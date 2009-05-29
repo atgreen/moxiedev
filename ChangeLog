@@ -1,0 +1,205 @@
+2009-05-26  Anthony Green  <green@moxielogic.com>
+
+	* u-boot: Initial u-boot bits.
+	* build.xml: Add u-boot build machinery.
+	
+2009-05-23  Anthony Green  <green@moxielogic.com>
+
+	* test/Makefile (clean): Clean up more stuff.
+	* scripts/moxie-elf-newlib.spec.in: Fix install.
+
+2009-05-22  Anthony Green  <green@moxielogic.com>
+
+	* scripts/moxie-elf-qemu.spec.in: Don't install qemu-nbd.
+
+2009-05-16  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Fix in-tree qemu install prefix.
+
+2009-05-08  Anthony Green  <green@moxielogic.com>
+
+	* scripts/mksrpm.sh: run gcc_upate --touch before tarring up
+	gcc sources.
+	* scripts/fix-svn.sh: Fix.
+
+2009-05-07  Anthony Green  <green@moxielogic.com>
+
+	* scripts/comps.xml: New file.
+	* scripts/*spec.in: Lots 'o tweaks
+	* scripts/mksrpm.sh: New file.
+	* scripts/mkrpms.sh: New file.
+
+2009-05-01  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Don't build gmp/mpfr/cloog-ppl/ppl out of tree now.
+	Those sources have been integrated into the gcc source tree.
+	* libs/*: Delete these libraries.
+	* libs: Delete directory.
+	* scripts/mksrpm.sh (QEMU_VERSION): Adjust for new git repository.
+
+2009-04-30  Anthony Green  <green@moxielogic.com>
+
+	* qemu: Merge new upstream git repository.
+	* build.xml: Tweak accordingly.
+
+2009-04-28  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Clean up clean target.  Make host library builds
+	optional.
+
+2009-04-27  Anthony Green  <green@moxielogic.com>
+
+	* scripts/fix-svn.sh: New file.
+
+2009-04-24  Anthony Green  <green@moxielogic.com>
+
+	* scripts/precheck/configure.ac: Remove gmp and mpfr checks.
+
+2009-03-25  Anthony Green  <green@moxielogic.com>
+
+	* benchmarks/MiBench/*: Fix spro-elf references.  Link with
+	-Tsim.ld.
+
+2009-03-17  Anthony Green  <green@moxielogic.com>
+
+	* scripts/dejagnu/site.exp: Fix spro-elf reference.
+
+2009-03-12  Anthony Green  <green@moxielogic.com>
+
+	* scripts/moxie-elf-binutils.spec.in: New file.
+	* scripts/moxie-elf-newlib.spec.in: New file.
+	* scripts/moxie-elf-gdb.spec.in: New file.
+	* scripts/moxie-elf-gcc.spec.in: New file.
+	* scripts/moxie-elf-qemu.spec.in: New file.
+	* scripts/mksrpm.sh: New file.
+	* scripts/v.awk, scripts/nv.awk: New files.
+	* build.xml (srpm): Use mksrpm.sh script.
+
+2009-03-10  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Exclude sim dir from binutils sprm.
+	* TODO: Fix 'sparrow' reference.
+	* HACKING: Mention qemu.
+
+2009-03-05  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Add qemu.  
+
+2009-02-20  Anthony Green  <green@moxielogic.com>
+
+	* *: spro is now moxie.
+
+2009-01-25  Anthony Green  <green@moxielogic.com>
+
+	* benchmark/MiBench/all_run: ggx is now spro.
+	* benchmark/MiBench/*/__run: Ditto.
+	* benchmark/MiBench/*/Makefile: Ditto.
+
+2009-01-13  Anthony Green  <green@moxielogic.com>
+
+	* scripts/precheck/configure.ac: Check for gperf.
+	scripts/precheck/configure: Rebuilt.
+
+2008-09-04  Anthony Green  <green@moxielogic.com>
+
+	* TODO: One more thing done (benchmark script).
+
+2008-09-04  Anthony Green  <green@moxielogic.com>
+
+	* benchmarks/MiBench/all_run: Fix icount file name creation.
+
+2008-09-04  Anthony Green  <green@moxielogic.com>
+
+	* benchmarks/MiBench/security_rijndael_d/src/aesxam.c: Remove
+	memory.h include so it will build.
+	* benchmarks/MiBench/security_rijndael_e/src/aesxam.c: Ditto.
+
+	* benchmarks/MiBench/all_run: Add DATASETS environment variable
+	and use it.
+
+	* benchmarks/MiBench/*/src/Makefile (OPTS_DEF):
+	Build with -O2.
+	* scripts/s.awk, scripts/i.awk: New files.
+	* benchmarks/MiBench/*/src/__run: Collect instruction count data.
+
+2008-08-30  Anthony Green  <green@moxielogic.com>
+
+	* TODO: More todo items.
+
+2008-08-23  Anthony Green  <green@moxielogic.com>
+
+	* TODO: Add note to change src/dest order in assembler.
+
+2008-08-21  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Build gcc twice.  The first time is for newlib only.
+	We need the installed newlib headers in order to avoid
+	inhibit_libc which results in a crippled libgcov.a.
+
+2008-08-21  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Build the C++ tools and libraries in addition to C.
+
+2008-08-20  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Tweak gcccheck target.  Fix DEJAGNU setting.
+	* scripts/dejagnu/site.exp: Fix boards_dir.
+
+2008-08-05  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Delete benchmark work dirs in clean target.
+
+2008-08-05  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Build gdb.
+
+2008-08-02  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Set DEJAGNU environment variable before running runtest.
+	* scripts/dejagnu/site.exp: New file.
+	* scripts/dejagnu/spro-sim.exp: New file.
+	* TODO: Remove DEJAGNU TODO item.
+
+2008-08-01  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Build the gcc srpm with --nodeps, since binutils
+	probably isn't installed at build time.
+
+2008-08-01  Anthony Green  <green@moxielogic.com>
+	
+	* scripts/precheck/configure.ac: New file.
+	* scripts/precheck/configure: Created.
+	* TODO: Remove prerequisite test item.
+	* build.xml: Run sanity tests before build.  Add build-time
+	messages between phases.
+
+2008-08-01  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Set "env" attribute on exec tasks to add install dir to path.
+	* TODO: Updated accordingly.
+	* ggxdev-setenv: Don't set PATH.
+	* HACKING: Updated accordingly.
+
+2008-07-25  Anthony Green  <green@moxielogic.com>
+
+	* TODO: Add more things to do.
+
+2008-05-07  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Build newlib/libgloss in different build directory.
+
+2008-05-06  Anthony Green  <green@moxielogic.com>
+
+	* TODO: Update.
+	* benchmarks/*: New files.  Imported MiBench_for_MiDataSets_V1_3.
+
+2008-05-06  Anthony Green  <green@moxielogic.com>
+
+	* scripts/spro-binutils.spec, scripts/spro-gcc.spec: New
+	files.
+	* build.xml: Add srpm targets.
+
+2008-05-05  Anthony Green  <green@moxielogic.com>
+
+	* HACKING, TODO, AUTHORS: Created.
+

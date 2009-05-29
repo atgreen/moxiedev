@@ -1,0 +1,80 @@
+Name:		moxie-elf-newlib
+Version:	@VERSION@
+Release:	0.@BUILDNUM@
+Summary:	An embedded C runtime library
+
+Group:		Development/Tools
+License:	BSD
+URL:		http://moxielogic.org
+Source0:	moxie-elf-newlib.tar.gz
+
+BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
+Requires:       moxie-elf-gcc
+BuildRequires:  moxie-elf-gcc
+
+BuildArch:	noarch
+
+%description
+Newlib is a C library intended for use on embedded systems. It is a
+conglomeration of several library parts, all under free software
+licenses that make them easily usable on embedded products.
+
+%prep
+%setup -q -n src
+
+# Extract %%__os_install_post into os_install_post~
+cat << \EOF > os_install_post~
+%__os_install_post
+EOF
+
+# Generate customized brp-*scripts
+cat os_install_post~ | while read a x y; do
+case $a in
+# Prevent brp-strip* from trying to handle foreign binaries 
+*/brp-strip*)
+  b=$(basename $a)
+  sed -e 's,find $RPM_BUILD_ROOT,find $RPM_BUILD_ROOT%_bindir $RPM_BUILD_ROOT%_libexecdir,' $a > $b
+  chmod a+x $b
+  ;;
+esac
+done
+
+sed -e 's,^[ ]*/usr/lib/rpm.*/brp-strip,./brp-strip,' \
+< os_install_post~ > os_install_post
+
+%build
+`pwd`/configure --prefix=%_prefix \
+		--exec-prefix=%_exec_prefix \
+		--bindir=%_bindir \
+		--sbindir=%_sbindir \
+		--sysconfdir=%_sysconfdir \
+		--datadir=%_datadir \
+		--includedir=%_includedir \
+		--libdir=%_libdir \
+		--libexecdir=%_libexecdir \
+		--localstatedir=%_localstatedir \
+		--sharedstatedir=%_sharedstatedir \
+		--mandir=%_mandir \
+		--infodir=%_infodir \
+		--target=moxie-elf
+make all-target-newlib all-target-libgloss
+
+%install
+rm -rf $RPM_BUILD_ROOT
+mkdir -p $RPM_BUILD_ROOT/usr/moxie-elf/lib
+make install-target-libgloss install-target-newlib DESTDIR=$RPM_BUILD_ROOT
+
+%define __os_install_post . ./os_install_post
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root,-)
+%{_prefix}/moxie-elf
+%doc COPYING* newlib/MAINTAINERS newlib/NEWS newlib/README
+
+%changelog
+* @DATE@ Anthony Green <green@moxielogic.com> @VERSION@-1
+- Created.

@@ -1,0 +1,22 @@
+D/doc////
+D/iconvdata////
+D/libc////
+D/libm////
+D/testsuite////
+/ChangeLog/1.1356/Sat May 16 14:55:22 2009/-ko/
+/HOWTO/1.1/Wed Mar 25 21:16:04 2009//
+/MAINTAINERS/1.9/Fri May  8 21:41:53 2009//
+/Makefile.am/1.42/Wed Apr 22 21:48:58 2009/-ko/
+/Makefile.in/1.54/Sat May 16 14:55:22 2009/-ko/
+/Makefile.shared/1.1/Wed Apr 22 21:48:58 2009//
+/NEWS/1.13/Thu Mar 19 21:10:29 2009/-ko/
+/README/1.18/Thu Mar 19 21:10:29 2009/-ko/
+/acconfig.h/1.4/Thu Mar 19 21:10:29 2009//
+/acinclude.m4/1.29/Thu Mar 19 21:10:29 2009/-ko/
+/aclocal.m4/1.31/Thu Mar 19 21:10:29 2009/-ko/
+/configure/1.62/Sat May 16 14:55:22 2009/-ko/
+/configure.host/1.106/Wed Apr 22 21:47:57 2009/-ko/
+/configure.in/1.41/Sat May 16 14:55:22 2009/-ko/
+/confsubdir.m4/1.1/Thu Mar 19 21:10:29 2009//
+/newlib.hin/1.19/Sat May 16 14:55:22 2009//
+/stamp-h.in/1.2/Thu Mar 19 21:10:37 2009//

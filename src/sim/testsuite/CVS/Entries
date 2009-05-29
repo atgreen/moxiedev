@@ -1,0 +1,12 @@
+D/common////
+D/config////
+D/d10v-elf////
+D/frv-elf////
+D/lib////
+D/m32r-elf////
+D/mips64el-elf////
+D/sim////
+/ChangeLog/1.62/Thu Mar 19 21:10:42 2009/-ko/
+/Makefile.in/1.5/Thu Mar 19 21:10:42 2009/-ko/
+/configure/1.4/Thu Mar 19 21:10:42 2009/-ko/
+/configure.ac/1.1/Thu Mar 19 21:10:42 2009//

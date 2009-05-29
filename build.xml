@@ -1,0 +1,278 @@
+<project name="moxiedev" default="usage">
+
+  <property environment="env"/>
+
+  <!-- =================================================================== -->
+  <!-- Help on usage                                                       -->
+  <!-- =================================================================== -->
+  <target name="usage">
+    <echo message=""/>
+    <echo message=""/>
+    <echo message="moxiedev Build instructions"/>
+    <echo message="-------------------------------------------------------------"/>
+    <echo message=""/>
+    <echo message=" available targets are:"/>
+    <echo message=""/>
+    
+    <echo message=" benchmark    --> run selected MiBench benchmarks"/>
+    <echo message=" build        --> builds and installs in root dir"/>
+    <echo message=" clean        --> cleans tree of all generated files"/>
+    <echo message=" gcccheck     --> runs gcc testsuite on the moxie simulator"/>
+    <echo message=" post-results --> post the last gcccheck results to the moxiedev-testresults list"/>
+    <echo message=" srpm         --> create source RPM files for the tools"/>
+    <echo message=" usage        --> provides help on using the build tool (default)"/>
+    <echo message=""/>
+    <echo message=" See comments inside the build.xml file for more details."/>
+    <echo message="-------------------------------------------------------------"/>
+    <echo message=""/>
+    <echo message=""/>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Clean the tree                                                      -->
+  <!-- =================================================================== -->
+  <target name="clean">
+    <delete dir="dist"/>
+    <delete dir="root"/>
+    <delete dir="build"/>
+    <delete>
+      <fileset dir="." includes="**/*~"/>
+      <fileset dir="." includes="**/.#*~"/>
+      <fileset dir="." includes="*~"/>
+    </delete>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd benchmarks/MiBench; ./all__delete_work_dirs)"/>
+    </exec>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd qemu; make distclean > /dev/null 2>&amp;1)"/>
+    </exec>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Build everything                                                    -->
+  <!-- =================================================================== -->
+
+  <target name="build">
+
+    <mkdir dir="root/usr"/>
+    <mkdir dir="build/src"/>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Running sanity check on build system ========================"/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd build; ../scripts/precheck/configure)"/>
+    </exec>
+
+    <available file="build/FAIL" property="isFileAvail"/>
+    <fail if="isFileAvail" message="Sanity precheck test failed!  Something is missing."/>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building binutils ==========================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd build/src; ../../src/configure --target=moxie-elf --disable-gdbtk --prefix=`(cd ../../root/usr; pwd)`)"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=build/src"/>
+      <arg value="-j2"/>
+      <arg value="all-binutils"/>
+      <arg value="all-gas"/>
+      <arg value="all-ld"/>
+      <arg value="all-sim"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=build/src"/>
+      <arg value="install-binutils"/>
+      <arg value="install-gas"/>
+      <arg value="install-ld"/>
+      <arg value="install-sim"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building initial gcc for newlib build ======================="/>
+    <echo message="===================================================================="/>
+    <mkdir dir="build/gcc"/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd build/gcc; ../../gcc/configure --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-newlib)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/gcc"/>
+      <arg value="-j2"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/gcc"/>
+      <arg value="install"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building newlib ============================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/src"/>
+      <arg value="all-target-newlib"/>
+      <arg value="install-target-newlib"/>
+      <arg value="CC_FOR_TARGET=moxie-elf-gcc"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/src"/>
+      <arg value="all-target-libgloss"/>
+      <arg value="install-target-libgloss"/>
+      <arg value="CC_FOR_TARGET=moxie-elf-gcc"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building full gcc ==========================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd build/gcc; ../../gcc/configure --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-newlib --with-headers=`(cd ../../root/usr/moxie-elf/include; pwd)`)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/gcc"/>
+      <arg value="-j2"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/gcc"/>
+      <arg value="install"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building gdb ================================================"/>
+    <echo message="===================================================================="/>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/src"/>
+      <arg value="all-gdb"/>
+      <arg value="install-gdb"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building qemu ==============================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd qemu; ./configure --prefix=`(cd ../root/usr; pwd)` --target-list=moxie-softmmu)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=qemu"/>
+      <arg value="-j2"/>
+      <arg value="install"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building u-boot ============================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd u-boot; ./mkconfig moxiesim moxie moxie moxiesim)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=u-boot"/>
+    </exec>
+
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Run the gcc testsuite on the moxie simulator                      -->
+  <!-- =================================================================== -->
+
+  <target name="gcccheck">
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <env key="DEJAGNU" path="${basedir}/scripts/dejagnu/site.exp"/>
+      <arg value="--directory=build/gcc/gcc"/>
+      <arg value="check"/>
+      <arg value="RUNTESTFLAGS=--target_board moxie-sim ${expfile}"/>
+    </exec>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Run selected MiBench benchmarks                                     -->
+  <!-- =================================================================== -->
+
+  <target name="benchmark">
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd benchmarks/MiBench; ./all__delete_work_dirs)"/>
+    </exec>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd benchmarks/MiBench; ./all__create_work_dirs)"/>
+    </exec>
+
+    <!-- Delete the benchmarks we aren't going to run -->
+
+    <!-- This benchmark SEGVs with datasets > 1.  Out of memory?  -->
+    <delete dir="benchmarks/MiBench/automotive_susan_c/src_work"/>
+    <!-- These next benchmarks requires more of an OS than newlib provides.  -->
+    <delete dir="benchmarks/MiBench/consumer_lame/src_work"/>
+    <delete dir="benchmarks/MiBench/consumer_mad/src_work"/>
+    <delete dir="benchmarks/MiBench/network_patricia/src_work"/>
+    <delete dir="benchmarks/MiBench/office_ghostscript/src_work"/>
+    <delete dir="benchmarks/MiBench/office_ispell/src_work"/>
+    <delete dir="benchmarks/MiBench/office_rsynth/src_work"/>
+    <delete dir="benchmarks/MiBench/security_pgp_d/src_work"/>
+    <delete dir="benchmarks/MiBench/security_pgp_e/src_work"/>
+    <delete dir="benchmarks/MiBench/telecom_gsm/src_work"/>
+    <!-- These next two benchmark currently SEGV.  --> 
+    <delete dir="benchmarks/MiBench/automotive_susan_e/src_work"/>
+    <delete dir="benchmarks/MiBench/telecom_adpcm_c/src_work"/>
+    <delete dir="benchmarks/MiBench/telecom_adpcm_d/src_work"/>
+    <!-- There's a data error with these benchmarks.  --> 
+    <delete dir="benchmarks/MiBench/consumer_tiff2bw/src_work"/>
+    <delete dir="benchmarks/MiBench/consumer_tiff2rgba/src_work"/>
+    <delete dir="benchmarks/MiBench/consumer_tiffdither/src_work"/>
+    <delete dir="benchmarks/MiBench/consumer_tiffmedian/src_work"/>
+
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <env key="DATASETS" value="3"/>
+      <arg value="-c"/>
+      <arg value="(cd benchmarks/MiBench; ./all_run)"/>
+    </exec>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Create SRPMs                                                        -->
+  <!-- =================================================================== -->
+  <target name="srpm">
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="./scripts/mksrpm.sh"/>
+    </exec>
+  </target>
+
+  <target name="post-results">
+    <mail 
+       user="XXXXXXXXXXXX"
+       password="XXXXXXXXXXXXXX"
+       mailport="587"
+       encoding="mime"
+       ssl="yes"
+       from="XXXXXXXXXXXXXXXXXx"
+       mailhost="smtp.gmail.com"
+       tolist="moxiedev-testresults@googlegroups.com"
+       subject="XXXXXXXXXXXXXXXXX"
+       messagefile="XXXXXXXXXXXX"/>
+  </target>
+
+</project>
+

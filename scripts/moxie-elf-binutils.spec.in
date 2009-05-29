@@ -1,0 +1,70 @@
+Name:		moxie-elf-binutils
+Version:	@VERSION@
+Release:	0.@BUILDNUM@
+Summary:	The GNU binutils for the moxie core
+
+Group:		Development/Tools
+License:	GPL
+URL:		http://moxielogic.com/blog
+Source0:	moxie-elf-binutils.tar.gz
+BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildRequires:	texinfo bison flex
+
+%description
+binutils is a collection of binary utilities, including ar (for creating,
+modifying and extracting from archives), nm (for listing symbols from
+object files), objcopy (for copying and translating object files),
+objdump (for displaying information from object files), ranlib (for
+generating an index for the contents of an archive), size (for listing
+the section sizes of an object or archive file), strings (for listing
+printable strings from files), strip (for discarding symbols), c++filt
+(a filter for demangling encoded C++ symbols), addr2line (for converting
+addresses to file and line).
+
+%prep
+%setup -q -n src
+
+
+%build
+CFLAGS="%optflags" ./configure \
+		   %_target_platform \
+		   --prefix=%_prefix \
+		   --exec-prefix=%_exec_prefix \
+		   --bindir=%_bindir \
+		   --sbindir=%_sbindir \
+		   --sysconfdir=%_sysconfdir \
+		   --datadir=%_datadir \
+		   --includedir=%_includedir \
+		   --libdir=%_libdir \
+		   --libexecdir=%_libexecdir \
+		   --localstatedir=%_localstatedir \
+		   --sharedstatedir=%_sharedstatedir \
+		   --mandir=%_mandir \
+		   --infodir=%_infodir \
+		   --enable-shared \
+		   --target=moxie-elf
+%__make tooldir=%_prefix all info
+
+%install
+rm -rf $RPM_BUILD_ROOT
+make install DESTDIR=$RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT%_datadir/locale
+rm -rf $RPM_BUILD_ROOT%_infodir
+rm -rf $RPM_BUILD_ROOT%_libdir/*.a
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+
+%files
+%defattr(-,root,root,-)
+%{_bindir}/*
+%{_prefix}/moxie-elf
+%{_prefix}/*/moxie-elf
+%{_mandir}/man1/*
+%doc COPYING*
+
+
+%changelog
+* @DATE@ Anthony Green <green@moxielogic.com> @VERSION@-1
+- Created.

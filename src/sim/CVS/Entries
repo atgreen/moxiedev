@@ -1,0 +1,28 @@
+D/arm////
+D/common////
+D/cr16////
+D/cris////
+D/d10v////
+D/erc32////
+D/frv////
+D/h8300////
+D/igen////
+D/iq2000////
+D/m32c////
+D/m32r////
+D/m68hc11////
+D/mcore////
+D/mips////
+D/mn10300////
+D/ppc////
+D/sh////
+D/sh64////
+D/testsuite////
+D/v850////
+D/moxie////
+/ChangeLog/1.121/Sat May 16 14:56:52 2009/-ko/
+/MAINTAINERS/1.24/Sat May 16 14:56:52 2009//
+/Makefile.in/1.17/Thu Apr 23 11:27:30 2009/-ko/
+/README-HACKING/1.2/Thu Mar 19 21:10:40 2009/-ko/
+/configure/1.28/Sun May  3 14:03:42 2009/-ko/
+/configure.ac/1.16/Sun May  3 14:03:42 2009//

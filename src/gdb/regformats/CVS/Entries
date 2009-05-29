@@ -1,0 +1,22 @@
+D/rs6000////
+/arm-with-iwmmxt.dat/1.3/Wed May 27 02:00:13 2009//
+/mips-linux.dat/1.2/Wed May 27 02:00:13 2009//
+/mips64-linux.dat/1.2/Wed May 27 02:00:13 2009//
+/reg-arm.dat/1.2/Wed May 27 02:00:13 2009//
+/reg-cris.dat/1.1/Wed May 27 02:00:13 2009//
+/reg-crisv32.dat/1.2/Wed May 27 02:00:13 2009//
+/reg-i386-linux.dat/1.2/Wed May 27 02:00:13 2009//
+/reg-i386.dat/1.2/Wed May 27 02:00:13 2009//
+/reg-ia64.dat/1.2/Wed May 27 02:00:13 2009//
+/reg-m32r.dat/1.1/Wed May 27 02:00:13 2009//
+/reg-m68k.dat/1.2/Wed May 27 02:00:13 2009//
+/reg-s390.dat/1.2/Wed May 27 02:00:13 2009//
+/reg-s390x.dat/1.3/Wed May 27 02:00:13 2009//
+/reg-sh.dat/1.1/Wed May 27 02:00:13 2009//
+/reg-sparc64.dat/1.1/Wed May 27 02:00:13 2009//
+/reg-spu.dat/1.3/Wed May 27 02:00:13 2009//
+/reg-x86-64-linux.dat/1.2/Wed May 27 02:00:13 2009//
+/reg-x86-64.dat/1.3/Wed May 27 02:00:13 2009//
+/reg-xtensa.dat/1.2/Wed May 27 02:00:13 2009//
+/regdat.sh/1.9/Wed May 27 02:00:13 2009//
+/regdef.h/1.7/Wed May 27 02:00:13 2009//

@@ -1,0 +1,73 @@
+Name:		moxie-elf-gdb
+Version:	@VERSION@
+Release:	0.@BUILDNUM@
+Summary:	The GNU gdb for the moxie core
+
+Group:		Development/Tools
+License:	GPL
+URL:		http://moxielogic.com/blog
+Source0:	moxie-elf-gdb.tar.gz
+BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildRequires:	texinfo ncurses-devel zlib-devel flex bison
+
+%description
+The GNU Debugger, GDB, for the moxie core.
+
+%package sim
+Summary:  GNU simulator for the moxie core
+Group:    Development
+
+%description sim
+GNU simulator for the moxie core.
+
+%prep
+%setup -q -n src
+
+%build
+CFLAGS="%optflags" ./configure \
+		   %_target_platform \
+		   --prefix=%_prefix \
+		   --exec-prefix=%_exec_prefix \
+		   --bindir=%_bindir \
+		   --sbindir=%_sbindir \
+		   --sysconfdir=%_sysconfdir \
+		   --datadir=%_datadir \
+		   --includedir=%_includedir \
+		   --libdir=%_libdir \
+		   --libexecdir=%_libexecdir \
+		   --localstatedir=%_localstatedir \
+		   --sharedstatedir=%_sharedstatedir \
+		   --mandir=%_mandir \
+		   --infodir=%_infodir \
+		   --enable-shared \
+		   --disable-gdbtk \
+		   --target=moxie-elf
+%__make tooldir=%_prefix all 
+
+%install
+rm -rf $RPM_BUILD_ROOT
+make install DESTDIR=$RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT%_datadir/locale
+rm -rf $RPM_BUILD_ROOT%_infodir
+rm -rf $RPM_BUILD_ROOT%_libdir/*.a
+rm -rf $RPM_BUILD_ROOT%_prefix/*-linux-gnu
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+
+%files
+%defattr(-,root,root,-)
+%{_bindir}/*
+%exclude %{_bindir}/moxie-elf-run
+%{_mandir}/man1/*
+%doc COPYING*
+
+%files sim
+%defattr(-,root,root,-)
+%{_bindir}/moxie-elf-run
+%doc COPYING*
+
+%changelog
+* @DATE@ Anthony Green <green@moxielogic.com> @VERSION@-1
+- Created.

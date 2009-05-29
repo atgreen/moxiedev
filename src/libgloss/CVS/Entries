@@ -1,0 +1,60 @@
+D/arm////
+D/bfin////
+D/config////
+D/cris////
+D/crx////
+D/d30v////
+D/doc////
+D/fr30////
+D/frv////
+D/hp74x////
+D/i386////
+D/i960////
+D/iq2000////
+D/libnosys////
+D/m32c////
+D/m32r////
+D/m68hc11////
+D/m68k////
+D/mcore////
+D/mep////
+D/mips////
+D/mn10200////
+D/mn10300////
+D/mt////
+D/pa////
+D/rs6000////
+D/sh////
+D/sparc////
+D/spu////
+D/testsuite////
+D/v850////
+D/wince////
+D/xstormy16////
+D/lm32////
+D/moxie////
+/ChangeLog/1.272/Sat May 16 14:55:05 2009//
+/Makefile.in/1.5/Thu Mar 19 21:10:27 2009//
+/README/1.4/Thu Mar 19 21:10:27 2009//
+/acinclude.m4/1.1/Thu Mar 19 21:10:27 2009//
+/aclocal.m4/1.1/Thu Mar 19 21:10:27 2009//
+/close.c/1.1/Thu Mar 19 21:10:27 2009//
+/configure/1.26/Sat May 16 14:55:05 2009//
+/configure.in/1.25/Sat May 16 14:55:05 2009//
+/debug.c/1.1/Thu Mar 19 21:10:27 2009//
+/debug.h/1.2/Thu Mar 19 21:10:27 2009//
+/fstat.c/1.1/Thu Mar 19 21:10:27 2009//
+/getpid.c/1.1/Thu Mar 19 21:10:27 2009//
+/glue.h/1.1/Thu Mar 19 21:10:27 2009//
+/isatty.c/1.1/Thu Mar 19 21:10:27 2009//
+/kill.c/1.1/Thu Mar 19 21:10:27 2009//
+/lseek.c/1.1/Thu Mar 19 21:10:27 2009//
+/open.c/1.1/Thu Mar 19 21:10:28 2009//
+/print.c/1.1/Thu Mar 19 21:10:28 2009//
+/putnum.c/1.1/Thu Mar 19 21:10:28 2009//
+/read.c/1.2/Thu Mar 19 21:10:28 2009//
+/sbrk.c/1.1/Thu Mar 19 21:10:28 2009//
+/stat.c/1.1/Thu Mar 19 21:10:28 2009//
+/syscall.h/1.4/Thu Mar 19 21:10:28 2009//
+/unlink.c/1.1/Thu Mar 19 21:10:28 2009//
+/write.c/1.1/Thu Mar 19 21:10:28 2009//

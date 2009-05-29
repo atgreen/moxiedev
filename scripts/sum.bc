@@ -1,0 +1,12 @@
+total = 0
+while (1) {
+  count = read()
+  if (count == 0)
+  {
+    print total
+    print "\n"
+    break
+  }
+  total = total + count
+}
+quit

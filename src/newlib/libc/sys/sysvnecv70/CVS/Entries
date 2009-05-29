@@ -1,0 +1,22 @@
+/Makefile.am/1.4/Wed Apr 22 21:49:01 2009/-ko/
+/Makefile.in/1.14/Wed Apr 22 21:49:01 2009/-ko/
+/aclocal.m4/1.22/Thu Mar 19 21:10:35 2009/-ko/
+/cerror.S/1.1/Thu Mar 19 21:10:35 2009//
+/close.S/1.1/Thu Mar 19 21:10:35 2009//
+/configure/1.27/Wed Apr 22 21:48:16 2009/-ko/
+/configure.in/1.2/Wed Apr 22 21:48:16 2009/-ko/
+/crt0.S/1.1/Thu Mar 19 21:10:35 2009//
+/exit.S/1.1/Thu Mar 19 21:10:35 2009//
+/fps.S/1.1/Thu Mar 19 21:10:35 2009//
+/fpx.c/1.1.1.1/Thu Mar 19 21:10:35 2009/-ko/
+/fstat.S/1.1/Thu Mar 19 21:10:35 2009//
+/ioctl.S/1.1/Thu Mar 19 21:10:35 2009//
+/isatty.S/1.1/Thu Mar 19 21:10:35 2009//
+/lseek.S/1.1/Thu Mar 19 21:10:35 2009//
+/open.S/1.1/Thu Mar 19 21:10:35 2009//
+/read.S/1.1/Thu Mar 19 21:10:35 2009//
+/sbrk.S/1.1/Thu Mar 19 21:10:35 2009//
+/sysv60.S/1.1/Thu Mar 19 21:10:35 2009//
+/sysvnecv70.tex/1.1.1.1/Thu Mar 19 21:10:35 2009/-ko/
+/write.S/1.1/Thu Mar 19 21:10:35 2009//
+D

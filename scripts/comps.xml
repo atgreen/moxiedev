@@ -1,0 +1,18 @@
+<comps>
+<group>
+<id>moxiedev</id>
+<name>Moxie Logic Development Tools</name>
+<description>Cross-development tools targeting the moxie core.</description>
+<uservisible>true</uservisible>
+<packagelist>
+<packagereq type="default">moxie-elf-binutils</packagereq>
+<packagereq type="default">moxie-elf-gcc</packagereq>
+<packagereq type="default">moxie-elf-gcc-c++</packagereq>
+<packagereq type="default">moxie-elf-gcc-libstdc++</packagereq>
+<packagereq type="default">moxie-elf-gdb</packagereq>
+<packagereq type="default">moxie-elf-gdb-sim</packagereq>
+<packagereq type="default">moxie-elf-newlib</packagereq>
+<packagereq type="default">moxie-elf-qemu</packagereq>
+</packagelist>
+</group>
+</comps>

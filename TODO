@@ -1,0 +1,41 @@
+* Assembler
+
+  - Reverse src and dest operands for two operand instructions to
+    follow conventions set by assemblers for other processors.
+
+* Building
+
+  - Add sanity check for ncurses-devel and SDL-devel
+
+  - Replace mpfr-2.4.0 reference with variable
+
+  - Figure out how to save build logs (tee output?  maybe ant has a
+    convenient mechanism).
+
+* Testing
+
+  - Figure out how to move mail task bits into external property file
+    (for username, password, server, etc).
+
+  - Import ggxamine.
+
+* Documentation
+
+  - Use publican to document moxie architecture.
+
+* Benchmarks
+
+  - I want to automake building and running on the benchmarks on a
+    group of amazon ec2 instances.  I think the best way to do this is
+    to package everything up in RPM format to load on the ec2
+    instances.  I've already done this for MiBench data and tools, but
+    now this has to happen for the tests.
+
+    - Create binary RPMs for the benchmark suites.  Data is already
+      RPMized, but need to find home for it (~3Gb).
+
+    - Write ant magic to start ec2 instances, load and run tests,
+      extract results and shutdown instances.
+
+
+

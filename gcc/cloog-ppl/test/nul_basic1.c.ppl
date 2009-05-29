@@ -1,0 +1,4 @@
+/* Generated from ./nul_basic1.cloog by CLooG 0.15 64 bits in 0.00s. */
+for (i=0;i<=M;i+=2) {
+  S1(j = i/2) ;
+}

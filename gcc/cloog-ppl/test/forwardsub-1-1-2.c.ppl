@@ -1,0 +1,11 @@
+/* Generated from ./forwardsub-1-1-2.cloog by CLooG 0.15 64 bits in 0.03s. */
+S3(i = 1,j = 1) ;
+S1(i = 2,j = 1) ;
+S4(i = 2,j = 2) ;
+for (i=3;i<=M;i++) {
+  S1(j = 1) ;
+  for (j=2;j<=i-1;j++) {
+    S2 ;
+  }
+  S4(j = i) ;
+}

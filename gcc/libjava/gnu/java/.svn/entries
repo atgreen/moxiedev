@@ -1,0 +1,64 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/java
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2009-02-25T21:40:28.493970Z
+144434
+gandalf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+locale
+dir
+
+lang
+dir
+
+text
+dir
+
+nio
+dir
+
+net
+dir
+
+io
+dir
+
+rmi
+dir
+
+security
+dir
+
+beans
+dir
+
+math
+dir
+
+awt
+dir
+
+util
+dir
+

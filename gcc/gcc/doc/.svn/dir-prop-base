@@ -1,0 +1,11 @@
+K 10
+svn:ignore
+V 53
+*.info*
+gcc.1
+cpp.1
+gcov.1
+gfdl.7
+gpl.7
+fsf-funding.7
+END

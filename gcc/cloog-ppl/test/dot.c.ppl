@@ -1,0 +1,9 @@
+/* Generated from ./dot.cloog by CLooG 0.15 64 bits in 0.01s. */
+for (j=1;j<=M;j++) {
+  S1(i = 0) ;
+}
+for (i=1;i<=N;i++) {
+  for (j=1;j<=M;j++) {
+    S2 ;
+  }
+}

@@ -1,0 +1,5 @@
+/* Generated from ./reservoir/stride.cloog by CLooG 0.15 64 bits in 0.00s. */
+for (c2=2;c2<=M;c2+=7) {
+  j = (c2-2)/7 ;
+  S1(i = c2) ;
+}

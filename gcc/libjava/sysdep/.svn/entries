@@ -1,0 +1,135 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/libjava/sysdep
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2008-10-24T02:44:26.417696Z
+141335
+dje
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+powerpc
+dir
+
+arm
+dir
+
+m68k
+dir
+
+alpha
+dir
+
+i386
+dir
+
+s390
+dir
+
+descriptor-n.h
+file
+
+
+
+
+2009-04-24T17:49:43.000000Z
+433e10e115547d819ac98359574aee0f
+2005-05-25T23:24:07.000000Z
+100173
+rth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+98
+
+pa
+dir
+
+ia64
+dir
+
+sparc
+dir
+
+mips
+dir
+
+descriptor-y.h
+file
+
+
+
+
+2009-04-24T17:49:43.000000Z
+91690f00407b09a38d13eb69091bc2d0
+2005-05-25T23:24:07.000000Z
+100173
+rth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+219
+
+sh
+dir
+
+x86-64
+dir
+
+generic
+dir
+

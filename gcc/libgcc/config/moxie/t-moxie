@@ -1,0 +1,7 @@
+# Assemble startup files.
+$(T)crti.o: $(gcc_srcdir)/config/moxie/crti.asm $(GCC_PASSES)
+	$(GCC_FOR_TARGET) $(GCC_CFLAGS) $(MULTILIB_CFLAGS) $(INCLUDES) \
+	  -c -o $(T)crti.o -x assembler $(gcc_srcdir)/config/moxie/crti.asm
+$(T)crtn.o: $(gcc_srcdir)/config/moxie/crtn.asm $(GCC_PASSES)
+	$(GCC_FOR_TARGET) $(GCC_CFLAGS) $(MULTILIB_CFLAGS) $(INCLUDES) \
+	  -c -o $(T)crtn.o -x assembler $(gcc_srcdir)/config/moxie/crtn.asm

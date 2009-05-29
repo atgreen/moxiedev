@@ -1,0 +1,10 @@
+K 10
+svn:ignore
+V 54
+Makefile
+stamp-h
+config.h
+stamp-h.in
+jni_md.h
+stamp-h1
+END

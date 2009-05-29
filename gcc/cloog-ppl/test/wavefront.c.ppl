@@ -1,0 +1,9 @@
+/* Generated from ./wavefront.cloog by CLooG 0.15 64 bits in 0.01s. */
+if ((n >= 1) && (m >= 1)) {
+  for (c1=2;c1<=n+m;c1++) {
+    for (c2=max(c1-m,1);c2<=min(c1-1,n);c2++) {
+      j = c1-c2 ;
+      S1(i = c2) ;
+    }
+  }
+}

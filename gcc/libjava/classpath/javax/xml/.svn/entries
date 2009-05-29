@@ -1,0 +1,83 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/xml
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+parsers
+dir
+
+xpath
+dir
+
+validation
+dir
+
+datatype
+dir
+
+stream
+dir
+
+transform
+dir
+
+namespace
+dir
+
+XMLConstants.java
+file
+
+
+
+
+2009-04-24T17:47:25.000000Z
+29689a2602b61fc11547d1350b3430eb
+2006-05-18T17:29:21.798468Z
+113887
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4248
+

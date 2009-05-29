@@ -1,0 +1,79 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2009-05-28T10:48:35.615073Z
+147950
+davek
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+powerpc
+dir
+
+arm
+dir
+
+m68k
+dir
+
+alpha
+dir
+
+avr
+dir
+
+i386
+dir
+
+xstormy16
+dir
+
+frv
+dir
+
+x86_64
+dir
+
+s390
+dir
+
+cris
+dir
+
+ia64
+dir
+
+spu
+dir
+
+sparc
+dir
+
+mips
+dir
+
+sh
+dir
+
+bfin
+dir
+

@@ -1,0 +1,463 @@
+2009-04-18  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* PPL 0.10.2 released.
+
+2009-04-16  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/doc/Makefile.am, doc/Makefile.am: Added targets to have
+	`make -n dist' work as expected.
+
+2009-04-16  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/src/Makefile.am, Watchdog/tests/Makefile.am,
+	demos/ppl_lcdd/Makefile.am, demos/ppl_lpsol/Makefile.am,
+	interfaces/C/Makefile.am, interfaces/C/tests/Makefile.am,
+	interfaces/Java/Makefile.am, interfaces/Java/jni/Makefile.am,
+	interfaces/Java/parma_polyhedra_library/Makefile.am,
+	interfaces/Java/tests/Makefile.am, interfaces/OCaml/Makefile.am,
+	interfaces/OCaml/tests/Makefile.am,
+	interfaces/Prolog/Ciao/Makefile.am,
+	interfaces/Prolog/GNU/Makefile.am, interfaces/Prolog/Makefile.am,
+	interfaces/Prolog/SICStus/Makefile.am,
+	interfaces/Prolog/SWI/Makefile.am,
+	interfaces/Prolog/XSB/Makefile.am,
+	interfaces/Prolog/YAP/Makefile.am,
+	interfaces/Prolog/tests/Makefile.am, src/Makefile.am,
+	tests/BD_Shape/Makefile.am, tests/Box/Makefile.am,
+	tests/Grid/Makefile.am, tests/MIP_Problem/Makefile.am,
+	tests/Octagonal_Shape/Makefile.am,
+	tests/Partially_Reduced_Product/Makefile.am,
+	tests/Polyhedron/Makefile.am, tests/Powerset/Makefile.am: Added
+	rules so that `make -n' and `make -n check' work.
+
+2009-04-15  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/src/Makefile.am, interfaces/C/Makefile.am,
+	src/Makefile.am: Libtool -version-info updated for PPL 0.10.2.
+
+2009-04-14  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* PPL 0.10.1 released.
+
+2009-04-11  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* .gitignore, Watchdog/doc/.gitignore, doc/.gitignore,
+	interfaces/Prolog/XSB/.gitignore: Added missing patterns.
+
+2009-04-11  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* ChangeLog, Watchdog/ChangeLog: Updated.
+
+2009-04-06  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* ChangeLog, Watchdog/ChangeLog: Updated.
+
+2009-04-04  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/NEWS, Watchdog/README, Watchdog/configure.ac,
+	Watchdog/src/Makefile.am: Updated for PWL 0.7.
+
+2009-03-30  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/configure.ac, configure.ac: Version number bumped.  The
+	name of the program is Autoconf.
+
+2009-03-30  Enea Zaffanella <zaffanella@cs.unipr.it>
+
+	* TODO, Watchdog/src/Watchdog.defs.hh: Moved TODO items to their
+	place.
+
+2009-03-30  Enea Zaffanella <zaffanella@cs.unipr.it>
+
+	* Watchdog/src/Watchdog.defs.hh,
+	interfaces/OCaml/ppl_ocaml_common.cc,
+	interfaces/OCaml/ppl_ocaml_common.defs.hh,
+	interfaces/OCaml/ppl_ocaml_globals.ml,
+	interfaces/OCaml/ppl_ocaml_globals.mli,
+	interfaces/Prolog/ppl_prolog_common.cc: Added timeout functions to
+	the OCaml interface.  Also removed duplicate CATCH_ALL macro
+	definitions in the Prolog and OCaml interfaces.
+
+2009-03-28  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* ChangeLog, ChangeLog-2001-2008, ChangeLog_2001-2008,
+	Watchdog/ChangeLog, Watchdog/ChangeLog-2001-2008,
+	Watchdog/ChangeLog_2001-2008: Change logs updated.
+
+2009-03-28  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/configure.ac, configure.ac: Improved the semantics of the
+	--enable-watchdog configure option.
+
+2009-03-27  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* ChangeLog, Watchdog/ChangeLog: Change logs covering the changes
+	made in the CVS repository in 2009.  They will be replaced by
+	up-to-date change logs obtained from git.
+
+2009-03-27  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* ChangeLog, ChangeLog-2001-2008, Watchdog/ChangeLog,
+	Watchdog/ChangeLog-2001-2008: Renamed and frozen: the
+	ChangeLog-2001-2008 should never be changed again.
+
+2009-03-27  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* ChangeLog, Watchdog/ChangeLog: Updated to 2008-12-31.
+
+2009-03-26  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/tests/pwl_test.cc, tests/ppl_test.cc: Support systems
+	that do not define `siginfo_t'.
+
+2009-03-26  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/configure.ac, configure.ac: Added checks for the
+	availability of `siginfo_t'.
+
+2009-03-26  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* m4/ac_check_fpu_control.m4: We can infer the possibility to
+	control the CPU even when cross-compiling.  This happens (at least)
+	on i386 and sparc (provided we have <ieeefp.h>).
+
+2009-03-25  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* interfaces/C/ppl_c_stream.cc,
+	interfaces/C/tests/print_to_buffer.c, src/c_streambuf_format.cc,
+	src/c_streambuf_format.defs.hh, src/c_streambuf_format.inlines.hh,
+	src/c_streambuf_format_settings.h: Better parameters for formatted
+	output.
+
+2009-03-25  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* src/fpu-ia32.inlines.hh: Properly use PPL_FPMATH_MAY_USE_387 and
+	PPL_FPMATH_MAY_USE_SSE.
+
+2009-03-25  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* src/fpu-ia32.cc: Depend on PPL_CAN_CONTROL_FPU.
+
+2009-03-25  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* configure.ac: Typo fixed.
+
+2009-03-25  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* : commit b5d7b09c10aea7c95b9d2693986e2e4e549d3a12 Author: Roberto
+	Bagnara <bagnara@cs.unipr.it> Date:   Wed Mar 25 21:06:01 2009 +0100
+
+2009-03-25  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* tests/Box/congruences1.cc, tests/Box/max_min1.cc: Disable more
+	tests that fail on the Alpha due to a GCC bug.
+
+2009-03-25  Enea Zaffanella <zaffanella@cs.unipr.it>
+
+	* src/Octagonal_Shape.templates.hh,
+	tests/BD_Shape/simplifyusingcontext1.cc,
+	tests/Octagonal_Shape/Makefile.am,
+	tests/Octagonal_Shape/simplifyusingcontext1.cc,
+	tests/Polyhedron/simplifyusingcontext1.cc: Implemented
+	Octagonal_Shape::simplify_using_context_assign().  The efficiency of
+	the method needs improving. Added a few tests.
+
+2009-03-25  Patricia Hill <p.m.hill@leeds.ac.uk>
+
+	* TODO: TODO item - Check the configuration dependent documentation for Prolog, done
+	and removed.
+
+2009-03-25  Patricia Hill <p.m.hill@leeds.ac.uk>
+
+	* interfaces/OCaml/ppl_interface_generator_ocaml_cc_code.m4,
+	interfaces/OCaml/ppl_ocaml_common.cc,
+	interfaces/OCaml/tests/ppl_interface_generator_ocaml_test_ml_code.m
+	4, interfaces/OCaml/tests/test1.ml: Where the result type is unit,
+	the type returned by C++ must be a CAMLprim value type and not a
+	void.
+
+2009-03-24  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* tests/Grid/addcongruences1.cc,
+	tests/Octagonal_Shape/generalizedaffineimage3.cc,
+	tests/Octagonal_Shape/generalizedaffinepreimage2.cc: Exception
+	handling is broken in GCC on the Alpha: commented out some tests.
+
+2009-03-24  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* interfaces/C/tests/formatted_output.c: Reduced DIMENSION to 100.
+
+2009-03-24  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* configure.ac, interfaces/C/tests/formatted_output.c,
+	m4/ac_check_fpu_control.m4, m4/ac_check_gmp.m4,
+	m4/ac_cxx_double_exact_output.m4, m4/ac_cxx_flexible_arrays.m4,
+	m4/ac_cxx_float_exact_output.m4, m4/ac_cxx_ieee_inexact_flag.m4,
+	m4/ac_cxx_limit_memory.m4, m4/ac_cxx_long_double_exact_output.m4,
+	m4/ac_cxx_proper_long_double.m4, m4/ac_cxx_remainder_bug.m4:
+	Improved the actions of AC_RUN_IFELSE when cross-compiling.
+
+2009-03-24  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* interfaces/C/Makefile.am: Fixed file names.
+
+2009-03-24  Enea Zaffanella <zaffanella@cs.unipr.it>
+
+	* NEWS: Mention the bug corrected for method
+	Octagonal_Shape<T>::affine_image().
+
+2009-03-24  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* interfaces/C/ppl_c_header.h: Fixed comment.
+
+2009-03-24  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* interfaces/C/ppl_c_header.h: Fixed indentation.
+
+2009-03-24  Enea Zaffanella <zaffanella@cs.unipr.it>
+
+	* src/Octagonal_Shape.templates.hh: Corrected bug affecting method
+	Octagonal_Shape::affine_image().
+
+2009-03-24  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* interfaces/C/Makefile.am, interfaces/C/ppl_c_header.h,
+	interfaces/C/ppl_c_implementation_common.cc,
+	interfaces/C/ppl_c_implementation_common.defs.hh,
+	interfaces/C/ppl_c_stream.cc, interfaces/C/ppl_c_stream.defs.hh,
+	interfaces/C/ppl_c_stream.h, interfaces/C/ppl_c_stream.inlines.hh,
+	interfaces/C/tests/formatted_output.c,
+	interfaces/C/tests/print_to_buffer.c,
+	interfaces/C/tests/print_to_buffer.h, src/Makefile.am,
+	src/c_stream.cc, src/c_stream.h, src/c_streambuf.inlines.hh,
+	src/c_streambuf_format.cc, src/c_streambuf_format.defs.hh,
+	src/c_streambuf_format.inlines.hh,
+	src/c_streambuf_format_settings.h: Cleaned C streams implementation.
+
+2009-03-24  Enea Zaffanella <zaffanella@cs.unipr.it>
+
+	* tests/Octagonal_Shape/affineimage1.cc: Test test17() shows a bug
+	in method Octagonal_Shape::affine_image().  The bug is triggered
+	  when the affine image is of the form var -> var + n and the
+	octagonal shape has constraints relating var with another space
+	dimension having index smaller than var.
+
+2009-03-24  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* README.configure, TODO: Explained the `--disable-ppl_lcdd' and
+	`--disable-ppl_lcdd' configure options.
+
+2009-03-24  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* fedora/ppl.spec: There are no GNU Prolog packages available on
+	ia64: disable the GNU Prolog interface also on those platforms
+	(besides ppc64, s390 and s390x).
+
+2009-03-24  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* fedora/ppl.spec: Synchronized with the Fedora repository.
+
+2009-03-24  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* interfaces/C/ppl_c_header.h,
+	interfaces/C/tests/formatted_output.c,
+	interfaces/C/tests/print_to_buffer.c,
+	interfaces/C/tests/print_to_buffer.h, src/c_stream.h: Added some
+	more infrastructure.  Variables renamed.
+
+2009-03-23  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* interfaces/C/tests/formatted_output.c,
+	interfaces/C/tests/print_to_buffer.c: Build restored.
+
+2009-03-23  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* interfaces/C/tests/print_to_buffer.c, src/c_stream.cc,
+	src/c_stream.h, src/c_streambuf_format.cc: Added repeated char for
+	left and right margin.
+
+2009-03-23  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* interfaces/C/tests/print_to_buffer.c,
+	interfaces/C/tests/print_to_buffer.h, src/c_stream.h: Some fixes.
+
+2009-03-23  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* interfaces/C/tests/Makefile.am, interfaces/C/tests/cxxoutput.c,
+	interfaces/C/tests/formatted_output.c,
+	interfaces/C/tests/print_to_buffer.cc: Done some cleaning.
+
+2009-03-23  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* interfaces/C/Makefile.am, interfaces/C/ppl_c_header.h,
+	interfaces/C/tests/Makefile.am,
+	interfaces/C/tests/print_to_buffer.c,
+	interfaces/C/tests/print_to_buffer.h, src/c_stream.h: Started the
+	installation of the new formatted output machinery.
+
+2009-03-23  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* src/c_stream.cc, src/c_stream.h, src/c_streambuf_format.cc: Better
+	name.
+
+2009-03-23  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* src/c_stream.cc, src/c_stream.h, src/c_streambuf_format.cc: Bug
+	fix: ostringstream.str() returns a temporary.
+
+2009-03-23  Enea Zaffanella <zaffanella@spartacus.cs.unipr.it>
+
+	* tests/Octagonal_Shape/affineimage1.cc: Added a test.
+
+2009-03-23  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* src/c_stream.cc, src/c_stream.h, src/c_streambuf.defs.hh,
+	src/c_streambuf.inlines.hh, src/c_streambuf_format.cc,
+	src/c_streambuf_format.defs.hh: Separated wrap before from wrap
+	after. Bug fixes.
+
+2009-03-23  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* src/OR_Matrix.inlines.hh, src/Octagonal_Shape.inlines.hh,
+	src/Octagonal_Shape.templates.hh: Readability improvements.
+
+2009-03-23  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* src/OR_Matrix.inlines.hh: Fixed a bug (that is inconsequential for
+	the current code base).  We were using `m % 2 == 1' instead of `m %
+	2 != 0', with `m' a signed number that could be negative.
+
+2009-03-23  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* src/c_stream.cc, src/c_stream.h: Added ppl_io_ostream_buffer_clear
+	function.
+
+2009-03-23  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* src/c_stream.cc, src/c_stream.h: Added write functions for native
+	types.
+
+2009-03-23  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* src/Makefile.am, src/c_stream.cc, src/c_stream.h,
+	src/c_streambuf.cc, src/c_streambuf.defs.hh,
+	src/c_streambuf.inlines.hh, src/c_streambuf_format.cc,
+	src/c_streambuf_format.defs.hh, src/c_streambuf_format.inlines.hh,
+	src/c_streambuf_format.types.hh: Added filtered streams. Implemented
+	format filter.
+
+2009-03-23  Enea Zaffanella <zaffanella@spartacus.cs.unipr.it>
+
+	* doc/Makefile.am: Add dependencies between HTML manuals for
+	parallel builds.  The distributed built HTML manuals logically
+	depend on the built tag file, which is not distributed; hence a
+	direct dependency cannot be added (it would break a `make distcheck'
+	check). As a workaround, they now depend on the core HTML manual,
+	which is built _and_ distributed.
+
+2009-03-23  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* src/OR_Matrix.inlines.hh: Obsolete FIXME removed.
+
+2009-03-23  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* src/Octagonal_Shape.templates.hh: Little formatting improvement.
+
+2009-03-23  Enea Zaffanella <zaffanella@cs.unipr.it>
+
+	* src/pretty_print.cc, src/pretty_print.hh: Use consistent parameter
+	names in helper function wrap.
+
+2009-03-22  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* demos/ppl_lpsol/expected_mpz_a: Updated to reflect the new way
+	`ppl_lpsol' is invoked.
+
+2009-03-22  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Makefile.am, Watchdog/Makefile.am, Watchdog/pwl-config.sed,
+	ppl-config.sed: Tightened the machinery used to generate the
+	configuration headers.
+
+2009-03-22  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* .gitignore, Makefile.am, Watchdog/Makefile.am,
+	Watchdog/configure.ac, Watchdog/pwl-config.sed, configure.ac,
+	ppl-config.sed: New machinery to create ppl-config.h and
+	pwl-config.h.
+
+2009-03-21  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/configure.ac, configure.ac: Minimum Autoconf version
+	brought back to 2.61.
+
+2009-03-21  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* .gitignore, NEWS, Watchdog/.gitignore, Watchdog/configure.ac,
+	Watchdog/m4/Makefile.am, Watchdog/m4/ax_prefix_config_h.m4,
+	Watchdog/src/Makefile.am, configure.ac, instchk.hh, m4/Makefile.am,
+	m4/ac_check_fpu_control.m4, m4/ac_check_gmp.m4,
+	m4/ac_cxx_attribute_weak.m4, m4/ac_cxx_double_binary_format.m4,
+	m4/ac_cxx_double_exact_output.m4, m4/ac_cxx_flexible_arrays.m4,
+	m4/ac_cxx_float_binary_format.m4, m4/ac_cxx_float_exact_output.m4,
+	m4/ac_cxx_ieee_inexact_flag.m4, m4/ac_cxx_limit_memory.m4,
+	m4/ac_cxx_long_double_binary_format.m4,
+	m4/ac_cxx_long_double_exact_output.m4,
+	m4/ac_cxx_proper_long_double.m4, m4/ac_cxx_remainder_bug.m4,
+	m4/ax_prefix_config_h.m4: Got rid of AX_PREFIX_CONFIG_H.
+
+2009-03-20  Roberto Bagnara <bagnara@cs.unipr.it>
+
+	* Watchdog/configure.ac, configure.ac, m4/ac_prog_java.m4,
+	m4/ac_prog_javac.m4: Avoid using obsolete Autoconf macros.
+
+2009-02-22  Abramo Bagnara <abramo.bagnara@gmail.com>
+
+	* .cvsignore, .gitignore, Watchdog/.cvsignore, Watchdog/.gitignore,
+	Watchdog/doc/.cvsignore, Watchdog/doc/.gitignore,
+	Watchdog/m4/.cvsignore, Watchdog/m4/.gitignore,
+	Watchdog/src/.cvsignore, Watchdog/src/.gitignore,
+	Watchdog/tests/.cvsignore, Watchdog/tests/.gitignore,
+	Watchdog/utils/.cvsignore, Watchdog/utils/.gitignore,
+	debian/.cvsignore, debian/.gitignore, demos/.cvsignore,
+	demos/.gitignore, demos/ppl_lcdd/.cvsignore,
+	demos/ppl_lcdd/.gitignore, demos/ppl_lcdd/examples/.cvsignore,
+	demos/ppl_lcdd/examples/.gitignore, demos/ppl_lpsol/.cvsignore,
+	demos/ppl_lpsol/.gitignore, demos/ppl_lpsol/examples/.cvsignore,
+	demos/ppl_lpsol/examples/.gitignore, devtools/.cvsignore,
+	devtools/.gitignore, doc/.cvsignore, doc/.gitignore,
+	fedora/.cvsignore, fedora/.gitignore, interfaces/.cvsignore,
+	interfaces/.gitignore, interfaces/C/.cvsignore,
+	interfaces/C/.gitignore, interfaces/C/tests/.cvsignore,
+	interfaces/C/tests/.gitignore, interfaces/Java/.cvsignore,
+	interfaces/Java/.gitignore, interfaces/Java/jni/.cvsignore,
+	interfaces/Java/jni/.gitignore,
+	interfaces/Java/parma_polyhedra_library/.cvsignore,
+	interfaces/Java/parma_polyhedra_library/.gitignore,
+	interfaces/Java/tests/.cvsignore, interfaces/Java/tests/.gitignore,
+	interfaces/OCaml/.cvsignore, interfaces/OCaml/.gitignore,
+	interfaces/OCaml/tests/.cvsignore,
+	interfaces/OCaml/tests/.gitignore, interfaces/Prolog/.cvsignore,
+	interfaces/Prolog/.gitignore, interfaces/Prolog/Ciao/.cvsignore,
+	interfaces/Prolog/Ciao/.gitignore,
+	interfaces/Prolog/GNU/.cvsignore, interfaces/Prolog/GNU/.gitignore,
+	interfaces/Prolog/SICStus/.cvsignore,
+	interfaces/Prolog/SICStus/.gitignore,
+	interfaces/Prolog/SWI/.cvsignore, interfaces/Prolog/SWI/.gitignore,
+	interfaces/Prolog/XSB/.cvsignore, interfaces/Prolog/XSB/.gitignore,
+	interfaces/Prolog/YAP/.cvsignore, interfaces/Prolog/YAP/.gitignore,
+	interfaces/Prolog/tests/.cvsignore,
+	interfaces/Prolog/tests/.gitignore, m4/.cvsignore, m4/.gitignore,
+	src/.cvsignore, src/.gitignore, tests/.cvsignore, tests/.gitignore,
+	tests/Ask_Tell/.cvsignore, tests/Ask_Tell/.gitignore,
+	tests/BD_Shape/.cvsignore, tests/BD_Shape/.gitignore,
+	tests/Box/.cvsignore, tests/Box/.gitignore, tests/Grid/.cvsignore,
+	tests/Grid/.gitignore, tests/MIP_Problem/.cvsignore,
+	tests/MIP_Problem/.gitignore, tests/Octagonal_Shape/.cvsignore,
+	tests/Octagonal_Shape/.gitignore,
+	tests/Partially_Reduced_Product/.cvsignore,
+	tests/Partially_Reduced_Product/.gitignore,
+	tests/Polyhedron/.cvsignore, tests/Polyhedron/.gitignore,
+	tests/Powerset/.cvsignore, tests/Powerset/.gitignore,
+	utils/.cvsignore, utils/.gitignore: Replaced .cvsignore with
+	.gitignore.

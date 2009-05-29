@@ -1,0 +1,193 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/tr1/4_metaprogramming
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+is_same
+dir
+
+has_trivial_destructor
+dir
+
+is_union
+dir
+
+is_arithmetic
+dir
+
+remove_extent
+dir
+
+remove_cv
+dir
+
+add_volatile
+dir
+
+is_empty
+dir
+
+is_abstract
+dir
+
+add_const
+dir
+
+is_enum
+dir
+
+remove_all_extents
+dir
+
+is_integral
+dir
+
+is_object
+dir
+
+remove_const
+dir
+
+add_reference
+dir
+
+is_convertible
+dir
+
+is_floating_point
+dir
+
+remove_reference
+dir
+
+is_pod
+dir
+
+integral_constant
+dir
+
+is_compound
+dir
+
+add_cv
+dir
+
+is_function
+dir
+
+is_const
+dir
+
+has_nothrow_copy
+dir
+
+aligned_storage
+dir
+
+is_member_object_pointer
+dir
+
+add_pointer
+dir
+
+is_base_of
+dir
+
+is_fundamental
+dir
+
+is_reference
+dir
+
+rank
+dir
+
+is_void
+dir
+
+remove_volatile
+dir
+
+remove_pointer
+dir
+
+has_nothrow_assign
+dir
+
+has_trivial_copy
+dir
+
+has_virtual_destructor
+dir
+
+is_class
+dir
+
+has_nothrow_constructor
+dir
+
+is_polymorphic
+dir
+
+is_scalar
+dir
+
+alignment_of
+dir
+
+is_member_pointer
+dir
+
+is_signed
+dir
+
+extent
+dir
+
+is_member_function_pointer
+dir
+
+is_unsigned
+dir
+
+is_array
+dir
+
+has_trivial_assign
+dir
+
+has_trivial_constructor
+dir
+
+is_volatile
+dir
+
+headers
+dir
+
+is_pointer
+dir
+

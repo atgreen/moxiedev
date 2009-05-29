@@ -1,0 +1,49 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2009-04-28T04:02:30.693678Z
+146869
+davek
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+xml
+dir
+
+java
+dir
+
+classpath
+dir
+
+gcj
+dir
+
+CORBA
+dir
+
+javax
+dir
+
+awt
+dir
+

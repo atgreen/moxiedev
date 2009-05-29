@@ -1,0 +1,44 @@
+K 9
+svk:merge
+V 315
+23c3ee16-a423-49b3-8738-b114dc1aabb6:/local/gcc-clean:839
+23c3ee16-a423-49b3-8738-b114dc1aabb6:/local/gcc-pta-dev:259
+23c3ee16-a423-49b3-8738-b114dc1aabb6:/local/gcc-trunk:531
+7dca8dba-45c1-47dc-8958-1a7301c5ed47:/local-gcc/md-constraint:113709
+f367781f-d768-471e-ba66-e306e17dff77:/local/gen-rework-20060122:110130
+K 10
+svn:ignore
+V 372
+*-all
+*-co
+*-dirs
+*-done
+*-install-info
+*-src
+*-stamp-*
+*-tagged
+blockit
+cfg-paper.info
+config.status
+configure.aux
+configure.cp
+configure.cps
+configure.dvi
+configure.fn
+configure.fns
+configure.ky
+configure.kys
+configure.log
+configure.pg
+configure.pgs
+configure.toc
+configure.tp
+configure.tps
+configure.vr
+configure.vrs
+dir.info
+Makefile
+lost+found
+update.out
+LAST_UPDATED
+END

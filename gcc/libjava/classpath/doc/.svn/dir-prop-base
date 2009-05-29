@@ -1,0 +1,16 @@
+K 10
+svn:ignore
+V 69
+Makefile
+*.info
+*.aux
+*.cp
+*.dvi
+*.fn
+*.ky
+*.log
+*.pg
+*.toc
+*.tp
+*.vr
+END

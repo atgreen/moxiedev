@@ -1,0 +1,9 @@
+/* Generated from ./iftest.cloog by CLooG 0.15 64 bits in 0.00s. */
+for (i=1;i<=n;i++) {
+  if (i <= 2*m) {
+    S1 ;
+  }
+  if (i >= max(2*m+1,m)) {
+    S1 ;
+  }
+}

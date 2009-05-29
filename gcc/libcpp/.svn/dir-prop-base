@@ -1,0 +1,12 @@
+K 10
+svn:ignore
+V 54
+TAGS
+TAGS.sub
+GPATH
+GRTAGS
+GSYMS
+GTAGS
+autom4te.cache
+
+END

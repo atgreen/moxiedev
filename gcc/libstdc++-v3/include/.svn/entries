@@ -1,0 +1,135 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/include
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2009-05-27T20:32:30.479785Z
+147930
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+c
+dir
+
+Makefile.in
+file
+
+
+
+
+2009-05-16T13:52:27.000000Z
+db9ceedf2382fbab05903508b7b40e70
+2009-05-13T00:17:09.448408Z
+147459
+bje
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+65104
+
+debug
+dir
+
+tr1_impl
+dir
+
+std
+dir
+
+c_std
+dir
+
+parallel
+dir
+
+ext
+dir
+
+bits
+dir
+
+c_global
+dir
+
+precompiled
+dir
+
+tr1
+dir
+
+Makefile.am
+file
+
+
+
+
+2009-05-16T13:52:27.000000Z
+9c8d307894297c08dbd4ae31b54de7db
+2009-05-13T00:17:09.448408Z
+147459
+bje
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+50085
+
+c_compatibility
+dir
+
+backward
+dir
+

@@ -1,0 +1,61 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/26_numerics
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2009-05-15T10:02:38.007537Z
+147567
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+slice
+dir
+
+partial_sum
+dir
+
+random
+dir
+
+valarray
+dir
+
+accumulate
+dir
+
+adjacent_difference
+dir
+
+complex
+dir
+
+headers
+dir
+
+inner_product
+dir
+
+iota
+dir
+
+slice_array
+dir
+

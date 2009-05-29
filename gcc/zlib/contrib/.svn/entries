@@ -1,0 +1,122 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/zlib/contrib
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2005-09-12T17:42:53.000000Z
+104184
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+minizip
+dir
+
+iostream
+dir
+
+asm586
+dir
+
+asm686
+dir
+
+ada
+dir
+
+infback9
+dir
+
+README.contrib
+file
+
+
+
+
+2009-04-24T17:50:45.000000Z
+249561260ad9fb1372265976e2124a54
+2005-09-12T17:42:53.000000Z
+104184
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2700
+
+vstudio
+dir
+
+masmx64
+dir
+
+inflate86
+dir
+
+puff
+dir
+
+testzlib
+dir
+
+masm686
+dir
+
+masmx86
+dir
+
+pascal
+dir
+
+iostream2
+dir
+
+delphi
+dir
+
+blast
+dir
+
+iostream3
+dir
+
+dotzlib
+dir
+
+untgz
+dir
+

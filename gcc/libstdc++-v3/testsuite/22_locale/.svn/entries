@@ -1,0 +1,97 @@
+10
+
+dir
+147952
+svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale
+svn://gcc.gnu.org/svn/gcc
+
+
+
+2009-05-19T18:20:47.044835Z
+147714
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+ctype_byname
+dir
+
+money_put
+dir
+
+codecvt_byname
+dir
+
+facet
+dir
+
+collate
+dir
+
+ctype
+dir
+
+time_put
+dir
+
+money_get
+dir
+
+num_put
+dir
+
+codecvt
+dir
+
+moneypunct_byname
+dir
+
+time_get
+dir
+
+num_get
+dir
+
+locale
+dir
+
+moneypunct
+dir
+
+messages_byname
+dir
+
+numpunct_byname
+dir
+
+messages
+dir
+
+numpunct
+dir
+
+headers
+dir
+
+global_templates
+dir
+
+ctype_base
+dir
+
+collate_byname
+dir
+

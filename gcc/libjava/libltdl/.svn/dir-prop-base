@@ -1,0 +1,15 @@
+K 10
+svn:ignore
+V 96
+.deps
+.libs
+Makefile
+config.status
+config.log
+conftest*
+libtool
+*.lo
+*.la
+stamp-h
+autom4te.cache
+END

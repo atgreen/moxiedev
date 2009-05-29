@@ -1,0 +1,11 @@
+K 10
+svn:ignore
+V 38
+*.o
+*.a
+*.lo
+*.la
+.libs
+.deps
+Makefile
+END

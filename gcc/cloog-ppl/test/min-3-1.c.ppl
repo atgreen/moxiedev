@@ -1,0 +1,6 @@
+/* Generated from ./min-3-1.cloog by CLooG 0.15 64 bits in 0.00s. */
+for (i=0;i<=min(M,10);i++) {
+  for (j=0;j<=min(M,10);j++) {
+    S1 ;
+  }
+}

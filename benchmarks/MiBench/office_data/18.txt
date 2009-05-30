@@ -1,0 +1,608 @@
+
+
+
+
+    
+
+Business Development and Technology Transfer Department
+
+LIST OF TECHNOLOGIES AVAILABLE FOR LICENSING
+
+thematic filing
+
+Last updated: 21 April, 2006
+
+ 
+
+Allergy Genomics Therapeutics
+Anopheles 
+Bacterial 
+Biofilm 
+Cancer 
+Cardiovascular, Hematology, Thrombosis 
+Central nervous system 
+Fungi 
+Hepatitis 
+HIV 
+Inflammation 
+Compounds Library 
+Malaria 
+Pain 
+Parasitology 
+Tuberculosis 
+Vaccines 
+Viral 
+ 
+Agribusiness
+ HIV 
+Agrochemical Hygiene 
+Array Immunotherapy 
+Biochemistry Inflammation 
+BioInformatics Neurobiology 
+Biological material / Life sciences Processes 
+Cancer Proteomics 
+Diagnostics Vaccines 
+Environment Veterinary medecine  
+Gene Therapy   
+
+ 
+
+Allergy 
+D.I. n° 
+ Inventor 
+ Title  
+01.77 Salah MECHERI A humanized mast cell system for the detection of functional human IgE : use for the detection of anaphylactogenic and anti-anaphylactogenic substances (biological material) 
+98.44 Ulrich BLANK A humanized mast cell system fixing IgE 
+ 
+Agribusiness 
+D.I. n° 
+ Inventor 
+ Title  
+00.44 Bernard DUJON Microsatellite typing kit for the identification of yeast strains: food testing and human diagnostic applications  
+00.28 Philippe GLASER Listeria monocytogenes genome: therapeutic and diagnostic applications  
+96.53  Robert LONGIN MultiMicroFermentors  
+96.07 Patrick GRIMONT Probes for 16 S RNA : detection of E. Coli or Shigella  
+ 
+Agrochemicals 
+D.I. n° 
+ Inventor 
+ Title  
+00.01 Franck KUNST Photorhabdus luminescens genome (TT01 strain)  
+96.53  Robert LONGIN MultiMicroFermentors  
+ 
+Array 
+D.I. n° 
+ Inventor 
+ Title  
+00.45 Bernard DUJON  Specific primers from the Saccharomyces cerevisiae genome for the design of microarrays  
+97.44 Stewart COLE Genomic analysis method for the detection and identification of mycobacteria thode  
+ 
+Biochemistry 
+D.I. n° 
+ Inventor 
+ Title  
+01.58 Liliane ASSAIRI Use of recombinant NAD kinase from bacillus subtilis and Neisseria meningitidis for the synthesis of NADP 
+00.31/98.20 Philippe MARLIERE In vivo production of proteins chemically diversified by incorporation of non-conventional amino acids: useful in vaccines, therapy, diagnosis and biocynthesis  
+00.29 Michel VERON In vivo and in vitro synthesis of nucleoside triphosphate analogs using mutant nucleoside diphosphate kinase (NDPK)  
+ 
+BioInformatics 
+D.I. n° 
+ Inventor 
+ Title  
+04.31 Didier MAZEL Modulating mutational frequency to optimize protein evolution 
+02.48 Alexis COLLETTE
+ ISEApeaks :a strategy for global and statistical immune repertoire analysis. Use of the ISEApeaks software program as a tool in disease diagnosis and prognosis  
+02.03 Farid CHETOUANI  DiffTool: bulding, visualizing and querying protein clusters 
+01.45 Farid CHETOUANI  Find Target: a software tool for subtractive genome analysis  
+01.43 Lionel FRANGEUL GMP-Tool-Box: a software package for bacterial genome sequencing projects from shotgun follow-up to annotation 
+ 
+00.54 Edouard YERAMIAN Computational method for enhanced detection of genes and coding regions within long genomic sequences  
+99.92 Adrien SIX A new software package to contribute to a comprehensive automation of immune repertoire analysis 
+96.12 Patrick GRIMONT Taxotron software for the automatic identification of bacteria  
+ 
+Biological Material / Life sciences 
+D.I. n° 
+ Inventeur 
+ Title  
+04.97/04.06/98.03 Philippe BRULET Use of the CA2+ reporter GFP-aequorin for probing infection and physiology 
+04.93 Ralf ALTMEYER Purified native trimers of SARS coC Spike (S) protein as vaccine against SARS 
+04.90-02.91 Annette MARTIN Chimeric GB virus B (GBV-B) : use in the development of treatments targeting Hepatitis C virus infection 
+04.31 Didier MAZEL Modulating mutational frequency to optimize protein evolution 
+04.17 Armelle PHALIPON Production and characterization of murine monoclonal antibodies specific for lipopolysaccharide and protecting against Shigella flexneri serotype 2a for (i) development of a diagnostic kit and (ii) characterization of known oligoside epitopes that could serve as the basis of a chemically-defined synthetic vaccine.  
+04.14 Frédéric TANGY  Infectious flavivirus pseudo-particles containing functional prM-E envelop proteins 
+04.12 Philippe DESPRES  Use of infectious retroviral pseudoparticles enveloped by flavivirus glycoproteins prM andt E for viral diagnostics and prophylaxis 
+03.91 Vincent DEUBEL Novel golden Hamster model for henipavirus (Nipah-Hendra) infection.  
+03.64 Lena EDELMAN Anti-GPIV monoclonal antibodies  
+03.27 Pierre CHARNEAU Non transformed cultured lines of embryonic mouse hepatic stem cells able to repopulate the mouse liver and ifferentiate into hepatocytes and bile ducts in vivo 
+03.16 Philippe DESPRES Residue M-36 present in the proapoptotic sequence ApoptoM (residues M-32 to M-40) is a molecular determinant of flavivirus attenuation  
+03.09 Pénélope MAVROMARA Discovery of a novel HCV core+1 proteine as well as a novel translation mechanism 
+02.118 Mireille MONTEBEYRIE Monoclonal antibodies directed against the c-terminal end of the protein P2 ribosomal of Trypanosoma cruzi 
+02.104 Nancy GUILLEN Entamoeba histolytica strain overexpressing the catalytic domain of protein kinase EhPAK 
+02.100 Faridabano NATO  Production of specific monoclonal antibodies against subunits A and B of cholera toxin (Biological Material) 
+02.85 Jean-Pierre CHANGEUX CGRP in the treatment of nicotine withdrawal syndrome : transgenic mouse model 
+01.13/02.57/02.84 Alphonse GARCIA  Novel targeting peptides for intracellular delivery of compounds: research and therapeutic applications 
+02.60 Farida NATO  Rapid diagnosis of cholera based on immunochromatography
+ 
+02.59 Anne BLANCHARD Development and characterization of two monoclonal antibodies directed against the 15 C-terminal amino acids of aquaporin-2 and their evaluation using histologic sections of kidney from various species (human, rat, mouse) 
+02.08 Ara HOVANESSIAN Hybridoma cell lines : 71/10 against the proteine kinase PKR ; 56/3 against the 2-5A synthetase 69 kDa ; 25/11 against the 2-5A synthetase 100 lDa 
+01.77 Salah MECHERI A humanized mast cell system for the detection of functional human IgE : use for the detection of anaphylactogenic and anti-anaphylactogenic substances 
+01.32 Isabelle SAINT-GIRON Restriction-modification system in Leptospira biflexa clone patoc 1 (biological material) 
+01.20 James DI SANTO  Novel strain of alymphoid mice for xenotransplantation  
+00.59 Claude LECLERC B. pertussis adenylate cyclase-activating peptide receptor and its use in screening for immunologically/pharmacologically active molecules  
+00.29 Michel VERON In vivo and in vitro synthesis of nucleoside triphosphate analogs using mutant nucleoside diphosphate kinase (NDPK)  
+00.05 Christophe D'ENFERT cDNA library from Aspergillus nidulans for cloning of genes by functional complementation in S. cerevisiae yeast 
+98.44 Anna WEYER A humanized mast cell system fixing human IgE: Use for screening of immunological and chemical reagents endowed with anaphylactogenic or anti-degranulating properties  
+98.40 Jean-Marc CAVAILLON Hybridoma of anti-IL1 receptor antagonist  
+98.17 Fernando ARENZANA-SEISDEDOS Monoclonal antibodies anti-SDF1 hybridomas  
+98.10  Claude PARSOT Screening method for inhibitors and activators of type III secretion system in gram negative bacteria  
+94.52/ 98.01 Jean-Pierre CHANGEUX Transgenic mice that are defective for the alpha 4 subunit nicotinic neuronal receptor. Animal model for screening.  
+92.22  Bernard DUJON I-Sce1 enzyme and its applications  
+ 
+Cancer 
+D.I. n° 
+ Inventeur 
+ Titre  
+03.88 Fabrice AGOU Functional characterization of minimal oligomerization domain of NEMO  
+03.83 Marie-Annick BUENDIA Transgenics mice representing animal models of liver carcigenesis 
+03.68 Hervé BOURHY Identification of a peptide motif of lyssavirus matrix protein involved in the induction of apoptosis : therapeutic applications  
+03.53 Claude LECLERC Synthetic glycopeptide vaccines : applications in anti-tumoral immunotherapy 
+03.33 Dana PHILPOTT  Sensing of a unique muropeptide gram-negative bacterial peptidoglycan (PGN) by Nod1: drug screening, diagnostic and therapeutic applications 
+03.32 Yu-Chun LONE Generation of mice that are doubly transgenic for HLA-A21 HLA-DR1 and doubly knocked-out for H-2 class 1 et Il (b2mO r Ilabo rKO) for the preclinical development of new vaccines 
+03.29 Fabrice AGOU
+ Novel peptides inhibiting the release of nuclear factor-kappaB (NF-kB): anti-inflammatory and anticancer applications 
+03.13 Jean-Michel THIBERGE Simplified method for molecular typing of Helicobacter pylori (H. pylori) isolates 
+03.05 Philippe DESPRES Dengue virus residues M32 to M40 contain a proapoptotic sequence designated ApoptoM 
+02.96 Philippe DESPRES Use of M-36 residue as a molecular determinant of flavivirus attenuation
+ 
+01.13/02.57/02.84 Alphonse GARCIA  Novel targeting peptides for intracellular delivery of compounds: research and therapeutic applications 
+02.76/02.84 Alphonse GARCIA  Protein phosphatase 2A (PP2A)-targeting peptides designed for intracellular transfer and anti-apoptotic activity 
+02.70 Eric PRINGAULT  In vitro model system for the study of prevention of dysplasias and adenocarcinomas arising from the intestinal metaplasias of Barrett's syndrome  
+02.57 Alphonse GARCIA Intracellular transfer of protein phosphatase 2A (PP2A)-targeting peptides: novel strategy for the inhibition of tumoral and infectious processes 
+01.64 Alphonse GARCIA Screening for molecular candidates for apoptosis modulation 
+01.62 Alphonse GARCIA Protein Phosphatase 2A-chemokine receptor CXCR4, CC-5 and CD28 binding sites: novel targets for inhibition of HIV infection and tumor development  
+01.57 Monique LAFON Polypeptides inducing immunogenic apoptotic bodies 
+01.07/96.78 Jacques THEZE Peptide p1-30 mimicking some IL-2 effects  
+00.03 Philippe DESPRES Apoptotic sequence  
+96.61/99.62 Claude LECLERC MAG: A new family of optimized synthetic glycopeptidic vaccines with high therapeutic activity 
+96.42/95.33 Claude LECLERC Recombinant parvovirus-like particles for inducing cytotoxic T-cell response: use in antiviral and antitumoral drugs or vaccines  
+ 
+Diagnostics 
+D.I. n° 
+ Inventeur 
+ Titre  
+04.93 Ralf ALTMEYER Purified native trimers of SARS coC Spike (S) protein as vaccine against SARS 
+04.52 Pierre LAFAYE Anti-phosphorylcholine monoclonal antibodies protective against invasive Neisseria meningitidis infection. Diagnostic and therapeutic applications. 
+04.40 Sylvie BAY "Phosphorylcholine-sugar" conjugates and their synthesis : diagnostic and therapeutic applications  
+04.32 Ralf ALTMEYER Optimized genes for increased SARS Co V Spike protein expression 
+04.14 Frédéric TANGY  Infectious flavivirus pseudo-particles containing functional prM-E envelop proteins 
+04.12 Philippe DESPRES  Use of infectious retroviral pseudoparticles enveloped by flavivirus glycoproteins prM andt E for viral diagnostics and prophylaxis 
+03.101 Philippe GLASER Complete sequence of Listeria monocytogenes strain CLIP80459. Use in genomic typing of Listeria monocytogenes and risk assessment 
+03.21/85/91 Vincent DEUBEL Detection of Nipah virus and compositions providing immunoprotection against henipaviruses 
+03.78 Patrick GRIMONT Molecular approach for capsular typing of Klebsiella 
+03.75 Claude LECLERC Recombinant CyaA toxins : diagnostic and immunomonitoring applications  
+03.33 Dana PHILPOTT  Sensing of a unique muropeptide gram-negative bacterial peptidoglycan (PGN) by Nod1: drug screening, diagnostic and therapeutic applications 
+03.13 Jean-Michel THIBERGE Simplified method for molecular typing of Helicobacter pylori (H. pylori) isolates 
+03.09 Pénélope MAVROMARA Discovery of a novel HCV core+1 proteine as well as a novel translation mechanism 
+03.04 Sylvie BAY Phosphorylcholine-glycoconjugates and their synthesis : diagnostic and therapeutic applications
+ 
+02.122 Pascale COSSART  Use of Listeria bile salt hydrolase to develop detection, diagnostic and therapeutic tools 
+02.118 Mireille MONTEBEYRIE Monoclonal antibodies directed against the c-terminal end of the protein P2 ribosomal of Trypanosoma cruzi 
+02.94 Charlotte BEHR  Absolute quantification of cytokine mRNAs 
+02.82 François ROUGEON  HC antibodies and their derivatives obtained through the immunization of camelids against human beta -amyloid peptide: use in the diagnosis and treament of Alzheimer's disease 
+02.60 Farida NATO  Rapid diagnosis of cholera based on immunochromatography
+ 
+02.56 Jean-Marc GHIGO  Identification of an external membrane protein family involved in interbacterial interactions during biofilm formation and conjugative transfer of genes: applications in the development of bacteria-BioR biofilm control procedures  
+02.48 Alexis COLLETTE
+ ISEApeaks :a strategy for global and statistical immune repertoire analysis. Use of the ISEApeaks software program as a tool in disease diagnosis and prognosis  
+02.44 Pierre LAFAYE Monoclonal antibodies directed against calreticulin: diagnostic and intracellular targeting applications  
+02.30 Michèle BOULOY Recombinant antigen for the serological diagnosis of Puumala hantavirus infection 
+02.10 Stewart COLE Specifically deleted tubercular bacillus sequences for the rapid identification of M. tuberculosis and other members of the M. tuberculosis complex 
+01.63 Antoine DANCHIN Partial sequencing and annotation of Penicllium marneffei genome 
+01.47 Brigitte GICQUEL Probes for the identification of M. tuberculosis strains with accrued virulence and capable of housing or leading to the acquisition of antibiotic resistance genes 
+01.41 Christophe d'ENFERT Specific probes of Candida albicans yeast genome 
+01.22 Marie-Louise GOUGEON Novel cytofluorometric method for quantitation and characterization of cell-mediated cytotoxic activity  
+01.17 Philippe DESPRES Molecular determinants specific for West Nile virus clone IS-98-STI allowing identification of cellular genes involved in host response to flaviviral and related viral infections  
+01.05 Penelope MAVROMARA  Compositions and methods for the identification of viral inhibitors of host cell protein synthesis shut-off (UCHI 853)  
+00.75 Suzanne CHANTEAU Simple and rapid diagnosis of human plague  
+00.72 Stewart COLE Identification of novel targets for the diagnosis, prevention and/or treatment of mycobacterial infections  
+00.44 Bernard DUJON Microsatellite typing kit for the identification of yeast strains: food testing and human diagnostic applications  
+00.43 Bernard DUJON Novel nucleotide sequences of Saccharomyces cerevisiae and their use in the detection of hemiascomycetous yeasts  
+00.31/98.20 Philippe MARLIERE In vivo production of proteins chemically diversified by incorporation of non-conventional amino acids: useful in vaccines, therapy, diagnosis and biocynthesis  
+00.28 Philippe GLASER Sequencing of the Listeria monocytogenes genome 
+00.25 Gilles MARCHAL Immunogenic glycopeptides derived from Mycobacterium tuberculosis: diagnostic and vaccine applications  
+00.11 Alain ISRAËL Detection of mutations in Nemo gene: use in diagnosis of familial incontinentia pigmenti 
+00.10 Huseyin FIRAT Hybridomas producing anti-HLA-H antibodies for the diagnosis of human hemachromatosis  
+99.68/69 Hugues BEDOUELLE Novel antibody-based fluorescence biosensor using no additional reagents  
+98.51 Stewart COLE Banque génomique de BCG. Applications vaccinale et diagnostique.  
+98.31 Brigitte GICQUEL New sequences of M. tuberculosis and the identification of associated genes  
+98.30 Jean-Luc GUESDON Molecular diagnostic for prelingual deafness  
+97.49 Philippe METEZEAU Chromosomic laser microdissection: process for cytogenetics abnormalities detection 
+97.44 Stewart COLE Genomic analysis method for the detection and identification of mycobacteria  
+96.07 Patrick GRIMONT Probes for 16 S RNA : detection of E. Coli or Shigella  
+91.13 Gilles MARCHAL Mycobacterium Proteins and their applications (naxi test)  
+ 
+Environment 
+D.I. n° 
+ Inventor 
+ Title  
+01.01 Pierre BEGUIN Sequence of Photorhabdus luminescens genome (TT01 strain)  
+ 
+Gene Therapy 
+D.I. n° 
+ Inventor 
+ Title  
+02.57
+ Alphonse GARCIA  Novel targeting peptides for intracellular delivery of compounds: research and therapeutic applications
+ 
+96.69 Pierre CHARNEAU Central DNA Flap Sequence for new Lentiviral Vectors  
+96.02 Denise PAULIN Promotor of the SM22 gene and its applications for cardiovascular gene therapy  
+94.32 Denise PAULIN Desmine Promotor and its applications for gene therapy  
+ 
+Genomics 
+D.I. n° 
+ Inventor 
+ Title  
+04.31 Didier MAZEL Modulating mutational frequency to optimize protein evolution 
+01.63 Antoine DANCHIN Partial sequencing and annotation of Penicllium marneffei genome 
+98.30 Jean-Luc GUESDON Molecular diagnostic for prelingual deafness 
+97.44 Stewart COLE Genomic analysis method for the detection and identification of mycobacteria  
+ 
+HIV 
+D.I. n° 
+ Inventor 
+ Title  
+02.111 Ara HOVANESSIAN A universal B-cell epitope vaccine against HIV infection  
+01.68 Fernando ARENZANA-SEISDEDOS Human langerin is the principal receptor expressed by Langerhans cells permitting HIV envelope glycoprotein binding 
+01.62 Alphonse GARCIA Protein Phosphatase 2A-chemokine receptor CXCR4, CC-5 and CD28 binding sites: novel targets for inhibition of HIV infection and tumor development  
+01.55  Pierre LANGLADE-DEMOYEN News HIV1 epitopics peptides 
+00.18 Simon WAIN-HOBSON Live recombinant HIV vaccine  
+99.86 Olivier SCHWARTZ A screening method to identify new HIV inhibitors  
+99.38  Ralf ALTMEYER A new method for rapid screening of drugs inhibiting HIV entry  
+ 
+Hygiene 
+D.I. n° 
+ Inventor 
+ Title  
+03.35 Jean-Marc GHIGO Culture method for the study of Biofilms in continuous flux. Use in the study of bacteria-surface interactions  
+96.53  Robert LONGIN MultiMicroFermentors  
+ 
+Immunotherapy 
+D.I. n° 
+ Inventor 
+ Title  
+02.46 Pierre DRUILHE Anti-MSP3 recombinant antibodies 
+02.30 Michèle BOULOY Recombinant antigen for the serological diagnosis of Puumala hantavirus infection 
+01.49 Salah MECHERI Determination of vaccine protective potential using mastocyte-activating salivary antigens from mosquitos 
+96.61/99.62 Claude LECLERC MAG: A new family of optimized synthetic glycopeptidic vaccines with high therapeutic activity 
+ 
+Inflammation 
+D.I. n° 
+ Inventor 
+ Title  
+04.111 Stephen GIRARDIN  Screening for Nod-modifying drugs to treat Crohn's disease 
+03.88 Fabrice AGOU Functional characterization of minimal oligomerization domain of NEMO  
+03.33 Dana PHILPOTT  Sensing of a unique muropeptide gram-negative bacterial peptidoglycan (PGN) by Nod1: drug screening, diagnostic and therapeutic applications 
+03.29 Fabrice AGOU
+ Novel peptides inhibiting the release of nuclear factor-kappaB (NF-kB): anti-inflammatory and anticancer applications 
+03.17 Pedro ALZARI  Immunotherapy for neuroinflammatory diseases involving downregulation of neurotrophin-mediated apoptosis 
+02.86 Daniel SCOTT-ALGARA  Novel therapy for the treatment of atherosclerosis and inflammatory processes induced by pathogenic agents 
+ 
+Neurobiology 
+D.I. n° 
+ Inventor 
+ Title  
+04.97/04.06/98.03 Philippe BRULET Use of the CA2+ reporter GFP-aequorin for probing infection and physiology 
+03.42 Benoit ROBERT Msx1 and Msx2 are required for the integrity and functionality of the dorsal roof plate of the neural tube, maintaining a non neuronal identity of the roof plate cells. Use in screening and identification of genes involved in differentiation, proliferation and maintainance of glial lineage.  
+03.17 Pedro ALZARI  Immunotherapy for neuroinflammatory diseases involving downregulation of neurotrophin-mediated apoptosis 
+02.103 Thomas BOURGERON Mutation of neuroligin HNL3 gene in autism and the identification of the sequence of MNL4, the gene ortholog of HNL4X in mouse  
+02.97 Daniel GONZALES-DUNIA  2'Fluoro-2'-deoxycytidine inhibits Borna Disease Virus Replication and Spread 
+02.85 Jean-Pierre CHANGEUX CGRP in the treatment of nicotine withdrawal syndrome : transgenic mouse model 
+02.82 François ROUGEON  HC antibodies and their derivatives obtained through the immunization of camelids against human beta -amyloid peptide: use in the diagnosis and treament of Alzheimer's disease 
+02.58 Jean-Michel HEARD  Treatment of central nervous system lesions associated with lysosomal storage disease by intracerebral injection of AAV vectors 
+02.18 Roberto BRUZZONE Members of the Pmexin family are expressed in cortical neurons and form functional ionic channels. Possible implications of members of this multigene family in epilepsy, schizophrenia and higher cognitive functions 
+01.80 Jean-Pierre CHANGEUX  Transgenic mice with mutations of the beta 2 subunit of the nicotinic neuronal receptor: use the screnning of molecules that modulate nicotine withdrawal symptoms 
+01.71 Jean-Claude MAZIE Mouse monoclonal antibody C11 58,2 directed against Tetanus neurotoxin-Insensitive Vesicle Associated Membrane Protein (TI-VAMP or SybL1p)  
+01.69 Mannich BUENDIA Beta-catenin and FHL2 interactions in Alzheimer disease: therapeutic applications  
+01.61 Thomas BOURGERON A frameshift mutation of HNL4, a primate specific X-linked neuroligin, is associated with autistic disorder and Asperger 
+00.49 Jean-Pierre CHANGEUX Transgenic mice with mutations of the beta2 subunit of the neuronal nicotinic acetylcholine receptor (nAChR)  
+00.48 Jean-Pierre CHANGEUX Knockout mice lacking the alpha6 subunit of the neuronal nicotinic acetylcholine receptor (nAChR) and their use in drug screening  
+00.21 Hoang-Oanh NGHIEM Purification of histidine kinase proteins and their use in phosphorylation of proteins involved in allergy  
+99.36/85  François ROUGEON Bioactive peptides derived from submandibular rat 1 protein (SMR1) and its derivatives: therapeutic and diagnostic applications.  
+98.01/94.52  Jean-Pierre CHANGEUX 
+ Transgenic mice that are defective for the alpha 4 subunit nicotinic neuronal receptor. Animal model for screening.  
+ 
+Processes 
+D.I. n° 
+ Inventor 
+ Title  
+04.111 Stephen GIRARDIN  Screening for Nod-modifying drugs to treat Crohn's disease 
+04.32 Ralf ALTMEYER Optimized genes for increased SARS Co V Spike protein expression 
+04.31 Didier MAZEL Modulating mutational frequency to optimize protein evolution 
+03.76 Armand BERNEMAN Screening procedure for potential inhibitors of proline racemase 
+02.56 Jean-Marc GHIGO  Identification of an external membrane protein family involved in interbacterial interactions during biofilm formation and conjugative transfer of genes: applications in the development of bacteria-BioR biofilm control procedures  
+97.49 Philippe METEZEAU Chromosomic laser microdissection: process for cytogenetics abnormalities detection 
+96.53  Robert LONGIN MultiMicroFermentors  
+91.43 François ROUGEON A new antibodies and proteins diversity process  
+ 
+Proteomics 
+D.I. n° 
+ Inventor 
+ Title  
+04.31 Didier MAZEL Modulating mutational frequency to optimize protein evolution 
+00.31/98.20 Philippe MARLIERE In vivo production of proteins chemically diversified by incorporation of non-conventional amino acids: useful in vaccines, therapy, diagnosis and biocynthesis  
+99.72 Yves JACOB Constrained peptides libraries for use in a combinatorial approach to selecting molecules of pharmacological interest 
+96.53  Robert LONGIN MultiMicroFermentors  
+ 
+Therapeutics anopheles 
+D.I. n° 
+ Inventor 
+ Title  
+ 
+Therapeutics bacterial 
+D.I. n° 
+ Inventor 
+ Title  
+04.111 Stephen GIRARDIN  Screening for Nod-modifying drugs to treat Crohn's disease 
+04.84 Richard FERRORO Interactions of Helicobacter pylori with Nod1 : application to the identification of anti-inflammatory molecules 
+04.52 Pierre LAFAYE Anti-phosphorylcholine monoclonal antibodies protective against invasive Neisseria meningitidis infection. Diagnostic and therapeutic applications. 
+04.40 Sylvie BAY "Phosphorylcholine-sugar" conjugates and their synthesis : diagnostic and therapeutic applications  
+04.27  Anthony PUGSLEY A novel antimicrobial target specific to Gram-negative bacteria 
+03.33 Dana PHILPOTT  Sensing of a unique muropeptide gram-negative bacterial peptidoglycan (PGN) by Nod1: drug screening, diagnostic and therapeutic applications 
+03.13 Jean-Michel THIBERGE Simplified method for molecular typing of Helicobacter pylori (H. pylori) isolates 
+02.62 Elisabeth CARNIEL Identification of genes specifically expressed in Y pestis and Y pseudotuberculosis
+ 
+02.28 Stewart COLE Novel antigens for the diagnosis, prevention and treatment of mycobacteriosis 
+01.82 Antoine DANCHIN Identification of pharmacologic targets during methylthioribose (MTR) recycling and events involved in post-traduction modification of lysine residues by carbamylation 
+01.63 Antoine DANCHIN Partial sequencing and annotation of Penicllium marneffei genome 
+01.53 Maurice HOFNUNG "Big Blue" transgenic mice as animal models of chronic Helicobacter pylori infection and their use in the evaluation of the effects of therapeutic compositions on gastric mutagenesis  
+00.72 Stewart COLE Identification of novel targets for the diagnosis, prevention and/or treatment of mycobacterial infections  
+00.28 Philippe GLASER Sequencing of the Listeria monocytogenes genome 
+00.26 Agnès LABIGNE  Genomic random library of H. pylori  
+00.01 Franck KUNST Sequence of Photorhabdus luminescens genome (TT01 strain)  
+98.08 Agnès LABIGNE UreI protein: a novel target for Helicobacter pylori eradication therapy  
+ 
+Therapeutics biofilm 
+D.I. n° 
+ Inventor 
+ Title  
+02.56 Jean-Marc GHIGO Identification of a family of external membrane proteins involved in interbacterial interactions during biofilm formation and conjugative gene transfer: use in the development of bacterial biofilm control strategies 
+ 
+Therapeutics cancer 
+D.I. n° 
+ Inventor 
+ Title  
+04.02 François LEMONNIER Evaluation of the protective capacity of cellular immune response completely restricted to human HLA alleles induced in vivo in the absence of murine response competition in mice doubly transgenic for HLA-A2/HLA-DR1 and double knockout for H-2 class 1&II (b2m°/°/lab°/°KO) against viral challenge. Vaccine and immunology applications for preclinical development of new vaccines.
+ 
+03.83 Marie-Annick BUENDIA Transgenics mice representing animal models of liver carcigenesis 
+03.68 Hervé BOURHY Identification of a peptide motif of lyssavirus matrix protein involved in the induction of apoptosis : therapeutic applications  
+03.29 Fabrice AGOU
+ Novel peptides inhibiting the release of nuclear factor-kappaB (NF-kB): anti-inflammatory and anticancer applications 
+02.76/02.84 Alphonse GARCIA  Protein phosphatase 2A (PP2A)-targeting peptides designed for intracellular transfer 
+and anti-apoptotic activity 
+02.57 Alphonse GARCIA Intracellular transfer of protein phosphatase 2A (PP2A)-targeting peptides: novel strategy for the inhibition of tumoral and infectious processes 
+02.29 Alphonse GARCIA Novel consensus motif associated with PP1 alpha catalytic subunit binding with specific Bcl-2 proteins for the prediction of protein interaction 
+01.64 Alphonse GARCIA Screening for molecular candidates for apoptosis modulation 
+01.62 Alphonse GARCIA Protein Phosphatase 2A-chemokine receptor CXCR4, CC-5 and CD28 binding sites: novel targets for inhibition of HIV infection and tumor development  
+01.57 Monique LAFON Polypeptides inducing immunogenic apoptotic bodies 
+96.61/99.62 Claude LECLERC MAG: A new family of optimized synthetic glycopeptidic vaccines with high therapeutic activity 
+96.42/95.33 Claude LECLERC Recombinant parvovirus-like particles for inducing cytotoxic T-cell response: use in antiviral and antitumoral drugs or vaccines  
+ 
+Therapeutics cardiovascular, hematology, thrombosis 
+D.I. n° 
+ Inventeur 
+ Titre  
+03.12 Jean-François POULIN DNA construct for assessing thymic function activity and therapeutical uses thereof 
+02.86 Daniel SCOTT-ALGARA  Novel therapy for the treatment of atherosclerosis and inflammatory processes induced by pathogenic agents 
+02.84 Alphonse GARCIA  Novel targeting peptides for intracellular delivery of compounds: research and therapeutic applications
+ 
+96.02 Denise PAULIN Promotor of the SM22 gene and its applications for gene therapy 
+ 
+Therapeutics central nervous system 
+D.I. n° 
+ Inventor 
+ Title  
+02.82 François ROUGEON  HC antibodies and their derivatives obtained through the immunization of camelids against human beta -amyloid peptide: use in the diagnosis and treament of Alzheimer's disease 
+02.44 Pierre LAFAYE Monoclonal antibodies directed against calreticulin: diagnostic and intracellular targeting applications  
+02.18 Roberto BRUZZONE Members of the Pmexin family are expressed in cortical neurons and form functional ionic channels. Possible implications of members of this multigene family in epilepsy, schizophrenia and higher cognitive functions 
+01.69 Mannich BUENDIA Beta-catenin and FHL2 interactions in Alzheimer disease: therapeutic applications  
+01.61 Thomas BOURGERON A frameshift mutation of HNL4, a primate specific X-linked neuroligin, is associated with autistic disorder and Asperger 
+99.28/93
+ François ROUGEON Bioactive peptides derived from submandibular rat 1 protein (SMR1) and its derivatives: therapeutic and diagnostic applications 
+ 
+Therapeutics compounds library
+ 
+D.I. n° 
+ Inventor 
+ Title  
+99.72 Yves JACOB Constrained peptides libraries for use in a combinatorial approach to selecting molecules of pharmacological interest 
+ 
+Therapeutics fungi 
+D.I. n° 
+ Inventor 
+ Title  
+03.94 Christophe D'ENFERT Genes involved in the formation of biofilms by pathogenic yeast Candida albicans 
+01.56 Christophe d'ENFERT Method for the identification of genes required for the growth of filamentous Aspergillus fumigatus fungus: use in screening for new antifungal molecules  
+01.41 Christophe d'ENFERT Specific probes of Candida albicans yeast genome 
+96.68 Christophe d'ENFERT Strains of pyrG. Aspergillus fumigatus and their application in the screening of antifungals  
+ 
+Therapeutics hepatitis 
+D.I. n° 
+ Inventor 
+ Title  
+04.90-02.91 Annette MARTIN Chimeric GB virus B (GBV-B) : use in the development of treatments targeting Hepatitis C virus infection 
+04.64 Agata BUDKOWSKA Cell entry of hepatitis C virus via human scavenger receptor hSR-BI. Screening for candidate therapeutic molecules capable of inhibiting HCV/SR-BI. 
+04.29 Yves RIVIERES T-cell immunogenicity of protein core+ 1 in chronic carriers of hepatitis C virus. Therapeutic and/or vaccine applications. 
+03.09 Pénélope MAVROMARA Discovery of a novel HCV core+1 proteine as well as a novel translation mechanism 
+03.07 Ralf ALTMEYER Interaction of HCV glycoproteins with dendritic cell and liver endothelial call lectins DC-SIGN and L-SIGN 
+02.83 Catherine TRANSY Molecular tools for the selection of human primary hepatocytes infected with hepatitis C virus (HCV): use in the development of novel antiviral molecules and in the study of molecular interactions between HCV and host cell 
+ 
+Therapeutics HIV
+ 
+D.I. n° 
+ Inventor 
+ Title  
+04.47 Frédéric TANGY Anti-HIV-1 activity of dermaseptin S4, a broad spectrum antimicrobial: potential use as a local microbicide for the prevention of mucosal HIV transmission during sexual intercourse  
+01.68 Fernando ARENZANA-SEISDEDOS Human langerin is the principal receptor expressed by Langerhans cells permitting HIV envelope glycoprotein binding 
+99.86 Olivier SCHWARTZ A screening method to identify new HIV inhibitors  
+99.38  Ralf ALTMEYER A new method for rapid screening of drugs inhibiting HIV entry  
+ 
+Therapeutics inflammation
+ 
+D.I. n° 
+ Inventor 
+ Title  
+04.111 Stephen GIRARDIN  Screening for Nod-modifying drugs to treat Crohn's disease 
+03.33 Dana PHILPOTT  Sensing of a unique muropeptide gram-negative bacterial peptidoglycan (PGN) by Nod1: drug screening, diagnostic and therapeutic applications 
+03.29 Fabrice AGOU
+ Novel peptides inhibiting the release of nuclear factor-kappaB (NF-kB): anti-inflammatory and anticancer applications 
+02.86 Daniel SCOTT-ALGARA  Novel therapy for the treatment of atherosclerosis and inflammatory processes induced by pathogenic agents 
+ 
+Therapeutics malaria
+ 
+D.I. n° 
+ Inventor 
+ Title  
+00.19 Jüng GYSIN Novel proteins involved in cytoadhesion of Plasmodium falciparum-infected erythrocytes: diagnostic and vaccine applications 
+ 
+Therapeutics parasitology 
+D.I. n° 
+ Inventor 
+ Title  
+03.76 Armand BERNEMAN Screening procedure for potential inhibitors of proline racemase 
+02.127 Pedro ALZARI Crystallographic structure of Trypanosoma cruzi proline racemase 
+02.118 Mireille MONTEBEYRIE Monoclonal antibodies directed against the c-terminal end of the protein P2 ribosomal of Trypanosoma cruzi 
+02.04  Michel VERON Novel Plasmodium falciparum antigen DG 571 for the induction of protection against challenge infection with Plasmodium sporozoite  
+00.19 Jüng GYSIN Novel proteins involved in cytoadhesion of Plasmodium falciparum-infected erythrocytes: diagnostic and vaccine applications 
+00.13 Isabelle TARDIEUX Therapeutic use of specific domains of toxofilin, a novel actin-binding protein from Toxoplasma gondii  
+00.80 Hechmi LOUZIR Vaccine against leishmaniasis using virulence antigen P55 gene 
+ 
+99.83/28 Paola MINOPRIO A B-Cell mitogen : A novel approach for vaccination and/or therapy ; the exemple of Trypanosoma cruzi  
+ 
+Therapeutics pain 
+D.I. n° 
+ Inventor 
+ Title  
+99.36/85  François ROUGEON Bioactive peptides derived from submandibular rat 1 protein (SMR1) and its derivatives: therapeutic and diagnostic applications.  
+ 
+Therapeutics tuberculosis 
+D.I. n° 
+ Inventor 
+ Title  
+02.28 Stewart COLE Novel antigens for the diagnosis, prevention and treatment of mycobacteriosis 
+02.26 Brigitte GICQUEL Recombinant Mycobacterium bovis BCG (rBCG) strains expressing chicken ovalbumin (ova) gene included within replicating or integrating vectors 
+02.22 Olivier SCHWARTZ Role of DC-SIGN/DC209 in Mycobacterium tuberculosis attachment and entry into human dendritic cells and role of lipoarabinomannan (LAM) as a DC-SIGN ligand 
+01.24 Hélène MUNIER-LEHMANN M. tuberculosis thymidylate kinase (TMPK) inhibitors: use in the development of new antitubercular drugs  
+00.72 Stewart COLE Identification of novel targets for the diagnosis, prevention and/or treatment of mycobacterial infections  
+98.21 Brigitte GICQUEL Procedure for the screening of antibiotic molecules active against Mycobacteria  
+ 
+Therapeutics vaccines 
+D.I. n° 
+ Inventor 
+ Title  
+03.04 Sylvie BAY Phosphorylcholine-glycoconjugates and their synthesis : diagnostic and therapeutic applications
+ 
+00.69 Alice DAUTRY-VARSAT Methods for prevention or treatment of Chlamydia infection
+
+ 
+00.59 Claude LECLERC B. pertussis adenylate cyclase-activating peptide receptor and its use in screening for immunologically/pharmacologically active molecules  
+ 
+Therapeutics viral 
+D.I. n° 
+ Inventor 
+ Title  
+04.87 Françoise COLBERE-GARAPIN Viral genome oligoribonucleotide homologs for treatment of persistant viral infections  
+04.32 Ralf ALTMEYER Optimized genes for increased SARS Co V Spike protein expression 
+04.14 Frédéric TANGY  Infectious flavivirus pseudo-particles containing functional prM-E envelop proteins 
+04.12 Philippe DESPRES  Use of infectious retroviral pseudoparticles enveloped by flavivirus glycoproteins prM andt E for viral diagnostics and prophylaxis 
+03.68 Hervé BOURHY Identification of a peptide motif of lyssavirus matrix protein involved in the induction of apoptosis : therapeutic applications  
+03.60 Nicole TANDEAU DE MARSAC Use of microvirins against viral infection 
+03.21/85/91 Vincent DEUBEL Detection of Nipah virus and compositions providing immunoprotection against henipaviruses 
+03.09 Pénélope MAVROMARA Discovery of a novel HCV core+1 proteine as well as a novel translation mechanism 
+02.96 Philippe DESPRES Use of M-36 residue as a molecular determinant of flavivirus attenuation 
+02.77 Fernando ARENZANA-SEISDEDOS  Inhibition of Dendritic Cell-Specific ICAM Norintegrin (DC-SIGN) interaction with cytomegalovirus: novel strategy for the control of viral propagation 
+02.63 Florence COLBERE-GARAPIN Transfer of viral genome and/or viral cell receptor oligoribonucleotide homologs for the inhibition of picornavirus expression 
+02.45 Philippe DESPRES Induction of protective immune response involving flavivirus membrane M protein ectodomain exposure to plasma membrane 
+02.44 Pierre LAFAYE Monoclonal antibodies directed against calreticulin: diagnostic and intracellular targeting applications  
+02.42 Fernando ARENZANA-SEIDEDOS Novel dendritic-cell-specific ICAM3-grabbing non-integrin (DC-SIGN) inhibitors used for the prevention and treatment of dengue and other viral infections
+ 
+01.68 Fernando ARENZANA-SEISDEDOS Human langerin is the principal receptor expressed by Langerhans cells permitting HIV envelope glycoprotein binding 
+01.52 François LEMONIER Use of RNA for the induction of antiviral response 
+96.31 Jean-Louis VIRELIZIER Human SDF chemokine and its application as a HIV therapeutic  
+ 
+Vaccines 
+D.I. n° 
+ Inventor 
+ Title  
+04.93 Ralf ALTMEYER Purified native trimers of SARS coC Spike (S) protein as vaccine against SARS 
+04.40 Sylvie BAY "Phosphorylcholine-sugar" conjugates and their synthesis : diagnostic and therapeutic applications  
+04.29 Yves RIVIERES T-cell immunogenicity of protein core+ 1 in chronic carriers of hepatitis C virus. Therapeutic and/or vaccine applications. 
+04.12 Philippe DESPRES  Use of infectious retroviral pseudoparticles enveloped by flavivirus glycoproteins prM andt E for viral diagnostics and prophylaxis 
+04.02 François LEMONNIER Evaluation of the protective capacity of cellular immune response completely restricted to human HLA alleles induced in vivo in the absence of murine response competition in mice doubly transgenic for HLA-A2/HLA-DR1 and double knockout for H-2 class 1&II (b2m°/°/lab°/°KO) against viral challenge. Vaccine and immunology applications for preclinical development of new vaccines.
+ 
+03.53 Claude LECLERC Synthetic glycopeptide vaccines : applications in anti-tumoral immunotherapy 
+03.44 Pierre DRUILHE Gene family cluster encoding proteins targeted by antibodies effective at killing Plasmodium falciparum erythrocytic stages 
+03.43 Claude LECLERC Identification of the Bordetella pertussis adenylate cyclase domain that interacts with its receptor the integrin (CD11b/CD18).  
+03.21/03.85 Vincent DEUBEL Detection of Nipah virus and compositions providing immunoprotection against henipaviruses 
+03.19 Steward COLE Use of Mycobacterium tuberculosis RD1 in vaccine applications 
+02.96 Philippe DESPRES Use of M-36 residue as a molecular determinant of flavivirus attenuation
+ 
+02.95  Brigitte GICQUEL BCG strain with an inactivating mutation of the ureC gene 
+02.91 Annette MARTIN An infectious chimeric GB virus B containing the core domain III of the HepatitisC virus (HCV) ires that is infectious and causes hepatitis in tamarins : a new animal model for HCV studies 
+02.89 Shirley LONGACRE Use of Glycosyl-phosphatidyl-inositol (GPI) modification of protein antigens as an adjuvant for immunostimulation by subunit vaccine preparations 
+02.83 Catherine TRANSY Molecular tools for the selection of human primary hepatocytes infected with hepatitis C virus (HCV): use in the development of novel antiviral molecules and in the study of molecular interactions between HCV and host cell 
+02.24 Philippe DESPRES Yellow fever molecular determinant M-36 and its role in the attenuation of various anti-amaril vaccine strains through modulation of proapototic activity of hepatotropic flavirirus  
+02.21 Philippe DESPRES Analysis of the immune capacities of recombinant measles viruses expressing Env and NS1 from yellow fever virus 
+02.20 Frédéric TANGY Recombinant measles viruses expressing the native envelope glycoprotein of HIV1 clade B or envelopes with deleted variable loops induce humoral and cellular immune responses 
+02.19 Frédéric TANGY Production of an infectious cDNA of the Schwarz strain of measles vaccine 
+02.06 Pierre DRUILHE Novel Plasmodium falciparum antigen DG 571 for the induction of protection against challenge infection with Plasmodium sporozoite  
+01.87 Armand BERNEMAN Potential adjuvant effect of T. cruzi proline racemase (TcPA45)
+ 
+01.65 Claude LECLERC Use of viral pseudo-particles (PPV-PLPS) for targeting and activation of dendritic cells and their adjuvant effect  
+01.63 Antoine DANCHIN Partial sequencing and annotation of Penicllium marneffei genome 
+01.57 Monique LAFON Polypeptides inducing immunogenic apoptotic bodies 
+01.55  Pierre LANGLADE-DEMOYEN News HIV1 epitopics peptides 
+01.54 Claude LECLERC B. pertussis adenylatecyclase receptor: use in screening for immunologically/pharmacologically active molecules  
+01.40  Frédéric TANGY Generation of an Infectious cDNA corresponding to the antigenome of the Schwarz Vaccine Strain of Measles Virus 
+01.31 Pierre DRUILHE Identification of two novel Plasmodium falciparum antigens involved in host response to the pre-erythrocyte stages of the parasite 
+01.13 Pierre DRUILHE Phosphatase A2 protein binding sites for HIV-1 Vpr protein and parasite Theileria protein kinase CK2-alpha: two new targets for viral, parasitic or tumoral indications 
+01.24 Hélène MUNIER-LEHMANN M. tuberculosis thymidylate kinase (TMPK) inhibitors: use in the development of new antitubercular drugs  
+01.23 Jean-Michel FOURNIER Novel vaccine composition inducing protective antibodies against cholera  
+00.80 Hechmi LOUZIR Vaccine against leishmaniasis using virulence antigen P55 gene 
+ 
+00.59 Claude LECLERC B. pertussis adenylate cyclase-activating peptide receptor and its use in screening for immunologically/pharmacologically active molecules  
+00.31/98.20 Philippe MARLIERE In vivo production of proteins chemically diversified by incorporation of non-conventional amino acids: useful in vaccines, therapy, diagnosis and biocynthesis  
+00.25 Gilles MARCHAL Immunogenic glycopeptides derived from Mycobacterium tuberculosis: diagnostic and vaccine applications  
+00.18 Simon WAIN-HOBSON Live recombinant HIV vaccine  
+99.83 Paola MINOPRIO A B-Cell mitogen : A novel approach for vaccination and/or therapy ; the exemple of Trypanosoma cruzi  
+99.75 Michèle BOULOY Attenuated Rift Valley Fever Virus: human and veterinary vaccine applications  
+99.44 Pierre DRUILHE Mucosal immunization using lipid-tailed peptides without adjuvant  
+99.28 Paola MINOPRIO A B-Cell mitogen : A novel approach for vaccination and/or therapy ; the exemple of Trypanosoma cruzi  
+98.51 Stewart COLE Deleted sequences in M. bovis BCG/M. bovis or M. tuberculosis genomes: diagnostic and vaccine applications 
+98.31 Brigitte GICQUEL New sequences of M. tuberculosis and the identification of associated genes  
+96.61/99.62 Claude LECLERC MAG: A new family of optimized synthetic glycopeptidic vaccines with high therapeutic activity 
+96.42/95.33 Claude LECLERC Recombinant parvovirus-like particles for inducing cytotoxic T-cell response: use in antiviral and antitumoral drugs or vaccines  
+96.26 Armelle PHALIPON Novel immunogenic polypeptides for the induction of protective immune response against pathogenic microorganisms and method for their production 
+91.13 Gilles MARCHAL Mycobacterium Proteins and their applications (naxi test)  
+ 
+Veterinary medecine  
+D.I. n° 
+ Inventor 
+ Title  
+04.14 Frédéric TANGY  Infectious flavivirus pseudo-particles containing functional prM-E envelop proteins 
+04.12 Philippe DESPRES  Use of infectious retroviral pseudoparticles enveloped by flavivirus glycoproteins prM andt E for viral diagnostics and prophylaxis 
+03.21/03.85 Vincent DEUBEL Detection of Nipah virus and compositions providing immunoprotection against henipaviruses 
+03.19 Steward COLE Use of Mycobacterium tuberculosis RD1 in vaccine applications 
+02.97 Daniel GONZALES-DUNIA  2'Fluoro-2'-deoxycytidine inhibits Borna Disease Virus Replication and Spread 
+02.28 Stewart COLE Improved vaccines for the prevention of tuberculosis infection in animals 
+01.30 Nicolas R. ESCRIOU  Generation of defective recombinant RNA replicons. Use for vaccination and therapy in humans and animals  
+01.17 Philippe DESPRES Molecular determinants specific for West Nile virus clone IS-98-STI allowing identification of cellular genes involved in host response to flaviviral and related viral infections  
+01.13 Pierre DRUILHE  Phosphatase A2 protein binding sites for HIV-1 Vpr protein and parasite Theileria protein kinase CK2-alpha: two new targets for viral, parasitic or tumoral indications 
+00.04 Nicole GUISO-MACLOUF Antigenic variants of pertactin in Bordetella: diagnostic and immunogenic applications in veterinary field 
+99.75 Michèle BOULOY Attenuated Rift Valley Fever Virus: human and veterinary vaccine applications  
+98.37  Noël TORDO  DNA vaccine against lyssavirus infection  
+ 
+
+Other technology briefs are in the process of being written and will be soon available. 
+
+
+ 

@@ -1,0 +1,1 @@
+-fps -c ../../telecom_gsm_data/12.au > output_large.encode.gsm

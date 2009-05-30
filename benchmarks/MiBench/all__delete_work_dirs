@@ -1,0 +1,21 @@
+#! /bin/sh
+
+for i in *
+do
+
+if [ -d "$i" ] 
+then
+ tmp=$PWD
+ cd $i
+ if [ -d "src" ] 
+ then
+  # *** process directory ***
+  echo $i
+  rm -rf src_work
+  # *************************
+ fi
+ cd $tmp
+fi
+
+done
+

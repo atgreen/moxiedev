@@ -1,0 +1,5 @@
+for i in `seq 2 20`; do 
+ echo $i; 
+ echo "../../automotive_susan_data/$i.pgm output_large.corners.pgm -c > ftmp_out" > _finfo_cmd_run.$i
+ cp _finfo_dataset.1 _finfo_dataset.$i;
+done

@@ -1,0 +1,1 @@
+ -a -d americanmed+ ../../office_data/15.txt  > ftmp_out 2> ftmp_out1

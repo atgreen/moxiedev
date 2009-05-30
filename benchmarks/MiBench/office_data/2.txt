@@ -1,0 +1,1510 @@
+ [11pt,letterpaper] article 
+
+
+  booktabs 
+  amsmath 
+  amssymb 
+  amsfonts 
+  natbib 
+  color 
+  epsfig 
+
+  pstricks 
+  multido 
+  calc 
+  pst-node 
+
+  times 
+  graphicx 
+  subfigure 
+  moreverb 
+ [normalem] ulem 
+
+  fullpage 
+
+  makeidx 
+
+
+
+
+       
+       w  
+       A  
+       W  
+       J  
+       F  
+       K  
+       D  
+       G  
+       I  
+       t  
+       x  
+       y  
+       h  
+       d  
+       f  
+       k  
+       m  
+       v  
+       u  
+       c  
+       s  
+       r  
+       U  
+       S  
+       z  
+       
+          
+          
+  #1  
+         def   =  
+       a  
+       b  
+       V  
+       h  
+       v  
+       X  
+       1  
+
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+       0  
+     eqnarray   
+     eqnarray         eqnarray   
+     eqnarray         equation   
+     equation   
+
+    [1]  {  #1   } 
+    [1]  (  #1   ) 
+    [1]  [  #1   ] 
+    [1] fig(  #1 ) 
+    [1] table(  #1 ) 
+    [2] fig(  #1  #2 ) 
+    [1] section (  #1 ) 
+    [1]    #1    
+
+
+       ^2  
+    [2] array  ( c )#1
+#2array   
+         w  ^ (h)  
+         w  ^ (h) T  
+       
+    [1]   #1  
+
+    [2]      #1         #2   
+    [2]   #1     #2  
+    [1] #1^ -1  
+    [1]       #1  ^ -1   
+    [1]   #1  
+    [2]  [linestyle=dotted,arrows=-] #1  #2  
+    [1]    var ( #1 ) 
+    [2]     #1     #2   
+       1  2  
+
+     equation   
+     equation   
+
+    [1]      #1  
+    [2] N ( #1 ; #2   ) 
+    [1]    #1  
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+
+    [1]     #1  
+
+    [1]   blue    #1   
+    [1]   #1  
+    [2] (#1,   #2 ) 
+    [2] #1 (  #2 ) 
+           
+    [1]     #1   
+    [1]    trace  ( #1  ) 
+
+
+       mnode=circle,arrows=-,rowsep=.5cm,colsep=.5cm,arrowsize=1.5pt 4  
+       mnode=circle,arrows=->,rowsep=.5cm,colsep=.5cm,arrowsize=1.5pt 4  
+       mnode=circle,arrows=-,rowsep=.4cm,colsep=.4cm,arrowsize=1.5pt 4  
+       mnode=circle,arrows=->,rowsep=.4cm,colsep=.4cm,arrowsize=1.5pt 4  
+
+    [2]  #1   #2  
+    [2]  #1   #2  
+    [1]    #1  
+    [2]    normal  ( #1 , #2 ) 
+        e.g.,   
+        etc.,   
+        i.e.,   
+
+    [1]    pa   ( #1  ) 
+    [1]    ch   ( #1  ) 
+
+    [1]   tr  { #1  } 
+
+
+    [1]     #1   
+    [1]     #1   
+    [1]  
+    [1]  
+    [1]    #1    
+
+
+     1.689 
+
+document  
+
+  Automatic Performance Model Construction for the Fast Software Exploration of New Hardware Designs 
+
+   
+
+  
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+  OT: TODO FOR JOHN (IF WE HAVE TIME): John's graphs showed we
+have an accuracy problem for small & large speedups. Beyond
+normalization, we should brainstorm
+about these. A few suggestions:
+
+ - what is the accuracy if the target optimization is in the
+ training set ?  with a single reaction (=target optimization), it
+ should be perfect; as we add more reactions it should degrade, but
+ by how much ? it is a kind of "limit study" ?
+
+  
+
+  OT: TODO FOR JOHN (IF WE HAVE TIME): characterize large
+applications through reactions using a training set only composed of
+small applications. 
+
+  OT: TODO FOR OLIVIER: check figure labels. 
+
+  OT: TODO FOR JOHN: please fill all the ?? in the text, you
+have the numbers. 
+
+  OT: RESEARCH QUESTION FOR ALL IF WE HAVE TIME: How do we
+decide we are sufficiently trained ? We need a metric to determine
+that. Important for practical usage. 
+
+  -2cm 
+
+abstract  
+     1 
+  Developing an optimizing compiler for a newly proposed
+architecture is extremely difficult when there is only a simulator
+of the machine available.  Designing such a compiler requires
+running many experiments in order to understand how different
+optimizations interact. Given that simulators are orders of
+magnitude slower than real processors, such experiments are highly
+restricted.  This paper develops a technique to automatically build
+a performance model for predicting the impact of program
+transformations on any architecture, based on a limited number of
+automatically selected runs. As a result, the time for evaluating
+the impact of any compiler optimization  in early design stages can
+be drastically reduced such that   all  selected potential compiler
+optimizations can be evaluated. This is achieved by first evaluating
+a small set of sample compiler optimizations on a prior set of
+benchmarks in order to train a model, followed
+by a very small number of evaluations, or probes, of the target program.
+
+  We show that by training on less than 0.7% of all
+possible transformations (640 samples collected from 10 benchmarks
+out of 880000 possible samples, 88000 per training benchmark) and
+probing the new program on only 4 transformations, we can predict
+the performance of all program transformations with an error of just
+7.1% on average. As each prediction takes almost no time
+to generate, this scheme provides an accurate method of evaluating
+compiler performance, which is several orders of magnitude faster
+than current approaches.
+
+abstract  
+
+
+
+
+  Introduction   introduction  
+
+
+
+Computer architectures have significantly increased in complexity in
+the last 20 years. As a result, simulators have also become
+increasingly complex and, critically, three or more orders of
+magnitude slower than real processors.  However, early on in the
+design cycle of a new processor, software and compiler engineers
+need to port system applications, develop compilers, tune libraries
+and run large applications for prospective customers on the new
+target architecture before the processor is available. They
+therefore have to rely on simulators for their task. As the design
+cycle is long, software and compiler engineers are left with using
+exceedingly slow simulators for tuning purposes. Several years can
+elapse between the time a first simulator is available, and the time
+the actual architecture is available. This problem is further
+aggravated by stringent time-to-market constraints, and the
+increasing complexity of compilers   almagor2004 . What is
+needed is a fast    proxy  of the hardware. Given a new program,
+we would like an accurate prediction of the performance of the
+program without having to run it, or perhaps only running it a few
+times. This would dramatically overcome the performance shortcomings
+of existing simulators and allow many different versions of a
+program to be evaluated for tuning purposes.
+
+In this article, we propose a method for drastically reducing the
+overall time required to tune applications for new architectures
+early on in the design cycle, when only slow simulators are
+available. We can build a performance model of a new architecture
+that is accurate enough for program tuning purposes and dramatically
+faster than simulators. Though model construction requires a number
+of training runs on the available simulator, it is entirely
+  automatic . This model is built by monitoring how programs
+react to certain program transformations on the target architecture.
+The model is first trained using a few programs to which program
+transformations are randomly applied; then it requires a few test
+runs from a selection of characteristic transformations for the
+program to be tuned. These latter characteristic transformations are
+selected automatically based on a technique called    mutual
+information , which determines the transformations likely to give
+the most information about a program's performance on a particular
+machine. From then on, the model can instantly estimate  the speedup
+of the target program if any known program transformation were
+applied; in fact, the model enables the evaluation of   all 
+program transformations in any order and in a very small time. We
+empirically show that with 640 training runs (corresponding to only
+0.7% of the total number of possible transformations sequences),
+and 4 test runs to characterize a new target program, our model can
+predict the program speedup after applying a transformation with an
+error of 7.1%.
+
+Beyond providing an automatic process for building a reliable and
+fast performance model, our approach has several assets. The model
+can not only be used to predict the impact of a program
+transformation, but can also predict the best possible speedup after
+applying any known transformation. Beyond the initial training, the
+model accuracy can be regularly improved through continuous on-line
+training. Any simulation performed on any program after the initial
+training, including the test runs to characterize new programs, can
+augment the total training set, all without any human intervention.
+Moreover, since the model provides speedup estimates in almost no
+time, it has applications beyond the design cycle since it is much
+faster than running applications on the real machine. It can be used
+for benchmarking purposes, i.e., tuning applications of prospective
+customers, and can even be provided to end-users. Finally, the
+approach can also be used by architecture designers to take into
+account the impact of software tuning when designing architectures.
+After a number of training runs on a given simulator configuration
+during design-space exploration, our model would behave as if a
+compiler had been tuned for this architecture configuration. Design
+decisions would then not only be based upon estimated architecture
+performance but combined estimated architecture+compiler
+performance.
+
+The paper is organized as follows: Section   sec:example 
+provides an example showing how our automatically generated model
+can predict the speedups over a large transformation space.
+Section   sec:predictive-performance-modeling  describes our
+reactions-based predictive modeling technique and how we
+automatically find the best transformations to characterize a
+program. Section   sec:experimental-methodology  describes the
+experimental methodology, while
+Section   sec:experimental-results  provides empirical evidence
+of the accuracy of our technique, followed by related work in
+Section   related-work  and conclusions in
+Section   sec:conclusions .
+
+  Grigori changed the final paragraph a bit ... 
+
+
+figure  
+ center  
+  minipage  [t] .45  
+    center  
+          0.5 
+       -90   [width=6cm] NewGraphs/compress-speedup-profile.eps  
+           Model accuracy for   compress . The y-axis corresponds to
+ the speedup of each transformation sequence while the x-axis
+ corresponds to transformation sequences sorted in increasing
+ order of performance. The line marked    actual  corresponds to the real
+ measured performance of the program while    predicted  corresponds to the
+ prediction of our model. The prediction is averaged over 30 trials.  
+       fig:example 
+    center  
+  minipage  
+  
+
+  minipage  [t] .45  
+    center  
+           0.5 
+        -90   [width=6cm] NewGraphs/compress-profile-fig1b.eps  
+           Speedup for all transformations, sorted according to the speedup achieved for
+      compress  (one trial). The comparison highlights the differences in both the absolute and relative program behavior to transformations. 
+        fig:sorted-speedup 
+    center  
+  minipage  
+ center  
+   -0.39cm 
+figure  
+
+  Example 
+
+  sec:example 
+
+Let us assume that we are at the beginning of the design cycle of a
+processor, that only a performance simulator is available, and that
+software and compiler engineers start tuning applications for this
+processor. In this section, we provide a simple example showing that
+it is possible to automatically train a model, using a number of
+runs on a few benchmarks, in order to predict the performance impact of compiler
+optimizations on any new  program. As a
+result, we can drastically reduce the overall simulation time
+necessary to evaluate tentative architectures and tune programs to
+new architectures; using the model has virtually no cost.
+
+We wish to predict the performance of a new program on a particular
+platform, in this case the Texas Instrument C6713 clustered VLIW
+processor. In order to evaluate our predictor, we generate many
+different versions of the program using 13 different program
+transformations, listed in Table   fig:transformations . We wish
+to predict what effect any combination of these will have on any new
+program. Since program transformations can be composed into
+arbitrarily long sequences, the number of possible program versions
+is large. In practice, combinations of 5 transformations are a
+reasonable maximum. As a result, the total transformation space size
+we consider is 88000. Thus, we wish to build a model that can
+predict the performance of 88000 different versions of a new
+program.
+
+In order to build our model we performed 640 runs on random pairs of
+benchmarks and transformations (10 benchmarks, 64 samples per
+benchmark). Next, in addition to these training data, an additional
+4 carefully selected runs are performed on the the new program to be
+investigated.  These runs are used to "probe" the new program, and
+characterize its reactions to program transformations. We will show
+that only a few such probes are necessary to characterize the new
+program behavior on a large range of program transformations. We
+call such an approach    reactions -based modeling. Given this
+total of 644 evaluations, we are then able to build a model that
+accurately predicts the entire 88000 different versions of
+the program.
+
+In order to validate the accuracy of our model, we have
+  exhaustively  searched the transformation space for each of
+the benchmarks on the TI C6713 processor, with a total running time
+of 33 days. Figure   fig:example  shows how the model accuracy is
+exercised on program   compress . The y-axis is the speedup
+obtained after applying a transformation, and the x-axis is simply
+the transformations sequences sorted by increasing (  actual )
+speedup. The dotted line shows the speedup estimated by the model,
+and the solid line is the actual speedup. The average error is
+10.3% for this benchmark.
+
+At first, it may be surprising that such a small training set size is
+sufficient to capture such a huge space. However,
+Figure   fig:sorted-speedup  explains why this is possible: programs
+exhibit a "plateau"-like profile, which means there are few different
+performance levels for each benchmark, or, in other words, many
+transformation sequences have similar impact.  Almagor et al.   almagor2004  have built similar speedup graphs which
+again show few plateaus, but for different transformation spaces. As a
+result of this small number of plateaus, if (1) we can automatically
+identify a few characteristic transformations which capture these
+plateaus, and (2) we can cluster transformations according to the
+performance plateau to which they belong, we can build a performance
+model with a small number of training runs. This is what we achieve with
+reactions-based modeling.
+
+
+Still, it does not mean the behavior  of all benchmarks to all
+transformations is the same, and that the transformation space is
+easily predicted. Figure   fig:sorted-speedup  shows the same
+speedup graph as in Figure   fig:example , using the
+transformation order given by benchmark   compress  to plot
+benchmarks   adpcm  and   fir . If all benchmarks would
+react similarly to most transformations, all the benchmark curves
+would be monotonic and increasing. Obviously it is not the case,
+hinting at the complexity of the transformation space.
+
+The above example shows that we can fairly accurately predict the
+performance of different versions of an unseen program.
+ Still, it may  be argued that, in practice, a tuning
+process may  involve manual transformations not considered here.
+However, manual transformations can usually be decomposed into
+sequences of simple systematic compiler transformations, as recently
+illustrated by Parello et al.   PTCP04 . Another option is
+simply to train our process on manual transformations in addition to
+compiler optimizations. Furthermore, our code characterization
+process based on reactions can indifferently target whole programs
+or specific code sections, because it solely relies on performance
+measurements/reactions and is not dependent on code structure.
+
+This section has provided a motivating example, illustrating that it
+is possible to build a model that predicts the performance of
+different versions of a program without having to execute the
+program. The next section describes how we can automatically build
+such a model using machine learning.
+
+figure  [t]
+  
+
+  minipage  [t] .45  
+    center  
+           0.5 
+        figure=figs/features-based-model.eps,width=7.9cm 
+           Features-based model.    Input:  static features extracted from the transformed program at the source level;
+         Output:  program speedup. 
+        fig:features-based-model 
+    center  
+  minipage  
+  
+
+  minipage  [t] .45  
+    center  
+           0.5 
+        figure=figs/reaction-based-model.eps,width=7.9cm 
+           Reactions-based model.    Input:  speedups on canonical transformation sequences;
+         Output:  transformation sequence speedup. 
+        fig:reactions-based-model 
+    center  
+  minipage  
+  
+
+     -0.39cm 
+figure  
+
+  MOB:  It would be nice to have a legend explaining this if
+we have space. Most people are going to find this modeling stuff
+hard so a walk through here would really help 
+
+  Predictive Performance Modeling 
+
+  sec:predictive-performance-modeling 
+
+  Characterization 
+
+At the heart of our approach is building a performance prediction
+model. More precisely, the model must accurately and rapidly predict
+the performance impact (speedup) of a large range of program
+transformations on a given program, so that a large software
+design-space can be explored without having to simulate or run the
+multiple transformed versions of the program.
+
+More formally, let p be a program, t a program transformation
+sequence, and s the speedup of p after applying t, we wish to
+build a predictive performance model f, that predicts  a speedup
+  s  close to the real speedup s, i.e., f(p,t) =   s .
+In standard predictive modeling techniques, such a model is built
+using a training set, here, a set of tuples (p i,t i,s i).
+
+
+  Static program features-based modeling.   Most
+compiler-oriented machine-learning approaches have used
+  program features -based characterization to automatically
+build such a model (see Section   related-work ). This approach
+implicitly assumes one can identify the set of static program
+features which characterize program behavior. Features-based
+modeling takes a summary p^* of the input static program p. In
+order to capture the effect of program transformations, we collect
+the static features at the source code level, after applying program
+transformations using SUIF, see
+Figure   fig:features-based-model .
+
+After training, the model function f takes as inputs the code features
+of the transformed program p^* ,
+and outputs the predicted speedup, e.g.:
+( f(p^*) =   s  ).
+
+Such an approach is attractive because the transformed program needs
+not be executed in order to predict its performance, and it has been
+successfully used in the past for specific optimizations, e.g.,
+targeting loop nests.
+Moreover, this approach can be used on any new transformed program
+since the model just uses code features as input. In particular, the
+model is not restricted to the set of transformations that have been
+used during the training; a new transformation can be used to
+generate the transformed program. However, it is harder to extract
+appropriate features to characterize a whole program, and we will
+also empirically show in Section   sec:experimental-results  that
+features-based characterization does not perform as well when a
+large range of program transformations is considered.
+
+As a result, we need to come up with a different characterization
+method, compatible with a large range of program transformations and
+whole-code characterization.
+
+  Reactions-based modeling.  Building an analytical
+model of the performance behavior of a complex program on a modern
+processor architecture is known to be a difficult task   chaos .
+Rather than building a processor performance model, we have
+developed a modeling approach capable of capturing the performance
+effect of program transformations which we call
+  characterization by reactions . Characterization by reactions
+is an empirical analysis method used in many scientific domains. A
+target may be   "probed" in various ways and its reactions are
+observed. If similar targets have been studied in the past, it can
+be classified as similar to a previous target, or behaving like a
+combination of some of these targets.
+
+The principles of characterizing programs by reactions are exactly
+the same.  In our case the ``probes'' are an automatically selected
+set of program transformations, which are applied to the program and
+the behavior observed is the resulting speedup. Using this approach
+we build a model f which takes as input the reactions s i
+(speedup after applying transformation t i) of the program p to
+various transformation sequences t 1   t K in order to
+predict the speedup with respect to a new transformation sequence
+t, see Figure   fig:reactions-based-model :
+( f((t 1,s 1),  , (t K,s K),t ) =   s  )
+
+Because this characterization method is based on program run-time
+behavior rather than a static program characterization (as for
+features), it suits whole-code characterization well as opposed to
+small code constructs, e.g., loop nests. On the other hand, it has
+the disadvantage of requiring K probes or program runs before we
+can build a predictor. However, we show in
+Section   sec:experimental-results  that we can keep K very
+small (less than or equal to 4).
+
+  Building the model 
+
+  sec:building-model 
+
+There exist many modeling techniques that can be trained over an
+existing data set to provide a predictive model. In this paper we
+use an ANN (Artificial Neural Network), with one hidden layer and five hidden units, as it is robust to noise in
+its input and capable of learning real-values outputs - both
+characteristics of our problem domain. ANNs are well studied
+techniques and have been used in a wide range of
+domains   bishop . We have also considered other techniques, such as   Mixtures of Experts    Jacobs91  and
+  Regression Trees    Breiman book ;
+however, our current experience suggests that ANNs may be particularly
+practical for the prediction problem   bishop .
+
+  ANN.  The model works as follows: the input are the
+reactions and the transformation whose performance impact we want to
+predict, and the output is the predicted speedup of the transformation.
+More precisely, for any given program, the entries of the
+ANN are the speedups s 1, ,s K obtained for K probe
+transformations t 1, ,t K, and the identifier t of the
+target program transformation. The identifier is provided as a set
+of 13 bits, one per possible elementary transformation; since each
+transformation sequence is composed of elementary transformations,
+at most 5 such bits are set to 1. The model is not trained/specific
+to a program, it is trained on multiple programs, and can be applied
+to any unseen program thereafter.
+
+The K probe transformations have been selected as the most
+discriminating transformations, i.e., the transformations which will
+best characterize the behavior of programs and are defined as  
+
+canonical  transformations. These canonical transformations are not
+defined a priori or in ad-hoc manner, but using a systematic
+algorithm described in the next paragraph.
+
+  Selecting the canonical transformations.  We wish to
+determine the smallest set of canonical transformations, or probes, with which
+to characterize a new program. Mutual information
+theory   bishop  allows one to examine the training data and
+select those transformations that are the most independent, i.e.,
+they share the least mutual (and thus redundant) information. In
+general, this process requires a combinatorial search for the best
+discriminators.
+
+Let s 1,  , s T  describe the speedups for T
+transformations sequences t 1,  , t T from the training set.
+Our goal here is to extract a    canonical  subset {  t  1,
+ ,   t  K } of transformations such that the resulting
+improvements are most informative about the programs. We may judge
+this by observing the variations in the corresponding speedups.
+A formal measure of
+information is mutual information   CoverThomas 91 
+  I(m; s  i 1 ,  , s  i K ) 
+
+H(s  i 1 ,  , s  i K ) - H(s  i 1 ,  , s  i K |m) 
+
+H(    ) - H(    |m),
+  eqI 
+
+
+where the vector of speedups for the canonical transformations are
+given by        [s  i 1 ,  , s  i K ], and
+H(    ), H(    |m) are the marginal and the
+conditional entropies   CoverThomas 91 , respectively:
+
+  H(    )   -            p (    )
+    p (    ),    
+H(    |m)   -   1  M     m=1 ^M
+           p (    |m) 
+
+  p (    |m).
+  eqHm 
+
+
+
+Our goal is to maximize (  eqI ) with respect to
+the indices of the canonical transformations i 1,  , i K.
+
+Note that in our case we can compute the marginal and
+the conditional distributions p(    ),
+p(    |m) by counting the speed-ups in the training
+set. However, if the speed-ups are quantized to lie in a discrete
+space of S bins, the computational complexity of evaluating the
+marginal entropy H(    ) is   O(S^ K ),
+i.e. approximations need to be considered. In our case, we note that
+for a given benchmark m, the speedups we obtain on transaformation
+  i are    deterministic  and    independent  of the
+speed-ups we obtain on transformation   j,
+i.e.   p (    |m) =    j=1 ^K
+  p (   i j |m)    . Therefore, equation
+(  eqI ) can be expanded and simplified into the following form
+  I(m;     )
+&=&    j=1 ^K H(s  i j ) -         
+p(    )     p(    )     j=1 ^K
+p(s  i j ) .
+  eqR2 
+
+
+
+
+The rightmost term in (  eqR2 ) defines the    redundancy ,
+which is zero when the speedups are independent, and it is large
+when they are strongly correlated.  In order to select the most
+informative subset of transformations (in the mutual information
+sense), we need to optimize (  eqR2 ) with respect to the indices
+of the canonical transformations i 1,  , i K.  The
+computation of the first term    j=1 ^P H(s  i j ), in (  eqR2 ), is O(SM) complexity.  To minimize the redundancy (2nd term in   eqR2 ),
+we apply a simple greedy approximation strategy by choosing
+transformations which lead to a high information content  
+
+individually , and which are maximally independent from one another.
+In practice, we recalculate the best canonical transformations as we
+progressively collect more training data, and we experimented with
+the number of canonicals in the range of 1 to 8.
+
+Once we have selected the canonical transformations containing the
+most information, we apply them to the program to be  predicted. Their
+execution times are the final inputs into our trained model which
+provides an accurate predictor.
+
+
+  OT: TODO FOR MIKE: Explain how you compute the entropy H.
+Only the computation of the marginal entropy is explicit.MOB DONE  
+
+  OT: TODO FOR MIKE: You say "to minimize
+redundancy...maximize volume of sample covariance". Explicit
+computation of volume of sample covariance.MOB DROPPED DONE 
+
+  OT: TODO FOR MIKE: Still unclear (explain): how do you
+proceed in practice to select the transformations based on the
+aforementioned cost function ?
+
+Do you scan all N-tuples, do you sample them, something else ? It
+seems you assume you have all samples, which you don't in practice,
+you progressively collect them. How is it compatible with what you
+describe ?MOB DONE 
+
+
+  Experimental Methodology 
+  sec:experimental-methodology 
+
+This section provides a brief description of the programs, transformations
+and platforms used in our experiments.
+
+figure  
+ center  
+  minipage  [c] .45  
+    center  
+    
+
+         0.1 
+       0.5 
+    tabular   |l|l| 
+          Label &    Transformation  
+
+      
+
+ 1,2,3,4 &     Loop unrolling 
+ 
+
+   n&   FOR loop normalization 
+ 
+
+t&      Non-perfectly nested loop conversion 
+ 
+
+    k&  Break load constant instructions     
+ 
+
+      s & Common subexpression elimination 
+ 
+
+     d& Dead code elimination   
+
+
+     h& Hoisting of loop invariants  
+ 
+
+      i & IF hoisting  
+ 
+
+      m & Move loop-invariant conditionals  
+ 
+
+      c & Copy propagation          
+ 
+
+    tabular  
+           The  labeled transformations used for the exhaustive enumeration of
+  the space. 1,2,3,4 corresponds to the loop unroll factor. 
+        fig:transformations 
+    center  
+  minipage  
+  
+
+  minipage  [c] .45  
+    center  
+    
+
+         0.5 
+       0.5 
+    tabular   |l|l| 
+          Label &    Static Feature  
+
+      
+
+ LDC & Load a constant value 
+ 
+
+ CVT & Conversion between float/int 
+ 
+
+ LOD & Load from memory 
+ 
+
+ STR & Store to memory 
+ 
+
+ MBR & Multi-way branch 
+ 
+
+ CMPI/CMPF & Comparison using int/float 
+ 
+
+ UJMP/CJMP & Unconditional/Conditional jump 
+ 
+
+ CPY & Copy 
+ 
+
+ SFT & Shift 
+ 
+
+ ROT & Rotation 
+ 
+
+ ARII/ARIF & Arithmetic operation on int/float 
+ 
+
+ MULI/MULF & Multiplication on int/float 
+ 
+
+ DIVI/DIVF & Division on int/float 
+ 
+
+ LOG & Logical operation 
+ 
+
+ CAL & Function call 
+ 
+
+ ARYI/ARYF & Array operation with int/float (address computation) 
+ 
+
+    tabular  
+           Static program features. 
+        fig:features 
+    center  
+  minipage  
+ center  
+    -0.39cm 
+figure  
+
+
+
+  Benchmarks.  The    UTDSP    lee,saghir  benchmark suite was
+ designed ``to evaluate the quality of code generated by a high-level
+language (such as C) compiler targeting a programmable digital
+signal processor (DSP)''   lee . This set of benchmarks contains
+small, but compute-intensive DSP kernels as well as larger
+applications composed of more complex algorithms. The size of
+programs ranges from 20 to 500 lines of code. These programs represent
+compute-intensive kernels widely regarded most important by DSP
+programmers and are used indefinitely in stream-processing
+applications.
+
+
+
+  Transformations.  In this study, we consider source-to-source
+transformations  (many of these transformations also appear within
+the optimization phases of a native compiler   almagor2004 ),
+applicable to C programs and available within the restructuring
+compiler SUIF 1   hall .  For the purpose of this paper, we have
+selected the transformations described and labeled in
+Table   fig:transformations . As we (arbitrarily) consider four
+loop unroll factors, this increases the number of transformations
+considered to 13. We then exhaustively evaluated all transformations
+sequences of length 5 selected from these 13 options. So, in theory, the total
+number of possible transformation sequences is given by the combinational expression
+A  13 ^ 5 =  13!  (13-5)! =154440, since no transformation can
+appear twice in the sequence and the order of transformations has an
+influence on performance. However, since unrolling can only appear once
+in any sequence (only one possible unroll factor), it decreases the total number of possible sequences we evaluated to 88000 per benchmark.
+
+  Platforms. 
+
+Most of the results in Section   sec:experimental-results  are
+provided for a TI processor architecture described below. However, in order to
+show that our approach is not specific to an
+architecture, we also provide results for an embedded AMD processor architecture in
+Section   sec:other-architecture ;
+this AMD processor is based on a MIPS core, so we will later refer to it as   MIPS . The platforms are detailed
+below.
+
+   TI:  The Texas Instrument C6713 is a high-end floating point
+DSP, running at 300MHz. The wide clustered VLIW processor has 256KB of internal memory.
+The programs were compiled  using the TI's   Code Composer
+Studio Tools  Version 2.21 compiler with the highest   -O3 
+optimization level and   -ml3  flag (generates large memory
+model
+code).
+
+   MIPS:  The AMD Alchemy Au1500 processor is an embedded SoC
+processor using a MIPS32 core (Au1), running at 500MHz. It has 16KB
+instruction cache and 16KB non-blocking data cache.  The programs
+were compiled with GCC 3.2.1 with the   -O3  compile flag.
+According to the manufacturer, this version/option gives the best
+performance - better than later versions of GCC -  and hence was
+used in our experiments.
+
+  Training the model. 
+In our experiments we vary the training set size to consider its
+impact on performance. In all cases, this is performed using "leave
+one out" cross-validation, a standard technique for evaluating ANNs
+and other predictive models. Basically, this means that, if we have
+N programs, we select one program whose performance we wish to
+predict with respect to transformations. We then use data from the
+N-1 remaining programs to train our ANN; before testing it on the
+selected Nth program; we repeat this procedure for the N programs and average results.
+Thus, we do not train the ANN on data
+associated with the program whose performance we wish to predict.
+
+The training set is randomly picked samples within the
+transformation space (recall the transformation space contains
+88000 possible transformation sequences). In order to get a
+statistically significant behavior, we repeat this sampling 30
+times. Thus, for each sample size, we have 30 trials with this size
+data and show the average result over the 30 trials.
+
+Finally, note that for the reactions approach, in addition to the training set, we need one more simulation/execution
+of the baseline program
+to compute the speedups (ratio of baseline over transformed versions)
+of the canonical transformations, which are used as inputs to the model.
+
+  Experimental Results 
+  sec:experimental-results 
+
+This section first evaluates the accuracy of reactions-based modeling
+across the program transformation space and also examines its accuracy
+in predicting high-speed up optimizations. This is followed by a short
+evaluation of the standard features-based approach to modeling. Next
+we consider the trade-off between accuracy of prediction and the number
+of training examples we use. This is followed by an evaluation of how
+the number of canonical transformations also affects predictive
+power. Finally, we try a simple cross-platform study where we train on
+one platform and use it to predict performance on a new unseen
+machine.
+
+  Reactions-Based approach 
+
+figure  
+ center  
+  minipage  [c] .45  
+    center  
+           0.5 
+        figure=NewGraphs/baseZero/ti-mae-base-zero.eps,width=8cm 
+           Mean absolute error: Reactions, Features and Naive predictors. 
+        fig:mae 
+    center  
+  minipage  
+  
+
+  minipage  [c] .45  
+    center  
+           0.5 
+        figure=NewGraphs/baseZero/stdev-base-zero.eps,width=8cm 
+           Standard deviation: Reactions and Naive predictors. 
+        fig:stdev 
+    center  
+  minipage  
+ center  
+    -0.39cm 
+figure  
+
+  MOB Figure 7b inconsistent with text below 
+
+  MOB: Will
+figure 7b really have features based predictors  - surely just 7a 
+
+  MOB: I think having features data here  is too distant
+form text in section 5.4 4 pages away 
+
+  OT: QUESTION FOR JOHN: I think I already asked, but the 64
+transformations are the same for each of the N-1 benchmarks ?. 
+
+In this section, we use a training set of 64 runs per benchmark, i.e.,
+this means we have randomly selected 64 program transformations and
+apply them to each of the N-1 =10  benchmarks to build a
+predictor. As mentioned before, we repeat this process 30 times to be
+statistically meaningful. Also, we have set the number of canonical
+transformations to 4. After training, these 4 canonical
+transformations are applied to the Nth unseen program. The reactions
+(speedups) to these canonical transformations, as well as the
+transformation identifier, are used as inputs to the model, along with
+the execution of the original, untransformed program. The model is used
+to predict the speedup of all of the remaining 88000-4
+transformation sequences of the unseen Nth benchmark (i.e., "leave one out"). Thus we
+have a training set of overall size 64   10 +4 (644) to predict
+88000-4 data points.
+
+We compare our model against a    naive predictor . The naive
+predictor simply finds the average performance of the training data
+(all program-transformation pairs in the samples) and predicts that any new point
+will be that value,.i.e., the naive prediction is
+   i=1 ^ 640 s  i /640 where s  i  is the real speedup of one
+of the transformations.
+
+In order to describe the accuracy of the model, we use the    Mean
+absolute error  defined as
+(    i=1 ^ 88000-4    |  s  i   - s  i |  88000-4   ),
+where s  i  is the real speedup of one of the transformation
+points and   s  i   the predicted value. Averaged over all
+88000-4 transformations applied to the unseen benchmark, this
+gives an overall average measure of the error. As mentioned in
+Section   sec:example , we have collected the actual speedups for
+all benchmarks and all transformations allowing us to calculate the
+MAE exactly.
+
+figure  
+ center  
+  minipage  [c] .45  
+    center  
+           0.5 
+        figure=NewGraphs/baseZero/ti-5-percent-base-zero.eps,width=8cm 
+           Reactions and Naive predictors: transformations with more than 5% speedup, and top 5% (actual) transformations. 
+        fig:more-than-5percent-speedups 
+    center  
+  minipage  
+  
+
+  minipage  [c] .45  
+    center  
+           0.5 
+        figure=NewGraphs/K-less-than-10.eps,width=8cm 
+           Impact of number of training benchmarks. 
+        fig:training-benchmarks 
+    center  
+  minipage  
+ center  
+    -0.39cm 
+figure  
+
+  MOB A little more explanation and centre the figure? 
+
+Figure   fig:mae  shows the mean absolute error of our predictor
+for each program, as well as the naive predictor. As can be seen,
+the overall mean error is 7.1% when using a reactions-based
+predictor. If we compare this to the naive predictor, whose error is
+14.4%, it is twice as accurate. Since our model is trained on
+random samples, its accuracy can typically vary from one sample set
+to another. For that reason, we have evaluated the standard
+deviation of the mean absolute error over the 30 different trials
+used for evaluating the models in Figure   fig:mae , see
+Section   sec:experimental-methodology . We show in
+Figure   fig:stdev  that the model accuracy is quite stable, much
+more so than that of the naive predictor.
+
+  MOB: Given all the effort to generate the figure, a little
+more discussion of the stdev results is worthwhile 
+
+  OT: TODO FOR JOHN: 1 page of graphs, one per benchmark, as
+described below; basically, the speedup graphs for all benchmarks;
+make sure the Y axis is normalized the same way for all bench; add
+the naive predictor. 
+
+  OT: TODO FOR JOHN: Can we make the same bargraphs, but only
+averaged over transformations that bring more than, say, 5% speedup
+? 
+
+   MOB: The text below is confusing and out of step with the
+legend of fig 7 b.  (1) is described in 7(b) (2) is not - something
+different  is 
+
+While the average error and standard deviation over all program
+transformations is a good indication of model accuracy, for
+practical usage, it is important to predict well the best performing
+transformations most of the time. For that reason, we have
+evaluated the model accuracy on (1) all transformations which bring
+more than 5% speedup, and (2) the top 5% transformations (ranked
+according to the actual speedup). The results are reported in
+Figure   fig:more-than-5percent-speedups . Even though the error
+is slightly worse over both transformations bringing more than 5%
+speedup (10.2% error) and top 5% transformations (11.5% error) than
+over all transformations (7.1%), the model is still fairly accurate
+on these critical transformations, and again, it is significantly more accurate than the naive
+predictor on the same transformations. Thus, it represents a practical
+alternative for fast software exploration.
+
+  OT: Comment the graphs (I will do it). 
+
+  OT: REMARK FOR JOHN: These histogram graphs are really hard to
+read and will be replaced by the speedup graphs, much nicer. 
+
+  MOB: Grey scaling on the different canonicals would really
+help 
+
+figure  
+ center  
+  minipage  [c] .45  
+    center  
+           0.5 
+        figure=NewGraphs/baseZero/varying-canonicals-base-zero.eps,width=8cm 
+           Impact of training size and number of
+      canonical transformations for reactions-based model. 
+        fig:sample-size-canonical 
+    center  
+  minipage  
+  
+
+  minipage  [c] .45  
+    center  
+           0.5 
+        figure=NewGraphs/baseZero/rand-vs-mutual-base-zero.eps,width=8cm 
+              Mutual Information  selection vs. random
+      selection of canonical transformations  for reactions-based model. 
+        fig:random-canonical 
+    center  
+  minipage  
+ center  
+    -0.39cm 
+figure  
+
+  Features-Based approach 
+  features-based-approach 
+
+  MOB: This section is a little waffly - it can be reduced 
+
+In this section, we compare the reactions-based approach against the
+more standard features-based approach. Even though the reactions-based
+approach significantly outperforms the features-based approach,
+feature selection for whole-programs is still in its
+infancy   ABCP06  and future improvements in feature selection
+may improve its accuracy. As a pragmatic starting point we generated
+many different features used in other research   ABCP06 , as
+listed in Table   fig:features . As mentioned before, we collect
+these features after applying the program transformations in SUIF,
+in order to capture the static impact of transformations on static
+program characteristics.
+
+  OT: TODO FOR JOHN: Put features and reactions on the same bar
+graph (we must compare them); put two bars for features: one for
+training size of 640, one for training size of 13-cube; if the
+former completely skews the scale, put it on a separate graph then. 
+
+For a fair comparison with reactions, we have trained the
+features-based model on the same 640+4 samples as for the
+reactions model. These results are reported in Figure   fig:mae ,
+along with the reactions results. Features-based prediction not only
+performs worse than reactions-based prediction, but it performs
+worse than the naive predictor in many cases. Even though static
+features have proved useful for tuning single program optimizations,
+such as unrolling, and on small code constructs   StephensonA05 ,
+performance modeling of whole programs, even small ones, is a more
+difficult task. Nevertheless, in future work, we hope to improve the static
+features definition to better capture whole program behavior, and
+also to combine static features and reactions in a hybrid approach.
+
+In the remaining sections, we therefore focus our investigations and experiments on the reactions approach.
+
+  Speeding up training: accuracy vs. training time (size) 
+
+There is naturally a trade off between the number of training runs
+and the accuracy of the model. The smaller the number of runs, the
+faster the model is built, but potentially, the  lower the accuracy.
+To evaluate this trade off, Figure   fig:sample-size-canonical 
+shows prediction accuracy against training set size (the number of
+training runs). As mentioned before, the training runs are randomly
+selected among the set of all possible program-transformation pairs
+except for the target program.
+
+Consider the bars corresponding to 4 canonical transformations (the
+trend is similar for other values). The mean absolute error is
+large, 12.3%, when allowing only 16 samples per benchmark to build
+the predictor. However, starting at 32 samples per benchmark, the
+model accuracy is good enough for practical usage (9.1%). It
+reduces to just 7.1% when using 64 samples per benchmark.
+Interestingly, the accuracy of the predictor does not increase
+significantly beyond this sample size; at 1024 samples per
+benchmark, it is almost the same as for 64 samples. This confirms
+the remark of Section   sec:example  that there are only few
+performance "plateaus" for each benchmark, and once all plateaus
+have been covered by training samples, additional training is
+unnecessary.
+
+  OT: TODO FOR OLIVIER: ideally, highlight that programs
+with complex non-plateau speedup profiles benefit more from
+additional training; I will check the graphs and add that if
+necessary. 
+
+Considering there are 88000 possible transformations per
+benchmark, and that we need no more than 64 samples per benchmark to
+obtain a fairly accurate model, we can reduce transformation space
+exploration to   1  3753 th of its total size. Note that, once
+the model is trained with a few benchmarks, then we only need to
+probe new benchmarks with canonical transformations, speeding up
+exploration by several orders of magnitude.
+
+In fact, while we used 10 benchmarks for our training set in each
+experiment, it does not mean the model cannot be used after training
+on a smaller (nor a larger) number of benchmarks. In
+Figure   fig:training-benchmarks , we have evaluated the model
+accuracy when varying the number of training benchmarks from 1 to
+10. After training on two benchmarks, the model accuracy is not much
+better than that of the naive predictor, however, after training on
+5 benchmarks, it is down to 10.5%.
+
+  OT: we should explore how many benchmarks are necessary to
+get good accuracy. 
+
+Throughout the article, we have used randomly selected training
+runs. However, in practice, software engineers may decide to do
+specific runs anyway; these runs can add to or even replace the
+random training runs, to further improve the performance model.
+
+  Impact of canonical transformations 
+
+   Number of canonical transformations vs. prediction error.  As with
+training, the higher the number of necessary canonical
+transformations, i.e., the number of probing runs on the new
+benchmark, the more experiments are necessary on a new benchmark, but
+the better the benchmark characterization.
+
+As stated earlier, canonical transformations, which enable the
+discrimination of programs by focusing on the most meaningful
+reactions for a given model/platform, are selected automatically.
+Figure   fig:sample-size-canonical  shows the impact of selecting
+1 to 8 canonical transformations for the predictor. As would be
+expected, increasing the number of canonical transformations
+generally improves the prediction accuracy across the various
+training sizes. Also, there is a limit (4) beyond which increasing
+the number of canonical transformations brings little benefit.
+
+  OT: TODO FOR OLIVIER IF WE PUT PROFILES: maybe add this, but
+it may not be true: The reason is the same: inspecting
+Figure   fig:speedup-profiles  shows that most programs have less
+than ?? performance plateaus, suggesting no more than ?? canonical
+transformations are necessary. By construction (i.e., the
+statistical mutual information technique), these canonical
+transformations discriminate the benchmarks by characterizing these
+plateaus. 
+
+Note however that, even with 1 reaction, the model already performs
+quite well (consider the bar for 64 samples and 1 canonical
+transformation). It turns out that, since our set of benchmarks is
+much smaller than the set of possible transformations, it is easy to
+find one transformation which almost fully discriminates benchmarks.
+Usually, the one transformation chosen with mutual information
+corresponds to the best speedup (within the training set) for each
+benchmark. Still, some benchmarks, such as   fir ,
+significantly benefit from 4 rather than 1 or 2 canonical
+transformations.
+
+Finally, one can see that 32 samples/8 canonical transformations
+performs about as well as 64 samples/2 canonical transformations.
+So one can choose, depending on the experimental constraints, to
+either minimize the training set or the number of probes.
+
+
+     Mutual Information  selection vs. random selection.  In
+order to evaluate the benefit of the   Mutual Information 
+approach, we have compared it with a random selection of canonical
+transformations, in Figure   fig:random-canonical .
+We note that using mutual information features is consistently better
+than using random features, and sometimes significantly so, e.g.,   fir ,
+  lmsfir .
+
+  MOB: TODO FOR JOHN: we should compare the best selected ones
+vs random vs the 12 obvious single transformations. May not have
+time 
+
+figure  
+ center  
+  minipage  [c] .45  
+    center  
+           0.5 
+        figure=NewGraphs/baseZero/mips-mae-base-zero.eps,width=8cm 
+           MIPS mean absolute error: Reactions and Naive predictors. 
+        fig:mips 
+    center  
+  minipage  
+  
+
+  minipage  [c] .45  
+    center  
+           0.5 
+        figure=NewGraphs/baseZero/train-mips-predict-ti-base-zero.eps,width=8cm 
+           Learning across architectures, using the reactions-based model. 
+        fig:across-architectures 
+    center  
+  minipage  
+ center  
+    -0.39cm 
+figure  
+
+
+  Modeling another architecture 
+  sec:other-architecture 
+
+
+In this section, we report in Figure   fig:mips  the main
+accuracy results for another architecture platform, a MIPS core
+described in Section   sec:experimental-methodology . Note that
+the average accuracy of our model is almost the same as the TI
+platform. We also see that the naive predictor performs better, in
+large part because the MIPS core (and the underlying compiler) is
+significantly more simple than the TI core (simple
+scalar versus large VLIW processor).
+
+Finally, since a significant number of transformations can have a
+similar impact on different architecture platforms, we have explored
+whether we could apply on a new platform what was learned on another
+platform. Figure   fig:across-architectures  shows the accuracy
+of a model trained on the MIPS, on 10 benchmarks (64 samples per
+benchmark, 4 canonical transformations), and used to predict
+performance of the left out benchmark running on the TI platform. While not as
+good as the native TI model, it still outperforms the naive
+predictors.
+
+  MOB: TODO FOR JOHN: Put MIPS data in here. 
+
+  OT: TODO FOR JOHN IF WE HAVE TIME: Try predicting MIPS using TI
+data and vice-versa; try training a model adding an architecture id
+as input, using leave one out and see if we can not only
+discriminate software transformations but also architectures (it
+should be possible). 
+
+
+
+  Related Work 
+  related-work 
+
+  Speeding up simulators and alternative approaches. 
+Recently, there have been proposals to speed up
+simulation using sampling, e.g.  SimPoint   605403  and
+SMARTS   WunderlichWFH03 . Even more recently,
+TurboSMARTS   WenischWFH05  could drastically reduce overall
+simulation time through a combination of sampling and checkpointing.
+These techniques are actually orthogonal and complementary with our
+technique: by reducing the time necessary to perform one run, they
+can reduce our training and characterization time. However, sampling
+techniques like SimPoint or SMARTS are ill-suited for software
+design-space exploration because they require a significant
+pre-processing effort for each benchmark (at least one full
+functional simulation), so that, after any program transformation,
+the whole pre-processing must be replayed, voiding part or all of
+the speed benefits of sampling.
+
+Karkhanis et al.   KarkhanisS04  propose an analytical model for
+hardware exploration that captures the key performance features of
+superscalar processors. This model can potentially be used for
+software exploration, but the construction of the model is ad hoc
+and a complex process, which makes it difficult to generalize and replicate. Eeckhout et al.   EeckhoutBSBJ04  use
+statistical simulation to similarly capture processor
+characteristics, and generate synthetic traces that are later run on
+a simplified superscalar simulator. After any program
+transformation, a new trace needs to be generated if this approach
+were to be used for software exploration, requiring a full
+functional simulation.
+
+Recently Ipek   ipek  has proposed a distinct method for
+both considerably speeding up and automating the hardware
+design-space exploration process. The principle is to train an ANN
+(Artificial Neural Network) to predict the impact of hardware
+parameter variations (e.g., cache size, memory latency, etc) on the
+performance behavior of a target architecture. After training on
+less than 5% of the design space, the model can still accurately
+predict performance variations with less than 2% error. One model
+is built for each benchmark, i.e., the model does not learn   across 
+benchmarks as we do.
+Moreover, the approach is limited to hardware because the model
+is specific to a program binary, just like the sampling approaches.
+Therefore, any  modification of the program binary, such as
+applying a program transformation, requires  training a new model
+using several thousands simulations. As a result, the approach is
+not suitable for software exploration. Our approach similarly relies
+on machine-learning  to build a performance model, but it
+can accommodate any program transformation without retraining.
+
+Recently, IBM has highlighted the issue of software tuning early on
+in the design cycle. For the Blue Gene/L, it was shown that an
+approximate but fast performance model, as a replacement for more
+detailed but slow simulators, can be very useful in
+practice   ibm-ispass ; still, the approximate model proposed
+was designed manually and in an ad-hoc manner.
+
+  OT: REMARK FOR MIKE: Mike's initial text was focused on
+showing ML brought poor absolute performance. I don't see how it
+fits with the current focus of the paper, so I changed it to "ML
+used for one or a few heuristics, but not for a global performance
+model across all optimizations". If I missed the point of the
+previous angle, the text is still in the SVN. 
+
+  Predicting the impact of program transformations. 
+Machine-learning has recently been investigated by a number of
+researchers in the area of compiler optimization. The goal is
+usually to improve or replace one or more hand-tuned compiler
+heuristics. Such machine learned heuristics attempt to predict a
+good transformation, but do not predict their actual performance.
+
+Stephenson et al.   metaOpt03  used genetic programming to tune
+heuristics for three compiler optimizations within
+the  Trimaran's IMPACT compiler: hyperblock selection, data
+prefetching and register allocation.
+Cavazos et al.   CavazosPLDI04  describe using supervised
+learning to control whether or not to apply instruction scheduling.
+Monsifrot et al.   Monsifrot  use a classifier based on decision
+tree learning to determine which loops to unroll: they looked at the
+performance of compiling Fortran programs from the SPEC benchmark
+suite using g77 for two different architectures, an UltraSPARC and
+an IA64. Stephenson et al.   StephensonA05  use machine-learning
+to characterize the best unroll loop factor for a given loop nest,
+and improve over the ORC compiler heuristic. All of these approaches
+are successful in automatically generating compiler heuristics for code segments
+rather than in predicting the eventual performance of the selected
+optimizations for whole programs.
+
+Agakov et al.   ABCP06  build models of good transformation
+sequences from training data on a per program basis. This is then
+used to guide iterative search on a new program. Unlike this paper,
+they only attempt to predict good transformations to apply rather
+than predicting the   performance  impact of any particular
+transformation. Predicting performance is a significantly more
+difficult problem as it requires the precise capture of architecture
+behavior.
+
+  OT: TODO FOR MIKE: talk about your CGO paper here,
+position it; maybe change the intro of this paragraph if necessary.
+MOB DONE  
+
+  Program characterization for prediction.  In order to
+predict the effect of a transformation on a given program, the
+predictor is fed some characteristics of the target program. Much of
+the prior work in machine learning based compilation
+ relies on   program
+features -based characterization. For instance,
+Monsifrot et al.   Monsifrot ,
+Stephenson et al.   StephensonA05  and
+Agakov et al.   ABCP06  all use static loop nest features.
+Features may capture those characteristics of the static
+program that are best at predicting program transformations to apply.
+
+However, we have shown that features-based characterization may not
+be well suited to the complex task of predicting whole program
+performance and the impact of many different transformations.
+Triantafyllis et al.   triantafyllis  bears some similarity with our   reactions -based characterization method.
+They augment the Intel Itanium compiler with the ability to
+iteratively search combinations of compiler options across runs for
+a given program, and they especially focus on the interactions among
+compiler options. As part of their technique, they collect the good
+combinations of compiler optimizations by noticing that how a
+program behaves for one transformation can be an indication of how
+it would behave for some other transformations. Our reaction
+characterization method is based on a similar intuition, however
+they attempt to find appropriate optimizations, while we also
+attempt to estimate the associated speedups and to scan the whole
+transformation space very rapidly.
+
+  Conclusions and Future Work 
+
+  sec:conclusions 
+
+This article proposes a method for building a performance model of a
+target machine which is accurate enough to estimate the speedup of
+any known program transformation. One of the key assets of our
+approach is that the model construction is entirely automatic; the
+main construction cost is the training phase, though training runs
+can be either randomly selected or resulting from past/useful
+experiments. The performance model is based on characterizing
+programs by their reactions to a set of automatically selected
+canonical transformations. This approach has been shown to
+accurately capture the complex interplay between the program and the
+architecture.
+
+  Hybrid reactions+features approach.  Even though the
+reactions-based approach proved superior to the features-based
+approach, and required only a few probing runs on the new target
+program, the features-based approach still has the potential
+practical advantage of not requiring any probing run of the new
+target program, since the characterization is static. As a result,
+we intend to investigate a combined reactions+features approach in
+order to achieve the accuracy of the reactions approach with the
+practical advantages of the features approach.
+
+  Extensions to other combined software+hardware predictions. 
+Our reactions approach makes no assumption on the   nature  of
+reactions. In this study, reactions are the impact of software
+transformations on performance, but they could also be the impact of
+hardware modifications on performance. As a result, we will extend
+our approach to combined software+hardware design-space exploration
+by simultaneously studying software and hardware reactions.
+
+     0.8 
+
+
+
+  plain 
+  article performance model 
+
+document  

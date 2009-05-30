@@ -1,0 +1,50 @@
+
+
+			
+
+<NYT_TEXT >
+
+<p>IT has been three years since iTunes burst on the scene and pushed the popularity of music downloads and the white <a href="http://tech2.nytimes.com/gst/technology/techsearch.html?st=p&cat=&query=ipod&inline=nyt-classifier" title="">iPod</a> headset cords coming out of the ears of what seems like half the population. </p> 
+<div id="articleInline">
+<div id="inlineBox"><a href="#secondParagraph" class="jumpLink">Skip to next paragraph</a>
+  
+   
+<div class="image">
+<div class="enlargeThis"><a href="javascript:pop_me_up2('http://www.nytimes.com/imagepages/2006/05/19/arts/19urge_ready.html', '19urge_ready', 'width=636,height=600,scrollbars=yes,toolbars=no,resizable=yes')">Enlarge this Image</a></div>
+<a href="javascript:pop_me_up2('http://www.nytimes.com/imagepages/2006/05/19/arts/19urge_ready.html', '19urge_ready', 'width=636,height=600,scrollbars=yes,toolbars=no,resizable=yes')">
+<IMG src="http://graphics10.nytimes.com/images/2006/05/19/arts/urge.190.jpg" width="190" height="227" alt="" border="0">
+</a>
+<div class="credit">MTV Networks</div>
+<p class="caption">
+Among the artists included in the classical section of Urge.com are Frank Zappa, Wynton Marsalis, Philip Glass and Leonard Bernstein. 
+</p>
+</div>
+  
+<div id="sidebarArticles">
+<h4>Related</h4>
+<h2>
+
+<a href="http://www.nytimes.com/2006/05/19/arts/19burge.html">Seeking Out Orchestras and Opera</a>
+
+(May 19, 2006)
+</h2>
+</div>
+<div id="inlineReadersOpinion">
+<h4>Readers&#8217; Opinions</h4>
+<div class="story">
+<h2>
+<a href="http://forums.nytimes.com/top/opinion/readersopinions/forums/arts/classicalmusic/index.html?page=recent">Forum: Classical Music</a>
+</h2>
+<p class="summary"></p>
+</div>
+</div>
+   
+</div>
+</div><a name="secondParagraph"></a>
+ <p>Now the MTV networks and Microsoft are sending out their own entry to challenge Apple in the music-downloading stakes. Their site, <a href="http://Urge.com" target="_">Urge.com</a>, which went live on Wednesday, bills itself as offering everything from alt-rock to zydeco: two million tracks, available individually or to subscribers, all playable on Microsoft digital players in the Windows Media format.</p><p> That means you can't play them on your iPod. (The gauntlet has been thrown down.) You also can't use it if you have a Mac, and PC users will find that they need up-to-date Windows software to run Urge.</p><p>The version of the site that just went up is the public beta version, denoting a work in progress. Since the service is designed in tandem with the latest Windows Media Player, users who click on the 14-day free trial offer will find that their computers begin an automatic download of the latest beta version of Windows Media Player as well. (Subscriptions to Urge are  $9.95 to $14.95 a month; users can also purchase individual tracks for 99 cents each.) </p><p>Three years ago it seemed that classical music producers did not care about digital downloading.  Well, that impression was wrong. Classical music, as many have noted recently, is doing very well on the Internet:  a bigger proportion of sales on iTunes than in conventional retail stores.</p><p>The classical establishment is now moving with uncharacteristic speed to get onto this bandwagon. Orchestras like the New York and Los Angeles Philharmonics are establishing direct-to-download recording deals. Labels are suddenly aware of the benefits of Internet marketing, and iTunes even sends out a classical music monthly page to anyone whose purchasing history seems to warrant it. (Urge.com, like iTunes, has a classical page with new releases and featured albums. It also, like iTunes, has original content, including celebrity playlists and radio-style podcasts.)</p><p>This is not to say that classical music is expanding into a of larger market, but simply that it is moving to occupy its own significant niche in a market composed entirely of niches. </p><p>The idea that Internet success is indicative of some kind of mass popularity, or spawns it, is fallacious. On the contrary, the music scene on the Internet favors obscure groups that can use it to develop strong cult followings. This is a climate of specific and precise interests, where groups of aficionados can and do find one another through blogs, message boards or chat rooms. </p><p>So it's ideally suited, at least theoretically, to a field composed of countless niches. The term classical music encompasses everything from opera to organ, Baroque to contemporary. </p><p>Which leads to the question of how to define classical music, on or off the Internet, and what forms are enjoying the most popularity. Film soundtracks and classical crossover are both usually termed classical. To opera lovers, in particular, it may be disquieting to note that Andrea Bocelli, the Italian singer who sometimes ventures into opera, represented 5 of the Top 10 classical downloads on iTunes on Monday. Also in the classical Top 10 was the Cincinnati Pops' version of the theme from "Mission Impossible." </p><p>Yet it's difficult to know how to draw a line. After all, the term "classical music" has traditionally embraced everything from divertimentos, ballets and pops concerts to Bruckner's Seventh and "Einstein on the Beach,"  a wide range of very disparate music, some of it purely entertaining. It seems counterintuitive to begin dictating rules for inclusion in what is inherently a catchall term.</p><p>There is certainly a trend in this brave new world toward defining classical music in its new, commodified version largely in terms of form rather than content. Thus, "classical music" becomes, for example, anything presented in a concert hall by a big orchestra: <a href="http://movies2.nytimes.com/gst/movies/filmography.html?p_id=111295&inline=nyt-per" title="">Howard Shore's</a> "Lord of the Rings" Symphony, music from the Final Fantasy video game series played by the Los Angeles Philharmonic and the London Symphony Orchestra, or Mr. Bocelli's coming appearances, this September, with the <a href="http://topics.nytimes.com/top/reference/timestopics/organizations/n/new_york_philharmonic/index.html?inline=nyt-org" title="More articles about the New York Philharmonic.">New York Philharmonic</a>.</p><p> "Classical music" can also be reduced to a simple tune, whether it's an opera aria deconstructed by a "popera" group like the Opera Babes or the East Village Opera Company, or the insidious "Baby <a href="http://topics.nytimes.com/top/reference/timestopics/people/m/wolfgang_amadeus_mozart/index.html?inline=nyt-per" title="More articles about Wolfgang Amadeus Mozart.">Mozart</a>" series, which reduces the master's works to a few lines played on a synthesizer. </p><p>These trends are certainly represented on iTunes, and on Urge as well, simply because no retailer overlooks the things that sell well. But it's a mistake to think that Internet outlets foster this kind of thing more than any other medium. </p><p>And a perusal of the classical home page on iTunes shows a range of music with appeal to any serious connoisseur, like Mitsuko Uchida and the Emerson Quartet, as well as offerings for newcomers, like lists of "iTunes essentials," providing a guide that is hard to find in your average bricks-and-mortar store. There is also, yes, a "crossover corner." But it's only one section, at the bottom of the page.</p><p>So far, perhaps the most notable innovation that iTunes has brought to the classical field has been creating an impetus to get the musicians' union to agree on new terms regarding broadcast rights for downloads. This paved the way, for instance, for Deutsche Grammophon to team up with the New York Philharmonic and the Los Angeles Philharmonic to sell live recordings under the rubric "DG Concerts." This hardly represents a crass sellout to popular taste.</p><p>It remains to be seen what spin, if any, MTV gives to its classical section on Urge. There is every indication that the site is attempting to match the iTunes standard. </p><p>The bottom line about the advent of a new major online music retailer is that classical music is — as one might not have expected a few years ago — part of the equation. And people, however they define classical music, will now have more ways to get it. </p>
+</NYT_TEXT>
+<div class="nextArticleLink"><a onClick="s_code_linktrack('Article-MoreArticlesBottom');"
+				href="http://www.nytimes.com/pages/arts/index.html">More Articles in 
+				Arts &#x00bb;</a></div>
+</div>
+</div>

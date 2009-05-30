@@ -1,0 +1,17 @@
+#! /bin/sh
+
+if test -z "$1"; then
+ echo "Usage: __run <dataset number> <number of runs (optional)>"
+ exit
+fi
+
+cp _run/_finfo_dataset.$1 _finfo_dataset
+if test -n "$2"; then
+ echo $2 > _finfo_dataset
+fi
+
+read CL < _run/_finfo_cmd_run.$1
+
+echo "time moxie-elf-run -v ./a.out -- $CL" > tmp_bat
+source tmp_bat
+cat ftmp_out | awk -f ../../../../scripts/i.awk >> icount.txt

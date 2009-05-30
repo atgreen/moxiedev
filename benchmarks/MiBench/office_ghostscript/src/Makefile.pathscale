@@ -1,0 +1,8 @@
+# Declarations
+COMPILER = pathcc
+OPTS_DEF = -Ofast
+MISC_OPTS = -lm -lz
+
+# Actions
+all:		
+	$(COMPILER) $(OPTS_DEF) $(MISC_OPTS) *.c

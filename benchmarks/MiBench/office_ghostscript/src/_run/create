@@ -1,0 +1,5 @@
+for i in `seq 1 20`; do 
+ echo $i; 
+ echo "-sDEVICE=ppm -dNOPAUSE -q -sOutputFile=output.ppm -- ../../office_data/$i.ps > ftmp_out" > _finfo_cmd_run.$i
+ cp _finfo_dataset.1 _finfo_dataset.$i;
+done

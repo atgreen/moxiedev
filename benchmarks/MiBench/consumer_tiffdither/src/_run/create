@@ -1,0 +1,5 @@
+for i in `seq 1 20`; do 
+ echo $i; 
+ echo "-c g4 ../../consumer_tiff_data/$i.bw.tif output_largedither.tif 2> ftmp_out" > _finfo_cmd_run.$i
+ cp _finfo_dataset.1 _finfo_dataset.$i;
+done

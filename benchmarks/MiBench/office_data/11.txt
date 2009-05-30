@@ -1,0 +1,2906 @@
+Development Recipe for a Heap Manager Embedding 
+Advanced Bug Defence 
+
+ 
+
+Anthony Savidis 
+
+Institute of Computer Science (ICS), 
+
+Foundation for Research and Technology – Hellas (FORTH), 
+
+Heraklion, Crete, GR-71110 GREECE 
+
+Tel: +30-2810-391749, Fax: +30-2810-391740 
+
+as@ics.forth.gr 
+
+ 
+
+ 
+
+ 
+
+Abstract 
+
+ 
+
+Software applications developed in C++ typically allocate objects from free storage, 
+commonly known as the heap, available syntactically during development-time as 
+statically typed memory-address variables called pointers. The runtime system of the 
+C++ language for dynamic memory allocation encompasses the low-level heap 
+manager of the C language, offering an Application Programming Interface (API) 
+basically consisting of the malloc and free functions. Recent implementations of this 
+heap manager in various C++ compilers encapsulated error-tracking facilities, thus 
+better supporting memory defect detection. Most known heap managers are primarily 
+capable to: (a) identify on the spot memory disposal via invalid memory addresses; 
+and (b) detect with a variant delay overwrites of disposed memory blocks. To extend 
+those capabilities, the development recipe of a heap manager embedding advanced 
+bug defence is presented, enabling to: (i) verify valid memory addresses; (ii) check of 
+memory block corruption; (iii) monitor memory blocks for unexpected content 
+modification; (iv) monitor erroneous overwrites to already disposed memory blocks; 
+(v) report memory leaks and record memory allocation history; and (vi) embed 
+readable tags in memory blocks for memory inspection. The presented heap-manager 
+overloads the basic new and delete C++ operators, so that programs linked with it 
+automatically inherit defensive memory management. Additionally, a comprehensive 
+set of template functions is provided, to inject defect detection statements and 
+validation guards in the program source code. 
+
+ 
+
+Keywords 
+
+Dynamic memory allocation. Defensive heap management. Defensive programming. 
+Debugging techniques. 
+
+
+1 Introduction 
+
+
+In languages offering programmer-controlled memory management, such as the C++ 
+language, the explicit manipulation of memory addresses leads to the frequently 
+occurring category of memory corruption errors. In small-scale systems, the manual 
+exploration of such defects through intensive repeating debugging sessions is 
+probably a feasible process. However, in the context of large-scale systems, the wide 
+runtime propagation of memory-corruption defects may result in the delayed 
+appearance of observable symptoms, far away from the particular malicious code. 
+Practically, unless automated techniques for direct defect detection are employed, the 
+manual investigation by employing inspection instruments and by injecting heuristic 
+diagnostic statements becomes a painful and resource demanding process. 
+
+ 
+
+In (Eisenstadt, 1997), the report from the study of a large number of anecdotal 
+debugging experiences concluded that over fifty percent of the debugging problems 
+resulted from the large time and source distance between the cause of the errors and 
+the externally observable symptoms. Additionally, the two major causes of bugs were 
+actually memory overwrites from in-house program code, and defects in vendor–
+supplied software or hardware. Currently, most known C++ compilers explicitly 
+provide some facilities for automatic bug tracking, through the incorporation of a 
+simple defensive heap manager and the ability of to generate extra memory-checking 
+statements. In this context, the implementation of a custom-made heap manager has 
+numerous advantages: 
+
+.. It allows developers to implement alternative policies for dynamic memory 
+allocation, depending on the particular stage of execution or even the size of the 
+requested memory blocks (like the small-object allocator – see Alexandrescu, 
+2001); 
+.. It enables the incorporation of advanced bug defence policies, while providing 
+direct programming access to all allocated memory blocks. In this case, even 
+when program tracing and manual memory inspection is applied, the availability 
+of heap memory as a program-controlled data structure enables immediate 
+reviewing of any target memory block; 
+.. It supports the implementation of automatic tracking for memory-management 
+program behaviour, such as the recording of memory allocation and disposal 
+requests (timestamps and block size information), enabling further off-line 
+analysis or sampling of dynamically allocated memory during execution. 
+
+
+We will report the implementation prescription for a heap manager, encompassing 
+advanced bug defence. This heap manager provides a comprehensive defensive 
+wrapper over the original malloc and free heap control functions, performing 
+additional runtime management and bookkeeping of memory blocks. The basic new 
+and delete operators are overloaded to call the defensive heap manager functions, 
+while bug defence is supported as follows: 
+
+.. Checking of pointer addresses and pointed memory for: 
+.. Detecting recent overwriting beyond pointed memory-block boundaries; 
+.. Validating memory addresses as legal dynamically allocated blocks; 
+.. Verifying the deployment size for pointed memory blocks. 
+.. Forcing disposal regulations over memory blocks: 
+.. Putting an expiration time interval, meaning if the block is not freed prior to 
+expiration it is immediately reported as a memory leak; 
+.. Forbidding temporarily block disposal, meaning statements disposing 
+explicitly such blocks are reported immediately as potentially offensive; 
+
+
+
+ .. Monitoring erroneous access to specific or all memory blocks for: 
+.. Unexpected content modification (side effects); 
+.. Overwriting of memory boundaries (pointer over-run or under-run); 
+.. Content overwriting after memory blocks are disposed, by activating late 
+memory-block disposal together with content modification monitors; 
+.. Reporting information regarding: 
+.. Memory leaks, i.e. memory blocks not freed during program execution; 
+.. Memory management history, i.e. allocation / disposal requests, with exact 
+timestamps. 
+
+
+ 
+
+freemallocfreemallocdeletenewDefensiveheap managerBlock validationMemory monitoringDisposal controlBuilt-inheap managerMemory 
+blocksDefect 
+monitorsfreemallocfreemallocdeletenewDefensiveheap managerBlock validationMemory monitoringDisposal controlBuilt-inheap managerMemory 
+blocksDefect 
+monitors 
+
+
+ 
+
+Figure 1: The structure of the defensive heap manager, as a defensive wrapper over 
+the built-in heap manager, offering mainly: disposal control, memory monitoring and 
+block validation functionality. 
+
+ 
+
+In 
+
+Figure 1, the structure of the defensive heap manager is outlined, in relationship to the 
+built-in heap manager. As it is shown, the defensive heap manager maintains its own 
+list of memory blocks, where each block may optionally have runtime defect 
+monitors, depending on the particular error-tracking operations requested during 
+runtime (e.g. block validity, checking block validity or content modification). 
+
+1.1 Overview of the defensive Application Programming Interface (API) 
+
+
+The defensive API available to programmers hides effectively the heap manager, 
+while offering a compact set of template functions for embedding memory-corruption 
+defence within client programs. An important issue is that the supplied functions do 
+not substitute the basic pointer-use style, but only constitute bug diagnosis support, 
+deployable in a manner orthogonal with the original program logic. For instance, 
+memory allocation and disposal, or pointer de-reference and pointer arithmetic 
+operators are not affected; programmers employ the defensive library to verify 
+correctness of pointers and pointed memory prior or after memory access operations 
+are performed. The basic API is illustrated in Figure 2. 
+
+ 
+
+The capabilities for error detection mainly rely on the on the padding of memory 
+blocks with extra error-checking information. Additionally, the reported method 
+employs double copies of memory-allocation information within memory blocks, like 
+
+
+block size, source file and source line, thus effectively detecting potential corruption 
+even for the bookkeeping data structures. Prior to the detailed presentation of the 
+implementation methodology for the proposed defensive heap manager, a briefing and 
+comparison with existing related work is provided. 
+
+ 
+
+Macro 
+
+Explanation 
+
+DNEW(t) 
+
+A wrapper to new, also recording file, line and allocation 
+expression information for the allocated memory. 
+
+DNEWCLASS(c, args) 
+
+A wrapper to new, as before, in case constructor 
+arguments are supplied (should be parenthesized). 
+
+DNEWARR(e, n) 
+
+A wrapper to new, as before, for dynamic arrays. 
+
+DCHECKPTR(p) 
+
+Checking pointer validity in terms of address, memory size 
+for *p, and internal corruption. 
+
+DSIZE(p, n) 
+
+Asserts the memory size of a given pointer. 
+
+DCONTROLDISPOSAL(p, flag) 
+
+Disposal for p memory block is enabled / disabled. 
+
+DLATEDISPOSALON(t) 
+
+DLATEDISPOSALOFF() 
+
+All memory block disposal requests after this call will be 
+committed with a delay for t milliseconds, while guarding 
+for illegal access. The behavior can be switched off. 
+
+DMONITORCONTENT(p, t) 
+
+DUNMONITORCONTENT(p) 
+
+Start (or stop) monitoring the memory content of a 
+pointer, with check period t, raising an error in case it is 
+overwritten; t=0 implies intensive checks. 
+
+DMONITORVALIDITY(p, t) 
+
+DUNMONITORVALIDITY(p) 
+
+Start (or stop) monitoring memory bounds and content of 
+a pointer, with check period t, raising an error in case of 
+overwriting (over-run or under-run). 
+
+DMONITOREXPIRATION(p, d) 
+
+DUNMONITOREXPIRATION(p) 
+
+Start (or stop) an expiration monitor for early memory 
+leaks, with expiration time d. 
+
+DINIT() 
+
+Initializes the heap manager. Dynamic memory allocation 
+is not allowed during static data initialization. 
+
+DFINISH(path) 
+
+Cleans-up the heap manager, reporting memory leaks in 
+the specified file path. 
+
+DSTARTLOGGING(path) 
+
+DSTOPLOGGING() 
+
+Start (top) logging memory allocation operations in a file, 
+concurrently to program execution. 
+
+
+
+ 
+
+Figure 2: The basic programmer’s API for defensive memory management, with a 
+comprehensive set of template functions for: allocation control, validation, defect 
+monitoring, and logging. 
+
+ 
+
+The API offers facilities to detect various categories of hardly traceable memory bugs, 
+like writing over disposed but not recycled memory blocks, or overwriting of 
+neighbour memory blocks. In such cases, the native heap manager will not complain 
+for illegal memory accesses, however, the program will clearly suffer from 
+unexpected side effects. As it will be shown, the deployment of the DLATEDISPOSAL 
+macro allows programmers to globally monitor unexpected post-disposal content 
+modification. 
+
+ 
+
+2 Related work 
+
+
+Related work mainly concerns previous developments regarding wrapper patterns 
+over the native heap manager for bug detection. For example, the work by (Hixon et 
+al., 2002) concerned the complete rewriting of the basic memory manager, including 
+the lower-level memory allocation functions, for the Madden™ NFL game franchise, 
+putting forward the need to encapsulate source and file information directly inside 
+dynamically allocated memory blocks; this technique is known as in-band header for 
+memory blocks. Usability wise, this technique is superior to the bookkeeping of file 
+and line information in a separate list, as it allows programmers during memory 
+inspection to directly identify the source file and source line where a particular 
+
+
+memory block has been dynamically allocated. The same feature has been supported 
+in our defensive heap manager, providing also allocation expression information, as it 
+is shown in an actual debugging session within Figure 3. The heap manager proposed 
+in (Hixon et al., 2002) does not encapsulate defence against corruption of the heap 
+manager structures (a very disastrous situation), neither it provides runtime monitors 
+for erroneous access, boundary over passing, or early memory leaks. 
+
+ 
+
+ 
+
+Figure 3: Viewing file, line and allocation expression information while inspecting 
+memory allocated dynamically through the defensive memory manager; the feature for 
+duplicate copies of defensive information has been switched off for display clarity. 
+
+ 
+
+A technique to craft a “bug-free” heap manager as a wrapper over the original C heap 
+manager is outlined in (Jongerius, 1995). In this work, although the basic 
+implementation issues for such a heap manager are mainly explained, the method 
+practically remains at the prototype level since: (a) it does not propose memory block 
+padding with offensive-access guard units; (b) it misses the handling of compiler-
+specific padding for dynamic arrays; (c) it does not address runtime memory-block 
+monitoring; and (d) it proposes separate dynamic structures for memory block 
+information, i.e. out-of-band header, clearly leading to larger memory fragmentation 
+during debugging run sessions, while not allowing better inspection of memory blocks 
+as in Figure 3. The large challenges for C++ programmers, regarding memory 
+management, are mainly two (Joyner, 1992): (i) an object can be de-allocated 
+prematurely, while valid references still exist (dangling pointers); and (ii) dead objects 
+might not be de-allocated, leading to memory filling up with dead objects (memory 
+leaks). Although in virtual memory systems memory leaks hardly lead to memory 
+exhaustion, performance problems may arise due to cache misses while accessing 
+used memory. Basically, memory corruption errors, like writing in already disposed 
+memory, are caused due to the use of dangling pointers. In this context, the Etnus 
+memory manager (Etnus, 2004), is a commercially available heap manager with 
+advanced debugging features, such as memory hoarding, a feature very similar to 
+relaxed memory disposal, enabling the detection of post-disposal write-access to 
+memory blocks. 
+
+Allocation via 
+defensivemacro (gettingfile and lineinformation)
+Getting pointer 
+variableaddress for 
+inspectionin the debuggerFile, line,
+allocationexpression,
+and sizeAdditionalmemory block 
+informationUser memory(the repeatingpattern is dueto initialisationof the std::stringinstances)
+Copied allocationinformationAllocation via 
+defensivemacro (gettingfile and lineinformation)
+Getting pointer 
+variableaddress for 
+inspectionin the debuggerFile, line,
+allocationexpression,
+and sizeAdditionalmemory block 
+informationUser memory(the repeatingpattern is dueto initialisationof the std::stringinstances)
+Copied allocationinformation
+
+
+
+ 
+
+3 Implementation 
+3.1 Defensive memory capsules 
+
+
+
+
+The implementation of our defensive heap manager as a wrapper over the original 
+heap manager reflects the delivery of requested dynamically allocated memory blocks 
+as defensive memory capsules, embedding error tracking and content validation 
+capabilities. User memory is actually encapsulated inside a larger allocated memory 
+unit, where extra memory serves defensive purposes, encompassing block information 
+as well as specific constant values to detect illegal trespassing of block boundaries. 
+The specific memory layout for defensive memory capsules is provided in Figure 4; 
+the detailed description of each embedded item and its bug-defence purpose, together 
+with the memory address calculation logic follows. 
+
+ 
+
+00054 bytes,
+header,
+repeating10101010sizeof 
+MemoryCapsule,
+Blockinformationsizeof 
+MemoryCapsule,
+copy of blockinformation3 bytes,
+zeroedunit4 bytes,
+trailer 2,
+repeating11001100Allocation size,
+User memory4 bytes,
+reserved bycompilersonly for new[]
+1 byte,
+offset toend of blockinformationfor arrays1 byte, 
+offset toend of blockinformationfor non-arrays94 bytes, 
+trailer 1,
+array sizecopy orrepeating1111000000054 bytes,
+header,
+repeating10101010sizeof 
+MemoryCapsule,
+Blockinformationsizeof 
+MemoryCapsule,
+copy of blockinformation3 bytes,
+zeroedunit4 bytes,
+trailer 2,
+repeating11001100Allocation size,
+User memory4 bytes,
+reserved bycompilersonly for new[]
+1 byte,
+offset toend of blockinformationfor arrays1 byte, 
+offset toend of blockinformationfor non-arrays94 bytes, 
+trailer 1,
+array sizecopy orrepeating11110000 
+
+Figure 4: Memory layout for defensive memory capsules, encompassing user memory, 
+block information with its defensive copy, the defensive header and trailer, and the 
+offset values to compute the starting address of block information given the user 
+memory address. 
+
+ 
+
+3.1.1 Header and trailer units 
+
+
+ 
+
+There is a single header unit consisting of four bytes, repeating the byte pattern 
+10101010 (decimal 170), and two trailer units having four bytes each. The first trailer 
+unit encompasses either a copy of the compiler-reserved bytes for size information if 
+memory allocation is requested via new[], or the constant repeating byte pattern 
+11110000 (decimal 240). The second trailer unit encompasses the repeating byte 
+pattern 11001100 (decimal 204). As it is shown, canonical byte patterns are written 
+within header and trailer units to minimise the probability that the pattern itself 
+remains unaffected upon erroneous overwriting. Additionally, the reserved compiler 
+bytes storing size information for dynamic arrays are copied in a reserved trailer unit, 
+to enable checking for illegal overwriting during execution. 
+
+ 
+
+3.1.2 Block information with a defensive copy 
+
+
+ 
+
+The data structure for memory blocks primarily concerns allocation information such 
+as the allocation statement program context (i.e. source file, source line, and 
+allocation expression), and the allocation size. Additionally, it encapsulates runtime 
+information, such as the memory block state (i.e. under late disposal, disposal is 
+disabled), together with the instance holding the defect monitors (see Figure 5). 
+
+
+monitor holderinstancestate 
+flaguser memoryallocation sizenext blockprevious blockstate 
+flaguser memorymonitor holderinstanceallocation sizenext blockprevious block
+
+
+file,
+=15 charsexpression,
+=15 charsline,
+=4 charssize,
+=9 chars1 byte,sizeofvoid*,
+address ofsizeofvoid*,
+address ofsizeof 
+unsigned,
+sizeofvoid*,
+address ofsizeofvoid*,
+address of,,,.
+48 bytesfile,
+=15 charsexpression,
+=15 charsline,
+=4 charssize,
+=9 chars1 byte,sizeofvoid*,
+address ofsizeofvoid*,
+address ofsizeof 
+unsigned,
+sizeofvoid*,
+address ofsizeofvoid*,
+address of,,,.
+48 bytes 
+
+Figure 5: Layout of memory-block information items, encompassing compile-time (i.e. 
+file, expression and line) and runtime information (all the rest); it is noted that the 
+visual size of block units is not representative of their memory size in bytes. 
+
+ 
+
+As indicated in Figure 5, the starting address of user memory is also part of the block 
+information, while the various types of runtime defect monitors are populated in a 
+dynamic instance of an appropriately defined monitor holder class (named 
+DefectMonitors, to be discussed later). The choice to make the monitor holder 
+instance out-of-band block information has been taken mainly for implementation 
+simplicity; as it will be discussed, memory capsules maintain a replica of their 
+memory image for self-verification. 
+
+ 
+
+In Figure 6, the class definition for defensive memory capsules, i.e. MemoryCapsule 
+class, is provided. The local member variables correspond to the memory layout for 
+block information illustrated under Figure 5. Naturally, it is up to the compiler to 
+decide the exact layout of members for instances of the MemoryCapsule class, padding 
+if necessary with additional alignment bytes. In this context, the memory layout of 
+Figure 5 is supplied mainly for illustration purposes, as it is only one of the possible 
+alternative layouts, while it does not constitute a basis for address or offset 
+calculations. The context member of MemoryCapsule instances encompasses in text 
+format the source file, line, allocation expression and allocation size of their 
+respective creation new statement. The latter to be extractable require the use of the 
+DNEW or DNEWARR allocation macros, in place of new or new[] operators, otherwise only 
+allocation size information will be stored. The maximum character size reserved for 
+source file, line, allocation expression, and allocation size are also shown in Figure 5, 
+where all numeric items are textually stored in decimal format. 
+
+ 
+
+The decimal representation is necessary to make such block information directly 
+readable when inspected in debugging sessions (as also shown in Figure 3). Following 
+Figure 5, source lines are considered to be up to 9999 (five characters, one character 
+reserved for the comma symbol), and allocation size to be up to 999999999 (nine 
+characters, one reserved for the preceding comma, and one reserved for the trailing 
+dot). Since source file and allocation expression are limited to sixteen (16) bytes, 
+some of the original content has to be pruned-out. Because of the fact that the C pre-
+processor provides fully qualified file paths, it is important to copy the file name from 
+end to start, to ensure that the file name is effectively extracted; otherwise, only a 
+directory prefix is taken, usually identical for all allocation statements. In Figure 7, 
+the assembly of textual information inside memory blocks is illustrated; the context 
+character array is padded if necessary with the * character. 
+
+ 
+
+ 
+
+
+ACBDEACBDE
+
+
+class MemoryCapsule { 
+
+ char context[CONTEXT_SIZE]; 
+
+ unsigned char stateFlags; 
+
+ unsigned userSize; 
+
+ void* userAddr; 
+
+ DefectMonitors* monitors; 
+
+ MemoryCapsule* next; 
+
+ MemoryCapsule* prev; 
+
+ static MemoryCapsule* head; 
+
+ static bool inLateDisposals; 
+
+ static unsigned disposalDelay; 
+
+ void* GetReplicaAddress (void); 
+
+ void RefreshReplica (void); 
+
+ bool VerifyReplica (void) const; 
+
+ void IsLateDisposalActive (void) const; 
+
+ void IsDisposalDisabled (void) const; 
+
+ MemoryCapsule ( 
+
+ const char* file, 
+
+ const char* expr, 
+
+ unsigned short line, 
+
+ unsigned size, 
+
+ void* userAddr 
+
+ ); 
+
+ ~ MemoryCapsule (); 
+
+public: 
+
+ static MemoryCapsule* Construct ( 
+
+ const char* file, 
+
+ const char* expr, 
+
+ unsigned short line, 
+
+ unsigned size 
+
+ ); 
+
+ void Retarget (void* newUserAddr); 
+
+ static MemoryCapsule* GetBlock (void* userAddr); 
+
+ unsigned GetSize (void) const; 
+
+ const char* GetContext (void) const { return context; } 
+
+ bool Validate (void) const; 
+
+ void EnableDisposal (void); 
+
+ void DisableDisposal (void); 
+
+ static void EnableLateDisposals (unsigned delay); 
+
+ void); 
+
+static void DisableLateDisposals ( 
+void Dispose (void); 
+
+}; 
+
+
+
+ 
+
+Figure 6: Outline of the most important members of the MemoryCapsule class, 
+implementing defensive memory capsules for dynamically allocated blocks. 
+
+ 
+
+std::string[5]
+C: max 15 content characters (+1 for null), 
+copied from start ..endEntire allocation expressionmissed\DdebugTest.cppA: max 15 content characters (+1 for null), 
+copied from end ..startEntire source file pathmissedSource line(from binary format)
+Allocation size(from binary format)
+\DdebugTest.cpp,16,std::string[5],84.
+*********
+B: max 4 content characters,
++1 for commaD: max 9 content characters,
++1 for comma, +1 for dotE: padding remaining context 
+bytes with the ‘*’ characterstd::string[5]
+C: max 15 content characters (+1 for null), 
+copied from start ..endEntire allocation expressionmissed\DdebugTest.cppA: max 15 content characters (+1 for null), 
+copied from end ..startEntire source file pathmissedSource line(from binary format)
+Allocation size(from binary format)
+\DdebugTest.cpp,16,std::string[5],84.
+*********
+B: max 4 content characters,
++1 for commaD: max 9 content characters,
++1 for comma, +1 for dotE: padding remaining context 
+bytes with the ‘*’ character 
+
+
+Figure 7: Assembling informative textual content encapsulated within memory blocks, 
+being readable during memory inspection sessions; the resulting context character 
+array, with its constituent text parts, is shown at bottom right. 
+
+
+Since memory capsules constitute a memory wrapper for user allocated memory, 
+encapsulating critical allocation information, it is crucial to detect potential content 
+corruption for memory capsules during runtime. As it has been previously discussed, 
+block information is effectively kept with an up-to-date copy in a region of memory 
+exactly following the user memory area (see also Figure 4). The implementation of 
+the copy extraction, creation and verification functions is provided under Figure 8; a 
+call to the RefreshReplica function has to be injected as the final statement of every 
+member function that mutates the state of the calling MemoryCapsule instance. 
+Additionally, the implementation of the disposal control functions is supplied within 
+Figure 8; in case disposal is disabled for a particular memory block, by calling the 
+DisableDisposal member function, any subsequent call for explicit disposal of this 
+block will instantly raise a runtime error (an assertion will fail). Notice that the 
+RefreshReplica function is called by the EnableDisposal and DisableDisposal 
+functions. If late memory disposal is activated, by calling the EnableLateDisposals 
+static member function, all subsequent disposal requests for any memory block will 
+immediately return, while being committed concurrently with the normal program 
+execution after a delay disposalDelay (in milliseconds). As it will be discussed later, 
+during the late disposal timeframe of memory blocks, those are continuously 
+monitored, posting a runtime error in case content modification is detected. 
+
+ 
+
+template <class T> inline void* POFFS (const void* p, T j) 
+
+ { return ((unsigned char*) p) + j; } 
+
+template <class T> inline void PINC (void*& p, T j) 
+
+ { p = POFFS(p, j); } 
+
+void* MemoryCapsule::GetReplicaAddress (void) 
+
+ { return POFFS(userAddr, GetSize()); /* Exactly after user memory. */ } 
+
+void MemoryCapsule::RefreshReplica (void) 
+
+ { memcpy(GetReplicaAddress (), this, sizeof(MemoryCapsule)); } 
+
+bool MemoryCapsule::VerifyReplica (void) const 
+
+ { return !memcmp(GetReplicaAddress (), this, sizeof(MemoryCapsule)); } 
+
+ 
+
+#define IN_DISPOSAL_DISDABLED_STATE_FLAG 0x1 // Disposing memory not allowed. 
+
+#define IN_LATE_DISPOSAL_STATE_FLAG 0x2 // Late disposal is active. 
+
+bool MemoryCapsule::IsDisposalDisabled (void) const 
+
+ { return (stateFlags & IN_DISPOSAL_DISDABLED_STATE_FLAG) != 0; } 
+
+void MemoryCapsule::EnableDisposal (void) 
+
+ { stateFlags &= ~IN_DISPOSAL_DISDABLED_STATE_FLAG; RefreshReplica(); } 
+
+void MemoryCapsule::DisableDisposal (void) 
+
+ { stateFlags |= IN_DISPOSAL_DISDABLED_STATE_FLAG; RefreshReplica(); } 
+
+bool MemoryCapsule::IsLateDisposalActive (void) const 
+
+ { return (stateFlags & IN_LATE_DISPOSAL_STATE_FLAG) != 0; } 
+
+ 
+
+void MemoryCapsule::EnableLateDisposals (unsigned delay) 
+
+ { inLateDisposals = true; disposalDelay = delay; } 
+
+void MemoryCapsule::DisableLateDisposals (void) 
+
+ { inLateDisposals = false; disposalDelay = false; } 
+
+
+
+ 
+
+Figure 8: (a) memory capsule copy (replica) extraction, creation and verification 
+functions; and (b) disposal control functions. 
+
+ 
+
+ 
+
+ 
+
+
+3.1.3 Handling compiler reserved bytes for dynamic arrays 
+
+
+ 
+
+In case an allocated memory block needs to be deployed as a dynamic array of 
+program items, the C++ language offers an appropriate automation mechanism 
+through the new[] allocation operator. Effectively, this operator allocates as many 
+bytes needed for the requested array size and the type of stored items, plus a few extra 
+bytes to hold size information. In most known compiler, like the GNU/g++, Microsoft 
+Visual C++, and Metrowerks Code Warrior C++, such size information actually 
+occupies four bytes of heap memory, stored usually as an unsigned integer value, 
+while constituting a standard header always preceding the returned starting address of 
+the user memory. Compilers need such size information in the implementation of the 
+delete[] operator so as to automatically call the destructor for every item stored in 
+the dynamic array. There is a tricky technical issue regarding those extra bytes when 
+trying to overload the allocation operator function new[](size_t N): 
+
+.. The compiler adds the extra four bytes to the required allocation size (in bytes) 
+and supplies the result as the size parameter N, while the overloaded function 
+should allocate dynamically a block of N bytes, and return its starting address A; 
+.. The compiler stores the original dynamic array length, in terms of typed items, 
+within those four bytes, followed by a call to the constructor of each array item; 
+.. The user address returned to the caller after new[] completes is A+4, thus 
+displaced in comparison to the address of the internally allocated block; when 
+delete[] is called, the original starting address A is passed to the delete operator 
+function, and not the displaced user-returned memory address A+4. 
+
+
+Consequently, to be able to implement accurate validation functions for user memory 
+addresses, it does not suffice to merely store their original value upon internal 
+allocation, since, in case of dynamic arrays, the user address and the block address do 
+not match. Hence, it is necessary to appropriately retarget the internally stored user 
+address, i.e. userAddr member of the MemoryCapsule class, while ensuring the correct 
+conversion of the user address to its respective MemoryCapsule address. The latter to be 
+accommodated it is required to unambiguously convert the user memory address to its 
+respective MemoryCapsule instance; the method to accomplish this conversion is 
+detailed in Figure 9. Although four bytes need to be wasted, the benefit is that the 
+starting address of the MemoryCapsule instance is computed directly from a user 
+memory address ADDR, independently of whether the memory is a dynamic array or 
+not, using the following expression: 
+
+ 
+
+ADDR – BYTE[ADDR-5] - sizeof(MemoryCapsule) 
+
+ 
+
+Initially, upon memory block allocation and before the new operator returns, user 
+memory is considered to be the whole newly allocated block, following the memory 
+outline and the stored offset value shown at the bottom of Figure 9. However, once 
+the new expression returns, and an address displacement is observed (by the DNEW and 
+DNEWARR macros, to be discussed later), the stored user memory value in the 
+MemoryCapsule instance is updated, while the memory layout shown at the top of 
+Figure 9 is adopted, setting the offset bytes as indicated. The definitions of memory 
+calculations for retargeting, together with the GetBlock and GetSize functions 
+dependent on user memory address displacement, are provided under Figure 10. 
+
+
+59user memory(via new[])
+user memory(via new)
+compilerreserved-1-2-3-4-5-6-7-8-9-1-2-3-4-500000000MemoryCapsuleinstance559user memory(via new[])
+user memory(via new)
+compilerreserved-1-2-3-4-5-6-7-8-9-1-2-3-4-50000000000000000MemoryCapsuleinstance5 
+
+
+Figure 9: Calculating the offset to the 1st byte after the MemoryCapsule block, given the 
+user memory address, through a method applicable for both arrays and non-arrays. 
+
+ 
+
+#define COMPILER_ARRAY_BYTES 4 
+
+#define OFFSETBYTE_OFFSET -(COMPILER_ARRAY_BYTES + 1) 
+
+#define OFFSET_FORARRAYS 9 
+
+#define OFFSET_FORNONARRAYS 5 
+
+short GetOffsetByte (const void* p) 
+
+ { return (short) *((unsigned char*) POFFS(p, OFFSETBYTE_OFFSET)); } 
+
+void SetOffsetByte (void* p, unsigned char i) 
+
+ { *((unsigned char*) POFFS(p, OFFSETBYTE_OFFSET)) = i; } 
+
+MemoryCapsule* MemoryCapsule::GetBlock (void* p) 
+
+ { return POFFS(POFFS(p, OffsetByte(p)), -sizeof(MemoryCapsule))); } 
+
+unsigned MemoryCapsule::GetSize (void) const { 
+
+ short k = GetOffsetByte(userAddr); 
+
+ assert(k == OFFSET_FORARRAYS || k == OFFSET_FORNONARRAYS); 
+
+ return k == OFFSET_FORARRAYS ? size - COMPILER_ARRAY_BYTES : size; 
+
+} 
+
+bool MemoryCapsule::KnownAsArray (void) const 
+
+ { return OffsetByte(userAddr) == OFFSET_FORARRAYS; } 
+
+template <class T> T* DOK (const T* p) { assert(p); return p; } 
+
+#define STR(e) #e 
+
+#define DNEW(a) \ 
+
+DOK((Heap::Context(__FILE__, __LINE__, #a), Heap::Retarget(new a))) 
+
+#define DNEWARR(t, n) \ 
+
+DOK((Heap::Context(__FILE__,__LINE__, STR(t[n])), Heap::Retarget(new t[n]))) 
+
+
+
+ 
+
+Figure 10: Retargeting user memory in case of an address displacement due to 
+dynamic array allocation; the check is also encapsulated inside DNEW to ensure 
+correct behavior in case programmers do not use the explicit array allocation macro 
+DNEWARR. 
+
+ 
+
+void* operator new (size_t n) { return Heap::malloc(n); } 
+
+void operator delete (void* p) { Heap::free(p); } 
+
+void* operator new[] (size_t n) { return Heap::malloc(n); } 
+
+void operator delete[] (void* p) { Heap::free(p, true); } 
+
+
+
+ 
+
+Figure 11: The overloaded new and delete operators deploying the defensive heap 
+manager for memory allocation and disposal. 
+
+ 
+
+ 
+
+
+The detection of address displacement requires comparison between the address of the 
+allocated-block returned inside the overloaded implementation of the new and new[] 
+operators (see Figure 11), and the address returned to the program as the evaluation of 
+the allocation expression. The program-returned address, as shown within Figure 10 
+(see macros DNEW and DNEWARR) is supplied as an argument to the Heap::Retarget 
+function which is responsible to: (a) check for address displacement; and (b) make 
+internal rearrangements to accommodate such address displacement. The original 
+allocation address is gained from an internal stack of MemoryCapsule instances, called 
+newRequestsStack, which is maintained as follows: 
+
+ 
+
+.. Each time a memory capsule instance is constructed inside Heap::malloc, and 
+before the new or new[] operators return, this instance is pushed on the stack; 
+.. In the Heap::Retarget function, the top of the newRequestsStack is gained and 
+popped, holding the original allocated-block address to be compared with the 
+argument supplied to the Heap::Retarget function. 
+
+
+ 
+
+The need to introduce such a stack arises from the fact that the employment of a local 
+variable inside the heap manager class, just to hold the address of the most recent 
+allocated block does not suffice. More specifically, after the overloaded new operator 
+returns the address of the newly allocated block, but before the new expression is 
+thoroughly evaluated, subsequent calls to class constructors may lead to additional 
+allocations that will effectively overwrite this variable. To accommodate this runtime 
+scenario, new expressions are actually served by initially pushing their memory 
+capsule on the stack, just upon internal memory allocation, and popping from the 
+stack once the expression is entirely evaluated; in between those actions, multiple 
+other new expressions may be served in the same manner. The relevant definitions for 
+handling this stack are provided under Figure 12. 
+
+ 
+
+#define MAX_NESTED_NEW 1024 
+
+MemoryCapsule* Heap::newRequestsStack[MAX_NESTED_NEW]; 
+
+unsigned Heap::newTop = 0; 
+
+void Heap::Push (MemoryCapsule* p) { 
+
+ assert(newTop < MAX_NESTED_NEW); 
+
+ newRequestsStack[newTop++] = p; 
+
+} 
+
+MemoryCapsule* Heap::Pop (void) { 
+
+ assert(newTop); 
+
+ return newRequestsStack[newTop--] ; 
+
+} 
+
+template <class T> T* Heap::Retarget (T* userAddr) { 
+
+ MemoryCapsule* p = Pop(); 
+
+ p->Retarget(userAddr); // Apply potential retargeting inside. 
+
+ return userAddr; // The potentially retargeted address returned intact. 
+
+} 
+
+
+
+ 
+
+Figure 12: The simple implementation of the stack of memory allocation blocks for new 
+requests, so that the original user memory address can be extracted, and the Retarget 
+function to accommodate displacement internally; the above functions are static. 
+
+ 
+
+The implementation of the user-memory retargeting function for the MemoryCapsule 
+class is supplied in Figure 13. The fact that the user memory address is displaced has 
+been reflected earlier in the implementation of the GetSize function as follows (see 
+also Figure 10): if no displacement is observed, the user memory size is considered to 
+
+
+be the allocation size (i.e. size member); else, the COMPILER_ARRAY_BYTES value is 
+subtracted from size, and then returned as the result. It should be noted that all known 
+recipes for defensive heap managers completely dismiss this critical issue of 
+compiler-specific padding and returned address displacement, effectively resulting in 
+total failure to validate dynamic-array pointers. 
+
+ 
+
+#define PADDR(p) ((unsigned) (p)) 
+
+void MemoryCapsule::Retarget (void* newUserAddr) { 
+
+ if (newUserAddr != oldUserAddr) { 
+
+ void* oldUserAddr = userAddr; 
+
+ // Retarget the user address to the new value. 
+
+ userAddr = newUserAddr; 
+
+ // Verify that this is a legal compiler-specific displacement. 
+
+ assert(PADDR(newUserAddr) > PADDR(oldUserAddr)); 
+
+ assert(PADDR(newUserAddr) - PADDR(oldUserAddr)==COMPILER_ARRAY_BYTES);
+
+ // Mark the offset byte for dynamic arrays 
+
+ SetOffsetByte(newUserAddr, OFFSET_FORARRAYS); 
+
+ // Preserve the offset byte for non-arrays, zeroing the three bytes that follow it. 
+
+ memset( 
+
+ POFFS(oldUserAddr, -OFFSET_FORNONARRAYS+1), 
+
+ 0, 
+
+ COMPILER_ARRAY_BYTES-1 
+
+ ); 
+
+ // Copy the compiler reserved bytes at trailer 1. 
+
+ memcpy( 
+
+ POFFS(oldUserAddr, size + sizeof(MemoryCapsule)), 
+
+ oldUserAddr, 
+
+ COMPILER_ARRAY_BYTES 
+
+ ); 
+
+ // Verify that the block is gained correctly from the new user address. 
+
+ assert(this == GetBlock(userAddr); 
+
+ // Finally refresh the internal copy of block information. 
+
+ RefreshReplica(); 
+
+ } 
+
+} 
+
+
+
+ 
+
+Figure 13: The implementation of the user memory re-targeting logic for memory 
+capsules; notice that the compiler-reserved bytes are also copied at trailer 1 (see 
+Figure 4) for error checking. 
+
+ 
+
+3.1.4 Instance construction for memory capsules 
+
+
+ 
+
+The construction of memory capsules is provided through the static Construct 
+function, as shown in Figure 14. Dynamic memory allocation takes place inside this 
+function, subsequently calling the constructor of the MemoryCapsule class by supplying 
+explicitly the user-memory address. 
+
+
+#define HEADER_BYTES 4 
+
+#define TRAILER1_BYTES COMPILER_ARRAY_BYTES 
+
+#define TRAILER2_BYTES 4 
+
+#define BLOCK_HEADER 170 // 10101010 
+
+#define BLOCK_TRAILER1 240 // 11110000 
+
+#define BLOCK_TRAILER2 204 // 11001100 
+
+ 
+
+unsigned MemoryCapsule::AllocationSize (unsigned userSize) { // Static function. 
+
+ return 2 * sizeof(MemoryCapsule) + // Includes the defensive copy. 
+
+ COMPILER_ARRAY_BYTES+1 + // Four zeroed bytes plus offset byte. 
+
+ HEADER_BYTES + 
+
+ TRAILER1_BYTES + 
+
+ TRAILER2_BYTES + 
+
+ userSize; 
+
+} 
+
+MemoryCapsule* MemoryCapsule::Construct ( 
+
+ const char* file, 
+
+ const char* expr, 
+
+ unsigned short line, 
+
+ unsigned size 
+
+ ) { 
+
+ void* mem = malloc(MemoryCapsule::AllocationSize(size)); 
+
+ assert(mem); 
+
+ memset(mem, BLOCK_HEADER, HEADER_BYTES); 
+
+ PINC(mem, HEADER_BYTES); 
+
+ void* p = POFFS(mem, sizeof(MemoryCapsule)); 
+
+ *((unsigned char*) p) = OFFSET_FORNONARRAYS; 
+
+ PINC(p, 1); 
+
+ memset(p, 0, COMPILER_ARRAY_BYTES); 
+
+ PINC(p, COMPILER_ARRAY_BYTES); 
+
+ 
+
+ 
+new (mem) MemoryCapsule (file, expr, line, size, p); 
+
+ 
+
+PINC(p, size + sizeof(MemoryCapsule)); 
+
+ memset(p, BLOCK_TRAILER1, TRAILER1_BYTES); 
+
+ memset(POFFS(p, TRAILER1_BYTES), BLOCK_TRAILER2, TRAILER2_BYTES); 
+
+ 
+
+return (MemoryCapsule*) mem; 
+
+} 
+
+
+
+ 
+
+Figure 14: The construction function, allocating enough memory to hold user memory 
+and all extra defensive information; the memory capsule constructor is called with the 
+placement new operator. 
+
+ 
+
+Following Figure 14, the default assumption is that the requested user memory is not 
+a dynamic array, so the memory outline shown at the bottom of Figure 9 is 
+considered. Also, the Construct function prepares everything, except the content of 
+the MemoryCapsule instance and its defensive replica; it is the constructor of the 
+MemoryCapsule class, being provided in Figure 15, which effectively handles the latter. 
+
+
+#define MAX_SOURCE_LINES 9999 
+
+#define CONTEXT_CHAR_PADDING ‘*’ 
+
+#define USERMEM_ALLOC_PAINTING ‘!’ 
+
+MemoryCapsule:: MemoryCapsule ( 
+
+ const char* file, 
+
+ const char* expr, 
+
+ unsigned short line, 
+
+ unsigned _size, 
+
+ void* _userAddr 
+
+ ) { 
+
+ 
+
+ assert(line <= MAX_SOURCE_LINES && _size && _userAddr); 
+
+ assert(this == GetBlock(_userAddr)); 
+
+ size = _size; 
+
+ userAddr = _userAddr; 
+
+ memset(userAddr, USERMEM_ALLOC_PAINTING, size); 
+
+ stateFlags = 0; 
+
+ monitors = new (malloc(sizeof(DefectMonitors))) DefectMonitors(this); 
+
+ memset(context, CONTEXT_CHAR_PADDING, sizeof(context)); 
+
+ sprintf(context, "%s,%d,%s,%d", file, _line, expr, size); 
+
+ assert(strlen(context) < CONTEXT_SIZE); 
+
+ prev = (MemoryCapsule *) 0; 
+
+ next = head; 
+
+ if (head) { 
+
+ head->prev = this; 
+
+ head->RefreshReplica(); 
+
+ } 
+
+ head = this; 
+
+ RefreshReplica(); 
+
+} 
+
+MemoryCapsule::~MemoryCapsule () { 
+
+ monitors->DefectMonitors::~DefectMonitors(); 
+
+ free(monitors); 
+
+ if (this==head) 
+
+ head = head->next; 
+
+ if (prev) { 
+
+ prev->next = next; 
+
+ prev->RefreshReplica(); 
+
+ } 
+
+ if (next) { 
+
+ next->prev = prev; 
+
+ next->RefreshReplica(); 
+
+ } 
+
+ free(POFFS(this, -HEADER_BYTES)); 
+
+} 
+
+
+
+ 
+
+Figure 15: The memory capsule constructor (top), initially painting user memory with a 
+repeating character, resetting state flags, allocating the dynamic instance for defensive 
+monitors, setting context information, connecting in the list of memory capsules, and 
+finally refreshing the defensive replica; the destructor (bottom), destroying debug 
+monitors and freeing allocated memory. 
+
+ 
+
+3.1.5 The Heap::malloc and Heap::free functions 
+
+
+ 
+
+Next, the implementation of the main memory allocation functions, i.e. malloc and 
+free, of the defensive heap manager is discussed. Following the source code provided 
+in Figure 16, the malloc function delegates construction to the MemoryCapsule class, 
+explicitly passing the program context parameters. Once the block is constructed and 
+
+
+memory has been effectively allocated, the block is pushed on the stack to be later 
+checked for address displacement. 
+
+ 
+
+char Heap::file[FILE_SIZE]; // 16 bytes, including null terminator. 
+
+char Heap::expr[EXPR_SIZE]; // 16 bytes, including null terminator 
+
+unsigned Heap::line; 
+
+void* Heap::malloc (unsigned size) { 
+
+ MemoryCapsule* block = MemoryCapsule::Construct(file, expr, line, size); 
+
+ if (!Heap::IsContextEmpty()) { // Thus, either DNEW or DNEWARR were used.
+
+ Heap::Push(block); // We know Retarget will be called to pop. 
+
+ Heap::ResetContext(); // Need to clear context explicitly. 
+
+ } 
+
+ return block->GetUserAddr(); 
+
+} 
+
+void Heap::free (void* userAddr, bool array) { 
+
+ MemoryCapsule* block = MemoryCapsule::GetBlock(userAddr); 
+
+ assert(block->Validate()); // Validate the block. 
+
+ assert(!block->IsDisposalDisabled()); // No privilege to dispose! 
+
+ assert(!block->IsLateDisposalActive()); // Double delete! 
+
+ assert(!NewStillInProgress(block)); // Delete while new not returned! 
+
+ assert(!array || block->KnownAsArray()); // Freeing array not via delete[]! 
+
+ block->Dispose(); 
+
+} 
+
+bool Heap::NewStillInProgress (MemoryCapsule* p) { 
+
+ for (unsigned i = 0; i < newTop; ++i) 
+
+ if ( newRequestsStack[i] == p) 
+
+ return true; 
+
+ return false; 
+
+} 
+
+void Heap::Context (const char* _file, const char* _expr, unsigned _line) { 
+
+ unsigned len = strlen(_file); 
+
+ strcpy(file, _file + (len < FILE_SIZE ? 0 : len+1 – FILE_SIZE)); 
+
+ if (strlen(_expr) < EXPR_SIZE) 
+
+ strcpy(expr, _expr); 
+
+ else 
+
+ { memcpy(expr, _expr, EXPR_SIZE-1); expr[EXPR_SIZE-1] = ‘\0’; } 
+
+} 
+
+bool Heap::IsContextEmpty (void) 
+
+ { return file[0]==’$’ && expr[0]==’$’ && !line; } 
+
+void Heap::ResetContext (void) 
+
+ { file[0] = expr[0] = ‘$’; file[1] = expr[1] = line = 0; } 
+
+
+
+ 
+
+Figure 16: The allocation functions together with the various utility functions of the 
+defensive heap manager employed in their implementation. 
+
+ 
+
+The newly constructed block has to be pushed on the newRequestsStack stack, if and 
+only if it is certified that before its allocation expression returns it will: (a) be checked 
+for retargeting; and (b) be popped from the stack. However, the latter will only occur 
+if the DNEW or DNEWARR macros are employed for allocation, as opposed to the use of the 
+pure operators new or new[]. It is possible to recognize whether the currently served 
+allocation request originates from the deployment of the special-purpose macros by 
+checking the content of the program context variables. More specifically, 
+Heap::Context is only called within the DNEW and DNEWARR macros, to save internally 
+the particular allocation program-context, while the context is explicitly cleared via a 
+call to Heap::ResetContext after each memory allocation request. Additionally, every 
+allocation request always follows the execution of a corresponding new expression. 
+Consequently, if context is not empty, i.e. !Heap::IsContextEmpty(), then it is 
+
+
+verified that a DNEW or DENWARR led to memory allocation, meaning the Heap::Retarget 
+function will be subsequently called for displacement checking and stack popping. In 
+case the pure allocation operators are employed, the call to Heap::malloc function will 
+find the context to be empty (actually having only the single character $ as content), 
+hence, it will correctly avoid to push the block on the address retargeting stack. 
+Effectively, this implies that all dynamic arrays not created with the special-purpose 
+macros fail the address validation checks, since the required internal retargeting of the 
+user memory address is not effectively applied. It should be noted that such a conflict 
+is unavoidable if the handcrafted memory manager is not explicitly informed for such 
+compiler-enforced address displacement. To overcome this limitation, we provide a 
+template function to programmers for post-allocation qualification of memory 
+addresses as dynamic arrays (see Figure 17), requesting the memory manager to cater 
+manually for address displacement. Once the DARRAY function is called, for dynamic 
+arrays of programmer-defined classes, the supplied memory address will be validated 
+correctly, as if DNEWARR has been originally called. 
+
+ 
+
+template <class T> void DARRAY (T* p) { Heap::QualifyAsArray(p); } 
+
+void Heap::QualifyAsArray (void* p) { 
+
+ MemoryCapsule* block = MemoryCapsule::GetBlock( 
+
+ POFFS(p, -COMPILER_ARRAY_BYTES) 
+
+ ); 
+
+ assert(block->Validate()); 
+
+ block->Retarget(p); 
+
+} 
+
+
+
+ 
+
+Figure 17: Post-allocation qualification of memory addresses as dynamic arrays, 
+accommodating internally address displacement for correct address validation. 
+
+ 
+
+Additionally, as shown in Figure 16, the Heap::free function encapsulates detailed 
+error checking as follows: 
+
+.. Memory block validation, applying exhaustive tests of user-memory correctness 
+(will be discussed in the next section); 
+.. Checking that that disposal has not been disabled for the subject user-memory 
+block; 
+.. Checking that the subject block is not in its late disposal state (i.e. a request for 
+disposal was posted earlier, while the destruction time interval has not yet 
+expired); 
+.. Asserting that the present disposal request does not concern user-memory whose 
+allocation expression has not yet returned, i.e. !NewStillInProgress(block). 
+Practically, this scenario means that during the dynamic construction of class 
+instances, code is executed that finally destroys such instances, even before their 
+allocation expression returns. Effectively, once the allocation expression returns, 
+it conveys already disposed memory. 
+3.1.6 Validating user pointers 
+
+
+
+
+ 
+
+ 
+
+The validation of pointers to dynamically allocated user memory is made possible 
+through the DCHECKPTR and DSIZE template functions, internally calling the Validate 
+and GetSize members of the respective memory capsule instances. Their 
+implementation is provided in Figure 18. 
+
+
+template <class T> T* DCHECKPTR (T* p) { 
+
+ MemoryCapsule* block = MemoryCapsule::GetBlock(p); 
+
+ assert(block->Validate()); 
+
+ return p; 
+
+} 
+
+template <class T> unsigned DSIZE (T* p) { 
+
+ MemoryCapsule* block = MemoryCapsule::GetBlock(p); 
+
+ assert(block->Validate()); 
+
+ return block->GetSize(); 
+
+} 
+
+bool MemoryCapsule::Validate (void) const 
+
+ { return VerifyHeader() && VerifyTrailer1() && VerifyTrailer2() && 
+
+ VerifyReplica() && VerifyOffsets(); } 
+
+bool MemoryCapsule::VerifyHeader (void) const 
+
+ { return !memcmp(POFFS(this, -HEADER_BYTES), header, HEADER_BYTES); } 
+
+bool MemoryCapsule::VerifyTrailer1 (void) const { 
+
+ if (GetOffsetByte(userAddr) == OFFSET_FORARRAYS) 
+
+ return !memcmp( 
+
+ POFFS(userAddr, -COMPILER_ARRAY_BYTES), 
+
+ POFFS(userAddr, GetSize() + sizeof(MemoryCapsule)), 
+
+ COMPILER_ARRAY_BYTES 
+
+ ); 
+
+ else 
+
+ return !memcmp( 
+
+ POFFS(userAddr, GetSize() + sizeof(MemoryCapsule)), 
+
+ trailer1, 
+
+ TRAILER1_BYTES 
+
+ ); 
+
+} 
+
+bool MemoryCapsule::VerifyTrailer2 (void) const { 
+
+ return !memcmp( 
+
+ POFFS( 
+
+ userAddr, 
+
+ GetSize() + sizeof(MemoryCapsule) + TRAILER1_BYTES 
+
+ ), 
+
+ trailer2, 
+
+ TRAILER2_BYTES 
+
+ ); 
+
+} 
+
+bool MemoryCapsule::VerifyOffsets (void) const { 
+
+ short b = GetOffsetByte(userAddr); 
+
+ if (b == OFFSET_FORARRAYS || b == OFFSET_FORNONARRAYS) 
+
+ return !memcmp(POFFS(userAddr,-b+1), zeroed,COMPILER_ARRAY_BYTES-1); 
+
+ else 
+
+ return false; 
+
+} 
+
+
+
+ 
+
+Figure 18: Exhaustive validation of memory capsules with intensive memory 
+corruption checks over header, trailers, defensive replica and stored address offsets. 
+
+ 
+
+Following Figure 18, validation is exhaustive, covering all aspects of the internally 
+stored defensive information, as follows: 
+
+.. The standard header region is checked against the unique header pattern; in case 
+of mismatch, a typical pointer under-run error, i.e. crossing the starting boundary 
+of user memory, is identified; 
+.. The standard trailer regions are checked as follows: 
+.. First trailer. If user memory is a dynamic array, then this trailer stores a copy 
+of the compiler-reserved bytes; a content mismatch between the original and 
+the copied regions indicates either corruption of the original compiler-
+
+
+
+reserved bytes, i.e. pointer-under un, or overwriting of the ending boundary of 
+user memory, i.e. pointer over-run. In case user memory is not a dynamic 
+array, checking is performed against the unique trailer1 pattern; in case of 
+mismatch, a pointer over-run error is identified. 
+.. Second trailer. It is checked against the trailer2 pattern, while a mismatch 
+effectively signifies a pointer over-run error. 
+.. Verification of matching between the memory capsule instance and its internally 
+stored defensive replica: 
+.. In case the replica is overwritten, a pointer over-run is signified; 
+.. If the original is corrupted, a pointer under-run is likely indicated. 
+.. The cause of the error in case of a corrupted original MemoryCapsule instance 
+is not always caused by misuses of the respective user memory, but may be 
+well caused by erroneous access through pointers to neighbor memory 
+regions. 
+.. Finally, the detection as to which instance is actually corrupted can be only 
+manually observed through memory inspection; usually, if the original 
+instance is corrupted, erroneous address calculations will cause header and 
+trailer testing to fail prior to replica verification. 
+.. Verification of address offsets stored to accommodate compiler-forced 
+displacement for dynamic arrays as follows (see also Figure 9): 
+.. There is a zeroed pattern of three bytes exactly one byte after the primary 
+MemoryCapsule instance. 
+
+
+The standard byte patterns header, trailer2, trailer2 and zeroed are static members 
+of the MemoryCapsule instance, initialized explicitly upon heap manager initialization, 
+by calling the static MemoryCapsule::Initialise function, as shown in Figure 19. 
+
+ 
+
+char MemoryCapsule::header[HEADER_BYTES]; 
+
+char MemoryCapsule::trailer1[TRAILER1_BYTES]; 
+
+char MemoryCapsule::trailer2[TRAILER2_BYTES]; 
+
+char MemoryCapsule::zeroed[COMPILER_ARRAY_BYTES-1]; 
+
+void MemoryCapsule::Initialise (void) { // Static function. 
+
+ memset(header, BLOCK_HEADER, HEADER_BYTES); 
+
+ memset(trailer1, BLOCK_TRAILER1, TRAILER1_BYTES); 
+
+ memset(trailer2, BLOCK_TRAILER2, TRAILER2_BYTES); 
+
+ memset(zeroed, 0, COMPILER_ARRAY_BYTES-1); 
+
+ // Other global initialisations go here. 
+
+} 
+
+
+
+ 
+
+Figure 19: Initialization of the standard byte patterns for error checking. 
+
+ 
+
+The need for such detailed content-error checking is inevitable to support the wide 
+detection of erroneous memory overwrites, especially assuming that the encapsulated 
+debug information may also be offended by programming defects. An alternative 
+technique, regarding the maintenance of a memory capsule defensive copy, is the use 
+of a function producing a numeric key value given a MemoryCapsule instance, i.e. 
+something like a hashing function, storing merely this numeric value in place of an 
+exact memory copy. Upon instance modification, the content of this value is refreshed 
+accordingly, while matching is performed by equality checking of the stored value 
+with the result of calling the hashing function. This technique requires the careful 
+design of the hashing function to minimise the probability of result collision, i.e. 
+having multiple different instances producing the same numeric key value. Although 
+this technique is more memory efficient, we have decided to employ the defensive 
+
+
+copy method since: (a) it is the most accurate for overwrite detection; and (b) it 
+introduces identical readable prefixes and postfixes in user memory regions during 
+memory inspection (as shown in Figure 3). 
+
+ 
+
+3.1.7 Logging facilities 
+
+
+ 
+
+Logging of memory allocation operations can be enabled or disabled during 
+execution, by providing explicitly a file path where logged information is to be 
+textually written. Since it is critical for logging to introduce a minimal delay in 
+memory management, the following technique has been applied: (a) logging is always 
+taking place in main memory, while there is an independent thread regularly flushing 
+memory-logged information to secondary storage; (b) during logging, only primitive 
+information is recorded, meaning that any particular data analysis is to only take place 
+off-line, using external utility programs or filters. The basic logging-API is provided 
+in Figure 20; as shown, the relevant heap manager functions are merely delegate calls 
+to utility functions of the MemoryCapsule class. Logging can be stopped and 
+subsequently re-started at any point, with different log file paths if necessary. 
+
+ 
+
+#define DSTARTLOGGING(path) Heap::StartLogging(path) 
+
+#define DSTOPLOGGING() Heap::StopLogging() 
+
+void Heap::StartLogging (const char* path) 
+
+ { MemoryCapsule::StartLogging(path); } 
+
+void Heap::StopLogging (void) 
+
+ { MemoryCapsule::StopLogging(); } 
+
+
+
+ 
+
+Figure 20: Logging-control functions during program execution. 
+
+ 
+
+The complete implementation of the logging functions is provided under Figure 21. 
+The logging thread-function LogThreadFunc wakes-up every half of a second and 
+flushes all logged entries, except the tail one. 
+
+
+struct LogEntry { 
+
+ unsigned timeStamp, n; // Exact time and number of bytes. 
+
+ bool isAllocation; // If false, it is disposal. 
+
+ LogEntry* next; // Single linked list. 
+
+}; 
+
+static LogEntry* logHead; 
+
+static LogEntry* logTail; 
+
+static FILE* logFile; 
+
+static bool stopLogging; 
+static Thread logThread; 
+
+static void LogFlush (LogEntry* until = (LogEntry*) 0) { 
+
+ while (logHead && logHead != until) { 
+
+ fprintf( 
+
+ logFile, "%d %s %d\n", 
+
+ logHead->timeStamp, 
+
+ logHead->isAllocation ? : “new” : “delete”, 
+
+ logHead->n 
+
+ ); 
+
+ LogEntry* p = logHead; 
+
+ logHead = logHead->next; 
+
+ free(p); 
+
+ } 
+
+} 
+
+static void* LogThreadFunc (void* unused) { 
+
+ while (!stopLogging) // Sleep 0.5 seconds and flush all, but the tail. 
+
+ usleep(500000)LogFlush(logTail); } 
+
+{ ; 
+logThread.SetFinished(); 
+
+} 
+
+void Log (bool isAllocation) { 
+
+ LogEntry* entry = new (malloc(sizeof(LogEntry))) LogEntry; 
+
+ entry->timeStamp = time(NULL); 
+
+ entry->isAllocation = isAllocation; 
+
+ entry->n = GetSize(); 
+
+ entry->next = (LogEntry*)0 ; 
+
+ if (!logTail) 
+
+ logHead = (logTail = entry); 
+
+ else 
+
+ { logTail->next = entry; logTail = entry; } 
+
+static void StartLogging (const char* path) { 
+
+ logFile = fopen(path, "wt"); 
+
+ assert(logFile); 
+
+ 
+
+stopLogging = false; 
+logThread.Start(LogThreadFunc); 
+
+} 
+
+static void StopLogging (void) { 
+
+ stopLogging = true; 
+
+ logThread->WaitToFinish(); // Should wait log thread to finish. 
+
+ LogFlush(); // Flush remaining logged entries. 
+
+ fclose(logFile); 
+
+ logFile = (FILE*) 0; 
+
+ logHead = logTail = (LogEntry*) 0; 
+
+} 
+
+
+
+ 
+
+Figure 21: Implementation of logging facilities, all being members of the 
+MemoryCapsule class; the logging thread flushes all but the logTail entry, while the 
+Log function appends log entries always at the logTail. 
+
+ 
+
+The Thread wrapper class employed in the implementation of the MemoryCapsule 
+logging facilities is provided within Figure 22, showing an implementation over the 
+POSIX thread API. As it will be shown later, the same wrapper class is also employed 
+in the implementation of the defect monitors. 
+
+
+#include <pthread.h> 
+
+class Mutex { 
+
+ pthread_mutex_t mutex; 
+
+public: 
+
+ void Lockvoid) { pthread_mutex_lock(&mutex); } 
+
+ ( 
+void Unlock (void) { pthread_mutex_unlock(&mutex); } 
+
+ Mutex (void) { 
+
+ pthread_mutexattr_t attrs; 
+
+ pthread_mutexattr_init(&attrs); 
+
+ pthread_mutex_init(&mutex, &attrs); 
+
+ } 
+
+ ~Mutex() { pthread_mutex_destroy(&mutex); } 
+
+}; 
+
+class Thread { 
+
+ Mutex mutex; 
+
+ pthread_t thread; 
+
+public: 
+
+ void Start (void* (*f)(void*), void* a = (void*) 0) 
+
+ { mutex.Lock(); pthread_create(&thread, (pthread_attr_t*) 0, f, a); } 
+
+ void SetFinished(void) { mutex.Unlock(); } 
+
+ 
+void WaitToFinish (void) { mutex.Lock(); } 
+
+ Thread (void){} ~Thread(){} 
+
+}; 
+
+
+
+ 
+
+Figure 22: The simple Mutex and Thread class wrappers for the POSIX thread API; 
+checking of error return values from POSIX functions has been removed for clarity. 
+
+ 
+
+To avoid concurrent access problems over the list of logged entries, the logging thread 
+is bound to work on all elements of the list except the tail element, moving effectively 
+logHead forward, while the Log function appends elements at the tail, manipulating 
+only the logTail variable, as illustrated in Figure 23. 
+
+ 
+
+logHeadlogTailLogging threadfunctionThread of themain programlogTaillogHeadlogHeadlogHeadlogHeadlogTaillogTaillogHeadlogTailLogging threadfunctionThread of themain programlogTaillogHeadlogHeadlogHeadlogHeadlogTaillogTail 
+
+
+Figure 23: The logging thread accesses, flushes and removes all elements preceding 
+logTail, moving logHead forward, while the Log function appends elements after 
+logTail, moving logTail forward. 
+
+3.2 Defect monitors 
+
+
+Apart from explicit pointer-validation statements, normally injected by programmers 
+within the source code during program implementation, there are situations where the 
+employment of third-party code, or generally code written without embedded bug 
+defense, turns the post-development incorporation of validation checks to an 
+impractical task. Additionally, typical pointer validation checks, like the previously 
+defined DCHECKPTR template function, verify only the subject memory block, not 
+performing any corruption test for other potentially offended memory blocks. 
+Consequently, once malicious code corrupts particular memory blocks, the situation is 
+
+
+MemorycorruptionPost disposaloverwriteUnexpectedoverwritesEarly memoryleakMemorycorruptionUnexpectedoverwritesEarly memoryleakPost disposaloverwrite
+
+
+detected only at the point a validity test is called for any of those offended blocks. To 
+identify the malicious code, programmers repeatedly try to cause failing validity-tests 
+appear earlier in comparison to recent program executions, so as to minimize the time 
+distance between the validation failure and the call of the hidden faulty statements. 
+
+ 
+
+In this context, the intensive incorporation of validation checks within the source 
+code, to the extent this is practically feasible, is a very common tactic to selectively 
+increase the call frequency of certain validation tests. In some cases, to achieve 
+maximum call frequency, programmers incorporate validation calls even within the 
+application main-loop. Overall, although such debug activities reveal a quite 
+standardized defect resolution pattern, it is a fact that programmers apply numerous 
+heuristic methods, all of which introduce temporary source code “pollution”, by 
+injecting repeating validity tests and a large repertoire of diagnostic messages. 
+Additionally, it is very common that during debug periods the strict time schedules 
+usually cause programmers to keep add-hoc diagnostic code or temporary code 
+modifications as part of the eventual software system, sometimes entirely 
+commented-out or as part of the normal program control-flow. 
+
+In our defensive heap manager, apart from validity checks embedded in the defensive 
+template functions for pointer use, intensive concurrent error checking can be 
+performed over memory blocks, through independent threads of execution. The latter 
+is accomplished through the implementation of different categories of defect 
+monitors, as shown in Figure 24. More specifically, the following categories are 
+supported: 
+
+ 
+
+.. Block validity monitors, continuously checking for corruption of the defensive 
+regions of memory blocks (header, trailers, offsets and defensive replica); 
+.. User memory monitors, making a copy of user-memory upon start-up, while 
+continuously monitoring user-memory for content modification, thus guarding 
+against unexpected overwrites and side effects; 
+.. Late disposal monitors, enabling delayed destruction of memory blocks, while 
+during late disposal time they automatically activate block-validity and content-
+overwrite monitoring, thus detecting post-disposal write operations; 
+
+
+user 
+memorydefensive 
+partdefensive 
+partBlock validitymonitorLate disposalmonitorExpirationmonitorUser memorymonitoruser memory 
+copyexpirationtimedisposal 
+timevalidatevalidatetrap changesactivatemonitorsdisposeuser 
+memorydefensive 
+partdefensive 
+partBlock validitymonitorLate disposalmonitorExpirationmonitorUser memorymonitoruser memory 
+copyexpirationtimedisposal 
+timevalidatevalidatetrap changesactivatemonitorsdispose 
+
+
+Figure 24: The four categories of defect monitors for dynamically allocated memory, 
+showing at the top the types of defects detected during execution; monitors are 
+implemented as independent threads, each associated with a particular 
+MemoryCapsule instance. 
+
+ 
+
+ 
+
+
+ .. Expiration monitors, putting an upper bound on the lifetime of associated dynamic 
+memory, enabling the early detection of situations where the allocated memory is 
+not effectively disposed, even though it is known that after a certain period it is 
+not needed by the program. 
+
+
+ 
+
+class DefectMonitors { 
+
+private: 
+
+ MemoryCapsule* myBlock; 
+
+ unsigned char flags; 
+
+ Thread contentThread; 
+
+ void* contentCopy; 
+
+ unsigned contentCheckPeriod; 
+
+ static void* ContentThreadFunc (void* arg); 
+
+ Thread validityThread; 
+
+ unsigned validityCheckPeriod; 
+
+ static void* ValidityThreadFunc (void* arg); 
+
+ Thread expirationThread; 
+
+ unsigned expirationTime; 
+
+ static void* ExpirationThreadFunc (void* arg); 
+
+ Thread disposalThread; 
+
+ unsigned disposalDelay; 
+
+ static void* DisposalThreadFunc (void* arg); 
+
+public: 
+
+ bool IsContentMonitorRunning (void) const 
+
+ { return (flags & CONTENT_MONITOR_RUNNING_FLAG) != 0; } 
+
+ bool IsValidityMonitorRunning (void) const 
+
+ { return (flags & VALIDITY_MONITOR_RUNNING_FLAG) != 0; } 
+
+ bool IsExpirationMonitorRunning (void) const 
+
+ { return (flags & EXPIRATION_MONITOR_RUNNING_FLAG) != 0; } 
+
+ bool IsDisposalMonitorRunning (void) const 
+
+ { return (flags & DISPOSAL_MONITOR_RUNNING_FLAG) != 0; } 
+
+ void StartContentMonitor (unsigned checkPeriod = 0); 
+
+ void StopContentMonitor (void); 
+
+ void StartValidityMonitor (unsigned checkPeriod = 0); 
+
+ void StopValidityMonitor (void); 
+
+ void StartExpirationMonitor (unsigned delay); 
+
+ void StopExpirationMonitor (void); 
+
+ void StartDisposalMonitor (unsigned delay); 
+
+ DefectMonitors (MemoryCapsule* block); 
+
+ ~DefectMonitors (); 
+
+}; 
+
+
+
+ 
+
+Figure 25: The basic API for the DefectMonitors class, encapsulating all four 
+categories of defect monitors; instances of DefectMonitors class are associated 
+uniquely to their monitored MemoryCapsule instance. 
+
+ 
+
+The declaration of the DefectMonitors class is provided in Figure 25; the definitions 
+of the macro constants are omitted for clarity, as they are typical bit masks. The 
+owner MemoryCapsule instance is supplied as a constructor parameter. The 
+checkPeriod parameter in monitor activation functions is the time interval in-between 
+successive defect checks, during which the thread is effectively suspended (i.e. 
+sleeping); if checkPeriod is 0 (the default value), checking is repeatedly performed via 
+an inner loop. The delay parameter is the elapsed time after which the monitor-
+
+
+specific job will be effectively performed (i.e. disposal or expiration). The 
+implementation of the thread functions per defect monitor is provided in Figure 26. 
+
+ 
+
+void DefectMonitors::CheckContentModification (void) { 
+
+ unsigned char* c = contentCopy; 
+
+ unsigned char* b = myBlock->GetUserAddr(); 
+
+ if (memcmp(c, b, myBlock->GetSize() != 0) { 
+
+ for (unsigned n = myBlock->GetSize(); n; --n, ++c, ++b) 
+
+ *c = (*c == *b ? '*' : *b); 
+
+ assert(false); // Raise an explicit failing assertion. 
+
+ } 
+
+} 
+
+void* DefectMonitors::ContentThreadFunc (void* arg) { 
+
+ DefectMonitors* monitors = (DefectMonitors*) arg; 
+
+ while (monitors->IsContentMonitorRunning()) { 
+
+ if (monitors->contentCheckPeriod) 
+
+ usleep(monitors-> contentCheckPeriod * 1000); 
+
+ monitors->CheckContentModification(); 
+
+ } 
+
+ return (void*) 0; // Return value is unused. 
+
+} 
+
+void* DefectMonitors::ValidityThreadFunc (void* arg) { 
+
+ DefectMonitors* monitors = (DefectMonitors*) arg; 
+
+ while (monitors->IsValidityMonitorRunning()) { 
+
+ if (monitors->validityCheckPeriod) 
+
+ usleep(monitors->validityCheckPeriod * 1000); 
+
+ if (!monitors->Validate()) 
+
+ assert(false); // Raise an explicit failing assertion. 
+
+ } 
+
+ return (void*) 0; // Return value is unused. 
+
+} 
+
+void* DefectMonitors::ExpirationThreadFunc (void* arg) { 
+
+ DefectMonitors* monitors = (DefectMonitors*) arg; 
+
+ while (monitors->IsExpirationMonitorRunning()) 
+
+ if (time(NULL) >= monitors->expirationTime) 
+
+ assert(false); // Raise an explicit failing assertion. 
+
+ return (void*) 0; // Return value is unused. 
+
+} 
+
+void* DefectMonitors::DisposalThreadFunc (void* arg) { 
+
+ DefectMonitors* monitors = (DefectMonitors*) arg; 
+
+ usleep(monitors->disposalDelay * 1000); 
+
+ monitors->myBlock->MemoryCapsule::~MemoryCapsule(); 
+
+ return (void*) 0; // Return value is unused. 
+
+} 
+
+
+
+ 
+
+Figure 26: The implementation of the thread functions for defensive monitors, most of 
+which are implemented as a main-loop, checking for explicit monitor interruption by a 
+Stop member call, while periodically performing the respective defect test. 
+
+ 
+
+Following Figure 26, the content-corruption monitor performs intensive tests for 
+matching of the user-memory copy with use-memory content. In case the test fails, the 
+unmodified bytes of the content-copy are painted with a standard character (in this 
+case *), while the modified bytes of user-memory are also written on the memory copy. 
+This way the overwritten bytes and their content become directly visible through 
+inspection of the copied user-memory (see 
+
+Figure 27); the original user-memory content is intentionally left untouched. 
+
+
+ 
+
+ 
+
+Figure 27: Detecting corrupted bytes and the illegal post-disposal written value 
+through memory inspection, after the program has been interrupted due to the failing 
+assertion in the content monitor. 
+
+ 
+
+To complete the discussion on defect monitors, the implementation of the start / stop 
+member functions needs to be provided. The start functions need to check if the 
+monitor is already running, conditionally initiating the associated thread function. The 
+stop functions reset the monitor running flag, subsequently waiting synchronously for 
+the thread to gracefully compete. Additionally, in the defect monitors destructor 
+~DefectMonitors, all active monitors are explicitly stopped. The detailed 
+implementation of the start / stop functions is given in Figure 28. 
+
+ 
+
+offensive statementpainting unmodifiedbytes allows detectionof the overwritten bytesand the written valueLSBMSBoffensive statementpainting unmodifiedbytes allows detectionof the overwritten bytesand the written valueLSBMSB
+
+
+
+
+void DefectMonitors::StartContentMonitor (unsigned period) { 
+
+ assert(!IsContentMonitorRunning()); 
+
+ flags |= CONTENT_MONITOR_RUNNING_FLAG; 
+
+ contentCheckPeriod = period; 
+
+ contentCopy = malloc(myBlock->GetSize()); 
+
+ memcpy(contentCopy, myBlock->GetUserAddr(),myBlock ->GetSize()); 
+
+ contentThread.Start(ContentThreadFunc, this); 
+
+} 
+
+void DefectMonitors::StopMonitor (unsigned char b, Thread& monitor) { 
+
+ assert(flags & b != 0); 
+
+ flags &= ~b; 
+
+ monitor.WaitToFinish(); 
+
+} 
+
+void DefectMonitors::StopContentMonitor (void) { 
+
+ StopMonitor(CONTENT_MONITOR_RUNNING_FLAG, contentMonitor); 
+
+ free(contentCopy); 
+
+ contentCopy = (void*) 0; 
+
+} 
+
+void DefectMonitors::StartValidityMonitor (unsigned period) { 
+
+ assert(!IsValidityMonitorRunning()); 
+
+ flags |= VALIDITY _MONITOR_RUNNING_FLAG; 
+
+ validityCheckPeriod = period; 
+
+ validityMonitor.Start(ValidityThreadFunc, this); 
+
+} 
+
+void DefectMonitors::StopValidityMonitor (void) 
+
+ { StopMonitor(VALIDITY_MONITOR_RUNNING_FLAG, validityMonitor); } 
+
+void DefectMonitors::StartExpirationMonitor (unsigned delay) { 
+
+ assert(!IsExpirationMonitorRunning()); 
+
+ flags |= EXPIRATION_MONITOR_RUNNING_FLAG; 
+
+ expirationTime = time(NULL) + (delay / 1000); 
+
+ expirationMonitor.Start(ExpirationThreadFunc, this); 
+
+} 
+
+void DefectMonitors::StopExpiresMonitor (void) 
+
+ { StopMonitor(EXPIRATION _MONITOR_RUNNING_FLAG, expirationMonitor); } 
+
+} 
+
+void DefectMonitors::StartDisposalMonitor (unsigned delay) { 
+
+ assert(!IsDisposalMonitorRunning()); 
+
+ flags |= DISPOSAL_MONITOR_RUNNING_FLAG; 
+
+ disposalDelay = delay; 
+
+ disposalMonitor.Start(DisposalThreadFunc, this); 
+
+ if (!IsContentMonitorRunning()) 
+
+ StartContentMonitor(); // Intensive check with 0 delay. 
+
+ if (!IsValidityMonitorRunning()) 
+
+ StartValidityMonitor(); // Intensive check with 0 delay. 
+
+} 
+
+
+
+ 
+
+Figure 28: The start / stop functions for defect monitors; the disposal monitor initiates 
+internally the content monitor (to detect post-disposal content overwrite) and the 
+validity monitor (to detect erroneous accesses). 
+
+ 
+
+The defect monitors constitute a very powerful instrument largely automating the 
+incorporation of defect checking logic within the program flow, without however 
+requiring the manual injection of test statements in the normal control flow. For 
+instance, post disposal overwrites are a very common defect which normally requires 
+iterative painful program tracing, with manual inspection of memory access 
+operations, so as to detect the offensive code. As it is discussed in detail under section 
+3.2.3, through the proposed defensive heap manager those errors can be automatically 
+tracked-down during execution. Next we provide the Dispose function of the 
+MemoryCapsule class (see Figure 29), which completes the overall presentation of 
+
+
+defensive memory capsules and the embedded defect monitors. As it was shown in 
+Figure 16, the Dispose functions is eventuially called in the Heap::free function so as 
+to free the dynamically allocated memory, while also cleaning-up any created 
+defense-oriented items. 
+
+ 
+
+3.2.1 The Dispose function 
+
+
+ 
+
+The disposal of allocated memory may take place synchronously during program 
+execution, i.e. within the same thread as the disposal requesting statement, or 
+asynchronously, as it is the case with delayed disposal committed by the late disposal 
+thread (i.e. disposalThread). 
+
+ 
+
+void MemoryCapsule::Dispose (void) { 
+
+ assert(Validate()); 
+
+ assert((flags & IN_DISPOSAL_DISABLED_STATE_FLAG) == 0); 
+
+ assert((flags & IN_LATE_DISPOSAL_STATE_FLAG) == 0); 
+
+ assert(!monitors->IsDisposalMonitorRunning()); 
+
+ if (inLateDisposals) { // Delayed detsruction. 
+
+ 
+flags |= IN_LATE_DISPOSAL_STATE_FLAG; 
+
+ RefreshReplica(); 
+
+ monitors->StartDisposalMonitor(disposalDelay); 
+
+ } 
+
+ else // Immediate destruction. 
+
+ this->MemoryCapsule::~MemoryCapsule(); 
+
+} 
+
+Mutex MemoryCapsule::blockLinkMutex; // Static variable. 
+
+MemoryCapsule::~MemoryCapsule() { 
+
+ blockLinkMutex.Lock(); 
+
+ // The original block of ~MemoryCapsule() from Figure 15, is put here. 
+
+ blockLinkMutex.Unlock(); 
+
+} 
+
+MemoryCapsule::MemoryCapsule() { 
+
+ blockLinkMutex.Lock(); 
+
+ // The original block of MemoryCapsule() from Figure 15, is put here. 
+
+ blockLinkMutex.Unlock(); 
+
+} 
+
+
+
+ 
+
+Figure 29: The disposal function, asserting that: block is valid, disposal is enabled, 
+block is not in late disposal mode, and disposal monitor is not running; the 
+MemoryCapsule constructor and destructor are made thread-safe via a mutex. 
+
+ 
+
+The disposal function is provided in Figure 29; as shown, the original memory 
+capsule constructor and destructor are slightly modified so that the internal 
+manipulation of allocated-block list becomes thread-safe, since destruction may be 
+performed through an independent thread of execution. Also, in case the heap-
+manager is in late-disposal state, i.e. the DLATEDISPOSALON macro was called, a request 
+for memory disposal will cause the MemoryCapsule to enter late disposal state and 
+subsequently activate its disposal monitor. Next, we discuss the way defect monitors 
+are employed during debugging for defect detection. 
+
+ 
+
+3.2.2 Deployment of defect monitors in debugging sessions 
+
+
+ 
+
+The use of defect monitors can help easily and quickly track-down various program 
+bugs, in situations where manual-tracing methods can hardly direct to the real 
+offensive statements in the source code. As it can be observed in Figure 26, providing 
+
+
+offensivestatementmost likelyoffensive call……
+offensivestatementmost likelyoffensive call…
+
+
+the implementation of the thread functions, the implementation of the error-checking 
+conditions is carried out as follows: 
+
+.. Let Cond be a condition whose true evaluation denotes a successful validation 
+test. Then, instead of programming the validation check as assert(Cond), an 
+explicit branch statement of the form if (!Cond) assert(false) is employed. 
+
+
+ 
+
+Although this may look to be an unnecessary redundancy, it serves a key role during 
+source-level debugging: instead of relying upon assertion failure for program 
+interruption, programmers should put explicit breakpoints at all such assert(false) 
+statements, actually indicating the detection of a program error. The reason is that, 
+from our observations, program interruption is much faster when an explicit 
+breakpoint is met, in comparison to implicit interruption due to a failed assertion. The 
+speed of program interruption is very critical since, because of the fact that error-
+checking assertions are evaluated within independent program threads, during the 
+small time interval it takes for the program to interrupt in debug mode, the execution 
+control of the main thread would have normally proceed forward beyond the offensive 
+statement. In this context, to minimize the interruption delay, it is better to inject 
+explicit program breakpoints because they are served more efficiently by the 
+debugger in comparison to failed assertions. Practically, the assert(false) statements 
+are put to document the erroneous situations, while using the suggested technique 
+they are not to be actually evaluated. 
+
+ 
+
+stop-pointstatementpotentially offensivestatementsPROGRAM TRAJECTORYCALL STACK STATEMENTSunlikelyoffensive calls{}{…}{…}{…}{… }
+likelyoffensive callsstop-pointstatementpotentially offensivestatementsPROGRAM TRAJECTORYCALL STACK STATEMENTSunlikelyoffensive calls{}{…}{…}{…}{… }{}{…}{…}{…}{… }
+likelyoffensive calls 
+
+
+ 
+
+Figure 30: Top: the distance between the offensive statement and the stop-point 
+statement in the trajectory of the main thread; Bottom: the assumption for the likely 
+offensive calls very close to the top activation record in the call-stack of the main-
+thread. 
+
+ 
+
+Once the program stops at such an assert-breakpoint, the manual inspection of the 
+call-stack for the main-thread is performed, to identify the particular stop-point 
+statement. Clearly, irrespective of the small time distance between the already 
+executed offensive statement and the particular current stop-point, the activation 
+record of the function encompassing the called offensive statement may not be found 
+within the program stack (i.e. the call has returned). Hence, following Figure 30 (see 
+upper part), the offensive statement being part of the main-thread program trajectory 
+may not be identifiable within the call-stack statements. However, it is clear that the 
+
+
+ .. Else, it is proved that the time distance between the memory disposal and its 
+subsequent content-overwrite is clearly larger than the initial time interval, so this 
+is appropriately increased and the whole process is repeated. 
+.. The call to the DLATEDISPOSALON macro is made upon program start-up, providing 
+an initially considered adequate time-interval (e.g. 5000 milliseconds), and then 
+the program is run. It should be noted that the supplied time interval is always 
+bound by the total elapsed time required for the defect symptoms to appear; 
+.. If the program stops at a post-disposal content-overwrite assert-breakpoint (of the 
+ContentThreadFunc, see Figure 26), the error has been detected, and the debug 
+back-tracing process previously discussed, in section 3.2.2, is effectively applied; 
+
+
+already executed statements of the active function-calls have led to the execution of 
+the particular offensive statement, hence, those calls are considered as likely 
+offensive, with considerably decreasing probability as we move lower to the call stack 
+(see Figure 30, bottom part). The reason that the lower activation records are not 
+considered as likely offensive is due to the fact that the time distance between the 
+offensive statement and program interruption is very tiny to actually allow multiple 
+function calls to be effectively performed. Hence, even though defect monitors cannot 
+manage to stop the control-flow at the exact point of the offensive statement, they do 
+not allow program execution to move far away from it. 
+
+ 
+
+The next step in the debugging process, after a defect monitor stops execution and the 
+call-stack is carefully examined, is to inject explicit defect tests identical to the one 
+performed by the subject monitor, only in-between the most likely offensive 
+statements, i.e. those belonging to the function of the top activation record, actually 
+engaging directly or indirectly memory access. The purpose of those tests is to cause 
+program interruption synchronously within the main thread, exactly after the 
+offensive statement is called. In case none of those tests fails after rerun, this 
+particular block of code is considered to be non-offensive, and the same process is 
+repeated for the most previously called block of statements for the same of the 
+previous activation record (see Figure 30, bottom part); we call this technique debug 
+back-tracing. 
+
+ 
+
+3.2.3 Detection of post-disposal overwrites 
+
+
+ 
+
+Post-disposal overwrites constitute one of the most dangerous defects, especially due 
+to the fact that there are many cases where it is very hard to assume from the external 
+symptoms the potential presence of post-disposal write-access. More specifically, 
+disposed memory may be likely returned by the heap manager during subsequent 
+allocation requests (i.e. recycled), while dangling pointers to the disposed objects may 
+erroneously be still referenced by the program. In this case, read accesses will 
+normally return erroneous data that will likely lead to logical program errors, while 
+write accesses will overwrite locations hosting different program objects, clearly 
+corrupting their content, without however enabling the native heap manager to raise 
+an exception since the accessed memory is legally allocated by the program. Through 
+the employment of late disposal, post-disposal overwrites can be easily detected as 
+follows: 
+
+It should be noted that once the post-disposal breakpoint is reached, the details of the 
+memory overwrite can be easily studied by inspecting the contentCopy buffer, as it has 
+been also demonstrated in the example of 
+
+Figure 27. 
+
+
+ block->DisableDisposal(); 
+
+#define DNEWCLASS(c, args) DNEW(c##args) 
+
+template <class T> void DCONTROLDISPOSAL(T* p, bool flag) { 
+
+ MemoryCapsule* block = MemoryCapsule::GetBlock(block); 
+
+ assert(block->Validate()); 
+
+ if (flag) 
+
+ block->EnableDisposal(); 
+
+ else 
+
+} 
+
+#define DLATEDISPOSALON(t) MemoryCapsule::EnableLateDisposals(t) 
+
+#define DLATEDISPOSALOFF() MemoryCapsule::DisableLateDisposals() 
+
+template <class T> void DMONITORCONTENT(T* p, unsigned period) { 
+
+ MemoryCapsule* block = MemoryCapsule::GetBlock(block); 
+
+ assert(block->Validate()); 
+
+ block->StartContentMonitor(period); 
+
+} 
+
+template <class T> void DUNMONITORCONTENT(T* p) { 
+
+ MemoryCapsule* block = MemoryCapsule::GetBlock(block); 
+
+ assert(block->Validate()); 
+
+ block->StopContentMonitor(); 
+
+} 
+
+
+
+3.3 The rest of the template defensive functions 
+
+
+The remaining template functions, for memory-use error detection, are provided under 
+Figure 31. Some of those functions, such as the ones concerning defect monitors, are 
+to be mainly employed by programmers as post-programming injections, selectively 
+embedded within the source code, once faulty program behavior is observed. The 
+allocation macros DNEW, DNEWARR and DNEWCLASS need to be engaged if pointer 
+validation through DCHECKPTR is to be applied. Additionally, pointer validation can be 
+also applied for pointers not allocated through the special-purpose macros, keeping in 
+mind that: (a) dynamic-array addresses of class instances not explicitly qualified with 
+DARRAY function will fail the validation check, since the defensive heap manager can 
+cater for the compiler address displacement only when the allocation macros are 
+employed; (b) the rest of heap memory addresses will be validated normally, 
+however, without encompassing source file, source line and allocation expression 
+information inside their respective MemoryCapsule instance. 
+
+ 
+
+ 
+
+Figure 31: The implementation of the remaining defensive template functions; the rest 
+of monitor control functions are implementationally similar to DMONITORCONTENT 
+and DUNMONITORCONTENT, so they are omitted for clarity. 
+
+ 
+
+In case of production / release program mode, all defensive templates and macros are 
+implemented as empty macros (i.e. stripped-off), while the allocation macros are 
+simply defined as the original allocation operators. In this case, reflecting our 
+experience with real-life systems, it is suggested that once the performance 
+implications due to the extra processing layer introduced for defensive heap-
+management are not effectively critical, the defensive code should remain active as an 
+integral part of the system. However, to avoid assertions, which will inappropriately 
+prompt the end-user for source- code expressions, files and lines, but to also hide 
+proprietary development-oriented system information, the following technique can be 
+employed, which has been tested in real practice: 
+
+ 
+
+
+ .. Program an augmented assertion macro (DASSERT, see Figure 32), accepting the 
+error identifier and the subject block together with the asserted condition, having 
+two versions: (a) debug version, binding to the normal built-in assert; and (b) 
+release version, posting an encoded fatal-error message to the user (i.e. the DERROR 
+member of the MemoryCapsule class); 
+
+
+ 
+
+#define MON_POSTDISPOSAL_OVERWRITE_ERROR 1 
+
+#define MON_UNEXPECTED_OVERWRITE_ERROR 2 
+
+#define MON_EXPIRATION_ERROR 3 
+
+#define DOUBLE_DISPOSAL_ERROR 4 
+
+#define BLOCK_VALIDITY_ERROR 5 
+
+#define MON_BLOCK_VALIDITY_ERROR 6 
+
+#define DISABLED_DISPOSAL_ERROR 7 
+
+#define DISPOSE_ARRAY_ERROR 8 
+
+... 
+
+unsigned DFILEID (const char* filename); 
+
+void DCONTEXT (const char* context, char* file, unsigned* line); 
+
+void DEXIT (unsigned err, unsigned file, unsigned line, unsigned size); 
+
+void MemoryCapsule::DERROR (unsigned err) { 
+
+ static char _file[FILE_SIZE]; 
+
+ unsigned _line; 
+
+ DCONTEXT(context, _file, &_line); 
+
+ DEXIT(err, DFILEID(_file), _line, GetSize()); 
+
+} 
+
+#define DASSERT(err, block, cond) if (!cond) block->DERROR(err) 
+
+#define DASSERT(err, block, cond) assert(cond) 
+
+
+
+ 
+
+Figure 32: Substituting program assertions with encoded messages carrying 
+compacted information regarding the type and source of the error. 
+
+ 
+
+.. Encode all defect categories with constant numeric identifiers, explicitly supplied 
+in the use of the DASSERT macro (err parameter), substituting all cases of 
+embedded defect-checking in where the built-in assert is employed; 
+.. Enumerate all program source files, associating uniquely each file name with an 
+integer identifier, extractable during runtime via the DFILEID function; 
+.. Implement the error reporting and exit function DEXIT, effectively terminating 
+program execution, while prompting also for an explicit notification of the system 
+vendor either automatically (through an e-mail, in which case this is performed 
+directly by the exit function), or manually. 
+3.4 Reporting memory leaks 
+
+
+
+
+Memory leaks are reported upon program termination, through an explicit call to 
+DFINISH(path), where path is the name of the file where the memory leaks are to be 
+textually reported. The linked list of memory blocks, starting at MemoryCapsule::head 
+is traversed, while every existing memory block, at the time the DFINISH function is 
+called, is effectively reported as a program memory leak. 
+
+3.5 Resolving new / delete overloading conflicts with third-party libraries 
+
+
+While the overloading of the built-in operators new and delete is a necessary 
+ingredient of the presented defensive heap manager, there are situations where a third-
+party library needs to be employed which happens to overload those operators too. In 
+such cases, disabling either of the replicated versions may not be a viable solution, 
+practically requiring two versions of the operators to be co-present, each with 
+customized implemented behavior. For instance, the well-known MFC library 
+
+
+provides its own version of the new / delete operators in debug-mode; hence, to be 
+able to perform debugging for systems where MFC is employed, the MFC version of 
+the allocation operators should be necessarily imported. To effectively cater for such 
+potential conflicts, the following solution has been designed as part of the defensive 
+heap manager: 
+
+.. The allocation operators have been entirely re-implemented through semantically 
+equivalent template functions; then, in the allocation macros DNEW / DNEWARR, 
+instead of calling the built-in new / new[], the corresponding template functions are 
+called. For instance, in Figure 33, the complete re-implementation of new[] is 
+provided by the Heap::arraynew<T> template function, with the same semantics as 
+new[],reserving four extra bytes of storage for size information. 
+.. The destruction operator is similarly re-implemented from scratch (see Figure 33, 
+function Heap::arraydetele<T>), while two special-purpose macros are 
+introduced, to be used for memory disposal in place of the original delete / 
+delete[] operators, named DDELETE / DDELARR respectively (see Figure 33). 
+
+
+ 
+
+template <class T> void DDELARR(T* p) { Heap::arraydelete(p); } 
+
+#define DNEWARR(t, n) \ 
+
+ DOK((Heap::Context(__FILE__,__LINE__, STR(t[n])), Heap::arraynew<t>(n))) 
+
+template <class T> void Heap::arraydelete (T* arr) { 
+
+ unsigned size = DSIZE(arr); 
+
+ assert((size % sizeof(T)) == 0); // Verify correctness of memory size. 
+
+ void* p = POFFS(arr, -COMPILER_ARRAY_BYTES); 
+
+ unsigned n = *((unsigned*) p); // Extract stored array size. 
+
+ assert(n == size / sizeof(T)); // Verify correctness of stored array size. 
+
+ arr += n; 
+
+ while (n--) (--arr)->T::~T(); // Call destructor for every array object. 
+
+ Heap::free(p, true); // Now dispose allocated memory. 
+
+} 
+
+template <class T> T* Heap::arraynew (size_t n) { 
+
+ void* mem = Heap::malloc(COMPILER_ARRAY_BYTES + n * sizeof(T)); 
+
+ *((unsigned*) mem) = n; // Like new, we reserve extra bytes for size. 
+
+ T* arr = (T*) POFFS(mem, COMPILER_ARRAY_BYTES); 
+
+ arrayconstructor(arr, n); // Call constructor for each array instance. 
+
+ return Heap::Retarget(arr); // Accommodate user address displacement. 
+
+} 
+
+template <class T> void Heap::arrayconstructor (T* arr, unsigned n) 
+
+ { while (n--) new (arr++) T; } // Call constructor for array objects. 
+
+
+
+ 
+
+Figure 33: The explicit implementation of the entire functionality of the new[] and 
+delete[] operators from scratch through DNEWARR and DDELARR. 
+
+ 
+
+ 
+
+4 Summary and conclusions 
+
+
+In large-scale software systems, the detection and resolution of programming defects 
+is a critical resource-demanding process, which may significantly hazard the original 
+production schedules, and can also compromise the eventual quality of the delivered 
+software products. When memory corruption occurs, even for restricted regions 
+affecting data content at a minimal scale, it tends to rapidly propagate during 
+execution, spreading widely erroneous content and inherently disrupting the correct 
+behaviour of program units. Such progressive data infection, causing a chain-reaction 
+of defective data processing and bringing disorder into the regular system behaviour, 
+
+
+may proceed silently for a considerable period of time, before it becomes externally 
+observable. Once the presence of symptoms for erroneous program behaviour is 
+verified through repeating system executions, the tracing of the offensive code is 
+initiated as a systematic debugging process. In this process, there are actually two 
+critical issues that may well turn debugging processes into nightmare experiences: 
+
+.. In most cases, the time distance between the execution of the malicious code and 
+the observation of defect-indicating symptoms: (a) is not zero; (b) is not constant; 
+and (c) is not bound in a way that helps the bug-hunting process. 
+.. The error may only be reproducible in normal program execution, but never 
+during source-level debugging (e.g. real-time systems, multithreaded systems). 
+
+
+ 
+
+In this context, the reported work is mainly focused on minimising the time distance 
+between heap-memory corruption incidents and their runtime detection, effectively 
+automating the detection process through embedded memory validation and 
+monitoring functionality. The presented heap manager constitutes an adapter over the 
+native heap manager, encapsulating large-scale memory-corruption defence, while 
+addressing particular demanding programming issues to support realistic deployment 
+in real-life system development. Some of the advanced features not met in existing 
+heap manager recipes are: 
+
+.. Accommodation of compiler-performed user-address displacement for 
+dynamically allocated arrays of class instances; 
+.. Support of defect monitors, concurrently observing heap-memory regions for the 
+presence of defects, practically eliminating the need for manual injection of 
+intensive validation checks within the program source code; 
+.. Delivery of a method to effectively trap post-disposal memory overwrites, through 
+late memory disposal and content monitoring; 
+.. Encapsulation of corruption detection capability for the internally maintained 
+memory-block information through defensive copies; 
+.. Support for concurrent logging facilities, introducing a minimal overhead on the 
+allocation functions, while emphasizing off-line data analysis; 
+.. Entire re-implementation of the allocation and disposal operators, to avoid 
+conflicts in case third-party libraries already provide overloaded versions. 
+
+
+ 
+
+From the programming usability point of view, the presented heap manager 
+introduces minimal modifications on the source code, merely requiring allocation 
+expressions to employ the augmented macro versions. This job can be easily 
+automated using common text-editor facilities. For instance, in MS Visual Studio™ 
+IDE, the substitution of the regular expressions new\:b+\(\:i\)\[\(.+\)\]; (dynamic 
+arrays), new\:b+\(\:i\)\(.*\); (dynamic instances with constructor arguments) and 
+new\:b+\(\:i\); (dynamic instances with default constructor) by DNEWARR(\1,\2), 
+DNEWCLASS(\1,\2) and DNEW(\1), substitutes automatically the standard allocation 
+expressions by their defensive versions. Then, depending on the particular 
+requirements for memory-error checking, the supplied defensive features can be 
+deployed in the source code, like putting explicit validation tests prior to pointer use, 
+verifying the size of heap-memory regions before content write, or activating specific 
+defect monitors. Additionally, the textual-context tags, preceding and following user-
+memory blocks, allow better memory inspection as they provide readable information 
+regarding the source file, source line, allocation expression and memory size of 
+viewed memory regions. Moreover, all memory regions allocated within program 
+units not deploying the allocation macros (e.g. third-party code, or files not yet re-
+
+
+factored) become directly identifiable from the different content of the textual tags; 
+for example, a block of 80 bytes allocated with the standard new expression will have 
+the context tag “$,0,$,80”. 
+
+ 
+
+The presented heap manager is actually an add-on defensive layer on top of the 
+compiler-supplied memory management mechanism. Existing compilers encompass 
+some heap-memory checking facilities, the most known being delayed detection of 
+post-disposal overwrites for recycled blocks, via a check performed prior to their re-
+allocation. The later is implemented through the following technique: disposed 
+memory blocks are painted with a standard byte pattern, while upon re-allocation its 
+content is matched against this byte pattern; any mismatch indicates a post disposal 
+overwrite. Clearly, although this method detects overwrites, it cannot certify that the 
+error is always detected (only if the offended block is eventually recycled), while it 
+does not support direct defect detection (there is no clue as to when the overwrite 
+occurred). It is argued that the functionality encompassed in the reported defensive 
+heap manager could be directly encapsulated within the original heap manager of C++ 
+compilers. This way, the need for deployment of the allocation macros and the 
+injection of explicit pointer validation checks in the source code is effectively 
+eliminated, once the standard allocation functions encompass the defensive 
+functionality and the code generation caters to introduce explicit validation tests for 
+pointers engaged in de-reference (i.e. arrow or dot operator) expressions. Since in the 
+effort to accommodate advanced features for intensive bug defence, as it is the case 
+with the reported development recipe, the development complexity of heap-manager 
+adapters is largely increased, it is considered as more effective if bug defence is 
+eventually encapsulated in the standard compiler functionality. 
+
+ 
+
+ 
+
+References 
+
+ 
+
+Alexandrescu, A. (2001). A Small-Object Allocator. In Modern C++ Design - 
+
+Applied Generic and Design Patterns, Pearson Professional Education, UK. 
+
+ 
+
+Eisenstadt, M. (1997). My Hairiest Bug War Stories. In Communications of the ACM, Vol. 
+40, No. 4, pp 31–37. 
+
+ 
+
+Etnus, LLC (2004). TotalView™: Memory Debugging Features. Available on line from: 
+http://www.etnus.com/TotalView/Memory.html 
+
+ 
+
+Hixon, B., Martin, D., Moore, R., Schaefer, G., Wifall, R. (2002). Play by Play: Effective 
+Memory Management. In Gamasutra on line magazine, August 2, article available from: 
+http://www.gamasutra.com/features/20020802/hixon_01.htm. 
+
+ 
+
+Jongerius. J. (1995). A New Heap Manager. Chapter 5, Writing Bug-Free C Code - 
+
+A Programming Style That Automatically Detects Bugs in C Code. Prentice Hall, Series on 
+Programming Tools. 
+
+ 
+
+Joyner, I. (1992). C++??: a Critique of C++. 2nd edition, available on line from: 
+http://www.literateprogramming.com/c++critique.pdf 
+
+ 
+
+Savidis, A (2004). The Implementation of Generic Smart Pointers for Advanced Defensive 
+Programming. In Software Practice & Experience, Willey, Vol. 34, Issue 10, pp 977-1009, 
+http://www3.interscience.wiley.com/cgi-bin/fulltext/108561714/PDFSTART. 
+
+

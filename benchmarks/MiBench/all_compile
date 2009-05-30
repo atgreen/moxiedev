@@ -1,0 +1,24 @@
+#! /bin/sh
+
+for i in *
+do
+
+if [ -d "$i" ] 
+then
+ tmp=$PWD
+ cd $i
+ if [ -d "src_work" ] 
+ then
+  # *** process directory ***
+  echo "**********************************************************"
+  echo $i
+  cd src_work
+  make
+  ls -l a.out 
+  # *************************
+ fi
+ cd $tmp
+fi
+
+done
+

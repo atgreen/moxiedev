@@ -1,0 +1,8 @@
+# Declarations
+COMPILER = gcc
+OPTS_DEF = -O3
+MISC_OPTS = -lm -DUNIX -DPORTABLE -m32
+
+# Actions
+all:		
+	$(COMPILER) $(OPTS_DEF) $(MISC_OPTS) *.c

@@ -1,0 +1,5 @@
+for i in `seq 1 20`; do 
+ echo $i; 
+ echo "../../office_data/$i.txt output_large.enc e 1234567890abcdeffedcba09876543211234567890abcdeffedcba0987654321 > ftmp_out" > _finfo_cmd_run.$i
+ cp _finfo_dataset.1 _finfo_dataset.$i;
+done

@@ -1,0 +1,2243 @@
+Web Content Accessibility Guidelines 2.0[contents] [checklist]
+ 
+Web Content Accessibility Guidelines 2.0
+W3C Working Draft 27 April 2006
+  This version: 
+  http://www.w3.org/TR/2006/WD-WCAG20-20060427/ 
+  Latest version: 
+  http://www.w3.org/TR/WCAG20/ 
+  Previous version: 
+  http://www.w3.org/TR/2005/WD-WCAG20-20051123/ 
+  Editors: 
+  Ben Caldwell, Trace Research & Development Center, University of 
+  Wisconsin-Madison 
+  Wendy Chisholm, W3C 
+  John Slatin, Accessibility Institute, University of Texas at Austin 
+  Gregg Vanderheiden, Trace Research & Development Center, University of 
+  Wisconsin-Madison 
+This document is also available in these non-normative formats: 
+  single HTML file 
+Copyright © 2006 W3C ® ( MIT , ERCIM , Keio), All Rights Reserved. W3C 
+liability, trademark and document use rules apply.
+
+
+
+Abstract
+Web Content Accessibility Guidelines 2.0 (WCAG 2.0) covers a wide range of 
+issues and recommendations for making Web content more accessible. This document 
+contains principles, guidelines, and success criteria that define and explain 
+the requirements for making Web-based information and applications accessible. 
+"Accessible" means usable to a wide range of people with disabilities, including 
+blindness and low vision, deafness and hearing loss, learning difficulties, 
+cognitive limitations, limited movement, speech difficulties, photosensitivity 
+and combinations of these. Following these guidelines will also make your Web 
+content more accessible to the vast majority of users, including older users. It 
+will also enable people to access Web content using many different devices - 
+including a wide variety of assistive technologies. 
+WCAG 2.0 success criteria are written as testable statements that are not 
+technology-specific. Guidance about satisfying the success criteria in specific 
+technologies as well as general information about interpreting the success 
+criteria are provided in separate documents. An Overview of Web Content 
+Accessibility Guidelines (WCAG) 2.0 Last Call Documents is also available. 
+Until WCAG 2.0 advances to W3C Recommendation, the current and referenceable 
+document is Web Content Accessibility Guidelines 1.0 (WCAG 1.0), published as a 
+W3C Recommendation May 1999.
+Status of this Document
+This section describes the status of this document at the time of its 
+publication. Other documents may supersede this document. A list of current W3C 
+publications and the latest revision of this technical report can be found in 
+the W3C technical reports index at http://www.w3.org/TR/. 
+The W3C strongly encourages broad community review of this Last Call Working 
+Draft, and submission of comments on any issues which you feel could present a 
+significant barrier to future adoption and implementation of WCAG 2.0. In 
+particular, we encourage you to comment on the success criteria and the 
+conformance model. Reviewers are encouraged to provide suggestions for how to 
+address issues as well as supportive feedback and endorsements of the document.
+This 27 April 2006 release of the Web Content Accessibility Guidelines 2.0 is a 
+Last Call Working Draft by the Web Content Accessibility Guidelines Working 
+Group (part of the Web Accessibility Initiative). Publication as a Last Call 
+Working Draft indicates that the WCAG WG believes it has addressed all 
+substantive issues and that the document is stable. The first public Working 
+Draft of WCAG 2.0 was published 25 January 2001. Since then, the WCAG WG has 
+published nine Working Drafts, addressed more than 1,000 issues, and developed a 
+variety of support information for the guidelines. This publication of WCAG 2.0 
+is accompanied by the following documents:
+  Understanding WCAG 2.0 - which provides information about each Guideline as 
+  well as describing how to meet each Success Criteria.
+  Techniques for WCAG 2.0 - which includes sufficient techniques for each 
+  success criteria for various Web technologies including HTML, CSS, SMIL and 
+  scripting.
+After Last Call, the WCAG WG believes that WCAG 2.0 will be ready to move on to 
+the remaining stages of the W3C Recommendation Track Process:
+  Candidate Recommendation - collect implementation experience on use of WCAG 
+  2.0 to design and evaluate Web content for accessibility;
+  Proposed Recommendation - seek endorsement of the specification from W3C 
+  Member organizations;
+  Recommendation - published by W3C as a technical report appropriate for 
+  widespread deployment and the promotion of W3C's mission.
+Comments on this working draft are due on or before 31 May 2006. To comment, 
+please use one of the following standard response formats.
+  Web form
+  HTML file
+  Excel spreadsheet
+  Email form
+Instructions and downloads for all are available at 
+http:///www.w3.org/WAI/WCAG20/comments/. Please send completed forms to 
+public-comments-wcag20@w3.org. 
+The archives for the public comments list are publicly available. Archives of 
+the WCAG WG mailing list discussions are also publicly available.
+We are starting to gather implementation examples during this Last Call review 
+process. Implementation examples are examples of pages or sites that conform to 
+the proposed WCAG 2.0 at various levels of conformance.
+This Last Call draft of WCAG 2.0 addresses all the open issues against the 
+previous Working Draft. For a detailed list of changes since the last 
+publication of this document, please refer to the History of Changes to WCAG 2.0 
+Working Drafts.
+Publication as a Working Draft does not imply endorsement by the W3C Membership. 
+This is a draft document and may be updated, replaced or obsoleted by other 
+documents at any time. It is inappropriate to cite this document as other than 
+work in progress.
+This document was produced by a group operating under the 5 February 2004 W3C 
+Patent Policy. W3C maintains a public list of any patent disclosures made in 
+connection with the deliverables of the group; that page also includes 
+instructions for disclosing a patent. An individual who has actual knowledge of 
+a patent which the individual believes contains Essential Claim(s) must disclose 
+the information in accordance with section 6 of the W3C Patent Policy.
+
+
+
+Table of Contents
+  Introduction 
+    Related Documents 
+    Authoring tools 
+    The Role of User Agents 
+    The Four Principles of Accessibility 
+    Important New Terms Used in WCAG 2.0 
+  Conformance 
+    Technology assumptions and the "baseline" 
+    Conformance levels and the baseline 
+    Conformance claims 
+    Content that conforms to WCAG 1.0 
+    How to refer to WCAG 2.0 from other documents 
+  WCAG 2.0 Guidelines 
+    Principle 1: Content must be perceivable. 
+      Guideline 1.1 Provide text alternatives for all non-text content 
+      Guideline 1.2 Provide synchronized alternatives for multimedia 
+      Guideline 1.3 Ensure that information and structure can be separated from 
+      presentation 
+      Guideline 1.4 Make it easy to distinguish foreground information from its 
+      background 
+    Principle 2: Interface components in the content must be operable 
+      Guideline 2.1 Make all functionality operable via a keyboard interface 
+      Guideline 2.2 Allow users to control time limits on their reading or 
+      interaction 
+      Guideline 2.3 Allow users to avoid content that could cause seizures due 
+      to photosensitivity 
+      Guideline 2.4 Provide mechanisms to help users find content, orient 
+      themselves within it, and navigate through it 
+      Guideline 2.5 Help users avoid mistakes and make it easy to correct 
+      mistakes that do occur 
+    Principle 3: Content and controls must be understandable 
+      Guideline 3.1 Make text content readable and understandable. 
+      Guideline 3.2 Make the placement and functionality of content predictable. 
+
+    Principle 4: Content should be robust enough to work with current and future 
+    user agents (including assistive technologies) 
+      Guideline 4.1 Support compatibility with current and future user agents 
+      (including assistive technologies) 
+      Guideline 4.2 Ensure that content is accessible or provide an accessible 
+      alternative 
+Appendices
+  Appendix A: Glossary (Normative) 
+  Appendix B: Checklist 
+  Appendix C: Acknowledgements 
+  Appendix D: Comparison of WCAG 1.0 checkpoints to WCAG 2.0 
+  Appendix E: References 
+
+
+
+Introduction 
+This section is informative. 
+You are reading the Web Content Accessibility Guidelines (WCAG) version 2.0. 
+This is the central document that defines the requirements for making Web 
+content accessible to a wide range of people with disabilities, including 
+blindness and low vision, deafness and hearing loss, learning difficulties, 
+cognitive limitations, limited movement, speech difficulties, and others. 
+Following these guidelines will also make your Web content more usable to many 
+other users, including older users. It will also enable people to access Web 
+content using many different devices - including a wide variety of assistive 
+technologies and mobile technologies.
+WCAG 2.0 covers a wide range of recommendations for making Web content more 
+accessible. The guidelines do not include standard usability recommendations 
+except where they have specific impact on accessibility.
+The WCAG 2.0 document itself consists of: 
+  This introduction
+  Information about conformance to WCAG 2.0 
+  Guidelines with success criteria for each guideline
+  "How to meet" links to information on intent, sufficient techniques, examples, 
+  and benefits for each success criterion
+  A link to information about the Working Group's approach to defining baseline 
+  assumptions about the technologies that are available to end users
+  Appendices containing definitions, a checklist, references, and other support 
+  information.
+Related Documents
+In addition to WCAG 2.0 (this document) there are a number of related support 
+documents that provide additional information and examples. These other 
+documents are informative only and do not define conformance to WCAG 2.0. Only 
+this document (WCAG 2.0) is normative. That is, only this document can be used 
+for determining conformance to these guidelines. Readers should consult WCAG 2.0 
+in order to determine the exact wording of the success criteria and for 
+information about documenting conformance.
+The other documents in this set are provided to help readers understand WCAG 2.0 
+and how to produce conforming content. These informative documents are written 
+to be used by a diverse audience, including but not limited to:
+  people who create Web content 
+  developers who write code
+  Quality assurance or accessibility evaluators 
+  policy makers
+  managers
+  users
+Currently, these informative documents include:
+  Essential Components of Web Accessibility - Explains how the Web Content 
+  Accessibility Guidelines work with the other WAI guidelines (the User Agent 
+  Accessibility Guidelines and the Authoring Tool Accessibility Guidelines) and 
+  with assistive technologies to provide access to the Web by people with 
+  disabilities.
+  Overview of Web Content Accessibility Guidelines (WCAG) 2.0 Documents - 
+  Provides an overview of WCAG 2.0 and its various informative support 
+documents.
+  About Baselines for WCAG 2.0 - Provides additional information on baselines.
+  Understanding WCAG 2.0 - Provides information about each success criterion, 
+  including:
+    its intent,
+    key terms from the WCAG 2.0 Glossary needed to understand the success 
+    criterion,
+    names of and links to techniques that the working group deems sufficient to 
+    meet the success criterion, and
+    examples and benefits of the success criterion.
+  Note: Each of the "How to meet SC x.x.x" links in WCAG 2.0 links to the 
+  relevant section of the Understanding WCAG 2.0 document.
+  Techniques for WCAG 2.0 - Provide specific details on different techniques, 
+  including examples, code, and tests.
+  Note: The development of techniques documents is an ongoing process. 
+  Developers are encouraged to submit new techniques at any time. 
+  Application Notes - Provide detailed application information in different 
+  areas. For example, an application note on forms will provide a collection of 
+  techniques, and strategies for creating accessible forms. It will also 
+  summarize the different success criteria that relate to forms.
+  Note: Application notes are a future component that will be developed in 
+  conjunction with the Education and Outreach Working Group.
+The Working Group plans to publish a number of other technology-specific 
+techniques documents and encourages development of techniques documents that 
+show how to meet WCAG 2.0 using non-W3C technologies. Please visit the Working 
+Group home page for a complete list of these and other informative documents 
+related to WCAG 2.0.
+Every attempt has been made to make WCAG 2.0 and the related documents listed 
+above as readable and usable as possible while retaining the accuracy and 
+clarity needed in a technical specification. Sometimes technical terms are 
+needed for clarity or testability. In these cases, the terms are defined in 
+Appendix A: Glossary . To assist readers, there is a How to Meet link beside 
+every success criterion that puts readers one click away from detailed 
+information on that success criterion and two clicks away from the specific 
+technique descriptions related to the success criterion.
+The Working Group recognizes that readers who are new to accessibility may need 
+or want additional information. For these readers, the work of the Web 
+Accessibility Initiative and its Education and Outreach Working Group is highly 
+recommended. The articles called Getting Started: Making a Web Site Accessible 
+and How People with Disabilities Use the Web are especially useful. 
+Authoring tools
+A large part of Web content is created using authoring tools. These tools often 
+determine how Web content is implemented, either by making authoring decisions 
+directly or by limiting the choices available to the author. As a result, 
+authoring tools will play an important role in creating Web content that 
+conforms to the Web Content Accessibility Guidelines. At the same time, we 
+recommend that all authors become familiar with the Guidelines because this will 
+help in creating accessible content and coverage of the Guidelines may vary 
+between tools.
+Developers of authoring tools can make their tools aware of the Web Content 
+Accessibility Guidelines by following the Authoring Tool Accessibility 
+Guidelines. The working group encourages users and purchasers of authoring tools 
+to consider conformance to the Authoring Tool Accessibility Guidelines as a 
+criterion when selecting tools. The current version at WCAG 2.0's release is 
+Authoring Tool Accessibility Guidelines 1.0. However, version 2.0 is nearing 
+completion and it is based on WCAG 2.0. The latest version of the Authoring Tool 
+Accessibility Guidelines 2.0 can be found at http://www.w3.org/TR/ATAG20.
+The Role of User Agents
+Web content is always rendered by a user agent. A user agent is any software 
+that retrieves and renders Web content for users and includes assistive 
+technologies. Web content that conforms to WCAG 2.0 is most likely to be 
+rendered correctly by user agents that conform to the User Agent Accessibility 
+Guidelines (UAAG). For more information about the relationship between WCAG 2.0 
+and other WAI accessibility guidelines, see Essential Components of Web 
+Accessibility.
+The Four Principles of Accessibility
+The WCAG 2.0 Guidelines are organized around the following four principles:
+  Content must be perceivable
+  Interface components in the content must be operable
+  Content and controls must be understandable
+  Content should be robust enough to work with current and future user agents 
+  (including assistive technologies)
+These four principles lay the foundation necessary for anyone to access and use 
+Web content. WCAG 2.0 offers information about how to increase the ability of 
+people with disabilities to perceive, operate, and understand Web content. Under 
+each principle there is a list of guidelines that address the principle. Under 
+each guideline there are success criteria used to evaluate conformance to this 
+standard for that guideline. The success criteria are written as statements that 
+will be either true or false when specific Web content is tested against the 
+success criteria. The success criteria are grouped into three levels of 
+conformance, each representing a higher level of accessibility for that 
+guideline.
+The principles, guidelines, and success criteria represent concepts that address 
+accessibility issues and needs, regardless of the technology used. They are not 
+specific to HTML, XML, or any other technology. This approach makes it possible 
+to apply WCAG 2.0 to a variety of situations and technologies, including those 
+that do not yet exist. 
+The principles and guidelines give direction and guidance to Web authors. The 
+success criteria are written as true/false statements so that they can be used 
+in determining conformance. Only the success criteria are testable.
+Important New Terms Used in WCAG 2.0
+WCAG 2.0 includes several important new terms. These terms are defined in the 
+Glossary ( Appendix A: Glossary ), and links to the definitions are provided 
+whenever these and other important terms are used in the success criteria. The 
+terms are introduced briefly here to make this new vocabulary easier to 
+understand. 
+"Web unit" is one of these important new terms. Web pages are the most common 
+type of Web unit. The broader term was chosen because it covers Web applications 
+and other types of content to which the word "page" may not apply. A Web unit is 
+any collection of information, consisting of one or more resources, intended to 
+be rendered together, and identified by a single Uniform Resource Identifier 
+(such as a URL). For example, A Web page containing several images and a style 
+sheet is a typical Web unit. 
+Several success criteria require that content (or certain aspects of content) 
+can be "programmatically determined." This means that the author is responsible 
+for ensuring that the content is delivered in such a way that software can 
+access it. This is important in order to allow assistive technologies to 
+recognize it and present it to the user, even if the user requires a different 
+sensory modality than the original. For example, some assistive technologies 
+convert text into speech or braille. This will also allow content in the future 
+to be translated into simpler forms for people with cognitive disabilities, or 
+to allow access by other agent based technologies. This can happen only if the 
+content itself can be programmatically determined. 
+WCAG 2.0 also introduces the term "baseline” which allows WCAG 2.0 to adapt to 
+changing technologies and to the needs of different countries and environments. 
+Baselines are described in more detail in the conformance section and in About 
+Baselines for WCAG 2.0. 
+Conformance
+This section is normative. 
+Conformance means that Web content satisfies the success criteria defined in 
+this document. This section outlines the conformance scheme used throughout this 
+document.
+The success criteria for each guideline are organized into three (3) levels.
+  Level 1 success criteria: 
+    Achieve a minimum level of accessibility.
+    Can reasonably be applied to all Web content.
+  Level 2 success criteria: 
+    Achieve an enhanced level of accessibility.
+    Can reasonably be applied to all Web content.
+  Level 3 success criteria: 
+    Achieve additional accessibility enhancements.
+    Can not necessarily be applied to all Web content.
+Note 1: Because not all level 3 success criteria can be used with all types of 
+content, Triple-A conformance only requires conformance to a portion of level 3 
+success criteria.
+Note 2: Guidelines do not necessarily contain success criteria at every level. 
+Some have success criteria at only one level.
+This method of grouping success criteria differs in important ways from the 
+approach taken in WCAG 1.0. Each checkpoint in WCAG 1.0 was assigned a 
+"priority" according to its impact on accessibility. Thus, Priority 3 
+checkpoints appeared to be less important than Priority 1 checkpoints. The WCAG 
+Working Group believes that all success criteria of WCAG 2.0 are essential for 
+some people. Thus, the system of checkpoints and priorities used in WCAG 1.0 has 
+been replaced by success criteria under Levels 1, 2, and 3 as described above. 
+Note that even conformance to all three levels will not make Web content 
+accessible to all people.
+All WCAG 2.0 success criteria are testable. While some can be tested by computer 
+programs, others must be tested by qualified human testers. Sometimes, a 
+combination of computer programs and qualified human testers may be used. When 
+people who understand WCAG 2.0 test the same content using the same success 
+criteria, the same results should be obtained with high inter-rater reliability.
+Note: For each success criterion, there is a list of techniques deemed by the 
+Working Group to be sufficient to meet the requirement. For each technique, 
+there is a test to determine whether the technique has been successfully 
+implemented. If the test(s) for a "sufficient" technique or combination of 
+techniques is passed, then the Working Group would consider that success 
+criterion met. However, passing all tests for all techniques is not necessary. 
+Nor is it necessary to meet a success criterion using one of the sufficient 
+techniques. There may be other techniques which are not documented by the 
+working group that would also meet the success criterion.
+Technology assumptions and the "baseline"
+WCAG 2.0 defines accessibility guidelines (goals) and success criteria (testable 
+criteria for conformance at different levels of accessibility). The guidelines 
+and success criteria are described in a technology-independent way in order to 
+allow conformance using any Web technology that supports accessibility. WCAG 
+2.0, therefore, does not require or prohibit the use of any specific technology. 
+It is possible to conform to WCAG 2.0 using both W3C and non-W3C technologies, 
+as long as the technologies are supported by accessible user agents, including 
+assistive technologies.
+WCAG 2.0 uses the term user agent to mean: Any software that retrieves and 
+renders Web content for users. This may include Web browsers, media players, 
+plug-ins, and other programs - including assistive technologies - that help in 
+retrieving and rendering Web content. It is important to note that assistive 
+technologies are included in this definition. Assistive technologies include 
+screen readers, screen magnifiers, on-screen and alternative keyboards, single 
+switches, voice recognition, and a wide variety of input and output devices that 
+meet the needs of people with disabilities.
+Choosing baseline technologies
+In choosing Web technologies (HTML, scripting, etc.) that will be used when 
+building content, authors need to know what technologies they can assume will be 
+supported by, and active in, the user agents (including assistive technologies) 
+that people with disabilities will be using. If authors rely on technologies 
+that are not supported, then their content may not be accessible.
+The set of such technologies that an author assumes are supported and turned on 
+in accessible user agents is called a baseline. Authors must ensure that all 
+information and functionality of the Web content conforms to WCAG 2.0 assuming 
+that user agents support all of the technologies in the baseline and that they 
+are enabled. Non-baseline technologies can also be used, but all information and 
+functionality of the Web content must conform both with all non-baseline 
+technologies turned on and with the technologies turned off. Both conditions are 
+necessary since some users many have browsers that support them while others may 
+not. 
+Note: See also Use of technologies outside of the baseline .
+Who sets baselines?
+Baselines may be set by many different entities including (but not limited to) 
+authors, organizations, customers, and governmental bodies. 
+WCAG 2.0 does not specify any particular baseline. There are several reasons for 
+this. First, what is appropriate in a baseline may differ for different 
+environments. For example, in the case of content that will be viewed only by 
+employees of a particular company, it may be possible to assume that user agents 
+support more advanced technologies if the company provides the necessary user 
+agents (including assistive technology) to all employees. For public Websites, 
+however, a more conservative level of technology may be all that can be 
+reasonably assumed. Baselines may also vary by jurisdiction (for example, state, 
+country, etc.). Finally, the level of technology that can be assumed to be 
+supported by accessible user agents will certainly change over time.
+Some examples of scenarios leading to different baselines:
+Example 1: A government site that provides information to the public. A 
+government agency publishes information intended for the general public. The 
+specified baseline includes only technologies that have been widely supported by 
+more than one accessible and affordable user agent for more than one release. 
+The government periodically changes the baseline it requires for authors of 
+public sites to reflect the increasing ability of affordable user agents 
+(including assistive technology) to work with newer technologies.
+Example 2: A particular government provides high level accessible user agents to 
+all citizens who need them. A government provides all citizens with user agents 
+that support newer technologies. The government is thus able to specify a 
+baseline that includes these newer technologies for all of its Web sites for its 
+citizens since the government can assume its citizens' user agents can handle 
+the technologies. 
+Example 3: A private intranet. An organization (public or private) provides its 
+employees with the information technology tools they need to do their jobs. The 
+baseline for intranet sites used only by employees includes newer technologies 
+that are supported only by the user agent that the organization provides for its 
+employees. Because the company controls the user agents that will view its 
+internal content, the author has a very accurate knowledge of the technologies 
+that those user agents (including assistive technologies) support.
+Note: Baselines are not specified in terms of specific user agents, but in terms 
+of the Web content technologies that are supported and enabled in those user 
+agents (including assistive technologies).
+Use of technologies outside of the baseline
+Authors may use technologies that are not in the specified baseline provided 
+that the authors do not rely exclusively on those technologies for conveying any 
+information or functionality. Also, the presence of the other technologies must 
+not block the ability of the users to access the content via the technologies in 
+the baseline. Specifically, the following must be true:
+  All content and functionality are available using only the technologies in the 
+  specified baseline.
+  The non-baseline technologies do not interfere with (break or block access to) 
+  the content 
+    when used with user agents that only support the baseline technologies 
+    when used with user agents that support both the baseline and the additional 
+    technologies. 
+Additional (non-normative) information on baselines can be found at About 
+Baselines for WCAG 2.0.
+Conformance levels and the baseline
+  WCAG 2.0 conformance at level A means that all Level 1 success criteria in the 
+  guidelines are met assuming user agent support for only the technologies in 
+  the specified baseline. 
+  WCAG 2.0 conformance at level Double-A (AA) means that all Level 1 and all 
+  Level 2 success criteria in the guidelines are met assuming user agent support 
+  for only the technologies in the specified baseline. 
+  WCAG 2.0 conformance at level Triple-A (AAA) means that all Level 1, Level 2 
+  and at least half (50%) of the Level 3 success criteria that apply to the 
+  content types used are met assuming user agent support for only the 
+  technologies in the specified baseline. 
+If a success criterion relates to a feature, component or type of content that 
+is not used in the content (for example, there is no multimedia on the site), 
+then that success criterion is met automatically.
+Conformance claims
+Conformance claims apply to Web units, and sets of Web units. (Web units often 
+take the form of a traditional Web page but can also take the form of a fully 
+interactive and immersive environment.)
+Required components of a conformance claim
+Conformance claims are not required. However, if you make a conformance claim 
+then the conformance claim must include the following assertions:
+  The date of the claim
+  The guidelines title/version: "Web Content Accessibility Guidelines 2.0" 
+  The URI of the guidelines: http://www.w3.org/TR/2006/REC-WCAG20-YYYYMMDD/ 
+  Note: The correct date will replace "YYYYMMDD" when WCAG 2.0 is published as a 
+  W3C Recommendation.
+  The conformance level satisfied: (Level A, AA or AAA) 
+  The baseline used to make the conformance claim. (The baseline technologies 
+  can be listed in the conformance claim, or, if the baseline is published 
+  elsewhere, the conformance claim can cite the baseline and provide a URI 
+  pointing to it.) 
+  Scope of the claim (a URI, list of URI's, or a set of URIs defined by a 
+  regular expression) 
+Optional components of a conformance claim: 
+  A list of additional success criteria that have been met beyond a standard 
+  claim
+  A list of the specific technologies "relied upon" to create the content for 
+  which the claim is being made. (This includes markup languages, style sheet 
+  languages, scripting/programming languages, image formats, and multimedia 
+  formats.)
+    "Relied upon" means that the content would not meet WCAG 2.0 at the claimed 
+    level if that technology is turned off or not supported)
+    o All of the technologies that are 'relied upon' must be in the baseline.
+  A list of the specific technologies that are "used but not relied upon"
+    If a technology is "used but not relied upon," the content would still meet 
+    WCAG 2.0 at the stated conformance level even if that technology is turned 
+    off or not supported.
+  A list of user agents that the content has been tested on. This should include 
+  assistive technologies.
+  Information about audience assumptions or target audience. This could include 
+  language, geographic information, or other pertinent information about the 
+  intended audience. The target audience information CANNOT specify anything 
+  related to disability or to physical, sensory or cognitive requirements. 
+Examples of conformance claims:
+Example 1: On 23 March 2005, http://www.wondercall.example.com conforms to W3C's 
+WCAG 2.0, Conformance Level A. The baseline for this claim is HTML 4.01. The 
+specification that this content "relies upon" is: HTML 4.01. The specifications 
+that this content "uses but does not rely on" are: CSS2, and gif. This content 
+was tested using the following user agents and assistive technologies: Firefox 
+1.5 on Windows 2000 SP4 with Jaws 7.0, Firefox 1.5 on Windows XP SP 2 with Jaws 
+7.0, IE 6.0 on Windows 2000 SP4 with Jaws 4.51, IE 6.0 on Windows 2000 SP4 with 
+Jaws 7.0, and Firefox 1.5 on Windows XP SP2 with Jaws 7.0, Safari 2.0 with OS X 
+10.4.
+Example 2: On 5 May 2006, "G7: An Introduction" 
+http://telcor.example.com/nav/G7/intro.html conforms to W3C's WCAG 2.0. 
+Conformance Level Double-A. The following additional success criteria have also 
+been met: 1.1.2, 1.2.5, and 1.4.3. The baseline for this claim is 
+UDBaseline#1-2006 at http://UDLabs.org/Baseline#1-2006.html. The specification 
+that this content "relies upon" is: XHTML 1.0 (Strict), and Real Video. The 
+specifications that this content "uses but does not rely on" are: JavaScript 
+1.2, CSS2.
+Example 3: On 21 June 2007, http://example.com/nav and http://example.com/docs 
+conform to W3C's WCAG 2.0, Conformance Triple-A. The baseline is 
+ISA-Baseline#2-2007 at http://ISA.example.gov/Baselines/BL2-2007. The 
+specifications that this content "relies upon" are: XHTML 1.0 (Strict), CSS2, 
+JavaScript 1.2, jpeg, png. " The technologies this content has been tested with 
+can be found at http://example.com/docs/WCAG20/test/technologies.html.
+Conformance notes
+A Web unit conforms to WCAG 2.0 at a given conformance level only if all content 
+provided by that Web unit (including any secondary resources that are rendered 
+as part of the Web unit) conforms at that level.
+Note: If multiple representations can be retrieved from a URI through content 
+negotiation, then the conformance claim would be for the Web unit that is 
+returned when no negotiation is conducted (unless the server returns an error 
+for that condition, in which case one of the negotiated forms must comply) 
+(Refer to success criterion 4.2.1 .)
+Aggregated content
+Sometimes, a Web unit is assembled ("aggregated") from multiple sources that 
+each may or may not have their own level of conformance. They may in fact not 
+even be Web units of any kind - and thus would not, and sometimes could not, 
+conform to all of the success criteria by themselves. Authored units are defined 
+as "some set of material created as a single entity by an author". The 
+conformance level for a Web unit that contains authored units is equal to the 
+lowest conformance level claimed for the Web unit content and any of the 
+authored units it contains - including any claims pertaining to aggregated 
+authored units. If individual authored units do not carry a conformance claim, 
+then the claim must be based on the Web unit with the authored units in place.
+Scoping of conformance claims
+Conformance claims can be limited, or "scoped," to apply to only some parts of a 
+Web site. Scoping by URI to exclude sections of a site is allowed so that 
+authors can make claims for just some parts of a site. Example 3 above is a 
+scoped conformance claim. Scoping cannot exclude a particular type of content 
+(for example, images or scripts) since it would allow exclusion of individual 
+success criteria. 
+While scoping can include and exclude parts of a site, processes (such as 
+shopping) and authored units must be considered in their entirety. If part of a 
+Web unit that is part of a process or task does not conform at some level, then 
+no conformance claim can be made at that level for any Web unit in that process. 
+The same applies to authored units.
+Example 1: An online store has a series of pages that are used to select and 
+purchase products. All pages in the series must conform in order to claim 
+conformance for any page that is part of the sequence.
+Example 2: A site has a collection of videos for which it is not required to and 
+does not want to claim accessibility. The videos are located in one location 
+(e.g., example.com/movies.php). The conformance claim for the site or section of 
+the site excludes the location that contains the videos. The conformance claim 
+is valid as long as the Web units to which it applies only link to the videos 
+instead of displaying them as part of the page (that is, as long as the videos 
+are not treated as embedded content within a page for which conformance is being 
+claimed).
+Note 1: Linking to non-conforming content is not prohibited. Linking to 
+non-conformant content is allowed, except when one of the following is true:
+  the content is rendered together with the Web page (or other Web unit), or
+  the content is itself a Web unit within the set of URIs to which the 
+  conformance claim applies, or
+  the content is a Web unit that is part of a process for which a claim is made.
+Note 2: In any of these cases, the content would have to meet the guidelines in 
+order for the claim to be valid.
+This scoping provision does not preclude an organization, customer, or 
+government from requiring that all parts of a site be accessible and meet some 
+conformance level of WCAG 2.0. WCAG 2.0 does not require that full Web sites 
+conform, although that is certainly desirable.
+Content that conforms to WCAG 1.0
+This Working Draft of WCAG 2.0 builds upon WCAG 1.0 and reflects feedback 
+received since the publication of WCAG 1.0 in May 1999.
+The Web Content Accessibility Guidelines Working Group is working to ensure that 
+organizations and individuals who are currently using WCAG 1.0 (which remains 
+stable and normative at this time) will be able to smoothly transition to WCAG 
+2.0. For more information about the similarities and differences between WCAG 
+1.0 Checkpoints and WCAG 2.0 Guidelines and success criteria, please refer to 
+Appendix D: Comparison of WCAG 1.0 checkpoints to WCAG 2.0 . 
+Authors whose content currently conforms to WCAG 1.0 may wish to capitalize on 
+past accessibility efforts when making the transition to WCAG 2.0. A qualified 
+conformance statement could allow them this flexibility. For example, a 
+conformance claim might include the following statement: "Materials with 
+creation or modification dates before 31 December 2006 conform to WCAG 1.0 Level 
+AA. Materials with creation or modification dates after 31 December 2006 conform 
+to WCAG 2.0 Level AA."
+How to refer to WCAG 2.0 from other documents
+Information references
+When referencing WCAG 2.0 in an informational fashion, the following format can 
+be used.
+Web Content Accessibility Guidelines 2.0, W3C World Wide Web Consortium 
+Recommendation XX Month Year. (http://www.w3.org/TR/200X/REC-WCAG20-YYYYMMDD/, 
+Latest version at http://www.w3.org/TR/WCAG20/) 
+When referring to WCAG 2.0 from another standard with a "should" statement
+When referencing WCAG 2.0 from within a should statement in a standard (or 
+advisory statement in a regulation), then the full WCAG 2.0 should be 
+referenced. This would mean that all three levels of WCAG 2.0 should be 
+considered but that none are required. The format for referencing WCAG 2.0 from 
+a "should" statement therefore, is:
+Web Content Accessibility Guidelines 2.0, W3C World Wide Web Consortium 
+Recommendation XX Month Year. (http://www.w3.org/TR/200X/REC-WCAG20-YYYYMMDD/) 
+When referring to WCAG 2.0 from another standard with a "shall" statement
+When citing WCAG 2.0 as part of a requirement (e.g., a shall statement in a 
+standard or regulation), the reference must include the specific parts of WCAG 
+2.0 that are intended to be required . When referencing WCAG 2.0 in this manner, 
+the following rules apply:
+  Conformance at any level of WCAG 2.0 requires that all of the Level 1 success 
+  criteria be met. References to WCAG 2.0 can not be for any subset of Level 1.
+  Beyond Level 1, a "shall" reference may include any subset of provisions in 
+  Levels 2 and 3. That is, it is possible to require "all of Level 1 and [some 
+  specific list of success criteria in Level 2 and Level 3]" be met.
+  If Double-A conformance to WCAG 2.0 is specified, then all Level 1 and all 
+  Level 2 success criteria must be met.
+  If Triple-A conformance to WCAG 2.0 is specified, then all Level 1, and all 
+  Level 2 success criteria as well as at least 50% of the Level 3 success 
+  criteria that apply to the content types used must be met.
+Examples
+To cite only the Level 1 success criteria (Single-A conformance): 
+Web Content Accessibility Guidelines 2.0, W3C World Wide Web Consortium 
+Recommendation XX Month Year, Level 1 success criteria. 
+(http://www.w3.org/TR/200X/REC-WCAG20-YYYYMMDD/) 
+To cite the Levels 1 and 2 success criteria (Double-A conformance): 
+Web Content Accessibility Guidelines 2.0, W3C World Wide Web Consortium 
+Recommendation XX Month Year, Level 1 & Level 2 success criteria. 
+(http://www.w3.org/TR/200X/REC-WCAG20-YYYYMMDD/) 
+To cite Level 1 success criteria and selected success criteria from Level 2 and 
+Level 3: 
+Web Content Accessibility Guidelines 2.0, W3C World Wide Web Consortium 
+Recommendation XX Month Year, Level 1 success criteria plus Success Criteria 
+1.x.x, 2.y.y, … 3.z.z. (http://www.w3.org/TR/200X/REC-WCAG20-YYYYMMDD/) 
+Note: It is not recommended that Triple-A conformance ever be required for 
+entire sites. 
+Example of use of a WCAG reference in a "shall" statement. 
+All Web content on publicly available Web sites shall conform to Web Content 
+Accessibility Guidelines 2.0, W3C World Wide Web Consortium Recommendation XX 
+Month Year, Level 1 success criteria plus Success Criteria 1.3.3, 1.3.4, 1.4.1, 
+2.4.2-6, 3.1.6 (http://www.w3.org/TR/200X/REC-WCAG20-YYYYMMDD/)
+Referring to content from WCAG support documents
+Techniques, which are listed in Understanding WCAG 2.0 and described in other 
+supporting documents, are not part of the normative WCAG 2.0 Recommendation and 
+should not be cited using the citation for the WCAG 2.0 Recommendation itself. 
+References to techniques in support documents should be cited separately.
+Techniques can be cited based on the individual Technique document or on the 
+master WCAG 2.0 Techniques document. For example, the technique "Using alt 
+attributes on img elements" could be cited as
+"Using alt attributes on img elements", W3C World Wide Web Consortium Note. 
+(URL: http://www.w3.org/TR/NOTE-WCAG20-TECHS/UsingAltOnImg.html/) 
+or
+W3C World Wide Web Consortium (200x): WCAG2.0 HTML Techniques (URL: 
+http://www.w3.org/TR/NOTE-WCAG20-TECHS/HTMLTechs.html) 
+Note: Techniques are not designed to be referenced as "required" from any 
+standard or regulation.
+WCAG 2.0 Guidelines
+This section is normative.
+Principle 1: Content must be perceivable.
+Guideline 1.1 Provide text alternatives for all non-text content
+Level 1 Success Criteria for Guideline 1.1 
+1.1.1 For all non-text content, one of the following is true: [How to meet 
+1.1.1] 
+  If non-text content presents information or responds to user input, text 
+  alternatives serve the same purpose and present the same information as the 
+  non-text content. If text alternatives cannot serve the same purpose, then 
+  text alternatives at least identify the purpose of the non-text content.
+  If non-text content is multimedia; live audio-only or live video-only content; 
+  a test or exercise that must use a particular sense; or primarily intended to 
+  create a specific sensory experience; then text alternatives at least identify 
+  the non-text content with a descriptive text label. (For multimedia, see also 
+  Guideline 1.2 Provide synchronized alternatives for multimedia .)
+  If the purpose of non-text content is to confirm that content is being 
+  operated by a person rather than a computer, different forms are provided to 
+  accommodate multiple disabilities.
+  If non-text content is pure decoration, or used only for visual formatting, or 
+  if it is not presented to users, it is implemented such that it can be ignored 
+  by assistive technology.
+Level 2 Success Criteria for Guideline 1.1
+(No level 2 success criteria for this guideline.) 
+Level 3 Success Criteria for Guideline 1.1 
+(No level 3 success criteria for this guideline.) 
+Guideline 1.1 (text-equiv) Issues 
+Guideline 1.2 Provide synchronized alternatives for multimedia
+Level 1 Success Criteria for Guideline 1.2
+1.2.1 Captions are provided for prerecorded multimedia. [How to meet 1.2.1] 
+1.2.2 Audio descriptions of video, or a full multimedia text alternative 
+including any interaction, are provided for prerecorded multimedia. [How to meet 
+1.2.2] 
+Level 2 Success Criteria for Guideline 1.2 
+1.2.3 Audio descriptions of video are provided for prerecorded multimedia. [How 
+to meet 1.2.3] 
+1.2.4 Captions are provided for live multimedia. [How to meet 1.2.4] 
+Level 3 Success Criteria for Guideline 1.2 
+1.2.5 Sign language interpretation is provided for multimedia. [How to meet 
+1.2.5] 
+1.2.6 Extended audio descriptions of video are provided for prerecorded 
+multimedia. [How to meet 1.2.6] 
+1.2.7 For prerecorded multimedia, a full multimedia text alternative including 
+any interaction is provided. [How to meet 1.2.7] 
+Guideline 1.2 (media-equiv) Issues 
+Guideline 1.3 Ensure that information and structure can be separated from 
+presentation
+Level 1 Success Criteria for Guideline 1.3
+1.3.1 Information and relationships conveyed through presentation can be 
+programmatically determined, and notification of changes to these is available 
+to user agents, including assistive technologies. [How to meet 1.3.1] 
+1.3.2 Any information that is conveyed by color is also visually evident without 
+color. [How to meet 1.3.2] 
+1.3.3 When the sequence of the content affects its meaning, that sequence can be 
+programmatically determined. [How to meet 1.3.3] 
+Level 2 Success Criteria for Guideline 1.3 
+1.3.4 Information that is conveyed by variations in presentation of text is also 
+conveyed in text, or the variations in presentation of text can be 
+programmatically determined. [How to meet 1.3.4] 
+1.3.5 Information required to understand and operate content does not rely on 
+shape, size, visual location, or orientation of components. [How to meet 1.3.5] 
+Level 3 Success Criteria for Guideline 1.3 
+(No level 3 success criteria for this guideline.) 
+Guideline 1.3 (content-structure-separation) Issues 
+Guideline 1.4 Make it easy to distinguish foreground information from its 
+background 
+Level 1 Success Criteria for Guideline 1.4
+(No level 1 success criteria for this guideline.) 
+Level 2 Success Criteria for Guideline 1.4
+1.4.1 Text or diagrams, and their background, have a luminosity contrast ratio 
+of at least 5:1. [How to meet 1.4.1] 
+1.4.2 A mechanism is available to turn off background audio that plays 
+automatically, without requiring the user to turn off all audio. [How to meet 
+1.4.2] 
+Level 3 Success Criteria for Guideline 1.4 
+1.4.3 Text or diagrams, and their background, have a luminosity contrast ratio 
+of at least 10:1. [How to meet 1.4.3] 
+1.4.4 Audio content does not contain background sounds, background sounds can be 
+turned off, or background sounds are at least 20 decibels lower than the 
+foreground audio content, with the exception of occasional sound effects. [How 
+to meet 1.4.4] 
+Note: A 20 decibel difference in sound level is roughly four times (4x) quieter 
+or louder. Background sound that meets this requirement will be approximately 
+four times (4x) quieter than the foreground audio content.
+Guideline 1.4 (visual-audio-contrast) Issues 
+Principle 2: Interface components in the content must be operable
+Guideline 2.1 Make all functionality operable via a keyboard interface
+Level 1 Success Criteria for Guideline 2.1
+2.1.1 All functionality of the content is operable in a non-time-dependent 
+manner through a keyboard interface, except where the task requires analog, 
+time-dependent input. [How to meet 2.1.1] 
+Note: This does not preclude and should not discourage the support of other 
+input methods (such as a mouse) in addition to keyboard operation.
+Level 2 Success Criteria for Guideline 2.1 
+(No level 2 success criteria for this guideline.) 
+Level 3 Success Criteria for Guideline 2.1 
+2.1.2 All functionality of the content is operable in a non-time-dependent 
+manner through a keyboard interface. [How to meet 2.1.2] 
+Guideline 2.1 (keyboard-operation) Issues 
+Guideline 2.2 Allow users to control time limits on their reading or interaction
+Level 1 Success Criteria for Guideline 2.2
+2.2.1 For each time-out that is a function of the content, at least one of the 
+following is true: [How to meet 2.2.1] 
+  the user is allowed to deactivate the time-out; or
+  the user is allowed to adjust the time-out over a wide range that is at least 
+  ten times the length of the default setting; or
+  the user is warned before time expires and given at least 20 seconds to extend 
+  the time-out with a simple action (for example, "hit any key"), and the user 
+  is allowed to extend the timeout at least ten times; or
+  the time-out is an important part of a real-time event (for example, an 
+  auction), and no alternative to the time-out is possible; or
+  the time-out is part of an activity where timing is essential (for example, 
+  competitive gaming or time-based testing) and time limits can not be extended 
+  further without invalidating the activity.
+Level 2 Success Criteria for Guideline 2.2 
+2.2.2 Content does not blink for more than three seconds, or a method is 
+available to stop all blinking content in the Web unit or authored component. 
+[How to meet 2.2.2] 
+Note: For requirements related to flickering or flashing content, refer to 
+Guideline 2.3 Allow users to avoid content that could cause seizures due to 
+photosensitivity .
+2.2.3 Content can be paused by the user unless the timing or movement is part of 
+an activity where timing or movement is essential. [How to meet 2.2.3] 
+Level 3 Success Criteria for Guideline 2.2 
+2.2.4 Except for real-time events, timing is not an essential part of the event 
+or activity presented by the content. [How to meet 2.2.4] 
+2.2.5 Interruptions, such as updated content, can be postponed or suppressed by 
+the user, except interruptions involving an emergency. [How to meet 2.2.5] 
+2.2.6 When an authenticated session expires, the user can continue the activity 
+without loss of data after re-authenticating. [How to meet 2.2.6] 
+Guideline 2.2 (time-limits) Issues 
+Guideline 2.3 Allow users to avoid content that could cause seizures due to 
+photosensitivity
+Level 1 Success Criteria for Guideline 2.3
+2.3.1 Content does not violate the general flash threshold or the red flash 
+threshold. [How to meet 2.3.1] 
+Level 2 Success Criteria for Guideline 2.3 
+(No level 2 success criteria for this guideline.) 
+Level 3 Success Criteria for Guideline 2.3 
+2.3.2 Web units do not contain any components that flash more than three times 
+in any 1-second period. [How to meet 2.3.2] 
+Guideline 2.3 (seizure) Issues 
+Guideline 2.4 Provide mechanisms to help users find content, orient themselves 
+within it, and navigate through it
+Level 1 Success Criteria for Guideline 2.4
+2.4.1 A mechanism is available to bypass blocks of content that are repeated on 
+multiple Web units. [How to meet 2.4.1] 
+Level 2 Success Criteria for Guideline 2.4
+2.4.2 More than one way is available to locate content within a set of Web units 
+where content is not the result of, or a step in, a process or task. [How to 
+meet 2.4.2] 
+2.4.3 Web units have titles. [How to meet 2.4.3] 
+2.4.4 Each link is programmatically associated with text from which its purpose 
+can be determined. [How to meet 2.4.4] 
+Level 3 Success Criteria for Guideline 2.4 
+2.4.5 Titles, headings, and labels are descriptive. [How to meet 2.4.5] 
+2.4.6 When a Web unit or authored component is navigated sequentially, 
+components receive focus in an order that follows relationships and sequences in 
+the content. [How to meet 2.4.6] 
+2.4.7 Information about the user's location within a set of Web units is 
+available. [How to meet 2.4.7] 
+2.4.8 The purpose of each link can be programmatically determined from the link. 
+[How to meet 2.4.8] 
+Guideline 2.4 (navigation-mechanisms) Issues 
+Guideline 2.5 Help users avoid mistakes and make it easy to correct mistakes 
+that do occur
+Level 1 Success Criteria for Guideline 2.5
+2.5.1 If an input error is detected, the error is identified and described to 
+the user in text. [How to meet 2.5.1] 
+Level 2 Success Criteria for Guideline 2.5
+2.5.2 If an input error is detected and suggestions for correction are known and 
+can be provided without jeopardizing the security or purpose of the content, the 
+suggestions are provided to the user. [How to meet 2.5.2] 
+2.5.3 For forms that cause legal or financial transactions to occur, that modify 
+or delete data in data storage systems, or that submit test responses, at least 
+one of the following is true: [How to meet 2.5.3] 
+  Actions are reversible.
+  Actions are checked for input errors before going on to the next step in the 
+  process.
+  The user is able to review and confirm or correct information before 
+  submitting it.
+Level 3 Success Criteria for Guideline 2.5 
+2.5.4 Context-sensitive help is available for text input. [How to meet 2.5.4] 
+Guideline 2.5 (minimize-error) Issues 
+Principle 3: Content and controls must be understandable
+Guideline 3.1 Make text content readable and understandable.
+Level 1 Success Criteria for Guideline 3.1
+3.1.1 The primary natural language or languages of the Web unit can be 
+programmatically determined. [How to meet 3.1.1] 
+Level 2 Success Criteria for Guideline 3.1 
+3.1.2 The natural language of each passage or phrase in the Web unit can be 
+programmatically determined. [How to meet 3.1.2] 
+Note: This requirement does not apply to individual words or phrases that have 
+become part of the primary language of the content.
+Level 3 Success Criteria for Guideline 3.1 
+3.1.3 A mechanism is available for identifying specific definitions of words or 
+phrases used in an unusual or restricted way, including idioms and jargon. [How 
+to meet 3.1.3] 
+3.1.4 A mechanism for finding the expanded form of abbreviations is available. 
+[How to meet 3.1.4] 
+3.1.5 When text requires reading ability more advanced than the lower secondary 
+education level, supplemental content is available that does not require reading 
+ability more advanced than the lower secondary education level. [How to meet 
+3.1.5] 
+3.1.6 A mechanism is available for identifying specific pronunciation of words 
+where meaning cannot be determined without pronunciation. [How to meet 3.1.6] 
+Guideline 3.1 (meaning) Issues 
+Guideline 3.2 Make the placement and functionality of content predictable.
+Level 1 Success Criteria for Guideline 3.2
+3.2.1 When any component receives focus, it does not cause a change of context. 
+[How to meet 3.2.1] 
+3.2.2 Changing the setting of any form control or field does not automatically 
+cause a change of context (beyond moving to the next field in tab order), unless 
+the authored unit contains instructions before the control that describe the 
+behavior. [How to meet 3.2.2] 
+Level 2 Success Criteria for Guideline 3.2
+3.2.3 Navigational mechanisms that are repeated on multiple Web units within a 
+set of Web units or other primary resources occur in the same relative order 
+each time they are repeated, unless a change is initiated by the user. [How to 
+meet 3.2.3] 
+3.2.4 Components that have the same functionality within a set of Web units are 
+identified consistently. [How to meet 3.2.4] 
+Level 3 Success Criteria for Guideline 3.2 
+3.2.5 Changes of context are initiated only by user request. [How to meet 3.2.5] 
+
+Guideline 3.2 (consistent-behavior) Issues 
+Principle 4: Content should be robust enough to work with current and future 
+user agents (including assistive technologies)
+Guideline 4.1 Support compatibility with current and future user agents 
+(including assistive technologies)
+Level 1 Success Criteria for Guideline 4.1
+4.1.1 Web units or authored components can be parsed unambiguously, and the 
+relationships in the resulting data structure are also unambiguous. [How to meet 
+4.1.1] 
+4.1.2 For all user interface components, the name and role can be 
+programmatically determined, values that can be set by the user can be 
+programmatically set, and notification of changes to these items is available to 
+user agents, including assistive technologies. [How to meet 4.1.2] 
+Level 2 Success Criteria for Guideline 4.1
+(No level 2 success criteria for this guideline.) 
+Level 3 Success Criteria for Guideline 4.1 
+(No level 3 success criteria for this guideline.) 
+Guideline 4.1 (ensure-compat) Issues 
+Guideline 4.2 Ensure that content is accessible or provide an accessible 
+alternative
+Level 1 Success Criteria for Guideline 4.2
+4.2.1 At least one version of the content meets all level 1 success criteria, 
+but alternate version(s) that do not meet all level 1 success criteria may be 
+available from the same URI. [How to meet 4.2.1] 
+4.2.2 Content meets the following criteria even if the content uses a technology 
+that is not in the chosen baseline: [How to meet 4.2.2] 
+  If content can be entered using the keyboard, then the content can be exited 
+  using the keyboard.
+  Content conforms to success criterion 2.3.1 (general and red flash).
+Level 2 Success Criteria for Guideline 4.2 
+4.2.3 At least one version of the content meets all level 2 success criteria, 
+but alternate version(s) that do not meet all level 2 success criteria may be 
+available from the same URI. [How to meet 4.2.3] 
+Level 3 Success Criteria for Guideline 4.2 
+4.2.4 Content implemented using technologies outside of the chosen baseline 
+satisfies all Level 1 and Level 2 requirements supported by the technologies. 
+[How to meet 4.2.4] 
+Guideline 4.2 (accessible-alternatives) Issues 
+Appendix A: Glossary (Normative)
+This section is normative. 
+  abbreviation 
+  shortened form of a word, phrase, or name
+  Note: Includes initialisms and acronyms.
+  acronym 
+  abbreviation made from the initial letters of a name or phrase that contains 
+  several words
+  Note: Many acronyms can be pronounced as words.
+  Example: NOAA is an acronym made from the initial letters of the National 
+  Oceanic and Atmospheric Administration in the United States.
+  activity where timing is essential 
+  activity where timing is part of the design of the activity and removal of the 
+  time dependency would change the functionality of the content
+  alternate version 
+  version that provides all of the same information and functionality and is as 
+  up to date as any non-conformant content
+  analog, time-dependent input 
+  input whose result is different depending on the rate of the analog movement 
+  (such as when line width varies with pen speed or pressure.)
+  Note: Most actions carried out by a pointing device can also be done from the 
+  keyboard (for example, clicking, selecting, moving, sizing). However, there is 
+  a small class of input that is done with a pointing device that cannot be done 
+  from the keyboard in any known fashion. This type of input can be best 
+  characterized by the fact that the outcome can only be achieved by moving the 
+  pointer in a smooth fashion at a certain rate. For example, in a watercolor 
+  program stroke width and opacity may depend on the rate of movement (and/or 
+  pressure) of a "brush".
+  Application Programming Interface (API) 
+  definitions of how communication may take place between applications
+  Note 1: Implementing APIs that are independent of a particular operating 
+  environment (as are the W3C DOM Level 2 specifications) may reduce 
+  implementation costs for multi-platform user agents and promote the 
+  development of multi-platform assistive technologies. Implementing 
+  conventional APIs for a particular operating environment may reduce 
+  implementation costs for assistive technology developers who wish to 
+  interoperate with more than one piece of software running on that operating 
+  environment.
+  Note 2: A "device API" defines how communication may take place with an input 
+  or output device such as a keyboard, mouse, or video card.
+  Note 3: In this document, an "input/output API" defines how applications or 
+  devices communicate with a user agent. As used in this document, input and 
+  output APIs include, but are not limited to, device APIs. Input and output 
+  APIs also include more abstract communication interfaces than those specified 
+  by device APIs. A "conventional input/output API" is one that is expected to 
+  be implemented by software running on a particular operating environment. For 
+  example, the conventional input APIs of the user agent are for the mouse and 
+  keyboard. For touch screen devices or mobile devices, conventional input APIs 
+  may include stylus, buttons, and voice. The graphical display and sound card 
+  are considered conventional output devices for a graphical desktop computer 
+  environment, and each has an associated API.
+  Note 4: This definition is based on User Agent Accessibility Guidelines 1.0 
+  Glossary.
+  ASCII art 
+  picture created by a spatial arrangement of characters (typically from the 95 
+  printable characters defined by ASCII). 
+  Assistive technology (in the context of this document) 
+  a user agent that:
+    relies on services (such as retrieving Web content and parsing markup) 
+    provided by one or more other "host" user agents. Assistive technologies 
+    communicate data and messages with host user agents by using and monitoring 
+    APIs.
+    provides services beyond those offered by the host user agents to meet the 
+    requirements of users with disabilities. Additional services include 
+    alternative renderings (e.g., as synthesized speech or magnified content), 
+    alternative input methods (e.g., voice), additional navigation or 
+    orientation mechanisms, and content transformations (e.g., to make tables 
+    more accessible).
+  Example: Examples of assistive technologies that are important in the context 
+  of this document include the following:
+    screen magnifiers, which are used by people with visual disabilities to 
+    enlarge and change colors on the screen to improve the visual readability of 
+    rendered text and images;
+    screen readers, which are used by people who are blind or have reading 
+    disabilities to read textual information through synthesized speech or 
+    braille displays;
+    voice recognition software, which may be used by people who have some 
+    physical disabilities;
+    alternative keyboards, which are used by people with certain physical 
+    disabilities to simulate the keyboard;
+    alternative pointing devices, which are used by people with certain physical 
+    disabilities to simulate mouse pointing and button activations.
+  Note: This definition is based on User Agent Accessibility Guidelines 1.0 
+  Glossary.
+  audio description 
+  narration added to the soundtrack to describe important visual details that 
+  cannot be understood from the main soundtrack alone 
+  Note 1: Audio descriptions of video provide information about actions, 
+  characters, scene changes, and on-screen text.
+  Note 2: In standard audio description, narration is added during existing 
+  pauses in dialogue. (See also Extended audio descriptions.)
+  authored component 
+  an authored unit intended to be used as a part of another authored unit
+  authored unit 
+  set of material created as a single body by an author
+  Example 1: a collection consisting of markup, a style sheet, and an image or 
+  audio clip.
+  Example 2: a set of Web pages intended to be viewed only as a unit or in 
+  sequence.
+  Note: This definition is based on Glossary of Terms for Device Independence.
+  baseline 
+  set of technologies assumed to be supported by, and enabled in, user agents 
+  Note: For more information on baselines and their use, refer to Technology 
+  Assumptions and the "baseline." 
+  blink 
+  turn on and off between 0.5 and 3 times per second
+  captions 
+  text presented and synchronized with multimedia to provide not only the 
+  speech, but also sound effects and sometimes speaker identification
+  Note: In some countries, the term "subtitle" is used to refer to dialogue only 
+  and "captions" is used as the term for dialogue plus sounds and speaker 
+  identification. In other countries, subtitle (or its translation) is used to 
+  refer to both. 
+  changes of context 
+  change of :
+    user agent;
+    viewport;
+    focus;
+    content that changes the meaning of the Web unit.
+  Note: A change of content is not always a change of context. Small changes in 
+  content, such as an expanding outline or dynamic menu, do not change the 
+  context.
+  content 
+  information to be communicated to the user by means of a user agent 
+  Note: This includes the code and markup that define the structure, 
+  presentation, and interaction, as well as text, images, and sounds that convey 
+  information to the end-user.
+  context-sensitive help 
+  help text that provides information related to the function currently being 
+  performed
+  emergency 
+  a sudden, unexpected situation or occurrence that requires immediate action to 
+  preserve health, safety, or property 
+  event handler 
+  section of code that responds to an action taken by the user (or user agent)
+  Note: On Web pages, events are usually user actions such as moving the mouse, 
+  typing, etc. 
+    An event handler determines the response to that action. 
+    A device-specific event handler only responds to an action by one kind of 
+    input device. 
+    An abstract event handler is one which can be activated by a variety of 
+    input devices.
+  extended audio descriptions 
+  audio descriptions that are added to an audiovisual presentation by pausing 
+  the video so that there is time to add additional description
+  Note: This technique is only used when the sense of the video would be lost 
+  without the additional audio description.
+  full multimedia text alternative including any interaction 
+  document including correctly sequenced descriptions of all visual settings, 
+  actions, and non-speech sounds combined with descriptive transcripts of all 
+  dialogue and a means of achieving any outcomes that are achieved using 
+  interaction during the multimedia 
+  Note: A screenplay used to create the multimedia content would meet this 
+  definition only if it was corrected to accurately represent the final 
+  multimedia after editing.
+  functionality 
+  processes and outcomes achievable through user action
+  general flash threshold 
+    A sequence of flashes or rapidly changing image sequences where all three of 
+    the following occur:
+      the combined area of flashes occurring concurrently (but not necessarily 
+      contiguously) occupies more than one quarter of any 341 x 256 pixel 
+      rectangle anywhere on the displayed screen area when the content is viewed 
+      at 1024 x 768 pixels;
+      there are more than three flashes within any one-second period; and
+      the flashing is below 50 Hz.
+  Note 1: For the general flash threshold, a flash is defined as a pair of 
+  opposing changes in brightness of 10% or more of full scale white brightness, 
+  where brightness is calculated as 0.2126 * ((R / FS) ^ 2.2) + 0.7152 * ((G / 
+  FS) ^ 2.2) + 0.0722 * ((B / FS) ^ 2.2). R, G, and B are the red, green, and 
+  blue RGB values of the color; FS is the maximum possible full scale RGB value 
+  for R, G, and B (255 for eight bit color channels); and the "^" character is 
+  the exponentiation operator. An "opposing change" is an increase followed by a 
+  decrease, or a decrease followed by an increase. This applies only when the 
+  brightness of the darker image is below .80 of full scale white brightness.
+  Note 2: Based on Wisconsin Computer Equivalence Algorithm for Flash Pattern 
+  Analysis (FPA) 
+  idioms 
+  phrase whose meaning cannot be deduced from the meaning of the individual 
+  words and the specific words cannot be changed without losing the meaning
+  Example 1: In English, "kicking the bucket" means "dying". But the phrase 
+  cannot be changed to "kicking the buckets" or "kicking the tub" or "booting 
+  the bucket" or "knocking over the bucket" without losing its meaning.
+  Example 2: In English, "spilling the beans" means "revealing a secret." 
+  However, "knocking over the beans" or "spilling the vegetables" does not mean 
+  the same thing."
+  Example 3: In Japanese, the phrase "さじを投げる（どうするこ ともできなくなり、あきらめること" literally 
+  translates into "he threw a spoon". But it means that there was nothing he 
+  could do and finally he gave up.
+  Example 4: In Dutch, "Hij ging met de kippen op stok" literally translates 
+  into "He went to roost with the chickens". But it means that he went to bed 
+  early.
+  information 
+    a message to be sent and received
+    a collection of facts or data from which inferences may be drawn
+  information that is conveyed by color 
+  information presented in a manner that depends entirely on the ability to 
+  perceive color
+  informative 
+  for information purposes and not required for conformance
+  Note: Content required for conformance is referred to as "normative."
+  initialism 
+  shortened form of a name or phrase made from the initial letters of words or 
+  syllables contained in that name or phrase
+  Note: Not defined in all languages. 
+  Example 1: SNCF is a French initialism that contains the initial letters of 
+  the Sociétè Nationale des Chemins de Fer, the French national railroad. 
+  Example 2: ESP is an initialism for extrasensory perception.
+  input error 
+  information provided by the user that is not accepted
+  Note: This includes:
+    Information that is required by the Web unit but omitted by the user
+    Information that is provided by the user but that falls outside the required 
+    data format or values.
+  jargon 
+  words used in a particular way by people in a particular field
+  Example: The word StickyKeys is jargon from the field of assistive 
+  technology/accessibility.
+  keyboard interface 
+  interface used by software to obtain keystroke input
+  Note 1: Allows users to provide keystroke input to programs even if the native 
+  technology does not contain a keyboard.
+  Example: A touch screen PDA has a keyboard interface built into its operating 
+  system as well as a connector for external keyboards. Applications on the PDA 
+  can use the interface to obtain keyboard input either from an external 
+  keyboard or from other applications that provide simulated keyboard output, 
+  such as handwriting interpreters or speech to text applications with "keyboard 
+  emulation" functionality.
+  Note 2: Operation of the application (or parts of the application) through a 
+  keyboard operated mouse emulator, such as MouseKeys, does not qualify as 
+  operation through a keyboard interface because operation of the program is 
+  through its pointing device interface - not through its keyboard interface.
+  label 
+  text, image, or sound that is presented to a user to identify a component 
+  within Web content 
+  live audio-only 
+  A time-based live presentation that contains only audio (no video and no 
+  interaction).
+  live video-only 
+  A time-based live presentation that contains only video (no audio and no 
+  interaction).
+  Lower secondary education level 
+  the two or three year period of education that begins after completion of six 
+  years of school and ends nine years after the beginning of primary education.
+  Note: This definition is based on [UNESCO].
+  luminosity contrast ratio 
+  (L1 + 0.05) / (L2 + 0.05), where L1 is the luminosity of the lighter of the 
+  text or background colors, and L2 is the luminosity of the darker of the text 
+  or background colors.
+  Note 1: The luminosity of a color is defined as 0.2126 * ((R / FS) ^ 2.2) + 
+  0.7152 * ((G / FS) ^ 2.2) + 0.0722 * ((B / FS) ^ 2.2). 
+    R, G, and B are the red, green, and blue RGB values of the color.
+    FS is the maximum possible full scale RGB value for R, G, and B (255 for 
+    eight bit color channels).
+    The "^" character is the exponentiation operator.
+  Note 2: Luminosity values can range from 0 (black) to 1 (white), and 
+  luminosity contrast ratios can range from 1 to 21.
+  mechanism 
+  process or technique for achieving a result
+  multimedia 
+  audio or video synchronized with another type of media and/or with time-based 
+  interactive components
+  name 
+  text by which software can identify a component within Web content to the user
+  Note: The name may be hidden and only exposed by assistive technology, whereas 
+  a label is presented even without assistive technology. In many (but not all) 
+  cases, the label is a display of the name.
+  natural languages 
+  languages used by humans to communicate, including spoken, written, and signed 
+  languages
+  Note: See also sign language interpretation.
+  non-text content 
+  content that is not represented by a Unicode character or sequence of Unicode 
+  characters when rendered in a user agent according to the formal specification 
+  of the content type 
+  Note: This includes ASCII Art, which is a pattern of characters.
+  normative 
+  required for conformance
+  Note 1: One may conform in a variety of well-defined ways to this document.
+  Note 2: Content identified as "informative" or "non-normative" is never 
+  required for conformance.
+  parsed unambiguously 
+  parsed into only one data structure
+  Note: Parsing transforms markup or other code into a data structure, usually a 
+  tree, which is suitable for later processing and which captures the implied 
+  hierarchy of the input. 
+  paused 
+  stopped by user request and not restarted until requested by user
+  presentation 
+  rendering of the content and structure in a form that can be perceived by the 
+  user
+  primary education level 
+  six year time period that begins between the ages of five and seven, possibly 
+  without any previous education
+  Note: This definition is based on [UNESCO].
+  programmatically determined 
+  determined by software from data provided in a user-agent-supported manner 
+  such that the user agents can extract and present this information to users in 
+  different modalities
+  programmatically set 
+  set by software using methods that are user-agent-supported 
+  pure decoration 
+  serving only an aesthetic purpose, providing no information, and having no 
+  functionality.
+  real-time event 
+  event that a) occurs at the same time as the viewing, b) is not completely 
+  generated by the content, and c) is not pre-recorded
+  Example 1: A Webcast of a live performance.
+  Example 2: An on-line auction with people bidding.
+  Example 3: Live humans interacting in a fantasy world using avatars.
+  red flash threshold 
+    transition to or from a saturated red where all three of the following 
+occur:
+      The combined area of flashes occurring concurrently occupies more than one 
+      quarter of any 341 x 256 pixel rectangle anywhere on the displayed screen 
+      area when the content is viewed at 1024 x 768 pixels.
+      There are more than three flashes within any one-second period.
+      The flashing is below 50 Hz.
+  Note: Based on Wisconsin Computer Equivalence Algorithm for Flash Pattern 
+  Analysis (FPA) 
+  regular expression 
+  regular expression as defined in XML Schema Part 2: Datatypes, Appendix F.
+  role 
+  text or a number by which software can identify the function of a component 
+  within Web content
+  Example: A number that indicates whether an image functions as a hyperlink, 
+  command button, or check box.
+  same functionality 
+  identical result when used
+  Example: A submit "search" button on one Web page and a "find" button on 
+  another Web page may both have a field to enter a term and list topics in the 
+  web site related to the term submitted. In this case, they would have the same 
+  functionality but would not be labeled consistently.
+  same relative order 
+  same position relative to other items
+  Note: Items are considered to be in the same relative order even if other 
+  items are inserted or removed from the original order. For example, expanding 
+  navigation menus may insert an additional level of detail or a secondary 
+  navigation section may be inserted into the reading order.
+  sign language interpretation 
+  translation of spoken words and other audible information into a language that 
+  uses a simultaneous combination of handshapes, facial expressions, and 
+  orientation and movement of the hands, arms, or body to convey meaning
+  Note: Although some languages have a signed counterpart, most sign languages 
+  are independent languages that are unrelated to the spoken language of the 
+  same country or culture.
+  specific sensory experience 
+  a sensory experience that is not purely decorative and does not primarily 
+  convey important information or perform a function
+  structure 
+    The way the parts of an authored unit are organized in relation to each 
+    other; and
+    The way a collection of Web units is organized
+  supplemental content 
+  additional content, which users may use in addition to or instead of the 
+  default content, that illustrates or clarifies the default content
+  Example: Examples of supplemental content may include text, images and audio.
+  technology 
+  markup language, programming language, style sheet, data format, or API 
+  test or exercise that must use a particular sense 
+  test where the content must be presented in a particular sensory format
+  Example: Color blindness test, hearing test, vision exercise, spelling test.
+  text 
+  sequence of characters
+  Note: Characters are those included in the Unicode/ISO/IEC 106464 repertoire. 
+  text alternative 
+  programmatically determined text that is used in place of non-text content, or 
+  text that is used in addition to non-text content and referred to from the 
+  programmatically determined text
+  unicode 
+  universal character set that defines all the characters needed for writing the 
+  majority of living languages in use on computers
+  Note 1: For more information, refer to the Unicode Consortium or to the 
+  tutorial entitled, "Character sets & encodings in XHTML, HTML and CSS" 
+  produced by the W3C Internationalization Activity. 
+  Note 2: This definition is based on [UNICODE] 
+  used in an unusual restricted way 
+  words used in such a way that users must know exactly what definition to apply 
+  in order to understand the content correctly
+  Example: The word "representational" means something quite different if it 
+  occurs in a discussion of visual art as opposed to a treatise on government, 
+  but the appropriate definition can be determined from context. By contrast, 
+  the word "text" is used in a very specific way in WCAG 2.0, so a definition is 
+  supplied in the glossary.
+  user agent 
+  any software that retrieves and renders Web content for users
+  Example: Web browsers, media players, plug-ins, and other programs — including 
+  assistive technologies — that help in retrieving and rendering Web content.
+  user-agent-supported 
+  implemented by user agents and assistive technologies
+  Note: One of the factors that should be considered before adding a technology 
+  to a baseline is the availability of affordable user agents and assistive 
+  technologies which support the technology.
+  variations in presentations of text 
+  changes in the visual appearance or sound of the text, such as changing to a 
+  different font or a different voice
+  video 
+  the technology of moving pictures or images
+  Note: Video can be made up of animated or photographic images, or both.
+  Web unit 
+  a collection of information, consisting of one or more resources, intended to 
+  be rendered together, and identified by a single Uniform Resource Identifier 
+  (such as URLs)
+  Note: This definition is based on the definition of Web page in Web 
+  Characterization Terminology & Definitions Sheet. The concept of simultaneity 
+  was removed to allow the term to cover interactive and scripted content.
+  Example 1: An interactive movie-like shopping environment where the user 
+  navigates about and activates products to have them demonstrated, and moves 
+  them to a cart to buy them.
+  Example 2: A Web page including all embedded images and media.
+  Wisconsin Computer Equivalence Algorithm for Flash Pattern Analysis (FPA) 
+  a method developed at the University of Wisconsin, working in conjunction with 
+  Dr. Graham Harding and Cambridge Research Associates, for applying the United 
+  Kingdom's "Ofcom Guidance Note on Flashing Images and Regular Patterns in 
+  Television (Re-issued as Ofcom Notes 25 July 2005)" to content displayed on a 
+  computer screen, such as Web pages and other computer content
+  Note: The Ofcom Guidance Document [OFCOM] is based on the assumption that the 
+  television screen occupies the central ten degrees of vision. This is not 
+  accurate for a screen which is located in front of a person. The Wisconsin 
+  algorithm basically carries out the same analysis as the Ofcom Guidelines 
+  except that is does it on every possible ten degree window for a prototypical 
+  computer display.
+Appendix B: Checklist (Non-Normative)
+This section is informative.
+The Web Content Accessibility Guidelines 2.0 Checklist serves as an appendix to 
+Web Content Accessibility Guidelines 2.0 [WCAG20]. It lists all of the success 
+criteria from WCAG 2.0 in a checkable list. The level of each success criterion 
+is provided as well as a link to WCAG 2.0 for more information for each success 
+criterion. For many readers, the Checklist provides a quick reference and 
+overview to the information in WCAG 2.0.
+Success Criteria
+  Guideline 1.1 : Provide text alternatives for all non-text 
+      contentTrueSuccess CriterionComments
+      L1  1.1.1 For all non-text content, one of the following is true: [How to 
+      meet 1.1.1] 
+        If non-text content presents information or responds to user input, text 
+        alternatives serve the same purpose and present the same information as 
+        the non-text content. If text alternatives cannot serve the same 
+        purpose, then text alternatives at least identify the purpose of the 
+        non-text content.
+        If non-text content is multimedia; live audio-only or live video-only 
+        content; a test or exercise that must use a particular sense; or 
+        primarily intended to create a specific sensory experience; then text 
+        alternatives at least identify the non-text content with a descriptive 
+        text label. (For multimedia, see also Guideline 1.2 Provide synchronized 
+        alternatives for multimedia .)
+        If the purpose of non-text content is to confirm that content is being 
+        operated by a person rather than a computer, different forms are 
+        provided to accommodate multiple disabilities.
+        If non-text content is pure decoration, or used only for visual 
+        formatting, or if it is not presented to users, it is implemented such 
+        that it can be ignored by assistive technology.  
+  Guideline 1.2 : Provide synchronized alternatives for 
+      multimediaTrueSuccess CriterionComments
+      L1  1.2.1 Captions are provided for prerecorded multimedia. [How to meet 
+      1.2.1]   
+       1.2.2 Audio descriptions of video, or a full multimedia text alternative 
+      including any interaction, are provided for prerecorded multimedia. [How 
+      to meet 1.2.2]   
+      L2  1.2.3 Audio descriptions of video are provided for prerecorded 
+      multimedia. [How to meet 1.2.3]   
+       1.2.4 Captions are provided for live multimedia. [How to meet 1.2.4]   
+      L3  1.2.5 Sign language interpretation is provided for multimedia. [How to 
+      meet 1.2.5]   
+       1.2.6 Extended audio descriptions of video are provided for prerecorded 
+      multimedia. [How to meet 1.2.6]   
+       1.2.7 For prerecorded multimedia, a full multimedia text alternative 
+      including any interaction is provided. [How to meet 1.2.7]   
+  Guideline 1.3 : Ensure that information and structure can be separated from 
+  presentationTrueSuccess CriterionComments
+      L1  1.3.1 Information and relationships conveyed through presentation can 
+      be programmatically determined, and notification of changes to these is 
+      available to user agents, including assistive technologies. [How to meet 
+      1.3.1]   
+       1.3.2 Any information that is conveyed by color is also visually evident 
+      without color. [How to meet 1.3.2]   
+       1.3.3 When the sequence of the content affects its meaning, that sequence 
+      can be programmatically determined. [How to meet 1.3.3]   
+      L2  1.3.4 Information that is conveyed by variations in presentation of 
+      text is also conveyed in text, or the variations in presentation of text 
+      can be programmatically determined. [How to meet 1.3.4]   
+       1.3.5 Information required to understand and operate content does not 
+      rely on shape, size, visual location, or orientation of components. [How 
+      to meet 1.3.5]   
+  Guideline 1.4 : Make it easy to distinguish foreground information from its 
+  background TrueSuccess CriterionComments
+      L2  1.4.1 Text or diagrams, and their background, have a luminosity 
+      contrast ratio of at least 5:1. [How to meet 1.4.1]   
+       1.4.2 A mechanism is available to turn off background audio that plays 
+      automatically, without requiring the user to turn off all audio. [How to 
+      meet 1.4.2]   
+      L3  1.4.3 Text or diagrams, and their background, have a luminosity 
+      contrast ratio of at least 10:1. [How to meet 1.4.3]   
+       1.4.4 Audio content does not contain background sounds, background sounds 
+      can be turned off, or background sounds are at least 20 decibels lower 
+      than the foreground audio content, with the exception of occasional sound 
+      effects. [How to meet 1.4.4] 
+      Note: A 20 decibel difference in sound level is roughly four times (4x) 
+      quieter or louder. Background sound that meets this requirement will be 
+      approximately four times (4x) quieter than the foreground audio content.  
+  Guideline 2.1 : Make all functionality operable via a keyboard 
+      interfaceTrueSuccess CriterionComments
+      L1  2.1.1 All functionality of the content is operable in a 
+      non-time-dependent manner through a keyboard interface, except where the 
+      task requires analog, time-dependent input. [How to meet 2.1.1] 
+      Note: This does not preclude and should not discourage the support of 
+      other input methods (such as a mouse) in addition to keyboard operation.  
+      L3  2.1.2 All functionality of the content is operable in a 
+      non-time-dependent manner through a keyboard interface. [How to meet 
+      2.1.2]   
+  Guideline 2.2 : Allow users to control time limits on their reading or 
+  interactionTrueSuccess CriterionComments
+      L1  2.2.1 For each time-out that is a function of the content, at least 
+      one of the following is true: [How to meet 2.2.1] 
+        the user is allowed to deactivate the time-out; or
+        the user is allowed to adjust the time-out over a wide range that is at 
+        least ten times the length of the default setting; or
+        the user is warned before time expires and given at least 20 seconds to 
+        extend the time-out with a simple action (for example, "hit any key"), 
+        and the user is allowed to extend the timeout at least ten times; or
+        the time-out is an important part of a real-time event (for example, an 
+        auction), and no alternative to the time-out is possible; or
+        the time-out is part of an activity where timing is essential (for 
+        example, competitive gaming or time-based testing) and time limits can 
+        not be extended further without invalidating the activity.  
+      L2  2.2.2 Content does not blink for more than three seconds, or a method 
+      is available to stop all blinking content in the Web unit or authored 
+      component. [How to meet 2.2.2] 
+      Note: For requirements related to flickering or flashing content, refer to 
+      Guideline 2.3 Allow users to avoid content that could cause seizures due 
+      to photosensitivity .  
+       2.2.3 Content can be paused by the user unless the timing or movement is 
+      part of an activity where timing or movement is essential. [How to meet 
+      2.2.3]   
+      L3  2.2.4 Except for real-time events, timing is not an essential part of 
+      the event or activity presented by the content. [How to meet 2.2.4]   
+       2.2.5 Interruptions, such as updated content, can be postponed or 
+      suppressed by the user, except interruptions involving an emergency. [How 
+      to meet 2.2.5]   
+       2.2.6 When an authenticated session expires, the user can continue the 
+      activity without loss of data after re-authenticating. [How to meet 2.2.6] 
+        
+  Guideline 2.3 : Allow users to avoid content that could cause seizures due to 
+  photosensitivityTrueSuccess CriterionComments
+      L1  2.3.1 Content does not violate the general flash threshold or the red 
+      flash threshold. [How to meet 2.3.1]   
+      L3  2.3.2 Web units do not contain any components that flash more than 
+      three times in any 1-second period. [How to meet 2.3.2]   
+  Guideline 2.4 : Provide mechanisms to help users find content, orient 
+  themselves within it, and navigate through itTrueSuccess CriterionComments
+      L1  2.4.1 A mechanism is available to bypass blocks of content that are 
+      repeated on multiple Web units. [How to meet 2.4.1]   
+      L2  2.4.2 More than one way is available to locate content within a set of 
+      Web units where content is not the result of, or a step in, a process or 
+      task. [How to meet 2.4.2]   
+       2.4.3 Web units have titles. [How to meet 2.4.3]   
+       2.4.4 Each link is programmatically associated with text from which its 
+      purpose can be determined. [How to meet 2.4.4]   
+      L3  2.4.5 Titles, headings, and labels are descriptive. [How to meet 
+      2.4.5]   
+       2.4.6 When a Web unit or authored component is navigated sequentially, 
+      components receive focus in an order that follows relationships and 
+      sequences in the content. [How to meet 2.4.6]   
+       2.4.7 Information about the user's location within a set of Web units is 
+      available. [How to meet 2.4.7]   
+       2.4.8 The purpose of each link can be programmatically determined from 
+      the link. [How to meet 2.4.8]   
+  Guideline 2.5 : Help users avoid mistakes and make it easy to correct mistakes 
+  that do occurTrueSuccess CriterionComments
+      L1  2.5.1 If an input error is detected, the error is identified and 
+      described to the user in text. [How to meet 2.5.1]   
+      L2  2.5.2 If an input error is detected and suggestions for correction are 
+      known and can be provided without jeopardizing the security or purpose of 
+      the content, the suggestions are provided to the user. [How to meet 2.5.2] 
+        
+       2.5.3 For forms that cause legal or financial transactions to occur, that 
+      modify or delete data in data storage systems, or that submit test 
+      responses, at least one of the following is true: [How to meet 2.5.3] 
+        Actions are reversible.
+        Actions are checked for input errors before going on to the next step in 
+        the process.
+        The user is able to review and confirm or correct information before 
+        submitting it.  
+      L3  2.5.4 Context-sensitive help is available for text input. [How to meet 
+      2.5.4]   
+  Guideline 3.1 : Make text content readable and understandable.TrueSuccess 
+      CriterionComments
+      L1  3.1.1 The primary natural language or languages of the Web unit can be 
+      programmatically determined. [How to meet 3.1.1]   
+      L2  3.1.2 The natural language of each passage or phrase in the Web unit 
+      can be programmatically determined. [How to meet 3.1.2] 
+      Note: This requirement does not apply to individual words or phrases that 
+      have become part of the primary language of the content.  
+      L3  3.1.3 A mechanism is available for identifying specific definitions of 
+      words or phrases used in an unusual or restricted way, including idioms 
+      and jargon. [How to meet 3.1.3]   
+       3.1.4 A mechanism for finding the expanded form of abbreviations is 
+      available. [How to meet 3.1.4]   
+       3.1.5 When text requires reading ability more advanced than the lower 
+      secondary education level, supplemental content is available that does not 
+      require reading ability more advanced than the lower secondary education 
+      level. [How to meet 3.1.5]   
+       3.1.6 A mechanism is available for identifying specific pronunciation of 
+      words where meaning cannot be determined without pronunciation. [How to 
+      meet 3.1.6]   
+  Guideline 3.2 : Make the placement and functionality of content 
+      predictable.TrueSuccess CriterionComments
+      L1  3.2.1 When any component receives focus, it does not cause a change of 
+      context. [How to meet 3.2.1]   
+       3.2.2 Changing the setting of any form control or field does not 
+      automatically cause a change of context (beyond moving to the next field 
+      in tab order), unless the authored unit contains instructions before the 
+      control that describe the behavior. [How to meet 3.2.2]   
+      L2  3.2.3 Navigational mechanisms that are repeated on multiple Web units 
+      within a set of Web units or other primary resources occur in the same 
+      relative order each time they are repeated, unless a change is initiated 
+      by the user. [How to meet 3.2.3]   
+       3.2.4 Components that have the same functionality within a set of Web 
+      units are identified consistently. [How to meet 3.2.4]   
+      L3  3.2.5 Changes of context are initiated only by user request. [How to 
+      meet 3.2.5]   
+  Guideline 4.1 : Support compatibility with current and future user agents 
+  (including assistive technologies)TrueSuccess CriterionComments
+      L1  4.1.1 Web units or authored components can be parsed unambiguously, 
+      and the relationships in the resulting data structure are also 
+      unambiguous. [How to meet 4.1.1]   
+       4.1.2 For all user interface components, the name and role can be 
+      programmatically determined, values that can be set by the user can be 
+      programmatically set, and notification of changes to these items is 
+      available to user agents, including assistive technologies. [How to meet 
+      4.1.2]   
+  Guideline 4.2 : Ensure that content is accessible or provide an accessible 
+  alternativeTrueSuccess CriterionComments
+      L1  4.2.1 At least one version of the content meets all level 1 success 
+      criteria, but alternate version(s) that do not meet all level 1 success 
+      criteria may be available from the same URI. [How to meet 4.2.1]   
+       4.2.2 Content meets the following criteria even if the content uses a 
+      technology that is not in the chosen baseline: [How to meet 4.2.2] 
+        If content can be entered using the keyboard, then the content can be 
+        exited using the keyboard.
+        Content conforms to success criterion 2.3.1 (general and red flash).  
+      L2  4.2.3 At least one version of the content meets all level 2 success 
+      criteria, but alternate version(s) that do not meet all level 2 success 
+      criteria may be available from the same URI. [How to meet 4.2.3]   
+      L3  4.2.4 Content implemented using technologies outside of the chosen 
+      baseline satisfies all Level 1 and Level 2 requirements supported by the 
+      technologies. [How to meet 4.2.4]   
+
+Appendix C: Acknowledgements (Non-Normative)
+This section is informative.
+This publication has been funded in part with Federal funds from the U.S. 
+Department of Education under contract number ED05CO0039. The content of this 
+publication does not necessarily reflect the views or policies of the U.S. 
+Department of Education, nor does mention of trade names, commercial products, 
+or organizations imply endorsement by the U.S. Government. 
+C.1 Participants active in the WCAG WG at the time of publication
+  Bruce Bailey (DoED/OCIO)
+  Frederick Boland (NIST)
+  Judy Brewer (W3C/MIT)
+  Ben Caldwell (Trace R&D Center, University of Wisconsin-Madison)
+  Sofia Celic (The National Information and Library Service)
+  Wendy Chisholm (W3C)
+  Michael Cooper (Watchfire)
+  Roberto Ellero (International Webmasters Association / HTML Writers Guild)
+  Bengt Farre (Femtio Procent Data)
+  Becky Gibson (IBM)
+  Kerstin Goldsmith (Oracle)
+  Loretta Guarino Reid (Adobe)
+  Katie Haritos-Shea
+  Gez Lemon (International Webmasters Association / HTML Writers Guild)
+  Alex Li (SAP AG)
+  Yvette Hoitink (Heritas)
+  Luca Mascaro (International Webmasters Association / HTML Writers Guild)
+  Sorcha Moore (Segala)
+  David MacDonald (E-Ramp Inc.)
+  Roberto Scano (International Webmasters Association / HTML Writers Guild)
+  Cynthia Shelley (Microsoft)
+  John Slatin (Accessibility Institute, University of Texas at Austin)
+  Andi Snow-Weaver (IBM)
+  Christophe Strobbe (DoArch, K.U.Leuven)
+  Makoto Ueki (Infoaxia)
+  Gregg Vanderheiden (Trace R&D Center, University of Wisconsin)
+C.2 Other previously active WCAG WG participants and other contributors to WCAG 
+2.0
+Jenae Andershonis, Avi Arditti, Sandy Bartell, Kynn Bartlett, Marco Bertoni, 
+Harvey Bingham, Paul Bohman, Dick Brown, Doyle Burnett, Roberto Castaldo, 
+Jonathan Chetwynd, David M Clark, Joe Clark, Tom Croucher, Nir Dagan, Daniel 
+Dardailler, Geoff Deering, Don Evans, Alan J. Flavell, Al Gilman, Jon Gunderson, 
+Emmanuelle Gutiérrez y Restrepo, Donovan Hipke, Bjoern Hoehrmann, Ian Jacobs, 
+Phill Jenkins, Leonard R. Kasday, Andrew Kirkpatrick, Marja-Riitta Koivunen, 
+Scott Luebking, Tim Lacy, Jim Ley, William Loughborough, Greg Lowney ,Mathew J 
+Mirabella, Charles McCathieNevile , Matt May, Marti McCuller, Charles F. Munat, 
+Robert Neff, Bruno von Niman, Tim Noonan, Sebastiano Nutarelli, Graham Oliver, 
+Sean B. Palmer, Sailesh Panchang, Anne Pemberton, David Poehlman, Adam Victor 
+Reed, Chris Ridpath, Lee Roberts, Gregory J. Rosmaita, Lisa Seeman, Justin 
+Thorp, Gian Sampson-Wild, Joel Sanda, Jim Thatcher, Takayuki Watanabe, Jason 
+White.
+Appendix D: Comparison of WCAG 1.0 checkpoints to WCAG 2.0 (Non-Normative)
+This section is informative.
+Priority 1 checkpoints
+This mapping shows how the WCAG 1.0 checkpoints relate to the WCAG 2.0 Last Call 
+Working Draft released 27 April 2006. Note that WCAG 2.0 is still a draft and 
+the WCAG 2.0 Guidelines and success criteria in no way supersede the checkpoints 
+in WCAG 1.0.
+The Web Content Accessibility Guidelines Working Group is working carefully to 
+enable organizations and individuals that are currently using WCAG 1.0 (which 
+remains a stable and referenceable document) to ensure that they will be able to 
+make a smooth transition to WCAG 2.0 when it is released.
+      In General (Priority 1)WCAG 2.0 Success Criteria
+      1.1: Provide a text equivalent for every non-text element (e.g., via 
+      "alt", "longdesc", or in element content). This includes: images, 
+      graphical representations of text (including symbols), image map regions, 
+      animations (e.g., animated GIFs), applets and programmatic objects, ascii 
+      art, frames, scripts, images used as list bullets, spacers, graphical 
+      buttons, sounds (played with or without user interaction), stand-alone 
+      audio files, audio tracks of video, and video. 1.1.1 For all non-text 
+      content, one of the following is true: (Level 1) 
+        If non-text content presents information or responds to user input, text 
+        alternatives serve the same purpose and present the same information as 
+        the non-text content. If text alternatives cannot serve the same 
+        purpose, then text alternatives at least identify the purpose of the 
+        non-text content.
+        If non-text content is multimedia; live audio-only or live video-only 
+        content; a test or exercise that must use a particular sense; or 
+        primarily intended to create a specific sensory experience; then text 
+        alternatives at least identify the non-text content with a descriptive 
+        text label. (For multimedia, see also Guideline 1.2 Provide synchronized 
+        alternatives for multimedia .)
+        If the purpose of non-text content is to confirm that content is being 
+        operated by a person rather than a computer, different forms are 
+        provided to accommodate multiple disabilities.
+        If non-text content is pure decoration, or used only for visual 
+        formatting, or if it is not presented to users, it is implemented such 
+        that it can be ignored by assistive technology.
+      For scripts, applets, and objects, alternative versions are covered under 
+      Guideline 4.2, and labels under Guideline 1.1 (See also SC 2.4.6 (Level 3) 
+      and SC 4.1.2 (Level 1).).
+      Images used as bullets are also covered in Guideline 1.3 with regard to 
+      CSS usage. For framesets, noframes is no longer required. For multimedia, 
+      alternatives (beyond labels) are covered under Guideline 1.2. ASCII art is 
+      non-text content.
+      2.1: Ensure that all information conveyed with color is also available 
+      without color, for example from context or markup.1.3.2 Any information 
+      that is conveyed by color is also visually evident without color. (Level 
+      1) 
+      4.1: Clearly identify changes in the natural language of a document's text 
+      and any text equivalents (e.g., captions).3.1.2 The natural language of 
+      each passage or phrase in the Web unit can be programmatically determined. 
+      (Level 2) 
+      Note: This requirement does not apply to individual words or phrases that 
+      have become part of the primary language of the content.
+      Note: Identification of the language for individual words is no longer 
+      required. 
+      6.1: Organize documents so they may be read without style sheets. For 
+      example, when an HTML document is rendered without associated style 
+      sheets, it must still be possible to read the document. This is 
+      baseline-dependent:
+        if style sheets are in your baseline, WCAG 1.0 checkpoint 6.1 is not 
+        required; 
+        if style sheets are not in your baseline, then WCAG 1.0 checkpoint 6.1 
+        is required at Level 1 (as it maps to Guideline 1.3 L1) 
+
+      6.2: Ensure that equivalents for dynamic content are updated when the 
+      dynamic content changes. Text alternatives are addressed in Guideline 1.1, 
+      1.2, and 4.2. If providing a text alternative for content and that content 
+      changes, then the text alternative must also be changed or else you don't 
+      conform to Guideline 1.1, 1.2, and 4.2 anymore. 
+      7.1: Until user agents allow users to control flickering, avoid causing 
+      the screen to flicker. 2.3.1 Content does not violate the general flash 
+      threshold or the red flash threshold. (Level 1) 
+      2.3.2 Web units do not contain any components that flash more than three 
+      times in any 1-second period. (Level 3) 
+      14.1: Use the clearest and simplest language appropriate for a site's 
+      content. Some of the Level 3 success criteria in Guideline 3.1 aid in 
+      making content understandable. There is no direct mapping. 
+      And if you use images and image maps (Priority 1)WCAG 2.0 Success Critera
+      1.2: Provide redundant text links for each active region of a server-side 
+      image map. With regard to text alternatives:
+      1.1.1 For all non-text content, one of the following is true: (Level 1) 
+        If non-text content presents information or responds to user input, text 
+        alternatives serve the same purpose and present the same information as 
+        the non-text content. If text alternatives cannot serve the same 
+        purpose, then text alternatives at least identify the purpose of the 
+        non-text content.
+        If non-text content is multimedia; live audio-only or live video-only 
+        content; a test or exercise that must use a particular sense; or 
+        primarily intended to create a specific sensory experience; then text 
+        alternatives at least identify the non-text content with a descriptive 
+        text label. (For multimedia, see also Guideline 1.2 Provide synchronized 
+        alternatives for multimedia .)
+        If the purpose of non-text content is to confirm that content is being 
+        operated by a person rather than a computer, different forms are 
+        provided to accommodate multiple disabilities.
+        If non-text content is pure decoration, or used only for visual 
+        formatting, or if it is not presented to users, it is implemented such 
+        that it can be ignored by assistive technology.
+      With regard to keyboard access: 
+      2.1.1 All functionality of the content is operable in a non-time-dependent 
+      manner through a keyboard interface, except where the task requires 
+      analog, time-dependent input. (Level 1) 
+      Note: This does not preclude and should not discourage the support of 
+      other input methods (such as a mouse) in addition to keyboard operation.
+      2.4.4 Each link is programmatically associated with text from which its 
+      purpose can be determined. (Level 2) 
+      4.2.1 At least one version of the content meets all level 1 success 
+      criteria, but alternate version(s) that do not meet all level 1 success 
+      criteria may be available from the same URI. (Level 1) 
+      Note: Server-side image maps are not keyboard accessible. 
+      9.1: Provide client-side image maps instead of server-side image maps 
+      except where the regions cannot be defined with an available geometric 
+      shape.With regard to text alternatives:
+      1.1.1 For all non-text content, one of the following is true: (Level 1) 
+        If non-text content presents information or responds to user input, text 
+        alternatives serve the same purpose and present the same information as 
+        the non-text content. If text alternatives cannot serve the same 
+        purpose, then text alternatives at least identify the purpose of the 
+        non-text content.
+        If non-text content is multimedia; live audio-only or live video-only 
+        content; a test or exercise that must use a particular sense; or 
+        primarily intended to create a specific sensory experience; then text 
+        alternatives at least identify the non-text content with a descriptive 
+        text label. (For multimedia, see also Guideline 1.2 Provide synchronized 
+        alternatives for multimedia .)
+        If the purpose of non-text content is to confirm that content is being 
+        operated by a person rather than a computer, different forms are 
+        provided to accommodate multiple disabilities.
+        If non-text content is pure decoration, or used only for visual 
+        formatting, or if it is not presented to users, it is implemented such 
+        that it can be ignored by assistive technology.
+      With regard to keyboard access: 
+      2.1.1 All functionality of the content is operable in a non-time-dependent 
+      manner through a keyboard interface, except where the task requires 
+      analog, time-dependent input. (Level 1) 
+      Note: This does not preclude and should not discourage the support of 
+      other input methods (such as a mouse) in addition to keyboard operation.
+      2.4.4 Each link is programmatically associated with text from which its 
+      purpose can be determined. (Level 2) 
+      4.2.1 At least one version of the content meets all level 1 success 
+      criteria, but alternate version(s) that do not meet all level 1 success 
+      criteria may be available from the same URI. (Level 1) 
+      Note: Server-side image maps are not keyboard accessible. 
+      And if you use tables (Priority 1)WCAG 2.0 Success Criteria
+      5.1: For data tables, identify row and column headers. 1.3.1 Information 
+      and relationships conveyed through presentation can be programmatically 
+      determined, and notification of changes to these is available to user 
+      agents, including assistive technologies. (Level 1) 
+      5.2: For data tables that have two or more logical levels of row or column 
+      headers, use markup to associate data cells and header cells. 1.3.1 
+      Information and relationships conveyed through presentation can be 
+      programmatically determined, and notification of changes to these is 
+      available to user agents, including assistive technologies. (Level 1) 
+      And if you use frames (Priority 1)WCAG 2.0 Success Criteria
+      12.1: Title each frame to facilitate frame identification and navigation. 
+      2.4.1 A mechanism is available to bypass blocks of content that are 
+      repeated on multiple Web units. (Level 1) 
+      2.4.4 Each link is programmatically associated with text from which its 
+      purpose can be determined. (Level 2) 
+      4.1.2 For all user interface components, the name and role can be 
+      programmatically determined, values that can be set by the user can be 
+      programmatically set, and notification of changes to these items is 
+      available to user agents, including assistive technologies. (Level 1) 
+      And if you use applets and scripts (Priority 1)WCAG 2.0 Success Criteria
+      6.3: Ensure that pages are usable when scripts, applets, or other 
+      programmatic objects are turned off or not supported. If this is not 
+      possible, provide equivalent information on an alternative accessible 
+      page. For any technologies (scripts, applets, or other programmatic 
+      objects) not in the specified baseline, the following are true: 
+        The Web content still conforms using user agents that only support the 
+        technologies that are in the baseline (i.e. the use of technologies that 
+        are not in the baseline does not "break" access to the Web content by 
+        user agents that don't support those technologies.) 
+        All content and functionality are available using only the technologies 
+        in the specified baseline. 
+      4.2.1 At least one version of the content meets all level 1 success 
+      criteria, but alternate version(s) that do not meet all level 1 success 
+      criteria may be available from the same URI. (Level 1) 
+      4.2.3 At least one version of the content meets all level 2 success 
+      criteria, but alternate version(s) that do not meet all level 2 success 
+      criteria may be available from the same URI. (Level 2) 
+      And if you use multimedia (Priority 1)WCAG 2.0 Success Criteria
+      1.3: Until user agents can automatically read aloud the text equivalent of 
+      a visual track, provide an auditory description of the important 
+      information of the visual track of a multimedia presentation. 1.2.2 Audio 
+      descriptions of video, or a full multimedia text alternative including any 
+      interaction, are provided for prerecorded multimedia. (Level 1) 
+      1.4: For any time-based multimedia presentation (e.g., a movie or 
+      animation), synchronize equivalent alternatives (e.g., captions or 
+      auditory descriptions of the visual track) with the presentation. 1.2.1 
+      Captions are provided for prerecorded multimedia. (Level 1) 
+      1.2.2 Audio descriptions of video, or a full multimedia text alternative 
+      including any interaction, are provided for prerecorded multimedia. (Level 
+      1) 
+      1.2.3 Audio descriptions of video are provided for prerecorded multimedia. 
+      (Level 2) 
+      1.2.4 Captions are provided for live multimedia. (Level 2) 
+      1.2.6 Extended audio descriptions of video are provided for prerecorded 
+      multimedia. (Level 3) 
+      And if all else fails (Priority 1)WCAG 2.0 Success Criteria
+      11.4: If, after best efforts, you cannot create an accessible page, 
+      provide a link to an alternative page that uses W3C technologies, is 
+      accessible, has equivalent information (or functionality), and is updated 
+      as often as the inaccessible (original) page. 4.2.1 At least one version 
+      of the content meets all level 1 success criteria, but alternate 
+      version(s) that do not meet all level 1 success criteria may be available 
+      from the same URI. (Level 1) 
+      4.2.2 Content meets the following criteria even if the content uses a 
+      technology that is not in the chosen baseline: (Level 1) 
+        If content can be entered using the keyboard, then the content can be 
+        exited using the keyboard.
+        Content conforms to success criterion 2.3.1 (general and red flash).
+
+Priority 2 checkpoints
+      In General (Priority 2)WCAG 2.0 Success Criteria
+      2.2: Ensure that foreground and background color combinations provide 
+      sufficient contrast when viewed by someone having color deficits or when 
+      viewed on a black and white screen. [Priority 2 for images, Priority 3 for 
+      text]. 1.4.1 Text or diagrams, and their background, have a luminosity 
+      contrast ratio of at least 5:1. (Level 2) 
+      1.4.3 Text or diagrams, and their background, have a luminosity contrast 
+      ratio of at least 10:1. (Level 3) 
+      3.1: When an appropriate markup language exists, use markup rather than 
+      images to convey information. This is baseline-dependent. The guidance on 
+      choosing an appropriate baseline will include information about the 
+      advantages of technologies with accessibility features. 
+      This also maps to sufficient techniques on using semantic markup listed in 
+      How to Meet Success Criterion 1.3.1 (level 1) and How to Meet Success 
+      Criterion 1.3.4 (level 2). 
+      3.2: Create documents that validate to published formal grammars. 4.1.1 
+      Web units or authored components can be parsed unambiguously, and the 
+      relationships in the resulting data structure are also unambiguous. (Level 
+      1) 
+      Note: Validating to published formal grammars is a stronger requirement 
+      than unambiguous parsing required by Success Criterion 4.1.1 but is one of 
+      the sufficient techniques for this success criterion. Refer to How to Meet 
+      Success Criterion 4.1.1 
+      3.3: Use style sheets to control layout and presentation. 1.3.3 When the 
+      sequence of the content affects its meaning, that sequence can be 
+      programmatically determined. (Level 1) 
+      Maps to several items in Understanding WCAG 2.0: CSS techniques for SC 
+      1.3.1 (level 1), CSS techniques for SC 1.3.2 (level 1), and a client-side 
+      scripting technique for SC 1.3.3 (level 1). 
+      3.4: Use relative rather than absolute units in markup language attribute 
+      values and style sheet property values. This maps to an advisory technique 
+      (Using readable fonts) for Guideline 1.4. 
+      3.5 Use header elements to convey document structure and use them 
+      according to specification. 1.3.1 Information and relationships conveyed 
+      through presentation can be programmatically determined, and notification 
+      of changes to these is available to user agents, including assistive 
+      technologies. (Level 1) 
+      3.6: Mark up lists and list items properly. 1.3.1 Information and 
+      relationships conveyed through presentation can be programmatically 
+      determined, and notification of changes to these is available to user 
+      agents, including assistive technologies. (Level 1) 
+      3.7: Mark up quotations. Do not use quotation markup for formatting 
+      effects such as indentation. 1.3.1 Information and relationships conveyed 
+      through presentation can be programmatically determined, and notification 
+      of changes to these is available to user agents, including assistive 
+      technologies. (Level 1) 
+      1.3.4 Information that is conveyed by variations in presentation of text 
+      is also conveyed in text, or the variations in presentation of text can be 
+      programmatically determined. (Level 2) 
+      6.5: Ensure that dynamic content is accessible or provide an alternative 
+      presentation or page. 4.2.1 At least one version of the content meets all 
+      level 1 success criteria, but alternate version(s) that do not meet all 
+      level 1 success criteria may be available from the same URI. (Level 1) 
+      4.2.3 At least one version of the content meets all level 2 success 
+      criteria, but alternate version(s) that do not meet all level 2 success 
+      criteria may be available from the same URI. (Level 2) 
+      7.2: Until user agents allow users to control blinking, avoid causing 
+      content to blink (i.e., change presentation at a regular rate, such as 
+      turning on and off). 2.2.2 Content does not blink for more than three 
+      seconds, or a method is available to stop all blinking content in the Web 
+      unit or authored component. (Level 2) 
+      Note: For requirements related to flickering or flashing content, refer to 
+      Guideline 2.3 Allow users to avoid content that could cause seizures due 
+      to photosensitivity .
+      7.4: Until user agents provide the ability to stop the refresh, do not 
+      create periodically auto-refreshing pages. 2.2.1 For each time-out that is 
+      a function of the content, at least one of the following is true: (Level 
+      1) 
+        the user is allowed to deactivate the time-out; or
+        the user is allowed to adjust the time-out over a wide range that is at 
+        least ten times the length of the default setting; or
+        the user is warned before time expires and given at least 20 seconds to 
+        extend the time-out with a simple action (for example, "hit any key"), 
+        and the user is allowed to extend the timeout at least ten times; or
+        the time-out is an important part of a real-time event (for example, an 
+        auction), and no alternative to the time-out is possible; or
+        the time-out is part of an activity where timing is essential (for 
+        example, competitive gaming or time-based testing) and time limits can 
+        not be extended further without invalidating the activity.
+      3.2.5 Changes of context are initiated only by user request. (Level 3) 
+      7.5: Until user agents provide the ability to stop auto-redirect, do not 
+      use markup to redirect pages automatically. Instead, configure the server 
+      to perform redirects. 3.2.5 Changes of context are initiated only by user 
+      request. (Level 3) 
+      10.1: Until user agents allow users to turn off spawned windows, do not 
+      cause pop-ups or other windows to appear and do not change the current 
+      window without informing the user. 3.2.1 When any component receives 
+      focus, it does not cause a change of context. (Level 1) 
+      3.2.2 Changing the setting of any form control or field does not 
+      automatically cause a change of context (beyond moving to the next field 
+      in tab order), unless the authored unit contains instructions before the 
+      control that describe the behavior. (Level 1) 
+      3.2.5 Changes of context are initiated only by user request. (Level 3) 
+      11.1: Use W3C technologies when they are available and appropriate for a 
+      task and use the latest versions when supported. No longer required for 
+      conformance to WCAG 2.0.
+      Note: The document About Baselines and WCAG 2.0 provides advice about 
+      choosing appropriate technologies as related to setting baselines.
+      11.2: Avoid deprecated features of W3C technologies. No longer required 
+      for conformance to WCAG 2.0.
+      12.3: Divide large blocks of information into more manageable groups where 
+      natural and appropriate. No longer required for conformance to WCAG 2.0.
+      This partially maps to a sufficient technique for SC 2.4.1 (level 1): 
+      Providing Heading elements at the beginning of each section of content. 
+      13.1: Clearly identify the target of each link. 2.4.4 Each link is 
+      programmatically associated with text from which its purpose can be 
+      determined. (Level 2) 
+      2.4.8 The purpose of each link can be programmatically determined from the 
+      link. (Level 3) 
+      13.2: Provide metadata to add semantic information to pages and sites. 
+      This is no longer required for conformance, but could be a technique for 
+      satisfying certain success criteria in Guidelines 2.4, 4.2, 3.1 and 1.3. 
+      This is also baseline-dependent. 
+      13.3: Provide information about the general layout of a site (e.g., a site 
+      map or table of contents). 2.4.2 More than one way is available to locate 
+      content within a set of Web units where content is not the result of, or a 
+      step in, a process or task. (Level 2) 
+      This also maps to the technique Providing a Site Map.
+      Note: This is a partial mapping.
+      13.4: Use navigation mechanisms in a consistent manner. 3.2.3 Navigational 
+      mechanisms that are repeated on multiple Web units within a set of Web 
+      units or other primary resources occur in the same relative order each 
+      time they are repeated, unless a change is initiated by the user. (Level 
+      2) 
+      3.2.4 Components that have the same functionality within a set of Web 
+      units are identified consistently. (Level 2) 
+      And if you use tables (Priority 2)WCAG 2.0 Success Criteria
+      5.3: Do not use tables for layout unless the table makes sense when 
+      linearized. Otherwise, if the table does not make sense, provide an 
+      alternative equivalent (which may be a linearized version). 1.3.3 When the 
+      sequence of the content affects its meaning, that sequence can be 
+      programmatically determined. (Level 1) 
+      5.4: If a table is used for layout, do not use any structural markup for 
+      the purpose of visual formatting. 1.3.1 Information and relationships 
+      conveyed through presentation can be programmatically determined, and 
+      notification of changes to these is available to user agents, including 
+      assistive technologies. (Level 1) 
+      Especially: Failure of SC 1.3.1 due to using structural markup in a way 
+      that does not represent relationships in the content.
+      And if you use frames (Priority 2)WCAG 2.0 Succes Criteria
+      12.2: Describe the purpose of frames and how frames relate to each other 
+      if it is not obvious by frame titles alone. This is no longer required for 
+      conformance (because the longdesc attribute type on the frame element type 
+      has not been supported and is not defined in XHTML 1.1, the Working Draft 
+      of XFrames, or the Working Draft of XHTML 2.0). The longdesc attribute is 
+      still present in the Frames Module defined in XHTML Modularization. 
+      And if you use forms (Priority 2)WCAG 2.0 Success Criteria
+      10.2: Until user agents support explicit associations between labels and 
+      form controls, for all form controls with implicitly associated labels, 
+      ensure that the label is properly positioned. User agents now support 
+      explicit associations of labels with form controls, so the "until user 
+      agents" clause has been satisfied. This is therefore no longer a 
+      requirement under WCAG 2.0.
+      It is an Advisory item. Other closely related SC are:
+      1.3.1 Information and relationships conveyed through presentation can be 
+      programmatically determined, and notification of changes to these is 
+      available to user agents, including assistive technologies. (Level 1) 
+      1.3.4 Information that is conveyed by variations in presentation of text 
+      is also conveyed in text, or the variations in presentation of text can be 
+      programmatically determined. (Level 2) 
+      12.4: Associate labels explicitly with their controls. 1.3.1 Information 
+      and relationships conveyed through presentation can be programmatically 
+      determined, and notification of changes to these is available to user 
+      agents, including assistive technologies. (Level 1) 
+      4.1.2 For all user interface components, the name and role can be 
+      programmatically determined, values that can be set by the user can be 
+      programmatically set, and notification of changes to these items is 
+      available to user agents, including assistive technologies. (Level 1) 
+      And if you use applets and scripts (Priority 2)WCAG 2.0 Success Criteria
+      6.4: For scripts and applets, ensure that event handlers are input 
+      device-independent. 2.1.1 All functionality of the content is operable in 
+      a non-time-dependent manner through a keyboard interface, except where the 
+      task requires analog, time-dependent input. (Level 1) 
+      Note: This does not preclude and should not discourage the support of 
+      other input methods (such as a mouse) in addition to keyboard operation.
+      2.1.2 All functionality of the content is operable in a non-time-dependent 
+      manner through a keyboard interface. (Level 3) 
+      Note: Device-independent event handlers are not explicitly required. 
+      7.3: Until user agents allow users to freeze moving content, avoid 
+      movement in pages. The "until user agents" clause has been satisfied, so 
+      it is no longer necessary to avoid movement altogether, as long as authors 
+      do not do anything to interfere with the user's ability to pause the 
+      content. The prohibition has therefore been replaced with this success 
+      criterion 2.2.3
+      2.2.3 Content can be paused by the user unless the timing or movement is 
+      part of an activity where timing or movement is essential. (Level 2) 
+      8.1: Make programmatic elements such as scripts and applets directly 
+      accessible or compatible with assistive technologies [Priority 1 if 
+      functionality is important and not presented elsewhere, otherwise Priority 
+      2.] 4.1.2 For all user interface components, the name and role can be 
+      programmatically determined, values that can be set by the user can be 
+      programmatically set, and notification of changes to these items is 
+      available to user agents, including assistive technologies. (Level 1) 
+      4.2.1 At least one version of the content meets all level 1 success 
+      criteria, but alternate version(s) that do not meet all level 1 success 
+      criteria may be available from the same URI. (Level 1) 
+      4.2.2 Content meets the following criteria even if the content uses a 
+      technology that is not in the chosen baseline: (Level 1) 
+        If content can be entered using the keyboard, then the content can be 
+        exited using the keyboard.
+        Content conforms to success criterion 2.3.1 (general and red flash).
+      9.2: Ensure that any element that has its own interface can be operated in 
+      a device-independent manner. 2.1.1 All functionality of the content is 
+      operable in a non-time-dependent manner through a keyboard interface, 
+      except where the task requires analog, time-dependent input. (Level 1) 
+      Note: This does not preclude and should not discourage the support of 
+      other input methods (such as a mouse) in addition to keyboard operation.
+      2.1.2 All functionality of the content is operable in a non-time-dependent 
+      manner through a keyboard interface. (Level 3) 
+      9.3: For scripts, specify logical event handlers rather than 
+      device-dependent event handlers. 2.1.1 All functionality of the content is 
+      operable in a non-time-dependent manner through a keyboard interface, 
+      except where the task requires analog, time-dependent input. (Level 1) 
+      Note: This does not preclude and should not discourage the support of 
+      other input methods (such as a mouse) in addition to keyboard operation.
+      2.1.2 All functionality of the content is operable in a non-time-dependent 
+      manner through a keyboard interface. (Level 3) 
+
+Priority 3 checkpoints
+      In General (Priority 3)WCAG 2.0 Success Criteria
+      4.2: Specify the expansion of each abbreviation or acronym in a document 
+      where it first occurs. 3.1.4 A mechanism for finding the expanded form of 
+      abbreviations is available. (Level 3) 
+      4.3: Identify the primary natural language of a document. 3.1.1 The 
+      primary natural language or languages of the Web unit can be 
+      programmatically determined. (Level 1) 
+      9.4: Create a logical tab order through links, form controls, and objects. 
+      2.4.6 When a Web unit or authored component is navigated sequentially, 
+      components receive focus in an order that follows relationships and 
+      sequences in the content. (Level 3) 
+      9.5: Provide keyboard shortcuts to important links (including those in 
+      client-side image maps), form controls, and groups of form controls. 
+      Accesskeys are no longer required for conformance to WCAG 2.0. It is an 
+      advisory item: Providing access keys (optional technique for SC 2.4.1 
+      (level 1)). 
+      10.5: Until user agents (including assistive technologies) render adjacent 
+      links distinctly, include non-link, printable characters (surrounded by 
+      spaces) between adjacent links. Note: This technique is no longer needed 
+      for user agents but may be useful for people with cognitive disabilities. 
+      11.3: Provide information so that users may receive documents according to 
+      their preferences (e.g., language, content type, etc.) This checkpoint 
+      does not map to any WCAG 2.0 success criterion, though certain aspects may 
+      map to certain success criteria or to advisory item (see Situation B under 
+      How to Meet Success Criterion 4.2.1, for example). Content negotiation is 
+      discussed briefly in "Conformance to Web Content Accessibility Guidelines 
+      2.0."
+      13.5: Provide navigation bars to highlight and give access to the 
+      navigation mechanism. This checkpoint is not required by any success 
+      criterion in WCAG 2.0. It is a possible strategy to address SC 2.4.2 
+      (level 2). If navigation bars are used, SC 3.2.3 (level 2) applies.
+      3.2.3 Navigational mechanisms that are repeated on multiple Web units 
+      within a set of Web units or other primary resources occur in the same 
+      relative order each time they are repeated, unless a change is initiated 
+      by the user. (Level 2) 
+      13.6: Group related links, identify the group (for user agents), and, 
+      until user agents do so, provide a way to bypass the group. 2.4.1 A 
+      mechanism is available to bypass blocks of content that are repeated on 
+      multiple Web units. (Level 1) 
+      Note: In WCAG 2.0, this requirement applies only to groups that are 
+      repeated on multiple delivery units. 
+      13.7: If search functions are provided, enable different types of searches 
+      for different skill levels and preferences. Note: This checkpoint does not 
+      directly map to any WCAG 2.0 Success Criterion and is not required. Some 
+      aspects relate to 2.4.2 (level 2) and 2.5.4 (level 3) as well as advisory 
+      items in Understanding WCAG 2.0. 
+      13.8: Place distinguishing information at the beginning of headings, 
+      paragraphs, lists, etc. This checkpoint is not required by any Success 
+      Criterion in WCAG 2.0. . Part of this maps to optional techniqueStarting 
+      section headings with unique information for SC 2.4.5 (level 3). 
+      13.9: Provide information about document collections (i.e., documents 
+      comprising multiple pages.) This checkpoint is not in WCAG 2.0 but does 
+      relate to SC 2.4.7 (level 3) and would appear in advisory items in 
+      Understanding WCAG 2.0.
+      13.10: Provide a means to skip over multi-line ASCII art. This item is not 
+      required by any Success Criterion in WCAG 2.0. ASCII art is considered 
+      non-text content and is therefore covered by SC 1.1.1. 
+      14.2: Supplement text with graphic or auditory presentations where they 
+      will facilitate comprehension of the page. This checkpoint is not required 
+      by any WCAG 2.0 Success Criterion. Providing visual illustrations of 
+      complex ideas, events, and processes and Providing a spoken version of the 
+      text are listed as is a technique that can be used to satisfy WCAG 2.0 SC 
+      3.1.5 (level 3). 
+      14.3: Create a style of presentation that is consistent across pages. 
+      Aspects of WCAG 1.0 Checkpoint 14.3 are required by WCAG 2.0 Guideline 
+      3.2.3 (level 2), 3.2.4 (level 2). There is no Success Criterion in WCAG 
+      2.0 that is as broad as WCAG 1.0 Checkpoint 14.3, so aspects of it do not 
+      relate.
+      And if you use images and image maps (Priority 3)WCAG 2.0 Success Criteria
+      1.5: Until user agents render text equivalents for client-side image map 
+      links, provide redundant text links for each active region of a 
+      client-side image map. This is no longer required because user agents now 
+      render text alternatives for client-side image map areas. 
+      And if you use tables (Priority 3)WCAG 2.0 Success Criteria
+      5.5: Provide summaries for tables. This is no longer required for 
+      conformance. However, in layout tables, the summary attribute must be 
+      omitted or empty. See Failure of SC 1.3.1 due to using th elements, 
+      caption elements, or non-empty summary attributes in layout tables.
+      5.6: Provide abbreviations for header labels.This is no longer required 
+      for conformance, but a potentially useful technique.
+      10.3: Until user agents (including assistive technologies) render 
+      side-by-side text correctly, provide a linear text alternative (on the 
+      current page or some other) for all tables that lay out text in parallel, 
+      word-wrapped columns. WCAG 1.0 Checkpoint 10.3 is no longer required for 
+      conformance to WCAG 2.0.
+      1.3.3 When the sequence of the content affects its meaning, that sequence 
+      can be programmatically determined. (Level 1) 
+      2.4.6 When a Web unit or authored component is navigated sequentially, 
+      components receive focus in an order that follows relationships and 
+      sequences in the content. (Level 3) 
+      And if you use forms (Priority 3)WCAG 2.0 Success Criteria
+      10.4 Until user agents handle empty controls correctly, include default, 
+      place-holding characters in edit boxes and text areas. This "until user 
+      agents" condition is now met and this checkpoint is no longer required. 
+
+New Level 1 requirements in WCAG 2.0 not mapped above
+Guideline 2.5
+2.5.1 If an input error is detected, the error is identified and described to 
+the user in text. (Level 1) 
+New Level 2 requirements in WCAG 2.0 not mapped above
+Guideline 1.3
+1.3.4 Information that is conveyed by variations in presentation of text is also 
+conveyed in text, or the variations in presentation of text can be 
+programmatically determined. (Level 2) 
+1.3.5 Information required to understand and operate content does not rely on 
+shape, size, visual location, or orientation of components. (Level 2) 
+Guideline 1.4
+1.4.2 A mechanism is available to turn off background audio that plays 
+automatically, without requiring the user to turn off all audio. (Level 2) 
+Guideline 2.4
+2.4.3 Web units have titles. (Level 2) 
+Guideline 2.5
+2.5.2 If an input error is detected and suggestions for correction are known and 
+can be provided without jeopardizing the security or purpose of the content, the 
+suggestions are provided to the user. (Level 2) 
+2.5.3 For forms that cause legal or financial transactions to occur, that modify 
+or delete data in data storage systems, or that submit test responses, at least 
+one of the following is true: (Level 2) 
+  Actions are reversible.
+  Actions are checked for input errors before going on to the next step in the 
+  process.
+  The user is able to review and confirm or correct information before 
+  submitting it.
+New Level 3 requirements in WCAG 2.0 not mapped above
+Guideline 1.2
+1.2.5 Sign language interpretation is provided for multimedia. (Level 3) 
+1.2.7 For prerecorded multimedia, a full multimedia text alternative including 
+any interaction is provided. (Level 3) 
+Guideline 1.4
+1.4.4 Audio content does not contain background sounds, background sounds can be 
+turned off, or background sounds are at least 20 decibels lower than the 
+foreground audio content, with the exception of occasional sound effects. (Level 
+3) 
+Note: A 20 decibel difference in sound level is roughly four times (4x) quieter 
+or louder. Background sound that meets this requirement will be approximately 
+four times (4x) quieter than the foreground audio content.
+Guideline 2.2
+2.2.4 Except for real-time events, timing is not an essential part of the event 
+or activity presented by the content. (Level 3) 
+2.2.5 Interruptions, such as updated content, can be postponed or suppressed by 
+the user, except interruptions involving an emergency. (Level 3) 
+2.2.6 When an authenticated session expires, the user can continue the activity 
+without loss of data after re-authenticating. (Level 3) 
+Guideline 2.4
+2.4.5 Titles, headings, and labels are descriptive. (Level 3) 
+Guideline 2.5
+2.5.4 Context-sensitive help is available for text input. (Level 3) 
+Guideline 3.1
+3.1.3 A mechanism is available for identifying specific definitions of words or 
+phrases used in an unusual or restricted way, including idioms and jargon. 
+(Level 3) 
+3.1.6 A mechanism is available for identifying specific pronunciation of words 
+where meaning cannot be determined without pronunciation. (Level 3) 
+Guideline 4.2
+4.2.4 Content implemented using technologies outside of the chosen baseline 
+satisfies all Level 1 and Level 2 requirements supported by the technologies. 
+(Level 3) 
+Appendix E: References (Non-Normative)
+This section is informative.
+  WCAG20 
+  "Web Content Accessibility Guidelines 2.0," B. Caldwell, W. Chisholm, J. 
+  Slatin, and G. Vanderheiden, eds., W3C Last Call Working Draft 27 April 2006. 
+  This W3C Working Draft is available at 
+  http://www.w3.org/TR/2006/WD-WCAG20-20060427/. The latest version of WCAG 2.0 
+  is available at http://www.w3.org/TR/WCAG20/ 
+  UAAG10 
+  "User Agent Accessibility Guidelines 1.0," I. Jacobs, J. Gunderson, E. Hansen, 
+  eds., W3C Recommendation 17 December 2002. The latest version of UAAG 1.0 is 
+  available at http://www.w3.org/TR/UAAG10/ 
+  UNESCO 
+  International Standard Classification of Education, 1997. A copy of the 
+  standard is available at 
+  http://www.unesco.org/education/information/nfsunesco/doc/isced_1997.htm. 
+  UNICODE 
+  The Unicode Consortium. The Unicode Standard, Version 4.0.1, defined by: The 
+  Unicode Standard, Version 4.0 (Reading, MA, Addison-Wesley, 2003. ISBN 
+  0-321-18578-1), as amended by Unicode 4.0.1 
+  (http://www.unicode.org/versions/Unicode4.0.1/). 
+  OFCOM 
+  Guidance Notes, Section 2: Harm and offence Annex 1, "Ofcom Guidance Note on 
+  Flashing Images and Regular Patterns in Television (Re-issued as Ofcom Notes 
+  25 July 2005)" available at 
+  http://www.ofcom.org.uk/tv/ifi/guidance/bguidance/guidance2.pdf) 

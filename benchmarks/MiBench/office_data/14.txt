@@ -1,0 +1,1759 @@
+Slashdot | Microsoft's IE7 Search Box Bugs GoogleOSTG SourceForge ThinkGeek 
+  ITMJ Linux.com NewsForge freshmeat Newsletters Jobs Broadband Whitepapers X 
+Stories 
+Slash Boxes 
+Comments 
+Slashdot 
+       
+News for nerds, stuff that matters 
+Login
+  Why Login? 
+  Why Subscribe? 
+Sections
+  Main
+  Apple 
+  AskSlashdot 
+  Books 
+  Developers 
+  Games 
+  Hardware 
+  Interviews 
+  IT 
+  Linux 
+  Politics 
+  Science 
+  YRO 
+Vendors
+  AMD 
+Help
+  FAQ 
+  Bugs 
+Stories
+  Old Stories 
+  Old Polls 
+  Topics 
+  Hall of Fame 
+  Bookmarks 
+  Submit Story 
+About
+  Supporters 
+  Code 
+Services
+  Broadband 
+  PriceGrabber 
+  Sponsor Solutions 
+  Special Offers 
+  Tech Jobs 
+Slashdot Log In 
+Log in
+Nickname 
+ 
+Password 
+   
+ Public Terminal 
+  
+[ Create a new account ] 
+Related Links 
+  Compare prices on Google Related Items 
+  Compare prices on Internet Products 
+  a new IE7 search box feature 
+  More Internet Explorer stories 
+  More Google stories 
+Microsoft's IE7 Search Box Bugs Google 
+Posted by CmdrTaco on Mon May 01, '06 12:38 PM
+from the now-wait-a-minute dept. 
+  tessaiga writes "The New York Times reports that Google is crying foul over a 
+new IE7 search box feature that defaults to MSN Search. Although the feature can 
+be modified to use Google or other search engines, Google asserts that "The best 
+way to handle the search box [...] would be to give users a choice when they 
+first start up Internet Explorer 7." Google goes on to assert that the move 
+"limits consumer choice and is reminiscent of the tactics that got Microsoft 
+into antitrust trouble in the late 1990s". I notice that in my version of 
+Firefox the search box defaults to Google, and that the pulldown menu of 
+pre-entered options doesn't even include MSN Search, but Google seems to have 
+been oddly quiet on that front for the many years prior to IE7 that Firefox has 
+made this feature available." 
+
+This discussion has been archived. No new comments can be posted. 
+Microsoft's IE7 Search Box Bugs Google | Log in/Create an Account | Top | 803 
+comments (Spill at 50!) | Index Only | Search Discussion 
+Display OptionsThreshold:  -1: 803 comments 0: 796 comments 1: 649 comments 2: 
+  402 comments 3: 72 comments 4: 46 comments 5: 32 comments Flat Nested No 
+  Comments Threaded Oldest First Newest First Highest Scores First Oldest First 
+  (Ignore Threads) Newest First (Ignore Threads)    
+The Fine Print: The following comments are owned by whoever posted them. We are 
+not responsible for them in any way. 
+(1) | 2 
+  Defaults vs. Presets(Score:5, Informative) 
+  by Kelson (129150) * on Monday May 01, @12:39PM (#15237909) 
+  (http://www.hyperborea.org/journal/) 
+  The main difference between the IE7 search box and the Firefox and Opera 
+  search boxes is that the IE7 search box comes preloaded with only one search 
+  provider: MSN. Firefox and Opera both include a half-dozen or so providers 
+  when you install them. (You can add additional search engines in all three.)
+
+  Well, that, and Firefox doesn't have a setting for a "default" provider. It 
+  "defaults" to the last one you used, which can be helpful if, say, you use 
+  Google most of the time and want to do a bunch of IMDB lookups in a row. (Yes, 
+  you can add IMDB as a search engine.) Of course, if you've never used the box 
+  before, it starts out with Google...
+
+  Of course, you can always read what the IE team has to say about searching 
+  [msdn.com]...
+    Re:Defaults vs. Presets by plague3106 (Score:1) Monday May 01, @12:42PM 
+      Re:Defaults vs. Presets by byolinux (Score:3) Monday May 01, @01:02PM 
+        Care to support that accusation?(Score:5, Insightful) 
+        by Kadin2048 (468275) <kadin2048@mTWAINac.com minus author> on Monday 
+        May 01, @01:49PM (#15238692) 
+        (Last Journal: Tuesday May 16, @09:37AM) 
+        Search engines pay money to the browser makers to get their search 
+        engines in there anyway.
+
+        Um, care to back that up?
+
+        The two biggest browsers right now are IE and Firefox; Microsoft is 
+        basically promoting their own product here (MSN Search) so I doubt 
+        they're "paying" anything directly, so really your point seems to 
+        suggest that Google has paid Firefox to be the default search. That's a 
+        pretty strong statement to be making without any evidence.
+        [ Parent ] 
+          Re:Care to support that accusation?(Score:5, Informative) 
+          by CableModemSniper (556285) <cblsnipr&optonline,net> on Monday May 
+          01, @01:58PM (#15238780) 
+          (http://meta-meta.blogspot.com/ | Last Journal: Saturday September 11, 
+          @03:30PM) 
+          http://www.spamdailynews.com/publish/Mozilla_makin 
+          g_tens_of_millions_of_dollars_from_Firefox.asp [spamdailynews.com]
+          [ Parent ] 
+            Re:Care to support that accusation? by hattmoward (Score:2) Tuesday 
+            May 02, @10:11AM 
+          Re:Care to support that accusation?(Score:5, Interesting) 
+          by Kelson (129150) * on Monday May 01, @02:04PM (#15238833) 
+          (http://www.hyperborea.org/journal/) 
+              Search engines pay money to the browser makers to get their search 
+              engines in there anyway.
+            Um, care to back that up?
+          Funny, I thought that "accusation" was common knowledge [gigaom.com]. 
+          Opera, for instance, hasn't exactly been hiding the fact. Back in 
+          September, Jon von Tetzchner said [operawatch.com]:
+            What finally made [going free] possible is the increase in revenues 
+            from search and service partners. We can now go free and still 
+            increase our revenues.
+          And later in the same interview:
+            We have been working with Google for a long time. Our new search 
+            deal increases our search based revenue, which is an important 
+            factor in our decision to go free. We are also working with Google 
+            to make sure their services work well with Opera.
+          [ Parent ] 
+          Re:Care to support that accusation? by byolinux (Score:1) Monday May 
+          01, @05:08PM 
+          Re:Care to support that accusation? by rm69990 (Score:2) Monday May 
+          01, @07:59PM 
+          4 replies beneath your current threshold.
+        Re:Defaults vs. Presets(Score:4, Insightful) 
+        by lcsjk (143581) on Monday May 01, @03:26PM (#15239586) 
+        I read through these comments and realize that a lot of these readers 
+        still do not understand the real issue here. MS OWNS THE OPERATING 
+        SYSTEM!! Google does not! Microsoft provides Walmart, Office Max, Sears, 
+        Radio Shack, TigerDirect, (and the list goes on) with the PRE-INSTALLED 
+        operating system. The vast majority of users have no idea how to install 
+        ANYTHING. They are stuck with using what is pre-loaded, and if it works 
+        fairly well, they don't complain.
+        It does not matter if Google or MSN or Jeeves or any other search engine 
+        comes on FireFox or Opera. FireFox and Opera are not part of the 
+        pre-loaded OS and therefore are used by only a very small percentage of 
+        users.
+        The real issue is MICROSOFT "CONTROLS" THE COMPUTER for most people. 
+        Whatever is put there stays there, and good or bad, is the only thing 
+        they are able to use. That is what is referred to as "Monopolistic 
+        Power". This is a re-enactment of the NETSCAPE issue and the present 
+        WINDOWS MEDIA PLAYER issue. MS is not keeping people from using other 
+        search engines. They are just taking advantage of the fact that most 
+        people are only able to use what is provided, and by bundling it with 
+        the OS, they can say it is free. 
+        Since our present administration will not even slap the hand of MS 
+        anymore, the only recourse Google will have is to promote by writing a 
+        program that loads itself and deletes the MS search engine. Most people 
+        would allow that. Like AOL, Google can distribute free CD's in Wallmart 
+        and major groceries and even contract with the US Post Office to have 
+        CD's distrubuted there.
+        [ Parent ] 
+          Re:Defaults vs. Presets by CaymanIslandCarpedie (Score:2) Monday May 
+          01, @04:51PM 
+          Re:Defaults vs. Presets(Score:4, Insightful) 
+          by im_thatoneguy (819432) on Monday May 01, @05:00PM (#15240398) 
+          The vast majority of users have no idea how to install ANYTHING. They 
+          are stuck with using what is pre-loaded, and if it works fairly well, 
+          they don't complain. 
+
+          I think that's a very telling statement. If it works fairly well, why 
+          change? If users can't tell an appreciable difference between two 
+          products, why would they care which they use? I can tell very cleary 
+          you want them to care, but you're fighting for the rights of 
+          individuals who really couldn't care less if the Devil himself 
+          performed the internet search and told them the results. 
+
+          So let's recap. People hate installing things. They hate choosing 
+          between things they don't understand. And the current option seems 
+          just as good as any other to them. Those who do want something else, 
+          want to be able to choose... can. 
+
+          This whole thing sounds like a huge non-issue to me.
+          [ Parent ] 
+            Re:Defaults vs. Presets by MickDownUnder (Score:1) Tuesday May 02, 
+            @08:47AM 
+            Re:Defaults vs. Presets by 99BottlesOfBeerInMyF (Score:2) Tuesday 
+            May 02, @11:19AM 
+              Re:Defaults vs. Presets by im_thatoneguy (Score:2) Tuesday May 02, 
+              @12:21PM 
+              Re:Defaults vs. Presets by 99BottlesOfBeerInMyF (Score:2) Tuesday 
+              May 02, @02:10PM 
+            Re:Defaults vs. Presets by Gr8Apes (Score:2) Tuesday May 02, 
+            @10:12AM 
+              Re:Defaults vs. Presets by Gr8Apes (Score:1) Friday May 05, 
+              @09:40AM 
+              1 reply beneath your current threshold.
+            1 reply beneath your current threshold.
+          Re:Defaults vs. Presets by RalphTheWonderLlama (Score:1) Monday May 
+          01, @06:10PM 
+            Re:Defaults vs. Presets by CAR912 (Score:1) Monday May 01, @09:35PM 
+              Re:Defaults vs. Presets by RalphTheWonderLlama (Score:1) Tuesday 
+              May 02, @01:42PM 
+          Re:Defaults vs. Presets by silentrancor2 (Score:1) Tuesday May 02, 
+          @09:25AM 
+      Re:Defaults vs. Presets by hpa (Score:2) Monday May 01, @02:05PM 
+      not as I recall by Anubis350 (Score:2) Monday May 01, @12:56PM 
+        Re:not as I recall by aichpvee (Score:1) Monday May 01, @11:58PM 
+        1 reply beneath your current threshold.
+      Mod parent -1 Wrong by Proud like a god (Score:3) Monday May 01, @01:08PM 
+      Re:Defaults vs. Presets by Anonymous Coward (Score:1) Monday May 01, 
+      @06:05PM 
+      1 reply beneath your current threshold.
+    Re:Defaults vs. Presets by mode_m (Score:3) Monday May 01, @12:43PM 
+      Re:Defaults vs. Presets(Score:5, Insightful) 
+      by sbrown123 (229895) on Monday May 01, @12:58PM (#15238128) 
+      (http://slashdot.org/) 
+      There is a major difference between Firefox or Opera defaulting to Google 
+      and IE7 defaulting to MSN: neither Firefox or Opera are owned by Google. 
+      Google makes no money in the sell of either. Firefox and/or Opera could 
+      change their default to MSN if they so desired. Microsoft could even pay 
+      them to do that. But Microsoft deploys IE7 and Microsoft makes money on 
+      MSN. That is a problem.
+      [ Parent ] 
+        Abuse of monopoly powers(Score:5, Informative) 
+        by Anonymous Coward on Monday May 01, @01:07PM (#15238239) 
+        Microsoft could even pay them to do that. But Microsoft deploys IE7 and 
+        Microsoft makes money on MSN. 
+        That's not quite what the problem is either. 
+        The real problem is that it's illegal to abuse monopoly powers by using 
+        your (otherwise legal) monopoly in one industry to force users to adopt 
+        your inferior product in another industry. 
+        For a concrete example - if you have a monopoly in Operating Systems, 
+        you can NOT use your operating system monopoly to force users to use 
+        your online-store or your media-player or your single-sign-on-service. 
+        Google's arguing that you are also not allowed to force people to use 
+        your search engine either -- and that users are so unlikely to switch 
+        default browsers that making this the default in IE is effectively 
+        forcing the users. 
+        Firefox does not have this problem, because it is not illegally abusing 
+        any monopoly powers.
+        [ Parent ] 
+          Re:Abuse of monopoly powers(Score:5, Insightful) 
+          by Irish_Samurai (224931) on Monday May 01, @01:29PM (#15238485) 
+          If Google has leading market share in the search marketspace, how can 
+          they claim that Microsoft's intent to default to MSN in IE7 is a not 
+          competative practice. I see how the argument works from the 
+          OS/effective monopoly perspective, but the argument seems a little 
+          weak if approached a different way.
+
+          IE defaults to MSN as it's home page, correct? Well, MSN search is 
+          there. Google's stating that people won't use their search because 
+          users won't change the toolbar default is equivalent to saying that 
+          people don't change their default home page - which is untrue.
+
+          Where does this end? The default home page? The toolbar option? At 
+          some point this gets ridiculous.
+
+          The problem doesn't stem from not being able to make a choice, because 
+          the settings can be changed. The problem stems from the public not 
+          even understanding the difference between the competitors and not 
+          caring to change. Who's fault is that? The entrenched vendor who has 
+          no reason to promote its competitors or the competitor who needs to 
+          make consumer education a priority?
+
+          In this case, how do you establish that? The OS is entrenched, but 
+          Google market share is significant over MSN's search. I mean hell, its 
+          almost 50%. [hitslink.com] How can you argue that your dominance is in 
+          danger by a company who holds 8%?
+          [ Parent ] 
+            Re:Abuse of monopoly powers by iserlohn (Score:2) Monday May 01, 
+            @01:41PM 
+              Re:Abuse of monopoly powers by EastCoastSurfer (Score:2) Monday 
+              May 01, @01:52PM 
+              Re:Abuse of monopoly powers by bunratty (Score:2) Monday May 01, 
+              @02:19PM 
+              Re:Abuse of monopoly powers by VJ42 (Score:2) Monday May 01, 
+              @02:33PM 
+              Re:Abuse of monopoly powers by flimflammer (Score:1) Monday May 
+              01, @02:56PM 
+              Re:Abuse of monopoly powers by EastCoastSurfer (Score:2) Monday 
+              May 01, @02:57PM 
+              Re:Abuse of monopoly powers by bunratty (Score:1) Monday May 01, 
+              @04:01PM 
+              Re:Abuse of monopoly powers by EastCoastSurfer (Score:2) Monday 
+              May 01, @09:27PM 
+              Re:Abuse of monopoly powers by bunratty (Score:2) Monday May 01, 
+              @09:35PM 
+              Re:Abuse of monopoly powers by geminidomino (Score:2) Tuesday May 
+              02, @12:22AM 
+              Re:Abuse of monopoly powers by ScottyH (Score:1) Tuesday May 02, 
+              @01:43AM 
+              Re:Abuse of monopoly powers by fymidos (Score:2) Tuesday May 02, 
+              @05:52AM 
+              Re:Abuse of monopoly powers by Handpaper (Score:2) Tuesday May 02, 
+              @05:58AM 
+            Re:Abuse of monopoly powers(Score:5, Insightful) 
+            by GreyPoopon (411036) <gpooponNO@SPAMgmail.com> on Monday May 01, 
+            @01:48PM (#15238678) 
+            If Google has leading market share in the search marketspace, how 
+            can they claim that Microsoft's intent to default to MSN in IE7 is a 
+            not competative practice. I see how the argument works from the 
+            OS/effective monopoly perspective, but the argument seems a little 
+            weak if approached a different way. 
+            I would have thought this was an easy question by now. Microsoft has 
+            a monopoly in the desktop operating system market. Microsoft 
+            leverages this monopoly to gain a new monopoly in the web browser 
+            market. Now Microsoft is leveraging the browser monopoly to 
+            overthrow its competitors and establish a monopoly in the search 
+            engine market. Can't you see where this is going? The rules are 
+            different when a company develops a monopoly. Up until that point, a 
+            practice like this would be considered shrewd business tactics, and 
+            provides healthy competition. In fact, it's even OK for their 
+            competitors to use this tactic. But when a company that has a 
+            monopoly uses tactics like this, it is considered anticompetitive 
+            and illegal. They are using a monopoly in one part of the market to 
+            gain market share (and eventually set up a monopoly) in another part 
+            of the market.
+            IE defaults to MSN as it's home page, correct? Well, MSN search is 
+            there. Google's stating that people won't use their search because 
+            users won't change the toolbar default is equivalent to saying that 
+            people don't change their default home page - which is untrue. 
+            Actually, it's true. Many people DON'T change their default home 
+            page. I helped set up three computers for family and friends in the 
+            last two years. Not one of them changed the default page from MSN 
+            until I went back later and installed Firefox. In fact, one of them 
+            asked me to make MSN the default page for Firefox because that was 
+            what they were accustomed to.
+            The OS is entrenched, but Google market share is significant over 
+            MSN's search. I mean hell, its almost 50%. How can you argue that 
+            your dominance is in danger by a company who holds 8%? 
+            Google does not yet have a monopoly in the search engine market. But 
+            for argument's sake, let's assume that they do. If they used their 
+            monopoly in the search engine market to push Google OS and Google 
+            Office to their customers (at the obvious expense of competitors), 
+            then they would be guilty. It's because the OS (Windows) and 
+            Internet Explorer are entrenched that Microsoft could easily erode 
+            the dominance that Google has. The 8% market share that MSN Search 
+            has means nothing. The 90+% market share that Internet Explorer has 
+            means EVERYTHING. Think about it.
+            [ Parent ] 
+              Re:Abuse of monopoly powers by Irish_Samurai (Score:3) Monday May 
+              01, @02:05PM 
+              Re:Abuse of monopoly powers by JacksBrokenCode (Score:1) Monday 
+              May 01, @04:12PM 
+              Re:Abuse of monopoly powers by mscamara (Score:1) Monday May 01, 
+              @07:43PM 
+              Re:Abuse of monopoly powers by bodester17 (Score:1) Tuesday May 
+              02, @10:55AM 
+              Re:Abuse of monopoly powers by GreyPoopon (Score:3) Monday May 01, 
+              @02:18PM 
+              Re:Abuse of monopoly powers by MO! (Score:2) Monday May 01, 
+              @03:55PM 
+              Re:Abuse of monopoly powers by It'sYerMam (Score:2) Monday May 01, 
+              @04:44PM 
+              Re:Abuse of monopoly powers by Ninjaesque One (Score:1) Monday May 
+              01, @09:12PM 
+              Re:Abuse of monopoly powers by fymidos (Score:2) Tuesday May 02, 
+              @06:01AM 
+              2 replies beneath your current threshold.
+            Re:Abuse of monopoly powers(Score:5, Insightful) 
+            by 99BottlesOfBeerInMyF (813746) on Monday May 01, @02:09PM 
+            (#15238882) 
+            If Google has leading market share in the search marketspace, how 
+            can they claim that Microsoft's intent to default to MSN in IE7 is a 
+            not competative practice. 
+            Easily. MS is using its monopoly to gain an advantage in the new 
+            market. That is the whole point and that is what the law forbids.
+            IE defaults to MSN as it's home page, correct? Well, MSN search is 
+            there. Google's stating that people won't use their search because 
+            users won't change the toolbar default is equivalent to saying that 
+            people don't change their default home page - which is untrue. 
+            No, it is equivalent to them saying not all users will be 
+            knowledgeable or motivated enough to change it. Firefox is far 
+            superior to IE in most ways. Even the US government recommends all 
+            users switch for security reasons. Still most people use IE. That is 
+            not because MS has forced them not to switch, it is because most 
+            don't know they can or why they should. Thus consumers use an 
+            inferior product and everyone suffers (except MS).
+            It does not matter that they can switch it. The point is some users 
+            won't know they can. Others will know they can, but won't know how. 
+            Still others will know they can and how but will be too lazy to 
+            bother. The net result is MSN gains marketshare. Can Google set the 
+            default browser included with a monopoly on all desktop OS's to 
+            google.com? No, they don't have a monopoly to abuse. Thus MS has 
+            gained market using their existing monopoly. That is blatantly 
+            illegal.
+            Where does this end? The default home page? The toolbar option? At 
+            some point this gets ridiculous. 
+            Legally, all of the above that reference a product in another 
+            market. If people make money doing something and MS takes part of 
+            that money away using their OS monopoly, they have broken the law.
+            The problem stems from the public not even understanding the 
+            difference between the competitors and not caring to change. Who's 
+            fault is that? 
+            It is not Google's job to educate or motivate the people to have to 
+            change, rather the onus is upon MS to not make choices in their OS 
+            design or settings for people that gain them market share in other 
+            markets than desktop OS's. It is part of the price you pay for 
+            having a monopoly. When you're really big, the law says you have to 
+            watch where you step so you don't crush those smaller.
+            In this case, how do you establish that? The OS is entrenched, but 
+            Google market share is significant over MSN's search. I mean hell, 
+            its almost 50%. How can you argue that your dominance is in danger 
+            by a company who holds 8%? 
+            MS's market share in Web browsers was 8% once too, before they 
+            started bundling it with the OS. Their market share for server OS's 
+            was below 8%, before they started tying it to the desktop with 
+            secret protocols. Now their products are still inferior, but one has 
+            dominated the market entirely and the other is gaining market share. 
+            Google has not locked people in in any way to their service. All MS 
+            has to do is get their search "good enough" that people won't go out 
+            of their way to change settings and they will win with this tactic. 
+            That is what is illegal. They aren't winning by producing a product 
+            that is better or even as good, just one that is "good enough" and 
+            bundled. "Good enough" is not what consumers deserve and the people 
+            that make a product that is just "good enough" should not be 
+            profiting on it over more innovative companies, just because they 
+            already have a monopoly on something else.
+            [ Parent ] 
+              Re:Abuse of monopoly powers by ThinkFr33ly (Score:3) Monday May 
+              01, @05:22PM 
+              Re:Abuse of monopoly powers by 99BottlesOfBeerInMyF (Score:2) 
+              Monday May 01, @05:41PM 
+              Re:Abuse of monopoly powers by ThinkFr33ly (Score:2) Monday May 
+              01, @05:53PM 
+              Re:Abuse of monopoly powers by 99BottlesOfBeerInMyF (Score:2) 
+              Monday May 01, @06:39PM 
+              Re:Abuse of monopoly powers by fingusernames (Score:2) Monday May 
+              01, @07:03PM 
+              Re:Abuse of monopoly powers by 2674 (Score:1) Monday May 01, 
+              @09:07PM 
+              Re:Abuse of monopoly powers by Bert64 (Score:2) Tuesday May 02, 
+              @05:44AM 
+              Re:Abuse of monopoly powers by 99BottlesOfBeerInMyF (Score:2) 
+              Tuesday May 02, @09:53AM 
+              Re:Abuse of monopoly powers by boule75 (Score:2) Tuesday May 02, 
+              @10:47AM 
+              1 reply beneath your current threshold.
+            Re:Abuse of monopoly powers by bunratty (Score:2) Monday May 01, 
+            @02:07PM 
+              Re:Abuse of monopoly powers by KDR_11k (Score:1) Monday May 01, 
+              @02:50PM 
+              Re:Abuse of monopoly powers by mydn (Score:1) Monday May 01, 
+              @02:54PM 
+                Re:Abuse of monopoly powers by bunratty (Score:2) Monday May 01, 
+                @04:03PM 
+                  Re:Abuse of monopoly powers by mydn (Score:1) Monday May 01, 
+                  @05:20PM 
+                    Re:Abuse of monopoly powers by bunratty (Score:2) Monday May 
+                    01, @09:39PM 
+                Re:Abuse of monopoly powers by 99BottlesOfBeerInMyF (Score:2) 
+                Monday May 01, @05:30PM 
+                  Re:Abuse of monopoly powers by mydn (Score:1) Monday May 01, 
+                  @07:09PM 
+                    Re:Abuse of monopoly powers by 99BottlesOfBeerInMyF 
+                    (Score:2) Tuesday May 02, @10:28AM 
+                1 reply beneath your current threshold.
+              Re:Abuse of monopoly powers by Stellian (Score:1) Monday May 01, 
+              @04:20PM 
+                1 reply beneath your current threshold.
+              Re:Abuse of monopoly powers by bunratty (Score:2) Monday May 01, 
+              @02:14PM 
+                Re:Abuse of monopoly powers by YU Nicks NE Way (Score:2) Monday 
+                May 01, @05:01PM 
+                  Re:Abuse of monopoly powers by bunratty (Score:2) Monday May 
+                  01, @09:44PM 
+                    Re:Abuse of monopoly powers by YU Nicks NE Way (Score:2) 
+                    Tuesday May 02, @10:44AM 
+                1 reply beneath your current threshold.
+              Re:Abuse of monopoly powers by homer_ca (Score:2) Monday May 01, 
+              @02:33PM 
+              1 reply beneath your current threshold.
+            Re:Abuse of monopoly powers by zsau (Score:2) Monday May 01, 
+            @06:29PM 
+              Re:Abuse of monopoly powers by mscamara (Score:1) Monday May 01, 
+              @08:07PM 
+            Re:Abuse of monopoly powers by fymidos (Score:2) Tuesday May 02, 
+            @05:41AM 
+            1 reply beneath your current threshold.
+          Re:Abuse of monopoly powers by TurdTapper (Score:3) Monday May 01, 
+          @01:40PM 
+            Re:Abuse of monopoly powers(Score:5, Insightful) 
+            by 99BottlesOfBeerInMyF (813746) on Monday May 01, @01:47PM 
+            (#15238660) 
+            Yet, Microsoft is NOT forcing anyone to adopt it. If you want to 
+            change it, you can. If someone is so unlikely to switch that's a 
+            laziness/ignorance issue on the part of the end user, not Microsoft. 
+
+            You're wrong, both conceptually and under the letter of the law. 
+            Will setting MSN as the default search engine gain MS market share 
+            for their service? Yes. Can Google gain the same advantage, not 
+            having a monopoly on desktop OS's to use? No. Thus MS has gained an 
+            unfair advantage by leveraging their monopoly. That is illegal. 
+            Whether or not this exploiting the fact that people are lazy and 
+            ignorant does not figure into it.
+            [ Parent ] 
+              Re:Abuse of monopoly powers by Holi (Score:1) Monday May 01, 
+              @03:45PM 
+              Re:Abuse of monopoly powers by 99BottlesOfBeerInMyF (Score:2) 
+              Monday May 01, @04:19PM 
+              Re:Abuse of monopoly powers by It'sYerMam (Score:2) Monday May 01, 
+              @04:51PM 
+              Re:Abuse of monopoly powers by Duhavid (Score:2) Monday May 01, 
+              @09:36PM 
+            Re:Abuse of monopoly powers by KDR_11k (Score:1) Monday May 01, 
+            @03:01PM 
+              Re:Abuse of monopoly powers by KDR_11k (Score:1) Monday May 01, 
+              @03:25PM 
+              1 reply beneath your current threshold.
+            Re:Abuse of monopoly powers by nemui-chan (Score:2) Monday May 01, 
+            @03:27PM 
+            You Can't Disregard Key Factors! by Makarakalax (Score:2) Tuesday 
+            May 02, @06:12AM 
+            1 reply beneath your current threshold.
+          Re:Abuse of monopoly powers by Atmchicago (Score:2) Monday May 01, 
+          @02:07PM 
+          Re:Abuse of monopoly powers by Trouvist (Score:1) Monday May 01, 
+          @02:10PM 
+            Re:Abuse of monopoly powers by KDR_11k (Score:1) Monday May 01, 
+            @03:07PM 
+              Re:Abuse of monopoly powers by Achromus (Score:1) Monday May 01, 
+              @03:55PM 
+            Re:Abuse of monopoly powers by fymidos (Score:2) Tuesday May 02, 
+            @06:08AM 
+          There is Not as much Abuse of monopoly powers by oscartheduck 
+          (Score:1) Monday May 01, @02:23PM 
+          huh?! how about google and gmail? by bluenote39 (Score:1) Monday May 
+          01, @04:05PM 
+          Re:Abuse of monopoly powers by hoppo (Score:1) Monday May 01, @04:08PM 
+
+          Re:Abuse of monopoly powers by Khuffie (Score:2) Monday May 01, 
+          @04:16PM 
+            Re:Abuse of monopoly powers by rdoger6424 (Score:1) Monday May 01, 
+            @08:20PM 
+          Breakup Google by ghoul (Score:2) Monday May 01, @05:35PM 
+          Re:Abuse of monopoly powers by mscamara (Score:1) Monday May 01, 
+          @07:35PM 
+          1 reply beneath your current threshold.
+        Re:Defaults vs. Presets by Kihaji (Score:1) Monday May 01, @01:18PM 
+          Logical Fallacy Alert! False Dilemma Detected!(Score:4, Insightful) 
+          by Kelson (129150) * on Monday May 01, @01:29PM (#15238488) 
+          (http://www.hyperborea.org/journal/) 
+          Don't believe for one moment that Google's motives are pure and "do no 
+          evil".
+
+          Not to make a judgment about Google specifically, but it's entirely 
+          possible to have impure motives without doing evil to get there. 
+          Motives are about ends, doing evil is about means. (Of course, there 
+          are certain ends that you can only achieve by doing evil -- like 
+          deciding to f*ing kill someone.)
+
+          One's motive could be to make huge piles of cash, but one could go 
+          about it ethically. One could even try to compete on both technical 
+          and PR levels.
+          [ Parent ] 
+            Re:Logical Fallacy Alert! False Dilemma Detected! by Kihaji 
+            (Score:1) Monday May 01, @02:54PM 
+              Re:Logical Fallacy Alert! False Dilemma Detected! by Kelson 
+              (Score:3) Monday May 01, @03:30PM 
+            Re:Logical Fallacy Alert! False Dilemma Detected! by abb3w (Score:2) 
+            Tuesday May 02, @11:47AM 
+            1 reply beneath your current threshold.
+        Re:Defaults vs. Presets by bhirsch (Score:2) Monday May 01, @01:22PM 
+          Re:Defaults vs. Presets by mfrank (Score:2) Monday May 01, @01:50PM 
+            Re:Defaults vs. Presets by bhirsch (Score:1) Monday May 01, @02:13PM 
+
+              Re:Defaults vs. Presets by bunratty (Score:3) Monday May 01, 
+              @02:17PM 
+              Re:Defaults vs. Presets by bhirsch (Score:2) Monday May 01, 
+              @02:31PM 
+              Re:Defaults vs. Presets by bunratty (Score:2) Monday May 01, 
+              @02:37PM 
+              Re:Defaults vs. Presets by bhirsch (Score:2) Monday May 01, 
+              @02:45PM 
+              Re:Defaults vs. Presets by bunratty (Score:2) Monday May 01, 
+              @04:10PM 
+              1 reply beneath your current threshold.
+            Re:Defaults vs. Presets by Kihaji (Score:1) Monday May 01, @05:44PM 
+          Re:Defaults vs. Presets by bhirsch (Score:2) Monday May 01, @03:50PM 
+            Re:Defaults vs. Presets by swv3752 (Score:2) Monday May 01, @05:38PM 
+
+              Re:Defaults vs. Presets by bhirsch (Score:2) Monday May 01, 
+              @07:24PM 
+                Re:Defaults vs. Presets by swv3752 (Score:2) Monday May 01, 
+                @10:18PM 
+                  Re:Defaults vs. Presets by bhirsch (Score:2) Tuesday May 02, 
+                  @08:46AM 
+                    Re:Defaults vs. Presets by swv3752 (Score:2) Wednesday May 
+                    03, @08:42PM 
+                      Re:Defaults vs. Presets by bhirsch (Score:2) Thursday May 
+                      04, @08:51AM 
+              Re:Defaults vs. Presets by mscamara (Score:1) Monday May 01, 
+              @08:24PM 
+          Re:Defaults vs. Presets by amliebsch (Score:2) Monday May 01, @04:53PM 
+
+          1 reply beneath your current threshold.
+        mod parent up by bill_kress (Score:2) Monday May 01, @01:25PM 
+        But that's EXACTLY how Google makes its money by ScentCone (Score:2) 
+        Monday May 01, @01:51PM 
+        Re:Defaults vs. Presets by udayb (Score:1) Monday May 01, @02:03PM 
+        Re:Defaults vs. Presets by finnif (Score:1) Monday May 01, @02:45PM 
+          Re:Defaults vs. Presets by sbrown123 (Score:2) Monday May 01, @03:05PM 
+
+            Re:Defaults vs. Presets by amliebsch (Score:2) Monday May 01, 
+            @04:55PM 
+              Re:Defaults vs. Presets by sbrown123 (Score:2) Tuesday May 02, 
+              @10:38AM 
+        Google makes BUCKETS of money from firefox.. by cybrthng (Score:2) 
+        Monday May 01, @04:06PM 
+        Re:Defaults vs. Presets by Bravoc (Score:1) Monday May 01, @05:21PM 
+        Re:Defaults vs. Presets by voxelz (Score:1) Monday May 01, @05:35PM 
+        Re:Defaults vs. Presets by ssuchter (Score:1) Monday May 01, @07:08PM 
+        Re:Defaults vs. Presets by xcham (Score:1) Monday May 01, @08:25PM 
+        Re:Defaults vs. Presets by rtb61 (Score:2) Monday May 01, @08:38PM 
+        Re:Defaults vs. Presets by encyclo (Score:1) Monday May 01, @08:59PM 
+        2 replies beneath your current threshold.
+      Re:Defaults vs. Presets by AdamRich1 (Score:1) Monday May 01, @05:01PM 
+    Re:Defaults vs. Presets by litecode (Score:1) Monday May 01, @12:45PM 
+      Re:Defaults vs. Presets by plague3106 (Score:1) Monday May 01, @12:50PM 
+    Re:Defaults vs. Presets by TripMaster Monkey (Score:2) Monday May 01, 
+    @12:45PM 
+      Re:Defaults vs. Presets by gurps_npc (Score:3) Monday May 01, @01:15PM 
+        Re:Defaults vs. Presets by EastCoastSurfer (Score:2) Monday May 01, 
+        @01:25PM 
+          Re:Defaults vs. Presets(Score:4, Informative) 
+          by tmasssey (546878) on Monday May 01, @01:52PM (#15238729) 
+          (http://www.outoftheboxsolutions.com/ | Last Journal: Monday April 17, 
+          @11:36AM) 
+          I'll think about it for an hour. Still makes sense. Why? Microsoft is 
+          a monopoly. Monopolies cannot use their monopoly product (the OS, and 
+          according to MS, IE is part of the OS) to leverage other products.
+          Now, this is not impossible to be gotten around. The entire reason why 
+          Windows XP was shipped one year after Windows 2000 is simple: 
+          Microsoft wanted to bundle Windows Messenger, and a new version of IE 
+          and Outlook Express with Windows 2000. But they couldn't. How do you 
+          get around that?
+          Simple: make them an "inseparable" part of a "new" operating system. 
+          Voila! Windows XP.
+          In any case, the spirit is obvious: MS should not be able to do this. 
+          The *leteter*, though, may be different...
+          [ Parent ] 
+            Re:Defaults vs. Presets by tddoog (Score:1) Monday May 01, @04:53PM 
+            Re:Defaults vs. Presets by TheNetAvenger (Score:2) Monday May 01, 
+            @06:05PM 
+            Re:Defaults vs. Presets by p3d0 (Score:1) Monday May 01, @06:10PM 
+            1 reply beneath your current threshold.
+        Re:Defaults vs. Presets(Score:5, Insightful) 
+        by qodfathr (255387) on Monday May 01, @01:26PM (#15238439) 
+          Because Firefox does not gain from making Google a default
+
+
+        Didn't Mozilla.org make a TON of money off of Google referals directly 
+        related to the Firefox search box?
+        [ Parent ] 
+          Re:Defaults vs. Presets(Score:5, Interesting) 
+          by NutscrapeSucks (446616) on Monday May 01, @02:26PM (#15239039) 
+          Yeah, Google employs Firefox developers directly and indirectly pays 
+          Mozilla salaries. I suppose technically they're independant, but 
+          realistically Mozilla.org is a division of Google, Inc.
+          [ Parent ] 
+          Re:Defaults vs. Presets by Penguin Programmer (Score:1) Monday May 01, 
+          @02:54PM 
+            Re:Defaults vs. Presets by assassinator42 (Score:2) Monday May 01, 
+            @03:32PM 
+          Re:Defaults vs. Presets by Beryllium Sphere(tm) (Score:2) Monday May 
+          01, @04:57PM 
+          1 reply beneath your current threshold.
+        Re:Defaults vs. Presets by denominateur (Score:2) Monday May 01, 
+        @01:30PM 
+          Re:Defaults vs. Presets by bunratty (Score:2) Monday May 01, @02:12PM 
+          Re:Defaults vs. Presets by Americano (Score:3) Monday May 01, @02:47PM 
+
+        Re:Defaults vs. Presets by spongman (Score:2) Monday May 01, @01:51PM 
+        Re:Defaults vs. Presets by teal_ (Score:1) Monday May 01, @02:21PM 
+          Re:Defaults vs. Presets by Moofie (Score:1) Tuesday May 02, @12:41AM 
+        Re:Defaults vs. Presets by vondo (Score:2) Monday May 01, @02:37PM 
+        Re:Defaults vs. Presets by Wyatt Galen Houtz (Score:1) Monday May 01, 
+        @02:53PM 
+        Re:Defaults vs. Presets by johansalk (Score:2) Monday May 01, @03:28PM 
+        Re:Defaults vs. Presets by Merlinus (Score:1) Tuesday May 02, @11:39AM 
+        1 reply beneath your current threshold.
+      Re:Defaults vs. Presets by Whiney Mac Fanboy (Score:3) Monday May 01, 
+      @01:18PM 
+      Re:Defaults vs. Presets by Vexorian (Score:1) Monday May 01, @01:31PM 
+        Re:Defaults vs. Presets by Baricom (Score:3) Monday May 01, @02:08PM 
+          Re:Defaults vs. Presets by Bert64 (Score:2) Tuesday May 02, @05:04AM 
+            Re:Defaults vs. Presets by Baricom (Score:2) Wednesday May 03, 
+            @12:00AM 
+              Re:Defaults vs. Presets by Bert64 (Score:2) Thursday May 04, 
+              @09:26AM 
+      Re:Defaults vs. Presets by Rachel Lucid (Score:1) Monday May 01, @01:34PM 
+      Re:Defaults vs. Presets by Khammurabi (Score:1) Monday May 01, @01:49PM 
+      Re:Defaults vs. Presets by MikeFM (Score:2) Monday May 01, @01:55PM 
+      Re:Defaults vs. Presets by NoMoreNicksLeft (Score:2) Monday May 01, 
+      @02:19PM 
+        Re:Defaults vs. Presets by drinkypoo (Score:3) Monday May 01, @02:27PM 
+          Re:Defaults vs. Presets by swv3752 (Score:2) Monday May 01, @05:43PM 
+            Re:Defaults vs. Presets by NoMoreNicksLeft (Score:2) Monday May 01, 
+            @05:51PM 
+      Re:Defaults vs. Presets by nstlgc (Score:1) Monday May 01, @02:24PM 
+      Re:Defaults vs. Presets by Tom (Score:2) Monday May 01, @02:51PM 
+      Re:Defaults vs. Presets by RoyalPeasantry (Score:2) Monday May 01, 
+      @03:05PM 
+      Re:Defaults vs. Presets by Beryllium Sphere(tm) (Score:2) Monday May 01, 
+      @04:49PM 
+      Re:Defaults vs. Presets by beemishboy (Score:1) Monday May 01, @06:06PM 
+      Re:Defaults vs. Presets by Bert64 (Score:2) Tuesday May 02, @04:23AM 
+      2 replies beneath your current threshold.
+    Re:Defaults vs. Presets(Score:5, Insightful) 
+    by jxyama (821091) on Monday May 01, @12:45PM (#15237998) 
+    >Of course, if you've never used the box before, it starts out with 
+Google...
+    That's precisely what "default" means.
+    [ Parent ] 
+      Re:Defaults vs. Presets by Kelson (Score:2) Monday May 01, @01:11PM 
+        Re:Defaults vs. Presets by Changa_MC (Score:1) Monday May 01, @01:50PM 
+          Re:Defaults vs. Presets by Kelson (Score:2) Monday May 01, @02:06PM 
+      Re:Defaults vs. Presets by houghi (Score:2) Monday May 01, @01:15PM 
+        Re:Defaults vs. Presets by RalphSleigh (Score:2) Monday May 01, @01:29PM 
+
+          Re:Defaults vs. Presets by houghi (Score:2) Monday May 01, @03:01PM 
+        Re:Defaults vs. Presets by Griffinart (Score:1) Monday May 01, @01:51PM 
+      Submitter's remark by Overly Critical Guy (Score:2) Monday May 01, 
+      @03:20PM 
+    Re:Defaults vs. Presets(Score:5, Insightful) 
+    by sehryan (412731) on Monday May 01, @12:47PM (#15238010) 
+    The problem with that defense of Firefox and Google is that Firefox doesn't 
+    ask you to specify which one you would like to use, it just defaults to it. 
+    And as the summary points out, MSN isn't even an option. Google isn't 
+    bitching about that, because it is in their favor (default home page is also 
+    a Google site), as opposed to IE7, which isn't.
+
+    The stronger case is made in the fact that, when released, IE7 will become 
+    the dominant browser on the market. So whatever the default is set to, is 
+    probably going to remain on a bulk of the computers it is on. But if someone 
+    is going to bitch about setting a default without asking, the same standard 
+    should apply to Firefox/Google.
+    [ Parent ] 
+      Re:Defaults vs. Presets by jachim69 (Score:2) Monday May 01, @01:13PM 
+        Re:Defaults vs. Presets by I'm Don Giovanni (Score:1) Monday May 01, 
+        @04:25PM 
+          Re:Defaults vs. Presets by Bert64 (Score:2) Tuesday May 02, @05:10AM 
+      Re:Defaults vs. Presets(Score:5, Informative) 
+      by kimvette (919543) on Monday May 01, @01:29PM (#15238484) 
+      (http://kim.biyn.com/ | Last Journal: Monday October 03, @08:06PM) 
+      Hmm,
+
+      I run Firefox 1.5.0.1 and MSN is indeed an available option. IIRC I did 
+      have to select "Add Engines" but it is most definitely in the list now, as 
+      is Dictionary, IMDB, and Wikipedia respectively.
+      [ Parent ] 
+      Re:Defaults vs. Presets by j_d_williams (Score:1) Monday May 01, @01:30PM 
+      Re:Defaults vs. Presets by antoinjapan (Score:2) Monday May 01, @01:36PM 
+      Re:Defaults vs. Presets by frdmfghtr (Score:2) Monday May 01, @01:58PM 
+        Re:Defaults vs. Presets by RoyalPeasantry (Score:1) Monday May 01, 
+        @03:20PM 
+          Re:Defaults vs. Presets by frdmfghtr (Score:2) Monday May 01, @06:01PM 
+
+            Re:Defaults vs. Presets by RoyalPeasantry (Score:1) Monday May 01, 
+            @07:12PM 
+        Re:Defaults vs. Presets by evil_tandem (Score:1) Monday May 01, @03:49PM 
+
+      Re:Defaults vs. Presets(Score:4, Insightful) 
+      by 99BottlesOfBeerInMyF (813746) on Monday May 01, @03:06PM (#15239403) 
+      The problem with that defense of Firefox and Google is that Firefox 
+      doesn't ask you to specify which one you would like to use, it just 
+      defaults to it. 
+        Google - has a monopoly on nothing. Thus it has no ability to illegally 
+        leverage a monopoly. 
+        Firefox - has a monopoly on nothing. Thus it has no ability to illegally 
+        leverage a monopoly. 
+        Microsoft - has a monopoly on desktop OS's. Thus it is forbidden from 
+        using that desktop OS to gain market share in another market, i.e. 
+        search engine services. 
+      But if someone is going to bitch about setting a default without asking, 
+      the same standard should apply to Firefox/Google. 
+      The same standard is applied. As soon as either of them gains a monopoly 
+      and enters into the other's market (or any other market) they will 
+      forbidden from abusing the first monopoly from gaining market share in the 
+      second. For example, If google dominates the search services industry and 
+      is declared a monopoly it is illegal for them to intentionally change 
+      their search algorithm to always return GoogleOS or GoogleBrowser as the 
+      first search result for "OS" or "Web browser."
+      Microsoft is in the wrong here.
+      [ Parent ] 
+        Re:Defaults vs. Presets by 99BottlesOfBeerInMyF (Score:2) Tuesday May 
+        02, @10:05AM 
+        1 reply beneath your current threshold.
+      Re:Defaults vs. Presets by Jesus IS the Devil (Score:2) Monday May 01, 
+      @07:57PM 
+      1 reply beneath your current threshold.
+    Re:Defaults vs. Presets(Score:5, Funny) 
+    by Muerte2 (121747) on Monday May 01, @12:55PM (#15238095) 
+    (http://www.perturb.org/) 
+    I don't know where you got your information. My copy of IE7 came with: MSN, 
+    Yahoo, Google, and Ebay. I quickly switched from MSN to Google in about 3 
+    seconds. Then I remembered I was running IE7 and promptly switched back to 
+    Firefox.
+    [ Parent ] 
+      Re:Defaults vs. Presets by Kelson (Score:3) Monday May 01, @01:18PM 
+        Re:Defaults vs. Presets by Muerte2 (Score:1) Monday May 01, @01:35PM 
+          Re:Defaults vs. Presets by Kelson (Score:2) Monday May 01, @02:11PM 
+          1 reply beneath your current threshold.
+        IE7 uses IE6's previous search settings by I'm Don Giovanni (Score:1) 
+        Monday May 01, @04:33PM 
+        Re:Defaults vs. Presets by kevmo (Score:2) Tuesday May 02, @12:43AM 
+        1 reply beneath your current threshold.
+      Re:Defaults vs. Presets by krunk4ever (Score:2) Tuesday May 02, @02:19AM 
+    Re:Defaults vs. Presets by Jherek Carnelian (Score:2) Monday May 01, 
+    @12:58PM 
+      2 replies beneath your current threshold.
+    Re:Defaults vs. Presets(Score:4, Interesting) 
+    by MtViewGuy (197597) on Monday May 01, @01:07PM (#15238244) 
+    Talk about sour grapes.
+
+    When you first install Firefox, the default search provider is Google, and 
+    in fact Google even kindly provides their own startup page for Firefox 
+users!
+
+    The fact you can easily change the configuration of Internet Explorer 7.0 to 
+    default to Google instead of MSN Search shows that (IMO) Microsoft hasn't 
+    really done anything wrong.
+    [ Parent ] 
+      Re:Defaults vs. Presets by Makarakalax (Score:1) Tuesday May 02, @06:20AM 
+    Re:Defaults vs. Presets by chaboud (Score:2) Monday May 01, @01:09PM 
+      Re:Defaults vs. Presets by camcorder (Score:1) Monday May 01, @01:27PM 
+      Re:Defaults vs. Presets by Tony Hoyle (Score:3) Monday May 01, @01:55PM 
+      1 reply beneath your current threshold.
+    Which is most lucrative? by Bombula (Score:2) Monday May 01, @01:10PM 
+    The real issue is Free vs. Non Free. by twitter (Score:2) Monday May 01, 
+    @01:18PM 
+      Re:The real issue is Free vs. Non Free. by Anonymous Coward (Score:1) 
+      Monday May 01, @01:36PM 
+      Re:The real issue is Free vs. Non Free. by Winckle (Score:2) Monday May 
+      01, @03:11PM 
+        Re:The real issue is Free vs. Non Free. by theCoder (Score:2) Tuesday 
+        May 02, @08:34AM 
+      Apple's OSX "distro" only uses Google by I'm Don Giovanni (Score:1) Monday 
+      May 01, @04:47PM 
+    Search Box vs. No Search Box by kindbud (Score:2) Monday May 01, @01:23PM 
+      Re:Search Box vs. No Search Box by Kelson (Score:3) Monday May 01, 
+      @01:31PM 
+        Re:Search Box vs. No Search Box by kindbud (Score:2) Monday May 01, 
+        @07:23PM 
+      Re:Search Box vs. No Search Box by denominateur (Score:1) Monday May 01, 
+      @01:47PM 
+      Re:Search Box vs. No Search Box by blazerw11 (Score:2) Monday May 01, 
+      @01:51PM 
+      Re:Search Box vs. No Search Box by Changa_MC (Score:1) Monday May 01, 
+      @01:54PM 
+    Re:Defaults vs. Presets by danielk1982 (Score:2) Monday May 01, @01:27PM 
+    Re:Defaults vs. Presets(Score:5, Insightful) 
+    by Androclese (627848) on Monday May 01, @01:32PM (#15238522) 
+      The main difference between the IE7 search box and the Firefox and Opera 
+      search boxes is that the IE7 search box comes preloaded with only one 
+      search provider: MSN. Firefox and Opera both include a half-dozen or so 
+      providers when you install them. (You can add additional search engines in 
+      all three.)
+    Everybody is missing the primary point. You almost got it right, but your 
+    first sentence went a few words too long.
+    The main difference between the IE7 and the Firefox and Opera is that the 
+    IE7 search box comes preloaded. 
+    IE will come with any new OS. Firefox and Opera will not.
+    IE is, by definition a Default & Preset. IE is forced upon you, Firefox and 
+    Opera is chosen.
+    That is where the compaint is based from.
+    [ Parent ] 
+      Re:Defaults vs. Presets by MrCopilot (Score:2) Monday May 01, @02:52PM 
+      Re:Defaults vs. Presets by 99BottlesOfBeerInMyF (Score:2) Monday May 01, 
+      @03:11PM 
+      Re:Defaults vs. Presets by suv4x4 (Score:2) Monday May 01, @03:48PM 
+      Re:Defaults vs. Presets by ghislain_leblanc (Score:1) Monday May 01, 
+      @04:56PM 
+        Re:Defaults vs. Presets by Bert64 (Score:2) Tuesday May 02, @05:21AM 
+      Re:Defaults vs. Presets by Yankovic (Score:2) Monday May 01, @07:50PM 
+      Re:Defaults vs. Presets by Duds (Score:2) Tuesday May 02, @04:24AM 
+      Not quite correct.. by slashmojo (Score:1) Tuesday May 02, @08:15AM 
+      3 replies beneath your current threshold.
+    Re:Defaults vs. Presets by EnderWigginsXenocide (Score:2) Monday May 01, 
+    @01:40PM 
+    Re:Defaults vs. Presets by spongman (Score:2) Monday May 01, @01:42PM 
+    Re:Defaults vs. Presets by fredclown (Score:1) Monday May 01, @01:52PM 
+    A better default than Google? by RareButSeriousSideEf (Score:1) Monday May 
+    01, @01:55PM 
+    Re:Defaults vs. Presets by PsychicX (Score:2) Monday May 01, @02:02PM 
+      Re:Defaults vs. Presets by Kelson (Score:2) Monday May 01, @02:27PM 
+    Re:Defaults vs. Presets by MyDixieWrecked (Score:2) Monday May 01, @02:52PM 
+      Re:Defaults vs. Presets by danielk1982 (Score:2) Monday May 01, @03:48PM 
+    The Mozilla foundation isn't an abusive monopolist by NatteringNabob 
+    (Score:2) Monday May 01, @03:04PM 
+    Re:Defaults vs. Presets by farble1670 (Score:1) Monday May 01, @04:05PM 
+    Re:Defaults vs. Presets by Joao (Score:2) Monday May 01, @04:09PM 
+    Re:Defaults vs. Presets by spectrumCoder (Score:1) Monday May 01, @05:11PM 
+    Re:Defaults vs. Presets by towsonu2003 (Score:1) Monday May 01, @05:45PM 
+      Re:Defaults vs. Presets by corrosive_nf (Score:1) Monday May 01, @11:04PM 
+    Re:Defaults vs. Presets by C0rinthian (Score:2) Monday May 01, @07:24PM 
+    Re:Defaults vs. Presets by Raffaello (Score:2) Tuesday May 02, @01:20AM 
+    Re:Defaults vs. Presets by drivekiller (Score:1) Tuesday May 02, @01:48AM 
+    Re:Defaults vs. Presets by spinel (Score:1) Tuesday May 02, @09:55AM 
+    7 replies beneath your current threshold.
+  Safari search(Score:5, Insightful) 
+  by mapinguari (110030) on Monday May 01, @12:40PM (#15237921) 
+  Google didn't complain much when Safari came out with a Google-only search 
+box.
+    The funny thing is by PhrostyMcByte (Score:3) Monday May 01, @01:06PM 
+    Re:Safari search by Whiney Mac Fanboy (Score:2) Monday May 01, @01:10PM 
+    Re:Safari search by porcupine8 (Score:2) Monday May 01, @01:26PM 
+      Re:Safari search by CableModemSniper (Score:1) Monday May 01, @02:07PM 
+      Re:Safari search by Dis*abstraction (Score:1) Monday May 01, @02:11PM 
+      Re:Safari search by 99BottlesOfBeerInMyF (Score:2) Monday May 01, @04:59PM 
+
+        Re:Safari search by porcupine8 (Score:2) Monday May 01, @05:49PM 
+          Re:Safari search by 99BottlesOfBeerInMyF (Score:2) Monday May 01, 
+          @06:26PM 
+    Re:Safari search by Jugalator (Score:2) Monday May 01, @04:13PM 
+    Re:Safari search by SilentChris (Score:2) Monday May 01, @12:59PM 
+    Re:Safari search by ucahg (Score:3) Monday May 01, @01:00PM 
+      Re:Safari search by gEvil (beta) (Score:2) Monday May 01, @01:10PM 
+      Re:Safari search by Rufus211 (Score:2) Monday May 01, @01:16PM 
+        Re:Safari search by Kirby-meister (Score:1) Monday May 01, @01:50PM 
+        1 reply beneath your current threshold.
+      It is customizable (with a free 3rd-party plugin) by kiddailey (Score:2) 
+      Monday May 01, @01:22PM 
+      Re:Safari search(Score:5, Insightful) 
+      by AeroIllini (726211) <aeroillini&gmail,com> on Monday May 01, @01:37PM 
+      (#15238564) 
+      Microsoft is certainly in their right to do this. It's no different. It 
+      should make absolutely no difference whether the product being promoted is 
+      yours or a third party's.
+
+      It absolutely makes a difference.
+
+      Microsoft is a convicted monopolist. That means the *rules change*. They 
+      can no longer just operate normally like a standard, 
+      non-convicted-monopolist business can. There is a very strict set of rules 
+      they have to follow in order to maintain competition in the marketplace, 
+      and these rules are different from those of other companies.
+
+      Google was right to bring this up. Since the Department of Justice doesn't 
+      seem interested in following up on the conviction, it is up to the other 
+      big players in the industry to point out the ways that Microsoft is 
+      violating the anti-trust provisions. The other browsers can default to 
+      whichever search engine they want, even if they make money from it. 
+      Microsoft cannot.
+      [ Parent ] 
+        Re:Safari search by I'm Don Giovanni (Score:1) Monday May 01, @05:18PM 
+          Re:Safari search by 99BottlesOfBeerInMyF (Score:2) Monday May 01, 
+          @06:09PM 
+          Re:Safari search by GaryPatterson (Score:2) Monday May 01, @10:53PM 
+          1 reply beneath your current threshold.
+        Re:Safari search by Cougem (Score:2) Monday May 01, @07:05PM 
+          1 reply beneath your current threshold.
+        Re:Safari search by rbarreira (Score:2) Tuesday May 02, @04:12AM 
+          Re:Safari search by 99BottlesOfBeerInMyF (Score:2) Tuesday May 02, 
+          @03:12PM 
+        1 reply beneath your current threshold.
+      Re:Safari search by SydShamino (Score:3) Monday May 01, @01:41PM 
+      Re:Safari search by JOrgePeixoto (Score:1) Monday May 01, @02:25PM 
+      Re:Safari search by evil_tandem (Score:1) Monday May 01, @04:16PM 
+      Re:Safari search by gnud (Score:1) Monday May 01, @06:59PM 
+      5 replies beneath your current threshold.
+    2 replies beneath your current threshold.
+  Neither did Microsoft. by Poromenos1 (Score:3) Monday May 01, @12:40PM 
+    Re:Neither did Microsoft. by alex_guy_CA (Score:2) Monday May 01, @12:45PM 
+      Re:Neither did Microsoft. by DaHat (Score:2) Monday May 01, @12:47PM 
+        Re:Neither did Microsoft. by alex_guy_CA (Score:2) Monday May 01, 
+        @12:59PM 
+        Re:Neither did Microsoft. by georgewad (Score:1) Monday May 01, @01:02PM 
+
+        Re:Neither did Microsoft. by SydShamino (Score:2) Monday May 01, 
+        @01:45PM 
+          Re:Neither did Microsoft. by DaHat (Score:2) Monday May 01, @01:53PM 
+            Re:Neither did Microsoft. by geoffspear (Score:2) Monday May 01, 
+            @02:24PM 
+              Re:Neither did Microsoft. by DaHat (Score:2) Monday May 01, 
+              @02:38PM 
+              Re:Neither did Microsoft. by geoffspear (Score:2) Monday May 01, 
+              @02:45PM 
+              Re:Neither did Microsoft. by SydShamino (Score:2) Tuesday May 02, 
+              @03:40PM 
+            Re:Neither did Microsoft. by Cro Magnon (Score:2) Monday May 01, 
+            @02:30PM 
+        2 replies beneath your current threshold.
+      Re:Neither did Microsoft. by slimme (Score:2) Monday May 01, @01:00PM 
+    Re:Neither did Microsoft. by Elwaryn (Score:1) Monday May 01, @01:27PM 
+    1 reply beneath your current threshold.
+  Firefox can do it, Microsoft probably can't(Score:5, Insightful) 
+  by yagu (721525) * <`yayagu' `at' `gmail.com'> on Monday May 01, @12:41PM 
+  (#15237934) 
+  (Last Journal: Sunday April 16, @12:44PM) 
+  From the slashdot summary: 
+    I notice that in my version of Firefox the search box defaults to Google, 
+    and that the pull-down menu of pre-entered options doesn't even include MSN 
+    Search, but Google seems to have been oddly quiet on that front for the many 
+    years prior to IE7 that Firefox has made this feature available.
+  Google's concern and complaint is Microsoft is once again leveraging their 
+  monopoly in their Windows domain to control unfairly users' choice to some 
+  other market or product, in this case, search engine choice. It could be 
+  problematic, maybe even legally, that Microsoft sets the default search to 
+  theirs, even though they offer other choices. I agree with Google's complaint 
+  and would like to see Microsoft forced to make choosing the search engine part 
+  of the setup procedure. 
+  As for the slashdot summary observation Firefox hasn't done the same, Firefox 
+  has no monopoly and is therefor in no way obligated in the same way as 
+  Microsoft to change the default behavior. 
+  As an aside, and a question, has anyone else had trouble with IE7? In keeping 
+  with "knowing your enemy", I installed IE7, and it crashes consistently every 
+  time I open up a new page in a new tab. Anyone else seen this?
+    Google != Mozilla Foundation(Score:5, Insightful) 
+    by eldavojohn (898314) * on Monday May 01, @12:47PM (#15238013) 
+    (http://slashdot.org/~eldavojohn/journal/ | Last Journal: Sunday May 14, 
+    @09:12AM) 
+    I agree with the parent post, but I'll attempt to target the real problems 
+    with the analogy a little more concretely. 
+
+    The most important difference here is that Google is not a subsidiary or 
+    owned by the Mozilla Foundation whereas MSN is owned by Microsoft. 
+
+    Firefox and Google are two companies that are (to my knowledge) completely 
+    independent. Firefox can choose whatever search engine they want to set to 
+    default. On top of that, you don't pay for Firefox where you kind of paid 
+    for IE7. 
+
+    The author's analogy of: 
+      I notice that in my version of Firefox the search box defaults to Google, 
+      and that the pulldown menu of pre-entered options doesn't even include MSN 
+      Search, but Google seems to have been oddly quiet on that front for the 
+      many years prior to IE7 that Firefox has made this feature available."
+    Is, in my opinion, a poor one. A Mozilla based browser is free for almost 
+    any operating system while IE7 is free ... so long as you've purchased 
+    Windows [microsoft.com]. 
+
+    To recap, Microsoft putting Microsoft as the default search engine is bad 
+    because they are using their operating system and browser market dominance 
+    to corner the search engine market. They have no right to do that. Where 
+    would we make them stop? It's kind of a slippery slope. It's fine that 
+    they've put unlimited funds toward web search and the console market--it's 
+    not fine if their forcing or even defaulting their users to themselves in 
+    other markets.
+    [ Parent ] 
+      Re:Google != Mozilla Foundation by Aladrin (Score:2) Monday May 01, 
+      @01:29PM 
+      Re:Google != Mozilla Foundation by 53cur!ty (Score:1) Monday May 01, 
+      @01:32PM 
+      Re:Google != Mozilla Foundation by saleenS281 (Score:2) Monday May 01, 
+      @01:50PM 
+      Re:Google != Mozilla Foundation by richmaine (Score:2) Monday May 01, 
+      @02:25PM 
+      Re:Google != Mozilla Foundation by DragonWriter (Score:2) Monday May 01, 
+      @02:48PM 
+      Re:Google != Mozilla Foundation by Xedium (Score:1) Monday May 01, 
+      @03:48PM 
+        Re:Google != Mozilla Foundation by nosferatu1001 (Score:1) Monday May 
+        01, @04:25PM 
+      1 reply beneath your current threshold.
+    Re:Firefox can do it, Microsoft probably can't by vivek7006 (Score:2) Monday 
+    May 01, @12:48PM 
+    What monopoly? by MikeRT (Score:3) Monday May 01, @12:49PM 
+      Re:What monopoly? by aesiamun (Score:1) Monday May 01, @01:25PM 
+        Re:What monopoly? by schnikies79 (Score:1) Monday May 01, @01:41PM 
+          Re:What monopoly? by T-Ranger (Score:1) Monday May 01, @04:04PM 
+        Re:What monopoly? by evil_tandem (Score:1) Monday May 01, @04:29PM 
+          Re:What monopoly? by aesiamun (Score:1) Tuesday May 02, @04:23PM 
+            Re:What monopoly? by evil_tandem (Score:1) Tuesday May 02, @07:08PM 
+      2 replies beneath your current threshold.
+    Re:Firefox can do it, Microsoft probably can't by QuietLagoon (Score:2) 
+    Monday May 01, @12:51PM 
+    Re:Firefox can do it, Microsoft probably can't by cultrhetor (Score:1) 
+    Monday May 01, @12:52PM 
+      Re:Firefox can do it, Microsoft probably can't by Malor (Score:2) Monday 
+      May 01, @01:05PM 
+        Re:Firefox can do it, Microsoft probably can't by BootNinja (Score:1) 
+        Monday May 01, @01:52PM 
+        1 reply beneath your current threshold.
+    Re:Firefox can do it, Microsoft probably can't by M-G (Score:2) Monday May 
+    01, @12:56PM 
+      Re:Firefox can do it, Microsoft probably can't by YU Nicks NE Way 
+      (Score:2) Monday May 01, @01:01PM 
+        Re:Firefox can do it, Microsoft probably can't by Kaki Nix Sain 
+        (Score:1) Monday May 01, @01:15PM 
+      Re:Firefox can do it, Microsoft probably can't by EddWo (Score:2) Monday 
+      May 01, @01:14PM 
+        Re:Firefox can do it, Microsoft probably can't by EddWo (Score:2) Monday 
+        May 01, @01:22PM 
+          Re:Firefox can do it, Microsoft probably can't by I'm Don Giovanni 
+          (Score:1) Monday May 01, @05:36PM 
+      1 reply beneath your current threshold.
+    Re:Firefox can do it, Microsoft probably can't by rxmd (Score:2) Monday May 
+    01, @12:57PM 
+    Re:Firefox can do it, Microsoft probably can't(Score:4, Funny) 
+    by morgan_greywolf (835522) on Monday May 01, @01:00PM (#15238146) 
+    (Last Journal: Monday July 11, @12:00PM) 
+    it crashes consistently
+
+    Oh, that feature's been in there at least since 4.0!
+    [ Parent ] 
+    Re:Firefox can do it, Microsoft probably can't by mattwarden (Score:2) 
+    Monday May 01, @01:00PM 
+    Re:Firefox can do it, Microsoft probably can't by echinda (Score:1) Monday 
+    May 01, @01:11PM 
+    Re:Firefox can do it, Microsoft probably can't by dorath (Score:1) Monday 
+    May 01, @01:14PM 
+      Re:Firefox can do it, Microsoft probably can't by msuarezalvarez (Score:1) 
+      Monday May 01, @05:50PM 
+    Re:Firefox can do it, Microsoft probably can't by Wells2k (Score:2) Monday 
+    May 01, @01:19PM 
+      Re:Firefox can do it, Microsoft probably can't by cyber-vandal (Score:2) 
+      Monday May 01, @01:45PM 
+      Re:Firefox can do it, Microsoft probably can't by BootNinja (Score:1) 
+      Monday May 01, @02:00PM 
+      Re:Firefox can do it, Microsoft probably can't by Changa_MC (Score:1) 
+      Monday May 01, @02:00PM 
+    Re:Firefox can do it, Microsoft probably can't by teal_ (Score:1) Monday May 
+    01, @02:10PM 
+    6 replies beneath your current threshold.
+  One other detail(Score:5, Interesting) 
+  by Vengeance (46019) on Monday May 01, @12:41PM (#15237936) 
+  Firefox isn't a Google product, and isn't subject to the same sorts of 
+  antitrust restrictions that IE is. Various combinations that rhyme with 
+  'Clucking Nidiot' were going through my head when I read the blurb.
+    Re:One other detail(Score:5, Informative) 
+    by man_of_mr_e (217855) on Monday May 01, @12:49PM (#15238031) 
+    No, but one of the lead Mozilla developers, Ben Goodger, is a Google 
+    Employee.
+    [ Parent ] 
+      Re:One other detail by superskippy (Score:1) Monday May 01, @12:58PM 
+      Re:One other detail by thepotoo (Score:2) Monday May 01, @01:07PM 
+        Re:One other detail by jinxidoru (Score:2) Monday May 01, @01:16PM 
+          Re:One other detail by thepotoo (Score:2) Monday May 01, @01:24PM 
+            Re:One other detail by jinxidoru (Score:2) Monday May 01, @07:46PM 
+      1 reply beneath your current threshold.
+    Re:One other detail(Score:5, Insightful) 
+    by DaHat (247651) on Monday May 01, @12:52PM (#15238065) 
+    (http://www.brendansstudentloans.com/) 
+    FireFox may not be a Google product however Google will pay you 
+    [toprankblog.com] for having other people install it.
+    [ Parent ] 
+    Re:One other detail by AzsxQuii (Score:1) Monday May 01, @01:13PM 
+    That's not the point by jeffmeden (Score:2) Monday May 01, @01:19PM 
+      IE vs. Google-search? Eh? by Rozzin (Score:1) Friday May 05, @11:49AM 
+      1 reply beneath your current threshold.
+    Re:One other detail by swillden (Score:2) Monday May 01, @05:44PM 
+    Re:Yes it is! by msuarezalvarez (Score:1) Monday May 01, @05:54PM 
+    1 reply beneath your current threshold.
+  Cue the "Google is a hypocrite" posts(Score:4, Insightful) 
+  by Verteiron (224042) on Monday May 01, @12:41PM (#15237942) 
+  (http://slashdot.org/) 
+  Microsoft is a convicted monopolist, and thus is subject to a different set of 
+  rules. If Firefox had 90% of the browser market then things might be 
+  different. As it stands, however, Firefox can include or exclude whoever they 
+  want. Microsoft may not be able to.
+
+  At least, that's the excuse Google can use. Frankly I'm inclined to think it's 
+  "just business".
+    Re:Cue the "Google is a hypocrite" posts by bogaboga (Score:2) Monday May 
+    01, @12:46PM 
+    Re:Cue the "Google is a hypocrite" posts by DrDitto (Score:1) Monday May 01, 
+    @12:54PM 
+      1 reply beneath your current threshold.
+    Re:Cue the "Google is a hypocrite" posts by man_of_mr_e (Score:2) Monday May 
+    01, @12:56PM 
+      Re:Cue the "Google is a hypocrite" posts by Anonymous Coward (Score:1) 
+      Monday May 01, @01:15PM 
+        Re:Cue the "Google is a hypocrite" posts by man_of_mr_e (Score:2) Monday 
+        May 01, @02:09PM 
+        Re:Cue the "Google is a hypocrite" posts by man_of_mr_e (Score:2) Monday 
+        May 01, @02:21PM 
+        1 reply beneath your current threshold.
+    Re:Cue the "Google is a hypocrite" posts by joeytmann (Score:1) Monday May 
+    01, @01:14PM 
+      Re:Cue the "Google is a hypocrite" posts by Duhavid (Score:2) Monday May 
+      01, @09:57PM 
+      1 reply beneath your current threshold.
+    Re:Cue the "Google is a hypocrite" posts by Anonymous Coward (Score:1) 
+    Monday May 01, @01:26PM 
+    Re:Cue the "Google is a hypocrite" posts by The Cydonian (Score:2) Monday 
+    May 01, @01:30PM 
+    3 replies beneath your current threshold.
+  Hardly anti-trust. This is just normal business.(Score:4, Insightful) 
+  by Shayde (189538) on Monday May 01, @12:42PM (#15237953) 
+  (http://planet-geek.com/) 
+  I'd hardly call this an antitrust issue. A microsoft product is referrign to a 
+  microsoft search engine. It's very easy to change it to use a different one. 
+  It's when Microsoft makes it impossible to use anything _BUT_ their own 
+  products that there's serious problems. Case in point is the inability to 
+  'remove' IE at all, and Microsoft's assertion that it was impossible to do so 
+  (then later making versions of windows that have IE removed).
+
+  I think Google is starting to feel the pinch. They've tweaked the lumbering 
+  behemoth that is Microsoft, and Billy boy is fighting back the best way he 
+  can. Back room deals, silent contracts, and subtle manipulation of the market. 
+  Google should be more worried about Microsoft pushing their products into the 
+  colleges and large businesses, not what the default search engine on one box 
+  in one browser is.
+    *nods* by everphilski (Score:2) Monday May 01, @01:11PM 
+      Re:*nods* by glens (Score:1) Monday May 01, @01:50PM 
+    Re:Hardly anti-trust. This is just normal business by QuietLagoon (Score:2) 
+    Monday May 01, @01:13PM 
+      Re:Hardly anti-trust. This is just normal business by QuietLagoon 
+      (Score:2) Tuesday May 02, @08:36AM 
+      1 reply beneath your current threshold.
+    Re:Hardly anti-trust. This is just normal business by zambotsu (Score:1) 
+    Monday May 01, @01:23PM 
+      Re:Hardly anti-trust. This is just normal business by eMartin (Score:2) 
+      Monday May 01, @03:10PM 
+    Agreed!! by teebob21 (Score:1) Monday May 01, @11:36PM 
+      Re:Agreed!! by 99BottlesOfBeerInMyF (Score:2) Tuesday May 02, @02:51PM 
+  Here's Page 1 of the NYT article by xmas2003 (Score:3) Monday May 01, @12:42PM 
+
+  This is what Google should do...(Score:4, Funny) 
+  by bogaboga (793279) on Monday May 01, @12:43PM (#15237959) 
+  Google should auto-magically have a script that makes it the default search 
+  engine when an Internet Explorer user visits http://www.google.com/ 
+  [google.com] to make a search.
+    Re:This is what Google should do... by whereiseljefe (Score:2) Monday May 
+    01, @01:08PM 
+      Re:This is what Google should do... by Lehk228 (Score:2) Monday May 01, 
+      @01:48PM 
+    1 reply beneath your current threshold.
+  Firefox(Score:5, Insightful) 
+  by Kohath (38547) on Monday May 01, @12:43PM (#15237963) 
+  I notice that in my version of Firefox the search box defaults to Google
+
+  - Google doesn't make firefox
+  - Google isn't a monopoly
+  - Firefox isn't a monopoly
+
+  Your comment is irrelevant. I hear that Adobe Premier doesn't let you search 
+  on Alta-Vista too.
+    Re:Firefox by KarmaMB84 (Score:2) Monday May 01, @12:52PM 
+      Re:Firefox by EastCoastSurfer (Score:2) Monday May 01, @01:36PM 
+    Re:Firefox(Score:4, Insightful) 
+    by ecuador_gr (944749) on Monday May 01, @12:54PM (#15238084) 
+    (http://www.ecuadors.net/) 
+    If you want to push this argument, I have to tell you that Google is very 
+    close to being a monopoly, and that is exactly how they got Firefox to 
+    default to them.
+    And as a personal rant I have to say that as a consumer I have never felt 
+    hurt by MS's monopoly (my Linux box is doing fine right next to my XP box - 
+    thank you very much), however I have been hurt by telco monopoly numerous 
+    times. Maybe some articles devoted to the woes that our dependance on 
+    companies like Time Warner Cable on monopoly markets would be a refreshing 
+    change to all the MS bashing on slashdot.
+    [ Parent ] 
+      Re:Firefox by PitaBred (Score:2) Monday May 01, @02:04PM 
+        Re:Firefox by radish (Score:2) Monday May 01, @02:59PM 
+          Re:Firefox by Johnny Mnemonic (Score:2) Monday May 01, @03:41PM 
+        Re:Firefox by I'm Don Giovanni (Score:1) Monday May 01, @05:59PM 
+      Re:Firefox by kpharmer (Score:2) Monday May 01, @02:11PM 
+        Re:Firefox by ecuador_gr (Score:1) Monday May 01, @02:59PM 
+          Re:Firefox by ecuador_gr (Score:1) Monday May 01, @03:01PM 
+          Re:Firefox by kpharmer (Score:2) Monday May 01, @04:53PM 
+            Re:Firefox by ecuador_gr (Score:1) Monday May 01, @05:36PM 
+      Re:Firefox by x_codingmonkey_x (Score:1) Monday May 01, @02:17PM 
+        Re:Firefox by ecuador_gr (Score:1) Monday May 01, @03:26PM 
+          Re:Firefox by Fanboy Troy (Score:2) Monday May 01, @06:54PM 
+            Re:Firefox by ecuador_gr (Score:1) Monday May 01, @07:26PM 
+              Re:Firefox by Fanboy Troy (Score:1) Tuesday May 02, @02:55AM 
+              Re:Firefox by ecuador_gr (Score:1) Tuesday May 02, @10:50AM 
+              Re:Firefox by Fanboy Troy (Score:1) Tuesday May 02, @12:52PM 
+              Re:Firefox by ecuador_gr (Score:1) Tuesday May 02, @06:55PM 
+        Re:Firefox by Procyon101 (Score:2) Monday May 01, @06:59PM 
+      Re:Firefox by hkmwbz (Score:2) Monday May 01, @02:32PM 
+      Telcom monopolies by solomonrex (Score:1) Monday May 01, @02:32PM 
+      Re:Firefox by oyenstikker (Score:2) Monday May 01, @02:39PM 
+      Re:Firefox by Cro Magnon (Score:2) Monday May 01, @02:42PM 
+      Re:Firefox(Score:5, Insightful) 
+      by DragonWriter (970822) on Monday May 01, @02:45PM (#15239193) 
+        If you want to push this argument, I have to tell you that Google is 
+        very close to being a monopoly, and that is exactly how they got Firefox 
+        to default to them.
+
+
+      Its not illegal to be a monopoly (and even less so a near monopoly) in one 
+      market and, as a result of that, to have other players then promote your 
+      monopoly (or near-monopoly) product in its own market.
+
+      It is illegal to leverage your monopoly power in one market to gain an 
+      unfair advantage in another market.
+
+      Now, my guess is that using MSN search as a default in IE (which, IIRC, 
+      predates IE7; if you type an invalid address into the IE6 address bar the 
+      default behavior, ISTR, is an MSN search -- I can't check because even 
+      though I have IE6, mine has Google Toolbar which replaces the default 
+      behavior with a Google search) probably doesn't reach to that level, and, 
+      insofar as it does, the IE7 search box behavior is probably less 
+      problematic than the pre-IE7 address bar behavior.
+
+      But to pretend that there was some parallel between Microsoft using its OS 
+      dominance to push the MSN search system through the IE browser it 
+      controls, and Google using its search dominance to push Google search 
+      through the Firefox browser which it doesn't control is, well, missing the 
+      point rather badly.
+      [ Parent ] 
+        Re:Firefox by R3zonance (Score:1) Tuesday May 02, @08:19AM 
+          Re:Firefox by DragonWriter (Score:2) Thursday May 04, @11:01AM 
+      Re:Firefox by Jordanis (Score:1) Monday May 01, @03:42PM 
+      Re:Firefox by bogjobber (Score:1) Monday May 01, @04:20PM 
+        Re:Firefox by I'm Don Giovanni (Score:1) Monday May 01, @06:03PM 
+      Re:Firefox by diggem (Score:2) Monday May 01, @04:48PM 
+      Re:Firefox by SoulRider (Score:1) Monday May 01, @05:22PM 
+      Re:Firefox by ecuador_gr (Score:1) Monday May 01, @05:56PM 
+      Re:Firefox by eddeye (Score:2) Tuesday May 02, @05:07AM 
+      1 reply beneath your current threshold.
+    Re:Firefox by man_of_mr_e (Score:2) Monday May 01, @01:01PM 
+      Re:Firefox by man_of_mr_e (Score:2) Monday May 01, @02:15PM 
+      1 reply beneath your current threshold.
+    Re:Firefox by digitaldc (Score:2) Monday May 01, @01:05PM 
+    Re:Firefox by Luscious868 (Score:2) Monday May 01, @01:40PM 
+    Re:Firefox by mrtroy (Score:1) Monday May 01, @02:17PM 
+      Re:Firefox by I'm Don Giovanni (Score:1) Monday May 01, @06:05PM 
+      Re:Firefox by Procyon101 (Score:2) Monday May 01, @07:07PM 
+      1 reply beneath your current threshold.
+    2 replies beneath your current threshold.
+  Makes sense by Donniedarkness (Score:2) Monday May 01, @12:43PM 
+    Re:Makes sense by Anonymous Coward (Score:1) Monday May 01, @12:52PM 
+      Re:Makes sense by Donniedarkness (Score:2) Monday May 01, @01:00PM 
+    Yes It Will(Score:5, Insightful) 
+    by Iscariot_ (166362) on Monday May 01, @01:02PM (#15238177) 
+    It's the default browser in Vista, come '07 your statement is wrong. And 
+    that's the big problem here. IE is bundled with an OS (Vista) and Firefox is 
+    not. If IE was a completely seperate application then I'd have no problem 
+    here, but with Vista that is not the case.
+
+    On another note, Google doesn't own Safari or Firefox, so they can pick 
+    whatever default search they want.
+    [ Parent ] 
+      Re:Yes It Will by Donniedarkness (Score:2) Monday May 01, @01:07PM 
+        Re:Yes It Will by Iscariot_ (Score:2) Monday May 01, @01:11PM 
+          Re:Yes It Will by Donniedarkness (Score:2) Monday May 01, @01:18PM 
+            Re:Yes It Will by Kelson (Score:2) Monday May 01, @03:05PM 
+            Re:Yes It Will by Iscariot_ (Score:2) Monday May 01, @03:23PM 
+      1 reply beneath your current threshold.
+    Re:Makes sense by gravesb (Score:1) Monday May 01, @01:46PM 
+      Re:Makes sense by Kelson (Score:2) Monday May 01, @03:03PM 
+    Re:Makes sense by I'm Don Giovanni (Score:1) Monday May 01, @06:26PM 
+      1 reply beneath your current threshold.
+    1 reply beneath your current threshold.
+  Irrelevant by Skye16 (Score:2) Monday May 01, @12:43PM 
+  would not change by supe (Score:2) Monday May 01, @12:44PM 
+    Re:would not change by Risen888 (Score:1) Monday May 01, @02:31PM 
+  Adding MSN Search(Score:4, Insightful) 
+  by SeanDuggan (732224) on Monday May 01, @12:44PM (#15237968) 
+  (http://users.adelphia.net/~s.duggan/ | Last Journal: Monday October 17, 
+  @09:43AM) 
+  I agree that Google is being a bit hypcritical here. It makes business sense 
+  that they don't want MSN to be the default, especially since Microsoft is also 
+  muscling into the search engine wars, but I think their case would have been 
+  stronger if they'd included MSN search in their search options on 
+  installation. Then again, part of me is wondering if that might not have 
+  caused legal problems in and of itself. "Appropriation of competiting 
+  technology and repackaging under a different brand name" or somesuch.
+    Insightful? by mypalmike (Score:2) Monday May 01, @01:23PM 
+      Mixing of subjects by SeanDuggan (Score:2) Monday May 01, @01:43PM 
+    Re:Adding MSN Search by Tom (Score:2) Monday May 01, @02:46PM 
+      Adding Many Searches by abb3w (Score:2) Tuesday May 02, @12:03PM 
+    Re:Adding MSN Search by 99BottlesOfBeerInMyF (Score:2) Monday May 01, 
+    @04:43PM 
+    1 reply beneath your current threshold.
+  It's not Googles job to cry foul(Score:5, Interesting) 
+  by 3770 (560838) on Monday May 01, @12:44PM (#15237975) 
+  (http://vsxgen.sourceforge.net/) 
+  It's not Googles job to cry foul over things that benefit them. Especially, 
+  when it is a third party software.
+
+  Complaining about Google being default in Firefox is Microsofts job (or Yahoo 
+  or someone else). However, if Microsoft had complained about that they would 
+  have _had_ to make it optional in IE7 as well. So, Microsoft kept quiet about 
+  that.
+
+  If Google had complained about them being the default in FireFox then they 
+  would have been on the moral high ground when complaining about IE7. But they 
+  wouldn't be in a much better position to convince Microsoft though.
+
+    Re:It's not Googles job to cry foul by joeykiller (Score:2) Monday May 01, 
+    @01:03PM 
+    Re:It's not Googles job to cry foul by amliebsch (Score:2) Monday May 01, 
+    @01:09PM 
+    Re:It's not Googles job to cry foul by EvanED (Score:2) Monday May 01, 
+    @01:50PM 
+      Re:It's not Googles job to cry foul by 99BottlesOfBeerInMyF (Score:2) 
+      Monday May 01, @02:55PM 
+    Re:It's not Googles job to cry foul by saleenS281 (Score:2) Monday May 01, 
+    @01:59PM 
+      Re:It's not Googles job to cry foul by swillden (Score:2) Monday May 01, 
+      @05:47PM 
+  Not the same by connsmythe96 (Score:2) Monday May 01, @12:44PM 
+    Re:Not the same by Mir322 (Score:1) Monday May 01, @01:05PM 
+  Its microsoft's responsibility by truesaer (Score:2) Monday May 01, @12:44PM 
+    Re:Its microsoft's responsibility by onecheapgeek (Score:1) Monday May 01, 
+    @01:11PM 
+  Why? by buxrule (Score:1) Monday May 01, @12:44PM 
+    Stealing Ad Revenue by SeanDuggan (Score:2) Monday May 01, @12:48PM 
+      Re:Stealing Ad Revenue by rabbit994 (Score:2) Monday May 01, @12:58PM 
+        The Allure of Search Boxes by SeanDuggan (Score:2) Monday May 01, 
+        @01:40PM 
+          Re:The Allure of Search Boxes by caluml (Score:2) Monday May 01, 
+          @01:56PM 
+    Re:Why? by cyber-vandal (Score:2) Monday May 01, @12:48PM 
+    Re:Why? by Jim_Maryland (Score:2) Monday May 01, @01:00PM 
+    Re:Why? by piratePenguin (Score:1) Monday May 01, @01:21PM 
+  Firefox != monopoly by oneiros27 (Score:2) Monday May 01, @12:45PM 
+    Re:Firefox != monopoly by rainman_bc (Score:2) Monday May 01, @12:55PM 
+    Re:Firefox != monopoly by drzhivago (Score:2) Monday May 01, @01:03PM 
+  What's the business case for this? by Omega (Score:2) Monday May 01, @12:46PM 
+  What about Firefox? by rainman_bc (Score:1) Monday May 01, @12:46PM 
+    Re:What about Firefox? by MrP-(at work) (Score:2) Monday May 01, @12:57PM 
+      Re:What about Firefox? by KarmaMB84 (Score:2) Monday May 01, @01:02PM 
+  Present a choice? by Kenja (Score:2) Monday May 01, @12:47PM 
+  pay attention man by tehwebguy (Score:3) Monday May 01, @12:47PM 
+  Don't search!!!!!(Score:5, Informative) 
+  by grumpyman (849537) on Monday May 01, @12:47PM (#15238015) 
+  "The best way to handle the search box [...] would be to give users a choice 
+  when they first start up Internet Explorer 7." 
+  OTOH, I would much prefer it DOES NOT search for anything. For example, if I 
+  type in stuff like 'wwwww.yahoo.com', that STUPID IE just search for it and 
+  with the address bar ending up modifed as 
+  "http://sea.search.msn.com/dnserror.aspx?FORM=DNSA S&q=wwwww.yahoo.com". Now I 
+  need to go delete those characters to modify the original URL!! Ernest
+    Re:Don't search!!!!! by MooUK (Score:2) Monday May 01, @01:23PM 
+      Re:Don't search!!!!! by grumpyman (Score:2) Monday May 01, @01:54PM 
+    Re:Don't search!!!!! by hackstraw (Score:2) Monday May 01, @01:49PM 
+      Re:Don't search!!!!! by Politburo (Score:2) Monday May 01, @02:06PM 
+    Re:Don't search!!!!! by !IH (Score:2) Monday May 01, @03:57PM 
+    1 reply beneath your current threshold.
+  Safari the Same by BodhiCat (Score:1) Monday May 01, @12:48PM 
+    Re:Safari the Same by DRM_is_Stupid (Score:1) Tuesday May 02, @10:23PM 
+  About Firefox & Google.... by Chaffar (Score:2) Monday May 01, @12:49PM 
+    Re:About Firefox & Google.... by spectecjr (Score:2) Monday May 01, @01:00PM 
+
+      Re:About Firefox & Google.... by Chaffar (Score:2) Monday May 01, @01:24PM 
+
+  *sigh* you are 2 clicks from Google on IE... by everphilski (Score:3) Monday 
+  May 01, @12:50PM 
+    Re:*sigh* you are 2 clicks from Google on IE... by ABoerma (Score:1) Monday 
+    May 01, @03:56PM 
+    Re:*sigh* you are 2 clicks from Google on IE... by eddeye (Score:2) Tuesday 
+    May 02, @05:00AM 
+    1 reply beneath your current threshold.
+  Antitrust trouble...(Score:5, Insightful) 
+  by mikesd81 (518581) <mikesd@@@ptd...net> on Monday May 01, @12:50PM 
+  (#15238043) 
+  (http://slashdot.org/) 
+  " Google goes on to assert that the move "limits consumer choice and is 
+  reminiscent of the tactics that got Microsoft into antitrust trouble in the 
+  late 1990s". 
+
+  I like Google, but this does not limit consumer choice. IE7 doesn't *block* 
+  google's web site. You can add Google search to their search box....
+
+  Antitrust would be if when you go to google.com or altavista.com and what not 
+  and it automatically goes to MSN.com. And if you use Google in the search box 
+  it doesn't limit the searches. Sorry. Google's wrong this one. And they should 
+  be careful now. Backwards steps can cause a giant to fall.
+    Re:Antitrust trouble... by vluther (Score:2) Monday May 01, @01:15PM 
+      Re:Antitrust trouble... by jeffhesser (Score:1) Monday May 01, @02:04PM 
+    Wrong Version, Comrad. by twitter (Score:2) Monday May 01, @01:26PM 
+      1 reply beneath your current threshold.
+    Re:Antitrust trouble... by notjim (Score:1) Monday May 01, @01:42PM 
+    Re:Antitrust trouble... by 99BottlesOfBeerInMyF (Score:2) Monday May 01, 
+    @02:27PM 
+    Re:Antitrust trouble... by eddeye (Score:2) Tuesday May 02, @05:02AM 
+      Re:Antitrust trouble... by mikesd81 (Score:1) Tuesday May 02, @12:03PM 
+        Re:Antitrust trouble... by eddeye (Score:2) Tuesday May 02, @04:44PM 
+  Hate to say it but need to side with MS this time by bail0ut (Score:1) Monday 
+  May 01, @12:53PM 
+  odd? by llZENll (Score:1) Monday May 01, @12:53PM 
+  who uses it anyway? by joe 155 (Score:2) Monday May 01, @12:55PM 
+  Call us a Luddite, but we hates the "auto-search" by xxxJonBoyxxx (Score:2) 
+  Monday May 01, @12:56PM 
+    Re:Call us a Luddite, but we hates the "auto-searc by Oswald (Score:2) 
+    Monday May 01, @01:41PM 
+      Re:Call us a Luddite, but we hates the "auto-searc by eddy (Score:2) 
+      Monday May 01, @02:54PM 
+    Re:Call us a Luddite, but we hates the "auto-searc by assassinator42 
+    (Score:2) Tuesday May 02, @01:48AM 
+  Whiney Google by BladesP9 (Score:1) Monday May 01, @12:56PM 
+  Excerpt-- by mattwarden (Score:2) Monday May 01, @12:58PM 
+  Apples and Kumquats by TBone (Score:2) Monday May 01, @01:00PM 
+    Re:Apples and Kumquats by Nairanvac (Score:1) Monday May 01, @02:03PM 
+      Re:Apples and Kumquats by TBone (Score:2) Monday May 01, @09:35PM 
+        Re:Apples and Kumquats by Nairanvac (Score:1) Monday May 01, @10:15PM 
+  Amusing by DerekLyons (Score:2) Monday May 01, @01:01PM 
+    Re:Amusing by jblsys (Score:1) Monday May 01, @01:28PM 
+      Re:Amusing by DerekLyons (Score:2) Monday May 01, @02:41PM 
+        Re:Amusing by Spaceman40 (Score:2) Monday May 01, @05:52PM 
+        Re:Amusing by msuarezalvarez (Score:1) Monday May 01, @06:20PM 
+    1 reply beneath your current threshold.
+  Idiot. by Gannoc (Score:2) Monday May 01, @01:03PM 
+    The "trust" in "antitrust" by I'm Don Giovanni (Score:1) Monday May 01, 
+    @06:58PM 
+  The Great War has begun! by Yvanhoe (Score:2) Monday May 01, @01:04PM 
+  Firefox not developed by Google by Dreben (Score:2) Monday May 01, @01:06PM 
+    Re:Firefox not developed by Google by insidious777 (Score:1) Monday May 01, 
+    @01:26PM 
+    Re:Firefox not developed by Google by Kelson (Score:2) Monday May 01, 
+    @02:54PM 
+  Oh Lovely... by eno2001 (Score:2) Monday May 01, @01:07PM 
+  Come on now... by tomyjade (Score:1) Monday May 01, @01:10PM 
+  Search capability(Score:4, Interesting) 
+  by Billosaur (927319) * on Monday May 01, @01:10PM (#15238267) 
+  (Last Journal: Monday May 15, @03:28PM) 
+  Here's a little trick for Google users who are going to use IE7: go to the 
+  address bar and type "www.google.com." Voila!
+  This is so much pissing in the wind. Google needs to get over itself and 
+  Microsoft needs a good, swift kick in the browser. Who cares! Use the browser 
+  you want to use and use the search engine you want to use! Until browsers 
+  start blocking particular search URLs of search engines refuse to run in 
+  certain browsers, there is... say it with me now... nothing to see here!
+    Re:Search capability by slofstra (Score:1) Monday May 01, @02:43PM 
+  What is the difference by MrShaggy (Score:1) Monday May 01, @01:11PM 
+  Changing default is easy by Anonymous Coward (Score:1) Monday May 01, @01:12PM 
+
+    It's the principal, though by Nairanvac (Score:1) Monday May 01, @02:11PM 
+      Re:It's the principal, though by slofstra (Score:1) Monday May 01, 
+      @03:10PM 
+  Why IE7 and Firefox are different by thebdj (Score:2) Monday May 01, @01:12PM 
+  Google's Homepage Today by obsidian.ten (Score:1) Monday May 01, @01:13PM 
+  Why this could be a very good thing by rseuhs (Score:2) Monday May 01, 
+  @01:16PM 
+  Which GOOG is this again? by mixonic (Score:1) Monday May 01, @01:19PM 
+  Google isn't hypocritical by aweiland (Score:1) Monday May 01, @01:20PM 
+  If you don't like it... by Captain Scurvy (Score:2) Monday May 01, @01:20PM 
+  Does Google own Firefox? by jvance (Score:1) Monday May 01, @01:21PM 
+    Troll by jvance (Score:1) Tuesday May 02, @02:39AM 
+    1 reply beneath your current threshold.
+  'evil' tag by TheCoop1984 (Score:1) Monday May 01, @01:22PM 
+    Re:'evil' tag by Nairanvac (Score:1) Monday May 01, @01:53PM 
+  Firefox is not google! IE7 is Microsoft. by LWatsonIII (Score:1) Monday May 
+  01, @01:23PM 
+  This isn't hypocrisy... by TMarvelous (Score:1) Monday May 01, @01:24PM 
+  from an ie, firefox, safari user by john_uy (Score:2) Monday May 01, @01:24PM 
+  Catch-22 by asylumx (Score:1) Monday May 01, @01:26PM 
+  The difference is. . . by LunarCrisis (Score:1) Monday May 01, @01:27PM 
+  OMG by Britz (Score:2) Monday May 01, @01:28PM 
+  blah blah.. by XO (Score:2) Monday May 01, @01:30PM 
+  There is a misunderstanding here : by unity100 (Score:1) Monday May 01, 
+  @01:37PM 
+  In response... by oahazmatt (Score:1) Monday May 01, @01:37PM 
+  Monopoly by ajwitte (Score:1) Monday May 01, @01:40PM 
+  You're new here by Ancil (Score:2) Monday May 01, @01:42PM 
+    Re:You're new here by Americano (Score:1) Monday May 01, @02:21PM 
+    1 reply beneath your current threshold.
+  All for naught by danpsmith (Score:2) Monday May 01, @01:43PM 
+  My GM car... by DavidD_CA (Score:3) Monday May 01, @01:45PM 
+    No, it's not the same! by jivo (Score:1) Monday May 01, @04:02PM 
+      Re:No, it's not the same! by DavidD_CA (Score:2) Monday May 01, @04:26PM 
+        Re:No, it's not the same! by jivo (Score:1) Monday May 01, @04:39PM 
+      1 reply beneath your current threshold.
+  Google IS right - there is an important difference by jivo (Score:1) Monday 
+  May 01, @01:46PM 
+  Google is evil? by Sky Cry (Score:1) Monday May 01, @01:47PM 
+  Quite funny... by DoctorDyna (Score:1) Monday May 01, @01:47PM 
+  maybe Im missing something by night_flyer (Score:2) Monday May 01, @01:47PM 
+  Google Toolbar Changes IE7. by Deathlizard (Score:2) Monday May 01, @01:48PM 
+    MOD PARENT UP by I'm Don Giovanni (Score:1) Monday May 01, @07:07PM 
+  Odd sense of time... by podperson (Score:2) Monday May 01, @01:49PM 
+  Microsoft HAVE to play differently... by MosesJones (Score:2) Monday May 01, 
+  @01:50PM 
+  Favorite part of story by smooth wombat (Score:2) Monday May 01, @01:50PM 
+  defaults... by An anonymous Frank (Score:1) Monday May 01, @01:51PM 
+  Laughing about Google by wysiwia (Score:1) Monday May 01, @01:51PM 
+  I guess "Don't be Evil" doesn't rule out hypocricy by MStiles (Score:1) Monday 
+  May 01, @01:52PM 
+  Didn by Alternate Interior (Score:2) Monday May 01, @01:55PM 
+  Even MORE Evil! by Sux2BU (Score:2) Monday May 01, @01:59PM 
+  Google is wrong by Tofflos (Score:1) Monday May 01, @02:05PM 
+  In other news... by spongman (Score:2) Monday May 01, @02:06PM 
+  Oh noz! My Search Engine!! by PixieDust (Score:1) Monday May 01, @02:15PM 
+    1 reply beneath your current threshold.
+  Can you really blame M$, though? by Nairanvac (Score:2) Monday May 01, 
+  @02:16PM 
+    Re:Can you really blame M$, though? by jefu (Score:2) Monday May 01, 
+    @05:54PM 
+  Beta software? by dzd12 (Score:1) Monday May 01, @02:26PM 
+  Did anyone else notice... by Net_fiend (Score:1) Monday May 01, @02:28PM 
+    1 reply beneath your current threshold.
+  Change by cvalente (Score:2) Monday May 01, @02:37PM 
+  Firefox by Tom (Score:2) Monday May 01, @02:41PM 
+  And the (obvious) difference is...(Score:5, Insightful) 
+  by buffy (8100) * <(buffy) (at) (parapet.net)> on Monday May 01, @02:47PM 
+  (#15239227) 
+  (http://parapet.net/) 
+  Microsoft owns their browser and is using it to leverage their other 
+  property--MSN search, or whatever they're calling it these days. Google does 
+  NOT own Firefox--Firefox is a third party. Microsoft is using one hand of 
+  their monopolistic giant to put money into their other hand. Google is not, 
+  and as such, as a valid point, IMHO.
+
+  That said, of COURSE it works to their [Google's] advantage that Firefox 
+  behaves in such a manner. However, that doesn't mean that the Mozilla 
+  Foundation isn't free to switch their default over to MSN if their user base 
+  overwhelmingly requests it.
+
+  -buf
+  Search box? by Pedrito (Score:2) Monday May 01, @02:59PM 
+  Not Google's Responsibility by $nyper (Score:1) Monday May 01, @03:09PM 
+  IE6 AutoSearch??? by RoyalPeasantry (Score:1) Monday May 01, @03:27PM 
+    Re:IE6 AutoSearch??? by I'm Don Giovanni (Score:1) Monday May 01, @07:26PM 
+  Google's my default search enginge... by ICEWarm (Score:1) Monday May 01, 
+  @03:37PM 
+    Re:Google's my default search enginge... by I'm Don Giovanni (Score:1) 
+    Monday May 01, @07:29PM 
+  Solutions by moria (Score:1) Monday May 01, @03:46PM 
+  I use IE7 by JimmyFo (Score:1) Monday May 01, @04:01PM 
+    Re:I use IE7 by Dewin Cymraeg (Score:1) Tuesday May 02, @04:13AM 
+  er by acidosmosis (Score:1) Monday May 01, @04:04PM 
+  SOMETHING has to be the default, right? by nm42 (Score:1) Monday May 01, 
+  @04:07PM 
+  Google is whining? by Saratoga C++ (Score:1) Monday May 01, @04:10PM 
+  I think... by blackcanoflysol (Score:1) Monday May 01, @04:14PM 
+  Google is wrong by eebra82 (Score:1) Monday May 01, @04:34PM 
+  Unreal by eenlow (Score:1) Monday May 01, @04:46PM 
+    Re:Unreal by The Cisco Kid (Score:2) Tuesday May 02, @08:14AM 
+      Re:Unreal by eenlow (Score:1) Tuesday May 02, @09:02AM 
+        Re:Unreal by The Cisco Kid (Score:2) Tuesday May 02, @10:43AM 
+          Re:Unreal by eenlow (Score:1) Tuesday May 02, @11:12AM 
+            Re:Unreal by The Cisco Kid (Score:2) Tuesday May 02, @12:43PM 
+              Re:Unreal by eenlow (Score:1) Tuesday May 02, @01:50PM 
+              Re:Unreal by The Cisco Kid (Score:2) Tuesday May 02, @02:33PM 
+              Re:Unreal by eenlow (Score:1) Tuesday May 02, @03:02PM 
+              Re:Unreal by The Cisco Kid (Score:2) Wednesday May 03, @10:01AM 
+  How is this much different from IE6? by AFCArchvile (Score:2) Monday May 01, 
+  @04:49PM 
+    Correction:How is this much different from IE6? by AFCArchvile (Score:2) 
+    Monday May 01, @05:01PM 
+  So much for A9...back to Google by tgibbs (Score:2) Monday May 01, @04:52PM 
+  It's IE by humankind (Score:2) Monday May 01, @05:24PM 
+  This is a complete nonissue... by BuddyJesus (Score:1) Monday May 01, @05:28PM 
+
+  Best Solution? by cuteseal (Score:1) Monday May 01, @07:17PM 
+  MSN really wasnt a search engine by VGfort (Score:1) Monday May 01, @07:38PM 
+  I'll show 'em! by crhylove (Score:2) Monday May 01, @07:48PM 
+  Google is not trying to play fair(Score:4, Interesting) 
+  by spideyct (250045) on Monday May 01, @07:51PM (#15241605) 
+  I installed one of the first IE7 beta releases. I was surprised that the new 
+  search box includes a drop down that lets you change to AOL, Yahoo, Google, or 
+  Ask Jeeves (but defaults to MSN). I selected Google once, it worked as 
+  expected, but the next time I launched IE, it was set back to MSN Search. 
+  Without digging much further, I figured that was just how it had to be... 
+  Microsoft was giving space to the others, but still asserting its control.
+
+  Then when I browsed to the Google homepage, I got a little DHTML pop-up window 
+  that said something to the effect of "hey, you're using IE7, wanna change the 
+  default for your searchbox to use Google?" Perfect, I had wanted to do that, 
+  and I guess they figured out how. So I press OK. I restarted IE7, and sure 
+  enough, my default search was now Google. Thanks Google.
+
+  Except, a funny thing happened when I let Google change my settings. That list 
+  of alternate search engines that Microsoft had provided, for the user's 
+  benefit, was now replaced by a single choice: Google. Yes, I wanted Google as 
+  my default, but I never said I wanted Google as the only choice! That's 
+  annoying.
+
+  That is when I noticed the Search Settings... menu option at the bottom of the 
+  search bar's menu. It includes a Restore Defaults... button, which does 
+  exactly that. I clicked it, and all of my search engines were back (and MSN 
+  Search was back to being the default). From that Search Settings screen, I 
+  selected Google, and clicked Set Default. Now Google was my default search 
+  engine, AND I still had the choice of selecting a different engine from the 
+  drop down. That is what I wanted. Why didn't Google give me what I wanted?
+    hijackthe browser feature? by geo.georgi (Score:1) Tuesday May 02, @07:55AM 
+      Re:hijackthe browser feature? by The Cisco Kid (Score:2) Tuesday May 02, 
+      @08:22AM 
+      1 reply beneath your current threshold.
+  What about Google's monopoly on search? by chrisbeach (Score:1) Monday May 01, 
+  @08:26PM 
+    Re:What about Google's monopoly on search? by The Cisco Kid (Score:2) 
+    Tuesday May 02, @08:07AM 
+  get the facts by AlgorithMan (Score:1) Monday May 01, @09:11PM 
+  No MSN on Firefox. by ayeco (Score:2) Monday May 01, @09:25PM 
+  Why no MSN in Firefox by mnmn (Score:2) Monday May 01, @10:07PM 
+  Your argument is dumb ... by jasonsfa98 (Score:1) Monday May 01, @11:32PM 
+    Re:Your argument is dumb ... by jasonsfa98 (Score:1) Monday May 01, @11:39PM 
+
+  play fair by godseyeview (Score:1) Tuesday May 02, @12:40AM 
+  What's the issue? by IDontLinkMondays (Score:1) Tuesday May 02, @03:48AM 
+  Firefox has other search engines? really? by master_p (Score:2) Tuesday May 
+  02, @04:37AM 
+  Fix proposal by anato (Score:1) Tuesday May 02, @06:23AM 
+  Firefox Google Search by The Cisco Kid (Score:2) Tuesday May 02, @08:03AM 
+  Google is on IE7 setup screens by killweav (Score:1) Tuesday May 02, @08:24AM 
+  Very big difference by Pecisk (Score:2) Tuesday May 02, @09:24AM 
+  Apples to Oranges by Sierpinski (Score:2) Tuesday May 02, @10:45AM 
+  Like I care... by zerofret (Score:1) Tuesday May 02, @05:58PM 
+  Re:A choice, yeah...(Score:5, Insightful) 
+  by vondo (303621) * on Monday May 01, @12:46PM (#15238007) 
+  Exactly. The last thing I want when I install a new piece of software is it 
+  asking me a bunch of silly questions like this. I like the FF way: A box that 
+  lets me search, it show where it is searching (the big G), and it has an entry 
+  for "Add more."
+
+  Microsoft should be free to choose whatever default they want and not add 
+  anyone else by default.
+  [ Parent ] 
+    Re:A choice, yeah... by optimus2861 (Score:2) Monday May 01, @01:23PM 
+      Re:A choice, yeah... by flosofl (Score:2) Monday May 01, @02:38PM 
+      Re:A choice, yeah... by TorAvalon (Score:1) Monday May 01, @04:02PM 
+      1 reply beneath your current threshold.
+    Re:A choice, yeah... by 99BottlesOfBeerInMyF (Score:2) Monday May 01, 
+    @04:37PM 
+      Re:A choice, yeah... by fyrewulff (Score:1) Monday May 01, @05:56PM 
+        Re:A choice, yeah... by 99BottlesOfBeerInMyF (Score:2) Monday May 01, 
+        @06:14PM 
+  Re:They don't complain about FF by paperdiesel (Score:1) Monday May 01, 
+  @12:48PM 
+    Re:They don't complain about FF by plague3106 (Score:1) Monday May 01, 
+    @12:54PM 
+    Re:They don't complain about FF by cerelib (Score:2) Monday May 01, @01:12PM 
+
+    Re:They don't complain about FF by assassinator42 (Score:2) Monday May 01, 
+    @03:44PM 
+  Re:They don't complain about FF by JonTurner (Score:2) Monday May 01, @12:51PM 
+
+    Re:They don't complain about FF by plague3106 (Score:1) Monday May 01, 
+    @02:09PM 
+  Re:They don't complain about FF by plague3106 (Score:1) Monday May 01, 
+  @12:52PM 
+  Re:They don't complain about FF by Vicissidude (Score:2) Monday May 01, 
+  @12:54PM 
+  as a matter of fact... by IronyChef (Score:1) Monday May 01, @01:02PM 
+  Re:They don't complain about FF by ckotchey (Score:1) Monday May 01, @01:05PM 
+    Re:They don't complain about FF by Aladrin (Score:2) Monday May 01, @01:47PM 
+
+      Re:They don't complain about FF by heinousjay (Score:1) Monday May 01, 
+      @02:09PM 
+  Re:IE7 defaulted to Google for me by I'm Don Giovanni (Score:1) Monday May 01, 
+  @07:19PM 
+  Re:Huh? by Ash-Fox (Score:1) Tuesday May 02, @07:08AM 
+    1 reply beneath your current threshold.
+  Re:I don't trust Google by Ash-Fox (Score:1) Tuesday May 02, @07:16AM 
+  38 replies beneath your current threshold. 
+
+(1) | 2 
+   Practical people would be more practical if they would take a little more 
+time for dreaming. -- J. P. McEvoy 
+All trademarks and copyrights on this page are owned by their respective owners. 
+Comments are owned by the Poster. The Rest © 1997-2006 OSTG. 
+  home awards contribute story older articles OSTG advertise about terms of 
+  service privacy faq rss 

@@ -1,0 +1,645 @@
+Computer - Wikipedia, the free encyclopediaYour continued donations keep 
+Wikipedia running!    
+Computer
+From Wikipedia, the free encyclopedia
+Jump to: navigation, search
+  For the IEEE magazine see Computer (magazine) 
+A computer is a machine designed for manipulating data according to a list of 
+instructions known as a program.
+ 
+A typical PC, running the Microsoft Windows OS 
+An Apple iMac G5, the iMac line is the most popular alternative computer to a 
+windows machine. iMacs run the Mac OS X OS.
+Computers are versatile. In fact, they are universal information-processing 
+machines. According to the Church–Turing thesis, a computer with a certain 
+minimum threshold capability is in principle capable of performing the tasks of 
+any other computer, from those of a personal digital assistant to a 
+supercomputer, as long as time and memory capacity are not considerations. 
+Therefore, the same computer designs may be adapted for tasks ranging from 
+processing company payrolls to controlling unmanned spaceflights. Due to 
+technological advancement, modern electronic computers are exponentially more 
+capable than those of preceding generations (a phenomenon partially described by 
+Moore's Law).
+Computers take numerous physical forms. Early electronic computers were the size 
+of a large room, and such enormous computing facilities still exist for 
+specialized scientific computation — supercomputers — and for the transaction 
+processing requirements of large companies, generally called mainframes. Smaller 
+computers for individual use, called personal computers, and their portable 
+equivalent, the laptop computer, are ubiquitous information-processing and 
+communication tools and are perhaps what most non-experts think of as "a 
+computer". However, the most common form of computer in use today is the 
+embedded computer, small computers used to control another device. Embedded 
+computers control machines from fighter aircraft to digital cameras.
+      Contents [hide]
+        1 History of computing 
+        2 How computers work: the stored program architecture 
+        3 Digital circuits 
+        4 I/O devices 
+        5 Programs 
+          5.1 Libraries and operating systems 
+        6 Computer applications 
+          6.1 Networking and the Internet 
+        7 Alternative computing models 
+        8 Computing professions and disciplines 
+        9 See also 
+          9.1 Other computers 
+        10 Notes and references 
+        11 External links 
+
+
+[edit]History of computing
+  Main article: History of computing 
+ 
+ENIAC — a milestone in computing historyOriginally, the term "computer" referred 
+to a person who performed numerical calculations, often with the aid of a 
+mechanical calculating device. Examples of early calculating devices, the first 
+ancestors of the computer, included the abacus and the Antikythera mechanism, an 
+ancient Greek device for calculating the movements of planets, dating from about 
+87 BC.[1] The end of the Middle Ages saw a reinvigoration of European 
+mathematics and engineering, and Wilhelm Schickard's 1623 device was the first 
+of a number of European engineers to construct a mechanical calculator.[2] The 
+abacus has been noted as being an early computer, as it was like a calculator in 
+the past. In 1801, Joseph Marie Jacquard made an improvement to existing loom 
+designs that used a series of punched paper cards as a program to weave 
+intricate patterns. The resulting Jacquard loom is not considered a true 
+computer but it was an important step in the development of modern digital 
+computers. Charles Babbage was the first to conceptualize and design a fully 
+programmable computer as early as 1820, but due to a combination of the limits 
+of the technology of the time, limited finance, and an inability to resist 
+tinkering with his design, the device was never actually constructed in his 
+lifetime. A number of technologies that would later prove useful in computing, 
+such as the punch card and the vacuum tube had appeared by the end of the 19th 
+century, and large-scale automated data processing using punch cards was 
+performed by tabulating machines designed by Hermann Hollerith.
+During the first half of the 20th century, many scientific computing needs were 
+met by increasingly sophisticated, special-purpose analog computers, which used 
+a direct mechanical or electrical model of the problem as a basis for 
+computation. These became increasingly rare after the development of the 
+programmable digital computer.
+A succession of steadily more powerful and flexible computing devices were 
+constructed in the 1930s and 1940s, gradually adding the key features of modern 
+computers, such as the use of digital electronics (largely invented by Claude 
+Shannon in 1937)[3] and more flexible programmability. Defining one point along 
+this road as "the first digital electronic computer" is exceedingly difficult. 
+Notable achievements include the Atanasoff-Berry Computer (1937), a 
+special-purpose machine that used valve-driven (vacuum tube) computation, binary 
+numbers, and regenerative memory; the secret British Colossus computer (1944), 
+which had limited programmability but demonstrated that a device using thousands 
+of valves could be made reliable and reprogrammed electronically; the Harvard 
+Mark I, a large-scale electromechanical computer with limited programmability 
+(1944); the decimal-based American ENIAC (1946) — which was the first general 
+purpose electronic computer, but originally had an inflexible architecture that 
+meant reprogramming it essentially required it to be rewired; and Konrad Zuse's 
+Z machines, with the electromechanical Z3 (1941) being the first working machine 
+featuring automatic binary arithmetic and feasible programmability.
+The team who developed ENIAC, recognizing its flaws, came up with a far more 
+flexible and elegant design, which has become known as the Von Neumann 
+architecture (or "stored program architecture"), named for one of its principle 
+designers. This stored program architecture became the basis for virtually all 
+modern computers. A number of projects to develop computers based on the stored 
+program architecture commenced in the mid to late-1940s; the first of these were 
+completed in Britain. The first to be up and running was the Small-Scale 
+Experimental Machine, but the EDSAC was perhaps the first practical version that 
+was developed.
+ 
+The Apple II, an early personal computerValve (tube) driven computer designs 
+were in use throughout the 1950s, but were eventually replaced with 
+transistor-based computers, which were smaller, faster, cheaper, and much more 
+reliable, thus allowing them to be commercially produced, in the 1960s. By the 
+1970s, the adoption of integrated circuit technology had enabled computers to be 
+produced at a low enough cost to allow individuals to own a personal computer of 
+the type familiar today.
+[edit]How computers work: the stored program architecture
+While the technologies used in computers have changed dramatically since the 
+first electronic, general-purpose computers of the 1940s, most still use the 
+stored program architecture (sometimes called the von Neumann architecture). The 
+design made the universal computer a practical reality.
+The architecture describes a computer with four main sections: the arithmetic 
+and logic unit (ALU), the control circuitry, the memory, and the input and 
+output devices (collectively termed I/O). These parts are interconnected by 
+bundles of wires (called "buses" when the same bundle supports more than one 
+data path) and are usually driven by a timer or clock (although other events 
+could drive the control circuitry).
+Conceptually, a computer's memory can be viewed as a list of cells. Each cell 
+has a numbered "address" and can store a small, fixed amount of information. 
+This information can either be an instruction, telling the computer what to do, 
+or data, the information which the computer is to process using the instructions 
+that have been placed in the memory. In principle, any cell can be used to store 
+either instructions or data.
+The ALU is in many senses the heart of the computer. It is capable of performing 
+two classes of basic operations. The first is arithmetic operations; for 
+instance, adding or subtracting two numbers together. The set of arithmetic 
+operations may be very limited; indeed, some designs do not directly support 
+multiplication and division operations (instead, users support multiplication 
+and division through programs that perform multiple additions, subtractions, and 
+other digit manipulations). The second class of ALU operations involves 
+comparison operations: given two numbers, determining if they are equal, or if 
+not equal which is larger.
+The I/O systems are the means by which the computer receives information from 
+the outside world, and reports its results back to that world. On a typical 
+personal computer, input devices include objects like the keyboard and mouse, 
+and output devices include computer monitors, printers and the like, but as will 
+be discussed later a huge variety of devices can be connected to a computer and 
+serve as I/O devices.
+The control system ties this all together. Its job is to read instructions and 
+data from memory or the I/O devices, decode the instructions, providing the ALU 
+with the correct inputs according to the instructions, "tell" the ALU what 
+operation to perform on those inputs, and send the results back to the memory or 
+to the I/O devices. One key component of the control system is a counter that 
+keeps track of what the address of the current instruction is; typically, this 
+is incremented each time an instruction is executed, unless the instruction 
+itself indicates that the next instruction should be at some other location 
+(allowing the computer to repeatedly execute the same instructions).
+Since the 1980s the ALU and control unit (collectively called a central 
+processing unit or CPU) have typically been located on a single integrated 
+circuit called a microprocessor.
+The functioning of such a computer is in principle quite straightforward. 
+Typically, on each clock cycle, the computer fetches instructions and data from 
+its memory. The instructions are executed, the results are stored, and the next 
+instruction is fetched. This procedure repeats until a halt instruction is 
+encountered.
+The set of instructions interpreted by the control unit, and executed by the 
+ALU, are limited in number, precisely defined, and very simple operations. 
+Broadly, they fit into one or more of of four categories: 1) moving data from 
+one location to another (an example might be an instruction that "tells" the CPU 
+to "copy the contents of memory cell 5 and place the copy in cell 10"; 2) 
+executing arithmetic and logical processes on data (for instance, "add the 
+contents of cell 7 to the contents of cell 13 and place the result in cell 20" 
+3) testing the condition of data ("if the contents of cell 999 are 0, the next 
+instruction is at cell 30") 4) altering the sequence of operations (the previous 
+example alters the sequence of operations, but instructions such as "the next 
+instruction is at cell 100" are also standard).
+Instructions, like data, are represented within the computer as binary code — a 
+base two system of counting. For example, the code for one kind of "copy" 
+operation in the Intel x86 line of microprocessors is 10110000 [4]. The 
+particular instruction set that a specific computer supports is known as that 
+computer's machine language. Using an already-popular machine language makes it 
+much easier to run existing software on a new machine; consequently, in markets 
+where commercial software availability is important suppliers have converged on 
+one or a very small number of distinct machine languages.
+Larger computers, such as some minicomputers, mainframe computers, servers, 
+differ from the model above in one significant aspect; rather than one CPU they 
+often have a number of them. Supercomputers often have highly unusual 
+architectures significantly different from the basic stored-program 
+architecture, sometimes featuring thousands of CPUs, but such designs tend to be 
+useful only for specialized tasks.
+[edit]Digital circuits
+The conceptual design above could be implemented using a variety of different 
+technologies. As previously mentioned, a stored program computer could be 
+designed entirely of mechanical components like Babbage's. However, digital 
+circuits allow Boolean logic and arithmetic using binary numerals to be 
+implemented using relays — essentially, electrically controlled switches. 
+Shannon's famous thesis showed how relays could be arranged to form units called 
+logic gates, implementing simple Boolean operations. Others soon figured out 
+that vacuum tubes — electronic devices, could be used instead. Vacuum tubes were 
+originally used as a signal amplifier for radio and other applications, but were 
+used in digital electronics as a very fast switch; when electricity is provided 
+to one of the pins, current can flow through between the other two.
+Through arrangements of logic gates, one can build digital circuits to do more 
+complex tasks, for instance, an adder, which implements in electronics the same 
+method — in computer terminology, an algorithm — to add two numbers together 
+that children are taught — add one column at a time, and carry what's left over. 
+Eventually, through combining circuits together, a complete ALU and control 
+system can be built up. This does require a considerable number of components. 
+CSIRAC, one of the earliest stored-program computers, is probably close to the 
+smallest practically useful design. It had about 2,000 valves, some of which 
+were "dual components"[5], so this represented somewhere between 2 and 4,000 
+logic components.
+Vacuum tubes had severe limitations for the construction of large numbers of 
+gates. They were expensive, unreliable (particularly when used in such large 
+quantities), took up a lot of space, and used a lot of electrical power, and, 
+while incredibly fast compared to a mechanical switch, had limits to the speed 
+at which they could operate. Therefore, by the 1960s they were replaced by the 
+transistor, a new device which performed the same task as the tube but was much 
+smaller, faster operating, reliable, used much less power, and was far cheaper.
+ 
+Integrated circuits are the basis of modern digital computing hardware.In the 
+1960s and 1970s, the transistor itself was gradually replaced by the integrated 
+circuit, which placed multiple transistors (and other components) and the wires 
+connecting them on a single, solid piece of silicon. By the 1970s, the entire 
+ALU and control unit, the combination becoming known as a CPU, were being placed 
+on a single "chip" called a microprocessor. Over the history of the integrated 
+circuit, the number of components that can be placed on one has grown 
+enormously. The first IC's contained a few tens of components; as of 2006, the 
+Intel Core Duo processor contains 151 million transistors [6].
+Tubes, transistors, and transistors on integrated circuits can be used as the 
+"storage" component of the stored-program architecture, using a circuit design 
+known as a flip-flop, and indeed flip-flops are used for small amounts of very 
+high-speed storage. However, few computer designs have used flip-flops for the 
+bulk of their storage needs. Instead, earliest computers stored data in Williams 
+tubes — essentially, projecting some dots on a TV screen and reading them again, 
+or mercury delay lines where the data was stored as sound pulses traveling 
+slowly (compared to the machine itself) along long tubes filled with mercury. 
+These somewhat ungainly but effective methods were eventually replaced by 
+magnetic memory devices, such as magnetic core memory, where electrical currents 
+were used to introduce a permanent (but weak) magnetic field in some ferrous 
+material, which could then be read to retrieve the data. Eventually, DRAM was 
+introduced. A DRAM unit is a type of integrated circuit containing huge banks of 
+an electronic component called a capacitor which can store an electrical charge 
+for a period of time. The level of charge in a capacitor could be set to store 
+information, and then measured to read the information when required.
+[edit]I/O devices
+I/O (short for input/output) is a general term for devices that send computers 
+information from the outside world and that return the results of computations. 
+These results can either be viewed directly by a user, or they can be sent to 
+another machine, whose control has been assigned to the computer: In a robot, 
+for instance, the controlling computer's major output device is the robot 
+itself.
+The first generation of computers were equipped with a fairly limited range of 
+input devices. A punch card reader, or something similar, was used to enter 
+instructions and data into the computer's memory, and some kind of printer, 
+usually a modified teletype, was used to record the results. Over the years, 
+other devices have been added. For the personal computer, for instance, 
+keyboards and mice are the primary ways people directly enter information into 
+the computer; and monitors are the primary way in which information from the 
+computer is presented back to the user, though printers, speakers, and 
+headphones are common, too. There is a huge variety of other devices for 
+obtaining other types of input. One example is the digital camera, which can be 
+used to input visual information. There are two prominent classes of I/O 
+devices. The first class is that of secondary storage devices, such as hard 
+disks, CD-ROMs, key drives and the like, which represent comparatively slow, but 
+high-capacity devices, where information can be stored for later retrieval; the 
+second class is that of devices used to access computer networks. The ability to 
+transfer data between computers has opened up a huge range of capabilities for 
+the computer. The global Internet allows millions of computers to transfer 
+information of all types between each other.
+[edit]Programs
+Computer programs are simply lists of instructions for the computer to execute. 
+These can range from just a few instructions which perform a simple task, to a 
+much more complex instruction list which may also include tables of data. Many 
+computer programs contain millions of instructions, and many of those 
+instructions are executed repeatedly. A typical modern PC (in the year 2005) can 
+execute around 3 billion instructions per second. Computers do not gain their 
+extraordinary capabilities through the ability to execute complex instructions. 
+Rather, they do millions of simple instructions arranged by people known as 
+programmers.
+In practice, people do not normally write the instructions for computers 
+directly in machine language. Such programming is incredibly tedious and highly 
+error-prone, making programmers very unproductive. Instead, programmers describe 
+the desired actions in a "high level" programming language which is then 
+translated into the machine language automatically by special computer programs 
+(interpreters and compilers). Some programming languages map very closely to the 
+machine language, such as Assembly Language (low level languages); at the other 
+end, languages like Prolog are based on abstract principles far removed from the 
+details of the machine's actual operation (high level languages). The language 
+chosen for a particular task depends on the nature of the task, the skill set of 
+the programmers, tool availability and, often, the requirements of the customers 
+(for instance, projects for the US military were often required to be in the Ada 
+programming language).
+Computer software is an alternative term for computer programs; it is a more 
+inclusive phrase and includes all the ancillary material accompanying the 
+program needed to do useful tasks. For instance, a video game includes not only 
+the program itself, but also data representing the pictures, sounds, and other 
+material needed to create the virtual environment of the game. A computer 
+application is a piece of computer software provided to many computer users, 
+often in a retail environment. The stereotypical modern example of an 
+application is perhaps the office suite, a set of interrelated programs for 
+performing common office tasks.
+Going from the extremely simple capabilities of a single machine language 
+instruction to the myriad capabilities of application programs means that many 
+computer programs are extremely large and complex. A typical example is Windows 
+XP, created from roughly 40 million lines of computer code in the C++ 
+programming language;[7] there are many projects of even bigger scope, built by 
+large teams of programmers. The management of this enormous complexity is key to 
+making such projects possible; programming languages, and programming practices, 
+enable the task to be divided into smaller and smaller subtasks until they come 
+within the capabilities of a single programmer in a reasonable period.
+Nevertheless, the process of developing software remains slow, unpredictable, 
+and error-prone; the discipline of software engineering has attempted, with some 
+partial success, to make the process quicker and more productive and improve the 
+quality of the end product.
+[edit]Libraries and operating systems
+Soon after the development of the computer, it was discovered that certain tasks 
+were required in many different programs; an early example was computing some of 
+the standard mathematical functions. For the purposes of efficiency, standard 
+versions of these were collected in libraries and made available to all who 
+required them. A particularly common task set related to handling the gritty 
+details of "talking" to the various I/O devices, so libraries for these were 
+quickly developed.
+By the 1960s, with computers in wide industrial use for many purposes, it became 
+common for them to be used for many different jobs within an organization. Soon, 
+special software to automate the scheduling and execution of these many jobs 
+became available. The combination of managing "hardware" and scheduling jobs 
+became known as the "operating system"; the classic example of this type of 
+early operating system was OS/360 by IBM.[8]
+The next major development in operating systems was timesharing — the idea that 
+multiple users could use the machine "simultaneously" by keeping all of their 
+programs in memory, executing each user's program for a short time so as to 
+provide the illusion that each user had their own computer. Such a development 
+required the operating system to provide each user's programs with a "virtual 
+machine" such that one user's program could not interfere with another's (by 
+accident or design). The range of devices that operating systems had to manage 
+also expanded; a notable one was hard disks; the idea of individual "files" and 
+a hierarchical structure of "directories" (now often called folders) greatly 
+simplified the use of these devices for permanent storage. Security access 
+controls, allowing computer users access only to files, directories and programs 
+they had permissions to use, were also common.
+Perhaps the last major addition to the operating system were tools to provide 
+programs with a standardized graphical user interface. While there are few 
+technical reasons why a GUI has to be tied to the rest of an operating system, 
+it allows the operating system vendor to encourage all the software for their 
+operating system to have a similar looking and acting interface.
+Outside these "core" functions, operating systems are usually shipped with an 
+array of other tools, some of which may have little connection with these 
+original core functions but have been found useful by enough customers for a 
+provider to include them. For instance, Apple's Mac OS X ships with a digital 
+video editor application.
+Operating systems for smaller computers may not provide all of these functions. 
+The operating systems for early microcomputers with limited memory and 
+processing capability did not, and Embedded computers typically have specialized 
+operating systems or no operating system at all, with their custom application 
+programs performing the tasks that might otherwise be delegated to an operating 
+system.
+[edit]Computer applications
+ 
+Computer-controlled robots are now common in industrial manufacture. 
+Computer-generated imagery (CGI) is a central ingredient in motion picture 
+visual effects. The seawater creature in The Abyss (1989) marked the acceptance 
+of CGI in the visual effects industry. 
+Furby: many modern, mass-produced toys would not be possible without low-cost 
+embedded computers.The first digital computers, with their large size and cost, 
+mainly performed scientific calculations, often to support military objectives. 
+The ENIAC was originally designed to calculate ballistics-firing tables for 
+artillery, but it was also used to calculate neutron cross-sectional densities 
+to help in the design of the hydrogen bomb,[9][10] significantly speeding up its 
+development. (Many of the most powerful supercomputers available today are also 
+used for nuclear weapons simulations.) The CSIR Mk I, the first Australian 
+stored-program computer, was amongst many other tasks used for the evaluation of 
+rainfall patterns for the catchment area of the Snowy Mountains Scheme, a large 
+hydroelectric generation project[11] Others were used in cryptanalysis, for 
+example the first programmable (though not general-purpose) digital electronic 
+computer, Colossus, built in 1943 during World War II. Despite this early focus 
+of scientific and military engineering applications, computers were quickly used 
+in other areas.
+From the beginning, stored program computers were applied to business problems. 
+The LEO, a stored program-computer built by J. Lyons and Co. in the United 
+Kingdom, was operational and being used for inventory management and other 
+purposes 3 years before IBM built their first commercial stored-program 
+computer. Continual reductions in the cost and size of computers saw them 
+adopted by ever-smaller organizations. Moreover, with the invention of the 
+microprocessor in the 1970s, it became possible to produce inexpensive 
+computers. In the 1980s, personal computers became popular for many tasks, 
+including book-keeping, writing and printing documents, calculating forecasts 
+and other repetitive mathematical tasks involving spreadsheets.
+As computers have become less expensive, they have been used extensively in the 
+creative arts as well. Sound, still pictures, and video are now routinely 
+created (through synthesizers, computer graphics and computer animation), and 
+near-universally edited by computer. They have also been used for entertainment, 
+with the video game becoming a huge industry.
+Computers have been used to control mechanical devices since they became small 
+and cheap enough to do so; indeed, a major spur for integrated circuit 
+technology was building a computer small enough to guide the Apollo 
+missions[12][13] two of the first major applications for embedded computers. 
+Today, it is almost rarer to find a powered mechanical device not controlled by 
+a computer than to find one that is at least partly so. Perhaps the most famous 
+computer-controlled mechanical devices are robots, machines with more-or-less 
+human appearance and some subset of their capabilities. Industrial robots have 
+become commonplace in mass production, but general-purpose human-like robots 
+have not lived up to the promise of their fictional counterparts and remain 
+either toys or research projects.
+Robotics, indeed, is the physical expression of the field of artificial 
+intelligence, a discipline whose exact boundaries are fuzzy but to some degree 
+involves attempting to give computers capabilities that they do not currently 
+possess but humans do. Over the years, methods have been developed to allow 
+computers to do things previously regarded as the exclusive domain of humans — 
+for instance, "read" handwriting, play chess, or perform symbolic integration. 
+However, progress on creating a computer that exhibits "general" intelligence 
+comparable to a human has been extremely slow.
+[edit]Networking and the Internet
+Computers have been used to coordinate information in multiple locations since 
+the 1950s, with the US military's SAGE system the first large-scale example of 
+such a system, which led to a number of special-purpose commercial systems like 
+Sabre.
+In the 1970s, computer engineers at research institutions throughout the US 
+began to link their computers together using telecommunications technology. This 
+effort was funded by ARPA, and the computer network that it produced was called 
+the ARPANET. The technologies that made the Arpanet possible spread and evolved. 
+In time, the network spread beyond academic and military institutions and became 
+known as the Internet. The emergence of networking involved a redefinition of 
+the nature and boundaries of the computer. In the phrase of John Gage and Bill 
+Joy (of Sun Microsystems), "the network is the computer". Computer operating 
+systems and applications were modified to include the ability to define and 
+access the resources of other computers on the network, such as peripheral 
+devices, stored information, and the like, as extensions of the resources of an 
+individual computer. Initially these facilities were available primarily to 
+people working in high-tech environments, but in the 1990s the spread of 
+applications like e-mail and the World Wide Web, combined with the development 
+of cheap, fast networking technologies like Ethernet and ADSL saw computer 
+networking become ubiquitous almost everywhere. In fact, the number of computers 
+that are networked is growing phenomenally. A very large proportion of personal 
+computers regularly connect to the Internet to communicate and receive 
+information.[14] "Wireless" networking, often utilizing mobile phone networks, 
+has meant networking is becoming increasingly ubiquitous even in mobile 
+computing environments.
+[edit]Alternative computing models
+Despite the massive gains in speed and capacity over the history of the digital 
+computer, there are many tasks for which current computers are indequate. For 
+some of these tasks, conventional computers are fundamentally inadequate, 
+because the time taken to find a solution grows very quickly as the size of the 
+problem to be solved expands. Therefore, there has been research interest in 
+some computer models that use biological processes, or the oddities of quantum 
+physics, to tackle these types of problems. For instance, DNA computing is 
+proposed to use biological processes to solve certain problems. Because of the 
+exponential division of cells, a DNA computing system could potentially tackle a 
+problem in a massively parallel fashion. However, such a system is limited by 
+the maximum practical mass of DNA that can be handled.
+Quantum computers, as the name implies, take advantage of the unusual world of 
+quantum physics. If a practical quantum computer is ever constructed, there are 
+a limited number of problems for which the quantum computer is fundamentally 
+faster than a standard computer. However, these problems, relating to 
+cryptography and, unsurprisingly, quantum physics simulations, are of 
+considerable practical interest.
+These alternative models for computation remain research projects at the present 
+time, and will likely find application only for those problems where 
+conventional computers are inadequate.
+[edit]Computing professions and disciplines
+In the developed world, virtually every profession makes use of computers. 
+However, certain professional and academic disciplines have evolved that 
+specialize in techniques to construct, program, and use computers. Terminology 
+for different professional disciplines is still somewhat fluid and new fields 
+emerge from time to time: however, some of the major groupings are as follows:
+  Computer engineering is the branch of electrical engineering that focuses both 
+  on hardware and software design, and the interaction between the two. 
+  Computer science is an academic study of the processes related to computation, 
+  such as developing efficient algorithms to perform specific tasks. It tackles 
+  questions as to whether problems can be solved at all using a computer, how 
+  efficiently they can be solved, and how to construct efficient programs to 
+  compute solutions. A huge array of specialties has developed within computer 
+  science to investigate different classes of problems. 
+  Software engineering concentrates on methodologies and practices to allow the 
+  development of reliable software systems while minimizing, and reliably 
+  estimating, costs and timelines. 
+  Information systems concentrates on the use and deployment of computer systems 
+  in a wider organizational (usually business) context. 
+  Many disciplines have developed at the intersection of computers with other 
+  professions; one of many examples is experts in geographical information 
+  systems who apply computer technology to problems of managing geographical 
+  information. 
+There are two major professional societies dedicated to computers, the 
+Association for Computing Machinery and IEEE Computer Society.
+[edit]See also
+Look up Computer in Wiktionary, the free dictionary.Wikiquote has a collection 
+of quotations related to: 
+ComputerWikimedia Commons has media related to: 
+ComputerAssociation for Computing Machinery 
+  IEEE Computer Society 
+  Operating system 
+  Computer hardware 
+  Computability theory 
+  Computer datasheet 
+  Computer expo 
+  Computer science 
+  Computer types: analog computer, hybrid computer, supercomputer, desktop, 
+  laptop, desknote, roll-away computer, embedded computer, cart computer, tablet 
+  pc, handheld computer, subnotebook, and server 
+  Computing 
+  Computers in fiction 
+  Computer music 
+  Computer security and Computer insecurity challenges such as: malware, 
+  phishing, spam (electronic), and how to solve them, such as firewall, computer 
+  security audit 
+  Digital 
+  History of computing 
+  List of computer term etymologies 
+  List of computing topics 
+  Personal computer 
+  Word processing 
+  Internet 
+  Computer programming 
+
+
+[edit]Other computers
+  Analog computer 
+  DNA computer 
+  Molecular computer 
+  Quantum computer 
+[edit]Notes and references
+  ^ Phillips, Tony (2000). "The Antikythera Mechanism I." American Mathematical 
+  Society URL accessed on 2006-04-05. 
+  ^ "Visible Storage." computerhistory.org: Unknown. URL accessed on 2006-04-05. 
+
+  ^ Shannon, Claude Elwood (1940). A symbolic analysis of relay and switching 
+  circuits. Massachusetts Institute of Technology: Thesis (M.S.) 
+  ^ Unknown (Unknown). "[http://www.sandpile.org/ia32/opc_1.htm IA-32 
+  architecture one byte opcodes]." sandpile.org URL accessed on 2006-04-09. 
+  ^ The last of the first : CSIRAC : Australia's first computer, Doug McCann and 
+  Peter Thorne, ISBN 0734020244. 
+  ^ Thon, Harald and Töpel, Bert (January 16, 2006). "Will Core Duo Notebooks 
+  Trade Battery Life For Quicker Response?." Tom's Hardware URL accessed on 
+  2006-04-09. 
+  ^ Tanenbaum, Andrew S. Modern Operating Systems (2nd ed.). Prentice Hall. ISBN 
+  0-13-092641-8. 
+  ^ IBM Data Processing Division (April 7, 1964). System/360 Announcement. Press 
+  release. 
+  ^ Randall 5th, Alexander (February 14, 2006). "Q&A: A lost interview with 
+  ENIAC co-inventor J. Presper Eckert." Computerworld URL accessed on 
+  2006-04-05. 
+  ^ "Classical Super / Runaway Super." Globalsecurity.org: Unknown. URL accessed 
+  on 2006-04-05. 
+  ^ The last of the first : CSIRAC : Australia's first computer, Doug McCann and 
+  Peter Thorne, ISBN 0734020244. 
+  ^ Brown, Alexander (August 22, 2002). "Integrated Circuits in the Apollo 
+  Guidance Computer." URL accessed on 2006-04-05. 
+  ^ "Technological Innovation and the ICBM." Smithsonian Institution: Unknown. 
+  URL accessed on 2006-04-05. 
+  ^ "North America Internet Usage Stats." Internet World Stats: April 3, 2006. 
+  URL accessed on 2006-04-05. 
+[edit]External links
+  Computer History 
+Retrieved from "http://en.wikipedia.org/wiki/Computer"
+Categories: Computer science | Computing | Computer hardware
+ViewsArticle Discussion Edit this page History Personal toolsSign in / create 
+  account Navigation
+  Main Page 
+  Community Portal 
+  Featured articles 
+  Current events 
+  Recent changes 
+  Random article 
+  Help 
+  Contact Wikipedia 
+  Donations 
+Search
+    Toolbox
+  What links here 
+  Related changes 
+  Upload file 
+  Special pages 
+  Printable version 
+  Permanent link
+  Cite this article 
+In other languages
+  Afrikaans 
+  العربية 
+  Asturianu 
+  Български 
+  বাংলা 
+  Brezhoneg 
+  Bosanski 
+  Català 
+  Česky 
+  Cymraeg 
+  Dansk 
+  Deutsch 
+  Esperanto 
+  Español 
+  Eesti 
+  فارسی 
+  Suomi 
+  Føroyskt 
+  Français 
+  Frysk 
+  Gàidhlig 
+  Galego 
+  עברית 
+  हिन्दी 
+  Magyar 
+  Interlingua 
+  Bahasa Indonesia 
+  Íslenska 
+  Italiano 
+  ᐃᓄᒃᑎᑐᑦ 
+  日本語 
+  한국어 
+  Kurdî / كوردي 
+  Latina 
+  Lëtzebuergesch 
+  Limburgs 
+  ລາວ 
+  Lietuvių 
+  Latviešu 
+  Malagasy 
+  മലയാളം 
+  Bahasa Melayu 
+  Myanmasa 
+  Norsk (bokmål) 
+  Plattdüütsch 
+  Nederlands 
+  Norsk (nynorsk) 
+  Diné bizaad 
+  Polski 
+  Português 
+  Română 
+  Русский 
+  Simple English 
+  Slovenščina 
+  Shqip 
+  Српски / Srpski 
+  Svenska 
+  Kiswahili 
+  தமிழ் 
+  తెలుగు 
+  ไทย 
+  Türkçe 
+  Oyghurque 
+  Українська 
+  اردو 
+  Tiếng Việt 
+  ייִדיש 
+  中文 
+  Bân-lâm-gú 
+
+  This page was last modified 00:51, 21 May 2006. All text is available under 
+  the terms of the GNU Free Documentation License (see Copyrights for details). 
+  Wikipedia® is a registered trademark of the Wikimedia Foundation, Inc.
+  Privacy policy About Wikipedia Disclaimers 

@@ -1,0 +1,5 @@
+for i in `seq 1 20`; do 
+ echo $i; 
+ echo "../../office_data/$i.pgp -o output.txt > ftmp_out 2> ftmp_out1" > _finfo_cmd_run.$i
+ cp _finfo_dataset.1 _finfo_dataset.$i;
+done

@@ -1,0 +1,8 @@
+# Declarations
+COMPILER = icc
+OPTS_DEF = -fast
+MISC_OPTS = -lm -m32
+
+# Actions
+all:		
+	$(COMPILER) $(OPTS_DEF) $(MISC_OPTS) *.c

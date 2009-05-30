@@ -1,0 +1,2126 @@
+annual report 
+2004 
+NATIONAL INSTITUTE 
+FOR RESEARCH 
+IN COMPUTER SCIENCE 
+AND CONTROL 
+
+THE FRENCH 
+NATIONAL INSTITUTE 
+FOR RESEARCH 
+IN COMPUTER SCIENCE 
+AND CONTROL 
+
+contents 
+The President’s message 
+INRIA, a strategy of excellence 
+¦ International outlook 
+¦ A wealth of scientific outputs 
+¦ Fruitful dialog between research and innovation 
+¦ 6 research units, competence centers 
+in the regions 
+¦ The means for growth 
+Organization chart 
+Councils 
+10 researchers tales 
+The 124 research project-teams 
+2 
+4 
+6 
+8 
+18 
+26 
+34 
+38 
+39 
+40 
+62 
+INRIA was founded in 1967 (it was then called IRIA). 
+The Institute is a public establishment of scientific and 
+technological character (EPST) placed under the dual authority 
+of the Ministries of Research and Industry. 
+3, 6 research units located in 
+Aquitaine, Bretagne, Lorraine, Île-de-France, 
+Nord-Pas-de-Calais, Provence-Alpes-Côte d’Azur, 
+Rhône-Alpes, and in interaction with their region. 
+a staff of 
+3,500,including 2,700 scientists 
+(INRIA and partner organizations) 
+1,800 persons on INRIA payroll 
+124 research project-teams 
+Budget 
+1 123 million euros exclusive of tax, including 
+22% in self-resources 
+
+Due to the quality of its research scientists and the excel-
+lence of their work, the Institute stands out as a major 
+contributor to many European and international projects. 
+In basic research, applied research and technology 
+transfer, INRIA intends to participate in a continuous flux 
+of innovations in the field of ICST. The growing importance 
+of information technology in all scientific disciplines and 
+in most economic activities prompted the Institute to 
+commit itself to a strategy of research in partnership 
+with numerous organizations. More than half of the 
+124 project-teams of the Institute are joint projects 
+with CNRS, the engineering schools, the universities and 
+other research institutes. The Institute is also working 
+with the large industrial R&D departments. Research 
+in computer science is thus led in close proximity with 
+the needs in telecommunications, medicine, biology, 
+transportation, and so on. 
+INRIA, the French National Institute for 
+Research in Computer Science and Control, 
+is one of France's main assets in the 
+international challenge of information and 
+communication science and technology. 
+This strategy of closeness results in a dynamic transfer 
+activity of research results through software publication 
+and distribution and the creation of startups supported 
+by INRIA's subsidiary --INRIA-Transfert. 
+INRIA has contributed to the creation of many companies 
+during the last twenty years: from the pioneering Simulog 
+founded in 1984 to Genostar founded in 2004, and 
+including Ilog, listed on the Euronext, Nasdaq and Kelkoo. 
+Around forty such companies are currently active and 
+others have been integrated into large industrial groups. 
+Training and information distribution are part of the 
+Institute's assignments. The 3,500 INRIA collaborators, 
+including 2,700 scientists, contribute to these goals with 
+the desire to share their scientific curiosity, their passion 
+for research and their knowledge with the world around them. 
+
+
+The President’s
+
+
+message
+
+
+Gilles Kahn 
+
+
+Gilles Kahn is a scientist of international renown. 
+He is a specialist in programming environments 
+and computer proof environments. His training 
+and career led him from the École polytechnique 
+(X64) to INRIA, which he joined in 1977, 
+with various stays at Stanford University, 
+USA (1968-1971), the University of Edinburgh, 
+UK (1975-1976), the Isaac Newton Institute, 
+Cambridge, UK (1995). 
+At INRIA, Gilles Kahn participated in the creation 
+of the Sophia Antipolis research unit before 
+joining the Institute general management. 
+He became INRIA's Scientific Director in 1993. 
+Gilles Kahn was appointed Chairman of the 
+Institute's Board of Directors in May 2004. 
+Gilles Kahn is a member of the Academy of 
+Sciences, of the Academy of Technology and the 
+Academia Europea. He also belongs to many 
+scientific boards of companies and research 
+organizations (Onera, BRGM, CNES, EDF, Ilog, etc.) 
+in France and abroad. 
+
+
+The President’s message 
+
+
+The year 2004 began with the examination of the results of 
+the previous contract period (2000-2003) by a very high level 
+international evaluation committee. The positive and constructive 
+conclusions drawn by this committee form the basis for the 
+definition of a new contract with the Government. Fortified by this 
+evaluation, INRIA worked hard in 2004 and the present annual 
+report is proof of a sustained scientific production, the creation of 
+new projects, and the progress of FUTURS with our university 
+partners in Bordeaux, Lille and Saclay. The subdivision of INRIA 
+activity into themes has been entirely revised and now highlights 
+the strategic interest of the Institute in life sciences and 
+the health sector. INRIA reinforced its Scientific Management 
+with the arrival of a new vice President for Research, Professor 
+Jean Vuillemin and the setting-up of four working groups for 
+prospective and analysis that involve over forty INRIA scientists. 
+
+The efficiency of research organization is one of the topics that 
+was discussed on the national level and INRIA deems it be of 
+paramount importance. The implementation of a computerized 
+management system required much mobilization on the part of 
+INRIA staff. The decision to deploy the system at the beginning of 
+2005 was made irrevocably. Owing to the collective efforts 
+expended for such a complex transition, the Institute will be in a 
+better position to face the changes in research organization that 
+we can see dawning on the horizon in France and in Europe. 
+Various items were reinforced, among which organization of 
+computer resources, training of INRIA personnel, support to 
+software development, communication on INRIA research work, 
+and support to research projects in terms of contractual 
+relations. A reform of the Institute's statutory decree that had 
+been in the works for a long time is about to be adopted: we will 
+thus now be able to spend more time studying the best 
+
+application files for research positions at INRIA. The Institute is 
+evolving towards more decentralization and more responsibility 
+exerted closer to the research teams, for a more competent and 
+reactive administrative, technical and organizational support. 
+
+What is in store for us in the upcoming years? 
+The pace of scientific and technological evolution in Information 
+and Communication Science and Technology shows no sign of 
+slackening. Industry has picked up from the start of century 
+crisis, renewed and quietened down. There are signs that 
+company creation is also reviving-good news for an Institute that 
+has been active in this area for twenty years. ICST is a crucial 
+part of most new scientific and technological developments 
+and INRIA must adapt to the growth in needs for knowledge, 
+expertise and experimentation in this field, while preserving the 
+essential values that form the basis of its action. 
+
+
+02•03
+
+
+
+INRIA: 
+
+a strategy 
+
+of excellence 
+
+Information and communication science and technology 
+(ICST) is transforming society. It enters multiple 
+areas of daily life, industry and services. Computer 
+systems are embedded into common devices-TV 
+sets, telephones, cars, supermarket shelves and 
+so on. These devices communicate with each other 
+via networks and have long been contributing to 
+industrial efficiency. Digital advances in all fields are 
+accompanied with growing needs in computation, 
+algorithms and software intelligence. 
+
+
+For INRIA, research is not limited to the development 
+
+Evolution, 
+
+fractals and design of information technology products. It must contribute 
+
+Project-team COMPLEX to economic development in all the sectors that 
+need it. 
+
+06 INTERNATIONAL 8 FROM THE IDEA 
+OUTLOOK TO THE APPLICATION: 
+
+a wealth of scientific productions 
+
+
+INRIA and its partners must thus propose innovation 
+incentives for industry, services and administration. 
+Research in information technology contributes to 
+a more transparent world in which information is 
+available, intelligible and accessible. Research makes 
+the realization of new projects and services easier 
+via modeling, simulation and visualization. It also 
+participates in progress in medical technology, makes 
+complex systems secure, contributes to progress in 
+environment protection, the understanding of natural 
+phenomena and quality of life. 
+
+Thus the development of ICST and its contribution to 
+advances in science is leading INRIA into a dynamics 
+of development of growth at the service of economy 
+and society. This approach delineated into seven 
+priority challenges in the Institute's strategic plan 
+guides the work of INRIA. 
+
+18 FRUITFUL DIALOG 26 SIX RESEARCH 
+BETWEEN UNITS, 
+research and innovation regional competence centers 
+in the field of ICST 
+
+
+7 
+
+priority 
+
+scientific challenges 
+
+Design and master 
+
+the future network infrastructures 
+and communication services platforms 
+
+Develop 
+
+multimedia data 
+and multimedia information processing 
+
+Guarantee 
+
+the reliability and security of software 
+intensive systems 
+
+Couple 
+
+models and data to simulate 
+and control complex systems 
+
+Combine 
+
+simulation, visualization and interaction 
+
+Model 
+
+the living structures and mechanisms 
+
+Fully integrate 
+
+ICST into medical technology 
+
+34 THE MEANS 
+FOR GROWTH 
+
+04•05
+
+
+
+INTERNATIONAL 
+OUTLOOK 
+
+INRIA's research work is in the context of a dual international perspective. The teams are invited to increase exchanges and partnerships with 
+foreign departments. In parallel, each research project-team is evaluated 
+by a committee that calls upon the best international research scientists 
+in each speciality. The Institute as a whole regularly presents its work 
+to an external evaluation committee called the Visiting Committee, 
+composed of external French and foreign scientists of note.The last such 
+evaluation took place in March 2004. 
+
+This international strategy is one of the Institute's priorities. The objective is to maintain INRIA at the highest level of excellence. This is the 
+reason why the Institute kept investing much in this area in 2004. This 
+approach has several development directions: reinforcing the attractiveness of the Institute and augmenting its capacity to welcome and recruit 
+the best foreign graduates and scientists, developing partnerships with 
+the most dynamic academic and industrial departments worldwide. 
+
+INRIA implements this strategy in the framework of geographical priorities. The Institute maintains a strong commitment to the development 
+of the European research area. INRIA is one of the major actors of the 
+6th Framework Program (FP). In 2004, the Institute was partner to more 
+than forty European research initiatives. INRIA is also a founding member of ERCIM, the European Research Consortium for Informatics and 
+Mathematics, a one of its kind organization in Europe that regroups 
+research organizations in the field of ICST from eighteen European 
+countries. INRIA has been and is still participating in several work 
+groups initiated by the Europe mission of the Ministry in charge of 
+Research in the framework of the preparation of the 7th FP. 
+
+The second priority of INRIA is to reinforce partnerships with research 
+departments in the United States. The United States is the most dynamic 
+country in ICST research. Forty percent of the projects work in partnership with American teams, in the framework of the “associate teams” 
+program. In this context, INRIA favors nine major centers, for example 
+at Urbana Champaign and MIT (to welcome interns and for collaborations). Finally, the Institute intends to strengthen its collaborations with 
+Asia, which will be a new geographical priority in the years to come. The 
+objective of the Institute is to bolster personnel exchanges between 
+France and Asia in view of creating strong human and scientific ties 
+between INRIA researchers and Asian scientists. INRIA is thus involved 
+in several joint research ventures, such the LIAMA in China and the 
+Hong Kong Center for financial engineering. 
+The Institute is also a driving force in the development of multilateral 
+research programs with Brazil, Chile, Mexico and various African countries (project SARIMA). 
+
+Members of the LIAMA 
+scientific committee 
+Sharing competence with Africanresearch in applied mathematics 
+
+Several INRIA teams are working in close collaboration with African 
+researchers in applied mathematics, especially the project-team MERE 
+on the modeling of systems in connection with water. INRIA got 
+involved with these teams in project SARIMA (support to research 
+activities in computer science and mathematics in Africa) which proposes to develop a balanced cooperation model between research 
+teams in the North and the South. The main objective is to identify 
+and reinforce competence centers in applied mathematics cooperating within a network structure. Seven teams were selected to start 
+with as network nodes (five teams from French-speaking sub-Saharan 
+countries, one Tunisian team and one Lebanese team). The project 
+is supported by the French Ministry of Foreign Affairs and will be 
+operated in the North by the GIS SARIMA (scientific interest group), 
+composed of INRIA, CIMPA and the universities of Nice-Sophia 
+Antipolis, Metz and Rennes I. In 2004, SARIMA entered its operational 
+phase: INRIA will manage 915,000 euros over a period of three years 
+to fund bilateral research projects, researchers exchanges, as well as 
+visits of graduate students, doctoral candidates and post-docs in 
+expert teams in the North and in the South. 
+
+
+Associate teams around the world 
+The “Associate teams Program” was launched by INRIA in 2001. Its purpose is to reinforce 
+synergies between an INRIA team and a foreign team. By bringing in significant funds for 
+mobility, the program makes it possible to develop collaborations initiated by the research 
+scientists and to strengthen scientific cooperation around a promising project. In 2004, 
+twenty-six teams were able to develop exchanges, meetings, bilateral seminars and partici-
+pation in international conferences. 
+This recent program is being constantly improved. One-and three-year evaluations make it 
+possible to measure its impact on research. In December 2004, the evaluation committee thus 
+evaluated the eight teams who benefitted from this support for three years. 
+35 
+30 
+25 
+20 
+15 
+10 
+5 
+0 
+10 8 10 12 
+10 
+16 
+26 
+33 
+2 5 
+Team evolution over 4 years 
+02 03 04 05 
+. started associate-teams 
+. terminated associate-teams 
+. total number associate-team 
+A reinforced presence 
+in China 
+The development of special, durable rela-
+tions between French and Chinese research 
+scientists in the field of ICST is one of 
+INRIA's priorities. In 1997, the Institute 
+created the Sino-French Laboratory in 
+Computer Science, Automation and Applied 
+Mathematics (LIAMA) with the Chinese 
+Academy of Sciences (CAS). LIAMA kept 
+growing in 2004 following the dynamism of 
+the Chinese economy that is increasingly in 
+demand of innovations in the field of ICST. 
+The department boasts around thirty 
+Chinese and French research scientists on 
+research themes at the interface between 
+ICST and environmental problems (plant 
+growth simulation and visualization, 
+remote image processing and interpreta-
+tion, fluid mechanics) and on the promotion 
+of free scientific software (Scilab). 
+METALAU, an INRIA team, has associated 
+itself with LIAMA for the Greenlab project 
+whose goal is to develop a dynamical 
+model of plant growth. In October 2004, a 
+new agreement was signed that reasserted 
+LIAMA's ambitions and welcomed two new 
+partners, BRGM (French Research Institute 
+for Geosciences) and INRA (National 
+Institute for Research in Agronomy). Both 
+organizations are joining CNRS (French 
+National Center for Scientific Research) and 
+CIRAD (French Agricultural Research centre 
+for International Development) within 
+LIAMA. The department is hosted by the 
+Institute of Automation of the Chinese 
+Academy of Sciences (CASIA) in Beijing. 
+International outlook 
+
+
+For example, since 2002 the EPIDAURE team has been working in partnership with the LONI, 
+a member of the UCLA School of Medicine, to put together an atlas of the numerous brain 
+images resulting from the explosion of brain imaging techniques. EPIDAURE specializes in the 
+design of analysis tools for this type of images and thus shares its expertise with a department with experience in the understanding of brain functions. The Sophia Antipolis team thus 
+had access to a unique computer platform with immediate onsite help, and was able to share 
+the work with other international researchers. 
+Similarly, the Dutch researchers of CWI integrated their experience with the PROTHEO team 
+of INRIA Lorraine in the field of symbolic systems. There is now a strong synergy between 
+the two groups and the quality of the software written after this cooperation underlines the 
+driving role of this program. 
+
+
+5 in Europe (15%) 
+3 in Asia (9%) 
+1 in Africa (3%) 
+
+24 in Americas (73%) 
+
+Geographical repartition 
+
+Associate teams by zone 
+
+06•07 
+
+
+From the idea 
+to the application: 
+a wealth of scientific outputs 
+Haptic feedback 
+on virtual workbench 
+Project-team I3D, 
+project RNTL Geobench 
+2,600 scientific publications, 25 international conferences, 4,360 attendees including 
+3,200 from abroad, 11,500 hours of teaching, 950 doctoral candidates, 
+150 postdocs, 300 trainees 
+
+A wealth of scientific outputs 
+
+
+Research at INRIA is organized into small teams 
+--the project-teams --that are created to work 
+on precise themes and whose advances are 
+regularly evaluated. INRIA also includes other 
+research teams, which are not yet acknowledged 
+as project-teams. This organizational choice 
+turns out to be very productive in the field of 
+ITCS where the pace of innovation is very quick. 
+The visible part of INRIA research consists 
+in softwares, experiments, partnerships and 
+publications. 
+Here are a few examples that show this work of 
+turning ideas into applications carried out by 
+INRIA researchers in 2004. 
+
+A WEALTH 
+OF SCIENTIFIC OUTPUTS 
+
+3 software packages 
+
+The development and production of application software, validation tools, computational tools and so on, 
+give a measure of the variety of INRIA research. More 
+than 150 such tools can be found on the www.inria.fr 
+site. The Institute has adopted a development strategy 
+that emphasizes the widest possible dissemination into 
+the academic and industrial worlds. Thus, many INRIA 
+software packages contributed to the development of 
+international standards that are now recognized, such 
+as OLSR in the field of ad hoc mobile networks for 
+instance. 
+Part of this software is made available to all, primarily 
+to researchers, as open source. Other software is 
+marketed by INRIA in partnership with industry and 
+integrated into various products. 
+
+SPREAD: objects that communicate 
+
+SPREAD (Spatial Programming Environment for Ambient computing 
+Design) is a software package developed by the ACES team. The 
+purpose of SPREAD is to simplify the development of applications in 
+the area of ubiquitous computing. In April 2004, in the framework of 
+the Senate's international meeting on prospective on “21st century 
+transportations”, the team presented Ubi-Bus, a system based on 
+Spread to help vision impaired or low mobility persons use public 
+transports. Ubi-Bus makes it possible for users to ask for a bus to stop 
+from a simple telephone or a PDA. 
+
+3D object manipulation 
+with force feedback 
+Project-team SIAMES 
+08•09
+
+
+
+The application makes extensive use of the new programming 
+abstractions proposed by Spread, whose characteristics depend on the 
+location in space and allow for spontaneous information exchange 
+between physical entities (for example, the bus, the bus stop and the 
+user). Ubi-bus runs on a wireless peer-to-peer architecture in which 
+each object hosts a copy of the system and the necessary components. 
+The application may spawn many others in which city objects could 
+exchange information with users. 
+Spread was registered by INRIA at the Software Protection Agency 
+in March 2003. 
+
+MPFR: the same round-off on any computer 
+
+The MPFR library was developed by research scientists of Loria and 
+INRIA Lorraine. MPFR is a set of software tools designed to perform 
+floating point operations up to an arbitrary precision with exact round-
+off. In a floating point operation, for example 1 divided by 3, the result 
+cannot be represented exactly therefore a choice must be made between 
+0.33334 and 0.33333. The round-off choice is critical for certain 
+applications that require high precision. It sometimes depends however 
+on the type of computer that is performing the calculations. Now, the 
+execution of any computer program relies on computations: precision 
+and portability are important issues in computing. MPFR proposes a 
+solution that sets the exactitude of the round-off for all computations 
+and all machines. The library is inspired by the IEEE-754 standard, that 
+had already settled the matter for other types of computations, the 
+so-called double precision computations. MPFR is now available as free 
+software under the GNU LGPL license. It can be used by anyone and 
+be integrated into commercial software. This is why many software 
+developers have adopted MPFR for different applications: critical 
+computations, estimate of the numerical stability of an algorithm, 
+computation with correct round-off of such mathematical functions as 
+the sine, exponential and logarithm, which are not standardized in 
+IEEE-754. The latter application was the reason for integrating MPFR 
+into the GNU Fortran compiler in July 2004, a significant benefit for 
+many numerics experts since most numerical code is written in Fortran. 
+
+www.mpfr.org 
+
+Modeling contacts 
+between two infected proteins 
+ARC DOCKING - Project-team GÉOMETRICA 
+DIET: networked scientific computing 
+
+DIET (Distributed Interactive Engineering Toolbox) is a toolbox for 
+remote computing over the Internet on a network of computers (grid 
+computing). The toolbox was developed by project-team GRAAL in 
+order to implement and validate the algorithms created by the research 
+scientists. DIET makes it possible to deploy computing applications 
+requiring significant resources, and thus numerous machines, such as 
+3D simulations, bioinformatics, and scientific computing. DIET defines 
+the user side of things: a web page dedicated to the application where 
+parameters can be entered. DIET then chooses the machine that will 
+perform the fastest computation through a network of computers. DIET 
+offers decisive advantages compared to existing tools in the field, in 
+particular the ability to manage an unlimited number of remote 
+computers and users. DIET makes it possible to modify the scheduling 
+depending on the application. The toolbox has been available since 
+September 2004. It was presented at the Super Grid Computing 
+meeting in the United States in November 2004 and was well received 
+by the scientific community. 
+Today, GRAAL researchers intend to endow DIET with new functionalities, in particular the possibility to leave the data on the client machine 
+in such a way that the application may change computers freely. 
+
+http://graal.ens-lyon.fr/DIET/ 
+
+3 cooperative research initiatives 
+
+Cooperative research initiatives (ARC) were created by 
+INRIA in order to focus the competence of several 
+research projects and partner departments on a 
+concrete, still prospective but well identified challenge. 
+ARCs are evaluated every two years. 
+
+DOCKING: a new tool for biologists 
+
+Docking is the name given to the pairing up of two molecules: a key 
+and a lock that correspond to an intercellular communication. This is an 
+important issue for biologists. The more proteins are discovered by 
+genome decryption, the better scientists would like to know them, in 
+particular to identify their pairing potential and its effects. The scale of 
+the phenomenon makes it however extremely hard to observe. The 
+Docking ARC was thus set up in 2002 by INRIA teams-GÉOMETRICA, 
+ÉVASION and ISA-to develop molecular docking visualization and 
+analysis tools in partnership with the “Membrane assembly dynamics” 
+team of CNRS. 
+At the end of 2004, the Docking ARC published software that makes 
+it possible for biologists to visualize and analyze molecule dockings. 
+Candidate molecules are sifted through a series of screens so that 
+couples that have an actual chance of pairing up due to their shape can 
+be identified. The contacts and deformations that occur during the 
+phenomenon are then simulated. The tool allows researchers to interact 
+with the docking phenomenon during the simulation. 
+
+
+A wealth of scientific outputs 
+
+
+HEADEXP: validating the harmlessness 
+of cell phone equipment 
+
+In 2003 and 2004, several INRIA teams made up an ARC called 
+Headexp to study the impact of electromagnetic radiation from mobile 
+phones on user head tissues. The initiative resulted in the development 
+of a computer simulation tool based on wave propagation numerical 
+methods operating on realistic geometrical models of head tissues, 
+more relevant than the simple preexisting ones. This simulation tool 
+allows to accurately take into account the heterogeneity of human head 
+tissues. This research involved skills in modeling and simulation of electromagnetic wave propagation (CAIMAN and ONDES project-teams), 
+medical imaging (ÉPIDAURE project-team and the image processing 
+and interpretation group of ENST in Paris), automatic mesh generation 
+(GAMMA and GÉOMETRICA project-teams) and neurosciences 
+(ODYSSÉE project-team). The France Telecom R&D teams specialized in 
+biological effects of electromagnetic wave radiation and in antenna 
+design were associated to the work, as well as a researcher from the 
+National Institute of Industrial Environment and Risks. 
+
+DYNAS: modeling for the protection 
+of the environment 
+
+Dynas was launched in 2004 by project-team ESTIME of INRIA, the 
+CEMAGREF and its DEAN research unit, the CERMICS (applied mathematics) and CEREVE (environment) departments of the École nationale 
+des ponts et chaussées, and the Fluid Mechanics Institute of Strasbourg 
+(IMFS). 
+The goal of this initiative is to apply modeling techniques to water 
+flows in porous media, especially along slopes. The applications of such 
+research are important in the fields of hydrology, hence in environment. 
+The objective of the teams is to develop simulation and computational 
+tools for various phenomena such as terrain saturation, flux propagation, 
+and so on. 
+A first workshop was held at INRIA Rocquencourt in December 2004. 
+The outcome of the initiative is in two years. 
+
+TangiMap: 3D navigation 
+interface for a PDA 
+Project-team IPARLA 
+Modeling temperature 
+diffusion in tissues 
+ARC HEADEXP - Project-team CAIMAN 
+3 experimentations 
+
+Experimentation is a crucial stage, the first concrete 
+manifestation of research work. It is needed to adapt 
+and validate systems implemented in actual technical 
+environments. Experimentation is the first step toward 
+innovation. 
+
+PERF-RV: innovating more simply 
+with virtual reality 
+
+Around twenty academic and industrial departments, including INRIA 
+teams in Rennes and Rocquencourt have explored numerous aspects 
+linked to the development of a complete virtual reality platform, in order 
+to foster and simplify innovation. Such a platform makes it possible to 
+model a virtual world, visualize it in 3D and interact with in real time. 
+Project PERF-RV launched by INRIA in 2001 in the framework of the 
+National Network for Research and Technological Innovation in 
+Software Technology, resulted in significant scientific and technological 
+advances. The research and development phase ended in October 2004 
+with the presentation of an experimentation of this “future engineering 
+and design department” at the CEA of Fontenay-aux-Roses. The results 
+of PERF-RV can be seen in various virtual reality platforms installed in 
+particular at PSA, CEA and INRIA. These results are of interest to many 
+companies, including Dassault Systèmes, Virtools and so on. INRIA 
+research scientists are pursuing the development in order to integrate 
+new advances and construct a digital simulation platform dedicated to 
+design. 
+
+10•11
+
+
+
+DIATELIC: expert systems simplify 
+diabetic patients follow-up 
+
+Peritoneal dialysis has less constraints than traditional dialysis. It can be 
+used to treat chronic renal insufficiency patients at home, which 
+concerns more than 2,500 patients in France and around 120,000 
+worldwide. Patients are equipped with an intraperitoneal catheter and 
+are able to perform the necessary dialyses themselves. Loria has been 
+working for a few years in partnership with the Lorraine Association of 
+Renal Insufficiency Patients (ALTIR) and Nancy teaching hospital, to 
+improve the follow-up of such patients using expert systems. In 2004, 
+this collaboration resulted in the general implementation of the Diatelic 
+system for all concerned patients, that is to say one hundred persons in 
+the area of Nancy, Vittel and Verdun. With Diatelic, patients and their 
+relatives regularly enter various parameters that concern them on a 
+computer. The system analyzes the data and automatically warns 
+the doctor in case of problem. Monitoring is constant in spite of the 
+distance. The system was experimented on for two years in order to 
+validate its reliability before being brought up to scale. The team is now 
+involved in project DEPIC that will directly gather the information from 
+a sensor located on the catheter, in order to diagnose infection risks 
+before the appearance of clinical signs and complications. The new 
+system will be experimented on in 2005. 
+
+CYCAB: the car of the future 
+for protected neighborhoods 
+
+From June 3 to June 13, 2004, automated vehicles drove through 
+Antibes amidst pedestrians and two-wheelers, transporting people who 
+wished to be transported. This world first experiment was intended to 
+demonstrate the benefits of new types of vehicles-automatic, 
+economical, non polluting and totally silent-in a protected urban area 
+with which they communicate. 
+The operational implementation of these future vehicles is based on 
+complex research carried out by fifteen European partners in the framework of the 5th FP (Framework Program for Technological Research and 
+Development), a research coordinated by INRIA. The vehicles talk to the 
+urban environment via an array of sensors, image processing software 
+and other communication technology developed by different INRIA 
+teams and by numerous foreign academic and industrial and 
+engineering and design departments. In particular, the IMARA team 
+applied its work in the field of the “automated road” and the VISA 
+development initiative put an experimentation platform at the disposal 
+of research scientists in order to validate research on such future 
+vehicles. Other experiments were conducted in parallel in Bayonne, 
+Coimbra and Rotterdam. 
+
+ParkShuttle at Antibes 
+Driverless shuttle transport 
+developed by the Frog company 
+
+MICCAI 2004 in Saint-Malo 
+
+A wealth of scientific outputs 
+
+
+3 events 
+
+Scientific events are one of the first main knowledge 
+dissemination mode. INRIA organized 25 international 
+conferences in 2004, which have gathered 4,360 
+attendees including 3,200 from many countries. 
+
+EUROGRAPHICS 
+
+INRIA Rhône-Alpes organized and hosted the 25th Eurographics conference, the most important European conference on computer graphics and 
+virtual reality. The conference was held from August 30 to September 3, 
+2004, in Grenoble. More than 500 scientists, industry representatives and 
+users presented their scientific and technological innovations applied to 
+digital leisure, multimedia application and scientific visualization. Claude 
+Puech was awarded the 1st "Eurographics Distinguished Career Award" 
+for his fundamental contributions in computer graphics on the occasion of 
+the conference. 
+
+SIGMOD/PODS 
+
+For the first time, the prestigious SIGMOD/PODS international 
+conference on databases was held in France on June 13-18, 2004. 
+The conference was organized by INRIA and the ACM (Association for 
+Computing Machinery) with more than 500 attendees from research 
+and industry, on topics concerning security, embedded or multimedia 
+data management, and so on. On this occasion, the “SIGMOD Test of 
+Time” prize that distinguishes the ten year old publication with the most 
+impact since then, was awarded to Serge Abiteboul (INRIA), Sophie 
+Cluet (INRIA), Michel Scholl (CNAM and INRIA) and Vassilis 
+Christophides (ICS-Forth, Greece) for their article "From Structured 
+Documents to Novel Query Facilities" at SIGMOD 94 
+
+MICCAI 2004 
+
+IRISA (INRIA, CNRS, University of Rennes I and INSA) organized MICCAI 
+2004, the international conference of reference in the field of medical 
+image processing, computer aided surgery and medical robotics. The 
+conference was held in Saint-Malo and Rennes on September 26-30. 
+It was an occasion to gather together the new specialists that combine 
+medicine, mathematics, robotics and computer science and to take stock 
+of the considerable advances achieved every year in these fields. 
+
+A few publications 
+
+Handbook of Numerical Analysis 
+Volume XII: Computational Models for the Human Body 
+
+Nicholas Ayache Ed. 
+
+Elsevier North-Holland, 2004. 676 pages 
+ISBN: 0-444-51566-6 
+
+The modeling of the human body and its algorithmic representations 
+are assuming increasing importance in medical applications, in 
+particular to realistically model certain functions on the computer. 
+Such models can be used to better predict certain pathologies and 
+better guide therapeutic strategies. This book describes concrete 
+examples of such models covering a wide spectrum of methods and 
+applications. The mathematical modeling of associated physical 
+phenomena is presented and examples of numerical simulations for 
+several organs and systems are given. 
+
+Nicholas Ayache is the scientific head of project-team ÉPIDAURE 
+(INRIA Sophia Antipolis). 
+
+Interactive Theorem Proving and Program Development: 
+Coq'Art: the Calculus of Inductive Constructions 
+
+Yves Bertot and Pierre Castéran 
+
+Springer, 2004 
+
+This book proposes a practical introduction to the development 
+of certified proofs and programs using Coq. Coq is a proving aid tool, 
+a system that manipulates formal mathematical proofs. Coq is based 
+on a logical formalism called the Calculus of Inductive Constructions. 
+The book includes a series of examples and exercises that make it 
+a must have for researchers, students and engineers interested in 
+formal proof, and the development of zero defects software. 
+
+Yves Bertot is a research scientist of project-team LEMME
+(INRIA Sophia Antipolis).
+Pierre Castéran is a research scientist of the project-team SIGNES
+(INRIA Futurs).
+
+
+Computer arithmetics and computations 
+
+IC2 Treatise, Computing and Information Systems series 
+
+Jean-Claude Bajard and Jean-Michel Muller 
+
+Hermès-Lavoisier, ISBN: 2-7462-0861-X, May 2004, 226 pages. 
+
+This book presents the current state of the art in computer 
+arithmetics. It then presents the algorithms used to perform 
+such operations as additions and multiplications (the basis of 
+numerical computing), as well as their hardware implementation. 
+The book next considers the computation of elementary functions 
+(sine, logarithm, etc.). Several hardware or software solutions are 
+proposed to enlarge machine computation capabilities. The book 
+also describes the main algorithms in multiprecision libraries 
+that are sometimes needed because the precision supplied by 
+processors is insufficient for certain computations. The book closes 
+on the study of arithmetic operators on finite fields that are crucial 
+for encoding and cryptography. 
+
+Jean-Michel Muller is the scientific head of project-team ARENAIRE
+(INRIA Rhône-Alpes). 
+Jean-Claude Bajard is Professor at the Computer Science Department
+of Montpellier, LIRMM.
+
+
+12•13
+
+
+
+GRID’5000
+
+
+GRID’5000: PC clusters 
+at Irisa-INRIA Rennes 
+and INRIA Rhône-Alpes 
+5,000 networked processors in INRIA's and 
+its partners research units, for a one-of 
+its-kind experimental computational tool 
+worldwide. 
+
+The French research community has decided to set up an experimental grid consisting of 5,000 processors connected via high 
+speed networks. This equipment represents an up to now 
+unique instrument to study grid computing. INRIA is strongly 
+involved in the operation, called GRID'5000, which is funded by 
+the Ministry of Research with INRIA, CNRS, Renater and various 
+regional and departmental councils. Several universities are 
+also associated with the project. 
+
+Computing grids meet a double challenge: 
+
+¦ an increasing need in resources (computation, storage and 
+communication) for various applications in medicine, climatology, imaging, high energy physics, geophysics, engineering 
+and so forth, and 
+¦ the need to share data, programs and resources beyond 
+geographical and administrative borders for members of 
+virtual communities. 
+Tomorrow, grids will offer a very wide spectrum of new services 
+over the Internet. They however demand an adaptation of 
+the whole of software tools to their distributed architecture: 
+network protocols, operating systems, grid middleware, executable supports, programming environments and applications. 
+Many research team as involved in these themes, especially at 
+INRIA. With GRID'5000, they will be able to test their developments and demonstrate the stability, security, accessibility and 
+performance of computing grids. 
+
+Project-team GRAND LARGE of INRIA Futurs steers the whole 
+project and develops high performance, fault tolerant middleware. The goal of DOLPHIN is to model and solve in parallel 
+large scale combinatorial problems. RUNTIME develops execution supports intended to ease the use of high performance 
+components. In Rennes, PARIS developed a software component 
+model based on the CORBA standard by integrating parallel 
+applications. The team is also working on large scale data storage. SAGE studies the “gridification” of scientific computing 
+applications. At INRIA Rhône-Alpes, GRAAL develops middleware for grid application deployment. MESCAL works on scaling 
+properties of middleware. MOAIS proposes programming 
+models and load balancing techniques. RESO is interested in 
+network performance and control and is looking for the 
+changes to be made to the TCP/IP protocol architecture of the 
+Internet to adapt it to very high speeds. At Rocquencourt, 
+REGAL studies the problems linked to the dynamic character of 
+grid environments and peer to peer systems. At Sophia 
+Antipolis, OASIS works on a Java programming environment 
+called Proactive that encourages computation portability and 
+mobility. CAIMAN and SMASH propose algorithms for parallel, 
+distributed resolution of partial differential equations. 
+SCALAPPLIX (Futurs), ALGORILLE (Lorraine),SYMBIOSE (Rennes), 
+COPRIN, ÉPIDAURE (Sophia Antipolis) also work in relation with 
+project GRID'5000. 
+
+GRID'5000 will be deployed on eight sites in France, including 
+seven INRIA sites: Bordeaux, Lille and Orsay (INRIA Futurs), 
+INRIA Rennes, Grenoble and Lyon (INRIA Rhône-Alpes), and 
+INRIA Sophia Antipolis. The eighth site will be hosted in 
+Toulouse by a team of the ENSEEIHT. Each site will feature high 
+performance parallel computers composed of PC clusters. The 
+sites will be interconnected via the Renater network. Close to 
+one thousand processors were already deployed at the end of 
+2004. 
+
+
+A wealth of scientific outputs 
+
+
+STUDENTS 
+
+AND RESEARCH SCIENTISTS: 
+
+shared progress 
+
+Training through research is at the heart of INRIA. It is on the one hand, 
+one of the Institute's missions, which it carries out in partnership with 
+the universities and engineering schools. On the other hand, the work 
+of doctoral candidates and postdocs is an often significant contribution 
+to the research carried out within INRIA project-teams. To open up 
+the world of research and share its passion for ICST, INRIA welcomes 
+more than 1,500 students of all levels from the B.A. to postdocs, for 
+durations of a few weeks up to three years. 
+The Institute signed agreements with many graduate programs to welcome doctoral candidates who come prepare their Ph.D. for an average 
+period of three years. INRIA integrates these students within its projectteams, which presents a double advantage. Doctoral candidates work 
+in internationally recognized teams and benefit from a high level 
+scientific support. At the same time, their doctoral work contributes to 
+advances in research. INRIA had 950 doctoral candidates in 2004, a 
+15% increase over 2003, which confirms the 10% growth between 
+2002 and 2003 and demonstrates the Institute's attractiveness. Close 
+to one third of them came from abroad, in particular from North Africa 
+and Asia, but also from the Americas and Europe. 
+The doctoral candidates who prepared their Ph.D. at the Institute are 
+encouraged to acquire a postdoctoral experience in other research 
+projects in France or abroad. 
+INRIA also welcomes postdocs, with a selection based on criteria 
+of scientific experience and mobility. Thus, postdoc stays are partly 
+financed by the government, European projects and the Institute's own 
+resources. In 2004, 150 postdocs, including a significant part of foreign 
+researchers, were working within INRIA's project-teams. 
+
+(1) 
+(5) (6) (7) 
+(2) (3) (4) 
+Prizes, appointments 
+
+Philippe Flajolet (1), senior research scientist 
+of project-team ALGO, was awarded the CNRS 
+silver medal. This medal singles out nationally and 
+internationally recognized research scientists for 
+the originality, quality and importance of their 
+work. 
+
+The doctoral thesis prize of the SPECIF (Society 
+of Computer Science Academics and Researchers 
+in France) was awarded to Sid-Ahmed 
+Berrani (2), who prepared his thesis in projectteam TEXMEX in the framework of an agreement 
+between IRISA and Thomson (Rennes Thomson 
+Research Center). The thesis is entitled 
+“Approximative search for nearest neighbors with 
+probabilistic precision control: application to 
+image search by contents” (Doctorate of the 
+University of Rennes I, February 2004) 
+
+David Cohen-Steiner received a thesis prize 
+from the French École polytechnique. His thesis, 
+prepared under the direction of Jean-Daniel 
+Boissonnat, project-team GEOMETRICA is entitled: 
+“A few surface discretization problems”. 
+
+Véronique Cortier (3), a CNRS research 
+scientist working in project-team CASSIS (Loria) 
+received “Le Monde de la Recherche” prize for her 
+doctoral thesis “Automatic verification of cryptographic protocols”. This work carried out within 
+project-team SECSI (INRIA Futurs) had received 
+the 2003 SPECIF thesis prize. 
+
+Eric Filiol (4), a research scientist of the projectteam CODES specializing in symmetrical cryptology 
+received the “higher education” Roberval 2004 
+prize for his monograph on Computer viruses 
+published by Springer. 
+
+Clément Forest (5), a former doctoral candidate of EPIDAURE, is the laureate of “Le Monde de 
+la Recherche” prize (Ph.D. jointly under N. Ayache 
+and H. Delinguette). The thesis was defended at 
+the École polytechnique last year. It concerned the 
+simulation of laparoscopic surgery, more precisely 
+original models of interaction between a surgical 
+instrument and a deformable organ model. 
+Clément Forest also received the best demonstration prize during the “Medical Simulation 2004” 
+international symposium held in Boston on June 
+17-18, 2004. 
+
+Liliana Ibanescu (6), of project-team PROTHÉO, 
+received one of the five thesis prizes of INPL for 
+her thesis “Rule programming and strategies for 
+the automatic generation of polycyclic hydrocarbons 
+combustion mechanisms” defended in 2003. 
+
+Mathieu Turuani (7) is one of the four 
+prizewinners of the thesis prize of the French 
+Association of Fundamental Computer Science for 
+his thesis entitled “Cryptographic protocol security, decidability and complexity”, prepared under 
+Michael Rusinowitch of project-team CASSIS. 
+
+14•15
+
+
+
+TRANSMITTING, SHARING 
+
+knowledge and research advances 
+
+INRIA is the owner of a unique capital of experience and knowledge 
+in ICST through its teams. The Institute has set up an organization that 
+fosters the transmission and sharing of this capital for very wide audiences. The multiple objectives that guide communication at INRIA are to 
+inform partners on research advances, explain ICST and its challenges 
+to the general public, participate in student training and raise awareness among youth and develop a liking for science. INRIA has built 
+bridges between its research scientists and its audiences, in order to 
+collect stories and facts, identify the researchers who can answer such 
+and such request, and to give a great many presentations adapted to 
+different levels of pedagogy. In fact, many audiences are interested in 
+ICST. 
+INRIA publishes INédit, a journal aimed at its research partners, 
+and Bleu INRIA, a newsletter for elected representatives and public 
+decision makers. 
+In 2004, INRIA formed a collection of multimedia scientific presentations for students and researchers wishing to improve their knowledge 
+of ICST. In parallel, the Institute is actively involved in the Science Fair 
+and reaches out to a very young audience on this occasion. In October 
+2004, INRIA launched a scientific popularization website, called 
+Interstices. The site proposes a “discovery of the universe of ICST” 
+and is aimed at a wide audience interested in science. The site features 
+scientists portraits, thematic files, a history of discoveries, a presentation 
+of ongoing research, and very pedagogical explanations of complex 
+phenomena. 
+
+Showing research 
+
+INRIA wants to show the general public how its research may result 
+in surprising applications. A domestic network called Mirror Space by 
+project-team IN SITU of INRIA Futurs was presented at the Beaubourg 
+museum for the Interactive Design Exhibit and at the Cité des Sciences 
+(see article in the second part of this document). A demonstration of the 
+“city of the future” drew much attention at the Senate by showing how 
+vehicles could establish a dialog with urban fixtures. 
+
+Giving a taste for ICST 
+
+Youth is a priviledged audience for INRIA. The Institute develops a very 
+diversified communication strategy to get them interested, give them a 
+taste for science and incite them to contribute to research. This 
+approach supported and encouraged by INRIA takes the form of numerous initiatives in the research units. In 2004, INRIA participated in the 
+5th show on mathematical games and culture that was held in Paris on 
+June 3-6. Two INRIA units, Futurs and Rocquencourt, were present on 
+the mathematical jobs stand. Andreas Enge of project-team TANC gave 
+a talk on the use of mathematics in research work. 
+
+
+INRIA Rhône-Alpes participated in the “Taste for Science” event 
+organized on November 15-17 by the CCSTI-Grenoble. This seminar on 
+education-research-business pedagogical practice is intended to make 
+better known the regional initiatives aiming at restoring the taste for 
+science among youth. INRIA Rhône-Alpes was the sponsor of this 
+first event. The research unit conducted one session of the seminar and 
+participated in the filming of a presentation of scientific careers. 
+In October and November, INRIA organized a series of talks at the Cité 
+des Sciences, under the direction of Gilles Dowek, Professor at the École 
+polytechnique and scientific head of project-team LOGICAL. 
+Finally, INRIA Rocquencourt signed a partnership agreement with 
+the Versailles local education authority to develop joint initiatives 
+concerning mathematics in particular. 
+INRIA is preparing a program to intensify such initiatives in 2005, 
+in collaboration with various partners, research scientists, universities, 
+CNRS, and so on. 
+
+
+INRIA became a member of the Sudoc, the network 
+of French university libraries, to gather the catalogs 
+of its information centers into a common base. 
+This base will include more that 5.4 million 
+notices available in 948 libraries. It will make it 
+possible to put richer information at the disposal 
+of researchers while augmenting the visibility of 
+its document stock. 
+INRIA is committed to the “open archive initiative” 
+since it signed the Berlin declaration* on “free 
+access to knowledge in exact sciences, life sciences, 
+human and social sciences” on July 25, 2004. 
+The Institute is simultaneously preparing to set 
+up its own open archives in partnership with 
+the CCSD, the Center for Direct Scientific 
+Communication of CNRS in Lyon. 
+The publication of scientific works is at the heart of 
+this movement. Traditional publication is through 
+scientific journals that evaluate and publish 
+articles, often with important delays. Since a few 
+years ago, research scientists have gotten used 
+to posting their publication projects directly on a 
+web server in order to put them at the disposal 
+of the scientific community rapidly and free of 
+charge. Thus was born the “open archives 
+initiative”. Archive servers were set up such as 
+ArXiv in the field of physics in the United States. 
+Search engines were created to facilitate access to 
+the archives. 
+It is essential for INRIA, whose objective is to 
+circulate its research work as widely as possible, 
+to set up a server that guarantees the permanence 
+of this approach and visibility of publications. By 
+signing a framework agreement with CNRS, INRIA 
+will constitute a pool of its scientific production, 
+based on a self-archiving approach on the part 
+of research scientists. The latter will be able to 
+publish all their work on the server, including 
+research reports and article projects. INRIA is the 
+second French research organization with CNRS to 
+establish “open archives”. 
+[*] http://www.zim.mpg.de/openaccess-berlin/berlin 
+declaration.html 
+INRIA prepares 
+its “Open Archives” 
+with CNRS 
+Speech2Graphite: 
+lip-reading learning aid tool 
+for young deaf persons 
+Project-teams ISA and PAROLE 
+(in collaboration with the DATHA association) 
+A wealth of scientific outputs 
+16•17
+
+
+
+A fruitful dialogbetween 
+research and innovation 
+750 ongoing research contracts, including 230 research contracts signed in 2004, 
+175 active patents, 120 freely available or marketed software packages, 
+80 technology companies, including 7 created in 2004 
+Real time 
+augmented reality 
+Project-team LAGADIC 
+
+A fruitful dialog 
+
+
+INRIA develops its research in close proximity 
+with industry and services that make extensive 
+use of ICST in such way that its work contributes 
+as much as possible to the new systems and 
+products that are put at the disposal of the public. 
+In each of its research units, INRIA has a team 
+specializing in industrial transfer to help 
+research scientists develop such partnerships. 
+This activity translates into a permanent dialog 
+with business under various forms: clubs, 
+bilateral contracts, joint research departments, 
+consortiums, standardization bodies, and so on. 
+
+Partnerships 
+
+Partnerships with business are an essential source of 
+inspiration for INRIA researchers, a means of identifying 
+the needs and demands of users. 
+Company expectations often make it possible to orient 
+research and its applications toward the most important 
+challenges. They also make it possible to analyze and 
+solve the problems at their actual scale. This is why 
+INRIA conducts much research in partnership with 
+industrial departments or innovative small and medium 
+sized companies. The companies for which ICST plays a 
+central role also invest a significant part of their 
+turnover in R&D, which encourages fruitful exchanges 
+with INRIA teams. 
+Numerous programs are ongoing. The following two 
+examples show the diversity of such work. 
+
+OZONE: ICST for the general public 
+
+Project OZONE (new technologies and services for emerging nomadic 
+societies) mobilized academic and industrial resources for a common 
+objective, which was to put ICST advances at the disposal of the 
+general public within everyday life appliances. This European initiative 
+lasted for three years and involved eleven INRIA teams, research centers 
+of Philips and Thomson, as well as Epictoïd, the Belgian microelectronics 
+interuniversity center, and the Eindhoven technical university in the 
+Netherlands. Researchers explored numerous topics with emphasis on 
+the user side: multimodal human-machine interfaces, access to services 
+and content available on the web from various devices (TV sets, 
+PDAs,...), access to multimedia content, and so on. Each time the 
+envisioned solution took the context into account-inside/outside, 
+
+
+Distributed fluid simulation on PC 
+cluster with FlowVR 
+
+Project-team APACHE 
+
+
+18•19
+
+
+
+silence/noise, mobile/fixed networks. OZONE was completed in August 
+2004 and its results were implemented into three demonstrators that 
+were used to make experiments on mobile user access on the one hand, 
+and public or private multimedia content access and sharing on the 
+other hand. To pursue this research, the INRIA teams got involved in a 
+new European project called AMIGO in 2005. The new project also 
+associates academic and industrial partners, including Philips who is the 
+project coordinator 
+
+SATIN: toward interactive TV 
+
+The WAM team (Web Adaptation and Multimedia) and the new 
+HTTV company founded in 1998 and specializing in interactive TV, 
+jointly launched a research and development program called SATIN, 
+supported by the RIAM (French National research and technological 
+innovation network devoted to multimedia and audiovisual). This 
+program covers many aspects of interactive television-program 
+production and broadcasting, for all used networks (cable, satellite, 
+ADSL, DTTV, etc.), and decoding (local management of interaction). 
+In collaboration with HTTV, WAM contributed to defining the global 
+architecture of the system and to determining a representation format 
+for interactive programs. The team also developed a program editing 
+software component based on the SMIL format, a W3C standard, 
+that makes it possible to coordinate and describe the various interaction 
+elements (overlays, synchronizations, information complements, etc.) 
+irrespective of the streaming format. This partnership resulted in a 
+software transfer: the tool will be integrated by HTTV into their Prime 
+TV system. There were also personnel exchanges. Project WAM's expert 
+engineer joined the HTTV team, who is also welcoming a postdoc. 
+
+The SATIN interactive TV 
+program editor, 
+with multimedia data 
+synchronization 
+Project-team WAM 
+Software transfer: 
+
+the economic impact 
+
+INRIA research projects result in the production of 
+experimental prototype software. In a good many cases, 
+this first step is continued by the development of software that will either be marketed or put at the disposal 
+of all potential users as open source. INRIA chooses the 
+type of license that will ensure the widest diffusion of its 
+software case by case. 
+The Institute has set up a specific organization to 
+actively support this evolution from prototype to finished 
+software. Development engineers improve, stabilize and 
+document the applications so that they can be distributed. Engineers and researchers are helped in this work 
+by specialized software development teams in each 
+research unit. In 2004, the efficiency of this approach 
+was demonstrated by the adoption of many software 
+packages by industry. 
+
+C-JDBC 
+
+C-JDBC is a middleware developed by the SARDES team for database 
+clustering that received many awards in 2004-finalist in the “best data-
+base category” at the LinuxWorld Product Excellence Awards in August, 
+and winner of the ApacheCon Derby Code Contest in November. 
+Version 1.0.4 of C-JDBC was released in October. C-JDBC makes it possible for any application to transparently access a database cluster with 
+high availability and excellent performance. C-JDBC is distributed by 
+ObjectWeb, a consortium co-founded by INRIA to develop the diffusion 
+of robust, free software middleware in order to encourage standards 
+and sharing. ObjectWeb provides an industrial grade support service for 
+entirely secure adoption of the product. In 2004, C-JDBC was downloaded 18,000 times. The site recorded close to 1.5 million hits. 
+
+http://c-jdbc.objectweb.org/ 
+
+SYNDEX 
+
+SynDEx is a software tool to aid in optimized implementation of realtime, embedded, distributed applications. It is based on a methodology 
+defined by INRIA researchers called AAA (algorithm-architecture adequacy) that makes it possible to manually and automatically explore 
+possible implementations of an application software onto several 
+computers in order to identify the best one. The tool is aimed at sectors 
+in which embedded systems are critical, such as aerospace for flight 
+controls, the automobile industry for all of the electronics, telecommunications, mobile robotics, industrial control, and so on. SynDEx is 
+currently developed within the project-team AOSTE of INRIA. It was 
+evaluated then adopted by several major players in the field. 
+For example, MDBA uses SynDEx to add a new functionality to its Eryx 
+antitank missile. 
+In 2004, version 6.7.4 of SynDEx was re-architectured to meet user 
+needs more efficiently and make for better maintenance. This version is 
+cross-platform (Unix/Linux, Window, Mac OS) and freely downloadable 
+on the web, with complete documentation, at www.syndex.org 
+
+
+A fruitful dialog 
+
+
+Intellectual property:
+launching CeCILLthe first free software 
+license compatible withFrench law 
+In 2004, INRIA participated in the drawing 
+up of new free software, viral license, 
+CeCILL, based on French law, in collabora-
+tion with CNRS and the CEA. 
+The interest of free software, which is not 
+necessarily free of charge, is to disclose 
+the source code that can be modified and 
+redistributed by third parties. This allows a 
+very large community of developers, users 
+and industry to regularly contribute to 
+improving and enriching the software. 
+When most free software is distributed 
+under Anglo-Saxon license, the new CeCILL 
+license makes it possible to define and 
+delineate use and diffusion principles in 
+accordance with French law. This is an 
+important step that demonstrates INRIA's 
+commitment to take the best possible 
+care of the intellectual property of the 
+results of its research projects, in all cases 
+(software licenses, patents, know-how, 
+results of cooperative work with external 
+partners, etc.). This approach falls within 
+the framework of the debate on pooled 
+development of free software components 
+provided for by the French ADELE 
+(Electronic Administration 2004-2007) 
+government program. 
+20•21 
+Computing curvature 
+directions on a mesh 
+Project-team GÉOMETRICA 
+
+Automatic canopy extraction 
+from a satellite image 
+Project-team ARIANA 
+SPEECH2GRAPHITE 
+Speech2Graphite was presented in October 2004 on the occasion 
+of the Science Fair. It looks like a “talking head”. The purpose of 
+Speech2Graphite is to allow hearing impaired persons to follow a 
+spoken discourse independently of the position of the speaker. 
+It is developed by the project-teams ISA and PAROLE of INRIA 
+Lorraine/LORIA, in partnership with the DATHA association 
+(Development of technological aids for hearing impaired persons). 
+A three-dimensional image of a face is generated that reproduces 
+lip movements based on a recorded speech signal. In order to facilitate 
+lip reading, a hand is also represented in three-dimensions to add 
+information on the consonants and vowels, which makes it possible to 
+eliminate ambiguities between sounds corresponding to the same 
+shapes of the lips, such as p and b for example. The setup may be 
+complemented with subtitles. The system combines a phoneme 
+recognition tool called Espere and a complex driving system based on a 
+model that makes it possible to associate a shape of the lips and face, 
+and its computer graphics translation, with each sound. By simplifying 
+access to spoken discourse, combined with subtitle precision, 
+Speech2Graphite opens up many application prospects, for example 
+French language learning for deaf children. 
+CORESE 
+Corese (Conceptual Resource Search Engine) is a search engine for the 
+semantic web based on the RDF language of the W3C. It is developed 
+by the ACACIA team. Corese is made freely available for researchers on 
+the team's website and was proposed for evaluation to different indus-
+trial partners (Telecom Valley, Renault, ATOS, T-Systems NOVA Deutsche 
+Telekom, etc.). Corese was used as a basis for numerous knowledge 
+management applications. In 2004, EADS adopted it as a basis for 
+a corporate memory application. The technology university of Troyes is 
+working on an application on project memory. The project-team 
+GALAAD of INRIA is also using it for a European project. 
+A two year software development operation based on the prototype 
+was completed in June 2004. This operation improved the quality 
+of Corese and stabilized its development environment. Since then, a 
+startup called eCore has been incubating with the goal of marketing 
+a family of competence management applications based on Corese. 
+This project was prizewinner of the 2004 business creation competition 
+(a national competition for aid in innovative technology company 
+creation by the French Ministry in charge of research). 
+http://www-sop.inria.fr/acacia/soft/corese 
+Standardization: 
+decisive contributions 
+INRIA is committed to the search and definition of 
+standards. Standards are essential in the field of ICST in 
+order to encourage the adoption of collectively developed 
+specifications by the largest number of users. 
+Standards can be enacted by international standardiza-
+tion bodies, such as ISO, ETSI, and so on, or developed 
+within consortiums that regroup experts stemming 
+from public and private research. The consortiums 
+sometimes are without incorporation. 
+INRIA participates in the work of most standardization bodies, including 
+the ISO. The Institute is also an active member of a large number of con-
+sortiums, that do not enact standards but issue recommendations. 
+Recommendations are sets of specifications that describe how to 
+implement a technology in principle, with strong emphasis on interop-
+erability. Recommendations are all the more likely to be adopted as the 
+consortium gathers a wide range of actors. Such is the case of the IETF 
+for the IP world, the W3C for the web, the OMG (Object Management 
+Group) for object technology, and the TEI (Text Encoding Initiative) for 
+the development of digital textual resources. 
+In 2004, various tools developed by INRIA research scientists emerged 
+as new standards, such as OLSR developed by the HIPERCOM team 
+for ad hoc mobile networks, the first European tool standardized by the 
+IETF in this area, and the formal security specification model developed 
+by EVEREST and adopted by the GlobalPlatform Card Specification 
+v2.1.1 consortium. GlobalPlatform is the reference organization for 
+the all main actors in the field of smart cards. 
+Such joint work is accompanied by a permanent dialog organized by 
+INRIA in each of its research units. Regular meetings are held to foster 
+exchanges between industry representatives and researchers on a 
+topical theme. A national INRIA-Industry one day meeting was also held 
+on January 27, 2004 at Rocquencourt on software engineering. 
+In 2004, INRIA Sophia Antipolis initiated the “software cafés”, short 
+meetings around a coffee cup during which teams presented develop-
+ment tools (SmartTools), the programming library of the grid (ProActive) 
+and the Corese knowledge management tool. This successful initiative 
+was taken up by INRIA Lorraine. 
+
+A fruitful dialog 
+
+
+Project-team REO 
+Body and gesture 
+observation 
+temporal system 
+Project-team PRIMA 
+Realtime penumbra 
+computation 
+Project-teams ARTIS-GRAVIR 
+Visualization of the wall 
+pressure in a sacculated 
+brain aneurysm 
+
+Spinning off 
+
+Little by little, company creation appeared as a natural 
+solution to transfer research results. As soon as such 
+results can have economic or social applications, and 
+that no partner company is willing to develop them, it is 
+important to help transfer by fostering the creation of a 
+new company. This is a long, difficult path, all the more 
+so since the ICST market is now mature. Significant 
+financial support is necessary as well as enough time 
+to carve a market niche. Many INRIA young research 
+scientists and engineers are more than willing and 
+brimming with ideas. This is why in 1998 INRIA created 
+a specialized, efficient tool. INRIA-Transfert and the 
+startup funds contributed to a sustained rate of company 
+creation since 1997. 
+
+In 2004, in spite of a difficult situation in terms on 
+investment and risk taking, seven new companies were 
+launched. 
+
+
+Pre- and postprocessing solutions 
+for the optimization of the computerized 
+design chain 
+
+The purpose of Distene is to develop and offer the best skills and 
+technology in the field of scientific preprocessing and postprocessing, 
+two key areas in the optimization of the computerized design chain. 
+Distene is a 2004 spin-off of Simulog, the first INRIA startup, from 
+which it gets its technological and human capital. Thus, over fifteen 
+years of R&D in collaboration with INRIA, and ten years of commercial 
+partnerships with the largest CAD/computing solution publishers and 
+industrial users of such technology, make Distene an international 
+reference right from the start. 
+
+
+Algorithms for the evaluation of financial risks 
+
+Finoptech was founded in February 2004 by an INRIA research scientist. 
+The company targets investment banks, hedge funds and fund 
+management companies. It proposes an innovative mathematical and 
+computer approach of pricing and risk assessment for complex 
+structured products. Market departments and fund managers are 
+increasingly in demand for mathematical tools in order to control an 
+activity made more complicated by the development of sophisticated 
+financial products. Finoptech develops algorithmic and analytic methods that allow them to estimate prices and risks in constrained time 
+during their operations, in particular through the development of new 
+Monte-Carlo methods and efficient calibration techniques. The team 
+is working in partnership with INRIA. Finoptech is hosted by the 
+startup incubator at Rocquencourt and is currently in its commercial 
+development phase. 
+
+22•23
+
+
+
+Genomics exploration 
+
+Genostar is a bioinformatics software publisher founded in 2004. 
+Its offer is structured around an environment for genomic and postgenomic data modeling, analysis and exploration, that includes the 
+GenoStar platform stemming from the work of the consortium by 
+the same name. This consortium includes the HELIX team of INRIA, the 
+Pasteur Institute and two biotech companies, GENOME Express and 
+Hybrigenics. In May 2002, the consortium work resulted in a first 
+version of an integrated set of software modules that quickly caught the 
+interest of research departments. Three modules make up the Genostar 
+platform: GenoAnnot is used by biologists to annotate genomic 
+sequences, that is to say to identify the areas of biological interest 
+foremost of which are those containing the genes; GenoLink makes it 
+possible to compare and cross examine heterogeneous information in 
+order to characterize the proteins that are produced by these genes; 
+finally GenoBool makes it possible to efficiently conduct exploratory 
+analyses of complex datasets by making use of data mining techniques. 
+Genostar also offers two software packages stemming from HELIX 
+research work: GEB (GenoExpertBacteria) to explore the links between 
+the genes and the metabolic networks via the enzymes coded for by the 
+genes, and GNA (Genetic Network Analyzer) that leverages particularly 
+powerful modeling and simulation techniques for the study of the 
+dynamics of genetic interaction networks. 
+
+V-Eye, an Internet virtual 
+world with a large number 
+of participants 
+Project-team PLANETE 
+Shared adventures 
+and success 
+Ilog was founded in 1987 with an 51% 
+participation of INRIA to its capital. The 
+company quickly found its market. It suc-
+cessfully installed itself in the United States 
+and is now present in seven countries. Ilog 
+publishes software components for opti-
+mization, visualization and business rules. 
+The company achieved a turnover of 
+$102.8 million in 2004 and is listed in the 
+NASDAQ and Euronext. INRIA sold its 
+shares in 1998 to build up the capital of 
+INRIA-Transfert. 
+Kelkoo was created in 1999 based on 
+research work on information mediation 
+carried out by INRIA and Bull. The company 
+rapidly became the number one shopping 
+engine with a turnover of more than 42.5 
+million euros and exceptional results. 
+On March 26, 2004, Yahoo! Inc, the Internet 
+world leader, and Kelkoo SA, the European 
+leader of Internet price comparison and 
+shopping engines, announced the signing of 
+a final agreement sealing the buyout of 
+Kelkoo by Yahoo!. 
+Numerous INRIA startups such as Trusted 
+Logic, Xylème, Realviz and UDCast remain 
+partners of the Institute in marketing 
+licenses for its technologies on the one 
+hand, and in pursuing research and devel-
+opment programs on the other hand. 
+The computing power of PC networks 
+
+ICATIS was first a prize-winning project in the 2003 “emergence” 
+category competition. The company was created in January 2004 by 
+a CNRS research engineer and an INRIA research scientist. It is located 
+in Grenoble. ICATIS offers an innovative approach of PC cluster grid 
+computing in two areas of application. The ComputeMode technology 
+developed by the ID research department in partnership with project 
+APACHE, proposes to perform computations in a more flexible way by 
+using company PC networks. This way, companies do not have to invest 
+in dedicated computers. For example, the Total group is interested in 
+such techniques to analyze and model drilling zones. The second application, which is still in development in partnership with project-team 
+MOVI of INRIA, makes it possible to associate PC clusters with standard 
+video projectors to project high quality computer graphics at an affordable price. 
+ICATIS was awarded an Anvar prize in 2004 and achieved a turnover 
+of 180,000 euros for its first year of operation. The company is still in 
+its market discovery phase and is also developing a service offer based 
+on Linux, computing and its ComputeMode package that is now 
+available in “open source”. 
+
+
+A fruitful dialog 
+
+
+Avitrack: 
+automatic video image 
+interpretation, recognizing 
+an unloading operation 
+
+Project-team ORION 
+
+
+Bayesian techniques 
+
+The purpose of Probayes is to bring a new computer programming 
+technique called probabilistic programming to industry. Probayes is 
+scientifically supported by CNRS, the Joseph Fourier University, the INPG 
+and INRIA. It was a 2001 prizewinner among innovative emerging 
+projects by the French Ministry of Research and New Technology, the FSE 
+and Anvar, and again in 2003 as “creation-development” project in the 
+national competition for innovative technology company creation. 
+
+TECNOMADE 
+
+Tecnomade proposes a decision and concertation tool in architecture and 
+city planning based on optimized, real time 3D modeling. The tool makes 
+it possible to visualize a building and its surroundings from all angles, 
+to move around it like a pedestrian or a car and to visit the interior. 
+Three-dimensional interactive navigation is made easy for a nonspecialist 
+audience due to a carefully crafted ergonomic interface. The tool also 
+makes it possible to reduce costs of large scale, realistic mockup 
+production and drastically cuts down on repetitive manual operations. 
+
+
+Next generation infrastructure solution 
+
+W2G TECHNOLOGIES was founded in March 2004. The goal of the 
+company is to develop and market Web2Grid, a software technology 
+to virtualize computing applications and transfer their execution on a 
+service architecture implemented on a grid infrastructure. Such services 
+make it possible to execute, distribute and globally operate the applications based on a set of pooled resources that can be reallocated on 
+demand. The goal is to supply a next generation solution capable of 
+significantly improving the cost/performance ratio of infrastructures, 
+including hardware, software, network and human aspects. 
+Infrastructures represent 70% of computing costs in companies. 
+Web2Grid is intended for all organizations that must manage 
+computer infrastructures. 
+
+20 years of company creation at l’INRIA 
+
+In 2004, INRIA made a positive assessment of twenty years of innovative company creation. Of the 77 created companies, close to fifty 
+are still in operation today, either autonomously or within the large 
+groups they have joined. This strategy allowed the Institute to be in 
+direct contact with the economic environment and to better understand the changes it was going through. This strategy contributes to 
+instilling an entrepreneurial spirit in the research teams and opens up 
+diverse career prospects for their members: from the Academy of 
+Sciences to the high tech stock market. 
+
+1984 --1991 
+
+Computer science forced its way into numerous industrial sectors. 
+With its EPST status (Scientific and technological public establishment), INRIA was able to take stakes in industrial and commercial 
+companies as early as 1984. During this period, twenty-two companies were created, including five of which INRIA was a shareholder. 
+At that time, the ICST sector was emerging and the entry barrier was 
+not very high. INRIA was able to become, and above all, remain the 
+prime Ilog shareholder with an investment of less than 150,000 euros, 
+which would be impossible today. 
+
+1992 --1996 
+
+The start of the decade crisis hit the IT world, henceforth closely 
+linked to the economic activity. The entrance ticket for company 
+creation rose. INRIA realized that it no longer had the means to fund 
+innovative startups alone. The rhythm of creation of companies stemming from INRIA fell-five in five years-none of which had INRIA 
+among its shareholders. 
+
+1997 --2003 
+
+In 1998, INRIA set up a financial tool to invest and accompany the 
+development of high tech companies. This creation was followed by 
+that of risk funds in partnership with AXA and the Caisse des dépôts 
+et consignations, that make it possible to gather capital to be invested in the new startups. These measures combined with the incubators 
+and competitions boosted company creation. This was the time of the 
+Internet bubble and its subsequent bursting. More than 50% of all 
+companies created by INRIA, which is to say 35 startups, were 
+launched during these seven years. 
+
+2004 and after 
+
+If, in 2004, the economic situation has improved, company creation 
+now takes place within a very competitive environment. Startups 
+must not only demonstrate that they have an actual competitive 
+edge, just like any new company, but also that their offer corresponds 
+to an immediate demand with clients who are ready to pay. 
+INRIA's experience shows that it is possible to create innovative companies stemming from public research, but that an efficient innovation policy requires time, specific funding separate from the research 
+budget, and an accompaniment operation that is recognized by venture capital professionals. 
+All the measures taken-risk fund creation, new innovative company 
+status, company creation competitions, call for proposals on startup 
+funds and incubators-have demonstrated that they are useful and 
+efficient. It also appeared that they do not meet all situations, and 
+that other measures will have to found to significantly increase the 
+creation of innovative and long lasting companies stemming from 
+research. 
+
+24•25
+
+
+
+6 research 
+units, 
+competence centers in the field of ICST 
+Modeling the growth 
+of a cervical tumor 
+Project-team ÉPIDAURE 
+6 research units, 19 sites in France, 7 joint laboratories, 
+39 partner establishments, including 24 universities and 13 engineering schools in France, 
+163 research teams, including 124 project-teams. 
+
+6 research units 
+
+
+INRIA is committed to a decentralized development model into research units implanted in 
+the regions that orient their work according to 
+the directions defined in the Institute's Strategic 
+Plan. 
+The purpose of the research units is to mobilize 
+resources, competence and energies in the field 
+of ITSC in order to actively contribute to the 
+constitution of regional excellence centers, an 
+idea encouraged by the Ministry of Research, 
+and to play a driving role in innovation. Thus, 
+INRIA fosters a networked research dynamics 
+in partnership with business as well as other 
+institutions. Six units have already been created 
+in Île-de-France, Brittany, Lorraine, Rhône-Alpes 
+and Provence. This dynamics is ongoing: the 
+last unit created by the Institute, INRIA Futurs, 
+is a prefiguration of three future research units 
+in the South of Île-de-France, in Aquitaine and 
+in Nord-Pas-de-Calais. 
+
+
+3D seismic data visualization 
+using a computing grid 
+Project-team ISA 
+Visualization of an 
+algebraic surface 
+Project-team GALAAD 
+X2 
+X Y2 --X2 
+X Z2+Y2 
+X Z2 --X X Y X Z = 0 
+
+26•27
+
+
+
+INRIA ROCQUENCOURT: 
+security, performance, networks 
+and health 
+
+When INRIA was founded in 1967, it was called IRIA and was installed at 
+Rocquencourt. The research unit long remained the Institute's only site. 
+Today, it hosts around forty teams that play a decisive role in computer 
+science and applied mathematics. 
+
+Language expressiveness and safety and algorithm performance is one of the leading themes of the unit, with approximately 
+forty software packages distributed. INRIA Rocquencourt is one of the 
+partners of the Scilab consortium. The consortium gathers together 
+many members* to develop a scientific computing package. In 2004, 
+the new 3.0 version of Scilab intends to become an open source 
+alternative to the world leader Matlab, which is proprietary software. 
+Another success is the tetrahedral mesh generator developed by 
+project-team GAMMA and purchased by worldwide publishers of CAD 
+and scientific computing software. 
+
+Networks and systems are expanding research themes in ICST, with 
+much impact in terms of innovation, transfer and results. In 2004, the 
+IETF (Internet Engineering Task Force) standardized the OLSR routing 
+protocol developed by project-team HIPERCOM. The SMIS project-team 
+received the Silver Award of the 2004 e-gate open competition 
+organized by Sun, Axalto and ST Microelectronics, for an embedded 
+database system with security techniques intended for next generation 
+smart cards. Research in this field also lead to a significant wave of 
+startup creation in the past years, with Medience, Xyleme and N2Nsoft 
+in particular. 
+
+For a few years, projects in scientific computing, modeling and simulation as well as automatic control projects have been applying their skills 
+to the life sciences, one of the unit's priority themes. The modeling 
+and simulation of human body organs and major functions will be 
+valued tools in medicine for prevention, diagnosis and therapy. In 2004, 
+a new team called REO was created that develops blood flow modeling 
+to improve prevention and treatment of cardiovascular diseases. 
+
+The Rocquencourt unit is located in the Paris region, in the midst of a 
+rich academic and industrial network, with which a resolute partnership 
+strategy was engaged. One third of the research teams are joint with 
+other laboratories. The unit is also increasingly working with industry, 
+in particular through its participation in the development of a regional 
+excellence center in the field of complex software and 
+systems. Indeed, there are many players in this field in the region 
+and the unit research in automatic control and embedded systems are 
+strong contributors to innovation in this area. 
+
+INRIA Rocquencourt signed an agreement with the University of 
+Versailles-Saint-Quentin, INRA, the Versailles education authority, the 
+UIFM, the regional and the departmental councils in order to organize 
+the deployment of a very high speed fiber optics network in the region. 
+
+The unit is also involved in several knowledge sharing and diffusion 
+initiatives in the field of ICST. In 2004, it signed a partnership agreement 
+with the Versailles education authority to promote mathematics among 
+youth. The unit also launched “Thématiques INRIA” with INRIA Futurs 
+and received a wide audience on its site for series of in-depth conferences on a given field, for example, musical sound. 
+
+* Appedge, Axs Ingénierie, CEA, CNES, Cril Technology, Dassault Aviation, 
+EDF, ENPC, Esterel Technologies, PSA Peugeot Citroën, Renault, Thales and TNI. 
+Projects and partners 
+Key figures 
+480 persons, including 
+366 scientists 
+041 research teams, including 
+025 INRIA project-teams and 
+041 development project 
+One third of the research teams are joint 
+with the Universities of Paris V, Paris VI 
+and Marne-la-Vallée, and the ENS, ENPC, 
+ENSTA, CNAM and CNRS. 
+Sophie Cluet, 
+Research Unit Director 
+
+6 research units 
+
+
+INRIA RENNES: 
+
+contributing to excellence for 25 years 
+
+INRIA moved in Rennes as early as 1980 by creating a joint research 
+unit with CNRS, the University of Rennes 1 and INSA Rennes. The unit 
+was called IRISA, Institute of Computer Science and Random Systems 
+Research. Since then, the unit extended its presence on other sites such 
+as Nantes and Lannion. With IRISA, INRIA Rennes constitutes a regional center of excellence in the field of ICST and increasingly develops its 
+international relations. In 2004, six teams of the unit were working with 
+foreign departments in the framework of the INRIA Associate Team 
+program. Twenty projects involving IRISA were selected in the 6th 
+European FP. Two INRIA Rennes teams are European project coordinators: PARIS for the excellence network Core Grid on computing grids, 
+and VISTA for project Fluid to develop emerging technology in the field 
+of “fluid imaging”. INRIA Rennes works in close partnership with many 
+businesses, large industrial groups and small and medium sized 
+companies that are gathered together within the Irisatech club. The unit 
+contributes to the creation of excellence centers in the region. 
+
+INRIA Rennes is very active in bioinformatics within Ouest Génopole 
+the center that has been regrouping genomic research developed in 
+Brittany and Pays de Loire since 2002. INRIA is assuming the Ouest 
+Génopole presidency for the academic year 2004-2005. Today, Ouest 
+Génopole gathers together 2,000 research scientists from INSERM, 
+IFREMER, INRA, CNRS, AFSSA and the Grand-Ouest universities. 
+INRIA Rennes explores other areas at the interface between 
+ITSC and the health sector, especially medical imaging in pre- and 
+peroperative modes in medical robotics. 
+
+Two research directions that are becoming more and more important 
+in the region are images and their distribution on networks. 
+INRIA Rennes is highly involved in this work in partnership with industry: virtual reality, image processing, encoding and compression for the 
+distribution of multimedia contents over different types of networks 
+(fixed IP, mobile, etc.). In 2004, project-team TEMICS pushed a technical recommendation through at ISO concerning the JPEG standard. 
+INRIA Rennes launched a new collaboration project with INA (National 
+Audiovisual Institute) and Thomson on audiovisual indexing. The 
+research unit reinforced its partnership with France Telecom with ten 
+external research contracts and three cooperative research contract on 
+scientific topics in connection with network monitoring, image, 
+human/machine dialogue and security in 2004. 
+
+In the field of network and system security for the protocol layers 
+and embedded software, INRIA Rennes has acquired a solid experience. 
+The research unit intends to collaborate with its academic partners of 
+the Rennes site (ENS, ENST, ESE) and industry in such strategic sectors 
+as defense, telecommunications and automobile. 
+
+INRIA Rennes is highly involved in the deployment of the Grid 5000 
+platform to equip the country with a scientific grid computing tool 
+made of 5,000 processors distributed over several nodes. In 2004, 
+INRIA Rennes installed a 360 processor node, shortly to be upgraded 
+to 500 processors. The new equipment will provide an actual high 
+performance, large scale computing and testing platform to validate 
+distributed code for such systems. 
+
+Projects and partners 
+Key figures 
+530 persons, including 
+440 scientists 
+028 research teams, including 
+020 INRIA project-teams 
+Most of the projects are joint with CNRS, 
+INSA Rennes and the University of Rennes I 
+Lannion 
+3 teams, including 
+1 INRIA project in partnership 
+1 with the University of Rennes I 
+Nantes 
+2 INRIA projects, one with the École des mines 
+de Nantes, and the other with the University 
+of Nantes. 
+Claude Labit, 
+Research Unit Director 
+28•29
+
+
+
+Projects and partners 
+Key figures 
+500 persons, including 
+380 scientists 
+028 INRIA project-teams 
+40 % of these projects are joint 
+with other establishments and 
+research departments, such as 
+the Center for Applied Mathematics 
+(CMA, École des mines), 
+the Computer Science, Signal 
+and Systems department (I3S) of 
+the University of Nice-Sophia Antipolis 
+and the J.A. Dieudonné Laboratory 
+(CNRS and University of Nice-Sophia 
+Antipolis), the Center for Teaching 
+and Research in Mathematics, 
+Computer Science and Scientific 
+Computing (CERMICS, École des 
+ponts), the Biological Oceanography 
+and Marine Plankton Ecology 
+Laboratory (CNRS and University 
+Paris VI), the University of Provence, 
+the École normale supérieure, 
+the Computing, Robotics and 
+Microelectronics Department 
+(LIRMM) of Montpellier (CNRS 
+and University of Montpellier II), 
+the University of Montpellier I, INRA. 
+Michel Cosnard, 
+Research Unit Director 
+INRIA SOPHIA ANTIPOLIS: 
+at the heart of the largest European 
+scientific park 
+
+Sophia Antipolis occupies a singular place within the European high 
+tech geography. The research centers of many companies, developers 
+and ICST users are installed there, side by side with public institutions 
+as well as several engineering schools and universities. 25,000 persons 
+work in this area, making up a network of competences and resources 
+that is unparalleled in Europe. INRIA has been present at Sophia since 
+1983. It is growing sharply with an increasingly close partnership strategy with the companies and institutions that are established there. 
+INRIA Sophia Antipolis works in particular with Hitachi, SAP, France 
+Telecom, and Texas Instruments, among others. The research unit also 
+participates in the development of the scientific park via company creation (a dozen up to this day). It was also instrumental in attracting the 
+research centers of foreign companies installed at Sophia. The research 
+unit is participating in a project to create an ICST Campus with the universities and engineering schools that would make it possible to bring 
+higher education and research closer together. While remaining very 
+committed to Sophia Antipolis, especially with two themes--ubiquitous 
+computing and life sciences--the research unit intends to expend the 
+regional dimension of its work. INRIA Sophia Antipolis thus enquired 
+about needs and developments in different fields in Marseille and 
+Montpellier. Five research teams are now installed there, partially or 
+entirely. INRIA wants to reinforce these localizations on environmental 
+and medical themes. 
+
+More than half of the research carried out at Sophia Antipolis concerns 
+ubiquitous computing and how to make it reliable, from 
+networks to the applications. The research unit is an excellence center 
+in the areas of protocols, performance evaluation, the web, embedded 
+computing, and network dimensioning. In the latter field, the joint 
+project-team CORSO of INRIA and France Télécom was created in 2003. 
+The team is installed in the INRIA Sophia Antipolis premises and 
+associates research scientists from project-team MASCOTTE(1) and 
+France Télécom engineers. 
+
+The life sciences represent an increasingly important part of the 
+research effort of INRIA Sophia Antipolis, especially in biology, neurosciences, medicine and environment. Next to specialized project-teams 
+(COMORE, DEMAR, etc.) more and more teams are orienting their 
+research in this direction. For example, the APICS team applies part of 
+its research to the detection of brain lesions for epilepsy. In 2004, the 
+project-team ÉPIDAURE concluded a partnership with the Medicine 
+School of the University of Nice and two hospitals, the Antoine 
+Lacassagne Regional Cancer Center (CAL) and the Nice teaching 
+hospital, in the field of medical imaging. Project-team ODYSSÉE(2) 
+participated in the project of installing a MEG (magnetoelectroencephalography) equipment at the La Timone hospital in Marseille. A new 
+project called MERE (Water modeling and resources) was launched in 
+2004 in Montpellier. This is the first partnership of INRIA with INRA. 
+
+(1) MASCOTTE: a joint project with CNRS and the University of Nice-Sophia Antipolis within 
+the I3S department. 
+(2) ODYSSÉE: a joint project with the École normale supérieure de Paris and the École 
+nationale des ponts et chaussées. 
+
+6 research units 
+
+
+INRIA LORRAINE: 
+
+a dynamics of research and innovation 
+
+The INRIA Lorraine research unit was founded in 1986. It develops 
+research projects in collaboration with CNRS and the Lorraine universities with the LORIA (Lorraine Laboratory for Research in Computer 
+Science and its Applications), the IECN (Elie-Cartan Institute in Nancy), 
+the LMAM (Metz Laboratory for Mathematics and Applications) and the 
+LGIPM (Department of Industrial Engineering and Mechanical 
+Production in Metz). Some projects are dual-located between Nancy 
+and Metz, Strasbourg or Besançon. 
+INRIA Lorraine contributes to the coordination of Regional Scientific and 
+Technological Group (PRST) called Software Intelligence in the framework of the plan contract between the region and the government. 
+
+The Software Intelligence PRST thus made it possible to bring together 
+researchers from LORIA, the ATILF (Analysis and computer processing of 
+the French language) and INIST (Institute for Scientific and Technical 
+Information) on the theme of language engineering, documents and 
+scientific, technical and cultural information, and around a resource 
+center for automatic language processing. The competences of the 
+Lorraine research unit concern real time recognition of continuous 
+speech, syntactic analysis integrating semantic aspects, text mining and 
+the representation of structured knowledge. The national R&D initiative 
+Syntax and the Lirics European project are pursuing work on the 
+standardization of linguistic resources. In 2004, the European Summer 
+School in Logic, Language and Information attracted 500 attendees 
+in Nancy. 
+
+Several LORIA teams are working on software and computer 
+system quality, security and reliability. With industrial and 
+academic partners, the TRIO project-team participated in the EAST EEA 
+(Electronics Architecture and Software Technology-Embedded Electronic 
+Architecture) European project that obtained the ITEA (Information 
+Technology for European Advancement) prize in October 2004 for its 
+contribution to embedded systems in automobile. The verification of 
+cryptographic protocols and network security infrastructures are other 
+significant research directions of the research unit. 
+
+In order to combine simulation and visualization, the research 
+unit acquired a virtual reality hall for three-dimensional visualization 
+and simulation of varied phenomena, in particular in physics, geology 
+and biology. 
+Thus the CALVI project-team simulates and visualizes plasma fusion, 
+in collaboration with physicists from the Henri Poincaré University in 
+Nancy. The ISA project-team participated in the Docking cooperative 
+research initiative, which resulted in 2004 in a simulation and visualization software for molecule interaction. 
+Finally, more and more INRIA Lorraine research scientists are working 
+on models and algorithms for bioinformatics and bio-inspired 
+computing. 
+
+Hélène Kirchner, 
+
+Research Unit Director 
+
+Projects and partners 
+Key figures 
+450 persons, including 
+340 scientists 
+024 research teams including 
+021 INRIA project-teams 
+All the teams are in partnership: 
+¦ within LORIA (Lorraine Laboratory of 
+Computer Science Research and Applications),
+17 projects in partnership with CNRS, 
+the Institut national polytechnique de Lorraine, 
+the Henri Poincaré Nancy 1 University 
+and Nancy 2 University. 
+¦ 3 research projects in applied mathematics, 
+within the IECN (Elie Cartan Institute in Nancy), 
+in partnership with CNRS, the Henri Poincaré 
+Nancy 1 University, Nancy 2 University, 
+and Louis Pasteur University in Strasbourg. 
+¦ 3 research projects, entirely or partially 
+located at Metz, are joint with the University 
+of Metz and CNRS. 
+30•31
+
+
+
+INRIA RHÔNE-ALPES: 
+
+a dual local network of expertise 
+
+In 1992, INRIA launched a new research unit in Grenoble. The region is 
+very dynamic in the field of micro- and nanotechnology on the one 
+hand, and very much in demand of innovation in ICST on the other 
+hand. INRIA Rhône-Alpes quickly found its place in this environment, 
+establishing a competence center in computing in partnership with local 
+industry and research. The unit extended its development to Lyon, the 
+second city in France, in partnership with the École Normale Supérieure 
+in particular. Six research teams are currently entirely or partially located Lyon. They work in particular on bioinformatics. The city has one of 
+the most important research communities in the life sciences in France. 
+In its areas of expertise, INRIA Rhône-Alpes contributed to the creation 
+of numerous startups, either by research result transfer, or by helping 
+research scientists found their own company. From Polyspace 
+Technology in 1998 to Genostar Technologies in 2004, INRIA Rhône-
+Alpes contributed to the creation of eleven companies. Other companies 
+are currently emerging. The research unit is one of the important 
+participants in the GRAIN (Grenoble Alpes Incubation) incubator that 
+proposes support and help company founders. 
+
+In Grenoble, INRIA Rhône-Alpes is accompanying the rise of embedded systems in micro- and nanotechnology. It is estimated that in 
+2010, there will be twice as many embedded processors--over 12 billion 
+--than inhabitants on Earth. The research unit got involved in a project 
+called EmSoC (Embedded System on Chip) with the CEA, INRIA, the 
+Grenoble academic communities and industry. EmSoC is in the context 
+of the development of a competitiveness center on embedded systems. 
+Teams are faced with a dual challenge in this project: low consumption 
+and software verification to guarantee their quality and reliability. 
+Several project-teams contribute to research on embedded systems-
+COMPSYS, ARENAIRE, VASY, POPART, SARDES, among others. 
+
+In Lyon, INRIA Rhône-Alpes is developing a competence center in the 
+area of computing for biology. HELIX is the oldest and most important INRIA project-team in bioinformatics. It demonstrates the open, 
+integrative approach of INRIA Rhône-Alpes by associating biologists, 
+computer scientists and mathematicians in a very open process of 
+applying mathematical, algorithmic and computing methods to problems in biology. In addition to this research, INRIA Rhône-Alpes got 
+involved in a significant training activity in collaboration with the CEA 
+and the University. The three partners signed in 2004 an agreement to 
+create an ongoing program of training in bioinformatics. 
+
+Several INRIA Rhône-Alpes teams, EVASION, ARTIS, MOVI, E-MOTION, 
+PRIMA, I3D, etc., are working on different types of images, virtual 
+reality and interaction within the GRAVIR department that associates the University, the INPG, CNRS and INRIA. GRAVIR is hosted by 
+INRIA. 
+
+The research unit set up a unique experimentation and development 
+service in terms of importance, that manages the whole set of vision, 
+robotics and PC cluster platforms, which constitutes an exceptional 
+resource centers at the disposal of its teams. 
+
+Projects and partners 
+Key figures 
+500 persons, including 
+300 scientists, 
+025 research teams, including 
+022 project-teams 
+016 in partnership with CNRS, 
+the Joseph Fourier University and the 
+Institut national polytechnique of Grenoble 
+(GRAVIR and ID departments), CNRS and 
+the École nationale supérieure of Lyon (LIP 
+laboratory), the Claude Bernard University 
+and the Institut national 
+des sciences appliquées (INSA) of Lyon. 
+Bernard Espiau, 
+Research Unit Director 
+

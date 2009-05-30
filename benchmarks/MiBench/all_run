@@ -1,0 +1,40 @@
+#! /bin/sh
+
+for i in *
+do
+
+if test "x$DATASETS" = "x"; then
+  export DATASETS=20
+fi
+
+if [ -d "$i" ] 
+then
+ tmp=$PWD
+ cd $i
+ if [ -d "src_work" ] 
+ then
+  # *** process directory ***
+  echo "**********************************************************"
+  echo $i
+  cd src_work
+  make
+   echo "==========================================================" > icount.txt
+   basename `(cd ..; pwd)` >> icount.txt
+   moxie-elf-size a.out >> icount.txt
+   for j in `seq 1 $DATASETS`;
+   do
+    echo "##########################################################"
+    echo "Dataset: $j"
+    ./__run $j 1
+   done
+   tail -$DATASETS icount.txt | bc ../../../../scripts/sum.bc >> icount.txt
+  # *************************
+ fi
+ cd $tmp
+fi
+
+done
+
+FILE=icount-`date +"%Y%m%d-%H:%M"`
+rm -f $FILE
+find ./ -name icount.txt | xargs -iii cat ii >> $FILE

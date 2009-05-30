@@ -1,0 +1,5 @@
+for i in `seq 1 20`; do 
+ echo $i; 
+ echo "-fps -c ../../telecom_gsm_data/$i.au > output_large.encode.gsm" > _finfo_cmd_run.$i
+ cp _finfo_dataset.1 _finfo_dataset.$i;
+done

@@ -1,0 +1,11 @@
+/82559_eeprom
+/hello_world
+/interrupt
+/mem_to_mem_idma2intr
+/test_burst
+/timer
+/sched
+/smc91111_eeprom
+/smc911x_eeprom
+*.bin
+*.srec

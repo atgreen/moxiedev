@@ -1,3 +1,8 @@
+2009-05-30  Anthony Green  <green@moxielogic.com>
+	
+	* HACKING: Added u-boot.  Corrections.
+	* README: New file.
+
 2009-05-26  Anthony Green  <green@moxielogic.com>
 
 	* u-boot: Initial u-boot bits.

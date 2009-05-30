@@ -21,16 +21,24 @@ Directories
   gas, ld, sim, gdb, newlib and libgloss) from sourceware.org.
   Moxie patches are applied to this and maintained in our mercurial
   repository.  However, since the repo contains CVS directories, we
-  can still update the tree directly from the upstream gcc trunk with
+  can still update the tree directly from the upstream src trunk with
   cvs.
 
   qemu
 
-  This contains an anonymous svn checkout of the trunk of the qemu tree.
-  Moxie patches are applied to this and maintined in our mercurial
-  repository.  However, since the repo contains .svn directories, we
-  can still update the tree directly from the upstream gcc trunk with
-  svn.
+  This contains an anonymous git checkout of the trunk of the qemu tree.
+  Moxie patches are applied to this and maintined in our git
+  repository.  However, since the repo contains the .git directory, we
+  can still update the tree directly from the upstream qemu trunk with
+  git.
+
+  u-boot
+
+  This contains an anonymous git checkout of the trunk of the u-boot tree.
+  Moxie patches are applied to this and maintined in our git
+  repository.  However, since the repo contains the .git directory, we
+  can still update the tree directly from the upstream u-boot trunk with
+  git.
 
   doc
 

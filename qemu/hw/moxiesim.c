@@ -93,10 +93,10 @@ static void main_cpu_reset(void *opaque)
 }
 
 static void
-moxiesim_init (int ram_size, int vga_ram_size,
-		 const char *boot_device,
-		 const char *kernel_filename, const char *kernel_cmdline,
-		 const char *initrd_filename, const char *cpu_model)
+moxiesim_init (int ram_size,
+	       const char *boot_device,
+	       const char *kernel_filename, const char *kernel_cmdline,
+	       const char *initrd_filename, const char *cpu_model)
 {
     CPUState *env;
     ram_addr_t phys_ram;
@@ -144,9 +144,10 @@ void irq_info(Monitor *mon)
 }
 
 QEMUMachine moxiesim_machine = {
-    "moxiesim",
-    "Moxie simulator platform",
-    moxiesim_init,
+    .name = "moxiesim",
+    .desc = "Moxie simulator platform",
+    .init = moxiesim_init,
+    .is_default = 1,
 };
 
 static void moxie_machine_init(void)

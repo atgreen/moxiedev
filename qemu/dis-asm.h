@@ -218,6 +218,7 @@ enum bfd_architecture
 #define bfd_mach_cris_v0_v10   255
 #define bfd_mach_cris_v32      32
 #define bfd_mach_cris_v10_v32  1032
+  bfd_arch_moxie,      /* The Moxie core.  */
   bfd_arch_microblaze, /* Xilinx MicroBlaze.  */
   bfd_arch_last
   };
@@ -401,6 +402,7 @@ extern int print_insn_tic30		PARAMS ((bfd_vma, disassemble_info*));
 extern int print_insn_ppc		PARAMS ((bfd_vma, disassemble_info*));
 extern int print_insn_s390		PARAMS ((bfd_vma, disassemble_info*));
 extern int print_insn_crisv32           PARAMS ((bfd_vma, disassemble_info*));
+extern int print_insn_moxie             PARAMS ((bfd_vma, disassemble_info*));
 extern int print_insn_microblaze        PARAMS ((bfd_vma, disassemble_info*));
 
 #if 0

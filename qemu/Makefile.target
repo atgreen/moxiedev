@@ -194,6 +194,13 @@ endif
 ifeq ($(findstring mips, $(TARGET_BASE_ARCH) $(ARCH)),mips)
 LIBOBJS+=mips-dis.o
 endif
+ifeq ($(findstring moxie, $(TARGET_BASE_ARCH) $(ARCH)),moxie)
+LIBOBJS+=op_helper.o helper.o
+LIBOBJS+=moxie-dis.o
+ifndef CONFIG_USER_ONLY
+LIBOBJS+= mmu.o
+endif
+endif
 ifeq ($(findstring sparc, $(TARGET_BASE_ARCH) $(ARCH)),sparc)
 LIBOBJS+=sparc-dis.o
 endif
@@ -628,6 +635,9 @@ ifdef FDT_LIBS
 OBJS+= device_tree.o
 LIBS+= $(FDT_LIBS)
 endif
+endif
+ifeq ($(TARGET_BASE_ARCH), moxie)
+OBJS+= moxiesim.o serial.o mc146818rtc.o vga.o
 endif
 ifeq ($(TARGET_BASE_ARCH), cris)
 # Boards

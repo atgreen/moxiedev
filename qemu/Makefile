@@ -380,6 +380,7 @@ tarbin:
 	$(bindir)/qemu-system-mipsel \
 	$(bindir)/qemu-system-mips64 \
 	$(bindir)/qemu-system-mips64el \
+	$(bindir)/qemu-system-moxie \
 	$(bindir)/qemu-system-ppc \
 	$(bindir)/qemu-system-ppcemb \
 	$(bindir)/qemu-system-ppc64 \
@@ -395,6 +396,7 @@ tarbin:
 	$(bindir)/qemu-m68k \
 	$(bindir)/qemu-mips \
 	$(bindir)/qemu-mipsel \
+        $(bindir)/qemu-moxie \
 	$(bindir)/qemu-ppc \
 	$(bindir)/qemu-ppc64 \
 	$(bindir)/qemu-ppc64abi32 \

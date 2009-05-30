@@ -136,6 +136,9 @@ case "$cpu" in
   mips64)
     cpu="mips64"
   ;;
+  moxie)
+    cpu="moxie"
+  ;;
   ppc)
     cpu="ppc"
   ;;
@@ -688,6 +691,7 @@ mips-softmmu \
 mipsel-softmmu \
 mips64-softmmu \
 mips64el-softmmu \
+moxie-softmmu \
 ppc-softmmu \
 ppcemb-softmmu \
 ppc64-softmmu \
@@ -1464,6 +1468,10 @@ case "$cpu" in
     echo "ARCH=mips64" >> $config_mak
     echo "#define HOST_MIPS64 1" >> $config_h
   ;;
+  moxie)
+    echo "ARCH=moxie" >> $config_mak
+    echo "#define HOST_MOXIE 1" >> $config_h
+  ;;
   ppc)
     echo "ARCH=ppc" >> $config_mak
     echo "#define HOST_PPC 1" >> $config_h
@@ -1782,6 +1790,7 @@ target_bigendian="no"
 [ "$target_cpu" = "mips" ] && target_bigendian=yes
 [ "$target_cpu" = "mipsn32" ] && target_bigendian=yes
 [ "$target_cpu" = "mips64" ] && target_bigendian=yes
+[ "$target_cpu" = "moxie" ] && target_bigendian=yes
 [ "$target_cpu" = "ppc" ] && target_bigendian=yes
 [ "$target_cpu" = "ppcemb" ] && target_bigendian=yes
 [ "$target_cpu" = "ppc64" ] && target_bigendian=yes
@@ -1965,6 +1974,12 @@ case "$target_cpu" in
     echo "#define TARGET_ABI_MIPSN64 1" >> $config_h
     target_phys_bits=64
   ;;
+  moxie)
+    echo "TARGET_ARCH=moxie" >> $config_mak
+    echo "#define TARGET_ARCH \"moxie\"" >> $config_h
+    echo "#define TARGET_MOXIE 1" >> $config_h
+    target_phys_bits=32
+  ;;
   ppc)
     echo "TARGET_ARCH=ppc" >> $config_mak
     echo "#define TARGET_ARCH \"ppc\"" >> $config_h
@@ -2087,6 +2102,7 @@ if test "$target_cpu" = "arm" \
      -o "$target_cpu" = "mipsn32el" \
      -o "$target_cpu" = "mips64" \
      -o "$target_cpu" = "mips64el" \
+     -o "$target_cpu" = "moxie" \
      -o "$target_cpu" = "ppc" \
      -o "$target_cpu" = "ppc64" \
      -o "$target_cpu" = "ppc64abi32" \

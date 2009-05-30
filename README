@@ -14,12 +14,12 @@
 0    available under a Free Software license.                                           0
 1                                                                                       1
 0    MoxieDev is the source and build environment for the Moxie toolchain,              0
-1    simulators, firmware and HDL code.                                                  1
+1    simulators, firmware and HDL code.                                                 1
 0                                                                                       0
 1                                                                                       1
 0    For details on the Moxie architecture and project, see the project wiki at:        0
 1                                                                                       1
-0    		http://www.moxielogic.org/wiki                                          0
+0               http://www.moxielogic.org/wiki                                          0
 1                                                                                       1
 0    For ongoing updates on the progress of the Moxie project, see the blog at:         0
 1                                                                                       1

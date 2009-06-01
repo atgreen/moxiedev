@@ -103,8 +103,19 @@ moxie_print_operand_address (FILE *file, rtx x)
       break;
       
     case PLUS:
-      fprintf (file, "%ld(%s)", 
-	       INTVAL(XEXP (x, 1)), reg_names[REGNO (XEXP (x, 0))]);
+      switch (GET_CODE (XEXP (x, 1)))
+	{
+	case CONST_INT:
+	  fprintf (file, "%ld(%s)", 
+		   INTVAL(XEXP (x, 1)), reg_names[REGNO (XEXP (x, 0))]);
+	  break;
+	case SYMBOL_REF:
+	  output_addr_const (file, XEXP (x, 1));
+	  fprintf (file, "(%s)", reg_names[REGNO (XEXP (x, 0))]);
+	  break;
+	default:
+	  abort();
+	}
       break;
 
     default:

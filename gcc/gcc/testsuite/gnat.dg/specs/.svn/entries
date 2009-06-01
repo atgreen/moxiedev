@@ -1,7 +1,7 @@
 10
 
 dir
-147952
+148029
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gnat.dg/specs
 svn://gcc.gnu.org/svn/gcc
 
@@ -1216,40 +1216,6 @@ charlet
 
 602
 
-formal_type.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-1f2ca5355aa5a24e2f1dbad3c4e8ac76
-2006-10-31T18:20:42.966598Z
-118332
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-439
-
 delta_small.ads
 file
 
@@ -1283,6 +1249,40 @@ sam
 
 
 216
+
+formal_type.ads
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+1f2ca5355aa5a24e2f1dbad3c4e8ac76
+2006-10-31T18:20:42.966598Z
+118332
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+439
 
 static_initializer.ads
 file
@@ -1352,17 +1352,17 @@ charlet
 
 981
 
-access_constant_decl.ads
+unchecked_union.ads
 file
 
 
 
 
 2009-04-24T17:46:10.000000Z
-a3aeba60c0c92acaa70248375acbbdbb
-2007-12-07T14:37:36.009827Z
-130677
-sam
+94bb073daea80fa12a0c3c2ed76494e0
+2006-09-13T18:40:26.542344Z
+116928
+ebotcazou
 
 
 
@@ -1384,7 +1384,7 @@ sam
 
 
 
-263
+432
 
 aggr1.ads
 file
@@ -1420,17 +1420,17 @@ charlet
 
 187
 
-unchecked_union.ads
+access_constant_decl.ads
 file
 
 
 
 
 2009-04-24T17:46:10.000000Z
-94bb073daea80fa12a0c3c2ed76494e0
-2006-09-13T18:40:26.542344Z
-116928
-ebotcazou
+a3aeba60c0c92acaa70248375acbbdbb
+2007-12-07T14:37:36.009827Z
+130677
+sam
 
 
 
@@ -1452,41 +1452,7 @@ ebotcazou
 
 
 
-432
-
-pack3_pkg.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-e1d74f010f9129c76388cdce7bfd680c
-2008-06-09T09:41:16.006502Z
-136583
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-112
+263
 
 sync_iface_test.ads
 file
@@ -1521,6 +1487,40 @@ charlet
 
 
 377
+
+pack3_pkg.ads
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+e1d74f010f9129c76388cdce7bfd680c
+2008-06-09T09:41:16.006502Z
+136583
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+112
 
 small_alignment.ads
 file
@@ -1658,40 +1658,6 @@ charlet
 
 279
 
-abstract_limited.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-0655d24f018576946af2af51c7ca3f5e
-2006-10-31T18:20:42.966598Z
-118332
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-141
-
 access_constant.ads
 file
 
@@ -1725,6 +1691,40 @@ sam
 
 
 298
+
+abstract_limited.ads
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+0655d24f018576946af2af51c7ca3f5e
+2006-10-31T18:20:42.966598Z
+118332
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+141
 
 static_initializer2.ads
 file
@@ -1794,40 +1794,6 @@ ebotcazou
 
 536
 
-self_class.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-2a609f9e2620a0f4c29c793e91454e36
-2008-05-28T12:38:31.775024Z
-136073
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-165
-
 static_initializer4.ads
 file
 
@@ -1862,17 +1828,17 @@ ebotcazou
 
 201
 
-varsize_return_pkg1.adb
+self_class.ads
 file
 
 
 
 
 2009-04-24T17:46:10.000000Z
-4ca717d3ec3294d5721adb12a9a1c4c6
-2008-04-18T10:10:15.976127Z
-134433
-ebotcazou
+2a609f9e2620a0f4c29c793e91454e36
+2008-05-28T12:38:31.775024Z
+136073
+charlet
 
 
 
@@ -1894,7 +1860,7 @@ ebotcazou
 
 
 
-443
+165
 
 renamings.ads
 file
@@ -1929,6 +1895,40 @@ charlet
 
 
 385
+
+varsize_return_pkg1.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+4ca717d3ec3294d5721adb12a9a1c4c6
+2008-04-18T10:10:15.976127Z
+134433
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+443
 
 varsize_return_pkg2.adb
 file
@@ -2100,40 +2100,6 @@ ebotcazou
 
 1272
 
-integer_value.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-18b43ed50b94e487d6c6f0f068e0849e
-2007-11-28T20:46:18.091025Z
-130497
-sam
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-165
-
 size_clause3.ads
 file
 
@@ -2167,6 +2133,40 @@ ebotcazou
 
 
 1312
+
+integer_value.ads
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+18b43ed50b94e487d6c6f0f068e0849e
+2007-11-28T20:46:18.091025Z
+130497
+sam
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+165
 
 tag1.ads
 file

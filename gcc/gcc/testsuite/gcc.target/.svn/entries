@@ -1,15 +1,15 @@
 10
 
 dir
-147952
+148029
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-28T10:48:35.615073Z
-147950
-davek
+2009-05-29T07:06:35.015963Z
+147970
+jakub
 
 
 
@@ -26,16 +26,16 @@ davek
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
-dir
-
 arm
 dir
 
-m68k
+powerpc
 dir
 
 alpha
+dir
+
+m68k
 dir
 
 avr
@@ -50,10 +50,10 @@ dir
 frv
 dir
 
-x86_64
+s390
 dir
 
-s390
+x86_64
 dir
 
 cris
@@ -65,10 +65,10 @@ dir
 spu
 dir
 
-sparc
+mips
 dir
 
-mips
+sparc
 dir
 
 sh

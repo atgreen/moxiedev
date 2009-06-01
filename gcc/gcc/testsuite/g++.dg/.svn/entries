@@ -1,7 +1,7 @@
 10
 
 dir
-147952
+148029
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg
 svn://gcc.gnu.org/svn/gcc
 
@@ -130,10 +130,10 @@ sje
 
 7702
 
-graphite
+tree-prof
 dir
 
-tree-prof
+graphite
 dir
 
 warn
@@ -142,10 +142,10 @@ dir
 lookup
 dir
 
-pch
+parse
 dir
 
-parse
+pch
 dir
 
 expr
@@ -164,6 +164,9 @@ cpp0x
 dir
 
 abi
+dir
+
+eh
 dir
 
 pubtypes.C
@@ -199,9 +202,6 @@ janis
 
 
 1239
-
-eh
-dir
 
 README
 file

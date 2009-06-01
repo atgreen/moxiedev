@@ -1,7 +1,7 @@
 10
 
 dir
-147952
+148029
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/java/text
 svn://gcc.gnu.org/svn/gcc
 
@@ -471,40 +471,6 @@ doko
 
 1707
 
-DateFormat.h
-file
-
-
-
-
-2009-04-24T17:49:20.000000Z
-7785b6829d84c7938c606cb74bfd0258
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3882
-
 AttributedCharacterIterator$Attribute.h
 file
 
@@ -538,6 +504,40 @@ tromey
 
 
 1293
+
+DateFormat.h
+file
+
+
+
+
+2009-04-24T17:49:20.000000Z
+7785b6829d84c7938c606cb74bfd0258
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3882
 
 Format.h
 file
@@ -573,40 +573,6 @@ doko
 
 1181
 
-ParseException.h
-file
-
-
-
-
-2009-04-24T17:49:20.000000Z
-4dac2856ce4cfe18f4a0a7370fe0edfc
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-699
-
 RuleBasedCollator$CollationElement.h
 file
 
@@ -641,14 +607,14 @@ tromey
 
 949
 
-StringCharacterIterator.h
+ParseException.h
 file
 
 
 
 
 2009-04-24T17:49:20.000000Z
-849fc072664d7de1b1e5e93a52563493
+4dac2856ce4cfe18f4a0a7370fe0edfc
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -673,7 +639,7 @@ tromey
 
 
 
-1256
+699
 
 CollationKey.h
 file
@@ -708,6 +674,40 @@ tromey
 
 
 1078
+
+StringCharacterIterator.h
+file
+
+
+
+
+2009-04-24T17:49:20.000000Z
+849fc072664d7de1b1e5e93a52563493
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1256
 
 BreakIterator.h
 file
@@ -845,40 +845,6 @@ tromey
 
 789
 
-CharacterIterator.h
-file
-
-
-
-
-2009-04-24T17:49:20.000000Z
-0cf17327bb5b378edc4ffd5a81a0767c
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-862
-
 RuleBasedCollator.h
 file
 
@@ -912,6 +878,40 @@ gandalf
 
 
 2420
+
+CharacterIterator.h
+file
+
+
+
+
+2009-04-24T17:49:20.000000Z
+0cf17327bb5b378edc4ffd5a81a0767c
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+862
 
 DecimalFormat.h
 file
@@ -981,40 +981,6 @@ tromey
 
 1105
 
-Collator.java
-file
-
-
-
-
-2009-04-24T17:49:20.000000Z
-57a41906048845d16fb22fed533bc6e4
-2008-03-04T21:46:05.581689Z
-132872
-daney
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-14682
-
 NumberFormat$Field.h
 file
 
@@ -1048,6 +1014,40 @@ tromey
 
 
 1454
+
+Collator.java
+file
+
+
+
+
+2009-04-24T17:49:20.000000Z
+57a41906048845d16fb22fed533bc6e4
+2008-03-04T21:46:05.581689Z
+132872
+daney
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+14682
 
 Annotation.h
 file

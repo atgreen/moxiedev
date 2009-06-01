@@ -1,15 +1,15 @@
 10
 
 dir
-147952
+148029
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-28T11:24:18.311572Z
-147951
-dodji
+2009-05-31T14:59:41.067261Z
+148015
+bstarynk
 
 
 
@@ -25,6 +25,9 @@ dodji
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+gcc.c-torture
+dir
 
 README.compat
 file
@@ -59,9 +62,6 @@ jsm28
 
 
 4059
-
-gcc.c-torture
-dir
 
 ChangeLog-1993-2007
 file
@@ -103,10 +103,10 @@ dir
 gnat.dg
 dir
 
-gcc.dg
+ada
 dir
 
-ada
+gcc.dg
 dir
 
 gcc.misc-tests
@@ -119,17 +119,17 @@ file
 
 
 
-3cbaedec64dd759e480abd6838fb3cb2
-2009-05-28T11:24:18.311572Z
-147951
-dodji
+1bef2462b90d9057b6a00f58f640e376
+2009-05-31T14:59:41.067261Z
+148015
+bstarynk
 
 
 
 
 
-ChangeLog.r147796
 ChangeLog.r147952
+ChangeLog.r148029
 ChangeLog.mine
 
 README.gcc

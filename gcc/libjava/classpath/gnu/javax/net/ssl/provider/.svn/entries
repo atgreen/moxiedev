@@ -1,7 +1,7 @@
 10
 
 dir
-147952
+148029
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/javax/net/ssl/provider
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ tromey
 
 3985
 
-X509KeyManagerFactory.java
-file
-
-
-
-
-2009-04-24T17:46:59.000000Z
-f33dc78b7ce398793f2990ce63fa7273
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-12917
-
 DelegatedTask.java
 file
 
@@ -161,6 +127,40 @@ tromey
 
 
 2874
+
+X509KeyManagerFactory.java
+file
+
+
+
+
+2009-04-24T17:46:59.000000Z
+f33dc78b7ce398793f2990ce63fa7273
+2008-06-28T13:29:13.958049Z
+137223
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12917
 
 TLSRandom.java
 file
@@ -196,40 +196,6 @@ mark
 
 7291
 
-SessionImpl.java
-file
-
-
-
-
-2009-04-24T17:46:59.000000Z
-b2072b4e33560d9d8d3851f81b977d06
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5278
-
 CertificateURL.java
 file
 
@@ -264,17 +230,17 @@ tromey
 
 10267
 
-Alert.java
+SessionImpl.java
 file
 
 
 
 
-2009-04-24T17:46:58.000000Z
-5c6a92596badb14259b31ccec445ccfc
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2009-04-24T17:46:59.000000Z
+b2072b4e33560d9d8d3851f81b977d06
+2008-06-28T13:29:13.958049Z
+137223
+doko
 
 
 
@@ -296,7 +262,7 @@ tromey
 
 
 
-8420
+5278
 
 ProtocolVersion.java
 file
@@ -332,6 +298,40 @@ doko
 
 5087
 
+Alert.java
+file
+
+
+
+
+2009-04-24T17:46:58.000000Z
+5c6a92596badb14259b31ccec445ccfc
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8420
+
 ExtensionList.java
 file
 
@@ -366,40 +366,6 @@ tromey
 
 8048
 
-ContentType.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-71212d2e64d35e8958f5429d39249ca0
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2910
-
 HelloRequest.java
 file
 
@@ -433,6 +399,40 @@ doko
 
 
 2377
+
+ContentType.java
+file
+
+
+
+
+2009-04-24T17:46:58.000000Z
+71212d2e64d35e8958f5429d39249ca0
+2008-06-28T13:29:13.958049Z
+137223
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2910
 
 ClientCertificateTypeList.java
 file
@@ -1046,40 +1046,6 @@ doko
 
 28839
 
-ExchangeKeys.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-42c3f387b7619cc5ce0b2da3d1b08320
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2082
-
 Record.java
 file
 
@@ -1113,6 +1079,40 @@ tromey
 
 
 5915
+
+ExchangeKeys.java
+file
+
+
+
+
+2009-04-24T17:46:58.000000Z
+42c3f387b7619cc5ce0b2da3d1b08320
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2082
 
 ClientPSKParameters.java
 file
@@ -1216,40 +1216,6 @@ tromey
 
 2217
 
-ServerKeyExchangeParams.java
-file
-
-
-
-
-2009-04-24T17:46:59.000000Z
-c1f19a1d56ef11cce64af5ca065fb0c7
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2037
-
 ServerDHParams.java
 file
 
@@ -1283,6 +1249,40 @@ tromey
 
 
 7198
+
+ServerKeyExchangeParams.java
+file
+
+
+
+
+2009-04-24T17:46:59.000000Z
+c1f19a1d56ef11cce64af5ca065fb0c7
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2037
 
 SSLHMac.java
 file
@@ -1386,17 +1386,17 @@ tromey
 
 21214
 
-ClientHello.java
+SSLRandom.java
 file
 
 
 
 
-2009-04-24T17:46:58.000000Z
-298c1b99847be0a90a80494fcdd09e88
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+2009-04-24T17:46:59.000000Z
+48e56b3559479e221ad150c1e9117dcc
+2006-03-10T13:25:35.074455Z
+111932
+mark
 
 
 
@@ -1418,41 +1418,7 @@ tromey
 
 
 
-7465
-
-CertificateRequestBuilder.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-df70cc32faac4c482c4f9fbc67e406d0
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3735
+4813
 
 KeyExchangeAlgorithm.java
 file
@@ -1488,17 +1454,17 @@ tromey
 
 2015
 
-SSLRandom.java
+CertificateRequestBuilder.java
 file
 
 
 
 
-2009-04-24T17:46:59.000000Z
-48e56b3559479e221ad150c1e9117dcc
-2006-03-10T13:25:35.074455Z
-111932
-mark
+2009-04-24T17:46:58.000000Z
+df70cc32faac4c482c4f9fbc67e406d0
+2008-06-28T13:29:13.958049Z
+137223
+doko
 
 
 
@@ -1520,7 +1486,41 @@ mark
 
 
 
-4813
+3735
+
+ClientHello.java
+file
+
+
+
+
+2009-04-24T17:46:58.000000Z
+298c1b99847be0a90a80494fcdd09e88
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7465
 
 MacAlgorithm.java
 file
@@ -1624,40 +1624,6 @@ tromey
 
 4474
 
-ClientHelloV2.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-11aa5e18ae74532e8008f21513f775f5
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4857
-
 AbstractHandshake.java
 file
 
@@ -1692,17 +1658,17 @@ tromey
 
 42965
 
-InputSecurityParameters.java
+ClientHelloV2.java
 file
 
 
 
 
 2009-04-24T17:46:58.000000Z
-6eccd7cb7cf11a6365405744b8e60f40
-2008-06-28T13:29:13.958049Z
-137223
-doko
+11aa5e18ae74532e8008f21513f775f5
+2007-01-09T19:58:05.773323Z
+120621
+tromey
 
 
 
@@ -1724,7 +1690,7 @@ doko
 
 
 
-11966
+4857
 
 SSLServerSocketFactoryImpl.java
 file
@@ -1760,17 +1726,17 @@ tromey
 
 3774
 
-Extension.java
+InputSecurityParameters.java
 file
 
 
 
 
 2009-04-24T17:46:58.000000Z
-3693851da748373fa829c21a356640e6
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+6eccd7cb7cf11a6365405744b8e60f40
+2008-06-28T13:29:13.958049Z
+137223
+doko
 
 
 
@@ -1792,7 +1758,7 @@ tromey
 
 
 
-7102
+11966
 
 OutputSecurityParameters.java
 file
@@ -1827,6 +1793,40 @@ doko
 
 
 10511
+
+Extension.java
+file
+
+
+
+
+2009-04-24T17:46:58.000000Z
+3693851da748373fa829c21a356640e6
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7102
 
 MacException.java
 file
@@ -1998,17 +1998,17 @@ tromey
 
 4976
 
-ClientRSA_PSKParameters.java
+ClientDiffieHellmanPublic.java
 file
 
 
 
 
 2009-04-24T17:46:58.000000Z
-7574540600d795cff1450d7b9c74e8fd
-2008-06-28T13:29:13.958049Z
-137223
-doko
+9499e93eb4d8008571a8cedd2c2c748e
+2007-01-09T19:58:05.773323Z
+120621
+tromey
 
 
 
@@ -2030,7 +2030,7 @@ doko
 
 
 
-4065
+3858
 
 ClientHandshake.java
 file
@@ -2066,17 +2066,17 @@ doko
 
 43018
 
-ClientDiffieHellmanPublic.java
+ClientRSA_PSKParameters.java
 file
 
 
 
 
 2009-04-24T17:46:58.000000Z
-9499e93eb4d8008571a8cedd2c2c748e
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+7574540600d795cff1450d7b9c74e8fd
+2008-06-28T13:29:13.958049Z
+137223
+doko
 
 
 
@@ -2098,7 +2098,7 @@ tromey
 
 
 
-3858
+4065
 
 Debug.java
 file

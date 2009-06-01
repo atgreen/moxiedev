@@ -1,7 +1,7 @@
 10
 
 dir
-147952
+148029
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/swing/colorchooser
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ tromey
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-ColorChooserComponentFactory.class
-file
-
-
-
-
-2009-04-24T17:48:16.000000Z
-8090ab5ca8187812473feaf8312883f9
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1014
 
 DefaultSwatchChooserPanel$MouseHandler.class
 file
@@ -93,6 +59,40 @@ has-props
 
 
 1670
+
+ColorChooserComponentFactory.class
+file
+
+
+
+
+2009-04-24T17:48:16.000000Z
+8090ab5ca8187812473feaf8312883f9
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1014
 
 DefaultHSBChooserPanel$RadioStateListener.class
 file
@@ -230,40 +230,6 @@ has-props
 
 1517
 
-DefaultHSBChooserPanel.class
-file
-
-
-
-
-2009-04-24T17:48:16.000000Z
-2a12e22e8e7fa05149d994a6efbd3f58
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-9940
-
 DefaultSwatchChooserPanel$RecentPanelLayout.class
 file
 
@@ -297,6 +263,40 @@ has-props
 
 
 2178
+
+DefaultHSBChooserPanel.class
+file
+
+
+
+
+2009-04-24T17:48:16.000000Z
+2a12e22e8e7fa05149d994a6efbd3f58
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+9940
 
 DefaultRGBChooserPanel$SliderHandler.class
 file

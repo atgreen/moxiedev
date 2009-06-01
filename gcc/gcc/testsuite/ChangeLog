@@ -1,10 +1,60 @@
-<<<<<<< .mine
 2009-05-21  Anthony Green  <green@moxielogic.com>
 
 	* testsuite/lib/target-supports.exp (check_profiling_available):
 	Profiling is not available for testing purposes on moxie.
 
-=======
+2009-05-31  Basile Starynkevitch  <basile@starynkevitch.net>
+
+	* gcc.dg/plugin/ggcplug.c: moved comment.
+	(plugin_init): fixed typo, declared i, returned 0 at end.
+
+2009-05-31  Ira Rosen  <irar@il.ibm.com>
+
+	PR testsuite/40244
+	* gcc.dg/vect/bb-slp-4.c: Change the number of data accesses to 2.
+	* gcc.dg/vect/bb-slp-10.c: Change the store misalignment to 1.
+
+2009-05-29  Ian Lance Taylor  <iant@google.com>
+
+	* gcc.dg/Wcxx-compat-11.c: New testcase.
+
+2009-05-29  Francois-Xavier Coudert  <fxcoudert@gcc.gnu.org>
+
+	PR fortran/40019
+	* gfortran.dg/leadz_trailz_1.f90: New test.
+	* gfortran.dg/leadz_trailz_2.f90: New test.
+
+2009-05-29  Martin Jambor  <mjambor@suse.cz>
+
+	* gfortran.dg/pr25923.f90: XFAIL warning expectation.
+	* gcc.dg/tree-ssa/ssa-fre-7.c: Compile with -fno-tree-sra.
+	* gcc.dg/tree-ssa/ssa-fre-8.c: Likewise.
+	* gcc.dg/tree-ssa/ssa-fre-9.c: Likewise.
+	* gcc.dg/memcpy-1.c: Removed param sra-max-structure-size.
+	* gcc.dg/tree-ssa/sra-2.c: Likewise.
+	* gcc.dg/tree-ssa/sra-3.c: Likewise.
+	* gcc.dg/tree-ssa/sra-1.c: Likewise.
+	* gcc.dg/tree-ssa/sra-4.c: Changed comment.
+	* gcc.dg/tree-ssa/sra-5.c: New file.
+	* gcc.dg/tree-ssa/sra-6.c: New file.
+	* gcc.c-torture/compile/sra-1.c: New file.
+
+2009-05-29  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/40291
+	* gcc.c-torture/compile/pr40291.c: New test.
+
+	PR target/40017
+	* gcc.target/powerpc/altivec-types-1.c: Don't expect error for
+	__vector _Bool.
+	* gcc.target/powerpc/altivec-30.c: New test.
+	* gcc.target/powerpc/altivec-31.c: New test.
+
+2009-05-28  Richard Guenther  <rguenther@suse.de>
+
+	* gcc.dg/tree-ssa/ssa-fre-26.c: New testcase.
+	* gcc.c-torture/execute/20090527-1.c: Likewise.
+
 2009-05-28  Dodji Seketeli  <dodji@redhat.com>
 
 	PR c++/39754
@@ -16,10 +66,9 @@
 	* g++.dg/template/canon-type-6.C: Likewise.
 	* g++.dg/template/canon-type-7.C: Likewise.
 
-
 2009-05-28  Dave Korn  <dave.korn.cygwin@gmail.com>
-            Uros Bizjak  <ubizjak@gmail.com>
-            Danny Smith  <dansmister@gmail.com>
+	    Uros Bizjak  <ubizjak@gmail.com>
+	    Danny Smith  <dansmister@gmail.com>
 
 	PR target/37216
 
@@ -41,33 +90,33 @@
 	* g++.dg/torture/pr34222.C (ptrdiff_t): Likewise.
 	* g++.dg/tree-ssa/pr22444.C (ptrdiff_t): Likewise.
 	(size_t): Use __extension__ and __SIZE_TYPE__.
-        * gcc.c-torture/compile/20000211-1.c (size_t): Typedef size_t via
+	* gcc.c-torture/compile/20000211-1.c (size_t): Typedef size_t via
 	__SIZE_TYPE__.
-        * gcc.c-torture/compile/20010328-1.c (size_t): Likewise,
-        * gcc.c-torture/compile/20030320-1.c (size_t): Likewise,
-        * gcc.c-torture/compile/20030405-1.c (size_t): Likewise,
-        * gcc.c-torture/compile/20030902-1.c (size_t): Likewise,
-        * gcc.c-torture/compile/20060202-1.c (size_t): Likewise,
-        * gcc.c-torture/compile/20080613-1.c (size_t): Likewise,
-        * gcc.c-torture/compile/920428-2.c (size_t): Likewise,
-        * gcc.c-torture/compile/980329-1.c (size_t): Likewise,
-        * gcc.c-torture/compile/980816-1.c (size_t): Likewise,
-        * gcc.c-torture/compile/pr32584.c (size_t): Likewise,
-        * (__ssize_t): Likewise.
-        * gcc.c-torture/compile/pr33173.c (size_t): Likewise,
-        * gcc.c-torture/compile/pr33382.c (size_t): Likewise,
-        * gcc.c-torture/compile/pr34334.c (size_t): Likewise,
-        * gcc.c-torture/compile/pr34688.c (size_t): Likewise,
-        * gcc.c-torture/compile/pr35043.c (size_t): Likewise,
-        * gcc.c-torture/compile/pr37669.c (size_t): Likewise,
-        * gcc.dg/20050629-1.c (size_t): Typedef size_t via __SIZE_TYPE__.
-        * gcc.dg/pr33667.c (size_t): Likewise.
-        * gcc.dg/prefetch-loop-arrays-1.c (size_t): Likewise.
-        * gcc.dg/torture/pr39204.c (size_t): Likewise.
-        * gcc.dg/tree-ssa/20041122-1.c (size_t): Likewise.
-        * gcc.dg/tree-ssa/pr36908.c (size_t): Likewise.
-        * gcc.dg/tree-ssa/pr38250.c (size_t): Likewise.
-        * gcc.dg/tree-ssa/ssa-dse-10.c (size_t): Likewise.
+	* gcc.c-torture/compile/20010328-1.c (size_t): Likewise,
+	* gcc.c-torture/compile/20030320-1.c (size_t): Likewise,
+	* gcc.c-torture/compile/20030405-1.c (size_t): Likewise,
+	* gcc.c-torture/compile/20030902-1.c (size_t): Likewise,
+	* gcc.c-torture/compile/20060202-1.c (size_t): Likewise,
+	* gcc.c-torture/compile/20080613-1.c (size_t): Likewise,
+	* gcc.c-torture/compile/920428-2.c (size_t): Likewise,
+	* gcc.c-torture/compile/980329-1.c (size_t): Likewise,
+	* gcc.c-torture/compile/980816-1.c (size_t): Likewise,
+	* gcc.c-torture/compile/pr32584.c (size_t): Likewise,
+	* (__ssize_t): Likewise.
+	* gcc.c-torture/compile/pr33173.c (size_t): Likewise,
+	* gcc.c-torture/compile/pr33382.c (size_t): Likewise,
+	* gcc.c-torture/compile/pr34334.c (size_t): Likewise,
+	* gcc.c-torture/compile/pr34688.c (size_t): Likewise,
+	* gcc.c-torture/compile/pr35043.c (size_t): Likewise,
+	* gcc.c-torture/compile/pr37669.c (size_t): Likewise,
+	* gcc.dg/20050629-1.c (size_t): Typedef size_t via __SIZE_TYPE__.
+	* gcc.dg/pr33667.c (size_t): Likewise.
+	* gcc.dg/prefetch-loop-arrays-1.c (size_t): Likewise.
+	* gcc.dg/torture/pr39204.c (size_t): Likewise.
+	* gcc.dg/tree-ssa/20041122-1.c (size_t): Likewise.
+	* gcc.dg/tree-ssa/pr36908.c (size_t): Likewise.
+	* gcc.dg/tree-ssa/pr38250.c (size_t): Likewise.
+	* gcc.dg/tree-ssa/ssa-dse-10.c (size_t): Likewise.
 
 2009-05-28  Ira Rosen  <irar@il.ibm.com>
 
@@ -93,9 +142,9 @@
 	patterns to reflect frontend changes.
 	* gfortran.dg/vector_subscript_4.f90: Likewise.
 
-2009-05-27  Olivier Hainque  <hainque@adacore.com>	
-            Eric Botcazou  <botcazou@adacore.com>
-    
+2009-05-27  Olivier Hainque  <hainque@adacore.com>
+	    Eric Botcazou  <botcazou@adacore.com>
+
 	* gcc.c-torture/execute/align-nest.c: New testcase.
 	* gnat.dg/misaligned_nest.adb: New testcase.
 
@@ -108,18 +157,25 @@
 
 2009-05-27  Kai TIetz  <kai.tietz@onevision.com>
 
-        * g++.old-deja/g++.brendan/array1.C (array): Use __SIZE_TYPE__
-        cast instead of assuming 0ul.
-        * g++.old-deja/g++.brendan/crash64.C (size_t): Define it via
-        __SIZE_TYPE__.
-        (_type_desc): Make first argument const.
-        * g++.old-deja/g++.jason/new3.C (dg-options): Add -Wno-long-long.
+	* g++.old-deja/g++.brendan/array1.C (array): Use __SIZE_TYPE__
+	cast instead of assuming 0ul.
+	* g++.old-deja/g++.brendan/crash64.C (size_t): Define it via
+	__SIZE_TYPE__.
+	(_type_desc): Make first argument const.
+	* g++.old-deja/g++.jason/new3.C (dg-options): Add -Wno-long-long.
 
 2009-05-27  Thomas Koenig  <tkoenig@gcc.gnu.org>
 
 	PR libfortran/40187
 	* gfortran.dg/c_f_pointer_shape_tests_4.f03:  New file.
 	* gfortran.dg/c_f_pointer_shape_tests_4_driver.c:  New file.
+
+2009-05-26  Basile Starynkevitch  <basile@starynkevitch.net>
+
+	* testsuite/gcc.dg/plugin/plugin.exp: Added ggcplug.c test plugin
+	with ggcplug-test-1.c for testing PLUGIN_GGC_MARKING etc...
+	* testsuite/gcc.dg/plugin/ggcplug-test-1.c: Added new file.
+	* testsuite/gcc.dg/plugin/ggcplug.c: Added new file.
 
 2009-05-26  Tobias Burnus  <burnus@net-b.de>
 
@@ -257,7 +313,6 @@
 	* g++.dg/ext/dllexport2.C: Likewise.
 	* g++.dg/ext/dllexport2a.cc: Likewise.
 
->>>>>>> .r147952
 2009-05-21  Steve Ellcey  <sje@cup.hp.com>
 
 	PR target/37846
@@ -593,7 +648,6 @@
 	PR tree-optimization/40074
 	* gcc.dg/vect/pr40074.c: New test.
 
->>>>>>> .r147614
 2009-05-10  Ian Lance Taylor  <iant@google.com>
 
 	* gcc.dg/Wcxx-compat-7.c: New testcase.

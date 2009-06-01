@@ -1,7 +1,7 @@
 10
 
 dir
-147952
+148029
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale/locale/cons
 svn://gcc.gnu.org/svn/gcc
 
@@ -366,40 +366,6 @@ jakub
 
 1940
 
-12352.cc
-file
-
-
-
-
-2009-04-24T17:50:12.000000Z
-b49d92370eb39b274e98191c64f2bce5
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2538
-
 7222-c.cc
 file
 
@@ -433,6 +399,40 @@ jakub
 
 
 1203
+
+12352.cc
+file
+
+
+
+
+2009-04-24T17:50:12.000000Z
+b49d92370eb39b274e98191c64f2bce5
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2538
 
 40184.cc
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-147952
+148029
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/javax/imageio/bmp
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-EncodeRGB16.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-39a8211baa94582d04548071d0c9747c
-2006-05-18T17:29:21.798468Z
-113887
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4277
 
 DecodeRGB1.java
 file
@@ -94,6 +60,40 @@ mark
 
 3288
 
+EncodeRGB16.java
+file
+
+
+
+
+2009-04-24T17:46:58.000000Z
+39a8211baa94582d04548071d0c9747c
+2006-05-18T17:29:21.798468Z
+113887
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4277
+
 DecodeBF32.java
 file
 
@@ -127,40 +127,6 @@ mark
 
 
 3650
-
-DecodeBF16.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-853f154d811251f50889425405ecfcdd
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3602
 
 DecodeRGB4.java
 file
@@ -196,6 +162,40 @@ mark
 
 3267
 
+DecodeBF16.java
+file
+
+
+
+
+2009-04-24T17:46:58.000000Z
+853f154d811251f50889425405ecfcdd
+2008-06-28T13:29:13.958049Z
+137223
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3602
+
 BMPInfoHeader.java
 file
 
@@ -230,40 +230,6 @@ mark
 
 8552
 
-BMPDecoder.java
-file
-
-
-
-
-2009-04-24T17:46:58.000000Z
-c452da94e7e48fb920682461a60e7893
-2006-05-18T17:29:21.798468Z
-113887
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4847
-
 BMPImageReader.java
 file
 
@@ -297,6 +263,40 @@ mark
 
 
 4661
+
+BMPDecoder.java
+file
+
+
+
+
+2009-04-24T17:46:58.000000Z
+c452da94e7e48fb920682461a60e7893
+2006-05-18T17:29:21.798468Z
+113887
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4847
 
 DecodeRGB8.java
 file
@@ -434,17 +434,17 @@ mark
 
 4222
 
-DecodeRLE8.java
+BMPImageWriter.java
 file
 
 
 
 
 2009-04-24T17:46:58.000000Z
-e6e1afa9095b5919ac078f5063ddc0a9
-2005-11-15T16:23:41.473736Z
-107024
-mark
+4ce5607af9efce26d684ca9bc187e962
+2008-10-21T17:55:01.166395Z
+141271
+doko
 
 
 
@@ -466,7 +466,7 @@ mark
 
 
 
-4532
+7424
 
 BMPEncoder.java
 file
@@ -502,17 +502,17 @@ mark
 
 3688
 
-BMPImageWriter.java
+DecodeRLE8.java
 file
 
 
 
 
 2009-04-24T17:46:58.000000Z
-4ce5607af9efce26d684ca9bc187e962
-2008-10-21T17:55:01.166395Z
-141271
-doko
+e6e1afa9095b5919ac078f5063ddc0a9
+2005-11-15T16:23:41.473736Z
+107024
+mark
 
 
 
@@ -534,7 +534,7 @@ doko
 
 
 
-7424
+4532
 
 BMPImageReaderSpi.java
 file

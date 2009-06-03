@@ -1,0 +1,105 @@
+10
+
+dir
+0
+svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/moxie
+svn://gcc.gnu.org/svn/gcc
+add
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+138bc75d-0d04-0410-961f-82ee72b054a4
+
+moxie.md
+file
+
+
+
+add
+
+sfp-machine.h
+file
+
+
+
+add
+
+crti.asm
+file
+
+
+
+add
+
+t-moxie-softfp
+file
+
+
+
+add
+
+moxie.c
+file
+
+
+
+add
+
+t-moxie
+file
+
+
+
+add
+
+predicates.md
+file
+
+
+
+add
+
+crtn.asm
+file
+
+
+
+add
+
+constraints.md
+file
+
+
+
+add
+
+moxie.h
+file
+
+
+
+add
+
+moxie-protos.h
+file
+
+
+
+add
+

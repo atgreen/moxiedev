@@ -1,7 +1,7 @@
 10
 
 dir
-148029
+148111
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.abi
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,17 +502,17 @@ mmitchel
 
 350
 
-primary5.C
+cxa_vec.C
 file
 
 
 
 
 2009-04-24T17:44:24.000000Z
-6f380830639cca69801edec0c70561f2
-2007-03-22T19:44:09.083851Z
-123132
-mueller
+7892020dde0db36cf45f8dcadf8e80fc
+2008-04-09T09:13:23.835902Z
+134134
+nathan
 
 
 
@@ -534,7 +534,7 @@ mueller
 
 
 
-456
+5741
 
 vtable3h.C
 file
@@ -570,17 +570,17 @@ mmitchel
 
 358
 
-cxa_vec.C
+primary5.C
 file
 
 
 
 
 2009-04-24T17:44:24.000000Z
-7892020dde0db36cf45f8dcadf8e80fc
-2008-04-09T09:13:23.835902Z
-134134
-nathan
+6f380830639cca69801edec0c70561f2
+2007-03-22T19:44:09.083851Z
+123132
+mueller
 
 
 
@@ -602,7 +602,7 @@ nathan
 
 
 
-5741
+456
 
 vtable3i.C
 file
@@ -910,40 +910,6 @@ mmitchel
 
 3948
 
-vtable3.h
-file
-
-
-
-
-2009-04-24T17:44:24.000000Z
-f43645b177185eca1785bb1bc24abcc7
-2003-07-01T12:01:44.000000Z
-68769
-kazu
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3353
-
 bitfields.C
 file
 
@@ -977,6 +943,40 @@ ghazi
 
 
 3656
+
+vtable3.h
+file
+
+
+
+
+2009-04-24T17:44:24.000000Z
+f43645b177185eca1785bb1bc24abcc7
+2003-07-01T12:01:44.000000Z
+68769
+kazu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3353
 
 aggregates.C
 file
@@ -1012,40 +1012,6 @@ ghazi
 
 2308
 
-vbase1.C
-file
-
-
-
-
-2009-04-24T17:44:24.000000Z
-84fee86dc35b4828d76a638ec9084b6d
-2003-07-01T12:01:44.000000Z
-68769
-kazu
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2821
-
 crash1.C
 file
 
@@ -1079,6 +1045,40 @@ mmitchel
 
 
 497
+
+vbase1.C
+file
+
+
+
+
+2009-04-24T17:44:24.000000Z
+84fee86dc35b4828d76a638ec9084b6d
+2003-07-01T12:01:44.000000Z
+68769
+kazu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2821
 
 vbase2.C
 file

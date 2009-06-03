@@ -1,15 +1,15 @@
 10
 
 dir
-148029
+148111
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-28T00:17:00.094831Z
-147937
-bkoz
+2009-06-02T09:06:31.459160Z
+148081
+paolo
 
 
 
@@ -26,10 +26,10 @@ bkoz
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-25_algorithms
+27_io
 dir
 
-27_io
+25_algorithms
 dir
 
 19_diagnostics
@@ -78,16 +78,16 @@ dir
 18_support
 dir
 
-abi
-dir
-
 21_strings
 dir
 
-26_numerics
+abi
 dir
 
 30_threads
+dir
+
+26_numerics
 dir
 
 ext
@@ -96,10 +96,10 @@ dir
 performance
 dir
 
-libstdc++-dg
+17_intro
 dir
 
-17_intro
+libstdc++-dg
 dir
 
 22_locale

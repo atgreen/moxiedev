@@ -1,7 +1,7 @@
 10
 
 dir
-148029
+148111
 svn://gcc.gnu.org/svn/gcc/trunk/libffi/testsuite/libffi.call
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ andreast
 
 745
 
-struct3.c
-file
-
-
-
-
-2009-04-24T17:46:16.000000Z
-ccda1a87fadf3cc0c31bbc75c4c92cef
-2004-01-24T16:13:48.000000Z
-76513
-andreast
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1220
-
 nested_struct1.c
 file
 
@@ -230,16 +196,16 @@ daney
 
 5100
 
-struct5.c
+struct3.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-81535421410fd680f78b33f39cdcc580
-2003-09-04T14:49:22.000000Z
-71069
+ccda1a87fadf3cc0c31bbc75c4c92cef
+2004-01-24T16:13:48.000000Z
+76513
 andreast
 
 
@@ -262,7 +228,7 @@ andreast
 
 
 
-1398
+1220
 
 nested_struct3.c
 file
@@ -298,6 +264,40 @@ daney
 
 2848
 
+struct5.c
+file
+
+
+
+
+2009-04-24T17:46:16.000000Z
+81535421410fd680f78b33f39cdcc580
+2003-09-04T14:49:22.000000Z
+71069
+andreast
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1398
+
 cls_7_1_byte.c
 file
 
@@ -331,74 +331,6 @@ daney
 
 
 3474
-
-struct7.c
-file
-
-
-
-
-2009-04-24T17:46:16.000000Z
-c596ddb985689ec61b12aaa3d22affa3
-2003-09-04T14:49:22.000000Z
-71069
-andreast
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1605
-
-nested_struct5.c
-file
-
-
-
-
-2009-04-24T17:46:16.000000Z
-06b22ba5f6e89af1196361d1c74d92a2
-2007-08-10T15:38:23.042961Z
-127337
-daney
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2853
 
 cls_double.c
 file
@@ -434,14 +366,48 @@ daney
 
 1149
 
-struct9.c
+nested_struct5.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-0717d05df52a64bc7535ebd46256c507
+06b22ba5f6e89af1196361d1c74d92a2
+2007-08-10T15:38:23.042961Z
+127337
+daney
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2853
+
+struct7.c
+file
+
+
+
+
+2009-04-24T17:46:16.000000Z
+c596ddb985689ec61b12aaa3d22affa3
 2003-09-04T14:49:22.000000Z
 71069
 andreast
@@ -466,7 +432,41 @@ andreast
 
 
 
-1394
+1605
+
+nested_struct7.c
+file
+
+
+
+
+2009-04-24T17:46:16.000000Z
+8a14f32776acdca3a98afca9bc2e627d
+2007-08-10T15:38:23.042961Z
+127337
+daney
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2855
 
 return_sl.c
 file
@@ -502,17 +502,17 @@ daney
 
 731
 
-nested_struct7.c
+struct9.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-8a14f32776acdca3a98afca9bc2e627d
-2007-08-10T15:38:23.042961Z
-127337
-daney
+0717d05df52a64bc7535ebd46256c507
+2003-09-04T14:49:22.000000Z
+71069
+andreast
 
 
 
@@ -534,7 +534,7 @@ daney
 
 
 
-2855
+1394
 
 cls_sint.c
 file
@@ -1046,40 +1046,6 @@ daney
 
 2515
 
-closure_fn1.c
-file
-
-
-
-
-2009-04-24T17:46:16.000000Z
-f35aec711f2a1a260a6bea3cdb43cfd9
-2007-08-10T15:38:23.042961Z
-127337
-daney
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2913
-
 cls_align_float.c
 file
 
@@ -1114,17 +1080,17 @@ daney
 
 2621
 
-return_fl1.c
+closure_fn1.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-30f05c9246b15bd48f552bbd54d483b7
-2006-02-16T22:29:01.660175Z
-111156
-andreast
+f35aec711f2a1a260a6bea3cdb43cfd9
+2007-08-10T15:38:23.042961Z
+127337
+daney
 
 
 
@@ -1146,7 +1112,7 @@ andreast
 
 
 
-755
+2913
 
 problem1.c
 file
@@ -1182,17 +1148,17 @@ daney
 
 2394
 
-return_dbl2.c
+return_fl1.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-56a258923c7b9c1aa0ab24bbde1ade56
-2007-08-09T02:02:37.303695Z
-127312
-daney
+30f05c9246b15bd48f552bbd54d483b7
+2006-02-16T22:29:01.660175Z
+111156
+andreast
 
 
 
@@ -1214,7 +1180,7 @@ daney
 
 
 
-1005
+755
 
 closure_fn3.c
 file
@@ -1250,14 +1216,14 @@ daney
 
 2951
 
-return_fl3.c
+return_dbl2.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-5e832fea7e1abc3e13210dd628c3ea6a
+56a258923c7b9c1aa0ab24bbde1ade56
 2007-08-09T02:02:37.303695Z
 127312
 daney
@@ -1282,7 +1248,7 @@ daney
 
 
 
-967
+1005
 
 cls_sshort.c
 file
@@ -1317,6 +1283,40 @@ daney
 
 
 1145
+
+return_fl3.c
+file
+
+
+
+
+2009-04-24T17:46:16.000000Z
+5e832fea7e1abc3e13210dd628c3ea6a
+2007-08-09T02:02:37.303695Z
+127312
+daney
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+967
 
 closure_fn5.c
 file
@@ -1386,17 +1386,17 @@ daney
 
 2586
 
-promotion.c
+cls_2byte.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-09a387482b7ce131ae73efe275816fdd
-2006-04-22T21:17:35.201451Z
-113181
-andreast
+4e47c1e8fbaa31aa5f644c3d6a31e52e
+2007-08-10T15:38:23.042961Z
+127337
+daney
 
 
 
@@ -1418,7 +1418,7 @@ andreast
 
 
 
-1353
+2500
 
 nested_struct.c
 file
@@ -1454,17 +1454,17 @@ daney
 
 4763
 
-cls_2byte.c
+promotion.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-4e47c1e8fbaa31aa5f644c3d6a31e52e
-2007-08-10T15:38:23.042961Z
-127337
-daney
+09a387482b7ce131ae73efe275816fdd
+2006-04-22T21:17:35.201451Z
+113181
+andreast
 
 
 
@@ -1486,19 +1486,19 @@ daney
 
 
 
-2500
+1353
 
-return_ll1.c
+float2.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-2d2b2f98ba2fedbd6af3934722e4cf8e
-2007-08-09T02:02:37.303695Z
-127312
-daney
+b418ca228711a1ecc2f172ee9d5531e4
+2006-04-22T21:17:35.201451Z
+113181
+andreast
 
 
 
@@ -1520,7 +1520,7 @@ daney
 
 
 
-981
+1357
 
 nested_struct10.c
 file
@@ -1556,17 +1556,17 @@ daney
 
 3643
 
-float2.c
+return_ll1.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-b418ca228711a1ecc2f172ee9d5531e4
-2006-04-22T21:17:35.201451Z
-113181
-andreast
+2d2b2f98ba2fedbd6af3934722e4cf8e
+2007-08-09T02:02:37.303695Z
+127312
+daney
 
 
 
@@ -1588,7 +1588,7 @@ andreast
 
 
 
-1357
+981
 
 cls_4byte.c
 file
@@ -1760,40 +1760,6 @@ daney
 
 1753
 
-cls_align_sint16.c
-file
-
-
-
-
-2009-04-24T17:46:16.000000Z
-979ae347488a739227b3f9a81d205a40
-2007-08-10T15:38:23.042961Z
-127337
-daney
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2590
-
 cls_align_uint32.c
 file
 
@@ -1827,6 +1793,40 @@ daney
 
 
 2588
+
+cls_align_sint16.c
+file
+
+
+
+
+2009-04-24T17:46:16.000000Z
+979ae347488a739227b3f9a81d205a40
+2007-08-10T15:38:23.042961Z
+127337
+daney
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2590
 
 return_sc.c
 file
@@ -1896,17 +1896,17 @@ andreast
 
 1084
 
-struct2.c
+cls_float.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-c423f6a45fa262bd2f6b08844b13aff1
-2003-09-04T14:49:22.000000Z
-71069
-andreast
+567dfad1c2fe1d78747fa067571b594f
+2007-08-10T15:38:23.042961Z
+127337
+daney
 
 
 
@@ -1928,7 +1928,7 @@ andreast
 
 
 
-1414
+1131
 
 cls_20byte.c
 file
@@ -1964,48 +1964,14 @@ daney
 
 2607
 
-cls_float.c
+struct2.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-567dfad1c2fe1d78747fa067571b594f
-2007-08-10T15:38:23.042961Z
-127337
-daney
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1131
-
-struct4.c
-file
-
-
-
-
-2009-04-24T17:46:16.000000Z
-ae607b88ef36ed4e5cba673f5439e327
+c423f6a45fa262bd2f6b08844b13aff1
 2003-09-04T14:49:22.000000Z
 71069
 andreast
@@ -2030,41 +1996,7 @@ andreast
 
 
 
-1338
-
-nested_struct2.c
-file
-
-
-
-
-2009-04-24T17:46:16.000000Z
-9510fb005490f72663b181232d22de02
-2007-08-10T15:38:23.042961Z
-127337
-daney
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2824
+1414
 
 cls_5_1_byte.c
 file
@@ -2100,14 +2032,14 @@ daney
 
 3090
 
-nested_struct4.c
+nested_struct2.c
 file
 
 
 
 
 2009-04-24T17:46:16.000000Z
-bcbe0baf135639a049d5ce80b6bb9ca7
+9510fb005490f72663b181232d22de02
 2007-08-10T15:38:23.042961Z
 127337
 daney
@@ -2132,7 +2064,41 @@ daney
 
 
 
-2847
+2824
+
+struct4.c
+file
+
+
+
+
+2009-04-24T17:46:16.000000Z
+ae607b88ef36ed4e5cba673f5439e327
+2003-09-04T14:49:22.000000Z
+71069
+andreast
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1338
 
 cls_24byte.c
 file
@@ -2167,6 +2133,40 @@ daney
 
 
 3452
+
+nested_struct4.c
+file
+
+
+
+
+2009-04-24T17:46:16.000000Z
+bcbe0baf135639a049d5ce80b6bb9ca7
+2007-08-10T15:38:23.042961Z
+127337
+daney
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2847
 
 struct6.c
 file

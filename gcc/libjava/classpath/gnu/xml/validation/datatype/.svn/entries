@@ -1,7 +1,7 @@
 10
 
 dir
-148029
+148111
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/xml/validation/datatype
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ mark
 
 2334
 
-NegativeIntegerType.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-be4e05f69604d25e29878720c9330e47
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3439
-
 Facet.java
 file
 
@@ -229,6 +195,40 @@ mark
 
 
 2684
+
+NegativeIntegerType.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+be4e05f69604d25e29878720c9330e47
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3439
 
 TotalDigitsFacet.java
 file
@@ -298,40 +298,6 @@ doko
 
 7940
 
-NotationType.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-db4da8c0c059a6a4233ca2ff016d0cb6
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2790
-
 NonNegativeIntegerType.java
 file
 
@@ -366,17 +332,17 @@ mark
 
 3773
 
-GMonthType.java
+NotationType.java
 file
 
 
 
 
 2009-04-24T17:47:03.000000Z
-b9d665e087ae83044d14592a992fb6d4
-2006-03-10T13:25:35.074455Z
-111932
-mark
+db4da8c0c059a6a4233ca2ff016d0cb6
+2008-06-28T13:29:13.958049Z
+137223
+doko
 
 
 
@@ -398,7 +364,7 @@ mark
 
 
 
-4466
+2790
 
 UnsignedLongType.java
 file
@@ -433,6 +399,40 @@ mark
 
 
 3862
+
+GMonthType.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+b9d665e087ae83044d14592a992fb6d4
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4466
 
 DecimalType.java
 file
@@ -1148,40 +1148,6 @@ doko
 
 3312
 
-AnyURIType.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-af8a0104e87c382efebb40982309d0f0
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2952
-
 GYearType.java
 file
 
@@ -1215,6 +1181,40 @@ mark
 
 
 4149
+
+AnyURIType.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+af8a0104e87c382efebb40982309d0f0
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2952
 
 Annotation.java
 file
@@ -1420,40 +1420,6 @@ doko
 
 3402
 
-ListSimpleType.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-6230ef73632236e23aebd7aa62c26e79
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2946
-
 DurationType.java
 file
 
@@ -1487,6 +1453,40 @@ mark
 
 
 6855
+
+ListSimpleType.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+6230ef73632236e23aebd7aa62c26e79
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2946
 
 TypeBuilder.java
 file
@@ -1522,40 +1522,6 @@ doko
 
 9501
 
-EnumerationFacet.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-c8e1f86a6a55548642ec5874471093f2
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2329
-
 AnyType.java
 file
 
@@ -1590,17 +1556,17 @@ mark
 
 2116
 
-Base64BinaryType.java
+EnumerationFacet.java
 file
 
 
 
 
 2009-04-24T17:47:03.000000Z
-3fbeb4b10d8dab1d34dcdfe25f0ba7ab
-2008-06-28T13:29:13.958049Z
-137223
-doko
+c8e1f86a6a55548642ec5874471093f2
+2006-03-10T13:25:35.074455Z
+111932
+mark
 
 
 
@@ -1622,7 +1588,7 @@ doko
 
 
 
-4156
+2329
 
 HexBinaryType.java
 file
@@ -1658,6 +1624,40 @@ doko
 
 2900
 
+Base64BinaryType.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+3fbeb4b10d8dab1d34dcdfe25f0ba7ab
+2008-06-28T13:29:13.958049Z
+137223
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4156
+
 TypeLibraryFactory.java
 file
 
@@ -1692,40 +1692,6 @@ mark
 
 2298
 
-QNameType.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-4cb8a8bee09434324d19ee38f03ccf01
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3928
-
 NCNameType.java
 file
 
@@ -1759,6 +1725,40 @@ mark
 
 
 3678
+
+QNameType.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+4cb8a8bee09434324d19ee38f03ccf01
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3928
 
 UnionSimpleType.java
 file
@@ -1896,40 +1896,6 @@ mark
 
 3552
 
-PositiveIntegerType.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-c7765e9035b14b5a2cb3e68bb299897a
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3437
-
 NameType.java
 file
 
@@ -1963,6 +1929,40 @@ mark
 
 
 3380
+
+PositiveIntegerType.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+c7765e9035b14b5a2cb3e68bb299897a
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3437
 
 LengthFacet.java
 file
@@ -2032,40 +2032,6 @@ mark
 
 4746
 
-MinLengthFacet.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-0b03e072efe904ec5018765d53a8a1ea
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2362
-
 AtomicSimpleType.java
 file
 
@@ -2099,6 +2065,40 @@ mark
 
 
 2758
+
+MinLengthFacet.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+0b03e072efe904ec5018765d53a8a1ea
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2362
 
 UnsignedIntType.java
 file

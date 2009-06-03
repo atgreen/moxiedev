@@ -1502,6 +1502,11 @@ struct GTY(()) tree_vec {
     _ce___->value = VALUE; \
   } while (0)
 
+/* True if NODE, a FIELD_DECL, is to be processed as a bitfield for
+   constructor output purposes.  */
+#define CONSTRUCTOR_BITFIELD_P(NODE) \
+  (DECL_BIT_FIELD (FIELD_DECL_CHECK (NODE)) && DECL_MODE (NODE) != BLKmode)
+
 /* A single element of a CONSTRUCTOR. VALUE holds the actual value of the
    element. INDEX can optionally design the position of VALUE: in arrays,
    it is the index where VALUE has to be placed; in structures, it is the
@@ -5020,7 +5025,7 @@ extern tree tree_overlaps_hard_reg_set (tree, HARD_REG_SET *);
 
 /* Generate a new label for the CFI info to refer to.  */
 
-extern char *dwarf2out_cfi_label (void);
+extern char *dwarf2out_cfi_label (bool);
 
 /* Entry point to update the canonical frame address (CFA).  */
 

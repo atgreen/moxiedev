@@ -1,4 +1,4 @@
-2009-05-28  Anthony Green  <green@moxielogic.com>
+2009-06-02  Anthony Green  <green@moxielogic.com>
 
 	* config/moxie/crti.asm: New file.
 	* config/moxie/crtn.asm: New file.
@@ -14,6 +14,281 @@
 	* doc/md.texi (Machine Constraints): Add moxie constraints.
 	* doc/contrib.texi (Contributors): Mention moxie port.
 	* doc/install.texi (Specific): Mention the moxie port.
+
+2009-06-02  Kaz Kojima  <kkojima@gcc.gnu.org>
+
+	* config/sh/sh.c: Revert last change.
+	(sh_expand_epilogue): Emit a blockage insn before the frame
+	pointer adjustment unconditionally.
+
+2009-06-02  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* config/pa/pa-hpux.h (LINK_SPEC): Remove "%<fwhole-program".
+	* config/pa/pa-hpux10.h (LINK_SPEC): Likewise.
+	* config/pa/pa-hpux11.h (LINK_SPEC): Likewise.
+	* gcc.c (set_collect_gcc_options): Don't add -fwhole-program
+	to COLLECT_GCC_OPTIONS.
+
+2009-06-02  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* collect2.c (target_system_root): New variable.
+	(main): Handle --sysroot=.
+	(ignore_library): Strip the sysroot from the library path.
+
+2009-06-02  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* Makefile.in (COLLECT2_OBJS): Add collect2-aix.o.
+	(collect2.o): Depend on collect2-aix.h.
+	(collect2-aix.o): New rule.
+	* collect2-aix.h: New file.
+	* collect2-aix.c: Likewise.
+	* collect2.c: Include collect2-aix.h.  Don't undefine
+	OBJECT_FORMAT_COFF if CROSS_AIX_SUPPORT is defined.
+	Guard native includes with #ifndef CROSS_DIRECTORY_STRUCTURE.
+	Use TARGET_AIX_VERSION instead of _AIX51.
+	* config/rs6000/aix43.h (TARGET_AIX_VERSION): Define.
+	* config/rs6000/aix51.h (TARGET_AIX_VERSION): Likewise.
+	* config/rs6000/aix52.h (TARGET_AIX_VERSION): Likewise.
+	* config/rs6000/aix53.h (TARGET_AIX_VERSION): Likewise.
+	* config/rs6000/aix61.h (TARGET_AIX_VERSION): Likewise.
+
+2009-06-02  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* collect2.c (ignore_library): Avoid premature post-increment
+	and null deference.
+
+2009-06-02  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* Makefile.in (libgcc.mvars): Add TARGET_SYSTEM_ROOT.
+	* config/rs6000/aix.h (LINK_SYSCALLS_SPEC): Add %R to the
+	!CROSS_DIRECTORY_STRUCTURE alternative and use it for
+	CROSS_DIRECTORY_STRUCTURE too.
+	(LINK_LIBG_SPEC): Likewise.
+	(LIB_SPEC): Add %R to sysroot paths.
+	* config/rs6000/aix43.h (CPP_SPEC): Add %R to sysroot paths.
+	(CPLUSPLUS_CPP_SPEC, LIB_SPEC): Likewise.
+	* config/rs6000/aix51.h: As for aix43.h.
+	* config/rs6000/aix52.h: Likewise.
+	* config/rs6000/aix53.h: Likewise.
+	* config/rs6000/aix61.h: Likewise.
+	* config/rs6000/t-aix52 (SHLIB_LINK): Add $(TARGET_SYSTEM_ROOT)
+	to the beginning of sysroot paths.
+
+2009-06-02  Alexandre Oliva  <aoliva@redhat.com>
+
+	* print_rtl (print_rtx): Don't print modes in EXPR_LISTs and
+	INSN_LISTs that are out of the REG_NOTE range.
+
+2009-06-02  Alexandre Oliva  <aoliva@redhat.com>
+
+	* loop-unroll.c (struct iv_to_split): Add pointer to next.
+	(struct var_to_expand): Likewise.
+	(struct opt_info): Add head and tail for linked lists of the above.
+	(analyze_insn_to_expand_var): Initialize next.
+	(analyze_iv_to_split_insn): Likewise.
+	(analyze_insns_in_loop): Create linked lists.
+	(allocate_basic_variable): Simplify for use without hash table.
+	(insert_var_expansion_initialization): Likewise, make it type-safer.
+	(combine_var_copies_in_loop_exit): Likewise.
+	(apply_opt_in_copies): Walk lists rather than hash tables.
+	(release_var_copies): Simplified and inlined by hand into...
+	(free_opt_info): ... this function.
+
+2009-06-02  Richard Guenther  <rguenther@suse.de>
+
+	* tree-ssa-sccvn.c (copy_reference_ops_from_ref): Use DECL_SIZE
+	for field decls.
+
+2009-06-02  Alexandre Oliva  <aoliva@redhat.com>
+
+	* cfgexpand.c (gimple_expand_cfg): Discard the source location
+	only for builtins that are not overridden.
+
+2009-06-02  Alexandre Oliva  <aoliva@redhat.com>
+
+	* gengtype.c (adjust_field_rtx_def): Add NOTE_INSN_DELETED_LABEL's
+	label string.
+
+2009-06-02  Alexandre Oliva  <aoliva@redhat.com>
+
+	* df-core.c (df_ref_debug): Honor -fdump-noaddr.
+
+2009-06-02  Alexandre Oliva  <aoliva@redhat.com>
+
+	* combine.c (move_deaths): Compare LUIDs within the same BB only.
+
+2009-06-02  Alexandre Oliva  <aoliva@redhat.com>
+
+	* common.opt (fdump-unnumbered-links): New.
+	* doc/invoke.texi (-fdump-unnumbered-links): Document it.
+	* print-rtl.c (flag_dump_unnumbered_links): New.
+	(print_rtx): Test it.
+
+2009-06-02  Richard Earnshaw  <rearnsha@arm.com>
+
+	* arm.c (arm_get_frame_offsets): Prefer using r3 for padding a
+	push/pop multiple to 8-byte alignment.
+	
+2009-06-01  Jakub Jelinek  <jakub@redhat.com>
+
+	* config/i386/i386.c (queued_cfa_restores): New static variable.
+	(ix86_add_cfa_restore_note, ix86_add_queued_cfa_restore_notes): New
+	functions.
+	(pro_epilogue_adjust_stack): Call ix86_add_queued_cfa_restore_notes.
+	(ix86_emit_restore_reg_using_pop): Add RED_OFFSET argument.
+	Set RTX_FRAME_RELATED_P immediately after adding a REG_CFA_* note.
+	Call ix86_add_cfa_restore_note instead of adding REG_CFA_OFFSET
+	note unconditionally.
+	(ix86_emit_restore_regs_using_mov): Likewise.
+	(ix86_emit_restore_sse_regs_using_mov): Likewise.
+	(ix86_emit_restore_regs_using_pop): Add RED_OFFSET argument, pass
+	it through to ix86_emit_restore_reg_using_pop.
+	(ix86_emit_leave): Add RED_OFFSET argument.  Call
+	ix86_add_queued_cfa_restore_notes.  Call ix86_add_cfa_restore_note
+	instead of adding REG_CFA_OFFSET note unconditionally.
+	(ix86_expand_epilogue): Compute RED_OFFSET, pass it down to
+	the above functions.  Call ix86_add_queued_cfa_restore_notes when
+	needed.
+
+	* dwarf2out.c (dwarf2out_cfi_label): Add FORCE argument, if true,
+	force output of the label even for dwarf2out_do_cfi_asm.
+	(add_fde_cfi): If -g2 and above and cfi might change CFA,
+	force creation of CFI label and chain DW_CFA_set_loc jumping to it
+	for convert_cfa_to_fb_loc_list.  Adjust other dwarf2out_cfi_label
+	caller.
+	(dwarf2out_stack_adjust, dwarf2out_frame_debug,
+	dwarf2out_begin_epilogue, dwarf2out_frame_debug_restore_state): Adjust
+	dwarf2out_cfi_label callers.
+	* tree.h (dwarf2out_cfi_label): Adjust prototype.
+	* config/arm/arm.c (thumb_pushpop, thumb1_output_function_prologue):
+	Adjust dwarf2out_cfi_label callers.
+	* config/vax/vax.c (vax_output_function_prologue): Likewise.
+
+	* config/i386/i386.h (struct machine_cfa_state,
+	struct machine_function): Guard with ifndef USED_FOR_TARGET
+	instead of not IN_LIBGCC2 and not in IN_TARGET_LIBS.
+
+	PR other/40024
+	* emutls.c (__emutls_get_address): Change arr->size to mean number
+	of allocated arr->data entries instead of # of slots + 1.
+
+	PR middle-end/40316
+	* recog.c (peep2_reinit_state): New function.
+	(peephole2_init_state): Use it at the end of a basic block and also
+	when seeing a RTX_FRAME_RELATED_P insn.
+
+2009-06-01  Steve Ellcey  <sje@cup.hp.com>
+
+	* ia64.md (floatdirf2, fix_truncrfdi, floatunsdirf,
+	fixuns_truncrfdi2): New.
+	(fix_truncxfdi2_alts, fixuns_truncxfdi2_alts,
+	*nmaddsf4_alts, *nmadddf4_alts, *nmadddf4_truncsf_alts,
+	*mulxf3_alts, *mulxf3_truncsf_alts, *mulxf3_truncdf_alts,
+	*maddxf4_alts, *maddxf4_alts_truncsf, *maddxf4_alts_truncdf,
+	*nmaddxf4_alts, *nmaddxf4_truncsf_alts, *nmaddxf4_truncdf_alts,
+	*recip_approx): Remove.
+	(divsi3 modsi3, udivsi3, umodsi3, divsi3_internal, divdi3,
+	moddi3, udivdi3, umoddi3, divdi3_internal_lat, divdi3_internal_thr,
+	divsf3, sqrtsf2, divdf3, sqrtdf2, divxf3, sqrtxf2): Modify and
+	move to div.md.
+	* div.md (fix_truncrfdi2_alts, fixuns_truncrfdi2_alt,
+	setf_exp_rf): New.
+
+2009-06-01  Ian Lance Taylor  <iant@google.com>
+
+	* attribs.c (register_attribute): Use CONST_CAST.
+	* collect2.c (main): Use CONST_CAST2.
+	(scan_prog_file): Likewise.
+	* gcc.c (process_command, main): Likewise.
+	* toplev.c (toplev_main): Likewise.
+
+	* c-typeck.c (handle_warn_cast_qual): New static function,
+	partially broken out of build_c_cast.
+	(build_c_cast): Call handle_warn_cast_qual.
+	* doc/invoke.texi (Warning Options): Document new effect of
+	-Wcast-qual.
+
+2009-06-01  Aldy Hernandez  <aldyh@redhat.com>
+
+	* diagnostic.c (diagnostic_build_prefix): Always print columns.
+	(diagnostic_report_current_module): Print columns.
+	* common.opt (flag_show_column): Enable by default.
+
+2009-06-01  Luis Machado  <luisgpm@br.ibm.com>
+
+	* alias.c (find_base_term): Check for NULL term before returning.
+
+2009-06-01  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	Revert due to PR40320:
+	
+	2009-06-01  Maxim Kuvyrkov  <maxim@codesourcery.com>
+	* calls.c (emit_library_call_value_1): Don't force_operand for move
+	and push insns.
+
+2009-06-01  Olivier Hainque  <hainque@adacore.com>
+            Eric Botcazou  <botcazou@adacore.com>
+
+	* tree.h (CONSTRUCTOR_BITFIELD_P): True if NODE, a FIELD_DECL, is
+	to be processed as a bitfield for constructor output purposes.
+	* output.h (initializer_constant_valid_for_bitfield_p): Declare
+	new function.
+	* varasm.c (oc_local_state): New type, output_constructor
+	local state to support communication with helpers.
+	(oc_outer_state): New type, output_constructor outer state of
+	relevance in recursive calls.
+	(output_constructor_array_range): New output_constructor helper,
+	extracted code for an array range element.
+	(output_constructor_regular_field): New output_constructor helper,
+	extracted code for an element that is not a bitfield.
+	(output_constructor_bitfield): New output_constructor helper,
+	extracted code for a bitfield element.  Accept an OUTER state
+	argument for recursive processing.  Recurse on record or array
+	CONSTRUCTOR values, possibly past noop conversions.
+	(initializer_constant_valid_for_bitfield_p): New predicate.  Whether
+	VALUE is a valid constant-valued expression for use in a static
+	bit-field initializer.
+	(output_constructor): Rework to use helpers.  Accept and honor an
+	OUTER state argument for recursive calls.  Return total size.  Be
+	prepared for nested constructors initializing bitfields.
+	(output_constant): Feed OUTER in calls to output_constructor.
+
+2009-06-01  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* calls.c (emit_library_call_value_1): Don't force_operand for move
+	and push insns.
+
+2009-06-01  Nick Clifton  <nickc@redhat.com>
+
+	* doc/invoke.texi (IA-64 Options): Fix typo.
+
+2009-06-01  Ira Rosen  <irar@il.ibm.com>
+
+	PR tree-optimization/39129
+	* tree-vect-loop-manip.c (conservative_cost_threshold): Change the 
+	printed message.
+	(vect_do_peeling_for_loop_bound): Use 
+	LOOP_REQUIRES_VERSIONING_FOR_ALIGNMENT and
+	LOOP_REQUIRES_VERSIONING_FOR_ALIAS macros.
+	(vect_loop_versioning): Likewise.
+	(vect_create_cond_for_alias_checks): Fix indentation.
+	* tree-vectorizer.h (struct _loop_vec_info): Fix indentation of the 
+	macros.
+	(LOOP_REQUIRES_VERSIONING_FOR_ALIGNMENT): Define.
+	(LOOP_REQUIRES_VERSIONING_FOR_ALIAS): Likewise.
+	* tree-vect-loop.c (vect_analyze_loop_form): Change "too many BBs" to 
+	"control flow in loop".
+	(vect_estimate_min_profitable_iters): Use 
+	LOOP_REQUIRES_VERSIONING_FOR_ALIGNMENT and
+	LOOP_REQUIRES_VERSIONING_FOR_ALIAS macros.
+	* tree-vect-data-refs.c (vect_enhance_data_refs_alignment): Likewise.
+	(vect_create_data_ref_ptr): Don't mention array dimension in printing.
+	* tree-vect-stmts.c (vectorizable_store): Replace the check that the 
+	statement belongs to a group of strided accesses with the exact code 
+	check.
+	(vectorizable_load): Likewise.
+	* tree-vect-slp.c (vect_analyze_slp_instance): Spell out "basic block".
+	(vect_slp_analyze_bb, vect_slp_transform_bb): Likewise.
 
 2009-06-01  Gerald Pfeifer  <gerald@pfeifer.com>
 

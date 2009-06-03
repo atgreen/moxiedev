@@ -1,7 +1,7 @@
 10
 
 dir
-148029
+148111
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/java/awt/event
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,14 +536,14 @@ tromey
 
 2868
 
-HierarchyListener.java
+MouseMotionListener.java
 file
 
 
 
 
 2009-04-24T17:47:05.000000Z
-3658d8e2e418118bb51e548441b3d461
+9420ef805947252f8a2e56ec9f9eb9ff
 2005-09-23T17:31:48.000000Z
 104575
 tromey
@@ -568,41 +568,7 @@ tromey
 
 
 
-2476
-
-AdjustmentListener.java
-file
-
-
-
-
-2009-04-24T17:47:05.000000Z
-6c1e9ebd30a7e9ae22412ca067e6a870
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2292
+2827
 
 ContainerEvent.java
 file
@@ -638,14 +604,14 @@ tromey
 
 4707
 
-MouseMotionListener.java
+AdjustmentListener.java
 file
 
 
 
 
 2009-04-24T17:47:05.000000Z
-9420ef805947252f8a2e56ec9f9eb9ff
+6c1e9ebd30a7e9ae22412ca067e6a870
 2005-09-23T17:31:48.000000Z
 104575
 tromey
@@ -670,7 +636,41 @@ tromey
 
 
 
-2827
+2292
+
+HierarchyListener.java
+file
+
+
+
+
+2009-04-24T17:47:05.000000Z
+3658d8e2e418118bb51e548441b3d461
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2476
 
 ContainerListener.java
 file
@@ -706,40 +706,6 @@ tromey
 
 2764
 
-MouseAdapter.java
-file
-
-
-
-
-2009-04-24T17:47:05.000000Z
-45eb7cd0efc982c1f56836e18d81c86c
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3433
-
 KeyAdapter.java
 file
 
@@ -774,17 +740,17 @@ tromey
 
 2973
 
-MouseEvent.java
+MouseAdapter.java
 file
 
 
 
 
 2009-04-24T17:47:05.000000Z
-821a1dd7a4a77523fef745e2510283cb
-2008-10-21T17:55:01.166395Z
-141271
-doko
+45eb7cd0efc982c1f56836e18d81c86c
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -806,41 +772,7 @@ doko
 
 
 
-15266
-
-KeyEvent.java
-file
-
-
-
-
-2009-04-24T17:47:05.000000Z
-d43a9e01b1acc6bb66c20fb4881574f3
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-42830
+3433
 
 HierarchyBoundsAdapter.java
 file
@@ -876,17 +808,17 @@ tromey
 
 2835
 
-MouseListener.java
+KeyEvent.java
 file
 
 
 
 
 2009-04-24T17:47:05.000000Z
-f7d9e53dbb7138a2fccd58c032aba16b
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+d43a9e01b1acc6bb66c20fb4881574f3
+2008-10-21T17:55:01.166395Z
+141271
+doko
 
 
 
@@ -908,7 +840,41 @@ tromey
 
 
 
-3450
+42830
+
+MouseEvent.java
+file
+
+
+
+
+2009-04-24T17:47:05.000000Z
+821a1dd7a4a77523fef745e2510283cb
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+15266
 
 KeyListener.java
 file
@@ -943,6 +909,40 @@ tromey
 
 
 2826
+
+MouseListener.java
+file
+
+
+
+
+2009-04-24T17:47:05.000000Z
+f7d9e53dbb7138a2fccd58c032aba16b
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3450
 
 ItemEvent.java
 file

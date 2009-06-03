@@ -113,6 +113,20 @@ moxie_print_operand_address (FILE *file, rtx x)
 	  output_addr_const (file, XEXP (x, 1));
 	  fprintf (file, "(%s)", reg_names[REGNO (XEXP (x, 0))]);
 	  break;
+	case CONST:
+	  {
+	    rtx plus = XEXP (XEXP (x, 1), 0);
+	    if (GET_CODE (XEXP (plus, 0)) == SYMBOL_REF 
+		&& CONST_INT_P (XEXP (plus, 1)))
+	      {
+		output_addr_const(file, XEXP (plus, 0));
+		fprintf (file,"+%ld(%s)", INTVAL (XEXP (plus, 1)),
+			 reg_names[REGNO (XEXP (x, 0))]);
+	      }
+	    else
+	      abort();
+	  }
+	  break;
 	default:
 	  abort();
 	}
@@ -182,8 +196,8 @@ struct GTY(()) machine_function
    /* Number of bytes saved on the stack for local variables.  */
    int local_vars_size;
 
-   /* The sum of 2 sizes: locals vars and padding byte for saving the registers.
-    * Used in expand_prologue () and expand_epilogue ().  */
+   /* The sum of 2 sizes: locals vars and padding byte for saving the
+    * registers.  Used in expand_prologue () and expand_epilogue().  */
    int size_for_adjusting_sp;
  };
 

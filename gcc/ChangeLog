@@ -1,9 +1,30 @@
-2009-05-27  Anthony Green  <green@moxielogic.com>
+2009-06-02  Anthony Green  <green@moxielogic.com>
 
 	* Makefile.def (host_modules): Configure in-tree GMP with
 	--enable-cxx.
 	* Makefile.in: Rebuilt.
 
+2009-06-03  Ben Elliston  <bje@au.ibm.com>
+
+	* config.sub, config.guess: Update from upstream sources.
+
+2009-06-02  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* configure.ac (powerpc-*-aix*, rs6000-*-aix*): Add target-newlib
+	to noconfdirs.
+	* configure: Regenerate.
+
+2009-06-02  Alexandre Oliva  <aoliva@redhat.com>
+
+	* Makefile.tpl ([+compare-target+]): Compare all stage
+	directories, rather than just gcc.
+	* Makefile.in: Rebuilt.
+
+2009-06-01  Doug Kwan  <dougkwan@google.com>
+
+	* configure.ac: Support gold for target arm*-*-*.
+	* configure: Regenerate.
+	
 2009-05-29  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
 
 	* Makefile.def: Add MPC support and dependencies.

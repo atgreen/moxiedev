@@ -1,7 +1,7 @@
 10
 
 dir
-148029
+148111
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/org/xml/sax
 svn://gcc.gnu.org/svn/gcc
 
@@ -196,6 +196,9 @@ has-props
 
 282
 
+ext
+dir
+
 Parser.class
 file
 
@@ -230,7 +233,7 @@ has-props
 
 587
 
-ext
+helpers
 dir
 
 EntityResolver.class
@@ -266,9 +269,6 @@ has-props
 
 
 291
-
-helpers
-dir
 
 AttributeList.class
 file
@@ -372,40 +372,6 @@ has-props
 
 230
 
-SAXNotRecognizedException.class
-file
-
-
-
-
-2009-04-24T17:48:32.000000Z
-ab2e90ca2b040189b5259c10055589fe
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-477
-
 SAXParseException.class
 file
 
@@ -439,6 +405,40 @@ has-props
 
 
 1971
+
+SAXNotRecognizedException.class
+file
+
+
+
+
+2009-04-24T17:48:32.000000Z
+ab2e90ca2b040189b5259c10055589fe
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+477
 
 XMLFilter.class
 file

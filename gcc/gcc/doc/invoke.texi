@@ -275,7 +275,7 @@ Objective-C and Objective-C++ Dialects}.
 @xref{Debugging Options,,Options for Debugging Your Program or GCC}.
 @gccoptlist{-d@var{letters}  -dumpspecs  -dumpmachine  -dumpversion @gol
 -fdbg-cnt-list -fdbg-cnt=@var{counter-value-list} @gol
--fdump-noaddr -fdump-unnumbered @gol
+-fdump-noaddr -fdump-unnumbered -fdump-unnumbered-links @gol
 -fdump-translation-unit@r{[}-@var{n}@r{]} @gol
 -fdump-class-hierarchy@r{[}-@var{n}@r{]} @gol
 -fdump-ipa-all -fdump-ipa-cgraph -fdump-ipa-inline @gol
@@ -3694,6 +3694,19 @@ Warn whenever a pointer is cast so as to remove a type qualifier from
 the target type.  For example, warn if a @code{const char *} is cast
 to an ordinary @code{char *}.
 
+Also warn when making a cast which introduces a type qualifier in an
+unsafe way.  For example, casting @code{char **} to @code{const char **}
+is unsafe, as in this example:
+
+@smallexample
+  /* p is char ** value.  */
+  const char **q = (const char **) p;
+  /* Assignment of readonly string to const char * is OK.  */
+  *q = "string";
+  /* Now char** pointer points to read-only memory.  */
+  **p = 'b';
+@end smallexample
+
 @item -Wcast-align
 @opindex Wcast-align
 @opindex Wno-cast-align
@@ -4928,6 +4941,12 @@ When doing debugging dumps, suppress instruction numbers and address output.
 This makes it more feasible to use diff on debugging dumps for compiler
 invocations with different options, in particular with and without
 @option{-g}.
+
+@item -fdump-unnumbered-links
+@opindex fdump-unnumbered-links
+When doing debugging dumps (see @option{-d} option above), suppress
+instruction numbers for the links to the previous and next instructions
+in a sequence.
 
 @item -fdump-translation-unit @r{(C++ only)}
 @itemx -fdump-translation-unit-@var{options} @r{(C++ only)}
@@ -11729,8 +11748,8 @@ using the minimum latency algorithm.
 Generate code for inline divides of integer values
 using the maximum throughput algorithm.
 
-@item -mno-inline-float-divide
-@opindex mno-inline-float-divide
+@item -mno-inline-int-divide
+@opindex mno-inline-int-divide
 Do not generate inline code for divides of integer values.
 
 @item -minline-sqrt-min-latency

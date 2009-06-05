@@ -63,7 +63,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (mult:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "nonmemory_operand" "r")))]
+	   (match_operand:SI 2 "register_operand" "r")))]
   ""
   "mul.l  %0, %2")
 
@@ -71,7 +71,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (div:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "nonmemory_operand" "r")))]
+	   (match_operand:SI 2 "register_operand" "r")))]
   ""
   "div.l  %0, %2")
 
@@ -79,7 +79,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (udiv:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "nonmemory_operand" "r")))]
+	   (match_operand:SI 2 "register_operand" "r")))]
   ""
   "udiv.l %0, %2")
 
@@ -87,7 +87,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (mod:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "nonmemory_operand" "r")))]
+	   (match_operand:SI 2 "register_operand" "r")))]
   ""
   "mod.l  %0, %2")
 
@@ -95,7 +95,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (umod:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "nonmemory_operand" "r")))]
+	   (match_operand:SI 2 "register_operand" "r")))]
   ""
   "umod.l %0, %2")
 
@@ -296,21 +296,15 @@
 (define_expand "cbranchsi4"
   [(set (reg:CC CC_REG)
         (compare:CC
-         (match_operand:SI 1 "general_operand" "")
-         (match_operand:SI 2 "general_operand" "")))
+         (match_operand:SI 1 "register_operand" "")
+         (match_operand:SI 2 "register_operand" "")))
    (set (pc)
         (if_then_else (match_operator:CC 0 "comparison_operator"
                        [(reg:CC CC_REG) (const_int 0)])
                       (label_ref (match_operand 3 "" ""))
                       (pc)))]
   ""
-  "
-  /* Force the compare operands into regsiters.  */
-  if (GET_CODE (operands[1]) != REG)
-    operands[1] = force_reg (SImode, operands[1]);
-  if (GET_CODE (operands[2]) != REG)
-    operands[2] = force_reg (SImode, operands[2]);
-")
+  "")
 
 (define_insn "*cmpsi"
   [(set (reg:CC CC_REG)

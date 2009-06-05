@@ -43,11 +43,10 @@
 (define_constraint "I"
   "An 8-bit constant (0..255)"
   (and (match_code "const_int")
-       (match_test "(unsigned int) ival <= 255")))
+       (match_test "ival >= 0 && ival <= 255")))
 
 (define_constraint "N"
-  "An constant -(0..255)"
+  "A constant -(0..255)"
   (and (match_code "const_int")
-       (match_test "((unsigned int) ival) >= 0xffffff01 
-	            && ((unsigned int) ival) <= 0xffffffff")))
+       (match_test "ival >= -255 && ival <= 0")))
 

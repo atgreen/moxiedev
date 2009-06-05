@@ -40,26 +40,16 @@
   return general_operand (op, mode);
 })
 
+;; Nonzero if OP can be an operand to an add/inc/dec instruction.
+
 (define_predicate "moxie_add_operand"
-  (match_code "const_int,reg")
-{
-  if ((GET_CODE (op) == CONST_INT
-       && INTVAL (op) >= -255
-       && INTVAL (op) <= 255)
-      || (REG_P (op)))
-    return 1;
-  else
-    return 0;
-})
+  (ior (match_code "reg")
+       (and (match_code "const_int")
+	    (match_test "IN_RANGE (INTVAL (op), -255, 255)"))))
+
+;; Nonzero if OP can be an operand to an sub/dec instruction.
 
 (define_predicate "moxie_sub_operand"
-  (match_code "const_int,reg")
-{
-  if ((GET_CODE (op) == CONST_INT
-       && INTVAL (op) >= 0
-       && INTVAL (op) <= 255)
-      || (REG_P (op)))
-    return 1;
-  else
-    return 0;
-})
+  (ior (match_code "reg")
+       (and (match_code "const_int")
+	    (match_test "IN_RANGE (INTVAL (op), 0, 255)"))))

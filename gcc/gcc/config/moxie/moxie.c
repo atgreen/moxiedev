@@ -264,7 +264,7 @@ moxie_expand_prologue (void)
   /* Save callee-saved registers.  */
   for (regno = 0; regno < FIRST_PSEUDO_REGISTER; regno++)
     {
-      if (df_regs_ever_live_p (regno) && (! call_used_regs[regno]))
+      if (!fixed_regs[regno] && df_regs_ever_live_p (regno) && !call_used_regs[regno])
 	{
 	  insn = emit_insn (gen_movsi_push (gen_rtx_REG (Pmode, regno)));
 	  RTX_FRAME_RELATED_P (insn) = 1;
@@ -288,33 +288,36 @@ void
 moxie_expand_epilogue (void)
 {
   int regno;
-  rtx insn;
+  rtx insn, reg, cfa_restores = NULL;
 
   if (cfun->machine->callee_saved_reg_size != 0)
     {
-      insn = 
-	emit_insn (gen_movsi (gen_rtx_REG (Pmode, MOXIE_R12), 
-			      GEN_INT (cfun->machine->callee_saved_reg_size)));
+      reg = gen_rtx_REG (Pmode, MOXIE_R12);
+      emit_move_insn (reg,
+		      GEN_INT (-cfun->machine->callee_saved_reg_size));
+      emit_insn (gen_addsi3 (reg, reg, hard_frame_pointer_rtx));
+      insn = emit_move_insn (stack_pointer_rtx, reg);
       RTX_FRAME_RELATED_P (insn) = 1;
-      insn = emit_insn (gen_movsi (stack_pointer_rtx, hard_frame_pointer_rtx));
-      insn = 
-	emit_insn (gen_subsi3 (stack_pointer_rtx, 
-			       stack_pointer_rtx, 
-			       gen_rtx_REG (Pmode, MOXIE_R12)));
-      RTX_FRAME_RELATED_P (insn) = 1;
-
-      for (regno = FIRST_PSEUDO_REGISTER; regno > 0; --regno)
-	if (df_regs_ever_live_p (regno) && (! call_used_regs[regno]))
+      add_reg_note (insn, REG_CFA_DEF_CFA,
+		    plus_constant (stack_pointer_rtx,
+				   cfun->machine->callee_saved_reg_size));
+      for (regno = FIRST_PSEUDO_REGISTER; regno-- > 0; )
+	if (!fixed_regs[regno] && !call_used_regs[regno]
+	    && df_regs_ever_live_p (regno))
 	  {
-	    insn = emit_insn (gen_movsi_pop (gen_rtx_REG (Pmode, regno)));
+	    reg = gen_rtx_REG (Pmode, regno);
+	    insn = emit_insn (gen_movsi_pop (reg));
 	    RTX_FRAME_RELATED_P (insn) = 1;
+	    add_reg_note (insn, REG_CFA_ADJUST_CFA,
+			  gen_rtx_SET (VOIDmode, stack_pointer_rtx,
+				       plus_constant (stack_pointer_rtx,
+						      UNITS_PER_WORD)));
+	    add_reg_note (insn, REG_CFA_RESTORE, reg);
 	  }
     }
 
-  insn = emit_jump_insn (gen_returner ());
-  RTX_FRAME_RELATED_P (insn) = 1;
+  emit_jump_insn (gen_returner ());
 }
-
 
 /* Implements the macro INITIAL_ELIMINATION_OFFSET, return the OFFSET.  */
 

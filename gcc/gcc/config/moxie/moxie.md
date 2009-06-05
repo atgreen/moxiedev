@@ -42,7 +42,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r,r,r")
 	  (plus:SI
 	   (match_operand:SI 1 "register_operand" "0,0,0")
-	   (match_operand:SI 2 "general_operand" "I,N,r")))]
+	   (match_operand:SI 2 "moxie_add_operand" "I,N,r")))]
   ""
   "@
   inc    %0, %2
@@ -53,7 +53,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r,r")
 	  (minus:SI
 	   (match_operand:SI 1 "register_operand" "0,0")
-	   (match_operand:SI 2 "general_operand" "I,r")))]
+	   (match_operand:SI 2 "moxie_sub_operand" "I,r")))]
   ""
   "@
   dec    %0, %2
@@ -63,7 +63,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (mult:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "general_operand" "r")))]
+	   (match_operand:SI 2 "nonmemory_operand" "r")))]
   ""
   "mul.l  %0, %2")
 
@@ -71,7 +71,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (div:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "general_operand" "r")))]
+	   (match_operand:SI 2 "nonmemory_operand" "r")))]
   ""
   "div.l  %0, %2")
 
@@ -79,7 +79,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (udiv:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "general_operand" "r")))]
+	   (match_operand:SI 2 "nonmemory_operand" "r")))]
   ""
   "udiv.l %0, %2")
 
@@ -87,7 +87,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (mod:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "general_operand" "r")))]
+	   (match_operand:SI 2 "nonmemory_operand" "r")))]
   ""
   "mod.l  %0, %2")
 
@@ -95,7 +95,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	  (umod:SI
 	   (match_operand:SI 1 "register_operand" "0")
-	   (match_operand:SI 2 "general_operand" "r")))]
+	   (match_operand:SI 2 "nonmemory_operand" "r")))]
   ""
   "umod.l %0, %2")
 
@@ -298,11 +298,11 @@
         (compare:CC
          (match_operand:SI 1 "general_operand" "")
          (match_operand:SI 2 "general_operand" "")))
-	 (set (pc)
-          (if_then_else (match_operator:CC 0 "comparison_operator"
-	                     [(reg:CC CC_REG) (const_int 0)])
-			(label_ref (match_operand 3 "" ""))
-			(pc)))]
+   (set (pc)
+        (if_then_else (match_operator:CC 0 "comparison_operator"
+                       [(reg:CC CC_REG) (const_int 0)])
+                      (label_ref (match_operand 3 "" ""))
+                      (pc)))]
   ""
   "
   /* Force the compare operands into regsiters.  */
@@ -326,8 +326,8 @@
 ;; -------------------------------------------------------------------------
 
 (define_code_iterator cond [ne eq lt ltu gt gtu ge le geu leu])
-(define_code_attr CC [(ne "ne ") (eq "eq ") (lt "lt ") (ltu "ltu") 
-		      (gt "gt ") (gtu "gtu") (ge "ge ") (le "le ") 
+(define_code_attr CC [(ne "ne") (eq "eq") (lt "lt") (ltu "ltu") 
+		      (gt "gt") (gtu "gtu") (ge "ge") (le "le") 
 		      (geu "geu") (leu "leu") ])
 
 (define_insn "*b<cond:code>"
@@ -353,17 +353,12 @@
 
 (define_insn "*call"
   [(call (mem:QI (match_operand:SI
-		  0 "immediate_operand" "i"))
+		  0 "nonmemory_operand" "i,r"))
 	 (match_operand 1 "" ""))]
   ""
-  "jsra   %0")
-
-(define_insn "*call_indirect"
-  [(call (mem:QI (match_operand:SI
-		  0 "register_operand" "r"))
-	 (match_operand 1 "" ""))]
-  ""
-  "jsr    %0")
+  "@
+   jsra   %0
+   jsr    %0")
 
 (define_expand "call_value"
   [(set (match_operand 0 "" "")

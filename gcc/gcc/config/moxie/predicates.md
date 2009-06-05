@@ -40,5 +40,26 @@
   return general_operand (op, mode);
 })
 
+(define_predicate "moxie_add_operand"
+  (match_code "const_int,reg")
+{
+  if ((GET_CODE (op) == CONST_INT
+       && INTVAL (op) >= -255
+       && INTVAL (op) <= 255)
+      || (REG_P (op)))
+    return 1;
+  else
+    return 0;
+})
 
-
+(define_predicate "moxie_sub_operand"
+  (match_code "const_int,reg")
+{
+  if ((GET_CODE (op) == CONST_INT
+       && INTVAL (op) >= 0
+       && INTVAL (op) <= 255)
+      || (REG_P (op)))
+    return 1;
+  else
+    return 0;
+})

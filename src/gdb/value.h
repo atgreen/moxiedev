@@ -272,11 +272,18 @@ extern void set_value_component_location (struct value *component,
 extern enum lval_type *deprecated_value_lval_hack (struct value *);
 #define VALUE_LVAL(val) (*deprecated_value_lval_hack (val))
 
-/* If lval == lval_memory, this is the address in the inferior.  If
-   lval == lval_register, this is the byte offset into the registers
-   structure.  */
-extern CORE_ADDR *deprecated_value_address_hack (struct value *);
-#define VALUE_ADDRESS(val) (*deprecated_value_address_hack (val))
+/* If lval == lval_memory, return the address in the inferior.  If
+   lval == lval_register, return the byte offset into the registers
+   structure.  Otherwise, return 0.  The returned address
+   includes the offset, if any.  */
+extern CORE_ADDR value_address (struct value *);
+
+/* Like value_address, except the result does not include value's
+   offset.  */
+extern CORE_ADDR value_raw_address (struct value *);
+
+/* Set the address of a value.  */
+extern void set_value_address (struct value *, CORE_ADDR);
 
 /* Pointer to internal variable.  */
 extern struct internalvar **deprecated_value_internalvar_hack (struct value *);
@@ -301,23 +308,6 @@ extern struct value *coerce_ref (struct value *value);
    References are dereferenced.  */
 
 extern struct value *coerce_array (struct value *value);
-
-/* Internal variables (variables for convenience of use of debugger)
-   are recorded as a chain of these structures.  */
-
-typedef struct value * (*internalvar_make_value) (struct internalvar *);
-
-struct internalvar
-{
-  struct internalvar *next;
-  char *name;
-  struct value *value;
-  internalvar_make_value make_value;
-  int endian;
-  /* True if this internalvar is the canonical name for a convenience
-     function.  */
-  int canonical;
-};
 
 
 
@@ -531,7 +521,13 @@ extern struct value *access_value_history (int num);
 
 extern struct value *value_of_internalvar (struct internalvar *var);
 
+extern int get_internalvar_integer (struct internalvar *var, LONGEST *l);
+
 extern void set_internalvar (struct internalvar *var, struct value *val);
+
+extern void set_internalvar_integer (struct internalvar *var, LONGEST l);
+
+extern void clear_internalvar (struct internalvar *var);
 
 extern void set_internalvar_component (struct internalvar *var,
 				       int offset,
@@ -541,6 +537,8 @@ extern void set_internalvar_component (struct internalvar *var,
 extern struct internalvar *lookup_only_internalvar (const char *name);
 
 extern struct internalvar *create_internalvar (const char *name);
+
+typedef struct value * (*internalvar_make_value) (struct internalvar *);
 
 extern struct internalvar *
   create_internalvar_type_lazy (char *name, internalvar_make_value fun);

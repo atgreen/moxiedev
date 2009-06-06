@@ -1,3 +1,9 @@
+2009-05-28  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* Adapt to VALUE_ADDRESS removal.
+	generic/gdbtk-cmds.c (gdb_eval): Use value_address function instead of
+	VALUE_ADDRESS macro.
+	
 2009-05-24  Pierre Muller  <muller@ics.u-strasbg.fr>
 
 	* Adapt to target_wait_hook change.

@@ -75,7 +75,8 @@ static void set_schedlock_func (char *args, int from_tty,
 
 static int currently_stepping (struct thread_info *tp);
 
-static int currently_stepping_callback (struct thread_info *tp, void *data);
+static int currently_stepping_or_nexting_callback (struct thread_info *tp,
+						   void *data);
 
 static void xdb_handle_command (char *args, int from_tty);
 
@@ -493,6 +494,14 @@ follow_exec (ptid_t pid, char *execd_pathname)
   th->step_resume_breakpoint = NULL;
   th->step_range_start = 0;
   th->step_range_end = 0;
+
+  /* The target reports the exec event to the main thread, even if
+     some other thread does the exec, and even if the main thread was
+     already stopped --- if debugging in non-stop mode, it's possible
+     the user had the main thread held stopped in the previous image
+     --- release it now.  This is the same behavior as step-over-exec
+     with scheduler-locking on in all-stop mode.  */
+  th->stop_requested = 0;
 
   /* What is this a.out's name? */
   printf_unfiltered (_("Executing new program: %s\n"), execd_pathname);
@@ -1355,13 +1364,21 @@ clear_proceed_status (void)
     }
 }
 
-/* This should be suitable for any targets that support threads. */
+/* Check the current thread against the thread that reported the most recent
+   event.  If a step-over is required return TRUE and set the current thread
+   to the old thread.  Otherwise return FALSE.
+
+   This should be suitable for any targets that support threads. */
 
 static int
 prepare_to_proceed (int step)
 {
   ptid_t wait_ptid;
   struct target_waitstatus wait_status;
+  int schedlock_enabled;
+
+  /* With non-stop mode on, threads are always handled individually.  */
+  gdb_assert (! non_stop);
 
   /* Get the last target status returned by target_wait().  */
   get_last_target_status (&wait_ptid, &wait_status);
@@ -1373,9 +1390,15 @@ prepare_to_proceed (int step)
       return 0;
     }
 
+  schedlock_enabled = (scheduler_mode == schedlock_on
+		       || (scheduler_mode == schedlock_step
+			   && step));
+
   /* Switched over from WAIT_PID.  */
   if (!ptid_equal (wait_ptid, minus_one_ptid)
-      && !ptid_equal (inferior_ptid, wait_ptid))
+      && !ptid_equal (inferior_ptid, wait_ptid)
+      /* Don't single step WAIT_PID if scheduler locking is on.  */
+      && !schedlock_enabled)
     {
       struct regcache *regcache = get_thread_regcache (wait_ptid);
 
@@ -2425,15 +2448,6 @@ handle_inferior_event (struct execution_control_state *ecs)
 	     operations such as address => section name and hence
 	     require the table to contain all sections (including
 	     those found in shared libraries).  */
-	  /* NOTE: cagney/2003-11-25: Pass current_target and not
-	     exec_ops to SOLIB_ADD.  This is because current GDB is
-	     only tooled to propagate section_table changes out from
-	     the "current_target" (see target_resize_to_sections), and
-	     not up from the exec stratum.  This, of course, isn't
-	     right.  "infrun.c" should only interact with the
-	     exec/process stratum, instead relying on the target stack
-	     to propagate relevant changes (stop, section table
-	     changed, ...) up to other layers.  */
 #ifdef SOLIB_ADD
 	  SOLIB_ADD (NULL, 0, &current_target, auto_solib_add);
 #else
@@ -2489,9 +2503,8 @@ handle_inferior_event (struct execution_control_state *ecs)
 
       /* Record the exit code in the convenience variable $_exitcode, so
          that the user can inspect this again later.  */
-      set_internalvar (lookup_internalvar ("_exitcode"),
-		       value_from_longest (builtin_type_int32,
-					   (LONGEST) ecs->ws.value.integer));
+      set_internalvar_integer (lookup_internalvar ("_exitcode"),
+			       (LONGEST) ecs->ws.value.integer);
       gdb_flush (gdb_stdout);
       target_mourn_inferior ();
       singlestep_breakpoints_inserted_p = 0;
@@ -2888,6 +2901,11 @@ targets should add new threads to the thread list themselves in non-stop mode.")
 	  if (debug_infrun)
 	    fprintf_unfiltered (gdb_stdlog, "infrun: thread_hop_needed\n");
 
+	  /* Switch context before touching inferior memory, the
+	     previous thread may have exited.  */
+	  if (!ptid_equal (inferior_ptid, ecs->ptid))
+	    context_switch (ecs->ptid);
+
 	  /* Saw a breakpoint, but it was hit by the wrong thread.
 	     Just continue. */
 
@@ -2914,9 +2932,6 @@ targets should add new threads to the thread list themselves in non-stop mode.")
 	    error (_("Cannot step over breakpoint hit in wrong thread"));
 	  else
 	    {			/* Single step */
-	      if (!ptid_equal (inferior_ptid, ecs->ptid))
-		context_switch (ecs->ptid);
-
 	      if (!non_stop)
 		{
 		  /* Only need to require the next event from this
@@ -3422,15 +3437,6 @@ infrun: BPSTAT_WHAT_SET_LONGJMP_RESUME (!gdbarch_get_longjmp_target)\n");
 	     operations such as address => section name and hence
 	     require the table to contain all sections (including
 	     those found in shared libraries).  */
-	  /* NOTE: cagney/2003-11-25: Pass current_target and not
-	     exec_ops to SOLIB_ADD.  This is because current GDB is
-	     only tooled to propagate section_table changes out from
-	     the "current_target" (see target_resize_to_sections), and
-	     not up from the exec stratum.  This, of course, isn't
-	     right.  "infrun.c" should only interact with the
-	     exec/process stratum, instead relying on the target stack
-	     to propagate relevant changes (stop, section table
-	     changed, ...) up to other layers.  */
 #ifdef SOLIB_ADD
 	  SOLIB_ADD (NULL, 0, &current_target, auto_solib_add);
 #else
@@ -3475,7 +3481,7 @@ infrun: BPSTAT_WHAT_SET_LONGJMP_RESUME (!gdbarch_get_longjmp_target)\n");
   if (!non_stop)
     {
       struct thread_info *tp;
-      tp = iterate_over_threads (currently_stepping_callback,
+      tp = iterate_over_threads (currently_stepping_or_nexting_callback,
 				 ecs->event_thread);
       if (tp)
 	{
@@ -3486,6 +3492,21 @@ infrun: BPSTAT_WHAT_SET_LONGJMP_RESUME (!gdbarch_get_longjmp_target)\n");
 	       && ecs->event_thread->stop_signal != TARGET_SIGNAL_TRAP)
 	      || ecs->event_thread->stepping_over_breakpoint)
 	    {
+	      keep_going (ecs);
+	      return;
+	    }
+
+	  /* If the stepping thread exited, then don't try reverting
+	     back to it, just keep going.  We need to query the target
+	     in case it doesn't support thread exit events.  */
+	  if (is_exited (tp->ptid)
+	      || !target_thread_alive (tp->ptid))
+	    {
+	      if (debug_infrun)
+		fprintf_unfiltered (gdb_stdlog, "\
+infrun: not switching back to stepped thread, it has vanished\n");
+
+	      delete_thread (tp->ptid);
 	      keep_going (ecs);
 	      return;
 	    }
@@ -3923,28 +3944,29 @@ infrun: BPSTAT_WHAT_SET_LONGJMP_RESUME (!gdbarch_get_longjmp_target)\n");
   keep_going (ecs);
 }
 
-/* Are we in the middle of stepping?  */
-
-static int
-currently_stepping_thread (struct thread_info *tp)
-{
-  return (tp->step_range_end && tp->step_resume_breakpoint == NULL)
-	 || tp->trap_expected
-	 || tp->stepping_through_solib_after_catch;
-}
-
-static int
-currently_stepping_callback (struct thread_info *tp, void *data)
-{
-  /* Return true if any thread *but* the one passed in "data" is
-     in the middle of stepping.  */
-  return tp != data && currently_stepping_thread (tp);
-}
+/* Is thread TP in the middle of single-stepping?  */
 
 static int
 currently_stepping (struct thread_info *tp)
 {
-  return currently_stepping_thread (tp) || bpstat_should_step ();
+  return ((tp->step_range_end && tp->step_resume_breakpoint == NULL)
+ 	  || tp->trap_expected
+ 	  || tp->stepping_through_solib_after_catch
+ 	  || bpstat_should_step ());
+}
+
+/* Returns true if any thread *but* the one passed in "data" is in the
+   middle of stepping or of handling a "next".  */
+
+static int
+currently_stepping_or_nexting_callback (struct thread_info *tp, void *data)
+{
+  if (tp == data)
+    return 0;
+
+  return (tp->step_range_end
+ 	  || tp->trap_expected
+ 	  || tp->stepping_through_solib_after_catch);
 }
 
 /* Inferior has stepped into a subroutine call with source code that

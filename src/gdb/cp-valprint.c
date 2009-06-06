@@ -36,6 +36,7 @@
 #include "valprint.h"
 #include "cp-support.h"
 #include "language.h"
+#include "python/python.h"
 
 /* Controls printing of vtbl's */
 static void
@@ -418,12 +419,27 @@ cp_print_value (struct type *type, struct type *real_type,
       if (skip >= 1)
 	fprintf_filtered (stream, "<invalid address>");
       else
-	cp_print_value_fields (baseclass, thistype, base_valaddr,
-			       thisoffset + boffset, address + boffset,
-			       stream, recurse, options,
-			       ((struct type **)
-				obstack_base (&dont_print_vb_obstack)),
-			       0);
+	{
+	  int result = 0;
+
+	  /* Attempt to run the Python pretty-printers on the
+	     baseclass if possible.  */
+	  if (!options->raw)
+	    result = apply_val_pretty_printer (baseclass, base_valaddr,
+					       thisoffset + boffset,
+					       address + boffset,
+					       stream, recurse,
+					       options,
+					       current_language);
+	  	  
+	  if (!result)
+	    cp_print_value_fields (baseclass, thistype, base_valaddr,
+				   thisoffset + boffset, address + boffset,
+				   stream, recurse, options,
+				   ((struct type **)
+				    obstack_base (&dont_print_vb_obstack)),
+				   0);
+	}
       fputs_filtered (", ", stream);
 
     flush_it:
@@ -461,6 +477,7 @@ cp_print_static_field (struct type *type,
   if (TYPE_CODE (type) == TYPE_CODE_STRUCT)
     {
       CORE_ADDR *first_dont_print;
+      CORE_ADDR addr;
       int i;
 
       first_dont_print
@@ -470,7 +487,7 @@ cp_print_static_field (struct type *type,
 
       while (--i >= 0)
 	{
-	  if (VALUE_ADDRESS (val) == first_dont_print[i])
+	  if (value_address (val) == first_dont_print[i])
 	    {
 	      fputs_filtered ("<same as static member of an already"
 			      " seen type>",
@@ -479,12 +496,13 @@ cp_print_static_field (struct type *type,
 	    }
 	}
 
-      obstack_grow (&dont_print_statmem_obstack, (char *) &VALUE_ADDRESS (val),
+      addr = value_address (val);
+      obstack_grow (&dont_print_statmem_obstack, (char *) &addr,
 		    sizeof (CORE_ADDR));
 
       CHECK_TYPEDEF (type);
       cp_print_value_fields (type, type, value_contents_all (val),
-			     value_embedded_offset (val), VALUE_ADDRESS (val),
+			     value_embedded_offset (val), addr,
 			     stream, recurse, options, NULL, 1);
       return;
     }
@@ -492,7 +510,7 @@ cp_print_static_field (struct type *type,
   opts = *options;
   opts.deref_ref = 0;
   val_print (type, value_contents_all (val), 
-	     value_embedded_offset (val), VALUE_ADDRESS (val),
+	     value_embedded_offset (val), value_address (val),
 	     stream, recurse, &opts, current_language);
 }
 

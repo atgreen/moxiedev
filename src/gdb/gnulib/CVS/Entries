@@ -1,12 +1,12 @@
 D/extra////
 D/m4////
-/Makefile.am/1.3/Wed May 27 02:00:13 2009//
-/Makefile.in/1.5/Wed May 27 02:00:13 2009//
-/dummy.c/1.2/Wed May 27 02:00:13 2009//
-/memchr.c/1.2/Wed May 27 02:00:13 2009//
-/memcmp.c/1.2/Wed May 27 02:00:13 2009//
-/memmem.c/1.2/Wed May 27 02:00:13 2009//
-/stdint.in.h/1.2/Wed May 27 02:00:13 2009//
-/str-two-way.h/1.2/Wed May 27 02:00:13 2009//
-/string.in.h/1.2/Wed May 27 02:00:13 2009//
-/wchar.in.h/1.2/Wed May 27 02:00:13 2009//
+/Makefile.am/1.3/Fri May 29 23:30:11 2009//
+/Makefile.in/1.5/Fri May 29 23:30:11 2009//
+/dummy.c/1.2/Fri May 29 23:30:11 2009//
+/memchr.c/1.2/Fri May 29 23:30:11 2009//
+/memcmp.c/1.2/Fri May 29 23:30:11 2009//
+/memmem.c/1.2/Fri May 29 23:30:11 2009//
+/stdint.in.h/1.2/Fri May 29 23:30:11 2009//
+/str-two-way.h/1.2/Fri May 29 23:30:11 2009//
+/string.in.h/1.2/Fri May 29 23:30:11 2009//
+/wchar.in.h/1.2/Fri May 29 23:30:11 2009//

@@ -205,7 +205,7 @@ mi_cmd_exec_continue (char *command, char **argv, int argc)
       int pid;
       if (argv[1] == NULL || argv[1] == '\0')
 	error ("Thread group id not specified");
-      pid = atoi (argv[1] + 1);
+      pid = atoi (argv[1]);
       if (!in_inferior_list (pid))
 	error ("Invalid thread group id '%s'", argv[1]);
 
@@ -260,7 +260,7 @@ mi_cmd_exec_interrupt (char *command, char **argv, int argc)
       int pid;
       if (argv[1] == NULL || argv[1] == '\0')
 	error ("Thread group id not specified");
-      pid = atoi (argv[1] + 1);
+      pid = atoi (argv[1]);
       if (!in_inferior_list (pid))
 	error ("Invalid thread group id '%s'", argv[1]);
 
@@ -788,7 +788,7 @@ mi_cmd_data_evaluate_expression (char *command, char **argv, int argc)
   get_user_print_options (&opts);
   opts.deref_ref = 0;
   val_print (value_type (val), value_contents (val),
-	     value_embedded_offset (val), VALUE_ADDRESS (val),
+	     value_embedded_offset (val), value_address (val),
 	     stb->stream, 0, &opts, current_language);
 
   ui_out_field_stream (uiout, "value", stb);
@@ -1112,6 +1112,10 @@ mi_cmd_list_features (char *command, char **argv, int argc)
       ui_out_field_string (uiout, NULL, "frozen-varobjs");
       ui_out_field_string (uiout, NULL, "pending-breakpoints");
       ui_out_field_string (uiout, NULL, "thread-info");
+      
+#if HAVE_PYTHON
+      ui_out_field_string (uiout, NULL, "python");
+#endif
       
       do_cleanups (cleanup);
       return;

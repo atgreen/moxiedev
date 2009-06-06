@@ -1,3 +1,50 @@
+2009-06-04  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbint.texinfo: Rename formal parameters to gdbarch function
+	protoypes from "current_gdbarch" to "gdbarch".
+
+2009-05-28  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Basic Python): Change get_parameter to parameter.
+
+2009-05-27  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (GDB/MI Miscellaneous Commands): Document "python"
+	feature.
+	(GDB/MI Variable Objects): Document -var-set-visualizer.
+
+2009-04-02  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (GDB/MI Miscellaneous Commands): Document "python"
+	feature.
+	(GDB/MI Variable Objects): Document -var-set-visualizer.
+
+2009-05-27  Tom Tromey  <tromey@redhat.com>
+	    Thiago Jung Bauermann  <bauerman@br.ibm.com>
+	    Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.texinfo (Objfiles In Python): Reference pretty printing.
+	(Pretty Printing): New node.
+	(Selecting Pretty-Printers): Likewise.
+	(Python API): Update.
+	(Output Formats): Document /r format.
+
+2009-05-27  Thiago Jung Bauermann  <bauerman@br.ibm.com>
+	    Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Types In Python): New node.
+	(Values From Inferior): "type" is now an attribute.
+	(Python API): Update.
+
+2009-05-27  Tom Tromey  <tromey@redhat.com>
+	    Thiago Jung Bauermann  <bauerman@br.ibm.com>
+	    Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.texinfo: Add @syncodeindex for `tp'.
+	(Python API): Update.
+	(Auto-loading): New node.
+	(Objfiles In Python): New node.
+
 2009-05-15  Paul Pluzhnikov  <ppluzhnikov@google.com>
 
 	* gdb.texinfo (Threads): Document libthread-db-search-path.

@@ -1,3 +1,78 @@
+2009-06-03  Doug Evans  <dje@google.com>
+
+	* gdb.arch/i386-sse.exp: Test xmm[8-15] if amd64.
+	* gdb.arch/i386-see.c: Ditto.
+
+2009-05-30  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* gdb.base/macscp.exp (info_macro): Return undefined if undefined.
+	(check_macro): Return 1 if undefined.
+	If first test fails, check if macro debug information is available,
+	and report unsupported test if no macro information is found.
+
+2009-05-29  Doug Evans  <dje@google.com>
+
+	* gdb.threads/hand-call-in-threads.exp: New.
+	* gdb.threads/hand-call-in-threads.c: New.
+
+2009-05-29  Michael Snyder  <msnyder@vmware.com>
+
+	* gdb.base/break-always.exp: Change "1" to "on".
+	Add confirmation check.
+
+2009-05-28  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.threads/threxit-hop-specific.c: New.
+	* gdb.threads/threxit-hop-specific.exp: New.
+	* gdb.threads/thread-execl.c: New.
+	* gdb.threads/thread-execl.exp: New.
+
+2009-05-27  Tom Tromey  <tromey@redhat.com>
+	    Thiago Jung Bauermann  <bauerman@br.ibm.com>
+
+	* lib/mi-support.exp (mi_varobj_update_dynamic): New proc.
+	(mi_child_regexp): Likewise.
+	(mi_list_varobj_children_range): Likewise.
+	(mi_get_features): Likewise.
+	(mi_list_varobj_children): Rewrite.
+	* gdb.python/python-mi.exp: New file.
+
+2009-05-27  Tom Tromey  <tromey@redhat.com>
+	    Thiago Jung Bauermann  <bauerman@br.ibm.com>
+	    Phil Muldoon  <pmuldoon@redhat.com>
+	    Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* gdb.python/python-prettyprint.exp: New file.
+	* gdb.python/python-prettyprint.c: New file.
+	* gdb.python/python-prettyprint.py: New file.
+	* gdb.base/display.exp: print/r is now valid.
+
+2009-05-27  Thiago Jung Bauermann  <bauerman@br.ibm.com>
+	    Tom Tromey  <tromey@redhat.com>
+	    Pedro Alves  <pedro@codesourcery.com>
+	    Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* gdb.python/python-template.exp: New file.
+	* gdb.python/python-template.cc: New file.
+	* gdb.python/python.exp (gdb_py_test_multiple): Add two objfile
+	tests.
+	* gdb.python/python-value.exp (py_objfile_tests): New proc.
+	Call it.
+	(test_value_after_death): New proc.
+	* gdb.python/python-value.c (PTR): New typedef.
+	(main): New variable 'x'.
+
+2009-05-27  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.python/python.exp (gdb_py_test_multiple): Add two objfile
+	tests.
+	* gdb.python/python-value.exp (py_objfile_tests): New proc.
+	Call it.
+
+2009-05-27  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.mi/nsthrexec.c, gdb.mi/mi-nsthrexec.exp: New.
+
 2009-05-24  Pedro Alves  <pedro@codesourcery.com>
 
 	* gdb.threads/fork-thread-pending.c: New.

@@ -367,6 +367,7 @@ struct call_info
   unsigned int max_depth;
   unsigned int is_tail : 1;
   unsigned int is_pasted : 1;
+  unsigned int broken_cycle : 1;
   unsigned int priority : 13;
 };
 
@@ -2592,7 +2593,7 @@ insert_callee (struct function_info *caller, struct call_info *callee)
 	    p->fun->start = NULL;
 	    p->fun->is_func = TRUE;
 	  }
-	p->count += 1;
+	p->count += callee->count;
 	/* Reorder list so most recent call is first.  */
 	*pp = p->next;
 	p->next = caller->call_list;
@@ -2600,7 +2601,6 @@ insert_callee (struct function_info *caller, struct call_info *callee)
 	return FALSE;
       }
   callee->next = caller->call_list;
-  callee->count += 1;
   caller->call_list = callee;
   return TRUE;
 }
@@ -2790,7 +2790,7 @@ mark_functions_via_relocs (asection *sec,
       callee->is_tail = !is_call;
       callee->is_pasted = FALSE;
       callee->priority = priority;
-      callee->count = 0;
+      callee->count = 1;
       if (callee->fun->last_caller != sec)
 	{
 	  callee->fun->last_caller = sec;
@@ -2882,7 +2882,7 @@ pasted_function (asection *sec)
 	      callee->fun = fun;
 	      callee->is_tail = TRUE;
 	      callee->is_pasted = TRUE;
-	      callee->count = 0;
+	      callee->count = 1;
 	      if (!insert_callee (fun_start, callee))
 		free (callee);
 	      return TRUE;
@@ -3272,9 +3272,8 @@ remove_cycles (struct function_info *fun,
 				       "from %s to %s\n"),
 				     f1, f2);
 	    }
-	  *callp = call->next;
-	  free (call);
-	  continue;
+
+	  call->broken_cycle = TRUE;
 	}
       callp = &call->next;
     }
@@ -3517,7 +3516,8 @@ mark_overlay_section (struct function_info *fun,
 	  BFD_ASSERT (!fun->sec->segment_mark);
 	  fun->sec->segment_mark = 1;
 	}
-      if (!mark_overlay_section (call->fun, info, param))
+      if (!call->broken_cycle
+	  && !mark_overlay_section (call->fun, info, param))
 	return FALSE;
     }
 
@@ -3577,7 +3577,8 @@ unmark_overlay_section (struct function_info *fun,
     }
 
   for (call = fun->call_list; call != NULL; call = call->next)
-    if (!unmark_overlay_section (call->fun, info, param))
+    if (!call->broken_cycle
+	&& !unmark_overlay_section (call->fun, info, param))
       return FALSE;
 
   if (RECURSE_UNMARK)
@@ -3628,7 +3629,8 @@ collect_lib_sections (struct function_info *fun,
     }
 
   for (call = fun->call_list; call != NULL; call = call->next)
-    collect_lib_sections (call->fun, info, param);
+    if (!call->broken_cycle)
+      collect_lib_sections (call->fun, info, param);
 
   return TRUE;
 }
@@ -3822,7 +3824,7 @@ collect_overlays (struct function_info *fun,
 
   fun->visit7 = TRUE;
   for (call = fun->call_list; call != NULL; call = call->next)
-    if (!call->is_pasted)
+    if (!call->is_pasted && !call->broken_cycle)
       {
 	if (!collect_overlays (call->fun, info, ovly_sections))
 	  return FALSE;
@@ -3868,7 +3870,8 @@ collect_overlays (struct function_info *fun,
     }
 
   for (call = fun->call_list; call != NULL; call = call->next)
-    if (!collect_overlays (call->fun, info, ovly_sections))
+    if (!call->broken_cycle
+	&& !collect_overlays (call->fun, info, ovly_sections))
       return FALSE;
 
   if (added_fun)
@@ -3919,6 +3922,8 @@ sum_stack (struct function_info *fun,
   max = NULL;
   for (call = fun->call_list; call; call = call->next)
     {
+      if (call->broken_cycle)
+	continue;
       if (!call->is_pasted)
 	has_call = TRUE;
       if (!sum_stack (call->fun, info, sum_stack_param))
@@ -3962,7 +3967,7 @@ sum_stack (struct function_info *fun,
 	{
 	  info->callbacks->minfo (_("  calls:\n"));
 	  for (call = fun->call_list; call; call = call->next)
-	    if (!call->is_pasted)
+	    if (!call->is_pasted && !call->broken_cycle)
 	      {
 		const char *f2 = func_name (call->fun);
 		const char *ann1 = call->fun == max ? "*" : " ";
@@ -4438,14 +4443,18 @@ spu_elf_auto_overlay (struct bfd_link_info *info)
 	  for (call = dummy_caller.call_list; call; call = call->next)
 	    {
 	      unsigned int k;
+	      unsigned int stub_delta = 1;
 
-	      ++num_stubs;
+	      if (htab->params->ovly_flavour == ovly_soft_icache)
+		stub_delta = call->count;
+	      num_stubs += stub_delta;
+
 	      /* If the call is within this overlay, we won't need a
 		 stub.  */
 	      for (k = base; k < i + 1; k++)
 		if (call->fun->sec == ovly_sections[2 * k])
 		  {
-		    --num_stubs;
+		    num_stubs -= stub_delta;
 		    break;
 		  }
 	    }
@@ -4984,7 +4993,7 @@ spu_elf_relocate_section (bfd *output_bfd,
 
 /* Adjust _SPUEAR_ syms to point at their overlay stubs.  */
 
-static bfd_boolean
+static int
 spu_elf_output_symbol_hook (struct bfd_link_info *info,
 			    const char *sym_name ATTRIBUTE_UNUSED,
 			    Elf_Internal_Sym *sym,
@@ -5016,7 +5025,7 @@ spu_elf_output_symbol_hook (struct bfd_link_info *info,
 	  }
     }
 
-  return TRUE;
+  return 1;
 }
 
 static int spu_plugin = 0;

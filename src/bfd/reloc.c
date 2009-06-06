@@ -2492,6 +2492,8 @@ ENUMX
   BFD_RELOC_386_TLS_DESC_CALL
 ENUMX
   BFD_RELOC_386_TLS_DESC
+ENUMX
+  BFD_RELOC_386_IRELATIVE
 ENUMDOC
   i386/elf relocations
 
@@ -2547,6 +2549,8 @@ ENUMX
   BFD_RELOC_X86_64_TLSDESC_CALL
 ENUMX
   BFD_RELOC_X86_64_TLSDESC
+ENUMX
+  BFD_RELOC_X86_64_IRELATIVE
 ENUMDOC
   x86-64/elf relocations
 
@@ -5291,6 +5295,10 @@ bfd_generic_relax_section (bfd *abfd ATTRIBUTE_UNUSED,
 			   struct bfd_link_info *link_info ATTRIBUTE_UNUSED,
 			   bfd_boolean *again)
 {
+  if (link_info->relocatable)
+    (*link_info->callbacks->einfo)
+      (_("%P%F: --relax and -r may not be used together\n"));
+
   *again = FALSE;
   return TRUE;
 }

@@ -22,12 +22,18 @@
 #include "ui-out.h"
 #include "cli/cli-script.h"
 #include "gdbcmd.h"
+#include "objfiles.h"
+#include "observer.h"
 
 #include <ctype.h>
 
 /* True if we should print the stack when catching a Python error,
    false otherwise.  */
 static int gdbpy_should_print_stack = 1;
+
+/* This is true if we should auto-load python code when an objfile is
+   opened, false otherwise.  */
+static int gdbpy_auto_load = 1;
 
 #ifdef HAVE_PYTHON
 
@@ -46,6 +52,10 @@ static PyMethodDef GdbMethods[];
 
 PyObject *gdb_module;
 
+/* Some string constants we may wish to use.  */
+PyObject *gdbpy_to_string_cst;
+PyObject *gdbpy_children_cst;
+PyObject *gdbpy_display_hint_cst;
 PyObject *gdbpy_doc_cst;
 
 /* Given a command_line, return a command string suitable for passing
@@ -202,7 +212,7 @@ parameter_to_python (struct cmd_list_element *cmd)
    value.  */
 
 static PyObject *
-get_parameter (PyObject *self, PyObject *args)
+gdbpy_parameter (PyObject *self, PyObject *args)
 {
   struct cmd_list_element *alias, *prefix, *cmd;
   char *arg, *newarg;
@@ -225,7 +235,7 @@ get_parameter (PyObject *self, PyObject *args)
 			 "could not find parameter `%s'", arg);
 
   if (! cmd->var)
-    return PyErr_Format (PyExc_RuntimeError, "`%s' is not a variable", arg);
+    return PyErr_Format (PyExc_RuntimeError, "`%s' is not a parameter", arg);
   return parameter_to_python (cmd);
 }
 
@@ -299,6 +309,129 @@ gdbpy_print_stack (void)
     PyErr_Print ();
   else
     PyErr_Clear ();
+}
+
+
+
+/* The "current" objfile.  This is set when gdb detects that a new
+   objfile has been loaded.  It is only set for the duration of a call
+   to gdbpy_new_objfile; it is NULL at other times.  */
+static struct objfile *gdbpy_current_objfile;
+
+/* The file name we attempt to read.  */
+#define GDBPY_AUTO_FILENAME "-gdb.py"
+
+/* This is a new_objfile observer callback which loads python code
+   based on the path to the objfile.  */
+static void
+gdbpy_new_objfile (struct objfile *objfile)
+{
+  char *realname;
+  char *filename, *debugfile;
+  int len;
+  FILE *input;
+  PyGILState_STATE state;
+  struct cleanup *cleanups;
+
+  if (!gdbpy_auto_load || !objfile || !objfile->name)
+    return;
+
+  state = PyGILState_Ensure ();
+
+  gdbpy_current_objfile = objfile;
+
+  realname = gdb_realpath (objfile->name);
+  len = strlen (realname);
+  filename = xmalloc (len + sizeof (GDBPY_AUTO_FILENAME));
+  memcpy (filename, realname, len);
+  strcpy (filename + len, GDBPY_AUTO_FILENAME);
+
+  input = fopen (filename, "r");
+  debugfile = filename;
+
+  cleanups = make_cleanup (xfree, filename);
+  make_cleanup (xfree, realname);
+
+  if (!input && debug_file_directory)
+    {
+      /* Also try the same file in the separate debug info directory.  */
+      debugfile = xmalloc (strlen (filename)
+			   + strlen (debug_file_directory) + 1);
+      strcpy (debugfile, debug_file_directory);
+      /* FILENAME is absolute, so we don't need a "/" here.  */
+      strcat (debugfile, filename);
+
+      make_cleanup (xfree, debugfile);
+      input = fopen (debugfile, "r");
+    }
+
+  if (!input && gdb_datadir)
+    {
+      /* Also try the same file in a subdirectory of gdb's data
+	 directory.  */
+      debugfile = xmalloc (strlen (gdb_datadir) + strlen (filename)
+			   + strlen ("/auto-load") + 1);
+      strcpy (debugfile, gdb_datadir);
+      strcat (debugfile, "/auto-load");
+      /* FILENAME is absolute, so we don't need a "/" here.  */
+      strcat (debugfile, filename);
+
+      make_cleanup (xfree, debugfile);
+      input = fopen (debugfile, "r");
+    }
+
+  if (input)
+    {
+      /* We don't want to throw an exception here -- but the user
+	 would like to know that something went wrong.  */
+      if (PyRun_SimpleFile (input, debugfile))
+	gdbpy_print_stack ();
+      fclose (input);
+    }
+
+  do_cleanups (cleanups);
+  gdbpy_current_objfile = NULL;
+
+  PyGILState_Release (state);
+}
+
+/* Return the current Objfile, or None if there isn't one.  */
+static PyObject *
+gdbpy_get_current_objfile (PyObject *unused1, PyObject *unused2)
+{
+  PyObject *result;
+
+  if (! gdbpy_current_objfile)
+    Py_RETURN_NONE;
+
+  result = objfile_to_objfile_object (gdbpy_current_objfile);
+  if (result)
+    Py_INCREF (result);
+  return result;
+}
+
+/* Return a sequence holding all the Objfiles.  */
+static PyObject *
+gdbpy_objfiles (PyObject *unused1, PyObject *unused2)
+{
+  struct objfile *objf;
+  PyObject *list;
+
+  list = PyList_New (0);
+  if (!list)
+    return NULL;
+
+  ALL_OBJFILES (objf)
+  {
+    PyObject *item = objfile_to_objfile_object (objf);
+    if (!item || PyList_Append (list, item) == -1)
+      {
+	Py_DECREF (list);
+	return NULL;
+      }
+  }
+
+  return list;
 }
 
 #else /* HAVE_PYTHON */
@@ -399,6 +532,15 @@ Enables or disables printing of Python stack traces."),
 			   &set_python_list,
 			   &show_python_list);
 
+  add_setshow_boolean_cmd ("auto-load", class_maintenance,
+			   &gdbpy_auto_load, _("\
+Enable or disable auto-loading of Python code when an object is opened."), _("\
+Show whether Python code will be auto-loaded when an object is opened."), _("\
+Enables or disables auto-loading of Python code when an object is opened."),
+			   NULL, NULL,
+			   &set_python_list,
+			   &show_python_list);
+
 #ifdef HAVE_PYTHON
   Py_Initialize ();
   PyEval_InitThreads ();
@@ -414,9 +556,17 @@ Enables or disables printing of Python stack traces."),
   gdbpy_initialize_frames ();
   gdbpy_initialize_commands ();
   gdbpy_initialize_functions ();
+  gdbpy_initialize_types ();
+  gdbpy_initialize_objfile ();
 
   PyRun_SimpleString ("import gdb");
+  PyRun_SimpleString ("gdb.pretty_printers = []");
 
+  observer_attach_new_objfile (gdbpy_new_objfile);
+
+  gdbpy_to_string_cst = PyString_FromString ("to_string");
+  gdbpy_children_cst = PyString_FromString ("children");
+  gdbpy_display_hint_cst = PyString_FromString ("display_hint");
   gdbpy_doc_cst = PyString_FromString ("__doc__");
 
   /* Create a couple objects which are used for Python's stdout and
@@ -462,8 +612,16 @@ static PyMethodDef GdbMethods[] =
     "Get a value from history" },
   { "execute", execute_gdb_command, METH_VARARGS,
     "Execute a gdb command" },
-  { "get_parameter", get_parameter, METH_VARARGS,
+  { "parameter", gdbpy_parameter, METH_VARARGS,
     "Return a gdb parameter's value" },
+
+  { "default_visualizer", gdbpy_default_visualizer, METH_VARARGS,
+    "Find the default visualizer for a Value." },
+
+  { "current_objfile", gdbpy_get_current_objfile, METH_NOARGS,
+    "Return the current Objfile being loaded, or None." },
+  { "objfiles", gdbpy_objfiles, METH_NOARGS,
+    "Return a sequence of all loaded objfiles." },
 
   { "selected_frame", gdbpy_selected_frame, METH_NOARGS,
     "selected_frame () -> gdb.Frame.\n\
@@ -471,6 +629,11 @@ Return the selected frame object." },
   { "frame_stop_reason_string", gdbpy_frame_stop_reason_string, METH_VARARGS,
     "stop_reason_string (Integer) -> String.\n\
 Return a string explaining unwind stop reason." },
+
+  { "lookup_type", (PyCFunction) gdbpy_lookup_type,
+    METH_VARARGS | METH_KEYWORDS,
+    "lookup_type (name [, block]) -> type\n\
+Return a Type corresponding to the given name." },
 
   { "write", gdbpy_write, METH_VARARGS,
     "Write a string using gdb's filtered stream." },

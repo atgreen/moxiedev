@@ -1,3 +1,73 @@
+2009-06-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10198
+	* gas/i386/jump.s: Add test for "jmp $+2".
+	* gas/i386/jump16.s: Likewise.
+
+	* gas/i386/jump.d: Updated.
+	* gas/i386/jump16.d: Likewise.
+
+2009-05-26  Catherine Moore  <clm@codesourcery.com>
+
+	* gas/mips/eret.s: Remove.
+	* gas/mips/eret.d: Remove.
+	* gas/mips/eret.l: Remove.
+	* gas/mips/eret-1.s: New.
+	* gas/mips/eret-1.d: New.
+	* gas/mips/eret-2.s: New.
+	* gas/mips/eret-2.d: New.
+	* gas/mips/eret-3.s: New.
+	* gas/mips/eret-3.d: New.
+	* gas/mips/mips.exp: Run new tests.  Remove old tests.
+
+2009-05-23  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* gas/mips/vr4130.s, gas/mips/vr4130.d: Expect part A to have nops.
+
+2009-05-23  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* gas/mips/align.d: Use an nm test rather than an objdump one.
+
+2009-05-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/elf/ifunc-1.d: New.
+	* gas/elf/ifunc-1.s: Likewise.
+
+	* gas/elf/elf.exp: Run ifunc-1.
+
+2009-05-22  Dwarakanath Rajagopal  <dwarak.rajagopal@amd.com>
+
+	* gas/i386/i386.exp: Remove SSE5 tests.
+	* gas/i386/x86-64-sse5.s: Delete. Remove SSE5 tests.
+	* gas/i386/x86-64-sse5.d: Ditto.
+	* gas/i386/arch-10-1.l: Remove SSE5 tests.
+	* gas/i386/arch-10-2.l: Ditto.
+	* gas/i386/arch-10-3.l: Ditto.
+	* gas/i386/arch-10-4.l: Ditto.
+	* gas/i386/arch-10.d: Ditto.
+	* gas/i386/arch-10.s: Ditto.
+	* gas/i386/arch-4.s: Delete. Remove SSE5 tests.
+	* gas/i386/arch-4.d: Ditto.
+	* gas/i386/arch-8.s: Ditto.
+	* gas/i386/arch-8.d: Ditto.
+	* gas/i386/arch-2.s: Remove SSE5 tests.
+	* gas/i386/arch-2.d: Remove SSE5 tests.
+	* gas/i386/x86-64-arch-2.s: Ditto.
+	
+2009-05-19  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* gas/pe/:  New directory for PE format-specific tests.
+	* gas/pe/aligncomm-a.d:  New test pattern file.
+	* gas/pe/aligncomm-a.s:  New test source file.
+	* gas/pe/aligncomm-b.d:  New test pattern file.
+	* gas/pe/aligncomm-b.s:  New test source file.
+	* gas/pe/aligncomm-c.d:  New test pattern file.
+	* gas/pe/aligncomm-c.s:  New test source file.
+	* gas/pe/aligncomm-d.d:  New test pattern file.
+	* gas/pe/aligncomm-d.s:  New test source file.
+	* gas/pe/pe.exp:  New test control script.
+	* lib/gas-defs.exp (is_pecoff_format):  New function.
+
 2009-05-05  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* gas/lns/lns-common-1-ia64.s: Add test for discriminator.
@@ -20,6 +90,17 @@
 	* gas/arm/attr-mcpu.d: Add -mfpu=neon.
 	* gas/arm/mapmisc.d: Correct expected output for .double and
 	.dcb.d.
+
+2009-04-30  Nick Clifton  <nickc@redhat.com>
+
+	* gas/elf/elf.exp: Extend type test to include an ifunc symbol.
+	Provide an alternative test for targets which do not support ifunc
+	symbols.
+	gas/elf/type.s: Add entry for an ifunc symbol.
+	gas/elf/type.e: Add ifunc entry to expected symbol dump.
+	gas/elf/section2.e-armelf: Add  entry for ifunc symbol.
+	gas/elf/type-noifunc.s: New file.
+	gas/elf/type-noifunc.e: Likewise.
 
 2009-04-24  Cary Coutant  <ccoutant@google.com>
 

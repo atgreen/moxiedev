@@ -33,6 +33,7 @@
 
 #if HAVE_LIBPYTHON2_4
 #include "python2.4/Python.h"
+#include "python2.4/frameobject.h"
 /* Py_ssize_t is not defined until 2.5.
    Logical type for Py_ssize_t is Py_intptr_t, but that fails in 64-bit
    compilation due to several apparent mistakes in python2.4 API, so we
@@ -40,8 +41,10 @@
 typedef int Py_ssize_t;
 #elif HAVE_LIBPYTHON2_5
 #include "python2.5/Python.h"
+#include "python2.5/frameobject.h"
 #elif HAVE_LIBPYTHON2_6
 #include "python2.6/Python.h"
+#include "python2.6/frameobject.h"
 #else
 #error "Unable to find usable Python.h"
 #endif
@@ -66,15 +69,24 @@ extern PyTypeObject value_object_type;
 PyObject *gdbpy_history (PyObject *self, PyObject *args);
 PyObject *gdbpy_frame_stop_reason_string (PyObject *, PyObject *);
 PyObject *gdbpy_selected_frame (PyObject *self, PyObject *args);
+PyObject *gdbpy_lookup_type (PyObject *self, PyObject *args, PyObject *kw);
 
 PyObject *value_to_value_object (struct value *v);
+PyObject *type_to_type_object (struct type *);
+PyObject *objfile_to_objfile_object (struct objfile *);
 
+PyObject *objfpy_get_printers (PyObject *, void *);
+
+struct value *value_object_to_value (PyObject *self);
 struct value *convert_value_from_python (PyObject *obj);
+struct type *type_object_to_type (PyObject *obj);
 
 void gdbpy_initialize_values (void);
 void gdbpy_initialize_frames (void);
 void gdbpy_initialize_commands (void);
+void gdbpy_initialize_types (void);
 void gdbpy_initialize_functions (void);
+void gdbpy_initialize_objfile (void);
 
 struct cleanup *make_cleanup_py_decref (PyObject *py);
 struct cleanup *make_cleanup_py_restore_gil (PyGILState_STATE *state);
@@ -99,6 +111,17 @@ char *python_string_to_host_string (PyObject *obj);
 PyObject *target_string_to_unicode (const gdb_byte *str, int length);
 int gdbpy_is_string (PyObject *obj);
 
+/* Note that these are declared here, and not in python.h with the
+   other pretty-printer functions, because they refer to PyObject.  */
+char *apply_varobj_pretty_printer (PyObject *print_obj,
+				   struct value **replacement);
+PyObject *gdbpy_get_varobj_pretty_printer (struct value *value);
+char *gdbpy_get_display_hint (PyObject *printer);
+PyObject *gdbpy_default_visualizer (PyObject *self, PyObject *args);
+
 extern PyObject *gdbpy_doc_cst;
+extern PyObject *gdbpy_children_cst;
+extern PyObject *gdbpy_to_string_cst;
+extern PyObject *gdbpy_display_hint_cst;
 
 #endif /* GDB_PYTHON_INTERNAL_H */

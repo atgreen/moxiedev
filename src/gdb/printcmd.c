@@ -68,11 +68,15 @@ struct format_data
     int count;
     char format;
     char size;
+
+    /* True if the value should be printed raw -- that is, bypassing
+       python-based formatters.  */
+    unsigned char raw;
   };
 
 /* Last specified output format.  */
 
-static char last_format = 'x';
+static char last_format = 0;
 
 /* Last specified examination size.  'b', 'h', 'w' or `q'.  */
 
@@ -181,6 +185,7 @@ decode_format (char **string_ptr, int oformat, int osize)
   val.format = '?';
   val.size = '?';
   val.count = 1;
+  val.raw = 0;
 
   if (*p >= '0' && *p <= '9')
     val.count = atoi (p);
@@ -193,6 +198,11 @@ decode_format (char **string_ptr, int oformat, int osize)
     {
       if (*p == 'b' || *p == 'h' || *p == 'w' || *p == 'g')
 	val.size = *p++;
+      else if (*p == 'r')
+	{
+	  val.raw = 1;
+	  p++;
+	}
       else if (*p >= 'a' && *p <= 'z')
 	val.format = *p++;
       else
@@ -270,7 +280,7 @@ print_formatted (struct value *val, int size,
   int len = TYPE_LENGTH (type);
 
   if (VALUE_LVAL (val) == lval_memory)
-    next_address = VALUE_ADDRESS (val) + len;
+    next_address = value_address (val) + len;
 
   if (size)
     {
@@ -279,9 +289,9 @@ print_formatted (struct value *val, int size,
 	case 's':
 	  {
 	    struct type *elttype = value_type (val);
-	    next_address = (VALUE_ADDRESS (val)
+	    next_address = (value_address (val)
 			    + val_print_string (elttype,
-						VALUE_ADDRESS (val), -1,
+						value_address (val), -1,
 						stream, options));
 	  }
 	  return;
@@ -289,8 +299,8 @@ print_formatted (struct value *val, int size,
 	case 'i':
 	  /* We often wrap here if there are long symbolic names.  */
 	  wrap_here ("    ");
-	  next_address = (VALUE_ADDRESS (val)
-			  + gdb_print_insn (VALUE_ADDRESS (val), stream,
+	  next_address = (value_address (val)
+			  + gdb_print_insn (value_address (val), stream,
 					    &branch_delay_insns));
 	  return;
 	}
@@ -874,6 +884,7 @@ print_command_1 (char *exp, int inspect, int voidprint)
       fmt.count = 1;
       fmt.format = 0;
       fmt.size = 0;
+      fmt.raw = 0;
     }
 
   if (exp && *exp)
@@ -909,6 +920,7 @@ print_command_1 (char *exp, int inspect, int voidprint)
 
       get_formatted_print_options (&opts, format);
       opts.inspect_it = inspect;
+      opts.raw = fmt.raw;
 
       print_formatted (val, fmt.size, &opts, gdb_stdout);
       printf_filtered ("\n");
@@ -959,6 +971,7 @@ output_command (char *exp, int from_tty)
   struct value_print_options opts;
 
   fmt.size = 0;
+  fmt.raw = 0;
 
   if (exp && *exp == '/')
     {
@@ -976,6 +989,7 @@ output_command (char *exp, int from_tty)
   annotate_value_begin (value_type (val));
 
   get_formatted_print_options (&opts, format);
+  opts.raw = fmt.raw;
   print_formatted (val, fmt.size, &opts, gdb_stdout);
 
   annotate_value_end ();
@@ -1091,6 +1105,8 @@ sym_info (char *arg, int from_tty)
 static void
 address_info (char *exp, int from_tty)
 {
+  struct gdbarch *gdbarch;
+  int regno;
   struct symbol *sym;
   struct minimal_symbol *msymbol;
   long val;
@@ -1153,6 +1169,7 @@ address_info (char *exp, int from_tty)
   printf_filtered ("\" is ");
   val = SYMBOL_VALUE (sym);
   section = SYMBOL_OBJ_SECTION (sym);
+  gdbarch = get_objfile_arch (SYMBOL_SYMTAB (sym)->objfile);
 
   switch (SYMBOL_CLASS (sym))
     {
@@ -1177,20 +1194,28 @@ address_info (char *exp, int from_tty)
 
     case LOC_COMPUTED:
       /* FIXME: cagney/2004-01-26: It should be possible to
-	 unconditionally call the SYMBOL_OPS method when available.
+	 unconditionally call the SYMBOL_COMPUTED_OPS method when available.
 	 Unfortunately DWARF 2 stores the frame-base (instead of the
 	 function) location in a function's symbol.  Oops!  For the
 	 moment enable this when/where applicable.  */
-      SYMBOL_OPS (sym)->describe_location (sym, gdb_stdout);
+      SYMBOL_COMPUTED_OPS (sym)->describe_location (sym, gdb_stdout);
       break;
 
     case LOC_REGISTER:
+      /* GDBARCH is the architecture associated with the objfile the symbol
+	 is defined in; the target architecture may be different, and may
+	 provide additional registers.  However, we do not know the target
+	 architecture at this point.  We assume the objfile architecture
+	 will contain all the standard registers that occur in debug info
+	 in that objfile.  */
+      regno = SYMBOL_REGISTER_OPS (sym)->register_number (sym, gdbarch);
+
       if (SYMBOL_IS_ARGUMENT (sym))
 	printf_filtered (_("an argument in register %s"),
-			 gdbarch_register_name (current_gdbarch, val));
+			 gdbarch_register_name (gdbarch, regno));
       else
 	printf_filtered (_("a variable in register %s"),
-			 gdbarch_register_name (current_gdbarch, val));
+			 gdbarch_register_name (gdbarch, regno));
       break;
 
     case LOC_STATIC:
@@ -1208,8 +1233,10 @@ address_info (char *exp, int from_tty)
       break;
 
     case LOC_REGPARM_ADDR:
+      /* Note comment at LOC_REGISTER.  */
+      regno = SYMBOL_REGISTER_OPS (sym)->register_number (sym, gdbarch);
       printf_filtered (_("address of an argument in register %s"),
-		       gdbarch_register_name (current_gdbarch, val));
+		       gdbarch_register_name (gdbarch, regno));
       break;
 
     case LOC_ARG:
@@ -1296,9 +1323,10 @@ x_command (char *exp, int from_tty)
   struct cleanup *old_chain;
   struct value *val;
 
-  fmt.format = last_format;
+  fmt.format = last_format ? last_format : 'x';
   fmt.size = last_size;
   fmt.count = 1;
+  fmt.raw = 0;
 
   if (exp && *exp == '/')
     {
@@ -1325,7 +1353,7 @@ x_command (char *exp, int from_tty)
       if (/* last_format == 'i'  && */ 
 	  TYPE_CODE (value_type (val)) == TYPE_CODE_FUNC
 	   && VALUE_LVAL (val) == lval_memory)
-	next_address = VALUE_ADDRESS (val);
+	next_address = value_address (val);
       else
 	next_address = value_as_address (val);
       do_cleanups (old_chain);
@@ -1354,8 +1382,7 @@ x_command (char *exp, int from_tty)
 	 then don't fetch it now; instead mark it by voiding the $__
 	 variable.  */
       if (value_lazy (last_examine_value))
-	set_internalvar (lookup_internalvar ("__"),
-			 allocate_value (builtin_type_void));
+	clear_internalvar (lookup_internalvar ("__"));
       else
 	set_internalvar (lookup_internalvar ("__"), last_examine_value);
     }
@@ -1402,6 +1429,7 @@ display_command (char *exp, int from_tty)
 	  fmt.format = 0;
 	  fmt.size = 0;
 	  fmt.count = 0;
+	  fmt.raw = 0;
 	}
 
       innermost_block = NULL;
@@ -1613,6 +1641,7 @@ do_one_display (struct display *d)
       annotate_display_expression ();
 
       get_formatted_print_options (&opts, d->format.format);
+      opts.raw = d->format.raw;
       print_formatted (evaluate_expression (d->exp),
 		       d->format.size, &opts, gdb_stdout);
       printf_filtered ("\n");

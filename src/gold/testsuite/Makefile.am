@@ -23,6 +23,7 @@ TEST_OBJDUMP = $(top_builddir)/../binutils/objdump
 TEST_CXXFILT = $(top_builddir)/../binutils/cxxfilt
 TEST_STRIP = $(top_builddir)/../binutils/strip-new
 TEST_AR = $(top_builddir)/../binutils/ar
+TEST_NM = $(top_builddir)/../binutils/nm-new
 
 if PLUGINS
 LIBDL = -ldl
@@ -101,6 +102,18 @@ flagstest_debug.o: constructor_test.cc
 	$(CXXCOMPILE) -O0 -g -c -o $@ $<
 flagstest_ndebug.o: constructor_test.cc
 	$(CXXCOMPILE) -O0 -c -o $@ $<
+
+
+check_SCRIPTS += gc_comdat_test.sh
+check_DATA += gc_comdat_test.stdout
+gc_comdat_test_1.o: gc_comdat_test_1.cc 
+	$(CXXCOMPILE) -O0 -c -ffunction-sections -g -o $@ $<
+gc_comdat_test_2.o: gc_comdat_test_2.cc 
+	$(CXXCOMPILE) -O0 -c -ffunction-sections -g -o $@ $<
+gc_comdat_test: gc_comdat_test_1.o gc_comdat_test_2.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--gc-sections gc_comdat_test_1.o gc_comdat_test_2.o
+gc_comdat_test.stdout: gc_comdat_test
+	$(TEST_NM) -C gc_comdat_test > gc_comdat_test.stdout
 
 
 check_PROGRAMS += basic_test
@@ -1037,6 +1050,47 @@ empty.syms:
 	@echo "Symbol table" >>empty.syms
 
 endif PLUGINS
+
+check_PROGRAMS += exclude_libs_test
+check_SCRIPTS += exclude_libs_test.sh
+check_DATA += exclude_libs_test.syms
+MOSTLYCLEANFILES += exclude_libs_test.syms libexclude_libs_test_1.a \
+        libexclude_libs_test_2.a alt/libexclude_libs_test_3.a
+exclude_libs_test_SOURCES = exclude_libs_test.c
+exclude_libs_test_DEPENDENCIES = gcctestdir/ld libexclude_libs_test_1.a \
+	libexclude_libs_test_2.a alt/libexclude_libs_test_3.a
+exclude_libs_test_LDFLAGS = -Bgcctestdir/ -L. -Lalt \
+	-Wl,--exclude-libs,dummy:libexclude_libs_test_1 \
+	-Wl,--exclude-libs,libexclude_libs_test_3
+exclude_libs_test_LDADD = -lexclude_libs_test_1 -lexclude_libs_test_2 \
+	alt/libexclude_libs_test_3.a
+exclude_libs_test.syms: exclude_libs_test
+	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+libexclude_libs_test_1.a: exclude_libs_test_1.o
+	$(TEST_AR) rc $@ $^
+libexclude_libs_test_2.a: exclude_libs_test_2.o
+	$(TEST_AR) rc $@ $^
+alt/libexclude_libs_test_3.a: exclude_libs_test_3.o
+	test -d alt || mkdir -p alt
+	$(TEST_AR) rc $@ $^
+
+check_PROGRAMS += local_labels_test
+local_labels_test.o: ver_test_6.c
+	$(COMPILE) -g -c -Wa,-L -o $@ $<
+local_labels_test: local_labels_test.o
+	$(LINK) -Bgcctestdir/ local_labels_test.o
+
+check_PROGRAMS += discard_locals_test
+check_SCRIPTS += discard_locals_test.sh
+check_DATA += discard_locals_test.syms
+MOSTLYCLEANFILES += discard_locals_test.syms
+discard_locals_test_SOURCES = discard_locals_test.c
+discard_locals_test_LDFLAGS = -Bgcctestdir/ -Wl,--discard-locals
+discard_locals_test.syms: discard_locals_test
+	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+# '-Wa,-L' is required to preserve the local label used for testing.
+discard_locals_test.o: discard_locals_test.c
+	$(COMPILE) -c -Wa,-L -o $@ $<
 
 endif GCC
 endif NATIVE_LINKER

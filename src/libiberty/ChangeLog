@@ -1,3 +1,40 @@
+2009-05-30  Eli Zaretskii  <eliz@gnu.org>
+
+	* snprintf.c: Doc fix.
+
+	* vsnprintf.c: Doc fix.
+
+2009-05-29  Kai Tietz  <kai.tietz@onevision.com>
+
+        * pex-win32.c (pex_win32_fdopenr): Set INHERIT to false.
+
+2009-05-29  Michael Matz  <matz@suse.de>
+
+	* fibheap.c (fibheap_replace_key_data): Make sure we don't early
+	out when forcing the minimum.
+	(fibheap_delete_node): Assert that we managed to force the minimum.
+
+2009-05-25  Tristan Gingold  <gingold@adacore.com>
+
+	* config.h-vms: Rewritten.  Define configure macros.
+	Use DEC-C builtin alloca.
+
+	* makefile.vms (OBJS): Update list.
+	(OPT): New variable.
+	(CFLAGS): Update compilation flags.
+	(libiberty.olb): Do not depend on alloca-conf.h anymore.
+
+2009-05-19  Ian Lance Taylor  <iant@google.com>
+	    Ben Elliston  <bje@au.ibm.com>
+
+	* cp-demangle.c (cplus_demangle_fill_ctor): Fix logic bug.
+	(cplus_demangle_fill_dtor): Likewise.
+
+2009-05-17  Julian Brown  <julian@codesourcery.com>
+
+	* pex-win32.c (pex_win32_exec_child): Fix logic to avoid closing
+	standard handles (stdin, stdout, stderr) in parent.
+
 2009-04-29  Julian Brown  <julian@codesourcery.com>
 
 	* pex-win32.c (pex_win32_pipe): Add _O_NOINHERIT.    

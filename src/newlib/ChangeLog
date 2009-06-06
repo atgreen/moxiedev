@@ -1,3 +1,35 @@
+2009-06-03  IWAMURO Motonori  <deenheart@gmail.com>
+
+	* libc/string/wcwidth.c: Optimize for speed.
+
+2009-06-03  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (lc_ctype_cjk_lang): New static int.
+	(loadlocale): In case of setting LC_CTYPE, set lc_ctype_cjk_lang
+	to 1 if the language is "jp", "ko", or "zh", to 0 otherwise.
+	(__locale_cjk_lang): New function.
+	* libc/string/local.h (__locale_cjk_lang): Declare.
+	* libc/string/wcwidth.c: Fix comments.
+	(__wcwidth): Handle CJK Ambiguous Width characters according
+	to setting returned by __locale_cjk_lang.
+
+2009-06-02  Richard Earnshaw  <rearnsha@arm.com>
+
+	* libc/include/sys/config.h: Remove specification of _REENT_SMALL for
+	thumb2.
+
+2009-06-02  IWAMURO Motonori  <deenheart@gmail.com>
+
+	* libc/ctype/jp2uc.c: Skip all definition if defined __CYGWIN__.
+	(__jp2uc): Change the scope to static function.
+	* libc/ctype/local.h (_jp2uc): Define as macro if defined __CYGWIN__.
+	* libc/string/local.h (_jp2uc): Include ../ctype/local.h.
+
+2009-05-27  Neal H. Walfield  <neal@gnu.org>
+
+	* libc/include/machine/setjmp.h (sigjmp_buf): Size according to
+	_JBTYPE and the size of sigset_t.
+
 2009-05-15  Craig Howland <howland@LGSInnovations.com>
 
 	* configure.in:  Add configuration test for long double type existing

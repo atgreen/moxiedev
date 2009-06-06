@@ -159,7 +159,7 @@ struct bpo_greg_section_info
     struct bpo_reloc_request *reloc_request;
   };
 
-static bfd_boolean mmix_elf_link_output_symbol_hook
+static int mmix_elf_link_output_symbol_hook
   PARAMS ((struct bfd_link_info *, const char *, Elf_Internal_Sym *,
 	   asection *, struct elf_link_hash_entry *));
 
@@ -2082,7 +2082,7 @@ _bfd_mmix_check_all_relocs (abfd, info)
    the register section, and scale them down to correspond to the register
    number.  */
 
-static bfd_boolean
+static int
 mmix_elf_link_output_symbol_hook (info, name, sym, input_sec, h)
      struct bfd_link_info *info ATTRIBUTE_UNUSED;
      const char *name ATTRIBUTE_UNUSED;
@@ -2099,7 +2099,7 @@ mmix_elf_link_output_symbol_hook (info, name, sym, input_sec, h)
       sym->st_shndx = SHN_REGISTER;
     }
 
-  return TRUE;
+  return 1;
 }
 
 /* We fake a register section that holds values that are register numbers.
@@ -2589,6 +2589,10 @@ mmix_elf_relax_section (abfd, sec, link_info, again)
 
   /* Assume nothing changes.  */
   *again = FALSE;
+
+  if (link_info->relocatable)
+    (*link_info->callbacks->einfo)
+      (_("%P%F: --relax and -r may not be used together\n"));
 
   /* We don't have to do anything if this section does not have relocs, or
      if this is not a code section.  */

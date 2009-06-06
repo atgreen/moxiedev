@@ -1,3 +1,88 @@
+2009-06-04  Alan Modra  <amodra@bigpond.net.au>
+
+	* strings.c (main): Delay parsing of decimal digits.
+
+2009-06-04  Alan Modra  <amodra@bigpond.net.au>
+
+	* dep-in.sed: Don't use \n in replacement part of s command.
+	* Makefile.am (DEP1): LC_ALL for uniq.
+	Run "make dep-am".
+	* Makefile.in: Regenerate.
+
+2009-06-03  Tristan Gingold  <gingold@adacore.com>
+
+	* MAINTAINERS: Add myself as Mach-O maintainer.
+
+2009-06-01  Alan Modra  <amodra@bigpond.net.au>
+
+	PR 10199
+	* doc/binutils.texi (nm): Correct -S description.
+
+2009-05-28  Nick Clifton  <nickc@redhat.com>
+
+	* po/da.po: Updated Danish translation.
+
+2009-05-28  Nick Clifton  <nickc@redhat.com>
+
+	* readelf.c (display_debug_section): Do not display debug sections
+	with the NOBITS section type.
+
+2009-05-27  Rafael Avila de Espindola  <espindola@google.com>
+
+	* aclocal.m4: Include ../config/plugins.m4.
+	* configure.in: Use AC_PLUGINS.
+	* configure: Regenerate.
+	* Makefile.in: Regenerate.
+	* doc/Makefile.in: Regenerate.
+
+2009-05-27  Rafael Avila de Espindola  <espindola@google.com>
+
+	* ar.c (main): Call bfd_plugin_set_program_name.
+	* nm.c (main): Call bfd_plugin_set_program_name.
+
+2009-05-27  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* sysdump.c (tab): Use puts rather than two printfs.
+
+2009-05-26  Nick Clifton  <nickc@redhat.com>
+
+	* po/id.po: Updated Indonesian translation.
+	* po/binutils.pot: Updated template file.
+
+2009-05-26  Rafael Avila de Espindola  <espindola@google.com>
+
+	* ar.c: Include plugin.h.
+	(main): Handle the --plugin option.
+	* nm.c: Include plugin.h.
+	(OPTION_PLUGIN): New.
+	(long_options): Add plugin.
+	(main): Handle OPTION_PLUGIN.
+	* NEWS: Mention  the new feature.
+	* doc/binutils: Documement the new command line options.
+	* configure.in: Check for --enable-plugins.
+	* configure: Regenerate.
+
+2009-05-26  Alan Modra  <amodra@bigpond.net.au>
+
+	* dep-in.sed: Output one filename per line with all lines having
+	continuation backslash.  Prefix first line with "A", following
+	lines with "B".
+	* Makefile.am (DEP): Don't use dep.sed here.
+	(DEP1): Run $MKDEP on single files, use dep.sed here on dependencies,
+	sort and uniq.
+	* Makefile.in: Regenerate.
+
+2009-05-25  Tristan Gingold  <gingold@adacore.com>
+
+	* makefile.vms-in: Fix CFLAGS, add addr2line.exe target.
+
+	* configure.com: Fix it: handle alloca and define TARGET in config.h.
+
+2009-05-22  Alan Modra  <amodra@bigpond.net.au>
+
+	* Makefile.am: Run "make dep-am".
+	* Makefile.in: Regenerate.
+
 2009-05-12  Alan Modra  <amodra@bigpond.net.au>
 
 	* objcopy.c (set_long_section_mode): Check input_bfd is coff

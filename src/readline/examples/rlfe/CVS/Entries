@@ -1,12 +1,12 @@
-/ChangeLog/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/Makefile.in/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/README/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/config.h.in/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/configure/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/configure.in/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/extern.h/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/os.h/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/pty.c/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/rlfe.c/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
-/screen.h/1.1.1.1/Thu Mar 19 21:10:40 2009/-ko/
+/ChangeLog/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/Makefile.in/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/README/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/config.h.in/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/configure/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/configure.in/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/extern.h/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/os.h/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/pty.c/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/rlfe.c/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
+/screen.h/1.1.1.1/Fri May 29 23:30:14 2009/-ko/
 D

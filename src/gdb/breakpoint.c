@@ -368,8 +368,7 @@ void
 set_breakpoint_count (int num)
 {
   breakpoint_count = num;
-  set_internalvar (lookup_internalvar ("bpnum"),
-		   value_from_longest (builtin_type_int32, (LONGEST) num));
+  set_internalvar_integer (lookup_internalvar ("bpnum"), num);
 }
 
 /* Used in run_command to zero the hit count when a new run starts. */
@@ -421,16 +420,15 @@ get_number_trailer (char **pp, int trailer)
          to pass to lookup_internalvar().  */
       char *varname;
       char *start = ++p;
-      struct value *val;
+      LONGEST val;
 
       while (isalnum (*p) || *p == '_')
 	p++;
       varname = (char *) alloca (p - start + 1);
       strncpy (varname, start, p - start);
       varname[p - start] = '\0';
-      val = value_of_internalvar (lookup_internalvar (varname));
-      if (TYPE_CODE (value_type (val)) == TYPE_CODE_INT)
-	retval = (int) value_as_long (val);
+      if (get_internalvar_integer (lookup_internalvar (varname), &val))
+	retval = (int) val;
       else
 	{
 	  printf_filtered (_("Convenience variable must have integer value.\n"));
@@ -992,7 +990,7 @@ update_watchpoint (struct breakpoint *b, int reparse)
 		  int len, type;
 		  struct bp_location *loc, **tmp;
 
-		  addr = VALUE_ADDRESS (v) + value_offset (v);
+		  addr = value_address (v);
 		  len = TYPE_LENGTH (value_type (v));
 		  type = hw_write;
 		  if (b->type == bp_read_watchpoint)
@@ -6339,7 +6337,7 @@ can_use_hardware_watchpoint (struct value *v)
 		  || (TYPE_CODE (vtype) != TYPE_CODE_STRUCT
 		      && TYPE_CODE (vtype) != TYPE_CODE_ARRAY))
 		{
-		  CORE_ADDR vaddr = VALUE_ADDRESS (v) + value_offset (v);
+		  CORE_ADDR vaddr = value_address (v);
 		  int       len   = TYPE_LENGTH (value_type (v));
 
 		  if (!target_region_ok_for_hw_watchpoint (vaddr, len))
@@ -8275,8 +8273,7 @@ static void
 set_tracepoint_count (int num)
 {
   tracepoint_count = num;
-  set_internalvar (lookup_internalvar ("tpnum"),
-		   value_from_longest (builtin_type_int32, (LONGEST) num));
+  set_internalvar_integer (lookup_internalvar ("tpnum"), num);
 }
 
 void

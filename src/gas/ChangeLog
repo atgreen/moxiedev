@@ -1,3 +1,112 @@
+2009-06-04  Alan Modra  <amodra@bigpond.net.au>
+
+	* dep-in.sed: Don't use \n in replacement part of s command.
+	* Makefile.am (DEP1, DEPTC, DEPOBJ, DEP2): LC_ALL for uniq.
+	* Makefile.in: Regenerate.
+
+2009-06-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10198
+	* config/tc-i386-intel.c (i386_intel_operand): Check '$' as '.'.
+
+2009-05-26  Catherine Moore  <clm@codesourcery.com>
+
+	* config/tc-mips.c (check_for_24k_errata): Remove.
+	(md_mips_end): Remove call to check_for_24k_errata.
+	(start_noreorder): Likewise.
+	(s_change_sec): Likewise.
+	(s_change_section): Likewise.
+	(insns_between): Add 24k errata checks.
+	(append_insn): Remove declaration and references to nhdx_24k.
+	Remove calls to check_for_24k_errata.
+	    
+2009-05-26  Nick Clifton  <nickc@redhat.com>
+
+	* po/id.po: Updated Indonesian translation.
+	* po/gas.pot: Updated template file.
+
+2009-05-26  Nick Clifton  <nickc@redhat.com>
+
+	PR 10143
+	* config/bfin-parse.y (error): Use "%s" as format string for error
+	message.
+
+2009-05-26  Alan Modra  <amodra@bigpond.net.au>
+
+	* dep-in.sed: Output one filename per line with all lines having
+	continuation backslash.  Prefix first line with "A", following
+	lines with "B".
+	* Makefile.am (DEP): Don't use dep.sed here.
+	(DEP1): Run $MKDEP on single files, use dep.sed here on dependencies,
+	sort and uniq.
+	(DEPTC, DEPOBJ, DEP2): Use dep.sed on dependencies, sort and uniq.
+	Emit multi dependencies on one line.
+	* Makefile.in: Regenerate.
+
+2009-05-25  Tristan Gingold  <gingold@adacore.com>
+
+	* makefile.vms: New file to compile gas on VMS.
+
+	* configure.com: New file to do configuration on VMS with DCL.
+
+2009-05-23  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* config/tc-mips.c (nops_for_vr4130): Don't check noreorder_p.
+	(nops_for_insn): Likewise.
+
+2009-05-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* symbols.c (COPIED_SYMFLAGS): Add BSF_GNU_INDIRECT_FUNCTION.
+
+2009-05-22  Dwarakanath Rajagopal  <dwarak.rajagopal@amd.com>
+
+	* config/tc-i386.c (process_drex): Delete. Remove SSE5 support.
+	(build_modrm_byte): Remove DREX handling support.
+	(DREX_*): Delete.
+	(drex_byte): Delete.
+	(md_assemble): Remove DREX handling support.
+	(process_operands): Remove DREX, SSE5 support.
+	(i386_insn): Remove DREX.
+	
+2009-05-22  Alan Modra  <amodra@bigpond.net.au>
+
+	* Makefile.am: Run "make dep-am".
+	* Makefile.in: Regenerate.
+
+2009-05-20  Kai Tietz  <kai.tietz@onevision.com>
+	    H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/obj-coff.h: Include "coff/x86_64.h" for x86 pe-coff.
+	(TARGET_FORMAT): Removed for x86 pe-coff.
+	(COFF_TARGET_FORMAT): Likewise.
+
+	* config/tc-i386.c (md_longopts): Allow --64 for x86 pe-coff.
+	(md_parse_option): Likewise.
+	(md_show_usage): Show option --32/--64 for x86 pe-coff.
+	(i386_target_format): Use also for x86 pe-coff.
+
+	* config/tc-i386.h (TARGET_FORMAT): Defined as i386_target_format
+	for x86 pe-coff.
+
+2009-05-19  DJ Delorie  <dj@redhat.com>
+
+	* config/tc-mep.c (mep_machine): Only check CPU flags, not COP flags.
+	(mep_process_saved_insns): Remove debugging printfs.
+
+2009-05-19  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* NEWS:  Mention new feature.
+	* config/obj-coff.c (obj_coff_common_parse):  New function.
+	(obj_coff_comm):  Likewise.
+	(coff_pseudo_table):  Override default ".comm" definition on PE.
+	* doc/as.texinfo:  Document new feature.
+
+2009-05-17  Kai Tietz  <kai.tietz@onevision.com>
+
+	* config/obj-coff.c (obj_coff_section): Add 'y' as
+	specifier for SEC_COFF_NOREAD section flag.
+	* doc/as.texinfo: Add documentation about .section flag 'y'.
+
 2009-05-13  DJ Delorie  <dj@redhat.com>
 
 	* cgen.c (gas_cgen_parse_operand): Guard against NULL pointers.
@@ -130,7 +239,7 @@
 	(expr_set_rank): New.
 	* expr.h (expr_set_rank): Declare.
 
-2008-04-15  Anthony Green  <green@moxielogic.com>
+2009-04-15  Anthony Green  <green@moxielogic.com>
 
 	* config/tc-moxie.h: New file.
 	* config/tc-moxie.c: New file.
@@ -666,7 +775,7 @@
 	qdsub in Thumb-2 mode.
 
 2009-01-29  Paul Brook  <paul@codesourcery.com>
-            Mark Mitchell  <mark@codesourcery.com>
+	    Mark Mitchell  <mark@codesourcery.com>
 
 	* config/tc-arm.c (do_t_mul): In Thumb-2 mode, use 16-bit encoding
 	of MUL when possible.

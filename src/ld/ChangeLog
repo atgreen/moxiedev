@@ -1,3 +1,106 @@
+2009-06-05  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* scripttempl/elf.sc: Remove .rel.ifunc.dyn and .rela.ifunc.dyn.
+
+2009-06-04  Alan Modra  <amodra@bigpond.net.au>
+
+	* dep-in.sed: Don't use \n in replacement part of s command.
+	* Makefile.am (DEP1): LC_ALL for uniq.
+	* Makefile.in: Regenerate.
+
+2009-06-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* scripttempl/elf.sc (PLT): Add "*(.iplt)".
+	(GOT): Add "*(.igot.plt)a" and "*(.igot)".
+	(GOTPLT): Add "*(.igot)".
+	(__rel_iplt_start): New.
+	(__rel_iplt_end): Likewise.
+	(__rela_iplt_start): Likewise.
+	(__rela_iplt_end): Likewise.
+
+2009-05-27  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* deffilep.y (%union):  Add new string-type semantic value 'digits'.
+	(%token):  Remove NUMBER as token, add DIGITS.
+	(%type):  Add NUMBER as type.  Add new id types anylang_id, opt_id.
+	(ALIGNCOMM):  Parse an anylang_id instead of a plain ID.
+	(anylang_id):  New production.
+	(opt_digits):  Likewise.
+	(opt_id):  Likewise.
+	(NUMBER):  Likewise.
+	(def_lex):  Return strings of digits in raw string form as DIGITS
+	token, instead of converting to numeric integer type.
+
+2009-05-26  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* ldmain.c (main): Don't reject --relax -r.
+	* ld.texinfo (PowerPC ELF32): Document behaviour of relaxing
+	partial links.
+
+2009-05-26  Nick Clifton  <nickc@redhat.com>
+
+	* po/id.po: Updated Indonesian translation.
+	* po/ld.pot: Updated template file.
+
+2009-05-26  Alan Modra  <amodra@bigpond.net.au>
+
+	* dep-in.sed: Output one filename per line with all lines having
+	continuation backslash.  Prefix first line with "A", following
+	lines with "B".
+	* Makefile.am (DEP): Don't use dep.sed here.
+	(DEP1): Run $MKDEP on single files, use dep.sed here on dependencies,
+	sort and uniq.
+	* Makefile.in: Regenerate.
+
+2009-05-26  Alan Modra  <amodra@bigpond.net.au>
+
+	* ldlang.c (lang_check_section_addresses): Ignore non-alloc sections.
+
+2009-05-22  Julian Brown  <julian@codesourcery.com>
+
+	* emultempl/armelf.em (fix_cortex_a8): New.
+	(arm_elf_before_allocation): Call bfd_elf32_arm_set_cortex_a8_fix.
+	(arm_elf_create_output_section_statements): Add fix_cortex_a8 to
+	bfd_elf32_arm_set_target_relocs.
+	(OPTION_FIX_CORTEX_A8, OPTION_NO_FIX_CORTEX_A8): New.
+	(PARSE_AND_LIST_LONGOPTS): Add [no-]fix-cortex-a8 options.
+	(PARSE_AND_LIST_OPTIONS): Add [no-]fix-cortex-a8 options.
+	(PARSE_AND_LIST_ARGS_CASES): Handle OPTION_[NO_]FIX_CORTEX_A8.
+	* ld.texinfo (--[no-]fix-cortex-a8): Briefly document new options.
+
+2009-05-22  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* ldlang.c (lang_check_section_addresses): Ignore non-loadable
+	sections when checking for overlap.  Clarify error message
+	concerns load address.
+
+2009-05-22  Alan Modra  <amodra@bigpond.net.au>
+
+	* Makefile.am: Run "make dep-am".
+	* Makefile.in: Regenerate.
+
+2009-05-19  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* NEWS:  Mention new feature.
+	* deffile.h (def_file_aligncomm):  Add new struct definition.
+	(def_file):  Add new def_file_aligncomm member.
+	* deffilep.y (%token):  Add new ALIGNCOMM token.
+	(command):  Add production rule for ALIGNCOMM.
+	(def_file_free):  Free any chained def_file_aligncomm structs.
+	(diropts[]):  Add entry for '-aligncomm' .drectve command.
+	(def_aligncomm):  New grammar function.
+	* ld.texinfo:  Document new feature.
+	* pe-dll.c (process_def_file):  Rename from this ...
+	(process_def_file_and_drectve):  ... to this, updating all callers,
+	and process any aligncomms chained to the def file after scanning
+	all .drectve sections.
+	(generate_edata):  Updated to match.
+	(pe_dll_build_sections):  Likewise.
+
+2009-05-17  Aaron W. LaFramboise  <aaron98wiridge9@aaronwl.com>
+
+	* pe-dll.c (process_def_file): Do not create empty export table.
+
 2009-05-15  Alan Modra  <amodra@bigpond.net.au>
 
 	* ldlang.c (lang_output_section_statement_lookup): Add function

@@ -327,7 +327,8 @@ Sized_relobj<size, big_endian>::Sized_relobj(
     local_values_(),
     local_got_offsets_(),
     kept_comdat_sections_(),
-    has_eh_frame_(false)
+    has_eh_frame_(false),
+    discarded_eh_frame_shndx_(-1U)
 {
 }
 
@@ -1295,7 +1296,13 @@ Sized_relobj<size, big_endian>::do_layout(Symbol_table* symtab,
 						   &offset);
       out_sections[i] = os;
       if (offset == -1)
-        out_section_offsets[i] = invalid_address;
+	{
+	  // An object can contain at most one section holding exception
+	  // frame information.
+	  gold_assert(this->discarded_eh_frame_shndx_ == -1U);
+	  this->discarded_eh_frame_shndx_ = i;
+	  out_section_offsets[i] = invalid_address;
+	}
       else
         out_section_offsets[i] = convert_types<Address, off_t>(offset);
 
@@ -1432,6 +1439,7 @@ Sized_relobj<size, big_endian>::do_count_local_symbols(Stringpool* pool,
   unsigned int dyncount = 0;
   // Skip the first, dummy, symbol.
   psyms += sym_size;
+  bool discard_locals = parameters->options().discard_locals();
   for (unsigned int i = 1; i < loccount; ++i, psyms += sym_size)
     {
       elfcpp::Sym<size, big_endian> sym(psyms);
@@ -1453,7 +1461,8 @@ Sized_relobj<size, big_endian>::do_count_local_symbols(Stringpool* pool,
 
       // Decide whether this symbol should go into the output file.
 
-      if (shndx < shnum && out_sections[shndx] == NULL)
+      if ((shndx < shnum && out_sections[shndx] == NULL)
+	  || (shndx == this->discarded_eh_frame_shndx_))
         {
 	  lv.set_no_output_symtab_entry();
           gold_assert(!lv.needs_output_dynsym_entry());
@@ -1476,8 +1485,29 @@ Sized_relobj<size, big_endian>::do_count_local_symbols(Stringpool* pool,
 	  continue;
 	}
 
-      // Add the symbol to the symbol table string pool.
+      // If --discard-locals option is used, discard all temporary local
+      // symbols.  These symbols start with system-specific local label
+      // prefixes, typically .L for ELF system.  We want to be compatible
+      // with GNU ld so here we essentially use the same check in
+      // bfd_is_local_label().  The code is different because we already
+      // know that:
+      //
+      //   - the symbol is local and thus cannot have global or weak binding.
+      //   - the symbol is not a section symbol.
+      //   - the symbol has a name.
+      //
+      // We do not discard a symbol if it needs a dynamic symbol entry.
       const char* name = pnames + sym.get_st_name();
+      if (discard_locals
+	  && sym.get_st_type() != elfcpp::STT_FILE
+	  && !lv.needs_output_dynsym_entry()
+	  && parameters->target().is_local_label_name(name))
+	{
+	  lv.set_no_output_symtab_entry();
+	  continue;
+	}
+
+      // Add the symbol to the symbol table string pool.
       pool->add(name, true, NULL);
       ++count;
 
@@ -1558,7 +1588,15 @@ Sized_relobj<size, big_endian>::do_finalize_local_symbols(unsigned int index,
 
 	      // This is a SHF_MERGE section or one which otherwise
 	      // requires special handling.
-	      if (!lv.is_section_symbol())
+	      if (shndx == this->discarded_eh_frame_shndx_)
+		{
+		  // This local symbol belongs to a discarded .eh_frame
+		  // section.  Just treat it like the case in which
+		  // os == NULL above.
+		  gold_assert(this->has_eh_frame_);
+		  continue;
+		}
+	      else if (!lv.is_section_symbol())
 		{
 		  // This is not a section symbol.  We can determine
 		  // the final value now.
@@ -1873,8 +1911,8 @@ Sized_relobj<size, big_endian>::map_to_kept_section(
       *found = true;
       Output_section* os = kept->object_->output_section(kept->shndx_);
       Address offset = kept->object_->get_output_section_offset(kept->shndx_);
-      gold_assert(os != NULL && offset != invalid_address);
-      return os->address() + offset;
+      if (os != NULL && offset != invalid_address)
+        return os->address() + offset;
     }
   *found = false;
   return 0;

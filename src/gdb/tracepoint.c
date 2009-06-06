@@ -41,6 +41,7 @@
 #include "user-regs.h"
 #include "valprint.h"
 #include "gdbcore.h"
+#include "objfiles.h"
 
 #include "ax.h"
 #include "ax-gdb.h"
@@ -208,8 +209,7 @@ static void
 set_traceframe_num (int num)
 {
   traceframe_number = num;
-  set_internalvar (lookup_internalvar ("trace_frame"),
-		   value_from_longest (builtin_type_int32, (LONGEST) num));
+  set_internalvar_integer (lookup_internalvar ("trace_frame"), num);
 }
 
 /* Set tracepoint number to NUM.  */
@@ -217,8 +217,7 @@ static void
 set_tracepoint_num (int num)
 {
   tracepoint_number = num;
-  set_internalvar (lookup_internalvar ("tracepoint"),
-		   value_from_longest (builtin_type_int32, (LONGEST) num));
+  set_internalvar_integer (lookup_internalvar ("tracepoint"), num);
 }
 
 /* Set externally visible debug variables for querying/printing
@@ -240,13 +239,9 @@ set_traceframe_context (struct frame_info *trace_frame)
       traceframe_fun = 0;
       traceframe_sal.pc = traceframe_sal.line = 0;
       traceframe_sal.symtab = NULL;
-      set_internalvar (lookup_internalvar ("trace_func"),
-		       allocate_value (builtin_type_void));
-      set_internalvar (lookup_internalvar ("trace_file"),
-		       allocate_value (builtin_type_void));
-      set_internalvar (lookup_internalvar ("trace_line"),
-		       value_from_longest (builtin_type_int32,
-					   (LONGEST) - 1));
+      clear_internalvar (lookup_internalvar ("trace_func"));
+      clear_internalvar (lookup_internalvar ("trace_file"));
+      set_internalvar_integer (lookup_internalvar ("trace_line"), -1);
       return;
     }
 
@@ -257,16 +252,14 @@ set_traceframe_context (struct frame_info *trace_frame)
 
   /* Save linenumber as "$trace_line", a debugger variable visible to
      users.  */
-  set_internalvar (lookup_internalvar ("trace_line"),
-		   value_from_longest (builtin_type_int32,
-				       (LONGEST) traceframe_sal.line));
+  set_internalvar_integer (lookup_internalvar ("trace_line"),
+			   traceframe_sal.line);
 
   /* Save func name as "$trace_func", a debugger variable visible to
      users.  */
-  if (traceframe_fun == NULL ||
-      SYMBOL_LINKAGE_NAME (traceframe_fun) == NULL)
-    set_internalvar (lookup_internalvar ("trace_func"),
-		     allocate_value (builtin_type_void));
+  if (traceframe_fun == NULL
+      || SYMBOL_LINKAGE_NAME (traceframe_fun) == NULL)
+    clear_internalvar (lookup_internalvar ("trace_func"));
   else
     {
       len = strlen (SYMBOL_LINKAGE_NAME (traceframe_fun));
@@ -285,10 +278,9 @@ set_traceframe_context (struct frame_info *trace_frame)
 
   /* Save file name as "$trace_file", a debugger variable visible to
      users.  */
-  if (traceframe_sal.symtab == NULL ||
-      traceframe_sal.symtab->filename == NULL)
-    set_internalvar (lookup_internalvar ("trace_file"),
-		     allocate_value (builtin_type_void));
+  if (traceframe_sal.symtab == NULL
+      || traceframe_sal.symtab->filename == NULL)
+    clear_internalvar (lookup_internalvar ("trace_file"));
   else
     {
       len = strlen (traceframe_sal.symtab->filename);
@@ -792,7 +784,7 @@ collect_symbol (struct collection_list *collect,
       add_memrange (collect, memrange_absolute, offset, len);
       break;
     case LOC_REGISTER:
-      reg = SYMBOL_VALUE (sym);
+      reg = SYMBOL_REGISTER_OPS (sym)->register_number (sym, current_gdbarch);
       if (info_verbose)
 	printf_filtered ("LOC_REG[parm] %s: ", 
 			 SYMBOL_PRINT_NAME (sym));
@@ -1144,7 +1136,7 @@ encode_actions (struct breakpoint *t, char ***tdp_actions,
 		    case UNOP_MEMVAL:
 		      /* safe because we know it's a simple expression */
 		      tempval = evaluate_expression (exp);
-		      addr = VALUE_ADDRESS (tempval) + value_offset (tempval);
+		      addr = value_address (tempval);
 		      len = TYPE_LENGTH (check_typedef (exp->elts[1].type));
 		      add_memrange (collect, memrange_absolute, addr, len);
 		      break;
@@ -1854,6 +1846,8 @@ scope_info (char *args, int from_tty)
   char **canonical, *symname, *save_args = args;
   struct dict_iterator iter;
   int j, count = 0;
+  struct gdbarch *gdbarch;
+  int regno;
 
   if (args == 0 || *args == 0)
     error (_("requires an argument (function, line or *addr) to define a scope"));
@@ -1880,6 +1874,8 @@ scope_info (char *args, int from_tty)
 	  if (symname == NULL || *symname == '\0')
 	    continue;		/* probably botched, certainly useless */
 
+	  gdbarch = get_objfile_arch (SYMBOL_SYMTAB (sym)->objfile);
+
 	  printf_filtered ("Symbol %s is ", symname);
 	  switch (SYMBOL_CLASS (sym))
 	    {
@@ -1905,14 +1901,21 @@ scope_info (char *args, int from_tty)
 	      printf_filtered ("%s", paddress (SYMBOL_VALUE_ADDRESS (sym)));
 	      break;
 	    case LOC_REGISTER:
+	      /* GDBARCH is the architecture associated with the objfile
+		 the symbol is defined in; the target architecture may be
+		 different, and may provide additional registers.  However,
+		 we do not know the target architecture at this point.
+		 We assume the objfile architecture will contain all the
+		 standard registers that occur in debug info in that
+		 objfile.  */
+	      regno = SYMBOL_REGISTER_OPS (sym)->register_number (sym, gdbarch);
+
 	      if (SYMBOL_IS_ARGUMENT (sym))
 		printf_filtered ("an argument in register $%s",
-				 gdbarch_register_name
-				 (current_gdbarch, SYMBOL_VALUE (sym)));
+				 gdbarch_register_name (gdbarch, regno));
 	      else
 		printf_filtered ("a local variable in register $%s",
-				 gdbarch_register_name
-				 (current_gdbarch, SYMBOL_VALUE (sym)));
+				 gdbarch_register_name (gdbarch, regno));
 	      break;
 	    case LOC_ARG:
 	      printf_filtered ("an argument at stack/frame offset %ld",
@@ -1927,9 +1930,10 @@ scope_info (char *args, int from_tty)
 			       SYMBOL_VALUE (sym));
 	      break;
 	    case LOC_REGPARM_ADDR:
+	      /* Note comment at LOC_REGISTER.  */
+	      regno = SYMBOL_REGISTER_OPS (sym)->register_number (sym, gdbarch);
 	      printf_filtered ("the address of an argument, in register $%s",
-			       gdbarch_register_name
-				 (current_gdbarch, SYMBOL_VALUE (sym)));
+			       gdbarch_register_name (gdbarch, regno));
 	      break;
 	    case LOC_TYPEDEF:
 	      printf_filtered ("a typedef.\n");
@@ -1957,7 +1961,7 @@ scope_info (char *args, int from_tty)
 	      printf_filtered ("optimized out.\n");
 	      continue;
 	    case LOC_COMPUTED:
-	      SYMBOL_OPS (sym)->describe_location (sym, gdb_stdout);
+	      SYMBOL_COMPUTED_OPS (sym)->describe_location (sym, gdb_stdout);
 	      break;
 	    }
 	  if (SYMBOL_TYPE (sym))

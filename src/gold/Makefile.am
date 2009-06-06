@@ -68,6 +68,7 @@ CCFILES = \
 	script.cc \
 	stringpool.cc \
 	symtab.cc \
+	target.cc \
 	target-select.cc \
 	version.cc \
 	workqueue.cc \
@@ -123,10 +124,11 @@ YFILES = \
 EXTRA_DIST = yyscript.c yyscript.h
 
 TARGETSOURCES = \
-	i386.cc x86_64.cc sparc.cc powerpc.cc
+	i386.cc x86_64.cc sparc.cc powerpc.cc arm.cc
 
 ALL_TARGETOBJS = \
-	i386.$(OBJEXT) x86_64.$(OBJEXT) sparc.$(OBJEXT) powerpc.$(OBJEXT)
+	i386.$(OBJEXT) x86_64.$(OBJEXT) sparc.$(OBJEXT) powerpc.$(OBJEXT) \
+	arm.$(OBJEXT)
 
 libgold_a_SOURCES = $(CCFILES) $(HFILES) $(YFILES)
 

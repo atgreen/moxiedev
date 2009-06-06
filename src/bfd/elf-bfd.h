@@ -745,8 +745,10 @@ struct elf_backend_data
      const char **name, flagword *flags, asection **sec, bfd_vma *value);
 
   /* If this field is not NULL, it is called by the elf_link_output_sym
-     phase of a link for each symbol which will appear in the object file.  */
-  bfd_boolean (*elf_backend_link_output_symbol_hook)
+     phase of a link for each symbol which will appear in the object file.
+     On error, this function returns 0.  1 is returned when the symbol
+     should be output, 2 is returned when the symbol should be discarded.  */
+  int (*elf_backend_link_output_symbol_hook)
     (struct bfd_link_info *info, const char *, Elf_Internal_Sym *,
      asection *, struct elf_link_hash_entry *);
 
@@ -1296,9 +1298,6 @@ struct bfd_elf_section_data
 
   /* A pointer to the bfd section used for dynamic relocs.  */
   asection *sreloc;
-
-  /* A pointer to the bfd section used for dynamic relocs against ifunc symbols.  */
-  asection *indirect_relocs;
 
   union {
     /* Group name, if this section is a member of a group.  */
@@ -2147,8 +2146,8 @@ extern int _bfd_elf_obj_attrs_arg_type (bfd *, int, int);
 extern void _bfd_elf_parse_attributes (bfd *, Elf_Internal_Shdr *);
 extern bfd_boolean _bfd_elf_merge_object_attributes (bfd *, bfd *);
 
-extern asection * _bfd_elf_make_ifunc_reloc_section
-  (bfd *, asection *, bfd *, unsigned int);
+extern bfd_boolean _bfd_elf_create_static_ifunc_sections
+  (bfd *, struct bfd_link_info *);
 
 /* Large common section.  */
 extern asection _bfd_elf_large_com_section;

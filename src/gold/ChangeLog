@@ -1,3 +1,209 @@
+2009-06-05  Doug Kwan  <dougkwan@google.com>
+
+	* Makefile.am (CCFILES): Add target.cc.
+	* Makefile.in: Regenerate. 
+	* i386.cc (class Target_i386): Define new virtual method to
+	override do_is_local_label_name in parent.
+	* object.cc (Sized_relobj::do_count_local_symbols): Discard
+	local symbols if --discard-locals or -X is given.
+	* options.h (class General_options): Declare new options
+	'--discard-locals' and '-X' for discarding locals.
+	* target.h (class Target): Define new methods is_local_label_name.
+	Declare new virtual method do_is_local_label_name.
+	* target.cc: New file.
+	* testsuite/Makefile.am (check_PROGRAMS): Add discard_locals_test.
+	(check_SCRIPTS): Add discard_locals_test.sh.
+	(check_DATA): Add discard_local_tests.syms.
+	(discard_locals_test_SOURCES, discard_locals_test_LDFLAGS): Define.
+	(discard_local_tests.syms, discard_locals_test.o): New make rules.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/discard_locals_test.c: New file.
+	* testsuite/discard_locals_test.sh: Same.
+
+2009-06-05  Doug Kwan  <dougkwan@google.com>
+
+	* object.cc (Sized_relobj::Sized_relobj): Initialize
+	discarded_eh_frame_shndx_ to -1U.
+	(Sized_relobj::do_layout): Record index of a discard .eh_frame
+	section.
+	(Sized_relobj::do_count_local_symbols): Skip local symbols in
+	a discarded .eh_frame section.
+	(Sized_relobj::do_finalize_local_symbols): Ditto.
+	* object.h (class Sized_relobj): Declare new member
+	discarded_eh_frame_shndx_.
+	* testsuite/Makefile.am (check_PROGRAMS): Add local_labels_test.
+	(local_labels_test.o, local_labels_test): New rules.
+	* testsuite/Makefile.in: Regenerate.
+
+2009-06-04  Doug Kwan  <dougkwan@google.com>
+
+	* layout.cc (Layout::section_name_mapping): Add mapping for
+	special ARM sections.
+
+2009-06-03  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (utils::sign_extend): Reverse test in gold_assert.
+	(utils::has_overflow): Same.
+
+2009-06-03  Ian Lance Taylor  <iant@google.com>
+
+	* layout.cc (Layout::section_name_mapping): New array, replacing
+	Layout::linkonce_mapping.
+	(Layout::section_name_mapping_count): New variable, replacing
+	Layout::linkonce_mapping_count.
+	(Layout::linkonce_output_name): Remove.
+	(Layout::output_section_name): Rewrite.
+	* layout.h (class Layout): Rename Linkonce_mapping to
+	Section_name_mapping, linkonce_mapping to section_name_mapping,
+	linkonce_mapping_count to section_name_mapping_count.  Don't
+	declare linkonce_output_name.
+
+2009-06-03  Doug Kwan  <dougkwan@google.com>
+
+	* gold/arm.cc (namespace utils): New.
+	(Target_arm::reloc_is_non_pic): Define new method.
+	(class Arm_relocate_functions): New.
+	(Target_arm::Relocate::relocate): Handle relocation types used by
+	Android.
+
+2009-06-03  Ian Lance Taylor  <iant@google.com>
+
+	* arm.cc (Target_arm::scan::global): Use || instead of |.
+
+2009-06-02  Doug Kwan  <dougkwan@google.com>
+
+	* gold/arm.cc (Target_arm::Scan::Scan):  Initialize
+	issued_non_pic_error_.
+	(class Target_arm::Scan): Declare new method check_non_pic.
+	Define new method symbol_needs_plt_entry.
+	Declare new data member issued_non_pic_error_.
+	(class Target_arm::Relocate): Declare new method
+	should_apply_static_reloc.
+	(Target_arm::may_need_copy_reloc): Handle STT_ARM_TFUNC.
+	(Target_arm::Scan::check_non_pic): Define new method.
+	(Target_arm::Scan::local): Handle a small subset of reloc types used
+	by Android.
+	(Target_arm::Scan::local): Same.
+	(Target_arm::Relocate::should_apply_statci_reloc): Define new method.
+
+2009-05-31  Mikolaj Zalewski  <mikolajz@google.com>
+
+	* incremental.cc (Incremental_inputs::report_command_line): Filter
+	out --incremental-* options.
+
+2009-05-29  Doug Kwan  <dougkwan@google.com>
+
+	* gold/arm.cc (Output_data_plt_arm): Forward declaration for new
+	template class.
+	(class Target_arm): Update comment.
+	(Target_arm::Target_arm): Initialize new data members GOT_,
+	PLT_, GOT_PLT_, REL_DYN_, COPY_RELOCS_ and DYNBSS_.
+	Declare new methods Target_arm::got_section, Target_arm::make_plt_entry
+	and Target_arm::rel_dyn_section.
+	Declare new_enum Target_arm::Got_type.
+	Declare new data members GOT_, PLT_, GOT_PLT_, REL_DYN_, COPY_RELOCS_
+	and DYNBSS_.
+	Update commments for member do_dynsym_value.
+	(Target_arm::got_size, Target_arm::plt_section,
+	Target_arm::may_need_copy_reloc and Target_arm::copy_reloc): Define
+	new methods inside class defintion.
+	(Target_arm::got_section): Define new method.
+	(Target_arm::rel_dyn_section): Same.
+	(Output_data_plt_arm): New template class.
+	(Output_data_plt_arm::Output_data_plt_arm): Define constructor.
+	(Output_data_plt_arm:do_adjust_output_section): Define new method.
+	(Output_data_plt_arm::add_entry): Same.
+	(Output_data_plt_arm::first_plt_entry): Define new
+	static data member for PLT instruction template.
+	(Output_data_plt_arm::plt_entry): Same.
+	(Output_data_plt_arm::do_write): Define new method.
+	(Target_arm::make_plt_entry): Same.
+	(Target_arm::do_finalize_sections): Same.
+	(Target_arm::do_dynsym_value): Same.
+
+2009-05-28  Doug Kwan  <dougkwan@google.com>
+
+	* Makefile.am (TARGETSOURCES): Add arm.cc.
+	(ALL_TARGETOBJECTS): Add arm.$(OBJEXT)
+	* Makefile.in: Regenerate.
+	* arm.cc: New file.
+	* configure.tgt: Add armbe*-*-*, armeb*-*-* and arm*-*-* targets.
+
+2009-05-26  Doug Kwan  <dougkwan@google.com>
+
+	* options.cc (General_options::parse_exclude_libs).  Fix a comment.
+	(General_options::check_excluded_libs): Strip off directories in
+	archive name before matching like GNU ld does.
+	* testsuite/Makefile.am (MOSTLYCLEANFILES,
+	exclude_libs_test_DEPENDENCIES): Add alt/libexclude_libs_test_3.a
+	(exclude_libs_test_LDFLAGS): Add linker option
+	-Wl,--exclude-libs,libexclude_libs_test_3
+	(exclude_libs_test_LADD): Add alt/libexclude_libs_test_3.a as
+	an explicit archive without using -l.
+	(alt/libexclude_libs_test_3.a): New make rule.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/exclude_libs_test.c : Declare lib3_default().
+	(main): Call it.
+	* exclude_libs_test.sh: Add tests for alt/exclude_libs_test_3.a.
+	* exclude_libs_test_3.c: New file.
+
+2009-05-26  Nick Clifton  <nickc@redhat.com>
+
+	* po/id.po: New Indonesian translation.
+	* po/gold.pot: Updated template file.
+
+2009-05-22  Sriraman Tallam  <tmsriram@google.com>
+
+	* testsuite/Makefile.am: Add -ffunction-sections to compile 
+	gc_comdat_test files.  Add -Wl,--gc-sections to build
+	gc_comdat_test.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/gc_comdat_test.sh: Fix the condition around grep.
+
+2009-05-21  Sriraman Tallam  <tmsriram@google.com>
+
+	* object.cc (Sized_relobj::map_to_kept_section): Return NULL if the
+	kept comdat section was garbage collected.
+	* testsuite/Makefile.am: Add test gc_comdat_test.sh.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/gc_comdat_test.sh: New file.
+	* testsuite/gc_comdat_test_1.cc: New file.
+	* testsuite/gc_comdat_test_2.cc: New file.
+
+2009-05-19  Doug Kwan  <dougkwan@google.com>
+
+	* archive.cc (Archive::Archive): Move constructor from archive.h
+	to here.  Initialize no_export_.
+	(Archive::get_elf_object_for_member): Set no_export flag of object.
+	* archive.h (Archive::Archive): Move constructor body to
+	archive.cc.
+	(Archive::no_export): New method.
+	(Archive::no_export_): New field.
+	* object.h (Object::Object): Initialize no_export_ to false.
+	(Object::no_export, Object::set_no_export): New methods.
+	(Object::no_export_): New field.
+	* options.cc (General_options::parse_exclude_libs): New method.
+	(General_options::check_excluded_libs) Same.
+	* options.h (exclude_libs): New option.
+	(General_options::check_excluded_libs): New method declaration.
+	(General_options::excluded_libs_): New field.
+	* symtab.cc (Symbol_table::add_from_relobj): Hide symbols with
+	default or protected visibility if an object has no-export flag set.
+	testsuite/Makefile.am (check_PROGRAMS): Add exclude_libs_test.
+	(check_SCRIPTS): Add exclude_libs_test.sh.
+	(check_DATA): Add exclude_libs_test.syms.
+	(MOSTLYCLEANFILES): Add exclude_libs_test.syms,
+	libexclude_libs_test_1.a and libexclude_libs_test_2.a.
+	(exclude_libs_test_SOURCES, exclude_libs_test_DEPENDENCIES,
+	exclude_libs_test_LDFLAGS and exclude_libs_test_LDADD): Define.
+	(exclude_libs_test.syms, libexclude_libs_test_1.a,
+	libexclude_libs_test_2.a): New rules.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/exclude_libs_test.c: New file.
+	* testsuite/exclude_libs_test.sh: Ditto.
+	* testsuite/exclude_libs_test_1.c: Ditto.
+	* testsuite/exclude_libs_test_2.c: Ditto.
+
 2009-05-15  Ian Lance Taylor  <iant@google.com>
 
 	* configure.ac: Check for declarations for cases where libiberty.h

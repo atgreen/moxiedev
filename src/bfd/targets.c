@@ -747,6 +747,7 @@ extern const bfd_target m88kopenbsd_vec;
 extern const bfd_target mach_o_be_vec;
 extern const bfd_target mach_o_le_vec;
 extern const bfd_target mach_o_fat_vec;
+extern const bfd_target mach_o_i386_vec;
 extern const bfd_target maxqcoff_vec;
 extern const bfd_target mcore_pe_big_vec;
 extern const bfd_target mcore_pe_little_vec;
@@ -766,6 +767,7 @@ extern const bfd_target pc532netbsd_vec;
 extern const bfd_target pdp11_aout_vec;
 extern const bfd_target pef_vec;
 extern const bfd_target pef_xlib_vec;
+extern const bfd_target plugin_vec;
 extern const bfd_target pmac_xcoff_vec;
 extern const bfd_target ppcboot_vec;
 extern const bfd_target riscix_vec;
@@ -1114,6 +1116,7 @@ static const bfd_target * const _bfd_target_vector[] =
 	&mach_o_be_vec,
 	&mach_o_le_vec,
 	&mach_o_fat_vec,
+	&mach_o_i386_vec,
 	&maxqcoff_vec,
 	&mcore_pe_big_vec,
 	&mcore_pe_little_vec,
@@ -1144,6 +1147,9 @@ static const bfd_target * const _bfd_target_vector[] =
 	&pdp11_aout_vec,
 	&pef_vec,
 	&pef_xlib_vec,
+#if BFD_SUPPORTS_PLUGINS
+	&plugin_vec,
+#endif
 #if 0
 	/* This has the same magic number as RS/6000.  */
 	&pmac_xcoff_vec,

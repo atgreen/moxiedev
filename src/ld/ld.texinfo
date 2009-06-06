@@ -5865,6 +5865,13 @@ instructions into @code{bal} instructions when it determines that the
 target subroutine is a leaf routine (that is, the target subroutine does
 not itself call any subroutines).
 
+@cindex Cortex-A8 erratum workaround
+@kindex --fix-cortex-a8
+@kindex --no-fix-cortex-a8
+The @samp{--fix-cortex-a8} switch enables a link-time workaround for an erratum in certain Cortex-A8 processors.  The workaround is enabled by default if you are targeting the ARM v7-A architecture profile.  It can be enabled otherwise by specifying @samp{--fix-cortex-a8}, or disabled unconditionally by specifying @samp{--no-fix-cortex-a8}.
+
+The erratum only affects Thumb-2 code.  Please contact ARM for further details.
+
 @ifclear GENERIC
 @lowersections
 @end ifclear
@@ -6277,7 +6284,10 @@ displacement, which may result in @command{ld} giving
 @samp{--relax} enables the generation of trampolines that can access
 the entire 32-bit address space.  These trampolines are inserted at
 section boundaries, so may not themselves be reachable if an input
-section exceeds 33M in size.
+section exceeds 33M in size.  You may combine @samp{-r} and
+@samp{--relax} to add trampolines in a partial link.  In that case
+both branches to undefined symbols and inter-section branches are also
+considered potentially out of range, and trampolines inserted.
 
 @cindex PowerPC ELF32 options
 @table @option
@@ -6994,6 +7004,17 @@ implemented.
 As a GNU extension, weak symbols that do not specify an alternate symbol
 are supported.  If the symbol is undefined when linking, the symbol
 uses a default value.
+
+@cindex aligned common symbols
+@item aligned common symbols
+As a GNU extension to the PE file format, it is possible to specify the
+desired alignment for a common symbol.  This information is conveyed from
+the assembler or compiler to the linker by means of GNU-specific commands
+carried in the object file's @samp{.drectve} section, which are recognized
+by @command{ld} and respected when laying out the common symbols.  Native
+tools will be able to process object files employing this GNU extension,
+but will fail to respect the alignment instructions, and may issue noisy
+warnings about unknown linker directives.
 @end table
 
 @ifclear GENERIC

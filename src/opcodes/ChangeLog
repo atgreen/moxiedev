@@ -1,3 +1,95 @@
+2009-06-04  Alan Modra  <amodra@bigpond.net.au>
+
+	* dep-in.sed: Don't use \n in replacement part of s command.
+	* Makefile.am (DEP1): LC_ALL for uniq.
+	* Makefile.in: Regenerate.
+
+2009-06-02  Nick Clifton  <nickc@redhat.com>
+
+	* po/nl.po: Updated Dutch translation.
+
+2009-06-02  Tristan Gingold  <gingold@adacore.com>
+
+	* ia64-gen.c (parse_resource_users, print_dependency_table,
+	add_dis_table_ent, finish_distable, insert_bit_table_ent,
+	add_dis_entry, compact_distree, gen_dis_table, completer_entries_eq,
+	get_prefix_len, compute_completer_bits, insert_opcode_dependencies,
+	insert_completer_entry, print_completer_entry, print_completer_table,
+	opcodes_eq, add_opcode_entry, shrink): Use ISO C syntax for functions.
+
+2009-05-28  DJ Delorie  <dj@redhat.com>
+
+	* mep-asm.c: Regenerate.
+	* mep-desc.c: Regenerate.
+
+2009-05-26  DJ Delorie  <dj@redhat.com>
+
+	* mep-asm.c: Regenerate.
+	* mep-desc.c: Regenerate.
+	* mep-desc.h: Regenerate.
+	* mep-dis.c: Regenerate.
+	* mep-ibld.c: Regenerate.
+	* mep-opc.c: Regenerate.
+	* mep-opc.h: Regenerate.
+
+2009-05-26  Nick Clifton  <nickc@redhat.com>
+
+	* po/id.po: Updated Indonesian translation.
+	* po/opcodes.pot: Updated template file.
+
+2009-05-26  Alan Modra  <amodra@bigpond.net.au>
+
+	* dep-in.sed: Don't modify .o to .lo here.  Output one filename
+	per line with all lines having continuation backslash.  Prefix
+	first line with "A", following lines with "B".
+	* Makefile.am (DEP): Don't use dep.sed here.
+	(DEP1): Run $MKDEP on single files, modify .o to .lo here.  Use
+	dep.sed here on dependencies, sort and uniq.
+	* Makefile.in: Regenerate.
+
+2009-05-25  Tristan Gingold  <gingold@adacore.com>
+
+	* makefile.vms (OPT): New variable.
+	(CFLAGS): Update compilation flags.
+
+2009-05-22  DJ Delorie  <dj@redhat.com>
+
+	* mep-asm.c: Regenerate.
+	* mep-desc.c: Regenerate.
+	* mep-desc.h: Regenerate.
+	* mep-dis.c: Regenerate.
+	* mep-ibld.c: Regenerate.
+	* mep-opc.c: Regenerate.
+	* mep-opc.h: Regenerate.
+
+2009-05-22  Dwarakanath Rajagopal  <dwarak.rajagopal@amd.com>
+
+	* i386-opc.h (Cpusse5): Delete.
+	(i386_cpu_flags): Delete.
+	* i386-gen.c: Remove CpuSSE5, Drex, Drexv and Drexc.
+	* i386-opc.tbl: Remove SSE5 instructions.
+	* i386-tbl.h: Regenerate.
+	* i386-init.h: Regenerate.
+	* i386-dis.c (OP_E_memeory, OP_E_extended): Remove drex handling.
+	(print_drex_arg): Delete.
+	(OP_DREX4): Delete.
+	(OP_DREX3): Delete.
+	(OP_DREX_ICMP): Delete.
+	(OP_DREX_FCMP): Delete.
+	(DREX_*): Delete.
+	(THREE_BYTE_0F24, THREE_BYTE_0F25, THREE_BYTE_0f7B): Delete.
+	
+2009-05-22  Alan Modra  <amodra@bigpond.net.au>
+
+	* Makefile.am: Run "make dep-am".
+	* Makefile.in: Regenerate.
+	* po/POTFILES.in: Regenerate.
+
+2009-05-19  DJ Delorie  <dj@redhat.com>
+
+	* mep-asm.c: Regenerate.
+	* mep-opc.c: Regenerate.
+
 2009-04-30  DJ Delorie  <dj@redhat.com>
 
 	* mep-asm.c: Regenerate.

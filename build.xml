@@ -16,6 +16,7 @@
     
     <echo message=" benchmark    --> run selected MiBench benchmarks"/>
     <echo message=" build        --> builds and installs in root dir"/>
+    <echo message=" arm-build    --> builds and installs an arm-eabi toolchain in arm-root"/>
     <echo message=" clean        --> cleans tree of all generated files"/>
     <echo message=" gcccheck     --> runs gcc testsuite on the moxie simulator"/>
     <echo message=" post-results --> post the last gcccheck results to the moxiedev-testresults list"/>
@@ -34,7 +35,9 @@
   <target name="clean">
     <delete dir="dist"/>
     <delete dir="root"/>
+    <delete dir="arm-root"/>
     <delete dir="build"/>
+    <delete dir="arm-build"/>
     <delete>
       <fileset dir="." includes="**/*~"/>
       <fileset dir="." includes="**/.#*~"/>
@@ -48,6 +51,108 @@
       <arg value="-c"/>
       <arg value="(cd qemu; make distclean > /dev/null 2>&amp;1)"/>
     </exec>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Build arm-everything                                                -->
+  <!-- =================================================================== -->
+
+  <target name="arm-build">
+
+    <mkdir dir="arm-root/usr"/>
+    <mkdir dir="arm-build/src"/>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Running sanity check on build system ========================"/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd arm-build; ../scripts/precheck/configure)"/>
+    </exec>
+
+    <available file="arm-build/FAIL" property="isFileAvail"/>
+    <fail if="isFileAvail" message="Sanity precheck test failed!  Something is missing."/>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building binutils ==========================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd arm-build/src; ../../src/configure --target=arm-eabi --disable-gdbtk --prefix=`(cd ../../arm-root/usr; pwd)`)"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=arm-build/src"/>
+      <arg value="-j2"/>
+      <arg value="all-binutils"/>
+      <arg value="all-gas"/>
+      <arg value="all-ld"/>
+      <arg value="all-sim"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=arm-build/src"/>
+      <arg value="install-binutils"/>
+      <arg value="install-gas"/>
+      <arg value="install-ld"/>
+      <arg value="install-sim"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building initial gcc for newlib arm-build ======================="/>
+    <echo message="===================================================================="/>
+    <mkdir dir="arm-build/gcc"/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd arm-build/gcc; ../../gcc/configure --target=arm-eabi --prefix=`(cd ../../arm-root/usr; pwd)` --enable-languages=c --disable-libssp --with-newlib)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=arm-build/gcc"/>
+      <arg value="-j2"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=arm-build/gcc"/>
+      <arg value="install"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building newlib ============================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=arm-build/src"/>
+      <arg value="all-target-newlib"/>
+      <arg value="install-target-newlib"/>
+      <arg value="CC_FOR_TARGET=arm-eabi-gcc"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=arm-build/src"/>
+      <arg value="all-target-libgloss"/>
+      <arg value="install-target-libgloss"/>
+      <arg value="CC_FOR_TARGET=arm-eabi-gcc"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building full gcc ==========================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd arm-build/gcc; ../../gcc/configure --target=arm-eabi --prefix=`(cd ../../arm-root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-newlib --with-headers=`(cd ../../arm-root/usr/arm-eabi/include; pwd)`)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=arm-build/gcc"/>
+      <arg value="-j2"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=arm-build/gcc"/>
+      <arg value="install"/>
+    </exec>
+
   </target>
 
   <!-- =================================================================== -->

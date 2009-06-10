@@ -1,7 +1,7 @@
 10
 
 dir
-148111
+148340
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/other
 svn://gcc.gnu.org/svn/gcc
 
@@ -2100,40 +2100,6 @@ reichelt
 
 89
 
-friend5.C
-file
-
-
-
-
-2009-04-24T17:44:14.000000Z
-ee0489aeeac7a4238f28b53289c9c6b3
-2007-06-25T22:51:12.405308Z
-126006
-simartin
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-160
-
 error12.C
 file
 
@@ -2201,6 +2167,40 @@ uweigand
 
 
 444
+
+friend5.C
+file
+
+
+
+
+2009-04-24T17:44:14.000000Z
+ee0489aeeac7a4238f28b53289c9c6b3
+2007-06-25T22:51:12.405308Z
+126006
+simartin
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+160
 
 array1.C
 file

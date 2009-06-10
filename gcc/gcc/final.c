@@ -130,6 +130,12 @@ rtx current_output_insn;
 /* Line number of last NOTE.  */
 static int last_linenum;
 
+/* Last discriminator written to assembly.  */
+static int last_discriminator;
+
+/* Discriminator of current block.  */
+static int discriminator;
+
 /* Highest line number in current block.  */
 static int high_block_linenum;
 
@@ -1496,6 +1502,7 @@ final_start_function (rtx first ATTRIBUTE_UNUSED, FILE *file,
 
   last_filename = locator_file (prologue_locator);
   last_linenum = locator_line (prologue_locator);
+  last_discriminator = discriminator = 0;
 
   high_block_linenum = high_function_linenum = last_linenum;
 
@@ -1852,6 +1859,8 @@ final_scan_insn (rtx insn, FILE *file, int optimize ATTRIBUTE_UNUSED,
 	  else
 	    *seen |= SEEN_BB;
 
+          discriminator = NOTE_BASIC_BLOCK (insn)->discriminator;
+
 	  break;
 
 	case NOTE_INSN_EH_REGION_BEG:
@@ -2183,7 +2192,9 @@ final_scan_insn (rtx insn, FILE *file, int optimize ATTRIBUTE_UNUSED,
 	   note in a row.  */
 	if (notice_source_line (insn))
 	  {
-	    (*debug_hooks->source_line) (last_linenum, last_filename);
+	    (*debug_hooks->source_line) (last_linenum,
+	                                 last_filename,
+	                                 last_discriminator);
 	  }
 
 	if (GET_CODE (body) == ASM_INPUT)
@@ -2709,11 +2720,13 @@ notice_source_line (rtx insn)
   if (filename
       && (force_source_line
 	  || filename != last_filename
-	  || last_linenum != linenum))
+	  || last_linenum != linenum
+	  || last_discriminator != discriminator))
     {
       force_source_line = false;
       last_filename = filename;
       last_linenum = linenum;
+      last_discriminator = discriminator;
       high_block_linenum = MAX (last_linenum, high_block_linenum);
       high_function_linenum = MAX (last_linenum, high_function_linenum);
       return true;
@@ -4300,6 +4313,41 @@ static unsigned int
 rest_of_clean_state (void)
 {
   rtx insn, next;
+  FILE *final_output = NULL;
+  int save_unnumbered = flag_dump_unnumbered;
+  int save_noaddr = flag_dump_noaddr;
+
+  if (flag_dump_final_insns)
+    {
+      final_output = fopen (flag_dump_final_insns, "a");
+      if (!final_output)
+	{
+	  error ("could not open final insn dump file %qs: %s",
+		 flag_dump_final_insns, strerror (errno));
+	  flag_dump_final_insns = NULL;
+	}
+      else
+	{
+	  const char *aname;
+
+	  aname = (IDENTIFIER_POINTER
+		   (DECL_ASSEMBLER_NAME (current_function_decl)));
+	  fprintf (final_output, "\n;; Function (%s) %s\n\n", aname,
+	     cfun->function_frequency == FUNCTION_FREQUENCY_HOT
+	     ? " (hot)"
+	     : cfun->function_frequency == FUNCTION_FREQUENCY_UNLIKELY_EXECUTED
+	     ? " (unlikely executed)"
+	     : "");
+
+	  flag_dump_noaddr = flag_dump_unnumbered = 1;
+
+	  for (insn = get_insns (); insn; insn = NEXT_INSN (insn))
+	    if (LABEL_P (insn))
+	      INSN_UID (insn) = CODE_LABEL_NUMBER (insn);
+	    else
+	      INSN_UID (insn) = 0;
+	}
+    }
 
   /* It is very important to decompose the RTL instruction chain here:
      debug information keeps pointing into CODE_LABEL insns inside the function
@@ -4310,6 +4358,27 @@ rest_of_clean_state (void)
       next = NEXT_INSN (insn);
       NEXT_INSN (insn) = NULL;
       PREV_INSN (insn) = NULL;
+
+      if (final_output
+	  && (!NOTE_P (insn) ||
+	      (NOTE_KIND (insn) != NOTE_INSN_VAR_LOCATION
+	       && NOTE_KIND (insn) != NOTE_INSN_BLOCK_BEG
+	       && NOTE_KIND (insn) != NOTE_INSN_BLOCK_END)))
+	print_rtl_single (final_output, insn);
+
+    }
+
+  if (final_output)
+    {
+      flag_dump_noaddr = save_noaddr;
+      flag_dump_unnumbered = save_unnumbered;
+
+      if (fclose (final_output))
+	{
+	  error ("could not close final insn dump file %qs: %s",
+		 flag_dump_final_insns, strerror (errno));
+	  flag_dump_final_insns = NULL;
+	}
     }
 
   /* In case the function was not output,

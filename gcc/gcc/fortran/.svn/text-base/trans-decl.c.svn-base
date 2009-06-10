@@ -713,9 +713,6 @@ gfc_build_qualified_array (tree decl, gfc_symbol * sym)
       layout_type (type);
     }
 
-  if (write_symbols == NO_DEBUG)
-    return;
-
   if (TYPE_NAME (type) != NULL_TREE
       && GFC_TYPE_ARRAY_UBOUND (type, sym->as->rank - 1) != NULL_TREE
       && TREE_CODE (GFC_TYPE_ARRAY_UBOUND (type, sym->as->rank - 1)) == VAR_DECL)
@@ -4188,7 +4185,7 @@ gfc_generate_function_code (gfc_namespace * ns)
   /* If bounds-checking is enabled, generate code to check passed in actual
      arguments against the expected dummy argument attributes (e.g. string
      lengths).  */
-  if (flag_bounds_check)
+  if (gfc_option.rtcheck & GFC_RTCHECK_BOUNDS)
     add_argument_checking (&body, sym);
 
   tmp = gfc_trans_code (ns->code);

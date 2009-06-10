@@ -339,6 +339,9 @@ dim_rank_check (gfc_expr *dim, gfc_expr *array, int allow_assumed)
   gfc_array_ref *ar;
   int rank;
 
+  if (dim == NULL)
+    return SUCCESS;
+
   if (dim->expr_type != EXPR_CONSTANT
       || (array->expr_type != EXPR_VARIABLE
 	  && array->expr_type != EXPR_ARRAY))
@@ -517,6 +520,9 @@ gfc_check_all_any (gfc_expr *mask, gfc_expr *dim)
     return FAILURE;
 
   if (dim_check (dim, 1, false) == FAILURE)
+    return FAILURE;
+
+  if (dim_rank_check (dim, mask, 0) == FAILURE)
     return FAILURE;
 
   return SUCCESS;
@@ -856,6 +862,8 @@ gfc_check_count (gfc_expr *mask, gfc_expr *dim, gfc_expr *kind)
     return FAILURE;
   if (dim_check (dim, 1, false) == FAILURE)
     return FAILURE;
+  if (dim_rank_check (dim, mask, 0) == FAILURE)
+    return FAILURE;
   if (kind_check (kind, 2, BT_INTEGER) == FAILURE)
     return FAILURE;
   if (kind && gfc_notify_std (GFC_STD_F2003, "Fortran 2003: '%s' intrinsic "
@@ -876,23 +884,55 @@ gfc_check_cshift (gfc_expr *array, gfc_expr *shift, gfc_expr *dim)
   if (type_check (shift, 1, BT_INTEGER) == FAILURE)
     return FAILURE;
 
-  if (array->rank == 1)
+  if (dim_check (dim, 2, true) == FAILURE)
+    return FAILURE;
+
+  if (dim_rank_check (dim, array, false) == FAILURE)
+    return FAILURE;
+
+  if (array->rank == 1 || shift->rank == 0)
     {
       if (scalar_check (shift, 1) == FAILURE)
 	return FAILURE;
     }
-  else if (shift->rank != array->rank - 1 && shift->rank != 0)
+  else if (shift->rank == array->rank - 1)
     {
-      gfc_error ("SHIFT argument at %L of CSHIFT must have rank %d or be a "
-		 "scalar", &shift->where, array->rank - 1);
+      int d;
+      if (!dim)
+	d = 1;
+      else if (dim->expr_type == EXPR_CONSTANT)
+	gfc_extract_int (dim, &d);
+      else
+	d = -1;
+
+      if (d > 0)
+	{
+	  int i, j;
+	  for (i = 0, j = 0; i < array->rank; i++)
+	    if (i != d - 1)
+	      {
+		if (!identical_dimen_shape (array, i, shift, j))
+		  {
+		    gfc_error ("'%s' argument of '%s' intrinsic at %L has "
+			       "invalid shape in dimension %d (%ld/%ld)",
+			       gfc_current_intrinsic_arg[1],
+			       gfc_current_intrinsic, &shift->where, i + 1,
+			       mpz_get_si (array->shape[i]),
+			       mpz_get_si (shift->shape[j]));
+		    return FAILURE;
+		  }
+
+		j += 1;
+	      }
+	}
+    }
+  else
+    {
+      gfc_error ("'%s' argument of intrinsic '%s' at %L of must have rank "
+		 "%d or be a scalar", gfc_current_intrinsic_arg[1],
+		 gfc_current_intrinsic, &shift->where, array->rank - 1);
       return FAILURE;
     }
-
-  /* TODO: Add shape conformance check between array (w/o dimension dim)
-     and shift. */
-
-  if (dim_check (dim, 2, true) == FAILURE)
-    return FAILURE;
 
   return SUCCESS;
 }
@@ -1042,54 +1082,84 @@ gfc_check_eoshift (gfc_expr *array, gfc_expr *shift, gfc_expr *boundary,
   if (type_check (shift, 1, BT_INTEGER) == FAILURE)
     return FAILURE;
 
-  if (array->rank == 1)
+  if (dim_check (dim, 3, true) == FAILURE)
+    return FAILURE;
+
+  if (dim_rank_check (dim, array, false) == FAILURE)
+    return FAILURE;
+
+  if (array->rank == 1 || shift->rank == 0)
     {
-      if (scalar_check (shift, 2) == FAILURE)
+      if (scalar_check (shift, 1) == FAILURE)
 	return FAILURE;
     }
-  else if (shift->rank != array->rank - 1 && shift->rank != 0)
+  else if (shift->rank == array->rank - 1)
     {
-      gfc_error ("SHIFT argument at %L of EOSHIFT must have rank %d or be a "
-		 "scalar", &shift->where, array->rank - 1);
+      int d;
+      if (!dim)
+	d = 1;
+      else if (dim->expr_type == EXPR_CONSTANT)
+	gfc_extract_int (dim, &d);
+      else
+	d = -1;
+
+      if (d > 0)
+	{
+	  int i, j;
+	  for (i = 0, j = 0; i < array->rank; i++)
+	    if (i != d - 1)
+	      {
+		if (!identical_dimen_shape (array, i, shift, j))
+		  {
+		    gfc_error ("'%s' argument of '%s' intrinsic at %L has "
+			       "invalid shape in dimension %d (%ld/%ld)",
+			       gfc_current_intrinsic_arg[1],
+			       gfc_current_intrinsic, &shift->where, i + 1,
+			       mpz_get_si (array->shape[i]),
+			       mpz_get_si (shift->shape[j]));
+		    return FAILURE;
+		  }
+
+		j += 1;
+	      }
+	}
+    }
+  else
+    {
+      gfc_error ("'%s' argument of intrinsic '%s' at %L of must have rank "
+		 "%d or be a scalar", gfc_current_intrinsic_arg[1],
+		 gfc_current_intrinsic, &shift->where, array->rank - 1);
       return FAILURE;
     }
-
-  /* TODO: Add shape conformance check between array (w/o dimension dim)
-     and shift. */
 
   if (boundary != NULL)
     {
       if (same_type_check (array, 0, boundary, 2) == FAILURE)
 	return FAILURE;
 
-      if (array->rank == 1)
+      if (array->rank == 1 || boundary->rank == 0)
 	{
 	  if (scalar_check (boundary, 2) == FAILURE)
 	    return FAILURE;
 	}
-      else if (boundary->rank != array->rank - 1 && boundary->rank != 0)
+      else if (boundary->rank == array->rank - 1)
 	{
-	  gfc_error ("BOUNDARY argument at %L of EOSHIFT must have rank %d or be "
-		     "a scalar", &boundary->where, array->rank - 1);
+	  if (gfc_check_conformance (shift, boundary,
+				     "arguments '%s' and '%s' for "
+				     "intrinsic %s",
+				     gfc_current_intrinsic_arg[1],
+				     gfc_current_intrinsic_arg[2],
+				     gfc_current_intrinsic ) == FAILURE)
+	    return FAILURE;
+	}
+      else
+	{
+	  gfc_error ("'%s' argument of intrinsic '%s' at %L of must have "
+		     "rank %d or be a scalar", gfc_current_intrinsic_arg[1],
+		     gfc_current_intrinsic, &shift->where, array->rank - 1);
 	  return FAILURE;
 	}
-
-      if (shift->rank == boundary->rank)
-	{
-	  int i;
-	  for (i = 0; i < shift->rank; i++)
-	    if (! identical_dimen_shape (shift, i, boundary, i))
-	      {
-		gfc_error ("Different shape in dimension %d for SHIFT and "
-			   "BOUNDARY arguments of EOSHIFT at %L", shift->rank,
-			   &boundary->where);
-		return FAILURE;
-	      }
-	}
     }
-
-  if (dim_check (dim, 4, true) == FAILURE)
-    return FAILURE;
 
   return SUCCESS;
 }
@@ -1512,14 +1582,11 @@ gfc_check_lbound (gfc_expr *array, gfc_expr *dim, gfc_expr *kind)
   if (array_check (array, 0) == FAILURE)
     return FAILURE;
 
-  if (dim != NULL)
-    {
-      if (dim_check (dim, 1, false) == FAILURE)
-	return FAILURE;
+  if (dim_check (dim, 1, false) == FAILURE)
+    return FAILURE;
 
-      if (dim_rank_check (dim, array, 1) == FAILURE)
-	return FAILURE;
-    }
+  if (dim_rank_check (dim, array, 1) == FAILURE)
+    return FAILURE;
 
   if (kind_check (kind, 2, BT_INTEGER) == FAILURE)
     return FAILURE;
@@ -1719,13 +1786,11 @@ check_rest (bt type, int kind, gfc_actual_arglist *arglist)
 	}
 
       for (tmp = arglist, m=1; tmp != arg; tmp = tmp->next, m++)
-        {
-	  char buffer[80];
-	  snprintf (buffer, 80, "arguments 'a%d' and 'a%d' for intrinsic '%s'",
-		    m, n, gfc_current_intrinsic);
-	  if (gfc_check_conformance (buffer, tmp->expr, x) == FAILURE)
+	if (gfc_check_conformance (tmp->expr, x,
+				   "arguments 'a%d' and 'a%d' for "
+				   "intrinsic '%s'", m, n,
+				   gfc_current_intrinsic) == FAILURE)
 	    return FAILURE;
-	}
     }
 
   return SUCCESS;
@@ -1905,24 +1970,22 @@ gfc_check_minloc_maxloc (gfc_actual_arglist *ap)
       ap->next->next->expr = m;
     }
 
-  if (d && dim_check (d, 1, false) == FAILURE)
+  if (dim_check (d, 1, false) == FAILURE)
     return FAILURE;
 
-  if (d && dim_rank_check (d, a, 0) == FAILURE)
+  if (dim_rank_check (d, a, 0) == FAILURE)
     return FAILURE;
 
   if (m != NULL && type_check (m, 2, BT_LOGICAL) == FAILURE)
     return FAILURE;
 
-  if (m != NULL)
-    {
-      char buffer[80];
-      snprintf (buffer, 80, "arguments '%s' and '%s' for intrinsic %s",
-		gfc_current_intrinsic_arg[0], gfc_current_intrinsic_arg[2],
-		gfc_current_intrinsic);
-      if (gfc_check_conformance (buffer, a, m) == FAILURE)
-	return FAILURE;
-    }
+  if (m != NULL
+      && gfc_check_conformance (a, m,
+				"arguments '%s' and '%s' for intrinsic %s",
+				gfc_current_intrinsic_arg[0],
+				gfc_current_intrinsic_arg[2],
+				gfc_current_intrinsic ) == FAILURE)
+    return FAILURE;
 
   return SUCCESS;
 }
@@ -1961,24 +2024,22 @@ check_reduction (gfc_actual_arglist *ap)
       ap->next->next->expr = m;
     }
 
-  if (d && dim_check (d, 1, false) == FAILURE)
+  if (dim_check (d, 1, false) == FAILURE)
     return FAILURE;
 
-  if (d && dim_rank_check (d, a, 0) == FAILURE)
+  if (dim_rank_check (d, a, 0) == FAILURE)
     return FAILURE;
 
   if (m != NULL && type_check (m, 2, BT_LOGICAL) == FAILURE)
     return FAILURE;
 
-  if (m != NULL)
-    {
-      char buffer[80];
-      snprintf (buffer, 80, "arguments '%s' and '%s' for intrinsic %s",
-		gfc_current_intrinsic_arg[0], gfc_current_intrinsic_arg[2],
-		gfc_current_intrinsic);
-      if (gfc_check_conformance (buffer, a, m) == FAILURE)
-	return FAILURE;
-    }
+  if (m != NULL
+      && gfc_check_conformance (a, m,
+				"arguments '%s' and '%s' for intrinsic %s",
+				gfc_current_intrinsic_arg[0],
+				gfc_current_intrinsic_arg[2],
+				gfc_current_intrinsic) == FAILURE)
+    return FAILURE;
 
   return SUCCESS;
 }
@@ -2133,29 +2194,78 @@ gfc_check_null (gfc_expr *mold)
 gfc_try
 gfc_check_pack (gfc_expr *array, gfc_expr *mask, gfc_expr *vector)
 {
-  char buffer[80];
-
   if (array_check (array, 0) == FAILURE)
     return FAILURE;
 
   if (type_check (mask, 1, BT_LOGICAL) == FAILURE)
     return FAILURE;
 
-  snprintf (buffer, 80, "arguments '%s' and '%s' for intrinsic '%s'",
-	    gfc_current_intrinsic_arg[0], gfc_current_intrinsic_arg[1],
-	    gfc_current_intrinsic);
-  if (gfc_check_conformance (buffer, array, mask) == FAILURE)
+  if (gfc_check_conformance (array, mask,
+			     "arguments '%s' and '%s' for intrinsic '%s'",
+			     gfc_current_intrinsic_arg[0],
+			     gfc_current_intrinsic_arg[1],
+			     gfc_current_intrinsic) == FAILURE)
     return FAILURE;
 
   if (vector != NULL)
     {
+      mpz_t array_size, vector_size;
+      bool have_array_size, have_vector_size;
+
       if (same_type_check (array, 0, vector, 2) == FAILURE)
 	return FAILURE;
 
       if (rank_check (vector, 2, 1) == FAILURE)
 	return FAILURE;
 
-      /* TODO: More constraints here.  */
+      /* VECTOR requires at least as many elements as MASK
+         has .TRUE. values.  */
+      have_array_size = gfc_array_size (array, &array_size) == SUCCESS;
+      have_vector_size = gfc_array_size (vector, &vector_size) == SUCCESS;
+
+      if (have_vector_size
+	  && (mask->expr_type == EXPR_ARRAY
+	      || (mask->expr_type == EXPR_CONSTANT
+		  && have_array_size)))
+	{
+	  int mask_true_values = 0;
+
+	  if (mask->expr_type == EXPR_ARRAY)
+	    {
+	      gfc_constructor *mask_ctor = mask->value.constructor;
+	      while (mask_ctor)
+		{
+		  if (mask_ctor->expr->expr_type != EXPR_CONSTANT)
+		    {
+		      mask_true_values = 0;
+		      break;
+		    }
+
+		  if (mask_ctor->expr->value.logical)
+		    mask_true_values++;
+
+		  mask_ctor = mask_ctor->next;
+		}
+	    }
+	  else if (mask->expr_type == EXPR_CONSTANT && mask->value.logical)
+	    mask_true_values = mpz_get_si (array_size);
+
+	  if (mpz_get_si (vector_size) < mask_true_values)
+	    {
+	      gfc_error ("'%s' argument of '%s' intrinsic at %L must "
+			 "provide at least as many elements as there "
+			 "are .TRUE. values in '%s' (%ld/%d)",
+			 gfc_current_intrinsic_arg[2],gfc_current_intrinsic, 
+			 &vector->where, gfc_current_intrinsic_arg[1],
+			 mpz_get_si (vector_size), mask_true_values);
+	      return FAILURE;
+	    }
+	}
+
+      if (have_array_size)
+	mpz_clear (array_size);
+      if (have_vector_size)
+	mpz_clear (vector_size);
     }
 
   return SUCCESS;
@@ -2324,7 +2434,7 @@ gfc_check_reshape (gfc_expr *source, gfc_expr *shape,
 {
   mpz_t size;
   mpz_t nelems;
-  int m;
+  int shape_size;
 
   if (array_check (source, 0) == FAILURE)
     return FAILURE;
@@ -2342,26 +2452,121 @@ gfc_check_reshape (gfc_expr *source, gfc_expr *shape,
       return FAILURE;
     }
 
-  m = mpz_cmp_ui (size, GFC_MAX_DIMENSIONS);
+  shape_size = mpz_get_ui (size);
   mpz_clear (size);
 
-  if (m > 0)
+  if (shape_size <= 0)
+    {
+      gfc_error ("'%s' argument of '%s' intrinsic at %L is empty",
+		 gfc_current_intrinsic_arg[1], gfc_current_intrinsic,
+		 &shape->where);
+      return FAILURE;
+    }
+  else if (shape_size > GFC_MAX_DIMENSIONS)
     {
       gfc_error ("'shape' argument of 'reshape' intrinsic at %L has more "
 		 "than %d elements", &shape->where, GFC_MAX_DIMENSIONS);
       return FAILURE;
+    }
+  else if (shape->expr_type == EXPR_ARRAY)
+    {
+      gfc_expr *e;
+      int i, extent;
+      for (i = 0; i < shape_size; ++i)
+	{
+	  e = gfc_get_array_element (shape, i);
+	  if (e->expr_type != EXPR_CONSTANT)
+	    {
+	      gfc_free_expr (e);
+	      continue;
+	    }
+
+	  gfc_extract_int (e, &extent);
+	  if (extent < 0)
+	    {
+	      gfc_error ("'%s' argument of '%s' intrinsic at %L has "
+			 "negative element (%d)", gfc_current_intrinsic_arg[1],
+			 gfc_current_intrinsic, &e->where, extent);
+	      return FAILURE;
+	    }
+
+	  gfc_free_expr (e);
+	}
     }
 
   if (pad != NULL)
     {
       if (same_type_check (source, 0, pad, 2) == FAILURE)
 	return FAILURE;
+
       if (array_check (pad, 2) == FAILURE)
 	return FAILURE;
     }
 
-  if (order != NULL && array_check (order, 3) == FAILURE)
-    return FAILURE;
+  if (order != NULL)
+    {
+      if (array_check (order, 3) == FAILURE)
+	return FAILURE;
+
+      if (type_check (order, 3, BT_INTEGER) == FAILURE)
+	return FAILURE;
+
+      if (order->expr_type == EXPR_ARRAY)
+	{
+	  int i, order_size, dim, perm[GFC_MAX_DIMENSIONS];
+	  gfc_expr *e;
+
+	  for (i = 0; i < GFC_MAX_DIMENSIONS; ++i)
+	    perm[i] = 0;
+
+	  gfc_array_size (order, &size);
+	  order_size = mpz_get_ui (size);
+	  mpz_clear (size);
+
+	  if (order_size != shape_size)
+	    {
+	      gfc_error ("'%s' argument of '%s' intrinsic at %L "
+			 "has wrong number of elements (%d/%d)", 
+			 gfc_current_intrinsic_arg[3],
+			 gfc_current_intrinsic, &order->where,
+			 order_size, shape_size);
+	      return FAILURE;
+	    }
+
+	  for (i = 1; i <= order_size; ++i)
+	    {
+	      e = gfc_get_array_element (order, i-1);
+	      if (e->expr_type != EXPR_CONSTANT)
+		{
+		  gfc_free_expr (e);
+		  continue;
+		}
+
+	      gfc_extract_int (e, &dim);
+
+	      if (dim < 1 || dim > order_size)
+		{
+		  gfc_error ("'%s' argument of '%s' intrinsic at %L "
+			     "has out-of-range dimension (%d)", 
+			     gfc_current_intrinsic_arg[3],
+			     gfc_current_intrinsic, &e->where, dim);
+		  return FAILURE;
+		}
+
+	      if (perm[dim-1] != 0)
+		{
+		  gfc_error ("'%s' argument of '%s' intrinsic at %L has "
+			     "invalid permutation of dimensions (dimension "
+			     "'%d' duplicated)", gfc_current_intrinsic_arg[3],
+			     gfc_current_intrinsic, &e->where, dim);
+		  return FAILURE;
+		}
+
+	      perm[dim-1] = 1;
+	      gfc_free_expr (e);
+	    }
+	}
+    }
 
   if (pad == NULL && shape->expr_type == EXPR_ARRAY
       && gfc_is_constant_expr (shape)
@@ -2555,14 +2760,11 @@ gfc_check_size (gfc_expr *array, gfc_expr *dim, gfc_expr *kind)
   if (array_check (array, 0) == FAILURE)
     return FAILURE;
 
-  if (dim != NULL)
-    {
-      if (dim_check (dim, 1, true) == FAILURE)
-	return FAILURE;
+  if (dim_check (dim, 1, true) == FAILURE)
+    return FAILURE;
 
-      if (dim_rank_check (dim, array, 0) == FAILURE)
-	return FAILURE;
-    }
+  if (dim_rank_check (dim, array, 0) == FAILURE)
+    return FAILURE;
 
   if (kind_check (kind, 2, BT_INTEGER) == FAILURE)
     return FAILURE;
@@ -2613,6 +2815,18 @@ gfc_check_spread (gfc_expr *source, gfc_expr *dim, gfc_expr *ncopies)
 
   if (dim_check (dim, 1, false) == FAILURE)
     return FAILURE;
+
+  /* dim_rank_check() does not apply here.  */
+  if (dim 
+      && dim->expr_type == EXPR_CONSTANT
+      && (mpz_cmp_ui (dim->value.integer, 1) < 0
+	  || mpz_cmp_ui (dim->value.integer, source->rank + 1) > 0))
+    {
+      gfc_error ("'%s' argument of '%s' intrinsic at %L is not a valid "
+		 "dimension index", gfc_current_intrinsic_arg[1],
+		 gfc_current_intrinsic, &dim->where);
+      return FAILURE;
+    }
 
   if (type_check (ncopies, 2, BT_INTEGER) == FAILURE)
     return FAILURE;
@@ -2898,14 +3112,11 @@ gfc_check_ubound (gfc_expr *array, gfc_expr *dim, gfc_expr *kind)
   if (array_check (array, 0) == FAILURE)
     return FAILURE;
 
-  if (dim != NULL)
-    {
-      if (dim_check (dim, 1, false) == FAILURE)
-	return FAILURE;
+  if (dim_check (dim, 1, false) == FAILURE)
+    return FAILURE;
 
-      if (dim_rank_check (dim, array, 0) == FAILURE)
-	return FAILURE;
-    }
+  if (dim_rank_check (dim, array, 0) == FAILURE)
+    return FAILURE;
 
   if (kind_check (kind, 2, BT_INTEGER) == FAILURE)
     return FAILURE;
@@ -2921,6 +3132,8 @@ gfc_check_ubound (gfc_expr *array, gfc_expr *dim, gfc_expr *kind)
 gfc_try
 gfc_check_unpack (gfc_expr *vector, gfc_expr *mask, gfc_expr *field)
 {
+  mpz_t vector_size;
+
   if (rank_check (vector, 0, 1) == FAILURE)
     return FAILURE;
 
@@ -2933,10 +3146,45 @@ gfc_check_unpack (gfc_expr *vector, gfc_expr *mask, gfc_expr *field)
   if (same_type_check (vector, 0, field, 2) == FAILURE)
     return FAILURE;
 
+  if (mask->expr_type == EXPR_ARRAY
+      && gfc_array_size (vector, &vector_size) == SUCCESS)
+    {
+      int mask_true_count = 0;
+      gfc_constructor *mask_ctor = mask->value.constructor;
+      while (mask_ctor)
+	{
+	  if (mask_ctor->expr->expr_type != EXPR_CONSTANT)
+	    {
+	      mask_true_count = 0;
+	      break;
+	    }
+
+	  if (mask_ctor->expr->value.logical)
+	    mask_true_count++;
+
+	  mask_ctor = mask_ctor->next;
+	}
+
+      if (mpz_get_si (vector_size) < mask_true_count)
+	{
+	  gfc_error ("'%s' argument of '%s' intrinsic at %L must "
+		     "provide at least as many elements as there "
+		     "are .TRUE. values in '%s' (%ld/%d)",
+		     gfc_current_intrinsic_arg[0], gfc_current_intrinsic,
+		     &vector->where, gfc_current_intrinsic_arg[1],
+		     mpz_get_si (vector_size), mask_true_count);
+	  return FAILURE;
+	}
+
+      mpz_clear (vector_size);
+    }
+
   if (mask->rank != field->rank && field->rank != 0)
     {
-      gfc_error ("FIELD argument at %L of UNPACK must have the same rank as "
-		 "MASK or be a scalar", &field->where);
+      gfc_error ("'%s' argument of '%s' intrinsic at %L must have "
+		 "the same rank as '%s' or be a scalar", 
+		 gfc_current_intrinsic_arg[2], gfc_current_intrinsic,
+		 &field->where, gfc_current_intrinsic_arg[1]);
       return FAILURE;
     }
 
@@ -2946,9 +3194,11 @@ gfc_check_unpack (gfc_expr *vector, gfc_expr *mask, gfc_expr *field)
       for (i = 0; i < field->rank; i++)
 	if (! identical_dimen_shape (mask, i, field, i))
 	{
-	  gfc_error ("Different shape in dimension %d for MASK and FIELD "
-		     "arguments of UNPACK at %L", mask->rank, &field->where);
-	  return FAILURE;
+	  gfc_error ("'%s' and '%s' arguments of '%s' intrinsic at %L "
+		     "must have identical shape.", 
+		     gfc_current_intrinsic_arg[2],
+		     gfc_current_intrinsic_arg[1], gfc_current_intrinsic,
+		     &field->where);
 	}
     }
 

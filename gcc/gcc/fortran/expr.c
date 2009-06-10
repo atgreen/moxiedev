@@ -2127,8 +2127,16 @@ check_transformational (gfc_expr *e)
     "selected_real_kind", "transfer", "trim", NULL
   };
 
+  static const char * const trans_func_f2003[] =  {
+    "all", "any", "count", "dot_product", "matmul", "null", "pack",
+    "product", "repeat", "reshape", "selected_char_kind", "selected_int_kind",
+    "selected_real_kind", "spread", "sum", "transfer", "transpose",
+    "trim", "unpack", NULL
+  };
+
   int i;
   const char *name;
+  const char *const *functions;
 
   if (!e->value.function.isym
       || !e->value.function.isym->transformational)
@@ -2136,31 +2144,23 @@ check_transformational (gfc_expr *e)
 
   name = e->symtree->n.sym->name;
 
+  functions = (gfc_option.allow_std & GFC_STD_F2003) 
+		? trans_func_f2003 : trans_func_f95;
+
   /* NULL() is dealt with below.  */
   if (strcmp ("null", name) == 0)
     return MATCH_NO;
 
-  for (i = 0; trans_func_f95[i]; i++)
-    if (strcmp (trans_func_f95[i], name) == 0)
-      break;
+  for (i = 0; functions[i]; i++)
+    if (strcmp (functions[i], name) == 0)
+       break;
 
-  /* FIXME, F2003: implement translation of initialization
-     expressions before enabling this check. For F95, error
-     out if the transformational function is not in the list.  */
-#if 0
-  if (trans_func_f95[i] == NULL
-      && gfc_notify_std (GFC_STD_F2003, 
-			 "transformational intrinsic '%s' at %L is not permitted "
-			 "in an initialization expression", name, &e->where) == FAILURE)
-    return MATCH_ERROR;
-#else
-  if (trans_func_f95[i] == NULL)
+  if (functions[i] == NULL)
     {
       gfc_error("transformational intrinsic '%s' at %L is not permitted "
 		"in an initialization expression", name, &e->where);
       return MATCH_ERROR;
     }
-#endif
 
   return check_init_expr_arguments (e);
 }
@@ -2777,18 +2777,25 @@ gfc_specification_expr (gfc_expr *e)
 /* Given two expressions, make sure that the arrays are conformable.  */
 
 gfc_try
-gfc_check_conformance (const char *optype_msgid, gfc_expr *op1, gfc_expr *op2)
+gfc_check_conformance (gfc_expr *op1, gfc_expr *op2, const char *optype_msgid, ...)
 {
   int op1_flag, op2_flag, d;
   mpz_t op1_size, op2_size;
   gfc_try t;
 
+  va_list argp;
+  char buffer[240];
+
   if (op1->rank == 0 || op2->rank == 0)
     return SUCCESS;
 
+  va_start (argp, optype_msgid);
+  vsnprintf (buffer, 240, optype_msgid, argp);
+  va_end (argp);
+
   if (op1->rank != op2->rank)
     {
-      gfc_error ("Incompatible ranks in %s (%d and %d) at %L", _(optype_msgid),
+      gfc_error ("Incompatible ranks in %s (%d and %d) at %L", _(buffer),
 		 op1->rank, op2->rank, &op1->where);
       return FAILURE;
     }
@@ -2803,7 +2810,7 @@ gfc_check_conformance (const char *optype_msgid, gfc_expr *op1, gfc_expr *op2)
       if (op1_flag && op2_flag && mpz_cmp (op1_size, op2_size) != 0)
 	{
 	  gfc_error ("Different shape for %s at %L on dimension %d "
-		     "(%d and %d)", _(optype_msgid), &op1->where, d + 1,
+		     "(%d and %d)", _(buffer), &op1->where, d + 1,
 		     (int) mpz_get_si (op1_size),
 		     (int) mpz_get_si (op2_size));
 
@@ -2951,7 +2958,7 @@ gfc_check_assign (gfc_expr *lvalue, gfc_expr *rvalue, int conform)
 
   /* Check size of array assignments.  */
   if (lvalue->rank != 0 && rvalue->rank != 0
-      && gfc_check_conformance ("array assignment", lvalue, rvalue) != SUCCESS)
+      && gfc_check_conformance (lvalue, rvalue, "array assignment") != SUCCESS)
     return FAILURE;
 
   if (rvalue->is_boz && lvalue->ts.type != BT_INTEGER

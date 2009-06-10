@@ -261,14 +261,23 @@ So instead we use the macro below and test it against specific values.  */
 # endif /* GNUC >= 2.96 */
 #endif /* ATTRIBUTE_MALLOC */
 
-/* Attributes on labels were valid as of gcc 2.93. */
+/* Attributes on labels were valid as of gcc 2.93 and g++ 4.5.  For
+   g++ an attribute on a label must be followed by a semicolon.  */
 #ifndef ATTRIBUTE_UNUSED_LABEL
-# if (!defined (__cplusplus) && GCC_VERSION >= 2093)
-#  define ATTRIBUTE_UNUSED_LABEL ATTRIBUTE_UNUSED
+# ifndef __cplusplus
+#  if GCC_VERSION >= 2093
+#   define ATTRIBUTE_UNUSED_LABEL ATTRIBUTE_UNUSED
+#  else
+#   define ATTRIBUTE_UNUSED_LABEL
+#  endif
 # else
-#  define ATTRIBUTE_UNUSED_LABEL
-# endif /* !__cplusplus && GNUC >= 2.93 */
-#endif /* ATTRIBUTE_UNUSED_LABEL */
+#  if GCC_VERSION >= 4005
+#   define ATTRIBUTE_UNUSED_LABEL ATTRIBUTE_UNUSED ;
+#  else
+#   define ATTRIBUTE_UNUSED_LABEL
+#  endif
+# endif
+#endif
 
 #ifndef ATTRIBUTE_UNUSED
 #define ATTRIBUTE_UNUSED __attribute__ ((__unused__))
@@ -393,6 +402,18 @@ So instead we use the macro below and test it against specific values.  */
    gcc 2.8.  */
 #if GCC_VERSION < 2008
 #define __extension__
+#endif
+
+/* This is used to declare a const variable which should be visible
+   outside of the current compilation unit.  Use it as
+     EXPORTED_CONST int i = 1;
+   This is because the semantics of const are different in C and C++.
+   "extern const" is permitted in C but it looks strange, and gcc
+   warns about it when -Wc++-compat is not used.  */
+#ifdef __cplusplus
+#define EXPORTED_CONST extern const
+#else
+#define EXPORTED_CONST const
 #endif
 
 #ifdef __cplusplus

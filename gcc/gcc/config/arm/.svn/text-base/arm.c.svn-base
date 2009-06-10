@@ -58,7 +58,7 @@
 typedef struct minipool_node    Mnode;
 typedef struct minipool_fixup   Mfix;
 
-const struct attribute_spec arm_attribute_table[];
+EXPORTED_CONST struct attribute_spec arm_attribute_table[];
 
 void (*arm_lang_output_object_attributes_hook)(void);
 
@@ -4266,15 +4266,17 @@ thumb2_legitimate_index_p (enum machine_mode mode, rtx index, int strict_p)
 
   if (mode == DImode || mode == DFmode)
     {
-      HOST_WIDE_INT val = INTVAL (index);
-      /* ??? Can we assume ldrd for thumb2?  */
-      /* Thumb-2 ldrd only has reg+const addressing modes.  */
-      if (code != CONST_INT)
+      if (code == CONST_INT)
+	{
+	  HOST_WIDE_INT val = INTVAL (index);
+	  /* ??? Can we assume ldrd for thumb2?  */
+	  /* Thumb-2 ldrd only has reg+const addressing modes.  */
+	  /* ldrd supports offsets of +-1020.
+	     However the ldr fallback does not.  */
+	  return val > -256 && val < 256 && (val & 3) == 0;
+	}
+      else
 	return 0;
-
-      /* ldrd supports offsets of +-1020.
-         However the ldr fallback does not.  */
-      return val > -256 && val < 256 && (val & 3) == 0;
     }
 
   if (code == MULT)
@@ -14741,13 +14743,13 @@ arm_hard_regno_mode_ok (unsigned int regno, enum machine_mode mode)
 	return VALID_IWMMXT_REG_MODE (mode);
     }
   
-  /* We allow any value to be stored in the general registers.
+  /* We allow almost any value to be stored in the general registers.
      Restrict doubleword quantities to even register pairs so that we can
-     use ldrd.  Do not allow Neon structure opaque modes in general registers;
-     they would use too many.  */
+     use ldrd.  Do not allow very large Neon structure opaque modes in
+     general registers; they would use too many.  */
   if (regno <= LAST_ARM_REGNUM)
     return !(TARGET_LDRD && GET_MODE_SIZE (mode) > 4 && (regno & 1) != 0)
-      && !VALID_NEON_STRUCT_MODE (mode);
+      && ARM_NUM_REGS (mode) <= 4;
 
   if (regno == FRAME_POINTER_REGNUM
       || regno == ARG_POINTER_REGNUM)

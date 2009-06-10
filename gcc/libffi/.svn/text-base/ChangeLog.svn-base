@@ -1,3 +1,219 @@
+2009-06-09  Andrew Haley  <aph@redhat.com>
+
+	* src/x86/freebsd.S: Add missing file.
+
+2009-06-08  Andrew Haley  <aph@redhat.com>
+
+	Import from libffi 3.0.8:
+
+	* doc/libffi.texi: New file.
+	* doc/libffi.info: Likewise.
+	* doc/stamp-vti: Likewise.
+	* man/Makefile.am: New file.
+	* man/ffi_call.3: New file.
+
+	* Makefile.am (EXTRA_DIST): Add src/x86/darwin64.S,
+	src/dlmalloc.c.
+	(nodist_libffi_la_SOURCES): Add X86_FREEBSD.
+
+	* configure.ac: Bump version to 3.0.8.
+	parisc*-*-linux*: Add.
+	i386-*-freebsd* | i386-*-openbsd*: Add.
+	powerpc-*-beos*: Add.
+	AM_CONDITIONAL X86_FREEBSD: Add.
+	AC_CONFIG_FILES: Add man/Makefile.
+
+	* include/ffi.h.in (FFI_FN): Change void (*)() to void (*)(void).
+
+2009-06-08  Andrew Haley  <aph@redhat.com>
+
+	* README: Import from libffi 3.0.8.
+
+2009-06-08  Andrew Haley  <aph@redhat.com>
+
+	* testsuite/libffi.call/err_bad_abi.c: Add xfails.
+	* testsuite/libffi.call/cls_longdouble_va.c: Add xfails.
+	* testsuite/libffi.call/cls_dbls_struct.c: Add xfail x86_64-*-linux-*.
+	* testsuite/libffi.call/err_bad_typedef.c: Add xfails.
+
+	* testsuite/libffi.call/stret_medium2.c: Add __UNUSED__ to args.
+	* testsuite/libffi.call/stret_medium.c: Likewise.
+	* testsuite/libffi.call/stret_large2.c: Likewise.
+	* testsuite/libffi.call/stret_large.c:  Likewise.
+
+2008-12-26  Timothy Wall  <twall@users.sf.net>
+
+        * testsuite/libffi.call/cls_longdouble.c,
+        testsuite/libffi.call/cls_longdouble_va.c,
+        testsuite/libffi.call/cls_align_longdouble.c,
+        testsuite/libffi.call/cls_align_longdouble_split.c,
+        testsuite/libffi.call/cls_align_longdouble_split2.c: mark expected
+        failures on x86_64 cygwin/mingw.
+
+2008-12-22  Timothy Wall  <twall@users.sf.net>
+
+        * testsuite/libffi.call/closure_fn0.c,
+        testsuite/libffi.call/closure_fn1.c,
+        testsuite/libffi.call/closure_fn2.c,
+        testsuite/libffi.call/closure_fn3.c,
+        testsuite/libffi.call/closure_fn4.c,
+        testsuite/libffi.call/closure_fn5.c,
+        testsuite/libffi.call/closure_fn6.c,
+        testsuite/libffi.call/closure_loc_fn0.c,
+        testsuite/libffi.call/closure_stdcall.c,
+        testsuite/libffi.call/cls_align_pointer.c,
+        testsuite/libffi.call/cls_pointer.c,
+        testsuite/libffi.call/cls_pointer_stack.c: use portable cast from
+        pointer to integer (intptr_t).
+        * testsuite/libffi.call/cls_longdouble.c: disable for win64.
+
+2008-07-24  Anthony Green  <green@redhat.com>
+
+        * testsuite/libffi.call/cls_dbls_struct.c,
+        testsuite/libffi.call/cls_double_va.c,
+        testsuite/libffi.call/cls_longdouble.c,
+        testsuite/libffi.call/cls_longdouble_va.c,
+        testsuite/libffi.call/cls_pointer.c,
+        testsuite/libffi.call/cls_pointer_stack.c,
+        testsuite/libffi.call/err_bad_abi.c: Clean up failures from
+        compiler warnings.
+
+2008-03-04  Anthony Green  <green@redhat.com>
+            Blake Chaffin
+            hos@tamanegi.org
+
+        * testsuite/libffi.call/cls_align_longdouble_split2.c
+          testsuite/libffi.call/cls_align_longdouble_split.c
+          testsuite/libffi.call/cls_dbls_struct.c
+          testsuite/libffi.call/cls_double_va.c
+          testsuite/libffi.call/cls_longdouble.c
+          testsuite/libffi.call/cls_longdouble_va.c
+          testsuite/libffi.call/cls_pointer.c
+          testsuite/libffi.call/cls_pointer_stack.c
+          testsuite/libffi.call/err_bad_abi.c
+          testsuite/libffi.call/err_bad_typedef.c
+          testsuite/libffi.call/stret_large2.c
+          testsuite/libffi.call/stret_large.c
+          testsuite/libffi.call/stret_medium2.c
+          testsuite/libffi.call/stret_medium.c: New tests from Apple.
+
+2009-06-05  Andrew Haley  <aph@redhat.com>
+
+	* src/x86/ffitarget.h, src/x86/ffi.c: Merge stdcall changes from
+	libffi.
+
+2009-06-04  Andrew Haley  <aph@redhat.com>
+
+	* src/x86/ffitarget.h, src/x86/win32.S, src/x86/ffi.c: Back out
+	stdcall changes.
+
+2008-02-26  Anthony Green  <green@redhat.com>
+            Thomas Heller  <theller@ctypes.org>
+
+        * src/x86/ffi.c (ffi_closure_SYSV_inner): Change C++ comment to C
+        comment.
+
+2008-02-03  Timothy Wall  <twall@users.sf.net>
+
+        * src/x86/ffi.c (FFI_INIT_TRAMPOLINE_STDCALL): Calculate jump return
+          offset based on code pointer, not data pointer.
+
+2008-01-31  Timothy Wall <twall@users.sf.net>
+
+        * testsuite/libffi.call/closure_stdcall.c: Add test for stdcall
+        closures.
+        * src/x86/ffitarget.h: Increase size of trampoline for stdcall
+        closures.
+        * src/x86/win32.S: Add assembly for stdcall closure.
+        * src/x86/ffi.c: Initialize stdcall closure trampoline.
+
+2009-06-04  Andrew Haley  <aph@redhat.com>
+
+	* include/ffi.h.in: Change void (*)() to void (*)(void).
+	* src/x86/ffi.c: Likewise.
+
+2009-06-04  Andrew Haley  <aph@redhat.com>
+
+	* src/powerpc/ppc_closure.S: Insert licence header.
+	* src/powerpc/linux64_closure.S: Likewise.
+	* src/m68k/sysv.S: Likewise.
+
+	* src/sh64/ffi.c: Change void (*)() to void (*)(void).
+	* src/powerpc/ffi.c: Likewise.
+	* src/powerpc/ffi_darwin.c: Likewise.
+	* src/m32r/ffi.c: Likewise.
+	* src/sh64/ffi.c: Likewise.
+	* src/x86/ffi64.c: Likewise.
+	* src/alpha/ffi.c: Likewise.
+	* src/alpha/osf.S: Likewise.
+	* src/frv/ffi.c: Likewise.
+	* src/s390/ffi.c: Likewise.
+	* src/pa/ffi.c: Likewise.
+	* src/pa/hpux32.S: Likewise.
+	* src/ia64/unix.S: Likewise.
+	* src/ia64/ffi.c: Likewise.
+	* src/sparc/ffi.c: Likewise.
+	* src/mips/ffi.c: Likewise.
+	* src/sh/ffi.c: Likewise.
+
+2008-02-15  David Daney  <ddaney@avtrex.com>
+
+        * src/mips/ffi.c (USE__BUILTIN___CLEAR_CACHE):
+        Define (conditionally), and use it to include cachectl.h.
+        (ffi_prep_closure_loc): Fix cache flushing.
+        * src/mips/ffitarget.h (_ABIN32, _ABI64, _ABIO32): Define.
+
+2009-06-04  Andrew Haley  <aph@redhat.com>
+
+	include/ffi.h.in,
+	src/arm/ffitarget.h,
+	src/arm/ffi.c,
+	src/arm/sysv.S,
+	src/powerpc/ffitarget.h,
+	src/closures.c,
+	src/sh64/ffitarget.h,
+	src/sh64/ffi.c,
+	src/sh64/sysv.S,
+	src/types.c,
+	src/x86/ffi64.c,
+	src/x86/ffitarget.h,
+	src/x86/win32.S,
+	src/x86/darwin.S,
+	src/x86/ffi.c,
+	src/x86/sysv.S,
+	src/x86/unix64.S,
+	src/alpha/ffitarget.h,
+	src/alpha/ffi.c,
+	src/alpha/osf.S,
+	src/m68k/ffitarget.h,
+	src/frv/ffitarget.h,
+	src/frv/ffi.c,
+	src/s390/ffitarget.h,
+	src/s390/sysv.S,
+	src/cris/ffitarget.h,
+	src/pa/linux.S,
+	src/pa/ffitarget.h,
+	src/pa/ffi.c,
+	src/raw_api.c,
+	src/ia64/ffitarget.h,
+	src/ia64/unix.S,
+	src/ia64/ffi.c,
+	src/ia64/ia64_flags.h,
+	src/java_raw_api.c,
+	src/debug.c,
+	src/sparc/v9.S,
+	src/sparc/ffitarget.h,
+	src/sparc/ffi.c,
+	src/sparc/v8.S,
+	src/mips/ffitarget.h,
+	src/mips/n32.S,
+	src/mips/o32.S,
+	src/mips/ffi.c,
+	src/prep_cif.c,
+	src/sh/ffitarget.h,
+	src/sh/ffi.c,
+	src/sh/sysv.S: Update license text.
+
 2009-05-22  Dave Korn  <dave.korn.cygwin@gmail.com>
 
 	* src/x86/win32.S (_ffi_closure_STDCALL):  New function.

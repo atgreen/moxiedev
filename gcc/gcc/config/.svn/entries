@@ -1,15 +1,15 @@
 10
 
 dir
-148111
+148340
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-06-02T21:17:36.830826Z
-148103
-kkojima
+2009-06-10T05:46:07.882669Z
+148340
+green
 
 
 
@@ -1841,10 +1841,6 @@ ian
 
 moxie
 dir
-
-
-
-add
 
 darwin-ppc-ldouble-patch.def
 file

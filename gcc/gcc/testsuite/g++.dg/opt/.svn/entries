@@ -1,7 +1,7 @@
 10
 
 dir
-148111
+148340
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/opt
 svn://gcc.gnu.org/svn/gcc
 
@@ -2100,40 +2100,6 @@ jakub
 
 264
 
-nrv15.C
-file
-
-
-
-
-2009-04-24T17:44:13.000000Z
-4ed264b192fadaa6f3076ca27b4fc086
-2009-03-11T05:01:30.883034Z
-144772
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1144
-
 local1.C
 file
 
@@ -2201,6 +2167,40 @@ dnovillo
 
 
 299
+
+nrv15.C
+file
+
+
+
+
+2009-04-24T17:44:13.000000Z
+4ed264b192fadaa6f3076ca27b4fc086
+2009-03-11T05:01:30.883034Z
+144772
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1144
 
 alias3.C
 file

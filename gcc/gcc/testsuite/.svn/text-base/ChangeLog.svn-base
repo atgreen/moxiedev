@@ -1,3 +1,228 @@
+2009-06-10  Anthony Green  <green@moxielogic.com>
+
+	* testsuite/lib/target-supports.exp (check_profiling_available):
+	Profiling is not available for testing purposes on moxie.
+
+2009-06-09  Ian Lance Taylor  <iant@google.com>
+
+	* gcc.dg/Wcxx-compat-12.c: New testcase.
+
+2009-06-09  Janne Blomqvist  <jb@gcc.gnu.org>
+
+	PR libfortran/40334
+	* gfortran.dg/backspace_11.f90: New.
+
+2009-06-09  Jason Merrill  <jason@redhat.com>
+
+	* g++.dg/cpp0x/defaulted10.C: New.
+
+2009-06-09  Martin Jambor  <mjambor@suse.cz>
+
+	* testsuite/gcc.c-torture/compile/pr40351.c: New file.
+
+2009-06-09  Olivier Hainque  <hainque@adacore.com>
+
+	* gnat.dg/align_max.adb: New test.
+
+2009-06-08  Jason Merrill  <jason@redhat.com>
+
+	* g++.dg/cpp0x/auto15.C: New.
+
+2009-06-08  Jan Hubicka  <jh@suse.cz>
+
+	PR debug/39834
+	* gcc.dg/torture/pr39834.c
+
+2009-06-08  Jan Hubicka  <jh@suse.cz>
+
+	PR middle-end/40102
+	* g++.dg/torture/pr40102.C: New testcase.
+
+2009-06-08  Jakub Jelinek  <jakub@redhat.com>
+
+	* gcc.dg/builtin-object-size-2.c (test1): Adjust expected results.
+	* gcc.dg/builtin-object-size-4.c (test1): Adjust expected results.
+	* gcc.dg/builtin-object-size-6.c: New test.
+
+	PR c++/40373
+	* g++.dg/template/dtor7.C: New test.
+
+	PR c++/40370
+	PR c++/40372
+	* g++.dg/template/error41.C: New test.
+	* g++.dg/template/error42.C: New test.
+
+2009-06-08  Revital Eres  <eres@il.ibm.com>
+
+	PR testsuite/40359
+	* gcc.dg/vect/vect-58.c: Change checks to use vect_hw_misalign.
+	* gcc.dg/vect/vect-88.c: Likewise.
+	* gcc.dg/vect/no-section-anchors-vect-66.c: Likewise.
+	* gcc.dg/vect/pr25413.c: Likewise.
+	* lib/target-supports.exp: Add i?86 to vect_hw_misalign.
+
+2009-06-07  Ian Lance Taylor  <iant@google.com>
+
+	* g++.dg/warn/Wswitch-3.C: New testcase.
+	* gcc.dg/Wswitch.c: Adjust for -Wswitch change.
+	* gcc.dg/Wswitch-enum-error.c: Likewise.
+	* gcc.dg/Wswitch-error.c: Likewise.
+
+2009-06-07  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/40008
+	* gfortran.dg/negative_unit.f: Update test.
+	* gfortran.dg/negative_unit_int8.f: Update test.
+	* gfortran.dg/newunit_1.f90: New test.
+
+2009-06-07  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/25104
+	PR fortran/29962
+	* gfortran.dg/spread_init_expr.f03: New.
+	* gfortran.dg/unpack_init_expr.f03: New.
+	* gfortran.dg/intrinsic_argument_conformance_2.f90: Adjusted
+	error message.
+
+2009-06-07  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/25104
+	PR fortran/29962
+	* gfortran.dg/count_init_expr.f03
+	* gfortran.dg/product_init_expr.f03
+	* gfortran.dg/sum_init_expr.f03
+
+2009-06-07  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/36874
+	* gfortran.dg/intrinsic_argument_conformance_2.f90: Adjusted error message.
+	* gfortran.dg/zero_sized_1.f90: Removed checks with incompatible shapes.
+	* gfortran.dg/zero_sized_5.f90: Likewise.
+
+2009-06-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR middle-end/32950
+	* g++.dg/torture/pr32950.C: New.
+
+2009-06-07  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/25104
+	PR fortran/29962
+	* gfortran.dg/dot_product_1.f03: New.
+	* gfortran.dg/matmul_8.f03: New.
+	* gfortran.dg/transpose_3.f03: New.
+
+2009-06-06  Ian Lance Taylor  <iant@google.com>
+
+	* gcc.dg/Wunused-label-1.c: New test case.
+	* g++.dg/warn/Wunused-label-1.C: New test case.
+	* g++.dg/warn/Wunused-label-2.C: New test case.
+	* g++.dg/warn/Wunused-label-3.C: New test case.
+
+2009-06-06  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/37203
+	* reshape_zerosize_2.f90: New.
+
+2009-06-06  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/32890
+	* gfortran.dg/pack_assign_1.f90: New.
+	* gfortran.dg/pack_vector_1.f90: New.
+
+2009-06-05  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/40340
+	* gcc.dg/pr40340-1.c: New test.
+	* gcc.dg/pr40340-2.c: New test.
+	* gcc.dg/pr40340-3.c: New test.
+	* gcc.dg/pr40340-4.c: New test.
+	* gcc.dg/pr40340-5.c: New test.
+	* gcc.dg/pr40340.h: New file.
+
+2009-06-05  Revital Eres  <eres@il.ibm.com>
+
+	* lib/target-supports.exp:
+	(check_effective_target_vect_hw_misalign): New procedure.
+	* gcc.dg/vect/vect-50.c: Change checks to use vect_hw_misalign.
+	* gcc.dg/vect/vect-33.c: Likewise.
+	* gcc.dg/vect/vect-92.c: Likewise.
+	* gcc.dg/vect/vect-58.c: Likewise.
+	* gcc.dg/vect/no-section-anchors-vect-69.c: Likewise.
+	* gcc.dg/vect/vect-42.c: Likewise.
+	* gcc.dg/vect/slp-25.c: Likewise.
+	* gcc.dg/vect/vect-align-1.c: Likewise.
+	* gcc.dg/vect/vect-align-2.c: Likewise.
+	* gcc.dg/vect/vect-93.c: Likewise.
+	* gcc.dg/vect/no-scevccp-outer-8.c: Likewise.
+	* gcc.dg/vect/costmodel/i386/costmodel-vect-31.c: Likewise.
+	* gcc.dg/vect/costmodel/i386/costmodel-vect-33.c: Likewise.
+	* gcc.dg/vect/costmodel/x86_64/costmodel-vect-31.c: Likewise.
+	* gcc.dg/vect/costmodel/x86_64/costmodel-vect-33.c: Likewise.
+	* gcc.dg/vect/vect-26.c: Likewise.
+	* gcc.dg/vect/vect-44.c: Likewise.
+	* gcc.dg/vect/vect-70.c: Likewise.
+	* gcc.dg/vect/vect-95.c: Likewise.
+	* gcc.dg/vect/no-section-anchors-vect-64.c: Likewise.
+	* gcc.dg/vect/vect-28.c: Likewise.
+	* gcc.dg/vect/no-section-anchors-vect-31.c: Likewise.
+	* gcc.dg/vect/vect-87.c: Likewise.
+	* gcc.dg/vect/vect-109.c: Likewise.
+	* gcc.dg/vect/vect-54.c: Likewise.
+	* gcc.dg/vect/vect-96.c: Likewise.
+	* gcc.dg/vect/vect-multitypes-1.c: Likewise.
+	* gcc.dg/vect/vect-88.c: Likewise.
+	* gcc.dg/vect/no-section-anchors-vect-66.c: Likewise.
+	* gcc.dg/vect/vect-89.c: Likewise.
+	* gcc.dg/vect/vect-91.c: Likewise.
+	* gcc.dg/vect/no-section-anchors-vect-68.c: Likewise.
+	* gcc.dg/vect/vect-multitypes-4.c: Likewise.
+	* gfortran.dg/vect/vect-2.f90: Likewise.
+	* gfortran.dg/vect/vect-3.f90: Likewise.
+	* gfortran.dg/vect/vect-4.f90: Likewise.
+	* gfortran.dg/vect/vect-5.f90: Likewise.
+
+2009-06-05  Alexander Strange <astrange@ithinksw.com>
+
+	PR tree-optimization/36318
+	* gcc.dg/tree-ssa/sra-7.c: New test.
+
+2009-06-04  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/37203
+	* gfortran.dg/reshape_order_5.f90: New.
+	* gfortran.dg/reshape_shape_1.f90: New.
+
+2009-06-04  Jason Merrill  <jason@redhat.com>
+
+	* g++.dg/template/error38.C: Add pointer-to-typedef case.
+
+2009-06-04  Steve Ellcey  <sje@cup.hp.com>
+
+	* gcc.dg/vect/vect-42.c: Modify vect_no_align case.
+	* gcc.dg/vect/no-vfa-vect-43.c: Ditto.
+
+2009-06-04  Richard Guenther  <rguenther@suse.de>
+
+	PR c++/39371
+	* g++.dg/torture/pr40335.C: New testcase.
+
+2009-06-03  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/40328
+	* gcc.dg/torture/pr40328.c: New testcase.
+
+2009-06-03  Martin Jambor  <mjambor@suse.cz>
+
+	* g++.dg/torture/pr40323.C: New file.
+
+2009-06-03  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gnat.dg/specs/root.ads: New test.
+	* gnat.dg/specs/root-level_1.ads: Likewise.
+	* gnat.dg/specs/root-level_2.ads: Likewise.
+	* gnat.dg/specs/root-level_1-level_2.ads: Likewise.
+
 2009-06-02  Mark Mitchell  <mark@codesourcery.com>
 
 	* g++.dg/init/ref15.C: Require unwrapped targets.
@@ -72,7 +297,7 @@
 	* gnat.dg/nested_float_packed.ads: New test.
 
 2009-06-01  Olivier Hainque  <hainque@adacore.com>
-            Eric Botcazou  <botcazou@adacore.com>
+	    Eric Botcazou  <botcazou@adacore.com>
 
 	* gnat.dg/oconst[1-6].ad[bs]: New tests. Also support for ...
 	* gnat.dg/test_oconst.adb: New test.
@@ -154,8 +379,7 @@
 
 2009-05-28  Kai Tietz  <kai.tietz@onevision.com>
 
-	*  g++.dg/ext/packed6.C (size_t): Use __extension__ and
-	__SIZE_TYPE__.
+	*  g++.dg/ext/packed6.C (size_t): Use __extension__ and __SIZE_TYPE__.
 	* g++.dg/opt/memcpy1.C (size_t): Likewise.
 	* g++.dg/pr37742.C (size_t): Likewise.
 	* g++.dg/torture/pr34850.C (size_t): Likewise.
@@ -314,7 +538,7 @@
 	* gcc.dg/vect/pr40238.c: New test.
 
 2009-05-24  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
-	    Dominique Dhumieres
+	    Dominique Dhumieres  <dominiq@lps.ens.fr>
 
 	PR fortran/35732
 	PR fortran/39872
@@ -580,8 +804,10 @@
 	* gcc.target/i386/align-main-2.c (check): Mark noinline.
 	* gcc.dg/ipa/ipa-4.c: Disable early inlining.
 	* gcc.dg/vect/vect-iv-10.c (main1): Mark noinline.
-	* gcc.dg/vect/costmodel/i386/costmodel-vect-33.c (main1): Mark noinline.
-	* gcc.dg/vect/costmodel/x86_64/costmodel-vect-33.c (main1): Mark noinline.
+	* gcc.dg/vect/costmodel/i386/costmodel-vect-33.c (main1):
+	Mark noinline.
+	* gcc.dg/vect/costmodel/x86_64/costmodel-vect-33.c (main1):
+	Mark noinline.
 	* gcc.dg/vect/pr31699.c (foo): Mark noinline.
 	* gcc.dg/vect/pr18400.c (main1): Mark noinline.
 
@@ -669,8 +895,8 @@
 
 2009-05-12  Jan Hubicka  <jh@suse.cz>
 
-	* gcc.dg/tree-ssa/loop-36.c: Reduce amount of iterations to 2 so unrolling
-	still happens.
+	* gcc.dg/tree-ssa/loop-36.c: Reduce amount of iterations to 2
+	so unrolling still happens.
 	* gcc.dg/ipa/ipacost-1.c: Prevent inlining
 	* gcc.dg/ipa/ipacost-2.c: Likewise.
 	* gcc.dg/vect/slp-3.c: Loop is no longer unrolled.

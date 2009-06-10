@@ -1,15 +1,15 @@
 10
 
 dir
-148111
+148340
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/vect/costmodel/i386
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-15T17:02:28.044927Z
-147585
-hubicka
+2009-06-05T15:28:50.693894Z
+148211
+revitale
 
 
 
@@ -134,11 +134,11 @@ file
 
 
 
-2009-04-24T17:45:25.000000Z
-059b992dcad3641f19abf41baafbd1d4
-2007-10-30T05:25:10.825343Z
-129764
-dorit
+2009-06-10T05:24:43.000000Z
+76c976cadebef1950cb9300e21b9ccb4
+2009-06-05T15:28:50.693894Z
+148211
+revitale
 
 
 
@@ -160,7 +160,7 @@ dorit
 
 
 
-1443
+1599
 
 i386-costmodel-vect.exp
 file
@@ -202,11 +202,11 @@ file
 
 
 
-2009-05-16T13:52:10.000000Z
-b88218e44c89e8168580166e99fe6d15
-2009-05-15T17:02:28.044927Z
-147585
-hubicka
+2009-06-10T05:24:43.000000Z
+88b8c4c427fe5720252cfc4ea4fcf443
+2009-06-05T15:28:50.693894Z
+148211
+revitale
 
 
 
@@ -228,5 +228,5 @@ hubicka
 
 
 
-597
+624
 

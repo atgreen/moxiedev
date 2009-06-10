@@ -435,6 +435,17 @@ remove_unused_scope_block_p (tree scope)
 	 will be output to file.  */
       if (TREE_CODE (*t) == FUNCTION_DECL)
 	unused = false;
+
+      /* If a decl has a value expr, we need to instantiate it
+	 regardless of debug info generation, to avoid codegen
+	 differences in memory overlap tests.  update_equiv_regs() may
+	 indirectly call validate_equiv_mem() to test whether a
+	 SET_DEST overlaps with others, and if the value expr changes
+	 by virtual register instantiation, we may get end up with
+	 different results.  */
+      else if (TREE_CODE (*t) == VAR_DECL && DECL_HAS_VALUE_EXPR_P (*t))
+	unused = false;
+
       /* Remove everything we don't generate debug info for.  */
       else if (DECL_IGNORED_P (*t))
 	{
@@ -525,7 +536,25 @@ remove_unused_scope_block_p (tree scope)
    /* For terse debug info we can eliminate info on unused variables.  */
    else if (debug_info_level == DINFO_LEVEL_NONE
 	    || debug_info_level == DINFO_LEVEL_TERSE)
-     ;
+     {
+       /* Even for -g0/-g1 don't prune outer scopes from artificial
+	  functions, otherwise diagnostics using tree_nonartificial_location
+	  will not be emitted properly.  */
+       if (inlined_function_outer_scope_p (scope))
+	 {
+	   tree ao = scope;
+
+	   while (ao
+		  && TREE_CODE (ao) == BLOCK
+		  && BLOCK_ABSTRACT_ORIGIN (ao) != ao)
+	     ao = BLOCK_ABSTRACT_ORIGIN (ao);
+	   if (ao
+	       && TREE_CODE (ao) == FUNCTION_DECL
+	       && DECL_DECLARED_INLINE_P (ao)
+	       && lookup_attribute ("artificial", DECL_ATTRIBUTES (ao)))
+	     unused = false;
+	 }
+     }
    else if (BLOCK_VARS (scope) || BLOCK_NUM_NONLOCALIZED_VARS (scope))
      unused = false;
    /* See if this block is important for representation of inlined function.

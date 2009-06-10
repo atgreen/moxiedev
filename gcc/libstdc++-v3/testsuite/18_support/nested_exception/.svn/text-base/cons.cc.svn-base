@@ -27,7 +27,7 @@ void test01()
 
   std::nested_exception e;
 
-  VERIFY( !e.nested_ptr() );
+  VERIFY( e.nested_ptr() == 0 );
 }
 
 void test02() 

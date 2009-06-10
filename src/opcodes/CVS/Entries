@@ -1,5 +1,4 @@
 D/po////
-/ChangeLog/1.1395/Fri Jun  5 22:01:36 2009//
 /ChangeLog-0001/1.1/Fri May 29 23:30:14 2009//
 /ChangeLog-0203/1.1/Fri May 29 23:30:14 2009//
 /ChangeLog-2004/1.1/Fri May 29 23:30:14 2009//
@@ -160,8 +159,6 @@ D/po////
 /mips16-opc.c/1.13/Fri May 29 23:30:14 2009//
 /mmix-dis.c/1.5/Fri May 29 23:30:14 2009//
 /mmix-opc.c/1.7/Fri May 29 23:30:14 2009//
-/moxie-dis.c/1.1/Fri May 29 23:30:14 2009//
-/moxie-opc.c/1.1/Fri May 29 23:30:14 2009//
 /msp430-dis.c/1.5/Fri May 29 23:30:14 2009//
 /mt-asm.c/1.5/Fri May 29 23:30:14 2009//
 /mt-desc.c/1.2/Fri May 29 23:30:14 2009//
@@ -235,3 +232,6 @@ D/po////
 /z8k-dis.c/1.18/Fri May 29 23:30:14 2009//
 /z8k-opc.h/1.11/Fri May 29 23:30:14 2009//
 /z8kgen.c/1.14/Fri May 29 23:30:14 2009//
+/ChangeLog/1.1396/Result of merge//
+/moxie-dis.c/1.2/Result of merge//
+/moxie-opc.c/1.2/Result of merge//

@@ -1,3 +1,178 @@
+2009-06-09  Tobias Burnus  <burnus@net-b.de>
+
+	* trans-decl.c (gfc_generate_function_code): Use gfc_option.rtcheck
+	instead of flag_bounds_check.
+	* intrinsic.texi (ISO_FORTRAN_ENV): Document INT{8,16,32,64} and
+	REAL{32,64,128}.
+
+2009-06-08  Paul Thomas  <pault@gcc.gnu.org>
+
+	* trans-array.h : Replace prototypes for
+	gfc_conv_descriptor_offset, gfc_conv_descriptor_stride,
+	gfc_conv_descriptor_lbound, gfc_conv_descriptor_ubound with new
+	prototypes of the same names with _get or _set appended.
+	* trans-array.c : Make the originals of the above static and
+	new functions for the _get and _set functions. Update all the
+	references to these descriptor access functions.
+	* trans-expr.c : Update references to the above descriptor
+	access functions.
+	* trans-intrinsic.c : The same.
+	* trans-openmp.c : The same.
+	* trans-stmt.c : The same.
+
+2009-06-08  Alexandre Oliva  <aoliva@redhat.com>
+
+	* options.c (gfc_post_options): Disable dump_parse_tree
+	during -fcompare-debug-second.
+
+2009-06-07  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/40008
+	* gfortran.h (gfc_open): Add newunit expression to structure.
+	* io.c (io_tag): Add new unit tag and fix whitespace.
+	(match_open_element): Add matching for newunit.
+	(gfc_free_open): Free the newunit expression.
+	(gfc_resolve_open): Add newunit to resolution and check constraints.
+	(gfc_resolve_close): Add check for non-negative unit.
+	(gfc_resolve_filepos): Likewise.
+	(gfc_resolve_dt): Likewise.
+	* trans-io.c (set_parameter_value): Build runtime checks for unit
+	numbers within range of kind=4 integer. (gfc_trans_open) Set the
+	newunit parameter.
+	* ioparm.def (IOPARM): Define the newunit parameter as a pointer
+	to GFC_INTEGER_4, pint4.
+
+2009-06-07  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/25104
+	PR fortran/29962
+	* array.c (gfc_append_constructor): Added NULL-check.
+	* check.c (gfc_check_spread): Check DIM.
+	(gfc_check_unpack): Check that the ARRAY arguments provides enough
+	values for MASK.
+	* intrinsic.h (gfc_simplify_spread): New prototype.
+	(gfc_simplify_unpack): Likewise.
+	* intrinsic.c (add_functions): Added new simplifier callbacks.
+	* simplify.c (gfc_simplify_spread): New.
+	(gfc_simplify_unpack): New.
+	* expr.c (check_transformational): Allow additional transformational
+	intrinsics in initialization expression.
+
+2009-06-07  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/25104
+	PR fortran/29962
+	* check.c (gfc_check_all_any): Check rank of DIM.
+	(gfc_check_count): Likewise.
+	* intrinsic.h (gfc_simplify_all): New prototype.
+	(gfc_simplify_any): Likewise.
+	(gfc_simplify_count): Likewise.
+	(gfc_simplify_sum): Likewise.
+	(gfc_simplify_product): Likewise.
+	* intrinsic.c (add_functions): Added new simplifier callbacks.
+	* simplify.c (transformational_result): New.
+	(simplify_transformation_to_scalar): New.
+	(simplify_transformation_to_array): New.
+	(gfc_count): New.
+	(gfc_simplify_all): New.
+	(gfc_simplify_any): New.
+	(gfc_simplify_count): New.
+	(gfc_simplify_sum): New.
+	(gfc_simplify_product): New.
+	* expr.c (check_transformational): Allow additional transformational
+	intrinsics in initialization expression.
+
+2009-06-07  Daniel Franke  <franke.daniel@gmail.com>
+
+	* check.c (dim_rank_check): Return SUCCESS if DIM=NULL.
+	(gfc_check_lbound): Removed (now) redundant check for DIM=NULL.
+	(gfc_check_minloc_maxloc): Likewise.
+	(check_reduction): Likewise.
+	(gfc_check_size): Likewise.
+	(gfc_check_ubound): Likewise.
+	(gfc_check_cshift): Added missing shape-conformance checks.
+	(gfc_check_eoshift): Likewise.
+	* gfortran.h (gfc_check_conformance): Modified prototype to printf-style.
+	* expr.c (gfc_check_conformance): Accept error-message chunks in 
+	printf-style. Changed all callers.
+
+
+2009-06-07  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/25104
+	PR fortran/29962
+	* intrinsic.h (gfc_simplify_dot_product): New prototype.
+	(gfc_simplify_matmul): Likewise.
+	(gfc_simplify_transpose): Likewise.
+	* intrinsic.c (add_functions): Added new simplifier callbacks.
+	* simplify.c (init_result_expr): New.
+	(compute_dot_product): New.
+	(gfc_simplify_dot_product): New.
+	(gfc_simplify_matmul): New.
+	(gfc_simplify_transpose): New.
+	* expr.c (check_transformational): Allow transformational intrinsics
+	with simplifier in initialization expression.
+
+2009-06-06  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/37203
+	* simplify.c (gfc_simplify_reshape): Fixed reshaping of empty arrays
+	without padding.
+
+2009-06-06  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/32890
+	* intrinsic.h (gfc_simplify_pack): New prototype.
+	* intrinsic.c (add_functions): Added
+	simplifier-callback to PACK.
+	* simplify.c (is_constant_array_expr): Moved
+	to beginning of file.
+	(gfc_simplify_pack): New.
+	* check.c (gfc_check_pack): Check that VECTOR has enough elements.
+	Added safeguards for empty arrays.
+
+2009-06-05  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
+
+	* simplify.c (call_mpc_func): Use mpc_realref/mpc_imagref
+	instead of MPC_RE/MPC_IM.
+
+2009-06-05  Alexandre Oliva  <aoliva@redhat.com>
+
+	* trans-decl.c (gfc_build_qualified_array): Don't skip generation
+	of range types.
+	* trans.h (struct lang_type): Add base_decls.
+	(GFC_TYPE_ARRAY_BASE_DECL): New.
+	* trans-types.c (gfc_get_array_type_bounds): Initialize base decls
+	proactively and excessively.
+	(gfc_get_array_descr_info): Use existing base decls if available.
+
+2009-06-04  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/37203
+	* check.c (gfc_check_reshape): Additional checks for the
+	SHAPE and ORDER arguments.
+	* simplify.c (gfc_simplify_reshape): Converted argument checks
+	to asserts.
+
+2009-06-03  Tobias Burnus  <burnus@net-b.de>
+
+	* gfortran.texi: Add mixed-language programming, mention
+	varying string lengths, some clean up of introduction parts.
+	* intrinsic.texi (instrinsic modules): Create @menu for subsections.
+	(ISO_C_BINDING): Support ISOCBINDING_INT_FAST128_T.
+	* libgfortran.h: Comment to rember to keep gfortran.texi in sync.
+	* iso-c-binding.def: Support ISOCBINDING_INT_FAST128_T.
+
+2009-06-03  Francois-Xavier Coudert  <fxcoudert@gcc.gnu.org>
+	    Tobias Burnus  <burnus@net-b.de>
+
+	* iso-c-binding.def: Use INTMAX_TYPE instead of intmax_type_node.
+	* trans-types.c (init_c_interop_kinds): Remove intmax_type_node.
+
+2009-06-03  Alexandre Oliva  <aoliva@redhat.com>
+
+	* module.c (mio_f2k_derived): Initialize cur.
+
 2009-06-01  Tobias Burnus  <burnus@net-b.de>
 
 	PR fortran/40309

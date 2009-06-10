@@ -550,7 +550,7 @@ objc_init (void)
 
   init_objc ();
 
-  if (print_struct_values)
+  if (print_struct_values && !flag_compare_debug)
     generate_struct_by_value_array ();
 
   return true;
@@ -9532,7 +9532,7 @@ objc_rewrite_function_call (tree function, tree first_param)
    a function in OBJ_TYPE_REF_EXPR (presumably objc_msgSend or one
    of its cousins).  */
 
-enum gimplify_status
+int
 objc_gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
 {
   enum gimplify_status r0, r1;

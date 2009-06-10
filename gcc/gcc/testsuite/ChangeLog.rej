@@ -1,0 +1,14 @@
+***************
+*** 1,3 ****
+  2009-06-02  Mark Mitchell  <mark@codesourcery.com>
+  
+  	* g++.dg/init/ref15.C: Require unwrapped targets.
+--- 1,8 ----
++ 2009-06-02  Anthony Green  <green@moxielogic.com>
++ 
++ 	* testsuite/lib/target-supports.exp (check_profiling_available):
++ 	Profiling is not available for testing purposes on moxie.
++ 
+  2009-06-02  Mark Mitchell  <mark@codesourcery.com>
+  
+  	* g++.dg/init/ref15.C: Require unwrapped targets.

@@ -25,7 +25,6 @@ D/m32r////
 D/m68hc11////
 D/m68k////
 D/m68k-coff////
-D/m88k////
 D/macros////
 D/maxq10////
 D/maxq20////
@@ -36,7 +35,6 @@ D/mmix////
 D/mn10200////
 D/mn10300////
 D/mri////
-D/ms1////
 D/msp430////
 D/mt////
 D/openrisc////
@@ -52,13 +50,13 @@ D/sun4////
 D/symver////
 D/tic4x////
 D/tic54x////
-D/tic80////
 D/v850////
 D/vax////
-D/vtable////
 D/xc16x////
 D/xstormy16////
 D/xtensa////
 D/z80////
 D/z8k////
 /template/1.1.1.1/Fri May 29 23:29:58 2009//
+D/lm32////
+D/pe////

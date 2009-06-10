@@ -44,11 +44,11 @@
 
   FORM 3 instructions start with a bits "11"...
 
-    11oovvvvvvvvvvvv
+    11oooovvvvvvvvvv
     0              F
 
-   oo           - form 3 opcode number
-   vvvvvvvvvvvv - 12-bit immediate value.  */
+   oooo         - form 3 opcode number
+   vvvvvvvvvv   - 10-bit immediate value.  */
 
 const moxie_opc_info_t moxie_form1_opc_info[64] =
   {

@@ -1,7 +1,7 @@
 10
 
 dir
-148340
+148390
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/ext/visibility
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ janis
 
 352
 
-staticdatamem.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-6014ef7f9e80dffce855a18d78bf2212
-2004-12-14T02:15:55.000000Z
-92120
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-396
-
 anon5.C
 file
 
@@ -603,6 +569,40 @@ jakub
 
 
 155
+
+staticdatamem.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+6014ef7f9e80dffce855a18d78bf2212
+2004-12-14T02:15:55.000000Z
+92120
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+396
 
 anon6.C
 file
@@ -706,40 +706,6 @@ jakub
 
 500
 
-fvisibility-inlines-hidden-2.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-9f6874b06aea35e844ab40f0f69550c5
-2006-07-13T06:16:59.976710Z
-115411
-geoffk
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-369
-
 anon9.C
 file
 
@@ -774,17 +740,17 @@ jakub
 
 146
 
-visibility-1.C
+fvisibility-inlines-hidden-2.C
 file
 
 
 
 
 2009-04-24T17:44:09.000000Z
-b78959b2914362cd23e2ae31204c2305
-2004-08-06T02:03:29.000000Z
-85621
-mmitchel
+9f6874b06aea35e844ab40f0f69550c5
+2006-07-13T06:16:59.976710Z
+115411
+geoffk
 
 
 
@@ -806,41 +772,7 @@ mmitchel
 
 
 
-188
-
-fvisibility-inlines-hidden-3.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-5c8d17e33f840c89b8d56a22d680b9d1
-2006-07-21T20:39:19.835663Z
-115649
-mrs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-576
+369
 
 fvisibility-inlines-hidden.C
 file
@@ -876,14 +808,48 @@ mmitchel
 
 330
 
-visibility-2.C
+fvisibility-inlines-hidden-3.C
 file
 
 
 
 
 2009-04-24T17:44:09.000000Z
-e84981f02dd8957761952e315dab0d86
+5c8d17e33f840c89b8d56a22d680b9d1
+2006-07-21T20:39:19.835663Z
+115649
+mrs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+576
+
+visibility-1.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+b78959b2914362cd23e2ae31204c2305
 2004-08-06T02:03:29.000000Z
 85621
 mmitchel
@@ -908,7 +874,7 @@ mmitchel
 
 
 
-220
+188
 
 class1.C
 file
@@ -943,6 +909,40 @@ nathan
 
 
 556
+
+visibility-2.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+e84981f02dd8957761952e315dab0d86
+2004-08-06T02:03:29.000000Z
+85621
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+220
 
 visibility-3.C
 file

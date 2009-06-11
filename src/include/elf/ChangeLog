@@ -1,4 +1,4 @@
-2009-06-10  Anthony Green  <green@moxielogic.org>
+2009-06-11  Anthony Green  <green@moxielogic.org>
 
 	* moxie.h (R_MOXIE_PCREL10): New.
 

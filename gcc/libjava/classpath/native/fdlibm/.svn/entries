@@ -1,7 +1,7 @@
 10
 
 dir
-148340
+148390
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/native/fdlibm
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,40 +502,6 @@ mark
 
 856
 
-s_expm1.c
-file
-
-
-
-
-2009-04-24T17:48:33.000000Z
-788127c08a5d84aee05eae21ac0b3333
-2006-03-10T21:46:48.115162Z
-111942
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7539
-
 s_cbrt.c
 file
 
@@ -569,6 +535,40 @@ mark
 
 
 2332
+
+s_expm1.c
+file
+
+
+
+
+2009-04-24T17:48:33.000000Z
+788127c08a5d84aee05eae21ac0b3333
+2006-03-10T21:46:48.115162Z
+111942
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7539
 
 s_copysign.c
 file
@@ -706,40 +706,6 @@ mark
 
 4595
 
-e_log10.c
-file
-
-
-
-
-2009-04-24T17:48:33.000000Z
-2b81275a5f14d5e78cb6d40f107f08a8
-2006-03-10T21:46:48.115162Z
-111942
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2770
-
 k_rem_pio2.c
 file
 
@@ -774,14 +740,14 @@ mark
 
 8460
 
-w_sinh.c
+e_log10.c
 file
 
 
 
 
 2009-04-24T17:48:33.000000Z
-4a01afcfa59402e1ecf74b0303f1836c
+2b81275a5f14d5e78cb6d40f107f08a8
 2006-03-10T21:46:48.115162Z
 111942
 mark
@@ -806,7 +772,7 @@ mark
 
 
 
-832
+2770
 
 dtoa.c
 file
@@ -841,6 +807,40 @@ doko
 
 
 19344
+
+w_sinh.c
+file
+
+
+
+
+2009-04-24T17:48:33.000000Z
+4a01afcfa59402e1ecf74b0303f1836c
+2006-03-10T21:46:48.115162Z
+111942
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+832
 
 e_scalb.c
 file
@@ -944,14 +944,14 @@ mark
 
 879
 
-w_remainder.c
+k_tan.c
 file
 
 
 
 
 2009-04-24T17:48:33.000000Z
-064179024aa4440e0fcb6635a746d020
+07bab8b6a4dc493ad8bdcb7a810e5491
 2006-03-10T21:46:48.115162Z
 111942
 mark
@@ -976,7 +976,7 @@ mark
 
 
 
-885
+4403
 
 .cvsignore
 file
@@ -1012,14 +1012,14 @@ tromey
 
 51
 
-k_tan.c
+w_remainder.c
 file
 
 
 
 
 2009-04-24T17:48:33.000000Z
-07bab8b6a4dc493ad8bdcb7a810e5491
+064179024aa4440e0fcb6635a746d020
 2006-03-10T21:46:48.115162Z
 111942
 mark
@@ -1044,7 +1044,7 @@ mark
 
 
 
-4403
+885
 
 e_sqrt.c
 file

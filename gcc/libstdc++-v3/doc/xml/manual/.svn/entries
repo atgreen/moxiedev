@@ -1,7 +1,7 @@
 10
 
 dir
-148340
+148390
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/doc/xml/manual
 svn://gcc.gnu.org/svn/gcc
 
@@ -672,40 +672,6 @@ bkoz
 
 4576
 
-bitmap_allocator.xml
-file
-
-
-
-
-2009-04-24T17:49:57.000000Z
-286e315fae25cf3aa51085a4a9453d95
-2008-04-10T22:14:17.589732Z
-134178
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-21458
-
 support.xml
 file
 
@@ -739,6 +705,40 @@ bkoz
 
 
 14046
+
+bitmap_allocator.xml
+file
+
+
+
+
+2009-04-24T17:49:57.000000Z
+286e315fae25cf3aa51085a4a9453d95
+2008-04-10T22:14:17.589732Z
+134178
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+21458
 
 configure.xml
 file
@@ -1012,40 +1012,6 @@ bkoz
 
 41530
 
-locale.xml
-file
-
-
-
-
-2009-04-24T17:49:58.000000Z
-bb35e3849af92c8758c187b02684d30e
-2009-04-15T23:26:59.941518Z
-146139
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-10615
-
 extensions.xml
 file
 
@@ -1079,6 +1045,40 @@ bkoz
 
 
 23121
+
+locale.xml
+file
+
+
+
+
+2009-04-24T17:49:58.000000Z
+bb35e3849af92c8758c187b02684d30e
+2009-04-15T23:26:59.941518Z
+146139
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+10615
 
 appendix_contributing.xml
 file

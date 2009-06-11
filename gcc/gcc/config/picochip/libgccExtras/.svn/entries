@@ -1,7 +1,7 @@
 10
 
 dir
-148340
+148390
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/picochip/libgccExtras
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ hariharans
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-divmodsi4.asm
-file
-
-
-
-
-2009-04-24T17:43:26.000000Z
-ae47a9840393ec664a13fcae7f2366f3
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7608
 
 setjmp.asm
 file
@@ -94,14 +60,14 @@ jakub
 
 6207
 
-longjmp.asm
+divmodsi4.asm
 file
 
 
 
 
 2009-04-24T17:43:26.000000Z
-ff762fdfae8d8b2856d8245439bbe566
+ae47a9840393ec664a13fcae7f2366f3
 2009-04-09T15:00:19.611803Z
 145841
 jakub
@@ -126,7 +92,41 @@ jakub
 
 
 
-6230
+7608
+
+ashlsi3.asm
+file
+
+
+
+
+2009-04-24T17:43:26.000000Z
+3f41a8beef8a6b9feb6da5d3a31eb7b6
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6476
 
 clzsi2.asm
 file
@@ -162,14 +162,14 @@ jsm28
 
 6259
 
-ashlsi3.asm
+longjmp.asm
 file
 
 
 
 
 2009-04-24T17:43:26.000000Z
-3f41a8beef8a6b9feb6da5d3a31eb7b6
+ff762fdfae8d8b2856d8245439bbe566
 2009-04-09T15:00:19.611803Z
 145841
 jakub
@@ -194,7 +194,7 @@ jakub
 
 
 
-6476
+6230
 
 ashlsi3.c
 file
@@ -332,40 +332,6 @@ jakub
 
 6202
 
-ashrsi3.asm
-file
-
-
-
-
-2009-04-24T17:43:26.000000Z
-19c70b9dc6e632f6bdbae23252450ea0
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6735
-
 udivmodhi4.asm
 file
 
@@ -399,6 +365,40 @@ jakub
 
 
 8277
+
+ashrsi3.asm
+file
+
+
+
+
+2009-04-24T17:43:26.000000Z
+19c70b9dc6e632f6bdbae23252450ea0
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6735
 
 ashrsi3.c
 file
@@ -468,40 +468,6 @@ jakub
 
 6734
 
-lshrsi3.asm
-file
-
-
-
-
-2009-04-24T17:43:26.000000Z
-53e52e6cd46f183e04c5ea70d82adfdb
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6488
-
 divmodhi4.asm
 file
 
@@ -535,6 +501,40 @@ jakub
 
 
 8605
+
+lshrsi3.asm
+file
+
+
+
+
+2009-04-24T17:43:26.000000Z
+53e52e6cd46f183e04c5ea70d82adfdb
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6488
 
 udivmodsi4.asm
 file

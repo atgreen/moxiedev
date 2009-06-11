@@ -1,7 +1,7 @@
 10
 
 dir
-148340
+148390
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/java/net/protocol/http
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-HTTPConnection$Pool.h
-file
-
-
-
-
-2009-04-24T17:49:01.000000Z
-5a86acc97417e536f4b22cf38da18d52
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1465
 
 Credentials.h
 file
@@ -93,6 +59,40 @@ tromey
 
 
 948
+
+HTTPConnection$Pool.h
+file
+
+
+
+
+2009-04-24T17:49:01.000000Z
+5a86acc97417e536f4b22cf38da18d52
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1465
 
 Response.h
 file
@@ -468,40 +468,6 @@ doko
 
 1624
 
-Handler.h
-file
-
-
-
-
-2009-04-24T17:49:01.000000Z
-b07079e70a5532da264d7f61d8f3ac8e
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-901
-
 ChunkedInputStream.h
 file
 
@@ -535,6 +501,40 @@ doko
 
 
 1256
+
+Handler.h
+file
+
+
+
+
+2009-04-24T17:49:01.000000Z
+b07079e70a5532da264d7f61d8f3ac8e
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+901
 
 SimpleCookieManager.h
 file

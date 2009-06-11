@@ -1,3 +1,27 @@
+2009-06-11  Francois-Xavier Coudert  <fxcoudert@gcc.gnu.org>
+
+	PR fortran/38718
+	* intrinsic.c (add_functions): Add simplifiers for ISNAN,
+	IS_IOSTAT_END and IS_IOSTAT_EOR.
+	* intrinsic.h (gfc_simplify_is_iostat_end, gfc_simplify_is_iostat_eor,
+	gfc_simplify_isnan): New prototypes.
+	* intrinsic.c (gfc_simplify_is_iostat_end, gfc_simplify_is_iostat_eor,
+	gfc_simplify_isnan): New functions.
+
+2009-06-11  Jakub Jelinek  <jakub@redhat.com>
+
+	* interface.c (fold_unary): Rename to...
+	(fold_unary_intrinsic): ... this.
+	(gfc_extend_expr): Adjust caller.
+	(gfc_match_generic_spec): Likewise.  Initialize *op to INTRINSIC_NONE
+	to avoid warnings.
+	* expr.c (gfc_simplify_expr): Initialize start and end before calling
+	gfc_extract_int.
+
+2009-06-10  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* trans-decl.c (create_main_function):  Don't build main decl twice.
+
 2009-06-09  Tobias Burnus  <burnus@net-b.de>
 
 	* trans-decl.c (gfc_generate_function_code): Use gfc_option.rtcheck

@@ -1,9 +1,3 @@
-2009-06-02  Anthony Green  <green@moxielogic.com>
-
-	* Makefile.def (host_modules): Configure in-tree GMP with
-	--enable-cxx.
-	* Makefile.in: Rebuilt.
-
 2009-06-09  Ghassan Shobaki  <ghassan.shobaki@amd.com>
 
         * MAINTAINERS: Added my name to the write-after-approval list

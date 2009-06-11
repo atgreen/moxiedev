@@ -1,7 +1,7 @@
 10
 
 dir
-148340
+148390
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/java/awt/font
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-FontRenderContext.class
-file
-
-
-
-
-2009-04-24T17:47:54.000000Z
-e401f539d6aac2bd1f96cb33b9658462
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1637
 
 TextLayout$Run.class
 file
@@ -94,6 +60,40 @@ has-props
 
 946
 
+FontRenderContext.class
+file
+
+
+
+
+2009-04-24T17:47:54.000000Z
+e401f539d6aac2bd1f96cb33b9658462
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1637
+
 LineMetrics.class
 file
 
@@ -128,40 +128,6 @@ has-props
 
 595
 
-TextLayout.class
-file
-
-
-
-
-2009-04-24T17:47:54.000000Z
-4193075971d338525ec94f58ad8316a6
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-23699
-
 ShapeGraphicAttribute.class
 file
 
@@ -195,6 +161,40 @@ has-props
 
 
 2426
+
+TextLayout.class
+file
+
+
+
+
+2009-04-24T17:47:54.000000Z
+4193075971d338525ec94f58ad8316a6
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+23699
 
 TextLayout$CaretPolicy.class
 file
@@ -468,40 +468,6 @@ has-props
 
 2263
 
-NumericShaper.class
-file
-
-
-
-
-2009-04-24T17:47:54.000000Z
-ff730e1236279fdf5da483d0ff19357c
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4709
-
 TextHitInfo.class
 file
 
@@ -535,6 +501,40 @@ has-props
 
 
 2065
+
+NumericShaper.class
+file
+
+
+
+
+2009-04-24T17:47:54.000000Z
+ff730e1236279fdf5da483d0ff19357c
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4709
 
 GlyphVector.class
 file

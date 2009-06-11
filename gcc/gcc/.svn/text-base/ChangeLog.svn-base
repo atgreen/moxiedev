@@ -1,3 +1,130 @@
+2009-06-11  Anthony Green  <green@moxielogic.com>
+
+	* config/moxie/moxie.md: Define length attribute for all
+	instructions.
+	(rCC): Define.
+	(*b<cond:code>): Support limited branch ranges for new PC-relative
+	branch instructions.
+	* config/moxie/moxie.h (HAS_LONG_UNCOND_BRANCH): Define.
+
+2009-06-11  Jakub Jelinek  <jakub@redhat.com>
+
+	* config/i386/i386.c (min_insn_size): Use get_attr_length
+	for normal insns other than TYPE_MULTI, TYPE_OTHER and TYPE_FCMP.
+	For __asm return 0.
+
+	* config/i386/i386.c (ix86_pad_returns): Use emit_jump_insn_before
+	instead of emit_insn_before.
+
+2009-06-10  Ian Lance Taylor  <iant@google.com>
+
+	PR bootstrap/40408
+	* graphite.c (add_conditions_to_domain): Change SWITCH_EXPR to
+	GIMPLE_SWITCH.
+
+2009-06-10  Revital Eres  <eres@il.ibm.com>
+
+	* passes.c (init_optimization_passes): Reschedule
+	predictive-commoning pass before complete unroll pass.
+
+2009-06-10  Martin Jambor  <mjambor@suse.cz>
+
+	* cgraph.c (cgraph_node_can_be_local_p): New function.
+	(cgraph_make_node_local): New function.
+	* cgraph.h (cgraph_node_can_be_local_p): Declare.
+	(cgraph_make_node_local): Declare.
+
+2009-06-10  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* tree.h (tree_base): Add packed_flag and user_align fields.
+	Decrease size of spare field.
+	(TYPE_USER_ALIGN): Use user_align from tree_base.
+	(DECL_USER_ALIGN): Likewise.
+	(TYPE_PACKED): Use packed_flag from tree_base.
+	(DECL_PACKED): Likewise.
+	(tree_type): Delete packed_flag and user_align fields.  Widen
+	precision field.  Widen mode field and shuffle fields to align
+	mode on an 8-bit boundary.
+	(tree_decl_common): Delete decl_flag_1 and user_align fields.
+	Renumber decl_flag_* fields.  Fix comments.  Widen
+	decl_common_unused field.
+	(DECL_HAS_VALUE_EXPR_P): Adjust for renumbering of decl_flag_*
+	fields.
+	(DECL_EXTERNAL): Likewise.
+	(DECL_BIT_FIELD): Likewise.
+	(DECL_NONADDRESSABLE_P): Likewise.
+	(TYPE_DECL_SUPRESS_DEBUG): Likewise.
+	* config/arm/arm-modes.def (XImode): Make it an INT_MODE.
+
+2009-06-10  Ian Lance Taylor  <iant@google.com>
+
+	* vec.h (DEF_VEC_ALLOC_I): Use DEF_VEC_NONALLOC_FUNCS_I.
+	(DEF_VEC_ALLOC_P): Use DEF_VEC_NONALLOC_FUNCS_P.
+	(DEF_VEC_ALLOC_O): Use DEF_VEC_NONALLOC_FUNCS_O.
+	(DEF_VEC_ALLOC_FUNC_P): Only define VEC_OP (T,A,alloc).
+	(DEF_VEC_NONALLOC_FUNCS_P): New macro, broken out of old
+	DEF_VEC_ALLOC_FUNC_P.
+	(DEF_VEC_ALLOC_FUNC_O): Only define VEC_OP (T,A,alloc).
+	(DEF_VEC_NONALLOC_FUNCS_O): New macro, broken out of old
+	DEF_VEC_ALLOC_FUNC_O.
+	(DEF_VEC_ALLOC_FUNC_I): Only define VEC_OP (T,A,alloc).
+	(DEF_VEC_NONALLOC_FUNCS_I): New macro, broken out of old
+	DEF_VEC_ALLOC_FUNC_I.
+	(vec_stack_p_reserve, vec_stack_p_reserve_exact): Declare.
+	(vec_stack_p_reserve_exact_1): Declare.
+	(vec_stack_o_reserve, vec_stack_o_reserve_exact): Declare.
+	(vec_stack_free): Declare.
+	(VEC_stack_alloc): Define.
+	(DEF_VEC_ALLOC_P_STACK, DEF_VEC_ALLOC_FUNC_P_STACK): Define.
+	(DEF_VEC_ALLOC_O_STACK, DEF_VEC_ALLOC_FUNC_O_STACK): Define.
+	(DEF_VEC_ALLOC_I_STACK, DEF_VEC_ALLOC_FUNC_I_STACK): Define.
+	* vec.c (void_p): New type.  Call DEF_VEC_P and DEF_VEC_ALLOC_P
+	for void_p.
+	(stack_vecs): New static variable.
+	(vec_stack_p_reserve_exact_1): New function.
+	(vec_stack_o_reserve_1): New static function.
+	(vec_stack_p_reserve, vec_stack_p_reserve_exact): New functions.
+	(vec_stack_o_reserve, vec_stack_o_reserve_exact): New functions.
+	(vec_stack_free): New function.
+	* df-scan.c (df_ref): Use DEF_VEC_P and DEF_VEC_ALLOC_P_STACK.
+	(VEC_df_ref_stack_alloc): Define.
+	(df_mw_hardreg_ptr): New type.  Use DEF_VEC_P and
+	DEF_VEC_ALLOC_P_STACK.
+	(VEC_df_mw_hardreg_ptr_stack_alloc): Define.
+	(struct df_collection_rec): Change _vec fields to VEC.  Remove
+	_use fields.
+	(df_free_collection_rec): Adjust for new fields.
+	(df_insn_rescan): Use new df_collection_rec fields.
+	(df_notes_rescan, df_canonize_collection_rec): Likewise.
+	(df_ref_create_structure, df_ref_record): Likewise.
+	(df_get_conditional_uses, df_get_call_refs): Likewise.
+	(df_insn_refs_collect, df_bb_refs_collect): Likewise.
+	(df_bb_refs_record, df_record_entry_block_defs): Likewise.
+	(df_record_exit_block_uses, df_bb_verify): Likewise.
+	(df_swap_refs): Change ref_vec parameter to VEC.  Change all
+	callers.
+	(df_sort_and_compress_refs): Change ref_vec parameter to VEC.
+	Remove count parameter.  Change return type to void.  Change all
+	callers.
+	(df_sort_and_compress_mws): Change mw_vec parameter to VEC.
+	Remove count parameter.  Change return type to void.  Change all
+	callers.
+	(df_install_refs): Change old_vec parameter to VEC.  Remove count
+	parameter.  Change all callers.
+	(df_install_mws): Change old_vec parameter to VEC.  Remove count
+	parameter.  Change all callers.
+	(df_refs_verify): Change new_rec parameter to VEC.  Change call
+	callers.
+	(df_mws_verify): Likewise.
+
+2009-06-10  Alexandre Oliva  <aoliva@redhat.com>
+
+	* gcc.c (compare_files): Cast munmap argumento to caddr_t.
+
+2009-06-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* doc/extend.texi: Add description for __builtin_ia32_crc32di.
+
 2009-06-10  Anthony Green  <green@moxielogic.com>
 
 	* config/moxie/crti.asm: New file.

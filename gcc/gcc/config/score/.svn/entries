@@ -1,7 +1,7 @@
 10
 
 dir
-148340
+148390
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/score
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ bonzini
 
 52139
 
-crti.asm
-file
-
-
-
-
-2009-04-24T17:43:27.000000Z
-af7c796cd689d6ea37589cbdb067abed
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3345
-
 t-score-elf
 file
 
@@ -127,6 +93,40 @@ ian
 
 
 2399
+
+crti.asm
+file
+
+
+
+
+2009-04-24T17:43:27.000000Z
+af7c796cd689d6ea37589cbdb067abed
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3345
 
 predicates.md
 file
@@ -196,40 +196,6 @@ bonzini
 
 50208
 
-score3.h
-file
-
-
-
-
-2009-05-16T13:52:23.000000Z
-2b9813a7e24f1b689f520a7df6b06b62
-2009-05-14T13:42:45.175069Z
-147534
-bonzini
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7206
-
 score-generic.md
 file
 
@@ -264,16 +230,16 @@ liqin
 
 1482
 
-score-protos.h
+score3.h
 file
 
 
 
 
 2009-05-16T13:52:23.000000Z
-09b0d164498e2ee4fccf6e0948c500d2
-2009-05-12T09:43:48.981653Z
-147425
+2b9813a7e24f1b689f520a7df6b06b62
+2009-05-14T13:42:45.175069Z
+147534
 bonzini
 
 
@@ -296,7 +262,7 @@ bonzini
 
 
 
-4679
+7206
 
 crtn.asm
 file
@@ -332,6 +298,40 @@ jakub
 
 1567
 
+score-protos.h
+file
+
+
+
+
+2009-05-16T13:52:23.000000Z
+09b0d164498e2ee4fccf6e0948c500d2
+2009-05-12T09:43:48.981653Z
+147425
+bonzini
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4679
+
 score7.h
 file
 
@@ -366,40 +366,6 @@ bonzini
 
 7175
 
-score.c
-file
-
-
-
-
-2009-05-16T13:52:23.000000Z
-e588213495ff2c4e13a7ae6e74334fe2
-2009-05-15T07:12:03.223055Z
-147560
-bonzini
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-34455
-
 elf.h
 file
 
@@ -433,6 +399,40 @@ liqin
 
 
 3820
+
+score.c
+file
+
+
+
+
+2009-05-16T13:52:23.000000Z
+e588213495ff2c4e13a7ae6e74334fe2
+2009-05-15T07:12:03.223055Z
+147560
+bonzini
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+34455
 
 score.h
 file

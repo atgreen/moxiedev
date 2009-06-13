@@ -1,41 +1,94 @@
-* Assembler
+1010101010101010101010101010101010101010101010101010101010101010101010101010101
+0101010101010101010101010101010101010101010101010101010101010101010101010101010
+1   ___  ___          _     ______                                            1
+0   |  \/  |         (_)    |  _  \              Open Source Tools,           0
+1   | .  . | _____  ___  ___| | | |_____   __    Firmware, and HDL code for   1
+0   | |\/| |/ _ \ \/ / |/ _ \ | | / _ \ \ / /    the Moxie processor core.    0
+1   | |  | | (_) >  <| |  __/ |/ /  __/\ V /                                  1
+0   \_|  |_/\___/_/\_\_|\___|___/ \___| \_/      http://moxielogic.org/blog   0
+1                                                                             1
+0101010101010101010101010101010101010101010101010101010101010101010101010101010
+1010101010101010101010101010101010101010101010101010101010101010101010101010101
 
-  - Reverse src and dest operands for two operand instructions to
-    follow conventions set by assemblers for other processors.
+This is the living TO DO document.  Let me know if you're interesting
+in tackling any of these..
+					Anthony Green <green@moxielogic.com>
 
+-------------------------------------------------------------------------------
 * Building
+-------------------------------------------------------------------------------
 
   - Add sanity check for ncurses-devel and SDL-devel
-
-  - Replace mpfr-2.4.0 reference with variable
 
   - Figure out how to save build logs (tee output?  maybe ant has a
     convenient mechanism).
 
-* Testing
 
-  - Figure out how to move mail task bits into external property file
-    (for username, password, server, etc).
-
-  - Import ggxamine.
-
+-------------------------------------------------------------------------------
 * Documentation
+-------------------------------------------------------------------------------
 
   - Use publican to document moxie architecture.
 
-* Benchmarks
 
-  - I want to automake building and running on the benchmarks on a
-    group of amazon ec2 instances.  I think the best way to do this is
-    to package everything up in RPM format to load on the ec2
-    instances.  I've already done this for MiBench data and tools, but
-    now this has to happen for the tests.
+-------------------------------------------------------------------------------
+* Compiler
+-------------------------------------------------------------------------------
 
-    - Create binary RPMs for the benchmark suites.  Data is already
-      RPMized, but need to find home for it (~3Gb).
+  - Fix loads so they zero extend.  The following code...
 
-    - Write ant magic to start ec2 instances, load and run tests,
-      extract results and shutdown instances.
+unsigned short *ptr;
+int foo()
+{
+  return *ptr;
+}
 
+...currently emits...
 
+foo:
+	ldi.l  $r1, 16
+	lda.l  $r0, ptr
+	ld.s   $r0, ($r0)
+	ashl   $r0, $r1
+	lshr   $r0, $r1
+	ret
+
+    The compiler should know that certain operations zero extend, so it doesn't have to 
+    do that shifting hack.
+
+  - Consider sign extended versions of memory load operations.
+
+  - Shorten load/store offsets to 16-bits. They are currently 32-bits,
+    but for all of the benchmarks I’ve looked at the upper 16-bits are
+    always 0×0000 or 0xffff. If the compiler ever really wants to use
+    an offset > 16-bits, it should revert to computing the target
+    address in registers. I don’t expect that much code would require
+    this.
+    
+  - Introduce shift instructions with immediate operands. There’s
+    plenty of opcode space for us to add 16-bit shift instructions that
+    include a 5-bit immediate shift value (so we can shift up to 32-bits
+    in either direction). Right now we load a 32-bit immediate shift value
+    into a register which burns that register as well as wastes 32-bits of
+    code space per shift.
+    
+  - Get the compiler to generate 16-bit immediate loads. All
+    immediates are 32-bits right now, but the vast majority of these
+    constants are < 16 bits long.
+    
+  - Push/pop multiple registers to the stack with one
+    instruction. Although we have 16-registers, the ABI doesn’t have us
+    pushing all 16 to the stack on function entry. We should be able to
+    have a single 16-bit instruction that pushes/pops all of the relevant
+    registers in one go. The instruction would include a bitmap
+    identifying the registers we need to push/pop. ARM has something like
+    this. It stores progress in a special register so that it can resume
+    memory reads/writes after an interrupt.
+
+  - Many register rich ISAs include one register that is hardwired to
+    zero. We could try this to see if it makes a difference, but I doubt
+    it would be a win. Another idea would be to create a cmpz instruction
+    to compare a register to zero so we don’t have to burn a register for
+    this common operation. Maybe cmp1 might even make sense. This is easy
+    to measure.
 

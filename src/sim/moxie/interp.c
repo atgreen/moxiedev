@@ -35,15 +35,10 @@ host_callback *       callback;
 
 FILE *tracefile;
 
-<<<<<<< interp.c
-#define INST2OFFSET(o) ((((signed short)((o & ((1<<10)-1))<<6))>>6)<<1)
-
-=======
 /* Extract the signed 10-bit offset from a 16-bit branch
    instruction.  */
 #define INST2OFFSET(o) ((((signed short)((o & ((1<<10)-1))<<6))>>6)<<1)
 
->>>>>>> 1.3
 #define EXTRACT_WORD(addr) (((addr)[0] << 24) \
 			    + ((addr)[1] << 16) \
 			    + ((addr)[2] << 8) \

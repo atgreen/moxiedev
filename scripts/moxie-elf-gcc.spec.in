@@ -1,3 +1,5 @@
+%define	with_newlib 1
+
 Name:		moxie-elf-gcc
 Version:	@VERSION@
 Release:	0.@BUILDNUM@
@@ -9,12 +11,17 @@ URL:		http://moxielogic.com/blog
 Source0:	moxie-elf-gcc.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-BuildRequires:	moxie-elf-binutils moxie-elf-newlib flex bison texinfo gperf
-Requires:	moxie-elf-binutils moxie-elf-newlib
+BuildRequires:	moxie-elf-binutils flex bison texinfo gperf
+Requires:	moxie-elf-binutils
+%if %{with_newlib} == 1
+BuildRequires:	moxie-elf-newlib
+Requires:	moxie-elf-newlib
+%endif
 
 %description
 The GNU Compiler Collection targeting the moxie core.
 
+%if %{with_newlib} == 1
 %package c++
 Summary:  GNU C++ compiler for the moxie core
 Group:    Development
@@ -30,6 +37,7 @@ Requires: moxie-elf-gcc-c++
 
 %description libstdc++
 C++ runtime library for the moxie core.
+%endif
 
 %prep
 %setup -q -n gcc
@@ -75,8 +83,12 @@ cd build
   --infodir=%_infodir \
   --enable-shared \
   --target=moxie-elf \
+%if %{with_newlib} == 1
   --enable-languages=c,c++ \
   --with-newlib \
+%else
+  --enable-languages=c \
+%endif
   --disable-libssp
 make %{?_smp_mflags}
 cd ..
@@ -99,14 +111,17 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-,root,root,-)
 %{_bindir}/*
+%if %{with_newlib} == 1
 %exclude %{_bindir}/moxie-elf-c++
 %exclude %{_bindir}/moxie-elf-g++
+%endif
 %{_libdir}/gcc/moxie-elf
 %{_prefix}/libexec/gcc/moxie-elf
 %{_mandir}/man1/*
 %{_mandir}/man7/*
 %doc COPYING*
 
+%if %{with_newlib} == 1
 %files c++
 %defattr(-,root,root,-)
 %{_bindir}/moxie-elf-c++
@@ -115,6 +130,8 @@ rm -rf $RPM_BUILD_ROOT
 %files libstdc++
 %defattr(-,root,root,-)
 %{_prefix}/moxie-elf
+%{_datadir}/gcc*
+%endif
 
 %changelog
 * @DATE@ Anthony Green <green@moxielogic.com> @VERSION@-1

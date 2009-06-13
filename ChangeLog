@@ -1,3 +1,13 @@
+2009-06-12  Anthony Green  <green@moxielogic.com>
+
+	* README: Fit within 80 columns.
+	* TODO, HACKING: Update.
+	* scripts/moxie-elf-gcc.spec.in (with_newlib): Define.  Build a
+	bootstrapping compiler by setting this to 0.  Also package
+	python files with libstdc++.
+	* build.xml: Read properties from
+	${user.home}/moxiedev.properties.
+
 2009-05-30  Anthony Green  <green@moxielogic.com>
 	
 	* HACKING: Added u-boot.  Corrections.

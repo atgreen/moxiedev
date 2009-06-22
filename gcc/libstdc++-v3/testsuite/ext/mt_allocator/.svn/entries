@@ -1,7 +1,7 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/ext/mt_allocator
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ bkoz
 
 1773
 
-deallocate_local_thread-7.cc
-file
-
-
-
-
-2009-05-28T13:02:30.000000Z
-8fef075704a15eaaa7bc60b97c32b07b
-2009-05-28T00:17:00.094831Z
-147937
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1842
-
 deallocate_global_thread-1.cc
 file
 
@@ -229,6 +195,40 @@ bkoz
 
 
 1507
+
+deallocate_local_thread-7.cc
+file
+
+
+
+
+2009-05-28T13:02:30.000000Z
+8fef075704a15eaaa7bc60b97c32b07b
+2009-05-28T00:17:00.094831Z
+147937
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1842
 
 deallocate_global_thread-3.cc
 file
@@ -264,40 +264,6 @@ bkoz
 
 1523
 
-22309_thread.cc
-file
-
-
-
-
-2009-04-24T17:50:36.000000Z
-e6688cf4fd4bd3fdec36064da80bc33f
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2034
-
 deallocate_local-2.cc
 file
 
@@ -331,6 +297,40 @@ bkoz
 
 
 1475
+
+22309_thread.cc
+file
+
+
+
+
+2009-04-24T17:50:36.000000Z
+e6688cf4fd4bd3fdec36064da80bc33f
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2034
 
 deallocate_local-4.cc
 file
@@ -366,40 +366,6 @@ bkoz
 
 1519
 
-tune-1.cc
-file
-
-
-
-
-2009-04-24T17:50:36.000000Z
-639e95d507c7e8f251f97ed2636a162a
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2106
-
 check_allocate_big_per_type.cc
 file
 
@@ -434,14 +400,14 @@ jakub
 
 1567
 
-tune-2.cc
+tune-1.cc
 file
 
 
 
 
 2009-04-24T17:50:36.000000Z
-ca8b0eaba8ad125b60603f692c24d186
+639e95d507c7e8f251f97ed2636a162a
 2009-04-09T15:00:19.611803Z
 145841
 jakub
@@ -466,7 +432,7 @@ jakub
 
 
 
-2127
+2106
 
 deallocate_local-6.cc
 file
@@ -501,6 +467,40 @@ bkoz
 
 
 1778
+
+tune-2.cc
+file
+
+
+
+
+2009-04-24T17:50:36.000000Z
+ca8b0eaba8ad125b60603f692c24d186
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2127
 
 check_deallocate_null_thread.cc
 file

@@ -156,8 +156,12 @@ free_expr0 (gfc_expr *e)
 	  break;
 
 	case BT_COMPLEX:
+#ifdef HAVE_mpc
+	  mpc_clear (e->value.complex);
+#else
 	  mpfr_clear (e->value.complex.r);
 	  mpfr_clear (e->value.complex.i);
+#endif
 	  break;
 
 	default:
@@ -439,10 +443,15 @@ gfc_copy_expr (gfc_expr *p)
 
 	case BT_COMPLEX:
 	  gfc_set_model_kind (q->ts.kind);
+#ifdef HAVE_mpc
+	  mpc_init2 (q->value.complex, mpfr_get_default_prec());
+	  mpc_set (q->value.complex, p->value.complex, GFC_MPC_RND_MODE);
+#else
 	  mpfr_init (q->value.complex.r);
 	  mpfr_init (q->value.complex.i);
 	  mpfr_set (q->value.complex.r, p->value.complex.r, GFC_RND_MODE);
 	  mpfr_set (q->value.complex.i, p->value.complex.i, GFC_RND_MODE);
+#endif
 	  break;
 
 	case BT_CHARACTER:
@@ -3142,6 +3151,7 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue)
   /* Checks on rvalue for procedure pointer assignments.  */
   if (proc_pointer)
     {
+      char err[200];
       attr = gfc_expr_attr (rvalue);
       if (!((rvalue->expr_type == EXPR_NULL)
 	    || (rvalue->expr_type == EXPR_FUNCTION && attr.proc_pointer)
@@ -3181,10 +3191,11 @@ gfc_check_pointer_assign (gfc_expr *lvalue, gfc_expr *rvalue)
 	return SUCCESS;
       if (rvalue->expr_type == EXPR_VARIABLE
 	  && !gfc_compare_interfaces (lvalue->symtree->n.sym,
-				      rvalue->symtree->n.sym, 0, 1))
+				      rvalue->symtree->n.sym, 0, 1, err,
+				      sizeof(err)))
 	{
-	  gfc_error ("Interfaces don't match "
-		     "in procedure pointer assignment at %L", &rvalue->where);
+	  gfc_error ("Interface mismatch in procedure pointer assignment "
+		     "at %L: %s", &rvalue->where, err);
 	  return FAILURE;
 	}
       return SUCCESS;

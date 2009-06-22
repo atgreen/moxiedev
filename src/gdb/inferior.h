@@ -135,6 +135,8 @@ extern void clear_proceed_status (void);
 
 extern void proceed (CORE_ADDR, enum target_signal, int);
 
+extern int sched_multi;
+
 /* When set, stop the 'step' command if we enter a function which has
    no line number information.  The normal behavior is that we step
    over such function.  */
@@ -153,13 +155,17 @@ extern void terminal_save_ours (void);
 
 extern void terminal_ours (void);
 
-extern CORE_ADDR unsigned_pointer_to_address (struct type *type,
+extern CORE_ADDR unsigned_pointer_to_address (struct gdbarch *gdbarch,
+					      struct type *type,
 					      const gdb_byte *buf);
-extern void unsigned_address_to_pointer (struct type *type, gdb_byte *buf,
+extern void unsigned_address_to_pointer (struct gdbarch *gdbarch,
+					 struct type *type, gdb_byte *buf,
 					 CORE_ADDR addr);
-extern CORE_ADDR signed_pointer_to_address (struct type *type,
+extern CORE_ADDR signed_pointer_to_address (struct gdbarch *gdbarch,
+					    struct type *type,
 					    const gdb_byte *buf);
-extern void address_to_signed_pointer (struct type *type, gdb_byte *buf,
+extern void address_to_signed_pointer (struct gdbarch *gdbarch,
+				       struct type *type, gdb_byte *buf,
 				       CORE_ADDR addr);
 
 extern void wait_for_inferior (int treat_exec_as_sigtrap);
@@ -196,12 +202,6 @@ extern void terminal_init_inferior (void);
 
 extern void terminal_init_inferior_with_pgrp (int pgrp);
 
-/* From procfs.c */
-
-extern int proc_iterate_over_mappings (int (*)(int, CORE_ADDR));
-
-extern ptid_t procfs_first_available (void);
-
 /* From fork-child.c */
 
 extern int fork_inferior (char *, char *, char **,
@@ -211,7 +211,7 @@ extern int fork_inferior (char *, char *, char **,
 
 extern void startup_inferior (int);
 
-extern char *construct_inferior_arguments (struct gdbarch *, int, char **);
+extern char *construct_inferior_arguments (int, char **);
 
 /* From infrun.c */
 
@@ -490,6 +490,10 @@ extern void print_inferior (struct ui_out *uiout, int requested_inferior);
 
 /* Returns true if the inferior list is not empty.  */
 extern int have_inferiors (void);
+
+/* Returns true if there are any live inferiors in the inferior list
+   (not cores, not executables, real live processes).  */
+extern int have_live_inferiors (void);
 
 /* Return a pointer to the current inferior.  It is an error to call
    this if there is no current inferior.  */

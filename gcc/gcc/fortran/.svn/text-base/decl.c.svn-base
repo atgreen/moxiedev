@@ -1435,28 +1435,26 @@ build_struct (const char *name, gfc_charlen *cl, gfc_expr **init,
 	  bool has_ts;
 	  gfc_constructor *ctor = c->initializer->value.constructor;
 
-	  bool first = true;
-	  int first_len;
-
 	  has_ts = (c->initializer->ts.cl
 		    && c->initializer->ts.cl->length_from_typespec);
 
-	  for (; ctor; ctor = ctor->next)
+	  if (ctor)
 	    {
-	      /* Remember the length of the first element for checking that
-		 all elements *in the constructor* have the same length.  This
-		 need not be the length of the LHS!  */
-	      if (first)
-		{
-		  gcc_assert (ctor->expr->expr_type == EXPR_CONSTANT);
-		  gcc_assert (ctor->expr->ts.type == BT_CHARACTER);
-		  first_len = ctor->expr->value.character.length;
-		  first = false;
-		}
+	      int first_len;
 
-	      if (ctor->expr->expr_type == EXPR_CONSTANT)
-		gfc_set_constant_character_len (len, ctor->expr,
-						has_ts ? -1 : first_len);
+	      /* Remember the length of the first element for checking
+		 that all elements *in the constructor* have the same
+		 length.  This need not be the length of the LHS!  */
+	      gcc_assert (ctor->expr->expr_type == EXPR_CONSTANT);
+	      gcc_assert (ctor->expr->ts.type == BT_CHARACTER);
+	      first_len = ctor->expr->value.character.length;
+
+	      for (; ctor; ctor = ctor->next)
+		{
+		  if (ctor->expr->expr_type == EXPR_CONSTANT)
+		    gfc_set_constant_character_len (len, ctor->expr,
+						    has_ts ? -1 : first_len);
+		}
 	    }
 	}
     }
@@ -6812,6 +6810,51 @@ gfc_match_enum (void)
 }
 
 
+/* Returns an initializer whose value is one higher than the value of the
+   LAST_INITIALIZER argument.  If the argument is NULL, the
+   initializers value will be set to zero.  The initializer's kind
+   will be set to gfc_c_int_kind.
+
+   If -fshort-enums is given, the appropriate kind will be selected
+   later after all enumerators have been parsed.  A warning is issued
+   here if an initializer exceeds gfc_c_int_kind.  */
+
+static gfc_expr *
+enum_initializer (gfc_expr *last_initializer, locus where)
+{
+  gfc_expr *result;
+
+  result = gfc_get_expr ();
+  result->expr_type = EXPR_CONSTANT;
+  result->ts.type = BT_INTEGER;
+  result->ts.kind = gfc_c_int_kind;
+  result->where = where;
+
+  mpz_init (result->value.integer);
+
+  if (last_initializer != NULL)
+    {
+      mpz_add_ui (result->value.integer, last_initializer->value.integer, 1);
+      result->where = last_initializer->where;
+
+      if (gfc_check_integer_range (result->value.integer,
+	     gfc_c_int_kind) != ARITH_OK)
+	{
+	  gfc_error ("Enumerator exceeds the C integer type at %C");
+	  return NULL;
+	}
+    }
+  else
+    {
+      /* Control comes here, if it's the very first enumerator and no
+	 initializer has been given.  It will be initialized to zero.  */
+      mpz_set_si (result->value.integer, 0);
+    }
+
+  return result;
+}
+
+
 /* Match a variable name with an optional initializer.  When this
    subroutine is called, a variable is expected to be parsed next.
    Depending on what is happening at the moment, updates either the
@@ -6872,7 +6915,7 @@ enumerator_decl (void)
      previous enumerator (stored in last_initializer) is incremented
      by 1 and is used to initialize the current enumerator.  */
   if (initializer == NULL)
-    initializer = gfc_enum_initializer (last_initializer, old_locus);
+    initializer = enum_initializer (last_initializer, old_locus);
 
   if (initializer == NULL || initializer->ts.type != BT_INTEGER)
     {

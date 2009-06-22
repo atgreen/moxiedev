@@ -1710,7 +1710,7 @@ cgraph_create_virtual_clone (struct cgraph_node *old_node,
      ??? We cannot use COMDAT linkage because there is no
      ABI support for this.  */
   DECL_EXTERNAL (new_node->decl) = 0;
-  DECL_ONE_ONLY (new_node->decl) = 0;
+  DECL_COMDAT_GROUP (new_node->decl) = 0;
   TREE_PUBLIC (new_node->decl) = 0;
   DECL_COMDAT (new_node->decl) = 0;
   DECL_WEAK (new_node->decl) = 0;
@@ -1889,7 +1889,7 @@ cgraph_make_node_local (struct cgraph_node *node)
   if (DECL_COMDAT (node->decl) || DECL_EXTERNAL (node->decl))
     {
       DECL_COMDAT (node->decl) = 0;
-      DECL_ONE_ONLY (node->decl) = 0;
+      DECL_COMDAT_GROUP (node->decl) = 0;
       TREE_PUBLIC (node->decl) = 0;
       DECL_WEAK (node->decl) = 0;
       DECL_EXTERNAL (node->decl) = 0;

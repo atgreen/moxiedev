@@ -1,7 +1,7 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/javax/imageio/bmp
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,17 +60,17 @@ has-props
 
 2105
 
-BMPImageWriter.class
+DecodeRLE8.class
 file
 
 
 
 
 2009-04-24T17:47:43.000000Z
-2689d4a6ac4ff23ef54a33510895d392
-2008-10-21T17:55:01.166395Z
-141271
-doko
+b2a74d936c7300b79c5e8f99c48365b3
+2007-07-27T21:14:19.002073Z
+126998
+tromey
 has-props
 
 
@@ -92,7 +92,7 @@ has-props
 
 
 
-3350
+3245
 
 BMPEncoder.class
 file
@@ -128,17 +128,17 @@ has-props
 
 1547
 
-DecodeRLE8.class
+BMPImageWriter.class
 file
 
 
 
 
 2009-04-24T17:47:43.000000Z
-b2a74d936c7300b79c5e8f99c48365b3
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2689d4a6ac4ff23ef54a33510895d392
+2008-10-21T17:55:01.166395Z
+141271
+doko
 has-props
 
 
@@ -160,41 +160,7 @@ has-props
 
 
 
-3245
-
-BMPImageReaderSpi.class
-file
-
-
-
-
-2009-04-24T17:47:43.000000Z
-93306fe655d414c2da51ad2796eff1d8
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3037
+3350
 
 EncodeRGB8.class
 file
@@ -230,14 +196,14 @@ has-props
 
 2105
 
-DecodeRGB24.class
+BMPImageReaderSpi.class
 file
 
 
 
 
 2009-04-24T17:47:43.000000Z
-d16479200109a463a4d34eb70630cf09
+93306fe655d414c2da51ad2796eff1d8
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -262,7 +228,7 @@ has-props
 
 
 
-1766
+3037
 
 EncodeRLE4.class
 file
@@ -297,6 +263,40 @@ has-props
 
 
 4027
+
+DecodeRGB24.class
+file
+
+
+
+
+2009-04-24T17:47:43.000000Z
+d16479200109a463a4d34eb70630cf09
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1766
 
 BMPFileHeader.class
 file
@@ -400,40 +400,6 @@ has-props
 
 3426
 
-BMPException.class
-file
-
-
-
-
-2009-04-24T17:47:43.000000Z
-0d4b6d191e847ac8ff8ed9091d0aacb4
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-379
-
 EncodeRGB32.class
 file
 
@@ -467,6 +433,40 @@ has-props
 
 
 2162
+
+BMPException.class
+file
+
+
+
+
+2009-04-24T17:47:43.000000Z
+0d4b6d191e847ac8ff8ed9091d0aacb4
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+379
 
 EncodeRGB24.class
 file

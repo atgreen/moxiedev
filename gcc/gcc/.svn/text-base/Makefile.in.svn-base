@@ -1215,7 +1215,6 @@ OBJS-common = \
 	sched-rgn.o \
 	sched-vis.o \
 	sdbout.o \
-	see.o \
 	sel-sched-ir.o \
 	sel-sched-dump.o \
 	sel-sched.o \
@@ -2416,7 +2415,7 @@ tree-vect-slp.o: tree-vect-slp.c $(CONFIG_H) $(SYSTEM_H) \
 tree-vect-stmts.o: tree-vect-stmts.c $(CONFIG_H) $(SYSTEM_H) \
    coretypes.h $(TM_H) $(GGC_H) $(TREE_H) $(TARGET_H) $(BASIC_BLOCK_H) \
    $(DIAGNOSTIC_H) $(TREE_FLOW_H) $(TREE_DUMP_H) $(CFGLOOP_H) \
-   $(EXPR_H) $(RECOG_H) $(OPTABS_H) tree-vectorizer.h langhooks.h
+   $(EXPR_H) $(RECOG_H) $(OPTABS_H) $(TOPLEV_H) tree-vectorizer.h langhooks.h
 tree-vect-data-refs.o: tree-vect-data-refs.c $(CONFIG_H) $(SYSTEM_H) \
    coretypes.h $(TM_H) $(GGC_H) $(TREE_H) $(TARGET_H) $(BASIC_BLOCK_H) \
    $(DIAGNOSTIC_H) $(TREE_FLOW_H) $(TREE_DUMP_H) $(CFGLOOP_H) \
@@ -2734,14 +2733,10 @@ fwprop.o : fwprop.c $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) $(RTL_H) \
 web.o : web.c $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) $(RTL_H) \
    hard-reg-set.h $(FLAGS_H) $(BASIC_BLOCK_H) $(FUNCTION_H) output.h $(TOPLEV_H) \
    $(DF_H) $(OBSTACK_H) $(TIMEVAR_H) $(TREE_PASS_H)
-see.o : see.c $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) $(RTL_H) \
-   hard-reg-set.h $(FLAGS_H) $(BASIC_BLOCK_H) $(FUNCTION_H) output.h \
-   $(DF_H) $(OBSTACK_H) $(TIMEVAR_H) $(TREE_PASS_H) $(RECOG_H) $(EXPR_H) \
-   $(SPLAY_TREE_H) $(HASHTAB_H) $(REGS_H) dce.h
 gcse.o : gcse.c $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) $(RTL_H) \
    $(REGS_H) hard-reg-set.h $(FLAGS_H) $(REAL_H) insn-config.h $(GGC_H) \
    $(RECOG_H) $(EXPR_H) $(BASIC_BLOCK_H) $(FUNCTION_H) output.h $(TOPLEV_H) \
-   $(TM_P_H) $(PARAMS_H) $(EXCEPT_H) $(TREE_H) $(TIMEVAR_H) \
+   $(TM_P_H) $(PARAMS_H) $(EXCEPT_H) gt-gcse.h $(TREE_H) $(TIMEVAR_H) \
    intl.h $(OBSTACK_H) $(TREE_PASS_H) $(DF_H) $(DBGCNT_H)
 store-motion.o : store-motion.c $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) $(RTL_H) \
    $(REGS_H) hard-reg-set.h $(FLAGS_H) $(REAL_H) insn-config.h $(GGC_H) \
@@ -2773,8 +2768,8 @@ tree-ssa-ccp.o : tree-ssa-ccp.c $(TREE_FLOW_H) $(CONFIG_H) \
    $(TREE_DUMP_H) $(BASIC_BLOCK_H) $(TREE_PASS_H) langhooks.h \
    tree-ssa-propagate.h value-prof.h $(FLAGS_H) $(TARGET_H) $(TOPLEV_H)
 tree-sra.o : tree-sra.c $(CONFIG_H) $(SYSTEM_H) coretypes.h alloc-pool.h \
-   $(TM_H) $(TREE_H) $(GIMPLE_H) $(TREE_FLOW_H) $(DIAGNOSTIC_H) $(TREE_DUMP_H) \
-   $(TIMEVAR_H) $(PARAMS_H) $(TARGET_H) $(FLAGS_H)
+   $(TM_H) $(TREE_H) $(GIMPLE_H) $(TREE_FLOW_H) $(DIAGNOSTIC_H) statistics.h \
+   $(TREE_DUMP_H) $(TIMEVAR_H) $(PARAMS_H) $(TARGET_H) $(FLAGS_H)
 tree-switch-conversion.o : tree-switch-conversion.c $(CONFIG_H) $(SYSTEM_H) \
     $(TREE_H) $(TM_P_H) $(TREE_FLOW_H) $(DIAGNOSTIC_H) $(TREE_INLINE_H) \
     $(TIMEVAR_H) $(TM_H) coretypes.h $(TREE_DUMP_H) $(GIMPLE_H) \

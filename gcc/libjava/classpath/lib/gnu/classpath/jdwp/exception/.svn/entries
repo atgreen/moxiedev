@@ -1,7 +1,7 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/classpath/jdwp/exception
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ has-props
 
 416
 
-JdwpIllegalArgumentException.class
-file
-
-
-
-
-2009-04-24T17:47:29.000000Z
-bbe34d0fb2c0db8a358358d29bbeab21
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-480
-
 InvalidFrameException.class
 file
 
@@ -161,6 +127,40 @@ has-props
 
 
 799
+
+JdwpIllegalArgumentException.class
+file
+
+
+
+
+2009-04-24T17:47:29.000000Z
+bbe34d0fb2c0db8a358358d29bbeab21
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+480
 
 InvalidClassLoaderException.class
 file
@@ -332,40 +332,6 @@ has-props
 
 865
 
-InvalidObjectException.class
-file
-
-
-
-
-2009-04-24T17:47:29.000000Z
-93c0ba4ee1c22ad191d88e6639a895ef
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-869
-
 InvalidStringException.class
 file
 
@@ -399,6 +365,40 @@ has-props
 
 
 1023
+
+InvalidObjectException.class
+file
+
+
+
+
+2009-04-24T17:47:29.000000Z
+93c0ba4ee1c22ad191d88e6639a895ef
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+869
 
 InvalidThreadException.class
 file
@@ -468,40 +468,6 @@ has-props
 
 623
 
-AbsentInformationException.class
-file
-
-
-
-
-2009-04-24T17:47:29.000000Z
-c481e5b7486b2280cc0cfb3ebbdbaaee
-2007-03-06T21:09:22.211189Z
-122639
-kgallowa
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-474
-
 InvalidTagException.class
 file
 
@@ -535,6 +501,40 @@ has-props
 
 
 685
+
+AbsentInformationException.class
+file
+
+
+
+
+2009-04-24T17:47:29.000000Z
+c481e5b7486b2280cc0cfb3ebbdbaaee
+2007-03-06T21:09:22.211189Z
+122639
+kgallowa
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+474
 
 NotImplementedException.class
 file

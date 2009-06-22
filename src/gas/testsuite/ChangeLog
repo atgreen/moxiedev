@@ -1,3 +1,25 @@
+2009-06-19  Alan Modra  <amodra@bigpond.net.au>
+
+	* gas/cfi/cfi-common-7.s: Skip a multiple of four.
+	* gas/cfi/cfi-common-7.d: Adjust.
+
+2009-06-18  Nick Clifton  <nickc@redhat.com>
+
+	PR 10169
+	* gas/arm/thumb2_bad_reg.s: Add tests for SSAT and USAT with an
+	out of range shift.
+	* gas/arm/thumb2_bad_reg.l: Update expected error messages.
+
+	PR 10288
+	* gas/arm/align.s: Add labels so that COFF based targets can
+	correctly locate THUMB code.
+	* gas/arm/copro.d: Do not pass --architecture switch to objdump.
+
+2009-06-15  Nick Clifton  <nickc@redhat.com>
+
+	PR gas/10186
+	* gas/arm/thumb32.d: Fix expected binary value of SEV.W instruction.
+
 2009-06-09  Jakub Jelinek  <jakub@redhat.com>
 
 	PR gas/10255

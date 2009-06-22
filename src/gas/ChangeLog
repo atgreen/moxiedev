@@ -1,3 +1,50 @@
+2009-06-19  Martin Schwidefsky  <schwidefsky@de.ibm.com>
+
+	* config/tc-s390.c (md_gather_operands): Accept an instruction
+	without operands if all operands are tagged as optional.
+
+2009-06-18  Nick Clifton  <nickc@redhat.com>
+
+	PR 10169
+	* gas/tc-arm.c (do_t_ssat): Move common code from here...
+	(do_t_usat): ... and here to...
+	(do_t_ssat_usat): New function: ... here.  Add code to check that
+	the shift value, if present, is in range.
+
+2009-06-18  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	Merge cegcc and mingw32ce target name changes
+	from CeGCC project:
+
+	2007-12-25  Pedro Alves  <pedro_alves@portugalmail.pt>
+
+	* configure.tgt: Add arm*-*-cegcc* target.
+
+	2007-12-17  Pedro Alves  <pedro_alves@portugalmail.pt>
+
+	* configure.tgt: Add arm-*-mingw32ce* target.
+
+2009-06-16  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* config/tc-vax.c (md_estimate_size_before_relax): Accept
+	indirect symbol references in the PIC mode and emit a
+	PC-relative relocation instead of a GOT/PLT one.  Likewise
+	for symbols known to be hidden at this point.
+
+2009-06-15  Nick Clifton  <nickc@redhat.com>
+
+	PR 10186
+	* config/tc-arm.c (T16_32_TAB): Fix binary value of SEV.W
+	instruction.
+
+2009-06-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10269
+	* config/tc-i386.c (md_apply_fix): Use TC_FORCE_RELOCATION
+	instead of generic_force_reloc.
+
+	* config/tc-i386.h (TC_FORCE_RELOCATION): New.
+
 2009-06-11  Anthony Green  <green@moxielogic.com>
 
 	* config/tc-moxie.c (md_chars_to_number): Define.

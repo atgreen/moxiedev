@@ -1970,6 +1970,7 @@ static int ix86_isa_flags_explicit;
 #define OPTION_MASK_ISA_CX16_SET OPTION_MASK_ISA_CX16
 #define OPTION_MASK_ISA_SAHF_SET OPTION_MASK_ISA_SAHF
 #define OPTION_MASK_ISA_MOVBE_SET OPTION_MASK_ISA_MOVBE
+#define OPTION_MASK_ISA_CRC32_SET OPTION_MASK_ISA_CRC32
 
 /* Define a set of ISAs which aren't available when a given ISA is
    disabled.  MMX and SSE ISAs are handled separately.  */
@@ -2012,6 +2013,7 @@ static int ix86_isa_flags_explicit;
 #define OPTION_MASK_ISA_CX16_UNSET OPTION_MASK_ISA_CX16
 #define OPTION_MASK_ISA_SAHF_UNSET OPTION_MASK_ISA_SAHF
 #define OPTION_MASK_ISA_MOVBE_UNSET OPTION_MASK_ISA_MOVBE
+#define OPTION_MASK_ISA_CRC32_UNSET OPTION_MASK_ISA_CRC32
 
 /* Vectorization library interface and handlers.  */
 tree (*ix86_veclib_handler)(enum built_in_function, tree, tree) = NULL;
@@ -2315,6 +2317,19 @@ ix86_handle_option (size_t code, const char *arg ATTRIBUTE_UNUSED, int value)
 	}
       return true;
 
+    case OPT_mcrc32:
+      if (value)
+	{
+	  ix86_isa_flags |= OPTION_MASK_ISA_CRC32_SET;
+	  ix86_isa_flags_explicit |= OPTION_MASK_ISA_CRC32_SET;
+	}
+      else
+	{
+	  ix86_isa_flags &= ~OPTION_MASK_ISA_CRC32_UNSET;
+	  ix86_isa_flags_explicit |= OPTION_MASK_ISA_CRC32_UNSET;
+	}
+      return true;
+
     case OPT_maes:
       if (value)
 	{
@@ -2378,6 +2393,7 @@ ix86_target_string (int isa, int flags, const char *arch, const char *tune,
     { "-mabm",		OPTION_MASK_ISA_ABM },
     { "-mpopcnt",	OPTION_MASK_ISA_POPCNT },
     { "-mmovbe",	OPTION_MASK_ISA_MOVBE },
+    { "-mcrc32",	OPTION_MASK_ISA_CRC32 },
     { "-maes",		OPTION_MASK_ISA_AES },
     { "-mpclmul",	OPTION_MASK_ISA_PCLMUL },
   };
@@ -3408,12 +3424,6 @@ override_options (bool main_args_p)
 static void
 ix86_function_specific_save (struct cl_target_option *ptr)
 {
-  gcc_assert (IN_RANGE (ix86_arch, 0, 255));
-  gcc_assert (IN_RANGE (ix86_schedule, 0, 255));
-  gcc_assert (IN_RANGE (ix86_tune, 0, 255));
-  gcc_assert (IN_RANGE (ix86_fpmath, 0, 255));
-  gcc_assert (IN_RANGE (ix86_branch_cost, 0, 255));
-
   ptr->arch = ix86_arch;
   ptr->schedule = ix86_schedule;
   ptr->tune = ix86_tune;
@@ -3423,6 +3433,14 @@ ix86_function_specific_save (struct cl_target_option *ptr)
   ptr->arch_specified = ix86_arch_specified;
   ptr->ix86_isa_flags_explicit = ix86_isa_flags_explicit;
   ptr->target_flags_explicit = target_flags_explicit;
+
+  /* The fields are char but the variables are not; make sure the
+     values fit in the fields.  */
+  gcc_assert (ptr->arch == ix86_arch);
+  gcc_assert (ptr->schedule == ix86_schedule);
+  gcc_assert (ptr->tune == ix86_tune);
+  gcc_assert (ptr->fpmath == ix86_fpmath);
+  gcc_assert (ptr->branch_cost == ix86_branch_cost);
 }
 
 /* Restore the current options */
@@ -6513,15 +6531,20 @@ ix86_build_builtin_va_list_abi (enum calling_abi abi)
     return build_pointer_type (char_type_node);
 
   record = (*lang_hooks.types.make_type) (RECORD_TYPE);
-  type_decl = build_decl (TYPE_DECL, get_identifier ("__va_list_tag"), record);
+  type_decl = build_decl (BUILTINS_LOCATION,
+			  TYPE_DECL, get_identifier ("__va_list_tag"), record);
 
-  f_gpr = build_decl (FIELD_DECL, get_identifier ("gp_offset"),
+  f_gpr = build_decl (BUILTINS_LOCATION,
+		      FIELD_DECL, get_identifier ("gp_offset"),
 		      unsigned_type_node);
-  f_fpr = build_decl (FIELD_DECL, get_identifier ("fp_offset"),
+  f_fpr = build_decl (BUILTINS_LOCATION,
+		      FIELD_DECL, get_identifier ("fp_offset"),
 		      unsigned_type_node);
-  f_ovf = build_decl (FIELD_DECL, get_identifier ("overflow_arg_area"),
+  f_ovf = build_decl (BUILTINS_LOCATION,
+		      FIELD_DECL, get_identifier ("overflow_arg_area"),
 		      ptr_type_node);
-  f_sav = build_decl (FIELD_DECL, get_identifier ("reg_save_area"),
+  f_sav = build_decl (BUILTINS_LOCATION,
+		      FIELD_DECL, get_identifier ("reg_save_area"),
 		      ptr_type_node);
 
   va_list_gpr_counter_field = f_gpr;
@@ -6913,8 +6936,8 @@ ix86_gimplify_va_arg (tree valist, tree type, gimple_seq *pre_p,
       bool need_temp;
       tree int_addr, sse_addr;
 
-      lab_false = create_artificial_label ();
-      lab_over = create_artificial_label ();
+      lab_false = create_artificial_label (UNKNOWN_LOCATION);
+      lab_over = create_artificial_label (UNKNOWN_LOCATION);
 
       examine_argument (nat_mode, type, 0, &needed_intregs, &needed_sseregs);
 
@@ -7496,11 +7519,12 @@ ix86_file_end (void)
 	{
 	  tree decl;
 
-	  decl = build_decl (FUNCTION_DECL, get_identifier (name),
+	  decl = build_decl (BUILTINS_LOCATION,
+			     FUNCTION_DECL, get_identifier (name),
 			     error_mark_node);
 	  TREE_PUBLIC (decl) = 1;
 	  TREE_STATIC (decl) = 1;
-	  DECL_ONE_ONLY (decl) = 1;
+	  DECL_COMDAT_GROUP (decl) = DECL_ASSEMBLER_NAME (decl);
 
 	  (*targetm.asm_out.unique_section) (decl, 0);
 	  switch_to_section (get_named_section (decl, NULL, 0));
@@ -10241,7 +10265,8 @@ get_dllimport_decl (tree decl)
   *loc = h = GGC_NEW (struct tree_map);
   h->hash = in.hash;
   h->base.from = decl;
-  h->to = to = build_decl (VAR_DECL, NULL, ptr_type_node);
+  h->to = to = build_decl (DECL_SOURCE_LOCATION (decl),
+			   VAR_DECL, NULL, ptr_type_node);
   DECL_ARTIFICIAL (to) = 1;
   DECL_IGNORED_P (to) = 1;
   DECL_EXTERNAL (to) = 1;
@@ -20746,6 +20771,16 @@ enum ix86_builtins
   IX86_BUILTIN_MFENCE,
   IX86_BUILTIN_LFENCE,
 
+  IX86_BUILTIN_BSRSI,
+  IX86_BUILTIN_BSRDI,
+  IX86_BUILTIN_RDPMC,
+  IX86_BUILTIN_RDTSC,
+  IX86_BUILTIN_RDTSCP,
+  IX86_BUILTIN_ROLQI,
+  IX86_BUILTIN_ROLHI,
+  IX86_BUILTIN_RORQI,
+  IX86_BUILTIN_RORHI,
+
   /* SSE3.  */
   IX86_BUILTIN_ADDSUBPS,
   IX86_BUILTIN_HADDPS,
@@ -21448,6 +21483,8 @@ enum ix86_special_builtin_type
 {
   SPECIAL_FTYPE_UNKNOWN,
   VOID_FTYPE_VOID,
+  UINT64_FTYPE_VOID,
+  UINT64_FTYPE_PUNSIGNED,
   V32QI_FTYPE_PCCHAR,
   V16QI_FTYPE_PCCHAR,
   V8SF_FTYPE_PCV4SF,
@@ -21493,6 +21530,9 @@ enum ix86_builtin_type
   INT_FTYPE_V4SF_V4SF_PTEST,
   INT_FTYPE_V2DI_V2DI_PTEST,
   INT_FTYPE_V2DF_V2DF_PTEST,
+  INT_FTYPE_INT,
+  UINT64_FTYPE_INT,
+  INT64_FTYPE_INT64,
   INT64_FTYPE_V4SF,
   INT64_FTYPE_V2DF,
   INT_FTYPE_V16QI,
@@ -21603,6 +21643,8 @@ enum ix86_builtin_type
   UINT_FTYPE_UINT_UINT,
   UINT_FTYPE_UINT_USHORT,
   UINT_FTYPE_UINT_UCHAR,
+  UINT16_FTYPE_UINT16_INT,
+  UINT8_FTYPE_UINT8_INT,
   V8HI_FTYPE_V8HI_INT,
   V4SI_FTYPE_V4SI_INT,
   V4HI_FTYPE_V4HI_INT,
@@ -21641,6 +21683,9 @@ enum ix86_builtin_type
 /* Special builtins with variable number of arguments.  */
 static const struct builtin_description bdesc_special_args[] =
 {
+  { ~OPTION_MASK_ISA_64BIT, CODE_FOR_rdtsc, "__builtin_ia32_rdtsc", IX86_BUILTIN_RDTSC, UNKNOWN, (int) UINT64_FTYPE_VOID },
+  { ~OPTION_MASK_ISA_64BIT, CODE_FOR_rdtscp, "__builtin_ia32_rdtscp", IX86_BUILTIN_RDTSCP, UNKNOWN, (int) UINT64_FTYPE_PUNSIGNED },
+
   /* MMX */
   { OPTION_MASK_ISA_MMX, CODE_FOR_mmx_emms, "__builtin_ia32_emms", IX86_BUILTIN_EMMS, UNKNOWN, (int) VOID_FTYPE_VOID },
 
@@ -21721,6 +21766,14 @@ static const struct builtin_description bdesc_special_args[] =
 /* Builtins with variable number of arguments.  */
 static const struct builtin_description bdesc_args[] =
 {
+  { ~OPTION_MASK_ISA_64BIT, CODE_FOR_bsr, "__builtin_ia32_bsrsi", IX86_BUILTIN_BSRSI, UNKNOWN, (int) INT_FTYPE_INT },
+  { OPTION_MASK_ISA_64BIT, CODE_FOR_bsr_rex64, "__builtin_ia32_bsrdi", IX86_BUILTIN_BSRDI, UNKNOWN, (int) INT64_FTYPE_INT64 },
+  { ~OPTION_MASK_ISA_64BIT, CODE_FOR_rdpmc, "__builtin_ia32_rdpmc", IX86_BUILTIN_RDPMC, UNKNOWN, (int) UINT64_FTYPE_INT },
+  { ~OPTION_MASK_ISA_64BIT, CODE_FOR_rotlqi3, "__builtin_ia32_rolqi", IX86_BUILTIN_ROLQI, UNKNOWN, (int) UINT8_FTYPE_UINT8_INT },
+  { ~OPTION_MASK_ISA_64BIT, CODE_FOR_rotlhi3, "__builtin_ia32_rolhi", IX86_BUILTIN_ROLHI, UNKNOWN, (int) UINT16_FTYPE_UINT16_INT },
+  { ~OPTION_MASK_ISA_64BIT, CODE_FOR_rotrqi3, "__builtin_ia32_rorqi", IX86_BUILTIN_RORQI, UNKNOWN, (int) UINT8_FTYPE_UINT8_INT },
+  { ~OPTION_MASK_ISA_64BIT, CODE_FOR_rotrhi3, "__builtin_ia32_rorhi", IX86_BUILTIN_RORHI, UNKNOWN, (int) UINT16_FTYPE_UINT16_INT },
+
   /* MMX */
   { OPTION_MASK_ISA_MMX, CODE_FOR_mmx_addv8qi3, "__builtin_ia32_paddb", IX86_BUILTIN_PADDB, UNKNOWN, (int) V8QI_FTYPE_V8QI_V8QI },
   { OPTION_MASK_ISA_MMX, CODE_FOR_mmx_addv4hi3, "__builtin_ia32_paddw", IX86_BUILTIN_PADDW, UNKNOWN, (int) V4HI_FTYPE_V4HI_V4HI },
@@ -22178,10 +22231,10 @@ static const struct builtin_description bdesc_args[] =
 
   /* SSE4.2 */
   { OPTION_MASK_ISA_SSE4_2, CODE_FOR_sse4_2_gtv2di3, "__builtin_ia32_pcmpgtq", IX86_BUILTIN_PCMPGTQ, UNKNOWN, (int) V2DI_FTYPE_V2DI_V2DI },
-  { OPTION_MASK_ISA_SSE4_2, CODE_FOR_sse4_2_crc32qi, "__builtin_ia32_crc32qi", IX86_BUILTIN_CRC32QI, UNKNOWN, (int) UINT_FTYPE_UINT_UCHAR },
-  { OPTION_MASK_ISA_SSE4_2, CODE_FOR_sse4_2_crc32hi, "__builtin_ia32_crc32hi", IX86_BUILTIN_CRC32HI, UNKNOWN, (int) UINT_FTYPE_UINT_USHORT },
-  { OPTION_MASK_ISA_SSE4_2, CODE_FOR_sse4_2_crc32si, "__builtin_ia32_crc32si", IX86_BUILTIN_CRC32SI, UNKNOWN, (int) UINT_FTYPE_UINT_UINT },
-  { OPTION_MASK_ISA_SSE4_2 | OPTION_MASK_ISA_64BIT, CODE_FOR_sse4_2_crc32di, "__builtin_ia32_crc32di", IX86_BUILTIN_CRC32DI, UNKNOWN, (int) UINT64_FTYPE_UINT64_UINT64 },
+  { OPTION_MASK_ISA_SSE4_2 | OPTION_MASK_ISA_CRC32, CODE_FOR_sse4_2_crc32qi, "__builtin_ia32_crc32qi", IX86_BUILTIN_CRC32QI, UNKNOWN, (int) UINT_FTYPE_UINT_UCHAR },
+  { OPTION_MASK_ISA_SSE4_2 | OPTION_MASK_ISA_CRC32, CODE_FOR_sse4_2_crc32hi, "__builtin_ia32_crc32hi", IX86_BUILTIN_CRC32HI, UNKNOWN, (int) UINT_FTYPE_UINT_USHORT },
+  { OPTION_MASK_ISA_SSE4_2 | OPTION_MASK_ISA_CRC32, CODE_FOR_sse4_2_crc32si, "__builtin_ia32_crc32si", IX86_BUILTIN_CRC32SI, UNKNOWN, (int) UINT_FTYPE_UINT_UINT },
+  { OPTION_MASK_ISA_SSE4_2 | OPTION_MASK_ISA_CRC32 | OPTION_MASK_ISA_64BIT, CODE_FOR_sse4_2_crc32di, "__builtin_ia32_crc32di", IX86_BUILTIN_CRC32DI, UNKNOWN, (int) UINT64_FTYPE_UINT64_UINT64 },
 
   /* SSE4A */
   { OPTION_MASK_ISA_SSE4A, CODE_FOR_sse4a_extrqi, "__builtin_ia32_extrqi", IX86_BUILTIN_EXTRQI, UNKNOWN, (int) V2DI_FTYPE_V2DI_UINT_UINT },
@@ -23365,6 +23418,35 @@ ix86_init_mmx_sse_builtins (void)
     = build_function_type_list (V2DF_type_node,
 				V2DF_type_node, V2DI_type_node, NULL_TREE);
 
+  /* Integer intrinsics.  */
+  tree uint64_ftype_void
+    = build_function_type (long_long_unsigned_type_node,
+			   void_list_node);
+  tree int_ftype_int
+    = build_function_type_list (integer_type_node,
+				integer_type_node, NULL_TREE);
+  tree int64_ftype_int64
+    = build_function_type_list (long_long_integer_type_node,
+				long_long_integer_type_node,
+				NULL_TREE);
+  tree uint64_ftype_int
+    = build_function_type_list (long_long_unsigned_type_node,
+				integer_type_node, NULL_TREE);
+  tree punsigned_type_node = build_pointer_type (unsigned_type_node);
+  tree uint64_ftype_punsigned
+    = build_function_type_list (long_long_unsigned_type_node,
+				punsigned_type_node, NULL_TREE);
+  tree ushort_ftype_ushort_int
+    = build_function_type_list (short_unsigned_type_node,
+				short_unsigned_type_node,
+				integer_type_node,
+				NULL_TREE);
+  tree uchar_ftype_uchar_int
+    = build_function_type_list (unsigned_char_type_node,
+				unsigned_char_type_node,
+				integer_type_node,
+				NULL_TREE);
+
   tree ftype;
 
   /* Add all special builtins with variable number of operands.  */
@@ -23381,6 +23463,12 @@ ix86_init_mmx_sse_builtins (void)
 	{
 	case VOID_FTYPE_VOID:
 	  type = void_ftype_void;
+	  break;
+	case UINT64_FTYPE_VOID:
+	  type = uint64_ftype_void;
+	  break;
+	case UINT64_FTYPE_PUNSIGNED:
+	  type = uint64_ftype_punsigned;
 	  break;
 	case V32QI_FTYPE_PCCHAR:
 	  type = v32qi_ftype_pcchar;
@@ -23511,6 +23599,15 @@ ix86_init_mmx_sse_builtins (void)
 	  break;
 	case INT_FTYPE_V2DF_V2DF_PTEST:
 	  type = int_ftype_v2df_v2df;
+	  break;
+	case INT_FTYPE_INT:
+	  type = int_ftype_int;
+	  break;
+	case UINT64_FTYPE_INT:
+	  type = uint64_ftype_int;
+	  break;
+	case INT64_FTYPE_INT64:
+	  type = int64_ftype_int64;
 	  break;
 	case INT64_FTYPE_V4SF:
 	  type = int64_ftype_v4sf;
@@ -23821,6 +23918,12 @@ ix86_init_mmx_sse_builtins (void)
 	  break;
 	case UINT_FTYPE_UINT_UCHAR:
 	  type = unsigned_ftype_unsigned_uchar;
+	  break;
+	case UINT16_FTYPE_UINT16_INT:
+	  type = ushort_ftype_ushort_int;
+	  break;
+	case UINT8_FTYPE_UINT8_INT:
+	  type = uchar_ftype_uchar_int;
 	  break;
 	case V8HI_FTYPE_V8HI_INT:
 	  type = v8hi_ftype_v8hi_int;
@@ -24901,6 +25004,9 @@ ix86_expand_args_builtin (const struct builtin_description *d,
       return ix86_expand_sse_ptest (d, exp, target);
     case FLOAT128_FTYPE_FLOAT128:
     case FLOAT_FTYPE_FLOAT:
+    case INT_FTYPE_INT:
+    case UINT64_FTYPE_INT:
+    case INT64_FTYPE_INT64:
     case INT64_FTYPE_V4SF:
     case INT64_FTYPE_V2DF:
     case INT_FTYPE_V16QI:
@@ -25026,6 +25132,8 @@ ix86_expand_args_builtin (const struct builtin_description *d,
     case UINT_FTYPE_UINT_UINT:
     case UINT_FTYPE_UINT_USHORT:
     case UINT_FTYPE_UINT_UCHAR:
+    case UINT16_FTYPE_UINT16_INT:
+    case UINT8_FTYPE_UINT8_INT:
       nargs = 2;
       break;
     case V2DI2TI_FTYPE_V2DI_INT:
@@ -25270,6 +25378,12 @@ ix86_expand_special_args_builtin (const struct builtin_description *d,
     case VOID_FTYPE_VOID:
       emit_insn (GEN_FCN (icode) (target));
       return 0;
+    case UINT64_FTYPE_VOID:
+      nargs = 0;
+      klass = load;
+      memory = 0;
+      break;
+    case UINT64_FTYPE_PUNSIGNED:
     case V2DI_FTYPE_PV2DI:
     case V32QI_FTYPE_PCCHAR:
     case V16QI_FTYPE_PCCHAR:
@@ -25392,6 +25506,9 @@ ix86_expand_special_args_builtin (const struct builtin_description *d,
 
   switch (nargs)
     {
+    case 0:
+      pat = GEN_FCN (icode) (target);
+      break;
     case 1:
       pat = GEN_FCN (icode) (target, args[0].op);
       break;
@@ -25907,7 +26024,8 @@ ix86_veclibabi_svml (enum built_in_function fn, tree type_out, tree type_in)
     fntype = build_function_type_list (type_out, type_in, type_in, NULL);
 
   /* Build a function declaration for the vectorized function.  */
-  new_fndecl = build_decl (FUNCTION_DECL, get_identifier (name), fntype);
+  new_fndecl = build_decl (BUILTINS_LOCATION,
+			   FUNCTION_DECL, get_identifier (name), fntype);
   TREE_PUBLIC (new_fndecl) = 1;
   DECL_EXTERNAL (new_fndecl) = 1;
   DECL_IS_NOVOPS (new_fndecl) = 1;
@@ -25991,7 +26109,8 @@ ix86_veclibabi_acml (enum built_in_function fn, tree type_out, tree type_in)
     fntype = build_function_type_list (type_out, type_in, type_in, NULL);
 
   /* Build a function declaration for the vectorized function.  */
-  new_fndecl = build_decl (FUNCTION_DECL, get_identifier (name), fntype);
+  new_fndecl = build_decl (BUILTINS_LOCATION,
+			   FUNCTION_DECL, get_identifier (name), fntype);
   TREE_PUBLIC (new_fndecl) = 1;
   DECL_EXTERNAL (new_fndecl) = 1;
   DECL_IS_NOVOPS (new_fndecl) = 1;

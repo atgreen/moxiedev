@@ -448,7 +448,7 @@ gimple_build_assign_with_ops_stat (enum tree_code subcode, tree lhs, tree op1,
 
    This function returns the newly created GIMPLE_ASSIGN tuple.  */
 
-inline gimple
+gimple
 gimplify_assign (tree dst, tree src, gimple_seq *seq_p)
 { 
   tree t = build2 (MODIFY_EXPR, TREE_TYPE (dst), dst, src);
@@ -3264,6 +3264,11 @@ walk_stmt_load_store_addr_ops (gimple stmt, void *data,
 	  && TREE_CODE (gimple_call_chain (stmt)) == ADDR_EXPR)
 	ret |= visit_addr (stmt, TREE_OPERAND (gimple_call_chain (stmt), 0),
 			   data);
+      if (visit_addr
+	  && gimple_call_return_slot_opt_p (stmt)
+	  && gimple_call_lhs (stmt) != NULL_TREE
+	  && TREE_ADDRESSABLE (TREE_TYPE (gimple_call_lhs (stmt))))
+	ret |= visit_addr (stmt, gimple_call_lhs (stmt), data);
     }
   else if (gimple_code (stmt) == GIMPLE_ASM)
     {

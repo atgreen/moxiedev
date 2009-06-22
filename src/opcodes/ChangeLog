@@ -1,3 +1,45 @@
+2009-06-19  Martin Schwidefsky  <sschwidefsky@de.ibm.com>
+
+	* s390-opc.c (INSTR_RR_0R_OPT, INSTR_RX_0RRD_OPT, MASK_RR_0R_OPT,
+	MASK_RX_0RRD_OPT): New instruction formats with optional arguments.
+	* s390-opc.txt (nopr, nop): Use new instruction format.
+
+2009-06-18  Nick Clifton  <nickc@redhat.com>
+
+	PR 10288
+	* arm-dis.c (print_insn_coprocessor): Check that a user specified
+	ARM architecture supports the matched instruction.
+	(print_insn_arm): Likewise.
+	(select_arm_features): New function.  Fills in the fields of an
+	arm_feature_set structure based on a given arm machine number.
+	(print_insn): Initialise an arm_feature_set structure.
+
+2009-06-16  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* vax-dis.c (is_function_entry): Return success for synthetic
+	symbols too.
+	(is_plt_tail): New function.
+	(print_insn_vax): Decode PLT entry offset longword.
+
+2009-06-15  Nick Clifton  <nickc@redhat.com>
+
+	PR 10186
+	* arm-dis.c (thumb32_opcodes): Fix binary value of SEV.W
+	instruction.
+
+	PR 10173
+	* cr16-dis.c (print_arg): Avoid printing the 0x prefix twice.
+
+2009-06-15  Nick Clifton  <nickc@redhat.com>
+
+	PR 10263
+	* arm-dis.c (print_insn): Ignore is_data if the user has requested
+	the disassembly of data as well as instructions.
+
+2009-06-11  Doug Evans  <dje@sebabeach.org>
+
+	* cgen.sh: Handle multiple simultaneous runs for parallel makes.
+
 2009-06-11  Anthony Green  <green@moxielogic.com>
 
 	* moxie-opc.c (moxie_form1_opc_info): Remove branch instructions.

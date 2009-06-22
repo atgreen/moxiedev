@@ -559,26 +559,6 @@ map_vmap (bfd *abfd, bfd *arch)
   return vp;
 }
 
-/* Read or write from BFD executable files.
-
-   MEMADDR is an address within the target address space, MYADDR is an
-   address within GDB address-space where data is written to, LEN is
-   length of buffer, and WRITE indicates whether to read or write.
-   SECTIONS and SECTIONS_END defines a section table holding sections
-   from possibly multiple BFDs.
-
-   If SECTION_NAME is not NULL, only access sections with that same
-   name.
-
-   Result is a length:
-
-   0:    We cannot handle this address and length.
-   > 0:  We have handled N bytes starting at this address.
-   (If N == length, we did it all.)  We might be able
-   to handle more bytes beyond this length, but no
-   promises.
-   < 0:  We cannot handle this address, but if somebody
-   else handles (-N) bytes, we can start from there.  */
 
 int
 section_table_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
@@ -594,7 +574,6 @@ section_table_xfer_memory_partial (gdb_byte *readbuf, const gdb_byte *writebuf,
 
   if (len <= 0)
     internal_error (__FILE__, __LINE__, _("failed internal consistency check"));
-
 
   for (p = sections; p < sections_end; p++)
     {
@@ -802,6 +781,15 @@ ignore (struct bp_target_info *bp_tgt)
   return 0;
 }
 
+static int
+exec_has_memory (struct target_ops *ops)
+{
+  /* We can provide memory if we have any file/target sections to read
+     from.  */
+  return (current_target_sections->sections
+	  != current_target_sections->sections_end);
+}
+
 /* Find mapped memory. */
 
 extern void
@@ -836,7 +824,7 @@ Specify the filename of the executable file.";
   exec_ops.to_remove_breakpoint = ignore;
   exec_ops.to_create_inferior = find_default_create_inferior;
   exec_ops.to_stratum = file_stratum;
-  exec_ops.to_has_memory = 1;
+  exec_ops.to_has_memory = exec_has_memory;
   exec_ops.to_make_corefile_notes = exec_make_note_section;
   exec_ops.to_magic = OPS_MAGIC;
 }

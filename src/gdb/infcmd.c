@@ -194,8 +194,7 @@ get_inferior_args (void)
     {
       char *n, *old;
 
-      n = gdbarch_construct_inferior_arguments (current_gdbarch,
-						inferior_argc, inferior_argv);
+      n = construct_inferior_arguments (inferior_argc, inferior_argv);
       old = set_inferior_args (n);
       xfree (old);
     }
@@ -247,7 +246,7 @@ notice_args_read (struct ui_file *file, int from_tty,
 /* Compute command-line string given argument vector.  This does the
    same shell processing as fork_inferior.  */
 char *
-construct_inferior_arguments (struct gdbarch *gdbarch, int argc, char **argv)
+construct_inferior_arguments (int argc, char **argv)
 {
   char *result;
 
@@ -420,6 +419,18 @@ post_create_inferior (struct target_ops *target, int from_tty)
       solib_create_inferior_hook ();
 #endif
     }
+
+  /* If the user sets watchpoints before execution having started,
+     then she gets software watchpoints, because GDB can't know which
+     target will end up being pushed, or if it supports hardware
+     watchpoints or not.  breakpoint_re_set takes care of promoting
+     watchpoints to hardware watchpoints if possible, however, if this
+     new inferior doesn't load shared libraries or we don't pull in
+     symbols from any other source on this target/arch,
+     breakpoint_re_set is never called.  Call it now so that software
+     watchpoints get a chance to be promoted to hardware watchpoints
+     if the now pushed target supports hardware watchpoints.  */
+  breakpoint_re_set ();
 
   observer_notify_inferior_created (target, from_tty);
 }
@@ -1280,7 +1291,7 @@ advance_command (char *arg, int from_tty)
 static void
 print_return_value (struct type *func_type, struct type *value_type)
 {
-  struct gdbarch *gdbarch = current_gdbarch;
+  struct gdbarch *gdbarch = get_regcache_arch (stop_registers);
   struct cleanup *old_chain;
   struct ui_stream *stb;
   struct value *value;
@@ -2001,9 +2012,11 @@ nofp_registers_info (char *addr_exp, int from_tty)
 }
 
 static void
-print_vector_info (struct gdbarch *gdbarch, struct ui_file *file,
+print_vector_info (struct ui_file *file,
 		   struct frame_info *frame, const char *args)
 {
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+
   if (gdbarch_print_vector_info_p (gdbarch))
     gdbarch_print_vector_info (gdbarch, file, frame, args);
   else
@@ -2033,8 +2046,7 @@ vector_info (char *args, int from_tty)
   if (!target_has_registers)
     error (_("The program has no registers now."));
 
-  print_vector_info (current_gdbarch, gdb_stdout,
-		     get_selected_frame (NULL), args);
+  print_vector_info (gdb_stdout, get_selected_frame (NULL), args);
 }
 
 /* Kill the inferior process.  Make us have no inferior.  */
@@ -2052,9 +2064,9 @@ kill_command (char *arg, int from_tty)
     error (_("Not confirmed."));
   target_kill ();
 
-  /* If the current target interface claims there's still execution,
-     then don't mess with threads of other processes.  */
-  if (!target_has_execution)
+  /* If we still have other inferiors to debug, then don't mess with
+     with their threads.  */
+  if (!have_inferiors ())
     {
       init_thread_list ();		/* Destroy thread info */
 
@@ -2442,9 +2454,9 @@ detach_command (char *args, int from_tty)
   if (!gdbarch_has_global_solist (target_gdbarch))
     no_shared_libraries (NULL, from_tty);
 
-  /* If the current target interface claims there's still execution,
-     then don't mess with threads of other processes.  */
-  if (!target_has_execution)
+  /* If we still have inferiors to debug, then don't mess with their
+     threads.  */
+  if (!have_inferiors ())
     init_thread_list ();
 
   if (deprecated_detach_hook)
@@ -2517,9 +2529,11 @@ interrupt_target_command (char *args, int from_tty)
 }
 
 static void
-print_float_info (struct gdbarch *gdbarch, struct ui_file *file,
+print_float_info (struct ui_file *file,
 		  struct frame_info *frame, const char *args)
 {
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+
   if (gdbarch_print_float_info_p (gdbarch))
     gdbarch_print_float_info (gdbarch, file, frame, args);
   else
@@ -2550,8 +2564,7 @@ float_info (char *args, int from_tty)
   if (!target_has_registers)
     error (_("The program has no registers now."));
 
-  print_float_info (current_gdbarch, gdb_stdout, 
-		    get_selected_frame (NULL), args);
+  print_float_info (gdb_stdout, get_selected_frame (NULL), args);
 }
 
 static void

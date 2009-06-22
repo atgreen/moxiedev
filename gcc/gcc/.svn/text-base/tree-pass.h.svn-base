@@ -75,6 +75,9 @@ enum tree_dump_index
 					   dumper to print stmts.  */
 #define TDF_RHS_ONLY	(1 << 17)	/* a flag to only print the RHS of
 					   a gimple stmt.  */
+#define TDF_ASMNAME	(1 << 18)	/* display asm names of decls  */
+
+
 /* In tree-dump.c */
 
 extern char *get_dump_file_name (int);
@@ -377,6 +380,7 @@ extern struct gimple_opt_pass pass_late_warn_uninitialized;
 extern struct gimple_opt_pass pass_cse_reciprocals;
 extern struct gimple_opt_pass pass_cse_sincos;
 extern struct gimple_opt_pass pass_convert_to_rsqrt;
+extern struct gimple_opt_pass pass_optimize_bswap;
 extern struct gimple_opt_pass pass_warn_function_return;
 extern struct gimple_opt_pass pass_warn_function_noreturn;
 extern struct gimple_opt_pass pass_cselim;
@@ -478,7 +482,6 @@ extern struct rtl_opt_pass pass_split_all_insns;
 extern struct rtl_opt_pass pass_fast_rtl_byte_dce;
 extern struct rtl_opt_pass pass_lower_subreg2;
 extern struct rtl_opt_pass pass_mode_switching;
-extern struct rtl_opt_pass pass_see;
 extern struct rtl_opt_pass pass_sms;
 extern struct rtl_opt_pass pass_sched;
 extern struct rtl_opt_pass pass_ira;

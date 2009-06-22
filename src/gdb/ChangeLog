@@ -1,3 +1,740 @@
+2009-06-18  Hui Zhu  <teawater@gmail.com>
+	    Michael Snyder  <msnyder@vmware.com>
+
+	* infrun.c (handle_inferior_event): Improve reverse stepping
+	through function epilogue.
+
+	* infrun.c (handle_inferior_event): Reverse-next through
+	trampoline.
+
+2009-06-18  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* dwarf2-frame.c (struct comp_unit): Use bfd_size_type for
+	dwarf_frame_size.
+
+2009-06-17  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf2read.c (zlib_decompress_section): Use a cleanup.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbarch.sh (pointer_to_address): Change to type 'm'.
+	(address_to_pointer): Likewise.
+	* gdbarch.c, gdbarch.h: Regenerate.
+
+	* inferior.h (unsigned_pointer_to_address): Add GDBARCH argument.
+	(signed_pointer_to_address): Likewise.
+	(unsigned_address_to_pointer, address_to_signed_pointer): Likewise.
+	* findvar.c (unsigned_pointer_to_address): Likewise.
+	(signed_pointer_to_address): Likewise.
+	(unsigned_address_to_pointer, address_to_signed_pointer): Likewise.
+
+	* avr-tdep.c (avr_address_to_pointer): Likewise.
+	(avr_pointer_to_address): Likewise.
+	* iq2000-tdep.c (iq2000_pointer_to_address): Likewise.
+	(iq2000_address_to_pointer): Likewise.
+	* m32c-tdep.c (m32c_m16c_address_to_pointer): Likewise.
+	(m32c_m16c_pointer_to_address): Likewise.
+	* spu-tdep.c (spu_pointer_to_address): Likewise.
+	* xstormy16-tdep.c (xstormy16_pointer_to_address): Likewise.
+	(xstormy16_address_to_pointer): Likewise.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* printcmd.c (print_scalar_formatted): Always truncate
+	unsigned data types.
+
+	* cli-dump.c (struct callback_data): Change type of load_offset
+	to CORE_ADDR.
+	(restore_binary_file): Update type casts.
+	(restore_command): Parse load_offset as address, not long.
+
+	* utils.c (string_to_core_addr): Do not sign-extend value.
+	* varobj.c (find_frame_addr_in_frame_chain): Truncate frame_base
+	before comparing against requested frame address.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbarch.sh (gcore_bfd_target): New gdbarch callback.
+	* gdbarch.h, gdbarch.c: Regenerate.
+
+	* gcore.c (default_gcore_target): Make return value const.
+	Call gdbarch_gcore_bfd_target if present.
+	(default_gcore_arch, default_gcore_mach): Use target_gdbarch.
+
+	* corelow.c (core_read_description): Call gdbarch_core_read_description
+	on core_gdbarch instead of current_gdbarch.
+
+	* ppc-linux-tdep.c (ppc_linux_init_abi): Install gcore_bfd_target.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.c (create_string_type): Receive character type as argument.
+	* gdbtypes.h (create_string_type): Add character type argument.
+	* dwarf2read.c (read_tag_string_type): Pass character type to
+	create_string_type.
+
+	* value.h (value_string): Add character type argument.
+	* valops.c (value_string): Add character type argument.  Pass it to
+	create_string_type.  Do not allocate space in inferior.
+	* valarith.c (value_concat): Pass character type to value_string.
+
+	* value.h (value_typed_string): Rename to ...
+	(value_cstring): ... this.
+	* valops.c (value_typed_string): Rename to ...
+	(value_cstring): ... this.
+	* c-lang.c (evaluate_subexp_c): Update.
+
+	* python/python-value.c (builtin_type_pychar): New define.
+	(convert_value_from_python): Call value_cstring instead
+	of value_from_string.
+	* value.c (value_from_string): Remove.
+	* value.h (value_from_string): Remove.
+
+	* eval.c (evaluate_subexp_standard): Pass character type to
+	value_string.  Pass expression architecture to value_nsstring
+	and lookup_child_selector.
+	* objc-lang.h (lookup_objc_class): Add GDBARCH parameter.
+	(lookup_child_selector): Likewise.
+	(value_nsstring): Likewise.
+	* objc-lang.c (lookup_objc_class): Add GDBARCH parameter.
+	Pass character type to value_string..
+	(lookup_child_selector): Likewise.
+	(value_nsstring): Add GDBARCH parameter, use it instead of
+	objfile architecture.  Pass architecture to lookup_objc_class
+	and lookup_child_selector. Pass character type to value_string.
+	(end_msglist): Pass architecture to lookup_objc_class.
+	* objc-exp.y: Pass architecture to lookup_objc_class.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.h (struct language_defn): Add forward declaration.
+	(lookup_typename): Add LANGUAGE and GDBARCH parameters.
+	(lookup_unsigned_typename): Likewise.
+	(lookup_signed_typename): Likewise.
+	* gdbtypes.c (lookup_typename): Add LANGUAGE and GDBARCH parameters.
+	Use them instead of current_language and current_gdbarch.
+	(lookup_unsigned_typename): Add LANGUAGE and GDBARCH parameters.
+	Pass them to lookup_typename.
+	(lookup_signed_typename): Likewise.
+
+	* c-exp.y: Pass parse_language and parse_gdbarch to
+	lookup_unsigned_typename and lookup_signed_typename.
+	* objc-exp.y: Likewise.
+	* m2-exp.y: Pass parse_language and parse_gdbarch to lookup_typename.
+
+	* c-lang.c (evaluate_subexp_c): Pass expression language and
+	gdbarch to lookup_typename.
+	* printcmd.c (printf_command): Pass current language and
+	gdbarch to lookup_typename.
+	* python/python-type.c (typy_lookup_typename): Likewise.
+	Include "language.h".
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* sparc64-nat.c (sparc64_gregset_supplies_p): Add GDBARCH parameter.
+	Use it instead of current_gdbarch.  Pass architecture to
+	sparc32_gregset_supplies_p.
+	(sparc64_fpregset_supplies_p): Add GDBARCH parameter.  Use it instead
+	of current_gdbarch.  Pass architecture to sparc32_fpregset_supplies_p.
+	* sparc64nbsd-nat.c (sparc64nbsd_gregset_supplies_p,
+	sparc64nbsd_fpregset_supplies_p): Likewise.
+	* sparc-nat.c (sparc_gregset_supplies_p, sparc_fpregset_supplies_p):
+	Add GDBARCH parameter.
+	(sparc32_gregset_supplies_p, sparc32_fpregset_supplies_p): Likewise.
+	(sparc_fetch_inferior_registers): Pass regcache architecture to
+	sparc_gregset_supplies_p and sparc_fpregset_supplies_p.
+	(sparc_store_inferior_registers): Likewise.
+	* sparc-nat.h (sparc_gregset_supplies_p, sparc_fpregset_supplies_p:
+	Add GDBARCH parameter.
+	(sparc32_gregset_supplies_p, sparc32_fpregset_supplies_p): Likewise.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* ada-tasks.c (read_known_tasks_array): Use target_gdbarch instead
+	of current_gdbarch.
+	* aix-thread.c (pd_enable): Likewise.
+	* amd64-linux-nat.c (ps_get_thread_area): Likewise.
+	* bsd-uthread.c (bsd_uthread_activate): Likewise.
+	* linux-nat.c (linux_nat_info_proc_cmd): Likewise.
+	* linux-thread-db.c (enable_thread_event): Likewise.
+	* monitor.c (monitor_write_memory, monitor_read_memory): Likewise.
+	* nto-procfs.c (procfs_open): Likewise.
+	* procfs.c (invalidate_cache, procfs_insert_watchpoint,
+	info_proc_mappings, info_mappings_callback): Likewise.
+	* record.c (record_open): Likewise.
+	* rs6000-nat.c (ARCH64): Likewise.
+	* solib-darwin.c (darwin_solib_create_inferior_hook): Likewise.
+	(darwin_bfd_open): Likewise.
+	* memattr.c (mem_info_command): Likewise.
+
+	* windows-nat.c (win32_resume): Use current regcache architecture
+	instead of current_gdbarch.
+
+	* dbug-rom.c (dbug_regname): Remove check against number of
+	registers in current_gdbarch.
+	* solib-pa64.c (read_dynamic_info): Remove unused variable.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* dummy-frame.c (deprecated_pc_in_call_dummy): Add GDBARCH parameter,
+	use it instead of current_gdbarch.
+	* frame.h (deprecated_pc_in_call_dummy): Add GDBARCH parameter.
+	* arm-tdep.c (arm_skip_prologue): Pass architecture to
+	deprecated_pc_in_call_dummy.
+
+	* symtab.c (skip_prologue_using_sal): Add GDBARCH parameter.
+	Use it instead of current_gdbarch.
+	* symtab.h (skip_prologue_using_sal): Add GDBARCH parameter.
+	* breakpoint.c (expand_line_sal_maybe): Pass architecture to
+	skip_prologue_using_sal.
+	* arm-tdep.c (skip_prologue_using_sal): Likewise.
+	* lm32-tdep.c (lm32_skip_prologue): Likewise.
+	* m32-tdep.c (m32c_skip_prologue): Likewise.
+	* mips-tdep.c (mips_skip_prologue): Likewise.
+	* moxie-tdep.c (moxie_skip_prologue): Likewise.
+	* mt-tdep.c (mt_frame_unwind_cache): Likewise.
+	* rs6000-tdep.c (rs6000_skip_prologue): Likewise.
+	* frv-tdep.c (frv_analyze_prologue): Add GDBARCH parameter, pass
+	it to skip_prologue_using_sal.  Update call sites ...
+	(frv_skip_prologue, frv_frame_unwind_cache): ... here.
+
+	* mn10300-tdep.c (struct mn10300_prologue): Add GDBARCH member.
+	(check_for_saved): Use it instead of current_gdbarch.
+	(mn10300_analyze_prologue): Set it.
+
+	* value.c (using_struct_return): Add GDBARCH parameter.  Use it
+	instead of current_gdbarch.
+	* value.h (using_struct_return): Add GDBARCH parameter.
+	* eval.c (evaluate_subexp_standard): Pass architecture to
+	using_struct_return.
+	* infcall.c (call_function_by_hand): Likewise.
+	* stack.c (return_command): Likewise.
+	* sparc-tdep.c (sparc32_push_dummy_code): Likewise.
+
+	* symtab.c (in_prologue): Add GDBARCH parameter.  Use it instead of
+	current_gdbarch.
+	* symtab.h (in_prologue): Add GDBARCH parameter.
+	* infrun.c (handle_inferior_event): Pass architecture to in_prologue.
+
+	* eval.c (evaluate_subexp_standard): Use expression architecture
+	instead of current_gdbarch.
+
+	* c-lang.c (evaluate_subexp_c): Use expression architecture and
+	language instead of current_gdbarch and current_language.
+
+	* printcmd.c (do_one_display): Use expression architecture instead
+	of current_gdbarch.
+
+	* infcmd.c (print_return_value): Use architecture of stop_regcache
+	instead of current_gdbarch.
+	(print_vector_info, print_float_info): Remove GDBARCH argument,
+	use frame architecture instead.
+	(vector_info, float_info): Update calls.
+
+	* objc-lang.c (objc_skip_trampoline): Use frame architecture
+	instead of current_gdbarch.
+
+	* parse.c (write_dollar_variable): Use parse architecture instead
+	of current_gdbarch.
+
+	* source.c (line_info): Use objfile architecture instead of
+	current_gdbarch.
+
+	* symtab.c (find_function_start_sal): Use gdbarch instead of
+	current_gdbarch.
+	(print_msymbol_info): Use objfile architecture instead of
+	current_gdbarch.
+
+	* valops.c (value_assign): Use frame architecture instead of
+	current_gdbarch.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* buildsym.c (record_line): Remove call to gdbarch_addr_bits_remove.
+
+	* coffread.c (coff_symtab_read): Call gdbarch_addr_bits_remove before
+	calling record_line.
+	(enter_linenos): Likewise.
+	* dbxread.c (process_one_symbol): Likewise.
+	* dwarf2read.c (dwarf_decode_lines): Likewise.
+	* mdebugread.c (psymtab_to_symtab_1): Likewise.
+	* xcoffread.c (enter_line_range): Likewise.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* ax-gdb.c (gen_bitfield_ref): Add EXP argument, use expression
+	architecture instead of current_gdbarch.
+	(gen_struct_ref): Add EXP argument, pass to get_bitfield_ref.
+	(gen_expr): Pass expression to get_struct_ref.
+
+	* symtab.h (struct symbol_ops): Add GDBARCH parameter to
+	tracepoint_var_ref callback.
+	* ax-gdb.c (gen_var_ref): Pass architecture to tracepoint_var_ref
+	symbol operation callback.
+	* dwarf2loc.c (dwarf2_tracepoint_var_ref): Add GDBARCH parameter.
+	Use it instead of current_gdbarch.
+	(locexpr_tracepoint_var_ref): Add GDBARCH parameter.  Pass it to
+	dwarf2_tracepoint_var_ref.
+	(loclist_tracepoint_var_ref): Likewise.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* prologue-value.c (make_pv_area): Add ADDR_BIT argument.
+	Use it instead of address bits of current_gdbarch.
+	* prologue-value.c (make_pv_area): Add ADDR_BIT argument.
+	* arm-tdep.c (thumb_analyze_prologue): Pass address bits to
+	make_pv_area.
+	(arm_scan_prologue): Likewise.
+	* m32c-tdep.c (m32c_analyze_prologue): Likewise.
+	* mep-tdep.c (mep_analyze_prologue): Likewise.
+	* mn10300-tdep.c (mn10300_analyze_prologue): Likewise.
+	* s390-tdep.c (s390_analyze_prologue): Likewise.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* mi/mi-main.c (mi_cmd_data_list_register_names): Use selected
+	frame architecture instead of current_gdbarch.
+	(mi_cmd_data_list_changed_registers): Likewise.
+	(mi_cmd_data_list_register_values): Likewise.  Pass selected
+	frame to get_register.
+	(get_register): Add FRAME argument, use it as frame to retrieve
+	registers from (instead of selected frame).  Use frame architecture
+	instead of current_gdbarch.
+	(mi_cmd_data_write_register_values): Use current regcache
+	architecture instead of current_gdbarch.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* tui/tui-regs.c (tui_show_register_group): Remove GDBARCH parameter;
+	use frame architecture instead.  Replace current_gdbarch uses.
+	(tui_show_registers): Update call.
+	(tui_get_register): Remove GDBARCH parameter; use frame architecture
+	instead.
+	(tui_show_register_group): Update call.
+	(tui_check_register_values): Likewise.
+	(tui_register_format): Remove GDBARCH parameter; use frame
+	architecture instead.  Replace current_gdbarch uses.
+	(tui_get_register): Update call.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbarch.sh (construct_inferior_arguments): Remove.
+	* gdbarch.c, gdbarch.h: Regenerate.
+	* infcmd.c (get_inferior_args): Call construct_inferior_arguments
+	directly instead of gdbarch_construct_inferior_arguments.
+	(construct_inferior_arguments): Remove GDBARCH argument.
+	* inferior.h (construct_inferior_arguments): Likewise.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* symfile.c (section_is_mapped): Use objfile architecture instead
+	of current_gdbarch.
+	(TARGET_LONG_BYTES): Remove.
+	(read_target_long_array): Add SIZE argument.  Use it instead of
+	TARGET_LONG_BYTES.
+	(simple_read_overlay_table): Retrieve long size from objfile
+	architecture; pass it to read_target_long_array.
+	(simple_read_overlay_region_table): Likewise.
+	(simple_overlay_update_1): Likewise.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* infrun.c (cleanup_displaced_step_closure): Remove.
+	(displaced_step_clear_cleanup): Move to before displaced_step_prepare.
+	(displaced_step_prepare): Use displaced_step_clear_cleanup instead
+	of cleanup_displaced_step_closure.
+	(handle_inferior_event, keep_going): Use thread architecture instead
+	of current_gdbarch.
+
+2009-06-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* infrun.c (handle_inferior_event): Use current frame architecture
+	or thread architecture instead of current_gdbarch.  Pass to
+	handle_step_into_function and handle_step_into_function_backward.
+	(handle_step_into_function): Add GDBARCH parameter.  Use it instead
+	of current_gdbarch.
+	(handle_step_into_function_backward): Likewise.
+	(insert_step_resume_breakpoint_at_frame): Use frame architecture
+	instead of current_gdbarch.
+	(insert_step_resume_breakpoint_at_caller): Likewise.
+
+2009-06-17  Pierre Muller  <muller@ics.u-strasbg.fr>
+	Pedro Alves  <pedro@codesourcery.com>
+	
+	* infcmd.c (post_create_inferior): Call breakpoint_re_set after target
+	is pushed for watchpoint promotion to hardware watchpoint.
+
+2009-06-16  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* dwarf2read.c (dwarf_info_section, dwarf_abbrev_section)
+	(dwarf_line_section, dwarf_pubnames_section, dwarf_aranges_section)
+	(dwarf_loc_section, dwarf_macinfo_section, dwarf_str_section)
+	(dwarf_ranges_section, dwarf_frame_section)
+	(dwarf_eh_frame_section): Removed.
+	(dwarf2_resize_section): Likewise.
+	(dwarf2_read_section): Now static, use bfd_mmap() if possible.
+	(dwarf2_get_section_info): New function.
+	(munmap_section_buffer): Likewise.
+	(dwarf2_per_objfile_cleanup): Likewise.
+	(section_is_p): Signature change.
+	* dwarf2-frame.c (dwarf2_build_frame_info): Use
+	dwarf2_get_section_info instead of dwarf2_read_section.
+	
+2009-06-16  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* solib.c (symbol_add_stub): New FLAGS parameter.
+	(solib_read_symbols): FROM_TTY -> FLAGS, call symbol_add_stub
+	directly.
+	(solib_add): Defer breakpoint_re_set until after all solibs.
+	* bsd-uthread.c (bsd_uthread_solib_loaded): Adjust.
+	* rs6000-nat.c (objfile_symbol_add): Adjust.
+	* symfile.c (syms_from_objfile): Merge parameters into ADD_FLAGS.
+	(new_symfile_objfile): Likewise.
+	(symbol_file_add_with_addrs_or_offsets): Likewise.
+	(symbol_file_add_from_bfd): Likewise.
+	(symbol_file_add): Likewise.
+	* symfile.h (enum symfile_add_flags): New. Adjust prototypes.
+	* symfile-mem.c (symbol_file_add_from_memory): Adjust.
+	* windows-nat.c (safe_symbol_file_add_stub): Adjust.
+	* machoread.c (macho_oso_symfile, macho_symfile_read): Adjust.
+	
+2009-06-16  Keith Seitz  <keiths@redhat.com>
+
+	* linespec.c (collect_methods): Delete.
+	(add_matching_methods): Reove destructor special case.
+	(find_method): Call find_methods directly instead of
+	collect_methods.
+	* valops.c (value_struct_elt): Remove destructor
+	special cases.
+	(check_field): Likewise.
+	(value_struct_elt_for_reference): Likewise.
+	(destructor_name_p): Remove misleading comment about dtors
+	being "special cases". 
+	* gdbtypes.h (get_destructor_fn_field): Remove. No longer needed.
+	* gdbtypes.c (get_destructor_fn_field): Likewise. 
+
+2009-06-16  Pedro Alves  <pedro@codesourcery.com>
+
+	* mi/mi-main.c (mi_cmd_data_read_memory): Dispatch
+	TARGET_OJECT_MEMORY reads to the topmost target, not to the
+	flattened current_target.
+
+2009-06-16  Tristan Gingold  <gingold@adacore.com>
+
+	* avr-tdep.c (struct gdbarch_tdep): Replace the unused field with
+	call_length field.
+	(avr_register_name): Add const to register_names.
+	(avr_scan_arg_moves): Move inside avr_scan_prologue.
+	(avr_scan_prologue): Add pc_end argument.
+	Only read prologue bytes that can be read.
+	Limit the scan to the known prologue length.
+	Makes pattern variables static and const.
+	Fix indentation.
+	(avr_skip_prologue): Pass func_end argument to avr_scan_prologue.
+	Fix indentation.
+	(avr_breakpoint_from_pc): Constify avr_break_insn.
+	(avr_extract_return_value): Fix function comment.
+	(avr_frame_unwind_cache): Fix GNU style violations.
+	Pass current_pc argument to avr_scan_prologue to stop prologue
+	analysis to the current pc.  This fixes the bug with the 'next'
+	command.
+	Correctly set the SP register of the previous frame (use call_length).
+	(avr_frame_prev_register): Fix indentation.
+	Correctly read PC from the stack on avr6 architectures.
+	(avr_push_dummy_call): Fix indentation.
+	(avr_gdbarch_init): Set call_length according to the architecture.
+
+2009-06-15  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* infcall.c (show_unwind_on_terminating_exception_p): New
+	function.
+	(call_function_by_hand): Create breakpoint and clean-up call for
+	std::terminate.breakpoint. Add unwind_on_terminating_exception_p
+	gate. Pop frame on breakpoint hit.
+	(_initialize_infcall): Add add_setshow_boolean_cmd for
+	unwind-on-terminating-exception.
+
+2009-06-12  Kevin Buettner  <kevinb@redhat.com>
+
+	* dwarf2read.c (dwarf2_psymtab_to_symtab): Propagate
+	`has_section_at_zero' flag from stripped objfile to separate,
+	debug info only, objfile.
+
+2009-06-12  Pedro Alves  <pedro@codesourcery.com>
+
+	* exec.h (section_table_xfer_memory_partial): Improve description,
+	mention SECTION_NAME.
+	* exec.c (section_table_xfer_memory_partial): Remove stale
+	description.
+
+2009-06-11  Aleksandar Ristovski  <aristovski@qnx.com>
+
+	* nto-tdep.h (nto_generic_supply_gpregset)
+	(nto_generic_supply_fpregset, nto_generic_supply_altregset): Remove.
+	* nto-tdep.c (nto_generic_supply_gpregset)
+	(nto_generic_supply_fpregset, nto_generic_supply_altregset): Remove.
+
+2009-06-11  Aleksandar Ristovski  <aristovski@qnx.com>
+
+	* i386-nto-tdep.c (I386_NTO_SIGCONTEXT_OFFSET): Remove define.
+	(i386nto_sigcontext_addr): Change the way context address is calculated.
+	(i386nto_init_abi): Remove usage of deprecated sc_reg_offset and
+	sc_sp_offset and set sc_reg_offset and sc_num_regs.
+
+2009-06-11  Aleksandar Ristovski  <aristovski@qnx.com>
+
+	* i386-nto-tdep.c (i386_nto_target): Remove definition.
+	(init_i386nto_ops): Use macros to set fields to global
+	current_nto_target directly.
+	(i386nto_init_abi): Remove unused nto_set_target call.
+	* nto-tdep.h (nto_set_target): Remove unused declaration.
+	* nto-tdep.c (nto_set_target): Remove unused function.
+
+2009-06-11  Pedro Alves  <pedro@codesourcery.com>
+
+	* breakpoint.c (break_command_really): Rename local variable
+	breakpoint_chain to bkpt_chain.
+
+2009-06-11  Aleksandar Ristovski  <aristovski@qnx.com>
+
+	Add support for XMM registers.
+	* i386-nto-tdep.c (i386nto_regset_id): Add case for SSE register set.
+	(i386nto_register_area): Correctly calculate offsets and sizes for
+	all supported registers.
+
+2009-06-11  Tom Tromey  <tromey@redhat.com>
+
+	* eval.c (evaluate_subexp_standard) <OP_OBJC_MSGCALL>: Remove
+	'static' from local variable definitions.
+
+2009-06-11  Pedro Alves  <pedro@codesourcery.com>
+
+	* symtab.c (append_expanded_sal): Remove unused local variables.
+
+2009-06-11  Pedro Alves  <pedro@codesourcery.com>
+
+	* infrun.c (sched_multi): New global.
+	(resume): If sched_multi is set, resume only threads of the
+	current inferior.
+	(prepare_to_proceed): Don't switch over to wait_ptid if we're
+	resuming a different inferior, and sched_multi is off.
+	(show_schedule_multiple): New.
+	(_initialize_infrun): Register new "set schedule-multiple" command.
+	* inferior.h (sched_multi): Declare.
+	* NEWS: Mention new "schedule-multiple" setting.
+
+2009-06-11  Pedro Alves  <pedro@codesourcery.com>
+
+	* varobj.c (varobj_create): Properly restore the selected frame.
+
+2009-06-05  Tom Tromey  <tromey@redhat.com>
+
+	* inferior.c (print_inferior): Make a table, not a list.  Emit
+	table headers.
+
+2009-06-10  Jonas Maebe  <jonas.maebe@elis.ugent.be>
+
+	* darwin-nat.c (darwin_stop_inferior): Pass 0 as options to
+	darwin_wait (blocking wait).
+	(darwin_kill_inferior): Likewise.
+
+2009-06-10  Pedro Alves  <pedro@codesourcery.com>
+
+	* infrun.c (handle_inferior_event): Update comment around trying
+	to revert back to a stepping thread that has exited.
+
+2009-06-10  Cary Coutant  <ccoutant@google.com>
+
+	* dwarf2read.c (dwarf_decode_lines): Recognize and ignore
+	DW_LNE_set_discriminator.
+
+2009-06-10  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* breakpoint.c: ARI fixes.
+	(create_overlay_event_breakpoint): Avoid assignment inside if statement.
+	(print_one_breakpoint_location): Likewise.
+	(create_longjmp_breakpoint): Likewise.
+	(tracepoint_save_command): Likewise
+	(bpstat_find_step_resume_breakpoint): No operator at end of line.
+	(bpstat_stop_status): Likewise.
+	(describe_other_breakpoints): Likewise.
+	(hw_watchpoint_used_count): Likewise.
+	(expand_line_sal_maybe): Likewise.
+	(break_command_really): Likewise.
+	(delete_command): Likewise.
+	(do_enable_breakpoint): Likewise.
+	(delete_trace_command): Likewise.
+	(catch_exception_command_1): Likewise and remove extra parentheses.
+
+2009-06-08  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* breakpoint.c (_initialize_breakpoint): Remove "bu" command alias of
+	"ubreak" command that does not exist.
+
+2009-06-08  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* cli/cli-decode.c (add_alias_cmd): Correct assertion.
+
+2009-06-07  Pedro Alves  <pedro@codesourcery.com>
+
+	* hppa-tdep.c (_initialize_hppa_tdep): Add declaration.
+
+2009-06-07  Pedro Alves  <pedro@codesourcery.com>
+
+	* procfs.h: New.
+	* proc-utils.h (procfs_first_available): Don't declare here.
+	* sol-thread.c: Include procfs.h instead of sys/procfs.h and
+	proc-utils.h.
+	* procfs.c: Include procfs.h.
+	(procfs_target): Make it public.  Don't register
+	procfs_can_use_hw_breakpoint here.
+	(proc_set_watchpoint): Check for PCWATCH or PIOCSWATCH being
+	defined instead of TARGET_HAS_HARDWARE_WATCHPOINTS.
+	(procfs_can_use_hw_breakpoint): Remove check of
+	TARGET_HAS_HARDWARE_WATCHPOINTS.
+	(procfs_use_watchpoints): Register procfs_can_use_hw_breakpoint
+	here.
+	(_initialize_procfs): Don't add the procfs target here.
+
+	* i386-sol2-nat.c: Include target.h and procfs.h.
+	(_initialize_amd64_sol2_nat): Install the procfs target here,
+	customized with watchpoints support.
+	* irix5-nat.c: Include target.h.
+	(_initialize_core_irix5): Rename to ...
+	(_initialize_irix5_nat): ... this.  Install the procfs target
+	here, customized with watchpoints support.
+	* alpha-nat.c: Include procfs.h.
+	(_initialize_core_alpha): Rename to...
+	(_initialize_alpha_nat): ... this.  Install the procfs target
+	here, customized with watchpoints support.
+	* sparc-sol2-nat.c: Include target.h and procfs.h.
+	(_initialize_sparc_sol2_nat): New.
+
+	* config/i386/nm-i386sol2.h (TARGET_HAS_HARDWARE_WATCHPOINTS): Delete.
+	* config/sparc/nm-sol2.h (TARGET_HAS_HARDWARE_WATCHPOINTS): Delete.
+	* config/mips/irix5.mh (NAT_FILE): Delete.
+	* config/mips/irix6.mh (NAT_FILE): Delete.
+	* config/mips/nm-irix5.h: Delete.
+
+20009-06-07  Pedro  Alves  <pedro@codesourcery.com>
+
+	* auxv.c (procfs_xfer_auxv): Change type of the `object' argument
+	to enum target_object.  Cleanup comments.
+	* auxv.h: Include "target.h".  Cleanup comments to not mention
+	NATIVE_XFER_AUXV anymore.
+
+2009-06-07  Pedro Alves  <pedro@codesourcery.com>
+
+	* inferior.h (procfs_first_available): Move declaration to...
+	* proc-utils.h: ... here.
+	* sol-thread.c: Include procfs.h and proc-utils.h.
+
+2009-06-07  Pedro Alves  <pedro@codesourcery.com>
+
+	* inferior.h (proc_iterate_over_mappings): Delete declaration.
+	* nto-tdep.h (proc_iterate_over_mappings): Delete declaration.
+	* procfs.c (proc_iterate_over_mappings): Delete.
+
+2009-06-07  Pedro Alves  <pedro@codesourcery.com>
+
+	* target.h (struct target_ops): Make to_has_all_memory,
+	to_has_memory, to_has_stack, to_has_registers and to_has_execution
+	methods instead of variables.
+	(target_has_all_memory_1, target_has_memory_1, target_has_stack_1)
+	(target_has_registers_1, target_has_execution_1): Declare
+	functions.
+	(target_has_all_memory): Rewrite to call target_has_all_memory_1.
+	(target_has_memory): Rewrite to call target_has_memory_1.
+	(target_has_stack): Rewrite to call target_has_all_stack_1.
+	(target_has_registers): Rewrite to call target_has_registers_1.
+	(target_has_execution): Rewrite to call target_has_execution_1.
+	(default_child_has_all_memory, default_child_has_memory)
+	(default_child_has_stack, default_child_has_registers)
+	(default_child_has_execution): Declare.
+	(target_mark_running, target_mark_exited): Delete declarations.
+	* target.c (default_child_has_all_memory,
+	default_child_has_memory, default_child_has_stack,
+	default_child_has_registers, default_child_has_execution): New.
+	(target_has_all_memory_1, target_has_memory_1, target_has_stack_1,
+	target_has_registers_1, target_has_execution_1): New.
+	(add_target): Default the to_has_all_memory, to_has_all_memory,
+	to_has_memory, to_has_stack, to_has_registers and to_has_execution
+	callbacks to return 0.
+	(update_current_target): Do not inherit to_has_all_memory,
+	to_has_memory, to_has_stack, to_has_registers or to_has_execution.
+	(target_mark_running, target_mark_exited): Delete.
+	(memory_xfer_partial): Adjust.
+	(target_read_memory, target_write_memory, target_search_memory):
+	Dispatch to the the top-most target, not the flattened
+	current_target.
+	(target_info): Adjust.
+	(init_dummy_target): Install return_zero as callback for
+	to_has_all_memory, to_has_memory, to_has_stack, to_has_registers,
+	to_has_execution.
+	(set_maintenance_target_async_permitted): Use have_live_inferiors
+	instead of target_has_execution.
+	* target-memory.c (target_write_memory_blocks): Dispatch memory
+	writes to the the top-most target, not the flattened
+	current_target.
+
+	* breakpoint.c (insert_breakpoints): Don't check for
+	target_has_execution here.
+	(update_global_location_list): Check if there are live inferiors
+	to debug instead of target_has_execution.
+	* infcmd.c (kill_command, detach_command): Check if there are
+	inferiors instead of target_has_execution.
+	* inferior.h (have_live_inferiors): Declare.
+	* inferior.c (have_live_inferiors): New.
+	* infrun.c (normal_stop): Don't check for target_has_execution to
+	finish the thread states.
+	* thread.c (is_thread_state, is_stopped, is_exited, is_running)
+	(any_running, is_executing): Remove checks for
+	target_has_execution.
+	* top.c (kill_or_detach): Don't try to kill core inferiors.
+	(quit_target): Don't check for target_has_execution.
+
+	* corelow.c (core_has_memory, core_has_stack, core_has_registers):
+	New.
+	(init_core_ops): Install core_has_memory, core_has_stack and
+	core_has_registers.
+	* exec.c (exec_has_memory): New.
+	(init_exec_ops): Install exec_has_memory.
+	* remote.c (remote_add_inferior): Don't call target_mark_running.
+	(remote_start_remote): Don't call target_mark_exited or call
+	target_mark_running.
+	(remote_open_1): Use have_inferiors instead of
+	target_has_execution.  Don't use target_mark_exited.
+	(init_remote_ops): Install deafult_child_has_all_memory,
+	default_child_has_memory, default_child_has_stack,
+	default_child_has_registers, default_child_has_execution.
+	* bsd-kvm.c (bsd_kvm_return_one): New.
+	(bsd_kvm_add_target): Register bsd_kvm_return_one as
+	to_has_memory, to_has_stack and to_has_registers callbacks.
+	* remote-m32r-sdi.c (m32r_return_one): New.
+	(init_m32r_ops): Register it.
+	* inf-child.c (inf_child_target): Adjust to register
+	default_child_has_all_memory, default_child_has_memory,
+	default_child_has_stack, default_child_has_registers,
+	default_child_has_execution callbacks.
+	* gnu-nat.c (init_gnu_ops): Likewise.
+	* go32-nat.c (init_go32_ops): Likewise.
+	* hpux-thread.c (init_hpux_thread_ops): Likewise.
+	* monitor.c (init_base_monitor_ops): Likewise.
+	* nto-procfs.c (init_procfs_ops): Likewise.
+	* remote-mips.c (_initialize_remote_mips): Likewise.
+	* windows-nat.c (init_windows_ops): Likewise.
+	* remote-sim.c (gdbsim_create_inferior): Don't use
+	target_mark_running or target_mark_exited.
+	(gdbsim_mourn_inferior): Don't call target_mark_exited.
+	(init_gdbsim_ops): Adjust to register
+	default_child_has_all_memory, default_child_has_memory,
+	default_child_has_stack, default_child_has_registers,
+	default_child_has_execution callbacks.
+
+	* linux-nat.c (linux_nat_xfer_partial): If reading memory, and
+	there's no inferior selected, defer to a lower stratum.
+
 2009-06-05  Tom Tromey  <tromey@redhat.com>
 
 	* varobj.c (update_dynamic_varobj_children): Wrap error text in
@@ -5,7 +742,7 @@
 	(install_visualizer): Likewise.
 	(varobj_set_visualizer): Likewise.
 
-2009-06-05  Marc Khouzam <marc.khouzam@ericsson.com>
+2009-06-05  Marc Khouzam  <marc.khouzam@ericsson.com>
 
 	* mi/mi-main.c (mi_cmd_exec_continue)
 	(mi_cmd_exec_interrupt): Adjust parsing of thread group

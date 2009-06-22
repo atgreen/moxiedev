@@ -31,10 +31,7 @@
 /isxdigit.c/1.2/Fri May 29 23:30:13 2009/-ko/
 /jp2uc.c/1.6/Fri Jun  5 20:33:20 2009//
 /jp2uc.h/1.2/Fri May 29 23:30:13 2009//
-/local.h/1.4/Fri Jun  5 20:33:20 2009//
 /toascii.c/1.1.1.1/Fri May 29 23:30:13 2009/-ko/
-/tolower.c/1.3/Fri May 29 23:30:13 2009/-ko/
-/toupper.c/1.3/Fri May 29 23:30:13 2009/-ko/
 /towctrans.c/1.2/Fri May 29 23:30:13 2009//
 /towlower.c/1.7/Fri May 29 23:30:13 2009//
 /towupper.c/1.7/Fri May 29 23:30:13 2009//
@@ -43,4 +40,7 @@
 /utf8punct.h/1.1/Fri May 29 23:30:13 2009//
 /wctrans.c/1.1/Fri May 29 23:30:13 2009//
 /wctype.c/1.2/Fri May 29 23:30:13 2009//
+/local.h/1.5/Fri Jun 19 11:14:06 2009//
+/tolower.c/1.4/Fri Jun 19 11:14:06 2009/-ko/
+/toupper.c/1.4/Fri Jun 19 11:14:06 2009/-ko/
 D

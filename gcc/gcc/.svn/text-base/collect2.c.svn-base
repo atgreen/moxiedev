@@ -1167,7 +1167,9 @@ main (int argc, char **argv)
 #else
 #if LINK_ELIMINATE_DUPLICATE_LDIRECTORIES
 	    case 'L':
-	      if (is_in_args (arg, (const char **) ld1_argv, ld1-1))
+	      if (is_in_args (arg,
+			      CONST_CAST2 (const char **, char **, ld1_argv),
+			      ld1 - 1))
 		--ld1;
 	      break;
 #endif /* LINK_ELIMINATE_DUPLICATE_LDIRECTORIES */
@@ -1279,7 +1281,8 @@ main (int argc, char **argv)
   /* The AIX linker will discard static constructors in object files if
      nothing else in the file is referenced, so look at them first.  */
   {
-      const char **export_object_lst = (const char **)object_lst;
+      const char **export_object_lst 
+	= CONST_CAST2 (const char **, char **, object_lst);
 
       while (export_object_lst < object)
 	scan_prog_file (*export_object_lst++, PASS_OBJ);

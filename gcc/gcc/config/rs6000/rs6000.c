@@ -258,7 +258,7 @@ static GTY(()) section *toc_section;
 int rs6000_alignment_flags;
 
 /* True for any options that were explicitly set.  */
-struct {
+static struct {
   bool aix_struct_ret;		/* True if -maix-struct-ret was used.  */
   bool alignment;		/* True if -malign- was used.  */
   bool spe_abi;			/* True if -mabi=spe/no-spe was used.  */
@@ -775,7 +775,6 @@ static bool rs6000_ms_bitfield_layout_p (const_tree);
 static tree rs6000_handle_struct_attribute (tree *, tree, tree, int, bool *);
 static void rs6000_eliminate_indexed_memrefs (rtx operands[2]);
 static const char *rs6000_mangle_type (const_tree);
-EXPORTED_CONST struct attribute_spec rs6000_attribute_table[];
 static void rs6000_set_default_type_attributes (tree);
 static rtx rs6000_savres_routine_sym (rs6000_stack_t *, bool, bool, bool);
 static rtx rs6000_emit_stack_reset (rs6000_stack_t *, rtx, rtx, int, bool);
@@ -1034,6 +1033,22 @@ static const char alt_reg_names[][8] =
   "sfp"
 };
 #endif
+
+/* Table of valid machine attributes.  */
+
+static const struct attribute_spec rs6000_attribute_table[] =
+{
+  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
+  { "altivec",   1, 1, false, true,  false, rs6000_handle_altivec_attribute },
+  { "longcall",  0, 0, false, true,  true,  rs6000_handle_longcall_attribute },
+  { "shortcall", 0, 0, false, true,  true,  rs6000_handle_longcall_attribute },
+  { "ms_struct", 0, 0, false, false, false, rs6000_handle_struct_attribute },
+  { "gcc_struct", 0, 0, false, false, false, rs6000_handle_struct_attribute },
+#ifdef SUBTARGET_ATTRIBUTE_TABLE
+  SUBTARGET_ATTRIBUTE_TABLE,
+#endif
+  { NULL,        0, 0, false, false, false, NULL }
+};
 
 #ifndef MASK_STRICT_ALIGN
 #define MASK_STRICT_ALIGN 0
@@ -5204,14 +5219,6 @@ rs6000_emit_move (rtx dest, rtx source, enum machine_mode mode)
 	       && ! legitimate_constant_pool_address_p (operands[1])
 	       && ! toc_relative_expr_p (operands[1]))
 	{
-	  /* Emit a USE operation so that the constant isn't deleted if
-	     expensive optimizations are turned on because nobody
-	     references it.  This should only be done for operands that
-	     contain SYMBOL_REFs with CONSTANT_POOL_ADDRESS_P set.
-	     This should not be done for operands that contain LABEL_REFs.
-	     For now, we just handle the obvious case.  */
-	  if (GET_CODE (operands[1]) != LABEL_REF)
-	    emit_use (operands[1]);
 
 #if TARGET_MACHO
 	  /* Darwin uses a special PIC legitimizer.  */
@@ -6833,19 +6840,22 @@ rs6000_build_builtin_va_list (void)
     return build_pointer_type (char_type_node);
 
   record = (*lang_hooks.types.make_type) (RECORD_TYPE);
-  type_decl = build_decl (TYPE_DECL, get_identifier ("__va_list_tag"), record);
+  type_decl = build_decl (BUILTINS_LOCATION, TYPE_DECL,
+      			  get_identifier ("__va_list_tag"), record);
 
-  f_gpr = build_decl (FIELD_DECL, get_identifier ("gpr"),
+  f_gpr = build_decl (BUILTINS_LOCATION, FIELD_DECL, get_identifier ("gpr"),
 		      unsigned_char_type_node);
-  f_fpr = build_decl (FIELD_DECL, get_identifier ("fpr"),
+  f_fpr = build_decl (BUILTINS_LOCATION, FIELD_DECL, get_identifier ("fpr"),
 		      unsigned_char_type_node);
   /* Give the two bytes of padding a name, so that -Wpadded won't warn on
      every user file.  */
-  f_res = build_decl (FIELD_DECL, get_identifier ("reserved"),
-		      short_unsigned_type_node);
-  f_ovf = build_decl (FIELD_DECL, get_identifier ("overflow_arg_area"),
+  f_res = build_decl (BUILTINS_LOCATION, FIELD_DECL,
+      		      get_identifier ("reserved"), short_unsigned_type_node);
+  f_ovf = build_decl (BUILTINS_LOCATION, FIELD_DECL,
+      		      get_identifier ("overflow_arg_area"),
 		      ptr_type_node);
-  f_sav = build_decl (FIELD_DECL, get_identifier ("reg_save_area"),
+  f_sav = build_decl (BUILTINS_LOCATION, FIELD_DECL,
+      		      get_identifier ("reg_save_area"),
 		      ptr_type_node);
 
   va_list_gpr_counter_field = f_gpr;
@@ -7066,8 +7076,8 @@ rs6000_gimplify_va_arg (tree valist, tree type, gimple_seq *pre_p,
     align = 16;
   else
     {
-      lab_false = create_artificial_label ();
-      lab_over = create_artificial_label ();
+      lab_false = create_artificial_label (input_location);
+      lab_over = create_artificial_label (input_location);
 
       /* Long long and SPE vectors are aligned in the registers.
 	 As are any other 2 gpr item such as complex int due to a
@@ -9397,19 +9407,22 @@ rs6000_init_builtins (void)
   float_type_internal_node = float_type_node;
   void_type_internal_node = void_type_node;
 
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__bool char"),
+  tdecl = build_decl (BUILTINS_LOCATION, TYPE_DECL,
+      		      get_identifier ("__bool char"),
 		      bool_char_type_node);
   TYPE_NAME (bool_char_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__bool short"),
+  tdecl = build_decl (BUILTINS_LOCATION, TYPE_DECL,
+      		      get_identifier ("__bool short"),
 		      bool_short_type_node);
   TYPE_NAME (bool_short_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__bool int"),
+  tdecl = build_decl (BUILTINS_LOCATION, TYPE_DECL,
+      		      get_identifier ("__bool int"),
 		      bool_int_type_node);
   TYPE_NAME (bool_int_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__pixel"),
+  tdecl = build_decl (BUILTINS_LOCATION, TYPE_DECL, get_identifier ("__pixel"),
 		      pixel_type_node);
   TYPE_NAME (pixel_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
@@ -9419,50 +9432,61 @@ rs6000_init_builtins (void)
   bool_V4SI_type_node = build_vector_type (bool_int_type_node, 4);
   pixel_V8HI_type_node = build_vector_type (pixel_type_node, 8);
 
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector unsigned char"),
+  tdecl = build_decl (BUILTINS_LOCATION, TYPE_DECL,
+      		      get_identifier ("__vector unsigned char"),
 		      unsigned_V16QI_type_node);
   TYPE_NAME (unsigned_V16QI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector signed char"),
+  tdecl = build_decl (BUILTINS_LOCATION,
+      		      TYPE_DECL, get_identifier ("__vector signed char"),
 		      V16QI_type_node);
   TYPE_NAME (V16QI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector __bool char"),
+  tdecl = build_decl (BUILTINS_LOCATION,
+      		      TYPE_DECL, get_identifier ("__vector __bool char"),
 		      bool_V16QI_type_node);
   TYPE_NAME ( bool_V16QI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
 
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector unsigned short"),
+  tdecl = build_decl (BUILTINS_LOCATION,
+      		      TYPE_DECL, get_identifier ("__vector unsigned short"),
 		      unsigned_V8HI_type_node);
   TYPE_NAME (unsigned_V8HI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector signed short"),
+  tdecl = build_decl (BUILTINS_LOCATION,
+      		      TYPE_DECL, get_identifier ("__vector signed short"),
 		      V8HI_type_node);
   TYPE_NAME (V8HI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector __bool short"),
+  tdecl = build_decl (BUILTINS_LOCATION, TYPE_DECL,
+      		      get_identifier ("__vector __bool short"),
 		      bool_V8HI_type_node);
   TYPE_NAME (bool_V8HI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
 
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector unsigned int"),
+  tdecl = build_decl (BUILTINS_LOCATION, TYPE_DECL,
+      		      get_identifier ("__vector unsigned int"),
 		      unsigned_V4SI_type_node);
   TYPE_NAME (unsigned_V4SI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector signed int"),
+  tdecl = build_decl (BUILTINS_LOCATION,
+      		      TYPE_DECL, get_identifier ("__vector signed int"),
 		      V4SI_type_node);
   TYPE_NAME (V4SI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector __bool int"),
+  tdecl = build_decl (BUILTINS_LOCATION,
+      		      TYPE_DECL, get_identifier ("__vector __bool int"),
 		      bool_V4SI_type_node);
   TYPE_NAME (bool_V4SI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
 
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector float"),
+  tdecl = build_decl (BUILTINS_LOCATION,
+      		      TYPE_DECL, get_identifier ("__vector float"),
 		      V4SF_type_node);
   TYPE_NAME (V4SF_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
-  tdecl = build_decl (TYPE_DECL, get_identifier ("__vector __pixel"),
+  tdecl = build_decl (BUILTINS_LOCATION,
+      		      TYPE_DECL, get_identifier ("__vector __pixel"),
 		      pixel_V8HI_type_node);
   TYPE_NAME (pixel_V8HI_type_node) = tdecl;
   (*lang_hooks.decls.pushdecl) (tdecl);
@@ -9668,7 +9692,8 @@ spe_init_builtins (void)
 			    SPE_BUILTIN_EVSEL_FSTSTEQ);
 
   (*lang_hooks.decls.pushdecl)
-    (build_decl (TYPE_DECL, get_identifier ("__ev64_opaque__"),
+    (build_decl (BUILTINS_LOCATION, TYPE_DECL,
+		 get_identifier ("__ev64_opaque__"),
 		 opaque_V2SI_type_node));
 
   /* Initialize irregular SPE builtins.  */
@@ -20561,22 +20586,6 @@ rs6000_initialize_trampoline (rtx addr, rtx fnaddr, rtx cxt)
 }
 
 
-/* Table of valid machine attributes.  */
-
-const struct attribute_spec rs6000_attribute_table[] =
-{
-  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
-  { "altivec",   1, 1, false, true,  false, rs6000_handle_altivec_attribute },
-  { "longcall",  0, 0, false, true,  true,  rs6000_handle_longcall_attribute },
-  { "shortcall", 0, 0, false, true,  true,  rs6000_handle_longcall_attribute },
-  { "ms_struct", 0, 0, false, false, false, rs6000_handle_struct_attribute },
-  { "gcc_struct", 0, 0, false, false, false, rs6000_handle_struct_attribute },
-#ifdef SUBTARGET_ATTRIBUTE_TABLE
-  SUBTARGET_ATTRIBUTE_TABLE,
-#endif
-  { NULL,        0, 0, false, false, false, NULL }
-};
-
 /* Handle the "altivec" attribute.  The attribute may have
    arguments as follows:
 

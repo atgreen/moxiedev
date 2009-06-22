@@ -2025,34 +2025,6 @@ value_from_pointer (struct type *type, CORE_ADDR addr)
 }
 
 
-/* Create a value for a string constant to be stored locally
-   (not in the inferior's memory space, but in GDB memory).
-   This is analogous to value_from_longest, which also does not
-   use inferior memory.  String shall NOT contain embedded nulls.  */
-
-struct value *
-value_from_string (char *ptr)
-{
-  struct value *val;
-  int len = strlen (ptr);
-  int lowbound = current_language->string_lower_bound;
-  struct type *string_char_type;
-  struct type *rangetype;
-  struct type *stringtype;
-
-  rangetype = create_range_type ((struct type *) NULL,
-				 builtin_type_int32,
-				 lowbound, len + lowbound - 1);
-  string_char_type = language_string_char_type (current_language,
-						current_gdbarch);
-  stringtype = create_array_type ((struct type *) NULL,
-				  string_char_type,
-				  rangetype);
-  val = allocate_value (stringtype);
-  memcpy (value_contents_raw (val), ptr, len);
-  return val;
-}
-
 /* Create a value of type TYPE whose contents come from VALADDR, if it
    is non-null, and whose memory address (in the inferior) is
    ADDRESS.  */
@@ -2138,7 +2110,8 @@ coerce_array (struct value *arg)
    address as a hidden first parameter).  */
 
 int
-using_struct_return (struct type *func_type, struct type *value_type)
+using_struct_return (struct gdbarch *gdbarch,
+		     struct type *func_type, struct type *value_type)
 {
   enum type_code code = TYPE_CODE (value_type);
 
@@ -2151,7 +2124,7 @@ using_struct_return (struct type *func_type, struct type *value_type)
     return 0;
 
   /* Probe the architecture for the return-value convention.  */
-  return (gdbarch_return_value (current_gdbarch, func_type, value_type,
+  return (gdbarch_return_value (gdbarch, func_type, value_type,
 				NULL, NULL, NULL)
 	  != RETURN_VALUE_REGISTER_CONVENTION);
 }

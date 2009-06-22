@@ -212,7 +212,6 @@ struct gdbarch
   gdbarch_skip_solib_resolver_ftype *skip_solib_resolver;
   gdbarch_in_solib_return_trampoline_ftype *in_solib_return_trampoline;
   gdbarch_in_function_epilogue_p_ftype *in_function_epilogue_p;
-  gdbarch_construct_inferior_arguments_ftype *construct_inferior_arguments;
   gdbarch_elf_make_msymbol_special_ftype *elf_make_msymbol_special;
   gdbarch_coff_make_msymbol_special_ftype *coff_make_msymbol_special;
   int cannot_step_breakpoint;
@@ -227,6 +226,7 @@ struct gdbarch
   struct core_regset_section * core_regset_sections;
   gdbarch_core_xfer_shared_libraries_ftype *core_xfer_shared_libraries;
   gdbarch_core_pid_to_str_ftype *core_pid_to_str;
+  const char * gcore_bfd_target;
   int vtable_function_descriptors;
   int vbit_in_delta;
   gdbarch_skip_permanent_breakpoint_ftype *skip_permanent_breakpoint;
@@ -317,8 +317,8 @@ struct gdbarch startup_gdbarch =
   0,  /* register_to_value */
   0,  /* value_to_register */
   0,  /* value_from_register */
-  0,  /* pointer_to_address */
-  0,  /* address_to_pointer */
+  unsigned_pointer_to_address,  /* pointer_to_address */
+  unsigned_address_to_pointer,  /* address_to_pointer */
   0,  /* integer_to_address */
   0,  /* return_value */
   0,  /* skip_prologue */
@@ -349,7 +349,6 @@ struct gdbarch startup_gdbarch =
   generic_skip_solib_resolver,  /* skip_solib_resolver */
   0,  /* in_solib_return_trampoline */
   generic_in_function_epilogue_p,  /* in_function_epilogue_p */
-  construct_inferior_arguments,  /* construct_inferior_arguments */
   0,  /* elf_make_msymbol_special */
   0,  /* coff_make_msymbol_special */
   0,  /* cannot_step_breakpoint */
@@ -364,6 +363,7 @@ struct gdbarch startup_gdbarch =
   0,  /* core_regset_sections */
   0,  /* core_xfer_shared_libraries */
   0,  /* core_pid_to_str */
+  0,  /* gcore_bfd_target */
   0,  /* vtable_function_descriptors */
   0,  /* vbit_in_delta */
   0,  /* skip_permanent_breakpoint */
@@ -458,7 +458,6 @@ gdbarch_alloc (const struct gdbarch_info *info,
   gdbarch->skip_solib_resolver = generic_skip_solib_resolver;
   gdbarch->in_solib_return_trampoline = generic_in_solib_return_trampoline;
   gdbarch->in_function_epilogue_p = generic_in_function_epilogue_p;
-  gdbarch->construct_inferior_arguments = construct_inferior_arguments;
   gdbarch->elf_make_msymbol_special = default_elf_make_msymbol_special;
   gdbarch->coff_make_msymbol_special = default_coff_make_msymbol_special;
   gdbarch->register_reggroup_p = default_register_reggroup_p;
@@ -606,7 +605,6 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of skip_solib_resolver, invalid_p == 0 */
   /* Skip verify of in_solib_return_trampoline, invalid_p == 0 */
   /* Skip verify of in_function_epilogue_p, invalid_p == 0 */
-  /* Skip verify of construct_inferior_arguments, invalid_p == 0 */
   /* Skip verify of elf_make_msymbol_special, invalid_p == 0 */
   /* Skip verify of coff_make_msymbol_special, invalid_p == 0 */
   /* Skip verify of cannot_step_breakpoint, invalid_p == 0 */
@@ -620,6 +618,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of core_reg_section_encodes_pid, invalid_p == 0 */
   /* Skip verify of core_xfer_shared_libraries, has predicate */
   /* Skip verify of core_pid_to_str, has predicate */
+  /* Skip verify of gcore_bfd_target, has predicate */
   /* Skip verify of vtable_function_descriptors, invalid_p == 0 */
   /* Skip verify of vbit_in_delta, invalid_p == 0 */
   /* Skip verify of skip_permanent_breakpoint, has predicate */
@@ -732,9 +731,6 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: coff_make_msymbol_special = <%s>\n",
                       host_address_to_string (gdbarch->coff_make_msymbol_special));
-  fprintf_unfiltered (file,
-                      "gdbarch_dump: construct_inferior_arguments = <%s>\n",
-                      host_address_to_string (gdbarch->construct_inferior_arguments));
   fprintf_unfiltered (file,
                       "gdbarch_dump: convert_from_func_ptr_addr = <%s>\n",
                       host_address_to_string (gdbarch->convert_from_func_ptr_addr));
@@ -852,6 +848,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: frame_red_zone_size = %s\n",
                       plongest (gdbarch->frame_red_zone_size));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_gcore_bfd_target_p() = %d\n",
+                      gdbarch_gcore_bfd_target_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gcore_bfd_target = %s\n",
+                      gdbarch->gcore_bfd_target);
   fprintf_unfiltered (file,
                       "gdbarch_dump: gdbarch_get_longjmp_target_p() = %d\n",
                       gdbarch_get_longjmp_target_p (gdbarch));
@@ -2094,7 +2096,7 @@ gdbarch_pointer_to_address (struct gdbarch *gdbarch, struct type *type, const gd
   gdb_assert (gdbarch->pointer_to_address != NULL);
   if (gdbarch_debug >= 2)
     fprintf_unfiltered (gdb_stdlog, "gdbarch_pointer_to_address called\n");
-  return gdbarch->pointer_to_address (type, buf);
+  return gdbarch->pointer_to_address (gdbarch, type, buf);
 }
 
 void
@@ -2111,7 +2113,7 @@ gdbarch_address_to_pointer (struct gdbarch *gdbarch, struct type *type, gdb_byte
   gdb_assert (gdbarch->address_to_pointer != NULL);
   if (gdbarch_debug >= 2)
     fprintf_unfiltered (gdb_stdlog, "gdbarch_address_to_pointer called\n");
-  gdbarch->address_to_pointer (type, buf, addr);
+  gdbarch->address_to_pointer (gdbarch, type, buf, addr);
 }
 
 void
@@ -2707,23 +2709,6 @@ set_gdbarch_in_function_epilogue_p (struct gdbarch *gdbarch,
   gdbarch->in_function_epilogue_p = in_function_epilogue_p;
 }
 
-char *
-gdbarch_construct_inferior_arguments (struct gdbarch *gdbarch, int argc, char **argv)
-{
-  gdb_assert (gdbarch != NULL);
-  gdb_assert (gdbarch->construct_inferior_arguments != NULL);
-  if (gdbarch_debug >= 2)
-    fprintf_unfiltered (gdb_stdlog, "gdbarch_construct_inferior_arguments called\n");
-  return gdbarch->construct_inferior_arguments (gdbarch, argc, argv);
-}
-
-void
-set_gdbarch_construct_inferior_arguments (struct gdbarch *gdbarch,
-                                          gdbarch_construct_inferior_arguments_ftype construct_inferior_arguments)
-{
-  gdbarch->construct_inferior_arguments = construct_inferior_arguments;
-}
-
 void
 gdbarch_elf_make_msymbol_special (struct gdbarch *gdbarch, asymbol *sym, struct minimal_symbol *msym)
 {
@@ -3008,6 +2993,31 @@ set_gdbarch_core_pid_to_str (struct gdbarch *gdbarch,
                              gdbarch_core_pid_to_str_ftype core_pid_to_str)
 {
   gdbarch->core_pid_to_str = core_pid_to_str;
+}
+
+int
+gdbarch_gcore_bfd_target_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->gcore_bfd_target != 0;
+}
+
+const char *
+gdbarch_gcore_bfd_target (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  /* Check variable changed from pre-default.  */
+  gdb_assert (gdbarch->gcore_bfd_target != 0);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_gcore_bfd_target called\n");
+  return gdbarch->gcore_bfd_target;
+}
+
+void
+set_gdbarch_gcore_bfd_target (struct gdbarch *gdbarch,
+                              const char * gcore_bfd_target)
+{
+  gdbarch->gcore_bfd_target = gcore_bfd_target;
 }
 
 int

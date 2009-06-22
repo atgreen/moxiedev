@@ -29,6 +29,7 @@
 struct field;
 struct block;
 struct value_print_options;
+struct language_defn;
 
 /* Some macros for char-based bitfields.  */
 
@@ -1176,13 +1177,16 @@ extern struct type *create_range_type (struct type *, struct type *, int,
 extern struct type *create_array_type (struct type *, struct type *,
 				       struct type *);
 
-extern struct type *create_string_type (struct type *, struct type *);
+extern struct type *create_string_type (struct type *, struct type *,
+					struct type *);
 
 extern struct type *create_set_type (struct type *, struct type *);
 
-extern struct type *lookup_unsigned_typename (char *);
+extern struct type *lookup_unsigned_typename (const struct language_defn *,
+					      struct gdbarch *,char *);
 
-extern struct type *lookup_signed_typename (char *);
+extern struct type *lookup_signed_typename (const struct language_defn *,
+					    struct gdbarch *,char *);
 
 extern struct type *check_typedef (struct type *);
 
@@ -1195,14 +1199,14 @@ extern void check_stub_method_group (struct type *, int);
 
 extern char *gdb_mangle_name (struct type *, int, int);
 
-extern struct type *lookup_typename (char *, struct block *, int);
+extern struct type *lookup_typename (const struct language_defn *,
+				     struct gdbarch *, char *,
+				     struct block *, int);
 
 extern struct type *lookup_template_type (char *, struct type *,
 					  struct block *);
 
 extern int get_vptr_fieldno (struct type *, struct type **);
-
-extern int get_destructor_fn_field (struct type *, int *, int *);
 
 extern int get_discrete_bounds (struct type *, LONGEST *, LONGEST *);
 

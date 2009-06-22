@@ -1,7 +1,7 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/CORBA
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,9 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-Poa
-dir
 
 SafeForDirectCalls.java
 file
@@ -63,39 +60,8 @@ tromey
 
 2089
 
-gnuAny.java
-file
-
-
-
-
-2009-04-24T17:46:48.000000Z
-b3264221b764ef8ceac6e6315bfe2cf3
-2005-11-15T23:20:01.014789Z
-107049
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-22846
+Poa
+dir
 
 HolderLocator.java
 file
@@ -130,6 +96,40 @@ mark
 
 
 6682
+
+gnuAny.java
+file
+
+
+
+
+2009-04-24T17:46:48.000000Z
+b3264221b764ef8ceac6e6315bfe2cf3
+2005-11-15T23:20:01.014789Z
+107049
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+22846
 
 gnuRequest.java
 file
@@ -959,40 +959,6 @@ tromey
 
 3249
 
-gnuNVList.java
-file
-
-
-
-
-2009-04-24T17:46:48.000000Z
-2c13988f4a67cabd1637296b9e85a741
-2005-11-15T23:20:01.014789Z
-107049
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3381
-
 StreamHolder.java
 file
 
@@ -1027,14 +993,14 @@ mark
 
 3551
 
-WStringHolder.java
+gnuNVList.java
 file
 
 
 
 
 2009-04-24T17:46:48.000000Z
-a549650722fa49aaf0f71cc0550192f4
+2c13988f4a67cabd1637296b9e85a741
 2005-11-15T23:20:01.014789Z
 107049
 mark
@@ -1059,7 +1025,7 @@ mark
 
 
 
-4240
+3381
 
 OrbFocused.java
 file
@@ -1094,6 +1060,40 @@ doko
 
 
 11546
+
+WStringHolder.java
+file
+
+
+
+
+2009-04-24T17:46:48.000000Z
+a549650722fa49aaf0f71cc0550192f4
+2005-11-15T23:20:01.014789Z
+107049
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4240
 
 gnuContext.java
 file
@@ -1231,40 +1231,6 @@ mark
 
 2149
 
-RawReply.java
-file
-
-
-
-
-2009-04-24T17:46:48.000000Z
-79ce4ab4d13d45b99ae6310a046021fe
-2005-11-15T23:20:01.014789Z
-107049
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2877
-
 OrbFunctional.java
 file
 
@@ -1298,6 +1264,40 @@ doko
 
 
 55632
+
+RawReply.java
+file
+
+
+
+
+2009-04-24T17:46:48.000000Z
+79ce4ab4d13d45b99ae6310a046021fe
+2005-11-15T23:20:01.014789Z
+107049
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2877
 
 DuplicateNameHolder.java
 file
@@ -1333,9 +1333,6 @@ tromey
 
 3317
 
-NamingService
-dir
-
 ServiceRequestAdapter.java
 file
 
@@ -1370,39 +1367,8 @@ doko
 
 5413
 
-_PolicyImplBase.java
-file
-
-
-
-
-2009-04-24T17:46:48.000000Z
-f17da665c4f109969490ef1f27e3084c
-2005-11-15T23:20:01.014789Z
-107049
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6428
+NamingService
+dir
 
 Connected_objects.java
 file
@@ -1437,6 +1403,40 @@ doko
 
 
 6606
+
+_PolicyImplBase.java
+file
+
+
+
+
+2009-04-24T17:46:48.000000Z
+f17da665c4f109969490ef1f27e3084c
+2005-11-15T23:20:01.014789Z
+107049
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6428
 
 ServiceDetailHolder.java
 file
@@ -1506,9 +1506,6 @@ mark
 
 4244
 
-DynAn
-dir
-
 IOR.java
 file
 
@@ -1542,6 +1539,9 @@ doko
 
 
 22443
+
+DynAn
+dir
 
 ByteArrayComparator.java
 file
@@ -1713,9 +1713,6 @@ doko
 
 14676
 
-GIOP
-dir
-
 ResponseHandlerImpl.java
 file
 
@@ -1749,6 +1746,9 @@ mark
 
 
 5957
+
+GIOP
+dir
 
 BigDecimalHelper.java
 file
@@ -1818,40 +1818,6 @@ mark
 
 3295
 
-gnuValueHolder.java
-file
-
-
-
-
-2009-04-24T17:46:48.000000Z
-9d6bcb7324de733a9b29ee664401f498
-2005-11-15T23:20:01.014789Z
-107049
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3701
-
 Minor.java
 file
 
@@ -1885,6 +1851,40 @@ mark
 
 
 8059
+
+gnuValueHolder.java
+file
+
+
+
+
+2009-04-24T17:46:48.000000Z
+9d6bcb7324de733a9b29ee664401f498
+2005-11-15T23:20:01.014789Z
+107049
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3701
 
 gnuContextList.java
 file

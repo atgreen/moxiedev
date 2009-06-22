@@ -33,7 +33,6 @@
 /erand48.c/1.1/Fri May 29 23:30:13 2009//
 /exit.c/1.9/Fri May 29 23:30:13 2009/-ko/
 /gd_qnan.h/1.1/Fri May 29 23:30:13 2009//
-/gdtoa-gethex.c/1.3/Fri May 29 23:30:13 2009//
 /gdtoa-hexnan.c/1.2/Fri May 29 23:30:13 2009//
 /gdtoa.h/1.1/Fri May 29 23:30:13 2009//
 /getenv.c/1.3/Fri May 29 23:30:13 2009/-ko/
@@ -49,7 +48,6 @@
 /ldtoa.c/1.14/Fri May 29 23:30:13 2009//
 /llabs.c/1.1/Fri May 29 23:30:13 2009//
 /lldiv.c/1.1/Fri May 29 23:30:13 2009//
-/local.h/1.6/Fri May 29 23:30:13 2009/-ko/
 /lrand48.c/1.2/Fri May 29 23:30:13 2009//
 /malign.c/1.2/Fri May 29 23:30:13 2009/-ko/
 /malloc.c/1.2/Fri May 29 23:30:13 2009/-ko/
@@ -90,7 +88,6 @@
 /srand48.c/1.2/Fri May 29 23:30:13 2009//
 /std.h/1.2/Fri May 29 23:30:13 2009/-ko/
 /stdlib.tex/1.10/Fri May 29 23:30:13 2009/-ko/
-/strtod.c/1.14/Fri May 29 23:30:13 2009/-ko/
 /strtol.c/1.2/Fri May 29 23:30:13 2009/-ko/
 /strtold.c/1.2/Fri May 29 23:30:13 2009//
 /strtoll.c/1.3/Fri May 29 23:30:13 2009//
@@ -103,7 +100,6 @@
 /wcrtomb.c/1.4/Fri May 29 23:30:13 2009//
 /wcsnrtombs.c/1.1/Fri May 29 23:30:13 2009//
 /wcsrtombs.c/1.9/Fri May 29 23:30:13 2009//
-/wcstod.c/1.5/Fri May 29 23:30:13 2009//
 /wcstol.c/1.1/Fri May 29 23:30:13 2009//
 /wcstold.c/1.2/Fri May 29 23:30:13 2009//
 /wcstoll.c/1.1/Fri May 29 23:30:13 2009//
@@ -116,4 +112,8 @@
 /wctob.c/1.3/Fri May 29 23:30:13 2009//
 /wctomb.c/1.4/Fri May 29 23:30:13 2009/-ko/
 /wctomb_r.c/1.14/Fri May 29 23:30:13 2009/-ko/
+/gdtoa-gethex.c/1.4/Fri Jun 19 11:14:06 2009//
+/local.h/1.7/Fri Jun 19 11:14:06 2009/-ko/
+/strtod.c/1.15/Fri Jun 19 11:14:06 2009/-ko/
+/wcstod.c/1.6/Fri Jun 19 11:14:06 2009//
 D

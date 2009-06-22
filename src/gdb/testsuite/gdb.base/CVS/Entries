@@ -5,7 +5,6 @@
 /all-bin.exp/1.11/Fri May 29 23:30:11 2009/-ko/
 /all-types.c/1.1.1.1/Fri May 29 23:30:11 2009/-ko/
 /annota1.c/1.1.1.3/Fri May 29 23:30:11 2009/-ko/
-/annota1.exp/1.32/Fri May 29 23:30:11 2009/-ko/
 /annota3.c/1.1/Fri May 29 23:30:11 2009//
 /annota3.exp/1.19/Fri May 29 23:30:11 2009//
 /args.c/1.2/Fri May 29 23:30:11 2009//
@@ -94,7 +93,6 @@
 /display.c/1.2/Fri May 29 23:30:11 2009/-ko/
 /display.exp/1.18/Fri Jun  5 20:29:33 2009/-ko/
 /dump.c/1.2/Fri May 29 23:30:11 2009//
-/dump.exp/1.15/Fri May 29 23:30:11 2009//
 /echo.exp/1.6/Fri May 29 23:30:11 2009/-ko/
 /ena-dis-br.exp/1.11/Fri May 29 23:30:11 2009/-ko/
 /ending-run.c/1.3/Fri May 29 23:30:11 2009/-ko/
@@ -398,4 +396,6 @@
 /whatis-exp.exp/1.10/Fri May 29 23:30:11 2009/-ko/
 /whatis.c/1.9/Fri May 29 23:30:11 2009/-ko/
 /whatis.exp/1.13/Fri May 29 23:30:11 2009/-ko/
+/annota1.exp/1.33/Fri Jun 19 11:14:03 2009/-ko/
+/dump.exp/1.16/Fri Jun 19 11:14:04 2009//
 D

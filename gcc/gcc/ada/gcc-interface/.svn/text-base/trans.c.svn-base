@@ -1843,7 +1843,8 @@ Case_Statement_to_gnu (Node_Id gnat_node)
   /* We build a SWITCH_EXPR that contains the code with interspersed
      CASE_LABEL_EXPRs for each label.  */
 
-  push_stack (&gnu_switch_label_stack, NULL_TREE, create_artificial_label ());
+  push_stack (&gnu_switch_label_stack, NULL_TREE,
+	      create_artificial_label (input_location));
   start_stmt_group ();
   for (gnat_when = First_Non_Pragma (Alternatives (gnat_node));
        Present (gnat_when);
@@ -1908,9 +1909,10 @@ Case_Statement_to_gnu (Node_Id gnat_node)
 	  if ((!gnu_low || TREE_CODE (gnu_low) == INTEGER_CST)
 	      && (!gnu_high || TREE_CODE (gnu_high) == INTEGER_CST))
 	    {
-	      add_stmt_with_node (build3 (CASE_LABEL_EXPR, void_type_node,
-					  gnu_low, gnu_high,
-					  create_artificial_label ()),
+	      add_stmt_with_node (build3
+				  (CASE_LABEL_EXPR, void_type_node,
+				   gnu_low, gnu_high,
+				   create_artificial_label (input_location)),
 				  gnat_choice);
 	      choices_added++;
 	    }
@@ -1953,7 +1955,7 @@ Loop_Statement_to_gnu (Node_Id gnat_node)
 
   TREE_TYPE (gnu_loop_stmt) = void_type_node;
   TREE_SIDE_EFFECTS (gnu_loop_stmt) = 1;
-  LOOP_STMT_LABEL (gnu_loop_stmt) = create_artificial_label ();
+  LOOP_STMT_LABEL (gnu_loop_stmt) = create_artificial_label (input_location);
   set_expr_location_from_node (gnu_loop_stmt, gnat_node);
   Sloc_to_locus (Sloc (End_Label (gnat_node)),
 		 &DECL_SOURCE_LOCATION (LOOP_STMT_LABEL (gnu_loop_stmt)));
@@ -2213,7 +2215,8 @@ Subprogram_Body_to_gnu (Node_Id gnat_node)
      properly copies them out.  We do this by making a new block and converting
      any inner return into a goto to a label at the end of the block.  */
   push_stack (&gnu_return_label_stack, NULL_TREE,
-	      gnu_cico_list ? create_artificial_label () : NULL_TREE);
+	      gnu_cico_list ? create_artificial_label (input_location)
+	      : NULL_TREE);
 
   /* Get a tree corresponding to the code for the subprogram.  */
   start_stmt_group ();
@@ -5875,7 +5878,7 @@ gnat_gimplify_stmt (tree *stmt_p)
 
     case LOOP_STMT:
       {
-	tree gnu_start_label = create_artificial_label ();
+	tree gnu_start_label = create_artificial_label (input_location);
 	tree gnu_end_label = LOOP_STMT_LABEL (stmt);
 	tree t;
 
@@ -6607,10 +6610,7 @@ emit_check (tree gnu_cond, tree gnu_expr, int reason, Node_Id gnat_node)
      we don't need to evaluate it just for the check.  */
   TREE_SIDE_EFFECTS (gnu_result) = TREE_SIDE_EFFECTS (gnu_expr);
 
-  /* ??? Unfortunately, if we don't put a SAVE_EXPR around this whole thing,
-     we will repeatedly do the test and, at compile time, we will repeatedly
-     visit it during unsharing, which leads to an exponential explosion.  */
-  return save_expr (gnu_result);
+  return gnu_result;
 }
 
 /* Return an expression that converts GNU_EXPR to GNAT_TYPE, doing overflow
@@ -7226,8 +7226,15 @@ protect_multiple_eval (tree exp)
 {
   tree type = TREE_TYPE (exp);
 
-  /* If this has no side effects, we don't need to do anything.  */
-  if (!TREE_SIDE_EFFECTS (exp))
+  /* If EXP has no side effects, we theoritically don't need to do anything.
+     However, we may be recursively passed more and more complex expressions
+     involving checks which will be reused multiple times and eventually be
+     unshared for gimplification; in order to avoid a complexity explosion
+     at that point, we protect any expressions more complex than a simple
+     arithmetic expression.  */
+  if (!TREE_SIDE_EFFECTS (exp)
+      && (CONSTANT_CLASS_P (exp)
+	  || !EXPRESSION_CLASS_P (skip_simple_arithmetic (exp))))
     return exp;
 
   /* If this is a conversion, protect what's inside the conversion.

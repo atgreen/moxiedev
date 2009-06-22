@@ -238,7 +238,7 @@ Objective-C and Objective-C++ Dialects}.
 -Wfatal-errors  -Wfloat-equal  -Wformat  -Wformat=2 @gol
 -Wno-format-contains-nul -Wno-format-extra-args -Wformat-nonliteral @gol
 -Wformat-security  -Wformat-y2k @gol
--Wframe-larger-than=@var{len} -Wignored-qualifiers @gol
+-Wframe-larger-than=@var{len} -Wjump-misses-init -Wignored-qualifiers @gol
 -Wimplicit  -Wimplicit-function-declaration  -Wimplicit-int @gol
 -Winit-self  -Winline @gol
 -Wno-int-to-pointer-cast -Wno-invalid-offsetof @gol
@@ -310,7 +310,7 @@ Objective-C and Objective-C++ Dialects}.
 -frandom-seed=@var{string} -fsched-verbose=@var{n} @gol
 -fsel-sched-verbose -fsel-sched-dump-cfg -fsel-sched-pipelining-verbose @gol
 -ftest-coverage  -ftime-report -fvar-tracking @gol
--g  -g@var{level}  -gtoggle  -gcoff  -gdwarf-2 @gol
+-g  -g@var{level}  -gtoggle  -gcoff  -gdwarf-@var{version} @gol
 -ggdb  -gstabs  -gstabs+  -gvms  -gxcoff  -gxcoff+ @gol
 -fno-merge-debug-strings -fno-dwarf2-cfi-asm @gol
 -fdebug-prefix-map=@var{old}=@var{new} @gol
@@ -364,7 +364,7 @@ Objective-C and Objective-C++ Dialects}.
 -frounding-math -fsched2-use-superblocks @gol
 -fsched2-use-traces -fsched-spec-load -fsched-spec-load-dangerous @gol
 -fsched-stalled-insns-dep[=@var{n}] -fsched-stalled-insns[=@var{n}] @gol
--fschedule-insns -fschedule-insns2 -fsection-anchors -fsee @gol
+-fschedule-insns -fschedule-insns2 -fsection-anchors @gol
 -fselective-scheduling -fselective-scheduling2 @gol
 -fsel-sched-pipelining -fsel-sched-pipelining-outer-loops @gol
 -fsignaling-nans -fsingle-precision-constant -fsplit-ivs-in-unroller @gol
@@ -443,6 +443,7 @@ Objective-C and Objective-C++ Dialects}.
 -msched-prolog  -mno-sched-prolog @gol
 -mlittle-endian  -mbig-endian  -mwords-little-endian @gol
 -mfloat-abi=@var{name}  -msoft-float  -mhard-float  -mfpe @gol
+-mfp16-format=@var{name}
 -mthumb-interwork  -mno-thumb-interwork @gol
 -mcpu=@var{name}  -march=@var{name}  -mfpu=@var{name}  @gol
 -mstructure-size-boundary=@var{n} @gol
@@ -579,7 +580,7 @@ Objective-C and Objective-C++ Dialects}.
 -mno-wide-multiply  -mrtd  -malign-double @gol
 -mpreferred-stack-boundary=@var{num}
 -mincoming-stack-boundary=@var{num}
--mcld -mcx16 -msahf -mmovbe -mrecip @gol
+-mcld -mcx16 -msahf -mmovbe -mcrc32 -mrecip @gol
 -mmmx  -msse  -msse2 -msse3 -mssse3 -msse4.1 -msse4.2 -msse4 -mavx @gol
 -maes -mpclmul @gol
 -msse4a -m3dnow -mpopcnt -mabm -msse5 @gol
@@ -2973,6 +2974,20 @@ requiring a non-null value by the @code{nonnull} function attribute.
 @option{-Wnonnull} is included in @option{-Wall} and @option{-Wformat}.  It
 can be disabled with the @option{-Wno-nonnull} option.
 
+@item -Wjump-misses-init @r{(C, Objective-C only)}
+@opindex Wjump-misses-init
+@opindex Wno-jump-misses-init
+Warn if a @code{goto} statement or a @code{switch} statement jumps
+forward across the initialization of a variable, or jumps backward to a
+label after the variable has been initialized.  This only warns about
+variables which are initialized when they are declared.  This warning is
+only supported for C and Objective C; in C++ this sort of branch is an
+error in any case.
+
+@option{-Wjump-misses-init} is included in @option{-Wall} and
+@option{-Wc++-compat}.  It can be disabled with the
+@option{-Wno-jump-misses-init} option.
+
 @item -Winit-self @r{(C, C++, Objective-C and Objective-C++ only)}
 @opindex Winit-self
 @opindex Wno-init-self
@@ -4344,13 +4359,14 @@ use of these extensions is likely to make other debuggers crash or
 refuse to read the program, and may cause assemblers other than the GNU
 assembler (GAS) to fail with an error.
 
-@item -gdwarf-2
-@opindex gdwarf-2
-Produce debugging information in DWARF version 2 format (if that is
-supported).  This is the format used by DBX on IRIX 6.  With this
-option, GCC uses features of DWARF version 3 when they are useful;
-version 3 is upward compatible with version 2, but may still cause
-problems for older debuggers.
+@item -gdwarf-@var{version}
+@opindex gdwarf-@var{version}
+Produce debugging information in DWARF format (if that is
+supported).  This is the format used by DBX on IRIX 6.  The value
+of @var{version} may be either 2 or 3; the default version is 2.
+
+Note that with DWARF version 2 some ports require, and will always
+use, some non-conflicting DWARF 3 extensions in the unwind tables.
 
 @item -gvms
 @opindex gvms
@@ -4384,7 +4400,7 @@ debug information in version 1 of the DWARF format (which is very
 different from version 2), and it would have been too confusing.  That
 debug format is long obsolete, but the option cannot be changed now.
 Instead use an additional @option{-g@var{level}} option to change the
-debug level for DWARF2.
+debug level for DWARF.
 
 @item -gtoggle
 @opindex gtoggle
@@ -5051,7 +5067,7 @@ Dump after function inlining.
 @end table
 
 @item -fdump-statistics-@var{option}
-@opindex -fdump-statistics
+@opindex fdump-statistics
 Enable and control dumping of pass statistics in a separate file.  The
 file name is generated by appending a suffix ending in
 @samp{.statistics} to the source file name, and the file is created in
@@ -5078,6 +5094,10 @@ meaningful will be ignored.  The following options are available
 Print the address of each node.  Usually this is not meaningful as it
 changes according to the environment and source file.  Its primary use
 is for tying up a dump file with a debug environment.
+@item asmname
+If @code{DECL_ASSEMBLER_NAME} has been set for a given decl, use that
+in the dump instead of @code{DECL_NAME}.  Its primary use is ease of
+use working backward from mangled names in the assembly file.
 @item slim
 Inhibit dumping of members of a scope or body of a function merely
 because that scope has been reached.  Only dump such items when they
@@ -5110,9 +5130,11 @@ The following tree dumps are possible:
 @table @samp
 
 @item original
+@opindex fdump-tree-original
 Dump before any tree based optimization, to @file{@var{file}.original}.
 
 @item optimized
+@opindex fdump-tree-optimized
 Dump after all tree based optimization, to @file{@var{file}.optimized}.
 
 @item gimple
@@ -5271,7 +5293,7 @@ analysis and transformation is reported.  This is the same verbosity level
 that @option{-fdump-tree-vect-details} uses.
 
 @item -frandom-seed=@var{string}
-@opindex frandom-string
+@opindex frandom-seed
 This option provides a seed that GCC uses when it would otherwise use
 random numbers.  It is used to generate certain symbol names
 that have to be different in every compiled file.  It is also used to
@@ -6202,11 +6224,6 @@ without @option{-fbranch-probabilities} the traces constructed may not
 match the reality and hurt the performance.  This only makes
 sense when scheduling after register allocation, i.e.@: with
 @option{-fschedule-insns2} or at @option{-O2} or higher.
-
-@item -fsee
-@opindex fsee
-Eliminate redundant sign extension instructions and move the non-redundant
-ones to optimal placement using lazy code motion (LCM).
 
 @item -freschedule-modulo-scheduled-loops
 @opindex freschedule-modulo-scheduled-loops
@@ -7991,6 +8008,7 @@ they cause the preprocessor output to be unsuitable for actual
 compilation.
 
 @table @gcctabopt
+@item -Wp,@var{option}
 @opindex Wp
 You can use @option{-Wp,@var{option}} to bypass the compiler driver
 and pass @var{option} directly through to the preprocessor.  If
@@ -8003,7 +8021,7 @@ you should avoid using @option{-Wp} and let the driver handle the
 options instead.
 
 @item -Xpreprocessor @var{option}
-@opindex preprocessor
+@opindex Xpreprocessor
 Pass @var{option} as an option to the preprocessor.  You can use this to
 supply system-specific preprocessor options which GCC does not know how to
 recognize.
@@ -9283,13 +9301,20 @@ of the @option{-mcpu=} option.  Permissible names are: @samp{armv2},
 @opindex mfp
 This specifies what floating point hardware (or hardware emulation) is
 available on the target.  Permissible names are: @samp{fpa}, @samp{fpe2},
-@samp{fpe3}, @samp{maverick}, @samp{vfp}, @samp{vfpv3}, @samp{vfpv3-d16} and
-@samp{neon}.  @option{-mfp} and @option{-mfpe}
+@samp{fpe3}, @samp{maverick}, @samp{vfp}, @samp{vfpv3}, @samp{vfpv3-d16},
+@samp{neon}, and @samp{neon-fp16}.  @option{-mfp} and @option{-mfpe}
 are synonyms for @option{-mfpu}=@samp{fpe}@var{number}, for compatibility
 with older versions of GCC@.
 
 If @option{-msoft-float} is specified this specifies the format of
 floating point values.
+
+@item -mfp16-format=@var{name}
+@opindex mfp16-format
+Specify the format of the @code{__fp16} half-precision floating-point type.
+Permissible names are @samp{none}, @samp{ieee}, and @samp{alternative}; 
+the default is @samp{none}, in which case the @code{__fp16} type is not 
+defined.  @xref{Half-Precision}, for more information.
 
 @item -mstructure-size-boundary=@var{n}
 @opindex mstructure-size-boundary
@@ -10588,12 +10613,12 @@ optimization option such as @option{-O3} or above is present in the
 command line.
 
 @item -mTLS
-@opindex TLS
+@opindex mTLS
 
 Assume a large TLS segment when generating thread-local code.
 
 @item -mtls
-@opindex tls
+@opindex mtls
 
 Do not assume a large TLS segment when generating thread-local code.
 
@@ -10975,7 +11000,7 @@ Generate the predefine, @code{_SIO}, for server IO@.  The default is
 options are available under HP-UX and HI-UX@.
 
 @item -mgnu-ld
-@opindex gnu-ld
+@opindex mgnu-ld
 Use GNU ld specific options.  This passes @option{-shared} to ld when
 building a shared library.  It is the default when GCC is configured,
 explicitly or implicitly, with the GNU linker.  This option does not
@@ -10987,7 +11012,7 @@ using @samp{which `gcc -print-prog-name=ld`}.  This option is only available
 on the 64 bit HP-UX GCC, i.e.@: configured with @samp{hppa*64*-*-hpux*}.
 
 @item -mhp-ld
-@opindex hp-ld
+@opindex mhp-ld
 Use HP ld specific options.  This passes @option{-b} to ld when building
 a shared library and passes @option{+Accept TypeMismatch} to ld on all
 links.  It is the default when GCC is configured, explicitly or
@@ -11558,6 +11583,12 @@ or @code{remainder} built-in functions: see @ref{Other Builtins} for details.
 This option will enable GCC to use movbe instruction to implement
 @code{__builtin_bswap32} and @code{__builtin_bswap64}.
 
+@item -mcrc32
+@opindex mcrc32
+This option will enable built-in functions, @code{__builtin_ia32_crc32qi},
+@code{__builtin_ia32_crc32hi}. @code{__builtin_ia32_crc32si} and
+@code{__builtin_ia32_crc32di} to generate the crc32 machine instruction.
+
 @item -mrecip
 @opindex mrecip
 This option will enable GCC to use RCPSS and RSQRTSS instructions (and their
@@ -11706,7 +11737,7 @@ darwin only the -m64 option turns off the @option{-fno-pic} and
 @option{-mdynamic-no-pic} options.
 
 @item -mno-red-zone
-@opindex no-red-zone
+@opindex mno-red-zone
 Do not use a so called red zone for x86-64 code.  The red zone is mandated
 by the x86-64 ABI, it is a 128-byte area beyond the location of the
 stack pointer that will not be modified by signal or interrupt handlers
@@ -12595,7 +12626,7 @@ Enable the use of 68HC12 pre and post auto-increment and auto-decrement
 addressing modes.
 
 @item -minmax
-@itemx -nominmax
+@itemx -mnominmax
 @opindex minmax
 @opindex mnominmax
 Enable the use of 68HC12 min and max instructions.
@@ -12686,7 +12717,7 @@ Generate code for a little endian target.
 Generate code for the 210 processor.
 
 @item -mno-lsim
-@opindex no-lsim
+@opindex mno-lsim
 Assume that run-time support has been provided and so omit the
 simulator library (@file{libsim.a)} from the linker command line.
 
@@ -13506,7 +13537,7 @@ to the @code{rE} epsilon register.
 
 @item -mabi=mmixware
 @itemx -mabi=gnu
-@opindex mabi-mmixware
+@opindex mabi=mmixware
 @opindex mabi=gnu
 Generate code that passes function parameters and return values that (in
 the called function) are seen as registers @code{$0} and up, as opposed to
@@ -13653,7 +13684,7 @@ Generate code for a PDP-11/45.  This is the default.
 Generate code for a PDP-11/10.
 
 @item -mbcopy-builtin
-@opindex bcopy-builtin
+@opindex mbcopy-builtin
 Use inline @code{movmemhi} patterns for copying memory.  This is the
 default.
 

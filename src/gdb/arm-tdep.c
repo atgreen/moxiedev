@@ -395,7 +395,7 @@ thumb_analyze_prologue (struct gdbarch *gdbarch,
 
   for (i = 0; i < 16; i++)
     regs[i] = pv_register (i, 0);
-  stack = make_pv_area (ARM_SP_REGNUM);
+  stack = make_pv_area (ARM_SP_REGNUM, gdbarch_addr_bit (gdbarch));
   back_to = make_cleanup_free_pv_area (stack);
 
   while (start < limit)
@@ -539,7 +539,7 @@ arm_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
   struct symtab_and_line sal;
 
   /* If we're in a dummy frame, don't even try to skip the prologue.  */
-  if (deprecated_pc_in_call_dummy (pc))
+  if (deprecated_pc_in_call_dummy (gdbarch, pc))
     return pc;
 
   /* See if we can determine the end of the prologue via the symbol table.
@@ -547,7 +547,8 @@ arm_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
      is greater.  */
   if (find_pc_partial_function (pc, NULL, &func_addr, NULL))
     {
-      CORE_ADDR post_prologue_pc = skip_prologue_using_sal (func_addr);
+      CORE_ADDR post_prologue_pc
+	= skip_prologue_using_sal (gdbarch, func_addr);
       if (post_prologue_pc != 0)
 	return max (pc, post_prologue_pc);
     }
@@ -559,7 +560,7 @@ arm_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
      information.  If the debug information could not be used to provide
      that bound, then use an arbitrary large number as the upper bound.  */
   /* Like arm_scan_prologue, stop no later than pc + 64. */
-  limit_pc = skip_prologue_using_sal (pc);
+  limit_pc = skip_prologue_using_sal (gdbarch, pc);
   if (limit_pc == 0)
     limit_pc = pc + 64;          /* Magic.  */
 
@@ -862,7 +863,7 @@ arm_scan_prologue (struct frame_info *this_frame,
 
   for (regno = 0; regno < ARM_FPS_REGNUM; regno++)
     regs[regno] = pv_register (regno, 0);
-  stack = make_pv_area (ARM_SP_REGNUM);
+  stack = make_pv_area (ARM_SP_REGNUM, gdbarch_addr_bit (gdbarch));
   back_to = make_cleanup_free_pv_area (stack);
 
   for (current_pc = prologue_start;

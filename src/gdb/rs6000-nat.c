@@ -75,7 +75,7 @@
 #ifndef ARCH3264
 # define ARCH64() 0
 #else
-# define ARCH64() (register_size (current_gdbarch, 0) == 8)
+# define ARCH64() (register_size (target_gdbarch, 0) == 8)
 #endif
 
 /* Union of 32-bit and 64-bit versions of ld_info. */
@@ -691,8 +691,8 @@ objfile_symbol_add (void *arg)
 {
   struct objfile *obj = (struct objfile *) arg;
 
-  syms_from_objfile (obj, NULL, 0, 0, 0, 0);
-  new_symfile_objfile (obj, 0, 0);
+  syms_from_objfile (obj, NULL, 0, 0, 0);
+  new_symfile_objfile (obj, 0);
   return 1;
 }
 

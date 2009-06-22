@@ -3,7 +3,6 @@ D/emultempl////
 D/po////
 D/scripttempl////
 D/testsuite////
-/ChangeLog/1.1999/Fri Jun  5 22:47:31 2009//
 /ChangeLog-0001/1.1/Fri May 29 23:30:12 2009//
 /ChangeLog-0203/1.2/Fri May 29 23:30:12 2009//
 /ChangeLog-2004/1.2/Fri May 29 23:30:12 2009//
@@ -24,7 +23,6 @@ D/testsuite////
 /configure/1.96/Fri May 29 23:30:12 2009//
 /configure.host/1.47/Fri May 29 23:30:12 2009//
 /configure.in/1.59/Fri May 29 23:30:12 2009//
-/configure.tgt/1.226/Fri May 29 23:30:12 2009//
 /deffile.h/1.12/Fri Jun  5 22:47:31 2009//
 /deffilep.y/1.27/Fri Jun  5 22:47:31 2009//
 /dep-in.sed/1.7/Fri Jun  5 22:47:31 2009//
@@ -68,3 +66,5 @@ D/testsuite////
 /pep-dll.h/1.8/Fri May 29 23:30:12 2009//
 /stamp-h.in/1.1.1.1/Fri May 29 23:30:12 2009//
 /sysdep.h/1.7/Fri May 29 23:30:12 2009//
+/ChangeLog/1.2003/Fri Jun 19 11:14:04 2009//
+/configure.tgt/1.227/Fri Jun 19 11:14:04 2009//

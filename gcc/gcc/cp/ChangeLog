@@ -1,3 +1,171 @@
+2009-06-18  Aldy Hernandez  <aldyh@redhat.com>
+
+	* class.c (get_vtable_decl): Replace finish_decl with cp_finish_decl.
+	* decl.c (finish_decl): Remove.
+	(declare_global_var): Replace finish_decl with cp_finish_decl.
+	(start_method): Same.
+	* rtti.c (emit_tinfo_decl): Same.
+	* pt.c (tsubst_expr): Same.
+	(instantiate_decl): Same.
+	* decl2.c (grokbitfield): Same.
+	* name-lookup.c (pushdecl_top_level_1): Same.
+	* cp-tree.h: Remove finish_decl.
+
+2009-06-16  David Edelsohn  <edelsohn@gnu.org>
+
+	* g++-spec.c (LIBSTDCXX_STATIC): Default to NULL.
+	(lang_specific_driver): Always allocate extra argument.
+	Add LIBSTDCXX_STATIC to arglist if defined and linking
+	statically.
+
+2009-06-16  Ian Lance Taylor  <iant@google.com>
+
+	* Make-lang.in (cp/class.o): Depend upon gt-cp-class.h.
+	(cp/semantics.o): Depend upon gt-cp-semantics.h.
+
+2009-06-16  Ian Lance Taylor  <iant@google.com>
+
+	* parser.c (cp_unevaluated_operand): Define global variable.
+	(cp_parser_question_colon_clause): Increment
+	c_inhibit_evaluation_warnings when evaluating an expression which
+	will never be executed.
+	(cp_parser_decltype): Increment cp_unevaluated_operand and
+	c_inhibit_evaluation_warnings, not skip_evaluation.
+	(cp_parser_sizeof_operand): Likewise.
+	(cp_parser_enclosed_template_argument_list): Save
+	cp_unevaluated_operand and c_inhibit_evaluation_warnings, not
+	skip_evaluation.
+	* cp-tree.h (struct saved_scope): Remove skip_evaluation field.
+	Add unevaluated_operand and inhibit_evaluation_warnings fields.
+	(cp_unevaluated_operand): Declare.
+	* name-lookup.c (push_to_top_level): Save cp_unevaluated_operand
+	and c_inhibit_evaluation_warnings rather than skip_evaluation.
+	(pop_from_top_level): Restore cp_unevaluated_operand and
+	c_inhibit_evaluation_warnings rather than skip_evaluation.
+	* class.c (build_base_path): Check cp_unevaluated_operand rather
+	than skip_evaluation.
+	* typeck.c (build_class_member_access_expr): Likewise.
+	(cp_build_binary_op): Don't warn about bad shift counts if
+	c_inhibit_evaluation_warnings is non-zero.
+	* pt.c (coerce_template_parms): Save state of
+	cp_unevaluated_operand and c_inhibit_evaluation_warnings, not
+	skip_evaluation.
+	(tsubst_aggr_type): Likewise.
+	(tsubst_pack_expansion): Check cp_unevaluated_operand rather than
+	skip_evaluation.
+	(tsubst_copy): Likewise.
+	(tsubst): Set cp_unevaluated_operand and
+	c_inhibit_evaluation_warnings, not skip_evaluation.
+	(tsubst_copy_and_build): Likewise.
+	* call.c (convert_arg_to_ellipsis): Check cp_unevaluated_operand
+	rather than skip_evaluation.
+	* decl2.c (mark_used): Likewise.
+	* semantics.c (finish_non_static_data_member): Likewise.
+	* cvt.c (cp_convert_and_check): Check
+	c_inhibit_evaluation_warnings rather than skip_evaluation.
+	* mangle.c (write_type): Set cp_unevaluated_operand rather than
+	skip_evaluation.
+
+2009-06-15  Ian Lance Taylor  <iant@google.com>
+
+	* parser.c (cp_parser_direct_declarator): Add braces around
+	variables declared before label.
+
+2009-06-15  Rafael Avila de Espindola  <espindola@google.com>
+
+	* cp-objcp-common.h (LANG_HOOKS_COMDAT_GROUP): Remove.
+	* cp-tree.h (cxx_comdat_group): Change signature.
+	* decl.c (duplicate_decls): Use DECL_COMDAT_GROUP.
+	(cxx_comdat_group): Change signature.
+	* decl2.c (comdat_linkage, maybe_make_one_only): Update call to
+	make_decl_one_only.
+	(constrain_visibility, get_guard): Use DECL_COMDAT_GROUP.
+	* method.c (use_thunk): Update call to make_decl_one_only.
+	* optimize.c (maybe_clone_body): Use DECL_COMDAT_GROUP
+
+2009-06-12  Aldy Hernandez  <aldyh@redhat.com>
+
+	* typeck.c (cp_build_binary_op): Pass location to overflow_warning.
+	(build_modify_expr): New arg.
+	* semantics.c (finish_unary_op_expr): Pass location to
+	overflow_warning.
+	(handle_omp_for_class_iterator): Pass location to build_modify_expr.
+	* typeck.c (cxx_sizeof_or_alignof_type): Pass location to
+	c_sizeof_or_alignof_type.
+	(build_array_ref): New argument.
+	(build_compound_expr): Same.
+	(build_const_cast): Same.
+	(build_ptrmemfunc): Pass location to build_c_cast.
+	* init.c (avoid_placement_new_aliasing): Pass location to
+	build_stmt.
+	(build_vec_delete_1): Pass location to cp_build_modify_expr,
+	build_compound_expr.
+	* class.c (build_vtbl_ref_1): Pass location to build_array_ref.
+	* decl.c (poplevel): Pass location to c_build_bind_expr.
+	(finish_case_label): Pass location to build_case_label.
+	(finish_constructor_body): Same.
+	(finish_destructor_body): Pass location to build_stmt.
+	(cxx_maybe_build_cleanup): Same, but to build_compound_expr.
+	* call.c (build_new_op): Pass location to build_array_ref.
+	(build_x_va_arg): Pass location to build_va_arg.
+	* except.c (expand_end_catch_block): Pass location to
+	build_stmt.
+	* cp-tree.h (build_array_ref): New argument.
+	(build_compound_expr): Same.
+	(build_c_cast): Same.
+	* cp-gimplify.c (gimplify_if_stmt): Pass location on down.
+	(gimplify_switch_stmt): Same.
+	* typeck2.c (split_nonconstant_init_1): Same.
+	* pt.c (tsubst_copy): Same.
+	* semantics.c (add_decl_expr): Same.
+	(do_poplevel): Same.
+	(push_cleanup): Same.
+	(finish_goto_stmt): Same.
+	(finish_expr_stmt): Same.
+	(begin_if_stmt): Same.
+	(begin_while_stmt): Same.
+	(begin_do_stmt): Same.
+	(finish_return_stmt): Same.
+	(begin_for_stmt): Same.
+	(finish_break_stmt): Same.
+	(finish_continue_stmt): Same.
+	(begin_switch_stmt): Same.
+	(begin_try_block): Same.
+	(begin_handler): Same.
+	(finish_asm_stmt): Same.
+	(finish_label_stmt): Same.
+	(finish_stmt_expr_expr): Same.
+	(finalize_nrv_r): Same.
+	(finish_omp_atomic): Same.
+	* name-lookup.c (do_using_directive): Same.
+	* decl2.c (grok_array_decl): Same.
+	* parser.c (cp_parser_cast_expression): Same.
+	(cp_parser_selection_statement): Same.
+	(cp_parser_implicitly_scoped_statement): Same.
+	(cp_parser_objc_selector_expression): Same.
+	(cp_parser_objc_synchronized_statement): Same.
+	(cp_parser_objc_throw_statement): Same.
+	(cp_parser_omp_critical): Same.
+	(cp_parser_omp_master): Same.
+	* typeck.c (build_function_call): Add location argument.
+	* init.c: Add location argument to all build_decl calls.
+	* class.c: Same.
+	* method.c: Same.
+	* rtti.c: Same.
+	* tree.c: Same.
+	* pt.c: Same.
+	* semantics.c: Same.
+	* lex.c: Same.
+	* decl2.c: Same.
+	* cp-gimplify.c: Same.
+	* decl.c: Same.
+	(cp_make_fname_decl): Add location argument.  Pass location ot
+	build_decl.
+	(finish_case_label): Same.
+	* cp-tree.h (finish_case_label): Add location argument.
+	* parser.c (cp_parser_label_for_labeled_statement): Pass location to
+	finish_case_label.
+	
 2009-06-09  Jason Merrill  <jason@redhat.com>
 
 	PR c++/40381

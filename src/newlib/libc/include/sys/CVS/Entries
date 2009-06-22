@@ -6,7 +6,6 @@
 /dirent.h/1.2/Fri May 29 23:30:13 2009/-ko/
 /errno.h/1.16/Fri May 29 23:30:13 2009/-ko/
 /fcntl.h/1.7/Fri May 29 23:30:13 2009/-ko/
-/features.h/1.17/Fri May 29 23:30:13 2009//
 /file.h/1.1.1.1/Fri May 29 23:30:13 2009/-ko/
 /iconvnls.h/1.1/Fri May 29 23:30:13 2009//
 /lock.h/1.4/Fri May 29 23:30:13 2009//
@@ -23,8 +22,9 @@
 /time.h/1.13/Fri May 29 23:30:13 2009/-ko/
 /timeb.h/1.1.1.1/Fri May 29 23:30:13 2009/-ko/
 /times.h/1.2/Fri May 29 23:30:13 2009/-ko/
-/types.h/1.29/Fri May 29 23:30:13 2009/-ko/
 /unistd.h/1.68/Fri May 29 23:30:13 2009/-ko/
 /utime.h/1.1.1.1/Fri May 29 23:30:13 2009/-ko/
 /wait.h/1.1.1.1/Fri May 29 23:30:13 2009/-ko/
+/features.h/1.18/Fri Jun 19 11:14:06 2009//
+/types.h/1.30/Fri Jun 19 11:14:06 2009/-ko/
 D

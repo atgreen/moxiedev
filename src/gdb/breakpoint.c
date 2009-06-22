@@ -1286,12 +1286,10 @@ insert_breakpoints (void)
 
   update_global_location_list (1);
 
-  if (!breakpoints_always_inserted_mode ()
-      && (target_has_execution
- 	  || gdbarch_has_global_breakpoints (target_gdbarch)))
-    /* update_global_location_list does not insert breakpoints
-       when always_inserted_mode is not enabled.  Explicitly
-       insert them now.  */
+  /* update_global_location_list does not insert breakpoints when
+     always_inserted_mode is not enabled.  Explicitly insert them
+     now.  */
+  if (!breakpoints_always_inserted_mode ())
     insert_breakpoint_locations ();
 }
 
@@ -1480,7 +1478,8 @@ create_overlay_event_breakpoint (char *func_name, struct objfile *objfile)
   struct breakpoint *b;
   struct minimal_symbol *m;
 
-  if ((m = lookup_minimal_symbol_text (func_name, objfile)) == NULL)
+  m = lookup_minimal_symbol_text (func_name, objfile);
+  if (m == NULL)
     return;
 
   b = create_internal_breakpoint (SYMBOL_VALUE_ADDRESS (m),
@@ -2130,10 +2129,10 @@ bpstat_find_step_resume_breakpoint (bpstat bsp)
 
   for (; bsp != NULL; bsp = bsp->next)
     {
-      if ((bsp->breakpoint_at != NULL) &&
-	  (bsp->breakpoint_at->owner->type == bp_step_resume) &&
-	  (bsp->breakpoint_at->owner->thread == current_thread || 
-	   bsp->breakpoint_at->owner->thread == -1))
+      if ((bsp->breakpoint_at != NULL)
+	  && (bsp->breakpoint_at->owner->type == bp_step_resume)
+	  && (bsp->breakpoint_at->owner->thread == current_thread
+	      || bsp->breakpoint_at->owner->thread == -1))
 	return bsp->breakpoint_at->owner;
     }
 
@@ -3134,9 +3133,9 @@ bpstat_stop_status (CORE_ADDR bp_addr, ptid_t ptid)
 	if (b->silent)
 	  bs->print = 0;
 	bs->commands = b->commands;
-	if (bs->commands &&
-	    (strcmp ("silent", bs->commands->line) == 0
-	     || (xdb_commands && strcmp ("Q", bs->commands->line) == 0)))
+	if (bs->commands
+	    && (strcmp ("silent", bs->commands->line) == 0
+		|| (xdb_commands && strcmp ("Q", bs->commands->line) == 0)))
 	  {
 	    bs->commands = bs->commands->next;
 	    bs->print = 0;
@@ -3749,8 +3748,9 @@ print_one_breakpoint_location (struct breakpoint *b,
       ui_out_field_int (uiout, "ignore", b->ignore_count);
       ui_out_text (uiout, " hits\n");
     }
-  
-  if (!part_of_multiple && (l = b->commands))
+
+  l = b->commands;
+  if (!part_of_multiple && l)
     {
       struct cleanup *script_chain;
 
@@ -4045,8 +4045,8 @@ describe_other_breakpoints (CORE_ADDR pc, struct obj_section *section,
 	    else if (b->thread != -1)
 	      printf_filtered (" (thread %d)", b->thread);
 	    printf_filtered ("%s%s ",
-			     ((b->enable_state == bp_disabled || 
-			       b->enable_state == bp_call_disabled) 
+			     ((b->enable_state == bp_disabled
+			       || b->enable_state == bp_call_disabled) 
 			      ? " (disabled)"
 			      : b->enable_state == bp_permanent 
 			      ? " (permanent)"
@@ -4427,7 +4427,8 @@ create_longjmp_breakpoint (char *func_name)
 {
   struct minimal_symbol *m;
 
-  if ((m = lookup_minimal_symbol_text (func_name, NULL)) == NULL)
+  m = lookup_minimal_symbol_text (func_name, NULL);
+  if (m == NULL)
     return;
   set_momentary_breakpoint_at_pc (SYMBOL_VALUE_ADDRESS (m), bp_longjmp);
   update_global_location_list (1);
@@ -4933,9 +4934,9 @@ hw_watchpoint_used_count (enum bptype type, int *other_type_used)
       {
 	if (b->type == type)
 	  i++;
-	else if ((b->type == bp_hardware_watchpoint ||
-		  b->type == bp_read_watchpoint ||
-		  b->type == bp_access_watchpoint))
+	else if ((b->type == bp_hardware_watchpoint
+		  || b->type == bp_read_watchpoint
+		  || b->type == bp_access_watchpoint))
 	  *other_type_used = 1;
       }
   }
@@ -5405,8 +5406,8 @@ expand_line_sal_maybe (struct symtab_and_line sal)
 	  if (find_pc_partial_function (pc, &this_function, 
 					&func_addr, &func_end))
 	    {
-	      if (this_function && 
-		  strcmp (this_function, original_function) != 0)
+	      if (this_function
+		  && strcmp (this_function, original_function) != 0)
 		{
 		  remove_sal (&expanded, i);
 		  --i;
@@ -5419,8 +5420,18 @@ expand_line_sal_maybe (struct symtab_and_line sal)
 		  if (sym)
 		    expanded.sals[i] = find_function_start_sal (sym, 1);
 		  else
-		    expanded.sals[i].pc 
-		      = gdbarch_skip_prologue (current_gdbarch, pc);
+		    {
+		      /* Since find_pc_partial_function returned true,
+			 we should really always find the section here.  */
+		      struct obj_section *section = find_pc_section (pc);
+		      if (section)
+			{
+			  struct gdbarch *gdbarch
+			    = get_objfile_arch (section->objfile);
+			  expanded.sals[i].pc
+			    = gdbarch_skip_prologue (gdbarch, pc);
+			}
+		    }
 		}
 	    }
 	}
@@ -5687,7 +5698,7 @@ break_command_really (char *arg, char *cond_string, int thread,
   char *addr_start = arg;
   char **addr_string;
   struct cleanup *old_chain;
-  struct cleanup *breakpoint_chain = NULL;
+  struct cleanup *bkpt_chain = NULL;
   struct captured_parse_breakpoint_args parse_args;
   int i;
   int pending = 0;
@@ -5727,8 +5738,8 @@ break_command_really (char *arg, char *cond_string, int thread,
 
           /* If pending breakpoint support is auto query and the user
 	     selects no, then simply return the error code.  */
-	  if (pending_break_support == AUTO_BOOLEAN_AUTO && 
-	      !nquery ("Make breakpoint pending on future shared library load? "))
+	  if (pending_break_support == AUTO_BOOLEAN_AUTO
+	      && !nquery ("Make breakpoint pending on future shared library load? "))
 	    return;
 
 	  /* At this point, either the user was queried about setting
@@ -5765,12 +5776,11 @@ break_command_really (char *arg, char *cond_string, int thread,
   /* ----------------------------- SNIP -----------------------------
      Anything added to the cleanup chain beyond this point is assumed
      to be part of a breakpoint.  If the breakpoint create succeeds
-     then the memory is not reclaimed. */
-  breakpoint_chain = make_cleanup (null_cleanup, 0);
+     then the memory is not reclaimed.  */
+  bkpt_chain = make_cleanup (null_cleanup, 0);
 
   /* Mark the contents of the addr_string for cleanup.  These go on
-     the breakpoint_chain and only occure if the breakpoint create
-     fails. */
+     the bkpt_chain and only occur if the breakpoint create fails.  */
   for (i = 0; i < sals.nelts; i++)
     {
       if (addr_string[i] != NULL)
@@ -5842,13 +5852,13 @@ break_command_really (char *arg, char *cond_string, int thread,
   if (sals.nelts > 1)
     warning (_("Multiple breakpoints were set.\n"
 	       "Use the \"delete\" command to delete unwanted breakpoints."));
-  /* That's it. Discard the cleanups for data inserted into the
-     breakpoint. */
-  discard_cleanups (breakpoint_chain);
-  /* But cleanup everything else. */
+  /* That's it.  Discard the cleanups for data inserted into the
+     breakpoint.  */
+  discard_cleanups (bkpt_chain);
+  /* But cleanup everything else.  */
   do_cleanups (old_chain);
 
-  /* error call may happen here - have BREAKPOINT_CHAIN already discarded.  */
+  /* error call may happen here - have BKPT_CHAIN already discarded.  */
   update_global_location_list (1);
 }
 
@@ -6774,8 +6784,8 @@ catch_exception_command_1 (enum exception_event_kind ex_event, char *arg,
   if ((*arg != '\0') && !isspace (*arg))
     error (_("Junk at end of arguments."));
 
-  if ((ex_event != EX_EVENT_THROW) &&
-      (ex_event != EX_EVENT_CATCH))
+  if (ex_event != EX_EVENT_THROW
+      && ex_event != EX_EVENT_CATCH)
     error (_("Unsupported or unknown exception event; cannot catch it"));
 
   if (handle_gnu_v3_exceptions (tempflag, cond_string, ex_event, from_tty))
@@ -7232,7 +7242,7 @@ update_global_location_list (int should_insert)
     }
 
   if (breakpoints_always_inserted_mode () && should_insert
-      && (target_has_execution
+      && (have_live_inferiors ()
 	  || (gdbarch_has_global_breakpoints (target_gdbarch))))
     insert_breakpoint_locations ();
 
@@ -7398,11 +7408,11 @@ delete_command (char *arg, int from_tty)
          have to be deleted with an explicit breakpoint number argument.  */
       ALL_BREAKPOINTS (b)
       {
-	if (b->type != bp_call_dummy &&
-	    b->type != bp_shlib_event &&
-	    b->type != bp_thread_event &&
-	    b->type != bp_overlay_event &&
-	    b->number >= 0)
+	if (b->type != bp_call_dummy
+	    && b->type != bp_shlib_event
+	    && b->type != bp_thread_event
+	    && b->type != bp_overlay_event
+	    && b->number >= 0)
 	  {
 	    breaks_to_delete = 1;
 	    break;
@@ -7415,11 +7425,11 @@ delete_command (char *arg, int from_tty)
 	{
 	  ALL_BREAKPOINTS_SAFE (b, temp)
 	  {
-	    if (b->type != bp_call_dummy &&
-		b->type != bp_shlib_event &&
-		b->type != bp_thread_event &&
-		b->type != bp_overlay_event &&
-		b->number >= 0)
+	    if (b->type != bp_call_dummy
+		&& b->type != bp_shlib_event
+		&& b->type != bp_thread_event
+		&& b->type != bp_overlay_event
+		&& b->number >= 0)
 	      delete_breakpoint (b);
 	  }
 	}
@@ -8030,10 +8040,10 @@ do_enable_breakpoint (struct breakpoint *bpt, enum bpdisp disposition)
 	error (_("Hardware breakpoints used exceeds limit."));
     }
 
-  if (bpt->type == bp_watchpoint || 
-      bpt->type == bp_hardware_watchpoint ||
-      bpt->type == bp_read_watchpoint || 
-      bpt->type == bp_access_watchpoint)
+  if (bpt->type == bp_watchpoint
+      || bpt->type == bp_hardware_watchpoint
+      || bpt->type == bp_read_watchpoint
+      || bpt->type == bp_access_watchpoint)
     {
       struct gdb_exception e;
 
@@ -8368,8 +8378,8 @@ delete_trace_command (char *arg, int from_tty)
 	{
 	  ALL_BREAKPOINTS_SAFE (b, temp)
 	  {
-	    if (b->type == bp_tracepoint &&
-		b->number >= 0)
+	    if (b->type == bp_tracepoint
+		&& b->number >= 0)
 	      delete_breakpoint (b);
 	  }
 	}
@@ -8516,7 +8526,8 @@ tracepoint_save_command (char *args, int from_tty)
 
   pathname = tilde_expand (args);
   cleanup = make_cleanup (xfree, pathname);
-  if (!(fp = fopen (pathname, "w")))
+  fp = fopen (pathname, "w");
+  if (!fp)
     error (_("Unable to open file '%s' for saving tracepoints (%s)"),
 	   args, safe_strerror (errno));
   make_cleanup_fclose (fp);
@@ -8804,11 +8815,8 @@ BREAK_ARGS_HELP ("break")));
   add_com_alias ("bre", "break", class_run, 1);
   add_com_alias ("brea", "break", class_run, 1);
 
- if (xdb_commands)
-    {
-      add_com_alias ("ba", "break", class_breakpoint, 1);
-      add_com_alias ("bu", "ubreak", class_breakpoint, 1);
-    }
+  if (xdb_commands)
+   add_com_alias ("ba", "break", class_breakpoint, 1);
 
   if (dbx_commands)
     {

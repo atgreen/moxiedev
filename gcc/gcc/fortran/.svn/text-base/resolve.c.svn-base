@@ -347,7 +347,7 @@ resolve_contained_fntype (gfc_symbol *sym, gfc_namespace *ns)
     return;
 
   /* Try to find out of what the return type is.  */
-  if (sym->result->ts.type == BT_UNKNOWN)
+  if (sym->result->ts.type == BT_UNKNOWN && sym->result->ts.interface == NULL)
     {
       t = gfc_set_default_type (sym->result, 0, ns);
 
@@ -7610,31 +7610,39 @@ build_default_init_expr (gfc_symbol *sym)
       break;
 	  
     case BT_COMPLEX:
+#ifdef HAVE_mpc
+      mpc_init2 (init_expr->value.complex, mpfr_get_default_prec());
+#else
       mpfr_init (init_expr->value.complex.r);
       mpfr_init (init_expr->value.complex.i);
+#endif
       switch (gfc_option.flag_init_real)
 	{
 	case GFC_INIT_REAL_SNAN:
 	  init_expr->is_snan = 1;
 	  /* Fall through.  */
 	case GFC_INIT_REAL_NAN:
-	  mpfr_set_nan (init_expr->value.complex.r);
-	  mpfr_set_nan (init_expr->value.complex.i);
+	  mpfr_set_nan (mpc_realref (init_expr->value.complex));
+	  mpfr_set_nan (mpc_imagref (init_expr->value.complex));
 	  break;
 
 	case GFC_INIT_REAL_INF:
-	  mpfr_set_inf (init_expr->value.complex.r, 1);
-	  mpfr_set_inf (init_expr->value.complex.i, 1);
+	  mpfr_set_inf (mpc_realref (init_expr->value.complex), 1);
+	  mpfr_set_inf (mpc_imagref (init_expr->value.complex), 1);
 	  break;
 
 	case GFC_INIT_REAL_NEG_INF:
-	  mpfr_set_inf (init_expr->value.complex.r, -1);
-	  mpfr_set_inf (init_expr->value.complex.i, -1);
+	  mpfr_set_inf (mpc_realref (init_expr->value.complex), -1);
+	  mpfr_set_inf (mpc_imagref (init_expr->value.complex), -1);
 	  break;
 
 	case GFC_INIT_REAL_ZERO:
+#ifdef HAVE_mpc
+	  mpc_set_ui (init_expr->value.complex, 0, GFC_MPC_RND_MODE);
+#else
 	  mpfr_set_ui (init_expr->value.complex.r, 0.0, GFC_RND_MODE);
 	  mpfr_set_ui (init_expr->value.complex.i, 0.0, GFC_RND_MODE);
+#endif
 	  break;
 
 	default:
@@ -8593,7 +8601,7 @@ check_generic_tbp_ambiguity (gfc_tbp_generic* t1, gfc_tbp_generic* t2,
     }
 
   /* Compare the interfaces.  */
-  if (gfc_compare_interfaces (sym1, sym2, 1, 0))
+  if (gfc_compare_interfaces (sym1, sym2, 1, 0, NULL, 0))
     {
       gfc_error ("'%s' and '%s' for GENERIC '%s' at %L are ambiguous",
 		 sym1->name, sym2->name, generic_name, &where);
@@ -9406,10 +9414,19 @@ resolve_symbol (gfc_symbol *sym)
   if (sym->attr.procedure && sym->ts.interface
       && sym->attr.if_source != IFSRC_DECL)
     {
+      if (sym->ts.interface == sym)
+	{
+	  gfc_error ("PROCEDURE '%s' at %L may not be used as its own "
+		     "interface", sym->name, &sym->declared_at);
+	  return;
+	}
       if (sym->ts.interface->attr.procedure)
-	gfc_error ("Interface '%s', used by procedure '%s' at %L, is declared "
-		   "in a later PROCEDURE statement", sym->ts.interface->name,
-		   sym->name,&sym->declared_at);
+	{
+	  gfc_error ("Interface '%s', used by procedure '%s' at %L, is declared"
+		     " in a later PROCEDURE statement", sym->ts.interface->name,
+		     sym->name,&sym->declared_at);
+	  return;
+	}
 
       /* Get the attributes from the interface (now resolved).  */
       if (sym->ts.interface->attr.if_source
@@ -9852,9 +9869,12 @@ values;
 static gfc_try
 next_data_value (void)
 {
-
   while (mpz_cmp_ui (values.left, 0) == 0)
     {
+      if (!gfc_is_constant_expr (values.vnode->expr))
+	gfc_error ("non-constant DATA value at %L",
+		   &values.vnode->expr->where);
+
       if (values.vnode->next == NULL)
 	return FAILURE;
 

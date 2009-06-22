@@ -564,8 +564,8 @@ get_decl_align_unit (tree decl)
      So here we only make sure stack_alignment_needed >= align.  */
   if (crtl->stack_alignment_needed < align)
     crtl->stack_alignment_needed = align;
-  if (crtl->max_used_stack_slot_alignment < crtl->stack_alignment_needed)
-    crtl->max_used_stack_slot_alignment = crtl->stack_alignment_needed;
+  if (crtl->max_used_stack_slot_alignment < align)
+    crtl->max_used_stack_slot_alignment = align;
 
   return align / BITS_PER_UNIT;
 }
@@ -1410,7 +1410,8 @@ add_stack_protection_conflicts (void)
 static void
 create_stack_guard (void)
 {
-  tree guard = build_decl (VAR_DECL, NULL, ptr_type_node);
+  tree guard = build_decl (DECL_SOURCE_LOCATION (current_function_decl),
+			   VAR_DECL, NULL, ptr_type_node);
   TREE_THIS_VOLATILE (guard) = 1;
   TREE_USED (guard) = 1;
   expand_one_stack_var (guard);

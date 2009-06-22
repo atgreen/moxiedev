@@ -2033,8 +2033,12 @@ common_handle_option (size_t scode, const char *arg, int value,
       set_debug_level (SDB_DEBUG, false, arg);
       break;
 
-    case OPT_gdwarf_2:
-      set_debug_level (DWARF2_DEBUG, false, arg);
+    case OPT_gdwarf_:
+      if (value < 2 || value > 3)
+	error ("dwarf version %d is not supported", value);
+      else
+	dwarf_version = value;
+      set_debug_level (DWARF2_DEBUG, false, "");
       break;
 
     case OPT_ggdb:
@@ -2063,6 +2067,7 @@ common_handle_option (size_t scode, const char *arg, int value,
       flag_pedantic_errors = pedantic = 1;
       break;
 
+    case OPT_fsee:
     case OPT_fcse_skip_blocks:
     case OPT_floop_optimize:
     case OPT_frerun_loop_opt:

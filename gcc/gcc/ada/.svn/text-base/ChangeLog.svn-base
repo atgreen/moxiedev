@@ -1,3 +1,247 @@
+2009-06-20  Robert Dewar  <dewar@adacore.com>
+
+	* a-nudira.adb: Minor reformatting
+
+2009-06-20  Ed Schonberg  <schonberg@adacore.com>
+
+	* exp_ch3.adb (Build_Record_Init_Proc): When copying initial
+	expressions (possibly from a parent type) indicate that the scope of
+	the new itypes is the initialization procedure being built.
+
+2009-06-20  Robert Dewar  <dewar@adacore.com>
+
+	* a-nudira.adb (Fits_In_32_Bits): New name (inverted sense) for
+	Needs_64, and now computed without anomolies for some dynamic types.
+
+2009-06-20  Thomas Quinot  <quinot@adacore.com>
+
+	* sem_prag.adb: Minor reformatting
+
+	* exp_disp.ads: Minor reformatting
+
+2009-06-20  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_ch3.adb (Is_OK_For_Limited_Init): An unchecked conversion of a
+	function call is a legal expression to initialize a limited object.
+
+	* exp_ch3.adb: Rename various freeze operations that perform expansion
+	actions, to prevent confusion with subprograms in the freeze package.
+
+2009-06-20  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem.adb (Walk_Library_Units): Check instantiations first.
+
+	* sem_ch6.adb (Analyze_Subprogram_Declaration): Mark a subprogram as a
+	private primitive if it is a function with a controlling result that is
+	a type extension with progenitors.
+
+	* exp_ch9.adb (Build_Wrapper_Spec, Build_Wrapper_Body): Handle properly
+	a primitive operation of a synchronized tagged type that has a
+	controlling result.
+
+2009-06-20  Thomas Quinot  <quinot@adacore.com>
+
+	* einfo.ads: Fix typo.
+
+2009-06-20  Ed Falis  <falis@adacore.com>
+
+	* s-vxwext.ads, s-vxwext-kernel.adb: Complete previous change.
+
+2009-06-19  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/trans.c (emit_check): Do not wrap up the result
+	in a SAVE_EXPR.
+	(protect_multiple_eval): Always protect complex expressions.
+
+2009-06-19  Emmanuel Briot  <briot@adacore.com>
+
+	* prj-ext.adb, makeutl.adb, makeutl.ads (Executable_Prefix_Path): Now
+	make sure we always return a name ending with a path separator.
+
+2009-06-19  Javier Miranda  <miranda@adacore.com>
+
+	* sem_ch12.adb (Instantiate_Package_Body, Instantiate_Subprogram_Body):
+	Save and restore the visibility of the parent when installed.
+
+2009-06-19  Jose Ruiz  <ruiz@adacore.com>
+
+	* s-tposen.ads (Protection_Entry): Replace fields L, Ceiling, and Owner
+	by Common which contains all these fields.
+
+	* s-tposen.adb (Initialize_Protection_Entry, Lock_Entry,
+	Lock_Read_Only_Entry, Timed_Protected_Single_Entry_Call, Unlock_Entry):
+	Remove code duplication in this package by means of calling the
+	equivalent code in s-taprob.
+
+2009-06-19  Robert Dewar  <dewar@adacore.com>
+
+	* a-einuoc.ads: Minor reformatting
+
+2009-06-19  Ed Falis  <falis@adacore.com>
+
+	* a-einuoc.ads, s-osinte-vxworks.ads, s-vxwext.ads, s-vxwext-kernel.adb,
+	s-vxwext-kernel.ads, s-vxwext-rtp.ads: Code clean up.
+
+2009-06-19  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* einfo.ads (Handling of Type'Size Values): Fix Object_Size values.
+
+2009-06-19  Robert Dewar  <dewar@adacore.com>
+
+	* a-nudira.adb (Need_64): Handle negative ranges and also dynamic
+	ranges
+
+	* checks.adb (Determine_Range): Move the test for generic types later.
+
+	* sem_eval.adb (Compile_Time_Compare): Improve circuitry to catch more
+	cases.
+	(Eval_Relational_Op): Fold more cases including string compares
+
+	* sem_util.ads, sem_util.adb (References_Generic_Formal_Type): New
+	function.
+
+2009-06-19  Robert Dewar  <dewar@adacore.com>
+
+	* sem_type.ads, sem_ch12.adb: Minor reformatting
+
+	* s-wchcnv.adb (UTF_32_To_Char_Sequence): Handle invalid data properly
+
+2009-06-19  Ed Schonberg  <schonberg@adacore.com>
+
+	* exp_ch9.adb (Build_Wrapper_Spec): Handle properly an overridden
+	primitive operation of a rivate extension whose controlling argument
+	is an out parameter.
+
+	* sem.adb (Walk_Library_Units): exclude generic package declarations
+	from check.
+
+2009-06-19  Thomas Quinot  <quinot@adacore.com>
+
+	* i-vxwoio.ads: Add comments
+
+2009-06-19  Thomas Quinot  <quinot@adacore.com>
+
+	* socket.c, g-socthi-vms.adb, g-socthi-vms.ads, g-socthi-vxworks.adb,
+	g-socthi-vxworks.ads, g-socthi-mingw.adb, g-socthi-mingw.ads,
+	g-socthi.adb, g-socthi.ads, g-socket.adb, g-sothco.ads
+	(GNAT.Sockets.Thin.C_Ioctl): Rename to Socket_Ioctl.
+	(GNAT.Sockets.Thin.Socket_Ioctl): Use new function
+	Thin_Common.Socket_Ioctl.
+	(GNAT.Sockets.Thin_Common.Socket_Ioctl): Binding to new C wrapper
+	__gnat_socket_ioctl.
+	(__gnat_socket_ioctl): Wrapper for ioctl(2) called with a single int*
+	argument after the file descriptor and request code.
+
+2009-06-19  Robert Dewar  <dewar@adacore.com>
+
+	* checks.adb: Minor reformatting
+
+2009-06-19  Jose Ruiz  <ruiz@adacore.com>
+
+	* env.c (__gnat_environ): RTX does not support this functionality.
+
+2009-06-19  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem.adb (Walk_Library_Items): Include bodies in the list of units to
+	traverse, to account for front-end inlining and instantiations in a
+	spec or in the main unit.
+
+2009-06-19  Robert Dewar  <dewar@adacore.com>
+
+	* checks.adb (Determine_Range): Do not attempt to get range of generic
+	type.
+
+2009-06-19  Sergey Rybin  <rybin@adacore.com>
+
+	* gnat_ugn.texi, vms_data.ads: Add the documentation for the new
+	gnatmetric option for generating the schema file for gnatmetric XML
+	output. Add corresponding VMS qualifier.
+
+2009-06-19  Robert Dewar  <dewar@adacore.com>
+
+	* g-cgi.adb: Minor reformatting
+
+2009-06-19  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* s-intman-solaris.adb (Notify_Exception): Do not discriminate on the
+	signal code for SIGFPE and raise Program_Error for SIGILL.
+
+	* s-osinte-solaris.ads: Remove signal code constants for SIGFPE.
+
+2009-06-19  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_ch8.adb (Nvis_Messages): Do not list an entity declared in a
+	generic package if there is a visibility candidate that is declared in
+	a regular package.
+
+2009-06-18  Olivier Hainque  <hainque@adacore.com>
+
+	* system-aix64.ads: New file.
+	* gcc-interface/Makefile.in (aix LIBGNAT_TARGET_PAIRS): Use the
+	64bit system.ads for ppc64 multilib variants.
+
+2009-06-16  Robert Dewar  <dewar@adacore.com>
+            Olivier Hainque  <hainque@adacore.com>
+
+	Relax constraints on Machine_Attribute argument types:
+	* sem_prag.adb (Check_Arg_Is_Static_Expression): Allow for
+	missing type.
+	(Analyze_Attribute, case Machine_Attribute): Allow any type for arg 3.
+	* gcc-interface/decl.c (prepend_attributes): Accept static
+	expressions of any type as attribute arguments, not only string
+	literals.
+	* gnat_rm.texi (pragma Machine_Attribute section): Adjust to reflect
+	the relaxation of the restriction on the Info argument type.
+	
+2009-06-13  Aldy Hernandez  <aldyh@redhat.com>
+
+	* gcc-interface/utils.c (record_builtin_type): Pass location
+	argument to build_decl.
+	(create_type_stub_decl): Same.
+	(create_type_decl): Same.
+	(create_var_decl_1): Same.
+	(create_field_decl): Same.
+	(create_param_decl): Same.
+	(create_label_decl): Same.
+	(create_subprog_decl): Same.
+	* gcc-interface/decl.c (gnat_to_gnu_entity): Same.
+	* gcc-interface/trans.c (Case_Statement_to_gnu): Pass location
+	argument to create_artificial_label.
+	(Loop_Statement_to_gnu): Same.
+	(Subprogram_Body_to_gnu): Same.
+	(gnat_gimplify_stmt): Same.
+
+2009-06-11  Richard Henderson  <rth@redhat.com>
+
+	* gcc-interface/misc.c (gnat_handle_option): Rename OPT_gdwarf_ to
+	OPT_gdwarfplus.
+
+2009-06-11  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_attr.adb (Resolve_Attribute, case 'access): Add missing
+	accessibiliy check on access_to_subprogram in the context of an
+	anonymous access that is not an access parameter.
+
+2009-06-11  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* tracebak.c (i386 section): Define IS_BAD_PTR on Solaris.
+	
+2009-06-11  Quentin Ochem  <ochem@adacore.com>
+
+	* sem_warn.adb, scng.adb, sfn_scan.adb, freeze.adb: Add CODEFIX
+	comments for message handled by GPS.
+
+2009-06-11  Matthew Gingell  <gingell@adacore.com>
+
+	* adaint.c: Use fopen64 instead of fopen on platforms where we know
+	it's supported.
+
+2009-06-11  Pascal Obry  <obry@adacore.com>
+
+	* g-cgi.ads: Fix comment typo.
+
+	* g-cgi.adb: Properly decode "+" in CGI parameters as spaces.
+
 2009-06-10  Eric Botcazou  <ebotcazou@adacore.com>
 
 	* gcc-interface/decl.c (gnat_to_gnu_entity) <E_Record_Subtype>: Use
@@ -79,7 +323,7 @@
 	* gcc-interface/Make-lang.in: Fix formatting.
 
 2009-06-01  Olivier Hainque  <hainque@adacore.com>
-            Eric Botcazou  <ebotcazou@adacore.com>
+	    Eric Botcazou  <ebotcazou@adacore.com>
 	
 	* gcc-interface/utils.c (convert) <CONSTRUCTOR case>: When converting
 	to the packable version of the type, clear TREE_STATIC/TREE_CONSTANT
@@ -87,7 +331,7 @@
 	as a static constant any more.
 
 2009-06-01  Olivier Hainque  <hainque@adacore.com>
-            Eric Botcazou  <ebotcazou@adacore.com>
+	    Eric Botcazou  <ebotcazou@adacore.com>
 	
 	* gcc-interface/utils2.c (gnat_build_constructor): Factor
 	out code.  Use initializer_constant_valid_for_bitfield_p and
@@ -267,7 +511,7 @@
 	GPS.
 
 	* sinput.ads, sinput.adb (Expr_First_Char): New function
-        (Expr_Last_Char): New function
+	(Expr_Last_Char): New function
 
 2009-05-06  Sergey Rybin  <rybin@adacore.com>
 
@@ -1287,9 +1531,9 @@
 
 	* prj-proc.adb, prj.adb, prj.ads, prj-nmsc.adb, prj-env.adb
 	(Source_Iterator): new type.
-        This removes the need for having the sources on three different
-        lists at the project tree, project and language level. They are now
-        on a single list.
+	This removes the need for having the sources on three different
+	lists at the project tree, project and language level. They are now
+	on a single list.
 
 2009-04-24  Emmanuel Briot  <briot@adacore.com>
 
@@ -1318,7 +1562,7 @@
 	efficient.
 
 2009-04-24  Richard Kenner  <kenner@vlsi1.ultra.nyu.edu>
-            Thomas Quinot  <quinot@adacore.com>
+	    Thomas Quinot  <quinot@adacore.com>
 
 	* fe.h (Set_Identifier_Casing): Add const to second parameter.
 	* gcc-interface/misc.c (internal_error_function): Make copy of return
@@ -5496,17 +5740,17 @@
 
 2009-04-09  Robert Dewar  <dewar@adacore.com>
 
-        * checks.adb:
-        (Insert_Valid_Check): Avoid unnecessary generation of junk declaration
-        when no invalid values exist, Avoid duplicate read of atomic variable.
+	* checks.adb:
+	(Insert_Valid_Check): Avoid unnecessary generation of junk declaration
+	when no invalid values exist, Avoid duplicate read of atomic variable.
 
-        * cstand.adb (Build_Signed_Integer_Type): Set Is_Known_Valid
-        (Standard_Unsigned): Set Is_Known_Valid
+	* cstand.adb (Build_Signed_Integer_Type): Set Is_Known_Valid
+	(Standard_Unsigned): Set Is_Known_Valid
 
-        * sem_ch3.adb (Analyze_Subtype_Declaration): Copy Is_Known_Valid on
+	* sem_ch3.adb (Analyze_Subtype_Declaration): Copy Is_Known_Valid on
 	subtype declaration if no constraint.
-        (Set_Modular_Size): Set Is_Known_Valid if appropriate
-        (Build_Derived_Numeric_Type): Copy Is_Known_Valid if no constraint
+	(Set_Modular_Size): Set Is_Known_Valid if appropriate
+	(Build_Derived_Numeric_Type): Copy Is_Known_Valid if no constraint
 
 2009-04-09  Robert Dewar  <dewar@adacore.com>
 

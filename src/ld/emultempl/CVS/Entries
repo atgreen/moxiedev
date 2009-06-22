@@ -2,7 +2,6 @@
 /aix.em/1.52/Fri May 29 23:30:12 2009//
 /alphaelf.em/1.12/Fri May 29 23:30:12 2009//
 /armcoff.em/1.30/Fri May 29 23:30:12 2009//
-/armelf.em/1.73/Fri Jun  5 22:47:31 2009//
 /astring.sed/1.1/Fri May 29 23:30:12 2009//
 /avrelf.em/1.7/Fri May 29 23:30:12 2009//
 /beos.em/1.44/Fri May 29 23:30:12 2009//
@@ -47,4 +46,5 @@
 /vxworks.em/1.7/Fri May 29 23:30:12 2009//
 /xtensaelf.em/1.23/Fri May 29 23:30:12 2009//
 /z80.em/1.4/Fri May 29 23:30:12 2009//
+/armelf.em/1.74/Fri Jun 19 11:14:04 2009//
 D

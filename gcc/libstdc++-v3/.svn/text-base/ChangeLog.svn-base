@@ -1,7 +1,171 @@
+2009-06-19  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/random.h (_Adaptor): Simplify for _DInputType always
+	a floating point type.
+	(uniform_int_distribution<>::uniform_int_distribution(_IntType,
+	_IntType)): Fix second default argument.
+	(uniform_int_distribution<>::_M_call): Remove.
+	(uniform_int_distribution<>::operator()(_UniformRandomNumberGenerator&,
+	const param_type&)): Only declare.
+	* include/bits/random.tcc (uniform_int_distribution<>::_M_call(
+	_UniformRandomNumberGenerator&, result_type, result_type, true_type):
+	Remove.
+	uniform_int_distribution<>::operator()(_UniformRandomNumberGenerator&,
+	const param_type&): Define here.
+	(geometric_distribution<>::operator()(_UniformRandomNumberGenerator&,
+	const param_type&), discrete_distribution<>::operator()
+	(_UniformRandomNumberGenerator&, const param_type&), 
+	piecewise_constant_distribution<>::operator()
+	(_UniformRandomNumberGenerator&, const param_type&),
+	piecewise_linear_distribution<>::operator()
+	(_UniformRandomNumberGenerator&, const param_type&)): Use double as
+	the second template argument of _Adaptor.
+	* testsuite/26_numerics/random/uniform_int_distribution/cons/
+	default.cc: Adjust.
+
+2009-06-19  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/random.tcc (discrete_distribution<>::param_type::
+      	param_type(size_t, double, double, _Func),
+	discrete_distribution<>::operator()(_UniformRandomNumberGenerator&,
+	const param_type&)): Tidy.
+	(piecewise_constant_distribution<>::param_type::_M_initialize):
+	Use reserve, fix.
+	(piecewise_constant_distribution<>::param_type::
+	param_type(initializer_list<>, _Func),
+	piecewise_constant_distribution<>::param_type::
+	param_type(size_t, _RealType, _RealType, _Func),
+       	piecewise_linear_distribution<>::param_type::
+	param_type(initializer_list<>, _Func),
+       	piecewise_linear_distribution<>::param_type::
+	param_type(size_t, _RealType, _RealType, _Func)): Use reserve, tidy.
+	(piecewise_constant_distribution<>::param_type::
+	param_type(_InputIteratorB, _InputIteratorB, _InputIteratorW),
+	piecewise_constant_distribution<>::
+	operator()(_UniformRandomNumberGenerator&, const param_type&),
+      	piecewise_linear_distribution<>::
+	operator()(_UniformRandomNumberGenerator&, const param_type&)): Fix.
+	(operator>>(std::basic_istream<>&,
+	piecewise_constant_distribution<>&),
+	operator>>(std::basic_istream<>&, piecewise_linear_distribution<>&)):
+	Use reserve.
+	* include/bits/random.h: Minor cosmetic changes.
+
+2009-06-17  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* testsuite/23_containers/list/check_construct_destroy.h: New.
+	Move test logic here.
+	* testsuite/23_containers/list/moveable.h: Same.
+	* testsuite/23_containers/list/modifiers/insert/25288.h: Same.
+	* testsuite/23_containers/list/modifiers/1.h: Same.
+	* testsuite/23_containers/list/modifiers/2.h: Same.
+	* testsuite/23_containers/list/modifiers/3.h: Same.
+	* testsuite/23_containers/list/modifiers/swap/1.h: Same.
+	* testsuite/23_containers/list/modifiers/swap/2.h: Same.
+	* testsuite/23_containers/list/modifiers/swap/3.h: Same.
+	* testsuite/23_containers/list/operations/1.h: Same.
+	* testsuite/23_containers/list/operations/2.h: Same.
+	* testsuite/23_containers/list/operations/3.h: Same.
+	* testsuite/23_containers/list/operations/4.h: Same.
+	* testsuite/23_containers/list/operations/5.h: Same.
+	* testsuite/23_containers/list/capacity/1.h: Same.
+	* testsuite/23_containers/list/init-list.h: Same.
+	* testsuite/23_containers/list/cons/1.h: Same.
+	* testsuite/23_containers/list/cons/2.h: Same.
+	* testsuite/23_containers/list/cons/3.h: Same.
+	* testsuite/23_containers/list/cons/4.h: Same.
+	* testsuite/23_containers/list/cons/5.h: Same.
+	* testsuite/23_containers/list/cons/6.h: Same.
+	* testsuite/23_containers/list/cons/7.h: Same.
+	* testsuite/23_containers/list/cons/8.h: Same.
+	* testsuite/23_containers/list/cons/9.h: Same.
+	* testsuite/23_containers/list/cons/clear_allocator.h: Same.
+	* testsuite/23_containers/list/modifiers/insert/25288.cc: Include test
+	header.
+	* testsuite/23_containers/list/modifiers/1.cc: Same.
+	* testsuite/23_containers/list/modifiers/2.cc: Same.
+	* testsuite/23_containers/list/modifiers/3.cc: Same.
+	* testsuite/23_containers/list/modifiers/swap/1.cc: Same.
+	* testsuite/23_containers/list/modifiers/swap/2.cc: Same.
+	* testsuite/23_containers/list/modifiers/swap/3.cc: Same.
+	* testsuite/23_containers/list/operations/1.cc: Same.
+	* testsuite/23_containers/list/operations/2.cc: Same.
+	* testsuite/23_containers/list/operations/3.cc: Same.
+	* testsuite/23_containers/list/operations/4.cc: Same.
+	* testsuite/23_containers/list/operations/5.cc: Same.
+	* testsuite/23_containers/list/capacity/1.cc: Same.
+	* testsuite/23_containers/list/init-list.cc: Same.
+	* testsuite/23_containers/list/cons/1.cc: Same.
+	* testsuite/23_containers/list/cons/2.cc: Same.
+	* testsuite/23_containers/list/cons/3.cc: Same.
+	* testsuite/23_containers/list/cons/4.cc: Same.
+	* testsuite/23_containers/list/cons/5.cc: Same.
+	* testsuite/23_containers/list/cons/6.cc: Same.
+	* testsuite/23_containers/list/cons/7.cc: Same.
+	* testsuite/23_containers/list/cons/8.cc: Same.
+	* testsuite/23_containers/list/cons/9.cc: Same.
+	* testsuite/23_containers/list/cons/clear_allocator.cc: Same.
+	* testsuite/23_containers/list/check_construct_destroy.cc: Same.
+	* testsuite/23_containers/list/moveable.cc: Same.
+
+2009-06-17  Tom Tromey  <tromey@redhat.com>
+
+	* python/hook.in: Do not fail when there is no current objfile.
+	Use os.path.normpath.
+
+2009-06-16  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* libsupc++/exception_ptr.h (exception_ptr::swap(exception_ptr&&)):
+	Remove.
+	(exception_ptr::operator=(exception_ptr&&)): Cast source to
+	rvalue-reference so that move constructor is called.
+	* testsuite/18_support/exception_ptr/move.cc: New.
+
+2009-06-16  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* include/std/thread (~thread(), operator=(thread&&)): Call terminate
+	if joinable.
+
+2009-06-15  Tom Tromey  <tromey@redhat.com>
+
+	* python/libstdcxx/v6/printers.py (StdMapPrinter.__init__): Don't
+	set self.iter.
+	(StdMapPrinter.to_string): Make a new iterator.
+	(StdMapPrinter.children): Likewise.
+	(StdSetPrinter.__init__): Don't set self.iter.
+	(StdSetPrinter.to_string): Make a new iterator.
+	(StdSetPrinter.children): Likewise.
+
+2009-06-11  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/random.tcc
+	(negative_binomial_distribution<>::operator()
+	(_UniformRandomNumberGenerator&, const param_type&): Tweak to use a
+	class member gamma_distribution.
+	(negative_binomial_distribution<>::operator()
+	(_UniformRandomNumberGenerator&)): Implement out of line here.
+	(operator<<(basic_ostream<>&, negative_binomial_distribution<>),
+	operator>>(basic_ostream<>&, negative_binomial_distribution<>): Adjust.
+	(student_t_distribution<>::operator()
+	(_UniformRandomNumberGenerator&, const param_type&): Move inline,
+	simplify.
+	(operator<<(basic_ostream<>&, student_t_distribution<>),
+	operator>>(basic_ostream<>&, student_t_distribution<>): Adjust.
+	(chi_squared_distribution<>::operator()
+	(_UniformRandomNumberGenerator&, const param_type&): Move inline,
+	tweak to use a class member gamma_distribution.
+	(operator<<(basic_ostream<>&, chi_squared_distribution<>),
+	operator>>(basic_ostream<>&, chi_squared_distribution<>): Adjust.
+	(fisher_f_distribution<>::operator() (_UniformRandomNumberGenerator&,
+	const param_type&): Move inline, tweak to use class member
+	gamma_distributions.
+	(operator<<(basic_ostream<>&, fisher_f_distribution<>),
+	operator>>(basic_ostream<>&, fisher_f_distribution<>): Adjust.
+	* include/bits/random.h: Adjust, minor tweaks.
+
 2009-06-10  Tom Tromey  <tromey@redhat.com>
 
-	* python/libstdcxx/v6/printers.py (lookup_function): Remove extra
-	';'.
+	* python/libstdcxx/v6/printers.py (lookup_function): Remove extra ';'.
 	(build_libstdcxx_dictionary): Accept shortened form of
 	basic_string names.
 	(StdStringPrinter.to_string): Remove reference to WideEncoding.

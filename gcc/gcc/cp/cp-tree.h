@@ -755,7 +755,9 @@ struct GTY(()) saved_scope {
   int x_processing_specialization;
   BOOL_BITFIELD x_processing_explicit_instantiation : 1;
   BOOL_BITFIELD need_pop_function_context : 1;
-  BOOL_BITFIELD skip_evaluation : 1;
+
+  int unevaluated_operand;
+  int inhibit_evaluation_warnings;
 
   struct stmt_tree_s x_stmt_tree;
 
@@ -3621,6 +3623,14 @@ extern GTY(()) tree integer_three_node;
    function, two inside the body of a function in a local class, etc.)  */
 extern int function_depth;
 
+/* In parser.c.  */
+
+/* Nonzero if we are parsing an unevaluated operand: an operand to
+   sizeof, typeof, or alignof.  This is a count since operands to
+   sizeof can be nested.  */
+
+extern int cp_unevaluated_operand;
+
 /* in pt.c  */
 
 /* These values are used for the `STRICT' parameter to type_unification and
@@ -4323,7 +4333,6 @@ extern tree start_decl				(const cp_declarator *, cp_decl_specifier_seq *, int, 
 extern void start_decl_1			(tree, bool);
 extern bool check_array_initializer		(tree, tree, tree);
 extern void cp_finish_decl			(tree, tree, bool, tree, int);
-extern void finish_decl				(tree, tree, tree, tree);
 extern int cp_complete_array_type		(tree *, tree, bool);
 extern tree build_ptrmemfunc_type		(tree);
 extern tree build_ptrmem_type			(tree, tree);
@@ -4372,7 +4381,7 @@ extern tree cxx_builtin_function		(tree decl);
 extern tree cxx_builtin_function_ext_scope	(tree decl);
 extern tree check_elaborated_type_specifier	(enum tag_types, tree, bool);
 extern void warn_extern_redeclared_static	(tree, tree);
-extern const char *cxx_comdat_group		(tree);
+extern tree cxx_comdat_group			(tree);
 extern bool cp_missing_noreturn_ok_p		(tree);
 extern void initialize_artificial_var		(tree, tree);
 extern tree check_var_type			(tree, tree);
@@ -4380,7 +4389,7 @@ extern tree reshape_init (tree, tree);
 
 extern bool defer_mark_used_calls;
 extern GTY(()) VEC(tree, gc) *deferred_mark_used_calls;
-extern tree finish_case_label			(tree, tree);
+extern tree finish_case_label			(location_t, tree, tree);
 extern tree cxx_maybe_build_cleanup		(tree);
 
 /* in decl2.c */
@@ -4542,7 +4551,8 @@ extern tree type_uses_auto			(tree);
 extern void append_type_to_template_for_access_check (tree, tree, tree);
 extern tree splice_late_return_type		(tree, tree);
 extern bool is_auto				(const_tree);
-extern tree process_template_parm		(tree, tree, bool, bool);
+extern tree process_template_parm		(tree, location_t, tree, 
+						 bool, bool);
 extern tree end_template_parm_list		(tree);
 extern void end_template_decl			(void);
 extern bool check_default_tmpl_args             (tree, tree, int, int, int);
@@ -4933,7 +4943,7 @@ extern tree build_x_indirect_ref		(tree, const char *,
                                                  tsubst_flags_t);
 extern tree cp_build_indirect_ref		(tree, const char *,
                                                  tsubst_flags_t);
-extern tree build_array_ref			(tree, tree, location_t);
+extern tree build_array_ref			(location_t, tree, tree);
 extern tree get_member_function_from_ptrfunc	(tree *, tree);
 extern tree cp_build_function_call              (tree, tree, tsubst_flags_t);
 extern tree cp_build_function_call_vec		(tree, VEC(tree,gc) **,
@@ -4953,12 +4963,12 @@ extern tree build_x_conditional_expr		(tree, tree, tree,
 extern tree build_x_compound_expr_from_list	(tree, const char *);
 extern tree build_x_compound_expr_from_vec	(VEC(tree,gc) *, const char *);
 extern tree build_x_compound_expr		(tree, tree, tsubst_flags_t);
-extern tree build_compound_expr                 (tree, tree);
+extern tree build_compound_expr                 (location_t, tree, tree);
 extern tree cp_build_compound_expr		(tree, tree, tsubst_flags_t);
 extern tree build_static_cast			(tree, tree, tsubst_flags_t);
 extern tree build_reinterpret_cast		(tree, tree, tsubst_flags_t);
 extern tree build_const_cast			(tree, tree, tsubst_flags_t);
-extern tree build_c_cast			(tree, tree);
+extern tree build_c_cast			(location_t, tree, tree);
 extern tree cp_build_c_cast			(tree, tree, tsubst_flags_t);
 extern tree build_x_modify_expr			(tree, enum tree_code, tree,
 						 tsubst_flags_t);

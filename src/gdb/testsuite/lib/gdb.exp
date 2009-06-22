@@ -423,6 +423,10 @@ proc runto { function args } {
 	    fail "running to $function in runto"
 	    return 0
 	}
+	eof { 
+	    fail "running to $function in runto (end of file)"
+	    return 0
+	}
 	timeout { 
 	    fail "running to $function in runto (timeout)"
 	    return 0
@@ -1743,6 +1747,7 @@ proc gdb_compile {source dest type options} {
 
     if { $type == "executable" } {
 	if { ([istarget "*-*-mingw*"]
+	      || [istarget "*-*-*djgpp"]
 	      || [istarget "*-*-cygwin*"])} {
 	    # Force output to unbuffered mode, by linking in an object file
 	    # with a global contructor that calls setvbuf.

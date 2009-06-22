@@ -1,7 +1,7 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/libdecnumber
 svn://gcc.gnu.org/svn/gcc
 
@@ -505,40 +505,6 @@ jakub
 
 3816
 
-decQuadSymbols.h
-file
-
-
-
-
-2009-04-24T17:46:15.000000Z
-3851bae03416db42a85be1c5610f438b
-2007-09-10T20:44:08.038077Z
-128350
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3244
-
 decNumberLocal.h
 file
 
@@ -572,6 +538,40 @@ jakub
 
 
 33143
+
+decQuadSymbols.h
+file
+
+
+
+
+2009-04-24T17:46:15.000000Z
+3851bae03416db42a85be1c5610f438b
+2007-09-10T20:44:08.038077Z
+128350
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3244
 
 decDouble.c
 file
@@ -879,40 +879,6 @@ ian
 
 11292
 
-decQuad.c
-file
-
-
-
-
-2009-04-24T17:46:15.000000Z
-e5f14719849d88cf70f5c2bcf18fa72b
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5855
-
 ChangeLog
 file
 
@@ -946,6 +912,40 @@ ian
 
 
 15666
+
+decQuad.c
+file
+
+
+
+
+2009-04-24T17:46:15.000000Z
+e5f14719849d88cf70f5c2bcf18fa72b
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5855
 
 decPacked.h
 file
@@ -981,40 +981,6 @@ jakub
 
 2699
 
-decSingleSymbols.h
-file
-
-
-
-
-2009-04-24T17:46:15.000000Z
-8998c4f3e69ea3d218b574a2defb9a98
-2007-09-10T20:44:08.038077Z
-128350
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-890
-
 decQuad.h
 file
 
@@ -1048,6 +1014,40 @@ jakub
 
 
 10611
+
+decSingleSymbols.h
+file
+
+
+
+
+2009-04-24T17:46:15.000000Z
+8998c4f3e69ea3d218b574a2defb9a98
+2007-09-10T20:44:08.038077Z
+128350
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+890
 
 dconfig.h
 file

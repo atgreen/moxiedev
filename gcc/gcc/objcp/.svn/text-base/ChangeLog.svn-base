@@ -1,3 +1,21 @@
+2009-06-19  Ian Lance Taylor  <iant@google.com>
+
+	* objcp-decl.h (start_struct): Remove in_struct and struct_types
+	parameters.  Add struct_info parameter.
+	(finish_struct): Likewise.
+
+2009-06-13  Aldy Hernandez  <aldyh@redhat.com>
+
+	* objcp-decl.h (start_struct): Add location argument.
+	(finish_struct): Same.
+	(finish_decl): New.
+
+2009-06-12  Aldy Hernandez  <aldyh@redhat.com>
+
+	* objcp-decl.h (c_end_compound_stmt): New argument.
+	* objcp-decl.c (objcp_start_struct): Add argument.
+	(objcp_finish_struct): Same.
+
 2009-06-03  Ian Lance Taylor  <iant@google.com>
 
 	* Make-lang.in (cc1objplus-checksum.o): Depend upon $(CONFIG_H)

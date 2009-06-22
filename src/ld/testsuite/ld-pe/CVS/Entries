@@ -28,19 +28,19 @@
 /orphand.s/1.2/Fri May 29 23:30:12 2009//
 /orphane.s/1.2/Fri May 29 23:30:12 2009//
 /pe-compile.exp/1.1/Tue May 19 16:08:08 2009//
-/pe-run.exp/1.1/Tue May 19 16:08:08 2009//
 /pe.exp/1.14/Fri Jun  5 22:47:34 2009//
 /secrel.d/1.3/Fri May 29 23:30:12 2009//
 /secrel1.s/1.2/Fri May 29 23:30:12 2009//
 /secrel2.s/1.1/Fri May 29 23:30:12 2009//
 /secrel_64.d/1.1/Fri May 29 23:30:12 2009//
-/vers-script-1.d/1.1/Fri May 29 23:30:12 2009//
 /vers-script-1.ver/1.1/Fri May 29 23:30:12 2009//
 /vers-script-2.d/1.1/Fri May 29 23:30:12 2009//
 /vers-script-2.ver/1.1/Fri May 29 23:30:12 2009//
-/vers-script-3.d/1.1/Fri May 29 23:30:12 2009//
 /vers-script-3.ver/1.1/Fri May 29 23:30:12 2009//
-/vers-script-4.d/1.1/Fri May 29 23:30:12 2009//
 /vers-script-4.ver/1.1/Fri May 29 23:30:12 2009//
-/vers-script-dll.c/1.1/Fri May 29 23:30:12 2009//
+/pe-run.exp/1.2/Fri Jun 19 11:14:04 2009//
+/vers-script-1.d/1.2/Fri Jun 19 11:14:04 2009//
+/vers-script-3.d/1.2/Fri Jun 19 11:14:04 2009//
+/vers-script-4.d/1.2/Fri Jun 19 11:14:04 2009//
+/vers-script-dll.c/1.2/Fri Jun 19 11:14:04 2009//
 D

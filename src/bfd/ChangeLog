@@ -1,3 +1,573 @@
+2009-06-19  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_print_private_header): Fix format character.
+
+2009-06-19  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_scan_read_symtab_symbols): Add prototype.
+	(bfd_mach_o_version): Use bfd_mach_o_get_data instead of direct access.
+	(bfd_mach_o_valid): Ditto.
+	(bfd_mach_o_wide_p): Ditto.
+	(bfd_mach_o_canonicalize_reloc): Ditto.
+	(bfd_mach_o_build_commands): Ditto.
+	(bfd_mach_o_scan_read_thread): Ditto.
+	(bfd_mach_o_flatten_sections): Ditto.
+	(bfd_mach_o_scan_start_address): Ditto.
+	(bfd_mach_o_lookup_section): Ditto.
+	(bfd_mach_o_core_fetch_environment): Ditto.
+	(bfd_mach_o_write_contents): Ditto.  Handle reexport_dylib.
+	(bfd_mach_o_scan_write_relocs): Adjust for bfd_mach_o_get_data.
+	(bfd_mach_o_scan_write_symtab): Ditto.
+	Use macros instead of hard-coded values.
+	(bfd_mach_o_scan_read_symtab_symbol): Make the function static.
+	Use bfd_mach_o_get_data instead of direct access.  Use macros
+	instead of hard-coded values.
+	(bfd_mach_o_scan_read_symtab_strtab): Make the function static.
+	Remove sym argument and get section from mdata.
+	Move code into the else branch.
+	(bfd_mach_o_scan_read_symtab_symbols): Make the function static.
+	Remove sym argument and get section from mdata.  Adjust code.
+	(bfd_mach_o_scan_read_dylib): Move assertion into the created
+	switch (which replaces consecutive if statements).
+	(bfd_mach_o_scan_read_dysymtab): Rename seg to cmd.  Load
+	module table, table of content, indirect symbols and external
+	referenced symbols.
+	(bfd_mach_o_scan_read_symtab): Renames seg to symtab.  Set symtab
+	field.
+	(bfd_mach_o_scan_read_linkedit): New function.
+	(bfd_mach_o_scan_read_str): Ditto.
+	(bfd_mach_o_count_symbols): Simplify the code by using the symtab
+	field of mdata.
+	(bfd_mach_o_get_symtab_upper_bound): Remove check as
+	bfd_mach_o_count_symbols never returns an error.
+	(bfd_mach_o_canonicalize_symtab): Simplify the code by using the
+	symtab field (there might be only one symtab).
+	(bfd_mach_o_scan_read_command): Handle reexported dylib.
+	Handle sub frameworks, sub umbrella, sub library and sub client.
+	Read code signature and segment split info commands.
+	(bfd_mach_o_scan): Reindent.
+	(bfd_mach_o_xlat_name): New type.
+	(bfd_mach_o_print_flags): New function.
+	(bfd_mach_o_get_name): Ditto.
+	(bfd_mach_o_cpu_name): New variable.
+	(bfd_mach_o_filetype_name, bfd_mach_o_header_flags_name)
+	(bfd_mach_o_section_type_name)
+	(bfd_mach_o_section_attribute_name)
+	(bfd_mach_o_load_command_name): New variables.
+	(bfd_mach_o_print_private_header): New function.
+	(bfd_mach_o_print_section_map): New function extracted from
+	bfd_mach_o_print_private_bfd_data.
+	(bfd_mach_o_print_section): Ditto.  Print more infos.
+	(bfd_mach_o_print_segment): Ditto.
+	(bfd_mach_o_print_dysymtab): Ditto.
+	(bfd_mach_o_bfd_print_private_bfd_data): Reworked.  Handle
+	load weak dylib, reexport dylib and id dylib.
+	Handle code signature and segment_split info.
+	Handle sub frameworks, sub umbrella, sub library and sub client.
+	(bfd_mach_o_section_get_nbr_indirect): New function.
+
+	* mach-o.h (BFD_MACH_O_REFERENCE_MASK): New macro.  Add comment.
+	(bfd_mach_o_header_flags): New enum to define header flags.
+	(bfd_mach_o_section_attribute): New enum to replace ...
+	(BFD_MACH_O_S_ATTR_LOC_RELOC, BFD_MACH_O_S_ATTR_EXT_RELOC,
+	BFD_MACH_O_S_ATTR_SOME_INSTRUCTIONS, BFD_MACH_O_S_ATTR_DEBUG,
+	BFD_MACH_O_S_SELF_MODIFYING_CODE, BFD_MACH_O_S_ATTR_LIVE_SUPPORT,
+	BFD_MACH_O_S_ATTR_NO_DEAD_STRIP, BFD_MACH_O_S_ATTR_STRIP_STATIC_SYMS,
+	BFD_MACH_O_S_ATTR_NO_TOC, BFD_MACH_O_S_ATTR_PURE_INSTRUCTIONS): ...
+	these removed macros.
+	(BFD_MACH_O_NLIST_SIZE, BFD_MACH_O_NLIST_64_SIZE): New macros.
+	(bfd_mach_o_dylib_module): New type.
+	(BFD_MACH_O_DYLIB_MODULE_SIZE, BFD_MACH_O_DYLIB_MODULE_64_SIZE): New
+	macros.
+	(bfd_mach_o_dylib_table_of_content): New type.
+	(BFD_MACH_O_TABLE_OF_CONTENT_SIZE): New macro.
+	(bfd_mach_o_dylib_reference): New type.
+	(BFD_MACH_O_REFERENCE_SIZE): New macro.
+	(bfd_mach_o_dysymtab_command): Add fields for loaded and decoded
+	modules, toc, references and indirect syms.
+	(BFD_MACH_O_INDIRECT_SYMBOL_SIZE): New macro.
+	(bfd_mach_o_dylinker_command): Remove cmd and cmdsize fields (were
+	unused).  Add comment.
+	(bfd_mach_o_dylib_command): Ditto.
+	(bfd_mach_o_prebound_dylib_command): Ditto.
+	(bfd_mach_o_linkedit_command): New type.
+	(bfd_mach_o_str_command): New type.
+	(bfd_mach_o_load_command): Add linkedit and str fields.
+	(mach_o_data_struct): Add symtab field.
+	(bfd_get_mach_o_data): Renamed to ...
+	(bfd_mach_o_get_data): ... this new macro.
+	(bfd_mach_o_scan_read_symtab_symbol,
+	bfd_mach_o_scan_read_symtab_strtab,
+	bfd_mach_o_scan_read_symtab_symbols): Prototypes removed.
+
+	* mach-o-i386.c (bfd_mach_o_i386_mkobject): Use bfd_mach_o_get_data
+	instead of direct access.
+
+2009-06-19  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf32-ppc.c (ppc_elf_check_relocs): Allow local symbols for
+	R_PPC_PLTREL24 relocs.
+	(ppc_elf_relocate_section): Likewise.
+
+2009-06-19  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf32-ppc.c (find_plt_ent): Pass pointer to plist rather than
+	pointer to sym hash.  Update all uses.
+	(update_plt_info): Likewise.  Don't check addend here.
+
+2009-06-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-i386.c (elf_i386_check_relocs): Remove isymbuf and use
+	bfd_sym_from_r_symndx.
+	* elf64-x86-64.c (elf64_x86_64_check_relocs): Likewise.
+
+2009-06-18  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf-bfd.h (struct sym_sec_cache): Delete.
+	(struct sym_cache): New.
+	(bfd_section_from_r_symndx): Delete prototype.
+	(bfd_sym_from_r_symndx): Define prototype.
+	* elf.c (bfd_section_from_r_symndx): Delete, replace with..
+	(bfd_sym_from_r_symndx): ..new function.
+	* elf32-arm.c: Update all uses of struct sym_sec_cache and
+	bfd_section_from_r_symndx to new struct and function.
+	* elf32-bfin.c: Likewise.
+	* elf32-hppa.c: Likewise.
+	* elf32-i386.c: Likewise.
+	* elf32-m32r.c: Likewise.
+	* elf32-m68hc1x.c: Likewise.
+	* elf32-m68hc1x.h: Likewise.
+	* elf32-m68k.c: Likewise.
+	* elf32-ppc.c: Likewise.
+	* elf32-s390.c: Likewise.
+	* elf32-sh.c: Likewise.
+	* elf64-ppc.c: Likewise.
+	* elf64-s390.c: Likewise.
+	* elf64-x86-64.c: Likewise.
+	* elfxx-sparc.c: Likewise.
+	* elfxx-sparc.h: Likewise.
+
+2009-06-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-i386.c (elf_i386_check_relocs): Cache or free isymbuf.
+	* elf64-x86-64.c (elf64_x86_64_check_relocs): Likewise.
+
+2009-06-18  Nick Clifton  <nickc@redhat.com>
+
+	* elflink.c (elf_link_sort_relocs): Return early if there are no
+	relocs to sort.
+
+2009-06-18  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	Merge cegcc and mingw32ce target name changes from
+	CeGCC project:
+
+	2007-12-25  Pedro Alves  <pedro_alves@portugalmail.pt>
+
+	* config.bfd: Add arm*-*-cegcc* target.
+
+	2007-12-17  Pedro Alves  <pedro_alves@portugalmail.pt>
+
+	* config.bfd: Add arm-*-mingw32ce* target.
+
+2009-06-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf-bfd.h (_bfd_elf_allocate_ifunc_dyn_relocs): New.
+	* elf-ifunc.c (_bfd_elf_allocate_ifunc_dyn_relocs): Likewise.
+	* elf32-i386.c (elf_i386_allocate_dynrelocs): Use it.
+	* elf64-x86-64.c (elf64_x86_64_allocate_dynrelocs): Likewise.
+
+2009-06-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf-bfd.h (_bfd_elf_create_ifunc_dyn_reloc): New.
+	* elf-ifunc.c (_bfd_elf_create_ifunc_dyn_reloc): Likewise.
+	* elf32-i386.c (elf_i386_check_relocs): Use it.
+	* elf64-x86-64.c (elf64_x86_64_check_relocs): Likewise.
+
+2009-06-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf-bfd.h (elf_dyn_relocs): New.
+
+	* elf32-i386.c (elf_i386_dyn_relocs): Removed.
+	(elf_i386_link_hash_entry): Replace elf_i386_dyn_relocs with
+	elf_dyn_relocs.
+	(elf_i386_copy_indirect_symbol): Likewise.
+	(elf_i386_check_relocs): Likewise.
+	(elf_i386_gc_sweep_hook): Likewise.
+	(elf_i386_allocate_dynrelocs): Likewise.
+	(elf_i386_readonly_dynrelocs): Likewise.
+	(elf_i386_size_dynamic_sections): Likewise.
+
+	* elf64-x86-64.c (elf64_x86_64_dyn_relocs): Removed.
+	(elf64_x86_64_link_hash_entry): Replace elf64_x86_64_dyn_relocs
+	with elf_dyn_relocs.
+	(elf64_x86_64_copy_indirect_symbol): Updated.
+	(elf64_x86_64_check_relocs): Likewise.
+	(elf64_x86_64_gc_sweep_hook): Likewise.
+	(elf64_x86_64_adjust_dynamic_symbol): Likewise.
+	(elf64_x86_64_allocate_dynrelocs): Likewise.
+	(elf64_x86_64_readonly_dynrelocs): Likewise.
+	(elf64_x86_64_size_dynamic_sections): Likewise.
+
+2009-06-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-arm.c (create_got_section): Get existing .rela.got
+	section.
+	* elf32-hppa.c (elf32_hppa_create_dynamic_sections): Likewise.
+	* elf32-lm32.c (create_got_section): Likewise.
+	* elf32-m32r.c (create_got_section): Likewise.
+	* elf32-ppc.c (ppc_elf_create_got): Likewise.
+	* elf32-s390.c (create_got_section): Likewise.
+	* elf32-sh.c (create_got_section): Likewise.
+	* elf32-xtensa.c (elf_xtensa_create_dynamic_sections): Likewise.
+	* elf64-s390.c (create_got_section): Likewise.
+	* elfxx-sparc.c (create_got_section): Likewise.
+
+	* elflink.c (_bfd_elf_create_got_section): Properly initialize
+	the GOT size.
+
+2009-06-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf-bfd.h (ELF_LOCAL_SYMBOL_HASH): New.
+
+	* elf32-i386.c (elf_i386_local_hash): Removed.
+	(elf_i386_local_htab_hash): Use ELF_LOCAL_SYMBOL_HASH.
+	(elf_i386_get_local_sym_hash): Likewise.
+
+	* elf64-x86-64.c (elf64_x86_64_local_hash): Removed.
+	(elf64_x86_64_local_htab_hash): Use ELF_LOCAL_SYMBOL_HASH.
+	(elf64_x86_64_get_local_sym_hash): Likewise.
+	* elfxx-ia64.c (elfNN_ia64_local_htab_hash): Likewise.
+	(get_local_sym_hash): Likewise.
+
+2009-06-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elfxx-ia64.c (elfNN_ia64_link_hash_table): Remove got_sec,
+	rel_got_sec and plt_sec.
+	(elfNN_ia64_relax_section): Updated.
+	(elfNN_ia64_create_dynamic_sections): Likewise.
+	(get_got): Likewise.
+	(allocate_dynrel_entries): Likewise.
+	(elfNN_ia64_size_dynamic_sections): Likewise.
+	(set_got_entry): Likewise.
+	(elfNN_ia64_choose_gp): Likewise.
+	(elfNN_ia64_relocate_section): Likewise.
+	(elfNN_ia64_finish_dynamic_symbol): Likewise.
+	(elfNN_ia64_finish_dynamic_sections): Likewise.
+
+2009-06-16  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* elf32-spu.c (needs_ovl_stub): Respect .brinfo lrlive bits
+	also for calls.
+
+2009-06-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure.in (elf): Add elf-ifunc.lo.
+
+	* configure: Regenerated.
+	* Makefile.in: Likewise.
+
+	* elf-bfd.h (elf_link_hash_table): Add sgot, sgotplt,
+	srelgot, splt, srelplt, igotplt, iplt, irelplt and irelifunc.
+
+	* elf32-i386.c (elf_i386_link_hash_table): Remove sgot,
+	sgotplt, srelgot, splt, srelplt, igotplt, iplt, irelplt and
+	irelifunc.
+	(elf_i386_link_hash_table_create): Likewise.
+	(elf_i386_create_dynamic_sections): Likewise.
+	(elf_i386_check_relocs): Likewise.
+	(elf_i386_allocate_dynrelocs): Likewise.
+	(elf_i386_size_dynamic_sections): Likewise.
+	(elf_i386_relocate_section): Likewise.
+	(elf_i386_finish_dynamic_symbol): Likewise.
+	(elf_i386_finish_dynamic_sections): Likewise.
+	(elf_i386_create_got_section): Removed.
+
+	* elf64-x86-64.c (elf64_x86_64_link_hash_table): Remove sgot,
+	sgotplt, srelgot, splt, srelplt, igotplt, iplt, irelplt and
+	irelifunc.
+	(elf64_x86_64_compute_jump_table_size): Updated.
+	(elf64_x86_64_link_hash_table_create): Likewise.
+	(elf64_x86_64_create_dynamic_sections): Likewise.
+	(elf64_x86_64_check_relocs): Likewise.
+	(elf64_x86_64_allocate_dynrelocs): Likewise.
+	(elf64_x86_64_size_dynamic_sections): Likewise.
+	(elf64_x86_64_relocate_section): Likewise.
+	(elf64_x86_64_finish_dynamic_symbol): Likewise.
+	(elf64_x86_64_finish_dynamic_sections): Likewise.
+	(elf64_x86_64_create_got_section): Removed.
+
+	* elflink.c (_bfd_elf_create_got_section): Use log_file_align
+	for pointer alignment.  Set up section pointers.
+	(_bfd_elf_create_dynamic_sections): Likewise.
+	(_bfd_elf_create_ifunc_sections): Moved to ...
+	* elf-ifunc.c: Here.  New.
+
+	* Makefile.am (BFD32_BACKENDS): Add elf-ifunc.lo.
+	(BFD32_BACKENDS_CFILES): Add elf-ifunc.c.
+	Run "make dep-am".
+
+2009-06-16  Doug Kwan  <dougkwan@google.com>
+
+	* elf32-arm.c (cortex_a8_erratum_scan): Change type of offset
+	to bfd_signed_vma.  Cast constant operands which are used in
+	offset related expressions to bfd_signed_vma type as appropriate.
+
+2009-06-16  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_plt_sym_val): New function.
+	(elf_backend_plt_sym_val): Define.
+
+2009-06-16  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_reloc_type_class): New function.
+	(elf_backend_reloc_type_class): Define.
+
+2009-06-16  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_relocate_section): For symbol references
+	from an executable to a shared library treat R_VAX_PC32
+	relocations as R_VAX_PLT32 ones.
+
+2009-06-16  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_instantiate_got_entries): Skip local
+	symbols in GOT space calculation.
+	(elf_vax_relocate_section): Adjust accordingly.
+
+2009-06-16  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_plt_entry): Set the entry mask to
+	include <R11:R2>.
+
+2009-06-16  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_check_relocs): Handle the visibility
+	attribute.
+	(elf_vax_relocate_section): Likewise.
+
+2009-06-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-i386.c (elf_i386_allocate_dynrelocs): Update comments.
+	* elf64-x86-64.c (elf64_x86_64_allocate_dynrelocs): Likewise.
+
+2009-06-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-i386.c (elf_i386_check_relocs): Reformat.
+	* elf64-x86-64.c (elf64_x86_64_check_relocs): Likewise.
+
+2009-06-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* Makefile.am: Run "make dep-am".
+	* Makefile.in: Regenerated.
+
+2009-06-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-i386.c (elf_i386_allocate_dynrelocs): Fix a typo.
+	* elf64-x86-64.c (elf64_x86_64_allocate_dynrelocs): Likewise.
+
+2009-06-15  Nick Clifton  <nickc@redhat.com>
+
+	* po/ru.po: New Russian translation.
+	* configure.in (ALL_LINGUAS): Add ru.
+	* configure: Regenerate.
+
+2009-06-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-i386.c: Remove duplicated comments.
+
+2009-06-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10270
+	* elf32-i386.c (elf_i386_allocate_dynrelocs): Disallow
+	dynamic IFUNC pointer in non-shared object.  Use .got.plt
+	for IFUNC definition in PIE.
+	(elf_i386_allocate_dynrelocs): Resolve IFUNC definition in
+	PIE locally.
+
+	* elf64-x86-64.c (elf64_x86_64_allocate_dynrelocs): Disallow
+	dynamic IFUNC pointer in non-shared object.  Use .got.plt
+	for IFUNC definition in PIE.
+	(elf64_x86_64_relocate_section): Resolve IFUNC definition in
+	PIE locally.
+
+2009-06-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-i386.c (elf_i386_check_relocs): Properly report
+	local symbol for unhandled relocation against STT_GNU_IFUNC
+	symbol.
+	(elf_i386_relocate_section): Likewise.
+	* elf64-x86-64.c (elf64_x86_64_check_relocs):  Likewise.
+	(elf64_x86_64_relocate_section): Likewise.
+
+2009-06-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10269
+	* elf32-i386.c: Include "objalloc.h" and "hashtab.h".
+	(elf_i386_link_hash_table): Add loc_hash_table and
+	loc_hash_memory.
+	(elf_i386_local_hash): New.
+	(elf_i386_local_htab_hash): Likewise.
+	(elf_i386_local_htab_eq): Likewise.
+	(elf_i386_get_local_sym_hash): Likewise.
+	(elf_i386_link_hash_table_free): Likewise.
+	(elf_i386_allocate_local_dynrelocs): Likewise.
+	(elf_i386_finish_local_dynamic_symbol): Likewise.
+	(bfd_elf64_bfd_link_hash_table_free): Likewise.
+	(elf_i386_link_hash_table_create): Create loc_hash_table and
+	loc_hash_memory.
+	(elf_i386_check_relocs): Handle local STT_GNU_IFUNC symbols.
+	(elf_i386_size_dynamic_sections): Likewise.
+	(elf_i386_relocate_section): Likewise.
+	(elf_i386_finish_dynamic_sections): Likewise.
+	(elf_i386_finish_dynamic_symbol): Check _DYNAMIC only if sym
+	isn't NULL.
+
+	* elf64-x86-64.c: Include "objalloc.h" and "hashtab.h".
+	(elf64_x86_64_link_hash_table): Add loc_hash_table and
+	loc_hash_memory.
+	(elf64_x86_64_local_hash): New.
+	(elf64_x86_64_local_htab_hash): Likewise.
+	(elf64_x86_64_local_htab_eq): Likewise.
+	(elf64_x86_64_get_local_sym_hash): Likewise.
+	(elf64_x86_64_link_hash_table_free): Likewise.
+	(elf64_x86_64_allocate_local_dynrelocs): Likewise.
+	(elf64_x86_64_finish_local_dynamic_symbol): Likewise.
+	(bfd_elf64_bfd_link_hash_table_free): Likewise.
+	(elf64_x86_64_link_hash_table_create): Create loc_hash_table
+	and loc_hash_memory.
+	(elf64_x86_64_check_relocs): Handle local STT_GNU_IFUNC
+	symbols.
+	(elf64_x86_64_size_dynamic_sections): Likewise.
+	(elf64_x86_64_relocate_section): Likewise.
+	(elf64_x86_64_finish_dynamic_sections): Likewise.
+	(elf64_x86_64_finish_dynamic_symbol): Check _DYNAMIC only if
+	sym isn't NULL.
+
+2009-06-10  Philip Blundell  <philb@gnu.org>
+
+	* elf32-arm.c (elf32_arm_fix_exidx_coverage): Avoid crash if
+	elf_sec->this_hdr == NULL.
+
+2009-06-12  Tristan Gingold  <gingold@adacore.com>
+
+	* reloc.c: Add BFD_RELOC_MACH_O_SECTDIFF and BFD_RELOC_MACH_O_PAIR.
+	* bfd-in2.h: Regenerated.
+	* libbfd.h: Regenerated.
+
+	* mach-o.c (FILE_ALIGN): New macro.
+	(bfd_mach_o_canonicalize_symtab): Adjust for bfd_mach_o_asymbol.
+	(bfd_mach_o_print_symbol): Ditto.
+	(bfd_mach_o_scan_write_thread): Adjust type of variable offset.
+	(bfd_mach_o_get_reloc_upper_bound): New function.
+	(bfd_mach_o_canonicalize_reloc): Ditto.
+	(bfd_mach_o_scan_write_relocs): Ditto.
+	(bfd_mach_o_scan_write_section_32): Remove offset argument.
+	(bfd_mach_o_scan_write_section_64): Ditto.
+	(bfd_mach_o_scan_write_segment_32): Write relocs.  Fix size of data
+	written for load command.  Do not compute section file offset.
+	(bfd_mach_o_scan_write_segment_64): Ditto.
+	(bfd_mach_o_scan_write_symtab): Compute file offset first.
+	Adjust for bfd_mach_o_asymbol.  Move code to convert from BFD to
+	Mach-O to ...
+	(bfd_mach_o_mangle_symbols): ... this new function.
+	(bfd_mach_o_write_contents): Be sure to have load commands built.
+	Call bfd_mach_o_mangle_symbols.
+	(bfd_mach_o_build_commands): Adjust for filelen field.
+	Use FILE_ALIGN macro.  Clear section file offset if section is empty.
+	Do not set symtab file offset anymore here.
+	(bfd_mach_o_make_empty_symbol): Allocate a bfd_mach_o_asymbol.
+	(bfd_mach_o_make_bfd_section): Set SEC_RELOC if has reloc.
+	Set reloc_count and rel_filepos section fields.
+	(bfd_mach_o_scan_read_section_32): Type of argument offset is now
+	unsigned int.
+	(bfd_mach_o_scan_read_section_64): Ditto.
+	(bfd_mach_o_scan_read_section): Ditto.
+	(bfd_mach_o_scan_read_symtab_symbol): Typr of argument s is now
+	bfd_mach_o_asymbol.  Use unsigned int for file offset type.
+	(bfd_mach_o_scan_read_symtab_symbol): Adjust for bfd_mach_o_asymbol.
+	Handle weak-ref symbols.
+	(bfd_mach_o_scan_read_symtab_symbols): Adjust for bfd_mach_o_asymbol.
+	(bfd_mach_o_scan_read_dysymtab_symbol): Ditto.
+	(bfd_mach_o_scan): Remove assignment to removed field.
+	(bfd_mach_o_mkobject_init): Ditto.
+	(bfd_mach_o_bfd_print_private_bfd_data): Adjust printf formatter.
+	(bfd_mach_o_bfd_reloc_type_lookup): New macro.
+	(bfd_mach_o_bfd_reloc_name_lookup): Ditto.
+	(bfd_mach_o_swap_reloc_in): Ditto.
+	(bfd_mach_o_swap_reloc_out): Ditto.
+
+	* mach-o.h (BFD_MACH_O_REFERENCE_FLAG_UNDEFINED_NON_LAZY)
+	(BFD_MACH_O_REFERENCE_FLAG_UNDEFINED_LAZY)
+	(BFD_MACH_O_REFERENCE_FLAG_DEFINED)
+	(BFD_MACH_O_REFERENCE_FLAG_PRIVATE_DEFINED)
+	(BFD_MACH_O_REFERENCE_FLAG_PRIVATE_UNDEFINED_NON_LAZY)
+	(BFD_MACH_O_REFERENCE_FLAG_PRIVATE_UNDEFINED_LAZY)
+	(BFD_MACH_O_REFERENCED_DYNAMICALLY, BFD_MACH_O_N_DESC_DISCARDED)
+	(BFD_MACH_O_N_NO_DEAD_STRIP, BFD_MACH_O_N_WEAK_REF)
+	(BFD_MACH_O_N_WEAK_DEF): New macros.
+	Add comments.
+	(bfd_mach_o_section_type): Add new enumeration values.
+	(BFD_MACH_O_S_SELF_MODIFYING_CODE)
+	(BFD_MACH_O_S_ATTR_LIVE_SUPPORT)
+	(BFD_MACH_O_S_ATTR_NO_DEAD_STRIP)
+	(BFD_MACH_O_S_ATTR_STRIP_STATIC_SYMS, BFD_MACH_O_S_ATTR_NO_TOC): New
+	macros.
+	(BFD_MACH_O_GENERIC_RELOC_VANILLA)
+	(BFD_MACH_O_GENERIC_RELOC_PAIR)
+	(BFD_MACH_O_GENERIC_RELOC_SECTDIFF)
+	(BFD_MACH_O_GENERIC_RELOC_PB_LA_PTR)
+	(BFD_MACH_O_GENERIC_RELOC_LOCAL_SECTDIFF): Ditto.
+	(BFD_MACH_O_RELENT_SIZE): Ditto.
+	(BFD_MACH_O_R_PCREL, BFD_MACH_O_GET_R_LENGTH)
+	(BFD_MACH_O_R_EXTERN, BFD_MACH_O_GET_R_TYPE)
+	(BFD_MACH_O_GET_R_SYMBOLNUM, BFD_MACH_O_SET_R_LENGTH)
+	(BFD_MACH_O_SET_R_TYPE, BFD_MACH_O_SET_R_SYMBOLNUM): Ditto.
+	(BFD_MACH_O_SR_SCATTERED, BFD_MACH_O_SR_PCREL)
+	(BFD_MACH_O_GET_SR_LENGTH, BFD_MACH_O_GET_SR_TYPE)
+	(BFD_MACH_O_GET_SR_ADDRESS, BFD_MACH_O_SET_SR_LENGTH)
+	(BFD_MACH_O_SET_SR_TYPE, BFD_MACH_O_SET_SR_ADDRESS): Ditto.
+	(bfd_mach_o_reloc_info): New struct.
+	(bfd_mach_o_asymbol): New struct.
+	(bfd_mach_o_symtab_command): The symbols field is now of type
+	bfd_mach_o_asymbol.
+	(bfd_mach_o_load_command): The offset and len fields are now of type
+	unsigned int.
+	(mach_o_data_struct): Remove symbols, nsymbols and ibfd fields.
+	Add a filelen field.  Add comments.
+	(bfd_mach_o_backend_data): New struct.
+	(bfd_mach_o_get_backend_data): New macro.
+	(bfd_mach_o_scan_read_symtab_symbol): Parameter symbol now of type
+	bfd_mach_o_asymbol.
+	(bfd_mach_o_scan_read_dysymtab_symbol): Ditto.
+	(bfd_mach_o_get_reloc_upper_bound): New prototype.
+	(bfd_mach_o_canonicalize_reloc): Ditto.
+	
+	* mach-o-target.c (bfd_mach_o_bfd_is_local_label_name): Remove
+	duplicated macro.  Now defined to _bfd_generic_is_local_label.
+	(TARGET_NAME_BACKEND): New macro...
+	(TARGET_NAME_BACKEND): ... used to name a new variable.
+	(TARGET_NAME): Define relocs table using bfd_mach_o, reference
+	Mach-O backend data.
+
+	* mach-o-i386.c (i386_howto_table): New variable.
+	(bfd_mach_o_i386_swap_reloc_in): New function.
+	(bfd_mach_o_i386_swap_reloc_out): Ditto.
+	(bfd_mach_o_i386_bfd_reloc_type_lookup): Ditto.
+	(bfd_mach_o_i386_bfd_reloc_name_lookup): Ditto.
+	(bfd_mach_o_swap_reloc_in, bfd_mach_o_swap_reloc_out): New macros.
+	(bfd_mach_o_bfd_reloc_type_lookup)
+	(bfd_mach_o_bfd_reloc_name_lookup): Ditto.
+
+2009-06-11  Eric Paris  <eparis@redhat.com>
+	    Nick Clifton  <nickc@redhat.com>
+
+	* opncls.c (_maybe_make_executable): New function.  Gives execute
+	permission to an executable bfd that was opened for writing
+	provided that it is a regular file.  Replaces common code found in...
+	(bfd_close): here and ...
+	(bfd_close_all_done): here.
+
 2009-06-11  Anthony Green  <green@moxielogic.com>
 
 	* reloc.c: Add BFD_RELOC_MOXIE_10_PCREL.

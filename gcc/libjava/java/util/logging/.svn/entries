@@ -1,7 +1,7 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/java/util/logging
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-FileHandler$ostr.h
-file
-
-
-
-
-2009-04-24T17:49:23.000000Z
-a073ced9971387b8a30816f0c4b59dc2
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-904
 
 StreamHandler.h
 file
@@ -93,6 +59,40 @@ tromey
 
 
 1433
+
+FileHandler$ostr.h
+file
+
+
+
+
+2009-04-24T17:49:23.000000Z
+a073ced9971387b8a30816f0c4b59dc2
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+904
 
 LoggingPermission.h
 file
@@ -264,40 +264,6 @@ tromey
 
 435
 
-LogManager.java
-file
-
-
-
-
-2009-04-24T17:49:23.000000Z
-19e9d37c53baef10a9d2ad79720951cf
-2007-03-30T04:09:35.365735Z
-123356
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-31195
-
 MemoryHandler.h
 file
 
@@ -331,6 +297,40 @@ tromey
 
 
 1043
+
+LogManager.java
+file
+
+
+
+
+2009-04-24T17:49:23.000000Z
+19e9d37c53baef10a9d2ad79720951cf
+2007-03-30T04:09:35.365735Z
+123356
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+31195
 
 Level.h
 file
@@ -434,14 +434,14 @@ tromey
 
 3189
 
-Handler.h
+SimpleFormatter.h
 file
 
 
 
 
 2009-04-24T17:49:23.000000Z
-5afe39e2526b1397148871f25d9c16e1
+b819aafb4fc7ee35e8fabccd22b8956f
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -466,7 +466,7 @@ tromey
 
 
 
-1614
+810
 
 FileHandler.h
 file
@@ -502,14 +502,14 @@ tromey
 
 1629
 
-SimpleFormatter.h
+Handler.h
 file
 
 
 
 
 2009-04-24T17:49:23.000000Z
-b819aafb4fc7ee35e8fabccd22b8956f
+5afe39e2526b1397148871f25d9c16e1
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -534,7 +534,7 @@ tromey
 
 
 
-810
+1614
 
 Logger.h
 file

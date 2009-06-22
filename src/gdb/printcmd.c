@@ -407,7 +407,7 @@ print_scalar_formatted (const void *valaddr, struct type *type,
   /* If we are printing it as unsigned, truncate it in case it is actually
      a negative signed value (e.g. "print/u (short)-1" should print 65535
      (if shorts are 16 bits) instead of 4294967295).  */
-  if (options->format != 'd')
+  if (options->format != 'd' || TYPE_UNSIGNED (type))
     {
       if (len < sizeof (LONGEST))
 	val_long &= ((LONGEST) 1 << HOST_CHAR_BIT * len) - 1;
@@ -1616,7 +1616,7 @@ do_one_display (struct display *d)
       val = evaluate_expression (d->exp);
       addr = value_as_address (val);
       if (d->format.format == 'i')
-	addr = gdbarch_addr_bits_remove (current_gdbarch, addr);
+	addr = gdbarch_addr_bits_remove (d->exp->gdbarch, addr);
 
       annotate_display_value ();
 
@@ -2271,7 +2271,9 @@ printf_command (char *arg, int from_tty)
 	      gdb_byte *str;
 	      CORE_ADDR tem;
 	      int j;
-	      struct type *wctype = lookup_typename ("wchar_t", NULL, 0);
+	      struct type *wctype = lookup_typename (current_language,
+						     current_gdbarch,
+						     "wchar_t", NULL, 0);
 	      int wcwidth = TYPE_LENGTH (wctype);
 	      gdb_byte *buf = alloca (wcwidth);
 	      struct obstack output;
@@ -2309,7 +2311,9 @@ printf_command (char *arg, int from_tty)
 	    break;
 	  case wide_char_arg:
 	    {
-	      struct type *wctype = lookup_typename ("wchar_t", NULL, 0);
+	      struct type *wctype = lookup_typename (current_language,
+						     current_gdbarch,
+						     "wchar_t", NULL, 0);
 	      struct type *valtype;
 	      struct obstack output;
 	      struct cleanup *inner_cleanup;

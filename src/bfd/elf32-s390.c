@@ -730,8 +730,8 @@ struct elf_s390_link_hash_table
     bfd_vma offset;
   } tls_ldm_got;
 
-  /* Small local sym to section mapping cache.  */
-  struct sym_sec_cache sym_sec;
+  /* Small local sym cache.  */
+  struct sym_cache sym_cache;
 };
 
 /* Get the s390 ELF linker hash table from a link_info structure.  */
@@ -800,7 +800,7 @@ elf_s390_link_hash_table_create (abfd)
   ret->sdynbss = NULL;
   ret->srelbss = NULL;
   ret->tls_ldm_got.refcount = 0;
-  ret->sym_sec.abfd = NULL;
+  ret->sym_cache.abfd = NULL;
 
   return &ret->elf.root;
 }
@@ -821,18 +821,10 @@ create_got_section (dynobj, info)
   htab = elf_s390_hash_table (info);
   htab->sgot = bfd_get_section_by_name (dynobj, ".got");
   htab->sgotplt = bfd_get_section_by_name (dynobj, ".got.plt");
-  if (!htab->sgot || !htab->sgotplt)
+  htab->srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
+  if (!htab->sgot || !htab->sgotplt || !htab->srelgot)
     abort ();
 
-  htab->srelgot = bfd_make_section_with_flags (dynobj, ".rela.got",
-					       (SEC_ALLOC | SEC_LOAD
-						| SEC_HAS_CONTENTS
-						| SEC_IN_MEMORY
-						| SEC_LINKER_CREATED
-						| SEC_READONLY));
-  if (htab->srelgot == NULL
-      || ! bfd_set_section_alignment (dynobj, htab->srelgot, 2))
-    return FALSE;
   return TRUE;
 }
 
@@ -1302,11 +1294,16 @@ elf_s390_check_relocs (abfd, info, sec, relocs)
 		     easily.  Oh well.  */
 		  asection *s;
 		  void *vpp;
+		  Elf_Internal_Sym *isym;
 
-		  s = bfd_section_from_r_symndx (abfd, &htab->sym_sec,
-						 sec, r_symndx);
-		  if (s == NULL)
+		  isym = bfd_sym_from_r_symndx (&htab->sym_cache,
+						abfd, r_symndx);
+		  if (isym == NULL)
 		    return FALSE;
+
+		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
+		  if (s == NULL)
+		    s = sec;
 
 		  vpp = &elf_section_data (s)->local_dynrel;
 		  head = (struct elf_s390_dyn_relocs **) vpp;

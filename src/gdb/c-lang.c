@@ -904,17 +904,20 @@ evaluate_subexp_c (struct type *expect_type, struct expression *exp,
 	switch (dest_type & ~C_CHAR)
 	  {
 	  case C_STRING:
-	    type = language_string_char_type (current_language,
-					      current_gdbarch);
+	    type = language_string_char_type (exp->language_defn,
+					      exp->gdbarch);
 	    break;
 	  case C_WIDE_STRING:
-	    type = lookup_typename ("wchar_t", NULL, 0);
+	    type = lookup_typename (exp->language_defn, exp->gdbarch,
+				    "wchar_t", NULL, 0);
 	    break;
 	  case C_STRING_16:
-	    type = lookup_typename ("char16_t", NULL, 0);
+	    type = lookup_typename (exp->language_defn, exp->gdbarch,
+				    "char16_t", NULL, 0);
 	    break;
 	  case C_STRING_32:
-	    type = lookup_typename ("char32_t", NULL, 0);
+	    type = lookup_typename (exp->language_defn, exp->gdbarch,
+				    "char32_t", NULL, 0);
 	    break;
 	  default:
 	    internal_error (__FILE__, __LINE__, "unhandled c_string_type");
@@ -948,7 +951,7 @@ evaluate_subexp_c (struct type *expect_type, struct expression *exp,
 	    if ((dest_type & C_CHAR) != 0)
 	      result = allocate_value (type);
 	    else
-	      result = value_typed_string ("", 0, type);
+	      result = value_cstring ("", 0, type);
 	    do_cleanups (cleanup);
 	    return result;
 	  }
@@ -968,9 +971,9 @@ evaluate_subexp_c (struct type *expect_type, struct expression *exp,
 	    /* Write the terminating character.  */
 	    for (i = 0; i < TYPE_LENGTH (type); ++i)
 	      obstack_1grow (&output, 0);
-	    result = value_typed_string (obstack_base (&output),
-					 obstack_object_size (&output),
-					 type);
+	    result = value_cstring (obstack_base (&output),
+				    obstack_object_size (&output),
+				    type);
 	  }
 	do_cleanups (cleanup);
 	return result;

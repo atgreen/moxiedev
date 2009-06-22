@@ -871,7 +871,7 @@ dw2_output_indirect_constant_1 (splay_tree_node node,
   sym = (const char *) node->key;
   id = (tree) node->value;
 
-  decl = build_decl (VAR_DECL, id, ptr_type_node);
+  decl = build_decl (UNKNOWN_LOCATION, VAR_DECL, id, ptr_type_node);
   DECL_ARTIFICIAL (decl) = 1;
   DECL_IGNORED_P (decl) = 1;
   DECL_INITIAL (decl) = decl;
@@ -879,7 +879,7 @@ dw2_output_indirect_constant_1 (splay_tree_node node,
   if (TREE_PUBLIC (id))
     {
       TREE_PUBLIC (decl) = 1;
-      make_decl_one_only (decl);
+      make_decl_one_only (decl, DECL_ASSEMBLER_NAME (decl));
     }
   else
     TREE_STATIC (decl) = 1;

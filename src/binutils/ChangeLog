@@ -1,3 +1,49 @@
+2009-06-18  Nick Clifton  <nickc@redhat.com>
+
+	PR 10288
+	* objdump.c (disassemble_bytes): Set the
+	USER_SPECIFIED_MACHINE_TYPE flag in the disassemble_info structure
+	if the user has invoked the -m switch.
+	* doc/binutils.texi: Document the additional behaviour of
+	objdump's -m switch for ARM targets.
+
+2009-06-18  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* configure.in: Merge cegcc and mingw32ce target name changes from
+	CeGCC project.
+
+2007-12-25  Pedro Alves  <pedro_alves@portugalmail.pt>
+
+	* configure.in: Add arm*-*-cegcc* and arm*-*-mingw32ce* targets.
+	* configure: Regenerate.
+
+2009-06-15  Nick Clifton  <nickc@redhat.com>
+
+	PR 10263
+	* objdump.c (disassemble_bytes): Set the DISASSEMBLE_DATA bit in
+	the flags field of the disassemble_info structure if the -D switch
+	is in operation.
+
+2009-06-12  Homer Xing  <homer.xing@yahoo.com>
+
+	* NEWS: Mention new feature added to gprof.
+
+2009-06-12  John Reiser  <jreiser@BitWagon.com>
+
+	* readelf.c (process_symbol_table): Set gnubuckets to NULL after
+	freeing it and before returning.
+
+2009-06-12  Jakub Jelinek  <jakub@redhat.com>
+
+	* readelf.c (process_symbol_table): Don't return early if
+	.hash/.gnu.hash is empty/unusable and not -D.
+
+2009-06-09  Tom Bramer  <tjb@postpro.net>
+
+	PR 10165
+	* winduni.c (wind_MultiByteToWideChar): Do not pass MB_PRECOMPOSED
+	to MultiByteToWideChar when using the CP_UTF8 or CO_UTF7 types.
+
 2009-06-04  Alan Modra  <amodra@bigpond.net.au>
 
 	* strings.c (main): Delay parsing of decimal digits.

@@ -846,13 +846,10 @@ create_array_type (struct type *result_type,
    type?  */
 
 struct type *
-create_string_type (struct type *result_type, 
+create_string_type (struct type *result_type,
+		    struct type *string_char_type,
 		    struct type *range_type)
 {
-  struct type *string_char_type;
-      
-  string_char_type = language_string_char_type (current_language,
-						current_gdbarch);
   result_type = create_array_type (result_type,
 				   string_char_type,
 				   range_type);
@@ -1036,7 +1033,9 @@ type_name_no_tag (const struct type *type)
    suitably defined.  */
 
 struct type *
-lookup_typename (char *name, struct block *block, int noerr)
+lookup_typename (const struct language_defn *language,
+		 struct gdbarch *gdbarch, char *name,
+		 struct block *block, int noerr)
 {
   struct symbol *sym;
   struct type *tmp;
@@ -1044,9 +1043,7 @@ lookup_typename (char *name, struct block *block, int noerr)
   sym = lookup_symbol (name, block, VAR_DOMAIN, 0);
   if (sym == NULL || SYMBOL_CLASS (sym) != LOC_TYPEDEF)
     {
-      tmp = language_lookup_primitive_type_by_name (current_language,
-						    current_gdbarch,
-						    name);
+      tmp = language_lookup_primitive_type_by_name (language, gdbarch, name);
       if (tmp)
 	{
 	  return tmp;
@@ -1064,28 +1061,30 @@ lookup_typename (char *name, struct block *block, int noerr)
 }
 
 struct type *
-lookup_unsigned_typename (char *name)
+lookup_unsigned_typename (const struct language_defn *language,
+			  struct gdbarch *gdbarch, char *name)
 {
   char *uns = alloca (strlen (name) + 10);
 
   strcpy (uns, "unsigned ");
   strcpy (uns + 9, name);
-  return (lookup_typename (uns, (struct block *) NULL, 0));
+  return lookup_typename (language, gdbarch, uns, (struct block *) NULL, 0);
 }
 
 struct type *
-lookup_signed_typename (char *name)
+lookup_signed_typename (const struct language_defn *language,
+			struct gdbarch *gdbarch, char *name)
 {
   struct type *t;
   char *uns = alloca (strlen (name) + 8);
 
   strcpy (uns, "signed ");
   strcpy (uns + 7, name);
-  t = lookup_typename (uns, (struct block *) NULL, 1);
+  t = lookup_typename (language, gdbarch, uns, (struct block *) NULL, 1);
   /* If we don't find "signed FOO" just try again with plain "FOO".  */
   if (t != NULL)
     return t;
-  return lookup_typename (name, (struct block *) NULL, 0);
+  return lookup_typename (language, gdbarch, name, (struct block *) NULL, 0);
 }
 
 /* Lookup a structure type named "struct NAME",
@@ -1332,34 +1331,6 @@ get_vptr_fieldno (struct type *type, struct type **basetypep)
 	*basetypep = TYPE_VPTR_BASETYPE (type);
       return TYPE_VPTR_FIELDNO (type);
     }
-}
-
-/* Find the method and field indices for the destructor in class type T.
-   Return 1 if the destructor was found, otherwise, return 0.  */
-
-int
-get_destructor_fn_field (struct type *t, 
-			 int *method_indexp, 
-			 int *field_indexp)
-{
-  int i;
-
-  for (i = 0; i < TYPE_NFN_FIELDS (t); i++)
-    {
-      int j;
-      struct fn_field *f = TYPE_FN_FIELDLIST1 (t, i);
-
-      for (j = 0; j < TYPE_FN_FIELDLIST_LENGTH (t, i); j++)
-	{
-	  if (is_destructor_name (TYPE_FN_FIELD_PHYSNAME (f, j)) != 0)
-	    {
-	      *method_indexp = i;
-	      *field_indexp = j;
-	      return 1;
-	    }
-	}
-    }
-  return 0;
 }
 
 static void

@@ -1,3 +1,54 @@
+2009-06-18  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Add handling of "@cjknarrow"
+	modifier on _MB_CAPABLE targets.  Add comment to explain.  Improve
+	documentation.
+
+2009-06-17  Michael Eager <eager@eagercon.com>
+
+	* libc/include/pthread.h: Support XMK (Xilinx) BSP, add RTEMS to
+	PTHREAD_MUTEX_NORMAL.
+	* libc/include/sys/features.h: Same.
+	* libc/include/sys/types.h: Same.
+
+2009-06-16  Corinna Vinschen  <corinna@vinschen.de>
+	
+	* libc/include/locale.h (struct lconv): Add missing members required
+	by POSIX.1-2008.
+	* libc/locale/locale.c (lconv): Initialize new members to default
+	values in "C" locale.
+
+2009-06-16  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdio/vfprintf.c (_VFPRINTF_R): Use actual length of
+	radix char instead of assuming length 1.
+	* libc/stdlib/gdtoa-gethex.c: Remove use of USE_LOCALE.
+	(gethex): Allow multibyte decimal point.
+	Fix compiler warnings due to different signedness of pointer types.
+	* libc/stdlib/strtod.c: Remove use of USE_LOCALE.
+	(_strtod_r): Allow multibyte decimal point.
+	* libc/stdlib/wcstod.c (_wcstod_r): Evaluate correct wide char
+	endptr position if the decimal point is a multibyte char.
+
+2009-06-16  Craig Howland <howland@LGSInnovations.com>
+
+	* libc/ctype/local.h (__locale_charset): Add arguments to
+	prototype
+	* libc/stdlib/local.h (__locale_charset): Ditto.
+
+2009-06-16  Craig Howland <howland@LGSInnovations.com>
+
+	* libc/include/math.h:  Simplify fpclassify, isinf, isnan, and signbit
+	macros to remove un-necessary extension use.  isinf and isnan also
+	changed to use fpclassify.  isfinite macro modified to run faster by
+	only calling fpclassify once instead of possibly twice.
+
+2009-06-09  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/ctype/tolower.c (tolower): Cast conversion result from
+	mbtowc/wctomb to unsigned char to avoid negative return values.
+	* libc/ctype/toupper.c (toupper): Ditto.
+
 2009-06-03  IWAMURO Motonori  <deenheart@gmail.com>
 
 	* libc/string/wcwidth.c: Optimize for speed.

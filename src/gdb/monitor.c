@@ -1412,7 +1412,7 @@ monitor_write_memory (CORE_ADDR memaddr, char *myaddr, int len)
   monitor_debug ("MON write %d %s\n", len, paddr (memaddr));
 
   if (current_monitor->flags & MO_ADDR_BITS_REMOVE)
-    memaddr = gdbarch_addr_bits_remove (current_gdbarch, memaddr);
+    memaddr = gdbarch_addr_bits_remove (target_gdbarch, memaddr);
 
   /* Use memory fill command for leading 0 bytes.  */
 
@@ -1811,7 +1811,7 @@ monitor_read_memory (CORE_ADDR memaddr, char *myaddr, int len)
 		 paddr_nz (memaddr), (long) myaddr, len);
 
   if (current_monitor->flags & MO_ADDR_BITS_REMOVE)
-    memaddr = gdbarch_addr_bits_remove (current_gdbarch, memaddr);
+    memaddr = gdbarch_addr_bits_remove (target_gdbarch, memaddr);
 
   if (current_monitor->flags & MO_GETMEM_READ_SINGLE)
     return monitor_read_memory_single (memaddr, myaddr, len);
@@ -2289,11 +2289,11 @@ init_base_monitor_ops (void)
   monitor_ops.to_thread_alive = monitor_thread_alive;
   monitor_ops.to_pid_to_str = monitor_pid_to_str;
   monitor_ops.to_stratum = process_stratum;
-  monitor_ops.to_has_all_memory = 1;
-  monitor_ops.to_has_memory = 1;
-  monitor_ops.to_has_stack = 1;
-  monitor_ops.to_has_registers = 1;
-  monitor_ops.to_has_execution = 1;
+  monitor_ops.to_has_all_memory = default_child_has_all_memory;
+  monitor_ops.to_has_memory = default_child_has_memory;
+  monitor_ops.to_has_stack = default_child_has_stack;
+  monitor_ops.to_has_registers = default_child_has_registers;
+  monitor_ops.to_has_execution = default_child_has_execution;
   monitor_ops.to_magic = OPS_MAGIC;
 }				/* init_base_monitor_ops */
 

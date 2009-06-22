@@ -1061,8 +1061,8 @@ Common Report Var(flag_section_anchors) Optimization
 Access data in the same section from shared anchor points
 
 fsee
-Common Report Var(flag_see) Init(0)
-Eliminate redundant sign extensions using LCM.
+Common
+Does nothing.  Preserved for backward compatibility.
 
 fshow-column
 Common C ObjC C++ ObjC++ Report Var(flag_show_column) Init(1)
@@ -1410,12 +1410,12 @@ Common JoinedOrMissing
 Generate debug information in default format
 
 gcoff
-Common JoinedOrMissing Negative(gdwarf-2)
+Common JoinedOrMissing Negative(gdwarf-)
 Generate debug information in COFF format
 
-gdwarf-2
-Common JoinedOrMissing Negative(gstabs)
-Generate debug information in DWARF v2 format
+gdwarf-
+Common Joined UInteger Var(dwarf_version) Init(2) Negative(gstabs)
+Generate debug information in DWARF v2 (or later) format
 
 ggdb
 Common JoinedOrMissing

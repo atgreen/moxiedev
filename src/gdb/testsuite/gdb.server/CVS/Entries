@@ -1,10 +1,10 @@
 /Makefile.in/1.1/Fri May 29 23:30:12 2009//
 /ext-attach.c/1.2/Fri May 29 23:30:12 2009//
 /ext-attach.exp/1.4/Fri May 29 23:30:12 2009//
-/ext-run.exp/1.4/Fri May 29 23:30:12 2009//
-/file-transfer.exp/1.4/Fri May 29 23:30:12 2009//
-/server-mon.exp/1.5/Fri May 29 23:30:12 2009//
-/server-run.exp/1.7/Fri May 29 23:30:12 2009//
 /server.c/1.5/Fri May 29 23:30:12 2009//
 /transfer.txt/1.1/Fri May 29 23:30:12 2009//
+/ext-run.exp/1.5/Fri Jun 19 11:14:04 2009//
+/file-transfer.exp/1.5/Fri Jun 19 11:14:04 2009//
+/server-mon.exp/1.6/Fri Jun 19 11:14:04 2009//
+/server-run.exp/1.8/Fri Jun 19 11:14:04 2009//
 D

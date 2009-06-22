@@ -67,19 +67,6 @@ nto_target (void)
 #endif
 }
 
-void
-nto_set_target (struct nto_target_ops *targ)
-{
-  nto_regset_id = targ->regset_id;
-  nto_supply_gregset = targ->supply_gregset;
-  nto_supply_fpregset = targ->supply_fpregset;
-  nto_supply_altregset = targ->supply_altregset;
-  nto_supply_regset = targ->supply_regset;
-  nto_register_area = targ->register_area;
-  nto_regset_fill = targ->regset_fill;
-  nto_fetch_link_map_offsets = targ->fetch_link_map_offsets;
-}
-
 /* Take a string such as i386, rs6000, etc. and map it onto CPUTYPE_X86,
    CPUTYPE_PPC, etc. as defined in nto-share/dsmsgs.h.  */
 int
@@ -338,27 +325,6 @@ nto_in_dynsym_resolve_code (CORE_ADDR pc)
   if (in_plt_section (pc, NULL))
     return 1;
   return 0;
-}
-
-void
-nto_generic_supply_gpregset (const struct regset *regset,
-			     struct regcache *regcache, int regnum,
-			     const void *gregs, size_t len)
-{
-}
-
-void
-nto_generic_supply_fpregset (const struct regset *regset,
-			     struct regcache *regcache, int regnum,
-			     const void *fpregs, size_t len)
-{
-}
-
-void
-nto_generic_supply_altregset (const struct regset *regset,
-			      struct regcache *regcache, int regnum,
-			      const void *altregs, size_t len)
-{
 }
 
 void

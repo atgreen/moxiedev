@@ -12147,7 +12147,7 @@ bfd_default_target_size=32
 
 # host stuff:
 
-ALL_LINGUAS="fr tr ja es sv da zh_CN ro rw vi fi id"
+ALL_LINGUAS="fr tr ja es sv da zh_CN ro rw vi fi id ru"
 # If we haven't got the data from the intl directory,
 # assume NLS is disabled.
 USE_NLS=no
@@ -20942,7 +20942,8 @@ selarchs="$f"
 # Target backend .o files.
 tb=
 
-elf="elf.lo elflink.lo elf-attrs.lo elf-strtab.lo elf-eh-frame.lo dwarf1.lo"
+elf="elf.lo elflink.lo elf-attrs.lo elf-ifunc.lo elf-strtab.lo
+     elf-eh-frame.lo dwarf1.lo"
 
 for vec in $selvecs
 do

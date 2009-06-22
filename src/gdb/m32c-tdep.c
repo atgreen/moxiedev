@@ -1541,7 +1541,7 @@ m32c_analyze_prologue (struct gdbarch *arch,
   st.fb = pv_register (tdep->fb->num, 0);
   st.sp = pv_register (tdep->sp->num, 0);
   st.pc = pv_register (tdep->pc->num, 0);
-  st.stack = make_pv_area (tdep->sp->num);
+  st.stack = make_pv_area (tdep->sp->num, gdbarch_addr_bit (arch));
   back_to = make_cleanup_free_pv_area (st.stack);
 
   /* Record that the call instruction has saved the return address on
@@ -1815,7 +1815,7 @@ m32c_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR ip)
   /* Find end by prologue analysis.  */
   m32c_analyze_prologue (gdbarch, ip, func_end, &p);
   /* Find end by line info.  */
-  sal_end = skip_prologue_using_sal (ip);
+  sal_end = skip_prologue_using_sal (gdbarch, ip);
   /* Return whichever is lower.  */
   if (sal_end != 0 && sal_end != ip && sal_end < p.prologue_end)
     return sal_end;
@@ -2401,7 +2401,8 @@ m32c_skip_trampoline_code (struct frame_info *frame, CORE_ADDR stop_pc)
    programmer!  :)  */
 
 static void
-m32c_m16c_address_to_pointer (struct type *type, gdb_byte *buf, CORE_ADDR addr)
+m32c_m16c_address_to_pointer (struct gdbarch *gdbarch,
+			      struct type *type, gdb_byte *buf, CORE_ADDR addr)
 {
   enum type_code target_code;
   gdb_assert (TYPE_CODE (type) == TYPE_CODE_PTR ||
@@ -2449,7 +2450,8 @@ m32c_m16c_address_to_pointer (struct type *type, gdb_byte *buf, CORE_ADDR addr)
 
 
 static CORE_ADDR
-m32c_m16c_pointer_to_address (struct type *type, const gdb_byte *buf)
+m32c_m16c_pointer_to_address (struct gdbarch *gdbarch,
+			      struct type *type, const gdb_byte *buf)
 {
   CORE_ADDR ptr;
   enum type_code target_code;

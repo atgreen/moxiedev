@@ -1,7 +1,7 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/awt/font/autofit
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ has-props
 
 402
 
-LatinBlue.class
-file
-
-
-
-
-2009-04-24T17:47:31.000000Z
-ce450f7ef4fb2b20a5a4655b98ae5666
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1023
-
 Width.class
 file
 
@@ -127,6 +93,40 @@ has-props
 
 
 847
+
+LatinBlue.class
+file
+
+
+
+
+2009-04-24T17:47:31.000000Z
+ce450f7ef4fb2b20a5a4655b98ae5666
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1023
 
 AutoHinter.class
 file
@@ -230,40 +230,6 @@ has-props
 
 504
 
-HintScaler.class
-file
-
-
-
-
-2009-04-24T17:47:31.000000Z
-4eb9b5a48285c248482b39c5bb764493
-2007-06-03T23:18:43.019099Z
-125302
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-459
-
 LatinAxis.class
 file
 
@@ -297,6 +263,40 @@ has-props
 
 
 689
+
+HintScaler.class
+file
+
+
+
+
+2009-04-24T17:47:31.000000Z
+4eb9b5a48285c248482b39c5bb764493
+2007-06-03T23:18:43.019099Z
+125302
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+459
 
 LatinMetrics.class
 file
@@ -400,40 +400,6 @@ has-props
 
 1962
 
-Edge.class
-file
-
-
-
-
-2009-04-24T17:47:31.000000Z
-335bb2688f246840570e988d23442709
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1799
-
 Script.class
 file
 
@@ -467,6 +433,40 @@ has-props
 
 
 659
+
+Edge.class
+file
+
+
+
+
+2009-04-24T17:47:31.000000Z
+335bb2688f246840570e988d23442709
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1799
 
 Latin.class
 file

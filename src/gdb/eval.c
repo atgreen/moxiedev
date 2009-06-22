@@ -754,7 +754,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	struct value *val;
 
 	(*pos) += 3 + BYTES_TO_EXP_ELEM (exp->elts[pc + 1].longconst + 1);
-	regno = user_reg_map_name_to_regnum (current_gdbarch,
+	regno = user_reg_map_name_to_regnum (exp->gdbarch,
 					     name, strlen (name));
 	if (regno == -1)
 	  error (_("Register $%s not available."), name);
@@ -765,9 +765,9 @@ evaluate_subexp_standard (struct type *expect_type,
            So for these registers, we fetch the register value regardless
            of the evaluation mode.  */
 	if (noside == EVAL_AVOID_SIDE_EFFECTS
-	    && regno < gdbarch_num_regs (current_gdbarch)
-	       + gdbarch_num_pseudo_regs (current_gdbarch))
-	  val = value_zero (register_type (current_gdbarch, regno), not_lval);
+	    && regno < gdbarch_num_regs (exp->gdbarch)
+			+ gdbarch_num_pseudo_regs (exp->gdbarch))
+	  val = value_zero (register_type (exp->gdbarch, regno), not_lval);
 	else
 	  val = value_of_register (regno, get_selected_frame (NULL));
 	if (val == NULL)
@@ -789,7 +789,8 @@ evaluate_subexp_standard (struct type *expect_type,
       (*pos) += 3 + BYTES_TO_EXP_ELEM (tem + 1);
       if (noside == EVAL_SKIP)
 	goto nosideret;
-      return value_string (&exp->elts[pc + 2].string, tem);
+      type = language_string_char_type (exp->language_defn, exp->gdbarch);
+      return value_string (&exp->elts[pc + 2].string, tem, type);
 
     case OP_OBJC_NSSTRING:		/* Objective C Foundation Class NSString constant.  */
       tem = longest_to_int (exp->elts[pc + 1].longconst);
@@ -798,7 +799,7 @@ evaluate_subexp_standard (struct type *expect_type,
 	{
 	  goto nosideret;
 	}
-      return (struct value *) value_nsstring (&exp->elts[pc + 2].string, tem + 1);
+      return value_nsstring (exp->gdbarch, &exp->elts[pc + 2].string, tem + 1);
 
     case OP_BITSTRING:
       tem = longest_to_int (exp->elts[pc + 1].longconst);
@@ -1010,23 +1011,24 @@ evaluate_subexp_standard (struct type *expect_type,
 	  sel[len] = 0;		/* Make sure it's terminated.  */
 
 	selector_type = builtin_type (exp->gdbarch)->builtin_data_ptr;
-	return value_from_longest (selector_type, lookup_child_selector (sel));
+	return value_from_longest (selector_type,
+				   lookup_child_selector (exp->gdbarch, sel));
       }
 
     case OP_OBJC_MSGCALL:
       {				/* Objective C message (method) call.  */
 
-	static CORE_ADDR responds_selector = 0;
-	static CORE_ADDR method_selector = 0;
+	CORE_ADDR responds_selector = 0;
+	CORE_ADDR method_selector = 0;
 
 	CORE_ADDR selector = 0;
 
 	int struct_return = 0;
 	int sub_no_side = 0;
 
-	static struct value *msg_send = NULL;
-	static struct value *msg_send_stret = NULL;
-	static int gnu_runtime = 0;
+	struct value *msg_send = NULL;
+	struct value *msg_send_stret = NULL;
+	int gnu_runtime = 0;
 
 	struct value *target = NULL;
 	struct value *method = NULL;
@@ -1098,16 +1100,20 @@ evaluate_subexp_standard (struct type *expect_type,
 	   the verification method than the non-standard, but more
 	   often used, 'NSObject' class. Make sure we check for both. */
 
-	responds_selector = lookup_child_selector ("respondsToSelector:");
+	responds_selector
+	  = lookup_child_selector (exp->gdbarch, "respondsToSelector:");
 	if (responds_selector == 0)
-	  responds_selector = lookup_child_selector ("respondsTo:");
+	  responds_selector
+	    = lookup_child_selector (exp->gdbarch, "respondsTo:");
 	
 	if (responds_selector == 0)
 	  error (_("no 'respondsTo:' or 'respondsToSelector:' method"));
 	
-	method_selector = lookup_child_selector ("methodForSelector:");
+	method_selector
+	  = lookup_child_selector (exp->gdbarch, "methodForSelector:");
 	if (method_selector == 0)
-	  method_selector = lookup_child_selector ("methodFor:");
+	  method_selector
+	    = lookup_child_selector (exp->gdbarch, "methodFor:");
 	
 	if (method_selector == 0)
 	  error (_("no 'methodFor:' or 'methodForSelector:' method"));
@@ -1185,11 +1191,12 @@ evaluate_subexp_standard (struct type *expect_type,
 		  val_type = expect_type;
 	      }
 
-	    struct_return = using_struct_return (value_type (method), val_type);
+	    struct_return = using_struct_return (exp->gdbarch,
+						 value_type (method), val_type);
 	  }
 	else if (expect_type != NULL)
 	  {
-	    struct_return = using_struct_return (NULL,
+	    struct_return = using_struct_return (exp->gdbarch, NULL,
 						 check_typedef (expect_type));
 	  }
 	

@@ -2352,6 +2352,7 @@ save_expr (tree expr)
     return t;
 
   t = build1 (SAVE_EXPR, TREE_TYPE (expr), t);
+  SET_EXPR_LOCATION (t, EXPR_LOCATION (expr));
 
   /* This expression might be placed ahead of a jump to ensure that the
      value was computed on both sides of the jump.  So make sure it isn't
@@ -2471,6 +2472,36 @@ tree_node_structure (const_tree t)
     default:
       gcc_unreachable ();
     }
+}
+
+/* Set various status flags when building a CALL_EXPR object T.  */
+
+static void
+process_call_operands (tree t)
+{
+  bool side_effects = TREE_SIDE_EFFECTS (t);
+  int i;
+
+  if (!side_effects)
+    for (i = 1; i < TREE_OPERAND_LENGTH (t); i++)
+      {
+	tree op = TREE_OPERAND (t, i);
+	if (op && TREE_SIDE_EFFECTS (op))
+	  {
+	    side_effects = true;
+	    break;
+	  }
+      }
+
+  if (!side_effects)
+    {
+      /* Calls have side-effects, except those to const or pure functions.  */
+      i = call_expr_flags (t);
+      if ((i & ECF_LOOPING_CONST_OR_PURE) || !(i & (ECF_CONST | ECF_PURE)))
+	side_effects = true;
+    }
+
+  TREE_SIDE_EFFECTS (t) = side_effects;
 }
 
 /* Return 1 if EXP contains a PLACEHOLDER_EXPR; i.e., if it represents a size
@@ -2659,7 +2690,7 @@ substitute_in_expr (tree exp, tree f, tree r)
 {
   enum tree_code code = TREE_CODE (exp);
   tree op0, op1, op2, op3;
-  tree new_tree, inner;
+  tree new_tree;
 
   /* We handle TREE_LIST and COMPONENT_REF separately.  */
   if (code == TREE_LIST)
@@ -2672,27 +2703,32 @@ substitute_in_expr (tree exp, tree f, tree r)
       return tree_cons (TREE_PURPOSE (exp), op1, op0);
     }
   else if (code == COMPONENT_REF)
-   {
-     /* If this expression is getting a value from a PLACEHOLDER_EXPR
-	and it is the right field, replace it with R.  */
-     for (inner = TREE_OPERAND (exp, 0);
-	  REFERENCE_CLASS_P (inner);
-	  inner = TREE_OPERAND (inner, 0))
-       ;
-     if (TREE_CODE (inner) == PLACEHOLDER_EXPR
-	 && TREE_OPERAND (exp, 1) == f)
-       return r;
+    {
+      tree inner;
 
-     /* If this expression hasn't been completed let, leave it alone.  */
-     if (TREE_CODE (inner) == PLACEHOLDER_EXPR && TREE_TYPE (inner) == 0)
-       return exp;
+      /* If this expression is getting a value from a PLACEHOLDER_EXPR
+	 and it is the right field, replace it with R.  */
+      for (inner = TREE_OPERAND (exp, 0);
+	   REFERENCE_CLASS_P (inner);
+	   inner = TREE_OPERAND (inner, 0))
+	;
 
-     op0 = SUBSTITUTE_IN_EXPR (TREE_OPERAND (exp, 0), f, r);
-     if (op0 == TREE_OPERAND (exp, 0))
-       return exp;
+      /* The field.  */
+      op1 = TREE_OPERAND (exp, 1);
 
-     new_tree = fold_build3 (COMPONENT_REF, TREE_TYPE (exp),
-			op0, TREE_OPERAND (exp, 1), NULL_TREE);
+      if (TREE_CODE (inner) == PLACEHOLDER_EXPR && op1 == f)
+	return r;
+
+      /* If this expression hasn't been completed let, leave it alone.  */
+      if (TREE_CODE (inner) == PLACEHOLDER_EXPR && !TREE_TYPE (inner))
+	return exp;
+
+      op0 = SUBSTITUTE_IN_EXPR (TREE_OPERAND (exp, 0), f, r);
+      if (op0 == TREE_OPERAND (exp, 0))
+	return exp;
+
+      new_tree
+	= fold_build3 (COMPONENT_REF, TREE_TYPE (exp), op0, op1, NULL_TREE);
    }
   else
     switch (TREE_CODE_CLASS (code))
@@ -2753,7 +2789,8 @@ substitute_in_expr (tree exp, tree f, tree r)
 		&& op3 == TREE_OPERAND (exp, 3))
 	      return exp;
 
-	    new_tree = fold (build4 (code, TREE_TYPE (exp), op0, op1, op2, op3));
+	    new_tree
+	      = fold (build4 (code, TREE_TYPE (exp), op0, op1, op2, op3));
 	    break;
 
 	  default:
@@ -2763,8 +2800,9 @@ substitute_in_expr (tree exp, tree f, tree r)
 
       case tcc_vl_exp:
 	{
-	  tree copy = NULL_TREE;
 	  int i;
+
+	  new_tree = NULL_TREE;
 
 	  for (i = 1; i < TREE_OPERAND_LENGTH (exp); i++)
 	    {
@@ -2772,14 +2810,18 @@ substitute_in_expr (tree exp, tree f, tree r)
 	      tree new_op = SUBSTITUTE_IN_EXPR (op, f, r);
 	      if (new_op != op)
 		{
-		  if (!copy)
-		    copy = copy_node (exp);
-		  TREE_OPERAND (copy, i) = new_op;
+		  if (!new_tree)
+		    new_tree = copy_node (exp);
+		  TREE_OPERAND (new_tree, i) = new_op;
 		}
 	    }
 
-	  if (copy)
-	    new_tree = fold (copy);
+	  if (new_tree)
+	    {
+	      new_tree = fold (new_tree);
+	      if (TREE_CODE (new_tree) == CALL_EXPR)
+		process_call_operands (new_tree);
+	    }
 	  else
 	    return exp;
 	}
@@ -2789,7 +2831,7 @@ substitute_in_expr (tree exp, tree f, tree r)
 	gcc_unreachable ();
       }
 
-  TREE_READONLY (new_tree) = TREE_READONLY (exp);
+  TREE_READONLY (new_tree) |= TREE_READONLY (exp);
   return new_tree;
 }
 
@@ -2801,6 +2843,7 @@ substitute_placeholder_in_expr (tree exp, tree obj)
 {
   enum tree_code code = TREE_CODE (exp);
   tree op0, op1, op2, op3;
+  tree new_tree;
 
   /* If this is a PLACEHOLDER_EXPR, see if we find a corresponding type
      in the chain of OBJ.  */
@@ -2876,8 +2919,9 @@ substitute_placeholder_in_expr (tree exp, tree obj)
 	    op0 = SUBSTITUTE_PLACEHOLDER_IN_EXPR (TREE_OPERAND (exp, 0), obj);
 	    if (op0 == TREE_OPERAND (exp, 0))
 	      return exp;
-	    else
-	      return fold_build1 (code, TREE_TYPE (exp), op0);
+
+	    new_tree = fold_build1 (code, TREE_TYPE (exp), op0);
+	    break;
 
 	  case 2:
 	    op0 = SUBSTITUTE_PLACEHOLDER_IN_EXPR (TREE_OPERAND (exp, 0), obj);
@@ -2885,8 +2929,9 @@ substitute_placeholder_in_expr (tree exp, tree obj)
 
 	    if (op0 == TREE_OPERAND (exp, 0) && op1 == TREE_OPERAND (exp, 1))
 	      return exp;
-	    else
-	      return fold_build2 (code, TREE_TYPE (exp), op0, op1);
+
+	    new_tree = fold_build2 (code, TREE_TYPE (exp), op0, op1);
+	    break;
 
 	  case 3:
 	    op0 = SUBSTITUTE_PLACEHOLDER_IN_EXPR (TREE_OPERAND (exp, 0), obj);
@@ -2896,8 +2941,9 @@ substitute_placeholder_in_expr (tree exp, tree obj)
 	    if (op0 == TREE_OPERAND (exp, 0) && op1 == TREE_OPERAND (exp, 1)
 		&& op2 == TREE_OPERAND (exp, 2))
 	      return exp;
-	    else
-	      return fold_build3 (code, TREE_TYPE (exp), op0, op1, op2);
+
+	    new_tree = fold_build3 (code, TREE_TYPE (exp), op0, op1, op2);
+	    break;
 
 	  case 4:
 	    op0 = SUBSTITUTE_PLACEHOLDER_IN_EXPR (TREE_OPERAND (exp, 0), obj);
@@ -2909,8 +2955,10 @@ substitute_placeholder_in_expr (tree exp, tree obj)
 		&& op2 == TREE_OPERAND (exp, 2)
 		&& op3 == TREE_OPERAND (exp, 3))
 	      return exp;
-	    else
-	      return fold (build4 (code, TREE_TYPE (exp), op0, op1, op2, op3));
+
+	    new_tree
+	      = fold (build4 (code, TREE_TYPE (exp), op0, op1, op2, op3));
+	    break;
 
 	  default:
 	    gcc_unreachable ();
@@ -2919,8 +2967,9 @@ substitute_placeholder_in_expr (tree exp, tree obj)
 
       case tcc_vl_exp:
 	{
-	  tree copy = NULL_TREE;
 	  int i;
+
+	  new_tree = NULL_TREE;
 
 	  for (i = 1; i < TREE_OPERAND_LENGTH (exp); i++)
 	    {
@@ -2928,21 +2977,29 @@ substitute_placeholder_in_expr (tree exp, tree obj)
 	      tree new_op = SUBSTITUTE_PLACEHOLDER_IN_EXPR (op, obj);
 	      if (new_op != op)
 		{
-		  if (!copy)
-		    copy = copy_node (exp);
-		  TREE_OPERAND (copy, i) = new_op;
+		  if (!new_tree)
+		    new_tree = copy_node (exp);
+		  TREE_OPERAND (new_tree, i) = new_op;
 		}
 	    }
 
-	  if (copy)
-	    return fold (copy);
+	  if (new_tree)
+	    {
+	      new_tree = fold (new_tree);
+	      if (TREE_CODE (new_tree) == CALL_EXPR)
+		process_call_operands (new_tree);
+	    }
 	  else
 	    return exp;
 	}
+	break;
 
       default:
 	gcc_unreachable ();
       }
+
+  TREE_READONLY (new_tree) |= TREE_READONLY (exp);
+  return new_tree;
 }
 
 /* Stabilize a reference so that we can use it any number of times
@@ -3537,15 +3594,19 @@ build_nt_call_vec (tree fn, VEC(tree,gc) *args)
 /* Create a DECL_... node of code CODE, name NAME and data type TYPE.
    We do NOT enter this node in any sort of symbol table.
 
+   LOC is the location of the decl.
+
    layout_decl is used to set up the decl's storage layout.
    Other slots are initialized to 0 or null pointers.  */
 
 tree
-build_decl_stat (enum tree_code code, tree name, tree type MEM_STAT_DECL)
+build_decl_stat (location_t loc, enum tree_code code, tree name,
+    		 tree type MEM_STAT_DECL)
 {
   tree t;
 
   t = make_node_stat (code PASS_MEM_STAT);
+  DECL_SOURCE_LOCATION (t) = loc;
 
 /*  if (type == error_mark_node)
     type = integer_type_node; */
@@ -3567,7 +3628,7 @@ tree
 build_fn_decl (const char *name, tree type)
 {
   tree id = get_identifier (name);
-  tree decl = build_decl (FUNCTION_DECL, id, type);
+  tree decl = build_decl (input_location, FUNCTION_DECL, id, type);
 
   DECL_EXTERNAL (decl) = 1;
   TREE_PUBLIC (decl) = 1;
@@ -6336,7 +6397,8 @@ build_complex_type (tree component_type)
 	name = 0;
 
       if (name != 0)
-	TYPE_NAME (t) = build_decl (TYPE_DECL, get_identifier (name), t);
+	TYPE_NAME (t) = build_decl (UNKNOWN_LOCATION, TYPE_DECL,
+	    			    get_identifier (name), t);
     }
 
   return build_qualified_type (t, TYPE_QUALS (component_type));
@@ -7451,7 +7513,8 @@ make_vector_type (tree innertype, int nunits, enum machine_mode mode)
 				   build_index_type (index));
     tree rt = make_node (RECORD_TYPE);
 
-    TYPE_FIELDS (rt) = build_decl (FIELD_DECL, get_identifier ("f"), array);
+    TYPE_FIELDS (rt) = build_decl (UNKNOWN_LOCATION, FIELD_DECL,
+				   get_identifier ("f"), array);
     DECL_CONTEXT (TYPE_FIELDS (rt)) = rt;
     layout_type (rt);
     TYPE_DEBUG_REPRESENTATION_TYPE (t) = rt;
@@ -8139,19 +8202,22 @@ initializer_zerop (const_tree init)
     }
 }
 
-/* Build an empty statement.  */
+/* Build an empty statement at location LOC.  */
 
 tree
-build_empty_stmt (void)
+build_empty_stmt (location_t loc)
 {
-  return build1 (NOP_EXPR, void_type_node, size_zero_node);
+  tree t = build1 (NOP_EXPR, void_type_node, size_zero_node);
+  SET_EXPR_LOCATION (t, loc);
+  return t;
 }
 
 
-/* Build an OpenMP clause with code CODE.  */
+/* Build an OpenMP clause with code CODE.  LOC is the location of the
+   clause.  */
 
 tree
-build_omp_clause (enum omp_clause_code code)
+build_omp_clause (location_t loc, enum omp_clause_code code)
 {
   tree t;
   int size, length;
@@ -8163,6 +8229,7 @@ build_omp_clause (enum omp_clause_code code)
   memset (t, 0, size);
   TREE_SET_CODE (t, OMP_CLAUSE);
   OMP_CLAUSE_SET_CODE (t, code);
+  OMP_CLAUSE_LOCATION (t) = loc;
 
 #ifdef GATHER_STATISTICS
   tree_node_counts[(int) omp_clause_kind]++;
@@ -8170,41 +8237,6 @@ build_omp_clause (enum omp_clause_code code)
 #endif
   
   return t;
-}
-
-/* Set various status flags when building a CALL_EXPR object T.  */
-
-static void
-process_call_operands (tree t)
-{
-  bool side_effects;
-
-  side_effects = TREE_SIDE_EFFECTS (t);
-  if (!side_effects)
-    {
-      int i, n;
-      n = TREE_OPERAND_LENGTH (t);
-      for (i = 1; i < n; i++)
-	{
-	  tree op = TREE_OPERAND (t, i);
-	  if (op && TREE_SIDE_EFFECTS (op))
-	    {
-	      side_effects = 1;
-	      break;
-	    }
-	}
-    }
-  if (!side_effects)
-    {
-      int i;
-
-      /* Calls have side-effects, except those to const or
-	 pure functions.  */
-      i = call_expr_flags (t);
-      if ((i & ECF_LOOPING_CONST_OR_PURE) || !(i & (ECF_CONST | ECF_PURE)))
-	side_effects = 1;
-    }
-  TREE_SIDE_EFFECTS (t) = side_effects;
 }
 
 /* Build a tcc_vl_exp object with code CODE and room for LEN operands.  LEN
@@ -8473,6 +8505,36 @@ int_cst_value (const_tree x)
 	val |= (~(unsigned HOST_WIDE_INT) 0) << (bits - 1) << 1;
       else
 	val &= ~((~(unsigned HOST_WIDE_INT) 0) << (bits - 1) << 1);
+    }
+
+  return val;
+}
+
+/* Return value of a constant X and sign-extend it.  */
+
+HOST_WIDEST_INT
+widest_int_cst_value (const_tree x)
+{
+  unsigned bits = TYPE_PRECISION (TREE_TYPE (x));
+  unsigned HOST_WIDEST_INT val = TREE_INT_CST_LOW (x);
+
+#if HOST_BITS_PER_WIDEST_INT > HOST_BITS_PER_WIDE_INT
+  gcc_assert (HOST_BITS_PER_WIDEST_INT >= 2 * HOST_BITS_PER_WIDE_INT);
+  val |= (((unsigned HOST_WIDEST_INT) TREE_INT_CST_HIGH (x))
+	  << HOST_BITS_PER_WIDE_INT);
+#else
+  /* Make sure the sign-extended value will fit in a HOST_WIDE_INT.  */
+  gcc_assert (TREE_INT_CST_HIGH (x) == 0
+	      || TREE_INT_CST_HIGH (x) == -1);
+#endif
+
+  if (bits < HOST_BITS_PER_WIDEST_INT)
+    {
+      bool negative = ((val >> (bits - 1)) & 1) != 0;
+      if (negative)
+	val |= (~(unsigned HOST_WIDEST_INT) 0) << (bits - 1) << 1;
+      else
+	val &= ~((~(unsigned HOST_WIDEST_INT) 0) << (bits - 1) << 1);
     }
 
   return val;
@@ -9108,13 +9170,15 @@ call_expr_arglist (tree exp)
 }
 
 
-/* Create a nameless artificial label and put it in the current function
-   context.  Returns the newly created label.  */
+/* Create a nameless artificial label and put it in the current
+   function context.  The label has a location of LOC.  Returns the
+   newly created label.  */
 
 tree
-create_artificial_label (void)
+create_artificial_label (location_t loc)
 {
-  tree lab = build_decl (LABEL_DECL, NULL_TREE, void_type_node);
+  tree lab = build_decl (loc,
+      			 LABEL_DECL, NULL_TREE, void_type_node);
 
   DECL_ARTIFICIAL (lab) = 1;
   DECL_IGNORED_P (lab) = 1;
@@ -9415,6 +9479,79 @@ list_equal_p (const_tree t1, const_tree t2)
     if (TREE_VALUE (t1) != TREE_VALUE (t2))
       return false;
   return !t1 && !t2;
+}
+
+/* Return true iff conversion in EXP generates no instruction.  Mark
+   it inline so that we fully inline into the stripping functions even
+   though we have two uses of this function.  */
+
+static inline bool
+tree_nop_conversion (const_tree exp)
+{
+  tree outer_type, inner_type;
+
+  if (!CONVERT_EXPR_P (exp)
+      && TREE_CODE (exp) != NON_LVALUE_EXPR)
+    return false;
+  if (TREE_OPERAND (exp, 0) == error_mark_node)
+    return false;
+
+  outer_type = TREE_TYPE (exp);
+  inner_type = TREE_TYPE (TREE_OPERAND (exp, 0));
+
+  /* Use precision rather then machine mode when we can, which gives
+     the correct answer even for submode (bit-field) types.  */
+  if ((INTEGRAL_TYPE_P (outer_type)
+       || POINTER_TYPE_P (outer_type)
+       || TREE_CODE (outer_type) == OFFSET_TYPE)
+      && (INTEGRAL_TYPE_P (inner_type)
+	  || POINTER_TYPE_P (inner_type)
+	  || TREE_CODE (inner_type) == OFFSET_TYPE))
+    return TYPE_PRECISION (outer_type) == TYPE_PRECISION (inner_type);
+
+  /* Otherwise fall back on comparing machine modes (e.g. for
+     aggregate types, floats).  */
+  return TYPE_MODE (outer_type) == TYPE_MODE (inner_type);
+}
+
+/* Return true iff conversion in EXP generates no instruction.  Don't
+   consider conversions changing the signedness.  */
+
+static bool
+tree_sign_nop_conversion (const_tree exp)
+{
+  tree outer_type, inner_type;
+
+  if (!tree_nop_conversion (exp))
+    return false;
+
+  outer_type = TREE_TYPE (exp);
+  inner_type = TREE_TYPE (TREE_OPERAND (exp, 0));
+
+  return (TYPE_UNSIGNED (outer_type) == TYPE_UNSIGNED (inner_type)
+	  && POINTER_TYPE_P (outer_type) == POINTER_TYPE_P (inner_type));
+}
+
+/* Strip conversions from EXP according to tree_nop_conversion and
+   return the resulting expression.  */
+
+tree
+tree_strip_nop_conversions (tree exp)
+{
+  while (tree_nop_conversion (exp))
+    exp = TREE_OPERAND (exp, 0);
+  return exp;
+}
+
+/* Strip conversions from EXP according to tree_sign_nop_conversion
+   and return the resulting expression.  */
+
+tree
+tree_strip_sign_nop_conversions (tree exp)
+{
+  while (tree_sign_nop_conversion (exp))
+    exp = TREE_OPERAND (exp, 0);
+  return exp;
 }
 
 

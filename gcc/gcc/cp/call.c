@@ -4398,7 +4398,7 @@ build_new_op (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
       return cp_build_unary_op (code, arg1, candidates != 0, complain);
 
     case ARRAY_REF:
-      return build_array_ref (arg1, arg2, input_location);
+      return build_array_ref (input_location, arg1, arg2);
 
     case COND_EXPR:
       return build_conditional_expr (arg1, arg2, arg3, complain);
@@ -5064,7 +5064,7 @@ convert_arg_to_ellipsis (tree arg)
 	 If the call appears in the context of a sizeof expression,
 	 there is no need to emit a warning, since the expression won't be
 	 evaluated. We keep the builtin_trap just as a safety check.  */
-      if (!skip_evaluation)
+      if (cp_unevaluated_operand == 0)
 	warning (0, "cannot pass objects of non-POD type %q#T through %<...%>; "
 		 "call will abort at runtime", TREE_TYPE (arg));
       arg = call_builtin_trap ();
@@ -5102,7 +5102,7 @@ build_x_va_arg (tree expr, tree type)
       return expr;
     }
 
-  return build_va_arg (expr, type);
+  return build_va_arg (input_location, expr, type);
 }
 
 /* TYPE has been given to va_arg.  Apply the default conversions which

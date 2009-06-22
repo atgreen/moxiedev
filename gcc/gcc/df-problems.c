@@ -2509,8 +2509,8 @@ df_byte_lr_alloc (bitmap all_blocks ATTRIBUTE_UNUSED)
   unsigned int regno;
   unsigned int index = 0;
   unsigned int max_reg = max_reg_num();
-  struct df_byte_lr_problem_data *problem_data 
-    = problem_data = XNEW (struct df_byte_lr_problem_data);
+  struct df_byte_lr_problem_data *problem_data
+    = XNEW (struct df_byte_lr_problem_data);
 
   df_byte_lr->problem_data = problem_data;
 
@@ -3912,19 +3912,21 @@ df_simulate_one_insn_forwards (basic_block bb, rtx insn, bitmap live)
   for (link = REG_NOTES (insn); link; link = XEXP (link, 1))
     {
       switch (REG_NOTE_KIND (link))
+	{
 	case REG_DEAD:
 	case REG_UNUSED:
-	{
-	  rtx reg = XEXP (link, 0);
-	  int regno = REGNO (reg);
-	  if (regno < FIRST_PSEUDO_REGISTER)
-	    {
-	      int n = hard_regno_nregs[regno][GET_MODE (reg)];
-	      while (--n >= 0)
-		bitmap_clear_bit (live, regno + n);
-	    }
-	  else 
-	    bitmap_clear_bit (live, regno);
+	  {
+	    rtx reg = XEXP (link, 0);
+	    int regno = REGNO (reg);
+	    if (regno < FIRST_PSEUDO_REGISTER)
+	      {
+		int n = hard_regno_nregs[regno][GET_MODE (reg)];
+		while (--n >= 0)
+		  bitmap_clear_bit (live, regno + n);
+	      }
+	    else 
+	      bitmap_clear_bit (live, regno);
+	  }
 	  break;
 	default:
 	  break;

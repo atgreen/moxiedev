@@ -644,13 +644,13 @@ namespace std
     template<typename _UniformRandomNumberGenerator>
       typename uniform_int_distribution<_IntType>::result_type
       uniform_int_distribution<_IntType>::
-      _M_call(_UniformRandomNumberGenerator& __urng,
-	      result_type __min, result_type __max, true_type)
+      operator()(_UniformRandomNumberGenerator& __urng,
+		 const param_type& __param)
       {
 	// XXX Must be fixed to work well for *arbitrary* __urng.max(),
-	// __urng.min(), __max, __min.  Currently works fine only in the
-	// most common case __urng.max() - __urng.min() >= __max - __min,
-	// with __urng.max() > __urng.min() >= 0.
+	// __urng.min(), __param.b(), __param.a().  Currently works fine only
+	// in the most common case __urng.max() - __urng.min() >=
+	// __param.b() - __param.a(), with __urng.max() > __urng.min() >= 0.
 	typedef typename __gnu_cxx::__add_unsigned<typename
 	  _UniformRandomNumberGenerator::result_type>::__type __urntype;
 	typedef typename __gnu_cxx::__add_unsigned<result_type>::__type
@@ -664,14 +664,14 @@ namespace std
 	const __urntype __urnmin = __urng.min();
 	const __urntype __urnmax = __urng.max();
 	const __urntype __urnrange = __urnmax - __urnmin;
-	const __uctype __urange = __max - __min;
+	const __uctype __urange = __param.b() - __param.a();
 	const __uctype __udenom = (__urnrange <= __urange
 				   ? 1 : __urnrange / (__urange + 1));
 	do
 	  __ret = (__urntype(__urng()) -  __urnmin) / __udenom;
-	while (__ret > __max - __min);
+	while (__ret > __param.b() - __param.a());
 
-	return __ret + __min;
+	return __ret + __param.a();
       }
 
   template<typename _IntType, typename _CharT, typename _Traits>
@@ -799,7 +799,7 @@ namespace std
 	// The largest _RealType convertible to _IntType.
 	const double __thr =
 	  std::numeric_limits<_IntType>::max() + __naf;
-	__detail::_Adaptor<_UniformRandomNumberGenerator, result_type>
+	__detail::_Adaptor<_UniformRandomNumberGenerator, double>
 	  __aurng(__urng);
 
 	double __cand;
@@ -854,6 +854,20 @@ namespace std
       return __is;
     }
 
+
+  template<typename _IntType>
+    template<typename _UniformRandomNumberGenerator>
+      typename negative_binomial_distribution<_IntType>::result_type
+      negative_binomial_distribution<_IntType>::
+      operator()(_UniformRandomNumberGenerator& __urng)
+      {
+	const double __y = _M_gd(__urng);
+
+	// XXX Is the constructor too slow?
+	std::poisson_distribution<result_type> __poisson(__y);
+	return __poisson(__urng);
+      }
+
   template<typename _IntType>
     template<typename _UniformRandomNumberGenerator>
       typename negative_binomial_distribution<_IntType>::result_type
@@ -861,11 +875,13 @@ namespace std
       operator()(_UniformRandomNumberGenerator& __urng,
 		 const param_type& __p)
       {
-	gamma_distribution<> __gamma(__p.k(), 1.0);
-	double __x = __gamma(__urng);
+	typedef typename std::gamma_distribution<result_type>::param_type
+	  param_type;
+	
+	const double __y =
+	  _M_gd(__urng, param_type(__p.k(), __p.p() / (1.0 - __p.p())));
 
-	poisson_distribution<result_type> __poisson(__x * __p.p()
-						    / (1.0 - __p.p()));
+	std::poisson_distribution<result_type> __poisson(__y);
 	return __poisson(__urng);
       }
 
@@ -885,7 +901,8 @@ namespace std
       __os.fill(__os.widen(' '));
       __os.precision(std::numeric_limits<double>::digits10 + 1);
 
-      __os << __x.k() << __space << __x.p();
+      __os << __x.k() << __space << __x.p()
+	   << __space << __x._M_gd;
 
       __os.flags(__flags);
       __os.fill(__fill);
@@ -906,7 +923,7 @@ namespace std
 
       _IntType __k;
       double __p;
-      __is >> __k >> __p;
+      __is >> __k >> __p >> __x._M_gd;
       __x.param(typename negative_binomial_distribution<_IntType>::
 		param_type(__k, __p));
 
@@ -1538,17 +1555,6 @@ namespace std
     }
 
 
-  template<typename _RealType>
-    template<typename _UniformRandomNumberGenerator>
-      typename chi_squared_distribution<_RealType>::result_type
-      chi_squared_distribution<_RealType>::
-      operator()(_UniformRandomNumberGenerator& __urng,
-		 const param_type& __p)
-      {
-	gamma_distribution<_RealType> __gamma(__p.n() / 2, 1.0);
-	return 2 * __gamma(__urng);
-      }
-
   template<typename _RealType, typename _CharT, typename _Traits>
     std::basic_ostream<_CharT, _Traits>&
     operator<<(std::basic_ostream<_CharT, _Traits>& __os,
@@ -1565,7 +1571,7 @@ namespace std
       __os.fill(__space);
       __os.precision(std::numeric_limits<_RealType>::digits10 + 1);
 
-      __os << __x.n();
+      __os << __x.n() << __space << __x._M_gd;
 
       __os.flags(__flags);
       __os.fill(__fill);
@@ -1585,7 +1591,7 @@ namespace std
       __is.flags(__ios_base::dec | __ios_base::skipws);
 
       _RealType __n;
-      __is >> __n;
+      __is >> __n >> __x._M_gd;
       __x.param(typename chi_squared_distribution<_RealType>::
 		param_type(__n));
 
@@ -1657,23 +1663,6 @@ namespace std
     }
 
 
-  template<typename _RealType>
-    template<typename _UniformRandomNumberGenerator>
-      typename fisher_f_distribution<_RealType>::result_type
-      fisher_f_distribution<_RealType>::
-      operator()(_UniformRandomNumberGenerator& __urng,
-		 const param_type& __p)
-      {
-	gamma_distribution<_RealType> __gamma;
-	_RealType __ym = __gamma(__urng,
-	 typename gamma_distribution<_RealType>::param_type(__p.m() / 2, 2));
-
-	_RealType __yn = __gamma(__urng,
-	 typename gamma_distribution<_RealType>::param_type(__p.n() / 2, 2));
-
-	return (__ym * __p.n()) / (__yn * __p.m());
-      }
-
   template<typename _RealType, typename _CharT, typename _Traits>
     std::basic_ostream<_CharT, _Traits>&
     operator<<(std::basic_ostream<_CharT, _Traits>& __os,
@@ -1690,7 +1679,8 @@ namespace std
       __os.fill(__space);
       __os.precision(std::numeric_limits<_RealType>::digits10 + 1);
 
-      __os << __x.m() << __space << __x.n();
+      __os << __x.m() << __space << __x.n()
+	   << __space << __x._M_gd_x << __space << __x._M_gd_y;
 
       __os.flags(__flags);
       __os.fill(__fill);
@@ -1710,7 +1700,7 @@ namespace std
       __is.flags(__ios_base::dec | __ios_base::skipws);
 
       _RealType __m, __n;
-      __is >> __m >> __n;
+      __is >> __m >> __n >> __x._M_gd_x >> __x._M_gd_y;
       __x.param(typename fisher_f_distribution<_RealType>::
 		param_type(__m, __n));
 
@@ -1718,43 +1708,6 @@ namespace std
       return __is;
     }
 
-
-  template<typename _RealType>
-    template<typename _UniformRandomNumberGenerator>
-      typename student_t_distribution<_RealType>::result_type
-      student_t_distribution<_RealType>::
-      operator()(_UniformRandomNumberGenerator& __urng,
-		 const param_type& __param)
-      {
-	if (__param.n() <= 2.0)
-	  {
-	    _RealType __y1 = _M_nd(__urng);
-	    chi_squared_distribution<_RealType> __chisq(__param.n());
-	    _RealType __y2 = __chisq(__urng);
-
-	    return __y1 / std::sqrt(__y2 / __param.n());
-	  }
-	else
-	  {
-	    _RealType __y1, __y2, __z;
-	    exponential_distribution<_RealType>
-	      __exponential(1.0 / (__param.n() / 2.0 - 1.0));
-
-	    do
-	      {
-		__y1 = _M_nd(__urng);
-		__y2 = __exponential(__urng);
-
-		__z = __y1 * __y1 / (__param.n() - 2.0);
-	      }
-	    while (1.0 - __z < 0.0 || std::exp(-__y2 - __z) > (1.0 - __z));
-
-	    // Note that there is a typo in Knuth's formula, the line below
-	    // is taken from the original paper of Marsaglia, Mathematics of
-	    // Computation, 34 (1980), p 234-256
-	    return __y1 / std::sqrt((1.0 - 2.0 / __param.n()) * (1.0 - __z));
-	  }
-      }
 
   template<typename _RealType, typename _CharT, typename _Traits>
     std::basic_ostream<_CharT, _Traits>&
@@ -1772,7 +1725,7 @@ namespace std
       __os.fill(__space);
       __os.precision(std::numeric_limits<_RealType>::digits10 + 1);
 
-      __os << __x.n() << __space << __x._M_nd;
+      __os << __x.n() << __space << __x._M_nd << __space << __x._M_gd;
 
       __os.flags(__flags);
       __os.fill(__fill);
@@ -1792,7 +1745,7 @@ namespace std
       __is.flags(__ios_base::dec | __ios_base::skipws);
 
       _RealType __n;
-      __is >> __n >> __x._M_nd;
+      __is >> __n >> __x._M_nd >> __x._M_gd;
       __x.param(typename student_t_distribution<_RealType>::param_type(__n));
 
       __is.flags(__flags);
@@ -2032,30 +1985,31 @@ namespace std
 	  return;
 	}
 
-      double __sum = std::accumulate(_M_prob.begin(), _M_prob.end(), 0.0);
-      //  Now normalize the densities.
+      const double __sum = std::accumulate(_M_prob.begin(),
+					   _M_prob.end(), 0.0);
+      // Now normalize the probabilites.
       std::transform(_M_prob.begin(), _M_prob.end(), _M_prob.begin(),
 		     std::bind2nd(std::divides<double>(), __sum));
-      //  Accumulate partial sums.
+      // Accumulate partial sums.
+      _M_cp.reserve(_M_prob.size());
       std::partial_sum(_M_prob.begin(), _M_prob.end(),
 		       std::back_inserter(_M_cp));
-      //  Make sure the last cumulative probablility is one.
+      // Make sure the last cumulative probability is one.
       _M_cp[_M_cp.size() - 1] = 1.0;
     }
 
   template<typename _IntType>
     template<typename _Func>
       discrete_distribution<_IntType>::param_type::
-      param_type(size_t __nw, double __xmin, double __xmax,
-		 _Func __fw)
+      param_type(size_t __nw, double __xmin, double __xmax, _Func __fw)
       : _M_prob(), _M_cp()
       {
-	for (size_t __i = 0; __i < __nw; ++__i)
-	  {
-	    const double __x = ((__nw - __i - 0.5) * __xmin
-				     + (__i + 0.5) * __xmax) / __nw;
-	    _M_prob.push_back(__fw(__x));
-	  }
+	const size_t __n = __nw == 0 ? 1 : __nw;
+	const double __delta = (__xmax - __xmin) / __n;
+
+	_M_prob.reserve(__n);
+	for (size_t __k = 0; __k < __nw; ++__k)
+	  _M_prob.push_back(__fw(__xmin + __k * __delta + 0.5 * __delta));
 
 	_M_initialize();
       }
@@ -2067,17 +2021,14 @@ namespace std
       operator()(_UniformRandomNumberGenerator& __urng,
 		 const param_type& __param)
       {
-	__detail::_Adaptor<_UniformRandomNumberGenerator, result_type>
+	__detail::_Adaptor<_UniformRandomNumberGenerator, double>
 	  __aurng(__urng);
 
 	const double __p = __aurng();
 	auto __pos = std::lower_bound(__param._M_cp.begin(),
 				      __param._M_cp.end(), __p);
-	if (__pos == __param._M_cp.end())
-	  return 0;
-	const size_t __i = __pos - __param._M_cp.begin();
 
-	return __i;
+	return __pos - __param._M_cp.begin();
       }
 
   template<typename _IntType, typename _CharT, typename _Traits>
@@ -2122,6 +2073,7 @@ namespace std
       __is >> __n;
 
       std::vector<double> __prob_vec;
+      __prob_vec.reserve(__n);
       for (; __n != 0; --__n)
 	{
 	  double __prob;
@@ -2145,6 +2097,7 @@ namespace std
       if (_M_int.size() < 2)
 	{
 	  _M_int.clear();
+	  _M_int.reserve(2);
 	  _M_int.push_back(_RealType(0));
 	  _M_int.push_back(_RealType(1));
 
@@ -2154,21 +2107,21 @@ namespace std
 	  return;
 	}
 
-      double __sum = 0.0;
-      for (size_t __i = 0; __i < _M_den.size(); ++__i)
-	{
-	  __sum += _M_den[__i] * (_M_int[__i + 1] - _M_int[__i]);
-	  _M_cp.push_back(__sum);
-	}
+      const double __sum = std::accumulate(_M_den.begin(),
+					   _M_den.end(), 0.0);
 
-      //  Now normalize the densities...
       std::transform(_M_den.begin(), _M_den.end(), _M_den.begin(),
 		     std::bind2nd(std::divides<double>(), __sum));
-      //  ... and partial sums.
-      std::transform(_M_cp.begin(), _M_cp.end(), _M_cp.begin(),
-		     std::bind2nd(std::divides<double>(), __sum));
-      //  Make sure the last cumulative probablility is one.
+
+      _M_cp.reserve(_M_den.size());
+      std::partial_sum(_M_den.begin(), _M_den.end(),
+		       std::back_inserter(_M_cp));
+
+      // Make sure the last cumulative probability is one.
       _M_cp[_M_cp.size() - 1] = 1.0;
+
+      for (size_t __k = 0; __k < _M_den.size(); ++__k)
+	_M_den[__k] /= _M_int[__k + 1] - _M_int[__k];
     }
 
   template<typename _RealType>
@@ -2179,17 +2132,19 @@ namespace std
 		 _InputIteratorW __wbegin)
       : _M_int(), _M_den(), _M_cp()
       {
-	do
+	if (__bbegin != __bend)
 	  {
-	    _M_int.push_back(*__bbegin);
-	    ++__bbegin;
-	    if (__bbegin != __bend)
+	    for (;;)
 	      {
+		_M_int.push_back(*__bbegin);
+		++__bbegin;
+		if (__bbegin == __bend)
+		  break;
+
 		_M_den.push_back(*__wbegin);
 		++__wbegin;
 	      }
 	  }
-	while (__bbegin != __bend);
 
 	_M_initialize();
       }
@@ -2197,17 +2152,16 @@ namespace std
   template<typename _RealType>
     template<typename _Func>
       piecewise_constant_distribution<_RealType>::param_type::
-      param_type(initializer_list<_RealType> __bil, _Func __fw)
+      param_type(initializer_list<_RealType> __bl, _Func __fw)
       : _M_int(), _M_den(), _M_cp()
       {
-	for (auto __biter = __bil.begin(); __biter != __bil.end(); ++__biter)
+	_M_int.reserve(__bl.size());
+	for (auto __biter = __bl.begin(); __biter != __bl.end(); ++__biter)
 	  _M_int.push_back(*__biter);
 
-	for (size_t __i = 0; __i < _M_int.size() - 1; ++__i)
-	  {
-	    _RealType __x = 0.5 * (_M_int[__i] + _M_int[__i + 1]);
-	    _M_den.push_back(__fw(__x));
-	  }
+	_M_den.reserve(_M_int.size() - 1);
+	for (size_t __k = 0; __k < _M_int.size() - 1; ++__k)
+	  _M_den.push_back(__fw(0.5 * (_M_int[__k + 1] + _M_int[__k])));
 
 	_M_initialize();
       }
@@ -2218,18 +2172,16 @@ namespace std
       param_type(size_t __nw, _RealType __xmin, _RealType __xmax, _Func __fw)
       : _M_int(), _M_den(), _M_cp()
       {
-	for (size_t __i = 0; __i <= __nw; ++__i)
-	  {
-	    const _RealType __x = ((__nw - __i) * __xmin
-					  + __i * __xmax) / __nw;
-	    _M_int.push_back(__x);
-	  }
-	for (size_t __i = 0; __i < __nw; ++__i)
-	  {
-	    const _RealType __x = ((__nw - __i - 0.5) * __xmin
-					+ (__i + 0.5) * __xmax) / __nw;
-	    _M_den.push_back(__fw(__x));
-	  }
+	const size_t __n = __nw == 0 ? 1 : __nw;
+	const _RealType __delta = (__xmax - __xmin) / __n;
+
+	_M_int.reserve(__n + 1);
+	for (size_t __k = 0; __k <= __nw; ++__k)
+	  _M_int.push_back(__xmin + __k * __delta);
+
+	_M_den.reserve(__n);
+	for (size_t __k = 0; __k < __nw; ++__k)
+	  _M_den.push_back(__fw(_M_int[__k] + 0.5 * __delta));
 
 	_M_initialize();
       }
@@ -2241,7 +2193,7 @@ namespace std
       operator()(_UniformRandomNumberGenerator& __urng,
 		 const param_type& __param)
       {
-	__detail::_Adaptor<_UniformRandomNumberGenerator, result_type>
+	__detail::_Adaptor<_UniformRandomNumberGenerator, double>
 	  __aurng(__urng);
 
 	const double __p = __aurng();
@@ -2249,8 +2201,9 @@ namespace std
 				      __param._M_cp.end(), __p);
 	const size_t __i = __pos - __param._M_cp.begin();
 
-	return __param._M_int[__i]
-	     + (__p - __param._M_cp[__i]) / __param._M_den[__i];
+	const double __pref = __i > 0 ? __param._M_cp[__i - 1] : 0.0;
+
+	return __param._M_int[__i] + (__p - __pref) / __param._M_den[__i];
       }
 
   template<typename _RealType, typename _CharT, typename _Traits>
@@ -2300,6 +2253,7 @@ namespace std
       __is >> __n;
 
       std::vector<_RealType> __int_vec;
+      __int_vec.reserve(__n + 1);
       for (size_t __i = 0; __i <= __n; ++__i)
 	{
 	  _RealType __int;
@@ -2308,6 +2262,7 @@ namespace std
 	}
 
       std::vector<double> __den_vec;
+      __den_vec.reserve(__n);
       for (size_t __i = 0; __i < __n; ++__i)
 	{
 	  double __den;
@@ -2331,10 +2286,12 @@ namespace std
       if (_M_int.size() < 2)
 	{
 	  _M_int.clear();
+	  _M_int.reserve(2);
 	  _M_int.push_back(_RealType(0));
 	  _M_int.push_back(_RealType(1));
 
 	  _M_den.clear();
+	  _M_den.reserve(2);
 	  _M_den.push_back(1.0);
 	  _M_den.push_back(1.0);
 
@@ -2342,17 +2299,19 @@ namespace std
 	}
 
       double __sum = 0.0;
-      for (size_t __i = 0; __i < _M_int.size() - 1; ++__i)
+      _M_cp.reserve(_M_int.size() - 1);
+      _M_m.reserve(_M_int.size() - 1);
+      for (size_t __k = 0; __k < _M_int.size() - 1; ++__k)
 	{
-	  const _RealType __delta = _M_int[__i + 1] - _M_int[__i];
-	  __sum += 0.5 * (_M_den[__i + 1] + _M_den[__i]) * __delta;
+	  const _RealType __delta = _M_int[__k + 1] - _M_int[__k];
+	  __sum += 0.5 * (_M_den[__k + 1] + _M_den[__k]) * __delta;
 	  _M_cp.push_back(__sum);
-	  _M_m.push_back((_M_den[__i + 1] - _M_den[__i]) / __delta);
+	  _M_m.push_back((_M_den[__k + 1] - _M_den[__k]) / __delta);
 	}
 
       //  Now normalize the densities...
       std::transform(_M_den.begin(), _M_den.end(), _M_den.begin(),
-		     std::bind2nd(std::divides<double>(),__sum));
+		     std::bind2nd(std::divides<double>(), __sum));
       //  ... and partial sums... 
       std::transform(_M_cp.begin(), _M_cp.end(), _M_cp.begin(),
 		     std::bind2nd(std::divides<double>(), __sum));
@@ -2361,13 +2320,7 @@ namespace std
 		     std::bind2nd(std::divides<double>(), __sum));
       //  Make sure the last cumulative probablility is one.
       _M_cp[_M_cp.size() - 1] = 1.0;
-    }
-
-  template<typename _RealType>
-    piecewise_linear_distribution<_RealType>::param_type::
-    param_type()
-    : _M_int(), _M_den(), _M_cp(), _M_m()
-    { _M_initialize(); }
+     }
 
   template<typename _RealType>
     template<typename _InputIteratorB, typename _InputIteratorW>
@@ -2389,10 +2342,12 @@ namespace std
   template<typename _RealType>
     template<typename _Func>
       piecewise_linear_distribution<_RealType>::param_type::
-      param_type(initializer_list<_RealType> __bil, _Func __fw)
+      param_type(initializer_list<_RealType> __bl, _Func __fw)
       : _M_int(), _M_den(), _M_cp(), _M_m()
       {
-	for (auto __biter = __bil.begin(); __biter != __bil.end(); ++__biter)
+	_M_int.reserve(__bl.size());
+	_M_den.reserve(__bl.size());
+	for (auto __biter = __bl.begin(); __biter != __bl.end(); ++__biter)
 	  {
 	    _M_int.push_back(*__biter);
 	    _M_den.push_back(__fw(*__biter));
@@ -2404,16 +2359,18 @@ namespace std
   template<typename _RealType>
     template<typename _Func>
       piecewise_linear_distribution<_RealType>::param_type::
-      param_type(size_t __nw, _RealType __xmin, _RealType __xmax,
-		 _Func __fw)
+      param_type(size_t __nw, _RealType __xmin, _RealType __xmax, _Func __fw)
       : _M_int(), _M_den(), _M_cp(), _M_m()
       {
-	for (size_t __i = 0; __i <= __nw; ++__i)
+	const size_t __n = __nw == 0 ? 1 : __nw;
+	const _RealType __delta = (__xmax - __xmin) / __n;
+
+	_M_int.reserve(__n + 1);
+	_M_den.reserve(__n + 1);
+	for (size_t __k = 0; __k <= __nw; ++__k)
 	  {
-	    const _RealType __x = ((__nw - __i) * __xmin
-					  + __i * __xmax) / __nw;
-	    _M_int.push_back(__x);
-	    _M_den.push_back(__fw(__x));
+	    _M_int.push_back(__xmin + __k * __delta);
+	    _M_den.push_back(__fw(_M_int[__k] + __delta));
 	  }
 
 	_M_initialize();
@@ -2426,31 +2383,30 @@ namespace std
       operator()(_UniformRandomNumberGenerator& __urng,
 		 const param_type& __param)
       {
-	result_type __x;
-	__detail::_Adaptor<_UniformRandomNumberGenerator, result_type>
+	__detail::_Adaptor<_UniformRandomNumberGenerator, double>
 	  __aurng(__urng);
 
 	const double __p = __aurng();
 	auto __pos = std::lower_bound(__param._M_cp.begin(),
 				      __param._M_cp.end(), __p);
 	const size_t __i = __pos - __param._M_cp.begin();
+
+	const double __pref = __i > 0 ? __param._M_cp[__i - 1] : 0.0;
+
 	const double __a = 0.5 * __param._M_m[__i];
 	const double __b = __param._M_den[__i];
-	const double __c = __param._M_cp[__i];
-	const double __q = -0.5 * (__b
-#if _GLIBCXX_USE_C99_MATH_TR1
-			 + std::copysign(std::sqrt(__b * __b
-						 - 4.0 * __a * __c), __b));
-#else
-			 + (__b < 0.0 ? -1.0 : 1.0)
-			 * std::sqrt(__b * __b - 4.0 * __a * __c));
-#endif
-	const double __x0 = __param._M_int[__i];
-	const double __x1 = __q / __a;
-	const double __x2 = __c / __q;
-	__x = std::max(__x0 + __x1, __x0 + __x2);
+	const double __cm = __p - __pref;
 
-	return __x;
+	_RealType __x = __param._M_int[__i];
+	if (__a == 0)
+	  __x += __cm / __b;
+	else
+	  {
+	    const double __d = __b * __b + 4.0 * __a * __cm;
+	    __x += 0.5 * (std::sqrt(__d) - __b) / __a;
+          }
+
+        return __x;
       }
 
   template<typename _RealType, typename _CharT, typename _Traits>
@@ -2500,6 +2456,7 @@ namespace std
       __is >> __n;
 
       std::vector<_RealType> __int_vec;
+      __int_vec.reserve(__n + 1);
       for (size_t __i = 0; __i <= __n; ++__i)
 	{
 	  _RealType __int;
@@ -2508,6 +2465,7 @@ namespace std
 	}
 
       std::vector<double> __den_vec;
+      __den_vec.reserve(__n + 1);
       for (size_t __i = 0; __i <= __n; ++__i)
 	{
 	  double __den;

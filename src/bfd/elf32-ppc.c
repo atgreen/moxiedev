@@ -2735,8 +2735,8 @@ struct ppc_elf_link_hash_table
   /* The size of the first PLT entry.  */
   int plt_initial_entry_size;
 
-  /* Small local sym to section mapping cache.  */
-  struct sym_sec_cache sym_sec;
+  /* Small local sym cache.  */
+  struct sym_cache sym_cache;
 };
 
 /* Get the PPC ELF linker hash table from a link_info structure.  */
@@ -2845,12 +2845,9 @@ ppc_elf_create_got (bfd *abfd, struct bfd_link_info *info)
 	return FALSE;
     }
 
-  flags = (SEC_ALLOC | SEC_LOAD | SEC_HAS_CONTENTS | SEC_IN_MEMORY
-	   | SEC_LINKER_CREATED | SEC_READONLY);
-  htab->relgot = bfd_make_section_with_flags (abfd, ".rela.got", flags);
-  if (!htab->relgot
-      || ! bfd_set_section_alignment (abfd, htab->relgot, 2))
-    return FALSE;
+  htab->relgot = bfd_get_section_by_name (abfd, ".rela.got");
+  if (!htab->relgot)
+    abort ();
 
   return TRUE;
 }
@@ -3242,14 +3239,12 @@ update_local_sym_info (bfd *abfd,
 }
 
 static bfd_boolean
-update_plt_info (bfd *abfd, struct elf_link_hash_entry *h,
+update_plt_info (bfd *abfd, struct plt_entry **plist,
 		 asection *sec, bfd_vma addend)
 {
   struct plt_entry *ent;
 
-  if (addend < 32768)
-    sec = NULL;
-  for (ent = h->plt.plist; ent != NULL; ent = ent->next)
+  for (ent = *plist; ent != NULL; ent = ent->next)
     if (ent->sec == sec && ent->addend == addend)
       break;
   if (ent == NULL)
@@ -3258,24 +3253,24 @@ update_plt_info (bfd *abfd, struct elf_link_hash_entry *h,
       ent = bfd_alloc (abfd, amt);
       if (ent == NULL)
 	return FALSE;
-      ent->next = h->plt.plist;
+      ent->next = *plist;
       ent->sec = sec;
       ent->addend = addend;
       ent->plt.refcount = 0;
-      h->plt.plist = ent;
+      *plist = ent;
     }
   ent->plt.refcount += 1;
   return TRUE;
 }
 
 static struct plt_entry *
-find_plt_ent (struct elf_link_hash_entry *h, asection *sec, bfd_vma addend)
+find_plt_ent (struct plt_entry **plist, asection *sec, bfd_vma addend)
 {
   struct plt_entry *ent;
 
   if (addend < 32768)
     sec = NULL;
-  for (ent = h->plt.plist; ent != NULL; ent = ent->next)
+  for (ent = *plist; ent != NULL; ent = ent->next)
     if (ent->sec == sec && ent->addend == addend)
       break;
   return ent;
@@ -3575,8 +3570,11 @@ ppc_elf_check_relocs (bfd *abfd,
 	    h->non_got_ref = TRUE;
 	  break;
 
-	case R_PPC_PLT32:
 	case R_PPC_PLTREL24:
+	  if (h == NULL)
+	    break;
+	  /* Fall through */
+	case R_PPC_PLT32:
 	case R_PPC_PLTREL32:
 	case R_PPC_PLT16_LO:
 	case R_PPC_PLT16_HI:
@@ -3613,7 +3611,8 @@ ppc_elf_check_relocs (bfd *abfd,
 		  addend = rel->r_addend;
 		}
 	      h->needs_plt = 1;
-	      if (!update_plt_info (abfd, h, got2, addend))
+	      if (!update_plt_info (abfd, &h->plt.plist,
+				    addend < 32768 ? NULL : got2, addend))
 		return FALSE;
 	    }
 	  break;
@@ -3716,9 +3715,14 @@ ppc_elf_check_relocs (bfd *abfd,
 		 reliably deduce the GOT pointer value needed for
 		 PLT call stubs.  */
 	      asection *s;
+	      Elf_Internal_Sym *isym;
 
-	      s = bfd_section_from_r_symndx (abfd, &htab->sym_sec, sec,
-					     r_symndx);
+	      isym = bfd_sym_from_r_symndx (&htab->sym_cache,
+					    abfd, r_symndx);
+	      if (isym == NULL)
+		return FALSE;
+
+	      s = bfd_section_from_elf_index (abfd, isym->st_shndx);
 	      if (s == got2)
 		{
 		  htab->plt_type = PLT_OLD;
@@ -3740,7 +3744,7 @@ ppc_elf_check_relocs (bfd *abfd,
 	    {
 	      /* We may need a plt entry if the symbol turns out to be
 		 a function defined in a dynamic object.  */
-	      if (!update_plt_info (abfd, h, NULL, 0))
+	      if (!update_plt_info (abfd, &h->plt.plist, NULL, 0))
 		return FALSE;
 
 	      /* We may need a copy reloc too.  */
@@ -3774,7 +3778,7 @@ ppc_elf_check_relocs (bfd *abfd,
 	    {
 	      /* We may need a plt entry if the symbol turns out to be
 		 a function defined in a dynamic object.  */
-	      if (!update_plt_info (abfd, h, NULL, 0))
+	      if (!update_plt_info (abfd, &h->plt.plist, NULL, 0))
 		return FALSE;
 	      break;
 	    }
@@ -3846,14 +3850,18 @@ ppc_elf_check_relocs (bfd *abfd,
 		  /* Track dynamic relocs needed for local syms too.
 		     We really need local syms available to do this
 		     easily.  Oh well.  */
-
 		  asection *s;
 		  void *vpp;
+		  Elf_Internal_Sym *isym;
 
-		  s = bfd_section_from_r_symndx (abfd, &htab->sym_sec,
-						 sec, r_symndx);
-		  if (s == NULL)
+		  isym = bfd_sym_from_r_symndx (&htab->sym_cache,
+						abfd, r_symndx);
+		  if (isym == NULL)
 		    return FALSE;
+
+		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
+		  if (s == NULL)
+		    s = sec;
 
 		  vpp = &elf_section_data (s)->local_dynrel;
 		  head = (struct ppc_elf_dyn_relocs **) vpp;
@@ -4345,7 +4353,8 @@ ppc_elf_gc_sweep_hook (bfd *abfd,
 	  if (h != NULL)
 	    {
 	      bfd_vma addend = r_type == R_PPC_PLTREL24 ? rel->r_addend : 0;
-	      struct plt_entry *ent = find_plt_ent (h, got2, addend);
+	      struct plt_entry *ent = find_plt_ent (&h->plt.plist,
+						    got2, addend);
 	      if (ent->plt.refcount > 0)
 		ent->plt.refcount -= 1;
 	    }
@@ -4603,7 +4612,8 @@ ppc_elf_tls_optimize (bfd *obfd ATTRIBUTE_UNUSED,
 		    {
 		      struct plt_entry *ent;
 
-		      ent = find_plt_ent (htab->tls_get_addr, NULL, 0);
+		      ent = find_plt_ent (&htab->tls_get_addr->plt.plist,
+					  NULL, 0);
 		      if (ent != NULL && ent->plt.refcount > 0)
 			ent->plt.refcount -= 1;
 		    }
@@ -5761,7 +5771,8 @@ ppc_elf_relax_section (bfd *abfd,
 	  if (r_type == R_PPC_PLTREL24
 	      && htab->plt != NULL)
 	    {
-	      struct plt_entry *ent = find_plt_ent (h, got2, irel->r_addend);
+	      struct plt_entry *ent = find_plt_ent (&h->plt.plist,
+						    got2, irel->r_addend);
 
 	      if (ent != NULL)
 		{
@@ -7113,7 +7124,7 @@ ppc_elf_relocate_section (bfd *output_bfd,
 	case R_PPC_RELAX32PC_PLT:
 	case R_PPC_RELAX32_PLT:
 	  {
-	    struct plt_entry *ent = find_plt_ent (h, got2, addend);
+	    struct plt_entry *ent = find_plt_ent (&h->plt.plist, got2, addend);
 
 	    if (htab->plt_type == PLT_NEW)
 	      relocation = (htab->glink->output_section->vma
@@ -7202,10 +7213,12 @@ ppc_elf_relocate_section (bfd *output_bfd,
 	  break;
 
 	case R_PPC_PLTREL24:
+	  if (h == NULL)
+	    break;
 	  /* Relocation is to the entry for this symbol in the
 	     procedure linkage table.  */
 	  {
-	    struct plt_entry *ent = find_plt_ent (h, got2, addend);
+	    struct plt_entry *ent = find_plt_ent (&h->plt.plist, got2, addend);
 
 	    addend = 0;
 	    if (ent == NULL

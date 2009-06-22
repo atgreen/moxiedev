@@ -1,15 +1,15 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-06-11T07:47:35.460978Z
-148367
-fxcoudert
+2009-06-19T21:58:27.969781Z
+148731
+pault
 
 
 
@@ -25,6 +25,9 @@ fxcoudert
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+gcc.c-torture
+dir
 
 README.compat
 file
@@ -59,9 +62,6 @@ jsm28
 
 
 4059
-
-gcc.c-torture
-dir
 
 ChangeLog-1993-2007
 file
@@ -103,10 +103,10 @@ dir
 gnat.dg
 dir
 
-gcc.dg
+ada
 dir
 
-ada
+gcc.dg
 dir
 
 gcc.misc-tests
@@ -118,11 +118,11 @@ file
 
 
 
-2009-06-11T12:14:02.000000Z
-ba51061b0caa4cedd859f3b22e81b930
-2009-06-11T07:47:35.460978Z
-148367
-fxcoudert
+2009-06-20T15:53:12.000000Z
+337a7b6b388f6830df9809e63986e8ba
+2009-06-19T21:58:27.969781Z
+148731
+pault
 
 
 
@@ -144,7 +144,7 @@ fxcoudert
 
 
 
-159198
+171626
 
 README.gcc
 file

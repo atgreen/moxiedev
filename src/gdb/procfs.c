@@ -50,6 +50,7 @@
 #include "gdb_assert.h"
 #include "inflow.h"
 #include "auxv.h"
+#include "procfs.h"
 
 /*
  * PROCFS.C
@@ -181,7 +182,7 @@ procfs_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
 }
 #endif
 
-static struct target_ops *
+struct target_ops *
 procfs_target (void)
 {
   struct target_ops *t = inf_child_target ();
@@ -212,7 +213,6 @@ procfs_target (void)
   t->to_has_thread_control  = tc_schedlock;
   t->to_find_memory_regions = proc_find_memory_regions;
   t->to_make_corefile_notes = procfs_make_note_section;
-  t->to_can_use_hw_breakpoint = procfs_can_use_hw_breakpoint;
 
 #if defined(PR_MODEL_NATIVE) && (PR_MODEL_NATIVE == PR_MODEL_LP64)
   t->to_auxv_parse = procfs_auxv_parse;
@@ -2902,7 +2902,10 @@ procfs_address_to_host_pointer (CORE_ADDR addr)
 int
 proc_set_watchpoint (procinfo *pi, CORE_ADDR addr, int len, int wflags)
 {
-#if !defined (TARGET_HAS_HARDWARE_WATCHPOINTS)
+#if !defined (PCWATCH) && !defined (PIOCSWATCH)
+  /* If neither or these is defined, we can't support watchpoints.
+     This just avoids possibly failing to compile the below on such
+     systems.  */
   return 0;
 #else
 /* Horrible hack!  Detect Solaris 2.5, because this doesn't work on 2.5 */
@@ -4470,7 +4473,7 @@ invalidate_cache (procinfo *parent, procinfo *pi, void *ptr)
       if (!proc_set_gregs (pi))	/* flush gregs cache */
 	proc_warn (pi, "target_resume, set_gregs",
 		   __LINE__);
-  if (gdbarch_fp0_regnum (current_gdbarch) >= 0)
+  if (gdbarch_fp0_regnum (target_gdbarch) >= 0)
     if (pi->fpregs_dirty)
       if (parent == NULL ||
 	  proc_get_current_thread (parent) != pi->tid)
@@ -5294,9 +5297,6 @@ procfs_set_watchpoint (ptid_t ptid, CORE_ADDR addr, int len, int rwflag,
 static int
 procfs_can_use_hw_breakpoint (int type, int cnt, int othertype)
 {
-#ifndef TARGET_HAS_HARDWARE_WATCHPOINTS
-  return 0;
-#else
   /* Due to the way that proc_set_watchpoint() is implemented, host
      and target pointers must be of the same size.  If they are not,
      we can't use hardware watchpoints.  This limitation is due to the
@@ -5312,7 +5312,6 @@ procfs_can_use_hw_breakpoint (int type, int cnt, int othertype)
   /* Other tests here???  */
 
   return 1;
-#endif
 }
 
 /*
@@ -5353,7 +5352,7 @@ static int
 procfs_insert_watchpoint (CORE_ADDR addr, int len, int type)
 {
   if (!target_have_steppable_watchpoint
-      && !gdbarch_have_nonsteppable_watchpoint (current_gdbarch))
+      && !gdbarch_have_nonsteppable_watchpoint (target_gdbarch))
     {
       /* When a hardware watchpoint fires off the PC will be left at
 	 the instruction following the one which caused the
@@ -5394,6 +5393,7 @@ procfs_use_watchpoints (struct target_ops *t)
   t->to_insert_watchpoint = procfs_insert_watchpoint;
   t->to_remove_watchpoint = procfs_remove_watchpoint;
   t->to_region_ok_for_hw_watchpoint = procfs_region_ok_for_hw_watchpoint;
+  t->to_can_use_hw_breakpoint = procfs_can_use_hw_breakpoint;
 }
 
 /*
@@ -5521,31 +5521,6 @@ int solib_mappings_callback (struct prmap *map,
      not a problem.  */
 #endif
   return (*func) (fd, (CORE_ADDR) map->pr_vaddr);
-}
-
-/*
- * Function: proc_iterate_over_mappings
- *
- * Uses the unified "iterate_over_mappings" function
- * to implement the exported interface to solib-svr4.c.
- *
- * Given a pointer to a function, call that function once for every
- * mapped address space in the process.  The callback function
- * receives an open file descriptor for the file corresponding to
- * that mapped address space (if there is one), and the base address
- * of the mapped space.  Quit when the callback function returns a
- * nonzero value, or at teh end of the mappings.
- *
- * Returns: the first non-zero return value of the callback function,
- * or zero.
- */
-
-int
-proc_iterate_over_mappings (int (*func) (int, CORE_ADDR))
-{
-  procinfo *pi = find_procinfo_or_die (PIDGET (inferior_ptid), 0);
-
-  return iterate_over_mappings (pi, func, pi, solib_mappings_callback);
 }
 
 /*
@@ -5781,7 +5756,7 @@ info_mappings_callback (struct prmap *map, int (*ignore) (), void *unused)
   pr_off = map->pr_off;
 #endif
 
-  if (gdbarch_addr_bit (current_gdbarch) == 32)
+  if (gdbarch_addr_bit (target_gdbarch) == 32)
     printf_filtered ("\t%#10lx %#10lx %#10lx %#10x %7s\n",
 		     (unsigned long) map->pr_vaddr,
 		     (unsigned long) map->pr_vaddr + map->pr_size - 1,
@@ -5812,7 +5787,7 @@ info_proc_mappings (procinfo *pi, int summary)
     return;	/* No output for summary mode. */
 
   printf_filtered (_("Mapped address spaces:\n\n"));
-  if (gdbarch_ptr_bit (current_gdbarch) == 32)
+  if (gdbarch_ptr_bit (target_gdbarch) == 32)
     printf_filtered ("\t%10s %10s %10s %10s %7s\n",
 		     "Start Addr",
 		     "  End Addr",
@@ -6013,16 +5988,6 @@ proc_untrace_sysexit_cmd (char *args, int from_tty)
 void
 _initialize_procfs (void)
 {
-  struct target_ops * t;
-
-  t = procfs_target ();
-
-#ifdef TARGET_HAS_HARDWARE_WATCHPOINTS
-  procfs_use_watchpoints (t);
-#endif
-
-  add_target (t);
-
   add_info ("proc", info_proc_cmd, _("\
 Show /proc process information about any running process.\n\
 Specify process id, or use the program being debugged by default.\n\

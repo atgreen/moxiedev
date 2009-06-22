@@ -35,7 +35,6 @@ D/testsuite////
 /configure/1.243/Fri May 29 23:29:57 2009//
 /configure.com/1.1/Mon May 25 13:11:33 2009//
 /configure.in/1.212/Fri May 29 23:29:57 2009//
-/configure.tgt/1.48/Fri May 29 23:29:57 2009//
 /debug.c/1.6/Fri May 29 23:29:57 2009//
 /dep-in.sed/1.13/Fri Jun  5 22:47:24 2009//
 /depend.c/1.10/Fri May 29 23:29:57 2009//
@@ -92,4 +91,5 @@ D/testsuite////
 /write.c/1.122/Fri May 29 23:30:11 2009//
 /write.h/1.20/Fri May 29 23:30:11 2009//
 /dw2gencfi.c/1.41/Wed Jun 10 05:55:33 2009//
-/ChangeLog/1.3824/Result of merge//
+/ChangeLog/1.3831/Fri Jun 19 11:13:40 2009//
+/configure.tgt/1.49/Fri Jun 19 11:13:40 2009//

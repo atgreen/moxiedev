@@ -1,7 +1,7 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/mips
 svn://gcc.gnu.org/svn/gcc
 
@@ -468,6 +468,74 @@ rsandifo
 
 928
 
+fpr-moves-6.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+24ded4afed8b1d9b23e82671f0bc55ed
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1274
+
+gcc-have-sync-compare-and-swap-1.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+5ef37309741f8d06c8875ea775e741d0
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+388
+
 octeon-pop-1.c
 file
 
@@ -536,14 +604,14 @@ rsandifo
 
 250
 
-gcc-have-sync-compare-and-swap-1.c
+pr34831.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-5ef37309741f8d06c8875ea775e741d0
+f95e6890f2bc69d7a36990c9bc30b80c
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -568,75 +636,7 @@ rsandifo
 
 
 
-388
-
-fpr-moves-6.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-24ded4afed8b1d9b23e82671f0bc55ed
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1274
-
-fix-vr4130-4.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-9d01ac9bf819c8e3629c28ee2e77efd7
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-220
+109
 
 octeon-dmul-1.c
 file
@@ -672,14 +672,14 @@ rsandifo
 
 293
 
-pr34831.c
+fix-vr4130-4.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-f95e6890f2bc69d7a36990c9bc30b80c
+9d01ac9bf819c8e3629c28ee2e77efd7
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -704,41 +704,7 @@ rsandifo
 
 
 
-109
-
-mips-ps-2.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-d9cb43a9ef9bddea61b9ba773a785edd
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3055
+220
 
 ins-1.c
 file
@@ -774,14 +740,14 @@ rsandifo
 
 238
 
-memcpy-1.c
+mips-ps-2.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-87ce25a318862fed744565467713ca08
+d9cb43a9ef9bddea61b9ba773a785edd
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -806,7 +772,7 @@ rsandifo
 
 
 
-229
+3055
 
 loongson-simd.c
 file
@@ -841,6 +807,40 @@ rsandifo
 
 
 37437
+
+memcpy-1.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+87ce25a318862fed744565467713ca08
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+229
 
 msubu-1.c
 file
@@ -2236,40 +2236,6 @@ rsandifo
 
 759
 
-madd-6.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-55d658f98eb311cb3c28bf2822c5a344
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-246
-
 msub-5.c
 file
 
@@ -2303,6 +2269,40 @@ rsandifo
 
 
 419
+
+madd-6.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+55d658f98eb311cb3c28bf2822c5a344
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+246
 
 dpaq_sa_l_w.c
 file
@@ -2338,40 +2338,6 @@ nemet
 
 1346
 
-fpr-moves-3.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-8e9c2dab6959e056e1e5c54e07d1f252
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-636
-
 octeon-seq-4.c
 file
 
@@ -2406,14 +2372,14 @@ rsandifo
 
 212
 
-octeon-cins-1.c
+fpr-moves-3.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-d6c43fa2e68e6b20810004e523d05a7c
+8e9c2dab6959e056e1e5c54e07d1f252
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -2438,7 +2404,7 @@ rsandifo
 
 
 
-472
+636
 
 save-restore-3.c
 file
@@ -2473,6 +2439,40 @@ rsandifo
 
 
 635
+
+octeon-cins-1.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+d6c43fa2e68e6b20810004e523d05a7c
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+472
 
 int-moves-2.c
 file
@@ -2542,17 +2542,17 @@ rsandifo
 
 204
 
-mips.exp
+fpr-moves-7.c
 file
 
 
 
 
-2009-05-08T12:19:49.000000Z
-68e6da3b67571eac88af7d6121132c38
-2009-05-05T20:54:06.426226Z
-147134
-nemet
+2009-04-24T17:45:48.000000Z
+789dc5f534775273608729f85e92dcc2
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
 
 
 
@@ -2574,7 +2574,7 @@ nemet
 
 
 
-35850
+787
 
 gcc-have-sync-compare-and-swap-2.c
 file
@@ -2610,17 +2610,17 @@ rsandifo
 
 382
 
-fpr-moves-7.c
+mips.exp
 file
 
 
 
 
-2009-04-24T17:45:48.000000Z
-789dc5f534775273608729f85e92dcc2
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
+2009-05-08T12:19:49.000000Z
+68e6da3b67571eac88af7d6121132c38
+2009-05-05T20:54:06.426226Z
+147134
+nemet
 
 
 
@@ -2642,41 +2642,7 @@ rsandifo
 
 
 
-787
-
-clear-cache-1.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-7c764ae5d41f63104a81cb7acf7228d2
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-343
+35850
 
 octeon-dmul-2.c
 file
@@ -2712,14 +2678,14 @@ rsandifo
 
 175
 
-mips-ps-3.c
+clear-cache-1.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-d0c00af6b15c62a4ce49044a222e31c2
+7c764ae5d41f63104a81cb7acf7228d2
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -2744,7 +2710,41 @@ rsandifo
 
 
 
-20740
+343
+
+dsp-ctrl.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+7868f177dc05e8e595bf157005698f14
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1136
 
 ins-2.c
 file
@@ -2780,14 +2780,14 @@ nemet
 
 736
 
-dsp-ctrl.c
+mips-ps-3.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-7868f177dc05e8e595bf157005698f14
+d0c00af6b15c62a4ce49044a222e31c2
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -2812,7 +2812,7 @@ rsandifo
 
 
 
-1136
+20740
 
 msubu-2.c
 file
@@ -2950,14 +2950,14 @@ nemet
 
 487
 
-mips32-dsp.c
+r10k-cache-barrier-2.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-8043d462124b58ccd9f138e890ac0d7e
+8de0121c5f344b239655b15764a4b0b9
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -2982,7 +2982,7 @@ rsandifo
 
 
 
-28647
+792
 
 cache-1.c
 file
@@ -3018,14 +3018,14 @@ rsandifo
 
 660
 
-r10k-cache-barrier-2.c
+mips32-dsp.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-8de0121c5f344b239655b15764a4b0b9
+8043d462124b58ccd9f138e890ac0d7e
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -3050,7 +3050,7 @@ rsandifo
 
 
 
-792
+28647
 
 branch-cost-2.c
 file
@@ -3222,40 +3222,6 @@ rsandifo
 
 2146
 
-movcc-3.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-b56eaf94d236d11eb9fe87ab9a0d72ba
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1159
-
 octeon-exts-2.c
 file
 
@@ -3290,14 +3256,14 @@ nemet
 
 561
 
-fix-r10000-5.c
+movcc-3.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-0d6e97782cb61dedf1fcebd1dc414a53
+b56eaf94d236d11eb9fe87ab9a0d72ba
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -3322,7 +3288,7 @@ rsandifo
 
 
 
-334
+1159
 
 fix-r4000-11.c
 file
@@ -3358,14 +3324,14 @@ rsandifo
 
 257
 
-dse-1.c
+fix-r10000-5.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-6bdccca11516f1b8e53b78c91199416c
+0d6e97782cb61dedf1fcebd1dc414a53
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -3390,7 +3356,7 @@ rsandifo
 
 
 
-1408
+334
 
 scc-4.c
 file
@@ -3425,6 +3391,40 @@ rsandifo
 
 
 289
+
+dse-1.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+6bdccca11516f1b8e53b78c91199416c
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1408
 
 neg-abs-1.c
 file
@@ -3494,14 +3494,14 @@ nemet
 
 539
 
-mips-3d-3.c
+rsqrt-4.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-47141bc4d87d1423354d242b58ac5e0e
+afc452ced103115faf105459e8869684
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -3526,7 +3526,7 @@ rsandifo
 
 
 
-20192
+503
 
 fix-r10000-9.c
 file
@@ -3562,14 +3562,14 @@ rsandifo
 
 331
 
-rsqrt-4.c
+mips-3d-3.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-afc452ced103115faf105459e8869684
+47141bc4d87d1423354d242b58ac5e0e
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -3594,41 +3594,7 @@ rsandifo
 
 
 
-503
-
-smartmips-ror-3.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-9be9d08e654aea321b248c5488e7d933
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-213
+20192
 
 timode-1.c
 file
@@ -3664,14 +3630,14 @@ rsandifo
 
 1687
 
-mips-3d-7.c
+smartmips-ror-3.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-a1b7d44c791f794654d654ceecb609f4
+9be9d08e654aea321b248c5488e7d933
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -3696,7 +3662,7 @@ rsandifo
 
 
 
-5065
+213
 
 r10k-cache-barrier-10.c
 file
@@ -3731,6 +3697,40 @@ rsandifo
 
 
 489
+
+mips-3d-7.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+a1b7d44c791f794654d654ceecb609f4
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5065
 
 nmadd-1.c
 file
@@ -3800,14 +3800,14 @@ rsandifo
 
 211
 
-mips32-dspr2-type.c
+truncate-2.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-1bf8d42aa8a942d972fb9022f93019aa
+5e7a656ae7f8b87cd826024f51e62d7b
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -3832,41 +3832,7 @@ rsandifo
 
 
 
-263
-
-pr33256.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-9026eb7b93efa8f54c9615a8c3c4de49
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-248
+418
 
 r10k-cache-barrier-14.c
 file
@@ -3902,14 +3868,14 @@ rsandifo
 
 184
 
-truncate-2.c
+pr33256.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-5e7a656ae7f8b87cd826024f51e62d7b
+9026eb7b93efa8f54c9615a8c3c4de49
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -3934,7 +3900,41 @@ rsandifo
 
 
 
-418
+248
+
+mips32-dspr2-type.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+1bf8d42aa8a942d972fb9022f93019aa
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+263
 
 fix-r10000-11.c
 file
@@ -3970,40 +3970,6 @@ rsandifo
 
 334
 
-fix-r10000-15.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-97c2f1bb5a15e424857a634ef2092a54
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-532
-
 fix-r4000-3.c
 file
 
@@ -4038,14 +4004,14 @@ rsandifo
 
 424
 
-maddu-4.c
+fix-r10000-15.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-b4339b1cb983f888f80fbe2e1f5bd899
+97c2f1bb5a15e424857a634ef2092a54
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -4070,7 +4036,7 @@ rsandifo
 
 
 
-443
+532
 
 near-far-3.c
 file
@@ -4106,6 +4072,40 @@ rsandifo
 
 743
 
+maddu-4.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+b4339b1cb983f888f80fbe2e1f5bd899
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+443
+
 fix-r4000-7.c
 file
 
@@ -4140,40 +4140,6 @@ rsandifo
 
 428
 
-mips-sched-madd.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-225e3f7bf4fcc53a1c6b192870b2fee9
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-462
-
 long-calls-pg.c
 file
 
@@ -4207,6 +4173,40 @@ rsandifo
 
 
 179
+
+mips-sched-madd.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+225e3f7bf4fcc53a1c6b192870b2fee9
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+462
 
 inter
 dir

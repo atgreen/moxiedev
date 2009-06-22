@@ -355,8 +355,8 @@ assign_stack_local_1 (enum machine_mode mode, HOST_WIDE_INT size,
 
   if (crtl->stack_alignment_needed < alignment_in_bits)
     crtl->stack_alignment_needed = alignment_in_bits;
-  if (crtl->max_used_stack_slot_alignment < crtl->stack_alignment_needed)
-    crtl->max_used_stack_slot_alignment = crtl->stack_alignment_needed;
+  if (crtl->max_used_stack_slot_alignment < alignment_in_bits)
+    crtl->max_used_stack_slot_alignment = alignment_in_bits;
 
   /* Calculate how many bytes the start of local variables is off from
      stack alignment.  */
@@ -2100,7 +2100,8 @@ split_complex_args (tree args)
 	  layout_decl (p, 0);
 
 	  /* Build a second synthetic decl.  */
-	  decl = build_decl (PARM_DECL, NULL_TREE, subtype);
+	  decl = build_decl (EXPR_LOCATION (p),
+			     PARM_DECL, NULL_TREE, subtype);
 	  DECL_ARG_TYPE (decl) = DECL_ARG_TYPE (p);
 	  DECL_ARTIFICIAL (decl) = addressable;
 	  DECL_IGNORED_P (decl) = addressable;
@@ -2135,7 +2136,8 @@ assign_parms_augmented_arg_list (struct assign_parm_data_all *all)
       tree type = build_pointer_type (TREE_TYPE (fntype));
       tree decl;
 
-      decl = build_decl (PARM_DECL, NULL_TREE, type);
+      decl = build_decl (DECL_SOURCE_LOCATION (fndecl),
+			 PARM_DECL, NULL_TREE, type);
       DECL_ARG_TYPE (decl) = type;
       DECL_ARTIFICIAL (decl) = 1;
       DECL_IGNORED_P (decl) = 1;
@@ -3520,8 +3522,6 @@ locate_and_pad_parm (enum machine_mode passed_mode, tree type, int in_regs,
      calling function side.  */
   if (crtl->stack_alignment_needed < boundary)
     crtl->stack_alignment_needed = boundary;
-  if (crtl->max_used_stack_slot_alignment < crtl->stack_alignment_needed)
-    crtl->max_used_stack_slot_alignment = crtl->stack_alignment_needed;
   if (crtl->preferred_stack_boundary < boundary)
     crtl->preferred_stack_boundary = boundary;
 

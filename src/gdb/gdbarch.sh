@@ -466,8 +466,8 @@ f:void:value_to_register:struct frame_info *frame, int regnum, struct type *type
 # (but not the value contents) filled in.
 f:struct value *:value_from_register:struct type *type, int regnum, struct frame_info *frame:type, regnum, frame::default_value_from_register::0
 #
-f:CORE_ADDR:pointer_to_address:struct type *type, const gdb_byte *buf:type, buf::unsigned_pointer_to_address::0
-f:void:address_to_pointer:struct type *type, gdb_byte *buf, CORE_ADDR addr:type, buf, addr::unsigned_address_to_pointer::0
+m:CORE_ADDR:pointer_to_address:struct type *type, const gdb_byte *buf:type, buf::unsigned_pointer_to_address::0
+m:void:address_to_pointer:struct type *type, gdb_byte *buf, CORE_ADDR addr:type, buf, addr::unsigned_address_to_pointer::0
 M:CORE_ADDR:integer_to_address:struct type *type, const gdb_byte *buf:type, buf
 
 # Return the return-value convention that will be used by FUNCTYPE
@@ -575,15 +575,6 @@ f:int:in_solib_return_trampoline:CORE_ADDR pc, char *name:pc, name::generic_in_s
 # which don't suffer from that problem could just let this functionality
 # untouched.
 m:int:in_function_epilogue_p:CORE_ADDR addr:addr:0:generic_in_function_epilogue_p::0
-# Given a vector of command-line arguments, return a newly allocated
-# string which, when passed to the create_inferior function, will be
-# parsed (on Unix systems, by the shell) to yield the same vector.
-# This function should call error() if the argument vector is not
-# representable for this target or if this target does not support
-# command-line arguments.
-# ARGC is the number of elements in the vector.
-# ARGV is an array of strings, one per argument.
-m:char *:construct_inferior_arguments:int argc, char **argv:argc, argv::construct_inferior_arguments::0
 f:void:elf_make_msymbol_special:asymbol *sym, struct minimal_symbol *msym:sym, msym::default_elf_make_msymbol_special::0
 f:void:coff_make_msymbol_special:int val, struct minimal_symbol *msym:val, msym::default_coff_make_msymbol_special::0
 v:int:cannot_step_breakpoint:::0:0::0
@@ -617,6 +608,9 @@ M:LONGEST:core_xfer_shared_libraries:gdb_byte *readbuf, ULONGEST offset, LONGEST
 # How the core_stratum layer converts a PTID from a core file to a
 # string.
 M:char *:core_pid_to_str:ptid_t ptid:ptid
+
+# BFD target to use when generating a core file.
+V:const char *:gcore_bfd_target:::0:0:::gdbarch->gcore_bfd_target
 
 # If the elements of C++ vtables are in-place function descriptors rather
 # than normal function pointers (which may point to code or a descriptor),

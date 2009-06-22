@@ -899,13 +899,7 @@ create_got_section (bfd *dynobj, struct bfd_link_info *info)
   htab->sgot = bfd_get_section_by_name (dynobj, ".got");
   BFD_ASSERT (htab->sgot != NULL);
 
-  htab->srelgot = bfd_make_section_with_flags (dynobj, ".rela.got",
-					       SEC_ALLOC
-					       | SEC_LOAD
-					       | SEC_HAS_CONTENTS
-					       | SEC_IN_MEMORY
-					       | SEC_LINKER_CREATED
-					       | SEC_READONLY);
+  htab->srelgot = bfd_get_section_by_name (dynobj, ".rela.got");
   if (htab->srelgot == NULL
       || ! bfd_set_section_alignment (dynobj, htab->srelgot,
 				      htab->word_align_power))
@@ -1471,14 +1465,18 @@ _bfd_sparc_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 		  /* Track dynamic relocs needed for local syms too.
 		     We really need local syms available to do this
 		     easily.  Oh well.  */
-
 		  asection *s;
 		  void *vpp;
+		  Elf_Internal_Sym *isym;
 
-		  s = bfd_section_from_r_symndx (abfd, &htab->sym_sec,
-						 sec, r_symndx);
-		  if (s == NULL)
+		  isym = bfd_sym_from_r_symndx (&htab->sym_cache,
+						abfd, r_symndx);
+		  if (isym == NULL)
 		    return FALSE;
+
+		  s = bfd_section_from_elf_index (abfd, isym->st_shndx);
+		  if (s == NULL)
+		    s = sec;
 
 		  vpp = &elf_section_data (s)->local_dynrel;
 		  head = (struct _bfd_sparc_elf_dyn_relocs **) vpp;

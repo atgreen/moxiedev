@@ -159,7 +159,7 @@ bsd_uthread_read_memory_address (CORE_ADDR addr)
 static int
 bsd_uthread_activate (struct objfile *objfile)
 {
-  struct gdbarch *gdbarch = current_gdbarch;
+  struct gdbarch *gdbarch = target_gdbarch;
   struct bsd_uthread_ops *ops = gdbarch_data (gdbarch, bsd_uthread_data);
 
   /* Skip if the thread stratum has already been activated.  */
@@ -248,7 +248,7 @@ bsd_uthread_solib_loaded (struct so_list *so)
     {
       if (strncmp (so->so_original_name, *names, strlen (*names)) == 0)
 	{
-	  solib_read_symbols (so, so->from_tty);
+	  solib_read_symbols (so, so->from_tty ? SYMFILE_VERBOSE : 0);
 
 	  if (bsd_uthread_activate (so->objfile))
 	    {

@@ -1,7 +1,7 @@
 10
 
 dir
-148390
+148747
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/xml/dom/html2
 svn://gcc.gnu.org/svn/gcc
 
@@ -570,40 +570,6 @@ has-props
 
 1372
 
-DomHTMLFieldSetElement.class
-file
-
-
-
-
-2009-04-24T17:47:48.000000Z
-67e6d58e68d667de50fb72e0df5062a1
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-820
-
 DomHTMLInputElement.class
 file
 
@@ -638,14 +604,14 @@ has-props
 
 4906
 
-DomHTMLUListElement.class
+DomHTMLFieldSetElement.class
 file
 
 
 
 
 2009-04-24T17:47:48.000000Z
-22e97f0b6ba3bde9f5f148936cc1e867
+67e6d58e68d667de50fb72e0df5062a1
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -670,7 +636,7 @@ has-props
 
 
 
-1250
+820
 
 DomHTMLStyleElement.class
 file
@@ -706,6 +672,40 @@ has-props
 
 1427
 
+DomHTMLUListElement.class
+file
+
+
+
+
+2009-04-24T17:47:48.000000Z
+22e97f0b6ba3bde9f5f148936cc1e867
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1250
+
 DomHTMLHeadElement.class
 file
 
@@ -739,74 +739,6 @@ has-props
 
 
 937
-
-DomHTMLBRElement.class
-file
-
-
-
-
-2009-04-24T17:47:48.000000Z
-399498eb073bb3cf1f62d4d67a28c107
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-923
-
-DomHTMLFormElement.class
-file
-
-
-
-
-2009-04-24T17:47:48.000000Z
-a975945a488a6ab99955b7762b4bb404
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2784
 
 DomHTMLIsIndexElement.class
 file
@@ -842,14 +774,14 @@ has-props
 
 1181
 
-DomHTMLMenuElement.class
+DomHTMLFormElement.class
 file
 
 
 
 
 2009-04-24T17:47:48.000000Z
-91335edbe0538fe0a50603fd36b36b59
+a975945a488a6ab99955b7762b4bb404
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -874,7 +806,41 @@ has-props
 
 
 
-887
+2784
+
+DomHTMLBRElement.class
+file
+
+
+
+
+2009-04-24T17:47:48.000000Z
+399498eb073bb3cf1f62d4d67a28c107
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+923
 
 DomHTMLHtmlElement.class
 file
@@ -909,6 +875,40 @@ has-props
 
 
 937
+
+DomHTMLMenuElement.class
+file
+
+
+
+
+2009-04-24T17:47:48.000000Z
+91335edbe0538fe0a50603fd36b36b59
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+887
 
 DomHTMLTableCaptionElement.class
 file
@@ -978,40 +978,6 @@ has-props
 
 1115
 
-DomHTMLOptionElement.class
-file
-
-
-
-
-2009-04-24T17:47:48.000000Z
-989bcf93d6c244ea098f94d85d2846fc
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2410
-
 DomHTMLAreaElement.class
 file
 
@@ -1045,6 +1011,40 @@ has-props
 
 
 2461
+
+DomHTMLOptionElement.class
+file
+
+
+
+
+2009-04-24T17:47:48.000000Z
+989bcf93d6c244ea098f94d85d2846fc
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2410
 
 DomHTMLHRElement.class
 file

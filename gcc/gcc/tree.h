@@ -966,30 +966,17 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
   case NOP_EXPR:						\
   case CONVERT_EXPR
 
-/* Given an expression as a tree, strip any NON_LVALUE_EXPRs and NOP_EXPRs
-   that don't change the machine mode.  */
+/* Given an expression as a tree, strip any conversion that generates
+   no instruction.  Accepts both tree and const_tree arguments since
+   we are not modifying the tree itself.  */
 
-#define STRIP_NOPS(EXP)						\
-  while ((CONVERT_EXPR_P (EXP)					\
-	  || TREE_CODE (EXP) == NON_LVALUE_EXPR)		\
-	 && TREE_OPERAND (EXP, 0) != error_mark_node		\
-	 && (TYPE_MODE (TREE_TYPE (EXP))			\
-	     == TYPE_MODE (TREE_TYPE (TREE_OPERAND (EXP, 0))))) \
-    (EXP) = TREE_OPERAND (EXP, 0)
+#define STRIP_NOPS(EXP) \
+  (EXP) = tree_strip_nop_conversions (CONST_CAST_TREE (EXP))
 
 /* Like STRIP_NOPS, but don't let the signedness change either.  */
 
 #define STRIP_SIGN_NOPS(EXP) \
-  while ((CONVERT_EXPR_P (EXP)					\
-	  || TREE_CODE (EXP) == NON_LVALUE_EXPR)		\
-	 && TREE_OPERAND (EXP, 0) != error_mark_node		\
-	 && (TYPE_MODE (TREE_TYPE (EXP))			\
-	     == TYPE_MODE (TREE_TYPE (TREE_OPERAND (EXP, 0))))	\
-	 && (TYPE_UNSIGNED (TREE_TYPE (EXP))			\
-	     == TYPE_UNSIGNED (TREE_TYPE (TREE_OPERAND (EXP, 0)))) \
-	 && (POINTER_TYPE_P (TREE_TYPE (EXP))			\
-	     == POINTER_TYPE_P (TREE_TYPE (TREE_OPERAND (EXP, 0))))) \
-    (EXP) = TREE_OPERAND (EXP, 0)
+  (EXP) = tree_strip_sign_nop_conversions (CONST_CAST_TREE (EXP))
 
 /* Like STRIP_NOPS, but don't alter the TREE_TYPE either.  */
 
@@ -1004,9 +991,8 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
 /* Remove unnecessary type conversions according to
    tree_ssa_useless_type_conversion.  */
 
-#define STRIP_USELESS_TYPE_CONVERSION(EXP)				\
-      while (tree_ssa_useless_type_conversion (EXP))			\
-	EXP = TREE_OPERAND (EXP, 0)
+#define STRIP_USELESS_TYPE_CONVERSION(EXP) \
+  (EXP) = tree_ssa_strip_useless_type_conversions (EXP)
 
 /* Nonzero if TYPE represents an integral type.  Note that we do not
    include COMPLEX types here.  Keep these checks in ascending code
@@ -1563,7 +1549,7 @@ struct GTY(()) tree_constructor {
 
 /* True if a tree is an expression or statement that can have a
    location.  */
-#define CAN_HAVE_LOCATION_P(NODE) (EXPR_P (NODE))
+#define CAN_HAVE_LOCATION_P(NODE) ((NODE) && EXPR_P (NODE))
 
 extern void protected_set_expr_location (tree, location_t);
 
@@ -1725,6 +1711,9 @@ extern void protected_set_expr_location (tree, location_t);
   OMP_CLAUSE_OPERAND (OMP_CLAUSE_RANGE_CHECK (OMP_CLAUSE_CHECK (NODE),	\
 					      OMP_CLAUSE_PRIVATE,	\
 	                                      OMP_CLAUSE_COPYPRIVATE), 0)
+#define OMP_CLAUSE_HAS_LOCATION(NODE) \
+  ((OMP_CLAUSE_CHECK (NODE))->omp_clause.locus != UNKNOWN_LOCATION)
+#define OMP_CLAUSE_LOCATION(NODE)  (OMP_CLAUSE_CHECK (NODE))->omp_clause.locus
 
 /* True on an OMP_SECTION statement that was the last lexical member.
    This status is meaningful in the implementation of lastprivate.  */
@@ -1919,6 +1908,7 @@ struct GTY(()) phi_arg_d {
 
 struct GTY(()) tree_omp_clause {
   struct tree_common common;
+  location_t locus;
   enum omp_clause_code code;
   union omp_clause_subcode {
     enum omp_clause_default_kind  default_kind;
@@ -2864,6 +2854,8 @@ extern void decl_restrict_base_insert (tree, tree);
    something which is DECL_COMDAT.  */
 #define DECL_COMDAT(NODE) (DECL_WITH_VIS_CHECK (NODE)->decl_with_vis.comdat_flag)
 
+#define DECL_COMDAT_GROUP(NODE) (DECL_WITH_VIS_CHECK (NODE)->decl_with_vis.comdat_group)
+
 /* A replaceable function is one which may be replaced at link-time
    with an entirely different definition, provided that the
    replacement has the same type.  For example, functions declared
@@ -2932,12 +2924,13 @@ extern void decl_restrict_base_insert (tree, tree);
 
 /* Used in TREE_PUBLIC decls to indicate that copies of this DECL in
    multiple translation units should be merged.  */
-#define DECL_ONE_ONLY(NODE) (DECL_WITH_VIS_CHECK (NODE)->decl_with_vis.one_only)
+#define DECL_ONE_ONLY(NODE) (DECL_COMDAT_GROUP (NODE) != NULL_TREE)
 
 struct GTY(()) tree_decl_with_vis {
  struct tree_decl_with_rtl common;
  tree assembler_name;
  tree section_name;
+ tree comdat_group;
 
  /* Belong to VAR_DECL exclusively.  */
  unsigned defer_output:1;
@@ -2957,12 +2950,11 @@ struct GTY(()) tree_decl_with_vis {
  ENUM_BITFIELD(symbol_visibility) visibility : 2;
  unsigned visibility_specified : 1;
  /* Belong to FUNCTION_DECL exclusively.  */
- unsigned one_only : 1;
  unsigned init_priority_p:1;
 
  /* Belongs to VAR_DECL exclusively.  */
  ENUM_BITFIELD(tls_model) tls_model : 3;
- /* 13 unused bits. */
+ /* 14 unused bits. */
 };
 
 /* In a VAR_DECL that's static,
@@ -3862,12 +3854,13 @@ extern tree build_tree_list_stat (tree, tree MEM_STAT_DECL);
 #define build_tree_list(t,q) build_tree_list_stat(t,q MEM_STAT_INFO)
 extern tree build_tree_list_vec_stat (const VEC(tree,gc) * MEM_STAT_DECL);
 #define build_tree_list_vec(v) build_tree_list_vec_stat (v MEM_STAT_INFO)
-extern tree build_decl_stat (enum tree_code, tree, tree MEM_STAT_DECL);
+extern tree build_decl_stat (location_t, enum tree_code,
+			     tree, tree MEM_STAT_DECL);
 extern tree build_fn_decl (const char *, tree);
-#define build_decl(c,t,q) build_decl_stat (c,t,q MEM_STAT_INFO)
+#define build_decl(l,c,t,q) build_decl_stat (l,c,t,q MEM_STAT_INFO)
 extern tree build_block (tree, tree, tree, tree);
-extern tree build_empty_stmt (void);
-extern tree build_omp_clause (enum omp_clause_code);
+extern tree build_empty_stmt (location_t);
+extern tree build_omp_clause (location_t, enum omp_clause_code);
 
 extern tree build_vl_exp_stat (enum tree_code, int MEM_STAT_DECL);
 #define build_vl_exp(c,n) build_vl_exp_stat (c,n MEM_STAT_INFO)
@@ -4619,12 +4612,14 @@ extern int operand_equal_for_phi_arg_p (const_tree, const_tree);
 extern tree call_expr_arg (tree, int);
 extern tree *call_expr_argp (tree, int);
 extern tree call_expr_arglist (tree);
-extern tree create_artificial_label (void);
+extern tree create_artificial_label (location_t);
 extern const char *get_name (tree);
 extern bool stdarg_p (tree);
 extern bool prototype_p (tree);
 extern bool auto_var_in_fn_p (const_tree, const_tree);
 extern tree build_low_bits_mask (tree, unsigned);
+extern tree tree_strip_nop_conversions (tree);
+extern tree tree_strip_sign_nop_conversions (tree);
 
 /* In cgraph.c */
 extern void change_decl_assembler_name (tree, tree);
@@ -4863,6 +4858,7 @@ extern tree build_nonstandard_integer_type (unsigned HOST_WIDE_INT, int);
 extern tree build_range_type (tree, tree, tree);
 extern bool subrange_type_for_debug_p (const_tree, tree *, tree *);
 extern HOST_WIDE_INT int_cst_value (const_tree);
+extern HOST_WIDEST_INT widest_int_cst_value (const_tree);
 
 extern bool fields_compatible_p (const_tree, const_tree);
 extern tree find_compatible_field (tree, tree);
@@ -4989,7 +4985,7 @@ extern unsigned int update_alignment_for_field (record_layout_info, tree,
                                                 unsigned int);
 /* varasm.c */
 extern void make_decl_rtl (tree);
-extern void make_decl_one_only (tree);
+extern void make_decl_one_only (tree, tree);
 extern int supports_one_only (void);
 extern void resolve_unique_section (tree, int, int);
 extern void mark_referenced (tree);
@@ -5169,9 +5165,9 @@ struct GTY(()) tree_priority_map {
 #define tree_priority_map_marked_p tree_map_base_marked_p
 
 /* In tree-ssa-ccp.c */
-extern tree maybe_fold_offset_to_reference (tree, tree, tree);
-extern tree maybe_fold_offset_to_address (tree, tree, tree);
-extern tree maybe_fold_stmt_addition (tree, tree, tree);
+extern tree maybe_fold_offset_to_reference (location_t, tree, tree, tree);
+extern tree maybe_fold_offset_to_address (location_t, tree, tree, tree);
+extern tree maybe_fold_stmt_addition (location_t, tree, tree, tree);
 
 /* In tree-ssa-address.c.  */
 extern tree tree_mem_ref_addr (tree, tree);

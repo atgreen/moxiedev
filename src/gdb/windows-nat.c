@@ -556,7 +556,9 @@ static int
 safe_symbol_file_add_stub (void *argv)
 {
 #define p ((struct safe_symbol_file_add_args *) argv)
-  p->ret = symbol_file_add (p->name, p->from_tty, p->addrs, p->mainline, p->flags);
+  const int add_flags = ((p->from_tty ? SYMFILE_VERBOSE : 0)
+                         | (p->mainline ? SYMFILE_MAINLINE : 0));
+  p->ret = symbol_file_add (p->name, add_flags, p->addrs, p->flags);
   return !!p->ret;
 #undef p
 }
@@ -1246,9 +1248,10 @@ windows_resume (struct target_ops *ops,
       if (step)
 	{
 	  /* Single step by setting t bit */
-	  windows_fetch_inferior_registers (ops,
-					    get_current_regcache (),
-					    gdbarch_ps_regnum (current_gdbarch));
+	  struct regcache *regcache = get_current_regcache ();
+	  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+	  windows_fetch_inferior_registers (ops, regcache,
+					    gdbarch_ps_regnum (gdbarch));
 	  th->context.EFlags |= FLAG_TRACE_BIT;
 	}
 
@@ -2164,11 +2167,11 @@ init_windows_ops (void)
   windows_ops.to_pid_to_str = windows_pid_to_str;
   windows_ops.to_stop = windows_stop;
   windows_ops.to_stratum = process_stratum;
-  windows_ops.to_has_all_memory = 1;
-  windows_ops.to_has_memory = 1;
-  windows_ops.to_has_stack = 1;
-  windows_ops.to_has_registers = 1;
-  windows_ops.to_has_execution = 1;
+  windows_ops.to_has_all_memory = default_child_has_all_memory;
+  windows_ops.to_has_memory = default_child_has_memory;
+  windows_ops.to_has_stack = default_child_has_stack;
+  windows_ops.to_has_registers = default_child_has_registers;
+  windows_ops.to_has_execution = default_child_has_execution;
   windows_ops.to_pid_to_exec_file = windows_pid_to_exec_file;
   windows_ops.to_get_ada_task_ptid = windows_get_ada_task_ptid;
 

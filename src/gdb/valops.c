@@ -832,6 +832,7 @@ value_assign (struct value *toval, struct value *fromval)
     case lval_register:
       {
 	struct frame_info *frame;
+	struct gdbarch *gdbarch;
 	int value_reg;
 
 	/* Figure out which frame this is in currently.  */
@@ -840,14 +841,14 @@ value_assign (struct value *toval, struct value *fromval)
 
 	if (!frame)
 	  error (_("Value being assigned to is no longer active."));
-	
-	if (gdbarch_convert_register_p
-	    (current_gdbarch, VALUE_REGNUM (toval), type))
+
+	gdbarch = get_frame_arch (frame);
+	if (gdbarch_convert_register_p (gdbarch, VALUE_REGNUM (toval), type))
 	  {
 	    /* If TOVAL is a special machine register requiring
 	       conversion of program values to a special raw
 	       format.  */
-	    gdbarch_value_to_register (current_gdbarch, frame, 
+	    gdbarch_value_to_register (gdbarch, frame,
 				       VALUE_REGNUM (toval), type,
 				       value_contents (fromval));
 	  }
@@ -1348,7 +1349,7 @@ value_array (int lowbound, int highbound, struct value **elemvec)
 }
 
 struct value *
-value_typed_string (char *ptr, int len, struct type *char_type)
+value_cstring (char *ptr, int len, struct type *char_type)
 {
   struct value *val;
   int lowbound = current_language->string_lower_bound;
@@ -1375,34 +1376,21 @@ value_typed_string (char *ptr, int len, struct type *char_type)
    string may contain embedded null bytes.  */
 
 struct value *
-value_string (char *ptr, int len)
+value_string (char *ptr, int len, struct type *char_type)
 {
   struct value *val;
   int lowbound = current_language->string_lower_bound;
+  int highbound = len / TYPE_LENGTH (char_type);
   struct type *rangetype = create_range_type ((struct type *) NULL,
 					      builtin_type_int32,
 					      lowbound, 
-					      len + lowbound - 1);
+					      highbound + lowbound - 1);
   struct type *stringtype
-    = create_string_type ((struct type *) NULL, rangetype);
-  CORE_ADDR addr;
+    = create_string_type ((struct type *) NULL, char_type, rangetype);
 
-  if (current_language->c_style_arrays == 0)
-    {
-      val = allocate_value (stringtype);
-      memcpy (value_contents_raw (val), ptr, len);
-      return val;
-    }
-
-
-  /* Allocate space to store the string in the inferior, and then copy
-     LEN bytes from PTR in gdb to that address in the inferior.  */
-
-  addr = allocate_space_in_inferior (len);
-  write_memory (addr, (gdb_byte *) ptr, len);
-
-  val = value_at_lazy (stringtype, addr);
-  return (val);
+  val = allocate_value (stringtype);
+  memcpy (value_contents_raw (val), ptr, len);
+  return val;
 }
 
 struct value *
@@ -1849,10 +1837,6 @@ value_struct_elt (struct value **argp, struct value **args,
 
       /* C++: If it was not found as a data field, then try to
          return it as a pointer to a method.  */
-
-      if (destructor_name_p (name, t))
-	error (_("Cannot get value of destructor"));
-
       v = search_struct_method (name, argp, args, 0, 
 				static_memfuncp, t);
 
@@ -1868,32 +1852,6 @@ value_struct_elt (struct value **argp, struct value **args,
       return v;
     }
 
-  if (destructor_name_p (name, t))
-    {
-      if (!args[1])
-	{
-	  /* Destructors are a special case.  */
-	  int m_index, f_index;
-
-	  v = NULL;
-	  if (get_destructor_fn_field (t, &m_index, &f_index))
-	    {
-	      v = value_fn_field (NULL, 
-				  TYPE_FN_FIELDLIST1 (t, m_index),
-				  f_index, NULL, 0);
-	    }
-	  if (v == NULL)
-	    error (_("could not find destructor function named %s."), 
-		   name);
-	  else
-	    return v;
-	}
-      else
-	{
-	  error (_("destructor should not have any argument"));
-	}
-    }
-  else
     v = search_struct_method (name, argp, args, 0, 
 			      static_memfuncp, t);
   
@@ -2499,8 +2457,6 @@ classify_oload_match (struct badness_vector *oload_champ_bv,
 int
 destructor_name_p (const char *name, const struct type *type)
 {
-  /* Destructors are a special case.  */
-
   if (name[0] == '~')
     {
       char *dname = type_name_no_tag (type);
@@ -2538,14 +2494,6 @@ check_field (struct type *type, const char *name)
 
   /* C++: If it was not found as a data field, then try to return it
      as a pointer to a method.  */
-
-  /* Destructors are a special case.  */
-  if (destructor_name_p (name, type))
-    {
-      int m_index, f_index;
-
-      return get_destructor_fn_field (type, &m_index, &f_index);
-    }
 
   for (i = TYPE_NFN_FIELDS (type) - 1; i >= 0; --i)
     {
@@ -2641,12 +2589,6 @@ value_struct_elt_for_reference (struct type *domain, int offset,
 
   /* C++: If it was not found as a data field, then try to return it
      as a pointer to a method.  */
-
-  /* Destructors are a special case.  */
-  if (destructor_name_p (name, t))
-    {
-      error (_("member pointers to destructors not implemented yet"));
-    }
 
   /* Perform all necessary dereferencing.  */
   while (intype && TYPE_CODE (intype) == TYPE_CODE_PTR)

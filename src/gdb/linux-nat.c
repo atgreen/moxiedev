@@ -3290,6 +3290,12 @@ linux_nat_xfer_partial (struct target_ops *ops, enum target_object object,
     return linux_xfer_siginfo (ops, object, annex, readbuf, writebuf,
 			       offset, len);
 
+  /* The target is connected but no live inferior is selected.  Pass
+     this request down to a lower stratum (e.g., the executable
+     file).  */
+  if (object == TARGET_OBJECT_MEMORY && ptid_equal (inferior_ptid, null_ptid))
+    return 0;
+
   old_chain = save_inferior_ptid ();
 
   if (is_lwp (inferior_ptid))
@@ -3785,7 +3791,7 @@ linux_nat_info_proc_cmd (char *args, int from_tty)
 
 	  cleanup = make_cleanup_fclose (procfile);
 	  printf_filtered (_("Mapped address spaces:\n\n"));
-	  if (gdbarch_addr_bit (current_gdbarch) == 32)
+	  if (gdbarch_addr_bit (target_gdbarch) == 32)
 	    {
 	      printf_filtered ("\t%10s %10s %10s %10s %7s\n",
 			   "Start Addr",
@@ -3811,7 +3817,7 @@ linux_nat_info_proc_cmd (char *args, int from_tty)
 		 a generic local_address_string instead to print out
 		 the addresses; that makes sense to me, too.  */
 
-	      if (gdbarch_addr_bit (current_gdbarch) == 32)
+	      if (gdbarch_addr_bit (target_gdbarch) == 32)
 	        {
 	          printf_filtered ("\t%#10lx %#10lx %#10x %#10x %7s\n",
 			       (unsigned long) addr,	/* FIXME: pr_addr */

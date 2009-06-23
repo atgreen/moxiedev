@@ -1,3 +1,14 @@
+2009-06-22  Anthony Green  <green@moxielogic.com>
+
+        * moxie/rtl/verilog/MoxieCore.v: New file.
+        * moxie/rtl/verilog/iprinter.v: New file.
+        * moxie/rtl/verilog/moxie.v: New file.
+        * moxie/rtl/verilog/moxiesoc.v: New file.
+        * moxie/rtl/verilog/test.v: New file.
+        * moxie/rtl/verilog/testsuite/config/default.exp: New file.
+        * moxie/rtl/verilog/testsuite/moxie.modules/iprinter.exp: New file.
+        * moxie/rtl/verilog/testsuite/moxie.modules/test-iprinter.v: New file.
+
 2009-06-12  Anthony Green  <green@moxielogic.com>
 
 	* README: Fit within 80 columns.

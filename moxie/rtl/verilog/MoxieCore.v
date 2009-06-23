@@ -1,4 +1,4 @@
-// moxiesoc.v - Top level moxi
+// moxie.v - The Moxie Core
 //
 // Copyright (c) 2009 Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
@@ -20,7 +20,7 @@
 // Set the boot address upon system reset
 `define BOOT_ADDRESS 32'h00001000 
 
-module moxie (/*AUTOARG*/
+module MoxieCore (/*AUTOARG*/
    // Inputs
    reset, clk
    );
@@ -199,7 +199,17 @@ module moxie (/*AUTOARG*/
       // This is a rediculous switch.  Eventually we should recode
       // the opcodes so we can easily determine the length of the
       // instruction.
-      if ((insn[15:8] == 8'b00011010) // jmpa
+      if ((insn[15:8] == 8'b00001111)    // beq
+	  || (insn[15:8] == 8'b00010101) // bge
+	  || (insn[15:8] == 8'b00010111) // bgeu
+	  || (insn[15:8] == 8'b00010010) // bgt
+	  || (insn[15:8] == 8'b00010100) // bgtu
+	  || (insn[15:8] == 8'b00010110) // ble
+	  || (insn[15:8] == 8'b00011000) // bleu
+	  || (insn[15:8] == 8'b00010001) // blt
+	  || (insn[15:8] == 8'b00010011) // bltu
+	  || (insn[15:8] == 8'b00010000) // bne
+	  || (insn[15:8] == 8'b00011010) // jmpa
 	  || (insn[15:8] == 8'b00000011) // jsra
 	  || (insn[15:8] == 8'b00011101) // lda.b
 	  || (insn[15:8] == 8'b00001000) // lda.l
@@ -217,11 +227,8 @@ module moxie (/*AUTOARG*/
 	  || (insn[15:8] == 8'b00111001)) // sto.s
 	/* This is a 48-bit instruction.  */
 
-      /* idex_insn = insn; */
-	insn <= 0;
-
-      insn_o <= insn;
-      	
+      idex_insn = insn;
+	
    end
 
    always @ (negedge clk) begin
@@ -230,5 +237,5 @@ module moxie (/*AUTOARG*/
    end
 
 
-endmodule // moxie
+endmodule // MoxieCore
 

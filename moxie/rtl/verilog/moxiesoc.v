@@ -1,4 +1,4 @@
-// test module
+// moxiesoc.v - Top level Moxie SoC module.
 //
 // Copyright (c) 2009 Anthony Green.  All Rights Reserved.
 // DO NOT ALTER OR REMOVE COPYRIGHT NOTICES.
@@ -17,23 +17,27 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 // 02110-1301, USA.
 
-module test;
-
-   reg rst_o = 0;
-   initial begin
-      $dumpfile("test.vcd");
-      $dumpvars(1,soc); 
-      # 10 rst_o = 1;
-      # 20 rst_o = 0;
-      # 100 $stop;
-   end
-
-   reg clk_o = 0;
-
-   always #5 clk_o = !clk_o;
-
-   moxiesoc soc (rst_o, clk_o);
-
-endmodule
+module moxiesoc (/*AUTOARG*/
+   // Inputs
+   rst_i, clk_i
+   );
    
- 
+   // --- Clock and Reset ------------------------------------------
+   input  rst_i, clk_i;
+
+   reg rst;
+
+   moxie mx (rst_i, clk_i);
+   
+   always @ (posedge clk_i) begin
+      
+      if (rst_i == 1) begin
+	 
+	 $display("** RESET **");
+
+      end
+	
+   end
+	 
+endmodule // moxiesoc
+

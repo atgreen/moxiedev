@@ -28,7 +28,6 @@ with GNAT.Directory_Operations;  use GNAT.Directory_Operations;
 with GNAT.HTable;
 
 with Err_Vars; use Err_Vars;
-with Fmap;     use Fmap;
 with Hostparm;
 with MLib.Tgt;
 with Opt;      use Opt;
@@ -196,6 +195,10 @@ package body Prj.Nmsc is
    --  Find the list of files that should not be considered as source files
    --  for this project. Sets the list in the Excluded_Sources_Htable.
 
+   procedure Override_Kind (Source : Source_Id; Kind : Source_Kind);
+   --  Override the reference kind for a source file. This properly updates
+   --  the unit data if necessary.
+
    function Hash (Unit : Unit_Info) return Header_Num;
 
    type Name_And_Index is record
@@ -233,11 +236,9 @@ package body Prj.Nmsc is
       Kind                : Source_Kind;
       File_Name           : File_Name_Type;
       Display_File        : File_Name_Type;
-      Lang_Kind           : Language_Kind;
       Naming_Exception    : Boolean := False;
       Path                : Path_Information := No_Path_Information;
       Alternate_Languages : Language_List := null;
-      Other_Part          : Source_Id := No_Source;
       Unit                : Name_Id   := No_Name;
       Index               : Int       := 0;
       Source_To_Replace   : Source_Id := No_Source);
@@ -272,17 +273,27 @@ package body Prj.Nmsc is
    procedure Check_Ada_Name (Name : String; Unit : out Name_Id);
    --  Check that a name is a valid Ada unit name
 
-   procedure Check_Naming_Schemes
+   procedure Check_Package_Naming
      (Project        : Project_Id;
       In_Tree        : Project_Tree_Ref;
-      Is_Config_File : Boolean);
-   --  Check the naming scheme part of Data.
+      Is_Config_File : Boolean;
+      Bodies         : out Array_Element_Id;
+      Specs          : out Array_Element_Id);
+   --  Check the naming scheme part of Data, and initialize the naming scheme
+   --  data in the config of the various languages.
    --  Is_Config_File should be True if Project is a config file (.cgpr)
+   --  This also returns the naming scheme exceptions for unit-based
+   --  languages (Bodies and Specs are associative arrays mapping individual
+   --  unit names to source file names).
 
    procedure Check_Configuration
-     (Project : Project_Id;
-      In_Tree : Project_Tree_Ref);
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      Compiler_Driver_Mandatory : Boolean);
    --  Check the configuration attributes for the project
+   --  If Compiler_Driver_Mandatory is true, then a Compiler.Driver attribute
+   --  for each language must be defined, or we will not look for its source
+   --  files.
 
    procedure Check_If_Externally_Built
      (Project : Project_Id;
@@ -303,12 +314,6 @@ package body Prj.Nmsc is
    --  and modify its data Data accordingly.
    --  Current_Dir should represent the current directory, and is passed for
    --  efficiency to avoid system calls to recompute it.
-
-   procedure Check_Package_Naming
-     (Project : Project_Id;
-      In_Tree : Project_Tree_Ref);
-   --  Check package Naming of project Project in project tree In_Tree and
-   --  modify its data Data accordingly.
 
    procedure Check_Programming_Languages
      (In_Tree : Project_Tree_Ref;
@@ -349,10 +354,10 @@ package body Prj.Nmsc is
       In_Tree               : Project_Tree_Ref;
       Explicit_Sources_Only : Boolean;
       Proc_Data             : in out Processing_Data);
-   --  Find all Ada sources by traversing all source directories.
-   --  If Explicit_Sources_Only is True, then the sources found must belong to
-   --  the list of sources specified explicitly in the project file.
-   --  If Explicit_Sources_Only is False, then all sources matching the naming
+   --  Find all Ada sources by traversing all source directories. If
+   --  Explicit_Sources_Only is True, then the sources found must belong to
+   --  the list of sources specified explicitly in the project file. If
+   --  Explicit_Sources_Only is False, then all sources matching the naming
    --  scheme are recorded.
 
    function Compute_Directory_Last (Dir : String) return Natural;
@@ -369,25 +374,29 @@ package body Prj.Nmsc is
    --  Error_Report.
 
    procedure Search_Directories
-     (Project         : Project_Id;
-      In_Tree         : Project_Tree_Ref;
-      For_All_Sources : Boolean);
-   --  Search the source directories to find the sources.
-   --  If For_All_Sources is True, check each regular file name against the
-   --  naming schemes of the different languages. Otherwise consider only the
-   --  file names in the hash table Source_Names.
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      For_All_Sources           : Boolean;
+      Allow_Duplicate_Basenames : Boolean);
+   --  Search the source directories to find the sources. If For_All_Sources is
+   --  True, check each regular file name against the naming schemes of the
+   --  different languages. Otherwise consider only the file names in the hash
+   --  table Source_Names. If Allow_Duplicate_Basenames, then files with the
+   --  same base names are authorized within a project for source-based
+   --  languages (never for unit based languages)
 
    procedure Check_File
-     (Project           : Project_Id;
-      In_Tree           : Project_Tree_Ref;
-      Path              : Path_Name_Type;
-      File_Name         : File_Name_Type;
-      Display_File_Name : File_Name_Type;
-      For_All_Sources   : Boolean);
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      Path                      : Path_Name_Type;
+      File_Name                 : File_Name_Type;
+      Display_File_Name         : File_Name_Type;
+      For_All_Sources           : Boolean;
+      Allow_Duplicate_Basenames : Boolean);
    --  Check if file File_Name is a valid source of the project. This is used
-   --  in multi-language mode only.
-   --  When the file matches one of the naming schemes, it is added to
-   --  various htables through Add_Source and to Source_Paths_Htable.
+   --  in multi-language mode only. When the file matches one of the naming
+   --  schemes, it is added to various htables through Add_Source and to
+   --  Source_Paths_Htable.
    --
    --  Name is the name of the candidate file. It hasn't been normalized yet
    --  and is the direct result of readdir().
@@ -402,6 +411,10 @@ package body Prj.Nmsc is
    --
    --  If For_All_Sources is True, then all possible file names are analyzed
    --  otherwise only those currently set in the Source_Names htable.
+   --
+   --  If Allow_Duplicate_Basenames, then files with the same base names are
+   --  authorized within a project for source-based languages (never for unit
+   --  based languages)
 
    procedure Check_File_Naming_Schemes
      (In_Tree               : Project_Tree_Ref;
@@ -426,8 +439,8 @@ package body Prj.Nmsc is
    --  Free the internal hash tables used for checking naming exceptions
 
    procedure Get_Directories
-     (Project : Project_Id;
-      In_Tree : Project_Tree_Ref;
+     (Project     : Project_Id;
+      In_Tree     : Project_Tree_Ref;
       Current_Dir : String);
    --  Get the object directory, the exec directory and the source directories
    --  of a project.
@@ -452,19 +465,19 @@ package body Prj.Nmsc is
    procedure Find_Sources
      (Project   : Project_Id;
       In_Tree   : Project_Tree_Ref;
-      Proc_Data : in out Processing_Data);
+      Proc_Data : in out Processing_Data;
+      Allow_Duplicate_Basenames : Boolean);
    --  Process the Source_Files and Source_List_File attributes, and store
    --  the list of source files into the Source_Names htable.
    --  When these attributes are not defined, find all files matching the
    --  naming schemes in the source directories.
+   --  If Allow_Duplicate_Basenames, then files with the same base names are
+   --  authorized within a project for source-based languages (never for unit
+   --  based languages)
 
    procedure Compute_Unit_Name
      (File_Name       : File_Name_Type;
-      Dot_Replacement : File_Name_Type;
-      Separate_Suffix : File_Name_Type;
-      Body_Suffix     : File_Name_Type;
-      Spec_Suffix     : File_Name_Type;
-      Casing          : Casing_Type;
+      Naming          : Lang_Naming_Data;
       Kind            : out Source_Kind;
       Unit            : out Name_Id;
       In_Tree         : Project_Tree_Ref);
@@ -475,7 +488,7 @@ package body Prj.Nmsc is
    procedure Get_Unit
      (In_Tree             : Project_Tree_Ref;
       Canonical_File_Name : File_Name_Type;
-      Naming              : Naming_Data;
+      Project             : Project_Id;
       Exception_Id        : out Ada_Naming_Exception_Id;
       Unit_Name           : out Name_Id;
       Unit_Kind           : out Spec_Or_Body);
@@ -516,13 +529,16 @@ package body Prj.Nmsc is
    --  computing
 
    procedure Look_For_Sources
-     (Project     : Project_Id;
-      In_Tree     : Project_Tree_Ref;
-      Proc_Data   : in out Processing_Data);
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      Proc_Data                 : in out Processing_Data;
+      Allow_Duplicate_Basenames : Boolean);
    --  Find all the sources of project Project in project tree In_Tree and
    --  update its Data accordingly. This assumes that Data.First_Source has
    --  been initialized with the list of excluded sources and special naming
-   --  exceptions.
+   --  exceptions. If Allow_Duplicate_Basenames, then files with the same base
+   --  names are authorized within a project for source-based languages (never
+   --  for unit based languages)
 
    function Path_Name_Of
      (File_Name : File_Name_Type;
@@ -547,8 +563,8 @@ package body Prj.Nmsc is
       Location        : Source_Ptr;
       Source_Recorded : in out Boolean);
    --  Put a unit in the list of units of a project, if the file name
-   --  corresponds to a valid unit name.
-   --  Ada_Language is a pointer to the Language_Data for "Ada" in Project.
+   --  corresponds to a valid unit name. Ada_Language is a pointer to the
+   --  Language_Data for "Ada" in Project.
 
    procedure Remove_Source
      (Id          : Source_Id;
@@ -621,15 +637,27 @@ package body Prj.Nmsc is
      (Filename : String;
       Suffix   : File_Name_Type) return Boolean
    is
+      Min_Prefix_Length : Natural := 0;
    begin
-      if Suffix = No_File then
+      if Suffix = No_File or else Suffix = Empty_File then
          return False;
       end if;
 
       declare
          Suf : constant String := Get_Name_String (Suffix);
       begin
-         return Filename'Length > Suf'Length
+
+         --  The file name must end with the suffix (which is not an extension)
+         --  For instance a suffix "configure.in" must match a file with the
+         --  same name. To avoid dummy cases, though, a suffix starting with
+         --  '.' requires a file that is at least one character longer ('.cpp'
+         --  should not match a file with the same name)
+
+         if Suf (Suf'First) = '.' then
+            Min_Prefix_Length := 1;
+         end if;
+
+         return Filename'Length >= Suf'Length + Min_Prefix_Length
            and then Filename
              (Filename'Last - Suf'Length + 1 .. Filename'Last) = Suf;
       end;
@@ -661,16 +689,15 @@ package body Prj.Nmsc is
       Kind                : Source_Kind;
       File_Name           : File_Name_Type;
       Display_File        : File_Name_Type;
-      Lang_Kind           : Language_Kind;
       Naming_Exception    : Boolean := False;
       Path                : Path_Information := No_Path_Information;
       Alternate_Languages : Language_List := null;
-      Other_Part          : Source_Id := No_Source;
       Unit                : Name_Id   := No_Name;
       Index               : Int       := 0;
       Source_To_Replace   : Source_Id := No_Source)
    is
       Config   : constant Language_Config := Lang_Id.Config;
+      UData    : Unit_Index;
 
    begin
       Id := new Source_Data;
@@ -679,7 +706,7 @@ package body Prj.Nmsc is
          Write_Str ("Adding source File: ");
          Write_Str (Get_Name_String (File_Name));
 
-         if Lang_Kind = Unit_Based then
+         if Lang_Id.Config.Kind = Unit_Based then
             Write_Str (" Unit: ");
             --  ??? in gprclean, it seems we sometimes pass an empty Unit name
             --  (see test extended_projects)
@@ -695,29 +722,42 @@ package body Prj.Nmsc is
 
       Id.Project             := Project;
       Id.Language            := Lang_Id;
-      Id.Lang_Kind           := Lang_Kind;
-      Id.Compiled            := Lang_Id.Config.Compiler_Driver /=
-                                                             Empty_File_Name;
       Id.Kind                := Kind;
       Id.Alternate_Languages := Alternate_Languages;
-      Id.Other_Part          := Other_Part;
 
-      Id.Object_Exists       := Config.Object_Generated;
-      Id.Object_Linked       := Config.Objects_Linked;
+      --  Add the source id to the Unit_Sources_HT hash table, if the unit name
+      --  is not null.
 
-      if Other_Part /= No_Source then
-         Other_Part.Other_Part := Id;
+      if Unit /= No_Name then
+         Unit_Sources_Htable.Set (In_Tree.Unit_Sources_HT, Unit, Id);
+
+         --  ??? Record_Unit has already fetched that earlier, so this isn't
+         --  the most efficient way. But we can't really pass a parameter since
+         --  Process_Exceptions_Unit_Based and Check_File haven't looked it up.
+
+         UData := Units_Htable.Get (In_Tree.Units_HT, Unit);
+
+         if UData = No_Unit_Index then
+            UData      := new Unit_Data;
+            UData.Name := Unit;
+            Units_Htable.Set (In_Tree.Units_HT, Unit, UData);
+         end if;
+
+         Id.Unit := UData;
+
+         --  Note that this updates Unit information as well
+
+         Override_Kind (Id, Kind);
       end if;
 
-      Id.Unit                := Unit;
-      Id.Index               := Index;
-      Id.File                := File_Name;
-      Id.Display_File        := Display_File;
-      Id.Dependency          := Lang_Id.Config.Dependency_Kind;
-      Id.Dep_Name            := Dependency_Name (File_Name, Id.Dependency);
-      Id.Naming_Exception    := Naming_Exception;
+      Id.Index            := Index;
+      Id.File             := File_Name;
+      Id.Display_File     := Display_File;
+      Id.Dep_Name         := Dependency_Name
+                               (File_Name, Lang_Id.Config.Dependency_Kind);
+      Id.Naming_Exception := Naming_Exception;
 
-      if Id.Compiled and then Id.Object_Exists then
+      if Is_Compilable (Id) and then Config.Object_Generated then
          Id.Object   := Object_Name (File_Name, Config.Object_File_Suffix);
          Id.Switches := Switches_Name (File_Name);
       end if;
@@ -725,13 +765,6 @@ package body Prj.Nmsc is
       if Path /= No_Path_Information then
          Id.Path := Path;
          Source_Paths_Htable.Set (In_Tree.Source_Paths_HT, Path.Name, Id);
-      end if;
-
-      --  Add the source id to the Unit_Sources_HT hash table, if the unit name
-      --  is not null.
-
-      if Unit /= No_Name then
-         Unit_Sources_Htable.Set (In_Tree.Unit_Sources_HT, Unit, Id);
       end if;
 
       --  Add the source to the language list
@@ -750,8 +783,7 @@ package body Prj.Nmsc is
 
    function ALI_File_Name (Source : String) return String is
    begin
-      --  If the source name has an extension, then replace it with
-      --  the ALI suffix.
+      --  If the source name has extension, replace it with the ALI suffix
 
       for Index in reverse Source'First + 1 .. Source'Last loop
          if Source (Index) = '.' then
@@ -759,8 +791,7 @@ package body Prj.Nmsc is
          end if;
       end loop;
 
-      --  If there is no dot, or if it is the first character, just add the
-      --  ALI suffix.
+      --  If no dot, or if it is the first character, just add the ALI suffix
 
       return Source & ALI_Suffix;
    end ALI_File_Name;
@@ -785,14 +816,18 @@ package body Prj.Nmsc is
    -----------
 
    procedure Check
-     (Project         : Project_Id;
-      In_Tree         : Project_Tree_Ref;
-      Report_Error    : Put_Line_Access;
-      When_No_Sources : Error_Warning;
-      Current_Dir     : String;
-      Proc_Data       : in out Processing_Data;
-      Is_Config_File  : Boolean)
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      Report_Error              : Put_Line_Access;
+      When_No_Sources           : Error_Warning;
+      Current_Dir               : String;
+      Proc_Data                 : in out Processing_Data;
+      Is_Config_File            : Boolean;
+      Compiler_Driver_Mandatory : Boolean;
+      Allow_Duplicate_Basenames : Boolean)
    is
+      Specs : Array_Element_Id;
+      Bodies : Array_Element_Id;
       Extending : Boolean := False;
 
    begin
@@ -814,17 +849,48 @@ package body Prj.Nmsc is
       if Project.Qualifier = Dry
         and then Project.Source_Dirs /= Nil_String
       then
-         Error_Msg
-           (Project, In_Tree,
-            "an abstract project needs to have no language, no sources " &
-            "or no source directories",
-            Project.Location);
+         declare
+            Source_Dirs      : constant Variable_Value :=
+                                 Util.Value_Of
+                                   (Name_Source_Dirs,
+                                    Project.Decl.Attributes, In_Tree);
+            Source_Files     : constant Variable_Value :=
+                                 Util.Value_Of
+                                   (Name_Source_Files,
+                                    Project.Decl.Attributes, In_Tree);
+            Source_List_File : constant Variable_Value :=
+                                 Util.Value_Of
+                                   (Name_Source_List_File,
+                                    Project.Decl.Attributes, In_Tree);
+            Languages        : constant Variable_Value :=
+                                 Util.Value_Of
+                                   (Name_Languages,
+                                    Project.Decl.Attributes, In_Tree);
+
+         begin
+            if Source_Dirs.Values  = Nil_String
+              and then Source_Files.Values = Nil_String
+              and then Languages.Values = Nil_String
+              and then Source_List_File.Default
+            then
+               Project.Source_Dirs := Nil_String;
+
+            else
+               Error_Msg
+                 (Project, In_Tree,
+                  "at least one of Source_Files, Source_Dirs or Languages " &
+                  "must be declared empty for an abstract project",
+                  Project.Location);
+            end if;
+         end;
       end if;
 
       --  Check configuration in multi language mode
 
       if Must_Check_Configuration then
-         Check_Configuration (Project, In_Tree);
+         Check_Configuration
+           (Project, In_Tree,
+            Compiler_Driver_Mandatory => Compiler_Driver_Mandatory);
       end if;
 
       --  Library attributes
@@ -835,23 +901,20 @@ package body Prj.Nmsc is
          Show_Source_Dirs (Project, In_Tree);
       end if;
 
-      Check_Package_Naming (Project, In_Tree);
-
       Extending := Project.Extends /= No_Project;
 
-      Check_Naming_Schemes (Project, In_Tree, Is_Config_File);
+      Check_Package_Naming (Project, In_Tree, Is_Config_File, Bodies, Specs);
 
       if Get_Mode = Ada_Only then
-         Prepare_Ada_Naming_Exceptions
-           (Project.Naming.Bodies, In_Tree, Body_Part);
-         Prepare_Ada_Naming_Exceptions
-           (Project.Naming.Specs, In_Tree, Specification);
+         Prepare_Ada_Naming_Exceptions (Bodies, In_Tree, Impl);
+         Prepare_Ada_Naming_Exceptions (Specs, In_Tree, Spec);
       end if;
 
       --  Find the sources
 
       if Project.Source_Dirs /= Nil_String then
-         Look_For_Sources (Project, In_Tree, Proc_Data);
+         Look_For_Sources
+           (Project, In_Tree, Proc_Data, Allow_Duplicate_Basenames);
 
          if Get_Mode = Ada_Only then
 
@@ -859,11 +922,11 @@ package body Prj.Nmsc is
             --  of this project file.
 
             Warn_If_Not_Sources
-              (Project, In_Tree, Project.Naming.Bodies,
+              (Project, In_Tree, Bodies,
                Specs     => False,
                Extending => Extending);
             Warn_If_Not_Sources
-              (Project, In_Tree, Project.Naming.Specs,
+              (Project, In_Tree, Specs,
                Specs     => True,
                Extending => Extending);
 
@@ -1131,8 +1194,9 @@ package body Prj.Nmsc is
    -------------------------
 
    procedure Check_Configuration
-     (Project : Project_Id;
-      In_Tree : Project_Tree_Ref)
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      Compiler_Driver_Mandatory : Boolean)
    is
       Dot_Replacement : File_Name_Type := No_File;
       Casing          : Casing_Type    := All_Lower_Case;
@@ -1144,13 +1208,6 @@ package body Prj.Nmsc is
       Prev_Index : Language_Ptr := No_Language_Index;
       --  The index of the previous language
 
-      Current_Language : Name_Id := No_Name;
-      --  The name of the language
-
-      procedure Get_Language_Index_Of (Language : Name_Id);
-      --  Get the language index of Language, if Language is one of the
-      --  languages of the project.
-
       procedure Process_Project_Level_Simple_Attributes;
       --  Process the simple attributes at the project level
 
@@ -1159,35 +1216,6 @@ package body Prj.Nmsc is
 
       procedure Process_Packages;
       --  Read the packages of the project
-
-      ---------------------------
-      -- Get_Language_Index_Of --
-      ---------------------------
-
-      procedure Get_Language_Index_Of (Language : Name_Id) is
-         Real_Language : Name_Id;
-
-      begin
-         Get_Name_String (Language);
-         To_Lower (Name_Buffer (1 .. Name_Len));
-         Real_Language := Name_Find;
-
-         --  Nothing to do if the language is the same as the current language
-
-         if Current_Language /= Real_Language then
-            Lang_Index := Project.Languages;
-            while Lang_Index /= No_Language_Index loop
-               exit when Lang_Index.Name = Real_Language;
-               Lang_Index := Lang_Index.Next;
-            end loop;
-
-            if Lang_Index = No_Language_Index then
-               Current_Language := No_Name;
-            else
-               Current_Language := Real_Language;
-            end if;
-         end if;
-      end Get_Language_Index_Of;
 
       ----------------------
       -- Process_Packages --
@@ -1241,46 +1269,49 @@ package body Prj.Nmsc is
 
                      --  Get the name of the language
 
-                     Get_Language_Index_Of (Element.Index);
+                     Lang_Index :=
+                       Get_Language_From_Name
+                         (Project, Get_Name_String (Element.Index));
 
                      if Lang_Index /= No_Language_Index then
                         case Current_Array.Name is
-                        when Name_Driver =>
+                           when Name_Driver =>
 
-                           --  Attribute Driver (<language>)
+                              --  Attribute Driver (<language>)
 
-                           Lang_Index.Config.Binder_Driver :=
-                             File_Name_Type (Element.Value.Value);
+                              Lang_Index.Config.Binder_Driver :=
+                                File_Name_Type (Element.Value.Value);
 
-                        when Name_Required_Switches =>
-                           Put (Into_List =>
+                           when Name_Required_Switches =>
+                              Put
+                                (Into_List =>
                                    Lang_Index.Config.Binder_Required_Switches,
-                                From_List => Element.Value.Values,
-                                In_Tree   => In_Tree);
+                                 From_List => Element.Value.Values,
+                                 In_Tree   => In_Tree);
 
-                        when Name_Prefix =>
+                           when Name_Prefix =>
 
-                           --  Attribute Prefix (<language>)
+                              --  Attribute Prefix (<language>)
 
-                           Lang_Index.Config.Binder_Prefix :=
-                             Element.Value.Value;
+                              Lang_Index.Config.Binder_Prefix :=
+                                Element.Value.Value;
 
-                        when Name_Objects_Path =>
+                           when Name_Objects_Path =>
 
-                           --  Attribute Objects_Path (<language>)
+                              --  Attribute Objects_Path (<language>)
 
-                           Lang_Index.Config.Objects_Path :=
-                             Element.Value.Value;
+                              Lang_Index.Config.Objects_Path :=
+                                Element.Value.Value;
 
-                        when Name_Objects_Path_File =>
+                           when Name_Objects_Path_File =>
 
-                           --  Attribute Objects_Path (<language>)
+                              --  Attribute Objects_Path (<language>)
 
-                           Lang_Index.Config.Objects_Path_File :=
-                             Element.Value.Value;
+                              Lang_Index.Config.Objects_Path_File :=
+                                Element.Value.Value;
 
-                        when others =>
-                           null;
+                           when others =>
+                              null;
                         end case;
                      end if;
                   end if;
@@ -1349,7 +1380,8 @@ package body Prj.Nmsc is
 
                      --  Get the name of the language
 
-                     Get_Language_Index_Of (Element.Index);
+                     Lang_Index := Get_Language_From_Name
+                       (Project, Get_Name_String (Element.Index));
 
                      if Lang_Index /= No_Language_Index then
                         case Current_Array.Name is
@@ -1427,9 +1459,18 @@ package body Prj.Nmsc is
                            Lang_Index.Config.Compiler_Driver :=
                              File_Name_Type (Element.Value.Value);
 
-                        when Name_Required_Switches =>
+                        when Name_Required_Switches |
+                             Name_Leading_Required_Switches =>
                            Put (Into_List =>
-                                  Lang_Index.Config.Compiler_Required_Switches,
+                                  Lang_Index.Config.
+                                    Compiler_Leading_Required_Switches,
+                                From_List => Element.Value.Values,
+                                In_Tree   => In_Tree);
+
+                        when Name_Trailing_Required_Switches =>
+                           Put (Into_List =>
+                                  Lang_Index.Config.
+                                    Compiler_Trailing_Required_Switches,
                                 From_List => Element.Value.Values,
                                 In_Tree   => In_Tree);
 
@@ -1459,6 +1500,12 @@ package body Prj.Nmsc is
                               Lang_Index.Config.Object_File_Suffix :=
                                 Element.Value.Value;
                            end if;
+
+                        when Name_Object_File_Switches =>
+                           Put (Into_List =>
+                                  Lang_Index.Config.Object_File_Switches,
+                                From_List => Element.Value.Values,
+                                In_Tree   => In_Tree);
 
                         when Name_Pic_Option =>
 
@@ -1675,11 +1722,12 @@ package body Prj.Nmsc is
 
                   --  Get the name of the language
 
-                  Get_Language_Index_Of (Element.Index);
+                  Lang_Index := Get_Language_From_Name
+                    (Project, Get_Name_String (Element.Index));
 
                   if Lang_Index /= No_Language_Index then
                      case Current_Array.Name is
-                        when Name_Specification_Suffix | Name_Spec_Suffix =>
+                        when Name_Spec_Suffix | Name_Specification_Suffix =>
 
                            --  Attribute Spec_Suffix (<language>)
 
@@ -2192,7 +2240,9 @@ package body Prj.Nmsc is
 
                --  Get the name of the language
 
-               Get_Language_Index_Of (Element.Index);
+               Lang_Index :=
+                 Get_Language_From_Name
+                   (Project, Get_Name_String (Element.Index));
 
                if Lang_Index /= No_Language_Index then
                   case Current_Array.Name is
@@ -2347,12 +2397,14 @@ package body Prj.Nmsc is
 
       Lang_Index := Project.Languages;
       while Lang_Index /= No_Language_Index loop
-         Current_Language := Lang_Index.Display_Name;
+         --  For all languages, Compiler_Driver needs to be specified. This is
+         --  only necessary if we do intend to compile (not in GPS for
+         --  instance)
 
-         --  For all languages, Compiler_Driver needs to be specified
-
-         if Lang_Index.Config.Compiler_Driver = No_File then
-            Error_Msg_Name_1 := Current_Language;
+         if Compiler_Driver_Mandatory
+           and then Lang_Index.Config.Compiler_Driver = No_File
+         then
+            Error_Msg_Name_1 := Lang_Index.Display_Name;
             Error_Msg
               (Project,
                In_Tree,
@@ -2405,7 +2457,7 @@ package body Prj.Nmsc is
             if Lang_Index.Config.Naming_Data.Spec_Suffix = No_File and then
               Lang_Index.Config.Naming_Data.Body_Suffix = No_File
             then
-               Error_Msg_Name_1 := Current_Language;
+               Error_Msg_Name_1 := Lang_Index.Display_Name;
                Error_Msg
                  (Project,
                   In_Tree,
@@ -2484,6 +2536,7 @@ package body Prj.Nmsc is
       Iter      : Source_Iterator;
       Source    : Source_Id;
       Project_2 : Project_Id;
+      Other     : Source_Id;
 
    begin
       if not Interfaces.Default then
@@ -2524,9 +2577,11 @@ package body Prj.Nmsc is
                         Source.In_Interfaces := True;
                         Source.Declared_In_Interfaces := True;
 
-                        if Source.Other_Part /= No_Source then
-                           Source.Other_Part.In_Interfaces := True;
-                           Source.Other_Part.Declared_In_Interfaces := True;
+                        Other := Other_Part (Source);
+
+                        if Other /= No_Source then
+                           Other.In_Interfaces := True;
+                           Other.Declared_In_Interfaces := True;
                         end if;
 
                         if Current_Verbosity = High then
@@ -2632,17 +2687,22 @@ package body Prj.Nmsc is
    end Check_And_Normalize_Unit_Names;
 
    --------------------------
-   -- Check_Naming_Schemes --
+   -- Check_Package_Naming --
    --------------------------
 
-   procedure Check_Naming_Schemes
+   procedure Check_Package_Naming
      (Project        : Project_Id;
       In_Tree        : Project_Tree_Ref;
-      Is_Config_File : Boolean)
+      Is_Config_File : Boolean;
+      Bodies         : out Array_Element_Id;
+      Specs          : out Array_Element_Id)
    is
       Naming_Id : constant Package_Id :=
                    Util.Value_Of (Name_Naming, Project.Decl.Packages, In_Tree);
       Naming    : Package_Element;
+
+      Ada_Body_Suffix_Loc : Source_Ptr := No_Location;
+      Ada_Spec_Suffix_Loc : Source_Ptr := No_Location;
 
       procedure Check_Naming_Ada_Only;
       --  Does Check_Naming_Schemes processing in Ada_Only mode.
@@ -2668,6 +2728,9 @@ package body Prj.Nmsc is
          Kind    : Source_Kind);
       --  In Multi_Lang mode, process the naming exceptions for the two types
       --  of languages we can have.
+
+      procedure Initialize_Naming_Data;
+      --  Initialize internal naming data for the various languages
 
       ------------------
       -- Check_Common --
@@ -2873,8 +2936,7 @@ package body Prj.Nmsc is
                      Kind             => Kind,
                      File_Name        => File_Name,
                      Display_File     => File_Name_Type (Element.Value),
-                     Naming_Exception => True,
-                     Lang_Kind        => File_Based);
+                     Naming_Exception => True);
 
                else
                   --  Check if the file name is already recorded for another
@@ -2923,7 +2985,6 @@ package body Prj.Nmsc is
          Source            : Source_Id;
          Source_To_Replace : Source_Id := No_Source;
          Other_Project     : Project_Id;
-         Other_Part        : Source_Id := No_Source;
          Iter              : Source_Iterator;
 
       begin
@@ -2951,7 +3012,7 @@ package body Prj.Nmsc is
 
                if Exceptions = No_Array_Element then
                   Exceptions := Value_Of
-                    (Name_Specification,
+                    (Name_Spec,
                      In_Arrays => Naming.Decl.Arrays,
                      In_Tree   => In_Tree);
                end if;
@@ -2984,6 +3045,8 @@ package body Prj.Nmsc is
             if Unit /= No_Name then
 
                --  Check if the source already exists
+               --  ??? In Ada_Only mode (Record_Unit), we use a htable for
+               --  efficiency
 
                Source_To_Replace := No_Source;
                Iter := For_Each_Source (In_Tree);
@@ -2991,20 +3054,22 @@ package body Prj.Nmsc is
                loop
                   Source := Prj.Element (Iter);
                   exit when Source = No_Source
-                    or else (Source.Unit = Unit and then Source.Index = Index);
+                    or else (Source.Unit /= null
+                              and then Source.Unit.Name = Unit
+                              and then Source.Index = Index);
                   Next (Iter);
                end loop;
 
                if Source /= No_Source then
                   if Source.Kind /= Kind then
-                     Other_Part := Source;
-
                      loop
                         Next (Iter);
                         Source := Prj.Element (Iter);
 
-                        exit when Source = No_Source or else
-                          (Source.Unit = Unit and then Source.Index = Index);
+                        exit when Source = No_Source
+                          or else (Source.Unit /= null
+                                    and then Source.Unit.Name = Unit
+                                    and then Source.Index = Index);
                      end loop;
                   end if;
 
@@ -3012,10 +3077,6 @@ package body Prj.Nmsc is
                      Other_Project := Source.Project;
 
                      if Is_Extending (Project, Other_Project) then
-                        Other_Part := Source.Other_Part;
-
-                        --  Record the source to be removed
-
                         Source_To_Replace := Source;
                         Source := No_Source;
 
@@ -3040,8 +3101,6 @@ package body Prj.Nmsc is
                      Kind         => Kind,
                      File_Name    => File_Name,
                      Display_File => File_Name_Type (Element.Value.Value),
-                     Lang_Kind    => Unit_Based,
-                     Other_Part   => Other_Part,
                      Unit         => Unit,
                      Index        => Index,
                      Naming_Exception => True,
@@ -3058,131 +3117,98 @@ package body Prj.Nmsc is
       ---------------------------
 
       procedure Check_Naming_Ada_Only is
+         Ada : constant Language_Ptr :=
+           Get_Language_From_Name (Project, "ada");
+
          Casing_Defined : Boolean;
-         Spec_Suffix    : File_Name_Type;
-         Body_Suffix    : File_Name_Type;
          Sep_Suffix_Loc : Source_Ptr;
 
-         Ada_Spec_Suffix : constant Variable_Value :=
-           Prj.Util.Value_Of
-             (Index     => Name_Ada,
-              Src_Index => 0,
-              In_Array  => Project.Naming.Spec_Suffix,
-              In_Tree   => In_Tree);
-
-         Ada_Body_Suffix : constant Variable_Value :=
-           Prj.Util.Value_Of
-             (Index     => Name_Ada,
-              Src_Index => 0,
-              In_Array  => Project.Naming.Body_Suffix,
-              In_Tree   => In_Tree);
-
       begin
-         --  The default value of separate suffix should be the same as the
-         --  body suffix, so we need to compute that first.
-
-         if Ada_Body_Suffix.Kind = Single
-           and then Length_Of_Name (Ada_Body_Suffix.Value) /= 0
-         then
-            Body_Suffix := Canonical_Case_File_Name (Ada_Body_Suffix.Value);
-            Project.Naming.Separate_Suffix := Body_Suffix;
-            Set_Body_Suffix (In_Tree, "ada", Project.Naming, Body_Suffix);
-
-         else
-            Body_Suffix := Default_Ada_Body_Suffix;
-            Project.Naming.Separate_Suffix := Body_Suffix;
-            Set_Body_Suffix (In_Tree, "ada", Project.Naming, Body_Suffix);
+         if Ada = null then
+            --  No language, thus nothing to do
+            return;
          end if;
 
-         Write_Attr ("Body_Suffix", Get_Name_String (Body_Suffix));
+         declare
+            Data : Lang_Naming_Data renames Ada.Config.Naming_Data;
+         begin
+            --  The default value of separate suffix should be the same as the
+            --  body suffix, so we need to compute that first.
 
-         --  We'll need the dot replacement below, so compute it now
+            Data.Separate_Suffix := Data.Body_Suffix;
+            Write_Attr ("Body_Suffix", Get_Name_String (Data.Body_Suffix));
 
-         Check_Common
-           (Dot_Replacement => Project.Naming.Dot_Replacement,
-            Casing          => Project.Naming.Casing,
-            Casing_Defined  => Casing_Defined,
-            Separate_Suffix => Project.Naming.Separate_Suffix,
-            Sep_Suffix_Loc  => Sep_Suffix_Loc);
+            --  We'll need the dot replacement below, so compute it now
 
-         Project.Naming.Bodies :=
-           Util.Value_Of (Name_Body, Naming.Decl.Arrays, In_Tree);
+            Check_Common
+              (Dot_Replacement => Data.Dot_Replacement,
+               Casing          => Data.Casing,
+               Casing_Defined  => Casing_Defined,
+               Separate_Suffix => Data.Separate_Suffix,
+               Sep_Suffix_Loc  => Sep_Suffix_Loc);
 
-         if Project.Naming.Bodies /= No_Array_Element then
-            Check_And_Normalize_Unit_Names
-              (Project, In_Tree, Project.Naming.Bodies, "Naming.Bodies");
-         end if;
+            Bodies := Util.Value_Of (Name_Body, Naming.Decl.Arrays, In_Tree);
 
-         Project.Naming.Specs :=
-           Util.Value_Of (Name_Spec, Naming.Decl.Arrays, In_Tree);
+            if Bodies /= No_Array_Element then
+               Check_And_Normalize_Unit_Names
+                 (Project, In_Tree, Bodies, "Naming.Bodies");
+            end if;
 
-         if Project.Naming.Specs /= No_Array_Element then
-            Check_And_Normalize_Unit_Names
-              (Project, In_Tree, Project.Naming.Specs, "Naming.Specs");
-         end if;
+            Specs := Util.Value_Of (Name_Spec, Naming.Decl.Arrays, In_Tree);
 
-         --  Check Spec_Suffix
+            if Specs /= No_Array_Element then
+               Check_And_Normalize_Unit_Names
+                 (Project, In_Tree, Specs, "Naming.Specs");
+            end if;
 
-         if Ada_Spec_Suffix.Kind = Single
-           and then Length_Of_Name (Ada_Spec_Suffix.Value) /= 0
-         then
-            Spec_Suffix := Canonical_Case_File_Name (Ada_Spec_Suffix.Value);
-            Set_Spec_Suffix (In_Tree, "ada", Project.Naming, Spec_Suffix);
+            --  Check Spec_Suffix
 
-            if Is_Illegal_Suffix
-                 (Spec_Suffix, Project.Naming.Dot_Replacement)
-            then
-               Err_Vars.Error_Msg_File_1 := Spec_Suffix;
+            if Is_Illegal_Suffix (Data.Spec_Suffix, Data.Dot_Replacement) then
+               Err_Vars.Error_Msg_File_1 := Data.Spec_Suffix;
                Error_Msg
                  (Project, In_Tree,
                   "{ is illegal for Spec_Suffix",
-                  Ada_Spec_Suffix.Location);
+                  Ada_Spec_Suffix_Loc);
             end if;
 
-         else
-            Spec_Suffix := Default_Ada_Spec_Suffix;
-            Set_Spec_Suffix (In_Tree, "ada", Project.Naming, Spec_Suffix);
-         end if;
+            Write_Attr ("Spec_Suffix", Get_Name_String (Data.Spec_Suffix));
 
-         Write_Attr ("Spec_Suffix", Get_Name_String (Spec_Suffix));
+            --  Check Body_Suffix
 
-         --  Check Body_Suffix
+            if Is_Illegal_Suffix (Data.Body_Suffix, Data.Dot_Replacement) then
+               Err_Vars.Error_Msg_File_1 := Data.Body_Suffix;
+               Error_Msg
+                 (Project, In_Tree,
+                  "{ is illegal for Body_Suffix",
+                  Ada_Body_Suffix_Loc);
+            end if;
 
-         if Is_Illegal_Suffix
-              (Body_Suffix, Project.Naming.Dot_Replacement)
-         then
-            Err_Vars.Error_Msg_File_1 := Body_Suffix;
-            Error_Msg
-              (Project, In_Tree,
-               "{ is illegal for Body_Suffix",
-               Ada_Body_Suffix.Location);
-         end if;
+            --  Spec_Suffix cannot be equal to Body_Suffix or Separate_Suffix,
+            --  since that would cause a clear ambiguity. Note that we do allow
+            --  a Spec_Suffix to have the same termination as one of these,
+            --  which causes a potential ambiguity, but we resolve that my
+            --  matching the longest possible suffix.
 
-         --  Spec_Suffix cannot be equal to Body_Suffix or Separate_Suffix,
-         --  since that would cause a clear ambiguity. Note that we do allow a
-         --  Spec_Suffix to have the same termination as one of these, which
-         --  causes a potential ambiguity, but we resolve that my matching the
-         --  longest possible suffix.
+            if Data.Spec_Suffix = Data.Body_Suffix then
+               Error_Msg
+                 (Project, In_Tree,
+                  "Body_Suffix (""" &
+                  Get_Name_String (Data.Body_Suffix) &
+                  """) cannot be the same as Spec_Suffix.",
+                  Ada_Body_Suffix_Loc);
+            end if;
 
-         if Spec_Suffix = Body_Suffix then
-            Error_Msg
-              (Project, In_Tree,
-               "Body_Suffix (""" &
-               Get_Name_String (Body_Suffix) &
-               """) cannot be the same as Spec_Suffix.",
-               Ada_Body_Suffix.Location);
-         end if;
-
-         if Body_Suffix /= Project.Naming.Separate_Suffix
-           and then Spec_Suffix = Project.Naming.Separate_Suffix
-         then
-            Error_Msg
-              (Project, In_Tree,
-               "Separate_Suffix (""" &
-               Get_Name_String (Project.Naming.Separate_Suffix) &
-               """) cannot be the same as Spec_Suffix.",
-               Sep_Suffix_Loc);
-         end if;
+            if Data.Body_Suffix /= Data.Separate_Suffix
+              and then Data.Spec_Suffix = Data.Separate_Suffix
+            then
+               Error_Msg
+                 (Project, In_Tree,
+                  "Separate_Suffix (""" &
+                  Get_Name_String (Data.Separate_Suffix) &
+                  """) cannot be the same as Spec_Suffix.",
+                  Sep_Suffix_Loc);
+            end if;
+         end;
       end Check_Naming_Ada_Only;
 
       -----------------------------
@@ -3255,7 +3281,7 @@ package body Prj.Nmsc is
             if Suffix = Nil_Variable_Value then
                Suffix := Value_Of
                  (Name                    => Lang,
-                  Attribute_Or_Array_Name => Name_Specification_Suffix,
+                  Attribute_Or_Array_Name => Name_Spec_Suffix,
                   In_Package              => Naming_Id,
                   In_Tree                 => In_Tree);
             end if;
@@ -3313,17 +3339,105 @@ package body Prj.Nmsc is
          end loop;
       end Check_Naming_Multi_Lang;
 
+      ----------------------------
+      -- Initialize_Naming_Data --
+      ----------------------------
+
+      procedure Initialize_Naming_Data is
+         Specs  : Array_Element_Id :=
+           Util.Value_Of
+             (Name_Spec_Suffix,
+              Naming.Decl.Arrays,
+              In_Tree);
+         Impls  : Array_Element_Id :=
+           Util.Value_Of
+             (Name_Body_Suffix,
+              Naming.Decl.Arrays,
+              In_Tree);
+         Lang    : Language_Ptr;
+         Lang_Name : Name_Id;
+         Value   : Variable_Value;
+
+      begin
+         --  At this stage, the project already contains the default
+         --  extensions for the various languages. We now merge those
+         --  suffixes read in the user project, and they override the
+         --  default
+
+         while Specs /= No_Array_Element loop
+            Lang_Name := In_Tree.Array_Elements.Table (Specs).Index;
+            Lang := Get_Language_From_Name
+              (Project, Name => Get_Name_String (Lang_Name));
+
+            if Lang = null then
+               if Current_Verbosity = High then
+                  Write_Line
+                    ("Ignoring spec naming data for "
+                     & Get_Name_String (Lang_Name)
+                     & " since language is not defined for this project");
+               end if;
+            else
+               Value := In_Tree.Array_Elements.Table (Specs).Value;
+
+               if Lang.Name = Name_Ada then
+                  Ada_Spec_Suffix_Loc := Value.Location;
+               end if;
+
+               if Value.Kind = Single then
+                  Lang.Config.Naming_Data.Spec_Suffix :=
+                    Canonical_Case_File_Name (Value.Value);
+               end if;
+            end if;
+
+            Specs := In_Tree.Array_Elements.Table (Specs).Next;
+         end loop;
+
+         while Impls /= No_Array_Element loop
+            Lang_Name := In_Tree.Array_Elements.Table (Impls).Index;
+            Lang := Get_Language_From_Name
+              (Project, Name => Get_Name_String (Lang_Name));
+
+            if Lang = null then
+               if Current_Verbosity = High then
+                  Write_Line
+                    ("Ignoring impl naming data for "
+                     & Get_Name_String (Lang_Name)
+                     & " since language is not defined for this project");
+               end if;
+            else
+               Value := In_Tree.Array_Elements.Table (Impls).Value;
+
+               if Lang.Name = Name_Ada then
+                  Ada_Body_Suffix_Loc := Value.Location;
+               end if;
+
+               if Value.Kind = Single then
+                  Lang.Config.Naming_Data.Body_Suffix :=
+                    Canonical_Case_File_Name (Value.Value);
+               end if;
+            end if;
+
+            Impls := In_Tree.Array_Elements.Table (Impls).Next;
+         end loop;
+      end Initialize_Naming_Data;
+
    --  Start of processing for Check_Naming_Schemes
 
    begin
+      Specs  := No_Array_Element;
+      Bodies := No_Array_Element;
+
       --  No Naming package or parsing a configuration file? nothing to do
 
       if Naming_Id /= No_Package and not Is_Config_File then
          Naming := In_Tree.Packages.Table (Naming_Id);
 
          if Current_Verbosity = High then
-            Write_Line ("Checking package Naming.");
+            Write_Line ("Checking package Naming for project "
+                        & Get_Name_String (Project.Name));
          end if;
+
+         Initialize_Naming_Data;
 
          case Get_Mode is
             when Ada_Only =>
@@ -3332,7 +3446,7 @@ package body Prj.Nmsc is
                Check_Naming_Multi_Lang;
          end case;
       end if;
-   end Check_Naming_Schemes;
+   end Check_Package_Naming;
 
    ------------------------------
    -- Check_Library_Attributes --
@@ -3399,7 +3513,7 @@ package body Prj.Nmsc is
                loop
                   Src_Id := Prj.Element (Iter);
                   exit when Src_Id = No_Source
-                    or else Src_Id.Lang_Kind /= File_Based
+                    or else Src_Id.Language.Config.Kind /= File_Based
                     or else Src_Id.Kind /= Spec;
                   Next (Iter);
                end loop;
@@ -4026,212 +4140,6 @@ package body Prj.Nmsc is
       end if;
    end Check_Library_Attributes;
 
-   --------------------------
-   -- Check_Package_Naming --
-   --------------------------
-
-   procedure Check_Package_Naming
-     (Project : Project_Id;
-      In_Tree : Project_Tree_Ref)
-   is
-      Naming_Id : constant Package_Id :=
-                   Util.Value_Of (Name_Naming, Project.Decl.Packages, In_Tree);
-
-      Naming    : Package_Element;
-
-   begin
-      --  If there is a package Naming, we will put in Data.Naming
-      --  what is in this package Naming.
-
-      if Naming_Id /= No_Package then
-         Naming := In_Tree.Packages.Table (Naming_Id);
-
-         if Current_Verbosity = High then
-            Write_Line ("Checking ""Naming"".");
-         end if;
-
-         --  Check Spec_Suffix
-
-         declare
-            Spec_Suffixs : Array_Element_Id :=
-                             Util.Value_Of
-                               (Name_Spec_Suffix,
-                                Naming.Decl.Arrays,
-                                In_Tree);
-
-            Suffix  : Array_Element_Id;
-            Element : Array_Element;
-            Suffix2 : Array_Element_Id;
-
-         begin
-            --  If some suffixes have been specified, we make sure that
-            --  for each language for which a default suffix has been
-            --  specified, there is a suffix specified, either the one
-            --  in the project file or if there were none, the default.
-
-            if Spec_Suffixs /= No_Array_Element then
-               Suffix := Project.Naming.Spec_Suffix;
-
-               while Suffix /= No_Array_Element loop
-                  Element :=
-                    In_Tree.Array_Elements.Table (Suffix);
-                  Suffix2 := Spec_Suffixs;
-
-                  while Suffix2 /= No_Array_Element loop
-                     exit when In_Tree.Array_Elements.Table
-                                (Suffix2).Index = Element.Index;
-                     Suffix2 := In_Tree.Array_Elements.Table
-                                 (Suffix2).Next;
-                  end loop;
-
-                  --  There is a registered default suffix, but no
-                  --  suffix specified in the project file.
-                  --  Add the default to the array.
-
-                  if Suffix2 = No_Array_Element then
-                     Array_Element_Table.Increment_Last
-                       (In_Tree.Array_Elements);
-                     In_Tree.Array_Elements.Table
-                       (Array_Element_Table.Last
-                          (In_Tree.Array_Elements)) :=
-                       (Index                => Element.Index,
-                        Src_Index            => Element.Src_Index,
-                        Index_Case_Sensitive => False,
-                        Value                => Element.Value,
-                        Next                 => Spec_Suffixs);
-                     Spec_Suffixs := Array_Element_Table.Last
-                                       (In_Tree.Array_Elements);
-                  end if;
-
-                  Suffix := Element.Next;
-               end loop;
-
-               --  Put the resulting array as the specification suffixes
-
-               Project.Naming.Spec_Suffix := Spec_Suffixs;
-            end if;
-         end;
-
-         declare
-            Current : Array_Element_Id;
-            Element : Array_Element;
-
-         begin
-            Current := Project.Naming.Spec_Suffix;
-            while Current /= No_Array_Element loop
-               Element := In_Tree.Array_Elements.Table (Current);
-               Get_Name_String (Element.Value.Value);
-
-               if Name_Len = 0 then
-                  Error_Msg
-                    (Project, In_Tree,
-                     "Spec_Suffix cannot be empty",
-                     Element.Value.Location);
-               end if;
-
-               In_Tree.Array_Elements.Table (Current) := Element;
-               Current := Element.Next;
-            end loop;
-         end;
-
-         --  Check Body_Suffix
-
-         declare
-            Impl_Suffixs : Array_Element_Id :=
-                             Util.Value_Of
-                               (Name_Body_Suffix,
-                                Naming.Decl.Arrays,
-                                In_Tree);
-
-            Suffix  : Array_Element_Id;
-            Element : Array_Element;
-            Suffix2 : Array_Element_Id;
-
-         begin
-            --  If some suffixes have been specified, we make sure that
-            --  for each language for which a default suffix has been
-            --  specified, there is a suffix specified, either the one
-            --  in the project file or if there were none, the default.
-
-            if Impl_Suffixs /= No_Array_Element then
-               Suffix := Project.Naming.Body_Suffix;
-               while Suffix /= No_Array_Element loop
-                  Element :=
-                    In_Tree.Array_Elements.Table (Suffix);
-
-                  Suffix2 := Impl_Suffixs;
-                  while Suffix2 /= No_Array_Element loop
-                     exit when In_Tree.Array_Elements.Table
-                                (Suffix2).Index = Element.Index;
-                     Suffix2 := In_Tree.Array_Elements.Table
-                                  (Suffix2).Next;
-                  end loop;
-
-                  --  There is a registered default suffix, but no suffix was
-                  --  specified in the project file. Add default to the array.
-
-                  if Suffix2 = No_Array_Element then
-                     Array_Element_Table.Increment_Last
-                       (In_Tree.Array_Elements);
-                     In_Tree.Array_Elements.Table
-                       (Array_Element_Table.Last
-                          (In_Tree.Array_Elements)) :=
-                       (Index                => Element.Index,
-                        Src_Index            => Element.Src_Index,
-                        Index_Case_Sensitive => False,
-                        Value                => Element.Value,
-                        Next                 => Impl_Suffixs);
-                     Impl_Suffixs := Array_Element_Table.Last
-                                       (In_Tree.Array_Elements);
-                  end if;
-
-                  Suffix := Element.Next;
-               end loop;
-
-               --  Put the resulting array as the implementation suffixes
-
-               Project.Naming.Body_Suffix := Impl_Suffixs;
-            end if;
-         end;
-
-         declare
-            Current : Array_Element_Id;
-            Element : Array_Element;
-
-         begin
-            Current := Project.Naming.Body_Suffix;
-            while Current /= No_Array_Element loop
-               Element := In_Tree.Array_Elements.Table (Current);
-               Get_Name_String (Element.Value.Value);
-
-               if Name_Len = 0 then
-                  Error_Msg
-                    (Project, In_Tree,
-                     "Body_Suffix cannot be empty",
-                     Element.Value.Location);
-               end if;
-
-               In_Tree.Array_Elements.Table (Current) := Element;
-               Current := Element.Next;
-            end loop;
-         end;
-
-         --  Get the exceptions, if any
-
-         Project.Naming.Specification_Exceptions :=
-           Util.Value_Of
-             (Name_Specification_Exceptions,
-              In_Arrays => Naming.Decl.Arrays,
-              In_Tree   => In_Tree);
-
-         Project.Naming.Implementation_Exceptions :=
-           Util.Value_Of
-             (Name_Implementation_Exceptions,
-              In_Arrays => Naming.Decl.Arrays,
-              In_Tree   => In_Tree);
-      end if;
-   end Check_Package_Naming;
-
    ---------------------------------
    -- Check_Programming_Languages --
    ---------------------------------
@@ -4244,8 +4152,53 @@ package body Prj.Nmsc is
       Def_Lang    : Variable_Value := Nil_Variable_Value;
       Def_Lang_Id : Name_Id;
 
+      procedure Add_Language (Name, Display_Name : Name_Id);
+      --  Add a new language to the list of languages for the project.
+      --  Nothing is done if the language has already been defined
+
+      procedure Add_Language (Name, Display_Name : Name_Id) is
+         Lang : Language_Ptr := Project.Languages;
+      begin
+         while Lang /= No_Language_Index loop
+            if Name = Lang.Name then
+               return;
+            end if;
+
+            Lang := Lang.Next;
+         end loop;
+
+         Lang              := new Language_Data'(No_Language_Data);
+         Lang.Next         := Project.Languages;
+         Project.Languages := Lang;
+         Lang.Name := Name;
+         Lang.Display_Name := Display_Name;
+
+         if Name = Name_Ada then
+            Lang.Config.Kind := Unit_Based;
+            Lang.Config.Dependency_Kind := ALI_File;
+
+            if Get_Mode = Ada_Only then
+               --  Create a default config for Ada (since there is no
+               --  configuration file to create it for us)
+               --  ??? We should do as GPS does and create a dummy config
+               --  file
+
+               Lang.Config.Naming_Data :=
+                 (Dot_Replacement => File_Name_Type
+                    (First_Name_Id + Character'Pos ('-')),
+                  Casing          => All_Lower_Case,
+                  Separate_Suffix => Default_Ada_Body_Suffix,
+                  Spec_Suffix     => Default_Ada_Spec_Suffix,
+                  Body_Suffix     => Default_Ada_Body_Suffix);
+            end if;
+
+         else
+            Lang.Config.Kind := File_Based;
+         end if;
+      end Add_Language;
+
    begin
-      Project.Languages := No_Language_Index;
+      Project.Languages := null;
       Languages :=
         Prj.Util.Value_Of (Name_Languages, Project.Decl.Attributes, In_Tree);
       Def_Lang :=
@@ -4289,27 +4242,17 @@ package body Prj.Nmsc is
             end if;
 
             if Def_Lang_Id /= No_Name then
-               Project.Languages := new Language_Data'(No_Language_Data);
-               Project.Languages.Name := Def_Lang_Id;
                Get_Name_String (Def_Lang_Id);
                Name_Buffer (1) := GNAT.Case_Util.To_Upper (Name_Buffer (1));
-               Project.Languages.Display_Name := Name_Find;
-
-               if Def_Lang_Id = Name_Ada then
-                  Project.Languages.Config.Kind := Unit_Based;
-                  Project.Languages.Config.Dependency_Kind := ALI_File;
-               else
-                  Project.Languages.Config.Kind := File_Based;
-               end if;
+               Add_Language
+                 (Name         => Def_Lang_Id,
+                  Display_Name => Name_Find);
             end if;
 
          else
             declare
                Current           : String_List_Id := Languages.Values;
                Element           : String_Element;
-               Lang_Name         : Name_Id;
-               Index             : Language_Ptr;
-               NL_Id             : Language_Ptr;
 
             begin
                --  If there are no languages declared, there are no sources
@@ -4333,34 +4276,10 @@ package body Prj.Nmsc is
                      Element := In_Tree.String_Elements.Table (Current);
                      Get_Name_String (Element.Value);
                      To_Lower (Name_Buffer (1 .. Name_Len));
-                     Lang_Name := Name_Find;
 
-                     --  If the language was not already specified (duplicates
-                     --  are simply ignored).
-
-                     NL_Id := Project.Languages;
-                     while NL_Id /= No_Language_Index loop
-                        exit when Lang_Name = NL_Id.Name;
-                        NL_Id := NL_Id.Next;
-                     end loop;
-
-                     if NL_Id = No_Language_Index then
-                        Index := new Language_Data'(No_Language_Data);
-                        Index.Name := Lang_Name;
-                        Index.Display_Name := Element.Value;
-                        Index.Next := Project.Languages;
-
-                        if Lang_Name = Name_Ada then
-                           Index.Config.Kind := Unit_Based;
-                           Index.Config.Dependency_Kind := ALI_File;
-
-                        else
-                           Index.Config.Kind := File_Based;
-                           Index.Config.Dependency_Kind := None;
-                        end if;
-
-                        Project.Languages := Index;
-                     end if;
+                     Add_Language
+                       (Name         => Name_Find,
+                        Display_Name => Element.Value);
 
                      Current := Element.Next;
                   end loop;
@@ -4468,8 +4387,7 @@ package body Prj.Nmsc is
             Interfaces     : String_List_Id := Lib_Interfaces.Values;
             Interface_ALIs : String_List_Id := Nil_String;
             Unit           : Name_Id;
-            The_Unit_Id    : Unit_Index;
-            UData          : Unit_Data;
+            UData          : Unit_Index;
 
             procedure Add_ALI_For (Source : File_Name_Type);
             --  Add an ALI file name to the list of Interface ALIs
@@ -4543,10 +4461,9 @@ package body Prj.Nmsc is
                   Error_Msg_Name_1 := Unit;
 
                   if Get_Mode = Ada_Only then
-                     The_Unit_Id :=
-                       Units_Htable.Get (In_Tree.Units_HT, Unit);
+                     UData := Units_Htable.Get (In_Tree.Units_HT, Unit);
 
-                     if The_Unit_Id = No_Unit_Index then
+                     if UData = No_Unit_Index then
                         Error_Msg
                           (Project, In_Tree,
                            "unknown unit %%",
@@ -4556,35 +4473,29 @@ package body Prj.Nmsc is
                      else
                         --  Check that the unit is part of the project
 
-                        UData := In_Tree.Units.Table (The_Unit_Id);
-
-                        if UData.File_Names (Body_Part).Name /= No_File
-                          and then
-                            UData.File_Names (Body_Part).Path.Name /=
-                             Slash
+                        if UData.File_Names (Impl) /= null
+                          and then not UData.File_Names (Impl).Locally_Removed
                         then
                            if Check_Project
-                             (UData.File_Names (Body_Part).Project,
+                             (UData.File_Names (Impl).Project,
                               Project, Extending)
                            then
-                              --  There is a body for this unit.
-                              --  If there is no spec, we need to check that it
-                              --  is not a subunit.
+                              --  There is a body for this unit. If there is
+                              --  no spec, we need to check that it is not a
+                              --  subunit.
 
-                              if UData.File_Names (Specification).Name =
-                                No_File
-                              then
+                              if UData.File_Names (Spec) = null then
                                  declare
                                     Src_Ind : Source_File_Index;
 
                                  begin
-                                    Src_Ind := Sinput.P.Load_Project_File
-                                      (Get_Name_String
-                                         (UData.File_Names
-                                            (Body_Part).Path.Name));
+                                    Src_Ind :=
+                                      Sinput.P.Load_Project_File
+                                        (Get_Name_String (UData.File_Names
+                                                           (Impl).Path.Name));
 
                                     if Sinput.P.Source_File_Is_Subunit
-                                      (Src_Ind)
+                                        (Src_Ind)
                                     then
                                        Error_Msg
                                          (Project, In_Tree,
@@ -4601,7 +4512,7 @@ package body Prj.Nmsc is
                               --  ALI file for its body to the Interface ALIs.
 
                               Add_ALI_For
-                                (UData.File_Names (Body_Part).Name);
+                                (UData.File_Names (Impl).File);
 
                            else
                               Error_Msg
@@ -4611,13 +4522,10 @@ package body Prj.Nmsc is
                                    (Interfaces).Location);
                            end if;
 
-                        elsif UData.File_Names (Specification).Name /=
-                             No_File
-                          and then UData.File_Names
-                                     (Specification).Path.Name /= Slash
+                        elsif UData.File_Names (Spec) /= null
+                          and then not UData.File_Names (Spec).Locally_Removed
                           and then Check_Project
-                                     (UData.File_Names
-                                        (Specification).Project,
+                                     (UData.File_Names (Spec).Project,
                                       Project, Extending)
 
                         then
@@ -4626,7 +4534,7 @@ package body Prj.Nmsc is
                            --  Interface ALIs.
 
                            Add_ALI_For
-                             (UData.File_Names (Specification).Name);
+                             (UData.File_Names (Spec).File);
 
                         else
                            Error_Msg
@@ -4641,19 +4549,19 @@ package body Prj.Nmsc is
                      --  Multi_Language mode
 
                      Next_Proj := Project.Extends;
-
                      Iter := For_Each_Source (In_Tree, Project);
-
                      loop
-                        while Prj.Element (Iter) /= No_Source and then
-                           Prj.Element (Iter).Unit /= Unit
+                        while Prj.Element (Iter) /= No_Source
+                          and then
+                            (Prj.Element (Iter).Unit = null
+                              or else Prj.Element (Iter).Unit.Name /= Unit)
                         loop
                            Next (Iter);
                         end loop;
 
                         Source := Prj.Element (Iter);
-                        exit when Source /= No_Source or else
-                                  Next_Proj = No_Project;
+                        exit when Source /= No_Source
+                          or else Next_Proj = No_Project;
 
                         Iter := For_Each_Source (In_Tree, Next_Proj);
                         Next_Proj := Next_Proj.Extends;
@@ -4662,18 +4570,16 @@ package body Prj.Nmsc is
                      if Source /= No_Source then
                         if Source.Kind = Sep then
                            Source := No_Source;
-
                         elsif Source.Kind = Spec
-                          and then Source.Other_Part /= No_Source
+                          and then Other_Part (Source) /= No_Source
                         then
-                           Source := Source.Other_Part;
+                           Source := Other_Part (Source);
                         end if;
                      end if;
 
                      if Source /= No_Source then
                         if Source.Project /= Project
-                          and then
-                            not Is_Extending (Project, Source.Project)
+                          and then not Is_Extending (Project, Source.Project)
                         then
                            Source := No_Source;
                         end if;
@@ -4687,14 +4593,15 @@ package body Prj.Nmsc is
                                 (Interfaces).Location);
 
                      else
-                        if Source.Kind = Spec and then
-                          Source.Other_Part /= No_Source
+                        if Source.Kind = Spec
+                          and then Other_Part (Source) /= No_Source
                         then
-                           Source := Source.Other_Part;
+                           Source := Other_Part (Source);
                         end if;
 
                         String_Element_Table.Increment_Last
                           (In_Tree.String_Elements);
+
                         In_Tree.String_Elements.Table
                           (String_Element_Table.Last
                              (In_Tree.String_Elements)) :=
@@ -4706,8 +4613,9 @@ package body Prj.Nmsc is
                                (Interfaces).Location,
                            Flag          => False,
                            Next          => Interface_ALIs);
-                        Interface_ALIs := String_Element_Table.Last
-                          (In_Tree.String_Elements);
+
+                        Interface_ALIs :=
+                          String_Element_Table.Last (In_Tree.String_Elements);
                      end if;
 
                   end if;
@@ -5890,21 +5798,19 @@ package body Prj.Nmsc is
          --  No Source_Dirs specified: the single source directory is the one
          --  containing the project file
 
-         String_Element_Table.Increment_Last
-           (In_Tree.String_Elements);
-         Project.Source_Dirs := String_Element_Table.Last
-           (In_Tree.String_Elements);
-         In_Tree.String_Elements.Table (Project.Source_Dirs) :=
+         String_Element_Table.Append (In_Tree.String_Elements,
            (Value         => Name_Id (Project.Directory.Name),
             Display_Value => Name_Id (Project.Directory.Display_Name),
             Location      => No_Location,
             Flag          => False,
             Next          => Nil_String,
-            Index         => 0);
+            Index         => 0));
+         Project.Source_Dirs := String_Element_Table.Last
+                                  (In_Tree.String_Elements);
 
          if Current_Verbosity = High then
             Write_Attr
-              ("Single source directory",
+              ("Default source directory",
                Get_Name_String (Project.Directory.Display_Name));
          end if;
 
@@ -6121,11 +6027,7 @@ package body Prj.Nmsc is
 
    procedure Compute_Unit_Name
      (File_Name       : File_Name_Type;
-      Dot_Replacement : File_Name_Type;
-      Separate_Suffix : File_Name_Type;
-      Body_Suffix     : File_Name_Type;
-      Spec_Suffix     : File_Name_Type;
-      Casing          : Casing_Type;
+      Naming          : Lang_Naming_Data;
       Kind            : out Source_Kind;
       Unit            : out Name_Id;
       In_Tree         : Project_Tree_Ref)
@@ -6133,16 +6035,16 @@ package body Prj.Nmsc is
       Filename : constant String := Get_Name_String (File_Name);
       Last     : Integer := Filename'Last;
       Sep_Len  : constant Integer :=
-                   Integer (Length_Of_Name (Separate_Suffix));
+                   Integer (Length_Of_Name (Naming.Separate_Suffix));
       Body_Len : constant Integer :=
-                   Integer (Length_Of_Name (Body_Suffix));
+                   Integer (Length_Of_Name (Naming.Body_Suffix));
       Spec_Len : constant Integer :=
-                   Integer (Length_Of_Name (Spec_Suffix));
+                   Integer (Length_Of_Name (Naming.Spec_Suffix));
 
       Standard_GNAT : constant Boolean :=
-                        Spec_Suffix = Default_Ada_Spec_Suffix
+                        Naming.Spec_Suffix = Default_Ada_Spec_Suffix
                           and then
-                        Body_Suffix = Default_Ada_Body_Suffix;
+                        Naming.Body_Suffix = Default_Ada_Body_Suffix;
 
       Unit_Except : Unit_Exception;
       Masked      : Boolean  := False;
@@ -6150,7 +6052,7 @@ package body Prj.Nmsc is
       Unit := No_Name;
       Kind := Spec;
 
-      if Dot_Replacement = No_File then
+      if Naming.Dot_Replacement = No_File then
          if Current_Verbosity = High then
             Write_Line ("  No dot_replacement specified");
          end if;
@@ -6160,22 +6062,22 @@ package body Prj.Nmsc is
       --  Choose the longest suffix that matches. If there are several matches,
       --  give priority to specs, then bodies, then separates.
 
-      if Separate_Suffix /= Body_Suffix
-        and then Suffix_Matches (Filename, Separate_Suffix)
+      if Naming.Separate_Suffix /= Naming.Body_Suffix
+        and then Suffix_Matches (Filename, Naming.Separate_Suffix)
       then
          Last := Filename'Last - Sep_Len;
          Kind := Sep;
       end if;
 
       if Filename'Last - Body_Len <= Last
-        and then Suffix_Matches (Filename, Body_Suffix)
+        and then Suffix_Matches (Filename, Naming.Body_Suffix)
       then
          Last := Natural'Min (Last, Filename'Last - Body_Len);
          Kind := Impl;
       end if;
 
       if Filename'Last - Spec_Len <= Last
-        and then Suffix_Matches (Filename, Spec_Suffix)
+        and then Suffix_Matches (Filename, Naming.Spec_Suffix)
       then
          Last := Natural'Min (Last, Filename'Last - Spec_Len);
          Kind := Spec;
@@ -6191,7 +6093,7 @@ package body Prj.Nmsc is
       --  Check that the casing matches
 
       if File_Names_Case_Sensitive then
-         case Casing is
+         case Naming.Casing is
             when All_Lower_Case =>
                for J in Filename'First .. Last loop
                   if Is_Letter (Filename (J))
@@ -6225,7 +6127,8 @@ package body Prj.Nmsc is
       --  be any dot in the name.
 
       declare
-         Dot_Repl : constant String := Get_Name_String (Dot_Replacement);
+         Dot_Repl : constant String :=
+           Get_Name_String (Naming.Dot_Replacement);
 
       begin
          if Dot_Repl /= "." then
@@ -6351,7 +6254,7 @@ package body Prj.Nmsc is
    procedure Get_Unit
      (In_Tree             : Project_Tree_Ref;
       Canonical_File_Name : File_Name_Type;
-      Naming              : Naming_Data;
+      Project             : Project_Id;
       Exception_Id        : out Ada_Naming_Exception_Id;
       Unit_Name           : out Name_Id;
       Unit_Kind           : out Spec_Or_Body)
@@ -6360,6 +6263,7 @@ package body Prj.Nmsc is
                    Ada_Naming_Exceptions.Get (Canonical_File_Name);
       VMS_Name : File_Name_Type;
       Kind     : Source_Kind;
+      Lang     : Language_Ptr;
 
    begin
       if Info_Id = No_Ada_Naming_Exception
@@ -6379,25 +6283,28 @@ package body Prj.Nmsc is
       if Info_Id /= No_Ada_Naming_Exception then
          Exception_Id := Info_Id;
          Unit_Name := No_Name;
-         Unit_Kind := Specification;
+         Unit_Kind := Spec;
 
       else
          Exception_Id := No_Ada_Naming_Exception;
-         Compute_Unit_Name
-           (File_Name       => Canonical_File_Name,
-            Dot_Replacement => Naming.Dot_Replacement,
-            Separate_Suffix => Naming.Separate_Suffix,
-            Body_Suffix     => Body_Suffix_Id_Of (In_Tree, Name_Ada, Naming),
-            Spec_Suffix     => Spec_Suffix_Id_Of (In_Tree, Name_Ada, Naming),
-            Casing          => Naming.Casing,
-            Kind            => Kind,
-            Unit            => Unit_Name,
-            In_Tree         => In_Tree);
+         Lang := Get_Language_From_Name (Project, "ada");
 
-         case Kind is
-            when Spec       => Unit_Kind := Specification;
-            when Impl | Sep => Unit_Kind := Body_Part;
-         end case;
+         if Lang = null then
+            Unit_Name := No_Name;
+            Unit_Kind := Spec;
+         else
+            Compute_Unit_Name
+              (File_Name       => Canonical_File_Name,
+               Naming          => Lang.Config.Naming_Data,
+               Kind            => Kind,
+               Unit            => Unit_Name,
+               In_Tree         => In_Tree);
+
+            case Kind is
+               when Spec       => Unit_Kind := Spec;
+               when Impl | Sep => Unit_Kind := Impl;
+            end case;
+         end if;
       end if;
    end Get_Unit;
 
@@ -6421,19 +6328,21 @@ package body Prj.Nmsc is
       Suffix_Str : constant String := Get_Name_String (Suffix);
 
    begin
-      if Suffix_Str'Length = 0 or else Index (Suffix_Str, ".") = 0 then
+      if Suffix_Str'Length = 0 then
+         return False;
+      elsif Index (Suffix_Str, ".") = 0 then
          return True;
       end if;
 
-      --  If dot replacement is a single dot, and first character of suffix is
-      --  also a dot
+      --  Case of dot replacement is a single dot, and first character of
+      --  suffix is also a dot.
 
       if Get_Name_String (Dot_Replacement) = "."
         and then Suffix_Str (Suffix_Str'First) = '.'
       then
          for Index in Suffix_Str'First + 1 .. Suffix_Str'Last loop
 
-            --  If there is another dot
+            --  Case of following dot
 
             if Suffix_Str (Index) = '.' then
 
@@ -6551,7 +6460,8 @@ package body Prj.Nmsc is
                         Write_Str (Create);
                         Write_Str (" directory """);
                         Write_Str (Full_Path_Name.all);
-                        Write_Line (""" created");
+                        Write_Str (""" created for project ");
+                        Write_Line (Get_Name_String (Project.Name));
                      end if;
 
                   exception
@@ -6759,9 +6669,10 @@ package body Prj.Nmsc is
    ------------------
 
    procedure Find_Sources
-     (Project   : Project_Id;
-      In_Tree   : Project_Tree_Ref;
-      Proc_Data : in out Processing_Data)
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      Proc_Data                 : in out Processing_Data;
+      Allow_Duplicate_Basenames : Boolean)
    is
       Sources          : constant Variable_Value :=
                            Util.Value_Of
@@ -6783,7 +6694,7 @@ package body Prj.Nmsc is
         (Source_List_File.Kind = Single,
          "Source_List_File is not a single string");
 
-      --  If the user has specified a Sources attribute
+      --  If the user has specified a Source_Files attribute
 
       if not Sources.Default then
          if not Source_List_File.Default then
@@ -6920,14 +6831,16 @@ package body Prj.Nmsc is
 
       if Get_Mode = Ada_Only then
          Find_Ada_Sources
-           (Project, In_Tree, Explicit_Sources_Only => Has_Explicit_Sources,
-            Proc_Data => Proc_Data);
+           (Project, In_Tree,
+            Explicit_Sources_Only => Has_Explicit_Sources,
+            Proc_Data             => Proc_Data);
 
       else
          Search_Directories
            (Project, In_Tree,
-            For_All_Sources =>
-              Sources.Default and then Source_List_File.Default);
+            For_All_Sources           =>
+              Sources.Default and then Source_List_File.Default,
+            Allow_Duplicate_Basenames => Allow_Duplicate_Basenames);
       end if;
 
       --  Check if all exceptions have been found. For Ada, it is an error if
@@ -6947,9 +6860,9 @@ package body Prj.Nmsc is
             if Source.Naming_Exception
               and then Source.Path = No_Path_Information
             then
-               if Source.Unit /= No_Name then
+               if Source.Unit /= No_Unit_Index then
                   Error_Msg_Name_1 := Name_Id (Source.Display_File);
-                  Error_Msg_Name_2 := Name_Id (Source.Unit);
+                  Error_Msg_Name_2 := Name_Id (Source.Unit.Name);
                   Error_Msg
                     (Project, In_Tree,
                      "source file %% for unit %% not found",
@@ -7286,11 +7199,7 @@ package body Prj.Nmsc is
                if not Header_File then
                   Compute_Unit_Name
                     (File_Name       => File_Name,
-                     Dot_Replacement => Config.Naming_Data.Dot_Replacement,
-                     Separate_Suffix => Config.Naming_Data.Separate_Suffix,
-                     Body_Suffix     => Config.Naming_Data.Body_Suffix,
-                     Spec_Suffix     => Config.Naming_Data.Spec_Suffix,
-                     Casing          => Config.Naming_Data.Casing,
+                     Naming          => Config.Naming_Data,
                      Kind            => Kind,
                      Unit            => Unit,
                      In_Tree         => In_Tree);
@@ -7312,17 +7221,48 @@ package body Prj.Nmsc is
       end if;
    end Check_File_Naming_Schemes;
 
+   -------------------
+   -- Override_Kind --
+   -------------------
+
+   procedure Override_Kind (Source : Source_Id; Kind : Source_Kind) is
+   begin
+      --  If the file was previously already associated with a unit, change it
+
+      if Source.Unit /= null
+        and then Source.Kind in Spec_Or_Body
+        and then Source.Unit.File_Names (Source.Kind) /= null
+      then
+         --  If we had another file referencing the same unit (for instance it
+         --  was in an extended project), that source file is in fact invisible
+         --  from now on, and in particular doesn't belong to the same unit.
+
+         if Source.Unit.File_Names (Source.Kind) /= Source then
+            Source.Unit.File_Names (Source.Kind).Unit := No_Unit_Index;
+         end if;
+
+         Source.Unit.File_Names (Source.Kind) := null;
+      end if;
+
+      Source.Kind := Kind;
+
+      if Source.Kind in Spec_Or_Body and then Source.Unit /= null then
+         Source.Unit.File_Names (Source.Kind) := Source;
+      end if;
+   end Override_Kind;
+
    ----------------
    -- Check_File --
    ----------------
 
    procedure Check_File
-     (Project           : Project_Id;
-      In_Tree           : Project_Tree_Ref;
-      Path              : Path_Name_Type;
-      File_Name         : File_Name_Type;
-      Display_File_Name : File_Name_Type;
-      For_All_Sources   : Boolean)
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      Path                      : Path_Name_Type;
+      File_Name                 : File_Name_Type;
+      Display_File_Name         : File_Name_Type;
+      For_All_Sources           : Boolean;
+      Allow_Duplicate_Basenames : Boolean)
    is
       Canonical_Path : constant Path_Name_Type :=
                          Path_Name_Type
@@ -7333,7 +7273,6 @@ package body Prj.Nmsc is
       Alternate_Languages   : Language_List;
       Language              : Language_Ptr;
       Source                : Source_Id;
-      Other_Part            : Source_Id;
       Add_Src               : Boolean;
       Src_Ind               : Source_File_Index;
       Unit                  : Name_Id;
@@ -7379,14 +7318,14 @@ package body Prj.Nmsc is
 
                --  Check if this is a subunit
 
-               if Name_Loc.Source.Unit /= No_Name
+               if Name_Loc.Source.Unit /= No_Unit_Index
                  and then Name_Loc.Source.Kind = Impl
                then
                   Src_Ind := Sinput.P.Load_Project_File
                     (Get_Name_String (Canonical_Path));
 
                   if Sinput.P.Source_File_Is_Subunit (Src_Ind) then
-                     Name_Loc.Source.Kind := Sep;
+                     Override_Kind (Name_Loc.Source, Sep);
                   end if;
                end if;
             end if;
@@ -7394,8 +7333,6 @@ package body Prj.Nmsc is
       end if;
 
       if Check_Name then
-         Other_Part := No_Source;
-
          Check_File_Naming_Schemes
            (In_Tree               => In_Tree,
             Project               => Project,
@@ -7430,16 +7367,20 @@ package body Prj.Nmsc is
                exit when Source = No_Source;
 
                if Unit /= No_Name
-                 and then Source.Unit = Unit
+                 and then Source.Unit /= No_Unit_Index
+                 and then Source.Unit.Name = Unit
                  and then
                    ((Source.Kind = Spec and then Kind = Impl)
                        or else
                     (Source.Kind = Impl and then Kind = Spec))
                then
-                  Other_Part := Source;
+                  --  We found the "other_part (source)"
+
+                  null;
 
                elsif (Unit /= No_Name
-                      and then Source.Unit = Unit
+                      and then Source.Unit /= No_Unit_Index
+                      and then Source.Unit.Name = Unit
                       and then
                         (Source.Kind = Kind
                            or else
@@ -7453,22 +7394,29 @@ package body Prj.Nmsc is
                   --  allowed if order of source directories is known.
 
                   if Project = Source.Project then
-                     if Project.Known_Order_Of_Source_Dirs then
-                        Add_Src := False;
-
-                     elsif Unit /= No_Name then
-                        Error_Msg_Name_1 := Unit;
-                        Error_Msg
-                          (Project, In_Tree, "duplicate unit %%",
-                           No_Location);
-                        Add_Src := False;
+                     if Unit = No_Name then
+                        if Allow_Duplicate_Basenames then
+                           Add_Src := True;
+                        elsif Project.Known_Order_Of_Source_Dirs then
+                           Add_Src := False;
+                        else
+                           Error_Msg_File_1 := File_Name;
+                           Error_Msg
+                             (Project, In_Tree, "duplicate source file name {",
+                              No_Location);
+                           Add_Src := False;
+                        end if;
 
                      else
-                        Error_Msg_File_1 := File_Name;
-                        Error_Msg
-                          (Project, In_Tree, "duplicate source file name {",
-                           No_Location);
-                        Add_Src := False;
+                        if Project.Known_Order_Of_Source_Dirs then
+                           Add_Src := False;
+                        else
+                           Error_Msg_Name_1 := Unit;
+                           Error_Msg
+                             (Project, In_Tree, "duplicate unit %%",
+                              No_Location);
+                           Add_Src := False;
+                        end if;
                      end if;
 
                      --  Do not allow the same unit name in different projects,
@@ -7513,12 +7461,10 @@ package body Prj.Nmsc is
                   In_Tree             => In_Tree,
                   Project             => Project,
                   Lang_Id             => Language,
-                  Lang_Kind           => Lang_Kind,
                   Kind                => Kind,
                   Alternate_Languages => Alternate_Languages,
                   File_Name           => File_Name,
                   Display_File        => Display_File_Name,
-                  Other_Part          => Other_Part,
                   Unit                => Unit,
                   Path                => (Canonical_Path, Path),
                   Source_To_Replace   => Source_To_Replace);
@@ -7532,9 +7478,10 @@ package body Prj.Nmsc is
    ------------------------
 
    procedure Search_Directories
-     (Project         : Project_Id;
-      In_Tree         : Project_Tree_Ref;
-      For_All_Sources : Boolean)
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      For_All_Sources           : Boolean;
+      Allow_Duplicate_Basenames : Boolean)
    is
       Source_Dir        : String_List_Id;
       Element           : String_Element;
@@ -7607,12 +7554,16 @@ package body Prj.Nmsc is
 
                         declare
                            Path_Name : constant String :=
-                               Normalize_Pathname
-                                 (Name (1 .. Last),
-                                  Directory      => Source_Directory
-                                    (Source_Directory'First .. Dir_Last),
-                                  Resolve_Links  => Opt.Follow_Links_For_Files,
-                                  Case_Sensitive => True); --  no folding
+                                         Normalize_Pathname
+                                           (Name (1 .. Last),
+                                            Directory       =>
+                                              Source_Directory
+                                                (Source_Directory'First ..
+                                                 Dir_Last),
+                                            Resolve_Links   =>
+                                              Opt.Follow_Links_For_Files,
+                                            Case_Sensitive => True);
+                           --  Case_Sensitive set True (no folding)
 
                            Path : Path_Name_Type;
                            FF   : File_Found :=
@@ -7637,12 +7588,15 @@ package body Prj.Nmsc is
 
                            else
                               Check_File
-                                (Project           => Project,
-                                 In_Tree           => In_Tree,
-                                 Path              => Path,
-                                 File_Name         => File_Name,
-                                 Display_File_Name => Display_File_Name,
-                                 For_All_Sources   => For_All_Sources);
+                                (Project                   => Project,
+                                 In_Tree                   => In_Tree,
+                                 Path                      => Path,
+                                 File_Name                 => File_Name,
+                                 Display_File_Name         =>
+                                   Display_File_Name,
+                                 For_All_Sources           => For_All_Sources,
+                                 Allow_Duplicate_Basenames =>
+                                   Allow_Duplicate_Basenames);
                            end if;
                         end;
                      end if;
@@ -7706,18 +7660,18 @@ package body Prj.Nmsc is
               (Name     => Source.File,
                Location => No_Location,
                Source   => Source,
-               Except   => Source.Unit /= No_Name,
+               Except   => Source.Unit /= No_Unit_Index,
                Found    => False));
 
          --  If this is an Ada exception, record in table Unit_Exceptions
 
-         if Source.Unit /= No_Name then
+         if Source.Unit /= No_Unit_Index then
             declare
                Unit_Except : Unit_Exception :=
-                                Unit_Exceptions.Get (Source.Unit);
+                                Unit_Exceptions.Get (Source.Unit.Name);
 
             begin
-               Unit_Except.Name := Source.Unit;
+               Unit_Except.Name := Source.Unit.Name;
 
                if Source.Kind = Spec then
                   Unit_Except.Spec := Source.File;
@@ -7725,7 +7679,7 @@ package body Prj.Nmsc is
                   Unit_Except.Impl := Source.File;
                end if;
 
-               Unit_Exceptions.Set (Source.Unit, Unit_Except);
+               Unit_Exceptions.Set (Source.Unit.Name, Unit_Except);
             end;
          end if;
 
@@ -7738,9 +7692,10 @@ package body Prj.Nmsc is
    ----------------------
 
    procedure Look_For_Sources
-     (Project     : Project_Id;
-      In_Tree     : Project_Tree_Ref;
-      Proc_Data   : in out Processing_Data)
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      Proc_Data                 : in out Processing_Data;
+      Allow_Duplicate_Basenames : Boolean)
    is
       Iter : Source_Iterator;
 
@@ -7757,103 +7712,47 @@ package body Prj.Nmsc is
       procedure Mark_Excluded_Sources is
          Source   : Source_Id := No_Source;
          OK       : Boolean;
-         Unit     : Unit_Data;
-         Excluded : File_Found := Excluded_Sources_Htable.Get_First;
-
-         procedure Exclude
-           (Extended : Project_Id;
-            Index    : Unit_Index;
-            Kind     : Spec_Or_Body);
-         --  If the current file (Excluded) belongs to the current project or
-         --  one that the current project extends, then mark this file/unit as
-         --  excluded. It is an error to locally remove a file from another
-         --  project.
-
-         -------------
-         -- Exclude --
-         -------------
-
-         procedure Exclude
-           (Extended : Project_Id;
-            Index    : Unit_Index;
-            Kind     : Spec_Or_Body)
-         is
-         begin
-            if Extended = Project
-              or else Is_Extending (Project, Extended)
-            then
-               OK := True;
-
-               if Index /= No_Unit_Index then
-                  Unit.File_Names (Kind).Path.Name    := Slash;
-                  Unit.File_Names (Kind).Needs_Pragma := False;
-                  In_Tree.Units.Table (Index) := Unit;
-               end if;
-
-               if Source /= No_Source then
-                  Source.Locally_Removed := True;
-                  Source.In_Interfaces := False;
-               end if;
-
-               if Current_Verbosity = High then
-                  Write_Str ("Removing file ");
-                  Write_Line (Get_Name_String (Excluded.File));
-               end if;
-
-               Add_Forbidden_File_Name (Excluded.File);
-
-            else
-               Error_Msg
-                 (Project, In_Tree,
-                  "cannot remove a source from another project",
-                  Excluded.Location);
-            end if;
-         end Exclude;
-
-      --  Start of processing for Mark_Excluded_Sources
+         Excluded : File_Found;
 
       begin
+         Excluded := Excluded_Sources_Htable.Get_First;
          while Excluded /= No_File_Found loop
-            OK     := False;
+            OK := False;
 
-            case Get_Mode is
-            when Ada_Only =>
+            --  ??? Don't we have a hash table to map files to Source_Id?
 
-               --  ??? This loop could be the same as for Multi_Language if
-               --  we were setting In_Tree.First_Source when we search for
-               --  Ada sources (basically once we have removed the use of
-               --  Project.Ada_Sources).
+            Iter := For_Each_Source (In_Tree);
+            loop
+               Source := Prj.Element (Iter);
+               exit when Source = No_Source;
 
-               For_Each_Unit :
-               for Index in Unit_Table.First ..
-                 Unit_Table.Last (In_Tree.Units)
-               loop
-                  Unit := In_Tree.Units.Table (Index);
+               if Source.File = Excluded.File then
+                  if Source.Project = Project
+                    or else Is_Extending (Project, Source.Project)
+                  then
+                     OK := True;
+                     Source.Locally_Removed := True;
+                     Source.In_Interfaces := False;
 
-                  for Kind in Spec_Or_Body'Range loop
-                     if Unit.File_Names (Kind).Name = Excluded.File then
-                        Exclude (Unit.File_Names (Kind).Project, Index, Kind);
-                        exit For_Each_Unit;
+                     if Current_Verbosity = High then
+                        Write_Str ("Removing file ");
+                        Write_Line (Get_Name_String (Excluded.File));
                      end if;
-                  end loop;
-               end loop For_Each_Unit;
 
-            when Multi_Language =>
-               Iter := For_Each_Source (In_Tree);
-               loop
-                  Source := Prj.Element (Iter);
-                  exit when Source = No_Source;
-
-                  if Source.File = Excluded.File then
-                     Exclude (Source.Project, No_Unit_Index, Specification);
-                     exit;
+                  else
+                     Error_Msg
+                       (Project, In_Tree,
+                        "cannot remove a source from another project",
+                        Excluded.Location);
                   end if;
 
-                  Next (Iter);
-               end loop;
+                  exit;
+               end if;
 
-               OK := OK or Excluded.Found;
-            end case;
+               Next (Iter);
+            end loop;
+
+            OK := OK or Excluded.Found;
 
             if not OK then
                Err_Vars.Error_Msg_File_1 := Excluded.File;
@@ -7871,6 +7770,7 @@ package body Prj.Nmsc is
 
       procedure Process_Sources_In_Multi_Language_Mode is
          Iter : Source_Iterator;
+
       begin
          --  Check that two sources of this project do not have the same object
          --  file name.
@@ -7915,10 +7815,11 @@ package body Prj.Nmsc is
                Src_Id := Prj.Element (Iter);
                exit when Src_Id = No_Source;
 
-               if Src_Id.Compiled and then Src_Id.Object_Exists
+               if Is_Compilable (Src_Id)
+                 and then Src_Id.Language.Config.Object_Generated
                  and then Is_Extending (Project, Src_Id.Project)
                then
-                  if Src_Id.Unit = No_Name then
+                  if Src_Id.Unit = No_Unit_Index then
                      if Src_Id.Kind = Impl then
                         Check_Object (Src_Id);
                      end if;
@@ -7926,7 +7827,7 @@ package body Prj.Nmsc is
                   else
                      case Src_Id.Kind is
                         when Spec =>
-                           if Src_Id.Other_Part = No_Source then
+                           if Other_Part (Src_Id) = No_Source then
                               Check_Object (Src_Id);
                            end if;
 
@@ -7934,7 +7835,7 @@ package body Prj.Nmsc is
                            null;
 
                         when Impl =>
-                           if Src_Id.Other_Part /= No_Source then
+                           if Other_Part (Src_Id) /= No_Source then
                               Check_Object (Src_Id);
 
                            else
@@ -7942,14 +7843,14 @@ package body Prj.Nmsc is
 
                               declare
                                  Src_Ind : constant Source_File_Index :=
-                                   Sinput.P.Load_Project_File
-                                     (Get_Name_String
-                                          (Src_Id.Path.Name));
+                                             Sinput.P.Load_Project_File
+                                               (Get_Name_String
+                                                 (Src_Id.Path.Name));
                               begin
                                  if Sinput.P.Source_File_Is_Subunit
-                                   (Src_Ind)
+                                      (Src_Ind)
                                  then
-                                    Src_Id.Kind := Sep;
+                                    Override_Kind (Src_Id, Sep);
                                  else
                                     Check_Object (Src_Id);
                                  end if;
@@ -7978,7 +7879,7 @@ package body Prj.Nmsc is
             Load_Naming_Exceptions (Project, In_Tree);
          end if;
 
-         Find_Sources (Project, In_Tree, Proc_Data);
+         Find_Sources (Project, In_Tree, Proc_Data, Allow_Duplicate_Basenames);
          Mark_Excluded_Sources;
 
          if Get_Mode = Multi_Language then
@@ -8098,14 +7999,14 @@ package body Prj.Nmsc is
          Unit_Kind    : Spec_Or_Body;
          Needs_Pragma : Boolean)
       is
-         The_Unit      : Unit_Index :=
-                           Units_Htable.Get (In_Tree.Units_HT, Unit_Name);
-         UData         : Unit_Data;
-         Kind          : Source_Kind;
-         Source        : Source_Id;
-         To_Record     : Boolean := False;
-         The_Location  : Source_Ptr := Location;
-         Unit_Prj      : Project_Id;
+         UData : constant Unit_Index :=
+                   Units_Htable.Get (In_Tree.Units_HT, Unit_Name);
+         --  ??? Add_Source will look it up again, can we do that only once ?
+
+         Source       : Source_Id;
+         To_Record    : Boolean := False;
+         The_Location : Source_Ptr := Location;
+         Unit_Prj     : Project_Id;
 
       begin
          if Current_Verbosity = High then
@@ -8118,34 +8019,15 @@ package body Prj.Nmsc is
          --  unit kind (spec or body), or what is in the unit list is a unit of
          --  a project we are extending.
 
-         if The_Unit /= No_Unit_Index then
-            UData := In_Tree.Units.Table (The_Unit);
-
-            if (UData.File_Names (Unit_Kind).Name = Canonical_File
-                 and then UData.File_Names (Unit_Kind).Path.Name = Slash)
-              or else UData.File_Names (Unit_Kind).Name = No_File
+         if UData /= No_Unit_Index then
+            if UData.File_Names (Unit_Kind) = null
+              or else
+                (UData.File_Names (Unit_Kind).File = Canonical_File
+                  and then UData.File_Names (Unit_Kind).Locally_Removed)
               or else Is_Extending
-                        (Project.Extends, UData.File_Names (Unit_Kind).Project)
+                (Project.Extends, UData.File_Names (Unit_Kind).Project)
             then
-               if UData.File_Names (Unit_Kind).Path.Name = Slash then
-                  Remove_Forbidden_File_Name
-                    (UData.File_Names (Unit_Kind).Name);
-               end if;
-
-               --  Record the file name in the hash table Files_Htable
-
-               Files_Htable.Set (Proc_Data.Units, Canonical_File, Project);
-
-               UData.File_Names (Unit_Kind) :=
-                 (Name         => Canonical_File,
-                  Index        => Unit_Ind,
-                  Display_Name => File_Name,
-                  Path         => (Canonical_Path, Path_Name),
-                  Project      => Project,
-                  Needs_Pragma => Needs_Pragma);
-               In_Tree.Units.Table (The_Unit) := UData;
                To_Record       := True;
-               Source_Recorded := True;
 
             --  If the same file is already in the list, do not add it again
 
@@ -8205,45 +8087,25 @@ package body Prj.Nmsc is
                   Location);
 
             else
-               Unit_Table.Increment_Last (In_Tree.Units);
-               The_Unit := Unit_Table.Last (In_Tree.Units);
-               Units_Htable.Set (In_Tree.Units_HT, Unit_Name, The_Unit);
-
-               Files_Htable.Set (Proc_Data.Units, Canonical_File, Project);
-
-               UData.Name := Unit_Name;
-               UData.File_Names (Unit_Kind) :=
-                 (Name         => Canonical_File,
-                  Index        => Unit_Ind,
-                  Display_Name => File_Name,
-                  Path         => (Canonical_Path, Path_Name),
-                  Project      => Project,
-                  Needs_Pragma => Needs_Pragma);
-               In_Tree.Units.Table (The_Unit) := UData;
-
-               Source_Recorded := True;
                To_Record := True;
             end if;
          end if;
 
          if To_Record then
-            case Unit_Kind is
-               when Body_Part      => Kind := Impl;
-               when Specification  => Kind := Spec;
-            end case;
-
+            Files_Htable.Set (Proc_Data.Units, Canonical_File, Project);
             Add_Source
               (Id                  => Source,
                In_Tree             => In_Tree,
                Project             => Project,
                Lang_Id             => Ada_Language,
-               Lang_Kind           => Unit_Based,
                File_Name           => Canonical_File,
                Display_File        => File_Name,
                Unit                => Unit_Name,
                Path                => (Canonical_Path, Path_Name),
-               Kind                => Kind,
-               Other_Part          => No_Source);  --  ??? Can we find file ?
+               Naming_Exception    => Needs_Pragma,
+               Kind                => Unit_Kind,
+               Index               => Unit_Ind);
+            Source_Recorded := True;
          end if;
       end Record_Unit;
 
@@ -8266,7 +8128,7 @@ package body Prj.Nmsc is
       Get_Unit
         (In_Tree             => In_Tree,
          Canonical_File_Name => Canonical_File,
-         Naming              => Project.Naming,
+         Project             => Project,
          Exception_Id        => Exception_Id,
          Unit_Name           => Unit_Name,
          Unit_Kind           => Unit_Kind);
@@ -8442,8 +8304,7 @@ package body Prj.Nmsc is
    is
       Conv          : Array_Element_Id;
       Unit          : Name_Id;
-      The_Unit_Id   : Unit_Index;
-      The_Unit_Data : Unit_Data;
+      The_Unit_Data : Unit_Index;
       Location      : Source_Ptr;
 
    begin
@@ -8454,21 +8315,20 @@ package body Prj.Nmsc is
          Get_Name_String (Unit);
          To_Lower (Name_Buffer (1 .. Name_Len));
          Unit := Name_Find;
-         The_Unit_Id := Units_Htable.Get (In_Tree.Units_HT, Unit);
+         The_Unit_Data := Units_Htable.Get (In_Tree.Units_HT, Unit);
          Location := In_Tree.Array_Elements.Table (Conv).Value.Location;
 
-         if The_Unit_Id = No_Unit_Index then
+         if The_Unit_Data = No_Unit_Index then
             Error_Msg (Project, In_Tree, "?unknown unit %%", Location);
 
          else
-            The_Unit_Data := In_Tree.Units.Table (The_Unit_Id);
             Error_Msg_Name_2 :=
               In_Tree.Array_Elements.Table (Conv).Value.Value;
 
             if Specs then
                if not Check_Project
-                 (The_Unit_Data.File_Names (Specification).Project,
-                  Project, Extending)
+                        (The_Unit_Data.File_Names (Spec).Project,
+                         Project, Extending)
                then
                   Error_Msg
                     (Project, In_Tree,
@@ -8478,9 +8338,10 @@ package body Prj.Nmsc is
                end if;
 
             else
-               if not Check_Project
-                 (The_Unit_Data.File_Names (Body_Part).Project,
-                  Project, Extending)
+               if The_Unit_Data.File_Names (Impl) = null
+                 or else not Check_Project
+                               (The_Unit_Data.File_Names (Impl).Project,
+                                Project, Extending)
                then
                   Error_Msg
                     (Project, In_Tree,

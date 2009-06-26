@@ -820,6 +820,20 @@ package VMS_Data is
    --
    --   Work quietly, only output warnings and errors.
 
+   S_Check_Time     : aliased constant S := "/TIME "                       &
+                                               "-t";
+   --        /NOTIME (D)
+   --        /TIME
+   --
+   --   Print out execution time
+
+   S_Check_Log      : aliased constant S := "/LOG "                        &
+                                               "-log";
+   --        /NOLOG (D)
+   --        /LOG
+   --
+   --   Duplicate all the output sent to Stderr into a log file.
+
    S_Check_Sections : aliased constant S := "/SECTIONS="                   &
                                             "DEFAULT "                     &
                                                "-s123 "                    &
@@ -893,6 +907,8 @@ package VMS_Data is
                        S_Check_Mess     'Access,
                        S_Check_Project  'Access,
                        S_Check_Quiet    'Access,
+                       S_Check_Time     'Access,
+                       S_Check_Log      'Access,
                        S_Check_Sections 'Access,
                        S_Check_Short    'Access,
                        S_Check_Subdirs  'Access,

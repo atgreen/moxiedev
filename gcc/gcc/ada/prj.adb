@@ -53,7 +53,6 @@ package body Prj is
 
    Default_Ada_Spec_Suffix_Id : File_Name_Type;
    Default_Ada_Body_Suffix_Id : File_Name_Type;
-   Slash_Id                   : Path_Name_Type;
    --  Initialized in Prj.Initialize, then never modified
 
    subtype Known_Casing is Casing_Type range All_Upper_Case .. Mixed_Case;
@@ -64,21 +63,6 @@ package body Prj is
       Mixed_Case     => new String'("MixedCase"));
 
    Initialized : Boolean := False;
-
-   Standard_Dot_Replacement : constant File_Name_Type :=
-                                File_Name_Type
-                                  (First_Name_Id + Character'Pos ('-'));
-
-   Std_Naming_Data : constant Naming_Data :=
-                       (Dot_Replacement           => Standard_Dot_Replacement,
-                        Casing                    => All_Lower_Case,
-                        Spec_Suffix               => No_Array_Element,
-                        Body_Suffix               => No_Array_Element,
-                        Separate_Suffix           => No_File,
-                        Specs                     => No_Array_Element,
-                        Bodies                    => No_Array_Element,
-                        Specification_Exceptions  => No_Array_Element,
-                        Implementation_Exceptions => No_Array_Element);
 
    Project_Empty : constant Project_Data :=
                      (Qualifier                      => Unspecified,
@@ -113,8 +97,7 @@ package body Prj is
                       Exec_Directory                 => No_Path_Information,
                       Extends                        => No_Project,
                       Extended_By                    => No_Project,
-                      Naming                         => Std_Naming_Data,
-                      Languages      => No_Language_Index,
+                      Languages                      => No_Language_Index,
                       Decl                           => No_Declarations,
                       Imported_Projects              => null,
                       All_Imported_Projects          => null,
@@ -149,9 +132,12 @@ package body Prj is
    procedure Free_List (Languages : in out Language_List);
    --  Free memory allocated for the list of languages or sources
 
+   procedure Free_Units (Table : in out Units_Htable.Instance);
+   --  Free memory allocated for unit information in the project
+
    procedure Language_Changed (Iter : in out Source_Iterator);
    procedure Project_Changed (Iter : in out Source_Iterator);
-   --  Called when a new project or language was selected for this iterator.
+   --  Called when a new project or language was selected for this iterator
 
    function Contains_ALI_Files (Dir : Path_Name_Type) return Boolean;
    --  Return True if there is at least one ALI file in the directory Dir
@@ -188,67 +174,6 @@ package body Prj is
       To (Last + 1 .. Last + S'Length) := S;
       Last := Last + S'Length;
    end Add_To_Buffer;
-
-   -----------------------
-   -- Body_Suffix_Id_Of --
-   -----------------------
-
-   function Body_Suffix_Id_Of
-     (In_Tree     : Project_Tree_Ref;
-      Language_Id : Name_Id;
-      Naming      : Naming_Data) return File_Name_Type
-   is
-      Element_Id : Array_Element_Id;
-      Element    : Array_Element;
-
-   begin
-      --  ??? This seems to be only for Ada_Only mode...
-      Element_Id := Naming.Body_Suffix;
-      while Element_Id /= No_Array_Element loop
-         Element := In_Tree.Array_Elements.Table (Element_Id);
-
-         if Element.Index = Language_Id then
-            return File_Name_Type (Element.Value.Value);
-         end if;
-
-         Element_Id := Element.Next;
-      end loop;
-
-      return No_File;
-   end Body_Suffix_Id_Of;
-
-   --------------------
-   -- Body_Suffix_Of --
-   --------------------
-
-   function Body_Suffix_Of
-     (In_Tree  : Project_Tree_Ref;
-      Language : String;
-      Naming   : Naming_Data) return String
-   is
-      Language_Id : Name_Id;
-      Element_Id  : Array_Element_Id;
-      Element     : Array_Element;
-
-   begin
-      Name_Len := 0;
-      Add_Str_To_Name_Buffer (Language);
-      To_Lower (Name_Buffer (1 .. Name_Len));
-      Language_Id := Name_Find;
-
-      Element_Id := Naming.Body_Suffix;
-      while Element_Id /= No_Array_Element loop
-         Element := In_Tree.Array_Elements.Table (Element_Id);
-
-         if Element.Index = Language_Id then
-            return Get_Name_String (Element.Value.Value);
-         end if;
-
-         Element_Id := Element.Next;
-      end loop;
-
-      return "";
-   end Body_Suffix_Of;
 
    -----------------------------
    -- Default_Ada_Body_Suffix --
@@ -324,15 +249,10 @@ package body Prj is
    -- Empty_Project --
    -------------------
 
-   function Empty_Project (Tree : Project_Tree_Ref) return Project_Data is
-      Value : Project_Data;
-
+   function Empty_Project return Project_Data is
    begin
       Prj.Initialize (Tree => No_Project_Tree);
-      Value := Project_Empty;
-      Value.Naming := Tree.Private_Part.Default_Naming;
-
-      return Value;
+      return Project_Empty;
    end Empty_Project;
 
    ------------------
@@ -617,9 +537,6 @@ package body Prj is
          Name_Len := 4;
          Name_Buffer (1 .. 4) := ".adb";
          Default_Ada_Body_Suffix_Id := Name_Find;
-         Name_Len := 1;
-         Name_Buffer (1) := '/';
-         Slash_Id := Name_Find;
 
          Prj.Attr.Initialize;
          Set_Name_Table_Byte (Name_Project,  Token_Type'Pos (Tok_Project));
@@ -638,21 +555,10 @@ package body Prj is
 
    function Is_A_Language
      (Project       : Project_Id;
-      Language_Name : Name_Id) return Boolean
-   is
-      Lang_Ind : Language_Ptr;
-
+      Language_Name : Name_Id) return Boolean is
    begin
-      Lang_Ind := Project.Languages;
-      while Lang_Ind /= No_Language_Index loop
-         if Lang_Ind.Name = Language_Name then
-            return True;
-         end if;
-
-         Lang_Ind := Lang_Ind.Next;
-      end loop;
-
-      return False;
+      return Get_Language_From_Name
+        (Project, Get_Name_String (Language_Name)) /= null;
    end Is_A_Language;
 
    ------------------
@@ -706,110 +612,6 @@ package body Prj is
       Temp_Files.Table (Temp_Files.Last) := Path;
    end Record_Temp_File;
 
-   ------------------------------------
-   -- Register_Default_Naming_Scheme --
-   ------------------------------------
-
-   procedure Register_Default_Naming_Scheme
-     (Language            : Name_Id;
-      Default_Spec_Suffix : File_Name_Type;
-      Default_Body_Suffix : File_Name_Type;
-      In_Tree             : Project_Tree_Ref)
-   is
-      Lang    : Name_Id;
-      Suffix  : Array_Element_Id;
-      Found   : Boolean := False;
-      Element : Array_Element;
-
-   begin
-      --  Get the language name in small letters
-
-      Get_Name_String (Language);
-      Name_Buffer (1 .. Name_Len) := To_Lower (Name_Buffer (1 .. Name_Len));
-      Lang := Name_Find;
-
-      --  Look for an element of the spec suffix array indexed by the language
-      --  name. If one is found, put the default value.
-
-      Suffix := In_Tree.Private_Part.Default_Naming.Spec_Suffix;
-      Found := False;
-      while Suffix /= No_Array_Element and then not Found loop
-         Element := In_Tree.Array_Elements.Table (Suffix);
-
-         if Element.Index = Lang then
-            Found := True;
-            Element.Value.Value := Name_Id (Default_Spec_Suffix);
-            In_Tree.Array_Elements.Table (Suffix) := Element;
-
-         else
-            Suffix := Element.Next;
-         end if;
-      end loop;
-
-      --  If none can be found, create a new one
-
-      if not Found then
-         Element :=
-           (Index     => Lang,
-            Src_Index => 0,
-            Index_Case_Sensitive => False,
-            Value => (Project  => No_Project,
-                      Kind     => Single,
-                      Location => No_Location,
-                      Default  => False,
-                      Value    => Name_Id (Default_Spec_Suffix),
-                      Index    => 0),
-            Next  => In_Tree.Private_Part.Default_Naming.Spec_Suffix);
-         Array_Element_Table.Increment_Last (In_Tree.Array_Elements);
-         In_Tree.Array_Elements.Table
-           (Array_Element_Table.Last (In_Tree.Array_Elements)) :=
-            Element;
-         In_Tree.Private_Part.Default_Naming.Spec_Suffix :=
-           Array_Element_Table.Last (In_Tree.Array_Elements);
-      end if;
-
-      --  Look for an element of the body suffix array indexed by the language
-      --  name. If one is found, put the default value.
-
-      Suffix := In_Tree.Private_Part.Default_Naming.Body_Suffix;
-      Found := False;
-      while Suffix /= No_Array_Element and then not Found loop
-         Element := In_Tree.Array_Elements.Table (Suffix);
-
-         if Element.Index = Lang then
-            Found := True;
-            Element.Value.Value := Name_Id (Default_Body_Suffix);
-            In_Tree.Array_Elements.Table (Suffix) := Element;
-
-         else
-            Suffix := Element.Next;
-         end if;
-      end loop;
-
-      --  If none can be found, create a new one
-
-      if not Found then
-         Element :=
-           (Index     => Lang,
-            Src_Index => 0,
-            Index_Case_Sensitive => False,
-            Value => (Project  => No_Project,
-                      Kind     => Single,
-                      Location => No_Location,
-                      Default  => False,
-                      Value    => Name_Id (Default_Body_Suffix),
-                      Index    => 0),
-            Next  => In_Tree.Private_Part.Default_Naming.Body_Suffix);
-         Array_Element_Table.Increment_Last
-           (In_Tree.Array_Elements);
-         In_Tree.Array_Elements.Table
-           (Array_Element_Table.Last (In_Tree.Array_Elements))
-             := Element;
-         In_Tree.Private_Part.Default_Naming.Body_Suffix :=
-           Array_Element_Table.Last (In_Tree.Array_Elements);
-      end if;
-   end Register_Default_Naming_Scheme;
-
    ----------
    -- Free --
    ----------
@@ -853,13 +655,22 @@ package body Prj is
    ---------------
 
    procedure Free_List (Source : in out Source_Id) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Source_Data, Source_Id);
+      procedure Unchecked_Free is new
+        Ada.Unchecked_Deallocation (Source_Data, Source_Id);
+
       Tmp : Source_Id;
+
    begin
       while Source /= No_Source loop
          Tmp := Source.Next_In_Lang;
          Free_List (Source.Alternate_Languages);
+
+         if Source.Unit /= null
+           and then Source.Kind in Spec_Or_Body
+         then
+            Source.Unit.File_Names (Source.Kind) := null;
+         end if;
+
          Unchecked_Free (Source);
          Source := Tmp;
       end loop;
@@ -873,8 +684,9 @@ package body Prj is
      (List         : in out Project_List;
       Free_Project : Boolean)
    is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Project_List_Element, Project_List);
+      procedure Unchecked_Free is new
+        Ada.Unchecked_Deallocation (Project_List_Element, Project_List);
+
       Tmp : Project_List;
 
    begin
@@ -895,9 +707,11 @@ package body Prj is
    ---------------
 
    procedure Free_List (Languages : in out Language_Ptr) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Language_Data, Language_Ptr);
+      procedure Unchecked_Free is new
+        Ada.Unchecked_Deallocation (Language_Data, Language_Ptr);
+
       Tmp : Language_Ptr;
+
    begin
       while Languages /= null loop
          Tmp := Languages.Next;
@@ -907,13 +721,41 @@ package body Prj is
       end loop;
    end Free_List;
 
+   ----------------
+   -- Free_Units --
+   ----------------
+
+   procedure Free_Units (Table : in out Units_Htable.Instance) is
+      procedure Unchecked_Free is new
+        Ada.Unchecked_Deallocation (Unit_Data, Unit_Index);
+
+      Unit : Unit_Index;
+
+   begin
+      Unit := Units_Htable.Get_First (Table);
+      while Unit /= No_Unit_Index loop
+         if Unit.File_Names (Spec) /= null then
+            Unit.File_Names (Spec).Unit := No_Unit_Index;
+         end if;
+
+         if Unit.File_Names (Impl) /= null then
+            Unit.File_Names (Impl).Unit := No_Unit_Index;
+         end if;
+
+         Unchecked_Free (Unit);
+         Unit := Units_Htable.Get_Next (Table);
+      end loop;
+
+      Units_Htable.Reset (Table);
+   end Free_Units;
+
    ----------
    -- Free --
    ----------
 
    procedure Free (Tree : in out Project_Tree_Ref) is
-      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-        (Project_Tree_Data, Project_Tree_Ref);
+      procedure Unchecked_Free is new
+        Ada.Unchecked_Deallocation (Project_Tree_Data, Project_Tree_Ref);
 
    begin
       if Tree /= null then
@@ -923,16 +765,14 @@ package body Prj is
          Array_Element_Table.Free (Tree.Array_Elements);
          Array_Table.Free (Tree.Arrays);
          Package_Table.Free (Tree.Packages);
-         Unit_Table.Free (Tree.Units);
-         Units_Htable.Reset (Tree.Units_HT);
          Source_Paths_Htable.Reset (Tree.Source_Paths_HT);
          Unit_Sources_Htable.Reset (Tree.Unit_Sources_HT);
 
          Free_List (Tree.Projects, Free_Project => True);
+         Free_Units (Tree.Units_HT);
 
          --  Private part
 
-         Naming_Table.Free      (Tree.Private_Part.Namings);
          Path_File_Table.Free   (Tree.Private_Part.Path_Files);
          Source_Path_Table.Free (Tree.Private_Part.Source_Paths);
          Object_Path_Table.Free (Tree.Private_Part.Object_Paths);
@@ -961,33 +801,19 @@ package body Prj is
       Array_Element_Table.Init      (Tree.Array_Elements);
       Array_Table.Init              (Tree.Arrays);
       Package_Table.Init            (Tree.Packages);
-      Unit_Table.Init               (Tree.Units);
-      Units_Htable.Reset            (Tree.Units_HT);
       Source_Paths_Htable.Reset     (Tree.Source_Paths_HT);
       Unit_Sources_Htable.Reset     (Tree.Unit_Sources_HT);
 
       Free_List (Tree.Projects, Free_Project => True);
+      Free_Units (Tree.Units_HT);
 
       --  Private part table
 
-      Naming_Table.Init             (Tree.Private_Part.Namings);
-      Naming_Table.Increment_Last   (Tree.Private_Part.Namings);
-      Tree.Private_Part.Namings.Table
-        (Naming_Table.Last (Tree.Private_Part.Namings)) := Std_Naming_Data;
       Path_File_Table.Init        (Tree.Private_Part.Path_Files);
       Source_Path_Table.Init      (Tree.Private_Part.Source_Paths);
       Object_Path_Table.Init      (Tree.Private_Part.Object_Paths);
-      Tree.Private_Part.Default_Naming := Std_Naming_Data;
 
       if Current_Mode = Ada_Only then
-         Register_Default_Naming_Scheme
-           (Language            => Name_Ada,
-            Default_Spec_Suffix => Default_Ada_Spec_Suffix,
-            Default_Body_Suffix => Default_Ada_Body_Suffix,
-            In_Tree             => Tree);
-         Tree.Private_Part.Default_Naming.Separate_Suffix :=
-           Default_Ada_Body_Suffix;
-
          Tree.Private_Part.Current_Source_Path_File := No_Path;
          Tree.Private_Part.Current_Object_Path_File := No_Path;
          Tree.Private_Part.Ada_Path_Length := 0;
@@ -997,57 +823,6 @@ package body Prj is
       end if;
    end Reset;
 
-   ------------------------
-   -- Same_Naming_Scheme --
-   ------------------------
-
-   function Same_Naming_Scheme
-     (Left, Right : Naming_Data) return Boolean
-   is
-   begin
-      return Left.Dot_Replacement = Right.Dot_Replacement
-        and then Left.Casing = Right.Casing
-        and then Left.Separate_Suffix = Right.Separate_Suffix;
-   end Same_Naming_Scheme;
-
-   ---------------------
-   -- Set_Body_Suffix --
-   ---------------------
-
-   procedure Set_Body_Suffix
-     (In_Tree  : Project_Tree_Ref;
-      Language : String;
-      Naming   : in out Naming_Data;
-      Suffix   : File_Name_Type)
-   is
-      Language_Id : Name_Id;
-      Element     : Array_Element;
-
-   begin
-      Name_Len := 0;
-      Add_Str_To_Name_Buffer (Language);
-      To_Lower (Name_Buffer (1 .. Name_Len));
-      Language_Id := Name_Find;
-
-      Element :=
-        (Index                => Language_Id,
-         Src_Index            => 0,
-         Index_Case_Sensitive => False,
-         Value                =>
-           (Kind     => Single,
-            Project  => No_Project,
-            Location => No_Location,
-            Default  => False,
-            Value    => Name_Id (Suffix),
-            Index    => 0),
-         Next                 => Naming.Body_Suffix);
-
-      Array_Element_Table.Increment_Last (In_Tree.Array_Elements);
-      Naming.Body_Suffix :=
-         Array_Element_Table.Last (In_Tree.Array_Elements);
-      In_Tree.Array_Elements.Table (Naming.Body_Suffix) := Element;
-   end Set_Body_Suffix;
-
    --------------
    -- Set_Mode --
    --------------
@@ -1055,6 +830,7 @@ package body Prj is
    procedure Set_Mode (New_Mode : Mode) is
    begin
       Current_Mode := New_Mode;
+
       case New_Mode is
          when Ada_Only =>
             Default_Language_Is_Ada := True;
@@ -1064,129 +840,6 @@ package body Prj is
             Must_Check_Configuration := True;
       end case;
    end Set_Mode;
-
-   ---------------------
-   -- Set_Spec_Suffix --
-   ---------------------
-
-   procedure Set_Spec_Suffix
-     (In_Tree  : Project_Tree_Ref;
-      Language : String;
-      Naming   : in out Naming_Data;
-      Suffix   : File_Name_Type)
-   is
-      Language_Id : Name_Id;
-      Element     : Array_Element;
-
-   begin
-      Name_Len := 0;
-      Add_Str_To_Name_Buffer (Language);
-      To_Lower (Name_Buffer (1 .. Name_Len));
-      Language_Id := Name_Find;
-
-      Element :=
-        (Index                => Language_Id,
-         Src_Index            => 0,
-         Index_Case_Sensitive => False,
-         Value                =>
-           (Kind     => Single,
-            Project  => No_Project,
-            Location => No_Location,
-            Default  => False,
-            Value    => Name_Id (Suffix),
-            Index    => 0),
-         Next                 => Naming.Spec_Suffix);
-
-      Array_Element_Table.Increment_Last (In_Tree.Array_Elements);
-      Naming.Spec_Suffix :=
-        Array_Element_Table.Last (In_Tree.Array_Elements);
-      In_Tree.Array_Elements.Table (Naming.Spec_Suffix) := Element;
-   end Set_Spec_Suffix;
-
-   -----------
-   -- Slash --
-   -----------
-
-   function Slash return Path_Name_Type is
-   begin
-      return Slash_Id;
-   end Slash;
-
-   -----------------------
-   -- Spec_Suffix_Id_Of --
-   -----------------------
-
-   function Spec_Suffix_Id_Of
-     (In_Tree     : Project_Tree_Ref;
-      Language_Id : Name_Id;
-      Naming      : Naming_Data) return File_Name_Type
-   is
-      Element_Id : Array_Element_Id;
-      Element    : Array_Element;
-
-   begin
-      Element_Id := Naming.Spec_Suffix;
-      while Element_Id /= No_Array_Element loop
-         Element := In_Tree.Array_Elements.Table (Element_Id);
-
-         if Element.Index = Language_Id then
-            return File_Name_Type (Element.Value.Value);
-         end if;
-
-         Element_Id := Element.Next;
-      end loop;
-
-      return No_File;
-   end Spec_Suffix_Id_Of;
-
-   --------------------
-   -- Spec_Suffix_Of --
-   --------------------
-
-   function Spec_Suffix_Of
-     (In_Tree  : Project_Tree_Ref;
-      Language : String;
-      Naming   : Naming_Data) return String
-   is
-      Language_Id : Name_Id;
-      Element_Id  : Array_Element_Id;
-      Element     : Array_Element;
-
-   begin
-      Name_Len := 0;
-      Add_Str_To_Name_Buffer (Language);
-      To_Lower (Name_Buffer (1 .. Name_Len));
-      Language_Id := Name_Find;
-
-      Element_Id := Naming.Spec_Suffix;
-      while Element_Id /= No_Array_Element loop
-         Element := In_Tree.Array_Elements.Table (Element_Id);
-
-         if Element.Index = Language_Id then
-            return Get_Name_String (Element.Value.Value);
-         end if;
-
-         Element_Id := Element.Next;
-      end loop;
-
-      return "";
-   end Spec_Suffix_Of;
-
-   --------------------------
-   -- Standard_Naming_Data --
-   --------------------------
-
-   function Standard_Naming_Data
-     (Tree : Project_Tree_Ref := No_Project_Tree) return Naming_Data
-   is
-   begin
-      if Tree = No_Project_Tree then
-         Prj.Initialize (Tree => No_Project_Tree);
-         return Std_Naming_Data;
-      else
-         return Tree.Private_Part.Default_Naming;
-      end if;
-   end Standard_Naming_Data;
 
    -------------------
    -- Switches_Name --
@@ -1426,6 +1079,78 @@ package body Prj is
       Free_List (Project.All_Imported_Projects, Free_Project => False);
       For_All_Projects (Project, Dummy);
    end Compute_All_Imported_Projects;
+
+   -------------------
+   -- Is_Compilable --
+   -------------------
+
+   function Is_Compilable (Source : Source_Id) return Boolean is
+   begin
+      return Source.Language.Config.Compiler_Driver /= Empty_File_Name
+        and then not Source.Locally_Removed;
+   end Is_Compilable;
+
+   ------------------------------
+   -- Object_To_Global_Archive --
+   ------------------------------
+
+   function Object_To_Global_Archive (Source : Source_Id) return Boolean is
+   begin
+      return Source.Language.Config.Kind = File_Based
+        and then Source.Kind = Impl
+        and then Source.Language.Config.Objects_Linked
+        and then Is_Compilable (Source)
+        and then Source.Language.Config.Object_Generated;
+   end Object_To_Global_Archive;
+
+   ----------------------------
+   -- Get_Language_From_Name --
+   ----------------------------
+
+   function Get_Language_From_Name
+     (Project : Project_Id;
+      Name    : String) return Language_Ptr
+   is
+      N      : Name_Id;
+      Result : Language_Ptr;
+
+   begin
+      Name_Len := Name'Length;
+      Name_Buffer (1 .. Name_Len) := Name;
+      To_Lower (Name_Buffer (1 .. Name_Len));
+      N := Name_Find;
+
+      Result := Project.Languages;
+      while Result /= No_Language_Index loop
+         if Result.Name = N then
+            return Result;
+         end if;
+
+         Result := Result.Next;
+      end loop;
+
+      return No_Language_Index;
+   end Get_Language_From_Name;
+
+   ----------------
+   -- Other_Part --
+   ----------------
+
+   function Other_Part (Source : Source_Id) return Source_Id is
+   begin
+      if Source.Unit /= No_Unit_Index then
+         case Source.Kind is
+            when Impl =>
+               return Source.Unit.File_Names (Spec);
+            when Spec =>
+               return Source.Unit.File_Names (Impl);
+            when Sep =>
+               return No_Source;
+         end case;
+      else
+         return No_Source;
+      end if;
+   end Other_Part;
 
 begin
    --  Make sure that the standard config and user project file extensions are

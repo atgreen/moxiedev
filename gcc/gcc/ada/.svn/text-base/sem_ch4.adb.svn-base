@@ -387,7 +387,7 @@ package body Sem_Ch4 is
            and then Comes_From_Source (N)
            and then not In_Instance_Body
          then
-            if not OK_For_Limited_Init (Expression (E)) then
+            if not OK_For_Limited_Init (Type_Id, Expression (E)) then
                Error_Msg_N ("initialization not allowed for limited types", N);
                Explain_Limited_Type (Type_Id, N);
             end if;
@@ -2262,7 +2262,9 @@ package body Sem_Ch4 is
          return;
       end if;
 
-      if Present (Actuals)
+      --  An indexing requires at least one actual
+
+      if not Is_Empty_List (Actuals)
         and then
           (Needs_No_Actuals (Nam)
             or else
@@ -2445,7 +2447,7 @@ package body Sem_Ch4 is
                   if Report and not Is_Indexed and not Is_Indirect then
 
                      --  Ada 2005 (AI-251): Complete the error notification
-                     --  to help new Ada 2005 users
+                     --  to help new Ada 2005 users.
 
                      if Is_Class_Wide_Type (Etype (Formal))
                        and then Is_Interface (Etype (Etype (Formal)))

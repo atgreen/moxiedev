@@ -206,7 +206,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc; ../../gcc/configure --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-newlib)"/>
+      <arg value="(cd build/gcc; ../../gcc/configure --enable-build-with-cxx --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-newlib)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -243,7 +243,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc; ../../gcc/configure --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-newlib --with-headers=`(cd ../../root/usr/moxie-elf/include; pwd)`)"/>
+      <arg value="(cd build/gcc; ../../gcc/configure --enable-build-with-cxx --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-newlib --with-headers=`(cd ../../root/usr/moxie-elf/include; pwd)`)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>

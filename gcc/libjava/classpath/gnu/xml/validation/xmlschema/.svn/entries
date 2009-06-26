@@ -1,7 +1,7 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/xml/validation/xmlschema
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-XMLSchemaTypeInfo.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-f7fccc44d753f1312c0f4cdc540ec41e
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2815
 
 ElementDeclaration.java
 file
@@ -94,6 +60,40 @@ mark
 
 3739
 
+XMLSchemaTypeInfo.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+f7fccc44d753f1312c0f4cdc540ec41e
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2815
+
 Particle.java
 file
 
@@ -128,48 +128,14 @@ mark
 
 2131
 
-XMLSchemaElementTypeInfo.java
+AttributeDeclaration.java
 file
 
 
 
 
 2009-04-24T17:47:03.000000Z
-cb14ad68de7ec609e43631a298ab6da8
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2965
-
-ValidationException.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-e37bf2ae7538dda9cc4a08f349548c36
+f04a2135f7079739a287127ec959d9d0
 2006-03-10T13:25:35.074455Z
 111932
 mark
@@ -194,7 +160,7 @@ mark
 
 
 
-2117
+3042
 
 ComplexType.java
 file
@@ -230,14 +196,14 @@ mark
 
 2925
 
-AttributeDeclaration.java
+ValidationException.java
 file
 
 
 
 
 2009-04-24T17:47:03.000000Z
-f04a2135f7079739a287127ec959d9d0
+e37bf2ae7538dda9cc4a08f349548c36
 2006-03-10T13:25:35.074455Z
 111932
 mark
@@ -262,7 +228,41 @@ mark
 
 
 
-3042
+2117
+
+XMLSchemaElementTypeInfo.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+cb14ad68de7ec609e43631a298ab6da8
+2008-06-28T13:29:13.958049Z
+137223
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2965
 
 XMLSchemaTypeInfoProvider.java
 file

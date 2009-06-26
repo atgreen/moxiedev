@@ -1,15 +1,15 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gnat.dg
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-06-09T15:32:03.143902Z
-148314
-hainque
+2009-06-26T08:54:26.778865Z
+148966
+ebotcazou
 
 
 
@@ -2032,6 +2032,40 @@ charlet
 
 150
 
+array7.adb
+file
+
+
+
+
+2009-06-26T14:45:11.000000Z
+f7053b56b4ea3ffe32675cc6bdce4152
+2009-06-26T08:54:26.778865Z
+148966
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+279
+
 inline_scope.adb
 file
 
@@ -2473,6 +2507,40 @@ hainque
 
 
 48
+
+array7.ads
+file
+
+
+
+
+2009-06-26T14:45:11.000000Z
+ab99dc85cc0beb624cf55a8362fa4194
+2009-06-26T08:54:26.778865Z
+148966
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+217
 
 loop_optimization5_pkg.ads
 file
@@ -4276,40 +4344,6 @@ charlet
 
 845
 
-rep_clause2.ads
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-879097798e84a55d0876c499122cdd18
-2008-01-14T19:32:10.520160Z
-131531
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1134
-
 self_aggregate_with_call.adb
 file
 
@@ -4343,6 +4377,40 @@ ebotcazou
 
 
 579
+
+rep_clause2.ads
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+879097798e84a55d0876c499122cdd18
+2008-01-14T19:32:10.520160Z
+131531
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1134
 
 concat1.adb
 file
@@ -7369,6 +7437,40 @@ ebotcazou
 
 
 344
+
+raise_ce.adb
+file
+
+
+
+
+2009-06-26T14:45:11.000000Z
+14ca6ec6ac239ab1d151eea57c9f41a0
+2009-06-22T09:08:58.958347Z
+148780
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+60
 
 ifaces.ads
 file
@@ -17236,40 +17338,6 @@ sam
 
 184
 
-warn1.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-181a6b1ff5b7cd3f2d6d36c29c18b590
-2007-06-06T10:54:25.331020Z
-125480
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-288
-
 entry_queues.adb
 file
 
@@ -17303,6 +17371,40 @@ charlet
 
 
 1078
+
+warn1.adb
+file
+
+
+
+
+2009-04-24T17:46:10.000000Z
+181a6b1ff5b7cd3f2d6d36c29c18b590
+2007-06-06T10:54:25.331020Z
+125480
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+288
 
 pointer_protected_p.ads
 file
@@ -17542,6 +17644,40 @@ sam
 
 244
 
+array6.adb
+file
+
+
+
+
+2009-06-26T14:45:11.000000Z
+a9a0725729c4b56fd51ac830fd3cdc3a
+2009-06-26T08:38:38.985429Z
+148964
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+605
+
 iface_test.adb
 file
 
@@ -17711,6 +17847,40 @@ charlet
 
 
 574
+
+handle_and_return.adb
+file
+
+
+
+
+2009-06-26T14:45:11.000000Z
+88dcdd2724cad49e7d26c2988f235dff
+2009-06-22T09:08:58.958347Z
+148780
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+282
 
 protected_self_ref2.adb
 file

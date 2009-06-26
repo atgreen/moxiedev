@@ -1,3 +1,63 @@
+2009-06-24  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/40427
+	* gfortran.h (gfc_component): New member 'formal_ns'.
+	(gfc_copy_formal_args_ppc,void gfc_ppc_use): New.
+	* interface.c (gfc_ppc_use): New function, analogous to
+	gfc_procedure_use, but for procedure pointer components.
+	* module.c (MOD_VERSION): Bump module version.
+	(mio_component): Treat formal arguments.
+	(mio_formal_arglist): Changed argument from gfc_symbol to
+	gfc_formal_arglist.
+	(mio_symbol): Changed argument of mio_formal_arglist.
+	* resolve.c (resolve_ppc_call,resolve_expr_ppc): Call gfc_ppc_use,
+	to check actual arguments and treat formal args correctly.
+	(resolve_fl_derived): Copy formal args of procedure pointer components
+	from their interface.
+	* symbol.c (gfc_copy_formal_args_ppc): New function, analogous to
+	gfc_copy_formal_args, but for procedure pointer components.
+
+2009-06-22  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/37254
+	PR fortran/39850
+	* interface.c (compare_parameter): Set implicit type for function
+	actual arguments with BT_UNKNOWN.
+
+2009-06-22  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/40472
+	PR fortran/50520
+	* simplify.c (gfc_simplify_spread): Fix the case that source=
+	is a scalar.
+
+2009-06-22  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/40443
+	* interface.c (gfc_search_interface): Hold back a match to an
+	elementary procedure until all other possibilities are
+	exhausted.
+
+2009-06-22  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/40472
+	* simplify.c (gfc_simplify_spread): Restrict the result size to
+	the limit for an array constructor.
+
+2009-06-21  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/39850
+	* interface.c (gfc_compare_interfaces): Take care of implicit typing
+	when checking the function attribute. Plus another bugfix.
+	(compare_parameter): Set attr.function and attr.subroutine according
+	to the usage of a procedure as actual argument.
+
+2009-06-20  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/40452
+	* trans-decl.c (add_argument_checking): Disable bounds check
+	for allowed argument storage association.
+
 2009-06-19  Paul Thomas  <pault@gcc.gnu.org>
 
 	PR fortran/40440

@@ -1,15 +1,15 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/30_threads
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-18T22:15:56.681369Z
-147678
-redi
+2009-06-23T23:24:20.628902Z
+148883
+bkoz
 
 
 
@@ -29,10 +29,7 @@ redi
 call_once
 dir
 
-condition_variable_any
-dir
-
-mutex
+packaged_task
 dir
 
 timed_mutex
@@ -41,27 +38,42 @@ dir
 try_lock
 dir
 
-thread
-dir
-
 recursive_mutex
-dir
-
-lock_guard
 dir
 
 condition_variable
 dir
 
-headers
+this_thread
+dir
+
+shared_future
+dir
+
+unique_future
+dir
+
+mutex
+dir
+
+condition_variable_any
+dir
+
+thread
+dir
+
+lock_guard
 dir
 
 recursive_timed_mutex
 dir
 
+headers
+dir
+
 unique_lock
 dir
 
-this_thread
+promise
 dir
 

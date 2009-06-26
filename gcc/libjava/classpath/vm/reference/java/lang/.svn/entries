@@ -1,7 +1,7 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/vm/reference/java/lang
 svn://gcc.gnu.org/svn/gcc
 
@@ -63,40 +63,6 @@ tromey
 reflect
 dir
 
-VMFloat.java
-file
-
-
-
-
-2009-04-24T17:48:53.000000Z
-55e8eb47404493b5e7622503cf185f84
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4390
-
 VMClass.java
 file
 
@@ -131,17 +97,17 @@ doko
 
 16968
 
-VMString.java
+VMFloat.java
 file
 
 
 
 
-2009-04-24T17:48:54.000000Z
-47b6d2a6e6e17a52963ce67e065950c9
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+2009-04-24T17:48:53.000000Z
+55e8eb47404493b5e7622503cf185f84
+2008-06-28T13:29:13.958049Z
+137223
+doko
 
 
 
@@ -163,7 +129,7 @@ tromey
 
 
 
-3362
+4390
 
 VMObject.java
 file
@@ -199,6 +165,40 @@ tromey
 
 4189
 
+VMString.java
+file
+
+
+
+
+2009-04-24T17:48:54.000000Z
+47b6d2a6e6e17a52963ce67e065950c9
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3362
+
 VMThread.java
 file
 
@@ -233,40 +233,6 @@ mark
 
 14434
 
-VMDouble.java
-file
-
-
-
-
-2009-04-24T17:48:53.000000Z
-c02a6cd0355c2ce33b78996021b6a4f3
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4237
-
 VMCompiler.java
 file
 
@@ -300,6 +266,40 @@ tromey
 
 
 3773
+
+VMDouble.java
+file
+
+
+
+
+2009-04-24T17:48:53.000000Z
+c02a6cd0355c2ce33b78996021b6a4f3
+2008-06-28T13:29:13.958049Z
+137223
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4237
 
 VMProcess.java
 file
@@ -437,6 +437,9 @@ tromey
 
 3186
 
+management
+dir
+
 VMMath.java
 file
 
@@ -470,7 +473,4 @@ mark
 
 
 20762
-
-management
-dir
 

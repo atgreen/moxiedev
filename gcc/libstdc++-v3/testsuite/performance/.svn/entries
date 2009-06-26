@@ -1,15 +1,15 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/performance
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2009-06-21T14:02:09.878859Z
+148765
+redi
 
 
 
@@ -45,5 +45,8 @@ dir
 dir
 
 26_numerics
+dir
+
+30_threads
 dir
 

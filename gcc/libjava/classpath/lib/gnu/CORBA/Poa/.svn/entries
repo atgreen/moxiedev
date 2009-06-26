@@ -1,7 +1,7 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/CORBA/Poa
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-AOM$Obj.class
-file
-
-
-
-
-2009-04-24T17:47:28.000000Z
-53837de1bfed43a1f9050e939f222dfa
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1342
 
 ForwardRequestHolder.class
 file
@@ -93,6 +59,40 @@ has-props
 
 
 1273
+
+AOM$Obj.class
+file
+
+
+
+
+2009-04-24T17:47:28.000000Z
+53837de1bfed43a1f9050e939f222dfa
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1342
 
 AOM.class
 file
@@ -162,40 +162,6 @@ has-props
 
 221
 
-gnuRequestProcessingPolicy.class
-file
-
-
-
-
-2009-04-24T17:47:28.000000Z
-b8da6ad215d8bdf3fa667e7402435ae6
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-987
-
 gnuIdAssignmentPolicy.class
 file
 
@@ -229,6 +195,40 @@ has-props
 
 
 942
+
+gnuRequestProcessingPolicy.class
+file
+
+
+
+
+2009-04-24T17:47:28.000000Z
+b8da6ad215d8bdf3fa667e7402435ae6
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+987
 
 ForwardedServant.class
 file
@@ -332,40 +332,6 @@ has-props
 
 3326
 
-LocalDelegate.class
-file
-
-
-
-
-2009-04-24T17:47:28.000000Z
-d7d0f5e6dbf78e4ffa524db3acf67263
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8788
-
 ORB_1_4.class
 file
 
@@ -400,17 +366,17 @@ has-props
 
 7741
 
-gnuPOA$RefTemplate.class
+LocalDelegate.class
 file
 
 
 
 
 2009-04-24T17:47:28.000000Z
-7e6624d738cb34302979fde06178ec18
-2008-10-21T17:55:01.166395Z
-141271
-doko
+d7d0f5e6dbf78e4ffa524db3acf67263
+2007-07-27T21:14:19.002073Z
+126998
+tromey
 has-props
 
 
@@ -432,7 +398,7 @@ has-props
 
 
 
-1993
+8788
 
 gnuImplicitActivationPolicy.class
 file
@@ -467,6 +433,40 @@ has-props
 
 
 996
+
+gnuPOA$RefTemplate.class
+file
+
+
+
+
+2009-04-24T17:47:28.000000Z
+7e6624d738cb34302979fde06178ec18
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1993
 
 gnuForwardRequest.class
 file

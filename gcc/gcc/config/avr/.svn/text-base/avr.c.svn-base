@@ -67,7 +67,6 @@ static int compare_sign_p (rtx insn);
 static tree avr_handle_progmem_attribute (tree *, tree, tree, int, bool *);
 static tree avr_handle_fndecl_attribute (tree *, tree, tree, int, bool *);
 static tree avr_handle_fntype_attribute (tree *, tree, tree, int, bool *);
-EXPORTED_CONST struct attribute_spec avr_attribute_table[];
 static bool avr_assemble_integer (rtx, unsigned int, int);
 static void avr_file_start (void);
 static void avr_file_end (void);
@@ -112,205 +111,23 @@ const char *avr_extra_arch_macro;
 /* Current architecture.  */
 const struct base_arch_s *avr_current_arch;
 
+/* Current device.  */
+const struct mcu_type_s *avr_current_device;
+
 section *progmem_section;
 
-static const struct base_arch_s avr_arch_types[] = {
-  { 1, 0, 0, 0, 0, 0, 0, 0, NULL },  /* unknown device specified */
-  { 1, 0, 0, 0, 0, 0, 0, 0, "__AVR_ARCH__=1"   },
-  { 0, 0, 0, 0, 0, 0, 0, 0, "__AVR_ARCH__=2"   },
-  { 0, 0, 0, 1, 0, 0, 0, 0, "__AVR_ARCH__=25"  },
-  { 0, 0, 1, 0, 0, 0, 0, 0, "__AVR_ARCH__=3"   },
-  { 0, 0, 1, 0, 1, 0, 0, 0, "__AVR_ARCH__=31"  },
-  { 0, 0, 1, 1, 0, 0, 0, 0, "__AVR_ARCH__=35"  },
-  { 0, 1, 0, 1, 0, 0, 0, 0, "__AVR_ARCH__=4"   },
-  { 0, 1, 1, 1, 0, 0, 0, 0, "__AVR_ARCH__=5"   },
-  { 0, 1, 1, 1, 1, 1, 0, 0, "__AVR_ARCH__=51"  },
-  { 0, 1, 1, 1, 1, 1, 1, 0, "__AVR_ARCH__=6"   }
-};
-
-/* These names are used as the index into the avr_arch_types[] table 
-   above.  */
-
-enum avr_arch
+/* AVR attributes.  */
+static const struct attribute_spec avr_attribute_table[] =
 {
-  ARCH_UNKNOWN,
-  ARCH_AVR1,
-  ARCH_AVR2,
-  ARCH_AVR25,
-  ARCH_AVR3,
-  ARCH_AVR31,
-  ARCH_AVR35,
-  ARCH_AVR4,
-  ARCH_AVR5,
-  ARCH_AVR51,
-  ARCH_AVR6
+  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
+  { "progmem",   0, 0, false, false, false,  avr_handle_progmem_attribute },
+  { "signal",    0, 0, true,  false, false,  avr_handle_fndecl_attribute },
+  { "interrupt", 0, 0, true,  false, false,  avr_handle_fndecl_attribute },
+  { "naked",     0, 0, false, true,  true,   avr_handle_fntype_attribute },
+  { "OS_task",   0, 0, false, true,  true,   avr_handle_fntype_attribute },
+  { "OS_main",   0, 0, false, true,  true,   avr_handle_fntype_attribute },
+  { NULL,        0, 0, false, false, false, NULL }
 };
-
-struct mcu_type_s {
-  const char *const name;
-  int arch;  /* index in avr_arch_types[] */
-  /* Must lie outside user's namespace.  NULL == no macro.  */
-  const char *const macro;
-};
-
-/* List of all known AVR MCU types - if updated, it has to be kept
-   in sync in several places (FIXME: is there a better way?):
-    - here
-    - avr.h (CPP_SPEC, LINK_SPEC, CRT_BINUTILS_SPECS)
-    - t-avr (MULTILIB_MATCHES)
-    - gas/config/tc-avr.c
-    - avr-libc  */
-
-static const struct mcu_type_s avr_mcu_types[] = {
-    /* Classic, <= 8K.  */
-  { "avr2",         ARCH_AVR2, NULL },
-  { "at90s2313",    ARCH_AVR2, "__AVR_AT90S2313__" },
-  { "at90s2323",    ARCH_AVR2, "__AVR_AT90S2323__" },
-  { "at90s2333",    ARCH_AVR2, "__AVR_AT90S2333__" },
-  { "at90s2343",    ARCH_AVR2, "__AVR_AT90S2343__" },
-  { "attiny22",     ARCH_AVR2, "__AVR_ATtiny22__" },
-  { "attiny26",     ARCH_AVR2, "__AVR_ATtiny26__" },
-  { "at90s4414",    ARCH_AVR2, "__AVR_AT90S4414__" },
-  { "at90s4433",    ARCH_AVR2, "__AVR_AT90S4433__" },
-  { "at90s4434",    ARCH_AVR2, "__AVR_AT90S4434__" },
-  { "at90s8515",    ARCH_AVR2, "__AVR_AT90S8515__" },
-  { "at90c8534",    ARCH_AVR2, "__AVR_AT90C8534__" },
-  { "at90s8535",    ARCH_AVR2, "__AVR_AT90S8535__" },
-    /* Classic + MOVW, <= 8K.  */
-  { "avr25",        ARCH_AVR25, NULL },
-  { "ata6289",      ARCH_AVR25, "__AVR_ATA6289__" },
-  { "attiny13",     ARCH_AVR25, "__AVR_ATtiny13__" },
-  { "attiny13a",    ARCH_AVR25, "__AVR_ATtiny13A__" },
-  { "attiny2313",   ARCH_AVR25, "__AVR_ATtiny2313__" },
-  { "attiny24",     ARCH_AVR25, "__AVR_ATtiny24__" },
-  { "attiny44",     ARCH_AVR25, "__AVR_ATtiny44__" },
-  { "attiny84",     ARCH_AVR25, "__AVR_ATtiny84__" },
-  { "attiny25",     ARCH_AVR25, "__AVR_ATtiny25__" },
-  { "attiny45",     ARCH_AVR25, "__AVR_ATtiny45__" },
-  { "attiny85",     ARCH_AVR25, "__AVR_ATtiny85__" },
-  { "attiny261",    ARCH_AVR25, "__AVR_ATtiny261__" },
-  { "attiny461",    ARCH_AVR25, "__AVR_ATtiny461__" },
-  { "attiny861",    ARCH_AVR25, "__AVR_ATtiny861__" },
-  { "attiny43u",    ARCH_AVR25, "__AVR_ATtiny43U__" },
-  { "attiny87",     ARCH_AVR25, "__AVR_ATtiny87__" },
-  { "attiny48",     ARCH_AVR25, "__AVR_ATtiny48__" },
-  { "attiny88",     ARCH_AVR25, "__AVR_ATtiny88__" },
-  { "at86rf401",    ARCH_AVR25, "__AVR_AT86RF401__" },
-    /* Classic, > 8K, <= 64K.  */
-  { "avr3",         ARCH_AVR3, NULL },
-  { "at43usb355",   ARCH_AVR3, "__AVR_AT43USB355__" },
-  { "at76c711",     ARCH_AVR3, "__AVR_AT76C711__" },
-    /* Classic, == 128K.  */
-  { "avr31",        ARCH_AVR31, NULL },
-  { "atmega103",    ARCH_AVR31, "__AVR_ATmega103__" },
-  { "at43usb320",   ARCH_AVR31, "__AVR_AT43USB320__" },
-    /* Classic + MOVW + JMP/CALL.  */
-  { "avr35",        ARCH_AVR35, NULL },
-  { "at90usb82",    ARCH_AVR35, "__AVR_AT90USB82__" },
-  { "at90usb162",   ARCH_AVR35, "__AVR_AT90USB162__" },
-  { "attiny167",    ARCH_AVR35, "__AVR_ATtiny167__" },
-  { "attiny327",    ARCH_AVR35, "__AVR_ATtiny327__" },
-    /* Enhanced, <= 8K.  */
-  { "avr4",         ARCH_AVR4, NULL },
-  { "atmega8",      ARCH_AVR4, "__AVR_ATmega8__" },
-  { "atmega48",     ARCH_AVR4, "__AVR_ATmega48__" },
-  { "atmega48p",    ARCH_AVR4, "__AVR_ATmega48P__" },
-  { "atmega88",     ARCH_AVR4, "__AVR_ATmega88__" },
-  { "atmega88p",    ARCH_AVR4, "__AVR_ATmega88P__" },
-  { "atmega8515",   ARCH_AVR4, "__AVR_ATmega8515__" },
-  { "atmega8535",   ARCH_AVR4, "__AVR_ATmega8535__" },
-  { "atmega8hva",   ARCH_AVR4, "__AVR_ATmega8HVA__" },
-  { "atmega4hvd",   ARCH_AVR4, "__AVR_ATmega4HVD__" },
-  { "atmega8hvd",   ARCH_AVR4, "__AVR_ATmega8HVD__" },
-  { "atmega8c1",    ARCH_AVR4, "__AVR_ATmega8C1__" },
-  { "atmega8m1",    ARCH_AVR4, "__AVR_ATmega8M1__" },
-  { "at90pwm1",     ARCH_AVR4, "__AVR_AT90PWM1__" },
-  { "at90pwm2",     ARCH_AVR4, "__AVR_AT90PWM2__" },
-  { "at90pwm2b",    ARCH_AVR4, "__AVR_AT90PWM2B__" },
-  { "at90pwm3",     ARCH_AVR4, "__AVR_AT90PWM3__" },
-  { "at90pwm3b",    ARCH_AVR4, "__AVR_AT90PWM3B__" },
-  { "at90pwm81",    ARCH_AVR4, "__AVR_AT90PWM81__" },
-    /* Enhanced, > 8K, <= 64K.  */
-  { "avr5",         ARCH_AVR5, NULL },
-  { "atmega16",     ARCH_AVR5, "__AVR_ATmega16__" },
-  { "atmega161",    ARCH_AVR5, "__AVR_ATmega161__" },
-  { "atmega162",    ARCH_AVR5, "__AVR_ATmega162__" },
-  { "atmega163",    ARCH_AVR5, "__AVR_ATmega163__" },
-  { "atmega164p",   ARCH_AVR5, "__AVR_ATmega164P__" },
-  { "atmega165",    ARCH_AVR5, "__AVR_ATmega165__" },
-  { "atmega165p",   ARCH_AVR5, "__AVR_ATmega165P__" },
-  { "atmega168",    ARCH_AVR5, "__AVR_ATmega168__" },
-  { "atmega168p",   ARCH_AVR5, "__AVR_ATmega168P__" },
-  { "atmega169",    ARCH_AVR5, "__AVR_ATmega169__" },
-  { "atmega169p",   ARCH_AVR5, "__AVR_ATmega169P__" },
-  { "atmega32",     ARCH_AVR5, "__AVR_ATmega32__" },
-  { "atmega323",    ARCH_AVR5, "__AVR_ATmega323__" },
-  { "atmega324p",   ARCH_AVR5, "__AVR_ATmega324P__" },
-  { "atmega325",    ARCH_AVR5, "__AVR_ATmega325__" },
-  { "atmega325p",   ARCH_AVR5, "__AVR_ATmega325P__" },
-  { "atmega3250",   ARCH_AVR5, "__AVR_ATmega3250__" },
-  { "atmega3250p",  ARCH_AVR5, "__AVR_ATmega3250P__" },
-  { "atmega328p",   ARCH_AVR5, "__AVR_ATmega328P__" },
-  { "atmega329",    ARCH_AVR5, "__AVR_ATmega329__" },
-  { "atmega329p",   ARCH_AVR5, "__AVR_ATmega329P__" },
-  { "atmega3290",   ARCH_AVR5, "__AVR_ATmega3290__" },
-  { "atmega3290p",  ARCH_AVR5, "__AVR_ATmega3290P__" },
-  { "atmega406",    ARCH_AVR5, "__AVR_ATmega406__" },
-  { "atmega64",     ARCH_AVR5, "__AVR_ATmega64__" },
-  { "atmega640",    ARCH_AVR5, "__AVR_ATmega640__" },
-  { "atmega644",    ARCH_AVR5, "__AVR_ATmega644__" },
-  { "atmega644p",   ARCH_AVR5, "__AVR_ATmega644P__" },
-  { "atmega645",    ARCH_AVR5, "__AVR_ATmega645__" },
-  { "atmega6450",   ARCH_AVR5, "__AVR_ATmega6450__" },
-  { "atmega649",    ARCH_AVR5, "__AVR_ATmega649__" },
-  { "atmega6490",   ARCH_AVR5, "__AVR_ATmega6490__" },
-  { "atmega16hva",  ARCH_AVR5, "__AVR_ATmega16HVA__" },
-  { "atmega16hvb",  ARCH_AVR5, "__AVR_ATmega16HVB__" },
-  { "atmega32hvb",  ARCH_AVR5, "__AVR_ATmega32HVB__" },
-  { "at90can32",    ARCH_AVR5, "__AVR_AT90CAN32__" },
-  { "at90can64",    ARCH_AVR5, "__AVR_AT90CAN64__" },
-  { "at90pwm216",   ARCH_AVR5, "__AVR_AT90PWM216__" },
-  { "at90pwm316",   ARCH_AVR5, "__AVR_AT90PWM316__" },
-  { "atmega16c1",   ARCH_AVR5, "__AVR_ATmega16C1__" },
-  { "atmega32c1",   ARCH_AVR5, "__AVR_ATmega32C1__" },
-  { "atmega64c1",   ARCH_AVR5, "__AVR_ATmega64C1__" },
-  { "atmega16m1",   ARCH_AVR5, "__AVR_ATmega16M1__" },
-  { "atmega32m1",   ARCH_AVR5, "__AVR_ATmega32M1__" },
-  { "atmega64m1",   ARCH_AVR5, "__AVR_ATmega64M1__" },
-  { "atmega16u4",   ARCH_AVR5, "__AVR_ATmega16U4__" },
-  { "atmega32u4",   ARCH_AVR5, "__AVR_ATmega32U4__" },
-  { "atmega32u6",   ARCH_AVR5, "__AVR_ATmega32U6__" },
-  { "at90scr100",   ARCH_AVR5, "__AVR_AT90SCR100__" },
-  { "at90usb646",   ARCH_AVR5, "__AVR_AT90USB646__" },
-  { "at90usb647",   ARCH_AVR5, "__AVR_AT90USB647__" },
-  { "at94k",        ARCH_AVR5, "__AVR_AT94K__" },
-    /* Enhanced, == 128K.  */
-  { "avr51",        ARCH_AVR51, NULL },
-  { "atmega128",    ARCH_AVR51, "__AVR_ATmega128__" },
-  { "atmega1280",   ARCH_AVR51, "__AVR_ATmega1280__" },
-  { "atmega1281",   ARCH_AVR51, "__AVR_ATmega1281__" },
-  { "atmega1284p",  ARCH_AVR51, "__AVR_ATmega1284P__" },
-  { "atmega128rfa1",  ARCH_AVR51, "__AVR_ATmega128RFA1__" },
-  { "at90can128",   ARCH_AVR51, "__AVR_AT90CAN128__" },
-  { "at90usb1286",  ARCH_AVR51, "__AVR_AT90USB1286__" },
-  { "at90usb1287",  ARCH_AVR51, "__AVR_AT90USB1287__" },
-  { "m3000f",       ARCH_AVR51, "__AVR_M3000F__" },
-  { "m3000s",       ARCH_AVR51, "__AVR_M3000S__" },
-  { "m3001b",       ARCH_AVR51, "__AVR_M3001B__" },
-    /* 3-Byte PC.  */
-  { "avr6",         ARCH_AVR6, NULL },
-  { "atmega2560",   ARCH_AVR6, "__AVR_ATmega2560__" },
-  { "atmega2561",   ARCH_AVR6, "__AVR_ATmega2561__" },
-    /* Assembler only.  */
-  { "avr1",         ARCH_AVR1, NULL },
-  { "at90s1200",    ARCH_AVR1, "__AVR_AT90S1200__" },
-  { "attiny11",     ARCH_AVR1, "__AVR_ATtiny11__" },
-  { "attiny12",     ARCH_AVR1, "__AVR_ATtiny12__" },
-  { "attiny15",     ARCH_AVR1, "__AVR_ATtiny15__" },
-  { "attiny28",     ARCH_AVR1, "__AVR_ATtiny28__" },
-  { NULL,           ARCH_UNKNOWN, NULL }
-};
-
 
 /* Initialize the GCC target structure.  */
 #undef TARGET_ASM_ALIGNED_HI_OP
@@ -403,7 +220,7 @@ avr_override_options (void)
 
 /*  return register class from register number.  */
 
-static const int reg_class_tab[]={
+static const enum reg_class reg_class_tab[]={
   GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,
   GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,
   GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,GENERAL_REGS,
@@ -1458,7 +1275,7 @@ class_max_nregs (enum reg_class rclass ATTRIBUTE_UNUSED,enum machine_mode mode)
 int
 avr_jump_mode (rtx x, rtx insn)
 {
-  int dest_addr = INSN_ADDRESSES (INSN_UID (GET_MODE (x) == LABEL_REF
+  int dest_addr = INSN_ADDRESSES (INSN_UID (GET_CODE (x) == LABEL_REF
 					    ? XEXP (x, 0) : x));
   int cur_addr = INSN_ADDRESSES (INSN_UID (insn));
   int jump_distance = cur_addr - dest_addr;
@@ -2928,7 +2745,7 @@ out_tsthi (rtx insn, rtx op, int *l)
     {
       /* Faster than sbiw if we can clobber the operand.  */
       if (l) *l = 1;
-      return AS2 (or,%A0,%B0);
+      return "or %A0,%B0";
     }
   if (test_hard_reg_class (ADDW_REGS, op))
     {
@@ -3251,9 +3068,9 @@ ashlhi3_out (rtx insn, rtx operands[], int *len)
 	      return (AS1 (swap,%A0)    CR_TAB
 		      AS1 (swap,%B0)    CR_TAB
 		      AS2 (ldi,%3,0xf0) CR_TAB
-		      AS2 (and,%B0,%3)  CR_TAB
+		      "and %B0,%3"      CR_TAB
 		      AS2 (eor,%B0,%A0) CR_TAB
-		      AS2 (and,%A0,%3)  CR_TAB
+		      "and %A0,%3"      CR_TAB
 		      AS2 (eor,%B0,%A0));
 	    }
 	  break;  /* optimize_size ? 6 : 8 */
@@ -3281,9 +3098,9 @@ ashlhi3_out (rtx insn, rtx operands[], int *len)
 		      AS1 (swap,%A0)    CR_TAB
 		      AS1 (swap,%B0)    CR_TAB
 		      AS2 (ldi,%3,0xf0) CR_TAB
-		      AS2 (and,%B0,%3)  CR_TAB
+		      "and %B0,%3"      CR_TAB
 		      AS2 (eor,%B0,%A0) CR_TAB
-		      AS2 (and,%A0,%3)  CR_TAB
+		      "and %A0,%3"      CR_TAB
 		      AS2 (eor,%B0,%A0));
 	    }
 	  break;  /* 10 */
@@ -3351,7 +3168,7 @@ ashlhi3_out (rtx insn, rtx operands[], int *len)
 		      AS1 (clr,%A0)     CR_TAB
 		      AS1 (swap,%B0)    CR_TAB
 		      AS2 (ldi,%3,0xf0) CR_TAB
-		      AS2 (and,%B0,%3));
+		      "and %B0,%3");
 	    }
 	  *len = 6;
 	  return (AS2 (mov,%B0,%A0) CR_TAB
@@ -3390,7 +3207,7 @@ ashlhi3_out (rtx insn, rtx operands[], int *len)
 		      AS1 (swap,%B0)    CR_TAB
 		      AS1 (lsl,%B0)     CR_TAB
 		      AS2 (ldi,%3,0xe0) CR_TAB
-		      AS2 (and,%B0,%3));
+		      "and %B0,%3");
 	    }
 	  if (AVR_HAVE_MUL)
 	    {
@@ -4028,9 +3845,9 @@ lshrhi3_out (rtx insn, rtx operands[], int *len)
 	      return (AS1 (swap,%B0)    CR_TAB
 		      AS1 (swap,%A0)    CR_TAB
 		      AS2 (ldi,%3,0x0f) CR_TAB
-		      AS2 (and,%A0,%3)  CR_TAB
+		      "and %A0,%3"      CR_TAB
 		      AS2 (eor,%A0,%B0) CR_TAB
-		      AS2 (and,%B0,%3)  CR_TAB
+		      "and %B0,%3"      CR_TAB
 		      AS2 (eor,%A0,%B0));
 	    }
 	  break;  /* optimize_size ? 6 : 8 */
@@ -4058,9 +3875,9 @@ lshrhi3_out (rtx insn, rtx operands[], int *len)
 		      AS1 (swap,%B0)    CR_TAB
 		      AS1 (swap,%A0)    CR_TAB
 		      AS2 (ldi,%3,0x0f) CR_TAB
-		      AS2 (and,%A0,%3)  CR_TAB
+		      "and %A0,%3"      CR_TAB
 		      AS2 (eor,%A0,%B0) CR_TAB
-		      AS2 (and,%B0,%3)  CR_TAB
+		      "and %B0,%3"      CR_TAB
 		      AS2 (eor,%A0,%B0));
 	    }
 	  break;  /* 10 */
@@ -4128,7 +3945,7 @@ lshrhi3_out (rtx insn, rtx operands[], int *len)
 		      AS1 (clr,%B0)     CR_TAB
 		      AS1 (swap,%A0)    CR_TAB
 		      AS2 (ldi,%3,0x0f) CR_TAB
-		      AS2 (and,%A0,%3));
+		      "and %A0,%3");
 	    }
 	  *len = 6;
 	  return (AS2 (mov,%A0,%B0) CR_TAB
@@ -4167,7 +3984,7 @@ lshrhi3_out (rtx insn, rtx operands[], int *len)
 		      AS1 (swap,%A0)    CR_TAB
 		      AS1 (lsr,%A0)     CR_TAB
 		      AS2 (ldi,%3,0x07) CR_TAB
-		      AS2 (and,%A0,%3));
+		      "and %A0,%3");
 	    }
 	  if (AVR_HAVE_MUL)
 	    {
@@ -4743,7 +4560,7 @@ gas_output_ascii(FILE *file, const char *str, size_t length)
    assigned to registers of class CLASS would likely be spilled
    because registers of CLASS are needed for spill registers.  */
 
-enum reg_class
+bool
 class_likely_spilled_p (int c)
 {
   return (c != ALL_REGS && c != ADDW_REGS);
@@ -4758,18 +4575,6 @@ class_likely_spilled_p (int c)
    naked     - don't generate function prologue/epilogue and `ret' command.
 
    Only `progmem' attribute valid for type.  */
-
-const struct attribute_spec avr_attribute_table[] =
-{
-  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
-  { "progmem",   0, 0, false, false, false,  avr_handle_progmem_attribute },
-  { "signal",    0, 0, true,  false, false,  avr_handle_fndecl_attribute },
-  { "interrupt", 0, 0, true,  false, false,  avr_handle_fndecl_attribute },
-  { "naked",     0, 0, false, true,  true,   avr_handle_fntype_attribute },
-  { "OS_task",   0, 0, false, true,  true,   avr_handle_fntype_attribute },
-  { "OS_main",   0, 0, false, true,  true,   avr_handle_fntype_attribute },
-  { NULL,        0, 0, false, false, false, NULL }
-};
 
 /* Handle a "progmem" attribute; arguments as in
    struct attribute_spec.handler.  */
@@ -5067,9 +4872,10 @@ avr_operand_rtx_cost (rtx x, enum machine_mode mode, enum rtx_code outer,
    case, *TOTAL contains the cost result.  */
 
 static bool
-avr_rtx_costs (rtx x, int code, int outer_code ATTRIBUTE_UNUSED, int *total,
+avr_rtx_costs (rtx x, int codearg, int outer_code ATTRIBUTE_UNUSED, int *total,
 	       bool speed)
 {
+  enum rtx_code code = (enum rtx_code) codearg;
   enum machine_mode mode = GET_MODE (x);
   HOST_WIDE_INT val;
 

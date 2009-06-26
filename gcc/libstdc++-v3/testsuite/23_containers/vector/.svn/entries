@@ -1,7 +1,7 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/vector
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,10 +26,10 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-modifiers
+invalidation
 dir
 
-invalidation
+modifiers
 dir
 
 requirements
@@ -180,39 +180,8 @@ jakub
 
 1040
 
-26412-1.cc
-file
-
-
-
-
-2009-04-24T17:50:18.000000Z
-f8174636c44aeac108055a53715459e1
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-869
+ext_pointer
+dir
 
 init-list.cc
 file
@@ -248,7 +217,41 @@ jakub
 
 1866
 
-ext_pointer
+26412-1.cc
+file
+
+
+
+
+2009-04-24T17:50:18.000000Z
+f8174636c44aeac108055a53715459e1
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+869
+
+resize
 dir
 
 26412-2.cc
@@ -284,9 +287,6 @@ jakub
 
 
 863
-
-resize
-dir
 
 cons
 dir

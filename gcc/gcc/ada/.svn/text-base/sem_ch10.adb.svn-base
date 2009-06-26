@@ -108,6 +108,14 @@ package body Sem_Ch10 is
    --  has not yet been rewritten as a package declaration, and the entity has
    --  to be retrieved from the Instance_Spec of the unit.
 
+   function Has_With_Clause
+     (C_Unit     : Node_Id;
+      Pack       : Entity_Id;
+      Is_Limited : Boolean := False) return Boolean;
+   --  Determine whether compilation unit C_Unit contains a [limited] with
+   --  clause for package Pack. Use the flag Is_Limited to designate desired
+   --  clause kind.
+
    procedure Implicit_With_On_Parent (Child_Unit : Node_Id; N : Node_Id);
    --  If the main unit is a child unit, implicit withs are also added for
    --  all its ancestors.
@@ -2375,11 +2383,19 @@ package body Sem_Ch10 is
 
       elsif Unit_Kind in N_Subprogram_Instantiation then
 
-         --  Instantiation node is replaced with a wrapper package. Retrieve
-         --  the visible subprogram created by the instance from corresponding
-         --  attribute of the wrapper.
+         --  The visible subprogram is created during instantiation, and is
+         --  an attribute of the wrapper package. We retrieve the wrapper
+         --  package directly from the instantiation node. If the instance
+         --  is inlined the unit is still an instantiation. Otherwise it has
+         --  been rewritten as the declaration of the wrapper itself.
 
-         E_Name := Related_Instance (Defining_Entity (U));
+         if Nkind (U) in N_Subprogram_Instantiation then
+            E_Name :=
+              Related_Instance
+                (Defining_Entity (Specification (Instance_Spec (U))));
+         else
+            E_Name := Related_Instance (Defining_Entity (U));
+         end if;
 
       elsif Unit_Kind = N_Package_Renaming_Declaration
         or else Unit_Kind in N_Generic_Renaming_Declaration
@@ -2793,6 +2809,53 @@ package body Sem_Ch10 is
          return Defining_Entity (Unit);
       end if;
    end Get_Parent_Entity;
+
+   ---------------------
+   -- Has_With_Clause --
+   ---------------------
+
+   function Has_With_Clause
+     (C_Unit     : Node_Id;
+      Pack       : Entity_Id;
+      Is_Limited : Boolean := False) return Boolean
+   is
+      Item : Node_Id;
+
+      function Named_Unit (Clause : Node_Id) return Entity_Id;
+      --  Return the entity for the unit named in a [limited] with clause
+
+      ----------------
+      -- Named_Unit --
+      ----------------
+
+      function Named_Unit (Clause : Node_Id) return Entity_Id is
+      begin
+         if Nkind (Name (Clause)) = N_Selected_Component then
+            return Entity (Selector_Name (Name (Clause)));
+         else
+            return Entity (Name (Clause));
+         end if;
+      end Named_Unit;
+
+   --  Start of processing for Has_With_Clause
+
+   begin
+      if Present (Context_Items (C_Unit)) then
+         Item := First (Context_Items (C_Unit));
+         while Present (Item) loop
+            if Nkind (Item) = N_With_Clause
+              and then Limited_Present (Item) = Is_Limited
+              and then Named_Unit (Item) = Pack
+            then
+               return True;
+            end if;
+
+            Next (Item);
+         end loop;
+      end if;
+
+      return False;
+   end Has_With_Clause;
 
    -----------------------------
    -- Implicit_With_On_Parent --
@@ -3550,12 +3613,6 @@ package body Sem_Ch10 is
                   Install_Limited_Withed_Unit (Item);
                end if;
             end if;
-
-         --  All items other than Limited_With clauses are ignored (they were
-         --  installed separately early on by Install_Context_Clause).
-
-         else
-            null;
          end if;
 
          Next (Item);
@@ -3905,14 +3962,6 @@ package body Sem_Ch10 is
       --  Determine whether any package in the ancestor chain starting with
       --  C_Unit has a limited with clause for package Pack.
 
-      function Has_With_Clause
-        (C_Unit     : Node_Id;
-         Pack       : Entity_Id;
-         Is_Limited : Boolean := False) return Boolean;
-      --  Determine whether compilation unit C_Unit contains a with clause
-      --  for package Pack. Use flag Is_Limited to designate desired clause
-      --  kind. This is a subsidiary routine to Has_Limited_With_Clause.
-
       function Is_Visible_Through_Renamings (P : Entity_Id) return Boolean;
       --  Check if some package installed though normal with-clauses has a
       --  renaming declaration of package P. AARM 10.1.2(21/2).
@@ -4140,19 +4189,29 @@ package body Sem_Ch10 is
             end;
 
             --  Finally, check whether there are subprograms that still
-            --  require a body.
+            --  require a body, i.e. are not renamings or null.
 
             if not Is_Empty_Elmt_List (Subp_List) then
                declare
                   Subp_Id : Elmt_Id;
+                  Spec    : Node_Id;
 
                begin
                   Subp_Id := First_Elmt (Subp_List);
+                  Spec    := Parent (Node (Subp_Id));
 
                   while Present (Subp_Id) loop
-                     if Nkind (Parent (Parent (Node (Subp_Id))))
-                        /= N_Subprogram_Renaming_Declaration
+                     if Nkind (Parent (Spec))
+                        = N_Subprogram_Renaming_Declaration
                      then
+                        null;
+
+                     elsif Nkind (Spec) = N_Procedure_Specification
+                       and then Null_Present (Spec)
+                     then
+                        null;
+
+                     else
                         Set_Body_Required (Library_Unit (N));
                         return;
                      end if;
@@ -4234,49 +4293,6 @@ package body Sem_Ch10 is
 
          return False;
       end Has_Limited_With_Clause;
-
-      ---------------------
-      -- Has_With_Clause --
-      ---------------------
-
-      function Has_With_Clause
-        (C_Unit     : Node_Id;
-         Pack       : Entity_Id;
-         Is_Limited : Boolean := False) return Boolean
-      is
-         Item : Node_Id;
-         Nam  : Entity_Id;
-
-      begin
-         if Present (Context_Items (C_Unit)) then
-            Item := First (Context_Items (C_Unit));
-            while Present (Item) loop
-               if Nkind (Item) = N_With_Clause then
-
-                  --  Retrieve the entity of the imported compilation unit
-
-                  if Nkind (Name (Item)) = N_Selected_Component then
-                     Nam := Entity (Selector_Name (Name (Item)));
-                  else
-                     Nam := Entity (Name (Item));
-                  end if;
-
-                  if Nam = Pack
-                    and then
-                      ((Is_Limited and then Limited_Present (Item))
-                          or else
-                       (not Is_Limited and then not Limited_Present (Item)))
-                  then
-                     return True;
-                  end if;
-               end if;
-
-               Next (Item);
-            end loop;
-         end if;
-
-         return False;
-      end Has_With_Clause;
 
       ----------------------------------
       -- Is_Visible_Through_Renamings --
@@ -4403,6 +4419,15 @@ package body Sem_Ch10 is
       if Nkind (P) = N_Defining_Program_Unit_Name then
          Is_Child_Package := True;
          P := Defining_Identifier (P);
+      end if;
+
+      --  Do not install the limited-view if the context of the unit is already
+      --  available through a regular with clause.
+
+      if Nkind (Unit (Cunit (Current_Sem_Unit))) = N_Package_Body
+        and then Has_With_Clause (Cunit (Current_Sem_Unit), P)
+      then
+         return;
       end if;
 
       --  Do not install the limited-view if the full-view is already visible
@@ -4888,6 +4913,18 @@ package body Sem_Ch10 is
               K =  N_Subprogram_Renaming_Declaration)
         and then Present (Parent_Spec (Lib_Unit));
    end Is_Child_Spec;
+
+   ------------------------------------
+   -- Is_Legal_Shadow_Entity_In_Body --
+   ------------------------------------
+
+   function Is_Legal_Shadow_Entity_In_Body (T : Entity_Id) return Boolean is
+      C_Unit : constant Node_Id := Cunit (Current_Sem_Unit);
+   begin
+      return Nkind (Unit (C_Unit)) = N_Package_Body
+        and then Has_With_Clause (C_Unit,
+                   Cunit_Entity (Get_Source_Unit (Non_Limited_View (T))));
+   end Is_Legal_Shadow_Entity_In_Body;
 
    -----------------------
    -- Load_Needed_Body --
@@ -5632,50 +5669,53 @@ package body Sem_Ch10 is
             if Ekind (Lim_Typ) /= E_Package
               and then not Is_Child_Unit (Non_Limited_View (Lim_Typ))
             then
-               --  Handle incomplete types of the real view. For this purpose
-               --  we traverse the list of visible entities to look for an
-               --  incomplete type in the real-view associated with Lim_Typ.
 
-               E := First_Entity (P);
-               while Present (E) and then E /= First_Private_Entity (P) loop
-                  exit when Ekind (E) = E_Incomplete_Type
-                    and then Present (Full_View (E))
-                    and then Full_View (E) = Lim_Typ;
+               --  If the package has incomplete types, the limited view
+               --  of the incomplete type is in fact never visible (AI05-129)
+               --  but we have created a shadow entity E1 for it, that points
+               --  to E2, a non-limited incomplete type. This in turn has a
+               --  full view E3 that is the full declaration. There is a
+               --  corresponding shadow entity E4. When reinstalling the
+               --  non-limited view, E2 must become the current entity and
+               --  E3 must be ignored.
 
-                  Next_Entity (E);
-               end loop;
+               E := Non_Limited_View (Lim_Typ);
 
-               --  If the previous search was not successful then the entity
-               --  to be restored in the homonym list is the non-limited view
+               if Present (Current_Entity (E))
+                 and then Ekind (Current_Entity (E)) = E_Incomplete_Type
+                 and then Full_View (Current_Entity (E)) = E
+               then
 
-               if E = First_Private_Entity (P) then
-                  E := Non_Limited_View (Lim_Typ);
-               end if;
+                  --  Lim_Typ is the limited view of a full type declaration
+                  --  that has a previous incomplete declaration, i.e. E3
+                  --  from the previous description. Nothing to insert.
 
-               pragma Assert (not In_Chain (E));
-
-               Prev := Current_Entity (Lim_Typ);
-
-               if Prev = Lim_Typ then
-                  Set_Current_Entity (E);
+                  null;
 
                else
-                  while Present (Prev)
-                    and then Homonym (Prev) /= Lim_Typ
-                  loop
-                     Prev := Homonym (Prev);
-                  end loop;
+                  pragma Assert (not In_Chain (E));
 
-                  if Present (Prev) then
-                     Set_Homonym (Prev, E);
+                  Prev := Current_Entity (Lim_Typ);
+
+                  if Prev = Lim_Typ then
+                     Set_Current_Entity (E);
+
+                  else
+                     while Present (Prev)
+                       and then Homonym (Prev) /= Lim_Typ
+                     loop
+                        Prev := Homonym (Prev);
+                     end loop;
+
+                     if Present (Prev) then
+                        Set_Homonym (Prev, E);
+                     end if;
                   end if;
+
+                  --  Preserve structure of homonym chain.
+
+                  Set_Homonym (E, Homonym (Lim_Typ));
                end if;
-
-               --  We must also set the next homonym entity of the real entity
-               --  to handle the case in which the next homonym was a shadow
-               --  entity.
-
-               Set_Homonym (E, Homonym (Lim_Typ));
             end if;
 
             Next_Entity (Lim_Typ);

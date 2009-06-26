@@ -386,7 +386,7 @@ package body Exp_Ch4 is
         and then Nkind (Orig_Node) = N_Allocator);
 
       PtrT := Etype (Orig_Node);
-      Dtyp := Designated_Type (PtrT);
+      Dtyp := Available_View (Designated_Type (PtrT));
       Etyp := Etype (Expression (Orig_Node));
 
       if Is_Class_Wide_Type (Dtyp)
@@ -571,6 +571,58 @@ package body Exp_Ch4 is
 
    begin
       if Is_Tagged_Type (T) or else Needs_Finalization (T) then
+
+         if Is_CPP_Constructor_Call (Exp) then
+
+            --  Generate:
+            --  Pnnn : constant ptr_T := new (T); Init (Pnnn.all,...); Pnnn
+
+            --  Allocate the object with no expression
+
+            Node := Relocate_Node (N);
+            Set_Expression (Node,
+              New_Reference_To (Root_Type (Etype (Exp)), Loc));
+
+            --  Avoid its expansion to avoid generating a call to the default
+            --  C++ constructor
+
+            Set_Analyzed (Node);
+
+            Temp := Make_Defining_Identifier (Loc, New_Internal_Name ('P'));
+
+            Insert_Action (N,
+              Make_Object_Declaration (Loc,
+                Defining_Identifier => Temp,
+                Constant_Present    => True,
+                Object_Definition   => New_Reference_To (PtrT, Loc),
+                Expression          => Node));
+
+            Apply_Accessibility_Check (Temp);
+
+            --  Locate the enclosing list and insert the C++ constructor call
+
+            declare
+               P : Node_Id;
+
+            begin
+               P := Parent (Node);
+               while not Is_List_Member (P) loop
+                  P := Parent (P);
+               end loop;
+
+               Insert_List_After_And_Analyze (P,
+                 Build_Initialization_Call (Loc,
+                   Id_Ref =>
+                     Make_Explicit_Dereference (Loc,
+                       Prefix => New_Reference_To (Temp, Loc)),
+                   Typ => Root_Type (Etype (Exp)),
+                   Constructor_Ref => Exp));
+            end;
+
+            Rewrite (N, New_Reference_To (Temp, Loc));
+            Analyze_And_Resolve (N, PtrT);
+            return;
+         end if;
 
          --  Ada 2005 (AI-318-02): If the initialization expression is a call
          --  to a build-in-place function, then access to the allocated object
@@ -2999,7 +3051,7 @@ package body Exp_Ch4 is
 
    procedure Expand_N_Allocator (N : Node_Id) is
       PtrT  : constant Entity_Id  := Etype (N);
-      Dtyp  : constant Entity_Id  := Designated_Type (PtrT);
+      Dtyp  : constant Entity_Id  := Available_View (Designated_Type (PtrT));
       Etyp  : constant Entity_Id  := Etype (Expression (N));
       Loc   : constant Source_Ptr := Sloc (N);
       Desig : Entity_Id;
@@ -7860,6 +7912,8 @@ package body Exp_Ch4 is
               Make_Raise_Program_Error (Sloc (N),
                 Reason => PE_Accessibility_Check_Failed));
             Set_Etype (N, Target_Type);
+
+            return;
          end if;
       end if;
 
@@ -7953,9 +8007,13 @@ package body Exp_Ch4 is
 
          begin
             if Is_Access_Type (Target_Type) then
-               Actual_Op_Typ   := Designated_Type (Operand_Type);
-               Actual_Targ_Typ := Designated_Type (Target_Type);
 
+               --  Handle entities from the limited view
+
+               Actual_Op_Typ :=
+                 Available_View (Designated_Type (Operand_Type));
+               Actual_Targ_Typ :=
+                 Available_View (Designated_Type (Target_Type));
             else
                Actual_Op_Typ   := Operand_Type;
                Actual_Targ_Typ := Target_Type;
@@ -7976,6 +8034,7 @@ package body Exp_Ch4 is
                --  conversion.
 
                if Is_Class_Wide_Type (Actual_Op_Typ)
+                 and then Actual_Op_Typ /= Actual_Targ_Typ
                  and then Root_Op_Typ /= Actual_Targ_Typ
                  and then Is_Ancestor (Root_Op_Typ, Actual_Targ_Typ)
                then
@@ -9484,8 +9543,10 @@ package body Exp_Ch4 is
       Obj_Tag    : Node_Id;
 
    begin
-      Left_Type  := Etype (Left);
-      Right_Type := Etype (Right);
+      --  Handle entities from the limited view
+
+      Left_Type  := Available_View (Etype (Left));
+      Right_Type := Available_View (Etype (Right));
 
       if Is_Class_Wide_Type (Left_Type) then
          Left_Type := Root_Type (Left_Type);

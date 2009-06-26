@@ -41,21 +41,19 @@ package Prj.Env is
 
    procedure Create_Mapping_File
      (Project  : Project_Id;
-      Language : Name_Id := No_Name;
+      Language : Name_Id;
       In_Tree  : Project_Tree_Ref;
       Name     : out Path_Name_Type);
    --  Create a temporary mapping file for project Project. For each source or
    --  template of Language in the Project, put the mapping of its file
    --  name and path name in this file.
    --
-   --  This function either looks at all the source files for the specified
-   --  language in the project, or if Language is set to No_Name, at all
-   --  units in the project.
-   --
    --  Implementation note: we pass a language name, not a language_index here,
    --  since the latter would have to match exactly the index of that language
    --  for the specified project, and that is not information available in
    --  buildgpr.adb.
+   --
+   --  See fmap for a description of the format of the mapping file
 
    procedure Set_Mapping_File_Initial_State_To_Empty
      (In_Tree : Project_Tree_Ref);
@@ -65,16 +63,9 @@ package Prj.Env is
 
    procedure Create_Config_Pragmas_File
      (For_Project          : Project_Id;
-      Main_Project         : Project_Id;
-      In_Tree              : Project_Tree_Ref;
-      Include_Config_Files : Boolean := True);
+      In_Tree              : Project_Tree_Ref);
    --  If there needs to have SFN pragmas, either for non standard naming
-   --  schemes or for individual units, or (when Include_Config_Files is True)
-   --  if Global_Configuration_Pragmas has been specified in package gnatmake
-   --  of the main project, or if Local_Configuration_Pragmas has been
-   --  specified in package Compiler of the main project, build (if needed)
-   --  a temporary file that contains all configuration pragmas, and specify
-   --  the configuration pragmas file in the project data.
+   --  schemes or for individual units.
 
    procedure Create_New_Path_File
      (In_Tree   : Project_Tree_Ref;

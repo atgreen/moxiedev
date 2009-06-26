@@ -34,6 +34,8 @@
 
 package body System.VxWorks.Ext is
 
+   ERROR : constant := -1;
+
    --------------
    -- Int_Lock --
    --------------
@@ -62,5 +64,15 @@ package body System.VxWorks.Ext is
    begin
       return Os_Sem_Delete (Sem);
    end semDelete;
+
+   ------------------------
+   -- taskCpuAffinitySet --
+   ------------------------
+
+   function taskCpuAffinitySet (tid : t_id; CPU : int) return int is
+      pragma Unreferenced (tid, CPU);
+   begin
+      return ERROR;
+   end taskCpuAffinitySet;
 
 end System.VxWorks.Ext;

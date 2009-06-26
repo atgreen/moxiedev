@@ -562,6 +562,7 @@ GNATRTL_NONTASKING_OBJS= \
   s-stoele$(objext) \
   s-stopoo$(objext) \
   s-stratt$(objext) \
+  s-strhas$(objext) \
   s-ststop$(objext) \
   s-soflin$(objext) \
   s-memory$(objext) \

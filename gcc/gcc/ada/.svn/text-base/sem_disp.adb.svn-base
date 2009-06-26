@@ -301,10 +301,106 @@ package body Sem_Disp is
       --  If a controlling formal has a statically tagged actual, the tag of
       --  this actual is to be used for any tag-indeterminate actual.
 
+      procedure Check_Direct_Call;
+      --  In the case when the controlling actual is a class-wide type whose
+      --  root type's completion is a task or protected type, the call is in
+      --  fact direct. This routine detects the above case and modifies the
+      --  call accordingly.
+
       procedure Check_Dispatching_Context;
       --  If the call is tag-indeterminate and the entity being called is
       --  abstract, verify that the context is a call that will eventually
       --  provide a tag for dispatching, or has provided one already.
+
+      -----------------------
+      -- Check_Direct_Call --
+      -----------------------
+
+      procedure Check_Direct_Call is
+         Typ : Entity_Id := Etype (Control);
+
+         function Is_User_Defined_Equality (Id : Entity_Id) return Boolean;
+         --  Determine whether an entity denotes a user-defined equality
+
+         ------------------------------
+         -- Is_User_Defined_Equality --
+         ------------------------------
+
+         function Is_User_Defined_Equality (Id : Entity_Id) return Boolean is
+         begin
+            return
+              Ekind (Id) = E_Function
+                and then Chars (Id) = Name_Op_Eq
+                and then Comes_From_Source (Id)
+
+               --  Internally generated equalities have a full type declaration
+               --  as their parent.
+
+                and then Nkind (Parent (Id)) = N_Function_Specification;
+         end Is_User_Defined_Equality;
+
+      --  Start of processing for Check_Direct_Call
+
+      begin
+         --  Predefined primitives do not receive wrappers since they are built
+         --  from scratch for the corresponding record of synchronized types.
+         --  Equality is in general predefined, but is excluded from the check
+         --  when it is user-defined.
+
+         if Is_Predefined_Dispatching_Operation (Subp_Entity)
+           and then not Is_User_Defined_Equality (Subp_Entity)
+         then
+            return;
+         end if;
+
+         if Is_Class_Wide_Type (Typ) then
+            Typ := Root_Type (Typ);
+         end if;
+
+         if Is_Private_Type (Typ) and then Present (Full_View (Typ)) then
+            Typ := Full_View (Typ);
+         end if;
+
+         if Is_Concurrent_Type (Typ)
+              and then
+            Present (Corresponding_Record_Type (Typ))
+         then
+            Typ := Corresponding_Record_Type (Typ);
+
+            --  The concurrent record's list of primitives should contain a
+            --  wrapper for the entity of the call, retrieve it.
+
+            declare
+               Prim          : Entity_Id;
+               Prim_Elmt     : Elmt_Id;
+               Wrapper_Found : Boolean := False;
+
+            begin
+               Prim_Elmt := First_Elmt (Primitive_Operations (Typ));
+               while Present (Prim_Elmt) loop
+                  Prim := Node (Prim_Elmt);
+
+                  if Is_Primitive_Wrapper (Prim)
+                    and then Wrapped_Entity (Prim) = Subp_Entity
+                  then
+                     Wrapper_Found := True;
+                     exit;
+                  end if;
+
+                  Next_Elmt (Prim_Elmt);
+               end loop;
+
+               --  A primitive declared between two views should have a
+               --  corresponding wrapper.
+
+               pragma Assert (Wrapper_Found);
+
+               --  Modify the call by setting the proper entity
+
+               Set_Entity (Name (N), Prim);
+            end;
+         end if;
+      end Check_Direct_Call;
 
       -------------------------------
       -- Check_Dispatching_Context --
@@ -483,6 +579,11 @@ package body Sem_Disp is
 
             Set_Controlling_Argument (N, Control);
             Check_Restriction (No_Dispatching_Calls, N);
+
+            --  The dispatching call may need to be converted into a direct
+            --  call in certain cases.
+
+            Check_Direct_Call;
 
          --  If there is a statically tagged actual and a tag-indeterminate
          --  call to a function of the ancestor (such as that provided by a

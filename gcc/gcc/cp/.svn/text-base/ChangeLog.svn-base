@@ -1,3 +1,40 @@
+2009-06-25  Ian Lance Taylor  <iant@google.com>
+
+	* call.c (avoid_sign_compare_warnings): New static function.
+	(build_new_op): Call it.
+	* typeck.c (cp_build_binary_op): Don't call warn_sign_compare if
+	TREE_NO_WARNING is set on either operand.
+
+2009-06-25  Ian Lance Taylor  <iant@google.com>
+
+	* g++spec.c (SKIPOPT): define.
+	(lang_specific_driver): Handle -static-libstdc++.  Only add
+	LIBSTDCXX_STATIC if we add LIBSTDCXX.
+
+2009-06-25  Ian Lance Taylor  <iant@google.com>
+
+	* cvt.c (convert_to_void): Only warn about COND_EXPR if neither
+	the second nor third operand has side effects.
+
+2009-06-25  Ian Lance Taylor  <iant@google.com>
+
+	* parser.c (cp_parser_binary_expression): Increment
+	c_inhibit_evaluation_warnings while parsing the right hand side of
+	"true || x" or "false && x".
+	* typeck.c (cp_build_binary_op): Only call warn_for_sign_compare
+	if c_inhibit_evaluation_warnings is zero.
+
+2009-06-24  Jason Merrill  <jason@redhat.com>
+
+	* error.c (dump_decl): Do say "typedef" for the injected class name.
+
+	* pt.c (lookup_template_class): Use currently_open_class,
+	compare template args later.
+
+	PR c++/40342
+	* decl.c (decls_match): Check DECL_TI_TEMPLATE too.
+	* class.c (resolve_address_of_overloaded_function): Fix typo.
+
 2009-06-18  Aldy Hernandez  <aldyh@redhat.com>
 
 	* class.c (get_vtable_decl): Replace finish_decl with cp_finish_decl.

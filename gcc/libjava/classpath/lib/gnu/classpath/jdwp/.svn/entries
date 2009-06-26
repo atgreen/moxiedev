@@ -1,7 +1,7 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/classpath/jdwp
 svn://gcc.gnu.org/svn/gcc
 
@@ -542,40 +542,6 @@ has-props
 
 475
 
-JdwpConstants.class
-file
-
-
-
-
-2009-04-24T17:47:29.000000Z
-6571719cf1ccbf2c8be7127c057f7465
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1279
-
 JdwpConstants$ThreadStatus.class
 file
 
@@ -609,6 +575,40 @@ has-props
 
 
 584
+
+JdwpConstants.class
+file
+
+
+
+
+2009-04-24T17:47:29.000000Z
+6571719cf1ccbf2c8be7127c057f7465
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1279
 
 JdwpConstants$TypeTag.class
 file
@@ -681,40 +681,6 @@ has-props
 value
 dir
 
-JdwpConstants$ModKind.class
-file
-
-
-
-
-2009-04-24T17:47:29.000000Z
-a5bce72885fea62e8524d3c928a355ca
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-796
-
 JdwpConstants$SuspendStatus.class
 file
 
@@ -749,6 +715,43 @@ has-props
 
 468
 
+JdwpConstants$ModKind.class
+file
+
+
+
+
+2009-04-24T17:47:29.000000Z
+a5bce72885fea62e8524d3c928a355ca
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+796
+
+event
+dir
+
 JdwpConstants$EventKind.class
 file
 
@@ -782,9 +785,6 @@ has-props
 
 
 1119
-
-event
-dir
 
 VMVirtualMachine.class
 file

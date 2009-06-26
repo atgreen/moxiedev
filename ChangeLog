@@ -1,3 +1,7 @@
+2009-06-26  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Build GCC with g++.
+
 2009-06-22  Anthony Green  <green@moxielogic.com>
 
         * moxie/rtl/verilog/MoxieCore.v: New file.

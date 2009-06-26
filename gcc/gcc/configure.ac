@@ -276,6 +276,7 @@ rm -f a.out a.exe b.out
 # Find the native compiler
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_PROG_CXX
 ACX_PROG_GNAT([-I"$srcdir"/ada])
 
 # autoconf is lame and doesn't give us any substitution variable for this.
@@ -323,24 +324,30 @@ AC_CHECK_TYPES([__int64], [AC_CHECK_SIZEOF(__int64)])
 # So, we only use -pedantic if we can disable those warnings.
 
 ACX_PROG_CC_WARNING_OPTS(
-	m4_quote(m4_do([-W -Wall -Wwrite-strings -Wstrict-prototypes ],
-		       [-Wmissing-prototypes -Wcast-qual])), [loose_warn])
+	m4_quote(m4_do([-W -Wall -Wwrite-strings -Wcast-qual])), [loose_warn])
 ACX_PROG_CC_WARNING_OPTS(
-	m4_quote(m4_do([-Wold-style-definition -Wc++-compat ], 
-		       [-Wmissing-format-attribute])), [strict_warn])
+	m4_quote(m4_do([-Wstrict-prototypes -Wmissing-prototypes])),
+	[c_loose_warn])
+ACX_PROG_CC_WARNING_OPTS(
+	m4_quote(m4_do([-Wmissing-format-attribute])), [strict_warn])
+ACX_PROG_CC_WARNING_OPTS(
+	m4_quote(m4_do([-Wold-style-definition -Wc++-compat])), [c_strict_warn])
 ACX_PROG_CC_WARNING_ALMOST_PEDANTIC(
 	m4_quote(m4_do([-Wno-long-long -Wno-variadic-macros ], 
 		       [-Wno-overlength-strings])), [strict_warn])
 ACX_PROG_CC_WARNINGS_ARE_ERRORS([manual], [strict_warn])
 
 # The above macros do nothing if the compiler is not GCC.  However, the
-# Makefile has more goo to add other flags, so this variabl is used to
-# enables warnings only for GCC.
+# Makefile has more goo to add other flags, so these variables are used
+# to enable warnings only for GCC.
 warn_cflags=
+warn_cxxflags=
 if test "x$GCC" = "xyes"; then
   warn_cflags='$(GCC_WARN_CFLAGS)'
+  warn_cxxflags='$(GCC_WARN_CXXFLAGS)'
 fi
 AC_SUBST(warn_cflags)
+AC_SUBST(warn_cxxflags)
 
 # Enable expensive internal checks
 is_release=
@@ -572,6 +579,13 @@ fi
 # -------------------------------
 # Miscenalleous configure options
 # -------------------------------
+
+# See if we are building gcc with C++.
+AC_ARG_ENABLE(build-with-cxx,
+[  --enable-build-with-cxx build with C++ compiler instead of C compiler],
+ENABLE_BUILD_WITH_CXX=$enableval,
+ENABLE_BUILD_WITH_CXX=no)
+AC_SUBST(ENABLE_BUILD_WITH_CXX)
 
 # With stabs
 AC_ARG_WITH(stabs,
@@ -3125,7 +3139,7 @@ foo:	nop
     esac
 
     gcc_GAS_CHECK_FEATURE([move fp gpr support],
-      gcc_cv_as_powerpc_mfpgpr, [9,99,0],,
+      gcc_cv_as_powerpc_mfpgpr, [2,19,2],,
       [$conftest_s],,
       [AC_DEFINE(HAVE_AS_MFPGPR, 1,
 	  [Define if your assembler supports mffgpr and mftgpr.])])
@@ -3159,7 +3173,7 @@ LCF0:
     esac
 
     gcc_GAS_CHECK_FEATURE([compare bytes support],
-      gcc_cv_as_powerpc_cmpb, [9,99,0], -a32,
+      gcc_cv_as_powerpc_cmpb, [2,19,2], -a32,
       [$conftest_s],,
       [AC_DEFINE(HAVE_AS_CMPB, 1,
 	  [Define if your assembler supports cmpb.])])
@@ -3174,7 +3188,7 @@ LCF0:
     esac
 
     gcc_GAS_CHECK_FEATURE([decimal float support],
-      gcc_cv_as_powerpc_dfp, [9,99,0], -a32,
+      gcc_cv_as_powerpc_dfp, [2,19,2], -a32,
       [$conftest_s],,
       [AC_DEFINE(HAVE_AS_DFP, 1,
 	  [Define if your assembler supports DFP instructions.])])
@@ -3189,10 +3203,38 @@ LCF0:
     esac
 
     gcc_GAS_CHECK_FEATURE([vector-scalar support],
-      gcc_cv_as_powerpc_vsx, [9,99,0], -a32,
+      gcc_cv_as_powerpc_vsx, [2,19,2], -a32,
       [$conftest_s],,
       [AC_DEFINE(HAVE_AS_VSX, 1,
 	  [Define if your assembler supports VSX instructions.])])
+
+    case $target in
+      *-*-aix*) conftest_s='	.machine "pwr7"
+	.csect .text[[PR]]
+	popcntd 3,3';;
+      *) conftest_s='	.machine power7
+	.text
+	popcntd 3,3';;
+    esac
+
+    gcc_GAS_CHECK_FEATURE([popcntd support],
+      gcc_cv_as_powerpc_popcntd, [2,19,2], -a32,
+      [$conftest_s],,
+      [AC_DEFINE(HAVE_AS_POPCNTD, 1,
+	  [Define if your assembler supports POPCNTD instructions.])])
+
+    case $target in
+      *-*-aix*) conftest_s='	.csect .text[[PR]]
+	lwsync';;
+      *) conftest_s='	.text
+	lwsync';;
+    esac
+
+    gcc_GAS_CHECK_FEATURE([lwsync support],
+      gcc_cv_as_powerpc_lwsync, [2,19,2], -a32,
+      [$conftest_s],,
+      [AC_DEFINE(HAVE_AS_LWSYNC, 1,
+	  [Define if your assembler supports LWSYNC instructions.])])
 
     gcc_GAS_CHECK_FEATURE([.gnu_attribute support],
       gcc_cv_as_powerpc_gnu_attribute, [2,18,0],,
@@ -3720,6 +3762,13 @@ esac],
 [GGC=ggc-page])
 AC_SUBST(GGC)
 echo "Using $GGC for garbage collection."
+
+# Libraries to use on the host.  This will normally be set by the top
+# level Makefile.  Here we simply capture the value for our Makefile.
+if test -z "${HOST_LIBS+set}"; then
+  HOST_LIBS=
+fi
+AC_SUBST(HOST_LIBS)
 
 # Use the system's zlib library.
 zlibdir=-L../zlib

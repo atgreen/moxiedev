@@ -536,10 +536,19 @@ package body Freeze is
          --  Otherwise, we require the address clause to be constant because
          --  the call to the initialization procedure (or the attach code) has
          --  to happen at the point of the declaration.
+         --  Actually the IP call has been moved to the freeze actions
+         --  anyway, so maybe we can relax this restriction???
 
          else
             Check_Constant_Address_Clause (Expr, E);
-            Set_Has_Delayed_Freeze (E, False);
+
+            --  Has_Delayed_Freeze was set on E when the address clause was
+            --  analyzed. Reset the flag now unless freeze actions were
+            --  attached to it in the mean time.
+
+            if No (Freeze_Node (E)) then
+               Set_Has_Delayed_Freeze (E, False);
+            end if;
          end if;
 
          if not Error_Posted (Expr)
@@ -2442,7 +2451,7 @@ package body Freeze is
                           and then Convention (E) = Convention_C
                         then
                            Error_Msg_N
-                             ("?& is a tagged type which does not "
+                             ("?& involves a tagged type which does not "
                               & "correspond to any C type!", Formal);
 
                         --  Check wrong convention subprogram pointer
@@ -2591,10 +2600,30 @@ package body Freeze is
                         end if;
                      end if;
 
-                     if Is_Array_Type (R_Type)
+                     --  Give warning for suspicous return of a result of an
+                     --  unconstrained array type in a foreign convention
+                     --  function.
+
+                     if Has_Foreign_Convention (E)
+
+                       --  We are looking for a return of unconstrained array
+
+                       and then Is_Array_Type (R_Type)
                        and then not Is_Constrained (R_Type)
+
+                       --  Exclude imported routines, the warning does not
+                       --  belong on the import, but on the routine definition.
+
                        and then not Is_Imported (E)
-                       and then Has_Foreign_Convention (E)
+
+                       --  Exclude VM case, since both .NET and JVM can handle
+                       --  return of unconstrained arrays without a problem.
+
+                       and then VM_Target = No_VM
+
+                       --  Check that general warning is enabled, and that it
+                       --  is not suppressed for this particular case.
+
                        and then Warn_On_Export_Import
                        and then not Has_Warnings_Off (E)
                        and then not Has_Warnings_Off (R_Type)
@@ -2640,6 +2669,28 @@ package body Freeze is
             --  Special processing for objects created by object declaration
 
             if Nkind (Declaration_Node (E)) = N_Object_Declaration then
+
+               --  Abstract type allowed only for C++ imported variables or
+               --  constants.
+
+               --  Note: we inhibit this check for objects that do not come
+               --  from source because there is at least one case (the
+               --  expansion of x'class'input where x is abstract) where we
+               --  legitimately generate an abstract object.
+
+               if Is_Abstract_Type (Etype (E))
+                 and then Comes_From_Source (Parent (E))
+                 and then not (Is_Imported (E)
+                                 and then Is_CPP_Class (Etype (E)))
+               then
+                  Error_Msg_N ("type of object cannot be abstract",
+                               Object_Definition (Parent (E)));
+
+                  if Is_CPP_Class (Etype (E)) then
+                     Error_Msg_NE ("\} may need a cpp_constructor",
+                       Object_Definition (Parent (E)), Etype (E));
+                  end if;
+               end if;
 
                --  For object created by object declaration, perform required
                --  categorization (preelaborate and pure) checks. Defer these
@@ -5033,10 +5084,25 @@ package body Freeze is
             elsif Is_Generic_Type (Etype (E)) then
                null;
 
+            --  Display warning if returning unconstrained array
+
             elsif Is_Array_Type (Retype)
               and then not Is_Constrained (Retype)
+
+              --  Exclude cases where descriptor mechanism is set, since the
+              --  VMS descriptor mechanisms allow such unconstrained returns.
+
               and then Mechanism (E) not in Descriptor_Codes
+
+              --  Check appropriate warning is enabled (should we check for
+              --  Warnings (Off) on specific entities here, probably so???)
+
               and then Warn_On_Export_Import
+
+               --  Exclude the VM case, since return of unconstrained arrays
+               --  is properly handled in both the JVM and .NET cases.
+
+              and then VM_Target = No_VM
             then
                Error_Msg_N
                 ("?foreign convention function& should not return " &
@@ -5065,9 +5131,9 @@ package body Freeze is
          end if;
       end if;
 
-      --  For VMS, descriptor mechanisms for parameters are allowed only
-      --  for imported/exported subprograms.  Moreover, the NCA descriptor
-      --  is not allowed for parameters of exported subprograms.
+      --  For VMS, descriptor mechanisms for parameters are allowed only for
+      --  imported/exported subprograms. Moreover, the NCA descriptor is not
+      --  allowed for parameters of exported subprograms.
 
       if OpenVMS_On_Target then
          if Is_Exported (E) then

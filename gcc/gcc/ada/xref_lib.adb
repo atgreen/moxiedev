@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1998-2008, Free Software Foundation, Inc.         --
+--          Copyright (C) 1998-2009, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -49,7 +49,7 @@ package body Xref_Lib is
 
    No_Xref_Information : exception;
    --  Exception raised when there is no cross-referencing information in
-   --  the .ali files
+   --  the .ali files.
 
    procedure Parse_EOL
      (Source                 : not null access String;
@@ -481,8 +481,7 @@ package body Xref_Lib is
    function Get_Full_Type (Decl : Declaration_Reference) return String is
 
       function Param_String return String;
-      --  Return the string to display depending on whether Decl is a
-      --  parameter or not
+      --  Return the string to display depending on whether Decl is a parameter
 
       ------------------
       -- Param_String --
@@ -709,8 +708,10 @@ package body Xref_Lib is
             Ptr := Ptr + 1;
          end loop;
 
+         --  Skip CR or LF if not at end of file
+
          if Source (Ptr) /= EOF then
-            Ptr := Ptr + 1;      -- skip CR or LF
+            Ptr := Ptr + 1;
          end if;
 
          --  Skip past CR/LF or LF/CR combination
@@ -1071,7 +1072,7 @@ package body Xref_Lib is
       loop
          --  Process references on current line
 
-         while Ali (Ptr) = ' ' or Ali (Ptr) = ASCII.HT loop
+         while Ali (Ptr) = ' ' or else Ali (Ptr) = ASCII.HT loop
 
             --  For every reference read the line, type and column,
             --  optionally preceded by a file number and a pipe symbol.

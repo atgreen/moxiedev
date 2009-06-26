@@ -6996,6 +6996,8 @@ This not normally required, but is used by separate analysis tools.
 Typically
 these tools do the necessary compilations automatically, so you should
 not have to specify this switch in normal operation.
+Note that the combination of switches @option{-gnatct} generates a tree
+in the form required by ASIS applications.
 
 @item -gnatu
 @cindex @option{-gnatu} (@command{gcc})
@@ -12572,10 +12574,12 @@ The current list of qualifiers is:
 
 @itemize @bullet
 @item
-@code{abstract}: qualify a project with no sources. An abstract project must
-have a declaration specifying that there are no sources in the project, and,
-if it extends another project, the project it extends must also be a qualified
-abstract project.
+@code{abstract}: qualify a project with no sources. A qualified abstract
+project must either have no declaration of attributes @code{Source_Dirs},
+@code{Source_Files}, @code{Languages} or @code{Source_List_File}, or one of
+@code{Source_Dirs}, @code{Source_Files}, or @code{Languages} must be declared
+as empty. If it extends another project, the project it extends must also be a
+qualified abstract project.
 
 @item
 @code{standard}: a standard project is a non library project with sources.
@@ -13869,6 +13873,14 @@ If @code{Body_Suffix ("Ada")} and @code{Spec_Suffix ("Ada")} end with the
 same string, then a file name that ends with the longest of these two suffixes
 will be a body if the longest suffix is @code{Body_Suffix ("Ada")} or a spec
 if the longest suffix is @code{Spec_Suffix ("Ada")}.
+
+If the suffix does not start with a '.', a file with a name exactly equal
+to the suffix will also be part of the project (for instance if you define
+the suffix as @code{Makefile}, a file called @file{Makefile} will be part
+of the project. This is not interesting in general when using projects to
+compile. However, it might become useful when a project is also used to
+find the list of source files in an editor, like the GNAT Programming System
+(GPS).
 
 If @code{Body_Suffix ("Ada")} is not specified, then the default is
 @code{"^.adb^.ADB^"}.
@@ -17693,8 +17705,9 @@ considered to be a class. A category consists of a library package (or
 a library generic package) that defines a tagged or an interface type,
 together with all its descendant (generic) packages that define tagged
 or interface types. For any package counted as a class,
-its body (if any) is considered
-together with its spec when counting the dependencies. For dependencies
+its body and subunits (if any) are considered
+together with its spec when counting the dependencies, and coupling
+metrics are reported for spec units only. For dependencies
 between classes, the Ada semantic dependencies are considered.
 For coupling metrics, only dependencies on units that are considered as
 classes, are considered.
@@ -18891,9 +18904,10 @@ units are called @emph{interface units} (@pxref{Stand-alone Ada Libraries}).
 All compilation units comprising an application, including those in a library,
 need to be elaborated in an order partially defined by Ada's semantics. GNAT
 computes the elaboration order from the @file{ALI} files and this is why they
-constitute a mandatory part of GNAT libraries. Except in the case of
-@emph{stand-alone libraries}, where a specific library elaboration routine is
-produced independently of the application(s) using the library.
+constitute a mandatory part of GNAT libraries.
+@emph{Stand-alone libraries} are the exception to this rule because a specific
+library elaboration routine is produced independently of the application(s)
+using the library.
 
 @node General Ada Libraries
 @section General Ada Libraries

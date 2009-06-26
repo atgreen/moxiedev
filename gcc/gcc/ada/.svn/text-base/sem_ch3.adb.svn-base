@@ -840,8 +840,8 @@ package body Sem_Ch3 is
       Desig_Type := Entity (Subtype_Mark (N));
 
       Set_Directly_Designated_Type
-                             (Anon_Type, Desig_Type);
-      Set_Etype              (Anon_Type, Anon_Type);
+                (Anon_Type, Desig_Type);
+      Set_Etype (Anon_Type, Anon_Type);
 
       --  Make sure the anonymous access type has size and alignment fields
       --  set, as required by gigi. This is necessary in the case of the
@@ -872,11 +872,6 @@ package body Sem_Ch3 is
       --  if the designated type is.
 
       Set_Is_Public (Anon_Type, Is_Public (Scope (Anon_Type)));
-
-      --  Ada 2005 (AI-50217): Propagate the attribute that indicates that the
-      --  designated type comes from the limited view.
-
-      Set_From_With_Type (Anon_Type, From_With_Type (Desig_Type));
 
       --  Ada 2005 (AI-231): Propagate the access-constant attribute
 
@@ -960,7 +955,7 @@ package body Sem_Ch3 is
       --  introduce semantic dependencies.
 
       elsif Nkind (Related_Nod) = N_Function_Specification
-        and then not From_With_Type (Anon_Type)
+        and then not From_With_Type (Desig_Type)
       then
          if Present (Enclosing_Prot_Type) then
             Build_Itype_Reference (Anon_Type, Parent (Enclosing_Prot_Type));
@@ -2657,24 +2652,9 @@ package body Sem_Ch3 is
          end if;
       end if;
 
-      --  Abstract type is never permitted for a variable or constant.
-      --  Note: we inhibit this check for objects that do not come from
-      --  source because there is at least one case (the expansion of
-      --  x'class'input where x is abstract) where we legitimately
-      --  generate an abstract object.
-
-      if Is_Abstract_Type (T) and then Comes_From_Source (N) then
-         Error_Msg_N ("type of object cannot be abstract",
-                      Object_Definition (N));
-
-         if Is_CPP_Class (T) then
-            Error_Msg_NE ("\} may need a cpp_constructor",
-              Object_Definition (N), T);
-         end if;
-
       --  Case of unconstrained type
 
-      elsif Is_Indefinite_Subtype (T) then
+      if Is_Indefinite_Subtype (T) then
 
          --  Nothing to do in deferred constant case
 
@@ -8629,23 +8609,42 @@ package body Sem_Ch3 is
          --  source (including the _Call primitive operation of RAS types,
          --  which has to have the flag Comes_From_Source for other purposes):
          --  we assume that the expander will provide the missing completion.
+         --  In case of previous errors, other expansion actions that provide
+         --  bodies for null procedures with not be invoked, so inhibit message
+         --  in those cases.
+         --  Note that E_Operator is not in the list that follows, because
+         --  this kind is reserved for predefined operators, that are
+         --  intrinsic and do not need completion.
 
          elsif     Ekind (E) = E_Function
            or else Ekind (E) = E_Procedure
            or else Ekind (E) = E_Generic_Function
            or else Ekind (E) = E_Generic_Procedure
          then
-            if not Has_Completion (E)
-              and then not (Is_Subprogram (E)
-                            and then Is_Abstract_Subprogram (E))
-              and then not (Is_Subprogram (E)
-                              and then
-                            (not Comes_From_Source (E)
-                              or else Chars (E) = Name_uCall))
-              and then Nkind (Parent (Unit_Declaration_Node (E))) /=
-                                                       N_Compilation_Unit
-              and then Chars (E) /= Name_uSize
+            if Has_Completion (E) then
+               null;
+
+            elsif Is_Subprogram (E) and then Is_Abstract_Subprogram (E) then
+               null;
+
+            elsif Is_Subprogram (E)
+              and then (not Comes_From_Source (E)
+                          or else Chars (E) = Name_uCall)
             then
+               null;
+
+            elsif
+               Nkind (Parent (Unit_Declaration_Node (E))) = N_Compilation_Unit
+            then
+               null;
+
+            elsif Nkind (Parent (E)) = N_Procedure_Specification
+              and then Null_Present (Parent (E))
+              and then Serious_Errors_Detected > 0
+            then
+               null;
+
+            else
                Post_Error;
             end if;
 
@@ -8781,7 +8780,7 @@ package body Sem_Ch3 is
         and then not In_Instance
         and then not In_Inlined_Body
       then
-         if not OK_For_Limited_Init (Exp) then
+         if not OK_For_Limited_Init (T, Exp) then
 
             --  In GNAT mode, this is just a warning, to allow it to be evilly
             --  turned off. Otherwise it is a real error.
@@ -11246,9 +11245,9 @@ package body Sem_Ch3 is
            and then Is_Completely_Hidden (Old_Compon)
          then
             --  This is a shadow discriminant created for a discriminant of
-            --  the parent type that is one of several renamed by the same
-            --  new discriminant. Give the shadow discriminant an internal
-            --  name that cannot conflict with that of visible components.
+            --  the parent type, which needs to be present in the subtype.
+            --  Give the shadow discriminant an internal name that cannot
+            --  conflict with that of visible components.
 
             Set_Chars (New_Compon, New_Internal_Name ('C'));
          end if;
@@ -11351,10 +11350,11 @@ package body Sem_Ch3 is
 
          --  For an untagged derived subtype, the number of discriminants may
          --  be smaller than the number of inherited discriminants, because
-         --  several of them may be renamed by a single new discriminant.
-         --  In this case, add the hidden discriminants back into the subtype,
-         --  because otherwise the size of the subtype is computed incorrectly
-         --  in GCC 4.1.
+         --  several of them may be renamed by a single new discriminant or
+         --  constrained. In this case, add the hidden discriminants back into
+         --  the subtype, because they need to be present if the optimizer of
+         --  the GCC 4.x back-end decides to break apart assignments between
+         --  objects using the parent view into member-wise assignments.
 
          Num_Gird := 0;
 
@@ -11401,8 +11401,15 @@ package body Sem_Ch3 is
                         --  component for the current old discriminant.
 
                         New_C := Create_Component (Old_Discr);
-                        Set_Original_Record_Component  (New_C, Old_Discr);
+                        Set_Original_Record_Component (New_C, Old_Discr);
                      end if;
+
+                  else
+                     --  The constraint has eliminated the old discriminant.
+                     --  Introduce a shadow component.
+
+                     New_C := Create_Component (Old_Discr);
+                     Set_Original_Record_Component (New_C, Old_Discr);
                   end if;
 
                   Next_Elmt (Constr);
@@ -12041,6 +12048,25 @@ package body Sem_Ch3 is
       then
          Set_Derived_Name;
 
+      --  An inherited dispatching equality will be overridden by an internally
+      --  generated one, or by an explicit one, so preserve its name and thus
+      --  its entry in the dispatch table. Otherwise, if Parent_Subp is a
+      --  private operation it may become invisible if the full view has
+      --  progenitors, and the dispatch table will be malformed.
+      --  We check that the type is limited to handle the anomalous declaration
+      --  of Limited_Controlled, which is derived from a non-limited type, and
+      --  which is handled specially elsewhere as well.
+
+      elsif Chars (Parent_Subp) = Name_Op_Eq
+        and then Is_Dispatching_Operation (Parent_Subp)
+        and then Etype (Parent_Subp) = Standard_Boolean
+        and then not Is_Limited_Type (Etype (First_Formal (Parent_Subp)))
+        and then
+          Etype (First_Formal (Parent_Subp)) =
+            Etype (Next_Formal (First_Formal (Parent_Subp)))
+      then
+         Set_Derived_Name;
+
       --  If parent is hidden, this can be a regular derivation if the
       --  parent is immediately visible in a non-instantiating context,
       --  or if we are in the private part of an instance. This test
@@ -12072,7 +12098,7 @@ package body Sem_Ch3 is
       elsif Parent_Overrides_Interface_Primitive then
          Set_Derived_Name;
 
-      --  The type is inheriting a private operation, so enter
+      --  Otherwise, the type is inheriting a private operation, so enter
       --  it with a special name so it can't be overridden.
 
       else
@@ -15290,20 +15316,36 @@ package body Sem_Ch3 is
    --  ???Check all calls of this, and compare the conditions under which it's
    --  called.
 
-   function OK_For_Limited_Init (Exp : Node_Id) return Boolean is
+   function OK_For_Limited_Init
+     (Typ : Entity_Id;
+      Exp : Node_Id) return Boolean
+   is
    begin
       return Is_CPP_Constructor_Call (Exp)
         or else (Ada_Version >= Ada_05
                   and then not Debug_Flag_Dot_L
-                  and then OK_For_Limited_Init_In_05 (Exp));
+                  and then OK_For_Limited_Init_In_05 (Typ, Exp));
    end OK_For_Limited_Init;
 
    -------------------------------
    -- OK_For_Limited_Init_In_05 --
    -------------------------------
 
-   function OK_For_Limited_Init_In_05 (Exp : Node_Id) return Boolean is
+   function OK_For_Limited_Init_In_05
+     (Typ : Entity_Id;
+      Exp : Node_Id) return Boolean
+   is
    begin
+      --  An object of a limited interface type can be initialized with any
+      --  expression of a nonlimited descendant type.
+
+      if Is_Class_Wide_Type (Typ)
+        and then Is_Limited_Interface (Typ)
+        and then not Is_Limited_Type (Etype (Exp))
+      then
+         return True;
+      end if;
+
       --  Ada 2005 (AI-287, AI-318): Relax the strictness of the front end in
       --  case of limited aggregates (including extension aggregates), and
       --  function calls. The function call may have been give in prefixed
@@ -15315,7 +15357,8 @@ package body Sem_Ch3 is
 
          when N_Qualified_Expression =>
             return
-              OK_For_Limited_Init_In_05 (Expression (Original_Node (Exp)));
+              OK_For_Limited_Init_In_05
+                (Typ, Expression (Original_Node (Exp)));
 
          --  Ada 2005 (AI-251): If a class-wide interface object is initialized
          --  with a function call, the expander has rewritten the call into an
@@ -15328,7 +15371,8 @@ package body Sem_Ch3 is
          when N_Type_Conversion | N_Unchecked_Type_Conversion =>
             return not Comes_From_Source (Exp)
               and then
-                OK_For_Limited_Init_In_05 (Expression (Original_Node (Exp)));
+                OK_For_Limited_Init_In_05
+                  (Typ, Expression (Original_Node (Exp)));
 
          when N_Indexed_Component | N_Selected_Component  =>
             return Nkind (Exp) = N_Function_Call;

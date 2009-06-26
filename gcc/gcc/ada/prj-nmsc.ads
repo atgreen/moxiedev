@@ -41,13 +41,15 @@ private package Prj.Nmsc is
    --  Free the memory occupied by Proc_Data
 
    procedure Check
-     (Project         : Project_Id;
-      In_Tree         : Project_Tree_Ref;
-      Report_Error    : Put_Line_Access;
-      When_No_Sources : Error_Warning;
-      Current_Dir     : String;
-      Proc_Data       : in out Processing_Data;
-      Is_Config_File  : Boolean);
+     (Project                   : Project_Id;
+      In_Tree                   : Project_Tree_Ref;
+      Report_Error              : Put_Line_Access;
+      When_No_Sources           : Error_Warning;
+      Current_Dir               : String;
+      Proc_Data                 : in out Processing_Data;
+      Is_Config_File            : Boolean;
+      Compiler_Driver_Mandatory : Boolean;
+      Allow_Duplicate_Basenames : Boolean);
    --  Perform consistency and semantic checks on a project, starting from the
    --  project tree parsed from the .gpr file. This procedure interprets the
    --  various case statements in the project based on the current environment
@@ -69,6 +71,14 @@ private package Prj.Nmsc is
    --  language are found in a project where this language is declared.
    --
    --  Is_Config_File should be True if Project is config file (.cgpr)
+   --
+   --  If Compiler_Driver_Mandatory is true, then a Compiler.Driver attribute
+   --  for each language must be defined, or we will not look for its source
+   --  files.
+   --
+   --  If Allow_Duplicate_Basenames, then files with the same base names are
+   --  authorized within a project for source-based languages (never for unit
+   --  based languages)
 
 private
    type Processing_Data is record

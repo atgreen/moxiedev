@@ -409,7 +409,8 @@ Objective-C and Objective-C++ Dialects}.
 @xref{Link Options,,Options for Linking}.
 @gccoptlist{@var{object-file-name}  -l@var{library} @gol
 -nostartfiles  -nodefaultlibs  -nostdlib -pie -rdynamic @gol
--s  -static  -static-libgcc  -shared  -shared-libgcc  -symbolic @gol
+-s  -static  -static-libgcc  -static-libstdc++ -shared  @gol
+-shared-libgcc  -symbolic @gol
 -T @var{script}  -Wl,@var{option}  -Xlinker @var{option} @gol
 -u @var{symbol}}
 
@@ -778,7 +779,9 @@ See RS/6000 and PowerPC Options.
 -mscore5 -mscore5u -mscore7 -mscore7d}
 
 @emph{SH Options}
-@gccoptlist{-m1  -m2  -m2e  -m3  -m3e @gol
+@gccoptlist{-m1  -m2  -m2e @gol
+-m2a-nofpu -m2a-single-only -m2a-single -m2a @gol
+-m3  -m3e @gol
 -m4-nofpu  -m4-single-only  -m4-single  -m4 @gol
 -m4a-nofpu -m4a-single-only -m4a-single -m4a -m4al @gol
 -m5-64media  -m5-64media-nofpu @gol
@@ -8127,7 +8130,9 @@ or @option{-nodefaultlibs} is used.
 @item -nodefaultlibs
 @opindex nodefaultlibs
 Do not use the standard system libraries when linking.
-Only the libraries you specify will be passed to the linker.
+Only the libraries you specify will be passed to the linker, options
+specifying linkage of the system libraries, such as @code{-static-libgcc}
+or @code{-shared-libgcc}, will be ignored.
 The standard startup files are used normally, unless @option{-nostartfiles}
 is used.  The compiler may generate calls to @code{memcmp},
 @code{memset}, @code{memcpy} and @code{memmove}.
@@ -8139,7 +8144,9 @@ mechanism when this option is specified.
 @opindex nostdlib
 Do not use the standard system startup files or libraries when linking.
 No startup files and only the libraries you specify will be passed to
-the linker.  The compiler may generate calls to @code{memcmp}, @code{memset},
+the linker, options specifying linkage of the system libraries, such as
+@code{-static-libgcc} or @code{-shared-libgcc}, will be ignored.
+The compiler may generate calls to @code{memcmp}, @code{memset},
 @code{memcpy} and @code{memmove}.
 These entries are usually resolved by entries in
 libc.  These entry points should be supplied through some other
@@ -8239,6 +8246,18 @@ exceptions, you must link it using the G++ or GCJ driver, as appropriate
 for the languages used in the program, or using the option
 @option{-shared-libgcc}, such that it is linked with the shared
 @file{libgcc}.
+
+@item -static-libstdc++
+When the @command{g++} program is used to link a C++ program, it will
+normally automatically link against @option{libstdc++}.  If
+@file{libstdc++} is available as a shared library, and the
+@option{-static} option is not used, then this will link against the
+shared version of @file{libstdc++}.  That is normally fine.  However, it
+is sometimes useful to freeze the version of @file{libstdc++} used by
+the program without going all the way to a fully static link.  The
+@option{-static-libstdc++} option directs the @command{g++} driver to
+link @file{libstdc++} statically, without necessarily linking other
+libraries statically.
 
 @item -symbolic
 @opindex symbolic
@@ -9439,14 +9458,17 @@ not call any other functions.)  The default is @option{-mno-apcs-leaf-frame}.
 Gives all externally visible functions in the file being compiled an ARM
 instruction set header which switches to Thumb mode before executing the
 rest of the function.  This allows these functions to be called from
-non-interworking code.
+non-interworking code. This option is not valid in AAPCS configurations
+because interworking is enabled by default.
 
 @item -mcaller-super-interworking
 @opindex mcaller-super-interworking
 Allows calls via function pointers (including virtual functions) to
 execute correctly regardless of whether the target code has been
 compiled for interworking or not.  There is a small overhead in the cost
-of executing a function pointer if this option is enabled.
+of executing a function pointer if this option is enabled. This option 
+is not valid in AAPCS configurations because interworking is enabled
+by default.
 
 @item -mtp=@var{name}
 @opindex mtp
@@ -14926,6 +14948,26 @@ Generate code for the SH2.
 
 @item -m2e
 Generate code for the SH2e.
+
+@item -m2a-nofpu
+@opindex m2a-nofpu
+Generate code for the SH2a without FPU, or for a SH2a-FPU in such a way
+that the floating-point unit is not used.
+
+@item -m2a-single-only
+@opindex m2a-single-only
+Generate code for the SH2a-FPU, in such a way that no double-precision
+floating point operations are used.
+
+@item -m2a-single
+@opindex m2a-single
+Generate code for the SH2a-FPU assuming the floating-point unit is in
+single-precision mode by default.
+
+@item -m2a
+@opindex m2a
+Generate code for the SH2a-FPU assuming the floating-point unit is in
+double-precision mode by default.
 
 @item -m3
 @opindex m3

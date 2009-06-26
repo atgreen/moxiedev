@@ -1,7 +1,7 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/classpath/jdwp/exception
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ kseitz
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-InvalidTagException.java
-file
-
-
-
-
-2009-04-24T17:46:48.000000Z
-9fd2ef99f932cb11ad47e5442b6422d8
-2007-03-27T18:40:48.163473Z
-123265
-kseitz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2232
 
 AbsentInformationException.java
 file
@@ -94,6 +60,40 @@ kgallowa
 
 2236
 
+InvalidTagException.java
+file
+
+
+
+
+2009-04-24T17:46:48.000000Z
+9fd2ef99f932cb11ad47e5442b6422d8
+2007-03-27T18:40:48.163473Z
+123265
+kseitz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2232
+
 NotImplementedException.java
 file
 
@@ -127,40 +127,6 @@ tromey
 
 
 2289
-
-InvalidMethodException.java
-file
-
-
-
-
-2009-04-24T17:46:48.000000Z
-bea4f47f98667b61a6e749df49fa62f4
-2005-09-23T19:36:46.000000Z
-104578
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2359
 
 NativeMethodException.java
 file
@@ -196,6 +162,40 @@ mark
 
 2398
 
+InvalidMethodException.java
+file
+
+
+
+
+2009-04-24T17:46:48.000000Z
+bea4f47f98667b61a6e749df49fa62f4
+2005-09-23T19:36:46.000000Z
+104578
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2359
+
 InvalidSlotException.java
 file
 
@@ -207,6 +207,40 @@ file
 2007-03-27T18:40:48.163473Z
 123265
 kseitz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2400
+
+InvalidEventTypeException.java
+file
+
+
+
+
+2009-04-24T17:46:48.000000Z
+caac3ec389f7911a65808c4a8c86a38a
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -263,40 +297,6 @@ tromey
 
 
 2350
-
-InvalidEventTypeException.java
-file
-
-
-
-
-2009-04-24T17:46:48.000000Z
-caac3ec389f7911a65808c4a8c86a38a
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2400
 
 InvalidThreadGroupException.java
 file
@@ -400,40 +400,6 @@ tromey
 
 2182
 
-InvalidFrameException.java
-file
-
-
-
-
-2009-04-24T17:46:48.000000Z
-54da8e18b90539a63162e7748b3c9c0c
-2007-02-08T18:44:37.360519Z
-121720
-kgallowa
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2353
-
 JdwpIllegalArgumentException.java
 file
 
@@ -467,6 +433,40 @@ tromey
 
 
 2392
+
+InvalidFrameException.java
+file
+
+
+
+
+2009-04-24T17:46:48.000000Z
+54da8e18b90539a63162e7748b3c9c0c
+2007-02-08T18:44:37.360519Z
+121720
+kgallowa
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2353
 
 InvalidClassLoaderException.java
 file

@@ -1,15 +1,15 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-27T20:32:30.479785Z
-147930
-bkoz
+2009-06-23T22:33:17.764234Z
+148880
+redi
 
 
 
@@ -102,22 +102,22 @@ dir
 is_lvalue_reference
 dir
 
-has_nothrow_default_constructor
-dir
-
 enable_if
 dir
 
-make_signed
+has_nothrow_default_constructor
 dir
 
 move
 dir
 
-is_rvalue_reference
+make_signed
 dir
 
 time_point
+dir
+
+is_rvalue_reference
 dir
 
 make_unsigned
@@ -126,16 +126,16 @@ dir
 remove_reference
 dir
 
-has_trivial_default_constructor
-dir
-
-add_lvalue_reference
+ratio
 dir
 
 clocks
 dir
 
-ratio
+add_lvalue_reference
+dir
+
+has_trivial_default_constructor
 dir
 
 allocator

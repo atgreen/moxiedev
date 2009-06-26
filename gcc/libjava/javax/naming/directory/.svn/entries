@@ -1,7 +1,7 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/javax/naming/directory
 svn://gcc.gnu.org/svn/gcc
 
@@ -230,40 +230,6 @@ tromey
 
 1525
 
-SchemaViolationException.h
-file
-
-
-
-
-2009-04-24T17:49:25.000000Z
-5fccc9e2850c7446cd21c55c636c8f1e
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-785
-
 SearchResult.h
 file
 
@@ -297,6 +263,40 @@ tromey
 
 
 1447
+
+SchemaViolationException.h
+file
+
+
+
+
+2009-04-24T17:49:25.000000Z
+5fccc9e2850c7446cd21c55c636c8f1e
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+785
 
 BasicAttribute.h
 file
@@ -400,40 +400,6 @@ tromey
 
 1274
 
-InvalidAttributesException.h
-file
-
-
-
-
-2009-04-24T17:49:25.000000Z
-424586ba34ff365ae9640734a8d00de2
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-798
-
 BasicAttributes$BasicAttributesEnumeration.h
 file
 
@@ -467,6 +433,40 @@ doko
 
 
 1406
+
+InvalidAttributesException.h
+file
+
+
+
+
+2009-04-24T17:49:25.000000Z
+424586ba34ff365ae9640734a8d00de2
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+798
 
 BasicAttributes$1.h
 file

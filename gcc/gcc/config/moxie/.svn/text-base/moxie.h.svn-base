@@ -460,14 +460,6 @@ do									      \
  { ARG_POINTER_REGNUM,   HARD_FRAME_POINTER_REGNUM }}			
 #endif
 
-/* A C expression that returns nonzero if the compiler is allowed to
-   try to replace register number FROM-REG with register number
-   TO-REG.  This macro need only be defined if `ELIMINABLE_REGS' is
-   defined, and will usually be the constant 1, since most of the
-   cases preventing register elimination are things that the compiler
-   already knows about.  */
-#define CAN_ELIMINATE(FROM, TO) 1
-
 /* This macro is similar to `INITIAL_FRAME_POINTER_OFFSET'.  It
    specifies the initial difference between the specified pair of
    registers.  This macro must be defined if `ELIMINABLE_REGS' is
@@ -517,6 +509,9 @@ do									      \
    locations.  */
 #define MOVE_MAX 4
 #define TRULY_NOOP_TRUNCATION(op,ip) 1
+
+/* All load operations zero extend.  */
+#define LOAD_EXTEND_OP(MEM) ZERO_EXTEND
 
 #define RETURN_POPS_ARGS(FUNDECL, FUNTYPE, STACK_SIZE) 0
 

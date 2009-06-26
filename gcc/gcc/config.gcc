@@ -802,10 +802,14 @@ arm-*-pe*)
 avr-*-rtems*)
 	tm_file="avr/avr.h dbxelf.h avr/rtems.h rtems.h newlib-stdint.h"
 	tmake_file="avr/t-avr t-rtems avr/t-rtems"
+	extra_gcc_objs="driver-avr.o avr-devices.o"
+	extra_objs="avr-devices.o"
 	;;
 avr-*-*)
 	tm_file="avr/avr.h dbxelf.h newlib-stdint.h"
 	use_gcc_stdint=wrap
+	extra_gcc_objs="driver-avr.o avr-devices.o"
+	extra_objs="avr-devices.o"
 	;;
 bfin*-elf*)
 	tm_file="${tm_file} dbxelf.h elfos.h newlib-stdint.h bfin/elf.h"
@@ -1556,6 +1560,18 @@ mcore-*-pe*)
 	tm_file="svr3.h dbxcoff.h newlib-stdint.h ${tm_file} mcore/mcore-pe.h"
 	tmake_file=mcore/t-mcore-pe
 	inhibit_libc=true
+	use_gcc_stdint=wrap
+	;;
+mep-*-*)
+	tm_file="dbxelf.h elfos.h svr4.h ${tm_file}"
+	tmake_file=mep/t-mep
+	extra_parts="crtbegin.o crtend.o"
+	c_target_objs="mep-pragma.o"
+	cxx_target_objs="mep-pragma.o"
+	if test -d "${srcdir}/../newlib/libc/include" &&
+	   test "x$with_headers" = x; then
+		with_headers=yes
+	fi
 	use_gcc_stdint=wrap
 	;;
 mips-sgi-irix[56]*)
@@ -3136,7 +3152,7 @@ case ${target} in
 	i[34567]86-*-linux* | x86_64-*-linux* | i[34567]86-*-kfreebsd*-gnu | x86_64-*-kfreebsd*-gnu)
 		tmake_file="${tmake_file} i386/t-fprules-softfp soft-fp/t-softfp i386/t-linux"
 		;;
-	i[34567]86-*-cygwin*)
+	i[34567]86-*-cygwin* | i[34567]86-*-mingw* | x86_64-*-mingw*)
 		tmake_file="${tmake_file} i386/t-fprules-softfp soft-fp/t-softfp"
 		;;
 	ia64*-*-linux*)

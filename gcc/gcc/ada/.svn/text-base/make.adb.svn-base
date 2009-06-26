@@ -644,7 +644,7 @@ package body Make is
      (Source_File      : File_Name_Type;
       Source_File_Name : String;
       Source_Index     : Int;
-      Naming           : Naming_Data;
+      Project          : Project_Id;
       In_Package       : Package_Id;
       Allow_ALI        : Boolean) return Variable_Value;
    --  Return the switches for the source file in the specified package of a
@@ -1274,7 +1274,7 @@ package body Make is
              (Source_File      => Name_Find,
               Source_File_Name => File_Name,
               Source_Index     => Index,
-              Naming           => Main_Project.Naming,
+              Project          => Main_Project,
               In_Package       => The_Package,
               Allow_ALI        => Program = Binder or else Program = Linker);
 
@@ -1465,16 +1465,16 @@ package body Make is
          Sfile : File_Name_Type) return Boolean
       is
          UID    : Prj.Unit_Index;
-         U_Data : Unit_Data;
 
       begin
          UID := Units_Htable.Get (Project_Tree.Units_HT, Uname);
 
          if UID /= Prj.No_Unit_Index then
-            U_Data := Project_Tree.Units.Table (UID);
-
-            if U_Data.File_Names (Body_Part).Name /= Sfile
-              and then U_Data.File_Names (Specification).Name /= Sfile
+            if (UID.File_Names (Impl) = null
+                 or else UID.File_Names (Impl).File /= Sfile)
+              and then
+                (UID.File_Names (Spec) = null
+                  or else UID.File_Names (Spec).File /= Sfile)
             then
                Verbose_Msg (Uname, "sources do not include ", Name_Id (Sfile));
                return True;
@@ -1939,23 +1939,25 @@ package body Make is
                ALI_Project := No_Project;
 
                declare
-                  Udata : Prj.Unit_Data;
+                  Udata : Prj.Unit_Index;
 
                begin
-                  for U in 1 .. Unit_Table.Last (Project_Tree.Units) loop
-                     Udata := Project_Tree.Units.Table (U);
-
-                     if Udata.File_Names (Body_Part).Name = Source_File then
-                        ALI_Project := Udata.File_Names (Body_Part).Project;
+                  Udata := Units_Htable.Get_First (Project_Tree.Units_HT);
+                  while Udata /= No_Unit_Index loop
+                     if Udata.File_Names (Impl) /= null
+                       and then Udata.File_Names (Impl).File = Source_File
+                     then
+                        ALI_Project := Udata.File_Names (Impl).Project;
                         exit;
 
-                     elsif
-                       Udata.File_Names (Specification).Name = Source_File
+                     elsif Udata.File_Names (Spec) /= null
+                       and then Udata.File_Names (Spec).File = Source_File
                      then
-                        ALI_Project :=
-                          Udata.File_Names (Specification).Project;
+                        ALI_Project := Udata.File_Names (Spec).Project;
                         exit;
                      end if;
+
+                     Udata := Units_Htable.Get_Next (Project_Tree.Units_HT);
                   end loop;
                end;
 
@@ -2029,6 +2031,7 @@ package body Make is
                      Projects : array (1 .. Num_Ext) of Project_Id;
                      Dep      : Sdep_Record;
                      OK       : Boolean := True;
+                     UID      : Unit_Index;
 
                   begin
                      Proj := ALI_Project;
@@ -2045,24 +2048,20 @@ package body Make is
                        ALIs.Table (ALI).Last_Sdep
                      loop
                         Dep := Sdep.Table (D);
-
+                        UID  := Units_Htable.Get_First (Project_Tree.Units_HT);
                         Proj := No_Project;
 
                         Unit_Loop :
-                        for
-                          UID in 1 .. Unit_Table.Last (Project_Tree.Units)
-                        loop
-                           if Project_Tree.Units.Table (UID).
-                             File_Names (Body_Part).Name = Dep.Sfile
+                        while UID /= null loop
+                           if UID.File_Names (Impl) /= null
+                             and then UID.File_Names (Impl).File = Dep.Sfile
                            then
-                              Proj := Project_Tree.Units.Table (UID).
-                                File_Names (Body_Part).Project;
+                              Proj := UID.File_Names (Impl).Project;
 
-                           elsif Project_Tree.Units.Table (UID).
-                             File_Names (Specification).Name = Dep.Sfile
+                           elsif UID.File_Names (Spec) /= null
+                             and then UID.File_Names (Spec).File = Dep.Sfile
                            then
-                              Proj := Project_Tree.Units.Table (UID).
-                                File_Names (Specification).Project;
+                              Proj := UID.File_Names (Spec).Project;
                            end if;
 
                            --  If a source is in a project, check if it is one
@@ -2078,6 +2077,9 @@ package body Make is
 
                               exit Unit_Loop;
                            end if;
+
+                           UID :=
+                             Units_Htable.Get_Next (Project_Tree.Units_HT);
                         end loop Unit_Loop;
                      end loop D_Chk;
 
@@ -2386,7 +2388,7 @@ package body Make is
                       (Source_File      => Source_File,
                        Source_File_Name => Source_File_Name,
                        Source_Index     => Source_Index,
-                       Naming           => Arguments_Project.Naming,
+                       Project          => Arguments_Project,
                        In_Package       => Compiler_Package,
                        Allow_ALI        => False);
 
@@ -3595,7 +3597,6 @@ package body Make is
                            declare
                               Unit_Name : Name_Id;
                               Uid       : Prj.Unit_Index;
-                              Udata     : Unit_Data;
 
                            begin
                               Get_Name_String (Uname);
@@ -3606,30 +3607,21 @@ package body Make is
                                   (Project_Tree.Units_HT, Unit_Name);
 
                               if Uid /= Prj.No_Unit_Index then
-                                 Udata := Project_Tree.Units.Table (Uid);
-
-                                 if
-                                    Udata.File_Names (Body_Part).Name /=
-                                                                       No_File
+                                 if Uid.File_Names (Impl) /= null
                                    and then
-                                     Udata.File_Names (Body_Part).Path.Name /=
-                                       Slash
+                                     not Uid.File_Names (Impl).Locally_Removed
                                  then
-                                    Sfile := Udata.File_Names (Body_Part).Name;
+                                    Sfile := Uid.File_Names (Impl).File;
                                     Source_Index :=
-                                      Udata.File_Names (Body_Part).Index;
+                                      Uid.File_Names (Impl).Index;
 
-                                 elsif
-                                    Udata.File_Names (Specification).Name /=
-                                                                        No_File
+                                 elsif Uid.File_Names (Spec) /= null
                                    and then
-                                     Udata.File_Names
-                                       (Specification).Path.Name /= Slash
+                                     not Uid.File_Names (Spec).Locally_Removed
                                  then
-                                    Sfile :=
-                                      Udata.File_Names (Specification).Name;
+                                    Sfile := Uid.File_Names (Spec).File;
                                     Source_Index :=
-                                      Udata.File_Names (Specification).Index;
+                                      Uid.File_Names (Spec).Index;
                                  end if;
                               end if;
                            end;
@@ -3758,7 +3750,7 @@ package body Make is
 
    begin
       Prj.Env.Create_Config_Pragmas_File
-        (For_Project, Main_Project, Project_Tree);
+        (For_Project, Project_Tree);
 
       if For_Project.Config_File_Name /= No_Path then
          Temporary_Config_File := For_Project.Config_File_Temp;
@@ -4243,6 +4235,8 @@ package body Make is
                File_Name : constant String := Base_Name (Main);
                --  The simple file name of the current main
 
+               Lang : Language_Ptr;
+
             begin
                exit when Main = "";
 
@@ -4264,18 +4258,18 @@ package body Make is
                   --  is the actual path of a source of a project.
 
                   if Main /= File_Name then
+                     Lang := Get_Language_From_Name (Main_Project, "ada");
+
                      Real_Path :=
                        Locate_Regular_File
-                         (Main &
-                          Body_Suffix_Of
-                            (Project_Tree, "ada", Main_Project.Naming),
+                         (Main & Get_Name_String
+                              (Lang.Config.Naming_Data.Body_Suffix),
                           "");
                      if Real_Path = null then
                         Real_Path :=
                           Locate_Regular_File
-                            (Main &
-                             Spec_Suffix_Of
-                               (Project_Tree, "ada", Main_Project.Naming),
+                            (Main & Get_Name_String
+                                 (Lang.Config.Naming_Data.Spec_Suffix),
                              "");
                      end if;
 
@@ -4378,6 +4372,7 @@ package body Make is
 
          Bytes : Integer;
          OK    : Boolean := True;
+         Unit  : Unit_Index;
 
          Status : Boolean;
          --  For call to Close
@@ -4390,139 +4385,135 @@ package body Make is
 
             --  Traverse all units
 
-            for J in Unit_Table.First ..
-                     Unit_Table.Last (Project_Tree.Units)
-            loop
-               declare
-                  Unit : constant Unit_Data := Project_Tree.Units.Table (J);
-               begin
-                  if Unit.Name /= No_Name then
+            Unit := Units_Htable.Get_First (Project_Tree.Units_HT);
 
-                     --  If there is a body, put it in the mapping
+            while Unit /= No_Unit_Index loop
+               if Unit.Name /= No_Name then
 
-                     if Unit.File_Names (Body_Part).Name /= No_File
-                       and then Unit.File_Names (Body_Part).Project /=
-                                                            No_Project
-                     then
-                        Get_Name_String (Unit.Name);
-                        Add_Str_To_Name_Buffer ("%b");
-                        ALI_Unit := Name_Find;
-                        ALI_Name :=
-                          Lib_File_Name
-                            (Unit.File_Names (Body_Part).Display_Name);
-                        ALI_Project := Unit.File_Names (Body_Part).Project;
+                  --  If there is a body, put it in the mapping
 
-                        --  Otherwise, if there is a spec, put it in the
-                        --  mapping.
+                  if Unit.File_Names (Impl) /= No_Source
+                    and then Unit.File_Names (Impl).Project /=
+                    No_Project
+                  then
+                     Get_Name_String (Unit.Name);
+                     Add_Str_To_Name_Buffer ("%b");
+                     ALI_Unit := Name_Find;
+                     ALI_Name :=
+                       Lib_File_Name
+                         (Unit.File_Names (Impl).Display_File);
+                     ALI_Project := Unit.File_Names (Impl).Project;
 
-                     elsif Unit.File_Names (Specification).Name /= No_File
-                       and then Unit.File_Names (Specification).Project /=
-                                                                No_Project
-                     then
-                        Get_Name_String (Unit.Name);
-                        Add_Str_To_Name_Buffer ("%s");
-                        ALI_Unit := Name_Find;
-                        ALI_Name :=
-                          Lib_File_Name
-                            (Unit.File_Names (Specification).Display_Name);
-                        ALI_Project := Unit.File_Names (Specification).Project;
+                     --  Otherwise, if there is a spec, put it in the
+                     --  mapping.
 
-                     else
-                        ALI_Name := No_File;
-                     end if;
+                  elsif Unit.File_Names (Spec) /= No_Source
+                    and then Unit.File_Names (Spec).Project /=
+                    No_Project
+                  then
+                     Get_Name_String (Unit.Name);
+                     Add_Str_To_Name_Buffer ("%s");
+                     ALI_Unit := Name_Find;
+                     ALI_Name :=
+                       Lib_File_Name
+                         (Unit.File_Names (Spec).Display_File);
+                     ALI_Project := Unit.File_Names (Spec).Project;
 
-                     --  If we have something to put in the mapping then do it
-                     --  now. However, if the project is extended, we don't put
-                     --  anything in the mapping file, because we do not know
-                     --  where the ALI file is: it might be in the extended
-                     --  project obj dir as well as in the extending project
-                     --  obj dir.
+                  else
+                     ALI_Name := No_File;
+                  end if;
 
-                     if ALI_Name /= No_File
-                       and then ALI_Project.Extended_By = No_Project
-                       and then ALI_Project.Extends = No_Project
-                     then
-                        --  First check if the ALI file exists. If it does not,
-                        --  do not put the unit in the mapping file.
+                  --  If we have something to put in the mapping then do it
+                  --  now. However, if the project is extended, we don't put
+                  --  anything in the mapping file, because we don't know where
+                  --  the ALI file is: it might be in the extended project obj
+                  --  dir as well as in the extending project obj dir.
+
+                  if ALI_Name /= No_File
+                    and then ALI_Project.Extended_By = No_Project
+                    and then ALI_Project.Extends = No_Project
+                  then
+                     --  First check if the ALI file exists. If it does not,
+                     --  do not put the unit in the mapping file.
+
+                     declare
+                        ALI : constant String := Get_Name_String (ALI_Name);
+
+                     begin
+                        --  For library projects, use the library directory,
+                        --  for other projects, use the object directory.
+
+                        if ALI_Project.Library then
+                           Get_Name_String (ALI_Project.Library_Dir.Name);
+                        else
+                           Get_Name_String
+                             (ALI_Project.Object_Directory.Name);
+                        end if;
+
+                        if Name_Buffer (Name_Len) /=
+                          Directory_Separator
+                        then
+                           Add_Char_To_Name_Buffer (Directory_Separator);
+                        end if;
+
+                        Add_Str_To_Name_Buffer (ALI);
+                        Add_Char_To_Name_Buffer (ASCII.LF);
 
                         declare
-                           ALI : constant String := Get_Name_String (ALI_Name);
+                           ALI_Path_Name : constant String :=
+                                             Name_Buffer (1 .. Name_Len);
 
                         begin
-                           --  For library projects, use the library directory,
-                           --  for other projects, use the object directory.
-
-                           if ALI_Project.Library then
-                              Get_Name_String (ALI_Project.Library_Dir.Name);
-                           else
-                              Get_Name_String
-                                (ALI_Project.Object_Directory.Name);
-                           end if;
-
-                           if Name_Buffer (Name_Len) /=
-                                Directory_Separator
-                           then
-                              Add_Char_To_Name_Buffer (Directory_Separator);
-                           end if;
-
-                           Add_Str_To_Name_Buffer (ALI);
-                           Add_Char_To_Name_Buffer (ASCII.LF);
-
-                           declare
-                              ALI_Path_Name : constant String :=
-                                                Name_Buffer (1 .. Name_Len);
-
-                           begin
-                              if Is_Regular_File
+                           if Is_Regular_File
                                 (ALI_Path_Name (1 .. ALI_Path_Name'Last - 1))
-                              then
+                           then
+                              --  First line is the unit name
 
-                                 --  First line is the unit name
+                              Get_Name_String (ALI_Unit);
+                              Add_Char_To_Name_Buffer (ASCII.LF);
+                              Bytes :=
+                                Write
+                                  (Mapping_FD,
+                                   Name_Buffer (1)'Address,
+                                   Name_Len);
+                              OK := Bytes = Name_Len;
 
-                                 Get_Name_String (ALI_Unit);
-                                 Add_Char_To_Name_Buffer (ASCII.LF);
-                                 Bytes :=
-                                   Write
-                                     (Mapping_FD,
-                                      Name_Buffer (1)'Address,
-                                      Name_Len);
-                                 OK := Bytes = Name_Len;
+                              exit when not OK;
 
-                                 exit when not OK;
+                              --  Second line it the ALI file name
 
-                                 --  Second line it the ALI file name
+                              Get_Name_String (ALI_Name);
+                              Add_Char_To_Name_Buffer (ASCII.LF);
+                              Bytes :=
+                                Write
+                                  (Mapping_FD,
+                                   Name_Buffer (1)'Address,
+                                   Name_Len);
+                              OK := (Bytes = Name_Len);
 
-                                 Get_Name_String (ALI_Name);
-                                 Add_Char_To_Name_Buffer (ASCII.LF);
-                                 Bytes :=
-                                   Write
-                                     (Mapping_FD,
-                                      Name_Buffer (1)'Address,
-                                      Name_Len);
-                                 OK := Bytes = Name_Len;
+                              exit when not OK;
 
-                                 exit when not OK;
+                              --  Third line it the ALI path name
 
-                                 --  Third line it the ALI path name
+                              Bytes :=
+                                Write
+                                  (Mapping_FD,
+                                   ALI_Path_Name (1)'Address,
+                                   ALI_Path_Name'Length);
+                              OK := (Bytes = ALI_Path_Name'Length);
 
-                                 Bytes :=
-                                   Write
-                                     (Mapping_FD,
-                                      ALI_Path_Name (1)'Address,
-                                      ALI_Path_Name'Length);
-                                 OK := Bytes = ALI_Path_Name'Length;
+                              --  If OK is False, it means we were unable to
+                              --  write a line. No point in continuing with the
+                              --  other units.
 
-                                 --  If OK is False, it means we were unable
-                                 --  to write a line. No point in continuing
-                                 --  with the other units.
-
-                                 exit when not OK;
-                              end if;
-                           end;
+                              exit when not OK;
+                           end if;
                         end;
-                     end if;
+                     end;
                   end if;
-               end;
+               end if;
+
+               Unit := Units_Htable.Get_Next (Project_Tree.Units_HT);
             end loop;
 
             Close (Mapping_FD, Status);
@@ -5881,6 +5872,38 @@ package body Make is
                      Executable_Obsolete := Youngest_Obj_File /= No_File;
                   end if;
 
+                  --  Check if any library file is more recent than the
+                  --  executable: there may be an externally built library
+                  --  file that has been modified.
+
+                  if not Executable_Obsolete
+                    and then Main_Project /= No_Project
+                  then
+                     declare
+                        Proj1 : Project_List;
+
+                     begin
+                        Proj1 := Project_Tree.Projects;
+                        while Proj1 /= null loop
+                           if Proj1.Project.Library
+                             and then
+                               Proj1.Project.Library_TS > Executable_Stamp
+                           then
+                              Executable_Obsolete := True;
+                              Youngest_Obj_Stamp := Proj1.Project.Library_TS;
+                              Name_Len := 0;
+                              Add_Str_To_Name_Buffer ("library ");
+                              Add_Str_To_Name_Buffer
+                                (Get_Name_String (Proj1.Project.Library_Name));
+                              Youngest_Obj_File := Name_Find;
+                              exit;
+                           end if;
+
+                           Proj1 := Proj1.Next;
+                        end loop;
+                     end;
+                  end if;
+
                   --  Return if the executable is up to date and otherwise
                   --  motivate the relink/rebind.
 
@@ -6622,7 +6645,7 @@ package body Make is
          Prj.Env.Create_Mapping_File
            (Project,
             In_Tree  => Project_Tree,
-            Language => No_Name,
+            Language => Name_Ada,
             Name     => Data.Mapping_File_Names
                           (Data.Last_Mapping_File_Names));
 
@@ -6930,7 +6953,7 @@ package body Make is
       Into_Q       : Boolean)
    is
       Put_In_Q : Boolean := Into_Q;
-      Unit     : Unit_Data;
+      Unit     : Unit_Index;
       Sfile    : File_Name_Type;
       Index    : Int;
 
@@ -6972,27 +6995,25 @@ package body Make is
    begin
       --  For all the sources in the project files,
 
-      for Id in Unit_Table.First ..
-                Unit_Table.Last (Project_Tree.Units)
-      loop
-         Unit  := Project_Tree.Units.Table (Id);
+      Unit := Units_Htable.Get_First (Project_Tree.Units_HT);
+      while Unit /= null loop
          Sfile := No_File;
          Index := 0;
 
          --  If there is a source for the body, and the body has not been
          --  locally removed.
 
-         if Unit.File_Names (Body_Part).Name /= No_File
-           and then Unit.File_Names (Body_Part).Path.Name /= Slash
+         if Unit.File_Names (Impl) /= null
+           and then not Unit.File_Names (Impl).Locally_Removed
          then
             --  And it is a source for the specified project
 
-            if Check_Project (Unit.File_Names (Body_Part).Project) then
+            if Check_Project (Unit.File_Names (Impl).Project) then
 
                --  If we don't have a spec, we cannot consider the source
                --  if it is a subunit.
 
-               if Unit.File_Names (Specification).Name = No_File then
+               if Unit.File_Names (Spec) = null then
                   declare
                      Src_Ind : Source_File_Index;
 
@@ -7010,7 +7031,7 @@ package body Make is
                   begin
                      Src_Ind := Sinput.P.Load_Project_File
                                   (Get_Name_String
-                                     (Unit.File_Names (Body_Part).Path.Name));
+                                     (Unit.File_Names (Impl).Path.Name));
 
                      --  If it is a subunit, discard it
 
@@ -7018,27 +7039,27 @@ package body Make is
                         Sfile := No_File;
                         Index := 0;
                      else
-                        Sfile := Unit.File_Names (Body_Part).Display_Name;
-                        Index := Unit.File_Names (Body_Part).Index;
+                        Sfile := Unit.File_Names (Impl).Display_File;
+                        Index := Unit.File_Names (Impl).Index;
                      end if;
                   end;
 
                else
-                  Sfile := Unit.File_Names (Body_Part).Display_Name;
-                  Index := Unit.File_Names (Body_Part).Index;
+                  Sfile := Unit.File_Names (Impl).Display_File;
+                  Index := Unit.File_Names (Impl).Index;
                end if;
             end if;
 
-         elsif Unit.File_Names (Specification).Name /= No_File
-           and then Unit.File_Names (Specification).Path.Name /= Slash
-           and then Check_Project (Unit.File_Names (Specification).Project)
+         elsif Unit.File_Names (Spec) /= null
+           and then not Unit.File_Names (Spec).Locally_Removed
+           and then Check_Project (Unit.File_Names (Spec).Project)
          then
             --  If there is no source for the body, but there is a source
             --  for the spec which has not been locally removed, then we take
             --  this one.
 
-            Sfile := Unit.File_Names (Specification).Display_Name;
-            Index := Unit.File_Names (Specification).Index;
+            Sfile := Unit.File_Names (Spec).Display_File;
+            Index := Unit.File_Names (Spec).Index;
          end if;
 
          --  If Put_In_Q is True, we insert into the Q
@@ -7088,6 +7109,8 @@ package body Make is
                Init_Q;
             end if;
          end if;
+
+         Unit := Units_Htable.Get_Next (Project_Tree.Units_HT);
       end loop;
    end Insert_Project_Sources;
 
@@ -8101,10 +8124,12 @@ package body Make is
      (Source_File      : File_Name_Type;
       Source_File_Name : String;
       Source_Index     : Int;
-      Naming           : Naming_Data;
+      Project          : Project_Id;
       In_Package       : Package_Id;
       Allow_ALI        : Boolean) return Variable_Value
    is
+      Lang : constant Language_Ptr := Get_Language_From_Name (Project, "ada");
+
       Switches : Variable_Value;
 
       Defaults : constant Array_Element_Id :=
@@ -8135,14 +8160,17 @@ package body Make is
 
       --  Check also without the suffix
 
-      if Switches = Nil_Variable_Value then
+      if Switches = Nil_Variable_Value
+        and then Lang /= null
+      then
          declare
+            Naming      : Lang_Naming_Data renames Lang.Config.Naming_Data;
             Name        : String (1 .. Source_File_Name'Length + 3);
             Last        : Positive := Source_File_Name'Length;
             Spec_Suffix : constant String :=
-                            Spec_Suffix_Of (Project_Tree, "ada", Naming);
+                            Get_Name_String (Naming.Spec_Suffix);
             Body_Suffix : constant String :=
-                            Body_Suffix_Of (Project_Tree, "ada", Naming);
+                            Get_Name_String (Naming.Body_Suffix);
             Truncated   : Boolean := False;
 
          begin

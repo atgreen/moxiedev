@@ -6,7 +6,7 @@
  *                                                                          *
  *                          C Implementation File                           *
  *                                                                          *
- *            Copyright (C) 1992-2009 Free Software Foundation, Inc.        *
+ *         Copyright (C) 1992-2009, Free Software Foundation, Inc.          *
  *                                                                          *
  * GNAT is free software;  you can  redistribute it  and/or modify it under *
  * terms of the  GNU General Public License as published  by the Free Soft- *
@@ -35,7 +35,7 @@
 #ifdef __vxworks
 #include "ioLib.h"
 #include "dosFsLib.h"
-#ifndef __RTP__
+#if ! defined ( __RTP__) && ! defined (VTHREADS)
 # include "nfsLib.h"
 #endif
 #include "selectLib.h"
@@ -764,6 +764,22 @@ __gnat_localtime_tzoff (const time_t *timer, long *off)
 
   (*Lock_Task) ();
 
+#ifdef RTX
+
+  tzi_status = GetTimeZoneInformation (&tzi);
+  *off = tzi.Bias;
+  if (tzi_status == TIME_ZONE_ID_STANDARD)
+     /* The system is operating in the range covered by the StandardDate
+        member. */
+     *off = *off + tzi.StandardBias;
+  else if (tzi_status == TIME_ZONE_ID_DAYLIGHT)
+     /* The system is operating in the range covered by the DaylightDate
+        member. */
+     *off = *off + tzi.DaylightBias;
+  *off = *off * -60;
+
+#else
+
   /* First convert unix time_t structure to windows FILETIME format.  */
   utc_time.ull_time = ((unsigned long long) *timer + w32_epoch_offset)
                       * 10000000ULL;
@@ -791,6 +807,8 @@ __gnat_localtime_tzoff (const time_t *timer, long *off)
         *off = (long) ((local_time.ull_time - utc_time.ull_time) / 10000000ULL);
      else
         *off = - (long) ((utc_time.ull_time - local_time.ull_time) / 10000000ULL);
+
+#endif
 
   (*Unlock_Task) ();
 }
@@ -928,7 +946,7 @@ __gnat_is_file_not_found_error (int errno_val) {
        * filesystem-specific variants of this error.
        */
       case S_dosFsLib_FILE_NOT_FOUND:
-#ifndef __RTP__
+#if ! defined (__RTP__) && ! defined (VTHREADS)
       case S_nfsLib_NFSERR_NOENT:
 #endif
 #endif

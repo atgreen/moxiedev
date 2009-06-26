@@ -59,8 +59,6 @@
 typedef struct minipool_node    Mnode;
 typedef struct minipool_fixup   Mfix;
 
-EXPORTED_CONST struct attribute_spec arm_attribute_table[];
-
 void (*arm_lang_output_object_attributes_hook)(void);
 
 /* Forward function declarations.  */
@@ -206,7 +204,42 @@ static const char *arm_invalid_return_type (const_tree t);
 static tree arm_promoted_type (const_tree t);
 static tree arm_convert_to_type (tree type, tree expr);
 static bool arm_scalar_mode_supported_p (enum machine_mode);
+
+/* Table of machine attributes.  */
+static const struct attribute_spec arm_attribute_table[] =
+{
+  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
+  /* Function calls made to this symbol must be done indirectly, because
+     it may lie outside of the 26 bit addressing range of a normal function
+     call.  */
+  { "long_call",    0, 0, false, true,  true,  NULL },
+  /* Whereas these functions are always known to reside within the 26 bit
+     addressing range.  */
+  { "short_call",   0, 0, false, true,  true,  NULL },
+  /* Interrupt Service Routines have special prologue and epilogue requirements.  */
+  { "isr",          0, 1, false, false, false, arm_handle_isr_attribute },
+  { "interrupt",    0, 1, false, false, false, arm_handle_isr_attribute },
+  { "naked",        0, 0, true,  false, false, arm_handle_fndecl_attribute },
+#ifdef ARM_PE
+  /* ARM/PE has three new attributes:
+     interfacearm - ?
+     dllexport - for exporting a function/variable that will live in a dll
+     dllimport - for importing a function/variable from a dll
 
+     Microsoft allows multiple declspecs in one __declspec, separating
+     them with spaces.  We do NOT support this.  Instead, use __declspec
+     multiple times.
+  */
+  { "dllimport",    0, 0, true,  false, false, NULL },
+  { "dllexport",    0, 0, true,  false, false, NULL },
+  { "interfacearm", 0, 0, true,  false, false, arm_handle_fndecl_attribute },
+#elif TARGET_DLLIMPORT_DECL_ATTRIBUTES
+  { "dllimport",    0, 0, false, false, false, handle_dll_attribute },
+  { "dllexport",    0, 0, false, false, false, handle_dll_attribute },
+  { "notshared",    0, 0, false, true, false, arm_handle_notshared_attribute },
+#endif
+  { NULL,           0, 0, false, false, false, NULL }
+};
 
 /* Initialize the GCC target structure.  */
 #if TARGET_DLLIMPORT_DECL_ATTRIBUTES
@@ -1612,6 +1645,15 @@ arm_override_options (void)
   if (TARGET_AAPCS_BASED
       && (arm_fp_model == ARM_FP_MODEL_FPA))
     error ("FPA is unsupported in the AAPCS");
+
+  if (TARGET_AAPCS_BASED)
+    {
+      if (TARGET_CALLER_INTERWORKING)
+	error ("AAPCS does not support -mcaller-super-interworking");
+      else
+	if (TARGET_CALLEE_INTERWORKING)
+	  error ("AAPCS does not support -mcallee-super-interworking");
+    }
 
   /* FPA and iWMMXt are incompatible because the insn encodings overlap.
      VFP and iWMMXt can theoretically coexist, but it's unlikely such silicon
@@ -3366,42 +3408,6 @@ arm_pr_long_calls_off (struct cpp_reader * pfile ATTRIBUTE_UNUSED)
   arm_pragma_long_calls = OFF;
 }
 
-/* Table of machine attributes.  */
-const struct attribute_spec arm_attribute_table[] =
-{
-  /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
-  /* Function calls made to this symbol must be done indirectly, because
-     it may lie outside of the 26 bit addressing range of a normal function
-     call.  */
-  { "long_call",    0, 0, false, true,  true,  NULL },
-  /* Whereas these functions are always known to reside within the 26 bit
-     addressing range.  */
-  { "short_call",   0, 0, false, true,  true,  NULL },
-  /* Interrupt Service Routines have special prologue and epilogue requirements.  */
-  { "isr",          0, 1, false, false, false, arm_handle_isr_attribute },
-  { "interrupt",    0, 1, false, false, false, arm_handle_isr_attribute },
-  { "naked",        0, 0, true,  false, false, arm_handle_fndecl_attribute },
-#ifdef ARM_PE
-  /* ARM/PE has three new attributes:
-     interfacearm - ?
-     dllexport - for exporting a function/variable that will live in a dll
-     dllimport - for importing a function/variable from a dll
-
-     Microsoft allows multiple declspecs in one __declspec, separating
-     them with spaces.  We do NOT support this.  Instead, use __declspec
-     multiple times.
-  */
-  { "dllimport",    0, 0, true,  false, false, NULL },
-  { "dllexport",    0, 0, true,  false, false, NULL },
-  { "interfacearm", 0, 0, true,  false, false, arm_handle_fndecl_attribute },
-#elif TARGET_DLLIMPORT_DECL_ATTRIBUTES
-  { "dllimport",    0, 0, false, false, false, handle_dll_attribute },
-  { "dllexport",    0, 0, false, false, false, handle_dll_attribute },
-  { "notshared",    0, 0, false, true, false, arm_handle_notshared_attribute },
-#endif
-  { NULL,           0, 0, false, false, false, NULL }
-};
-
 /* Handle an attribute requiring a FUNCTION_DECL;
    arguments as in struct attribute_spec.handler.  */
 static tree
@@ -14097,6 +14103,12 @@ arm_print_operand (FILE *stream, rtx x, int code)
 	default:
 	  gcc_assert (GET_CODE (x) != NEG);
 	  fputc ('#', stream);
+	  if (GET_CODE (x) == HIGH)
+	    {
+	      fputs (":lower16:", stream);
+	      x = XEXP (x, 0);
+	    }
+	    
 	  output_addr_const (stream, x);
 	  break;
 	}
@@ -19858,6 +19870,32 @@ arm_output_shift(rtx * operands, int set_flags)
     sprintf (pattern, "mov%%%c\t%%0, %%1%%S3", c);
   output_asm_insn (pattern, operands);
   return "";
+}
+
+/* Output a Thumb-1 casesi dispatch sequence.  */
+const char *
+thumb1_output_casesi (rtx *operands)
+{
+  rtx diff_vec = PATTERN (next_real_insn (operands[0]));
+  addr_diff_vec_flags flags;
+
+  gcc_assert (GET_CODE (diff_vec) == ADDR_DIFF_VEC);
+
+  flags = ADDR_DIFF_VEC_FLAGS (diff_vec);
+
+  switch (GET_MODE(diff_vec))
+    {
+    case QImode:
+      return (ADDR_DIFF_VEC_FLAGS (diff_vec).offset_unsigned ? 
+	      "bl\t%___gnu_thumb1_case_uqi" : "bl\t%___gnu_thumb1_case_sqi");
+    case HImode:
+      return (ADDR_DIFF_VEC_FLAGS (diff_vec).offset_unsigned ? 
+	      "bl\t%___gnu_thumb1_case_uhi" : "bl\t%___gnu_thumb1_case_shi");
+    case SImode:
+      return "bl\t%___gnu_thumb1_case_si";
+    default:
+      gcc_unreachable ();
+    }
 }
 
 /* Output a Thumb-2 casesi instruction.  */

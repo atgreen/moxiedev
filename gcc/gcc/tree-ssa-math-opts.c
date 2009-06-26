@@ -1125,9 +1125,14 @@ find_bswap (gimple stmt)
   struct symbolic_number n;
   tree source_expr;
 
+  /* The last parameter determines the depth search limit.  It usually
+     correlates directly to the number of bytes to be touched.  We
+     increase that number by one here in order to also cover signed ->
+     unsigned conversions of the src operand as can be seen in
+     libgcc.  */
   source_expr =  find_bswap_1 (stmt, &n,
 			       TREE_INT_CST_LOW (
-				 TYPE_SIZE_UNIT (gimple_expr_type (stmt))));
+				 TYPE_SIZE_UNIT (gimple_expr_type (stmt))) + 1);
 
   if (!source_expr)
     return NULL_TREE;
@@ -1159,6 +1164,7 @@ execute_optimize_bswap (void)
   basic_block bb;
   bool bswap32_p, bswap64_p;
   bool changed = false;
+  tree bswap32_type = NULL_TREE, bswap64_type = NULL_TREE;
 
   if (BITS_PER_UNIT != 8)
     return 0;
@@ -1176,6 +1182,20 @@ execute_optimize_bswap (void)
   if (!bswap32_p && !bswap64_p)
     return 0;
 
+  /* Determine the argument type of the builtins.  The code later on
+     assumes that the return and argument type are the same.  */
+  if (bswap32_p)
+    {
+      tree fndecl = built_in_decls[BUILT_IN_BSWAP32];
+      bswap32_type = TREE_VALUE (TYPE_ARG_TYPES (TREE_TYPE (fndecl)));
+    }
+
+  if (bswap64_p)
+    {
+      tree fndecl = built_in_decls[BUILT_IN_BSWAP64];
+      bswap64_type = TREE_VALUE (TYPE_ARG_TYPES (TREE_TYPE (fndecl)));
+    }
+
   FOR_EACH_BB (bb)
     {
       gimple_stmt_iterator gsi;
@@ -1183,7 +1203,8 @@ execute_optimize_bswap (void)
       for (gsi = gsi_after_labels (bb); !gsi_end_p (gsi); gsi_next (&gsi))
         {
 	  gimple stmt = gsi_stmt (gsi);
-	  tree bswap_src;
+	  tree bswap_src, bswap_type;
+	  tree bswap_tmp;
 	  tree fndecl = NULL_TREE;
 	  int type_size;
 	  gimple call;
@@ -1198,11 +1219,17 @@ execute_optimize_bswap (void)
 	    {
 	    case 32:
 	      if (bswap32_p)
-		fndecl = built_in_decls[BUILT_IN_BSWAP32];
+		{
+		  fndecl = built_in_decls[BUILT_IN_BSWAP32];
+		  bswap_type = bswap32_type;
+		}
 	      break;
 	    case 64:
 	      if (bswap64_p)
-		fndecl = built_in_decls[BUILT_IN_BSWAP64];
+		{
+		  fndecl = built_in_decls[BUILT_IN_BSWAP64];
+		  bswap_type = bswap64_type;
+		}
 	      break;
 	    default:
 	      continue;
@@ -1217,8 +1244,41 @@ execute_optimize_bswap (void)
 	    continue;
 
 	  changed = true;
-	  call = gimple_build_call (fndecl, 1, bswap_src);
-	  gimple_call_set_lhs (call, gimple_assign_lhs (stmt));
+
+	  bswap_tmp = bswap_src;
+
+	  /* Convert the src expression if necessary.  */
+	  if (!useless_type_conversion_p (TREE_TYPE (bswap_tmp), bswap_type))
+	    {
+	      gimple convert_stmt;
+
+	      bswap_tmp = create_tmp_var (bswap_type, "bswapsrc");
+	      add_referenced_var (bswap_tmp);
+	      bswap_tmp = make_ssa_name (bswap_tmp, NULL);
+
+	      convert_stmt = gimple_build_assign_with_ops (
+			       CONVERT_EXPR, bswap_tmp, bswap_src, NULL);
+	      gsi_insert_before (&gsi, convert_stmt, GSI_SAME_STMT);
+	    }
+
+	  call = gimple_build_call (fndecl, 1, bswap_tmp);
+
+	  bswap_tmp = gimple_assign_lhs (stmt);
+
+	  /* Convert the result if necessary.  */
+	  if (!useless_type_conversion_p (TREE_TYPE (bswap_tmp), bswap_type))
+	    {
+	      gimple convert_stmt;
+
+	      bswap_tmp = create_tmp_var (bswap_type, "bswapdst");
+	      add_referenced_var (bswap_tmp);
+	      bswap_tmp = make_ssa_name (bswap_tmp, NULL);
+	      convert_stmt = gimple_build_assign_with_ops (
+		               CONVERT_EXPR, gimple_assign_lhs (stmt), bswap_tmp, NULL);
+	      gsi_insert_after (&gsi, convert_stmt, GSI_SAME_STMT);
+	    }
+
+	  gimple_call_set_lhs (call, bswap_tmp);
 
 	  if (dump_file)
 	    {

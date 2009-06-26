@@ -464,7 +464,7 @@ package body Sem_Ch6 is
          if Is_Limited_Type (R_Type)
            and then Comes_From_Source (N)
            and then not In_Instance_Body
-           and then not OK_For_Limited_Init_In_05 (Expr)
+           and then not OK_For_Limited_Init_In_05 (R_Type, Expr)
          then
             --  Error in Ada 2005
 
@@ -1831,7 +1831,7 @@ package body Sem_Ch6 is
                 Body_Spec);
             end if;
 
-         elsif Style_Check
+         elsif Style_Check --  ??? incorrect use of Style_Check!
            and then Is_Overriding_Operation (Spec_Id)
          then
             pragma Assert (Unit_Declaration_Node (Body_Id) = N);
@@ -4372,6 +4372,59 @@ package body Sem_Ch6 is
 
       else
          return;
+      end if;
+
+      --  The overriding operation is type conformant with the overridden one,
+      --  but the names of the formals are not required to match. If the names
+      --  appear permuted in the overriding operation, this is a possible
+      --  source of confusion that is worth diagnosing. Controlling formals
+      --  often carry names that reflect the type, and it is not worthwhile
+      --  requiring that their names match.
+
+      if Present (Overridden_Subp)
+        and then Nkind (Subp) /= N_Defining_Operator_Symbol
+      then
+         declare
+            Form1 : Entity_Id;
+            Form2 : Entity_Id;
+
+         begin
+            Form1 := First_Formal (Subp);
+            Form2 := First_Formal (Overridden_Subp);
+
+            --  If the overriding operation is a synchronized operation, skip
+            --  the first parameter of the overridden operation, which is
+            --  implicit in the new one. If the operation is declared in the
+            --  body it is not primitive and all formals must match.
+
+            if Is_Concurrent_Type (Scope (Subp))
+              and then Is_Tagged_Type (Scope (Subp))
+              and then not Has_Completion (Scope (Subp))
+            then
+               Form2 := Next_Formal (Form2);
+            end if;
+
+            if Present (Form1) then
+               Form1 := Next_Formal (Form1);
+               Form2 := Next_Formal (Form2);
+            end if;
+
+            while Present (Form1) loop
+               if not Is_Controlling_Formal (Form1)
+                 and then Present (Next_Formal (Form2))
+                 and then Chars (Form1) = Chars (Next_Formal (Form2))
+               then
+                  Error_Msg_Node_2 := Alias (Overridden_Subp);
+                  Error_Msg_Sloc := Sloc (Error_Msg_Node_2);
+                  Error_Msg_NE ("& does not match corresponding formal of&#",
+                     Form1, Form1);
+                  exit;
+               end if;
+
+               Next_Formal (Form1);
+               Next_Formal (Form2);
+            end loop;
+         end;
       end if;
 
       if Present (Overridden_Subp) then
@@ -7784,10 +7837,35 @@ package body Sem_Ch6 is
       First_Out_Param : Entity_Id := Empty;
       --  Used for setting Is_Only_Out_Parameter
 
+      function Designates_From_With_Type (Typ : Entity_Id) return Boolean;
+      --  Determine whether an access type designates a type coming from a
+      --  limited view.
+
       function Is_Class_Wide_Default (D : Node_Id) return Boolean;
       --  Check whether the default has a class-wide type. After analysis the
       --  default has the type of the formal, so we must also check explicitly
       --  for an access attribute.
+
+      -------------------------------
+      -- Designates_From_With_Type --
+      -------------------------------
+
+      function Designates_From_With_Type (Typ : Entity_Id) return Boolean is
+         Desig : Entity_Id := Typ;
+
+      begin
+         if Is_Access_Type (Desig) then
+            Desig := Directly_Designated_Type (Desig);
+         end if;
+
+         if Is_Class_Wide_Type (Desig) then
+            Desig := Root_Type (Desig);
+         end if;
+
+         return
+           Ekind (Desig) = E_Incomplete_Type
+             and then From_With_Type (Desig);
+      end Designates_From_With_Type;
 
       ---------------------------
       -- Is_Class_Wide_Default --
@@ -7978,7 +8056,7 @@ package body Sem_Ch6 is
             --  is also class-wide.
 
             if Ekind (Formal_Type) = E_Anonymous_Access_Type
-              and then not From_With_Type (Formal_Type)
+              and then not Designates_From_With_Type (Formal_Type)
               and then Is_Class_Wide_Default (Default)
               and then not Is_Class_Wide_Type (Designated_Type (Formal_Type))
             then

@@ -1,7 +1,7 @@
 10
 
 dir
-148747
+148971
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/java/nio/channels
 svn://gcc.gnu.org/svn/gcc
 
@@ -505,40 +505,6 @@ has-props
 
 2520
 
-ByteChannel.class
-file
-
-
-
-
-2009-04-24T17:48:00.000000Z
-5d7ab9fbf65ad0cbb8266d7b3f80e4ef
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-211
-
 SelectableChannel.class
 file
 
@@ -572,6 +538,40 @@ has-props
 
 
 1112
+
+ByteChannel.class
+file
+
+
+
+
+2009-04-24T17:48:00.000000Z
+5d7ab9fbf65ad0cbb8266d7b3f80e4ef
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+211
 
 ClosedByInterruptException.class
 file

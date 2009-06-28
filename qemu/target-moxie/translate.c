@@ -85,6 +85,10 @@ static TCGv cc;
 #define REG(x) (cpu_gregs[x])
 #define SREG(x) (cpu_sregs[x])
 
+/* Extract the signed 10-bit offset from a 16-bit branch
+   instruction.  */
+#define INST2OFFSET(o) ((((signed short)((o & ((1<<10)-1))<<6))>>6)<<1)
+
 /* The code generator doesn't like lots of temporaries, so maintain our own
    cache for reuse within a function.  */
 #define MAX_TEMPS 8
@@ -224,11 +228,6 @@ void cpu_reset (CPUMOXIEState *env)
   tlb_flush(env, 1);
 }
 
-static always_inline void gen_save_pc(target_ulong pc)
-{
-  gen_op_save_pc(pc);
-}
-
 static always_inline void restore_cpu_state (CPUState *env, DisasContext *ctx)
 {
   ctx->saved_hflags = ctx->hflags;
@@ -281,7 +280,139 @@ static int decode_opc (CPUState *env, DisasContext *ctx)
       if (opcode & (1 << 14))
 	{
 	  /* This is a Form 3 instruction.  */
-	  /* We haven't implemented any yet.  */
+	  int inst = (opcode >> 10 & 0xf);
+
+	  switch (inst)
+	    {
+	    case 0x00: /* beq */
+	      {
+		int l1 = gen_new_label();
+		tcg_gen_brcondi_i32 (TCG_COND_EQ, cc, CC_EQ, l1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    case 0x01: /* bne */
+	      {
+		int l1 = gen_new_label();
+		tcg_gen_brcondi_i32 (TCG_COND_NE, cc, CC_EQ, l1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    case 0x02: /* blt */
+	      {
+		int l1 = gen_new_label();
+		TCGv t1 = new_tmp();
+		tcg_gen_andi_i32(t1, cc, CC_LT);
+		tcg_gen_brcondi_i32 (TCG_COND_EQ, t1, CC_LT, l1);
+		dead_tmp(t1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    case 0x03: /* bgt */
+	      {
+		int l1 = gen_new_label();
+		TCGv t1 = new_tmp();
+		tcg_gen_andi_i32(t1, cc, CC_GT);
+		tcg_gen_brcondi_i32 (TCG_COND_EQ, t1, CC_GT, l1);
+		dead_tmp(t1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    case 0x04: /* bltu */
+	      {
+		int l1 = gen_new_label();
+		TCGv t1 = new_tmp();
+		tcg_gen_andi_i32(t1, cc, CC_LTU);
+		tcg_gen_brcondi_i32 (TCG_COND_EQ, t1, CC_LTU, l1);
+		dead_tmp(t1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    case 0x05: /* bgtu */
+	      {
+		int l1 = gen_new_label();
+		TCGv t1 = new_tmp();
+		tcg_gen_andi_i32(t1, cc, CC_GTU);
+		tcg_gen_brcondi_i32 (TCG_COND_EQ, t1, CC_GTU, l1);
+		dead_tmp(t1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    case 0x06: /* bge */
+	      {
+		int l1 = gen_new_label();
+		TCGv t1 = new_tmp();
+		tcg_gen_andi_i32(t1, cc, CC_GT|CC_EQ);
+		tcg_gen_brcondi_i32 (TCG_COND_GT, t1, 0, l1);
+		dead_tmp(t1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    case 0x07: /* ble */
+	      {
+		int l1 = gen_new_label();
+		TCGv t1 = new_tmp();
+		tcg_gen_andi_i32(t1, cc, CC_LT|CC_EQ);
+		tcg_gen_brcondi_i32 (TCG_COND_GT, t1, 0, l1);
+		dead_tmp(t1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    case 0x08: /* bgeu */
+	      {
+		int l1 = gen_new_label();
+		TCGv t1 = new_tmp();
+		tcg_gen_andi_i32(t1, cc, CC_GTU|CC_EQ);
+		tcg_gen_brcondi_i32 (TCG_COND_GT, t1, 0, l1);
+		dead_tmp(t1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    case 0x09: /* bleu */
+	      {
+		int l1 = gen_new_label();
+		TCGv t1 = new_tmp();
+		tcg_gen_andi_i32(t1, cc, CC_LTU|CC_EQ);
+		tcg_gen_brcondi_i32 (TCG_COND_GT, t1, 0, l1);
+		dead_tmp(t1);
+		gen_goto_tb(ctx, 1, ctx->pc+2);
+		gen_set_label(l1);
+		gen_goto_tb(ctx, 0, INST2OFFSET(opcode)+ctx->pc);
+		ctx->bstate = BS_BRANCH;
+	      }
+	      break;
+	    default:
+	      printf("* 0x%x\tForm 3 ********** 0x%x\n", ctx->pc, inst); 
+	      cpu_dump_state(env, logfile, fprintf, 0);
+	      abort();
+	    }
 	}
       else
 	{
@@ -555,140 +686,6 @@ static int decode_opc (CPUState *env, DisasContext *ctx)
 	    gen_set_label(label_equal);
 	    tcg_gen_movi_i32(cc, CC_EQ);
 	    gen_set_label(label_done);
-	  }
-	  break;
-	case 0x0f: /* beq */
-	  {
-	    int l1 = gen_new_label();
-	    tcg_gen_brcondi_i32 (TCG_COND_EQ, cc, CC_EQ, l1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
-	  }
-	  break;
-	case 0x10: /* bne */
-	  {
-	    int l1 = gen_new_label();
-	    tcg_gen_brcondi_i32 (TCG_COND_NE, cc, CC_EQ, l1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
-	  }
-	  break;
-	case 0x11: /* blt */
-	  {
-	    int l1 = gen_new_label();
-	    TCGv t1 = new_tmp();
-	    tcg_gen_andi_i32(t1, cc, CC_LT);
-	    tcg_gen_brcondi_i32 (TCG_COND_EQ, t1, CC_LT, l1);
-	    dead_tmp(t1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
-	  }
-	  break;
-	case 0x12: /* bgt */
-	  {
-	    int l1 = gen_new_label();
-	    TCGv t1 = new_tmp();
-	    tcg_gen_andi_i32(t1, cc, CC_GT);
-	    tcg_gen_brcondi_i32 (TCG_COND_EQ, t1, CC_GT, l1);
-	    dead_tmp(t1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
-	  }
-	  break;
-	case 0x13: /* bltu */
-	  {
-	    int l1 = gen_new_label();
-	    TCGv t1 = new_tmp();
-	    tcg_gen_andi_i32(t1, cc, CC_LTU);
-	    tcg_gen_brcondi_i32 (TCG_COND_EQ, t1, CC_LTU, l1);
-	    dead_tmp(t1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
-	  }
-	  break;
-	case 0x14: /* bgtu */
-	  {
-	    int l1 = gen_new_label();
-	    TCGv t1 = new_tmp();
-	    tcg_gen_andi_i32(t1, cc, CC_GTU);
-	    tcg_gen_brcondi_i32 (TCG_COND_EQ, t1, CC_GTU, l1);
-	    dead_tmp(t1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
-	  }
-	  break;
-	case 0x15: /* bge */
-	  {
-	    int l1 = gen_new_label();
-	    TCGv t1 = new_tmp();
-	    tcg_gen_andi_i32(t1, cc, CC_GT|CC_EQ);
-	    tcg_gen_brcondi_i32 (TCG_COND_GT, t1, 0, l1);
-	    dead_tmp(t1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
-	  }
-	  break;
-	case 0x16: /* ble */
-	  {
-	    int l1 = gen_new_label();
-	    TCGv t1 = new_tmp();
-	    tcg_gen_andi_i32(t1, cc, CC_LT|CC_EQ);
-	    tcg_gen_brcondi_i32 (TCG_COND_GT, t1, 0, l1);
-	    dead_tmp(t1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
-	  }
-	  break;
-	case 0x17: /* bgeu */
-	  {
-	    int l1 = gen_new_label();
-	    TCGv t1 = new_tmp();
-	    tcg_gen_andi_i32(t1, cc, CC_GTU|CC_EQ);
-	    tcg_gen_brcondi_i32 (TCG_COND_GT, t1, 0, l1);
-	    dead_tmp(t1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
-	  }
-	  break;
-	case 0x18: /* bleu */
-	  {
-	    int l1 = gen_new_label();
-	    TCGv t1 = new_tmp();
-	    tcg_gen_andi_i32(t1, cc, CC_LTU|CC_EQ);
-	    tcg_gen_brcondi_i32 (TCG_COND_GT, t1, 0, l1);
-	    dead_tmp(t1);
-	    gen_goto_tb(ctx, 1, ctx->pc+6);
-	    gen_set_label(l1);
-	    gen_goto_tb(ctx, 0, ldl_code(ctx->pc+2));
-	    ctx->bstate = BS_BRANCH;
-	    length = 6;
 	  }
 	  break;
 	case 0x19: /* jsr */
@@ -966,61 +963,6 @@ static int decode_opc (CPUState *env, DisasContext *ctx)
 	    length = 6;
 	  }
 	  break;
-#if 0
-	case 0x31: /* div.l */
-	  {
-	    int a = (opcode >> 4) & 0xf;
-	    int b = opcode & 0xf;
-
-	    TCGv t1 = new_tmp();
-	    TCGv t2 = new_tmp();
-	    TCGv code = new_tmp();
-	    TCGv result = new_tmp();
-
-	    int l1 = gen_new_label();
-	    int l2 = gen_new_label();
-	    tcg_gen_brcondi_i32 (TCG_COND_EQ, REG(b), 0, l1);
-
-	    tcg_gen_div_i32(result, REG(a), REG(b));
-	    tcg_gen_mov_i32(REG(a), result);
-	    tcg_gen_br(l2);
-
-	    gen_set_label(l1);
-	    
-	    /* Divide by zero */
-	    /* Load the stack pointer into T0.  */
-	    tcg_gen_movi_i32(code, MOXIE_EX_DIV0);
-	    tcg_gen_mov_i32(SREG(2), code);
-
-	    tcg_gen_movi_i32(t1, ctx->pc+2);
-
-	    /* Make space for the static chain and return address.  */
-	    tcg_gen_subi_i32(t2, REG(1), 4);
-    	    tcg_gen_qemu_st32(code, t2, ctx->memidx);
-
-	    tcg_gen_subi_i32(REG(1), t2, 4);
-    	    tcg_gen_qemu_st32(t1, REG(1), ctx->memidx);
-	    
-	    /* Push the current frame pointer.  */
-	    tcg_gen_subi_i32(t2, REG(1), 4);
-	    tcg_gen_mov_i32(REG(1), t2);
-	    tcg_gen_qemu_st32(REG(0), REG(1), ctx->memidx);
-			      
-	    /* Set the pc and $fp.  */
-	    tcg_gen_mov_i32(REG(0), REG(1));
-	    tcg_gen_mov_i32(cpu_pc, SREG(1));
-	    dead_tmp(t1);
-	    dead_tmp(t2);
-	    dead_tmp(code);
-	    tcg_gen_exit_tb(0);
-	    ctx->bstate = BS_BRANCH;
-
-	    gen_set_label(l2);
-
-	    dead_tmp(result);
-	  }
-	  break;
-#else
 	case 0x31: /* div.l */
 	  {
 	    int a = (opcode >> 4) & 0xf;
@@ -1032,7 +974,6 @@ static int decode_opc (CPUState *env, DisasContext *ctx)
 	    dead_tmp(result);
 	  }
 	  break;
-#endif
 	case 0x32: /* udiv.l */
 	  {
 	    int a = (opcode >> 4) & 0xf;
@@ -1066,13 +1007,9 @@ static int decode_opc (CPUState *env, DisasContext *ctx)
 	    dead_tmp(result);
 	  }
 	  break;
-#if 0
 	case 0x35: /* brk */
-	  TRACE("brk");
-	  cpu.asregs.exception = SIGTRAP;
-	  pc -= 2; /* Adjust pc */
+	  gen_helper_debug();
 	  break;
-#endif
 	case 0x36: /* ldo.b */
 	  {
 	    int a = (opcode >> 4) & 0xf;

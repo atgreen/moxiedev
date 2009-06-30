@@ -214,6 +214,7 @@ static struct group ** section_headers_groups;
 #define DISASS_DUMP	(1 << 1)	/* The -i command line switch.  */
 #define DEBUG_DUMP	(1 << 2)	/* The -w command line switch.  */
 #define STRING_DUMP     (1 << 3)	/* The -p command line switch.  */
+#define RELOC_DUMP      (1 << 4)	/* The -R command line switch.  */
 
 typedef unsigned char dump_type;
 
@@ -2844,11 +2845,12 @@ static struct option options[] =
   {"unwind",	       no_argument, 0, 'u'},
   {"archive-index",    no_argument, 0, 'c'},
   {"hex-dump",	       required_argument, 0, 'x'},
-  {"debug-dump",       optional_argument, 0, OPTION_DEBUG_DUMP},
+  {"relocated-dump",   required_argument, 0, 'R'},
   {"string-dump",      required_argument, 0, 'p'},
 #ifdef SUPPORT_DISASSEMBLY
   {"instruction-dump", required_argument, 0, 'i'},
 #endif
+  {"debug-dump",       optional_argument, 0, OPTION_DEBUG_DUMP},
 
   {"version",	       no_argument, 0, 'v'},
   {"wide",	       no_argument, 0, 'W'},
@@ -2885,6 +2887,8 @@ usage (FILE * stream)
                          Dump the contents of section <number|name> as bytes\n\
   -p --string-dump=<number|name>\n\
                          Dump the contents of section <number|name> as strings\n\
+  -R --relocated-dump=<number|name>\n\
+                         Dump the contents of section <number|name> as relocated bytes\n\
   -w[lLiaprmfFsoR] or\n\
   --debug-dump[=rawline,=decodedline,=info,=abbrev,=pubnames,=aranges,=macro,=frames,=str,=loc,=Ranges]\n\
                          Display the contents of DWARF2 debug sections\n"));
@@ -2961,6 +2965,22 @@ request_dump_byname (const char * section, dump_type type)
   dump_sects_byname = new_request;
 }
 
+static inline void
+request_dump (dump_type type)
+{
+  int section;
+  char * cp;
+
+  do_dump++;
+  section = strtoul (optarg, & cp, 0);
+
+  if (! *cp && section >= 0)
+    request_dump_bynumber (section, type);
+  else
+    request_dump_byname (optarg, type);
+}
+
+
 static void
 parse_args (int argc, char ** argv)
 {
@@ -2970,11 +2990,8 @@ parse_args (int argc, char ** argv)
     usage (stderr);
 
   while ((c = getopt_long
-	  (argc, argv, "ADHINSVWacdeghi:lnp:rstuvw::x:", options, NULL)) != EOF)
+	  (argc, argv, "ADHINR:SVWacdeghi:lnp:rstuvw::x:", options, NULL)) != EOF)
     {
-      char * cp;
-      int section;
-
       switch (c)
 	{
 	case 0:
@@ -3048,20 +3065,13 @@ parse_args (int argc, char ** argv)
 	  do_archive_index++;
 	  break;
 	case 'x':
-	  do_dump++;
-	  section = strtoul (optarg, & cp, 0);
-	  if (! *cp && section >= 0)
-	    request_dump_bynumber (section, HEX_DUMP);
-	  else
-	    request_dump_byname (optarg, HEX_DUMP);
+	  request_dump (HEX_DUMP);
 	  break;
 	case 'p':
-	  do_dump++;
-	  section = strtoul (optarg, & cp, 0);
-	  if (! *cp && section >= 0)
-	    request_dump_bynumber (section, STRING_DUMP);
-	  else
-	    request_dump_byname (optarg, STRING_DUMP);
+	  request_dump (STRING_DUMP);
+	  break;
+	case 'R':
+	  request_dump (RELOC_DUMP);
 	  break;
 	case 'w':
 	  do_dump++;
@@ -3088,12 +3098,8 @@ parse_args (int argc, char ** argv)
 	  break;
 #ifdef SUPPORT_DISASSEMBLY
 	case 'i':
-	  do_dump++;
-	  section = strtoul (optarg, & cp, 0);
-	  if (! *cp && section >= 0)
-	    request_dump_bynumber (section, DISASS_DUMP);
-	  else
-	    request_dump_byname (optarg, DISASS_DUMP);
+	  request_dump (DISASS_DUMP);
+	  break;
 #endif
 	case 'v':
 	  print_version (program_name);
@@ -6436,6 +6442,7 @@ get_ver_flags (unsigned int flags)
 }
 
 /* Display the contents of the version sections.  */
+
 static int
 process_version_sections (FILE * file)
 {
@@ -7758,190 +7765,57 @@ process_syminfo (FILE * file ATTRIBUTE_UNUSED)
   return 1;
 }
 
-#ifdef SUPPORT_DISASSEMBLY
-static int
-disassemble_section (Elf_Internal_Shdr * section, FILE * file)
+/* Check to see if the given reloc needs to be handled in a target specific
+   manner.  If so then process the reloc and return TRUE otherwise return
+   FALSE.  */
+
+static bfd_boolean
+target_specific_reloc_handling (Elf_Internal_Rela * reloc,
+				unsigned char *     start,
+				Elf_Internal_Sym *  symtab)
 {
-  printf (_("\nAssembly dump of section %s\n"),
-	  SECTION_NAME (section));
+  unsigned int reloc_type = get_reloc_type (reloc->r_info);
 
-  /* XXX -- to be done --- XXX */
-
-  return 1;
-}
-#endif
-
-static int
-dump_section_as_strings (Elf_Internal_Shdr * section, FILE * file)
-{
-  Elf_Internal_Shdr * relsec;
-  bfd_size_type num_bytes;
-  bfd_vma addr;
-  char * data;
-  char * end;
-  char * start;
-  char * name = SECTION_NAME (section);
-  bfd_boolean some_strings_shown;
-
-  num_bytes = section->sh_size;
-
-  if (num_bytes == 0 || section->sh_type == SHT_NOBITS)
+  switch (elf_header.e_machine)
     {
-      printf (_("\nSection '%s' has no data to dump.\n"), name);
-      return 0;
+    case EM_MN10300:
+    case EM_CYGNUS_MN10300:
+      {
+	static Elf_Internal_Sym * saved_sym = NULL;
+
+	switch (reloc_type)
+	  {
+	  case 34: /* R_MN10300_ALIGN */
+	    return TRUE;
+	  case 33: /* R_MN10300_SYM_DIFF */
+	    saved_sym = symtab + get_reloc_symindex (reloc->r_info);
+	    return TRUE;
+	  case 1: /* R_MN10300_32 */
+	  case 2: /* R_MN10300_16 */
+	    if (saved_sym != NULL)
+	      {
+		bfd_vma value;
+
+		value = reloc->r_addend
+		  + (symtab[get_reloc_symindex (reloc->r_info)].st_value
+		     - saved_sym->st_value);
+
+		byte_put (start + reloc->r_offset, value, reloc_type == 1 ? 4 : 2);
+
+		saved_sym = NULL;
+		return TRUE;
+	      }
+	    break;
+	  default:
+	    if (saved_sym != NULL)
+	      error (_("Unhandled MN10300 reloc type found after SYM_DIFF reloc"));
+	    break;
+	  }
+	break;
+      }
     }
 
-  addr = section->sh_addr;
-
-  start = get_data (NULL, file, section->sh_offset, 1, num_bytes,
-		    _("section data"));
-  if (!start)
-    return 0;
-
-  printf (_("\nString dump of section '%s':\n"), name);
-
-  /* If the section being dumped has relocations against it the user might
-     be expecting these relocations to have been applied.  Check for this
-     case and issue a warning message in order to avoid confusion.
-     FIXME: Maybe we ought to have an option that dumps a section with
-     relocs applied ?  */
-  for (relsec = section_headers;
-       relsec < section_headers + elf_header.e_shnum;
-       ++relsec)
-    {
-      if ((relsec->sh_type != SHT_RELA && relsec->sh_type != SHT_REL)
-	  || relsec->sh_info >= elf_header.e_shnum
-	  || section_headers + relsec->sh_info != section
-	  || relsec->sh_size == 0
-	  || relsec->sh_link >= elf_header.e_shnum)
-	continue;
-
-      printf (_("  Note: This section has relocations against it, but these have NOT been applied to this dump.\n"));
-      break;
-    }
-
-  data = start;
-  end  = start + num_bytes;
-  some_strings_shown = FALSE;
-
-  while (data < end)
-    {
-      while (!ISPRINT (* data))
-	if (++ data >= end)
-	  break;
-
-      if (data < end)
-	{
-#ifndef __MSVCRT__
-	  printf ("  [%6tx]  %s\n", data - start, data);
-#else
-	  printf ("  [%6Ix]  %s\n", (size_t) (data - start), data);
-#endif
-	  data += strlen (data);
-	  some_strings_shown = TRUE;
-	}
-    }
-
-  if (! some_strings_shown)
-    printf (_("  No strings found in this section."));
-
-  free (start);
-
-  putchar ('\n');
-  return 1;
-}
-
-
-static int
-dump_section_as_bytes (Elf_Internal_Shdr * section, FILE * file)
-{
-  Elf_Internal_Shdr * relsec;
-  bfd_size_type bytes;
-  bfd_vma addr;
-  unsigned char * data;
-  unsigned char * start;
-
-  bytes = section->sh_size;
-
-  if (bytes == 0 || section->sh_type == SHT_NOBITS)
-    {
-      printf (_("\nSection '%s' has no data to dump.\n"),
-	      SECTION_NAME (section));
-      return 0;
-    }
-  else
-    printf (_("\nHex dump of section '%s':\n"), SECTION_NAME (section));
-
-  addr = section->sh_addr;
-
-  start = get_data (NULL, file, section->sh_offset, 1, bytes,
-		    _("section data"));
-  if (!start)
-    return 0;
-
-  /* If the section being dumped has relocations against it the user might
-     be expecting these relocations to have been applied.  Check for this
-     case and issue a warning message in order to avoid confusion.
-     FIXME: Maybe we ought to have an option that dumps a section with
-     relocs applied ?  */
-  for (relsec = section_headers;
-       relsec < section_headers + elf_header.e_shnum;
-       ++relsec)
-    {
-      if ((relsec->sh_type != SHT_RELA && relsec->sh_type != SHT_REL)
-	  || relsec->sh_info >= elf_header.e_shnum
-	  || section_headers + relsec->sh_info != section
-	  || relsec->sh_size == 0
-	  || relsec->sh_link >= elf_header.e_shnum)
-	continue;
-
-      printf (_(" NOTE: This section has relocations against it, but these have NOT been applied to this dump.\n"));
-      break;
-    }
-
-  data = start;
-
-  while (bytes)
-    {
-      int j;
-      int k;
-      int lbytes;
-
-      lbytes = (bytes > 16 ? 16 : bytes);
-
-      printf ("  0x%8.8lx ", (unsigned long) addr);
-
-      for (j = 0; j < 16; j++)
-	{
-	  if (j < lbytes)
-	    printf ("%2.2x", data[j]);
-	  else
-	    printf ("  ");
-
-	  if ((j & 3) == 3)
-	    printf (" ");
-	}
-
-      for (j = 0; j < lbytes; j++)
-	{
-	  k = data[j];
-	  if (k >= ' ' && k < 0x7f)
-	    printf ("%c", k);
-	  else
-	    printf (".");
-	}
-
-      putchar ('\n');
-
-      data  += lbytes;
-      addr  += lbytes;
-      bytes -= lbytes;
-    }
-
-  free (start);
-
-  putchar ('\n');
-  return 1;
+  return FALSE;
 }
 
 /* Returns TRUE iff RELOC_TYPE is a 32-bit absolute RELA relocation used in
@@ -8129,8 +8003,8 @@ is_32bit_pcrel_reloc (unsigned int reloc_type)
       /* Do not abort or issue an error message here.  Not all targets use
 	 pc-relative 32-bit relocs in their DWARF debug information and we
 	 have already tested for target coverage in is_32bit_abs_reloc.  A
-	 more helpful warning message will be generated by
-	 debug_apply_relocations anyway, so just return.  */
+	 more helpful warning message will be generated by apply_relocations
+	 anyway, so just return.  */
       return FALSE;
     }
 }
@@ -8264,6 +8138,342 @@ is_none_reloc (unsigned int reloc_type)
   return FALSE;
 }
 
+/* Apply relocations to a section.
+   Note: So far support has been added only for those relocations
+   which can be found in debug sections.
+   FIXME: Add support for more relocations ?  */
+
+static void
+apply_relocations (void * file,
+		   Elf_Internal_Shdr * section,
+		   unsigned char * start)
+{
+  Elf_Internal_Shdr * relsec;
+  unsigned char * end = start + section->sh_size;
+
+  if (elf_header.e_type != ET_REL)
+    return;
+
+  /* Find the reloc section associated with the section.  */
+  for (relsec = section_headers;
+       relsec < section_headers + elf_header.e_shnum;
+       ++relsec)
+    {
+      bfd_boolean is_rela;
+      unsigned long num_relocs;
+      Elf_Internal_Rela * relocs;
+      Elf_Internal_Rela * rp;
+      Elf_Internal_Shdr * symsec;
+      Elf_Internal_Sym * symtab;
+      Elf_Internal_Sym * sym;
+
+      if ((relsec->sh_type != SHT_RELA && relsec->sh_type != SHT_REL)
+	  || relsec->sh_info >= elf_header.e_shnum
+	  || section_headers + relsec->sh_info != section
+	  || relsec->sh_size == 0
+	  || relsec->sh_link >= elf_header.e_shnum)
+	continue;
+
+      is_rela = relsec->sh_type == SHT_RELA;
+
+      if (is_rela)
+	{
+	  if (!slurp_rela_relocs (file, relsec->sh_offset, relsec->sh_size,
+				  & relocs, & num_relocs))
+	    return;
+	}
+      else
+	{
+	  if (!slurp_rel_relocs (file, relsec->sh_offset, relsec->sh_size,
+				 & relocs, & num_relocs))
+	    return;
+	}
+
+      /* SH uses RELA but uses in place value instead of the addend field.  */
+      if (elf_header.e_machine == EM_SH)
+	is_rela = FALSE;
+
+      symsec = section_headers + relsec->sh_link;
+      symtab = GET_ELF_SYMBOLS (file, symsec);
+
+      for (rp = relocs; rp < relocs + num_relocs; ++rp)
+	{
+	  bfd_vma         addend;
+	  unsigned int    reloc_type;
+	  unsigned int    reloc_size;
+	  unsigned char * loc;
+
+	  reloc_type = get_reloc_type (rp->r_info);
+
+	  if (target_specific_reloc_handling (rp, start, symtab))
+	    continue;
+	  else if (is_none_reloc (reloc_type))
+	    continue;
+	  else if (is_32bit_abs_reloc (reloc_type)
+		   || is_32bit_pcrel_reloc (reloc_type))
+	    reloc_size = 4;
+	  else if (is_64bit_abs_reloc (reloc_type)
+		   || is_64bit_pcrel_reloc (reloc_type))
+	    reloc_size = 8;
+	  else if (is_16bit_abs_reloc (reloc_type))
+	    reloc_size = 2;
+	  else
+	    {
+	      warn (_("unable to apply unsupported reloc type %d to section %s\n"),
+		    reloc_type, SECTION_NAME (section));
+	      continue;
+	    }
+
+	  loc = start + rp->r_offset;
+	  if ((loc + reloc_size) > end)
+	    {
+	      warn (_("skipping invalid relocation offset 0x%lx in section %s\n"),
+		    (unsigned long) rp->r_offset,
+		    SECTION_NAME (section));
+	      continue;
+	    }
+
+	  sym = symtab + get_reloc_symindex (rp->r_info);
+
+	  /* If the reloc has a symbol associated with it,
+	     make sure that it is of an appropriate type.
+
+	     Relocations against symbols without type can happen.
+	     Gcc -feliminate-dwarf2-dups may generate symbols
+	     without type for debug info.
+
+	     Icc generates relocations against function symbols
+	     instead of local labels.
+
+	     Relocations against object symbols can happen, eg when
+	     referencing a global array.  For an example of this see
+	     the _clz.o binary in libgcc.a.  */
+	  if (sym != symtab
+	      && ELF_ST_TYPE (sym->st_info) > STT_SECTION)
+	    {
+	      warn (_("skipping unexpected symbol type %s in %ld'th relocation in section %s\n"),
+		    get_symbol_type (ELF_ST_TYPE (sym->st_info)),
+		    (long int)(rp - relocs),
+		    SECTION_NAME (relsec));
+	      continue;
+	    }
+
+	  addend = is_rela ? rp->r_addend : byte_get (loc, reloc_size);
+
+	  if (is_32bit_pcrel_reloc (reloc_type)
+	      || is_64bit_pcrel_reloc (reloc_type))
+	    {
+	      /* On HPPA, all pc-relative relocations are biased by 8.  */
+	      if (elf_header.e_machine == EM_PARISC)
+		addend -= 8;
+	      byte_put (loc, (addend + sym->st_value) - rp->r_offset,
+		        reloc_size);
+	    }
+	  else
+	    byte_put (loc, addend + sym->st_value, reloc_size);
+	}
+
+      free (symtab);
+      free (relocs);
+      break;
+    }
+}
+
+#ifdef SUPPORT_DISASSEMBLY
+static int
+disassemble_section (Elf_Internal_Shdr * section, FILE * file)
+{
+  printf (_("\nAssembly dump of section %s\n"),
+	  SECTION_NAME (section));
+
+  /* XXX -- to be done --- XXX */
+
+  return 1;
+}
+#endif
+
+/* Reads in the contents of SECTION from FILE, returning a pointer
+   to a malloc'ed buffer or NULL if something went wrong.  */
+
+static char *
+get_section_contents (Elf_Internal_Shdr * section, FILE * file)
+{
+  bfd_size_type num_bytes;
+
+  num_bytes = section->sh_size;
+
+  if (num_bytes == 0 || section->sh_type == SHT_NOBITS)
+    {
+      printf (_("\nSection '%s' has no data to dump.\n"),
+	      SECTION_NAME (section));
+      return NULL;
+    }
+
+  return get_data (NULL, file, section->sh_offset, 1, num_bytes,
+		   _("section contents"));
+}
+
+		      
+static void
+dump_section_as_strings (Elf_Internal_Shdr * section, FILE * file)
+{
+  Elf_Internal_Shdr * relsec;
+  bfd_size_type num_bytes;
+  bfd_vma addr;
+  char * data;
+  char * end;
+  char * start;
+  char * name = SECTION_NAME (section);
+  bfd_boolean some_strings_shown;
+
+  start = get_section_contents (section, file);
+  if (start == NULL)
+    return;
+
+  printf (_("\nString dump of section '%s':\n"), name);
+
+  /* If the section being dumped has relocations against it the user might
+     be expecting these relocations to have been applied.  Check for this
+     case and issue a warning message in order to avoid confusion.
+     FIXME: Maybe we ought to have an option that dumps a section with
+     relocs applied ?  */
+  for (relsec = section_headers;
+       relsec < section_headers + elf_header.e_shnum;
+       ++relsec)
+    {
+      if ((relsec->sh_type != SHT_RELA && relsec->sh_type != SHT_REL)
+	  || relsec->sh_info >= elf_header.e_shnum
+	  || section_headers + relsec->sh_info != section
+	  || relsec->sh_size == 0
+	  || relsec->sh_link >= elf_header.e_shnum)
+	continue;
+
+      printf (_("  Note: This section has relocations against it, but these have NOT been applied to this dump.\n"));
+      break;
+    }
+
+  num_bytes = section->sh_size;
+  addr = section->sh_addr;
+  data = start;
+  end  = start + num_bytes;
+  some_strings_shown = FALSE;
+
+  while (data < end)
+    {
+      while (!ISPRINT (* data))
+	if (++ data >= end)
+	  break;
+
+      if (data < end)
+	{
+#ifndef __MSVCRT__
+	  printf ("  [%6tx]  %s\n", data - start, data);
+#else
+	  printf ("  [%6Ix]  %s\n", (size_t) (data - start), data);
+#endif
+	  data += strlen (data);
+	  some_strings_shown = TRUE;
+	}
+    }
+
+  if (! some_strings_shown)
+    printf (_("  No strings found in this section."));
+
+  free (start);
+
+  putchar ('\n');
+}
+
+static void
+dump_section_as_bytes (Elf_Internal_Shdr * section,
+		       FILE * file,
+		       bfd_boolean relocate)
+{
+  Elf_Internal_Shdr * relsec;
+  bfd_size_type bytes;
+  bfd_vma addr;
+  unsigned char * data;
+  unsigned char * start;
+
+  start = (unsigned char *) get_section_contents (section, file);
+  if (start == NULL)
+    return;
+
+  printf (_("\nHex dump of section '%s':\n"), SECTION_NAME (section));
+
+  if (relocate)
+    {
+      apply_relocations (file, section, start);
+    }
+  else
+    {
+      /* If the section being dumped has relocations against it the user might
+	 be expecting these relocations to have been applied.  Check for this
+	 case and issue a warning message in order to avoid confusion.
+	 FIXME: Maybe we ought to have an option that dumps a section with
+	 relocs applied ?  */
+      for (relsec = section_headers;
+	   relsec < section_headers + elf_header.e_shnum;
+	   ++relsec)
+	{
+	  if ((relsec->sh_type != SHT_RELA && relsec->sh_type != SHT_REL)
+	      || relsec->sh_info >= elf_header.e_shnum
+	      || section_headers + relsec->sh_info != section
+	      || relsec->sh_size == 0
+	      || relsec->sh_link >= elf_header.e_shnum)
+	    continue;
+
+	  printf (_(" NOTE: This section has relocations against it, but these have NOT been applied to this dump.\n"));
+	  break;
+	}
+    }
+
+  addr = section->sh_addr;
+  bytes = section->sh_size;
+  data = start;
+
+  while (bytes)
+    {
+      int j;
+      int k;
+      int lbytes;
+
+      lbytes = (bytes > 16 ? 16 : bytes);
+
+      printf ("  0x%8.8lx ", (unsigned long) addr);
+
+      for (j = 0; j < 16; j++)
+	{
+	  if (j < lbytes)
+	    printf ("%2.2x", data[j]);
+	  else
+	    printf ("  ");
+
+	  if ((j & 3) == 3)
+	    printf (" ");
+	}
+
+      for (j = 0; j < lbytes; j++)
+	{
+	  k = data[j];
+	  if (k >= ' ' && k < 0x7f)
+	    printf ("%c", k);
+	  else
+	    printf (".");
+	}
+
+      putchar ('\n');
+
+      data  += lbytes;
+      addr  += lbytes;
+      bytes -= lbytes;
+    }
+
+  free (start);
+
+  putchar ('\n');
+}
+
 /* Uncompresses a section that was compressed using zlib, in place.
    This is a copy of bfd_uncompress_section_contents, in bfd/compress.c  */
 
@@ -8337,143 +8547,6 @@ uncompress_section_contents (unsigned char ** buffer, dwarf_size_type * size)
 #endif  /* HAVE_ZLIB_H */
 }
 
-/* Apply relocations to a debug section.  */
-
-static void
-debug_apply_relocations (void * file,
-			 Elf_Internal_Shdr * section,
-			 unsigned char * start)
-{
-  Elf_Internal_Shdr * relsec;
-  unsigned char * end = start + section->sh_size;
-
-  if (elf_header.e_type != ET_REL)
-    return;
-
-  /* Find the reloc section associated with the debug section.  */
-  for (relsec = section_headers;
-       relsec < section_headers + elf_header.e_shnum;
-       ++relsec)
-    {
-      bfd_boolean is_rela;
-      unsigned long num_relocs;
-      Elf_Internal_Rela * relocs;
-      Elf_Internal_Rela * rp;
-      Elf_Internal_Shdr * symsec;
-      Elf_Internal_Sym * symtab;
-      Elf_Internal_Sym * sym;
-
-      if ((relsec->sh_type != SHT_RELA && relsec->sh_type != SHT_REL)
-	  || relsec->sh_info >= elf_header.e_shnum
-	  || section_headers + relsec->sh_info != section
-	  || relsec->sh_size == 0
-	  || relsec->sh_link >= elf_header.e_shnum)
-	continue;
-
-      is_rela = relsec->sh_type == SHT_RELA;
-
-      if (is_rela)
-	{
-	  if (!slurp_rela_relocs (file, relsec->sh_offset, relsec->sh_size,
-				  & relocs, & num_relocs))
-	    return;
-	}
-      else
-	{
-	  if (!slurp_rel_relocs (file, relsec->sh_offset, relsec->sh_size,
-				 & relocs, & num_relocs))
-	    return;
-	}
-
-      /* SH uses RELA but uses in place value instead of the addend field.  */
-      if (elf_header.e_machine == EM_SH)
-	is_rela = FALSE;
-
-      symsec = section_headers + relsec->sh_link;
-      symtab = GET_ELF_SYMBOLS (file, symsec);
-
-      for (rp = relocs; rp < relocs + num_relocs; ++rp)
-	{
-	  bfd_vma         addend;
-	  unsigned int    reloc_type;
-	  unsigned int    reloc_size;
-	  unsigned char * loc;
-
-	  reloc_type = get_reloc_type (rp->r_info);
-
-	  if (is_none_reloc (reloc_type))
-	    continue;
-
-	  if (is_32bit_abs_reloc (reloc_type)
-	      || is_32bit_pcrel_reloc (reloc_type))
-	    reloc_size = 4;
-	  else if (is_64bit_abs_reloc (reloc_type)
-		   || is_64bit_pcrel_reloc (reloc_type))
-	    reloc_size = 8;
-	  else if (is_16bit_abs_reloc (reloc_type))
-	    reloc_size = 2;
-	  else
-	    {
-	      warn (_("unable to apply unsupported reloc type %d to section %s\n"),
-		    reloc_type, SECTION_NAME (section));
-	      continue;
-	    }
-
-	  loc = start + rp->r_offset;
-	  if ((loc + reloc_size) > end)
-	    {
-	      warn (_("skipping invalid relocation offset 0x%lx in section %s\n"),
-		    (unsigned long) rp->r_offset,
-		    SECTION_NAME (section));
-	      continue;
-	    }
-
-	  sym = symtab + get_reloc_symindex (rp->r_info);
-
-	  /* If the reloc has a symbol associated with it,
-	     make sure that it is of an appropriate type.
-
-	     Relocations against symbols without type can happen.
-	     Gcc -feliminate-dwarf2-dups may generate symbols
-	     without type for debug info.
-
-	     Icc generates relocations against function symbols
-	     instead of local labels.
-
-	     Relocations against object symbols can happen, eg when
-	     referencing a global array.  For an example of this see
-	     the _clz.o binary in libgcc.a.  */
-	  if (sym != symtab
-	      && ELF_ST_TYPE (sym->st_info) > STT_SECTION)
-	    {
-	      warn (_("skipping unexpected symbol type %s in %ld'th relocation in section %s\n"),
-		    get_symbol_type (ELF_ST_TYPE (sym->st_info)),
-		    (long int)(rp - relocs),
-		    SECTION_NAME (relsec));
-	      continue;
-	    }
-
-	  addend = is_rela ? rp->r_addend : byte_get (loc, reloc_size);
-
-	  if (is_32bit_pcrel_reloc (reloc_type)
-	      || is_64bit_pcrel_reloc (reloc_type))
-	    {
-	      /* On HPPA, all pc-relative relocations are biased by 8.  */
-	      if (elf_header.e_machine == EM_PARISC)
-		addend -= 8;
-	      byte_put (loc, (addend + sym->st_value) - rp->r_offset,
-		        reloc_size);
-	    }
-	  else
-	    byte_put (loc, addend + sym->st_value, reloc_size);
-	}
-
-      free (symtab);
-      free (relocs);
-      break;
-    }
-}
-
 static int
 load_specific_debug_section (enum dwarf_section_display_enum debug,
 			     Elf_Internal_Shdr * sec, void * file)
@@ -8501,7 +8574,7 @@ load_specific_debug_section (enum dwarf_section_display_enum debug,
       return 0;
 
   if (debug_displays [debug].relocate)
-    debug_apply_relocations (file, sec, section->start);
+    apply_relocations (file, sec, section->start);
 
   return 1;
 }
@@ -8650,13 +8723,16 @@ process_section_contents (FILE * file)
 	disassemble_section (section, file);
 #endif
       if (dump_sects[i] & HEX_DUMP)
-	dump_section_as_bytes (section, file);
+	dump_section_as_bytes (section, file, FALSE);
 
-      if (dump_sects[i] & DEBUG_DUMP)
-	display_debug_section (section, file);
+      if (dump_sects[i] & RELOC_DUMP)
+	dump_section_as_bytes (section, file, TRUE);
 
       if (dump_sects[i] & STRING_DUMP)
 	dump_section_as_strings (section, file);
+
+      if (dump_sects[i] & DEBUG_DUMP)
+	display_debug_section (section, file);
     }
 
   /* Check to see if the user requested a

@@ -13,7 +13,6 @@
 /hidden2.s/1.1/Fri May 29 23:30:12 2009//
 /hidden3.d/1.1/Fri May 29 23:30:12 2009//
 /hidden3.s/1.1/Fri May 29 23:30:12 2009//
-/i386.exp/1.25/Fri May 29 23:30:12 2009//
 /pcrel16.d/1.5/Fri May 29 23:30:12 2009//
 /pcrel16.s/1.2/Fri May 29 23:30:12 2009//
 /pcrel16abs.d/1.1/Fri May 29 23:30:12 2009//
@@ -93,4 +92,7 @@
 /warn1.d/1.1/Fri May 29 23:30:12 2009//
 /warn1.s/1.1/Fri May 29 23:30:12 2009//
 /zero.s/1.1/Fri May 29 23:30:12 2009//
+/i386.exp/1.26/Tue Jun 30 10:46:30 2009//
+/tlsgd2.d/1.1/Fri Jun 19 16:00:33 2009//
+/tlsgd2.s/1.1/Fri Jun 19 16:00:33 2009//
 D

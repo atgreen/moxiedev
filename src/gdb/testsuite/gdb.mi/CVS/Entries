@@ -23,7 +23,6 @@
 /mi-read-memory.c/1.1/Fri May 29 23:30:12 2009//
 /mi-read-memory.exp/1.15/Fri May 29 23:30:12 2009//
 /mi-stack.c/1.5/Fri May 29 23:30:12 2009//
-/mi-stack.exp/1.28/Fri May 29 23:30:12 2009//
 /mi-syn-frame.c/1.4/Fri May 29 23:30:12 2009//
 /mi-syn-frame.exp/1.23/Fri May 29 23:30:12 2009//
 /mi-until.exp/1.20/Fri May 29 23:30:12 2009//
@@ -81,4 +80,5 @@
 /mi2-var-cmd.exp/1.22/Fri Jun 19 11:14:04 2009//
 /mi2-var-display.exp/1.24/Fri Jun 19 11:14:04 2009//
 /mi2-watch.exp/1.15/Fri Jun 19 11:14:04 2009//
+/mi-stack.exp/1.29/Tue Jun 30 10:43:59 2009//
 D

@@ -1764,6 +1764,8 @@ Output_section::Output_section(const char* name, elfcpp::Elf_Word type,
     attached_input_sections_are_sorted_(false),
     is_relro_(false),
     is_relro_local_(false),
+    is_small_section_(false),
+    is_large_section_(false),
     tls_offset_(0)
 {
   // An unallocated section has no address.  Forcing this means that
@@ -1991,6 +1993,24 @@ Output_section::add_merge_input_section(Relobj* object, unsigned int shndx,
   posd->add_input_section(object, shndx);
 
   return true;
+}
+
+// Update the output section flags based on input section flags.
+
+void
+Output_section::update_flags_for_input_section(elfcpp::Elf_Xword flags)
+{
+  // If we created the section with SHF_ALLOC clear, we set the
+  // address.  If we are now setting the SHF_ALLOC flag, we need to
+  // undo that.
+  if ((this->flags_ & elfcpp::SHF_ALLOC) == 0
+      && (flags & elfcpp::SHF_ALLOC) != 0)
+    this->mark_address_invalid();
+
+  this->flags_ |= (flags
+		   & (elfcpp::SHF_WRITE
+		      | elfcpp::SHF_ALLOC
+		      | elfcpp::SHF_EXECINSTR));
 }
 
 // Given an address OFFSET relative to the start of input section
@@ -2613,7 +2633,8 @@ Output_segment::Output_segment(elfcpp::Elf_Word type, elfcpp::Elf_Word flags)
     type_(type),
     flags_(flags),
     is_max_align_known_(false),
-    are_addresses_set_(false)
+    are_addresses_set_(false),
+    is_large_data_segment_(false)
 {
 }
 
@@ -2625,6 +2646,7 @@ Output_segment::add_output_section(Output_section* os,
 {
   gold_assert((os->flags() & elfcpp::SHF_ALLOC) != 0);
   gold_assert(!this->is_max_align_known_);
+  gold_assert(os->is_large_data_section() == this->is_large_data_segment());
 
   // Update the segment flags.
   this->flags_ |= seg_flags;
@@ -2730,6 +2752,69 @@ Output_segment::add_output_section(Output_section* os,
 
       pdl->insert(p, os);
       return;
+    }
+
+  // Small data sections go at the end of the list of data sections.
+  // If OS is not small, and there are small sections, we have to
+  // insert it before the first small section.
+  if (os->type() != elfcpp::SHT_NOBITS
+      && !os->is_small_section()
+      && !pdl->empty()
+      && pdl->back()->is_section()
+      && pdl->back()->output_section()->is_small_section())
+    {
+      for (Output_segment::Output_data_list::iterator p = pdl->begin();
+	   p != pdl->end();
+	   ++p)
+	{
+	  if ((*p)->is_section()
+	      && (*p)->output_section()->is_small_section())
+	    {
+	      pdl->insert(p, os);
+	      return;
+	    }
+	}
+      gold_unreachable();
+    }
+
+  // A small BSS section goes at the start of the BSS sections, after
+  // other small BSS sections.
+  if (os->type() == elfcpp::SHT_NOBITS && os->is_small_section())
+    {
+      for (Output_segment::Output_data_list::iterator p = pdl->begin();
+	   p != pdl->end();
+	   ++p)
+	{
+	  if (!(*p)->is_section()
+	      || !(*p)->output_section()->is_small_section())
+	    {
+	      pdl->insert(p, os);
+	      return;
+	    }
+	}
+    }
+
+  // A large BSS section goes at the end of the BSS sections, which
+  // means that one that is not large must come before the first large
+  // one.
+  if (os->type() == elfcpp::SHT_NOBITS
+      && !os->is_large_section()
+      && !pdl->empty()
+      && pdl->back()->is_section()
+      && pdl->back()->output_section()->is_large_section())
+    {
+      for (Output_segment::Output_data_list::iterator p = pdl->begin();
+	   p != pdl->end();
+	   ++p)
+	{
+	  if ((*p)->is_section()
+	      && (*p)->output_section()->is_large_section())
+	    {
+	      pdl->insert(p, os);
+	      return;
+	    }
+	}
+      gold_unreachable();
     }
 
   pdl->push_back(os);

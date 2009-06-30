@@ -1,7 +1,7 @@
 #                                                       -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-# Copyright 2002, 2003, 2004, 2005
+# Copyright 2002, 2003, 2004, 2005, 2009
 # Free Software Foundation, Inc.
 #
 # This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,17 @@ AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
 ACX_NONCANONICAL_TARGET
+
+# Check for the 'make' the user wants to use.
+AC_CHECK_PROGS(MAKE, make)
+MAKE_IS_GNU=
+case "`$MAKE --version 2>&1 | sed 1q`" in
+  *GNU*)
+    MAKE_IS_GNU=yes
+    ;;
+esac
+AM_CONDITIONAL(GMAKE, test "$MAKE_IS_GNU" = yes)
+AC_PROG_MAKE_SET
 
 # Add HP-specific tests when appropriate.
 case $target in
@@ -117,5 +128,5 @@ AC_OUTPUT([Makefile \
   gdb.fortran/Makefile gdb.server/Makefile \
   gdb.java/Makefile gdb.mi/Makefile gdb.modula2/Makefile \
   gdb.objc/Makefile gdb.opt/Makefile gdb.pascal/Makefile \
-  gdb.python/Makefile \
+  gdb.python/Makefile gdb.reverse/Makefile \
   gdb.threads/Makefile gdb.trace/Makefile gdb.xml/Makefile])

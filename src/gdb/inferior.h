@@ -242,6 +242,8 @@ extern void error_is_running (void);
 /* Calls error_is_running if the current thread is running.  */
 extern void ensure_not_running (void);
 
+void set_step_info (struct frame_info *frame, struct symtab_and_line sal);
+
 /* From infcmd.c */
 
 extern void tty_command (char *, int);
@@ -287,8 +289,9 @@ extern int stop_stack_dummy;
 
 extern int stopped_by_random_signal;
 
-/* 1 means step over all subroutine calls.
-   -1 means step over calls to undebuggable functions.  */
+/* STEP_OVER_ALL means step over all subroutine calls.
+   STEP_OVER_UNDEBUGGABLE means step over calls to undebuggable functions.
+   STEP_OVER_NONE means don't step over any subroutine calls.  */
 
 enum step_over_calls_kind
   {

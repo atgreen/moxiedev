@@ -1,3 +1,203 @@
+2009-06-24  Ian Lance Taylor  <iant@google.com>
+
+	PR 10156
+	* layout.cc (Layout::choose_output_section): If we find an
+	existing section, update the flags.
+	(Layout::create_notes): New function, broken out of
+	Layout::finalize.
+	(Layout::finalize): Don't create note sections.
+	(Layout::create_note): Don't crash if linker script discards
+	section.
+	(Layout::create_gold_note): Likewise.
+	(Layout::create_build_id): Likewise.  Don't set
+	after_input_sections on the section.
+	(Layout::create_executable_stack_info): Remove target parameter.
+	Change caller.
+	* layout.h (class Layout): Declare create_notes.  Update
+	declaration of create_executable_stack_info.
+	* gold.cc (queue_middle_tasks): Call create_notes.
+	* output.cc (Output_section::update_flags_for_input_section): Move
+	here from output.h.  If SHF_ALLOC flag is newly set, mark address
+	invalid.
+	* output.h (Output_data::mark_address_invalid): New function.
+	(class Output_section): Only declare, not define,
+	update_flags_for_input_section.  Remove set_flags.
+
+2009-06-24  Ian Lance Taylor  <iant@google.com>
+
+	* script-sections.cc (Output_section_definition::
+	set_section_addresses): Rename shadowing local load_address to
+	laddr.
+
+2009-06-24  Ian Lance Taylor  <iant@google.com>
+
+	PR 10244
+	* reloc.cc (relocate_sections): Skip empty relocation sections.
+
+2009-06-23  Ian Lance Taylor  <iant@google.com>
+
+	PR 10156
+	* layout.cc (Layout::create_note): Use choose_output_section
+	rather than make_output_section.
+
+2009-06-23  Ian Lance Taylor  <iant@google.com>
+
+	PR 10237
+	* options.cc (General_options::parse_V): Set printed_version_.
+	(General_options::General_options): Initialize printed_version_.
+	* options.h (class General_options): Add printed_version_ field.
+	* gold.cc (queue_initial_tasks): If there are no input files,
+	don't give a fatal error if we printed the version information.
+	(queue_middle_tasks): If using -r with a shared object, give a
+	fatal error rather than an ordinary error.
+
+2009-06-23  Ian Lance Taylor  <iant@google.com>
+
+	PR 10219
+	* layout.cc (Layout::Layout): Initialize have_stabstr_section_.
+	(Layout::make_output_section): Set have_stabstr_section_ if we see
+	a .stab*str section.
+	(Layout::finalize): Call link_stabs_sections.
+	(Layout::link_stabs_sections): New file.
+	* layout.h (class Layout): Add have_stabstr_section_ field.
+	Declare link_stabs_sections.
+
+2009-06-23  Doug Kwan  <dougkwan@google.com>
+
+	* Makefile.am (libgold_a_LIBADD): New.
+	(ld_new_DEPENDENCIES, ld_new_LDADD): Remove LIBOBJS
+ 	* Makefile.in: Regenerate.
+	* config.in (HAVE_DECL_MEMMEM, HAVE_DECL_STRNDUP): New.
+	* configure: Regenerate.
+	* configure.ac (AC_CHECK_DECLS): Add strndup and memmem.
+	* fileread.cc: Include sys/state.h
+	* gold.h: Declare memmem and strndup if found missing.
+	* gold_reloc.h: Include byteswap.h if HAVE_BYTESWAP_H is defined.
+
+2009-06-23  Ian Lance Taylor  <iant@google.com>
+
+	* configure.ac: Call AC_CHECK_DECLS using C, not C++.
+	* configure: Rebuild.
+
+2009-06-23  Ian Lance Taylor  <iant@google.com>
+
+	PR 10147
+	* object.cc (Object::section_contents): Don't try to get a view if
+	the section has length zero.
+	(Object::handle_gnu_warning_section): If the section is empty, use
+	the name of the section as the warning.
+
+2009-06-23  Ian Lance Taylor  <iant@google.com>
+
+	PR 10133
+	* stringpool.h (class Stringpool_template): Add optimize_ field.
+	(Stringpool_template::set_optimize): New function.
+	* stringpool.cc (Stringpool_template::Stringpool_template):
+	Initialize optimize_ field.
+	(Stringpool_template::set_string_offsets): Test local optimize
+	fild rather than parameter.
+	* layout.cc (Layout::Layout): Call set_optimize on the section
+	name stringpool.
+
+2009-06-22  Ian Lance Taylor  <iant@google.com>
+
+	PR 10030
+	* yyscript.y: Parse TARGET.
+	* script.cc (script_set_target): New function.
+	* script-c.h (script_set_target): Declare.
+	* options.cc (General_options::string_to_object_format): Rename
+	from string_to_object_format in anonymous namespace.  Change
+	callers.
+	* options.h (class General_options): Declare
+	string_to_object_format.
+
+2009-06-22  Ian Lance Taylor  <iant@google.com>
+
+	* script-sections.cc (Script_sections::create_segments): Don't put
+	program headers in a PT_LOAD segment if -n or -N.
+
+2009-06-22  Ian Lance Taylor  <iant@google.com>
+
+	PR 10141
+	* options.h (class General_options): Add -z lazy and -z now.  Sort
+	-z options into alphabetical order.
+	* layout.cc (Layout::finish_dynamic_section): Handle -z now.
+
+2009-06-21  Ian Lance Taylor  <iant@google.com>
+
+	* layout.cc (Layout::make_output_section): Call
+	Target::new_output_section.
+	(Layout::attach_allocated_section_to_segment): Put large section
+	sections in a separate load segment with the large segment flag
+	set.
+	(Layout::segment_precedes): Sort large data segments after other
+	load segments.
+	(align_file_offset): New static function.
+	(Layout::set_segment_offsets): Use align_file_offset.
+	* output.h (class Output_section): Add is_small_section_ and
+	is_large_section_ fields.
+	(Output_section::is_small_section): New function.
+	(Output_section::set_is_small_section):  New function.
+	(Output_section::is_large_section): New function.
+	(Output_section::set_is_large_section): New function.
+	(Output_section::is_large_data_section): New function.
+	(class Output_segment): Add is_large_data_segment_ field.
+	(Output_segment::is_large_data_segment): New function.
+	(Output_segment::set_is_large_data_segment): New function.
+	* output.cc (Output_section::Output_section): Initialize new
+	fields.
+	(Output_segment::Output_segment): Likewise.
+	(Output_segment::add_output_section): Add assertion that large
+	data sections always go in large data segments.  Force small data
+	sections to the end of the list of data sections.  Force small BSS
+	sections to the start of the list of BSS sections.  For large BSS
+	sections to the end of the list of BSS sections.
+	* symtab.h (class Symbol): Declare is_common_shndx.
+	(Symbol::is_defined): Check Symbol::is_common_shndx.
+	(Symbol::is_common): Likewise.
+	(class Symbol_table): Define enum Commons_section_type.  Update
+	declarations.  Add small_commons_ and large_commons_ fields.
+	* symtab.cc (Symbol::is_common_shndx): New function.
+	(Symbol_table::Symbol_table): Initialize new fields.
+	(Symbol_table::add_from_object): Put small and large common
+	symbols in the right list.
+	(Symbol_table::sized_finalized_symbol): Check
+	Symbol::is_common_shndx.
+	(Symbol_table::sized_write_globals): Likewise.
+	* common.cc (Symbol_table::do_allocate_commons): Allocate new
+	common symbol lists.  Don't call do_allocate_commons_list if the
+	list is empty.
+	(Symbol_table::do_allocate_commons_list): Remove is_tls
+	parameter.  Add comons_section_type parameter.  Change all
+	callers.  Handle small and large common symbols.
+	* object.cc (Sized_relobj::do_finalize_local_symbols): Check
+	Symbol::is_common_shndx.
+	* resolve.cc (symbol_to_bits): Likewise.
+	* target.h (Target::small_common_shndx): New function.
+	(Target::small_common_section_flags): New function.
+	(Target::large_common_shndx): New function.
+	(Target::large_common_section_flags): New function.
+	(Target::new_output_section): New function.
+	(Target::Target_info): Add small_common_shndx, large_common_shndx,
+	small_common_section_flags, and large_common_section_flags
+	fields.
+	(Target::do_new_output_section): New virtual function.
+	* arm.cc (Target_arm::arm_info): Initialize new fields.
+	* i386.cc (Target_i386::i386_info): Likewise.
+	* powerpc.cc (Target_powerpc::powerpc_info) [all versions]:
+	Likewise.
+	* sparc.c (Target_sparc::sparc_info) [all versions]: Likewise.
+	* x86_64.cc (Target_x86_64::x86_64_info): Likewise.
+	(Target_x86_64::do_new_output_section): New function.
+	* configure.ac: Define conditional MCMODEL_MEDIUM.
+	* testsuite/Makefile.am (check_PROGRAMS): Add large.
+	(large_SOURCES, large_CFLAGS, large_DEPENDENCIES): Define.
+	(large_LDFLAGS): Define.
+	* testsuite/large.c: New file.
+	* testsuite/testfile.cc (Target_test::test_target_info):
+	Initialize new fields.
+	* configure, testsuite/Makefile.in: Rebuild.
+
 2009-06-05  Doug Kwan  <dougkwan@google.com>
 
 	* Makefile.am (CCFILES): Add target.cc.

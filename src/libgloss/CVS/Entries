@@ -33,7 +33,6 @@ D/wince////
 D/xstormy16////
 D/lm32////
 D/moxie////
-/Makefile.in/1.5/Fri May 29 23:30:13 2009//
 /README/1.4/Fri May 29 23:30:13 2009//
 /acinclude.m4/1.1/Fri May 29 23:30:13 2009//
 /aclocal.m4/1.1/Fri May 29 23:30:13 2009//
@@ -57,4 +56,5 @@ D/moxie////
 /syscall.h/1.4/Fri May 29 23:30:13 2009//
 /unlink.c/1.1/Fri May 29 23:30:13 2009//
 /write.c/1.1/Fri May 29 23:30:13 2009//
-/ChangeLog/1.273/Fri Jun 19 11:14:04 2009//
+/ChangeLog/1.274/Tue Jun 30 10:46:43 2009//
+/Makefile.in/1.6/Tue Jun 30 10:46:43 2009//

@@ -755,10 +755,11 @@ apropos_cmd (struct ui_file *stream, struct cmd_list_element *commandlist,
 			 struct re_pattern_buffer *regex, char *prefix)
 {
   struct cmd_list_element *c;
-  int returnvalue=1; /*Needed to avoid double printing*/
+  int returnvalue;
   /* Walk through the commands */
   for (c=commandlist;c;c=c->next)
     {
+      returnvalue = -1; /*Needed to avoid double printing*/
       if (c->name != NULL)
 	{
 	  /* Try to match against the name*/
@@ -769,7 +770,7 @@ apropos_cmd (struct ui_file *stream, struct cmd_list_element *commandlist,
 				      0 /* don't recurse */, stream);
 	    }
 	}
-      if (c->doc != NULL && returnvalue != 0)
+      if (c->doc != NULL && returnvalue < 0)
 	{
 	  /* Try to match against documentation */
 	  if (re_search(regex,c->doc,strlen(c->doc),0,strlen(c->doc),NULL) >=0)
@@ -778,8 +779,11 @@ apropos_cmd (struct ui_file *stream, struct cmd_list_element *commandlist,
 				      0 /* don't recurse */, stream);
 	    }
 	}
-      /* Check if this command has subcommands */
-      if (c->prefixlist != NULL)
+      /* Check if this command has subcommands and is not an abbreviation.
+	 We skip listing subcommands of abbreviations in order to avoid
+	 duplicates in the output.
+       */
+      if (c->prefixlist != NULL && !c->abbrev_flag)
 	{
 	  /* Recursively call ourselves on the subcommand list,
 	     passing the right prefix in.

@@ -207,6 +207,9 @@ static void disable_trace_command (char *, int);
 
 static void trace_pass_command (char *, int);
 
+static void skip_prologue_sal (struct symtab_and_line *sal);
+
+
 /* Flag indicating that a command has proceeded the inferior past the
    current breakpoint.  */
 
@@ -1473,28 +1476,58 @@ create_internal_breakpoint (CORE_ADDR address, enum bptype type)
 }
 
 static void
-create_overlay_event_breakpoint (char *func_name, struct objfile *objfile)
+create_overlay_event_breakpoint (char *func_name)
 {
-  struct breakpoint *b;
-  struct minimal_symbol *m;
+  struct objfile *objfile;
 
-  m = lookup_minimal_symbol_text (func_name, objfile);
-  if (m == NULL)
-    return;
-
-  b = create_internal_breakpoint (SYMBOL_VALUE_ADDRESS (m),
-				  bp_overlay_event);
-  b->addr_string = xstrdup (func_name);
-
-  if (overlay_debugging == ovly_auto)
+  ALL_OBJFILES (objfile)
     {
-      b->enable_state = bp_enabled;
-      overlay_events_enabled = 1;
+      struct breakpoint *b;
+      struct minimal_symbol *m;
+
+      m = lookup_minimal_symbol_text (func_name, objfile);
+      if (m == NULL)
+        continue;
+
+      b = create_internal_breakpoint (SYMBOL_VALUE_ADDRESS (m),
+                                      bp_overlay_event);
+      b->addr_string = xstrdup (func_name);
+
+      if (overlay_debugging == ovly_auto)
+        {
+          b->enable_state = bp_enabled;
+          overlay_events_enabled = 1;
+        }
+      else
+       {
+         b->enable_state = bp_disabled;
+         overlay_events_enabled = 0;
+       }
     }
-  else
+  update_global_location_list (1);
+}
+
+static void
+create_longjmp_master_breakpoint (char *func_name)
+{
+  struct objfile *objfile;
+
+  ALL_OBJFILES (objfile)
     {
+      struct breakpoint *b;
+      struct minimal_symbol *m;
+
+      if (!gdbarch_get_longjmp_target_p (get_objfile_arch (objfile)))
+	continue;
+
+      m = lookup_minimal_symbol_text (func_name, objfile);
+      if (m == NULL)
+        continue;
+
+      b = create_internal_breakpoint (SYMBOL_VALUE_ADDRESS (m),
+                                      bp_longjmp_master);
+      b->addr_string = xstrdup (func_name);
       b->enable_state = bp_disabled;
-      overlay_events_enabled = 0;
     }
   update_global_location_list (1);
 }
@@ -1505,7 +1538,6 @@ update_breakpoints_after_exec (void)
   struct breakpoint *b;
   struct breakpoint *temp;
   struct bp_location *bploc;
-  struct objfile *objfile;
 
   /* We're about to delete breakpoints from GDB's lists.  If the
      INSERTED flag is true, GDB will try to lift the breakpoints by
@@ -1528,8 +1560,9 @@ update_breakpoints_after_exec (void)
       }
 
     /* Thread event breakpoints must be set anew after an exec(),
-       as must overlay event breakpoints.  */
-    if (b->type == bp_thread_event || b->type == bp_overlay_event)
+       as must overlay event and longjmp master breakpoints.  */
+    if (b->type == bp_thread_event || b->type == bp_overlay_event
+	|| b->type == bp_longjmp_master)
       {
 	delete_breakpoint (b);
 	continue;
@@ -1600,8 +1633,11 @@ update_breakpoints_after_exec (void)
       }
   }
   /* FIXME what about longjmp breakpoints?  Re-create them here?  */
-  ALL_OBJFILES (objfile)
-    create_overlay_event_breakpoint ("_ovly_debug_event", objfile);
+  create_overlay_event_breakpoint ("_ovly_debug_event");
+  create_longjmp_master_breakpoint ("longjmp");
+  create_longjmp_master_breakpoint ("_longjmp");
+  create_longjmp_master_breakpoint ("siglongjmp");
+  create_longjmp_master_breakpoint ("_siglongjmp");
 }
 
 int
@@ -2420,6 +2456,12 @@ print_it_typical (bpstat bs)
       result = PRINT_NOTHING;
       break;
 
+    case bp_longjmp_master:
+      /* These should never be enabled.  */
+      printf_filtered (_("Longjmp Master Breakpoint: gdb should not stop!\n"));
+      result = PRINT_NOTHING;
+      break;
+
     case bp_watchpoint:
     case bp_hardware_watchpoint:
       annotate_watchpoint (b->number);
@@ -2730,40 +2772,38 @@ watchpoint_check (void *p)
     within_current_scope = 1;
   else
     {
-      /* There is no current frame at this moment.  If we're going to have
-         any chance of handling watchpoints on local variables, we'll need
-         the frame chain (so we can determine if we're in scope).  */
-      reinit_frame_cache ();
+      struct frame_info *frame = get_current_frame ();
+      struct gdbarch *frame_arch = get_frame_arch (frame);
+      CORE_ADDR frame_pc = get_frame_pc (frame);
+
       fr = frame_find_by_id (b->watchpoint_frame);
       within_current_scope = (fr != NULL);
 
       /* If we've gotten confused in the unwinder, we might have
 	 returned a frame that can't describe this variable.  */
-      if (within_current_scope
-	  && (block_linkage_function (b->exp_valid_block)
-	      != get_frame_function (fr)))
-	within_current_scope = 0;
+      if (within_current_scope)
+	{
+	  struct symbol *function;
+
+	  function = get_frame_function (fr);
+	  if (function == NULL
+	      || !contained_in (b->exp_valid_block,
+				SYMBOL_BLOCK_VALUE (function)))
+	    within_current_scope = 0;
+	}
 
       /* in_function_epilogue_p() returns a non-zero value if we're still
 	 in the function but the stack frame has already been invalidated.
 	 Since we can't rely on the values of local variables after the
 	 stack has been destroyed, we are treating the watchpoint in that
-	 state as `not changed' without further checking.
-	 
-	 vinschen/2003-09-04: The former implementation left out the case
-	 that the watchpoint frame couldn't be found by frame_find_by_id()
-	 because the current PC is currently in an epilogue.  Calling
-	 gdbarch_in_function_epilogue_p() also when fr == NULL fixes that. */
-      if (!within_current_scope || fr == get_current_frame ())
-	{
-	  struct frame_info *frame = get_current_frame ();
-	  struct gdbarch *frame_arch = get_frame_arch (frame);
-	  CORE_ADDR frame_pc = get_frame_pc (frame);
+	 state as `not changed' without further checking.  Don't mark
+	 watchpoints as changed if the current frame is in an epilogue -
+	 even if they are in some other frame, our view of the stack
+	 is likely to be wrong.  */
+      if (gdbarch_in_function_epilogue_p (frame_arch, frame_pc))
+	return WP_VALUE_NOT_CHANGED;
 
-	  if (gdbarch_in_function_epilogue_p (frame_arch, frame_pc))
-	    return WP_VALUE_NOT_CHANGED;
-	}
-      if (fr && within_current_scope)
+      if (within_current_scope)
 	/* If we end up stopping, the current frame will get selected
 	   in normal_stop.  So this call to select_frame won't affect
 	   the user.  */
@@ -2997,7 +3037,7 @@ bpstat_check_breakpoint_conditions (bpstat bs, ptid_t ptid)
   struct breakpoint *b = bl->owner;
 
   if (frame_id_p (b->frame_id)
-      && !frame_id_eq (b->frame_id, get_frame_id (get_current_frame ())))
+      && !frame_id_eq (b->frame_id, get_stack_frame_id (get_current_frame ())))
     bs->stop = 0;
   else if (bs->stop)
     {
@@ -3019,8 +3059,12 @@ bpstat_check_breakpoint_conditions (bpstat bs, ptid_t ptid)
 	     function call.  */
 	  struct value *mark = value_mark ();
 
-	  /* Need to select the frame, with all that implies
-	     so that the conditions will have the right context.  */
+	  /* Need to select the frame, with all that implies so that
+	     the conditions will have the right context.  Because we
+	     use the frame, we will not see an inlined function's
+	     variables when we arrive at a breakpoint at the start
+	     of the inlined function; the current frame will be the
+	     call site.  */
 	  select_frame (get_current_frame ());
 	  value_is_zero
 	    = catch_errors (breakpoint_cond_eval, (bl->cond),
@@ -3113,7 +3157,8 @@ bpstat_stop_status (CORE_ADDR bp_addr, ptid_t ptid)
     if (!bs->stop)
       continue;
 
-    if (b->type == bp_thread_event || b->type == bp_overlay_event)
+    if (b->type == bp_thread_event || b->type == bp_overlay_event
+	|| b->type == bp_longjmp_master)
       /* We do not stop for these.  */
       bs->stop = 0;
     else
@@ -3397,6 +3442,7 @@ bpstat_what (bpstat bs)
 	  break;
 	case bp_thread_event:
 	case bp_overlay_event:
+	case bp_longjmp_master:
 	  bs_class = bp_nostop;
 	  break;
 	case bp_catchpoint:
@@ -3523,6 +3569,7 @@ print_one_breakpoint_location (struct breakpoint *b,
     {bp_shlib_event, "shlib events"},
     {bp_thread_event, "thread events"},
     {bp_overlay_event, "overlay events"},
+    {bp_longjmp_master, "longjmp master"},
     {bp_catchpoint, "catchpoint"},
     {bp_tracepoint, "tracepoint"},
   };
@@ -3651,6 +3698,7 @@ print_one_breakpoint_location (struct breakpoint *b,
       case bp_shlib_event:
       case bp_thread_event:
       case bp_overlay_event:
+      case bp_longjmp_master:
       case bp_tracepoint:
 	if (opts.addressprint)
 	  {
@@ -4268,6 +4316,7 @@ allocate_bp_location (struct breakpoint *bpt)
     case bp_shlib_event:
     case bp_thread_event:
     case bp_overlay_event:
+    case bp_longjmp_master:
       loc->loc_type = bp_loc_software_breakpoint;
       break;
     case bp_hardware_breakpoint:
@@ -4422,32 +4471,26 @@ make_breakpoint_permanent (struct breakpoint *b)
     bl->inserted = 1;
 }
 
-static void
-create_longjmp_breakpoint (char *func_name)
-{
-  struct minimal_symbol *m;
-
-  m = lookup_minimal_symbol_text (func_name, NULL);
-  if (m == NULL)
-    return;
-  set_momentary_breakpoint_at_pc (SYMBOL_VALUE_ADDRESS (m), bp_longjmp);
-  update_global_location_list (1);
-}
-
 /* Call this routine when stepping and nexting to enable a breakpoint
-   if we do a longjmp().  When we hit that breakpoint, call
+   if we do a longjmp() in THREAD.  When we hit that breakpoint, call
    set_longjmp_resume_breakpoint() to figure out where we are going. */
 
 void
-set_longjmp_breakpoint (void)
+set_longjmp_breakpoint (int thread)
 {
-  if (gdbarch_get_longjmp_target_p (current_gdbarch))
-    {
-      create_longjmp_breakpoint ("longjmp");
-      create_longjmp_breakpoint ("_longjmp");
-      create_longjmp_breakpoint ("siglongjmp");
-      create_longjmp_breakpoint ("_siglongjmp");
-    }
+  struct breakpoint *b, *temp;
+
+  /* To avoid having to rescan all objfile symbols at every step,
+     we maintain a list of continually-inserted but always disabled
+     longjmp "master" breakpoints.  Here, we simply create momentary
+     clones of those and enable them for the requested thread.  */
+  ALL_BREAKPOINTS_SAFE (b, temp)
+    if (b->type == bp_longjmp_master)
+      {
+	struct breakpoint *clone = clone_momentary_breakpoint (b);
+	clone->type = bp_longjmp;
+	clone->thread = thread;
+      }
 }
 
 /* Delete all longjmp breakpoints from THREAD.  */
@@ -4991,6 +5034,11 @@ set_momentary_breakpoint (struct symtab_and_line sal, struct frame_id frame_id,
 			  enum bptype type)
 {
   struct breakpoint *b;
+
+  /* If FRAME_ID is valid, it should be a real frame, not an inlined
+     one.  */
+  gdb_assert (!frame_id_inlined_p (frame_id));
+
   b = set_raw_breakpoint (sal, type);
   b->enable_state = bp_enabled;
   b->disposition = disp_donttouch;
@@ -5158,6 +5206,7 @@ mention (struct breakpoint *b)
       case bp_shlib_event:
       case bp_thread_event:
       case bp_overlay_event:
+      case bp_longjmp_master:
 	break;
       }
 
@@ -5434,6 +5483,15 @@ expand_line_sal_maybe (struct symtab_and_line sal)
 		    }
 		}
 	    }
+	}
+    }
+  else
+    {
+      for (i = 0; i < expanded.nelts; ++i)
+	{
+	  /* If this SAL corresponds to a breakpoint inserted using a
+	     line number, then skip the function prologue if necessary.  */
+	  skip_prologue_sal (&expanded.sals[i]);
 	}
     }
 
@@ -5903,7 +5961,8 @@ set_breakpoint (char *address, char *condition,
 
 /* Adjust SAL to the first instruction past the function prologue.
    The end of the prologue is determined using the line table from
-   the debugging information.
+   the debugging information.  explicit_pc and explicit_line are
+   not modified.
 
    If SAL is already past the prologue, then do nothing.  */
 
@@ -5918,7 +5977,11 @@ skip_prologue_sal (struct symtab_and_line *sal)
 
   start_sal = find_function_start_sal (sym, 1);
   if (sal->pc < start_sal.pc)
-    *sal = start_sal;
+    {
+      start_sal.explicit_line = sal->explicit_line;
+      start_sal.explicit_pc = sal->explicit_pc;
+      *sal = start_sal;
+    }
 }
 
 /* Helper function for break_command_1 and disassemble_command.  */
@@ -6087,7 +6150,6 @@ watch_command_1 (char *arg, int accessflag, int from_tty)
   struct block *exp_valid_block;
   struct value *val, *mark;
   struct frame_info *frame;
-  struct frame_info *prev_frame = NULL;
   char *exp_start = NULL;
   char *exp_end = NULL;
   char *tok, *id_tok_start, *end_tok;
@@ -6227,34 +6289,34 @@ watch_command_1 (char *arg, int accessflag, int from_tty)
     bp_type = bp_watchpoint;
 
   frame = block_innermost_frame (exp_valid_block);
-  if (frame)
-    prev_frame = get_prev_frame (frame);
-  else
-    prev_frame = NULL;
 
   /* If the expression is "local", then set up a "watchpoint scope"
      breakpoint at the point where we've left the scope of the watchpoint
      expression.  Create the scope breakpoint before the watchpoint, so
      that we will encounter it first in bpstat_stop_status.  */
-  if (innermost_block && prev_frame)
+  if (innermost_block && frame)
     {
-      scope_breakpoint = create_internal_breakpoint (get_frame_pc (prev_frame),
-						     bp_watchpoint_scope);
+      if (frame_id_p (frame_unwind_caller_id (frame)))
+	{
+ 	  scope_breakpoint
+	    = create_internal_breakpoint (frame_unwind_caller_pc (frame),
+					  bp_watchpoint_scope);
 
-      scope_breakpoint->enable_state = bp_enabled;
+	  scope_breakpoint->enable_state = bp_enabled;
 
-      /* Automatically delete the breakpoint when it hits.  */
-      scope_breakpoint->disposition = disp_del;
+	  /* Automatically delete the breakpoint when it hits.  */
+	  scope_breakpoint->disposition = disp_del;
 
-      /* Only break in the proper frame (help with recursion).  */
-      scope_breakpoint->frame_id = get_frame_id (prev_frame);
+	  /* Only break in the proper frame (help with recursion).  */
+	  scope_breakpoint->frame_id = frame_unwind_caller_id (frame);
 
-      /* Set the address at which we will stop.  */
-      scope_breakpoint->loc->requested_address
-	= get_frame_pc (prev_frame);
-      scope_breakpoint->loc->address
-	= adjust_breakpoint_address (scope_breakpoint->loc->requested_address,
-				     scope_breakpoint->type);
+	  /* Set the address at which we will stop.  */
+	  scope_breakpoint->loc->requested_address
+	    = frame_unwind_caller_pc (frame);
+	  scope_breakpoint->loc->address
+	    = adjust_breakpoint_address (scope_breakpoint->loc->requested_address,
+					 scope_breakpoint->type);
+	}
     }
 
   /* Now set up the breakpoint.  */
@@ -6435,7 +6497,6 @@ until_break_command (char *arg, int from_tty, int anywhere)
   struct symtabs_and_lines sals;
   struct symtab_and_line sal;
   struct frame_info *frame = get_selected_frame (NULL);
-  struct frame_info *prev_frame = get_prev_frame (frame);
   struct breakpoint *breakpoint;
   struct breakpoint *breakpoint2 = NULL;
   struct cleanup *old_chain;
@@ -6468,20 +6529,22 @@ until_break_command (char *arg, int from_tty, int anywhere)
        we don't specify a frame at which we need to stop.  */
     breakpoint = set_momentary_breakpoint (sal, null_frame_id, bp_until);
   else
-    /* Otherwise, specify the current frame, because we want to stop only
+    /* Otherwise, specify the selected frame, because we want to stop only
        at the very same frame.  */
-    breakpoint = set_momentary_breakpoint (sal, get_frame_id (frame),
+    breakpoint = set_momentary_breakpoint (sal, get_stack_frame_id (frame),
 					   bp_until);
 
   old_chain = make_cleanup_delete_breakpoint (breakpoint);
 
   /* Keep within the current frame, or in frames called by the current
      one.  */
-  if (prev_frame)
+
+  if (frame_id_p (frame_unwind_caller_id (frame)))
     {
-      sal = find_pc_line (get_frame_pc (prev_frame), 0);
-      sal.pc = get_frame_pc (prev_frame);
-      breakpoint2 = set_momentary_breakpoint (sal, get_frame_id (prev_frame),
+      sal = find_pc_line (frame_unwind_caller_pc (frame), 0);
+      sal.pc = frame_unwind_caller_pc (frame);
+      breakpoint2 = set_momentary_breakpoint (sal,
+					      frame_unwind_caller_id (frame),
 					      bp_until);
       make_cleanup_delete_breakpoint (breakpoint2);
     }
@@ -7412,6 +7475,7 @@ delete_command (char *arg, int from_tty)
 	    && b->type != bp_shlib_event
 	    && b->type != bp_thread_event
 	    && b->type != bp_overlay_event
+	    && b->type != bp_longjmp_master
 	    && b->number >= 0)
 	  {
 	    breaks_to_delete = 1;
@@ -7429,6 +7493,7 @@ delete_command (char *arg, int from_tty)
 		&& b->type != bp_shlib_event
 		&& b->type != bp_thread_event
 		&& b->type != bp_overlay_event
+		&& b->type != bp_longjmp_master
 		&& b->number >= 0)
 	      delete_breakpoint (b);
 	  }
@@ -7723,9 +7788,10 @@ breakpoint_re_set_one (void *bint)
     default:
       printf_filtered (_("Deleting unknown breakpoint type %d\n"), b->type);
       /* fall through */
-      /* Delete overlay event breakpoints; they will be reset later by
-         breakpoint_re_set.  */
+      /* Delete overlay event and longjmp master breakpoints; they will be
+	 reset later by breakpoint_re_set.  */
     case bp_overlay_event:
+    case bp_longjmp_master:
       delete_breakpoint (b);
       break;
 
@@ -7754,13 +7820,9 @@ breakpoint_re_set_one (void *bint)
   return 0;
 }
 
-/* Re-set all breakpoints after symbols have been re-loaded.
-
-   If OBJFILE is non-null, create overlay break point only in OBJFILE
-   (speed optimization).  Otherwise rescan all loaded objfiles.  */
-
+/* Re-set all breakpoints after symbols have been re-loaded.  */
 void
-breakpoint_re_set_objfile (struct objfile *objfile)
+breakpoint_re_set (void)
 {
   struct breakpoint *b, *temp;
   enum language save_language;
@@ -7780,19 +7842,11 @@ breakpoint_re_set_objfile (struct objfile *objfile)
   set_language (save_language);
   input_radix = save_input_radix;
 
-  if (objfile == NULL)
-    ALL_OBJFILES (objfile)
-      create_overlay_event_breakpoint ("_ovly_debug_event", objfile);
-  else
-    create_overlay_event_breakpoint ("_ovly_debug_event", objfile);
-}
-
-/* Re-set all breakpoints after symbols have been re-loaded.  */
-
-void
-breakpoint_re_set (void)
-{
-  breakpoint_re_set_objfile (NULL);
+  create_overlay_event_breakpoint ("_ovly_debug_event");
+  create_longjmp_master_breakpoint ("longjmp");
+  create_longjmp_master_breakpoint ("_longjmp");
+  create_longjmp_master_breakpoint ("siglongjmp");
+  create_longjmp_master_breakpoint ("_siglongjmp");
 }
 
 /* Reset the thread number of this breakpoint:

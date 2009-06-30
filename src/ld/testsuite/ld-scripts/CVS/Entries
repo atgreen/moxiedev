@@ -60,7 +60,6 @@
 /empty-address-3b.t/1.1/Fri May 29 23:30:12 2009//
 /empty-address-3c.d/1.2/Fri May 29 23:30:12 2009//
 /empty-address-3c.t/1.1/Fri May 29 23:30:12 2009//
-/empty-address.exp/1.2/Fri May 29 23:30:12 2009//
 /empty-aligned.d/1.5/Fri May 29 23:30:12 2009//
 /empty-aligned.exp/1.2/Fri May 29 23:30:12 2009//
 /empty-aligned.s/1.2/Fri May 29 23:30:12 2009//
@@ -190,8 +189,9 @@
 /sort_no-1.d/1.1/Fri May 29 23:30:12 2009//
 /sort_no-2.d/1.1/Fri May 29 23:30:12 2009//
 /sort_no.t/1.1/Fri May 29 23:30:12 2009//
-/weak.exp/1.14/Fri May 29 23:30:12 2009//
 /weak.t/1.1.1.1/Fri May 29 23:30:12 2009//
 /weak1.s/1.2/Fri May 29 23:30:12 2009//
 /weak2.s/1.2/Fri May 29 23:30:12 2009//
+/empty-address.exp/1.3/Tue Jun 30 10:46:30 2009//
+/weak.exp/1.15/Tue Jun 30 10:46:30 2009//
 D

@@ -213,16 +213,17 @@ struct target_ops
   int (*read_auxv) (CORE_ADDR offset, unsigned char *myaddr,
 		    unsigned int len);
 
-  /* Insert and remove a hardware watchpoint.
+  /* Insert and remove a break or watchpoint.
      Returns 0 on success, -1 on failure and 1 on unsupported.
      The type is coded as follows:
-       2 = write watchpoint
-       3 = read watchpoint
-       4 = access watchpoint
-  */
+       '0' - software-breakpoint
+       '1' - hardware-breakpoint
+       '2' - write watchpoint
+       '3' - read watchpoint
+       '4' - access watchpoint  */
 
-  int (*insert_watchpoint) (char type, CORE_ADDR addr, int len);
-  int (*remove_watchpoint) (char type, CORE_ADDR addr, int len);
+  int (*insert_point) (char type, CORE_ADDR addr, int len);
+  int (*remove_point) (char type, CORE_ADDR addr, int len);
 
   /* Returns 1 if target was stopped due to a watchpoint hit, 0 otherwise.  */
 
@@ -275,6 +276,9 @@ struct target_ops
   /* Switch to non-stop (1) or all-stop (0) mode.  Return 0 on
      success, -1 otherwise.  */
   int (*start_non_stop) (int);
+
+  /* Returns true if the target supports multi-process debugging.  */
+  int (*supports_multi_process) (void);
 };
 
 extern struct target_ops *the_target;
@@ -310,6 +314,10 @@ void set_target_ops (struct target_ops *);
 
 #define target_async(enable) \
   (the_target->async ? (*the_target->async) (enable) : 0)
+
+#define target_supports_multi_process() \
+  (the_target->supports_multi_process ? \
+   (*the_target->supports_multi_process) () : 0)
 
 /* Start non-stop mode, returns 0 on success, -1 on failure.   */
 

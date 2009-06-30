@@ -1,3 +1,61 @@
+2009-06-29  Nick Clifton  <nickc@redhat.com>
+
+	PR 10288
+	* ld-arm/arm-app-abs32.d: Update expected disassembly.
+	* ld-arm/arm-app.d: Likewise.
+	* ld-arm/arm-lib-plt32.d: Likewise.
+	* ld-arm/arm-lib.d: Likewise.
+	* ld-arm/arm-pic-veneer.d: Likewise.
+	* ld-arm/armthumb-lib.d: Likewise.
+	* ld-arm/farcall-mixed-app-v5.d: Likewise.
+	* ld-arm/farcall-mixed-app.d: Likewise.
+	* ld-arm/farcall-mixed-lib.d: Likewise.
+	* ld-arm/group-relocs.d: Likewise.
+	* ld-arm/mixed-app-v5.d: Likewise.
+	* ld-arm/mixed-app.d: Likewise.
+	* ld-arm/mixed-lib.d: Likewise.
+	* ld-arm/thumb2-bl-undefweak.d: Likewise.
+
+2009-06-27  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10337
+	* ld-ifunc/binutils.exp: New.
+
+2009-06-25  Kai Tietz  <kai.tietz@onevision.com>
+
+	* ld-pe/aligncomm-1.c (size_t): Add typedef.
+	(main): Use it for casting pointer to scalar.
+	* ld-pe/aligncomm-2.c: Likewise.
+	* ld-pe/aligncomm-3.c: Likewise.
+	* ld-pe/aligncomm-4.c: Likewise.
+	* ld-scripts/empty-address.exp: Make sure that for x86_64-*-mingw*
+	target imagebase is set to zero.
+	* ld-scripts/weak.exp: Don't fail for x86_64-*-mingw* target.
+
+2009-06-22  Christophe Lyon  <christophe.lyon@st.com>
+
+	ld/testsuite:
+	* ld-arm/farcall-mixed-app.s: Add new references to check more
+	modes switching.
+	* ld-arm/farcall-mixed-lib1.s: Likewise.
+	* ld-arm/farcall-mixed-app-v5.d: Update expected result.
+	* farcall-mixed-app.d: Likewise.
+	* ld-arm/farcall-mixed-lib.d: Likewise.
+
+2009-06-22  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* ld-pe/pe-run.exp (proc test_direct_link_dll):  Fix incorrect
+	line-wrapping.
+
+2009-06-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-i386/i386.exp: Run tlsgd2.
+
+	* ld-i386/tlsgd2.d: New.
+	* ld-i386/tlsgd2.s: Likewise.
+
+	* ld-x86-64/tlsgd3.d: Updated.
+
 2009-06-18  Dave Korn  <dave.korn.cygwin@gmail.com>
 
 	* ld-pe/pe-run.exp (proc test_direct_link_dll):  Always pass

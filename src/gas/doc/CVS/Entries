@@ -1,10 +1,8 @@
 /Makefile.am/1.56/Fri May 29 23:29:57 2009//
 /Makefile.in/1.102/Fri May 29 23:29:57 2009//
 /all.texi/1.31/Fri May 29 23:29:57 2009//
-/as.texinfo/1.203/Fri Jun  5 22:47:25 2009//
 /c-alpha.texi/1.9/Fri May 29 23:29:57 2009//
 /c-arc.texi/1.8/Fri May 29 23:29:57 2009//
-/c-arm.texi/1.56/Fri May 29 23:29:57 2009//
 /c-avr.texi/1.24/Fri May 29 23:29:57 2009//
 /c-bfin.texi/1.2/Fri May 29 23:29:57 2009//
 /c-cr16.texi/1.2/Fri May 29 23:29:57 2009//
@@ -47,4 +45,6 @@
 /fdl.texi/1.4/Fri May 29 23:29:57 2009//
 /h8.texi/1.2/Fri May 29 23:29:57 2009//
 /internals.texi/1.63/Fri May 29 23:29:57 2009//
+/as.texinfo/1.204/Tue Jun 30 10:46:27 2009//
+/c-arm.texi/1.57/Tue Jun 30 10:46:27 2009//
 D

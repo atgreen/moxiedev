@@ -124,6 +124,7 @@ Layout::Layout(int number_of_input_files, Script_options* script_options)
     has_static_tls_(false),
     any_postprocessing_sections_(false),
     resized_signatures_(false),
+    have_stabstr_section_(false),
     incremental_inputs_(NULL)
 {
   // Make space for more than enough segments for a typical file.
@@ -137,6 +138,10 @@ Layout::Layout(int number_of_input_files, Script_options* script_options)
   // Initialize structure needed for an incremental build.
   if (parameters->options().incremental())
     this->incremental_inputs_ = new Incremental_inputs;
+
+  // The section name pool is worth optimizing in all cases, because
+  // it is small, but there are often overlaps due to .rel sections.
+  this->namepool_.set_optimize();
 }
 
 // Hash a key we use to look up an output section mapping.
@@ -411,7 +416,10 @@ Layout::choose_output_section(const Relobj* relobj, const char* name,
       if (output_section_slot != NULL)
 	{
 	  if (*output_section_slot != NULL)
-	    return *output_section_slot;
+	    {
+	      (*output_section_slot)->update_flags_for_input_section(flags);
+	      return *output_section_slot;
+	    }
 
 	  // We don't put sections found in the linker script into
 	  // SECTION_NAME_MAP_.  That keeps us from getting confused
@@ -788,6 +796,8 @@ Layout::make_output_section(const char* name, elfcpp::Elf_Word type,
  else
     os = new Output_section(name, type, flags);
 
+  parameters->target().new_output_section(os);
+
   this->section_list_.push_back(os);
 
   // The GNU linker by default sorts some sections by priority, so we
@@ -816,6 +826,14 @@ Layout::make_output_section(const char* name, elfcpp::Elf_Word type,
 	  os->set_is_relro_local();
 	}
     }
+
+  // Check for .stab*str sections, as .stab* sections need to link to
+  // them.
+  if (type == elfcpp::SHT_STRTAB
+      && !this->have_stabstr_section_
+      && strncmp(name, ".stab", 5) == 0
+      && strcmp(name + strlen(name) - 3, "str") == 0)
+    this->have_stabstr_section_ = true;
 
   // If we have already attached the sections to segments, then we
   // need to attach this one now.  This happens for sections created
@@ -875,7 +893,8 @@ Layout::attach_allocated_section_to_segment(Output_section* os)
 
   // In general the only thing we really care about for PT_LOAD
   // segments is whether or not they are writable, so that is how we
-  // search for them.  People who need segments sorted on some other
+  // search for them.  Large data sections also go into their own
+  // PT_LOAD segment.  People who need segments sorted on some other
   // basis will have to use a linker script.
 
   Segment_list::const_iterator p;
@@ -883,28 +902,32 @@ Layout::attach_allocated_section_to_segment(Output_section* os)
        p != this->segment_list_.end();
        ++p)
     {
-      if ((*p)->type() == elfcpp::PT_LOAD
-	  && (parameters->options().omagic()
-	      || ((*p)->flags() & elfcpp::PF_W) == (seg_flags & elfcpp::PF_W)))
-        {
-          // If -Tbss was specified, we need to separate the data
-          // and BSS segments.
-          if (parameters->options().user_set_Tbss())
-            {
-              if ((os->type() == elfcpp::SHT_NOBITS)
-                  == (*p)->has_any_data_sections())
-                continue;
-            }
+      if ((*p)->type() != elfcpp::PT_LOAD)
+	continue;
+      if (!parameters->options().omagic()
+	  && ((*p)->flags() & elfcpp::PF_W) != (seg_flags & elfcpp::PF_W))
+	continue;
+      // If -Tbss was specified, we need to separate the data and BSS
+      // segments.
+      if (parameters->options().user_set_Tbss())
+	{
+	  if ((os->type() == elfcpp::SHT_NOBITS)
+	      == (*p)->has_any_data_sections())
+	    continue;
+	}
+      if (os->is_large_data_section() && !(*p)->is_large_data_segment())
+	continue;
 
-          (*p)->add_output_section(os, seg_flags);
-          break;
-        }
+      (*p)->add_output_section(os, seg_flags);
+      break;
     }
 
   if (p == this->segment_list_.end())
     {
       Output_segment* oseg = this->make_output_segment(elfcpp::PT_LOAD,
                                                        seg_flags);
+      if (os->is_large_data_section())
+	oseg->set_is_large_data_segment();
       oseg->add_output_section(os, seg_flags);
     }
 
@@ -1006,6 +1029,16 @@ Layout::layout_gnu_stack(bool seen_gnu_stack, uint64_t gnu_stack_flags)
       if ((gnu_stack_flags & elfcpp::SHF_EXECINSTR) != 0)
 	this->input_requires_executable_stack_ = true;
     }
+}
+
+// Create automatic note sections.
+
+void
+Layout::create_notes()
+{
+  this->create_gold_note();
+  this->create_executable_stack_info();
+  this->create_build_id();
 }
 
 // Create the dynamic sections which are needed before we read the
@@ -1178,9 +1211,7 @@ Layout::finalize(const Input_objects* input_objects, Symbol_table* symtab,
 
   this->count_local_symbols(task, input_objects);
 
-  this->create_gold_note();
-  this->create_executable_stack_info(target);
-  this->create_build_id();
+  this->link_stabs_sections();
 
   Output_segment* phdr_seg = NULL;
   if (!parameters->options().relocatable() && !parameters->doing_static_link())
@@ -1340,10 +1371,11 @@ Layout::finalize(const Input_objects* input_objects, Symbol_table* symtab,
 }
 
 // Create a note header following the format defined in the ELF ABI.
-// NAME is the name, NOTE_TYPE is the type, DESCSZ is the size of the
-// descriptor.  ALLOCATE is true if the section should be allocated in
-// memory.  This returns the new note section.  It sets
-// *TRAILING_PADDING to the number of trailing zero bytes required.
+// NAME is the name, NOTE_TYPE is the type, SECTION_NAME is the name
+// of the section to create, DESCSZ is the size of the descriptor.
+// ALLOCATE is true if the section should be allocated in memory.
+// This returns the new note section.  It sets *TRAILING_PADDING to
+// the number of trailing zero bytes required.
 
 Output_section*
 Layout::create_note(const char* name, int note_type,
@@ -1414,13 +1446,15 @@ Layout::create_note(const char* name, int note_type,
 
   memcpy(buffer + 3 * (size / 8), name, namesz);
 
-  const char *note_name = this->namepool_.add(section_name, false, NULL);
   elfcpp::Elf_Xword flags = 0;
   if (allocate)
     flags = elfcpp::SHF_ALLOC;
-  Output_section* os = this->make_output_section(note_name,
-						 elfcpp::SHT_NOTE,
-						 flags);
+  Output_section* os = this->choose_output_section(NULL, section_name,
+						   elfcpp::SHT_NOTE,
+						   flags, false);
+  if (os == NULL)
+    return NULL;
+
   Output_section_data* posd = new Output_data_const_buffer(buffer, notehdrsz,
 							   size / 8,
 							   "** note header");
@@ -1446,6 +1480,8 @@ Layout::create_gold_note()
   Output_section *os = this->create_note("GNU", elfcpp::NT_GNU_GOLD_VERSION,
 					 ".note.gnu.gold-version", desc.size(),
 					 false, &trailing_padding);
+  if (os == NULL)
+    return;
 
   Output_section_data* posd = new Output_data_const(desc, 4);
   os->add_output_section_data(posd);
@@ -1470,7 +1506,7 @@ Layout::create_gold_note()
 // library, we create a PT_GNU_STACK segment.
 
 void
-Layout::create_executable_stack_info(const Target* target)
+Layout::create_executable_stack_info()
 {
   bool is_stack_executable;
   if (parameters->options().is_execstack_set())
@@ -1482,7 +1518,8 @@ Layout::create_executable_stack_info(const Target* target)
       if (this->input_requires_executable_stack_)
 	is_stack_executable = true;
       else if (this->input_without_gnu_stack_note_)
-	is_stack_executable = target->is_default_stack_executable();
+	is_stack_executable =
+	  parameters->target().is_default_stack_executable();
       else
 	is_stack_executable = false;
     }
@@ -1579,6 +1616,8 @@ Layout::create_build_id()
   Output_section* os = this->create_note("GNU", elfcpp::NT_GNU_BUILD_ID,
 					 ".note.gnu.build-id", descsz, true,
 					 &trailing_padding);
+  if (os == NULL)
+    return;
 
   if (!desc.empty())
     {
@@ -1601,7 +1640,40 @@ Layout::create_build_id()
       gold_assert(trailing_padding == 0);
       this->build_id_note_ = new Output_data_zero_fill(descsz, 4);
       os->add_output_section_data(this->build_id_note_);
-      os->set_after_input_sections();
+    }
+}
+
+// If we have both .stabXX and .stabXXstr sections, then the sh_link
+// field of the former should point to the latter.  I'm not sure who
+// started this, but the GNU linker does it, and some tools depend
+// upon it.
+
+void
+Layout::link_stabs_sections()
+{
+  if (!this->have_stabstr_section_)
+    return;
+
+  for (Section_list::iterator p = this->section_list_.begin();
+       p != this->section_list_.end();
+       ++p)
+    {
+      if ((*p)->type() != elfcpp::SHT_STRTAB)
+	continue;
+
+      const char* name = (*p)->name();
+      if (strncmp(name, ".stab", 5) != 0)
+	continue;
+
+      size_t len = strlen(name);
+      if (strcmp(name + len - 3, "str") != 0)
+	continue;
+
+      std::string stab_name(name, len - 3);
+      Output_section* stab_sec;
+      stab_sec = this->find_output_section(stab_name.c_str());
+      if (stab_sec != NULL)
+	stab_sec->set_link_section(*p);
     }
 }
 
@@ -1729,14 +1801,25 @@ Layout::segment_precedes(const Output_segment* seg1,
   else if (seg2->are_addresses_set())
     return false;
 
-  // We sort PT_LOAD segments based on the flags.  Readonly segments
-  // come before writable segments.  Then writable segments with data
-  // come before writable segments without data.  Then executable
-  // segments come before non-executable segments.  Then the unlikely
-  // case of a non-readable segment comes before the normal case of a
-  // readable segment.  If there are multiple segments with the same
-  // type and flags, we require that the address be set, and we sort
-  // by virtual address and then physical address.
+  // A segment which holds large data comes after a segment which does
+  // not hold large data.
+  if (seg1->is_large_data_segment())
+    {
+      if (!seg2->is_large_data_segment())
+	return false;
+    }
+  else if (seg2->is_large_data_segment())
+    return true;
+
+  // Otherwise, we sort PT_LOAD segments based on the flags.  Readonly
+  // segments come before writable segments.  Then writable segments
+  // with data come before writable segments without data.  Then
+  // executable segments come before non-executable segments.  Then
+  // the unlikely case of a non-readable segment comes before the
+  // normal case of a readable segment.  If there are multiple
+  // segments with the same type and flags, we require that the
+  // address be set, and we sort by virtual address and then physical
+  // address.
   if ((flags1 & elfcpp::PF_W) != (flags2 & elfcpp::PF_W))
     return (flags1 & elfcpp::PF_W) == 0;
   if ((flags1 & elfcpp::PF_W) != 0
@@ -1750,6 +1833,19 @@ Layout::segment_precedes(const Output_segment* seg1,
   // We shouldn't get here--we shouldn't create segments which we
   // can't distinguish.
   gold_unreachable();
+}
+
+// Increase OFF so that it is congruent to ADDR modulo ABI_PAGESIZE.
+
+static off_t
+align_file_offset(off_t off, uint64_t addr, uint64_t abi_pagesize)
+{
+  uint64_t unsigned_off = off;
+  uint64_t aligned_off = ((unsigned_off & ~(abi_pagesize - 1))
+			  | (addr & (abi_pagesize - 1)));
+  if (aligned_off < unsigned_off)
+    aligned_off += abi_pagesize;
+  return aligned_off;
 }
 
 // Set the file offsets of all the segments, and all the sections they
@@ -1838,22 +1934,7 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 	      && !parameters->options().omagic())
 	    (*p)->set_minimum_p_align(common_pagesize);
 
-	  if (are_addresses_set)
-	    {
-	      if (!parameters->options().nmagic()
-		  && !parameters->options().omagic())
-		{
-		  // Adjust the file offset to the same address modulo
-		  // the page size.
-		  uint64_t unsigned_off = off;
-		  uint64_t aligned_off = ((unsigned_off & ~(abi_pagesize - 1))
-					  | (addr & (abi_pagesize - 1)));
-		  if (aligned_off < unsigned_off)
-		    aligned_off += abi_pagesize;
-		  off = aligned_off;
-		}
-	    }
-	  else
+	  if (!are_addresses_set)
 	    {
 	      // If the last segment was readonly, and this one is
 	      // not, then skip the address forward one page,
@@ -1873,6 +1954,10 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 
 	      off = orig_off + ((addr - orig_addr) & (abi_pagesize - 1));
 	    }
+
+	  if (!parameters->options().nmagic()
+	      && !parameters->options().omagic())
+	    off = align_file_offset(off, addr, abi_pagesize);
 
 	  unsigned int shndx_hold = *pshndx;
 	  uint64_t new_addr = (*p)->set_section_addresses(this, false, addr,
@@ -1900,6 +1985,7 @@ Layout::set_segment_offsets(const Target* target, Output_segment* load_seg,
 		  addr = align_address(aligned_addr, common_pagesize);
 		  addr = align_address(addr, (*p)->maximum_alignment());
 		  off = orig_off + ((addr - orig_addr) & (abi_pagesize - 1));
+		  off = align_file_offset(off, addr, abi_pagesize);
 		  new_addr = (*p)->set_section_addresses(this, true, addr,
                                                          &off, pshndx);
 		}
@@ -2814,6 +2900,8 @@ Layout::finish_dynamic_section(const Input_objects* input_objects,
     flags |= elfcpp::DF_STATIC_TLS;
   if (parameters->options().origin())
     flags |= elfcpp::DF_ORIGIN;
+  if (parameters->options().now())
+    flags |= elfcpp::DF_BIND_NOW;
   odyn->add_constant(elfcpp::DT_FLAGS, flags);
 
   flags = 0;
@@ -2837,6 +2925,8 @@ Layout::finish_dynamic_section(const Input_objects* input_objects,
 	       | elfcpp::DF_1_NOOPEN);
   if (parameters->options().origin())
     flags |= elfcpp::DF_1_ORIGIN;
+  if (parameters->options().now())
+    flags |= elfcpp::DF_1_NOW;
   if (flags)
     odyn->add_constant(elfcpp::DT_FLAGS_1, flags);
 }

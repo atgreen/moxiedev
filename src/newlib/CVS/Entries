@@ -5,8 +5,6 @@ D/libm////
 D/testsuite////
 /HOWTO/1.1/Fri May 29 23:30:13 2009//
 /MAINTAINERS/1.9/Fri May 29 23:30:13 2009//
-/Makefile.am/1.42/Fri May 29 23:30:13 2009/-ko/
-/Makefile.in/1.54/Fri May 29 23:30:13 2009/-ko/
 /Makefile.shared/1.1/Fri May 29 23:30:13 2009//
 /NEWS/1.13/Fri May 29 23:30:13 2009/-ko/
 /README/1.18/Fri May 29 23:30:13 2009/-ko/
@@ -19,4 +17,6 @@ D/testsuite////
 /confsubdir.m4/1.1/Fri May 29 23:30:13 2009//
 /newlib.hin/1.19/Fri May 29 23:30:14 2009//
 /stamp-h.in/1.2/Fri May 29 23:30:14 2009//
-/ChangeLog/1.1367/Fri Jun 19 11:14:06 2009/-ko/
+/ChangeLog/1.1369/Tue Jun 30 10:46:42 2009/-ko/
+/Makefile.am/1.43/Tue Jun 30 10:46:42 2009/-ko/
+/Makefile.in/1.55/Tue Jun 30 10:46:43 2009/-ko/

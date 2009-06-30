@@ -1,3 +1,146 @@
+2009-06-29  Nick Clifton  <nickc@redhat.com>
+
+	* elf-m10300.c (mn10300_elf_relax_section): Allow for the
+	different uses of the relocations addend when a symbol is in a
+	merged section.
+
+2009-06-27  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10337
+	* elf.c (bfd_section_from_shdr): Don't change sh_link for
+	SHT_REL/SHT_RELA sections on executable nor shared library.
+	Treat SHT_REL/SHT_RELA sections with sh_link set to SHN_UNDEF
+	as a normal section.
+
+2009-06-25  Nick Clifton  <nickc@redhat.com>
+
+	* elf-m10300.c (mn10300_elf_relax_section): Handle non-section
+	symbols with SEC_MERGE flag.
+
+2009-06-25  Kai Tietz  <kai.tietz@onevision.com>
+
+	* coffcode.h (sec_to_styp_flags): Set discardable for .reloc and
+	give .debug and .reloc data characteristics.
+	(DOT_RELOC): New define for .reloc section string.
+	(coff_write_object_contents): Use DOT_RELOC instead of string.
+
+2009-06-25  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o-target.c (bfd_mach_o_get_dynamic_symtab_upper_bound)
+	(bfd_mach_o_canonicalize_dynamic_symtab)
+	(bfd_mach_o_get_synthetic_symtab): Defines.
+	(TARGET_NAME_BACKEND): Add bfd_mach_o_print_thread entry.
+	(TARGET_NAME): Use Mach-O specific functions for dynamic.
+
+	* mach-o-i386.c (bfd_mach_o_i386_swap_reloc_in): Fix howto indexes
+	for scattered relocations.
+	(bfd_mach_o_i386_print_thread): New function.
+	(bfd_mach_o_print_thread): Define.
+
+	* mach-o.c (text_section_names_xlat): Add an entry for __const.
+	(bfd_mach_o_canonicalize_one_reloc, bfd_mach_o_canonicalize_relocs): 
+	New functions extracted from ...
+	(bfd_mach_o_canonicalize_reloc): ... This.  Simplified.
+	(bfd_mach_o_get_dynamic_reloc_upper_bound): New function.
+	(bfd_mach_o_canonicalize_dynamic_reloc): New function.
+	(bfd_mach_o_i386_flavour_string): Adjusted after enum renaming.
+	(bfd_mach_o_ppc_flavour_string): Reindentation.  Add 64 bits cases.
+	(bfd_mach_o_scan_read_dylinker): Do not create a section anymore.
+	Set name_str field.
+	(bfd_mach_o_scan_read_dylib): Ditto.
+	(bfd_mach_o_scan_read_thread): Set mdata at declaration.  Add comments,
+	reindent.
+	(bfd_mach_o_scan_read_dysymtab): Set mdata at declaration.  Correctly
+	decode isym and flags on little endian targets.  Set dysymtab field.
+	(bfd_mach_o_scan_start_address): Adjust for enum names.
+	(bfd_mach_o_lookup_section): Do not look for segments anymore.
+	(bfd_mach_o_print_section): Display bfd section name.
+	(bfd_mach_o_print_segment): Display none if no name.
+	(bfd_mach_o_print_dysymtab): Display next index for local, external
+	and undefined symbols.
+	(bfd_mach_o_bfd_print_private_bfd_data): Adjust code by using name_str.
+	Display dylinker name. Display thread and unixthread commands content.
+	(bfd_mach_o_print_thread): New macro.
+
+	* mach-o.h (bfd_mach_o_mach_header_magic): Align numbers.
+	(bfd_mach_o_ppc_thread_flavour): Ditto.
+	(bfd_mach_o_i386_thread_flavour): Ditto.
+	(BFD_MACH_O_PPC_THREAD_STATE_NONE): New enum.
+	(BFD_MACH_O_x86_THREAD_STATE_NONE): Replaces
+	BFD_MACH_O_THREAD_STATE_NONE.
+	(bfd_mach_o_segment_command): Remove segment field.
+	(bfd_mach_o_thread_flavour): Field offset is now unsigned long.
+	(bfd_mach_o_dylinker_command): Remove section field, add name_str.
+	(bfd_mach_o_prebound_dylib_command): Ditto.
+	(bfd_mach_o_dylib_command): Ditto.
+	(bfd_mach_o_prebound_dylib_command): Remove section field.
+	(mach_o_data_struct): Add dysymtab field.
+	(bfd_mach_o_backend_data): Add _bfd_mach_o_print_thread field.
+	(bfd_mach_o_get_reloc_upper_bound, bfd_mach_o_canonicalize_reloc)
+	(bfd_mach_o_build_commands): Remove parameter names and attributes.
+	(bfd_mach_o_get_dynamic_reloc_upper_bound)
+	(bfd_mach_o_canonicalize_dynamic_reloc): New prototypes.
+
+2009-06-25  Rafael Avila de Espindola  <espindola@google.com>
+
+	* plugin.c (load_plugin): Use stat and S_ISREG instead of the d_type
+	field of struct dirent.
+
+2009-06-23  Tristan Gingold  <gingold@adacore.com>
+
+	* vms.c (vms_get_synthetic_symtab): Remove duplicate definition
+	of this macro.  Fix indentation.
+
+2009-06-22  Christophe Lyon  <christophe.lyon@st.com>
+
+	* elf32-arm.c (elf32_arm_size_stubs): Use PLT address as
+	destination for defined dynamic symbols when deciding whether to
+	insert a stub or not.
+	(allocate_dynrelocs): Make sure functions are not marked as Thumb
+	when actually accessed through a PLT, even when generating a
+	shared lib.
+
+2009-06-22  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_canonicalize_reloc): Append a sentinel to
+	the relocs array.
+
+2009-06-22  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf32-ppc.c (ppc_elf_check_relocs): Handle R_PPC_RELAX* in switch.
+	* elf32-v850.c (v850_elf_relocate_section): Warning fix.
+
+2009-06-22  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf64-ppc.c (ppc64_elf_edit_opd): Avoid gcc warning.
+
+2009-06-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elflink.c (elf_link_add_object_symbols): Avoid warning
+	from -Wjump-misses-init in gcc 4.5.0.
+
+2009-06-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-i386.c (elf_i386_check_relocs): Properly check local
+	symbol on error.
+	* elf64-x86-64.c (elf64_x86_64_check_relocs): Likewise.
+
+2009-06-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf32-i386.c (elf_i386_tls_transition): Add a parameter,
+	r_symndx.  Report local symbol name on error.
+	(elf_i386_check_relocs): Updated.  Report local symbol name on
+	error.
+	(elf_i386_gc_sweep_hook): Updated.
+	(elf_i386_relocate_section): Likewise.
+
+	* elf64-x86-64.c (elf64_x86_64_tls_transition): Add a parameter,
+	r_symndx.  Report local symbol name on error.
+	(elf64_x86_64_check_relocs): Updated.  Report local symbol name
+	on error.
+	(elf64_x86_64_gc_sweep_hook): Updated.
+	(elf64_x86_64_relocate_section): Likewise.
+
 2009-06-19  Tristan Gingold  <gingold@adacore.com>
 
 	* mach-o.c (bfd_mach_o_print_private_header): Fix format character.

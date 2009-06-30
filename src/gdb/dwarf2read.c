@@ -46,6 +46,7 @@
 #include "hashtab.h"
 #include "command.h"
 #include "gdbcmd.h"
+#include "block.h"
 #include "addrmap.h"
 
 #include <fcntl.h>
@@ -945,6 +946,8 @@ static void read_common_block (struct die_info *, struct dwarf2_cu *);
 static void read_namespace (struct die_info *die, struct dwarf2_cu *);
 
 static void read_module (struct die_info *die, struct dwarf2_cu *cu);
+
+static void read_import_statement (struct die_info *die, struct dwarf2_cu *);
 
 static const char *namespace_name (struct die_info *die,
 				   int *is_anonymous, struct dwarf2_cu *);
@@ -2930,12 +2933,8 @@ process_die (struct die_info *die, struct dwarf2_cu *cu)
       read_file_scope (die, cu);
       break;
     case DW_TAG_subprogram:
-      read_func_scope (die, cu);
-      break;
     case DW_TAG_inlined_subroutine:
-      /* FIXME:  These are ignored for now.
-         They could be used to set breakpoints on all inlined instances
-         of a function and make GDB `next' properly over inlined functions.  */
+      read_func_scope (die, cu);
       break;
     case DW_TAG_lexical_block:
     case DW_TAG_try_block:
@@ -2985,14 +2984,12 @@ process_die (struct die_info *die, struct dwarf2_cu *cu)
       break;
     case DW_TAG_imported_declaration:
     case DW_TAG_imported_module:
-      /* FIXME: carlton/2002-10-16: Eventually, we should use the
-	 information contained in these.  DW_TAG_imported_declaration
-	 dies shouldn't have children; DW_TAG_imported_module dies
-	 shouldn't in the C++ case, but conceivably could in the
-	 Fortran case.  */
       processing_has_namespace_info = 1;
-      complaint (&symfile_complaints, _("unsupported tag: '%s'"),
-		 dwarf_tag_name (die->tag));
+      if (die->child != NULL && (die->tag == DW_TAG_imported_declaration
+				 || cu->language != language_fortran))
+	complaint (&symfile_complaints, _("Tag '%s' has unexpected children"),
+		   dwarf_tag_name (die->tag));
+      read_import_statement (die, cu);
       break;
     default:
       new_symbol (die, NULL, cu);
@@ -3036,6 +3033,90 @@ dwarf2_full_name (struct die_info *die, struct dwarf2_cu *cu)
 			    name, cu);
 
   return name;
+}
+
+/* Read the import statement specified by the given die and record it.  */
+
+static void
+read_import_statement (struct die_info *die, struct dwarf2_cu *cu)
+{
+  struct attribute *import_attr;
+  struct die_info *imported_die;
+  const char *imported_name;
+  const char *imported_name_prefix;
+  const char *import_prefix;
+  char *canonical_name;
+
+  import_attr = dwarf2_attr (die, DW_AT_import, cu);
+  if (import_attr == NULL)
+    {
+      complaint (&symfile_complaints, _("Tag '%s' has no DW_AT_import"),
+		 dwarf_tag_name (die->tag));
+      return;
+    }
+
+  imported_die = follow_die_ref (die, import_attr, &cu);
+  imported_name = dwarf2_name (imported_die, cu);
+  if (imported_name == NULL)
+    {
+      /* GCC bug: https://bugzilla.redhat.com/show_bug.cgi?id=506524
+
+        The import in the following code:
+        namespace A
+          {
+            typedef int B;
+          }
+
+        int main ()
+          {
+            using A::B;
+            B b;
+            return b;
+          }
+
+        ...
+         <2><51>: Abbrev Number: 3 (DW_TAG_imported_declaration)
+            <52>   DW_AT_decl_file   : 1
+            <53>   DW_AT_decl_line   : 6
+            <54>   DW_AT_import      : <0x75>
+         <2><58>: Abbrev Number: 4 (DW_TAG_typedef)
+            <59>   DW_AT_name        : B
+            <5b>   DW_AT_decl_file   : 1
+            <5c>   DW_AT_decl_line   : 2
+            <5d>   DW_AT_type        : <0x6e>
+        ...
+         <1><75>: Abbrev Number: 7 (DW_TAG_base_type)
+            <76>   DW_AT_byte_size   : 4
+            <77>   DW_AT_encoding    : 5        (signed)
+
+        imports the wrong die ( 0x75 instead of 0x58 ).
+        This case will be ignored until the gcc bug is fixed.  */
+      return;
+    }
+
+  /* FIXME: dwarf2_name (die); for the local name after import.  */
+
+  /* Figure out where the statement is being imported to.  */
+  import_prefix = determine_prefix (die, cu);
+
+  /* Figure out what the scope of the imported die is and prepend it
+     to the name of the imported die.  */
+  imported_name_prefix = determine_prefix (imported_die, cu);
+
+  if (strlen (imported_name_prefix) > 0)
+    {
+      canonical_name = alloca (strlen (imported_name_prefix) + 2 + strlen (imported_name) + 1);
+      strcpy (canonical_name, imported_name_prefix);
+      strcat (canonical_name, "::");
+      strcat (canonical_name, imported_name);
+    }
+  else
+    {
+      canonical_name = alloca (strlen (imported_name) + 1);
+      strcpy (canonical_name, imported_name);
+    }
+
+  using_directives = cp_add_using (import_prefix,canonical_name, using_directives);
 }
 
 static void
@@ -3229,7 +3310,9 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
     return;
 
   origin_die = follow_die_ref (die, attr, &cu);
-  if (die->tag != origin_die->tag)
+  if (die->tag != origin_die->tag
+      && !(die->tag == DW_TAG_inlined_subroutine
+	   && origin_die->tag == DW_TAG_subprogram))
     complaint (&symfile_complaints,
 	       _("DIE 0x%x and its abstract origin 0x%x have different tags"),
 	       die->offset, origin_die->offset);
@@ -3256,7 +3339,9 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
 	  struct die_info *child_origin_die;
 
 	  child_origin_die = follow_die_ref (child_die, attr, &cu);
-	  if (child_die->tag != child_origin_die->tag)
+	  if (child_die->tag != child_origin_die->tag
+	      && !(child_die->tag == DW_TAG_inlined_subroutine
+		   && child_origin_die->tag == DW_TAG_subprogram))
 	    complaint (&symfile_complaints,
 		       _("Child DIE 0x%x and its abstract origin 0x%x have "
 			 "different tags"), child_die->offset,
@@ -3299,10 +3384,25 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
   CORE_ADDR lowpc;
   CORE_ADDR highpc;
   struct die_info *child_die;
-  struct attribute *attr;
+  struct attribute *attr, *call_line, *call_file;
   char *name;
   CORE_ADDR baseaddr;
   struct block *block;
+  int inlined_func = (die->tag == DW_TAG_inlined_subroutine);
+
+  if (inlined_func)
+    {
+      /* If we do not have call site information, we can't show the
+	 caller of this inlined function.  That's too confusing, so
+	 only use the scope for local variables.  */
+      call_line = dwarf2_attr (die, DW_AT_call_line, cu);
+      call_file = dwarf2_attr (die, DW_AT_call_file, cu);
+      if (call_line == NULL || call_file == NULL)
+	{
+	  read_lexical_block_scope (die, cu);
+	  return;
+	}
+    }
 
   baseaddr = ANOFFSET (objfile->section_offsets, SECT_OFF_TEXT (objfile));
 
@@ -3371,6 +3471,7 @@ read_func_scope (struct die_info *die, struct dwarf2_cu *cu)
      back to building a containing block's symbol lists.  */
   local_symbols = new->locals;
   param_symbols = new->params;
+  using_directives = new->using_directives;
 
   /* If we've finished processing a top-level function, subsequent
      symbols go in the file symbol list.  */
@@ -3433,6 +3534,7 @@ read_lexical_block_scope (struct die_info *die, struct dwarf2_cu *cu)
       dwarf2_record_block_ranges (die, block, baseaddr, cu);
     }
   local_symbols = new->locals;
+  using_directives = new->using_directives;
 }
 
 /* Get low and high pc attributes from DW_AT_ranges attribute value OFFSET.
@@ -4750,7 +4852,7 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
      arrays with unspecified length.  */
   if (die->child == NULL)
     {
-      index_type = builtin_type_int32;
+      index_type = objfile_type (objfile)->builtin_int;
       range_type = create_range_type (NULL, index_type, 0, -1);
       type = create_array_type (NULL, element_type, range_type);
       return set_die_type (die, type, cu);
@@ -4973,9 +5075,7 @@ read_namespace (struct die_info *die, struct dwarf2_cu *cu)
       if (is_anonymous)
 	{
 	  const char *previous_prefix = determine_prefix (die, cu);
-	  cp_add_using_directive (TYPE_NAME (type),
-				  strlen (previous_prefix),
-				  strlen (TYPE_NAME (type)));
+	  cp_add_using_directive (previous_prefix, TYPE_NAME (type));
 	}
     }
 
@@ -5190,7 +5290,7 @@ read_tag_string_type (struct die_info *die, struct dwarf2_cu *cu)
         }
     }
 
-  index_type = builtin_type_int32;
+  index_type = objfile_type (objfile)->builtin_int;
   range_type = create_range_type (NULL, index_type, 1, length);
   char_type = language_string_char_type (cu->language_defn, gdbarch);
   type = create_string_type (NULL, char_type, range_type);
@@ -5217,7 +5317,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
   struct attribute *attr;
 
   type = die_type (die, cu);
-  ftype = make_function_type (type, (struct type **) 0, cu->objfile);
+  ftype = lookup_function_type (type);
 
   /* All functions in C++, Pascal and Java have prototypes.  */
   attr = dwarf2_attr (die, DW_AT_prototyped, cu);
@@ -6952,13 +7052,18 @@ die_is_declaration (struct die_info *die, struct dwarf2_cu *cu)
 
 /* Return the die giving the specification for DIE, if there is
    one.  *SPEC_CU is the CU containing DIE on input, and the CU
-   containing the return value on output.  */
+   containing the return value on output.  If there is no
+   specification, but there is an abstract origin, that is
+   returned.  */
 
 static struct die_info *
 die_specification (struct die_info *die, struct dwarf2_cu **spec_cu)
 {
   struct attribute *spec_attr = dwarf2_attr (die, DW_AT_specification,
 					     *spec_cu);
+
+  if (spec_attr == NULL)
+    spec_attr = dwarf2_attr (die, DW_AT_abstract_origin, *spec_cu);
 
   if (spec_attr == NULL)
     return NULL;
@@ -7289,7 +7394,7 @@ dwarf_decode_lines (struct line_header *lh, char *comp_dir, bfd *abfd,
 	      else
 		{
 		  lh->file_names[file - 1].included_p = 1;
-		  if (!decode_for_pst_p)
+		  if (!decode_for_pst_p && is_stmt)
 		    {
 		      if (last_subfile != current_subfile)
 			{
@@ -7304,7 +7409,7 @@ dwarf_decode_lines (struct line_header *lh, char *comp_dir, bfd *abfd,
 		      record_line (current_subfile, line, addr);
 		    }
 		}
-	      basic_block = 1;
+	      basic_block = 0;
 	    }
 	  else switch (op_code)
 	    {
@@ -7369,7 +7474,7 @@ dwarf_decode_lines (struct line_header *lh, char *comp_dir, bfd *abfd,
 	      else
 		{
 		  lh->file_names[file - 1].included_p = 1;
-		  if (!decode_for_pst_p)
+		  if (!decode_for_pst_p && is_stmt)
 		    {
 		      if (last_subfile != current_subfile)
 			{
@@ -7650,12 +7755,12 @@ static struct symbol *
 new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
 {
   struct objfile *objfile = cu->objfile;
-  struct gdbarch *gdbarch = get_objfile_arch (objfile);
   struct symbol *sym = NULL;
   char *name;
   struct attribute *attr = NULL;
   struct attribute *attr2 = NULL;
   CORE_ADDR baseaddr;
+  int inlined_func = (die->tag == DW_TAG_inlined_subroutine);
 
   baseaddr = ANOFFSET (objfile->section_offsets, SECT_OFF_TEXT (objfile));
 
@@ -7683,13 +7788,17 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
 	SYMBOL_TYPE (sym) = type;
       else
 	SYMBOL_TYPE (sym) = die_type (die, cu);
-      attr = dwarf2_attr (die, DW_AT_decl_line, cu);
+      attr = dwarf2_attr (die,
+			  inlined_func ? DW_AT_call_line : DW_AT_decl_line,
+			  cu);
       if (attr)
 	{
 	  SYMBOL_LINE (sym) = DW_UNSND (attr);
 	}
 
-      attr = dwarf2_attr (die, DW_AT_decl_file, cu);
+      attr = dwarf2_attr (die,
+			  inlined_func ? DW_AT_call_file : DW_AT_decl_file,
+			  cu);
       if (attr)
 	{
 	  int file_index = DW_UNSND (attr);
@@ -7736,13 +7845,21 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
 	      add_symbol_to_list (sym, cu->list_in_scope);
 	    }
 	  break;
+	case DW_TAG_inlined_subroutine:
+	  /* SYMBOL_BLOCK_VALUE (sym) will be filled in later by
+	     finish_block.  */
+	  SYMBOL_CLASS (sym) = LOC_BLOCK;
+	  SYMBOL_INLINED (sym) = 1;
+	  /* Do not add the symbol to any lists.  It will be found via
+	     BLOCK_FUNCTION from the blockvector.  */
+	  break;
 	case DW_TAG_variable:
 	  /* Compilation with minimal debug info may result in variables
 	     with missing type entries. Change the misleading `void' type
 	     to something sensible.  */
 	  if (TYPE_CODE (SYMBOL_TYPE (sym)) == TYPE_CODE_VOID)
 	    SYMBOL_TYPE (sym)
-	      = builtin_type (gdbarch)->nodebug_data_symbol;
+	      = objfile_type (objfile)->nodebug_data_symbol;
 
 	  attr = dwarf2_attr (die, DW_AT_const_value, cu);
 	  if (attr)
@@ -7789,7 +7906,14 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
 	    }
 	  break;
 	case DW_TAG_formal_parameter:
-	  SYMBOL_IS_ARGUMENT (sym) = 1;
+	  /* If we are inside a function, mark this as an argument.  If
+	     not, we might be looking at an argument to an inlined function
+	     when we do not have enough information to show inlined frames;
+	     pretend it's a local variable in that case so that the user can
+	     still see it.  */
+	  if (context_stack_depth > 0
+	      && context_stack[context_stack_depth - 1].name != NULL)
+	    SYMBOL_IS_ARGUMENT (sym) = 1;
 	  attr = dwarf2_attr (die, DW_AT_location, cu);
 	  if (attr)
 	    {
@@ -8043,7 +8167,6 @@ dwarf2_const_value_data (struct attribute *attr,
 static struct type *
 die_type (struct die_info *die, struct dwarf2_cu *cu)
 {
-  struct gdbarch *gdbarch = get_objfile_arch (cu->objfile);
   struct type *type;
   struct attribute *type_attr;
   struct die_info *type_die;
@@ -8052,7 +8175,7 @@ die_type (struct die_info *die, struct dwarf2_cu *cu)
   if (!type_attr)
     {
       /* A missing DW_AT_type represents a void type.  */
-      return builtin_type (gdbarch)->builtin_void;
+      return objfile_type (cu->objfile)->builtin_void;
     }
   else
     type_die = follow_die_ref (die, type_attr, &cu);
@@ -8130,6 +8253,7 @@ read_type_die (struct die_info *die, struct dwarf2_cu *cu)
       break;
     case DW_TAG_subprogram:
     case DW_TAG_subroutine_type:
+    case DW_TAG_inlined_subroutine:
       this_type = read_subroutine_type (die, cu);
       break;
     case DW_TAG_array_type:

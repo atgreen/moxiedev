@@ -55,7 +55,7 @@ static void
 print_dynamic_range_bound (struct type *, const char *, int,
 			   const char *, struct ui_file *);
 
-static void print_range_type_named (char *, struct ui_file *);
+static void print_range_type_named (char *, struct type *, struct ui_file *);
 
 
 
@@ -133,7 +133,7 @@ print_range (struct type *type, struct ui_file *stream)
     case TYPE_CODE_ENUM:
       break;
     default:
-      target_type = builtin_type_int32;
+      target_type = NULL;
       break;
     }
 
@@ -181,12 +181,12 @@ print_range_bound (struct type *type, char *bounds, int *n,
          be printed as a signed or an unsigned value.  This causes
          the upper bound of the 0 .. -1 range types to be printed as
          a very large unsigned number instead of -1.
-         To workaround this stabs deficiency, we replace the TYPE by
-         builtin_type_int32 when we detect that the bound is negative,
+         To workaround this stabs deficiency, we replace the TYPE by NULL
+         to indicate default output when we detect that the bound is negative,
          and the type is a TYPE_CODE_INT.  The bound is negative when
          'm' is the last character of the number scanned in BOUNDS.  */
       if (bounds[*n - 1] == 'm' && TYPE_CODE (type) == TYPE_CODE_INT)
-	type = builtin_type_int32;
+	type = NULL;
       ada_print_scalar (type, B, stream);
       if (bounds[*n] == '_')
 	*n += 2;
@@ -233,26 +233,27 @@ print_dynamic_range_bound (struct type *type, const char *name, int name_len,
     fprintf_filtered (stream, "?");
 }
 
-/* Print the range type named NAME.  */
+/* Print the range type named NAME.  If symbol lookup fails, fall back
+   to ORIG_TYPE as base type.  */
 
 static void
-print_range_type_named (char *name, struct ui_file *stream)
+print_range_type_named (char *name, struct type *orig_type,
+			struct ui_file *stream)
 {
   struct type *raw_type = ada_find_any_type (name);
   struct type *base_type;
   char *subtype_info;
 
   if (raw_type == NULL)
-    base_type = builtin_type_int32;
-  else if (TYPE_CODE (raw_type) == TYPE_CODE_RANGE)
+    raw_type = orig_type;
+
+  if (TYPE_CODE (raw_type) == TYPE_CODE_RANGE)
     base_type = TYPE_TARGET_TYPE (raw_type);
   else
     base_type = raw_type;
 
   subtype_info = strstr (name, "___XD");
-  if (subtype_info == NULL && raw_type == NULL)
-    fprintf_filtered (stream, "? .. ?");
-  else if (subtype_info == NULL)
+  if (subtype_info == NULL)
     print_range (raw_type, stream);
   else
     {
@@ -398,7 +399,8 @@ print_array_type (struct type *type, struct ui_file *stream, int show,
 		  if (k > 0)
 		    fprintf_filtered (stream, ", ");
 		  print_range_type_named (TYPE_FIELD_NAME
-					  (range_desc_type, k), stream);
+					  (range_desc_type, k),
+					  TYPE_INDEX_TYPE (arr_type), stream);
 		  if (TYPE_FIELD_BITSIZE (arr_type, 0) > 0)
 		    bitsize = TYPE_FIELD_BITSIZE (arr_type, 0);
 		}
@@ -421,7 +423,7 @@ print_array_type (struct type *type, struct ui_file *stream, int show,
 }
 
 /* Print the choices encoded by field FIELD_NUM of variant-part TYPE on
-   STREAM, assuming the VAL_TYPE is the type of the values.  */
+   STREAM, assuming that VAL_TYPE (if non-NULL) is the type of the values.  */
 
 static void
 print_choices (struct type *type, int field_num, struct ui_file *stream,
@@ -816,7 +818,7 @@ ada_print_type (struct type *type0, char *varstring, struct ui_file *stream,
 	    else
 	      {
 		fprintf_filtered (stream, "range ");
-		print_range_type_named (name, stream);
+		print_range_type_named (name, type, stream);
 	      }
 	  }
 	break;

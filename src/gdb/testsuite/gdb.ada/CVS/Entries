@@ -90,3 +90,4 @@ D/tick_last_segv////
 /type_coercion.exp/1.3/Fri May 29 23:30:11 2009//
 /uninitialized_vars.exp/1.1/Fri May 29 23:30:11 2009//
 /watch_arg.exp/1.7/Fri May 29 23:30:11 2009//
+/variant_record_packed_array.exp/1.1/Tue Jun 23 16:46:10 2009//

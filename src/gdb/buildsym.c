@@ -384,6 +384,8 @@ finish_block (struct symbol *symbol, struct pending **listhead,
       opblock = pblock;
     }
 
+  block_set_using (block, using_directives, &objfile->objfile_obstack);
+
   record_pending_block (objfile, block, opblock);
 
   return block;
@@ -812,10 +814,6 @@ start_symtab (char *name, char *dirname, CORE_ADDR start_addr)
   /* We shouldn't have any address map at this point.  */
   gdb_assert (! pending_addrmap);
 
-  /* Set up support for C++ namespace support, in case we need it.  */
-
-  cp_initialize_namespace ();
-
   /* Initialize the list of sub source files with one entry for this
      file (the top-level source file).  */
 
@@ -899,6 +897,19 @@ watch_main_source_file_lossage (void)
     }
 }
 
+/* Helper function for qsort.  Parametes are `struct block *' pointers,
+   function sorts them in descending order by their BLOCK_START.  */
+
+static int
+block_compar (const void *ap, const void *bp)
+{
+  const struct block *a = *(const struct block **) ap;
+  const struct block *b = *(const struct block **) bp;
+
+  return ((BLOCK_START (b) > BLOCK_START (a))
+	  - (BLOCK_START (b) < BLOCK_START (a)));
+}
+
 /* Finish the symbol definitions for one main source file, close off
    all the lexical contexts for that file (creating struct block's for
    them), then make the struct symtab for that file and put it in the
@@ -952,32 +963,28 @@ end_symtab (CORE_ADDR end_addr, struct objfile *objfile, int section)
      OBJF_REORDERED is true, then sort the pending blocks.  */
   if ((objfile->flags & OBJF_REORDERED) && pending_blocks)
     {
-      /* FIXME!  Remove this horrid bubble sort and use merge sort!!! */
-      int swapped;
-      do
-	{
-	  struct pending_block *pb, *pbnext;
+      unsigned count = 0;
+      struct pending_block *pb;
+      struct block **barray, **bp;
+      struct cleanup *back_to;
 
-	  pb = pending_blocks;
-	  pbnext = pb->next;
-	  swapped = 0;
+      for (pb = pending_blocks; pb != NULL; pb = pb->next)
+	count++;
 
-	  while (pbnext)
-	    {
-	      /* swap blocks if unordered! */
+      barray = xmalloc (sizeof (*barray) * count);
+      back_to = make_cleanup (xfree, barray);
 
-	      if (BLOCK_START (pb->block) < BLOCK_START (pbnext->block))
-		{
-		  struct block *tmp = pb->block;
-		  pb->block = pbnext->block;
-		  pbnext->block = tmp;
-		  swapped = 1;
-		}
-	      pb = pbnext;
-	      pbnext = pbnext->next;
-	    }
-	}
-      while (swapped);
+      bp = barray;
+      for (pb = pending_blocks; pb != NULL; pb = pb->next)
+	*bp++ = pb->block;
+
+      qsort (barray, count, sizeof (*barray), block_compar);
+
+      bp = barray;
+      for (pb = pending_blocks; pb != NULL; pb = pb->next)
+	pb->block = *bp++;
+
+      do_cleanups (back_to);
     }
 
   /* Cleanup any undefined types that have been left hanging around
@@ -990,7 +997,7 @@ end_symtab (CORE_ADDR end_addr, struct objfile *objfile, int section)
      are no-ops.  FIXME: Is this handled right in case of QUIT?  Can
      we make this cleaner?  */
 
-  cleanup_undefined_types ();
+  cleanup_undefined_types (objfile);
   finish_global_stabs (objfile);
 
   if (pending_blocks == NULL
@@ -1012,8 +1019,6 @@ end_symtab (CORE_ADDR end_addr, struct objfile *objfile, int section)
       finish_block (0, &global_symbols, 0, last_source_start_addr, end_addr,
 		    objfile);
       blockvector = make_blockvector (objfile);
-      cp_finalize_namespace (BLOCKVECTOR_BLOCK (blockvector, STATIC_BLOCK),
-			     &objfile->objfile_obstack);
     }
 
   /* Read the line table if it has to be read separately.  */
@@ -1182,6 +1187,12 @@ end_symtab (CORE_ADDR end_addr, struct objfile *objfile, int section)
 	  struct symbol *sym;
 	  struct dict_iterator iter;
 
+	  /* Inlined functions may have symbols not in the global or static
+	     symbol lists.  */
+	  if (BLOCK_FUNCTION (block) != NULL)
+	    if (SYMBOL_SYMTAB (BLOCK_FUNCTION (block)) == NULL)
+	      SYMBOL_SYMTAB (BLOCK_FUNCTION (block)) = symtab;
+
 	  for (sym = dict_iterator_first (BLOCK_DICT (block), &iter);
 	       sym != NULL;
 	       sym = dict_iterator_next (&iter))
@@ -1225,10 +1236,12 @@ push_context (int desc, CORE_ADDR valu)
   new->params = param_symbols;
   new->old_blocks = pending_blocks;
   new->start_addr = valu;
+  new->using_directives = using_directives;
   new->name = NULL;
 
   local_symbols = NULL;
   param_symbols = NULL;
+  using_directives = NULL;
 
   return new;
 }

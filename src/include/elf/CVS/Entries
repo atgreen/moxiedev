@@ -43,7 +43,6 @@
 /openrisc.h/1.2/Fri May 29 23:30:12 2009//
 /or32.h/1.2/Fri May 29 23:30:12 2009//
 /pj.h/1.5/Fri May 29 23:30:12 2009//
-/ppc.h/1.23/Fri May 29 23:30:12 2009//
 /ppc64.h/1.5/Fri May 29 23:30:12 2009//
 /reloc-macros.h/1.10/Fri May 29 23:30:12 2009//
 /s390.h/1.7/Fri May 29 23:30:12 2009//
@@ -58,6 +57,7 @@
 /xc16x.h/1.1/Fri May 29 23:30:12 2009//
 /xstormy16.h/1.4/Fri May 29 23:30:12 2009//
 /xtensa.h/1.7/Fri May 29 23:30:12 2009//
-/ChangeLog/1.366/Thu Jun 11 12:16:00 2009//
 /moxie.h/1.2/Thu Jun 11 12:15:26 2009//
+/ChangeLog/1.367/Tue Jun 30 10:44:17 2009//
+/ppc.h/1.24/Tue Jun 30 10:44:17 2009//
 D

@@ -38,7 +38,6 @@
 /derivation.cc/1.1/Fri May 29 23:30:11 2009//
 /derivation.exp/1.13/Fri May 29 23:30:11 2009//
 /exception.cc/1.8/Fri May 29 23:30:11 2009//
-/exception.exp/1.14/Fri May 29 23:30:11 2009//
 /expand-sals.cc/1.1/Fri May 29 23:30:11 2009//
 /expand-sals.exp/1.1/Fri May 29 23:30:11 2009//
 /formatted-ref.cc/1.2/Fri May 29 23:30:11 2009//
@@ -121,7 +120,12 @@
 /virtfunc.cc/1.3/Fri May 29 23:30:11 2009//
 /virtfunc.exp/1.18/Fri May 29 23:30:11 2009//
 /Makefile.in/1.6/Fri Jun 19 11:14:04 2009//
-/annota2.exp/1.16/Fri Jun 19 11:14:04 2009//
 /gdb2495.cc/1.1/Mon Jun 15 12:11:37 2009//
 /gdb2495.exp/1.1/Mon Jun 15 12:11:37 2009//
+/annota2.exp/1.17/Tue Jun 30 10:43:59 2009//
+/exception.exp/1.15/Tue Jun 30 10:43:59 2009//
+/namespace-nested-import.cc/1.1/Mon Jun 29 15:18:07 2009//
+/namespace-nested-import.exp/1.1/Mon Jun 29 15:18:07 2009//
+/namespace-using.cc/1.1/Tue Jun 23 17:46:52 2009//
+/namespace-using.exp/1.1/Tue Jun 23 17:46:52 2009//
 D

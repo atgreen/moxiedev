@@ -265,6 +265,7 @@ extern void ada_printstr (struct ui_file *, struct type *, const gdb_byte *,
 
 struct value *ada_convert_actual (struct value *actual,
                                   struct type *formal_type0,
+				  struct gdbarch *gdbarch,
                                   CORE_ADDR *sp);
 
 extern struct value *ada_value_subscript (struct value *, int,
@@ -283,10 +284,6 @@ extern int ada_is_simple_array_type (struct type *);
 extern int ada_is_array_descriptor_type (struct type *);
 
 extern int ada_is_bogus_array_descriptor (struct type *);
-
-extern struct type *ada_index_type (struct type *, int);
-
-extern struct value *ada_array_bound (struct value *, int, int);
 
 extern char *ada_decode_symbol (const struct general_symbol_info*);
 

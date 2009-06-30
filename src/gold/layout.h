@@ -208,6 +208,10 @@ class Layout
   void
   define_section_symbols(Symbol_table*);
 
+  // Create automatic note sections.
+  void
+  create_notes();
+
   // Create sections for linker scripts.
   void
   create_script_sections()
@@ -474,11 +478,15 @@ class Layout
 
   // Record whether the stack must be executable.
   void
-  create_executable_stack_info(const Target*);
+  create_executable_stack_info();
 
   // Create a build ID note if needed.
   void
   create_build_id();
+
+  // Link .stab and .stabstr sections.
+  void
+  link_stabs_sections();
 
   // Create .gnu_incremental_inputs and .gnu_incremental_strtab sections needed
   // for the next run of incremental linking to check what has changed.
@@ -724,6 +732,8 @@ class Layout
   bool any_postprocessing_sections_;
   // Whether we have resized the signatures_ hash table.
   bool resized_signatures_;
+  // Whether we have created a .stab*str output section.
+  bool have_stabstr_section_;
   // In incremental build, holds information check the inputs and build the
   // .gnu_incremental_inputs section.
   Incremental_inputs* incremental_inputs_;

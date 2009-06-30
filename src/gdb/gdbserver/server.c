@@ -1074,9 +1074,13 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
 	     p != NULL;
 	     p = strtok (NULL, ";"))
 	  {
-	    /* Record if GDB knows about multiprocess support.  */
 	    if (strcmp (p, "multiprocess+") == 0)
-	      multi_process = 1;
+	      {
+		/* GDB supports and wants multi-process support if
+		   possible.  */
+		if (target_supports_multi_process ())
+		  multi_process = 1;
+	      }
 	  }
 
       sprintf (own_buf, "PacketSize=%x;QPassSignals+", PBUFSIZ - 1);
@@ -1106,7 +1110,8 @@ handle_query (char *own_buf, int packet_len, int *new_packet_len_p)
       if (the_target->qxfer_osdata != NULL)
 	strcat (own_buf, ";qXfer:osdata:read+");
 
-      strcat (own_buf, ";multiprocess+");
+      if (target_supports_multi_process ())
+	strcat (own_buf, ";multiprocess+");
 
       if (target_supports_non_stop ())
 	strcat (own_buf, ";QNonStop+");
@@ -1518,8 +1523,10 @@ handle_v_kill (char *own_buf)
 {
   int pid;
   char *p = &own_buf[6];
-
-  pid = strtol (p, NULL, 16);
+  if (multi_process)
+    pid = strtol (p, NULL, 16);
+  else
+    pid = signal_pid;
   if (pid != 0 && kill_inferior (pid) == 0)
     {
       last_status.kind = TARGET_WAITKIND_SIGNALLED;
@@ -2366,66 +2373,44 @@ process_serial_event (void)
       signal = 0;
       myresume (own_buf, 1, signal);
       break;
-    case 'Z':
+    case 'Z':  /* insert_ ... */
+      /* Fallthrough.  */
+    case 'z':  /* remove_ ... */
       {
 	char *lenptr;
 	char *dataptr;
 	CORE_ADDR addr = strtoul (&own_buf[3], &lenptr, 16);
 	int len = strtol (lenptr + 1, &dataptr, 16);
 	char type = own_buf[1];
+	int res;
+	const int insert = ch == 'Z';
 
-	if (the_target->insert_watchpoint == NULL
-	    || (type < '2' || type > '4'))
+	/* Default to unrecognized/unsupported.  */
+	res = 1;
+	switch (type)
 	  {
-	    /* No watchpoint support or not a watchpoint command;
-	       unrecognized either way.  */
-	    own_buf[0] = '\0';
-	  }
-	else
-	  {
-	    int res;
-
+	  case '0': /* software-breakpoint */
+	  case '1': /* hardware-breakpoint */
+	  case '2': /* write watchpoint */
+	  case '3': /* read watchpoint */
+	  case '4': /* access watchpoint */
 	    require_running (own_buf);
-	    res = (*the_target->insert_watchpoint) (type, addr, len);
-	    if (res == 0)
-	      write_ok (own_buf);
-	    else if (res == 1)
-	      /* Unsupported.  */
-	      own_buf[0] = '\0';
-	    else
-	      write_enn (own_buf);
+	    if (insert && the_target->insert_point != NULL)
+	      res = (*the_target->insert_point) (type, addr, len);
+	    else if (!insert && the_target->remove_point != NULL)
+	      res = (*the_target->remove_point) (type, addr, len);
+	    break;
+	  default:
+	    break;
 	  }
-	break;
-      }
-    case 'z':
-      {
-	char *lenptr;
-	char *dataptr;
-	CORE_ADDR addr = strtoul (&own_buf[3], &lenptr, 16);
-	int len = strtol (lenptr + 1, &dataptr, 16);
-	char type = own_buf[1];
 
-	if (the_target->remove_watchpoint == NULL
-	    || (type < '2' || type > '4'))
-	  {
-	    /* No watchpoint support or not a watchpoint command;
-	       unrecognized either way.  */
-	    own_buf[0] = '\0';
-	  }
+	if (res == 0)
+	  write_ok (own_buf);
+	else if (res == 1)
+	  /* Unsupported.  */
+	  own_buf[0] = '\0';
 	else
-	  {
-	    int res;
-
-	    require_running (own_buf);
-	    res = (*the_target->remove_watchpoint) (type, addr, len);
-	    if (res == 0)
-	      write_ok (own_buf);
-	    else if (res == 1)
-	      /* Unsupported.  */
-	      own_buf[0] = '\0';
-	    else
-	      write_enn (own_buf);
-	  }
+	  write_enn (own_buf);
 	break;
       }
     case 'k':

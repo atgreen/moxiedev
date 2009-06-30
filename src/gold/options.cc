@@ -273,6 +273,7 @@ void
 General_options::parse_V(const char*, const char*, Command_line*)
 {
   gold::print_version(true);
+  this->printed_version_ = true;
   printf(_("  Supported targets:\n"));
   std::vector<const char*> supported_names;
   gold::supported_target_names(&supported_names);
@@ -466,6 +467,29 @@ General_options::check_excluded_libs (const std::string &name) const
   return false;
 }
 
+// Recognize input and output target names.  The GNU linker accepts
+// these with --format and --oformat.  This code is intended to be
+// minimally compatible.  In practice for an ELF target this would be
+// the same target as the input files; that name always start with
+// "elf".  Non-ELF targets would be "srec", "symbolsrec", "tekhex",
+// "binary", "ihex".
+
+General_options::Object_format
+General_options::string_to_object_format(const char* arg)
+{
+  if (strncmp(arg, "elf", 3) == 0)
+    return gold::General_options::OBJECT_FORMAT_ELF;
+  else if (strcmp(arg, "binary") == 0)
+    return gold::General_options::OBJECT_FORMAT_BINARY;
+  else
+    {
+      gold::gold_error(_("format '%s' not supported; treating as elf "
+                         "(supported formats: elf, binary)"),
+                       arg);
+      return gold::General_options::OBJECT_FORMAT_ELF;
+    }
+}
+
 } // End namespace gold.
 
 namespace
@@ -487,29 +511,6 @@ usage(const char* msg, const char *opt)
           _("%s: %s: %s\n"),
           gold::program_name, opt, msg);
   usage();
-}
-
-// Recognize input and output target names.  The GNU linker accepts
-// these with --format and --oformat.  This code is intended to be
-// minimally compatible.  In practice for an ELF target this would be
-// the same target as the input files; that name always start with
-// "elf".  Non-ELF targets would be "srec", "symbolsrec", "tekhex",
-// "binary", "ihex".
-
-gold::General_options::Object_format
-string_to_object_format(const char* arg)
-{
-  if (strncmp(arg, "elf", 3) == 0)
-    return gold::General_options::OBJECT_FORMAT_ELF;
-  else if (strcmp(arg, "binary") == 0)
-    return gold::General_options::OBJECT_FORMAT_BINARY;
-  else
-    {
-      gold::gold_error(_("format '%s' not supported; treating as elf "
-                         "(supported formats: elf, binary)"),
-                       arg);
-      return gold::General_options::OBJECT_FORMAT_ELF;
-    }
 }
 
 // If the default sysroot is relocatable, try relocating it based on
@@ -708,7 +709,8 @@ namespace gold
 {
 
 General_options::General_options()
-  : execstack_status_(General_options::EXECSTACK_FROM_INPUT), static_(false),
+  : printed_version_(false),
+    execstack_status_(General_options::EXECSTACK_FROM_INPUT), static_(false),
     do_demangle_(false), plugins_(),
     incremental_disposition_(INCREMENTAL_CHECK), implicit_incremental_(false)
 {
@@ -717,13 +719,13 @@ General_options::General_options()
 General_options::Object_format
 General_options::format_enum() const
 {
-  return string_to_object_format(this->format());
+  return General_options::string_to_object_format(this->format());
 }
 
 General_options::Object_format
 General_options::oformat_enum() const
 {
-  return string_to_object_format(this->oformat());
+  return General_options::string_to_object_format(this->oformat());
 }
 
 // Add the sysroot, if any, to the search paths.

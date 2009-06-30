@@ -394,9 +394,7 @@ extern struct value *value_concat (struct value *arg1, struct value *arg2);
 extern struct value *value_binop (struct value *arg1, struct value *arg2,
 				  enum exp_opcode op);
 
-extern struct value *value_ptradd (struct value *arg1, struct value *arg2);
-
-extern struct value *value_ptrsub (struct value *arg1, struct value *arg2);
+extern struct value *value_ptradd (struct value *arg1, LONGEST arg2);
 
 extern LONGEST value_ptrdiff (struct value *arg1, struct value *arg2);
 
@@ -468,11 +466,11 @@ extern struct value *value_one (struct type *type, enum lval_type lv);
 
 extern struct value *value_repeat (struct value *arg1, int count);
 
-extern struct value *value_subscript (struct value *array, struct value *idx);
+extern struct value *value_subscript (struct value *array, LONGEST index);
 
 extern struct value *value_bitstring_subscript (struct type *type,
 						struct value *bitstring,
-						struct value *idx);
+						LONGEST index);
 
 extern struct value *register_value_being_returned (struct type *valtype,
 						    struct regcache *retbuf);
@@ -489,6 +487,10 @@ extern int using_struct_return (struct gdbarch *gdbarch,
 extern struct value *evaluate_expression (struct expression *exp);
 
 extern struct value *evaluate_type (struct expression *exp);
+
+extern struct value *evaluate_subexp (struct type *expect_type,
+				      struct expression *exp,
+				      int *pos, enum noside noside);
 
 extern struct value *evaluate_subexpression_type (struct expression *exp,
 						  int subexp);
@@ -662,7 +664,8 @@ extern struct value *value_allocate_space_in_inferior (int);
 
 extern struct value *value_of_local (const char *name, int complain);
 
-extern struct value * value_subscripted_rvalue (struct value *array, struct value *idx, int lowerbound);
+extern struct value *value_subscripted_rvalue (struct value *array,
+					       LONGEST index, int lowerbound);
 
 /* User function handler.  */
 

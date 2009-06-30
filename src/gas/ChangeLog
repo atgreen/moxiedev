@@ -1,3 +1,104 @@
+2009-06-29  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c: Reformat.
+
+2009-06-23  DJ Delorie  <dj@redhat.com>
+
+	* config/tc-mep.c (mep_check_ivc2_scheduling): For IVC2, allocate
+	32 bits for relaxable branches so that we can relax them later.
+	(md_estimate_size_before_relax): Assume IVC2 branches will be relaxed.
+	(mep_relax_frag): New.
+	(md_convert_frag): Relax IVC2 branches in-place.
+	* config/tc-mep.h ((mep_relax_frag): New.
+
+2009-06-22  Martin Thuresson  <martin@mtme.org>
+	
+	* gas/app, gas/as.c, gas/as.h, gas/atof-generic.c, gas/cgen.c,
+	gas/config/atof-ieee.c, gas/config/obj-aout.c,
+	gas/config/obj-coff.c, gas/config/obj-ecoff.c,
+	gas/config/obj-elf.c, gas/config/obj-som.c, gas/config/tc-alpha.c,
+	gas/config/tc-arc.c, gas/config/tc-arm.c, gas/config/tc-cr16.c,
+	gas/config/tc-cris.c, gas/config/tc-crx.c, gas/config/tc-d30v.c,
+	gas/config/tc-dlx.c, gas/config/tc-hppa.c, gas/config/tc-i370.c,
+	gas/config/tc-i386-intel.c, gas/config/tc-i386.c,
+	gas/config/tc-i860.c, gas/config/tc-i960.c, gas/config/tc-ia64.c,
+	gas/config/tc-iq2000.c, gas/config/tc-m32c.c,
+	gas/config/tc-m32r.c, gas/config/tc-m68hc11.c,
+	gas/config/tc-m68k.c, gas/config/tc-maxq.c, gas/config/tc-mcore.c,
+	gas/config/tc-mep.c, gas/config/tc-mips.c, gas/config/tc-mmix.c,
+	gas/config/tc-mn10300.c, gas/config/tc-moxie.c,
+	gas/config/tc-ns32k.c, gas/config/tc-pj.c, gas/config/tc-ppc.c,
+	gas/config/tc-s390.c, gas/config/tc-score.c,
+	gas/config/tc-score7.c, gas/config/tc-sh.c, gas/config/tc-sparc.c,
+	gas/config/tc-spu.c, gas/config/tc-tic30.c, gas/config/tc-vax.c,
+	gas/config/tc-xtensa.c, gas/config/xtensa-relax.c,
+	gas/dw2gencfi.c, gas/dwarf2dbg.c, gas/ehopt.c, gas/expr.c,
+	gas/frags.c, gas/input-file.c, gas/read.c, gas/sb.c,
+	gas/subsegs.c, gas/symbols.c, gas/write.c: Change the name of the
+	gas macro `assert' to `gas_assert'.
+
+2009-06-22  Daniel Gutson <dgutson@codesourcery.com>
+
+	* config/tc-arm.c (implicit_it_mode): New enum.
+	(implicit_it_mode): New global.
+	(it_instruction_type): New enum.
+	(arm_parse_it_mode): New function.
+	(arm_long_opts): New option added.
+	(arm_it): New field.
+	(it_state): New enum.
+	(now_it): New macro.
+	(check_it_blocks_finished): New function.
+	(insns[]): Use the IT Thumb opcodes for ARM too.
+	(arm_cleanup): Call check_it_blocks_finished.
+	(now_it_compatible): New function.
+	(conditional_insn): New function.
+	(set_it_insn_type): New macro.
+	(set_it_insn_type_last): New macro.
+	(do_it): Call automatic IT machinery functions.
+	(do_t_add_sub): Likewise
+	(do_t_arit3): Likewise.
+	(do_t_arit3c): Likewise.
+	(do_t_blx): Likewise.
+	(do_t_branch): Likewise.
+	(do_t_bkpt): Likewise.
+	(do_t_branch23): Likewise.
+	(do_t_bx): Likewise.
+	(do_t_bxj): Likewise.
+	(do_t_cps): Likewise.
+	(do_t_cpsi): Likewise.
+	(do_t_cbz): Likewise.
+	(do_t_it): Likewise.
+	(encode_thumb2_ldmstm): Likewise.
+	(do_t_ldst): Likewise.
+	(do_t_mov_cmp): Likewise.
+	(do_t_mvn_tst): Likewise.
+	(do_t_mul): Likewise.
+	(do_t_neg): Likewise.
+	(do_t_setend): Likewise.
+	(do_t_shift): Likewise.
+	(do_t_tb): Likewise.
+	(output_it_inst): New function.
+	(new_automatic_it_block): New function.
+	(close_automatic_it_block): New function.
+	(now_it_add_mask): New function.
+	(it_fsm_pre_encode): New function.
+	(handle_it_state): New function.
+	(it_fsm_post_encode): New function.
+	(force_automatic_it_block_close): New function.
+	(in_it_block): New function.
+	(md_assemble): Call automatic IT block machinery functions.
+	(arm_frob_label): Likewise.
+	(arm_opts): New element.
+	* config/tc-arm.h (it_state): New enum.
+	(current_it): New struct.
+	(arm_segment_info_type): New member added.
+	* doc/c-arm.texi: New option -mimplicit-it documented.
+
+2009-06-20  Alan Modra  <amodra@bigpond.net.au>
+
+	PR 10302
+	* doc/as.texinfo (Section <ELF "M,S" flag>): Clarify tail merge.
+
 2009-06-19  Martin Schwidefsky  <schwidefsky@de.ibm.com>
 
 	* config/tc-s390.c (md_gather_operands): Accept an instruction

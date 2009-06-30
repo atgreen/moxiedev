@@ -34,6 +34,14 @@
    frame_unwind_WHAT...(): Unwind THIS frame's WHAT from the NEXT
    frame.
 
+   frame_unwind_caller_WHAT...(): Unwind WHAT for NEXT stack frame's
+   real caller.  Any inlined functions in NEXT's stack frame are
+   skipped.  Use these to ignore any potentially inlined functions,
+   e.g. inlined into the first instruction of a library trampoline.
+
+   get_stack_frame_WHAT...(): Get WHAT for THIS frame, but if THIS is
+   inlined, skip to the containing stack frame.
+
    put_frame_WHAT...(): Put a value into this frame (unsafe, need to
    invalidate the frame / regcache afterwards) (better name more
    strongly hinting at its unsafeness)
@@ -101,6 +109,10 @@ struct frame_id
      Typically, it is set to the address of the entry point of the
      frame's function (as returned by get_frame_func).
 
+     For inlined functions (INLINE_DEPTH != 0), this is the address of
+     the first executed instruction in the block corresponding to the
+     inlined function.
+
      This field is valid only if code_addr_p is true.  Otherwise, this
      frame is considered to have a wildcard code address, i.e. one that
      matches every address value in frame comparisons.  */
@@ -122,6 +134,10 @@ struct frame_id
   unsigned int stack_addr_p : 1;
   unsigned int code_addr_p : 1;
   unsigned int special_addr_p : 1;
+
+  /* The inline depth of this frame.  A frame representing a "called"
+     inlined function will have this set to a nonzero value.  */
+  int inline_depth;
 };
 
 /* Methods for constructing and comparing Frame IDs.  */
@@ -157,6 +173,10 @@ extern struct frame_id frame_id_build_wild (CORE_ADDR stack_addr);
    non-zero .base).  */
 extern int frame_id_p (struct frame_id l);
 
+/* Returns non-zero when L is a valid frame representing an inlined
+   function.  */
+extern int frame_id_inlined_p (struct frame_id l);
+
 /* Returns non-zero when L and R identify the same frame, or, if
    either L or R have a zero .func, then the same frame base.  */
 extern int frame_id_eq (struct frame_id l, struct frame_id r);
@@ -177,6 +197,9 @@ enum frame_type
   /* A fake frame, created by GDB when performing an inferior function
      call.  */
   DUMMY_FRAME,
+  /* A frame representing an inlined function, associated with an
+     upcoming (next, inner, younger) NORMAL_FRAME.  */
+  INLINE_FRAME,
   /* In a signal handler, various OSs handle this in various ways.
      The main thing is that the frame may be far from normal.  */
   SIGTRAMP_FRAME,
@@ -345,7 +368,8 @@ extern CORE_ADDR get_frame_base (struct frame_info *);
 
    instead, since that avoids the bug.  */
 extern struct frame_id get_frame_id (struct frame_info *fi);
-extern struct frame_id frame_unwind_id (struct frame_info *next_frame);
+extern struct frame_id get_stack_frame_id (struct frame_info *fi);
+extern struct frame_id frame_unwind_caller_id (struct frame_info *next_frame);
 
 /* Assuming that a frame is `normal', return its base-address, or 0 if
    the information isn't available.  NOTE: This address is really only
@@ -489,7 +513,7 @@ extern void put_frame_register_bytes (struct frame_info *frame, int regnum,
    calling frame.  For GDB, `pc' is the resume address and not a
    specific register.  */
 
-extern CORE_ADDR frame_pc_unwind (struct frame_info *frame);
+extern CORE_ADDR frame_unwind_caller_pc (struct frame_info *frame);
 
 /* Discard the specified frame.  Restoring the registers to the state
    of the caller.  */

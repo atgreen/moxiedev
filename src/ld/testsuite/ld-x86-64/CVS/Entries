@@ -41,7 +41,6 @@
 /tlsgd1.s/1.1/Fri May 29 23:30:12 2009//
 /tlsgd2.d/1.1/Fri May 29 23:30:12 2009//
 /tlsgd2.s/1.1/Fri May 29 23:30:12 2009//
-/tlsgd3.d/1.1/Fri May 29 23:30:12 2009//
 /tlsgd3.s/1.1/Fri May 29 23:30:12 2009//
 /tlsgdesc.dd/1.4/Fri May 29 23:30:12 2009//
 /tlsgdesc.rd/1.3/Fri May 29 23:30:12 2009//
@@ -63,4 +62,5 @@
 /tlspic2.s/1.1/Fri May 29 23:30:12 2009//
 /undefined.s/1.1/Fri May 29 23:30:12 2009//
 /x86-64.exp/1.11/Fri May 29 23:30:12 2009//
+/tlsgd3.d/1.2/Tue Jun 30 10:46:30 2009//
 D

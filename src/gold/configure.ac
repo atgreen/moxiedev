@@ -221,6 +221,9 @@ AM_CONDITIONAL(FN_PTRS_IN_SO_WITHOUT_PIC, [
     *) true;;
   esac])
 
+dnl Whether we can test -mcmodel=medium.
+AM_CONDITIONAL(MCMODEL_MEDIUM, [test "$target_cpu" = "x86_64"])
+
 dnl Test for __thread support.
 AC_CACHE_CHECK([for thread support], [gold_cv_c_thread],
 [AC_COMPILE_IFELSE([__thread int i = 1;],
@@ -318,13 +321,19 @@ AC_REPLACE_FUNCS(pread ftruncate mremap ffsll)
 AC_SEARCH_LIBS(zlibVersion, z, [AC_CHECK_HEADERS(zlib.h)])
 AM_CONDITIONAL(HAVE_ZLIB, test "$ac_cv_search_zlibVersion" != "no")
 
+dnl We have to check these in C, not C++, because autoconf generates
+dnl tests which have no type information, and current glibc provides
+dnl multiple declarations of functions like basename when compiling
+dnl with C++.
+AC_CHECK_DECLS([basename, ffs, asprintf, vasprintf, snprintf, vsnprintf, strverscmp])
+
 AC_LANG_PUSH(C++)
 
 AC_CHECK_HEADERS(tr1/unordered_set tr1/unordered_map)
 AC_CHECK_HEADERS(ext/hash_map ext/hash_set)
 AC_CHECK_HEADERS(byteswap.h)
 AC_CHECK_FUNCS(mallinfo posix_fallocate)
-AC_CHECK_DECLS([basename, ffs, asprintf, vasprintf, snprintf, vsnprintf, strverscmp])
+AC_CHECK_DECLS([basename, ffs, asprintf, vasprintf, snprintf, vsnprintf, strverscmp, strndup, memmem])
 
 # Use of ::std::tr1::unordered_map::rehash causes undefined symbols
 # at link time with some versions of GCC.

@@ -1,15 +1,15 @@
 10
 
 dir
-148971
+149118
 svn://gcc.gnu.org/svn/gcc/trunk/libffi
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-06-16T17:55:39.375944Z
-148543
-andreast
+2009-06-30T18:37:57.384271Z
+149113
+rsandifo
 has-props
 
 
@@ -205,11 +205,11 @@ file
 
 
 
-2009-06-20T15:53:38.000000Z
-77b8850132de430e51e3ed0daec09a41
-2009-06-16T17:55:39.375944Z
-148543
-andreast
+2009-06-30T20:34:08.000000Z
+1ae29071930f87c02993d4dc5c98d8c6
+2009-06-30T18:37:57.384271Z
+149113
+rsandifo
 
 
 
@@ -231,7 +231,7 @@ andreast
 
 
 
-135692
+135928
 
 libtool-version
 file

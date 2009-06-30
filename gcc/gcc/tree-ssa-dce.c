@@ -452,13 +452,6 @@ ref_may_be_aliased (tree ref)
 	   && !may_be_aliased (ref));
 }
 
-struct ref_data {
-  tree base;
-  HOST_WIDE_INT size;
-  HOST_WIDE_INT offset;
-  HOST_WIDE_INT max_size;
-};
-
 static bitmap visited = NULL;
 static unsigned int longest_chain = 0;
 static unsigned int total_chain = 0;
@@ -471,10 +464,10 @@ static bool chain_ovfl = false;
    anymore.  DATA points to cached get_ref_base_and_extent data for REF.  */
 
 static bool
-mark_aliased_reaching_defs_necessary_1 (tree ref, tree vdef, void *data)
+mark_aliased_reaching_defs_necessary_1 (ao_ref *ref, tree vdef,
+					void *data ATTRIBUTE_UNUSED)
 {
   gimple def_stmt = SSA_NAME_DEF_STMT (vdef);
-  struct ref_data *refd = (struct ref_data *)data;
 
   /* All stmts we visit are necessary.  */
   mark_operand_necessary (vdef);
@@ -485,22 +478,24 @@ mark_aliased_reaching_defs_necessary_1 (tree ref, tree vdef, void *data)
     {
       tree base, lhs = gimple_get_lhs (def_stmt);
       HOST_WIDE_INT size, offset, max_size;
+      ao_ref_base (ref);
       base = get_ref_base_and_extent (lhs, &offset, &size, &max_size);
       /* We can get MEM[symbol: sZ, index: D.8862_1] here,
 	 so base == refd->base does not always hold.  */
-      if (base == refd->base)
+      if (base == ref->base)
 	{
 	  /* For a must-alias check we need to be able to constrain
 	     the accesses properly.  */
 	  if (size != -1 && size == max_size
-	      && refd->max_size != -1)
+	      && ref->max_size != -1)
 	    {
-	      if (offset <= refd->offset
-		  && offset + size >= refd->offset + refd->max_size)
+	      if (offset <= ref->offset
+		  && offset + size >= ref->offset + ref->max_size)
 		return true;
 	    }
 	  /* Or they need to be exactly the same.  */
-	  else if (operand_equal_p (ref, lhs, 0))
+	  else if (ref->ref
+		   && operand_equal_p (ref->ref, lhs, 0))
 	    return true;
 	}
     }
@@ -512,14 +507,13 @@ mark_aliased_reaching_defs_necessary_1 (tree ref, tree vdef, void *data)
 static void
 mark_aliased_reaching_defs_necessary (gimple stmt, tree ref)
 {
-  struct ref_data refd;
   unsigned int chain;
+  ao_ref refd;
   gcc_assert (!chain_ovfl);
-  refd.base = get_ref_base_and_extent (ref, &refd.offset, &refd.size,
-				       &refd.max_size);
-  chain = walk_aliased_vdefs (ref, gimple_vuse (stmt),
+  ao_ref_init (&refd, ref);
+  chain = walk_aliased_vdefs (&refd, gimple_vuse (stmt),
 			      mark_aliased_reaching_defs_necessary_1,
-			      &refd, NULL);
+			      NULL, NULL);
   if (chain > longest_chain)
     longest_chain = chain;
   total_chain += chain;
@@ -532,8 +526,8 @@ mark_aliased_reaching_defs_necessary (gimple stmt, tree ref)
    a non-aliased decl.  */
 
 static bool
-mark_all_reaching_defs_necessary_1 (tree ref ATTRIBUTE_UNUSED,
-				tree vdef, void *data ATTRIBUTE_UNUSED)
+mark_all_reaching_defs_necessary_1 (ao_ref *ref ATTRIBUTE_UNUSED,
+				    tree vdef, void *data ATTRIBUTE_UNUSED)
 {
   gimple def_stmt = SSA_NAME_DEF_STMT (vdef);
 
@@ -556,9 +550,9 @@ mark_all_reaching_defs_necessary_1 (tree ref ATTRIBUTE_UNUSED,
 	return false;
     }
 
-  /* But can stop after the first necessary statement.  */
   mark_operand_necessary (vdef);
-  return true;
+
+  return false;
 }
 
 static void
@@ -677,18 +671,15 @@ propagate_necessity (struct edge_list *el)
 	     For 1) we mark all reaching may-defs as necessary, stopping
 	     at dominating kills.  For 2) we want to mark all dominating
 	     references necessary, but non-aliased ones which we handle
-	     in 1).  Instead of doing so for each load we rely on the
-	     worklist to eventually reach all dominating references and
-	     instead just mark the immediately dominating references
-	     as necessary (but skipping non-aliased ones).  */
+	     in 1).  By keeping a global visited bitmap for references
+	     we walk for 2) we avoid quadratic behavior for those.  */
 
 	  if (is_gimple_call (stmt))
 	    {
 	      unsigned i;
 
 	      /* Calls implicitly load from memory, their arguments
-	         in addition may explicitly perform memory loads.
-		 This also ensures propagation for case 2 for stores.  */
+	         in addition may explicitly perform memory loads.  */
 	      mark_all_reaching_defs_necessary (stmt);
 	      for (i = 0; i < gimple_call_num_args (stmt); ++i)
 		{
@@ -702,7 +693,7 @@ propagate_necessity (struct edge_list *el)
 	    }
 	  else if (gimple_assign_single_p (stmt))
 	    {
-	      tree lhs, rhs;
+	      tree rhs;
 	      bool rhs_aliased = false;
 	      /* If this is a load mark things necessary.  */
 	      rhs = gimple_assign_rhs1 (stmt);
@@ -714,12 +705,7 @@ propagate_necessity (struct edge_list *el)
 		  else
 		    rhs_aliased = true;
 		}
-	      /* If this is an aliased store, mark things necessary.
-		 This is where we make sure to propagate for case 2.  */
-	      lhs = gimple_assign_lhs (stmt);
-	      if (rhs_aliased
-		  || (TREE_CODE (lhs) != SSA_NAME
-		      && ref_may_be_aliased (lhs)))
+	      if (rhs_aliased)
 		mark_all_reaching_defs_necessary (stmt);
 	    }
 	  else if (gimple_code (stmt) == GIMPLE_RETURN)

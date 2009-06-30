@@ -45,6 +45,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "output.h"
 #include "target.h"
 #include "langhooks.h"
+#include "tree-inline.h"
 #include "tree-iterator.h"
 #include "basic-block.h"
 #include "tree-flow.h"
@@ -194,9 +195,6 @@ static GTY ((if_marked ("tree_priority_map_marked_p"),
 	     param_is (struct tree_priority_map)))
   htab_t init_priority_for_decl;
 
-static GTY ((if_marked ("tree_map_marked_p"), param_is (struct tree_map)))
-  htab_t restrict_base_for_decl;
-
 static void set_type_quals (tree, int);
 static int type_hash_eq (const void *, const void *);
 static hashval_t type_hash_hash (const void *);
@@ -273,8 +271,6 @@ init_ttree (void)
 					 tree_map_eq, 0);
   init_priority_for_decl = htab_create_ggc (512, tree_priority_map_hash,
 					    tree_priority_map_eq, 0);
-  restrict_base_for_decl = htab_create_ggc (256, tree_map_hash,
-					    tree_map_eq, 0);
 
   int_cst_hash_table = htab_create_ggc (1024, int_cst_hash_hash,
 					int_cst_hash_eq, NULL);
@@ -658,11 +654,11 @@ make_node_stat (enum tree_code code MEM_STAT_DECL)
 	    }
 	  else
 	    DECL_ALIGN (t) = 1;
-	  /* We have not yet computed the alias set for this declaration.  */
-	  DECL_POINTER_ALIAS_SET (t) = -1;
 	}
       DECL_SOURCE_LOCATION (t) = input_location;
       DECL_UID (t) = next_decl_uid++;
+      if (TREE_CODE (t) == LABEL_DECL)
+	LABEL_DECL_UID (t) = -1;
 
       break;
 
@@ -747,11 +743,6 @@ copy_node_stat (tree node MEM_STAT_DECL)
 	{
 	  SET_DECL_INIT_PRIORITY (t, DECL_INIT_PRIORITY (node));
 	  DECL_HAS_INIT_PRIORITY_P (t) = 1;
-	}
-      if (TREE_CODE (node) == VAR_DECL && DECL_BASED_ON_RESTRICT_P (node))
-	{
-	  SET_DECL_RESTRICT_BASE (t, DECL_GET_RESTRICT_BASE (node));
-	  DECL_BASED_ON_RESTRICT_P (t) = 1;
 	}
     }
   else if (TREE_CODE_CLASS (code) == tcc_type)
@@ -1591,7 +1582,8 @@ tree_floor_log2 (const_tree expr)
 	  : floor_log2 (low));
 }
 
-/* Return 1 if EXPR is the real constant zero.  */
+/* Return 1 if EXPR is the real constant zero.  Trailing zeroes matter for
+   decimal float constants, so don't return 1 for them.  */
 
 int
 real_zerop (const_tree expr)
@@ -1599,13 +1591,16 @@ real_zerop (const_tree expr)
   STRIP_NOPS (expr);
 
   return ((TREE_CODE (expr) == REAL_CST
-	   && REAL_VALUES_EQUAL (TREE_REAL_CST (expr), dconst0))
+	   && REAL_VALUES_EQUAL (TREE_REAL_CST (expr), dconst0)
+	   && !(DECIMAL_FLOAT_MODE_P (TYPE_MODE (TREE_TYPE (expr)))))
 	  || (TREE_CODE (expr) == COMPLEX_CST
 	      && real_zerop (TREE_REALPART (expr))
 	      && real_zerop (TREE_IMAGPART (expr))));
 }
 
-/* Return 1 if EXPR is the real constant one in real or complex form.  */
+/* Return 1 if EXPR is the real constant one in real or complex form.
+   Trailing zeroes matter for decimal float constants, so don't return
+   1 for them.  */
 
 int
 real_onep (const_tree expr)
@@ -1613,13 +1608,15 @@ real_onep (const_tree expr)
   STRIP_NOPS (expr);
 
   return ((TREE_CODE (expr) == REAL_CST
-	   && REAL_VALUES_EQUAL (TREE_REAL_CST (expr), dconst1))
+	   && REAL_VALUES_EQUAL (TREE_REAL_CST (expr), dconst1)
+	   && !(DECIMAL_FLOAT_MODE_P (TYPE_MODE (TREE_TYPE (expr)))))
 	  || (TREE_CODE (expr) == COMPLEX_CST
 	      && real_onep (TREE_REALPART (expr))
 	      && real_zerop (TREE_IMAGPART (expr))));
 }
 
-/* Return 1 if EXPR is the real constant two.  */
+/* Return 1 if EXPR is the real constant two.  Trailing zeroes matter
+   for decimal float constants, so don't return 1 for them.  */
 
 int
 real_twop (const_tree expr)
@@ -1627,13 +1624,15 @@ real_twop (const_tree expr)
   STRIP_NOPS (expr);
 
   return ((TREE_CODE (expr) == REAL_CST
-	   && REAL_VALUES_EQUAL (TREE_REAL_CST (expr), dconst2))
+	   && REAL_VALUES_EQUAL (TREE_REAL_CST (expr), dconst2)
+	   && !(DECIMAL_FLOAT_MODE_P (TYPE_MODE (TREE_TYPE (expr)))))
 	  || (TREE_CODE (expr) == COMPLEX_CST
 	      && real_twop (TREE_REALPART (expr))
 	      && real_zerop (TREE_IMAGPART (expr))));
 }
 
-/* Return 1 if EXPR is the real constant minus one.  */
+/* Return 1 if EXPR is the real constant minus one.  Trailing zeroes
+   matter for decimal float constants, so don't return 1 for them.  */
 
 int
 real_minus_onep (const_tree expr)
@@ -1641,7 +1640,8 @@ real_minus_onep (const_tree expr)
   STRIP_NOPS (expr);
 
   return ((TREE_CODE (expr) == REAL_CST
-	   && REAL_VALUES_EQUAL (TREE_REAL_CST (expr), dconstm1))
+	   && REAL_VALUES_EQUAL (TREE_REAL_CST (expr), dconstm1)
+	   && !(DECIMAL_FLOAT_MODE_P (TYPE_MODE (TREE_TYPE (expr)))))
 	  || (TREE_CODE (expr) == COMPLEX_CST
 	      && real_minus_onep (TREE_REALPART (expr))
 	      && real_zerop (TREE_IMAGPART (expr))));
@@ -2480,28 +2480,28 @@ static void
 process_call_operands (tree t)
 {
   bool side_effects = TREE_SIDE_EFFECTS (t);
-  int i;
+  bool read_only = false;
+  int i = call_expr_flags (t);
 
-  if (!side_effects)
+  /* Calls have side-effects, except those to const or pure functions.  */
+  if ((i & ECF_LOOPING_CONST_OR_PURE) || !(i & (ECF_CONST | ECF_PURE)))
+    side_effects = true;
+  /* Propagate TREE_READONLY of arguments for const functions.  */
+  if (i & ECF_CONST)
+    read_only = true;
+
+  if (!side_effects || read_only)
     for (i = 1; i < TREE_OPERAND_LENGTH (t); i++)
       {
 	tree op = TREE_OPERAND (t, i);
 	if (op && TREE_SIDE_EFFECTS (op))
-	  {
-	    side_effects = true;
-	    break;
-	  }
+	  side_effects = true;
+	if (op && !TREE_READONLY (op) && !CONSTANT_CLASS_P (op))
+	  read_only = false;
       }
 
-  if (!side_effects)
-    {
-      /* Calls have side-effects, except those to const or pure functions.  */
-      i = call_expr_flags (t);
-      if ((i & ECF_LOOPING_CONST_OR_PURE) || !(i & (ECF_CONST | ECF_PURE)))
-	side_effects = true;
-    }
-
   TREE_SIDE_EFFECTS (t) = side_effects;
+  TREE_READONLY (t) = read_only;
 }
 
 /* Return 1 if EXP contains a PLACEHOLDER_EXPR; i.e., if it represents a size
@@ -2679,11 +2679,102 @@ type_contains_placeholder_p (tree type)
   return result;
 }
 
+/* Push tree EXP onto vector QUEUE if it is not already present.  */
+
+static void
+push_without_duplicates (tree exp, VEC (tree, heap) **queue)
+{
+  unsigned int i;
+  tree iter;
+
+  for (i = 0; VEC_iterate (tree, *queue, i, iter); i++)
+    if (simple_cst_equal (iter, exp) == 1)
+      break;
+
+  if (!iter)
+    VEC_safe_push (tree, heap, *queue, exp);
+}
+
+/* Given a tree EXP, find all occurences of references to fields
+   in a PLACEHOLDER_EXPR and place them in vector REFS without
+   duplicates.  Also record VAR_DECLs and CONST_DECLs.  Note that
+   we assume here that EXP contains only arithmetic expressions
+   or CALL_EXPRs with PLACEHOLDER_EXPRs occurring only in their
+   argument list.  */
+
+void
+find_placeholder_in_expr (tree exp, VEC (tree, heap) **refs)
+{
+  enum tree_code code = TREE_CODE (exp);
+  tree inner;
+  int i;
+
+  /* We handle TREE_LIST and COMPONENT_REF separately.  */
+  if (code == TREE_LIST)
+    {
+      FIND_PLACEHOLDER_IN_EXPR (TREE_CHAIN (exp), refs);
+      FIND_PLACEHOLDER_IN_EXPR (TREE_VALUE (exp), refs);
+    }
+  else if (code == COMPONENT_REF)
+    {
+      for (inner = TREE_OPERAND (exp, 0);
+	   REFERENCE_CLASS_P (inner);
+	   inner = TREE_OPERAND (inner, 0))
+	;
+
+      if (TREE_CODE (inner) == PLACEHOLDER_EXPR)
+	push_without_duplicates (exp, refs);
+      else
+	FIND_PLACEHOLDER_IN_EXPR (TREE_OPERAND (exp, 0), refs);
+   }
+  else
+    switch (TREE_CODE_CLASS (code))
+      {
+      case tcc_constant:
+	break;
+
+      case tcc_declaration:
+	/* Variables allocated to static storage can stay.  */
+        if (!TREE_STATIC (exp))
+	  push_without_duplicates (exp, refs);
+	break;
+
+      case tcc_expression:
+	/* This is the pattern built in ada/make_aligning_type.  */
+	if (code == ADDR_EXPR
+	    && TREE_CODE (TREE_OPERAND (exp, 0)) == PLACEHOLDER_EXPR)
+	  {
+	    push_without_duplicates (exp, refs);
+	    break;
+	  }
+
+        /* Fall through...  */
+
+      case tcc_exceptional:
+      case tcc_unary:
+      case tcc_binary:
+      case tcc_comparison:
+      case tcc_reference:
+	for (i = 0; i < TREE_CODE_LENGTH (code); i++)
+	  FIND_PLACEHOLDER_IN_EXPR (TREE_OPERAND (exp, i), refs);
+	break;
+
+      case tcc_vl_exp:
+	for (i = 1; i < TREE_OPERAND_LENGTH (exp); i++)
+	  FIND_PLACEHOLDER_IN_EXPR (TREE_OPERAND (exp, i), refs);
+	break;
+
+      default:
+	gcc_unreachable ();
+      }
+}
+
 /* Given a tree EXP, a FIELD_DECL F, and a replacement value R,
    return a tree with all occurrences of references to F in a
-   PLACEHOLDER_EXPR replaced by R.   Note that we assume here that EXP
-   contains only arithmetic expressions or a CALL_EXPR with a
-   PLACEHOLDER_EXPR occurring only in its arglist.  */
+   PLACEHOLDER_EXPR replaced by R.  Also handle VAR_DECLs and
+   CONST_DECLs.  Note that we assume here that EXP contains only
+   arithmetic expressions or CALL_EXPRs with PLACEHOLDER_EXPRs
+   occurring only in their argument list.  */
 
 tree
 substitute_in_expr (tree exp, tree f, tree r)
@@ -2734,14 +2825,24 @@ substitute_in_expr (tree exp, tree f, tree r)
     switch (TREE_CODE_CLASS (code))
       {
       case tcc_constant:
-      case tcc_declaration:
 	return exp;
+
+      case tcc_declaration:
+	if (exp == f)
+	  return r;
+	else
+	  return exp;
+
+      case tcc_expression:
+	if (exp == f)
+	  return r;
+
+        /* Fall through...  */
 
       case tcc_exceptional:
       case tcc_unary:
       case tcc_binary:
       case tcc_comparison:
-      case tcc_expression:
       case tcc_reference:
 	switch (TREE_CODE_LENGTH (code))
 	  {
@@ -2803,6 +2904,17 @@ substitute_in_expr (tree exp, tree f, tree r)
 	  int i;
 
 	  new_tree = NULL_TREE;
+
+	  /* If we are trying to replace F with a constant, inline back
+	     functions which do nothing else than computing a value from
+	     the arguments they are passed.  This makes it possible to
+	     fold partially or entirely the replacement expression.  */
+	  if (CONSTANT_CLASS_P (r) && code == CALL_EXPR)
+	    {
+	      tree t = maybe_inline_call_in_expr (exp);
+	      if (t)
+		return SUBSTITUTE_IN_EXPR (t, f, r);
+	    }
 
 	  for (i = 1; i < TREE_OPERAND_LENGTH (exp); i++)
 	    {
@@ -3347,18 +3459,19 @@ build1_stat (enum tree_code code, tree type, tree node MEM_STAT_DECL)
   return t;
 }
 
-#define PROCESS_ARG(N)			\
-  do {					\
-    TREE_OPERAND (t, N) = arg##N;	\
-    if (arg##N &&!TYPE_P (arg##N))	\
-      {					\
-        if (TREE_SIDE_EFFECTS (arg##N))	\
-	  side_effects = 1;		\
-        if (!TREE_READONLY (arg##N))	\
-	  read_only = 0;		\
-        if (!TREE_CONSTANT (arg##N))	\
-	  constant = 0;			\
-      }					\
+#define PROCESS_ARG(N)				\
+  do {						\
+    TREE_OPERAND (t, N) = arg##N;		\
+    if (arg##N &&!TYPE_P (arg##N))		\
+      {						\
+        if (TREE_SIDE_EFFECTS (arg##N))		\
+	  side_effects = 1;			\
+        if (!TREE_READONLY (arg##N)		\
+	    && !CONSTANT_CLASS_P (arg##N))	\
+	  read_only = 0;			\
+        if (!TREE_CONSTANT (arg##N))		\
+	  constant = 0;				\
+      }						\
   } while (0)
 
 tree
@@ -3425,6 +3538,8 @@ build3_stat (enum tree_code code, tree tt, tree arg0, tree arg1,
   t = make_node_stat (code PASS_MEM_STAT);
   TREE_TYPE (t) = tt;
 
+  read_only = 1;
+
   /* As a special exception, if COND_EXPR has NULL branches, we
      assume that it is a gimple statement and always consider
      it to have side effects.  */
@@ -3439,6 +3554,9 @@ build3_stat (enum tree_code code, tree tt, tree arg0, tree arg1,
   PROCESS_ARG(0);
   PROCESS_ARG(1);
   PROCESS_ARG(2);
+
+  if (code == COND_EXPR)
+    TREE_READONLY (t) = read_only;
 
   TREE_SIDE_EFFECTS (t) = side_effects;
   TREE_THIS_VOLATILE (t)
@@ -4514,36 +4632,6 @@ decl_fini_priority_insert (tree decl, priority_type priority)
   h->fini = priority;
 }  
 
-/* Look up a restrict qualified base decl for FROM.  */
-
-tree
-decl_restrict_base_lookup (tree from)
-{
-  struct tree_map *h;
-  struct tree_map in;
-
-  in.base.from = from;
-  h = (struct tree_map *) htab_find_with_hash (restrict_base_for_decl, &in,
-					       htab_hash_pointer (from));
-  return h ? h->to : NULL_TREE;
-}
-
-/* Record the restrict qualified base TO for FROM.  */
-
-void
-decl_restrict_base_insert (tree from, tree to)
-{
-  struct tree_map *h;
-  void **loc;
-
-  h = GGC_NEW (struct tree_map);
-  h->hash = htab_hash_pointer (from);
-  h->base.from = from;
-  h->to = to;
-  loc = htab_find_slot_with_hash (restrict_base_for_decl, h, h->hash, INSERT);
-  *(struct tree_map **) loc = h;
-}
-
 /* Print out the statistics for the DECL_DEBUG_EXPR hash table.  */
 
 static void
@@ -4564,20 +4652,6 @@ print_value_expr_statistics (void)
 	   (long) htab_size (value_expr_for_decl),
 	   (long) htab_elements (value_expr_for_decl),
 	   htab_collisions (value_expr_for_decl));
-}
-
-/* Print out statistics for the RESTRICT_BASE_FOR_DECL hash table, but
-   don't print anything if the table is empty.  */
-
-static void
-print_restrict_base_statistics (void)
-{
-  if (htab_elements (restrict_base_for_decl) != 0)
-    fprintf (stderr,
-	     "RESTRICT_BASE    hash: size %ld, %ld elements, %f collisions\n",
-	     (long) htab_size (restrict_base_for_decl),
-	     (long) htab_elements (restrict_base_for_decl),
-	     htab_collisions (restrict_base_for_decl));
 }
 
 /* Lookup a debug expression for FROM, and return it if we find one.  */
@@ -7091,7 +7165,6 @@ dump_tree_statistics (void)
   print_type_hash_statistics ();
   print_debug_expr_statistics ();
   print_value_expr_statistics ();
-  print_restrict_base_statistics ();
   lang_hooks.print_statistics ();
 }
 

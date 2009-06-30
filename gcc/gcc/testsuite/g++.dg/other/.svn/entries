@@ -1,7 +1,7 @@
 10
 
 dir
-148971
+149118
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/other
 svn://gcc.gnu.org/svn/gcc
 
@@ -2100,40 +2100,6 @@ reichelt
 
 89
 
-error12.C
-file
-
-
-
-
-2009-04-24T17:44:14.000000Z
-e1eac1beda3a4145544bb54bc5a9b600
-2006-07-15T14:44:48.466282Z
-115474
-lmillward
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-126
-
 s390-1.C
 file
 
@@ -2201,6 +2167,40 @@ simartin
 
 
 160
+
+error12.C
+file
+
+
+
+
+2009-04-24T17:44:14.000000Z
+e1eac1beda3a4145544bb54bc5a9b600
+2006-07-15T14:44:48.466282Z
+115474
+lmillward
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+126
 
 array1.C
 file

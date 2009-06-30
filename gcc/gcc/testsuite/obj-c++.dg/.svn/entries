@@ -1,7 +1,7 @@
 10
 
 dir
-148971
+149118
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/obj-c++.dg
 svn://gcc.gnu.org/svn/gcc
 
@@ -2100,40 +2100,6 @@ zlaski
 
 756
 
-try-catch-7.mm
-file
-
-
-
-
-2009-04-24T17:46:11.000000Z
-462325a96e5f5d00468b971bbfaf34f1
-2005-05-26T01:53:56.000000Z
-100181
-mrs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-336
-
 comp-types-5.mm
 file
 
@@ -2201,6 +2167,40 @@ jsm28
 
 
 199
+
+try-catch-7.mm
+file
+
+
+
+
+2009-04-24T17:46:11.000000Z
+462325a96e5f5d00468b971bbfaf34f1
+2005-05-26T01:53:56.000000Z
+100181
+mrs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+336
 
 method-15.mm
 file

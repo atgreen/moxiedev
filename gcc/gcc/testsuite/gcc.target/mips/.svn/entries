@@ -1,7 +1,7 @@
 10
 
 dir
-148971
+149118
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/mips
 svn://gcc.gnu.org/svn/gcc
 
@@ -468,40 +468,6 @@ rsandifo
 
 928
 
-gcc-have-sync-compare-and-swap-1.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-5ef37309741f8d06c8875ea775e741d0
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-388
-
 fpr-moves-6.c
 file
 
@@ -536,14 +502,14 @@ rsandifo
 
 1274
 
-atomic-memory-2.c
+gcc-have-sync-compare-and-swap-1.c
 file
 
 
 
 
-2009-04-24T17:45:47.000000Z
-6d90b192ca6e7c0f391bffd34c0cce8f
+2009-04-24T17:45:48.000000Z
+5ef37309741f8d06c8875ea775e741d0
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -568,7 +534,7 @@ rsandifo
 
 
 
-250
+388
 
 octeon-pop-1.c
 file
@@ -603,6 +569,40 @@ rsandifo
 
 
 298
+
+atomic-memory-2.c
+file
+
+
+
+
+2009-04-24T17:45:47.000000Z
+6d90b192ca6e7c0f391bffd34c0cce8f
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+250
 
 pr34831.c
 file

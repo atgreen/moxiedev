@@ -1,14 +1,14 @@
 10
 
 dir
-148971
+149118
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gnat.dg
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-06-26T08:54:26.778865Z
-148966
+2009-06-30T17:26:32.532675Z
+149112
 ebotcazou
 
 
@@ -909,6 +909,40 @@ ebotcazou
 
 
 90
+
+discr13.adb
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+07db5c9c1f9d8577358ce9981e4494d2
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+607
 
 my_env_versioned_value_set_g.ads
 file
@@ -1930,6 +1964,40 @@ ebotcazou
 
 229
 
+discr16_g.ads
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+dd8e3ae6f7fc6c44f012e1d2baea2b9d
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+289
+
 tail_call_p.adb
 file
 
@@ -2644,6 +2712,40 @@ charlet
 
 70
 
+overflow_sum2.adb
+file
+
+
+
+
+2009-06-30T14:23:57.000000Z
+94d7b3cc1345f58f5547ed8c8973d6c0
+2009-06-28T18:17:47.244562Z
+149037
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+902
+
 tamdt.adb
 file
 
@@ -3120,6 +3222,40 @@ charlet
 
 203
 
+discr14.adb
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+f424a04af61a7fcea16d544c96d81bfa
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+270
+
 concat1_pkg.ads
 file
 
@@ -3323,6 +3459,40 @@ hainque
 
 
 299
+
+discr14.ads
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+74e58d4017b61fde3676a90810251f6d
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1063
 
 discr7.adb
 file
@@ -4072,6 +4242,40 @@ charlet
 
 222
 
+discr18_pkg.ads
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+3ddc748435fb751fe82d7edfd92789f9
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+470
+
 test_address_null_init.adb
 file
 
@@ -4309,6 +4513,40 @@ ebotcazou
 
 
 327
+
+discr16_cont.ads
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+547a1f5210319079a0725ba7d36b12a6
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+105
 
 test_self_ref.adb
 file
@@ -5159,6 +5397,40 @@ ebotcazou
 
 
 203
+
+discr15.adb
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+065903c55a0d02326057353aa17353c0
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+312
 
 access_func.adb
 file
@@ -7030,40 +7302,6 @@ charlet
 
 59
 
-test_overflow_sum.adb
-file
-
-
-
-
-2009-04-24T17:46:10.000000Z
-3c0a059720c51719086ac89fb8251ea4
-2008-10-01T18:43:09.179115Z
-140819
-bosch
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1883
-
 align_check.adb
 file
 
@@ -7505,6 +7743,40 @@ charlet
 
 
 401
+
+discr16.adb
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+fd91bd92442d466df323be7328ca9a1a
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+404
 
 dispatch1_p.ads
 file
@@ -8662,6 +8934,40 @@ ebotcazou
 
 815
 
+discr15_pkg.ads
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+26e8eb6ceffa8d46081b38a035e547e5
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+436
+
 curr_task.adb
 file
 
@@ -9648,6 +9954,40 @@ charlet
 
 407
 
+discr17.adb
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+d38cff211192f63f122b5dc2b1c1eed0
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1085
+
 bip_aggregate_bug.adb
 file
 
@@ -10191,6 +10531,40 @@ charlet
 
 
 226
+
+overflow_sum.adb
+file
+
+
+
+
+2009-06-30T14:23:57.000000Z
+a2d243fe1c9cc4acb1eab0db0f587b81
+2009-06-28T18:17:47.244562Z
+149037
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1822
 
 dynamic_elab2.adb
 file
@@ -11824,6 +12198,40 @@ uros
 
 273
 
+discr18.adb
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+104d69e3b212ba4407bf7904e8baaf8a
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+499
+
 loop_address.adb
 file
 
@@ -12809,6 +13217,74 @@ charlet
 
 
 104
+
+discr12_pkg.ads
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+07f4522311fa7b5885585c9945e8f5be
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+89
+
+discr16_pkg.ads
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+6170a30c05c055a11a90747d74d17e09
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+165
 
 check1.adb
 file
@@ -14071,6 +14547,40 @@ ebotcazou
 
 272
 
+discr19.adb
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+097968d9b477d4923ce0f49cbd46239b
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+342
+
 wide_pi.adb
 file
 
@@ -14104,6 +14614,40 @@ charlet
 
 
 117
+
+namet.ads
+file
+
+
+
+
+2009-06-30T14:23:57.000000Z
+3da039613ac55ae138fe9456dfe5fc2b
+2009-06-28T18:17:47.244562Z
+149037
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+196
 
 discr11.ads
 file
@@ -16657,6 +17201,40 @@ jamborm
 
 
 387
+
+discr12.adb
+file
+
+
+
+
+2009-06-30T20:34:05.000000Z
+9dc039a1140a23703f3b1572d69414c2
+2009-06-30T17:26:32.532675Z
+149112
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+565
 
 import1.ads
 file

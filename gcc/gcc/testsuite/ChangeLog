@@ -1,3 +1,175 @@
+2009-06-30  Jason Merrill  <jason@redhat.com>
+
+	PR c++/40595
+	* g++.dg/cpp0x/variadic94.C: New.
+
+2009-06-30  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* lib/gcc-defs.exp (gcc-set-multilib-library-path): Delete.
+	* lib/target-libpath.exp (ld_library_path_vars): New variable.
+	(init_ld_library_path_env_vars): New function, replacing the
+	orig_*_saved assignments.  Call it after defining it.
+	(set_ld_library_path_env_vars): Rewrite to use ld_library_path_vars.
+	(restore_ld_library_path_env_vars): Likewise.
+	(add_path, find_libgcc_s): New functions.
+	* lib/objc.exp (objc_init): Use find_libgcc_s instead of
+	gcc-set-multilib-library-path.
+	(objc_target_compile): Don't add "." to ld_library_path.
+	Use add_path.
+	* lib/gfortran.exp (gfortran_link_flags): Don't add "." to
+	ld_library_path.  Use add_path.  Use find_libgcc_s instead of
+	gcc-set-multilib-library-path.
+	* lib/g++.exp (g++_link_flags): Likewise.
+	* lib/obj-c++.exp (obj-c++_link_flags): Likewise.
+	* lib/c-torture.exp: Do not manipulate ld_library_path at the
+	top level; do it...
+	(c-torture-execute): ...here instead.  Use $ld_library_path_multilib
+	to tell when this needs to happen.  Use find_libgcc_s instead of
+	gcc-set-multilib-library-path.
+	* lib/gcc-dg.exp: Likewise.
+	* lib/gnat.exp (gnat_target_compile): Don't add "." to ld_library_path.
+	* g++.dg/compat/compat.exp (alt_ld_library_path): Don't add "."
+	unless it is in $ALT_LD_LIBRARY_PATH.
+	* g++.dg/compat/struct-layout-1.exp (alt_ld_library_path): Likewise.
+
+2009-06-30  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gnat.dg/discr12.adb: New test.
+	* gnat.dg/discr12_pkg.ads: New helper.
+	* gnat.dg/discr13.adb: New test.
+	* gnat.dg/discr14.ad[sb]: Likewise.
+	* gnat.dg/discr15.adb: Likewise.
+	* gnat.dg/discr15_pkg.ads: New helper.
+	* gnat.dg/discr16.adb: New test.
+	* gnat.dg/discr16_g.ads: New helper.
+	* gnat.dg/discr16_pkg.ads: Likewise.
+	* gnat.dg/discr16_cont.ads: Likewise.
+	* gnat.dg/discr17.adb: New test.
+	* gnat.dg/discr18.adb: Likewise.
+	* gnat.dg/discr18_pkg.ads: New helper.
+	* gnat.dg/discr19.adb: New test.
+
+2009-06-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
+
+	PR fortran/40576
+	* gfortran.dg/internal_write_1.f90:  New testcase.
+
+2009-06-30  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/40594
+	* gfortran.dg/derived_pointer_recursion_2.f90: New.
+
+2009-06-30  Richard Guenther  <rguenther@suse.de>
+
+	* gcc.dg/tree-ssa/ssa-dce-6.c: New testcase.
+
+2009-06-30  Wei Guozhi  <carrot@google.com>
+
+	* gcc.dg/tree-ssa/ssa-sink-5.c: Change the compiler option "-O2 -Os"
+	to "-Os".
+
+2009-06-30  Ira Rosen  <irar@il.ibm.com>
+
+	PR tree-optimization/40542
+	* gcc.dg/vect/pr40542.c: New test.
+
+2009-06-30  Martin Jambor  <mjambor@suse.cz>
+
+	PR tree-optimization/40582
+	* gcc.c-torture/compile/pr40582.c: New test.
+
+2009-06-30  Wei Guozhi  <carrot@google.com>
+
+	PR/40416
+	* gcc.dg/tree-ssa/ssa-sink-5.c: New testcase.
+
+2009-06-29  Jason Merrill  <jason@redhat.com>
+
+	PR c++/40274
+	* g++.dg/template/debug1.C: New.
+
+2009-06-29  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/40580
+	* pointer_check_1.f90: New test.
+	* pointer_check_2.f90: New test.
+	* pointer_check_3.f90: New test.
+	* pointer_check_4.f90: New test.
+	* pointer_check_5.f90: New test.
+
+2009-06-29  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/40551
+	* gfortran.dg/func_assign_2.f90 : New test.
+
+2009-06-29  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/14187
+	* gcc.dg/tree-ssa/restrict-1.c: New testcase.
+	* gcc.dg/tree-ssa/restrict-2.c: Likewise.
+	* gcc.dg/tree-ssa/restrict-3.c: Likewise.
+	* gcc.c-torture/execute/20090623-1.c: Likewise.
+	* gcc.dg/tree-ssa/ldist-13.c: Likewise.
+	* gcc.dg/tree-ssa/ldist-14.c: Likewise.
+
+2009-06-29  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/38212
+	* gcc.c-torture/execute/pr38212.c: New testcase.
+
+2009-06-29  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/40579
+	* gcc.c-torture/execute/pr40579.c: New testcase.
+
+2009-06-28  Uros Bizjak  <ubizjak@gmail.com>
+
+	PR tree-optimization/40550
+	* gcc.dg/pr40550.c: New test.
+
+2009-06-28  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gnat.dg/overflow_sum2.adb: New test
+	* gnat.dg/namet.ads: New helper.
+
+	* gnat.dg/test_overflow_sum.adb: Rename to overflow_sum.adb.
+
+2009-06-28  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/34112
+	* gfortran.dg/compiler-directive_1.f90: New test.
+	* gfortran.dg/compiler-directive_2.f: New test.
+
+2009-06-28  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
+
+	* gfortran.dg/integer_exponentiation_4.f90: Temporarily
+	comment out some values and add some cases.
+
+2009-06-27  Paolo Bonzini  <bonzini@gnu.org>
+
+	PR testsuite/40567
+	* gcc.dg/vect/vect.exp: Fix lappend syntax.
+
+2009-06-26  Richard Henderson  <rth@redhat.com>
+
+	PR testsuite/40565
+	* gcc.dg/vect/vect.exp: Add -fno-ipa-cp-clone to -O3 tests.
+	* gcc.target/i386/local.c: Pass a non-constant to T.
+
+2009-06-26  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/39997
+	PR fortran/40541
+	* gfortran.dg/proc_ptr_15.f90: Fixed and extended.
+	* gfortran.dg/proc_ptr_common_1.f90: Fixed invalid test case.
+	* gfortran.dg/proc_ptr_result_1.f90: Ditto.
+	* gfortran.dg/proc_ptr_result_5.f90: New.
+
+2009-06-26  Janis Johnson  <janis187@us.ibm.com>
+
+	PR c/39902
+	* gcc.dg/dfp/pr39902.c: New test.
+
 2009-06-26  Uros Bizjak  <ubizjak@gmail.com>
 
 	PR testsuite/40532
@@ -32,7 +204,7 @@
 2009-06-25  Martin Jambor  <mjambor@suse.cz>
 
 	PR tree-optimization/40493
-	* testsuite/gcc.c-torture/execute/pr40493.c: New test.
+	* gcc.c-torture/execute/pr40493.c: New test.
 
 2009-06-24  Jason Merrill  <jason@redhat.com>
 
@@ -127,7 +299,7 @@
 
 	* gcc.c-torture/unsorted/dump-noaddr.x (dump_compare): Use -dumpbase
 	to put dump files in a subdirectory.
-	* gcc/testsuite/lib/gcc-dg.exp (cleanup-saved-temps): Also remove
+	* lib/gcc-dg.exp (cleanup-saved-temps): Also remove
 	".o" temporary files.
 
 2009-06-21  Janus Weil  <janus@gcc.gnu.org>
@@ -204,8 +376,8 @@
 2009-06-19  Uros Bizjak  <ubizjak@gmail.com>
 
 	PR testsuite/40491
-	* testsuite/gcc.dg/20080522-1.c: Remove testcase for real.
-	* testsuite/gcc.dg/20080528-1.c: Ditto.
+	* gcc.dg/20080522-1.c: Remove testcase for real.
+	* gcc.dg/20080528-1.c: Ditto.
 
 2009-06-19  Janus Weil  <janus@gcc.gnu.org>
 
@@ -364,11 +536,11 @@
 
 2009-06-16  Martin Jambor  <mjambor@suse.cz>
 
-	* testsuite/gcc.c-torture/compile/pr40432.c: New file.
+	* gcc.c-torture/compile/pr40432.c: New file.
 
 2009-06-16  Martin Jambor  <mjambor@suse.cz>
 
-	* testsuite/gfortran.fortran-torture/compile/pr40413.f90: New file.
+	* gfortran.fortran-torture/compile/pr40413.f90: New file.
 
 2009-06-16  Janus Weil  <janus@gcc.gnu.org>
 
@@ -575,7 +747,7 @@
 
 2009-06-10  Anthony Green  <green@moxielogic.com>
 
-	* testsuite/lib/target-supports.exp (check_profiling_available):
+	* lib/target-supports.exp (check_profiling_available):
 	Profiling is not available for testing purposes on moxie.
 
 2009-06-09  Ian Lance Taylor  <iant@google.com>
@@ -593,7 +765,7 @@
 
 2009-06-09  Martin Jambor  <mjambor@suse.cz>
 
-	* testsuite/gcc.c-torture/compile/pr40351.c: New file.
+	* gcc.c-torture/compile/pr40351.c: New file.
 
 2009-06-09  Olivier Hainque  <hainque@adacore.com>
 
@@ -1047,10 +1219,10 @@
 
 2009-05-26  Basile Starynkevitch  <basile@starynkevitch.net>
 
-	* testsuite/gcc.dg/plugin/plugin.exp: Added ggcplug.c test plugin
+	* gcc.dg/plugin/plugin.exp: Added ggcplug.c test plugin
 	with ggcplug-test-1.c for testing PLUGIN_GGC_MARKING etc...
-	* testsuite/gcc.dg/plugin/ggcplug-test-1.c: Added new file.
-	* testsuite/gcc.dg/plugin/ggcplug.c: Added new file.
+	* gcc.dg/plugin/ggcplug-test-1.c: Added new file.
+	* gcc.dg/plugin/ggcplug.c: Added new file.
 
 2009-05-26  Tobias Burnus  <burnus@net-b.de>
 
@@ -1346,9 +1518,9 @@
 2009-05-16  Francois-Xavier Coudert  <fxcoudert@gcc.gnu.org>
 
 	PR fortran/31243
-	* gcc/testsuite/gfortran.dg/string_1.f90: New test.
-	* gcc/testsuite/gfortran.dg/string_2.f90: New test.
-	* gcc/testsuite/gfortran.dg/string_3.f90: New test.
+	* gfortran.dg/string_1.f90: New test.
+	* gfortran.dg/string_2.f90: New test.
+	* gfortran.dg/string_3.f90: New test.
 
 2009-05-16  David Billinghurst <billingd@gcc.gnu.org>
 
@@ -1373,7 +1545,7 @@
 
 2009-05-15  Jan Hubicka  <jh@suse.cz>
 
-	* testsuite/gcc.dg/tree-ssa/inline-3.c: New testcase
+	* gcc.dg/tree-ssa/inline-3.c: New testcase
 
 2009-05-15  Jan Hubicka  <jh@suse.cz>
 
@@ -2139,7 +2311,7 @@
 
 2009-04-28  Steve Ellcey  <sje@cup.hp.com>
 
-	* testsuite/gcc.target/ia64/sync-1.c: Check for cmpxchg8 only if
+	* gcc.target/ia64/sync-1.c: Check for cmpxchg8 only if
 	lp64 is true.
 
 2009-04-28  Richard Guenther  <rguenther@suse.de>
@@ -4100,7 +4272,7 @@
 2009-03-13  Jack Howarth  <howarth@bromo.med.uc.edu>
 
 	PR target/39137
-	* testsuite/gcc.target/i386/stackalign/longlong-2.c: Skip on darwin.
+	* gcc.target/i386/stackalign/longlong-2.c: Skip on darwin.
 
 2009-03-13  H.J. Lu  <hongjiu.lu@intel.com>
 
@@ -4295,8 +4467,8 @@
 2009-03-02  Sebastian Pop  <sebastian.pop@amd.com>
 
 	PR middle-end/39335
-	* testsuite/gcc.dg/graphite/pr39335_1.c: New.
-	* testsuite/gcc.dg/graphite/pr39335.c: New.
+	* gcc.dg/graphite/pr39335_1.c: New.
+	* gcc.dg/graphite/pr39335.c: New.
 
 2009-03-02  H.J. Lu  <hongjiu.lu@intel.com>
 
@@ -5676,7 +5848,7 @@
 	    Jan Sjodin  <jan.sjodin@amd.com>
 
 	PR tree-optimization/38559
-	* testsuite/gcc.dg/graphite/pr38559.c: New.
+	* gcc.dg/graphite/pr38559.c: New.
 
 2009-01-08  Ira Rosen  <irar@il.ibm.com>
 
@@ -5738,15 +5910,14 @@
 
 	PR tree-optimization/38492
 	PR tree-optimization/38498
-	* testsuite/gcc.dg/graphite/pr38500.c: Fixed warning as committed
+	* gcc.dg/graphite/pr38500.c: Fixed warning as committed
 	in trunk.
-	* testsuite/gcc.dg/graphite/block-0.c: Update test.
-	* testsuite/gcc.dg/graphite/block-1.c: Same.
-	* testsuite/gcc.dg/graphite/block-2.c: Remove xfail and test
-	for blocking.
-	* testsuite/gcc.dg/graphite/block-4.c: Remove test for strip mine.
-	* testsuite/gcc.dg/graphite/block-3.c: New.
-	* testsuite/gcc.dg/graphite/pr38498.c: New.
+	* gcc.dg/graphite/block-0.c: Update test.
+	* gcc.dg/graphite/block-1.c: Same.
+	* gcc.dg/graphite/block-2.c: Remove xfail and test for blocking.
+	* gcc.dg/graphite/block-4.c: Remove test for strip mine.
+	* gcc.dg/graphite/block-3.c: New.
+	* gcc.dg/graphite/pr38498.c: New.
 
 2009-01-07  H.J. Lu  <hongjiu.lu@intel.com>
 

@@ -1,3 +1,22 @@
+2009-06-30  Wei Guozhi  <carrot@google.com>
+
+	* MAINTAINERS: Add my name to Write After Approval list.
+
+2009-06-26  Steve Ellcey  <sje@cup.hp.com>
+
+	PR bootstrap/40338
+	* configure.ac (comparestring): Create new variable.
+	* Makefile.tpl (comparestring): Use to skip some comparisions.
+	* configure: Regenerate.
+	* Makefile.in: Regenerate.
+
+2009-06-26  Doug Evans  <dje@sebabeach.org>
+
+	* Makefile.def (host_modules): Add cgen.
+	* Makefile.in: Regenerate.
+	* configure.ac (host_tools): Add cgen.
+	* configure: Regenerate.
+
 2009-06-23  DJ Delorie  <dj@redhat.com>
 
 	* MAINTAINERS: Add myself as mep maintainer.

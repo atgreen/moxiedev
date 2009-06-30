@@ -1876,8 +1876,8 @@ expand_errno_check (tree exp, rtx target)
 
   /* Test the result; if it is NaN, set errno=EDOM because
      the argument was not in the domain.  */
-  emit_cmp_and_jump_insns (target, target, EQ, 0, GET_MODE (target),
-			   0, lab);
+  do_compare_rtx_and_jump (target, target, EQ, 0, GET_MODE (target),
+                           NULL_RTX, NULL_RTX, lab);
 
 #ifdef TARGET_EDOM
   /* If this built-in doesn't throw an exception, set errno directly.  */
@@ -5182,10 +5182,8 @@ expand_builtin_alloca (tree exp, rtx target)
   rtx op0;
   rtx result;
 
-  /* In -fmudflap-instrumented code, alloca() and __builtin_alloca()
-     should always expand to function calls.  These can be intercepted
-     in libmudflap.  */
-  if (flag_mudflap)
+  /* Emit normal call if marked not-inlineable.  */
+  if (CALL_CANNOT_INLINE_P (exp)) 
     return NULL_RTX;
 
   if (!validate_arglist (exp, INTEGER_TYPE, VOID_TYPE))

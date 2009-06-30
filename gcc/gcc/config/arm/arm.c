@@ -204,6 +204,8 @@ static const char *arm_invalid_return_type (const_tree t);
 static tree arm_promoted_type (const_tree t);
 static tree arm_convert_to_type (tree type, tree expr);
 static bool arm_scalar_mode_supported_p (enum machine_mode);
+static bool arm_frame_pointer_required (void);
+
 
 /* Table of machine attributes.  */
 static const struct attribute_spec arm_attribute_table[] =
@@ -460,6 +462,9 @@ static const struct attribute_spec arm_attribute_table[] =
 
 #undef TARGET_SCALAR_MODE_SUPPORTED_P
 #define TARGET_SCALAR_MODE_SUPPORTED_P arm_scalar_mode_supported_p
+
+#undef TARGET_FRAME_POINTER_REQUIRED
+#define TARGET_FRAME_POINTER_REQUIRED arm_frame_pointer_required
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 
@@ -14487,12 +14492,6 @@ arm_final_prescan_insn (rtx insn)
      reversed if it appears to fail.  */
   int reverse = 0;
 
-  /* JUMP_CLOBBERS will be one implies that the conditions if a branch is
-     taken are clobbered, even if the rtl suggests otherwise.  It also
-     means that we have to grub around within the jump expression to find
-     out what the conditions are when the jump isn't taken.  */
-  int jump_clobbers = 0;
-
   /* If we start with a return insn, we only succeed if we find another one.  */
   int seeking_return = 0;
 
@@ -14571,14 +14570,6 @@ arm_final_prescan_insn (rtx insn)
       int then_not_else = TRUE;
       rtx this_insn = start_insn, label = 0;
 
-      /* If the jump cannot be done with one instruction, we cannot
-	 conditionally execute the instruction in the inverse case.  */
-      if (get_attr_conds (insn) == CONDS_JUMP_CLOB)
-	{
-	  jump_clobbers = 1;
-	  return;
-	}
-
       /* Register the insn jumped to.  */
       if (reverse)
         {
@@ -14621,13 +14612,7 @@ arm_final_prescan_insn (rtx insn)
 		 control falls in from somewhere else.  */
 	      if (this_insn == label)
 		{
-		  if (jump_clobbers)
-		    {
-		      arm_ccfsm_state = 2;
-		      this_insn = next_nonnote_insn (this_insn);
-		    }
-		  else
-		    arm_ccfsm_state = 1;
+		  arm_ccfsm_state = 1;
 		  succeed = TRUE;
 		}
 	      else
@@ -14642,13 +14627,7 @@ arm_final_prescan_insn (rtx insn)
 	      this_insn = next_nonnote_insn (this_insn);
 	      if (this_insn && this_insn == label)
 		{
-		  if (jump_clobbers)
-		    {
-		      arm_ccfsm_state = 2;
-		      this_insn = next_nonnote_insn (this_insn);
-		    }
-		  else
-		    arm_ccfsm_state = 1;
+		  arm_ccfsm_state = 1;
 		  succeed = TRUE;
 		}
 	      else
@@ -14676,13 +14655,7 @@ arm_final_prescan_insn (rtx insn)
 	      if (this_insn && this_insn == label
 		  && insns_skipped < max_insns_skipped)
 		{
-		  if (jump_clobbers)
-		    {
-		      arm_ccfsm_state = 2;
-		      this_insn = next_nonnote_insn (this_insn);
-		    }
-		  else
-		    arm_ccfsm_state = 1;
+		  arm_ccfsm_state = 1;
 		  succeed = TRUE;
 		}
 	      else
@@ -14788,25 +14761,11 @@ arm_final_prescan_insn (rtx insn)
 	        }
 	      arm_target_insn = this_insn;
 	    }
-	  if (jump_clobbers)
-	    {
-	      gcc_assert (!reverse);
-	      arm_current_cc =
-		  get_arm_condition_code (XEXP (XEXP (XEXP (SET_SRC (body),
-							    0), 0), 1));
-	      if (GET_CODE (XEXP (XEXP (SET_SRC (body), 0), 0)) == AND)
-		arm_current_cc = ARM_INVERSE_CONDITION_CODE (arm_current_cc);
-	      if (GET_CODE (XEXP (SET_SRC (body), 0)) == NE)
-		arm_current_cc = ARM_INVERSE_CONDITION_CODE (arm_current_cc);
-	    }
-	  else
-	    {
-	      /* If REVERSE is true, ARM_CURRENT_CC needs to be inverted from
-		 what it was.  */
-	      if (!reverse)
-		arm_current_cc = get_arm_condition_code (XEXP (SET_SRC (body),
-							       0));
-	    }
+
+	  /* If REVERSE is true, ARM_CURRENT_CC needs to be inverted from
+	     what it was.  */
+	  if (!reverse)
+	    arm_current_cc = get_arm_condition_code (XEXP (SET_SRC (body), 0));
 
 	  if (reverse || then_not_else)
 	    arm_current_cc = ARM_INVERSE_CONDITION_CODE (arm_current_cc);
@@ -20067,6 +20026,16 @@ arm_optimization_options (int level, int size ATTRIBUTE_UNUSED)
      given on the command line.  */
   if (level > 0)
     flag_section_anchors = 2;
+}
+
+/* Implement TARGET_FRAME_POINTER_REQUIRED.  */
+
+bool
+arm_frame_pointer_required (void)
+{
+  return (cfun->has_nonlocal_label
+          || SUBTARGET_FRAME_POINTER_REQUIRED
+          || (TARGET_ARM && TARGET_APCS_FRAME && ! leaf_function_p ()));
 }
 
 #include "gt-arm.h"

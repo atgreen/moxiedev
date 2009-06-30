@@ -1,7 +1,7 @@
 10
 
 dir
-148971
+149118
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/opt
 svn://gcc.gnu.org/svn/gcc
 
@@ -2100,40 +2100,6 @@ jakub
 
 264
 
-local1.C
-file
-
-
-
-
-2009-04-24T17:44:13.000000Z
-83a82f683c2ef38a1d683e0c8055bded
-2002-11-02T01:03:03.000000Z
-58734
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-273
-
 static4.C
 file
 
@@ -2201,6 +2167,40 @@ jason
 
 
 1144
+
+local1.C
+file
+
+
+
+
+2009-04-24T17:44:13.000000Z
+83a82f683c2ef38a1d683e0c8055bded
+2002-11-02T01:03:03.000000Z
+58734
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+273
 
 alias3.C
 file

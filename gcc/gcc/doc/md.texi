@@ -2730,7 +2730,6 @@ Constants in the range @minus{}8 to 2
 
 @end table
 
-<<<<<<< .mine
 @item Moxie---@file{config/moxie/constraints.md}
 @table @code
 @item A
@@ -2750,46 +2749,6 @@ A constant in the range of 0 to -255.
 
 @end table
 
-@item Moxie---@file{config/moxie/constraints.md}
-@table @code
-@item A
-An absolute address
-
-@item B
-An offset address
-
-@item W
-A register indirect memory operand
-
-@item I
-A constant in the range of 0 to 255.
-
-@item N
-A constant in the range of 0 to -255.
-
-@end table
-
-=======
-@item Moxie---@file{config/moxie/constraints.md}
-@table @code
-@item A
-An absolute address
-
-@item B
-An offset address
-
-@item W
-A register indirect memory operand
-
-@item I
-A constant in the range of 0 to 255.
-
-@item N
-A constant in the range of 0 to -255.
-
-@end table
-
->>>>>>> .r148339
 @need 1000
 @item SPARC---@file{config/sparc/sparc.h}
 @table @code

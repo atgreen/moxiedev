@@ -2772,6 +2772,48 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 	  gfc_add_expr_to_block (&se->post, tmp);
         }
 
+      /* Add argument checking of passing an unallocated/NULL actual to
+         a nonallocatable/nonpointer dummy.  */
+
+      if (gfc_option.rtcheck & GFC_RTCHECK_POINTER)
+        {
+	  gfc_symbol *sym;
+	  char *msg;
+	  tree cond;
+
+	  if (e->expr_type == EXPR_VARIABLE)
+	    sym = e->symtree->n.sym;
+	  else if (e->expr_type == EXPR_FUNCTION)
+	    sym = e->symtree->n.sym->result;
+	  else
+	    goto end_pointer_check;
+
+	  if (sym->attr.allocatable
+	      && (fsym == NULL || !fsym->attr.allocatable))
+	    asprintf (&msg, "Allocatable actual argument '%s' is not "
+		      "allocated", sym->name);
+	  else if (sym->attr.pointer
+	      && (fsym == NULL || !fsym->attr.pointer))
+	    asprintf (&msg, "Pointer actual argument '%s' is not "
+		      "associated", sym->name);
+          else if (sym->attr.proc_pointer
+	      && (fsym == NULL || !fsym->attr.proc_pointer))
+	    asprintf (&msg, "Proc-pointer actual argument '%s' is not "
+		      "associated", sym->name);
+	  else
+	    goto end_pointer_check;
+
+	  cond  = fold_build2 (EQ_EXPR, boolean_type_node, parmse.expr,
+			       fold_convert (TREE_TYPE (parmse.expr),
+					     null_pointer_node));
+ 
+	  gfc_trans_runtime_check (true, false, cond, &se->pre, &e->where,
+				   msg);
+	  gfc_free (msg);
+        }
+      end_pointer_check:
+
+
       /* Character strings are passed as two parameters, a length and a
          pointer - except for Bind(c) which only passes the pointer.  */
       if (parmse.string_length != NULL_TREE && !sym->attr.is_bind_c)
@@ -4300,6 +4342,7 @@ gfc_trans_arrayfunc_assign (gfc_expr * expr1, gfc_expr * expr2)
   gfc_ss *ss;
   gfc_ref * ref;
   bool seen_array_ref;
+  bool c = false;
   gfc_component *comp = NULL;
 
   /* The caller has already checked rank>0 and expr_type == EXPR_FUNCTION.  */
@@ -4309,6 +4352,10 @@ gfc_trans_arrayfunc_assign (gfc_expr * expr1, gfc_expr * expr2)
   /* Elemental functions don't need a temporary anyway.  */
   if (expr2->value.function.esym != NULL
       && expr2->value.function.esym->attr.elemental)
+    return NULL;
+
+  /* Fail if rhs is not FULL or a contiguous section.  */
+  if (expr1->ref && !(gfc_full_array_ref_p (expr1->ref, &c) || c))
     return NULL;
 
   /* Fail if EXPR1 can't be expressed as a descriptor.  */
@@ -4785,7 +4832,7 @@ copyable_array_p (gfc_expr * expr)
   if (expr->rank < 1 || !expr->ref || expr->ref->next)
     return false;
 
-  if (!gfc_full_array_ref_p (expr->ref))
+  if (!gfc_full_array_ref_p (expr->ref, NULL))
     return false;
 
   /* Next check that it's of a simple enough type.  */

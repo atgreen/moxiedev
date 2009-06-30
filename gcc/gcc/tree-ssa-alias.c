@@ -273,6 +273,13 @@ ptr_derefs_may_alias_p (tree ptr1, tree ptr2)
   if (!pi1 || !pi2)
     return true;
 
+  /* If both pointers are restrict-qualified try to disambiguate
+     with restrict information.  */
+  if (TYPE_RESTRICT (TREE_TYPE (ptr1))
+      && TYPE_RESTRICT (TREE_TYPE (ptr2))
+      && !pt_solutions_same_restrict_base (&pi1->pt, &pi2->pt))
+    return false;
+
   /* ???  This does not use TBAA to prune decls from the intersection
      that not both pointers may access.  */
   return pt_solutions_intersect (&pi1->pt, &pi2->pt);
@@ -1420,8 +1427,8 @@ walk_non_aliased_vuses (ao_ref *ref, tree vuse,
    The function returns the number of statements walked.  */
 
 static unsigned int
-walk_aliased_vdefs_1 (tree ref, tree vdef,
-		      bool (*walker)(tree, tree, void *), void *data,
+walk_aliased_vdefs_1 (ao_ref *ref, tree vdef,
+		      bool (*walker)(ao_ref *, tree, void *), void *data,
 		      bitmap *visited, unsigned int cnt)
 {
   do
@@ -1448,7 +1455,7 @@ walk_aliased_vdefs_1 (tree ref, tree vdef,
       /* ???  Do we want to account this to TV_ALIAS_STMT_WALK?  */
       cnt++;
       if ((!ref
-	   || stmt_may_clobber_ref_p (def_stmt, ref))
+	   || stmt_may_clobber_ref_p_1 (def_stmt, ref))
 	  && (*walker) (ref, vdef, data))
 	return cnt;
 
@@ -1458,8 +1465,8 @@ walk_aliased_vdefs_1 (tree ref, tree vdef,
 }
 
 unsigned int
-walk_aliased_vdefs (tree ref, tree vdef,
-		    bool (*walker)(tree, tree, void *), void *data,
+walk_aliased_vdefs (ao_ref *ref, tree vdef,
+		    bool (*walker)(ao_ref *, tree, void *), void *data,
 		    bitmap *visited)
 {
   bitmap local_visited = NULL;

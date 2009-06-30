@@ -1044,11 +1044,6 @@ extern int arm_structure_size_boundary;
 #define SUBTARGET_FRAME_POINTER_REQUIRED 0
 #endif
 
-#define FRAME_POINTER_REQUIRED					\
-  (cfun->has_nonlocal_label				\
-   || SUBTARGET_FRAME_POINTER_REQUIRED				\
-   || (TARGET_ARM && TARGET_APCS_FRAME && ! leaf_function_p ()))
-
 /* Return number of consecutive hard regs needed starting at reg REGNO
    to hold something of mode MODE.
    This is ordinarily the length in words of a value of mode MODE
@@ -1433,13 +1428,17 @@ do {									      \
 /* If defined, gives a class of registers that cannot be used as the
    operand of a SUBREG that changes the mode of the object illegally.  */
 
-/* Moves between FPA_REGS and GENERAL_REGS are two memory insns.  */
+/* Moves between FPA_REGS and GENERAL_REGS are two memory insns.
+   Moves between VFP_REGS and GENERAL_REGS are a single insn, but
+   it is typically more expensive than a single memory access.  We set
+   the cost to less than two memory accesses so that floating
+   point to integer conversion does not go through memory.  */
 #define REGISTER_MOVE_COST(MODE, FROM, TO)		\
   (TARGET_32BIT ?						\
    ((FROM) == FPA_REGS && (TO) != FPA_REGS ? 20 :	\
     (FROM) != FPA_REGS && (TO) == FPA_REGS ? 20 :	\
-    IS_VFP_CLASS (FROM) && !IS_VFP_CLASS (TO) ? 10 :	\
-    !IS_VFP_CLASS (FROM) && IS_VFP_CLASS (TO) ? 10 :	\
+    IS_VFP_CLASS (FROM) && !IS_VFP_CLASS (TO) ? 15 :	\
+    !IS_VFP_CLASS (FROM) && IS_VFP_CLASS (TO) ? 15 :	\
     (FROM) == IWMMXT_REGS && (TO) != IWMMXT_REGS ? 4 :  \
     (FROM) != IWMMXT_REGS && (TO) == IWMMXT_REGS ? 4 :  \
     (FROM) == IWMMXT_GR_REGS || (TO) == IWMMXT_GR_REGS ? 20 :  \

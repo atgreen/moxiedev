@@ -1,7 +1,7 @@
 10
 
 dir
-148971
+149118
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/compat
 svn://gcc.gnu.org/svn/gcc
 
@@ -468,40 +468,6 @@ drow
 
 1402
 
-scalar-by-value-3_y.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-f3045827c37ac1a7f9fcde5c06e3385d
-2008-09-09T03:17:22.762171Z
-140137
-drow
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2585
-
 fp2-struct-init.h
 file
 
@@ -569,6 +535,40 @@ ebotcazou
 
 
 706
+
+scalar-by-value-3_y.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+f3045827c37ac1a7f9fcde5c06e3385d
+2008-09-09T03:17:22.762171Z
+140137
+drow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2585
 
 struct-by-value-15_y.c
 file

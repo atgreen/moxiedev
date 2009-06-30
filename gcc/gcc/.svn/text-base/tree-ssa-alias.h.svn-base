@@ -49,6 +49,9 @@ struct GTY(()) pt_solution
   /* Nonzero if the pt_vars bitmap includes a global variable.  */
   unsigned int vars_contains_global : 1;
 
+  /* Nonzero if the pt_vars bitmap includes a restrict tag variable.  */
+  unsigned int vars_contains_restrict : 1;
+
   /* Set of variables that this pointer may point to.  */
   bitmap vars;
 };
@@ -97,9 +100,9 @@ extern bool stmt_may_clobber_ref_p_1 (gimple, ao_ref *);
 extern void *walk_non_aliased_vuses (ao_ref *, tree,
 				     void *(*)(ao_ref *, tree, void *),
 				     void *(*)(ao_ref *, tree, void *), void *);
-extern unsigned int walk_aliased_vdefs (tree, tree,
-					bool (*)(tree, tree, void *), void *,
-					bitmap *);
+extern unsigned int walk_aliased_vdefs (ao_ref *, tree,
+					bool (*)(ao_ref *, tree, void *),
+					void *, bitmap *);
 extern struct ptr_info_def *get_ptr_info (tree);
 extern void dump_alias_info (FILE *);
 extern void debug_alias_info (void);
@@ -115,6 +118,8 @@ extern void delete_alias_heapvars (void);
 extern bool pt_solution_includes_global (struct pt_solution *);
 extern bool pt_solution_includes (struct pt_solution *, const_tree);
 extern bool pt_solutions_intersect (struct pt_solution *, struct pt_solution *);
+extern bool pt_solutions_same_restrict_base (struct pt_solution *,
+					     struct pt_solution *);
 extern void pt_solution_reset (struct pt_solution *);
 extern void dump_pta_stats (FILE *);
 

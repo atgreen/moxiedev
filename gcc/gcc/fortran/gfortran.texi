@@ -1851,6 +1851,7 @@ c
 
 @menu
 * Interoperability with C::
+* GNU Fortran Compiler Directives::
 * Non-Fortran Main Program::
 @end menu
 
@@ -1964,10 +1965,10 @@ a macro. Use the @code{IERRNO} intrinsic (GNU extension) instead.
 Subroutines and functions have to have the @code{BIND(C)} attribute to
 be compatible with C. The dummy argument declaration is relatively
 straightforward. However, one needs to be careful because C uses
-call-by-value by default while GNU Fortran uses call-by-reference.
-Furthermore, strings and pointers are handled differently. Note that
-only explicit size and assumed-size arrays are supported but not
-assumed-shape or allocatable arrays.
+call-by-value by default while Fortran behaves usually similar to
+call-by-reference. Furthermore, strings and pointers are handled
+differently. Note that only explicit size and assumed-size arrays are
+supported but not assumed-shape or allocatable arrays.
 
 To pass a variable by value, use the @code{VALUE} attribute.
 Thus the following C prototype
@@ -2097,6 +2098,60 @@ C-interoperable @code{OPTIONAL} and for assumed-rank and assumed-type
 dummy arguments. However, the TR has neither been approved nor implemented
 in GNU Fortran; therefore, these features are not yet available.
 
+
+
+@node GNU Fortran Compiler Directives
+@section GNU Fortran Compiler Directives
+
+The Fortran standard standard describes how a conforming program shall
+behave; however, the exact implementation is not standardized. In order
+to allow the user to choose specific implementation details, compiler
+directives can be used to set attributes of variables and procedures
+which are not part of the standard. Whether a given attribute is
+supported and its exact effects depend on both the operating system and
+on the processor; see
+@ref{Top,,C Extensions,gcc,Using the GNU Compiler Collection (GCC)}
+for details.
+
+For procedures and procedure pointers, the following attributes can
+be used to change the calling convention:
+
+@itemize
+@item @code{CDECL} -- standard C calling convention
+@item @code{STDCALL} -- convention where the called procedure pops the stack
+@item @code{FASTCALL} -- part of the arguments are passed via registers
+instead using the stack
+@end itemize
+
+Besides changing the calling convention, the attributes also influence
+the decoration of the symbol name, e.g., by a leading underscore or by
+a trailing at-sign followed by the number of bytes on the stack. When
+assigning a procedure to a procedure pointer, both should use the same
+calling convention.
+
+On some systems, procedures and global variables (module variables and
+@code{COMMON} blocks) need special handling to be accessible when they
+are in a shared library. The following attributes are available:
+
+@itemize
+@item @code{DLLEXPORT} -- provide a global pointer to a pointer in the DLL
+@item @code{DLLIMPORT} -- reference the function or variable using a global pointer 
+@end itemize
+
+The attributes are specified using the syntax
+
+@code{!GCC$ ATTRIBUTES} @var{attribute-list} @code{::} @var{variable-list}
+
+where in free-form source code only whitespace is allowed before @code{!GCC$}
+and in fixed-form source code @code{!GCC$}, @code{cGCC$} or @code{*GCC$} shall
+start in the first column.
+
+For procedures, the compiler directives shall be placed into the body
+of the procedure; for variables and procedure pointers, they shall be in
+the same declaration part as the variable or procedure pointer.
+
+
+
 @node Non-Fortran Main Program
 @section Non-Fortran Main Program
 
@@ -2222,7 +2277,7 @@ initialization using @code{_gfortran_set_args}.
 Default: enabled.
 @item @var{option}[6] @tab Enables run-time checking. Possible values
 are (bitwise or-ed): GFC_RTCHECK_BOUNDS (1), GFC_RTCHECK_ARRAY_TEMPS (2),
-GFC_RTCHECK_RECURSION (4), GFC_RTCHECK_DO (16).
+GFC_RTCHECK_RECURSION (4), GFC_RTCHECK_DO (16), GFC_RTCHECK_POINTER (32).
 Default: disabled.
 @item @var{option}[7] @tab If non zero, range checking is enabled.
 Default: enabled. See -frange-check (@pxref{Code Gen Options}).

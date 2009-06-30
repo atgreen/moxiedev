@@ -1,3 +1,73 @@
+2009-06-30  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/utils2.c (build_binary_op) <MODIFY_EXPR>: Do not use
+	the type of the left operand if it pads a self-referential type when
+	the right operand is a constructor.
+
+	* gcc-interface/lang-specs.h: Fix copyright date.
+
+2009-06-30  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/decl.c: Include tree-inline.h.
+	(annotate_value) <CALL_EXPR>: Try to inline the call in the expression.
+	* gcc-interface/utils.c (max_size) <CALL_EXPR>: Likewise.
+	* gcc-interface/utils2.c: Include tree-inline.
+	(known_alignment) <CALL_EXPR>: Likewise.
+
+2009-06-30  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* raise-gcc.c: Include dwarf2.h conditionally.
+	
+2009-06-29  Tom Tromey  <tromey@redhat.com>
+
+	* raise-gcc.c: Include elf/dwarf2.h.
+
+2009-06-27  Laurent GUERBY  <laurent@guerby.net>
+
+	* tb-gcc.c (trace_callback): Add casts to silence warning.
+
+2009-06-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* tb-gcc.c: Fix copyright notice.
+
+2009-06-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* init.c (__gnat_set_globals): Add prototype.
+	* adaint.c (__gnat_binder_supports_auto_init): Likewise.
+	(__gnat_sals_init_using_constructors): Likewise.
+	* gcc-interface/utils.c (gnat_pushlevel): Likewise.
+	(get_block_jmpbuf_decl): Likewise.
+	(gnat_poplevel): Likewise.
+	(merge_sizes): Rename local variable.
+	(copy_type): Likewise.
+	(build_vms_descriptor32): Likewise.
+	(build_vms_descriptor): Likewise.
+	(convert_vms_descriptor64): Likewise.
+	(convert_vms_descriptor32): Likewise.
+	(convert_to_fat_pointer): Likewise.
+	(maybe_unconstrained_array): Likewise.
+	(def_fn_type): Use promoted type with va_arg.
+	* gcc-interface/decl.c (gnat_to_gnu_entity): Add declaration.
+	(substitute_in_type): Rename local variable.
+	* gcc-interface/Make-lang.in (ada-warn): Use STRICT_WARN.
+
+2009-06-26  Laurent GUERBY  <laurent@guerby.net>
+
+	* tb-gcc.c (trace_callback): Use char* instead of void*.
+	* gcc-interface/misc.c (enumerate_modes): Make loop C++ compatible.
+	* gcc-interface/trans.c (parm_attr): Rename to parm_attr_d.
+	(Attribute_to_gnu): Adjust for above change.
+	(Subprogram_Body_to_gnu): Likewise.
+	* gcc-interface/utils.c (merge_sizes): Rename local variable.
+	(copy_type): Likewise.
+	(build_vms_descriptor32): Likewise.
+	(build_vms_descriptor): Likewise.
+	(convert_vms_descriptor64): Likewise.
+	(convert_vms_descriptor32): Likewise.
+	(convert_to_fat_pointer): Likewise.
+	(maybe_unconstrained_array): Likewise.
+	* gcc-interface/decl.c (substitute_in_type): Likewise.
+
 2009-06-26  Eric Botcazou  <ebotcazou@adacore.com>
 
 	* gcc-interface/decl.c (cannot_be_superflat_p): New predicate.

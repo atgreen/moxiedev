@@ -1,7 +1,7 @@
 10
 
 dir
-149118
+149163
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.brendan
 svn://gcc.gnu.org/svn/gcc
 
@@ -4276,40 +4276,6 @@ mmitchel
 
 247
 
-visibility4.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-715aa94186b2b202e2e9a4997d26444f
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-257
-
 warnings3.C
 file
 
@@ -4377,6 +4343,40 @@ mmitchel
 
 
 223
+
+visibility4.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+715aa94186b2b202e2e9a4997d26444f
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+257
 
 dtors1.C
 file

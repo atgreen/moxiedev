@@ -1,7 +1,7 @@
 10
 
 dir
-149118
+149163
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gfortran.dg
 svn://gcc.gnu.org/svn/gcc
 
@@ -8597,40 +8597,6 @@ kargl
 gomp
 dir
 
-used_types_3.f90
-file
-
-
-
-
-2009-04-24T17:46:05.000000Z
-ec6029c698323ec2a78835b334d7702a
-2006-08-24T04:47:28.603318Z
-116369
-pault
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1059
-
 pr26246_2.f90
 file
 
@@ -8698,6 +8664,40 @@ hp
 
 
 778
+
+used_types_3.f90
+file
+
+
+
+
+2009-04-24T17:46:05.000000Z
+ec6029c698323ec2a78835b334d7702a
+2006-08-24T04:47:28.603318Z
+116369
+pault
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1059
 
 c_loc_tests_3.f03
 file

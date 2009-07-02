@@ -1,3 +1,114 @@
+2009-07-01  Anthony Green  <green@moxielogic.com>
+
+	* config/moxie/moxie.c (moxie_expand_prologue): Use dec
+	instruction when possible.
+	(moxie_expand_prologue): Ditto.  Also, save an instruction and
+	some complexity by popping off of $r12 instead of $sp.  
+	* config/moxie/moxie.md (movsi_pop): Don't assume $sp.  Take two
+	operands.
+	
+2009-07-01  Richard Henderson  <rth@redhat.com>
+
+	PR bootstrap/40347
+	* function.c (reposition_prologue_and_epilogue_notes): If epilogue
+	contained no insns, reposition note before last insn.
+
+2009-07-01  Richard Henderson  <rth@redhat.com>
+
+	PR debug/40431
+	* dwarf2out.c (def_cfa_1): Revert 2009-06-11 change for
+	DW_CFA_def_cfa_offset and DW_CFA_def_cfa.
+
+2009-07-01  Michael Meissner  <meissner@linux.vnet.ibm.com>
+
+	PR bootstrap/40558
+	* config/rs6000/rs6000.c (print_operand): Undo change that breaks
+	darwin9 for printing reg addresses with %y.
+
+2009-07-01  Adam Nemet  <anemet@caviumnetworks.com>
+
+	* combine.c (force_to_mode): Handle TRUNCATE.  Factor out
+	truncation from operands in binary operations.
+
+2009-07-01  Adam Nemet  <anemet@caviumnetworks.com>
+
+	Revert:
+	2009-01-11  Adam Nemet  <anemet@caviumnetworks.com>
+	* expmed.c (store_bit_field_1): Properly truncate the paradoxical
+	subreg of op0 to the original op0.
+
+	* expmed.c (store_bit_field_1): Use a temporary as the destination
+	instead of a paradoxical subreg when we need to truncate the result.
+
+2009-07-01  DJ Delorie  <dj@redhat.com>
+
+	* config/mep/mep-ivc2.cpu (cmov, cmovc, cmovh): Add intrinsic names to VLIW variants.
+	(ivc2rm, ivc2crn): Make data type consistent with non-VLIW variants.
+	* config/mep/intrinsics.md: Regenerate.
+	* config/mep/intrinsics.h: Regenerate.
+	* config/mep/mep-intrin.h: Regenerate.
+
+2009-07-01  Jakub Jelinek  <jakub@redhat.com>
+
+	PR debug/40462
+	* jump.c (returnjump_p): Revert last patch.
+	* dwarf2out.c (dwarf2out_begin_epilogue): Handle SEQUENCEs.
+
+2009-07-01  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	PR target/40575
+	* pa.md (casesi32p): Use jump table label to determine the offset
+	of the jump table.
+	(casesi64p): Likewise.
+
+	* pa.c (forward_branch_p): Return bool type.  Use instruction addresses
+	when available.  Assert that INSN has a jump label.
+	(pa_adjust_insn_length): Don't call forward_branch_p if INSN doesn't
+	have a jump label.
+
+2009-07-01  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/19831
+	* tree-ssa-dce.c (propagate_necessity): Calls to functions
+	that only act as barriers do not make any previous stores
+	necessary.
+	* tree-ssa-structalias.c (handle_lhs_call): Delay making
+	HEAP variables global, do not add a constraint from nonlocal.
+	(find_func_aliases): Handle escapes through return statements.
+	(compute_points_to_sets): Make escaped HEAP variables global.
+
+2009-07-01  Paolo Bonzini  <bonzini@gnu.org>
+
+	PR bootstrap/40597
+	* expmed.c (emit_store_flag): Perform a conversion if necessary,
+	after reducing a DImode cstore to SImode.
+
+2009-07-01  Paolo Bonzini  <bonzini@gnu.org>
+
+	* expr.c (expand_expr_real_1): Reinstate fallthrough to
+	TRUTH_ANDIF_EXPR if do_store_flag returns NULL.
+
+2009-07-01  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* config/vax/vax.h (TARGET_BSD_DIVMOD): New macro.  Set to 1.
+	* config/vax/linux.h (TARGET_BSD_DIVMOD): New macro.  Redefine the
+	to 0.
+	* config/vax/vax.c (vax_init_libfuncs): Only redefine udiv_optab
+	and umod_optab if TARGET_BSD_DIVMOD.
+	* config/vax/lib1funcs.asm: New file.
+	* config/vax/t-linux: New file.
+	* config.gcc (vax-*-linux*): Set tmake_file to vax/t-linux.
+
+2009-06-30  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/40566
+	* convert.c (convert_to_integer) <case COND_EXPR>: Don't convert
+	to type arguments that have void type.
+
+	PR debug/40573
+	* dwarf2out.c (gen_formal_parameter_die): Call
+	equate_decl_number_to_die if node is different from origin.
+
 2009-06-30  Anthony Green  <green@moxielogic.com>
 
 	Clean up moxie port for --enable-build-with-cxx.
@@ -650,6 +761,19 @@
 2009-06-25  Michael Meissner  <meissner@linux.vnet.ibm.com>
 	    Pat Haugen  <pthaugen@us.ibm.com>
 	    Revital Eres <ERES@il.ibm.com>
+
+	* config/rs6000/rs6000.c (print_operand): Correct lossage message
+	for %c error.  Add %x support to print VSX registers as a unified
+	register set, instead of separate float and altivec registers.
+	Switch to use VECTOR_MEM_ALTIVEC_P instead of TARGET_ALTIVEC for
+	%y case, and add support for VSX pre-modify addresses.
+	(output_toc): Add assert for CONST containing an integer constant
+	in the PLUS case.
+	(rs6000_adjust_cost): Add POWER7 support.
+	(insn_must_be_first_in_group): Ditto.
+	(insn_must_be_last_in_group): Ditto.
+	(rs6000_emit_popcount): Ditto.
+	(rs6000_vector_mode_supported_p): Ditto.
 
 	* config/rs6000/rs6000-protos.h (rs6000_secondary_reload_class):
 	Change some of the functions called by macros to being called

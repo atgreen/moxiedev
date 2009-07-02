@@ -1,3 +1,29 @@
+2009-07-01  Adam Nemet  <anemet@caviumnetworks.com>
+
+	* gcc.target/mips/truncate-4.c: New testcase.
+
+2009-07-01  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/19831
+	* gcc.dg/tree-ssa/20041122-1.c: Enable TBAA, scan FRE dump,
+	make allocated memory escape.  Un-XFAIL.
+	* gcc.dg/vect/pr21591.c: Make allocated memory escape.
+	* gcc.dg/vect/pr31699.c: Likewise.
+	* gcc.dg/tree-ssa/ssa-dce-7.c: New testcase.
+
+2009-06-30  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/40566
+	* g++.dg/parse/cond5.C: New test.
+
+2009-06-30  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* gcc.dg/tree-ssa/gen-vect-25.c (n): New variable.
+	(main): Pass n to main_1 instead.
+	* gcc.dg/tree-ssa/gen-vect-28.c (off): New variable.
+	(main_1): New function, split off from...
+	(main): ...here.  Pass `off' to main_1 instead.
+
 2009-06-30  Jason Merrill  <jason@redhat.com>
 
 	PR c++/40595

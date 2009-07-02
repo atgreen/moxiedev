@@ -1,14 +1,14 @@
 10
 
 dir
-149118
+149163
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/mips
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-06-23T00:31:44.963415Z
-148827
+2009-07-01T21:34:58.668321Z
+149154
 nemet
 
 
@@ -468,40 +468,6 @@ rsandifo
 
 928
 
-fpr-moves-6.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-24ded4afed8b1d9b23e82671f0bc55ed
-2008-12-21T21:47:38.741080Z
-142875
-rsandifo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1274
-
 gcc-have-sync-compare-and-swap-1.c
 file
 
@@ -536,14 +502,14 @@ rsandifo
 
 388
 
-octeon-pop-1.c
+fpr-moves-6.c
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-a6705675a5159170e591f46a8e4c6335
+24ded4afed8b1d9b23e82671f0bc55ed
 2008-12-21T21:47:38.741080Z
 142875
 rsandifo
@@ -568,7 +534,7 @@ rsandifo
 
 
 
-298
+1274
 
 atomic-memory-2.c
 file
@@ -603,6 +569,40 @@ rsandifo
 
 
 250
+
+octeon-pop-1.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+a6705675a5159170e591f46a8e4c6335
+2008-12-21T21:47:38.741080Z
+142875
+rsandifo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+298
 
 pr34831.c
 file
@@ -7579,6 +7579,40 @@ nemet
 
 
 272
+
+truncate-4.c
+file
+
+
+
+
+2009-07-02T01:09:04.000000Z
+c7649c610dc4d105166e60b0cfeb9d6c
+2009-07-01T21:34:58.668321Z
+149154
+nemet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+247
 
 fix-r10000-13.c
 file

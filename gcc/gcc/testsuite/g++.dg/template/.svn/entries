@@ -1,7 +1,7 @@
 10
 
 dir
-149118
+149163
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/template
 svn://gcc.gnu.org/svn/gcc
 
@@ -468,40 +468,6 @@ nathan
 
 317
 
-ttp19.C
-file
-
-
-
-
-2009-04-24T17:44:21.000000Z
-00132c35b440c6f38de75bfaed01af9d
-2006-06-16T06:08:49.470124Z
-114703
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-184
-
 param1.C
 file
 
@@ -569,6 +535,40 @@ reichelt
 
 
 221
+
+ttp19.C
+file
+
+
+
+
+2009-04-24T17:44:21.000000Z
+00132c35b440c6f38de75bfaed01af9d
+2006-06-16T06:08:49.470124Z
+114703
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+184
 
 meminit1.C
 file
@@ -8628,40 +8628,6 @@ dgregor
 
 3226
 
-arg5.C
-file
-
-
-
-
-2009-04-24T17:44:19.000000Z
-578d898bb69e2e67cdcccff713390fe6
-2007-03-08T07:26:43.510767Z
-122685
-reichelt
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-162
-
 error41.C
 file
 
@@ -8729,6 +8695,40 @@ mmitchel
 
 
 233
+
+arg5.C
+file
+
+
+
+
+2009-04-24T17:44:19.000000Z
+578d898bb69e2e67cdcccff713390fe6
+2007-03-08T07:26:43.510767Z
+122685
+reichelt
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+162
 
 spec32.C
 file

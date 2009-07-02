@@ -1,7 +1,7 @@
 10
 
 dir
-149118
+149163
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/obj-c++.dg
 svn://gcc.gnu.org/svn/gcc
 
@@ -2100,40 +2100,6 @@ zlaski
 
 756
 
-comp-types-5.mm
-file
-
-
-
-
-2009-04-24T17:46:11.000000Z
-f2fc36166a21e21a4a4bc94e5da78028
-2005-05-24T22:18:43.000000Z
-100121
-mrs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2439
-
 dwarf-2.mm
 file
 
@@ -2201,6 +2167,40 @@ mrs
 
 
 336
+
+comp-types-5.mm
+file
+
+
+
+
+2009-04-24T17:46:11.000000Z
+f2fc36166a21e21a4a4bc94e5da78028
+2005-05-24T22:18:43.000000Z
+100121
+mrs
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2439
 
 method-15.mm
 file

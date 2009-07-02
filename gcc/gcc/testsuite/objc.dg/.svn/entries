@@ -1,7 +1,7 @@
 10
 
 dir
-149118
+149163
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/objc.dg
 svn://gcc.gnu.org/svn/gcc
 
@@ -2038,40 +2038,6 @@ zlaski
 
 268
 
-super-dealloc-1.m
-file
-
-
-
-
-2009-04-24T17:46:12.000000Z
-5f7cf7eb1290cd0ac7cc810aca461fcb
-2005-05-27T02:55:21.000000Z
-100241
-mrs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-729
-
 const-str-4.m
 file
 
@@ -2106,17 +2072,17 @@ zlaski
 
 636
 
-proto-lossage-2.m
+super-dealloc-1.m
 file
 
 
 
 
 2009-04-24T17:46:12.000000Z
-f0b9884c1de6674b724f6ea9b7c54270
-2003-09-25T01:26:01.000000Z
-71748
-zlaski
+5f7cf7eb1290cd0ac7cc810aca461fcb
+2005-05-27T02:55:21.000000Z
+100241
+mrs
 
 
 
@@ -2138,7 +2104,7 @@ zlaski
 
 
 
-321
+729
 
 func-ptr-2.m
 file
@@ -2173,6 +2139,40 @@ zlaski
 
 
 826
+
+proto-lossage-2.m
+file
+
+
+
+
+2009-04-24T17:46:12.000000Z
+f0b9884c1de6674b724f6ea9b7c54270
+2003-09-25T01:26:01.000000Z
+71748
+zlaski
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+321
 
 param-1.m
 file

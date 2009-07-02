@@ -1,7 +1,7 @@
 10
 
 dir
-149118
+149163
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/compat
 svn://gcc.gnu.org/svn/gcc
 
@@ -468,40 +468,6 @@ drow
 
 1402
 
-fp2-struct-init.h
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-59ca841f17677fc8a60f3e9b812cffb3
-2003-06-10T21:01:39.000000Z
-67734
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-843
-
 struct-by-value-13_y.c
 file
 
@@ -569,6 +535,40 @@ drow
 
 
 2585
+
+fp2-struct-init.h
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+59ca841f17677fc8a60f3e9b812cffb3
+2003-06-10T21:01:39.000000Z
+67734
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+843
 
 struct-by-value-15_y.c
 file

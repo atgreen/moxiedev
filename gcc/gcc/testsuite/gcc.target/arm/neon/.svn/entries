@@ -1,7 +1,7 @@
 10
 
 dir
-149118
+149163
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/arm/neon
 svn://gcc.gnu.org/svn/gcc
 
@@ -1012,40 +1012,6 @@ jules
 
 633
 
-vRshrQ_nu16.c
-file
-
-
-
-
-2009-04-24T17:45:34.000000Z
-a7efb121c3705c2b8d706db64521b526
-2007-07-25T12:28:31.339902Z
-126911
-jules
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-593
-
 vget_highu32.c
 file
 
@@ -1113,6 +1079,40 @@ jules
 
 
 638
+
+vRshrQ_nu16.c
+file
+
+
+
+
+2009-04-24T17:45:34.000000Z
+a7efb121c3705c2b8d706db64521b526
+2007-07-25T12:28:31.339902Z
+126911
+jules
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+593
 
 vld3_lanes32.c
 file

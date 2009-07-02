@@ -1,7 +1,7 @@
 10
 
 dir
-149118
+149163
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/swing/plaf
 svn://gcc.gnu.org/svn/gcc
 
@@ -406,40 +406,6 @@ has-props
 
 314
 
-SplitPaneUI.class
-file
-
-
-
-
-2009-04-24T17:48:17.000000Z
-1d1c4485ff3a3f6e00ea052133af5419
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-645
-
 PanelUI.class
 file
 
@@ -507,6 +473,40 @@ has-props
 
 
 949
+
+SplitPaneUI.class
+file
+
+
+
+
+2009-04-24T17:48:17.000000Z
+1d1c4485ff3a3f6e00ea052133af5419
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+645
 
 SeparatorUI.class
 file

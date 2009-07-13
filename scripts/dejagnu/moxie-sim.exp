@@ -41,11 +41,14 @@ set_board_info ldflags   "[libgloss_link_flags] [newlib_link_flags]"
 # No linker script needed.
 set_board_info ldscript "-Tsim.ld"
 
-# Doesn't pass arguments or signals, can't return results, and doesn't
-# do inferiorio.
+# Configuration settings for testsuites
 set_board_info noargs 1
 set_board_info gdb,nosignals 1
 set_board_info gdb,noresults 1
+set_board_info gdb,cannot_call_functions 1
+set_board_info gdb,skip_float_tests 1
+set_board_info gdb,can_reverse 1
+set_board_info gdb,use_precord 1
 
 # More time is needed
 set_board_info gcc,timeout 800
@@ -54,3 +57,4 @@ set_board_info gdb,timeout 60
 # Used by a few gcc.c-torture testcases to delimit how large the stack can
 # be.
 set_board_info gcc,stack_size  5000
+

@@ -917,6 +917,8 @@ static void
 m32r_fetch_register (struct target_ops *ops,
 		     struct regcache *regcache, int regno)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned long val, val2, regid;
 
   if (regno == -1)
@@ -947,7 +949,7 @@ m32r_fetch_register (struct target_ops *ops,
 
       /* We got the number the register holds, but gdb expects to see a
          value in the target byte ordering.  */
-      store_unsigned_integer (buffer, 4, val);
+      store_unsigned_integer (buffer, 4, byte_order, val);
       regcache_raw_supply (regcache, regno, buffer);
     }
   return;
@@ -1050,10 +1052,10 @@ m32r_xfer_memory (CORE_ADDR memaddr, gdb_byte *myaddr, int len,
     {
       if (write)
 	fprintf_unfiltered (gdb_stdlog, "m32r_xfer_memory(%s,%d,write)\n",
-			    paddr (memaddr), len);
+			    paddress (target_gdbarch, memaddr), len);
       else
 	fprintf_unfiltered (gdb_stdlog, "m32r_xfer_memory(%s,%d,read)\n",
-			    paddr (memaddr), len);
+			    paddress (target_gdbarch, memaddr), len);
     }
 
   if (write)
@@ -1140,7 +1142,8 @@ m32r_mourn_inferior (struct target_ops *ops)
 }
 
 static int
-m32r_insert_breakpoint (struct bp_target_info *bp_tgt)
+m32r_insert_breakpoint (struct gdbarch *gdbarch,
+			struct bp_target_info *bp_tgt)
 {
   CORE_ADDR addr = bp_tgt->placed_address;
   int ib_breakpoints;
@@ -1149,7 +1152,7 @@ m32r_insert_breakpoint (struct bp_target_info *bp_tgt)
 
   if (remote_debug)
     fprintf_unfiltered (gdb_stdlog, "m32r_insert_breakpoint(%s,...)\n",
-			paddr (addr));
+			paddress (gdbarch, addr));
 
   if (use_ib_breakpoints)
     ib_breakpoints = max_ib_breakpoints;
@@ -1183,14 +1186,15 @@ m32r_insert_breakpoint (struct bp_target_info *bp_tgt)
 }
 
 static int
-m32r_remove_breakpoint (struct bp_target_info *bp_tgt)
+m32r_remove_breakpoint (struct gdbarch *gdbarch,
+			struct bp_target_info *bp_tgt)
 {
   CORE_ADDR addr = bp_tgt->placed_address;
   int i;
 
   if (remote_debug)
     fprintf_unfiltered (gdb_stdlog, "m32r_remove_breakpoint(%s)\n",
-			paddr (addr));
+			paddress (gdbarch, addr));
 
   for (i = 0; i < MAX_BREAKPOINTS; i++)
     {
@@ -1417,7 +1421,7 @@ m32r_insert_watchpoint (CORE_ADDR addr, int len, int type)
 
   if (remote_debug)
     fprintf_unfiltered (gdb_stdlog, "m32r_insert_watchpoint(%s,%d,%d)\n",
-			paddr (addr), len, type);
+			paddress (target_gdbarch, addr), len, type);
 
   for (i = 0; i < MAX_ACCESS_BREAKS; i++)
     {
@@ -1441,7 +1445,7 @@ m32r_remove_watchpoint (CORE_ADDR addr, int len, int type)
 
   if (remote_debug)
     fprintf_unfiltered (gdb_stdlog, "m32r_remove_watchpoint(%s,%d,%d)\n",
-			paddr (addr), len, type);
+			paddress (target_gdbarch, addr), len, type);
 
   for (i = 0; i < MAX_ACCESS_BREAKS; i++)
     {

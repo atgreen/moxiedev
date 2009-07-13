@@ -1,14 +1,14 @@
-/Makefile.in/1.2/Fri May 29 23:30:12 2009/-ko/
-/aout.sed/1.1.1.1/Fri May 29 23:30:12 2009/-ko/
-/configure/1.2/Fri May 29 23:30:12 2009/-ko/
-/configure.ac/1.1/Fri May 29 23:30:12 2009//
-/ecoff.sed/1.1.1.1/Fri May 29 23:30:12 2009/-ko/
-/exclfwd.exp/1.7/Fri May 29 23:30:12 2009//
-/exclfwd.h/1.5/Fri May 29 23:30:12 2009//
-/exclfwd1.c/1.5/Fri May 29 23:30:12 2009//
-/exclfwd2.c/1.5/Fri May 29 23:30:12 2009//
-/hppa.sed/1.1.1.1/Fri May 29 23:30:12 2009/-ko/
-/weird.def/1.2/Fri May 29 23:30:12 2009/-ko/
-/weird.exp/1.17/Fri May 29 23:30:12 2009/-ko/
-/xcoff.sed/1.1.1.1/Fri May 29 23:30:12 2009/-ko/
+/Makefile.in/1.2/Mon Jul  6 10:46:43 2009/-ko/
+/aout.sed/1.1.1.1/Mon Jul  6 10:46:43 2009/-ko/
+/configure/1.2/Mon Jul  6 10:46:43 2009/-ko/
+/configure.ac/1.1/Mon Jul  6 10:46:43 2009//
+/ecoff.sed/1.1.1.1/Mon Jul  6 10:46:43 2009/-ko/
+/exclfwd.exp/1.7/Mon Jul  6 10:46:43 2009//
+/exclfwd.h/1.5/Mon Jul  6 10:46:43 2009//
+/exclfwd1.c/1.5/Mon Jul  6 10:46:43 2009//
+/exclfwd2.c/1.5/Mon Jul  6 10:46:43 2009//
+/hppa.sed/1.1.1.1/Mon Jul  6 10:46:43 2009/-ko/
+/weird.def/1.2/Mon Jul  6 10:46:43 2009/-ko/
+/weird.exp/1.17/Mon Jul  6 10:46:43 2009/-ko/
+/xcoff.sed/1.1.1.1/Mon Jul  6 10:46:43 2009/-ko/
 D

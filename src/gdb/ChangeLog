@@ -1,9 +1,2159 @@
-2009-07-11  Anthony Green  <green@moxielogic.com>
+2009-07-13  Anthony Green  <green@moxielogic.com>
 
 	* moxie-tdep.c (moxie_gdbarch_init): Call
 	set_gdbarch_process_record.
 	(moxie_process_record): New.
 	(moxie_process_readu): New.
+
+2009-07-12  Michael Snyder  <msnyder@vmware.com>
+
+	* i386-tdep.c: Add a frame unwinder for function epilogues.
+	(i386_in_function_epilogue_p): New function.
+	(i386_epilogue_frame_sniffer): New function.
+	(i386_epilogue_frame_cache): New function.
+	(i386_epilogue_frame_this_id): New function.
+	(i386_epilogue_frame_unwind): New struct frame_unwind.
+	(i386_gdbarch_init): Hook the new unwinder.
+
+2009-07-11  Hui Zhu  <teawater@gmail.com>
+
+	* cli/cli-cmds.c (disassemble_command): Add a new modifier /r
+	to "disassemble" command to print the raw instructions in hex as
+	well as in symbolic form.
+	(init_cli_cmds): Ditto.
+	(print_disassembly): Change "mixed" to "flags" to translate
+	the behavior of disassemble.
+	(disassemble_current_function): Ditto.
+	* mi/mi-cmd-disas.c (mi_cmd_disassemble): Ditto.
+	* stack.c (gdb_disassembly_stub): Ditto.
+	* disasm.c (do_mixed_source_and_assembly): Ditto.
+	(do_mixed_source_and_assembly): Ditto.
+	(do_assembly_only): Ditto.
+	(gdb_disassembly): Ditto.
+	(dump_insns): print the raw instructions in hex as well as in
+	symbolic form if DISASSEMBLY_RAW_INSN and flags is true.
+	* disasm.h (DISASSEMBLY_SOURCE): Include source code with the
+	assembly if it and flags is true.
+	(DISASSEMBLY_RAW_INSN): Include the raw instructions in hex with
+	the assembly if it and flags is true.
+	(gdb_disassembly): Update extern.
+	* NEWS: Document disassemble/r support.
+
+2009-07-10  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf2-frame.c: Include dwarf2.h, not elf/dwarf2.h.
+	* dwarf2expr.c: Likewise.
+	* dwarf2loc.c: Likewise.
+	* dwarf2read.c: Likewise.
+	* sh-tdep.c: Likewise.
+	* xtensa-tdep.c: Likewise.
+
+2009-07-10  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Tidy up the code.
+	* mi/mi-cmd-var.c (mi_cmd_var_update): Remove variable nv.  Move
+	variables var, rootlist and cr to their local sub-block.  Move the
+	make_cleanup_ui_out_tuple_begin_end, make_cleanup_ui_out_list_begin_end
+	and do_cleanups calls to the common base block.  Remove the zero NV
+	check.
+
+2009-07-10 Phil Muldoon  <pmuldoon@redhat.com>
+
+	* python/python-internal.h (apply_varobj_pretty_printer): Update
+	definition.
+	(python_string_to_target_python_string): Add definition.
+	* python/python-utils.c (unicode_to_encoded_python_string)
+	(unicode_to_target_python_string)
+	(python_string_to_target_python_string): New Functions.
+	* python/python-prettyprint.c (pretty_print_one_value): Likewise.
+	(print_string_repr): Refactor to logic to account for PyObject
+	returned strings.
+	(apply_varobj_pretty_printer): Likewise.
+	* python/python-value.c (valpy_string): Parse length keyword. Use
+	length keyword in LA_GET_STRING.
+	* varobj.c (value_get_print_value): Refactor logic to account for
+	PyObject returned strings.
+	* c-lang.c (c_get_string): If the length parameter is specified,
+	use that. Return value in characters. Update comments.
+	* language.h: Update c_get_string prototype comments.
+
+2009-07-09  Doug Evans  <dje@google.com>
+
+	* i386-tdep.c (i386_displaced_step_fixup): Fix order of arguments
+	to read_memory_unsigned_integer.
+
+2009-07-09  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Report error on inaccessible memory.
+	* cli/cli-dump.c: Include gdbcore.h.
+	(dump_memory_to_file): Call read_memory instead of target_read_memory.
+
+2009-07-09  Hui Zhu  <teawater@gmail.com>
+
+	* solib.c (solib_bfd_open): Output a warning if solib's
+	architecture is not compatible with inferior's architecture.
+
+2009-07-09  Ulrich Weigand  <uweigand@de.ibm.com>
+	    Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* target.h (struct target_ops <to_thread_architecture>): Describe it.
+	(target_thread_architecture): Refer to to_thread_architecture.
+
+2009-07-08  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* cli/cli-cmds.c (init_cli_cmds): Add "inf" alias for "info" command.
+
+2009-07-07  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* tui/tui-stack.c (tui_make_status_line): Display PC as ?? if unknown.
+
+2009-07-07  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* breakpoint.c (set_raw_breakpoint): Remove static modifier.
+
+2009-07-07  Tom Tromey  <tromey@redhat.com>
+
+	* c-lang.c (convert_octal): Only allow 3 octal digits.
+	(print_wchar): Prefer 3-digit octal form.  Fall back to hex if
+	needed.
+	* c-exp.y (c_parse_escape): Only allow 3 octal digits.
+
+2009-07-07  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* python/python-value.c (valpy_getitem): Remove incorrect assert.
+	
+2009-07-07  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* python/python-value.c (valpy_getitem): Don't return from TRY_CATCH.
+
+2009-07-07  Sami Wagiaalla  <swagiaal@redhat.com>
+
+	* cp-support.h (struct using_direct): Rename members inner and
+	outer to import_src, and import_dest respectively.
+	* cp-namespace.c (cp_add_using_directive): Update.
+	(cp_add_using): Update.
+	(cp_copy_usings): Update.
+	(cp_lookup_symbol_namespace): Update.
+	(cp_scan_for_anonymous_namespaces): Update.
+	* cp-support.c (make_symbol_overload_list_using): Update.
+	* cp-support.h (cp_add_using_directive, cp_add_using): Rename
+	arguments from inner and outer to src and dest respectively.
+	* cp-namespace.c (cp_add_using_directive): Ditto.
+	(cp_add_using): Ditto.
+
+2009-07-07  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* mi/mi-cmd-var.c (mi_cmd_var_update): Replace a while loop by for loop.
+	* varobj.c (varobj_invalidate): Replace a while loop by for loop.
+
+2009-07-07  Vladimir Prus  <vladimir@codesourcery.com>
+
+	Fix hang in floating varobjs.
+
+	* varobj.c (varobj_invalidate): Advance to next
+	element when processing floating varobj.
+
+2009-07-07  Vladimir Prus  <vladimir@codesourcery.com>
+
+	* varobj.c: Remove unnecessary include.
+
+2009-07-07  Tristan Gingold  <gingold@adacore.com>
+
+	* config/i386/darwin.mh	(NATDEPFILES): Remove excServer.o.
+	Remove excServer.c target.  Remove _all target.
+	* darwin.defs: Removed.
+
+2009-07-06  Aleksandar Ristovski  <aristovski@qnx.com>
+
+	* configure.tgt (i[34567]86-*-nto*): Add build_gdbserver=yes.
+
+2009-07-06  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* source.c (find_and_open_source): Remove the `objfile' parameter.
+	Update the function comment.
+	(open_source_file, symtab_to_fullname, psymtab_to_fullname): Update the
+	find_and_open_source callers.
+
+2009-07-05  Pedro Alves  <pedro@codesourcery.com>
+
+	* coff-pe-read.c (read_pe_exported_syms): Recognize
+	"pe-arm-wince-little" and "pei-arm-wince-little" bfd targets as PE
+	targets.
+
+2009-07-05  Pedro Alves  <pedro@codesourcery.com>
+
+	* arm-wince-tdep.c (arm_wince_skip_main_prologue): New.
+	(arm_wince_init_abi): Register it as gdbarch_skip_main_prologue
+	callback.
+
+2009-06-29  Tristan Gingold  <gingold@adacore.com>
+
+	* i386-darwin-tdep.c (amd64_darwin_thread_state_reg_offset)
+	(amd64_darwin_thread_state_num_regs)
+	(amd64_darwin_sigcontext_addr, x86_darwin_init_abi_64): Moved to
+	amd64-darwin-tdep.c
+	(_initialize_i386_darwin_tdep): Remove 64 bits parts.
+	(darwin_dwarf_signal_frame_p): Make public.
+	* amd64-darwin-tdep.c: New file with most chunks from
+	i386-darwin-tdep.c	
+	* i386-darwin-tdep.h: Add a prototype for darwin_dwarf_signal_frame_p.
+	(amd64_darwin_thread_state_reg_offset)
+	(amd64_darwin_thread_state_num_regs): Moved to amd64-darwin-tdep.h
+	* amd64-darwin-tdep.h: New file.
+	* i386-darwin-nat.c: Only includes amd64-nat.h and amd64-darwin-tdep.h
+	if BFD64 is defined.
+	(i386_darwin_fetch_inferior_registers): Add #ifdef BFD64/#endif around
+	64 bits parts.
+	(i386_darwin_store_inferior_registers): Ditto.
+	(darwin_set_sstep): Ditto.
+	(darwin_complete_target): Ditto.
+	(amd64_darwin_sstep_at_sigreturn): Ditto.
+	* configure.tgt: Create a separate entry for x86_64-*-darwin.
+	Add 64 bits support for i386-*-darwin if --enable-64-bit-bfd.
+	* Makefile.in (ALLDEPFILES): Add amd64-darwin-tdep.c, darwin-nat.c,
+	i386-darwin-tdep.c i386-darwin-nat.c
+	(ALL_64_TARGET_OBS): Add amd64-darwin-tdep.o
+	
+2009-07-02  Pedro Alves  <pedro@codesourcery.com>
+
+	* linux-fork.c (forks_exist_p): Drop unnecessary extern.
+	(add_fork, linux_fork_killall, linux_fork_mourn_inferior)
+	(linux_fork_detach): Ditto.
+	(delete_fork_command): Rename to ...
+	(delete_checkpoint_command): ... this.
+	(detach_fork_command): Rename to ...
+	(detach_checkpoint_command): ... this.
+	(info_forks_command): Rename to ...
+	(info_checkpoints_command): ... this.
+	(_initialize_linux_fork): Remove stale comments.  Adjust.
+
+2009-07-02  Pedro Alves  <pedro@codesourcery.com>
+
+	* linux-nat.c (linux_child_follow_fork): If we're staying attached
+	to the child process, enable event reporting on it.  Don't handle
+	checkpoints here.  Instead, add the child fork to the lwp thread
+	and inferior lists without clobbering the previous inferior.  Let
+	the thread_db layer learn about a new child process, even if
+	following the parent.
+	(linux_nat_switch_fork): Delete lwps of the current inferior only,
+	instead of clearing the whole list.  Use thread_change_ptid to
+	give the core the illusion the new checkpoint is still the same
+	inferior.  Clear the register cache.
+	(linux_handle_extended_wait): Handle checkpoints here.
+	(linux_multi_process): Turn on.
+	* linux-fork.c (struct fork_info) <pc>: Remove field.
+	(init_fork_list): Do not delete the checkpoint from the inferior
+	list (it is not there).
+	(fork_load_infrun_state): Don't switch inferior_ptid here.  Pass
+	the new checkpoint's ptid to linux_nat_switch_fork.
+	(fork_save_infrun_state): Make static.  Don't stop the pc field of
+	fork_info, it's gone.
+	(linux_fork_mourn_inferior): Don't delete the checkpoint from the
+	inferior list, it's not there.
+	(linux_fork_detach): Ditto.
+	(delete_fork_command): Replace mention of fork/checkpoint by
+	checkpoint only.
+	(detach_fork_command): Likewise.  Don't delete the checkpoint from
+	the inferior list.
+	(info_forks_command): Adjust.
+	(restore_detach_fork): Delete.
+	(checkpointing_pid): New.
+	(linux_fork_checkpointing_p): New.
+	(save_detach_fork): Delete.
+	(checkpoint_command): Delete temp_detach_fork.  Don't remove
+	breakpoints, that's a nop.  Store the pid of the process we're
+	checkpointing, and use make_cleanup_restore_integer to restore it.
+	Don't reinsert breakpoints here.
+	(process_command, fork_command): Delete.
+	(restart_command): Update comments to only mention checkpoints,
+	not forks.
+	(_initialize_linux_fork): Delete "fork", "process", "info forks"
+	commands.
+	* linux-fork.h (fork_save_infrun_state, fork_list): Delete
+	declarations.
+	(linux_fork_checkpointing_p): Declare.
+	* cli/cli-cmds.c (killlist): New.
+	* cli/cli-cmds.h (killlist): Declare.
+	* gdbcmd.h (killlist): Declare.
+	* inferior.c: Include "gdbthread.h".
+	(detach_inferior_command, kill_inferior_command)
+	(inferior_command): New.
+	(info_inferiors_command): Allow specifying a specific inferior id.
+	(_initialize_inferiors): Register "inferior", "kill inferior" and
+	"detach inferior" commands.
+	* infcmd.c (_initialize_infcmd): Make "kill" a prefix command.
+	* gdbthread.h (any_thread_of_process): Declare.
+	* thread.c (any_thread_of_process): New.
+
+	* NEWS: Mention multi-inferior debugging.  Mention 'info
+	inferiors', 'inferior', 'detach inferior' and 'kill inferior' as
+	new commands.
+	(Removed commands): New section, mentioning that 'info forks',
+	'fork', 'process', 'delete fork' and 'detach fork' are now gone.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbarch.sh (current_gdbarch): Remove global variable.
+	(find_arch_by_info): Remove, inline into ...
+	(gdbarch_find_by_info): ... this.  Remove current_gdbarch swapping.
+	(deprecated_current_gdbarch_select_hack): Rename to ...
+	(deprecated_target_gdbarch_select_hack): ... this.  Do not set
+	or access current_gdbarch.
+	* gdbarch.c, gdbarch.h: Regenerate.
+
+	* arch-utils.c (gdbarch_update_p): Update call.
+	(set_gdbarch_from_file): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* defs.h (extract_signed_integer, extract_unsigned_integer,
+	extract_long_unsigned_integer, store_signed_integer,
+	store_unsigned_integer): Add BYTE_ORDER parameter.
+	* findvar.c (extract_signed_integer, extract_unsigned_integer,
+	extract_long_unsigned_integer, store_signed_integer,
+	store_unsigned_integer): Add BYTE_ORDER parameter.  Use it
+	instead of current_gdbarch.
+
+	* gdbcore.h (read_memory_integer, safe_read_memory_integer,
+	read_memory_unsigned_integer, write_memory_signed_integer,
+	write_memory_unsigned_integer): Add BYTE_ORDER parameter.
+	* corefile.c (struct captured_read_memory_integer_arguments): Add
+	BYTE_ORDER member.
+	(safe_read_memory_integer): Add BYTE_ORDER parameter.  Store it into
+	struct captured_read_memory_integer_arguments.
+	(do_captured_read_memory_integer): Pass it to read_memory_integer.
+	(read_memory_integer): Add BYTE_ORDER parameter.  Pass it to
+	extract_signed_integer.
+	(read_memory_unsigned_integer): Add BYTE_ORDER parameter.  Pass it to
+	extract_unsigned_integer.
+	(write_memory_signed_integer): Add BYTE_ORDER parameter.  Pass it
+	to store_signed_integer.
+	(write_memory_unsigned_integer): Add BYTE_ORDER parameter.  Pass it
+	to store_unsigned_integer.
+
+	* target.h (get_target_memory_unsigned): Add BYTE_ORDER parameter.
+	* target.c (get_target_memory_unsigned): Add BYTE_ORDER parameter.
+	Pass it to extract_unsigned_integer.
+
+
+	Update calls to extract_signed_integer, extract_unsigned_integer,
+	extract_long_unsigned_integer, store_signed_integer,
+	store_unsigned_integer, read_memory_integer,
+	read_memory_unsigned_integer, safe_read_memory_integer,
+	write_memory_signed_integer, write_memory_unsigned_integer, and
+	get_target_memory_unsigned to pass byte order:
+	* ada-lang.c (ada_value_binop): Update.
+	* ada-valprint.c (char_at): Update.
+	* alpha-osf1-tdep.c (alpha_osf1_sigcontext_addr): Update.
+	* alpha-tdep.c (alpha_lds, alpha_sts, alpha_push_dummy_call,
+	alpha_extract_return_value, alpha_read_insn,
+	alpha_get_longjmp_target): Update.
+	* amd64-linux-tdep.c (amd64_linux_sigcontext_addr): Update.
+	* amd64obsd-tdep.c (amd64obsd_supply_uthread,
+	amd64obsd_collect_uthread, amd64obsd_trapframe_cache): Update.
+	* amd64-tdep.c (amd64_push_dummy_call, amd64_analyze_prologue,
+	amd64_frame_cache, amd64_sigtramp_frame_cache, fixup_riprel,
+	amd64_displaced_step_fixup): Update.
+	* arm-linux-tdep.c (arm_linux_sigreturn_init,
+	arm_linux_rt_sigreturn_init, arm_linux_supply_gregset): Update.
+	* arm-tdep.c (thumb_analyze_prologue, arm_skip_prologue,
+	arm_scan_prologue, arm_push_dummy_call, thumb_get_next_pc,
+	arm_get_next_pc, arm_extract_return_value, arm_store_return_value,
+	arm_return_value): Update.
+	* arm-wince-tdep.c (arm_pe_skip_trampoline_code): Update.
+	* auxv.c (default_auxv_parse): Update.
+	* avr-tdep.c (avr_address_to_pointer, avr_pointer_to_address,
+	avr_scan_prologue, avr_extract_return_value,
+	avr_frame_prev_register, avr_push_dummy_call): Update.
+	* bsd-uthread.c (bsd_uthread_check_magic, bsd_uthread_lookup_offset,
+	bsd_uthread_wait, bsd_uthread_thread_alive,
+	bsd_uthread_extra_thread_info): Update.
+	* c-lang.c (c_printstr, print_wchar): Update.
+	* cp-valprint.c (cp_print_class_member): Update.
+	* cris-tdep.c (cris_sigcontext_addr, cris_sigtramp_frame_unwind_cache,
+	cris_push_dummy_call, cris_scan_prologue, cris_store_return_value,
+	cris_extract_return_value, find_step_target, dip_prefix,
+	sixteen_bit_offset_branch_op, none_reg_mode_jump_op,
+	move_mem_to_reg_movem_op, get_data_from_address): Update.
+	* dwarf2expr.c (dwarf2_read_address, execute_stack_op): Update.
+	* dwarf2-frame.c (execute_cfa_program): Update.
+	* dwarf2loc.c (find_location_expression): Update.
+	* dwarf2read.c (dwarf2_const_value): Update.
+	* expprint.c (print_subexp_standard): Update.
+	* findvar.c (unsigned_pointer_to_address, signed_pointer_to_address,
+	unsigned_address_to_pointer, address_to_signed_pointer,
+	read_var_value): Update.
+	* frame.c (frame_unwind_register_signed,
+	frame_unwind_register_unsigned, get_frame_memory_signed,
+	get_frame_memory_unsigned): Update.
+	* frame-unwind.c (frame_unwind_got_constant): Update.
+	* frv-linux-tdep.c (frv_linux_pc_in_sigtramp,
+	frv_linux_sigcontext_reg_addr, frv_linux_sigtramp_frame_cache):
+	Update.
+	* frv-tdep.c (frv_analyze_prologue, frv_skip_main_prologue,
+	frv_extract_return_value, find_func_descr,
+	frv_convert_from_func_ptr_addr, frv_push_dummy_call): Update.
+	* f-valprint.c (f_val_print): Update.
+	* gnu-v3-abi.c (gnuv3_decode_method_ptr, gnuv3_make_method_ptr):
+	Update.
+	* h8300-tdep.c (h8300_is_argument_spill, h8300_analyze_prologue,
+	h8300_push_dummy_call, h8300_extract_return_value,
+	h8300h_extract_return_value, h8300_store_return_value,
+	h8300h_store_return_value): Update.
+	* hppabsd-tdep.c (hppabsd_find_global_pointer): Update.
+	* hppa-hpux-nat.c (hppa_hpux_fetch_register, hppa_hpux_store_register):
+	Update.
+	* hppa-hpux-tdep.c (hppa32_hpux_in_solib_call_trampoline,
+	hppa64_hpux_in_solib_call_trampoline,
+	hppa_hpux_in_solib_return_trampoline, hppa_hpux_skip_trampoline_code,
+	hppa_hpux_sigtramp_frame_unwind_cache,
+	hppa_hpux_sigtramp_unwind_sniffer, hppa32_hpux_find_global_pointer,
+	hppa64_hpux_find_global_pointer, hppa_hpux_search_pattern,
+	hppa32_hpux_search_dummy_call_sequence,
+	hppa64_hpux_search_dummy_call_sequence, hppa_hpux_supply_save_state,
+	hppa_hpux_unwind_adjust_stub): Update.
+	* hppa-linux-tdep.c (insns_match_pattern,
+	hppa_linux_find_global_pointer): Update.
+	* hppa-tdep.c (hppa_in_function_epilogue_p, hppa32_push_dummy_call,
+	hppa64_convert_code_addr_to_fptr, hppa64_push_dummy_call,
+	skip_prologue_hard_way, hppa_frame_cache, hppa_fallback_frame_cache,
+	hppa_pseudo_register_read, hppa_frame_prev_register_helper,
+	hppa_match_insns): Update.
+	* hpux-thread.c (hpux_thread_fetch_registers): Update.
+	* i386-tdep.c (i386bsd_sigcontext_addr): Update.
+	* i386-cygwin-tdep.c (core_process_module_section): Update.
+	* i386-darwin-nat.c (i386_darwin_sstep_at_sigreturn,
+	amd64_darwin_sstep_at_sigreturn): Update.
+	* i386-darwin-tdep.c (i386_darwin_sigcontext_addr,
+	amd64_darwin_sigcontext_addr): Likewise.
+	* i386-linux-nat.c (i386_linux_sigcontext_addr): Update.
+	* i386nbsd-tdep.c (i386nbsd_sigtramp_cache_init): Update.
+	* i386-nto-tdep.c (i386nto_sigcontext_addr): Update.
+	* i386obsd-nat.c (i386obsd_supply_pcb): Update.
+	* i386obsd-tdep.c (i386obsd_supply_uthread, i386obsd_collect_uthread,
+	i386obsd_trapframe_cache): Update.
+	* i386-tdep.c (i386_displaced_step_fixup, i386_follow_jump,
+	i386_analyze_frame_setup, i386_analyze_prologue,
+	i386_skip_main_prologue, i386_frame_cache, i386_sigtramp_frame_cache,
+	i386_get_longjmp_target, i386_push_dummy_call,
+	i386_pe_skip_trampoline_code, i386_svr4_sigcontext_addr,
+	i386_fetch_pointer_argument): Update.
+	* i387-tdep.c (i387_supply_fsave): Update.
+	* ia64-linux-tdep.c (ia64_linux_sigcontext_register_address): Update.
+	* ia64-tdep.c (ia64_pseudo_register_read, ia64_pseudo_register_write,
+	examine_prologue, ia64_frame_cache, ia64_frame_prev_register,
+	ia64_sigtramp_frame_cache, ia64_sigtramp_frame_prev_register,
+	ia64_access_reg, ia64_access_rse_reg, ia64_libunwind_frame_this_id,
+	ia64_libunwind_frame_prev_register,
+	ia64_libunwind_sigtramp_frame_this_id,
+	ia64_libunwind_sigtramp_frame_prev_register, ia64_find_global_pointer,
+	find_extant_func_descr, find_func_descr,
+	ia64_convert_from_func_ptr_addr, ia64_push_dummy_call, ia64_dummy_id,
+	ia64_unwind_pc): Update.
+	* iq2000-tdep.c (iq2000_pointer_to_address, iq2000_address_to_pointer,
+	iq2000_scan_prologue, iq2000_extract_return_value,
+	iq2000_push_dummy_call): Update.
+	* irix5nat.c (fill_gregset): Update.
+	* jv-lang.c (evaluate_subexp_java): Update.
+	* jv-valprint.c (java_value_print): Update.
+	* lm32-tdep.c (lm32_analyze_prologue, lm32_push_dummy_call, 
+	lm32_extract_return_value, lm32_store_return_value): Update.
+	* m32c-tdep.c (m32c_push_dummy_call, m32c_return_value,
+	m32c_skip_trampoline_code, m32c_m16c_address_to_pointer,
+	m32c_m16c_pointer_to_address): Update.
+	* m32r-tdep.c (m32r_store_return_value, decode_prologue,
+	m32r_skip_prologue, m32r_push_dummy_call, m32r_extract_return_value):
+	Update.
+	* m68hc11-tdep.c (m68hc11_pseudo_register_read,
+	m68hc11_pseudo_register_write, m68hc11_analyze_instruction,
+	m68hc11_push_dummy_call): Update.
+	* m68linux-tdep.c (m68k_linux_pc_in_sigtramp,
+	m68k_linux_get_sigtramp_info, m68k_linux_sigtramp_frame_cache):
+	Update.
+	* m68k-tdep.c (m68k_push_dummy_call, m68k_analyze_frame_setup,
+	m68k_analyze_register_saves, m68k_analyze_prologue, m68k_frame_cache,
+	m68k_get_longjmp_target): Update.
+	* m88k-tdep.c (m88k_fetch_instruction): Update.
+	* mep-tdep.c (mep_pseudo_cr32_read, mep_pseudo_csr_write,
+	mep_pseudo_cr32_write, mep_get_insn, mep_push_dummy_call): Update.
+	* mi/mi-main.c (mi_cmd_data_write_memory): Update.
+	* mips-linux-tdep.c (mips_linux_get_longjmp_target, supply_32bit_reg,
+	mips64_linux_get_longjmp_target, mips64_fill_gregset,
+	mips64_fill_fpregset, mips_linux_in_dynsym_stub): Update.
+	* mipsnbdsd-tdep.c (mipsnbsd_get_longjmp_target): Update.
+	* mips-tdep.c (mips_fetch_instruction, fetch_mips_16,
+	mips_eabi_push_dummy_call, mips_n32n64_push_dummy_call,
+	mips_o32_push_dummy_call, mips_o64_push_dummy_call, 
+	mips_single_step_through_delay, mips_skip_pic_trampoline_code,
+	mips_integer_to_address): Update.
+	* mn10300-tdep.c (mn10300_analyze_prologue, mn10300_push_dummy_call):
+	Update.
+	* monitor.c (monitor_supply_register, monitor_write_memory,
+	monitor_read_memory_single): Update.
+	* moxie-tdep.c (moxie_store_return_value, moxie_extract_return_value,
+	moxie_analyze_prologue): Update.
+	* mt-tdep.c (mt_return_value, mt_skip_prologue, mt_select_coprocessor,
+	mt_pseudo_register_read, mt_pseudo_register_write, mt_registers_info,
+	mt_push_dummy_call): Update.
+	* objc-lang.c (read_objc_method, read_objc_methlist_nmethods,
+	read_objc_methlist_method, read_objc_object, read_objc_super,
+	read_objc_class, find_implementation_from_class): Update.
+	* ppc64-linux-tdep.c (ppc64_desc_entry_point,
+	ppc64_linux_convert_from_func_ptr_addr, ppc_linux_sigtramp_cache):
+	Update.
+	* ppcobsd-tdep.c (ppcobsd_sigtramp_frame_sniffer,
+	ppcobsd_sigtramp_frame_cache): Update.
+	* ppc-sysv-tdep.c (ppc_sysv_abi_push_dummy_call,
+	do_ppc_sysv_return_value, ppc64_sysv_abi_push_dummy_call,
+	ppc64_sysv_abi_return_value): Update.
+	* ppc-linux-nat.c (ppc_linux_auxv_parse): Update.
+	* procfs.c (procfs_auxv_parse): Update.
+	* p-valprint.c (pascal_val_print): Update.
+	* regcache.c (regcache_raw_read_signed, regcache_raw_read_unsigned,
+	regcache_raw_write_signed, regcache_raw_write_unsigned,
+	regcache_cooked_read_signed, regcache_cooked_read_unsigned,
+	regcache_cooked_write_signed, regcache_cooked_write_unsigned): Update.
+	* remote-m32r-sdi.c (m32r_fetch_register): Update.
+	* remote-mips.c (mips_wait, mips_fetch_registers, mips_xfer_memory):
+	Update.
+	* rs6000-aix-tdep.c (rs6000_push_dummy_call, rs6000_return_value,
+	rs6000_convert_from_func_ptr_addr, branch_dest, 
+	rs6000_software_single_step): Update.
+	* rs6000-tdep.c (rs6000_in_function_epilogue_p,
+	ppc_displaced_step_fixup, ppc_deal_with_atomic_sequence,
+	bl_to_blrl_insn_p, rs6000_fetch_instruction, skip_prologue,
+	rs6000_skip_main_prologue, rs6000_skip_trampoline_code,
+	rs6000_frame_cache): Update.
+	* s390-tdep.c (s390_pseudo_register_read, s390_pseudo_register_write,
+	s390x_pseudo_register_read, s390x_pseudo_register_write, s390_load,
+	s390_backchain_frame_unwind_cache, s390_sigtramp_frame_unwind_cache,
+	extend_simple_arg, s390_push_dummy_call, s390_return_value): Update.
+	* scm-exp.c (scm_lreadr): Update.
+	* scm-lang.c (scm_get_field, scm_unpack): Update.
+	* scm-valprint.c (scm_val_print): Update.
+	* score-tdep.c (score_breakpoint_from_pc, score_push_dummy_call,
+	score_fetch_inst): Update.
+	* sh64-tdep.c (look_for_args_moves, sh64_skip_prologue_hard_way,
+	sh64_analyze_prologue, sh64_push_dummy_call, sh64_extract_return_value,
+	sh64_pseudo_register_read, sh64_pseudo_register_write,
+	sh64_frame_prev_register): Update:
+	* sh-tdep.c (sh_analyze_prologue, sh_push_dummy_call_fpu,
+	sh_push_dummy_call_nofpu, sh_extract_return_value_nofpu,
+	sh_store_return_value_nofpu, sh_in_function_epilogue_p): Update.
+	* solib-darwin.c (darwin_load_image_infos): Update.
+	* solib-frv.c (fetch_loadmap, lm_base, frv_current_sos, enable_break2,
+	find_canonical_descriptor_in_load_object): Update.
+	* solib-irix.c (extract_mips_address, fetch_lm_info, irix_current_sos,
+	irix_open_symbol_file_object): Update.
+	* solib-som.c (som_solib_create_inferior_hook, link_map_start,
+	som_current_sos, som_open_symbol_file_object): Update.
+	* solib-sunos.c (SOLIB_EXTRACT_ADDRESS, LM_ADDR, LM_NEXT, LM_NAME):
+	Update.
+	* solib-svr4.c (read_program_header, scan_dyntag_auxv,
+	solib_svr4_r_ldsomap): Update.
+	* sparc64-linux-tdep.c (sparc64_linux_step_trap): Update.
+	* sparc64obsd-tdep.c (sparc64obsd_supply_uthread,
+	sparc64obsd_collect_uthread): Update.
+	* sparc64-tdep.c (sparc64_pseudo_register_read,
+	sparc64_pseudo_register_write, sparc64_supply_gregset,
+	sparc64_collect_gregset): Update.
+	* sparc-linux-tdep.c (sparc32_linux_step_trap): Update.
+	* sparcobsd-tdep.c (sparc32obsd_supply_uthread,
+	sparc32obsd_collect_uthread): Update.
+	* sparc-tdep.c (sparc_fetch_wcookie, sparc32_push_dummy_code,
+	sparc32_store_arguments, sparc32_return_value, sparc_supply_rwindow,
+	sparc_collect_rwindow): Update.
+	* spu-linux-nat.c (parse_spufs_run): Update.
+	* spu-tdep.c (spu_pseudo_register_read_spu,
+	spu_pseudo_register_write_spu, spu_pointer_to_address,
+	spu_analyze_prologue, spu_in_function_epilogue_p,
+	spu_frame_unwind_cache, spu_push_dummy_call, spu_software_single_step,
+	spu_get_longjmp_target, spu_get_overlay_table, spu_overlay_update_osect,
+	info_spu_signal_command, info_spu_mailbox_list, info_spu_dma_cmdlist,
+	info_spu_dma_command, info_spu_proxydma_command): Update.
+	* stack.c (print_frame_nameless_args, frame_info): Update.
+	* symfile.c (read_target_long_array, simple_read_overlay_table,
+	simple_read_overlay_region_table): Update.
+	* target.c (debug_print_register): Update.
+	* tramp-frame.c (tramp_frame_start): Update.
+	* v850-tdep.c (v850_analyze_prologue, v850_push_dummy_call,
+	v850_extract_return_value, v850_store_return_value, 
+	* valarith.c (value_binop, value_bit_index): Update.
+	* valops.c (value_cast): Update.
+	* valprint.c (val_print_type_code_int, val_print_string,
+	read_string): Update.
+	* value.c (unpack_long, unpack_double, unpack_field_as_long,
+	modify_field, pack_long): Update.
+	* vax-tdep.c (vax_store_arguments, vax_push_dummy_call,
+	vax_skip_prologue): Update.
+	* xstormy16-tdep.c (xstormy16_push_dummy_call,
+	xstormy16_analyze_prologue, xstormy16_in_function_epilogue_p,
+	xstormy16_resolve_jmp_table_entry, xstormy16_find_jmp_table_entry,
+	xstormy16_pointer_to_address, xstormy16_address_to_pointer): Update.
+	* xtensa-tdep.c (extract_call_winsize, xtensa_pseudo_register_read,
+	xtensa_pseudo_register_write, xtensa_frame_cache,
+	xtensa_push_dummy_call, call0_track_op, call0_frame_cache): Update.
+
+
+	* dfp.h (decimal_to_string, decimal_from_string, decimal_from_integral,
+	decimal_from_floating, decimal_to_doublest, decimal_is_zero): Add
+	BYTE_ORDER parameter.
+	(decimal_binop): Add BYTE_ORDER_X, BYTE_ORDER_Y, and BYTE_ORDER_RESULT
+	parameters.
+	(decimal_compare): Add BYTE_ORDER_X and BYTE_ORDER_Y parameters.
+	(decimal_convert): Add BYTE_ORDER_FROM and BYTE_ORDER_TO parameters.
+	* dfp.c (match_endianness): Add BYTE_ORDER parameter.  Use it
+	instead of current_gdbarch.
+	(decimal_to_string, decimal_from_integral, decimal_from_floating,
+	decimal_to_doublest, decimal_is_zero): Add BYTE_ORDER parameter.
+	Pass it to match_endianness.
+	(decimal_binop): Add BYTE_ORDER_X, BYTE_ORDER_Y, and BYTE_ORDER_RESULT
+	parameters.  Pass them to match_endianness.
+	(decimal_compare): Add BYTE_ORDER_X and BYTE_ORDER_Y parameters.
+	Pass them to match_endianness.
+	(decimal_convert): Add BYTE_ORDER_FROM and BYTE_ORDER_TO parameters.
+	Pass them to match_endianness.
+	* valarith.c (value_args_as_decimal): Add BYTE_ORDER_X and
+	BYTE_ORDER_Y output parameters.
+	(value_binop): Update call to value_args_as_decimal.
+
+	Update calls to decimal_to_string, decimal_from_string,
+	decimal_from_integral, decimal_from_floating, decimal_to_doublest,
+	decimal_is_zero, decimal_binop, decimal_compare and decimal_convert
+	to pass/receive byte order:
+	* c-exp.y (parse_number): Update.
+	* printcmd.c (printf_command): Update.
+	* valarith.c (value_args_as_decimal, value_binop, value_logical_not,
+	value_equal, value_less): Update.
+	* valops.c (value_cast, value_one): Update.
+	* valprint.c (print_decimal_floating): Update.
+	* value.c (unpack_long, unpack_double): Update.
+	* python/python-value.c (valpy_nonzero): Update.
+
+
+	* ada-valprint.c (char_at): Add BYTE_ORDER parameter.
+	(printstr): Update calls to char_at.
+	(ada_val_print_array): Likewise.
+	* valprint.c (read_string): Add BYTE_ORDER parameter.
+	(val_print_string): Update call to read_string.
+	* c-lang.c (c_get_string): Likewise.
+	* charset.h (target_wide_charset): Add BYTE_ORDER parameter.
+	* charset.c (target_wide_charset): Add BYTE_ORDER parameter.
+	Use it instead of current_gdbarch.
+	* printcmd.c (printf_command): Update calls to target_wide_charset.
+	* c-lang.c (charset_for_string_type): Add BYTE_ORDER parameter.
+	Pass to target_wide_charset.  Use it instead of current_gdbarch.
+	(classify_type): Add BYTE_ORDER parameter.  Pass to
+	charset_for_string_type.  Allow NULL encoding pointer.
+	(print_wchar): Add BYTE_ORDER parameter.
+	(c_emit_char): Update calls to classify_type and print_wchar.
+	(c_printchar, c_printstr): Likewise.
+
+
+	* gdbarch.sh (in_solib_return_trampoline): Convert to type "m".
+	* gdbarch.c, gdbarch.h: Regenerate.
+	* arch-utils.h (generic_in_solib_return_trampoline): Add GDBARCH
+	parameter.
+	* arch-utils.c (generic_in_solib_return_trampoline): Likewise.
+	* hppa-hpux-tdep.c (hppa_hpux_in_solib_return_trampoline): Likewise.
+	* rs6000-tdep.c (rs6000_in_solib_return_trampoline): Likewise.
+	(rs6000_skip_trampoline_code): Update call.
+
+	* alpha-tdep.h (struct gdbarch_tdep): Add GDBARCH parameter to
+	dynamic_sigtramp_offset and pc_in_sigtramp callbacks.
+	(alpha_read_insn): Add GDBARCH parameter.
+	* alpha-tdep.c (alpha_lds, alpha_sts): Add GDBARCH parameter.
+	(alpha_register_to_value): Pass architecture to alpha_sts.
+	(alpha_extract_return_value): Likewise.
+	(alpha_value_to_register): Pass architecture to alpha_lds.
+	(alpha_store_return_value): Likewise.
+	(alpha_read_insn): Add GDBARCH parameter.
+	(alpha_skip_prologue): Pass architecture to alpha_read_insn.
+	(alpha_heuristic_proc_start): Likewise.
+	(alpha_heuristic_frame_unwind_cache): Likewise.
+	(alpha_next_pc): Likewise.
+	(alpha_sigtramp_frame_this_id): Pass architecture to
+	tdep->dynamic_sigtramp_offset callback.
+	(alpha_sigtramp_frame_sniffer): Pass architecture to
+	tdep->pc_in_sigtramp callback.
+	* alphafbsd-tdep.c (alphafbsd_pc_in_sigtramp): Add GDBARCH parameter.
+	(alphafbsd_sigtramp_offset): Likewise.
+	* alpha-linux-tdep.c (alpha_linux_sigtramp_offset_1): Add GDBARCH
+	parameter.  Pass to alpha_read_insn.
+	(alpha_linux_sigtramp_offset): Add GDBARCH parameter.  Pass to
+	alpha_linux_sigtramp_offset_1.
+	(alpha_linux_pc_in_sigtramp): Add GDBARCH parameter.  Pass to
+	alpha_linux_sigtramp_offset.
+	(alpha_linux_sigcontext_addr): Pass architecture to alpha_read_insn
+	and alpha_linux_sigtramp_offset.
+	* alphanbsd-tdep.c (alphanbsd_sigtramp_offset): Add GDBARCH parameter.
+	(alphanbsd_pc_in_sigtramp): Add GDBARCH parameter.  Pass to
+	alphanbsd_sigtramp_offset.
+	* alphaobsd-tdep.c (alphaobsd_sigtramp_offset): Add GDBARCH parameter.
+	(alphaobsd_pc_in_sigtramp): Add GDBARCH parameter.  Pass to
+	alpha_read_insn.
+	(alphaobsd_sigcontext_addr): Pass architecture to
+	alphaobsd_sigtramp_offset.
+	* alpha-osf1-tdep.c (alpha_osf1_pc_in_sigtramp): Add GDBARCH
+	parameter.
+
+	* amd64-tdep.c (amd64_analyze_prologue): Add GDBARCH parameter.
+	(amd64_skip_prologue): Pass architecture to amd64_analyze_prologue.
+	(amd64_frame_cache): Likewise.
+
+	* arm-tdep.c (SWAP_SHORT, SWAP_INT): Remove.
+	(thumb_analyze_prologue, arm_skip_prologue, arm_scan_prologue,
+	thumb_get_next_pc, arm_get_next_pc): Do not use SWAP_ macros.
+	* arm-wince-tdep.c: Include "frame.h".
+
+	* avr-tdep.c (EXTRACT_INSN): Remove.
+	(avr_scan_prologue): Add GDBARCH argument, inline EXTRACT_INSN.
+	(avr_skip_prologue): Pass architecture to avr_scan_prologue.
+	(avr_frame_unwind_cache): Likewise.
+
+	* cris-tdep.c (struct instruction_environment): Add BYTE_ORDER member.
+	(find_step_target): Initialize it.
+	(get_data_from_address): Add BYTE_ORDER parameter.
+	(bdap_prefix): Pass byte order to get_data_from_address.
+	(handle_prefix_assign_mode_for_aritm_op): Likewise.
+	(three_operand_add_sub_cmp_and_or_op): Likewise.
+	(handle_inc_and_index_mode_for_aritm_op): Likewise.
+
+	* frv-linux-tdep.c (frv_linux_pc_in_sigtramp): Add GDBARCH parameter.
+	(frv_linux_sigcontext_reg_addr): Pass architecture to
+	frv_linux_pc_in_sigtramp.
+	(frv_linux_sigtramp_frame_sniffer): Likewise.
+
+	* h8300-tdep.c (h8300_is_argument_spill): Add GDBARCH parameter.
+	(h8300_analyze_prologue): Add GDBARCH parameter.  Pass to
+	h8300_is_argument_spill.
+	(h8300_frame_cache, h8300_skip_prologue): Pass architecture
+	to h8300_analyze_prologue.
+
+	* hppa-tdep.h (struct gdbarch_tdep): Add GDBARCH parameter to
+	in_solib_call_trampoline callback.
+	(hppa_in_solib_call_trampoline): Add GDBARCH parameter.
+	* hppa-tdep.c (hppa64_convert_code_addr_to_fptr): Add GDBARCH
+	parameter.
+	(hppa64_push_dummy_call): Pass architecture to
+	hppa64_convert_code_addr_to_fptr.
+	(hppa_match_insns): Add GDBARCH parameter.
+	(hppa_match_insns_relaxed): Add GDBARCH parameter.  Pass to
+	hppa_match_insns.
+	(hppa_skip_trampoline_code): Pass architecture to hppa_match_insns.
+	(hppa_in_solib_call_trampoline): Add GDBARCH parameter.  Pass to
+	hppa_match_insns_relaxed.
+	(hppa_stub_unwind_sniffer): Pass architecture to
+	tdep->in_solib_call_trampoline callback.
+	* hppa-hpux-tdep.c (hppa_hpux_search_pattern): Add GDBARCH parameter.
+	(hppa32_hpux_search_dummy_call_sequence): Pass architecture to
+	hppa_hpux_search_pattern.
+	* hppa-linux-tdep.c (insns_match_pattern): Add GDBARCH parameter.
+	(hppa_linux_sigtramp_find_sigcontext): Add GDBARCH parameter.
+	Pass to insns_match_pattern.
+	(hppa_linux_sigtramp_frame_unwind_cache): Pass architecture to
+	hppa_linux_sigtramp_find_sigcontext.
+	(hppa_linux_sigtramp_frame_sniffer): Likewise.
+	(hppa32_hpux_in_solib_call_trampoline): Add GDBARCH parameter.
+	(hppa64_hpux_in_solib_call_trampoline): Likewise.
+
+	* i386-tdep.c (i386_follow_jump): Add GDBARCH parameter.
+	(i386_analyze_frame_setup): Add GDBARCH parameter.
+	(i386_analyze_prologue): Add GDBARCH parameter.  Pass to
+	i386_follow_jump and i386_analyze_frame_setup.
+	(i386_skip_prologue): Pass architecture to i386_analyze_prologue
+	and i386_follow_jump.
+	(i386_frame_cache): Pass architecture to i386_analyze_prologue.
+	(i386_pe_skip_trampoline_code): Add FRAME parameter.
+	* i386-tdep.h (i386_pe_skip_trampoline_code): Add FRAME parameter.
+	* i386-cygwin-tdep.c (i386_cygwin_skip_trampoline_code): Pass
+	frame to i386_pe_skip_trampoline_code.
+
+	* ia64-tdep.h (struct gdbarch_tdep): Add GDBARCH parameter
+	to sigcontext_register_address callback.
+	* ia64-tdep.c (ia64_find_global_pointer): Add GDBARCH parameter.
+	(ia64_find_unwind_table): Pass architecture to
+	ia64_find_global_pointer.
+	(find_extant_func_descr): Add GDBARCH parameter.
+	(find_func_descr): Pass architecture to find_extant_func_descr
+	and ia64_find_global_pointer.
+	(ia64_sigtramp_frame_init_saved_regs): Pass architecture to
+	tdep->sigcontext_register_address callback.
+	* ia64-linux-tdep.c (ia64_linux_sigcontext_register_address): Add
+	GDBARCH parameter.
+
+	* iq2000-tdep.c (iq2000_scan_prologue): Add GDBARCH parameter.
+	(iq2000_frame_cache): Pass architecture to iq2000_scan_prologue.
+
+	* lm32-tdep.c (lm32_analyze_prologue): Add GDBARCH parameter.
+	(lm32_skip_prologue, lm32_frame_cache): Pass architecture to
+	lm32_analyze_prologue.
+
+	* m32r-tdep.c (decode_prologue): Add GDBARCH parameter.
+	(m32r_skip_prologue): Pass architecture to decode_prologue.
+
+	* m68hc11-tdep.c (m68hc11_analyze_instruction): Add GDBARCH parameter.
+	(m68hc11_scan_prologue): Pass architecture to
+	m68hc11_analyze_instruction.
+
+	* m68k-tdep.c (m68k_analyze_frame_setup): Add GDBARCH parameter.
+	(m68k_analyze_prologue): Pass architecture to
+	m68k_analyze_frame_setup.
+
+	* m88k-tdep.c (m88k_fetch_instruction): Add BYTE_ORDER parameter.
+	(m88k_analyze_prologue): Add GDBARCH parameter.  Pass byte order
+	to m88k_fetch_instruction.
+	(m88k_skip_prologue): Pass architecture to m88k_analyze_prologue.
+	(m88k_frame_cache): Likewise.
+
+	* mep-tdep.c (mep_get_insn): Add GDBARCH parameter.
+	(mep_analyze_prologue): Pass architecture to mep_get_insn.
+
+	* mips-tdep.c (mips_fetch_instruction): Add GDBARCH parameter.
+	(mips32_next_pc): Pass architecture to mips_fetch_instruction.
+	(deal_with_atomic_sequence): Likewise.
+	(unpack_mips16): Add GDBARCH parameter, pass to mips_fetch_instruction.
+	(mips16_scan_prologue): Likewise.
+	(mips32_scan_prologue): Likewise.
+	(mips16_in_function_epilogue_p): Likewise.
+	(mips32_in_function_epilogue_p): Likewise.
+	(mips_about_to_return): Likewise.
+	(mips_insn16_frame_cache): Pass architecture to mips16_scan_prologue.
+	(mips_insn32_frame_cache): Pass architecture to mips32_scan_prologue.
+	(mips_skip_prologue): Pass architecture to mips16_scan_prologue
+	and mips32_scan_prologue.
+	(mips_in_function_epilogue_p): Pass architecture to
+	mips16_in_function_epilogue_p and
+	mips32_in_function_epilogue_p.
+	(heuristic_proc_start): Pass architecture to mips_fetch_instruction
+	and mips_about_to_return.
+	(mips_skip_mips16_trampoline_code): Pass architecture to
+	mips_fetch_instruction.
+	(fetch_mips_16): Add GDBARCH parameter.
+	(mips16_next_pc): Pass architecture to fetch_mips_16.
+	(extended_mips16_next_pc): Pass architecture to unpack_mips16 and
+	fetch_mips_16.
+
+	* objc-lang.c (read_objc_method, read_objc_methlist_nmethods,
+	read_objc_methlist_method, read_objc_object, read_objc_super,
+	read_objc_class): Add GDBARCH parameter.
+	(find_implementation_from_class): Add GDBARCH parameter, pass
+	to read_objc_class, read_objc_methlist_nmethods, and
+	read_objc_methlist_method.
+	(find_implementation): Add GDBARCH parameter, pass to
+	read_objc_object and find_implementation_from_class.
+	(resolve_msgsend, resolve_msgsend_stret): Pass architecture
+	to find_implementation.
+	(resolve_msgsend_super, resolve_msgsend_super_stret): Pass
+	architecture to read_objc_super and find_implementation_from_class.
+
+	* ppc64-linux-tdep.c (ppc64_desc_entry_point): Add GDBARCH parameter.
+	(ppc64_standard_linkage1_target, ppc64_standard_linkage2_target,
+	ppc64_standard_linkage3_target): Pass architecture to
+	ppc64_desc_entry_point.
+	* rs6000-tdep.c (bl_to_blrl_insn_p): Add BYTE_ORDER parameter.
+	(skip_prologue): Pass byte order to bl_to_blrl_insn_p.
+	(rs6000_fetch_instruction): Add GDBARCH parameter.
+	(rs6000_skip_stack_check): Add GDBARCH parameter, pass to
+	rs6000_fetch_instruction.
+	(skip_prologue): Pass architecture to rs6000_fetch_instruction.
+	
+	* remote-mips.c (mips_store_word): Return old_contents as host
+	integer value instead of target bytes.
+
+	* s390-tdep.c (struct s390_prologue_data): Add BYTE_ORDER member.
+	(s390_analyze_prologue): Initialize it.
+	(extend_simple_arg): Add GDBARCH parameter.
+	(s390_push_dummy_call): Pass architecture to extend_simple_arg.
+
+	* scm-lang.c (scm_get_field): Add BYTE_ORDER parameter.
+	* scm-lang.h (scm_get_field): Add BYTE_ORDER parameter.
+	(SCM_CAR, SCM_CDR): Pass SCM_BYTE_ORDER to scm_get_field.
+	* scm-valprint.c (scm_scmval_print): Likewise.
+	(scm_scmlist_print, scm_ipruk, scm_scmval_print): Define
+	SCM_BYTE_ORDER.
+
+	* sh64-tdep.c (look_for_args_moves): Add GDBARCH parameter.
+	(sh64_skip_prologue_hard_way): Add GDBARCH parameter, pass to
+	look_for_args_moves.
+	(sh64_skip_prologue): Pass architecture to
+	sh64_skip_prologue_hard_way.
+	* sh-tdep.c (sh_analyze_prologue): Add GDBARCH parameter.
+	(sh_skip_prologue): Pass architecture to sh_analyze_prologue.
+	(sh_frame_cache): Likewise.
+
+	* solib-irix.c (extract_mips_address): Add GDBARCH parameter.
+	(fetch_lm_info, irix_current_sos, irix_open_symbol_file_object):
+	Pass architecture to extract_mips_address.
+
+	* sparc-tdep.h (sparc_fetch_wcookie): Add GDBARCH parameter.
+	* sparc-tdep.c (sparc_fetch_wcookie): Add GDBARCH parameter.
+	(sparc_supply_rwindow, sparc_collect_rwindow): Pass architecture
+	to sparc_fetch_wcookie.
+	(sparc32_frame_prev_register): Likewise.
+	* sparc64-tdep.c (sparc64_frame_prev_register): Likewise.
+	* sparc32nbsd-tdep.c (sparc32nbsd_sigcontext_saved_regs): Likewise.
+	* sparc64nbsd-tdep.c (sparc64nbsd_sigcontext_saved_regs): Likewise.
+
+	* spu-tdep.c (spu_analyze_prologue): Add GDBARCH parameter.
+	(spu_skip_prologue): Pass architecture to spu_analyze_prologue.
+	(spu_virtual_frame_pointer): Likewise.
+	(spu_frame_unwind_cache): Likewise.
+	(info_spu_mailbox_list): Add BYTE_ORER parameter.
+	(info_spu_mailbox_command): Pass byte order to info_spu_mailbox_list.
+	(info_spu_dma_cmdlist): Add BYTE_ORER parameter.
+	(info_spu_dma_command, info_spu_proxydma_command): Pass byte order
+	to info_spu_dma_cmdlist.
+
+	* symfile.c (read_target_long_array): Add GDBARCH parameter.
+	(simple_read_overlay_table, simple_read_overlay_region_table,
+	simple_overlay_update_1): Pass architecture to read_target_long_array.
+
+	* v850-tdep.c (v850_analyze_prologue): Add GDBARCH parameter.
+	(v850_frame_cache): Pass architecture to v850_analyze_prologue.
+
+	* xstormy16-tdep.c (xstormy16_analyze_prologue): Add GDBARCH
+	parameter.
+	(xstormy16_skip_prologue, xstormy16_frame_cache): Pass architecture
+	to xstormy16_analyze_prologue.
+	(xstormy16_resolve_jmp_table_entry): Add GDBARCH parameter.
+	(xstormy16_find_jmp_table_entry): Likewise.
+	(xstormy16_skip_trampoline_code): Pass architecture to
+	xstormy16_resolve_jmp_table_entry.
+	(xstormy16_pointer_to_address): Likewise.
+	(xstormy16_address_to_pointer): Pass architecture to
+	xstormy16_find_jmp_table_entry.
+
+	* xtensa-tdep.c (call0_track_op): Add GDBARCH parameter.
+	(call0_analyze_prologue): Add GDBARCH parameter, pass to
+	call0_track_op.
+	(call0_frame_cache): Pass architecture to call0_analyze_prologue.
+	(xtensa_skip_prologue): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* defs.h (strlen_paddr, paddr, paddr_nz): Remove.
+	(paddress): Add GDBARCH parameter.
+	* utils.c (strlen_paddr, paddr, paddr_nz): Remove.
+	(paddress): Add GDBARCH parameter, use it instead of current_gdbarch.
+	* ui-out.h (ui_out_field_core_addr): Add GDBARCH parameter.
+	* ui-out.c (ui_out_field_core_addr): Add GDBARCH parameter,
+	use it instead of current_gdbarch.
+
+	Update calls to ui_out_field_core_addr to pass architecture:
+	* ada-lang.c (print_one_exception): Update.
+	* breakpoint.c (print_one_breakpoint_location,
+	print_one_exception_catchpoint): Update.
+	* disasm.c (dump_insns): Update.
+	* darwin-nat-info.c (darwin_debug_regions_recurse): Update.
+	* mi/mi-main.c (mi_cmd_data_read_memory): Update.
+	* mi/mi-symbol-cmds.c: Include "objfiles.h".
+	(mi_cmd_symbol_list_lines): Update.
+	* stack.c (print_frame_info, print_frame): Update.
+
+	Update callers of paddress to pass architecture:
+	* ada-tasks.c (info_task): Update.
+	* ada-valprint.c (ada_val_print_1): Update.
+	* annotate.c (annotate_source, annotate_frame_begin): Update.
+	* breakpoint.c (insert_bp_location, describe_other_breakpoints,
+	mention): Update.
+	* cli/cli-cmds.c (edit_command, list_command, print_disassembly):
+	Update.
+	* corefile.c (memory_error): Update.
+	* c-valprint.c (print_function_pointer_address, c_val_print): Update.
+	* disasm.c (dis_asm_print_address): Update.
+	* exec.c (print_section_info): Update.
+	* f-valprint.c (f_val_print): Update.
+	* infcmd.c: Include "arch-utils.h".
+	(jump_command, program_info): Update.
+	* linux-fork.c: Include "arch-utils.h".
+	(info_forks_command): Update.
+	* m2-valprint.c (print_function_pointer_address,
+	print_unpacked_pointer, print_variable_at_address,
+	m2_val_print): Update.
+	* m32r-rom.c (m32r_load_section, m32r_load, m32r_upload_command):
+	Update.
+	* printcmd.c (print_address, print_address_demangle, address_info):
+	Update.
+	* p-valprint.c (pascal_val_print): Update.
+	* source.c: Include "arch-utils.h".
+	(line_info): Update.
+	* stack.c (frame_info, print_block_frame_labels): Update.
+	* symfile.c (add_symbol_file_command, list_overlays_command): Update.
+	* symmisc.c (dump_msymbols, dump_psymtab, dump_symtab_1,
+	print_symbol, print_partial_symbols, maintenance_info_psymtabs,
+	maintenance_check_symtabs): Update.
+	* symtab.c (find_pc_sect_symtab): Update.
+	* target.c (deprecated_debug_xfer_memory): Update.
+	* tracepoint.c (scope_info): Update.
+	* tui/tui-stack.c (tui_make_status_line): Update.
+	* valprint.c (val_print_string): Update.
+
+	Update callers of paddr_nz to use paddress instead (keeping
+	user-visible output identical):
+	* alpha-tdep.c (alpha_heuristic_proc_start): Update.
+	* amd64-tdep.c (fixup_riprel, amd64_displaced_step_copy_insn,
+	amd64_displaced_step_fixup): Update.
+	* arch-utils.c (simple_displaced_step_copy_insn): Update.
+	* auxv.c (fprint_target_auxv): Update.
+	* breakpoint.c (insert_single_step_breakpoint): Update.
+	* buildsym.c (finish_block): Update.
+	* cli/cli-dump.c (restore_section_callback): Update.
+	* fbsd-nat.c (fbsd_find_memory_regions): Update.
+	* frame.c (frame_unwind_register_value): Update.
+	* gcore.c (gcore_create_callback): Update.
+	* hppa-tdep.c (hppa_frame_cache, hppa_skip_trampoline_code): Update.
+	* i386-tdep.c (i386_displaced_step_fixup, i386_record_modrm,
+	i386_record_lea_modrm_addr, i386_record_lea_modrm,
+	i386_process_record): Update.
+	* ia64-tdep.c (ia64_frame_this_id, ia64_sigtramp_frame_this_id,
+	ia64_libunwind_frame_this_id, ia64_libunwind_sigtramp_frame_this_id,
+	ia64_dummy_id, ia64_access_reg, ia64_access_rse_reg): Update.
+	* infrun.c (displaced_step_prepare, displaced_step_fixup,
+	handle_inferior_event, insert_step_resume_breakpoint_at_sal,
+	insert_longjmp_resume_breakpoint): Update.
+	* linux-nat.c (linux_nat_find_memory_regions): Update.
+	* linux-record.c (record_linux_system_call): Update.
+	* mips-tdep.c (heuristic_proc_start, mips_eabi_push_dummy_call,
+	mips_n32n64_push_dummy_call, mips_o32_push_dummy_call,
+	mips_o64_push_dummy_call): Update.
+	* monitor.c (monitor_error, monitor_remove_breakpoint): Update.
+	* record.c (record_arch_list_add_mem, record_wait,
+	record_xfer_partial): Update.
+	* remote-mips.c (mips_fetch_word, mips_check_lsi_error,
+	mips_common_breakpoint): Update.
+	* remote-sim.c (gdbsim_xfer_inferior_memory): Update.
+	* rs6000-tdep.c (ppc_displaced_step_fixup): Update.
+	* solib-som.c (som_current_sos): Update.
+	* symfile.c (load_progress, generic_load): Update.
+	* symfile-mem.c (add_vsyscall_page): Update.
+	* valops.c (value_fetch_lazy): Update.
+	* windows-tdep.c (windows_xfer_shared_library): Update.
+
+	Update callers of paddr_nz to use paddress instead (changing
+	user-visible output to make it more correct):
+	* dwarf2loc.c (locexpr_describe_location): Update.
+	* ia64-tdep.c (ia64_memory_insert_breakpoint,
+	ia64_memory_remove_breakpoint): Update.
+	* jv-valprint.c (java_value_print): Update.
+	* m32c-tdep.c (m32c_m16c_address_to_pointer): Update.
+	* monitor.c (monitor_read_memory): Update.
+
+	Update callers of paddr to use paddress instead (changing
+	user-visible output to make it more correct):
+	* arm-tdep.c (arm_push_dummy_call): Update.
+	* breakpoint.c (insert_bp_location, create_thread_event_breakpoint,
+	create_breakpoint): Update.
+	* darwin-nat-info.c (darwin_debug_regions): Update.
+	* dcache.c (dcache_info): Update.
+	* dsrec.c (load_srec, make_srec): Update.
+	* dwarf2-frame.c (dwarf2_restore_rule, execute_cfa_program,
+	dwarf2_frame_cache): Update.
+	* gcore.c (gcore_copy_callback): Update.
+	* gnu-nat.c (gnu_xfer_memory): Update.
+	* mips-linux-nat.c (mips_show_dr): Update.
+	* monitor.c (monitor_write_memory, monitor_insert_breakpoint,
+	monitor_remove_breakpoint): Update.
+	* remote.c (compare_sections_command): Update.
+	* remote-m32r-sdi.c (m32r_xfer_memory, m32r_insert_breakpoint,
+	m32r_remove_breakpoint, m32r_insert_watchpoint,
+	m32r_remove_watchpoint): Update.
+	* sol-thread.c (info_cb): Update.
+	* symfile.c (load_progress): Update.
+
+	Update callers of paddress or paddr_nz to use hex_string instead
+	(changes output of internal/error/debug messages only):
+	* dwarf2read.c (dump_die_shallow): Update.
+	* frame.c (fprint_field, fprint_frame, frame_pc_unwind,
+	get_frame_func, create_new_frame): Update.
+	* hppa-tdep.c (find_unwind_entry, unwind_command): Update.
+	* ia64-tdep.c (get_kernel_table, ia64_find_proc_info_x,
+	ia64_get_dyn_info_list): Update.
+	* maint.c (maintenance_translate_address): Update.
+	* mi/mi-cmd-var.c (mi_cmd_var_create): Update.
+	* target.c (target_flash_erase): Update.
+
+	Update callers of paddr/paddr_nz to use phex/phex_nz instead,
+	using an appropriate address size.  Remove use of strlen_paddr.
+	* exec.c (exec_files_info): Update.
+	* i386-nat.c (i386_show_dr): Update.
+	* remote.c (remote_flash_erase): Update.
+	* m32r-rom.c (m32r_load_section): Update.
+	* monitor.c (monitor_vsprintf, monitor_store_register): Update.
+	* remote.c (remote_check_symbols, remote_search_memory): Update.
+	* remote-mips.c (mips_request, mips_common_breakpoint): Update.
+	* scm-valprint.c (scm_ipruk, scm_scmval_print): Update.
+	* sh64-tdep.c (sh64_show_media_regs, sh64_show_compact_regs): Update.
+	* sh-tdep.c (sh_generic_show_regs, sh3_show_regs, sh2e_show_regs,
+	sh2a_show_regs, sh2a_nofpu_show_regs, sh3e_show_regs,
+	sh3_dsp_show_regs, sh4_show_regs, sh4_nofpu_show_regs,
+	sh_dsp_show_regs): Update.
+	* xcoffsolib.c (sharedlibrary_command): Update.
+
+
+	* maint.c (maint_print_section_info): Add ADDR_SIZE parameter.
+	Use hex_string_custom instead of paddr.
+	(print_bfd_section_info): Pass address size.
+	(print_objfile_section_info): Likewise.
+
+	* annotate.h (annotate_source): Add GDBARCH parameter.
+	(annotate_frame_begin): Likewise.
+	* annotate.c (annotate_source): Add GDBARCH parameter.
+	(annotate_frame_begin): Likewise.
+	* source.c (identify_source_line): Update call to annotate_source.
+	* stack.c (print_frame_info, print_frame): Update call to
+	annotate_frame_begin.
+
+	* breakpoint.c (describe_other_breakpoints): Add GDBARCH parameter.
+	(create_breakpoint, create_ada_exception_breakpoint): Update call.
+
+	* stack.c (print_block_frame_labels): Add GDBARCH parameter.
+	(print_frame_label_vars): Update call.
+
+	* symmisc.c (print_partial_symbols): Add GDBARCH parameter.
+	(dump_psymtab): Update call to print_partial_symbols.
+	(struct print_symbol_args): Add GDBARCH member.
+	(dump_symtab_1): Set print_symbol_args architecture member.
+	(print_symbol): Use it.
+
+	* windows-tdep.h (windows_xfer_shared_library): Add GDBARCH
+	parameter.
+	* windows-tdep.c (windows_xfer_shared_library): Likewise.
+	* i386-cygwin-tdep.c (struct cpms_data): Add GDBARCH member.
+	(core_process_module_section): Pass architecture from cpms_data to
+	windows_xfer_shared_library.
+	(windows_core_xfer_shared_libraries): Initialize cmps_data 
+	architecture member.
+	* windows-nat.c (windows_xfer_shared_libraries): Pass architecture
+	to windows_xfer_shared_library.
+
+	* defs.h (print_address): Add GDBARCH parameter.
+	* printcmd.c (print_address): Add GDBARCH parameter.
+	(print_scalar_formatted, do_examine): Update call.
+	* findcmd.c (find_command): Update call.
+	* tracepoint.c: Include "arch-utils.h".
+	(trace_find_line_command): Update call.
+	* tui/tui-disasm.c (tui_disassemble): Update call.
+
+	* value.h (print_address_demangle): Add GDBARCH parameter.
+	* printcmd.c (print_address_demangle): Add GDBARCH parameter.
+	* c-valprint.c (print_function_pointer_address, c_val_print):
+	Update call.
+	* f-valprint.c (f_val_print): Update call.
+	* gnu-v3-abi.c (gnuv3_print_method_ptr): Update call.
+	* jv-valprint.c (java_val_print): Update call.
+	* m2-valprint.c (print_function_pointer_address, m2_val_print):
+	Update call.
+	* p-valprint.c (pascal_val_print): Update call.
+
+	* disasm.c (gdb_disassemble_info): Install architecture into
+	di.application_data field.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* disasm.h (gdb_disassembly): Add GDBARCH parameter.
+	(gdb_print_insn): Likewise.
+	* disasm.c (dump_insns): Add GDBARCH parameter.  Use it instead
+	of current_gdbarch.
+	(do_mixed_source_and_assembly): Add GDBARCH parameter.  Pass to
+	dump_insns.
+	(do_assembly_only): Likewise.
+	(gdb_disassembly): Add GDBARCH parameter.  Use it instead of
+	current_gdbarch.  Pass to subroutines.
+	(gdb_print_insn): Add GDBARCH parameter.  Use it instead of
+	current_gdbarch.
+
+	* stack.c (struct gdb_disassembly_stub_args): Add GDBARCH member.
+	(gdb_disassembly_stub): Pass architecture to gdb_disassembly.
+	(do_gdb_disassembly): Add GDBARCH argument.  Store into args.
+	(print_frame_info): Pass architecture to do_gdb_disassembly.
+
+	* printcmd.c (print_formatted): Pass architecture to gdb_print_insn.
+
+	* mi/mi-cmd-disas.c: Include "arch-utils.h"
+	(mi_cmd_disassemble): Pass architecture to gdb_disassembly.
+
+	* cli/cli-cmds.c: Include "arch-utils.h".
+	(print_disassembly): Add GDBARCH parameter.  Pass to gdb_disassembly
+	and tui_show_assembly.
+	(disassemble_current_function): Pass architecture to
+	tui_get_low_disassembly_address and print_disassembly.
+	(disassemble_command): Pass architecture to
+	tui_get_low_disassembly_address and print_disassembly.
+
+	* tui/tui.c (tui_show_assembly): Add GDBARCH parameter.  Pass to
+	tui_update_source_windows_with_addr.
+
+	* tui/tui-data.h (struct tui_locator_element): Add GDBARCH member.
+	(struct tui_source_info): Likewise.
+	* tui/tui-data.c (tui_clear_win_detail): Clear source_info.gdbarch.
+
+	* tui/tui-disasm.c (tui_disassemble): Add GDBARCH parameter.
+	Pass to gdb_print_insn.
+	(tui_find_disassembly_address): Add GDBARCH parameter.  Pass to
+	tui_disassemble.
+	(tui_set_disassem_content): Add GDBARCH parameter.  Install into
+	source_info.gdbarch.  Pass to tui_disassemble.
+	(tui_show_disassem): Add GDBARCH parameter.  Pass to 
+	tui_update_source_window.
+	(tui_show_disassem_and_update_source): Add GDBARCH parameter.  Pass to
+	tui_show_disassem and tui_update_source_window.
+
+	(tui_get_begin_asm_address): Return locator architecture in addition
+	to locator PC value.
+
+	(tui_get_low_disassembly_address): Add GDBARCH parameter.   Pass to
+	tui_get_low_disassembly_address.
+
+	(tui_vertical_disassem_scroll): Pass architecture to subroutines.
+
+	* tui/tui-disasm.h (tui_set_disassem_content): Add GDBARCH parameter.
+	(tui_show_disassem): Likewise.
+	(tui_show_disassem_and_update_source): Likewise.
+	(tui_get_begin_asm_address): Return architecture and PC value.
+
+	* tui/tui.h (tui_get_low_disassembly_address): Add GDBARCH parameter.
+	(tui_show_assembly): Add GDBARCH parameter.
+
+	* tui/tui-layout.c (extract_display_start_addr): Return current window
+	architecture in addition to current PC value.
+
+	(tui_set_layout): Update calls to tui_get_low_disassembly_address and
+	extract_display_start_addr.  Pass architecture to
+	tui_update_source_windows_with_addr.
+
+	* tui/tui-source.c: Include "objfiles.h".
+	(tui_set_source_content): Initialize window architecture.
+	(tui_show_symtab_source): Add GDBARCH parameter.  Pass to
+	tui_update_source_window_as_is
+
+	* tui/tui-source.h (tui_show_symtab_source): Add GDBARCH parameter.
+
+	* tui/tui-stack.c (tui_set_locator_info): Add GDBARCH parameter.
+	Install locator architecture.
+	(tui_set_locator_filename): Update call.
+	(tui_show_frame_info): Pass architecture to tui_set_locator_info
+	and subroutines.
+
+	* tui/tui-win.c (make_visible_with_new_height): Pass architecture
+	to tui_update_source_window.
+
+	* tui/tui-winsource.c: Include "objfiles.h".
+	(tui_display_main): Update call to tui_get_begin_asm_address.
+	Pass architecture to tui_update_source_windows_with_addr.
+	(tui_update_source_window): Add GDBARCH parameter.  Pass to
+	tui_update_source_window_as_is.
+	(tui_update_source_window_as_is): Add GDBARCH parameter.
+	Pass to tui_set_disassem_content.
+	(tui_update_source_windows_with_addr): Add GDBARCH parameter.
+	Pass to subroutines.
+	(tui_update_source_windows_with_line): Pass objfile architecture
+	to subroutines.
+	(tui_horizontal_source_scroll): Pass architecture to 
+	tui_update_source_window_as_is.
+	
+	* tui/tui-winsource.h (tui_update_source_window): Add GDBARCH
+	parameter.
+	(tui_update_source_window_as_is): Likewise.
+	(tui_update_source_windows_with_addr): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* breakpoint.h (struct breakpoint): New member GDBARCH.
+	* breakpoint.c: Include "arch-utils.h".
+	(set_raw_breakpoint_without_location): Add GDBARCH parameter.
+	Use it to set breakpoint architecture.
+	(set_raw_breakpoint): Add GDBARCH parameter.
+	(create_internal_breakpoint): Likewise.
+	(create_catchpoint): Likewise.
+	(create_fork_vfork_event_catchpoint): Likewise.
+	(create_breakpoint): Likewise.
+	(create_breakpoints): Likewise.
+	(break_command_really): Likewise.
+	(create_ada_exception_breakpoint): Likewise.
+	Update local callers to pass architecture:
+	(create_internal_breakpoint): Update.
+	(create_overlay_event_breakpoint): Update.
+	(create_longjmp_master_breakpoint): Update.
+	(create_thread_event_breakpoint): Update.
+	(create_solib_event_breakpoint): Update.
+	(create_catchpoint): Update.
+	(create_fork_vfork_event_catchpoint): Update.
+	(set_momentary_breakpoint): Update.
+	(clone_momentary_breakpoint): Update.
+	(create_breakpoint): Update.
+	(create_breakpoints): Update.
+	(break_command_really): Update.
+	(break_command_1): Update.
+	(set_breakpoint): Update.
+	(watch_command_1): Update.
+	(catch_fork_command_1): Update.
+	(catch_exec_commnd_1): Update.
+	(handle_gnu_v3_exceptions): Update.
+	(create_ada_exception_breakpoint): Update.
+	(catch_ada_exception_command): Update.
+	(catch_assert_command): Update.
+	(trace_command): Update.
+
+	* breakpoint.h (struct bp_location): New member GDBARCH.
+	* breakpoint.c (get_sal_arch): New function.
+	(set_raw_breakpoint): Set location architecture.
+	(add_location_to_breakpoint): Likewise.
+	(clone_momentary_breakpoint): Likewise.
+	(watch_command_1): Likewise.
+	(update_watchpoint): Likewise.
+	(bp_loc_is_permanent): Use location architecture instead of
+	current_gdbarch.
+	(adjust_breakpoint_address): Add GDBARCH parameter; use it
+	instead of current_gdbarch.
+	Update callers of adjust_breakpoint_address to pass
+	breakpoint location architecture:
+	(set_raw_breakpoint): Update.
+	(watch_command_1): Update.
+
+	* tracepoint.c: (collect_symbol): Add GDBARCH parameter, use instead
+	of current_gdbarch.
+	(add_local_symbols): Add GDBARCH parameter.  Pass to collect_symbol.
+	(encode_actions): Pass tracepoint architecture to add_local_symbols
+	(encode_actions): Use tracepoint architecture instead of
+	current_gdbarch.  Pass it to add_local_symbols and collect_symbol.
+
+	* breakpoint.h (struct breakpoint_ops): Replace last_addr parameter
+	of print_one callback with last_loc.
+	* breakpoint.c (print_one_breakpoint_location): Replace last_addr
+	parameter with last_loc.
+	(print_one_breakpoint): Likewise.
+	(do_captured_breakpoint_query): Update call.
+	(breakpoint_1): Pass last_loc instead of last_addr to
+	print_one_breakpoint.  Pass last location architecture instead of
+	current_gdbarch to set_next_address.
+	Update all implementations of the print_one callback:
+	* breakpoint.c (print_one_catch_fork): Update.
+	(print_one_catch_vfork): Update.
+	(print_one_catch_exec): Update.
+	(print_one_exception_catchpoint): Update.
+	* ada-lang.c (print_one_exception): Update.
+	(print_one_catch_exception): Update.
+	(print_one_catch_exception_unhandled): Update.
+	(print_one_catch_assert): Update.
+
+	* breakpoint.c (print_one_breakpoint_location): Add PRINT_ADDRESS_BITS
+	parameter.  Use it instead of gdbarch_addr_bit (current_gdbarch).
+	(print_one_breakpoint): Add PRINT_ADDRESS_BITS parameter and pass it
+	to print_one_breakpoint_location.
+	(breakpoint_address_bits): New function.
+	(do_captured_breakpoint_query): Compute number of address bits to print
+	and pass it to print_one_breakpoint.
+	(breakpoint_1): Likewise.  Use it instead of current_gdbarch.
+
+	* breakpoint.h (create_thread_event_breakpoint): Add GDBARCH.
+	* breakpoint.c (create_thread_event_breakpoint): Likewise.
+	Update callers to create_thread_event_breakpoint:
+	* aix-thread.c (pd_enable): Update.
+	* linux-thread-db.c (enable_thread_event): Update.
+
+	* breakpoint.h (create_solib_event_breakpoint): Add GDBARCH.
+	* breakpoint.c (create_solib_event_breakpoint): Likewise.
+	Update callers to create_solib_event_breakpoint:
+	* solib-frv.c (enable_break, enable_break2): Update.
+	* solib-pa64.c (pa64_solib_create_inferior_hook): Update.
+	* solib-som.c (som_solib_create_inferior_hook): Update.
+	* solib-darwin.c (darwin_solib_create_inferior_hook): Update.
+	* solib-svr4.c (enable_break): Update.
+
+	* breakpoint.h (insert_single_step_breakpoint): Add GDBARCH.
+	* breakpoint.c (insert_single_step_breakpoint): Likewise.
+	Update callers to insert_single_step_breakpoint:
+	* alpha-tdep.c (alpha_software_single_step): Update.
+	* arm-linux-tdep.c (arm_linux_software_single_step): Update.
+	* arm-tdep.c (arm_software_single_step): Update.
+	* cris-tdep.c (cris_software_single_step): Update.
+	* rs6000-aix-tdep.c (rs6000_software_single_step): Update.
+	* rs6000-tdep.c (ppc_deal_with_atomic_sequence): Update.
+	* sparc-tdep.c (sparc_software_single_step): Update.
+	* spu-tdep.c (spu_software_single_step): Update.
+	* mips-tdep.c (deal_with_atomic_sequence): Add GDBARCH parameter.
+	Pass it to insert_single_step_breakpoint.
+	(mips_software_single_step): Pass architecture to
+	deal_with_atomic_sequence and insert_single_step_breakpoint.
+
+	* breakpoint.h (deprecated_insert_raw_breakpoint): Add GDBARCH.
+	(deprecated_remove_raw_breakpoint): Likewise.
+	* breakpoint.c (deprecated_insert_raw_breakpoint): Add GDBARCH.
+	(deprecated_remove_raw_breakpoint): Likewise.
+	Update callers to deprecated_insert_raw_breakpoint and
+	deprecated_remove_raw_breakpoint:
+	* breakpoint.c (single_step_gdbarch): New static variable.
+	(insert_single_step_breakpoint): Pass GDBARCH parameter to
+	deprecated_insert_raw_breakpoint.  Store it in single_step_gdbarch.
+	(remove_single_step_breakpoints): Pass architecture stored in
+	single_step_gdbarch to deprecated_remove_raw_breakpoint.
+	* rs6000-nat.c (exec_one_dummy_insn): Update.
+	* solib-irix.c (enable_break, disable_break): Update.
+	* procfs.c (procfs_mourn_inferior): Update.
+	(remove_dbx_link_breakpoint): Update.
+
+	* breakpoint.h (set_breakpoint): Add GDBARCH parameter.
+	(set_momentary_breakpoint, set_momentary_breakpoint_at_pc): Likewise.
+	* breakpoint.c (set_breakpoint): Add GDBARCH parameter.
+	(set_momentary_breakpoint, set_momentary_breakpoint_at_pc): Likewise.
+	Update callers to set_breakpoint, set_momentary_breakpoint and
+	set_momentary_breakpoint_at_pc:
+	* breakpoint.c (set_momentary_breakpoint_at_pc): Update.
+	(until_break_command): Update.
+	* infcall.c (call_function_by_hand): Update.
+	* infcmd.c (finish_backward, finish_forward): Update.
+	* infrun.c (insert_step_resume_breakpoint_at_sal): Add GDBARCH
+	parameter.  Pass it to set_momentary_breakpoint.
+	(insert_longjmp_resume_breakpoint): Add GDBARCH parameter.
+	Pass it to set_momentary_breakpoint_at_pc.
+	(handle_inferior_event): Update.
+	(insert_step_resume_breakpoint_at_frame): Update.
+	(insert_step_resume_breakpoint_at_caller): Update..
+	* mi/mi-cmd-break.c: Include "arch-utils.h".
+	(mi_cmd_break_insert): Update.
+
+	* target.h (struct target_ops): Add GDBARCH parameter to
+	to_insert_breakpoint, to_remove_breakpoint, to_insert_hw_breakpoint,
+	and to_remove_hw_breakpoint members.
+	(target_insert_breakpoint, target_remove_breakpoint,
+	target_insert_hw_breakpoint, target_remove_hw_breakpoint): Add GDBARCH
+	parameter, pass to target routine.
+	(memory_remove_breakpoint, memory_insert_breakpoint): Add GDBARCH
+	parameter.
+	* target.c (debug_to_insert_breakpoint, debug_to_remove_breakpoint,
+	debug_to_insert_hw_breakpoint, debug_to_remove_hw_breakpoint): Add
+	GDBARCH parameter, pass to target routine.
+	(update_current_target): Update function signature.
+	* breakpoint.c (insert_bp_location, remove_breakpoint,
+	deprecated_insert_raw_breakpoint, deprecated_remove_raw_breakpoint):
+	Pass architecture to target_ routines.
+	Update all implementations of the target breakpoint routines to take
+	GDBARCH parameter and use it instead of GDBARCH as appropriate:
+	* corelow.c (ignore): Update.
+	* exec.c (ignore): Update.
+	* mem-break.c (memory_insert_breakpoint): Update.
+	(memory_remove_breakpoint): Update.
+	* monitor.c (monitor_insert_breakpoint): Update.
+	(monitor_remove_breakpoint): Update.
+	* record.c (record_insert_breakpoint): Update.
+	(record_beneath_to_insert_breakpoint): Update.
+	(record_remove_breakpoint): Update.
+	(record_beneath_to_remove_breakpoint): Update.
+	* remote.c (remote_insert_breakpoint): Update.
+	(remote_remove_breakpoint): Update.
+	(remote_insert_hw_breakpoint): Update.
+	(remote_remove_hw_breakpoint): Update.
+	* remote-m32r-sdi.c (m32r_insert_breakpoint): Update.
+	(m32r_remove_breakpoint): Update.
+	* remote-mips.c (mips_insert_breakpoint): Update.
+	(mips_remove_breakpoint): Update.
+	* i386-nat.c (i386_insert_hw_breakpoint): Update.
+	(i386_remove_hw_breakpoint): Update.
+	* nto-procfs.c (procfs_insert_breakpoint):  Update.
+	(procfs_remove_breakpoint): Update.
+	(procfs_insert_hw_breakpoint): Update.
+	(procfs_remove_hw_breakpoint): Update.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* frame.h (frame_unwind_arch): New.
+	(frame_unwind_caller_arch): Likewise.
+	* frame-unwind.h (frame_prev_arch_ftype): New type.
+	(struct frame_unwind): New member prev_arch.
+	* frame.c (struct frame_info): New member prev_arch.
+	(frame_unwind_arch): New function.
+	(frame_unwind_caller_arch): Likewise..
+	(get_frame_arch): Reimplement in terms of frame_unwind_arch.
+	* sentinel-frame.c (sentinel_frame_prev_arch): New function.
+	(sentinel_frame_unwinder): Install it.
+
+	* frame.c (frame_pc_unwind): Use frame_unwind_arch instead
+	of get_frame_arch.
+	(frame_unwind_register_value): Likewise.
+	(frame_unwind_register_signed): Likewise.
+	(frame_unwind_register_unsigned): Likewise.
+	* frame-unwind.c (frame_unwind_got_optimized): Likewise.
+	(frame_unwind_got_register): Likewise.
+	(frame_unwind_got_constant): Likewise.
+	(frame_unwind_got_bytes): Likewise.
+	(frame_unwind_got_address): Likewise.
+
+	* frame.h (enum frame_type): New value ARCH_FRAME.
+	* frame.c (fprint_frame_type): Handle ARCH_FRAME.
+	* stack.c (print_frame_info): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* target.h (struct target_ops): New member to_thread_architecture.
+	(target_thread_architecture): New macro.
+	* target.c (update_current_target): Inherit to_thread_architecture.
+	(default_thread_architecture): New function.
+	(debug_to_thread_architecture): New function.
+	(setup_target_debug): Handle to_thread_architecture.
+
+	* regcache.h (get_thread_arch_regcache): New.
+	* regcache.c (struct regcache_list): New data type.
+	(current_regcache): Hold regcache list instead of single regcache.
+	(current_thread_ptid, current_thread_arch): New static variables.
+	(get_thread_arch_regcache): New function.
+	(get_thread_regcache): Use it.  Call target_thread_architecture.
+	(regcache_thread_ptid_changed): Update to current_regcache changes.
+	(registers_changed): Likewise.  Reset current_thread_arch and
+	current_thread_ptid.
+
+	* remote.c (remote_wait): Access target registers in target_gdbarch.
+	* linux-nat.c (linux_nat_do_thread_registers): Likewise.
+	* proc-service.c (ps_lgetregs, ps_lsetregs): Likewise.
+	(ps_lgetfpregs, ps_lsetfpregs): Likewise.
+	* sol-thread.c (ps_lgetregs, ps_lsetregs): Likewise.
+	(ps_lgetfpregs, ps_lsetfpregs): Likewise.
+	* solib-svr4.c (enable_break): Likewise.
+	(svr4_relocate_main_executable): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* python/python-internal.h (struct language_defn): Declare.
+	(python_gdbarch, python_language): Likewise.
+	(ensure_python_env): Add prototype.
+	(make_cleanup_py_restore_gil): Remove prototype.
+
+	* python/python.c: Include "arch-utils.h", "value.h" and "language.h".
+	(python_gdbarch, python_language): New global variables.
+	(struct python_env): New data type.
+	(ensure_python_env, restore_python_env): New functions.
+	(eval_python_from_control_command): Call ensure_python_env to
+	install current architecture and language.
+	(python_command, gdbpy_new_objfile): Likewise.
+	* python/python-cmd.c: Include "arch-utils.h" and "language.h".
+	(cmdpy_destroyer, cmdpy_function, cmdpy_completer): Call
+	ensure_python_env.
+	* python/python-type.c (clean_up_objfile_types): Likewise.
+	* python/python-objfile.c: Include "language.h".
+	(clean_up_objfile): Call ensure_python_env.
+	* python/python-prettyprint.c (apply_val_pretty_printer): Likewise.
+	(apply_varobj_pretty_printer): Do not call PyGILState_Ensure.
+	* varobj.c (varobj_ensure_python_env): New helper function.
+	(varobj_get_display_hint, update_dynamic_varobj_children,
+	install_default_visualizer, varobj_set_visualizer, free_variable,
+	value_get_print_value): Call it.
+	(value_get_print_value): Add varobj argument instead of pretty
+	printer argument.  Update all callers.
+
+	* python/python-utils.c (py_gil_restore, make_cleanup_py_restore_gil):
+	Remove.
+
+	* value.h (internal_function_fn): Add GDBARCH and LANGUAGE argument.
+	(call_internal_function): Likewise.
+	* value.c (call_internal_function): Likewise.  Pass to handler.
+	* eval.c (evaluate_subexp_standard): Update call.
+	* python/python-function.c: Include "language.h".
+	(fnpy_call): Add GDBARCH and LANGAUAGE arguments and call
+	make_cleanup_python_env.
+
+	* python/python-value.c (builtin_type_pyint, builtin_type_pyfloat,
+	builtin_type_pylong, builtin_type_pybool, builtin_type_pychar,
+	valpy_str): Use python_gdbarch and python_language instead of
+	current_gdbarch and current_language.
+	* python/python-type.c (typy_lookup_typename): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* arch-utils.c (selected_byte_order): Return target_byte_order_user.
+	(show_endian): Use target_byte_order_user if specified; otherwise
+	use get_current_arch () instead of current_gdbarch.
+	(show_architecture): Use set_architecture_string if specified;
+	otherwise use get_current_arch () instead of current_gdbarch.
+	(get_current_arch): New function.
+	* arch-utils.h (get_current_arch): Add prototype.
+
+	* osabi.c (show_osabi): Use get_current_arch () instead of
+	current_gdbarch.
+
+	* findcmd.c: Include "arch-utils.h".
+	(parse_find_args): Add BIG_P argument.  Use it instead of byte order
+	of current_gdbarch.
+	(find_command): Use get_current_arch () instead of current_gdbarch.
+	Pass byte order to parse_find_args.
+
+	* maint.c: Include "arch-utils.h".
+	(maintenance_print_architecture): Use get_current_arch () instead
+	of current_gdbarch.
+
+	* reggroups.c: Include "arch-utils.h".
+	(maintenance_print_reggroups): Use get_current_arch () instead
+	of current_gdbarch.
+
+	* symfile.c: Include "arch-utils.h".
+	(overlay_load_command): Use get_current_arch () instead of
+	current_gdbarch.
+
+	* value.c: Include "arch-utils.h".
+	(show_convenience): Use get_current_arch () instead of
+	current_gdbarch.
+
+	* tui/tui-regs.c: Include "arch-utils.h".
+	(tui_reg_next_command): Use get_current_arch () instead of
+	current_gdbarch.
+
+	* mi/mi-main.c: Include "arch-utils.h".
+	(mi_cmd_data_read_memory): Use get_current_arch () instead of
+	current_gdbarch.
+
+	* parse.c: Include "arch-utils.h".
+	(parse_exp_in_context): Use get_current_arch () instead of
+	current_gdbarch.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.c (make_pointer_type, make_reference_type,
+	smash_to_memberptr_type, lookup_array_range_type, check_stub_method):
+	Use type architecture instead of current_gdbarch.
+
+	* gdbtypes.h (address_space_name_to_int, address_space_int_to_name):
+	Add GDBARCH paramter.
+	* gdbtypes.c (address_space_name_to_int, address_space_int_to_name):
+	Add GDBARCH parameter.   Use it instead of current_gdbarch.
+	* c-typeprint.c (c_type_print_modifier): Update call.
+	* parse.c (push_type_address_space): Likewise.
+
+	* findvar.c (extract_typed_address, store_typed_address): Use type
+	architecture instead of current_gdbarch.
+
+	* value.c (value_as_address, unpack_field_as_long): Use type architecture
+	instead of current_gdbarch.
+
+	* doublest.c (floatformat_from_length): Add GDBARCH argument.  Use it
+	instead of current_gdbarch.
+	(floatformat_from_type): Pass type architecture.
+
+	* infcall.c (find_function_addr): Use type architecture instead
+	of current_gdbarch.
+
+	* valarith.c (value_bitstring_subscript, value_x_binop, value_neg,
+	value_bit_index): Use type architecture instead of current_gdbarch.
+	* valops.c (value_cast, value_slice): Likewise.
+
+	* value.h (modify_field): Add TYPE argument.
+	* value.c (modify_field): Add TYPE argument.  Use type architecture
+	instead of current_gdbarch.
+	(set_internalvar_component): Likewise.
+	* eval.c (evaluate_struct_tuple): Update call.
+	* valops.c (value_assign): Likewise.
+	* ada-lang.c (modify_general_field): Likewise.  Add TYPE argument.
+	(make_array_descriptor): Update calls.
+	(move_bits): Add BITS_BIG_ENDIAN_P argument.  Use it instead of
+	current_gdbarch.
+	(ada_value_assign, value_assign_to_component): Update calls.
+	(decode_packed_array, ada_value_primitive_packed_val, ada_value_assign,
+	value_assign_to_component): Use type arch instead of current_gdbarch.
+
+	* printcmd.c (float_type_from_length): Remove GDBARCH argument,
+	use type architecture instead.
+	(print_scalar_formatted, printf_command): Update calls.  Use type
+	architecture instead of current_gdbarch.
+	* valprint.c (val_print_type_code_int): Use type architecture
+	instead of current_gdbarch.
+	* varobj.c (value_get_print_value): Likewise.
+	* python/python-prettyprint.c (print_string_repr): Add GDBARCH
+	argument.  Use it instead of current_gdbarch.
+	(apply_val_pretty_printer): Update call.
+
+	* ada-valprint.c (ada_val_print_1): Use type architecture instead
+	of current_gdbarch.
+	* c-valprint.c (print_function_pointer_address): Add GDBARCH argument.
+	Use it instead of current_gdbarch.
+	(c_val_print): Update calls passing type architecture.
+	* f-valprint.c (f_val_print): Use type architecture instead of
+	current_gdbarch.
+	* jv-valprint (java_value_print): Likewise.
+	* m2-valprint.c (print_function_pointer_address): Add GDBARCH argument.
+	Use it instead of current_gdbarch.
+	(print_unpacked_pointer): Update calls passing type architecture.
+	* scm-valprint.c (scm_scmval_print): Use type architecture instead of
+	current_gdbarch.
+
+	* gnu-v3-abi.c (get_class_arch): Remove.
+	(gnuv3_rtti_type): Use get_type_arch instead of get_class_arch.  Remove
+	special-case check for Java classes.
+	(gnuv3_virtual_fn_field, gnuv3_baseclass_offset, gnuv3_print_method_ptr,
+	gnuv3_method_ptr_size, gnuv3_make_method_ptr, gnuv3_method_ptr_to_value):
+	Use get_type_arch instead of get_class_arch.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.h (TYPE_OBJFILE_OWNED, TYPE_OWNER): New macros.
+	(TYPE_OBJFILE, TYPE_ALLOC, TYPE_ZALLOC): Reimplement.
+	(alloc_type_arch): Add prototype.
+	(alloc_type_copy): Likewise.
+	(get_type_arch): Likewise.
+	(arch_type): Likewise.
+	(arch_integer_type): Likewise.
+	(arch_character_type): Likewise.
+	(arch_boolean_type): Likewise.
+	(init_float_type): Remove, replace by ...
+	(arch_float_type): ... this.
+	(init_complex_type): Remove, replace by ...
+	(arch_complex_type): ... this.
+	(init_flags_type): Remove, replace by ...
+	(arch_flags_type): ... this.
+	(init_composite_type): Remove, replace by ...
+	(arch_composite_type): ... this.
+
+	* gdbtypes.c (alloc_type): No longer support NULL objfile.
+	(init_type): Likewise.
+	(alloc_type_arch): New function.
+	(alloc_type_copy): New function.
+	(get_type_arch): New function.
+
+	(smash_type): Preserve type ownership information.
+	(make_pointer_type, make_reference_type, make_function_type,
+	smash_to_memberptr_type, smash_to_method_type): No longer
+	preserve OBJFILE across smash_type calls.
+	(make_pointer_type, make_reference_type, make_function_type,
+	lookup_memberptr_type, lookup_methodptr_type, allocate_stub_method,
+	create_range_type, create_array_type, create_set_type, copy_type):
+	Use alloc_type_copy when allocating types.
+	(check_typedef): Use alloc_type_arch.
+	(copy_type_recursive): Likewise.  Preserve type ownership data
+	after copying type.
+	(recursive_dump_type): Dump type ownership data.
+	(alloc_type_instance): Update type ownership check.
+	(copy_type, copy_type_recursive): Likewise.
+
+	(arch_type): New function.
+	(arch_integer_type): Likewise.
+	(arch_character_type): Likewise.
+	(arch_boolean_type): Likewise.
+	(init_float_type): Remove, replace by ...
+	(arch_float_type): ... this.
+	(init_complex_type): Remove, replace by ...
+	(arch_complex_type): ... this.
+	(init_flags_type): Remove, replace by ...
+	(arch_flags_type): ... this.
+	(append_flags_type_flag): Move down.
+	(init_composite_type): Remove, replace by ...
+	(arch_composite_type): ... this.
+	(append_composite_type_field_aligned,
+	append_composite_type_field): Move down.
+
+	* gdbarch.c (gdbtypes_post_init): Allocate all types
+	using per-architecture routines.
+	* ada-lang.c (ada_language_arch_info): Likewise.
+	* f-lang.c (build_fortran_types): Likewise.
+	* jv-lang.c (build_java_types): Likewise.
+	* m2-lang.c (build_m2_types): Likewise.
+	* scm-lang.c (build_scm_types): Likewise.
+
+	* ada-lang.c (ada_type_of_array): Use alloc_type_copy.
+	(packed_array_type): Likewise.
+	(ada_template_to_fixed_record_type_1): Likewise.
+	(template_to_static_fixed_type): Likewise.
+	(to_record_with_fixed_variant_part): Likewise.
+	(to_fixed_variant_branch_type): Likewise.
+	(to_fixed_array_type): Likewise.
+	(to_fixed_range_type): Likewise.
+	(empty_record): Use type instead of objfile argument.
+	Use alloc_type_copy.
+	(to_fixed_variant_branch_type): Update call to empty_record.
+	* jv-lang.c (type_from_class): Use alloc_type_arch.
+
+	* arm-tdep.c (arm_ext_type): Allocate per-architecture type.
+	* i386-tdep.c (i386_eflags_type, i386_mxcsr_type, i387_ext_type,
+	i386_mmx_type, i386_sse_type): Likewise.
+	* ia64-tdep.c (ia64_ext_type): Likewise.
+	* m32c-tdep.c (make_types): Likewise.
+	* m68k-tdep.c (m68k_ps_type, m68881_ext_type): Likewise.
+	* rs6000-tdep.c (rs6000_builtin_type_vec64,
+	rs6000_builtin_type_vec128): Likewise.
+	* sparc-tdep.c (sparc_psr_type, sparc_fsr_type): Likewise.
+	* sparc64-tdep.c (sparc64_pstate_type, sparc64_fsr_type,
+	sparc64_fprs_type): Likewise.
+	* spu-tdep.c (spu_builtin_type_vec128): Likewise.
+	* xtensa-tdep.c (xtensa_register_type): Likewise.
+	* linux-tdep.c (linux_get_siginfo_type): Likewise.
+	* target-descriptions.c (tdesc_gdb_type): Likewise.
+	* gnu-v3-abi.c (build_gdb_vtable_type): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* i386-tdep.h (struct gdbarch_tdep): Add i386_eflags_type and
+	i386_mxcsr_type members.
+	(i386_eflags_type): Make into function.
+	(i386_mxcsr_type): Likewise.
+	* i386-tdep.c (i386_eflags_type): Make into function.
+	(i386_mxcsr_type): Likewise.
+	(i386_register_type): Update uses.
+	(i386_init_types): Remove.
+	(_initialize_i386_tdep): Do not call it.
+	* amd64-tdep.c (amd64_register_type): Update uses.
+
+	* m68k-tdep.h (struct gdbarch_tdep): Add m68k_ps_type member.
+	* m68k-tdep.c (m68k_ps_type): Make into function.
+	(m68k_register_type): Update use.
+	(m68k_init_types): Remove.
+	(_initialize_m68k_tdep): Do not call it.
+
+	* sparc-tdep.h (struct gdbarch_tdep): Add sparc_psr_type,
+	sparc_fsr_type, sparc64_pstate_type, sparc64_fsr_type, and
+	sparc64_fprs_type members.
+	* sparc-tdep.c (sparc_psr_type): Make into function.
+	(sparc_fsr_type): Likewise.
+	(sparc32_register_type): Update uses.
+	(sparc_init_types): Remove.
+	(_initialize_sparc_tdep): Do not call it.
+	* sparc64-tdep.c (sparc64_pstate_type): Make into function.
+	(sparc64_fsr_type): Likewise.
+	(sparc64_fprs_type): Likewise.
+	(sparc64_register_type): Update uses.
+	(sparc64_init_types): Remove.
+	(_initialize_sparc64_tdep): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.h (builtin_type_ieee_single, builtin_type_ieee_double,
+	builtin_type_i387_ext, builtin_type_m68881_ext, builtin_type_arm_ext,
+	builtin_type_ia64_spill, builtin_type_ia64_quad): Remove.
+	(init_float_type, init_complex_type): Add prototypes.
+	* gdbtypes.c (builtin_type_ieee_single, builtin_type_ieee_double,
+	builtin_type_i387_ext, builtin_type_m68881_ext, builtin_type_arm_ext,
+	builtin_type_ia64_spill, builtin_type_ia64_quad): Remove.
+	(_initialize_gdbtypes): Do not initialize them.
+	(build_flt): Rename to ...
+	(init_float_type): ... this.  Make global.
+	(build_complex): Rename to ...
+	(init_complex_type): ... this.  Make global.  Remove BIT argument.
+	(gdbtypes_post_init): Update calls.
+
+	* ada-lang.c (ada_language_arch_info): Use init_float_type.
+	* jv-lang.c (build_java_types): Likewise.
+	* m2-lang.c (build_m2_types): Likewise.
+	* f-lang.c (build_fortran_types): Use init_float_type and
+	init_complex_type.
+
+	* target-descriptions.c (tdesc_gdb_type): Call init_float_type instead
+	of using builtin_type_ieee_single, builtin_type_ieee_double, or
+	builtin_type_arm_ext.
+
+	* ia64-tdep.h (struct gdbarch_tdep): Add ia64_ext_type member.
+	* ia64-tdep.c (builtin_type_ia64_ext): Remove.
+	(_initialize_ia64_tdep): Do not initialize it.
+	(floatformat_valid, floatformat_ia64_ext, floatformats_ia64_ext):
+	Move up.
+	(ia64_ext_type): New function.
+	(ia64_register_reggroup_p, ia64_convert_register_p,
+	ia64_register_to_value, ia64_value_to_register,
+	ia64_extract_return_value, ia64_store_return_value): Use ia64_ext_type
+	instead of builtin_type_ia64_ext.
+
+	* i386-tdep.h (struct gdbarch_tdep): Add i387_ext_type member.
+	(i387_ext_type): Add prototype.
+	* i386-tdep.c (i387_ext_type): New function.
+	(i386_extract_return_value, i386_store_return_value,
+	i386_register_type): Use it instead of builtin_type_i387_ext.
+	* amd64-tdep.c (amd64_register_type): Likewise.
+	* i387-tdep.c (print_i387_value, i387_register_to_value,
+	i387_value_to_register): Likewise.
+	(print_i387_value, print_i387_ext): Add GDBARCH argument.
+	(print_i387_ext, i387_print_float_info): Pass to subroutines.
+
+	* m68k-tdep.h (struct gdbarch_tdep): Add m68881_ext_type member.
+	* m68k-tdep.c (m68881_ext_type): New function.
+	(m68k_register_type, m68k_convert_register_p): Use it instead
+	of builtin_type_m68881_ext.
+
+	* arm-tdep.h (struct gdbarch_tdep): Add arm_ext_type member.
+	* arm-tdep.c (arm_ext_type): New function.
+	(arm_register_type): Use it instead of builtin_type_arm_ext.
+
+	* alpha-tdep.c (alpha_register_type): Use builtin types
+	instead of builtin_type_ieee_double.
+
+	* mips-tdep.c (mips_float_register_type, mips_double_register_type):
+	Remove.
+	(mips_register_type): Use builtin types instead of
+	builtin_type_ieee_single and builtin_type_ieee_double.
+	(mips_print_fp_register): Use builtin types instead of
+	mips_float_register_type and mips_double_register_type.
+
+	* hppa-tdep.c (hppa32_register_type, hppa64_register_type):
+	Use builtin types instead of builtin_type_ieee_single and
+	builtin_type_ieee_double.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.h (builtin_type_int0, builtin_type_int8, builtin_type_uint8,
+	builtin_type_int16, builtin_type_uint16, builtin_type_int32,
+	builtin_type_uint32, builtin_type_int64, builtin_type_uint64,
+	builtin_type_int128, builtin_type_uint128): Remove.
+	(struct builtin_type): New members builtin_int0, builtin_int8,
+	builtin_uint8, builtin_int16, builtin_uint16, builtin_int32,
+	builtin_uint32, builtin_int64, builtin_uint64, builtin_int128,
+	and builtin_uint128.
+	* gdbtypes.c (builtin_type_int0, builtin_type_int8, builtin_type_uint8,
+	builtin_type_int16, builtin_type_uint16, builtin_type_int32,
+	builtin_type_uint32, builtin_type_int64, builtin_type_uint64,
+	builtin_type_int128, builtin_type_uint128): Remove.
+	(_initialize_gdbtypes): Do not initialize them.
+	(gdbtypes_post_init): Initialize fixed-size integer types.
+
+	* dwarf2expr.c (unsigned_address_type, signed_address_type): Add
+	GDBARCH argument.  Return platform-specific type.
+	(dwarf2_read_address, execute_stack_op): Update calls.
+
+	* target-descriptions.c (tdesc_gdb_type): Use platform-specific types
+	instead of global builtin_int_... variables.
+	* mi/mi-main.c (mi_cmd_data_read_memory): Likewise.
+	* printcmd.c (do_examine): Likewise.
+	* jv-exp.y (parse_number): Likewise.
+
+	* alpha-tdep.c (alpha_register_type, alpha_push_dummy_call,
+	alpha_store_return_value): Likewise.
+	* amd64-linux-tdep.c (amd64_linux_register_type): Likewise.
+	* amd64-tdep.c (amd64_register_type): Likewise.
+	* arm-tdep.c (arm_register_type): Likewise.
+	* avr-tdep.c (avr_register_type): Likewise.
+	* cris-tdep.c (cris_register_type, crisv32_register_type): Likewise.
+	* frv-tdep.c (frv_register_type): Likewise.
+	* h8300-tdep.c h8300_register_type): Likewise.
+	* hppa-tdep.c (hppa64_push_dummy_call, hppa32_register_type,
+	hppa64_register_type): Likewise.
+	* i386-tdep.c (i386_mmx_type, i386_sse_type): Likewise.
+	* iq2000-tdep.c (iq2000_register_type): Likewise.
+	* lm32-tdep.c (lm32_register_type, lm32_push_dummy_call): Likewise.
+	* m32r-tdep.c (m32r_register_type): Likewise.
+	* m68hc11-tdep.c (m68hc11_register_type, m68hc11_pseudo_register_read,
+	m68hc11_pseudo_register_write): Likewise.
+	* m68k-tdep.c (m68k_register_type): Likewise.
+	* m88k-tdep.c (m88k_register_type, m88k_store_arguments): Likewise.
+	* mep-tdep.c (mep_register_type): Likewise.
+	* mips-tdep.c (mips_register_type, mips_pseudo_register_type,
+	mips_print_fp_register): Likewise.
+	* moxie-tdep.c (moxie_register_type): Likewise.
+	* mt-tdep.c (mt_copro_register_type, mt_register_type): Likewise.
+	* rs6000-tdep.c (rs6000_builtin_type_vec64,
+	rs6000_builtin_type_vec128): Likewise.
+	* score-tdep.c (score_register_type): Likewise.
+	* sparc-tdep.c (sparc32_register_type, sparc32_store_arguments):
+	Likewise.
+	* sparc64-tdep.c (sparc64_register_type, sparc64_store_arguments):
+	Likewise.
+	* spu-tdep.c (spu_builtin_type_vec128, spu_register_type): Likewise.
+	* v850-tdep.c (v850_register_type): Likewise.
+	* xstormy16-tdep.c (xstormy16_register_type): Likewise.
+	* xtensa-tdep.c (xtensa_register_type): Likewise.
+
+	* mt-tdep.c (struct gdbarch_tdep): New data structure.
+	(mt_gdbarch_init): Alloc TDEP structures.
+	(mt_register_type): Cache coprocessor type in TDEP instead of
+	static global variable.
+
+	* xtensa-tdep.h (struct gdbarch_tdep): Add type_entries member.
+	* xtensa-tdep.c (type_entries): Remove.
+	(xtensa_register_type): Cache fixed-size types in TDEP instead
+	of in global variable.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.h (builtin_type_true_char): Remove.
+	(builtin_type_true_unsigned_char): Likewise.
+	(struct builtin_type): Add builtin_true_char and
+	builtin_true_unsigned_char members.
+	* gdbtypes.c (builtin_type_true_char): Remove.
+	(builtin_type_true_unsigned_char): Likewise.
+	(_initialize_gdbtypes): Do not initialize them.
+	(gdbtypes_post_init): Initialize builtin_true_char and
+	builtin_true_unsigned_char members of builtin_type.
+
+	* printcmd.c (print_scalar_formatted): Use builtin_type
+	members instead of builtin_type_true_char and
+	builtin_type_true_unsigned_char.
+	* ada-valprint.c (ada_val_print_1): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.h (builtin_type_void): Remove.
+	* gdbtypes.c (builtin_type_void): Remove.
+	(_initialize_gdbtypes): Do not initialize it.
+
+	(safe_parse_type): Add GDBARCH argument.  Use it to construct
+	void return type.
+	(check_stub_method): Update call.
+
+	* infcall.c (call_function_by_hand): Use platform-specific type
+	instead of builtin_type_void.
+	* valops.c (value_cast): Use input void type instead of
+	builtin_type_void.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* ada-lang.c (assign_component): Use platform-specific integer type
+	instead of builtin_type_int32 type.
+	(ada_evaluate_subexp) [OP_ATR_SIZE]: Likewise.
+
+	* ax-gdb.c (gen_expr) [UNOP_NEG]: Use platform-specific integer type
+	instead of builtin_type_int8 type.
+	* valarith.c (value_x_unop): Likewise.
+	* python/python-value.c (valpy_absolute): Avoid reference to
+	builtin_type_int8 type.
+
+	* eval.c (evaluate_subexp_standard): Use platform-specific integer
+	type instead of builtin_type_int8 as EVAL_SKIP return value type.
+	* ada-lang.c (ada_evaluate_subexp): Likewise.
+	* jv-lang.c (evaluate_subexp_java): Likewise.
+	* m2-lang.c (evaluate_subexp_modula2): Likewise.
+	* scm-lang.c (evaluate_exp): Likewise.
+
+	* value.h (value_bitstring): Add INDEX_TYPE argument.
+	* valops.c (value_bitstring): Add INDEX_TYPE argument, use it instead
+	of builtin_type_int32 as base range type.
+	* eval.c (evaluate_subexp_standard): Update value_bitstring call.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.c (lookup_array_range_type): Add prototype.
+	(lookup_string_range_type): Likewise.
+	* gdbtypes.c (lookup_array_range_type): New function.
+	(lookup_string_range_type): Likewise.
+
+	* ax-gdb.c (gen_repeat): Use lookup_array_range_type.
+	* parse.c (follow_types): Likewise.
+	* jv-lang.c (java_array_type): Likewise.
+	* gnu-v3-abi.c (build_gdb_vtable_type): Likewise.
+	* mt-tdep.c (mt_register_type): Likewise.
+	* sh-tdep.c (sh_sh4_build_float_register_type): Likewise.
+	* sh64-tdep.c (sh64_build_float_register_type): Likewise.
+	* value.c (allocate_repeat_value): Likewise.
+	* valops.c (value_array, value_cstring): Likewise.
+	* valops.c (value_string): Use lookup_string_range_type.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* m2-typeprint.c (m2_print_bounds, m2_is_long_set_of_type): Remove
+	redundant check for NULL TYPE_TARGET_TYPE.
+	* m2-valprint.c (m2_print_long_set): Likewise.
+	* p-valprint.c (pascal_type_print_base): Likewise.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* printcmd.c (next_gdbarch): New static variable.
+	(set_next_address, do_examine, x_command): Set it.
+	(decode_format): Use 'a' size to indicate width of an address.
+	(do_examine): Add GDBARCH argument.  Handle 'a' size.
+	(x_command): Pass architecture to do_examine.
+	Error if called without argument the first time.  
+	(do_one_display): Pass architecture to do_examine.
+
+	(examine_i_type, examine_b_type, examine_h_type, examine_w_type,
+	examine_g_type): Remove.
+	(_initialize_printcmd): Do not initialize them.
+	(do_examine): Use builin_type_int... instead of examine_..._type.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdbtypes.h (struct builtin_type): Add internal_fn member.
+	* gdbtypes.c (gdbtypes_post_init): Initialize it.
+	* value.c (internal_fn_type): Remove.
+	(_initialize_values): Do not initialize it.
+
+	* value.c (struct internalvar): Add enum internalvar_kind type and
+	kind member.  Restructure union internalvar_data type.  Remove type,
+	canonical, and make_value members.
+	(init_if_undefined_command): Update for data structure changes.
+	(create_internalvar): Likewise.
+	(create_internalvar_type_lazy): Likewise.
+	(get_internalvar_integer): Likewise.
+	(get_internalvar_function): Likewise.
+	(set_internalvar_component): Likewise.
+	(set_internalvar): Likewise.
+	(set_internalvar_integer): Likewise.
+	(set_internalvar_function): Likewise.
+	(clear_internalvar): Likewise.
+	(add_internal_function): Likewise.
+	(preserve_one_internalvar): New function.
+	(preserve_values): Call it.
+
+	* value.h (value_of_internalvar): Add GDBARCH parameter.
+	(internalvar_make_value): Likewise.
+	* value.c (value_of_internalvar): Add GDBARCH parameter.  Pass it to
+	make_value callback.  Use it to generate per-architecture result value
+	types for internal variables with no pre-defined type.  Update for data
+	structure changes.
+	(show_convenience): Pass architecture to value_of_internalvar.
+	* eval.c (evaluate_subexp_standard): Likewise.
+	* infrun.c (siginfo_make_value): Add GDBARCH parameter.  Use it
+	instead of current frame architecture.  Return per-architecture type.
+
+	* value.h (set_internalvar_string): Add prototype.
+	* value.c (set_internalvar_string): New function.
+	* tracepoint.c (set_traceframe_context): Use it.
+
+2009-07-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* jv-lang.h (java_int_type, java_byte_type, java_short_type,
+	java_long_type, java_boolean_type, java_char_type, java_float_type,
+	java_double_type, java_void_type): Remove.
+	(struct builtin_java_type): New data type.
+	(builtin_java_type): Add prototype.
+	(java_primitive_type): Add GDBARCH argument.
+	(java_primitive_type_from_name): Likewise.
+	(type_from_class): Likewise.
+
+	* jv-lang.c (java_int_type, java_byte_type, java_short_type,
+	java_long_type, java_boolean_type, java_char_type, java_float_type,
+	java_double_type, java_void_type): Remove.
+
+	(build_java_types, builtin_java_type): New functions.
+	(java_type_data): New static variable.
+	(_initialize_java_language): Initialize it.  No longer initialize
+	global types.
+	(java_language_arch_info): Use per-architecture types.
+
+	(java_primitive_type): Add GDBARCH argument.  Return per-architecture
+	type instead of refering to global variable.
+	(java_primitive_type_from_name): Add GDBARCH argument.
+	(java_primitive_type_name): New function.
+	(java_demangled_signature_length): Use it instead of
+	java_primitive_type_from_name.
+	(java_demangled_signature_copy): Likewise.
+
+	(type_from_class): Add GDBARCH argument.  Pass to java_link_class_type,
+	java_primitive_type, and recursive type_from_class call.
+	(java_link_class_type): Add GDBARCH argument.  Pass to type_from_class
+	calls.  Use per-architecture types instead of global types.
+
+	* jv-exp.y (parse_java_type): New define.
+	Use per-architecture types instead of global types througout.
+
+	* jv-valprint.c (java_value_print): Pass architecture to
+	type_from_class and java_primitive_type_from_name.  Use per-
+	architecture types instead of global types.
+
+2009-07-01  Doug Evans  <dje@google.com>
+
+	* NEWS: Mention biarch amd64-linux gdbserver and hardware watchpoint
+	support for i386-linux, amd64-linux, and i386-win32 builds of
+	gdbserver.
+
+2009-07-01  Nick Roberts  <nickrob@snap.net.nz>
+
+	* Makefile.in (HFILES_NO_SRCDIR): Remove entries for deleted files.
+
+2009-06-30  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* Makefile.in (TARGET_FLAGS_TO_PASS): Include also FORCE_PARALLEL.
+	(check//%): Construct FORCE_PARALLEL for the sub-make.  Extend the
+	comment for it.
+
+2009-06-30  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	gdb/10275
+	* dwarf2-frame.c (dwarf2_frame_state): Move cfa_offset, cfa_reg,
+	cfa_how and cfa_exp into regs and adjust users.
+	
+2009-06-30  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* dwarf2read.c (inherit_abstract_dies): Work around GCC PR 40573.
 
 2009-06-30  Vladimir Prus  <vladimir@codesourcery.com>
 

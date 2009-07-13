@@ -461,8 +461,8 @@ find_unwind_entry (CORE_ADDR pc)
   struct hppa_objfile_private *priv;
 
   if (hppa_debug)
-    fprintf_unfiltered (gdb_stdlog, "{ find_unwind_entry 0x%s -> ",
-		        paddr_nz (pc));
+    fprintf_unfiltered (gdb_stdlog, "{ find_unwind_entry %s -> ",
+		        hex_string (pc));
 
   /* A function at address 0?  Not in HP-UX! */
   if (pc == (CORE_ADDR) 0)
@@ -496,8 +496,8 @@ find_unwind_entry (CORE_ADDR pc)
 	&& pc <= ui->cache->region_end)
       {
 	if (hppa_debug)
-	  fprintf_unfiltered (gdb_stdlog, "0x%s (cached) }\n",
-            paddr_nz ((uintptr_t) ui->cache));
+	  fprintf_unfiltered (gdb_stdlog, "%s (cached) }\n",
+            hex_string ((uintptr_t) ui->cache));
         return ui->cache;
       }
 
@@ -514,8 +514,8 @@ find_unwind_entry (CORE_ADDR pc)
 	  {
 	    ui->cache = &ui->table[middle];
 	    if (hppa_debug)
-	      fprintf_unfiltered (gdb_stdlog, "0x%s }\n",
-                paddr_nz ((uintptr_t) ui->cache));
+	      fprintf_unfiltered (gdb_stdlog, "%s }\n",
+                hex_string ((uintptr_t) ui->cache));
 	    return &ui->table[middle];
 	  }
 
@@ -540,6 +540,7 @@ find_unwind_entry (CORE_ADDR pc)
 static int
 hppa_in_function_epilogue_p (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned long status;
   unsigned int inst;
   char buf[4];
@@ -549,7 +550,7 @@ hppa_in_function_epilogue_p (struct gdbarch *gdbarch, CORE_ADDR pc)
   if (status != 0)
     return 0;
 
-  inst = extract_unsigned_integer (buf, 4);
+  inst = extract_unsigned_integer (buf, 4, byte_order);
 
   /* The most common way to perform a stack adjustment ldo X(sp),sp 
      We are destroying a stack frame if the offset is negative.  */
@@ -690,6 +691,8 @@ hppa32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 			int nargs, struct value **args, CORE_ADDR sp,
 			int struct_return, CORE_ADDR struct_addr)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   /* Stack base address at which any pass-by-reference parameters are
      stored.  */
   CORE_ADDR struct_end = 0;
@@ -737,7 +740,8 @@ hppa32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	      if (write_pass)
 		write_memory (struct_end - struct_ptr, value_contents (arg),
 			      TYPE_LENGTH (type));
-	      store_unsigned_integer (param_val, 4, struct_end - struct_ptr);
+	      store_unsigned_integer (param_val, 4, byte_order,
+				      struct_end - struct_ptr);
 	    }
 	  else if (TYPE_CODE (type) == TYPE_CODE_INT
 		   || TYPE_CODE (type) == TYPE_CODE_ENUM)
@@ -745,7 +749,7 @@ hppa32_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	      /* Integer value store, right aligned.  "unpack_long"
 		 takes care of any sign-extension problems.  */
 	      param_len = align_up (TYPE_LENGTH (type), 4);
-	      store_unsigned_integer (param_val, param_len,
+	      store_unsigned_integer (param_val, param_len, byte_order,
 				      unpack_long (type,
 						   value_contents (arg)));
 	    }
@@ -898,8 +902,9 @@ hppa64_floating_p (const struct type *type)
    function descriptor and return its address instead.  If CODE is not a
    function entry address, then just return it unchanged.  */
 static CORE_ADDR
-hppa64_convert_code_addr_to_fptr (CORE_ADDR code)
+hppa64_convert_code_addr_to_fptr (struct gdbarch *gdbarch, CORE_ADDR code)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct obj_section *sec, *opd;
 
   sec = find_pc_section (code);
@@ -930,7 +935,7 @@ hppa64_convert_code_addr_to_fptr (CORE_ADDR code)
 
 	  if (target_read_memory (addr, tmp, sizeof (tmp)))
 	      break;
-	  opdaddr = extract_unsigned_integer (tmp, sizeof (tmp));
+	  opdaddr = extract_unsigned_integer (tmp, sizeof (tmp), byte_order);
 
 	  if (opdaddr == code)
 	    return addr - 16;
@@ -947,6 +952,7 @@ hppa64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 			int struct_return, CORE_ADDR struct_addr)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int i, offset = 0;
   CORE_ADDR gp;
 
@@ -975,7 +981,7 @@ hppa64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
              safely sign-extend them.  */
 	  if (len < 8)
 	    {
-	      arg = value_cast (builtin_type_int64, arg);
+	      arg = value_cast (builtin_type (gdbarch)->builtin_int64, arg);
 	      len = 8;
 	    }
 	}
@@ -1044,8 +1050,9 @@ hppa64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	  ULONGEST codeptr, fptr;
 
 	  codeptr = unpack_long (type, value_contents (arg));
-	  fptr = hppa64_convert_code_addr_to_fptr (codeptr);
-	  store_unsigned_integer (fptrbuf, TYPE_LENGTH (type), fptr);
+	  fptr = hppa64_convert_code_addr_to_fptr (gdbarch, codeptr);
+	  store_unsigned_integer (fptrbuf, TYPE_LENGTH (type), byte_order,
+				  fptr);
 	  valbuf = fptrbuf;
 	}
       else
@@ -1476,6 +1483,7 @@ static CORE_ADDR
 skip_prologue_hard_way (struct gdbarch *gdbarch, CORE_ADDR pc,
 			int stop_before_branch)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   char buf[4];
   CORE_ADDR orig_pc = pc;
   unsigned long inst, stack_remaining, save_gr, save_fr, save_rp, save_sp;
@@ -1557,7 +1565,7 @@ restart:
       old_stack_remaining = stack_remaining;
 
       status = target_read_memory (pc, buf, 4);
-      inst = extract_unsigned_integer (buf, 4);
+      inst = extract_unsigned_integer (buf, 4, byte_order);
 
       /* Yow! */
       if (status != 0)
@@ -1608,7 +1616,7 @@ restart:
 	    {
 	      pc += 4;
 	      status = target_read_memory (pc, buf, 4);
-	      inst = extract_unsigned_integer (buf, 4);
+	      inst = extract_unsigned_integer (buf, 4, byte_order);
 	      if (status != 0)
 		return pc;
 	      reg_num = inst_saves_gr (inst);
@@ -1621,7 +1629,7 @@ restart:
       save_fr &= ~(1 << reg_num);
 
       status = target_read_memory (pc + 4, buf, 4);
-      next_inst = extract_unsigned_integer (buf, 4);
+      next_inst = extract_unsigned_integer (buf, 4, byte_order);
 
       /* Yow! */
       if (status != 0)
@@ -1652,13 +1660,13 @@ restart:
 	    {
 	      pc += 8;
 	      status = target_read_memory (pc, buf, 4);
-	      inst = extract_unsigned_integer (buf, 4);
+	      inst = extract_unsigned_integer (buf, 4, byte_order);
 	      if (status != 0)
 		return pc;
 	      if ((inst & 0xfc000000) != 0x34000000)
 		break;
 	      status = target_read_memory (pc + 4, buf, 4);
-	      next_inst = extract_unsigned_integer (buf, 4);
+	      next_inst = extract_unsigned_integer (buf, 4, byte_order);
 	      if (status != 0)
 		return pc;
 	      reg_num = inst_saves_fr (next_inst);
@@ -1816,6 +1824,8 @@ static struct hppa_frame_cache *
 hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int word_size = gdbarch_ptr_bit (gdbarch) / 8;
   struct hppa_frame_cache *cache;
   long saved_gr_mask;
   long saved_fr_mask;
@@ -1833,8 +1843,8 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
   if ((*this_cache) != NULL)
     {
       if (hppa_debug)
-        fprintf_unfiltered (gdb_stdlog, "base=0x%s (cached) }", 
-          paddr_nz (((struct hppa_frame_cache *)*this_cache)->base));
+        fprintf_unfiltered (gdb_stdlog, "base=%s (cached) }",
+          paddress (gdbarch, ((struct hppa_frame_cache *)*this_cache)->base));
       return (*this_cache);
     }
   cache = FRAME_OBSTACK_ZALLOC (struct hppa_frame_cache);
@@ -1935,11 +1945,12 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
 
 	if (!safe_frame_unwind_memory (this_frame, pc, buf4, sizeof buf4)) 
 	  {
-	    error (_("Cannot read instruction at 0x%s."), paddr_nz (pc));
+	    error (_("Cannot read instruction at %s."),
+		   paddress (gdbarch, pc));
 	    return (*this_cache);
 	  }
 
-	inst = extract_unsigned_integer (buf4, sizeof buf4);
+	inst = extract_unsigned_integer (buf4, sizeof buf4, byte_order);
 
 	/* Note the interesting effects of this instruction.  */
 	frame_size += prologue_inst_adjust_sp (inst);
@@ -2064,11 +2075,11 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
     CORE_ADDR fp;
 
     if (hppa_debug)
-      fprintf_unfiltered (gdb_stdlog, " (this_sp=0x%s, pc=0x%s, "
-		          "prologue_end=0x%s) ",
-		          paddr_nz (this_sp),
-			  paddr_nz (get_frame_pc (this_frame)),
-			  paddr_nz (prologue_end));
+      fprintf_unfiltered (gdb_stdlog, " (this_sp=%s, pc=%s, "
+		          "prologue_end=%s) ",
+		          paddress (gdbarch, this_sp),
+			  paddress (gdbarch, get_frame_pc (this_frame)),
+			  paddress (gdbarch, prologue_end));
 
      /* Check to see if a frame pointer is available, and use it for
         frame unwinding if it is.
@@ -2099,8 +2110,8 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
  	cache->base = fp;
  
  	if (hppa_debug)
-	  fprintf_unfiltered (gdb_stdlog, " (base=0x%s) [frame pointer]",
- 	    paddr_nz (cache->base));
+	  fprintf_unfiltered (gdb_stdlog, " (base=%s) [frame pointer]",
+			      paddress (gdbarch, cache->base));
       }
      else if (u->Save_SP 
 	      && trad_frame_addr_p (cache->saved_regs, HPPA_SP_REGNUM))
@@ -2108,12 +2119,11 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
             /* Both we're expecting the SP to be saved and the SP has been
 	       saved.  The entry SP value is saved at this frame's SP
 	       address.  */
-            cache->base = read_memory_integer
-			    (this_sp, gdbarch_ptr_bit (gdbarch) / 8);
+            cache->base = read_memory_integer (this_sp, word_size, byte_order);
 
 	    if (hppa_debug)
-	      fprintf_unfiltered (gdb_stdlog, " (base=0x%s) [saved]",
-			          paddr_nz (cache->base));
+	      fprintf_unfiltered (gdb_stdlog, " (base=%s) [saved]",
+			          paddress (gdbarch, cache->base));
       }
     else
       {
@@ -2121,8 +2131,8 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
 	   the SP back.  */
         cache->base = this_sp - frame_size;
 	if (hppa_debug)
-	  fprintf_unfiltered (gdb_stdlog, " (base=0x%s) [unwind adjust]",
-			      paddr_nz (cache->base));
+	  fprintf_unfiltered (gdb_stdlog, " (base=%s) [unwind adjust]",
+			      paddress (gdbarch, cache->base));
 
       }
     trad_frame_set_value (cache->saved_regs, HPPA_SP_REGNUM, cache->base);
@@ -2206,8 +2216,8 @@ hppa_frame_cache (struct frame_info *this_frame, void **this_cache)
   }
 
   if (hppa_debug)
-    fprintf_unfiltered (gdb_stdlog, "base=0x%s }", 
-      paddr_nz (((struct hppa_frame_cache *)*this_cache)->base));
+    fprintf_unfiltered (gdb_stdlog, "base=%s }",
+      paddress (gdbarch, ((struct hppa_frame_cache *)*this_cache)->base));
   return (*this_cache);
 }
 
@@ -2264,6 +2274,8 @@ static const struct frame_unwind hppa_frame_unwind =
 static struct hppa_frame_cache *
 hppa_fallback_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct hppa_frame_cache *cache;
   unsigned int frame_size = 0;
   int found_rp = 0;
@@ -2288,7 +2300,7 @@ hppa_fallback_frame_cache (struct frame_info *this_frame, void **this_cache)
 	{
 	  unsigned int insn;
 
-	  insn = read_memory_unsigned_integer (pc, 4);
+	  insn = read_memory_unsigned_integer (pc, 4, byte_order);
 	  frame_size += prologue_inst_adjust_sp (insn);
 
 	  /* There are limited ways to store the return pointer into the
@@ -2443,7 +2455,7 @@ hppa_stub_unwind_sniffer (const struct frame_unwind *self,
 
   if (pc == 0
       || (tdep->in_solib_call_trampoline != NULL
-	  && tdep->in_solib_call_trampoline (pc, NULL))
+	  && tdep->in_solib_call_trampoline (gdbarch, pc, NULL))
       || gdbarch_in_solib_return_trampoline (gdbarch, pc, NULL))
     return 1;
   return 0;
@@ -2533,12 +2545,10 @@ unwind_command (char *exp, int from_tty)
 
   printf_unfiltered ("unwind_table_entry (0x%lx):\n", (unsigned long)u);
 
-  printf_unfiltered ("\tregion_start = ");
-  print_address (u->region_start, gdb_stdout);
+  printf_unfiltered ("\tregion_start = %s\n", hex_string (u->region_start));
   gdb_flush (gdb_stdout);
 
-  printf_unfiltered ("\n\tregion_end = ");
-  print_address (u->region_end, gdb_stdout);
+  printf_unfiltered ("\tregion_end = %s\n", hex_string (u->region_end));
   gdb_flush (gdb_stdout);
 
 #define pif(FLD) if (u->FLD) printf_unfiltered (" "#FLD);
@@ -2610,18 +2620,18 @@ static struct type *
 hppa32_register_type (struct gdbarch *gdbarch, int regnum)
 {
    if (regnum < HPPA_FP4_REGNUM)
-     return builtin_type_uint32;
+     return builtin_type (gdbarch)->builtin_uint32;
    else
-     return builtin_type_ieee_single;
+     return builtin_type (gdbarch)->builtin_float;
 }
 
 static struct type *
 hppa64_register_type (struct gdbarch *gdbarch, int regnum)
 {
    if (regnum < HPPA64_FP4_REGNUM)
-     return builtin_type_uint64;
+     return builtin_type (gdbarch)->builtin_uint64;
    else
-     return builtin_type_ieee_double;
+     return builtin_type (gdbarch)->builtin_double;
 }
 
 /* Return non-zero if REGNUM is not a register available to the user
@@ -2691,12 +2701,13 @@ static void
 hppa_pseudo_register_read (struct gdbarch *gdbarch, struct regcache *regcache,
 			   int regnum, gdb_byte *buf)
 {
+    enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
     ULONGEST tmp;
 
     regcache_raw_read_unsigned (regcache, regnum, &tmp);
     if (regnum == HPPA_PCOQ_HEAD_REGNUM || regnum == HPPA_PCOQ_TAIL_REGNUM)
       tmp &= ~0x3;
-    store_unsigned_integer (buf, sizeof tmp, tmp);
+    store_unsigned_integer (buf, sizeof tmp, byte_order, tmp);
 }
 
 static CORE_ADDR
@@ -2711,6 +2722,7 @@ hppa_frame_prev_register_helper (struct frame_info *this_frame,
 				 int regnum)
 {
   struct gdbarch *arch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (arch);
 
   if (regnum == HPPA_PCOQ_TAIL_REGNUM)
     {
@@ -2720,7 +2732,8 @@ hppa_frame_prev_register_helper (struct frame_info *this_frame,
         trad_frame_get_prev_register (this_frame, saved_regs,
                                       HPPA_PCOQ_HEAD_REGNUM);
 
-      pc = extract_unsigned_integer (value_contents_all (pcoq_val), size);
+      pc = extract_unsigned_integer (value_contents_all (pcoq_val),
+				     size, byte_order);
       return frame_unwind_got_constant (this_frame, regnum, pc + 4);
     }
 
@@ -2818,9 +2831,10 @@ static struct insn_pattern hppa_sigtramp[] = {
    matched.  */
 
 static int
-hppa_match_insns (CORE_ADDR pc, struct insn_pattern *pattern,
-		  unsigned int *insn)
+hppa_match_insns (struct gdbarch *gdbarch, CORE_ADDR pc,
+		  struct insn_pattern *pattern, unsigned int *insn)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR npc = pc;
   int i;
 
@@ -2829,7 +2843,7 @@ hppa_match_insns (CORE_ADDR pc, struct insn_pattern *pattern,
       gdb_byte buf[HPPA_INSN_SIZE];
 
       target_read_memory (npc, buf, HPPA_INSN_SIZE);
-      insn[i] = extract_unsigned_integer (buf, HPPA_INSN_SIZE);
+      insn[i] = extract_unsigned_integer (buf, HPPA_INSN_SIZE, byte_order);
       if ((insn[i] & pattern[i].mask) == pattern[i].data)
         npc += 4;
       else
@@ -2844,8 +2858,8 @@ hppa_match_insns (CORE_ADDR pc, struct insn_pattern *pattern,
    instruction scheme.  */
 
 static int
-hppa_match_insns_relaxed (CORE_ADDR pc, struct insn_pattern *pattern,
-			  unsigned int *insn)
+hppa_match_insns_relaxed (struct gdbarch *gdbarch, CORE_ADDR pc,
+			  struct insn_pattern *pattern, unsigned int *insn)
 {
   int offset, len = 0;
 
@@ -2853,7 +2867,8 @@ hppa_match_insns_relaxed (CORE_ADDR pc, struct insn_pattern *pattern,
     len++;
 
   for (offset = 0; offset < len; offset++)
-    if (hppa_match_insns (pc - offset * HPPA_INSN_SIZE, pattern, insn))
+    if (hppa_match_insns (gdbarch, pc - offset * HPPA_INSN_SIZE,
+			  pattern, insn))
       return 1;
 
   return 0;
@@ -2872,7 +2887,8 @@ hppa_in_dyncall (CORE_ADDR pc)
 }
 
 int
-hppa_in_solib_call_trampoline (CORE_ADDR pc, char *name)
+hppa_in_solib_call_trampoline (struct gdbarch *gdbarch,
+			       CORE_ADDR pc, char *name)
 {
   unsigned int insn[HPPA_MAX_INSN_PATTERN_LEN];
   struct unwind_table_entry *u;
@@ -2888,10 +2904,12 @@ hppa_in_solib_call_trampoline (CORE_ADDR pc, char *name)
   if (u != NULL)
     return 0;
 
-  return (hppa_match_insns_relaxed (pc, hppa_import_stub, insn)
-	  || hppa_match_insns_relaxed (pc, hppa_import_pic_stub, insn)
-	  || hppa_match_insns_relaxed (pc, hppa_long_branch_stub, insn)
-	  || hppa_match_insns_relaxed (pc, hppa_long_branch_pic_stub, insn));
+  return
+    (hppa_match_insns_relaxed (gdbarch, pc, hppa_import_stub, insn)
+     || hppa_match_insns_relaxed (gdbarch, pc, hppa_import_pic_stub, insn)
+     || hppa_match_insns_relaxed (gdbarch, pc, hppa_long_branch_stub, insn)
+     || hppa_match_insns_relaxed (gdbarch, pc,
+				  hppa_long_branch_pic_stub, insn));
 }
 
 /* This code skips several kind of "trampolines" used on PA-RISC
@@ -2918,8 +2936,8 @@ hppa_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
       return pc;
     }
 
-  dp_rel = hppa_match_insns (pc, hppa_import_stub, insn);
-  if (dp_rel || hppa_match_insns (pc, hppa_import_pic_stub, insn))
+  dp_rel = hppa_match_insns (gdbarch, pc, hppa_import_stub, insn);
+  if (dp_rel || hppa_match_insns (gdbarch, pc, hppa_import_pic_stub, insn))
     {
       /* Extract the target address from the addil/ldw sequence.  */
       pc = hppa_extract_21 (insn[0]) + hppa_extract_14 (insn[1]);
@@ -2941,9 +2959,10 @@ hppa_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
       if (in_plt_section (pc, NULL))
 	{
 	  /* Sanity check: are we pointing to the PLT stub?  */
-  	  if (!hppa_match_insns (pc, hppa_plt_stub, insn))
+  	  if (!hppa_match_insns (gdbarch, pc, hppa_plt_stub, insn))
 	    {
-	      warning (_("Cannot resolve PLT stub at 0x%s."), paddr_nz (pc));
+	      warning (_("Cannot resolve PLT stub at %s."),
+		       paddress (gdbarch, pc));
 	      return 0;
 	    }
 

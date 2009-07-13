@@ -42,23 +42,24 @@ extern void _initialize_c_language (void);
    character set name.  */
 
 static const char *
-charset_for_string_type (enum c_string_type str_type)
+charset_for_string_type (enum c_string_type str_type,
+			 enum bfd_endian byte_order)
 {
   switch (str_type & ~C_CHAR)
     {
     case C_STRING:
       return target_charset ();
     case C_WIDE_STRING:
-      return target_wide_charset ();
+      return target_wide_charset (byte_order);
     case C_STRING_16:
       /* FIXME: UCS-2 is not always correct.  */
-      if (gdbarch_byte_order (current_gdbarch) == BFD_ENDIAN_BIG)
+      if (byte_order == BFD_ENDIAN_BIG)
 	return "UCS-2BE";
       else
 	return "UCS-2LE";
     case C_STRING_32:
       /* FIXME: UCS-4 is not always correct.  */
-      if (gdbarch_byte_order (current_gdbarch) == BFD_ENDIAN_BIG)
+      if (byte_order == BFD_ENDIAN_BIG)
 	return "UCS-4BE";
       else
 	return "UCS-4LE";
@@ -69,10 +70,11 @@ charset_for_string_type (enum c_string_type str_type)
 /* Classify ELTTYPE according to what kind of character it is.  Return
    the enum constant representing the character type.  Also set
    *ENCODING to the name of the character set to use when converting
-   characters of this type to the host character set.  */
+   characters of this type in target BYTE_ORDER to the host character set.  */
 
 static enum c_string_type
-classify_type (struct type *elttype, const char **encoding)
+classify_type (struct type *elttype, enum bfd_endian byte_order,
+	       const char **encoding)
 {
   struct type *saved_type;
   enum c_string_type result;
@@ -131,7 +133,9 @@ classify_type (struct type *elttype, const char **encoding)
   result = C_CHAR;
 
  done:
-  *encoding = charset_for_string_type (result);
+  if (encoding)
+    *encoding = charset_for_string_type (result, byte_order);
+
   return result;
 }
 
@@ -172,8 +176,8 @@ append_string_as_wide (const char *string, struct obstack *output)
 
 static void
 print_wchar (gdb_wint_t w, const gdb_byte *orig, int orig_len,
-	     int width, struct obstack *output, int quoter,
-	     int *need_escapep)
+	     int width, enum bfd_endian byte_order, struct obstack *output,
+	     int quoter, int *need_escapep)
 {
   int need_escape = *need_escapep;
   *need_escapep = 0;
@@ -219,8 +223,14 @@ print_wchar (gdb_wint_t w, const gdb_byte *orig, int orig_len,
 	    for (i = 0; i + width <= orig_len; i += width)
 	      {
 		char octal[30];
-		ULONGEST value = extract_unsigned_integer (&orig[i], width);
-		sprintf (octal, "\\%lo", (long) value);
+		ULONGEST value;
+		value = extract_unsigned_integer (&orig[i], width, byte_order);
+		/* If the value fits in 3 octal digits, print it that
+		   way.  Otherwise, print it as a hex escape.  */
+		if (value <= 0777)
+		  sprintf (octal, "\\%.3o", (int) (value & 0777));
+		else
+		  sprintf (octal, "\\x%lx", (long) value);
 		append_string_as_wide (octal, output);
 	      }
 	    /* If we somehow have extra bytes, print them now.  */
@@ -246,6 +256,7 @@ print_wchar (gdb_wint_t w, const gdb_byte *orig, int orig_len,
 static void
 c_emit_char (int c, struct type *type, struct ui_file *stream, int quoter)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
   struct obstack wchar_buf, output;
   struct cleanup *cleanups;
   const char *encoding;
@@ -253,7 +264,7 @@ c_emit_char (int c, struct type *type, struct ui_file *stream, int quoter)
   struct wchar_iterator *iter;
   int need_escape = 0;
 
-  classify_type (type, &encoding);
+  classify_type (type, byte_order, &encoding);
 
   buf = alloca (TYPE_LENGTH (type));
   pack_long (buf, type, c);
@@ -299,14 +310,14 @@ c_emit_char (int c, struct type *type, struct ui_file *stream, int quoter)
 	    {
 	      for (i = 0; i < num_chars; ++i)
 		print_wchar (chars[i], buf, buflen, TYPE_LENGTH (type),
-			     &wchar_buf, quoter, &need_escape);
+			     byte_order, &wchar_buf, quoter, &need_escape);
 	    }
 	}
 
       /* This handles the NUM_CHARS == 0 case as well.  */
       if (print_escape)
-	print_wchar (gdb_WEOF, buf, buflen, TYPE_LENGTH (type), &wchar_buf,
-		     quoter, &need_escape);
+	print_wchar (gdb_WEOF, buf, buflen, TYPE_LENGTH (type), byte_order,
+		     &wchar_buf, quoter, &need_escape);
     }
 
   /* The output in the host encoding.  */
@@ -328,9 +339,8 @@ void
 c_printchar (int c, struct type *type, struct ui_file *stream)
 {
   enum c_string_type str_type;
-  const char *encoding;
 
-  str_type = classify_type (type, &encoding);
+  str_type = classify_type (type, BFD_ENDIAN_UNKNOWN, NULL);
   switch (str_type)
     {
     case C_CHAR:
@@ -362,6 +372,7 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
 	    unsigned int length, int force_ellipses,
 	    const struct value_print_options *options)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
   unsigned int i;
   unsigned int things_printed = 0;
   int in_quotes = 0;
@@ -380,10 +391,11 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
      style.  */
   if (!force_ellipses
       && length > 0
-      && (extract_unsigned_integer (string + (length - 1) * width, width) == 0))
+      && (extract_unsigned_integer (string + (length - 1) * width,
+				    width, byte_order) == 0))
     length--;
 
-  str_type = classify_type (type, &encoding) & ~C_CHAR;
+  str_type = classify_type (type, byte_order, &encoding) & ~C_CHAR;
   switch (str_type)
     {
     case C_STRING:
@@ -411,7 +423,8 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
       for (i = 0; current_char; ++i)
 	{
 	  QUIT;
-	  current_char = extract_unsigned_integer (string + i * width, width);
+	  current_char = extract_unsigned_integer (string + i * width,
+						   width, byte_order);
 	}
       length = i;
     }
@@ -481,7 +494,7 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
 	      obstack_grow_wstr (&wchar_buf, LCST ("'"));
 	      need_escape = 0;
 	      print_wchar (current_char, orig_buf, orig_len, width,
-			   &wchar_buf, '\'', &need_escape);
+			   byte_order, &wchar_buf, '\'', &need_escape);
 	      obstack_grow_wstr (&wchar_buf, LCST ("'"));
 	      {
 		/* Painful gyrations.  */
@@ -514,7 +527,7 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
 	      while (reps-- > 0)
 		{
 		  print_wchar (current_char, orig_buf, orig_len, width,
-			       &wchar_buf, '"', &need_escape);
+			       byte_order, &wchar_buf, '"', &need_escape);
 		  ++things_printed;
 		}
 	    }
@@ -541,7 +554,7 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
 	      in_quotes = 1;
 	    }
 	  need_escape = 0;
-	  print_wchar (gdb_WEOF, buf, buflen, width, &wchar_buf,
+	  print_wchar (gdb_WEOF, buf, buflen, width, byte_order, &wchar_buf,
 		       '"', &need_escape);
 	  break;
 
@@ -555,7 +568,7 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
 	      in_quotes = 0;
 	    }
 	  obstack_grow_wstr (&wchar_buf, LCST (" <incomplete sequence "));
-	  print_wchar (gdb_WEOF, buf, buflen, width, &wchar_buf,
+	  print_wchar (gdb_WEOF, buf, buflen, width, byte_order, &wchar_buf,
 		       0, &need_escape);
 	  obstack_grow_wstr (&wchar_buf, LCST (">"));
 	  finished = 1;
@@ -591,18 +604,17 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
 }
 
 /* Obtain a C string from the inferior storing it in a newly allocated
-   buffer in BUFFER, which should be freed by the caller.  The string is
-   read until a null character is found. If VALUE is an array with known
-   length, the function will not read past the end of the array.  LENGTH
-   will contain the size of the string in bytes (not counting the null
-   character).
-
-   Assumes strings are terminated by a null character.  The size of a character
-   is determined by the length of the target type of the pointer or array.
-   This means that a null byte present in a multi-byte character will not
-   terminate the string unless the whole character is null.
-
-   CHARSET is always set to the target charset.  */
+   buffer in BUFFER, which should be freed by the caller.   If the
+   in- and out-parameter *LENGTH is specified at -1, the string is read
+   until a null character of the appropriate width is found, otherwise
+   the string is read to the length of characters specified.
+   The size of a character is determined by the length of the target
+   type of the pointer or  array.  If VALUE is an array with a known
+   length, the function will  not read past the end of the array.
+   On completion, *LENGTH will be set to the size of the string read in
+   characters.  (If a length of -1 is specified, the length returned
+   will not include the null character).  CHARSET is always set to the
+   target charset.  */
 
 void
 c_get_string (struct value *value, gdb_byte **buffer, int *length,
@@ -612,6 +624,8 @@ c_get_string (struct value *value, gdb_byte **buffer, int *length,
   unsigned int fetchlimit;
   struct type *type = check_typedef (value_type (value));
   struct type *element_type = TYPE_TARGET_TYPE (type);
+  int req_length = *length;
+  enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
 
   if (element_type == NULL)
     goto error;
@@ -647,7 +661,7 @@ c_get_string (struct value *value, gdb_byte **buffer, int *length,
 
   width = TYPE_LENGTH (element_type);
 
-  /* If the string lives in GDB's memory intead of the inferior's, then we
+  /* If the string lives in GDB's memory instead of the inferior's, then we
      just need to copy it to BUFFER.  Also, since such strings are arrays
      with known size, FETCHLIMIT will hold the size of the array.  */
   if ((VALUE_LVAL (value) == not_lval
@@ -657,12 +671,18 @@ c_get_string (struct value *value, gdb_byte **buffer, int *length,
       int i;
       const gdb_byte *contents = value_contents (value);
 
-      /* Look for a null character.  */
-      for (i = 0; i < fetchlimit; i++)
-	if (extract_unsigned_integer (contents + i * width, width) == 0)
-	  break;
-
-      /* I is now either the number of non-null characters, or FETCHLIMIT.  */
+      /* If a length is specified, use that.  */
+      if (*length >= 0)
+	i  = *length;
+      else
+ 	/* Otherwise, look for a null character.  */
+ 	for (i = 0; i < fetchlimit; i++)
+	  if (extract_unsigned_integer (contents + i * width, width,
+					byte_order) == 0)
+ 	    break;
+  
+      /* I is now either a user-defined length, the number of non-null
+ 	 characters, or FETCHLIMIT.  */
       *length = i * width;
       *buffer = xmalloc (*length);
       memcpy (*buffer, contents, *length);
@@ -670,8 +690,8 @@ c_get_string (struct value *value, gdb_byte **buffer, int *length,
     }
   else
     {
-      err = read_string (value_as_address (value), -1, width, fetchlimit,
-			 buffer, length);
+      err = read_string (value_as_address (value), *length, width, fetchlimit,
+  			 byte_order, buffer, length);
       if (err)
 	{
 	  xfree (*buffer);
@@ -680,10 +700,22 @@ c_get_string (struct value *value, gdb_byte **buffer, int *length,
 	}
     }
 
-  /* If the last character is null, subtract it from LENGTH.  */
-  if (*length > 0
-      && extract_unsigned_integer (*buffer + *length - width, width) == 0)
-    *length -= width;
+  /* If the LENGTH is specified at -1, we want to return the string
+     length up to the terminating null character.  If an actual length
+     was specified, we want to return the length of exactly what was
+     read.  */
+  if (req_length == -1)
+    /* If the last character is null, subtract it from LENGTH.  */
+    if (*length > 0
+ 	&& extract_unsigned_integer (*buffer + *length - width, width,
+				     byte_order) == 0)
+      *length -= width;
+  
+  /* The read_string function will return the number of bytes read.
+     If length returned from read_string was > 0, return the number of
+     characters read by dividing the number of bytes by width.  */
+  if (*length != 0)
+     *length = *length / width;
 
   *charset = target_charset ();
 
@@ -759,9 +791,12 @@ emit_numeric_character (struct type *type, unsigned long value,
 static char *
 convert_octal (struct type *type, char *p, char *limit, struct obstack *output)
 {
+  int i;
   unsigned long value = 0;
 
-  while (p < limit && isdigit (*p) && *p != '8' && *p != '9')
+  for (i = 0;
+       i < 3 && p < limit && isdigit (*p) && *p != '8' && *p != '9';
+       ++i)
     {
       value = 8 * value + host_hex_value (*p);
       ++p;
@@ -905,6 +940,7 @@ evaluate_subexp_c (struct type *expect_type, struct expression *exp,
 	struct value *result;
 	enum c_string_type dest_type;
 	const char *dest_charset;
+	enum bfd_endian byte_order;
 
 	obstack_init (&output);
 	cleanup = make_cleanup_obstack_free (&output);
@@ -941,7 +977,8 @@ evaluate_subexp_c (struct type *expect_type, struct expression *exp,
 	/* Ensure TYPE_LENGTH is valid for TYPE.  */
 	check_typedef (type);
 
-	dest_charset = charset_for_string_type (dest_type);
+	byte_order = gdbarch_byte_order (exp->gdbarch);
+	dest_charset = charset_for_string_type (dest_type, byte_order);
 
 	++*pos;
 	while (*pos < limit)

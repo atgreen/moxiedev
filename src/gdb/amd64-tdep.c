@@ -90,25 +90,25 @@ struct type *
 amd64_register_type (struct gdbarch *gdbarch, int regnum)
 {
   if (regnum >= AMD64_RAX_REGNUM && regnum <= AMD64_RDI_REGNUM)
-    return builtin_type_int64;
+    return builtin_type (gdbarch)->builtin_int64;
   if (regnum == AMD64_RBP_REGNUM || regnum == AMD64_RSP_REGNUM)
     return builtin_type (gdbarch)->builtin_data_ptr;
   if (regnum >= AMD64_R8_REGNUM && regnum <= AMD64_R15_REGNUM)
-    return builtin_type_int64;
+    return builtin_type (gdbarch)->builtin_int64;
   if (regnum == AMD64_RIP_REGNUM)
     return builtin_type (gdbarch)->builtin_func_ptr;
   if (regnum == AMD64_EFLAGS_REGNUM)
-    return i386_eflags_type;
+    return i386_eflags_type (gdbarch);
   if (regnum >= AMD64_CS_REGNUM && regnum <= AMD64_GS_REGNUM)
-    return builtin_type_int32;
+    return builtin_type (gdbarch)->builtin_int32;
   if (regnum >= AMD64_ST0_REGNUM && regnum <= AMD64_ST0_REGNUM + 7)
-    return builtin_type_i387_ext;
+    return i387_ext_type (gdbarch);
   if (regnum >= AMD64_FCTRL_REGNUM && regnum <= AMD64_FCTRL_REGNUM + 7)
-    return builtin_type_int32;
+    return builtin_type (gdbarch)->builtin_int32;
   if (regnum >= AMD64_XMM0_REGNUM && regnum <= AMD64_XMM0_REGNUM + 15)
     return i386_sse_type (gdbarch);
   if (regnum == AMD64_MXCSR_REGNUM)
-    return i386_mxcsr_type;
+    return i386_mxcsr_type (gdbarch);
 
   internal_error (__FILE__, __LINE__, _("invalid regnum"));
 }
@@ -677,6 +677,7 @@ amd64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		       int nargs, struct value **args,	CORE_ADDR sp,
 		       int struct_return, CORE_ADDR struct_addr)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[8];
 
   /* Pass arguments.  */
@@ -685,17 +686,17 @@ amd64_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   /* Pass "hidden" argument".  */
   if (struct_return)
     {
-      store_unsigned_integer (buf, 8, struct_addr);
+      store_unsigned_integer (buf, 8, byte_order, struct_addr);
       regcache_cooked_write (regcache, AMD64_RDI_REGNUM, buf);
     }
 
   /* Store return address.  */
   sp -= 8;
-  store_unsigned_integer (buf, 8, bp_addr);
+  store_unsigned_integer (buf, 8, byte_order, bp_addr);
   write_memory (sp, buf, 8);
 
   /* Finally, update the stack pointer...  */
-  store_unsigned_integer (buf, 8, sp);
+  store_unsigned_integer (buf, 8, byte_order, sp);
   regcache_cooked_write (regcache, AMD64_RSP_REGNUM, buf);
 
   /* ...and fake a frame pointer.  */
@@ -1034,6 +1035,7 @@ static void
 fixup_riprel (struct gdbarch *gdbarch, struct displaced_step_closure *dsc,
 	      CORE_ADDR from, CORE_ADDR to, struct regcache *regs)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   const struct amd64_insn *insn_details = &dsc->insn_details;
   int modrm_offset = insn_details->modrm_offset;
   gdb_byte *insn = insn_details->raw_insn + modrm_offset;
@@ -1047,7 +1049,7 @@ fixup_riprel (struct gdbarch *gdbarch, struct displaced_step_closure *dsc,
   ++insn;
 
   /* Compute the rip-relative address.	*/
-  disp = extract_signed_integer (insn, sizeof (int32_t));
+  disp = extract_signed_integer (insn, sizeof (int32_t), byte_order);
   insn_length = amd64_insn_length (gdbarch, dsc->insn_buf, dsc->max_len, from);
   rip_base = from + insn_length;
 
@@ -1075,9 +1077,9 @@ fixup_riprel (struct gdbarch *gdbarch, struct displaced_step_closure *dsc,
 
   if (debug_displaced)
     fprintf_unfiltered (gdb_stdlog, "displaced: %%rip-relative addressing used.\n"
-			"displaced: using temp reg %d, old value 0x%s, new value 0x%s\n",
-			dsc->tmp_regno, paddr_nz (dsc->tmp_save),
-			paddr_nz (rip_base));
+			"displaced: using temp reg %d, old value %s, new value %s\n",
+			dsc->tmp_regno, paddress (gdbarch, dsc->tmp_save),
+			paddress (gdbarch, rip_base));
 }
 
 static void
@@ -1144,8 +1146,8 @@ amd64_displaced_step_copy_insn (struct gdbarch *gdbarch,
 
   if (debug_displaced)
     {
-      fprintf_unfiltered (gdb_stdlog, "displaced: copy 0x%s->0x%s: ",
-			  paddr_nz (from), paddr_nz (to));
+      fprintf_unfiltered (gdb_stdlog, "displaced: copy %s->%s: ",
+			  paddress (gdbarch, from), paddress (gdbarch, to));
       displaced_step_dump_bytes (gdb_stdlog, buf, len);
     }
 
@@ -1251,6 +1253,7 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
 			    CORE_ADDR from, CORE_ADDR to,
 			    struct regcache *regs)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   /* The offset we applied to the instruction's address.  */
   ULONGEST insn_offset = to - from;
   gdb_byte *insn = dsc->insn_buf;
@@ -1258,17 +1261,18 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
 
   if (debug_displaced)
     fprintf_unfiltered (gdb_stdlog,
-			"displaced: fixup (0x%s, 0x%s), "
+			"displaced: fixup (%s, %s), "
 			"insn = 0x%02x 0x%02x ...\n",
-			paddr_nz (from), paddr_nz (to), insn[0], insn[1]);
+			paddress (gdbarch, from), paddress (gdbarch, to),
+			insn[0], insn[1]);
 
   /* If we used a tmp reg, restore it.	*/
 
   if (dsc->tmp_used)
     {
       if (debug_displaced)
-	fprintf_unfiltered (gdb_stdlog, "displaced: restoring reg %d to 0x%s\n",
-			    dsc->tmp_regno, paddr_nz (dsc->tmp_save));
+	fprintf_unfiltered (gdb_stdlog, "displaced: restoring reg %d to %s\n",
+			    dsc->tmp_regno, paddress (gdbarch, dsc->tmp_save));
       regcache_cooked_write_unsigned (regs, dsc->tmp_regno, dsc->tmp_save);
     }
 
@@ -1332,8 +1336,9 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
 	  if (debug_displaced)
 	    fprintf_unfiltered (gdb_stdlog,
 				"displaced: "
-				"relocated %%rip from 0x%s to 0x%s\n",
-				paddr_nz (orig_rip), paddr_nz (rip));
+				"relocated %%rip from %s to %s\n",
+				paddress (gdbarch, orig_rip),
+				paddress (gdbarch, rip));
 	}
     }
 
@@ -1352,16 +1357,16 @@ amd64_displaced_step_fixup (struct gdbarch *gdbarch,
       const ULONGEST retaddr_len = 8;
 
       regcache_cooked_read_unsigned (regs, AMD64_RSP_REGNUM, &rsp);
-      retaddr = read_memory_unsigned_integer (rsp, retaddr_len);
+      retaddr = read_memory_unsigned_integer (rsp, retaddr_len, byte_order);
       retaddr = (retaddr - insn_offset) & 0xffffffffUL;
-      write_memory_unsigned_integer (rsp, retaddr_len, retaddr);
+      write_memory_unsigned_integer (rsp, retaddr_len, byte_order, retaddr);
 
       if (debug_displaced)
 	fprintf_unfiltered (gdb_stdlog,
-			    "displaced: relocated return addr at 0x%s "
-			    "to 0x%s\n",
-			    paddr_nz (rsp),
-			    paddr_nz (retaddr));
+			    "displaced: relocated return addr at %s "
+			    "to %s\n",
+			    paddress (gdbarch, rsp),
+			    paddress (gdbarch, retaddr));
     }
 }
 
@@ -1587,9 +1592,11 @@ amd64_analyze_stack_align (CORE_ADDR pc, CORE_ADDR current_pc,
    to have no prologue and thus no valid frame pointer in %rbp.  */
 
 static CORE_ADDR
-amd64_analyze_prologue (CORE_ADDR pc, CORE_ADDR current_pc,
+amd64_analyze_prologue (struct gdbarch *gdbarch,
+			CORE_ADDR pc, CORE_ADDR current_pc,
 			struct amd64_frame_cache *cache)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   static gdb_byte proto[3] = { 0x48, 0x89, 0xe5 }; /* movq %rsp, %rbp */
   gdb_byte buf[3];
   gdb_byte op;
@@ -1599,7 +1606,7 @@ amd64_analyze_prologue (CORE_ADDR pc, CORE_ADDR current_pc,
 
   pc = amd64_analyze_stack_align (pc, current_pc, cache);
 
-  op = read_memory_unsigned_integer (pc, 1);
+  op = read_memory_unsigned_integer (pc, 1, byte_order);
 
   if (op == 0x55)		/* pushq %rbp */
     {
@@ -1634,7 +1641,8 @@ amd64_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
   CORE_ADDR pc;
 
   amd64_init_frame_cache (&cache);
-  pc = amd64_analyze_prologue (start_pc, 0xffffffffffffffffLL, &cache);
+  pc = amd64_analyze_prologue (gdbarch, start_pc, 0xffffffffffffffffLL,
+			       &cache);
   if (cache.frameless_p)
     return start_pc;
 
@@ -1647,6 +1655,8 @@ amd64_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 static struct amd64_frame_cache *
 amd64_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct amd64_frame_cache *cache;
   gdb_byte buf[8];
   int i;
@@ -1659,13 +1669,14 @@ amd64_frame_cache (struct frame_info *this_frame, void **this_cache)
 
   cache->pc = get_frame_func (this_frame);
   if (cache->pc != 0)
-    amd64_analyze_prologue (cache->pc, get_frame_pc (this_frame), cache);
+    amd64_analyze_prologue (gdbarch, cache->pc, get_frame_pc (this_frame),
+			    cache);
 
   if (cache->saved_sp_reg != -1)
     {
       /* Stack pointer has been saved.  */
       get_frame_register (this_frame, cache->saved_sp_reg, buf);
-      cache->saved_sp = extract_unsigned_integer(buf, 8);
+      cache->saved_sp = extract_unsigned_integer(buf, 8, byte_order);
     }
 
   if (cache->frameless_p)
@@ -1689,13 +1700,14 @@ amd64_frame_cache (struct frame_info *this_frame, void **this_cache)
       else
 	{
 	  get_frame_register (this_frame, AMD64_RSP_REGNUM, buf);
-	  cache->base = extract_unsigned_integer (buf, 8) + cache->sp_offset;
+	  cache->base = extract_unsigned_integer (buf, 8, byte_order)
+			+ cache->sp_offset;
 	}
     }
   else
     {
       get_frame_register (this_frame, AMD64_RBP_REGNUM, buf);
-      cache->base = extract_unsigned_integer (buf, 8);
+      cache->base = extract_unsigned_integer (buf, 8, byte_order);
     }
 
   /* Now that we have the base address for the stack frame we can
@@ -1771,8 +1783,10 @@ static const struct frame_unwind amd64_frame_unwind =
 static struct amd64_frame_cache *
 amd64_sigtramp_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct amd64_frame_cache *cache;
-  struct gdbarch_tdep *tdep = gdbarch_tdep (get_frame_arch (this_frame));
   CORE_ADDR addr;
   gdb_byte buf[8];
   int i;
@@ -1783,7 +1797,7 @@ amd64_sigtramp_frame_cache (struct frame_info *this_frame, void **this_cache)
   cache = amd64_alloc_frame_cache ();
 
   get_frame_register (this_frame, AMD64_RSP_REGNUM, buf);
-  cache->base = extract_unsigned_integer (buf, 8) - 8;
+  cache->base = extract_unsigned_integer (buf, 8, byte_order) - 8;
 
   addr = tdep->sigcontext_addr (this_frame);
   gdb_assert (tdep->sc_reg_offset);

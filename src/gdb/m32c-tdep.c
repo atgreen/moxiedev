@@ -192,34 +192,33 @@ make_types (struct gdbarch *arch)
 
   /* The builtin_type_mumble variables are sometimes uninitialized when
      this is called, so we avoid using them.  */
-  tdep->voyd = init_type (TYPE_CODE_VOID, 1, 0, "void", NULL);
-  tdep->ptr_voyd = init_type (TYPE_CODE_PTR, gdbarch_ptr_bit (arch) / 8,
-			      TYPE_FLAG_UNSIGNED, NULL, NULL);
+  tdep->voyd = arch_type (arch, TYPE_CODE_VOID, 1, "void");
+  tdep->ptr_voyd
+    = arch_type (arch, TYPE_CODE_PTR, gdbarch_ptr_bit (arch), NULL);
   TYPE_TARGET_TYPE (tdep->ptr_voyd) = tdep->voyd;
+  TYPE_UNSIGNED (tdep->ptr_voyd) = 1;
   tdep->func_voyd = lookup_function_type (tdep->voyd);
 
   sprintf (type_name, "%s_data_addr_t",
 	   gdbarch_bfd_arch_info (arch)->printable_name);
   tdep->data_addr_reg_type
-    = init_type (TYPE_CODE_PTR, data_addr_reg_bits / 8,
-		 TYPE_FLAG_UNSIGNED, xstrdup (type_name), NULL);
+    = arch_type (arch, TYPE_CODE_PTR, data_addr_reg_bits, xstrdup (type_name));
   TYPE_TARGET_TYPE (tdep->data_addr_reg_type) = tdep->voyd;
+  TYPE_UNSIGNED (tdep->data_addr_reg_type) = 1;
 
   sprintf (type_name, "%s_code_addr_t",
 	   gdbarch_bfd_arch_info (arch)->printable_name);
   tdep->code_addr_reg_type
-    = init_type (TYPE_CODE_PTR, code_addr_reg_bits / 8,
-		 TYPE_FLAG_UNSIGNED, xstrdup (type_name), NULL);
+    = arch_type (arch, TYPE_CODE_PTR, code_addr_reg_bits, xstrdup (type_name));
   TYPE_TARGET_TYPE (tdep->code_addr_reg_type) = tdep->func_voyd;
+  TYPE_UNSIGNED (tdep->code_addr_reg_type) = 1;
 
-  tdep->uint8  = init_type (TYPE_CODE_INT, 1, TYPE_FLAG_UNSIGNED,
-			    "uint8_t", NULL);
-  tdep->uint16 = init_type (TYPE_CODE_INT, 2, TYPE_FLAG_UNSIGNED,
-			    "uint16_t", NULL);
-  tdep->int8   = init_type (TYPE_CODE_INT, 1, 0, "int8_t", NULL);
-  tdep->int16  = init_type (TYPE_CODE_INT, 2, 0, "int16_t", NULL);
-  tdep->int32  = init_type (TYPE_CODE_INT, 4, 0, "int32_t", NULL);
-  tdep->int64  = init_type (TYPE_CODE_INT, 8, 0, "int64_t", NULL);
+  tdep->uint8  = arch_integer_type (arch,  8, 1, "uint8_t");
+  tdep->uint16 = arch_integer_type (arch, 16, 1, "uint16_t");
+  tdep->int8   = arch_integer_type (arch,  8, 0, "int8_t");
+  tdep->int16  = arch_integer_type (arch, 16, 0, "int16_t");
+  tdep->int32  = arch_integer_type (arch, 32, 0, "int32_t");
+  tdep->int64  = arch_integer_type (arch, 64, 0, "int64_t");
 }
 
 
@@ -2004,6 +2003,7 @@ m32c_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		      CORE_ADDR struct_addr)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned long mach = gdbarch_bfd_arch_info (gdbarch)->mach;
   CORE_ADDR cfa;
   int i;
@@ -2041,7 +2041,7 @@ m32c_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
     {
       int ptr_len = TYPE_LENGTH (tdep->ptr_voyd);
       sp -= ptr_len;
-      write_memory_unsigned_integer (sp, ptr_len, struct_addr);
+      write_memory_unsigned_integer (sp, ptr_len, byte_order, struct_addr);
     }
 
   /* Push the arguments.  */
@@ -2062,7 +2062,8 @@ m32c_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	     sure it ends up in the least significant end of r1.  (GDB
 	     should avoid assuming endianness, even on uni-endian
 	     processors.)  */
-	  ULONGEST u = extract_unsigned_integer (arg_bits, arg_size);
+	  ULONGEST u = extract_unsigned_integer (arg_bits, arg_size,
+						 byte_order);
 	  struct m32c_reg *reg = (mach == bfd_mach_m16c) ? tdep->r1 : tdep->r0;
 	  regcache_cooked_write_unsigned (regcache, reg->num, u);
 	}
@@ -2093,7 +2094,8 @@ m32c_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   /* Push the return address.  */
   sp -= tdep->ret_addr_bytes;
-  write_memory_unsigned_integer (sp, tdep->ret_addr_bytes, bp_addr);
+  write_memory_unsigned_integer (sp, tdep->ret_addr_bytes, byte_order,
+				 bp_addr);
 
   /* Update the stack pointer.  */
   regcache_cooked_write_unsigned (regcache, tdep->sp->num, sp);
@@ -2179,6 +2181,7 @@ m32c_return_value (struct gdbarch *gdbarch,
 		   const gdb_byte *writebuf)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   enum return_value_convention conv;
   ULONGEST valtype_len = TYPE_LENGTH (valtype);
 
@@ -2201,7 +2204,7 @@ m32c_return_value (struct gdbarch *gdbarch,
 	{
 	  ULONGEST u;
 	  regcache_cooked_read_unsigned (regcache, tdep->r0->num, &u);
-	  store_unsigned_integer (readbuf, valtype_len, u);
+	  store_unsigned_integer (readbuf, valtype_len, byte_order, u);
 	}
       else
 	{
@@ -2231,7 +2234,8 @@ m32c_return_value (struct gdbarch *gdbarch,
       /* Anything that fits in r0 is returned there.  */
       if (valtype_len <= TYPE_LENGTH (tdep->r0->type))
 	{
-	  ULONGEST u = extract_unsigned_integer (writebuf, valtype_len);
+	  ULONGEST u = extract_unsigned_integer (writebuf, valtype_len,
+						 byte_order);
 	  regcache_cooked_write_unsigned (regcache, tdep->r0->num, u);
 	}
       else
@@ -2307,7 +2311,9 @@ m32c_return_value (struct gdbarch *gdbarch,
 static CORE_ADDR
 m32c_skip_trampoline_code (struct frame_info *frame, CORE_ADDR stop_pc)
 {
-  struct gdbarch_tdep *tdep = gdbarch_tdep (get_frame_arch (frame));
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   /* It would be nicer to simply look up the addresses of known
      trampolines once, and then compare stop_pc with them.  However,
@@ -2330,13 +2336,14 @@ m32c_skip_trampoline_code (struct frame_info *frame, CORE_ADDR stop_pc)
 	     m32c_jsri*16*.  */
 	  CORE_ADDR sp = get_frame_sp (get_current_frame ());
 	  CORE_ADDR target
-	    = read_memory_unsigned_integer (sp + tdep->ret_addr_bytes, 2);
+	    = read_memory_unsigned_integer (sp + tdep->ret_addr_bytes,
+					    2, byte_order);
 
 	  /* What we have now is the address of a jump instruction.
 	     What we need is the destination of that jump.
 	     The opcode is 1 byte, and the destination is the next 3 bytes.
 	  */
-	  target = read_memory_unsigned_integer (target + 1, 3);
+	  target = read_memory_unsigned_integer (target + 1, 3, byte_order);
 	  return target;
 	}
     }
@@ -2404,6 +2411,7 @@ static void
 m32c_m16c_address_to_pointer (struct gdbarch *gdbarch,
 			      struct type *type, gdb_byte *buf, CORE_ADDR addr)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   enum type_code target_code;
   gdb_assert (TYPE_CODE (type) == TYPE_CODE_PTR ||
 	      TYPE_CODE (type) == TYPE_CODE_REF);
@@ -2422,7 +2430,7 @@ m32c_m16c_address_to_pointer (struct gdbarch *gdbarch,
       if (! func_msym)
         error ("Cannot convert code address %s to function pointer:\n"
                "couldn't find a symbol at that address, to find trampoline.",
-               paddr_nz (addr));
+               paddress (gdbarch, addr));
 
       func_name = SYMBOL_LINKAGE_NAME (func_msym);
       tramp_name = xmalloc (strlen (func_name) + 5);
@@ -2439,13 +2447,13 @@ m32c_m16c_address_to_pointer (struct gdbarch *gdbarch,
       if (! tramp_msym)
         error ("Cannot convert code address %s to function pointer:\n"
                "couldn't find trampoline named '%s.plt'.",
-               paddr_nz (addr), func_name);
+               paddress (gdbarch, addr), func_name);
 
       /* The trampoline's address is our pointer.  */
       addr = SYMBOL_VALUE_ADDRESS (tramp_msym);
     }
 
-  store_unsigned_integer (buf, TYPE_LENGTH (type), addr);
+  store_unsigned_integer (buf, TYPE_LENGTH (type), byte_order, addr);
 }
 
 
@@ -2453,13 +2461,14 @@ static CORE_ADDR
 m32c_m16c_pointer_to_address (struct gdbarch *gdbarch,
 			      struct type *type, const gdb_byte *buf)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR ptr;
   enum type_code target_code;
 
   gdb_assert (TYPE_CODE (type) == TYPE_CODE_PTR ||
 	      TYPE_CODE (type) == TYPE_CODE_REF);
 
-  ptr = extract_unsigned_integer (buf, TYPE_LENGTH (type));
+  ptr = extract_unsigned_integer (buf, TYPE_LENGTH (type), byte_order);
 
   target_code = TYPE_CODE (TYPE_TARGET_TYPE (type));
 

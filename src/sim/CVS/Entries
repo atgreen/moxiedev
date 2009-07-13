@@ -20,9 +20,20 @@ D/sh64////
 D/testsuite////
 D/v850////
 D/moxie////
-/ChangeLog/1.122/Fri Jun  5 22:47:35 2009/-ko/
-/MAINTAINERS/1.25/Fri Jun  5 22:47:35 2009//
-/Makefile.in/1.17/Fri May 29 23:30:14 2009/-ko/
-/README-HACKING/1.2/Fri May 29 23:30:14 2009/-ko/
-/configure/1.29/Fri Jun  5 22:47:35 2009/-ko/
-/configure.ac/1.17/Fri Jun  5 22:47:35 2009//
+D/arc////
+D/avr////
+D/d30v////
+D/fr30////
+D/h8500////
+D/i960////
+D/lm32////
+D/mn10200////
+D/tic80////
+D/w65////
+D/z8k////
+/ChangeLog/1.122/Mon Jul  6 10:46:49 2009/-ko/
+/MAINTAINERS/1.25/Mon Jul  6 10:46:49 2009//
+/Makefile.in/1.17/Mon Jul  6 10:46:49 2009/-ko/
+/README-HACKING/1.2/Mon Jul  6 10:46:49 2009/-ko/
+/configure/1.29/Mon Jul  6 10:46:49 2009/-ko/
+/configure.ac/1.17/Mon Jul  6 10:46:49 2009//

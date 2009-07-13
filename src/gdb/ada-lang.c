@@ -67,7 +67,7 @@
 
 static void extract_string (CORE_ADDR addr, char *buf);
 
-static void modify_general_field (char *, LONGEST, int, int);
+static void modify_general_field (struct type *, char *, LONGEST, int, int);
 
 static struct type *desc_base_type (struct type *);
 
@@ -182,7 +182,7 @@ static struct value *decode_packed_array (struct value *);
 static struct value *value_subscript_packed (struct value *, int,
                                              struct value **);
 
-static void move_bits (gdb_byte *, int, const gdb_byte *, int, int);
+static void move_bits (gdb_byte *, int, const gdb_byte *, int, int, int);
 
 static struct value *coerce_unspec_val_to_type (struct value *,
                                                 struct type *);
@@ -1214,9 +1214,10 @@ static char *bound_name[] = {
 /* Like modify_field, but allows bitpos > wordlength.  */
 
 static void
-modify_general_field (char *addr, LONGEST fieldval, int bitpos, int bitsize)
+modify_general_field (struct type *type, char *addr,
+		      LONGEST fieldval, int bitpos, int bitsize)
 {
-  modify_field (addr + bitpos / 8, fieldval, bitpos % 8, bitsize);
+  modify_field (type, addr + bitpos / 8, fieldval, bitpos % 8, bitsize);
 }
 
 
@@ -1608,7 +1609,6 @@ ada_type_of_array (struct value *arr, int bounds)
       struct type *elt_type;
       int arity;
       struct value *descriptor;
-      struct objfile *objf = TYPE_OBJFILE (value_type (arr));
 
       elt_type = ada_array_element_type (value_type (arr), -1);
       arity = ada_array_arity (value_type (arr));
@@ -1621,8 +1621,8 @@ ada_type_of_array (struct value *arr, int bounds)
         return NULL;
       while (arity > 0)
         {
-          struct type *range_type = alloc_type (objf);
-          struct type *array_type = alloc_type (objf);
+          struct type *range_type = alloc_type_copy (value_type (arr));
+          struct type *array_type = alloc_type_copy (value_type (arr));
           struct value *low = desc_one_bound (descriptor, arity, 0);
           struct value *high = desc_one_bound (descriptor, arity, 1);
           arity -= 1;
@@ -1729,7 +1729,7 @@ packed_array_type (struct type *type, long *elt_bits)
   if (TYPE_CODE (type) != TYPE_CODE_ARRAY)
     return type;
 
-  new_type = alloc_type (TYPE_OBJFILE (type));
+  new_type = alloc_type_copy (type);
   new_elt_type = packed_array_type (ada_check_typedef (TYPE_TARGET_TYPE (type)),
                                     elt_bits);
   create_array_type (new_type, new_elt_type, TYPE_INDEX_TYPE (type));
@@ -1833,7 +1833,7 @@ decode_packed_array (struct value *arr)
       return NULL;
     }
 
-  if (gdbarch_bits_big_endian (current_gdbarch)
+  if (gdbarch_bits_big_endian (get_type_arch (value_type (arr)))
       && ada_is_modular_type (value_type (arr)))
     {
        /* This is a (right-justified) modular type representing a packed
@@ -1957,7 +1957,7 @@ ada_value_primitive_packed_val (struct value *obj, const gdb_byte *valaddr,
   int len = (bit_size + bit_offset + HOST_CHAR_BIT - 1) / 8;
   /* Transmit bytes from least to most significant; delta is the direction
      the indices move.  */
-  int delta = gdbarch_bits_big_endian (current_gdbarch) ? -1 : 1;
+  int delta = gdbarch_bits_big_endian (get_type_arch (type)) ? -1 : 1;
 
   type = ada_check_typedef (type);
 
@@ -2006,7 +2006,7 @@ ada_value_primitive_packed_val (struct value *obj, const gdb_byte *valaddr,
       memset (unpacked, 0, TYPE_LENGTH (type));
       return v;
     }
-  else if (gdbarch_bits_big_endian (current_gdbarch))
+  else if (gdbarch_bits_big_endian (get_type_arch (type)))
     {
       src = len - 1;
       if (has_negatives (type)
@@ -2092,7 +2092,7 @@ ada_value_primitive_packed_val (struct value *obj, const gdb_byte *valaddr,
    not overlap.  */
 static void
 move_bits (gdb_byte *target, int targ_offset, const gdb_byte *source,
-	   int src_offset, int n)
+	   int src_offset, int n, int bits_big_endian_p)
 {
   unsigned int accum, mask;
   int accum_bits, chunk_size;
@@ -2101,7 +2101,7 @@ move_bits (gdb_byte *target, int targ_offset, const gdb_byte *source,
   targ_offset %= HOST_CHAR_BIT;
   source += src_offset / HOST_CHAR_BIT;
   src_offset %= HOST_CHAR_BIT;
-  if (gdbarch_bits_big_endian (current_gdbarch))
+  if (bits_big_endian_p)
     {
       accum = (unsigned char) *source;
       source += 1;
@@ -2193,12 +2193,12 @@ ada_value_assign (struct value *toval, struct value *fromval)
       from_size = value_bitsize (fromval);
       if (from_size == 0)
 	from_size = TYPE_LENGTH (value_type (fromval)) * TARGET_CHAR_BIT;
-      if (gdbarch_bits_big_endian (current_gdbarch))
+      if (gdbarch_bits_big_endian (get_type_arch (type)))
         move_bits (buffer, value_bitpos (toval),
-		   value_contents (fromval), from_size - bits, bits);
+		   value_contents (fromval), from_size - bits, bits, 1);
       else
-        move_bits (buffer, value_bitpos (toval), value_contents (fromval),
-                   0, bits);
+        move_bits (buffer, value_bitpos (toval),
+		   value_contents (fromval), 0, bits, 0);
       write_memory (to_addr, buffer, len);
       if (deprecated_memory_changed_hook)
 	deprecated_memory_changed_hook (to_addr, len);
@@ -2237,16 +2237,16 @@ value_assign_to_component (struct value *container, struct value *component,
   else
     bits = value_bitsize (component);
 
-  if (gdbarch_bits_big_endian (current_gdbarch))
+  if (gdbarch_bits_big_endian (get_type_arch (value_type (container))))
     move_bits (value_contents_writeable (container) + offset_in_container, 
 	       value_bitpos (container) + bit_offset_in_container,
 	       value_contents (val),
 	       TYPE_LENGTH (value_type (component)) * TARGET_CHAR_BIT - bits,
-	       bits);
+	       bits, 1);
   else
     move_bits (value_contents_writeable (container) + offset_in_container, 
 	       value_bitpos (container) + bit_offset_in_container,
-	       value_contents (val), 0, bits);
+	       value_contents (val), 0, bits, 0);
 }	       
 			
 /* The value of the element of array ARR at the ARITY indices given in IND.
@@ -3835,11 +3835,13 @@ make_array_descriptor (struct type *type, struct value *arr,
 
   for (i = ada_array_arity (ada_check_typedef (value_type (arr))); i > 0; i -= 1)
     {
-      modify_general_field (value_contents_writeable (bounds),
+      modify_general_field (value_type (bounds),
+			    value_contents_writeable (bounds),
                             ada_array_bound (arr, i, 0),
                             desc_bound_bitpos (bounds_type, i, 0),
                             desc_bound_bitsize (bounds_type, i, 0));
-      modify_general_field (value_contents_writeable (bounds),
+      modify_general_field (value_type (bounds),
+			    value_contents_writeable (bounds),
                             ada_array_bound (arr, i, 1),
                             desc_bound_bitpos (bounds_type, i, 1),
                             desc_bound_bitsize (bounds_type, i, 1));
@@ -3847,12 +3849,14 @@ make_array_descriptor (struct type *type, struct value *arr,
 
   bounds = ensure_lval (bounds, gdbarch, sp);
 
-  modify_general_field (value_contents_writeable (descriptor),
+  modify_general_field (value_type (descriptor),
+			value_contents_writeable (descriptor),
                         value_address (ensure_lval (arr, gdbarch, sp)),
                         fat_pntr_data_bitpos (desc_type),
                         fat_pntr_data_bitsize (desc_type));
 
-  modify_general_field (value_contents_writeable (descriptor),
+  modify_general_field (value_type (descriptor),
+			value_contents_writeable (descriptor),
                         value_address (bounds),
                         fat_pntr_bounds_bitpos (desc_type),
                         fat_pntr_bounds_bitsize (desc_type));
@@ -6665,9 +6669,9 @@ variant_field_index (struct type *type)
 /* A record type with no fields.  */
 
 static struct type *
-empty_record (struct objfile *objfile)
+empty_record (struct type *template)
 {
-  struct type *type = alloc_type (objfile);
+  struct type *type = alloc_type_copy (template);
   TYPE_CODE (type) = TYPE_CODE_STRUCT;
   TYPE_NFIELDS (type) = 0;
   TYPE_FIELDS (type) = NULL;
@@ -6724,7 +6728,7 @@ ada_template_to_fixed_record_type_1 (struct type *type,
         nfields++;
     }
 
-  rtype = alloc_type (TYPE_OBJFILE (type));
+  rtype = alloc_type_copy (type);
   TYPE_CODE (rtype) = TYPE_CODE_STRUCT;
   INIT_CPLUS_SPECIFIC (rtype);
   TYPE_NFIELDS (rtype) = nfields;
@@ -6934,7 +6938,7 @@ template_to_static_fixed_type (struct type *type0)
         new_type = static_unwrap_type (field_type);
       if (type == type0 && new_type != field_type)
         {
-          TYPE_TARGET_TYPE (type0) = type = alloc_type (TYPE_OBJFILE (type0));
+          TYPE_TARGET_TYPE (type0) = type = alloc_type_copy (type0);
           TYPE_CODE (type) = TYPE_CODE (type0);
           INIT_CPLUS_SPECIFIC (type);
           TYPE_NFIELDS (type) = nfields;
@@ -6979,7 +6983,7 @@ to_record_with_fixed_variant_part (struct type *type, const gdb_byte *valaddr,
   else
     dval = dval0;
 
-  rtype = alloc_type (TYPE_OBJFILE (type));
+  rtype = alloc_type_copy (type);
   TYPE_CODE (rtype) = TYPE_CODE_STRUCT;
   INIT_CPLUS_SPECIFIC (rtype);
   TYPE_NFIELDS (rtype) = nfields;
@@ -7099,7 +7103,7 @@ to_fixed_variant_branch_type (struct type *var_type0, const gdb_byte *valaddr,
                                value_type (dval), value_contents (dval));
 
   if (which < 0)
-    return empty_record (TYPE_OBJFILE (var_type));
+    return empty_record (var_type);
   else if (is_dynamic_field (var_type, which))
     return to_fixed_record_type
       (TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (var_type, which)),
@@ -7158,7 +7162,7 @@ to_fixed_array_type (struct type *type0, struct value *dval,
       if (elt_type0 == elt_type && !packed_array_p)
         result = type0;
       else
-        result = create_array_type (alloc_type (TYPE_OBJFILE (type0)),
+        result = create_array_type (alloc_type_copy (type0),
                                     elt_type, TYPE_INDEX_TYPE (type0));
     }
   else
@@ -7190,7 +7194,7 @@ to_fixed_array_type (struct type *type0, struct value *dval,
           struct type *range_type =
             to_fixed_range_type (TYPE_FIELD_NAME (index_type_desc, i),
                                  dval, TYPE_INDEX_TYPE (elt_type0));
-          result = create_array_type (alloc_type (TYPE_OBJFILE (elt_type0)),
+          result = create_array_type (alloc_type_copy (elt_type0),
                                       result, range_type);
 	  elt_type0 = TYPE_TARGET_TYPE (elt_type0);
         }
@@ -7918,7 +7922,8 @@ ada_value_binop (struct value *arg1, struct value *arg2, enum exp_opcode op)
 
   val = allocate_value (type1);
   store_unsigned_integer (value_contents_raw (val),
-                          TYPE_LENGTH (value_type (val)), v);
+                          TYPE_LENGTH (value_type (val)),
+			  gdbarch_byte_order (get_type_arch (type1)), v);
   return val;
 }
 
@@ -7990,7 +7995,8 @@ assign_component (struct value *container, struct value *lhs, LONGEST index,
   struct value *elt;
   if (TYPE_CODE (value_type (lhs)) == TYPE_CODE_ARRAY)
     {
-      struct value *index_val = value_from_longest (builtin_type_int32, index);
+      struct type *index_type = builtin_type (exp->gdbarch)->builtin_int;
+      struct value *index_val = value_from_longest (index_type, index);
       elt = unwrap_value (ada_value_subscript (lhs, 1, &index_val));
     }
   else
@@ -9235,9 +9241,9 @@ ada_evaluate_subexp (struct type *expect_type, struct expression *exp,
       if (noside == EVAL_SKIP)
         goto nosideret;
       else if (noside == EVAL_AVOID_SIDE_EFFECTS)
-        return value_zero (builtin_type_int32, not_lval);
+        return value_zero (builtin_type (exp->gdbarch)->builtin_int, not_lval);
       else
-        return value_from_longest (builtin_type_int32,
+        return value_from_longest (builtin_type (exp->gdbarch)->builtin_int,
                                    TARGET_CHAR_BIT * TYPE_LENGTH (type));
 
     case OP_ATR_VAL:
@@ -9422,7 +9428,7 @@ ada_evaluate_subexp (struct type *expect_type, struct expression *exp,
     }
 
 nosideret:
-  return value_from_longest (builtin_type_int8, (LONGEST) 1);
+  return value_from_longest (builtin_type (exp->gdbarch)->builtin_int, 1);
 }
 
 
@@ -9709,8 +9715,7 @@ to_fixed_range_type (char *name, struct value *dval, struct type *orig_type)
       if (L < INT_MIN || U > INT_MAX)
 	return raw_type;
       else
-	return create_range_type (alloc_type (TYPE_OBJFILE (orig_type)),
-				  raw_type,
+	return create_range_type (alloc_type_copy (orig_type), raw_type,
 				  discrete_type_low_bound (raw_type),
 				  discrete_type_high_bound (raw_type));
     }
@@ -9773,8 +9778,7 @@ to_fixed_range_type (char *name, struct value *dval, struct type *orig_type)
             }
         }
 
-      type = create_range_type (alloc_type (TYPE_OBJFILE (orig_type)),
-				base_type, L, U);
+      type = create_range_type (alloc_type_copy (orig_type), base_type, L, U);
       TYPE_NAME (type) = name;
       return type;
     }
@@ -10290,7 +10294,7 @@ print_it_exception (enum exception_catchpoint_kind ex, struct breakpoint *b)
 
 static void
 print_one_exception (enum exception_catchpoint_kind ex,
-                     struct breakpoint *b, CORE_ADDR *last_addr)
+                     struct breakpoint *b, struct bp_location **last_loc)
 { 
   struct value_print_options opts;
 
@@ -10298,11 +10302,11 @@ print_one_exception (enum exception_catchpoint_kind ex,
   if (opts.addressprint)
     {
       annotate_field (4);
-      ui_out_field_core_addr (uiout, "addr", b->loc->address);
+      ui_out_field_core_addr (uiout, "addr", b->loc->gdbarch, b->loc->address);
     }
 
   annotate_field (5);
-  *last_addr = b->loc->address;
+  *last_loc = b->loc;
   switch (ex)
     {
       case ex_catch_exception:
@@ -10374,9 +10378,9 @@ print_it_catch_exception (struct breakpoint *b)
 }
 
 static void
-print_one_catch_exception (struct breakpoint *b, CORE_ADDR *last_addr)
+print_one_catch_exception (struct breakpoint *b, struct bp_location **last_loc)
 {
-  print_one_exception (ex_catch_exception, b, last_addr);
+  print_one_exception (ex_catch_exception, b, last_loc);
 }
 
 static void
@@ -10404,9 +10408,10 @@ print_it_catch_exception_unhandled (struct breakpoint *b)
 }
 
 static void
-print_one_catch_exception_unhandled (struct breakpoint *b, CORE_ADDR *last_addr)
+print_one_catch_exception_unhandled (struct breakpoint *b,
+				     struct bp_location **last_loc)
 {
-  print_one_exception (ex_catch_exception_unhandled, b, last_addr);
+  print_one_exception (ex_catch_exception_unhandled, b, last_loc);
 }
 
 static void
@@ -10433,9 +10438,9 @@ print_it_catch_assert (struct breakpoint *b)
 }
 
 static void
-print_one_catch_assert (struct breakpoint *b, CORE_ADDR *last_addr)
+print_one_catch_assert (struct breakpoint *b, struct bp_location **last_loc)
 {
-  print_one_exception (ex_catch_assert, b, last_addr);
+  print_one_exception (ex_catch_assert, b, last_loc);
 }
 
 static void
@@ -11159,51 +11164,42 @@ ada_language_arch_info (struct gdbarch *gdbarch,
   lai->primitive_type_vector
     = GDBARCH_OBSTACK_CALLOC (gdbarch, nr_ada_primitive_types + 1,
 			      struct type *);
-  lai->primitive_type_vector [ada_primitive_type_int] =
-    init_type (TYPE_CODE_INT,
-	       gdbarch_int_bit (gdbarch) / TARGET_CHAR_BIT,
-	       0, "integer", (struct objfile *) NULL);
-  lai->primitive_type_vector [ada_primitive_type_long] =
-    init_type (TYPE_CODE_INT,
-	       gdbarch_long_bit (gdbarch) / TARGET_CHAR_BIT,
-	       0, "long_integer", (struct objfile *) NULL);
-  lai->primitive_type_vector [ada_primitive_type_short] =
-    init_type (TYPE_CODE_INT,
-	       gdbarch_short_bit (gdbarch) / TARGET_CHAR_BIT,
-	       0, "short_integer", (struct objfile *) NULL);
-  lai->string_char_type = 
-    lai->primitive_type_vector [ada_primitive_type_char] =
-    init_type (TYPE_CODE_INT, TARGET_CHAR_BIT / TARGET_CHAR_BIT,
-               0, "character", (struct objfile *) NULL);
-  lai->primitive_type_vector [ada_primitive_type_float] =
-    init_type (TYPE_CODE_FLT,
-	       gdbarch_float_bit (gdbarch)/ TARGET_CHAR_BIT,
-               0, "float", (struct objfile *) NULL);
-  lai->primitive_type_vector [ada_primitive_type_double] =
-    init_type (TYPE_CODE_FLT,
-	       gdbarch_double_bit (gdbarch) / TARGET_CHAR_BIT,
-               0, "long_float", (struct objfile *) NULL);
-  lai->primitive_type_vector [ada_primitive_type_long_long] =
-    init_type (TYPE_CODE_INT, 
-	       gdbarch_long_long_bit (gdbarch) / TARGET_CHAR_BIT,
-               0, "long_long_integer", (struct objfile *) NULL);
-  lai->primitive_type_vector [ada_primitive_type_long_double] =
-    init_type (TYPE_CODE_FLT,
-	       gdbarch_double_bit (gdbarch) / TARGET_CHAR_BIT,
-               0, "long_long_float", (struct objfile *) NULL);
-  lai->primitive_type_vector [ada_primitive_type_natural] =
-    init_type (TYPE_CODE_INT,
-	       gdbarch_int_bit (gdbarch) / TARGET_CHAR_BIT,
-	       0, "natural", (struct objfile *) NULL);
-  lai->primitive_type_vector [ada_primitive_type_positive] =
-    init_type (TYPE_CODE_INT,
-	       gdbarch_int_bit (gdbarch) / TARGET_CHAR_BIT,
-	       0, "positive", (struct objfile *) NULL);
-  lai->primitive_type_vector [ada_primitive_type_void] = builtin->builtin_void;
 
-  lai->primitive_type_vector [ada_primitive_type_system_address] =
-    lookup_pointer_type (init_type (TYPE_CODE_VOID, 1, 0, "void",
-                                    (struct objfile *) NULL));
+  lai->primitive_type_vector [ada_primitive_type_int]
+    = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
+			 0, "integer");
+  lai->primitive_type_vector [ada_primitive_type_long]
+    = arch_integer_type (gdbarch, gdbarch_long_bit (gdbarch),
+			 0, "long_integer");
+  lai->primitive_type_vector [ada_primitive_type_short]
+    = arch_integer_type (gdbarch, gdbarch_short_bit (gdbarch),
+			 0, "short_integer");
+  lai->string_char_type
+    = lai->primitive_type_vector [ada_primitive_type_char]
+    = arch_integer_type (gdbarch, TARGET_CHAR_BIT, 0, "character");
+  lai->primitive_type_vector [ada_primitive_type_float]
+    = arch_float_type (gdbarch, gdbarch_float_bit (gdbarch),
+		       "float", NULL);
+  lai->primitive_type_vector [ada_primitive_type_double]
+    = arch_float_type (gdbarch, gdbarch_double_bit (gdbarch),
+		       "long_float", NULL);
+  lai->primitive_type_vector [ada_primitive_type_long_long]
+    = arch_integer_type (gdbarch, gdbarch_long_long_bit (gdbarch),
+			 0, "long_long_integer");
+  lai->primitive_type_vector [ada_primitive_type_long_double]
+    = arch_float_type (gdbarch, gdbarch_double_bit (gdbarch),
+		       "long_long_float", NULL);
+  lai->primitive_type_vector [ada_primitive_type_natural]
+    = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
+			 0, "natural");
+  lai->primitive_type_vector [ada_primitive_type_positive]
+    = arch_integer_type (gdbarch, gdbarch_int_bit (gdbarch),
+			 0, "positive");
+  lai->primitive_type_vector [ada_primitive_type_void]
+    = builtin->builtin_void;
+
+  lai->primitive_type_vector [ada_primitive_type_system_address]
+    = lookup_pointer_type (arch_type (gdbarch, TYPE_CODE_VOID, 1, "void"));
   TYPE_NAME (lai->primitive_type_vector [ada_primitive_type_system_address])
     = "system__address";
 

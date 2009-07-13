@@ -152,8 +152,9 @@ sparc_is_unimp_insn (CORE_ADDR pc)
 /* Fetch StackGhost Per-Process XOR cookie.  */
 
 ULONGEST
-sparc_fetch_wcookie (void)
+sparc_fetch_wcookie (struct gdbarch *gdbarch)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct target_ops *ops = &current_target;
   gdb_byte buf[8];
   int len;
@@ -165,7 +166,7 @@ sparc_fetch_wcookie (void)
   /* We should have either an 32-bit or an 64-bit cookie.  */
   gdb_assert (len == 4 || len == 8);
 
-  return extract_unsigned_integer (buf, len);
+  return extract_unsigned_integer (buf, len, byte_order);
 }
 
 
@@ -283,46 +284,61 @@ sparc32_register_name (struct gdbarch *gdbarch, int regnum)
   return NULL;
 }
 
-
-/* Type for %psr.  */
-struct type *sparc_psr_type;
-
-/* Type for %fsr.  */
-struct type *sparc_fsr_type;
-
 /* Construct types for ISA-specific registers.  */
 
-static void
-sparc_init_types (void)
+static struct type *
+sparc_psr_type (struct gdbarch *gdbarch)
 {
-  struct type *type;
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-  type = init_flags_type ("builtin_type_sparc_psr", 4);
-  append_flags_type_flag (type, 5, "ET");
-  append_flags_type_flag (type, 6, "PS");
-  append_flags_type_flag (type, 7, "S");
-  append_flags_type_flag (type, 12, "EF");
-  append_flags_type_flag (type, 13, "EC");
-  sparc_psr_type = type;
+  if (!tdep->sparc_psr_type)
+    {
+      struct type *type;
 
-  type = init_flags_type ("builtin_type_sparc_fsr", 4);
-  append_flags_type_flag (type, 0, "NXA");
-  append_flags_type_flag (type, 1, "DZA");
-  append_flags_type_flag (type, 2, "UFA");
-  append_flags_type_flag (type, 3, "OFA");
-  append_flags_type_flag (type, 4, "NVA");
-  append_flags_type_flag (type, 5, "NXC");
-  append_flags_type_flag (type, 6, "DZC");
-  append_flags_type_flag (type, 7, "UFC");
-  append_flags_type_flag (type, 8, "OFC");
-  append_flags_type_flag (type, 9, "NVC");
-  append_flags_type_flag (type, 22, "NS");
-  append_flags_type_flag (type, 23, "NXM");
-  append_flags_type_flag (type, 24, "DZM");
-  append_flags_type_flag (type, 25, "UFM");
-  append_flags_type_flag (type, 26, "OFM");
-  append_flags_type_flag (type, 27, "NVM");
-  sparc_fsr_type = type;
+      type = arch_flags_type (gdbarch, "builtin_type_sparc_psr", 4);
+      append_flags_type_flag (type, 5, "ET");
+      append_flags_type_flag (type, 6, "PS");
+      append_flags_type_flag (type, 7, "S");
+      append_flags_type_flag (type, 12, "EF");
+      append_flags_type_flag (type, 13, "EC");
+
+      tdep->sparc_psr_type = type;
+    }
+
+  return tdep->sparc_psr_type;
+}
+
+static struct type *
+sparc_fsr_type (struct gdbarch *gdbarch)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (!tdep->sparc_fsr_type)
+    {
+      struct type *type;
+
+      type = arch_flags_type (gdbarch, "builtin_type_sparc_fsr", 4);
+      append_flags_type_flag (type, 0, "NXA");
+      append_flags_type_flag (type, 1, "DZA");
+      append_flags_type_flag (type, 2, "UFA");
+      append_flags_type_flag (type, 3, "OFA");
+      append_flags_type_flag (type, 4, "NVA");
+      append_flags_type_flag (type, 5, "NXC");
+      append_flags_type_flag (type, 6, "DZC");
+      append_flags_type_flag (type, 7, "UFC");
+      append_flags_type_flag (type, 8, "OFC");
+      append_flags_type_flag (type, 9, "NVC");
+      append_flags_type_flag (type, 22, "NS");
+      append_flags_type_flag (type, 23, "NXM");
+      append_flags_type_flag (type, 24, "DZM");
+      append_flags_type_flag (type, 25, "UFM");
+      append_flags_type_flag (type, 26, "OFM");
+      append_flags_type_flag (type, 27, "NVM");
+
+      tdep->sparc_fsr_type = type;
+    }
+
+  return tdep->sparc_fsr_type;
 }
 
 /* Return the GDB type object for the "standard" data type of data in
@@ -344,12 +360,12 @@ sparc32_register_type (struct gdbarch *gdbarch, int regnum)
     return builtin_type (gdbarch)->builtin_func_ptr;
 
   if (regnum == SPARC32_PSR_REGNUM)
-    return sparc_psr_type;
+    return sparc_psr_type (gdbarch);
 
   if (regnum == SPARC32_FSR_REGNUM)
-    return sparc_fsr_type;
+    return sparc_fsr_type (gdbarch);
 
-  return builtin_type_int32;
+  return builtin_type (gdbarch)->builtin_int32;
 }
 
 static void
@@ -385,6 +401,8 @@ sparc32_push_dummy_code (struct gdbarch *gdbarch, CORE_ADDR sp,
 			 CORE_ADDR *real_pc, CORE_ADDR *bp_addr,
 			 struct regcache *regcache)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   *bp_addr = sp - 4;
   *real_pc = funcaddr;
 
@@ -393,7 +411,8 @@ sparc32_push_dummy_code (struct gdbarch *gdbarch, CORE_ADDR sp,
       gdb_byte buf[4];
 
       /* This is an UNIMP instruction.  */
-      store_unsigned_integer (buf, 4, TYPE_LENGTH (value_type) & 0x1fff);
+      store_unsigned_integer (buf, 4, byte_order,
+			      TYPE_LENGTH (value_type) & 0x1fff);
       write_memory (sp - 8, buf, 4);
       return sp - 8;
     }
@@ -406,6 +425,8 @@ sparc32_store_arguments (struct regcache *regcache, int nargs,
 			 struct value **args, CORE_ADDR sp,
 			 int struct_return, CORE_ADDR struct_addr)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   /* Number of words in the "parameter array".  */
   int num_elements = 0;
   int element = 0;
@@ -442,7 +463,8 @@ sparc32_store_arguments (struct regcache *regcache, int nargs,
 	  gdb_assert (sparc_integral_or_pointer_p (type));
 
 	  if (len < 4)
-	    args[i] = value_cast (builtin_type_int32, args[i]);
+	    args[i] = value_cast (builtin_type (gdbarch)->builtin_int32,
+				  args[i]);
 	  num_elements += ((len + 3) / 4);
 	}
     }
@@ -487,7 +509,7 @@ sparc32_store_arguments (struct regcache *regcache, int nargs,
     {
       gdb_byte buf[4];
 
-      store_unsigned_integer (buf, 4, struct_addr);
+      store_unsigned_integer (buf, 4, byte_order, struct_addr);
       write_memory (sp, buf, 4);
     }
 
@@ -937,6 +959,7 @@ static struct value *
 sparc32_frame_prev_register (struct frame_info *this_frame,
 			     void **this_cache, int regnum)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
   struct sparc_frame_cache *cache =
     sparc32_frame_cache (this_frame, this_cache);
 
@@ -957,7 +980,7 @@ sparc32_frame_prev_register (struct frame_info *this_frame,
 
   /* Handle StackGhost.  */
   {
-    ULONGEST wcookie = sparc_fetch_wcookie ();
+    ULONGEST wcookie = sparc_fetch_wcookie (gdbarch);
 
     if (wcookie != 0 && !cache->frameless_p && regnum == SPARC_I7_REGNUM)
       {
@@ -1116,6 +1139,8 @@ sparc32_return_value (struct gdbarch *gdbarch, struct type *func_type,
 		      struct type *type, struct regcache *regcache,
 		      gdb_byte *readbuf, const gdb_byte *writebuf)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   /* The psABI says that "...every stack frame reserves the word at
      %fp+64.  If a function returns a structure, union, or
      quad-precision value, this word should hold the address of the
@@ -1132,7 +1157,7 @@ sparc32_return_value (struct gdbarch *gdbarch, struct type *func_type,
 	  CORE_ADDR addr;
 
 	  regcache_cooked_read_unsigned (regcache, SPARC_SP_REGNUM, &sp);
-	  addr = read_memory_unsigned_integer (sp + 64, 4);
+	  addr = read_memory_unsigned_integer (sp + 64, 4, byte_order);
 	  read_memory (addr, readbuf, TYPE_LENGTH (type));
 	}
 
@@ -1297,10 +1322,10 @@ sparc_software_single_step (struct frame_info *frame)
   /* Analyze the instruction at PC.  */
   nnpc = sparc_analyze_control_transfer (frame, pc, &npc);
   if (npc != 0)
-    insert_single_step_breakpoint (npc);
+    insert_single_step_breakpoint (arch, npc);
 
   if (nnpc != 0)
-    insert_single_step_breakpoint (nnpc);
+    insert_single_step_breakpoint (arch, nnpc);
 
   /* Assert that we have set at least one breakpoint, and that
      they're not set at the same spot - unless we're going
@@ -1431,6 +1456,8 @@ sparc32_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 void
 sparc_supply_rwindow (struct regcache *regcache, CORE_ADDR sp, int regnum)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int offset = 0;
   gdb_byte buf[8];
   int i;
@@ -1449,10 +1476,12 @@ sparc_supply_rwindow (struct regcache *regcache, CORE_ADDR sp, int regnum)
 	      /* Handle StackGhost.  */
 	      if (i == SPARC_I7_REGNUM)
 		{
-		  ULONGEST wcookie = sparc_fetch_wcookie ();
-		  ULONGEST i7 = extract_unsigned_integer (buf + offset, 8);
+		  ULONGEST wcookie = sparc_fetch_wcookie (gdbarch);
+		  ULONGEST i7;
 
-		  store_unsigned_integer (buf + offset, 8, i7 ^ wcookie);
+		  i7 = extract_unsigned_integer (buf + offset, 8, byte_order);
+		  store_unsigned_integer (buf + offset, 8, byte_order,
+					  i7 ^ wcookie);
 		}
 
 	      regcache_raw_supply (regcache, i, buf);
@@ -1483,10 +1512,12 @@ sparc_supply_rwindow (struct regcache *regcache, CORE_ADDR sp, int regnum)
 	      /* Handle StackGhost.  */
 	      if (i == SPARC_I7_REGNUM)
 		{
-		  ULONGEST wcookie = sparc_fetch_wcookie ();
-		  ULONGEST i7 = extract_unsigned_integer (buf + offset, 4);
+		  ULONGEST wcookie = sparc_fetch_wcookie (gdbarch);
+		  ULONGEST i7;
 
-		  store_unsigned_integer (buf + offset, 4, i7 ^ wcookie);
+		  i7 = extract_unsigned_integer (buf + offset, 4, byte_order);
+		  store_unsigned_integer (buf + offset, 4, byte_order,
+					  i7 ^ wcookie);
 		}
 
 	      regcache_raw_supply (regcache, i, buf);
@@ -1499,6 +1530,8 @@ void
 sparc_collect_rwindow (const struct regcache *regcache,
 		       CORE_ADDR sp, int regnum)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int offset = 0;
   gdb_byte buf[8];
   int i;
@@ -1517,10 +1550,11 @@ sparc_collect_rwindow (const struct regcache *regcache,
 	      /* Handle StackGhost.  */
 	      if (i == SPARC_I7_REGNUM)
 		{
-		  ULONGEST wcookie = sparc_fetch_wcookie ();
-		  ULONGEST i7 = extract_unsigned_integer (buf + offset, 8);
+		  ULONGEST wcookie = sparc_fetch_wcookie (gdbarch);
+		  ULONGEST i7;
 
-		  store_unsigned_integer (buf, 8, i7 ^ wcookie);
+		  i7 = extract_unsigned_integer (buf + offset, 8, byte_order);
+		  store_unsigned_integer (buf, 8, byte_order, i7 ^ wcookie);
 		}
 
 	      target_write_memory (sp + ((i - SPARC_L0_REGNUM) * 8), buf, 8);
@@ -1546,10 +1580,12 @@ sparc_collect_rwindow (const struct regcache *regcache,
 	      /* Handle StackGhost.  */
 	      if (i == SPARC_I7_REGNUM)
 		{
-		  ULONGEST wcookie = sparc_fetch_wcookie ();
-		  ULONGEST i7 = extract_unsigned_integer (buf + offset, 4);
+		  ULONGEST wcookie = sparc_fetch_wcookie (gdbarch);
+		  ULONGEST i7;
 
-		  store_unsigned_integer (buf + offset, 4, i7 ^ wcookie);
+		  i7 = extract_unsigned_integer (buf + offset, 4, byte_order);
+		  store_unsigned_integer (buf + offset, 4, byte_order,
+					  i7 ^ wcookie);
 		}
 
 	      target_write_memory (sp + ((i - SPARC_L0_REGNUM) * 4),
@@ -1738,7 +1774,4 @@ void
 _initialize_sparc_tdep (void)
 {
   register_gdbarch_init (bfd_arch_sparc, sparc32_gdbarch_init);
-
-  /* Initialize the SPARC-specific register types.  */
-  sparc_init_types();
 }

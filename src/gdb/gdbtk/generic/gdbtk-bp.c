@@ -30,6 +30,7 @@
 #include "gdbtk.h"
 #include "gdbtk-cmds.h"
 #include "observer.h"
+#include "arch-utils.h"
 
 /* From breakpoint.c */
 extern struct breakpoint *breakpoint_chain;
@@ -75,8 +76,9 @@ char *bpdisp[] =
  * at some point make these static in breakpoint.c and move GUI code there
  */
 
-extern struct breakpoint *set_raw_breakpoint (struct symtab_and_line sal,
-					      enum bptype bp_type);
+extern struct breakpoint *set_raw_breakpoint (struct gdbarch *gdbarch,
+					      struct symtab_and_line,
+					      enum bptype);
 extern void set_breakpoint_count (int);
 extern int breakpoint_count;
 
@@ -545,7 +547,7 @@ gdb_set_bp (ClientData clientData, Tcl_Interp *interp,
     return TCL_ERROR;
 
   sal.section = find_pc_overlay (sal.pc);
-  b = set_raw_breakpoint (sal, bp_breakpoint);
+  b = set_raw_breakpoint (get_current_arch (), sal, bp_breakpoint);
   set_breakpoint_count (breakpoint_count + 1);
   b->number = breakpoint_count;
   b->disposition = disp;
@@ -618,7 +620,7 @@ gdb_set_bp_addr (ClientData clientData, Tcl_Interp *interp, int objc,
 
   sal = find_pc_line (addr, 0);
   sal.pc = addr;
-  b = set_raw_breakpoint (sal, bp_breakpoint);
+  b = set_raw_breakpoint (get_current_arch (), sal, bp_breakpoint);
   set_breakpoint_count (breakpoint_count + 1);
   b->number = breakpoint_count;
   b->disposition = disp;

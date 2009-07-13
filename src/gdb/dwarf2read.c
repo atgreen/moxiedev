@@ -31,7 +31,7 @@
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "objfiles.h"
-#include "elf/dwarf2.h"
+#include "dwarf2.h"
 #include "buildsym.h"
 #include "demangle.h"
 #include "expression.h"
@@ -3331,14 +3331,24 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
   child_die = die->child;
   while (child_die && child_die->tag)
     {
-      attr = dwarf2_attr (child_die, DW_AT_abstract_origin, cu);
+      /* For each CHILD_DIE, find the corresponding child of
+	 ORIGIN_DIE.  If there is more than one layer of
+	 DW_AT_abstract_origin, follow them all; there shouldn't be,
+	 but GCC versions at least through 4.4 generate this (GCC PR
+	 40573).  */
+      struct die_info *child_origin_die = child_die;
+      while (1)
+	{
+	  attr = dwarf2_attr (child_origin_die, DW_AT_abstract_origin, cu);
+	  if (attr == NULL)
+	    break;
+	  child_origin_die = follow_die_ref (child_origin_die, attr, &cu);
+	}
+
       /* According to DWARF3 3.3.8.2 #3 new entries without their abstract
 	 counterpart may exist.  */
-      if (attr)
+      if (child_origin_die != child_die)
 	{
-	  struct die_info *child_origin_die;
-
-	  child_origin_die = follow_die_ref (child_die, attr, &cu);
 	  if (child_die->tag != child_origin_die->tag
 	      && !(child_die->tag == DW_TAG_inlined_subroutine
 		   && child_origin_die->tag == DW_TAG_subprogram))
@@ -3346,7 +3356,13 @@ inherit_abstract_dies (struct die_info *die, struct dwarf2_cu *cu)
 		       _("Child DIE 0x%x and its abstract origin 0x%x have "
 			 "different tags"), child_die->offset,
 		       child_origin_die->offset);
-	  *offsets_end++ = child_origin_die->offset;
+	  if (child_origin_die->parent != origin_die)
+	    complaint (&symfile_complaints,
+		       _("Child DIE 0x%x and its abstract origin 0x%x have "
+			 "different parents"), child_die->offset,
+		       child_origin_die->offset);
+	  else
+	    *offsets_end++ = child_origin_die->offset;
 	}
       child_die = sibling_die (child_die);
     }
@@ -8060,6 +8076,8 @@ dwarf2_const_value (struct attribute *attr, struct symbol *sym,
 {
   struct objfile *objfile = cu->objfile;
   struct comp_unit_head *cu_header = &cu->header;
+  enum bfd_endian byte_order = bfd_big_endian (objfile->obfd) ?
+				BFD_ENDIAN_BIG : BFD_ENDIAN_LITTLE;
   struct dwarf_block *blk;
 
   switch (attr->form)
@@ -8075,7 +8093,7 @@ dwarf2_const_value (struct attribute *attr, struct symbol *sym,
       /* NOTE: cagney/2003-05-09: In-lined store_address call with
          it's body - store_unsigned_integer.  */
       store_unsigned_integer (SYMBOL_VALUE_BYTES (sym), cu_header->addr_size,
-			      DW_ADDR (attr));
+			      DW_ADDR (attr), byte_order);
       SYMBOL_CLASS (sym) = LOC_CONST_BYTES;
       break;
     case DW_FORM_string:
@@ -9518,7 +9536,7 @@ dump_die_shallow (struct ui_file *f, int indent, struct die_info *die)
 	case DW_FORM_ref_addr:
 	case DW_FORM_addr:
 	  fprintf_unfiltered (f, "address: ");
-	  fputs_filtered (paddress (DW_ADDR (&die->attrs[i])), f);
+	  fputs_filtered (hex_string (DW_ADDR (&die->attrs[i])), f);
 	  break;
 	case DW_FORM_block2:
 	case DW_FORM_block4:

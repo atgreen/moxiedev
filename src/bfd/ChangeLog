@@ -1,3 +1,171 @@
+2009-07-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* bfdio.c (bfd_iovec): Add comments for bmmap.
+	* bfd-in2.h: Regenerated.
+
+2009-07-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* Makefile.am: Run "make dep-am".
+	* Makefile.in: Regenerated.
+
+2009-07-10  Doug Kwan  <dougkwan@google.com>
+
+	* elf32-arm.c (stub_hash_newfunc): Initialize fields
+	target_addend and orig_insn.
+
+2009-07-10  Tom Tromey  <tromey@redhat.com>
+
+	* Makefile.am (dwarf2.lo): Use dwarf2.h, not elf/dwarf2.h.
+	(elf-eh-frame.lo): Likewise.
+	(elf32-bfin.lo): Likewise.
+	(elf32-frv.lo): Likewise.
+	(elf32-xc16x.lo): Likewise.
+	* Makefile.in: Rebuild.
+	* dwarf2.c: Included dwarf.h, not elf/dwarf2.h.
+	* elf-eh-frame.c: Likewise.
+	* elf32-bfin.c: Likewise.
+	* elf32-frv.c: Likewise.
+	* elf32-xc16x.c: Likewise.
+
+2009-07-10  Julian Brown  <julian@codesourcery.com>
+
+	* elf32-arm.c (arm_build_one_stub): Use the hash entry of the
+	symbol a stub entry is derived from, not the entry for the stub
+	itself, in call to elf32_arm_final_link_relocate.
+
+2009-07-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf.c (_bfd_elf_get_synthetic_symtab): Remove leading zeros
+	when reporting  addends.
+
+2009-07-10  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf32-spu.c (spu_elf_size_stubs): Do set up soft-icache manager
+	data even when no stubs.
+	(spu_elf_place_overlay_data, spu_elf_build_stubs): Adjust.
+
+2009-07-10  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf32-ppc.c (ppc_elf_howto_raw): Add R_PPC_IRELATIVE.
+	(ppc_elf_get_synthetic_symtab): Report addend.
+	(PLT_IFUNC): Define.
+	(struct ppc_elf_link_hash_table): Add iplt and reliplt.
+	(ppc_elf_create_glink): New function.
+	(ppc_elf_create_dynamic_sections): Use it.
+	(ppc_elf_add_symbol_hook): Set has_ifunc_symbols.
+	(update_local_sym_info): Allocate space for local_plt array.
+	Don't bump local_got_refcounts for PLT_IFUNC.  Return local_plt
+	entry pointer.
+	(is_branch_reloc): New function.
+	(ppc_elf_check_relocs): Handle STT_GNU_IFUNC symbols.
+	(ppc_elf_gc_sweep_hook): Likewise.
+	(ppc_elf_adjust_dynamic_symbol): Likewise.
+	(allocate_dynrelocs): Likewise.
+	(ppc_elf_size_dynamic_sections): Likewise.
+	(ppc_elf_relocate_section): Likewise.
+	(branch_reloc_hash_match): Use is_branch_reloc.
+	(ppc_elf_tls_optimize): Adjust for local_plt.
+	(write_glink_stub): New function, extracted from..
+	(ppc_elf_finish_dynamic_symbol): ..here.  Handle STT_GNU_IFUNC.
+	(ppc_elf_finish_dynamic_sections): Only write plt resolver and
+	branch table when dynamic.
+	(elf_backend_post_process_headers): Define.
+	* elf64-ppc.c (elf_backend_post_process_headers): Define.
+	(ppc64_elf_howto_raw): Add R_PPC64_IRELATIVE.
+	(ppc64_elf_get_synthetic_symtab): Report addend.
+	(struct ppc_stub_hash_entry): Add plt_ent.
+	(PLT_IFUNC): Define.
+	(struct ppc_link_hash_table): Add iplt and reliplt.
+	(create_linkage_sections): Make .iplt and .rela.iplt sections.
+	(ppc64_elf_add_symbol_hook): Set has_ifunc_symbols.
+	(update_local_sym_info): Allocate space for local_plt array.
+	Don't bump local_got_ents for PLT_IFUNC.  Return local_plt
+	entry pointer.
+	(update_plt_info): Pass pointer to plt_entry rather than sym hash,
+	and don't change hash flags here.
+	(is_branch_reloc): New function.
+	(ppc64_elf_check_relocs): Handle STT_GNU_IFUNC.
+	(ppc64_elf_gc_sweep_hook): Likewise.
+	(ppc64_elf_adjust_dynamic_symbol): Likewise.
+	(allocate_dynrelocs): Likewise.
+	(ppc64_elf_size_dynamic_sections): Likewise.
+	(ppc_build_one_stub, ppc_size_one_stub): Likewise.
+	(ppc64_elf_size_stubs): Likewise.
+	(ppc64_elf_relocate_section): Likewise.
+	(get_sym_h): Adjust for local_plt.
+	(branch_reloc_hash_match): Use is_branch_reloc.
+	(ppc_type_of_stub): Pass plt_entry pointer and handle ifunc.
+	(ppc64_elf_toc): Ignore SEC_EXCLUDE sections.
+
+2009-07-10  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf.c (_bfd_elf_get_synthetic_symtab): Report addends.
+
+2009-07-10  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf-bfd.h (struct elf_link_hash_entry): Clarify ref_regular
+	and ref_regular_nonweak comment.
+	* elflink.c (elf_link_output_extsym): Special case ifunc syms
+	when def_regular, not ref_regular.
+	(elf_link_add_object_symbols): Don't set needs_plt on ifunc syms,..
+	* elf32-i386.c (elf_i386_check_relocs): ..set it here instead..
+	* elf64-x86-64.c (elf64_x86_64_check_relocs): ..and here.
+
+2009-07-09  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf32-spu.c (mark_functions_via_relocs): Init broken_cycle field
+	of malloc'd struct call_info.
+	(pasted_function): Likewise, priority too.
+
+2009-07-07  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf32-spu.c (spu_elf_auto_overlay): Take into account section
+	alignment when packing sections into overlays.
+
+2009-07-03  Cary Coutant  <ccoutant@google.com>
+
+	* dwarf2.c (decode_line_info): Ignore DW_LNE_set_discriminator.
+
+2009-07-03  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* coffcode.h (sec_to_styp_flags):  Partially revert (functional
+	changes only) earlier patch:-
+
+  2009-06-25  Kai Tietz  <kai.tietz@onevision.com>
+
+	  * coffcode.h (sec_to_styp_flags): Set discardable for .reloc and
+	  give .debug and .reloc data characteristics.
+	  (DOT_RELOC): New define for .reloc section string.
+	  (coff_write_object_contents): Use DOT_RELOC instead of string.
+
+2009-07-02  Tom Tromey  <tromey@redhat.com>
+
+	* aoutx.h (aout_get_external_symbols): Declare 'amt' locally.
+	* bfdwin.c (bfd_free_window): Cast to unsigned long.
+
+2009-07-01  Nick Clifton  <nickc@redhat.com>
+
+	* elf-m10300.c: Remove trailing white space.
+	* reloc.c: Likewise.
+
+2009-07-01  Douglas B Rupp  <rupp@gnat.com>
+
+	* bfd.m4 (BFD_HAVE_TIME_TYPE_MEMBER,
+	BFD_HAVE_SYS_STAT_TYPE_MEMBER): New config functions.
+	* configure.in: Use them.
+	* configure: Regenerate.
+	* config.in: Regnerate.
+	* vmsutil.c: Include sysdep.h, remove ansidecl.h.
+	#define _BSD_SOURCE. Add comments.
+	(vms_file_stats_name): Calculate creation date based on available
+	runtime data. Return 1 for version instead of 0.
+
+2009-07-01  Nick Clifton  <nickc@redhat.com>
+
+	PR 10072
+	* elf32-arm.c (elf32_arm_final_link_relocate): Add code to handle
+	to R_ARM_THM_PC8 relocation.
+
 2009-06-29  Nick Clifton  <nickc@redhat.com>
 
 	* elf-m10300.c (mn10300_elf_relax_section): Allow for the

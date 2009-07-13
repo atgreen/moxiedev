@@ -19,6 +19,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
+#include "arch-utils.h"
 #include "readline/readline.h"
 #include "readline/tilde.h"
 #include "completer.h"
@@ -123,6 +124,10 @@ struct cmd_list_element *deletelist;
 /* Chain containing all defined detach subcommands. */
 
 struct cmd_list_element *detachlist;
+
+/* Chain containing all defined kill subcommands. */
+
+struct cmd_list_element *killlist;
 
 /* Chain containing all defined "enable breakpoint" subcommands. */
 
@@ -671,17 +676,22 @@ edit_command (char *arg, int from_tty)
          of all known source files, not that user failed to give a filename.  */
       if (*arg == '*')
         {
+	  struct gdbarch *gdbarch;
           if (sal.symtab == 0)
 	    /* FIXME-32x64--assumes sal.pc fits in long.  */
 	    error (_("No source file for address %s."),
 		   hex_string ((unsigned long) sal.pc));
+
+	  gdbarch = get_objfile_arch (sal.symtab->objfile);
           sym = find_pc_function (sal.pc);
           if (sym)
-	    printf_filtered ("%s is in %s (%s:%d).\n", paddress (sal.pc),
-			     SYMBOL_PRINT_NAME (sym), sal.symtab->filename,
-			     sal.line);
+	    printf_filtered ("%s is in %s (%s:%d).\n",
+			     paddress (gdbarch, sal.pc),
+			     SYMBOL_PRINT_NAME (sym),
+			     sal.symtab->filename, sal.line);
           else
-	    printf_filtered ("%s is at %s:%d.\n", paddress (sal.pc),
+	    printf_filtered ("%s is at %s:%d.\n",
+			     paddress (gdbarch, sal.pc),
 			     sal.symtab->filename, sal.line);
         }
 
@@ -831,17 +841,22 @@ list_command (char *arg, int from_tty)
      of all known source files, not that user failed to give a filename.  */
   if (*arg == '*')
     {
+      struct gdbarch *gdbarch;
       if (sal.symtab == 0)
 	/* FIXME-32x64--assumes sal.pc fits in long.  */
 	error (_("No source file for address %s."),
 	       hex_string ((unsigned long) sal.pc));
+
+      gdbarch = get_objfile_arch (sal.symtab->objfile);
       sym = find_pc_function (sal.pc);
       if (sym)
 	printf_filtered ("%s is in %s (%s:%d).\n",
-			 paddress (sal.pc), SYMBOL_PRINT_NAME (sym),
+			 paddress (gdbarch, sal.pc),
+			 SYMBOL_PRINT_NAME (sym),
 			 sal.symtab->filename, sal.line);
       else
-	printf_filtered ("%s is at %s:%d.\n", paddress (sal.pc),
+	printf_filtered ("%s is at %s:%d.\n",
+			 paddress (gdbarch, sal.pc),
 			 sal.symtab->filename, sal.line);
     }
 
@@ -892,7 +907,8 @@ list_command (char *arg, int from_tty)
    MIXED is non-zero to print source with the assembler.  */
 
 static void
-print_disassembly (const char *name, CORE_ADDR low, CORE_ADDR high, int mixed)
+print_disassembly (struct gdbarch *gdbarch, const char *name,
+		   CORE_ADDR low, CORE_ADDR high, int flags)
 {
 #if defined(TUI)
   if (!tui_is_window_visible (DISASSEM_WIN))
@@ -902,10 +918,11 @@ print_disassembly (const char *name, CORE_ADDR low, CORE_ADDR high, int mixed)
       if (name != NULL)
         printf_filtered ("for function %s:\n", name);
       else
-        printf_filtered ("from %s to %s:\n", paddress (low), paddress (high));
+        printf_filtered ("from %s to %s:\n",
+			 paddress (gdbarch, low), paddress (gdbarch, high));
 
       /* Dump the specified range.  */
-      gdb_disassembly (uiout, 0, mixed, -1, low, high);
+      gdb_disassembly (gdbarch, uiout, 0, flags, -1, low, high);
 
       printf_filtered ("End of assembler dump.\n");
       gdb_flush (gdb_stdout);
@@ -913,7 +930,7 @@ print_disassembly (const char *name, CORE_ADDR low, CORE_ADDR high, int mixed)
 #if defined(TUI)
   else
     {
-      tui_show_assembly (low);
+      tui_show_assembly (gdbarch, low);
     }
 #endif
 }
@@ -923,12 +940,16 @@ print_disassembly (const char *name, CORE_ADDR low, CORE_ADDR high, int mixed)
    MIXED is non-zero to print source with the assembler.  */
 
 static void
-disassemble_current_function (int mixed)
+disassemble_current_function (int flags)
 {
+  struct frame_info *frame;
+  struct gdbarch *gdbarch;
   CORE_ADDR low, high, pc;
   char *name;
 
-  pc = get_frame_pc (get_selected_frame (_("No frame selected.")));
+  frame = get_selected_frame (_("No frame selected."));
+  gdbarch = get_frame_arch (frame);
+  pc = get_frame_pc (frame);
   if (find_pc_partial_function (pc, &name, &low, &high) == 0)
     error (_("No function contains program counter for selected frame."));
 #if defined(TUI)
@@ -936,36 +957,38 @@ disassemble_current_function (int mixed)
      `tui_version'.  */
   if (tui_active)
     /* FIXME: cagney/2004-02-07: This should be an observer.  */
-    low = tui_get_low_disassembly_address (low, pc);
+    low = tui_get_low_disassembly_address (gdbarch, low, pc);
 #endif
-  low += gdbarch_deprecated_function_start_offset (current_gdbarch);
+  low += gdbarch_deprecated_function_start_offset (gdbarch);
 
-  print_disassembly (name, low, high, mixed);
+  print_disassembly (gdbarch, name, low, high, flags);
 }
 
 /* Dump a specified section of assembly code.
 
    Usage:
-     disassemble [/m]
+     disassemble [/mr]
        - dump the assembly code for the function of the current pc
-     disassemble [/m] addr
+     disassemble [/mr] addr
        - dump the assembly code for the function at ADDR
-     disassemble [/m] low high
+     disassemble [/mr] low high
        - dump the assembly code in the range [LOW,HIGH)
 
-   A /m modifier will include source code with the assembly.  */
+   A /m modifier will include source code with the assembly.
+   A /r modifier will include raw instructions in hex with the assembly.  */
 
 static void
 disassemble_command (char *arg, int from_tty)
 {
+  struct gdbarch *gdbarch = get_current_arch ();
   CORE_ADDR low, high;
   char *name;
   CORE_ADDR pc, pc_masked;
   char *space_index;
-  int mixed_source_and_assembly;
+  int flags;
 
   name = NULL;
-  mixed_source_and_assembly = 0;
+  flags = 0;
 
   if (arg && *arg == '/')
     {
@@ -979,7 +1002,10 @@ disassemble_command (char *arg, int from_tty)
 	  switch (*arg++)
 	    {
 	    case 'm':
-	      mixed_source_and_assembly = 1;
+	      flags |= DISASSEMBLY_SOURCE;
+	      break;
+	    case 'r':
+	      flags |= DISASSEMBLY_RAW_INSN;
 	      break;
 	    default:
 	      error (_("Invalid disassembly modifier."));
@@ -992,7 +1018,7 @@ disassemble_command (char *arg, int from_tty)
 
   if (! arg || ! *arg)
     {
-      disassemble_current_function (mixed_source_and_assembly);
+      disassemble_current_function (flags);
       return;
     }
 
@@ -1010,9 +1036,9 @@ disassemble_command (char *arg, int from_tty)
 	 `tui_version'.  */
       if (tui_active)
 	/* FIXME: cagney/2004-02-07: This should be an observer.  */
-	low = tui_get_low_disassembly_address (low, pc);
+	low = tui_get_low_disassembly_address (gdbarch, low, pc);
 #endif
-      low += gdbarch_deprecated_function_start_offset (current_gdbarch);
+      low += gdbarch_deprecated_function_start_offset (gdbarch);
     }
   else
     {
@@ -1022,7 +1048,7 @@ disassemble_command (char *arg, int from_tty)
       high = parse_and_eval_address (space_index + 1);
     }
 
-  print_disassembly (name, low, high, mixed_source_and_assembly);
+  print_disassembly (gdbarch, name, low, high, flags);
 }
 
 static void
@@ -1319,6 +1345,7 @@ Without an argument, history expansion is enabled."),
 Generic command for showing things about the program being debugged."),
 		  &infolist, "info ", 0, &cmdlist);
   add_com_alias ("i", "info", class_info, 1);
+  add_com_alias ("inf", "info", class_info, 1);
 
   add_com ("complete", class_obscure, complete_command,
 	   _("List the completions for the rest of the line as a command."));
@@ -1431,6 +1458,7 @@ With two args if one is empty it stands for ten lines away from the other arg.")
 Disassemble a specified section of memory.\n\
 Default is the function surrounding the pc of the selected frame.\n\
 With a /m modifier, source lines are included (if available).\n\
+With a /r modifier, raw instructions in hex are included.\n\
 With a single argument, the function surrounding that address is dumped.\n\
 Two arguments are taken as a range of memory to dump."));
   set_cmd_completer (c, location_completer);

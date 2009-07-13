@@ -71,29 +71,47 @@ m68k_local_breakpoint_from_pc (struct gdbarch *gdbarch,
 }
 
 
-/* Type for %ps.  */
-struct type *m68k_ps_type;
-
 /* Construct types for ISA-specific registers.  */
-static void
-m68k_init_types (void)
+static struct type *
+m68k_ps_type (struct gdbarch *gdbarch)
 {
-  struct type *type;
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-  type = init_flags_type ("builtin_type_m68k_ps", 4);
-  append_flags_type_flag (type, 0, "C");
-  append_flags_type_flag (type, 1, "V");
-  append_flags_type_flag (type, 2, "Z");
-  append_flags_type_flag (type, 3, "N");
-  append_flags_type_flag (type, 4, "X");
-  append_flags_type_flag (type, 8, "I0");
-  append_flags_type_flag (type, 9, "I1");
-  append_flags_type_flag (type, 10, "I2");
-  append_flags_type_flag (type, 12, "M");
-  append_flags_type_flag (type, 13, "S");
-  append_flags_type_flag (type, 14, "T0");
-  append_flags_type_flag (type, 15, "T1");
-  m68k_ps_type = type;
+  if (!tdep->m68k_ps_type)
+    {
+      struct type *type;
+
+      type = arch_flags_type (gdbarch, "builtin_type_m68k_ps", 4);
+      append_flags_type_flag (type, 0, "C");
+      append_flags_type_flag (type, 1, "V");
+      append_flags_type_flag (type, 2, "Z");
+      append_flags_type_flag (type, 3, "N");
+      append_flags_type_flag (type, 4, "X");
+      append_flags_type_flag (type, 8, "I0");
+      append_flags_type_flag (type, 9, "I1");
+      append_flags_type_flag (type, 10, "I2");
+      append_flags_type_flag (type, 12, "M");
+      append_flags_type_flag (type, 13, "S");
+      append_flags_type_flag (type, 14, "T0");
+      append_flags_type_flag (type, 15, "T1");
+
+      tdep->m68k_ps_type = type;
+    }
+
+  return tdep->m68k_ps_type;
+}
+
+static struct type *
+m68881_ext_type (struct gdbarch *gdbarch)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (!tdep->m68881_ext_type)
+    tdep->m68881_ext_type
+      = arch_float_type (gdbarch, -1, "builtin_type_m68881_ext",
+			 floatformats_m68881_ext);
+
+  return tdep->m68881_ext_type;
 }
 
 /* Return the GDB type object for the "standard" data type of data in
@@ -117,19 +135,19 @@ m68k_register_type (struct gdbarch *gdbarch, int regnum)
 	  if (tdep->flavour == m68k_coldfire_flavour)
 	    return builtin_type (gdbarch)->builtin_double;
 	  else
-	    return builtin_type_m68881_ext;
+	    return m68881_ext_type (gdbarch);
 	}
 
       if (regnum == M68K_FPI_REGNUM)
 	return builtin_type (gdbarch)->builtin_func_ptr;
 
       if (regnum == M68K_FPC_REGNUM || regnum == M68K_FPS_REGNUM)
-	return builtin_type_int32;
+	return builtin_type (gdbarch)->builtin_int32;
     }
   else
     {
       if (regnum >= M68K_FP0_REGNUM && regnum <= M68K_FPI_REGNUM)
-	return builtin_type_int0;
+	return builtin_type (gdbarch)->builtin_int0;
     }
 
   if (regnum == gdbarch_pc_regnum (gdbarch))
@@ -139,9 +157,9 @@ m68k_register_type (struct gdbarch *gdbarch, int regnum)
     return builtin_type (gdbarch)->builtin_data_ptr;
 
   if (regnum == M68K_PS_REGNUM)
-    return m68k_ps_type;
+    return m68k_ps_type (gdbarch);
 
-  return builtin_type_int32;
+  return builtin_type (gdbarch)->builtin_int32;
 }
 
 static const char *m68k_register_names[] = {
@@ -174,7 +192,7 @@ m68k_convert_register_p (struct gdbarch *gdbarch, int regnum, struct type *type)
   if (!gdbarch_tdep (gdbarch)->fpregs_present)
     return 0;
   return (regnum >= M68K_FP0_REGNUM && regnum <= M68K_FP0_REGNUM + 7
-	  && type != builtin_type_m68881_ext);
+	  && type != m68881_ext_type (gdbarch));
 }
 
 /* Read a value of type TYPE from register REGNUM in frame FRAME, and
@@ -477,6 +495,7 @@ m68k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		      CORE_ADDR struct_addr)
 {
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[4];
   int i;
 
@@ -504,17 +523,17 @@ m68k_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   /* Store struct value address.  */
   if (struct_return)
     {
-      store_unsigned_integer (buf, 4, struct_addr);
+      store_unsigned_integer (buf, 4, byte_order, struct_addr);
       regcache_cooked_write (regcache, tdep->struct_value_regnum, buf);
     }
 
   /* Store return address.  */
   sp -= 4;
-  store_unsigned_integer (buf, 4, bp_addr);
+  store_unsigned_integer (buf, 4, byte_order, bp_addr);
   write_memory (sp, buf, 4);
 
   /* Finally, update the stack pointer...  */
-  store_unsigned_integer (buf, 4, sp);
+  store_unsigned_integer (buf, 4, byte_order, sp);
   regcache_cooked_write (regcache, M68K_SP_REGNUM, buf);
 
   /* ...and fake a frame pointer.  */
@@ -595,15 +614,17 @@ m68k_alloc_frame_cache (void)
    Otherwise, return PC.  */
 
 static CORE_ADDR
-m68k_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR current_pc,
+m68k_analyze_frame_setup (struct gdbarch *gdbarch,
+			  CORE_ADDR pc, CORE_ADDR current_pc,
 			  struct m68k_frame_cache *cache)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int op;
 
   if (pc >= current_pc)
     return current_pc;
 
-  op = read_memory_unsigned_integer (pc, 2);
+  op = read_memory_unsigned_integer (pc, 2, byte_order);
 
   if (op == P_LINKW_FP || op == P_LINKL_FP || op == P_PEA_FP)
     {
@@ -613,14 +634,14 @@ m68k_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR current_pc,
 	{
 	  /* link.w %fp, #-N */
 	  /* link.w %fp, #0; adda.l #-N, %sp */
-	  cache->locals = -read_memory_integer (pc + 2, 2);
+	  cache->locals = -read_memory_integer (pc + 2, 2, byte_order);
 
 	  if (pc + 4 < current_pc && cache->locals == 0)
 	    {
-	      op = read_memory_unsigned_integer (pc + 4, 2);
+	      op = read_memory_unsigned_integer (pc + 4, 2, byte_order);
 	      if (op == P_ADDAL_SP)
 		{
-		  cache->locals = read_memory_integer (pc + 6, 4);
+		  cache->locals = read_memory_integer (pc + 6, 4, byte_order);
 		  return pc + 10;
 		}
 	    }
@@ -630,7 +651,7 @@ m68k_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR current_pc,
       else if (op == P_LINKL_FP)
 	{
 	  /* link.l %fp, #-N */
-	  cache->locals = -read_memory_integer (pc + 2, 4);
+	  cache->locals = -read_memory_integer (pc + 2, 4, byte_order);
 	  return pc + 6;
 	}
       else
@@ -640,7 +661,7 @@ m68k_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR current_pc,
 
 	  if (pc + 2 < current_pc)
 	    {
-	      op = read_memory_unsigned_integer (pc + 2, 2);
+	      op = read_memory_unsigned_integer (pc + 2, 2, byte_order);
 
 	      if (op == P_MOVEAL_SP_FP)
 		{
@@ -659,7 +680,7 @@ m68k_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR current_pc,
       cache->locals = (op & 07000) == 0 ? 8 : (op & 07000) >> 9;
       if (pc + 2 < current_pc)
 	{
-	  op = read_memory_unsigned_integer (pc + 2, 2);
+	  op = read_memory_unsigned_integer (pc + 2, 2, byte_order);
 	  if ((op & 0170777) == P_SUBQW_SP || (op & 0170777) == P_SUBQL_SP)
 	    {
 	      cache->locals += (op & 07000) == 0 ? 8 : (op & 07000) >> 9;
@@ -672,13 +693,13 @@ m68k_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR current_pc,
     {
       /* adda.w #-N,%sp */
       /* lea (-N,%sp),%sp */
-      cache->locals = -read_memory_integer (pc + 2, 2);
+      cache->locals = -read_memory_integer (pc + 2, 2, byte_order);
       return pc + 4;
     }
   else if (op == P_ADDAL_SP)
     {
       /* adda.l #-N,%sp */
-      cache->locals = -read_memory_integer (pc + 2, 4);
+      cache->locals = -read_memory_integer (pc + 2, 4, byte_order);
       return pc + 6;
     }
 
@@ -695,6 +716,8 @@ m68k_analyze_register_saves (struct gdbarch *gdbarch, CORE_ADDR pc,
 			     CORE_ADDR current_pc,
 			     struct m68k_frame_cache *cache)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   if (cache->locals >= 0)
     {
       CORE_ADDR offset;
@@ -704,12 +727,12 @@ m68k_analyze_register_saves (struct gdbarch *gdbarch, CORE_ADDR pc,
       offset = -4 - cache->locals;
       while (pc < current_pc)
 	{
-	  op = read_memory_unsigned_integer (pc, 2);
+	  op = read_memory_unsigned_integer (pc, 2, byte_order);
 	  if (op == P_FMOVEMX_SP
 	      && gdbarch_tdep (gdbarch)->fpregs_present)
 	    {
 	      /* fmovem.x REGS,-(%sp) */
-	      op = read_memory_unsigned_integer (pc + 2, 2);
+	      op = read_memory_unsigned_integer (pc + 2, 2, byte_order);
 	      if ((op & 0xff00) == 0xe000)
 		{
 		  mask = op & 0xff;
@@ -737,7 +760,7 @@ m68k_analyze_register_saves (struct gdbarch *gdbarch, CORE_ADDR pc,
 	  else if (op == P_MOVEML_SP)
 	    {
 	      /* movem.l REGS,-(%sp) */
-	      mask = read_memory_unsigned_integer (pc + 2, 2);
+	      mask = read_memory_unsigned_integer (pc + 2, 2, byte_order);
 	      for (i = 0; i < 16; i++, mask >>= 1)
 		{
 		  if (mask & 1)
@@ -793,15 +816,16 @@ static CORE_ADDR
 m68k_analyze_prologue (struct gdbarch *gdbarch, CORE_ADDR pc,
 		       CORE_ADDR current_pc, struct m68k_frame_cache *cache)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned int op;
 
-  pc = m68k_analyze_frame_setup (pc, current_pc, cache);
+  pc = m68k_analyze_frame_setup (gdbarch, pc, current_pc, cache);
   pc = m68k_analyze_register_saves (gdbarch, pc, current_pc, cache);
   if (pc >= current_pc)
     return current_pc;
 
   /* Check for GOT setup.  */
-  op = read_memory_unsigned_integer (pc, 4);
+  op = read_memory_unsigned_integer (pc, 4, byte_order);
   if (op == P_LEA_PC_A5)
     {
       /* lea (%pc,N),%a5 */
@@ -841,6 +865,8 @@ m68k_unwind_pc (struct gdbarch *gdbarch, struct frame_info *next_frame)
 static struct m68k_frame_cache *
 m68k_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct m68k_frame_cache *cache;
   gdb_byte buf[4];
   int i;
@@ -861,7 +887,7 @@ m68k_frame_cache (struct frame_info *this_frame, void **this_cache)
      in progress when the signal occurred.  */
 
   get_frame_register (this_frame, M68K_FP_REGNUM, buf);
-  cache->base = extract_unsigned_integer (buf, 4);
+  cache->base = extract_unsigned_integer (buf, 4, byte_order);
   if (cache->base == 0)
     return cache;
 
@@ -884,7 +910,8 @@ m68k_frame_cache (struct frame_info *this_frame, void **this_cache)
 	 functions this might work too.  */
 
       get_frame_register (this_frame, M68K_SP_REGNUM, buf);
-      cache->base = extract_unsigned_integer (buf, 4) + cache->sp_offset;
+      cache->base = extract_unsigned_integer (buf, 4, byte_order)
+		    + cache->sp_offset;
     }
 
   /* Now that we have the base address for the stack frame we can
@@ -980,7 +1007,8 @@ m68k_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
   gdb_byte *buf;
   CORE_ADDR sp, jb_addr;
   struct gdbarch *gdbarch = get_frame_arch (frame);
-  struct gdbarch_tdep *tdep = gdbarch_tdep (get_frame_arch (frame));
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   if (tdep->jb_pc < 0)
     {
@@ -997,14 +1025,15 @@ m68k_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
     return 0;
 
   jb_addr = extract_unsigned_integer (buf, gdbarch_ptr_bit (gdbarch)
-					     / TARGET_CHAR_BIT);
+					     / TARGET_CHAR_BIT, byte_order);
 
   if (target_read_memory (jb_addr + tdep->jb_pc * tdep->jb_elt_size, buf,
-			  gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT))
+			  gdbarch_ptr_bit (gdbarch) / TARGET_CHAR_BIT),
+			  byte_order)
     return 0;
 
   *pc = extract_unsigned_integer (buf, gdbarch_ptr_bit (gdbarch)
-					 / TARGET_CHAR_BIT);
+					 / TARGET_CHAR_BIT, byte_order);
   return 1;
 }
 
@@ -1244,7 +1273,4 @@ void
 _initialize_m68k_tdep (void)
 {
   gdbarch_register (bfd_arch_m68k, m68k_gdbarch_init, m68k_dump_tdep);
-
-  /* Initialize the m68k-specific register types.  */
-  m68k_init_types ();
 }

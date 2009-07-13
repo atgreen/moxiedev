@@ -34,6 +34,7 @@
 #include <ctype.h>
 
 #include "defs.h"
+#include "arch-utils.h"
 #include "gdb_string.h"
 #include "symtab.h"
 #include "gdbtypes.h"
@@ -1086,7 +1087,7 @@ parse_exp_in_context (char **stringptr, struct block *block, int comma,
   expout = (struct expression *)
     xmalloc (sizeof (struct expression) + EXP_ELEM_TO_BYTES (expout_size));
   expout->language_defn = current_language;
-  expout->gdbarch = current_gdbarch;
+  expout->gdbarch = get_current_arch ();
 
   TRY_CATCH (except, RETURN_MASK_ALL)
     {
@@ -1227,7 +1228,7 @@ push_type_int (int n)
 void
 push_type_address_space (char *string)
 {
-  push_type_int (address_space_name_to_int (string));
+  push_type_int (address_space_name_to_int (parse_gdbarch, string));
 }
 
 enum type_pieces
@@ -1257,7 +1258,6 @@ follow_types (struct type *follow_type)
   int make_volatile = 0;
   int make_addr_space = 0;
   int array_size;
-  struct type *range_type;
 
   while (!done)
     switch (pop_type ())
@@ -1323,13 +1323,9 @@ follow_types (struct type *follow_type)
 	array_size = pop_type_int ();
 	/* FIXME-type-allocation: need a way to free this type when we are
 	   done with it.  */
-	range_type =
-	  create_range_type ((struct type *) NULL,
-			     builtin_type_int32, 0,
-			     array_size >= 0 ? array_size - 1 : 0);
 	follow_type =
-	  create_array_type ((struct type *) NULL,
-			     follow_type, range_type);
+	  lookup_array_range_type (follow_type,
+				   0, array_size >= 0 ? array_size - 1 : 0);
 	if (array_size < 0)
 	  TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED (follow_type) = 1;
 	break;

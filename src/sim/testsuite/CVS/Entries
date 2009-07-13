@@ -6,7 +6,9 @@ D/lib////
 D/m32r-elf////
 D/mips64el-elf////
 D/sim////
-/ChangeLog/1.62/Fri May 29 23:30:15 2009/-ko/
-/Makefile.in/1.5/Fri May 29 23:30:15 2009/-ko/
-/configure/1.4/Fri May 29 23:30:15 2009/-ko/
-/configure.ac/1.1/Fri May 29 23:30:15 2009//
+D/d30v-elf////
+D/fr30-elf////
+/ChangeLog/1.62/Mon Jul  6 10:46:53 2009/-ko/
+/Makefile.in/1.5/Mon Jul  6 10:46:53 2009/-ko/
+/configure/1.4/Mon Jul  6 10:46:53 2009/-ko/
+/configure.ac/1.1/Mon Jul  6 10:46:53 2009//

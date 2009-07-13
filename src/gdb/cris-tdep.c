@@ -259,13 +259,14 @@ cris_rt_sigtramp_start (struct frame_info *this_frame)
 static CORE_ADDR
 cris_sigcontext_addr (struct frame_info *this_frame)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR pc;
   CORE_ADDR sp;
   char buf[4];
 
-  get_frame_register (this_frame,
-		      gdbarch_sp_regnum (get_frame_arch (this_frame)), buf);
-  sp = extract_unsigned_integer (buf, 4);
+  get_frame_register (this_frame, gdbarch_sp_regnum (gdbarch), buf);
+  sp = extract_unsigned_integer (buf, 4, byte_order);
 
   /* Look for normal sigtramp frame first.  */
   pc = cris_sigtramp_start (this_frame);
@@ -321,6 +322,7 @@ cris_sigtramp_frame_unwind_cache (struct frame_info *this_frame,
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
   struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct cris_unwind_cache *info;
   CORE_ADDR pc;
   CORE_ADDR sp;
@@ -346,7 +348,7 @@ cris_sigtramp_frame_unwind_cache (struct frame_info *this_frame,
   info->leaf_function = 0;
 
   get_frame_register (this_frame, gdbarch_sp_regnum (gdbarch), buf);
-  info->base = extract_unsigned_integer (buf, 4);
+  info->base = extract_unsigned_integer (buf, 4, byte_order);
 
   addr = cris_sigcontext_addr (this_frame);
   
@@ -535,6 +537,7 @@ struct instruction_environment
   int   delay_slot_pc_active;
   int   xflag_found;
   int   disable_interrupt;
+  int   byte_order;
 } inst_env_type;
 
 /* Machine-dependencies in CRIS for opcodes.  */
@@ -862,6 +865,7 @@ cris_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		      int nargs, struct value **args, CORE_ADDR sp,
 		      int struct_return, CORE_ADDR struct_addr)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int stack_alloc;
   int stack_offset;
   int argreg;
@@ -952,7 +956,7 @@ cris_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	  else
 	    {
 	      gdb_byte buf[4];
-	      store_unsigned_integer (buf, 4, sp);
+	      store_unsigned_integer (buf, 4, byte_order, sp);
 	      si = push_stack_item (si, buf, 4);
 	    }
         }
@@ -1085,6 +1089,8 @@ cris_scan_prologue (CORE_ADDR pc, struct frame_info *this_frame,
 		    struct cris_unwind_cache *info)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   /* Present instruction.  */
   unsigned short insn;
 
@@ -1126,12 +1132,12 @@ cris_scan_prologue (CORE_ADDR pc, struct frame_info *this_frame,
   /* Find the prologue instructions.  */
   while (pc > 0 && pc < limit)
     {
-      insn = read_memory_unsigned_integer (pc, 2);
+      insn = read_memory_unsigned_integer (pc, 2, byte_order);
       pc += 2;
       if (insn == 0xE1FC)
         {
           /* push <reg> 32 bit instruction */
-          insn_next = read_memory_unsigned_integer (pc, 2);
+          insn_next = read_memory_unsigned_integer (pc, 2, byte_order);
           pc += 2;
           regno = cris_get_operand2 (insn_next);
 	  if (info)
@@ -1195,7 +1201,7 @@ cris_scan_prologue (CORE_ADDR pc, struct frame_info *this_frame,
 	    {
 	      info->sp_offset += -cris_get_signed_offset (insn);
 	    }
-	  insn_next = read_memory_unsigned_integer (pc, 2);
+	  insn_next = read_memory_unsigned_integer (pc, 2, byte_order);
           pc += 2;
           if (cris_get_mode (insn_next) == PREFIX_ASSIGN_MODE
               && cris_get_opcode (insn_next) == 0x000F
@@ -1240,7 +1246,7 @@ cris_scan_prologue (CORE_ADDR pc, struct frame_info *this_frame,
                && (cris_get_signed_offset (insn) < 0))  
         {
           /* move.S rZ,[r8-U] (?) */
-          insn_next = read_memory_unsigned_integer (pc, 2);
+          insn_next = read_memory_unsigned_integer (pc, 2, byte_order);
           pc += 2;
           regno = cris_get_operand2 (insn_next);
           if ((regno >= 0 && regno < gdbarch_sp_regnum (gdbarch))
@@ -1264,7 +1270,7 @@ cris_scan_prologue (CORE_ADDR pc, struct frame_info *this_frame,
                && (cris_get_signed_offset (insn) > 0))  
         {
           /* move.S [r8+U],rZ (?) */
-	  insn_next = read_memory_unsigned_integer (pc, 2);
+	  insn_next = read_memory_unsigned_integer (pc, 2, byte_order);
           pc += 2;
           regno = cris_get_operand2 (insn_next);
           if ((regno >= 0 && regno < gdbarch_sp_regnum (gdbarch))
@@ -1657,14 +1663,14 @@ cris_register_type (struct gdbarch *gdbarch, int regno)
   else if ((regno >= 0 && regno < gdbarch_sp_regnum (gdbarch))
 	   || (regno >= MOF_REGNUM && regno <= USP_REGNUM))
     /* Note: R8 taken care of previous clause.  */
-    return builtin_type_uint32;
+    return builtin_type (gdbarch)->builtin_uint32;
   else if (regno >= P4_REGNUM && regno <= CCR_REGNUM)
-      return builtin_type_uint16;
+      return builtin_type (gdbarch)->builtin_uint16;
   else if (regno >= P0_REGNUM && regno <= VR_REGNUM)
-      return builtin_type_uint8;
+      return builtin_type (gdbarch)->builtin_uint8;
   else
       /* Invalid (unimplemented) register.  */
-      return builtin_type_int0;
+      return builtin_type (gdbarch)->builtin_int0;
 }
 
 static struct type *
@@ -1680,17 +1686,17 @@ crisv32_register_type (struct gdbarch *gdbarch, int regno)
 	   || (regno == PID_REGNUM)
 	   || (regno >= S0_REGNUM && regno <= S15_REGNUM))
     /* Note: R8 and SP taken care of by previous clause.  */
-    return builtin_type_uint32;
+    return builtin_type (gdbarch)->builtin_uint32;
   else if (regno == WZ_REGNUM)
-      return builtin_type_uint16;
+      return builtin_type (gdbarch)->builtin_uint16;
   else if (regno == BZ_REGNUM || regno == VR_REGNUM || regno == SRS_REGNUM)
-      return builtin_type_uint8;
+      return builtin_type (gdbarch)->builtin_uint8;
   else
     {
       /* Invalid (unimplemented) register.  Should not happen as there are
 	 no unimplemented CRISv32 registers.  */
       warning (_("crisv32_register_type: unknown regno %d"), regno);
-      return builtin_type_int0;
+      return builtin_type (gdbarch)->builtin_int0;
     }
 }
 
@@ -1703,21 +1709,23 @@ static void
 cris_store_return_value (struct type *type, struct regcache *regcache,
 			 const void *valbuf)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   ULONGEST val;
   int len = TYPE_LENGTH (type);
   
   if (len <= 4)
     {
       /* Put the return value in R10.  */
-      val = extract_unsigned_integer (valbuf, len);
+      val = extract_unsigned_integer (valbuf, len, byte_order);
       regcache_cooked_write_unsigned (regcache, ARG1_REGNUM, val);
     }
   else if (len <= 8)
     {
       /* Put the return value in R10 and R11.  */
-      val = extract_unsigned_integer (valbuf, 4);
+      val = extract_unsigned_integer (valbuf, 4, byte_order);
       regcache_cooked_write_unsigned (regcache, ARG1_REGNUM, val);
-      val = extract_unsigned_integer ((char *)valbuf + 4, len - 4);
+      val = extract_unsigned_integer ((char *)valbuf + 4, len - 4, byte_order);
       regcache_cooked_write_unsigned (regcache, ARG2_REGNUM, val);
     }
   else
@@ -1872,6 +1880,8 @@ static void
 cris_extract_return_value (struct type *type, struct regcache *regcache,
 			   void *valbuf)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   ULONGEST val;
   int len = TYPE_LENGTH (type);
   
@@ -1879,15 +1889,15 @@ cris_extract_return_value (struct type *type, struct regcache *regcache,
     {
       /* Get the return value from R10.  */
       regcache_cooked_read_unsigned (regcache, ARG1_REGNUM, &val);
-      store_unsigned_integer (valbuf, len, val);
+      store_unsigned_integer (valbuf, len, byte_order, val);
     }
   else if (len <= 8)
     {
       /* Get the return value from R10 and R11.  */
       regcache_cooked_read_unsigned (regcache, ARG1_REGNUM, &val);
-      store_unsigned_integer (valbuf, 4, val);
+      store_unsigned_integer (valbuf, 4, byte_order, val);
       regcache_cooked_read_unsigned (regcache, ARG2_REGNUM, &val);
-      store_unsigned_integer ((char *)valbuf + 4, len - 4, val);
+      store_unsigned_integer ((char *)valbuf + 4, len - 4, byte_order, val);
     }
   else
     error (_("cris_extract_return_value: type length too large"));
@@ -2054,6 +2064,7 @@ find_step_target (struct frame_info *frame, inst_env_type *inst_env)
   int offset;
   unsigned short insn;
   struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   /* Create a local register image and set the initial state.  */
   for (i = 0; i < NUM_GENREGS; i++)
@@ -2074,13 +2085,14 @@ find_step_target (struct frame_info *frame, inst_env_type *inst_env)
   inst_env->invalid = 0;
   inst_env->xflag_found = 0;
   inst_env->disable_interrupt = 0;
+  inst_env->byte_order = byte_order;
 
   /* Look for a step target.  */
   do
     {
       /* Read an instruction from the client.  */
       insn = read_memory_unsigned_integer
-	     (inst_env->reg[gdbarch_pc_regnum (gdbarch)], 2);
+	     (inst_env->reg[gdbarch_pc_regnum (gdbarch)], 2, byte_order);
 
       /* If the instruction is not in a delay slot the new content of the
          PC is [PC] + 2.  If the instruction is in a delay slot it is not
@@ -2120,6 +2132,7 @@ find_step_target (struct frame_info *frame, inst_env_type *inst_env)
 static int
 cris_software_single_step (struct frame_info *frame)
 {
+  struct gdbarch *gdbarch = get_frame_arch (frame);
   inst_env_type inst_env;
 
   /* Analyse the present instruction environment and insert 
@@ -2135,15 +2148,15 @@ cris_software_single_step (struct frame_info *frame)
     {
       /* Insert at most two breakpoints.  One for the next PC content
          and possibly another one for a branch, jump, etc.  */
-      CORE_ADDR next_pc =
-	(CORE_ADDR) inst_env.reg[gdbarch_pc_regnum (get_frame_arch (frame))];
-      insert_single_step_breakpoint (next_pc);
+      CORE_ADDR next_pc
+	= (CORE_ADDR) inst_env.reg[gdbarch_pc_regnum (gdbarch)];
+      insert_single_step_breakpoint (gdbarch, next_pc);
       if (inst_env.branch_found 
 	  && (CORE_ADDR) inst_env.branch_break_address != next_pc)
 	{
 	  CORE_ADDR branch_target_address
 		= (CORE_ADDR) inst_env.branch_break_address;
-	  insert_single_step_breakpoint (branch_target_address);
+	  insert_single_step_breakpoint (gdbarch, branch_target_address);
 	}
     }
 
@@ -2208,7 +2221,8 @@ process_autoincrement (int size, unsigned short inst, inst_env_type *inst_env)
 /* Just a forward declaration.  */
 
 static unsigned long get_data_from_address (unsigned short *inst,
-					    CORE_ADDR address);
+					    CORE_ADDR address,
+					    enum bfd_endian byte_order);
 
 /* Calculates the prefix value for the general case of offset addressing 
    mode.  */
@@ -2234,7 +2248,8 @@ bdap_prefix (unsigned short inst, inst_env_type *inst_env)
 
   /* The offset is an indirection of the contents of the operand1 register.  */
   inst_env->prefix_value += 
-    get_data_from_address (&inst, inst_env->reg[cris_get_operand1 (inst)]);
+    get_data_from_address (&inst, inst_env->reg[cris_get_operand1 (inst)],
+			   inst_env->byte_order);
   
   if (cris_get_mode (inst) == AUTOINC_MODE)
     {
@@ -2300,7 +2315,8 @@ dip_prefix (unsigned short inst, inst_env_type *inst_env)
   /* The prefix value is one dereference of the contents of the operand1
      register.  */
   address = (CORE_ADDR) inst_env->reg[cris_get_operand1 (inst)];
-  inst_env->prefix_value = read_memory_unsigned_integer (address, 4);
+  inst_env->prefix_value
+    = read_memory_unsigned_integer (address, 4, inst_env->byte_order);
     
   /* Check if the mode is autoincrement.  */
   if (cris_get_mode (inst) == AUTOINC_MODE)
@@ -2367,7 +2383,7 @@ sixteen_bit_offset_branch_op (unsigned short inst, inst_env_type *inst_env)
     }
 
   /* We have a branch, find out the offset for the branch.  */
-  offset = read_memory_integer (inst_env->reg[REG_PC], 2);
+  offset = read_memory_integer (inst_env->reg[REG_PC], 2, inst_env->byte_order);
 
   /* The instruction is one word longer than normal, so add one word
      to the PC.  */
@@ -2876,13 +2892,14 @@ none_reg_mode_jump_op (unsigned short inst, inst_env_type *inst_env)
           /* Get the new value for the the PC.  */
           newpc = 
             read_memory_unsigned_integer ((CORE_ADDR) inst_env->prefix_value,
-                                          4);
+                                          4, inst_env->byte_order);
         }
       else
         {
           /* Get the new value for the PC.  */
           address = (CORE_ADDR) inst_env->reg[cris_get_operand1 (inst)];
-          newpc = read_memory_unsigned_integer (address, 4);
+          newpc = read_memory_unsigned_integer (address,
+						4, inst_env->byte_order);
 
           /* Check if we should increment a register.  */
           if (cris_get_mode (inst) == AUTOINC_MODE)
@@ -3057,7 +3074,8 @@ move_mem_to_reg_movem_op (unsigned short inst, inst_env_type *inst_env)
       if (cris_get_operand2 (inst) >= REG_PC)
         {
           inst_env->reg[REG_PC] = 
-            read_memory_unsigned_integer (inst_env->prefix_value, 4);
+            read_memory_unsigned_integer (inst_env->prefix_value,
+					  4, inst_env->byte_order);
         }
       /* The assign value is the value after the increment.  Normally, the   
          assign value is the value before the increment.  */
@@ -3081,7 +3099,7 @@ move_mem_to_reg_movem_op (unsigned short inst, inst_env_type *inst_env)
             }
           inst_env->reg[REG_PC] =
             read_memory_unsigned_integer (inst_env->reg[cris_get_operand1 (inst)], 
-                                          4);
+                                          4, inst_env->byte_order);
         }
       /* The increment is not depending on the size, instead it's depending
          on the number of registers loaded from memory.  */
@@ -3395,7 +3413,7 @@ reg_mode_add_sub_cmp_and_or_move_op (unsigned short inst,
    extend instruction, the size field is changed in instruction.  */
 
 static unsigned long 
-get_data_from_address (unsigned short *inst, CORE_ADDR address)
+get_data_from_address (unsigned short *inst, CORE_ADDR address, enum bfd_endian byte_order)
 {
   int size = cris_get_size (*inst);
   unsigned long value;
@@ -3409,7 +3427,7 @@ get_data_from_address (unsigned short *inst, CORE_ADDR address)
   /* Is there a need for checking the size?  Size should contain the number of
      bytes to read.  */
   size = 1 << size;
-  value = read_memory_unsigned_integer (address, size);
+  value = read_memory_unsigned_integer (address, size, byte_order);
 
   /* Check if it's an extend, signed or zero instruction.  */
   if (cris_get_opcode (*inst) < 4)
@@ -3435,7 +3453,8 @@ handle_prefix_assign_mode_for_aritm_op (unsigned short inst,
       operand2 = inst_env->reg[REG_PC];
 
       /* Get the value of the third operand.  */
-      operand3 = get_data_from_address (&inst, inst_env->prefix_value);
+      operand3 = get_data_from_address (&inst, inst_env->prefix_value,
+					inst_env->byte_order);
 
       /* Calculate the PC value after the instruction, i.e. where the
          breakpoint should be.  The order of the udw_operands is vital.  */
@@ -3464,7 +3483,8 @@ three_operand_add_sub_cmp_and_or_op (unsigned short inst,
       operand2 = inst_env->reg[cris_get_operand2 (inst)];
 
       /* Get the value of the third operand.  */
-      operand3 = get_data_from_address (&inst, inst_env->prefix_value);
+      operand3 = get_data_from_address (&inst, inst_env->prefix_value,
+					inst_env->byte_order);
 
       /* Calculate the PC value after the instruction, i.e. where the
          breakpoint should be.  */
@@ -3527,7 +3547,7 @@ handle_inc_and_index_mode_for_aritm_op (unsigned short inst,
 
       /* Get the value of the third operand, i.e. the indirect operand.  */
       operand1 = inst_env->reg[cris_get_operand1 (inst)];
-      operand3 = get_data_from_address (&inst, operand1);
+      operand3 = get_data_from_address (&inst, operand1, inst_env->byte_order);
 
       /* Calculate the PC value after the instruction, i.e. where the
          breakpoint should be.  The order of the udw_operands is vital.  */

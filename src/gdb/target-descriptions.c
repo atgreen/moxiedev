@@ -452,34 +452,34 @@ tdesc_gdb_type (struct gdbarch *gdbarch, struct tdesc_type *tdesc_type)
     {
     /* Predefined types.  */
     case TDESC_TYPE_INT8:
-      return builtin_type_int8;
+      return builtin_type (gdbarch)->builtin_int8;
 
     case TDESC_TYPE_INT16:
-      return builtin_type_int16;
+      return builtin_type (gdbarch)->builtin_int16;
 
     case TDESC_TYPE_INT32:
-      return builtin_type_int32;
+      return builtin_type (gdbarch)->builtin_int32;
 
     case TDESC_TYPE_INT64:
-      return builtin_type_int64;
+      return builtin_type (gdbarch)->builtin_int64;
 
     case TDESC_TYPE_INT128:
-      return builtin_type_int128;
+      return builtin_type (gdbarch)->builtin_int128;
 
     case TDESC_TYPE_UINT8:
-      return builtin_type_uint8;
+      return builtin_type (gdbarch)->builtin_uint8;
 
     case TDESC_TYPE_UINT16:
-      return builtin_type_uint16;
+      return builtin_type (gdbarch)->builtin_uint16;
 
     case TDESC_TYPE_UINT32:
-      return builtin_type_uint32;
+      return builtin_type (gdbarch)->builtin_uint32;
 
     case TDESC_TYPE_UINT64:
-      return builtin_type_uint64;
+      return builtin_type (gdbarch)->builtin_uint64;
 
     case TDESC_TYPE_UINT128:
-      return builtin_type_uint128;
+      return builtin_type (gdbarch)->builtin_uint128;
 
     case TDESC_TYPE_CODE_PTR:
       return builtin_type (gdbarch)->builtin_func_ptr;
@@ -488,13 +488,16 @@ tdesc_gdb_type (struct gdbarch *gdbarch, struct tdesc_type *tdesc_type)
       return builtin_type (gdbarch)->builtin_data_ptr;
 
     case TDESC_TYPE_IEEE_SINGLE:
-      return builtin_type_ieee_single;
+      return arch_float_type (gdbarch, -1, "builtin_type_ieee_single",
+			      floatformats_ieee_single);
 
     case TDESC_TYPE_IEEE_DOUBLE:
-      return builtin_type_ieee_double;
+      return arch_float_type (gdbarch, -1, "builtin_type_ieee_double",
+			      floatformats_ieee_double);
 
     case TDESC_TYPE_ARM_FPA_EXT:
-      return builtin_type_arm_ext;
+      return arch_float_type (gdbarch, -1, "builtin_type_arm_ext",
+			      floatformats_arm_ext);
 
     /* Types defined by a target feature.  */
     case TDESC_TYPE_VECTOR:
@@ -514,7 +517,7 @@ tdesc_gdb_type (struct gdbarch *gdbarch, struct tdesc_type *tdesc_type)
 	struct tdesc_type_field *f;
 	int ix;
 
-	type = init_composite_type (NULL, TYPE_CODE_UNION);
+	type = arch_composite_type (gdbarch, NULL, TYPE_CODE_UNION);
 	TYPE_NAME (type) = xstrdup (tdesc_type->name);
 
 	for (ix = 0;
@@ -708,7 +711,7 @@ tdesc_register_type (struct gdbarch *gdbarch, int regno)
 
   if (reg == NULL)
     /* Return "int0_t", since "void" has a misleading size of one.  */
-    return builtin_type_int0;
+    return builtin_type (gdbarch)->builtin_int0;
 
   if (arch_reg->type == NULL)
     {

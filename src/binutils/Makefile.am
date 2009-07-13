@@ -622,8 +622,8 @@ dwarf.o: \
   $(INCDIR)/alloca-conf.h \
   $(INCDIR)/ansidecl.h \
   $(INCDIR)/binary-io.h \
+  $(INCDIR)/dwarf2.h \
   $(INCDIR)/elf/common.h \
-  $(INCDIR)/elf/dwarf2.h \
   $(INCDIR)/fopen-same.h \
   $(INCDIR)/libiberty.h \
   $(INCDIR)/symcat.h \

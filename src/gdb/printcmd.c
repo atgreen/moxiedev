@@ -82,8 +82,9 @@ static char last_format = 0;
 
 static char last_size = 'w';
 
-/* Default address to examine next.  */
+/* Default address to examine next, and associated architecture.  */
 
+static struct gdbarch *next_gdbarch;
 static CORE_ADDR next_address;
 
 /* Number of delay instructions following current disassembled insn.  */
@@ -231,18 +232,10 @@ decode_format (char **string_ptr, int oformat, int osize)
     switch (val.format)
       {
       case 'a':
-      case 's':
-	/* Pick the appropriate size for an address.  */
-	if (gdbarch_ptr_bit (current_gdbarch) == 64)
-	  val.size = osize ? 'g' : osize;
-	else if (gdbarch_ptr_bit (current_gdbarch) == 32)
-	  val.size = osize ? 'w' : osize;
-	else if (gdbarch_ptr_bit (current_gdbarch) == 16)
-	  val.size = osize ? 'h' : osize;
-	else
-	  /* Bad value for gdbarch_ptr_bit.  */
-	  internal_error (__FILE__, __LINE__,
-			  _("failed internal consistency check"));
+	/* Pick the appropriate size for an address.  This is deferred
+	   until do_examine when we know the actual architecture to use.
+	   A special size value of 'a' is used to indicate this case.  */
+	val.size = osize ? 'a' : osize;
 	break;
       case 'f':
 	/* Floating point has to be word or giantword.  */
@@ -300,7 +293,8 @@ print_formatted (struct value *val, int size,
 	  /* We often wrap here if there are long symbolic names.  */
 	  wrap_here ("    ");
 	  next_address = (value_address (val)
-			  + gdb_print_insn (value_address (val), stream,
+			  + gdb_print_insn (get_type_arch (type),
+					    value_address (val), stream,
 					    &branch_delay_insns));
 	  return;
 	}
@@ -324,8 +318,9 @@ print_formatted (struct value *val, int size,
 /* Return builtin floating point type of same length as TYPE.
    If no such type is found, return TYPE itself.  */
 static struct type *
-float_type_from_length (struct gdbarch *gdbarch, struct type *type)
+float_type_from_length (struct type *type)
 {
+  struct gdbarch *gdbarch = get_type_arch (type);
   const struct builtin_type *builtin = builtin_type (gdbarch);
   unsigned int len = TYPE_LENGTH (type);
 
@@ -351,9 +346,10 @@ print_scalar_formatted (const void *valaddr, struct type *type,
 			const struct value_print_options *options,
 			int size, struct ui_file *stream)
 {
+  struct gdbarch *gdbarch = get_type_arch (type);
   LONGEST val_long = 0;
   unsigned int len = TYPE_LENGTH (type);
-  enum bfd_endian byte_order = gdbarch_byte_order (current_gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   /* If we get here with a string format, try again without it.  Go
      all the way back to the language printers, which may call us
@@ -402,7 +398,7 @@ print_scalar_formatted (const void *valaddr, struct type *type,
      same, then at this point, the value's length (in target bytes) is
      gdbarch_addr_bit/TARGET_CHAR_BIT, not TYPE_LENGTH (type).  */
   if (TYPE_CODE (type) == TYPE_CODE_PTR)
-    len = gdbarch_addr_bit (current_gdbarch) / TARGET_CHAR_BIT;
+    len = gdbarch_addr_bit (gdbarch) / TARGET_CHAR_BIT;
 
   /* If we are printing it as unsigned, truncate it in case it is actually
      a negative signed value (e.g. "print/u (short)-1" should print 65535
@@ -453,7 +449,7 @@ print_scalar_formatted (const void *valaddr, struct type *type,
     case 'a':
       {
 	CORE_ADDR addr = unpack_pointer (type, valaddr);
-	print_address (addr, stream);
+	print_address (gdbarch, addr, stream);
       }
       break;
 
@@ -461,18 +457,18 @@ print_scalar_formatted (const void *valaddr, struct type *type,
       {
 	struct value_print_options opts = *options;
 	opts.format = 0;
+
 	if (TYPE_UNSIGNED (type))
-	  value_print (value_from_longest (builtin_type_true_unsigned_char,
-					   val_long),
-		       stream, &opts);
-	else
-	  value_print (value_from_longest (builtin_type_true_char, val_long),
-		       stream, &opts);
+	  type = builtin_type (gdbarch)->builtin_true_unsigned_char;
+ 	else
+	  type = builtin_type (gdbarch)->builtin_true_char;
+
+	value_print (value_from_longest (type, val_long), stream, &opts);
       }
       break;
 
     case 'f':
-      type = float_type_from_length (current_gdbarch, type);
+      type = float_type_from_length (type);
       print_floating (valaddr, type, stream);
       break;
 
@@ -540,6 +536,7 @@ set_next_address (struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   struct type *ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
 
+  next_gdbarch = gdbarch;
   next_address = addr;
 
   /* Make address available to the user as $_.  */
@@ -712,9 +709,10 @@ build_address_symbolic (CORE_ADDR addr,  /* IN */
    <SYMBOL + OFFSET> after the number.  */
 
 void
-print_address (CORE_ADDR addr, struct ui_file *stream)
+print_address (struct gdbarch *gdbarch,
+	       CORE_ADDR addr, struct ui_file *stream)
 {
-  fputs_filtered (paddress (addr), stream);
+  fputs_filtered (paddress (gdbarch, addr), stream);
   print_address_symbolic (addr, stream, asm_demangle, " ");
 }
 
@@ -724,8 +722,8 @@ print_address (CORE_ADDR addr, struct ui_file *stream)
    or not.  */
 
 void
-print_address_demangle (CORE_ADDR addr, struct ui_file *stream,
-			int do_demangle)
+print_address_demangle (struct gdbarch *gdbarch, CORE_ADDR addr,
+			struct ui_file *stream, int do_demangle)
 {
   struct value_print_options opts;
   get_user_print_options (&opts);
@@ -735,7 +733,7 @@ print_address_demangle (CORE_ADDR addr, struct ui_file *stream,
     }
   else if (opts.addressprint)
     {
-      fputs_filtered (paddress (addr), stream);
+      fputs_filtered (paddress (gdbarch, addr), stream);
       print_address_symbolic (addr, stream, do_demangle, " ");
     }
   else
@@ -745,21 +743,11 @@ print_address_demangle (CORE_ADDR addr, struct ui_file *stream,
 }
 
 
-/* These are the types that $__ will get after an examine command of one
-   of these sizes.  */
-
-static struct type *examine_i_type;
-
-static struct type *examine_b_type;
-static struct type *examine_h_type;
-static struct type *examine_w_type;
-static struct type *examine_g_type;
-
 /* Examine data at address ADDR in format FMT.
    Fetch it from memory and print on gdb_stdout.  */
 
 static void
-do_examine (struct format_data fmt, CORE_ADDR addr)
+do_examine (struct format_data fmt, struct gdbarch *gdbarch, CORE_ADDR addr)
 {
   char format = 0;
   char size;
@@ -772,6 +760,7 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
   format = fmt.format;
   size = fmt.size;
   count = fmt.count;
+  next_gdbarch = gdbarch;
   next_address = addr;
 
   /* String or instruction format implies fetch single bytes
@@ -779,16 +768,29 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
   if (format == 's' || format == 'i')
     size = 'b';
 
-  if (format == 'i')
-    val_type = examine_i_type;
-  else if (size == 'b')
-    val_type = examine_b_type;
+  if (size == 'a')
+    {
+      /* Pick the appropriate size for an address.  */
+      if (gdbarch_ptr_bit (next_gdbarch) == 64)
+	size = 'g';
+      else if (gdbarch_ptr_bit (next_gdbarch) == 32)
+	size = 'w';
+      else if (gdbarch_ptr_bit (next_gdbarch) == 16)
+	size = 'h';
+      else
+	/* Bad value for gdbarch_ptr_bit.  */
+	internal_error (__FILE__, __LINE__,
+			_("failed internal consistency check"));
+    }
+
+  if (size == 'b')
+    val_type = builtin_type (next_gdbarch)->builtin_int8;
   else if (size == 'h')
-    val_type = examine_h_type;
+    val_type = builtin_type (next_gdbarch)->builtin_int16;
   else if (size == 'w')
-    val_type = examine_w_type;
+    val_type = builtin_type (next_gdbarch)->builtin_int32;
   else if (size == 'g')
-    val_type = examine_g_type;
+    val_type = builtin_type (next_gdbarch)->builtin_int64;
 
   maxelts = 8;
   if (size == 'w')
@@ -806,7 +808,7 @@ do_examine (struct format_data fmt, CORE_ADDR addr)
   while (count > 0)
     {
       QUIT;
-      print_address (next_address, gdb_stdout);
+      print_address (next_gdbarch, next_address, gdb_stdout);
       printf_filtered (":");
       for (i = maxelts;
 	   i > 0 && count > 0;
@@ -1139,20 +1141,21 @@ address_info (char *exp, int from_tty)
 
       if (msymbol != NULL)
 	{
+	  gdbarch = get_objfile_arch (msymbol_objfile (msymbol));
 	  load_addr = SYMBOL_VALUE_ADDRESS (msymbol);
 
 	  printf_filtered ("Symbol \"");
 	  fprintf_symbol_filtered (gdb_stdout, exp,
 				   current_language->la_language, DMGL_ANSI);
 	  printf_filtered ("\" is at ");
-	  fputs_filtered (paddress (load_addr), gdb_stdout);
+	  fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
 	  printf_filtered (" in a file compiled without debugging");
 	  section = SYMBOL_OBJ_SECTION (msymbol);
 	  if (section_is_overlay (section))
 	    {
 	      load_addr = overlay_unmapped_address (load_addr, section);
 	      printf_filtered (",\n -- loaded at ");
-	      fputs_filtered (paddress (load_addr), gdb_stdout);
+	      fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
 	      printf_filtered (" in overlay section %s",
 			       section->the_bfd_section->name);
 	    }
@@ -1180,13 +1183,13 @@ address_info (char *exp, int from_tty)
 
     case LOC_LABEL:
       printf_filtered ("a label at address ");
-      fputs_filtered (paddress (load_addr = SYMBOL_VALUE_ADDRESS (sym)),
-		      gdb_stdout);
+      load_addr = SYMBOL_VALUE_ADDRESS (sym);
+      fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
       if (section_is_overlay (section))
 	{
 	  load_addr = overlay_unmapped_address (load_addr, section);
 	  printf_filtered (",\n -- loaded at ");
-	  fputs_filtered (paddress (load_addr), gdb_stdout);
+	  fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
 	  printf_filtered (" in overlay section %s",
 			   section->the_bfd_section->name);
 	}
@@ -1220,13 +1223,13 @@ address_info (char *exp, int from_tty)
 
     case LOC_STATIC:
       printf_filtered (_("static storage at address "));
-     fputs_filtered (paddress (load_addr = SYMBOL_VALUE_ADDRESS (sym)),
-		     gdb_stdout);
+      load_addr = SYMBOL_VALUE_ADDRESS (sym);
+      fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
       if (section_is_overlay (section))
 	{
 	  load_addr = overlay_unmapped_address (load_addr, section);
 	  printf_filtered (_(",\n -- loaded at "));
-	  fputs_filtered (paddress (load_addr), gdb_stdout);
+	  fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
 	  printf_filtered (_(" in overlay section %s"),
 			   section->the_bfd_section->name);
 	}
@@ -1258,12 +1261,12 @@ address_info (char *exp, int from_tty)
     case LOC_BLOCK:
       printf_filtered (_("a function at address "));
       load_addr = BLOCK_START (SYMBOL_BLOCK_VALUE (sym));
-      fputs_filtered (paddress (load_addr), gdb_stdout);
+      fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
       if (section_is_overlay (section))
 	{
 	  load_addr = overlay_unmapped_address (load_addr, section);
 	  printf_filtered (_(",\n -- loaded at "));
-	  fputs_filtered (paddress (load_addr), gdb_stdout);
+	  fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
 	  printf_filtered (_(" in overlay section %s"),
 			   section->the_bfd_section->name);
 	}
@@ -1285,16 +1288,17 @@ address_info (char *exp, int from_tty)
 		&& (section->the_bfd_section->flags & SEC_THREAD_LOCAL) != 0)
 	      printf_filtered (_("a thread-local variable at offset %s "
 				 "in the thread-local storage for `%s'"),
-			       paddr_nz (load_addr), section->objfile->name);
+			       paddress (gdbarch, load_addr),
+			       section->objfile->name);
 	    else
 	      {
 		printf_filtered (_("static storage at address "));
-		fputs_filtered (paddress (load_addr), gdb_stdout);
+		fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
 		if (section_is_overlay (section))
 		  {
 		    load_addr = overlay_unmapped_address (load_addr, section);
 		    printf_filtered (_(",\n -- loaded at "));
-		    fputs_filtered (paddress (load_addr), gdb_stdout);
+		    fputs_filtered (paddress (gdbarch, load_addr), gdb_stdout);
 		    printf_filtered (_(" in overlay section %s"),
 				     section->the_bfd_section->name);
 		  }
@@ -1356,10 +1360,15 @@ x_command (char *exp, int from_tty)
 	next_address = value_address (val);
       else
 	next_address = value_as_address (val);
+
+      next_gdbarch = expr->gdbarch;
       do_cleanups (old_chain);
     }
 
-  do_examine (fmt, next_address);
+  if (!next_gdbarch)
+    error_no_arg (_("starting display address"));
+
+  do_examine (fmt, next_gdbarch, next_address);
 
   /* If the examine succeeds, we remember its size and format for next
      time.  */
@@ -1620,7 +1629,7 @@ do_one_display (struct display *d)
 
       annotate_display_value ();
 
-      do_examine (d->format, addr);
+      do_examine (d->format, d->exp->gdbarch, addr);
     }
   else
     {
@@ -2271,8 +2280,10 @@ printf_command (char *arg, int from_tty)
 	      gdb_byte *str;
 	      CORE_ADDR tem;
 	      int j;
-	      struct type *wctype = lookup_typename (current_language,
-						     current_gdbarch,
+	      struct gdbarch *gdbarch
+		= get_type_arch (value_type (val_args[i]));
+	      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+	      struct type *wctype = lookup_typename (current_language, gdbarch,
 						     "wchar_t", NULL, 0);
 	      int wcwidth = TYPE_LENGTH (wctype);
 	      gdb_byte *buf = alloca (wcwidth);
@@ -2286,7 +2297,7 @@ printf_command (char *arg, int from_tty)
 		{
 		  QUIT;
 		  read_memory (tem + j, buf, wcwidth);
-		  if (extract_unsigned_integer (buf, wcwidth) == 0)
+		  if (extract_unsigned_integer (buf, wcwidth, byte_order) == 0)
 		    break;
 		}
 
@@ -2299,7 +2310,7 @@ printf_command (char *arg, int from_tty)
 	      obstack_init (&output);
 	      inner_cleanup = make_cleanup_obstack_free (&output);
 
-	      convert_between_encodings (target_wide_charset (),
+	      convert_between_encodings (target_wide_charset (byte_order),
 					 host_charset (),
 					 str, j, wcwidth,
 					 &output, translit_char);
@@ -2311,8 +2322,10 @@ printf_command (char *arg, int from_tty)
 	    break;
 	  case wide_char_arg:
 	    {
-	      struct type *wctype = lookup_typename (current_language,
-						     current_gdbarch,
+	      struct gdbarch *gdbarch
+		= get_type_arch (value_type (val_args[i]));
+	      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+	      struct type *wctype = lookup_typename (current_language, gdbarch,
 						     "wchar_t", NULL, 0);
 	      struct type *valtype;
 	      struct obstack output;
@@ -2329,7 +2342,7 @@ printf_command (char *arg, int from_tty)
 	      obstack_init (&output);
 	      inner_cleanup = make_cleanup_obstack_free (&output);
 
-	      convert_between_encodings (target_wide_charset (),
+	      convert_between_encodings (target_wide_charset (byte_order),
 					 host_charset (),
 					 bytes, TYPE_LENGTH (valtype),
 					 TYPE_LENGTH (valtype),
@@ -2348,7 +2361,7 @@ printf_command (char *arg, int from_tty)
 
 	      /* If format string wants a float, unchecked-convert the value
 		 to floating point of the same size.  */
-	      type = float_type_from_length (current_gdbarch, type);
+	      type = float_type_from_length (type);
 	      val = unpack_double (type, value_contents (val_args[i]), &inv);
 	      if (inv)
 		error (_("Invalid floating value found in program."));
@@ -2365,7 +2378,7 @@ printf_command (char *arg, int from_tty)
 
 	      /* If format string wants a float, unchecked-convert the value
 		 to floating point of the same size.  */
-	      type = float_type_from_length (current_gdbarch, type);
+	      type = float_type_from_length (type);
 	      val = unpack_double (type, value_contents (val_args[i]), &inv);
 	      if (inv)
 		error (_("Invalid floating value found in program."));
@@ -2419,6 +2432,8 @@ printf_command (char *arg, int from_tty)
 	      /* Parameter data.  */
 	      struct type *param_type = value_type (val_args[i]);
 	      unsigned int param_len = TYPE_LENGTH (param_type);
+	      struct gdbarch *gdbarch = get_type_arch (param_type);
+	      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
 	      /* DFP output data.  */
 	      struct value *dfp_value = NULL;
@@ -2447,18 +2462,18 @@ printf_command (char *arg, int from_tty)
 		  if (*sos == 'H')
 		    {
 		      dfp_len = 4;
-		      dfp_type = builtin_type (current_gdbarch)->builtin_decfloat;
+		      dfp_type = builtin_type (gdbarch)->builtin_decfloat;
 		    }
 		  else if (*sos == 'D' && *(sos - 1) == 'D')
 		    {
 		      dfp_len = 16;
-		      dfp_type = builtin_type (current_gdbarch)->builtin_declong;
+		      dfp_type = builtin_type (gdbarch)->builtin_declong;
 		      sos--;
 		    }
 		  else
 		    {
 		      dfp_len = 8;
-		      dfp_type = builtin_type (current_gdbarch)->builtin_decdouble;
+		      dfp_type = builtin_type (gdbarch)->builtin_decdouble;
 		    }
 		}
 
@@ -2478,18 +2493,19 @@ printf_command (char *arg, int from_tty)
 
 	      /* Conversion between different DFP types.  */
 	      if (TYPE_CODE (param_type) == TYPE_CODE_DECFLOAT)
-		decimal_convert (param_ptr, param_len, dec, dfp_len);
+		decimal_convert (param_ptr, param_len, byte_order,
+				 dec, dfp_len, byte_order);
 	      else
 		/* If this is a non-trivial conversion, just output 0.
 		   A correct converted value can be displayed by explicitly
 		   casting to a DFP type.  */
-		decimal_from_string (dec, dfp_len, "0");
+		decimal_from_string (dec, dfp_len, byte_order, "0");
 
 	      dfp_value = value_from_decfloat (dfp_type, dec);
 
 	      dfp_ptr = (gdb_byte *) value_contents (dfp_value);
 
-	      decimal_to_string (dfp_ptr, dfp_len, decstr);
+	      decimal_to_string (dfp_ptr, dfp_len, byte_order, decstr);
 
 	      /* Print the DFP value.  */
 	      printf_filtered (current_substring, decstr);
@@ -2733,15 +2749,4 @@ Show printing of source filename and line number with <symbol>."), NULL,
 			   NULL,
 			   show_print_symbol_filename,
 			   &setprintlist, &showprintlist);
-
-  /* For examine/instruction a single byte quantity is specified as
-     the data.  This avoids problems with value_at_lazy() requiring a
-     valid data type (and rejecting VOID). */
-  examine_i_type = init_type (TYPE_CODE_INT, 1, 0, "examine_i_type", NULL);
-
-  examine_b_type = init_type (TYPE_CODE_INT, 1, 0, "examine_b_type", NULL);
-  examine_h_type = init_type (TYPE_CODE_INT, 2, 0, "examine_h_type", NULL);
-  examine_w_type = init_type (TYPE_CODE_INT, 4, 0, "examine_w_type", NULL);
-  examine_g_type = init_type (TYPE_CODE_INT, 8, 0, "examine_g_type", NULL);
-
 }

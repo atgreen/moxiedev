@@ -38,7 +38,8 @@ int
 java_value_print (struct value *val, struct ui_file *stream, 
 		  const struct value_print_options *options)
 {
-  struct gdbarch *gdbarch = current_gdbarch;
+  struct gdbarch *gdbarch = get_type_arch (value_type (val));
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct type *type;
   CORE_ADDR address;
   int i;
@@ -58,7 +59,7 @@ java_value_print (struct value *val, struct ui_file *stream,
 
       if (obj_addr != 0)
 	{
-	  type = type_from_class (java_class_from_object (val));
+	  type = type_from_class (gdbarch, java_class_from_object (val));
 	  type = lookup_pointer_type (type);
 
 	  val = value_at (type, address);
@@ -76,11 +77,12 @@ java_value_print (struct value *val, struct ui_file *stream,
       long length;
       unsigned int things_printed = 0;
       int reps;
-      struct type *el_type = java_primitive_type_from_name (name, i - 2);
+      struct type *el_type
+	= java_primitive_type_from_name (gdbarch, name, i - 2);
       i = 0;
       read_memory (address + get_java_object_header_size (gdbarch), buf4, 4);
 
-      length = (long) extract_signed_integer (buf4, 4);
+      length = (long) extract_signed_integer (buf4, 4, byte_order);
       fprintf_filtered (stream, "{length: %ld", length);
 
       if (el_type == NULL)
@@ -109,7 +111,8 @@ java_value_print (struct value *val, struct ui_file *stream,
                      pulls a host sized pointer out of the target and
                      then extracts that as an address (while assuming
                      that the address is unsigned)!  */
-		  element = extract_unsigned_integer (buf, sizeof (buf));
+		  element = extract_unsigned_integer (buf, sizeof (buf),
+						      byte_order);
 		}
 
 	      for (reps = 1; i + reps < length; reps++)
@@ -120,7 +123,8 @@ java_value_print (struct value *val, struct ui_file *stream,
                      pulls a host sized pointer out of the target and
                      then extracts that as an address (while assuming
                      that the address is unsigned)!  */
-		  next_element = extract_unsigned_integer (buf, sizeof (buf));
+		  next_element = extract_unsigned_integer (buf, sizeof (buf),
+							   byte_order);
 		  if (next_element != element)
 		    break;
 		}
@@ -133,7 +137,7 @@ java_value_print (struct value *val, struct ui_file *stream,
 	      if (element == 0)
 		fprintf_filtered (stream, "null");
 	      else
-		fprintf_filtered (stream, "@%s", paddr_nz (element));
+		fprintf_filtered (stream, "@%s", paddress (gdbarch, element));
 
 	      things_printed++;
 	      i += reps;
@@ -211,6 +215,7 @@ java_value_print (struct value *val, struct ui_file *stream,
       && address != 0
       && value_as_address (val) != 0)
     {
+      struct type *char_type;
       struct value *data_val;
       CORE_ADDR data;
       struct value *boffset_val;
@@ -232,7 +237,8 @@ java_value_print (struct value *val, struct ui_file *stream,
 
       value_free_to_mark (mark);	/* Release unnecessary values */
 
-      val_print_string (java_char_type, data + boffset, count, stream, options);
+      char_type = builtin_java_type (gdbarch)->builtin_char;
+      val_print_string (char_type, data + boffset, count, stream, options);
 
       return 0;
     }
@@ -458,6 +464,7 @@ java_val_print (struct type *type, const gdb_byte *valaddr,
 		struct ui_file *stream, int recurse,
 		const struct value_print_options *options)
 {
+  struct gdbarch *gdbarch = get_type_arch (type);
   unsigned int i = 0;	/* Number of characters printed */
   struct type *target_type;
   CORE_ADDR addr;
@@ -478,7 +485,8 @@ java_val_print (struct type *type, const gdb_byte *valaddr,
 	  /* Print vtable entry - we only get here if we ARE using
 	     -fvtable_thunks.  (Otherwise, look under TYPE_CODE_STRUCT.) */
 	  /* Extract an address, assume that it is unsigned.  */
-	  print_address_demangle (extract_unsigned_integer (valaddr, TYPE_LENGTH (type)),
+	  print_address_demangle (gdbarch,
+				  extract_unsigned_integer (valaddr, TYPE_LENGTH (type)),
 				  stream, demangle);
 	  break;
 	}
@@ -494,7 +502,7 @@ java_val_print (struct type *type, const gdb_byte *valaddr,
       if (TYPE_CODE (target_type) == TYPE_CODE_FUNC)
 	{
 	  /* Try to print what function it points to.  */
-	  print_address_demangle (addr, stream, demangle);
+	  print_address_demangle (gdbarch, addr, stream, demangle);
 	  /* Return value is irrelevant except for string pointers.  */
 	  return (0);
 	}

@@ -1,3 +1,128 @@
+2009-07-11  Hui Zhu  <teawater@gmail.com>
+
+	* gdb.base/help.exp (disassemble): Update expected help text.
+
+2009-07-09  Tom Tromey  <tromey@redhat.com>
+
+	* lib/gdb.exp: Handle TRANSCRIPT.
+	(remote_spawn, remote_close, send_gdb): New procs.
+
+2009-07-10 Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.python/python-prettyprint.c: Add counted null string
+	structure.
+	* gdb.python/python-prettyprint.exp: Print null string. Test for
+	embedded nulls.
+	* gdb.python/python-prettyprint.py (pp_ns): New Function.
+	* gdb.python/python-value.exp (test_value_in_inferior): Add
+	variable length string fetch tests.
+	* gdb.python/python-value.c (main): Add strings for string fetch tests.
+
+2009-07-09  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/dump.exp (inaccessible memory is reported): New test.
+
+2009-07-07  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.base/call-rt-st.exp: Update for change to escape output.
+	* gdb.base/callfuncs.exp: Likewise.
+	* gdb.base/charset.exp: Likewise.
+	* gdb.base/constvars.exp: Likewise.
+	* gdb.base/long_long.exp: Likewise.
+	* gdb.base/pointers.exp: Likewise.
+	* gdb.base/printcmds.exp: Likewise.
+	* gdb.base/setvar.exp: Likewise.
+	* gdb.base/store.exp: Likewise.
+	* gdb.cp/ref-types.exp: Likewise.
+	* gdb.mi/mi-var-child.exp: Likewise.
+	* gdb.mi/mi-var-display.exp: Likewise.
+	* gdb.mi/mi2-var-display.exp: Likewise.
+	* gdb.base/charset.exp: Test octal escape sequence length.
+	Update for change to escape output.
+
+2009-07-07  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.mi/mi2-var-cmd.exp (floating varobj invalidation): New test.
+
+2009-07-06  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* lib/java.exp (java_init): Ignore $GCJ if it is empty.
+
+2009-07-06  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* lib/gdbserver-support.exp (gdbserver_start): Loop spawning
+	gdbserver increasing $portnum if "Can't bind address" has been seen.
+
+2009-07-05  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.base/ending-run.exp: Add "step out of main" pattern for
+	mingw32ce.
+
+2009-07-05  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.base/long_long.exp: arm-mingw32ce defaults to natural-endian
+	VFP format.
+
+2009-07-02  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.base/multi-forks.exp: Only run detach-on-fork tests on
+	linux.  Adjust to use "inferior", "info inferiors", "detach
+	inferior" and "kill inferior" instead of "restart", "info fork",
+	"detach fork" and "delete fork".
+	* gdb.base/ending-run.exp: Spell out "info".
+	* gdb.base/help.exp: Adjust to use test_prefix_command_help for
+	the "kill" command.
+
+2009-07-02  Ulrich Weigand  <Ulrich.Weigand@de.ibm.com>
+
+	* gdb.threads/tls-shared.exp: Update to locexpr_describe_location
+	change to prefix TLS offset in hex with 0x.
+
+2009-07-02  Ulrich Weigand  <Ulrich.Weigand@de.ibm.com>
+
+	* gdb.base/default.exp: Update test case for "x" changes.
+
+2009-07-01  Tristan Gingold  <gingold@adacore.com>
+
+	* gdb.base/bigcore.exp: Make darwin untested.
+
+2009-06-30  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/completion.exp (directory completion): Create the directory.
+	New variables uniquedir, escapeduniquedir, uniquesu, uniquesub,
+	escapeuniquesub.
+	(directory completion 2): Expect now ${escapeuniquesub}.
+	(Glob remaining of directory test): Remove one excessive newline.
+	Expect the real output.
+
+2009-06-30  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix `make check//%' target after `make check' has been ran.
+	* Makefile.in (TEST_TARGETS): Remove the %/.dir dependency.  Add
+	a mkdir call.
+	(check-gdb.base%): Remove the gdb.base%/.dir dependency.
+	(%/.dir): Remove.
+
+2009-06-30  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* lib/mi-support.exp (mi_check_thread_states): Permit any output before
+	the expected result record.
+
+2009-06-30  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Remove racy FAILs relying just on the timeouts.
+	* gdb.base/setshow.exp (set annotate 2, show annotate (2))
+	(annotation_level 2): Remove racy FAILs.
+
+2009-06-30  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	gdb/10275
+	* gdb.dwarf2/dw2-restore.{S,exp}: New test.	
+	
+2009-06-30  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.opt/inline-locals.exp: Remove XFAIL with duplicated arg1.
+
 2009-06-30  Vladimir Prus  <vladimir@codesourcery.com>
 
 	* gdb.mi/mi-stack.exp: Testing symbolic options

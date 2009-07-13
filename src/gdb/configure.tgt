@@ -151,10 +151,14 @@ hppa*-*-*)
 	gdb_target_obs="hppa-tdep.o"
 	;;
 
-i[34567]86-*-darwin* | x86_64-*-darwin*)
+i[34567]86-*-darwin*)
 	# Target: Darwin/i386
-	gdb_target_obs="amd64-tdep.o i386-tdep.o i387-tdep.o \
+	gdb_target_obs="i386-tdep.o i387-tdep.o \
 			i386-darwin-tdep.o solib.o solib-darwin.o"
+	if test "x$enable_64_bit_bfd" = "xyes"; then
+	    # Target: GNU/Linux x86-64
+	    gdb_target_obs="amd64-tdep.o amd64-darwin-tdep.o ${gdb_target_obs}"
+	fi
 	;;
 i[34567]86-*-dicos*)
 	# Target: DICOS/i386
@@ -181,6 +185,7 @@ i[34567]86-*-nto*)
 	# Target: Intel 386 running qnx6.
 	gdb_target_obs="i386-tdep.o i387-tdep.o corelow.o solib.o solib-svr4.o \
 			i386-nto-tdep.o nto-tdep.o"
+	build_gdbserver=yes
 	;;
 i[34567]86-*-solaris2.1[0-9]*)
 	# Target: Solaris x86_64
@@ -522,6 +527,13 @@ vax-*-openbsd*)
 vax-*-*)
 	# Target: VAX running 4.2BSD or Ultrix
 	gdb_target_obs="vax-tdep.o"
+	;;
+
+x86_64-*-darwin*)
+	# Target: Darwin/x86-64
+	gdb_target_obs="amd64-tdep.o i386-tdep.o i387-tdep.o \
+			i386-darwin-tdep.o amd64-darwin-tdep.o \
+                        solib.o solib-darwin.o"
 	;;
 
 x86_64-*-dicos*)

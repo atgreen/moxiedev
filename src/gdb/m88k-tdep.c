@@ -39,9 +39,9 @@
 /* Fetch the instruction at PC.  */
 
 static unsigned long
-m88k_fetch_instruction (CORE_ADDR pc)
+m88k_fetch_instruction (CORE_ADDR pc, enum bfd_endian byte_order)
 {
-  return read_memory_unsigned_integer (pc, 4);
+  return read_memory_unsigned_integer (pc, 4, byte_order);
 }
 
 /* Register information.  */
@@ -81,7 +81,7 @@ m88k_register_type (struct gdbarch *gdbarch, int regnum)
   if (regnum == M88K_R30_REGNUM || regnum == M88K_R31_REGNUM)
     return builtin_type (gdbarch)->builtin_data_ptr;
 
-  return builtin_type_int32;
+  return builtin_type (gdbarch)->builtin_int32;
 }
 
 
@@ -258,6 +258,7 @@ static CORE_ADDR
 m88k_store_arguments (struct regcache *regcache, int nargs,
 		      struct value **args, CORE_ADDR sp)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
   int num_register_words = 0;
   int num_stack_words = 0;
   int i;
@@ -269,7 +270,8 @@ m88k_store_arguments (struct regcache *regcache, int nargs,
 
       if (m88k_integral_or_pointer_p (type) && len < 4)
 	{
-	  args[i] = value_cast (builtin_type_int32, args[i]);
+	  args[i] = value_cast (builtin_type (gdbarch)->builtin_int32,
+				args[i]);
 	  type = value_type (args[i]);
 	  len = TYPE_LENGTH (type);
 	}
@@ -524,9 +526,11 @@ struct m88k_prologue_insn m88k_prologue_insn_table[] =
    prologue.  */
 
 static CORE_ADDR
-m88k_analyze_prologue (CORE_ADDR pc, CORE_ADDR limit,
+m88k_analyze_prologue (struct gdbarch *gdbarch,
+		       CORE_ADDR pc, CORE_ADDR limit,
 		       struct m88k_frame_cache *cache)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR end = limit;
 
   /* Provide a dummy cache if necessary.  */
@@ -546,7 +550,7 @@ m88k_analyze_prologue (CORE_ADDR pc, CORE_ADDR limit,
   while (pc < limit)
     {
       struct m88k_prologue_insn *pi = m88k_prologue_insn_table;
-      unsigned long insn = m88k_fetch_instruction (pc);
+      unsigned long insn = m88k_fetch_instruction (pc, byte_order);
 
       while ((insn & pi->mask) != pi->insn)
 	pi++;
@@ -641,12 +645,14 @@ m88k_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 	return sal.end;
     }
 
-  return m88k_analyze_prologue (pc, pc + m88k_max_prologue_size, NULL);
+  return m88k_analyze_prologue (gdbarch, pc, pc + m88k_max_prologue_size,
+				NULL);
 }
 
 static struct m88k_frame_cache *
 m88k_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
   struct m88k_frame_cache *cache;
   CORE_ADDR frame_sp;
 
@@ -659,7 +665,8 @@ m88k_frame_cache (struct frame_info *this_frame, void **this_cache)
 
   cache->pc = get_frame_func (this_frame);
   if (cache->pc != 0)
-    m88k_analyze_prologue (cache->pc, get_frame_pc (this_frame), cache);
+    m88k_analyze_prologue (gdbarch, cache->pc, get_frame_pc (this_frame),
+			   cache);
 
   /* Calculate the stack pointer used in the prologue.  */
   if (cache->fp_offset != -1)

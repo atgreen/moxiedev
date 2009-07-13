@@ -68,11 +68,12 @@ is_scmvalue_type (struct type *type)
    of the 0'th one.  */
 
 LONGEST
-scm_get_field (LONGEST svalue, int index, int size)
+scm_get_field (LONGEST svalue, int index, int size,
+	       enum bfd_endian byte_order)
 {
   gdb_byte buffer[20];
   read_memory (SCM2PTR (svalue) + index * size, buffer, size);
-  return extract_signed_integer (buffer, size);
+  return extract_signed_integer (buffer, size, byte_order);
 }
 
 /* Unpack a value of type TYPE in buffer VALADDR as an integer
@@ -84,7 +85,10 @@ scm_unpack (struct type *type, const gdb_byte *valaddr, enum type_code context)
 {
   if (is_scmvalue_type (type))
     {
-      LONGEST svalue = extract_signed_integer (valaddr, TYPE_LENGTH (type));
+      enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
+      LONGEST svalue
+	= extract_signed_integer (valaddr, TYPE_LENGTH (type), byte_order);
+
       if (context == TYPE_CODE_BOOL)
 	{
 	  if (svalue == SCM_BOOL_F)
@@ -222,7 +226,7 @@ evaluate_exp (struct type *expect_type, struct expression *exp,
     }
   return evaluate_subexp_standard (expect_type, exp, pos, noside);
 nosideret:
-  return value_from_longest (builtin_type_int8, (LONGEST) 1);
+  return value_from_longest (builtin_type (exp->gdbarch)->builtin_int, 1);
 }
 
 const struct exp_descriptor exp_descriptor_scm = 
@@ -278,10 +282,8 @@ build_scm_types (struct gdbarch *gdbarch)
   struct builtin_scm_type *builtin_scm_type
     = GDBARCH_OBSTACK_ZALLOC (gdbarch, struct builtin_scm_type);
 
-  builtin_scm_type->builtin_scm =
-    init_type (TYPE_CODE_INT,
-	       gdbarch_long_bit (gdbarch) / TARGET_CHAR_BIT,
-	       0, "SCM", (struct objfile *) NULL);
+  builtin_scm_type->builtin_scm
+    = arch_integer_type (gdbarch, gdbarch_long_bit (gdbarch), 0, "SCM");
 
   return builtin_scm_type;
 }

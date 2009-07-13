@@ -82,6 +82,7 @@ default_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
 {
   const int sizeof_auxv_field = gdbarch_ptr_bit (target_gdbarch)
 				/ TARGET_CHAR_BIT;
+  const enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch);
   gdb_byte *ptr = *readptr;
 
   if (endptr == ptr)
@@ -90,9 +91,9 @@ default_auxv_parse (struct target_ops *ops, gdb_byte **readptr,
   if (endptr - ptr < sizeof_auxv_field * 2)
     return -1;
 
-  *typep = extract_unsigned_integer (ptr, sizeof_auxv_field);
+  *typep = extract_unsigned_integer (ptr, sizeof_auxv_field, byte_order);
   ptr += sizeof_auxv_field;
-  *valp = extract_unsigned_integer (ptr, sizeof_auxv_field);
+  *valp = extract_unsigned_integer (ptr, sizeof_auxv_field, byte_order);
   ptr += sizeof_auxv_field;
 
   *readptr = ptr;
@@ -237,14 +238,14 @@ fprint_target_auxv (struct ui_file *file, struct target_ops *ops)
 	  fprintf_filtered (file, "%s\n", plongest (val));
 	  break;
 	case hex:
-	  fprintf_filtered (file, "0x%s\n", paddr_nz (val));
+	  fprintf_filtered (file, "%s\n", paddress (target_gdbarch, val));
 	  break;
 	case str:
 	  {
 	    struct value_print_options opts;
 	    get_user_print_options (&opts);
 	    if (opts.addressprint)
-	      fprintf_filtered (file, "0x%s", paddr_nz (val));
+	      fprintf_filtered (file, "%s", paddress (target_gdbarch, val));
 	    val_print_string (builtin_type (target_gdbarch)->builtin_char,
 			      val, -1, file, &opts);
 	    fprintf_filtered (file, "\n");

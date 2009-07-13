@@ -104,8 +104,11 @@ struct gdbarch_tdep
   int sc_sp_offset;
 
   /* ISA-specific data types.  */
+  struct type *i386_eflags_type;
+  struct type *i386_mxcsr_type;
   struct type *i386_mmx_type;
   struct type *i386_sse_type;
+  struct type *i387_ext_type;
 
   /* Process record/replay target.  */
   /* Parse intx80 args.  */
@@ -159,11 +162,11 @@ enum i386_regnum
 #define I386_MAX_REGISTER_SIZE	16
 
 /* Types for i386-specific registers.  */
-extern struct type *i386_eflags_type;
-extern struct type *i386_mxcsr_type;
-
+extern struct type *i386_eflags_type (struct gdbarch *gdbarch);
+extern struct type *i386_mxcsr_type (struct gdbarch *gdbarch);
 extern struct type *i386_mmx_type (struct gdbarch *gdbarch);
 extern struct type *i386_sse_type (struct gdbarch *gdbarch);
+extern struct type *i387_ext_type (struct gdbarch *gdbarch);
 
 /* Segment selectors.  */
 #define I386_SEL_RPL	0x0003  /* Requester's Privilege Level mask.  */
@@ -175,7 +178,8 @@ extern struct type *i386_sse_type (struct gdbarch *gdbarch);
 #define I386_MAX_INSN_LEN (16)
 
 /* Functions exported from i386-tdep.c.  */
-extern CORE_ADDR i386_pe_skip_trampoline_code (CORE_ADDR pc, char *name);
+extern CORE_ADDR i386_pe_skip_trampoline_code (struct frame_info *frame,
+					       CORE_ADDR pc, char *name);
 extern CORE_ADDR i386_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc);
 
 /* Return whether the THIS_FRAME corresponds to a sigtramp routine.  */

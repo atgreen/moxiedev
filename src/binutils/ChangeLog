@@ -1,3 +1,34 @@
+2009-07-10  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* Makefile.am: Run "make dep-am".
+	* Makefile.in: Regenerated.
+
+2009-07-10  Tom Tromey  <tromey@redhat.com>
+
+	* Makefile.am (dwarf.o): Refer to dwarf2.h, not elf/dwarf2.h.
+	* Makefile.in: Rebuild.
+	* dwarf.c: Include dwarf2.h, not elf/dwarf2.h.
+
+2009-07-06  Tristan Gingold  <gingold@adacore.com>
+
+	* objdump.c (dump_dwarf_section): Handle .eh_frame like other dwarf
+	sections.
+	* dwarf.h (struct dwarf_section_display): Remove eh_frame field.
+	* dwarf.c (debug_displays): Adjust for removed field.
+
+2009-07-03  Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf.c (decode_location_expression): Handle DW_OP_stack_value
+	and DW_OP_implicit_value.
+
+2009-07-01  Nick Clifton  <nickc@redhat.com>
+
+	PR 6714
+	* rclex.c (handle_quotes): Do not complain about whitespace
+	separating quoted strings.
+	(rclex_string): Ignore whitespace when looking for a new opening
+	quote following a closing quote.
+
 2009-06-27  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR binutils/10321

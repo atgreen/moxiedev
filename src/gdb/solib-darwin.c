@@ -79,6 +79,7 @@ static void
 darwin_load_image_infos (void)
 {
   gdb_byte buf[24];
+  enum bfd_endian byte_order = gdbarch_byte_order (target_gdbarch);
   struct type *ptr_type = builtin_type (target_gdbarch)->builtin_data_ptr;
   int len;
 
@@ -97,11 +98,11 @@ darwin_load_image_infos (void)
     return;
 
   /* Extract the fields.  */
-  dyld_all_image.version = extract_unsigned_integer (buf, 4);
+  dyld_all_image.version = extract_unsigned_integer (buf, 4, byte_order);
   if (dyld_all_image.version != DYLD_VERSION)
     return;
 
-  dyld_all_image.count = extract_unsigned_integer (buf + 4, 4);
+  dyld_all_image.count = extract_unsigned_integer (buf + 4, 4, byte_order);
   dyld_all_image.info = extract_typed_address (buf + 8, ptr_type);
   dyld_all_image.notifier = extract_typed_address
     (buf + 8 + ptr_type->length, ptr_type);
@@ -360,7 +361,7 @@ darwin_solib_create_inferior_hook (void)
   darwin_load_image_infos ();
 
   if (dyld_all_image.version == DYLD_VERSION)
-    create_solib_event_breakpoint (dyld_all_image.notifier);
+    create_solib_event_breakpoint (target_gdbarch, dyld_all_image.notifier);
 }
 
 static void

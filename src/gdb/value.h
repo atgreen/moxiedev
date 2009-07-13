@@ -318,7 +318,8 @@ extern struct value *coerce_array (struct value *value);
 struct frame_info;
 struct fn_field;
 
-extern void print_address_demangle (CORE_ADDR, struct ui_file *, int);
+extern void print_address_demangle (struct gdbarch *, CORE_ADDR,
+				    struct ui_file *, int);
 
 extern LONGEST value_as_long (struct value *val);
 extern DOUBLEST value_as_double (struct value *val);
@@ -384,7 +385,8 @@ extern struct value *value_cstring (char *ptr, int len,
 				    struct type *char_type);
 extern struct value *value_string (char *ptr, int len,
 				   struct type *char_type);
-extern struct value *value_bitstring (char *ptr, int len);
+extern struct value *value_bitstring (char *ptr, int len,
+				      struct type *index_type);
 
 extern struct value *value_array (int lowbound, int highbound,
 				  struct value **elemvec);
@@ -522,13 +524,17 @@ extern void binop_promote (const struct language_defn *language,
 
 extern struct value *access_value_history (int num);
 
-extern struct value *value_of_internalvar (struct internalvar *var);
+extern struct value *value_of_internalvar (struct gdbarch *gdbarch,
+					   struct internalvar *var);
 
 extern int get_internalvar_integer (struct internalvar *var, LONGEST *l);
 
 extern void set_internalvar (struct internalvar *var, struct value *val);
 
 extern void set_internalvar_integer (struct internalvar *var, LONGEST l);
+
+extern void set_internalvar_string (struct internalvar *var,
+				    const char *string);
 
 extern void clear_internalvar (struct internalvar *var);
 
@@ -541,8 +547,8 @@ extern struct internalvar *lookup_only_internalvar (const char *name);
 
 extern struct internalvar *create_internalvar (const char *name);
 
-typedef struct value * (*internalvar_make_value) (struct internalvar *);
-
+typedef struct value * (*internalvar_make_value) (struct gdbarch *,
+						  struct internalvar *);
 extern struct internalvar *
   create_internalvar_type_lazy (char *name, internalvar_make_value fun);
 
@@ -584,8 +590,8 @@ extern void release_value (struct value *val);
 
 extern int record_latest_value (struct value *val);
 
-extern void modify_field (gdb_byte *addr, LONGEST fieldval, int bitpos,
-			  int bitsize);
+extern void modify_field (struct type *type, gdb_byte *addr,
+			  LONGEST fieldval, int bitpos, int bitsize);
 
 extern void type_print (struct type *type, char *varstring,
 			struct ui_file *stream, int show);
@@ -669,7 +675,9 @@ extern struct value *value_subscripted_rvalue (struct value *array,
 
 /* User function handler.  */
 
-typedef struct value *(*internal_function_fn) (void *cookie,
+typedef struct value *(*internal_function_fn) (struct gdbarch *gdbarch,
+					       const struct language_defn *language,
+					       void *cookie,
 					       int argc,
 					       struct value **argv);
 
@@ -677,7 +685,9 @@ void add_internal_function (const char *name, const char *doc,
 			    internal_function_fn handler,
 			    void *cookie);
 
-struct value *call_internal_function (struct value *function,
+struct value *call_internal_function (struct gdbarch *gdbarch,
+				      const struct language_defn *language,
+				      struct value *function,
 				      int argc, struct value **argv);
 
 char *value_internal_function_name (struct value *);

@@ -30,6 +30,7 @@
 #include <ctype.h>
 #include "target.h"
 #include "readline/readline.h"
+#include "gdbcore.h"
 
 #define XMALLOC(TYPE) ((TYPE*) xmalloc (sizeof (TYPE)))
 
@@ -246,7 +247,7 @@ dump_memory_to_file (char *cmd, char *mode, char *file_format)
      value.  */
   buf = xmalloc (count);
   make_cleanup (xfree, buf);
-  target_read_memory (lo, buf, count);
+  read_memory (lo, buf, count);
   
   /* Have everything.  Open/write the data.  */
   if (file_format == NULL || strcmp (file_format, "binary") == 0)
@@ -488,11 +489,13 @@ restore_section_callback (bfd *ibfd, asection *isec, void *args)
 		   (unsigned long) sec_end);
 
   if (data->load_offset != 0 || data->load_start != 0 || data->load_end != 0)
-    printf_filtered (" into memory (0x%s to 0x%s)\n", 
-		     paddr_nz ((unsigned long) sec_start 
+    printf_filtered (" into memory (%s to %s)\n",
+		     paddress (target_gdbarch,
+			       (unsigned long) sec_start
 			       + sec_offset + data->load_offset), 
-		     paddr_nz ((unsigned long) sec_start + sec_offset 
-		       + data->load_offset + sec_load_count));
+		     paddress (target_gdbarch,
+			       (unsigned long) sec_start + sec_offset
+				+ data->load_offset + sec_load_count));
   else
     puts_filtered ("\n");
 

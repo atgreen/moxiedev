@@ -27,6 +27,7 @@
 #include "gdb_string.h"
 #include "language.h"
 #include "valprint.h"
+#include "arch-utils.h"
 
 #include <tcl.h>
 #include "gdbtk.h"
@@ -211,7 +212,8 @@ static void
 get_register_size (int regnum, map_arg arg)
 {
   Tcl_ListObjAppendElement (gdbtk_interp, result_ptr->obj_ptr,
-			    Tcl_NewIntObj (register_size (current_gdbarch, regnum)));
+			    Tcl_NewIntObj (register_size (get_current_arch (),
+							  regnum)));
 }
 
 /* returns a list of valid types for a register */
@@ -224,7 +226,7 @@ get_register_types (int regnum, map_arg arg)
   struct type *reg_vtype;
   int i,n;
 
-  reg_vtype = register_type (current_gdbarch, regnum);
+  reg_vtype = register_type (get_current_arch (), regnum);
   
   if (TYPE_CODE (reg_vtype) == TYPE_CODE_UNION)
     {
@@ -287,7 +289,7 @@ get_register (int regnum, map_arg arg)
   
   reg_vtype = regtype[regnum];
   if (reg_vtype == NULL)
-    reg_vtype = register_type (current_gdbarch, regnum);
+    reg_vtype = register_type (get_current_arch (), regnum);
 
   if (!target_has_registers)
     {
@@ -319,10 +321,10 @@ get_register (int regnum, map_arg arg)
 
       strcpy (buf, "0x");
       ptr = buf + 2;
-      for (j = 0; j < register_size (current_gdbarch, regnum); j++)
+      for (j = 0; j < register_size (get_current_arch (), regnum); j++)
 	{
-	  int idx = ((gdbarch_byte_order (current_gdbarch) == BFD_ENDIAN_BIG)
-		     ? j : register_size (current_gdbarch, regnum) - 1 - j);
+	  int idx = ((gdbarch_byte_order (get_current_arch ()) == BFD_ENDIAN_BIG)
+		     ? j : register_size (get_current_arch (), regnum) - 1 - j);
 	  sprintf (ptr, "%02x", (unsigned char) buffer[idx]);
 	  ptr += 2;
 	}
@@ -338,7 +340,7 @@ get_register (int regnum, map_arg arg)
 
       if ((TYPE_CODE (reg_vtype) == TYPE_CODE_UNION)
 	  && (strcmp (FIELD_NAME (TYPE_FIELD (reg_vtype, 0)), 
-		      gdbarch_register_name (current_gdbarch, regnum)) == 0))
+		      gdbarch_register_name (get_current_arch (), regnum)) == 0))
 	{
 	  val_print (FIELD_TYPE (TYPE_FIELD (reg_vtype, 0)), buffer, 0, 0,
 		     stb, 0, &opts, current_language);
@@ -365,7 +367,7 @@ get_register_name (int regnum, map_arg arg)
   /* Non-zero if the caller wants the register numbers, too.  */
   int numbers = arg.integer;
   Tcl_Obj *name
-    = Tcl_NewStringObj (gdbarch_register_name (current_gdbarch, regnum), -1);
+    = Tcl_NewStringObj (gdbarch_register_name (get_current_arch (), regnum), -1);
   Tcl_Obj *elt;
 
   if (numbers)
@@ -398,16 +400,16 @@ map_arg_registers (Tcl_Interp *interp, int objc, Tcl_Obj **objv,
      In this case, some entries of gdbarch_register_name will change
      depending upon the particular processor being debugged.  */
 
-  numregs = (gdbarch_num_regs (current_gdbarch)
-	     + gdbarch_num_pseudo_regs (current_gdbarch));
+  numregs = (gdbarch_num_regs (get_current_arch ())
+	     + gdbarch_num_pseudo_regs (get_current_arch ()));
 
   if (objc == 0)		/* No args, just do all the regs */
     {
       result_ptr->flags |= GDBTK_MAKES_LIST;
       for (regnum = 0; regnum < numregs; regnum++)
 	{
-	  if (gdbarch_register_name (current_gdbarch, regnum) == NULL
-	      || *(gdbarch_register_name (current_gdbarch, regnum)) == '\0')
+	  if (gdbarch_register_name (get_current_arch (), regnum) == NULL
+	      || *(gdbarch_register_name (get_current_arch (), regnum)) == '\0')
 	    continue;
 	  func (regnum, arg);
 	}      
@@ -451,13 +453,13 @@ register_changed_p (int regnum, map_arg arg)
     return;
 
   if (memcmp (&old_regs[regnum * MAX_REGISTER_SIZE], raw_buffer,
-	      register_size (current_gdbarch, regnum)) == 0)
+	      register_size (get_current_arch (), regnum)) == 0)
     return;
 
   /* Found a changed register.  Save new value and return its number. */
 
   memcpy (&old_regs[regnum * MAX_REGISTER_SIZE], raw_buffer,
-	  register_size (current_gdbarch, regnum));
+	  register_size (get_current_arch (), regnum));
 
   Tcl_ListObjAppendElement (NULL, result_ptr->obj_ptr, Tcl_NewIntObj (regnum));
 }
@@ -471,8 +473,8 @@ setup_architecture_data ()
   xfree (regformat);
   xfree (regtype);
 
-  numregs = (gdbarch_num_regs (current_gdbarch)
-	     + gdbarch_num_pseudo_regs (current_gdbarch));
+  numregs = (gdbarch_num_regs (get_current_arch ())
+	     + gdbarch_num_pseudo_regs (get_current_arch ()));
   old_regs = xcalloc (1, numregs * MAX_REGISTER_SIZE + 1);
   regformat = (int *)xcalloc (numregs, sizeof(int));
   regtype = (struct type **)xcalloc (numregs, sizeof(struct type **));
@@ -502,8 +504,8 @@ gdb_regformat (ClientData clientData, Tcl_Interp *interp,
   type = (struct type *)strtol (Tcl_GetStringFromObj (objv[1], NULL), NULL, 16);  
   fm = (int)*(Tcl_GetStringFromObj (objv[2], NULL));
 
-  numregs = (gdbarch_num_regs (current_gdbarch)
-	     + gdbarch_num_pseudo_regs (current_gdbarch));
+  numregs = (gdbarch_num_regs (get_current_arch ())
+	     + gdbarch_num_pseudo_regs (get_current_arch ()));
   if (regno >= numregs)
     {
       gdbtk_set_result (interp, "Register number %d too large", regno);
@@ -534,9 +536,9 @@ gdb_reggrouplist (ClientData clientData, Tcl_Interp *interp,
       return TCL_ERROR;
     }
 
-  for (group = reggroup_next (current_gdbarch, NULL);
+  for (group = reggroup_next (get_current_arch (), NULL);
        group != NULL;
-       group = reggroup_next (current_gdbarch, group))
+       group = reggroup_next (get_current_arch (), group))
     {
       if (reggroup_type (group) == USER_REGGROUP)
 	Tcl_ListObjAppendElement (NULL, result_ptr->obj_ptr, Tcl_NewStringObj (reggroup_name (group), -1));
@@ -569,9 +571,9 @@ gdb_reggroup (ClientData clientData, Tcl_Interp *interp,
       return TCL_ERROR;
     }
 
-  for (group = reggroup_next (current_gdbarch, NULL);
+  for (group = reggroup_next (get_current_arch (), NULL);
        group != NULL;
-       group = reggroup_next (current_gdbarch, group))
+       group = reggroup_next (get_current_arch (), group))
     {
       if (strcmp (groupname, reggroup_name (group)) == 0)
 	break;
@@ -580,11 +582,11 @@ gdb_reggroup (ClientData clientData, Tcl_Interp *interp,
   if (group == NULL)
     return TCL_ERROR;
 
-  num = (gdbarch_num_regs (current_gdbarch)
-	 + gdbarch_num_pseudo_regs (current_gdbarch));
+  num = (gdbarch_num_regs (get_current_arch ())
+	 + gdbarch_num_pseudo_regs (get_current_arch ()));
   for (regnum = 0; regnum < num; regnum++)
     {
-      if (gdbarch_register_reggroup_p (current_gdbarch, regnum, group))
+      if (gdbarch_register_reggroup_p (get_current_arch (), regnum, group))
 	Tcl_ListObjAppendElement (NULL, result_ptr->obj_ptr, Tcl_NewIntObj (regnum));
     }
   return TCL_OK;

@@ -78,6 +78,13 @@ struct frame_info
   void *prologue_cache;
   const struct frame_unwind *unwind;
 
+  /* Cached copy of the previous frame's architecture.  */
+  struct
+  {
+    int p;
+    struct gdbarch *arch;
+  } prev_arch;
+
   /* Cached copy of the previous frame's resume address.  */
   struct {
     int p;
@@ -162,7 +169,7 @@ static void
 fprint_field (struct ui_file *file, const char *name, int p, CORE_ADDR addr)
 {
   if (p)
-    fprintf_unfiltered (file, "%s=0x%s", name, paddr_nz (addr));
+    fprintf_unfiltered (file, "%s=%s", name, hex_string (addr));
   else
     fprintf_unfiltered (file, "!%s", name);
 }
@@ -201,6 +208,9 @@ fprint_frame_type (struct ui_file *file, enum frame_type type)
     case SIGTRAMP_FRAME:
       fprintf_unfiltered (file, "SIGTRAMP_FRAME");
       return;
+    case ARCH_FRAME:
+      fprintf_unfiltered (file, "ARCH_FRAME");
+      return;
     default:
       fprintf_unfiltered (file, "<unknown type>");
       return;
@@ -232,7 +242,7 @@ fprint_frame (struct ui_file *file, struct frame_info *fi)
   fprintf_unfiltered (file, ",");
   fprintf_unfiltered (file, "pc=");
   if (fi->next != NULL && fi->next->prev_pc.p)
-    fprintf_unfiltered (file, "0x%s", paddr_nz (fi->next->prev_pc.value));
+    fprintf_unfiltered (file, "%s", hex_string (fi->next->prev_pc.value));
   else
     fprintf_unfiltered (file, "<unknown>");
   fprintf_unfiltered (file, ",");
@@ -244,7 +254,7 @@ fprint_frame (struct ui_file *file, struct frame_info *fi)
   fprintf_unfiltered (file, ",");
   fprintf_unfiltered (file, "func=");
   if (fi->next != NULL && fi->next->prev_func.p)
-    fprintf_unfiltered (file, "0x%s", paddr_nz (fi->next->prev_func.addr));
+    fprintf_unfiltered (file, "%s", hex_string (fi->next->prev_func.addr));
   else
     fprintf_unfiltered (file, "<unknown>");
   fprintf_unfiltered (file, "}");
@@ -535,7 +545,7 @@ frame_unwind_pc (struct frame_info *this_frame)
   if (!this_frame->prev_pc.p)
     {
       CORE_ADDR pc;
-      if (gdbarch_unwind_pc_p (get_frame_arch (this_frame)))
+      if (gdbarch_unwind_pc_p (frame_unwind_arch (this_frame)))
 	{
 	  /* The right way.  The `pure' way.  The one true way.  This
 	     method depends solely on the register-unwind code to
@@ -553,7 +563,7 @@ frame_unwind_pc (struct frame_info *this_frame)
 	     frame.  This is all in stark contrast to the old
 	     FRAME_SAVED_PC which would try to directly handle all the
 	     different ways that a PC could be unwound.  */
-	  pc = gdbarch_unwind_pc (get_frame_arch (this_frame), this_frame);
+	  pc = gdbarch_unwind_pc (frame_unwind_arch (this_frame), this_frame);
 	}
       else
 	internal_error (__FILE__, __LINE__, _("No unwind_pc method"));
@@ -563,7 +573,7 @@ frame_unwind_pc (struct frame_info *this_frame)
 	fprintf_unfiltered (gdb_stdlog,
 			    "{ frame_unwind_caller_pc (this_frame=%d) -> 0x%s }\n",
 			    this_frame->level,
-			    paddr_nz (this_frame->prev_pc.value));
+			    hex_string (this_frame->prev_pc.value));
     }
   return this_frame->prev_pc.value;
 }
@@ -588,9 +598,9 @@ get_frame_func (struct frame_info *this_frame)
       next_frame->prev_func.addr = get_pc_function_start (addr_in_block);
       if (frame_debug)
 	fprintf_unfiltered (gdb_stdlog,
-			    "{ get_frame_func (this_frame=%d) -> 0x%s }\n",
+			    "{ get_frame_func (this_frame=%d) -> %s }\n",
 			    this_frame->level,
-			    paddr_nz (next_frame->prev_func.addr));
+			    hex_string (next_frame->prev_func.addr));
     }
   return next_frame->prev_func.addr;
 }
@@ -732,17 +742,18 @@ get_frame_register (struct frame_info *frame,
 struct value *
 frame_unwind_register_value (struct frame_info *frame, int regnum)
 {
+  struct gdbarch *gdbarch;
   struct value *value;
 
   gdb_assert (frame != NULL);
+  gdbarch = frame_unwind_arch (frame);
 
   if (frame_debug)
     {
       fprintf_unfiltered (gdb_stdlog, "\
 { frame_unwind_register_value (frame=%d,regnum=%d(%s),...) ",
 			  frame->level, regnum,
-			  user_reg_map_regnum_to_name
-			    (get_frame_arch (frame), regnum));
+			  user_reg_map_regnum_to_name (gdbarch, regnum));
     }
 
   /* Find the unwinder.  */
@@ -763,8 +774,9 @@ frame_unwind_register_value (struct frame_info *frame, int regnum)
 	    fprintf_unfiltered (gdb_stdlog, " register=%d",
 				VALUE_REGNUM (value));
 	  else if (VALUE_LVAL (value) == lval_memory)
-	    fprintf_unfiltered (gdb_stdlog, " address=0x%s",
-				paddr_nz (value_address (value)));
+	    fprintf_unfiltered (gdb_stdlog, " address=%s",
+				paddress (gdbarch,
+					  value_address (value)));
 	  else
 	    fprintf_unfiltered (gdb_stdlog, " computed");
 
@@ -777,7 +789,7 @@ frame_unwind_register_value (struct frame_info *frame, int regnum)
 
 	      fprintf_unfiltered (gdb_stdlog, " bytes=");
 	      fprintf_unfiltered (gdb_stdlog, "[");
-	      for (i = 0; i < register_size (get_frame_arch (frame), regnum); i++)
+	      for (i = 0; i < register_size (gdbarch, regnum); i++)
 		fprintf_unfiltered (gdb_stdlog, "%02x", buf[i]);
 	      fprintf_unfiltered (gdb_stdlog, "]");
 	    }
@@ -798,10 +810,12 @@ get_frame_register_value (struct frame_info *frame, int regnum)
 LONGEST
 frame_unwind_register_signed (struct frame_info *frame, int regnum)
 {
+  struct gdbarch *gdbarch = frame_unwind_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int size = register_size (gdbarch, regnum);
   gdb_byte buf[MAX_REGISTER_SIZE];
   frame_unwind_register (frame, regnum, buf);
-  return extract_signed_integer (buf, register_size (get_frame_arch (frame),
-						     regnum));
+  return extract_signed_integer (buf, size, byte_order);
 }
 
 LONGEST
@@ -813,10 +827,12 @@ get_frame_register_signed (struct frame_info *frame, int regnum)
 ULONGEST
 frame_unwind_register_unsigned (struct frame_info *frame, int regnum)
 {
+  struct gdbarch *gdbarch = frame_unwind_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int size = register_size (gdbarch, regnum);
   gdb_byte buf[MAX_REGISTER_SIZE];
   frame_unwind_register (frame, regnum, buf);
-  return extract_unsigned_integer (buf, register_size (get_frame_arch (frame),
-						       regnum));
+  return extract_unsigned_integer (buf, size, byte_order);
 }
 
 ULONGEST
@@ -1191,8 +1207,8 @@ create_new_frame (CORE_ADDR addr, CORE_ADDR pc)
   if (frame_debug)
     {
       fprintf_unfiltered (gdb_stdlog,
-			  "{ create_new_frame (addr=0x%s, pc=0x%s) ",
-			  paddr_nz (addr), paddr_nz (pc));
+			  "{ create_new_frame (addr=%s, pc=%s) ",
+			  hex_string (addr), hex_string (pc));
     }
 
   fi = FRAME_OBSTACK_ZALLOC (struct frame_info);
@@ -1862,14 +1878,18 @@ LONGEST
 get_frame_memory_signed (struct frame_info *this_frame, CORE_ADDR addr,
 			 int len)
 {
-  return read_memory_integer (addr, len);
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  return read_memory_integer (addr, len, byte_order);
 }
 
 ULONGEST
 get_frame_memory_unsigned (struct frame_info *this_frame, CORE_ADDR addr,
 			   int len)
 {
-  return read_memory_unsigned_integer (addr, len);
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  return read_memory_unsigned_integer (addr, len, byte_order);
 }
 
 int
@@ -1880,17 +1900,48 @@ safe_frame_unwind_memory (struct frame_info *this_frame,
   return !target_read_memory (addr, buf, len);
 }
 
-/* Architecture method.  */
+/* Architecture methods.  */
 
 struct gdbarch *
 get_frame_arch (struct frame_info *this_frame)
 {
-  /* In the future, this function will return a per-frame
-     architecture instead of current_gdbarch.  Calling the
-     routine with a NULL value of this_frame is a bug!  */
-  gdb_assert (this_frame);
+  return frame_unwind_arch (this_frame->next);
+}
 
-  return current_gdbarch;
+struct gdbarch *
+frame_unwind_arch (struct frame_info *next_frame)
+{
+  if (!next_frame->prev_arch.p)
+    {
+      struct gdbarch *arch;
+
+      if (next_frame->unwind == NULL)
+	next_frame->unwind
+	  = frame_unwind_find_by_frame (next_frame,
+					&next_frame->prologue_cache);
+
+      if (next_frame->unwind->prev_arch != NULL)
+	arch = next_frame->unwind->prev_arch (next_frame,
+					      &next_frame->prologue_cache);
+      else
+	arch = get_frame_arch (next_frame);
+
+      next_frame->prev_arch.arch = arch;
+      next_frame->prev_arch.p = 1;
+      if (frame_debug)
+	fprintf_unfiltered (gdb_stdlog,
+			    "{ frame_unwind_arch (next_frame=%d) -> %s }\n",
+			    next_frame->level,
+			    gdbarch_bfd_arch_info (arch)->printable_name);
+    }
+
+  return next_frame->prev_arch.arch;
+}
+
+struct gdbarch *
+frame_unwind_caller_arch (struct frame_info *next_frame)
+{
+  return frame_unwind_arch (skip_inlined_frames (next_frame));
 }
 
 /* Stack pointer methods.  */

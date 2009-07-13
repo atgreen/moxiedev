@@ -354,8 +354,8 @@ evaluate_struct_tuple (struct value *struct_val,
 	    bitpos += TYPE_FIELD_BITPOS (substruct_type, subfieldno);
 	  addr = value_contents_writeable (struct_val) + bitpos / 8;
 	  if (bitsize)
-	    modify_field (addr, value_as_long (val),
-			  bitpos % 8, bitsize);
+	    modify_field (struct_type, addr,
+			  value_as_long (val), bitpos % 8, bitsize);
 	  else
 	    memcpy (addr, value_contents (val),
 		    TYPE_LENGTH (value_type (val)));
@@ -779,7 +779,8 @@ evaluate_subexp_standard (struct type *expect_type,
 
     case OP_INTERNALVAR:
       (*pos) += 2;
-      return value_of_internalvar (exp->elts[pc + 1].internalvar);
+      return value_of_internalvar (exp->gdbarch,
+				   exp->elts[pc + 1].internalvar);
 
     case OP_STRING:
       tem = longest_to_int (exp->elts[pc + 1].longconst);
@@ -804,7 +805,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	+= 3 + BYTES_TO_EXP_ELEM ((tem + HOST_CHAR_BIT - 1) / HOST_CHAR_BIT);
       if (noside == EVAL_SKIP)
 	goto nosideret;
-      return value_bitstring (&exp->elts[pc + 2].string, tem);
+      return value_bitstring (&exp->elts[pc + 2].string, tem,
+			      builtin_type (exp->gdbarch)->builtin_int);
       break;
 
     case OP_ARRAY:
@@ -1520,7 +1522,8 @@ evaluate_subexp_standard (struct type *expect_type,
 	    error (_("Expression of type other than \"Function returning ...\" used as function"));
 	}
       if (TYPE_CODE (value_type (argvec[0])) == TYPE_CODE_INTERNAL_FUNCTION)
-	return call_internal_function (argvec[0], nargs, argvec + 1);
+	return call_internal_function (exp->gdbarch, exp->language_defn,
+				       argvec[0], nargs, argvec + 1);
 
       return call_function_by_hand (argvec[0], nargs, argvec + 1);
       /* pai: FIXME save value from call_function_by_hand, then adjust pc by adjust_fn_pc if +ve  */
@@ -2514,7 +2517,7 @@ GDB does not (yet) know how to evaluate that kind of expression"));
     }
 
 nosideret:
-  return value_from_longest (builtin_type_int8, (LONGEST) 1);
+  return value_from_longest (builtin_type (exp->gdbarch)->builtin_int, 1);
 }
 
 /* Evaluate a subexpression of EXP, at index *POS,

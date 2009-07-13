@@ -1,3 +1,26 @@
+2009-07-11  Alan Modra  <amodra@bigpond.net.au>
+
+	* ldlang.c (insert_os_after): Don't tie assignments to non-alloc
+	output sections.
+
+2009-07-10  Alan Modra  <amodra@bigpond.net.au>
+
+	* emultempl/ppc32elf.em (ppc_before_allocation): Turn on
+	linker relaxation if it might be necessary.
+
+2009-07-10  Alan Modra  <amodra@bigpond.net.au>
+
+	* emulparams/elf32ppc.sh (GOTPLT, PLT): Handle .iplt.
+
+2009-07-06  Matthias Klose <doko@ubuntu.com>
+
+        * ld.texinfo: Fix typo.
+
+2009-07-03  Tristan Gingold  <gingold@adacore.com>
+
+	* scripttempl/pep.sc: Put .eh_frame in its own section.
+	* scripttempl/pe.sc: Ditto.
+	
 2009-06-26  Kai Tietz  <kai.tietz@onevision.com>
 
 	* scripttempl/pe.sc (.debug_pubtypes): Added section rule.

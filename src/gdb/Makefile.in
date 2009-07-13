@@ -466,7 +466,8 @@ TARGET_OBS = @TARGET_OBS@
 ALL_64_TARGET_OBS = \
 	alphabsd-tdep.o alphafbsd-tdep.o alpha-linux-tdep.o alpha-mdebug-tdep.o \
 	alphanbsd-tdep.o alphaobsd-tdep.o alpha-osf1-tdep.o alpha-tdep.o \
-	amd64fbsd-tdep.o amd64-dicos-tdep.o amd64-linux-tdep.o amd64nbsd-tdep.o \
+	amd64fbsd-tdep.o amd64-darwin-tdep.o amd64-dicos-tdep.o \
+	amd64-linux-tdep.o amd64nbsd-tdep.o \
 	amd64obsd-tdep.o amd64-sol2-tdep.o amd64-tdep.o amd64-windows-tdep.o \
 	ia64-linux-tdep.o ia64-tdep.o \
 	mips64obsd-tdep.o \
@@ -620,7 +621,8 @@ TARGET_FLAGS_TO_PASS = \
 	"MAKEINFO=$(MAKEINFO)" \
 	"MAKEHTML=$(MAKEHTML)" \
 	"RUNTEST=$(RUNTEST)" \
-	"RUNTESTFLAGS=$(RUNTESTFLAGS)"
+	"RUNTESTFLAGS=$(RUNTESTFLAGS)" \
+	"FORCE_PARALLEL=$(FORCE_PARALLEL)"
 
 # All source files that go into linking GDB.
 # Links made at configuration time should not be specified here, since
@@ -737,11 +739,9 @@ gdb_locale.h gdb_dirent.h arch-utils.h trad-frame.h gnu-nat.h \
 language.h nbsd-tdep.h wrapper.h solib-svr4.h \
 macroexp.h ui-file.h regcache.h gdb_string.h tracepoint.h i386-tdep.h \
 inf-child.h p-lang.h event-top.h gdbtypes.h scm-tags.h user-regs.h \
-regformats/regdef.h config/alpha/nm-osf3.h config/i386/nm-cygwin.h \
-config/i386/nm-linux64.h config/i386/nm-i386gnu.h \
+regformats/regdef.h config/alpha/nm-osf3.h  config/i386/nm-i386gnu.h \
 config/i386/nm-fbsd.h config/i386/nm-i386sol2.h config/i386/nm-linux.h \
-config/i386/nm-i386.h config/i386/nm-go32.h config/nm-nto.h \
-config/sparc/nm-sol2.h config/nm-linux.h config/mips/nm-irix5.h	\
+config/nm-nto.h config/sparc/nm-sol2.h config/nm-linux.h \
 config/rs6000/nm-rs6000.h top.h bsd-kvm.h gdb-stabs.h reggroups.h \
 annotate.h sim-regno.h dictionary.h dfp.h main.h frame-unwind.h	\
 remote-fileio.h i386-linux-tdep.h vax-tdep.h objc-lang.h \
@@ -885,7 +885,8 @@ check: force
 # will run 3 concurrent sessions of check, eventually testing all 10
 # combinations.  GNU make is required for the % pattern to work, as is
 # a shell that expands alternations within braces.  If GNU make is not
-# used, this rule will harmlessly fail to match.
+# used, this rule will harmlessly fail to match.  Used FORCE_PARALLEL to
+# prevent serialized checking due to the passed RUNTESTFLAGS.
 check//%: force
 	@if [ -f testsuite/config.status ]; then \
 	  rootme=`pwd`; export rootme; \
@@ -905,6 +906,7 @@ check//%: force
 	  else :; fi && cd $$testdir && \
 	  $(MAKE) $(TARGET_FLAGS_TO_PASS) \
 	    RUNTESTFLAGS="--target_board=$$variant $(RUNTESTFLAGS)" \
+	    FORCE_PARALLEL=$(if $(FORCE_PARALLEL),1,$(if $(RUNTESTFLAGS),,1)) \
 	    "$$target"; \
 	else true; fi
 
@@ -1289,6 +1291,7 @@ ALLDEPFILES = \
 	amd64bsd-nat.c amd64fbsd-nat.c amd64fbsd-tdep.c \
 	amd64nbsd-nat.c amd64nbsd-tdep.c \
 	amd64obsd-nat.c amd64obsd-tdep.c \
+	amd64-darwin-tdep.c \
 	amd64-dicos-tdep.c \
 	amd64-linux-nat.c amd64-linux-tdep.c \
 	amd64-sol2-tdep.c \
@@ -1297,7 +1300,7 @@ ALLDEPFILES = \
 	avr-tdep.c \
 	bsd-uthread.c bsd-kvm.c \
 	core-regset.c corelow.c \
-	dcache.c dicos-tdep.c \
+	dcache.c dicos-tdep.c darwin-nat.c \
 	exec.c \
 	fbsd-nat.c \
 	fork-child.c \
@@ -1313,6 +1316,7 @@ ALLDEPFILES = \
 	i386bsd-nat.c i386bsd-tdep.c i386fbsd-nat.c i386fbsd-tdep.c \
 	i386nbsd-nat.c i386nbsd-tdep.c i386obsd-nat.c i386obsd-tdep.c \
 	i387-tdep.c \
+	i386-darwin-tdep.c i386-darwin-nat.c \
 	i386-dicos-tdep.c \
 	i386-linux-tdep.c i386-nat.c \
 	i386-sol2-nat.c i386-sol2-tdep.c \

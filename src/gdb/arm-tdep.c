@@ -68,19 +68,6 @@ static int arm_debug;
 #define MSYMBOL_IS_SPECIAL(msym)				\
 	MSYMBOL_TARGET_FLAG_1 (msym)
 
-/* Macros for swapping shorts and ints. In the unlikely case that anybody else needs these,
-   move to a general header. (A better solution might be to define memory read routines that
-   know whether they are reading code or data.)  */
-
-#define SWAP_SHORT(x) \
-  ((((x) & 0xff00) >> 8) | (((x) & 0x00ff) << 8));
-
-#define SWAP_INT(x) \
-  (  ((x & 0xff000000) >> 24) \
-   | ((x & 0x00ff0000) >> 8)  \
-   | ((x & 0x0000ff00) << 8)  \
-   | ((x & 0x000000ff) << 24))
-
 /* Per-objfile data used for mapping symbols.  */
 static const struct objfile_data *arm_objfile_data_key;
 
@@ -387,6 +374,7 @@ thumb_analyze_prologue (struct gdbarch *gdbarch,
 			CORE_ADDR start, CORE_ADDR limit,
 			struct arm_prologue_cache *cache)
 {
+  enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   int i;
   pv_t regs[16];
   struct pv_area *stack;
@@ -402,10 +390,7 @@ thumb_analyze_prologue (struct gdbarch *gdbarch,
     {
       unsigned short insn;
 
-      insn = read_memory_unsigned_integer (start, 2);
-
-      if (gdbarch_byte_order_for_code (gdbarch) != gdbarch_byte_order (gdbarch))
-	insn = SWAP_SHORT (insn);
+      insn = read_memory_unsigned_integer (start, 2, byte_order_for_code);
 
       if ((insn & 0xfe00) == 0xb400)		/* push { rlist } */
 	{
@@ -533,6 +518,7 @@ thumb_analyze_prologue (struct gdbarch *gdbarch,
 static CORE_ADDR
 arm_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
+  enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   unsigned long inst;
   CORE_ADDR skip_pc;
   CORE_ADDR func_addr, limit_pc;
@@ -571,10 +557,7 @@ arm_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 
   for (skip_pc = pc; skip_pc < limit_pc; skip_pc += 4)
     {
-      inst = read_memory_unsigned_integer (skip_pc, 4);
-
-      if (gdbarch_byte_order_for_code (gdbarch) != gdbarch_byte_order (gdbarch))
-	inst = SWAP_INT (inst);
+      inst = read_memory_unsigned_integer (skip_pc, 4, byte_order_for_code);
 
       /* "mov ip, sp" is no longer a required part of the prologue.  */
       if (inst == 0xe1a0c00d)			/* mov ip, sp */
@@ -754,6 +737,8 @@ arm_scan_prologue (struct frame_info *this_frame,
 		   struct arm_prologue_cache *cache)
 {
   struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   int regno;
   CORE_ADDR prologue_start, prologue_end, current_pc;
   CORE_ADDR prev_pc = get_frame_pc (this_frame);
@@ -827,7 +812,7 @@ arm_scan_prologue (struct frame_info *this_frame,
       LONGEST return_value;
 
       frame_loc = get_frame_register_unsigned (this_frame, ARM_FP_REGNUM);
-      if (!safe_read_memory_integer (frame_loc, 4, &return_value))
+      if (!safe_read_memory_integer (frame_loc, 4, byte_order, &return_value))
         return;
       else
         {
@@ -870,10 +855,8 @@ arm_scan_prologue (struct frame_info *this_frame,
        current_pc < prologue_end;
        current_pc += 4)
     {
-      unsigned int insn = read_memory_unsigned_integer (current_pc, 4);
-
-      if (gdbarch_byte_order_for_code (gdbarch) != gdbarch_byte_order (gdbarch))
-	insn = SWAP_INT (insn);
+      unsigned int insn
+	= read_memory_unsigned_integer (current_pc, 4, byte_order_for_code);
 
       if (insn == 0xe1a0c00d)		/* mov ip, sp */
 	{
@@ -1400,6 +1383,7 @@ arm_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		     struct value **args, CORE_ADDR sp, int struct_return,
 		     CORE_ADDR struct_addr)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int argnum;
   int argreg;
   int nstack;
@@ -1423,9 +1407,9 @@ arm_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
   if (struct_return)
     {
       if (arm_debug)
-	fprintf_unfiltered (gdb_stdlog, "struct return in %s = 0x%s\n",
+	fprintf_unfiltered (gdb_stdlog, "struct return in %s = %s\n",
 			    gdbarch_register_name (gdbarch, argreg),
-			    paddr (struct_addr));
+			    paddress (gdbarch, struct_addr));
       regcache_cooked_write_unsigned (regcache, argreg, struct_addr);
       argreg++;
     }
@@ -1481,11 +1465,12 @@ arm_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	  && target_type != NULL
 	  && TYPE_CODE_FUNC == TYPE_CODE (target_type))
 	{
-	  CORE_ADDR regval = extract_unsigned_integer (val, len);
+	  CORE_ADDR regval = extract_unsigned_integer (val, len, byte_order);
 	  if (arm_pc_is_thumb (regval))
 	    {
 	      val = alloca (len);
-	      store_unsigned_integer (val, len, MAKE_THUMB_ADDR (regval));
+	      store_unsigned_integer (val, len, byte_order,
+				      MAKE_THUMB_ADDR (regval));
 	    }
 	}
 
@@ -1500,8 +1485,9 @@ arm_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	    {
 	      /* The argument is being passed in a general purpose
 		 register.  */
-	      CORE_ADDR regval = extract_unsigned_integer (val, partial_len);
-	      if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
+	      CORE_ADDR regval
+		= extract_unsigned_integer (val, partial_len, byte_order);
+	      if (byte_order == BFD_ENDIAN_BIG)
 		regval <<= (INT_REGISTER_SIZE - partial_len) * 8;
 	      if (arm_debug)
 		fprintf_unfiltered (gdb_stdlog, "arg %d in %s = 0x%s\n",
@@ -1593,6 +1579,20 @@ arm_print_float_info (struct gdbarch *gdbarch, struct ui_file *file,
   print_fpu_flags (status);
 }
 
+/* Construct the ARM extended floating point type.  */
+static struct type *
+arm_ext_type (struct gdbarch *gdbarch)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (!tdep->arm_ext_type)
+    tdep->arm_ext_type
+      = arch_float_type (gdbarch, -1, "builtin_type_arm_ext",
+			 floatformats_arm_ext);
+
+  return tdep->arm_ext_type;
+}
+
 /* Return the GDB type object for the "standard" data type of data in
    register N.  */
 
@@ -1600,7 +1600,7 @@ static struct type *
 arm_register_type (struct gdbarch *gdbarch, int regnum)
 {
   if (regnum >= ARM_F0_REGNUM && regnum < ARM_F0_REGNUM + NUM_FREGS)
-    return builtin_type_arm_ext;
+    return arm_ext_type (gdbarch);
   else if (regnum == ARM_SP_REGNUM)
     return builtin_type (gdbarch)->builtin_data_ptr;
   else if (regnum == ARM_PC_REGNUM)
@@ -1608,9 +1608,9 @@ arm_register_type (struct gdbarch *gdbarch, int regnum)
   else if (regnum >= ARRAY_SIZE (arm_register_names))
     /* These registers are only supported on targets which supply
        an XML description.  */
-    return builtin_type_int0;
+    return builtin_type (gdbarch)->builtin_int0;
   else
-    return builtin_type_uint32;
+    return builtin_type (gdbarch)->builtin_uint32;
 }
 
 /* Map a DWARF register REGNUM onto the appropriate GDB register
@@ -1829,13 +1829,14 @@ static CORE_ADDR
 thumb_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   unsigned long pc_val = ((unsigned long) pc) + 4;	/* PC after prefetch */
-  unsigned short inst1 = read_memory_unsigned_integer (pc, 2);
+  unsigned short inst1;
   CORE_ADDR nextpc = pc + 2;		/* default is next instruction */
   unsigned long offset;
 
-  if (gdbarch_byte_order_for_code (gdbarch) != gdbarch_byte_order (gdbarch))
-    inst1 = SWAP_SHORT (inst1);
+  inst1 = read_memory_unsigned_integer (pc, 2, byte_order_for_code);
 
   if ((inst1 & 0xff00) == 0xbd00)	/* pop {rlist, pc} */
     {
@@ -1845,7 +1846,7 @@ thumb_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
          all of the other registers.  */
       offset = bitcount (bits (inst1, 0, 7)) * INT_REGISTER_SIZE;
       sp = get_frame_register_unsigned (frame, ARM_SP_REGNUM);
-      nextpc = (CORE_ADDR) read_memory_unsigned_integer (sp + offset, 4);
+      nextpc = read_memory_unsigned_integer (sp + offset, 4, byte_order);
       nextpc = gdbarch_addr_bits_remove (gdbarch, nextpc);
       if (nextpc == pc)
 	error (_("Infinite loop detected"));
@@ -1863,9 +1864,8 @@ thumb_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
     }
   else if ((inst1 & 0xf800) == 0xf000)	/* long branch with link, and blx */
     {
-      unsigned short inst2 = read_memory_unsigned_integer (pc + 2, 2);
-      if (gdbarch_byte_order_for_code (gdbarch) != gdbarch_byte_order (gdbarch))
-	inst2 = SWAP_SHORT (inst2);
+      unsigned short inst2;
+      inst2 = read_memory_unsigned_integer (pc + 2, 2, byte_order_for_code);
       offset = (sbits (inst1, 0, 10) << 12) + (bits (inst2, 0, 10) << 1);
       nextpc = pc_val + offset;
       /* For BLX make sure to clear the low bits.  */
@@ -1891,6 +1891,8 @@ CORE_ADDR
 arm_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  enum bfd_endian byte_order_for_code = gdbarch_byte_order_for_code (gdbarch);
   unsigned long pc_val;
   unsigned long this_instr;
   unsigned long status;
@@ -1900,10 +1902,7 @@ arm_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
     return thumb_get_next_pc (frame, pc);
 
   pc_val = (unsigned long) pc;
-  this_instr = read_memory_unsigned_integer (pc, 4);
-
-  if (gdbarch_byte_order_for_code (gdbarch) != gdbarch_byte_order (gdbarch))
-    this_instr = SWAP_INT (this_instr);
+  this_instr = read_memory_unsigned_integer (pc, 4, byte_order_for_code);
 
   status = get_frame_register_unsigned (frame, ARM_PS_REGNUM);
   nextpc = (CORE_ADDR) (pc_val + 4);	/* Default case */
@@ -2084,7 +2083,7 @@ arm_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
 			base -= offset;
 		    }
 		  nextpc = (CORE_ADDR) read_memory_integer ((CORE_ADDR) base,
-							    4);
+							    4, byte_order);
 
 		  nextpc = gdbarch_addr_bits_remove (gdbarch, nextpc);
 
@@ -2122,7 +2121,7 @@ arm_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
 		    nextpc =
 		      (CORE_ADDR) read_memory_integer ((CORE_ADDR) (rn_val
 								  + offset),
-						       4);
+						       4, byte_order);
 		  }
 		  nextpc = gdbarch_addr_bits_remove
 			     (gdbarch, nextpc);
@@ -2166,12 +2165,14 @@ arm_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
 int
 arm_software_single_step (struct frame_info *frame)
 {
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+
   /* NOTE: This may insert the wrong breakpoint instruction when
      single-stepping over a mode-changing instruction, if the
      CPSR heuristics are used.  */
 
   CORE_ADDR next_pc = arm_get_next_pc (frame, get_frame_pc (frame));
-  insert_single_step_breakpoint (next_pc);
+  insert_single_step_breakpoint (gdbarch, next_pc);
 
   return 1;
 }
@@ -2293,6 +2294,7 @@ arm_extract_return_value (struct type *type, struct regcache *regs,
 			  gdb_byte *valbuf)
 {
   struct gdbarch *gdbarch = get_regcache_arch (regs);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   if (TYPE_CODE_FLT == TYPE_CODE (type))
     {
@@ -2347,7 +2349,7 @@ arm_extract_return_value (struct type *type, struct regcache *regs,
 	  store_unsigned_integer (valbuf, 
 				  (len > INT_REGISTER_SIZE
 				   ? INT_REGISTER_SIZE : len),
-				  tmp);
+				  byte_order, tmp);
 	  len -= INT_REGISTER_SIZE;
 	  valbuf += INT_REGISTER_SIZE;
 	}
@@ -2482,6 +2484,7 @@ arm_store_return_value (struct type *type, struct regcache *regs,
 			const gdb_byte *valbuf)
 {
   struct gdbarch *gdbarch = get_regcache_arch (regs);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
 
   if (TYPE_CODE (type) == TYPE_CODE_FLT)
     {
@@ -2525,7 +2528,7 @@ arm_store_return_value (struct type *type, struct regcache *regs,
 	  bfd_byte tmpbuf[INT_REGISTER_SIZE];
 	  LONGEST val = unpack_long (type, valbuf);
 
-	  store_signed_integer (tmpbuf, INT_REGISTER_SIZE, val);
+	  store_signed_integer (tmpbuf, INT_REGISTER_SIZE, byte_order, val);
 	  regcache_cooked_write (regs, ARM_A1_REGNUM, tmpbuf);
 	}
       else
@@ -2596,9 +2599,11 @@ arm_return_value (struct gdbarch *gdbarch, struct type *func_type,
 static int
 arm_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
 {
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR jb_addr;
   char buf[INT_REGISTER_SIZE];
-  struct gdbarch_tdep *tdep = gdbarch_tdep (get_frame_arch (frame));
   
   jb_addr = get_frame_register_unsigned (frame, ARM_A1_REGNUM);
 
@@ -2606,7 +2611,7 @@ arm_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
 			  INT_REGISTER_SIZE))
     return 0;
 
-  *pc = extract_unsigned_integer (buf, INT_REGISTER_SIZE);
+  *pc = extract_unsigned_integer (buf, INT_REGISTER_SIZE, byte_order);
   return 1;
 }
 

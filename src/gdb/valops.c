@@ -422,17 +422,18 @@ value_cast (struct type *type, struct value *arg2)
     return value_from_double (type, value_as_double (arg2));
   else if (code1 == TYPE_CODE_DECFLOAT && scalar)
     {
+      enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
       int dec_len = TYPE_LENGTH (type);
       gdb_byte dec[16];
 
       if (code2 == TYPE_CODE_FLT)
-	decimal_from_floating (arg2, dec, dec_len);
+	decimal_from_floating (arg2, dec, dec_len, byte_order);
       else if (code2 == TYPE_CODE_DECFLOAT)
 	decimal_convert (value_contents (arg2), TYPE_LENGTH (type2),
-			 dec, dec_len);
+			 byte_order, dec, dec_len, byte_order);
       else
 	/* The only option left is an integral type.  */
-	decimal_from_integral (arg2, dec, dec_len);
+	decimal_from_integral (arg2, dec, dec_len, byte_order);
 
       return value_from_decfloat (type, dec);
     }
@@ -450,8 +451,9 @@ value_cast (struct type *type, struct value *arg2)
          sees a cast as a simple reinterpretation of the pointer's
          bits.  */
       if (code2 == TYPE_CODE_PTR)
-        longest = extract_unsigned_integer (value_contents (arg2),
-                                            TYPE_LENGTH (type2));
+        longest = extract_unsigned_integer
+		    (value_contents (arg2), TYPE_LENGTH (type2),
+		     gdbarch_byte_order (get_type_arch (type2)));
       else
         longest = value_as_long (arg2);
       return value_from_longest (type, convert_to_boolean ?
@@ -471,7 +473,7 @@ value_cast (struct type *type, struct value *arg2)
 	 otherwise occur when dealing with a target having two byte
 	 pointers and four byte addresses.  */
 
-      int addr_bit = gdbarch_addr_bit (current_gdbarch);
+      int addr_bit = gdbarch_addr_bit (get_type_arch (type2));
 
       LONGEST longest = value_as_long (arg2);
       if (addr_bit < sizeof (LONGEST) * HOST_CHAR_BIT)
@@ -511,7 +513,7 @@ value_cast (struct type *type, struct value *arg2)
     return value_at_lazy (type, value_address (arg2));
   else if (code1 == TYPE_CODE_VOID)
     {
-      return value_zero (builtin_type_void, not_lval);
+      return value_zero (type, not_lval);
     }
   else
     {
@@ -541,8 +543,9 @@ value_one (struct type *type, enum lval_type lv)
 
   if (TYPE_CODE (type1) == TYPE_CODE_DECFLOAT)
     {
+      enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
       gdb_byte v[16];
-      decimal_from_string (v, TYPE_LENGTH (type), "1");
+      decimal_from_string (v, TYPE_LENGTH (type), byte_order, "1");
       val = value_from_decfloat (type, v);
     }
   else if (TYPE_CODE (type1) == TYPE_CODE_FLT)
@@ -702,8 +705,9 @@ value_fetch_lazy (struct value *val)
 		fprintf_unfiltered (gdb_stdlog, " register=%d",
 				    VALUE_REGNUM (new_val));
 	      else if (VALUE_LVAL (new_val) == lval_memory)
-		fprintf_unfiltered (gdb_stdlog, " address=0x%s",
-				    paddr_nz (value_address (new_val)));
+		fprintf_unfiltered (gdb_stdlog, " address=%s",
+				    paddress (gdbarch,
+					      value_address (new_val)));
 	      else
 		fprintf_unfiltered (gdb_stdlog, " computed");
 
@@ -808,7 +812,7 @@ value_assign (struct value *toval, struct value *fromval)
 		     (int) sizeof (LONGEST) * HOST_CHAR_BIT);
 
 	    read_memory (value_address (toval), buffer, changed_len);
-	    modify_field (buffer, value_as_long (fromval),
+	    modify_field (type, buffer, value_as_long (fromval),
 			  value_bitpos (toval), value_bitsize (toval));
 	    changed_addr = value_address (toval);
 	    dest_buffer = buffer;
@@ -869,9 +873,8 @@ value_assign (struct value *toval, struct value *fromval)
 					  value_offset (toval),
 					  changed_len, buffer);
 
-		modify_field (buffer, value_as_long (fromval),
-			      value_bitpos (toval), 
-			      value_bitsize (toval));
+		modify_field (type, buffer, value_as_long (fromval),
+			      value_bitpos (toval), value_bitsize (toval));
 
 		put_frame_register_bytes (frame, value_reg,
 					  value_offset (toval),
@@ -1294,7 +1297,6 @@ value_array (int lowbound, int highbound, struct value **elemvec)
   int idx;
   unsigned int typelength;
   struct value *val;
-  struct type *rangetype;
   struct type *arraytype;
   CORE_ADDR addr;
 
@@ -1315,12 +1317,8 @@ value_array (int lowbound, int highbound, struct value **elemvec)
 	}
     }
 
-  rangetype = create_range_type ((struct type *) NULL, 
-				 builtin_type_int32,
-				 lowbound, highbound);
-  arraytype = create_array_type ((struct type *) NULL,
-				 value_enclosing_type (elemvec[0]), 
-				 rangetype);
+  arraytype = lookup_array_range_type (value_enclosing_type (elemvec[0]),
+				       lowbound, highbound);
 
   if (!current_language->c_style_arrays)
     {
@@ -1351,12 +1349,8 @@ value_cstring (char *ptr, int len, struct type *char_type)
   struct value *val;
   int lowbound = current_language->string_lower_bound;
   int highbound = len / TYPE_LENGTH (char_type);
-  struct type *rangetype = create_range_type ((struct type *) NULL,
-					      builtin_type_int32,
-					      lowbound, 
-					      highbound + lowbound - 1);
   struct type *stringtype
-    = create_array_type ((struct type *) NULL, char_type, rangetype);
+    = lookup_array_range_type (char_type, lowbound, highbound + lowbound - 1);
 
   val = allocate_value (stringtype);
   memcpy (value_contents_raw (val), ptr, len);
@@ -1378,12 +1372,8 @@ value_string (char *ptr, int len, struct type *char_type)
   struct value *val;
   int lowbound = current_language->string_lower_bound;
   int highbound = len / TYPE_LENGTH (char_type);
-  struct type *rangetype = create_range_type ((struct type *) NULL,
-					      builtin_type_int32,
-					      lowbound, 
-					      highbound + lowbound - 1);
   struct type *stringtype
-    = create_string_type ((struct type *) NULL, char_type, rangetype);
+    = lookup_string_range_type (char_type, lowbound, highbound + lowbound - 1);
 
   val = allocate_value (stringtype);
   memcpy (value_contents_raw (val), ptr, len);
@@ -1391,14 +1381,12 @@ value_string (char *ptr, int len, struct type *char_type)
 }
 
 struct value *
-value_bitstring (char *ptr, int len)
+value_bitstring (char *ptr, int len, struct type *index_type)
 {
   struct value *val;
-  struct type *domain_type = create_range_type (NULL, 
-						builtin_type_int32,
-						0, len - 1);
-  struct type *type = create_set_type ((struct type *) NULL, 
-				       domain_type);
+  struct type *domain_type
+    = create_range_type (NULL, index_type, 0, len - 1);
+  struct type *type = create_set_type (NULL, domain_type);
   TYPE_CODE (type) = TYPE_CODE_BITSTRING;
   val = allocate_value (type);
   memcpy (value_contents_raw (val), ptr, TYPE_LENGTH (type));
@@ -2962,7 +2950,7 @@ value_slice (struct value *array, int lowbound, int length)
 	  else if (element > 0)
 	    {
 	      int j = i % TARGET_CHAR_BIT;
-	      if (gdbarch_bits_big_endian (current_gdbarch))
+	      if (gdbarch_bits_big_endian (get_type_arch (array_type)))
 		j = TARGET_CHAR_BIT - 1 - j;
 	      value_contents_raw (slice)[i / TARGET_CHAR_BIT] |= (1 << j);
 	    }

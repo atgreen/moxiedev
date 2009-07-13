@@ -1394,9 +1394,8 @@ gen_repeat (struct expression *exp, union exp_element **pc,
     {
       /* FIXME-type-allocation: need a way to free this type when we are
          done with it.  */
-      struct type *range
-      = create_range_type (0, builtin_type_int32, 0, length - 1);
-      struct type *array = create_array_type (0, value1.type, range);
+      struct type *array
+	= lookup_array_range_type (value1.type, 0, length - 1);
 
       value->kind = axs_lvalue_memory;
       value->type = array;
@@ -1643,7 +1642,8 @@ gen_expr (struct expression *exp, union exp_element **pc,
     case UNOP_NEG:
       (*pc)++;
       /* -FOO is equivalent to 0 - FOO.  */
-      gen_int_literal (ax, &value1, (LONGEST) 0, builtin_type_int8);
+      gen_int_literal (ax, &value1, 0,
+		       builtin_type (exp->gdbarch)->builtin_int);
       gen_usual_unary (exp, ax, &value1);	/* shouldn't do much */
       gen_expr (exp, pc, ax, &value2);
       gen_usual_unary (exp, ax, &value2);

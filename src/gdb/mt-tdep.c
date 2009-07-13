@@ -139,6 +139,14 @@ enum mt_gdb_regnums
 			    * MT_COPRO_PSEUDOREG_DIM_2)
 };
 
+/* The tdep structure.  */
+struct gdbarch_tdep
+{
+  /* ISA-specific types.  */
+  struct type *copro_type;
+};
+
+
 /* Return name of register number specified by REGNUM.  */
 
 static const char *
@@ -213,7 +221,7 @@ mt_copro_register_type (struct gdbarch *arch, int regnum)
     case MT_QCHANNEL_REGNUM:
     case MT_ISCRAMB_REGNUM:
     case MT_QSCRAMB_REGNUM:
-      return builtin_type_int32;
+      return builtin_type (arch)->builtin_int32;
     case MT_BYPA_REGNUM:
     case MT_BYPB_REGNUM:
     case MT_BYPC_REGNUM:
@@ -222,27 +230,27 @@ mt_copro_register_type (struct gdbarch *arch, int regnum)
     case MT_OUT_REGNUM:
     case MT_ZI2_REGNUM:
     case MT_ZQ2_REGNUM:
-      return builtin_type_int16;
+      return builtin_type (arch)->builtin_int16;
     case MT_EXMAC_REGNUM:
     case MT_MAC_REGNUM:
-      return builtin_type_uint32;
+      return builtin_type (arch)->builtin_uint32;
     case MT_CONTEXT_REGNUM:
       return builtin_type (arch)->builtin_long_long;
     case MT_FLAG_REGNUM:
       return builtin_type (arch)->builtin_unsigned_char;
     default:
       if (regnum >= MT_CPR0_REGNUM && regnum <= MT_CPR15_REGNUM)
-	return builtin_type_int16;
+	return builtin_type (arch)->builtin_int16;
       else if (regnum == MT_CPR0_REGNUM + MT_COPRO_PSEUDOREG_MAC_REGNUM)
 	{
 	  if (gdbarch_bfd_arch_info (arch)->mach == bfd_mach_mrisc2
 	      || gdbarch_bfd_arch_info (arch)->mach == bfd_mach_ms2)
-	    return builtin_type_uint64;
+	    return builtin_type (arch)->builtin_uint64;
 	  else
-	    return builtin_type_uint32;
+	    return builtin_type (arch)->builtin_uint32;
 	}
       else
-	return builtin_type_uint32;
+	return builtin_type (arch)->builtin_uint32;
     }
 }
 
@@ -252,16 +260,10 @@ mt_copro_register_type (struct gdbarch *arch, int regnum)
 static struct type *
 mt_register_type (struct gdbarch *arch, int regnum)
 {
-  static struct type *copro_type = NULL;
+  struct gdbarch_tdep *tdep = gdbarch_tdep (arch);
 
   if (regnum >= 0 && regnum < MT_NUM_REGS + MT_NUM_PSEUDO_REGS)
     {
-      if (copro_type == NULL)
-	{
-	  struct type *temp;
-	  temp = create_range_type (NULL, builtin_type_int32, 0, 1);
-	  copro_type = create_array_type (NULL, builtin_type_int16, temp);
-	}
       switch (regnum)
 	{
 	case MT_PC_REGNUM:
@@ -273,14 +275,19 @@ mt_register_type (struct gdbarch *arch, int regnum)
 	  return builtin_type (arch)->builtin_data_ptr;
 	case MT_COPRO_REGNUM:
 	case MT_COPRO_PSEUDOREG_REGNUM:
-	  return copro_type;
+	  if (tdep->copro_type == NULL)
+	    {
+	      struct type *elt = builtin_type (arch)->builtin_int16;
+	      tdep->copro_type = lookup_array_range_type (elt, 0, 1);
+	    }
+	  return tdep->copro_type;
 	case MT_MAC_PSEUDOREG_REGNUM:
 	  return mt_copro_register_type (arch,
 					 MT_CPR0_REGNUM
 					 + MT_COPRO_PSEUDOREG_MAC_REGNUM);
 	default:
 	  if (regnum >= MT_R0_REGNUM && regnum <= MT_R15_REGNUM)
-	    return builtin_type_int32;
+	    return builtin_type (arch)->builtin_int32;
 	  else if (regnum < MT_COPRO_PSEUDOREG_ARRAY)
 	    return mt_copro_register_type (arch, regnum);
 	  else
@@ -332,6 +339,8 @@ mt_return_value (struct gdbarch *gdbarch, struct type *func_type,
 		 struct type *type, struct regcache *regcache,
 		 gdb_byte *readbuf, const gdb_byte *writebuf)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   if (TYPE_LENGTH (type) > 4)
     {
       /* Return values > 4 bytes are returned in memory, 
@@ -362,7 +371,8 @@ mt_return_value (struct gdbarch *gdbarch, struct type *func_type,
 
 	  /* Return values of <= 4 bytes are returned in R11.  */
 	  regcache_cooked_read_unsigned (regcache, MT_R11_REGNUM, &temp);
-	  store_unsigned_integer (readbuf, TYPE_LENGTH (type), temp);
+	  store_unsigned_integer (readbuf, TYPE_LENGTH (type),
+				  byte_order, temp);
 	}
 
       if (writebuf)
@@ -396,6 +406,7 @@ mt_return_value (struct gdbarch *gdbarch, struct type *func_type,
 static CORE_ADDR
 mt_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR func_addr = 0, func_end = 0;
   char *func_name;
   unsigned long instr;
@@ -423,7 +434,7 @@ mt_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
   /* No function symbol, or no line symbol.  Use prologue scanning method.  */
   for (;; pc += 4)
     {
-      instr = read_memory_unsigned_integer (pc, 4);
+      instr = read_memory_unsigned_integer (pc, 4, byte_order);
       if (instr == 0x12000000)	/* nop */
 	continue;
       if (instr == 0x12ddc000)	/* copy sp into fp */
@@ -467,13 +478,15 @@ static int
 mt_select_coprocessor (struct gdbarch *gdbarch,
 			struct regcache *regcache, int regno)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned index, base;
   gdb_byte copro[4];
 
   /* Get the copro pseudo regnum. */
   regcache_raw_read (regcache, MT_COPRO_REGNUM, copro);
-  base = (extract_signed_integer (&copro[0], 2) * MT_COPRO_PSEUDOREG_DIM_2
-	  + extract_signed_integer (&copro[2], 2));
+  base = ((extract_signed_integer (&copro[0], 2, byte_order)
+	   * MT_COPRO_PSEUDOREG_DIM_2)
+	  + extract_signed_integer (&copro[2], 2, byte_order));
 
   regno -= MT_COPRO_PSEUDOREG_ARRAY;
   index = regno % MT_COPRO_PSEUDOREG_REGS;
@@ -484,8 +497,10 @@ mt_select_coprocessor (struct gdbarch *gdbarch,
 	 coprocessor register cache.  */
       unsigned ix;
 
-      store_signed_integer (&copro[0], 2, regno / MT_COPRO_PSEUDOREG_DIM_2);
-      store_signed_integer (&copro[2], 2, regno % MT_COPRO_PSEUDOREG_DIM_2);
+      store_signed_integer (&copro[0], 2, byte_order,
+			    regno / MT_COPRO_PSEUDOREG_DIM_2);
+      store_signed_integer (&copro[2], 2, byte_order,
+			    regno % MT_COPRO_PSEUDOREG_DIM_2);
       regcache_raw_write (regcache, MT_COPRO_REGNUM, copro);
       
       /* We must flush the cache, as it is now invalid.  */
@@ -512,6 +527,8 @@ static void
 mt_pseudo_register_read (struct gdbarch *gdbarch,
 			  struct regcache *regcache, int regno, gdb_byte *buf)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   switch (regno)
     {
     case MT_COPRO_REGNUM:
@@ -530,7 +547,7 @@ mt_pseudo_register_read (struct gdbarch *gdbarch,
 	  regcache_cooked_read_unsigned (regcache, MT_EXMAC_REGNUM, &ext_mac);
 	  newmac =
 	    (oldmac & 0xffffffff) | ((long long) (ext_mac & 0xff) << 32);
-	  store_signed_integer (buf, 8, newmac);
+	  store_signed_integer (buf, 8, byte_order, newmac);
 	}
       else
 	regcache_raw_read (regcache, MT_MAC_REGNUM, buf);
@@ -560,6 +577,7 @@ mt_pseudo_register_write (struct gdbarch *gdbarch,
 			   struct regcache *regcache,
 			   int regno, const gdb_byte *buf)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int i;
 
   switch (regno)
@@ -580,7 +598,7 @@ mt_pseudo_register_write (struct gdbarch *gdbarch,
 	  unsigned int oldmac, ext_mac;
 	  ULONGEST newmac;
 
-	  newmac = extract_unsigned_integer (buf, 8);
+	  newmac = extract_unsigned_integer (buf, 8, byte_order);
 	  oldmac = newmac & 0xffffffff;
 	  ext_mac = (newmac >> 32) & 0xff;
 	  regcache_cooked_write_unsigned (regcache, MT_MAC_REGNUM, oldmac);
@@ -619,6 +637,8 @@ mt_registers_info (struct gdbarch *gdbarch,
 		   struct ui_file *file,
 		   struct frame_info *frame, int regnum, int all)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   if (regnum == -1)
     {
       int lim;
@@ -665,10 +685,10 @@ mt_registers_info (struct gdbarch *gdbarch,
 
 	  for (i = 0; i < regsize; i++)
 	    fprintf_filtered (file, "%02x", (unsigned int)
-			      extract_unsigned_integer (buff + i, 1));
+			      extract_unsigned_integer (buff + i, 1, byte_order));
 	  fputs_filtered ("\t", file);
 	  print_longest (file, 'd', 0,
-			 extract_unsigned_integer (buff, regsize));
+			 extract_unsigned_integer (buff, regsize, byte_order));
 	  fputs_filtered ("\n", file);
 	}
       else if (regnum == MT_COPRO_REGNUM
@@ -702,13 +722,13 @@ mt_registers_info (struct gdbarch *gdbarch,
 	  /* Get the two "real" mac registers.  */
 	  frame_register_read (frame, MT_MAC_REGNUM, buf);
 	  oldmac = extract_unsigned_integer
-	    (buf, register_size (gdbarch, MT_MAC_REGNUM));
+	    (buf, register_size (gdbarch, MT_MAC_REGNUM), byte_order);
 	  if (gdbarch_bfd_arch_info (gdbarch)->mach == bfd_mach_mrisc2
 	      || gdbarch_bfd_arch_info (gdbarch)->mach == bfd_mach_ms2)
 	    {
 	      frame_register_read (frame, MT_EXMAC_REGNUM, buf);
 	      ext_mac = extract_unsigned_integer
-		(buf, register_size (gdbarch, MT_EXMAC_REGNUM));
+		(buf, register_size (gdbarch, MT_EXMAC_REGNUM), byte_order);
 	    }
 	  else
 	    ext_mac = 0;
@@ -748,6 +768,7 @@ mt_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		     int struct_return, CORE_ADDR struct_addr)
 {
 #define wordsize 4
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[MT_MAX_STRUCT_SIZE];
   int argreg = MT_1ST_ARGREG;
   int split_param_len = 0;
@@ -771,7 +792,7 @@ mt_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	  regcache_cooked_write_unsigned (regcache, argreg++,
 					  extract_unsigned_integer
 					  (value_contents (args[i]),
-					   wordsize));
+					   wordsize, byte_order));
 	  break;
 	case 8:
 	case 12:
@@ -784,7 +805,7 @@ mt_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		  /* This word of the argument is passed in a register.  */
 		  regcache_cooked_write_unsigned (regcache, argreg++,
 						  extract_unsigned_integer
-						  (val, wordsize));
+						  (val, wordsize, byte_order));
 		  typelen -= wordsize;
 		  val += wordsize;
 		}
@@ -1102,6 +1123,7 @@ static struct gdbarch *
 mt_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 {
   struct gdbarch *gdbarch;
+  struct gdbarch_tdep *tdep;
 
   /* Find a candidate among the list of pre-declared architectures.  */
   arches = gdbarch_list_lookup_by_info (arches, &info);
@@ -1110,7 +1132,8 @@ mt_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
 
   /* None found, create a new architecture from the information
      provided.  */
-  gdbarch = gdbarch_alloc (&info, NULL);
+  tdep = XCALLOC (1, struct gdbarch_tdep);
+  gdbarch = gdbarch_alloc (&info, tdep);
 
   set_gdbarch_float_format (gdbarch, floatformats_ieee_single);
   set_gdbarch_double_format (gdbarch, floatformats_ieee_double);

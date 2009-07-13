@@ -25,6 +25,7 @@
 #include "block.h"
 #include "dictionary.h"
 #include "varobj.h"
+#include "arch-utils.h"
 
 #include <tcl.h>
 #include "gdbtk.h"
@@ -211,11 +212,13 @@ gdb_get_blocks (ClientData clientData, Tcl_Interp *interp,
 	      char *addr;
 
 	      Tcl_Obj *elt = Tcl_NewListObj (0, NULL);
-	      addr = xstrprintf ("0x%s", paddr_nz (BLOCK_START (block)));
+	      addr = xstrprintf ("%s", paddress (get_current_arch (),
+						 BLOCK_START (block)));
 	      Tcl_ListObjAppendElement (interp, elt,
 					Tcl_NewStringObj (addr, -1));
 	      free(addr);
-	      addr = xstrprintf ("0x%s", paddr_nz (BLOCK_END (block)));
+	      addr = xstrprintf ("%s", paddress (get_current_arch (),
+						 BLOCK_END (block)));
 	      Tcl_ListObjAppendElement (interp, elt,
 					Tcl_NewStringObj (addr, -1));
 	      Tcl_ListObjAppendElement (interp, result_ptr->obj_ptr, elt);
@@ -384,8 +387,10 @@ gdb_selected_block (ClientData clientData, Tcl_Interp *interp,
     {
       struct block *block;
       block = get_frame_block (get_selected_frame (NULL), 0);
-      start = xstrprintf ("0x%s", paddr_nz (BLOCK_START (block)));
-      end = xstrprintf ("0x%s", paddr_nz (BLOCK_END (block)));
+      start = xstrprintf ("%s", paddress (get_current_arch (),
+					  BLOCK_START (block)));
+      end = xstrprintf ("%s", paddress (get_current_arch (),
+					BLOCK_END (block)));
     }
 
   Tcl_SetListObj (result_ptr->obj_ptr, 0, NULL);
@@ -420,8 +425,8 @@ gdb_selected_frame (ClientData clientData, Tcl_Interp *interp,
   else
     /* FIXME: cagney/2002-11-19: This should be using get_frame_id()
        to identify the frame and *NOT* get_frame_base().  */
-    frame = xstrprintf ("0x%s",
-	       paddr_nz (get_frame_base (get_selected_frame (NULL))));
+    frame = xstrprintf ("%s",paddress (get_current_arch (),
+			get_frame_base (get_selected_frame (NULL))));
 
   Tcl_SetStringObj (result_ptr->obj_ptr, frame, -1);
 

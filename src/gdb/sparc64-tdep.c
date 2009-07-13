@@ -121,60 +121,88 @@ sparc64_structure_or_union_p (const struct type *type)
 }
 
 
-/* Type for %pstate.  */
-struct type *sparc64_pstate_type;
-
-/* Type for %fsr.  */
-struct type *sparc64_fsr_type;
-
-/* Type for %fprs.  */
-struct type *sparc64_fprs_type;
-
 /* Construct types for ISA-specific registers.  */
 
-static void
-sparc64_init_types (void)
+static struct type *
+sparc64_pstate_type (struct gdbarch *gdbarch)
 {
-  struct type *type;
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-  type = init_flags_type ("builtin_type_sparc64_pstate", 8);
-  append_flags_type_flag (type, 0, "AG");
-  append_flags_type_flag (type, 1, "IE");
-  append_flags_type_flag (type, 2, "PRIV");
-  append_flags_type_flag (type, 3, "AM");
-  append_flags_type_flag (type, 4, "PEF");
-  append_flags_type_flag (type, 5, "RED");
-  append_flags_type_flag (type, 8, "TLE");
-  append_flags_type_flag (type, 9, "CLE");
-  append_flags_type_flag (type, 10, "PID0");
-  append_flags_type_flag (type, 11, "PID1");
-  sparc64_pstate_type = type;
+  if (!tdep->sparc64_pstate_type)
+    {
+      struct type *type;
 
-  type = init_flags_type ("builtin_type_sparc64_fsr", 8);
-  append_flags_type_flag (type, 0, "NXA");
-  append_flags_type_flag (type, 1, "DZA");
-  append_flags_type_flag (type, 2, "UFA");
-  append_flags_type_flag (type, 3, "OFA");
-  append_flags_type_flag (type, 4, "NVA");
-  append_flags_type_flag (type, 5, "NXC");
-  append_flags_type_flag (type, 6, "DZC");
-  append_flags_type_flag (type, 7, "UFC");
-  append_flags_type_flag (type, 8, "OFC");
-  append_flags_type_flag (type, 9, "NVC");
-  append_flags_type_flag (type, 22, "NS");
-  append_flags_type_flag (type, 23, "NXM");
-  append_flags_type_flag (type, 24, "DZM");
-  append_flags_type_flag (type, 25, "UFM");
-  append_flags_type_flag (type, 26, "OFM");
-  append_flags_type_flag (type, 27, "NVM");
-  sparc64_fsr_type = type;
+      type = arch_flags_type (gdbarch, "builtin_type_sparc64_pstate", 8);
+      append_flags_type_flag (type, 0, "AG");
+      append_flags_type_flag (type, 1, "IE");
+      append_flags_type_flag (type, 2, "PRIV");
+      append_flags_type_flag (type, 3, "AM");
+      append_flags_type_flag (type, 4, "PEF");
+      append_flags_type_flag (type, 5, "RED");
+      append_flags_type_flag (type, 8, "TLE");
+      append_flags_type_flag (type, 9, "CLE");
+      append_flags_type_flag (type, 10, "PID0");
+      append_flags_type_flag (type, 11, "PID1");
 
-  type = init_flags_type ("builtin_type_sparc64_fprs", 8);
-  append_flags_type_flag (type, 0, "DL");
-  append_flags_type_flag (type, 1, "DU");
-  append_flags_type_flag (type, 2, "FEF");
-  sparc64_fprs_type = type;
+      tdep->sparc64_pstate_type = type;
+    }
+
+  return tdep->sparc64_pstate_type;
 }
+
+static struct type *
+sparc64_fsr_type (struct gdbarch *gdbarch)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (!tdep->sparc64_fsr_type)
+    {
+      struct type *type;
+
+      type = arch_flags_type (gdbarch, "builtin_type_sparc64_fsr", 8);
+      append_flags_type_flag (type, 0, "NXA");
+      append_flags_type_flag (type, 1, "DZA");
+      append_flags_type_flag (type, 2, "UFA");
+      append_flags_type_flag (type, 3, "OFA");
+      append_flags_type_flag (type, 4, "NVA");
+      append_flags_type_flag (type, 5, "NXC");
+      append_flags_type_flag (type, 6, "DZC");
+      append_flags_type_flag (type, 7, "UFC");
+      append_flags_type_flag (type, 8, "OFC");
+      append_flags_type_flag (type, 9, "NVC");
+      append_flags_type_flag (type, 22, "NS");
+      append_flags_type_flag (type, 23, "NXM");
+      append_flags_type_flag (type, 24, "DZM");
+      append_flags_type_flag (type, 25, "UFM");
+      append_flags_type_flag (type, 26, "OFM");
+      append_flags_type_flag (type, 27, "NVM");
+
+      tdep->sparc64_fsr_type = type;
+    }
+
+  return tdep->sparc64_fsr_type;
+}
+
+static struct type *
+sparc64_fprs_type (struct gdbarch *gdbarch)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (!tdep->sparc64_fprs_type)
+    {
+      struct type *type;
+
+      type = arch_flags_type (gdbarch, "builtin_type_sparc64_fprs", 8);
+      append_flags_type_flag (type, 0, "DL");
+      append_flags_type_flag (type, 1, "DU");
+      append_flags_type_flag (type, 2, "FEF");
+
+      tdep->sparc64_fprs_type = type;
+    }
+
+  return tdep->sparc64_fprs_type;
+}
+
 
 /* Register information.  */
 
@@ -249,7 +277,7 @@ sparc64_register_type (struct gdbarch *gdbarch, int regnum)
   if (regnum == SPARC_SP_REGNUM || regnum == SPARC_FP_REGNUM)
     return builtin_type (gdbarch)->builtin_data_ptr;
   if (regnum >= SPARC_G0_REGNUM && regnum <= SPARC_I7_REGNUM)
-    return builtin_type_int64;
+    return builtin_type (gdbarch)->builtin_int64;
   if (regnum >= SPARC_F0_REGNUM && regnum <= SPARC_F31_REGNUM)
     return builtin_type (gdbarch)->builtin_float;
   if (regnum >= SPARC64_F32_REGNUM && regnum <= SPARC64_F62_REGNUM)
@@ -259,26 +287,26 @@ sparc64_register_type (struct gdbarch *gdbarch, int regnum)
   /* This raw register contains the contents of %cwp, %pstate, %asi
      and %ccr as laid out in a %tstate register.  */
   if (regnum == SPARC64_STATE_REGNUM)
-    return builtin_type_int64;
+    return builtin_type (gdbarch)->builtin_int64;
   if (regnum == SPARC64_FSR_REGNUM)
-    return sparc64_fsr_type;
+    return sparc64_fsr_type (gdbarch);
   if (regnum == SPARC64_FPRS_REGNUM)
-    return sparc64_fprs_type;
+    return sparc64_fprs_type (gdbarch);
   /* "Although Y is a 64-bit register, its high-order 32 bits are
      reserved and always read as 0."  */
   if (regnum == SPARC64_Y_REGNUM)
-    return builtin_type_int64;
+    return builtin_type (gdbarch)->builtin_int64;
 
   /* Pseudo registers.  */
 
   if (regnum == SPARC64_CWP_REGNUM)
-    return builtin_type_int64;
+    return builtin_type (gdbarch)->builtin_int64;
   if (regnum == SPARC64_PSTATE_REGNUM)
-    return sparc64_pstate_type;
+    return sparc64_pstate_type (gdbarch);
   if (regnum == SPARC64_ASI_REGNUM)
-    return builtin_type_int64;
+    return builtin_type (gdbarch)->builtin_int64;
   if (regnum == SPARC64_CCR_REGNUM)
-    return builtin_type_int64;
+    return builtin_type (gdbarch)->builtin_int64;
   if (regnum >= SPARC64_D0_REGNUM && regnum <= SPARC64_D62_REGNUM)
     return builtin_type (gdbarch)->builtin_double;
   if (regnum >= SPARC64_Q0_REGNUM && regnum <= SPARC64_Q60_REGNUM)
@@ -292,6 +320,7 @@ sparc64_pseudo_register_read (struct gdbarch *gdbarch,
 			      struct regcache *regcache,
 			      int regnum, gdb_byte *buf)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_assert (regnum >= SPARC64_NUM_REGS);
 
   if (regnum >= SPARC64_D0_REGNUM && regnum <= SPARC64_D30_REGNUM)
@@ -342,7 +371,7 @@ sparc64_pseudo_register_read (struct gdbarch *gdbarch,
 	  state = (state >> 32) & ((1 << 8) - 1);
 	  break;
 	}
-      store_unsigned_integer (buf, 8, state);
+      store_unsigned_integer (buf, 8, byte_order, state);
     }
 }
 
@@ -351,6 +380,7 @@ sparc64_pseudo_register_write (struct gdbarch *gdbarch,
 			       struct regcache *regcache,
 			       int regnum, const gdb_byte *buf)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_assert (regnum >= SPARC64_NUM_REGS);
 
   if (regnum >= SPARC64_D0_REGNUM && regnum <= SPARC64_D30_REGNUM)
@@ -386,7 +416,7 @@ sparc64_pseudo_register_write (struct gdbarch *gdbarch,
       ULONGEST state, bits;
 
       regcache_raw_read_unsigned (regcache, SPARC64_STATE_REGNUM, &state);
-      bits = extract_unsigned_integer (buf, 8);
+      bits = extract_unsigned_integer (buf, 8, byte_order);
       switch (regnum)
 	{
 	case SPARC64_CWP_REGNUM:
@@ -458,6 +488,7 @@ static struct value *
 sparc64_frame_prev_register (struct frame_info *this_frame, void **this_cache,
 			     int regnum)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
   struct sparc_frame_cache *cache =
     sparc64_frame_cache (this_frame, this_cache);
 
@@ -472,7 +503,7 @@ sparc64_frame_prev_register (struct frame_info *this_frame, void **this_cache,
 
   /* Handle StackGhost.  */
   {
-    ULONGEST wcookie = sparc_fetch_wcookie ();
+    ULONGEST wcookie = sparc_fetch_wcookie (gdbarch);
 
     if (wcookie != 0 && !cache->frameless_p && regnum == SPARC_I7_REGNUM)
       {
@@ -687,6 +718,7 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
 			 struct value **args, CORE_ADDR sp,
 			 int struct_return, CORE_ADDR struct_addr)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
   /* Number of extended words in the "parameter array".  */
   int num_elements = 0;
   int element = 0;
@@ -768,7 +800,8 @@ sparc64_store_arguments (struct regcache *regcache, int nargs,
 	     caller to an extended word according to the signed-ness
 	     of the argument type."  */
 	  if (len < 8)
-	    args[i] = value_cast (builtin_type_int64, args[i]);
+	    args[i] = value_cast (builtin_type (gdbarch)->builtin_int64,
+				  args[i]);
 	  num_elements++;
 	}
     }
@@ -1136,7 +1169,9 @@ sparc64_supply_gregset (const struct sparc_gregset *gregset,
 			struct regcache *regcache,
 			int regnum, const void *gregs)
 {
-  int sparc32 = (gdbarch_ptr_bit (get_regcache_arch (regcache)) == 32);
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int sparc32 = (gdbarch_ptr_bit (gdbarch) == 32);
   const gdb_byte *regs = gregs;
   int i;
 
@@ -1148,10 +1183,10 @@ sparc64_supply_gregset (const struct sparc_gregset *gregset,
 	  ULONGEST tstate, psr;
 	  gdb_byte buf[4];
 
-	  tstate = extract_unsigned_integer (regs + offset, 8);
+	  tstate = extract_unsigned_integer (regs + offset, 8, byte_order);
 	  psr = ((tstate & TSTATE_CWP) | PSR_S | ((tstate & TSTATE_ICC) >> 12)
 		 | ((tstate & TSTATE_XCC) >> 20) | PSR_V8PLUS);
-	  store_unsigned_integer (buf, 4, psr);
+	  store_unsigned_integer (buf, 4, byte_order, psr);
 	  regcache_raw_supply (regcache, SPARC32_PSR_REGNUM, buf);
 	}
 
@@ -1250,7 +1285,9 @@ sparc64_collect_gregset (const struct sparc_gregset *gregset,
 			 const struct regcache *regcache,
 			 int regnum, void *gregs)
 {
-  int sparc32 = (gdbarch_ptr_bit (get_regcache_arch (regcache)) == 32);
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  int sparc32 = (gdbarch_ptr_bit (gdbarch) == 32);
   gdb_byte *regs = gregs;
   int i;
 
@@ -1262,13 +1299,13 @@ sparc64_collect_gregset (const struct sparc_gregset *gregset,
 	  ULONGEST tstate, psr;
 	  gdb_byte buf[8];
 
-	  tstate = extract_unsigned_integer (regs + offset, 8);
+	  tstate = extract_unsigned_integer (regs + offset, 8, byte_order);
 	  regcache_raw_collect (regcache, SPARC32_PSR_REGNUM, buf);
-	  psr = extract_unsigned_integer (buf, 4);
+	  psr = extract_unsigned_integer (buf, 4, byte_order);
 	  tstate |= (psr & PSR_ICC) << 12;
 	  if ((psr & (PSR_VERS | PSR_IMPL)) == PSR_V8PLUS)
 	    tstate |= (psr & PSR_XCC) << 20;
-	  store_unsigned_integer (buf, 8, tstate);
+	  store_unsigned_integer (buf, 8, byte_order, tstate);
 	  memcpy (regs + offset, buf, 8);
 	}
 
@@ -1423,13 +1460,3 @@ sparc64_collect_fpregset (const struct regcache *regcache,
     }
 }
 
-
-/* Provide a prototype to silence -Wmissing-prototypes.  */
-void _initialize_sparc64_tdep (void);
-
-void
-_initialize_sparc64_tdep (void)
-{
-  /* Initialize the UltraSPARC-specific register types.  */
-  sparc64_init_types();
-}

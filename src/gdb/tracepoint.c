@@ -19,6 +19,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #include "defs.h"
+#include "arch-utils.h"
 #include "symtab.h"
 #include "frame.h"
 #include "gdbtypes.h"
@@ -228,12 +229,6 @@ set_traceframe_context (struct frame_info *trace_frame)
 {
   CORE_ADDR trace_pc;
 
-  static struct type *func_string, *file_string;
-  static struct type *func_range, *file_range;
-  struct value *func_val;
-  struct value *file_val;
-  int len;
-
   if (trace_frame == NULL)		/* Cease debugging any trace buffers.  */
     {
       traceframe_fun = 0;
@@ -261,20 +256,8 @@ set_traceframe_context (struct frame_info *trace_frame)
       || SYMBOL_LINKAGE_NAME (traceframe_fun) == NULL)
     clear_internalvar (lookup_internalvar ("trace_func"));
   else
-    {
-      len = strlen (SYMBOL_LINKAGE_NAME (traceframe_fun));
-      func_range = create_range_type (func_range,
-				      builtin_type_int32, 0, len - 1);
-      func_string = create_array_type (func_string,
-				       builtin_type_true_char, func_range);
-      func_val = allocate_value (func_string);
-      deprecated_set_value_type (func_val, func_string);
-      memcpy (value_contents_raw (func_val),
-	      SYMBOL_LINKAGE_NAME (traceframe_fun),
-	      len);
-      deprecated_set_value_modifiable (func_val, 0);
-      set_internalvar (lookup_internalvar ("trace_func"), func_val);
-    }
+    set_internalvar_string (lookup_internalvar ("trace_func"),
+			    SYMBOL_LINKAGE_NAME (traceframe_fun));
 
   /* Save file name as "$trace_file", a debugger variable visible to
      users.  */
@@ -282,20 +265,8 @@ set_traceframe_context (struct frame_info *trace_frame)
       || traceframe_sal.symtab->filename == NULL)
     clear_internalvar (lookup_internalvar ("trace_file"));
   else
-    {
-      len = strlen (traceframe_sal.symtab->filename);
-      file_range = create_range_type (file_range,
-				      builtin_type_int32, 0, len - 1);
-      file_string = create_array_type (file_string,
-				       builtin_type_true_char, file_range);
-      file_val = allocate_value (file_string);
-      deprecated_set_value_type (file_val, file_string);
-      memcpy (value_contents_raw (file_val),
-	      traceframe_sal.symtab->filename,
-	      len);
-      deprecated_set_value_modifiable (file_val, 0);
-      set_internalvar (lookup_internalvar ("trace_file"), file_val);
-    }
+    set_internalvar_string (lookup_internalvar ("trace_file"),
+			    traceframe_sal.symtab->filename);
 }
 
 /* ACTIONS functions: */
@@ -752,6 +723,7 @@ add_memrange (struct collection_list *memranges,
 static void
 collect_symbol (struct collection_list *collect, 
 		struct symbol *sym,
+		struct gdbarch *gdbarch,
 		long frame_regno, long frame_offset)
 {
   unsigned long len;
@@ -784,7 +756,7 @@ collect_symbol (struct collection_list *collect,
       add_memrange (collect, memrange_absolute, offset, len);
       break;
     case LOC_REGISTER:
-      reg = SYMBOL_REGISTER_OPS (sym)->register_number (sym, current_gdbarch);
+      reg = SYMBOL_REGISTER_OPS (sym)->register_number (sym, gdbarch);
       if (info_verbose)
 	printf_filtered ("LOC_REG[parm] %s: ", 
 			 SYMBOL_PRINT_NAME (sym));
@@ -792,7 +764,7 @@ collect_symbol (struct collection_list *collect,
       /* Check for doubles stored in two registers.  */
       /* FIXME: how about larger types stored in 3 or more regs?  */
       if (TYPE_CODE (SYMBOL_TYPE (sym)) == TYPE_CODE_FLT &&
-	  len > register_size (current_gdbarch, reg))
+	  len > register_size (gdbarch, reg))
 	add_register (collect, reg + 1);
       break;
     case LOC_REF_ARG:
@@ -849,7 +821,8 @@ collect_symbol (struct collection_list *collect,
 
 /* Add all locals (or args) symbols to collection list */
 static void
-add_local_symbols (struct collection_list *collect, CORE_ADDR pc,
+add_local_symbols (struct collection_list *collect,
+		   struct gdbarch *gdbarch, CORE_ADDR pc,
 		   long frame_regno, long frame_offset, int type)
 {
   struct symbol *sym;
@@ -868,8 +841,8 @@ add_local_symbols (struct collection_list *collect, CORE_ADDR pc,
 	      : type == 'L')	/* collecting Locals */
 	    {
 	      count++;
-	      collect_symbol (collect, sym, frame_regno, 
-			      frame_offset);
+	      collect_symbol (collect, sym, gdbarch,
+			      frame_regno, frame_offset);
 	    }
 	}
       if (BLOCK_FUNCTION (block))
@@ -1055,7 +1028,7 @@ encode_actions (struct breakpoint *t, char ***tdp_actions,
   *tdp_actions = NULL;
   *stepping_actions = NULL;
 
-  gdbarch_virtual_frame_pointer (current_gdbarch, 
+  gdbarch_virtual_frame_pointer (t->gdbarch,
 				 t->loc->address, &frame_reg, &frame_offset);
 
   for (action = t->actions; action; action = action->next)
@@ -1082,13 +1055,14 @@ encode_actions (struct breakpoint *t, char ***tdp_actions,
 
 	      if (0 == strncasecmp ("$reg", action_exp, 4))
 		{
-		  for (i = 0; i < gdbarch_num_regs (current_gdbarch); i++)
+		  for (i = 0; i < gdbarch_num_regs (t->gdbarch); i++)
 		    add_register (collect, i);
 		  action_exp = strchr (action_exp, ',');	/* more? */
 		}
 	      else if (0 == strncasecmp ("$arg", action_exp, 4))
 		{
 		  add_local_symbols (collect,
+				     t->gdbarch,
 				     t->loc->address,
 				     frame_reg,
 				     frame_offset,
@@ -1098,6 +1072,7 @@ encode_actions (struct breakpoint *t, char ***tdp_actions,
 	      else if (0 == strncasecmp ("$loc", action_exp, 4))
 		{
 		  add_local_symbols (collect,
+				     t->gdbarch,
 				     t->loc->address,
 				     frame_reg,
 				     frame_offset,
@@ -1121,7 +1096,7 @@ encode_actions (struct breakpoint *t, char ***tdp_actions,
 		      {
 			const char *name = &exp->elts[2].string;
 
-			i = user_reg_map_name_to_regnum (current_gdbarch,
+			i = user_reg_map_name_to_regnum (t->gdbarch,
 							 name, strlen (name));
 			if (i == -1)
 			  internal_error (__FILE__, __LINE__,
@@ -1144,6 +1119,7 @@ encode_actions (struct breakpoint *t, char ***tdp_actions,
 		    case OP_VAR_VALUE:
 		      collect_symbol (collect,
 				      exp->elts[2].symbol,
+				      t->gdbarch,
 				      frame_reg,
 				      frame_offset);
 		      break;
@@ -1693,6 +1669,8 @@ trace_find_line_command (char *args, int from_tty)
       old_chain = make_cleanup (xfree, sals.sals);
       if (sal.symtab == 0)
 	{
+	  struct gdbarch *gdbarch = get_current_arch ();
+
 	  printf_filtered ("TFIND: No line number information available");
 	  if (sal.pc != 0)
 	    {
@@ -1701,7 +1679,7 @@ trace_find_line_command (char *args, int from_tty)
 	         have the symbolic address.  */
 	      printf_filtered (" for address ");
 	      wrap_here ("  ");
-	      print_address (sal.pc, gdb_stdout);
+	      print_address (gdbarch, sal.pc, gdb_stdout);
 	      printf_filtered (";\n -- will attempt to find by PC. \n");
 	    }
 	  else
@@ -1713,13 +1691,15 @@ trace_find_line_command (char *args, int from_tty)
       else if (sal.line > 0
 	       && find_line_pc_range (sal, &start_pc, &end_pc))
 	{
+	  struct gdbarch *gdbarch = get_objfile_arch (sal.symtab->objfile);
+
 	  if (start_pc == end_pc)
 	    {
 	      printf_filtered ("Line %d of \"%s\"",
 			       sal.line, sal.symtab->filename);
 	      wrap_here ("  ");
 	      printf_filtered (" is at address ");
-	      print_address (start_pc, gdb_stdout);
+	      print_address (gdbarch, start_pc, gdb_stdout);
 	      wrap_here ("  ");
 	      printf_filtered (" but contains no code.\n");
 	      sal = find_pc_line (start_pc, 0);
@@ -1898,7 +1878,8 @@ scope_info (char *args, int from_tty)
 	      break;
 	    case LOC_STATIC:
 	      printf_filtered ("in static storage at address ");
-	      printf_filtered ("%s", paddress (SYMBOL_VALUE_ADDRESS (sym)));
+	      printf_filtered ("%s", paddress (gdbarch,
+					       SYMBOL_VALUE_ADDRESS (sym)));
 	      break;
 	    case LOC_REGISTER:
 	      /* GDBARCH is the architecture associated with the objfile
@@ -1940,11 +1921,13 @@ scope_info (char *args, int from_tty)
 	      continue;
 	    case LOC_LABEL:
 	      printf_filtered ("a label at address ");
-	      printf_filtered ("%s", paddress (SYMBOL_VALUE_ADDRESS (sym)));
+	      printf_filtered ("%s", paddress (gdbarch,
+					       SYMBOL_VALUE_ADDRESS (sym)));
 	      break;
 	    case LOC_BLOCK:
 	      printf_filtered ("a function at address ");
-	      printf_filtered ("%s", paddress (BLOCK_START (SYMBOL_BLOCK_VALUE (sym))));
+	      printf_filtered ("%s",
+		paddress (gdbarch, BLOCK_START (SYMBOL_BLOCK_VALUE (sym))));
 	      break;
 	    case LOC_UNRESOLVED:
 	      msym = lookup_minimal_symbol (SYMBOL_LINKAGE_NAME (sym),
@@ -1954,7 +1937,8 @@ scope_info (char *args, int from_tty)
 	      else
 		{
 		  printf_filtered ("static storage at address ");
-		  printf_filtered ("%s", paddress (SYMBOL_VALUE_ADDRESS (msym)));
+		  printf_filtered ("%s",
+		    paddress (gdbarch, SYMBOL_VALUE_ADDRESS (msym)));
 		}
 	      break;
 	    case LOC_OPTIMIZED_OUT:

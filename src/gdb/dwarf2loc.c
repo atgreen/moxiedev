@@ -33,7 +33,7 @@
 #include "exceptions.h"
 #include "block.h"
 
-#include "elf/dwarf2.h"
+#include "dwarf2.h"
 #include "dwarf2expr.h"
 #include "dwarf2loc.h"
 
@@ -57,6 +57,7 @@ find_location_expression (struct dwarf2_loclist_baton *baton,
   int length;
   struct objfile *objfile = dwarf2_per_cu_objfile (baton->per_cu);
   struct gdbarch *gdbarch = get_objfile_arch (objfile);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   unsigned int addr_size = dwarf2_per_cu_addr_size (baton->per_cu);
   CORE_ADDR base_mask = ~(~(CORE_ADDR)1 << (addr_size * 8 - 1));
   /* Adjust base_address for relocatable objects.  */
@@ -89,7 +90,7 @@ find_location_expression (struct dwarf2_loclist_baton *baton,
       low += base_address;
       high += base_address;
 
-      length = extract_unsigned_integer (loc_ptr, 2);
+      length = extract_unsigned_integer (loc_ptr, 2, byte_order);
       loc_ptr += 2;
 
       if (pc >= low && pc < high)
@@ -508,7 +509,7 @@ locexpr_describe_location (struct symbol *symbol, struct ui_file *stream)
 	fprintf_filtered (stream, 
 			  "a thread-local variable at offset %s in the "
 			  "thread-local storage for `%s'",
-			  paddr_nz (offset), objfile->name);
+			  paddress (gdbarch, offset), objfile->name);
 	return 1;
       }
   

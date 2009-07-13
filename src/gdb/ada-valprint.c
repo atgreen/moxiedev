@@ -292,12 +292,13 @@ ada_emit_char (int c, struct type *type, struct ui_file *stream,
    or 2) of a character.  */
 
 static int
-char_at (const gdb_byte *string, int i, int type_len)
+char_at (const gdb_byte *string, int i, int type_len,
+	 enum bfd_endian byte_order)
 {
   if (type_len == 1)
     return string[i];
   else
-    return (int) extract_unsigned_integer (string + 2 * i, 2);
+    return (int) extract_unsigned_integer (string + 2 * i, 2, byte_order);
 }
 
 /* Wrapper around memcpy to make it legal argument to ui_file_put */
@@ -466,6 +467,7 @@ printstr (struct ui_file *stream, struct type *elttype, const gdb_byte *string,
 	  unsigned int length, int force_ellipses, int type_len,
 	  const struct value_print_options *options)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (elttype));
   unsigned int i;
   unsigned int things_printed = 0;
   int in_quotes = 0;
@@ -496,8 +498,8 @@ printstr (struct ui_file *stream, struct type *elttype, const gdb_byte *string,
       rep1 = i + 1;
       reps = 1;
       while (rep1 < length
-	     && char_at (string, rep1, type_len) == char_at (string, i,
-							     type_len))
+	     && char_at (string, rep1, type_len, byte_order)
+		== char_at (string, i, type_len, byte_order))
 	{
 	  rep1 += 1;
 	  reps += 1;
@@ -514,8 +516,8 @@ printstr (struct ui_file *stream, struct type *elttype, const gdb_byte *string,
 	      in_quotes = 0;
 	    }
 	  fputs_filtered ("'", stream);
-	  ada_emit_char (char_at (string, i, type_len), elttype, stream, '\'',
-			 type_len);
+	  ada_emit_char (char_at (string, i, type_len, byte_order),
+			 elttype, stream, '\'', type_len);
 	  fputs_filtered ("'", stream);
 	  fprintf_filtered (stream, _(" <repeats %u times>"), reps);
 	  i = rep1 - 1;
@@ -532,8 +534,8 @@ printstr (struct ui_file *stream, struct type *elttype, const gdb_byte *string,
 		fputs_filtered ("\"", stream);
 	      in_quotes = 1;
 	    }
-	  ada_emit_char (char_at (string, i, type_len), elttype, stream, '"',
-			 type_len);
+	  ada_emit_char (char_at (string, i, type_len, byte_order),
+			 elttype, stream, '"', type_len);
 	  things_printed += 1;
 	}
     }
@@ -610,6 +612,7 @@ ada_val_print_array (struct type *type, const gdb_byte *valaddr,
 		     CORE_ADDR address, struct ui_file *stream, int recurse,
 		     const struct value_print_options *options)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
   struct type *elttype = TYPE_TARGET_TYPE (type);
   unsigned int eltlen;
   unsigned int len;
@@ -641,7 +644,7 @@ ada_val_print_array (struct type *type, const gdb_byte *valaddr,
           for (temp_len = 0;
                (temp_len < len
                 && temp_len < options->print_max
-                && char_at (valaddr, temp_len, eltlen) != 0);
+                && char_at (valaddr, temp_len, eltlen, byte_order) != 0);
                temp_len += 1);
           len = temp_len;
         }
@@ -746,9 +749,10 @@ ada_val_print_1 (struct type *type, const gdb_byte *valaddr0,
 	  struct value *func = ada_vax_float_print_function (type);
 	  if (func != 0)
 	    {
+	      struct gdbarch *gdbarch = get_type_arch (type);
 	      CORE_ADDR addr;
 	      addr = value_as_address (call_function_by_hand (func, 1, &val));
-	      val_print_string (builtin_type_true_char,
+	      val_print_string (builtin_type (gdbarch)->builtin_true_char,
 				addr, -1, stream, options);
 	      return 0;
 	    }
@@ -784,28 +788,22 @@ ada_val_print_1 (struct type *type, const gdb_byte *valaddr0,
 	      opts.format = format;
 	      print_scalar_formatted (valaddr, type, &opts, 0, stream);
 	    }
-          else if (ada_is_system_address_type (type)
-		   && TYPE_OBJFILE (type) != NULL)
+          else if (ada_is_system_address_type (type))
             {
               /* FIXME: We want to print System.Address variables using
                  the same format as for any access type.  But for some
                  reason GNAT encodes the System.Address type as an int,
                  so we have to work-around this deficiency by handling
-                 System.Address values as a special case.
+                 System.Address values as a special case.  */
 
-		 We do this only for System.Address types defined in an
-		 objfile.  For the built-in version of System.Address we
-		 have installed the proper type to begin with.  */
-
-	      struct gdbarch *gdbarch = get_objfile_arch (TYPE_OBJFILE (type));
+	      struct gdbarch *gdbarch = get_type_arch (type);
 	      struct type *ptr_type = builtin_type (gdbarch)->builtin_data_ptr;
+	      CORE_ADDR addr = extract_typed_address (valaddr, ptr_type);
 
               fprintf_filtered (stream, "(");
               type_print (type, "", stream, -1);
               fprintf_filtered (stream, ") ");
-	      fputs_filtered (paddress (extract_typed_address
-					(valaddr, ptr_type)),
-			      stream);
+	      fputs_filtered (paddress (gdbarch, addr), stream);
             }
 	  else
 	    {

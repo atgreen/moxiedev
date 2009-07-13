@@ -23,6 +23,7 @@
 /* Work in progress.  */
 
 #include "defs.h"
+#include "arch-utils.h"
 #include "target.h"
 #include "inferior.h"
 #include "gdb_string.h"
@@ -828,6 +829,7 @@ mi_cmd_data_evaluate_expression (char *command, char **argv, int argc)
 void
 mi_cmd_data_read_memory (char *command, char **argv, int argc)
 {
+  struct gdbarch *gdbarch = get_current_arch ();
   struct cleanup *cleanups = make_cleanup (null_cleanup, NULL);
   CORE_ADDR addr;
   long total_bytes;
@@ -884,23 +886,23 @@ mi_cmd_data_read_memory (char *command, char **argv, int argc)
   switch (word_size)
     {
     case 1:
-      word_type = builtin_type_int8;
+      word_type = builtin_type (gdbarch)->builtin_int8;
       word_asize = 'b';
       break;
     case 2:
-      word_type = builtin_type_int16;
+      word_type = builtin_type (gdbarch)->builtin_int16;
       word_asize = 'h';
       break;
     case 4:
-      word_type = builtin_type_int32;
+      word_type = builtin_type (gdbarch)->builtin_int32;
       word_asize = 'w';
       break;
     case 8:
-      word_type = builtin_type_int64;
+      word_type = builtin_type (gdbarch)->builtin_int64;
       word_asize = 'g';
       break;
     default:
-      word_type = builtin_type_int8;
+      word_type = builtin_type (gdbarch)->builtin_int8;
       word_asize = 'b';
     }
   /* The number of rows.  */
@@ -933,13 +935,15 @@ mi_cmd_data_read_memory (char *command, char **argv, int argc)
     error ("Unable to read memory.");
 
   /* Output the header information.  */
-  ui_out_field_core_addr (uiout, "addr", addr);
+  ui_out_field_core_addr (uiout, "addr", gdbarch, addr);
   ui_out_field_int (uiout, "nr-bytes", nr_bytes);
   ui_out_field_int (uiout, "total-bytes", total_bytes);
-  ui_out_field_core_addr (uiout, "next-row", addr + word_size * nr_cols);
-  ui_out_field_core_addr (uiout, "prev-row", addr - word_size * nr_cols);
-  ui_out_field_core_addr (uiout, "next-page", addr + total_bytes);
-  ui_out_field_core_addr (uiout, "prev-page", addr - total_bytes);
+  ui_out_field_core_addr (uiout, "next-row",
+			  gdbarch, addr + word_size * nr_cols);
+  ui_out_field_core_addr (uiout, "prev-row",
+			  gdbarch, addr - word_size * nr_cols);
+  ui_out_field_core_addr (uiout, "next-page", gdbarch, addr + total_bytes);
+  ui_out_field_core_addr (uiout, "prev-page", gdbarch, addr - total_bytes);
 
   /* Build the result as a two dimentional table.  */
   {
@@ -959,7 +963,7 @@ mi_cmd_data_read_memory (char *command, char **argv, int argc)
 	struct value_print_options opts;
 
 	cleanup_tuple = make_cleanup_ui_out_tuple_begin_end (uiout, NULL);
-	ui_out_field_core_addr (uiout, "addr", addr + row_byte);
+	ui_out_field_core_addr (uiout, "addr", gdbarch, addr + row_byte);
 	/* ui_out_field_core_addr_symbolic (uiout, "saddr", addr + row_byte); */
 	cleanup_list_data = make_cleanup_ui_out_list_begin_end (uiout, "data");
 	get_formatted_print_options (&opts, word_format);
@@ -1026,6 +1030,8 @@ mi_cmd_data_read_memory (char *command, char **argv, int argc)
 void
 mi_cmd_data_write_memory (char *command, char **argv, int argc)
 {
+  struct gdbarch *gdbarch = get_current_arch ();
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR addr;
   char word_format;
   long word_size;
@@ -1083,7 +1089,7 @@ mi_cmd_data_write_memory (char *command, char **argv, int argc)
   /* Get the value into an array.  */
   buffer = xmalloc (word_size);
   old_chain = make_cleanup (xfree, buffer);
-  store_signed_integer (buffer, word_size, value);
+  store_signed_integer (buffer, word_size, byte_order, value);
   /* Write it down to memory.  */
   write_memory (addr, buffer, word_size);
   /* Free the buffer.  */

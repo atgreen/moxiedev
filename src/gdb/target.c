@@ -93,6 +93,9 @@ static LONGEST target_xfer_partial (struct target_ops *ops,
 				    void *readbuf, const void *writebuf,
 				    ULONGEST offset, LONGEST len);
 
+static struct gdbarch *default_thread_architecture (struct target_ops *ops,
+						    ptid_t ptid);
+
 static void init_dummy_target (void);
 
 static struct target_ops debug_target;
@@ -103,15 +106,19 @@ static void debug_to_prepare_to_store (struct regcache *);
 
 static void debug_to_files_info (struct target_ops *);
 
-static int debug_to_insert_breakpoint (struct bp_target_info *);
+static int debug_to_insert_breakpoint (struct gdbarch *,
+				       struct bp_target_info *);
 
-static int debug_to_remove_breakpoint (struct bp_target_info *);
+static int debug_to_remove_breakpoint (struct gdbarch *,
+				       struct bp_target_info *);
 
 static int debug_to_can_use_hw_breakpoint (int, int, int);
 
-static int debug_to_insert_hw_breakpoint (struct bp_target_info *);
+static int debug_to_insert_hw_breakpoint (struct gdbarch *,
+					  struct bp_target_info *);
 
-static int debug_to_remove_hw_breakpoint (struct bp_target_info *);
+static int debug_to_remove_hw_breakpoint (struct gdbarch *,
+					  struct bp_target_info *);
 
 static int debug_to_insert_watchpoint (CORE_ADDR, int, int);
 
@@ -630,6 +637,7 @@ update_current_target (void)
       INHERIT (to_make_corefile_notes, t);
       /* Do not inherit to_get_thread_local_address.  */
       INHERIT (to_can_execute_reverse, t);
+      INHERIT (to_thread_architecture, t);
       /* Do not inherit to_read_description.  */
       INHERIT (to_get_ada_task_ptid, t);
       /* Do not inherit to_search_memory.  */
@@ -675,10 +683,10 @@ update_current_target (void)
 	    (int (*) (int, int, int))
 	    return_zero);
   de_fault (to_insert_hw_breakpoint,
-	    (int (*) (struct bp_target_info *))
+	    (int (*) (struct gdbarch *, struct bp_target_info *))
 	    return_minus_one);
   de_fault (to_remove_hw_breakpoint,
-	    (int (*) (struct bp_target_info *))
+	    (int (*) (struct gdbarch *, struct bp_target_info *))
 	    return_minus_one);
   de_fault (to_insert_watchpoint,
 	    (int (*) (CORE_ADDR, int, int))
@@ -770,6 +778,8 @@ update_current_target (void)
   de_fault (to_async_mask,
 	    (int (*) (int))
 	    return_one);
+  de_fault (to_thread_architecture,
+	    default_thread_architecture);
   current_target.to_read_description = NULL;
   de_fault (to_get_ada_task_ptid,
             (ptid_t (*) (long, long))
@@ -1454,7 +1464,7 @@ target_flash_erase (ULONGEST address, LONGEST length)
 	{
 	  if (targetdebug)
 	    fprintf_unfiltered (gdb_stdlog, "target_flash_erase (%s, %s)\n",
-                                paddr (address), phex (length, 0));
+                                hex_string (address), phex (length, 0));
 	  t->to_flash_erase (t, address, length);
 	  return;
 	}
@@ -1822,13 +1832,13 @@ get_target_memory (struct target_ops *ops, CORE_ADDR addr, gdb_byte *buf,
 
 ULONGEST
 get_target_memory_unsigned (struct target_ops *ops,
-			    CORE_ADDR addr, int len)
+			    CORE_ADDR addr, int len, enum bfd_endian byte_order)
 {
   gdb_byte buf[sizeof (ULONGEST)];
 
   gdb_assert (len <= sizeof (buf));
   get_target_memory (ops, addr, buf, len);
-  return extract_unsigned_integer (buf, len);
+  return extract_unsigned_integer (buf, len, byte_order);
 }
 
 static void
@@ -2448,6 +2458,12 @@ default_watchpoint_addr_within_range (struct target_ops *target,
   return addr >= start && addr < start + length;
 }
 
+static struct gdbarch *
+default_thread_architecture (struct target_ops *ops, ptid_t ptid)
+{
+  return target_gdbarch;
+}
+
 static int
 return_zero (void)
 {
@@ -2780,6 +2796,7 @@ debug_print_register (const char * func,
     fprintf_unfiltered (gdb_stdlog, "(%d)", regno);
   if (regno >= 0 && regno < gdbarch_num_regs (gdbarch))
     {
+      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
       int i, size = register_size (gdbarch, regno);
       unsigned char buf[MAX_REGISTER_SIZE];
       regcache_raw_collect (regcache, regno, buf);
@@ -2790,7 +2807,7 @@ debug_print_register (const char * func,
 	}
       if (size <= sizeof (LONGEST))
 	{
-	  ULONGEST val = extract_unsigned_integer (buf, size);
+	  ULONGEST val = extract_unsigned_integer (buf, size, byte_order);
 	  fprintf_unfiltered (gdb_stdlog, " %s %s",
 			      core_addr_to_string_nz (val), plongest (val));
 	}
@@ -2855,8 +2872,8 @@ deprecated_debug_xfer_memory (CORE_ADDR memaddr, bfd_byte *myaddr, int len,
 
   fprintf_unfiltered (gdb_stdlog,
 		      "target_xfer_memory (%s, xxx, %d, %s, xxx) = %d",
-		      paddress (memaddr), len, write ? "write" : "read",
-                      retval);
+		      paddress (target_gdbarch, memaddr), len,
+		      write ? "write" : "read", retval);
 
   if (retval > 0)
     {
@@ -2893,11 +2910,12 @@ debug_to_files_info (struct target_ops *target)
 }
 
 static int
-debug_to_insert_breakpoint (struct bp_target_info *bp_tgt)
+debug_to_insert_breakpoint (struct gdbarch *gdbarch,
+			    struct bp_target_info *bp_tgt)
 {
   int retval;
 
-  retval = debug_target.to_insert_breakpoint (bp_tgt);
+  retval = debug_target.to_insert_breakpoint (gdbarch, bp_tgt);
 
   fprintf_unfiltered (gdb_stdlog,
 		      "target_insert_breakpoint (0x%lx, xxx) = %ld\n",
@@ -2907,11 +2925,12 @@ debug_to_insert_breakpoint (struct bp_target_info *bp_tgt)
 }
 
 static int
-debug_to_remove_breakpoint (struct bp_target_info *bp_tgt)
+debug_to_remove_breakpoint (struct gdbarch *gdbarch,
+			    struct bp_target_info *bp_tgt)
 {
   int retval;
 
-  retval = debug_target.to_remove_breakpoint (bp_tgt);
+  retval = debug_target.to_remove_breakpoint (gdbarch, bp_tgt);
 
   fprintf_unfiltered (gdb_stdlog,
 		      "target_remove_breakpoint (0x%lx, xxx) = %ld\n",
@@ -2996,11 +3015,12 @@ debug_to_watchpoint_addr_within_range (struct target_ops *target,
 }
 
 static int
-debug_to_insert_hw_breakpoint (struct bp_target_info *bp_tgt)
+debug_to_insert_hw_breakpoint (struct gdbarch *gdbarch,
+			       struct bp_target_info *bp_tgt)
 {
   int retval;
 
-  retval = debug_target.to_insert_hw_breakpoint (bp_tgt);
+  retval = debug_target.to_insert_hw_breakpoint (gdbarch, bp_tgt);
 
   fprintf_unfiltered (gdb_stdlog,
 		      "target_insert_hw_breakpoint (0x%lx, xxx) = %ld\n",
@@ -3010,11 +3030,12 @@ debug_to_insert_hw_breakpoint (struct bp_target_info *bp_tgt)
 }
 
 static int
-debug_to_remove_hw_breakpoint (struct bp_target_info *bp_tgt)
+debug_to_remove_hw_breakpoint (struct gdbarch *gdbarch,
+			       struct bp_target_info *bp_tgt)
 {
   int retval;
 
-  retval = debug_target.to_remove_hw_breakpoint (bp_tgt);
+  retval = debug_target.to_remove_hw_breakpoint (gdbarch, bp_tgt);
 
   fprintf_unfiltered (gdb_stdlog,
 		      "target_remove_hw_breakpoint (0x%lx, xxx) = %ld\n",
@@ -3236,6 +3257,19 @@ debug_to_notice_signals (ptid_t ptid)
                       PIDGET (ptid));
 }
 
+static struct gdbarch *
+debug_to_thread_architecture (struct target_ops *ops, ptid_t ptid)
+{
+  struct gdbarch *retval;
+
+  retval = debug_target.to_thread_architecture (ops, ptid);
+
+  fprintf_unfiltered (gdb_stdlog, "target_thread_architecture (%s) = %p [%s]\n",
+		      target_pid_to_str (ptid), retval,
+		      gdbarch_bfd_arch_info (retval)->printable_name);
+  return retval;
+}
+
 static void
 debug_to_stop (ptid_t ptid)
 {
@@ -3309,6 +3343,7 @@ setup_target_debug (void)
   current_target.to_stop = debug_to_stop;
   current_target.to_rcmd = debug_to_rcmd;
   current_target.to_pid_to_exec_file = debug_to_pid_to_exec_file;
+  current_target.to_thread_architecture = debug_to_thread_architecture;
 }
 
 

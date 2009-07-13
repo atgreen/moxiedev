@@ -284,8 +284,10 @@ arm_linux_sigreturn_init (const struct tramp_frame *self,
 			  struct trad_frame_cache *this_cache,
 			  CORE_ADDR func)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR sp = get_frame_register_unsigned (this_frame, ARM_SP_REGNUM);
-  ULONGEST uc_flags = read_memory_unsigned_integer (sp, 4);
+  ULONGEST uc_flags = read_memory_unsigned_integer (sp, 4, byte_order);
 
   if (uc_flags == ARM_NEW_SIGFRAME_MAGIC)
     arm_linux_sigtramp_cache (this_frame, this_cache, func,
@@ -302,8 +304,10 @@ arm_linux_rt_sigreturn_init (const struct tramp_frame *self,
 			  struct trad_frame_cache *this_cache,
 			  CORE_ADDR func)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR sp = get_frame_register_unsigned (this_frame, ARM_SP_REGNUM);
-  ULONGEST pinfo = read_memory_unsigned_integer (sp, 4);
+  ULONGEST pinfo = read_memory_unsigned_integer (sp, 4, byte_order);
 
   if (pinfo == sp + ARM_OLD_RT_SIGFRAME_SIGINFO)
     arm_linux_sigtramp_cache (this_frame, this_cache, func,
@@ -368,6 +372,8 @@ arm_linux_supply_gregset (const struct regset *regset,
 			  struct regcache *regcache,
 			  int regnum, const void *gregs_buf, size_t len)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   const gdb_byte *gregs = gregs_buf;
   int regno;
   CORE_ADDR reg_pc;
@@ -392,9 +398,9 @@ arm_linux_supply_gregset (const struct regset *regset,
     {
       reg_pc = extract_unsigned_integer (gregs
 					 + INT_REGISTER_SIZE * ARM_PC_REGNUM,
-					 INT_REGISTER_SIZE);
-      reg_pc = gdbarch_addr_bits_remove (get_regcache_arch (regcache), reg_pc);
-      store_unsigned_integer (pc_buf, INT_REGISTER_SIZE, reg_pc);
+					 INT_REGISTER_SIZE, byte_order);
+      reg_pc = gdbarch_addr_bits_remove (gdbarch, reg_pc);
+      store_unsigned_integer (pc_buf, INT_REGISTER_SIZE, byte_order, reg_pc);
       regcache_raw_supply (regcache, ARM_PC_REGNUM, pc_buf);
     }
 }
@@ -575,6 +581,7 @@ arm_linux_regset_from_core_section (struct gdbarch *gdbarch,
 static int
 arm_linux_software_single_step (struct frame_info *frame)
 {
+  struct gdbarch *gdbarch = get_frame_arch (frame);
   CORE_ADDR next_pc = arm_get_next_pc (frame, get_frame_pc (frame));
 
   /* The Linux kernel offers some user-mode helpers in a high page.  We can
@@ -585,7 +592,7 @@ arm_linux_software_single_step (struct frame_info *frame)
   if (next_pc > 0xffff0000)
     next_pc = get_frame_register_unsigned (frame, ARM_LR_REGNUM);
 
-  insert_single_step_breakpoint (next_pc);
+  insert_single_step_breakpoint (gdbarch, next_pc);
 
   return 1;
 }

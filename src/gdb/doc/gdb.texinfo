@@ -2374,7 +2374,39 @@ To find out what inferiors exist at any moment, use @code{info inferiors}:
 @kindex info inferiors
 @item info inferiors
 Print a list of all inferiors currently being managed by @value{GDBN}.
+@end table
 
+To switch focus between inferiors, use the @code{inferior} command:
+
+@table @code
+@kindex inferior @var{inferior-id}
+@item inferior @var{inferior-id}
+Make inferior number @var{inferior-id} the current inferior.  The
+argument @var{inferior-id} is the internal inferior number assigned by
+@value{GDBN}, as shown in the first field of the @samp{info inferiors}
+display.
+@end table
+
+To quit debugging one of the inferiors, you can either detach from it
+by using the @w{@code{detach inferior}} command (allowing it to run
+independently), or kill it using the @w{@code{kill inferior}} command:
+
+@table @code
+@kindex detach inferior @var{inferior-id}
+@item detach inferior @var{inferior-id}
+Detach from the inferior identified by @value{GDBN} inferior number
+@var{inferior-id}, and remove it from the inferior list.
+
+@kindex kill inferior @var{inferior-id}
+@item kill inferior @var{inferior-id}
+Kill the inferior identified by @value{GDBN} inferior number
+@var{inferior-id}, and remove it from the inferior list.
+@end table
+
+To be notified when inferiors are started or exit under @value{GDBN}'s
+control use @w{@code{set print inferior-events}}:
+
+@table @code
 @kindex set print inferior-events
 @cindex print messages on inferior start and exit
 @item set print inferior-events
@@ -2758,51 +2790,17 @@ is held suspended.
 Show whether detach-on-fork mode is on/off.
 @end table
 
-If you choose to set @samp{detach-on-fork} mode off, then
-@value{GDBN} will retain control of all forked processes (including
-nested forks).  You can list the forked processes under the control of
-@value{GDBN} by using the @w{@code{info forks}} command, and switch
-from one fork to another by using the @w{@code{fork}} command.
-
-@table @code
-@kindex info forks
-@item info forks
-Print a list of all forked processes under the control of @value{GDBN}.
-The listing will include a fork id, a process id, and the current 
-position (program counter) of the process.
-
-@kindex fork @var{fork-id}
-@item fork @var{fork-id}
-Make fork number @var{fork-id} the current process.  The argument
-@var{fork-id} is the internal fork number assigned by @value{GDBN},
-as shown in the first field of the @samp{info forks} display.
-
-@kindex process @var{process-id}
-@item process @var{process-id}
-Make process number @var{process-id} the current process.  The
-argument @var{process-id} must be one that is listed in the output of
-@samp{info forks}.
-
-@end table
+If you choose to set @samp{detach-on-fork} mode off, then @value{GDBN}
+will retain control of all forked processes (including nested forks).
+You can list the forked processes under the control of @value{GDBN} by
+using the @w{@code{info inferiors}} command, and switch from one fork
+to another by using the @code{inferior} command (@pxref{Inferiors,
+,Debugging Multiple Inferiors}).
 
 To quit debugging one of the forked processes, you can either detach
-from it by using the @w{@code{detach fork}} command (allowing it to
-run independently), or delete (and kill) it using the
-@w{@code{delete fork}} command.
-
-@table @code
-@kindex detach fork @var{fork-id}
-@item detach fork @var{fork-id}
-Detach from the process identified by @value{GDBN} fork number
-@var{fork-id}, and remove it from the fork list.  The process will be
-allowed to run independently.
-
-@kindex delete fork @var{fork-id}
-@item delete fork @var{fork-id}
-Kill the process identified by @value{GDBN} fork number @var{fork-id},
-and remove it from the fork list.
-
-@end table
+from it by using the @w{@code{detach inferior}} command (allowing it
+to run independently), or kill it using the @w{@code{kill inferior}}
+command.  @xref{Inferiors, ,Debugging Multiple Inferiors}.
 
 If you ask to debug a child process and a @code{vfork} is followed by an
 @code{exec}, @value{GDBN} executes the new target up to the first
@@ -2810,8 +2808,8 @@ breakpoint in the new target.  If you have a breakpoint set on
 @code{main} in your original program, the breakpoint will also be set on
 the child process's @code{main}.
 
-When a child process is spawned by @code{vfork}, you cannot debug the
-child or parent until an @code{exec} call completes.
+On some systems, when a child process is spawned by @code{vfork}, you
+cannot debug the child or parent until an @code{exec} call completes.
 
 If you issue a @code{run} command to @value{GDBN} after an @code{exec}
 call executes, the new target restarts.  To restart the parent process,
@@ -6180,9 +6178,11 @@ Variables}).
 @cindex listing machine instructions
 @item disassemble
 @itemx disassemble /m
+@itemx disassemble /r
 This specialized command dumps a range of memory as machine
 instructions.  It can also print mixed source+disassembly by specifying
-the @code{/m} modifier.
+the @code{/m} modifier and print the raw instructions in hex as well as
+in symbolic form by specifying the @code{/r}.
 The default memory range is the function surrounding the
 program counter of the selected frame.  A single argument to this
 command is a program counter value; @value{GDBN} dumps the function
@@ -18896,7 +18896,7 @@ The result @code{bar} will be a @code{gdb.Value} object holding the
 value pointed to by @code{foo}.
 @end defmethod
 
-@defmethod Value string @r{[}encoding@r{]} @r{[}errors@r{]}
+@defmethod Value string @r{[}encoding@r{]} @r{[}errors@r{]} @r{[}length@r{]}
 If this @code{gdb.Value} represents a string, then this method
 converts the contents to a Python string.  Otherwise, this method will
 throw an exception.
@@ -18907,7 +18907,9 @@ language.
 
 For C-like languages, a value is a string if it is a pointer to or an
 array of characters or ints.  The string is assumed to be terminated
-by a zero of the appropriate width.
+by a zero of the appropriate width.  However if the optional length
+argument is given, the string will be converted to that given length,
+ignoring any embedded zeros that the string may contain.
 
 If the optional @var{encoding} argument is given, it must be a string
 naming the encoding of the string in the @code{gdb.Value}, such as
@@ -18921,6 +18923,9 @@ will be used, if the current language is able to supply one.
 
 The optional @var{errors} argument is the same as the corresponding
 argument to Python's @code{string.decode} method.
+
+If the optional @var{length} argument is given, the string will be
+fetched and converted to the given length.
 @end defmethod
 @end table
 
@@ -23329,7 +23334,7 @@ Returns the number of children of a variable object @var{name}:
 @smallexample
  -var-list-children [@var{print-values}] @var{name}
 @end smallexample
-@anchor{-var-list-children} 
+@anchor{-var-list-children}
 
 Return a list of the children of the specified variable object and
 create variable objects for them, if they do not already exist.  With
@@ -23340,16 +23345,49 @@ values; and if it is 2 or @code{--simple-values} print the name and
 value for simple data types and just the name for arrays, structures
 and unions.
 
+For each child the following results are returned:
+
+@table @var
+
+@item name
+Name of the variable object created for this child.
+
+@item exp
+The expression to be shown to the user by the front end to designate this child.
+For example this may be the name of a structure member.
+
+For C/C@t{++} structures there are several pseudo children returned to
+designate access qualifiers.  For these pseudo children @var{exp} is
+@samp{public}, @samp{private}, or @samp{protected}.  In this case the
+type and value are not present.
+
+@item numchild
+Number of children this child has.
+
+@item type
+The type of the child.
+
+@item value
+If values were requested, this is the value.
+
+@item thread-id
+If this variable object is associated with a thread, this is the thread id.  
+Otherwise this result is not present.
+
+@item frozen
+If the variable object is frozen, this variable will be present with a value of 1.
+@end table
+
 @subsubheading Example
 
 @smallexample
 (gdb)
  -var-list-children n
- ^done,numchild=@var{n},children=[@{name=@var{name},
+ ^done,numchild=@var{n},children=[child=@{name=@var{name},exp=@var{exp},
  numchild=@var{n},type=@var{type}@},@r{(repeats N times)}]
 (gdb)
  -var-list-children --all-values n
- ^done,numchild=@var{n},children=[@{name=@var{name},
+ ^done,numchild=@var{n},children=[child=@{name=@var{name},exp=@var{exp},
  numchild=@var{n},value=@var{value},type=@var{type}@},@r{(repeats N times)}]
 @end smallexample
 

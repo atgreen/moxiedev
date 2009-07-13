@@ -35,7 +35,7 @@
 #include "libiberty.h"
 #include "libbfd.h"
 #include "elf-bfd.h"
-#include "elf/dwarf2.h"
+#include "dwarf2.h"
 
 /* The data in the .debug_line statement prologue looks like this.  */
 
@@ -1404,6 +1404,10 @@ decode_line_info (struct comp_unit *unit, struct dwarf2_debug *stash)
 		    read_unsigned_leb128 (abfd, line_ptr, &bytes_read);
 		  line_ptr += bytes_read;
 		  table->num_files++;
+		  break;
+		case DW_LNE_set_discriminator:
+		  (void) read_unsigned_leb128 (abfd, line_ptr, &bytes_read);
+		  line_ptr += bytes_read;
 		  break;
 		default:
 		  (*_bfd_error_handler) (_("Dwarf Error: mangled line number section."));

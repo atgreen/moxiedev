@@ -24,6 +24,7 @@
 #include "target.h"
 #include "solib.h"
 #include "solib-target.h"
+#include "frame.h"
 
 #include "gdb_string.h"
 
@@ -39,6 +40,8 @@ static const char arm_wince_thumb_le_breakpoint[] = { 0xfe, 0xdf };
 static CORE_ADDR
 arm_pe_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
 {
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   ULONGEST indirect;
   struct minimal_symbol *indsym;
   char *symname;
@@ -50,11 +53,11 @@ arm_pe_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
        .dw __imp_<func>  */
 
   if (pc == 0
-      || read_memory_unsigned_integer (pc + 0, 4) != 0xe59fc000
-      || read_memory_unsigned_integer (pc + 4, 4) != 0xe59cf000)
+      || read_memory_unsigned_integer (pc + 0, 4, byte_order) != 0xe59fc000
+      || read_memory_unsigned_integer (pc + 4, 4, byte_order) != 0xe59cf000)
     return 0;
 
-  indirect = read_memory_unsigned_integer (pc + 8, 4);
+  indirect = read_memory_unsigned_integer (pc + 8, 4, byte_order);
   if (indirect == 0)
     return 0;
 
@@ -66,12 +69,46 @@ arm_pe_skip_trampoline_code (struct frame_info *frame, CORE_ADDR pc)
   if (symname == NULL || strncmp (symname, "__imp_", 6) != 0)
     return 0;
 
-  next_pc = read_memory_unsigned_integer (indirect, 4);
+  next_pc = read_memory_unsigned_integer (indirect, 4, byte_order);
   if (next_pc != 0)
     return next_pc;
 
   /* Check with the default arm gdbarch_skip_trampoline.  */
   return arm_skip_stub (frame, pc);
+}
+
+/* GCC emits a call to __gccmain in the prologue of main.
+
+   The function below examines the code pointed at by PC and checks to
+   see if it corresponds to a call to __gccmain.  If so, it returns
+   the address of the instruction following that call.  Otherwise, it
+   simply returns PC.  */
+
+CORE_ADDR
+arm_wince_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
+{
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  ULONGEST this_instr;
+
+  this_instr = read_memory_unsigned_integer (pc, 4, byte_order);
+
+  /* bl offset <__gccmain> */
+  if ((this_instr & 0xfff00000) == 0xeb000000)
+    {
+#define sign_extend(V, N) \
+  (((long) (V) ^ (1L << ((N) - 1))) - (1L << ((N) - 1)))
+
+      long offset = sign_extend (this_instr & 0x000fffff, 23) << 2;
+      CORE_ADDR call_dest = (pc + 8 + offset) & 0xffffffffU;
+      struct minimal_symbol *s = lookup_minimal_symbol_by_pc (call_dest);
+
+      if (s != NULL
+	  && SYMBOL_LINKAGE_NAME (s) != NULL
+	  && strcmp (SYMBOL_LINKAGE_NAME (s), "__gccmain") == 0)
+	pc += 4;
+    }
+
+  return pc;
 }
 
 static void
@@ -99,6 +136,9 @@ arm_wince_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* Single stepping.  */
   set_gdbarch_software_single_step (gdbarch, arm_software_single_step);
+
+  /* Skip call to __gccmain that gcc places in main.  */
+  set_gdbarch_skip_main_prologue (gdbarch, arm_wince_skip_main_prologue);
 }
 
 static enum gdb_osabi

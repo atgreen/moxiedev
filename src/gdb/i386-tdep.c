@@ -414,6 +414,8 @@ i386_displaced_step_fixup (struct gdbarch *gdbarch,
                            CORE_ADDR from, CORE_ADDR to,
                            struct regcache *regs)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   /* The offset we applied to the instruction's address.
      This could well be negative (when viewed as a signed 32-bit
      value), but ULONGEST won't reflect that, so take care when
@@ -428,9 +430,10 @@ i386_displaced_step_fixup (struct gdbarch *gdbarch,
 
   if (debug_displaced)
     fprintf_unfiltered (gdb_stdlog,
-                        "displaced: fixup (0x%s, 0x%s), "
+                        "displaced: fixup (%s, %s), "
                         "insn = 0x%02x 0x%02x ...\n",
-                        paddr_nz (from), paddr_nz (to), insn[0], insn[1]);
+                        paddress (gdbarch, from), paddress (gdbarch, to),
+			insn[0], insn[1]);
 
   /* The list of issues to contend with here is taken from
      resume_execution in arch/i386/kernel/kprobes.c, Linux 2.6.20.
@@ -499,8 +502,9 @@ i386_displaced_step_fixup (struct gdbarch *gdbarch,
           if (debug_displaced)
             fprintf_unfiltered (gdb_stdlog,
                                 "displaced: "
-                                "relocated %%eip from 0x%s to 0x%s\n",
-                                paddr_nz (orig_eip), paddr_nz (eip));
+                                "relocated %%eip from %s to %s\n",
+                                paddress (gdbarch, orig_eip),
+				paddress (gdbarch, eip));
         }
     }
 
@@ -519,16 +523,15 @@ i386_displaced_step_fixup (struct gdbarch *gdbarch,
       const ULONGEST retaddr_len = 4;
 
       regcache_cooked_read_unsigned (regs, I386_ESP_REGNUM, &esp);
-      retaddr = read_memory_unsigned_integer (esp, retaddr_len);
+      retaddr = read_memory_unsigned_integer (esp, retaddr_len, byte_order);
       retaddr = (retaddr - insn_offset) & 0xffffffffUL;
-      write_memory_unsigned_integer (esp, retaddr_len, retaddr);
+      write_memory_unsigned_integer (esp, retaddr_len, byte_order, retaddr);
 
       if (debug_displaced)
         fprintf_unfiltered (gdb_stdlog,
-                            "displaced: relocated return addr at 0x%s "
-                            "to 0x%s\n",
-                            paddr_nz (esp),
-                            paddr_nz (retaddr));
+                            "displaced: relocated return addr at %s to %s\n",
+                            paddress (gdbarch, esp),
+                            paddress (gdbarch, retaddr));
     }
 }
 
@@ -594,8 +597,9 @@ i386_alloc_frame_cache (void)
    target.  Otherwise, return PC.  */
 
 static CORE_ADDR
-i386_follow_jump (CORE_ADDR pc)
+i386_follow_jump (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte op;
   long delta = 0;
   int data16 = 0;
@@ -604,7 +608,7 @@ i386_follow_jump (CORE_ADDR pc)
   if (op == 0x66)
     {
       data16 = 1;
-      op = read_memory_unsigned_integer (pc + 1, 1);
+      op = read_memory_unsigned_integer (pc + 1, 1, byte_order);
     }
 
   switch (op)
@@ -613,7 +617,7 @@ i386_follow_jump (CORE_ADDR pc)
       /* Relative jump: if data16 == 0, disp32, else disp16.  */
       if (data16)
 	{
-	  delta = read_memory_integer (pc + 2, 2);
+	  delta = read_memory_integer (pc + 2, 2, byte_order);
 
 	  /* Include the size of the jmp instruction (including the
              0x66 prefix).  */
@@ -621,7 +625,7 @@ i386_follow_jump (CORE_ADDR pc)
 	}
       else
 	{
-	  delta = read_memory_integer (pc + 1, 4);
+	  delta = read_memory_integer (pc + 1, 4, byte_order);
 
 	  /* Include the size of the jmp instruction.  */
 	  delta += 5;
@@ -629,7 +633,7 @@ i386_follow_jump (CORE_ADDR pc)
       break;
     case 0xeb:
       /* Relative jump, disp8 (ignore data16).  */
-      delta = read_memory_integer (pc + data16 + 1, 1);
+      delta = read_memory_integer (pc + data16 + 1, 1, byte_order);
 
       delta += data16 + 2;
       break;
@@ -1005,9 +1009,11 @@ i386_skip_noop (CORE_ADDR pc)
    whichever is smaller.  If we don't recognize the code, return PC.  */
 
 static CORE_ADDR
-i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
+i386_analyze_frame_setup (struct gdbarch *gdbarch,
+			  CORE_ADDR pc, CORE_ADDR limit,
 			  struct i386_frame_cache *cache)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct i386_insn *insn;
   gdb_byte op;
   int skip = 0;
@@ -1056,11 +1062,13 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
       switch (op)
 	{
 	case 0x8b:
-	  if (read_memory_unsigned_integer (pc + skip + 1, 1) != 0xec)
+	  if (read_memory_unsigned_integer (pc + skip + 1, 1, byte_order)
+	      != 0xec)
 	    return pc;
 	  break;
 	case 0x89:
-	  if (read_memory_unsigned_integer (pc + skip + 1, 1) != 0xe5)
+	  if (read_memory_unsigned_integer (pc + skip + 1, 1, byte_order)
+	      != 0xe5)
 	    return pc;
 	  break;
 	default:
@@ -1088,24 +1096,24 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
       if (op == 0x83)
 	{
 	  /* `subl' with 8-bit immediate.  */
-	  if (read_memory_unsigned_integer (pc + 1, 1) != 0xec)
+	  if (read_memory_unsigned_integer (pc + 1, 1, byte_order) != 0xec)
 	    /* Some instruction starting with 0x83 other than `subl'.  */
 	    return pc;
 
 	  /* `subl' with signed 8-bit immediate (though it wouldn't
 	     make sense to be negative).  */
-	  cache->locals = read_memory_integer (pc + 2, 1);
+	  cache->locals = read_memory_integer (pc + 2, 1, byte_order);
 	  return pc + 3;
 	}
       else if (op == 0x81)
 	{
 	  /* Maybe it is `subl' with a 32-bit immediate.  */
-	  if (read_memory_unsigned_integer (pc + 1, 1) != 0xec)
+	  if (read_memory_unsigned_integer (pc + 1, 1, byte_order) != 0xec)
 	    /* Some instruction starting with 0x81 other than `subl'.  */
 	    return pc;
 
 	  /* It is `subl' with a 32-bit immediate.  */
-	  cache->locals = read_memory_integer (pc + 2, 4);
+	  cache->locals = read_memory_integer (pc + 2, 4, byte_order);
 	  return pc + 6;
 	}
       else
@@ -1116,7 +1124,7 @@ i386_analyze_frame_setup (CORE_ADDR pc, CORE_ADDR limit,
     }
   else if (op == 0xc8)		/* enter */
     {
-      cache->locals = read_memory_unsigned_integer (pc + 1, 2);
+      cache->locals = read_memory_unsigned_integer (pc + 1, 2, byte_order);
       return pc + 4;
     }
 
@@ -1181,15 +1189,16 @@ i386_analyze_register_saves (CORE_ADDR pc, CORE_ADDR current_pc,
    instruction will be a branch back to the start.  */
 
 static CORE_ADDR
-i386_analyze_prologue (CORE_ADDR pc, CORE_ADDR current_pc,
+i386_analyze_prologue (struct gdbarch *gdbarch,
+		       CORE_ADDR pc, CORE_ADDR current_pc,
 		       struct i386_frame_cache *cache)
 {
   pc = i386_skip_noop (pc);
-  pc = i386_follow_jump (pc);
+  pc = i386_follow_jump (gdbarch, pc);
   pc = i386_analyze_struct_return (pc, current_pc, cache);
   pc = i386_skip_probe (pc);
   pc = i386_analyze_stack_align (pc, current_pc, cache);
-  pc = i386_analyze_frame_setup (pc, current_pc, cache);
+  pc = i386_analyze_frame_setup (gdbarch, pc, current_pc, cache);
   return i386_analyze_register_saves (pc, current_pc, cache);
 }
 
@@ -1198,6 +1207,8 @@ i386_analyze_prologue (CORE_ADDR pc, CORE_ADDR current_pc,
 static CORE_ADDR
 i386_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
   static gdb_byte pic_pat[6] =
   {
     0xe8, 0, 0, 0, 0,		/* call 0x0 */
@@ -1209,7 +1220,7 @@ i386_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
   int i;
 
   cache.locals = -1;
-  pc = i386_analyze_prologue (start_pc, 0xffffffff, &cache);
+  pc = i386_analyze_prologue (gdbarch, start_pc, 0xffffffff, &cache);
   if (cache.locals < 0)
     return start_pc;
 
@@ -1242,7 +1253,7 @@ i386_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 
       if (op == 0x89)		/* movl %ebx, x(%ebp) */
 	{
-	  op = read_memory_unsigned_integer (pc + delta + 1, 1);
+	  op = read_memory_unsigned_integer (pc + delta + 1, 1, byte_order);
 
 	  if (op == 0x5d)	/* One byte offset from %ebp.  */
 	    delta += 3;
@@ -1256,7 +1267,8 @@ i386_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 
       /* addl y,%ebx */
       if (delta > 0 && op == 0x81
-	  && read_memory_unsigned_integer (pc + delta + 1, 1) == 0xc3)
+	  && read_memory_unsigned_integer (pc + delta + 1, 1, byte_order)
+	     == 0xc3)
 	{
 	  pc += delta + 6;
 	}
@@ -1265,8 +1277,8 @@ i386_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
   /* If the function starts with a branch (to startup code at the end)
      the last instruction should bring us back to the first
      instruction of the real code.  */
-  if (i386_follow_jump (start_pc) != start_pc)
-    pc = i386_follow_jump (pc);
+  if (i386_follow_jump (gdbarch, start_pc) != start_pc)
+    pc = i386_follow_jump (gdbarch, pc);
 
   return pc;
 }
@@ -1277,6 +1289,7 @@ i386_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR start_pc)
 CORE_ADDR
 i386_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte op;
 
   target_read_memory (pc, &op, 1);
@@ -1289,8 +1302,9 @@ i386_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 	  /* Make sure address is computed correctly as a 32bit
 	     integer even if CORE_ADDR is 64 bit wide.  */
  	  struct minimal_symbol *s;
- 	  CORE_ADDR call_dest = pc + 5 + extract_signed_integer (buf, 4);
+ 	  CORE_ADDR call_dest;
 
+	  call_dest = pc + 5 + extract_signed_integer (buf, 4, byte_order);
 	  call_dest = call_dest & 0xffffffffU;
  	  s = lookup_minimal_symbol_by_pc (call_dest);
  	  if (s != NULL
@@ -1320,6 +1334,8 @@ i386_unwind_pc (struct gdbarch *gdbarch, struct frame_info *next_frame)
 static struct i386_frame_cache *
 i386_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct i386_frame_cache *cache;
   gdb_byte buf[4];
   int i;
@@ -1340,7 +1356,7 @@ i386_frame_cache (struct frame_info *this_frame, void **this_cache)
      in progress when the signal occurred.  */
 
   get_frame_register (this_frame, I386_EBP_REGNUM, buf);
-  cache->base = extract_unsigned_integer (buf, 4);
+  cache->base = extract_unsigned_integer (buf, 4, byte_order);
   if (cache->base == 0)
     return cache;
 
@@ -1349,13 +1365,14 @@ i386_frame_cache (struct frame_info *this_frame, void **this_cache)
 
   cache->pc = get_frame_func (this_frame);
   if (cache->pc != 0)
-    i386_analyze_prologue (cache->pc, get_frame_pc (this_frame), cache);
+    i386_analyze_prologue (gdbarch, cache->pc, get_frame_pc (this_frame),
+			   cache);
 
   if (cache->saved_sp_reg != -1)
     {
       /* Saved stack pointer has been saved.  */
       get_frame_register (this_frame, cache->saved_sp_reg, buf);
-      cache->saved_sp = extract_unsigned_integer(buf, 4);
+      cache->saved_sp = extract_unsigned_integer (buf, 4, byte_order);
     }
 
   if (cache->locals < 0)
@@ -1380,7 +1397,8 @@ i386_frame_cache (struct frame_info *this_frame, void **this_cache)
       else
 	{
 	  get_frame_register (this_frame, I386_ESP_REGNUM, buf);
-	  cache->base = extract_unsigned_integer (buf, 4) + cache->sp_offset;
+	  cache->base = extract_unsigned_integer (buf, 4, byte_order)
+			+ cache->sp_offset;
 	}
     }
 
@@ -1469,6 +1487,89 @@ static const struct frame_unwind i386_frame_unwind =
   NULL,
   default_frame_sniffer
 };
+
+/* Normal frames, but in a function epilogue.  */
+
+/* The epilogue is defined here as the 'ret' instruction, which will
+   follow any instruction such as 'leave' or 'pop %ebp' that destroys
+   the function's stack frame.  */
+
+static int
+i386_in_function_epilogue_p (struct gdbarch *gdbarch, CORE_ADDR pc)
+{
+  gdb_byte insn;
+
+  if (target_read_memory (pc, &insn, 1))
+    return 0;	/* Can't read memory at pc.  */
+
+  if (insn != 0xc3)	/* 'ret' instruction.  */
+    return 0;
+
+  return 1;
+}
+
+static int
+i386_epilogue_frame_sniffer (const struct frame_unwind *self,
+			     struct frame_info *this_frame,
+			     void **this_prologue_cache)
+{
+  if (frame_relative_level (this_frame) == 0)
+    return i386_in_function_epilogue_p (get_frame_arch (this_frame),
+					get_frame_pc (this_frame));
+  else
+    return 0;
+}
+
+static struct i386_frame_cache *
+i386_epilogue_frame_cache (struct frame_info *this_frame, void **this_cache)
+{
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+  struct i386_frame_cache *cache;
+  gdb_byte buf[4];
+
+  if (*this_cache)
+    return *this_cache;
+
+  cache = i386_alloc_frame_cache ();
+  *this_cache = cache;
+
+  /* Cache base will be %esp plus cache->sp_offset (-4).  */
+  get_frame_register (this_frame, I386_ESP_REGNUM, buf);
+  cache->base = extract_unsigned_integer (buf, 4, 
+					  byte_order) + cache->sp_offset;
+
+  /* Cache pc will be the frame func.  */
+  cache->pc = get_frame_pc (this_frame);
+
+  /* The saved %esp will be at cache->base plus 8.  */
+  cache->saved_sp = cache->base + 8;
+
+  /* The saved %eip will be at cache->base plus 4.  */
+  cache->saved_regs[I386_EIP_REGNUM] = cache->base + 4;
+
+  return cache;
+}
+
+static void
+i386_epilogue_frame_this_id (struct frame_info *this_frame,
+			     void **this_cache,
+			     struct frame_id *this_id)
+{
+  struct i386_frame_cache *cache = i386_epilogue_frame_cache (this_frame,
+							      this_cache);
+
+  (*this_id) = frame_id_build (cache->base + 8, cache->pc);
+}
+
+static const struct frame_unwind i386_epilogue_frame_unwind =
+{
+  NORMAL_FRAME,
+  i386_epilogue_frame_this_id,
+  i386_frame_prev_register,
+  NULL, 
+  i386_epilogue_frame_sniffer
+};
 
 
 /* Signal trampolines.  */
@@ -1476,8 +1577,10 @@ static const struct frame_unwind i386_frame_unwind =
 static struct i386_frame_cache *
 i386_sigtramp_frame_cache (struct frame_info *this_frame, void **this_cache)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   struct i386_frame_cache *cache;
-  struct gdbarch_tdep *tdep = gdbarch_tdep (get_frame_arch (this_frame));
   CORE_ADDR addr;
   gdb_byte buf[4];
 
@@ -1487,7 +1590,7 @@ i386_sigtramp_frame_cache (struct frame_info *this_frame, void **this_cache)
   cache = i386_alloc_frame_cache ();
 
   get_frame_register (this_frame, I386_ESP_REGNUM, buf);
-  cache->base = extract_unsigned_integer (buf, 4) - 4;
+  cache->base = extract_unsigned_integer (buf, 4, byte_order) - 4;
 
   addr = tdep->sigcontext_addr (this_frame);
   if (tdep->sc_reg_offset)
@@ -1611,6 +1714,7 @@ i386_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
   gdb_byte buf[4];
   CORE_ADDR sp, jb_addr;
   struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   int jb_pc_offset = gdbarch_tdep (gdbarch)->jb_pc_offset;
 
   /* If JB_PC_OFFSET is -1, we have no way to find out where the
@@ -1619,15 +1723,15 @@ i386_get_longjmp_target (struct frame_info *frame, CORE_ADDR *pc)
     return 0;
 
   get_frame_register (frame, I386_ESP_REGNUM, buf);
-  sp = extract_unsigned_integer (buf, 4);
+  sp = extract_unsigned_integer (buf, 4, byte_order);
   if (target_read_memory (sp + 4, buf, 4))
     return 0;
 
-  jb_addr = extract_unsigned_integer (buf, 4);
+  jb_addr = extract_unsigned_integer (buf, 4, byte_order);
   if (target_read_memory (jb_addr + jb_pc_offset, buf, 4))
     return 0;
 
-  *pc = extract_unsigned_integer (buf, 4);
+  *pc = extract_unsigned_integer (buf, 4, byte_order);
   return 1;
 }
 
@@ -1666,6 +1770,7 @@ i386_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 		      struct value **args, CORE_ADDR sp, int struct_return,
 		      CORE_ADDR struct_addr)
 {
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[4];
   int i;
   int write_pass;
@@ -1685,7 +1790,7 @@ i386_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 	  if (write_pass)
 	    {
 	      /* Push value address.  */
-	      store_unsigned_integer (buf, 4, struct_addr);
+	      store_unsigned_integer (buf, 4, byte_order, struct_addr);
 	      write_memory (sp, buf, 4);
 	      args_space_used += 4;
 	    }
@@ -1734,11 +1839,11 @@ i386_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   /* Store return address.  */
   sp -= 4;
-  store_unsigned_integer (buf, 4, bp_addr);
+  store_unsigned_integer (buf, 4, byte_order, bp_addr);
   write_memory (sp, buf, 4);
 
   /* Finally, update the stack pointer...  */
-  store_unsigned_integer (buf, 4, sp);
+  store_unsigned_integer (buf, 4, byte_order, sp);
   regcache_cooked_write (regcache, I386_ESP_REGNUM, buf);
 
   /* ...and fake a frame pointer.  */
@@ -1787,7 +1892,7 @@ i386_extract_return_value (struct gdbarch *gdbarch, struct type *type,
 	 exactly how it would happen on the target itself, but it is
 	 the best we can do.  */
       regcache_raw_read (regcache, I386_ST0_REGNUM, buf);
-      convert_typed_floating (buf, builtin_type_i387_ext, valbuf, type);
+      convert_typed_floating (buf, i387_ext_type (gdbarch), valbuf, type);
     }
   else
     {
@@ -1841,7 +1946,7 @@ i386_store_return_value (struct gdbarch *gdbarch, struct type *type,
 	 floating-point format used by the FPU.  This is probably
 	 not exactly how it would happen on the target itself, but
 	 it is the best we can do.  */
-      convert_typed_floating (valbuf, type, buf, builtin_type_i387_ext);
+      convert_typed_floating (valbuf, type, buf, i387_ext_type (gdbarch));
       regcache_raw_write (regcache, I386_ST0_REGNUM, buf);
 
       /* Set the top of the floating-point register stack to 7.  The
@@ -1994,54 +2099,83 @@ i386_return_value (struct gdbarch *gdbarch, struct type *func_type,
 }
 
 
-/* Type for %eflags.  */
-struct type *i386_eflags_type;
-
-/* Type for %mxcsr.  */
-struct type *i386_mxcsr_type;
-
 /* Construct types for ISA-specific registers.  */
-static void
-i386_init_types (void)
+struct type *
+i386_eflags_type (struct gdbarch *gdbarch)
 {
-  struct type *type;
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
 
-  type = init_flags_type ("builtin_type_i386_eflags", 4);
-  append_flags_type_flag (type, 0, "CF");
-  append_flags_type_flag (type, 1, NULL);
-  append_flags_type_flag (type, 2, "PF");
-  append_flags_type_flag (type, 4, "AF");
-  append_flags_type_flag (type, 6, "ZF");
-  append_flags_type_flag (type, 7, "SF");
-  append_flags_type_flag (type, 8, "TF");
-  append_flags_type_flag (type, 9, "IF");
-  append_flags_type_flag (type, 10, "DF");
-  append_flags_type_flag (type, 11, "OF");
-  append_flags_type_flag (type, 14, "NT");
-  append_flags_type_flag (type, 16, "RF");
-  append_flags_type_flag (type, 17, "VM");
-  append_flags_type_flag (type, 18, "AC");
-  append_flags_type_flag (type, 19, "VIF");
-  append_flags_type_flag (type, 20, "VIP");
-  append_flags_type_flag (type, 21, "ID");
-  i386_eflags_type = type;
+  if (!tdep->i386_eflags_type)
+    {
+      struct type *type;
 
-  type = init_flags_type ("builtin_type_i386_mxcsr", 4);
-  append_flags_type_flag (type, 0, "IE");
-  append_flags_type_flag (type, 1, "DE");
-  append_flags_type_flag (type, 2, "ZE");
-  append_flags_type_flag (type, 3, "OE");
-  append_flags_type_flag (type, 4, "UE");
-  append_flags_type_flag (type, 5, "PE");
-  append_flags_type_flag (type, 6, "DAZ");
-  append_flags_type_flag (type, 7, "IM");
-  append_flags_type_flag (type, 8, "DM");
-  append_flags_type_flag (type, 9, "ZM");
-  append_flags_type_flag (type, 10, "OM");
-  append_flags_type_flag (type, 11, "UM");
-  append_flags_type_flag (type, 12, "PM");
-  append_flags_type_flag (type, 15, "FZ");
-  i386_mxcsr_type = type;
+      type = arch_flags_type (gdbarch, "builtin_type_i386_eflags", 4);
+      append_flags_type_flag (type, 0, "CF");
+      append_flags_type_flag (type, 1, NULL);
+      append_flags_type_flag (type, 2, "PF");
+      append_flags_type_flag (type, 4, "AF");
+      append_flags_type_flag (type, 6, "ZF");
+      append_flags_type_flag (type, 7, "SF");
+      append_flags_type_flag (type, 8, "TF");
+      append_flags_type_flag (type, 9, "IF");
+      append_flags_type_flag (type, 10, "DF");
+      append_flags_type_flag (type, 11, "OF");
+      append_flags_type_flag (type, 14, "NT");
+      append_flags_type_flag (type, 16, "RF");
+      append_flags_type_flag (type, 17, "VM");
+      append_flags_type_flag (type, 18, "AC");
+      append_flags_type_flag (type, 19, "VIF");
+      append_flags_type_flag (type, 20, "VIP");
+      append_flags_type_flag (type, 21, "ID");
+
+      tdep->i386_eflags_type = type;
+    }
+
+  return tdep->i386_eflags_type;
+}
+
+struct type *
+i386_mxcsr_type (struct gdbarch *gdbarch)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (!tdep->i386_mxcsr_type)
+    {
+      struct type *type;
+
+      type = arch_flags_type (gdbarch, "builtin_type_i386_mxcsr", 4);
+      append_flags_type_flag (type, 0, "IE");
+      append_flags_type_flag (type, 1, "DE");
+      append_flags_type_flag (type, 2, "ZE");
+      append_flags_type_flag (type, 3, "OE");
+      append_flags_type_flag (type, 4, "UE");
+      append_flags_type_flag (type, 5, "PE");
+      append_flags_type_flag (type, 6, "DAZ");
+      append_flags_type_flag (type, 7, "IM");
+      append_flags_type_flag (type, 8, "DM");
+      append_flags_type_flag (type, 9, "ZM");
+      append_flags_type_flag (type, 10, "OM");
+      append_flags_type_flag (type, 11, "UM");
+      append_flags_type_flag (type, 12, "PM");
+      append_flags_type_flag (type, 15, "FZ");
+
+      tdep->i386_mxcsr_type = type;
+    }
+
+  return tdep->i386_mxcsr_type;
+}
+
+struct type *
+i387_ext_type (struct gdbarch *gdbarch)
+{
+  struct gdbarch_tdep *tdep = gdbarch_tdep (gdbarch);
+
+  if (!tdep->i387_ext_type)
+    tdep->i387_ext_type
+      = arch_float_type (gdbarch, -1, "builtin_type_i387_ext",
+			 floatformats_i387_ext);
+
+  return tdep->i387_ext_type;
 }
 
 /* Construct vector type for MMX registers.  */
@@ -2052,6 +2186,8 @@ i386_mmx_type (struct gdbarch *gdbarch)
 
   if (!tdep->i386_mmx_type)
     {
+      const struct builtin_type *bt = builtin_type (gdbarch);
+
       /* The type we're building is this: */
 #if 0
       union __gdb_builtin_type_vec64i
@@ -2065,14 +2201,16 @@ i386_mmx_type (struct gdbarch *gdbarch)
 
       struct type *t;
 
-      t = init_composite_type ("__gdb_builtin_type_vec64i", TYPE_CODE_UNION);
-      append_composite_type_field (t, "uint64", builtin_type_int64);
+      t = arch_composite_type (gdbarch,
+			       "__gdb_builtin_type_vec64i", TYPE_CODE_UNION);
+
+      append_composite_type_field (t, "uint64", bt->builtin_int64);
       append_composite_type_field (t, "v2_int32",
-				   init_vector_type (builtin_type_int32, 2));
+				   init_vector_type (bt->builtin_int32, 2));
       append_composite_type_field (t, "v4_int16",
-				   init_vector_type (builtin_type_int16, 4));
+				   init_vector_type (bt->builtin_int16, 4));
       append_composite_type_field (t, "v8_int8",
-				   init_vector_type (builtin_type_int8, 8));
+				   init_vector_type (bt->builtin_int8, 8));
 
       TYPE_VECTOR (t) = 1;
       TYPE_NAME (t) = "builtin_type_vec64i";
@@ -2089,6 +2227,8 @@ i386_sse_type (struct gdbarch *gdbarch)
 
   if (!tdep->i386_sse_type)
     {
+      const struct builtin_type *bt = builtin_type (gdbarch);
+
       /* The type we're building is this: */
 #if 0
       union __gdb_builtin_type_vec128i
@@ -2105,22 +2245,21 @@ i386_sse_type (struct gdbarch *gdbarch)
 
       struct type *t;
 
-      t = init_composite_type ("__gdb_builtin_type_vec128i", TYPE_CODE_UNION);
+      t = arch_composite_type (gdbarch,
+			       "__gdb_builtin_type_vec128i", TYPE_CODE_UNION);
       append_composite_type_field (t, "v4_float",
-				   init_vector_type (builtin_type (gdbarch)
-						     ->builtin_float, 4));
+				   init_vector_type (bt->builtin_float, 4));
       append_composite_type_field (t, "v2_double",
-				   init_vector_type (builtin_type (gdbarch)
-						     ->builtin_double, 2));
+				   init_vector_type (bt->builtin_double, 2));
       append_composite_type_field (t, "v16_int8",
-				   init_vector_type (builtin_type_int8, 16));
+				   init_vector_type (bt->builtin_int8, 16));
       append_composite_type_field (t, "v8_int16",
-				   init_vector_type (builtin_type_int16, 8));
+				   init_vector_type (bt->builtin_int16, 8));
       append_composite_type_field (t, "v4_int32",
-				   init_vector_type (builtin_type_int32, 4));
+				   init_vector_type (bt->builtin_int32, 4));
       append_composite_type_field (t, "v2_int64",
-				   init_vector_type (builtin_type_int64, 2));
-      append_composite_type_field (t, "uint128", builtin_type_int128);
+				   init_vector_type (bt->builtin_int64, 2));
+      append_composite_type_field (t, "uint128", bt->builtin_int128);
 
       TYPE_VECTOR (t) = 1;
       TYPE_NAME (t) = "builtin_type_vec128i";
@@ -2141,13 +2280,13 @@ i386_register_type (struct gdbarch *gdbarch, int regnum)
     return builtin_type (gdbarch)->builtin_func_ptr;
 
   if (regnum == I386_EFLAGS_REGNUM)
-    return i386_eflags_type;
+    return i386_eflags_type (gdbarch);
 
   if (regnum == I386_EBP_REGNUM || regnum == I386_ESP_REGNUM)
     return builtin_type (gdbarch)->builtin_data_ptr;
 
   if (i386_fp_regnum_p (gdbarch, regnum))
-    return builtin_type_i387_ext;
+    return i387_ext_type (gdbarch);
 
   if (i386_mmx_regnum_p (gdbarch, regnum))
     return i386_mmx_type (gdbarch);
@@ -2156,7 +2295,7 @@ i386_register_type (struct gdbarch *gdbarch, int regnum)
     return i386_sse_type (gdbarch);
 
   if (regnum == I387_MXCSR_REGNUM (gdbarch_tdep (gdbarch)))
-    return i386_mxcsr_type;
+    return i386_mxcsr_type (gdbarch);
 
   return builtin_type (gdbarch)->builtin_int;
 }
@@ -2465,11 +2604,17 @@ i386_regset_from_core_section (struct gdbarch *gdbarch,
 /* Stuff for WIN32 PE style DLL's but is pretty generic really.  */
 
 CORE_ADDR
-i386_pe_skip_trampoline_code (CORE_ADDR pc, char *name)
+i386_pe_skip_trampoline_code (struct frame_info *frame,
+			      CORE_ADDR pc, char *name)
 {
-  if (pc && read_memory_unsigned_integer (pc, 2) == 0x25ff) /* jmp *(dest) */
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  /* jmp *(dest) */
+  if (pc && read_memory_unsigned_integer (pc, 2, byte_order) == 0x25ff)
     {
-      unsigned long indirect = read_memory_unsigned_integer (pc + 2, 4);
+      unsigned long indirect =
+	read_memory_unsigned_integer (pc + 2, 4, byte_order);
       struct minimal_symbol *indsym =
 	indirect ? lookup_minimal_symbol_by_pc (indirect) : 0;
       char *symname = indsym ? SYMBOL_LINKAGE_NAME (indsym) : 0;
@@ -2478,7 +2623,8 @@ i386_pe_skip_trampoline_code (CORE_ADDR pc, char *name)
 	{
 	  if (strncmp (symname, "__imp_", 6) == 0
 	      || strncmp (symname, "_imp_", 5) == 0)
-	    return name ? 1 : read_memory_unsigned_integer (indirect, 4);
+	    return name ? 1 :
+		   read_memory_unsigned_integer (indirect, 4, byte_order);
 	}
     }
   return 0;			/* Not a trampoline.  */
@@ -2546,13 +2692,15 @@ i386_svr4_sigtramp_p (struct frame_info *this_frame)
 static CORE_ADDR
 i386_svr4_sigcontext_addr (struct frame_info *this_frame)
 {
+  struct gdbarch *gdbarch = get_frame_arch (this_frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   gdb_byte buf[4];
   CORE_ADDR sp;
 
   get_frame_register (this_frame, I386_ESP_REGNUM, buf);
-  sp = extract_unsigned_integer (buf, 4);
+  sp = extract_unsigned_integer (buf, 4, byte_order);
 
-  return read_memory_unsigned_integer (sp + 8, 4);
+  return read_memory_unsigned_integer (sp + 8, 4, byte_order);
 }
 
 
@@ -2669,8 +2817,10 @@ static CORE_ADDR
 i386_fetch_pointer_argument (struct frame_info *frame, int argi, 
 			     struct type *type)
 {
+  struct gdbarch *gdbarch = get_frame_arch (frame);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR sp = get_frame_register_unsigned  (frame, I386_ESP_REGNUM);
-  return read_memory_unsigned_integer (sp + (4 * (argi + 1)), 4);
+  return read_memory_unsigned_integer (sp + (4 * (argi + 1)), 4, byte_order);
 }
 
 static void
@@ -2730,12 +2880,14 @@ struct i386_record_s
 static int
 i386_record_modrm (struct i386_record_s *irp)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (irp->regcache);
+
   if (target_read_memory (irp->addr, &irp->modrm, 1))
     {
       if (record_debug)
 	printf_unfiltered (_("Process record: error reading memory at "
-			     "addr 0x%s len = 1.\n"),
-			   paddr_nz (irp->addr));
+			     "addr %s len = 1.\n"),
+			   paddress (gdbarch, irp->addr));
       return -1;
     }
   irp->addr++;
@@ -2753,6 +2905,7 @@ i386_record_modrm (struct i386_record_s *irp)
 static int
 i386_record_lea_modrm_addr (struct i386_record_s *irp, uint32_t * addr)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (irp->regcache);
   uint8_t tmpu8;
   uint16_t tmpu16;
   uint32_t tmpu32;
@@ -2773,8 +2926,8 @@ i386_record_lea_modrm_addr (struct i386_record_s *irp, uint32_t * addr)
 	    {
 	      if (record_debug)
 		printf_unfiltered (_("Process record: error reading memory "
-				     "at addr 0x%s len = 1.\n"),
-				   paddr_nz (irp->addr));
+				     "at addr %s len = 1.\n"),
+				   paddress (gdbarch, irp->addr));
 	      return -1;
 	    }
 	  irp->addr++;
@@ -2793,8 +2946,8 @@ i386_record_lea_modrm_addr (struct i386_record_s *irp, uint32_t * addr)
 		{
 		  if (record_debug)
 		    printf_unfiltered (_("Process record: error reading "
-				         "memory at addr 0x%s len = 4.\n"),
-				       paddr_nz (irp->addr));
+				         "memory at addr %s len = 4.\n"),
+				       paddress (gdbarch, irp->addr));
 		  return -1;
 		}
 	      irp->addr += 4;
@@ -2809,8 +2962,8 @@ i386_record_lea_modrm_addr (struct i386_record_s *irp, uint32_t * addr)
 	    {
 	      if (record_debug)
 		printf_unfiltered (_("Process record: error reading memory "
-				     "at addr 0x%s len = 1.\n"),
-				   paddr_nz (irp->addr));
+				     "at addr %s len = 1.\n"),
+				   paddress (gdbarch, irp->addr));
 	      return -1;
 	    }
 	  irp->addr++;
@@ -2821,8 +2974,8 @@ i386_record_lea_modrm_addr (struct i386_record_s *irp, uint32_t * addr)
 	    {
 	      if (record_debug)
 		printf_unfiltered (_("Process record: error reading memory "
-				     "at addr 0x%s len = 4.\n"),
-				   paddr_nz (irp->addr));
+				     "at addr %s len = 4.\n"),
+				   paddress (gdbarch, irp->addr));
 	      return -1;
 	    }
 	  irp->addr += 4;
@@ -2855,8 +3008,8 @@ i386_record_lea_modrm_addr (struct i386_record_s *irp, uint32_t * addr)
 		{
 		  if (record_debug)
 		    printf_unfiltered (_("Process record: error reading "
-					 "memory at addr 0x%s len = 2.\n"),
-				       paddr_nz (irp->addr));
+					 "memory at addr %s len = 2.\n"),
+				       paddress (gdbarch, irp->addr));
 		  return -1;
 		}
 	      irp->addr += 2;
@@ -2874,8 +3027,8 @@ i386_record_lea_modrm_addr (struct i386_record_s *irp, uint32_t * addr)
 	    {
 	      if (record_debug)
 		printf_unfiltered (_("Process record: error reading memory "
-				     "at addr 0x%s len = 1.\n"),
-				   paddr_nz (irp->addr));
+				     "at addr %s len = 1.\n"),
+				   paddress (gdbarch, irp->addr));
 	      return -1;
 	    }
 	  irp->addr++;
@@ -2886,8 +3039,8 @@ i386_record_lea_modrm_addr (struct i386_record_s *irp, uint32_t * addr)
 	    {
 	      if (record_debug)
 		printf_unfiltered (_("Process record: error reading memory "
-				     "at addr 0x%s len = 2.\n"),
-				   paddr_nz (irp->addr));
+				     "at addr %s len = 2.\n"),
+				   paddress (gdbarch, irp->addr));
 	      return -1;
 	    }
 	  irp->addr += 2;
@@ -2964,15 +3117,16 @@ no_rm:
 static int
 i386_record_lea_modrm (struct i386_record_s *irp)
 {
+  struct gdbarch *gdbarch = get_regcache_arch (irp->regcache);
   uint32_t addr;
 
   if (irp->override)
     {
       if (record_debug)
 	printf_unfiltered (_("Process record ignores the memory change "
-			     "of instruction at address 0x%s because it "
+			     "of instruction at address %s because it "
 			     "can't get the value of the segment register.\n"),
-			   paddr_nz (irp->addr));
+			   paddress (gdbarch, irp->addr));
       return 0;
     }
 
@@ -3008,8 +3162,8 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 
   if (record_debug > 1)
     fprintf_unfiltered (gdb_stdlog, "Process record: i386_process_record "
-			            "addr = 0x%s\n",
-			paddr_nz (ir.addr));
+			            "addr = %s\n",
+			paddress (gdbarch, ir.addr));
 
   /* prefixes */
   while (1)
@@ -3018,8 +3172,8 @@ i386_process_record (struct gdbarch *gdbarch, struct regcache *regcache,
 	{
 	  if (record_debug)
 	    printf_unfiltered (_("Process record: error reading memory at "
-				 "addr 0x%s len = 1.\n"),
-			       paddr_nz (ir.addr));
+				 "addr %s len = 1.\n"),
+			       paddress (gdbarch, ir.addr));
 	  return -1;
 	}
       ir.addr++;
@@ -3079,8 +3233,8 @@ reswitch:
 	{
 	  if (record_debug)
 	    printf_unfiltered (_("Process record: error reading memory at "
-				 "addr 0x%s len = 1.\n"),
-			       paddr_nz (ir.addr));
+				 "addr %s len = 1.\n"),
+			       paddress (gdbarch, ir.addr));
 	  return -1;
 	}
       ir.addr++;
@@ -3818,10 +3972,10 @@ reswitch:
 	  {
 	    if (record_debug)
 	      printf_unfiltered (_("Process record ignores the memory change "
-				   "of instruction at address 0x%s because "
+				   "of instruction at address %s because "
 				   "it can't get the value of the segment "
 				   "register.\n"),
-				 paddr_nz (ir.addr));
+				 paddress (gdbarch, ir.addr));
 	  }
 	else
 	  {
@@ -3836,8 +3990,8 @@ reswitch:
 		  {
 		    if (record_debug)
 		      printf_unfiltered (_("Process record: error reading "
-					   "memory at addr 0x%s len = 4.\n"),
-					 paddr_nz (ir.addr));
+					   "memory at addr %s len = 4.\n"),
+					 paddress (gdbarch, ir.addr));
 		    return -1;
 		  }
 		ir.addr += 4;
@@ -3849,8 +4003,8 @@ reswitch:
 		  {
 		    if (record_debug)
 		      printf_unfiltered (_("Process record: error reading "
-					   "memory at addr 0x%s len = 4.\n"),
-					 paddr_nz (ir.addr));
+					   "memory at addr %s len = 4.\n"),
+					 paddress (gdbarch, ir.addr));
 		    return -1;
 		  }
 		ir.addr += 2;
@@ -4238,10 +4392,10 @@ reswitch:
 	    /* addr += ((uint32_t)read_register (I386_ES_REGNUM)) << 4; */
 	    if (record_debug)
 	      printf_unfiltered (_("Process record ignores the memory change "
-				   "of instruction at address 0x%s because "
+				   "of instruction at address %s because "
 				   "it can't get the value of the segment "
 				   "register.\n"),
-				 paddr_nz (ir.addr));
+				 paddress (gdbarch, ir.addr));
 	  }
 
 	if (prefixes & (PREFIX_REPZ | PREFIX_REPNZ))
@@ -4647,8 +4801,8 @@ reswitch:
 	  {
 	    if (record_debug)
 	      printf_unfiltered (_("Process record: error reading memory "
-				   "at addr 0x%s len = 1.\n"),
-				 paddr_nz (ir.addr));
+				   "at addr %s len = 1.\n"),
+				 paddress (gdbarch, ir.addr));
 	    return -1;
 	  }
 	ir.addr++;
@@ -4855,10 +5009,10 @@ reswitch:
 		if (record_debug)
 		  printf_unfiltered (_("Process record ignores the memory "
 				       "change of instruction at "
-				       "address 0x%s because it can't get "
+				       "address %s because it can't get "
 				       "the value of the segment "
 				       "register.\n"),
-				     paddr_nz (ir.addr));
+				     paddress (gdbarch, ir.addr));
 	      }
 	    else
 	      {
@@ -4900,10 +5054,10 @@ reswitch:
 		  if (record_debug)
 		    printf_unfiltered (_("Process record ignores the memory "
 					 "change of instruction at "
-					 "address 0x%s because it can't get "
+					 "address %s because it can't get "
 					 "the value of the segment "
 					 "register.\n"),
-				       paddr_nz (ir.addr));
+				       paddress (gdbarch, ir.addr));
 		}
 	      else
 		{
@@ -5088,8 +5242,8 @@ reswitch:
 
 no_support:
   printf_unfiltered (_("Process record doesn't support instruction 0x%02x "
-		       "at address 0x%s.\n"),
-		     (unsigned int) (opcode), paddr_nz (ir.addr));
+		       "at address %s.\n"),
+		     (unsigned int) (opcode), paddress (gdbarch, ir.addr));
   return -1;
 }
 
@@ -5258,7 +5412,15 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Helper for function argument information.  */
   set_gdbarch_fetch_pointer_argument (gdbarch, i386_fetch_pointer_argument);
 
-  /* Hook in the DWARF CFI frame unwinder.  */
+  /* Hook the function epilogue frame unwinder.  This unwinder is
+     appended to the list first, so that it supercedes the Dwarf
+     unwinder in function epilogues (where the Dwarf unwinder
+     currently fails).  */
+  frame_unwind_append_unwinder (gdbarch, &i386_epilogue_frame_unwind);
+
+  /* Hook in the DWARF CFI frame unwinder.  This unwinder is appended
+     to the list before the prologue-based unwinders, so that Dwarf
+     CFI info will be used if it is available.  */
   dwarf2_append_unwinders (gdbarch);
 
   frame_base_set_default (gdbarch, &i386_frame_base);
@@ -5266,6 +5428,7 @@ i386_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Hook in ABI-specific overrides, if they have been registered.  */
   gdbarch_init_osabi (info, gdbarch);
 
+  /* Hook in the legacy prologue-based unwinders last (fallback).  */
   frame_unwind_append_unwinder (gdbarch, &i386_sigtramp_frame_unwind);
   frame_unwind_append_unwinder (gdbarch, &i386_frame_unwind);
 
@@ -5336,7 +5499,6 @@ is \"default\"."),
   gdbarch_register_osabi (bfd_arch_i386, 0, GDB_OSABI_GO32,
 			  i386_go32_init_abi);
 
-  /* Initialize the i386-specific register groups & types.  */
+  /* Initialize the i386-specific register groups.  */
   i386_init_reggroups ();
-  i386_init_types();
 }

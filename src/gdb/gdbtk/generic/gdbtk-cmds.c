@@ -45,6 +45,7 @@
 #include "target.h"
 #include "valprint.h"
 #include "regcache.h"
+#include "arch-utils.h"
 
 /* tcl header files includes varargs.h unless HAS_STDARG is defined,
    but gdb uses stdarg.h, so make sure HAS_STDARG is defined.  */
@@ -1895,7 +1896,7 @@ gdbtk_load_asm (ClientData clientData, CORE_ADDR pc,
   for (i = 0; i < 3; i++)
     Tcl_SetObjLength (client_data->result_obj[i], 0);
 
-  fputs_filtered (paddress (pc), gdb_stdout);
+  fputs_filtered (paddress (get_current_arch (), pc), gdb_stdout);
   gdb_flush (gdb_stdout);
 
   result_ptr->obj_ptr = client_data->result_obj[1];
@@ -1904,7 +1905,7 @@ gdbtk_load_asm (ClientData clientData, CORE_ADDR pc,
 
   result_ptr->obj_ptr = client_data->result_obj[2];
   /* FIXME: cagney/2003-09-08: This should use gdb_disassembly.  */
-  insn = gdb_print_insn (pc, gdb_stdout, NULL);
+  insn = gdb_print_insn (get_current_arch (), pc, gdb_stdout, NULL);
   gdb_flush (gdb_stdout);
 
   client_data->widget_line_no++;
@@ -2271,7 +2272,7 @@ hex2bin (const char *hex, char *bin, int count)
   int incr = 2;
 
 
-  if (gdbarch_byte_order (current_gdbarch) == BFD_ENDIAN_LITTLE)
+  if (gdbarch_byte_order (get_current_arch ()) == BFD_ENDIAN_LITTLE)
     {
       /* need to read string in reverse */
       hex += count - 2;
@@ -2448,7 +2449,9 @@ gdb_update_mem (ClientData clientData, Tcl_Interp *interp,
   memset (mbuf, 0, nbytes + 32);
   mptr = cptr = mbuf;
 
-  rnum = target_read (&current_target, TARGET_OBJECT_MEMORY, NULL,
+  /* Dispatch memory reads to the topmost target, not the flattened
+     current_target.  */
+  rnum = target_read (current_target.beneath, TARGET_OBJECT_MEMORY, NULL,
 		      mbuf, addr, nbytes);
   if (rnum <= 0)
     {
@@ -2464,23 +2467,23 @@ gdb_update_mem (ClientData clientData, Tcl_Interp *interp,
   switch (size)
     {
     case 1:
-      val_type = builtin_type_int8;
+      val_type = builtin_type (get_current_arch ())->builtin_int8;
       asize = 'b';
       break;
     case 2:
-      val_type = builtin_type_int16;
+      val_type = builtin_type (get_current_arch ())->builtin_int16;
       asize = 'h';
       break;
     case 4:
-      val_type = builtin_type_int32;
+      val_type = builtin_type (get_current_arch ())->builtin_int32;
       asize = 'w';
       break;
     case 8:
-      val_type = builtin_type_int64;
+      val_type = builtin_type (get_current_arch ())->builtin_int64;
       asize = 'g';
       break;
     default:
-      val_type = builtin_type_int8;
+      val_type = builtin_type (get_current_arch ())->builtin_int8;
       asize = 'b';
     }
 
@@ -3009,7 +3012,10 @@ gdb_CA_to_TAS (ClientData clientData, Tcl_Interp *interp,
 
   /* This is not really correct.  Using paddr_nz() will convert to hex and truncate 
      to 32-bits when required but will otherwise not do what we really want. */
-  Tcl_SetStringObj (result_ptr->obj_ptr, paddr_nz (address), -1);
+  
+  Tcl_SetStringObj (result_ptr->obj_ptr,
+		    paddress (get_current_arch (), address),
+		    -1);
 
   return TCL_OK;
 }

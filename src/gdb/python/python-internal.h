@@ -62,6 +62,7 @@ typedef int Py_ssize_t;
 #endif
 
 struct value;
+struct language_defn;
 
 extern PyObject *gdb_module;
 extern PyTypeObject value_object_type;
@@ -89,7 +90,12 @@ void gdbpy_initialize_functions (void);
 void gdbpy_initialize_objfile (void);
 
 struct cleanup *make_cleanup_py_decref (PyObject *py);
-struct cleanup *make_cleanup_py_restore_gil (PyGILState_STATE *state);
+
+struct cleanup *ensure_python_env (struct gdbarch *gdbarch,
+				   const struct language_defn *language);
+
+extern struct gdbarch *python_gdbarch;
+extern const struct language_defn *python_language;
 
 /* Use this after a TRY_EXCEPT to throw the appropriate Python
    exception.  */
@@ -107,14 +113,15 @@ void gdbpy_print_stack (void);
 PyObject *python_string_to_unicode (PyObject *obj);
 char *unicode_to_target_string (PyObject *unicode_str);
 char *python_string_to_target_string (PyObject *obj);
+PyObject *python_string_to_target_python_string (PyObject *obj);
 char *python_string_to_host_string (PyObject *obj);
 PyObject *target_string_to_unicode (const gdb_byte *str, int length);
 int gdbpy_is_string (PyObject *obj);
 
 /* Note that these are declared here, and not in python.h with the
    other pretty-printer functions, because they refer to PyObject.  */
-char *apply_varobj_pretty_printer (PyObject *print_obj,
-				   struct value **replacement);
+PyObject *apply_varobj_pretty_printer (PyObject *print_obj,
+				       struct value **replacement);
 PyObject *gdbpy_get_varobj_pretty_printer (struct value *value);
 char *gdbpy_get_display_hint (PyObject *printer);
 PyObject *gdbpy_default_visualizer (PyObject *self, PyObject *args);

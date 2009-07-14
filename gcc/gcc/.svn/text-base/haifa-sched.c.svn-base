@@ -890,7 +890,8 @@ rank_for_schedule (const void *x, const void *y)
   int val, priority_val, weight_val, info_val;
 
   /* The insn in a schedule group should be issued the first.  */
-  if (SCHED_GROUP_P (tmp) != SCHED_GROUP_P (tmp2))
+  if (flag_sched_group_heuristic && 
+      SCHED_GROUP_P (tmp) != SCHED_GROUP_P (tmp2))
     return SCHED_GROUP_P (tmp2) ? 1 : -1;
 
   /* Make sure that priority of TMP and TMP2 are initialized.  */
@@ -899,11 +900,11 @@ rank_for_schedule (const void *x, const void *y)
   /* Prefer insn with higher priority.  */
   priority_val = INSN_PRIORITY (tmp2) - INSN_PRIORITY (tmp);
 
-  if (priority_val)
+  if (flag_sched_critical_path_heuristic && priority_val)
     return priority_val;
 
   /* Prefer speculative insn with greater dependencies weakness.  */
-  if (spec_info)
+  if (flag_sched_spec_insn_heuristic && spec_info)
     {
       ds_t ds1, ds2;
       dw_t dw1, dw2;
@@ -927,16 +928,16 @@ rank_for_schedule (const void *x, const void *y)
     }
 
   /* Prefer an insn with smaller contribution to registers-pressure.  */
-  if (!reload_completed &&
+  if (flag_sched_reg_pressure_heuristic && !reload_completed &&
       (weight_val = INSN_REG_WEIGHT (tmp) - INSN_REG_WEIGHT (tmp2)))
     return weight_val;
 
   info_val = (*current_sched_info->rank) (tmp, tmp2);
-  if (info_val)
+  if(flag_sched_rank_heuristic && info_val)
     return info_val;
 
   /* Compare insns based on their relation to the last-scheduled-insn.  */
-  if (INSN_P (last_scheduled_insn))
+  if (flag_sched_last_insn_heuristic && INSN_P (last_scheduled_insn))
     {
       dep_t dep1;
       dep_t dep2;
@@ -977,7 +978,7 @@ rank_for_schedule (const void *x, const void *y)
   val = (sd_lists_size (tmp2, SD_LIST_FORW)
 	 - sd_lists_size (tmp, SD_LIST_FORW));
 
-  if (val != 0)
+  if (flag_sched_dep_count_heuristic && val != 0)
     return val;
 
   /* If insns are equally good, sort by INSN_LUID (original insn order),
@@ -1990,6 +1991,23 @@ move_insn (rtx insn, rtx last, rtx nt)
   SCHED_GROUP_P (insn) = 0;  
 }
 
+/* Return true if scheduling INSN will finish current clock cycle.  */
+static bool
+insn_finishes_cycle_p (rtx insn)
+{
+  if (SCHED_GROUP_P (insn))
+    /* After issuing INSN, rest of the sched_group will be forced to issue
+       in order.  Don't make any plans for the rest of cycle.  */
+    return true;
+
+  /* Finishing the block will, apparently, finish the cycle.  */
+  if (current_sched_info->insn_finishes_block_p
+      && current_sched_info->insn_finishes_block_p (insn))
+    return true;
+
+  return false;
+}
+
 /* The following structure describe an entry of the stack of choices.  */
 struct choice_entry
 {
@@ -2168,7 +2186,10 @@ max_issue (struct ready_list *ready, int privileged_n, state_t state,
 	  delay = state_transition (state, insn);
 	  if (delay < 0)
 	    {
-	      if (state_dead_lock_p (state))
+	      if (state_dead_lock_p (state)
+		  || insn_finishes_cycle_p (insn))
+ 		/* We won't issue any more instructions in the next
+ 		   choice_state.  */
 		top->rest = 0;
 	      else
 		top->rest--;

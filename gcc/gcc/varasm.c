@@ -3208,6 +3208,10 @@ build_constant_desc (tree exp)
   set_mem_alias_set (rtl, 0);
   set_mem_alias_set (rtl, const_alias_set);
 
+  /* We cannot share RTX'es in pool entries.
+     Mark this piece of RTL as required for unsharing.  */
+  RTX_FLAG (rtl, used) = 1;
+
   /* Set flags or add text to the name to record information, such as
      that it is a local symbol.  If the name is changed, the macro
      ASM_OUTPUT_LABELREF will have to know how to strip this
@@ -5465,7 +5469,8 @@ do_assemble_alias (tree decl, tree target)
 #else
       if (!SUPPORTS_WEAK)
 	{
-	  error ("%Jweakref is not supported in this configuration", decl);
+	  error_at (DECL_SOURCE_LOCATION (decl),
+		    "weakref is not supported in this configuration");
 	  return;
 	}
 #endif
@@ -5605,12 +5610,14 @@ assemble_alias (tree decl, tree target)
     {
 #if !defined (ASM_OUTPUT_DEF)
 # if !defined(ASM_OUTPUT_WEAK_ALIAS) && !defined (ASM_WEAKEN_DECL)
-      error ("%Jalias definitions not supported in this configuration", decl);
+      error_at (DECL_SOURCE_LOCATION (decl),
+		"alias definitions not supported in this configuration");
       return;
 # else
       if (!DECL_WEAK (decl))
 	{
-	  error ("%Jonly weak aliases are supported in this configuration", decl);
+	  error_at (DECL_SOURCE_LOCATION (decl),
+		    "only weak aliases are supported in this configuration");
 	  return;
 	}
 # endif

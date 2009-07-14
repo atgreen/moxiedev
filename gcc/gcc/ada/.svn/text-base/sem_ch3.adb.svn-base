@@ -590,8 +590,8 @@ package body Sem_Ch3 is
 
    function Is_Progenitor
      (Iface : Entity_Id;
-      Typ   :  Entity_Id) return Boolean;
-   --  Determine whether type Typ implements interface Iface. This requires
+      Typ   : Entity_Id) return Boolean;
+   --  Determine whether the interface Iface is implemented by Typ. It requires
    --  traversing the list of abstract interfaces of the type, as well as that
    --  of the ancestor types. The predicate is used to determine when a formal
    --  in the signature of an inherited operation must carry the derived type.
@@ -2631,7 +2631,6 @@ package body Sem_Ch3 is
          if (Is_Class_Wide_Type (Etype (E)) or else Is_Dynamically_Tagged (E))
            and then Is_Tagged_Type (T)
            and then not Is_Class_Wide_Type (T)
-           and then not Is_CPP_Constructor_Call (E)
          then
             Error_Msg_N ("dynamically tagged expression not allowed!", E);
          end if;
@@ -2725,6 +2724,13 @@ package body Sem_Ch3 is
               and then Nkind (Original_Node (E)) = N_Aggregate
             then
                Act_T := Etype (E);
+
+            --  In case of class-wide interface object declarations we delay
+            --  the generation of the equivalent record type declarations until
+            --  its expansion because there are cases in they are not required.
+
+            elsif Is_Interface (T) then
+               null;
 
             else
                Expand_Subtype_From_Expr (N, T, Object_Definition (N), E);
@@ -6987,13 +6993,13 @@ package body Sem_Ch3 is
       --  Fields inherited from the Parent_Type
 
       Set_Discard_Names
-        (Derived_Type, Einfo.Discard_Names      (Parent_Type));
+        (Derived_Type, Einfo.Discard_Names  (Parent_Type));
       Set_Has_Specified_Layout
-        (Derived_Type, Has_Specified_Layout     (Parent_Type));
+        (Derived_Type, Has_Specified_Layout (Parent_Type));
       Set_Is_Limited_Composite
-        (Derived_Type, Is_Limited_Composite     (Parent_Type));
+        (Derived_Type, Is_Limited_Composite (Parent_Type));
       Set_Is_Private_Composite
-        (Derived_Type, Is_Private_Composite     (Parent_Type));
+        (Derived_Type, Is_Private_Composite (Parent_Type));
 
       --  Fields inherited from the Parent_Base
 
@@ -7014,10 +7020,22 @@ package body Sem_Ch3 is
       --  Fields inherited from the Parent_Base for record types
 
       if Is_Record_Type (Derived_Type) then
-         Set_OK_To_Reorder_Components
-           (Derived_Type, OK_To_Reorder_Components (Parent_Base));
-         Set_Reverse_Bit_Order
-           (Derived_Type, Reverse_Bit_Order (Parent_Base));
+
+         --  Ekind (Parent_Base) is not necessarily E_Record_Type since
+         --  Parent_Base can be a private type or private extension.
+
+         if Present (Full_View (Parent_Base)) then
+            Set_OK_To_Reorder_Components
+              (Derived_Type,
+               OK_To_Reorder_Components (Full_View (Parent_Base)));
+            Set_Reverse_Bit_Order
+              (Derived_Type, Reverse_Bit_Order (Full_View (Parent_Base)));
+         else
+            Set_OK_To_Reorder_Components
+              (Derived_Type, OK_To_Reorder_Components (Parent_Base));
+            Set_Reverse_Bit_Order
+              (Derived_Type, Reverse_Bit_Order (Parent_Base));
+         end if;
       end if;
 
       --  Direct controlled types do not inherit Finalize_Storage_Only flag
@@ -7049,7 +7067,6 @@ package body Sem_Ch3 is
          else
             Set_Component_Alignment
               (Derived_Type, Component_Alignment (Parent_Base));
-
             Set_C_Pass_By_Copy
               (Derived_Type, C_Pass_By_Copy      (Parent_Base));
          end if;
@@ -7895,7 +7912,7 @@ package body Sem_Ch3 is
       --  declaration, all clauses are inherited.
 
       if No (First_Rep_Item (Def_Id)) then
-         Set_First_Rep_Item    (Def_Id, First_Rep_Item (T));
+         Set_First_Rep_Item (Def_Id, First_Rep_Item (T));
       end if;
 
       if Is_Tagged_Type (T) then
@@ -16432,6 +16449,22 @@ package body Sem_Ch3 is
       if Is_CPP_Class (Priv_T) then
          Set_Is_CPP_Class (Full_T);
          Set_Convention   (Full_T, Convention_CPP);
+      end if;
+
+      --  If the private view has user specified stream attributes, then so has
+      --  the full view.
+
+      if Has_Specified_Stream_Read (Priv_T) then
+         Set_Has_Specified_Stream_Read (Full_T);
+      end if;
+      if Has_Specified_Stream_Write (Priv_T) then
+         Set_Has_Specified_Stream_Write (Full_T);
+      end if;
+      if Has_Specified_Stream_Input (Priv_T) then
+         Set_Has_Specified_Stream_Input (Full_T);
+      end if;
+      if Has_Specified_Stream_Output (Priv_T) then
+         Set_Has_Specified_Stream_Output (Full_T);
       end if;
    end Process_Full_View;
 

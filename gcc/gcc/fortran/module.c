@@ -3432,26 +3432,13 @@ mio_symbol (gfc_symbol *sym)
 {
   int intmod = INTMOD_NONE;
   
-  gfc_formal_arglist *formal;
-
   mio_lparen ();
 
   mio_symbol_attribute (&sym->attr);
   mio_typespec (&sym->ts);
 
-  /* Contained procedures don't have formal namespaces.  Instead we output the
-     procedure namespace.  The will contain the formal arguments.  */
   if (iomode == IO_OUTPUT)
-    {
-      formal = sym->formal;
-      while (formal && !formal->sym)
-	formal = formal->next;
-
-      if (formal)
-	mio_namespace_ref (&formal->sym->ns);
-      else
-	mio_namespace_ref (&sym->formal_ns);
-    }
+    mio_namespace_ref (&sym->formal_ns);
   else
     {
       mio_namespace_ref (&sym->formal_ns);

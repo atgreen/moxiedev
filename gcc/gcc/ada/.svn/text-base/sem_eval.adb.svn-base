@@ -2905,7 +2905,8 @@ package body Sem_Eval is
       Left_Int := Expr_Value (Left);
 
       if (Kind = N_And_Then and then Is_False (Left_Int))
-        or else (Kind = N_Or_Else and Is_True (Left_Int))
+            or else
+         (Kind = N_Or_Else  and then Is_True (Left_Int))
       then
          Fold_Uint (N, Left_Int, Rstat);
          return;
@@ -3736,6 +3737,16 @@ package body Sem_Eval is
       --  actually happen, but just in case.
 
       elsif not Is_Scalar_Type (T1) or else not Is_Scalar_Type (T1) then
+         return False;
+
+      --  If T1 has infinities but T2 doesn't have infinities, then T1 is
+      --  definitely not compatible with T2.
+
+      elsif Is_Floating_Point_Type (T1)
+        and then Has_Infinities (T1)
+        and then Is_Floating_Point_Type (T2)
+        and then not Has_Infinities (T2)
+      then
          return False;
 
       else
@@ -4945,7 +4956,7 @@ package body Sem_Eval is
                   "(RM 4.9(5))!", N, E);
             end if;
 
-         when N_Binary_Op | N_And_Then | N_Or_Else | N_Membership_Test =>
+         when N_Binary_Op | N_Short_Circuit | N_Membership_Test =>
             if Nkind (N) in N_Op_Shift then
                Error_Msg_N
                 ("shift functions are never static (RM 4.9(6,18))!", N);

@@ -364,8 +364,7 @@ procedure GNATCmd is
                            File :=
                              new String'
                                (Get_Name_String
-                                    (Proj.Project.Object_Directory.Name)     &
-                                Directory_Separator                          &
+                                 (Proj.Project.Object_Directory.Name)        &
                                 B_Start.all                                  &
                                 MLib.Fil.Ext_To
                                   (Get_Name_String
@@ -391,8 +390,7 @@ procedure GNATCmd is
                            File :=
                              new String'
                                (Get_Name_String
-                                    (Proj.Project.Object_Directory.Name)     &
-                                Directory_Separator                          &
+                                 (Proj.Project.Object_Directory.Name)        &
                                 B_Start.all                                  &
                                 Get_Name_String (Proj.Project.Library_Name)  &
                                 ".ci");
@@ -514,7 +512,6 @@ procedure GNATCmd is
                                (Get_Name_String
                                  (Unit.File_Names
                                    (Impl).Project. Object_Directory.Name)  &
-                                Directory_Separator                        &
                                 MLib.Fil.Ext_To
                                   (Get_Name_String
                                      (Unit.File_Names (Impl).Display_File),
@@ -684,16 +681,8 @@ procedure GNATCmd is
          Proj := Project_Tree.Projects;
          while Proj /= null loop
             if Proj.Project.Config_File_Temp then
-               if Verbose_Mode then
-                  Output.Write_Str ("Deleting temp configuration file """);
-                  Output.Write_Str
-                    (Get_Name_String (Proj.Project.Config_File_Name));
-                  Output.Write_Line ("""");
-               end if;
-
-               Delete_File
-                 (Name    => Get_Name_String (Proj.Project.Config_File_Name),
-                  Success => Success);
+               Delete_Temporary_File
+                 (Project_Tree, Proj.Project.Config_File_Name);
             end if;
 
             Proj := Proj.Next;
@@ -704,7 +693,7 @@ procedure GNATCmd is
       --  has been created, delete this temporary file.
 
       if Temp_File_Name /= No_Path then
-         Delete_File (Get_Name_String (Temp_File_Name), Success);
+         Delete_Temporary_File (Project_Tree, Temp_File_Name);
       end if;
    end Delete_Temp_Config_Files;
 
@@ -1077,16 +1066,13 @@ procedure GNATCmd is
                         begin
                            if Is_Regular_File
                                 (Dir &
-                                 Directory_Separator &
                                  ALI_File (1 .. Last))
                            then
                               --  We have found the correct project, so we
                               --  replace the file with the absolute path.
 
                               Last_Switches.Table (J) :=
-                                new String'
-                                  (Dir & Directory_Separator &
-                                   ALI_File (1 .. Last));
+                                new String'(Dir & ALI_File (1 .. Last));
 
                               --  And we are done
 
@@ -1155,7 +1141,6 @@ procedure GNATCmd is
                   Last_Switches.Increment_Last;
                   Last_Switches.Table (Last_Switches.Last) :=
                     new String'(Name_Buffer (1 .. Name_Len) &
-                                Directory_Separator &
                                 Executable_Name
                                   (Base_Name (Arg (Arg'First .. Last))));
                   exit;
@@ -1296,8 +1281,6 @@ begin
    Rules_Switches.Set_Last (0);
 
    VMS_Conv.Initialize;
-
-   Set_Mode (Ada_Only);
 
    --  Add the default search directories, to be able to find system.ads in the
    --  subsequent call to Targparm.Get_Target_Parameters.
@@ -1784,8 +1767,8 @@ begin
            (Project           => Project,
             In_Tree           => Project_Tree,
             Project_File_Name => Project_File.all,
-            Packages_To_Check => Packages_To_Check,
-            Is_Config_File    => False);
+            Flags             => Gnatmake_Flags,
+            Packages_To_Check => Packages_To_Check);
 
          if Project = Prj.No_Project then
             Fail ("""" & Project_File.all & """ processing failed");
@@ -2134,18 +2117,16 @@ begin
                   end if;
                end loop;
 
-               --  If the naming scheme of the project file is not standard,
-               --  and if the file name ends with the spec suffix, then
-               --  indicate to gnatstub the name of the body file with
-               --  a -o switch.
+               --  If the project file naming scheme is not standard, and if
+               --  the file name ends with the spec suffix, then indicate to
+               --  gnatstub the name of the body file with a -o switch.
 
-               if Lang.Config.Naming_Data.Body_Suffix /=
-                    Prj.Default_Ada_Spec_Suffix
-               then
+               if not Is_Standard_GNAT_Naming (Lang.Config.Naming_Data) then
                   if File_Index /= 0 then
                      declare
                         Spec : constant String :=
-                          Base_Name (Last_Switches.Table (File_Index).all);
+                                 Base_Name
+                                   (Last_Switches.Table (File_Index).all);
                         Last : Natural := Spec'Last;
 
                      begin
@@ -2212,8 +2193,7 @@ begin
          end if;
 
          --  For gnat check, -rules and the following switches need to be the
-         --  last options. So, we move all these switches to table
-         --  Rules_Switches.
+         --  last options, so move all these switches to table Rules_Switches.
 
          if The_Command = Check then
             declare
@@ -2362,7 +2342,7 @@ begin
 exception
    when Error_Exit =>
       if not Keep_Temporary_Files then
-         Prj.Env.Delete_All_Path_Files (Project_Tree);
+         Prj.Delete_All_Temp_Files (Project_Tree);
          Delete_Temp_Config_Files;
       end if;
 
@@ -2370,7 +2350,7 @@ exception
 
    when Normal_Exit =>
       if not Keep_Temporary_Files then
-         Prj.Env.Delete_All_Path_Files (Project_Tree);
+         Prj.Delete_All_Temp_Files (Project_Tree);
          Delete_Temp_Config_Files;
       end if;
 

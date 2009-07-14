@@ -40,19 +40,25 @@ struct GTY(()) lang_decl { tree t; };
 #define GET_TYPE_LANG_SPECIFIC(NODE) \
   (TYPE_LANG_SPECIFIC (NODE) ? TYPE_LANG_SPECIFIC (NODE)->t : NULL_TREE)
 
-#define SET_TYPE_LANG_SPECIFIC(NODE, X)	\
-  (TYPE_LANG_SPECIFIC (NODE)		\
-   = (TYPE_LANG_SPECIFIC (NODE)		\
-      ? TYPE_LANG_SPECIFIC (NODE) : GGC_NEW (struct lang_type)))->t = (X)
+#define SET_TYPE_LANG_SPECIFIC(NODE, X)			    \
+do {							    \
+  tree tmp = (X);					    \
+  if (!TYPE_LANG_SPECIFIC (NODE))			    \
+    TYPE_LANG_SPECIFIC (NODE) = GGC_NEW (struct lang_type); \
+  TYPE_LANG_SPECIFIC (NODE)->t = tmp;			    \
+} while (0)
 
 /* Macros to get and set the tree in DECL_LANG_SPECIFIC.  */
 #define GET_DECL_LANG_SPECIFIC(NODE) \
   (DECL_LANG_SPECIFIC (NODE) ? DECL_LANG_SPECIFIC (NODE)->t : NULL_TREE)
 
-#define SET_DECL_LANG_SPECIFIC(NODE, X)	\
-  (DECL_LANG_SPECIFIC (NODE)		\
-   = (DECL_LANG_SPECIFIC (NODE)		\
-      ? DECL_LANG_SPECIFIC (NODE) : GGC_NEW (struct lang_decl)))->t = (X)
+#define SET_DECL_LANG_SPECIFIC(NODE, X)			    \
+do {							    \
+  tree tmp = (X);					    \
+  if (!DECL_LANG_SPECIFIC (NODE))			    \
+    DECL_LANG_SPECIFIC (NODE) = GGC_NEW (struct lang_decl); \
+  DECL_LANG_SPECIFIC (NODE)->t = tmp;			    \
+} while (0)
 
 
 /* Flags added to type nodes.  */
@@ -159,13 +165,14 @@ struct GTY(()) lang_decl { tree t; };
 /* True if TYPE can alias any other types.  */
 #define TYPE_UNIVERSAL_ALIASING_P(NODE) TYPE_LANG_FLAG_6 (NODE)
 
-/* This field is only defined for FUNCTION_TYPE nodes. If the Ada subprogram
-   contains no parameters passed by copy in/copy out then this field is zero.
-   Otherwise it points to a list of nodes used to specify the return values
-   of the out (or in out) parameters that qualify to be passed by copy in/
-   copy out. For a full description of the copy in/copy out parameter passing
-   mechanism refer to the routine gnat_to_gnu_entity. */
-#define TYPE_CI_CO_LIST(NODE) TYPE_LANG_SLOT_1 (FUNCTION_TYPE_CHECK (NODE))
+/* In an UNCONSTRAINED_ARRAY_TYPE, this is the record containing both the
+   template and the object.
+
+   ??? We also put this on an ENUMERAL_TYPE that is dummy.  Technically,
+   this is a conflict on the minval field, but there doesn't seem to be
+   simple fix, so we'll live with this kludge for now.  */
+#define TYPE_OBJECT_RECORD_TYPE(NODE) \
+  (TREE_CHECK2 ((NODE), UNCONSTRAINED_ARRAY_TYPE, ENUMERAL_TYPE)->type.minval)
 
 /* For numerical types, this is the GCC lower bound of the type.  The GCC
    type system is based on the invariant that an object X of a given type
@@ -181,8 +188,28 @@ struct GTY(()) lang_decl { tree t; };
    considers that the assertion X <= UB is always true.  */
 #define TYPE_GCC_MAX_VALUE(NODE) (NUMERICAL_TYPE_CHECK (NODE)->type.maxval)
 
+/* For a FUNCTION_TYPE, if the subprogram has parameters passed by copy in/
+   copy out, this is the list of nodes used to specify the return values of
+   the out (or in out) parameters that are passed by copy in/copy out.  For
+   a full description of the copy in/copy out parameter passing mechanism
+   refer to the routine gnat_to_gnu_entity.  */
+#define TYPE_CI_CO_LIST(NODE) TYPE_LANG_SLOT_1 (FUNCTION_TYPE_CHECK (NODE))
+
 /* For numerical types, this holds various RM-defined values.  */
 #define TYPE_RM_VALUES(NODE) TYPE_LANG_SLOT_1 (NUMERICAL_TYPE_CHECK (NODE))
+
+/* Macros to get and set the individual values in TYPE_RM_VALUES.  */
+#define TYPE_RM_VALUE(NODE, N)				    \
+  (TYPE_RM_VALUES (NODE)				    \
+   ? TREE_VEC_ELT (TYPE_RM_VALUES (NODE), (N)) : NULL_TREE)
+
+#define SET_TYPE_RM_VALUE(NODE, N, X)		   \
+do {						   \
+  tree tmp = (X);				   \
+  if (!TYPE_RM_VALUES (NODE))			   \
+    TYPE_RM_VALUES (NODE) = make_tree_vec (3);	   \
+  TREE_VEC_ELT (TYPE_RM_VALUES (NODE), (N)) = tmp; \
+} while (0)
 
 /* For numerical types, this is the RM size of the type, aka its precision.
    There is a discrepancy between what is called precision here (and more
@@ -196,12 +223,8 @@ struct GTY(()) lang_decl { tree t; };
    the optimizer can pretend that they simply don't exist.  Therefore they
    must be within the range of values allowed by the precision in the GCC
    sense, hence TYPE_PRECISION be set to the Esize, not the RM size.  */
-#define TYPE_RM_SIZE(NODE) \
-  (TYPE_RM_VALUES (NODE) ? TREE_VEC_ELT (TYPE_RM_VALUES (NODE), 0) : NULL_TREE)
-#define SET_TYPE_RM_SIZE(NODE, X)		\
-  TREE_VEC_ELT ((TYPE_RM_VALUES (NODE)		\
-		 = (TYPE_RM_VALUES (NODE)	\
-		    ? TYPE_RM_VALUES (NODE) : make_tree_vec (3))), 0) = (X)
+#define TYPE_RM_SIZE(NODE) TYPE_RM_VALUE ((NODE), 0)
+#define SET_TYPE_RM_SIZE(NODE, X) SET_TYPE_RM_VALUE ((NODE), 0, (X))
 
 /* For numerical types, this is the RM lower bound of the type.  There is
    again a discrepancy between this lower bound and the GCC lower bound,
@@ -212,12 +235,8 @@ struct GTY(()) lang_decl { tree t; };
    the optimizer can pretend that they simply don't exist.  Therefore they
    must be within the range of values allowed by the lower bound in the GCC
    sense, hence the GCC lower bound be set to that of the base type.  */
-#define TYPE_RM_MIN_VALUE(NODE) \
-  (TYPE_RM_VALUES (NODE) ? TREE_VEC_ELT (TYPE_RM_VALUES (NODE), 1) : NULL_TREE)
-#define SET_TYPE_RM_MIN_VALUE(NODE, X)		\
-  TREE_VEC_ELT ((TYPE_RM_VALUES (NODE)		\
-		 = (TYPE_RM_VALUES (NODE)	\
-		    ? TYPE_RM_VALUES (NODE) : make_tree_vec (3))), 1) = (X)
+#define TYPE_RM_MIN_VALUE(NODE) TYPE_RM_VALUE ((NODE), 1)
+#define SET_TYPE_RM_MIN_VALUE(NODE, X) SET_TYPE_RM_VALUE ((NODE), 1, (X))
 
 /* For numerical types, this is the RM upper bound of the type.  There is
    again a discrepancy between this upper bound and the GCC upper bound,
@@ -228,12 +247,8 @@ struct GTY(()) lang_decl { tree t; };
    the optimizer can pretend that they simply don't exist.  Therefore they
    must be within the range of values allowed by the upper bound in the GCC
    sense, hence the GCC upper bound be set to that of the base type.  */
-#define TYPE_RM_MAX_VALUE(NODE) \
-  (TYPE_RM_VALUES (NODE) ? TREE_VEC_ELT (TYPE_RM_VALUES (NODE), 2) : NULL_TREE)
-#define SET_TYPE_RM_MAX_VALUE(NODE, X)		\
-  TREE_VEC_ELT ((TYPE_RM_VALUES (NODE)		\
-		 = (TYPE_RM_VALUES (NODE)	\
-		    ? TYPE_RM_VALUES (NODE) : make_tree_vec (3))), 2) = (X)
+#define TYPE_RM_MAX_VALUE(NODE) TYPE_RM_VALUE ((NODE), 2)
+#define SET_TYPE_RM_MAX_VALUE(NODE, X) SET_TYPE_RM_VALUE ((NODE), 2, (X))
 
 /* For numerical types, this is the lower bound of the type, i.e. the RM lower
    bound for language-defined types and the GCC lower bound for others.  */
@@ -248,15 +263,6 @@ struct GTY(()) lang_decl { tree t; };
 #define TYPE_MAX_VALUE(NODE) \
   (TYPE_RM_MAX_VALUE (NODE) \
    ? TYPE_RM_MAX_VALUE (NODE) : TYPE_GCC_MAX_VALUE (NODE))
-
-/* In an UNCONSTRAINED_ARRAY_TYPE, points to the record containing both
-   the template and object.
-
-   ??? We also put this on an ENUMERAL_TYPE that's dummy.  Technically,
-   this is a conflict on the minval field, but there doesn't seem to be
-   simple fix, so we'll live with this kludge for now.  */
-#define TYPE_OBJECT_RECORD_TYPE(NODE) \
-  (TREE_CHECK2 ((NODE), UNCONSTRAINED_ARRAY_TYPE, ENUMERAL_TYPE)->type.minval)
 
 /* For an INTEGER_TYPE with TYPE_MODULAR_P, this is the value of the
    modulus. */
@@ -286,7 +292,7 @@ struct GTY(()) lang_decl { tree t; };
 #define SET_TYPE_ACTUAL_BOUNDS(NODE, X) \
   SET_TYPE_LANG_SPECIFIC (TREE_CHECK2 (NODE, INTEGER_TYPE, ARRAY_TYPE), X)
 
-/* For a RECORD_TYPE that is a fat pointer, point to the type for the
+/* For a RECORD_TYPE that is a fat pointer, this is the type for the
    unconstrained object.  Likewise for a RECORD_TYPE that is pointed
    to by a thin pointer.  */
 #define TYPE_UNCONSTRAINED_ARRAY(NODE) \
@@ -294,9 +300,9 @@ struct GTY(()) lang_decl { tree t; };
 #define SET_TYPE_UNCONSTRAINED_ARRAY(NODE, X) \
   SET_TYPE_LANG_SPECIFIC (RECORD_TYPE_CHECK (NODE), X)
 
-/* For other RECORD_TYPEs and all UNION_TYPEs and QUAL_UNION_TYPEs, the Ada
-   size of the object.  This differs from the GCC size in that it does not
-   include any rounding up to the alignment of the type.  */
+/* For other RECORD_TYPEs and all UNION_TYPEs and QUAL_UNION_TYPEs, this is
+   the Ada size of the object.  This differs from the GCC size in that it
+   does not include any rounding up to the alignment of the type.  */
 #define TYPE_ADA_SIZE(NODE) \
   GET_TYPE_LANG_SPECIFIC (RECORD_OR_UNION_CHECK (NODE))
 #define SET_TYPE_ADA_SIZE(NODE, X) \

@@ -485,15 +485,14 @@ package body Checks is
       if Inside_A_Generic then
          return;
 
-      --  Only apply the run-time check if the access parameter
-      --  has an associated extra access level parameter and
-      --  when the level of the type is less deep than the level
-      --  of the access parameter.
+      --  Only apply the run-time check if the access parameter has an
+      --  associated extra access level parameter and when the level of the
+      --  type is less deep than the level of the access parameter, and
+      --  accessibility checks are not suppressed.
 
       elsif Present (Param_Ent)
          and then Present (Extra_Accessibility (Param_Ent))
-         and then UI_Gt (Object_Access_Level (N),
-                         Type_Access_Level (Typ))
+         and then UI_Gt (Object_Access_Level (N), Type_Access_Level (Typ))
          and then not Accessibility_Checks_Suppressed (Param_Ent)
          and then not Accessibility_Checks_Suppressed (Typ)
       then
@@ -533,16 +532,11 @@ package body Checks is
       --  when Aexp is a reference to a constant, in which case Expr gets
       --  reset to reference the value expression of the constant.
 
-      Size_Warning_Output : Boolean := False;
-      --  If we output a size warning we set this True, to stop generating
-      --  what is likely to be an unuseful redundant alignment warning.
-
       procedure Compile_Time_Bad_Alignment;
       --  Post error warnings when alignment is known to be incompatible. Note
       --  that we do not go as far as inserting a raise of Program_Error since
       --  this is an erroneous case, and it may happen that we are lucky and an
-      --  underaligned address turns out to be OK after all. Also this warning
-      --  is suppressed if we already complained about the size.
+      --  underaligned address turns out to be OK after all.
 
       --------------------------------
       -- Compile_Time_Bad_Alignment --
@@ -550,9 +544,7 @@ package body Checks is
 
       procedure Compile_Time_Bad_Alignment is
       begin
-         if not Size_Warning_Output
-           and then Address_Clause_Overlay_Warnings
-         then
+         if Address_Clause_Overlay_Warnings then
             Error_Msg_FE
               ("?specified address for& may be inconsistent with alignment ",
                Aexp, E);
@@ -566,7 +558,24 @@ package body Checks is
    --  Start of processing for Apply_Address_Clause_Check
 
    begin
-      --  First obtain expression from address clause
+      --  See if alignment check needed. Note that we never need a check if the
+      --  maximum alignment is one, since the check will always succeed.
+
+      --  Note: we do not check for checks suppressed here, since that check
+      --  was done in Sem_Ch13 when the address clause was processed. We are
+      --  only called if checks were not suppressed. The reason for this is
+      --  that we have to delay the call to Apply_Alignment_Check till freeze
+      --  time (so that all types etc are elaborated), but we have to check
+      --  the status of check suppressing at the point of the address clause.
+
+      if No (AC)
+        or else not Check_Address_Alignment (AC)
+        or else Maximum_Alignment = 1
+      then
+         return;
+      end if;
+
+      --  Obtain expression from address clause
 
       Expr := Expression (AC);
 
@@ -604,69 +613,7 @@ package body Checks is
          end if;
       end loop;
 
-      --  Output a warning if we have the situation of
-
-      --      for X'Address use Y'Address
-
-      --  and X and Y both have known object sizes, and Y is smaller than X
-
-      if Nkind (Expr) = N_Attribute_Reference
-        and then Attribute_Name (Expr) = Name_Address
-        and then Is_Entity_Name (Prefix (Expr))
-      then
-         declare
-            Exp_Ent  : constant Entity_Id := Entity (Prefix (Expr));
-            Obj_Size : Uint := No_Uint;
-            Exp_Size : Uint := No_Uint;
-
-         begin
-            if Known_Esize (E) then
-               Obj_Size := Esize (E);
-            elsif Known_Esize (Etype (E)) then
-               Obj_Size := Esize (Etype (E));
-            end if;
-
-            if Known_Esize (Exp_Ent) then
-               Exp_Size := Esize (Exp_Ent);
-            elsif Known_Esize (Etype (Exp_Ent)) then
-               Exp_Size := Esize (Etype (Exp_Ent));
-            end if;
-
-            if Obj_Size /= No_Uint
-              and then Exp_Size /= No_Uint
-              and then Obj_Size > Exp_Size
-              and then not Has_Warnings_Off (E)
-            then
-               if Address_Clause_Overlay_Warnings then
-                  Error_Msg_FE
-                    ("?& overlays smaller object", Aexp, E);
-                  Error_Msg_FE
-                    ("\?program execution may be erroneous", Aexp, E);
-                  Size_Warning_Output := True;
-                  Set_Address_Warning_Posted (AC);
-               end if;
-            end if;
-         end;
-      end if;
-
-      --  See if alignment check needed. Note that we never need a check if the
-      --  maximum alignment is one, since the check will always succeed.
-
-      --  Note: we do not check for checks suppressed here, since that check
-      --  was done in Sem_Ch13 when the address clause was processed. We are
-      --  only called if checks were not suppressed. The reason for this is
-      --  that we have to delay the call to Apply_Alignment_Check till freeze
-      --  time (so that all types etc are elaborated), but we have to check
-      --  the status of check suppressing at the point of the address clause.
-
-      if No (AC)
-        or else not Check_Address_Alignment (AC)
-        or else Maximum_Alignment = 1
-      then
-         return;
-      end if;
-
-      --  See if we know that Expr is a bad alignment at compile time
+      --  See if we know that Expr has a bad alignment at compile time
 
       if Compile_Time_Known_Value (Expr)
         and then (Known_Alignment (E) or else Known_Alignment (Typ))
@@ -691,20 +638,14 @@ package body Checks is
 
       --  If the expression has the form X'Address, then we can find out if
       --  the object X has an alignment that is compatible with the object E.
+      --  If it hasn't or we don't know, we defer issuing the warning until
+      --  the end of the compilation to take into account back end annotations.
 
       elsif Nkind (Expr) = N_Attribute_Reference
         and then Attribute_Name (Expr) = Name_Address
+        and then Has_Compatible_Alignment (E, Prefix (Expr)) = Known_Compatible
       then
-         declare
-            AR : constant Alignment_Result :=
-                   Has_Compatible_Alignment (E, Prefix (Expr));
-         begin
-            if AR = Known_Compatible then
-               return;
-            elsif AR = Known_Incompatible then
-               Compile_Time_Bad_Alignment;
-            end if;
-         end;
+         return;
       end if;
 
       --  Here we do not know if the value is acceptable. Stricly we don't have
@@ -4682,6 +4623,12 @@ package body Checks is
 
       --  The conversions will always work and need no check
 
+      --  Unchecked_Convert_To is used instead of Convert_To to handle the case
+      --  of converting from an enumeration value to an integer type, such as
+      --  occurs for the case of generating a range check on Enum'Val(Exp)
+      --  (which used to be handled by gigi). This is OK, since the conversion
+      --  itself does not require a check.
+
       elsif In_Subrange_Of (Target_Type, Source_Base_Type) then
          Insert_Action (N,
            Make_Raise_Constraint_Error (Loc,
@@ -4692,14 +4639,14 @@ package body Checks is
                  Right_Opnd =>
                    Make_Range (Loc,
                      Low_Bound =>
-                       Convert_To (Source_Base_Type,
+                       Unchecked_Convert_To (Source_Base_Type,
                          Make_Attribute_Reference (Loc,
                            Prefix =>
                              New_Occurrence_Of (Target_Type, Loc),
                            Attribute_Name => Name_First)),
 
                      High_Bound =>
-                       Convert_To (Source_Base_Type,
+                       Unchecked_Convert_To (Source_Base_Type,
                          Make_Attribute_Reference (Loc,
                            Prefix =>
                              New_Occurrence_Of (Target_Type, Loc),
@@ -4891,7 +4838,7 @@ package body Checks is
                      New_Occurrence_Of (Target_Base_Type, Loc),
                    Constant_Present    => True,
                    Expression          =>
-                     Make_Type_Conversion (Loc,
+                     Make_Unchecked_Type_Conversion (Loc,
                        Subtype_Mark =>
                          New_Occurrence_Of (Target_Base_Type, Loc),
                        Expression   => Duplicate_Subexpr (N))),
@@ -5248,31 +5195,31 @@ package body Checks is
       Loc : constant Source_Ptr := Sloc (N);
       Typ : constant Entity_Id  := Etype (N);
 
-      function In_Declarative_Region_Of_Subprogram_Body return Boolean;
-      --  Determine whether node N, a reference to an *in* parameter, is
-      --  inside the declarative region of the current subprogram body.
+      function Safe_To_Capture_In_Parameter_Value return Boolean;
+      --  Determines if it is safe to capture Known_Non_Null status for an
+      --  the entity referenced by node N. The caller ensures that N is indeed
+      --  an entity name. It is safe to capture the non-null status for an IN
+      --  parameter when the reference occurs within a declaration that is sure
+      --  to be executed as part of the declarative region.
 
       procedure Mark_Non_Null;
       --  After installation of check, if the node in question is an entity
       --  name, then mark this entity as non-null if possible.
 
-      ----------------------------------------------
-      -- In_Declarative_Region_Of_Subprogram_Body --
-      ----------------------------------------------
-
-      function In_Declarative_Region_Of_Subprogram_Body return Boolean is
+      function Safe_To_Capture_In_Parameter_Value return Boolean is
          E     : constant Entity_Id := Entity (N);
          S     : constant Entity_Id := Current_Scope;
          S_Par : Node_Id;
 
       begin
-         pragma Assert (Ekind (E) = E_In_Parameter);
+         if Ekind (E) /= E_In_Parameter then
+            return False;
+         end if;
 
          --  Two initial context checks. We must be inside a subprogram body
          --  with declarations and reference must not appear in nested scopes.
 
-         if (Ekind (S) /= E_Function
-             and then Ekind (S) /= E_Procedure)
+         if (Ekind (S) /= E_Function and then Ekind (S) /= E_Procedure)
            or else Scope (E) /= S
          then
             return False;
@@ -5298,6 +5245,26 @@ package body Checks is
             N_Decl := Empty;
             while Present (P) loop
 
+               --  If we have a short circuit form, and we are within the right
+               --  hand expression, we return false, since the right hand side
+               --  is not guaranteed to be elaborated.
+
+               if Nkind (P) in N_Short_Circuit
+                 and then N = Right_Opnd (P)
+               then
+                  return False;
+               end if;
+
+               --  Similarly, if we are in a conditional expression and not
+               --  part of the condition, then we return False, since neither
+               --  the THEN or ELSE expressions will always be elaborated.
+
+               if Nkind (P) = N_Conditional_Expression
+                 and then N /= First (Expressions (P))
+               then
+                  return False;
+               end if;
+
                --  While traversing the parent chain, we find that N
                --  belongs to a statement, thus it may never appear in
                --  a declarative region.
@@ -5307,6 +5274,8 @@ package body Checks is
                then
                   return False;
                end if;
+
+               --  If we are at a declaration, record it and exit
 
                if Nkind (P) in N_Declaration
                  and then Nkind (P) not in N_Subprogram_Specification
@@ -5324,7 +5293,7 @@ package body Checks is
 
             return List_Containing (N_Decl) = Declarations (S_Par);
          end;
-      end In_Declarative_Region_Of_Subprogram_Body;
+      end Safe_To_Capture_In_Parameter_Value;
 
       -------------------
       -- Mark_Non_Null --
@@ -5345,13 +5314,14 @@ package body Checks is
             --  safe to capture the value, or in the case of an IN parameter,
             --  which is a constant, if the check we just installed is in the
             --  declarative region of the subprogram body. In this latter case,
-            --  a check is decisive for the rest of the body, since we know we
-            --  must complete all declarations before executing the body.
+            --  a check is decisive for the rest of the body if the expression
+            --  is sure to be elaborated, since we know we have to elaborate
+            --  all declarations before executing the body.
+
+            --  Couldn't this always be part of Safe_To_Capture_Value ???
 
             if Safe_To_Capture_Value (N, Entity (N))
-              or else
-                (Ekind (Entity (N)) = E_In_Parameter
-                   and then In_Declarative_Region_Of_Subprogram_Body)
+              or else Safe_To_Capture_In_Parameter_Value
             then
                Set_Is_Known_Non_Null (Entity (N));
             end if;
@@ -5452,6 +5422,10 @@ package body Checks is
       Set_Etype (R_Cno, Typ);
       Set_Raises_Constraint_Error (R_Cno);
       Set_Is_Static_Expression (R_Cno, Stat);
+
+      --  Now deal with possible local raise handling
+
+      Possible_Local_Raise (R_Cno, Standard_Constraint_Error);
    end Install_Static_Check;
 
    ---------------------
@@ -6670,27 +6644,65 @@ package body Checks is
          declare
             T_LB       : constant Node_Id := Type_Low_Bound  (T_Typ);
             T_HB       : constant Node_Id := Type_High_Bound (T_Typ);
-            LB         : constant Node_Id := Low_Bound (Ck_Node);
-            HB         : constant Node_Id := High_Bound (Ck_Node);
-            Null_Range : Boolean;
+            Known_T_LB : constant Boolean := Compile_Time_Known_Value (T_LB);
+            Known_T_HB : constant Boolean := Compile_Time_Known_Value (T_HB);
 
+            LB         : Node_Id := Low_Bound (Ck_Node);
+            HB         : Node_Id := High_Bound (Ck_Node);
+            Known_LB   : Boolean;
+            Known_HB   : Boolean;
+
+            Null_Range     : Boolean;
             Out_Of_Range_L : Boolean;
             Out_Of_Range_H : Boolean;
 
          begin
-            --  Check for case where everything is static and we can
-            --  do the check at compile time. This is skipped if we
-            --  have an access type, since the access value may be null.
+            --  Compute what is known at compile time
 
-            --  ??? This code can be improved since you only need to know
-            --  that the two respective bounds (LB & T_LB or HB & T_HB)
-            --  are known at compile time to emit pertinent messages.
+            if Known_T_LB and Known_T_HB then
+               if Compile_Time_Known_Value (LB) then
+                  Known_LB := True;
 
-            if Compile_Time_Known_Value (LB)
-              and then Compile_Time_Known_Value (HB)
-              and then Compile_Time_Known_Value (T_LB)
-              and then Compile_Time_Known_Value (T_HB)
-              and then not Do_Access
+               --  There's no point in checking that a bound is within its
+               --  own range so pretend that it is known in this case. First
+               --  deal with low bound.
+
+               elsif Ekind (Etype (LB)) = E_Signed_Integer_Subtype
+                 and then Scalar_Range (Etype (LB)) = Scalar_Range (T_Typ)
+               then
+                  LB := T_LB;
+                  Known_LB := True;
+
+               else
+                  Known_LB := False;
+               end if;
+
+               --  Likewise for the high bound
+
+               if Compile_Time_Known_Value (HB) then
+                  Known_HB := True;
+
+               elsif Ekind (Etype (HB)) = E_Signed_Integer_Subtype
+                 and then Scalar_Range (Etype (HB)) = Scalar_Range (T_Typ)
+               then
+                  HB := T_HB;
+                  Known_HB := True;
+
+               else
+                  Known_HB := False;
+               end if;
+            end if;
+
+            --  Check for case where everything is static and we can do the
+            --  check at compile time. This is skipped if we have an access
+            --  type, since the access value may be null.
+
+            --  ??? This code can be improved since you only need to know that
+            --  the two respective bounds (LB & T_LB or HB & T_HB) are known at
+            --  compile time to emit pertinent messages.
+
+            if Known_T_LB and Known_T_HB and Known_LB and Known_HB
+              and not Do_Access
             then
                --  Floating-point case
 
@@ -6698,12 +6710,12 @@ package body Checks is
                   Null_Range := Expr_Value_R (HB) < Expr_Value_R (LB);
                   Out_Of_Range_L :=
                     (Expr_Value_R (LB) < Expr_Value_R (T_LB))
-                       or else
+                      or else
                     (Expr_Value_R (LB) > Expr_Value_R (T_HB));
 
                   Out_Of_Range_H :=
                     (Expr_Value_R (HB) > Expr_Value_R (T_HB))
-                       or else
+                      or else
                     (Expr_Value_R (HB) < Expr_Value_R (T_LB));
 
                --  Fixed or discrete type case
@@ -6712,12 +6724,12 @@ package body Checks is
                   Null_Range := Expr_Value (HB) < Expr_Value (LB);
                   Out_Of_Range_L :=
                     (Expr_Value (LB) < Expr_Value (T_LB))
-                    or else
+                      or else
                     (Expr_Value (LB) > Expr_Value (T_HB));
 
                   Out_Of_Range_H :=
                     (Expr_Value (HB) > Expr_Value (T_HB))
-                    or else
+                      or else
                     (Expr_Value (HB) < Expr_Value (T_LB));
                end if;
 
@@ -6751,7 +6763,6 @@ package body Checks is
                               "static range out of bounds of}?", T_Typ));
                      end if;
                   end if;
-
                end if;
 
             else
@@ -6853,15 +6864,17 @@ package body Checks is
                          or else
                        (Expr_Value_R (Ck_Node) > Expr_Value_R (UB));
 
-                  else -- fixed or discrete type
+                  --  Fixed or discrete type
+
+                  else
                      Out_Of_Range :=
                        Expr_Value (Ck_Node) < Expr_Value (LB)
                          or else
                        Expr_Value (Ck_Node) > Expr_Value (UB);
                   end if;
 
-                  --  Bounds of the type are static and the literal is
-                  --  out of range so make a warning message.
+                  --  Bounds of the type are static and the literal is out of
+                  --  range so output a warning message.
 
                   if Out_Of_Range then
                      if No (Warn_Node) then
@@ -6962,7 +6975,6 @@ package body Checks is
 
                         Next (L_Index);
                         Next (R_Index);
-
                      end if;
                   end loop;
                end;
@@ -6989,7 +7001,6 @@ package body Checks is
                        (Cond, Range_N_Cond (Ck_Node, T_Typ, Indx));
                   end loop;
                end;
-
             end if;
 
          else
@@ -7085,8 +7096,8 @@ package body Checks is
 
          Add_Check
            (Make_Raise_Constraint_Error (Loc,
-              Condition => Cond,
-              Reason    => CE_Range_Check_Failed));
+             Condition => Cond,
+             Reason    => CE_Range_Check_Failed));
       end if;
 
       return Ret_Result;

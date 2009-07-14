@@ -475,7 +475,7 @@ package body Sem_Warn is
            and then Present (Entity (N))
            and then Entity (N) = Var
          then
-            --  If this is an Lvalue, then definitely abandon, since
+            --  If this is an lvalue, then definitely abandon, since
             --  this could be a direct modification of the variable.
 
             if May_Be_Lvalue (N) then
@@ -1104,6 +1104,15 @@ package body Sem_Warn is
 
                      elsif Is_Composite_Type (E1T)
                        and then Has_Access_Values (E1T)
+                     then
+                        null;
+
+                     --  Suppress warning on formals of an entry body. All
+                     --  references are attached to the formal in the entry
+                     --  declaration, which are marked Is_Entry_Formal.
+
+                     elsif Ekind (Scope (E1)) = E_Entry
+                       and then not Is_Entry_Formal (E1)
                      then
                         null;
 
@@ -2987,6 +2996,12 @@ package body Sem_Warn is
             Warn_On_Unrecognized_Pragma         := True;
             Warn_On_Unrepped_Components         := True;
             Warn_On_Warnings_Off                := True;
+
+         when 'm' =>
+            Warn_On_Suspicious_Modulus_Value    := True;
+
+         when 'M' =>
+            Warn_On_Suspicious_Modulus_Value    := False;
 
          when 'o' =>
             Warn_On_All_Unread_Out_Parameters   := True;

@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/sparc
 svn://gcc.gnu.org/svn/gcc
 
@@ -128,40 +128,6 @@ ebotcazou
 
 182
 
-ultrasp3.c
-file
-
-
-
-
-2009-04-24T17:45:50.000000Z
-2a590bbe6abdc139ed7bc781acceffe4
-2008-08-12T21:23:11.970916Z
-139039
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-754
-
 sparc-loop-1.c
 file
 
@@ -195,6 +161,40 @@ ebotcazou
 
 
 389
+
+ultrasp3.c
+file
+
+
+
+
+2009-04-24T17:45:50.000000Z
+2a590bbe6abdc139ed7bc781acceffe4
+2008-08-12T21:23:11.970916Z
+139039
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+754
 
 combined-1.c
 file
@@ -298,40 +298,6 @@ ebotcazou
 
 964
 
-sparc.exp
-file
-
-
-
-
-2009-04-24T17:45:50.000000Z
-7cd3a701bb85d1e6b268a4acd00d103b
-2007-08-01T16:25:11.955122Z
-127127
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1222
-
 fpmul-2.c
 file
 
@@ -366,16 +332,50 @@ ebotcazou
 
 1825
 
-pdist.c
+sparc.exp
 file
 
 
 
 
 2009-04-24T17:45:50.000000Z
-178b0f750e337f74871710d17257944f
-2007-06-17T11:17:10.432382Z
-125768
+7cd3a701bb85d1e6b268a4acd00d103b
+2007-08-01T16:25:11.955122Z
+127127
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1222
+
+ultrasp9.c
+file
+
+
+
+
+2009-04-24T17:45:50.000000Z
+ec76fc9148242bd2a52e1a3145321de1
+2007-07-14T16:01:22.015416Z
+126641
 ebotcazou
 
 
@@ -398,41 +398,7 @@ ebotcazou
 
 
 
-512
-
-pdist-3.c
-file
-
-
-
-
-2009-04-24T17:45:50.000000Z
-77281e86e797be1ef8a0784c9a4db58a
-2007-07-12T14:29:23.661238Z
-126589
-froydnj
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-799
+683
 
 fpadd32.c
 file
@@ -468,16 +434,50 @@ ebotcazou
 
 225
 
-ultrasp9.c
+pdist-3.c
 file
 
 
 
 
 2009-04-24T17:45:50.000000Z
-ec76fc9148242bd2a52e1a3145321de1
-2007-07-14T16:01:22.015416Z
-126641
+77281e86e797be1ef8a0784c9a4db58a
+2007-07-12T14:29:23.661238Z
+126589
+froydnj
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+799
+
+pdist.c
+file
+
+
+
+
+2009-04-24T17:45:50.000000Z
+178b0f750e337f74871710d17257944f
+2007-06-17T11:17:10.432382Z
+125768
 ebotcazou
 
 
@@ -500,7 +500,7 @@ ebotcazou
 
 
 
-683
+512
 
 fexpand-2.c
 file
@@ -1080,40 +1080,6 @@ ebotcazou
 
 1505
 
-align.c
-file
-
-
-
-
-2009-04-24T17:45:50.000000Z
-44373c57181608413fc07f3ec0e2ad6e
-2007-06-17T11:17:10.432382Z
-125768
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-793
-
 20020116-2.c
 file
 
@@ -1148,16 +1114,16 @@ ebotcazou
 
 391
 
-ultrasp10.c
+align.c
 file
 
 
 
 
 2009-04-24T17:45:50.000000Z
-d6162326dc1d13ceac299feecb9623b5
-2007-07-14T16:01:22.015416Z
-126641
+44373c57181608413fc07f3ec0e2ad6e
+2007-06-17T11:17:10.432382Z
+125768
 ebotcazou
 
 
@@ -1180,19 +1146,19 @@ ebotcazou
 
 
 
-475
+793
 
-fands.c
+fpackfix.c
 file
 
 
 
 
 2009-04-24T17:45:50.000000Z
-ac06a3b7853caffeb81a94b6156bdbdd
-2004-11-13T13:25:09.000000Z
-90578
-ebotcazou
+bb68d7c78b1cb44c467d50043aafb12c
+2004-11-23T00:35:38.000000Z
+91057
+phython
 
 
 
@@ -1214,7 +1180,7 @@ ebotcazou
 
 
 
-452
+289
 
 fpack16.c
 file
@@ -1250,17 +1216,17 @@ ebotcazou
 
 295
 
-fpackfix.c
+fands.c
 file
 
 
 
 
 2009-04-24T17:45:50.000000Z
-bb68d7c78b1cb44c467d50043aafb12c
-2004-11-23T00:35:38.000000Z
-91057
-phython
+ac06a3b7853caffeb81a94b6156bdbdd
+2004-11-13T13:25:09.000000Z
+90578
+ebotcazou
 
 
 
@@ -1282,7 +1248,41 @@ phython
 
 
 
-289
+452
+
+ultrasp10.c
+file
+
+
+
+
+2009-04-24T17:45:50.000000Z
+d6162326dc1d13ceac299feecb9623b5
+2007-07-14T16:01:22.015416Z
+126641
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+475
 
 20020416-1.c
 file
@@ -1658,40 +1658,6 @@ ebotcazou
 
 145
 
-pdist-2.c
-file
-
-
-
-
-2009-05-08T12:19:49.000000Z
-cdc731686d5ced987af94de922fe7bc2
-2009-05-03T21:10:20.430082Z
-147085
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-604
-
 ultrasp8.c
 file
 
@@ -1725,6 +1691,40 @@ ebotcazou
 
 
 770
+
+pdist-2.c
+file
+
+
+
+
+2009-05-08T12:19:49.000000Z
+cdc731686d5ced987af94de922fe7bc2
+2009-05-03T21:10:20.430082Z
+147085
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+604
 
 fpmul.c
 file
@@ -1794,40 +1794,6 @@ ebotcazou
 
 225
 
-fexpand.c
-file
-
-
-
-
-2009-04-24T17:45:50.000000Z
-9dad8640f220b3cdedf1ec7bf1411ffe
-2007-06-17T11:17:10.432382Z
-125768
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-295
-
 fpadd16.c
 file
 
@@ -1861,6 +1827,40 @@ ebotcazou
 
 
 227
+
+fexpand.c
+file
+
+
+
+
+2009-04-24T17:45:50.000000Z
+9dad8640f220b3cdedf1ec7bf1411ffe
+2007-06-17T11:17:10.432382Z
+125768
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+295
 
 fnand.c
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/tools/classes/gnu/classpath/tools/doclets
 svn://gcc.gnu.org/svn/gcc
 
@@ -28,40 +28,6 @@ doko
 
 debugdoclet
 dir
-
-DocletConfigurationException.class
-file
-
-
-
-
-2009-04-24T17:48:45.000000Z
-e6066d698752c0835f93a73010aac514
-2008-08-15T20:31:42.599946Z
-139136
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-432
 
 AbstractDoclet$InterfaceRelation.class
 file
@@ -96,6 +62,40 @@ has-props
 
 
 663
+
+DocletConfigurationException.class
+file
+
+
+
+
+2009-04-24T17:48:45.000000Z
+e6066d698752c0835f93a73010aac514
+2008-08-15T20:31:42.599946Z
+139136
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+432
 
 AbstractDoclet$DocletOptionTag.class
 file
@@ -165,8 +165,39 @@ has-props
 
 187
 
-xmldoclet
-dir
+AbstractDoclet$DocletOptionTaglet.class
+file
+
+
+
+
+2009-04-24T17:48:45.000000Z
+d2830eeadffe80a9da2ce3a6a9d86856
+2008-08-15T20:31:42.599946Z
+139136
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4359
 
 DocletOptionColonSeparated.class
 file
@@ -202,73 +233,8 @@ has-props
 
 1139
 
-AbstractDoclet$DocletOptionTaglet.class
-file
-
-
-
-
-2009-04-24T17:48:45.000000Z
-d2830eeadffe80a9da2ce3a6a9d86856
-2008-08-15T20:31:42.599946Z
-139136
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4359
-
-DocletOptionPackageWildcard.class
-file
-
-
-
-
-2009-04-24T17:48:45.000000Z
-ddbacfcc02b7b233dd454897159baed7
-2008-08-15T20:31:42.599946Z
-139136
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2108
+xmldoclet
+dir
 
 AbstractDoclet$UsageType.class
 file
@@ -304,6 +270,40 @@ has-props
 
 1848
 
+DocletOptionPackageWildcard.class
+file
+
+
+
+
+2009-04-24T17:48:45.000000Z
+ddbacfcc02b7b233dd454897159baed7
+2008-08-15T20:31:42.599946Z
+139136
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2108
+
 DocletOptionString.class
 file
 
@@ -338,9 +338,6 @@ has-props
 
 776
 
-htmldoclet
-dir
-
 InvalidPackageWildcardException.class
 file
 
@@ -374,6 +371,9 @@ has-props
 
 
 437
+
+htmldoclet
+dir
 
 DocletOptionFlag.class
 file

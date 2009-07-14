@@ -426,8 +426,9 @@ perform_member_init (tree member, tree init)
   /* Effective C++ rule 12 requires that all data members be
      initialized.  */
   if (warn_ecpp && init == NULL_TREE && TREE_CODE (type) != ARRAY_TYPE)
-    warning (OPT_Weffc__, "%J%qD should be initialized in the member initialization "
-	     "list", current_function_decl, member);
+    warning_at (DECL_SOURCE_LOCATION (current_function_decl), OPT_Weffc__,
+		"%qD should be initialized in the member initialization list",
+		member);
 
   /* Get an lvalue for the data member.  */
   decl = build_class_member_access_expr (current_class_ref, member,
@@ -451,9 +452,9 @@ perform_member_init (tree member, tree init)
       else
 	{
 	  if (TREE_CODE (type) == REFERENCE_TYPE)
-	    permerror (input_location, "%Jvalue-initialization of %q#D, "
-				       "which has reference type",
-		       current_function_decl, member);
+	    permerror (DECL_SOURCE_LOCATION (current_function_decl),
+		       "value-initialization of %q#D, which has reference type",
+		       member);
 	  else
 	    {
 	      init = build2 (INIT_EXPR, type, decl, build_value_init (type));
@@ -492,8 +493,9 @@ perform_member_init (tree member, tree init)
 	      && !type_has_user_provided_default_constructor (type))
 	    /* TYPE_NEEDS_CONSTRUCTING can be set just because we have a
 	       vtable; still give this diagnostic.  */
-	    permerror (input_location, "%Juninitialized member %qD with %<const%> type %qT",
-		       current_function_decl, member, type);
+	    permerror (DECL_SOURCE_LOCATION (current_function_decl),
+		       "uninitialized member %qD with %<const%> type %qT",
+		       member, type);
 	  finish_expr_stmt (build_aggr_init (decl, init, 0, 
 					     tf_warning_or_error));
 	}
@@ -504,11 +506,13 @@ perform_member_init (tree member, tree init)
 	{
 	  /* member traversal: note it leaves init NULL */
 	  if (TREE_CODE (type) == REFERENCE_TYPE)
-	    permerror (input_location, "%Juninitialized reference member %qD",
-		       current_function_decl, member);
+	    permerror (DECL_SOURCE_LOCATION (current_function_decl),
+		       "uninitialized reference member %qD",
+		       member);
 	  else if (CP_TYPE_CONST_P (type))
-	    permerror (input_location, "%Juninitialized member %qD with %<const%> type %qT",
-		       current_function_decl, member, type);
+	    permerror (DECL_SOURCE_LOCATION (current_function_decl),
+		       "uninitialized member %qD with %<const%> type %qT",
+		       member, type);
 	}
       else if (TREE_CODE (init) == TREE_LIST)
 	/* There was an explicit member initialization.  Do some work
@@ -661,7 +665,8 @@ sort_mem_initializers (tree t, tree mem_inits)
 	    warning (OPT_Wreorder, "  %q+#D", subobject);
 	  else
 	    warning (OPT_Wreorder, "  base %qT", subobject);
-	  warning (OPT_Wreorder, "%J  when initialized here", current_function_decl);
+	  warning_at (DECL_SOURCE_LOCATION (current_function_decl),
+		      OPT_Wreorder, "  when initialized here");
 	}
 
       /* Look again, from the beginning of the list.  */
@@ -677,11 +682,13 @@ sort_mem_initializers (tree t, tree mem_inits)
       if (TREE_VALUE (subobject_init))
 	{
 	  if (TREE_CODE (subobject) == FIELD_DECL)
-	    error ("%Jmultiple initializations given for %qD",
-		   current_function_decl, subobject);
+	    error_at (DECL_SOURCE_LOCATION (current_function_decl),
+		      "multiple initializations given for %qD",
+		      subobject);
 	  else
-	    error ("%Jmultiple initializations given for base %qT",
-		   current_function_decl, subobject);
+	    error_at (DECL_SOURCE_LOCATION (current_function_decl),
+		      "multiple initializations given for base %qT",
+		      subobject);
 	}
 
       /* Record the initialization.  */
@@ -747,8 +754,9 @@ sort_mem_initializers (tree t, tree mem_inits)
 		  if (same_type_p (last_field_type, field_type))
 		    {
 		      if (TREE_CODE (field_type) == UNION_TYPE)
-			error ("%Jinitializations for multiple members of %qT",
-			       current_function_decl, last_field_type);
+			error_at (DECL_SOURCE_LOCATION (current_function_decl),
+				  "initializations for multiple members of %qT",
+				  last_field_type);
 		      done = 1;
 		      break;
 		    }
@@ -810,9 +818,10 @@ emit_mem_initializers (tree mem_inits)
       if (extra_warnings && !arguments
 	  && DECL_COPY_CONSTRUCTOR_P (current_function_decl)
 	  && type_has_user_nondefault_constructor (BINFO_TYPE (subobject)))
-	warning (OPT_Wextra, "%Jbase class %q#T should be explicitly initialized in the "
-		 "copy constructor",
-		 current_function_decl, BINFO_TYPE (subobject));
+	warning_at (DECL_SOURCE_LOCATION (current_function_decl), OPT_Wextra,
+		    "base class %q#T should be explicitly initialized in the "
+		    "copy constructor",
+		    BINFO_TYPE (subobject));
 
       /* Initialize the base.  */
       if (BINFO_VIRTUAL_P (subobject))
@@ -1764,6 +1773,7 @@ build_new_1 (VEC(tree,gc) **placement, tree type, tree nelts,
   /* The type of the new-expression.  (This type is always a pointer
      type.)  */
   tree pointer_type;
+  tree non_const_pointer_type;
   tree outer_nelts = NULL_TREE;
   tree alloc_call, alloc_expr;
   /* The address returned by the call to "operator new".  This node is
@@ -2067,9 +2077,15 @@ build_new_1 (VEC(tree,gc) **placement, tree type, tree nelts,
     }
 
   /* Now use a pointer to the type we've actually allocated.  */
-  data_addr = fold_convert (pointer_type, data_addr);
+
+  /* But we want to operate on a non-const version to start with,
+     since we'll be modifying the elements.  */
+  non_const_pointer_type = build_pointer_type
+    (cp_build_qualified_type (type, TYPE_QUALS (type) & ~TYPE_QUAL_CONST));
+
+  data_addr = fold_convert (non_const_pointer_type, data_addr);
   /* Any further uses of alloc_node will want this type, too.  */
-  alloc_node = fold_convert (pointer_type, alloc_node);
+  alloc_node = fold_convert (non_const_pointer_type, alloc_node);
 
   /* Now initialize the allocated object.  Note that we preevaluate the
      initialization expression, apart from the actual constructor call or
@@ -2089,12 +2105,32 @@ build_new_1 (VEC(tree,gc) **placement, tree type, tree nelts,
 
       if (array_p)
 	{
-	  if (*init)
+	  tree vecinit = NULL_TREE;
+	  if (*init && VEC_length (tree, *init) == 1
+	      && BRACE_ENCLOSED_INITIALIZER_P (VEC_index (tree, *init, 0))
+	      && CONSTRUCTOR_IS_DIRECT_INIT (VEC_index (tree, *init, 0)))
+	    {
+	      tree arraytype, domain;
+	      vecinit = VEC_index (tree, *init, 0);
+	      if (TREE_CONSTANT (nelts))
+		domain = compute_array_index_type (NULL_TREE, nelts);
+	      else
+		{
+		  domain = NULL_TREE;
+		  if (CONSTRUCTOR_NELTS (vecinit) > 0)
+		    warning (0, "non-constant array size in new, unable to "
+			     "verify length of initializer-list");
+		}
+	      arraytype = build_cplus_array_type (type, domain);
+	      vecinit = digest_init (arraytype, vecinit);
+	    }
+	  else if (*init)
             {
               if (complain & tf_error)
                 permerror (input_location, "ISO C++ forbids initialization in array new");
               else
                 return error_mark_node;
+	      vecinit = build_tree_list_vec (*init);
             }
 	  init_expr
 	    = build_vec_init (data_addr,
@@ -2102,7 +2138,7 @@ build_new_1 (VEC(tree,gc) **placement, tree type, tree nelts,
 						  MINUS_EXPR, outer_nelts,
 						  integer_one_node,
 						  complain),
-			      build_tree_list_vec (*init),
+			      vecinit,
 			      explicit_value_init_p,
 			      /*from_array=*/0,
                               complain);
@@ -2176,8 +2212,14 @@ build_new_1 (VEC(tree,gc) **placement, tree type, tree nelts,
 	  else if (stable)
 	    /* This is much simpler if we were able to preevaluate all of
 	       the arguments to the constructor call.  */
-	    init_expr = build2 (TRY_CATCH_EXPR, void_type_node,
-				init_expr, cleanup);
+	    {
+	      /* CLEANUP is compiler-generated, so no diagnostics.  */
+	      TREE_NO_WARNING (cleanup) = true;
+	      init_expr = build2 (TRY_CATCH_EXPR, void_type_node,
+				  init_expr, cleanup);
+	      /* Likewise, this try-catch is compiler-generated.  */
+	      TREE_NO_WARNING (init_expr) = true;
+	    }
 	  else
 	    /* Ack!  First we allocate the memory.  Then we set our sentry
 	       variable to true, and expand a cleanup that deletes the
@@ -2197,6 +2239,9 @@ build_new_1 (VEC(tree,gc) **placement, tree type, tree nelts,
 
 	      sentry = TARGET_EXPR_SLOT (begin);
 
+	      /* CLEANUP is compiler-generated, so no diagnostics.  */
+	      TREE_NO_WARNING (cleanup) = true;
+
 	      TARGET_EXPR_CLEANUP (begin)
 		= build3 (COND_EXPR, void_type_node, sentry,
 			  cleanup, void_zero_node);
@@ -2208,8 +2253,9 @@ build_new_1 (VEC(tree,gc) **placement, tree type, tree nelts,
 		= build2 (COMPOUND_EXPR, void_type_node, begin,
 			  build2 (COMPOUND_EXPR, void_type_node, init_expr,
 				  end));
+	      /* Likewise, this is compiler-generated.  */
+	      TREE_NO_WARNING (init_expr) = true;
 	    }
-
 	}
     }
   else
@@ -2251,7 +2297,7 @@ build_new_1 (VEC(tree,gc) **placement, tree type, tree nelts,
   /* A new-expression is never an lvalue.  */
   gcc_assert (!lvalue_p (rval));
 
-  return rval;
+  return convert (pointer_type, rval);
 }
 
 /* Generate a representation for a C++ "new" expression.  *PLACEMENT
@@ -2645,6 +2691,7 @@ build_vec_init (tree base, tree maxindex, tree init,
 
   inner_elt_type = strip_array_types (type);
   if (init
+      && TREE_CODE (atype) == ARRAY_TYPE
       && (from_array == 2
 	  ? (!CLASS_TYPE_P (inner_elt_type)
 	     || !TYPE_HAS_COMPLEX_ASSIGN_REF (inner_elt_type))
@@ -2660,7 +2707,6 @@ build_vec_init (tree base, tree maxindex, tree init,
 	 brace-enclosed initializers.  In this case, digest_init and
 	 store_constructor will handle the semantics for us.  */
 
-      gcc_assert (TREE_CODE (atype) == ARRAY_TYPE);
       stmt_expr = build2 (INIT_EXPR, atype, base, init);
       return stmt_expr;
     }

@@ -20,203 +20,203 @@ typedef unsigned int   cp_v2usi __attribute__((vector_size(8)));
 
 
 // default
-void mep_cpfmadila1_h (cp_v4hi, cp_v4hi, long, long);
-void mep_cpfmadiua1_h (cp_v4hi, cp_v4hi, long, long);
-void mep_cpfmadia1_b (cp_v8qi, cp_v8qi, long, long);
-void mep_cpfmadia1u_b (cp_v8uqi, cp_v8uqi, long, long);
-void mep_cpfmulila1_h (cp_v4hi, cp_v4hi, long, long);
-void mep_cpfmuliua1_h (cp_v4hi, cp_v4hi, long, long);
-void mep_cpfmulia1_b (cp_v8qi, cp_v8qi, long, long);
-void mep_cpfmulia1u_b (cp_v8uqi, cp_v8uqi, long, long);
-void mep_cpamadila1_h (cp_v4hi, cp_v4hi, long);
-void mep_cpamadiua1_h (cp_v4hi, cp_v4hi, long);
-void mep_cpamadia1_b (cp_v8qi, cp_v8qi, long);
-void mep_cpamadia1u_b (cp_v8uqi, cp_v8uqi, long);
-void mep_cpamulila1_h (cp_v4hi, cp_v4hi, long);
-void mep_cpamuliua1_h (cp_v4hi, cp_v4hi, long);
-void mep_cpamulia1_b (cp_v8qi, cp_v8qi, long);
-void mep_cpamulia1u_b (cp_v8uqi, cp_v8uqi, long);
-void mep_cpfmadila1s1_h (cp_v4hi, cp_v4hi, long);
-void mep_cpfmadiua1s1_h (cp_v4hi, cp_v4hi, long);
-void mep_cpfmadia1s1_b (cp_v8qi, cp_v8qi, long);
-void mep_cpfmadia1s1u_b (cp_v8uqi, cp_v8uqi, long);
-void mep_cpfmulila1s1_h (cp_v4hi, cp_v4hi, long);
-void mep_cpfmuliua1s1_h (cp_v4hi, cp_v4hi, long);
-void mep_cpfmulia1s1_b (cp_v8qi, cp_v8qi, long);
-void mep_cpfmulia1s1u_b (cp_v8uqi, cp_v8uqi, long);
-void mep_cpfmadila1s0_h (cp_v4hi, cp_v4hi, long);
-void mep_cpfmadiua1s0_h (cp_v4hi, cp_v4hi, long);
-void mep_cpfmadia1s0_b (cp_v8qi, cp_v8qi, long);
-void mep_cpfmadia1s0u_b (cp_v8uqi, cp_v8uqi, long);
-void mep_cpfmulila1s0_h (cp_v4hi, cp_v4hi, long);
-void mep_cpfmuliua1s0_h (cp_v4hi, cp_v4hi, long);
-void mep_cpfmulia1s0_b (cp_v8qi, cp_v8qi, long);
-void mep_cpfmulia1s0u_b (cp_v8uqi, cp_v8uqi, long);
+void mep_cpfmadila1_h (cp_v4hi, cp_v4hi, long, long); // volatile
+void mep_cpfmadiua1_h (cp_v4hi, cp_v4hi, long, long); // volatile
+void mep_cpfmadia1_b (cp_v8qi, cp_v8qi, long, long); // volatile
+void mep_cpfmadia1u_b (cp_v8uqi, cp_v8uqi, long, long); // volatile
+void mep_cpfmulila1_h (cp_v4hi, cp_v4hi, long, long); // volatile
+void mep_cpfmuliua1_h (cp_v4hi, cp_v4hi, long, long); // volatile
+void mep_cpfmulia1_b (cp_v8qi, cp_v8qi, long, long); // volatile
+void mep_cpfmulia1u_b (cp_v8uqi, cp_v8uqi, long, long); // volatile
+void mep_cpamadila1_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpamadiua1_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpamadia1_b (cp_v8qi, cp_v8qi, long); // volatile
+void mep_cpamadia1u_b (cp_v8uqi, cp_v8uqi, long); // volatile
+void mep_cpamulila1_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpamuliua1_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpamulia1_b (cp_v8qi, cp_v8qi, long); // volatile
+void mep_cpamulia1u_b (cp_v8uqi, cp_v8uqi, long); // volatile
+void mep_cpfmadila1s1_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpfmadiua1s1_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpfmadia1s1_b (cp_v8qi, cp_v8qi, long); // volatile
+void mep_cpfmadia1s1u_b (cp_v8uqi, cp_v8uqi, long); // volatile
+void mep_cpfmulila1s1_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpfmuliua1s1_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpfmulia1s1_b (cp_v8qi, cp_v8qi, long); // volatile
+void mep_cpfmulia1s1u_b (cp_v8uqi, cp_v8uqi, long); // volatile
+void mep_cpfmadila1s0_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpfmadiua1s0_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpfmadia1s0_b (cp_v8qi, cp_v8qi, long); // volatile
+void mep_cpfmadia1s0u_b (cp_v8uqi, cp_v8uqi, long); // volatile
+void mep_cpfmulila1s0_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpfmuliua1s0_h (cp_v4hi, cp_v4hi, long); // volatile
+void mep_cpfmulia1s0_b (cp_v8qi, cp_v8qi, long); // volatile
+void mep_cpfmulia1s0u_b (cp_v8uqi, cp_v8uqi, long); // volatile
 void mep_cpacswp ();                    // volatile
-void mep_cpaccpa1 ();
-void mep_cpacsuma1 ();
+void mep_cpaccpa1 ();                   // volatile
+void mep_cpacsuma1 ();                  // volatile
 void mep_c1nop ();                      // volatile
-void mep_cpfacla0s1_h (cp_v4hi, cp_v4hi);
-void mep_cpfacua0s1_h (cp_v4hi, cp_v4hi);
-void mep_cpfaca0s1_b (cp_v8qi, cp_v8qi);
-void mep_cpfaca0s1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpfsftbla0s1_h (cp_v4hi, cp_v4hi);
-void mep_cpfsftbua0s1_h (cp_v4hi, cp_v4hi);
-void mep_cpfsftba0s1_b (cp_v8qi, cp_v8qi);
-void mep_cpfsftba0s1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpfacla0s0_h (cp_v4hi, cp_v4hi);
-void mep_cpfacua0s0_h (cp_v4hi, cp_v4hi);
-void mep_cpfaca0s0_b (cp_v8qi, cp_v8qi);
-void mep_cpfaca0s0u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpfsftbla0s0_h (cp_v4hi, cp_v4hi);
-void mep_cpfsftbua0s0_h (cp_v4hi, cp_v4hi);
-void mep_cpfsftba0s0_b (cp_v8qi, cp_v8qi);
-void mep_cpfsftba0s0u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpsllia0 (long);
-void mep_cpsraia0 (long);
-void mep_cpsrlia0 (long);
-void mep_cpslla0 (cp_data_bus_int);
-void mep_cpsraa0 (cp_data_bus_int);
-void mep_cpsrla0 (cp_data_bus_int);
-void mep_cpaccpa0 ();
-void mep_cpacsuma0 ();
-cp_v2si mep_cpmovhla0_w ();
-cp_v2si mep_cpmovhua0_w ();
-cp_v2si mep_cppackla0_w ();
-cp_v2si mep_cppackua0_w ();
-cp_v4hi mep_cppackla0_h ();
-cp_v4hi mep_cppackua0_h ();
-cp_v8qi mep_cppacka0_b ();
-cp_v8uqi mep_cppacka0u_b ();
-cp_v2si mep_cpmovlla0_w ();
-cp_v2si mep_cpmovlua0_w ();
-cp_v2si mep_cpmovula0_w ();
-cp_v2si mep_cpmovuua0_w ();
-cp_v4hi mep_cpmovla0_h ();
-cp_v4hi mep_cpmovua0_h ();
-cp_v8qi mep_cpmova0_b ();
-void mep_cpsetla0_w (cp_v2si, cp_v2si);
-void mep_cpsetua0_w (cp_v2si, cp_v2si);
-void mep_cpseta0_h (cp_v4hi, cp_v4hi);
-void mep_cpsadla0_h (cp_v4hi, cp_v4hi);
-void mep_cpsadua0_h (cp_v4hi, cp_v4hi);
-void mep_cpsada0_b (cp_v8qi, cp_v8qi);
-void mep_cpsada0u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpabsla0_h (cp_v4hi, cp_v4hi);
-void mep_cpabsua0_h (cp_v4hi, cp_v4hi);
-void mep_cpabsa0_b (cp_v8qi, cp_v8qi);
-void mep_cpabsa0u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpsubacla0_h (cp_v4hi, cp_v4hi);
-void mep_cpsubacua0_h (cp_v4hi, cp_v4hi);
-void mep_cpsubaca0_b (cp_v8qi, cp_v8qi);
-void mep_cpsubaca0u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpsubla0_h (cp_v4hi, cp_v4hi);
-void mep_cpsubua0_h (cp_v4hi, cp_v4hi);
-void mep_cpsuba0_b (cp_v8qi, cp_v8qi);
-void mep_cpsuba0u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpaddacla0_h (cp_v4hi, cp_v4hi);
-void mep_cpaddacua0_h (cp_v4hi, cp_v4hi);
-void mep_cpaddaca0_b (cp_v8qi, cp_v8qi);
-void mep_cpaddaca0u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpaddla0_h (cp_v4hi, cp_v4hi);
-void mep_cpaddua0_h (cp_v4hi, cp_v4hi);
-void mep_cpadda0_b (cp_v8qi, cp_v8qi);
-void mep_cpadda0u_b (cp_v8uqi, cp_v8uqi);
+void mep_cpfacla0s1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpfacua0s1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpfaca0s1_b (cp_v8qi, cp_v8qi); // volatile
+void mep_cpfaca0s1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpfsftbla0s1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpfsftbua0s1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpfsftba0s1_b (cp_v8qi, cp_v8qi); // volatile
+void mep_cpfsftba0s1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpfacla0s0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpfacua0s0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpfaca0s0_b (cp_v8qi, cp_v8qi); // volatile
+void mep_cpfaca0s0u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpfsftbla0s0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpfsftbua0s0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpfsftba0s0_b (cp_v8qi, cp_v8qi); // volatile
+void mep_cpfsftba0s0u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpsllia0 (long);               // volatile
+void mep_cpsraia0 (long);               // volatile
+void mep_cpsrlia0 (long);               // volatile
+void mep_cpslla0 (cp_data_bus_int);     // volatile
+void mep_cpsraa0 (cp_data_bus_int);     // volatile
+void mep_cpsrla0 (cp_data_bus_int);     // volatile
+void mep_cpaccpa0 ();                   // volatile
+void mep_cpacsuma0 ();                  // volatile
+cp_v2si mep_cpmovhla0_w ();             // volatile
+cp_v2si mep_cpmovhua0_w ();             // volatile
+cp_v2si mep_cppackla0_w ();             // volatile
+cp_v2si mep_cppackua0_w ();             // volatile
+cp_v4hi mep_cppackla0_h ();             // volatile
+cp_v4hi mep_cppackua0_h ();             // volatile
+cp_v8qi mep_cppacka0_b ();              // volatile
+cp_v8uqi mep_cppacka0u_b ();            // volatile
+cp_v2si mep_cpmovlla0_w ();             // volatile
+cp_v2si mep_cpmovlua0_w ();             // volatile
+cp_v2si mep_cpmovula0_w ();             // volatile
+cp_v2si mep_cpmovuua0_w ();             // volatile
+cp_v4hi mep_cpmovla0_h ();              // volatile
+cp_v4hi mep_cpmovua0_h ();              // volatile
+cp_v8qi mep_cpmova0_b ();               // volatile
+void mep_cpsetla0_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsetua0_w (cp_v2si, cp_v2si); // volatile
+void mep_cpseta0_h (cp_v4hi, cp_v4hi);  // volatile
+void mep_cpsadla0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsadua0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsada0_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpsada0u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpabsla0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpabsua0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpabsa0_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpabsa0u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpsubacla0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsubacua0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsubaca0_b (cp_v8qi, cp_v8qi); // volatile
+void mep_cpsubaca0u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpsubla0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsubua0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsuba0_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpsuba0u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpaddacla0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpaddacua0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpaddaca0_b (cp_v8qi, cp_v8qi); // volatile
+void mep_cpaddaca0u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpaddla0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpaddua0_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpadda0_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpadda0u_b (cp_v8uqi, cp_v8uqi); // volatile
 void mep_c0nop ();                      // volatile
-void mep_cpsmsbslla1_w (cp_v2si, cp_v2si);
-void mep_cpsmsbslua1_w (cp_v2si, cp_v2si);
-void mep_cpsmsbslla1_h (cp_v4hi, cp_v4hi);
-void mep_cpsmsbslua1_h (cp_v4hi, cp_v4hi);
-void mep_cpsmadslla1_w (cp_v2si, cp_v2si);
-void mep_cpsmadslua1_w (cp_v2si, cp_v2si);
-void mep_cpsmadslla1_h (cp_v4hi, cp_v4hi);
-void mep_cpsmadslua1_h (cp_v4hi, cp_v4hi);
-void mep_cpmulslla1_w (cp_v2si, cp_v2si);
-void mep_cpmulslua1_w (cp_v2si, cp_v2si);
-void mep_cpmulslla1_h (cp_v4hi, cp_v4hi);
-void mep_cpmulslua1_h (cp_v4hi, cp_v4hi);
-void mep_cpsmsbla1_w (cp_v2si, cp_v2si);
-void mep_cpsmsbua1_w (cp_v2si, cp_v2si);
-void mep_cpsmsbla1_h (cp_v4hi, cp_v4hi);
-void mep_cpsmsbua1_h (cp_v4hi, cp_v4hi);
-void mep_cpsmadla1_w (cp_v2si, cp_v2si);
-void mep_cpsmadua1_w (cp_v2si, cp_v2si);
-void mep_cpsmadla1_h (cp_v4hi, cp_v4hi);
-void mep_cpsmadua1_h (cp_v4hi, cp_v4hi);
-void mep_cpmsbla1_w (cp_v2si, cp_v2si);
-void mep_cpmsbua1_w (cp_v2si, cp_v2si);
-void mep_cpmsbla1u_w (cp_v2usi, cp_v2usi);
-void mep_cpmsbua1u_w (cp_v2usi, cp_v2usi);
-void mep_cpmsbla1_h (cp_v4hi, cp_v4hi);
-void mep_cpmsbua1_h (cp_v4hi, cp_v4hi);
-void mep_cpmadla1_w (cp_v2si, cp_v2si);
-void mep_cpmadua1_w (cp_v2si, cp_v2si);
-void mep_cpmadla1u_w (cp_v2usi, cp_v2usi);
-void mep_cpmadua1u_w (cp_v2usi, cp_v2usi);
-void mep_cpmadla1_h (cp_v4hi, cp_v4hi);
-void mep_cpmadua1_h (cp_v4hi, cp_v4hi);
-void mep_cpmada1_b (cp_v8qi, cp_v8qi);
-void mep_cpmada1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpmulla1_w (cp_v2si, cp_v2si);
-void mep_cpmulua1_w (cp_v2si, cp_v2si);
-void mep_cpmulla1u_w (cp_v2usi, cp_v2usi);
-void mep_cpmulua1u_w (cp_v2usi, cp_v2usi);
-void mep_cpmulla1_h (cp_v4hi, cp_v4hi);
-void mep_cpmulua1_h (cp_v4hi, cp_v4hi);
-void mep_cpmula1_b (cp_v8qi, cp_v8qi);
-void mep_cpmula1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpssda1_b (cp_v8qi, cp_v8qi);
-void mep_cpssda1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpssqa1_b (cp_v8qi, cp_v8qi);
-void mep_cpssqa1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpsllia1 (long);
-void mep_cpsraia1 (long);
-void mep_cpsrlia1 (long);
-void mep_cpslla1 (cp_data_bus_int);
-void mep_cpsraa1 (cp_data_bus_int);
-void mep_cpsrla1 (cp_data_bus_int);
-cp_v2si mep_cpmovhla1_w ();
-cp_v2si mep_cpmovhua1_w ();
-cp_v2si mep_cppackla1_w ();
-cp_v2si mep_cppackua1_w ();
-cp_v4hi mep_cppackla1_h ();
-cp_v4hi mep_cppackua1_h ();
-cp_v8qi mep_cppacka1_b ();
-cp_v8uqi mep_cppacka1u_b ();
-cp_v2si mep_cpmovlla1_w ();
-cp_v2si mep_cpmovlua1_w ();
-cp_v2si mep_cpmovula1_w ();
-cp_v2si mep_cpmovuua1_w ();
-cp_v4hi mep_cpmovla1_h ();
-cp_v4hi mep_cpmovua1_h ();
-cp_v8qi mep_cpmova1_b ();
-void mep_cpsetla1_w (cp_v2si, cp_v2si);
-void mep_cpsetua1_w (cp_v2si, cp_v2si);
-void mep_cpseta1_h (cp_v4hi, cp_v4hi);
-void mep_cpsadla1_h (cp_v4hi, cp_v4hi);
-void mep_cpsadua1_h (cp_v4hi, cp_v4hi);
-void mep_cpsada1_b (cp_v8qi, cp_v8qi);
-void mep_cpsada1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpabsla1_h (cp_v4hi, cp_v4hi);
-void mep_cpabsua1_h (cp_v4hi, cp_v4hi);
-void mep_cpabsa1_b (cp_v8qi, cp_v8qi);
-void mep_cpabsa1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpsubacla1_h (cp_v4hi, cp_v4hi);
-void mep_cpsubacua1_h (cp_v4hi, cp_v4hi);
-void mep_cpsubaca1_b (cp_v8qi, cp_v8qi);
-void mep_cpsubaca1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpsubla1_h (cp_v4hi, cp_v4hi);
-void mep_cpsubua1_h (cp_v4hi, cp_v4hi);
-void mep_cpsuba1_b (cp_v8qi, cp_v8qi);
-void mep_cpsuba1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpaddacla1_h (cp_v4hi, cp_v4hi);
-void mep_cpaddacua1_h (cp_v4hi, cp_v4hi);
-void mep_cpaddaca1_b (cp_v8qi, cp_v8qi);
-void mep_cpaddaca1u_b (cp_v8uqi, cp_v8uqi);
-void mep_cpaddla1_h (cp_v4hi, cp_v4hi);
-void mep_cpaddua1_h (cp_v4hi, cp_v4hi);
-void mep_cpadda1_b (cp_v8qi, cp_v8qi);
-void mep_cpadda1u_b (cp_v8uqi, cp_v8uqi);
+void mep_cpsmsbslla1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsmsbslua1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsmsbslla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsmsbslua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsmadslla1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsmadslua1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsmadslla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsmadslua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpmulslla1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpmulslua1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpmulslla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpmulslua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsmsbla1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsmsbua1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsmsbla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsmsbua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsmadla1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsmadua1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsmadla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsmadua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpmsbla1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpmsbua1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpmsbla1u_w (cp_v2usi, cp_v2usi); // volatile
+void mep_cpmsbua1u_w (cp_v2usi, cp_v2usi); // volatile
+void mep_cpmsbla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpmsbua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpmadla1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpmadua1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpmadla1u_w (cp_v2usi, cp_v2usi); // volatile
+void mep_cpmadua1u_w (cp_v2usi, cp_v2usi); // volatile
+void mep_cpmadla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpmadua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpmada1_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpmada1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpmulla1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpmulua1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpmulla1u_w (cp_v2usi, cp_v2usi); // volatile
+void mep_cpmulua1u_w (cp_v2usi, cp_v2usi); // volatile
+void mep_cpmulla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpmulua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpmula1_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpmula1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpssda1_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpssda1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpssqa1_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpssqa1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpsllia1 (long);               // volatile
+void mep_cpsraia1 (long);               // volatile
+void mep_cpsrlia1 (long);               // volatile
+void mep_cpslla1 (cp_data_bus_int);     // volatile
+void mep_cpsraa1 (cp_data_bus_int);     // volatile
+void mep_cpsrla1 (cp_data_bus_int);     // volatile
+cp_v2si mep_cpmovhla1_w ();             // volatile
+cp_v2si mep_cpmovhua1_w ();             // volatile
+cp_v2si mep_cppackla1_w ();             // volatile
+cp_v2si mep_cppackua1_w ();             // volatile
+cp_v4hi mep_cppackla1_h ();             // volatile
+cp_v4hi mep_cppackua1_h ();             // volatile
+cp_v8qi mep_cppacka1_b ();              // volatile
+cp_v8uqi mep_cppacka1u_b ();            // volatile
+cp_v2si mep_cpmovlla1_w ();             // volatile
+cp_v2si mep_cpmovlua1_w ();             // volatile
+cp_v2si mep_cpmovula1_w ();             // volatile
+cp_v2si mep_cpmovuua1_w ();             // volatile
+cp_v4hi mep_cpmovla1_h ();              // volatile
+cp_v4hi mep_cpmovua1_h ();              // volatile
+cp_v8qi mep_cpmova1_b ();               // volatile
+void mep_cpsetla1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpsetua1_w (cp_v2si, cp_v2si); // volatile
+void mep_cpseta1_h (cp_v4hi, cp_v4hi);  // volatile
+void mep_cpsadla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsadua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsada1_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpsada1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpabsla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpabsua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpabsa1_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpabsa1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpsubacla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsubacua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsubaca1_b (cp_v8qi, cp_v8qi); // volatile
+void mep_cpsubaca1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpsubla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsubua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpsuba1_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpsuba1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpaddacla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpaddacua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpaddaca1_b (cp_v8qi, cp_v8qi); // volatile
+void mep_cpaddaca1u_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpaddla1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpaddua1_h (cp_v4hi, cp_v4hi); // volatile
+void mep_cpadda1_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpadda1u_b (cp_v8uqi, cp_v8uqi); // volatile
 cp_data_bus_int mep_cdmovi (long);
 cp_data_bus_int mep_cdmoviu (long);
 cp_v2si mep_cpmovi_w (long);
@@ -228,8 +228,8 @@ cp_data_bus_int mep_cdclipi3 (cp_data_bus_int, long);
 cp_data_bus_int mep_cdclipiu3 (cp_data_bus_int, long);
 cp_v2si mep_cpclipi3_w (cp_v2si, long);
 cp_v2si mep_cpclipiu3_w (cp_v2si, long);
-cp_v2si mep_cpslai3_w (cp_v2si, long);
-cp_v4hi mep_cpslai3_h (cp_v4hi, long);
+cp_v2si mep_cpslai3_w (cp_v2si, long);  // volatile
+cp_v4hi mep_cpslai3_h (cp_v4hi, long);  // volatile
 cp_data_bus_int mep_cdslli3 (cp_data_bus_int, long);
 cp_v2si mep_cpslli3_w (cp_v2si, long);
 cp_v4hi mep_cpslli3_h (cp_v4hi, long);
@@ -274,23 +274,23 @@ void mep_cpacmpne_b (cp_v8qi, cp_v8qi); // volatile
 void mep_cpacmpeq_w (cp_v2si, cp_v2si); // volatile
 void mep_cpacmpeq_h (cp_v4hi, cp_v4hi); // volatile
 void mep_cpacmpeq_b (cp_v8qi, cp_v8qi); // volatile
-void mep_cpcmpge_w (cp_v2si, cp_v2si);
-void mep_cpcmpgeu_w (cp_v2usi, cp_v2usi);
-void mep_cpcmpge_h (cp_v4hi, cp_v4hi);
-void mep_cpcmpge_b (cp_v8qi, cp_v8qi);
-void mep_cpcmpgeu_b (cp_v8uqi, cp_v8uqi);
-void mep_cpcmpgt_w (cp_v2si, cp_v2si);
-void mep_cpcmpgtu_w (cp_v2usi, cp_v2usi);
-void mep_cpcmpgt_h (cp_v4hi, cp_v4hi);
-void mep_cpcmpgt_b (cp_v8qi, cp_v8qi);
-void mep_cpcmpgtu_b (cp_v8uqi, cp_v8uqi);
-void mep_cpcmpne_w (cp_v2si, cp_v2si);
-void mep_cpcmpne_h (cp_v4hi, cp_v4hi);
-void mep_cpcmpne_b (cp_v8qi, cp_v8qi);
-void mep_cpcmpeq_w (cp_v2si, cp_v2si);
-void mep_cpcmpeq_h (cp_v4hi, cp_v4hi);
-void mep_cpcmpeq_b (cp_v8qi, cp_v8qi);
-void mep_cpcmpeqz_b (cp_v8qi, cp_v8qi);
+void mep_cpcmpge_w (cp_v2si, cp_v2si);  // volatile
+void mep_cpcmpgeu_w (cp_v2usi, cp_v2usi); // volatile
+void mep_cpcmpge_h (cp_v4hi, cp_v4hi);  // volatile
+void mep_cpcmpge_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpcmpgeu_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpcmpgt_w (cp_v2si, cp_v2si);  // volatile
+void mep_cpcmpgtu_w (cp_v2usi, cp_v2usi); // volatile
+void mep_cpcmpgt_h (cp_v4hi, cp_v4hi);  // volatile
+void mep_cpcmpgt_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpcmpgtu_b (cp_v8uqi, cp_v8uqi); // volatile
+void mep_cpcmpne_w (cp_v2si, cp_v2si);  // volatile
+void mep_cpcmpne_h (cp_v4hi, cp_v4hi);  // volatile
+void mep_cpcmpne_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpcmpeq_w (cp_v2si, cp_v2si);  // volatile
+void mep_cpcmpeq_h (cp_v4hi, cp_v4hi);  // volatile
+void mep_cpcmpeq_b (cp_v8qi, cp_v8qi);  // volatile
+void mep_cpcmpeqz_b (cp_v8qi, cp_v8qi); // volatile
 cp_data_bus_int mep_cdcastw (cp_data_bus_int);
 cp_data_bus_int mep_cdcastuw (cp_data_bus_int);
 cp_v2si mep_cpcasth_w (cp_v2si);
@@ -310,7 +310,7 @@ cp_v8uqi mep_cpextuu_b (cp_v8uqi);
 cp_v2si mep_cpbcast_w (cp_v2si);
 cp_v4hi mep_cpbcast_h (cp_v4hi);
 cp_v8qi mep_cpbcast_b (cp_v8qi);
-void mep_cpccadd_b (cp_v8qi*);
+void mep_cpccadd_b (cp_v8qi*);          // volatile
 cp_v2si mep_cphadd_w (cp_v2si);
 cp_v4hi mep_cphadd_h (cp_v4hi);
 cp_v8qi mep_cphadd_b (cp_v8qi);
@@ -325,9 +325,9 @@ cp_v8qi mep_cpabsz_b (cp_v8qi);
 void mep_cpmovtocc (cp_data_bus_int);   // volatile
 void mep_cpmovtocsar1 (cp_data_bus_int); // volatile
 void mep_cpmovtocsar0 (cp_data_bus_int); // volatile
-cp_data_bus_int mep_cpmovfrcc ();
-cp_data_bus_int mep_cpmovfrcsar1 ();
-cp_data_bus_int mep_cpmovfrcsar0 ();
+cp_data_bus_int mep_cpmovfrcc ();       // volatile
+cp_data_bus_int mep_cpmovfrcsar1 ();    // volatile
+cp_data_bus_int mep_cpmovfrcsar0 ();    // volatile
 cp_v2si mep_cpmin3_w (cp_v2si, cp_v2si);
 cp_v2si mep_cpminu3_w (cp_v2si, cp_v2si);
 cp_v4hi mep_cpmin3_h (cp_v4hi, cp_v4hi);
@@ -357,12 +357,12 @@ cp_v8qi mep_cpextladd3_b (cp_v8qi, cp_v8qi);
 cp_v8qi mep_cpextladdu3_b (cp_v8qi, cp_v8qi);
 cp_v8qi mep_cpextuadd3_b (cp_v8qi, cp_v8qi);
 cp_v8qi mep_cpextuaddu3_b (cp_v8qi, cp_v8qi);
-cp_v2si mep_cpssub3_w (cp_v2si, cp_v2si);
-cp_v4hi mep_cpssub3_h (cp_v4hi, cp_v4hi);
-cp_v2si mep_cpsadd3_w (cp_v2si, cp_v2si);
-cp_v4hi mep_cpsadd3_h (cp_v4hi, cp_v4hi);
-cp_v2si mep_cpsla3_w (cp_v2si, cp_v2si);
-cp_v4hi mep_cpsla3_h (cp_v4hi, cp_v4hi);
+cp_v2si mep_cpssub3_w (cp_v2si, cp_v2si); // volatile
+cp_v4hi mep_cpssub3_h (cp_v4hi, cp_v4hi); // volatile
+cp_v2si mep_cpsadd3_w (cp_v2si, cp_v2si); // volatile
+cp_v4hi mep_cpsadd3_h (cp_v4hi, cp_v4hi); // volatile
+cp_v2si mep_cpsla3_w (cp_v2si, cp_v2si); // volatile
+cp_v4hi mep_cpsla3_h (cp_v4hi, cp_v4hi); // volatile
 cp_data_bus_int mep_cdsll3 (cp_data_bus_int, cp_data_bus_int);
 cp_v2si mep_cpssll3_w (cp_v2si, cp_v2si);
 cp_v2si mep_cpsll3_w (cp_v2si, cp_v2si);
@@ -393,10 +393,10 @@ cp_v8qi mep_cpunpackl_b (cp_v8qi, cp_v8qi);
 cp_v2usi mep_cpunpacku_w (cp_v2usi, cp_v2usi);
 cp_v4uhi mep_cpunpacku_h (cp_v4uhi, cp_v4uhi);
 cp_v8uqi mep_cpunpacku_b (cp_v8uqi, cp_v8uqi);
-cp_data_bus_int mep_cpfsftbs1 (cp_data_bus_int, cp_data_bus_int);
-cp_data_bus_int mep_cpfsftbs0 (cp_data_bus_int, cp_data_bus_int);
+cp_data_bus_int mep_cpfsftbs1 (cp_data_bus_int, cp_data_bus_int); // volatile
+cp_data_bus_int mep_cpfsftbs0 (cp_data_bus_int, cp_data_bus_int); // volatile
 cp_data_bus_int mep_cpfsftbi (cp_data_bus_int, cp_data_bus_int, long);
-cp_data_bus_int mep_cpsel (cp_data_bus_int, cp_data_bus_int);
+cp_data_bus_int mep_cpsel (cp_data_bus_int, cp_data_bus_int); // volatile
 cp_vector mep_cpxor3 (cp_vector, cp_vector);
 cp_vector mep_cpnor3 (cp_vector, cp_vector);
 cp_vector mep_cpor3 (cp_vector, cp_vector);
@@ -518,7 +518,7 @@ void mep_beqi (long, long, void *);
 void mep_bnez (long, void *);
 void mep_beqz (long, void *);
 void mep_bra (void *);
-void mep_fsft (long*, long);
+void mep_fsft (long*, long);            // volatile
 void mep_sll3 (long*, long, long);
 void mep_slli (long*, long);
 void mep_srli (long*, long);
@@ -555,7 +555,7 @@ void mep_movu24 (long*, long);
 void mep_movi16 (long*, long);
 void mep_movi8 (long*, long);
 void mep_mov (long*, long);
-void mep_ssarb (long, long);
+void mep_ssarb (long, long);            // volatile
 void mep_extuh (long*);
 void mep_extub (long*);
 void mep_exth (long*);

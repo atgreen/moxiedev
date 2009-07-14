@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2008, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2009, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -577,7 +577,6 @@ is
       function P_Known_Discriminant_Part_Opt          return List_Id;
       function P_Signed_Integer_Type_Definition       return Node_Id;
       function P_Range                                return Node_Id;
-      function P_Range_Or_Subtype_Mark                return Node_Id;
       function P_Range_Constraint                     return Node_Id;
       function P_Record_Definition                    return Node_Id;
       function P_Subtype_Mark                         return Node_Id;
@@ -629,6 +628,11 @@ is
       --  Ada 2005 (AI-231): The flag Not_Null_Present indicates that the
       --  null-excluding part has been scanned out and it was present.
 
+      function P_Range_Or_Subtype_Mark
+        (Allow_Simple_Expression : Boolean := False) return Node_Id;
+      --  Scans out a range or subtype mark, and also permits a general simple
+      --  expression if Allow_Simple_Expresion is set to True.
+
       function Init_Expr_Opt (P : Boolean := False) return Node_Id;
       --  If an initialization expression is present (:= expression), then
       --  it is scanned out and returned, otherwise Empty is returned if no
@@ -664,7 +668,6 @@ is
    package Ch4 is
       function P_Aggregate                            return Node_Id;
       function P_Expression                           return Node_Id;
-      function P_Expression_No_Right_Paren            return Node_Id;
       function P_Expression_Or_Range_Attribute        return Node_Id;
       function P_Function_Name                        return Node_Id;
       function P_Name                                 return Node_Id;
@@ -673,9 +676,25 @@ is
       function P_Simple_Expression                    return Node_Id;
       function P_Simple_Expression_Or_Range_Attribute return Node_Id;
 
-      function P_Qualified_Expression
-        (Subtype_Mark : Node_Id)
-         return         Node_Id;
+      function P_Conditional_Expression return Node_Id;
+      --  Scans out a conditional expression. Called with token pointing to
+      --  the IF keyword, and returns pointing to the terminating right paren,
+      --  semicolon or comma, but does not consume this terminating token.
+
+      function P_Expression_If_OK return Node_Id;
+      --  Scans out an expression in a context where a conditional expression
+      --  is permitted to appear without surrounding parentheses.
+
+      function P_Expression_No_Right_Paren return Node_Id;
+      --  Scans out an expression in contexts where the expression cannot be
+      --  terminated by a right paren (gives better error recovery if an errant
+      --  right paren is found after the expression).
+
+      function P_Expression_Or_Range_Attribute_If_OK return Node_Id;
+      --  Scans out an expression or range attribute where a conditional
+      --  expression is permitted to appear without surrounding parentheses.
+
+      function P_Qualified_Expression (Subtype_Mark : Node_Id) return Node_Id;
       --  This routine scans out a qualified expression when the caller has
       --  already scanned out the name and apostrophe of the construct.
    end Ch4;
@@ -1131,6 +1150,7 @@ is
 
       function Token_Is_At_End_Of_Line return Boolean;
       --  Determines if the current token is the last token on the line
+
    end Util;
 
    --------------

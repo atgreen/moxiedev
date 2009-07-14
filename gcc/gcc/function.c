@@ -246,7 +246,8 @@ frame_offset_overflow (HOST_WIDE_INT offset, tree func)
 	       /* Leave room for the fixed part of the frame.  */
 	       - 64 * UNITS_PER_WORD)
     {
-      error ("%Jtotal size of local objects too large", func);
+      error_at (DECL_SOURCE_LOCATION (func),
+		"total size of local objects too large");
       return TRUE;
     }
 
@@ -2975,9 +2976,17 @@ assign_parm_setup_stack (struct assign_parm_data_all *all, tree parm,
 					  TYPE_UNSIGNED (TREE_TYPE (parm)));
 
       if (data->stack_parm)
-	/* ??? This may need a big-endian conversion on sparc64.  */
-	data->stack_parm
-	  = adjust_address (data->stack_parm, data->nominal_mode, 0);
+	{
+	  int offset = subreg_lowpart_offset (data->nominal_mode,
+					      GET_MODE (data->stack_parm));
+	  /* ??? This may need a big-endian conversion on sparc64.  */
+	  data->stack_parm
+	    = adjust_address (data->stack_parm, data->nominal_mode, 0);
+	  if (offset && MEM_OFFSET (data->stack_parm))
+	    set_mem_offset (data->stack_parm,
+			    plus_constant (MEM_OFFSET (data->stack_parm),
+					   offset));
+	}
     }
 
   if (data->entry_parm != data->stack_parm)
@@ -3137,8 +3146,12 @@ assign_parms (tree fndecl)
         {
           unsigned int align = FUNCTION_ARG_BOUNDARY (data.promoted_mode,
 						      data.passed_type);
+	  align = MINIMUM_ALIGNMENT (data.passed_type, data.promoted_mode,
+				     align);
 	  if (TYPE_ALIGN (data.nominal_type) > align)
-	    align = TYPE_ALIGN (data.passed_type);
+	    align = MINIMUM_ALIGNMENT (data.nominal_type,
+				       TYPE_MODE (data.nominal_type),
+				       TYPE_ALIGN (data.nominal_type));
 	  if (crtl->stack_alignment_estimated < align)
 	    {
 	      gcc_assert (!crtl->stack_realign_processed);

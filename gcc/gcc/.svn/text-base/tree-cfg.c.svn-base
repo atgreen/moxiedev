@@ -1638,12 +1638,14 @@ remove_useless_stmts_warn_notreached (gimple_seq stmts)
     {
       gimple stmt = gsi_stmt (gsi);
 
+      if (gimple_no_warning_p (stmt)) return false;
+
       if (gimple_has_location (stmt))
         {
           location_t loc = gimple_location (stmt);
           if (LOCATION_LINE (loc) > 0)
 	    {
-              warning (OPT_Wunreachable_code, "%Hwill never be executed", &loc);
+              warning_at (loc, OPT_Wunreachable_code, "will never be executed");
               return true;
             }
         }
@@ -2310,7 +2312,7 @@ remove_bb (basic_block bb)
      loop above, so the last statement we process is the first statement
      in the block.  */
   if (loc > BUILTINS_LOCATION && LOCATION_LINE (loc) > 0)
-    warning (OPT_Wunreachable_code, "%Hwill never be executed", &loc);
+    warning_at (loc, OPT_Wunreachable_code, "will never be executed");
 
   remove_phi_nodes_and_edges_for_unreachable_block (bb);
   bb->il.gimple = NULL;
@@ -7260,7 +7262,7 @@ execute_warn_function_return (void)
 	}
       if (location == UNKNOWN_LOCATION)
 	location = cfun->function_end_locus;
-      warning (0, "%H%<noreturn%> function does return", &location);
+      warning_at (location, 0, "%<noreturn%> function does return");
     }
 
   /* If we see "return;" in some basic block, then we do reach the end
@@ -7342,9 +7344,9 @@ execute_warn_function_noreturn (void)
       && !TREE_THIS_VOLATILE (cfun->decl)
       && EDGE_COUNT (EXIT_BLOCK_PTR->preds) == 0
       && !lang_hooks.missing_noreturn_ok_p (cfun->decl))
-    warning (OPT_Wmissing_noreturn, "%Jfunction might be possible candidate "
-	     "for attribute %<noreturn%>",
-	     cfun->decl);
+    warning_at (DECL_SOURCE_LOCATION (cfun->decl), OPT_Wmissing_noreturn,
+		"function might be possible candidate "
+		"for attribute %<noreturn%>");
   return 0;
 }
 

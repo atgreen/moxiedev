@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/dfp
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,40 +502,6 @@ janis
 
 4606
 
-convert-bfp-11.c
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-baf5f69fb00546783c0e3a5fe5f612e1
-2007-09-11T01:11:16.711536Z
-128361
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1707
-
 pragma-float-const-decimal64-3.c
 file
 
@@ -569,6 +535,40 @@ janis
 
 
 1401
+
+convert-bfp-11.c
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+baf5f69fb00546783c0e3a5fe5f612e1
+2007-09-11T01:11:16.711536Z
+128361
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1707
 
 modes.c
 file
@@ -808,17 +808,17 @@ janis
 
 230
 
-usual-arith-conv-const.c
+pr39035.c
 file
 
 
 
 
 2009-04-24T17:45:12.000000Z
-aa5c7e2acf92a1749995396abd5b4033
-2006-01-11T21:29:59.796568Z
-109604
-bje
+21baab23897966c6aa205d567c61a479
+2009-02-06T21:01:46.670386Z
+143992
+janis
 
 
 
@@ -840,7 +840,7 @@ bje
 
 
 
-1493
+1093
 
 convert-bfp.c
 file
@@ -876,17 +876,17 @@ janis
 
 2552
 
-pr39035.c
+usual-arith-conv-const.c
 file
 
 
 
 
 2009-04-24T17:45:12.000000Z
-21baab23897966c6aa205d567c61a479
-2009-02-06T21:01:46.670386Z
-143992
-janis
+aa5c7e2acf92a1749995396abd5b4033
+2006-01-11T21:29:59.796568Z
+109604
+bje
 
 
 
@@ -908,41 +908,7 @@ janis
 
 
 
-1093
-
-convert-bfp-5.c
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-9ae2f8276cb176e1e71522d9f57c9cb6
-2007-09-11T01:11:16.711536Z
-128361
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-488
+1493
 
 convert-dfp.c
 file
@@ -977,6 +943,40 @@ janis
 
 
 2369
+
+convert-bfp-5.c
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+9ae2f8276cb176e1e71522d9f57c9cb6
+2007-09-11T01:11:16.711536Z
+128361
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+488
 
 compare-rel-const.c
 file
@@ -2338,40 +2338,6 @@ janis
 
 2785
 
-compare-eq-d32.c
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-ecc92763e6c84f26459cc960ddafca98
-2006-01-17T00:09:27.471586Z
-109779
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-230
-
 func-vararg-mixed.c
 file
 
@@ -2405,6 +2371,40 @@ janis
 
 
 2275
+
+compare-eq-d32.c
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+ecc92763e6c84f26459cc960ddafca98
+2006-01-17T00:09:27.471586Z
+109779
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+230
 
 compare-special-d128.c
 file
@@ -2712,40 +2712,6 @@ janis
 
 591
 
-convert-bfp-13.c
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-5da64ac8a28513fd822a82460b1bc19c
-2008-10-29T17:05:42.363303Z
-141432
-jsm28
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-356
-
 pragma-float-const-decimal64-5.c
 file
 
@@ -2779,6 +2745,40 @@ janis
 
 
 870
+
+convert-bfp-13.c
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+5da64ac8a28513fd822a82460b1bc19c
+2008-10-29T17:05:42.363303Z
+141432
+jsm28
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+356
 
 convert-bfp-3.c
 file
@@ -2916,40 +2916,6 @@ janis
 
 2858
 
-keywords-pedantic.c
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-e854b0030432a7038f597bdf7050d3d6
-2006-01-11T21:29:59.796568Z
-109604
-bje
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-286
-
 compare-rel-d32.c
 file
 
@@ -2983,6 +2949,40 @@ janis
 
 
 233
+
+keywords-pedantic.c
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+e854b0030432a7038f597bdf7050d3d6
+2006-01-11T21:29:59.796568Z
+109604
+bje
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+286
 
 call-by-value.c
 file
@@ -3222,17 +3222,17 @@ bje
 
 1731
 
-convert-int.c
+keywords-c89.c
 file
 
 
 
 
 2009-04-24T17:45:12.000000Z
-f5e89326200fc9b551d040c7c4a04eac
-2007-05-22T18:08:48.502317Z
-124953
-janis
+dadf3ffd264a8aa4075042e754d622a2
+2007-07-12T22:57:32.434972Z
+126606
+manu
 
 
 
@@ -3254,7 +3254,7 @@ janis
 
 
 
-2940
+232
 
 convert-dfp-fold-2.c
 file
@@ -3290,17 +3290,17 @@ jsm28
 
 357
 
-keywords-c89.c
+convert-int.c
 file
 
 
 
 
 2009-04-24T17:45:12.000000Z
-dadf3ffd264a8aa4075042e754d622a2
-2007-07-12T22:57:32.434972Z
-126606
-manu
+f5e89326200fc9b551d040c7c4a04eac
+2007-05-22T18:08:48.502317Z
+124953
+janis
 
 
 
@@ -3322,7 +3322,7 @@ manu
 
 
 
-232
+2940
 
 compare-special.h
 file
@@ -3358,40 +3358,6 @@ uros
 
 9133
 
-compare-eq-const.c
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-bd32edb217aec1f0a021fdd74b462c18
-2006-01-17T00:09:27.471586Z
-109779
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-616
-
 compare-rel-dfp.c
 file
 
@@ -3425,6 +3391,40 @@ janis
 
 
 1123
+
+compare-eq-const.c
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+bd32edb217aec1f0a021fdd74b462c18
+2006-01-17T00:09:27.471586Z
+109779
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+616
 
 cast-bad.c
 file
@@ -3664,40 +3664,6 @@ janis
 
 854
 
-convert-int-saturate.c
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-4f6df9b0f2d346e1dd5f1d841abfdebf
-2007-03-24T17:04:47.113309Z
-123185
-meissner
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1598
-
 compare-eq.h
 file
 
@@ -3732,51 +3698,17 @@ bje
 
 2518
 
-pragma-float-const-decimal64-2.c
-file
-
-
-
-
-2009-05-08T12:19:51.000000Z
-880000a106888b1c4c2dac8698cb8191
-2009-05-07T22:34:08.644737Z
-147259
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1574
-
-convert-bfp-10.c
+convert-int-saturate.c
 file
 
 
 
 
 2009-04-24T17:45:12.000000Z
-1df1c4c08e1bac24754743671e62ad0b
-2007-09-11T01:11:16.711536Z
-128361
-janis
+4f6df9b0f2d346e1dd5f1d841abfdebf
+2007-03-24T17:04:47.113309Z
+123185
+meissner
 
 
 
@@ -3798,7 +3730,7 @@ janis
 
 
 
-3110
+1598
 
 func-vararg-size0.c
 file
@@ -3834,6 +3766,74 @@ janis
 
 612
 
+convert-bfp-10.c
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+1df1c4c08e1bac24754743671e62ad0b
+2007-09-11T01:11:16.711536Z
+128361
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3110
+
+pragma-float-const-decimal64-2.c
+file
+
+
+
+
+2009-05-08T12:19:51.000000Z
+880000a106888b1c4c2dac8698cb8191
+2009-05-07T22:34:08.644737Z
+147259
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1574
+
 pr39986.c
 file
 
@@ -3868,40 +3868,6 @@ janis
 
 1220
 
-pragma-float-const-decimal64-6.c
-file
-
-
-
-
-2009-05-08T12:19:51.000000Z
-2aad6a6561ca32d3114fd8e851a34e25
-2009-05-07T22:34:08.644737Z
-147259
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-863
-
 convert-bfp-14.c
 file
 
@@ -3935,6 +3901,40 @@ jsm28
 
 
 347
+
+pragma-float-const-decimal64-6.c
+file
+
+
+
+
+2009-05-08T12:19:51.000000Z
+2aad6a6561ca32d3114fd8e851a34e25
+2009-05-07T22:34:08.644737Z
+147259
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+863
 
 operator-cond.c
 file
@@ -4038,40 +4038,6 @@ bje
 
 560
 
-dfp.exp
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-86854a24a58d9e0ec0dd7d1af8bf4607
-2007-08-01T16:25:11.955122Z
-127127
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1894
-
 func-vararg-alternate-d64.c
 file
 
@@ -4105,6 +4071,40 @@ janis
 
 
 346
+
+dfp.exp
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+86854a24a58d9e0ec0dd7d1af8bf4607
+2007-08-01T16:25:11.955122Z
+127127
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1894
 
 pr39034.c
 file
@@ -4174,40 +4174,6 @@ janis
 
 14699
 
-convert-bfp-4.c
-file
-
-
-
-
-2009-04-24T17:45:12.000000Z
-da4761676d1572bc93dc7f8467c35141
-2007-09-11T01:11:16.711536Z
-128361
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-488
-
 Wbad-function-cast-1.c
 file
 
@@ -4242,16 +4208,16 @@ bje
 
 1673
 
-operator-unary.c
+convert-bfp-4.c
 file
 
 
 
 
 2009-04-24T17:45:12.000000Z
-c4cb7deb838345cd0e007ae3d10b0f8d
-2006-01-17T00:09:27.471586Z
-109779
+da4761676d1572bc93dc7f8467c35141
+2007-09-11T01:11:16.711536Z
+128361
 janis
 
 
@@ -4274,7 +4240,7 @@ janis
 
 
 
-1815
+488
 
 pr37435.c
 file
@@ -4309,6 +4275,40 @@ hjl
 
 
 160
+
+operator-unary.c
+file
+
+
+
+
+2009-04-24T17:45:12.000000Z
+c4cb7deb838345cd0e007ae3d10b0f8d
+2006-01-17T00:09:27.471586Z
+109779
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1815
 
 altivec-types.c
 file

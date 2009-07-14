@@ -237,8 +237,13 @@ package body Ada.Strings.Wide_Wide_Search is
       return Natural
    is
       PL1 : constant Integer := Pattern'Length - 1;
-      Ind : Natural;
       Cur : Natural;
+
+      Ind : Integer;
+      --  Index for start of match check. This can be negative if the pattern
+      --  length is greater than the string length, which is why this variable
+      --  is Integer instead of Natural. In this case, the search loops do not
+      --  execute at all, so this Ind value is never used.
 
    begin
       if Pattern = "" then
@@ -346,6 +351,12 @@ package body Ada.Strings.Wide_Wide_Search is
 
       if Mapping = null then
          raise Constraint_Error;
+      end if;
+
+      --  If Pattern longer than Source it can't be found
+
+      if Pattern'Length > Source'Length then
+         return 0;
       end if;
 
       --  Forwards case

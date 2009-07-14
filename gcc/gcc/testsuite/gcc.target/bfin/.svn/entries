@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/bfin
 svn://gcc.gnu.org/svn/gcc
 
@@ -740,40 +740,6 @@ bernds
 
 622
 
-shift.c
-file
-
-
-
-
-2009-04-24T17:45:39.000000Z
-d753e383697984b453f5269efc0caf25
-2007-05-03T13:24:03.234645Z
-124377
-bernds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2019
-
 workarounds-2.c
 file
 
@@ -807,6 +773,40 @@ bernds
 
 
 620
+
+shift.c
+file
+
+
+
+
+2009-04-24T17:45:39.000000Z
+d753e383697984b453f5269efc0caf25
+2007-05-03T13:24:03.234645Z
+124377
+bernds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2019
 
 workarounds-3.c
 file
@@ -978,40 +978,6 @@ bernds
 
 723
 
-mcpu-bf532.c
-file
-
-
-
-
-2009-04-24T17:45:39.000000Z
-eb5bf0d9a7554e4c54a43a8cedf6fd9a
-2008-10-22T19:42:56.286403Z
-141305
-bernds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-723
-
 mcpu-bf514.c
 file
 
@@ -1045,6 +1011,40 @@ bernds
 
 
 1336
+
+mcpu-bf532.c
+file
+
+
+
+
+2009-04-24T17:45:39.000000Z
+eb5bf0d9a7554e4c54a43a8cedf6fd9a
+2008-10-22T19:42:56.286403Z
+141305
+bernds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+723
 
 mcpu-bf533.c
 file

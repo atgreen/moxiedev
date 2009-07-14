@@ -72,6 +72,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "expr.h"
 #include "cfglayout.h"
 #include "tree-pass.h"
+#include "tree-flow.h"
 #include "timevar.h"
 #include "cgraph.h"
 #include "coverage.h"
@@ -4422,6 +4423,8 @@ rest_of_clean_state (void)
 
   free_bb_for_insn ();
 
+  delete_tree_ssa ();
+
   if (targetm.binds_local_p (current_function_decl))
     {
       unsigned int pref = crtl->preferred_stack_boundary;
@@ -4451,7 +4454,7 @@ struct rtl_opt_pass pass_clean_state =
 {
  {
   RTL_PASS,
-  NULL,                                 /* name */
+  "*clean_state",                       /* name */
   NULL,                                 /* gate */
   rest_of_clean_state,                  /* execute */
   NULL,                                 /* sub */

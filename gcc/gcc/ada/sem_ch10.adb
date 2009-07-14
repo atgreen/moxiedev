@@ -742,7 +742,7 @@ package body Sem_Ch10 is
                   --  in its scope. Finally we create a Units table entry for
                   --  the subprogram declaration, to maintain a one-to-one
                   --  correspondence with compilation unit nodes. This is
-                  --  critical for the tree traversals performed by Codepeer.
+                  --  critical for the tree traversals performed by CodePeer.
 
                   declare
                      Loc : constant Source_Ptr := Sloc (N);
@@ -3195,13 +3195,22 @@ package body Sem_Ch10 is
       end if;
 
       --  If the unit is a body, the context of the specification must also
-      --  be installed.
+      --  be installed. That includes private with_clauses in that context.
 
       if Nkind (Lib_Unit) = N_Package_Body
         or else (Nkind (Lib_Unit) = N_Subprogram_Body
                    and then not Acts_As_Spec (N))
       then
          Install_Context (Library_Unit (N));
+
+         --  Only install private with-clauses of a spec that comes from
+         --  source, excluding specs created for a subprogram body that is
+         --  a child unit.
+
+         if Comes_From_Source (Library_Unit (N)) then
+            Install_Private_With_Clauses
+              (Defining_Entity (Unit (Library_Unit (N))));
+         end if;
 
          if Is_Child_Spec (Unit (Library_Unit (N))) then
 
@@ -5712,7 +5721,7 @@ package body Sem_Ch10 is
                      end if;
                   end if;
 
-                  --  Preserve structure of homonym chain.
+                  --  Preserve structure of homonym chain
 
                   Set_Homonym (E, Homonym (Lim_Typ));
                end if;

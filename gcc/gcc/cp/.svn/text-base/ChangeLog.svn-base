@@ -1,3 +1,208 @@
+2009-07-13  Andrew Pinski  <andrew_pinski@playstation.sony.com>
+
+	PR C++/22154
+	* parser.c (cp_parser_elaborated_type_specifier): Accept typename in
+	front of qualified names.
+
+2009-07-12  Jason Merrill  <jason@redhat.com>
+
+	PR c++/36628
+	* tree.c (rvalue): Use lvalue_or_rvalue_with_address_p.
+
+	PR c++/37206
+	* cp-tree.h (enum cp_lvalue_kind_flags): Add clk_rvalueref.
+	* tree.c (lvalue_p_1): Return it.  Remove
+	treat_class_rvalues_as_lvalues parm.
+	(real_lvalue_p): Disallow pseudo-lvalues here.
+	(lvalue_or_rvalue_with_address_p): New fn.
+	* call.c (initialize_reference): Use it instead of real_lvalue_p.
+
+	PR c++/40689
+	* init.c (build_new_1): Handle initializer list as array initializer.
+	(build_vec_init): Likewise.
+	* typeck.c (cp_build_modify_expr): Likewise.
+	* typeck2.c (process_init_constructor_array): Error rather than abort
+	if too many initializers.
+
+2009-07-10  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/40502
+	* error.c (cp_print_error_function): Check for NULL block.
+
+2008-07-09  Simon Martin  <simartin@users.sourceforge.net>
+	    Jason Merrill  <jason@redhat.com>
+
+	* pt.c (perform_typedefs_access_check, get_types_needing_access_check,
+	append_type_to_template_for_access_check_1): Use CLASS_TYPE_P.
+
+2009-07-09  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/40684
+	* pt.c (type_unification_real): Use tsubst_template_arg instead
+	of tsubst to substitute default template arguments.
+
+2009-07-08  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR c++/31246
+	* init.c (build_new_1): Set TREE_NO_WARNING for compiler-generated
+	code.
+	* cp-gimplify.c (genericize_eh_spec_block): Likewise.
+	
+
+2009-07-07  Jason Merrill  <jason@redhat.com>
+
+	PR c++/35828
+	* pt.c (tsubst_decl): Don't abort if we didn't change anything
+	in a TEMPLATE_DECL's args.
+
+2009-07-07  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	* semantics.c (finalize_nrv_r): Replace EXPR_LOCUS by
+	EXPR_LOCATION.
+	
+2009-07-07  Jason Merrill  <jason@redhat.com>
+
+	PR c++/37816
+	* decl.c (build_enumerator): Don't add enumerators for a
+	scoped enum to the enclosing class.
+
+	PR c++/40639
+	* decl.c (start_enum): Allow dependent underlying type.
+
+	PR c++/40633
+	* decl.c (finish_enum): Finish scope even in a template.
+
+2009-07-07  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	* init.c: Replace %J by an explicit location. Update all calls.
+	* decl.c: Likewise.
+	* typeck2.c: Likewise.
+	* pt.c: Likewise.
+	* name-lookup.c: Likewise.
+	
+2009-07-06  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	* decl.c: Replace %H by an explicit location. Update all calls.
+	* except.c: Likewise.
+	* semantics.c: Likewise.
+	* parser.c: Likewise.
+
+2009-07-06  Simon Martin  <simartin@users.sourceforge.net>
+
+	PR c++/40557
+	* pt.c (perform_typedefs_access_check, get_types_needing_access_check,
+	append_type_to_template_for_access_check_1): Use
+	RECORD_OR_UNION_CODE_P.
+
+2009-07-04  Jason Merrill  <jason@redhat.com>
+
+	* pt.c (retrieve_specialization): Don't get confused by a
+	using-declaration that brings in another instance of this template
+	from a base class.
+
+	* ptree.c (cxx_print_type): Fix logic.
+
+	* cp-tree.h (LANG_DECL_FN_CHECK): Fix non-checking version.
+
+	PR c++/40619
+	* cp-tree.h (struct lang_decl_parm): New.
+	(struct lang_decl): Add it.
+	(LANG_DECL_PARM_CHECK): New.
+	(DECL_PARM_INDEX): New.
+	* decl2.c (parm_index): Remove.
+	* lex.c (retrofit_lang_decl): Handle parms.
+	(cxx_dup_lang_specific_decl): Likewise.
+	* mangle.c (write_expression): Adjust.
+	* tree.c (cp_tree_equal): Adjust.
+	(decl_linkage): Only check DECL_COMDAT for functions and variables.
+	* parser.c (cp_parser_parameter_declaration_list): Set
+	DECL_PARM_INDEX.
+	* pt.c (iterative_hash_template_arg): Hash it.
+
+2009-07-03  Jason Merrill  <jason@redhat.com>
+
+	* cp-tree.h (struct lang_decl): Overhaul.
+	(struct lang_decl_flags): Remove.
+	(struct lang_decl_base): New.
+	(struct lang_decl_min): New.
+	(struct lang_decl_fn): New.
+	(struct lang_decl_ns): New.
+	(CAN_HAVE_FULL_LANG_DECL_P): Replace with LANG_DECL_HAS_MIN.
+	(LANG_DECL_MIN_CHECK): New.
+	(LANG_DECL_FN_CHECK): New.
+	(LANG_DECL_NS_CHECK): New.
+	(STRIP_TEMPLATE): New.
+	(NON_THUNK_FUNCTION_CHECK): Remove.
+	(DECL_DECLARES_FUNCTION_P): New.
+	(lots): Adjust.
+	* lex.c (retrofit_lang_decl, cxx_dup_lang_specific_decl): Adjust.
+	* decl.c (push_local_name, duplicate_decls): Adjust.
+	* decl2.c (start_objects): Don't set u2sel.
+	* semantics.c (finish_omp_threadprivate): Adjust.
+	* class.c (build_clone): Don't do much on TEMPLATE_DECLs.
+	(decl_cloned_function_p): Out-of-line implementation of macros.
+	(clone_function_decl, adjust_clone_args): Use DECL_CLONED_FUNCTION_P.
+	* mangle.c (write_unqualified_name): Don't check function flags
+	on non-functions.
+	* method.c (make_alias_for): Don't set DECL_CLONED_FUNCTION.
+	* pt.c (build_template_decl): Don't set function flags.
+	(check_default_tmpl_args): Check that it's a function.
+	(instantiate_template): Use DECL_ABSTRACT_ORIGIN to find the
+	cloned template.
+
+	* pt.c (tsubst_decl) [FUNCTION_DECL]: Don't tsubst
+	DECL_CLONED_FUNCTION.
+
+	* cp-tree.h (struct lang_type_class): Move sorted_fields here.
+	* class.c (finish_struct_1): Adjust.
+	* ptree.c (cxx_print_decl, cxx_print_type): Adjust.
+	* search.c (lookup_field_1): Adjust.
+
+	* cp-tree.h (CLASSTYPE_INLINE_FRIENDS): Remove.
+	* decl.c (finish_method): Don't add to it.
+	* class.c (fixup_pending_inline): Remove.
+	(fixup_inline_methods): Remove.
+	(finish_struct_1): Don't call it.
+
+	* error.c (dump_function_name): Handle null name.
+
+2009-07-02  Mark Mitchell  <mark@codesourcery.com>
+
+	* typeck.c (cp_build_binary_op): Move warnings about use of NULL
+	in arithmetic earlier and allow comparisions of NULL with
+	pointers-to-members.
+
+2009-07-02  Jason Merrill  <jason@redhat.com>
+
+	Use hash tables for template specialization lookup.
+	* pt.c (struct spec_entry): New type.
+	(decl_specializations, type_specializations): New hash tables.
+	(register_specialization, retrieve_specialization): Use them.
+	(reregister_specialization, lookup_template_class): Use them.
+	(eq_specializations, hash_tmpl_and_args, hash_specialization): New.
+	(iterative_hash_template_arg): New.
+	(init_template_processing): New
+	(process_partial_specialization): Don't look to see if we already
+	have this partial specialization.
+	(maybe_process_partial_specialization): Handle reassigning
+	full specializations when we get an explicit specialization
+	of the partial instantiation.
+	(tsubst_friend_function): Adjust specialization reassignment code.
+	(instantiate_template): Only do one lookup.
+	(instantiate_decl): Don't do any lookup.
+	* cp-tree.h: Declare init_template_processing.
+	* decl.c (duplicate_decls): Pass args to reregister_specialization.
+
+2009-07-01  Jason Merrill  <jason@redhat.com>
+
+	* cp-tree.h (DECL_CLASS_TEMPLATE_P): Use DECL_IMPLICIT_TYPEDEF_P.
+
+	* pt.c (register_specialization): Use duplicate_decls to merge
+	the argument with a previous specialization.
+	(check_explicit_specialization): Call register_specialization to
+	merge the TEMPLATE_DECL with a previous version.
+	(determine_specialization): Return the args even if fn is a template.
+
 2009-07-01  Ian Lance Taylor  <iant@google.com>
 
 	* g++spec.c (lang_specific_driver): Bump num_args by 1.

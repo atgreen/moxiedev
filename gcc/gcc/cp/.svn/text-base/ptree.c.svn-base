@@ -65,10 +65,6 @@ cxx_print_decl (FILE *file, tree node, int indent)
       && DECL_PENDING_INLINE_INFO (node))
     fprintf (file, " pending-inline-info %p",
 	     (void *) DECL_PENDING_INLINE_INFO (node));
-  if (TREE_CODE (node) == TYPE_DECL
-      && DECL_SORTED_FIELDS (node))
-    fprintf (file, " sorted-fields %p",
-	     (void *) DECL_SORTED_FIELDS (node));
   if ((TREE_CODE (node) == FUNCTION_DECL || TREE_CODE (node) == VAR_DECL)
       && DECL_TEMPLATE_INFO (node))
     fprintf (file, " template-info %p",
@@ -97,9 +93,6 @@ cxx_print_type (FILE *file, tree node, int indent)
 
     case RECORD_TYPE:
     case UNION_TYPE:
-      indent_to (file, indent + 4);
-      fprintf (file, "full-name \"%s\"",
-	       type_as_string (node, TFF_CLASS_KEY_OR_ENUM));
       break;
 
     default:
@@ -112,6 +105,10 @@ cxx_print_type (FILE *file, tree node, int indent)
 
   if (! CLASS_TYPE_P (node))
     return;
+
+  indent_to (file, indent + 4);
+  fprintf (file, "full-name \"%s\"",
+	   type_as_string (node, TFF_CLASS_KEY_OR_ENUM));
 
   indent_to (file, indent + 3);
 
@@ -140,6 +137,9 @@ cxx_print_type (FILE *file, tree node, int indent)
     fputs (" delete[]", file);
   if (TYPE_HAS_ASSIGN_REF (node))
     fputs (" this=(X&)", file);
+  if (CLASSTYPE_SORTED_FIELDS (node))
+    fprintf (file, " sorted-fields %p",
+	     (void *) CLASSTYPE_SORTED_FIELDS (node));
 
   if (TREE_CODE (node) == RECORD_TYPE)
     {

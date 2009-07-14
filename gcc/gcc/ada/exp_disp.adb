@@ -931,7 +931,8 @@ package body Exp_Disp is
             Desig_Typ := Etype (Expression (N));
 
             if Is_Access_Type (Desig_Typ) then
-               Desig_Typ := Directly_Designated_Type (Desig_Typ);
+               Desig_Typ :=
+                 Available_View (Directly_Designated_Type (Desig_Typ));
             end if;
 
             if Is_Concurrent_Type (Desig_Typ) then
@@ -1830,6 +1831,11 @@ package body Exp_Disp is
                       RTE (RE_Asynchronous_Call), Loc),
                     Make_Identifier (Loc, Name_uF))));    --  status flag
          end if;
+
+      else
+         --  Ensure that the statements list is non-empty
+
+         Append_To (Stmts, Make_Null_Statement (Loc));
       end if;
 
       return
@@ -2198,6 +2204,11 @@ package body Exp_Disp is
                       RTE (RE_Conditional_Call), Loc),
                     Make_Identifier (Loc, Name_uF))));    --  status flag
          end if;
+
+      else
+         --  Ensure that the statements list is non-empty
+
+         Append_To (Stmts, Make_Null_Statement (Loc));
       end if;
 
       return
@@ -3021,6 +3032,11 @@ package body Exp_Disp is
                     Make_Identifier (Loc, Name_uM),       --  delay mode
                     Make_Identifier (Loc, Name_uF))));    --  status flag
          end if;
+
+      else
+         --  Ensure that the statements list is non-empty
+
+         Append_To (Stmts, Make_Null_Statement (Loc));
       end if;
 
       return
@@ -6102,64 +6118,71 @@ package body Exp_Disp is
          end loop;
       end if;
 
-      --  3) At the end of Access_Disp_Table we add the entity of an access
-      --     type declaration. It is used by Build_Get_Prim_Op_Address to
-      --     expand dispatching calls through the primary dispatch table.
+      --  3) At the end of Access_Disp_Table, if the type has user-defined
+      --     primitives, we add the entity of an access type declaration that
+      --     is used by Build_Get_Prim_Op_Address to expand dispatching calls
+      --     through the primary dispatch table.
+
+      if UI_To_Int (DT_Entry_Count (First_Tag_Component (Typ))) = 0 then
+         Analyze_List (Result);
 
       --     Generate:
       --       type Typ_DT is array (1 .. Nb_Prims) of Prim_Ptr;
       --       type Typ_DT_Acc is access Typ_DT;
 
-      declare
-         Name_DT_Prims     : constant Name_Id :=
-                               New_External_Name (Tname, 'G');
-         Name_DT_Prims_Acc : constant Name_Id :=
-                               New_External_Name (Tname, 'H');
-         DT_Prims          : constant Entity_Id :=
-                               Make_Defining_Identifier (Loc, Name_DT_Prims);
-         DT_Prims_Acc      : constant Entity_Id :=
-                               Make_Defining_Identifier (Loc,
-                                 Name_DT_Prims_Acc);
-      begin
-         Append_To (Result,
-           Make_Full_Type_Declaration (Loc,
-             Defining_Identifier => DT_Prims,
-             Type_Definition =>
-               Make_Constrained_Array_Definition (Loc,
-                 Discrete_Subtype_Definitions => New_List (
-                   Make_Range (Loc,
-                     Low_Bound  => Make_Integer_Literal (Loc, 1),
-                     High_Bound => Make_Integer_Literal (Loc,
-                                    DT_Entry_Count
-                                      (First_Tag_Component (Typ))))),
-                 Component_Definition =>
-                   Make_Component_Definition (Loc,
+      else
+         declare
+            Name_DT_Prims     : constant Name_Id :=
+                                  New_External_Name (Tname, 'G');
+            Name_DT_Prims_Acc : constant Name_Id :=
+                                  New_External_Name (Tname, 'H');
+            DT_Prims          : constant Entity_Id :=
+                                  Make_Defining_Identifier (Loc,
+                                    Name_DT_Prims);
+            DT_Prims_Acc      : constant Entity_Id :=
+                                  Make_Defining_Identifier (Loc,
+                                    Name_DT_Prims_Acc);
+         begin
+            Append_To (Result,
+              Make_Full_Type_Declaration (Loc,
+                Defining_Identifier => DT_Prims,
+                Type_Definition =>
+                  Make_Constrained_Array_Definition (Loc,
+                    Discrete_Subtype_Definitions => New_List (
+                      Make_Range (Loc,
+                        Low_Bound  => Make_Integer_Literal (Loc, 1),
+                        High_Bound => Make_Integer_Literal (Loc,
+                                       DT_Entry_Count
+                                         (First_Tag_Component (Typ))))),
+                    Component_Definition =>
+                      Make_Component_Definition (Loc,
+                        Subtype_Indication =>
+                          New_Reference_To (RTE (RE_Prim_Ptr), Loc)))));
+
+            Append_To (Result,
+              Make_Full_Type_Declaration (Loc,
+                Defining_Identifier => DT_Prims_Acc,
+                Type_Definition =>
+                   Make_Access_To_Object_Definition (Loc,
                      Subtype_Indication =>
-                       New_Reference_To (RTE (RE_Prim_Ptr), Loc)))));
+                       New_Occurrence_Of (DT_Prims, Loc))));
 
-         Append_To (Result,
-           Make_Full_Type_Declaration (Loc,
-             Defining_Identifier => DT_Prims_Acc,
-             Type_Definition =>
-                Make_Access_To_Object_Definition (Loc,
-                  Subtype_Indication =>
-                    New_Occurrence_Of (DT_Prims, Loc))));
+            Append_Elmt (DT_Prims_Acc, Access_Disp_Table (Typ));
 
-         Append_Elmt (DT_Prims_Acc, Access_Disp_Table (Typ));
+            --  Analyze the resulting list and suppress the generation of the
+            --  Init_Proc associated with the above array declaration because
+            --  this type is never used in object declarations. It is only used
+            --  to simplify the expansion associated with dispatching calls.
 
-         --  Analyze the resulting list and suppress the generation of the
-         --  Init_Proc associated with the above array declaration because
-         --  we never use such type in object declarations; this type is only
-         --  used to simplify the expansion associated with dispatching calls.
+            Analyze_List (Result);
+            Set_Suppress_Init_Proc (Base_Type (DT_Prims));
 
-         Analyze_List (Result);
-         Set_Suppress_Init_Proc (Base_Type (DT_Prims));
+            --  Mark entity of dispatch table. Required by the back end to
+            --  handle them properly.
 
-         --  Mark entity of dispatch table. Required by the backend to handle
-         --  the properly.
-
-         Set_Is_Dispatch_Table_Entity (DT_Prims);
-      end;
+            Set_Is_Dispatch_Table_Entity (DT_Prims);
+         end;
+      end if;
 
       Set_Ekind        (DT_Ptr, E_Constant);
       Set_Is_Tag       (DT_Ptr);

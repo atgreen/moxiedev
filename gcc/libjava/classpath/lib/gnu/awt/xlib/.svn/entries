@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/awt/xlib
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ has-props
 
 2233
 
-XToolkit.class
-file
-
-
-
-
-2009-04-24T17:47:28.000000Z
-73339ab75c17bca211240ba0bb3653fd
-2007-08-04T10:53:49.941399Z
-127204
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-11617
-
 XGraphicsEnvironment.class
 file
 
@@ -127,6 +93,40 @@ has-props
 
 
 1931
+
+XToolkit.class
+file
+
+
+
+
+2009-04-24T17:47:28.000000Z
+73339ab75c17bca211240ba0bb3653fd
+2007-08-04T10:53:49.941399Z
+127204
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11617
 
 XEventQueue.class
 file
@@ -230,40 +230,6 @@ has-props
 
 10539
 
-XFontMetrics.class
-file
-
-
-
-
-2009-04-24T17:47:28.000000Z
-1d4c795834c25327f5b7bda112d5d61f
-2007-01-11T00:15:27.668888Z
-120655
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1004
-
 XGraphicsConfiguration$FontMetricsCache$PerDisplayCache$CacheEntry.class
 file
 
@@ -297,6 +263,40 @@ has-props
 
 
 955
+
+XFontMetrics.class
+file
+
+
+
+
+2009-04-24T17:47:28.000000Z
+1d4c795834c25327f5b7bda112d5d61f
+2007-01-11T00:15:27.668888Z
+120655
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1004
 
 XGraphicsConfiguration$FontMetricsCache.class
 file
@@ -400,40 +400,6 @@ has-props
 
 6225
 
-XPanelPeer.class
-file
-
-
-
-
-2009-04-24T17:47:28.000000Z
-06606fe6d4f65f4ab1b40b5b33933232
-2007-01-11T00:15:27.668888Z
-120655
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1172
-
 XEventLoop.class
 file
 
@@ -467,6 +433,40 @@ has-props
 
 
 5310
+
+XPanelPeer.class
+file
+
+
+
+
+2009-04-24T17:47:28.000000Z
+06606fe6d4f65f4ab1b40b5b33933232
+2007-01-11T00:15:27.668888Z
+120655
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1172
 
 XCanvasPeer$DoMap.class
 file

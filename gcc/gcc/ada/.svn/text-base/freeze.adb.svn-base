@@ -1111,19 +1111,30 @@ package body Freeze is
       end loop;
    end Check_Unsigned_Type;
 
-   -----------------------------
-   -- Expand_Atomic_Aggregate --
-   -----------------------------
+   -------------------------
+   -- Is_Atomic_Aggregate --
+   -------------------------
 
-   procedure Expand_Atomic_Aggregate (E : Entity_Id; Typ : Entity_Id) is
+   function  Is_Atomic_Aggregate
+     (E   : Entity_Id;
+      Typ : Entity_Id) return Boolean
+   is
       Loc   : constant Source_Ptr := Sloc (E);
       New_N : Node_Id;
+      Par   : Node_Id;
       Temp  : Entity_Id;
 
    begin
-      if (Nkind (Parent (E)) = N_Object_Declaration
-            or else Nkind (Parent (E)) = N_Assignment_Statement)
-        and then Comes_From_Source (Parent (E))
+      Par := Parent (E);
+
+      --  Array may be qualified, so find outer context
+
+      if Nkind (Par) = N_Qualified_Expression then
+         Par := Parent (Par);
+      end if;
+
+      if Nkind_In (Par, N_Object_Declaration, N_Assignment_Statement)
+        and then Comes_From_Source (Par)
       then
          Temp :=
            Make_Defining_Identifier (Loc,
@@ -1134,13 +1145,16 @@ package body Freeze is
              Defining_Identifier => Temp,
              Object_Definition   => New_Occurrence_Of (Typ, Loc),
              Expression          => Relocate_Node (E));
-         Insert_Before (Parent (E), New_N);
+         Insert_Before (Par, New_N);
          Analyze (New_N);
 
-         Set_Expression (Parent (E), New_Occurrence_Of (Temp, Loc));
+         Set_Expression (Par, New_Occurrence_Of (Temp, Loc));
+         return True;
 
+      else
+         return False;
       end if;
-   end Expand_Atomic_Aggregate;
+   end Is_Atomic_Aggregate;
 
    ----------------
    -- Freeze_All --
@@ -1441,6 +1455,11 @@ package body Freeze is
       --  which is the current instance type can only be applied when the type
       --  is limited.
 
+      procedure Check_Suspicious_Modulus (Utype : Entity_Id);
+      --  Give warning for modulus of 8, 16, 32, or 64 given as an explicit
+      --  integer literal without an explicit corresponding size clause. The
+      --  caller has checked that Utype is a modular integer type.
+
       function After_Last_Declaration return Boolean;
       --  If Loc is a freeze_entity that appears after the last declaration
       --  in the scope, inhibit error messages on late completion.
@@ -1454,7 +1473,7 @@ package body Freeze is
       ----------------------------
 
       function After_Last_Declaration return Boolean is
-         Spec  : constant Node_Id := Parent (Current_Scope);
+         Spec : constant Node_Id := Parent (Current_Scope);
       begin
          if Nkind (Spec) = N_Package_Specification then
             if Present (Private_Declarations (Spec)) then
@@ -1519,9 +1538,7 @@ package body Freeze is
          --  either a tagged type, or a limited record.
 
          if Is_Limited_Type (Rec_Type)
-           and then
-             (Ada_Version < Ada_05
-               or else Is_Tagged_Type (Rec_Type))
+           and then (Ada_Version < Ada_05 or else Is_Tagged_Type (Rec_Type))
          then
             return;
 
@@ -1534,6 +1551,76 @@ package body Freeze is
             Traverse (Comp_Decl);
          end if;
       end Check_Current_Instance;
+
+      ------------------------------
+      -- Check_Suspicious_Modulus --
+      ------------------------------
+
+      procedure Check_Suspicious_Modulus (Utype : Entity_Id) is
+         Decl : constant Node_Id := Declaration_Node (Underlying_Type (Utype));
+
+      begin
+         if Nkind (Decl) = N_Full_Type_Declaration then
+            declare
+               Tdef : constant Node_Id := Type_Definition (Decl);
+            begin
+               if Nkind (Tdef) = N_Modular_Type_Definition then
+                  declare
+                     Modulus : constant Node_Id :=
+                                 Original_Node (Expression (Tdef));
+                  begin
+                     if Nkind (Modulus) = N_Integer_Literal then
+                        declare
+                           Modv : constant Uint := Intval (Modulus);
+                           Sizv : constant Uint := RM_Size (Utype);
+
+                        begin
+                           --  First case, modulus and size are the same. This
+                           --  happens if you have something like mod 32, with
+                           --  an explicit size of 32, this is for sure a case
+                           --  where the warning is given, since it is seems
+                           --  very unlikely that someone would want e.g. a
+                           --  five bit type stored in 32 bits. It is much
+                           --  more likely they wanted a 32-bit type.
+
+                           if Modv = Sizv then
+                              null;
+
+                           --  Second case, the modulus is 32 or 64 and no
+                           --  size clause is present. This is a less clear
+                           --  case for giving the warning, but in the case
+                           --  of 32/64 (5-bit or 6-bit types) these seem rare
+                           --  enough that it is a likely error (and in any
+                           --  case using 2**5 or 2**6 in these cases seems
+                           --  clearer. We don't include 8 or 16 here, simply
+                           --  because in practice 3-bit and 4-bit types are
+                           --  more common and too many false positives if
+                           --  we warn in these cases.
+
+                           elsif not Has_Size_Clause (Utype)
+                             and then (Modv = Uint_32 or else Modv = Uint_64)
+                           then
+                              null;
+
+                           --  No warning needed
+
+                           else
+                              return;
+                           end if;
+
+                           --  If we fall through, give warning
+
+                           Error_Msg_Uint_1 := Modv;
+                           Error_Msg_N
+                             ("?2 '*'*^' may have been intended here",
+                              Modulus);
+                        end;
+                     end if;
+                  end;
+               end if;
+            end;
+         end if;
+      end Check_Suspicious_Modulus;
 
       ------------------------
       -- Freeze_Record_Type --
@@ -2351,15 +2438,17 @@ package body Freeze is
            and then Nkind (Parent (E)) = N_Object_Declaration
            and then Present (Expression (Parent (E)))
            and then Nkind (Expression (Parent (E))) = N_Aggregate
+           and then
+             Is_Atomic_Aggregate (Expression (Parent (E)), Etype (E))
          then
-            Expand_Atomic_Aggregate (Expression (Parent (E)), Etype (E));
+            null;
          end if;
 
          --  For a subprogram, freeze all parameter types and also the return
          --  type (RM 13.14(14)). However skip this for internal subprograms.
          --  This is also the point where any extra formal parameters are
-         --  created since we now know whether the subprogram will use
-         --  a foreign convention.
+         --  created since we now know whether the subprogram will use a
+         --  foreign convention.
 
          if Is_Subprogram (E) then
             if not Is_Internal (E) then
@@ -2385,11 +2474,9 @@ package body Freeze is
                         --  If the type of a formal is incomplete, subprogram
                         --  is being frozen prematurely. Within an instance
                         --  (but not within a wrapper package) this is an
-                        --  an artifact of our need to regard the end of an
+                        --  artifact of our need to regard the end of an
                         --  instantiation as a freeze point. Otherwise it is
                         --  a definite error.
-
-                        --  and then not Is_Wrapper_Package (Current_Scope) ???
 
                         if In_Instance then
                            Set_Is_Frozen (E, False);
@@ -3605,6 +3692,12 @@ package body Freeze is
          elsif Is_Integer_Type (E) then
             Adjust_Esize_For_Alignment (E);
 
+            if Is_Modular_Integer_Type (E)
+              and then Warn_On_Suspicious_Modulus_Value
+            then
+               Check_Suspicious_Modulus (E);
+            end if;
+
          elsif Is_Access_Type (E) then
 
             --  Check restriction for standard storage pool
@@ -4012,6 +4105,12 @@ package body Freeze is
       --  designated type is a private type without full view, the expression
       --  cannot contain an allocator, so the type is not frozen.
 
+      --  For a function, we freeze the entity when the subprogram declaration
+      --  is frozen, but a function call may appear in an initialization proc.
+      --  before the declaration is frozen. We need to generate the extra
+      --  formals, if any, to ensure that the expansion of the call includes
+      --  the proper actuals.
+
       Desig_Typ := Empty;
 
       case Nkind (N) is
@@ -4031,6 +4130,14 @@ package body Freeze is
 
             if Is_Access_Type (Etype (Prefix (N))) then
                Desig_Typ := Designated_Type (Etype (Prefix (N)));
+            end if;
+
+         when N_Identifier =>
+            if Present (Nam)
+              and then Ekind (Nam) = E_Function
+              and then Nkind (Parent (N)) = N_Function_Call
+            then
+               Create_Extra_Formals (Nam);
             end if;
 
          when others =>
@@ -4053,12 +4160,12 @@ package body Freeze is
          return;
       end if;
 
-      --  Loop for looking at the right place to insert the freeze nodes
+      --  Loop for looking at the right place to insert the freeze nodes,
       --  exiting from the loop when it is appropriate to insert the freeze
       --  node before the current node P.
 
-      --  Also checks some special exceptions to the freezing rules. These
-      --  cases result in a direct return, bypassing the freeze action.
+      --  Also checks som special exceptions to the freezing rules. These cases
+      --  result in a direct return, bypassing the freeze action.
 
       P := N;
       loop

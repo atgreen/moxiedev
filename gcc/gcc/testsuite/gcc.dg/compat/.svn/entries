@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/compat
 svn://gcc.gnu.org/svn/gcc
 
@@ -468,6 +468,40 @@ drow
 
 1402
 
+fp2-struct-init.h
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+59ca841f17677fc8a60f3e9b812cffb3
+2003-06-10T21:01:39.000000Z
+67734
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+843
+
 struct-by-value-13_y.c
 file
 
@@ -536,17 +570,17 @@ drow
 
 2585
 
-fp2-struct-init.h
+scalar-by-value-5_y.c
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-59ca841f17677fc8a60f3e9b812cffb3
-2003-06-10T21:01:39.000000Z
-67734
-janis
+9ee81f45e9ecc9c1cc1f20ef2291c412
+2006-05-24T23:19:36.287107Z
+114058
+amodra
 
 
 
@@ -568,7 +602,7 @@ janis
 
 
 
-843
+62
 
 struct-by-value-15_y.c
 file
@@ -604,17 +638,17 @@ ebotcazou
 
 832
 
-scalar-by-value-5_y.c
+struct-by-value-17_y.c
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-9ee81f45e9ecc9c1cc1f20ef2291c412
-2006-05-24T23:19:36.287107Z
-114058
-amodra
+80cfd0d379437de4282de02e6a998ced
+2008-09-09T03:17:22.762171Z
+140137
+drow
 
 
 
@@ -636,7 +670,7 @@ amodra
 
 
 
-62
+640
 
 pr38736_x.c
 file
@@ -672,14 +706,14 @@ hjl
 
 238
 
-struct-by-value-17_y.c
+struct-by-value-18a_y.c
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-80cfd0d379437de4282de02e6a998ced
+beaa6038f72719a86aee57e8340ef0a1
 2008-09-09T03:17:22.762171Z
 140137
 drow
@@ -704,7 +738,7 @@ drow
 
 
 
-640
+476
 
 struct-by-value-19_y.c
 file
@@ -740,40 +774,6 @@ ebotcazou
 
 2777
 
-struct-by-value-18a_y.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-beaa6038f72719a86aee57e8340ef0a1
-2008-09-09T03:17:22.762171Z
-140137
-drow
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-476
-
 vector-1_y.c
 file
 
@@ -807,40 +807,6 @@ hjl
 
 
 374
-
-struct-return-3_y.c
-file
-
-
-
-
-2009-04-24T17:45:08.000000Z
-f97b069f695c4dd75f321861e347c381
-2003-06-10T19:08:33.000000Z
-67724
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1670
 
 vector-1a_y.c
 file
@@ -876,6 +842,40 @@ hjl
 
 67
 
+struct-return-3_y.c
+file
+
+
+
+
+2009-04-24T17:45:08.000000Z
+f97b069f695c4dd75f321861e347c381
+2003-06-10T19:08:33.000000Z
+67724
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1670
+
 scalar-by-value-6.c
 file
 
@@ -910,40 +910,6 @@ drow
 
 284
 
-struct-by-value-13_main.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-b45e9656d38800844f112a197ad1e9d4
-2003-06-11T20:29:21.000000Z
-67796
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-285
-
 scalar-by-value-3_main.c
 file
 
@@ -977,6 +943,40 @@ janis
 
 
 288
+
+struct-by-value-13_main.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+b45e9656d38800844f112a197ad1e9d4
+2003-06-11T20:29:21.000000Z
+67796
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+285
 
 union-by-value-1_x.c
 file
@@ -2168,40 +2168,6 @@ ebotcazou
 
 255
 
-struct-by-value-10_x.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-505c2929f39eb04cb1a033934edf9a80
-2003-07-03T18:31:59.000000Z
-68898
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5320
-
 struct-by-value-4_main.c
 file
 
@@ -2235,6 +2201,40 @@ janis
 
 
 309
+
+struct-by-value-10_x.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+505c2929f39eb04cb1a033934edf9a80
+2003-07-03T18:31:59.000000Z
+68898
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5320
 
 mixed-struct-defs.h
 file
@@ -2270,40 +2270,6 @@ ebotcazou
 
 793
 
-struct-by-value-12_x.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-c9064cfe8567ca245502e5451c59d323
-2004-01-19T19:17:50.000000Z
-76170
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1220
-
 scalar-by-value-2_x.c
 file
 
@@ -2338,14 +2304,14 @@ janis
 
 2646
 
-struct-by-value-14_x.c
+struct-by-value-12_x.c
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-ece7ecad648b4e3ca87259758dda1dda
+c9064cfe8567ca245502e5451c59d323
 2004-01-19T19:17:50.000000Z
 76170
 ebotcazou
@@ -2370,7 +2336,7 @@ ebotcazou
 
 
 
-1186
+1220
 
 scalar-by-value-4_x.c
 file
@@ -2406,17 +2372,17 @@ drow
 
 2728
 
-struct-by-value-16_x.c
+struct-by-value-14_x.c
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-da67db0369951bf03918fd7d4503dd50
-2008-09-09T03:17:22.762171Z
-140137
-drow
+ece7ecad648b4e3ca87259758dda1dda
+2004-01-19T19:17:50.000000Z
+76170
+ebotcazou
 
 
 
@@ -2438,41 +2404,7 @@ drow
 
 
 
-1000
-
-scalar-by-value-6_x.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-46ec5aae9e8aed513f40e7df17082375
-2008-09-09T03:17:22.762171Z
-140137
-drow
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-146
+1186
 
 sdata-1_x.c
 file
@@ -2508,6 +2440,74 @@ rsandifo
 
 497
 
+scalar-by-value-6_x.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+46ec5aae9e8aed513f40e7df17082375
+2008-09-09T03:17:22.762171Z
+140137
+drow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+146
+
+struct-by-value-16_x.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+da67db0369951bf03918fd7d4503dd50
+2008-09-09T03:17:22.762171Z
+140137
+drow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1000
+
 vector-check.h
 file
 
@@ -2541,40 +2541,6 @@ janis
 
 
 1541
-
-struct-by-value-18_x.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-32697b25328521d7720beebfb390cf52
-2008-09-09T03:17:22.762171Z
-140137
-drow
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1182
 
 struct-return-10_main.c
 file
@@ -2610,17 +2576,17 @@ janis
 
 236
 
-pr38736_y.c
+struct-by-value-18_x.c
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-c7861cb9c33a40ea18f9ec149a743d3e
-2009-01-18T16:26:26.222354Z
-143486
-hjl
+32697b25328521d7720beebfb390cf52
+2008-09-09T03:17:22.762171Z
+140137
+drow
 
 
 
@@ -2642,41 +2608,7 @@ hjl
 
 
 
-112
-
-struct-layout-1_x.c
-file
-
-
-
-
-2009-04-24T17:45:08.000000Z
-7a2c01872720f537c35327ff79b01fa3
-2004-07-23T22:36:47.000000Z
-85098
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-158
+1182
 
 struct-return-20_main.c
 file
@@ -2712,6 +2644,74 @@ janis
 
 337
 
+struct-layout-1_x.c
+file
+
+
+
+
+2009-04-24T17:45:08.000000Z
+7a2c01872720f537c35327ff79b01fa3
+2004-07-23T22:36:47.000000Z
+85098
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+158
+
+pr38736_y.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+c7861cb9c33a40ea18f9ec149a743d3e
+2009-01-18T16:26:26.222354Z
+143486
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+112
+
 scalar-by-value-dfp_x.c
 file
 
@@ -2746,40 +2746,6 @@ bje
 
 5167
 
-scalar-return-3_main.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-2ca5f0e17c10c9db4db432a782911e02
-2003-06-11T18:21:38.000000Z
-67789
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-282
-
 vector-defs.h
 file
 
@@ -2813,6 +2779,40 @@ hjl
 
 
 3035
+
+scalar-return-3_main.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+2ca5f0e17c10c9db4db432a782911e02
+2003-06-11T18:21:38.000000Z
+67789
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+282
 
 struct-return-2_x.c
 file
@@ -2882,17 +2882,17 @@ hjl
 
 521
 
-struct-by-value-11_main.c
+vector-1b_x.c
 file
 
 
 
 
-2009-04-24T17:45:07.000000Z
-2102be8ecb282c0f364a3fc93b6eda04
-2003-06-11T20:29:21.000000Z
-67796
-janis
+2009-04-24T17:45:08.000000Z
+43176ddb299c1088aa460ce2f051d4d6
+2008-08-28T19:36:58.085515Z
+139730
+hjl
 
 
 
@@ -2914,7 +2914,7 @@ janis
 
 
 
-289
+66
 
 scalar-by-value-1_main.c
 file
@@ -2950,17 +2950,17 @@ janis
 
 235
 
-vector-1b_x.c
+struct-by-value-11_main.c
 file
 
 
 
 
-2009-04-24T17:45:08.000000Z
-43176ddb299c1088aa460ce2f051d4d6
-2008-08-28T19:36:58.085515Z
-139730
-hjl
+2009-04-24T17:45:07.000000Z
+2102be8ecb282c0f364a3fc93b6eda04
+2003-06-11T20:29:21.000000Z
+67796
+janis
 
 
 
@@ -2982,7 +2982,7 @@ hjl
 
 
 
-66
+289
 
 struct-by-value-21_main.c
 file
@@ -3086,40 +3086,6 @@ hutchinsonandy
 
 305
 
-struct-by-value-17a_main.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-c5fb0ac2460302d28fe58c72daf3dfdd
-2008-07-03T12:19:37.338160Z
-137417
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-292
-
 union-by-value-1_y.c
 file
 
@@ -3154,17 +3120,17 @@ ebotcazou
 
 2307
 
-struct-by-value-19_main.c
+struct-by-value-17a_main.c
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-7af2e80809d3780d2c9f259a195084c7
-2003-09-19T21:09:52.000000Z
-71591
-janis
+c5fb0ac2460302d28fe58c72daf3dfdd
+2008-07-03T12:19:37.338160Z
+137417
+hjl
 
 
 
@@ -3186,41 +3152,7 @@ janis
 
 
 
-518
-
-struct-by-value-18a_main.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-6d4a4f3f73e9926a5a3b11a2eb98fbd4
-2008-07-02T22:31:11.901898Z
-137396
-hutchinsonandy
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-311
+292
 
 fp-struct-test-by-value-y.h
 file
@@ -3256,17 +3188,17 @@ janis
 
 2299
 
-struct-by-value-6a_y.c
+struct-by-value-18a_main.c
 file
 
 
 
 
-2009-04-24T17:45:08.000000Z
-53e523edd14d2c62afc08802cb22b3aa
-2004-04-07T00:58:40.000000Z
-80472
-ghazi
+2009-04-24T17:45:07.000000Z
+6d4a4f3f73e9926a5a3b11a2eb98fbd4
+2008-07-02T22:31:11.901898Z
+137396
+hutchinsonandy
 
 
 
@@ -3288,7 +3220,41 @@ ghazi
 
 
 
-398
+311
+
+struct-by-value-19_main.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+7af2e80809d3780d2c9f259a195084c7
+2003-09-19T21:09:52.000000Z
+71591
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+518
 
 struct-layout-1.h
 file
@@ -3323,6 +3289,40 @@ uros
 
 
 25878
+
+struct-by-value-6a_y.c
+file
+
+
+
+
+2009-04-24T17:45:08.000000Z
+53e523edd14d2c62afc08802cb22b3aa
+2004-04-07T00:58:40.000000Z
+80472
+ghazi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+398
 
 struct-align-2_y.c
 file
@@ -3392,40 +3392,6 @@ janis
 
 297
 
-generate-random.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-db6ac9c4cab360de1e62ae24781a65aa
-2005-06-25T01:45:27.000000Z
-101316
-kcook
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-11826
-
 scalar-return-2_x.c
 file
 
@@ -3459,6 +3425,40 @@ janis
 
 
 1974
+
+generate-random.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+db6ac9c4cab360de1e62ae24781a65aa
+2005-06-25T01:45:27.000000Z
+101316
+kcook
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11826
 
 struct-return-21_y.c
 file
@@ -3494,17 +3494,17 @@ ebotcazou
 
 1597
 
-scalar-return-4_x.c
+struct-layout-1_x1.h
 file
 
 
 
 
-2009-04-24T17:45:07.000000Z
-460609bec2db27dafe2f2a7370f346e3
-2008-09-09T03:17:22.762171Z
-140137
-drow
+2009-04-24T17:45:08.000000Z
+fb88355c7eda41a4bdf439b6e6025a23
+2004-10-15T17:02:58.000000Z
+89105
+sje
 
 
 
@@ -3526,41 +3526,7 @@ drow
 
 
 
-1318
-
-small-struct-check.h
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-fc0f27be268e261a7898986b99c3ba79
-2003-06-10T19:08:33.000000Z
-67724
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1271
+2154
 
 struct-by-value-3_main.c
 file
@@ -3596,51 +3562,17 @@ janis
 
 353
 
-struct-layout-1_x1.h
-file
-
-
-
-
-2009-04-24T17:45:08.000000Z
-fb88355c7eda41a4bdf439b6e6025a23
-2004-10-15T17:02:58.000000Z
-89105
-sje
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2154
-
-struct-by-value-21_x.c
+small-struct-check.h
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-104a9e2f1328c06c43946eda39dbddcd
-2004-03-16T18:30:40.000000Z
-79538
-ebotcazou
+fc0f27be268e261a7898986b99c3ba79
+2003-06-10T19:08:33.000000Z
+67724
+janis
 
 
 
@@ -3662,7 +3594,41 @@ ebotcazou
 
 
 
-5060
+1271
+
+scalar-return-4_x.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+460609bec2db27dafe2f2a7370f346e3
+2008-09-09T03:17:22.762171Z
+140137
+drow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1318
 
 generate-random.h
 file
@@ -3698,17 +3664,17 @@ kcook
 
 1440
 
-small-struct-defs.h
+struct-by-value-21_x.c
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-ff30140d989365aec0270f03f4b181ac
-2003-05-20T22:15:45.000000Z
-67038
-janis
+104a9e2f1328c06c43946eda39dbddcd
+2004-03-16T18:30:40.000000Z
+79538
+ebotcazou
 
 
 
@@ -3730,41 +3696,7 @@ janis
 
 
 
-685
-
-struct-by-value-5b_main.c
-file
-
-
-
-
-2009-04-24T17:45:08.000000Z
-7c203f10fc2ae459f2178fdfe44c9469
-2004-04-07T00:58:40.000000Z
-80472
-ghazi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-281
+5060
 
 struct-complex-1_x.c
 file
@@ -3800,17 +3732,51 @@ hjl
 
 412
 
-struct-align-1.h
+struct-by-value-5b_main.c
+file
+
+
+
+
+2009-04-24T17:45:08.000000Z
+7c203f10fc2ae459f2178fdfe44c9469
+2004-04-07T00:58:40.000000Z
+80472
+ghazi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+281
+
+small-struct-defs.h
 file
 
 
 
 
 2009-04-24T17:45:07.000000Z
-c92a3f21fa4d29054e448117c112774c
-2004-01-19T19:17:50.000000Z
-76170
-ebotcazou
+ff30140d989365aec0270f03f4b181ac
+2003-05-20T22:15:45.000000Z
+67038
+janis
 
 
 
@@ -3832,7 +3798,7 @@ ebotcazou
 
 
 
-3040
+685
 
 struct-by-value-6b_main.c
 file
@@ -3867,6 +3833,40 @@ ghazi
 
 
 282
+
+struct-align-1.h
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+c92a3f21fa4d29054e448117c112774c
+2004-01-19T19:17:50.000000Z
+76170
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3040
 
 struct-by-value-7b_main.c
 file
@@ -4038,40 +4038,6 @@ janis
 
 290
 
-struct-by-value-20_main.c
-file
-
-
-
-
-2009-04-24T17:45:07.000000Z
-610474a2691b7f3361ae85e8b894eafd
-2003-09-19T21:09:52.000000Z
-71591
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-416
-
 vector-2a_x.c
 file
 
@@ -4105,6 +4071,40 @@ hjl
 
 
 67
+
+struct-by-value-20_main.c
+file
+
+
+
+
+2009-04-24T17:45:07.000000Z
+610474a2691b7f3361ae85e8b894eafd
+2003-09-19T21:09:52.000000Z
+71591
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+416
 
 union-return-1_x.c
 file
@@ -4208,17 +4208,17 @@ janis
 
 5205
 
-struct-by-value-18_main.c
+struct-by-value-5a_x.c
 file
 
 
 
 
-2009-04-24T17:45:07.000000Z
-697fa928208d131421c4b26a73dba195
-2003-06-11T20:29:21.000000Z
-67796
-janis
+2009-04-24T17:45:08.000000Z
+15f441b4f3abcebdf0291a662789b47e
+2004-04-07T00:58:40.000000Z
+80472
+ghazi
 
 
 
@@ -4240,7 +4240,7 @@ janis
 
 
 
-296
+554
 
 small-struct-init.h
 file
@@ -4276,17 +4276,17 @@ janis
 
 995
 
-struct-by-value-5a_x.c
+struct-by-value-18_main.c
 file
 
 
 
 
-2009-04-24T17:45:08.000000Z
-15f441b4f3abcebdf0291a662789b47e
-2004-04-07T00:58:40.000000Z
-80472
-ghazi
+2009-04-24T17:45:07.000000Z
+697fa928208d131421c4b26a73dba195
+2003-06-11T20:29:21.000000Z
+67796
+janis
 
 
 
@@ -4308,7 +4308,7 @@ ghazi
 
 
 
-554
+296
 
 struct-by-value-9_x.c
 file

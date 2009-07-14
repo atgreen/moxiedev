@@ -23,66 +23,21 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  Perform various checks on a project and find all its source files
+--  Find source dirs and source files for a project
 
 private package Prj.Nmsc is
 
-   type Processing_Data is private;
-   --  Temporary data which is needed while parsing a project. It does not need
-   --  to be kept in memory once a project has been fully loaded, but is
-   --  necessary while performing consistency checks (duplicate sources,...)
-   --  This data must be initialized before processing any project, and the
-   --  same data is used for processing all projects in the tree.
+   procedure Process_Naming_Scheme
+     (Tree         : Project_Tree_Ref;
+      Root_Project : Project_Id;
+      Flags        : Processing_Flags);
+   --  Perform consistency and semantic checks on all the projects in the tree.
+   --  This procedure interprets the various case statements in the project
+   --  based on the current environment variables (the "scenario"). After
+   --  checking the validity of the naming scheme, it searches for all the
+   --  source files of the project. The result of this procedure is a filled-in
+   --  data structure for Project_Id which contains all the information about
+   --  the project. This information is only valid while the scenario variables
+   --  are preserved.
 
-   procedure Initialize (Proc_Data : in out Processing_Data);
-   --  Initialize Proc_Data
-
-   procedure Free (Proc_Data : in out Processing_Data);
-   --  Free the memory occupied by Proc_Data
-
-   procedure Check
-     (Project                   : Project_Id;
-      In_Tree                   : Project_Tree_Ref;
-      Report_Error              : Put_Line_Access;
-      When_No_Sources           : Error_Warning;
-      Current_Dir               : String;
-      Proc_Data                 : in out Processing_Data;
-      Is_Config_File            : Boolean;
-      Compiler_Driver_Mandatory : Boolean;
-      Allow_Duplicate_Basenames : Boolean);
-   --  Perform consistency and semantic checks on a project, starting from the
-   --  project tree parsed from the .gpr file. This procedure interprets the
-   --  various case statements in the project based on the current environment
-   --  variables (the "scenario"). After checking the validity of the naming
-   --  scheme, it searches for all the source files of the project. The result
-   --  of this procedure is a filled-in data structure for Project_Id which
-   --  contains all the information about the project. This information is only
-   --  valid while the scenario variables are preserved. If the current mode
-   --  is Ada_Only, this procedure will only search Ada sources, but in multi-
-   --  language mode it will look for sources for all supported languages.
-   --
-   --  If Report_Error is null, use the standard error reporting mechanism
-   --  (Errout). Otherwise, report errors using Report_Error.
-   --
-   --  Current_Dir is for optimization purposes only, avoiding system calls to
-   --  query it.
-   --
-   --  When_No_Sources indicates what should be done when no sources of a
-   --  language are found in a project where this language is declared.
-   --
-   --  Is_Config_File should be True if Project is config file (.cgpr)
-   --
-   --  If Compiler_Driver_Mandatory is true, then a Compiler.Driver attribute
-   --  for each language must be defined, or we will not look for its source
-   --  files.
-   --
-   --  If Allow_Duplicate_Basenames, then files with the same base names are
-   --  authorized within a project for source-based languages (never for unit
-   --  based languages)
-
-private
-   type Processing_Data is record
-      Units : Files_Htable.Instance;
-      --  Mapping from file base name to the project containing the file
-   end record;
 end Prj.Nmsc;

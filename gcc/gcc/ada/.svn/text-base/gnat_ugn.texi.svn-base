@@ -3278,13 +3278,13 @@ package Pkg_Root is
   function Get_Value (Obj : Root) return int;
   pragma Import (CPP, Get_Value);
 
-  function Constructor return Root'Class;
+  function Constructor return Root;
   pragma Cpp_Constructor (Constructor, "_ZN4RootC1Ev");
 
-  function Constructor (v : Integer) return Root'Class;
+  function Constructor (v : Integer) return Root;
   pragma Cpp_Constructor (Constructor, "_ZN4RootC1Ei");
 
-  function Constructor (v, w : Integer) return Root'Class;
+  function Constructor (v, w : Integer) return Root;
   pragma Cpp_Constructor (Constructor, "_ZN4RootC1Eii");
 end Pkg_Root;
 @end smallexample
@@ -3527,7 +3527,7 @@ package Animals is
   procedure Set_Owner (A : in out Dog; Name : Chars_Ptr);
   pragma Import (C_Plus_Plus, Set_Owner);
 
-  function New_Dog return Dog'Class;
+  function New_Dog return Dog;
   pragma CPP_Constructor (New_Dog);
   pragma Import (CPP, New_Dog, "_ZN3DogC2Ev");
 end Animals;
@@ -4089,6 +4089,14 @@ Assume no invalid (bad) values except for 'Valid attribute use.
 @item -gnatc
 @cindex @option{-gnatc} (@command{gcc})
 Check syntax and semantics only (no code generation attempted).
+
+@item -gnatC
+@cindex @option{-gnatC} (@command{gcc})
+Generate CodePeer information (no code generation attempted).
+This switch will generate an intermediate representation suitable for
+use by CodePeer (@file{.scil} files). This switch is not compatible with
+code generation (it will, among other things, disable some switches such
+as -gnatn, and enable others such as -gnata).
 
 @item -gnatd
 @cindex @option{-gnatd} (@command{gcc})
@@ -4784,8 +4792,6 @@ some error messages.  Some examples are:
 
 @itemize @bullet
 @item
-Full details on entities not available in high integrity mode
-@item
 Details on possibly non-portable unchecked conversion
 @item
 List possible interpretations for ambiguous calls
@@ -5346,6 +5352,20 @@ The default is that these warnings are not given.
 @cindex @option{-gnatwM} (@command{gcc})
 This switch disables warnings for variables that are assigned or
 initialized, but never read.
+
+@item -gnatw.m
+@emph{Activate warnings on suspicious modulus values.}
+@cindex @option{-gnatw.m} (@command{gcc})
+This switch activates warnings for modulus values that seem suspicious.
+The cases caught are where the size is the same as the modulus (e.g.
+a modulus of 7 with a size of 7 bits), and modulus values of 32 or 64
+with no size clause. The guess in both cases is that 2**x was intended
+rather than x. The default is that these warnings are given.
+
+@item -gnatw.M
+@emph{Disable warnings on suspicious modulus values.}
+@cindex @option{-gnatw.M} (@command{gcc})
+This switch disables warnings for suspicious modulus values.
 
 @item -gnatwn
 @emph{Set normal warnings mode.}
@@ -6506,8 +6526,9 @@ following @command{gcc} switches refine this default behavior.
 @cindex Suppressing checks
 @cindex Checks, suppressing
 @findex Suppress
-Suppress all run-time checks as though @code{pragma Suppress (All_checks)}
-had been present in the source. Validity checks are also suppressed (in
+This switch causes the unit to be compiled
+as though @code{pragma Suppress (All_checks)}
+had been present in the source. Validity checks are also eliminated (in
 other words @option{-gnatp} also implies @option{-gnatVn}.
 Use this switch to improve the performance
 of the code at the expense of safety in the presence of invalid data or
@@ -6519,7 +6540,9 @@ checking code is zero or near-zero, the compiler will generate it even
 if checks are suppressed. In particular, if the compiler can prove
 that a certain check will necessarily fail, it will generate code to
 do an unconditional ``raise'', even if checks are suppressed. The
-compiler warns in this case.
+compiler warns in this case. Another case in which checks may not be
+eliminated is when they are embedded in certain run time routines such
+as math library routines.
 
 Of course, run-time checks are omitted whenever the compiler can prove
 that they will not fail, whether or not checks are suppressed.
@@ -6996,8 +7019,8 @@ This not normally required, but is used by separate analysis tools.
 Typically
 these tools do the necessary compilations automatically, so you should
 not have to specify this switch in normal operation.
-Note that the combination of switches @option{-gnatct} generates a tree
-in the form required by ASIS applications.
+Note that the combination of switches @option{-gnatct}
+generates a tree in the form required by ASIS applications.
 
 @item -gnatu
 @cindex @option{-gnatu} (@command{gcc})
@@ -12234,6 +12257,7 @@ is equivalent to the @command{gnatmake} invocation using the project file
 @node Importing Other Projects
 @subsection Importing Other Projects
 @cindex @code{ADA_PROJECT_PATH}
+@cindex @code{GPR_PROJECT_PATH}
 
 @noindent
 A compilation unit in a source file in one project may depend on compilation
@@ -12320,15 +12344,17 @@ if either
 The imported project file is in the same directory as the importing project
 file, or
 @item
-You have defined ^an environment variable^a logical name^
+You have defined one or two ^environment variables^logical names^
 that includes the directory containing
-the needed project file. The syntax of @code{ADA_PROJECT_PATH} is the same as
+the needed project file. The syntax of @code{GPR_PROJECT_PATH} and
+@code{ADA_PROJECT_PATH} is the same as
 the syntax of @code{ADA_INCLUDE_PATH} and @code{ADA_OBJECTS_PATH}: a list of
 directory names separated by colons (semicolons on Windows).
 @end itemize
 
 @noindent
-Thus, if we define @code{ADA_PROJECT_PATH} to include @file{^/gui^[GUI]^} and
+Thus, if we define @code{ADA_PROJECT_PATH} or @code{GPR_PROJECT_PATH}
+to include @file{^/gui^[GUI]^} and
 @file{^/comm^[COMM]^}, then our project file @file{app_proj.gpr} can be written
 as follows:
 
@@ -13307,7 +13333,7 @@ file. If the order of the source directories is not known statically, it is
 an error to have several files with the same source file name.
 
 Projects can be specified to have no Ada source
-files: the value of (@code{Source_Dirs} or @code{Source_Files} may be an empty
+files: the value of @code{Source_Dirs} or @code{Source_Files} may be an empty
 list, or the @code{"Ada"} may be absent from @code{Languages}:
 
 @smallexample @c projectfile
@@ -13330,6 +13356,7 @@ define a package @code{Naming} (@pxref{Naming Schemes}).
 @node  Importing Projects
 @section Importing Projects
 @cindex @code{ADA_PROJECT_PATH}
+@cindex @code{GPR_PROJECT_PATH}
 
 @noindent
 An immediate source of a project P may depend on source files that
@@ -13370,7 +13397,8 @@ files giving access to standard support libraries.
 
 @item
 In between, all the directories referenced in the
-^environment variable^logical name^ @env{ADA_PROJECT_PATH} if it exists.
+^environment variables^logical names^ @env{GPR_PROJECT_PATH}
+and @env{ADA_PROJECT_PATH} if they exist, and in that order.
 @end itemize
 
 @noindent
@@ -19034,6 +19062,7 @@ be accessed by the directive @option{-l@var{xxx}} at link time.
 @node Installing a library
 @subsection Installing a library
 @cindex @code{ADA_PROJECT_PATH}
+@cindex @code{GPR_PROJECT_PATH}
 
 @noindent
 If you use project files, library installation is part of the library build
@@ -19073,7 +19102,7 @@ responsibility of the library provider to install the necessary sources, ALI
 files and libraries in the directories mentioned in the project file. For
 convenience, the user's library project file should be installed in a location
 that will be searched automatically by the GNAT
-builder. These are the directories referenced in the @env{ADA_PROJECT_PATH}
+builder. These are the directories referenced in the @env{GPR_PROJECT_PATH}
 environment variable (@pxref{Importing Projects}), and also the default GNAT
 library location that can be queried with @command{gnatls -v} and is usually of
 the form $gnat_install_root/lib/gnat.
@@ -20685,6 +20714,11 @@ a generic instantiation a full source location is a chain from the location
 of this construct in the generic unit to the place where this unit is
 instantiated.
 
+@cindex @option{^-log^/LOG^} (@command{gnatcheck})
+@item ^-log^/LOG^
+Duplicate all the output sent to Stderr into a log file. The log file is
+named @var{gnatcheck.log} and is located in the current directory.
+
 @cindex @option{^-m^/DIAGNOSTIC_LIMIT^} (@command{gnatcheck})
 @item ^-m@i{nnn}^/DIAGNOSTIC_LIMIT=@i{nnn}^
 Maximum number of diagnoses to be sent to Stdout, @i{nnn} from o@dots{}1000,
@@ -20714,11 +20748,14 @@ Include the section containing diagnoses ordered by rules in the report file
 Include the section containing diagnoses ordered by files and then by rules
 in the report file
 
+@cindex @option{^-t^/TIME^} (@command{gnatcheck})
+@item ^-t^/TIME^
+Print out execution time.
+
 @cindex @option{^-v^/VERBOSE^} (@command{gnatcheck})
 @item ^-v^/VERBOSE^
 Verbose mode; @command{gnatcheck} generates version information and then
 a trace of sources being processed.
-
 
 @cindex @option{^-o ^/OUTPUT^} (@command{gnatcheck})
 @item ^-o ^/OUTPUT=^@var{report_file}
@@ -20814,7 +20851,10 @@ which enables all the standard style checks that corresponds to @option{-gnatyy}
 GNAT style check option, or a string that has exactly the same
 structure and semantics as the @code{string_LITERAL} parameter of GNAT pragma
 @code{Style_Checks} (for further information about this pragma,
-@pxref{Pragma Style_Checks,,, gnat_rm, GNAT Reference Manual}).
+@pxref{Pragma Style_Checks,,, gnat_rm, GNAT Reference Manual}). For example,
+@code{+RStyle_Checks:O} rule option activates and adds to @command{gnatcheck}
+output the compiler style check that corresponds to
+@code{-gnatyO} style check option.
 
 @item Warnings
 To record compiler warnings (@pxref{Warning Message Control}), use the rule
@@ -21513,6 +21553,9 @@ The following declarations are checked:
 type declarations
 
 @item
+subtype declarations
+
+@item
 constant declarations (but not number declarations)
 
 @item
@@ -21583,6 +21626,15 @@ should have the @emph{suffix1} suffix except for the case when
 the designated type is also an access type, in this case the
 type name should have the @emph{suffix1 & suffix2} suffix.
 
+@item Class_Access_Suffix=@emph{string}
+Specifies the suffix for the name of an access type that points to some class-wide
+type. If this parameter is set, it overrides for such access
+types the suffix set by the @code{Type_Suffix} or @code{Access_Suffix}
+parameter.
+
+@item Class_Subtype_Suffix=@emph{string}
+Specifies the suffix for the name of a subtype that denotes a class-wide type.
+
 @item Constant_Suffix=@emph{string}
 Specifies the suffix for a constant name.
 
@@ -21612,6 +21664,19 @@ This disables checks for access type names but
 does not disable any other checks for this rule.
 If @code{Type_Suffix} is set, access type names are
 checked as ordinary type names.
+
+@item Class_Access_Suffix
+Removes the suffix specified for access types pointing to class-wide
+type. This disables specific checks for names of access types pointing to
+class-wide types but does not disable any other checks for this rule.
+If @code{Type_Suffix} is set, access type names are
+checked as ordinary type names. If @code{Access_Suffix} is set, these
+access types are checked as any other access type name.
+
+@item Class_Subtype_Suffix=@emph{string}
+Removes the suffix specified for subtype names.
+This disables checks for subtype names but
+does not disable any other checks for this rule.
 
 @item Constant_Suffix
 Removes the suffix specified for constants. This
@@ -22794,7 +22859,7 @@ The corresponding Ada code is generated:
       (this : access Dog; Name : Interfaces.C.Strings.chars_ptr);
     pragma Import (CPP, Set_Owner, "_ZN3Dog9Set_OwnerEPc");
 
-    function New_Dog return Dog'Class;
+    function New_Dog return Dog;
     pragma CPP_Constructor (New_Dog);
     pragma Import (CPP, New_Dog, "_ZN3DogC1Ev");
   end;

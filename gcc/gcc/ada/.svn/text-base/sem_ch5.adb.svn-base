@@ -549,7 +549,6 @@ package body Sem_Ch5 is
            or else (Is_Dynamically_Tagged (Rhs)
                      and then not Is_Access_Type (T1)))
         and then not Is_Class_Wide_Type (T1)
-        and then not Is_CPP_Constructor_Call (Rhs)
       then
          Error_Msg_N ("dynamically tagged expression not allowed!", Rhs);
 
@@ -1833,6 +1832,11 @@ package body Sem_Ch5 is
 
                   Set_Ekind          (Id, E_Loop_Parameter);
                   Set_Etype          (Id, Etype (DS));
+
+                  --  Treat a range as an implicit reference to the type, to
+                  --  inhibit spurious warnings.
+
+                  Generate_Reference (Base_Type (Etype (DS)), N, ' ');
                   Set_Is_Known_Valid (Id, True);
 
                   --  The loop is not a declarative part, so the only entity

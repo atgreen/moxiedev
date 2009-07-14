@@ -1237,11 +1237,38 @@ package body Sem_Ch4 is
       Condition : constant Node_Id := First (Expressions (N));
       Then_Expr : constant Node_Id := Next (Condition);
       Else_Expr : constant Node_Id := Next (Then_Expr);
+
    begin
+      if Comes_From_Source (N) then
+         Check_Compiler_Unit (N);
+      end if;
+
       Analyze_Expression (Condition);
       Analyze_Expression (Then_Expr);
-      Analyze_Expression (Else_Expr);
-      Set_Etype (N, Etype (Then_Expr));
+
+      if Present (Else_Expr) then
+         Analyze_Expression (Else_Expr);
+      end if;
+
+      if not  Is_Overloaded (Then_Expr) then
+         Set_Etype (N, Etype (Then_Expr));
+      else
+         declare
+            I  : Interp_Index;
+            It : Interp;
+
+         begin
+            Set_Etype (N, Any_Type);
+            Get_First_Interp (Then_Expr, I, It);
+            while Present (It.Nam) loop
+               if Has_Compatible_Type (Else_Expr, It.Typ) then
+                  Add_One_Interp (N, It.Typ, It.Typ);
+               end if;
+
+               Get_Next_Interp (I, It);
+            end loop;
+         end;
+      end if;
    end Analyze_Conditional_Expression;
 
    -------------------------
@@ -2020,13 +2047,107 @@ package body Sem_Ch4 is
 
             Set_Etype (L, T_F);
          end if;
-
       end Try_One_Interp;
+
+      procedure Analyze_Set_Membership;
+      --  If a set of alternatives is present, analyze each and find the
+      --  common type to which they must all resolve.
+
+      ----------------------------
+      -- Analyze_Set_Membership --
+      ----------------------------
+
+      procedure Analyze_Set_Membership is
+         Alt               : Node_Id;
+         Index             : Interp_Index;
+         It                : Interp;
+         Candidate_Interps : Node_Id;
+         Common_Type       : Entity_Id := Empty;
+
+      begin
+         Analyze (L);
+         Candidate_Interps := L;
+
+         if not Is_Overloaded (L) then
+            Common_Type := Etype (L);
+
+            Alt := First (Alternatives (N));
+            while Present (Alt) loop
+               Analyze (Alt);
+
+               if not Has_Compatible_Type (Alt, Common_Type) then
+                  Wrong_Type (Alt, Common_Type);
+               end if;
+
+               Next (Alt);
+            end loop;
+
+         else
+            Alt := First (Alternatives (N));
+            while Present (Alt) loop
+               Analyze (Alt);
+               if not Is_Overloaded (Alt) then
+                  Common_Type := Etype (Alt);
+
+               else
+                  Get_First_Interp (Alt, Index, It);
+                  while Present (It.Typ) loop
+                     if not
+                       Has_Compatible_Type (Candidate_Interps, It.Typ)
+                     then
+                        Remove_Interp (Index);
+                     end if;
+
+                     Get_Next_Interp (Index, It);
+                  end loop;
+
+                  Get_First_Interp (Alt, Index, It);
+
+                  if No (It.Typ) then
+                     Error_Msg_N ("alternative has no legal type", Alt);
+                     return;
+                  end if;
+
+                  --  If alternative is not overloaded, we have a unique type
+                  --  for all of them.
+
+                  Set_Etype (Alt, It.Typ);
+                  Get_Next_Interp (Index, It);
+
+                  if No (It.Typ) then
+                     Set_Is_Overloaded (Alt, False);
+                     Common_Type := Etype (Alt);
+                  end if;
+
+                  Candidate_Interps := Alt;
+               end if;
+
+               Next (Alt);
+            end loop;
+         end if;
+
+         Set_Etype (N, Standard_Boolean);
+
+         if Present (Common_Type) then
+            Set_Etype (L, Common_Type);
+            Set_Is_Overloaded (L, False);
+
+         else
+            Error_Msg_N ("cannot resolve membership operation", N);
+         end if;
+      end Analyze_Set_Membership;
 
    --  Start of processing for Analyze_Membership_Op
 
    begin
       Analyze_Expression (L);
+
+      if No (R)
+        and then Extensions_Allowed
+      then
+         Analyze_Set_Membership;
+         return;
+      end if;
 
       if Nkind (R) = N_Range
         or else (Nkind (R) = N_Attribute_Reference
@@ -2063,6 +2184,7 @@ package body Sem_Ch4 is
       Set_Etype (N, Standard_Boolean);
 
       if Comes_From_Source (N)
+        and then Present (Right_Opnd (N))
         and then Is_CPP_Class (Etype (Etype (Right_Opnd (N))))
       then
          Error_Msg_N ("membership test not applicable to cpp-class types", N);

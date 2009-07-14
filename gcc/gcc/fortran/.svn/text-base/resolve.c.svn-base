@@ -1236,10 +1236,17 @@ resolve_actual_arglist (gfc_actual_arglist *arg, procedure_type ptype,
 	  continue;
 	}
 
-      if (is_proc_ptr_comp (e, &comp))
+      if (gfc_is_proc_ptr_comp (e, &comp))
 	{
 	  e->ts = comp->ts;
-	  e->expr_type = EXPR_VARIABLE;
+	  if (e->value.compcall.actual == NULL)
+	    e->expr_type = EXPR_VARIABLE;
+	  else
+	    {
+	      if (comp->as != NULL)
+		e->rank = comp->as->rank;
+	      e->expr_type = EXPR_FUNCTION;
+	    }
 	  goto argument_list;
 	}
 
@@ -1828,7 +1835,10 @@ resolve_specific_f0 (gfc_symbol *sym, gfc_expr *expr)
 found:
   gfc_procedure_use (sym, &expr->value.function.actual, &expr->where);
 
-  expr->ts = sym->ts;
+  if (sym->result)
+    expr->ts = sym->result->ts;
+  else
+    expr->ts = sym->ts;
   expr->value.function.name = sym->name;
   expr->value.function.esym = sym;
   if (sym->as != NULL)
@@ -4399,12 +4409,13 @@ check_host_association (gfc_expr *e)
 	      gfc_free (e->shape);
 	    }
 
-	  /* Give the symbol a symtree in the right place!  */
-	  gfc_get_sym_tree (sym->name, gfc_current_ns, &st, false);
-	  st->n.sym = sym;
+	  /* Give the expression the right symtree!  */
+	  gfc_find_sym_tree (e->symtree->name, NULL, 1, &st);
+	  gcc_assert (st != NULL);
 
-	  if (old_sym->attr.flavor == FL_PROCEDURE)
-	    {
+	  if (old_sym->attr.flavor == FL_PROCEDURE
+		|| e->expr_type == EXPR_FUNCTION)
+  	    {
 	      /* Original was function so point to the new symbol, since
 		 the actual argument list is already attached to the
 		 expression. */
@@ -4815,8 +4826,8 @@ resolve_compcall (gfc_expr* e)
 
   e->value.function.actual = newactual;
   e->value.function.name = e->value.compcall.name;
+  e->value.function.esym = target->n.sym;
   e->value.function.isym = NULL;
-  e->value.function.esym = NULL;
   e->symtree = target;
   e->ts = target->n.sym->ts;
   e->expr_type = EXPR_FUNCTION;
@@ -4831,7 +4842,7 @@ static gfc_try
 resolve_ppc_call (gfc_code* c)
 {
   gfc_component *comp;
-  gcc_assert (is_proc_ptr_comp (c->expr1, &comp));
+  gcc_assert (gfc_is_proc_ptr_comp (c->expr1, &comp));
 
   c->resolved_sym = c->expr1->symtree->n.sym;
   c->expr1->expr_type = EXPR_VARIABLE;
@@ -4859,7 +4870,7 @@ static gfc_try
 resolve_expr_ppc (gfc_expr* e)
 {
   gfc_component *comp;
-  gcc_assert (is_proc_ptr_comp (e, &comp));
+  gcc_assert (gfc_is_proc_ptr_comp (e, &comp));
 
   /* Convert to EXPR_FUNCTION.  */
   e->expr_type = EXPR_FUNCTION;
@@ -8989,6 +9000,9 @@ ensure_not_abstract (gfc_symbol* sub, gfc_symbol* ancestor)
 }
 
 
+static void resolve_symbol (gfc_symbol *sym);
+
+
 /* Resolve the components of a derived type.  */
 
 static gfc_try
@@ -9027,36 +9041,47 @@ resolve_fl_derived (gfc_symbol *sym)
 	    {
 	      gfc_symbol *ifc = c->ts.interface;
 
+	      if (ifc->formal && !ifc->formal_ns)
+		resolve_symbol (ifc);
+
 	      if (ifc->attr.intrinsic)
 		resolve_intrinsic (ifc, &ifc->declared_at);
 
 	      if (ifc->result)
-		c->ts = ifc->result->ts;
-	      else   
-		c->ts = ifc->ts;
+		{
+		  c->ts = ifc->result->ts;
+		  c->attr.allocatable = ifc->result->attr.allocatable;
+		  c->attr.pointer = ifc->result->attr.pointer;
+		  c->attr.dimension = ifc->result->attr.dimension;
+		  c->as = gfc_copy_array_spec (ifc->result->as);
+		}
+	      else
+		{   
+		  c->ts = ifc->ts;
+		  c->attr.allocatable = ifc->attr.allocatable;
+		  c->attr.pointer = ifc->attr.pointer;
+		  c->attr.dimension = ifc->attr.dimension;
+		  c->as = gfc_copy_array_spec (ifc->as);
+		}
 	      c->ts.interface = ifc;
 	      c->attr.function = ifc->attr.function;
 	      c->attr.subroutine = ifc->attr.subroutine;
 	      gfc_copy_formal_args_ppc (c, ifc);
 
-	      c->attr.allocatable = ifc->attr.allocatable;
-	      c->attr.pointer = ifc->attr.pointer;
 	      c->attr.pure = ifc->attr.pure;
 	      c->attr.elemental = ifc->attr.elemental;
-	      c->attr.dimension = ifc->attr.dimension;
 	      c->attr.recursive = ifc->attr.recursive;
 	      c->attr.always_explicit = ifc->attr.always_explicit;
-	      /* Copy array spec.  */
-	      c->as = gfc_copy_array_spec (ifc->as);
-	      /* TODO: if (c->as)
+	      /* Replace symbols in array spec.  */
+	      if (c->as)
 		{
 		  int i;
 		  for (i = 0; i < c->as->rank; i++)
 		    {
-		      gfc_expr_replace_symbols (c->as->lower[i], c);
-		      gfc_expr_replace_symbols (c->as->upper[i], c);
+		      gfc_expr_replace_comp (c->as->lower[i], c);
+		      gfc_expr_replace_comp (c->as->upper[i], c);
 		    }
-	        }*/
+	        }
 	      /* Copy char length.  */
 	      if (ifc->ts.cl)
 		{
@@ -9819,6 +9844,20 @@ resolve_symbol (gfc_symbol *sym)
   /* Resolve formal namespaces.  */
   if (sym->formal_ns && sym->formal_ns != gfc_current_ns)
     gfc_resolve (sym->formal_ns);
+
+  /* Make sure the formal namespace is present.  */
+  if (sym->formal && !sym->formal_ns)
+    {
+      gfc_formal_arglist *formal = sym->formal;
+      while (formal && !formal->sym)
+	formal = formal->next;
+
+      if (formal)
+	{
+	  sym->formal_ns = formal->sym->ns;
+	  sym->formal_ns->refs++;
+	}
+    }
 
   /* Check threadprivate restrictions.  */
   if (sym->attr.threadprivate && !sym->attr.save && !sym->ns->save_all

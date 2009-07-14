@@ -2637,7 +2637,7 @@ package body Sem_Ch6 is
                Make_Handled_Sequence_Of_Statements (Loc,
                  Statements => New_List (Make_Null_Statement (Loc))));
 
-         --  Create new entities for body and formals.
+         --  Create new entities for body and formals
 
          Set_Defining_Unit_Name (Specification (Null_Body),
            Make_Defining_Identifier (Loc, Chars (Defining_Entity (N))));
@@ -5496,16 +5496,8 @@ package body Sem_Ch6 is
              (No (P_Formal)
                or else Present (Extra_Accessibility (P_Formal)))
          then
-            --  Temporary kludge: for now we avoid creating the extra formal
-            --  for access parameters of protected operations because of
-            --  problem with the case of internal protected calls. ???
-
-            if Nkind (Parent (Parent (Parent (E)))) /= N_Protected_Definition
-              and then Nkind (Parent (Parent (Parent (E)))) /= N_Protected_Body
-            then
-               Set_Extra_Accessibility
-                 (Formal, Add_Extra_Formal (Formal, Standard_Natural, E, "F"));
-            end if;
+            Set_Extra_Accessibility
+              (Formal, Add_Extra_Formal (Formal, Standard_Natural, E, "F"));
          end if;
 
          --  This label is required when skipping extra formal generation for
@@ -6083,7 +6075,7 @@ package body Sem_Ch6 is
                    and then FCE (Left_Opnd  (E1), Left_Opnd  (E2))
                    and then FCE (Right_Opnd (E1), Right_Opnd (E2));
 
-            when N_And_Then | N_Or_Else | N_Membership_Test =>
+            when N_Short_Circuit | N_Membership_Test =>
                return
                  FCE (Left_Opnd  (E1), Left_Opnd  (E2))
                    and then
@@ -7183,6 +7175,7 @@ package body Sem_Ch6 is
                  or else not Is_Overloadable (Subp)
                  or else not Is_Primitive (Subp)
                  or else not Is_Dispatching_Operation (Subp)
+                 or else not Present (Find_Dispatching_Type (Subp))
                  or else not Is_Interface (Find_Dispatching_Type (Subp))
                then
                   null;

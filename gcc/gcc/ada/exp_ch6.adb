@@ -1146,7 +1146,7 @@ package body Exp_Ch6 is
             --  resulting variable is a temporary which does not designate
             --  the proper out-parameter, which may not be addressable. In
             --  that case, generate an assignment to the original expression
-            --  (before expansion of the  packed reference) so that the proper
+            --  (before expansion of the packed reference) so that the proper
             --  expansion of assignment to a packed component can take place.
 
             declare
@@ -1589,6 +1589,30 @@ package body Exp_Ch6 is
               and then Has_Volatile_Components (Entity (Prefix (Actual)))
             then
                Add_Call_By_Copy_Code;
+
+            --  Add call-by-copy code for the case of scalar out parameters
+            --  when it is not known at compile time that the subtype of the
+            --  formal is a subrange of the subtype of the actual (or vice
+            --  versa for in out parameters), in order to get range checks
+            --  on such actuals. (Maybe this case should be handled earlier
+            --  in the if statement???)
+
+            elsif Is_Scalar_Type (E_Formal)
+              and then
+                (not In_Subrange_Of (E_Formal, Etype (Actual))
+                  or else
+                    (Ekind (Formal) = E_In_Out_Parameter
+                      and then not In_Subrange_Of (Etype (Actual), E_Formal)))
+            then
+               --  Perhaps the setting back to False should be done within
+               --  Add_Call_By_Copy_Code, since it could get set on other
+               --  cases occurring above???
+
+               if Do_Range_Check (Actual) then
+                  Set_Do_Range_Check (Actual, False);
+               end if;
+
+               Add_Call_By_Copy_Code;
             end if;
 
          --  Processing for IN parameters
@@ -2020,21 +2044,24 @@ package body Exp_Ch6 is
       --  formals as we process the regular formals and collect the
       --  corresponding actuals in Extra_Actuals.
 
-      --  We also generate any required range checks for actuals as we go
-      --  through the loop, since this is a convenient place to do this.
+      --  We also generate any required range checks for actuals for in formals
+      --  as we go through the loop, since this is a convenient place to do it.
+      --  (Though it seems that this would be better done in Expand_Actuals???)
 
       Formal      := First_Formal (Subp);
       Actual      := First_Actual (N);
       Param_Count := 1;
       while Present (Formal) loop
 
-         --  Generate range check if required (not activated yet ???)
+         --  Generate range check if required
 
---         if Do_Range_Check (Actual) then
---            Set_Do_Range_Check (Actual, False);
---            Generate_Range_Check
---              (Actual, Etype (Formal), CE_Range_Check_Failed);
---         end if;
+         if Do_Range_Check (Actual)
+           and then Ekind (Formal) = E_In_Parameter
+         then
+            Set_Do_Range_Check (Actual, False);
+            Generate_Range_Check
+              (Actual, Etype (Formal), CE_Range_Check_Failed);
+         end if;
 
          --  Prepare to examine current entry
 
@@ -2711,6 +2738,15 @@ package body Exp_Ch6 is
                      Convert (Actual, Parent_Typ);
                      Enable_Range_Check (Actual);
 
+                     --  If the actual has been marked as requiring a range
+                     --  check, then generate it here.
+
+                     if Do_Range_Check (Actual) then
+                        Set_Do_Range_Check (Actual, False);
+                        Generate_Range_Check
+                          (Actual, Etype (Formal), CE_Range_Check_Failed);
+                     end if;
+
                   --  For access types, the parent formal type and actual type
                   --  differ.
 
@@ -3200,6 +3236,7 @@ package body Exp_Ch6 is
                        (Passoc, Next_Named_Actual (Parent (Temp)));
                   end loop;
                end;
+
             end if;
          end;
       end if;
@@ -4616,13 +4653,21 @@ package body Exp_Ch6 is
 
       end if;
 
-      Analyze (N);
-
       --  If it is a function call it can appear in elaboration code and
       --  the called entity must be frozen here.
 
       if Ekind (Subp) = E_Function then
          Freeze_Expression (Name (N));
+      end if;
+
+      --  Analyze and resolve the new call. The actuals have already been
+      --  resolved, but expansion of a function call will add extra actuals
+      --  if needed. Analysis of a procedure call already includes resolution.
+
+      Analyze (N);
+
+      if Ekind (Subp) = E_Function then
+         Resolve (N, Etype (Subp));
       end if;
    end Expand_Protected_Subprogram_Call;
 

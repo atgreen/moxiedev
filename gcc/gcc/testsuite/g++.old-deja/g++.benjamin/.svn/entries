@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.benjamin
 svn://gcc.gnu.org/svn/gcc
 
@@ -706,40 +706,6 @@ mmitchel
 
 917
 
-friend01.C
-file
-
-
-
-
-2009-04-24T17:44:25.000000Z
-4f0cb9084aea0b4b4780571fe3c08caa
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-408
-
 warn01.C
 file
 
@@ -774,14 +740,14 @@ mmitchel
 
 1706
 
-friend02.C
+friend01.C
 file
 
 
 
 
 2009-04-24T17:44:25.000000Z
-dec5ca9e16504f6b98460424ce0ca6dd
+4f0cb9084aea0b4b4780571fe3c08caa
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -806,7 +772,7 @@ mmitchel
 
 
 
-360
+408
 
 warn02.C
 file
@@ -841,6 +807,40 @@ nathan
 
 
 830
+
+friend02.C
+file
+
+
+
+
+2009-04-24T17:44:25.000000Z
+dec5ca9e16504f6b98460424ce0ca6dd
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+360
 
 warn03.C
 file
@@ -978,40 +978,6 @@ mmitchel
 
 180
 
-18208.C
-file
-
-
-
-
-2009-04-24T17:44:25.000000Z
-6c830e97620949de8d4c03bf0a532015
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-396
-
 14664-1.C
 file
 
@@ -1045,6 +1011,40 @@ mmitchel
 
 
 281
+
+18208.C
+file
+
+
+
+
+2009-04-24T17:44:25.000000Z
+6c830e97620949de8d4c03bf0a532015
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+396
 
 17930.C
 file

@@ -1,15 +1,15 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-01T21:34:58.668321Z
-149154
-nemet
+2009-07-10T22:49:52.357301Z
+149500
+daney
 
 
 
@@ -26,16 +26,16 @@ nemet
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
-dir
-
 arm
 dir
 
-m68k
+powerpc
 dir
 
 alpha
+dir
+
+m68k
 dir
 
 avr
@@ -50,10 +50,10 @@ dir
 frv
 dir
 
-x86_64
+s390
 dir
 
-s390
+x86_64
 dir
 
 cris
@@ -65,10 +65,10 @@ dir
 spu
 dir
 
-sparc
+mips
 dir
 
-mips
+sparc
 dir
 
 sh

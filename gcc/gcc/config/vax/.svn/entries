@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/vax
 svn://gcc.gnu.org/svn/gcc
 
@@ -332,40 +332,6 @@ matt
 
 1416
 
-t-linux
-file
-
-
-
-
-2009-07-02T01:09:08.000000Z
-79bd370853c0fb65675b72c778cc360c
-2009-07-01T01:23:54.119502Z
-149128
-macro
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-64
-
 vax-modes.def
 file
 
@@ -399,6 +365,40 @@ nickc
 
 
 847
+
+t-linux
+file
+
+
+
+
+2009-07-02T01:09:08.000000Z
+79bd370853c0fb65675b72c778cc360c
+2009-07-01T01:23:54.119502Z
+149128
+macro
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+64
 
 openbsd1.h
 file
@@ -434,40 +434,6 @@ matt
 
 862
 
-lib1funcs.asm
-file
-
-
-
-
-2009-07-02T01:09:08.000000Z
-df0dc35a171670d7cdb7123c41daf27a
-2009-07-01T01:23:54.119502Z
-149128
-macro
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2255
-
 netbsd.h
 file
 
@@ -501,6 +467,40 @@ nickc
 
 
 1360
+
+lib1funcs.asm
+file
+
+
+
+
+2009-07-02T01:09:08.000000Z
+df0dc35a171670d7cdb7123c41daf27a
+2009-07-01T01:23:54.119502Z
+149128
+macro
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2255
 
 constraints.md
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/sound/midi
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ has-props
 
 1283
 
-Soundbank.class
-file
-
-
-
-
-2009-04-24T17:48:13.000000Z
-7ac9c1426148576cb8b625c196af9384
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-430
-
 MidiEvent.class
 file
 
@@ -230,14 +196,14 @@ has-props
 
 734
 
-Synthesizer.class
+Soundbank.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-a348ca64ab44ce9721d714e1583e4a1b
+7ac9c1426148576cb8b625c196af9384
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -262,41 +228,10 @@ has-props
 
 
 
-1039
+430
 
-MidiMessage.class
-file
-
-
-
-
-2009-04-24T17:48:13.000000Z
-3f500f4c2d74e7c094ad0e467cdaaaf3
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1052
+spi
+dir
 
 MidiSystem.class
 file
@@ -332,8 +267,73 @@ has-props
 
 8292
 
-spi
-dir
+MidiMessage.class
+file
+
+
+
+
+2009-04-24T17:48:13.000000Z
+3f500f4c2d74e7c094ad0e467cdaaaf3
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1052
+
+Synthesizer.class
+file
+
+
+
+
+2009-04-24T17:48:13.000000Z
+a348ca64ab44ce9721d714e1583e4a1b
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1039
 
 Sequencer.class
 file
@@ -369,14 +369,14 @@ has-props
 
 1751
 
-ControllerEventListener.class
+MidiFileFormat.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-42d75a83dd5475bb6b4665f1519bc8c1
+d0a381e478891804f5d4e4e562d94f1e
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -401,7 +401,7 @@ has-props
 
 
 
-236
+1095
 
 MetaMessage.class
 file
@@ -437,14 +437,14 @@ has-props
 
 2002
 
-MidiFileFormat.class
+ControllerEventListener.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-d0a381e478891804f5d4e4e562d94f1e
+42d75a83dd5475bb6b4665f1519bc8c1
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -469,7 +469,7 @@ has-props
 
 
 
-1095
+236
 
 SoundbankResource.class
 file

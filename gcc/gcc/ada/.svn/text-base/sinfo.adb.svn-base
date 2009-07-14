@@ -229,7 +229,9 @@ package body Sinfo is
       (N : Node_Id) return List_Id is
    begin
       pragma Assert (False
-        or else NT (N).Nkind = N_Case_Statement);
+        or else NT (N).Nkind = N_Case_Statement
+        or else NT (N).Nkind = N_In
+        or else NT (N).Nkind = N_Not_In);
       return List4 (N);
    end Alternatives;
 
@@ -1604,6 +1606,14 @@ package body Sinfo is
         or else NT (N).Nkind = N_Allocator);
       return Flag18 (N);
    end Is_Dynamic_Coextension;
+
+   function Is_Elsif
+     (N : Node_Id) return Boolean is
+   begin
+      pragma Assert (False
+        or else NT (N).Nkind = N_Conditional_Expression);
+      return Flag13 (N);
+   end Is_Elsif;
 
    function Is_Entry_Barrier_Function
       (N : Node_Id) return Boolean is
@@ -3026,7 +3036,9 @@ package body Sinfo is
       (N : Node_Id; Val : List_Id) is
    begin
       pragma Assert (False
-        or else NT (N).Nkind = N_Case_Statement);
+        or else NT (N).Nkind = N_Case_Statement
+        or else NT (N).Nkind = N_In
+        or else NT (N).Nkind = N_Not_In);
       Set_List4_With_Parent (N, Val);
    end Set_Alternatives;
 
@@ -4392,6 +4404,14 @@ package body Sinfo is
         or else NT (N).Nkind = N_Allocator);
       Set_Flag18 (N, Val);
    end Set_Is_Dynamic_Coextension;
+
+   procedure Set_Is_Elsif
+     (N : Node_Id; Val : Boolean := True) is
+   begin
+      pragma Assert (False
+        or else NT (N).Nkind = N_Conditional_Expression);
+      Set_Flag13 (N, Val);
+   end Set_Is_Elsif;
 
    procedure Set_Is_Entry_Barrier_Function
       (N : Node_Id; Val : Boolean := True) is
@@ -5800,6 +5820,31 @@ package body Sinfo is
              T = V6 or else
              T = V7 or else
              T = V8;
+   end Nkind_In;
+
+
+   function Nkind_In
+     (T  : Node_Kind;
+      V1 : Node_Kind;
+      V2 : Node_Kind;
+      V3 : Node_Kind;
+      V4 : Node_Kind;
+      V5 : Node_Kind;
+      V6 : Node_Kind;
+      V7 : Node_Kind;
+      V8 : Node_Kind;
+      V9 : Node_Kind) return Boolean
+   is
+   begin
+      return T = V1 or else
+             T = V2 or else
+             T = V3 or else
+             T = V4 or else
+             T = V5 or else
+             T = V6 or else
+             T = V7 or else
+             T = V8 or else
+             T = V9;
    end Nkind_In;
 
    -----------------

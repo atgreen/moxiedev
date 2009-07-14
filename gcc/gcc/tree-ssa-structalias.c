@@ -337,10 +337,11 @@ new_var_info (tree t, const char *name)
   ret->decl = t;
   /* Vars without decl are artificial and do not have sub-variables.  */
   ret->is_artificial_var = (t == NULL_TREE);
-  ret->is_full_var = (t == NULL_TREE);
-  ret->is_heap_var = false;
   ret->is_special_var = false;
   ret->is_unknown_size_var = false;
+  ret->is_full_var = (t == NULL_TREE);
+  ret->is_heap_var = false;
+  ret->is_restrict_var = false;
   ret->may_have_pointers = true;
   ret->is_global_var = (t == NULL_TREE);
   if (t && DECL_P (t))
@@ -3475,6 +3476,7 @@ handle_lhs_call (tree lhs, int flags, VEC(ce_s, heap) *rhsc)
       vi = make_constraint_from_heapvar (get_vi_for_tree (lhs), "HEAP");
       /* We delay marking allocated storage global until we know if
          it escapes.  */
+      DECL_EXTERNAL (vi->decl) = 0;
       vi->is_global_var = 0;
     }
   else if (VEC_length (ce_s, rhsc) > 0)
@@ -4785,8 +4787,10 @@ find_what_var_points_to (varinfo_t vi, struct pt_solution *pt)
 	  else if (vi->is_heap_var)
 	    /* We represent heapvars in the points-to set properly.  */
 	    ;
+	  else if (vi->id == readonly_id)
+	    /* Nobody cares.  */
+	    ;
 	  else if (vi->id == anything_id
-		   || vi->id == readonly_id
 		   || vi->id == integer_id)
 	    pt->anything = 1;
 	}
@@ -4880,6 +4884,28 @@ pt_solution_reset (struct pt_solution *pt)
 {
   memset (pt, 0, sizeof (struct pt_solution));
   pt->anything = true;
+}
+
+/* Set the points-to solution *PT to point only to the variables
+   in VARS.  */
+
+void
+pt_solution_set (struct pt_solution *pt, bitmap vars)
+{
+  bitmap_iterator bi;
+  unsigned i;
+
+  memset (pt, 0, sizeof (struct pt_solution));
+  pt->vars = vars;
+  EXECUTE_IF_SET_IN_BITMAP (vars, 0, i, bi)
+    {
+      tree var = referenced_var_lookup (i);
+      if (is_global_var (var))
+	{
+	  pt->vars_contains_global = true;
+	  break;
+	}
+    }
 }
 
 /* Return true if the points-to solution *PT is empty.  */
@@ -5460,9 +5486,10 @@ compute_points_to_sets (void)
   /* Mark escaped HEAP variables as global.  */
   for (i = 0; VEC_iterate (varinfo_t, varmap, i, vi); ++i)
     if (vi->is_heap_var
+	&& !vi->is_restrict_var
 	&& !vi->is_global_var)
-      vi->is_global_var = pt_solution_includes (&cfun->gimple_df->escaped,
-						vi->decl);
+      DECL_EXTERNAL (vi->decl) = vi->is_global_var
+	= pt_solution_includes (&cfun->gimple_df->escaped, vi->decl);
 
   /* Compute the points-to sets for pointer SSA_NAMEs.  */
   for (i = 0; i < num_ssa_names; ++i)

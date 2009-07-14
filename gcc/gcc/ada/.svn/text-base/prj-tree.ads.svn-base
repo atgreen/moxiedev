@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 S p e c                                  --
 --                                                                          --
---          Copyright (C) 2001-2008, Free Software Foundation, Inc.         --
+--          Copyright (C) 2001-2009, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -92,11 +92,11 @@ package Prj.Tree is
 
    function Present (Node : Project_Node_Id) return Boolean;
    pragma Inline (Present);
-   --  Return True iff Node /= Empty_Node
+   --  Return True if Node /= Empty_Node
 
    function No (Node : Project_Node_Id) return Boolean;
    pragma Inline (No);
-   --  Return True iff Node = Empty_Node
+   --  Return True if Node = Empty_Node
 
    procedure Initialize (Tree : Project_Node_Tree_Ref);
    --  Initialize the Project File tree: empty the Project_Nodes table
@@ -108,6 +108,7 @@ package Prj.Tree is
       And_Expr_Kind : Variable_Kind := Undefined) return Project_Node_Id;
    --  Returns a Project_Node_Record with the specified Kind and Expr_Kind. All
    --  the other components have default nil values.
+   --  To create a node for a project itself, see Create_Project below instead
 
    function Hash (N : Project_Node_Id) return Header_Num;
    --  Used for hash tables where the key is a Project_Node_Id
@@ -285,7 +286,8 @@ package Prj.Tree is
      (Node    : Project_Node_Id;
       In_Tree : Project_Node_Tree_Ref) return Path_Name_Type;
    pragma Inline (Directory_Of);
-   --  Only valid for N_Project nodes
+   --  Returns the directory that contains the project file. This always ends
+   --  with a directory separator. Only valid for N_Project nodes.
 
    function Expression_Kind_Of
      (Node    : Project_Node_Id;
@@ -430,8 +432,7 @@ package Prj.Tree is
      (Node    : Project_Node_Id;
       In_Tree : Project_Node_Tree_Ref) return Project_Node_Id;
    pragma Inline (Project_Of_Renamed_Package_Of);
-   --  Only valid for N_Package_Declaration nodes.
-   --  May return Empty_Node.
+   --  Only valid for N_Package_Declaration nodes. May return Empty_Node.
 
    function Next_Package_In_Project
      (Node    : Project_Node_Id;
@@ -586,15 +587,80 @@ package Prj.Tree is
       In_Tree : Project_Node_Tree_Ref) return Boolean;
    --  Only valid for N_Attribute_Declaration and N_Attribute_Reference nodes
 
+   -----------------------
+   -- Create procedures --
+   -----------------------
+   --  The following procedures are used to edit a project file tree. They are
+   --  slightly higher-level than the Set_* procedures below
+
+   function Create_Project
+     (In_Tree        : Project_Node_Tree_Ref;
+      Name           : Name_Id;
+      Full_Path      : Path_Name_Type;
+      Is_Config_File : Boolean := False) return Project_Node_Id;
+   --  Create a new node for a project and register it in the tree so that it
+   --  can be retrieved later on.
+
+   function Create_Package
+     (Tree    : Project_Node_Tree_Ref;
+      Project : Project_Node_Id;
+      Pkg     : String) return Project_Node_Id;
+   --  Create a new package in Project. If the package already exists, it is
+   --  returned. The name of the package *must* be lower-cases, or none of its
+   --  attributes will be recognized.
+
+   function Create_Attribute
+     (Tree       : Project_Node_Tree_Ref;
+      Prj_Or_Pkg : Project_Node_Id;
+      Name       : Name_Id;
+      Index_Name : Name_Id       := No_Name;
+      Kind       : Variable_Kind := List;
+      At_Index   : Integer       := 0) return Project_Node_Id;
+   --  Create a new attribute. The new declaration is added at the end of the
+   --  declarative item list for Prj_Or_Pkg (a project or a package), but
+   --  before any package declaration). No addition is done if Prj_Or_Pkg is
+   --  Empty_Node. If Index_Name is not "", then if creates an attribute value
+   --  for a specific index. At_Index is used for the " at <idx>" in the naming
+   --  exceptions. Use Set_Expression_Of to set the value of the attribute (in
+   --  which case Enclose_In_Expression might be useful)
+
+   function Create_Literal_String
+     (Str  : Namet.Name_Id;
+      Tree : Project_Node_Tree_Ref) return Project_Node_Id;
+   --  Create a literal string whose value is Str
+
+   procedure Add_At_End
+     (Tree                  : Project_Node_Tree_Ref;
+      Parent                : Project_Node_Id;
+      Expr                  : Project_Node_Id;
+      Add_Before_First_Pkg  : Boolean := False;
+      Add_Before_First_Case : Boolean := False);
+   --  Add a new declarative item in the list in Parent. This new declarative
+   --  item will contain Expr (unless Expr is already a declarative item, in
+   --  which case it is added directly to the list). The new item is inserted
+   --  at the end of the list, unless Add_Before_First_Pkg is True. In the
+   --  latter case, it is added just before the first case construction is
+   --  seen, or before the first package (this assumes that all packages are
+   --  found at the end of the project, which isn't true in the general case
+   --  unless you have normalized the project to match this description).
+
+   function Enclose_In_Expression
+     (Node : Project_Node_Id;
+      Tree : Project_Node_Tree_Ref) return Project_Node_Id;
+   --  Enclose the Node inside a N_Expression node, and return this expression
+
    --------------------
    -- Set Procedures --
    --------------------
 
-   --  The following procedures are part of the abstract interface of
-   --  the Project File tree.
+   --  The following procedures are part of the abstract interface of the
+   --  Project File tree.
 
    --  Each Set_* procedure is valid only for the same Project_Node_Kind
    --  nodes as the corresponding query function above.
+   --  These are very low-level, and manipulate the tree itself directly. You
+   --  should look at the Create_* procedure instead if you want to use higher
+   --  level constructs
 
    procedure Set_Name_Of
      (Node    : Project_Node_Id;
@@ -960,6 +1026,7 @@ package Prj.Tree is
 
          Pkg_Id : Package_Node_Id := Empty_Package;
          --  Only used for N_Package_Declaration
+         --
          --  The component Pkg_Id is an entry into the table Package_Attributes
          --  (in Prj.Attr). It is used to indicate all the attributes of the
          --  package with their characteristics.
@@ -995,38 +1062,45 @@ package Prj.Tree is
 
          Flag1 : Boolean := False;
          --  This flag is significant only for:
+         --
          --    N_Attribute_Declaration and N_Attribute_Reference
-         --      It indicates for an associative array attribute, that the
+         --      Indicates for an associative array attribute, that the
          --      index is case insensitive.
-         --    N_Comment - it indicates that the comment is preceded by an
-         --                empty line.
-         --    N_Project - it indicates that there are comments in the project
-         --                source that cannot be kept in the tree.
+         --
+         --    N_Comment
+         --      Indicates that the comment is preceded by an empty line.
+         --
+         --    N_Project
+         --      Indicates that there are comments in the project source that
+         --      cannot be kept in the tree.
+         --
          --    N_Project_Declaration
-         --              - it indicates that there are unkept comments in the
-         --                project.
+         --      Indicates that there are unkept comments in the project.
+         --
          --    N_With_Clause
-         --              - it indicates that this is not the last with in a
-         --                with clause. It is set for "A", but not for "B" in
-         --                    with "B";
-         --                  and
-         --                    with "A", "B";
+         --      Indicates that this is not the last with in a with clause.
+         --      Set for "A", but not for "B" in with "B"; and with "A", "B";
 
          Flag2 : Boolean := False;
          --  This flag is significant only for:
-         --    N_Project - it indicates that the project "extends all" another
-         --                project.
-         --    N_Comment - it indicates that the comment is followed by an
-         --                empty line.
+         --
+         --    N_Project
+         --      Indicates that the project "extends all" another project.
+         --
+         --    N_Comment
+         --      Indicates that the comment is followed by an empty line.
+         --
          --    N_With_Clause
-         --              - it indicates that the originally imported project
-         --                is an extending all project.
+         --      Indicates that the originally imported project is an extending
+         --      all project.
 
          Comments : Project_Node_Id := Empty_Node;
          --  For nodes other that N_Comment_Zones or N_Comment, designates the
          --  comment zones associated with the node.
-         --  for N_Comment_Zones, designates the comment after the "end" of
+         --
+         --  For N_Comment_Zones, designates the comment after the "end" of
          --  the construct.
+         --
          --  For N_Comment, designates the next comment, if any.
 
       end record;
@@ -1245,15 +1319,14 @@ package Prj.Tree is
       --    --  Flag2:     comment is followed by an empty line
       --    --  Comments:  next comment
 
-      package Project_Node_Table is
-        new GNAT.Dynamic_Tables
+      package Project_Node_Table is new
+        GNAT.Dynamic_Tables
           (Table_Component_Type => Project_Node_Record,
            Table_Index_Type     => Project_Node_Id,
            Table_Low_Bound      => First_Node_Id,
            Table_Initial        => Project_Nodes_Initial,
            Table_Increment      => Project_Nodes_Increment);
-      --  This table contains the syntactic tree of project data
-      --  from project files.
+      --  Table contains the syntactic tree of project data from project files
 
       type Project_Name_And_Node is record
          Name : Name_Id;
@@ -1309,13 +1382,9 @@ private
 
    type Comment_State is record
       End_Of_Line_Node   : Project_Node_Id := Empty_Node;
-
       Previous_Line_Node : Project_Node_Id := Empty_Node;
-
       Previous_End_Node  : Project_Node_Id := Empty_Node;
-
       Unkept_Comments    : Boolean := False;
-
       Comments           : Comments_Ptr := null;
    end record;
 

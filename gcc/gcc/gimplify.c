@@ -610,7 +610,7 @@ internal_get_tmp_var (tree val, gimple_seq *pre_p, gimple_seq *post_p,
   mod = build2 (INIT_EXPR, TREE_TYPE (t), t, unshare_expr (val));
 
   if (EXPR_HAS_LOCATION (val))
-    SET_EXPR_LOCUS (mod, EXPR_LOCUS (val));
+    SET_EXPR_LOCATION (mod, EXPR_LOCATION (val));
   else
     SET_EXPR_LOCATION (mod, input_location);
 
@@ -814,7 +814,7 @@ gimple_set_do_not_emit_location (gimple g)
   gimple_set_plf (g, GF_PLF_1, true);
 }
 
-/* Set the location for gimple statement GS to LOCUS.  */
+/* Set the location for gimple statement GS to LOCATION.  */
 
 static void
 annotate_one_with_location (gimple gs, location_t location)
@@ -854,7 +854,7 @@ annotate_all_with_location_after (gimple_seq seq, gimple_stmt_iterator gsi,
 }
 
 
-/* Set the location for all the statements in a sequence STMT_P to LOCUS.  */
+/* Set the location for all the statements in a sequence STMT_P to LOCATION.  */
 
 void
 annotate_all_with_location (gimple_seq stmt_p, location_t location)
@@ -2375,7 +2375,7 @@ gimplify_call_expr (tree *expr_p, gimple_seq *pre_p, bool want_value)
 	    = CALL_EXPR_RETURN_SLOT_OPT (call);
 	  CALL_FROM_THUNK_P (*expr_p) = CALL_FROM_THUNK_P (call);
 	  CALL_CANNOT_INLINE_P (*expr_p) = CALL_CANNOT_INLINE_P (call);
-	  SET_EXPR_LOCUS (*expr_p, EXPR_LOCUS (call));
+	  SET_EXPR_LOCATION (*expr_p, EXPR_LOCATION (call));
 	  TREE_BLOCK (*expr_p) = TREE_BLOCK (call);
 
 	  /* Set CALL_EXPR_VA_ARG_PACK.  */
@@ -5377,7 +5377,7 @@ omp_notice_variable (struct gimplify_omp_ctx *ctx, tree decl, bool in_code)
 	case OMP_CLAUSE_DEFAULT_NONE:
 	  error ("%qE not specified in enclosing parallel",
 		 DECL_NAME (decl));
-	  error ("%Henclosing parallel", &ctx->location);
+	  error_at (ctx->location, "enclosing parallel");
 	  /* FALLTHRU */
 	case OMP_CLAUSE_DEFAULT_SHARED:
 	  flags |= GOVD_SHARED;
@@ -6787,6 +6787,7 @@ gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
 
 	    gimplify_and_add (EH_FILTER_FAILURE (*expr_p), &failure);
 	    ehf = gimple_build_eh_filter (EH_FILTER_TYPES (*expr_p), failure);
+	    gimple_set_no_warning (ehf, TREE_NO_WARNING (*expr_p));
 	    gimple_eh_filter_set_must_not_throw
 	      (ehf, EH_FILTER_MUST_NOT_THROW (*expr_p));
 	    gimplify_seq_add_stmt (pre_p, ehf);
@@ -7360,7 +7361,7 @@ gimplify_one_sizepos (tree *expr_p, gimple_seq *stmt_p)
       tmp = build1 (NOP_EXPR, type, expr);
       stmt = gimplify_assign (*expr_p, tmp, stmt_p);
       if (EXPR_HAS_LOCATION (expr))
-	gimple_set_location (stmt, *EXPR_LOCUS (expr));
+	gimple_set_location (stmt, EXPR_LOCATION (expr));
       else
 	gimple_set_location (stmt, input_location);
     }

@@ -1,7 +1,7 @@
 10
 
 dir
-149163
+149625
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/org/omg/IOP
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ has-props
 
 1227
 
-ServiceContext.class
-file
-
-
-
-
-2009-04-24T17:48:29.000000Z
-7a2cfc9f68c8457417a4b30c54a22e07
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-644
-
 ServiceContextHelper.class
 file
 
@@ -603,6 +569,40 @@ has-props
 
 
 3345
+
+ServiceContext.class
+file
+
+
+
+
+2009-04-24T17:48:29.000000Z
+7a2cfc9f68c8457417a4b30c54a22e07
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+644
 
 CodecFactoryOperations.class
 file
@@ -638,6 +638,9 @@ has-props
 
 282
 
+CodecFactoryPackage
+dir
+
 RMICustomMaxStreamFormat.class
 file
 
@@ -671,9 +674,6 @@ has-props
 
 
 190
-
-CodecFactoryPackage
-dir
 
 TAG_ORB_TYPE.class
 file
@@ -814,40 +814,6 @@ has-props
 
 1139
 
-IORHelper.class
-file
-
-
-
-
-2009-04-24T17:48:29.000000Z
-96ec9ecd01a7ca5d576c519d11450455
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3250
-
 IOR.class
 file
 
@@ -881,6 +847,40 @@ has-props
 
 
 740
+
+IORHelper.class
+file
+
+
+
+
+2009-04-24T17:48:29.000000Z
+96ec9ecd01a7ca5d576c519d11450455
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3250
 
 TAG_INTERNET_IOP.class
 file

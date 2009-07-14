@@ -312,8 +312,9 @@ abstract_virtuals_error (tree decl, tree type)
       unsigned ix;
       tree fn;
 
-      inform (input_location, "%J  because the following virtual functions are pure "
-	      "within %qT:", TYPE_MAIN_DECL (type), type);
+      inform (DECL_SOURCE_LOCATION (TYPE_MAIN_DECL (type)),
+	      "  because the following virtual functions are pure within %qT:",
+	      type);
 
       for (ix = 0; VEC_iterate (tree, pure, ix, fn); ix++)
 	inform (input_location, "\t%+#D", fn);
@@ -323,8 +324,9 @@ abstract_virtuals_error (tree decl, tree type)
       VEC_truncate (tree, pure, 0);
     }
   else
-    inform (input_location, "%J  since type %qT has pure virtual functions",
-	    TYPE_MAIN_DECL (type), type);
+    inform (DECL_SOURCE_LOCATION (TYPE_MAIN_DECL (type)),
+	    "  since type %qT has pure virtual functions",
+	    type);
 
   return 1;
 }
@@ -911,10 +913,9 @@ process_init_constructor_array (tree type, tree init)
     /* Vectors are like simple fixed-size arrays.  */
     len = TYPE_VECTOR_SUBPARTS (type);
 
-  /* There cannot be more initializers than needed as otherwise
-     reshape_init would have already rejected the initializer.  */
-  if (!unbounded)
-    gcc_assert (VEC_length (constructor_elt, v) <= len);
+  /* There must not be more initializers than needed.  */
+  if (!unbounded && VEC_length (constructor_elt, v)  > len)
+    error ("too many initializers for %qT", type);
 
   for (i = 0; VEC_iterate (constructor_elt, v, i, ce); ++i)
     {

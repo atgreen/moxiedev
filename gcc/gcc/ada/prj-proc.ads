@@ -37,7 +37,7 @@ package Prj.Proc is
       Success                : out Boolean;
       From_Project_Node      : Project_Node_Id;
       From_Project_Node_Tree : Project_Node_Tree_Ref;
-      Report_Error           : Put_Line_Access;
+      Flags                  : Prj.Processing_Flags;
       Reset_Tree             : Boolean := True);
    --  Process a project tree (ie the direct resulting of parsing a .gpr file)
    --  based on the current scenario variables.
@@ -48,41 +48,22 @@ package Prj.Proc is
    --  needed to automatically generate a configuration file. This first phase
    --  of the processing does not require a configuration file.
    --
-   --  If Report_Error is null, use the error reporting mechanism. Otherwise,
-   --  report errors using Report_Error.
-   --
-   --  When_No_Sources indicates what should be done when no sources are found
-   --  in a project for a specified or implied language.
-   --
    --  When Reset_Tree is True, all the project data are removed from the
    --  project table before processing.
 
    procedure Process_Project_Tree_Phase_2
-     (In_Tree                   : Project_Tree_Ref;
-      Project                   : Project_Id;
-      Success                   : out Boolean;
-      From_Project_Node         : Project_Node_Id;
-      From_Project_Node_Tree    : Project_Node_Tree_Ref;
-      Report_Error              : Put_Line_Access;
-      When_No_Sources           : Error_Warning := Error;
-      Current_Dir               : String;
-      Is_Config_File            : Boolean;
-      Compiler_Driver_Mandatory : Boolean;
-      Allow_Duplicate_Basenames : Boolean);
+     (In_Tree                : Project_Tree_Ref;
+      Project                : Project_Id;
+      Success                : out Boolean;
+      From_Project_Node      : Project_Node_Id;
+      From_Project_Node_Tree : Project_Node_Tree_Ref;
+      Flags                  : Processing_Flags);
    --  Perform the second phase of the processing, filling the rest of the
    --  project with the information extracted from the project tree. This phase
    --  requires that the configuration file has already been parsed (in fact
    --  we currently assume that the contents of the configuration file has
    --  been included in Project through Confgpr.Apply_Config_File). The
    --  parameters are the same as for phase_1, with the addition of:
-   --
-   --  Current_Dir is for optimization purposes, avoiding extra system calls.
-   --
-   --  Is_Config_File should be true if Project is a config file (.cgpr)
-   --
-   --  If Allow_Duplicate_Basenames, then files with the same base names are
-   --  authorized within a project for source-based languages (never for unit
-   --  based languages)
 
    procedure Process
      (In_Tree                : Project_Tree_Ref;
@@ -90,11 +71,8 @@ package Prj.Proc is
       Success                : out Boolean;
       From_Project_Node      : Project_Node_Id;
       From_Project_Node_Tree : Project_Node_Tree_Ref;
-      Report_Error           : Put_Line_Access;
-      When_No_Sources        : Error_Warning := Error;
-      Reset_Tree             : Boolean := True;
-      Current_Dir            : String := "";
-      Is_Config_File         : Boolean);
+      Flags                  : Processing_Flags;
+      Reset_Tree             : Boolean       := True);
    --  Performs the two phases of the processing
 
 end Prj.Proc;

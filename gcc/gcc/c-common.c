@@ -5417,13 +5417,15 @@ match_case_to_enum_1 (tree key, tree type, tree label)
 	      (unsigned HOST_WIDE_INT) TREE_INT_CST_LOW (key));
 
   if (TYPE_NAME (type) == 0)
-    warning (warn_switch ? OPT_Wswitch : OPT_Wswitch_enum,
-	     "%Jcase value %qs not in enumerated type",
-	     CASE_LABEL (label), buf);
+    warning_at (DECL_SOURCE_LOCATION (CASE_LABEL (label)),
+		warn_switch ? OPT_Wswitch : OPT_Wswitch_enum,
+		"case value %qs not in enumerated type",
+		buf);
   else
-    warning (warn_switch ? OPT_Wswitch : OPT_Wswitch_enum,
-	     "%Jcase value %qs not in enumerated type %qT",
-	     CASE_LABEL (label), buf, type);
+    warning_at (DECL_SOURCE_LOCATION (CASE_LABEL (label)),
+		warn_switch ? OPT_Wswitch : OPT_Wswitch_enum,
+		"case value %qs not in enumerated type %qT",
+		buf, type);
 }
 
 /* Subroutine of c_do_switch_warnings, called via splay_tree_foreach.
@@ -5480,8 +5482,8 @@ c_do_switch_warnings (splay_tree cases, location_t switch_location,
 
   default_node = splay_tree_lookup (cases, (splay_tree_key) NULL);
   if (!default_node)
-    warning (OPT_Wswitch_default, "%Hswitch missing default case",
-	     &switch_location);
+    warning_at (switch_location, OPT_Wswitch_default,
+		"switch missing default case");
 
   /* From here on, we only care about about enumerated types.  */
   if (!type || TREE_CODE (type) != ENUMERAL_TYPE)
@@ -6493,8 +6495,9 @@ handle_section_attribute (tree *node, tree ARG_UNUSED (name), tree args,
 	      && current_function_decl != NULL_TREE
 	      && !TREE_STATIC (decl))
 	    {
-	      error ("%Jsection attribute cannot be specified for "
-		     "local variables", decl);
+	      error_at (DECL_SOURCE_LOCATION (decl), 
+			"section attribute cannot be specified for "
+			"local variables");
 	      *no_add_attrs = true;
 	    }
 
@@ -6526,7 +6529,8 @@ handle_section_attribute (tree *node, tree ARG_UNUSED (name), tree args,
     }
   else
     {
-      error ("%Jsection attributes are not supported for this target", *node);
+      error_at (DECL_SOURCE_LOCATION (*node),
+		"section attributes are not supported for this target");
       *no_add_attrs = true;
     }
 
@@ -6745,8 +6749,8 @@ handle_weakref_attribute (tree *node, tree ARG_UNUSED (name), tree args,
   else
     {
       if (lookup_attribute ("alias", DECL_ATTRIBUTES (*node)))
-	error ("%Jweakref attribute must appear before alias attribute",
-	       *node);
+	error_at (DECL_SOURCE_LOCATION (*node),
+		  "weakref attribute must appear before alias attribute");
 
       /* Can't call declare_weak because it wants this to be TREE_PUBLIC,
 	 and that isn't supported; and because it wants to add it to
@@ -6956,12 +6960,14 @@ handle_no_instrument_function_attribute (tree *node, tree name,
 
   if (TREE_CODE (decl) != FUNCTION_DECL)
     {
-      error ("%J%qE attribute applies only to functions", decl, name);
+      error_at (DECL_SOURCE_LOCATION (decl),
+		"%qE attribute applies only to functions", name);
       *no_add_attrs = true;
     }
   else if (DECL_INITIAL (decl))
     {
-      error ("%Jcan%'t set %qE attribute after definition", decl, name);
+      error_at (DECL_SOURCE_LOCATION (decl),
+		"can%'t set %qE attribute after definition", name);
       *no_add_attrs = true;
     }
   else
@@ -7046,12 +7052,14 @@ handle_no_limit_stack_attribute (tree *node, tree name,
 
   if (TREE_CODE (decl) != FUNCTION_DECL)
     {
-      error ("%J%qE attribute applies only to functions", decl, name);
+      error_at (DECL_SOURCE_LOCATION (decl),
+	     "%qE attribute applies only to functions", name);
       *no_add_attrs = true;
     }
   else if (DECL_INITIAL (decl))
     {
-      error ("%Jcan%'t set %qE attribute after definition", decl, name);
+      error_at (DECL_SOURCE_LOCATION (decl),
+		"can%'t set %qE attribute after definition", name);
       *no_add_attrs = true;
     }
   else
@@ -8258,13 +8266,14 @@ c_warn_unused_result (gimple_seq seq)
 	      location_t loc = gimple_location (g);
 
 	      if (fdecl)
-		warning (0, "%Hignoring return value of %qD, "
-			 "declared with attribute warn_unused_result",
-			 &loc, fdecl);
+		warning_at (loc, OPT_Wunused_result, 
+			    "ignoring return value of %qD, "
+			    "declared with attribute warn_unused_result",
+			    fdecl);
 	      else
-		warning (0, "%Hignoring return value of function "
-			 "declared with attribute warn_unused_result",
-			 &loc);
+		warning_at (loc, OPT_Wunused_result,
+			    "ignoring return value of function "
+			    "declared with attribute warn_unused_result");
 	    }
 	  break;
 

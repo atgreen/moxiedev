@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/java/io
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,16 +26,16 @@ doko
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-FileReader.java
+Reader.java
 file
 
 
 
 
 2009-04-24T17:47:08.000000Z
-b0632b0335ff2df2678cf4d636bd5423
-2005-09-23T17:31:48.000000Z
-104575
+f5b5321665db9e51f39f0d589ee32e91
+2007-01-09T19:58:05.773323Z
+120621
 tromey
 
 
@@ -58,41 +58,7 @@ tromey
 
 
 
-3498
-
-CharConversionException.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-77b6282539c010ca1c0737e3eb108930
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2599
+10366
 
 ObjectInputStream.java
 file
@@ -128,16 +94,16 @@ doko
 
 64795
 
-Reader.java
+CharConversionException.java
 file
 
 
 
 
 2009-04-24T17:47:08.000000Z
-f5b5321665db9e51f39f0d589ee32e91
-2007-01-09T19:58:05.773323Z
-120621
+77b6282539c010ca1c0737e3eb108930
+2005-09-23T17:31:48.000000Z
+104575
 tromey
 
 
@@ -160,7 +126,41 @@ tromey
 
 
 
-10366
+2599
+
+FileReader.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+b0632b0335ff2df2678cf4d636bd5423
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3498
 
 BufferedReader.java
 file
@@ -298,40 +298,6 @@ tromey
 
 4757
 
-Writer.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-18a1356e6a98243187007782251eb0ed
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6982
-
 FileWriter.java
 file
 
@@ -365,6 +331,40 @@ mark
 
 
 5038
+
+Writer.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+18a1356e6a98243187007782251eb0ed
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6982
 
 FileDescriptor.java
 file
@@ -400,40 +400,6 @@ tromey
 
 4561
 
-File.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-59d4d70366001833ee2e8a41b5e1b738
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-52175
-
 BufferedWriter.java
 file
 
@@ -467,6 +433,40 @@ tromey
 
 
 8028
+
+File.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+59d4d70366001833ee2e8a41b5e1b738
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+52175
 
 UTFDataFormatException.java
 file
@@ -1114,40 +1114,6 @@ doko
 
 13112
 
-FileNotFoundException.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-d0faa3a75fdc462d4ea48e21eb986e62
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2646
-
 NotActiveException.java
 file
 
@@ -1181,6 +1147,40 @@ tromey
 
 
 2527
+
+FileNotFoundException.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+d0faa3a75fdc462d4ea48e21eb986e62
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2646
 
 InterruptedIOException.java
 file
@@ -1250,40 +1250,6 @@ tromey
 
 1979
 
-SerializablePermission.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-df539764d486b4e49a4cdb36d3b080ce
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3933
-
 BufferedOutputStream.java
 file
 
@@ -1317,6 +1283,40 @@ tromey
 
 
 6384
+
+SerializablePermission.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+df539764d486b4e49a4cdb36d3b080ce
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3933
 
 FilterInputStream.java
 file
@@ -1454,16 +1454,16 @@ mark
 
 8829
 
-StringReader.java
+PrintWriter.java
 file
 
 
 
 
 2009-04-24T17:47:08.000000Z
-08c2881279326c10af41279b5bc1b3c0
-2005-09-23T17:31:48.000000Z
-104575
+d8bc40153472bae6bbcb95ca22bfad63
+2007-01-09T19:58:05.773323Z
+120621
 tromey
 
 
@@ -1486,7 +1486,7 @@ tromey
 
 
 
-6492
+19106
 
 DataInput.java
 file
@@ -1522,16 +1522,16 @@ tromey
 
 19138
 
-PrintWriter.java
+StringReader.java
 file
 
 
 
 
 2009-04-24T17:47:08.000000Z
-d8bc40153472bae6bbcb95ca22bfad63
-2007-01-09T19:58:05.773323Z
-120621
+08c2881279326c10af41279b5bc1b3c0
+2005-09-23T17:31:48.000000Z
+104575
 tromey
 
 
@@ -1554,7 +1554,7 @@ tromey
 
 
 
-19106
+6492
 
 DataOutput.java
 file
@@ -1590,40 +1590,6 @@ tromey
 
 12291
 
-StringBufferInputStream.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-a964b818404a4377200d2bf90a18125e
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6786
-
 InvalidObjectException.java
 file
 
@@ -1657,6 +1623,40 @@ tromey
 
 
 2480
+
+StringBufferInputStream.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+a964b818404a4377200d2bf90a18125e
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6786
 
 PipedWriter.java
 file
@@ -1692,40 +1692,6 @@ tromey
 
 6400
 
-ByteArrayOutputStream.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-d291f45db49a5b09f1143423ad8b7b1a
-2005-11-15T23:20:01.014789Z
-107049
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-9520
-
 CharArrayReader.java
 file
 
@@ -1760,17 +1726,17 @@ tromey
 
 10272
 
-StreamCorruptedException.java
+ByteArrayOutputStream.java
 file
 
 
 
 
 2009-04-24T17:47:08.000000Z
-c4ef1d6c9a84261d35ba2101a989925f
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+d291f45db49a5b09f1143423ad8b7b1a
+2005-11-15T23:20:01.014789Z
+107049
+mark
 
 
 
@@ -1792,7 +1758,7 @@ tromey
 
 
 
-2631
+9520
 
 DeleteFileHelper.java
 file
@@ -1827,6 +1793,40 @@ tromey
 
 
 3245
+
+StreamCorruptedException.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+c4ef1d6c9a84261d35ba2101a989925f
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2631
 
 StringWriter.java
 file
@@ -1998,40 +1998,6 @@ mark
 
 6834
 
-IOException.java
-file
-
-
-
-
-2009-04-24T17:47:08.000000Z
-bbe394d33ad390db2c2ae6d9cb83a8dc
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2674
-
 ObjectInput.java
 file
 
@@ -2065,6 +2031,40 @@ tromey
 
 
 5094
+
+IOException.java
+file
+
+
+
+
+2009-04-24T17:47:08.000000Z
+bbe394d33ad390db2c2ae6d9cb83a8dc
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2674
 
 Closeable.java
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/naming/directory
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ tromey
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-InvalidAttributesException.class
-file
-
-
-
-
-2009-04-24T17:48:10.000000Z
-04e47a44d4afefb06ae43df1944fa585
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-566
 
 BasicAttributes$BasicAttributesEnumeration.class
 file
@@ -93,6 +59,40 @@ has-props
 
 
 1837
+
+InvalidAttributesException.class
+file
+
+
+
+
+2009-04-24T17:48:10.000000Z
+04e47a44d4afefb06ae43df1944fa585
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+566
 
 BasicAttributes$1.class
 file
@@ -230,14 +230,14 @@ has-props
 
 1285
 
-InvalidAttributeValueException.class
+AttributeInUseException.class
 file
 
 
 
 
 2009-04-24T17:48:10.000000Z
-2f707ef6f26c6f808a00cbdf34e25372
+494cb562365b043f2437cabdd575c14e
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -262,7 +262,7 @@ has-props
 
 
 
-578
+557
 
 Attributes.class
 file
@@ -298,14 +298,14 @@ has-props
 
 757
 
-AttributeInUseException.class
+InvalidAttributeValueException.class
 file
 
 
 
 
 2009-04-24T17:48:10.000000Z
-494cb562365b043f2437cabdd575c14e
+2f707ef6f26c6f808a00cbdf34e25372
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -330,7 +330,7 @@ has-props
 
 
 
-557
+578
 
 BasicAttributes.class
 file

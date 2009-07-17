@@ -50,7 +50,7 @@ static void load_kernel (CPUState *env)
     kernel_size = load_elf(loaderparams.kernel_filename,  PHYS_MEM_BASE,
                            &entry, &kernel_low, &kernel_high);
     if (kernel_size >= 0)
-      env->pc = entry;
+      env->pc = (unsigned) entry;
     else 
       {
         fprintf(stderr, "qemu: could not load kernel '%s'\n",

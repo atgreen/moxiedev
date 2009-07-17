@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/include
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,9 +25,6 @@ paolo
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-c
-dir
 
 Makefile.in
 file
@@ -63,6 +60,9 @@ redi
 
 65128
 
+c
+dir
+
 debug
 dir
 
@@ -72,10 +72,10 @@ dir
 std
 dir
 
-c_std
+parallel
 dir
 
-parallel
+c_std
 dir
 
 ext

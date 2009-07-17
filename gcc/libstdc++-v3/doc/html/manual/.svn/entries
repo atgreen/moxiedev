@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/doc/html/manual
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ bkoz
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-iterators.html
-file
-
-
-
-
-2009-04-24T17:49:57.000000Z
-d05425cee51692a07cf11cb307b671e1
-2009-04-15T23:31:04.302908Z
-146140
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2348
 
 dynamic_memory.html
 file
@@ -94,16 +60,16 @@ bkoz
 
 4721
 
-bk01pt05ch13s05.html
+iterators.html
 file
 
 
 
 
 2009-04-24T17:49:57.000000Z
-bdea2f4e55881f38d67b8582ae02b125
-2009-03-17T22:09:26.662036Z
-144923
+d05425cee51692a07cf11cb307b671e1
+2009-04-15T23:31:04.302908Z
+146140
 bkoz
 
 
@@ -126,7 +92,7 @@ bkoz
 
 
 
-2799
+2348
 
 bk01pt11ch27s03.html
 file
@@ -162,16 +128,16 @@ bkoz
 
 3381
 
-spine.html
+bk01pt05ch13s05.html
 file
 
 
 
 
 2009-04-24T17:49:57.000000Z
-c47db2493e71f55aa40024289661cece
-2009-04-15T23:31:04.302908Z
-146140
+bdea2f4e55881f38d67b8582ae02b125
+2009-03-17T22:09:26.662036Z
+144923
 bkoz
 
 
@@ -194,7 +160,7 @@ bkoz
 
 
 
-31577
+2799
 
 generalized_numeric_operations.html
 file
@@ -229,6 +195,40 @@ bkoz
 
 
 3662
+
+spine.html
+file
+
+
+
+
+2009-04-24T17:49:57.000000Z
+c47db2493e71f55aa40024289661cece
+2009-04-15T23:31:04.302908Z
+146140
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+31577
 
 configure.html
 file
@@ -298,40 +298,6 @@ bkoz
 
 3354
 
-status.html
-file
-
-
-
-
-2009-04-24T17:49:57.000000Z
-690f48cf574f17d2ae5e08346eb93e7a
-2009-04-15T23:31:04.302908Z
-146140
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-135316
-
 ext_allocators.html
 file
 
@@ -366,14 +332,14 @@ bkoz
 
 25062
 
-using.html
+status.html
 file
 
 
 
 
 2009-04-24T17:49:57.000000Z
-678884cef6ffd5e68c890fe9b075bc4d
+690f48cf574f17d2ae5e08346eb93e7a
 2009-04-15T23:31:04.302908Z
 146140
 bkoz
@@ -398,7 +364,7 @@ bkoz
 
 
 
-7285
+135316
 
 ext_containers.html
 file
@@ -434,14 +400,14 @@ bkoz
 
 2693
 
-bk01pt09ch20.html
+using.html
 file
 
 
 
 
 2009-04-24T17:49:57.000000Z
-c361078dab3063c845dd7abf0218e85c
+678884cef6ffd5e68c890fe9b075bc4d
 2009-04-15T23:31:04.302908Z
 146140
 bkoz
@@ -466,7 +432,7 @@ bkoz
 
 
 
-3384
+7285
 
 ext_io.html
 file
@@ -501,6 +467,40 @@ bkoz
 
 
 5679
+
+bk01pt09ch20.html
+file
+
+
+
+
+2009-04-24T17:49:57.000000Z
+c361078dab3063c845dd7abf0218e85c
+2009-04-15T23:31:04.302908Z
+146140
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3384
 
 using_macros.html
 file
@@ -1012,6 +1012,40 @@ bkoz
 
 2905
 
+ext_concurrency.html
+file
+
+
+
+
+2009-04-24T17:49:57.000000Z
+c70982d42efd8cef44fb534ff65b7fc4
+2009-04-15T23:31:04.302908Z
+146140
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7728
+
 associative.html
 file
 
@@ -1080,40 +1114,6 @@ bkoz
 
 4387
 
-ext_concurrency.html
-file
-
-
-
-
-2009-04-24T17:49:57.000000Z
-c70982d42efd8cef44fb534ff65b7fc4
-2009-04-15T23:31:04.302908Z
-146140
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7728
-
 bk01pt12ch33s03.html
 file
 
@@ -1147,74 +1147,6 @@ bkoz
 
 
 4753
-
-bk01pt03ch07s03.html
-file
-
-
-
-
-2009-04-24T17:49:57.000000Z
-c82cf2cc3167f95fc7a46814e9bbe451
-2009-04-15T23:31:04.302908Z
-146140
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2041
-
-bitmap_allocator.html
-file
-
-
-
-
-2009-04-24T17:49:57.000000Z
-662f633d8f4a65d66b22a20670ac3c72
-2009-04-15T23:31:04.302908Z
-146140
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-23397
 
 support.html
 file
@@ -1250,14 +1182,14 @@ bkoz
 
 2857
 
-bk01pt09pr02.html
+bitmap_allocator.html
 file
 
 
 
 
 2009-04-24T17:49:57.000000Z
-1d670bad3a1e70f9d51714afa2242079
+662f633d8f4a65d66b22a20670ac3c72
 2009-04-15T23:31:04.302908Z
 146140
 bkoz
@@ -1282,16 +1214,16 @@ bkoz
 
 
 
-3968
+23397
 
-bk01pt05ch13s06.html
+bk01pt03ch07s03.html
 file
 
 
 
 
 2009-04-24T17:49:57.000000Z
-911d9f8cfdaef442b055cf6c60e26ca9
+c82cf2cc3167f95fc7a46814e9bbe451
 2009-04-15T23:31:04.302908Z
 146140
 bkoz
@@ -1316,7 +1248,7 @@ bkoz
 
 
 
-7017
+2041
 
 verbose_termination.html
 file
@@ -1352,14 +1284,14 @@ bkoz
 
 4688
 
-locales.html
+bk01pt05ch13s06.html
 file
 
 
 
 
 2009-04-24T17:49:57.000000Z
-5cee30ced54144fdb0864f195dc809ce
+911d9f8cfdaef442b055cf6c60e26ca9
 2009-04-15T23:31:04.302908Z
 146140
 bkoz
@@ -1384,7 +1316,41 @@ bkoz
 
 
 
-13569
+7017
+
+bk01pt09pr02.html
+file
+
+
+
+
+2009-04-24T17:49:57.000000Z
+1d670bad3a1e70f9d51714afa2242079
+2009-04-15T23:31:04.302908Z
+146140
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3968
 
 license.html
 file
@@ -1420,6 +1386,40 @@ bkoz
 
 8482
 
+locales.html
+file
+
+
+
+
+2009-04-24T17:49:57.000000Z
+5cee30ced54144fdb0864f195dc809ce
+2009-04-15T23:31:04.302908Z
+146140
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+13569
+
 bk01pt08ch19s02.html
 file
 
@@ -1453,40 +1453,6 @@ bkoz
 
 
 7007
-
-bk01pt05ch13.html
-file
-
-
-
-
-2009-04-24T17:49:57.000000Z
-66924ae891d540d60cb3dd5426056491
-2009-04-15T23:31:04.302908Z
-146140
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6834
 
 numerics.html
 file
@@ -1522,6 +1488,40 @@ bkoz
 
 2661
 
+bk01pt05ch13.html
+file
+
+
+
+
+2009-04-24T17:49:57.000000Z
+66924ae891d540d60cb3dd5426056491
+2009-04-15T23:31:04.302908Z
+146140
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6834
+
 using_exceptions.html
 file
 
@@ -1556,48 +1556,14 @@ bkoz
 
 2567
 
-abi.html
-file
-
-
-
-
-2009-04-24T17:49:56.000000Z
-8973550b1802ca3fc5ff14180d194122
-2009-04-15T23:31:04.302908Z
-146140
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-42296
-
-intro.html
+sequences.html
 file
 
 
 
 
 2009-04-24T17:49:57.000000Z
-3f66d4e094264f7412598f94272b98ef
+ba31d9acb290cc2d768be5a02107328a
 2009-04-15T23:31:04.302908Z
 146140
 bkoz
@@ -1622,7 +1588,7 @@ bkoz
 
 
 
-7261
+4643
 
 shared_ptr.html
 file
@@ -1658,14 +1624,14 @@ bkoz
 
 22076
 
-sequences.html
+intro.html
 file
 
 
 
 
 2009-04-24T17:49:57.000000Z
-ba31d9acb290cc2d768be5a02107328a
+3f66d4e094264f7412598f94272b98ef
 2009-04-15T23:31:04.302908Z
 146140
 bkoz
@@ -1690,7 +1656,41 @@ bkoz
 
 
 
-4643
+7261
+
+abi.html
+file
+
+
+
+
+2009-04-24T17:49:56.000000Z
+8973550b1802ca3fc5ff14180d194122
+2009-04-15T23:31:04.302908Z
+146140
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+42296
 
 iostream_objects.html
 file
@@ -1964,14 +1964,14 @@ bkoz
 
 25415
 
-api.html
+bk01pt12ch40s03.html
 file
 
 
 
 
-2009-04-24T17:49:56.000000Z
-7fdfe5687f10b1ecfbc4348b52443079
+2009-04-24T17:49:57.000000Z
+56786a3160e7d1c3fb616fe9286a9949
 2009-04-15T23:31:04.302908Z
 146140
 bkoz
@@ -1996,7 +1996,7 @@ bkoz
 
 
 
-19482
+3231
 
 bk01pt12ch30s04.html
 file
@@ -2032,14 +2032,14 @@ bkoz
 
 31349
 
-bk01pt12ch40s03.html
+api.html
 file
 
 
 
 
-2009-04-24T17:49:57.000000Z
-56786a3160e7d1c3fb616fe9286a9949
+2009-04-24T17:49:56.000000Z
+7fdfe5687f10b1ecfbc4348b52443079
 2009-04-15T23:31:04.302908Z
 146140
 bkoz
@@ -2064,7 +2064,7 @@ bkoz
 
 
 
-3231
+19482
 
 bk01pt12ch31s04.html
 file

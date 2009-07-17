@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/awt/font/autofit
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ doko
 
 3071
 
-Script.java
-file
-
-
-
-
-2009-04-24T17:46:50.000000Z
-7e62cf974dc771e646920724d7c12b3e
-2007-06-03T23:18:43.019099Z
-125302
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2349
-
 Edge.java
 file
 
@@ -161,6 +127,40 @@ doko
 
 
 2730
+
+Script.java
+file
+
+
+
+
+2009-04-24T17:46:50.000000Z
+7e62cf974dc771e646920724d7c12b3e
+2007-06-03T23:18:43.019099Z
+125302
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2349
 
 Latin.java
 file
@@ -264,40 +264,6 @@ doko
 
 2492
 
-Width.java
-file
-
-
-
-
-2009-04-24T17:46:50.000000Z
-9a1788cf9b2fda55779953c89076c6a7
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2184
-
 LatinBlue.java
 file
 
@@ -331,6 +297,40 @@ doko
 
 
 2275
+
+Width.java
+file
+
+
+
+
+2009-04-24T17:46:50.000000Z
+9a1788cf9b2fda55779953c89076c6a7
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2184
 
 AutoHinter.java
 file
@@ -434,40 +434,6 @@ doko
 
 1962
 
-LatinAxis.java
-file
-
-
-
-
-2009-04-24T17:46:50.000000Z
-7f7897f1a54d27ec66580fb9bdaaba6e
-2007-06-03T23:18:43.019099Z
-125302
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2112
-
 HintScaler.java
 file
 
@@ -501,6 +467,40 @@ doko
 
 
 1969
+
+LatinAxis.java
+file
+
+
+
+
+2009-04-24T17:46:50.000000Z
+7f7897f1a54d27ec66580fb9bdaaba6e
+2007-06-03T23:18:43.019099Z
+125302
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2112
 
 LatinMetrics.java
 file

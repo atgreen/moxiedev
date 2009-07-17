@@ -176,12 +176,13 @@ package Tbuild is
    --  is given as a normal string instead of a String_Id value.
 
    function Make_Temporary
-     (Loc :   Source_Ptr;
-      Id  :  Name_Id;
+     (Loc          : Source_Ptr;
+      Id           : Character;
       Related_Node : Node_Id := Empty) return Node_Id;
    --  Create a defining identifier to capture the value of an expression
    --  or aggregate, and link it to the expression that it replaces, in
-   --  order to provide better CodePeer reports.
+   --  order to provide better CodePeer reports. The defining identifier
+   --  name is obtained by Make_Internal_Name (Id).
 
    function Make_Unsuppress_Block
      (Loc   : Source_Ptr;

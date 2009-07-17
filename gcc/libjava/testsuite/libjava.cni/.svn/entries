@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/testsuite/libjava.cni
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,16 +26,16 @@ aph
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-shortfield.java
+PR9577.out
 file
 
 
 
 
 2009-04-24T17:49:43.000000Z
-49720fc0c8dd994ae6dd8ceb249fb6d5
-2003-03-22T07:14:53.000000Z
-64702
+e134ced312b3511d88943d57ccd70c83
+2003-09-17T15:25:07.000000Z
+71460
 tromey
 
 
@@ -58,7 +58,7 @@ tromey
 
 
 
-315
+7
 
 longfield.java
 file
@@ -94,16 +94,16 @@ tromey
 
 365
 
-PR9577.out
+shortfield.java
 file
 
 
 
 
 2009-04-24T17:49:43.000000Z
-e134ced312b3511d88943d57ccd70c83
-2003-09-17T15:25:07.000000Z
-71460
+49720fc0c8dd994ae6dd8ceb249fb6d5
+2003-03-22T07:14:53.000000Z
+64702
 tromey
 
 
@@ -126,7 +126,7 @@ tromey
 
 
 
-7
+315
 
 shortfieldbase.h
 file
@@ -196,40 +196,6 @@ has-props
 
 629
 
-shortfield.h
-file
-
-
-
-
-2009-04-24T17:49:43.000000Z
-ccfcbd9024fb128cd29e01b476a02106
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-614
-
 longfield.h
 file
 
@@ -264,16 +230,16 @@ tromey
 
 631
 
-natshortfield.cc
+shortfield.h
 file
 
 
 
 
 2009-04-24T17:49:43.000000Z
-c8a0163319ecc15e4af54d3590bb85b5
-2003-03-22T07:14:53.000000Z
-64702
+ccfcbd9024fb128cd29e01b476a02106
+2007-01-09T19:58:05.773323Z
+120621
 tromey
 
 
@@ -296,7 +262,7 @@ tromey
 
 
 
-139
+614
 
 natlongfield.cc
 file
@@ -331,6 +297,40 @@ tromey
 
 
 257
+
+natshortfield.cc
+file
+
+
+
+
+2009-04-24T17:49:43.000000Z
+c8a0163319ecc15e4af54d3590bb85b5
+2003-03-22T07:14:53.000000Z
+64702
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+139
 
 PR9577.java
 file
@@ -400,40 +400,6 @@ tromey
 
 492
 
-natPR9577.cc
-file
-
-
-
-
-2009-04-24T17:49:43.000000Z
-b85c1558f78b5b73d1622f975f371fe9
-2003-09-17T15:25:07.000000Z
-71460
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-158
-
 cni.exp
 file
 
@@ -468,16 +434,16 @@ aph
 
 3046
 
-shortfield.out
+natPR9577.cc
 file
 
 
 
 
 2009-04-24T17:49:43.000000Z
-cdbf860b28600799275326e02bd11b23
-2003-03-22T07:14:53.000000Z
-64702
+b85c1558f78b5b73d1622f975f371fe9
+2003-09-17T15:25:07.000000Z
+71460
 tromey
 
 
@@ -500,7 +466,7 @@ tromey
 
 
 
-22
+158
 
 longfield.out
 file
@@ -535,6 +501,40 @@ tromey
 
 
 36
+
+shortfield.out
+file
+
+
+
+
+2009-04-24T17:49:43.000000Z
+cdbf860b28600799275326e02bd11b23
+2003-03-22T07:14:53.000000Z
+64702
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+22
 
 shortfield.jar
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/external/w3c_dom/org/w3c/dom/css
 svn://gcc.gnu.org/svn/gcc
 
@@ -298,40 +298,6 @@ tromey
 
 13241
 
-Counter.java
-file
-
-
-
-
-2009-04-24T17:46:45.000000Z
-9d9226cb9e91a043ae87f4e0a0f956fd
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1324
-
 CSSStyleDeclaration.java
 file
 
@@ -366,14 +332,14 @@ tromey
 
 7529
 
-CSSRule.java
+Counter.java
 file
 
 
 
 
 2009-04-24T17:46:45.000000Z
-2d35b1f9e093a90e698e9b1118d3276b
+9d9226cb9e91a043ae87f4e0a0f956fd
 2005-09-23T17:31:48.000000Z
 104575
 tromey
@@ -398,7 +364,7 @@ tromey
 
 
 
-3730
+1324
 
 CSSMediaRule.java
 file
@@ -433,6 +399,40 @@ tromey
 
 
 3171
+
+CSSRule.java
+file
+
+
+
+
+2009-04-24T17:46:45.000000Z
+2d35b1f9e093a90e698e9b1118d3276b
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3730
 
 CSSValueList.java
 file

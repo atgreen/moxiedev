@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/gcj/convert
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,40 +502,6 @@ tromey
 
 2468
 
-JIS0208_to_Unicode.cc
-file
-
-
-
-
-2009-04-24T17:48:56.000000Z
-6d63edf3a18c2b11c82aab036fd964a7
-2001-10-22T05:38:25.000000Z
-46400
-bryce
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-205436
-
 Output_UnicodeLittleUnmarked.java
 file
 
@@ -569,6 +535,40 @@ daney
 
 
 1181
+
+JIS0208_to_Unicode.cc
+file
+
+
+
+
+2009-04-24T17:48:56.000000Z
+6d63edf3a18c2b11c82aab036fd964a7
+2001-10-22T05:38:25.000000Z
+46400
+bryce
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+205436
 
 Output_8859_1.java
 file
@@ -604,40 +604,6 @@ tromey
 
 1365
 
-BytesToCharsetAdaptor.java
-file
-
-
-
-
-2009-04-24T17:48:56.000000Z
-90c3f30af9e81b1da645de95adb9d5f3
-2007-01-30T02:46:54.093832Z
-121329
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2274
-
 Output_ASCII.h
 file
 
@@ -671,6 +637,40 @@ tromey
 
 
 748
+
+BytesToCharsetAdaptor.java
+file
+
+
+
+
+2009-04-24T17:48:56.000000Z
+90c3f30af9e81b1da645de95adb9d5f3
+2007-01-30T02:46:54.093832Z
+121329
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2274
 
 Output_JavaSrc.h
 file
@@ -774,40 +774,6 @@ tromey
 
 670
 
-Input_UnicodeLittle.java
-file
-
-
-
-
-2009-04-24T17:48:56.000000Z
-fbf52ca17f7071f125cb2e7e7508ea22
-2004-03-20T00:24:49.000000Z
-79723
-bothner
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1124
-
 Output_8859_1.h
 file
 
@@ -841,6 +807,40 @@ tromey
 
 
 754
+
+Input_UnicodeLittle.java
+file
+
+
+
+
+2009-04-24T17:48:56.000000Z
+fbf52ca17f7071f125cb2e7e7508ea22
+2004-03-20T00:24:49.000000Z
+79723
+bothner
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1124
 
 CharsetToBytesAdaptor.h
 file
@@ -910,40 +910,6 @@ tromey
 
 754
 
-Input_UnicodeBig.java
-file
-
-
-
-
-2009-04-24T17:48:56.000000Z
-c002300bfc27d99f93a0dd702b68a925
-2004-03-20T00:24:49.000000Z
-79723
-bothner
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1106
-
 Input_SJIS.java
 file
 
@@ -977,6 +943,40 @@ tromey
 
 
 577
+
+Input_UnicodeBig.java
+file
+
+
+
+
+2009-04-24T17:48:56.000000Z
+c002300bfc27d99f93a0dd702b68a925
+2004-03-20T00:24:49.000000Z
+79723
+bothner
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1106
 
 Input_UnicodeLittle.h
 file
@@ -1012,40 +1012,6 @@ tromey
 
 871
 
-Input_UnicodeBig.h
-file
-
-
-
-
-2009-04-24T17:48:56.000000Z
-03d37f4ec5bc89e731d81e2973280987
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-853
-
 Input_SJIS.h
 file
 
@@ -1079,6 +1045,40 @@ tromey
 
 
 797
+
+Input_UnicodeBig.h
+file
+
+
+
+
+2009-04-24T17:48:56.000000Z
+03d37f4ec5bc89e731d81e2973280987
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+853
 
 JIS0201.h
 file

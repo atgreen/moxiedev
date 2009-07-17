@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libffi/src
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,10 +26,10 @@ andreast
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
+arm
 dir
 
-arm
+powerpc
 dir
 
 closures.c
@@ -72,6 +72,15 @@ dir
 sh64
 dir
 
+x86
+dir
+
+alpha
+dir
+
+m68k
+dir
+
 types.c
 file
 
@@ -106,25 +115,19 @@ aph
 
 2904
 
-m68k
-dir
-
-alpha
-dir
-
-x86
-dir
-
 frv
 dir
 
 s390
 dir
 
+cris
+dir
+
 pa
 dir
 
-cris
+ia64
 dir
 
 raw_api.c
@@ -160,9 +163,6 @@ aph
 
 
 6067
-
-ia64
-dir
 
 java_raw_api.c
 file

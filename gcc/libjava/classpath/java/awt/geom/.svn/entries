@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/java/awt/geom
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ tromey
 
 15856
 
-PathIterator.java
-file
-
-
-
-
-2009-04-24T17:47:06.000000Z
-f2f83df0ed690bcc1ae49d1ce981b9c3
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7159
-
 IllegalPathStateException.java
 file
 
@@ -127,6 +93,40 @@ tromey
 
 
 2502
+
+PathIterator.java
+file
+
+
+
+
+2009-04-24T17:47:06.000000Z
+f2f83df0ed690bcc1ae49d1ce981b9c3
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7159
 
 Area.java
 file
@@ -434,9 +434,6 @@ tromey
 
 43264
 
-doc-files
-dir
-
 QuadCurve2D.java
 file
 
@@ -470,6 +467,9 @@ doko
 
 
 43866
+
+doc-files
+dir
 
 RectangularShape.java
 file

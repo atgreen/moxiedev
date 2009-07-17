@@ -1,3 +1,53 @@
+2009-07-14  Michael Snyder  <msnyder@vmware.com>
+
+	* gdb.reverse/finish-reverse.exp: Do not expect reverse-finish
+	to bring gdb to the beginning of the calling line.
+
+	* gdb.arch/i386-signal.c (sigframe): Add a nop to avoid
+	confusing the i386 epilogue unwinder.
+
+2009-07-14  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.trace/tracecmd.exp: Add basic test of tracepoint conditions.
+
+2009-07-14  Michael Snyder  <msnyder@vmware.com>
+
+	* gdb.reverse/step-reverse.exp (stepi into function call):
+	Call instruction may not be first instruction in the line.
+	(reverse stepi from a function call): Used wrong line number.
+
+2009-07-13  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.arch/amd64-i386-address.exp, gdb.arch/amd64-i386-address.S: New.
+
+2009-07-13  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix gdb.base/macscp.exp when using custom inputrc.
+	* gdb.base/completion.exp: Remove env(INPUTRC) set and restore.
+	* gdb.base/readline.exp: Remove env(INPUTRC) set and restore.  Remove
+	env(TERM) set.
+	* gdb.cp/cpcompletion.exp: Remove env(INPUTRC) set.
+	* lib/gdb.exp (default_gdb_start): Add env(INPUTRC) and env(TERM) set.
+
+2009-07-13  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix racy clashing of output files for gdb.base{1,2}/ parallel run.
+	* gdb.base/annota1.exp (thread_test): Import global $testfile.
+	Change the compilation target to match the testcase name.
+	* gdb.base/sect-cmd.exp: Change the compilation target to match the
+	testcase name.
+	* a2-run.exp: Use for setup prepare_for_testing.  Change the
+	compilation target to match the testcase name.
+	* gdb.base/commands.exp: Likewise.
+	* gdb.base/finish.exp: Likewise.
+	* gdb.base/float.exp: Likewise.
+	* gdb.base/info-target.exp: Likewise.
+	* gdb.base/relational.exp: Likewise.
+	* gdb.base/term.exp: Likewise.
+	* gdb.base/until.exp: Likewise.
+	* gdb.base/volatile.exp: Likewise.
+	* gdb.base/whatis-exp.exp: Likewise.
+
 2009-07-11  Hui Zhu  <teawater@gmail.com>
 
 	* gdb.base/help.exp (disassemble): Update expected help text.

@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,10 +26,10 @@ rsandifo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-27_io
+25_algorithms
 dir
 
-25_algorithms
+27_io
 dir
 
 19_diagnostics
@@ -78,16 +78,16 @@ dir
 18_support
 dir
 
-21_strings
-dir
-
 abi
 dir
 
-30_threads
+21_strings
 dir
 
 26_numerics
+dir
+
+30_threads
 dir
 
 ext
@@ -96,10 +96,10 @@ dir
 performance
 dir
 
-17_intro
+libstdc++-dg
 dir
 
-libstdc++-dg
+17_intro
 dir
 
 22_locale

@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/autopar
 svn://gcc.gnu.org/svn/gcc
 
@@ -332,40 +332,6 @@ matz
 
 2166
 
-reduc-1short.c
-file
-
-
-
-
-2009-04-27T23:07:35.000000Z
-627868e60547d8486fe52c0760633d3e
-2009-04-26T19:35:04.045020Z
-146817
-matz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1258
-
 pr39500-1.c
 file
 
@@ -400,14 +366,14 @@ spop
 
 610
 
-reduc-2short.c
+reduc-1short.c
 file
 
 
 
 
 2009-04-27T23:07:35.000000Z
-5c39d4895f274e61f6867e6b992e7b95
+627868e60547d8486fe52c0760633d3e
 2009-04-26T19:35:04.045020Z
 146817
 matz
@@ -432,7 +398,7 @@ matz
 
 
 
-1155
+1258
 
 pr39500-2.c
 file
@@ -467,6 +433,40 @@ spop
 
 
 507
+
+reduc-2short.c
+file
+
+
+
+
+2009-04-27T23:07:35.000000Z
+5c39d4895f274e61f6867e6b992e7b95
+2009-04-26T19:35:04.045020Z
+146817
+matz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1155
 
 autopar.exp
 file

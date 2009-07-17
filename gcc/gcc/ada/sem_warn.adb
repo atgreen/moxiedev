@@ -33,6 +33,7 @@ with Lib;      use Lib;
 with Namet;    use Namet;
 with Nlists;   use Nlists;
 with Opt;      use Opt;
+with Par_SCO;  use Par_SCO;
 with Rtsfind;  use Rtsfind;
 with Sem;      use Sem;
 with Sem_Ch8;  use Sem_Ch8;
@@ -2997,6 +2998,9 @@ package body Sem_Warn is
             Warn_On_Unrepped_Components         := True;
             Warn_On_Warnings_Off                := True;
 
+         when 'g' =>
+            Set_GNAT_Mode_Warnings;
+
          when 'm' =>
             Warn_On_Suspicious_Modulus_Value    := True;
 
@@ -3040,6 +3044,45 @@ package body Sem_Warn is
 
       return True;
    end Set_Dot_Warning_Switch;
+
+   ----------------------------
+   -- Set_GNAT_Mode_Warnings --
+   ----------------------------
+
+   procedure Set_GNAT_Mode_Warnings is
+   begin
+      Address_Clause_Overlay_Warnings     := True;
+      Check_Unreferenced                  := True;
+      Check_Unreferenced_Formals          := True;
+      Check_Withs                         := True;
+      Constant_Condition_Warnings         := True;
+      Elab_Warnings                       := False;
+      Implementation_Unit_Warnings        := False;
+      Ineffective_Inline_Warnings         := True;
+      Warn_On_Ada_2005_Compatibility      := True;
+      Warn_On_All_Unread_Out_Parameters   := False;
+      Warn_On_Assertion_Failure           := True;
+      Warn_On_Assumed_Low_Bound           := True;
+      Warn_On_Bad_Fixed_Value             := True;
+      Warn_On_Biased_Representation       := True;
+      Warn_On_Constant                    := True;
+      Warn_On_Deleted_Code                := False;
+      Warn_On_Dereference                 := False;
+      Warn_On_Export_Import               := True;
+      Warn_On_Hiding                      := False;
+      Warn_On_Modified_Unread             := True;
+      Warn_On_No_Value_Assigned           := True;
+      Warn_On_Non_Local_Exception         := False;
+      Warn_On_Object_Renames_Function     := False;
+      Warn_On_Obsolescent_Feature         := True;
+      Warn_On_Questionable_Missing_Parens := True;
+      Warn_On_Redundant_Constructs        := True;
+      Warn_On_Object_Renames_Function     := True;
+      Warn_On_Unchecked_Conversion        := True;
+      Warn_On_Unrecognized_Pragma         := True;
+      Warn_On_Unrepped_Components         := False;
+      Warn_On_Warnings_Off                := False;
+   end Set_GNAT_Mode_Warnings;
 
    ------------------------
    -- Set_Warning_Switch --
@@ -3265,13 +3308,52 @@ package body Sem_Warn is
    -----------------------------
 
    procedure Warn_On_Known_Condition (C : Node_Id) is
-      P : Node_Id;
+      P           : Node_Id;
+      Orig        : constant Node_Id := Original_Node (C);
+      Test_Result : Boolean;
+
+      function Is_Known_Branch return Boolean;
+      --  If the type of the condition is Boolean, the constant value of the
+      --  condition is a boolean literal. If the type is a derived boolean
+      --  type, the constant is wrapped in a type conversion of the derived
+      --  literal. If the value of the condition is not a literal, no warnings
+      --  can be produced. This function returns True if the result can be
+      --  determined, and Test_Result is set True/False accordingly. Otherwise
+      --  False is returned, and Test_Result is unchanged.
 
       procedure Track (N : Node_Id; Loc : Node_Id);
       --  Adds continuation warning(s) pointing to reason (assignment or test)
       --  for the operand of the conditional having a known value (or at least
       --  enough is known about the value to issue the warning). N is the node
       --  which is judged to have a known value. Loc is the warning location.
+
+      ---------------------
+      -- Is_Known_Branch --
+      ---------------------
+
+      function Is_Known_Branch return Boolean is
+      begin
+         if Etype (C) = Standard_Boolean
+           and then Is_Entity_Name (C)
+           and then
+             (Entity (C) = Standard_False or else Entity (C) = Standard_True)
+         then
+            Test_Result := Entity (C) = Standard_True;
+            return True;
+
+         elsif Is_Boolean_Type (Etype (C))
+           and then Nkind (C) = N_Unchecked_Type_Conversion
+           and then Is_Entity_Name (Expression (C))
+           and then Ekind (Entity (Expression (C))) = E_Enumeration_Literal
+         then
+            Test_Result :=
+              Chars (Entity (Expression (C))) = Chars (Standard_True);
+            return True;
+
+         else
+            return False;
+         end if;
+      end Is_Known_Branch;
 
       -----------
       -- Track --
@@ -3314,17 +3396,47 @@ package body Sem_Warn is
    --  Start of processing for Warn_On_Known_Condition
 
    begin
-      --   Argument replacement in an inlined body can make conditions static.
-      --   Do not emit warnings in this case.
+      --  Adjust SCO condition if from source
+
+      if Generate_SCO
+        and then Comes_From_Source (Orig)
+        and then Is_Known_Branch
+      then
+         declare
+            Start : Source_Ptr;
+            Dummy : Source_Ptr;
+            Typ   : Character;
+            Atrue : Boolean;
+
+         begin
+            Sloc_Range (Orig, Start, Dummy);
+            Atrue := Test_Result;
+
+            if Present (Parent (C))
+              and then Nkind (Parent (C)) = N_Op_Not
+            then
+               Atrue := not Atrue;
+            end if;
+
+            if Atrue then
+               Typ := 't';
+            else
+               Typ := 'f';
+            end if;
+
+            Set_SCO_Condition (Start, Typ);
+         end;
+      end if;
+
+      --  Argument replacement in an inlined body can make conditions static.
+      --  Do not emit warnings in this case.
 
       if In_Inlined_Body then
          return;
       end if;
 
       if Constant_Condition_Warnings
-        and then Nkind (C) = N_Identifier
-        and then
-          (Entity (C) = Standard_False or else Entity (C) = Standard_True)
+        and then Is_Known_Branch
         and then Comes_From_Source (Original_Node (C))
         and then not In_Instance
       then
@@ -3379,7 +3491,7 @@ package body Sem_Warn is
 
          if not Operand_Has_Warnings_Suppressed (C) then
             declare
-               True_Branch : Boolean := Entity (C) = Standard_True;
+               True_Branch : Boolean := Test_Result;
                Cond        : Node_Id := C;
 
             begin

@@ -30,7 +30,6 @@
 /i386-permbkpt.exp/1.1/Mon Jul  6 10:46:43 2009//
 /i386-prologue.c/1.12/Mon Jul  6 10:46:43 2009//
 /i386-prologue.exp/1.18/Mon Jul  6 10:46:43 2009//
-/i386-signal.c/1.4/Mon Jul  6 10:46:43 2009//
 /i386-signal.exp/1.4/Mon Jul  6 10:46:43 2009//
 /i386-size-overlap.c/1.4/Mon Jul  6 10:46:43 2009//
 /i386-size-overlap.exp/1.4/Mon Jul  6 10:46:43 2009//
@@ -63,4 +62,7 @@
 /thumb-prologue.exp/1.8/Mon Jul  6 10:46:43 2009//
 /vsx-regs.c/1.1/Mon Jul  6 10:46:43 2009//
 /vsx-regs.exp/1.4/Mon Jul  6 10:46:43 2009//
+/amd64-i386-address.S/1.1/Mon Jul 13 20:16:48 2009//
+/amd64-i386-address.exp/1.1/Mon Jul 13 20:16:48 2009//
+/i386-signal.c/1.5/Wed Jul 15 17:46:09 2009//
 D

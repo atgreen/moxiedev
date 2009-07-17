@@ -1,3 +1,114 @@
+2009-07-15  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/sse.md (copysign<mode>3): Use "and-not" SSE instruction
+	instead of "and" with inverted sign bit mask value.  Use
+	"nonimmediate_operand" for operand 1 and operand 2 predicate.
+	Allocate registers only for operand 4 and operand 5.
+
+2009-07-15  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/40747
+	* fold-const.c (fold_cond_expr_with_comparison): When folding
+	< and <= to MIN, make sure the MIN uses the same type as the
+	comparison's operands.
+
+2009-07-15  Richard Earnshaw  <rearnsha@arm.com>
+
+	* arm.md (ior_xor): New code iterator.
+	(split for ior/xor with shift and zero-extend): New split pattern.
+	* arm/predicates.md (subreg_lowpart_operator): New special predicate.
+
+2009-07-15  Richard Guenther  <rguenther@suse.de>
+
+	* tree-ssa-structalias.c (make_constraint_from_heapvar): Initialize
+	offset member.
+
+2009-07-15  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/40753
+	* alias.c (ao_ref_from_mem): Reject FUNCTION_DECL and LABEL_DECL bases.
+
+2009-07-15  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* config/m68k/linux-unwind.h (m68k_fallback_frame_state): Update to
+	handle 2.6.30 kernel.
+
+2009-07-15  DJ Delorie  <dj@redhat.com>
+
+	* config/mep/mep.md (sibcall_internal): Change register to allow
+	for 24-bit addresses.
+	(sibcall_value_internal): Likewise.
+
+2009-07-14  Ghassan Shobaki  <ghassan.shobaki@amd.com>
+	
+	* doc/invoke.texi: Added descriptions of the  scheduling heuristics
+	that are enabled/disabled by the flags introduced by a previous patch.
+	
+2009-07-14  DJ Delorie  <dj@redhat.com>
+
+	* config/mep/mep.md (sibcall_internal): Include non-toggling
+	non-jmp case.
+	(sibcall_value_internal): Likewise.
+
+2009-07-14  Taras Glek  <tglek@mozilla.com>
+	    Rafael Espindola  <espindola@google.com>
+
+	* doc/sourcebuild.texi: Document install-plugin target.
+	* configure.ac: Added install-plugin target to language makefiles.
+	* configure: Regenerate.
+	* Makefile.in: (install-plugin): Install more headers,
+	depend on lang.install-plugin.
+
+2009-07-15  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	* tree-vrp.c (vrp_evaluate_conditional): Mark strings for
+	translation.
+	
+2009-07-14  DJ Delorie  <dj@redhat.com>
+
+	* config/mep/mep.c (mep_vliw_jmp_match): New function.
+	* config/mep/mep-protos.h (mep_vliw_jmp_match): Prototype it.
+	* config/mep/mep.md (sibcall_internal): Change test from
+	mep_vliw_mode_match to mep_vliw_jmp_match.
+	(sibcall_value_internal): Likewise.
+
+2009-07-14  Uros Bizjak  <ubizjak@gmail.com>
+
+	* config/i386/sse.md (copysign<mode>3): New expander.
+	* config/i386/i386-protos.h (ix86_build_signbit_mask): New prototype.
+	* config/i386/i386.c (ix86_build_signbit_mask): Make public.
+	Use ix86_build_const_vector.
+	(enum ix86_builtins): Add IX86_BUILTIN_CPYSGNPS and
+	IX86_BUILTIN_CPYSGNPD.
+	(builtin_description): Add __builtin_ia32_copysignps and
+	__builtin_ia32_copysignpd.
+	(ix86_builtin_vectorized_function): Handle BUILT_IN_COPYSIGN
+	and BUILT_IN_COPYSIGNF.
+
+2009-07-13  Jason Merrill  <jason@redhat.com>
+
+	* builtins.c (can_trust_pointer_alignment): New fn.
+	(get_pointer_alignment): Factor it out from here.
+	* tree.h: Declare it.
+
+2009-07-14  David Edelsohn  <edelsohn@gnu.org>
+
+	* config/rs6000/predicates.md (offsettable_mem_operand): Test
+	RTX_AUTOINC class.
+
+2009-07-14  Dodji Seketeli  <dodji@redhat.com>
+
+	PR debug/40705
+	PR c++/403057
+	* dwarf2.out.c (gen_type_die_with_usage): Added comment.
+
+2009-07-14  Richard Guenther  <rguenther@suse.de>
+	    Andrey Belevantsev <abel@ispras.ru>
+
+	PR middle-end/40745
+	* cfgexpand.c (partition_stack_vars): Do not bother to update
+	alias information when not optimizing.
+
 2009-07-14  Richard Guenther  <rguenther@suse.de>
 	Andrey Belevantsev <abel@ispras.ru>
 
@@ -43,13 +154,12 @@
 
 2009-07-13  Ghassan Shobaki  <ghassan.shobaki@amd.com>
 	
-	* haifa-sched.c 
-	(rank_for_schedule): Introduced flags to enable/disable 
-	individual scheduling heuristics.
-	* common.opt: Introduced flags to enable/disable
-        individual heuristics in the scheduler.	
-	* doc/invoke.texi: Introduced flags to enable/disable
-        individual heuristics in the scheduler.
+	* haifa-sched.c (rank_for_schedule): Introduced flags to
+	enable/disable individual scheduling heuristics.
+	* common.opt: Introduced flags to enable/disable individual
+	heuristics in the scheduler.	
+	* doc/invoke.texi: Introduced flags to enable/disable individual
+	heuristics in the scheduler.
 	
 2009-07-13  Kai Tietz  <kai.tietz@onevision.com>
 

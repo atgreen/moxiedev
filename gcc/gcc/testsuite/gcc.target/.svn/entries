@@ -1,15 +1,15 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-10T22:49:52.357301Z
-149500
-daney
+2009-07-14T18:44:59.899605Z
+149641
+uros
 
 
 
@@ -26,16 +26,16 @@ daney
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-arm
-dir
-
 powerpc
 dir
 
-alpha
+arm
 dir
 
 m68k
+dir
+
+alpha
 dir
 
 avr
@@ -50,10 +50,10 @@ dir
 frv
 dir
 
-s390
+x86_64
 dir
 
-x86_64
+s390
 dir
 
 cris
@@ -65,10 +65,10 @@ dir
 spu
 dir
 
-mips
+sparc
 dir
 
-sparc
+mips
 dir
 
 sh

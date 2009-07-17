@@ -37,8 +37,6 @@
 /tc-alpha.h/1.29/Mon Jul  6 10:46:40 2009//
 /tc-arc.c/1.44/Mon Jul  6 10:46:40 2009//
 /tc-arc.h/1.15/Mon Jul  6 10:46:40 2009//
-/tc-arm.c/1.393/Mon Jul 13 12:29:32 2009//
-/tc-arm.h/1.51/Mon Jul  6 10:46:40 2009//
 /tc-avr.c/1.63/Mon Jul  6 10:46:40 2009//
 /tc-avr.h/1.16/Mon Jul  6 10:46:40 2009//
 /tc-bfin.c/1.21/Mon Jul  6 10:46:40 2009//
@@ -200,4 +198,6 @@
 /xtensa-istack.h/1.14/Mon Jul  6 10:46:42 2009//
 /xtensa-relax.c/1.20/Mon Jul  6 10:46:42 2009//
 /xtensa-relax.h/1.10/Mon Jul  6 10:46:42 2009//
+/tc-arm.c/1.394/Wed Jul 15 17:46:03 2009//
+/tc-arm.h/1.53/Wed Jul 15 17:46:03 2009//
 D

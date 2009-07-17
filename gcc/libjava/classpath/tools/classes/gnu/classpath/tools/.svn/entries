@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/tools/classes/gnu/classpath/tools
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,12 +25,6 @@ aph
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-rmiregistry
-dir
-
-java2xhtml
-dir
 
 StringToolkit.class
 file
@@ -66,7 +60,10 @@ has-props
 
 1124
 
-native2ascii
+java2xhtml
+dir
+
+rmiregistry
 dir
 
 IOToolkit.class
@@ -103,22 +100,22 @@ has-props
 
 3753
 
+native2ascii
+dir
+
 jarsigner
-dir
-
-orbd
-dir
-
-keytool
 dir
 
 gjdoc
 dir
 
-common
+keytool
 dir
 
-javah
+orbd
+dir
+
+common
 dir
 
 NotifyingInputStreamReader.class
@@ -154,6 +151,9 @@ has-props
 
 
 5878
+
+javah
+dir
 
 rmic
 dir

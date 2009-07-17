@@ -1,15 +1,15 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/plugin
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-07T02:10:19.639857Z
-149310
-manu
+2009-07-14T22:25:23.347988Z
+149648
+dnovillo
 
 
 
@@ -128,6 +128,40 @@ dnovillo
 
 1839
 
+header-plugin-test.C
+file
+
+
+
+
+2009-07-15T17:44:21.000000Z
+b393922db8d338bed7f3bcf037edd19c
+2009-07-14T22:25:23.347988Z
+149648
+dnovillo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+56
+
 dumb_plugin.c
 file
 
@@ -196,6 +230,40 @@ dnovillo
 
 1177
 
+header_plugin.c
+file
+
+
+
+
+2009-07-15T17:44:21.000000Z
+378a1d7ae7db0dde9482ba6c341117a2
+2009-07-14T22:25:23.347988Z
+149648
+dnovillo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+619
+
 self-assign-test-2.C
 file
 
@@ -236,11 +304,11 @@ file
 
 
 
-2009-05-16T13:52:11.000000Z
-cc4098175d6d4179a3c639cf530da09b
-2009-05-14T01:38:33.663300Z
-147516
-tglek
+2009-07-15T17:44:21.000000Z
+c96a7b043278c246d5f46f5c0c2ce6e5
+2009-07-14T22:25:23.347988Z
+149648
+dnovillo
 
 
 
@@ -262,7 +330,7 @@ tglek
 
 
 
-2415
+2462
 
 self-assign-test-3.C
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/examples/gnu/classpath/examples/icons
 svn://gcc.gnu.org/svn/gcc
 
@@ -366,40 +366,6 @@ has-props
 
 328
 
-palme.gif
-file
-
-
-
-
-2009-04-24T17:46:44.000000Z
-5f99a7667b24ff518a81351fcac55782
-2007-06-03T23:18:43.019099Z
-125302
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-502
-
 stock-save.png
 file
 
@@ -434,14 +400,14 @@ has-props
 
 539
 
-aicas.png
+palme.gif
 file
 
 
 
 
 2009-04-24T17:46:44.000000Z
-b42f0724ddc78252ba14e107c2ba66f9
+5f99a7667b24ff518a81351fcac55782
 2007-06-03T23:18:43.019099Z
 125302
 doko
@@ -466,7 +432,7 @@ has-props
 
 
 
-2320
+502
 
 stock-save-as.png
 file
@@ -501,6 +467,40 @@ has-props
 
 
 751
+
+aicas.png
+file
+
+
+
+
+2009-04-24T17:46:44.000000Z
+b42f0724ddc78252ba14e107c2ba66f9
+2007-06-03T23:18:43.019099Z
+125302
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2320
 
 stock-open.png
 file

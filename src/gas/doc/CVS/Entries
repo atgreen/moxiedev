@@ -4,7 +4,6 @@
 /as.texinfo/1.205/Mon Jul 13 12:29:34 2009//
 /c-alpha.texi/1.9/Mon Jul  6 10:46:42 2009//
 /c-arc.texi/1.8/Mon Jul  6 10:46:42 2009//
-/c-arm.texi/1.58/Mon Jul 13 12:29:34 2009//
 /c-avr.texi/1.24/Mon Jul  6 10:46:42 2009//
 /c-bfin.texi/1.2/Mon Jul  6 10:46:42 2009//
 /c-cr16.texi/1.2/Mon Jul  6 10:46:42 2009//
@@ -47,4 +46,5 @@
 /fdl.texi/1.4/Mon Jul  6 10:46:42 2009//
 /h8.texi/1.2/Mon Jul  6 10:46:42 2009//
 /internals.texi/1.63/Mon Jul  6 10:46:42 2009//
+/c-arm.texi/1.59/Wed Jul 15 17:46:03 2009//
 D

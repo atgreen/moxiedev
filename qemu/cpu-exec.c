@@ -316,6 +316,8 @@ int cpu_exec(CPUState *env1)
                     do_interrupt(env);
 #elif defined(TARGET_CRIS)
                     do_interrupt(env);
+#elif defined(TARGET_MOXIE)
+                    do_interrupt(env);
 #elif defined(TARGET_M68K)
                     do_interrupt(0);
 #endif
@@ -372,7 +374,7 @@ int cpu_exec(CPUState *env1)
                     }
 #if defined(TARGET_ARM) || defined(TARGET_SPARC) || defined(TARGET_MIPS) || \
     defined(TARGET_PPC) || defined(TARGET_ALPHA) || defined(TARGET_CRIS) || \
-    defined(TARGET_MICROBLAZE)
+    defined(TARGET_MICROBLAZE) || defined(TARGET_MOXIE)
                     if (interrupt_request & CPU_INTERRUPT_HALT) {
                         env->interrupt_request &= ~CPU_INTERRUPT_HALT;
                         env->halted = 1;
@@ -518,6 +520,11 @@ int cpu_exec(CPUState *env1)
                         do_interrupt(env);
                         next_tb = 0;
                     }
+#elif defined(TARGET_MOXIE)
+                    if (interrupt_request & CPU_INTERRUPT_HARD) {
+                        do_interrupt(env);
+                        next_tb = 0;
+                    }
 #elif defined(TARGET_CRIS)
                     if (interrupt_request & CPU_INTERRUPT_HARD
                         && (env->pregs[PR_CCS] & I_FLAG)) {
@@ -588,6 +595,8 @@ int cpu_exec(CPUState *env1)
 #elif defined(TARGET_ALPHA)
                     log_cpu_state(env, 0);
 #elif defined(TARGET_CRIS)
+                    log_cpu_state(env, 0);
+#elif defined(TARGET_MOXIE)
                     log_cpu_state(env, 0);
 #else
 #error unsupported target CPU

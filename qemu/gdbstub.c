@@ -1296,6 +1296,47 @@ static int cpu_gdb_write_register(CPUState *env, uint8_t *mem_buf, int n)
 
     return 8;
 }
+#elif defined (TARGET_MOXIE)
+
+#define NUM_CORE_REGS 18
+
+static int cpu_gdb_read_register(CPUState *env, uint8_t *mem_buf, int n)
+{
+    printf ("********* read n = %d *************\n", n);
+
+    if (n < 16) {
+	GET_REG32(env->gregs[n]);
+    }
+
+    switch (n) {
+    case 16: GET_REG32(env->pc);
+    case 17: GET_REG32(env->cc);
+    default: 	
+      return 0;
+    }
+
+    return 0;
+}
+
+static int cpu_gdb_write_register(CPUState *env, uint8_t *mem_buf, int n)
+{
+    uint32_t tmp;
+
+    printf ("********* write n = %d *************\n", n);
+
+    if (n > 16)
+      {
+	return 0;
+      }
+
+    tmp = ldl_p(mem_buf);
+
+    if (n < 16) {
+	env->gregs[n] = tmp;
+    }
+
+    return 4;
+}
 #else
 
 #define NUM_CORE_REGS 0
@@ -1561,6 +1602,8 @@ static void gdb_set_cpu_pc(GDBState *s, target_ulong pc)
 #elif defined (TARGET_MICROBLAZE)
     s->c_cpu->sregs[SR_PC] = pc;
 #elif defined (TARGET_CRIS)
+    s->c_cpu->pc = pc;
+#elif defined (TARGET_MOXIE)
     s->c_cpu->pc = pc;
 #elif defined (TARGET_ALPHA)
     s->c_cpu->pc = pc;

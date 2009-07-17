@@ -1,3 +1,200 @@
+2009-07-15  Arnaud Charlet  <charlet@adacore.com>
+
+	* gcc-interface/Make-lang.in: Update dependencies
+
+	* gcc-interface/Makefile.in: Add target pairs for PPC/Xenomai
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* par_sco.adb (Traverse_Declarations_Or_Statements): Add processing for
+	N_Label. Remove SCO table entry for entry point (not used).
+
+	* par_sco.ads: Remove SCO entry point type (not used)
+
+	* switch.adb: Minor code clean up.
+
+2009-07-15  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_dbug.ads (Base Record Types): Document enhanced encoding.
+
+2009-07-15  Thomas Quinot  <quinot@adacore.com>
+
+	* gnatls.adb: Minor reformatting
+
+	* gnatcmd.adb: Minor code reorganization
+
+2009-07-15  Ed Schonberg  <schonberg@adacore.com>
+
+	* exp_util.adb (Component_May_Be_Bit_Aligned): Use underlying type to
+	determine whether a component of a private type has a composite type.
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* sem_ch10.adb: Minor reformatting throughout
+	Minor code reorganization (put nested subprograms in alpha order)
+
+2009-07-15  Ed Schonberg  <schonberg@adacore.com>
+
+	* exp_ch6.adb (Expand_Call): Prevent double attachment of the result
+	when compiling a call to a protected function that returns a controlled
+	object.
+
+2009-07-15  Hristian Kirtchev  <kirtchev@adacore.com>
+
+	* sysdep.c (__gnat_localtime_tzoff): Consolidate the Lynx cases into
+	one. Add task locking and unlocking around the critical region which
+	mentions localtime_r and global variable timezone for various targets.
+	Comment reformatting.
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* gnat_rm.texi: Document s-ststop.ads
+
+	* impunit.ad: (Map_Array): New table of alternative names
+	(Get_Kind_Of_Unit): Return possible suggested alternative name
+
+	* impunit.ads (Get_Kind_Of_Unit): Return possible suggested
+	alternative name.
+
+	* sem_ch10.adb (Analalyze_With_Clause): Add name of possible
+	alternative unit if an implementation unit is with'ed.
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* gnat_ugn.texi: Minor updates.
+
+	* snames.ads-tmpl: Minor comment updates for Ada 2005 fully implemented
+
+2009-07-15  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_warn.adb (Warn_On_Constant_Condition): Handle properly constant
+	conditions of a derived boolean type.
+	Minor reformatting
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* gnat1drv.adb: Initialize SCO tables
+
+	* par-load.adb: Call SCO_Record for main unit spec
+
+	* par.adb: Make call to SCO_Record for main unit
+
+	* par_sco.adb (Unit_Table): Change format to facilitate sort
+	(Process_Decisions): New procedure with list argument
+	(Traverse_Generic_Package_Declaration): New procedure
+	(Initialize): New procedure, replaces Init
+	(SCO_Output): Sort unit table before output
+	(SCO_Record): Avoid duplications
+	(SCO_Record): Handle remaining cases of units
+	(Traverse_Declarations_Or_Statements): Handle generics
+
+	* par_sco.ads (Initialize): New peocedure (replaces Init)
+
+	* sem_ch10.adb (Analyze_Proper_Body): Make call to SCO_Record for
+	subunit.
+
+2009-07-15  Arnaud Charlet  <charlet@adacore.com>
+
+	* debug.adb: Add -gnatd.J switch for now to support scil generation in
+	parallel. Add missing doc for -gnatd.I and -gnatd.O
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* lib-load.adb: Minor reformatting
+
+	* lib-writ.adb (Write_ALI): Fix handling of SCO_Output wrt Generate_SCO.
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* par.adb: Minor reformatting
+	Add ??? comment for possible bad comment
+
+	* par-ch10.adb: Minor reformatting
+
+2009-07-15  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_warn.adb (Warn_On_Constant_Condition): if the constant condition
+	is a literal of a derived boolean type, it appears as an unchecked
+	conversion. Retrieve actual value from expression of conversion.
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* sem_ch3.adb: Minor reformatting
+
+	* lib-xref.ads, lib-xref.adb, lib.ads, par_sco.ads, par_sco.adb,
+	lib-writ.ads, lib-writ.adb: Minor reformatting.
+	Fix problem with SCO format in ALI files
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* exp_ch7.adb, exp_util.adb, tbuild.adb, tbuild.ads, exp_ch4.adb,
+	exp_aggr.adb: Minor code reorganization (better calling sequence for
+	Make_Temporary).
+
+2009-07-15  Thomas Quinot  <quinot@adacore.com>
+
+	* opt.ads: Minor comment edits
+
+2009-07-15  Tristan Gingold  <gingold@adacore.com>
+
+	* gcc-interface/Makefile.in: Special rule for seh_init.o no longer
+	needed.
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* lib-writ.adb (Write_Unit_Information): Use SCO_Output to output SCO
+	information.
+
+	* lib-writ.ads: Document addition of SCO lines to ALI file
+
+	* par_sco.ads, par_sco.adb: New files.
+
+	* opt.ads (Generate_SCO): New switch
+
+	* par.adb (Par): Call SCO_Record to record SCO information
+
+	* sem_warn.adb (Warn_On_Constant_Condition): Adjust SCO condition
+
+	* switch-c.adb: Recognize -gnateS to generate SCO information
+
+	* usage.adb: Add line for -gnateS
+
+	* gcc-interface/Make-lang.in: Add dependency on par_sco.o for gnat1
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* sinfo.ads, make.adb, par.ads, par.adb, sem_warn.adb: Minor
+	reformatting.
+
+2009-07-15  Thomas Quinot  <quinot@adacore.com>
+
+	* g-socthi-mingw.adb: Minor comment addition
+
+	* g-socthi-mingw.ads (WSAStartup): First argument is a WORD not an int.
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* g-htable.ads, s-htable.ads: Minor reformatting
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* switch-c.adb, sem_ch10.adb, sem_warn.adb, sem_warn.ads: Implement
+	new switch -gnatw.g.
+	(Set_GNAT_Mode_Warnings): New procedure.
+
+	* lib-xref.adb: Minor reformatting
+
+2009-07-15  Robert Dewar  <dewar@adacore.com>
+
+	* exp_aggr.adb, tbuild.ads, tbuild.adb: Minor reformatting
+	Minor code reorganization
+
+2009-07-14  Taras Glek  <tglek@mozilla.com>
+	    Rafael Espindola  <espindola@google.com>
+
+	* gcc-interface/Make-lang.in (ada.install-plugin): New target for
+	installing plugin headers.
+
 2009-07-13  Ed Schonberg  <schonberg@adacore.com>
 
 	* exp_ch7.adb, exp_util.adb, tbuild.adb, tbuild.ads, exp_ch4.adb,

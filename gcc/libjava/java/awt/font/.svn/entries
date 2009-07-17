@@ -1,7 +1,7 @@
 10
 
 dir
-149625
+149693
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/java/awt/font
 svn://gcc.gnu.org/svn/gcc
 
@@ -230,40 +230,6 @@ tromey
 
 1258
 
-TextHitInfo.h
-file
-
-
-
-
-2009-04-24T17:49:13.000000Z
-54a2e49368e9357210edc8e7e3fa7169
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1249
-
 NumericShaper.h
 file
 
@@ -297,6 +263,40 @@ tromey
 
 
 2013
+
+TextHitInfo.h
+file
+
+
+
+
+2009-04-24T17:49:13.000000Z
+54a2e49368e9357210edc8e7e3fa7169
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1249
 
 GlyphVector.h
 file
@@ -434,40 +434,6 @@ tromey
 
 1393
 
-TextLayout$Run.h
-file
-
-
-
-
-2009-04-24T17:49:13.000000Z
-bc1376d703873f5b7ec9ad53998cd993
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1000
-
 FontRenderContext.h
 file
 
@@ -501,6 +467,40 @@ tromey
 
 
 1206
+
+TextLayout$Run.h
+file
+
+
+
+
+2009-04-24T17:49:13.000000Z
+bc1376d703873f5b7ec9ad53998cd993
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1000
 
 LineMetrics.h
 file

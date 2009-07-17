@@ -4,7 +4,6 @@
 /consecutive-reverse.c/1.1/Mon Jul  6 10:46:43 2009//
 /consecutive-reverse.exp/1.1/Mon Jul  6 10:46:43 2009//
 /finish-reverse.c/1.1/Mon Jul  6 10:46:43 2009//
-/finish-reverse.exp/1.1/Mon Jul  6 10:46:43 2009//
 /machinestate.c/1.1/Mon Jul  6 10:46:43 2009//
 /machinestate.exp/1.1/Mon Jul  6 10:46:43 2009//
 /ms1.c/1.1/Mon Jul  6 10:46:43 2009//
@@ -12,10 +11,11 @@
 /solib-reverse.c/1.1/Mon Jul  6 10:46:43 2009//
 /solib-reverse.exp/1.1/Mon Jul  6 10:46:43 2009//
 /step-reverse.c/1.1/Mon Jul  6 10:46:43 2009//
-/step-reverse.exp/1.1/Mon Jul  6 10:46:43 2009//
 /until-reverse.c/1.1/Mon Jul  6 10:46:43 2009//
 /until-reverse.exp/1.1/Mon Jul  6 10:46:43 2009//
 /ur1.c/1.1/Mon Jul  6 10:46:43 2009//
 /watch-reverse.c/1.1/Mon Jul  6 10:46:43 2009//
 /watch-reverse.exp/1.1/Mon Jul  6 10:46:43 2009//
+/finish-reverse.exp/1.2/Wed Jul 15 17:46:09 2009//
+/step-reverse.exp/1.2/Wed Jul 15 17:46:09 2009//
 D

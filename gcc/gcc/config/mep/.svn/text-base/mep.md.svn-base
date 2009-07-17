@@ -1923,8 +1923,12 @@
   ]
   "SIBLING_CALL_P (insn)"
 {
-  if (mep_vliw_mode_match (operands[2]))
+  if (mep_vliw_jmp_match (operands[2]))
     return "jmp\t%0";
+  else if (mep_vliw_mode_match (operands[2]))
+    return
+        "movu	$3, %0\n\
+	jmp	$3";
   else
     return
 	"ldc	$12, $lp\n\
@@ -1994,8 +1998,12 @@
   ]
   "SIBLING_CALL_P (insn)"
 {
-  if (mep_vliw_mode_match (operands[3]))
+  if (mep_vliw_jmp_match (operands[3]))
     return "jmp\t%1";
+  else if (mep_vliw_mode_match (operands[3]))
+    return
+        "movu	$3, %1\n\
+	jmp	$3";
   else
     return
 	"ldc	$12, $lp\n\

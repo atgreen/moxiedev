@@ -28,7 +28,6 @@
 /classes.exp/1.21/Mon Jul  6 10:46:43 2009//
 /cp-relocate.cc/1.4/Mon Jul  6 10:46:43 2009//
 /cp-relocate.exp/1.6/Mon Jul  6 10:46:43 2009//
-/cpcompletion.exp/1.2/Mon Jul  6 10:46:43 2009//
 /cplusfuncs.cc/1.1/Mon Jul  6 10:46:43 2009//
 /cplusfuncs.exp/1.7/Mon Jul  6 10:46:43 2009//
 /ctti.exp/1.12/Mon Jul  6 10:46:43 2009//
@@ -128,4 +127,5 @@
 /userdef.exp/1.11/Mon Jul  6 10:46:43 2009//
 /virtfunc.cc/1.3/Mon Jul  6 10:46:43 2009//
 /virtfunc.exp/1.18/Mon Jul  6 10:46:43 2009//
+/cpcompletion.exp/1.3/Wed Jul 15 17:46:09 2009//
 D

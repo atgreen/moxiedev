@@ -20,6 +20,7 @@
     <echo message=" arm-build    --> builds and installs an arm-eabi toolchain in arm-root"/>
     <echo message=" clean        --> cleans tree of all generated files"/>
     <echo message=" gcccheck     --> runs gcc testsuite on the moxie simulator"/>
+    <echo message=" gdbcheck     --> runs gdb testsuite on the moxie simulator"/>
     <echo message=" post-results --> post the last gcccheck results to the moxiedev-testresults list"/>
     <echo message=" srpm         --> create source RPM files for the tools"/>
     <echo message=" usage        --> provides help on using the build tool (default)"/>
@@ -294,6 +295,22 @@
       <arg value="--directory=u-boot"/>
     </exec>
 
+    <echo message="===================================================================="/>
+    <echo message="====== Building linux =============================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd linux-2.6; cp arch/moxie/configs/nommy_defconfig arch/moxie/defconfig)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=linux-2.6"/>
+      <arg value="ARCH=moxie"/>
+      <arg value="CROSS_COMPILE=moxie-elf-"/>
+      <arg value="vmlinux"/>
+    </exec>
+
   </target>
 
   <!-- =================================================================== -->
@@ -305,6 +322,21 @@
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <env key="DEJAGNU" path="${basedir}/scripts/dejagnu/site.exp"/>
       <arg value="--directory=build/gcc/gcc"/>
+      <arg value="check"/>
+      <arg value="RUNTESTFLAGS=--target_board moxie-sim ${expfile}"/>
+    </exec>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Run the gcc testsuite on the moxie simulator                      -->
+  <!-- =================================================================== -->
+
+  <target name="gdbcheck">
+    <echo message=" basedir = ${basedir}" />
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <env key="DEJAGNU" path="${basedir}/scripts/dejagnu/site.exp"/>
+      <arg value="--directory=build/src/gdb"/>
       <arg value="check"/>
       <arg value="RUNTESTFLAGS=--target_board moxie-sim ${expfile}"/>
     </exec>

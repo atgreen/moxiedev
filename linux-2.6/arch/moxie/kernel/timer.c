@@ -251,6 +251,8 @@ void __init time_init(void)
 	printk(KERN_INFO "%s #0 at 0x%08x, irq=%d\n",
 		timer_list[i], timer_baseaddr, irq);
 
+#if 0
+	MOXIE FIXME
 	cpuinfo.freq_div_hz = cpuinfo.cpu_clock_freq / HZ;
 
 	setup_irq(irq, &timer_irqaction);
@@ -259,4 +261,5 @@ void __init time_init(void)
 #endif
 	moxie_clocksource_init();
 	moxie_clockevent_init();
+#endif
 }

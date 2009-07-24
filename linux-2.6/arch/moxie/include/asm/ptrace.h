@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Anthony Green
  * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
@@ -14,6 +15,8 @@
 typedef unsigned long moxie_reg_t;
 
 struct pt_regs {
+	moxie_reg_t fp;
+	moxie_reg_t sp;
 	moxie_reg_t r0;
 	moxie_reg_t r1;
 	moxie_reg_t r2;
@@ -28,29 +31,7 @@ struct pt_regs {
 	moxie_reg_t r11;
 	moxie_reg_t r12;
 	moxie_reg_t r13;
-	moxie_reg_t r14;
-	moxie_reg_t r15;
-	moxie_reg_t r16;
-	moxie_reg_t r17;
-	moxie_reg_t r18;
-	moxie_reg_t r19;
-	moxie_reg_t r20;
-	moxie_reg_t r21;
-	moxie_reg_t r22;
-	moxie_reg_t r23;
-	moxie_reg_t r24;
-	moxie_reg_t r25;
-	moxie_reg_t r26;
-	moxie_reg_t r27;
-	moxie_reg_t r28;
-	moxie_reg_t r29;
-	moxie_reg_t r30;
-	moxie_reg_t r31;
 	moxie_reg_t pc;
-	moxie_reg_t msr;
-	moxie_reg_t ear;
-	moxie_reg_t esr;
-	moxie_reg_t fsr;
 	int pt_mode;
 };
 

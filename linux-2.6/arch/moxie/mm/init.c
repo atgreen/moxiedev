@@ -23,6 +23,8 @@
 #include <asm/sections.h>
 #include <asm/tlb.h>
 
+#define pr_debug early_printk
+
 #ifndef CONFIG_MMU
 unsigned int __page_offset;
 EXPORT_SYMBOL(__page_offset);
@@ -40,7 +42,7 @@ char *klimit = _end;
  * Initialize the bootmem system and give it all the memory we
  * have available.
  */
-unsigned long memory_start;
+unsigned long memory_start = 0xffffffff;
 unsigned long memory_end; /* due to mm/nommu.c */
 unsigned long memory_size;
 
@@ -86,7 +88,7 @@ void __init setup_memory(void)
 		}
 	}
 
-	if (!memory_start || !memory_end) {
+	if (memory_start == 0xffffffff || !memory_end) {
 		panic("%s: Missing memory setting 0x%08x-0x%08x\n",
 			__func__, (u32) memory_start, (u32) memory_end);
 	}

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Anthony Green <green@moxielogic.com>
  * Copyright (C) 2006 Atmark Techno, Inc.
  *
  * This file is subject to the terms and conditions of the GNU General Public
@@ -30,34 +31,23 @@
  */
 
 struct cpu_context {
-	__u32	r1; /* stack pointer */
+	__u32	fp; /* frame pointer */
+	__u32	sp; /* stack pointer */
+	__u32	r0;
+	__u32	r1;
 	__u32	r2;
-	/* dedicated registers */
+	__u32	r3;
+	__u32	r4;
+	__u32	r5;
+	__u32	r6;
+	__u32	r7;
+	__u32	r8;
+	__u32	r9;
+	__u32	r10;
+	__u32	r11;
+	__u32	r12;
 	__u32	r13;
-	__u32	r14;
-	__u32	r15;
-	__u32	r16;
-	__u32	r17;
-	__u32	r18;
-	/* non-volatile registers */
-	__u32	r19;
-	__u32	r20;
-	__u32	r21;
-	__u32	r22;
-	__u32	r23;
-	__u32	r24;
-	__u32	r25;
-	__u32	r26;
-	__u32	r27;
-	__u32	r28;
-	__u32	r29;
-	__u32	r30;
-	/* r31 is used as current task pointer */
-	/* special purpose registers */
-	__u32	msr;
-	__u32	ear;
-	__u32	esr;
-	__u32	fsr;
+	__u32	pc;
 };
 
 struct thread_info {

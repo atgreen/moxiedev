@@ -132,8 +132,8 @@ static char *myname;
 static SIM_OPEN_KIND sim_kind;
 static int issue_messages = 0;
 
-/* Default to a 8 Mbyte (== 2^23) memory space.  */
-static int sim_memory_size = 23;
+/* Default to a 16 Mbyte (== 2^23) memory space.  */
+static int sim_memory_size = 24;
 
 #define	MEM_SIZE_FLOOR	64
 void

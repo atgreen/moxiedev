@@ -1,6 +1,7 @@
 /*
  * Signal handling
  *
+ * Copyright (C) 2009 Anthony Green <green@moxielogic.com>
  * Copyright (C) 2008-2009 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2008-2009 PetaLogix
  * Copyright (C) 2003,2004 John Williams <jwilliams@itee.uq.edu.au>
@@ -73,17 +74,14 @@ static int restore_sigcontext(struct pt_regs *regs,
 	unsigned int err = 0;
 
 #define COPY(x)		{err |= __get_user(regs->x, &sc->regs.x); }
+	COPY(fp);
+	COPY(sp);
 	COPY(r0);
 	COPY(r1);
 	COPY(r2);	COPY(r3);	COPY(r4);	COPY(r5);
 	COPY(r6);	COPY(r7);	COPY(r8);	COPY(r9);
 	COPY(r10);	COPY(r11);	COPY(r12);	COPY(r13);
-	COPY(r14);	COPY(r15);	COPY(r16);	COPY(r17);
-	COPY(r18);	COPY(r19);	COPY(r20);	COPY(r21);
-	COPY(r22);	COPY(r23);	COPY(r24);	COPY(r25);
-	COPY(r26);	COPY(r27);	COPY(r28);	COPY(r29);
-	COPY(r30);	COPY(r31);
-	COPY(pc);	COPY(ear);	COPY(esr);	COPY(fsr);
+	COPY(pc);
 #undef COPY
 
 	*rval_p = regs->r3;
@@ -137,17 +135,14 @@ setup_sigcontext(struct sigcontext __user *sc, struct pt_regs *regs,
 	int err = 0;
 
 #define COPY(x)		{err |= __put_user(regs->x, &sc->regs.x); }
+	COPY(fp);
+	COPY(sp);
 	COPY(r0);
 	COPY(r1);
 	COPY(r2);	COPY(r3);	COPY(r4);	COPY(r5);
 	COPY(r6);	COPY(r7);	COPY(r8);	COPY(r9);
 	COPY(r10);	COPY(r11);	COPY(r12);	COPY(r13);
-	COPY(r14);	COPY(r15);	COPY(r16);	COPY(r17);
-	COPY(r18);	COPY(r19);	COPY(r20);	COPY(r21);
-	COPY(r22);	COPY(r23);	COPY(r24);	COPY(r25);
-	COPY(r26);	COPY(r27);	COPY(r28);	COPY(r29);
-	COPY(r30);	COPY(r31);
-	COPY(pc);	COPY(ear);	COPY(esr);	COPY(fsr);
+	COPY(pc);
 #undef COPY
 
 	err |= __put_user(mask, &sc->oldmask);
@@ -214,7 +209,10 @@ static void setup_rt_frame(int sig, struct k_sigaction *ka, siginfo_t *info,
 
 	/* Return from sighandler will jump to the tramp.
 	 Negative 8 offset because return is rtsd r15, 8 */
+#if 0
+	MOXIE FIXME
 	regs->r15 = ((unsigned long)frame->tramp)-8;
+#endif
 
 	__invalidate_cache_sigtramp((unsigned long)frame->tramp);
 

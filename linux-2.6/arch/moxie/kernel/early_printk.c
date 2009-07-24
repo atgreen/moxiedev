@@ -32,7 +32,7 @@ static void early_libgloss_printk_write(struct console *unused,
   asm ("swi 5");
 }
 
-static struct console early_serial_console = {
+struct console early_serial_console = {
 	.name = "earlyser",
 	.write = early_libgloss_printk_write,
 	.flags = CON_PRINTBUFFER,

@@ -20,7 +20,7 @@
 
 void trap_init(void)
 {
-  MOXIE_DIE;
+  /* Initialize traps.  Empty for now.  */
 }
 
 /* MOXIE FIXME ONLY REQUIRED FOR -O0 */

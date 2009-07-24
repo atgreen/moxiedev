@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Anthony Green <green@moxielogic.com>
  * Copyright (C) 2007-2009 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2007-2009 PetaLogix
  * Copyright (C) 2006 Atmark Techno, Inc.
@@ -52,10 +53,13 @@ DEFINE_PER_CPU(unsigned int, CURRENT_SAVE);	/* Saved current pointer */
 unsigned int boot_cpuid;
 char cmd_line[COMMAND_LINE_SIZE];
 
+extern struct console early_serial_console;
+
 void __init setup_arch(char **cmdline_p)
 {
 	*cmdline_p = cmd_line;
 
+	register_console(&early_serial_console);
 	console_verbose();
 
 	unflatten_device_tree();
@@ -64,11 +68,14 @@ void __init setup_arch(char **cmdline_p)
 	/* irq_early_init(); */
 	setup_cpuinfo();
 
+	/* This is where we would normally set up the caches.  
+	   Moxie currently has no cache, so there's nothing to do. 
+
 	__invalidate_icache_all();
 	__enable_icache();
 
 	__invalidate_dcache_all();
-	__enable_dcache();
+	__enable_dcache(); */
 
 	panic_timeout = 120;
 

@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Anthony Green <moxielogic.com>
  * Copyright (C) 2008-2009 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2008-2009 PetaLogix
  * Copyright (C) 2006 Atmark Techno, Inc.
@@ -19,24 +20,15 @@
 void show_regs(struct pt_regs *regs)
 {
 	printk(KERN_INFO " Registers dump: mode=%X\r\n", regs->pt_mode);
-	printk(KERN_INFO " r1=%08lX, r2=%08lX, r3=%08lX, r4=%08lX\n",
-				regs->r1, regs->r2, regs->r3, regs->r4);
-	printk(KERN_INFO " r5=%08lX, r6=%08lX, r7=%08lX, r8=%08lX\n",
-				regs->r5, regs->r6, regs->r7, regs->r8);
-	printk(KERN_INFO " r9=%08lX, r10=%08lX, r11=%08lX, r12=%08lX\n",
-				regs->r9, regs->r10, regs->r11, regs->r12);
-	printk(KERN_INFO " r13=%08lX, r14=%08lX, r15=%08lX, r16=%08lX\n",
-				regs->r13, regs->r14, regs->r15, regs->r16);
-	printk(KERN_INFO " r17=%08lX, r18=%08lX, r19=%08lX, r20=%08lX\n",
-				regs->r17, regs->r18, regs->r19, regs->r20);
-	printk(KERN_INFO " r21=%08lX, r22=%08lX, r23=%08lX, r24=%08lX\n",
-				regs->r21, regs->r22, regs->r23, regs->r24);
-	printk(KERN_INFO " r25=%08lX, r26=%08lX, r27=%08lX, r28=%08lX\n",
-				regs->r25, regs->r26, regs->r27, regs->r28);
-	printk(KERN_INFO " r29=%08lX, r30=%08lX, r31=%08lX, rPC=%08lX\n",
-				regs->r29, regs->r30, regs->r31, regs->pc);
-	printk(KERN_INFO " msr=%08lX, ear=%08lX, esr=%08lX, fsr=%08lX\n",
-				regs->msr, regs->ear, regs->esr, regs->fsr);
+	printk(KERN_INFO " fp=%08lX, sp=%08lX, r0=%08lX, r1=%08lX\n",
+	                        regs->fp, regs->sp, regs->r0, regs->r1);
+	printk(KERN_INFO " r2=%08lX, r3=%08lX, r4=%08lX, r5=%08lX\n",
+				regs->r2, regs->r3, regs->r4, regs->r5);
+	printk(KERN_INFO " r6=%08lX, r7=%08lX, r8=%08lX, r9=%08lX\n",
+				regs->r6, regs->r7, regs->r8, regs->r9);
+	printk(KERN_INFO " r10=%08lX, r11=%08lX, r12=%08lX, r13=%08lX\n",
+				regs->r10, regs->r11, regs->r12, regs->r13);
+	printk(KERN_INFO " PC=%08lX\n", regs->pc);
 }
 
 void (*pm_idle)(void);
@@ -122,14 +114,16 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 
 	*childregs = *regs;
 	if (user_mode(regs))
-		childregs->r1 = usp;
+		childregs->sp = usp;
 	else
-		childregs->r1 = ((unsigned long) ti) + THREAD_SIZE;
+		childregs->sp = ((unsigned long) ti) + THREAD_SIZE;
 
 #ifndef CONFIG_MMU
 	memset(&ti->cpu_context, 0, sizeof(struct cpu_context));
-	ti->cpu_context.r1 = (unsigned long)childregs;
-	ti->cpu_context.msr = (unsigned long)childregs->msr;
+	ti->cpu_context.sp = (unsigned long)childregs;
+
+	ti->cpu_context.fp = ti->cpu_context.sp;
+	childregs->fp = childregs->sp;
 #else
 
 	/* if creating a kernel thread then update the current reg (we don't
@@ -153,7 +147,7 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 	}
 
 	/* FIXME STATE_SAVE_PT_OFFSET; */
-	ti->cpu_context.r1  = (unsigned long)childregs - STATE_SAVE_ARG_SPACE;
+	ti->cpu_context.sp  = (unsigned long)childregs - STATE_SAVE_ARG_SPACE;
 	/* we should consider the fact that childregs is a copy of the parent
 	 * regs which were saved immediately after entering the kernel state
 	 * before enabling VM. This MSR will be restored in switch_to and
@@ -174,7 +168,7 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 	ti->cpu_context.msr = (childregs->msr|MSR_VM);
 	ti->cpu_context.msr &= ~MSR_UMS; /* switch_to to kernel mode */
 #endif
-	ti->cpu_context.r15 = (unsigned long)ret_from_fork - 8;
+	ti->cpu_context.pc = (unsigned long) ret_from_fork;
 
 	if (clone_flags & CLONE_SETTLS)
 		;
@@ -191,11 +185,7 @@ unsigned long thread_saved_pc(struct task_struct *tsk)
 	struct cpu_context *ctx =
 		&(((struct thread_info *)(tsk->stack))->cpu_context);
 
-	/* Check whether the thread is blocked in resume() */
-	if (in_sched_functions(ctx->r15))
-		return (unsigned long)ctx->r15;
-	else
-		return ctx->r14;
+	return (unsigned long) ctx->pc;
 }
 #endif
 
@@ -211,11 +201,12 @@ int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
 
 	memset(&regs, 0, sizeof(regs));
 	/* store them in non-volatile registers */
-	regs.r5 = (unsigned long)fn;
-	regs.r6 = (unsigned long)arg;
-	local_save_flags(regs.msr);
+	regs.r0 = (unsigned long)fn;
+	regs.r1 = (unsigned long)arg;
 	regs.pc = (unsigned long)kernel_thread_helper;
 	regs.pt_mode = 1;
+
+	show_regs(&regs);
 
 	return do_fork(flags | CLONE_VM | CLONE_UNTRACED, 0,
 			&regs, 0, NULL, NULL);
@@ -233,7 +224,7 @@ void start_thread(struct pt_regs *regs, unsigned long pc, unsigned long usp)
 {
 	set_fs(USER_DS);
 	regs->pc = pc;
-	regs->r1 = usp;
+	regs->sp = usp;
 	regs->pt_mode = 0;
 }
 

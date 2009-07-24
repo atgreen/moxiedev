@@ -21,11 +21,8 @@ int main(int argc, char *argv[])
 {
 	/* struct pt_regs */
 	DEFINE(PT_SIZE, sizeof(struct pt_regs));
-	DEFINE(PT_MSR, offsetof(struct pt_regs, msr));
-	DEFINE(PT_EAR, offsetof(struct pt_regs, ear));
-	DEFINE(PT_ESR, offsetof(struct pt_regs, esr));
-	DEFINE(PT_FSR, offsetof(struct pt_regs, fsr));
-	DEFINE(PT_PC, offsetof(struct pt_regs, pc));
+	DEFINE(PT_FP, offsetof(struct pt_regs, fp));
+	DEFINE(PT_SP, offsetof(struct pt_regs, sp));
 	DEFINE(PT_R0, offsetof(struct pt_regs, r0));
 	DEFINE(PT_R1, offsetof(struct pt_regs, r1));
 	DEFINE(PT_R2, offsetof(struct pt_regs, r2));
@@ -40,24 +37,7 @@ int main(int argc, char *argv[])
 	DEFINE(PT_R11, offsetof(struct pt_regs, r11));
 	DEFINE(PT_R12, offsetof(struct pt_regs, r12));
 	DEFINE(PT_R13, offsetof(struct pt_regs, r13));
-	DEFINE(PT_R14, offsetof(struct pt_regs, r14));
-	DEFINE(PT_R15, offsetof(struct pt_regs, r15));
-	DEFINE(PT_R16, offsetof(struct pt_regs, r16));
-	DEFINE(PT_R17, offsetof(struct pt_regs, r17));
-	DEFINE(PT_R18, offsetof(struct pt_regs, r18));
-	DEFINE(PT_R19, offsetof(struct pt_regs, r19));
-	DEFINE(PT_R20, offsetof(struct pt_regs, r20));
-	DEFINE(PT_R21, offsetof(struct pt_regs, r21));
-	DEFINE(PT_R22, offsetof(struct pt_regs, r22));
-	DEFINE(PT_R23, offsetof(struct pt_regs, r23));
-	DEFINE(PT_R24, offsetof(struct pt_regs, r24));
-	DEFINE(PT_R25, offsetof(struct pt_regs, r25));
-	DEFINE(PT_R26, offsetof(struct pt_regs, r26));
-	DEFINE(PT_R27, offsetof(struct pt_regs, r27));
-	DEFINE(PT_R28, offsetof(struct pt_regs, r28));
-	DEFINE(PT_R29, offsetof(struct pt_regs, r29));
-	DEFINE(PT_R30, offsetof(struct pt_regs, r30));
-	DEFINE(PT_R31, offsetof(struct pt_regs, r31));
+	DEFINE(PT_PC, offsetof(struct pt_regs, pc));
 	DEFINE(PT_MODE, offsetof(struct pt_regs, pt_mode));
 	BLANK();
 
@@ -93,33 +73,23 @@ int main(int argc, char *argv[])
 	BLANK();
 
 	/* struct cpu_context */
-	DEFINE(CC_R1, offsetof(struct cpu_context, r1)); /* r1 */
+	DEFINE(CC_FP, offsetof(struct cpu_context, fp)); /* frame pointer */
+	DEFINE(CC_SP, offsetof(struct cpu_context, sp)); /* stack pointer */
+	DEFINE(CC_R0, offsetof(struct cpu_context, r0)); 
+	DEFINE(CC_R1, offsetof(struct cpu_context, r1)); 
 	DEFINE(CC_R2, offsetof(struct cpu_context, r2));
-	/* dedicated registers */
+	DEFINE(CC_R3, offsetof(struct cpu_context, r3));
+	DEFINE(CC_R4, offsetof(struct cpu_context, r4));
+	DEFINE(CC_R5, offsetof(struct cpu_context, r5));
+	DEFINE(CC_R6, offsetof(struct cpu_context, r6));
+	DEFINE(CC_R7, offsetof(struct cpu_context, r7));
+	DEFINE(CC_R8, offsetof(struct cpu_context, r8));
+	DEFINE(CC_R9, offsetof(struct cpu_context, r9));
+	DEFINE(CC_R10, offsetof(struct cpu_context, r10));
+	DEFINE(CC_R11, offsetof(struct cpu_context, r11));
+	DEFINE(CC_R12, offsetof(struct cpu_context, r12));
 	DEFINE(CC_R13, offsetof(struct cpu_context, r13));
-	DEFINE(CC_R14, offsetof(struct cpu_context, r14));
-	DEFINE(CC_R15, offsetof(struct cpu_context, r15));
-	DEFINE(CC_R16, offsetof(struct cpu_context, r16));
-	DEFINE(CC_R17, offsetof(struct cpu_context, r17));
-	DEFINE(CC_R18, offsetof(struct cpu_context, r18));
-	/* non-volatile registers */
-	DEFINE(CC_R19, offsetof(struct cpu_context, r19));
-	DEFINE(CC_R20, offsetof(struct cpu_context, r20));
-	DEFINE(CC_R21, offsetof(struct cpu_context, r21));
-	DEFINE(CC_R22, offsetof(struct cpu_context, r22));
-	DEFINE(CC_R23, offsetof(struct cpu_context, r23));
-	DEFINE(CC_R24, offsetof(struct cpu_context, r24));
-	DEFINE(CC_R25, offsetof(struct cpu_context, r25));
-	DEFINE(CC_R26, offsetof(struct cpu_context, r26));
-	DEFINE(CC_R27, offsetof(struct cpu_context, r27));
-	DEFINE(CC_R28, offsetof(struct cpu_context, r28));
-	DEFINE(CC_R29, offsetof(struct cpu_context, r29));
-	DEFINE(CC_R30, offsetof(struct cpu_context, r30));
-	/* special purpose registers */
-	DEFINE(CC_MSR, offsetof(struct cpu_context, msr));
-	DEFINE(CC_EAR, offsetof(struct cpu_context, ear));
-	DEFINE(CC_ESR, offsetof(struct cpu_context, esr));
-	DEFINE(CC_FSR, offsetof(struct cpu_context, fsr));
+	DEFINE(CC_PC, offsetof(struct cpu_context, pc));
 	BLANK();
 
 	return 0;

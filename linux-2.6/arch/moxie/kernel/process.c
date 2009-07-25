@@ -118,57 +118,14 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 	else
 		childregs->sp = ((unsigned long) ti) + THREAD_SIZE;
 
-#ifndef CONFIG_MMU
 	memset(&ti->cpu_context, 0, sizeof(struct cpu_context));
 	ti->cpu_context.sp = (unsigned long)childregs;
+	ti->cpu_context.r0 = childregs->r0;
+	ti->cpu_context.r1 = childregs->r1;
+	ti->cpu_context.r13 = (unsigned long) p; /* current */
+	ti->cpu_context.pc = childregs->pc;
 
-	ti->cpu_context.fp = ti->cpu_context.sp;
-	childregs->fp = childregs->sp;
-#else
-
-	/* if creating a kernel thread then update the current reg (we don't
-	 * want to use the parent's value when restoring by POP_STATE) */
-	if (kernel_mode(regs))
-		/* save new current on stack to use POP_STATE */
-		childregs->CURRENT_TASK = (unsigned long)p;
-	/* if returning to user then use the parent's value of this register */
-
-	/* if we're creating a new kernel thread then just zeroing all
-	 * the registers. That's OK for a brand new thread.*/
-	/* Pls. note that some of them will be restored in POP_STATE */
-	if (kernel_mode(regs))
-		memset(&ti->cpu_context, 0, sizeof(struct cpu_context));
-	/* if this thread is created for fork/vfork/clone, then we want to
-	 * restore all the parent's context */
-	/* in addition to the registers which will be restored by POP_STATE */
-	else {
-		ti->cpu_context = *(struct cpu_context *)regs;
-		childregs->msr |= MSR_UMS;
-	}
-
-	/* FIXME STATE_SAVE_PT_OFFSET; */
-	ti->cpu_context.sp  = (unsigned long)childregs - STATE_SAVE_ARG_SPACE;
-	/* we should consider the fact that childregs is a copy of the parent
-	 * regs which were saved immediately after entering the kernel state
-	 * before enabling VM. This MSR will be restored in switch_to and
-	 * RETURN() and we want to have the right machine state there
-	 * specifically this state must have INTs disabled before and enabled
-	 * after performing rtbd
-	 * compose the right MSR for RETURN(). It will work for switch_to also
-	 * excepting for VM and UMS
-	 * don't touch UMS , CARRY and cache bits
-	 * right now MSR is a copy of parent one */
-	childregs->msr |= MSR_BIP;
-	childregs->msr &= ~MSR_EIP;
-	childregs->msr |= MSR_IE;
-	childregs->msr &= ~MSR_VM;
-	childregs->msr |= MSR_VMS;
-	childregs->msr |= MSR_EE; /* exceptions will be enabled*/
-
-	ti->cpu_context.msr = (childregs->msr|MSR_VM);
-	ti->cpu_context.msr &= ~MSR_UMS; /* switch_to to kernel mode */
-#endif
-	ti->cpu_context.pc = (unsigned long) ret_from_fork;
+	ti->cpu_context.sp -= 12; /* allocate function call ABI stack */
 
 	if (clone_flags & CLONE_SETTLS)
 		;
@@ -203,6 +160,7 @@ int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
 	/* store them in non-volatile registers */
 	regs.r0 = (unsigned long)fn;
 	regs.r1 = (unsigned long)arg;
+	regs.r13 = (unsigned long)current;
 	regs.pc = (unsigned long)kernel_thread_helper;
 	regs.pt_mode = 1;
 

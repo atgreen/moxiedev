@@ -71,6 +71,7 @@ ENTRY(of_release_dev)
 ENTRY(of_device_register)
 	bad
 ENTRY(ret_from_fork)
+	jsra schedule_tail
 	ret
 ENTRY(sys_execve)
 	bad
@@ -118,6 +119,28 @@ ENTRY(_switch_to)
 	sto.l	TI_CPU_CONTEXT+CC_R13($r0), $r13
 
 	ldo.l	$fp, TI_CPU_CONTEXT+CC_FP($r1)
+	ldi.l	$r12, 0
+	cmp	$fp, $r12
+	beq	.new_thread
+
+	ldo.l	$sp, TI_CPU_CONTEXT+CC_SP($r1)
+	ldo.l	$r0, TI_CPU_CONTEXT+CC_R0($r1)
+	ldo.l	$r2, TI_CPU_CONTEXT+CC_R2($r1)
+	ldo.l	$r3, TI_CPU_CONTEXT+CC_R3($r1)
+	ldo.l	$r4, TI_CPU_CONTEXT+CC_R4($r1)
+	ldo.l	$r5, TI_CPU_CONTEXT+CC_R5($r1)
+	ldo.l	$r6, TI_CPU_CONTEXT+CC_R6($r1)
+	ldo.l	$r7, TI_CPU_CONTEXT+CC_R7($r1)
+	ldo.l	$r8, TI_CPU_CONTEXT+CC_R8($r1)
+	ldo.l	$r9, TI_CPU_CONTEXT+CC_R9($r1)
+	ldo.l	$r10, TI_CPU_CONTEXT+CC_R10($r1)
+	ldo.l	$r11, TI_CPU_CONTEXT+CC_R11($r1)
+	ldo.l	$r12, TI_CPU_CONTEXT+CC_PC($r12)
+	ldo.l	$r13, TI_CPU_CONTEXT+CC_R13($r1)
+	ldo.l	$r1, TI_CPU_CONTEXT+CC_R1($r1)
+	ret
+
+.new_thread:		
 	ldo.l	$sp, TI_CPU_CONTEXT+CC_SP($r1)
 	ldo.l	$r0, TI_CPU_CONTEXT+CC_R0($r1)
 	ldo.l	$r2, TI_CPU_CONTEXT+CC_R2($r1)

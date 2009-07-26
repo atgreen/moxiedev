@@ -38,7 +38,7 @@
 
 static inline int irqs_disabled(void)
 {
-        return 1;
+        return 0;
 }
 
 #define raw_irqs_disabled irqs_disabled

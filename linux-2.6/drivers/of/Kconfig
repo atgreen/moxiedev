@@ -1,6 +1,6 @@
 config OF_DEVICE
 	def_bool y
-	depends on OF && (SPARC || PPC_OF || MICROBLAZE)
+	depends on OF && (SPARC || PPC_OF || MICROBLAZE || MOXIE)
 
 config OF_GPIO
 	def_bool y

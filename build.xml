@@ -305,7 +305,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd linux-2.6; cp arch/moxie/configs/nommy_defconfig arch/moxie/defconfig)"/>
+      <arg value="(cd linux-2.6; cp arch/moxie/configs/nommu_defconfig arch/moxie/defconfig)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>

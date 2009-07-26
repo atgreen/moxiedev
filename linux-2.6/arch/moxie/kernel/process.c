@@ -164,8 +164,6 @@ int kernel_thread(int (*fn)(void *), void *arg, unsigned long flags)
 	regs.pc = (unsigned long)kernel_thread_helper;
 	regs.pt_mode = 1;
 
-	show_regs(&regs);
-
 	return do_fork(flags | CLONE_VM | CLONE_UNTRACED, 0,
 			&regs, 0, NULL, NULL);
 }

@@ -64,12 +64,6 @@ ENTRY(_start)
 	jmpa	start_kernel
 
 	.text
-ENTRY(of_device_get_modalias)
-	bad
-ENTRY(of_release_dev)
-	bad
-ENTRY(of_device_register)
-	bad
 ENTRY(ret_from_fork)
 	jsra schedule_tail
 	ret
@@ -92,8 +86,6 @@ ENTRY(__mulsi3)
 ENTRY(__modsi3)
 	bad
 ENTRY(__divsi3)
-	bad
-ENTRY(of_bus_type_init)
 	bad
 
 # struct task_struct *__switch_to(struct thread_struct *prev,

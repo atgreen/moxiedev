@@ -53,6 +53,10 @@
       <arg value="-c"/>
       <arg value="(cd qemu; make distclean > /dev/null 2>&amp;1)"/>
     </exec>
+    <exec executable="make">
+      <arg value="--directory=linux-2.6"/>
+      <arg value="mrproper"/>
+    </exec>
   </target>
 
   <!-- =================================================================== -->

@@ -57,6 +57,10 @@
       <arg value="--directory=linux-2.6"/>
       <arg value="mrproper"/>
     </exec>
+    <exec executable="make">
+      <arg value="--directory=uClibc"/>
+      <arg value="clean"/>
+    </exec>
   </target>
 
   <!-- =================================================================== -->
@@ -167,7 +171,7 @@
 
   <target name="build">
 
-    <mkdir dir="root/usr"/>
+    <mkdir dir="root/usr/moxie-uclinux"/>
     <mkdir dir="build/src"/>
 
     <echo message="===================================================================="/>
@@ -300,7 +304,7 @@
     </exec>
 
     <echo message="===================================================================="/>
-    <echo message="====== Building linux =============================================="/>
+    <echo message="====== Building uClinux ============================================"/>
     <echo message="===================================================================="/>
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -312,7 +316,114 @@
       <arg value="--directory=linux-2.6"/>
       <arg value="ARCH=moxie"/>
       <arg value="CROSS_COMPILE=moxie-elf-"/>
+      <arg value="defconfig"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=linux-2.6"/>
+      <arg value="ARCH=moxie"/>
+      <arg value="CROSS_COMPILE=moxie-elf-"/>
       <arg value="vmlinux"/>
+    </exec>
+    <mkdir dir="root/usr/moxie-uclinux/usr"/>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=linux-2.6"/>
+      <arg value="ARCH=moxie"/>
+      <arg value="CROSS_COMPILE=moxie-elf-"/>
+      <arg value="INSTALL_HDR_PATH=${basedir}/root/usr/moxie-uclinux/usr"/>
+      <arg value="headers_install"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building uClibc  ============================================"/>
+    <echo message="===================================================================="/>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=uClibc"/>
+      <arg value="ARCH=moxie"/>
+      <arg value="CROSS=moxie-elf-"/>
+      <arg value="defconfig"/>
+    </exec>
+    <replace file="${basedir}/uClibc/.config" token="/usr/include" value="${basedir}/root/usr/moxie-uclinux/usr/include" />
+    <replace file="${basedir}/uClibc/.config" token="/usr/$(TARGET_ARCH)-linux-uclibc/usr/" value="" />
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=uClibc"/>
+      <arg value="ARCH=moxie"/>
+      <arg value="CROSS=moxie-elf-"/>
+    </exec>
+    <mkdir dir="root/usr/moxie-uclinux/usr"/>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=uClibc"/>
+      <arg value="ARCH=moxie"/>
+      <arg value="CROSS_COMPILE=moxie-elf-"/>
+      <arg value="PREFIX=${basedir}/root/usr/moxie-uclinux/usr"/>
+      <arg value="install"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building binutils for uClinux ==============================="/>
+    <echo message="===================================================================="/>
+    <mkdir dir="build/src-uclinux"/>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd build/src-uclinux; ../../src/configure --target=moxie-uclinux --disable-gdbtk --prefix=`(cd ../../root/usr; pwd)` --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`)"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=build/src-uclinux"/>
+      <arg value="-j2"/>
+      <arg value="all-binutils"/>
+      <arg value="all-gas"/>
+      <arg value="all-ld"/>
+      <arg value="all-sim"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=build/src-uclinux"/>
+      <arg value="install-binutils"/>
+      <arg value="install-gas"/>
+      <arg value="install-ld"/>
+      <arg value="install-sim"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building elf2flt ============================================"/>
+    <echo message="===================================================================="/>
+    <mkdir dir="build/elf2flt"/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd build/elf2flt; ../../elf2flt/configure --prefix=`(cd ../../root/usr; pwd)` --target=moxie-uclinux --with-bfd-include-dir='`(cd ../src/bfd; pwd)` -I`(cd ../../src/include/; pwd)`' --with-libiberty=../gcc/libiberty/libiberty.a --with-libbfd=../src/bfd/libbfd.a)" />
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/elf2flt"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/elf2flt"/>
+      <arg value="install"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building full uclinux gcc ==================================="/>
+    <echo message="===================================================================="/>
+    <mkdir dir="build/gcc-uclinux"/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd build/gcc-uclinux; ../../gcc/configure --enable-build-with-cxx --target=moxie-uclinux --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)` --with-build-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/gcc-uclinux"/>
+      <arg value="-j2"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/gcc-uclinux"/>
+      <arg value="install"/>
     </exec>
 
   </target>

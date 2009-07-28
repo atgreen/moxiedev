@@ -1,0 +1,25 @@
+#
+# For a description of the syntax of this configuration file,
+# see extra/config/Kconfig-language.txt
+#
+
+config TARGET_ARCH
+	string
+	default "moxie"
+
+config FORCE_OPTIONS_FOR_ARCH
+	bool
+	default y
+	select ARCH_BIG_ENDIAN
+	select ARCH_HAS_NO_MMU
+	select ARCH_HAS_NO_SHARED
+	select ARCH_HAS_NO_LDSO
+	select HAS_NO_THREADS
+	select UCLIBC_FORMAT_FLAT
+
+config ARCH_CFLAGS
+	string
+
+config CROSS
+	string
+	default "moxie-elf-"

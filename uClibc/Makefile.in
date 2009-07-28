@@ -1,0 +1,459 @@
+# Makefile for uClibc
+#
+# Copyright (C) 2000-2008 Erik Andersen <andersen@uclibc.org>
+#
+# Licensed under the LGPL v2.1, see the file COPYING.LIB in this tarball.
+#
+
+#--------------------------------------------------------------
+# You shouldn't need to mess with anything beyond this point...
+#--------------------------------------------------------------
+clean_targets := clean realclean distclean \
+	objclean-y headers_clean-y utils_clean
+noconfig_targets := menuconfig config oldconfig silentoldconfig randconfig \
+	defconfig allyesconfig allnoconfig \
+	release dist tags help
+
+include $(top_builddir)Rules.mak
+sub_headers := headers
+
+ifeq ($(HAVE_DOT_CONFIG),y)
+
+all: pregen libs
+libs: pregen
+
+# In this section, we need .config
+-include .config.cmd
+
+else # ifeq ($(HAVE_DOT_CONFIG),y)
+
+all: menuconfig
+
+headers:
+	@echo "Need to make a config file first, run: make menuconfig"
+	@false
+
+endif # ifeq ($(HAVE_DOT_CONFIG),y)
+
+include $(top_srcdir)ldso/Makefile.in
+include $(top_srcdir)libcrypt/Makefile.in
+include $(top_srcdir)libintl/Makefile.in
+include $(top_srcdir)libm/Makefile.in
+include $(top_srcdir)libnsl/Makefile.in
+include $(top_srcdir)libresolv/Makefile.in
+include $(top_srcdir)libutil/Makefile.in
+include $(top_srcdir)libpthread/Makefile.in
+include $(top_srcdir)librt/Makefile.in
+include $(top_srcdir)extra/locale/Makefile.in
+
+# last included to catch all the objects added by others (locales/threads)
+include $(top_srcdir)libc/Makefile.in
+
+ifeq ($(HAVE_DOT_CONFIG),y)
+# If the .config changes then we have to make sure that our includes are
+# updated properly. This would normally work by saying that the headers
+# have uClibc_config.h as prerequisite but since we _symlink_ the headers
+# and do not (?) want to rely on 'make -L' we better update them right here,
+# on spot to save us from alot of hazzle.
+include/bits/uClibc_config.h: extra/config/conf .config $(top_srcdir)extra/scripts/conf-header.sh | include/bits
+	@$(disp_gen)
+	$(Q)@$< -s $(top_srcdir)extra/Configs/Config.in
+	$(Q)$(top_srcdir)extra/scripts/conf-header.sh .config > $@
+	$(Q)$(MAKE) headers-y
+
+# The above doesn't work for threads, though. Just using check-symlinks for now.
+# XXX: FIXME: this is ugly
+MAKEFLAGS += -L
+include/config/linuxthreads/old.h include/config/linuxthreads/new.h:
+	@true
+
+# For the moment, we have to keep re-running this target
+# because the fix includes scripts rely on pre-processers
+# in order to generate the headers correctly :(.  That
+# means we can't use the $(HOSTCC) in order to get the
+# correct output.
+ifeq ($(ARCH_USE_MMU),y)
+export header_extra_args =
+else
+export header_extra_args = -n
+endif
+HEADERS_BITS_COMMON := $(notdir $(wildcard $(top_srcdir)libc/sysdeps/linux/common/bits/*.h))
+HEADERS_BITS_ARCH   := $(notdir $(wildcard $(top_srcdir)libc/sysdeps/linux/$(TARGET_ARCH)/bits/*.h))
+HEADERS_BITS_SUBARCH :=
+ifneq ($(TARGET_SUBARCH),)
+HEADERS_BITS_SUBARCH := $(notdir $(wildcard $(top_srcdir)libc/sysdeps/linux/$(TARGET_ARCH)/bits/$(TARGET_SUBARCH)/*.h))
+endif
+HEADERS_BITS_COMMON := $(filter-out $(HEADERS_BITS_ARCH) $(HEADERS_BITS_SUBARCH) $(HEADERS_BITS_PTHREAD),$(HEADERS_BITS_COMMON))
+
+HEADERS_SYS_COMMON := $(notdir $(wildcard $(top_srcdir)libc/sysdeps/linux/common/sys/*.h))
+HEADERS_SYS_ARCH := $(notdir $(wildcard $(top_srcdir)libc/sysdeps/linux/$(TARGET_ARCH)/sys/*.h))
+HEADERS_SYS_COMMON := $(filter-out $(HEADERS_SYS_ARCH),$(HEADERS_SYS_COMMON))
+
+ALL_HEADERS_COMMON       := include/fpu_control.h include/dl-osinfo.h \
+				include/hp-timing.h
+ALL_HEADERS_BITS_COMMON  := $(addprefix include/bits/,$(HEADERS_BITS_COMMON))
+ALL_HEADERS_BITS_ARCH    := $(addprefix include/bits/,$(HEADERS_BITS_ARCH))
+ifneq ($(TARGET_SUBARCH),)
+ALL_HEADERS_BITS_SUBARCH := $(addprefix include/bits/,$(HEADERS_BITS_SUBARCH))
+else
+ALL_HEADERS_BITS_SUBARCH :=
+endif
+ALL_HEADERS_SYS_COMMON   := $(addprefix include/sys/,$(HEADERS_SYS_COMMON))
+ALL_HEADERS_SYS_ARCH     := $(addprefix include/sys/,$(HEADERS_SYS_ARCH))
+
+target-headers-sysdep := \
+	$(ALL_HEADERS_COMMON) \
+	$(ALL_HEADERS_BITS_COMMON) \
+	$(ALL_HEADERS_BITS_ARCH) \
+	$(ALL_HEADERS_BITS_SUBARCH) \
+	$(ALL_HEADERS_SYS_COMMON) \
+	$(ALL_HEADERS_SYS_ARCH)
+
+include/fpu_control.h:
+	@$(disp_ln)
+	$(Q)[ -r libc/sysdeps/linux/$(TARGET_ARCH)/$(@F) ] && \
+		$(LN) -fs ../libc/sysdeps/linux/$(TARGET_ARCH)/$(@F) $@ || \
+		$(LN) -fs ../libc/sysdeps/linux/common/$(@F) $@
+
+include/dl-osinfo.h include/hp-timing.h:
+	$(do_ln) ../libc/sysdeps/linux/common/$(@F) $@
+
+$(ALL_HEADERS_BITS_COMMON):
+	$(do_ln) ../../libc/sysdeps/linux/common/bits/$(@F) $@
+
+$(ALL_HEADERS_BITS_ARCH):
+	$(do_ln) ../../libc/sysdeps/linux/$(TARGET_ARCH)/bits/$(@F) $@
+
+ifneq ($(TARGET_SUBARCH),)
+$(ALL_HEADERS_BITS_SUBARCH):
+	$(do_ln) ../../../libc/sysdeps/linux/$(TARGET_ARCH)/bits/$(TARGET_SUBARCH)/$(@F) $@
+endif
+
+ifneq ($(strip $(ALL_HEADERS_SYS_COMMON)),)
+$(ALL_HEADERS_SYS_COMMON):
+	$(do_ln) ../../libc/sysdeps/linux/common/sys/$(@F) $@
+endif
+
+ifneq ($(strip $(ALL_HEADERS_SYS_ARCH)),)
+$(ALL_HEADERS_SYS_ARCH):
+	$(do_ln) ../../libc/sysdeps/linux/$(TARGET_ARCH)/sys/$(@F) $@
+endif
+
+$(target-headers-sysdep): | include/bits
+
+sysdep_common_headers-clean:
+	$(RM) $(ALL_HEADERS_COMMON)
+headers_clean-y += sysdep_common_headers-clean
+
+# The headers. Arch specific headers are specified via ARCH_HEADERS in
+# libc/sysdeps/linux/$(TARGET_ARCH)/Makefile.arch which appends those via
+# libc/sysdeps/linux/Makefile.commonarch to headers-y
+headers-y += $(target-headers-sysdep)
+
+headers: include/bits/uClibc_config.h
+
+pregen: include/bits/sysnum.h headers
+
+include/bits/sysnum.h: $(top_srcdir)extra/scripts/gen_bits_syscall_h.sh
+	$(Q)$(INSTALL) -d $(@D)
+	@$(disp_gen)
+	$(Q)set -e; \
+	cd $(top_builddir); \
+	tmp=`mktemp include/bits/sysnum.h.XXXXXX 2>/dev/null || true`; \
+	[ -z "$$tmp" ] && tmp='include/bits/sysnum.h.new'; \
+	KERNEL_HEADERS="${KERNEL_HEADERS}" top_builddir=. CC="$(CC) $(CPU_CFLAGS)" $(SHELL) extra/scripts/gen_bits_syscall_h.sh > $$tmp; \
+	if cmp include/bits/sysnum.h $$tmp >/dev/null 2>&1; then \
+		$(RM) $$tmp; \
+	else \
+		mv -f $$tmp include/bits/sysnum.h; \
+	fi
+	@# Ugly linux specific hack..
+	$(Q)if grep -q __NR_ $@; then true; else \
+		rm -f $@; \
+		echo "ERROR: Could not generate syscalls."; \
+		echo "Make sure that you have proper kernel headers."; \
+		echo "Your .config in KERNEL_HEADERS=\"\" was set to:"; \
+		echo "${KERNEL_HEADERS}"; \
+		exit 1; \
+	fi
+
+$(LOCAL_INSTALL_PATH):
+	$(Q)$(MAKE) PREFIX=$(shell pwd)/$(LOCAL_INSTALL_PATH) RUNTIME_PREFIX=/ \
+	DEVEL_PREFIX=/usr/ \
+	HOSTCC="$(HOSTCC)" \
+	install
+
+install: install_runtime install_dev
+
+
+RUNTIME_PREFIX_LIB_FROM_DEVEL_PREFIX_LIB=$(shell $(top_srcdir)extra/scripts/relative_path.sh $(DEVEL_PREFIX)lib $(RUNTIME_PREFIX)lib)
+
+$(top_builddir)extra/scripts/unifdef: $(top_srcdir)extra/scripts/unifdef.c
+	$(hcompile.u)
+
+# Installs header files.
+# a "y" here means the feature is enabled and so we should *not* rm it.
+# if the option expands to nothing though, we can punt the headers.
+HEADERS_RM- := \
+	dl-osinfo.h \
+	_lfs_64.h \
+	bits/kernel_sigaction.h \
+	bits/kernel_stat.h \
+	bits/kernel_types.h \
+	bits/syscalls-common.h \
+	bits/utmpx.h \
+	bits/uClibc_errno.h \
+	bits/uClibc_uintmaxtostr.h \
+	atomic.h \
+	bits/atomic.h \
+	bits/sigcontextinfo.h \
+	bits/stackinfo.h \
+	tls.h
+	# gcc 4.3.1 needs it, dont rm:
+	#bits/uClibc_arch_features.h
+HEADERS_RM-$(UCLIBC_HAS_FLOATS) += \
+	complex.h \
+	fpu_control.h \
+	ieee754.h \
+	math.h \
+	tgmath.h \
+	bits/uClibc_fpmax.h \
+	bits/math*.h
+HEADERS_RM-$(UCLIBC_HAS_GNU_GETOPT)$(UCLIBC_HAS_GETOPT_LONG) += getopt.h
+HEADERS_RM-$(UCLIBC_HAS_REALTIME) += \
+	mqueue.h \
+	bits/mqueue.h \
+	sched.h \
+	bits/sched.h \
+	semaphore.h
+HEADERS_RM-$(UCLIBC_HAS_THREADS) += \
+	*thread*.h \
+	semaphore.h \
+	bits/*thread*.h \
+	bits/initspin.h
+HEADERS_RM-$(UCLIBC_LINUX_SPECIFIC) += \
+	sys/fsuid.h \
+	sys/inotify.h \
+	sys/perm.h \
+	sys/personality.h \
+	sys/prctl.h \
+	sys/reboot.h \
+	sys/sendfile.h \
+	sys/signalfd.h \
+	bits/statfs.h \
+	sys/statfs.h \
+	sys/swap.h \
+	sys/sysctl.h \
+	sys/sysinfo.h \
+	sys/vfs.h
+HEADERS_RM-$(HAVE_SHARED)                    += dlfcn.h bits/dlfcn.h
+HEADERS_RM-$(PTHREADS_DEBUG_SUPPORT)         += thread_db.h
+HEADERS_RM-$(UCLIBC_HAS_BSD_ERR)             += err.h
+HEADERS_RM-$(UCLIBC_HAS_CRYPT)               += crypt.h
+HEADERS_RM-$(UCLIBC_HAS_EPOLL)               += sys/epoll.h
+HEADERS_RM-$(UCLIBC_HAS_FENV)                += fenv.h bits/fenv.h bits/fenvinline.h
+HEADERS_RM-$(UCLIBC_HAS_FTW)                 += ftw.h
+HEADERS_RM-$(UCLIBC_HAS_GETTEXT_AWARENESS)   += libintl.h
+HEADERS_RM-$(UCLIBC_HAS_GLIBC_CUSTOM_PRINTF) += printf.h
+HEADERS_RM-$(UCLIBC_HAS_GLOB)                += glob.h
+HEADERS_RM-$(UCLIBC_HAS_GNU_ERROR)           += error.h
+HEADERS_RM-$(UCLIBC_HAS_IPV6)                += netinet/ip6.h netinet/icmp6.h
+HEADERS_RM-$(UCLIBC_HAS_LOCALE)              += iconv.h
+HEADERS_RM-$(UCLIBC_HAS_PTY)                 += pty.h
+HEADERS_RM-$(UCLIBC_HAS_REGEX)               += regex.h regexp.h
+HEADERS_RM-$(UCLIBC_HAS_RPC)                 += rpc
+HEADERS_RM-$(UCLIBC_HAS_SHADOW)              += shadow.h
+HEADERS_RM-$(UCLIBC_HAS_SOCKET)              += sys/socket.h bits/socket.h sys/socketvar.h
+HEADERS_RM-$(UCLIBC_HAS_SYSLOG)              += syslog.h sys/syslog.h bits/syslog*.h
+HEADERS_RM-$(UCLIBC_HAS_WCHAR)               += wchar.h wctype.h
+HEADERS_RM-$(UCLIBC_HAS_WORDEXP)             += wordexp.h
+HEADERS_RM-$(UCLIBC_HAS_XATTR)               += sys/xattr.h
+HEADERS_RM-$(UCLIBC_HAS_XLOCALE)             += xlocale.h
+HEADERS_RM-$(UCLIBC_SUPPORT_AI_ADDRCONFIG)   += ifaddrs.h
+HEADERS_RM-$(UCLIBC_SV4_DEPRECATED)          += ustat.h sys/ustat.h bits/ustat.h
+HEADERS_RM-$(UCLIBC_SUSV3_LEGACY)            += sys/timeb.h regexp.h
+	# BREAKAGE: include/signal.h uses it, this rm broke bbox compile:
+	### ucontext.h
+
+install_headers: headers $(top_builddir)extra/scripts/unifdef
+	$(INSTALL) -d $(PREFIX)$(DEVEL_PREFIX)include
+	top_builddir=$(top_builddir) \
+	$(top_srcdir)extra/scripts/install_headers.sh include $(PREFIX)$(DEVEL_PREFIX)include
+	# Disabled. If libc-internal.h is needed, document here why!
+	#printf '#ifndef _LIBC_INTERNAL_H\n#define _LIBC_INTERNAL_H 1\n#endif\n' >$(PREFIX)$(DEVEL_PREFIX)include/libc-internal.h
+	echo '/* Dont use _syscall#() macros; use the syscall() function */' > \
+		$(PREFIX)$(DEVEL_PREFIX)include/bits/syscalls.h
+	cd $(PREFIX)$(DEVEL_PREFIX)include && $(RM) -r $(HEADERS_RM-)
+ifeq ($(UCLIBC_HAS_WCHAR),)
+	cd $(PREFIX)$(DEVEL_PREFIX)include && mv -f wchar-stub.h wchar.h
+else
+	cd $(PREFIX)$(DEVEL_PREFIX)include && $(RM) -f wchar-stub.h
+endif
+
+# Installs development library links.
+install_dev: install_headers all
+	$(INSTALL) -d $(PREFIX)$(DEVEL_PREFIX)lib
+	-$(INSTALL) -m 644 lib/*.[ao] $(PREFIX)$(DEVEL_PREFIX)lib/
+ifeq ($(HAVE_SHARED),y)
+	for i in `find lib/ -type l -name 'lib[a-zA-Z]*.so' | \
+	$(SED) -e 's/lib\///'` ; do \
+		$(LN) -sf $(RUNTIME_PREFIX_LIB_FROM_DEVEL_PREFIX_LIB)$$i.$(MAJOR_VERSION) \
+		$(PREFIX)$(DEVEL_PREFIX)lib/$$i; \
+	done
+ifeq ($(HARDWIRED_ABSPATH),y)
+	if [ -f $(top_builddir)lib/libc.so -a -f $(PREFIX)$(RUNTIME_PREFIX)lib/$(SHARED_MAJORNAME) ] ; then \
+		$(RM) $(PREFIX)$(DEVEL_PREFIX)lib/libc.so; \
+		$(SED) -e 's:$(NONSHARED_LIBNAME):$(DEVEL_PREFIX)lib/$(NONSHARED_LIBNAME):' \
+		    -e 's:$(SHARED_MAJORNAME):$(RUNTIME_PREFIX)lib/$(SHARED_MAJORNAME):' \
+		    -e 's:$(UCLIBC_LDSO):$(RUNTIME_PREFIX)lib/$(UCLIBC_LDSO):' \
+		    $(top_builddir)lib/libc.so > $(PREFIX)$(DEVEL_PREFIX)lib/libc.so; \
+	fi
+else
+	-$(INSTALL) -m 644 lib/libc.so $(PREFIX)$(DEVEL_PREFIX)lib/
+endif
+ifeq ($(UCLIBC_HAS_THREADS),y)
+ifneq ($(LINUXTHREADS_OLD),y)
+ifeq ($(HARDWIRED_ABSPATH),y)
+	if [ -f $(top_builddir)lib/libpthread.so -a -f $(PREFIX)$(RUNTIME_PREFIX)lib/libpthread.so.$(MAJOR_VERSION) ] ; then \
+		$(RM) $(PREFIX)$(DEVEL_PREFIX)lib/libpthread.so; \
+		cp $(top_srcdir)extra/scripts/format.lds $(PREFIX)$(DEVEL_PREFIX)lib/libpthread.so; \
+		echo "GROUP ( $(RUNTIME_PREFIX)lib/libpthread.so.$(MAJOR_VERSION) $(DEVEL_PREFIX)lib/libpthread_nonshared.a )" \
+			>> $(PREFIX)$(DEVEL_PREFIX)lib/libpthread.so; \
+	fi
+else
+	-$(INSTALL) -m 644 lib/libpthread.so $(PREFIX)$(DEVEL_PREFIX)lib/
+endif
+endif
+endif
+ifeq ($(PTHREADS_DEBUG_SUPPORT),y)
+	$(LN) -sf $(RUNTIME_PREFIX_LIB_FROM_DEVEL_PREFIX_LIB)libthread_db.so.1 \
+		$(PREFIX)$(DEVEL_PREFIX)lib/libthread_db.so
+endif
+ifeq ($(DOPIC),y)
+#	# If we build shared libraries then the static libs are PIC...
+#	# Make _pic.a symlinks to make mklibs.py and similar tools happy.
+	if [ -d lib ] ; then \
+		for i in `find lib/ -type f -name 'lib*.a' | $(SED) -e 's/lib\///'` ; do \
+			$(LN) -sf $$i $(PREFIX)$(DEVEL_PREFIX)lib/`echo $$i \
+				| $(SED) -e 's/\.a$$/_pic.a/'`; \
+		done ; \
+	fi
+endif
+endif
+ifeq ($(UCLIBC_FORMAT_SHARED_FLAT),y)
+	for file in lib/lib*.gdb; do \
+		if test -f $$file; then \
+			$(INSTALL) -m 755 $$file $(PREFIX)$(DEVEL_PREFIX)lib; \
+			$(INSTALL) -m 755 `echo $$file | $(SED) 's/\.gdb$$//'` \
+			  $(PREFIX)$(DEVEL_PREFIX)lib; \
+		fi; \
+	done
+endif
+
+# Installs run-time libraries
+install_runtime: all
+ifeq ($(HAVE_SHARED),y)
+	$(INSTALL) -d $(PREFIX)$(RUNTIME_PREFIX)lib
+	$(INSTALL) -m 644 lib/lib*-$(VERSION).so \
+		$(PREFIX)$(RUNTIME_PREFIX)lib
+	(cd lib && $(TAR) -cf - *.so.*) | $(TAR) -xf - -C $(PREFIX)$(RUNTIME_PREFIX)lib
+	@if [ -x lib/$(UCLIBC_LDSO_NAME)-$(VERSION).so ] ; then \
+		set -e; \
+		$(SHELL_SET_X); \
+		$(INSTALL) -m 755 lib/$(UCLIBC_LDSO_NAME)-$(VERSION).so \
+			$(PREFIX)$(RUNTIME_PREFIX)lib; \
+	fi
+endif
+
+utils:
+	$(Q)$(MAKE) CROSS="$(CROSS)" CC="$(CC)" -C utils
+
+# Installs helper applications, such as 'ldd' and 'ldconfig'
+install_utils: utils
+	$(MAKE) CROSS="$(CROSS)" CC="$(CC)" -C utils utils_install
+
+endif # ifeq ($(HAVE_DOT_CONFIG),y)
+
+hostutils:
+	$(Q)$(MAKE) CROSS="$(CROSS)" CC="$(CC)" HOSTCC="$(HOSTCC)" -C utils hostutils
+
+install_hostutils: hostutils
+	$(MAKE) CROSS="$(CROSS)" CC="$(CC)" -C utils utils_install DOTHOST=.host
+
+include/bits include/config:
+	@$(disp_mkdir)
+	$(Q)$(INSTALL) -d $@
+
+# configuration
+# ---------------------------------------------------------------------------
+extra/config/conf extra/config/mconf: | include/config
+	$(Q)$(MAKE) -C extra/config $(notdir $@)
+
+menuconfig: extra/config/mconf
+	$(Q)./extra/config/mconf extra/Configs/Config.in
+
+config: extra/config/conf
+	$(Q)./extra/config/conf extra/Configs/Config.in
+
+oldconfig: extra/config/conf
+	$(Q)./extra/config/conf -o extra/Configs/Config.in
+
+silentoldconfig: extra/config/conf
+	$(Q)./extra/config/conf -s extra/Configs/Config.in
+
+randconfig: extra/config/conf
+	$(Q)./extra/config/conf -r extra/Configs/Config.in
+
+allyesconfig: extra/config/conf
+	$(Q)./extra/config/conf -y extra/Configs/Config.in
+	$(SED) -i -e "s/^DODEBUG=.*/# DODEBUG is not set/" .config
+	$(SED) -i -e "s/^DOASSERTS=.*/# DOASSERTS is not set/" .config
+	$(SED) -i -e "s/^SUPPORT_LD_DEBUG_EARLY=.*/# SUPPORT_LD_DEBUG_EARLY is not set/" .config
+	$(SED) -i -e "s/^SUPPORT_LD_DEBUG=.*/# SUPPORT_LD_DEBUG is not set/" .config
+	$(SED) -i -e "s/^UCLIBC_MJN3_ONLY=.*/# UCLIBC_MJN3_ONLY is not set/" .config
+	$(Q)./extra/config/conf -o extra/Configs/Config.in
+
+allnoconfig: extra/config/conf
+	$(Q)./extra/config/conf -n extra/Configs/Config.in
+
+defconfig: extra/config/conf
+	$(Q)./extra/config/conf -d extra/Configs/Config.in \
+		-D extra/Configs/defconfigs/$(ARCH)
+
+include_clean:
+	$(Q)$(RM) include/fpu_control.h include/dl-osinfo.h include/hp-timing.h
+	@set -e; \
+	for i in `(cd libc/sysdeps/linux/common/sys; ls *.h)` ; do \
+		$(RM) include/sys/$$i; \
+	done; \
+	if [ -d libc/sysdeps/linux/$(TARGET_ARCH)/sys ] ; then \
+		for i in `(cd libc/sysdeps/linux/$(TARGET_ARCH)/sys; ls *.h)` ; do \
+			$(RM) include/sys/$$i; \
+		done; \
+	fi
+
+clean: include_clean
+	$(Q)$(RM) -r lib include/bits
+	@$(MAKE) -C utils utils_clean
+	+$(MAKE) -s -C test clean
+	@$(RM) include/linux include/asm*
+	$(Q)$(RM) $(top_builddir)extra/scripts/unifdef
+	$(Q)$(RM) -r $(LOCAL_INSTALL_PATH)
+
+distclean: clean
+	-find . \( -name core -o -name \*.orig -o -name \*~ -o -name .\*.dep \) -exec $(RM) {} \;
+	$(RM) .config .config.old .config.cmd
+	$(RM) extra/locale/*.tgz
+	$(MAKE) -C extra/config distclean
+
+dist release:
+	$(RM) -r ../uClibc-$(VERSION) ../uClibc-$(VERSION).tar.bz2
+	svn -q export . ../uClibc-$(VERSION)
+	$(TAR) cjf ../uClibc-$(VERSION).tar.bz2 -C .. uClibc-$(VERSION)
+	du -b ../uClibc-$(VERSION).tar.bz2
+
+test check: test_compile
+	$(Q)$(MAKE) -C test
+
+test_compile: $(LOCAL_INSTALL_PATH)
+	$(Q)$(MAKE) -C test compile

@@ -1,7 +1,7 @@
 /*
  * Automatically generated C config: don't edit
  * Linux kernel version: 2.6.31-rc3
- * Sun Jul 26 10:49:13 2009
+ * Tue Jul 28 15:49:18 2009
  */
 /*
  * Copyright (C) 2009 Anthony Green <green@moxielogic.com>

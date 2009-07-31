@@ -3,8 +3,7 @@
 # For this to work, the mock config file for $TARGET must point to the 
 # local yum repo at $REPO.
 
-#CPU=x86_64
-CPU=i386
+CPU=x86_64
 
 TARGET=epel-4-$CPU
 RESULTDIR=/var/lib/mock/$TARGET/result

@@ -1,4 +1,4 @@
-%define	with_newlib 0
+%define	with_newlib 1
 
 Name:		moxie-elf-gcc
 Version:	@VERSION@

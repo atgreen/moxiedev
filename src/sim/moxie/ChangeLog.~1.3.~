@@ -1,7 +1,3 @@
-2009-07-30  Anthony Green  <green@moxielogic.com>
-
-	* interp.c (sim_resume): Add system call software interrupt support.
-
 2009-06-11  Anthony Green  <green@moxielogic.com>
 
 	* interp.c (INST2OFFSET): Define.

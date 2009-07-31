@@ -22,7 +22,6 @@ if ![info exists boards_dir] {
 }
 
 lappend boards_dir [pwd]/../../../../../scripts/dejagnu
-lappend boards_dir [pwd]/../../../../scripts/dejagnu
 
 verbose "Global Config File: target_triplet is $target_triplet" 2
 global target_list

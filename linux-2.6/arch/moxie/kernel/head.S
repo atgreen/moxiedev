@@ -67,8 +67,6 @@ ENTRY(_start)
 ENTRY(ret_from_fork)
 	jsra schedule_tail
 	ret
-ENTRY(sys_execve)
-	bad
 ENTRY(sys_clone)
 	bad
 ENTRY(sys_rt_sigreturn_wrapper)

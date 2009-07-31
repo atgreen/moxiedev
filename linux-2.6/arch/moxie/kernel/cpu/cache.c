@@ -19,42 +19,42 @@
 
 void _enable_icache(void)
 {
-  MOXIE_DIE;
+  /* Do nothing for now.  */
 }
 
 void _disable_icache(void)
 {
-  MOXIE_DIE;
+  /* Do nothing for now.  */
 }
 
 void _invalidate_icache(unsigned int addr)
 {
-  MOXIE_DIE;
+  /* Do nothing for now.  */
 }
 
 void _enable_dcache(void)
 {
-  MOXIE_DIE;
+  /* Do nothing for now.  */
 }
 
 void _disable_dcache(void)
 {
-  MOXIE_DIE;
+  /* Do nothing for now.  */
 }
 
 void _invalidate_dcache(unsigned int addr)
 {
-  MOXIE_DIE;
+  /* Do nothing for now.  */
 }
 
 void __invalidate_icache_all(void)
 {
-  MOXIE_DIE;
+  /* Do nothing for now.  */
 }
 
 void __invalidate_icache_range(unsigned long start, unsigned long end)
 {
-  MOXIE_DIE;
+  /* Do nothing for now.  */
 }
 
 void __invalidate_icache_page(struct vm_area_struct *vma, struct page *page)

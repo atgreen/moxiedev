@@ -2244,6 +2244,7 @@ static ssize_t generic_perform_write(struct file *file,
 		index = pos >> PAGE_CACHE_SHIFT;
 		bytes = min_t(unsigned long, PAGE_CACHE_SIZE - offset,
 						iov_iter_count(i));
+		printk ("offset = %d, index = %d, bytes = %d\n", offset, index, bytes);
 
 again:
 
@@ -2269,12 +2270,14 @@ again:
 
 		pagefault_disable();
 		copied = iov_iter_copy_from_user_atomic(page, i, offset, bytes);
+		printk ("a status = %d\n", status);
 		pagefault_enable();
 		flush_dcache_page(page);
 
 		mark_page_accessed(page);
 		status = a_ops->write_end(file, mapping, pos, bytes, copied,
 						page, fsdata);
+		printk ("b status = %d\n", status);
 		if (unlikely(status < 0))
 			break;
 		copied = status;
@@ -2299,6 +2302,8 @@ again:
 		written += copied;
 
 		balance_dirty_pages_ratelimited(mapping);
+
+		printk ("iov_iter_count(i) = %d\n", iov_iter_count(i));
 
 	} while (iov_iter_count(i));
 

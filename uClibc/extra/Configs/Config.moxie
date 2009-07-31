@@ -15,7 +15,7 @@ config FORCE_OPTIONS_FOR_ARCH
 	select ARCH_HAS_NO_SHARED
 	select ARCH_HAS_NO_LDSO
 	select HAS_NO_THREADS
-	select UCLIBC_FORMAT_FLAT
+	select HAVE_NO_PIC
 
 config ARCH_CFLAGS
 	string

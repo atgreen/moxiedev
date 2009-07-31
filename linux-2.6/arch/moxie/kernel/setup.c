@@ -55,9 +55,20 @@ char cmd_line[COMMAND_LINE_SIZE];
 
 extern struct console early_serial_console;
 
+/* The exception handler is defined in exception_handler.S.  */
+extern void moxie_exception_handler(void);
+
+static void install_handler(void (*handler)(void))
+{
+  asm("ssr %0, 1" : : "r" (handler));
+}
+
 void __init setup_arch(char **cmdline_p)
 {
 	*cmdline_p = cmd_line;
+
+	/* Install the exception handler.  */
+	install_handler (moxie_exception_handler);
 
 	register_console(&early_serial_console);
 	console_verbose();

@@ -177,19 +177,25 @@ moxie_analyze_prologue (CORE_ADDR start_addr, CORE_ADDR end_addr,
 
       /* Optional stack allocation for args and local vars <= 4
 	 byte.  */
-      else if (inst == 0x01f0)           /* ldi.l $r12, X */
+      else if (inst == 0x0170)           /* ldi.l $r5, X */
 	{
 	  offset = read_memory_integer (next_addr + 2, 4, byte_order);
 	  inst2 = read_memory_unsigned_integer (next_addr + 6, 2, byte_order);
 
-	  if (inst2 == 0x051f)           /* add.l $sp, $r12 */
+	  if (inst2 == 0x0517)           /* add.l $sp, $r5 */
 	    {
 	      cache->framesize += offset;
 	    }
 
 	  return (next_addr + 8);
 	}
-      else  /* This is not a prologue instruction.  */
+      else if ((inst & 0xff00) == 0x91)   /* dec $sp, X */
+	{
+	  cache->framesize += (inst & 0x00ff);
+	  return (next_addr + 2);
+	}
+
+/* This is not a prologue instruction.  */
 	break;
     }
 

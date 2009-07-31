@@ -997,7 +997,8 @@ sim_resume (sd, step, siggnal)
 		    {
 		      char *fname = &memory[cpu.asregs.regs[2]];
 		      int mode = (int) convert_target_flags ((unsigned) cpu.asregs.regs[3]);
-		      int perm = (int) cpu.asregs.regs[4];
+		      /* Permission bits are at 0x12($fp) */
+		      int perm = (int) EXTRACT_WORD(&memory[cpu.asregs.regs[0] + 20]);
 		      int fd = open (fname, mode, perm);
 		      /* FIXME - set errno */
 		      cpu.asregs.regs[2] = fd;
@@ -1007,7 +1008,8 @@ sim_resume (sd, step, siggnal)
 		    {
 		      int fd = cpu.asregs.regs[2];
 		      char *buf = &memory[cpu.asregs.regs[3]];
-		      unsigned len = (unsigned) cpu.asregs.regs[4];
+		      /* String length is at 0x12($fp) */
+		      unsigned len = EXTRACT_WORD(&memory[cpu.asregs.regs[0] + 20]);
 		      cpu.asregs.regs[2] = read (fd, buf, len);
 		      break;
 		    }
@@ -1015,7 +1017,7 @@ sim_resume (sd, step, siggnal)
 		    {
 		      char *str = &memory[cpu.asregs.regs[3]];
 		      /* String length is at 0x12($fp) */
-		      unsigned count, len = (unsigned) cpu.asregs.regs[4];
+		      unsigned count, len = EXTRACT_WORD(&memory[cpu.asregs.regs[0] + 20]);
 		      count = write (cpu.asregs.regs[2], str, len);
 		      cpu.asregs.regs[2] = count;
 		      break;

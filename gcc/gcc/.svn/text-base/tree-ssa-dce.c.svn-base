@@ -828,9 +828,6 @@ mark_virtual_phi_result_for_renaming (gimple phi)
     }
   FOR_EACH_IMM_USE_STMT (stmt, iter, gimple_phi_result (phi))
     {
-      if (gimple_code (stmt) != GIMPLE_PHI
-	  && !gimple_plf (stmt, STMT_NECESSARY))
-        continue;
       FOR_EACH_IMM_USE_ON_STMT (use_p, iter)
         SET_USE (use_p, SSA_NAME_VAR (gimple_phi_result (phi)));
       update_stmt (stmt);
@@ -873,7 +870,8 @@ remove_dead_phis (basic_block bb)
 	      FOR_EACH_IMM_USE_STMT (use_stmt, iter, vdef)
 		FOR_EACH_IMM_USE_ON_STMT (use_p, iter)
 		  SET_USE (use_p, vuse);
-	      if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (vdef))
+	      if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (vdef)
+	          && TREE_CODE (vuse) == SSA_NAME)
 		SSA_NAME_OCCURS_IN_ABNORMAL_PHI (vuse) = 1;
 	    }
 	  else
@@ -953,6 +951,7 @@ forward_edge_to_pdom (edge e, basic_block post_dom_bb)
 	{
 	  gimple phi = gsi_stmt (gsi);
 	  tree op;
+	  source_location locus;
 
 	  /* Dead PHI do not imply control dependency.  */
           if (!gimple_plf (phi, STMT_NECESSARY)
@@ -977,10 +976,16 @@ forward_edge_to_pdom (edge e, basic_block post_dom_bb)
 	      continue;
 	    }
 	  if (!e2)
-	    op = gimple_phi_arg_def (phi, e->dest_idx == 0 ? 1 : 0);
+	    {
+	      op = gimple_phi_arg_def (phi, e->dest_idx == 0 ? 1 : 0);
+	      locus = gimple_phi_arg_location (phi, e->dest_idx == 0 ? 1 : 0);
+	    }
 	  else
-	    op = gimple_phi_arg_def (phi, e2->dest_idx);
-	  add_phi_arg (phi, op, e);
+	    {
+	      op = gimple_phi_arg_def (phi, e2->dest_idx);
+	      locus = gimple_phi_arg_location (phi, e2->dest_idx);
+	    }
+	  add_phi_arg (phi, op, e, locus);
 	  gcc_assert (e2 || degenerate_phi_p (phi));
 	  gsi_next (&gsi);
 	}
@@ -1137,7 +1142,8 @@ eliminate_unnecessary_stmts (void)
       for (bb = ENTRY_BLOCK_PTR->next_bb; bb != EXIT_BLOCK_PTR; bb = next_bb)
 	{
 	  next_bb = bb->next_bb;
-	  if (!(bb->flags & BB_REACHABLE))
+	  if (!TEST_BIT (bb_contains_live_stmts, bb->index)
+	      || !(bb->flags & BB_REACHABLE))
 	    {
 	      for (gsi = gsi_start_phis (bb); !gsi_end_p (gsi); gsi_next (&gsi))
 		if (!is_gimple_reg (gimple_phi_result (gsi_stmt (gsi))))
@@ -1159,7 +1165,8 @@ eliminate_unnecessary_stmts (void)
 		    if (found)
 		      mark_virtual_phi_result_for_renaming (gsi_stmt (gsi));
 		  }
-	      delete_basic_block (bb);
+	      if (!(bb->flags & BB_REACHABLE))
+	        delete_basic_block (bb);
 	    }
 	}
     }

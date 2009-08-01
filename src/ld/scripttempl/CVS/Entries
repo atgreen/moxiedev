@@ -11,7 +11,6 @@
 /delta68.sc/1.1.1.1/Mon Jul  6 10:46:44 2009//
 /dlx.sc/1.1/Mon Jul  6 10:46:44 2009//
 /ebmon29k.sc/1.1.1.1/Mon Jul  6 10:46:44 2009//
-/elf.sc/1.91/Mon Jul  6 10:46:44 2009//
 /elf32cr16.sc/1.2/Mon Jul  6 10:46:44 2009//
 /elf32cr16c.sc/1.2/Mon Jul  6 10:46:44 2009//
 /elf32crx.sc/1.6/Mon Jul  6 10:46:44 2009//
@@ -60,7 +59,6 @@
 /mep.sc/1.4/Mon Jul  6 10:46:44 2009//
 /mips.sc/1.2/Mon Jul  6 10:46:44 2009//
 /mipsbsd.sc/1.1.1.1/Mon Jul  6 10:46:44 2009//
-/mmo.sc/1.6/Mon Jul  6 10:46:44 2009//
 /moxie.sc/1.1/Mon Jul  6 10:46:44 2009//
 /nw.sc/1.3/Mon Jul  6 10:46:44 2009//
 /or32.sc/1.1/Mon Jul  6 10:46:44 2009//
@@ -86,4 +84,6 @@
 /xstormy16.sc/1.11/Mon Jul  6 10:46:44 2009//
 /z80.sc/1.1/Mon Jul  6 10:46:44 2009//
 /z8000.sc/1.2/Mon Jul  6 10:46:44 2009//
+/elf.sc/1.92/Fri Jul 31 11:10:13 2009//
+/mmo.sc/1.7/Fri Jul 31 11:10:13 2009//
 D

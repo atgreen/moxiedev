@@ -933,7 +933,15 @@ further debugging may prove unreliable.", file, line, problem->name, msg);
       /* Default (yes/batch case) is to quit GDB.  When in batch mode
 	 this lessens the likelihood of GDB going into an infinite
 	 loop.  */
-      quit_p = query (_("%s\nQuit this debugging session? "), reason);
+      if (caution == 0)
+        {
+          /* Emit the message and quit.  */
+          fputs_unfiltered (reason, gdb_stderr);
+          fputs_unfiltered ("\n", gdb_stderr);
+          quit_p = 1;
+        }
+      else
+        quit_p = query (_("%s\nQuit this debugging session? "), reason);
     }
   else if (problem->should_quit == internal_problem_yes)
     quit_p = 1;
@@ -1433,7 +1441,7 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
     return def_value;
 
   /* If input isn't coming from the user directly, just say what
-     question we're asking, and then answer "yes" automatically.  This
+     question we're asking, and then answer the default automatically.  This
      way, important error messages don't get lost when talking to GDB
      over a pipe.  */
   if (! input_from_terminal_p ())
@@ -1447,11 +1455,6 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
 
       return def_value;
     }
-
-  /* Automatically answer the default value if input is not from the user
-     directly, or if the user did not want prompts.  */
-  if (!input_from_terminal_p () || !caution)
-    return def_value;
 
   if (deprecated_query_hook)
     {

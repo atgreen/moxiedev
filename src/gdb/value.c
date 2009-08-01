@@ -108,6 +108,11 @@ struct value
      gdbarch_bits_big_endian=1 targets, it is the position of the MSB. */
   int bitpos;
 
+  /* Only used for bitfields; the containing value.  This allows a
+     single read from the target when displaying multiple
+     bitfields.  */
+  struct value *parent;
+
   /* Frame register value is relative to.  This will be described in
      the lval enum above as "lval_register".  */
   struct frame_id frame_id;
@@ -194,6 +199,13 @@ struct value
   /* Actual contents of the value.  Target byte-order.  NULL or not
      valid if lazy is nonzero.  */
   gdb_byte *contents;
+
+  /* The number of references to this value.  When a value is created,
+     the value chain holds a reference, so REFERENCE_COUNT is 1.  If
+     release_value is called, this value is removed from the chain but
+     the caller of release_value now has a reference to this value.
+     The caller must arrange for a call to value_free later.  */
+  int reference_count;
 };
 
 /* Prototypes for local functions. */
@@ -259,6 +271,10 @@ allocate_value_lazy (struct type *type)
   val->pointed_to_offset = 0;
   val->modifiable = 1;
   val->initialized = 1;  /* Default to initialized.  */
+
+  /* Values start out on the all_values chain.  */
+  val->reference_count = 1;
+
   return val;
 }
 
@@ -385,6 +401,12 @@ void
 set_value_bitsize (struct value *value, int bit)
 {
   value->bitsize = bit;
+}
+
+struct value *
+value_parent (struct value *value)
+{
+  return value->parent;
 }
 
 gdb_byte *
@@ -583,11 +605,34 @@ value_mark (void)
   return all_values;
 }
 
+/* Take a reference to VAL.  VAL will not be deallocated until all
+   references are released.  */
+
+void
+value_incref (struct value *val)
+{
+  val->reference_count++;
+}
+
+/* Release a reference to VAL, which was acquired with value_incref.
+   This function is also called to deallocate values from the value
+   chain.  */
+
 void
 value_free (struct value *val)
 {
   if (val)
     {
+      gdb_assert (val->reference_count > 0);
+      val->reference_count--;
+      if (val->reference_count > 0)
+	return;
+
+      /* If there's an associated parent value, drop our reference to
+	 it.  */
+      if (val->parent != NULL)
+	value_free (val->parent);
+
       if (VALUE_LVAL (val) == lval_computed)
 	{
 	  struct lval_funcs *funcs = val->location.computed.funcs;
@@ -710,6 +755,9 @@ value_copy (struct value *arg)
 	      TYPE_LENGTH (value_enclosing_type (arg)));
 
     }
+  val->parent = arg->parent;
+  if (val->parent)
+    value_incref (val->parent);
   if (VALUE_LVAL (val) == lval_computed)
     {
       struct lval_funcs *funcs = val->location.computed.funcs;
@@ -1832,15 +1880,28 @@ value_primitive_field (struct value *arg1, int offset,
 
   if (TYPE_FIELD_BITSIZE (arg_type, fieldno))
     {
-      v = value_from_longest (type,
-			      unpack_field_as_long (arg_type,
-						    value_contents (arg1)
-						    + offset,
-						    fieldno));
-      v->bitpos = TYPE_FIELD_BITPOS (arg_type, fieldno) % 8;
+      /* Create a new value for the bitfield, with bitpos and bitsize
+	 set.  If possible, arrange offset and bitpos so that we can
+	 do a single aligned read of the size of the containing type.
+	 Otherwise, adjust offset to the byte containing the first
+	 bit.  Assume that the address, offset, and embedded offset
+	 are sufficiently aligned.  */
+      int bitpos = TYPE_FIELD_BITPOS (arg_type, fieldno);
+      int container_bitsize = TYPE_LENGTH (type) * 8;
+
+      v = allocate_value_lazy (type);
       v->bitsize = TYPE_FIELD_BITSIZE (arg_type, fieldno);
-      v->offset = value_offset (arg1) + offset
-	+ TYPE_FIELD_BITPOS (arg_type, fieldno) / 8;
+      if ((bitpos % container_bitsize) + v->bitsize <= container_bitsize
+	  && TYPE_LENGTH (type) <= (int) sizeof (LONGEST))
+	v->bitpos = bitpos % container_bitsize;
+      else
+	v->bitpos = bitpos % 8;
+      v->offset = value_offset (arg1) + value_embedded_offset (arg1)
+	+ (bitpos - v->bitpos) / 8;
+      v->parent = arg1;
+      value_incref (v->parent);
+      if (!value_lazy (arg1))
+	value_fetch_lazy (v);
     }
   else if (fieldno < TYPE_N_BASECLASSES (arg_type))
     {
@@ -1965,8 +2026,9 @@ value_fn_field (struct value **arg1p, struct fn_field *f, int j, struct type *ty
 }
 
 
-/* Unpack a field FIELDNO of the specified TYPE, from the anonymous object at
-   VALADDR.
+/* Unpack a bitfield of the specified FIELD_TYPE, from the anonymous
+   object at VALADDR.  The bitfield starts at BITPOS bits and contains
+   BITSIZE bits.
 
    Extracting bits depends on endianness of the machine.  Compute the
    number of least significant bits to discard.  For big endian machines,
@@ -1980,24 +2042,21 @@ value_fn_field (struct value **arg1p, struct fn_field *f, int j, struct type *ty
    If the field is signed, we also do sign extension. */
 
 LONGEST
-unpack_field_as_long (struct type *type, const gdb_byte *valaddr, int fieldno)
+unpack_bits_as_long (struct type *field_type, const gdb_byte *valaddr,
+		     int bitpos, int bitsize)
 {
-  enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
+  enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (field_type));
   ULONGEST val;
   ULONGEST valmask;
-  int bitpos = TYPE_FIELD_BITPOS (type, fieldno);
-  int bitsize = TYPE_FIELD_BITSIZE (type, fieldno);
   int lsbcount;
-  struct type *field_type;
 
   val = extract_unsigned_integer (valaddr + bitpos / 8,
 				  sizeof (val), byte_order);
-  field_type = TYPE_FIELD_TYPE (type, fieldno);
   CHECK_TYPEDEF (field_type);
 
   /* Extract bits.  See comment above. */
 
-  if (gdbarch_bits_big_endian (get_type_arch (type)))
+  if (gdbarch_bits_big_endian (get_type_arch (field_type)))
     lsbcount = (sizeof val * 8 - bitpos % 8 - bitsize);
   else
     lsbcount = (bitpos % 8);
@@ -2019,6 +2078,19 @@ unpack_field_as_long (struct type *type, const gdb_byte *valaddr, int fieldno)
 	}
     }
   return (val);
+}
+
+/* Unpack a field FIELDNO of the specified TYPE, from the anonymous object at
+   VALADDR.  See unpack_bits_as_long for more details.  */
+
+LONGEST
+unpack_field_as_long (struct type *type, const gdb_byte *valaddr, int fieldno)
+{
+  int bitpos = TYPE_FIELD_BITPOS (type, fieldno);
+  int bitsize = TYPE_FIELD_BITSIZE (type, fieldno);
+  struct type *field_type = TYPE_FIELD_TYPE (type, fieldno);
+
+  return unpack_bits_as_long (field_type, valaddr, bitpos, bitsize);
 }
 
 /* Modify the value of a bitfield.  ADDR points to a block of memory in

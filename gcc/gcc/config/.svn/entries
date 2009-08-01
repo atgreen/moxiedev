@@ -1,15 +1,15 @@
 10
 
 dir
-149693
+150304
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-15T15:40:15.292599Z
-149691
-uros
+2009-07-31T02:34:49.849672Z
+150294
+dj
 
 
 
@@ -28,7 +28,7 @@ uros
 
 t-netbsd
 file
-
+149693
 
 
 
@@ -62,7 +62,7 @@ hjl
 
 host-hpux.c
 file
-
+149693
 
 
 
@@ -96,7 +96,7 @@ nickc
 
 x-cflags-O1
 file
-
+149693
 
 
 
@@ -133,7 +133,7 @@ dir
 
 t-dfprules
 file
-
+149693
 
 
 
@@ -167,7 +167,7 @@ bje
 
 t-darwin
 file
-
+149693
 
 
 
@@ -201,7 +201,7 @@ ian
 
 linux.h
 file
-
+149693
 
 
 
@@ -235,7 +235,7 @@ jakub
 
 print-sysroot-suffix.sh
 file
-
+149693
 
 
 
@@ -269,7 +269,7 @@ ams
 
 t-slibgcc-darwin
 file
-
+149693
 
 
 
@@ -306,7 +306,7 @@ dir
 
 t-libgcc-pic
 file
-
+149693
 
 
 
@@ -343,7 +343,7 @@ dir
 
 elfos.h
 file
-
+149693
 
 
 
@@ -377,7 +377,7 @@ jakub
 
 t-svr4
 file
-
+149693
 
 
 
@@ -411,7 +411,7 @@ jsm28
 
 dbxcoff.h
 file
-
+149693
 
 
 
@@ -449,12 +449,9 @@ dir
 spu
 dir
 
-sparc
-dir
-
 interix.h
 file
-
+149693
 
 
 
@@ -486,9 +483,12 @@ nickc
 
 3607
 
+sparc
+dir
+
 vx-common.h
 file
-
+149693
 
 
 
@@ -522,7 +522,7 @@ jakub
 
 netbsd-aout.h
 file
-
+149693
 
 
 
@@ -556,7 +556,7 @@ nickc
 
 flat.h
 file
-
+149693
 
 
 
@@ -590,7 +590,7 @@ nickc
 
 darwin-crt2.c
 file
-
+149693
 
 
 
@@ -625,12 +625,9 @@ jakub
 mep
 dir
 
-m32r
-dir
-
 floatunsixf.c
 file
-
+149693
 
 
 
@@ -662,9 +659,12 @@ jsm28
 
 384
 
+m32r
+dir
+
 vxworks.opt
 file
-
+149693
 
 
 
@@ -696,77 +696,9 @@ nickc
 
 1214
 
-darwin.opt
-file
-
-
-
-
-2009-04-24T17:43:18.000000Z
-995e5a4d3855220bb0359cb371c1a662
-2007-08-02T10:49:31.520855Z
-127157
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1688
-
-darwin-c.c
-file
-
-
-
-
-2009-04-24T17:43:18.000000Z
-3e87af84f133e3b5bd8450fff3eb1cf1
-2009-02-20T15:20:38.173956Z
-144324
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-17179
-
 t-sysroot-suffix
 file
-
+149693
 
 
 
@@ -798,12 +730,80 @@ ams
 
 297
 
+darwin-c.c
+file
+149693
+
+
+
+2009-04-24T17:43:18.000000Z
+3e87af84f133e3b5bd8450fff3eb1cf1
+2009-02-20T15:20:38.173956Z
+144324
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+17179
+
+darwin.opt
+file
+149693
+
+
+
+2009-04-24T17:43:18.000000Z
+995e5a4d3855220bb0359cb371c1a662
+2007-08-02T10:49:31.520855Z
+127157
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1688
+
 i386
 dir
 
 t-libunwind
 file
-
+149693
 
 
 
@@ -837,7 +837,7 @@ jsm28
 
 darwin-protos.h
 file
-
+149693
 
 
 
@@ -871,7 +871,7 @@ jakub
 
 sol2.c
 file
-
+149693
 
 
 
@@ -905,7 +905,7 @@ nickc
 
 linux.opt
 file
-
+149693
 
 
 
@@ -939,7 +939,7 @@ ian
 
 freebsd-stdint.h
 file
-
+149693
 
 
 
@@ -973,7 +973,7 @@ gerald
 
 sol2.h
 file
-
+149693
 
 
 
@@ -1007,7 +1007,7 @@ jsm28
 
 vxlib-tls.c
 file
-
+149693
 
 
 
@@ -1044,7 +1044,7 @@ dir
 
 usegas.h
 file
-
+149693
 
 
 
@@ -1078,7 +1078,7 @@ nickc
 
 floatunsisf.c
 file
-
+149693
 
 
 
@@ -1112,7 +1112,7 @@ jsm28
 
 svr3.h
 file
-
+149693
 
 
 
@@ -1149,7 +1149,7 @@ dir
 
 kopensolaris-gnu.h
 file
-
+149693
 
 
 
@@ -1186,7 +1186,7 @@ dir
 
 sol2-protos.h
 file
-
+149693
 
 
 
@@ -1220,7 +1220,7 @@ nickc
 
 dbxelf.h
 file
-
+149693
 
 
 
@@ -1254,7 +1254,7 @@ jakub
 
 t-gnu
 file
-
+149693
 
 
 
@@ -1288,7 +1288,7 @@ pinskia
 
 lynx.opt
 file
-
+149693
 
 
 
@@ -1322,7 +1322,7 @@ nickc
 
 t-rtems
 file
-
+149693
 
 
 
@@ -1356,7 +1356,7 @@ neroden
 
 fixed-bit.c
 file
-
+149693
 
 
 
@@ -1393,7 +1393,7 @@ dir
 
 t-openbsd-thread
 file
-
+149693
 
 
 
@@ -1427,7 +1427,7 @@ bonzini
 
 fixed-bit.h
 file
-
+149693
 
 
 
@@ -1461,7 +1461,7 @@ jakub
 
 kfreebsd-gnu.h
 file
-
+149693
 
 
 
@@ -1495,7 +1495,7 @@ nickc
 
 fp-bit.c
 file
-
+149693
 
 
 
@@ -1532,7 +1532,7 @@ dir
 
 dbx.h
 file
-
+149693
 
 
 
@@ -1569,7 +1569,7 @@ dir
 
 fp-bit.h
 file
-
+149693
 
 
 
@@ -1603,7 +1603,7 @@ jakub
 
 host-solaris.c
 file
-
+149693
 
 
 
@@ -1637,7 +1637,7 @@ jakub
 
 udivmodsi4.c
 file
-
+149693
 
 
 
@@ -1674,7 +1674,7 @@ dir
 
 darwin-crt3.c
 file
-
+149693
 
 
 
@@ -1708,7 +1708,7 @@ jakub
 
 vxworksae.h
 file
-
+149693
 
 
 
@@ -1740,77 +1740,9 @@ nickc
 
 1977
 
-sol2-c.c
-file
-
-
-
-
-2009-04-27T23:09:06.000000Z
-628ee98c0a9b945d13af1f6dc97a4372
-2009-04-27T20:25:48.102110Z
-146855
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7370
-
-lynx.h
-file
-
-
-
-
-2009-04-24T17:43:22.000000Z
-e03eab3c9d6f711ba637a1902dd0219b
-2007-08-02T10:49:31.520855Z
-127157
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5020
-
 t-freebsd-thread
 file
-
+149693
 
 
 
@@ -1842,12 +1774,80 @@ ljrittle
 
 100
 
+lynx.h
+file
+149693
+
+
+
+2009-04-24T17:43:22.000000Z
+e03eab3c9d6f711ba637a1902dd0219b
+2007-08-02T10:49:31.520855Z
+127157
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5020
+
+sol2-c.c
+file
+149693
+
+
+
+2009-04-27T23:09:06.000000Z
+628ee98c0a9b945d13af1f6dc97a4372
+2009-04-27T20:25:48.102110Z
+146855
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7370
+
 moxie
 dir
 
 darwin-ppc-ldouble-patch.def
 file
-
+149693
 
 
 
@@ -1879,9 +1879,12 @@ jsm28
 
 3753
 
+m68hc11
+dir
+
 openbsd-oldgas.h
 file
-
+149693
 
 
 
@@ -1913,12 +1916,9 @@ nickc
 
 810
 
-m68hc11
-dir
-
 udivmod.c
 file
-
+149693
 
 
 
@@ -1952,7 +1952,7 @@ jsm28
 
 tm-dwarf2.h
 file
-
+149693
 
 
 
@@ -1984,43 +1984,9 @@ zack
 
 168
 
-interix3.h
-file
-
-
-
-
-2009-04-24T17:43:22.000000Z
-c2b214e90696f8919767ee1d9c14ac49
-2007-08-02T10:49:31.520855Z
-127157
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1097
-
 host-linux.c
 file
-
+149693
 
 
 
@@ -2052,22 +2018,17 @@ jakub
 
 7124
 
-README
+interix3.h
 file
+149693
 
 
 
-
-2009-04-24T17:43:16.000000Z
-8e697813dc96ca90f5d0f4c196efe2cc
-1998-12-16T22:24:51.000000Z
-24349
-law
-
-
-
-
-
+2009-04-24T17:43:22.000000Z
+c2b214e90696f8919767ee1d9c14ac49
+2007-08-02T10:49:31.520855Z
+127157
+nickc
 
 
 
@@ -2084,11 +2045,16 @@ law
 
 
 
-262
+
+
+
+
+
+1097
 
 sync.c
 file
-
+149693
 
 
 
@@ -2120,9 +2086,43 @@ jakub
 
 6099
 
+README
+file
+149693
+
+
+
+2009-04-24T17:43:16.000000Z
+8e697813dc96ca90f5d0f4c196efe2cc
+1998-12-16T22:24:51.000000Z
+24349
+law
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+262
+
 memcmp.c
 file
-
+149693
 
 
 
@@ -2154,9 +2154,12 @@ jsm28
 
 286
 
+cris
+dir
+
 t-linux
 file
-
+149693
 
 
 
@@ -2188,12 +2191,9 @@ jsm28
 
 1283
 
-cris
-dir
-
 vxworks-dummy.h
 file
-
+149693
 
 
 
@@ -2227,7 +2227,7 @@ jakub
 
 x-linux
 file
-
+149693
 
 
 
@@ -2259,43 +2259,9 @@ ian
 
 223
 
-netbsd.h
-file
-
-
-
-
-2009-04-24T17:43:25.000000Z
-42cc1d22cff64edbf7fa8b121ca7202b
-2007-09-10T00:22:54.985875Z
-128319
-kristerw
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6571
-
 t-slibgcc-elf-ver
 file
-
+149693
 
 
 
@@ -2327,9 +2293,46 @@ jsm28
 
 2199
 
+netbsd.h
+file
+149693
+
+
+
+2009-04-24T17:43:25.000000Z
+42cc1d22cff64edbf7fa8b121ca7202b
+2007-09-10T00:22:54.985875Z
+128319
+kristerw
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6571
+
+vms
+dir
+
 netbsd-elf.h
 file
-
+149693
 
 
 
@@ -2361,9 +2364,12 @@ kristerw
 
 3202
 
+iq2000
+dir
+
 memset.c
 file
-
+149693
 
 
 
@@ -2395,46 +2401,9 @@ jsm28
 
 177
 
-iq2000
-dir
-
-host-darwin.c
-file
-
-
-
-
-2009-04-24T17:43:19.000000Z
-24f08b0ffc0f2a2ca05169c3ee5c689e
-2007-08-02T10:49:31.520855Z
-127157
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2361
-
 t-sol2
 file
-
+149693
 
 
 
@@ -2466,9 +2435,43 @@ ian
 
 1265
 
+host-darwin.c
+file
+149693
+
+
+
+2009-04-24T17:43:19.000000Z
+24f08b0ffc0f2a2ca05169c3ee5c689e
+2007-08-02T10:49:31.520855Z
+127157
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2361
+
 t-libc-ok
 file
-
+149693
 
 
 
@@ -2502,7 +2505,7 @@ hjl
 
 svr4.h
 file
-
+149693
 
 
 
@@ -2536,7 +2539,7 @@ jakub
 
 host-darwin.h
 file
-
+149693
 
 
 
@@ -2570,7 +2573,7 @@ nickc
 
 memmove.c
 file
-
+149693
 
 
 
@@ -2604,7 +2607,7 @@ jsm28
 
 t-slibgcc-sld
 file
-
+149693
 
 
 
@@ -2636,43 +2639,9 @@ jsm28
 
 2111
 
-x-hpux
-file
-
-
-
-
-2009-05-28T13:02:28.000000Z
-70a634635eff456ffab3bc53b2a81690
-2009-05-26T14:02:04.105108Z
-147873
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-220
-
 x-darwin
 file
-
+149693
 
 
 
@@ -2704,12 +2673,46 @@ ian
 
 185
 
+x-hpux
+file
+149693
+
+
+
+2009-05-28T13:02:28.000000Z
+70a634635eff456ffab3bc53b2a81690
+2009-05-26T14:02:04.105108Z
+147873
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+220
+
 mn10300
 dir
 
 floatunsidf.c
 file
-
+149693
 
 
 
@@ -2744,77 +2747,9 @@ jsm28
 ia64
 dir
 
-gofast.h
-file
-
-
-
-
-2009-04-24T17:43:19.000000Z
-a48ace2861c72824ad6b53b4d0f14cc9
-2007-08-02T10:49:31.520855Z
-127157
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3273
-
-glibc-stdint.h
-file
-
-
-
-
-2009-04-24T17:43:19.000000Z
-26e7f4f8b1c6f6d236ccf4d49bfe4a92
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2549
-
 newlib-stdint.h
 file
-
+149693
 
 
 
@@ -2846,17 +2781,17 @@ jsm28
 
 3688
 
-gnu.h
+glibc-stdint.h
 file
-
+149693
 
 
 
 2009-04-24T17:43:19.000000Z
-6ca469512b1bddf47c64cf2903f2a49a
-2008-11-13T23:28:46.872027Z
-141838
-tschwinge
+26e7f4f8b1c6f6d236ccf4d49bfe4a92
+2009-04-09T15:00:19.611803Z
+145841
+jakub
 
 
 
@@ -2878,11 +2813,45 @@ tschwinge
 
 
 
-1631
+2549
+
+gofast.h
+file
+149693
+
+
+
+2009-04-24T17:43:19.000000Z
+a48ace2861c72824ad6b53b4d0f14cc9
+2007-08-02T10:49:31.520855Z
+127157
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3273
 
 floatunsitf.c
 file
-
+149693
 
 
 
@@ -2914,9 +2883,43 @@ jsm28
 
 384
 
+gnu.h
+file
+149693
+
+
+
+2009-04-24T17:43:19.000000Z
+6ca469512b1bddf47c64cf2903f2a49a
+2008-11-13T23:28:46.872027Z
+141838
+tschwinge
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1631
+
 rtems.h
 file
-
+149693
 
 
 
@@ -2950,7 +2953,7 @@ nickc
 
 x-solaris
 file
-
+149693
 
 
 
@@ -2984,7 +2987,7 @@ ian
 
 sol2-10.h
 file
-
+149693
 
 
 
@@ -3018,7 +3021,7 @@ nickc
 
 t-vxworks
 file
-
+149693
 
 
 
@@ -3061,7 +3064,7 @@ dir
 
 t-libunwind-elf
 file
-
+149693
 
 
 
@@ -3093,9 +3096,15 @@ jsm28
 
 2117
 
+mcore
+dir
+
+arc
+dir
+
 darwin.c
 file
-
+149693
 
 
 
@@ -3127,49 +3136,9 @@ jsm28
 
 49988
 
-arc
-dir
-
-mcore
-dir
-
-darwin-sections.def
-file
-
-
-
-
-2009-04-27T23:09:06.000000Z
-374b3e0a718102166c49e942f1595685
-2009-04-21T19:03:23.876795Z
-146533
-jsm28
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4148
-
 dfp-bit.c
 file
-
+149693
 
 
 
@@ -3201,9 +3170,43 @@ jakub
 
 19602
 
+darwin-sections.def
+file
+149693
+
+
+
+2009-04-27T23:09:06.000000Z
+374b3e0a718102166c49e942f1595685
+2009-04-21T19:03:23.876795Z
+146533
+jsm28
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4148
+
 freebsd-nthr.h
 file
-
+149693
 
 
 
@@ -3237,7 +3240,7 @@ nickc
 
 darwin.h
 file
-
+149693
 
 
 
@@ -3269,9 +3272,12 @@ fxcoudert
 
 41122
 
+score
+dir
+
 dfp-bit.h
 file
-
+149693
 
 
 
@@ -3303,12 +3309,9 @@ jakub
 
 22773
 
-score
-dir
-
 t-slibgcc-nolc-override
 file
-
+149693
 
 
 
@@ -3345,7 +3348,7 @@ dir
 
 t-openbsd
 file
-
+149693
 
 
 
@@ -3379,7 +3382,7 @@ neroden
 
 darwin-driver.c
 file
-
+149693
 
 
 
@@ -3416,7 +3419,7 @@ dir
 
 darwin9.h
 file
-
+149693
 
 
 
@@ -3450,7 +3453,7 @@ fxcoudert
 
 vxlib.c
 file
-
+149693
 
 
 
@@ -3487,7 +3490,7 @@ dir
 
 t-freebsd
 file
-
+149693
 
 
 
@@ -3521,7 +3524,7 @@ hjl
 
 memcpy.c
 file
-
+149693
 
 
 
@@ -3558,7 +3561,7 @@ dir
 
 openbsd.h
 file
-
+149693
 
 
 
@@ -3592,7 +3595,7 @@ nickc
 
 freebsd-spec.h
 file
-
+149693
 
 
 
@@ -3626,7 +3629,7 @@ jakub
 
 darwin-f.c
 file
-
+149693
 
 
 
@@ -3660,7 +3663,7 @@ dfranke
 
 t-lynx
 file
-
+149693
 
 
 
@@ -3694,7 +3697,7 @@ jsm28
 
 darwin-64.c
 file
-
+149693
 
 
 
@@ -3728,7 +3731,7 @@ jakub
 
 libgcc-glibc.ver
 file
-
+149693
 
 
 
@@ -3765,7 +3768,7 @@ dir
 
 freebsd.h
 file
-
+149693
 
 
 
@@ -3805,7 +3808,7 @@ dir
 
 divmod.c
 file
-
+149693
 
 
 
@@ -3839,7 +3842,7 @@ jsm28
 
 vxworks.c
 file
-
+149693
 
 
 
@@ -3873,7 +3876,7 @@ jakub
 
 knetbsd-gnu.h
 file
-
+149693
 
 
 
@@ -3907,7 +3910,7 @@ nickc
 
 vxworks.h
 file
-
+149693
 
 
 
@@ -3944,7 +3947,7 @@ dir
 
 hpux-stdint.h
 file
-
+149693
 
 
 

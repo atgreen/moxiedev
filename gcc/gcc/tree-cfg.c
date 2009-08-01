@@ -476,11 +476,12 @@ fold_cond_expr_cond (void)
 
       if (stmt && gimple_code (stmt) == GIMPLE_COND)
 	{
+	  location_t loc = gimple_location (stmt);
 	  tree cond;
 	  bool zerop, onep;
 
 	  fold_defer_overflow_warnings ();
-	  cond = fold_binary (gimple_cond_code (stmt), boolean_type_node,
+	  cond = fold_binary_loc (loc, gimple_cond_code (stmt), boolean_type_node,
 			      gimple_cond_lhs (stmt), gimple_cond_rhs (stmt));
 	  if (cond)
 	    {
@@ -755,13 +756,15 @@ same_line_p (location_t locus1, location_t locus2)
 static void
 assign_discriminator (location_t locus, basic_block bb)
 {
-  gimple to_stmt;
+  gimple first_in_to_bb, last_in_to_bb;
 
   if (locus == 0 || bb->discriminator != 0)
     return;
 
-  to_stmt = first_non_label_stmt (bb);
-  if (to_stmt && same_line_p (locus, gimple_location (to_stmt)))
+  first_in_to_bb = first_non_label_stmt (bb);
+  last_in_to_bb = last_stmt (bb);
+  if ((first_in_to_bb && same_line_p (locus, gimple_location (first_in_to_bb)))
+      || (last_in_to_bb && same_line_p (locus, gimple_location (last_in_to_bb))))
     bb->discriminator = next_discriminator_for_locus (locus);
 }
 
@@ -2883,7 +2886,7 @@ reinstall_phi_args (edge new_edge, edge old_edge)
  
       gcc_assert (result == gimple_phi_result (phi));
   
-      add_phi_arg (phi, arg, new_edge);
+      add_phi_arg (phi, arg, new_edge, redirect_edge_var_map_location (vm));
     }
   
   redirect_edge_var_map_clear (old_edge);
@@ -4837,7 +4840,8 @@ gimple_make_forwarder_block (edge fallthru)
       new_phi = create_phi_node (var, bb);
       SSA_NAME_DEF_STMT (var) = new_phi;
       gimple_phi_set_result (phi, make_ssa_name (SSA_NAME_VAR (var), phi));
-      add_phi_arg (new_phi, gimple_phi_result (phi), fallthru);
+      add_phi_arg (new_phi, gimple_phi_result (phi), fallthru, 
+		   UNKNOWN_LOCATION);
     }
 
   /* Add the arguments we have stored on edges.  */
@@ -5236,7 +5240,8 @@ add_phi_args_after_copy_edge (edge e_copy)
       phi = gsi_stmt (psi);
       phi_copy = gsi_stmt (psi_copy);
       def = PHI_ARG_DEF_FROM_EDGE (phi, e);
-      add_phi_arg (phi_copy, def, e_copy);
+      add_phi_arg (phi_copy, def, e_copy, 
+		   gimple_phi_arg_location_from_edge (phi, e));
     }
 }
 
@@ -7055,7 +7060,7 @@ gimple_lv_adjust_loop_header_phi (basic_block first, basic_block second,
       phi1 = gsi_stmt (psi1);
       phi2 = gsi_stmt (psi2);
       def = PHI_ARG_DEF (phi2, e2->dest_idx);
-      add_phi_arg (phi1, def, e);
+      add_phi_arg (phi1, def, e, gimple_phi_arg_location_from_edge (phi2, e2));
     }
 }
 
@@ -7196,8 +7201,9 @@ gimplify_build3 (gimple_stmt_iterator *gsi, enum tree_code code,
 		 tree type, tree a, tree b, tree c)
 {
   tree ret;
+  location_t loc = gimple_location (gsi_stmt (*gsi));
 
-  ret = fold_build3 (code, type, a, b, c);
+  ret = fold_build3_loc (loc, code, type, a, b, c);
   STRIP_NOPS (ret);
 
   return force_gimple_operand_gsi (gsi, ret, true, NULL, true,
@@ -7213,7 +7219,7 @@ gimplify_build2 (gimple_stmt_iterator *gsi, enum tree_code code,
 {
   tree ret;
 
-  ret = fold_build2 (code, type, a, b);
+  ret = fold_build2_loc (gimple_location (gsi_stmt (*gsi)), code, type, a, b);
   STRIP_NOPS (ret);
 
   return force_gimple_operand_gsi (gsi, ret, true, NULL, true,
@@ -7229,7 +7235,7 @@ gimplify_build1 (gimple_stmt_iterator *gsi, enum tree_code code, tree type,
 {
   tree ret;
 
-  ret = fold_build1 (code, type, a);
+  ret = fold_build1_loc (gimple_location (gsi_stmt (*gsi)), code, type, a);
   STRIP_NOPS (ret);
 
   return force_gimple_operand_gsi (gsi, ret, true, NULL, true,
@@ -7368,3 +7374,100 @@ struct gimple_opt_pass pass_warn_function_noreturn =
   0					/* todo_flags_finish */
  }
 };
+
+
+/* Walk a gimplified function and warn for functions whose return value is
+   ignored and attribute((warn_unused_result)) is set.  This is done before
+   inlining, so we don't have to worry about that.  */
+
+static void
+do_warn_unused_result (gimple_seq seq)
+{
+  tree fdecl, ftype;
+  gimple_stmt_iterator i;
+
+  for (i = gsi_start (seq); !gsi_end_p (i); gsi_next (&i))
+    {
+      gimple g = gsi_stmt (i);
+
+      switch (gimple_code (g))
+	{
+	case GIMPLE_BIND:
+	  do_warn_unused_result (gimple_bind_body (g));
+	  break;
+	case GIMPLE_TRY:
+	  do_warn_unused_result (gimple_try_eval (g));
+	  do_warn_unused_result (gimple_try_cleanup (g));
+	  break;
+	case GIMPLE_CATCH:
+	  do_warn_unused_result (gimple_catch_handler (g));
+	  break;
+	case GIMPLE_EH_FILTER:
+	  do_warn_unused_result (gimple_eh_filter_failure (g));
+	  break;
+
+	case GIMPLE_CALL:
+	  if (gimple_call_lhs (g))
+	    break;
+
+	  /* This is a naked call, as opposed to a GIMPLE_CALL with an
+	     LHS.  All calls whose value is ignored should be
+	     represented like this.  Look for the attribute.  */
+	  fdecl = gimple_call_fndecl (g);
+	  ftype = TREE_TYPE (TREE_TYPE (gimple_call_fn (g)));
+
+	  if (lookup_attribute ("warn_unused_result", TYPE_ATTRIBUTES (ftype)))
+	    {
+	      location_t loc = gimple_location (g);
+
+	      if (fdecl)
+		warning_at (loc, OPT_Wunused_result,
+			    "ignoring return value of %qD, "
+			    "declared with attribute warn_unused_result",
+			    fdecl);
+	      else
+		warning_at (loc, OPT_Wunused_result,
+			    "ignoring return value of function "
+			    "declared with attribute warn_unused_result");
+	    }
+	  break;
+
+	default:
+	  /* Not a container, not a call, or a call whose value is used.  */
+	  break;
+	}
+    }
+}
+
+static unsigned int
+run_warn_unused_result (void)
+{
+  do_warn_unused_result (gimple_body (current_function_decl));
+  return 0;
+}
+
+static bool
+gate_warn_unused_result (void)
+{
+  return flag_warn_unused_result;
+}
+
+struct gimple_opt_pass pass_warn_unused_result =
+{
+  {
+    GIMPLE_PASS,
+    "warn_unused_result",		/* name */
+    gate_warn_unused_result,		/* gate */
+    run_warn_unused_result,		/* execute */
+    NULL,				/* sub */
+    NULL,				/* next */
+    0,					/* static_pass_number */
+    TV_NONE,				/* tv_id */
+    PROP_gimple_any,			/* properties_required */
+    0,					/* properties_provided */
+    0,					/* properties_destroyed */
+    0,					/* todo_flags_start */
+    0,					/* todo_flags_finish */
+  }
+};
+

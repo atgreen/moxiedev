@@ -197,7 +197,6 @@ static conversion *direct_reference_binding (tree, conversion *);
 static bool promoted_arithmetic_type_p (tree);
 static conversion *conditional_conversion (tree, tree);
 static char *name_as_c_string (tree, tree, bool *);
-static tree call_builtin_trap (void);
 static tree prep_operand (tree);
 static void add_candidates (tree, const VEC(tree,gc) *, tree, bool, tree, tree,
 			    int, struct z_candidate **);
@@ -363,7 +362,8 @@ build_call_a (tree function, int n, tree *argarray)
 				argarray[i], t);
 	}
 
-  function = build_call_array (result_type, function, n, argarray);
+  function = build_call_array_loc (input_location,
+				   result_type, function, n, argarray);
   TREE_HAS_CONSTRUCTOR (function) = is_constructor;
   TREE_NOTHROW (function) = nothrow;
 
@@ -1221,7 +1221,21 @@ reference_binding (tree rto, tree rfrom, tree expr, bool c_cast_p, int flags)
       lvalue_p = clk_ordinary;
       from = TREE_TYPE (from);
     }
-  else if (expr)
+
+  if (expr && BRACE_ENCLOSED_INITIALIZER_P (expr))
+    {
+      maybe_warn_cpp0x ("extended initializer lists");
+      conv = implicit_conversion (to, from, expr, c_cast_p,
+				  flags);
+      if (!CLASS_TYPE_P (to)
+	  && CONSTRUCTOR_NELTS (expr) == 1)
+	{
+	  expr = CONSTRUCTOR_ELT (expr, 0)->value;
+	  from = TREE_TYPE (expr);
+	}
+    }
+
+  if (lvalue_p == clk_none && expr)
     lvalue_p = real_lvalue_p (expr);
 
   tfrom = from;
@@ -1363,8 +1377,9 @@ reference_binding (tree rto, tree rfrom, tree expr, bool c_cast_p, int flags)
   if (!(flags & LOOKUP_COPY_PARM))
     flags |= LOOKUP_ONLYCONVERTING;
 
-  conv = implicit_conversion (to, from, expr, c_cast_p,
-			      flags);
+  if (!conv)
+    conv = implicit_conversion (to, from, expr, c_cast_p,
+				flags);
   if (!conv)
     return NULL;
 
@@ -4580,6 +4595,10 @@ build_op_delete_call (enum tree_code code, tree addr, tree size,
       if (DECL_CLASS_SCOPE_P (fn))
 	perform_or_defer_access_check (TYPE_BINFO (type), fn, fn);
 
+      /* Core issue 901: It's ok to new a type with deleted delete.  */
+      if (DECL_DELETED_FN (fn) && alloc_fn)
+	return NULL_TREE;
+
       if (placement)
 	{
 	  /* The placement args might not be suitable for overload
@@ -5042,18 +5061,6 @@ convert_like_real (conversion *convs, tree expr, tree fn, int argnum,
   return expr;
 }
 
-/* Build a call to __builtin_trap.  */
-
-static tree
-call_builtin_trap (void)
-{
-  tree fn = implicit_built_in_decls[BUILT_IN_TRAP];
-
-  gcc_assert (fn != NULL);
-  fn = build_call_n (fn, 0);
-  return fn;
-}
-
 /* ARG is being passed to a varargs function.  Perform any conversions
    required.  Return the converted value.  */
 
@@ -5082,20 +5089,23 @@ convert_arg_to_ellipsis (tree arg)
   arg = require_complete_type (arg);
 
   if (arg != error_mark_node
-      && !pod_type_p (TREE_TYPE (arg)))
+      && (type_has_nontrivial_copy_init (TREE_TYPE (arg))
+	  || TYPE_HAS_NONTRIVIAL_DESTRUCTOR (TREE_TYPE (arg))))
     {
-      /* Undefined behavior [expr.call] 5.2.2/7.  We used to just warn
-	 here and do a bitwise copy, but now cp_expr_size will abort if we
-	 try to do that.
+      /* [expr.call] 5.2.2/7:
+	 Passing a potentially-evaluated argument of class type (Clause 9)
+	 with a non-trivial copy constructor or a non-trivial destructor
+	 with no corresponding parameter is conditionally-supported, with
+	 implementation-defined semantics.
+
+	 We used to just warn here and do a bitwise copy, but now
+	 cp_expr_size will abort if we try to do that.
+
 	 If the call appears in the context of a sizeof expression,
-	 there is no need to emit a warning, since the expression won't be
-	 evaluated. We keep the builtin_trap just as a safety check.  */
+	 it is not potentially-evaluated.  */
       if (cp_unevaluated_operand == 0)
-	warning (0, "cannot pass objects of non-POD type %q#T through %<...%>; "
-		 "call will abort at runtime", TREE_TYPE (arg));
-      arg = call_builtin_trap ();
-      arg = build2 (COMPOUND_EXPR, integer_type_node, arg,
-		    integer_zero_node);
+	error ("cannot pass objects of non-trivially-copyable "
+	       "type %q#T through %<...%>", TREE_TYPE (arg));
     }
 
   return arg;
@@ -5114,16 +5124,16 @@ build_x_va_arg (tree expr, tree type)
   if (expr == error_mark_node || !type)
     return error_mark_node;
 
-  if (! pod_type_p (type))
+  if (type_has_nontrivial_copy_init (type)
+      || TYPE_HAS_NONTRIVIAL_DESTRUCTOR (type)
+      || TREE_CODE (type) == REFERENCE_TYPE)
     {
       /* Remove reference types so we don't ICE later on.  */
       tree type1 = non_reference (type);
-      /* Undefined behavior [expr.call] 5.2.2/7.  */
-      warning (0, "cannot receive objects of non-POD type %q#T through %<...%>; "
-	       "call will abort at runtime", type);
+      /* conditionally-supported behavior [expr.call] 5.2.2/7.  */
+      error ("cannot receive objects of non-trivially-copyable type %q#T "
+	     "through %<...%>; ", type);
       expr = convert (build_pointer_type (type1), null_node);
-      expr = build2 (COMPOUND_EXPR, TREE_TYPE (expr),
-		     call_builtin_trap (), expr);
       expr = cp_build_indirect_ref (expr, NULL, tf_warning_or_error);
       return expr;
     }
@@ -5375,8 +5385,9 @@ build_over_call (struct z_candidate *cand, int flags, tsubst_flags_t complain)
 	    alcarray[ix + 1] = arg;
 	  argarray = alcarray;
 	}
-      expr = build_call_array (return_type, build_addr_func (fn), nargs,
-			       argarray);
+      expr = build_call_array_loc (input_location,
+				   return_type, build_addr_func (fn), nargs,
+				   argarray);
       if (TREE_THIS_VOLATILE (fn) && cfun)
 	current_function_returns_abnormally = 1;
       if (!VOID_TYPE_P (return_type))
@@ -6486,6 +6497,14 @@ compare_ics (conversion *ics1, conversion *ics2)
   ref_conv1 = maybe_handle_ref_bind (&ics1);
   ref_conv2 = maybe_handle_ref_bind (&ics2);
 
+  /* List-initialization sequence L1 is a better conversion sequence than
+     list-initialization sequence L2 if L1 converts to
+     std::initializer_list<X> for some X and L2 does not.  */
+  if (ics1->kind == ck_list && ics2->kind != ck_list)
+    return 1;
+  if (ics2->kind == ck_list && ics1->kind != ck_list)
+    return -1;
+
   /* [over.ics.rank]
 
      When  comparing  the  basic forms of implicit conversion sequences (as
@@ -6536,25 +6555,12 @@ compare_ics (conversion *ics1, conversion *ics2)
       conversion *t1;
       conversion *t2;
 
-      for (t1 = ics1; t1->kind != ck_user && t1->kind != ck_list; t1 = t1->u.next)
+      for (t1 = ics1; t1->kind != ck_user; t1 = t1->u.next)
 	if (t1->kind == ck_ambig || t1->kind == ck_aggr)
 	  return 0;
-      for (t2 = ics2; t2->kind != ck_user && t2->kind != ck_list; t2 = t2->u.next)
+      for (t2 = ics2; t2->kind != ck_user; t2 = t2->u.next)
 	if (t2->kind == ck_ambig || t2->kind == ck_aggr)
 	  return 0;
-
-      /* Conversion to std::initializer_list is better than other
-	 user-defined conversions.  */
-      if (t1->kind == ck_list
-	  || t2->kind == ck_list)
-	{
-	  if (t2->kind != ck_list)
-	    return 1;
-	  else if (t1->kind != ck_list)
-	    return -1;
-	  else
-	    return 0;
-	}
 
       if (t1->cand->fn != t2->cand->fn)
 	return 0;
@@ -7549,6 +7555,7 @@ initialize_reference (tree type, tree expr, tree decl, tree *cleanup)
   if (!conv || conv->bad_p)
     {
       if (!(TYPE_QUALS (TREE_TYPE (type)) & TYPE_QUAL_CONST)
+	  && !TYPE_REF_IS_RVALUE (type)
 	  && !real_lvalue_p (expr))
 	error ("invalid initialization of non-const reference of "
 	       "type %qT from a temporary of type %qT",

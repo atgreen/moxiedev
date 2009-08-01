@@ -50,6 +50,7 @@
 #include "addrmap.h"
 #include "arch-utils.h"
 #include "exec.h"
+#include "observer.h"
 
 /* Prototypes for local functions */
 
@@ -63,6 +64,11 @@ struct objfile *object_files;	/* Linked list of all objfiles */
 struct objfile *current_objfile;	/* For symbol file being read in */
 struct objfile *symfile_objfile;	/* Main symbol table loaded from */
 struct objfile *rt_common_objfile;	/* For runtime common symbols */
+
+/* Records whether any objfiles appeared or disappeared since we last updated
+   address to obj section map.  */
+
+static int objfiles_changed_p;
 
 /* Locate all mappable sections of a BFD file. 
    objfile_p_char is a char * to get it through
@@ -229,6 +235,8 @@ allocate_objfile (bfd *abfd, int flags)
   /* Save passed in flag bits. */
   objfile->flags |= flags;
 
+  objfiles_changed_p = 1;  /* Rebuild section map next time we need it.  */
+
   return (objfile);
 }
 
@@ -271,7 +279,26 @@ init_entry_point_info (struct objfile *objfile)
 CORE_ADDR
 entry_point_address (void)
 {
-  return symfile_objfile ? symfile_objfile->ei.entry_point : 0;
+  struct gdbarch *gdbarch;
+  CORE_ADDR entry_point;
+
+  if (symfile_objfile == NULL)
+    return 0;
+
+  gdbarch = get_objfile_arch (symfile_objfile);
+
+  entry_point = symfile_objfile->ei.entry_point;
+
+  /* Make certain that the address points at real code, and not a
+     function descriptor.  */
+  entry_point = gdbarch_convert_from_func_ptr_addr (gdbarch, entry_point,
+						    &current_target);
+
+  /* Remove any ISA markers, so that this matches entries in the
+     symbol table.  */
+  entry_point = gdbarch_addr_bits_remove (gdbarch, entry_point);
+
+  return entry_point;
 }
 
 /* Create the terminating entry of OBJFILE's minimal symbol table.
@@ -495,6 +522,7 @@ free_objfile (struct objfile *objfile)
   obstack_free (&objfile->objfile_obstack, 0);
   xfree (objfile);
   objfile = NULL;
+  objfiles_changed_p = 1;  /* Rebuild section map next time we need it.  */
 }
 
 static void
@@ -676,6 +704,7 @@ objfile_relocate (struct objfile *objfile, struct section_offsets *new_offsets)
 
   /* Relocate breakpoints as necessary, after things are relocated. */
   breakpoint_re_set ();
+  objfiles_changed_p = 1;  /* Rebuild section map next time we need it.  */
 }
 
 /* Many places in gdb want to test just to see if we have any partial
@@ -757,23 +786,113 @@ have_minimal_symbols (void)
   return 0;
 }
 
+/* Qsort comparison function.  */
+
+static int
+qsort_cmp (const void *a, const void *b)
+{
+  const struct obj_section *sect1 = *(const struct obj_section **) a;
+  const struct obj_section *sect2 = *(const struct obj_section **) b;
+  const CORE_ADDR sect1_addr = obj_section_addr (sect1);
+  const CORE_ADDR sect2_addr = obj_section_addr (sect2);
+
+  if (sect1_addr < sect2_addr)
+    {
+      gdb_assert (obj_section_endaddr (sect1) <= sect2_addr);
+      return -1;
+    }
+  else if (sect1_addr > sect2_addr)
+    {
+      gdb_assert (sect1_addr >= obj_section_endaddr (sect2));
+      return 1;
+    }
+  /* This can happen for separate debug-info files.  */
+  gdb_assert (obj_section_endaddr (sect1) == obj_section_endaddr (sect2));
+
+  return 0;
+}
+
+/* Update PMAP, PMAP_SIZE with non-TLS sections from all objfiles.  */
+
+static void
+update_section_map (struct obj_section ***pmap, int *pmap_size)
+{
+  int map_size, idx;
+  struct obj_section *s, **map;
+  struct objfile *objfile;
+
+  gdb_assert (objfiles_changed_p != 0);
+
+  map = *pmap;
+  xfree (map);
+
+#define insert_p(objf, sec) \
+  ((bfd_get_section_flags ((objf)->obfd, (sec)->the_bfd_section) \
+    & SEC_THREAD_LOCAL) == 0)
+
+  map_size = 0;
+  ALL_OBJSECTIONS (objfile, s)
+    if (insert_p (objfile, s))
+      map_size += 1;
+
+  map = xmalloc (map_size * sizeof (*map));
+
+  idx = 0;
+  ALL_OBJSECTIONS (objfile, s)
+    if (insert_p (objfile, s))
+      map[idx++] = s;
+
+#undef insert_p
+
+  qsort (map, map_size, sizeof (*map), qsort_cmp);
+
+  *pmap = map;
+  *pmap_size = map_size;
+}
+
+/* Bsearch comparison function. */
+
+static int
+bsearch_cmp (const void *key, const void *elt)
+{
+  const CORE_ADDR pc = *(CORE_ADDR *) key;
+  const struct obj_section *section = *(const struct obj_section **) elt;
+
+  if (pc < obj_section_addr (section))
+    return -1;
+  if (pc < obj_section_endaddr (section))
+    return 0;
+  return 1;
+}
+
 /* Returns a section whose range includes PC or NULL if none found.   */
 
 struct obj_section *
 find_pc_section (CORE_ADDR pc)
 {
-  struct obj_section *s;
-  struct objfile *objfile;
+  static struct obj_section **sections;
+  static int num_sections;
+
+  struct obj_section *s, **sp;
 
   /* Check for mapped overlay section first.  */
   s = find_pc_mapped_section (pc);
   if (s)
     return s;
 
-  ALL_OBJSECTIONS (objfile, s)
-    if (obj_section_addr (s) <= pc && pc < obj_section_endaddr (s))
-      return s;
+  if (objfiles_changed_p != 0)
+    {
+      update_section_map (&sections, &num_sections);
 
+      /* Don't need updates to section map until objfiles are added
+         or removed.  */
+      objfiles_changed_p = 0;
+    }
+
+  sp = (struct obj_section **) bsearch (&pc, sections, num_sections,
+					sizeof (*sections), bsearch_cmp);
+  if (sp != NULL)
+    return *sp;
   return NULL;
 }
 
@@ -891,4 +1010,13 @@ objfile_data (struct objfile *objfile, const struct objfile_data *data)
 {
   gdb_assert (data->index < objfile->num_data);
   return objfile->data[data->index];
+}
+
+/* Set objfiles_changed_p so section map will be rebuilt next time it
+   is used.  Called by reread_symbols.  */
+
+void
+objfiles_changed (void)
+{
+  objfiles_changed_p = 1;  /* Rebuild section map next time we need it.  */
 }

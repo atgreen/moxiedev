@@ -76,10 +76,6 @@ displaced_step_at_entry_point (struct gdbarch *gdbarch)
 
   addr = entry_point_address ();
 
-  /* Make certain that the address points at real code, and not a
-     function descriptor.  */
-  addr = gdbarch_convert_from_func_ptr_addr (gdbarch, addr, &current_target);
-
   /* Inferior calls also use the entry point as a breakpoint location.
      We don't want displaced stepping to interfere with those
      breakpoints, so leave space.  */
@@ -710,8 +706,17 @@ gdbarch_info_fill (struct gdbarch_info *info)
   info->byte_order_for_code = info->byte_order;
 
   /* "(gdb) set osabi ...".  Handled by gdbarch_lookup_osabi.  */
+  /* From the manual override, or from file.  */
   if (info->osabi == GDB_OSABI_UNINITIALIZED)
     info->osabi = gdbarch_lookup_osabi (info->abfd);
+  /* From the target.  */
+  if (info->osabi == GDB_OSABI_UNKNOWN && info->target_desc != NULL)
+    info->osabi = tdesc_osabi (info->target_desc);
+  /* From the configured default.  */
+#ifdef GDB_OSABI_DEFAULT
+  if (info->osabi == GDB_OSABI_UNKNOWN)
+    info->osabi = GDB_OSABI_DEFAULT;
+#endif
 
   /* Must have at least filled in the architecture.  */
   gdb_assert (info->bfd_arch_info != NULL);

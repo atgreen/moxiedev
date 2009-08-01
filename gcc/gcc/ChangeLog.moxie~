@@ -1,4 +1,4 @@
-2009-07-27  Anthony Green  <green@localhost.localdomain>
+2009-07-27  Anthony Green  <green@moxielogic.com>
 
 	* config.gcc: Add moxie linux config support.
 

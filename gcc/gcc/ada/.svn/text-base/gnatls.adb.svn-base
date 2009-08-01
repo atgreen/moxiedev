@@ -191,11 +191,14 @@ procedure Gnatls is
 
    package GNATDIST is
 
-      --  Any modification to this subunit requires a synchronization with
+      --  Any modification to this subunit requires synchronization with the
       --  GNATDIST sources.
 
-      procedure Output_ALI    (A : ALI_Id);
+      procedure Output_ALI (A : ALI_Id);
+      --  Comment required saying what this routine does ???
+
       procedure Output_No_ALI (Afile : File_Name_Type);
+      --  Comments required saying what this routine does ???
 
    end GNATDIST;
 
@@ -431,33 +434,33 @@ procedure Gnatls is
          T_Body);
 
       Image : constant array (Token_Type) of String_Access :=
-        (T_No_ALI         => new String'("No_ALI"),
-         T_ALI            => new String'("ALI"),
-         T_Unit           => new String'("Unit"),
-         T_With           => new String'("With"),
-         T_Source         => new String'("Source"),
-         T_Afile          => new String'("Afile"),
-         T_Ofile          => new String'("Ofile"),
-         T_Sfile          => new String'("Sfile"),
-         T_Name           => new String'("Name"),
-         T_Main           => new String'("Main"),
-         T_Kind           => new String'("Kind"),
-         T_Flags          => new String'("Flags"),
-         T_Preelaborated  => new String'("Preelaborated"),
-         T_Pure           => new String'("Pure"),
-         T_Has_RACW       => new String'("Has_RACW"),
-         T_Remote_Types   => new String'("Remote_Types"),
-         T_Shared_Passive => new String'("Shared_Passive"),
-         T_RCI            => new String'("RCI"),
-         T_Predefined     => new String'("Predefined"),
-         T_Internal       => new String'("Internal"),
-         T_Is_Generic     => new String'("Is_Generic"),
-         T_Procedure      => new String'("procedure"),
-         T_Function       => new String'("function"),
-         T_Package        => new String'("package"),
-         T_Subprogram     => new String'("subprogram"),
-         T_Spec           => new String'("spec"),
-         T_Body           => new String'("body"));
+                (T_No_ALI         => new String'("No_ALI"),
+                 T_ALI            => new String'("ALI"),
+                 T_Unit           => new String'("Unit"),
+                 T_With           => new String'("With"),
+                 T_Source         => new String'("Source"),
+                 T_Afile          => new String'("Afile"),
+                 T_Ofile          => new String'("Ofile"),
+                 T_Sfile          => new String'("Sfile"),
+                 T_Name           => new String'("Name"),
+                 T_Main           => new String'("Main"),
+                 T_Kind           => new String'("Kind"),
+                 T_Flags          => new String'("Flags"),
+                 T_Preelaborated  => new String'("Preelaborated"),
+                 T_Pure           => new String'("Pure"),
+                 T_Has_RACW       => new String'("Has_RACW"),
+                 T_Remote_Types   => new String'("Remote_Types"),
+                 T_Shared_Passive => new String'("Shared_Passive"),
+                 T_RCI            => new String'("RCI"),
+                 T_Predefined     => new String'("Predefined"),
+                 T_Internal       => new String'("Internal"),
+                 T_Is_Generic     => new String'("Is_Generic"),
+                 T_Procedure      => new String'("procedure"),
+                 T_Function       => new String'("function"),
+                 T_Package        => new String'("package"),
+                 T_Subprogram     => new String'("subprogram"),
+                 T_Spec           => new String'("spec"),
+                 T_Body           => new String'("body"));
 
       procedure Output_Name  (N : Name_Id);
       --  Remove any encoding info (%b and %s) and output N
@@ -465,12 +468,11 @@ procedure Gnatls is
       procedure Output_Afile (A : File_Name_Type);
       procedure Output_Ofile (O : File_Name_Type);
       procedure Output_Sfile (S : File_Name_Type);
-      --  Output various names. Check that the name is different from
-      --  no name. Otherwise, skip the output.
+      --  Output various names. Check that the name is different from no name.
+      --  Otherwise, skip the output.
 
       procedure Output_Token (T : Token_Type);
-      --  Output token using a specific format. That is several
-      --  indentations and:
+      --  Output token using specific format. That is several indentations and:
       --
       --  T_No_ALI  .. T_With : <token> & " =>" & NL
       --  T_Source  .. T_Kind : <token> & " => "
@@ -609,12 +611,12 @@ procedure Gnatls is
             FS := Full_Source_Name (FS);
 
             --  There is no full source name. This occurs for instance when a
-            --  withed unit has a spec file but no body file. This situation
-            --  is not a problem for GNATDIST since the unit may be located on
-            --  a partition we do not want to build. However, we need to
-            --  locate the spec file and to find its full source name.
-            --  Replace the body file name with the spec file name used to
-            --  compile the current unit when possible.
+            --  withed unit has a spec file but no body file. This situation is
+            --  not a problem for GNATDIST since the unit may be located on a
+            --  partition we do not want to build. However, we need to locate
+            --  the spec file and to find its full source name. Replace the
+            --  body file name with the spec file name used to compile the
+            --  current unit when possible.
 
             if FS = No_File then
                Get_Name_String (S);
@@ -1027,20 +1029,20 @@ procedure Gnatls is
          end if;
 
          if Verbose_Mode then
-            if U.Preelab             or
-               U.No_Elab             or
-               U.Pure                or
-               U.Dynamic_Elab        or
-               U.Has_RACW            or
-               U.Remote_Types        or
-               U.Shared_Passive      or
-               U.RCI                 or
-               U.Predefined          or
-               U.Internal            or
-               U.Is_Generic          or
-               U.Init_Scalars        or
-               U.SAL_Interface       or
-               U.Body_Needed_For_SAL or
+            if U.Preelab             or else
+               U.No_Elab             or else
+               U.Pure                or else
+               U.Dynamic_Elab        or else
+               U.Has_RACW            or else
+               U.Remote_Types        or else
+               U.Shared_Passive      or else
+               U.RCI                 or else
+               U.Predefined          or else
+               U.Internal            or else
+               U.Is_Generic          or else
+               U.Init_Scalars        or else
+               U.SAL_Interface       or else
+               U.Body_Needed_For_SAL or else
                U.Elaborate_Body
             then
                Write_Eol;
@@ -1117,7 +1119,6 @@ procedure Gnatls is
                if U.Predefined then
                   Write_Str (" Predefined");
                end if;
-
             end if;
 
             declare
@@ -1158,7 +1159,7 @@ procedure Gnatls is
                   Write_Str ("     Restrictions violated =>");
 
                   --  For boolean restrictions, just display the name of the
-                  --  restriction; for valued restrictions, also display the
+                  --  restriction. For valued restrictions, also display the
                   --  restriction value.
 
                   for Restriction in All_Restrictions loop
@@ -1314,7 +1315,6 @@ procedure Gnatls is
                   --  Find the end of line
 
                   Last := Index;
-
                   while Last <= Buffer'Last
                     and then Buffer (Last) /= ASCII.LF
                     and then Buffer (Last) /= ASCII.CR
@@ -1328,10 +1328,9 @@ procedure Gnatls is
                      Add_File (Buffer (Index .. Last - 1));
                   end if;
 
-                  Index := Last;
-
                   --  Find the beginning of the next line
 
+                  Index := Last;
                   while Buffer (Index) = ASCII.CR or else
                         Buffer (Index) = ASCII.LF
                   loop
@@ -1557,8 +1556,8 @@ begin
       Exit_Program (E_Fatal);
    end if;
 
-   --  Add the source and object directories specified on the
-   --  command line, if any, to the searched directories.
+   --  Add the source and object directories specified on the command line, if
+   --  any, to the searched directories.
 
    while First_Source_Dir /= null loop
       Add_Src_Search_Dir (First_Source_Dir.Value.all);

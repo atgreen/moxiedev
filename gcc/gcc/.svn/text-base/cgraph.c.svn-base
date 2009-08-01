@@ -654,8 +654,8 @@ cgraph_set_call_stmt (struct cgraph_edge *e, gimple new_stmt)
     }
 }
 
-/* Like cgraph_set_call_stmt but walk the clone tree and update all clones sharing
-   same function body.  */
+/* Like cgraph_set_call_stmt but walk the clone tree and update all
+   clones sharing the same function body.  */
 
 void
 cgraph_set_call_stmt_including_clones (struct cgraph_node *orig,
@@ -666,8 +666,10 @@ cgraph_set_call_stmt_including_clones (struct cgraph_node *orig,
 
   if (edge)
     cgraph_set_call_stmt (edge, new_stmt);
-  if (orig->clones)
-    for (node = orig->clones; node != orig;)
+
+  node = orig->clones;
+  if (node)
+    while (node != orig)
       {
 	struct cgraph_edge *edge = cgraph_edge (node, old_stmt);
 	if (edge)
@@ -690,29 +692,36 @@ cgraph_set_call_stmt_including_clones (struct cgraph_node *orig,
    same function body.  
    
    TODO: COUNT and LOOP_DEPTH should be properly distributed based on relative
-   frequencies of the clones.
-   */
+   frequencies of the clones.  */
 
 void
-cgraph_create_edge_including_clones (struct cgraph_node *orig, struct cgraph_node *callee,
-				     gimple stmt, gcov_type count, int freq,
-				     int loop_depth,
+cgraph_create_edge_including_clones (struct cgraph_node *orig,
+				     struct cgraph_node *callee,
+				     gimple stmt, gcov_type count,
+				     int freq, int loop_depth,
 				     cgraph_inline_failed_t reason)
 {
   struct cgraph_node *node;
+  struct cgraph_edge *edge;
 
   if (!cgraph_edge (orig, stmt))
-     cgraph_create_edge (orig, callee, stmt,
-     			 count, freq, loop_depth)->inline_failed = reason;
+    {
+      edge = cgraph_create_edge (orig, callee, stmt, count, freq, loop_depth);
+      edge->inline_failed = reason;
+    }
 
-  if (orig->clones)
-    for (node = orig->clones; node != orig;)
+  node = orig->clones;
+  if (node)
+    while (node != orig)
       {
         /* It is possible that we already constant propagated into the clone
 	   and turned indirect call into dirrect call.  */
         if (!cgraph_edge (node, stmt))
-	  cgraph_create_edge (node, callee, stmt, count, freq,
-			      loop_depth)->inline_failed = reason;
+	  {
+	    edge = cgraph_create_edge (node, callee, stmt, count,
+				       freq, loop_depth);
+	    edge->inline_failed = reason;
+	  }
 
 	if (node->clones)
 	  node = node->clones;
@@ -1716,6 +1725,31 @@ cgraph_create_virtual_clone (struct cgraph_node *old_node,
   DECL_WEAK (new_node->decl) = 0;
   new_node->clone.tree_map = tree_map;
   new_node->clone.args_to_skip = args_to_skip;
+  if (!args_to_skip)
+    new_node->clone.combined_args_to_skip = old_node->clone.combined_args_to_skip;
+  else if (old_node->clone.combined_args_to_skip)
+    {
+      int newi = 0, oldi = 0;
+      tree arg;
+      bitmap new_args_to_skip = BITMAP_GGC_ALLOC ();
+      struct cgraph_node *orig_node;
+      for (orig_node = old_node; orig_node->clone_of; orig_node = orig_node->clone_of)
+        ;
+      for (arg = DECL_ARGUMENTS (orig_node->decl); arg; arg = TREE_CHAIN (arg), oldi++)
+	{
+	  if (bitmap_bit_p (old_node->clone.combined_args_to_skip, oldi))
+	    {
+	      bitmap_set_bit (new_args_to_skip, oldi);
+	      continue;
+	    }
+	  if (bitmap_bit_p (args_to_skip, newi))
+	    bitmap_set_bit (new_args_to_skip, oldi);
+	  newi++;
+	}
+      new_node->clone.combined_args_to_skip = new_args_to_skip;
+    }
+  else
+    new_node->clone.combined_args_to_skip = args_to_skip;
   new_node->local.externally_visible = 0;
   new_node->local.local = 1;
   new_node->lowered = true;
@@ -1836,6 +1870,9 @@ cgraph_add_new_function (tree fndecl, bool lowered)
 	    push_cfun (DECL_STRUCT_FUNCTION (fndecl));
 	    current_function_decl = fndecl;
 	    gimple_register_cfg_hooks ();
+	    /* C++ Thunks are emitted late via this function, gimplify them.  */
+	    if (!gimple_body (fndecl))
+	      gimplify_function_tree (fndecl);
 	    tree_lowering_passes (fndecl);
 	    bitmap_obstack_initialize (NULL);
 	    if (!gimple_in_ssa_p (DECL_STRUCT_FUNCTION (fndecl)))

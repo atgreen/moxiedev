@@ -603,7 +603,12 @@ copy_statement_list (tree *tp)
   *tp = new_tree;
 
   for (; !tsi_end_p (oi); tsi_next (&oi))
-    tsi_link_after (&ni, tsi_stmt (oi), TSI_NEW_STMT);
+    {
+      tree stmt = tsi_stmt (oi);
+      if (TREE_CODE (stmt) == STATEMENT_LIST)
+	copy_statement_list (&stmt);
+      tsi_link_after (&ni, stmt, TSI_CONTINUE_LINKING);
+    }
 }
 
 static void
@@ -778,7 +783,8 @@ remap_gimple_op_r (tree *tp, int *walk_subtrees, void *data)
 	        {
 		  if (TREE_CODE (new_tree) == ADDR_EXPR)
 		    {
-		      *tp = fold_indirect_ref_1 (type, new_tree);
+		      *tp = fold_indirect_ref_1 (EXPR_LOCATION (new_tree),
+						 type, new_tree);
 		      /* ???  We should either assert here or build
 			 a VIEW_CONVERT_EXPR instead of blindly leaking
 			 incompatible types to our IL.  */
@@ -920,7 +926,8 @@ copy_tree_body_r (tree *tp, int *walk_subtrees, void *data)
     }
   else if (TREE_CODE (*tp) == STATEMENT_LIST)
     copy_statement_list (tp);
-  else if (TREE_CODE (*tp) == SAVE_EXPR)
+  else if (TREE_CODE (*tp) == SAVE_EXPR
+	   || TREE_CODE (*tp) == TARGET_EXPR)
     remap_save_expr (tp, id->decl_map, walk_subtrees);
   else if (TREE_CODE (*tp) == LABEL_DECL
 	   && (! DECL_CONTEXT (*tp)
@@ -1010,7 +1017,8 @@ copy_tree_body_r (tree *tp, int *walk_subtrees, void *data)
 	        {
 		  if (TREE_CODE (new_tree) == ADDR_EXPR)
 		    {
-		      *tp = fold_indirect_ref_1 (type, new_tree);
+		      *tp = fold_indirect_ref_1 (EXPR_LOCATION (new_tree),
+						 type, new_tree);
 		      /* ???  We should either assert here or build
 			 a VIEW_CONVERT_EXPR instead of blindly leaking
 			 incompatible types to our IL.  */
@@ -1375,8 +1383,8 @@ copy_bb (copy_body_data *id, basic_block bb, int frequency_scale,
 	{
 	  tree new_rhs;
 	  new_rhs = force_gimple_operand_gsi (&seq_gsi,
-	                                      gimple_assign_rhs1 (stmt),
-	                                      true, NULL, true, GSI_SAME_STMT);
+					      gimple_assign_rhs1 (stmt),
+					      true, NULL, false, GSI_NEW_STMT);
 	  gimple_assign_set_rhs1 (stmt, new_rhs);
 	  id->regimplify = false;
 	}
@@ -1488,67 +1496,69 @@ copy_bb (copy_body_data *id, basic_block bb, int frequency_scale,
 	     callgraph edges and update or duplicate them.  */
 	  if (is_gimple_call (stmt))
 	    {
-	      struct cgraph_edge *edge = cgraph_edge (id->src_node, orig_stmt);
+	      struct cgraph_edge *edge;
 	      int flags;
 
 	      switch (id->transform_call_graph_edges)
 		{
-	      case CB_CGE_DUPLICATE:
-	        if (edge)
-		  cgraph_clone_edge (edge, id->dst_node, stmt,
-					   REG_BR_PROB_BASE, 1,
-					   edge->frequency, true);
-		break;
+		case CB_CGE_DUPLICATE:
+		  edge = cgraph_edge (id->src_node, orig_stmt);
+		  if (edge)
+		    edge = cgraph_clone_edge (edge, id->dst_node, stmt,
+					      REG_BR_PROB_BASE, 1,
+					      edge->frequency, true);
+		  break;
 
-	      case CB_CGE_MOVE_CLONES:
-		cgraph_set_call_stmt_including_clones (id->dst_node, orig_stmt, stmt);
-		break;
+		case CB_CGE_MOVE_CLONES:
+		  cgraph_set_call_stmt_including_clones (id->dst_node,
+							 orig_stmt, stmt);
+		  edge = cgraph_edge (id->dst_node, stmt);
+		  break;
 
-	      case CB_CGE_MOVE:
-	        if (edge)
-		  cgraph_set_call_stmt (edge, stmt);
-		break;
+		case CB_CGE_MOVE:
+		  edge = cgraph_edge (id->dst_node, orig_stmt);
+		  if (edge)
+		    cgraph_set_call_stmt (edge, stmt);
+		  break;
 
-	      default:
-		gcc_unreachable ();
+		default:
+		  gcc_unreachable ();
 		}
 
-	    edge = cgraph_edge (id->src_node, orig_stmt);
-	    /* Constant propagation on argument done during inlining
-	       may create new direct call.  Produce an edge for it.  */
-	    if ((!edge 
-		 || (edge->indirect_call
-		     && id->transform_call_graph_edges == CB_CGE_MOVE_CLONES))
-		&& is_gimple_call (stmt)
-		&& (fn = gimple_call_fndecl (stmt)) != NULL)
-	      {
-		struct cgraph_node *dest = cgraph_node (fn);
+	      /* Constant propagation on argument done during inlining
+		 may create new direct call.  Produce an edge for it.  */
+	      if ((!edge 
+		   || (edge->indirect_call
+		       && id->transform_call_graph_edges == CB_CGE_MOVE_CLONES))
+		  && is_gimple_call (stmt)
+		  && (fn = gimple_call_fndecl (stmt)) != NULL)
+		{
+		  struct cgraph_node *dest = cgraph_node (fn);
 
-		/* We have missing edge in the callgraph.  This can happen in one case
-		   where previous inlining turned indirect call into direct call by
-		   constant propagating arguments.  In all other cases we hit a bug
-		   (incorrect node sharing is most common reason for missing edges.  */
-		gcc_assert (dest->needed || !dest->analyzed);
-		if (id->transform_call_graph_edges == CB_CGE_MOVE_CLONES)
-		  cgraph_create_edge_including_clones (id->dst_node, dest, stmt,
-						       bb->count,
-						       compute_call_stmt_bb_frequency (id->dst_node->decl, bb),
-						       bb->loop_depth,
-						       CIF_ORIGINALLY_INDIRECT_CALL);
-		else
-		  cgraph_create_edge (id->dst_node, dest, stmt,
-				      bb->count, CGRAPH_FREQ_BASE,
-				      bb->loop_depth)->inline_failed
-		    = CIF_ORIGINALLY_INDIRECT_CALL;
-		if (dump_file)
-		  {
-		     fprintf (dump_file, "Created new direct edge to %s",
-			      cgraph_node_name (dest));
-		  }
-	      }
+		  /* We have missing edge in the callgraph.  This can happen
+		     when previous inlining turned an indirect call into a
+		     direct call by constant propagating arguments.  In all
+		     other cases we hit a bug (incorrect node sharing is the
+		     most common reason for missing edges).  */
+		  gcc_assert (dest->needed || !dest->analyzed);
+		  if (id->transform_call_graph_edges == CB_CGE_MOVE_CLONES)
+		    cgraph_create_edge_including_clones
+		      (id->dst_node, dest, stmt, bb->count,
+		       compute_call_stmt_bb_frequency (id->dst_node->decl, bb),
+		       bb->loop_depth, CIF_ORIGINALLY_INDIRECT_CALL);
+		  else
+		    cgraph_create_edge (id->dst_node, dest, stmt,
+					bb->count, CGRAPH_FREQ_BASE,
+					bb->loop_depth)->inline_failed
+		      = CIF_ORIGINALLY_INDIRECT_CALL;
+		  if (dump_file)
+		    {
+		      fprintf (dump_file, "Created new direct edge to %s",
+			       cgraph_node_name (dest));
+		    }
+		}
 
 	      flags = gimple_call_flags (stmt);
-
 	      if (flags & ECF_MAY_BE_ALLOCA)
 		cfun->calls_alloca = true;
 	      if (flags & ECF_RETURNS_TWICE)
@@ -1818,7 +1828,8 @@ copy_phis_for_bb (basic_block bb, copy_body_data *id)
 		  new_arg = force_gimple_operand (new_arg, &stmts, true, NULL);
 		  gsi_insert_seq_on_edge_immediate (new_edge, stmts);
 		}
-	      add_phi_arg (new_phi, new_arg, new_edge);
+	      add_phi_arg (new_phi, new_arg, new_edge, 
+			   gimple_phi_arg_location_from_edge (phi, old_edge));
 	    }
 	}
     }
@@ -3917,7 +3928,8 @@ unsave_r (tree *tp, int *walk_subtrees, void *data)
     gcc_unreachable ();
   else if (TREE_CODE (*tp) == BIND_EXPR)
     copy_bind_expr (tp, walk_subtrees, id);
-  else if (TREE_CODE (*tp) == SAVE_EXPR)
+  else if (TREE_CODE (*tp) == SAVE_EXPR
+	   || TREE_CODE (*tp) == TARGET_EXPR)
     remap_save_expr (tp, st, walk_subtrees);
   else
     {
@@ -4340,7 +4352,8 @@ copy_static_chain (tree static_chain, copy_body_data * id)
 bool
 tree_versionable_function_p (tree fndecl)
 {
-  return copy_forbidden (DECL_STRUCT_FUNCTION (fndecl), fndecl) == NULL;
+  return (!lookup_attribute ("noclone", DECL_ATTRIBUTES (fndecl))
+	  && copy_forbidden (DECL_STRUCT_FUNCTION (fndecl), fndecl) == NULL);
 }
 
 /* Delete all unreachable basic blocks and update callgraph.
@@ -4435,6 +4448,42 @@ delete_unreachable_blocks_update_callgraph (copy_body_data *id)
      }
 #endif
   return changed;
+}
+
+/* Update clone info after duplication.  */
+
+static void
+update_clone_info (copy_body_data * id)
+{
+  struct cgraph_node *node;
+  if (!id->dst_node->clones)
+    return;
+  for (node = id->dst_node->clones; node != id->dst_node;)
+    {
+      /* First update replace maps to match the new body.  */
+      if (node->clone.tree_map)
+        {
+	  unsigned int i;
+          for (i = 0; i < VEC_length (ipa_replace_map_p, node->clone.tree_map); i++)
+	    {
+	      struct ipa_replace_map *replace_info;
+	      replace_info = VEC_index (ipa_replace_map_p, node->clone.tree_map, i);
+	      walk_tree (&replace_info->old_tree, copy_tree_body_r, id, NULL);
+	      walk_tree (&replace_info->new_tree, copy_tree_body_r, id, NULL);
+	    }
+	}
+      if (node->clones)
+	node = node->clones;
+      else if (node->next_sibling_clone)
+	node = node->next_sibling_clone;
+      else
+	{
+	  while (node != id->dst_node && !node->next_sibling_clone)
+	    node = node->clone_of;
+	  if (node != id->dst_node)
+	    node = node->next_sibling_clone;
+	}
+    }
 }
 
 /* Create a copy of a function's tree.
@@ -4593,6 +4642,7 @@ tree_function_versioning (tree old_decl, tree new_decl,
       while (VEC_length (gimple, init_stmts))
 	insert_init_stmt (bb, VEC_pop (gimple, init_stmts));
     }
+  update_clone_info (&id);
 
   /* Remap the nonlocal_goto_save_area, if any.  */
   if (cfun->nonlocal_goto_save_area)

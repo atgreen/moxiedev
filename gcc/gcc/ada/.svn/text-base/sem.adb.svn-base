@@ -243,7 +243,7 @@ package body Sem is
             Analyze_Free_Statement (N);
 
          when N_Freeze_Entity =>
-            null;  -- no semantic processing required
+            Analyze_Freeze_Entity (N);
 
          when N_Full_Type_Declaration =>
             Analyze_Type_Declaration (N);
@@ -601,6 +601,18 @@ package body Sem is
          --  case there is nothing to be done to analyze such nodes.
 
          when N_Push_Pop_xxx_Label =>
+            null;
+
+         --  SCIL nodes don't need analysis because they are decorated when
+         --  they are built. They are added to the tree by Insert_Actions and
+         --  the call to analyze them is generated when the full list is
+         --  analyzed.
+
+         when
+           N_SCIL_Dispatch_Table_Object_Init        |
+           N_SCIL_Dispatch_Table_Tag_Init           |
+           N_SCIL_Dispatching_Call                  |
+           N_SCIL_Tag_Init                          =>
             null;
 
          --  For the remaining node types, we generate compiler abort, because
@@ -1510,6 +1522,12 @@ package body Sem is
       --  after we have fully processed X, and is used only for debugging
       --  printouts and assertions.
 
+      Do_Main : Boolean := False;
+      --  Flag to delay processing the main body until after all other units.
+      --  This is needed because the spec of the main unit may appear in the
+      --  context of some other unit. We do not want this to force processing
+      --  of the main body before all other units have been processed.
+
       procedure Do_Action (CU : Node_Id; Item : Node_Id);
       --  Calls Action, with some validity checks
 
@@ -1674,8 +1692,16 @@ package body Sem is
          --------------------
 
          procedure Do_Withed_Unit (Withed_Unit : Node_Id) is
+            Save_Do_Main : constant Boolean := Do_Main;
+
          begin
+            --  Do not process the main unit if coming from a with_clause,
+            --  as would happen with a parent body that has a child spec
+            --  in its context.
+
+            Do_Main := False;
             Do_Unit_And_Dependents (Withed_Unit, Unit (Withed_Unit));
+            Do_Main := Save_Do_Main;
          end Do_Withed_Unit;
 
          procedure Do_Withed_Units is new Walk_Withs (Do_Withed_Unit);
@@ -1683,71 +1709,104 @@ package body Sem is
       --  Start of processing for Do_Unit_And_Dependents
 
       begin
-         if Seen (Unit_Num) then
-            return;
-         end if;
+         if not Seen (Unit_Num) then
 
-         Seen (Unit_Num) := True;
+            --  Process the with clauses
 
-         --  Process corresponding spec of body first
+            Do_Withed_Units (CU, Include_Limited => False);
 
-         if Nkind_In (Item, N_Package_Body, N_Subprogram_Body) then
-            declare
-               Spec_Unit : constant Node_Id := Library_Unit (CU);
-            begin
-               if Spec_Unit = CU then  --  ???Why needed?
-                  pragma Assert (Acts_As_Spec (CU));
-                  null;
+            --  Process the unit if it is a spec. If it is the main unit,
+            --  process it only if we have done all other units.
+
+            if not Nkind_In (Item, N_Package_Body, N_Subprogram_Body)
+              or else Acts_As_Spec (CU)
+            then
+               if CU = Cunit (Main_Unit) and then not Do_Main then
+                  Seen (Unit_Num) := False;
+
                else
-                  Do_Unit_And_Dependents (Spec_Unit, Unit (Spec_Unit));
+                  Seen (Unit_Num) := True;
+                  Do_Action (CU, Item);
+                  Done (Unit_Num) := True;
                end if;
-            end;
+            end if;
          end if;
 
-         --  Process the with clauses
+         --  Process bodies. The spec, if present, has been processed already.
+         --  A body appears if it is the main, or the body of a spec that is
+         --  in the context of the main unit, and that is instantiated, or else
+         --  contains a generic that is instantiated, or a subprogram that is
+         --  or a subprogram that is inlined in the main unit.
 
-         Do_Withed_Units (CU, Include_Limited => False);
+         --  We exclude bodies that may appear in a circular dependency list,
+         --  where spec A depends on spec B and body of B depends on spec A.
+         --  This is not an elaboration issue, but body B must be excluded
+         --  from the processing.
 
-         --  Process the unit itself
+         declare
+            Body_Unit :  Node_Id := Empty;
+            Body_Num  : Unit_Number_Type;
 
-         if not Nkind_In (Item, N_Package_Body, N_Subprogram_Body)
-           or else Acts_As_Spec (CU)
-           or else CU = Cunit (Main_Unit)
-         then
+            function Circular_Dependence (B : Node_Id) return Boolean;
+            --  Check whether this body depends on a spec that is pending,
+            --  that is to say has been seen but not processed yet.
 
-            Do_Action (CU, Item);
+            -------------------------
+            -- Circular_Dependence --
+            -------------------------
 
-            Done (Unit_Num) := True;
-         end if;
-
-         --  Process corresponding body of spec last. However, if this body is
-         --  the main unit (because some dependent of the main unit depends on
-         --  the main unit's spec), we don't process it now. We also skip
-         --  processing of the body of a unit named by pragma Extend_System,
-         --  because it has cyclic dependences in some cases.
-
-         --  A body that is not the main unit is present because of inlining
-         --  and/or instantiations, and it is best to process a body as early
-         --  as possible after the spec (as if an Elaborate_Body were present).
-         --  Currently all such bodies are added to the units list. It might
-         --  be possible to restrict the list to those bodies that are used
-         --  in the main unit. Possible optimization ???
-
-         if Nkind (Item) = N_Package_Declaration then
-            declare
-               Body_Unit : constant Node_Id := Library_Unit (CU);
+            function Circular_Dependence (B : Node_Id) return Boolean is
+               Item : Node_Id;
+               UN   : Unit_Number_Type;
 
             begin
-               if Present (Body_Unit)
-                 and then Body_Unit /= Cunit (Main_Unit)
-                 and then Unit_Num /= Get_Source_Unit (System_Aux_Id)
-               then
-                  Do_Unit_And_Dependents (Body_Unit, Unit (Body_Unit));
-                  Do_Action (Body_Unit, Unit (Body_Unit));
-                  Done (Get_Cunit_Unit_Number (Body_Unit)) := True;
-               end if;
-            end;
-         end if;
+               Item := First (Context_Items (B));
+               while Present (Item) loop
+                  if Nkind (Item) = N_With_Clause then
+                     UN := Get_Cunit_Unit_Number (Library_Unit (Item));
+
+                     if Seen (UN)
+                       and then not Done (UN)
+                     then
+                        return True;
+                     end if;
+                  end if;
+
+                  Next (Item);
+               end loop;
+
+               return False;
+            end Circular_Dependence;
+
+         begin
+            if Nkind (Item) = N_Package_Declaration then
+               Body_Unit := Library_Unit (CU);
+
+            elsif Nkind_In (Item, N_Package_Body, N_Subprogram_Body) then
+               Body_Unit := CU;
+            end if;
+
+            if Present (Body_Unit)
+
+              --  Since specs and bodies are not done at the same time,
+              --  guard against listing a body more than once. Bodies are
+              --  only processed when the main unit is being processed,
+              --  after all other units in the list. The DEC extension
+              --  to System is excluded because of circularities.
+
+              and then not Seen (Get_Cunit_Unit_Number (Body_Unit))
+              and then
+                (No (System_Aux_Id)
+                   or else Unit_Num /= Get_Source_Unit (System_Aux_Id))
+              and then not Circular_Dependence (Body_Unit)
+              and then Do_Main
+            then
+               Body_Num := Get_Cunit_Unit_Number (Body_Unit);
+               Seen (Body_Num) := True;
+               Do_Action (Body_Unit, Unit (Body_Unit));
+               Done (Body_Num) := True;
+            end if;
+         end;
       end Do_Unit_And_Dependents;
 
       --  Local Declarations
@@ -1801,16 +1860,13 @@ package body Sem is
 
             case Nkind (N) is
 
-               --  If it's a body, then ignore it, unless it's the main unit
-               --  Otherwise bodies appear in the list because of inlining or
-               --  instantiations, and they are processed immediately after
-               --  the corresponding specs.
+               --  If it's a body, ignore it. Bodies appear in the list only
+               --  because of inlining/instantiations, and they are processed
+               --  immediately after the corresponding specs. The main unit is
+               --  processed separately after all other units.
 
                when N_Package_Body | N_Subprogram_Body =>
-
-                  if CU = Cunit (Main_Unit) then
-                     Do_Unit_And_Dependents (CU, N);
-                  end if;
+                  null;
 
                --  It's a spec, so just do it
 
@@ -1821,6 +1877,29 @@ package body Sem is
 
          Next_Elmt (Cur);
       end loop;
+
+      if not Done (Main_Unit) then
+         Do_Main := True;
+
+         declare
+            Main_CU : constant Node_Id := Cunit (Main_Unit);
+
+         begin
+            --  If the main unit is an instantiation, the body appears before
+            --  the instance spec, which is added later to the unit list. Do
+            --  the spec if present, body will follow.
+
+            if Nkind (Original_Node (Unit (Main_CU)))
+                 in N_Generic_Instantiation
+              and then Present (Library_Unit (Main_CU))
+            then
+               Do_Unit_And_Dependents
+                 (Library_Unit (Main_CU), Unit (Library_Unit (Main_CU)));
+            else
+               Do_Unit_And_Dependents (Main_CU, Unit (Main_CU));
+            end if;
+         end;
+      end if;
 
       if Debug_Unit_Walk then
          if Done /= (Done'Range => True) then
@@ -1897,9 +1976,11 @@ package body Sem is
                   end loop;
 
                   --  See if it belongs to current unit, and if so, include its
-                  --  with_clauses.
+                  --  with_clauses. Do not process main unit prematurely.
 
-                  if Pnode = CU then
+                  if Pnode = CU
+                    and then CU /= Cunit (Main_Unit)
+                  then
                      Walk_Immediate (Cunit (S), Include_Limited);
                   end if;
                end;

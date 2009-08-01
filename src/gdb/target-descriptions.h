@@ -98,6 +98,12 @@ int tdesc_numbered_register (const struct tdesc_feature *feature,
 			     struct tdesc_arch_data *data,
 			     int regno, const char *name);
 
+/* Search FEATURE for a register named NAME, but do not assign a fixed
+   register number to it.  */
+
+int tdesc_unnumbered_register (const struct tdesc_feature *feature,
+			       const char *name);
+
 /* Search FEATURE for a register named NAME, and return its size in
    bits.  The register must exist.  */
 
@@ -122,6 +128,11 @@ int tdesc_numbered_register_choices (const struct tdesc_feature *feature,
 
 const struct bfd_arch_info *tdesc_architecture
   (const struct target_desc *);
+
+/* Return the OSABI associated with this target description, or
+   GDB_OSABI_UNKNOWN if no osabi was specified.  */
+
+enum gdb_osabi tdesc_osabi (const struct target_desc *);
 
 /* Return the string value of a property named KEY, or NULL if the
    property was not specified.  */
@@ -154,6 +165,11 @@ struct tdesc_type *tdesc_named_type (const struct tdesc_feature *feature,
 
 const char *tdesc_register_name (struct gdbarch *gdbarch, int regno);
 
+/* Return the type of register REGNO, from the target description or
+   from an architecture-provided pseudo_register_type method.  */
+
+struct type *tdesc_register_type (struct gdbarch *gdbarch, int regno);
+
 /* Check whether REGNUM is a member of REGGROUP using the target
    description.  Return -1 if the target description does not
    specify a group.  */
@@ -167,6 +183,7 @@ struct target_desc *allocate_target_description (void);
 struct cleanup *make_cleanup_free_target_description (struct target_desc *);
 void set_tdesc_architecture (struct target_desc *,
 			     const struct bfd_arch_info *);
+void set_tdesc_osabi (struct target_desc *, enum gdb_osabi osabi);
 void set_tdesc_property (struct target_desc *,
 			 const char *key, const char *value);
 

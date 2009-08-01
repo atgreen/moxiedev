@@ -484,7 +484,7 @@ package body ALI is
          loop
             Add_Char_To_Name_Buffer (Getc);
 
-            exit when At_End_Of_Field and not Ignore_Spaces;
+            exit when At_End_Of_Field and then not Ignore_Spaces;
 
             if not Ignore_Special then
                if Name_Buffer (1) = '"' then
@@ -544,7 +544,7 @@ package body ALI is
             V := V * 10 + (Character'Pos (Getc) - Character'Pos ('0'));
 
             exit when At_End_Of_Field;
-            exit when Nextc < '0' or Nextc > '9';
+            exit when Nextc < '0' or else Nextc > '9';
          end loop;
 
          return V;
@@ -2248,7 +2248,9 @@ package body ALI is
                            end;
 
                         --  Interfaces are stored in the list of references,
-                        --  although the parent type itself is stored in XE
+                        --  although the parent type itself is stored in XE.
+                        --  The first interface (when there are only
+                        --  interfaces) is stored in XE.Tref*)
 
                         elsif Ref = Tref_Derived
                           and then Typ = 'R'

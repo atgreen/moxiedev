@@ -110,8 +110,9 @@ supply_fpregset (struct regcache *regcache, const gdb_fpregset_t *fpregs)
 #endif
 
 /* Fetch register REGNO, or all regs if REGNO is -1.  */
-void
-gnu_fetch_registers (struct regcache *regcache, int regno)
+static void
+gnu_fetch_registers (struct target_ops *ops,
+		     struct regcache *regcache, int regno)
 {
   struct proc *thread;
 
@@ -201,8 +202,9 @@ store_fpregs (const struct regcache *regcache, struct proc *thread, int regno)
 }
 
 /* Store at least register REGNO, or all regs if REGNO == -1.  */
-void
-gnu_store_registers (struct regcache *regcache, int regno)
+static void
+gnu_store_registers (struct target_ops *ops,
+		     struct regcache *regcache, int regno)
 {
   struct proc *thread;
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
@@ -291,4 +293,22 @@ gnu_store_registers (struct regcache *regcache, int regno)
 
       store_fpregs (regcache, thread, regno);
     }
+}
+
+/* Provide a prototype to silence -Wmissing-prototypes.  */
+extern initialize_file_ftype _initialize_i386gnu_nat;
+
+void
+_initialize_i386gnu_nat (void)
+{
+  struct target_ops *t;
+
+  /* Fill in the generic GNU/Hurd methods.  */
+  t = gnu_target ();
+
+  t->to_fetch_registers = gnu_fetch_registers;
+  t->to_store_registers = gnu_store_registers;
+
+  /* Register the target.  */
+  add_target (t);
 }

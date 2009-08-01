@@ -129,6 +129,10 @@ static GTY(()) section * farbss_section;
 static GTY(()) section * frodata_section;
 static GTY(()) section * srodata_section;
 
+static GTY(()) section * vtext_section;
+static GTY(()) section * vftext_section;
+static GTY(()) section * ftext_section;
+
 static void mep_set_leaf_registers (int);
 static bool symbol_p (rtx);
 static bool symbolref_p (rtx);
@@ -3530,15 +3534,23 @@ mep_expand_builtin_saveregs (void)
   rtx regbuf;
 
   ns = cfun->machine->arg_regs_to_save;
-  bufsize = ns * (TARGET_IVC2 ? 12 : 4);
-  regbuf = assign_stack_local (SImode, bufsize, 32);
+  if (TARGET_IVC2)
+    {
+      bufsize = 8 * ((ns + 1) / 2) + 8 * ns;
+      regbuf = assign_stack_local (SImode, bufsize, 64);
+    }
+  else
+    {
+      bufsize = ns * 4;
+      regbuf = assign_stack_local (SImode, bufsize, 32);
+    }
 
   move_block_from_reg (5-ns, regbuf, ns);
 
   if (TARGET_IVC2)
     {
       rtx tmp = gen_rtx_MEM (DImode, XEXP (regbuf, 0));
-      int ofs = 4 * ns;
+      int ofs = 8 * ((ns+1)/2);
 
       for (i=0; i<ns; i++)
 	{
@@ -3627,7 +3639,9 @@ mep_expand_va_start (tree valist, rtx nextarg)
   TREE_SIDE_EFFECTS (t) = 1;
   expand_expr (t, const0_rtx, VOIDmode, EXPAND_NORMAL);
 
-  /* va_list.next_cop = va_list.next_gp_limit; */
+  u = fold_build2 (POINTER_PLUS_EXPR, ptr_type_node, u,
+		   size_int (8 * ((ns+1)/2)));
+  /* va_list.next_cop = ROUND_UP(va_list.next_gp_limit,8); */
   t = build2 (MODIFY_EXPR, ptr_type_node, next_cop, u);
   TREE_SIDE_EFFECTS (t) = 1;
   expand_expr (t, const0_rtx, VOIDmode, EXPAND_NORMAL);
@@ -4543,38 +4557,6 @@ mep_encode_section_info (tree decl, rtx rtl, int first)
 		   maxsize);
 	}
     }
-
-  /* Functions do not go through select_section, so we force it here
-     by using the DECL_SECTION_NAME as if the user specified the
-     .vtext or .ftext sections.  */
-  if (! DECL_SECTION_NAME (decl)
-      && TREE_CODE (decl) == FUNCTION_DECL)
-    {
-      tree secname;
-
-      if (lookup_attribute ("vliw", TYPE_ATTRIBUTES (TREE_TYPE (decl))))
-	{
-	  if (encoding == 'f')
-	    DECL_SECTION_NAME (decl) = build_string (7, ".vftext");
-	  else
-	    DECL_SECTION_NAME (decl) = build_string (6, ".vtext");
-	}
-      else if (encoding == 'f')
-	{
-	  if (flag_function_sections || DECL_ONE_ONLY (decl))
-	    mep_unique_section (decl, 0);
-	  else
-	    DECL_SECTION_NAME (decl) = build_string (6, ".ftext");
-	}
-
-      /* This is so we can control inlining.  It does not matter what
-         attribute we add, just that it has one.  */
-      secname = build_tree_list (get_identifier ("section"), DECL_SECTION_NAME (decl));
-      if (TYPE_P (decl))
-	TYPE_ATTRIBUTES (decl) = chainon (TYPE_ATTRIBUTES (decl), secname);
-      else
-	DECL_ATTRIBUTES (decl) = chainon (DECL_ATTRIBUTES (decl), secname);
-    }
 }
 
 const char *
@@ -4596,6 +4578,7 @@ mep_select_section (tree decl, int reloc ATTRIBUTE_UNUSED,
 		    unsigned HOST_WIDE_INT align ATTRIBUTE_UNUSED)
 {
   int readonly = 1;
+  int encoding;
 
   switch (TREE_CODE (decl))
     {
@@ -4614,6 +4597,30 @@ mep_select_section (tree decl, int reloc ATTRIBUTE_UNUSED,
 
     default:
       break;
+    }
+
+  if (TREE_CODE (decl) == FUNCTION_DECL)
+    {
+      const char *name = XSTR (XEXP (DECL_RTL (decl), 0), 0);
+
+      if (name[0] == '@' && name[2] == '.')
+	encoding = name[1];
+      else
+	encoding = 0;
+
+      if (flag_function_sections || DECL_ONE_ONLY (decl))
+	mep_unique_section (decl, 0);
+      else if (lookup_attribute ("vliw", TYPE_ATTRIBUTES (TREE_TYPE (decl))))
+	{
+	  if (encoding == 'f')
+	    return vftext_section;
+	  else
+	    return vtext_section;
+	}
+      else if (encoding == 'f')
+	return ftext_section;
+      else
+	return text_section;
     }
 
   if (TREE_CODE (decl) == VAR_DECL)
@@ -4670,7 +4677,9 @@ mep_unique_section (tree decl, int reloc)
     { ".far.",     ".gnu.linkonce.far." },
     { ".ftext.",   ".gnu.linkonce.ft." },
     { ".frodata.", ".gnu.linkonce.frd." },
-    { ".srodata.", ".gnu.linkonce.srd." }
+    { ".srodata.", ".gnu.linkonce.srd." },
+    { ".vtext.",   ".gnu.linkonce.v." },
+    { ".vftext.",   ".gnu.linkonce.vf." }
   };
   int sec = 2; /* .data */
   int len;
@@ -4682,7 +4691,12 @@ mep_unique_section (tree decl, int reloc)
     name = XSTR (XEXP (DECL_RTL (decl), 0), 0);
 
   if (TREE_CODE (decl) == FUNCTION_DECL)
-    sec = 0; /* .text */
+    {
+      if (lookup_attribute ("vliw", TYPE_ATTRIBUTES (TREE_TYPE (decl))))
+	sec = 9; /* .vtext */
+      else
+	sec = 0; /* .text */
+    }
   else if (decl_readonly_section (decl, reloc))
     sec = 1; /* .rodata */
 
@@ -4702,6 +4716,8 @@ mep_unique_section (tree decl, int reloc)
 	case 'f':
 	  if (sec == 0)
 	    sec = 6; /* .ftext */
+	  else if (sec == 9)
+	    sec = 10; /* .vftext */
 	  else if (sec == 1)
 	    sec = 7; /* .frodata */
 	  else
@@ -6204,7 +6220,9 @@ mep_legitimize_arg (const struct insn_operand_data *operand, rtx arg,
   /* But not for control registers.  */
   if (operand->constraint[0] == '='
       && (! REG_P (arg)
-	  || ! (CCR_REGNO_P (REGNO (arg)) || CR_REGNO_P (REGNO (arg)))
+	  || ! (CONTROL_REGNO_P (REGNO (arg))
+		|| CCR_REGNO_P (REGNO (arg))
+		|| CR_REGNO_P (REGNO (arg)))
 	  ))
     return gen_reg_rtx (operand->mode);
 
@@ -7340,6 +7358,18 @@ mep_asm_init_sections (void)
   srodata_section
     = get_unnamed_section (0, output_section_asm_op,
 			   "\t.section .srodata,\"a\"");
+
+  vtext_section
+    = get_unnamed_section (SECTION_CODE | SECTION_MEP_VLIW, output_section_asm_op,
+			   "\t.section .vtext,\"axv\"\n\t.vliw");
+
+  vftext_section
+    = get_unnamed_section (SECTION_CODE | SECTION_MEP_VLIW, output_section_asm_op,
+			   "\t.section .vftext,\"axv\"\n\t.vliw");
+
+  ftext_section
+    = get_unnamed_section (SECTION_CODE, output_section_asm_op,
+			   "\t.section .ftext,\"ax\"\n\t.core");
 
 }
 

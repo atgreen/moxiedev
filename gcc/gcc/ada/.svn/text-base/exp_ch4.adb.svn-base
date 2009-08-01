@@ -58,6 +58,7 @@ with Sem_Ch8;  use Sem_Ch8;
 with Sem_Ch13; use Sem_Ch13;
 with Sem_Eval; use Sem_Eval;
 with Sem_Res;  use Sem_Res;
+with Sem_SCIL; use Sem_SCIL;
 with Sem_Type; use Sem_Type;
 with Sem_Util; use Sem_Util;
 with Sem_Warn; use Sem_Warn;
@@ -3965,6 +3966,16 @@ package body Exp_Ch4 is
                 Right,
                 New_Occurrence_Of (Standard_False, Loc))));
 
+         --  If the right part of the expression is a function call then it can
+         --  be part of the expansion of the predefined equality operator of a
+         --  tagged type and we may need to adjust its SCIL dispatching node.
+
+         if Generate_SCIL
+           and then Nkind (Right) = N_Function_Call
+         then
+            Adjust_SCIL_Node (N, Right);
+         end if;
+
          Set_Then_Actions (N, Actlist);
          Analyze_And_Resolve (N, Standard_Boolean);
          Adjust_Result_Type (N, Typ);
@@ -4655,7 +4666,7 @@ package body Exp_Ch4 is
       end if;
 
       --  If the prefix is an access type, then we unconditionally rewrite if
-      --  as an explicit deference. This simplifies processing for several
+      --  as an explicit dereference. This simplifies processing for several
       --  cases, including packed array cases and certain cases in which checks
       --  must be generated. We used to try to do this only when it was
       --  necessary, but it cleans up the code to do it all the time.
@@ -6270,8 +6281,8 @@ package body Exp_Ch4 is
    begin
       Binary_Op_Validity_Checks (N);
 
-      Determine_Range (Right, ROK, Rlo, Rhi);
-      Determine_Range (Left,  LOK, Llo, Lhi);
+      Determine_Range (Right, ROK, Rlo, Rhi, Assume_Valid => True);
+      Determine_Range (Left,  LOK, Llo, Lhi, Assume_Valid => True);
 
       --  Convert mod to rem if operands are known non-negative. We do this
       --  since it is quite likely that this will improve the quality of code,
@@ -6865,15 +6876,15 @@ package body Exp_Ch4 is
       Left  : constant Node_Id := Left_Opnd (N);
       Right : constant Node_Id := Right_Opnd (N);
 
-      LLB : Uint;
-      Llo : Uint;
-      Lhi : Uint;
-      LOK : Boolean;
-      Rlo : Uint;
-      Rhi : Uint;
-      ROK : Boolean;
+      Lo : Uint;
+      Hi : Uint;
+      OK : Boolean;
 
-      pragma Warnings (Off, Lhi);
+      Lneg : Boolean;
+      Rneg : Boolean;
+      --  Set if corresponding operand can be negative
+
+      pragma Unreferenced (Hi);
 
    begin
       Binary_Op_Validity_Checks (N);
@@ -6909,23 +6920,18 @@ package body Exp_Ch4 is
       --  the remainder is always 0, and we can just ignore the left operand
       --  completely in this case.
 
-      Determine_Range (Right, ROK, Rlo, Rhi);
-      Determine_Range (Left, LOK, Llo, Lhi);
+      Determine_Range (Right, OK, Lo, Hi, Assume_Valid => True);
+      Lneg := (not OK) or else Lo < 0;
 
-      --  The operand type may be private (e.g. in the expansion of an
-      --  intrinsic operation) so we must use the underlying type to get the
-      --  bounds, and convert the literals explicitly.
+      Determine_Range (Left,  OK, Lo, Hi, Assume_Valid => True);
+      Rneg := (not OK) or else Lo < 0;
 
-      LLB :=
-        Expr_Value
-          (Type_Low_Bound (Base_Type (Underlying_Type (Etype (Left)))));
+      --  We won't mess with trying to find out if the left operand can really
+      --  be the largest negative number (that's a pain in the case of private
+      --  types and this is really marginal). We will just assume that we need
+      --  the test if the left operand can be negative at all.
 
-      --  Now perform the test, generating code only if needed
-
-      if ((not ROK) or else (Rlo <= (-1) and then (-1) <= Rhi))
-        and then
-         ((not LOK) or else (Llo = LLB))
-      then
+      if Lneg and Rneg then
          Rewrite (N,
            Make_Conditional_Expression (Loc,
              Expressions => New_List (
@@ -7621,6 +7627,7 @@ package body Exp_Ch4 is
          Cons : List_Id;
 
       begin
+
          --  Nothing else to do if no change of representation
 
          if Same_Representation (Operand_Type, Target_Type) then
@@ -7860,8 +7867,7 @@ package body Exp_Ch4 is
          --  Otherwise rewrite the conversion as described above
 
          Conv := Relocate_Node (N);
-         Rewrite
-           (Subtype_Mark (Conv), New_Occurrence_Of (Btyp, Loc));
+         Rewrite (Subtype_Mark (Conv), New_Occurrence_Of (Btyp, Loc));
          Set_Etype (Conv, Btyp);
 
          --  Enable overflow except for case of integer to float conversions,
@@ -7936,6 +7942,125 @@ package body Exp_Ch4 is
       end if;
 
       --  Here if we may need to expand conversion
+
+      --  If the operand of the type conversion is an arithmetic operation on
+      --  signed integers, and the based type of the signed integer type in
+      --  question is smaller than Standard.Integer, we promote both of the
+      --  operands to type Integer.
+
+      --  For example, if we have
+
+      --     target-type (opnd1 + opnd2)
+
+      --  and opnd1 and opnd2 are of type short integer, then we rewrite
+      --  this as:
+
+      --     target-type (integer(opnd1) + integer(opnd2))
+
+      --  We do this because we are always allowed to compute in a larger type
+      --  if we do the right thing with the result, and in this case we are
+      --  going to do a conversion which will do an appropriate check to make
+      --  sure that things are in range of the target type in any case. This
+      --  avoids some unnecessary intermediate overflows.
+
+      --  We might consider a similar transformation in the case where the
+      --  target is a real type or a 64-bit integer type, and the operand
+      --  is an arithmetic operation using a 32-bit integer type. However,
+      --  we do not bother with this case, because it could cause significant
+      --  ineffiencies on 32-bit machines. On a 64-bit machine it would be
+      --  much cheaper, but we don't want different behavior on 32-bit and
+      --  64-bit machines. Note that the exclusion of the 64-bit case also
+      --  handles the configurable run-time cases where 64-bit arithmetic
+      --  may simply be unavailable.
+
+      --  Note: this circuit is partially redundant with respect to the circuit
+      --  in Checks.Apply_Arithmetic_Overflow_Check, but we catch more cases in
+      --  the processing here. Also we still need the Checks circuit, since we
+      --  have to be sure not to generate junk overflow checks in the first
+      --  place, since it would be trick to remove them here!
+
+      declare
+         Root_Operand_Type : constant Entity_Id := Root_Type (Operand_Type);
+
+      begin
+         --  Enable transformation if all conditions are met
+
+         if
+           --  We only do this transformation for source constructs. We assume
+           --  that the expander knows what it is doing when it generates code.
+
+           Comes_From_Source (N)
+
+           --  If the operand type is Short_Integer or Short_Short_Integer,
+           --  then we will promote to Integer, which is available on all
+           --  targets, and is sufficient to ensure no intermediate overflow.
+           --  Furthermore it is likely to be as efficient or more efficient
+           --  than using the smaller type for the computation so we do this
+           --  unconditionally.
+
+           and then
+             (Root_Operand_Type = Base_Type (Standard_Short_Integer)
+               or else
+              Root_Operand_Type = Base_Type (Standard_Short_Short_Integer))
+
+           --  Test for interesting operation, which includes addition,
+           --  division, exponentiation, multiplication, subtraction, and
+           --  unary negation.
+
+           and then Nkind_In (Operand, N_Op_Add,
+                                       N_Op_Divide,
+                                       N_Op_Expon,
+                                       N_Op_Minus,
+                                       N_Op_Multiply,
+                                       N_Op_Subtract)
+         then
+            --  All conditions met, go ahead with transformation
+
+            declare
+               Opnd : Node_Id;
+               L, R : Node_Id;
+
+            begin
+               R :=
+                 Make_Type_Conversion (Loc,
+                   Subtype_Mark => New_Reference_To (Standard_Integer, Loc),
+                   Expression   => Relocate_Node (Right_Opnd (Operand)));
+
+               if Nkind (Operand) = N_Op_Minus then
+                  Opnd := Make_Op_Minus (Loc, Right_Opnd => R);
+
+               else
+                  L :=
+                    Make_Type_Conversion (Loc,
+                      Subtype_Mark => New_Reference_To (Standard_Integer, Loc),
+                      Expression   => Relocate_Node (Left_Opnd (Operand)));
+
+                  case Nkind (Operand) is
+                     when N_Op_Add =>
+                        Opnd := Make_Op_Add (Loc, L, R);
+                     when N_Op_Divide =>
+                        Opnd := Make_Op_Divide (Loc, L, R);
+                     when N_Op_Expon =>
+                        Opnd := Make_Op_Expon (Loc, L, R);
+                     when N_Op_Multiply =>
+                        Opnd := Make_Op_Multiply (Loc, L, R);
+                     when N_Op_Subtract =>
+                        Opnd := Make_Op_Subtract (Loc, L, R);
+                     when others =>
+                        raise Program_Error;
+                  end case;
+
+                  Rewrite (N,
+                    Make_Type_Conversion (Loc,
+                      Subtype_Mark => Relocate_Node (Subtype_Mark (N)),
+                      Expression   => Opnd));
+
+                     Analyze_And_Resolve (N, Target_Type);
+                     return;
+               end if;
+            end;
+         end if;
+      end;
 
       --  Do validity check if validity checking operands
 

@@ -260,9 +260,20 @@ elf_file_symbol (const char *s, int appfile)
       || (symbol_rootP->bsym->flags & BSF_FILE) == 0)
     {
       symbolS *sym;
+      unsigned int name_length;
 
       sym = symbol_new (s, absolute_section, 0, NULL);
       symbol_set_frag (sym, &zero_address_frag);
+
+      name_length = strlen (s);
+      if (name_length > strlen (S_GET_NAME (sym)))
+	{
+	  obstack_grow (&notes, s, name_length + 1);
+	  S_SET_NAME (sym, obstack_finish (&notes));
+	}
+      else
+	strcpy ((char *) S_GET_NAME (sym), s);
+
       symbol_get_bfdsym (sym)->flags |= BSF_FILE;
 
       if (symbol_rootP != sym)
@@ -496,7 +507,7 @@ get_section (bfd *abfd ATTRIBUTE_UNUSED, asection *sec, void *inf)
 {
   const char *gname = inf;
   const char *group_name = elf_group_name (sec);
-  
+
   return (group_name == gname
 	  || (group_name != NULL
 	      && gname != NULL
@@ -1665,8 +1676,8 @@ obj_elf_type (int ignore ATTRIBUTE_UNUSED)
 	}
     }
   else if (strcmp (typename, "gnu_indirect_function") == 0
-      || strcmp (typename, "10") == 0
-      || strcmp (typename, "STT_GNU_IFUNC") == 0)
+	   || strcmp (typename, "10") == 0
+	   || strcmp (typename, "STT_GNU_IFUNC") == 0)
     {
       const struct elf_backend_data *bed;
 
@@ -1677,6 +1688,18 @@ obj_elf_type (int ignore ATTRIBUTE_UNUSED)
 	as_bad (_("symbol type \"%s\" is supported only by GNU targets"),
 		typename);
       type = BSF_FUNCTION | BSF_GNU_INDIRECT_FUNCTION;
+    }
+  else if (strcmp (typename, "gnu_unique_object") == 0)
+    {
+      const struct elf_backend_data *bed;
+
+      bed = get_elf_backend_data (stdoutput);
+      if (!(bed->elf_osabi == ELFOSABI_LINUX
+	    /* GNU/Linux is still using the default value 0.  */
+	    || bed->elf_osabi == ELFOSABI_NONE))
+	as_bad (_("symbol type \"%s\" is supported only by GNU targets"),
+		typename);
+      type = BSF_OBJECT | BSF_GNU_UNIQUE;
     }
 #ifdef md_elf_symbol_type
   else if ((type = md_elf_symbol_type (typename, sym, elfsym)) != -1)
@@ -1711,7 +1734,9 @@ obj_elf_ident (int ignore ATTRIBUTE_UNUSED)
       char *p;
       comment_section = subseg_new (".comment", 0);
       bfd_set_section_flags (stdoutput, comment_section,
-			     SEC_READONLY | SEC_HAS_CONTENTS);
+			     SEC_READONLY | SEC_HAS_CONTENTS
+			     | SEC_MERGE | SEC_STRINGS);
+      comment_section->entsize = 1;
       p = frag_more (1);
       *p = 0;
     }

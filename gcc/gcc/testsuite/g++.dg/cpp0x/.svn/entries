@@ -1,14 +1,14 @@
 10
 
 dir
-149693
+150304
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/cpp0x
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-12T21:10:09.036113Z
-149536
+2009-07-25T03:57:20.087419Z
+150073
 jason
 
 
@@ -28,7 +28,7 @@ jason
 
 decltype-33837.C
 file
-
+149693
 
 
 
@@ -62,7 +62,7 @@ jakub
 
 variadic94.C
 file
-
+149693
 
 
 
@@ -94,9 +94,43 @@ jason
 
 411
 
-variadic77.C
+defaulted11.C
 file
 
+
+
+
+2009-07-31T04:47:41.000000Z
+d643a886132e6e38e0317b9432fb3745
+2009-07-25T03:57:20.087419Z
+150073
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+213
+
+variadic77.C
+file
+149693
 
 
 
@@ -128,43 +162,9 @@ jakub
 
 369
 
-variadic-ex14.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-2da1a34cbd6f053d69f347755b01f580
-2008-03-26T04:17:57.882338Z
-133543
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-650
-
 variadic-crash1.C
 file
-
+149693
 
 
 
@@ -196,17 +196,17 @@ dgregor
 
 1264
 
-initlist12.C
+variadic-ex14.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-88ca216d97a186e8c3400a3591c5b88d
-2009-01-06T03:27:39.405599Z
-143111
-jason
+2da1a34cbd6f053d69f347755b01f580
+2008-03-26T04:17:57.882338Z
+133543
+dgregor
 
 
 
@@ -228,11 +228,11 @@ jason
 
 
 
-272
+650
 
 vt-34051-2.C
 file
-
+149693
 
 
 
@@ -264,17 +264,17 @@ dgregor
 
 164
 
-variadic-function.C
+initlist12.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-990a73de20f5c72ced1c1ed615169011
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
+88ca216d97a186e8c3400a3591c5b88d
+2009-01-06T03:27:39.405599Z
+143111
+jason
 
 
 
@@ -296,45 +296,11 @@ dgregor
 
 
 
-1970
-
-cast-bug.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-7a47c96ccc25ad3c9076e60422fc834f
-2007-05-31T01:18:22.747239Z
-125211
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-131
+272
 
 vt-34314.C
 file
-
+149693
 
 
 
@@ -366,17 +332,17 @@ dgregor
 
 1029
 
-variadic4.C
+cast-bug.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-874e124d1552d6e04add0b9e1b3670e6
-2008-10-06T22:29:42.497392Z
-140916
-jason
+7a47c96ccc25ad3c9076e60422fc834f
+2007-05-31T01:18:22.747239Z
+125211
+dgregor
 
 
 
@@ -398,11 +364,45 @@ jason
 
 
 
-482
+131
+
+variadic-function.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+990a73de20f5c72ced1c1ed615169011
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1970
 
 vt-35026.C
 file
-
+149693
 
 
 
@@ -434,9 +434,43 @@ dgregor
 
 127
 
+variadic4.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+874e124d1552d6e04add0b9e1b3670e6
+2008-10-06T22:29:42.497392Z
+140916
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+482
+
 elision_weak.C
 file
-
+149693
 
 
 
@@ -470,7 +504,7 @@ dgregor
 
 auto13.C
 file
-
+149693
 
 
 
@@ -504,7 +538,7 @@ jason
 
 collapse-bug.C
 file
-
+149693
 
 
 
@@ -538,7 +572,7 @@ dgregor
 
 pr31431.C
 file
-
+149693
 
 
 
@@ -572,7 +606,7 @@ dgregor
 
 pr32126.C
 file
-
+149693
 
 
 
@@ -606,7 +640,7 @@ paolo
 
 variadic-ex5.C
 file
-
+149693
 
 
 
@@ -640,7 +674,7 @@ dgregor
 
 pr31439.C
 file
-
+149693
 
 
 
@@ -674,7 +708,7 @@ dgregor
 
 rv10.C
 file
-
+149693
 
 
 
@@ -708,7 +742,7 @@ jason
 
 variadic61.C
 file
-
+149693
 
 
 
@@ -742,7 +776,7 @@ dgregor
 
 variadic44.C
 file
-
+149693
 
 
 
@@ -776,7 +810,7 @@ dgregor
 
 auto2.C
 file
-
+149693
 
 
 
@@ -810,7 +844,7 @@ jason
 
 variadic27.C
 file
-
+149693
 
 
 
@@ -844,7 +878,7 @@ dgregor
 
 variadic-new2.C
 file
-
+149693
 
 
 
@@ -878,7 +912,7 @@ dgregor
 
 rv7n.C
 file
-
+149693
 
 
 
@@ -912,7 +946,7 @@ janis
 
 pr39639.C
 file
-
+149693
 
 
 
@@ -946,7 +980,7 @@ dodji
 
 decltype7.C
 file
-
+149693
 
 
 
@@ -980,7 +1014,7 @@ jakub
 
 variadic86.C
 file
-
+149693
 
 
 
@@ -1014,7 +1048,7 @@ dgregor
 
 vt-34102.C
 file
-
+149693
 
 
 
@@ -1048,7 +1082,7 @@ dgregor
 
 variadic69.C
 file
-
+149693
 
 
 
@@ -1082,7 +1116,7 @@ dgregor
 
 initlist21.C
 file
-
+149693
 
 
 
@@ -1116,7 +1150,7 @@ jason
 
 variadic-new.C
 file
-
+149693
 
 
 
@@ -1148,43 +1182,9 @@ dgregor
 
 271
 
-error1.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-609d70ad463c19840a3dde6aff121c32
-2007-12-10T14:38:05.356235Z
-130745
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-255
-
 decltype10.C
 file
-
+149693
 
 
 
@@ -1216,9 +1216,43 @@ jakub
 
 211
 
+error1.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+609d70ad463c19840a3dde6aff121c32
+2007-12-10T14:38:05.356235Z
+130745
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+255
+
 vt-34961.C
 file
-
+149693
 
 
 
@@ -1252,7 +1286,7 @@ dgregor
 
 defaulted3.C
 file
-
+149693
 
 
 
@@ -1284,77 +1318,9 @@ jason
 
 302
 
-variadic11.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-fd232fd0f9ee4ead299f8f5377eacce2
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-494
-
-initlist5.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-40bb48134a829e97a58bfec1928ca395
-2009-03-20T21:49:18.110024Z
-144979
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-740
-
 pr34057.C
 file
-
+149693
 
 
 
@@ -1386,9 +1352,77 @@ jakub
 
 190
 
+initlist5.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+40bb48134a829e97a58bfec1928ca395
+2009-03-20T21:49:18.110024Z
+144979
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+740
+
+variadic11.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+fd232fd0f9ee4ead299f8f5377eacce2
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+494
+
 enum1.C
 file
-
+149693
 
 
 
@@ -1422,7 +1456,7 @@ jakub
 
 rv2n.C
 file
-
+149693
 
 
 
@@ -1456,7 +1490,7 @@ janis
 
 variadic70.C
 file
-
+149693
 
 
 
@@ -1490,7 +1524,7 @@ dgregor
 
 variadic53.C
 file
-
+149693
 
 
 
@@ -1522,43 +1556,9 @@ dgregor
 
 400
 
-variadic36.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-1b855022d31b131d1921bedf205f407f
-2008-09-18T22:29:39.508493Z
-140476
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-427
-
 temp-va-arg-bug.C
 file
-
+149693
 
 
 
@@ -1590,9 +1590,43 @@ jsm28
 
 195
 
+variadic36.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+1b855022d31b131d1921bedf205f407f
+2008-09-18T22:29:39.508493Z
+140476
+janis
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+427
+
 variadic19.C
 file
-
+149693
 
 
 
@@ -1626,7 +1660,7 @@ dgregor
 
 rv6p.C
 file
-
+149693
 
 
 
@@ -1660,7 +1694,7 @@ dgregor
 
 bracket3.C
 file
-
+149693
 
 
 
@@ -1694,7 +1728,7 @@ dgregor
 
 decltype-33838.C
 file
-
+149693
 
 
 
@@ -1728,7 +1762,7 @@ dgregor
 
 variadic78.C
 file
-
+149693
 
 
 
@@ -1762,7 +1796,7 @@ jakub
 
 variadic-crash2.C
 file
-
+149693
 
 
 
@@ -1796,7 +1830,7 @@ dodji
 
 initlist13.C
 file
-
+149693
 
 
 
@@ -1828,43 +1862,9 @@ jason
 
 144
 
-variadic5.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-1dabfabca0620ceb39e08c88a86e7df4
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-719
-
 vt-34055.C
 file
-
+149693
 
 
 
@@ -1896,14 +1896,14 @@ paolo
 
 672
 
-variadic-tuple.C
+variadic5.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-f931cf5d1654ae4d7fb0f5c475bb7f6b
+1dabfabca0620ceb39e08c88a86e7df4
 2007-03-10T02:01:49.320093Z
 122789
 dgregor
@@ -1928,11 +1928,11 @@ dgregor
 
 
 
-7393
+719
 
 template_deduction.C
 file
-
+149693
 
 
 
@@ -1964,9 +1964,43 @@ dgregor
 
 1856
 
+variadic-tuple.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+f931cf5d1654ae4d7fb0f5c475bb7f6b
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7393
+
 auto14.C
 file
-
+149693
 
 
 
@@ -2000,7 +2034,7 @@ jason
 
 pr31432.C
 file
-
+149693
 
 
 
@@ -2034,7 +2068,7 @@ dgregor
 
 vt-33964.C
 file
-
+149693
 
 
 
@@ -2066,43 +2100,9 @@ dgregor
 
 400
 
-pr32127.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-40e7a635680d6d648eb6005a7755c36f
-2007-11-06T14:37:56.951642Z
-129928
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-169
-
 vt-34919.C
 file
-
+149693
 
 
 
@@ -2134,9 +2134,43 @@ dgregor
 
 171
 
+pr32127.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+40e7a635680d6d648eb6005a7755c36f
+2007-11-06T14:37:56.951642Z
+129928
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+169
+
 vt-34399.C
 file
-
+149693
 
 
 
@@ -2170,7 +2204,7 @@ dgregor
 
 variadic-ex6.C
 file
-
+149693
 
 
 
@@ -2204,7 +2238,7 @@ dgregor
 
 variadic20.C
 file
-
+149693
 
 
 
@@ -2238,7 +2272,7 @@ dgregor
 
 rv1p.C
 file
-
+149693
 
 
 
@@ -2272,7 +2306,7 @@ dgregor
 
 variadic62.C
 file
-
+149693
 
 
 
@@ -2306,7 +2340,7 @@ dgregor
 
 cast.C
 file
-
+149693
 
 
 
@@ -2340,7 +2374,7 @@ dgregor
 
 auto3.C
 file
-
+149693
 
 
 
@@ -2374,7 +2408,7 @@ jason
 
 variadic45.C
 file
-
+149693
 
 
 
@@ -2408,7 +2442,7 @@ dgregor
 
 variadic28.C
 file
-
+149693
 
 
 
@@ -2442,7 +2476,7 @@ dgregor
 
 decltype8.C
 file
-
+149693
 
 
 
@@ -2476,7 +2510,7 @@ jakub
 
 variadic87.C
 file
-
+149693
 
 
 
@@ -2510,7 +2544,7 @@ dgregor
 
 vt-34103.C
 file
-
+149693
 
 
 
@@ -2544,7 +2578,7 @@ dgregor
 
 decltype-38655.C
 file
-
+149693
 
 
 
@@ -2578,7 +2612,7 @@ bonzini
 
 collapse.C
 file
-
+149693
 
 
 
@@ -2612,7 +2646,7 @@ dgregor
 
 explicit1.C
 file
-
+149693
 
 
 
@@ -2644,9 +2678,43 @@ jason
 
 920
 
-decltype11.C
+initlist22.C
 file
 
+
+
+
+2009-07-31T04:47:41.000000Z
+4bdc8b28203fe557b8c5257e826d9e95
+2009-07-22T03:32:30.446149Z
+149873
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+796
+
+decltype11.C
+file
+149693
 
 
 
@@ -2680,7 +2748,7 @@ jason
 
 defaulted4.C
 file
-
+149693
 
 
 
@@ -2714,7 +2782,7 @@ jason
 
 variadic12.C
 file
-
+149693
 
 
 
@@ -2748,7 +2816,7 @@ dgregor
 
 initlist6.C
 file
-
+149693
 
 
 
@@ -2782,7 +2850,7 @@ jason
 
 pr34058.C
 file
-
+149693
 
 
 
@@ -2816,7 +2884,7 @@ jakub
 
 enum2.C
 file
-
+149693
 
 
 
@@ -2850,7 +2918,7 @@ hjl
 
 variadic71.C
 file
-
+149693
 
 
 
@@ -2884,7 +2952,7 @@ janis
 
 variadic54.C
 file
-
+149693
 
 
 
@@ -2918,7 +2986,7 @@ dgregor
 
 variadic37.C
 file
-
+149693
 
 
 
@@ -2952,7 +3020,7 @@ dgregor
 
 bracket4.C
 file
-
+149693
 
 
 
@@ -2986,7 +3054,7 @@ dgregor
 
 variadic79.C
 file
-
+149693
 
 
 
@@ -3020,7 +3088,7 @@ dgregor
 
 initlist14.C
 file
-
+149693
 
 
 
@@ -3054,7 +3122,7 @@ jason
 
 rvo.C
 file
-
+149693
 
 
 
@@ -3088,7 +3156,7 @@ dgregor
 
 variadic6.C
 file
-
+149693
 
 
 
@@ -3122,7 +3190,7 @@ dgregor
 
 auto15.C
 file
-
+149693
 
 
 
@@ -3156,7 +3224,7 @@ jason
 
 pr32128.C
 file
-
+149693
 
 
 
@@ -3190,7 +3258,7 @@ dgregor
 
 variadic-ex7.C
 file
-
+149693
 
 
 
@@ -3224,7 +3292,7 @@ dgregor
 
 variadic21.C
 file
-
+149693
 
 
 
@@ -3258,7 +3326,7 @@ dgregor
 
 rv3n.C
 file
-
+149693
 
 
 
@@ -3292,7 +3360,7 @@ janis
 
 variadic80.C
 file
-
+149693
 
 
 
@@ -3326,7 +3394,7 @@ jakub
 
 decltype1.C
 file
-
+149693
 
 
 
@@ -3360,7 +3428,7 @@ dgregor
 
 variadic63.C
 file
-
+149693
 
 
 
@@ -3394,7 +3462,7 @@ dgregor
 
 variadic46.C
 file
-
+149693
 
 
 
@@ -3428,7 +3496,7 @@ dgregor
 
 auto4.C
 file
-
+149693
 
 
 
@@ -3462,7 +3530,7 @@ jason
 
 variadic29.C
 file
-
+149693
 
 
 
@@ -3496,7 +3564,7 @@ dgregor
 
 rv7p.C
 file
-
+149693
 
 
 
@@ -3530,7 +3598,7 @@ dgregor
 
 decltype9.C
 file
-
+149693
 
 
 
@@ -3564,7 +3632,7 @@ jakub
 
 variadic88.C
 file
-
+149693
 
 
 
@@ -3598,7 +3666,7 @@ dgregor
 
 explicit2.C
 file
-
+149693
 
 
 
@@ -3630,9 +3698,43 @@ jason
 
 492
 
-vt-35331.C
+initlist23.C
 file
 
+
+
+
+2009-07-31T04:47:41.000000Z
+8d226b5ec13a739254991dee1a2a148e
+2009-07-24T16:02:14.492673Z
+150059
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+195
+
+vt-35331.C
+file
+149693
 
 
 
@@ -3666,7 +3768,7 @@ paolo
 
 reference_collapsing.C
 file
-
+149693
 
 
 
@@ -3700,7 +3802,7 @@ dgregor
 
 overload.C
 file
-
+149693
 
 
 
@@ -3734,7 +3836,7 @@ dgregor
 
 decltype12.C
 file
-
+149693
 
 
 
@@ -3768,7 +3870,7 @@ dgregor
 
 pr31442.C
 file
-
+149693
 
 
 
@@ -3802,7 +3904,7 @@ dgregor
 
 pr32252.C
 file
-
+149693
 
 
 
@@ -3836,7 +3938,7 @@ dgregor
 
 defaulted5.C
 file
-
+149693
 
 
 
@@ -3870,7 +3972,7 @@ jason
 
 named.C
 file
-
+149693
 
 
 
@@ -3904,7 +4006,7 @@ dgregor
 
 variadic30.C
 file
-
+149693
 
 
 
@@ -3938,7 +4040,7 @@ dgregor
 
 variadic13.C
 file
-
+149693
 
 
 
@@ -3972,7 +4074,7 @@ dgregor
 
 initlist7.C
 file
-
+149693
 
 
 
@@ -4006,7 +4108,7 @@ jason
 
 enum3.C
 file
-
+149693
 
 
 
@@ -4040,7 +4142,7 @@ jason
 
 rv2p.C
 file
-
+149693
 
 
 
@@ -4074,7 +4176,7 @@ dgregor
 
 variadic72.C
 file
-
+149693
 
 
 
@@ -4108,7 +4210,7 @@ dgregor
 
 variadic55.C
 file
-
+149693
 
 
 
@@ -4142,7 +4244,7 @@ dgregor
 
 variadic38.C
 file
-
+149693
 
 
 
@@ -4176,7 +4278,7 @@ dgregor
 
 scoped_enum_examples.C
 file
-
+149693
 
 
 
@@ -4210,7 +4312,7 @@ dgregor
 
 variadic-lambda.C
 file
-
+149693
 
 
 
@@ -4244,7 +4346,7 @@ dgregor
 
 not_special.C
 file
-
+149693
 
 
 
@@ -4278,7 +4380,7 @@ dgregor
 
 initlist15.C
 file
-
+149693
 
 
 
@@ -4312,7 +4414,7 @@ jason
 
 vt-35242.C
 file
-
+149693
 
 
 
@@ -4344,43 +4446,9 @@ paolo
 
 162
 
-vt-34219.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-e5ded9c4f13f4299049548f36f36d958
-2008-01-29T13:59:59.469000Z
-131938
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-411
-
 variadic7.C
 file
-
+149693
 
 
 
@@ -4412,9 +4480,43 @@ dgregor
 
 758
 
+vt-34219.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+e5ded9c4f13f4299049548f36f36d958
+2008-01-29T13:59:59.469000Z
+131938
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+411
+
 vt-34751.C
 file
-
+149693
 
 
 
@@ -4448,7 +4550,7 @@ dgregor
 
 pr34060.C
 file
-
+149693
 
 
 
@@ -4482,7 +4584,7 @@ jakub
 
 auto16.C
 file
-
+149693
 
 
 
@@ -4516,7 +4618,7 @@ jason
 
 pr31434.C
 file
-
+149693
 
 
 
@@ -4550,7 +4652,7 @@ dgregor
 
 variadic-throw.C
 file
-
+149693
 
 
 
@@ -4584,7 +4686,7 @@ dgregor
 
 variadic-ex8.C
 file
-
+149693
 
 
 
@@ -4618,7 +4720,7 @@ dgregor
 
 variadic22.C
 file
-
+149693
 
 
 
@@ -4652,7 +4754,7 @@ dgregor
 
 static_assert1.C
 file
-
+149693
 
 
 
@@ -4684,43 +4786,9 @@ dgregor
 
 399
 
-variadic81.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-c50ca86b3c5889ab02daaecbb96d59b9
-2008-05-12T15:18:52.829831Z
-135216
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-221
-
 decltype2.C
 file
-
+149693
 
 
 
@@ -4752,9 +4820,43 @@ dgregor
 
 1257
 
+variadic81.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+c50ca86b3c5889ab02daaecbb96d59b9
+2008-05-12T15:18:52.829831Z
+135216
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+221
+
 variadic64.C
 file
-
+149693
 
 
 
@@ -4786,43 +4888,9 @@ dgregor
 
 509
 
-auto5.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-fd8b8fe7fe5a5692d13a285ecdb8f37d
-2008-08-30T05:14:54.546315Z
-139798
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-259
-
 variadic47.C
 file
-
+149693
 
 
 
@@ -4854,9 +4922,43 @@ dgregor
 
 321
 
+auto5.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+fd8b8fe7fe5a5692d13a285ecdb8f37d
+2008-08-30T05:14:54.546315Z
+139798
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+259
+
 elision.C
 file
-
+149693
 
 
 
@@ -4890,7 +4992,7 @@ dgregor
 
 variadic89.C
 file
-
+149693
 
 
 
@@ -4924,7 +5026,7 @@ dgregor
 
 decltype13.C
 file
-
+149693
 
 
 
@@ -4956,43 +5058,9 @@ jakub
 
 393
 
-pr31443.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-67359603203bcca897778b2597f66e80
-2007-05-25T13:15:04.016852Z
-125062
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-229
-
 pr32253.C
 file
-
+149693
 
 
 
@@ -5024,16 +5092,16 @@ dgregor
 
 146
 
-variadic-init.C
+pr31443.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-e27f5d2cf1ffacc9b03605f63974cadf
-2007-11-10T02:53:31.527843Z
-130065
+67359603203bcca897778b2597f66e80
+2007-05-25T13:15:04.016852Z
+125062
 dgregor
 
 
@@ -5056,11 +5124,11 @@ dgregor
 
 
 
-934
+229
 
 defaulted6.C
 file
-
+149693
 
 
 
@@ -5092,9 +5160,43 @@ jason
 
 197
 
+variadic-init.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+e27f5d2cf1ffacc9b03605f63974cadf
+2007-11-10T02:53:31.527843Z
+130065
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+934
+
 variadic31.C
 file
-
+149693
 
 
 
@@ -5126,43 +5228,9 @@ dgregor
 
 159
 
-variadic14.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-1e1fa2f2e9cc63d798ef3b07852ef7e5
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-642
-
 initlist8.C
 file
-
+149693
 
 
 
@@ -5194,9 +5262,43 @@ jason
 
 145
 
+variadic14.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+1e1fa2f2e9cc63d798ef3b07852ef7e5
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+642
+
 enum4.C
 file
-
+149693
 
 
 
@@ -5230,7 +5332,7 @@ jason
 
 rv4n.C
 file
-
+149693
 
 
 
@@ -5264,7 +5366,7 @@ janis
 
 variadic90.C
 file
-
+149693
 
 
 
@@ -5298,7 +5400,7 @@ dgregor
 
 variadic73.C
 file
-
+149693
 
 
 
@@ -5330,43 +5432,9 @@ dgregor
 
 491
 
-variadic56.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-e40e17dbd8292e2f422b8b91bbee4dd0
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-448
-
 variadic-ex10.C
 file
-
+149693
 
 
 
@@ -5398,14 +5466,14 @@ dgregor
 
 397
 
-variadic39.C
+variadic56.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-951b21c26ba104b2ab7d8d762bd2bec0
+e40e17dbd8292e2f422b8b91bbee4dd0
 2007-03-10T02:01:49.320093Z
 122789
 dgregor
@@ -5430,11 +5498,11 @@ dgregor
 
 
 
-303
+448
 
 extern_template-1.C
 file
-
+149693
 
 
 
@@ -5466,9 +5534,43 @@ paolo
 
 105
 
+variadic39.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+951b21c26ba104b2ab7d8d762bd2bec0
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+303
+
 rv8p.C
 file
-
+149693
 
 
 
@@ -5502,7 +5604,7 @@ dgregor
 
 vt-34050.C
 file
-
+149693
 
 
 
@@ -5536,7 +5638,7 @@ dgregor
 
 temp-constructor-bug.C
 file
-
+149693
 
 
 
@@ -5570,7 +5672,7 @@ dgregor
 
 initlist16.C
 file
-
+149693
 
 
 
@@ -5604,7 +5706,7 @@ jason
 
 vt-35243.C
 file
-
+149693
 
 
 
@@ -5638,7 +5740,7 @@ paolo
 
 vt-34219-2.C
 file
-
+149693
 
 
 
@@ -5672,7 +5774,7 @@ dgregor
 
 variadic8.C
 file
-
+149693
 
 
 
@@ -5706,7 +5808,7 @@ dgregor
 
 variadic-ex1.C
 file
-
+149693
 
 
 
@@ -5740,7 +5842,7 @@ dgregor
 
 pr34061.C
 file
-
+149693
 
 
 
@@ -5774,7 +5876,7 @@ paolo
 
 variadic-ex9.C
 file
-
+149693
 
 
 
@@ -5808,7 +5910,7 @@ simonb
 
 variadic40.C
 file
-
+149693
 
 
 
@@ -5840,43 +5942,9 @@ dgregor
 
 122
 
-variadic23.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-7615032e452443ba81dd6860d86129d7
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-561
-
 variadic-ttp.C
 file
-
+149693
 
 
 
@@ -5908,16 +5976,16 @@ dgregor
 
 221
 
-temp_default1.C
+variadic23.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-f687cf952bf9b26e3de9a18a861cbc46
-2007-03-28T14:05:29.851239Z
-123300
+7615032e452443ba81dd6860d86129d7
+2007-03-10T02:01:49.320093Z
+122789
 dgregor
 
 
@@ -5940,45 +6008,11 @@ dgregor
 
 
 
-549
-
-static_assert2.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-8cbc91f4f007ae34557f6cc27a860398
-2006-11-21T20:22:05.625612Z
-119063
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-726
+561
 
 rv3p.C
 file
-
+149693
 
 
 
@@ -6010,16 +6044,84 @@ dgregor
 
 32759
 
-variadic82.C
+static_assert2.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+8cbc91f4f007ae34557f6cc27a860398
+2006-11-21T20:22:05.625612Z
+119063
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+726
+
+temp_default1.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+f687cf952bf9b26e3de9a18a861cbc46
+2007-03-28T14:05:29.851239Z
+123300
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+549
+
+trivial1.C
 file
 
 
 
 
-2009-04-24T17:44:05.000000Z
-e007db2c033ef0a193081e993983b116
-2009-01-07T20:43:01.368423Z
-143166
+2009-07-31T04:47:41.000000Z
+c86fab7ece48cf75b3d5f86e953d24c9
+2009-07-16T20:36:10.896555Z
+149721
 jason
 
 
@@ -6042,11 +6144,11 @@ jason
 
 
 
-254
+1632
 
 decltype3.C
 file
-
+149693
 
 
 
@@ -6078,9 +6180,43 @@ jason
 
 1585
 
+variadic82.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+e007db2c033ef0a193081e993983b116
+2009-01-07T20:43:01.368423Z
+143166
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+254
+
 variadic65.C
 file
-
+149693
 
 
 
@@ -6112,43 +6248,9 @@ jason
 
 323
 
-variadic48.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-a57a0da544372c92597786efed9659fd
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-173
-
 auto6.C
 file
-
+149693
 
 
 
@@ -6180,9 +6282,43 @@ jason
 
 2206
 
+variadic48.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+a57a0da544372c92597786efed9659fd
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+173
+
 scoped_enum.C
 file
-
+149693
 
 
 
@@ -6214,43 +6350,9 @@ dgregor
 
 1517
 
-overload-conv-1.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-3a17cd678756b6b530cc9d447f967678
-2007-05-31T01:18:22.747239Z
-125211
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-288
-
 pr32114.C
 file
-
+149693
 
 
 
@@ -6282,17 +6384,17 @@ dgregor
 
 140
 
-decltype14.C
+overload-conv-1.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-4ec2723baddfc9d905467688b0a93e32
-2008-11-20T18:40:52.126921Z
-142054
-jason
+3a17cd678756b6b530cc9d447f967678
+2007-05-31T01:18:22.747239Z
+125211
+dgregor
 
 
 
@@ -6314,11 +6416,11 @@ jason
 
 
 
-148
+288
 
 long_long.C
 file
-
+149693
 
 
 
@@ -6350,9 +6452,43 @@ dgregor
 
 77
 
+decltype14.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+4ec2723baddfc9d905467688b0a93e32
+2008-11-20T18:40:52.126921Z
+142054
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+148
+
 initlist1.C
 file
-
+149693
 
 
 
@@ -6384,77 +6520,9 @@ jason
 
 1029
 
-variadic-mem_fn.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-532fc7f93bb229494e92be11cfcf8152
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1044
-
-decltype-refbug.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-5be5466d65fc05f7bff75fd042614d66
-2007-11-07T23:37:29.034351Z
-129975
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-317
-
 pr31444.C
 file
-
+149693
 
 
 
@@ -6486,9 +6554,77 @@ dgregor
 
 216
 
+decltype-refbug.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+5be5466d65fc05f7bff75fd042614d66
+2007-11-07T23:37:29.034351Z
+129975
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+317
+
+variadic-mem_fn.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+532fc7f93bb229494e92be11cfcf8152
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1044
+
 defaulted7.C
 file
-
+149693
 
 
 
@@ -6522,7 +6658,7 @@ jason
 
 variadic32.C
 file
-
+149693
 
 
 
@@ -6554,43 +6690,9 @@ dgregor
 
 166
 
-variadic15.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-6ed2e036536de09852464be3cd9a350a
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-677
-
 initlist9.C
 file
-
+149693
 
 
 
@@ -6622,22 +6724,17 @@ jason
 
 454
 
-enum5.C
+variadic15.C
 file
+149693
 
 
 
-
-2009-07-14T13:03:15.000000Z
-8d128943842c7e12ad8c1ea017f3fb14
-2009-07-07T17:55:26.383352Z
-149341
-jason
-
-
-
-
-
+2009-04-24T17:44:05.000000Z
+6ed2e036536de09852464be3cd9a350a
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
 
 
 
@@ -6654,11 +6751,16 @@ jason
 
 
 
-299
+
+
+
+
+
+677
 
 deduce.C
 file
-
+149693
 
 
 
@@ -6690,9 +6792,43 @@ dgregor
 
 720
 
+enum5.C
+file
+149693
+
+
+
+2009-07-14T13:03:15.000000Z
+8d128943842c7e12ad8c1ea017f3fb14
+2009-07-07T17:55:26.383352Z
+149341
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+299
+
 variadic91.C
 file
-
+149693
 
 
 
@@ -6726,7 +6862,7 @@ dgregor
 
 variadic74.C
 file
-
+149693
 
 
 
@@ -6758,43 +6894,9 @@ dgregor
 
 742
 
-variadic57.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-3df1cd01278372ac99c35513e3c8b99b
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-275
-
 variadic-ex11.C
 file
-
+149693
 
 
 
@@ -6826,9 +6928,43 @@ dgregor
 
 262
 
+variadic57.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+3df1cd01278372ac99c35513e3c8b99b
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+275
+
 extern_template-2.C
 file
-
+149693
 
 
 
@@ -6862,7 +6998,7 @@ paolo
 
 pr38795.C
 file
-
+149693
 
 
 
@@ -6894,77 +7030,9 @@ jakub
 
 223
 
-variadic1.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-bb6afbbf296083db4650ea62c40e7f80
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-171
-
-vt-34051.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-f396e2178ea8dfa6db0847bf75d89371
-2008-01-15T18:08:00.058632Z
-131547
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-177
-
 vt-35023.C
 file
-
+149693
 
 
 
@@ -6996,9 +7064,77 @@ dgregor
 
 154
 
+vt-34051.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+f396e2178ea8dfa6db0847bf75d89371
+2008-01-15T18:08:00.058632Z
+131547
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+177
+
+variadic1.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+bb6afbbf296083db4650ea62c40e7f80
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+171
+
 initlist17.C
 file
-
+149693
 
 
 
@@ -7032,7 +7168,7 @@ jason
 
 auto10.C
 file
-
+149693
 
 
 
@@ -7066,7 +7202,7 @@ jason
 
 variadic9.C
 file
-
+149693
 
 
 
@@ -7098,43 +7234,9 @@ dgregor
 
 810
 
-pr31431-2.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-4b7b15a8e47bad61dec453995963456d
-2007-05-25T13:15:04.016852Z
-125062
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-156
-
 vt-34753.C
 file
-
+149693
 
 
 
@@ -7166,9 +7268,43 @@ dgregor
 
 248
 
+pr31431-2.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+4b7b15a8e47bad61dec453995963456d
+2007-05-25T13:15:04.016852Z
+125062
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+156
+
 variadic-ex2.C
 file
-
+149693
 
 
 
@@ -7202,7 +7338,7 @@ dgregor
 
 implicit-copy.C
 file
-
+149693
 
 
 
@@ -7234,9 +7370,43 @@ dgregor
 
 148
 
-variadic41.C
+std-layout1.C
 file
 
+
+
+
+2009-07-31T04:47:41.000000Z
+024127b05a89710621edb486968b4e3c
+2009-07-16T20:36:10.896555Z
+149721
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2168
+
+variadic41.C
+file
+149693
 
 
 
@@ -7270,7 +7440,7 @@ dgregor
 
 variadic24.C
 file
-
+149693
 
 
 
@@ -7302,43 +7472,9 @@ dgregor
 
 158
 
-pr31993.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-768b8078f11c2cd0df3f94ec3bf1b895
-2007-10-30T13:36:34.105448Z
-129773
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-162
-
 rv5n.C
 file
-
+149693
 
 
 
@@ -7370,16 +7506,16 @@ janis
 
 19333
 
-temp_default2.C
+pr31993.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-b0614ce472042e86627bab8a9917ae6c
-2007-03-28T14:05:29.851239Z
-123300
+768b8078f11c2cd0df3f94ec3bf1b895
+2007-10-30T13:36:34.105448Z
+129773
 dgregor
 
 
@@ -7402,45 +7538,11 @@ dgregor
 
 
 
-300
-
-static_assert3.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-edacfa979d970ca2fd7315f06f7c5572
-2006-11-21T20:22:05.625612Z
-119063
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-158
+162
 
 pr33839.C
 file
-
+149693
 
 
 
@@ -7472,17 +7574,17 @@ jakub
 
 195
 
-variadic83.C
+static_assert3.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-c97406e379935ecd6f83c7d4d33ae631
-2009-01-07T20:43:01.368423Z
-143166
-jason
+edacfa979d970ca2fd7315f06f7c5572
+2006-11-21T20:22:05.625612Z
+119063
+dgregor
 
 
 
@@ -7504,11 +7606,45 @@ jason
 
 
 
-239
+158
+
+temp_default2.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+b0614ce472042e86627bab8a9917ae6c
+2007-03-28T14:05:29.851239Z
+123300
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+300
 
 decltype4.C
 file
-
+149693
 
 
 
@@ -7540,9 +7676,43 @@ aoliva
 
 1938
 
+variadic83.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+c97406e379935ecd6f83c7d4d33ae631
+2009-01-07T20:43:01.368423Z
+143166
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+239
+
 variadic66.C
 file
-
+149693
 
 
 
@@ -7574,77 +7744,9 @@ dgregor
 
 177
 
-variadic49.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-abee30ec4450ea9478294337b34444d2
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-134
-
-auto7.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-8556d6750a30e8542f3922be9b89a92e
-2008-10-31T21:30:05.643129Z
-141501
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-285
-
 pr33996.C
 file
-
+149693
 
 
 
@@ -7676,9 +7778,77 @@ dgregor
 
 622
 
+auto7.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+8556d6750a30e8542f3922be9b89a92e
+2008-10-31T21:30:05.643129Z
+141501
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+285
+
+variadic49.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+abee30ec4450ea9478294337b34444d2
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+134
+
 rv9p.C
 file
-
+149693
 
 
 
@@ -7712,7 +7882,7 @@ jason
 
 rv-trivial-bug.C
 file
-
+149693
 
 
 
@@ -7744,43 +7914,9 @@ dgregor
 
 566
 
-overload-conv-2.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-a280ecf17238784796b3effb1fd26248
-2007-05-31T01:18:22.747239Z
-125211
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-161
-
 pr32115.C
 file
-
+149693
 
 
 
@@ -7812,17 +7948,17 @@ dgregor
 
 157
 
-vt-37737-1.C
+overload-conv-2.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-21083e5ee0d1039e33bda11cf5e195f3
-2009-02-07T02:05:04.695171Z
-144001
-paolo
+a280ecf17238784796b3effb1fd26248
+2007-05-31T01:18:22.747239Z
+125211
+dgregor
 
 
 
@@ -7844,11 +7980,11 @@ paolo
 
 
 
-159
+161
 
 decltype15.C
 file
-
+149693
 
 
 
@@ -7880,17 +8016,17 @@ jakub
 
 207
 
-initlist2.C
+vt-37737-1.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-b07e5a8dc17e52f03c788220d501f892
-2008-07-02T15:38:50.913845Z
-137361
-jason
+21083e5ee0d1039e33bda11cf5e195f3
+2009-02-07T02:05:04.695171Z
+144001
+paolo
 
 
 
@@ -7912,11 +8048,11 @@ jason
 
 
 
-555
+159
 
 pr34054.C
 file
-
+149693
 
 
 
@@ -7948,9 +8084,43 @@ jakub
 
 137
 
+initlist2.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+b07e5a8dc17e52f03c788220d501f892
+2008-07-02T15:38:50.913845Z
+137361
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+555
+
 pr31445.C
 file
-
+149693
 
 
 
@@ -7982,43 +8152,9 @@ dgregor
 
 164
 
-defaulted8.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-e4eda3d1136f1741945b988346e3fedf
-2009-02-11T05:23:38.067315Z
-144092
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-189
-
 enum_base_warn.C
 file
-
+149693
 
 
 
@@ -8050,9 +8186,43 @@ dgregor
 
 424
 
+defaulted8.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+e4eda3d1136f1741945b988346e3fedf
+2009-02-11T05:23:38.067315Z
+144092
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+189
+
 variadic50.C
 file
-
+149693
 
 
 
@@ -8086,7 +8256,7 @@ dgregor
 
 variadic33.C
 file
-
+149693
 
 
 
@@ -8120,7 +8290,7 @@ dgregor
 
 variadic16.C
 file
-
+149693
 
 
 
@@ -8154,7 +8324,7 @@ dgregor
 
 enum6.C
 file
-
+149693
 
 
 
@@ -8188,7 +8358,7 @@ jason
 
 rv4p.C
 file
-
+149693
 
 
 
@@ -8222,7 +8392,7 @@ dgregor
 
 variadic92.C
 file
-
+149693
 
 
 
@@ -8256,7 +8426,7 @@ jason
 
 variadic75.C
 file
-
+149693
 
 
 
@@ -8288,43 +8458,9 @@ dgregor
 
 681
 
-variadic58.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-78d145f1910f8b120ca926a7f9715581
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-380
-
 variadic-ex12.C
 file
-
+149693
 
 
 
@@ -8356,17 +8492,17 @@ dgregor
 
 226
 
-initlist10.C
+variadic58.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-73fd140acb60b79673309a4e733012ae
-2008-12-03T19:22:08.194477Z
-142404
-jason
+78d145f1910f8b120ca926a7f9715581
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
 
 
 
@@ -8388,11 +8524,11 @@ jason
 
 
 
-992
+380
 
 extern_template-3.C
 file
-
+149693
 
 
 
@@ -8424,17 +8560,17 @@ jason
 
 153
 
-variadic2.C
+initlist10.C
 file
-
+149693
 
 
 
 2009-04-24T17:44:05.000000Z
-be09491ac08d1c7bda2bd004c7a559e9
-2007-03-10T02:01:49.320093Z
-122789
-dgregor
+73fd140acb60b79673309a4e733012ae
+2008-12-03T19:22:08.194477Z
+142404
+jason
 
 
 
@@ -8456,45 +8592,11 @@ dgregor
 
 
 
-503
-
-vt-34052.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-f4757749a592f130d579f6b7e524b3ac
-2008-01-15T16:06:48.593177Z
-131543
-dgregor
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-310
+992
 
 vt-35024.C
 file
-
+149693
 
 
 
@@ -8526,9 +8628,77 @@ dgregor
 
 166
 
+vt-34052.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+f4757749a592f130d579f6b7e524b3ac
+2008-01-15T16:06:48.593177Z
+131543
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+310
+
+variadic2.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+be09491ac08d1c7bda2bd004c7a559e9
+2007-03-10T02:01:49.320093Z
+122789
+dgregor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+503
+
 initlist18.C
 file
-
+149693
 
 
 
@@ -8560,43 +8730,9 @@ jason
 
 257
 
-vt-35147.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-518e42cc4b8fdf93d93957379c4c6105
-2009-02-07T02:05:04.695171Z
-144001
-paolo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-250
-
 auto11.C
 file
-
+149693
 
 
 
@@ -8628,9 +8764,43 @@ jason
 
 190
 
+vt-35147.C
+file
+149693
+
+
+
+2009-04-24T17:44:05.000000Z
+518e42cc4b8fdf93d93957379c4c6105
+2009-02-07T02:05:04.695171Z
+144001
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+250
+
 vt-34754.C
 file
-
+149693
 
 
 
@@ -8664,7 +8834,7 @@ dgregor
 
 variadic-rref.C
 file
-
+149693
 
 
 
@@ -8698,7 +8868,7 @@ dgregor
 
 variadic-ex3.C
 file
-
+149693
 
 
 
@@ -8732,7 +8902,7 @@ dgregor
 
 scoped_enum_98.C
 file
-
+149693
 
 
 
@@ -8766,7 +8936,7 @@ dgregor
 
 pr33930.C
 file
-
+149693
 
 
 
@@ -8800,7 +8970,7 @@ dgregor
 
 pr31437.C
 file
-
+149693
 
 
 
@@ -8834,7 +9004,7 @@ dgregor
 
 pr32566.C
 file
-
+149693
 
 
 
@@ -8868,7 +9038,7 @@ dgregor
 
 iop.C
 file
-
+149693
 
 
 
@@ -8902,7 +9072,7 @@ dgregor
 
 variadic42.C
 file
-
+149693
 
 
 
@@ -8936,7 +9106,7 @@ jason
 
 variadic25.C
 file
-
+149693
 
 
 
@@ -8970,7 +9140,7 @@ dgregor
 
 pr33955.C
 file
-
+149693
 
 
 
@@ -9004,7 +9174,7 @@ dgregor
 
 static_assert4.C
 file
-
+149693
 
 
 
@@ -9038,7 +9208,7 @@ pinskia
 
 temp_default3.C
 file
-
+149693
 
 
 
@@ -9072,7 +9242,7 @@ dgregor
 
 decltype5.C
 file
-
+149693
 
 
 
@@ -9106,7 +9276,7 @@ dgregor
 
 enum_base.C
 file
-
+149693
 
 
 
@@ -9140,7 +9310,7 @@ dgregor
 
 variadic84.C
 file
-
+149693
 
 
 
@@ -9174,7 +9344,7 @@ dgregor
 
 variadic67.C
 file
-
+149693
 
 
 
@@ -9208,7 +9378,7 @@ dgregor
 
 auto8.C
 file
-
+149693
 
 
 
@@ -9242,7 +9412,7 @@ jason
 
 vt-34606.C
 file
-
+149693
 
 
 
@@ -9276,7 +9446,7 @@ paolo
 
 defaulted1.C
 file
-
+149693
 
 
 
@@ -9310,7 +9480,7 @@ jason
 
 decltype16.C
 file
-
+149693
 
 
 
@@ -9344,7 +9514,7 @@ jason
 
 vt-37737-2.C
 file
-
+149693
 
 
 
@@ -9378,7 +9548,7 @@ paolo
 
 initlist3.C
 file
-
+149693
 
 
 
@@ -9412,7 +9582,7 @@ jason
 
 defaulted9.C
 file
-
+149693
 
 
 
@@ -9446,7 +9616,7 @@ hjl
 
 variadic51.C
 file
-
+149693
 
 
 
@@ -9480,7 +9650,7 @@ dgregor
 
 variadic34.C
 file
-
+149693
 
 
 
@@ -9514,7 +9684,7 @@ dgregor
 
 variadic17.C
 file
-
+149693
 
 
 
@@ -9548,7 +9718,7 @@ dgregor
 
 rv6n.C
 file
-
+149693
 
 
 
@@ -9582,7 +9752,7 @@ janis
 
 enum7.C
 file
-
+149693
 
 
 
@@ -9616,7 +9786,7 @@ jason
 
 bracket1.C
 file
-
+149693
 
 
 
@@ -9650,7 +9820,7 @@ dgregor
 
 variadic93.C
 file
-
+149693
 
 
 
@@ -9684,7 +9854,7 @@ jason
 
 defaulted10.C
 file
-
+149693
 
 
 
@@ -9718,7 +9888,7 @@ jason
 
 variadic76.C
 file
-
+149693
 
 
 
@@ -9752,7 +9922,7 @@ jakub
 
 variadic59.C
 file
-
+149693
 
 
 
@@ -9786,7 +9956,7 @@ janis
 
 variadic-ex13.C
 file
-
+149693
 
 
 
@@ -9820,7 +9990,7 @@ janis
 
 initlist11.C
 file
-
+149693
 
 
 
@@ -9854,7 +10024,7 @@ jason
 
 warn_cxx0x.C
 file
-
+149693
 
 
 
@@ -9888,7 +10058,7 @@ dgregor
 
 variadic3.C
 file
-
+149693
 
 
 
@@ -9922,7 +10092,7 @@ dgregor
 
 initlist19.C
 file
-
+149693
 
 
 
@@ -9956,7 +10126,7 @@ jason
 
 auto12.C
 file
-
+149693
 
 
 
@@ -9990,7 +10160,7 @@ jason
 
 bind.C
 file
-
+149693
 
 
 
@@ -10024,7 +10194,7 @@ dgregor
 
 pr32125.C
 file
-
+149693
 
 
 
@@ -10058,7 +10228,7 @@ paolo
 
 vt-34755.C
 file
-
+149693
 
 
 
@@ -10092,7 +10262,7 @@ dgregor
 
 variadic-ex4.C
 file
-
+149693
 
 
 
@@ -10126,7 +10296,7 @@ dgregor
 
 pr31438.C
 file
-
+149693
 
 
 
@@ -10160,7 +10330,7 @@ paolo
 
 rv1n.C
 file
-
+149693
 
 
 
@@ -10194,7 +10364,7 @@ dgregor
 
 __func__.C
 file
-
+149693
 
 
 
@@ -10228,7 +10398,7 @@ dgregor
 
 variadic60.C
 file
-
+149693
 
 
 
@@ -10262,7 +10432,7 @@ janis
 
 variadic43.C
 file
-
+149693
 
 
 
@@ -10296,7 +10466,7 @@ dgregor
 
 auto1.C
 file
-
+149693
 
 
 
@@ -10330,7 +10500,7 @@ dgregor
 
 variadic26.C
 file
-
+149693
 
 
 
@@ -10364,7 +10534,7 @@ dgregor
 
 variadic-bind.C
 file
-
+149693
 
 
 
@@ -10398,7 +10568,7 @@ dgregor
 
 rv5p.C
 file
-
+149693
 
 
 
@@ -10432,7 +10602,7 @@ dgregor
 
 temp_default4.C
 file
-
+149693
 
 
 
@@ -10466,7 +10636,7 @@ dgregor
 
 variadic85.C
 file
-
+149693
 
 
 
@@ -10500,7 +10670,7 @@ dgregor
 
 decltype6.C
 file
-
+149693
 
 
 
@@ -10534,7 +10704,7 @@ dgregor
 
 variadic68.C
 file
-
+149693
 
 
 
@@ -10568,7 +10738,7 @@ dgregor
 
 auto9.C
 file
-
+149693
 
 
 
@@ -10602,7 +10772,7 @@ jason
 
 initlist20.C
 file
-
+149693
 
 
 
@@ -10636,7 +10806,7 @@ jason
 
 named_refs.C
 file
-
+149693
 
 
 
@@ -10670,7 +10840,7 @@ dgregor
 
 unnamed_refs.C
 file
-
+149693
 
 
 
@@ -10704,7 +10874,7 @@ dgregor
 
 variadic-unify.C
 file
-
+149693
 
 
 
@@ -10738,7 +10908,7 @@ dgregor
 
 defaulted2.C
 file
-
+149693
 
 
 
@@ -10772,7 +10942,7 @@ jason
 
 decltype17.C
 file
-
+149693
 
 
 
@@ -10806,7 +10976,7 @@ jason
 
 variadic10.C
 file
-
+149693
 
 
 
@@ -10840,7 +11010,7 @@ dgregor
 
 initlist4.C
 file
-
+149693
 
 
 
@@ -10874,7 +11044,7 @@ jason
 
 pr34056.C
 file
-
+149693
 
 
 
@@ -10908,7 +11078,7 @@ jakub
 
 variadic52.C
 file
-
+149693
 
 
 
@@ -10942,7 +11112,7 @@ dgregor
 
 variadic35.C
 file
-
+149693
 
 
 
@@ -10976,7 +11146,7 @@ dgregor
 
 variadic18.C
 file
-
+149693
 
 
 
@@ -11010,7 +11180,7 @@ dgregor
 
 elision_neg.C
 file
-
+149693
 
 
 
@@ -11044,7 +11214,7 @@ dgregor
 
 bracket2.C
 file
-
+149693
 
 
 

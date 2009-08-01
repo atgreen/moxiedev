@@ -152,6 +152,7 @@ struct GTY(()) cgraph_clone_info
 {
   VEC(ipa_replace_map_p,gc)* tree_map;
   bitmap args_to_skip;
+  bitmap combined_args_to_skip;
 };
 
 /* The cgraph data structure.
@@ -426,7 +427,6 @@ struct cgraph_node * cgraph_create_virtual_clone (struct cgraph_node *old_node,
 void cgraph_finalize_function (tree, bool);
 void cgraph_mark_if_needed (tree);
 void cgraph_finalize_compilation_unit (void);
-void cgraph_optimize (void);
 void cgraph_mark_needed_node (struct cgraph_node *);
 void cgraph_mark_address_taken_node (struct cgraph_node *);
 void cgraph_mark_reachable_node (struct cgraph_node *);
@@ -442,7 +442,6 @@ struct cgraph_node *cgraph_function_versioning (struct cgraph_node *,
 						VEC(ipa_replace_map_p,gc)*,
 						bitmap);
 void tree_function_versioning (tree, tree, VEC (ipa_replace_map_p,gc)*, bool, bitmap);
-void cgraph_analyze_function (struct cgraph_node *);
 struct cgraph_node *save_inline_function_body (struct cgraph_node *);
 void record_references_in_initializer (tree);
 bool cgraph_process_new_functions (void);
@@ -607,5 +606,24 @@ cgraph_node_set_size (cgraph_node_set set)
   return htab_elements (set->hashtab);
 }
 
+/* Uniquize all constants that appear in memory.
+   Each constant in memory thus far output is recorded
+   in `const_desc_table'.  */
+
+struct GTY(()) constant_descriptor_tree {
+  /* A MEM for the constant.  */
+  rtx rtl;
+  
+  /* The value of the constant.  */
+  tree value;
+
+  /* Hash of value.  Computing the hash from value each time
+     hashfn is called can't work properly, as that means recursive
+     use of the hash table during hash table expansion.  */
+  hashval_t hash;
+};
+
+/* Constant pool accessor function.  */
+htab_t constant_pool_htab (void);
 
 #endif  /* GCC_CGRAPH_H  */

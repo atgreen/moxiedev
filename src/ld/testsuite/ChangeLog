@@ -1,3 +1,78 @@
+2009-07-31  Hans-Peter Nilsson  <hp@bitrange.com>
+
+	* ld-mmix/x.s, ld-mmix/y.s, ld-mmix/zeroeh.ld,
+	ld-mmix/zeroehelf.d, ld-mmix/zeroehmmo.d: Use .gcc_except_table,
+	not .eh_frame.
+
+2009-07-30  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-elf/shared.exp: Comment out dl3b.
+
+2009-07-30  Hans-Peter Nilsson  <hp@bitrange.com>
+
+	* ld-scripts/empty-address-3a.d, ld-scripts/empty-address-3b.d:
+	Skip for mmix-knuth-mmixware.
+
+2009-07-29  Hans-Peter Nilsson  <hp@bitrange.com>
+
+	* ld-scripts/default-script.s (text): Globalize.
+	* ld-scripts/default-script1.d, ld-scripts/default-script2.d,
+	ld-scripts/default-script3.d, ld-scripts/default-script4.d: Adjust
+	accordingly.
+
+2009-07-25  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-x86-64/abs-l1om.d: New.
+	* ld-x86-64/protected2-l1om.d: Likewise.
+	* ld-x86-64/protected3-l1om.d: Likewise.
+
+	* ld-x86-64/x86-64.exp: Run abs-l1om, protected2-l1om and
+	protected3-l1om.
+
+2009-07-24  Trevor Smigiel  <Trevor_Smigiel@playstation.sony.com>
+	    Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-spu/pic.d: New.
+	* ld-spu/pic.s: New.
+	* ld-spu/picdef.s: New.
+
+2009-07-23  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10434
+	* ld-x86-64/tlsle1.d: New.
+	* ld-x86-64/tlsle1.s: Likewise.
+
+	* ld-x86-64/x86-64.exp: Run tlsle1.
+
+2009-07-21  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10426
+	* ld-ifunc/ifunc.exp: Check test-1 and libtest-2.so.  Updated.
+
+	* ld-ifunc/test-1.c: New.
+	* ld-ifunc/test-2.c: Likewise.
+
+2009-07-17  Chao-ying Fu  <fu@mips.com>
+
+	* ld-mips-elf/pic-and-nonpic-3b.dd: Updated to use new PLT
+	entries.
+	* ld-mips-elf/pic-and-nonpic-5b.dd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-6-o32.dd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-6-n32.dd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-6-n64.dd: Likewise.
+
+2009-07-16  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-ifunc/ifunc-5r-local-i386.d: New.
+	* ld-ifunc/ifunc-5r-local-x86-64.d: Likewise.
+
+2009-07-16  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* ld-arm/arm-target2.s: Add addend cases.
+	* ld-arm/arm-target2-rel.d: Adjust.
+	* ld-arm/arm-target2-abs.d: Adjust.
+	* ld-arm/arm-target2-got-rel.d: Adjust.
+
 2009-07-13  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* ld-ifunc/ifunc.exp: Don't use -shared/-static to build object

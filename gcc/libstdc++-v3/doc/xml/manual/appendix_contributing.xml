@@ -35,7 +35,7 @@
 <sect1 id="contrib.list" xreflabel="Contributor Checklist">
   <title>Contributor Checklist</title>
 
-  <sect2 id="list.reading" xreflabel="list.reading">
+  <sect2 id="list.reading">
     <title>Reading</title>
 
     <itemizedlist>
@@ -52,7 +52,7 @@
 	  organization is ANSI and their web-site is right
 	  <ulink url="http://www.ansi.org">here.</ulink> 
 	  (And if you've already registered with them, clicking this link will take you to directly to the place where you can 
-	  <ulink url="http://webstore.ansi.org/ansidocstore/product.asp?sku=ISO%2FIEC+14882%3A2003">buy the standard on-line.)</ulink>
+	  <ulink url="http://webstore.ansi.org/RecordDetail.aspx?sku=ISO/IEC%2014882:2003">buy the standard on-line.)</ulink>
 	</para>
       </listitem>
 
@@ -69,7 +69,7 @@
 	  The newsgroup dedicated to standardization issues is
 	  comp.std.c++: this FAQ for this group is quite useful and
 	  can be
-	  found <ulink url="http://www.jamesd.demon.co.uk/csc/faq.html">
+	  found <ulink url="http://www.comeaucomputing.com/csc/faq.html">
 	  here </ulink>.
       </para>
       </listitem>
@@ -77,7 +77,7 @@
       <listitem>
 	<para> 
 	  Peruse
-	  the <ulink url="http://www.gnu.org/prep/standards_toc.html">GNU
+	  the <ulink url="http://www.gnu.org/prep/standards">GNU
 	  Coding Standards</ulink>, and chuckle when you hit the part
 	  about <quote>Using Languages Other Than C</quote>.
 	</para>
@@ -101,7 +101,7 @@
     </itemizedlist>
 
   </sect2>
-  <sect2 id="list.copyright" xreflabel="list.copyright">
+  <sect2 id="list.copyright">
     <title>Assignment</title>
     <para>
       Small changes can be accepted without a copyright assignment form on
@@ -143,7 +143,7 @@
     </para>
   </sect2>
 
-  <sect2 id="list.getting" xreflabel="list.getting">
+  <sect2 id="list.getting">
     <title>Getting Sources</title>
     <para>
       <ulink url="http://gcc.gnu.org/svnwrite.html">Getting write access
@@ -151,7 +151,7 @@
     </para>
   </sect2>
 
-  <sect2 id="list.patches" xreflabel="list.patches">
+  <sect2 id="list.patches">
     <title>Submitting Patches</title>
 
     <para>
@@ -318,7 +318,7 @@ indicate a place that may require attention for multi-thread safety.
   <title>Coding Style</title>
   <para>
   </para>
-  <sect2 id="coding_style.bad_identifiers" xreflabel="coding_style.bad">
+  <sect2 id="coding_style.bad_identifiers">
     <title>Bad Identifiers</title>
     <para>
       Identifiers that conflict and should be avoided.
@@ -513,7 +513,7 @@ indicate a place that may require attention for multi-thread safety.
     </literallayout>
   </sect2>
 
-  <sect2 id="coding_style.example" xreflabel="coding_style.example">
+  <sect2 id="coding_style.example">
     <title>By Example</title>
     <literallayout>
       This library is written to appropriate C++ coding standards. As such,
@@ -915,14 +915,14 @@ indicate a place that may require attention for multi-thread safety.
 <sect1 id="contrib.doc_style" xreflabel="Documentation Style">
   <?dbhtml filename="documentation_style.html"?>
   <title>Documentation Style</title>
-  <sect2 id="doc_style.doxygen" xreflabel="doc_style.doxygen">
+  <sect2 id="doc_style.doxygen">
     <title>Doxygen</title>
-    <sect3 id="doxygen.prereq" xreflabel="doxygen.prereq">
+    <sect3 id="doxygen.prereq">
       <title>Prerequisites</title>
       <para>
 	Prerequisite tools are Bash 2.x,
 	<ulink url="http://www.doxygen.org/">Doxygen</ulink>, and
-	the <ulink url="http://www.gnu.org/software/coreutils/">GNU
+	the <ulink url="http://www.gnu.org/software/coreutils">GNU
 	coreutils</ulink>. (GNU versions of find, xargs, and possibly
 	sed and grep are used, just because the GNU versions make
 	things very easy.)
@@ -931,12 +931,12 @@ indicate a place that may require attention for multi-thread safety.
       <para>
 	To generate the pretty pictures and hierarchy
 	graphs, the
-	<ulink url="http://www.research.att.com/sw/tools/graphviz/download.html">Graphviz</ulink>
+	<ulink url="http://www.graphviz.org">Graphviz</ulink>
 	package will need to be installed. 
       </para>
     </sect3>
 
-    <sect3 id="doxygen.rules" xreflabel="doxygen.rules">
+    <sect3 id="doxygen.rules">
       <title>Generating the Doxygen Files</title>
       <para>
 	The following Makefile rules run Doxygen to generate HTML
@@ -972,7 +972,7 @@ indicate a place that may require attention for multi-thread safety.
 
     </sect3>
 
-    <sect3 id="doxygen.markup" xreflabel="doxygen.markup">
+    <sect3 id="doxygen.markup">
       <title>Markup</title>
 
       <para>
@@ -1055,10 +1055,10 @@ indicate a place that may require attention for multi-thread safety.
 
   </sect2>
 
-  <sect2 id="doc_style.docbook" xreflabel="doc_style.docbook">
+  <sect2 id="doc_style.docbook">
     <title>Docbook</title>
 
-    <sect3 id="docbook.prereq" xreflabel="docbook.prereq">
+    <sect3 id="docbook.prereq">
       <title>Prerequisites</title>
       <para>
 	Editing the DocBook sources requires an XML editor. Many
@@ -1129,7 +1129,7 @@ xmllint --noout --valid <filename>xml/index.xml</filename>
 	</screen>
     </sect3>
 
-    <sect3 id="docbook.rules" xreflabel="docbook.rules">
+    <sect3 id="docbook.rules">
       <title>Generating the DocBook Files</title>
 
       <para>
@@ -1157,7 +1157,7 @@ xmllint --noout --valid <filename>xml/index.xml</filename>
 
     </sect3>
 
-    <sect3 id="docbook.examples" xreflabel="docbook.examples">
+    <sect3 id="docbook.examples">
       <title>File Organization and Basics</title>
 
     <literallayout>
@@ -1223,7 +1223,7 @@ xmllint --noout --valid <filename>xml/index.xml</filename>
     </literallayout>
     </sect3>
 
-    <sect3 id="docbook.markup" xreflabel="docbook.markup">
+    <sect3 id="docbook.markup">
       <title>Markup By Example</title>
 
 <para>
@@ -1708,7 +1708,7 @@ table below.
     Anyone participating in implementation of the library should obtain
     a copy of the standard, ISO 14882.  People in the U.S. can obtain an
     electronic copy for US$18 from ANSI's web site. Those from other
-    countries should visit http://www.iso.ch/ to find out the location
+    countries should visit http://www.iso.org/ to find out the location
     of their country's representation in ISO, in order to know who can
     sell them a copy.
 

@@ -1080,7 +1080,10 @@ symbol_file_add_with_addrs_or_offsets (bfd *abfd,
   do_cleanups (my_cleanups);
 
   if (objfile->sf == NULL)
-    return objfile;	/* No symbols. */
+    {
+      observer_notify_new_objfile (objfile);
+      return objfile;	/* No symbols. */
+    }
 
   new_symfile_objfile (objfile, add_flags);
 
@@ -2457,8 +2460,10 @@ reread_symbols (void)
       /* At least one objfile has changed, so we can consider that
          the executable we're debugging has changed too.  */
       observer_notify_executable_changed ();
+
+      /* Notify objfiles that we've modified objfile sections.  */
+      objfiles_changed ();
     }
-      
 }
 
 

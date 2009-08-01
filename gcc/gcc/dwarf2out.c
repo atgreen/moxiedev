@@ -96,6 +96,22 @@ static void dwarf2out_source_line (unsigned int, const char *, int, bool);
 static rtx last_var_location_insn;
 #endif
 
+#ifdef VMS_DEBUGGING_INFO
+int vms_file_stats_name (const char *, long long *, long *, char *, int *);
+
+/* Define this macro to be a nonzero value if the directory specifications
+    which are output in the debug info should end with a separator.  */
+#define DWARF2_DIR_SHOULD_END_WITH_SEPARATOR 1
+/* Define this macro to evaluate to a nonzero value if GCC should refrain
+   from generating indirect strings in DWARF2 debug information, for instance
+   if your target is stuck with an old version of GDB that is unable to
+   process them properly or uses VMS Debug.  */
+#define DWARF2_INDIRECT_STRING_SUPPORT_MISSING_ON_TARGET 1
+#else
+#define DWARF2_DIR_SHOULD_END_WITH_SEPARATOR 0
+#define DWARF2_INDIRECT_STRING_SUPPORT_MISSING_ON_TARGET 0
+#endif
+
 #ifndef DWARF2_FRAME_INFO
 # ifdef DWARF2_DEBUGGING_INFO
 #  define DWARF2_FRAME_INFO \
@@ -268,8 +284,8 @@ typedef struct GTY(()) dw_fde_struct {
   const char *dw_fde_hot_section_end_label;
   const char *dw_fde_unlikely_section_label;
   const char *dw_fde_unlikely_section_end_label;
-  bool dw_fde_switched_sections;
   dw_cfi_ref dw_fde_cfi;
+  dw_cfi_ref dw_fde_switch_cfi; /* Last CFI before switching sections.  */
   unsigned funcdef_number;
   HOST_WIDE_INT stack_realignment;
   /* Dynamic realign argument pointer register.  */
@@ -288,6 +304,10 @@ typedef struct GTY(()) dw_fde_struct {
   /* True iff dw_fde_unlikely_section_label is in text_section or
      cold_text_section.  */
   unsigned cold_in_std_section : 1;
+  /* True iff switched sections.  */
+  unsigned dw_fde_switched_sections : 1;
+  /* True iff switching from cold to hot section.  */
+  unsigned dw_fde_switched_cold_to_hot : 1;
 }
 dw_fde_node;
 
@@ -3210,6 +3230,311 @@ output_cfi_directive (dw_cfi_ref cfi)
     }
 }
 
+DEF_VEC_P (dw_cfi_ref);
+DEF_VEC_ALLOC_P (dw_cfi_ref, heap);
+
+/* Output CFIs to bring current FDE to the same state as after executing
+   CFIs in CFI chain.  DO_CFI_ASM is true if .cfi_* directives shall
+   be emitted, false otherwise.  If it is false, FDE and FOR_EH are the
+   other arguments to pass to output_cfi.  */
+
+static void
+output_cfis (dw_cfi_ref cfi, bool do_cfi_asm, dw_fde_ref fde, bool for_eh)
+{
+  struct dw_cfi_struct cfi_buf;
+  dw_cfi_ref cfi2;
+  dw_cfi_ref cfi_args_size = NULL, cfi_cfa = NULL, cfi_cfa_offset = NULL;
+  VEC (dw_cfi_ref, heap) *regs = VEC_alloc (dw_cfi_ref, heap, 32);
+  unsigned int len, idx;
+
+  for (;; cfi = cfi->dw_cfi_next)
+    switch (cfi ? cfi->dw_cfi_opc : DW_CFA_nop)
+      {
+      case DW_CFA_advance_loc:
+      case DW_CFA_advance_loc1:
+      case DW_CFA_advance_loc2:
+      case DW_CFA_advance_loc4:
+      case DW_CFA_MIPS_advance_loc8:
+      case DW_CFA_set_loc:
+	/* All advances should be ignored.  */
+	break;
+      case DW_CFA_remember_state:
+	{
+	  dw_cfi_ref args_size = cfi_args_size;
+
+	  /* Skip everything between .cfi_remember_state and
+	     .cfi_restore_state.  */
+	  for (cfi2 = cfi->dw_cfi_next; cfi2; cfi2 = cfi2->dw_cfi_next)
+	    if (cfi2->dw_cfi_opc == DW_CFA_restore_state)
+	      break;
+	    else if (cfi2->dw_cfi_opc == DW_CFA_GNU_args_size)
+	      args_size = cfi2;
+	    else
+	      gcc_assert (cfi2->dw_cfi_opc != DW_CFA_remember_state);
+
+	  if (cfi2 == NULL)
+	    goto flush_all;
+	  else
+	    {
+	      cfi = cfi2;
+	      cfi_args_size = args_size;
+	    }
+	  break;
+	}
+      case DW_CFA_GNU_args_size:
+	cfi_args_size = cfi;
+	break;
+      case DW_CFA_GNU_window_save:
+	goto flush_all;
+      case DW_CFA_offset:
+      case DW_CFA_offset_extended:
+      case DW_CFA_offset_extended_sf:
+      case DW_CFA_restore:
+      case DW_CFA_restore_extended:
+      case DW_CFA_undefined:
+      case DW_CFA_same_value:
+      case DW_CFA_register:
+      case DW_CFA_val_offset:
+      case DW_CFA_val_offset_sf:
+      case DW_CFA_expression:
+      case DW_CFA_val_expression:
+      case DW_CFA_GNU_negative_offset_extended:
+	if (VEC_length (dw_cfi_ref, regs) <= cfi->dw_cfi_oprnd1.dw_cfi_reg_num)
+	  VEC_safe_grow_cleared (dw_cfi_ref, heap, regs,
+				 cfi->dw_cfi_oprnd1.dw_cfi_reg_num + 1);
+	VEC_replace (dw_cfi_ref, regs, cfi->dw_cfi_oprnd1.dw_cfi_reg_num, cfi);
+	break;
+      case DW_CFA_def_cfa:
+      case DW_CFA_def_cfa_sf:
+      case DW_CFA_def_cfa_expression:
+	cfi_cfa = cfi;
+	cfi_cfa_offset = cfi;
+	break;
+      case DW_CFA_def_cfa_register:
+	cfi_cfa = cfi;
+	break;
+      case DW_CFA_def_cfa_offset:
+      case DW_CFA_def_cfa_offset_sf:
+	cfi_cfa_offset = cfi;
+	break;
+      case DW_CFA_nop:
+	gcc_assert (cfi == NULL);
+      flush_all:
+	len = VEC_length (dw_cfi_ref, regs);
+	for (idx = 0; idx < len; idx++)
+	  {
+	    cfi2 = VEC_replace (dw_cfi_ref, regs, idx, NULL);
+	    if (cfi2 != NULL
+		&& cfi2->dw_cfi_opc != DW_CFA_restore
+		&& cfi2->dw_cfi_opc != DW_CFA_restore_extended)
+	      {
+		if (do_cfi_asm)
+		  output_cfi_directive (cfi2);
+		else
+		  output_cfi (cfi2, fde, for_eh);
+	      }
+	  }
+	if (cfi_cfa && cfi_cfa_offset && cfi_cfa_offset != cfi_cfa)
+	  {
+	    gcc_assert (cfi_cfa->dw_cfi_opc != DW_CFA_def_cfa_expression);
+	    cfi_buf = *cfi_cfa;
+	    switch (cfi_cfa_offset->dw_cfi_opc)
+	      {
+	      case DW_CFA_def_cfa_offset:
+		cfi_buf.dw_cfi_opc = DW_CFA_def_cfa;
+		cfi_buf.dw_cfi_oprnd2 = cfi_cfa_offset->dw_cfi_oprnd1;
+		break;
+	      case DW_CFA_def_cfa_offset_sf:
+		cfi_buf.dw_cfi_opc = DW_CFA_def_cfa_sf;
+		cfi_buf.dw_cfi_oprnd2 = cfi_cfa_offset->dw_cfi_oprnd1;
+		break;
+	      case DW_CFA_def_cfa:
+	      case DW_CFA_def_cfa_sf:
+		cfi_buf.dw_cfi_opc = cfi_cfa_offset->dw_cfi_opc;
+		cfi_buf.dw_cfi_oprnd2 = cfi_cfa_offset->dw_cfi_oprnd2;
+		break;
+	      default:
+		gcc_unreachable ();
+	      }
+	    cfi_cfa = &cfi_buf;
+	  }
+	else if (cfi_cfa_offset)
+	  cfi_cfa = cfi_cfa_offset;
+	if (cfi_cfa)
+	  {
+	    if (do_cfi_asm)
+	      output_cfi_directive (cfi_cfa);
+	    else
+	      output_cfi (cfi_cfa, fde, for_eh);
+	  }
+	cfi_cfa = NULL;
+	cfi_cfa_offset = NULL;
+	if (cfi_args_size
+	    && cfi_args_size->dw_cfi_oprnd1.dw_cfi_offset)
+	  {
+	    if (do_cfi_asm)
+	      output_cfi_directive (cfi_args_size);
+	    else
+	      output_cfi (cfi_args_size, fde, for_eh);
+	  }
+	cfi_args_size = NULL;
+	if (cfi == NULL)
+	  {
+	    VEC_free (dw_cfi_ref, heap, regs);
+	    return;
+	  }
+	else if (do_cfi_asm)
+	  output_cfi_directive (cfi);
+	else
+	  output_cfi (cfi, fde, for_eh);
+	break;
+      default:
+	gcc_unreachable ();
+    }
+}
+
+/* Output one FDE.  */
+
+static void
+output_fde (dw_fde_ref fde, bool for_eh, bool second,
+	    char *section_start_label, int fde_encoding, char *augmentation,
+	    bool any_lsda_needed, int lsda_encoding)
+{
+  const char *begin, *end;
+  static unsigned int j;
+  char l1[20], l2[20];
+  dw_cfi_ref cfi;
+
+  targetm.asm_out.unwind_label (asm_out_file, fde->decl, for_eh,
+				/* empty */ 0);
+  targetm.asm_out.internal_label (asm_out_file, FDE_LABEL,
+				  for_eh + j);
+  ASM_GENERATE_INTERNAL_LABEL (l1, FDE_AFTER_SIZE_LABEL, for_eh + j);
+  ASM_GENERATE_INTERNAL_LABEL (l2, FDE_END_LABEL, for_eh + j);
+  if (DWARF_INITIAL_LENGTH_SIZE - DWARF_OFFSET_SIZE == 4 && !for_eh)
+    dw2_asm_output_data (4, 0xffffffff, "Initial length escape value"
+			 " indicating 64-bit DWARF extension");
+  dw2_asm_output_delta (for_eh ? 4 : DWARF_OFFSET_SIZE, l2, l1,
+			"FDE Length");
+  ASM_OUTPUT_LABEL (asm_out_file, l1);
+
+  if (for_eh)
+    dw2_asm_output_delta (4, l1, section_start_label, "FDE CIE offset");
+  else
+    dw2_asm_output_offset (DWARF_OFFSET_SIZE, section_start_label,
+			   debug_frame_section, "FDE CIE offset");
+
+  if (!fde->dw_fde_switched_sections)
+    {
+      begin = fde->dw_fde_begin;
+      end = fde->dw_fde_end;
+    }
+  else if (second ^ fde->dw_fde_switched_cold_to_hot)
+    {
+      begin = fde->dw_fde_unlikely_section_label;
+      end = fde->dw_fde_unlikely_section_end_label;
+    }
+  else
+    {
+      begin = fde->dw_fde_hot_section_label;
+      end = fde->dw_fde_hot_section_end_label;
+    }
+
+  if (for_eh)
+    {
+      rtx sym_ref = gen_rtx_SYMBOL_REF (Pmode, begin);
+      SYMBOL_REF_FLAGS (sym_ref) |= SYMBOL_FLAG_LOCAL;
+      dw2_asm_output_encoded_addr_rtx (fde_encoding, sym_ref, false,
+				       "FDE initial location");
+      dw2_asm_output_delta (size_of_encoded_value (fde_encoding),
+			    end, begin, "FDE address range");
+    }
+  else
+    {
+      dw2_asm_output_addr (DWARF2_ADDR_SIZE, begin, "FDE initial location");
+      dw2_asm_output_delta (DWARF2_ADDR_SIZE, end, begin, "FDE address range");
+    }
+
+  if (augmentation[0])
+    {
+      if (any_lsda_needed)
+	{
+	  int size = size_of_encoded_value (lsda_encoding);
+
+	  if (lsda_encoding == DW_EH_PE_aligned)
+	    {
+	      int offset = (  4		/* Length */
+			    + 4		/* CIE offset */
+			    + 2 * size_of_encoded_value (fde_encoding)
+			    + 1		/* Augmentation size */ );
+	      int pad = -offset & (PTR_SIZE - 1);
+
+	      size += pad;
+	      gcc_assert (size_of_uleb128 (size) == 1);
+	    }
+
+	  dw2_asm_output_data_uleb128 (size, "Augmentation size");
+
+	  if (fde->uses_eh_lsda)
+	    {
+	      ASM_GENERATE_INTERNAL_LABEL (l1, "LLSDA", fde->funcdef_number);
+	      dw2_asm_output_encoded_addr_rtx (lsda_encoding,
+					       gen_rtx_SYMBOL_REF (Pmode, l1),
+					       false,
+					       "Language Specific Data Area");
+	    }
+	  else
+	    {
+	      if (lsda_encoding == DW_EH_PE_aligned)
+		ASM_OUTPUT_ALIGN (asm_out_file, floor_log2 (PTR_SIZE));
+	      dw2_asm_output_data (size_of_encoded_value (lsda_encoding), 0,
+				   "Language Specific Data Area (none)");
+	    }
+	}
+      else
+	dw2_asm_output_data_uleb128 (0, "Augmentation size");
+    }
+
+  /* Loop through the Call Frame Instructions associated with
+     this FDE.  */
+  fde->dw_fde_current_label = begin;
+  if (!fde->dw_fde_switched_sections)
+    for (cfi = fde->dw_fde_cfi; cfi != NULL; cfi = cfi->dw_cfi_next)
+      output_cfi (cfi, fde, for_eh);
+  else if (!second)
+    {
+      if (fde->dw_fde_switch_cfi)
+	for (cfi = fde->dw_fde_cfi; cfi != NULL; cfi = cfi->dw_cfi_next)
+	  {
+	    output_cfi (cfi, fde, for_eh);
+	    if (cfi == fde->dw_fde_switch_cfi)
+	      break;
+	  }
+    }
+  else
+    {
+      dw_cfi_ref cfi_next = fde->dw_fde_cfi;
+
+      if (fde->dw_fde_switch_cfi)
+	{
+	  cfi_next = fde->dw_fde_switch_cfi->dw_cfi_next;
+	  fde->dw_fde_switch_cfi->dw_cfi_next = NULL;
+	  output_cfis (fde->dw_fde_cfi, false, fde, for_eh);
+	  fde->dw_fde_switch_cfi->dw_cfi_next = cfi_next;
+	}
+      for (cfi = cfi_next; cfi != NULL; cfi = cfi->dw_cfi_next)
+	output_cfi (cfi, fde, for_eh);
+    }
+
+  /* Pad the FDE out to an address sized boundary.  */
+  ASM_OUTPUT_ALIGN (asm_out_file,
+		    floor_log2 ((for_eh ? PTR_SIZE : DWARF2_ADDR_SIZE)));
+  ASM_OUTPUT_LABEL (asm_out_file, l2);
+
+  j += 2;
+}
+
+
 /* Output the call frame information used to record information
    that relates to calculating the frame pointer, and records the
    location of saved registers.  */
@@ -3425,6 +3750,7 @@ output_call_frame_info (int for_eh)
   /* Loop through all of the FDE's.  */
   for (i = 0; i < fde_table_in_use; i++)
     {
+      unsigned int k;
       fde = &fde_table[i];
 
       /* Don't emit EH unwind info for leaf functions that don't need it.  */
@@ -3434,139 +3760,9 @@ output_call_frame_info (int for_eh)
 	  && !fde->uses_eh_lsda)
 	continue;
 
-      targetm.asm_out.unwind_label (asm_out_file, fde->decl, for_eh, /* empty */ 0);
-      targetm.asm_out.internal_label (asm_out_file, FDE_LABEL, for_eh + i * 2);
-      ASM_GENERATE_INTERNAL_LABEL (l1, FDE_AFTER_SIZE_LABEL, for_eh + i * 2);
-      ASM_GENERATE_INTERNAL_LABEL (l2, FDE_END_LABEL, for_eh + i * 2);
-      if (DWARF_INITIAL_LENGTH_SIZE - DWARF_OFFSET_SIZE == 4 && !for_eh)
-	dw2_asm_output_data (4, 0xffffffff,
-			     "Initial length escape value indicating 64-bit DWARF extension");
-      dw2_asm_output_delta (for_eh ? 4 : DWARF_OFFSET_SIZE, l2, l1,
-			    "FDE Length");
-      ASM_OUTPUT_LABEL (asm_out_file, l1);
-
-      if (for_eh)
-	dw2_asm_output_delta (4, l1, section_start_label, "FDE CIE offset");
-      else
-	dw2_asm_output_offset (DWARF_OFFSET_SIZE, section_start_label,
-			       debug_frame_section, "FDE CIE offset");
-
-      if (for_eh)
-	{
-	  if (fde->dw_fde_switched_sections)
-	    {
-	      rtx sym_ref2 = gen_rtx_SYMBOL_REF (Pmode,
-				      fde->dw_fde_unlikely_section_label);
-	      rtx sym_ref3= gen_rtx_SYMBOL_REF (Pmode,
-				      fde->dw_fde_hot_section_label);
-	      SYMBOL_REF_FLAGS (sym_ref2) |= SYMBOL_FLAG_LOCAL;
-	      SYMBOL_REF_FLAGS (sym_ref3) |= SYMBOL_FLAG_LOCAL;
-	      dw2_asm_output_encoded_addr_rtx (fde_encoding, sym_ref3, false,
-					       "FDE initial location");
-	      dw2_asm_output_delta (size_of_encoded_value (fde_encoding),
-				    fde->dw_fde_hot_section_end_label,
-				    fde->dw_fde_hot_section_label,
-				    "FDE address range");
-	      dw2_asm_output_encoded_addr_rtx (fde_encoding, sym_ref2, false,
-					       "FDE initial location");
-	      dw2_asm_output_delta (size_of_encoded_value (fde_encoding),
-				    fde->dw_fde_unlikely_section_end_label,
-				    fde->dw_fde_unlikely_section_label,
-				    "FDE address range");
-	    }
-	  else
-	    {
-	      rtx sym_ref = gen_rtx_SYMBOL_REF (Pmode, fde->dw_fde_begin);
-	      SYMBOL_REF_FLAGS (sym_ref) |= SYMBOL_FLAG_LOCAL;
-	      dw2_asm_output_encoded_addr_rtx (fde_encoding,
-					       sym_ref,
-					       false,
-					       "FDE initial location");
-	      dw2_asm_output_delta (size_of_encoded_value (fde_encoding),
-				    fde->dw_fde_end, fde->dw_fde_begin,
-				    "FDE address range");
-	    }
-	}
-      else
-	{
-	  if (fde->dw_fde_switched_sections)
-	    {
-	      dw2_asm_output_addr (DWARF2_ADDR_SIZE,
-				   fde->dw_fde_hot_section_label,
-				   "FDE initial location");
-	      dw2_asm_output_delta (DWARF2_ADDR_SIZE,
-				    fde->dw_fde_hot_section_end_label,
-				    fde->dw_fde_hot_section_label,
-				    "FDE address range");
-	      dw2_asm_output_addr (DWARF2_ADDR_SIZE,
-				   fde->dw_fde_unlikely_section_label,
-				   "FDE initial location");
-	      dw2_asm_output_delta (DWARF2_ADDR_SIZE,
-				    fde->dw_fde_unlikely_section_end_label,
-				    fde->dw_fde_unlikely_section_label,
-				    "FDE address range");
-	    }
-	  else
-	    {
-	      dw2_asm_output_addr (DWARF2_ADDR_SIZE, fde->dw_fde_begin,
-				   "FDE initial location");
-	      dw2_asm_output_delta (DWARF2_ADDR_SIZE,
-				    fde->dw_fde_end, fde->dw_fde_begin,
-				    "FDE address range");
-	    }
-	}
-
-      if (augmentation[0])
-	{
-	  if (any_lsda_needed)
-	    {
-	      int size = size_of_encoded_value (lsda_encoding);
-
-	      if (lsda_encoding == DW_EH_PE_aligned)
-		{
-		  int offset = (  4		/* Length */
-				+ 4		/* CIE offset */
-				+ 2 * size_of_encoded_value (fde_encoding)
-				+ 1		/* Augmentation size */ );
-		  int pad = -offset & (PTR_SIZE - 1);
-
-		  size += pad;
-		  gcc_assert (size_of_uleb128 (size) == 1);
-		}
-
-	      dw2_asm_output_data_uleb128 (size, "Augmentation size");
-
-	      if (fde->uses_eh_lsda)
-		{
-		  ASM_GENERATE_INTERNAL_LABEL (l1, "LLSDA",
-					       fde->funcdef_number);
-		  dw2_asm_output_encoded_addr_rtx (
-			lsda_encoding, gen_rtx_SYMBOL_REF (Pmode, l1),
-			false, "Language Specific Data Area");
-		}
-	      else
-		{
-		  if (lsda_encoding == DW_EH_PE_aligned)
-		    ASM_OUTPUT_ALIGN (asm_out_file, floor_log2 (PTR_SIZE));
-		  dw2_asm_output_data
-		    (size_of_encoded_value (lsda_encoding), 0,
-		     "Language Specific Data Area (none)");
-		}
-	    }
-	  else
-	    dw2_asm_output_data_uleb128 (0, "Augmentation size");
-	}
-
-      /* Loop through the Call Frame Instructions associated with
-	 this FDE.  */
-      fde->dw_fde_current_label = fde->dw_fde_begin;
-      for (cfi = fde->dw_fde_cfi; cfi != NULL; cfi = cfi->dw_cfi_next)
-	output_cfi (cfi, fde, for_eh);
-
-      /* Pad the FDE out to an address sized boundary.  */
-      ASM_OUTPUT_ALIGN (asm_out_file,
-			floor_log2 ((for_eh ? PTR_SIZE : DWARF2_ADDR_SIZE)));
-      ASM_OUTPUT_LABEL (asm_out_file, l2);
+      for (k = 0; k < (fde->dw_fde_switched_sections ? 2 : 1); k++)
+	output_fde (fde, for_eh, k, section_start_label, fde_encoding,
+		    augmentation, any_lsda_needed, lsda_encoding);
     }
 
   if (for_eh && targetm.terminate_dw2_eh_frame_info)
@@ -3580,6 +3776,52 @@ output_call_frame_info (int for_eh)
   /* Turn off app to make assembly quicker.  */
   if (flag_debug_asm)
     app_disable ();
+}
+
+/* Emit .cfi_startproc and .cfi_personality/.cfi_lsda if needed.  */
+
+static void
+dwarf2out_do_cfi_startproc (void)
+{
+  int enc;
+  rtx ref;
+
+  fprintf (asm_out_file, "\t.cfi_startproc\n");
+
+  if (eh_personality_libfunc)
+    {
+      enc = ASM_PREFERRED_EH_DATA_FORMAT (/*code=*/2, /*global=*/1);
+      ref = eh_personality_libfunc;
+
+      /* ??? The GAS support isn't entirely consistent.  We have to
+	 handle indirect support ourselves, but PC-relative is done
+	 in the assembler.  Further, the assembler can't handle any
+	 of the weirder relocation types.  */
+      if (enc & DW_EH_PE_indirect)
+	ref = dw2_force_const_mem (ref, true);
+
+      fprintf (asm_out_file, "\t.cfi_personality 0x%x,", enc);
+      output_addr_const (asm_out_file, ref);
+      fputc ('\n', asm_out_file);
+    }
+
+  if (crtl->uses_eh_lsda)
+    {
+      char lab[20];
+
+      enc = ASM_PREFERRED_EH_DATA_FORMAT (/*code=*/0, /*global=*/0);
+      ASM_GENERATE_INTERNAL_LABEL (lab, "LLSDA",
+				   current_function_funcdef_no);
+      ref = gen_rtx_SYMBOL_REF (Pmode, lab);
+      SYMBOL_REF_FLAGS (ref) = SYMBOL_FLAG_LOCAL;
+
+      if (enc & DW_EH_PE_indirect)
+	ref = dw2_force_const_mem (ref, true);
+
+      fprintf (asm_out_file, "\t.cfi_lsda 0x%x,", enc);
+      output_addr_const (asm_out_file, ref);
+      fputc ('\n', asm_out_file);
+    }
 }
 
 /* Output a marker (i.e. a label) for the beginning of a function, before
@@ -3644,9 +3886,11 @@ dwarf2out_begin_prologue (unsigned int line ATTRIBUTE_UNUSED,
   fde->dw_fde_hot_section_end_label = NULL;
   fde->dw_fde_unlikely_section_label = NULL;
   fde->dw_fde_unlikely_section_end_label = NULL;
-  fde->dw_fde_switched_sections = false;
+  fde->dw_fde_switched_sections = 0;
+  fde->dw_fde_switched_cold_to_hot = 0;
   fde->dw_fde_end = NULL;
   fde->dw_fde_cfi = NULL;
+  fde->dw_fde_switch_cfi = NULL;
   fde->funcdef_number = current_function_funcdef_no;
   fde->nothrow = crtl->nothrow;
   fde->uses_eh_lsda = crtl->uses_eh_lsda;
@@ -3685,47 +3929,7 @@ dwarf2out_begin_prologue (unsigned int line ATTRIBUTE_UNUSED,
 #endif
 
   if (dwarf2out_do_cfi_asm ())
-    {
-      int enc;
-      rtx ref;
-
-      fprintf (asm_out_file, "\t.cfi_startproc\n");
-
-      if (eh_personality_libfunc)
-	{
-	  enc = ASM_PREFERRED_EH_DATA_FORMAT (/*code=*/2, /*global=*/1); 
-	  ref = eh_personality_libfunc;
-
-	  /* ??? The GAS support isn't entirely consistent.  We have to
-	     handle indirect support ourselves, but PC-relative is done
-	     in the assembler.  Further, the assembler can't handle any
-	     of the weirder relocation types.  */
-	  if (enc & DW_EH_PE_indirect)
-	    ref = dw2_force_const_mem (ref, true);
-
-	  fprintf (asm_out_file, "\t.cfi_personality 0x%x,", enc);
-	  output_addr_const (asm_out_file, ref);
-	  fputc ('\n', asm_out_file);
-	}
-
-      if (crtl->uses_eh_lsda)
-	{
-	  char lab[20];
-
-	  enc = ASM_PREFERRED_EH_DATA_FORMAT (/*code=*/0, /*global=*/0);
-	  ASM_GENERATE_INTERNAL_LABEL (lab, "LLSDA",
-				       current_function_funcdef_no);
-	  ref = gen_rtx_SYMBOL_REF (Pmode, lab);
-	  SYMBOL_REF_FLAGS (ref) = SYMBOL_FLAG_LOCAL;
-
-	  if (enc & DW_EH_PE_indirect)
-	    ref = dw2_force_const_mem (ref, true);
-
-	  fprintf (asm_out_file, "\t.cfi_lsda 0x%x,", enc);
-	  output_addr_const (asm_out_file, ref);
-	  fputc ('\n', asm_out_file);
-	}
-    }
+    dwarf2out_do_cfi_startproc ();
 }
 
 /* Output a marker (i.e. a label) for the absolute end of the generated code
@@ -3807,9 +4011,11 @@ dwarf2out_switch_text_section (void)
 {
   dw_fde_ref fde = current_fde ();
 
-  gcc_assert (cfun && fde);
+  gcc_assert (cfun && fde && !fde->dw_fde_switched_sections);
 
-  fde->dw_fde_switched_sections = true;
+  fde->dw_fde_switched_sections = 1;
+  fde->dw_fde_switched_cold_to_hot = !in_cold_section_p;
+
   fde->dw_fde_hot_section_label = crtl->subsections.hot_section_label;
   fde->dw_fde_hot_section_end_label = crtl->subsections.hot_section_end_label;
   fde->dw_fde_unlikely_section_label = crtl->subsections.cold_section_label;
@@ -3823,6 +4029,30 @@ dwarf2out_switch_text_section (void)
   /* There is no need to mark used sections when not debugging.  */
   if (cold_text_section != NULL)
     dwarf2out_note_section_used ();
+
+  if (dwarf2out_do_cfi_asm ())
+    fprintf (asm_out_file, "\t.cfi_endproc\n");
+
+  /* Now do the real section switch.  */
+  switch_to_section (current_function_section ());
+
+  if (dwarf2out_do_cfi_asm ())
+    {
+      dwarf2out_do_cfi_startproc ();
+      /* As this is a different FDE, insert all current CFI instructions
+	 again.  */
+      output_cfis (fde->dw_fde_cfi, true, fde, true);
+    }
+  else
+    {
+      dw_cfi_ref cfi = fde->dw_fde_cfi;
+
+      cfi = fde->dw_fde_cfi;
+      if (cfi)
+	while (cfi->dw_cfi_next != NULL)
+	  cfi = cfi->dw_cfi_next;
+      fde->dw_fde_switch_cfi = cfi;
+    }
 }
 #endif
 
@@ -6483,8 +6713,9 @@ AT_string_form (dw_attr_ref a)
   /* If we cannot expect the linker to merge strings in .debug_str
      section, only put it into .debug_str if it is worth even in this
      single module.  */
-  if ((debug_str_section->common.flags & SECTION_MERGE) == 0
-      && (len - DWARF_OFFSET_SIZE) * node->refcount <= len)
+  if (DWARF2_INDIRECT_STRING_SUPPORT_MISSING_ON_TARGET
+      || ((debug_str_section->common.flags & SECTION_MERGE) == 0
+      && (len - DWARF_OFFSET_SIZE) * node->refcount <= len))
     return node->form = DW_FORM_string;
 
   ASM_GENERATE_INTERNAL_LABEL (label, "LASF", dw2_string_counter);
@@ -9387,7 +9618,9 @@ output_file_names (void)
   idx = 1;
   idx_offset = dirs[0].length > 0 ? 1 : 0;
   for (i = 1 - idx_offset; i < ndirs; i++)
-    dw2_asm_output_nstring (dirs[i].path, dirs[i].length - 1,
+    dw2_asm_output_nstring (dirs[i].path,
+			    dirs[i].length
+			     - !DWARF2_DIR_SHOULD_END_WITH_SEPARATOR,
 			    "Directory Entry: 0x%x", i + idx_offset);
 
   dw2_asm_output_data (1, 0, "End directory table");
@@ -9405,6 +9638,42 @@ output_file_names (void)
       int file_idx = backmap[i];
       int dir_idx = dirs[files[file_idx].dir_idx].dir_idx;
 
+#ifdef VMS_DEBUGGING_INFO
+#define MAX_VMS_VERSION_LEN 6 /* ";32768" */
+
+      /* Setting these fields can lead to debugger miscomparisons,
+         but VMS Debug requires them to be set correctly.  */
+
+      int ver;
+      long long cdt;
+      long siz;
+      int maxfilelen = strlen (files[file_idx].path)
+			       + dirs[dir_idx].length
+			       + MAX_VMS_VERSION_LEN + 1;
+      char *filebuf = XALLOCAVEC (char, maxfilelen);
+
+      vms_file_stats_name (files[file_idx].path, 0, 0, 0, &ver);
+      snprintf (filebuf, maxfilelen, "%s;%d",
+	        files[file_idx].path + dirs[dir_idx].length, ver);
+
+      dw2_asm_output_nstring
+	(filebuf, -1, "File Entry: 0x%x", (unsigned) i + 1);
+
+      /* Include directory index.  */
+      dw2_asm_output_data_uleb128 (dir_idx + idx_offset, NULL);
+
+      /* Modification time.  */
+      dw2_asm_output_data_uleb128
+        ((vms_file_stats_name (files[file_idx].path, &cdt, 0, 0, 0) == 0)
+	  ? cdt : 0,
+	 NULL);
+
+      /* File length in bytes.  */
+      dw2_asm_output_data_uleb128
+        ((vms_file_stats_name (files[file_idx].path, 0, &siz, 0, 0) == 0)
+      	  ? siz : 0,
+	 NULL);
+#else
       dw2_asm_output_nstring (files[file_idx].path + dirs[dir_idx].length, -1,
 			      "File Entry: 0x%x", (unsigned) i + 1);
 
@@ -9416,6 +9685,7 @@ output_file_names (void)
 
       /* File length in bytes.  */
       dw2_asm_output_data_uleb128 (0, NULL);
+#endif
     }
 
   dw2_asm_output_data (1, 0, "End file name table");
@@ -12669,7 +12939,23 @@ static void
 add_comp_dir_attribute (dw_die_ref die)
 {
   const char *wd = get_src_pwd ();
-  if (wd != NULL)
+  char *wd1;
+
+  if (wd == NULL)
+    return;
+
+  if (DWARF2_DIR_SHOULD_END_WITH_SEPARATOR)
+    {
+      int wdlen;
+
+      wdlen = strlen (wd);
+      wd1 = GGC_NEWVEC (char, wdlen + 2);
+      strcpy (wd1, wd);
+      wd1 [wdlen] = DIR_SEPARATOR;
+      wd1 [wdlen + 1] = 0;
+      wd = wd1;
+    }
+
     add_AT_string (die, DW_AT_comp_dir, remap_debug_filename (wd));
 }
 
@@ -13062,7 +13348,7 @@ add_name_and_src_coords_attributes (dw_die_ref die, tree decl)
     {
       add_AT_addr (die, DW_AT_VMS_rtnbeg_pd_address,
 		   XEXP (DECL_RTL (decl), 0));
-      VEC_safe_push (tree, gc, used_rtx_array, XEXP (DECL_RTL (decl), 0));
+      VEC_safe_push (rtx, gc, used_rtx_array, XEXP (DECL_RTL (decl), 0));
     }
 #endif
 }

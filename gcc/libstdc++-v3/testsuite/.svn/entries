@@ -1,7 +1,7 @@
 10
 
 dir
-149693
+150304
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite
 svn://gcc.gnu.org/svn/gcc
 
@@ -23,13 +23,13 @@ rsandifo
 
 
 
-
+incomplete
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-25_algorithms
+27_io
 dir
 
-27_io
+25_algorithms
 dir
 
 19_diagnostics
@@ -40,7 +40,7 @@ dir
 
 Makefile.in
 file
-
+149693
 
 
 
@@ -78,16 +78,16 @@ dir
 18_support
 dir
 
-abi
-dir
-
 21_strings
 dir
 
-26_numerics
+abi
 dir
 
 30_threads
+dir
+
+26_numerics
 dir
 
 ext
@@ -96,10 +96,10 @@ dir
 performance
 dir
 
-libstdc++-dg
+17_intro
 dir
 
-17_intro
+libstdc++-dg
 dir
 
 22_locale
@@ -128,7 +128,7 @@ dir
 
 Makefile.am
 file
-
+149693
 
 
 

@@ -2473,20 +2473,28 @@ declare_local_label (tree id)
 static int
 decl_jump_unsafe (tree decl)
 {
+  /* [stmt.dcl]/3: A program that jumps from a point where a local variable
+     with automatic storage duration is not in scope to a point where it is
+     in scope is ill-formed unless the variable has scalar type, class type
+     with a trivial default constructor and a trivial destructor, a
+     cv-qualified version of one of these types, or an array of one of the
+     preceding types and is declared without an initializer (8.5).  */
+  tree type = TREE_TYPE (decl);
+
   if (TREE_CODE (decl) != VAR_DECL || TREE_STATIC (decl)
-      || TREE_TYPE (decl) == error_mark_node)
+      || type == error_mark_node)
     return 0;
 
-  if (TYPE_NEEDS_CONSTRUCTING (TREE_TYPE (decl))
+  type = strip_array_types (type);
+
+  if (type_has_nontrivial_default_init (TREE_TYPE (decl))
       || DECL_NONTRIVIALLY_INITIALIZED_P (decl))
     return 2;
 
-  if (pod_type_p (TREE_TYPE (decl)))
-    return 0;
+  if (TYPE_HAS_NONTRIVIAL_DESTRUCTOR (TREE_TYPE (decl)))
+    return 1;
 
-  /* The POD stuff is just pedantry; why should it matter if the class
-     contains a field of pointer to member type?  */
-  return 1;
+  return 0;
 }
 
 /* A subroutine of check_previous_goto_1 to identify a branch to the user.  */
@@ -2541,7 +2549,8 @@ check_previous_goto_1 (tree decl, struct cp_binding_level* level, tree names,
 	  if (problem > 1)
 	    error ("  crosses initialization of %q+#D", new_decls);
 	  else
-	    permerror (input_location, "  enters scope of non-POD %q+#D", new_decls);
+	    permerror (input_location, "  enters scope of %q+#D which has "
+		       "non-trivial destructor", new_decls);
 	}
 
       if (b == level)
@@ -2656,7 +2665,8 @@ check_goto (tree decl)
       else if (u > 1)
 	error ("  skips initialization of %q+#D", b);
       else
-	permerror (input_location, "  enters scope of non-POD %q+#D", b);
+	permerror (input_location, "  enters scope of %q+#D which has "
+		   "non-trivial destructor", b);
     }
 
   if (ent->in_try_scope)
@@ -4360,13 +4370,6 @@ grok_reference_init (tree decl, tree type, tree init, tree *cleanup)
       return NULL_TREE;
     }
 
-  if (TREE_CODE (init) == CONSTRUCTOR)
-    {
-      error ("ISO C++ forbids use of initializer list to "
-	     "initialize reference %qD", decl);
-      return NULL_TREE;
-    }
-
   if (TREE_CODE (init) == TREE_LIST)
     init = build_x_compound_expr_from_list (init, "initializer");
 
@@ -4875,7 +4878,7 @@ reshape_init_class (tree type, reshape_iter *d, bool first_initializer_p)
    a CONSTRUCTOR). TYPE is the type of the variable being initialized, D is the
    iterator within the CONSTRUCTOR which points to the initializer to process.
    FIRST_INITIALIZER_P is true if this is the first initializer of the
-   CONSTRUCTOR node.  */
+   outermost CONSTRUCTOR node.  */
 
 static tree
 reshape_init_r (tree type, reshape_iter *d, bool first_initializer_p)
@@ -4920,6 +4923,10 @@ reshape_init_r (tree type, reshape_iter *d, bool first_initializer_p)
      initializer is considered for the initialization of the first
      member of the subaggregate.  */
   if (TREE_CODE (init) != CONSTRUCTOR
+      /* But don't try this for the first initializer, since that would be
+	 looking through the outermost braces; A a2 = { a1 }; is not a
+	 valid aggregate initialization.  */
+      && !first_initializer_p
       && can_convert_arg (type, TREE_TYPE (init), init, LOOKUP_NORMAL))
     {
       d->cur++;
@@ -5687,11 +5694,13 @@ cp_finish_decl (tree decl, tree init, bool init_const_expr_p,
 
   if (TREE_CODE (decl) == VAR_DECL)
     {
-      /* Only PODs can have thread-local storage.  Other types may require
-	 various kinds of non-trivial initialization.  */
-      if (DECL_THREAD_LOCAL_P (decl) && !pod_type_p (TREE_TYPE (decl)))
-	error ("%qD cannot be thread-local because it has non-POD type %qT",
-	       decl, TREE_TYPE (decl));
+      /* Only variables with trivial initialization and destruction can
+	 have thread-local storage.  */
+      if (DECL_THREAD_LOCAL_P (decl)
+	  && (type_has_nontrivial_default_init (TREE_TYPE (decl))
+	      || TYPE_HAS_NONTRIVIAL_DESTRUCTOR (TREE_TYPE (decl))))
+	error ("%qD cannot be thread-local because it has non-trivial "
+	       "type %qT", decl, TREE_TYPE (decl));
       /* If this is a local variable that will need a mangled name,
 	 register it now.  We must do this before processing the
 	 initializer for the variable, since the initialization might
@@ -7627,7 +7636,6 @@ grokdeclarator (const cp_declarator *declarator,
   bool unsigned_p, signed_p, short_p, long_p, thread_p;
   bool type_was_error_mark_node = false;
   bool parameter_pack_p = declarator? declarator->parameter_pack_p : false;
-  bool set_no_warning = false;
   bool template_type_arg = false;
   const char *errmsg;
 
@@ -8307,7 +8315,6 @@ grokdeclarator (const cp_declarator *declarator,
 		/* We now know that the TYPE_QUALS don't apply to the
 		   decl, but to its return type.  */
 		type_quals = TYPE_UNQUALIFIED;
-		set_no_warning = true;
 	      }
 	    errmsg = targetm.invalid_return_type (type);
 	    if (errmsg)
@@ -9528,9 +9535,6 @@ grokdeclarator (const cp_declarator *declarator,
        for the instantiated declaration based on the type of DECL.  */
     if (!processing_template_decl)
       cp_apply_type_quals_to_decl (type_quals, decl);
-
-    if (set_no_warning)
-        TREE_NO_WARNING (decl) = 1;
 
     return decl;
   }
@@ -12422,9 +12426,6 @@ finish_function (int flags)
       f->x_return_value = NULL;
       f->bindings = NULL;
       f->extern_decl_map = NULL;
-
-      /* Handle attribute((warn_unused_result)).  Relies on gimple input.  */
-      c_warn_unused_result (gimple_body (fndecl));
     }
   /* Clear out the bits we don't need.  */
   local_names = NULL;

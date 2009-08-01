@@ -3,7 +3,6 @@ D/iconvdata////
 D/libc////
 D/libm////
 D/testsuite////
-/ChangeLog/1.1373/Mon Jul 13 12:30:23 2009/-ko/
 /HOWTO/1.1/Mon Jul  6 10:46:48 2009//
 /MAINTAINERS/1.9/Mon Jul  6 10:46:48 2009//
 /Makefile.am/1.43/Mon Jul  6 10:46:48 2009/-ko/
@@ -20,3 +19,4 @@ D/testsuite////
 /confsubdir.m4/1.1/Mon Jul  6 10:46:48 2009//
 /newlib.hin/1.19/Mon Jul  6 10:46:48 2009//
 /stamp-h.in/1.2/Mon Jul  6 10:46:48 2009//
+/ChangeLog/1.1377/Fri Jul 31 11:10:18 2009/-ko/

@@ -3,7 +3,7 @@
  "http://www.oasis-open.org/docbook/xml/4.5/docbookx.dtd" 
 [ ]>
 
-<book id="manual-index" xreflabel="manual-index">
+<book id="manual-index">
 <?dbhtml dir="manual"?>
 <?dbhtml filename="spine.html"?>
 <title>The GNU C++ Library</title>
@@ -12,7 +12,7 @@
   <copyright>
     <year>2009</year>
     <holder>
-      <ulink url="http://fsf.org">FSF</ulink>
+      <ulink url="http://www.fsf.org">FSF</ulink>
     </holder>
   </copyright>
   <legalnotice>

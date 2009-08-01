@@ -593,7 +593,7 @@ package body Freeze is
             if RM_Size (T) < S then
                Error_Msg_Uint_1 := S;
                Error_Msg_NE
-                 ("size for & too small, minimum allowed is ^",
+                 ("size for& too small, minimum allowed is ^",
                   Size_Clause (T), T);
 
             elsif Unknown_Esize (T) then
@@ -2280,15 +2280,39 @@ package body Freeze is
             end;
          end if;
 
-         --  See if Implicit_Packing would work
+         --  See if Size is too small as is (and implicit packing might help)
 
          if not Is_Packed (Rec)
+
+           --  No implicit packing if even one component is explicitly placed
+
            and then not Placed_Component
+
+           --  Must have size clause and all scalar components
+
            and then Has_Size_Clause (Rec)
            and then All_Scalar_Components
+
+           --  Do not try implicit packing on records with discriminants, too
+           --  complicated, especially in the variant record case.
+
            and then not Has_Discriminants (Rec)
+
+           --  We can implicitly pack if the specified size of the record is
+           --  less than the sum of the object sizes (no point in packing if
+           --  this is not the case).
+
            and then Esize (Rec) < Scalar_Component_Total_Esize
+
+           --  And the total RM size cannot be greater than the specified size
+           --  since otherwise packing will not get us where we have to be!
+
            and then Esize (Rec) >= Scalar_Component_Total_RM_Size
+
+           --  Never do implicit packing in CodePeer mode since we don't do
+           --  any packing ever in this mode (why not???)
+
+           and then not CodePeer_Mode
          then
             --  If implicit packing enabled, do it
 
@@ -3007,6 +3031,7 @@ package body Freeze is
                     and then not Is_Limited_Composite (E)
                     and then not Is_Packed (Root_Type (E))
                     and then not Has_Component_Size_Clause (Root_Type (E))
+                    and then not CodePeer_Mode
                   then
                      Get_Index_Bounds (First_Index (E), Lo, Hi);
 
@@ -3030,7 +3055,10 @@ package body Freeze is
                         --  was a pragma Pack (resulting in the component size
                         --  being the same as the RM_Size). Furthermore, the
                         --  component type size must be an odd size (not a
-                        --  multiple of storage unit)
+                        --  multiple of storage unit). If the component RM size
+                        --  is an exact number of storage units that is a power
+                        --  of two, the array is not packed and has a standard
+                        --  representation.
 
                         begin
                            if RM_Size (E) = Len * Rsiz
@@ -3054,6 +3082,19 @@ package body Freeze is
                                    ("\use explicit pragma Pack "
                                     & "or use pragma Implicit_Packing", SZ);
                               end if;
+
+                           elsif RM_Size (E) = Len * Rsiz
+                             and then Implicit_Packing
+                             and then
+                               (Rsiz / System_Storage_Unit = 1
+                                 or else Rsiz / System_Storage_Unit = 2
+                                 or else Rsiz / System_Storage_Unit = 4)
+                           then
+
+                              --  Not a packed array, but indicate the desired
+                              --  component size, for the back-end.
+
+                              Set_Component_Size (Btyp, Rsiz);
                            end if;
                         end;
                      end if;
@@ -4109,7 +4150,8 @@ package body Freeze is
       --  is frozen, but a function call may appear in an initialization proc.
       --  before the declaration is frozen. We need to generate the extra
       --  formals, if any, to ensure that the expansion of the call includes
-      --  the proper actuals.
+      --  the proper actuals. This only applies to Ada subprograms, not to
+      --  imported ones.
 
       Desig_Typ := Empty;
 
@@ -4136,6 +4178,7 @@ package body Freeze is
             if Present (Nam)
               and then Ekind (Nam) = E_Function
               and then Nkind (Parent (N)) = N_Function_Call
+              and then Convention (Nam) = Convention_Ada
             then
                Create_Extra_Formals (Nam);
             end if;
@@ -5092,11 +5135,12 @@ package body Freeze is
    exception
       when Cannot_Be_Static =>
 
-         --  If the object that cannot be static is imported or exported,
-         --  then we give an error message saying that this object cannot
-         --  be imported or exported.
+         --  If the object that cannot be static is imported or exported, then
+         --  issue an error message saying that this object cannot be imported
+         --  or exported. If it has an address clause it is an overlay in the
+         --  current partition and the static requirement is not relevant.
 
-         if Is_Imported (E) then
+         if Is_Imported (E) and then No (Address_Clause (E)) then
             Error_Msg_N
               ("& cannot be imported (local type is not constant)", E);
 

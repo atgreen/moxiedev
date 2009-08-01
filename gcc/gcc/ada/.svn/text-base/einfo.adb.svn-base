@@ -49,8 +49,8 @@ package body Einfo is
    -- Usage of Fields in Defining Entity Nodes --
    ----------------------------------------------
 
-   --  Four of these fields are defined in Sinfo, since they in are the
-   --  base part of the node. The access routines for these fields and the
+   --  Four of these fields are defined in Sinfo, since they in are the base
+   --  part of the node. The access routines for these four fields and the
    --  corresponding set procedures are defined in Sinfo. These fields are
    --  present in all entities. Note that Homonym is also in the base part of
    --  the node, but has access routines that are more properly part of Einfo,
@@ -665,7 +665,8 @@ package body Einfo is
    begin
       pragma Assert
         (Ekind (Id) = E_Record_Subtype
-         or else Ekind (Id) = E_Class_Wide_Subtype);
+           or else
+         Ekind (Id) = E_Class_Wide_Subtype);
       return Node16 (Id);
    end Cloned_Subtype;
 
@@ -691,6 +692,7 @@ package body Einfo is
 
    function Component_Type (Id : E) return E is
    begin
+      pragma Assert (Is_Array_Type (Id) or else Is_String_Type (Id));
       return Node20 (Implementation_Base_Type (Id));
    end Component_Type;
 
@@ -2365,8 +2367,8 @@ package body Einfo is
 
    function Parent_Subtype (Id : E) return E is
    begin
-      pragma Assert (Ekind (Id) = E_Record_Type);
-      return Node19 (Id);
+      pragma Assert (Is_Record_Type (Id));
+      return Node19 (Base_Type (Id));
    end Parent_Subtype;
 
    function Postcondition_Proc (Id : E) return E is

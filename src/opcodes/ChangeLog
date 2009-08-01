@@ -1,3 +1,51 @@
+2009-07-25  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure.in: Handle bfd_l1om_arch.
+	* disassemble.c (disassembler): Likewise.
+
+	* configure: Regenerated.
+
+	* i386-dis.c (print_insn): Handle bfd_mach_l1om and
+	bfd_mach_l1om_intel_syntax.  Use 8 bytes per line for Intel L1OM.
+
+	* i386-gen.c (cpu_flag_init): Set CPU_UNKNOWN_FLAGS to ~CpuL1OM.
+	Add CPU_L1OM_FLAGS.
+	(cpu_flags): Add CpuL1OM.
+	(set_bitfield): Take an argument to set the value field.
+	(process_i386_cpu_flag): Support ~CpuXXX and ~(CpuXXX|CpuYYY).
+	(process_i386_opcode_modifier): Updated.
+	(process_i386_operand_type): Likewise.
+	* i386-init.h: Regenerated.
+	* i386-tbl.h: Likewise.
+
+	* i386-opc.h (CpuL1OM): New.
+	(CpuXsave): Updated.
+	(i386_cpu_flags): Add cpul1om.
+
+2009-07-24  Jan Beulich  <jbeulich@novell.com>
+
+	* i386-dis.c (fgrps): Correct annotation for feni/fdisi. Add
+	frstpm.
+	* i386-gen.c (cpu_flag_init): Add FP enabling flags where needed.
+	(cpu_flags): Add Cpu8087, Cpu287, Cpu387, Cpu687, and CpuFISTTP.
+	(set_bitfield): Expand CpuFP to Cpu8087|Cpu287|Cpu387.
+	* i386-opc.h (Cpu8087, Cpu287, Cpu387, Cpu687, CpuFISTTP):
+	Define.
+	(union i386_cpu_flags): Add cpu8087, cpu287, cpu387, cpu687,
+	and cpufisttp.
+	* i386-opc.tbl: Qualify floating point instructions by their
+	respective CpuXXX flag. Fix fucom{,p,pp}, fprem1, fsin, fcos,
+	and fsincos to be avilable only on 387. Fix fstsw ax to be
+	available only on 287+. Add f{,n}eni, f{,n}disi, f{,n}setpm,
+	and frstpm.
+	* i386-init.h, i386-tbl.h: Regenerate.
+
+2009-07-20  Nick Clifton  <nickc@redhat.com>
+
+	PR 10288
+	* arm-dis.c (arm_opcodes): Catch non-zero bits 8-11 in register
+	offset or indexed based addressing mode 3.
+
 2009-07-14  Nick Clifton  <nickc@redhat.com>
 
 	PR 10288

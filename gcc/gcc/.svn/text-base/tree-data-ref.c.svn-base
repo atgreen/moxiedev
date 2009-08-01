@@ -157,6 +157,14 @@ dump_data_references (FILE *file, VEC (data_reference_p, heap) *datarefs)
     dump_data_reference (file, dr);
 }
 
+/* Dump into STDERR all the data references from DATAREFS.  */ 
+
+void 
+debug_data_references (VEC (data_reference_p, heap) *datarefs)
+{
+  dump_data_references (stderr, datarefs);
+}
+
 /* Dump to STDERR all the dependence relations from DDRS.  */ 
 
 void 
@@ -176,6 +184,14 @@ dump_data_dependence_relations (FILE *file,
 
   for (i = 0; VEC_iterate (ddr_p, ddrs, i, ddr); i++)
     dump_data_dependence_relation (file, ddr);
+}
+
+/* Print to STDERR the data_reference DR.  */
+
+void 
+debug_data_reference (struct data_reference *dr)
+{
+  dump_data_reference (stderr, dr);
 }
 
 /* Dump function for a DATA_REFERENCE structure.  */
@@ -3334,22 +3350,6 @@ access_functions_are_affine_or_constant_p (const struct data_reference *a,
   return true;
 }
 
-/* Return true if we can create an affine data-ref for OP in STMT.  */
-
-bool
-stmt_simple_memref_p (struct loop *loop, gimple stmt, tree op)
-{
-  data_reference_p dr;
-  bool res = true;
-
-  dr = create_data_ref (loop, op, stmt, true);
-  if (!access_functions_are_affine_or_constant_p (dr, loop))
-    res = false;
-
-  free_data_ref (dr);
-  return res;
-}
-
 /* Initializes an equation for an OMEGA problem using the information
    contained in the ACCESS_FUN.  Returns true when the operation
    succeeded.
@@ -4154,6 +4154,37 @@ find_data_references_in_stmt (struct loop *nest, gimple stmt,
 
       VEC_safe_push (data_reference_p, heap, *datarefs, dr);
     }
+  VEC_free (data_ref_loc, heap, references);
+  return ret;
+}
+
+/* Stores the data references in STMT to DATAREFS.  If there is an unanalyzable
+   reference, returns false, otherwise returns true.  NEST is the outermost
+   loop of the loop nest in which the references should be analyzed.  */
+
+bool
+graphite_find_data_references_in_stmt (struct loop *nest, gimple stmt,
+				       VEC (data_reference_p, heap) **datarefs)
+{
+  unsigned i;
+  VEC (data_ref_loc, heap) *references;
+  data_ref_loc *ref;
+  bool ret = true;
+  data_reference_p dr;
+
+  if (get_references_in_stmt (stmt, &references))
+    {
+      VEC_free (data_ref_loc, heap, references);
+      return false;
+    }
+
+  for (i = 0; VEC_iterate (data_ref_loc, references, i, ref); i++)
+    {
+      dr = create_data_ref (nest, *ref->pos, stmt, ref->is_read);
+      gcc_assert (dr != NULL);
+      VEC_safe_push (data_reference_p, heap, *datarefs, dr);
+    }
+
   VEC_free (data_ref_loc, heap, references);
   return ret;
 }

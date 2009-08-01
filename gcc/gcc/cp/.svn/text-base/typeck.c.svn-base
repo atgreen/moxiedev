@@ -2017,7 +2017,7 @@ build_class_member_access_expr (tree object, tree member,
 	 in various testsuite cases where a null object is passed where a
 	 vtable access is required.  */
       if (null_object_p && warn_invalid_offsetof
-	  && CLASSTYPE_NON_POD_P (object_type)
+	  && CLASSTYPE_NON_STD_LAYOUT (object_type)
 	  && !DECL_FIELD_IS_BASE (member)
 	  && cp_unevaluated_operand == 0
 	  && (complain & tf_warning))
@@ -2429,7 +2429,8 @@ build_ptrmemfunc_access_expr (tree ptrmem, tree member_name)
 			  /*want_type=*/false);
   member_type = cp_build_qualified_type (TREE_TYPE (member),
 					 cp_type_quals (ptrmem_type));
-  return fold_build3 (COMPONENT_REF, member_type,
+  return fold_build3_loc (input_location,
+		      COMPONENT_REF, member_type,
 		      ptrmem, member, NULL_TREE);
 }
 
@@ -2836,7 +2837,8 @@ get_member_function_from_ptrfunc (tree *instance_ptrptr, tree function)
       TREE_NO_WARNING (vtbl) = 1;
 
       /* Finally, extract the function pointer from the vtable.  */
-      e2 = fold_build2 (POINTER_PLUS_EXPR, TREE_TYPE (vtbl), vtbl,
+      e2 = fold_build2_loc (input_location,
+			POINTER_PLUS_EXPR, TREE_TYPE (vtbl), vtbl,
 			fold_convert (sizetype, idx));
       e2 = cp_build_indirect_ref (e2, NULL, tf_warning_or_error);
       TREE_CONSTANT (e2) = 1;
@@ -3134,7 +3136,7 @@ convert_arguments (tree typelist, VEC(tree,gc) **values, tree fndecl,
 	  if (fndecl && DECL_BUILT_IN (fndecl)
 	      && DECL_FUNCTION_CODE (fndecl) == BUILT_IN_CONSTANT_P)
 	    /* Don't do ellipsis conversion for __built_in_constant_p
-	       as this will result in spurious warnings for non-POD
+	       as this will result in spurious errors for non-trivial
 	       types.  */
 	    val = require_complete_type (val);
 	  else
@@ -4095,7 +4097,7 @@ cp_pointer_int_sum (enum tree_code resultcode, tree ptrop, tree intop)
      pointer_int_sum() anyway.  */
   complete_type (TREE_TYPE (res_type));
 
-  return pointer_int_sum (resultcode, ptrop,
+  return pointer_int_sum (input_location, resultcode, ptrop,
 			  fold_if_not_in_template (intop));
 }
 
@@ -4393,7 +4395,7 @@ cp_build_unary_op (enum tree_code code, tree xarg, int noconvert,
     case TRUTH_NOT_EXPR:
       arg = perform_implicit_conversion (boolean_type_node, arg,
 					 complain);
-      val = invert_truthvalue (arg);
+      val = invert_truthvalue_loc (input_location, arg);
       if (arg != error_mark_node)
 	return val;
       errstring = "in argument to unary !";
@@ -5201,7 +5203,8 @@ convert_ptrmem (tree type, tree expr, bool allow_inverse_p,
 				    PLUS_EXPR, op1, delta,
 				    tf_warning_or_error);
 
-	  expr = fold_build3 (COND_EXPR, ptrdiff_type_node, cond, op1, op2);
+	  expr = fold_build3_loc (input_location,
+			      COND_EXPR, ptrdiff_type_node, cond, op1, op2);
 			 
 	}
 
@@ -6384,7 +6387,8 @@ get_delta_difference (tree from, tree to,
 	result = get_delta_difference_1 (to, from, c_cast_p);
 
 	if (result)
-	  result = size_diffop (size_zero_node, result);
+	  result = size_diffop_loc (input_location,
+				size_zero_node, result);
 	else
 	  {
 	    error_not_base_type (from, to);

@@ -577,6 +577,8 @@ static const arch_entry cpu_arch[] =
     CPU_CORE2_FLAGS },
   { "corei7", PROCESSOR_COREI7,
     CPU_COREI7_FLAGS },
+  { "l1om", PROCESSOR_GENERIC64,
+    CPU_L1OM_FLAGS },
   { "k6", PROCESSOR_K6,
     CPU_K6_FLAGS },
   { "k6_2", PROCESSOR_K6,
@@ -591,8 +593,18 @@ static const arch_entry cpu_arch[] =
     CPU_K8_FLAGS },
   { "amdfam10", PROCESSOR_AMDFAM10,
     CPU_AMDFAM10_FLAGS },
+  { ".8087", PROCESSOR_UNKNOWN,
+    CPU_8087_FLAGS },
+  { ".287", PROCESSOR_UNKNOWN,
+    CPU_287_FLAGS },
+  { ".387", PROCESSOR_UNKNOWN,
+    CPU_387_FLAGS },
+  { ".no87", PROCESSOR_UNKNOWN,
+    CPU_ANY87_FLAGS },
   { ".mmx", PROCESSOR_UNKNOWN,
     CPU_MMX_FLAGS },
+  { ".nommx", PROCESSOR_UNKNOWN,
+    CPU_3DNOWA_FLAGS },
   { ".sse", PROCESSOR_UNKNOWN,
     CPU_SSE_FLAGS },
   { ".sse2", PROCESSOR_UNKNOWN,
@@ -607,8 +619,12 @@ static const arch_entry cpu_arch[] =
     CPU_SSE4_2_FLAGS },
   { ".sse4", PROCESSOR_UNKNOWN,
     CPU_SSE4_2_FLAGS },
+  { ".nosse", PROCESSOR_UNKNOWN,
+    CPU_ANY_SSE_FLAGS },
   { ".avx", PROCESSOR_UNKNOWN,
     CPU_AVX_FLAGS },
+  { ".noavx", PROCESSOR_UNKNOWN,
+    CPU_ANY_AVX_FLAGS },
   { ".vmx", PROCESSOR_UNKNOWN,
     CPU_VMX_FLAGS },
   { ".smx", PROCESSOR_UNKNOWN,
@@ -1042,8 +1058,16 @@ i386_align_code (fragS *fragP, int count)
 	{
 	  /* If the padding is less than 15 bytes, we use the normal
 	     ones.  Otherwise, we use a jump instruction and adjust
-	     its offset.  */
-	  if (count < 15)
+	     its offset.   */
+	  int limit;
+	  
+	  /* For 64bit, the limit is 3 bytes.  */
+	  if (flag_code == CODE_64BIT
+	      && fragP->tc_frag_data.isa_flags.bitfield.cpulm)
+	    limit = 3;
+	  else
+	    limit = 15;
+	  if (count < limit)
 	    memcpy (fragP->fr_literal + fragP->fr_fix,
 		    patt[count - 1], count);
 	  else
@@ -1221,6 +1245,24 @@ cpu_flags_or (i386_cpu_flags x, i386_cpu_flags y)
       x.array [1] |= y.array [1];
     case 1:
       x.array [0] |= y.array [0];
+      break;
+    default:
+      abort ();
+    }
+  return x;
+}
+
+static INLINE i386_cpu_flags
+cpu_flags_and_not (i386_cpu_flags x, i386_cpu_flags y)
+{
+  switch (ARRAY_SIZE (x.array))
+    {
+    case 3:
+      x.array [2] &= ~y.array [2];
+    case 2:
+      x.array [1] &= ~y.array [1];
+    case 1:
+      x.array [0] &= ~y.array [0];
       break;
     default:
       abort ();
@@ -1916,6 +1958,35 @@ set_sse_check (int dummy ATTRIBUTE_UNUSED)
 }
 
 static void
+check_cpu_arch_compatible (const char *name ATTRIBUTE_UNUSED,
+			   i386_cpu_flags new ATTRIBUTE_UNUSED)
+{
+#if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
+  static const char *arch;
+
+  /* Intel LIOM is only supported on ELF.  */
+  if (!IS_ELF)
+    return;
+
+  if (!arch)
+    {
+      /* Use cpu_arch_name if it is set in md_parse_option.  Otherwise
+	 use default_arch.  */
+      arch = cpu_arch_name;
+      if (!arch)
+	arch = default_arch;
+    }
+
+  /* If we are targeting Intel L1OM, wm must enable it.  */
+  if (get_elf_backend_data (stdoutput)->elf_machine_code != EM_L1OM
+      || new.bitfield.cpul1om)
+    return;
+  
+  as_bad (_("`%s' is not supported on `%s'"), name, arch);
+#endif
+}
+
+static void
 set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 {
   SKIP_WHITESPACE ();
@@ -1931,6 +2002,8 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 	{
 	  if (strcmp (string, cpu_arch[i].name) == 0)
 	    {
+	      check_cpu_arch_compatible (string, cpu_arch[i].flags);
+
 	      if (*string != '.')
 		{
 		  cpu_arch_name = cpu_arch[i].name;
@@ -1956,8 +2029,12 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 		  break;
 		}
 
-	      flags = cpu_flags_or (cpu_arch_flags,
-				    cpu_arch[i].flags);
+	      if (strncmp (string + 1, "no", 2))
+		flags = cpu_flags_or (cpu_arch_flags,
+				      cpu_arch[i].flags);
+	      else
+		flags = cpu_flags_and_not (cpu_arch_flags,
+					   cpu_arch[i].flags);
 	      if (!cpu_flags_equal (&flags, &cpu_arch_flags))
 		{
 		  if (cpu_sub_arch_name)
@@ -2005,11 +2082,34 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
   demand_empty_rest_of_line ();
 }
 
+enum bfd_architecture
+i386_arch (void)
+{
+  if (cpu_arch_isa_flags.bitfield.cpul1om)
+    {
+      if (OUTPUT_FLAVOR != bfd_target_elf_flavour
+	  || flag_code != CODE_64BIT)
+	as_fatal (_("Intel L1OM is 64bit ELF only"));
+      return bfd_arch_l1om;
+    }
+  else
+    return bfd_arch_i386;
+}
+
 unsigned long
 i386_mach ()
 {
   if (!strcmp (default_arch, "x86_64"))
-    return bfd_mach_x86_64;
+    {
+      if (cpu_arch_isa_flags.bitfield.cpul1om)
+	{
+	  if (OUTPUT_FLAVOR != bfd_target_elf_flavour)
+	    as_fatal (_("Intel L1OM is 64bit ELF only"));
+	  return bfd_mach_l1om;
+	}
+      else
+	return bfd_mach_x86_64;
+    }
   else if (!strcmp (default_arch, "i386"))
     return bfd_mach_i386_i386;
   else
@@ -2466,10 +2566,6 @@ tc_i386_fix_adjustable (fixS *fixP ATTRIBUTE_UNUSED)
       || fixP->fx_r_type == BFD_RELOC_VTABLE_INHERIT
       || fixP->fx_r_type == BFD_RELOC_VTABLE_ENTRY)
     return 0;
-
-  if (fixP->fx_addsy != NULL
-      && symbol_get_bfdsym (fixP->fx_addsy)->flags & BSF_GNU_INDIRECT_FUNCTION)
-    return 0;
 #endif
   return 1;
 }
@@ -2813,6 +2909,10 @@ md_assemble (char *line)
   if (!process_suffix ())
     return;
 
+  /* Update operand types.  */
+  for (j = 0; j < i.operands; j++)
+    i.types[j] = operand_type_and (i.types[j], i.tm.operand_types[j]);
+
   /* Make still unresolved immediate matches conform to size of immediate
      given in i.suffix.  */
   if (!finalize_imm ())
@@ -2821,12 +2921,15 @@ md_assemble (char *line)
   if (i.types[0].bitfield.imm1)
     i.imm_operands = 0;	/* kludge for shift insns.  */
 
-  for (j = 0; j < 3; j++)
-    if (i.types[j].bitfield.inoutportreg
-	|| i.types[j].bitfield.shiftcount
-	|| i.types[j].bitfield.acc
-	|| i.types[j].bitfield.floatacc)
-      i.reg_operands--;
+  /* We only need to check those implicit registers for instructions
+     with 3 operands or less.  */
+  if (i.operands <= 3)
+    for (j = 0; j < i.operands; j++)
+      if (i.types[j].bitfield.inoutportreg
+	  || i.types[j].bitfield.shiftcount
+	  || i.types[j].bitfield.acc
+	  || i.types[j].bitfield.floatacc)
+	i.reg_operands--;
 
   /* ImmExt should be processed after SSE2AVX.  */
   if (!i.tm.opcode_modifier.sse2avx
@@ -4431,9 +4534,7 @@ check_word_reg (void)
 static int
 update_imm (unsigned int j)
 {
-  i386_operand_type overlap;
-
-  overlap = operand_type_and (i.types[j], i.tm.operand_types[j]);
+  i386_operand_type overlap = i.types[j];
   if ((overlap.bitfield.imm8
        || overlap.bitfield.imm8s
        || overlap.bitfield.imm16
@@ -4497,14 +4598,19 @@ update_imm (unsigned int j)
 static int
 finalize_imm (void)
 {
-  unsigned int j;
+  unsigned int j, n;
 
-  for (j = 0; j < 2; j++)
-    if (update_imm (j) == 0)
-      return 0;
+  /* Update the first 2 immediate operands.  */
+  n = i.operands > 2 ? 2 : i.operands;
+  if (n)
+    {
+      for (j = 0; j < n; j++)
+	if (update_imm (j) == 0)
+	  return 0;
 
-  i.types[2] = operand_type_and (i.types[2], i.tm.operand_types[2]);
-  gas_assert (operand_type_check (i.types[2], imm) == 0);
+      /* The 3rd operand can't be immediate operand.  */
+      gas_assert (operand_type_check (i.types[2], imm) == 0);
+    }
 
   return 1;
 }
@@ -6975,7 +7081,9 @@ md_estimate_size_before_relax (fragP, segment)
 #if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
       || (IS_ELF
 	  && (S_IS_EXTERNAL (fragP->fr_symbol)
-	      || S_IS_WEAK (fragP->fr_symbol)))
+	      || S_IS_WEAK (fragP->fr_symbol)
+	      || ((symbol_get_bfdsym (fragP->fr_symbol)->flags
+		   & BSF_GNU_INDIRECT_FUNCTION))))
 #endif
 #if defined (OBJ_COFF) && defined (TE_PE)
       || (OUTPUT_FLAVOR == bfd_target_coff_flavour
@@ -7256,7 +7364,7 @@ md_apply_fix (fixP, valP, seg)
 	  if ((sym_seg == seg
 	       || (symbol_section_p (fixP->fx_addsy)
 		   && sym_seg != absolute_section))
-	      && !TC_FORCE_RELOCATION (fixP))
+	      && !generic_force_reloc (fixP))
 	    {
 	      /* Yes, we add the values in twice.  This is because
 		 bfd_install_relocation subtracts them out again.  I think
@@ -7462,6 +7570,12 @@ parse_real_register (char *reg_string, char **end_op)
        || r->reg_type.bitfield.debug
        || r->reg_type.bitfield.test)
       && !cpu_arch_flags.bitfield.cpui386)
+    return (const reg_entry *) NULL;
+
+  if (r->reg_type.bitfield.floatreg
+      && !cpu_arch_flags.bitfield.cpu8087
+      && !cpu_arch_flags.bitfield.cpu287
+      && !cpu_arch_flags.bitfield.cpu387)
     return (const reg_entry *) NULL;
 
   if (r->reg_type.bitfield.regmmx && !cpu_arch_flags.bitfield.cpummx)
@@ -7739,8 +7853,13 @@ md_parse_option (int c, char *arg)
 		{
 		  /* ISA entension.  */
 		  i386_cpu_flags flags;
-		  flags = cpu_flags_or (cpu_arch_flags,
-					cpu_arch[i].flags);
+
+		  if (strncmp (arch, "no", 2))
+		    flags = cpu_flags_or (cpu_arch_flags,
+					  cpu_arch[i].flags);
+		  else
+		    flags = cpu_flags_and_not (cpu_arch_flags,
+					       cpu_arch[i].flags);
 		  if (!cpu_flags_equal (&flags, &cpu_arch_flags))
 		    {
 		      if (cpu_sub_arch_name)
@@ -7869,19 +7988,20 @@ md_show_usage (stream)
                           generate code for CPU and EXTENSION, CPU is one of:\n\
                            i8086, i186, i286, i386, i486, pentium, pentiumpro,\n\
                            pentiumii, pentiumiii, pentium4, prescott, nocona,\n\
-                           core, core2, corei7, k6, k6_2, athlon, k8, amdfam10,\n\
-                           generic32, generic64\n\
+                           core, core2, corei7, l1om, k6, k6_2, athlon, k8,\n\
+                           amdfam10, generic32, generic64\n\
                           EXTENSION is combination of:\n\
-                           mmx, sse, sse2, sse3, ssse3, sse4.1, sse4.2, sse4,\n\
-                           avx, vmx, smx, xsave, movbe, ept, aes, pclmul, fma,\n\
+                           8087, 287, 387, no87, mmx, nommx, sse, sse2, sse3,\n\
+                           ssse3, sse4.1, sse4.2, sse4, nosse, avx, noavx,\n\
+                           vmx, smx, xsave, movbe, ept, aes, pclmul, fma,\n\
                            clflush, syscall, rdtscp, 3dnow, 3dnowa, sse4a,\n\
                            svme, abm, padlock, fma4\n"));
   fprintf (stream, _("\
   -mtune=CPU              optimize for CPU, CPU is one of:\n\
                            i8086, i186, i286, i386, i486, pentium, pentiumpro,\n\
                            pentiumii, pentiumiii, pentium4, prescott, nocona,\n\
-                           core, core2, corei7, k6, k6_2, athlon, k8, amdfam10,\n\
-                           generic32, generic64\n"));
+                           core, core2, corei7, l1om, k6, k6_2, athlon, k8,\n\
+                           amdfam10, generic32, generic64\n"));
   fprintf (stream, _("\
   -msse2avx               encode SSE instructions with VEX prefix\n"));
   fprintf (stream, _("\
@@ -7923,6 +8043,7 @@ i386_target_format (void)
 	  cpu_arch_isa_flags.bitfield.cpummx= 1;
 	  cpu_arch_isa_flags.bitfield.cpusse = 1;
 	  cpu_arch_isa_flags.bitfield.cpusse2 = 1;
+	  cpu_arch_isa_flags.bitfield.cpulm = 1;
 	}
       if (cpu_flags_all_zero (&cpu_arch_tune_flags))
 	{
@@ -7978,7 +8099,15 @@ i386_target_format (void)
 	    object_64bit = 1;
 	    use_rela_relocations = 1;
 	  }
-	return flag_code == CODE_64BIT ? ELF_TARGET_FORMAT64 : ELF_TARGET_FORMAT;
+	if (cpu_arch_isa_flags.bitfield.cpul1om)
+	  {
+	    if (flag_code != CODE_64BIT)
+	      as_fatal (_("Intel L1OM is 64bit only"));
+	    return ELF_TARGET_L1OM_FORMAT;
+	  }
+	else
+	  return (flag_code == CODE_64BIT
+		  ? ELF_TARGET_FORMAT64 : ELF_TARGET_FORMAT);
       }
 #endif
 #if defined (OBJ_MACH_O)

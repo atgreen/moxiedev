@@ -101,6 +101,7 @@ processor names are recognized:
 @code{core},
 @code{core2},
 @code{corei7},
+@code{l1om},
 @code{k6},
 @code{k6_2},
 @code{athlon},
@@ -114,7 +115,12 @@ In addition to the basic instruction set, the assembler can be told to
 accept various extension mnemonics.  For example,
 @code{-march=i686+sse4+vmx} extends @var{i686} with @var{sse4} and
 @var{vmx}.  The following extensions are currently supported:
+@code{8087},
+@code{287},
+@code{387},
+@code{no87},
 @code{mmx},
+@code{nommx},
 @code{sse},
 @code{sse2},
 @code{sse3},
@@ -122,7 +128,9 @@ accept various extension mnemonics.  For example,
 @code{sse4.1},
 @code{sse4.2},
 @code{sse4},
+@code{nosse},
 @code{avx},
+@code{noavx},
 @code{vmx},
 @code{smx},
 @code{xsave},
@@ -141,6 +149,8 @@ accept various extension mnemonics.  For example,
 @code{svme},
 @code{abm} and
 @code{padlock}.
+Note that rather than extending a basic instruction set, the extension
+mnemonics starting with @code{no} revoke the respective functionality.
 
 When the @code{.arch} directive is used with @option{-march}, the
 @code{.arch} directive will take precedent.
@@ -876,7 +886,7 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{i486} @tab @samp{i586} @tab @samp{i686} @tab @samp{pentium}
 @item @samp{pentiumpro} @tab @samp{pentiumii} @tab @samp{pentiumiii} @tab @samp{pentium4}
 @item @samp{prescott} @tab @samp{nocona} @tab @samp{core} @tab @samp{core2}
-@item @samp{corei7}
+@item @samp{corei7} @tab @samp{l1om}
 @item @samp{k6} @tab @samp{k6_2} @tab @samp{athlon} @tab @samp{k8}
 @item @samp{amdfam10}
 @item @samp{generic32} @tab @samp{generic64}

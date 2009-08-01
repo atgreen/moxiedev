@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---          Copyright (C) 1992-2008, Free Software Foundation, Inc.         --
+--          Copyright (C) 1992-2009, Free Software Foundation, Inc.         --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -28,6 +28,37 @@ with Opt;      use Opt;
 
 package body Stylesw is
 
+   --  The following constant defines the default style options for -gnaty
+
+   Default_Style : constant String :=
+                     "3" &  -- indentation level is 3
+                     "a" &  -- check attribute casing
+                     "A" &  -- check array attribute indexes
+                     "b" &  -- check no blanks at end of lines
+                     "c" &  -- check comment formats
+                     "e" &  -- check end/exit labels present
+                     "f" &  -- check no form/feeds vertical tabs in source
+                     "h" &  -- check no horizontal tabs in source
+                     "i" &  -- check if-then layout
+                     "k" &  -- check casing rules for keywords
+                     "l" &  -- check reference manual layout
+                     "m" &  -- check line length <= 79 characters
+                     "n" &  -- check casing of package Standard idents
+                     "p" &  -- check pragma casing
+                     "r" &  -- check casing for identifier references
+                     "s" &  -- check separate subprogram specs present
+                     "t";   -- check token separation rules
+
+   --  The following constant defines the GNAT style options, showing them
+   --  as additions to the standard default style check options.
+
+   GNAT_Style    : constant String := Default_Style &
+                     "d" &  -- check no DOS line terminators
+                     "I" &  -- check mode IN
+                     "S" &  -- check separate lines after THEN or ELSE
+                     "u" &  -- check no unnecessary blank lines
+                     "x";   -- check extra parentheses around conditionals
+
    -------------------------------
    -- Reset_Style_Check_Options --
    -------------------------------
@@ -39,6 +70,7 @@ package body Stylesw is
       Style_Check_Attribute_Casing      := False;
       Style_Check_Blanks_At_End         := False;
       Style_Check_Blank_Lines           := False;
+      Style_Check_Boolean_And_Or        := False;
       Style_Check_Comments              := False;
       Style_Check_DOS_Line_Terminator   := False;
       Style_Check_End_Labels            := False;
@@ -122,6 +154,7 @@ package body Stylesw is
       Add ('a', Style_Check_Attribute_Casing);
       Add ('A', Style_Check_Array_Attribute_Index);
       Add ('b', Style_Check_Blanks_At_End);
+      Add ('B', Style_Check_Boolean_And_Or);
       Add ('c', Style_Check_Comments);
       Add ('d', Style_Check_DOS_Line_Terminator);
       Add ('e', Style_Check_End_Labels);
@@ -169,7 +202,7 @@ package body Stylesw is
    procedure Set_Default_Style_Check_Options is
    begin
       Reset_Style_Check_Options;
-      Set_Style_Check_Options ("3aAbcefhiklmnprst");
+      Set_Style_Check_Options (Default_Style);
    end Set_Default_Style_Check_Options;
 
    ----------------------------------
@@ -179,7 +212,7 @@ package body Stylesw is
    procedure Set_GNAT_Style_Check_Options is
    begin
       Reset_Style_Check_Options;
-      Set_Style_Check_Options ("3aAbcdefhiIklmnprsStux");
+      Set_Style_Check_Options (GNAT_Style);
    end Set_GNAT_Style_Check_Options;
 
    -----------------------------
@@ -278,6 +311,9 @@ package body Stylesw is
 
             when 'b' =>
                Style_Check_Blanks_At_End         := True;
+
+            when 'B' =>
+               Style_Check_Boolean_And_Or        := True;
 
             when 'c' =>
                Style_Check_Comments              := True;
@@ -439,6 +475,9 @@ package body Stylesw is
 
             when 'b' =>
                Style_Check_Blanks_At_End         := False;
+
+            when 'B' =>
+               Style_Check_Boolean_And_Or        := False;
 
             when 'c' =>
                Style_Check_Comments              := False;

@@ -1034,6 +1034,8 @@ compile_file (void)
 
   ggc_protect_identifiers = false;
 
+  /* This must also call cgraph_finalize_compilation_unit and
+     cgraph_optimize.  */
   lang_hooks.decls.final_write_globals ();
 
   if (errorcount || sorrycount)
@@ -1089,6 +1091,9 @@ compile_file (void)
     }
 #endif
 
+  /* Invoke registered plugin callbacks.  */
+  invoke_plugin_callbacks (PLUGIN_FINISH_UNIT, NULL);
+  
   /* This must be at the end.  Some target ports emit end of file directives
      into the assembly file here, and hence we can not output anything to the
      assembly file after this point.  */
@@ -1796,7 +1801,8 @@ process_options (void)
       || flag_loop_block
       || flag_loop_interchange
       || flag_loop_strip_mine
-      || flag_graphite_identity)
+      || flag_graphite_identity
+      || flag_graphite_force_parallel)
     sorry ("Graphite loop optimizations cannot be used");
 #endif
 
@@ -2041,7 +2047,7 @@ process_options (void)
   if (flag_signaling_nans)
     flag_trapping_math = 1;
 
-  /* We cannot reassociate if we want traps or signed zeros.  */
+  /* We cannot reassociate if we want traps or signed zeros.  */
   if (flag_associative_math && (flag_trapping_math || flag_signed_zeros))
     {
       warning (0, "-fassociative-math disabled; other options take precedence");
@@ -2346,9 +2352,6 @@ do_compile (void)
 	compile_file ();
 
       finalize ();
-
-      /* Invoke registered plugin callbacks.  */
-      invoke_plugin_callbacks (PLUGIN_FINISH_UNIT, NULL);
     }
 
   /* Stop timing and print the times.  */

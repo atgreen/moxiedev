@@ -1,3 +1,53 @@
+2009-07-30  Alan Modra  <amodra@bigpond.net.au>
+
+	* emulparams/elf32ppc.sh (PLT): Don't include ".iplt".
+	* emulparams/elf_i386.sh (IREL_IN_PLT): Define.
+	* emulparams/elf_x86_64.sh (IREL_IN_PLT): Define.
+	* scripttempl/elf.sc: Create separate .iplt and .rela.iplt sections
+	when !IREL_IN_PLT.
+
+2009-07-29  Hans-Peter Nilsson  <hp@bitrange.com>
+
+	* scripttempl/mmo.sc: For relocateable links, set $OUTPUT_FORMAT to
+	the new $RELOCATEABLE_OUTPUT_FORMAT, if set.
+	(OUTPUT_FORMAT): Use the variable $OUTPUT_FORMAT.
+	(ENTRY): Don't emit for relocateable links.
+	(/DISCARD/): Don't discard .gnu.warning.* for relocateable links.
+	* emulparams/mmo.sh (RELOCATEABLE_OUTPUT_FORMAT): Set, to
+	elf64-mmix.
+	* emulparams/elf64mmix.sh (OTHER_TEXT_SECTIONS): Empty, don't
+	provide "Main" or set "_start.", for relocateable links.
+
+2009-07-27  Nick Clifton  <nickc@redhat.com>
+
+	* (po/fi.po): Updated Finnish translation.
+
+2009-07-25  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* configure.tgt (targ64_extra_emuls): Add elf_l1om if elf_x86_64
+	is supported.  Add elf_l1om_fbsd if elf_x86_64_fbsd is supported.
+	(targ_extra_emuls): Likewise.
+
+	* Makefile.am (ALL_64_EMULATIONS): Add eelf_l1om.o and
+	eelf_l1om_fbsd.o
+	(eelf_l1om.c): New.
+	(eelf_l1om_fbsd.c): Likewise.
+	* Makefile.in: Regenerated.
+
+	* emulparams/elf_l1om.sh: New.
+	* emulparams/elf_l1om_fbsd.sh: Likewise.
+
+2009-07-23  Ulrich Drepper  <drepper@redhat.com>
+
+	* NEWS: Mention the linker's support for symbols with a binding of
+	STB_GNU_UNIQUE.
+
+2009-07-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10429
+	* ldlang.c (insert_os_after): Tie assignments to non-alloc
+	output sections if there is no-input section.
+
 2009-07-11  Alan Modra  <amodra@bigpond.net.au>
 
 	* ldlang.c (insert_os_after): Don't tie assignments to non-alloc
@@ -14,7 +64,7 @@
 
 2009-07-06  Matthias Klose <doko@ubuntu.com>
 
-        * ld.texinfo: Fix typo.
+	* ld.texinfo: Fix typo.
 
 2009-07-03  Tristan Gingold  <gingold@adacore.com>
 
@@ -457,7 +507,7 @@
 	* configure.tgt: Extend AIX 5 behavior to AIX 6 and above.
 
 2009-03-14  Dave Korn  <dave.korn.cygwin@gmail.com>
-            Danny Smith  <dannysmith@users.sourceforge.net>
+	    Danny Smith  <dannysmith@users.sourceforge.net>
 
 	* emultmpl/pe.em (pe_dll_characteristics): New variable.
 	(OPTION_DYNAMIC_BASE, OPTION_FORCE_INTEGRITY, OPTION_NX_COMPAT,

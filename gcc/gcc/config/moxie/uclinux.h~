@@ -25,9 +25,10 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #define STARTFILE_SPEC \
   "%{!shared: crt1%O%s} crti%O%s crtbegin%O%s"
 
-#define TARGET_OS_CPP_BUILTINS() LINUX_TARGET_OS_CPP_BUILTINS()
+#undef LINK_SPEC
+#define LINK_SPEC "-elf2flt"
 
-#define MD_UNWIND_SUPPORT "config/bfin/linux-unwind.h"
+#define TARGET_OS_CPP_BUILTINS() LINUX_TARGET_OS_CPP_BUILTINS()
 
 /* Like the definition in gcc.c, but for purposes of uClinux, every link is
    static.  */

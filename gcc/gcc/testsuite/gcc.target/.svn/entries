@@ -1,15 +1,15 @@
 10
 
 dir
-149693
+150304
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-14T18:44:59.899605Z
-149641
-uros
+2009-07-31T00:17:46.975073Z
+150287
+dougkwan
 
 
 
@@ -26,16 +26,16 @@ uros
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
-dir
-
 arm
 dir
 
-m68k
+powerpc
 dir
 
 alpha
+dir
+
+m68k
 dir
 
 avr
@@ -50,10 +50,10 @@ dir
 frv
 dir
 
-x86_64
+s390
 dir
 
-s390
+x86_64
 dir
 
 cris
@@ -65,10 +65,10 @@ dir
 spu
 dir
 
-sparc
+mips
 dir
 
-mips
+sparc
 dir
 
 sh

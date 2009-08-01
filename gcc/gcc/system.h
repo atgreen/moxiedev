@@ -1,6 +1,7 @@
 /* Get common system includes and various definitions and declarations based
    on autoconf macros.
-   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008
+   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008,
+   2009
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -46,6 +47,9 @@ along with GCC; see the file COPYING3.  If not see
 #endif
 
 /* Use the unlocked open routines from libiberty.  */
+#ifdef fopen /* fopen is a #define on VMS.  */
+#undef fopen
+#endif
 #define fopen(PATH,MODE) fopen_unlocked(PATH,MODE)
 #define fdopen(FILDES,MODE) fdopen_unlocked(FILDES,MODE)
 #define freopen(PATH,MODE,STREAM) freopen_unlocked(PATH,MODE,STREAM)
@@ -576,6 +580,9 @@ extern void fancy_abort (const char *, int, const char *) ATTRIBUTE_NORETURN;
 #if ENABLE_ASSERT_CHECKING
 #define gcc_assert(EXPR) 						\
    ((void)(!(EXPR) ? fancy_abort (__FILE__, __LINE__, __FUNCTION__), 0 : 0))
+#elif (GCC_VERSION >= 4005)
+#define gcc_assert(EXPR) 						\
+  ((void)(__builtin_expect(!(EXPR), 0) ? __builtin_unreachable(), 0 : 0))
 #else
 /* Include EXPR, so that unused variable warnings do not occur.  */
 #define gcc_assert(EXPR) ((void)(0 && (EXPR)))
@@ -583,7 +590,11 @@ extern void fancy_abort (const char *, int, const char *) ATTRIBUTE_NORETURN;
 
 /* Use gcc_unreachable() to mark unreachable locations (like an
    unreachable default case of a switch.  Do not use gcc_assert(0).  */
+#if (GCC_VERSION >= 4005) && !ENABLE_ASSERT_CHECKING
+#define gcc_unreachable() __builtin_unreachable()
+#else
 #define gcc_unreachable() (fancy_abort (__FILE__, __LINE__, __FUNCTION__))
+#endif
 
 /* Provide a fake boolean type.  We make no attempt to use the
    C99 _Bool, as it may not be available in the bootstrap compiler,

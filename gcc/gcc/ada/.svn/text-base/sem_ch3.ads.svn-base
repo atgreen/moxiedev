@@ -64,6 +64,11 @@ package Sem_Ch3 is
    --  the signature of the implicit type works like the profile of a regular
    --  subprogram.
 
+   procedure Add_Internal_Interface_Entities (Tagged_Type : Entity_Id);
+   --  Add to the list of primitives of Tagged_Type the internal entities
+   --  associated with covered interface primitives. These entities link the
+   --  interface primitives with the tagged type primitives that cover them.
+
    procedure Analyze_Declarations (L : List_Id);
    --  Called to analyze a list of declarations (in what context ???). Also
    --  performs necessary freezing actions (more description needed ???)
@@ -79,24 +84,38 @@ package Sem_Ch3 is
    procedure Access_Type_Declaration (T : Entity_Id; Def : Node_Id);
    --  Process an access type declaration
 
+   procedure Build_Itype_Reference
+     (Ityp : Entity_Id;
+      Nod  : Node_Id);
+   --  Create a reference to an internal type, for use by Gigi. The back-end
+   --  elaborates itypes on demand, i.e. when their first use is seen. This
+   --  can lead to scope anomalies if the first use is within a scope that is
+   --  nested within the scope that contains  the point of definition of the
+   --  itype. The Itype_Reference node forces the elaboration of the itype
+   --  in the proper scope. The node is inserted after Nod, which is the
+   --  enclosing declaration that generated Ityp.
+   --
+   --  A related mechanism is used during expansion, for itypes created in
+   --  branches of conditionals. See Ensure_Defined in exp_util.
+   --  Could both mechanisms be merged ???
+
    procedure Check_Abstract_Overriding (T : Entity_Id);
-   --  Check that all abstract subprograms inherited from T's parent type
-   --  have been overridden as required, and that nonabstract subprograms
-   --  have not been incorrectly overridden with an abstract subprogram.
+   --  Check that all abstract subprograms inherited from T's parent type have
+   --  been overridden as required, and that nonabstract subprograms have not
+   --  been incorrectly overridden with an abstract subprogram.
 
    procedure Check_Aliased_Component_Types (T : Entity_Id);
    --  Given an array type or record type T, check that if the type is
-   --  nonlimited, then the nominal subtype of any components of T
-   --  that have discriminants must be constrained.
+   --  nonlimited, then the nominal subtype of any components of T that
+   --  have discriminants must be constrained.
 
    procedure Check_Completion (Body_Id : Node_Id := Empty);
-   --  At the end of a declarative part, verify that all entities that
-   --  require completion have received one. If Body_Id is absent, the
-   --  error indicating a missing completion is placed on the declaration
-   --  that needs completion. If Body_Id is present, it is the defining
-   --  identifier of a package body, and errors are posted on that node,
-   --  rather than on the declarations that require completion in the package
-   --  declaration.
+   --  At the end of a declarative part, verify that all entities that require
+   --  completion have received one. If Body_Id is absent, the error indicating
+   --  a missing completion is placed on the declaration that needs completion.
+   --  If Body_Id is present, it is the defining identifier of a package body,
+   --  and errors are posted on that node, rather than on the declarations that
+   --  require completion in the package declaration.
 
    procedure Derive_Subprogram
      (New_Subp     : in out Entity_Id;
@@ -123,8 +142,8 @@ package Sem_Ch3 is
    --  the derived subprograms are aliased to those of the actual, not those of
    --  the ancestor.
    --
-   --  Note: one might expect this to be private to the package body, but
-   --  there is one rather unusual usage in package Exp_Dist.
+   --  Note: one might expect this to be private to the package body, but there
+   --  is one rather unusual usage in package Exp_Dist.
 
    function Find_Hidden_Interface
      (Src  : Elist_Id;
@@ -147,8 +166,8 @@ package Sem_Ch3 is
       Typ_For_Constraint : Entity_Id;
       Constraint         : Elist_Id) return Node_Id;
    --  ??? MORE DOCUMENTATION
-   --  Given a discriminant somewhere in the Typ_For_Constraint tree
-   --  and a Constraint, return the value of that discriminant.
+   --  Given a discriminant somewhere in the Typ_For_Constraint tree and a
+   --  Constraint, return the value of that discriminant.
 
    function Is_Null_Extension (T : Entity_Id) return Boolean;
    --  Returns True if the tagged type T has an N_Full_Type_Declaration that
@@ -217,7 +236,7 @@ package Sem_Ch3 is
    --  of the dependant private subtypes. The second action is to recopy the
    --  primitive operations of the private view (in the tagged case).
    --  N is the N_Full_Type_Declaration node.
-
+   --
    --    Full_T is the full view of the type whose full declaration is in N.
    --
    --    Priv_T is the private view of the type whose full declaration is in N.
@@ -228,16 +247,16 @@ package Sem_Ch3 is
       Check_List  : List_Id := Empty_List;
       R_Check_Off : Boolean := False);
    --  Process a range expression that appears in a declaration context. The
-   --  range is analyzed and resolved with the base type of the given type,
-   --  and an appropriate check for expressions in non-static contexts made
-   --  on the bounds. R is analyzed and resolved using T, so the caller should
-   --  if necessary link R into the tree before the call, and in particular in
-   --  the case of a subtype declaration, it is appropriate to set the parent
-   --  pointer of R so that the types get properly frozen. The Check_List
-   --  parameter is used when the subprogram is called from
-   --  Build_Record_Init_Proc and is used to return a set of constraint
-   --  checking statements generated by the Checks package. R_Check_Off is set
-   --  to True when the call to Range_Check is to be skipped.
+   --  range is analyzed and resolved with the base type of the given type, and
+   --  an appropriate check for expressions in non-static contexts made on the
+   --  bounds. R is analyzed and resolved using T, so the caller should if
+   --  necessary link R into the tree before the call, and in particular in the
+   --  case of a subtype declaration, it is appropriate to set the parent
+   --  pointer of R so that the types get properly frozen. Check_List is used
+   --  when the subprogram is called from Build_Record_Init_Proc and is used to
+   --  return a set of constraint checking statements generated by the Checks
+   --  package. R_Check_Off is set to True when the call to Range_Check is to
+   --  be skipped.
 
    function Process_Subtype
      (S           : Node_Id;

@@ -27,12 +27,7 @@
 /data.s/1.3/Mon Jul  6 10:46:47 2009//
 /data.t/1.3/Mon Jul  6 10:46:47 2009//
 /default-script.exp/1.4/Mon Jul  6 10:46:47 2009//
-/default-script.s/1.1/Mon Jul  6 10:46:47 2009//
 /default-script.t/1.1/Mon Jul  6 10:46:47 2009//
-/default-script1.d/1.2/Mon Jul  6 10:46:47 2009//
-/default-script2.d/1.2/Mon Jul  6 10:46:47 2009//
-/default-script3.d/1.2/Mon Jul  6 10:46:47 2009//
-/default-script4.d/1.2/Mon Jul  6 10:46:47 2009//
 /defined.exp/1.10/Mon Jul  6 10:46:47 2009//
 /defined.s/1.3/Mon Jul  6 10:46:47 2009//
 /defined.t/1.1.1.1/Mon Jul  6 10:46:47 2009//
@@ -54,9 +49,7 @@
 /empty-address-2b.d/1.1/Mon Jul  6 10:46:47 2009//
 /empty-address-2b.t/1.1/Mon Jul  6 10:46:47 2009//
 /empty-address-3.s/1.1/Mon Jul  6 10:46:47 2009//
-/empty-address-3a.d/1.1/Mon Jul  6 10:46:47 2009//
 /empty-address-3a.t/1.1/Mon Jul  6 10:46:47 2009//
-/empty-address-3b.d/1.1/Mon Jul  6 10:46:47 2009//
 /empty-address-3b.t/1.1/Mon Jul  6 10:46:47 2009//
 /empty-address-3c.d/1.2/Mon Jul  6 10:46:47 2009//
 /empty-address-3c.t/1.1/Mon Jul  6 10:46:47 2009//
@@ -194,4 +187,11 @@
 /weak.t/1.1.1.1/Mon Jul  6 10:46:47 2009//
 /weak1.s/1.2/Mon Jul  6 10:46:47 2009//
 /weak2.s/1.2/Mon Jul  6 10:46:47 2009//
+/default-script.s/1.2/Fri Jul 31 11:10:15 2009//
+/default-script1.d/1.3/Fri Jul 31 11:10:15 2009//
+/default-script2.d/1.3/Fri Jul 31 11:10:15 2009//
+/default-script3.d/1.3/Fri Jul 31 11:10:15 2009//
+/default-script4.d/1.3/Fri Jul 31 11:10:15 2009//
+/empty-address-3a.d/1.2/Fri Jul 31 11:10:15 2009//
+/empty-address-3b.d/1.2/Fri Jul 31 11:10:15 2009//
 D

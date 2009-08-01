@@ -47,6 +47,7 @@ with Sem_Cat;  use Sem_Cat;
 with Sem_Ch3;  use Sem_Ch3;
 with Sem_Ch6;  use Sem_Ch6;
 with Sem_Ch8;  use Sem_Ch8;
+with Sem_SCIL; use Sem_SCIL;
 with Sem_Disp; use Sem_Disp;
 with Sem_Dist; use Sem_Dist;
 with Sem_Eval; use Sem_Eval;
@@ -2814,9 +2815,9 @@ package body Sem_Ch4 is
                   Set_Etype (N,   Etype (Comp));
                   Set_Etype (Nam, It.Typ);
 
-                  --  For access type case, introduce explicit deference for
-                  --  more uniform treatment of entry calls. Do this only
-                  --  once if several interpretations yield an access type.
+                  --  For access type case, introduce explicit dereference for
+                  --  more uniform treatment of entry calls. Do this only once
+                  --  if several interpretations yield an access type.
 
                   if Is_Access_Type (Etype (Nam))
                     and then Nkind (Nam) /= N_Explicit_Dereference
@@ -3570,8 +3571,8 @@ package body Sem_Ch4 is
                   Set_Original_Discriminant (Sel, Comp);
                end if;
 
-               --  For access type case, introduce explicit deference for more
-               --  uniform treatment of entry calls.
+               --  For access type case, introduce explicit dereference for
+               --  more uniform treatment of entry calls.
 
                if Is_Access_Type (Etype (Name)) then
                   Insert_Explicit_Dereference (Name);
@@ -3875,6 +3876,15 @@ package body Sem_Ch4 is
       T    : Entity_Id;
 
    begin
+      --  Check if the expression is a function call for which we need to
+      --  adjust a SCIL dispatching node.
+
+      if Generate_SCIL
+        and then Nkind (Expr) = N_Function_Call
+      then
+         Adjust_SCIL_Node (N, Expr);
+      end if;
+
       --  If Conversion_OK is set, then the Etype is already set, and the
       --  only processing required is to analyze the expression. This is
       --  used to construct certain "illegal" conversions which are not
@@ -6574,6 +6584,12 @@ package body Sem_Ch4 is
          --  subprogram because that list starts with the subprogram formals.
          --  We retrieve the candidate operations from the generic declaration.
 
+         function Is_Private_Overriding (Op : Entity_Id) return Boolean;
+         --  An operation that overrides an inherited operation in the private
+         --  part of its package may be hidden, but if the inherited operation
+         --  is visible a direct call to it will dispatch to the private one,
+         --  which is therefore a valid candidate.
+
          function Valid_First_Argument_Of (Op : Entity_Id) return Boolean;
          --  Verify that the prefix, dereferenced if need be, is a valid
          --  controlling argument in a call to Op. The remaining actuals
@@ -6664,6 +6680,20 @@ package body Sem_Ch4 is
             end if;
          end Collect_Generic_Type_Ops;
 
+         ---------------------------
+         -- Is_Private_Overriding --
+         ---------------------------
+
+         function Is_Private_Overriding (Op : Entity_Id) return Boolean is
+            Visible_Op : constant Entity_Id := Homonym (Op);
+
+         begin
+            return Present (Visible_Op)
+              and then not Comes_From_Source (Visible_Op)
+              and then Alias (Visible_Op) = Op
+              and then not Is_Hidden (Visible_Op);
+         end Is_Private_Overriding;
+
          -----------------------------
          -- Valid_First_Argument_Of --
          -----------------------------
@@ -6744,15 +6774,16 @@ package body Sem_Ch4 is
                if (Present (Interface_Alias (Prim_Op))
                     and then Is_Ancestor (Find_Dispatching_Type
                                             (Alias (Prim_Op)), Corr_Type))
-                 or else
 
-                  --  Do not consider hidden primitives unless the type is
-                  --  in an open scope or we are within an instance, where
-                  --  visibility is known to be correct.
+                 --  Do not consider hidden primitives unless the type is in an
+                 --  open scope or we are within an instance, where visibility
+                 --  is known to be correct, or else if this is an overriding
+                 --  operation in the private part for an inherited operation.
 
-                  (Is_Hidden (Prim_Op)
-                     and then not Is_Immediately_Visible (Obj_Type)
-                     and then not In_Instance)
+                 or else (Is_Hidden (Prim_Op)
+                           and then not Is_Immediately_Visible (Obj_Type)
+                           and then not In_Instance
+                           and then not Is_Private_Overriding (Prim_Op))
                then
                   goto Continue;
                end if;

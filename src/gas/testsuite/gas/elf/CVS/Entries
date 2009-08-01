@@ -1,6 +1,5 @@
 /ehopt0.d/1.2/Mon Jul  6 10:46:42 2009//
 /ehopt0.s/1.3/Mon Jul  6 10:46:42 2009//
-/elf.exp/1.51/Mon Jul  6 10:46:42 2009//
 /equ-reloc.d/1.1/Mon Jul  6 10:46:42 2009//
 /equ-reloc.s/1.1/Mon Jul  6 10:46:42 2009//
 /group0.s/1.2/Mon Jul  6 10:46:42 2009//
@@ -46,6 +45,9 @@
 /symver.s/1.2/Mon Jul  6 10:46:42 2009//
 /type-noifunc.e/1.1/Mon Jul  6 10:46:42 2009//
 /type-noifunc.s/1.1/Mon Jul  6 10:46:42 2009//
-/type.e/1.6/Mon Jul  6 10:46:42 2009//
-/type.s/1.6/Mon Jul  6 10:46:42 2009//
+/elf.exp/1.53/Fri Jul 31 11:10:04 2009//
+/file.d/1.1/Mon Jul 27 10:04:25 2009//
+/file.s/1.1/Mon Jul 27 10:04:25 2009//
+/type.e/1.7/Fri Jul 31 11:10:04 2009//
+/type.s/1.8/Fri Jul 31 11:10:04 2009//
 D

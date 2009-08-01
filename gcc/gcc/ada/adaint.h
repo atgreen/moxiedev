@@ -43,26 +43,30 @@
 #define Encoding_8bits 1        /* Standard 8bits, CP_ACP on Windows. */
 #define Encoding_Unspecified 2  /* Based on GNAT_CODE_PAGE env variable. */
 
-/* Large file support. It is unclear what portable mechanism we can
-   use to determine at compile time what support the system offers for
-   large files. For now we just list the platforms we have manually
-   tested.  */
+/* Large file support. It is unclear what portable mechanism we can use to
+   determine at compile time what support the system offers for large files.
+   For now we just list the platforms we have manually tested. */
 
 #if defined (__GLIBC__) || defined (sun)  || defined (__sgi)
-#define FOPEN fopen64
-#define STAT stat64
-#define FSTAT fstat64
-#define LSTAT lstat64
-#define STRUCT_STAT struct stat64
+#define GNAT_FOPEN fopen64
+#define GNAT_STAT stat64
+#define GNAT_FSTAT fstat64
+#define GNAT_LSTAT lstat64
+#define GNAT_STRUCT_STAT struct stat64
 #else
-#define FOPEN fopen
-#define STAT stat
-#define FSTAT fstat
-#define LSTAT lstat
-#define STRUCT_STAT struct stat
+#define GNAT_FOPEN fopen
+#define GNAT_STAT stat
+#define GNAT_FSTAT fstat
+#define GNAT_LSTAT lstat
+#define GNAT_STRUCT_STAT struct stat
 #endif
 
-typedef long OS_Time; /* Type corresponding to GNAT.OS_Lib.OS_Time */
+/* Type corresponding to GNAT.OS_Lib.OS_Time */
+#if defined (_WIN64)
+typedef long long OS_Time;
+#else
+typedef long OS_Time;
+#endif
 
 extern int    __gnat_max_path_len;
 extern OS_Time __gnat_current_time		   (void);
@@ -89,7 +93,7 @@ extern int    __gnat_open_new                      (char *, int);
 extern int    __gnat_open_new_temp		   (char *, int);
 extern int    __gnat_mkdir			   (char *);
 extern int    __gnat_stat			   (char *,
-						    STRUCT_STAT *);
+						    GNAT_STRUCT_STAT *);
 extern int    __gnat_unlink                        (char *);
 extern int    __gnat_rename                        (char *, char *);
 extern int    __gnat_chdir                         (char *);

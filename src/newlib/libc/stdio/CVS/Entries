@@ -12,7 +12,6 @@
 /fdopen.c/1.9/Mon Jul  6 10:46:48 2009/-ko/
 /feof.c/1.5/Mon Jul  6 10:46:48 2009/-ko/
 /ferror.c/1.5/Mon Jul  6 10:46:48 2009/-ko/
-/fflush.c/1.13/Mon Jul  6 10:46:48 2009/-ko/
 /fgetc.c/1.7/Mon Jul  6 10:46:48 2009/-ko/
 /fgetpos.c/1.6/Mon Jul  6 10:46:48 2009/-ko/
 /fgets.c/1.8/Mon Jul  6 10:46:48 2009/-ko/
@@ -129,4 +128,5 @@
 /wprintf.c/1.1/Mon Jul  6 10:46:48 2009//
 /wscanf.c/1.1/Mon Jul  6 10:46:48 2009//
 /wsetup.c/1.6/Mon Jul  6 10:46:48 2009/-ko/
+/fflush.c/1.14/Fri Jul 31 11:10:19 2009/-ko/
 D

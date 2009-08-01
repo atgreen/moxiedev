@@ -34,10 +34,6 @@
 /arm-target1-abs.d/1.2/Mon Jul  6 10:46:44 2009//
 /arm-target1-rel.d/1.2/Mon Jul  6 10:46:44 2009//
 /arm-target1.s/1.1/Mon Jul  6 10:46:44 2009//
-/arm-target2-abs.d/1.2/Mon Jul  6 10:46:44 2009//
-/arm-target2-got-rel.d/1.2/Mon Jul  6 10:46:44 2009//
-/arm-target2-rel.d/1.2/Mon Jul  6 10:46:44 2009//
-/arm-target2.s/1.1/Mon Jul  6 10:46:44 2009//
 /arm.ld/1.5/Mon Jul  6 10:46:44 2009//
 /armthumb-lib.d/1.7/Mon Jul 13 12:30:02 2009//
 /armthumb-lib.sym/1.2/Mon Jul  6 10:46:44 2009//
@@ -253,4 +249,8 @@
 /vxworks2-static.sd/1.1/Mon Jul  6 10:46:44 2009//
 /vxworks2.s/1.1/Mon Jul  6 10:46:44 2009//
 /vxworks2.sd/1.1/Mon Jul  6 10:46:44 2009//
+/arm-target2-abs.d/1.3/Fri Jul 31 11:10:13 2009//
+/arm-target2-got-rel.d/1.3/Fri Jul 31 11:10:13 2009//
+/arm-target2-rel.d/1.3/Fri Jul 31 11:10:13 2009//
+/arm-target2.s/1.2/Fri Jul 31 11:10:13 2009//
 D

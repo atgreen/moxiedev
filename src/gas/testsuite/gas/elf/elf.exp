@@ -82,6 +82,20 @@ if { ([istarget "*-*-*elf*"]
 	&& ![istarget "am3*-*-*"]} then {    
       run_dump_test "ehopt0"
     }
+    case $target_triplet in {
+	{ m68k-*-* m68[03]??-*-* } {
+	    run_dump_test "file" { { as "--defsym m68k=1" } }
+	}
+	{ mmix-*-* } {
+	    run_dump_test "file" { { as "--defsym mmix=1" } }
+	}
+	{ xtensa*-*-* } {
+	    run_dump_test "file" { { as "--rename-section file.s=file.c" } }
+	}
+	default {
+	    run_dump_test "file"
+	}
+    }
     run_dump_test "group0a" 
     run_dump_test "group0b" 
     run_dump_test "group1a" 
@@ -126,7 +140,7 @@ if { ([istarget "*-*-*elf*"]
 	    run_elf_list_test "type-noifunc" "" "" "-s" "| grep \"1 \\\[FONTC\\\]\""
     } else {
     	    run_dump_test ifunc-1
-	    run_elf_list_test "type" "" "" "-s" "| grep \"1 \\\[FIONTC\\\]\""
+	    run_elf_list_test "type" "" "" "-s" "| grep \"1 \\\[FIONTCU\\\]\""
     }
 
     run_dump_test "section6" 

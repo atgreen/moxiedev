@@ -1,15 +1,15 @@
 10
 
 dir
-149693
+150304
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/sh
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-09T19:41:25.638589Z
-149433
-tromey
+2009-07-21T12:45:52.096232Z
+149854
+kkojima
 
 
 
@@ -28,7 +28,7 @@ tromey
 
 t-netbsd
 file
-
+149693
 
 
 
@@ -62,7 +62,7 @@ jsm28
 
 predicates.md
 file
-
+149693
 
 
 
@@ -96,7 +96,7 @@ ian
 
 sshmedia.h
 file
-
+149693
 
 
 
@@ -130,7 +130,7 @@ jakub
 
 symbian.c
 file
-
+149693
 
 
 
@@ -164,7 +164,7 @@ paolo
 
 sh-protos.h
 file
-
+149693
 
 
 
@@ -198,7 +198,7 @@ kkojima
 
 linux.h
 file
-
+149693
 
 
 
@@ -232,7 +232,7 @@ nickc
 
 ushmedia.h
 file
-
+149693
 
 
 
@@ -266,7 +266,7 @@ jakub
 
 t-sh64
 file
-
+149693
 
 
 
@@ -300,7 +300,7 @@ jsm28
 
 divtab-sh4.c
 file
-
+149693
 
 
 
@@ -334,7 +334,7 @@ jakub
 
 linux-unwind.h
 file
-
+149693
 
 
 
@@ -368,7 +368,7 @@ jakub
 
 linux-atomic.asm
 file
-
+149693
 
 
 
@@ -402,7 +402,7 @@ kkojima
 
 t-rtems
 file
-
+149693
 
 
 
@@ -440,11 +440,11 @@ file
 
 
 
-2009-07-14T13:03:40.000000Z
-1085f0530c7e10cdf13c7359e8a8ccb6
-2009-07-09T19:41:25.638589Z
-149433
-tromey
+2009-07-31T04:48:16.000000Z
+a0c471b6366692515d3d81d60206cc21
+2009-07-21T12:45:52.096232Z
+149854
+kkojima
 
 
 
@@ -466,11 +466,11 @@ tromey
 
 
 
-357118
+357179
 
 elf.h
 file
-
+149693
 
 
 
@@ -504,7 +504,7 @@ nickc
 
 superh.h
 file
-
+149693
 
 
 
@@ -538,7 +538,7 @@ nickc
 
 sh4.md
 file
-
+149693
 
 
 
@@ -576,11 +576,11 @@ file
 
 
 
-2009-07-14T13:03:40.000000Z
-3fbbd5a7e5665d047aa03a5d786a5ca9
-2009-07-06T13:55:09.949014Z
-149283
-nickc
+2009-07-31T04:48:16.000000Z
+dec7f2488e786fe5fe1e61b0c0fb8124
+2009-07-20T07:37:37.282744Z
+149803
+chrbr
 
 
 
@@ -602,11 +602,11 @@ nickc
 
 
 
-109402
+109327
 
 lib1funcs.asm
 file
-
+149693
 
 
 
@@ -638,43 +638,9 @@ kkojima
 
 84232
 
-embed-elf.h
-file
-
-
-
-
-2009-04-24T17:43:27.000000Z
-9391a1878073eca218390ddc3bb745f3
-2007-08-02T10:49:31.520855Z
-127157
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1511
-
 newlib.h
 file
-
+149693
 
 
 
@@ -706,9 +672,43 @@ nickc
 
 907
 
+embed-elf.h
+file
+149693
+
+
+
+2009-04-24T17:43:27.000000Z
+9391a1878073eca218390ddc3bb745f3
+2007-08-02T10:49:31.520855Z
+127157
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1511
+
 t-superh
 file
-
+149693
 
 
 
@@ -742,7 +742,7 @@ jsm28
 
 shmedia.md
 file
-
+149693
 
 
 
@@ -776,7 +776,7 @@ nickc
 
 t-linux64
 file
-
+149693
 
 
 
@@ -810,7 +810,7 @@ kkojima
 
 t-sh
 file
-
+149693
 
 
 
@@ -842,77 +842,9 @@ ian
 
 8489
 
-symbian-pre.h
-file
-
-
-
-
-2009-04-24T17:43:28.000000Z
-28c9cf65f09c24db9fce50bdb22bdf9f
-2007-08-02T10:49:31.520855Z
-127157
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1551
-
-sh-modes.def
-file
-
-
-
-
-2009-04-24T17:43:27.000000Z
-8d439712ff37bef737b9454a03cfa4b5
-2007-08-02T10:49:31.520855Z
-127157
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1458
-
 lib1funcs.h
 file
-
+149693
 
 
 
@@ -944,14 +876,14 @@ nickc
 
 2326
 
-rtems.h
+sh-modes.def
 file
-
+149693
 
 
 
 2009-04-24T17:43:27.000000Z
-746f2a4214e4c64d203ed00e4ee3337e
+8d439712ff37bef737b9454a03cfa4b5
 2007-08-02T10:49:31.520855Z
 127157
 nickc
@@ -976,11 +908,45 @@ nickc
 
 
 
-986
+1458
+
+symbian-pre.h
+file
+149693
+
+
+
+2009-04-24T17:43:28.000000Z
+28c9cf65f09c24db9fce50bdb22bdf9f
+2007-08-02T10:49:31.520855Z
+127157
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1551
 
 crti.asm
 file
-
+149693
 
 
 
@@ -1012,9 +978,43 @@ jakub
 
 3129
 
+rtems.h
+file
+149693
+
+
+
+2009-04-24T17:43:27.000000Z
+746f2a4214e4c64d203ed00e4ee3337e
+2007-08-02T10:49:31.520855Z
+127157
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+986
+
 little.h
 file
-
+149693
 
 
 
@@ -1048,7 +1048,7 @@ nickc
 
 t-vxworks
 file
-
+149693
 
 
 
@@ -1082,7 +1082,7 @@ rsandifo
 
 lib1funcs-Os-4-200.asm
 file
-
+149693
 
 
 
@@ -1116,7 +1116,7 @@ jakub
 
 crtn.asm
 file
-
+149693
 
 
 
@@ -1150,7 +1150,7 @@ jakub
 
 divtab-sh4-300.c
 file
-
+149693
 
 
 
@@ -1184,7 +1184,7 @@ jakub
 
 crt1.asm
 file
-
+149693
 
 
 
@@ -1218,7 +1218,7 @@ jakub
 
 divtab.c
 file
-
+149693
 
 
 
@@ -1252,7 +1252,7 @@ jakub
 
 sh1.md
 file
-
+149693
 
 
 
@@ -1286,7 +1286,7 @@ nickc
 
 divcost-analysis
 file
-
+149693
 
 
 
@@ -1320,7 +1320,7 @@ jsm28
 
 libgcc-glibc.ver
 file
-
+149693
 
 
 
@@ -1354,7 +1354,7 @@ jsm28
 
 sh4-300.md
 file
-
+149693
 
 
 
@@ -1388,7 +1388,7 @@ nickc
 
 sh4a.md
 file
-
+149693
 
 
 
@@ -1422,7 +1422,7 @@ nickc
 
 shmedia.h
 file
-
+149693
 
 
 
@@ -1456,7 +1456,7 @@ jakub
 
 t-linux
 file
-
+149693
 
 
 
@@ -1490,7 +1490,7 @@ ams
 
 t-symbian
 file
-
+149693
 
 
 
@@ -1524,7 +1524,7 @@ ian
 
 t-netbsd-sh5-64
 file
-
+149693
 
 
 
@@ -1558,7 +1558,7 @@ amylaar
 
 lib1funcs-4-300.asm
 file
-
+149693
 
 
 
@@ -1592,7 +1592,7 @@ jakub
 
 constraints.md
 file
-
+149693
 
 
 
@@ -1626,7 +1626,7 @@ jakub
 
 superh64.h
 file
-
+149693
 
 
 
@@ -1660,7 +1660,7 @@ nickc
 
 libgcc-excl.ver
 file
-
+149693
 
 
 
@@ -1694,7 +1694,7 @@ amylaar
 
 t-elf
 file
-
+149693
 
 
 
@@ -1728,7 +1728,7 @@ nickc
 
 superh.opt
 file
-
+149693
 
 
 
@@ -1762,7 +1762,7 @@ amylaar
 
 rtemself.h
 file
-
+149693
 
 
 
@@ -1796,7 +1796,7 @@ nickc
 
 sh.md
 file
-
+149693
 
 
 
@@ -1830,7 +1830,7 @@ nickc
 
 netbsd-elf.h
 file
-
+149693
 
 
 
@@ -1864,7 +1864,7 @@ nickc
 
 vxworks.h
 file
-
+149693
 
 
 
@@ -1898,7 +1898,7 @@ nickc
 
 sh64.h
 file
-
+149693
 
 
 
@@ -1932,7 +1932,7 @@ nickc
 
 symbian-post.h
 file
-
+149693
 
 
 
@@ -1970,11 +1970,11 @@ file
 
 
 
-2009-07-14T13:03:40.000000Z
-2709805985f5fc64798ae20221440cc7
-2009-07-06T13:55:09.949014Z
-149283
-nickc
+2009-07-31T04:48:16.000000Z
+dcd364dd845eac22146855285dfa64e8
+2009-07-20T07:37:37.282744Z
+149803
+chrbr
 
 
 
@@ -1996,11 +1996,11 @@ nickc
 
 
 
-9270
+9432
 
 sh-c.c
 file
-
+149693
 
 
 

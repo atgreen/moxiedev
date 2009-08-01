@@ -3548,7 +3548,7 @@ alpha_expand_unaligned_store (rtx dst, rtx src,
 	      emit_insn (gen_insll_le (insl, gen_lowpart (SImode, src), addr));
 	      break;
 	    case 8:
-	      emit_insn (gen_insql_le (insl, src, addr));
+	      emit_insn (gen_insql_le (insl, gen_lowpart (DImode, src), addr));
 	      break;
 	    }
 	}
@@ -7836,6 +7836,17 @@ alpha_start_function (FILE *file, const char *fnname,
       name_tree = get_identifier (fnname);
       TREE_ASM_WRITTEN (name_tree) = 1;
     }
+
+#if TARGET_ABI_OPEN_VMS
+  if (vms_debug_main
+      && strncmp (vms_debug_main, fnname, strlen (vms_debug_main)) == 0)
+    {
+      targetm.asm_out.globalize_label (asm_out_file, VMS_DEBUG_MAIN_POINTER);
+      ASM_OUTPUT_DEF (asm_out_file, VMS_DEBUG_MAIN_POINTER, fnname);
+      switch_to_section (text_section);
+      vms_debug_main = NULL;
+    }
+#endif
 
   alpha_fnname = fnname;
   sa_size = alpha_sa_size ();

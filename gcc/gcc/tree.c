@@ -6299,7 +6299,6 @@ build_function_type_skip_args (tree orig_type, bitmap args_to_skip)
       else
 	new_reversed = void_list_node;
     }
-    gcc_assert (new_reversed);
 
   /* Use copy_node to preserve as much as possible from original type
      (debug info, attribute lists etc.)
@@ -8537,7 +8536,8 @@ build_call_valist (tree return_type, tree fn, int nargs, va_list args)
    which are specified as a tree array ARGS.  */
 
 tree
-build_call_array (tree return_type, tree fn, int nargs, const tree *args)
+build_call_array_loc (location_t loc, tree return_type, tree fn,
+		      int nargs, const tree *args)
 {
   tree t;
   int i;
@@ -8549,6 +8549,7 @@ build_call_array (tree return_type, tree fn, int nargs, const tree *args)
   for (i = 0; i < nargs; i++)
     CALL_EXPR_ARG (t, i) = args[i];
   process_call_operands (t);
+  SET_EXPR_LOCATION (t, loc);
   return t;
 }
 

@@ -40,6 +40,7 @@ with Rident;   use Rident;
 with Rtsfind;  use Rtsfind;
 with Sem;      use Sem;
 with Sem_Aux;  use Sem_Aux;
+with Sem_Ch3;  use Sem_Ch3;
 with Sem_Ch8;  use Sem_Ch8;
 with Sem_Eval; use Sem_Eval;
 with Sem_Res;  use Sem_Res;
@@ -675,8 +676,7 @@ package body Sem_Ch13 is
             --  affect legality (except possibly to be rejected because they
             --  are incompatible with the compilation target).
 
-            when Attribute_Address        |
-                 Attribute_Alignment      |
+            when Attribute_Alignment      |
                  Attribute_Bit_Order      |
                  Attribute_Component_Size |
                  Attribute_Machine_Radix  |
@@ -798,6 +798,20 @@ package body Sem_Ch13 is
 
             Analyze_And_Resolve (Expr, RTE (RE_Address));
 
+            --  Even when ignoring rep clauses we need to indicate that the
+            --  entity has an address clause and thus it is legal to declare
+            --  it imported.
+
+            if Ignore_Rep_Clauses then
+               if Ekind (U_Ent) = E_Variable
+                 or else Ekind (U_Ent) = E_Constant
+               then
+                  Record_Rep_Item (U_Ent, N);
+               end if;
+
+               return;
+            end if;
+
             if Present (Address_Clause (U_Ent)) then
                Error_Msg_N ("address already given for &", Nam);
 
@@ -884,9 +898,8 @@ package body Sem_Ch13 is
                   Off   : Boolean;
 
                begin
-
-                  --  Exported variables cannot have an address clause,
-                  --  because this cancels the effect of the pragma Export
+                  --  Exported variables cannot have an address clause, because
+                  --  this cancels the effect of the pragma Export.
 
                   if Is_Exported (U_Ent) then
                      Error_Msg_N
@@ -1047,7 +1060,7 @@ package body Sem_Ch13 is
 
          --  Alignment attribute definition clause
 
-         when Attribute_Alignment => Alignment_Block : declare
+         when Attribute_Alignment => Alignment : declare
             Align : constant Uint := Get_Alignment_Value (Expr);
 
          begin
@@ -1066,8 +1079,17 @@ package body Sem_Ch13 is
             elsif Align /= No_Uint then
                Set_Has_Alignment_Clause (U_Ent);
                Set_Alignment            (U_Ent, Align);
+
+               --  For an array type, U_Ent is the first subtype. In that case,
+               --  also set the alignment of the anonymous base type so that
+               --  other subtypes (such as the itypes for aggregates of the
+               --  type) also receive the expected alignment.
+
+               if Is_Array_Type (U_Ent) then
+                  Set_Alignment (Base_Type (U_Ent), Align);
+               end if;
             end if;
-         end Alignment_Block;
+         end Alignment;
 
          ---------------
          -- Bit_Order --
@@ -2176,6 +2198,38 @@ package body Sem_Ch13 is
       Analyze (Expression (N));
    end Analyze_Free_Statement;
 
+   ---------------------------
+   -- Analyze_Freeze_Entity --
+   ---------------------------
+
+   --  This does not belong in sem_ch13, and I don't like the big new
+   --  dependency on sem_ch3, I would in fact move this to sem_ch3 or
+   --  somewhere else, and then Add_Internal_Interface_Entitites can be
+   --  private to sem_ch3.adb. ???
+
+   procedure Analyze_Freeze_Entity (N : Node_Id) is
+      E : constant Entity_Id := Entity (N);
+
+   begin
+      --  For tagged types covering interfaces add internal entities that link
+      --  the primitives of the interfaces with the primitives that cover them.
+
+      --  Note: These entities were originally generated only when generating
+      --  code because their main purpose was to provide support to initialize
+      --  the secondary dispatch tables. They are now generated also when
+      --  compiling with no code generation to provide ASIS the relationship
+      --  between interface primitives and tagged type primitives.
+
+      if Ada_Version >= Ada_05
+        and then Ekind (E) = E_Record_Type
+        and then Is_Tagged_Type (E)
+        and then not Is_Interface (E)
+        and then Has_Interfaces (E)
+      then
+         Add_Internal_Interface_Entities (E);
+      end if;
+   end Analyze_Freeze_Entity;
+
    ------------------------------------------
    -- Analyze_Record_Representation_Clause --
    ------------------------------------------
@@ -2192,12 +2246,26 @@ package body Sem_Ch13 is
       Hbit    : Uint := Uint_0;
       Comp    : Entity_Id;
       Ocomp   : Entity_Id;
+      Pcomp   : Entity_Id;
       Biased  : Boolean;
 
       Max_Bit_So_Far : Uint;
       --  Records the maximum bit position so far. If all field positions
       --  are monotonically increasing, then we can skip the circuit for
       --  checking for overlap, since no overlap is possible.
+
+      Tagged_Parent : Entity_Id := Empty;
+      --  This is set in the case of a derived tagged type for which we have
+      --  Is_Fully_Repped_Tagged_Type True (indicating that all components are
+      --  positioned by record representation clauses). In this case we must
+      --  check for overlap between components of this tagged type, and the
+      --  components of its parent. Tagged_Parent will point to this parent
+      --  type. For all other cases Tagged_Parent is left set to Empty.
+
+      Parent_Last_Bit : Uint;
+      --  Relevant only if Tagged_Parent is set, Parent_Last_Bit indicates the
+      --  last bit position for any field in the parent type. We only need to
+      --  check overlap for fields starting below this point.
 
       Overlap_Check_Required : Boolean;
       --  Used to keep track of whether or not an overlap check is required
@@ -2320,6 +2388,39 @@ package body Sem_Ch13 is
          end loop;
       end if;
 
+      --  See if we have a fully repped derived tagged type
+
+      declare
+         PS : constant Entity_Id := Parent_Subtype (Rectype);
+
+      begin
+         if Present (PS) and then Is_Fully_Repped_Tagged_Type (PS) then
+            Tagged_Parent := PS;
+
+            --  Find maximum bit of any component of the parent type
+
+            Parent_Last_Bit := UI_From_Int (System_Address_Size - 1);
+            Pcomp := First_Entity (Tagged_Parent);
+            while Present (Pcomp) loop
+               if Ekind (Pcomp) = E_Discriminant
+                    or else
+                  Ekind (Pcomp) = E_Component
+               then
+                  if Component_Bit_Offset (Pcomp) /= No_Uint
+                    and then Known_Static_Esize (Pcomp)
+                  then
+                     Parent_Last_Bit :=
+                       UI_Max
+                         (Parent_Last_Bit,
+                          Component_Bit_Offset (Pcomp) + Esize (Pcomp) - 1);
+                  end if;
+
+                  Next_Entity (Pcomp);
+               end if;
+            end loop;
+         end if;
+      end;
+
       --  All done if no component clauses
 
       CC := First (Component_Clauses (N));
@@ -2343,7 +2444,7 @@ package body Sem_Ch13 is
          Set_Normalized_Position_Max (Fent, Uint_0);
          Init_Esize                  (Fent, System_Address_Size);
 
-         Set_Component_Clause    (Fent,
+         Set_Component_Clause (Fent,
            Make_Component_Clause (Loc,
              Component_Name =>
                Make_Identifier (Loc,
@@ -2484,6 +2585,9 @@ package body Sem_Ch13 is
                         end;
                      end if;
 
+                  --  Normal case where this is the first component clause we
+                  --  have seen for this entity, so set it up properly.
+
                   else
                      --  Make reference for field in record rep clause and set
                      --  appropriate entity field in the field identifier.
@@ -2524,7 +2628,7 @@ package body Sem_Ch13 is
                         then
                            Error_Msg_NE
                              ("component overlaps tag field of&",
-                              CC, Rectype);
+                              Component_Name (CC), Rectype);
                         end if;
 
                         --  This information is also set in the corresponding
@@ -2568,6 +2672,27 @@ package body Sem_Ch13 is
                         if Esize (Comp) < 0 then
                            Error_Msg_N ("component size is negative", CC);
                         end if;
+                     end if;
+
+                     --  If OK component size, check parent type overlap if
+                     --  this component might overlap a parent field.
+
+                     if Present (Tagged_Parent)
+                       and then Fbit <= Parent_Last_Bit
+                     then
+                        Pcomp := First_Entity (Tagged_Parent);
+                        while Present (Pcomp) loop
+                           if (Ekind (Pcomp) = E_Discriminant
+                                or else
+                               Ekind (Pcomp) = E_Component)
+                             and then not Is_Tag (Pcomp)
+                             and then Chars (Pcomp) /= Name_uParent
+                           then
+                              Check_Component_Overlap (Comp, Pcomp);
+                           end if;
+
+                           Next_Entity (Pcomp);
+                        end loop;
                      end if;
                   end if;
                end if;
@@ -2614,16 +2739,26 @@ package body Sem_Ch13 is
 
             package Sorting is new GNAT.Heap_Sort_G (OC_Move, OC_Lt);
 
+            -----------
+            -- OC_Lt --
+            -----------
+
             function OC_Lt (Op1, Op2 : Natural) return Boolean is
             begin
                return OC_Fbit (Op1) < OC_Fbit (Op2);
             end OC_Lt;
+
+            -------------
+            -- OC_Move --
+            -------------
 
             procedure OC_Move (From : Natural; To : Natural) is
             begin
                OC_Fbit (To) := OC_Fbit (From);
                OC_Lbit (To) := OC_Lbit (From);
             end OC_Move;
+
+         --  Start of processing for Overlap_Check
 
          begin
             CC := First (Component_Clauses (N));
@@ -2722,7 +2857,6 @@ package body Sem_Ch13 is
                      if Has_Discriminants (Defining_Identifier (Clist)) then
                         C2_Ent :=
                           First_Discriminant (Defining_Identifier (Clist));
-
                         while Present (C2_Ent) loop
                            exit when C1_Ent = C2_Ent;
                            Check_Component_Overlap (C1_Ent, C2_Ent);

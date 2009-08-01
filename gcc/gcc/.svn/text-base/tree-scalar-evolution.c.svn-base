@@ -466,7 +466,7 @@ loop_phi_node_p (gimple phi)
    EVOLUTION_FN = {i_0, +, 2}_1.
 */
  
-static tree 
+tree
 compute_overall_effect_of_inner_loop (struct loop *loop, tree evolution_fn)
 {
   bool val = false;
@@ -492,7 +492,10 @@ compute_overall_effect_of_inner_loop (struct loop *loop, tree evolution_fn)
 	      /* evolution_fn is the evolution function in LOOP.  Get
 		 its value in the nb_iter-th iteration.  */
 	      res = chrec_apply (inner_loop->num, evolution_fn, nb_iter);
-	      
+
+	      if (chrec_contains_symbols_defined_in_loop (res, loop->num))
+		res = instantiate_parameters (loop, res);
+
 	      /* Continue the computation until ending on a parent of LOOP.  */
 	      return compute_overall_effect_of_inner_loop (loop, res);
 	    }
@@ -1890,18 +1893,16 @@ analyze_scalar_evolution_1 (struct loop *loop, tree var, tree res)
   return res;
 }
 
-/* Entry point for the scalar evolution analyzer.
-   Analyzes and returns the scalar evolution of the ssa_name VAR.
-   LOOP_NB is the identifier number of the loop in which the variable
-   is used.
+/* Analyzes and returns the scalar evolution of the ssa_name VAR in
+   LOOP.  LOOP is the loop in which the variable is used.
    
    Example of use: having a pointer VAR to a SSA_NAME node, STMT a
    pointer to the statement that uses this variable, in order to
    determine the evolution function of the variable, use the following
    calls:
    
-   unsigned loop_nb = loop_containing_stmt (stmt)->num;
-   tree chrec_with_symbols = analyze_scalar_evolution (loop_nb, var);
+   loop_p loop = loop_containing_stmt (stmt);
+   tree chrec_with_symbols = analyze_scalar_evolution (loop, var);
    tree chrec_instantiated = instantiate_parameters (loop, chrec_with_symbols);
 */
 
@@ -2174,7 +2175,9 @@ instantiate_scev_1 (basic_block instantiate_below,
 	  else
 	    res = chrec;
 
-	  if (res == NULL_TREE)
+	  if (res == NULL_TREE
+	      || !dominated_by_p (CDI_DOMINATORS, instantiate_below,
+				  gimple_bb (SSA_NAME_DEF_STMT (res))))
 	    res = chrec_dont_know;
 	}
 

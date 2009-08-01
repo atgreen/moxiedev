@@ -1411,7 +1411,7 @@ for_each_scev_op (tree *scev, bool (*cbck) (tree *, void *), void *data)
 
     case 2:
       for_each_scev_op (&TREE_OPERAND (*scev, 1), cbck, data);
-      
+
     case 1:
       for_each_scev_op (&TREE_OPERAND (*scev, 0), cbck, data);
 
@@ -1438,6 +1438,7 @@ operator_is_linear (tree scev)
     case NEGATE_EXPR:
     case SSA_NAME:
     case NON_LVALUE_EXPR:
+    case BIT_NOT_EXPR:
     CASE_CONVERT:
       return true;
 
@@ -1461,6 +1462,10 @@ scev_is_linear_expression (tree scev)
     return !(tree_contains_chrecs (TREE_OPERAND (scev, 0), NULL)
 	     && tree_contains_chrecs (TREE_OPERAND (scev, 1), NULL));
 
+  if (TREE_CODE (scev) == POLYNOMIAL_CHREC
+      && !evolution_function_is_affine_multivariate_p (scev, CHREC_VARIABLE (scev)))
+    return false;
+
   switch (TREE_CODE_LENGTH (TREE_CODE (scev)))
     {
     case 3:
@@ -1471,7 +1476,7 @@ scev_is_linear_expression (tree scev)
     case 2:
       return scev_is_linear_expression (TREE_OPERAND (scev, 0))
 	&& scev_is_linear_expression (TREE_OPERAND (scev, 1));
-      
+
     case 1:
       return scev_is_linear_expression (TREE_OPERAND (scev, 0));
 
@@ -1482,3 +1487,33 @@ scev_is_linear_expression (tree scev)
       return false;
     }
 }
+
+/* Determines whether the expression CHREC contains only interger consts
+   in the right parts.  */
+
+bool
+evolution_function_right_is_integer_cst (const_tree chrec)
+{
+  if (chrec == NULL_TREE)
+    return false;
+
+  switch (TREE_CODE (chrec))
+    {
+    case INTEGER_CST:
+      return true;
+
+    case POLYNOMIAL_CHREC:
+      if (!evolution_function_right_is_integer_cst (CHREC_RIGHT (chrec)))
+	return false;
+
+      if (TREE_CODE (CHREC_LEFT (chrec)) == POLYNOMIAL_CHREC
+	&& !evolution_function_right_is_integer_cst (CHREC_LEFT (chrec)))
+	return false;
+
+      return true;
+
+    default:
+      return false;
+    }
+}
+

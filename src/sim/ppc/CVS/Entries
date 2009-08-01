@@ -2,10 +2,8 @@
 /BUGS/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
 /COPYING/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
 /COPYING.LIB/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
-/ChangeLog/1.88/Mon Jul  6 10:46:53 2009/-ko/
 /ChangeLog.00/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
 /INSTALL/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
-/Makefile.in/1.25/Mon Jul  6 10:46:53 2009/-ko/
 /README/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
 /RUN/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
 /aclocal.m4/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
@@ -143,4 +141,6 @@
 /vm.h/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
 /vm_n.h/1.1.1.1/Mon Jul  6 10:46:53 2009/-ko/
 /words.h/1.4/Mon Jul  6 10:46:53 2009/-ko/
+/ChangeLog/1.89/Fri Jul 31 11:10:24 2009/-ko/
+/Makefile.in/1.26/Fri Jul 31 11:10:24 2009/-ko/
 D

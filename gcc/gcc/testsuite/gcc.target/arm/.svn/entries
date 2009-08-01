@@ -1,15 +1,15 @@
 10
 
 dir
-149693
+150304
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/arm
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-06-19T21:22:44.917926Z
-148728
-ramana
+2009-07-31T00:17:46.975073Z
+150287
+dougkwan
 
 
 
@@ -28,7 +28,7 @@ ramana
 
 fp16-compile-none-2.c
 file
-
+149693
 
 
 
@@ -62,7 +62,7 @@ sandra
 
 mmx-1.c
 file
-
+149693
 
 
 
@@ -94,43 +94,9 @@ uros
 
 1204
 
-cond-asm.c
-file
-
-
-
-
-2009-04-24T17:45:29.000000Z
-257aa0b2b8891d05f782af1a15b2ed25
-2006-08-10T16:31:40.009899Z
-116064
-pbrook
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-291
-
 va_list.c
 file
-
+149693
 
 
 
@@ -162,9 +128,43 @@ jsm28
 
 543
 
+cond-asm.c
+file
+149693
+
+
+
+2009-04-24T17:45:29.000000Z
+257aa0b2b8891d05f782af1a15b2ed25
+2006-08-10T16:31:40.009899Z
+116064
+pbrook
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+291
+
 neon-modes-1.c
 file
-
+149693
 
 
 
@@ -196,43 +196,9 @@ froydnj
 
 294
 
-g2.c
-file
-
-
-
-
-2009-04-24T17:45:29.000000Z
-f1109dc2f4b55ae9bee1eb70088acbdf
-2008-09-13T13:26:46.697746Z
-140340
-uros
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-608
-
 fp16-param-1.c
 file
-
+149693
 
 
 
@@ -264,9 +230,43 @@ sandra
 
 372
 
+g2.c
+file
+149693
+
+
+
+2009-04-24T17:45:29.000000Z
+f1109dc2f4b55ae9bee1eb70088acbdf
+2008-09-13T13:26:46.697746Z
+140340
+uros
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+608
+
 scd42-1.c
 file
-
+149693
 
 
 
@@ -301,43 +301,9 @@ uros
 neon
 dir
 
-scd42-3.c
-file
-
-
-
-
-2009-04-24T17:45:39.000000Z
-7a6d42192695bb35963980b35c67472e
-2008-09-13T13:26:46.697746Z
-140340
-uros
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-357
-
 fp16-compile-alt-2.c
 file
-
+149693
 
 
 
@@ -369,9 +335,43 @@ sandra
 
 296
 
+scd42-3.c
+file
+149693
+
+
+
+2009-04-24T17:45:39.000000Z
+7a6d42192695bb35963980b35c67472e
+2008-09-13T13:26:46.697746Z
+140340
+uros
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+357
+
 naked-1.c
 file
-
+149693
 
 
 
@@ -403,43 +403,9 @@ carlos
 
 464
 
-eabi1.c
-file
-
-
-
-
-2009-04-24T17:45:29.000000Z
-39e150b610f31cfb6c2c520f69fa0abf
-2009-01-14T01:44:39.470737Z
-143361
-jsm28
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-11159
-
 fp16-compile-alt-4.c
 file
-
+149693
 
 
 
@@ -471,9 +437,43 @@ sandra
 
 300
 
+eabi1.c
+file
+149693
+
+
+
+2009-04-24T17:45:29.000000Z
+39e150b610f31cfb6c2c520f69fa0abf
+2009-01-14T01:44:39.470737Z
+143361
+jsm28
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11159
+
 fp16-compile-vcvt.c
 file
-
+149693
 
 
 
@@ -507,7 +507,7 @@ sandra
 
 fp16-compile-alt-6.c
 file
-
+149693
 
 
 
@@ -541,7 +541,7 @@ sandra
 
 symbian2.c
 file
-
+149693
 
 
 
@@ -575,7 +575,7 @@ uros
 
 fp16-compile-ieee-10.c
 file
-
+149693
 
 
 
@@ -609,7 +609,7 @@ sandra
 
 fp16-compile-alt-8.c
 file
-
+149693
 
 
 
@@ -643,7 +643,7 @@ sandra
 
 fp16-unprototyped-2.c
 file
-
+149693
 
 
 
@@ -677,7 +677,7 @@ sandra
 
 symbian4.c
 file
-
+149693
 
 
 
@@ -711,7 +711,7 @@ uros
 
 fp16-compile-ieee-12.c
 file
-
+149693
 
 
 
@@ -745,7 +745,7 @@ sandra
 
 fp16-return-1.c
 file
-
+149693
 
 
 
@@ -779,7 +779,7 @@ sandra
 
 20051215-1.c
 file
-
+149693
 
 
 
@@ -813,7 +813,7 @@ uros
 
 fp16-compile-alt-11.c
 file
-
+149693
 
 
 
@@ -847,7 +847,7 @@ sandra
 
 fp16-compile-ieee-1.c
 file
-
+149693
 
 
 
@@ -881,7 +881,7 @@ sandra
 
 fp16-compile-ieee-3.c
 file
-
+149693
 
 
 
@@ -915,7 +915,7 @@ sandra
 
 fp16-compile-ieee-5.c
 file
-
+149693
 
 
 
@@ -949,7 +949,7 @@ sandra
 
 fp16-compile-ieee-7.c
 file
-
+149693
 
 
 
@@ -983,7 +983,7 @@ sandra
 
 fp16-compile-ieee-9.c
 file
-
+149693
 
 
 
@@ -1017,7 +1017,7 @@ sandra
 
 fp16-compile-exprtype.c
 file
-
+149693
 
 
 
@@ -1051,7 +1051,7 @@ sandra
 
 thumb2-mul-space-2.c
 file
-
+149693
 
 
 
@@ -1083,43 +1083,9 @@ mmitchel
 
 411
 
-long-calls-1.c
-file
-
-
-
-
-2009-04-28T12:59:58.000000Z
-bf821309d2cd93b8c0d6b0704742bc45
-2009-04-28T08:38:37.952050Z
-146876
-nathan
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5964
-
 arm.exp
 file
-
+149693
 
 
 
@@ -1151,51 +1117,17 @@ nickc
 
 1226
 
-neon-vmla-1.c
+long-calls-1.c
 file
+149693
 
 
 
-
-2009-05-22T06:47:40.000000Z
-7fc2a64aa360db3a1e3bba874d1e75b3
-2009-05-21T16:53:48.961204Z
-147771
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-322
-
-register-variables.c
-file
-
-
-
-
-2009-04-24T17:45:39.000000Z
-3143560976572191d8bba6ba78a45aa6
-2007-03-19T21:00:14.895322Z
-123071
-shinwell
+2009-04-28T12:59:58.000000Z
+bf821309d2cd93b8c0d6b0704742bc45
+2009-04-28T08:38:37.952050Z
+146876
+nathan
 
 
 
@@ -1217,11 +1149,11 @@ shinwell
 
 
 
-329
+5964
 
 fp16-variadic-1.c
 file
-
+149693
 
 
 
@@ -1253,9 +1185,77 @@ sandra
 
 583
 
+register-variables.c
+file
+149693
+
+
+
+2009-04-24T17:45:39.000000Z
+3143560976572191d8bba6ba78a45aa6
+2007-03-19T21:00:14.895322Z
+123071
+shinwell
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+329
+
+neon-vmla-1.c
+file
+149693
+
+
+
+2009-05-22T06:47:40.000000Z
+7fc2a64aa360db3a1e3bba874d1e75b3
+2009-05-21T16:53:48.961204Z
+147771
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+322
+
 long-calls-3.c
 file
-
+149693
 
 
 
@@ -1289,7 +1289,7 @@ froydnj
 
 20031108-1.c
 file
-
+149693
 
 
 
@@ -1323,7 +1323,7 @@ uros
 
 fp16-compile-none-1.c
 file
-
+149693
 
 
 
@@ -1357,7 +1357,7 @@ sandra
 
 fp16-builtins-1.c
 file
-
+149693
 
 
 
@@ -1391,7 +1391,7 @@ sandra
 
 fp16-rounding-ieee-1.c
 file
-
+149693
 
 
 
@@ -1425,7 +1425,7 @@ sandra
 
 fp16-rounding-alt-1.c
 file
-
+149693
 
 
 
@@ -1459,7 +1459,7 @@ sandra
 
 neon-vmls-1.c
 file
-
+149693
 
 
 
@@ -1491,77 +1491,9 @@ mmitchel
 
 322
 
-scd42-2.c
-file
-
-
-
-
-2009-04-24T17:45:39.000000Z
-22b6d4635b71bf03bd31344c57b987bd
-2008-09-13T13:26:46.697746Z
-140340
-uros
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-519
-
-neon-cond-1.c
-file
-
-
-
-
-2009-04-24T17:45:29.000000Z
-3684bcef0bcbc4ed68b1ce84db9ebc6b
-2009-01-27T16:14:13.749528Z
-143705
-pbrook
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-724
-
 fp16-compile-alt-1.c
 file
-
+149693
 
 
 
@@ -1593,9 +1525,77 @@ sandra
 
 263
 
+neon-cond-1.c
+file
+149693
+
+
+
+2009-04-24T17:45:29.000000Z
+3684bcef0bcbc4ed68b1ce84db9ebc6b
+2009-01-27T16:14:13.749528Z
+143705
+pbrook
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+724
+
+scd42-2.c
+file
+149693
+
+
+
+2009-04-24T17:45:39.000000Z
+22b6d4635b71bf03bd31344c57b987bd
+2008-09-13T13:26:46.697746Z
+140340
+uros
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+519
+
 fp16-compile-alt-3.c
 file
-
+149693
 
 
 
@@ -1629,7 +1629,7 @@ sandra
 
 naked-2.c
 file
-
+149693
 
 
 
@@ -1663,7 +1663,7 @@ carlos
 
 fp16-compile-alt-5.c
 file
-
+149693
 
 
 
@@ -1697,7 +1697,7 @@ sandra
 
 symbian1.c
 file
-
+149693
 
 
 
@@ -1729,43 +1729,9 @@ uros
 
 366
 
-fp16-unprototyped-1.c
-file
-
-
-
-
-2009-06-20T15:53:01.000000Z
-59b43d7fa573aec56d37e8d3ee175b75
-2009-06-18T12:30:19.753475Z
-148656
-sandra
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-384
-
 fp16-compile-alt-7.c
 file
-
+149693
 
 
 
@@ -1797,9 +1763,43 @@ sandra
 
 493
 
+fp16-unprototyped-1.c
+file
+149693
+
+
+
+2009-06-20T15:53:01.000000Z
+59b43d7fa573aec56d37e8d3ee175b75
+2009-06-18T12:30:19.753475Z
+148656
+sandra
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+384
+
 symbian3.c
 file
-
+149693
 
 
 
@@ -1831,43 +1831,9 @@ uros
 
 167
 
-fp16-compile-alt-9.c
-file
-
-
-
-
-2009-06-20T15:53:01.000000Z
-1900ff91b8d1ebb82b8a5ab9b5f6eb02
-2009-06-18T12:30:19.753475Z
-148656
-sandra
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-342
-
 fp16-compile-ieee-11.c
 file
-
+149693
 
 
 
@@ -1899,9 +1865,43 @@ sandra
 
 252
 
+fp16-compile-alt-9.c
+file
+149693
+
+
+
+2009-06-20T15:53:01.000000Z
+1900ff91b8d1ebb82b8a5ab9b5f6eb02
+2009-06-18T12:30:19.753475Z
+148656
+sandra
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+342
+
 symbian5.c
 file
-
+149693
 
 
 
@@ -1935,7 +1935,7 @@ uros
 
 vfp-1.c
 file
-
+149693
 
 
 
@@ -1969,7 +1969,7 @@ uros
 
 fp16-compile-alt-10.c
 file
-
+149693
 
 
 
@@ -2003,7 +2003,7 @@ sandra
 
 fp16-compile-alt-12.c
 file
-
+149693
 
 
 
@@ -2037,7 +2037,7 @@ sandra
 
 20030909-1.c
 file
-
+149693
 
 
 
@@ -2071,7 +2071,7 @@ uros
 
 fp16-compile-ieee-2.c
 file
-
+149693
 
 
 
@@ -2105,7 +2105,7 @@ sandra
 
 stack-corruption.c
 file
-
+149693
 
 
 
@@ -2139,7 +2139,7 @@ spark
 
 sibcall-1.c
 file
-
+149693
 
 
 
@@ -2173,7 +2173,7 @@ jconner
 
 fp16-compile-ieee-4.c
 file
-
+149693
 
 
 
@@ -2207,7 +2207,7 @@ sandra
 
 fp16-compile-ieee-6.c
 file
-
+149693
 
 
 
@@ -2241,7 +2241,7 @@ sandra
 
 fp16-compile-ieee-8.c
 file
-
+149693
 
 
 
@@ -2275,7 +2275,7 @@ sandra
 
 asm.c
 file
-
+149693
 
 
 
@@ -2309,7 +2309,7 @@ uros
 
 pr40482.c
 file
-
+149693
 
 
 
@@ -2343,7 +2343,7 @@ ramana
 
 thumb2-mul-space-3.c
 file
-
+149693
 
 
 
@@ -2377,7 +2377,7 @@ mmitchel
 
 thumb2-mul-space.c
 file
-
+149693
 
 
 
@@ -2411,7 +2411,7 @@ mmitchel
 
 thumb2-mul-speed.c
 file
-
+149693
 
 
 
@@ -2445,7 +2445,7 @@ mmitchel
 
 long-calls-2.c
 file
-
+149693
 
 
 
@@ -2479,7 +2479,7 @@ froydnj
 
 long-calls-4.c
 file
-
+149693
 
 
 

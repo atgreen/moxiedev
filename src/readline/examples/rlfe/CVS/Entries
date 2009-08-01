@@ -1,12 +1,12 @@
-/ChangeLog/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /Makefile.in/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /README/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /config.h.in/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /configure/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
-/configure.in/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /extern.h/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /os.h/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /pty.c/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /rlfe.c/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /screen.h/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
+/ChangeLog/1.2/Fri Jul 31 11:10:24 2009/-ko/
+/configure.in/1.2/Fri Jul 31 11:10:24 2009/-ko/
 D

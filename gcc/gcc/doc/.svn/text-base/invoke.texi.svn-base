@@ -161,7 +161,8 @@ in the following sections.
 @table @emph
 @item Overall Options
 @xref{Overall Options,,Options Controlling the Kind of Output}.
-@gccoptlist{-c  -S  -E  -o @var{file}  -combine  -pipe  -pass-exit-codes  @gol
+@gccoptlist{-c  -S  -E  -o @var{file}  -combine  -no-canonical-prefixes  @gol
+-pipe  -pass-exit-codes  @gol
 -x @var{language}  -v  -###  --help@r{[}=@var{class}@r{[},@dots{}@r{]]}  --target-help  @gol
 --version -wrapper@@@var{file} -fplugin=@var{file} -fplugin-arg-@var{name}=@var{arg}}
 
@@ -345,7 +346,8 @@ Objective-C and Objective-C++ Dialects}.
 -fira-region=@var{region} -fira-coalesce -fno-ira-share-save-slots @gol
 -fno-ira-share-spill-slots -fira-verbose=@var{n} @gol
 -fivopts -fkeep-inline-functions -fkeep-static-consts @gol
--floop-block -floop-interchange -floop-strip-mine @gol
+-floop-block -floop-interchange -floop-strip-mine -fgraphite-identity @gol
+-fgraphite-force-parallel @gol
 -fmerge-all-constants -fmerge-constants -fmodulo-sched @gol
 -fmodulo-sched-allow-regmoves -fmove-loop-invariants -fmudflap @gol
 -fmudflapir -fmudflapth -fno-branch-count-reg -fno-default-inline @gol
@@ -533,7 +535,7 @@ Objective-C and Objective-C++ Dialects}.
 -mmemory-latency=@var{time}}
 
 @emph{DEC Alpha/VMS Options}
-@gccoptlist{-mvms-return-codes}
+@gccoptlist{-mvms-return-codes -mdebug-main=@var{prefix}}
 
 @emph{FR30 Options}
 @gccoptlist{-msmall-model -mno-lsim}
@@ -737,7 +739,8 @@ See RS/6000 and PowerPC Options.
 -maltivec  -mno-altivec @gol
 -mpowerpc-gpopt  -mno-powerpc-gpopt @gol
 -mpowerpc-gfxopt  -mno-powerpc-gfxopt @gol
--mmfcrf  -mno-mfcrf  -mpopcntb  -mno-popcntb  -mfprnd  -mno-fprnd @gol
+-mmfcrf  -mno-mfcrf  -mpopcntb  -mno-popcntb -mpopcntd -mno-popcntd @gol
+-mfprnd  -mno-fprnd @gol
 -mcmpb -mno-cmpb -mmfpgpr -mno-mfpgpr -mhard-dfp -mno-hard-dfp @gol
 -mnew-mnemonics  -mold-mnemonics @gol
 -mfull-toc   -mminimal-toc  -mno-fp-in-toc  -mno-sum-in-toc @gol
@@ -751,7 +754,7 @@ See RS/6000 and PowerPC Options.
 -mstrict-align  -mno-strict-align  -mrelocatable @gol
 -mno-relocatable  -mrelocatable-lib  -mno-relocatable-lib @gol
 -mtoc  -mno-toc  -mlittle  -mlittle-endian  -mbig  -mbig-endian @gol
--mdynamic-no-pic  -maltivec  -mswdiv @gol
+-mdynamic-no-pic  -maltivec -mswdiv @gol
 -mprioritize-restricted-insns=@var{priority} @gol
 -msched-costly-dep=@var{dependence_type} @gol
 -minsert-sched-nops=@var{scheme} @gol
@@ -799,7 +802,7 @@ See RS/6000 and PowerPC Options.
 -m5-32media  -m5-32media-nofpu @gol
 -m5-compact  -m5-compact-nofpu @gol
 -mb  -ml  -mdalign  -mrelax @gol
--mbigtable  -mhitachi -mrenesas -mno-renesas -mnomacsave @gol
+-mbigtable -mfmovd -mhitachi -mrenesas -mno-renesas -mnomacsave @gol
 -mieee  -mbitops  -misize  -minline-ic_invalidate -mpadstruct  -mspace @gol
 -mprefergot  -musermode -multcost=@var{number} -mdiv=@var{strategy} @gol
 -mdivsi3_libfunc=@var{name} -mfixed-range=@var{register-range} @gol
@@ -1304,6 +1307,12 @@ gcc -c -Q -O3 --help=optimizers > /tmp/O3-opts
 gcc -c -Q -O2 --help=optimizers > /tmp/O2-opts
 diff /tmp/O2-opts /tmp/O3-opts | grep enabled
 @end smallexample
+
+@item -no-canonical-prefixes
+@opindex no-canonical-prefixes
+Do not expand any symbolic links, resolve references to @samp{/../}
+or @samp{/./}, or make the path absolute when generating a relative
+prefix.
 
 @item --version
 @opindex version
@@ -5142,6 +5151,8 @@ Enable showing line numbers for statements.
 Enable showing the unique ID (@code{DECL_UID}) for each variable.
 @item verbose
 Enable showing the tree dump for each statement.
+@item eh
+Enable showing the EH region number holding each statement.
 @item all
 Turn on all options, except @option{raw}, @option{slim}, @option{verbose}
 and @option{lineno}.
@@ -6581,6 +6592,21 @@ languages supported by GCC and is not limited to Fortran.  To use this
 code transformation, GCC has to be configured with @option{--with-ppl}
 and @option{--with-cloog} to enable the Graphite loop transformation
 infrastructure.
+
+@item -fgraphite-identity
+@opindex fgraphite-identity
+Enable the identity transformation for graphite.  For every SCoP we generate
+the polyhedral representation and transform it back to gimple.  Using
+@option{-fgraphite-identity} we can check the costs or benefits of the
+GIMPLE -> GRAPHITE -> GIMPLE transformation.  Some minimal optimizations
+are also performed by the code generator CLooG, like index splitting and
+dead code elimination in loops.
+
+@item -fgraphite-force-parallel
+Use the Graphite data dependence analysis to identify loops that can
+be parallelized.  Parallelize all the loops that can be analyzed to
+not contain loop carried dependences without checking that it is
+profitable to parallelize the loops.
 
 @item -fcheck-data-deps
 @opindex fcheck-data-deps
@@ -10573,8 +10599,13 @@ These @samp{-m} options are defined for the DEC Alpha/VMS implementations:
 @table @gcctabopt
 @item -mvms-return-codes
 @opindex mvms-return-codes
-Return VMS condition codes from main.  The default is to return POSIX
+Return VMS condition codes from main. The default is to return POSIX
 style condition (e.g.@: error) codes.
+
+@item -mdebug-main=@var{prefix}
+@opindex mdebug-main=@var{prefix}
+Flag the first routine whose name starts with @var{prefix} as the main
+routine for the debugger.
 @end table
 
 @node FR30 Options
@@ -14102,6 +14133,8 @@ These @samp{-m} options are defined for the IBM RS/6000 and PowerPC:
 @itemx -mno-mfcrf
 @itemx -mpopcntb
 @itemx -mno-popcntb
+@itemx -mpopcntd
+@itemx -mno-popcntd
 @itemx -mfprnd
 @itemx -mno-fprnd
 @itemx -mcmpb
@@ -14126,6 +14159,8 @@ These @samp{-m} options are defined for the IBM RS/6000 and PowerPC:
 @opindex mno-mfcrf
 @opindex mpopcntb
 @opindex mno-popcntb
+@opindex mpopcntd
+@opindex mno-popcntd
 @opindex mfprnd
 @opindex mno-fprnd
 @opindex mcmpb
@@ -14175,6 +14210,9 @@ The @option{-mpopcntb} option allows GCC to generate the popcount and
 double precision FP reciprocal estimate instruction implemented on the
 POWER5 processor and other processors that support the PowerPC V2.02
 architecture.
+The @option{-mpopcntd} option allows GCC to generate the popcount
+instruction implemented on the POWER7 processor and other processors
+that support the PowerPC V2.06 architecture.
 The @option{-mfprnd} option allows GCC to generate the FP round to
 integer instructions implemented on the POWER5+ processor and other
 processors that support the PowerPC V2.03 architecture.
@@ -14253,9 +14291,9 @@ The @option{-mcpu} options automatically enable or disable the
 following options:
 
 @gccoptlist{-maltivec  -mfprnd  -mhard-float  -mmfcrf  -mmultiple @gol
--mnew-mnemonics  -mpopcntb  -mpower  -mpower2  -mpowerpc64 @gol
+-mnew-mnemonics  -mpopcntb -mpopcntd  -mpower  -mpower2  -mpowerpc64 @gol
 -mpowerpc-gpopt  -mpowerpc-gfxopt  -msingle-float -mdouble-float @gol
--msimple-fpu -mstring  -mmulhw  -mdlmzb  -mmfpgpr}
+-msimple-fpu -mstring  -mmulhw  -mdlmzb  -mmfpgpr -mvsx}
 
 The particular options set for any particular CPU will vary between
 compiler versions, depending on what setting seems to produce optimal
@@ -14355,6 +14393,14 @@ instructions.
 @item -mspe=@var{yes/no}
 This option has been deprecated.  Use @option{-mspe} and
 @option{-mno-spe} instead.
+
+@item -mvsx
+@itemx -mno-vsx
+@opindex mvsx
+@opindex mno-vsx
+Generate code that uses (does not use) vector/scalar (VSX)
+instructions, and also enable the use of built-in functions that allow
+more direct access to the VSX instruction set.
 
 @item -mfloat-gprs=@var{yes/single/double/no}
 @itemx -mfloat-gprs
@@ -15298,6 +15344,11 @@ Use 32-bit offsets in @code{switch} tables.  The default is to use
 @item -mbitops
 @opindex mbitops
 Enable the use of bit manipulation instructions on SH2A.
+
+@item -mfmovd
+@opindex mfmovd
+Enable the use of the instruction @code{fmovd}.  Check @option{-mdalign} for
+alignment constraints.
 
 @item -mhitachi
 @opindex mhitachi

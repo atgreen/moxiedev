@@ -1,5 +1,3 @@
-/ChangeLog/1.21/Mon Jul  6 10:46:39 2009//
-/Makefile.in/1.7/Mon Jul  6 10:46:39 2009//
 /add-log.el/1.1.1.1/Mon Jul  6 10:46:39 2009//
 /add-log.vi/1.1.1.1/Mon Jul  6 10:46:39 2009//
 /configbuild.ein/1.1.1.1/Mon Jul  6 10:46:39 2009//
@@ -10,11 +8,13 @@
 /configdev.fig/1.1.1.1/Mon Jul  6 10:46:39 2009//
 /configdev.jin/1.1.1.1/Mon Jul  6 10:46:39 2009//
 /configdev.tin/1.1.1.1/Mon Jul  6 10:46:39 2009//
-/configure/1.3/Mon Jul  6 10:46:39 2009//
-/configure.in/1.3/Mon Jul  6 10:46:39 2009//
 /configure.texi/1.6/Mon Jul  6 10:46:39 2009//
 /fdl.texi/1.2/Mon Jul  6 10:46:39 2009//
 /make-stds.texi/1.3/Mon Jul  6 10:46:39 2009//
 /standards.texi/1.4/Mon Jul  6 10:46:39 2009//
 /texi2pod.pl/1.7/Mon Jul  6 10:46:39 2009//
+/ChangeLog/1.22/Fri Jul 31 11:10:02 2009//
+/Makefile.in/1.8/Fri Jul 31 11:10:02 2009//
+/configure/1.4/Fri Jul 31 11:10:03 2009//
+/configure.in/1.4/Fri Jul 31 11:10:03 2009//
 D

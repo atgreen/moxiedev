@@ -2183,6 +2183,16 @@ package VMS_Data is
    --
    --    Build against an alternate runtime system named xxx or RTS-xxx.
 
+   S_GCC_SCO     : aliased constant S := "/SCO_OUTPUT "   &
+                                            "-gnateS";
+   --        /NOSCO_OUTPUT (D)
+   --        /SCO_OUTPUT
+   --
+   --   Controls the output of SCO (Source Coverage Obligation) information
+   --   in the generated ALI file. This information is used by advanced source
+   --   coverage tools. For a full description of the SCO format, see unit
+   --   SCOs in the compiler sources (sco.ads/sco.adb).
+
    S_GCC_Search  : aliased constant S := "/SEARCH=*"                       &
                                             "-I*";
    --        /SEARCH=(directory[,...])
@@ -2222,6 +2232,8 @@ package VMS_Data is
                                                "-gnaty-A "                 &
                                             "BLANKS "                      &
                                                "-gnatyb "                  &
+                                            "BOOLEAN_OPERATORS "           &
+                                               "-gnatyB "                  &
                                             "NOBLANKS "                    &
                                                "-gnaty-b "                 &
                                             "COMMENTS "                    &
@@ -3472,6 +3484,7 @@ package VMS_Data is
                      S_GCC_Repinfo 'Access,
                      S_GCC_RepinfX 'Access,
                      S_GCC_RTS     'Access,
+                     S_GCC_SCO     'Access,
                      S_GCC_Search  'Access,
                      S_GCC_Style   'Access,
                      S_GCC_StyleX  'Access,
@@ -5753,6 +5766,12 @@ package VMS_Data is
    --   Do not place the IS keyword on a separate line in a subprogram body in
    --   case if the specification occupies more then one line.
 
+   S_Pretty_Sep_Label : aliased constant S := "/SEPARATE_LABEL "           &
+                                                    "--separate-label";
+   --        /SEPARATE_LABEL
+   --
+   --   Place statement label(s) and the statement itself on separate lines.
+
    S_Pretty_Sep_Loop_Then : aliased constant S := "/SEPARATE_LOOP_THEN "   &
                                                     "--separate-loop-then";
    --        /SEPARATE_LOOP_THEN
@@ -6139,6 +6158,7 @@ package VMS_Data is
                         S_Pretty_Project          'Access,
                         S_Pretty_RTS              'Access,
                         S_Pretty_Search           'Access,
+                        S_Pretty_Sep_Label        'Access,
                         S_Pretty_Sep_Loop_Then    'Access,
                         S_Pretty_N_Sep_Loop_Then  'Access,
                         S_Pretty_Subdirs          'Access,
@@ -6556,6 +6576,13 @@ package VMS_Data is
    --
    --  Avoid raising PROGRAM_ERROR in the generated program unit stubs.
 
+   S_Stub_No_Head : aliased constant S := "/NO_LOCAL_HEADER "             &
+                                          "--no-local-header";
+   --        /NONO_LOCAL_HEADER (D)
+   --        /NO_LOCAL_HEADER
+   --
+   --  Do not put local comment header before body stub for local program unit.
+
    S_Stub_Output  : aliased constant S := "/OUTPUT=@"                      &
                                             "-o@";
    --        /OUTPUT=filespec
@@ -6613,9 +6640,9 @@ package VMS_Data is
    --      OVERWRITE (D)  Overwrite the existing tree file. If the current
    --                     directory already contains the file which, according
    --                     to the GNAT file naming rules should be considered
-   --                     as a tree file for the argument source file,
-   --                     gnatstub will refuse to create the tree file needed
-   --                     to create a sample body unless this option is chosen.
+   --                     as a tree file for the argument source file, gnatstub
+   --                     will refuse to create the tree file needed to create
+   --                     a sample body unless this option is chosen.
    --
    --      SAVE           Do not remove the tree file (i.e., the snapshot
    --                     of the compiler internal structures used by gnatstub)
@@ -6653,6 +6680,7 @@ package VMS_Data is
                       S_Stub_Output     'Access,
                       S_Stub_Project    'Access,
                       S_Stub_No_Exc     'Access,
+                      S_Stub_No_Head    'Access,
                       S_Stub_Quiet      'Access,
                       S_Stub_Search     'Access,
                       S_Stub_Subdirs    'Access,

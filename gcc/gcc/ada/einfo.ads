@@ -357,8 +357,12 @@ package Einfo is
 --       overloaded entities it points to the parent subprogram of a derived
 --       subprogram. In case of abstract interface subprograms it points to the
 --       subprogram that covers the abstract interface primitive. Also used for
---       a subprogram renaming, where it points to the renamed subprogram.
---       Always empty for entries.
+--       a subprogram renaming, where it points to the renamed subprogram. For
+--       an inherited operation (of a type extension) that is overridden in a
+--       private part, the Alias is the overriding operation. In this fashion a
+--       call from outside the package ends up executing the new body even if
+--       non-dispatching, and a call from inside calls the overriding operation
+--       because it hides the implicit one. Alias is always empty for entries.
 
 --    Alignment (Uint14)
 --       Present in entities for types and also in constants, variables
@@ -487,7 +491,7 @@ package Einfo is
 --       Present in all entities. Set if a pragma Suppress or Unsuppress
 --       mentions the entity specifically in the second argument. If this
 --       flag is set the Global_Entity_Suppress and Local_Entity_Suppress
---       tables must be consulted to determine if the is actually an active
+--       tables must be consulted to determine if there actually is an active
 --       Suppress or Unsuppress pragma that applies to the entity.
 
 --    Class_Wide_Type (Node9)
@@ -545,21 +549,18 @@ package Einfo is
 --       at run-time (this happens if fields of a record have variable
 --       lengths). See package Layout for details of these values.
 --
---       Note: this field is obsolescent, to be eventually replaced entirely
---       by Normalized_First_Bit and Normalized_Position, but for the moment,
---       gigi is still using (and back annotating) this field, and gigi does
---       not know about the new fields. For the front end layout case, the
---       Component_Bit_Offset field is only set if it is static, and otherwise
---       the new Normalized_First_Bit and Normalized_Position fields are used.
+--       Note: Component_Bit_Offset is redundant with respect to the fields
+--       Normalized_First_Bit and Normalized_Position, and could in principle
+--       be eliminated, but it is convenient in several situations, including
+--       use in Gigi, to have this redundant field.
 
 --    Component_Clause (Node13)
 --       Present in record components and discriminants. If a record
---       representation clause is present for the corresponding record
---       type a that specifies a position for the component, then the
---       Component_Clause field of the E_Component entity points to the
---       N_Component_Clause node. Set to Empty if no record representation
---       clause was present, or if there was no specification for this
---       component.
+--       representation clause is present for the corresponding record type a
+--       that specifies a position for the component, then the Component_Clause
+--       field of the E_Component entity points to the N_Component_Clause node.
+--       Set to Empty if no record representation clause was present, or if
+--       there was no specification for this component.
 
 --    Component_Size (Uint22) [implementation base type only]
 --       Present in array types. It contains the component size value for
@@ -3095,23 +3096,24 @@ package Einfo is
 --    Packed_Array_Type (Node23)
 --       Present in array types and subtypes, including the string literal
 --       subtype case, if the corresponding type is packed (either bit packed
---       or packed to eliminate holes in non-contiguous enumeration type
---       index types). References the type used to represent the packed array,
---       which is either a modular type for short static arrays, or an
---       array of System.Unsigned. Note that in some situations (internal
---       types, and references to fields of variant records), it is not
---       always possible to construct this type in advance of its use. If
---       Packed_Array_Type is empty, then the necessary type is declared
---       on the fly for each reference to the array.
+--       or packed to eliminate holes in non-contiguous enumeration type index
+--       types). References the type used to represent the packed array, which
+--       is either a modular type for short static arrays, or an array of
+--       System.Unsigned. Note that in some situations (internal types, and
+--       references to fields of variant records), it is not always possible
+--       to construct this type in advance of its use. If Packed_Array_Type
+--       is empty, then the necessary type is declared on the fly for each
+--       reference to the array.
 
 --    Parameter_Mode (synthesized)
 --       Applies to formal parameter entities. This is a synonym for Ekind,
 --       used when obtaining the formal kind of a formal parameter (the result
 --       is one of E_[In/Out/In_Out]_Parameter)
 
---    Parent_Subtype (Node19)
---       Present in E_Record_Type. Points to the subtype to use for a
---       field that references the parent record.
+--    Parent_Subtype (Node19) [base type only]
+--       Present in E_Record_Type. Set only for derived tagged types, in which
+--       case it points to the subtype of the parent type. This is the type
+--       that is used as the Etype of the _parent field.
 
 --    Postcondition_Proc (Node8)
 --       Present only in procedure entities, saves the entity of the generated
@@ -3136,13 +3138,13 @@ package Einfo is
 --       protected types. Set to the original private component.
 
 --    Private_Dependents (Elist18)
---       Present in private (sub)types. Records the subtypes of the
---       private type, derivations from it, and records and arrays
---       with components dependent on the type.
+--       Present in private (sub)types. Records the subtypes of the private
+--       type, derivations from it, and records and arrays with components
+--       dependent on the type.
 --
---       The subtypes are traversed when installing and deinstalling
---       (the full view of) a private type in order to ensure correct
---       view of the subtypes.
+--       The subtypes are traversed when installing and deinstalling (the full
+--       view of) a private type in order to ensure correct view of the
+--       subtypes.
 --
 --       Used in similar fashion for incomplete types: holds list of subtypes
 --       of these incomplete types that have discriminant constraints. The
@@ -3190,7 +3192,7 @@ package Einfo is
 --       the case of an appearance of a simple variable that is not a renaming
 --       as the left side of an assignment in which case Referenced_As_LHS is
 --       set instead, or a similar appearance as an out parameter actual, in
---       which case As_Out_Parameter_Parameter is set.
+--       which case Referenced_As_Out_Parameter is set.
 
 --    Referenced_As_LHS (Flag36):
 --       Present in all entities. This flag is set instead of Referenced if a
@@ -5267,7 +5269,7 @@ package Einfo is
    --    Cloned_Subtype                      (Node16)   (subtype case only)
    --    First_Entity                        (Node17)
    --    Corresponding_Concurrent_Type       (Node18)
-   --    Parent_Subtype                      (Node19)
+   --    Parent_Subtype                      (Node19)   (base type only)
    --    Last_Entity                         (Node20)
    --    Discriminant_Constraint             (Elist21)
    --    Corresponding_Remote_Type           (Node22)

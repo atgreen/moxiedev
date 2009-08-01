@@ -439,7 +439,7 @@ package body Errout is
                --  Case of inlined body
 
                if Inlined_Body (X) then
-                  if Is_Warning_Msg then
+                  if Is_Warning_Msg or else Is_Style_Msg then
                      Error_Msg_Internal
                        ("?in inlined body #",
                         Actual_Error_Loc, Flag_Location, Msg_Cont_Status);
@@ -453,7 +453,7 @@ package body Errout is
                --  Case of generic instantiation
 
                else
-                  if Is_Warning_Msg then
+                  if Is_Warning_Msg or else Is_Style_Msg then
                      Error_Msg_Internal
                        ("?in instantiation #",
                         Actual_Error_Loc, Flag_Location, Msg_Cont_Status);
@@ -684,9 +684,7 @@ package body Errout is
          --  performed if we find a serious error. This is skipped if we
          --  are currently dealing with the configuration pragma file.
 
-         if not Try_Semantics
-           and then Current_Source_Unit /= No_Unit
-         then
+         if not Try_Semantics and then Current_Source_Unit /= No_Unit then
             Set_Fatal_Error (Get_Source_Unit (Sptr));
          end if;
       end Handle_Serious_Error;
@@ -713,9 +711,9 @@ package body Errout is
       --  Return without doing anything if message is suppressed
 
       if Suppress_Message
-        and not All_Errors_Mode
-        and not (Msg (Msg'Last) = '!')
-        and not Is_Warning_Msg
+        and then not All_Errors_Mode
+        and then not Is_Warning_Msg
+        and then Msg (Msg'Last) /= '!'
       then
          if not Continuation then
             Last_Killed := True;
@@ -746,9 +744,7 @@ package body Errout is
 
          --  Immediate return if warning message and warnings are suppressed
 
-         if Warnings_Suppressed (Optr)
-           or else Warnings_Suppressed (Sptr)
-         then
+         if Warnings_Suppressed (Optr) or else Warnings_Suppressed (Sptr) then
             Cur_Msg := No_Error_Msg;
             return;
          end if;
@@ -763,9 +759,7 @@ package body Errout is
          --  then we want to eliminate the warning, unless it is in the
          --  extended main code unit and we want warnings on the instance.
 
-         elsif In_Extended_Main_Code_Unit (Sptr)
-           and then Warn_On_Instance
-         then
+         elsif In_Extended_Main_Code_Unit (Sptr) and then Warn_On_Instance then
             null;
 
          --  Keep warning if debug flag G set
@@ -829,14 +823,16 @@ package body Errout is
 
             if Msglen > 8 and then Msg_Buffer (1 .. 8) = "(style) " then
                M := 9;
+
             elsif Msglen > 6 and then Msg_Buffer (1 .. 6) = "info: " then
                M := 7;
+
             else
                M := 1;
             end if;
 
-            --  Now deal with separation between messages. Normally this
-            --  is simply comma space, but there are some special cases.
+            --  Now deal with separation between messages. Normally this is
+            --  simply comma space, but there are some special cases.
 
             --  If continuation new line, then put actual NL character in msg
 
@@ -885,21 +881,21 @@ package body Errout is
 
       --  Otherwise build error message object for new message
 
-      Errors.Increment_Last;
+      Errors.Append
+        ((Text     => new String'(Msg_Buffer (1 .. Msglen)),
+          Next     => No_Error_Msg,
+          Sptr     => Sptr,
+          Optr     => Optr,
+          Sfile    => Get_Source_File_Index (Sptr),
+          Line     => Get_Physical_Line_Number (Sptr),
+          Col      => Get_Column_Number (Sptr),
+          Warn     => Is_Warning_Msg,
+          Style    => Is_Style_Msg,
+          Serious  => Is_Serious_Error,
+          Uncond   => Is_Unconditional_Msg,
+          Msg_Cont => Continuation,
+          Deleted  => False));
       Cur_Msg := Errors.Last;
-      Errors.Table (Cur_Msg).Text     := new String'(Msg_Buffer (1 .. Msglen));
-      Errors.Table (Cur_Msg).Next     := No_Error_Msg;
-      Errors.Table (Cur_Msg).Sptr     := Sptr;
-      Errors.Table (Cur_Msg).Optr     := Optr;
-      Errors.Table (Cur_Msg).Sfile    := Get_Source_File_Index (Sptr);
-      Errors.Table (Cur_Msg).Line     := Get_Physical_Line_Number (Sptr);
-      Errors.Table (Cur_Msg).Col      := Get_Column_Number (Sptr);
-      Errors.Table (Cur_Msg).Warn     := Is_Warning_Msg;
-      Errors.Table (Cur_Msg).Style    := Is_Style_Msg;
-      Errors.Table (Cur_Msg).Serious  := Is_Serious_Error;
-      Errors.Table (Cur_Msg).Uncond   := Is_Unconditional_Msg;
-      Errors.Table (Cur_Msg).Msg_Cont := Continuation;
-      Errors.Table (Cur_Msg).Deleted  := False;
 
       --  If immediate errors mode set, output error message now. Also output
       --  now if the -d1 debug flag is set (so node number message comes out
@@ -991,11 +987,11 @@ package body Errout is
                --  cascaded parsing errors
 
                if not (Errors.Table (Prev_Msg).Warn
-                         or
+                         or else
                        Errors.Table (Prev_Msg).Style)
                  or else
                       (Errors.Table (Cur_Msg).Warn
-                         or
+                         or else
                        Errors.Table (Cur_Msg).Style)
                then
                   --  All tests passed, delete the message by simply returning
@@ -1031,7 +1027,7 @@ package body Errout is
 
       --  Bump appropriate statistics count
 
-      if Errors.Table (Cur_Msg).Warn or Errors.Table (Cur_Msg).Style then
+      if Errors.Table (Cur_Msg).Warn or else Errors.Table (Cur_Msg).Style then
          Warnings_Detected := Warnings_Detected + 1;
 
       else
@@ -1104,6 +1100,10 @@ package body Errout is
          --  Suppress if no warnings set for either entity or node
 
          if No_Warnings (N) or else No_Warnings (E) then
+
+            --  Disable any continuation messages as well
+
+            Last_Killed := True;
             return;
          end if;
 
@@ -1134,7 +1134,7 @@ package body Errout is
         or else Msg (Msg'Last) = '!'
         or else Is_Warning_Msg
         or else OK_Node (N)
-        or else (Msg (Msg'First) = '\' and not Last_Killed)
+        or else (Msg (Msg'First) = '\' and then not Last_Killed)
       then
          Debug_Output (N);
          Error_Msg_Node_1 := E;
@@ -1385,9 +1385,8 @@ package body Errout is
       Specific_Warnings.Init;
 
       if Warning_Mode = Suppress then
-         Warnings.Increment_Last;
-         Warnings.Table (Warnings.Last).Start := Source_Ptr'First;
-         Warnings.Table (Warnings.Last).Stop  := Source_Ptr'Last;
+         Warnings.Append
+           ((Start => Source_Ptr'First, Stop => Source_Ptr'Last));
       end if;
    end Initialize;
 
@@ -2694,9 +2693,9 @@ package body Errout is
 
          Set_Error_Posted (N);
 
-         --  If it is a subexpression, then set Error_Posted on parents
-         --  up to and including the first non-subexpression construct. This
-         --  helps avoid cascaded error messages within a single expression.
+         --  If it is a subexpression, then set Error_Posted on parents up to
+         --  and including the first non-subexpression construct. This helps
+         --  avoid cascaded error messages within a single expression.
 
          P := N;
          loop
@@ -2736,6 +2735,8 @@ package body Errout is
    -- Special_Msg_Delete --
    ------------------------
 
+   --  Is it really right to have all this specialized knowledge in errout?
+
    function Special_Msg_Delete
      (Msg : String;
       N   : Node_Or_Entity_Id;
@@ -2747,48 +2748,61 @@ package body Errout is
       if Debug_Flag_OO then
          return False;
 
-      --  When an atomic object refers to a non-atomic type in the same
-      --  scope, we implicitly make the type atomic. In the non-error
-      --  case this is surely safe (and in fact prevents an error from
-      --  occurring if the type is not atomic by default). But if the
-      --  object cannot be made atomic, then we introduce an extra junk
-      --  message by this manipulation, which we get rid of here.
+      --  Processing for "atomic access cannot be guaranteed"
 
-      --  We identify this case by the fact that it references a type for
-      --  which Is_Atomic is set, but there is no Atomic pragma setting it.
+      elsif Msg = "atomic access to & cannot be guaranteed" then
 
-      elsif Msg = "atomic access to & cannot be guaranteed"
-        and then Is_Type (E)
-        and then Is_Atomic (E)
-        and then No (Get_Rep_Pragma (E, Name_Atomic))
-      then
-         return True;
+         --  When an atomic object refers to a non-atomic type in the same
+         --  scope, we implicitly make the type atomic. In the non-error case
+         --  this is surely safe (and in fact prevents an error from occurring
+         --  if the type is not atomic by default). But if the object cannot be
+         --  made atomic, then we introduce an extra junk message by this
+         --  manipulation, which we get rid of here.
 
-      --  When a size is wrong for a frozen type there is no explicit
-      --  size clause, and other errors have occurred, suppress the
-      --  message, since it is likely that this size error is a cascaded
-      --  result of other errors. The reason we eliminate unfrozen types
-      --  is that messages issued before the freeze type are for sure OK.
+         --  We identify this case by the fact that it references a type for
+         --  which Is_Atomic is set, but there is no Atomic pragma setting it.
 
-      elsif Msg = "size for& too small, minimum allowed is ^"
-        and then Is_Frozen (E)
-        and then Serious_Errors_Detected > 0
-        and then Nkind (N) /= N_Component_Clause
-        and then Nkind (Parent (N)) /= N_Component_Clause
-        and then
-          No (Get_Attribute_Definition_Clause (E, Attribute_Size))
-        and then
-          No (Get_Attribute_Definition_Clause (E, Attribute_Object_Size))
-        and then
-          No (Get_Attribute_Definition_Clause (E, Attribute_Value_Size))
-      then
-         return True;
+         if Is_Type (E)
+           and then Is_Atomic (E)
+           and then No (Get_Rep_Pragma (E, Name_Atomic))
+         then
+            return True;
+         end if;
+
+      --  Processing for "Size too small" messages
+
+      elsif Msg = "size for& too small, minimum allowed is ^" then
+
+         --  Suppress "size too small" errors in CodePeer mode, since pragma
+         --  Pack is also ignored in this configuration.
+
+         if CodePeer_Mode then
+            return True;
+
+         --  When a size is wrong for a frozen type there is no explicit size
+         --  clause, and other errors have occurred, suppress the message,
+         --  since it is likely that this size error is a cascaded result of
+         --  other errors. The reason we eliminate unfrozen types is that
+         --  messages issued before the freeze type are for sure OK.
+
+         elsif Is_Frozen (E)
+           and then Serious_Errors_Detected > 0
+           and then Nkind (N) /= N_Component_Clause
+           and then Nkind (Parent (N)) /= N_Component_Clause
+           and then
+             No (Get_Attribute_Definition_Clause (E, Attribute_Size))
+           and then
+             No (Get_Attribute_Definition_Clause (E, Attribute_Object_Size))
+           and then
+             No (Get_Attribute_Definition_Clause (E, Attribute_Value_Size))
+         then
+            return True;
+         end if;
+      end if;
 
       --  All special tests complete, so go ahead with message
 
-      else
-         return False;
-      end if;
+      return False;
    end Special_Msg_Delete;
 
    --------------------------
@@ -2809,18 +2823,18 @@ package body Errout is
          Msglen := Msglen - 1;
       end if;
 
-      --  The loop here deals with recursive types, we are trying to
-      --  find a related entity that is not an implicit type. Note
-      --  that the check with Old_Ent stops us from getting "stuck".
-      --  Also, we don't output the "type derived from" message more
-      --  than once in the case where we climb up multiple levels.
+      --  The loop here deals with recursive types, we are trying to find a
+      --  related entity that is not an implicit type. Note that the check with
+      --  Old_Ent stops us from getting "stuck". Also, we don't output the
+      --  "type derived from" message more than once in the case where we climb
+      --  up multiple levels.
 
       loop
          Old_Ent := Ent;
 
-         --  Implicit access type, use directly designated type
-         --  In Ada 2005, the designated type may be an anonymous access to
-         --  subprogram, in which case we can only point to its definition.
+         --  Implicit access type, use directly designated type In Ada 2005,
+         --  the designated type may be an anonymous access to subprogram, in
+         --  which case we can only point to its definition.
 
          if Is_Access_Type (Ent) then
             if Ekind (Ent) = E_Access_Subprogram_Type
@@ -2872,13 +2886,12 @@ package body Errout is
 
             Ent := Base_Type (Ent);
 
-         --  If this is a base type with a first named subtype, use the
-         --  first named subtype instead. This is not quite accurate in
-         --  all cases, but it makes too much noise to be accurate and
-         --  add 'Base in all cases. Note that we only do this is the
-         --  first named subtype is not itself an internal name. This
-         --  avoids the obvious loop (subtype->basetype->subtype) which
-         --  would otherwise occur!)
+         --  If this is a base type with a first named subtype, use the first
+         --  named subtype instead. This is not quite accurate in all cases,
+         --  but it makes too much noise to be accurate and add 'Base in all
+         --  cases. Note that we only do this is the first named subtype is not
+         --  itself an internal name. This avoids the obvious loop (subtype ->
+         --  basetype -> subtype) which would otherwise occur!)
 
          elsif Present (Freeze_Node (Ent))
            and then Present (First_Subtype_Link (Freeze_Node (Ent)))

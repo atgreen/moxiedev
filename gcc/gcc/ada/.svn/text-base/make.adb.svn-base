@@ -343,8 +343,6 @@ package body Make is
    Current_Verbosity : Prj.Verbosity  := Prj.Default;
    --  Verbosity to parse the project files
 
-   Project_Tree : constant Project_Tree_Ref := new Project_Tree_Data;
-
    Main_Project : Prj.Project_Id := No_Project;
    --  The project id of the main project file, if any
 
@@ -556,25 +554,6 @@ package body Make is
 
    procedure List_Bad_Compilations;
    --  Prints out the list of all files for which the compilation failed
-
-   procedure Verbose_Msg
-     (N1                : Name_Id;
-      S1                : String;
-      N2                : Name_Id := No_Name;
-      S2                : String  := "";
-      Prefix            : String  := "  -> ";
-      Minimum_Verbosity : Verbosity_Level_Type := Opt.Low);
-   procedure Verbose_Msg
-     (N1                : File_Name_Type;
-      S1                : String;
-      N2                : File_Name_Type := No_File;
-      S2                : String  := "";
-      Prefix            : String  := "  -> ";
-      Minimum_Verbosity : Verbosity_Level_Type := Opt.Low);
-   --  If the verbose flag (Verbose_Mode) is set and the verbosity level is
-   --  at least equal to Minimum_Verbosity, then print Prefix to standard
-   --  output followed by N1 and S1. If N2 /= No_Name then N2 is printed after
-   --  S1. S2 is printed last. Both N1 and N2 are printed in quotation marks.
 
    Usage_Needed : Boolean := True;
    --  Flag used to make sure Makeusg is call at most once
@@ -1434,10 +1413,6 @@ package body Make is
       O_File         : out File_Name_Type;
       O_Stamp        : out Time_Stamp_Type)
    is
-      function File_Not_A_Source_Of
-        (Uname : Name_Id;
-         Sfile : File_Name_Type) return Boolean;
-
       function First_New_Spec (A : ALI_Id) return File_Name_Type;
       --  Looks in the with table entries of A and returns the spec file name
       --  of the first withed unit (subprogram) for which no spec existed when
@@ -1451,34 +1426,6 @@ package body Make is
       --  Note: This function should really be in ali.adb and use Uname
       --  services, but this causes the whole compiler to be dragged along
       --  for gnatbind and gnatmake.
-
-      --------------------------
-      -- File_Not_A_Source_Of --
-      --------------------------
-
-      function File_Not_A_Source_Of
-        (Uname : Name_Id;
-         Sfile : File_Name_Type) return Boolean
-      is
-         UID    : Prj.Unit_Index;
-
-      begin
-         UID := Units_Htable.Get (Project_Tree.Units_HT, Uname);
-
-         if UID /= Prj.No_Unit_Index then
-            if (UID.File_Names (Impl) = null
-                 or else UID.File_Names (Impl).File /= Sfile)
-              and then
-                (UID.File_Names (Spec) = null
-                  or else UID.File_Names (Spec).File /= Sfile)
-            then
-               Verbose_Msg (Uname, "sources do not include ", Name_Id (Sfile));
-               return True;
-            end if;
-         end if;
-
-         return False;
-      end File_Not_A_Source_Of;
 
       --------------------
       -- First_New_Spec --
@@ -1855,72 +1802,10 @@ package body Make is
 
             elsif not Read_Only and then Main_Project /= No_Project then
 
-               --  Check if a file name does not correspond to the mapping of
-               --  units to file names.
-
-               declare
-                  SD        : Sdep_Record;
-                  WR        : With_Record;
-                  Unit_Name : Name_Id;
-
-               begin
-                  U_Chk :
-                  for U in ALIs.Table (ALI).First_Unit ..
-                           ALIs.Table (ALI).Last_Unit
-                  loop
-                     --  Check if the file name is one of the source of the
-                     --  unit.
-
-                     Get_Name_String (Units.Table (U).Uname);
-                     Name_Len := Name_Len - 2;
-                     Unit_Name := Name_Find;
-
-                     if File_Not_A_Source_Of
-                          (Unit_Name, Units.Table (U).Sfile)
-                     then
-                        ALI := No_ALI_Id;
-                        return;
-                     end if;
-
-                     --  Do the same check for each of the withed units
-
-                     W_Check :
-                     for W in Units.Table (U).First_With
-                          ..
-                        Units.Table (U).Last_With
-                     loop
-                        WR := Withs.Table (W);
-
-                        if WR.Sfile /= No_File then
-                           Get_Name_String (WR.Uname);
-                           Name_Len := Name_Len - 2;
-                           Unit_Name := Name_Find;
-
-                           if File_Not_A_Source_Of (Unit_Name, WR.Sfile) then
-                              ALI := No_ALI_Id;
-                              return;
-                           end if;
-                        end if;
-                     end loop W_Check;
-                  end loop U_Chk;
-
-                  --  Check also the subunits
-
-                  D_Check :
-                  for D in ALIs.Table (ALI).First_Sdep ..
-                           ALIs.Table (ALI).Last_Sdep
-                  loop
-                     SD := Sdep.Table (D);
-                     Unit_Name := SD.Subunit_Name;
-
-                     if Unit_Name /= No_Name then
-                        if File_Not_A_Source_Of (Unit_Name, SD.Sfile) then
-                           ALI := No_ALI_Id;
-                           return;
-                        end if;
-                     end if;
-                  end loop D_Check;
-               end;
+               if not Check_Source_Info_In_ALI (ALI) then
+                  ALI := No_ALI_Id;
+                  return;
+               end if;
 
                --  Check that the ALI file is in the correct object directory.
                --  If it is in the object directory of a project that is
@@ -4772,6 +4657,11 @@ package body Make is
             Exit_Program (E_Success);
 
          else
+            --  Call Get_Target_Parameters to ensure that VM_Target and
+            --  AAMP_On_Target get set before calling Usage.
+
+            Targparm.Get_Target_Parameters;
+
             --  Output usage information if no files to compile
 
             Usage;
@@ -5125,7 +5015,7 @@ package body Make is
 
             --  Add binder switches from the project file for the first main
 
-            if Do_Bind_Step and Binder_Package /= No_Package then
+            if Do_Bind_Step and then Binder_Package /= No_Package then
                if Verbose_Mode then
                   Write_Str ("Adding binder switches for """);
                   Write_Str (Main_Unit_File_Name);
@@ -5141,7 +5031,7 @@ package body Make is
 
             --  Add linker switches from the project file for the first main
 
-            if Do_Link_Step and Linker_Package /= No_Package then
+            if Do_Link_Step and then Linker_Package /= No_Package then
                if Verbose_Mode then
                   Write_Str ("Adding linker switches for""");
                   Write_Str (Main_Unit_File_Name);
@@ -5595,7 +5485,7 @@ package body Make is
                  and then (Do_Bind_Step
                              or Unique_Compile_All_Projects
                              or not Compile_Only)
-                 and then (Do_Link_Step or N_File = Osint.Number_Of_Files)
+                 and then (Do_Link_Step or else N_File = Osint.Number_Of_Files)
                then
                   Library_Projs.Init;
 
@@ -6143,7 +6033,7 @@ package body Make is
                      --  We do that only if Run_Path_Option is True
                      --  (not disabled by -R switch).
 
-                     if Run_Path_Option and Path_Option /= null then
+                     if Run_Path_Option and then Path_Option /= null then
                         declare
                            Option  : String_Access;
                            Length  : Natural := Path_Option'Length;
@@ -6312,7 +6202,9 @@ package body Make is
                         Successful_Links.Table (Successful_Links.Last) :=
                           Main_ALI_File;
 
-                     elsif Osint.Number_Of_Files = 1 or not Keep_Going then
+                     elsif Osint.Number_Of_Files = 1
+                       or else not Keep_Going
+                     then
                         Make_Failed ("*** link failed.");
 
                      else
@@ -6426,7 +6318,7 @@ package body Make is
                   --  Add binder switches from the project file for this main,
                   --  if any.
 
-                  if Do_Bind_Step and Binder_Package /= No_Package then
+                  if Do_Bind_Step and then Binder_Package /= No_Package then
                      if Verbose_Mode then
                         Write_Str ("Adding binder switches for """);
                         Write_Str (Main_Unit_File_Name);
@@ -6443,7 +6335,7 @@ package body Make is
                   --  Add linker switches from the project file for this main,
                   --  if any.
 
-                  if Do_Link_Step and Linker_Package /= No_Package then
+                  if Do_Link_Step and then Linker_Package /= No_Package then
                      if Verbose_Mode then
                         Write_Str ("Adding linker switches for""");
                         Write_Str (Main_Unit_File_Name);
@@ -6920,7 +6812,7 @@ package body Make is
 
       function Check_Project (P : Project_Id) return Boolean is
       begin
-         if All_Projects or P = The_Project then
+         if All_Projects or else P = The_Project then
             return True;
 
          elsif Extending then
@@ -7735,8 +7627,8 @@ package body Make is
                      RTS_Src_Path_Name := Src_Path_Name;
                      RTS_Lib_Path_Name := Lib_Path_Name;
 
-                  elsif  Src_Path_Name = null
-                    and Lib_Path_Name = null
+                  elsif Src_Path_Name = null
+                    and then Lib_Path_Name = null
                   then
                      Make_Failed ("RTS path not valid: missing " &
                                   "adainclude and adalib directories");
@@ -8232,52 +8124,6 @@ package body Make is
          Makeusg;
       end if;
    end Usage;
-
-   -----------------
-   -- Verbose_Msg --
-   -----------------
-
-   procedure Verbose_Msg
-     (N1                : Name_Id;
-      S1                : String;
-      N2                : Name_Id := No_Name;
-      S2                : String  := "";
-      Prefix            : String := "  -> ";
-      Minimum_Verbosity : Verbosity_Level_Type := Opt.Low)
-   is
-   begin
-      if (not Verbose_Mode) or else (Minimum_Verbosity > Verbosity_Level) then
-         return;
-      end if;
-
-      Write_Str (Prefix);
-      Write_Str ("""");
-      Write_Name (N1);
-      Write_Str (""" ");
-      Write_Str (S1);
-
-      if N2 /= No_Name then
-         Write_Str (" """);
-         Write_Name (N2);
-         Write_Str (""" ");
-      end if;
-
-      Write_Str (S2);
-      Write_Eol;
-   end Verbose_Msg;
-
-   procedure Verbose_Msg
-     (N1                : File_Name_Type;
-      S1                : String;
-      N2                : File_Name_Type := No_File;
-      S2                : String  := "";
-      Prefix            : String := "  -> ";
-      Minimum_Verbosity : Verbosity_Level_Type := Opt.Low)
-   is
-   begin
-      Verbose_Msg
-        (Name_Id (N1), S1, Name_Id (N2), S2, Prefix, Minimum_Verbosity);
-   end Verbose_Msg;
 
 begin
    --  Make sure that in case of failure, the temp files will be deleted

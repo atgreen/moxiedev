@@ -165,6 +165,10 @@ struct target_desc
   /* The architecture reported by the target, if any.  */
   const struct bfd_arch_info *arch;
 
+  /* The osabi reported by the target, if any; GDB_OSABI_UNKNOWN
+     otherwise.  */
+  enum gdb_osabi osabi;
+
   /* Any architecture-specific properties specified by the target.  */
   VEC(property_s) *properties;
 
@@ -351,6 +355,16 @@ tdesc_architecture (const struct target_desc *target_desc)
 {
   return target_desc->arch;
 }
+
+/* Return the OSABI associated with this target description, or
+   GDB_OSABI_UNKNOWN if no osabi was specified.  */
+
+enum gdb_osabi
+tdesc_osabi (const struct target_desc *target_desc)
+{
+  return target_desc->osabi;
+}
+
 
 
 /* Return 1 if this target description includes any registers.  */
@@ -619,6 +633,21 @@ tdesc_numbered_register (const struct tdesc_feature *feature,
   return 1;
 }
 
+/* Search FEATURE for a register named NAME, but do not assign a fixed
+   register number to it.  */
+
+int
+tdesc_unnumbered_register (const struct tdesc_feature *feature,
+			   const char *name)
+{
+  struct tdesc_reg *reg = tdesc_find_register_early (feature, name);
+
+  if (reg == NULL)
+    return 0;
+
+  return 1;
+}
+
 /* Search FEATURE for a register whose name is in NAMES and assign
    REGNO to it.  */
 
@@ -694,7 +723,7 @@ tdesc_register_name (struct gdbarch *gdbarch, int regno)
   return "";
 }
 
-static struct type *
+struct type *
 tdesc_register_type (struct gdbarch *gdbarch, int regno)
 {
   struct tdesc_arch_reg *arch_reg = tdesc_find_arch_register (gdbarch, regno);
@@ -842,8 +871,9 @@ tdesc_register_reggroup_p (struct gdbarch *gdbarch, int regno,
   if (regno >= num_regs && regno < num_regs + num_pseudo_regs)
     {
       struct tdesc_arch_data *data = gdbarch_data (gdbarch, tdesc_data);
-      gdb_assert (data->pseudo_register_reggroup_p != NULL);
-      return data->pseudo_register_reggroup_p (gdbarch, regno, reggroup);
+      if (data->pseudo_register_reggroup_p != NULL)
+	return data->pseudo_register_reggroup_p (gdbarch, regno, reggroup);
+      /* Otherwise fall through to the default reggroup_p.  */
     }
 
   ret = tdesc_register_in_reggroup_p (gdbarch, regno, reggroup);
@@ -1160,6 +1190,12 @@ set_tdesc_architecture (struct target_desc *target_desc,
 			const struct bfd_arch_info *arch)
 {
   target_desc->arch = arch;
+}
+
+void
+set_tdesc_osabi (struct target_desc *target_desc, enum gdb_osabi osabi)
+{
+  target_desc->osabi = osabi;
 }
 
 

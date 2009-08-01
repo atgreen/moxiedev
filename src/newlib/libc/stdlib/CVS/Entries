@@ -6,7 +6,6 @@
 /__call_atexit.c/1.6/Mon Jul  6 10:46:48 2009//
 /__exp10.c/1.2/Mon Jul  6 10:46:48 2009/-ko/
 /__ten_mu.c/1.2/Mon Jul  6 10:46:48 2009/-ko/
-/a64l.c/1.3/Mon Jul  6 10:46:48 2009//
 /abort.c/1.2/Mon Jul  6 10:46:48 2009/-ko/
 /abs.c/1.1.1.1/Mon Jul  6 10:46:48 2009/-ko/
 /assert.c/1.3/Mon Jul  6 10:46:48 2009/-ko/
@@ -65,7 +64,6 @@
 /mbstowcs.c/1.4/Mon Jul  6 10:46:48 2009/-ko/
 /mbstowcs_r.c/1.4/Mon Jul  6 10:46:48 2009/-ko/
 /mbtowc.c/1.5/Mon Jul  6 10:46:48 2009/-ko/
-/mbtowc_r.c/1.13/Mon Jul  6 10:46:48 2009/-ko/
 /mlock.c/1.5/Mon Jul  6 10:46:48 2009/-ko/
 /mprec.c/1.5/Mon Jul  6 10:46:48 2009/-ko/
 /mprec.h/1.8/Mon Jul  6 10:46:48 2009/-ko/
@@ -116,4 +114,6 @@
 /wctob.c/1.3/Mon Jul  6 10:46:48 2009//
 /wctomb.c/1.4/Mon Jul  6 10:46:48 2009/-ko/
 /wctomb_r.c/1.14/Mon Jul  6 10:46:48 2009/-ko/
+/a64l.c/1.4/Fri Jul 31 11:10:19 2009//
+/mbtowc_r.c/1.15/Fri Jul 31 11:10:19 2009/-ko/
 D

@@ -170,7 +170,6 @@
 /pic-and-nonpic-3a.s/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-3a.sd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-3b.ad/1.1/Mon Jul  6 10:46:46 2009//
-/pic-and-nonpic-3b.dd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-3b.gd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-3b.ld/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-3b.nd/1.1/Mon Jul  6 10:46:46 2009//
@@ -190,7 +189,6 @@
 /pic-and-nonpic-4b.sd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-5a.s/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-5b.ad/1.1/Mon Jul  6 10:46:46 2009//
-/pic-and-nonpic-5b.dd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-5b.gd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-5b.ld/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-5b.nd/1.1/Mon Jul  6 10:46:46 2009//
@@ -199,7 +197,6 @@
 /pic-and-nonpic-5b.s/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-5b.sd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n32.ad/1.1/Mon Jul  6 10:46:46 2009//
-/pic-and-nonpic-6-n32.dd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n32.gd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n32.nd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n32.pd/1.1/Mon Jul  6 10:46:46 2009//
@@ -209,7 +206,6 @@
 /pic-and-nonpic-6-n32b.s/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n32c.s/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n64.ad/1.1/Mon Jul  6 10:46:46 2009//
-/pic-and-nonpic-6-n64.dd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n64.gd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n64.nd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n64.pd/1.1/Mon Jul  6 10:46:46 2009//
@@ -219,7 +215,6 @@
 /pic-and-nonpic-6-n64b.s/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-n64c.s/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-o32.ad/1.1/Mon Jul  6 10:46:46 2009//
-/pic-and-nonpic-6-o32.dd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-o32.gd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-o32.nd/1.1/Mon Jul  6 10:46:46 2009//
 /pic-and-nonpic-6-o32.pd/1.1/Mon Jul  6 10:46:46 2009//
@@ -329,4 +324,9 @@
 /vxworks2-static.sd/1.1/Mon Jul  6 10:46:47 2009//
 /vxworks2.s/1.1/Mon Jul  6 10:46:47 2009//
 /vxworks2.sd/1.1/Mon Jul  6 10:46:47 2009//
+/pic-and-nonpic-3b.dd/1.2/Fri Jul 31 11:10:15 2009//
+/pic-and-nonpic-5b.dd/1.2/Fri Jul 31 11:10:15 2009//
+/pic-and-nonpic-6-n32.dd/1.2/Fri Jul 31 11:10:15 2009//
+/pic-and-nonpic-6-n64.dd/1.2/Fri Jul 31 11:10:15 2009//
+/pic-and-nonpic-6-o32.dd/1.2/Fri Jul 31 11:10:15 2009//
 D

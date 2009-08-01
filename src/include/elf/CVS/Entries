@@ -1,11 +1,9 @@
-/ChangeLog/1.371/Mon Jul 13 12:29:58 2009//
 /ChangeLog-9103/1.2/Mon Jul  6 10:46:43 2009//
 /alpha.h/1.12/Mon Jul  6 10:46:43 2009//
 /arc.h/1.6/Mon Jul  6 10:46:43 2009//
 /arm.h/1.35/Mon Jul  6 10:46:43 2009//
 /avr.h/1.9/Mon Jul  6 10:46:43 2009//
 /bfin.h/1.4/Mon Jul  6 10:46:43 2009//
-/common.h/1.112/Mon Jul  6 10:46:43 2009//
 /cr16.h/1.3/Mon Jul  6 10:46:43 2009//
 /cr16c.h/1.3/Mon Jul  6 10:46:43 2009//
 /cris.h/1.10/Mon Jul  6 10:46:43 2009//
@@ -45,13 +43,11 @@
 /or32.h/1.2/Mon Jul  6 10:46:43 2009//
 /pj.h/1.5/Mon Jul  6 10:46:43 2009//
 /ppc.h/1.25/Mon Jul 13 12:29:58 2009//
-/ppc64.h/1.6/Mon Jul 13 12:29:58 2009//
 /reloc-macros.h/1.10/Mon Jul  6 10:46:43 2009//
 /s390.h/1.7/Mon Jul  6 10:46:43 2009//
 /score.h/1.4/Mon Jul  6 10:46:43 2009//
 /sh.h/1.22/Mon Jul  6 10:46:43 2009//
 /sparc.h/1.14/Mon Jul  6 10:46:43 2009//
-/spu.h/1.3/Mon Jul  6 10:46:43 2009//
 /v850.h/1.14/Mon Jul  6 10:46:43 2009//
 /vax.h/1.3/Mon Jul  6 10:46:43 2009//
 /vxworks.h/1.1/Mon Jul  6 10:46:43 2009//
@@ -59,4 +55,8 @@
 /xc16x.h/1.1/Mon Jul  6 10:46:43 2009//
 /xstormy16.h/1.4/Mon Jul  6 10:46:43 2009//
 /xtensa.h/1.7/Mon Jul  6 10:46:43 2009//
+/ChangeLog/1.375/Fri Jul 31 11:10:12 2009//
+/common.h/1.114/Fri Jul 31 11:10:12 2009//
+/ppc64.h/1.7/Fri Jul 31 11:10:12 2009//
+/spu.h/1.4/Fri Jul 31 11:10:12 2009//
 D

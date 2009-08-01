@@ -28,6 +28,7 @@ with Checks;   use Checks;
 with Einfo;    use Einfo;
 with Elists;   use Elists;
 with Errout;   use Errout;
+with Expander; use Expander;
 with Exp_Tss;  use Exp_Tss;
 with Exp_Util; use Exp_Util;
 with Freeze;   use Freeze;
@@ -1439,6 +1440,14 @@ package body Sem_Aggr is
 
                else
                   Error_Msg_N ("nested array aggregate expected", Expr);
+
+                  --  If the expression is parenthesized, this may be
+                  --  a missing component association for a 1-aggregate.
+
+                  if Paren_Count (Expr) > 0 then
+                     Error_Msg_N ("\if single-component aggregate is intended,"
+                                  & " write e.g. (1 ='> ...)", Expr);
+                  end if;
                   return Failure;
                end if;
             end if;
@@ -1759,6 +1768,42 @@ package body Sem_Aggr is
                                             Single_Elmt => Single_Choice)
                then
                   return Failure;
+
+               --  Check incorrect use of dynamically tagged expression
+
+               --  We differentiate here two cases because the expression may
+               --  not be decorated. For example, the analysis and resolution
+               --  of the expression associated with the others choice will
+               --  be done later with the full aggregate. In such case we
+               --  duplicate the expression tree to analyze the copy and
+               --  perform the required check.
+
+               elsif not Present (Etype (Expression (Assoc))) then
+                  declare
+                     Save_Analysis : constant Boolean := Full_Analysis;
+                     Expr          : constant Node_Id :=
+                                       New_Copy_Tree (Expression (Assoc));
+
+                  begin
+                     Expander_Mode_Save_And_Set (False);
+                     Full_Analysis := False;
+                     Analyze (Expr);
+                     Full_Analysis := Save_Analysis;
+                     Expander_Mode_Restore;
+
+                     if Is_Tagged_Type (Etype (Expr)) then
+                        Check_Dynamically_Tagged_Expression
+                          (Expr => Expr,
+                           Typ  => Component_Type (Etype (N)),
+                           Related_Nod => N);
+                     end if;
+                  end;
+
+               elsif Is_Tagged_Type (Etype (Expression (Assoc))) then
+                  Check_Dynamically_Tagged_Expression
+                    (Expr => Expression (Assoc),
+                     Typ  => Component_Type (Etype (N)),
+                     Related_Nod => N);
                end if;
 
                Next (Assoc);
@@ -1992,6 +2037,15 @@ package body Sem_Aggr is
                return Failure;
             end if;
 
+            --  Check incorrect use of dynamically tagged expression
+
+            if Is_Tagged_Type (Etype (Expr)) then
+               Check_Dynamically_Tagged_Expression
+                 (Expr => Expr,
+                  Typ  => Component_Type (Etype (N)),
+                  Related_Nod => N);
+            end if;
+
             Next (Expr);
          end loop;
 
@@ -2021,6 +2075,32 @@ package body Sem_Aggr is
                                          Single_Elmt => False)
             then
                return Failure;
+
+            --  Check incorrect use of dynamically tagged expression. The
+            --  expression of the others choice has not been resolved yet.
+            --  In order to diagnose the semantic error we create a duplicate
+            --  tree to analyze it and perform the check.
+
+            else
+               declare
+                  Save_Analysis : constant Boolean := Full_Analysis;
+                  Expr          : constant Node_Id :=
+                                    New_Copy_Tree (Expression (Assoc));
+
+               begin
+                  Expander_Mode_Save_And_Set (False);
+                  Full_Analysis := False;
+                  Analyze (Expr);
+                  Full_Analysis := Save_Analysis;
+                  Expander_Mode_Restore;
+
+                  if Is_Tagged_Type (Etype (Expr)) then
+                     Check_Dynamically_Tagged_Expression
+                       (Expr => Expr,
+                        Typ  => Component_Type (Etype (N)),
+                        Related_Nod => N);
+                  end if;
+               end;
             end if;
          end if;
 
@@ -2296,7 +2376,20 @@ package body Sem_Aggr is
             Check_Unset_Reference (A);
             Check_Non_Static_Context (A);
 
-            if Is_Class_Wide_Type (Etype (A))
+            --  The aggregate is illegal if the ancestor expression is a call
+            --  to a function with a limited unconstrained result, unless the
+            --  type of the aggregate is a null extension. This restriction
+            --  was added in AI05-67 to simplify implementation.
+
+            if Nkind (A) = N_Function_Call
+              and then Is_Limited_Type (A_Type)
+              and then not Is_Null_Extension (Typ)
+              and then not Is_Constrained (A_Type)
+            then
+               Error_Msg_N
+                 ("type of limited ancestor part must be constrained", A);
+
+            elsif Is_Class_Wide_Type (Etype (A))
               and then Nkind (Original_Node (A)) = N_Function_Call
             then
                --  If the ancestor part is a dispatching call, it appears
@@ -2644,7 +2737,7 @@ package body Sem_Aggr is
                         end if;
                      end if;
 
-                     Generate_Reference (Compon, Selector_Name);
+                     Generate_Reference (Compon, Selector_Name, 'm');
 
                   else
                      Error_Msg_NE

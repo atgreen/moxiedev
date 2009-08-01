@@ -1,15 +1,15 @@
 10
 
 dir
-149693
+150304
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gfortran.dg/gomp
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-21T19:03:23.876795Z
-146533
-jsm28
+2009-07-28T16:15:47.304216Z
+150165
+jakub
 
 
 
@@ -28,7 +28,7 @@ jsm28
 
 pr39152.f90
 file
-
+149693
 
 
 
@@ -62,7 +62,7 @@ hjl
 
 pr33439.f90
 file
-
+149693
 
 
 
@@ -96,7 +96,7 @@ jakub
 
 allocatable_components_1.f90
 file
-
+149693
 
 
 
@@ -130,7 +130,7 @@ dfranke
 
 block-1.f90
 file
-
+149693
 
 
 
@@ -167,7 +167,7 @@ dir
 
 sharing-1.f90
 file
-
+149693
 
 
 
@@ -201,7 +201,7 @@ sandra
 
 pr36726.f90
 file
-
+149693
 
 
 
@@ -235,7 +235,7 @@ jakub
 
 pr27573.f90
 file
-
+149693
 
 
 
@@ -269,7 +269,7 @@ jakub
 
 pr39354.f90
 file
-
+149693
 
 
 
@@ -303,7 +303,7 @@ jakub
 
 sharing-2.f90
 file
-
+149693
 
 
 
@@ -337,7 +337,7 @@ jakub
 
 omp_clauses1.f90
 file
-
+149693
 
 
 
@@ -371,7 +371,7 @@ jakub
 
 sharing-3.f90
 file
-
+149693
 
 
 
@@ -405,7 +405,7 @@ jakub
 
 omp_threadprivate1.f90
 file
-
+149693
 
 
 
@@ -439,7 +439,7 @@ sandra
 
 omp_parse2.f
 file
-
+149693
 
 
 
@@ -473,7 +473,7 @@ jakub
 
 omp_threadprivate2.f90
 file
-
+149693
 
 
 
@@ -507,7 +507,7 @@ sandra
 
 pr29759.f90
 file
-
+149693
 
 
 
@@ -541,7 +541,7 @@ aldot
 
 crayptr1.f90
 file
-
+149693
 
 
 
@@ -573,43 +573,9 @@ jakub
 
 1306
 
-omp_parse1.f90
-file
-
-
-
-
-2009-04-24T17:46:03.000000Z
-04280f9a588c35300001e54082831f2f
-2008-06-06T13:01:54.143518Z
-136433
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-379
-
 crayptr2.f90
 file
-
+149693
 
 
 
@@ -641,9 +607,43 @@ sandra
 
 545
 
+omp_parse1.f90
+file
+149693
+
+
+
+2009-04-24T17:46:03.000000Z
+04280f9a588c35300001e54082831f2f
+2008-06-06T13:01:54.143518Z
+136433
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+379
+
 crayptr3.f90
 file
-
+149693
 
 
 
@@ -677,7 +677,7 @@ jakub
 
 crayptr4.f90
 file
-
+149693
 
 
 
@@ -711,7 +711,7 @@ jakub
 
 reduction1.f90
 file
-
+149693
 
 
 
@@ -745,7 +745,7 @@ jakub
 
 reduction2.f90
 file
-
+149693
 
 
 
@@ -777,43 +777,9 @@ jakub
 
 601
 
-reduction3.f90
-file
-
-
-
-
-2009-04-24T17:46:03.000000Z
-cf9706c950168b12fedcd8bec1221dd2
-2008-05-28T21:27:56.576694Z
-136130
-janus
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1423
-
 free-1.f90
 file
-
+149693
 
 
 
@@ -845,9 +811,43 @@ sandra
 
 154
 
+reduction3.f90
+file
+149693
+
+
+
+2009-04-24T17:46:03.000000Z
+cf9706c950168b12fedcd8bec1221dd2
+2008-05-28T21:27:56.576694Z
+136130
+janus
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1423
+
 free-2.f90
 file
-
+149693
 
 
 
@@ -881,7 +881,7 @@ burnus
 
 collapse1.f90
 file
-
+149693
 
 
 
@@ -915,7 +915,7 @@ jakub
 
 fixed-1.f
 file
-
+149693
 
 
 
@@ -949,7 +949,7 @@ sandra
 
 workshare1.f90
 file
-
+149693
 
 
 
@@ -981,9 +981,77 @@ jakub
 
 900
 
-pr35786-1.f90
+pr40878-1.f90
 file
 
+
+
+
+2009-07-31T04:47:42.000000Z
+b4570608c9f7bf1bf83b19629ce884db
+2009-07-28T16:15:47.304216Z
+150165
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1406
+
+pr40878-2.f90
+file
+
+
+
+
+2009-07-31T04:47:42.000000Z
+4359c79fda5533d97ee157c4b047f274
+2009-07-28T16:15:47.304216Z
+150165
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+417
+
+pr35786-1.f90
+file
+149693
 
 
 
@@ -1017,7 +1085,7 @@ jakub
 
 pr35786-2.f90
 file
-
+149693
 
 
 
@@ -1051,7 +1119,7 @@ jakub
 
 omp_do1.f90
 file
-
+149693
 
 
 
@@ -1085,7 +1153,7 @@ jvdelisle
 
 do-1.f90
 file
-
+149693
 
 
 
@@ -1119,7 +1187,7 @@ jakub
 
 gomp.exp
 file
-
+149693
 
 
 
@@ -1153,7 +1221,7 @@ jsm28
 
 pr26224.f
 file
-
+149693
 
 
 
@@ -1187,7 +1255,7 @@ jakub
 
 omp_atomic1.f90
 file
-
+149693
 
 
 

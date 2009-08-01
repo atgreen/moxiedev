@@ -186,6 +186,9 @@ DESCRIPTION
 .#define bfd_mach_i386_i386_intel_syntax 3
 .#define bfd_mach_x86_64 64
 .#define bfd_mach_x86_64_intel_syntax 65
+.  bfd_arch_l1om,   {* Intel L1OM *}
+.#define bfd_mach_l1om 66
+.#define bfd_mach_l1om_intel_syntax 67
 .  bfd_arch_we32k,     {* AT&T WE32xxx *}
 .  bfd_arch_tahoe,     {* CCI/Harris Tahoe *}
 .  bfd_arch_i860,      {* Intel 860 *}
@@ -210,6 +213,7 @@ DESCRIPTION
 .#define bfd_mach_ppc64		64
 .#define bfd_mach_ppc_403	403
 .#define bfd_mach_ppc_403gc	4030
+.#define bfd_mach_ppc_405	405
 .#define bfd_mach_ppc_505	505
 .#define bfd_mach_ppc_601	601
 .#define bfd_mach_ppc_602	602
@@ -470,7 +474,6 @@ extern const bfd_arch_info_type bfd_d30v_arch;
 extern const bfd_arch_info_type bfd_dlx_arch;
 extern const bfd_arch_info_type bfd_fr30_arch;
 extern const bfd_arch_info_type bfd_frv_arch;
-extern const bfd_arch_info_type bfd_moxie_arch;
 extern const bfd_arch_info_type bfd_h8300_arch;
 extern const bfd_arch_info_type bfd_h8500_arch;
 extern const bfd_arch_info_type bfd_hppa_arch;
@@ -481,6 +484,7 @@ extern const bfd_arch_info_type bfd_i960_arch;
 extern const bfd_arch_info_type bfd_ia64_arch;
 extern const bfd_arch_info_type bfd_ip2k_arch;
 extern const bfd_arch_info_type bfd_iq2000_arch;
+extern const bfd_arch_info_type bfd_l1om_arch;
 extern const bfd_arch_info_type bfd_lm32_arch;
 extern const bfd_arch_info_type bfd_m32c_arch;
 extern const bfd_arch_info_type bfd_m32r_arch;
@@ -495,6 +499,7 @@ extern const bfd_arch_info_type bfd_mips_arch;
 extern const bfd_arch_info_type bfd_mmix_arch;
 extern const bfd_arch_info_type bfd_mn10200_arch;
 extern const bfd_arch_info_type bfd_mn10300_arch;
+extern const bfd_arch_info_type bfd_moxie_arch;
 extern const bfd_arch_info_type bfd_msp430_arch;
 extern const bfd_arch_info_type bfd_mt_arch;
 extern const bfd_arch_info_type bfd_ns32k_arch;
@@ -517,8 +522,8 @@ extern const bfd_arch_info_type bfd_tic54x_arch;
 extern const bfd_arch_info_type bfd_tic80_arch;
 extern const bfd_arch_info_type bfd_v850_arch;
 extern const bfd_arch_info_type bfd_vax_arch;
-extern const bfd_arch_info_type bfd_we32k_arch;
 extern const bfd_arch_info_type bfd_w65_arch;
+extern const bfd_arch_info_type bfd_we32k_arch;
 extern const bfd_arch_info_type bfd_xstormy16_arch;
 extern const bfd_arch_info_type bfd_xtensa_arch;
 extern const bfd_arch_info_type bfd_xc16x_arch;
@@ -544,7 +549,6 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_dlx_arch,
     &bfd_fr30_arch,
     &bfd_frv_arch,
-    &bfd_moxie_arch,
     &bfd_h8300_arch,
     &bfd_h8500_arch,
     &bfd_hppa_arch,
@@ -555,6 +559,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_ia64_arch,
     &bfd_ip2k_arch,
     &bfd_iq2000_arch,
+    &bfd_l1om_arch,
     &bfd_lm32_arch,
     &bfd_m32c_arch,
     &bfd_m32r_arch,
@@ -569,8 +574,9 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_mmix_arch,
     &bfd_mn10200_arch,
     &bfd_mn10300_arch,
-    &bfd_mt_arch,
+    &bfd_moxie_arch,
     &bfd_msp430_arch,
+    &bfd_mt_arch,
     &bfd_ns32k_arch,
     &bfd_openrisc_arch,
     &bfd_or32_arch,

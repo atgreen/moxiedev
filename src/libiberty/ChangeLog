@@ -1,3 +1,36 @@
+2009-07-29  Douglas B Rupp  <rupp@gnat.com>
+
+	* make-temp-file.c (choose_tmpdir): Try standard temp logical on VMS.
+
+2009-07-27  Douglas B Rupp  <rupp@gnat.com>
+
+	* pex-unix.c (vfork): Remove VMS specific definition (get from header
+	file instead).
+	(to_ptr32): New function.
+	(pex_unix_exec_child): Use it.
+
+2009-07-24  Ian Lance Taylor  <iant@google.com>
+
+	PR bootstrap/40854
+	* crc32.c (xcrc32): Rename from crc32.
+
+2009-07-24  Ian Lance Taylor  <iant@google.com>
+
+	* crc32.c: New file.
+	* Makefile.in: Rebuild dependencies.
+	(CFILES): Add crc32.c.
+	(REQUIRED_OFILES): Add ./crc32.o.
+	* functions.texi: Rebuild.
+
+2009-07-17  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* cp-demangle.c (d_print_comp <DEMANGLE_COMPONENT_GLOBAL_CONSTRUCTORS>)
+	(d_print_comp <DEMANGLE_COMPONENT_GLOBAL_DESTRUCTORS): New.
+	(d_make_comp <DEMANGLE_COMPONENT_GLOBAL_CONSTRUCTORS>)
+	(d_make_comp <DEMANGLE_COMPONENT_GLOBAL_DESTRUCTORS): New.
+	(d_demangle_callback): The variable type is now declared as enum.
+	Replace parser of _GLOBAL_ symbols by a d_make_comp call.
+
 2009-06-21  Jakub Jelinek  <jakub@redhat.com>
 
 	* hashtab.c (htab_traverse): Don't call htab_expand for
@@ -83,7 +116,7 @@
        * libiberty/configure.ac: Fix Linux/MIPS matching rule.
        * libiberty/configure: Regenerate.
 
-2008-03-27  Ian Lance Taylor  <iant@google.com>
+2009-03-27  Ian Lance Taylor  <iant@google.com>
 
 	* memmem.c: New file, from gnulib.
 	* configure.ac: Add memmem to list of functions provided if they

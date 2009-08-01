@@ -52,6 +52,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "splay-tree.h"
 #include "vec.h"
 #include "gimple.h"
+#include "tree-pass.h"
 
 
 enum gimplify_omp_var_data
@@ -1786,6 +1787,7 @@ static enum gimplify_status
 gimplify_conversion (tree *expr_p)
 {
   tree tem;
+  location_t loc = EXPR_LOCATION (*expr_p);
   gcc_assert (CONVERT_EXPR_P (*expr_p));
 
   /* Then strip away all but the outermost conversion.  */
@@ -1826,9 +1828,9 @@ gimplify_conversion (tree *expr_p)
 
   /* If we have a conversion to a non-register type force the
      use of a VIEW_CONVERT_EXPR instead.  */
-  if (!is_gimple_reg_type (TREE_TYPE (*expr_p)))
-    *expr_p = fold_build1 (VIEW_CONVERT_EXPR, TREE_TYPE (*expr_p),
-			   TREE_OPERAND (*expr_p, 0));
+  if (CONVERT_EXPR_P (*expr_p) && !is_gimple_reg_type (TREE_TYPE (*expr_p)))
+    *expr_p = fold_build1_loc (loc, VIEW_CONVERT_EXPR, TREE_TYPE (*expr_p),
+			       TREE_OPERAND (*expr_p, 0));
 
   return GS_OK;
 }
@@ -1933,6 +1935,7 @@ gimplify_compound_lval (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
   VEC(tree,heap) *stack;
   enum gimplify_status ret = GS_OK, tret;
   int i;
+  location_t loc = EXPR_LOCATION (*expr_p);
 
   /* Create a stack of the subexpressions so later we can walk them in
      order from inner to outer.  */
@@ -1944,7 +1947,7 @@ gimplify_compound_lval (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
     restart:
       /* Fold INDIRECT_REFs now to turn them into ARRAY_REFs.  */
       if (TREE_CODE (*p) == INDIRECT_REF)
-	*p = fold_indirect_ref (*p);
+	*p = fold_indirect_ref_loc (loc, *p);
 
       if (handled_component_p (*p))
 	;
@@ -2003,7 +2006,7 @@ gimplify_compound_lval (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
 
 	      /* Divide the element size by the alignment of the element
 		 type (above).  */
-	      elmt_size = size_binop (EXACT_DIV_EXPR, elmt_size, factor);
+	      elmt_size = size_binop_loc (loc, EXACT_DIV_EXPR, elmt_size, factor);
 
 	      if (!is_gimple_min_invariant (elmt_size))
 		{
@@ -2026,7 +2029,7 @@ gimplify_compound_lval (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
 		= size_int (DECL_OFFSET_ALIGN (field) / BITS_PER_UNIT);
 
 	      /* Divide the offset by its alignment.  */
-	      offset = size_binop (EXACT_DIV_EXPR, offset, factor);
+	      offset = size_binop_loc (loc, EXACT_DIV_EXPR, offset, factor);
 
 	      if (!is_gimple_min_invariant (offset))
 		{
@@ -2116,6 +2119,7 @@ gimplify_self_mod_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
   bool postfix;
   enum tree_code arith_code;
   enum gimplify_status ret;
+  location_t loc = EXPR_LOCATION (*expr_p);
 
   code = TREE_CODE (*expr_p);
 
@@ -2159,9 +2163,9 @@ gimplify_self_mod_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
       if (!is_gimple_min_lval (lvalue))
 	{
 	  mark_addressable (lvalue);
-	  lvalue = build_fold_addr_expr (lvalue);
+	  lvalue = build_fold_addr_expr_loc (input_location, lvalue);
 	  gimplify_expr (&lvalue, pre_p, post_p, is_gimple_val, fb_rvalue);
-	  lvalue = build_fold_indirect_ref (lvalue);
+	  lvalue = build_fold_indirect_ref_loc (input_location, lvalue);
 	}
       ret = gimplify_expr (&lhs, pre_p, post_p, is_gimple_val, fb_rvalue);
       if (ret == GS_ERROR)
@@ -2171,9 +2175,9 @@ gimplify_self_mod_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
   /* For POINTERs increment, use POINTER_PLUS_EXPR.  */
   if (POINTER_TYPE_P (TREE_TYPE (lhs)))
     {
-      rhs = fold_convert (sizetype, rhs);
+      rhs = fold_convert_loc (loc, sizetype, rhs);
       if (arith_code == MINUS_EXPR)
-	rhs = fold_build1 (NEGATE_EXPR, TREE_TYPE (rhs), rhs);
+	rhs = fold_build1_loc (loc, NEGATE_EXPR, TREE_TYPE (rhs), rhs);
       arith_code = POINTER_PLUS_EXPR;
     }
 
@@ -2268,6 +2272,7 @@ gimplify_call_expr (tree *expr_p, gimple_seq *pre_p, bool want_value)
   int i, nargs;
   gimple call;
   bool builtin_va_start_p = FALSE;
+  location_t loc = EXPR_LOCATION (*expr_p);
 
   gcc_assert (TREE_CODE (*expr_p) == CALL_EXPR);
 
@@ -2291,7 +2296,7 @@ gimplify_call_expr (tree *expr_p, gimple_seq *pre_p, bool want_value)
   fndecl = get_callee_fndecl (*expr_p);
   if (fndecl && DECL_BUILT_IN (fndecl))
     {
-      tree new_tree = fold_call_expr (*expr_p, !want_value);
+      tree new_tree = fold_call_expr (input_location, *expr_p, !want_value);
 
       if (new_tree && new_tree != *expr_p)
 	{
@@ -2364,8 +2369,9 @@ gimplify_call_expr (tree *expr_p, gimple_seq *pre_p, bool want_value)
 	  tree call = *expr_p;
 
 	  --nargs;
-	  *expr_p = build_call_array (TREE_TYPE (call), CALL_EXPR_FN (call),
-				      nargs, CALL_EXPR_ARGP (call));
+	  *expr_p = build_call_array_loc (loc, TREE_TYPE (call),
+					  CALL_EXPR_FN (call),
+					  nargs, CALL_EXPR_ARGP (call));
 
 	  /* Copy all CALL_EXPR flags, location and block, except
 	     CALL_EXPR_VA_ARG_PACK flag.  */
@@ -2405,10 +2411,18 @@ gimplify_call_expr (tree *expr_p, gimple_seq *pre_p, bool want_value)
         }
     }
 
+  /* Verify the function result.  */
+  if (want_value && fndecl
+      && VOID_TYPE_P (TREE_TYPE (TREE_TYPE (fndecl))))
+    {
+      error_at (loc, "using result of function returning %<void%>");
+      ret = GS_ERROR;
+    }
+
   /* Try this again in case gimplification exposed something.  */
   if (ret != GS_ERROR)
     {
-      tree new_tree = fold_call_expr (*expr_p, !want_value);
+      tree new_tree = fold_call_expr (input_location, *expr_p, !want_value);
 
       if (new_tree && new_tree != *expr_p)
 	{
@@ -2749,6 +2763,7 @@ tree
 gimple_boolify (tree expr)
 {
   tree type = TREE_TYPE (expr);
+  location_t loc = EXPR_LOCATION (expr);
 
   if (TREE_CODE (type) == BOOLEAN_TYPE)
     return expr;
@@ -2777,7 +2792,7 @@ gimple_boolify (tree expr)
     default:
       /* Other expressions that get here must have boolean values, but
 	 might need to be converted to the appropriate mode.  */
-      return fold_convert (boolean_type_node, expr);
+      return fold_convert_loc (loc, boolean_type_node, expr);
     }
 }
 
@@ -2860,6 +2875,7 @@ gimplify_cond_expr (tree *expr_p, gimple_seq *pre_p, fallback_t fallback)
   gimple gimple_cond;
   enum tree_code pred_code;
   gimple_seq seq = NULL;
+  location_t loc = EXPR_LOCATION (*expr_p);
 
   type = TREE_TYPE (expr);
 
@@ -2893,18 +2909,18 @@ gimplify_cond_expr (tree *expr_p, gimple_seq *pre_p, fallback_t fallback)
 
 	  if (TREE_TYPE (TREE_OPERAND (expr, 1)) != void_type_node)
 	    TREE_OPERAND (expr, 1) =
-	      build_fold_addr_expr (TREE_OPERAND (expr, 1));
+	      build_fold_addr_expr_loc (loc, TREE_OPERAND (expr, 1));
 
 	  if (TREE_TYPE (TREE_OPERAND (expr, 2)) != void_type_node)
 	    TREE_OPERAND (expr, 2) =
-	      build_fold_addr_expr (TREE_OPERAND (expr, 2));
+	      build_fold_addr_expr_loc (loc, TREE_OPERAND (expr, 2));
 
 	  tmp = create_tmp_var (type, "iftmp");
 
 	  expr = build3 (COND_EXPR, void_type_node, TREE_OPERAND (expr, 0),
 			 TREE_OPERAND (expr, 1), TREE_OPERAND (expr, 2));
 
-	  result = build_fold_indirect_ref (tmp);
+	  result = build_fold_indirect_ref_loc (loc, tmp);
 	}
 
       /* Build the then clause, 't1 = a;'.  But don't build an assignment
@@ -3083,17 +3099,18 @@ gimplify_modify_expr_to_memcpy (tree *expr_p, tree size, bool want_value,
 {
   tree t, to, to_ptr, from, from_ptr;
   gimple gs;
+  location_t loc = EXPR_LOCATION (*expr_p);
 
   to = TREE_OPERAND (*expr_p, 0);
   from = TREE_OPERAND (*expr_p, 1);
 
   mark_addressable (from);
-  from_ptr = build_fold_addr_expr (from);
-  gimplify_arg (&from_ptr, seq_p, EXPR_LOCATION (*expr_p));
+  from_ptr = build_fold_addr_expr_loc (loc, from);
+  gimplify_arg (&from_ptr, seq_p, loc);
 
   mark_addressable (to);
-  to_ptr = build_fold_addr_expr (to);
-  gimplify_arg (&to_ptr, seq_p, EXPR_LOCATION (*expr_p));
+  to_ptr = build_fold_addr_expr_loc (loc, to);
+  gimplify_arg (&to_ptr, seq_p, loc);
 
   t = implicit_built_in_decls[BUILT_IN_MEMCPY];
 
@@ -3125,6 +3142,7 @@ gimplify_modify_expr_to_memset (tree *expr_p, tree size, bool want_value,
 {
   tree t, from, to, to_ptr;
   gimple gs;
+  location_t loc = EXPR_LOCATION (*expr_p);
 
   /* Assert our assumptions, to abort instead of producing wrong code
      silently if they are not met.  Beware that the RHS CONSTRUCTOR might
@@ -3139,8 +3157,8 @@ gimplify_modify_expr_to_memset (tree *expr_p, tree size, bool want_value,
   /* Now proceed.  */
   to = TREE_OPERAND (*expr_p, 0);
 
-  to_ptr = build_fold_addr_expr (to);
-  gimplify_arg (&to_ptr, seq_p, EXPR_LOCATION (*expr_p));
+  to_ptr = build_fold_addr_expr_loc (loc, to);
+  gimplify_arg (&to_ptr, seq_p, loc);
   t = implicit_built_in_decls[BUILT_IN_MEMSET];
 
   gs = gimple_build_call (t, 3, to_ptr, integer_zero_node, size);
@@ -4296,6 +4314,7 @@ gimplify_modify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
   tree *to_p = &TREE_OPERAND (*expr_p, 0);
   enum gimplify_status ret = GS_UNHANDLED;
   gimple assign;
+  location_t loc = EXPR_LOCATION (*expr_p);
 
   gcc_assert (TREE_CODE (*expr_p) == MODIFY_EXPR
 	      || TREE_CODE (*expr_p) == INIT_EXPR);
@@ -4308,7 +4327,7 @@ gimplify_modify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
     {
       STRIP_USELESS_TYPE_CONVERSION (*from_p);
       if (!useless_type_conversion_p (TREE_TYPE (*to_p), TREE_TYPE (*from_p)))
-	*from_p = fold_convert (TREE_TYPE (*to_p), *from_p);
+	*from_p = fold_convert_loc (loc, TREE_TYPE (*to_p), *from_p);
     }
 
   /* See if any simplifications can be done based on what the RHS is.  */
@@ -4450,14 +4469,15 @@ gimplify_variable_sized_compare (tree *expr_p)
   tree op0 = TREE_OPERAND (*expr_p, 0);
   tree op1 = TREE_OPERAND (*expr_p, 1);
   tree t, arg, dest, src;
+  location_t loc = EXPR_LOCATION (*expr_p);
 
   arg = TYPE_SIZE_UNIT (TREE_TYPE (op0));
   arg = unshare_expr (arg);
   arg = SUBSTITUTE_PLACEHOLDER_IN_EXPR (arg, op0);
-  src = build_fold_addr_expr (op1);
-  dest = build_fold_addr_expr (op0);
+  src = build_fold_addr_expr_loc (loc, op1);
+  dest = build_fold_addr_expr_loc (loc, op0);
   t = implicit_built_in_decls[BUILT_IN_MEMCMP];
-  t = build_call_expr (t, 3, dest, src, arg);
+  t = build_call_expr_loc (loc, t, 3, dest, src, arg);
   *expr_p
     = build2 (TREE_CODE (*expr_p), TREE_TYPE (*expr_p), t, integer_zero_node);
 
@@ -4470,17 +4490,18 @@ gimplify_variable_sized_compare (tree *expr_p)
 static enum gimplify_status
 gimplify_scalar_mode_aggregate_compare (tree *expr_p)
 {
+  location_t loc = EXPR_LOCATION (*expr_p);
   tree op0 = TREE_OPERAND (*expr_p, 0);
   tree op1 = TREE_OPERAND (*expr_p, 1);
 
   tree type = TREE_TYPE (op0);
   tree scalar_type = lang_hooks.types.type_for_mode (TYPE_MODE (type), 1);
 
-  op0 = fold_build1 (VIEW_CONVERT_EXPR, scalar_type, op0);
-  op1 = fold_build1 (VIEW_CONVERT_EXPR, scalar_type, op1);
+  op0 = fold_build1_loc (loc, VIEW_CONVERT_EXPR, scalar_type, op0);
+  op1 = fold_build1_loc (loc, VIEW_CONVERT_EXPR, scalar_type, op1);
 
   *expr_p
-    = fold_build2 (TREE_CODE (*expr_p), TREE_TYPE (*expr_p), op0, op1);
+    = fold_build2_loc (loc, TREE_CODE (*expr_p), TREE_TYPE (*expr_p), op0, op1);
 
   return GS_OK;
 }
@@ -4502,8 +4523,8 @@ gimplify_boolean_expr (tree *expr_p, location_t locus)
   tree type = TREE_TYPE (*expr_p);
 
   *expr_p = build3 (COND_EXPR, type, *expr_p,
-		    fold_convert (type, boolean_true_node),
-		    fold_convert (type, boolean_false_node));
+		    fold_convert_loc (locus, type, boolean_true_node),
+		    fold_convert_loc (locus, type, boolean_false_node));
 
   SET_EXPR_LOCATION (*expr_p, locus);
 
@@ -4607,6 +4628,7 @@ gimplify_addr_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
   tree expr = *expr_p;
   tree op0 = TREE_OPERAND (expr, 0);
   enum gimplify_status ret;
+  location_t loc = EXPR_LOCATION (*expr_p);
 
   switch (TREE_CODE (op0))
     {
@@ -4628,7 +4650,7 @@ gimplify_addr_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
 	tree t_op00 = TREE_TYPE (op00);
 
         if (!useless_type_conversion_p (t_expr, t_op00))
-	  op00 = fold_convert (TREE_TYPE (expr), op00);
+	  op00 = fold_convert_loc (loc, TREE_TYPE (expr), op00);
         *expr_p = op00;
         ret = GS_OK;
       }
@@ -4647,8 +4669,9 @@ gimplify_addr_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
       if (tree_ssa_useless_type_conversion (TREE_OPERAND (op0, 0)))
 	op0 = TREE_OPERAND (op0, 0);
 
-      *expr_p = fold_convert (TREE_TYPE (expr),
-			      build_fold_addr_expr (TREE_OPERAND (op0, 0)));
+      *expr_p = fold_convert_loc (loc, TREE_TYPE (expr),
+				  build_fold_addr_expr_loc (loc,
+							TREE_OPERAND (op0, 0)));
       ret = GS_OK;
       break;
 
@@ -4899,14 +4922,18 @@ gimplify_asm_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
   
   for (link = ASM_CLOBBERS (expr); link; ++i, link = TREE_CHAIN (link))
       VEC_safe_push (tree, gc, clobbers, link);
-    
-  stmt = gimple_build_asm_vec (TREE_STRING_POINTER (ASM_STRING (expr)),
-                               inputs, outputs, clobbers);
 
-  gimple_asm_set_volatile (stmt, ASM_VOLATILE_P (expr));
-  gimple_asm_set_input (stmt, ASM_INPUT_P (expr));
+  /* Do not add ASMs with errors to the gimple IL stream.  */
+  if (ret != GS_ERROR)
+    {
+      stmt = gimple_build_asm_vec (TREE_STRING_POINTER (ASM_STRING (expr)),
+				   inputs, outputs, clobbers);
 
-  gimplify_seq_add_stmt (pre_p, stmt);
+      gimple_asm_set_volatile (stmt, ASM_VOLATILE_P (expr));
+      gimple_asm_set_input (stmt, ASM_INPUT_P (expr));
+
+      gimplify_seq_add_stmt (pre_p, stmt);
+    }
 
   return ret;
 }
@@ -6556,7 +6583,7 @@ gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
 	  break;
 
 	case INDIRECT_REF:
-	  *expr_p = fold_indirect_ref (*expr_p);
+	  *expr_p = fold_indirect_ref_loc (input_location, *expr_p);
 	  if (*expr_p != save_expr)
 	    break;
 	  /* else fall through.  */
@@ -7161,7 +7188,7 @@ gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p,
       /* An lvalue will do.  Take the address of the expression, store it
 	 in a temporary, and replace the expression with an INDIRECT_REF of
 	 that temporary.  */
-      tmp = build_fold_addr_expr (*expr_p);
+      tmp = build_fold_addr_expr_loc (input_location, *expr_p);
       gimplify_expr (&tmp, pre_p, post_p, is_gimple_reg, fb_rvalue);
       *expr_p = build1 (INDIRECT_REF, TREE_TYPE (TREE_TYPE (tmp)), tmp);
     }
@@ -7468,6 +7495,8 @@ gimplify_function_tree (tree fndecl)
   gimple_seq seq;
   gimple bind;
 
+  gcc_assert (!gimple_body (fndecl));
+
   oldfn = current_function_decl;
   current_function_decl = fndecl;
   if (DECL_STRUCT_FUNCTION (fndecl))
@@ -7534,6 +7563,7 @@ gimplify_function_tree (tree fndecl)
     }
 
   DECL_SAVED_TREE (fndecl) = NULL_TREE;
+  cfun->curr_properties = PROP_gimple_any;
 
   current_function_decl = oldfn;
   pop_cfun ();

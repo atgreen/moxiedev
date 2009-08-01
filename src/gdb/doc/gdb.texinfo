@@ -30781,7 +30781,8 @@ their targets, we also describe the grammar here.
 
 Target descriptions can identify the architecture of the remote target
 and (for some architectures) provide information about custom register
-sets.  @value{GDBN} can use this information to autoconfigure for your
+sets.  They can also identify the OS ABI of the remote target.
+@value{GDBN} can use this information to autoconfigure for your
 target, or to warn you if you connect to an unsupported target.
 
 Here is a simple target description:
@@ -30805,6 +30806,7 @@ are explained further below.
 <!DOCTYPE target SYSTEM "gdb-target.dtd">
 <target version="1.0">
   @r{[}@var{architecture}@r{]}
+  @r{[}@var{osabi}@r{]}
   @r{[}@var{feature}@dots{}@r{]}
 </target>
 @end smallexample
@@ -30859,6 +30861,21 @@ An @samp{<architecture>} element has this form:
 @var{arch} is an architecture name from the same selection
 accepted by @code{set architecture} (@pxref{Targets, ,Specifying a
 Debugging Target}).
+
+@subsection OS ABI
+@cindex @code{<osabi>}
+
+This optional field was introduced in @value{GDBN} version 7.0.
+Previous versions of @value{GDBN} ignore it.
+
+An @samp{<osabi>} element has this form:
+
+@smallexample
+  <osabi>@var{abi-name}</osabi>
+@end smallexample
+
+@var{abi-name} is an OS ABI name from the same selection accepted by
+@w{@code{set osabi}} (@pxref{ABI, ,Configuring the Current ABI}).
 
 @subsection Features
 @cindex <feature>
@@ -31074,6 +31091,19 @@ The @samp{org.gnu.gdb.xscale.iwmmxt} feature is optional.  If present,
 it should contain at least registers @samp{wR0} through @samp{wR15} and
 @samp{wCGR0} through @samp{wCGR3}.  The @samp{wCID}, @samp{wCon},
 @samp{wCSSF}, and @samp{wCASF} registers are optional.
+
+The @samp{org.gnu.gdb.arm.vfp} feature is optional.  If present, it
+should contain at least registers @samp{d0} through @samp{d15}.  If
+they are present, @samp{d16} through @samp{d31} should also be included.
+@value{GDBN} will synthesize the single-precision registers from
+halves of the double-precision registers.
+
+The @samp{org.gnu.gdb.arm.neon} feature is optional.  It does not
+need to contain registers; it instructs @value{GDBN} to display the
+VFP double-precision registers as vectors and to synthesize the
+quad-precision registers from pairs of double-precision registers.
+If this feature is present, @samp{org.gnu.gdb.arm.vfp} must also
+be present and include 32 double-precision registers.
 
 @node MIPS Features
 @subsection MIPS Features

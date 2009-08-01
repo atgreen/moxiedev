@@ -356,7 +356,7 @@ tinfo_name (tree type)
   const char *name;
   tree name_string;
 
-  name = mangle_type_string (type);
+  name = mangle_type_string_for_rtti (type);
   name_string = fix_string_type (build_string (strlen (name) + 1, name));
   return name_string;
 }
@@ -1099,9 +1099,11 @@ get_pseudo_ti_init (tree type, unsigned tk_index)
 
 	    /* Combine offset and flags into one field.  */
 	    offset = fold_convert (offset_type, offset);
-	    offset = fold_build2 (LSHIFT_EXPR, offset_type, offset,
+	    offset = fold_build2_loc (input_location,
+				  LSHIFT_EXPR, offset_type, offset,
 				  build_int_cst (offset_type, 8));
-	    offset = fold_build2 (BIT_IOR_EXPR, offset_type, offset,
+	    offset = fold_build2_loc (input_location,
+				  BIT_IOR_EXPR, offset_type, offset,
 				  build_int_cst (offset_type, flags));
 	    base_init = tree_cons (NULL_TREE, offset, base_init);
 	    base_init = tree_cons (NULL_TREE, tinfo, base_init);

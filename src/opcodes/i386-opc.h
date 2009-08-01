@@ -46,8 +46,18 @@
 #define CpuClflush	(Cpu686 + 1)
 /* SYSCALL Instuctions support required */
 #define CpuSYSCALL	(CpuClflush + 1)
+/* Floating point support required */
+#define Cpu8087		(CpuSYSCALL + 1)
+/* i287 support required */
+#define Cpu287		(Cpu8087 + 1)
+/* i387 support required */
+#define Cpu387		(Cpu287 + 1)
+/* i686 and floating point support required */
+#define Cpu687		(Cpu387 + 1)
+/* SSE3 and floating point support required */
+#define CpuFISTTP		(Cpu687 + 1)
 /* MMX support required */
-#define CpuMMX		(CpuSYSCALL + 1)
+#define CpuMMX		(CpuFISTTP + 1)
 /* SSE support required */
 #define CpuSSE		(CpuMMX + 1)
 /* SSE2 support required */
@@ -78,8 +88,10 @@
 #define CpuSSE4_2	(CpuSSE4_1 + 1)
 /* AVX support required */
 #define CpuAVX		(CpuSSE4_2 + 1)
+/* Intel L1OM support required */
+#define CpuL1OM		(CpuAVX + 1)
 /* Xsave/xrstor New Instuctions support required */
-#define CpuXsave	(CpuAVX + 1)
+#define CpuXsave	(CpuL1OM + 1)
 /* AES support required */
 #define CpuAES		(CpuXsave + 1)
 /* PCLMUL support required */
@@ -126,6 +138,11 @@ typedef union i386_cpu_flags
       unsigned int cpui686:1;
       unsigned int cpuclflush:1;
       unsigned int cpusyscall:1;
+      unsigned int cpu8087:1;
+      unsigned int cpu287:1;
+      unsigned int cpu387:1;
+      unsigned int cpu687:1;
+      unsigned int cpufisttp:1;
       unsigned int cpummx:1;
       unsigned int cpusse:1;
       unsigned int cpusse2:1;
@@ -142,6 +159,7 @@ typedef union i386_cpu_flags
       unsigned int cpusse4_1:1;
       unsigned int cpusse4_2:1;
       unsigned int cpuavx:1;
+      unsigned int cpul1om:1;
       unsigned int cpuxsave:1;
       unsigned int cpuaes:1;
       unsigned int cpupclmul:1;

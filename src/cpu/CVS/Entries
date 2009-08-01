@@ -1,4 +1,3 @@
-/ChangeLog/1.84/Mon Jul  6 10:46:39 2009//
 /cris.cpu/1.8/Mon Jul  6 10:46:39 2009//
 /frv.cpu/1.25/Mon Jul  6 10:46:39 2009//
 /frv.opc/1.15/Mon Jul  6 10:46:39 2009//
@@ -18,7 +17,8 @@
 /sh.opc/1.4/Mon Jul  6 10:46:39 2009//
 /sh64-compact.cpu/1.3/Mon Jul  6 10:46:39 2009//
 /sh64-media.cpu/1.3/Mon Jul  6 10:46:39 2009//
-/simplify.inc/1.3/Mon Jul  6 10:46:39 2009//
 /xc16x.cpu/1.4/Mon Jul  6 10:46:39 2009//
 /xc16x.opc/1.3/Mon Jul  6 10:46:39 2009//
+/ChangeLog/1.85/Fri Jul 31 11:10:02 2009//
+/simplify.inc/1.4/Fri Jul 31 11:10:02 2009//
 D

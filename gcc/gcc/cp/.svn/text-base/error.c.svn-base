@@ -182,7 +182,10 @@ count_non_default_template_args (tree args, tree params)
       if (uses_template_parms (def))
 	{
 	  ++processing_template_decl;
-	  def = tsubst_copy_and_build (def, args, tf_none, NULL_TREE, false, true);
+	  /* This speculative substitution must not cause any classes to be
+	     instantiated that otherwise wouldn't be.  */
+	  def = tsubst_copy_and_build (def, args, tf_no_class_instantiations,
+				       NULL_TREE, false, true);
 	  --processing_template_decl;
 	}
       if (!cp_tree_equal (TREE_VEC_ELT (inner_args, last), def))
@@ -770,7 +773,8 @@ dump_type_suffix (tree t, int flags)
 	    dump_expr (TREE_OPERAND (max, 0),
 		       flags & ~TFF_EXPR_IN_PARENS);
 	  else
-	    dump_expr (fold_build2 (PLUS_EXPR, dtype, max,
+	    dump_expr (fold_build2_loc (input_location,
+				    PLUS_EXPR, dtype, max,
 				    build_int_cst (dtype, 1)),
 		       flags & ~TFF_EXPR_IN_PARENS);
 	}
@@ -2646,7 +2650,11 @@ cp_print_error_function (diagnostic_context *context,
 static const char *
 function_category (tree fn)
 {
-  if (DECL_FUNCTION_MEMBER_P (fn))
+  /* We can get called from the middle-end for diagnostics of function
+     clones.  Make sure we have language specific information before
+     dereferencing it.  */
+  if (DECL_LANG_SPECIFIC (STRIP_TEMPLATE (fn))
+      && DECL_FUNCTION_MEMBER_P (fn))
     {
       if (DECL_STATIC_FUNCTION_P (fn))
 	return _("In static member function %qs");

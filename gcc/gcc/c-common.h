@@ -110,6 +110,7 @@ enum rid
   RID_IS_CONVERTIBLE_TO,       RID_IS_CLASS,
   RID_IS_EMPTY,                RID_IS_ENUM,
   RID_IS_POD,                  RID_IS_POLYMORPHIC,
+  RID_IS_STD_LAYOUT,           RID_IS_TRIVIAL,
   RID_IS_UNION,
 
   /* C++0x */
@@ -829,7 +830,7 @@ extern tree shorten_binary_op (tree result_type, tree op0, tree op1, bool bitwis
    and, if so, perhaps change them both back to their original type.  */
 extern tree shorten_compare (tree *, tree *, tree *, enum tree_code *);
 
-extern tree pointer_int_sum (enum tree_code, tree, tree);
+extern tree pointer_int_sum (location_t, enum tree_code, tree, tree);
 
 /* Add qualifiers to a type, in the fashion for C.  */
 extern tree c_build_qualified_type (tree, int);
@@ -980,8 +981,6 @@ struct c_fileinfo *get_fileinfo (const char *);
 extern void dump_time_statistics (void);
 
 extern bool c_dump_tree (void *, tree);
-
-extern void c_warn_unused_result (gimple_seq);
 
 extern void verify_sequence_points (tree);
 

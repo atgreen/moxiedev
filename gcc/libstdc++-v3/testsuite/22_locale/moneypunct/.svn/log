@@ -1,0 +1,42 @@
+<modify-entry
+   name="40712.cc"
+   present-props=""
+   has-prop-mods="false"
+   has-props="false"/>
+<modify-entry
+   committed-rev="149782"
+   committed-date="2009-07-18T22:58:10.598929Z"
+   name="40712.cc"
+   last-author="paolo"
+   uuid="138bc75d-0d04-0410-961f-82ee72b054a4"/>
+<modify-entry
+   text-time="1970-01-01T00:00:00.000000Z"
+   name="40712.cc"
+   kind="file"
+   deleted="false"
+   working-size="-1"
+   absent="false"
+   revision="150304"/>
+<cp-and-translate
+   dest="40712.cc"
+   name=".svn/tmp/text-base/40712.cc.svn-base"/>
+<mv
+   dest=".svn/text-base/40712.cc.svn-base"
+   name=".svn/tmp/text-base/40712.cc.svn-base"/>
+<readonly
+   name=".svn/text-base/40712.cc.svn-base"/>
+<modify-entry
+   name="40712.cc"
+   checksum="499bac5bcf6a4cb60795e8597cacbc01"/>
+<modify-entry
+   name="40712.cc"
+   text-time="working"/>
+<modify-entry
+   name="40712.cc"
+   working-size="working"/>
+<modify-entry
+   committed-rev="149782"
+   committed-date="2009-07-18T22:58:10.598929Z"
+   name=""
+   last-author="paolo"
+   uuid="138bc75d-0d04-0410-961f-82ee72b054a4"/>

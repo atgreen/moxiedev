@@ -43,6 +43,7 @@ with Rident;   use Rident;
 with Sem;      use Sem;
 with Sem_Aux;  use Sem_Aux;
 with Sem_Ch8;  use Sem_Ch8;
+with Sem_SCIL; use Sem_SCIL;
 with Sem_Eval; use Sem_Eval;
 with Sem_Res;  use Sem_Res;
 with Sem_Type; use Sem_Type;
@@ -914,6 +915,7 @@ package body Exp_Util is
 
    function Component_May_Be_Bit_Aligned (Comp : Entity_Id) return Boolean is
       UT : constant Entity_Id := Underlying_Type (Etype (Comp));
+
    begin
       --  If no component clause, then everything is fine, since the back end
       --  never bit-misaligns by default, even if there is a pragma Packed for
@@ -930,9 +932,9 @@ package body Exp_Util is
       then
          return False;
 
-      --  If we know that we have a small (64 bits or less) record
-      --  or bit-packed array, then everything is fine, since the
-      --  back end can handle these cases correctly.
+      --  If we know that we have a small (64 bits or less) record or small
+      --  bit-packed array, then everything is fine, since the back end can
+      --  handle these cases correctly.
 
       elsif Esize (Comp) <= 64
         and then (Is_Record_Type (UT)
@@ -1319,12 +1321,14 @@ package body Exp_Util is
          Rewrite (Subtype_Indic, New_Reference_To (T, Loc));
 
       --  nothing needs to be done for private types with unknown discriminants
-      --  if the underlying type is not an unconstrained composite type.
+      --  if the underlying type is not an unconstrained composite type or it
+      --  is an unchecked union.
 
       elsif Is_Private_Type (Unc_Type)
         and then Has_Unknown_Discriminants (Unc_Type)
         and then (not Is_Composite_Type (Underlying_Type (Unc_Type))
-                    or else Is_Constrained (Underlying_Type (Unc_Type)))
+                  or else Is_Constrained (Underlying_Type (Unc_Type))
+                  or else Is_Unchecked_Union (Underlying_Type (Unc_Type)))
       then
          null;
 
@@ -2754,6 +2758,10 @@ package body Exp_Util is
                N_Real_Range_Specification               |
                N_Record_Definition                      |
                N_Reference                              |
+               N_SCIL_Dispatch_Table_Object_Init        |
+               N_SCIL_Dispatch_Table_Tag_Init           |
+               N_SCIL_Dispatching_Call                  |
+               N_SCIL_Tag_Init                          |
                N_Selected_Component                     |
                N_Signed_Integer_Type_Definition         |
                N_Single_Protected_Declaration           |
@@ -2938,6 +2946,43 @@ package body Exp_Util is
 
       return True;
    end Is_All_Null_Statements;
+
+   ---------------------------------
+   -- Is_Fully_Repped_Tagged_Type --
+   ---------------------------------
+
+   function Is_Fully_Repped_Tagged_Type (T : Entity_Id) return Boolean is
+      U    : constant Entity_Id := Underlying_Type (T);
+      Comp : Entity_Id;
+
+   begin
+      if No (U) or else not Is_Tagged_Type (U) then
+         return False;
+      elsif Has_Discriminants (U) then
+         return False;
+      elsif not Has_Specified_Layout (U) then
+         return False;
+      end if;
+
+      --  Here we have a tagged type, see if it has any unlayed out fields
+      --  other than a possible tag and parent fields. If so, we return False.
+
+      Comp := First_Component (U);
+      while Present (Comp) loop
+         if not Is_Tag (Comp)
+           and then Chars (Comp) /= Name_uParent
+           and then No (Component_Clause (Comp))
+         then
+            return False;
+         else
+            Next_Component (Comp);
+         end if;
+      end loop;
+
+      --  All components are layed out
+
+      return True;
+   end Is_Fully_Repped_Tagged_Type;
 
    ----------------------------------
    -- Is_Library_Level_Tagged_Type --
@@ -3303,16 +3348,11 @@ package body Exp_Util is
    function Is_Renamed_Object (N : Node_Id) return Boolean is
       Pnod : constant Node_Id   := Parent (N);
       Kind : constant Node_Kind := Nkind (Pnod);
-
    begin
       if Kind = N_Object_Renaming_Declaration then
          return True;
-
-      elsif Kind = N_Indexed_Component
-        or else Kind = N_Selected_Component
-      then
+      elsif Nkind_In (Kind, N_Indexed_Component, N_Selected_Component) then
          return Is_Renamed_Object (Pnod);
-
       else
          return False;
       end if;
@@ -3623,8 +3663,8 @@ package body Exp_Util is
    -- Make_CW_Equivalent_Type --
    -----------------------------
 
-   --  Create a record type used as an equivalent of any member
-   --  of the class which takes its size from exp.
+   --  Create a record type used as an equivalent of any member of the class
+   --  which takes its size from exp.
 
    --  Generate the following code:
 
@@ -3671,6 +3711,7 @@ package body Exp_Util is
       Range_Type := Make_Defining_Identifier (Loc, New_Internal_Name ('G'));
 
       if not Is_Interface (Root_Typ) then
+
          --  subtype rg__xx is
          --    Storage_Offset range 1 .. (Expr'size - typ'size) / Storage_Unit
 
@@ -4600,6 +4641,15 @@ package body Exp_Util is
              Constant_Present    => True,
              Expression          => Relocate_Node (Exp));
 
+         --  Check if the previous node relocation requires readjustment of
+         --  some SCIL Dispatching node.
+
+         if Generate_SCIL
+           and then Nkind (Exp) = N_Function_Call
+         then
+            Adjust_SCIL_Node (Exp, Expression (E));
+         end if;
+
          Set_Assignment_OK (E);
          Insert_Action (Exp, E);
 
@@ -4760,6 +4810,16 @@ package body Exp_Util is
                    Defining_Identifier => Obj,
                    Object_Definition   => New_Occurrence_Of (Exp_Type, Loc),
                    Expression          => Relocate_Node (Exp));
+
+               --  Check if the previous node relocation requires readjustment
+               --  of some SCIL Dispatching node.
+
+               if Generate_SCIL
+                 and then Nkind (Exp) = N_Function_Call
+               then
+                  Adjust_SCIL_Node (Exp, Expression (Decl));
+               end if;
+
                Insert_Action (Exp, Decl);
                Set_Etype (Obj, Exp_Type);
                Rewrite (Exp, New_Occurrence_Of (Obj, Loc));
@@ -4819,6 +4879,15 @@ package body Exp_Util is
              Defining_Identifier => Def_Id,
              Object_Definition   => New_Reference_To (Ref_Type, Loc),
              Expression          => New_Exp));
+
+         --  Check if the previous node relocation requires readjustment
+         --  of some SCIL Dispatching node.
+
+         if Generate_SCIL
+           and then Nkind (Exp) = N_Function_Call
+         then
+            Adjust_SCIL_Node (Exp, Prefix (New_Exp));
+         end if;
       end if;
 
       --  Preserve the Assignment_OK flag in all copies, since at least

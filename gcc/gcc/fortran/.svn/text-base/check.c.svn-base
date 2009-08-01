@@ -676,6 +676,19 @@ null_arg:
 
 
 gfc_try
+gfc_check_atan_2 (gfc_expr *y, gfc_expr *x)
+{
+  /* gfc_notify_std would be a wast of time as the return value
+     is seemingly used only for the generic resolution.  The error
+     will be: Too many arguments.  */
+  if ((gfc_option.allow_std & GFC_STD_F2008) == 0)
+    return FAILURE;
+
+  return gfc_check_atan2 (y, x);
+}
+
+
+gfc_try
 gfc_check_atan2 (gfc_expr *y, gfc_expr *x)
 {
   if (type_check (y, 0, BT_REAL) == FAILURE)
@@ -819,6 +832,15 @@ gfc_check_cmplx (gfc_expr *x, gfc_expr *y, gfc_expr *kind)
 		     gfc_current_intrinsic, &y->where);
 	  return FAILURE;
 	}
+
+      if (y->ts.type == BT_COMPLEX)
+	{
+	  gfc_error ("'%s' argument of '%s' intrinsic at %L must have a type "
+		     "of either REAL or INTEGER", gfc_current_intrinsic_arg[1],
+		     gfc_current_intrinsic, &y->where);
+	  return FAILURE;
+	}
+
     }
 
   if (kind_check (kind, 2, BT_COMPLEX) == FAILURE)
@@ -974,6 +996,14 @@ gfc_check_dcmplx (gfc_expr *x, gfc_expr *y)
 	{
 	  gfc_error ("'%s' argument of '%s' intrinsic at %L must not be "
 		     "present if 'x' is COMPLEX", gfc_current_intrinsic_arg[1],
+		     gfc_current_intrinsic, &y->where);
+	  return FAILURE;
+	}
+
+      if (y->ts.type == BT_COMPLEX)
+	{
+	  gfc_error ("'%s' argument of '%s' intrinsic at %L must have a type "
+		     "of either REAL or INTEGER", gfc_current_intrinsic_arg[1],
 		     gfc_current_intrinsic, &y->where);
 	  return FAILURE;
 	}

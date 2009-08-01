@@ -1,5 +1,4 @@
 /ChangeLog.gdb/1.4/Mon Jul  6 10:46:49 2009//
-/Makefile.in/1.6/Mon Jul  6 10:46:49 2009/-ko/
 /fdl.texi/1.2/Mon Jul  6 10:46:49 2009/-ko/
 /history.3/1.5/Mon Jul  6 10:46:49 2009/-ko/
 /history.texi/1.2/Mon Jul  6 10:46:49 2009/-ko/
@@ -14,4 +13,5 @@
 /texi2dvi/1.5/Mon Jul  6 10:46:49 2009/-ko/
 /texi2html/1.4/Mon Jul  6 10:46:49 2009/-ko/
 /version.texi/1.2/Mon Jul  6 10:46:49 2009/-ko/
+/Makefile.in/1.7/Fri Jul 31 11:10:24 2009/-ko/
 D

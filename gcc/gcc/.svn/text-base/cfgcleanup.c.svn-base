@@ -953,7 +953,12 @@ old_insns_match_p (int mode ATTRIBUTE_UNUSED, rtx i1, rtx i2)
   if (GET_CODE (i1) != GET_CODE (i2))
     return false;
 
-  p1 = PATTERN (i1);
+  /* __builtin_unreachable() may lead to empty blocks (ending with
+     NOTE_INSN_BASIC_BLOCK).  They may be crossjumped. */
+  if (NOTE_INSN_BASIC_BLOCK_P (i1) && NOTE_INSN_BASIC_BLOCK_P (i2))
+    return true;
+
+   p1 = PATTERN (i1);
   p2 = PATTERN (i2);
 
   if (GET_CODE (p1) != GET_CODE (p2))
@@ -1841,10 +1846,16 @@ try_optimize_cfg (int mode)
 
 	      /* Delete trivially dead basic blocks.  This is either
 		 blocks with no predecessors, or empty blocks with no
-		 successors.  Empty blocks may result from expanding
+		 successors.  However if the empty block with no
+		 successors is the successor of the ENTRY_BLOCK, it is
+		 kept.  This ensures that the ENTRY_BLOCK will have a
+		 successor which is a precondition for many RTL
+		 passes.  Empty blocks may result from expanding
 		 __builtin_unreachable ().  */
 	      if (EDGE_COUNT (b->preds) == 0
-		  || (EDGE_COUNT (b->succs) == 0 && BB_HEAD (b) == BB_END (b)))
+		  || (EDGE_COUNT (b->succs) == 0
+		      && BB_HEAD (b) == BB_END (b)
+		      && single_succ_edge (ENTRY_BLOCK_PTR)->dest != b))
 		{
 		  c = b->prev_bb;
 		  if (dump_file)
@@ -1916,6 +1927,7 @@ try_optimize_cfg (int mode)
 		  delete_basic_block (b);
 		  changed = true;
 		  b = c;
+		  continue;
 		}
 
 	      if (single_succ_p (b)

@@ -125,6 +125,12 @@ package Sem_Util is
    --  not necessarily mean that CE could be raised, but a response of True
    --  means that for sure CE cannot be raised.
 
+   procedure Check_Dynamically_Tagged_Expression
+     (Expr        : Node_Id;
+      Typ         : Entity_Id;
+      Related_Nod : Node_Id);
+   --  Check wrong use of dynamically tagged expression
+
    procedure Check_Fully_Declared (T : Entity_Id; N : Node_Id);
    --  Verify that the full declaration of type T has been seen. If not,
    --  place error message on node N. Used in  object declarations, type
@@ -623,6 +629,9 @@ package Sem_Util is
    --  the dependency of Einfo on Targparm which would be required for a
    --  synthesized attribute.
 
+   function Is_Actual_Out_Parameter (N : Node_Id) return Boolean;
+   --  Determines if N is an actual parameter of out mode in a subprogram call
+
    function Is_Actual_Parameter (N : Node_Id) return Boolean;
    --  Determines if N is an actual parameter in a subprogram call
 
@@ -653,11 +662,10 @@ package Sem_Util is
 
    function Is_Dependent_Component_Of_Mutable_Object
      (Object : Node_Id) return Boolean;
-   --  Returns True if Object is the name of a subcomponent that
-   --  depends on discriminants of a variable whose nominal subtype
-   --  is unconstrained and not indefinite, and the variable is
-   --  not aliased. Otherwise returns False. The nodes passed
-   --  to this function are assumed to denote objects.
+   --  Returns True if Object is the name of a subcomponent that depends on
+   --  discriminants of a variable whose nominal subtype is unconstrained and
+   --  not indefinite, and the variable is not aliased. Otherwise returns
+   --  False. The nodes passed to this function are assumed to denote objects.
 
    function Is_Dereferenced (N : Node_Id) return Boolean;
    --  N is a subexpression node of an access type. This function returns
@@ -684,18 +692,20 @@ package Sem_Util is
    --  point type T, i.e. if it is an exact multiple of Small.
 
    function Is_Fully_Initialized_Type (Typ : Entity_Id) return Boolean;
-   --  Typ is a type entity. This function returns true if this type is
-   --  fully initialized, meaning that an object of the type is fully
-   --  initialized. Note that initialization resulting from the use of
-   --  pragma Normalized_Scalars does not count. Note that this is only
-   --  used for the purpose of issuing warnings for objects that are
-   --  potentially referenced uninitialized. This means that the result
-   --  returned is not crucial, but probably should err on the side of
-   --  thinking things are fully initialized if it does not know.
+   --  Typ is a type entity. This function returns true if this type is fully
+   --  initialized, meaning that an object of the type is fully initialized.
+   --  Note that initialization resulting from use of pragma Normalized_Scalars
+   --  does not count. Note that this is only used for the purpose of issuing
+   --  warnings for objects that are potentially referenced uninitialized. This
+   --  means that the result returned is not crucial, but should err on the
+   --  side of thinking things are fully initialized if it does not know.
 
    function Is_Inherited_Operation (E : Entity_Id) return Boolean;
    --  E is a subprogram. Return True is E is an implicit operation inherited
    --  by a derived type declarations.
+
+   function Is_LHS (N : Node_Id) return Boolean;
+   --  Returns True iff N is used as Name in an assignment statement.
 
    function Is_Library_Level_Entity (E : Entity_Id) return Boolean;
    --  A library-level declaration is one that is accessible from Standard,
@@ -810,9 +820,9 @@ package Sem_Util is
    --  clear the Is_True_Constant flag, since that only gets reset if there
    --  really is an assignment somewhere in the entity scope). This procedure
    --  also calls Kill_All_Checks, since this is a special case of needing to
-   --  forget saved values. This procedure also clears Is_Known_Non_Null flags
-   --  in variables, constants or parameters since these are also not known to
-   --  be valid.
+   --  forget saved values. This procedure also clears the Is_Known_Null and
+   --  Is_Known_Non_Null and Is_Known_Valid flags in variables, constants or
+   --  parameters since these are also not known to be trustable any more.
    --
    --  The Last_Assignment_Only flag is set True to clear only Last_Assignment
    --  fields and leave other fields unchanged. This is used when we encounter
@@ -829,8 +839,8 @@ package Sem_Util is
       Last_Assignment_Only : Boolean := False);
    --  This performs the same processing as described above for the form with
    --  no argument, but for the specific entity given. The call has no effect
-   --  if the entity Ent is not for an object. Again, Last_Assignment_Only is
-   --  set if you want to clear only the Last_Assignment field (see above).
+   --  if the entity Ent is not for an object. Last_Assignment_Only has the
+   --  same meaning as for the call with no Ent.
 
    procedure Kill_Size_Check_Code (E : Entity_Id);
    --  Called when an address clause or pragma Import is applied to an entity.

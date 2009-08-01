@@ -333,7 +333,7 @@ build_base_path (enum tree_code code,
   if (null_test)
     {
       tree zero = cp_convert (TREE_TYPE (expr), integer_zero_node);
-      null_test = fold_build2 (NE_EXPR, boolean_type_node,
+      null_test = fold_build2_loc (input_location, NE_EXPR, boolean_type_node,
 			       expr, zero);
     }
 
@@ -385,7 +385,7 @@ build_base_path (enum tree_code code,
       TREE_CONSTANT (v_offset) = 1;
 
       offset = convert_to_integer (ptrdiff_type_node,
-				   size_diffop (offset,
+				   size_diffop_loc (input_location, offset,
 						BINFO_OFFSET (v_binfo)));
 
       if (!integer_zerop (offset))
@@ -417,7 +417,7 @@ build_base_path (enum tree_code code,
     {
       offset = fold_convert (sizetype, offset);
       if (code == MINUS_EXPR)
-	offset = fold_build1 (NEGATE_EXPR, sizetype, offset);
+	offset = fold_build1_loc (input_location, NEGATE_EXPR, sizetype, offset);
       expr = build2 (POINTER_PLUS_EXPR, ptr_target_type, expr, offset);
     }
   else
@@ -428,8 +428,8 @@ build_base_path (enum tree_code code,
 
  out:
   if (null_test)
-    expr = fold_build3 (COND_EXPR, target_type, null_test, expr,
-			fold_build1 (NOP_EXPR, target_type,
+    expr = fold_build3_loc (input_location, COND_EXPR, target_type, null_test, expr,
+			fold_build1_loc (input_location, NOP_EXPR, target_type,
 				     integer_zero_node));
 
   return expr;
@@ -553,10 +553,11 @@ convert_to_base_statically (tree expr, tree base)
       expr = cp_build_unary_op (ADDR_EXPR, expr, /*noconvert=*/1, 
                              tf_warning_or_error);
       if (!integer_zerop (BINFO_OFFSET (base)))
-        expr = fold_build2 (POINTER_PLUS_EXPR, pointer_type, expr,
+        expr = fold_build2_loc (input_location,
+			    POINTER_PLUS_EXPR, pointer_type, expr,
 			    fold_convert (sizetype, BINFO_OFFSET (base)));
       expr = fold_convert (build_pointer_type (BINFO_TYPE (base)), expr);
-      expr = build_fold_indirect_ref (expr);
+      expr = build_fold_indirect_ref_loc (input_location, expr);
     }
 
   return expr;
@@ -1248,8 +1249,14 @@ check_bases (tree t,
   int seen_non_virtual_nearly_empty_base_p;
   tree base_binfo;
   tree binfo;
+  tree field = NULL_TREE;
 
   seen_non_virtual_nearly_empty_base_p = 0;
+
+  if (!CLASSTYPE_NON_STD_LAYOUT (t))
+    for (field = TYPE_FIELDS (t); field; field = TREE_CHAIN (field))
+      if (TREE_CODE (field) == FIELD_DECL)
+	break;
 
   for (binfo = TYPE_BINFO (t), i = 0;
        BINFO_BASE_ITERATE (binfo, i, base_binfo); i++)
@@ -1305,6 +1312,36 @@ check_bases (tree t,
       CLASSTYPE_CONTAINS_EMPTY_CLASS_P (t)
 	|= CLASSTYPE_CONTAINS_EMPTY_CLASS_P (basetype);
       TYPE_HAS_COMPLEX_DFLT (t) |= TYPE_HAS_COMPLEX_DFLT (basetype);      
+
+      /*  A standard-layout class is a class that:
+	  ...
+	  * has no non-standard-layout base classes,  */
+      CLASSTYPE_NON_STD_LAYOUT (t) |= CLASSTYPE_NON_STD_LAYOUT (basetype);
+      if (!CLASSTYPE_NON_STD_LAYOUT (t))
+	{
+	  tree basefield;
+	  /* ...has no base classes of the same type as the first non-static
+	     data member...  */
+	  if (field && DECL_CONTEXT (field) == t
+	      && (same_type_ignoring_top_level_qualifiers_p
+		  (TREE_TYPE (field), basetype)))
+	    CLASSTYPE_NON_STD_LAYOUT (t) = 1;
+	  else
+	    /* ...either has no non-static data members in the most-derived
+	       class and at most one base class with non-static data
+	       members, or has no base classes with non-static data
+	       members */
+	    for (basefield = TYPE_FIELDS (basetype); basefield;
+		 basefield = TREE_CHAIN (basefield))
+	      if (TREE_CODE (basefield) == FIELD_DECL)
+		{
+		  if (field)
+		    CLASSTYPE_NON_STD_LAYOUT (t) = 1;
+		  else
+		    field = basefield;
+		  break;
+		}
+	}
     }
 }
 
@@ -1360,7 +1397,8 @@ determine_primary_bases (tree t)
 	      /* A virtual binfo might have been copied from within
 		 another hierarchy. As we're about to use it as a
 		 primary base, make sure the offsets match.  */
-	      delta = size_diffop (convert (ssizetype,
+	      delta = size_diffop_loc (input_location,
+				   convert (ssizetype,
 					    BINFO_OFFSET (base_binfo)),
 				   convert (ssizetype,
 					    BINFO_OFFSET (this_primary)));
@@ -1423,7 +1461,7 @@ determine_primary_bases (tree t)
 	  /* A virtual binfo might have been copied from within
 	     another hierarchy. As we're about to use it as a primary
 	     base, make sure the offsets match.  */
-	  delta = size_diffop (ssize_int (0),
+	  delta = size_diffop_loc (input_location, ssize_int (0),
 			       convert (ssizetype, BINFO_OFFSET (primary)));
 
 	  propagate_binfo_offsets (primary, delta);
@@ -2126,9 +2164,10 @@ update_vtable_entry_for_fn (tree t, tree binfo, tree fn, tree* virtuals,
 		{
 		  /* We convert via virtual base.  Adjust the fixed
 		     offset to be from there.  */
-		  offset = size_diffop
-		    (offset, convert
-		     (ssizetype, BINFO_OFFSET (virtual_offset)));
+		  offset = 
+		    size_diffop (offset,
+				 convert (ssizetype,
+					  BINFO_OFFSET (virtual_offset)));
 		}
 	      if (fixed_offset)
 		/* There was an existing fixed offset, this must be
@@ -2211,7 +2250,8 @@ update_vtable_entry_for_fn (tree t, tree binfo, tree fn, tree* virtuals,
   if (virtual_base)
     /* The `this' pointer needs to be adjusted from the declaration to
        the nearest virtual base.  */
-    delta = size_diffop (convert (ssizetype, BINFO_OFFSET (virtual_base)),
+    delta = size_diffop_loc (input_location,
+			 convert (ssizetype, BINFO_OFFSET (virtual_base)),
 			 convert (ssizetype, BINFO_OFFSET (first_defn)));
   else if (lost)
     /* If the nearest definition is in a lost primary, we don't need an
@@ -2224,7 +2264,8 @@ update_vtable_entry_for_fn (tree t, tree binfo, tree fn, tree* virtuals,
        BINFO to pointing at the base where the final overrider
        appears.  */
     virtual_covariant:
-    delta = size_diffop (convert (ssizetype,
+    delta = size_diffop_loc (input_location,
+			 convert (ssizetype,
 				  BINFO_OFFSET (TREE_VALUE (overrider))),
 			 convert (ssizetype, BINFO_OFFSET (binfo)));
 
@@ -2870,6 +2911,7 @@ check_field_decls (tree t, tree *access_decls,
   bool has_pointers;
   int any_default_members;
   int cant_pack = 0;
+  int field_access = -1;
 
   /* Assume there are no access declarations.  */
   *access_decls = NULL_TREE;
@@ -2883,6 +2925,7 @@ check_field_decls (tree t, tree *access_decls,
     {
       tree x = *field;
       tree type = TREE_TYPE (x);
+      int this_field_access;
 
       next = &TREE_CHAIN (x);
 
@@ -2957,10 +3000,21 @@ check_field_decls (tree t, tree *access_decls,
       if (TREE_PRIVATE (x) || TREE_PROTECTED (x))
 	CLASSTYPE_NON_AGGREGATE (t) = 1;
 
+      /* A standard-layout class is a class that:
+	 ...
+	 has the same access control (Clause 11) for all non-static data members,
+         ...  */
+      this_field_access = TREE_PROTECTED (x) ? 1 : TREE_PRIVATE (x) ? 2 : 0;
+      if (field_access == -1)
+	field_access = this_field_access;
+      else if (this_field_access != field_access)
+	CLASSTYPE_NON_STD_LAYOUT (t) = 1;
+
       /* If this is of reference type, check if it needs an init.  */
       if (TREE_CODE (type) == REFERENCE_TYPE)
 	{
-	  CLASSTYPE_NON_POD_P (t) = 1;
+	  CLASSTYPE_NON_LAYOUT_POD_P (t) = 1;
+	  CLASSTYPE_NON_STD_LAYOUT (t) = 1;
 	  if (DECL_INITIAL (x) == NULL_TREE)
 	    SET_CLASSTYPE_REF_FIELDS_NEED_INIT (t, 1);
 
@@ -2975,7 +3029,7 @@ check_field_decls (tree t, tree *access_decls,
 
       if (TYPE_PACKED (t))
 	{
-	  if (!pod_type_p (type) && !TYPE_PACKED (type))
+	  if (!layout_pod_type_p (type) && !TYPE_PACKED (type))
 	    {
 	      warning
 		(0,
@@ -3024,10 +3078,13 @@ check_field_decls (tree t, tree *access_decls,
       if (DECL_MUTABLE_P (x) || TYPE_HAS_MUTABLE_P (type))
 	CLASSTYPE_HAS_MUTABLE (t) = 1;
 
-      if (! pod_type_p (type))
+      if (! layout_pod_type_p (type))
 	/* DR 148 now allows pointers to members (which are POD themselves),
 	   to be allowed in POD structs.  */
-	CLASSTYPE_NON_POD_P (t) = 1;
+	CLASSTYPE_NON_LAYOUT_POD_P (t) = 1;
+
+      if (!std_layout_type_p (type))
+	CLASSTYPE_NON_STD_LAYOUT (t) = 1;
 
       if (! zero_init_p (type))
 	CLASSTYPE_NON_ZERO_INIT_P (t) = 1;
@@ -3522,7 +3579,8 @@ layout_nonempty_base_or_field (record_layout_info rli,
        hierarchy.  Therefore, we may not need to add the entire
        OFFSET.  */
     propagate_binfo_offsets (binfo,
-			     size_diffop (convert (ssizetype, offset),
+			     size_diffop_loc (input_location,
+					  convert (ssizetype, offset),
 					  convert (ssizetype,
 						   BINFO_OFFSET (binfo))));
 }
@@ -3559,7 +3617,8 @@ layout_empty_base (record_layout_info rli, tree binfo,
     {
       if (abi_version_at_least (2))
 	propagate_binfo_offsets
-	  (binfo, size_diffop (size_zero_node, BINFO_OFFSET (binfo)));
+	  (binfo, size_diffop_loc (input_location,
+			       size_zero_node, BINFO_OFFSET (binfo)));
       else
 	warning (OPT_Wabi,
 		 "offset of empty base %qT may not be ABI-compliant and may"
@@ -3665,7 +3724,8 @@ build_base_field (record_layout_info rli, tree binfo,
 
       /* On some platforms (ARM), even empty classes will not be
 	 byte-aligned.  */
-      eoc = round_up (rli_size_unit_so_far (rli),
+      eoc = round_up_loc (input_location,
+		      rli_size_unit_so_far (rli),
 		      CLASSTYPE_ALIGN_UNIT (basetype));
       atend = layout_empty_base (rli, binfo, eoc, offsets);
       /* A nearly-empty class "has no proper base class that is empty,
@@ -4280,7 +4340,7 @@ type_requires_array_cookie (tree type)
 /* Check the validity of the bases and members declared in T.  Add any
    implicitly-generated functions (like copy-constructors and
    assignment operators).  Compute various flag bits (like
-   CLASSTYPE_NON_POD_T) for T.  This routine works purely at the C++
+   CLASSTYPE_NON_LAYOUT_POD_T) for T.  This routine works purely at the C++
    level: i.e., independently of the ABI in use.  */
 
 static void
@@ -4346,9 +4406,12 @@ check_bases_and_members (tree t)
      elsewhere.  */
   CLASSTYPE_NON_AGGREGATE (t)
     |= (type_has_user_provided_constructor (t) || TYPE_POLYMORPHIC_P (t));
-  CLASSTYPE_NON_POD_P (t)
+  /* This is the C++98/03 definition of POD; it changed in C++0x, but we
+     retain the old definition internally for ABI reasons.  */
+  CLASSTYPE_NON_LAYOUT_POD_P (t)
     |= (CLASSTYPE_NON_AGGREGATE (t)
 	|| saved_nontrivial_dtor || saved_complex_asn_ref);
+  CLASSTYPE_NON_STD_LAYOUT (t) |= TYPE_CONTAINS_VPTR_P (t);
   TYPE_HAS_COMPLEX_ASSIGN_REF (t) |= TYPE_CONTAINS_VPTR_P (t);
   TYPE_HAS_COMPLEX_DFLT (t) |= TYPE_CONTAINS_VPTR_P (t);
 
@@ -4582,7 +4645,8 @@ layout_virtual_bases (record_layout_info rli, splay_tree offsets)
 	      && first_vbase
 	      && (tree_int_cst_lt
 		  (size_binop (CEIL_DIV_EXPR,
-			       round_up (CLASSTYPE_SIZE (t),
+			       round_up_loc (input_location,
+					 CLASSTYPE_SIZE (t),
 					 CLASSTYPE_ALIGN (basetype)),
 			       bitsize_unit_node),
 		   BINFO_OFFSET (vbase))))
@@ -5015,7 +5079,7 @@ layout_class_type (tree t, tree *virtuals_p)
       /* Make sure that we are on a byte boundary so that the size of
 	 the class without virtual bases will always be a round number
 	 of bytes.  */
-      rli->bitpos = round_up (rli->bitpos, BITS_PER_UNIT);
+      rli->bitpos = round_up_loc (input_location, rli->bitpos, BITS_PER_UNIT);
       normalize_rli (rli);
     }
 
@@ -5031,7 +5095,7 @@ layout_class_type (tree t, tree *virtuals_p)
   /* Create the version of T used for virtual bases.  We do not use
      make_class_type for this version; this is an artificial type.  For
      a POD type, we just reuse T.  */
-  if (CLASSTYPE_NON_POD_P (t) || CLASSTYPE_EMPTY_P (t))
+  if (CLASSTYPE_NON_LAYOUT_POD_P (t) || CLASSTYPE_EMPTY_P (t))
     {
       base_t = make_node (TREE_CODE (t));
 
@@ -7710,11 +7774,12 @@ build_vbase_offset_vtbl_entries (tree binfo, vtbl_init_data* vid)
 	 The vbase offsets go in reverse inheritance-graph order, and
 	 we are walking in inheritance graph order so these end up in
 	 the right order.  */
-      delta = size_diffop (BINFO_OFFSET (b), BINFO_OFFSET (non_primary_binfo));
+      delta = size_diffop_loc (input_location,
+			   BINFO_OFFSET (b), BINFO_OFFSET (non_primary_binfo));
 
       *vid->last_init
 	= build_tree_list (NULL_TREE,
-			   fold_build1 (NOP_EXPR,
+			   fold_build1_loc (input_location, NOP_EXPR,
 					vtable_entry_type,
 					delta));
       vid->last_init = &TREE_CHAIN (*vid->last_init);
@@ -7944,9 +8009,11 @@ add_vcall_offset (tree orig_fn, tree binfo, vtbl_init_data *vid)
 	     vid->binfo.  But it might be a lost primary, so its
 	     BINFO_OFFSET might be wrong, so we just use the
 	     BINFO_OFFSET from vid->binfo.  */
-	  vcall_offset = size_diffop (BINFO_OFFSET (base),
+	  vcall_offset = size_diffop_loc (input_location,
+				      BINFO_OFFSET (base),
 				      BINFO_OFFSET (vid->binfo));
-	  vcall_offset = fold_build1 (NOP_EXPR, vtable_entry_type,
+	  vcall_offset = fold_build1_loc (input_location,
+				      NOP_EXPR, vtable_entry_type,
 				      vcall_offset);
 	}
       /* Add the initializer to the vtable.  */
@@ -7985,7 +8052,8 @@ build_rtti_vtbl_entries (tree binfo, vtbl_init_data* vid)
 		  && BINFO_INHERITANCE_CHAIN (primary_base) == b);
       b = primary_base;
     }
-  offset = size_diffop (BINFO_OFFSET (vid->rtti_binfo), BINFO_OFFSET (b));
+  offset = size_diffop_loc (input_location,
+			BINFO_OFFSET (vid->rtti_binfo), BINFO_OFFSET (b));
 
   /* The second entry is the address of the typeinfo object.  */
   if (flag_rtti)

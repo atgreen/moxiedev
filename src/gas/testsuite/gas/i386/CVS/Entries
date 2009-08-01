@@ -53,8 +53,6 @@
 /arch-avx-1-6.s/1.1/Mon Jul  6 10:46:42 2009//
 /arch-avx-1.d/1.2/Mon Jul  6 10:46:42 2009//
 /arch-avx-1.s/1.2/Mon Jul  6 10:46:42 2009//
-/att-regs.d/1.3/Mon Jul  6 10:46:42 2009//
-/att-regs.s/1.3/Mon Jul  6 10:46:42 2009//
 /avx-intel.d/1.7/Mon Jul  6 10:46:42 2009//
 /avx.d/1.7/Mon Jul  6 10:46:42 2009//
 /avx.s/1.6/Mon Jul  6 10:46:42 2009//
@@ -94,7 +92,6 @@
 /gotpc.d/1.2/Mon Jul  6 10:46:42 2009//
 /gotpc.s/1.2/Mon Jul  6 10:46:42 2009//
 /i386.d/1.5/Mon Jul  6 10:46:42 2009//
-/i386.exp/1.113/Mon Jul 13 12:29:41 2009//
 /i386.s/1.5/Mon Jul  6 10:46:42 2009//
 /immed32.d/1.2/Mon Jul  6 10:46:42 2009//
 /immed32.s/1.1/Mon Jul  6 10:46:42 2009//
@@ -102,8 +99,6 @@
 /immed64.s/1.1/Mon Jul  6 10:46:42 2009//
 /intel-expr.d/1.1/Mon Jul  6 10:46:42 2009//
 /intel-expr.s/1.1/Mon Jul  6 10:46:42 2009//
-/intel-regs.d/1.3/Mon Jul  6 10:46:42 2009//
-/intel-regs.s/1.3/Mon Jul  6 10:46:42 2009//
 /intel.d/1.22/Mon Jul  6 10:46:42 2009//
 /intel.e/1.6/Mon Jul  6 10:46:42 2009//
 /intel.s/1.21/Mon Jul  6 10:46:42 2009//
@@ -422,4 +417,26 @@
 /xsave-intel.d/1.1/Mon Jul  6 10:46:42 2009//
 /xsave.d/1.1/Mon Jul  6 10:46:42 2009//
 /xsave.s/1.1/Mon Jul  6 10:46:42 2009//
+/287.d/1.1/Fri Jul 24 15:41:20 2009//
+/287.s/1.1/Fri Jul 24 15:41:20 2009//
+/387.d/1.1/Fri Jul 24 15:41:20 2009//
+/387.s/1.1/Fri Jul 24 15:41:20 2009//
+/8087.d/1.1/Fri Jul 24 15:41:20 2009//
+/8087.s/1.1/Fri Jul 24 15:41:20 2009//
+/att-regs.d/1.4/Fri Jul 31 11:10:04 2009//
+/att-regs.s/1.4/Fri Jul 31 11:10:04 2009//
+/i386.exp/1.117/Fri Jul 31 11:10:04 2009//
+/ifunc.d/1.1/Thu Jul 16 17:37:26 2009//
+/ifunc.s/1.1/Thu Jul 16 17:37:26 2009//
+/intel-regs.d/1.4/Fri Jul 31 11:10:04 2009//
+/intel-regs.s/1.4/Fri Jul 31 11:10:04 2009//
+/l1om-inval.l/1.1/Sat Jul 25 14:58:55 2009//
+/l1om-inval.s/1.1/Sat Jul 25 14:58:55 2009//
+/l1om.d/1.1/Sat Jul 25 14:58:55 2009//
+/no87-2.l/1.1/Fri Jul 24 15:41:20 2009//
+/no87-2.s/1.1/Fri Jul 24 15:41:20 2009//
+/no87.l/1.1/Fri Jul 24 15:41:20 2009//
+/no87.s/1.1/Fri Jul 24 15:41:20 2009//
+/x86-64-ifunc.d/1.1/Thu Jul 16 17:37:26 2009//
+/x86-64-nops-1-pentium.d/1.1/Tue Jul 21 17:50:21 2009//
 D

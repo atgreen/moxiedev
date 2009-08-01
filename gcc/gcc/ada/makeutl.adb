@@ -23,9 +23,11 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with ALI;      use ALI;
 with Debug;
 with Osint;    use Osint;
 with Output;   use Output;
+with Opt;      use Opt;
 with Prj.Ext;
 with Prj.Util;
 with Snames;   use Snames;
@@ -154,6 +156,98 @@ package body Makeutl is
       end if;
    end Add_Linker_Option;
 
+   ------------------------------
+   -- Check_Source_Info_In_ALI --
+   ------------------------------
+
+   function Check_Source_Info_In_ALI (The_ALI : ALI_Id) return Boolean is
+      Unit_Name : Name_Id;
+
+   begin
+      --  Loop through units
+
+      for U in ALIs.Table (The_ALI).First_Unit ..
+               ALIs.Table (The_ALI).Last_Unit
+      loop
+         --  Check if the file name is one of the source of the unit
+
+         Get_Name_String (Units.Table (U).Uname);
+         Name_Len  := Name_Len - 2;
+         Unit_Name := Name_Find;
+
+         if File_Not_A_Source_Of (Unit_Name, Units.Table (U).Sfile) then
+            return False;
+         end if;
+
+         --  Loop to do same check for each of the withed units
+
+         for W in Units.Table (U).First_With .. Units.Table (U).Last_With loop
+            declare
+               WR : ALI.With_Record renames Withs.Table (W);
+
+            begin
+               if WR.Sfile /= No_File then
+                  Get_Name_String (WR.Uname);
+                  Name_Len  := Name_Len - 2;
+                  Unit_Name := Name_Find;
+
+                  if File_Not_A_Source_Of (Unit_Name, WR.Sfile) then
+                     return False;
+                  end if;
+               end if;
+            end;
+         end loop;
+      end loop;
+
+      --  Loop to check subunits
+
+      for D in ALIs.Table (The_ALI).First_Sdep ..
+               ALIs.Table (The_ALI).Last_Sdep
+      loop
+         declare
+            SD : Sdep_Record renames Sdep.Table (D);
+
+         begin
+            Unit_Name := SD.Subunit_Name;
+
+            if Unit_Name /= No_Name then
+
+               --  For separates, the file is no longer associated with the
+               --  unit ("proc-sep.adb" is not associated with unit "proc.sep".
+               --  So we need to check whether the source file still exists in
+               --  the source tree: it will if it matches the naming scheme
+               --  (and then will be for the same unit).
+
+               if Find_Source
+                 (In_Tree => Project_Tree,
+                  Project => No_Project,
+                  Base_Name => SD.Sfile) = No_Source
+               then
+                  --  If this is not a runtime file (when using -a) ? Otherwise
+                  --  we get complaints about a-except.adb, which uses
+                  --  separates.
+
+                  if not Check_Readonly_Files
+                    or else Find_File (SD.Sfile, Osint.Source) = No_File
+                  then
+                     if Verbose_Mode then
+                        Write_Line
+                          ("While parsing ALI file: Sdep associates "
+                           & Get_Name_String (SD.Sfile)
+                           & " with unit " & Get_Name_String (Unit_Name)
+                           & " but this does not match what was found while"
+                           & " parsing the project. Will recompile");
+                     end if;
+                     return False;
+                  end if;
+               end if;
+            end if;
+         end;
+      end loop;
+
+      return True;
+   end Check_Source_Info_In_ALI;
+
    -----------------
    -- Create_Name --
    -----------------
@@ -263,6 +357,47 @@ package body Makeutl is
          end if;
       end;
    end Executable_Prefix_Path;
+
+   --------------------------
+   -- File_Not_A_Source_Of --
+   --------------------------
+
+   function File_Not_A_Source_Of
+     (Uname : Name_Id;
+      Sfile : File_Name_Type) return Boolean
+   is
+      Unit : constant Unit_Index :=
+               Units_Htable.Get (Project_Tree.Units_HT, Uname);
+
+      At_Least_One_File : Boolean := False;
+
+   begin
+      if Unit /= No_Unit_Index then
+         for F in Unit.File_Names'Range loop
+            if Unit.File_Names (F) /= null then
+               At_Least_One_File := True;
+               if Unit.File_Names (F).File = Sfile then
+                  return False;
+               end if;
+            end if;
+         end loop;
+
+         if not At_Least_One_File then
+
+            --  The unit was probably created initially for a separate unit
+            --  (which are initially created as IMPL when both suffixes are the
+            --  same). Later on, Override_Kind changed the type of the file,
+            --  and the unit is no longer valid in fact.
+
+            return False;
+         end if;
+
+         Verbose_Msg (Uname, "sources do not include ", Name_Id (Sfile));
+         return True;
+      end if;
+
+      return False;
+   end File_Not_A_Source_Of;
 
    ----------
    -- Hash --
@@ -748,5 +883,53 @@ package body Makeutl is
 
       return Result;
    end Unit_Index_Of;
+
+   -----------------
+   -- Verbose_Msg --
+   -----------------
+
+   procedure Verbose_Msg
+     (N1                : Name_Id;
+      S1                : String;
+      N2                : Name_Id := No_Name;
+      S2                : String  := "";
+      Prefix            : String := "  -> ";
+      Minimum_Verbosity : Opt.Verbosity_Level_Type := Opt.Low)
+   is
+   begin
+      if not Opt.Verbose_Mode
+        or else Minimum_Verbosity > Opt.Verbosity_Level
+      then
+         return;
+      end if;
+
+      Write_Str (Prefix);
+      Write_Str ("""");
+      Write_Name (N1);
+      Write_Str (""" ");
+      Write_Str (S1);
+
+      if N2 /= No_Name then
+         Write_Str (" """);
+         Write_Name (N2);
+         Write_Str (""" ");
+      end if;
+
+      Write_Str (S2);
+      Write_Eol;
+   end Verbose_Msg;
+
+   procedure Verbose_Msg
+     (N1                : File_Name_Type;
+      S1                : String;
+      N2                : File_Name_Type := No_File;
+      S2                : String  := "";
+      Prefix            : String := "  -> ";
+      Minimum_Verbosity : Opt.Verbosity_Level_Type := Opt.Low)
+   is
+   begin
+      Verbose_Msg
+        (Name_Id (N1), S1, Name_Id (N2), S2, Prefix, Minimum_Verbosity);
+   end Verbose_Msg;
 
 end Makeutl;

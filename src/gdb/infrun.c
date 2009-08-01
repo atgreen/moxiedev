@@ -964,6 +964,7 @@ displaced_step_fixup (ptid_t event_ptid, enum target_signal signal)
       struct displaced_step_request *head;
       ptid_t ptid;
       struct regcache *regcache;
+      struct gdbarch *gdbarch;
       CORE_ADDR actual_pc;
 
       head = displaced_step_request_queue;
@@ -985,9 +986,11 @@ displaced_step_fixup (ptid_t event_ptid, enum target_signal signal)
 
 	  displaced_step_prepare (ptid);
 
+	  gdbarch = get_regcache_arch (regcache);
+
 	  if (debug_displaced)
 	    {
-	      struct gdbarch *gdbarch = get_regcache_arch (regcache);
+	      CORE_ADDR actual_pc = regcache_read_pc (regcache);
 	      gdb_byte buf[4];
 
 	      fprintf_unfiltered (gdb_stdlog, "displaced: run %s: ",
@@ -996,7 +999,10 @@ displaced_step_fixup (ptid_t event_ptid, enum target_signal signal)
 	      displaced_step_dump_bytes (gdb_stdlog, buf, sizeof (buf));
 	    }
 
-	  target_resume (ptid, 1, TARGET_SIGNAL_0);
+	  if (gdbarch_software_single_step_p (gdbarch))
+	    target_resume (ptid, 0, TARGET_SIGNAL_0);
+	  else
+	    target_resume (ptid, 1, TARGET_SIGNAL_0);
 
 	  /* Done, we're stepping a thread.  */
 	  break;
@@ -1105,15 +1111,19 @@ maybe_software_singlestep (struct gdbarch *gdbarch, CORE_ADDR pc)
 {
   int hw_step = 1;
 
-  if (gdbarch_software_single_step_p (gdbarch)
-      && gdbarch_software_single_step (gdbarch, get_current_frame ()))
+  if (gdbarch_software_single_step_p (gdbarch))
     {
-      hw_step = 0;
-      /* Do not pull these breakpoints until after a `wait' in
-	 `wait_for_inferior' */
-      singlestep_breakpoints_inserted_p = 1;
-      singlestep_ptid = inferior_ptid;
-      singlestep_pc = pc;
+      if (use_displaced_stepping (gdbarch))
+        hw_step = 0;
+      else if (gdbarch_software_single_step (gdbarch, get_current_frame ()))
+	{
+	  hw_step = 0;
+	  /* Do not pull these breakpoints until after a `wait' in
+	     `wait_for_inferior' */
+	  singlestep_breakpoints_inserted_p = 1;
+	  singlestep_ptid = inferior_ptid;
+	  singlestep_pc = pc;
+	}
     }
   return hw_step;
 }
@@ -1179,7 +1189,8 @@ a command like `return' or `jump' to continue execution."));
      comments in the handle_inferior event for dealing with 'random
      signals' explain what we do instead.  */
   if (use_displaced_stepping (gdbarch)
-      && tp->trap_expected
+      && (tp->trap_expected
+	  || (step && gdbarch_software_single_step_p (gdbarch)))
       && sig == TARGET_SIGNAL_0)
     {
       if (!displaced_step_prepare (inferior_ptid))
@@ -1756,7 +1767,7 @@ struct execution_control_state
 
 static void init_execution_control_state (struct execution_control_state *ecs);
 
-void handle_inferior_event (struct execution_control_state *ecs);
+static void handle_inferior_event (struct execution_control_state *ecs);
 
 static void handle_step_into_function (struct gdbarch *gdbarch,
 				       struct execution_control_state *ecs);
@@ -1993,22 +2004,21 @@ wait_for_inferior (int treat_exec_as_sigtrap)
   ecs = &ecss;
   memset (ecs, 0, sizeof (*ecs));
 
-  overlay_cache_invalid = 1;
-
   /* We'll update this if & when we switch to a new thread.  */
   previous_inferior_ptid = inferior_ptid;
-
-  /* We have to invalidate the registers BEFORE calling target_wait
-     because they can be loaded from the target while in target_wait.
-     This makes remote debugging a bit more efficient for those
-     targets that provide critical registers as part of their normal
-     status mechanism. */
-
-  registers_changed ();
 
   while (1)
     {
       struct cleanup *old_chain;
+
+      /* We have to invalidate the registers BEFORE calling target_wait
+	 because they can be loaded from the target while in target_wait.
+	 This makes remote debugging a bit more efficient for those
+	 targets that provide critical registers as part of their normal
+	 status mechanism. */
+
+      overlay_cache_invalid = 1;
+      registers_changed ();
 
       if (deprecated_target_wait_hook)
 	ecs->ptid = deprecated_target_wait_hook (waiton_ptid, &ecs->ws, 0);
@@ -2063,14 +2073,8 @@ fetch_inferior_event (void *client_data)
 
   memset (ecs, 0, sizeof (*ecs));
 
-  overlay_cache_invalid = 1;
-
-  /* We can only rely on wait_for_more being correct before handling
-     the event in all-stop, but previous_inferior_ptid isn't used in
-     non-stop.  */
-  if (!ecs->wait_some_more)
-    /* We'll update this if & when we switch to a new thread.  */
-    previous_inferior_ptid = inferior_ptid;
+  /* We'll update this if & when we switch to a new thread.  */
+  previous_inferior_ptid = inferior_ptid;
 
   if (non_stop)
     /* In non-stop mode, the user/frontend should not notice a thread
@@ -2085,6 +2089,7 @@ fetch_inferior_event (void *client_data)
      targets that provide critical registers as part of their normal
      status mechanism. */
 
+  overlay_cache_invalid = 1;
   registers_changed ();
 
   if (deprecated_target_wait_hook)
@@ -2375,7 +2380,7 @@ stepped_in_from (struct frame_info *frame, struct frame_id step_frame_id)
    by an event from the inferior, figure out what it means and take
    appropriate action.  */
 
-void
+static void
 handle_inferior_event (struct execution_control_state *ecs)
 {
   struct frame_info *frame;
@@ -2444,8 +2449,6 @@ handle_inferior_event (struct execution_control_state *ecs)
     case infwait_thread_hop_state:
       if (debug_infrun)
         fprintf_unfiltered (gdb_stdlog, "infrun: infwait_thread_hop_state\n");
-      /* Cancel the waiton_ptid. */
-      waiton_ptid = pid_to_ptid (-1);
       break;
 
     case infwait_normal_state:
@@ -2476,7 +2479,9 @@ handle_inferior_event (struct execution_control_state *ecs)
     default:
       internal_error (__FILE__, __LINE__, _("bad switch"));
     }
+
   infwait_state = infwait_normal_state;
+  waiton_ptid = pid_to_ptid (-1);
 
   switch (ecs->ws.kind)
     {
@@ -2819,6 +2824,7 @@ targets should add new threads to the thread list themselves in non-stop mode.")
 	  singlestep_breakpoints_inserted_p = 0;
 
 	  ecs->random_signal = 0;
+	  ecs->event_thread->trap_expected = 0;
 
 	  context_switch (saved_singlestep_ptid);
 	  if (deprecated_context_hook)
@@ -3003,7 +3009,6 @@ targets should add new threads to the thread list themselves in non-stop mode.")
 
 	      ecs->event_thread->stepping_over_breakpoint = 1;
 	      keep_going (ecs);
-	      registers_changed ();
 	      return;
 	    }
 	}
@@ -3078,7 +3083,6 @@ targets should add new threads to the thread list themselves in non-stop mode.")
 	/* Single step */
       hw_step = maybe_software_singlestep (gdbarch, stop_pc);
       target_resume (ecs->ptid, hw_step, TARGET_SIGNAL_0);
-      registers_changed ();
       waiton_ptid = ecs->ptid;
       if (target_have_steppable_watchpoint)
 	infwait_state = infwait_step_watch_state;
@@ -3776,9 +3780,8 @@ infrun: not switching back to stepped thread, it has vanished\n");
      previous frame must have valid frame IDs.  */
   if (!frame_id_eq (get_stack_frame_id (frame),
 		    ecs->event_thread->step_stack_frame_id)
-      && (frame_id_eq (frame_unwind_caller_id (frame),
-		       ecs->event_thread->step_stack_frame_id)
-	  || execution_direction == EXEC_REVERSE))
+      && frame_id_eq (frame_unwind_caller_id (frame),
+		      ecs->event_thread->step_stack_frame_id))
     {
       CORE_ADDR real_stop_pc;
 
@@ -3806,6 +3809,7 @@ infrun: not switching back to stepped thread, it has vanished\n");
       /* Reverse stepping through solib trampolines.  */
 
       if (execution_direction == EXEC_REVERSE
+	  && ecs->event_thread->step_over_calls != STEP_OVER_NONE
 	  && (gdbarch_skip_trampoline_code (gdbarch, frame, stop_pc)
 	      || (ecs->stop_func_start == 0
 		  && in_solib_dynsym_resolve_code (stop_pc))))
@@ -3921,6 +3925,38 @@ infrun: not switching back to stepped thread, it has vanished\n");
 
       keep_going (ecs);
       return;
+    }
+
+  /* Reverse stepping through solib trampolines.  */
+
+  if (execution_direction == EXEC_REVERSE
+      && ecs->event_thread->step_over_calls != STEP_OVER_NONE)
+    {
+      if (gdbarch_skip_trampoline_code (gdbarch, frame, stop_pc)
+	  || (ecs->stop_func_start == 0
+	      && in_solib_dynsym_resolve_code (stop_pc)))
+	{
+	  /* Any solib trampoline code can be handled in reverse
+	     by simply continuing to single-step.  We have already
+	     executed the solib function (backwards), and a few 
+	     steps will take us back through the trampoline to the
+	     caller.  */
+	  keep_going (ecs);
+	  return;
+	}
+      else if (in_solib_dynsym_resolve_code (stop_pc))
+	{
+	  /* Stepped backward into the solib dynsym resolver.
+	     Set a breakpoint at its start and continue, then
+	     one more step will take us out.  */
+	  struct symtab_and_line sr_sal;
+	  init_sal (&sr_sal);
+	  sr_sal.pc = ecs->stop_func_start;
+	  insert_step_resume_breakpoint_at_sal (gdbarch, 
+						sr_sal, null_frame_id);
+	  keep_going (ecs);
+	  return;
+	}
     }
 
   /* If we're in the return path from a shared library trampoline,
@@ -4484,19 +4520,7 @@ prepare_to_wait (struct execution_control_state *ecs)
 {
   if (debug_infrun)
     fprintf_unfiltered (gdb_stdlog, "infrun: prepare_to_wait\n");
-  if (infwait_state == infwait_normal_state)
-    {
-      overlay_cache_invalid = 1;
 
-      /* We have to invalidate the registers BEFORE calling
-         target_wait because they can be loaded from the target while
-         in target_wait.  This makes remote debugging a bit more
-         efficient for those targets that provide critical registers
-         as part of their normal status mechanism. */
-
-      registers_changed ();
-      waiton_ptid = pid_to_ptid (-1);
-    }
   /* This is the old end of the while loop.  Let everybody know we
      want to wait for the inferior some more and get called again
      soon.  */

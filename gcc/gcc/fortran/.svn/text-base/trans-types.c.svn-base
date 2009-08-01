@@ -1602,7 +1602,9 @@ gfc_get_array_type_bounds (tree etype, int dimen, tree * lbound,
   int n;
 
   base_type = gfc_get_array_descriptor_base (dimen);
-  fat_type = build_variant_type_copy (base_type);
+  fat_type = build_distinct_type_copy (base_type);
+  TYPE_CANONICAL (fat_type) = base_type;
+  TYPE_STUB_DECL (fat_type) = TYPE_STUB_DECL (base_type);
 
   tmp = TYPE_NAME (etype);
   if (tmp && TREE_CODE (tmp) == TYPE_DECL)
@@ -1892,7 +1894,12 @@ gfc_get_ppc_type (gfc_component* c)
 {
   tree t;
   if (c->attr.function && !c->attr.dimension)
-    t = gfc_typenode_for_spec (&c->ts);
+    {
+      if (c->ts.type == BT_DERIVED)
+	t = c->ts.derived->backend_decl;
+      else
+	t = gfc_typenode_for_spec (&c->ts);
+    }
   else
     t = void_type_node;
   /* TODO: Build argument list.  */
@@ -1972,7 +1979,8 @@ gfc_get_derived_type (gfc_symbol * derived)
       if (c->ts.type != BT_DERIVED)
 	continue;
 
-      if (!c->attr.pointer || c->ts.derived->backend_decl == NULL)
+      if ((!c->attr.pointer && !c->attr.proc_pointer)
+	  || c->ts.derived->backend_decl == NULL)
 	c->ts.derived->backend_decl = gfc_get_derived_type (c->ts.derived);
 
       if (c->ts.derived && c->ts.derived->attr.is_iso_c)
@@ -2001,10 +2009,10 @@ gfc_get_derived_type (gfc_symbol * derived)
   fieldlist = NULL_TREE;
   for (c = derived->components; c; c = c->next)
     {
-      if (c->ts.type == BT_DERIVED)
-        field_type = c->ts.derived->backend_decl;
-      else if (c->attr.proc_pointer)
+      if (c->attr.proc_pointer)
 	field_type = gfc_get_ppc_type (c);
+      else if (c->ts.type == BT_DERIVED)
+        field_type = c->ts.derived->backend_decl;
       else
 	{
 	  if (c->ts.type == BT_CHARACTER)
@@ -2241,7 +2249,7 @@ gfc_get_function_type (gfc_symbol * sym)
 	     Contained procedures could pass by value as these are never
 	     used without an explicit interface, and cannot be passed as
 	     actual parameters for a dummy procedure.  */
-	  if (arg->ts.type == BT_CHARACTER)
+	  if (arg->ts.type == BT_CHARACTER && !sym->attr.is_bind_c)
             nstr++;
 	  typelist = gfc_chainon_list (typelist, type);
 	}

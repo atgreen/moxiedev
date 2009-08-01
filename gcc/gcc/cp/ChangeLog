@@ -1,3 +1,133 @@
+2009-07-29  Jason Merrill  <jason@redhat.com>
+
+	PR c++/14912
+	* cp-tree.h (enum tsubst_flags): Add tf_no_class_instantiations.
+	* error.c (count_non_default_template_args): Pass it.
+	* pt.c (tsubst) [TYPENAME_TYPE]: Don't complete type if it's set.
+
+2009-07-29  Richard Guenther  <rguenther@suse.de>
+
+	PR c++/40834
+	* cp-gimplify.c (cp_genericize_r): Properly walk the BIND_EXPR
+	vars.
+
+2009-07-26  Simon Martin  <simartin@users.sourceforge.net>
+
+	PR c++/40749
+	* decl.c (grokdeclarator): Do not set TREE_NO_WARNING for functions
+	with a qualified return type.
+
+2009-07-24  Jason Merrill  <jason@redhat.com>
+
+	Core issue 901
+	* call.c (build_op_delete_call): If this is for a new-expression
+	and the op delete is deleted, do nothing.
+
+	Core issue 702
+	* call.c (compare_ics): Give list-initialization of std::init_list
+	priority over conversion to scalar, too.
+
+2009-07-22  Jason Merrill  <jason@redhat.com>
+
+	* mangle.c (mangle_type_string_for_rtti): Rename to be clearer.
+	(needs_fake_anon): New.
+	(write_name): Check it.
+	(write_nested_name): Add a fake anonymous namespace scope if true.
+	* name-lookup.c (get_anonymous_namespace_name): No longer static.
+	* rtti.c, cp-tree.h: Adjust.
+
+2009-07-22  Richard Guenther  <rguenther@suse.de>
+
+	PR c++/40799
+	* cp-gimplify.c (cp_gimplify_expr): Move handling of using
+	related exprs to ...
+	(cp_genericize_r): ... genericization stage.
+	(cp_genericize): Adjust.
+
+2009-07-21  Jason Merrill  <jason@redhat.com>
+
+	Core issue 934
+	* call.c (reference_binding): Implement binding to { }.
+	(initialize_reference): Binding temporary to non-const && is fine.
+	* decl.c (grok_reference_init): Remove error for CONSTRUCTOR.
+
+	* decl.c (reshape_init_r): { T } is not an aggregate initializer
+	for class T.
+
+2009-07-17  Richard Guenther  <rguenther@suse.de>
+
+	PR c/40401
+	* decl.c (finish_function): Do not emit unused result warnings
+	from here.
+	* cp-objcp-common.h (LANG_HOOKS_POST_GIMPLIFY_PASS): Use
+	c_warn_unused_result_pass.
+	* semantics.c (expand_or_defer_fn): Adjust assertion about IL status.
+	* optimize.c (clone_body): Clone in GENERIC.
+	(maybe_clone_body): Do not clear DECL_SAVED_TREE.
+	* decl2.c (cp_write_global_declarations): Fix body test.
+	Do not call cgraph_optimize.
+	* Make-lang.in (optimize.o): Add tree-iterator.h dependency.
+	* method.c (use_thunk): Register thunk with
+	cgraph_finalize_function.
+	* error.c (function_category): Guard access of DECL_LANG_SPECIFIC.
+
+2009-07-17  Richard Guenther  <rguenther@suse.de>
+
+	* init.c (build_vec_delete_1): Do not set DECL_REGISTER on the
+	temporary pointer.
+
+2009-07-17  Aldy Hernandez  <aldyh@redhat.com>
+	    Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR 40435 
+	* typeck.c, init.c, class.c, method.c, rtti.c, except.c, error.c,
+	tree.c, cp-gimplify.c, cxx-pretty-print.c, pt.c, semantics.c,
+	call.c, cvt.c, mangle.c: Add location argument to
+	fold_{unary,binary,ternary}, fold_build[123], build_call_expr,
+	build_size_arg, build_fold_addr_expr, build_call_array,
+	non_lvalue, size_diffop, fold_build1_initializer,
+	fold_build2_initializer, fold_build3_initializer,
+	fold_build_call_array, fold_build_call_array_initializer,
+	fold_single_bit_test, omit_one_operand, omit_two_operands,
+	invert_truthvalue, fold_truth_not_expr, build_fold_indirect_ref,
+	fold_indirect_ref, combine_comparisons, fold_builtin_*,
+	fold_call_expr, build_range_check, maybe_fold_offset_to_address,
+	round_up, round_down.
+
+2009-07-16  Jason Merrill  <jason@redhat.com>
+
+	PR libstdc++/37907
+	Split POD into "standard-layout" and "trivial" as per N2230,
+	Support std::is_standard_layout and std::is_trivial traits.
+	* cp-tree.h (enum cp_trait_kind): Add CPTK_IS_STD_LAYOUT,
+	CPTK_IS_TRIVIAL.
+	(struct lang_type_class): Add non_std_layout.
+	(CLASSTYPE_NON_STD_LAYOUT): New.
+	* class.c (check_bases): Set it.
+	(check_field_decls): Likewise.
+	(check_bases_and_members): Likewise.
+	* parser.c (cp_parser_primary_expression): Handle RID_IS_STD_LAYOUT,
+	RID_IS_TRIVIAL.
+	(cp_parser_trait_expr): Likewise.
+	* semantics.c (trait_expr_value): Handle CPTK_IS_STD_LAYOUT,
+	CPTK_IS_TRIVIAL.
+	(finish_trait_expr): Likewise.
+	* tree.c (scalarish_type_p, trivial_type_p, std_layout_type_p): New.
+	(pod_type_p): Use them.
+	(type_has_nontrivial_copy_init, type_has_nontrivial_default_init): New.
+
+	Adjust bits of the language that no longer refer to POD types.
+	* call.c (convert_arg_to_ellipsis): Use type_has_nontrivial_copy_init
+	and TYPE_HAS_NONTRIVIAL_DESTRUCTOR rather than pod_type_p.
+	(build_x_va_arg): Likewise.
+	(call_builtin_trap): Remove.
+	* decl.c (declare_local_label): Use type_has_nontrivial_default_init
+	and TYPE_HAS_NONTRIVIAL_DESTRUCTOR rather than pod_type_p.
+	(cp_finish_decl): Likewise.
+	(check_previous_goto_1, check_goto): Adjust error.
+	* typeck.c (build_class_member_access_expr): Check
+	CLASSTYPE_NON_STD_LAYOUT rather than CLASSTYPE_NON_POD_P.
+
 2009-07-14  Taras Glek  <tglek@mozilla.com>
 	    Rafael Espindola  <espindola@google.com>
 

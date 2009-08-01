@@ -1,3 +1,252 @@
+2009-07-30  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	PR libstdc++/40919
+	* testsuite/26_numerics/headers/cmath/c99_classification_macros_c.cc:
+	xfail on darwin[3-9]*.
+
+2009-07-30  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/40917
+	* testsuite/util/replacement_memory_operators.h: Add missing includes,
+	tweak qualifications.
+
+2009-07-30  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/40916
+	* testsuite/23_containers/list/modifiers/swap/1.cc: Fix include order.
+	* testsuite/23_containers/list/modifiers/swap/2.cc: Likewise.
+	* testsuite/23_containers/list/modifiers/swap/2.cc: Likewise.
+
+2009-07-30  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* acinclude.m4 (GLIBCXX_CONFIGURE): Use m4_rename_force.
+
+2009-07-30  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/40915
+	* testsuite/18_support/headers/exception/synopsis.cc: Fix
+	std::terminate declaration.
+
+2009-07-29  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/40908
+	* config/abi/pre/gnu.ver: Avoid exporting inadvertently std::mutex
+	symbols at GLIBCXX_3.4.
+
+2009-07-29  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* config/abi/pre/gnu.ver: Add GLIBCXX_3.4.13, move a symbol into it.
+	* testsuite/util/testsuite_abi.cc: Adjust.
+	* configure.ac: Bump libtool_VERSION to 6:13:0.
+	* configure: Regenerate.
+
+2009-07-28  Benjamin Kosnik  <bkoz@redhat.com>
+	    Tyler Earman  <rem.intellegare@gmail.com>
+
+	* doc/xml/manual/configure.xml: Consistent placement of
+	ABI-changing options, clarify --enable-clocale.
+
+2009-07-28  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* python/Makefile.in: Regenerate.
+
+2009-07-27  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* python/Makefile.am (install-data-local): Use DESTDIR
+	correctly.
+
+2009-07-24  Jason Merrill  <jason@redhat.com>
+
+	Core issue 901
+	* libsupc++/vec.cc (__cxa_vec_new2, __cxa_vec_new3): Handle NULL
+	dealloc.
+
+2009-07-24  Joseph Myers  <joseph@codesourcery.com>
+
+	* include/c_global/cwchar (swprintf, vswprintf): Do not use if
+	_GLIBCXX_HAVE_BROKEN_VSWPRINTF.
+	* testsuite/lib/libstdc++.exp (check_v3_target_swprintf): New.
+	* testsuite/lib/dg-options.exp (dg-require-swprintf): New.
+	* testsuite/21_strings/headers/cwchar/functions_std.cc,
+	testsuite/27_io/basic_ostream/inserters_arithmetic/wchar_t/4402.cc,
+	testsuite/27_io/basic_ostream/inserters_other/wchar_t/error_code.cc:
+	Use dg-require-swprintf.
+
+2009-07-24  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* testsuite/26_numerics/valarray/dr630-2.cc: Extend.
+
+2009-07-23  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/c_std/cmath (abs(_Tp)): Add.
+	* include/c_global/cmath (abs(_Tp)): Likewise.
+	* testsuite/26_numerics/headers/cmath/overloads.cc: Extend.
+
+2009-07-23  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* doc/html/ext/lwg-closed.html: Update to R65.
+	* doc/html/ext/lwg-defects.html: Likewise.
+	* doc/html/ext/lwg-active.html: Likewise.
+	* doc/xml/manual/intro.xml: Update DRs entries.
+
+2009-07-22  Jason Merrill  <jason@redhat.com>
+
+	* libsupc++/typeinfo (__GXX_MERGED_TYPEINFO_NAMES): Default to 0.
+
+2009-07-22  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/std/valarray (valarray<>::operator=(const valarray<>&),
+	valarray<>::operator=(initializer_list<>)): Implement resolution
+	of DR 630, [Ready] in Frankfurt.
+	* testsuite/26_numerics/valarray/dr630-1.cc: New.
+	* testsuite/26_numerics/valarray/dr630-2.cc: Likewise.
+	* doc/xml/manual/intro.xml: Add an entry for DR 630.
+
+2009-07-21  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/std/chrono (duration<>::operator%=,  operator%):
+	Add, per DR 934.
+	* testsuite/20_util/duration/arithmetic/dr934-1.cc: New.
+	* testsuite/20_util/duration/arithmetic/dr934-2.cc: Likewise.
+
+	* include/std/chrono (operator/): Simplify implementation.
+
+2009-07-20  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* doc/xml/manual/intro.xml: Escape '&', validate.
+	* doc/xml/manual/using.xml: Validate, dead link check.
+	* doc/xml/manual/strings.xml: Same.
+	* doc/xml/manual/appendix_contributing.xml: Same.
+	* doc/xml/manual/iterators.xml: Same.
+	* doc/xml/manual/spine.xml: Same.
+
+	* doc/xml/faq.xml: Remove redundant xreflabel entities.
+	* doc/xml/gnu/gpl-3.0.xml: Same.
+	* doc/xml/manual/mt_allocator.xml: Same.
+	* doc/xml/manual/allocator.xml: Same.
+	* doc/xml/manual/ctype.xml: Same.
+	* doc/xml/manual/codecvt.xml: Same.
+	* doc/xml/manual/backwards_compatibility.xml: Same.
+	* doc/xml/manual/shared_ptr.xml: Same.
+	* doc/xml/manual/abi.xml: Same.
+	* doc/xml/manual/auto_ptr.xml: Same.
+	* doc/xml/manual/internals.xml: Same.
+	* doc/xml/manual/parallel_mode.xml: Same.
+	* doc/xml/manual/bitmap_allocator.xml: Same.
+	* doc/xml/manual/build_hacking.xml: Same.
+	* doc/xml/manual/evolution.xml: Same.
+	* doc/xml/manual/debug.xml: Same.
+	* doc/xml/manual/localization.xml: Same.
+	* doc/xml/manual/appendix_contributing.xml: Same.
+	* doc/xml/manual/locale.xml: Same.
+	* doc/xml/manual/messages.xml: Same.
+	* doc/xml/manual/spine.xml: Same.
+	* doc/xml/manual/test.xml: Same.
+	* doc/xml/book.txml: Same.
+	* doc/xml/spine.xml: Same.
+
+	* doc/xml/api.xml: Clean up ulink targets, convert to link if possible.
+	* doc/xml/manual/backwards_compatibility.xml: Same.
+	* doc/xml/manual/concurrency.xml: Same.
+	* doc/xml/manual/intro.xml: Same.
+	* doc/xml/manual/parallel_mode.xml: Same.
+	* doc/xml/manual/status_cxx1998.xml: Same.
+	* doc/xml/manual/containers.xml: Same.
+	* doc/xml/manual/io.xml: Same.
+	* doc/xml/manual/support.xml: Same.
+	* doc/xml/manual/strings.xml: Same.
+	* doc/xml/manual/debug_mode.xml: Same.
+	* doc/xml/manual/extensions.xml: Same.
+	* doc/xml/manual/appendix_contributing.xml: Same.
+	* doc/xml/manual/messages.xml: Same.
+	* doc/xml/manual/test.xml: Same.
+
+	* doc/xml/manual/abi.xml: Same.
+	* doc/xml/manual/auto_ptr.xml: Same.
+	* doc/xml/manual/parallel_mode.xml: Same.
+	* doc/xml/manual/build_hacking.xml: Same.
+	* doc/xml/manual/evolution.xml: Same.
+	* doc/xml/manual/using.xml: Same.
+	* doc/xml/manual/debug_mode.xml: Same.
+	* doc/xml/manual/extensions.xml: Same.
+	* doc/xml/manual/diagnostics.xml: Same.
+	* doc/xml/manual/algorithms.xml: Same.
+
+	* doc/html: Regenerate.
+
+2009-07-18  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/40712
+	* config/locale/gnu/numeric_members.cc (numpunct<>::
+	_M_initialize_numpunct): Dynamically allocate _M_data->_M_grouping
+	and copy the langinfo data into it.
+	(numpunct<>::~numpunct): Free the allocated memory.
+	* config/locale/gnu/monetary_members.cc (moneypunct<>::
+	_M_initialize_moneypunct): Dynamically allocate _M_data->_M_grouping,
+	_M_data->_M_positive_sign, _M_data->_M_negative_sign,
+	_M_data->_M_curr_symbol.
+	(moneypunct<>::~moneypunct): Free the allocated memory.
+	* testsuite/22_locale/moneypunct/40712.cc: New.
+
+	* include/bits/locale_facets.tcc (__numpunct_cache<>::_M_cache):
+	Do not leak memory if new throws.
+	* include/bits/locale_facets_nonio.tcc
+	(__moneypunct_cache<>::_M_cache): Likewise.
+
+2009-07-17  Joseph Myers  <joseph@codesourcery.com>
+
+	PR other/40784
+	* configure: Regenerate.
+
+2009-07-16  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* testsuite/util/testsuite_common_types.h (standard_layout): Activate.
+	* testsuite/29_atomics/atomic_integral/cons/assign_neg.cc: Adjust
+	line numbers.
+	* testsuite/29_atomics/atomic_integral/cons/copy_neg.cc: Same.
+	* testsuite/29_atomics/atomic/cons/assign_neg.cc: Same.
+	* testsuite/29_atomics/atomic/cons/copy_neg.cc: Same.
+
+2009-07-16  Joseph Myers  <joseph@codesourcery.com>
+
+	* configure: Regenerate.
+
+2009-07-16  Jason Merrill  <jason@redhat.com>
+
+	PR libstdc++/37907
+	* include/std/type_traits: Add is_standard_layout, is_trivial.
+	* testsuite/20_util/make_signed/requirements/typedefs_neg.cc,
+	testsuite/20_util/make_unsigned/requirements/typedefs_neg.cc:
+	Update line numbers.
+
+2009-07-16  Phil Muldoon <pmuldoon@redhat.com>
+	    Tom Tromey <tromey@redhat.com>
+
+	* python/libstdcxx/v6/printers.py (StdStringPrinter.to_string):
+	Fetch std::string to the given length.
+
+2009-07-16  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/istream.tcc (basic_istream<>::operator>>(short&),
+	basic_istream<>::operator>>(int&)): Implement resolution of DR 696,
+	[Ready] in Frankfurt.
+	* include/tr1_impl/regex (regex_traits<>::value): Adjust.
+	* testsuite/27_io/basic_istream/extractors_arithmetic/char/dr696.cc:
+	New.
+	* testsuite/27_io/basic_istream/extractors_arithmetic/wchar_t/dr696.cc:
+	Likewise.
+	* testsuite/27_io/basic_istream/extractors_arithmetic/char/13.cc:
+	Adjust.
+	* testsuite/27_io/basic_istream/extractors_arithmetic/wchar_t/13.cc:
+	Likewise.
+	* doc/xml/manual/intro.xml: Add an entry for DR 696.
+
+	* include/bits/istream.tcc: Minor clean-up to the initializers of the
+	__err locals.
+	* include/bits/ostream.tcc: Likewise.
+	* src/compatibility.cc: Likewise.
+	* src/istream.cc: Likewise.
+
 2009-07-12  Paolo Carlini  <paolo.carlini@oracle.com>
 
 	* include/std/type_traits (common_type): Remove workaround for
@@ -18,8 +267,8 @@
 
 2009-07-06  Benjamin Kosnik  <bkoz@redhat.com>
 
-	*  testsuite/21_strings/c_strings/wchar_t/3.cc: Add copyright.
-	*  testsuite/21_strings/c_strings/char/3.cc: Same.
+	* testsuite/21_strings/c_strings/wchar_t/3.cc: Add copyright.
+	* testsuite/21_strings/c_strings/char/3.cc: Same.
 
 2009-07-06  Jason Merrill  <jason@redhat.com>
 

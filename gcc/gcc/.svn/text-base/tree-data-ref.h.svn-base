@@ -96,8 +96,6 @@ struct dr_alias
   bitmap vops;
 };
 
-typedef struct scop *scop_p;
-
 /* Each vector of the access matrix represents a linear access
    function for a subscript.  First elements correspond to the
    leftmost indices, ie. for a[i][j] the first vector corresponds to
@@ -184,14 +182,10 @@ struct data_reference
   /* Alias information for the data reference.  */
   struct dr_alias alias;
 
-  /* The SCoP in which the data reference was analyzed.  */
-  scop_p scop;
-
   /* Matrix representation for the data access functions.  */
   struct access_matrix *access_matrix;
 };
 
-#define DR_SCOP(DR)                (DR)->scop
 #define DR_STMT(DR)                (DR)->stmt
 #define DR_REF(DR)                 (DR)->ref
 #define DR_BASE_OBJECT(DR)         (DR)->indices.base_object
@@ -395,7 +389,9 @@ extern void dump_subscript (FILE *, struct subscript *);
 extern void dump_ddrs (FILE *, VEC (ddr_p, heap) *);
 extern void dump_dist_dir_vectors (FILE *, VEC (ddr_p, heap) *);
 extern void dump_data_reference (FILE *, struct data_reference *);
+extern void debug_data_reference (struct data_reference *);
 extern void dump_data_references (FILE *, VEC (data_reference_p, heap) *);
+extern void debug_data_references (VEC (data_reference_p, heap) *);
 extern void debug_data_dependence_relation (struct data_dependence_relation *);
 extern void dump_data_dependence_relation (FILE *, 
 					   struct data_dependence_relation *);
@@ -409,6 +405,8 @@ extern void free_data_ref (data_reference_p);
 extern void free_data_refs (VEC (data_reference_p, heap) *);
 extern bool find_data_references_in_stmt (struct loop *, gimple,
 					  VEC (data_reference_p, heap) **);
+extern bool graphite_find_data_references_in_stmt (struct loop *, gimple,
+						   VEC (data_reference_p, heap) **);
 struct data_reference *create_data_ref (struct loop *, tree, gimple, bool);
 extern bool find_loop_nest (struct loop *, VEC (loop_p, heap) **);
 extern void compute_all_dependences (VEC (data_reference_p, heap) *,
@@ -418,7 +416,6 @@ extern void compute_all_dependences (VEC (data_reference_p, heap) *,
 extern void create_rdg_vertices (struct graph *, VEC (gimple, heap) *);
 extern bool dr_may_alias_p (const struct data_reference *,
 			    const struct data_reference *);
-extern bool stmt_simple_memref_p (struct loop *, gimple, tree);
 
 /* Return true when the DDR contains two data references that have the
    same access functions.  */

@@ -454,7 +454,8 @@ package body Checks is
       --  No check if accessing the Offset_To_Top component of a dispatch
       --  table. They are safe by construction.
 
-      if Present (Etype (P))
+      if Tagged_Type_Expansion
+        and then Present (Etype (P))
         and then RTU_Loaded (Ada_Tags)
         and then RTE_Available (RE_Offset_To_Top_Ptr)
         and then Etype (P) = RTE (RE_Offset_To_Top_Ptr)
@@ -758,6 +759,13 @@ package body Checks is
       --  Note that we do this transformation even if overflow checking is
       --  off, since this is precisely about giving the "right" result and
       --  avoiding the need for an overflow check.
+
+      --  Note: this circuit is partially redundant with respect to the similar
+      --  processing in Exp_Ch4.Expand_N_Type_Conversion, but the latter deals
+      --  with cases that do not come through here. We still need the following
+      --  processing even with the Exp_Ch4 code in place, since we want to be
+      --  sure not to generate the arithmetic overflow check in these cases
+      --  (Exp_Ch4 would have a hard time removing them once generated).
 
       if Is_Signed_Integer_Type (Typ)
         and then Nkind (Parent (N)) = N_Type_Conversion
@@ -4246,7 +4254,7 @@ package body Checks is
    --  Start of processing for Find_Check
 
    begin
-      --  Establish default, to avoid warnings from GCC
+      --  Establish default, in case no entry is found
 
       Check_Num := 0;
 
@@ -4317,7 +4325,6 @@ package body Checks is
 
       --  If we fall through entry was not found
 
-      Check_Num := 0;
       return;
    end Find_Check;
 

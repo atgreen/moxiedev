@@ -1875,8 +1875,8 @@ parse_neon_el_struct_list (char **str, unsigned *pbase,
   int leading_brace = 0;
   enum arm_reg_type rtype = REG_TYPE_NDQ;
   int addregs = 1;
-  const char *const incr_error = "register stride must be 1 or 2";
-  const char *const type_error = "mismatched element/structure types in list";
+  const char *const incr_error = _("register stride must be 1 or 2");
+  const char *const type_error = _("mismatched element/structure types in list");
   struct neon_typed_alias firsttype;
 
   if (skip_past_char (&ptr, '{') == SUCCESS)
@@ -18385,9 +18385,16 @@ arm_frag_align_code (int n, int max)
   char * p;
 
   /* We assume that there will never be a requirement
-     to support alignments greater than 32 bytes.  */
+     to support alignments greater than MAX_MEM_FOR_RS_ALIGN_CODE bytes.  */
   if (max > MAX_MEM_FOR_RS_ALIGN_CODE)
-    as_fatal (_("alignments greater than 32 bytes not supported in .text sections."));
+    {
+      char err_msg[128];
+
+      sprintf (err_msg, 
+        _("alignments greater than %d bytes not supported in .text sections."),
+        MAX_MEM_FOR_RS_ALIGN_CODE + 1);
+      as_fatal ("%s", err_msg);
+    }
 
   p = frag_var (rs_align_code,
 		MAX_MEM_FOR_RS_ALIGN_CODE,
@@ -20014,9 +20021,16 @@ md_apply_fix (fixS *	fixP,
 
     case BFD_RELOC_ARM_GOT32:
     case BFD_RELOC_ARM_GOTOFF:
-    case BFD_RELOC_ARM_TARGET2:
       if (fixP->fx_done || !seg->use_rela_p)
 	md_number_to_chars (buf, 0, 4);
+      break;
+      
+    case BFD_RELOC_ARM_TARGET2:
+      /* TARGET2 is not partial-inplace, so we need to write the
+         addend here for REL targets, because it won't be written out
+         during reloc processing later.  */
+      if (fixP->fx_done || !seg->use_rela_p)
+	md_number_to_chars (buf, fixP->fx_offset, 4);
       break;
 #endif
 

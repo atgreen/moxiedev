@@ -150,10 +150,6 @@ case "${host}" in
 	sysdeps_dir=m68k
 	libgcj_interpreter=yes
 	;;
-  moxie-*)
-	sysdeps_dir=moxie
-	libgcj_interpreter=no
-	;;
   powerpc64*-*)
 	sysdeps_dir=powerpc
 	libgcj_interpreter=yes

@@ -16481,8 +16481,6 @@ _ACEOF
  mips-*-*)
     machdep="mips_sgi_mach_dep.lo"
     ;;
- moxie*-*-uclinux*)
-    ;;
  sparc-*-netbsd*)
     machdep="sparc_netbsd_mach_dep.lo"
     ;;

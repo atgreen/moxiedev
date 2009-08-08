@@ -54,6 +54,10 @@
       <arg value="(cd qemu; make distclean > /dev/null 2>&amp;1)"/>
     </exec>
     <exec executable="make">
+      <arg value="--directory=dtc"/>
+      <arg value="clean"/>
+    </exec>
+    <exec executable="make">
       <arg value="--directory=linux-2.6"/>
       <arg value="mrproper"/>
     </exec>
@@ -184,6 +188,19 @@
 
     <available file="build/FAIL" property="isFileAvail"/>
     <fail if="isFileAvail" message="Sanity precheck test failed!  Something is missing."/>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building the device tree compiler, dtc ======================"/>
+    <echo message="===================================================================="/>
+    <exec executable="make">
+      <arg value="--directory=dtc"/>
+      <arg value="PREFIX=`(cd ../root/usr; pwd)`"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=dtc"/>
+      <arg value="PREFIX=`(cd ../root/usr; pwd)`"/>
+      <arg value="install"/>
+    </exec>
 
     <echo message="===================================================================="/>
     <echo message="====== Building binutils ==========================================="/>
@@ -413,7 +430,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc-uclinux; ../../gcc/configure --enable-build-with-cxx --target=moxie-uclinux --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)` --with-build-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`)"/>
+      <arg value="(cd build/gcc-uclinux; ../../gcc/configure --enable-build-with-cxx --target=moxie-uclinux --enable-threads --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)` --with-build-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>

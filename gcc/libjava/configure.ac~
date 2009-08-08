@@ -503,18 +503,16 @@ dnl gtk-cairo -- just export here...
 dnl --enable-regen-headers?
 
 # Only use libltdl for non-newlib builds.
-if test "x${with_newlib}" = "x" || test "x${with_newlib}" = "xno"; then
-   if test "x${host_os}" != "xuclinux"; then
-     AC_LIBLTDL_CONVENIENCE
-     AC_LIBTOOL_DLOPEN
-     DIRLTDL=libltdl
-     AC_DEFINE(USE_LTDL, 1, [Define if libltdl is in use.])
-     # Sigh.  Libtool's macro doesn't do the right thing.
-     INCLTDL="-I\$(top_srcdir)/libltdl $INCLTDL"
-     # FIXME: this is a hack.
-     sub_auxdir="`cd $ac_aux_dir && ${PWDCMD-pwd}`"
-     ac_configure_args="$ac_configure_args --with-auxdir=$sub_auxdir"
-   fi
+if test "x${with_newlib}" = "x" || test "x${with_newlib}" = "xno" || test "x${host_os}" != "xuclinux"; then
+   AC_LIBLTDL_CONVENIENCE
+   AC_LIBTOOL_DLOPEN
+   DIRLTDL=libltdl
+   AC_DEFINE(USE_LTDL, 1, [Define if libltdl is in use.])
+   # Sigh.  Libtool's macro doesn't do the right thing.
+   INCLTDL="-I\$(top_srcdir)/libltdl $INCLTDL"
+   # FIXME: this is a hack.
+   sub_auxdir="`cd $ac_aux_dir && ${PWDCMD-pwd}`"
+   ac_configure_args="$ac_configure_args --with-auxdir=$sub_auxdir"
 fi
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
@@ -774,10 +772,6 @@ case "$TARGET_ECOS" in
 	    PLATFORMH=win32.h
         CHECK_FOR_BROKEN_MINGW_LD
       ;;
-      *uclinux*)
-            PLATFORM=Ecos
-	    PLATFORMNET=Posix
-	    PLATFORMH=posix.h
       *)
             PLATFORM=Posix
 	    PLATFORMNET=Posix

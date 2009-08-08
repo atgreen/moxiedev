@@ -1,0 +1,60 @@
+/*
+ * GDB Simulator device tree.
+ *
+ * (C) Copyright 2009 Anthony Green
+ *
+ * Anthony Green <green@moxielogic.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ * MA 02111-1307 USA
+ *
+ */
+
+/dts-v1/;
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	compatible = "gdb,moxie-elf-gdb";
+	model = "testing";
+	DDR2_SDRAM: memory@00000000 {
+		device_type = "memory";
+		reg = < 0x00000000 0x02000000 >;
+	} ;
+	chosen {
+		bootargs = "lpj=1000";
+		linux,stdout-path = "";
+	} ;
+	cpus {
+		#address-cells = <1>;
+		#cpus = <0x1>;
+		#size-cells = <0>;
+		moxie_0: cpu@0 {
+			clock-frequency = <125000000>;
+			compatible = "xlnx,moxie-7.10.d";
+			d-cache-baseaddr = <0x90000000>;
+			d-cache-highaddr = <0x9fffffff>;
+			d-cache-line-size = <0x10>;
+			d-cache-size = <0x2000>;
+			device_type = "cpu";
+			i-cache-baseaddr = <0x90000000>;
+			i-cache-highaddr = <0x9fffffff>;
+			i-cache-line-size = <0x10>;
+			i-cache-size = <0x2000>;
+			model = "moxie,7.10.d";
+			reg = <0>;
+			timebase-frequency = <125000000>;
+		} ;
+	} ;
+}  ;

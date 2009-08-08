@@ -42,7 +42,9 @@
 #include <asm/sections.h>
 #include <asm/pci-bridge.h>
 
+#undef pr_debug
 #define pr_debug early_printk
+#define DEBUG 1
 
 static int __initdata dt_root_addr_cells;
 static int __initdata dt_root_size_cells;
@@ -382,7 +384,7 @@ static unsigned long __init unflatten_dt_node(unsigned long mem,
 		tag = *((u32 *)(*p));
 	}
 	if (tag != OF_DT_END_NODE) {
-		printk(KERN_INFO "Weird tag at end of node: %x\n", tag);
+		printk(KERN_INFO ">Weird tag at end of node: %x\n", tag);
 		return mem;
 	}
 	*p += 4;
@@ -412,7 +414,9 @@ void __init unflatten_device_tree(void)
 
 	/* Allocate memory for the expanded device tree */
 	mem = lmb_alloc(size + 4, __alignof__(struct device_node));
+	pr_debug (" mem after alloc = 0x%x\n", mem);
 	mem = (unsigned long) __va(mem);
+	pr_debug (" mem after __va = 0x%x\n", mem);
 	pr_debug("  unflattening %lx...\n", mem);
 
 	((u32 *)mem)[size / 4] = 0xdeadbeef;

@@ -123,33 +123,16 @@ inline unsigned get_romfs_len(unsigned *addr)
 }
 #endif	/* CONFIG_MTD_UCLINUX_EBSS */
 
-void __init machine_early_init(const char *cmdline, unsigned int ram,
-		unsigned int fdt)
+void __init machine_early_init(const char *cmdline)
 {
 	unsigned long *src, *dst = (unsigned long *)0x0;
+	void *fdt_start;
 
-	/* If CONFIG_MTD_UCLINUX is defined, assume ROMFS is at the
-	 * end of kernel. There are two position which we want to check.
-	 * The first is __init_end and the second __bss_start.
-	 */
-#ifdef CONFIG_MTD_UCLINUX
-	int romfs_size;
-	unsigned int romfs_base;
-	char *old_klimit = klimit;
-
-	romfs_base = (ram ? ram : (unsigned int)&__init_end);
-	romfs_size = PAGE_ALIGN(get_romfs_len((unsigned *)romfs_base));
-	if (!romfs_size) {
-		romfs_base = (unsigned int)&__bss_start;
-		romfs_size = PAGE_ALIGN(get_romfs_len((unsigned *)romfs_base));
-	}
-
-	/* Move ROMFS out of BSS before clearing it */
-	if (romfs_size > 0) {
-		memmove(&_ebss, (int *)romfs_base, romfs_size);
-		klimit += romfs_size;
-	}
-#endif
+	/* This kernel port assumes that the device firmware has
+	   placed a pointer to the flattened device tree blob in
+	   special register 9.  Extract it and place it in
+	   fdt_start.  */
+	asm("gsr %0, 9" : "=r"(fdt_start) : "0"(fdt_start));
 
 /* clearing bss section */
 	memset(__bss_start, 0, __bss_stop-__bss_start);
@@ -161,26 +144,13 @@ void __init machine_early_init(const char *cmdline, unsigned int ram,
 #endif
 
 /* initialize device tree for usage in early_printk */
-	early_init_devtree((void *)_fdt_start);
+	early_init_devtree((void *)fdt_start);
 
 #ifdef CONFIG_EARLY_PRINTK
 	setup_early_printk(NULL);
 #endif
 
-	early_printk("Ramdisk addr 0x%08x, FDT 0x%08x\n", ram, _fdt_start);
-	early_printk(KERN_NOTICE "Found FDT at 0x%08x\n", _fdt_start);
-
-#ifdef CONFIG_MTD_UCLINUX
-	early_printk("Found romfs @ 0x%08x (0x%08x)\n",
-			romfs_base, romfs_size);
-	early_printk("#### klimit %p ####\n", old_klimit);
-	BUG_ON(romfs_size < 0); /* What else can we do? */
-
-	early_printk("Moved 0x%08x bytes from 0x%08x to 0x%08x\n",
-			romfs_size, romfs_base, (unsigned)&_ebss);
-
-	early_printk("New klimit: 0x%08x\n", (unsigned)klimit);
-#endif
+	early_printk(KERN_NOTICE "Found FDT at 0x%08x\n", fdt_start);
 
 	for (src = __ivt_start; src < __ivt_end; src++, dst++)
 		*dst = *src;

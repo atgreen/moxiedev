@@ -4720,8 +4720,7 @@ LIBGCJ_LD_SYMBOLIC_FUNCTIONS="${libgcj_ld_symbolic_functions}"
 
 
 # Only use libltdl for non-newlib builds.
-if test "x${with_newlib}" = "x" || test "x${with_newlib}" = "xno"; then
-   if test "x${host_os}" != "xuclinux"; then
+if test "x${with_newlib}" = "x" || test "x${with_newlib}" = "xno" || test "x${$host_os}" != "xuclinux"; then
    echo "$as_me:$LINENO: checking dynamic linker characteristics" >&5
 echo $ECHO_N "checking dynamic linker characteristics... $ECHO_C" >&6
 library_names_spec=
@@ -5590,7 +5589,7 @@ _ACEOF
    sub_auxdir="`cd $ac_aux_dir && ${PWDCMD-pwd}`"
    ac_configure_args="$ac_configure_args --with-auxdir=$sub_auxdir"
 fi
-fi
+
 
 
 case `pwd` in

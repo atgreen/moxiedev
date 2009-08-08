@@ -777,7 +777,6 @@
 #   define SEARCH_FOR_DATA_START
     extern int _end[];
 #   define DATAEND (_end)
-#   define USE_GENERIC_PUSH_REGS
 # endif
 
 # if defined(POWERPC)

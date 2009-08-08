@@ -1,4 +1,5 @@
 /*
+ * Copyright (C) 2009 Anthony Green <green@moxielogic.com>
  * Copyright (C) 2007-2009 Michal Simek <monstr@monstr.eu>
  * Copyright (C) 2007-2009 PetaLogix
  * Copyright (C) 2006 Atmark Techno, Inc.
@@ -37,8 +38,7 @@ extern void early_console_reg_tlb_alloc(unsigned int addr);
 
 void time_init(void);
 void init_IRQ(void);
-void machine_early_init(const char *cmdline, unsigned int ram,
-						unsigned int fdt);
+void machine_early_init(const char *cmdline);
 
 void machine_restart(char *cmd);
 void machine_shutdown(void);

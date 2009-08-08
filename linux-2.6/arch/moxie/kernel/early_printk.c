@@ -57,23 +57,7 @@ void early_printk(const char *fmt, ...)
 
 int __init setup_early_printk(char *opt)
 {
-	if (early_console_initialized)
-		return 1;
-
-	base_addr = early_uartlite_console();
-	if (base_addr) {
-		early_console_initialized = 1;
-#ifdef CONFIG_MMU
-		early_console_reg_tlb_alloc(base_addr);
-#endif
-		early_printk("early_printk_console is enabled at 0x%08x\n",
-							base_addr);
-
-		/* register_console(early_console); */
-
-		return 0;
-	} else
-		return 1;
+  early_console_initialized = 1;
 }
 
 void __init disable_early_printk(void)

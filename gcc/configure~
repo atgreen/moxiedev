@@ -2284,9 +2284,6 @@ case "${target}" in
   *-*-tpf*)
     noconfigdirs="$noconfigdirs target-newlib target-libgloss target-libiberty ${libgcj} target-libmudflap gdb tcl tk libgui itcl"
     ;;
-  moxie-*-uclinux*)
-    noconfigdirs="$noconfigdirs target-newlib target-libgloss target-rda"
-    ;;
   *-*-uclinux*)
     noconfigdirs="$noconfigdirs target-newlib target-libgloss target-rda ${libgcj}"
     ;;

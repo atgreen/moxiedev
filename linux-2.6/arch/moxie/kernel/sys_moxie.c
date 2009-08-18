@@ -147,12 +147,14 @@ asmlinkage long moxie_clone(int flags, unsigned long stack, struct pt_regs *regs
 	return do_fork(flags, stack, regs, 0, NULL, NULL);
 }
 
-asmlinkage long moxie_execve(char __user *filenamei, char __user *__user *argv)
+asmlinkage long moxie_execve(char __user *filenamei, 
+			     char __user *__user *argv, 
+			     char __user *__user *envp, 
+			     int ignore,
+			     struct pt_regs *regs)
 {
 	int error;
 	char *filename;
-        register char __user *__user *envp __asm__("$r2");
-        register struct pt_regs *regs __asm__("$r3");
 
 	filename = getname(filenamei);
 	error = PTR_ERR(filename);
@@ -212,6 +214,7 @@ out:
  */
 int kernel_execve(const char *filename, char *const argv[], char *const envp[])
 {
+
   register const char *__a __asm__("$r0") = filename;
   register const void *__b __asm__("$r1") = argv;
   register const void *__c __asm__("$r2") = envp;

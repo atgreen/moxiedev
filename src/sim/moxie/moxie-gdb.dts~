@@ -30,7 +30,7 @@
 	model = "testing";
 	DDR2_SDRAM: memory@00000000 {
 		device_type = "memory";
-		reg = < 0x00000000 0x04000000 >;
+		reg = < 0x00000000 0x02000000 >;
 	} ;
 	chosen {
 		bootargs = "lpj=1000 console=earlyser0";

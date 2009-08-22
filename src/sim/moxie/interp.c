@@ -838,6 +838,9 @@ sim_resume (sd, step, siggnal)
 	      {
 		unsigned int inum = EXTRACT_WORD(pc+2);
 		TRACE("swi");
+		/* Set the special registers appropriately.  */
+		cpu.asregs.sregs[2] = 3; /* MOXIE_EX_SWI */
+	        cpu.asregs.sregs[3] = inum;
 		switch (inum)
 		  {
 		  case 0x1: /* SYS_exit */
@@ -885,7 +888,6 @@ sim_resume (sd, step, siggnal)
 		    {
 		      unsigned int handler = cpu.asregs.sregs[1];
 		      unsigned int sp = cpu.asregs.regs[1];
-		      cpu.asregs.sregs[2] = 3; /* MOXIE_EX_SWI */
 
 		      /* Save a slot for the static chain.  */
 		      sp -= 4;
@@ -1163,7 +1165,7 @@ sim_open (kind, cb, abfd, argv)
   if (sim_pre_argv_init (sd, argv[0]) != SIM_RC_OK)
     return 0;
 
-  sim_do_command(sd," memory region 0x00000000,0x2000000") ; 
+  sim_do_command(sd," memory region 0x00000000,0x4000000") ; 
   sim_do_command(sd," memory region 0xE0000000,0x10000") ; 
   sim_do_commandf (sd, "memory-info");
 

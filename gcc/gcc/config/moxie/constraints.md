@@ -49,4 +49,3 @@
   "A constant -(0..255)"
   (and (match_code "const_int")
        (match_test "ival >= -255 && ival <= 0")))
-

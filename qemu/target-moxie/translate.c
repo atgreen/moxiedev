@@ -799,14 +799,16 @@ static int decode_opc (CPUState *env, DisasContext *ctx)
 	    pc += 4;
 	  }
 	  break;
+#endif
 	case 0x23: /* st.s */
 	  {
-	    int dest = (inst >> 4) & 0xf;
-	    int val  = inst & 0xf;
-	    TRACE("st.s");
-	    wsat (opc, cpu.asregs.regs[dest], cpu.asregs.regs[val]);
+	    int dest = (opcode >> 4) & 0xf;
+	    int val  = opcode & 0xf;
+
+	    tcg_gen_qemu_st16(REG(val), REG(dest), ctx->memidx);
 	  }
 	  break;
+#if 0
 	case 0x24: /* sta.s */
 	  {
 	    int reg = (inst >> 4) & 0xf;
@@ -816,14 +818,16 @@ static int decode_opc (CPUState *env, DisasContext *ctx)
 	    pc += 4;
 	  }
 	  break;
+#endif
 	case 0x25: /* jmp */
 	  {
-	    int reg = (inst >> 4) & 0xf;
-	    TRACE("jmp");
-	    pc = cpu.asregs.regs[reg] - 2;
+	    int reg = (opcode >> 4) & 0xf;
+	    tcg_gen_movi_i32(cpu_pc, REG(reg));
+	    tcg_gen_exit_tb(0);
+	    ctx->bstate = BS_BRANCH;
+	    printf("* jmp to $r%d = 0x%x\n", reg, REG(reg));
 	  }
 	  break;
-#endif
 	case 0x26: /* and */
 	  {
 	    int a = (opcode >> 4) & 0xf;

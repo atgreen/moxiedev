@@ -20,6 +20,7 @@
    MA 02110-1301, USA.  */
 
 #include <stdio.h>
+#include "sysdep.h"
 #define STATIC_TABLE
 #define DEFINE_TABLE
 

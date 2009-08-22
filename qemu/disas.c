@@ -75,41 +75,41 @@ generic_symbol_at_address (bfd_vma addr, struct disassemble_info *info)
 
 bfd_vma bfd_getl32 (const bfd_byte *addr)
 {
-  unsigned long v;
+  uint32_t v;
 
-  v = (unsigned long) addr[0];
-  v |= (unsigned long) addr[1] << 8;
-  v |= (unsigned long) addr[2] << 16;
-  v |= (unsigned long) addr[3] << 24;
+  v = (uint32_t) addr[0];
+  v |= (uint32_t) addr[1] << 8;
+  v |= (uint32_t) addr[2] << 16;
+  v |= (uint32_t) addr[3] << 24;
   return (bfd_vma) v;
 }
 
 bfd_vma bfd_getb32 (const bfd_byte *addr)
 {
-  unsigned long v;
+  uint32_t v;
 
-  v = (unsigned long) addr[0] << 24;
-  v |= (unsigned long) addr[1] << 16;
-  v |= (unsigned long) addr[2] << 8;
-  v |= (unsigned long) addr[3];
+  v = (uint32_t) addr[0] << 24;
+  v |= (uint32_t) addr[1] << 16;
+  v |= (uint32_t) addr[2] << 8;
+  v |= (uint32_t) addr[3];
   return (bfd_vma) v;
 }
 
 bfd_vma bfd_getl16 (const bfd_byte *addr)
 {
-  unsigned long v;
+  uint32_t v;
 
-  v = (unsigned long) addr[0];
-  v |= (unsigned long) addr[1] << 8;
+  v = (uint32_t) addr[0];
+  v |= (uint32_t) addr[1] << 8;
   return (bfd_vma) v;
 }
 
 bfd_vma bfd_getb16 (const bfd_byte *addr)
 {
-  unsigned long v;
+  uint32_t v;
 
-  v = (unsigned long) addr[0] << 24;
-  v |= (unsigned long) addr[1] << 16;
+  v = (uint32_t) addr[0] << 8;
+  v |= (uint32_t) addr[1];
   return (bfd_vma) v;
 }
 

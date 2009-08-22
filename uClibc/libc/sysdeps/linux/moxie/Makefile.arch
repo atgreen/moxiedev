@@ -7,6 +7,6 @@
 
 CSRC := 
 
-SSRC := 
+SSRC := setjmp.S
 
 include $(top_srcdir)libc/sysdeps/linux/Makefile.commonarch

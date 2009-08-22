@@ -28,14 +28,32 @@ static u32 base_addr;
 static void early_libgloss_printk_write(struct console *unused,
 					const char *s, unsigned n)
 {
+  /* First, try the simulator escape... */
   asm ("ldi.l $r0, 0x0");
   asm ("swi 5");
+
+  /* Then try writing to the qemu serial port... */
+  {
+    int i = 0;
+    while (i < n)
+      *(char *)0x3f8 = s[i++];
+    return n;
+  }
+}
+
+extern struct tty_driver *hp_simserial_driver;
+
+static struct tty_driver *simcons_console_device (struct console *c, int *index)
+{
+	*index = c->index;
+	return hp_simserial_driver;
 }
 
 struct console early_serial_console = {
 	.name = "earlyser",
 	.write = early_libgloss_printk_write,
 	.flags = CON_PRINTBUFFER,
+	.device = simcons_console_device,
 	.index = -1,
 };
 
@@ -62,9 +80,11 @@ int __init setup_early_printk(char *opt)
 
 void __init disable_early_printk(void)
 {
+#if 0
 	if (!early_console_initialized || !early_console)
 		return;
 	printk(KERN_WARNING "disabling early console\n");
 	unregister_console(early_console);
 	early_console_initialized = 0;
+#endif
 }

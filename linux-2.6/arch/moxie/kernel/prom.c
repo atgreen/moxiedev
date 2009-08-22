@@ -42,9 +42,11 @@
 #include <asm/sections.h>
 #include <asm/pci-bridge.h>
 
+#if 0
 #undef pr_debug
 #define pr_debug early_printk
 #define DEBUG 1
+#endif
 
 static int __initdata dt_root_addr_cells;
 static int __initdata dt_root_size_cells;

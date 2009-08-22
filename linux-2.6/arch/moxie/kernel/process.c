@@ -179,8 +179,17 @@ unsigned long get_wchan(struct task_struct *p)
 void start_thread(struct pt_regs *regs, unsigned long pc, unsigned long usp)
 {
 	set_fs(USER_DS);
-	regs->pc = pc;
+
+	/* Push a fake stack frame, so that a "ret" instruction will
+	   send us to the new thread.  */
+	usp -= 12;
+	((long *)usp)[1] = pc;     /* Return address.  */
+	((long *)usp)[0] = usp + 12; /* Frame pointer.  */
+
 	regs->sp = usp;
+	regs->fp = usp;
+	regs->pc = pc;
+
 	regs->pt_mode = 0;
 }
 

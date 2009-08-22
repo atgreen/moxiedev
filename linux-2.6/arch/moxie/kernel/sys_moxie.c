@@ -149,12 +149,15 @@ asmlinkage long moxie_clone(int flags, unsigned long stack, struct pt_regs *regs
 
 asmlinkage long moxie_execve(char __user *filenamei, 
 			     char __user *__user *argv, 
-			     char __user *__user *envp, 
-			     int ignore,
-			     struct pt_regs *regs)
+			     char __user *__user *envp)
 {
 	int error;
 	char *filename;
+	struct pt_regs *regs;
+
+	/* Perhaps this is fragile, but regs is passed in as a hidden
+	   parameter in register $r8.  See exceception_handler.S.  */
+	asm ("mov %0, $r8" : "=r" (regs));
 
 	filename = getname(filenamei);
 	error = PTR_ERR(filename);
@@ -218,7 +221,7 @@ int kernel_execve(const char *filename, char *const argv[], char *const envp[])
   register const char *__a __asm__("$r0") = filename;
   register const void *__b __asm__("$r1") = argv;
   register const void *__c __asm__("$r2") = envp;
-  register const unsigned __syscall __asm__("$r5") = __NR_execve;
+  register const unsigned __syscall __asm__("$r6") = __NR_execve;
   __asm__ __volatile__ ("swi 0xffffffff"
 			: "=r" (__a)
 			: "r" (__syscall), "r" (__a), "r" (__b), "r" (__c));

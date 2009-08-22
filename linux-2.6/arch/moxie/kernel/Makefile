@@ -12,7 +12,8 @@ extra-y := head.o vmlinux.lds
 obj-y += exception_handler.o exceptions.o \
 	init_task.o intc.o irq.o of_device.o \
 	of_platform.o process.o prom.o prom_parse.o ptrace.o \
-	setup.o signal.o sys_moxie.o timer.o traps.o
+	setup.o signal.o sys_moxie.o timer.o traps.o \
+	simserial.o
 
 obj-y += cpu/
 

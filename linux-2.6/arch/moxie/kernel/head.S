@@ -73,8 +73,13 @@ ENTRY(sys_rt_sigreturn_wrapper)
 	bad
 ENTRY(sys_rt_sigsuspend_wrapper)
 	bad
+
 ENTRY(sys_vfork)
-	bad
+	/* Move pt_regs to the first argument register and jump to
+	   moxie_vfork.  */
+	mov	$r0, $r8	
+	jmpa	moxie_vfork
+
 ENTRY(__umodsi3)
 	bad
 ENTRY(__udivsi3)

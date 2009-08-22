@@ -67,9 +67,6 @@ void __init setup_arch(char **cmdline_p)
 {
 	*cmdline_p = cmd_line;
 
-	/* Install the exception handler.  */
-	install_handler (moxie_exception_handler);
-
 	register_console(&early_serial_console);
 	console_verbose();
 
@@ -128,11 +125,19 @@ void __init machine_early_init(const char *cmdline)
 	unsigned long *src, *dst = (unsigned long *)0x0;
 	void *fdt_start;
 
+	/* Install the exception handler.  */
+	install_handler (moxie_exception_handler);
+
 	/* This kernel port assumes that the device firmware has
 	   placed a pointer to the flattened device tree blob in
 	   special register 9.  Extract it and place it in
 	   fdt_start.  */
 	asm("gsr %0, 9" : "=r"(fdt_start) : "0"(fdt_start));
+
+	/* If it's not there, use the built in one and hope for the
+	   best.  */
+	if (fdt_start == 0)
+	  fdt_start = _fdt_start;
 
 /* clearing bss section */
 	memset(__bss_start, 0, __bss_stop-__bss_start);

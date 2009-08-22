@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2009 Anthony Green <green@moxielogic.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+#define MOXIE_EX_DIV0 0 /* Divide by zero */
+#define MOXIE_EX_BAD  1 /* Illegal instruction */
+#define MOXIE_EX_IRQ  2 /* Interrupt request */
+#define MOXIE_EX_SWI  3 /* Software interrupt */
+	
 .section .text
 .align 4
 .global moxie_exception_handler
@@ -23,33 +36,47 @@ moxie_exception_handler:
 	push	$sp, $r0
 	dec	$sp, 4    /* Skip over $sp, which was alread saved.  */
    	push    $sp, $fp
-	/* Save the return address.  This destroys $r6, but we'll
-	   just restore it again once we return from the system call
+	/* Save the return address.  This destroys $r7, but we'll
+	   just restore it again once we return from the exception
 	   below.  */
-	ldo.l	$r6, 4($fp)
-	sto.l	64($sp), $r6
+	ldo.l	$r7, 4($fp)
+	sto.l	64($sp), $r7
+	
+	/* What kind of exception is this?  The answer is stored in
+	   special register 2.  */
+	gsr	$r9, 2
+
+	ldi.l	$r10, MOXIE_EX_SWI
+	cmp	$r9, $r10
+	bne	.return_from_exception /* Only handle swi for now. */
+
+	/* It's a software interrupt.  The interrupt number is held in
+	   special register 3.  Ignore everything except a system 
+	   call.  */
+	gsr	$r9, 3
+	ldi.l	$r10, 0xffffffff
+	cmp	$r9, $r10
+	bne	.return_from_exception
 	
 	/* ---- Make the system call. ----------------------------- */
 
 	/* Store pt_regs in $r4.  */
-	mov	$r4, $sp
+	mov	$r8, $sp
 	
 	/* Multiply the index by four and look up the system call
 	address in our table. */
 
-	add.l	$r5, $r5
-	add.l	$r5, $r5
-	ldo.l	$r5, sys_call_table($r5)
-	jsr	$r5
+	add.l	$r6, $r6
+	add.l	$r6, $r6
+	ldo.l	$r6, sys_call_table($r6)
+	jsr	$r6
+
+.return_from_exception:	
 
 	/* ---- Restore all registers from the stack. ------------- */
 
-	/* First comes the return address.  Let's stick it in $r2
-	   for now.  We don't assume that $r2 is preserved over
-	   system calls.  */
-	pop	$sp, $fp
-	inc	$sp, 24		/* skip $sp, $r0 through $r4 for now.  */
-	pop	$sp, $r5
+	pop	$sp, $fp	/* Pop frame pointer.  */
+	inc	$sp, 28		/* skip $sp & $r0 through $r5.  */
 	pop	$sp, $r6
 	pop	$sp, $r7
 	pop	$sp, $r8
@@ -58,14 +85,8 @@ moxie_exception_handler:
 	pop	$sp, $r11
 	pop	$sp, $r12
 	pop	$sp, $r13
+	inc	$sp, 8		/* Skip pc and pt_mode.  */
 
-	/* Instead of returning normally, let's fake a return, because
-	   we may not be returning to where we were expecting to go.
-	   Just pop the frame pointer and throw away the return address
-	   and static chain value.  We'll use the return address that
-	   was saved in the pt_regs structure.  */
-	pop	$sp, $r2	/* Pop the pc.  */
-	dec	$sp, 4		/* Skip pt_mode.  */
-	pop	$sp, $fp	/* Pop $fp from call stack.  */
-	inc	$sp, 8		/* Skip return address and static chain.  */
-	jmp	$r2
+	/* start_thread pushed a fake call frame on the stack, so
+	   returning should send us to the new thread.  */
+	ret

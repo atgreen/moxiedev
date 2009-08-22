@@ -47,6 +47,9 @@
 
 #define SSC_GETCHAR	21
 
+extern long ia64_ssc (long, long, long, long, int);
+extern void ia64_ssc_connect_irq (long intr, long irq);
+
 static char *serial_name = "SimSerial driver";
 static char *serial_version = "0.6";
 
@@ -99,6 +102,12 @@ static unsigned char *tmp_buf;
 
 extern struct console *console_drivers; /* from kernel/printk.c */
 
+static void libgloss_read(struct console *unused, const char *s, unsigned n)
+{
+  asm ("ldi.l $r0, 0x0");
+  asm ("swi 4");
+}
+
 /*
  * ------------------------------------------------------------
  * rs_stop() and rs_start()
@@ -144,7 +153,7 @@ static irqreturn_t rs_interrupt_single(int irq, void *dev_id)
 	 * pretty simple in our case, because we only get interrupts
 	 * on inbound traffic
 	 */
-	/* receive_chars(info->tty); */
+	/* receive_chars(info->tty); MOXIE */
 	return IRQ_HANDLED;
 }
 
@@ -908,27 +917,6 @@ simrs_init (void)
 		B9600 | CS8 | CREAD | HUPCL | CLOCAL;
 	hp_simserial_driver->flags = TTY_DRIVER_REAL_RAW;
 	tty_set_operations(hp_simserial_driver, &hp_ops);
-
-	/*
-	 * Let's have a little bit of fun !
-	 */
-	for (i = 0, state = rs_table; i < NR_PORTS; i++,state++) {
-
-		if (state->type == PORT_UNKNOWN) continue;
-
-		if (!state->irq) {
-			if ((rc = assign_irq_vector(AUTO_ASSIGN)) < 0)
-				panic("%s: out of interrupt vectors!\n",
-				      __func__);
-			state->irq = rc;
-			/* ia64_ssc_connect_irq(KEYBOARD_INTR, state->irq); */
-		}
-
-		printk(KERN_INFO "ttyS%d at 0x%04lx (irq = %d) is a %s\n",
-		       state->line,
-		       state->port, state->irq,
-		       uart_config[state->type].name);
-	}
 
 	if (tty_register_driver(hp_simserial_driver))
 		panic("Couldn't register simserial driver\n");

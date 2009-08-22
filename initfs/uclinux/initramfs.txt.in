@@ -1,0 +1,27 @@
+dir /bin 755 1000 1000
+dir /dev 755 0 0
+nod /dev/console 644 0 0 c 5 1
+nod /dev/loop0 644 0 0 b 7 0
+nod /dev/null 666 0 0 c 1 3
+dir /etc 755 0 0
+dir /mnt 755 0 0
+dir /proc 755 0 0
+dir /sbin 755 1000 1000
+dir /sys 755 0 0
+dir /tmp 755 0 0
+dir /var 755 0 0
+dir /var/lock 755 0 0
+
+file /sbin/init @TOP@/initfs/uclinux/root/init.sh 755 0 0
+file /init @TOP@/initfs/uclinux/root/init.sh 755 0 0
+file /bin/init @TOP@/initfs/uclinux/root/init.sh 755 0 0
+
+file /bin/busybox @TOP@/busybox/busybox_unstripped 755 0 0
+slink /bin/ash busybox 777 0 0
+slink /bin/mkdir busybox 777 0 0
+slink /bin/mount busybox 777 0 0
+slink /bin/cat busybox 777 0 0
+slink /bin/switch_root busybox 777 0 0
+slink /bin/uname busybox 777 0 0
+
+slink /bin/sh ash 777 0 0

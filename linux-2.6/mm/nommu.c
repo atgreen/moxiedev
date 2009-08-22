@@ -849,6 +849,8 @@ static int validate_mmap_request(struct file *file,
 	unsigned long capabilities, rlen;
 	unsigned long reqprot = prot;
 	int ret;
+	/* MOXIE FIXME */
+	addr = 0L;
 
 	/* do the simple checks first */
 	if (flags & MAP_FIXED || addr) {

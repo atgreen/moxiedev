@@ -24,6 +24,10 @@ extern void default_external_libcall (rtx);
 extern rtx default_legitimize_address (rtx, rtx, enum machine_mode);
 
 extern int default_unspec_may_trap_p (const_rtx, unsigned);
+extern enum machine_mode default_promote_function_mode (const_tree, enum machine_mode,
+							int *, const_tree, int);
+extern enum machine_mode default_promote_function_mode_always_promote
+			(const_tree, enum machine_mode, int *, const_tree, int);
 
 extern enum machine_mode default_cc_modes_compatible (enum machine_mode,
 						      enum machine_mode);
@@ -90,6 +94,7 @@ extern const char *hook_invalid_arg_for_unprototyped_fn
   (const_tree, const_tree, const_tree);
 extern bool hook_bool_const_rtx_commutative_p (const_rtx, int);
 extern rtx default_function_value (const_tree, const_tree, bool);
+extern rtx default_libcall_value (enum machine_mode, rtx);
 extern rtx default_internal_arg_pointer (void);
 extern enum reg_class default_branch_target_register_class (void);
 #ifdef IRA_COVER_CLASSES

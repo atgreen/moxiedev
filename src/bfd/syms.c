@@ -1,6 +1,6 @@
 /* Generic symbol-table support for the BFD library.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009
+   2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
    Free Software Foundation, Inc.
    Written by Cygnus Support.
 
@@ -539,10 +539,10 @@ asymbol *
 _bfd_generic_make_empty_symbol (bfd *abfd)
 {
   bfd_size_type amt = sizeof (asymbol);
-  asymbol *new = bfd_zalloc (abfd, amt);
-  if (new)
-    new->the_bfd = abfd;
-  return new;
+  asymbol *new_symbol = (asymbol *) bfd_zalloc (abfd, amt);
+  if (new_symbol)
+    new_symbol->the_bfd = abfd;
+  return new_symbol;
 }
 
 /*

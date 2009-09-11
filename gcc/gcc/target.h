@@ -832,8 +832,11 @@ struct gcc_target
 
   /* Functions relating to calls - argument passing, returns, etc.  */
   struct calls {
-    bool (*promote_function_args) (const_tree fntype);
-    bool (*promote_function_return) (const_tree fntype);
+    enum machine_mode (*promote_function_mode) (const_tree type,
+						enum machine_mode mode,
+						int *punsignedp,
+						const_tree fntype,
+						int for_return);
     bool (*promote_prototypes) (const_tree fntype);
     rtx (*struct_value_rtx) (tree fndecl, int incoming);
     bool (*return_in_memory) (const_tree type, const_tree fndecl);
@@ -888,6 +891,10 @@ struct gcc_target
        specified by FN_DECL_OR_TYPE with a return type of RET_TYPE.  */
     rtx (*function_value) (const_tree ret_type, const_tree fn_decl_or_type,
 			   bool outgoing);
+
+    /* Return the rtx for the result of a libcall of mode MODE,
+       calling the function FN_NAME.  */
+    rtx (*libcall_value) (enum machine_mode, rtx);
 
     /* Return an rtx for the argument pointer incoming to the
        current function.  */
@@ -963,6 +970,10 @@ struct gcc_target
   
   /* Retutn true if a function must have and use a frame pointer.  */
   bool (* frame_pointer_required) (void);
+
+  /* Returns true if the compiler is allowed to try to replace register number
+     from-reg with register number to-reg.  */
+  bool (* can_eliminate) (const int, const int);
 
   /* Functions specific to the C family of frontends.  */
   struct c {
@@ -1116,9 +1127,6 @@ struct gcc_target
   /* True if output_file_directive should be called for main_input_filename
      at the beginning of assembly output.  */
   bool file_start_file_directive;
-
-  /* True if #pragma redefine_extname is to be supported.  */
-  bool handle_pragma_redefine_extname;
 
   /* True if #pragma extern_prefix is to be supported.  */
   bool handle_pragma_extern_prefix;

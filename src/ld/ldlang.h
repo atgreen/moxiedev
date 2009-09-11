@@ -445,6 +445,7 @@ struct orphan_save
   lang_output_section_statement_type **os_tail;
 };
 
+extern const char *output_target;
 extern lang_output_section_statement_type *abs_output_section;
 extern lang_statement_list_type lang_output_section_statement;
 extern bfd_boolean lang_has_input_file;
@@ -483,6 +484,8 @@ extern lang_output_section_statement_type *lang_enter_output_section_statement
    etree_type *, int);
 extern void lang_final
   (void);
+extern void lang_relax_sections
+  (bfd_boolean);
 extern void lang_process
   (void);
 extern void lang_section_start

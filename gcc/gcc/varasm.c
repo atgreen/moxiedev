@@ -2328,11 +2328,11 @@ assemble_external (tree decl ATTRIBUTE_UNUSED)
 	 for declarations that can be weak, it happens to be
 	 match.  */
       && !TREE_STATIC (decl)
-      && tree_find_value (weak_decls, decl) == NULL_TREE)
-      weak_decls = tree_cons (NULL, decl, weak_decls);
+      && value_member (decl, weak_decls) == NULL_TREE)
+    weak_decls = tree_cons (NULL, decl, weak_decls);
 
 #ifdef ASM_OUTPUT_EXTERNAL
-  if (tree_find_value (pending_assemble_externals, decl) == NULL_TREE)
+  if (value_member (decl, pending_assemble_externals) == NULL_TREE)
     pending_assemble_externals = tree_cons (NULL, decl,
 					    pending_assemble_externals);
 #endif
@@ -5369,20 +5369,7 @@ globalize_decl (tree decl)
   targetm.asm_out.globalize_decl_name (asm_out_file, decl);
 }
 
-/* We have to be able to tell cgraph about the needed-ness of the target
-   of an alias.  This requires that the decl have been defined.  Aliases
-   that precede their definition have to be queued for later processing.  */
-
-typedef struct GTY(()) alias_pair {
-  tree decl;
-  tree target;
-} alias_pair;
-
-/* Define gc'd vector type.  */
-DEF_VEC_O(alias_pair);
-DEF_VEC_ALLOC_O(alias_pair,gc);
-
-static GTY(()) VEC(alias_pair,gc) *alias_pairs;
+VEC(alias_pair,gc) *alias_pairs;
 
 /* Given an assembly name, find the decl it is associated with.  At the
    same time, mark it needed for cgraph.  */
@@ -5408,13 +5395,7 @@ find_decl_and_mark_needed (tree decl, tree target)
 
   if (fnode)
     {
-      /* We can't mark function nodes as used after cgraph global info
-	 is finished.  This wouldn't generally be necessary, but C++
-	 virtual table thunks are introduced late in the game and
-	 might seem like they need marking, although in fact they
-	 don't.  */
-      if (! cgraph_global_info_ready)
-	cgraph_mark_needed_node (fnode);
+      cgraph_mark_needed_node (fnode);
       return fnode->decl;
     }
   else if (vnode)
@@ -5526,6 +5507,39 @@ do_assemble_alias (tree decl, tree target)
 #endif
 }
 
+
+/* Remove the alias pairing for functions that are no longer in the call
+   graph.  */
+
+void
+remove_unreachable_alias_pairs (void)
+{
+  unsigned i;
+  alias_pair *p;
+
+  if (alias_pairs == NULL)
+    return;
+
+  for (i = 0; VEC_iterate (alias_pair, alias_pairs, i, p); )
+    {
+      if (!DECL_EXTERNAL (p->decl))
+	{
+	  struct cgraph_node *fnode = NULL;
+	  struct varpool_node *vnode = NULL;
+	  fnode = cgraph_node_for_asm (p->target);
+	  vnode = (fnode == NULL) ? varpool_node_for_asm (p->target) : NULL;
+	  if (fnode == NULL && vnode == NULL)
+	    {
+	      VEC_unordered_remove (alias_pair, alias_pairs, i);
+	      continue;
+	    }
+	}
+
+      i++;
+    }
+}
+
+
 /* First pass of completing pending aliases.  Make sure that cgraph knows
    which symbols will be required.  */
 
@@ -5547,6 +5561,11 @@ finish_aliases_1 (void)
 		   p->decl, p->target);
 	}
       else if (DECL_EXTERNAL (target_decl)
+ 	       /* We use local aliases for C++ thunks to force the tailcall
+ 		  to bind locally.  Of course this is a hack - to keep it
+ 		  working do the following (which is not strictly correct).  */
+ 	       && (! TREE_CODE (target_decl) == FUNCTION_DECL
+ 		   || ! DECL_VIRTUAL_P (target_decl))
 	       && ! lookup_attribute ("weakref", DECL_ATTRIBUTES (p->decl)))
 	error ("%q+D aliased to external symbol %qE",
 	       p->decl, p->target);

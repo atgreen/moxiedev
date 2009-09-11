@@ -1,7 +1,7 @@
 10
 
 dir
-149693
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.ns
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ janis
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-scoped1.C
-file
-
-
-
-
-2009-04-24T17:44:36.000000Z
-f96f046ae42a16ff9abb1cb64171b3ce
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-472
 
 lookup5.C
 file
@@ -93,6 +59,40 @@ mmitchel
 
 
 315
+
+scoped1.C
+file
+
+
+
+
+2009-04-24T17:44:36.000000Z
+f96f046ae42a16ff9abb1cb64171b3ce
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+472
 
 alias2.C
 file
@@ -434,40 +434,6 @@ mmitchel
 
 375
 
-template1.C
-file
-
-
-
-
-2009-04-24T17:44:36.000000Z
-039d19c86cd107b1fdcec33f4214e0e4
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-94
-
 overload1.C
 file
 
@@ -501,6 +467,40 @@ mmitchel
 
 
 457
+
+template1.C
+file
+
+
+
+
+2009-04-24T17:44:36.000000Z
+039d19c86cd107b1fdcec33f4214e0e4
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+94
 
 overload3.C
 file
@@ -1488,40 +1488,6 @@ mmitchel
 
 156
 
-friend1.C
-file
-
-
-
-
-2009-04-24T17:44:36.000000Z
-1ac4f8617c42fa9ac34245cdbdf20c7d
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-91
-
 using12.C
 file
 
@@ -1555,6 +1521,40 @@ janis
 
 
 473
+
+friend1.C
+file
+
+
+
+
+2009-04-24T17:44:36.000000Z
+1ac4f8617c42fa9ac34245cdbdf20c7d
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+91
 
 using14.C
 file
@@ -1794,40 +1794,6 @@ mmitchel
 
 122
 
-ns11.C
-file
-
-
-
-
-2009-04-24T17:44:36.000000Z
-ccd42fdc2dc6a2b87fb540bd4247eccf
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-406
-
 undef1.C
 file
 
@@ -1861,6 +1827,40 @@ mmitchel
 
 
 97
+
+ns11.C
+file
+
+
+
+
+2009-04-24T17:44:36.000000Z
+ccd42fdc2dc6a2b87fb540bd4247eccf
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+406
 
 ns13.C
 file
@@ -1998,17 +1998,17 @@ mmitchel
 
 131
 
-overload2.C
+template2.C
 file
 
 
 
 
 2009-04-24T17:44:36.000000Z
-38f94e950e14081178577cd7cfe9c1e9
-2008-09-18T22:29:39.508493Z
-140476
-janis
+73d49c61290b79275cc9f49efdafcaff
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
 
 
 
@@ -2030,7 +2030,7 @@ janis
 
 
 
-218
+189
 
 koenig1.C
 file
@@ -2066,17 +2066,17 @@ mmitchel
 
 202
 
-template2.C
+overload2.C
 file
 
 
 
 
 2009-04-24T17:44:36.000000Z
-73d49c61290b79275cc9f49efdafcaff
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
+38f94e950e14081178577cd7cfe9c1e9
+2008-09-18T22:29:39.508493Z
+140476
+janis
 
 
 
@@ -2098,41 +2098,7 @@ mmitchel
 
 
 
-189
-
-overload4.C
-file
-
-
-
-
-2009-04-24T17:44:36.000000Z
-cc53a89f144459e878c2fc27cb7cd750
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-121
+218
 
 koenig3.C
 file
@@ -2167,6 +2133,40 @@ mmitchel
 
 
 304
+
+overload4.C
+file
+
+
+
+
+2009-04-24T17:44:36.000000Z
+cc53a89f144459e878c2fc27cb7cd750
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+121
 
 template4.C
 file

@@ -238,7 +238,7 @@ prepare_call_address (rtx funexp, rtx static_chain_value,
    denote registers used by the called function.  */
 
 static void
-emit_call_1 (rtx funexp, tree fntree, tree fndecl ATTRIBUTE_UNUSED,
+emit_call_1 (rtx funexp, tree fntree ATTRIBUTE_UNUSED, tree fndecl ATTRIBUTE_UNUSED,
 	     tree funtype ATTRIBUTE_UNUSED,
 	     HOST_WIDE_INT stack_size ATTRIBUTE_UNUSED,
 	     HOST_WIDE_INT rounded_stack_size,
@@ -380,15 +380,6 @@ emit_call_1 (rtx funexp, tree fntree, tree fndecl ATTRIBUTE_UNUSED,
      effect.  */
   if (ecf_flags & ECF_NOTHROW)
     add_reg_note (call_insn, REG_EH_REGION, const0_rtx);
-  else
-    {
-      int rn = lookup_expr_eh_region (fntree);
-
-      /* If rn < 0, then either (1) tree-ssa not used or (2) doesn't
-	 throw, which we already took care of.  */
-      if (rn > 0)
-	add_reg_note (call_insn, REG_EH_REGION, GEN_INT (rn));
-    }
 
   if (ecf_flags & ECF_NORETURN)
     add_reg_note (call_insn, REG_NORETURN, const0_rtx);
@@ -1122,13 +1113,9 @@ initialize_argument_information (int num_actuals ATTRIBUTE_UNUSED,
 	    }
 	}
 
-      mode = TYPE_MODE (type);
       unsignedp = TYPE_UNSIGNED (type);
-
-      if (targetm.calls.promote_function_args (fndecl
-					       ? TREE_TYPE (fndecl)
-					       : fntype))
-	mode = promote_mode (type, mode, &unsignedp, 1);
+      mode = promote_function_mode (type, TYPE_MODE (type), &unsignedp,
+				    fndecl ? TREE_TYPE (fndecl) : fntype, 0);
 
       args[i].unsignedp = unsignedp;
       args[i].mode = mode;
@@ -1308,29 +1295,33 @@ precompute_arguments (int num_actuals, struct arg_data *args)
 
   for (i = 0; i < num_actuals; i++)
     {
+      tree type;
       enum machine_mode mode;
 
       if (TREE_CODE (args[i].tree_value) != CALL_EXPR)
 	continue;
 
       /* If this is an addressable type, we cannot pre-evaluate it.  */
-      gcc_assert (!TREE_ADDRESSABLE (TREE_TYPE (args[i].tree_value)));
+      type = TREE_TYPE (args[i].tree_value);
+      gcc_assert (!TREE_ADDRESSABLE (type));
 
       args[i].initial_value = args[i].value
 	= expand_normal (args[i].tree_value);
 
-      mode = TYPE_MODE (TREE_TYPE (args[i].tree_value));
+      mode = TYPE_MODE (type);
       if (mode != args[i].mode)
 	{
+	  int unsignedp = args[i].unsignedp;
 	  args[i].value
 	    = convert_modes (args[i].mode, mode,
 			     args[i].value, args[i].unsignedp);
-#if defined(PROMOTE_FUNCTION_MODE) && !defined(PROMOTE_MODE)
+
 	  /* CSE will replace this only if it contains args[i].value
 	     pseudo, so convert it down to the declared mode using
 	     a SUBREG.  */
 	  if (REG_P (args[i].value)
-	      && GET_MODE_CLASS (args[i].mode) == MODE_INT)
+	      && GET_MODE_CLASS (args[i].mode) == MODE_INT
+	      && promote_mode (type, mode, &unsignedp) != args[i].mode)
 	    {
 	      args[i].initial_value
 		= gen_lowpart_SUBREG (mode, args[i].value);
@@ -1338,7 +1329,6 @@ precompute_arguments (int num_actuals, struct arg_data *args)
 	      SUBREG_PROMOTED_UNSIGNED_SET (args[i].initial_value,
 					    args[i].unsignedp);
 	    }
-#endif
 	}
     }
 }
@@ -1928,6 +1918,7 @@ expand_call (tree exp, rtx target, int ignore)
   /* Data type of the function.  */
   tree funtype;
   tree type_arg_types;
+  tree rettype;
   /* Declaration of the function being called,
      or 0 if the function is computed (not known by name).  */
   tree fndecl = 0;
@@ -2023,7 +2014,6 @@ expand_call (tree exp, rtx target, int ignore)
   int old_stack_pointer_delta = 0;
 
   rtx call_fusage;
-  tree p = CALL_EXPR_FN (exp);
   tree addr = CALL_EXPR_FN (exp);
   int i;
   /* The alignment of the stack, in bits.  */
@@ -2046,15 +2036,16 @@ expand_call (tree exp, rtx target, int ignore)
     }
   else
     {
-      fntype = TREE_TYPE (TREE_TYPE (p));
+      fntype = TREE_TYPE (TREE_TYPE (addr));
       flags |= flags_from_decl_or_type (fntype);
     }
+  rettype = TREE_TYPE (exp);
 
   struct_value = targetm.calls.struct_value_rtx (fntype, 0);
 
   /* Warn if this value is an aggregate type,
      regardless of which calling convention we are using for it.  */
-  if (AGGREGATE_TYPE_P (TREE_TYPE (exp)))
+  if (AGGREGATE_TYPE_P (rettype))
     warning (OPT_Waggregate_return, "function call has aggregate value");
 
   /* If the result of a non looping pure or const function call is
@@ -2064,7 +2055,7 @@ expand_call (tree exp, rtx target, int ignore)
   if ((flags & (ECF_CONST | ECF_PURE))
       && (!(flags & ECF_LOOPING_CONST_OR_PURE))
       && (ignore || target == const0_rtx
-	  || TYPE_MODE (TREE_TYPE (exp)) == VOIDmode))
+	  || TYPE_MODE (rettype) == VOIDmode))
     {
       bool volatilep = false;
       tree arg;
@@ -2107,7 +2098,7 @@ expand_call (tree exp, rtx target, int ignore)
       }
 #else /* not PCC_STATIC_STRUCT_RETURN */
       {
-	struct_value_size = int_size_in_bytes (TREE_TYPE (exp));
+	struct_value_size = int_size_in_bytes (rettype);
 
 	if (target && MEM_P (target) && CALL_EXPR_RETURN_SLOT_OPT (exp))
 	  structure_value_addr = XEXP (target, 0);
@@ -2116,7 +2107,7 @@ expand_call (tree exp, rtx target, int ignore)
 	    /* For variable-sized objects, we must be called with a target
 	       specified.  If we were to allocate space on the stack here,
 	       we would have no way of knowing when to free it.  */
-	    rtx d = assign_temp (TREE_TYPE (exp), 0, 1, 1);
+	    rtx d = assign_temp (rettype, 0, 1, 1);
 
 	    mark_temp_addr_taken (d);
 	    structure_value_addr = XEXP (d, 0);
@@ -2287,7 +2278,6 @@ expand_call (tree exp, rtx target, int ignore)
   if (currently_expanding_call++ != 0
       || !flag_optimize_sibling_calls
       || args_size.var
-      || lookup_expr_eh_region (exp) >= 0
       || dbg_cnt (tail_call) == false)
     try_tail_call = 0;
 
@@ -2346,17 +2336,17 @@ expand_call (tree exp, rtx target, int ignore)
       tree caller_res = DECL_RESULT (current_function_decl);
 
       caller_unsignedp = TYPE_UNSIGNED (TREE_TYPE (caller_res));
-      caller_mode = caller_promoted_mode = DECL_MODE (caller_res);
+      caller_mode = DECL_MODE (caller_res);
       callee_unsignedp = TYPE_UNSIGNED (TREE_TYPE (funtype));
-      callee_mode = callee_promoted_mode = TYPE_MODE (TREE_TYPE (funtype));
-      if (targetm.calls.promote_function_return (TREE_TYPE (current_function_decl)))
-	caller_promoted_mode
-	  = promote_mode (TREE_TYPE (caller_res), caller_mode,
-			  &caller_unsignedp, 1);
-      if (targetm.calls.promote_function_return (funtype))
-	callee_promoted_mode
-	  = promote_mode (TREE_TYPE (funtype), callee_mode,
-			  &callee_unsignedp, 1);
+      callee_mode = TYPE_MODE (TREE_TYPE (funtype));
+      caller_promoted_mode
+	= promote_function_mode (TREE_TYPE (caller_res), caller_mode,
+				 &caller_unsignedp,
+				 TREE_TYPE (current_function_decl), 1);
+      callee_promoted_mode
+	= promote_function_mode (TREE_TYPE (funtype), callee_mode,
+				 &callee_unsignedp,
+				 funtype, 1);
       if (caller_mode != VOIDmode
 	  && (caller_promoted_mode != callee_promoted_mode
 	      || ((caller_mode != caller_promoted_mode
@@ -2694,14 +2684,14 @@ expand_call (tree exp, rtx target, int ignore)
 
       /* Figure out the register where the value, if any, will come back.  */
       valreg = 0;
-      if (TYPE_MODE (TREE_TYPE (exp)) != VOIDmode
+      if (TYPE_MODE (rettype) != VOIDmode
 	  && ! structure_value_addr)
 	{
 	  if (pcc_struct_value)
-	    valreg = hard_function_value (build_pointer_type (TREE_TYPE (exp)),
+	    valreg = hard_function_value (build_pointer_type (rettype),
 					  fndecl, NULL, (pass == 0));
 	  else
-	    valreg = hard_function_value (TREE_TYPE (exp), fndecl, fntype,
+	    valreg = hard_function_value (rettype, fndecl, fntype,
 					  (pass == 0));
 
 	  /* If VALREG is a PARALLEL whose first member has a zero
@@ -2866,12 +2856,12 @@ expand_call (tree exp, rtx target, int ignore)
 	 group load/store machinery below.  */
       if (!structure_value_addr
 	  && !pcc_struct_value
-	  && TYPE_MODE (TREE_TYPE (exp)) != BLKmode
-	  && targetm.calls.return_in_msb (TREE_TYPE (exp)))
+	  && TYPE_MODE (rettype) != BLKmode
+	  && targetm.calls.return_in_msb (rettype))
 	{
-	  if (shift_return_value (TYPE_MODE (TREE_TYPE (exp)), false, valreg))
+	  if (shift_return_value (TYPE_MODE (rettype), false, valreg))
 	    sibcall_failure = 1;
-	  valreg = gen_rtx_REG (TYPE_MODE (TREE_TYPE (exp)), REGNO (valreg));
+	  valreg = gen_rtx_REG (TYPE_MODE (rettype), REGNO (valreg));
 	}
 
       if (pass && (flags & ECF_MALLOC))
@@ -2880,7 +2870,7 @@ expand_call (tree exp, rtx target, int ignore)
 	  rtx last, insns;
 
 	  /* The return value from a malloc-like function is a pointer.  */
-	  if (TREE_CODE (TREE_TYPE (exp)) == POINTER_TYPE)
+	  if (TREE_CODE (rettype) == POINTER_TYPE)
 	    mark_reg_pointer (temp, BIGGEST_ALIGNMENT);
 
 	  emit_move_insn (temp, valreg);
@@ -2930,7 +2920,7 @@ expand_call (tree exp, rtx target, int ignore)
 
       /* If value type not void, return an rtx for the value.  */
 
-      if (TYPE_MODE (TREE_TYPE (exp)) == VOIDmode
+      if (TYPE_MODE (rettype) == VOIDmode
 	  || ignore)
 	target = const0_rtx;
       else if (structure_value_addr)
@@ -2938,10 +2928,10 @@ expand_call (tree exp, rtx target, int ignore)
 	  if (target == 0 || !MEM_P (target))
 	    {
 	      target
-		= gen_rtx_MEM (TYPE_MODE (TREE_TYPE (exp)),
-			       memory_address (TYPE_MODE (TREE_TYPE (exp)),
+		= gen_rtx_MEM (TYPE_MODE (rettype),
+			       memory_address (TYPE_MODE (rettype),
 					       structure_value_addr));
-	      set_mem_attributes (target, exp, 1);
+	      set_mem_attributes (target, rettype, 1);
 	    }
 	}
       else if (pcc_struct_value)
@@ -2949,9 +2939,9 @@ expand_call (tree exp, rtx target, int ignore)
 	  /* This is the special C++ case where we need to
 	     know what the true target was.  We take care to
 	     never use this value more than once in one expression.  */
-	  target = gen_rtx_MEM (TYPE_MODE (TREE_TYPE (exp)),
+	  target = gen_rtx_MEM (TYPE_MODE (rettype),
 				copy_to_reg (valreg));
-	  set_mem_attributes (target, exp, 1);
+	  set_mem_attributes (target, rettype, 1);
 	}
       /* Handle calls that return values in multiple non-contiguous locations.
 	 The Irix 6 ABI has examples of this.  */
@@ -2960,22 +2950,22 @@ expand_call (tree exp, rtx target, int ignore)
 	  if (target == 0)
 	    {
 	      /* This will only be assigned once, so it can be readonly.  */
-	      tree nt = build_qualified_type (TREE_TYPE (exp),
-					      (TYPE_QUALS (TREE_TYPE (exp))
+	      tree nt = build_qualified_type (rettype,
+					      (TYPE_QUALS (rettype)
 					       | TYPE_QUAL_CONST));
 
 	      target = assign_temp (nt, 0, 1, 1);
 	    }
 
 	  if (! rtx_equal_p (target, valreg))
-	    emit_group_store (target, valreg, TREE_TYPE (exp),
-			      int_size_in_bytes (TREE_TYPE (exp)));
+	    emit_group_store (target, valreg, rettype,
+			      int_size_in_bytes (rettype));
 
 	  /* We can not support sibling calls for this case.  */
 	  sibcall_failure = 1;
 	}
       else if (target
-	       && GET_MODE (target) == TYPE_MODE (TREE_TYPE (exp))
+	       && GET_MODE (target) == TYPE_MODE (rettype)
 	       && GET_MODE (target) == GET_MODE (valreg))
 	{
 	  bool may_overlap = false;
@@ -3020,9 +3010,9 @@ expand_call (tree exp, rtx target, int ignore)
 		sibcall_failure = 1;
 	    }
 	}
-      else if (TYPE_MODE (TREE_TYPE (exp)) == BLKmode)
+      else if (TYPE_MODE (rettype) == BLKmode)
 	{
-	  target = copy_blkmode_from_reg (target, valreg, TREE_TYPE (exp));
+	  target = copy_blkmode_from_reg (target, valreg, rettype);
 
 	  /* We can not support sibling calls for this case.  */
 	  sibcall_failure = 1;
@@ -3030,38 +3020,37 @@ expand_call (tree exp, rtx target, int ignore)
       else
 	target = copy_to_reg (avoid_likely_spilled_reg (valreg));
 
-      if (targetm.calls.promote_function_return(funtype))
+      /* If we promoted this return value, make the proper SUBREG.
+         TARGET might be const0_rtx here, so be careful.  */
+      if (REG_P (target)
+	  && TYPE_MODE (rettype) != BLKmode
+	  && GET_MODE (target) != TYPE_MODE (rettype))
 	{
-	  /* If we promoted this return value, make the proper SUBREG.
-	     TARGET might be const0_rtx here, so be careful.  */
-	  if (REG_P (target)
-	      && TYPE_MODE (TREE_TYPE (exp)) != BLKmode
-	      && GET_MODE (target) != TYPE_MODE (TREE_TYPE (exp)))
+	  tree type = rettype;
+	  int unsignedp = TYPE_UNSIGNED (type);
+	  int offset = 0;
+	  enum machine_mode pmode;
+
+	  /* Ensure we promote as expected, and get the new unsignedness.  */
+	  pmode = promote_function_mode (type, TYPE_MODE (type), &unsignedp,
+					 funtype, 1);
+	  gcc_assert (GET_MODE (target) == pmode);
+
+	  if ((WORDS_BIG_ENDIAN || BYTES_BIG_ENDIAN)
+	      && (GET_MODE_SIZE (GET_MODE (target))
+		  > GET_MODE_SIZE (TYPE_MODE (type))))
 	    {
-	      tree type = TREE_TYPE (exp);
-	      int unsignedp = TYPE_UNSIGNED (type);
-	      int offset = 0;
-	      enum machine_mode pmode;
-
-	      pmode = promote_mode (type, TYPE_MODE (type), &unsignedp, 1);
-	      /* If we don't promote as expected, something is wrong.  */
-	      gcc_assert (GET_MODE (target) == pmode);
-
-	      if ((WORDS_BIG_ENDIAN || BYTES_BIG_ENDIAN)
-		  && (GET_MODE_SIZE (GET_MODE (target))
-		      > GET_MODE_SIZE (TYPE_MODE (type))))
-		{
-		  offset = GET_MODE_SIZE (GET_MODE (target))
-		    - GET_MODE_SIZE (TYPE_MODE (type));
-		  if (! BYTES_BIG_ENDIAN)
-		    offset = (offset / UNITS_PER_WORD) * UNITS_PER_WORD;
-		  else if (! WORDS_BIG_ENDIAN)
-		    offset %= UNITS_PER_WORD;
-		}
-	      target = gen_rtx_SUBREG (TYPE_MODE (type), target, offset);
-	      SUBREG_PROMOTED_VAR_P (target) = 1;
-	      SUBREG_PROMOTED_UNSIGNED_SET (target, unsignedp);
+	      offset = GET_MODE_SIZE (GET_MODE (target))
+	        - GET_MODE_SIZE (TYPE_MODE (type));
+	      if (! BYTES_BIG_ENDIAN)
+	        offset = (offset / UNITS_PER_WORD) * UNITS_PER_WORD;
+	      else if (! WORDS_BIG_ENDIAN)
+	        offset %= UNITS_PER_WORD;
 	    }
+
+	  target = gen_rtx_SUBREG (TYPE_MODE (type), target, offset);
+	  SUBREG_PROMOTED_VAR_P (target) = 1;
+	  SUBREG_PROMOTED_UNSIGNED_SET (target, unsignedp);
 	}
 
       /* If size of args is variable or this was a constructor call for a stack
@@ -3807,7 +3796,7 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
      cse'ing of library calls could delete a call and leave the pop.  */
   NO_DEFER_POP;
   valreg = (mem_value == 0 && outmode != VOIDmode
-	    ? hard_libcall_value (outmode) : NULL_RTX);
+	    ? hard_libcall_value (outmode, orgfun) : NULL_RTX);
 
   /* Stack must be properly aligned now.  */
   gcc_assert (!(stack_pointer_delta
@@ -3876,15 +3865,14 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
 	}
       else
 	{
-	  /* Convert to the proper mode if PROMOTE_MODE has been active.  */
+	  /* Convert to the proper mode if a promotion has been active.  */
 	  if (GET_MODE (valreg) != outmode)
 	    {
 	      int unsignedp = TYPE_UNSIGNED (tfom);
 
-	      gcc_assert (targetm.calls.promote_function_return (tfom));
-	      gcc_assert (promote_mode (tfom, outmode, &unsignedp, 0)
+	      gcc_assert (promote_function_mode (tfom, outmode, &unsignedp,
+						 fndecl ? TREE_TYPE (fndecl) : fntype, 1)
 			  == GET_MODE (valreg));
-
 	      valreg = convert_modes (outmode, GET_MODE (valreg), valreg, 0);
 	    }
 

@@ -1,3 +1,889 @@
+2009-09-09  Loren J. Rittle  <ljrittle@acm.org>
+
+	* testsuite/30_threads/thread/native_handle/typesizes.cc: Remove
+	*-*-freebsd* from both dg-do and dg-options.
+
+2009-09-08  Alexandre Oliva  <aoliva@redhat.com>
+
+	* configure: Rebuilt with modified libtool.m4.
+
+2009-09-07  H.J. Lu  <hongjiu.lu@intel.com>
+            Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	PR libstdc++/41280
+	* configure.ac: Run "${multi_basedir}/config-ml.in" to generate
+	MULTISUBDIR = in subdirectory Makefiles, with ml_norecursion set.
+	* configure: Regenerate.
+
+2009-09-06  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/41267
+	* include/bits/stl_algobase.h (__copy_move::__copy_m,
+	__copy_move_backward::__copy_move_b): Don't call __builtin_memmove
+	with a null third argument.
+
+2009-09-04  Benjamin Kosnik  <bkoz@redhat.com>
+
+	Revert.
+	2009-08-06  Benjamin Kosnik  <bkoz@redhat.com>
+	* src/compatibility.cc: Make C++0x safe, add in explicit casts to
+	bool for stream sentry objects.
+	* include/bits/istream.tcc: Same.
+	* include/bits/ostream.tcc: Same.
+	* include/bits/basic_string.tcc: Same.
+	* include/bits/ostream_insert.h: Same.
+	* src/istream.cc: Same.
+
+2009-09-02  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac: Replace AC_CONFIG_COMMANDS([default])
+	instantiation with additional commands issued for each Makefile
+	in glibcxx_SUBDIRS, so `./config.status subdir/Makefile' also
+	runs these commands.
+	Add a separate AC_CONFIG_COMMANDS([generate-headers]) for
+	running `make' in include, passing `pch_build=' to `make'.
+	* configure: Regenerate.
+
+	PR libstdc++/41220
+	* include/Makefile.am (CLEANFILES): Add stamp-host.
+	* include/Makefile.in: Regenerate.
+
+2009-09-02  Joseph Myers  <joseph@codesourcery.com>
+
+	* testsuite/lib/libstdc++.exp (libstdc++_init): Copy .tcc files
+	under util/ to remote host.  Copy .h and .hpp files at more levels
+	under util/ to remote host.
+
+2009-09-02  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/stl_uninitialized.h
+	(__uninitialized_copy::uninitialized_copy): Just call (the now
+	forwarding) _Construct.
+
+2009-09-01  Chris Jefferson  <chris@bubblescope.net>
+	    Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* testsuite/util/testsuite_rvalref.h: Remove obsolete macro using
+	_GLIBCXX_TESTSUITE_ALLOW_RVALREF_ALIASING.
+	* testsuite/20_util/specialized_algorithms/uninitialized_copy_n/
+	move_iterators/1.cc: Adjust, do not define
+	_GLIBCXX_TESTSUITE_ALLOW_RVALREF_ALIASING.
+	* testsuite/20_util/specialized_algorithms/uninitialized_copy/
+	move_iterators/1.cc: Likewise.
+	* testsuite/25_algorithms/copy_n/move_iterators/1.cc: Likewise.
+	* testsuite/25_algorithms/move/1.cc: Likewise.
+	* testsuite/25_algorithms/move_backward/1.cc: Likewise.
+	* testsuite/25_algorithms/copy_backward/move_iterators/1.cc: Likewise.
+	* testsuite/25_algorithms/copy/move_iterators/1.cc: Likewise.
+	* testsuite/25_algorithms/heap/moveable.cc: Likewise.
+	* testsuite/25_algorithms/partial_sort/moveable.cc: Likewise; add
+	test for predicated test.
+	* testsuite/25_algorithms/sort/moveable.cc: Likewise.
+	* testsuite/25_algorithms/nth_element/moveable.cc: Add test
+	for predicated version.
+	* testsuite/25_algorithms/unique/moveable.cc: Likewise.
+
+	* testsuite/25_algorithms/inplace_merge/1.cc (S::operator<): Fix,
+	enable test2 and test3.
+
+	* testsuite/util/testsuite_iterators.h (operator=): Fix invalid
+	moving bug in C++0x mode.
+
+	* testsuite/25_algorithms/random_shuffle/moveable.cc: New.
+	* testsuite/25_algorithms/prev_permutation/moveable.cc: Likewise.
+	* testsuite/25_algorithms/next_permutation/moveable.cc: Likewise.
+	* testsuite/25_algorithms/heap/moveable2.cc: Likewise.
+
+2009-08-31  Uros Bizjak  <ubizjak@gmail.com>
+	    Kaz Kojima  <kkojima@gcc.gnu.org>
+
+	* testsuite/18_support/numeric_limits/denorm_min.cc: Use
+	dg-add-options ieee.
+	* testsuite/18_support/numeric_limits/digits10.cc: Likewise.
+	* testsuite/18_support/numeric_limits/epsilon.cc: Likewise.
+	* testsuite/18_support/numeric_limits/infinity.cc: Likewise.
+	* testsuite/18_support/numeric_limits/is_iec559.cc: Likewise.
+	* testsuite/18_support/numeric_limits/is_signed.cc: Likewise.
+	* testsuite/18_support/numeric_limits/min_max.cc: Likewise.
+	* testsuite/18_support/numeric_limits/quiet_NaN.cc: Likewise.
+	* testsuite/18_support/numeric_limits/
+	specialization_default_values.cc: Likewise.
+	* testsuite/18_support/numeric_limits/traps.cc: Likewise.
+	* testsuite/26_numerics/complex/pow.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	01_assoc_laguerre/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	02_assoc_legendre/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	03_beta/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	04_comp_ellint_1/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	05_comp_ellint_2/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	06_comp_ellint_3/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	07_conf_hyperg/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	08_cyl_bessel_i/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	09_cyl_bessel_j/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	10_cyl_bessel_k/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	11_cyl_neumann/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	12_ellint_1/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	13_ellint_2/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	14_ellint_3/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	15_expint/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	16_hermite/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	17_hyperg/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	18_laguerre/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	19_legendre/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	20_riemann_zeta/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	21_sph_bessel/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	22_sph_legendre/check_nan.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/special_functions/
+	23_sph_neumann/check_nan.cc: Likewise.
+
+2009-08-29  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/stl_construct.h: Include <bits/move.h>.
+
+2009-08-29  Chris Jefferson  <chris@bubblescope.net>
+
+	* include/bits/move.h (_GLIBCXX_FORWARD): Add.
+	* include/bits/stl_uninitialized.h (__uninitialized_construct_range):
+	Add.
+	* include/bits/stl_tempbuf.h (_Temporary_buffer::
+	_Temporary_buffer(_ForwardIterator, _ForwardIterator)): Use the latter.
+	* include/bits/stl_construct.h (_Construct(_T1*, _T2&&)): Add in
+	C++0x mode.
+	* testsuite/util/testsuite_hooks.h (operator<(const copy_tracker&,
+    	const copy_tracker&)): Add.
+	* testsuite/25_algorithms/stable_partition/mem_check.cc: New.
+	* testsuite/25_algorithms/stable_sort/mem_check.cc: Likewise.
+
+2009-08-26  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* config/abi/pre/gnu.ver: Fixups for string member functions.
+
+2009-08-26  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	PR libstdc++/41005
+	* configure.ac: Bump libtool_VERSION to 6:14:0.
+	* configure: Regenerate.
+	* src/Makefile.am: Compile fstream-inst.cc as C++0x.
+	* src/Makefile.in: Regenerate.
+	* config/abi/pre/gnu.ver: Add new symbols and disambiguate old ones,
+	move <future> symbols to 3.4.14 version.
+	* testsuite/util/testsuite_abi.cc: Add GLIBCXX_3.4.14 version.
+
+2009-08-25  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* include/bits/basic_string.h (basic_string): Add cbegin(),
+	cend(), crbegin(), crend() in C++0x mode.
+	* config/abi/pre/gnu.ver: Add exports.
+
+	* testsuite/util/testsuite_containers.h: New.
+	* testsuite/util/testsuite_container_traits.h: New.
+	* testsuite/21_strings/basic_string/requirements/citerators.cc: New.
+	* testsuite/21_strings/basic_string/requirements/typedefs.cc: New.
+	* testsuite/ext/vstring/requirements/citerators.cc: Edit.
+	* testsuite/ext/vstring/requirements/typedefs.cc: New.
+	* testsuite/23_containers/unordered_map/requirements/
+	cliterators.cc: Edit.
+	* testsuite/23_containers/unordered_map/requirements/
+	citerators.cc: Edit.
+	* testsuite/23_containers/unordered_map/requirements/
+	explicit_instantiation/1.cc: New.
+	* testsuite/23_containers/unordered_map/requirements/
+	explicit_instantiation/2.cc: New.
+	* testsuite/23_containers/unordered_map/requirements/
+	explicit_instantiation/3.cc: New.
+	* testsuite/23_containers/unordered_map/requirements/typedefs.cc: Edit.
+	* testsuite/23_containers/unordered_map/requirements/
+	explicit_instantiation.cc: Move to nested directory.
+	* testsuite/23_containers/queue/requirements/typedefs.cc: New.
+	* testsuite/23_containers/priority_queue/requirements/typedefs.cc: New.
+	* testsuite/23_containers/multimap/requirements/citerators.cc: Edit.
+	* testsuite/23_containers/multimap/requirements/typedefs.cc: New.
+	* testsuite/23_containers/set/requirements/citerators.cc: Edit.
+	* testsuite/23_containers/set/requirements/typedefs.cc: New.
+	* testsuite/23_containers/unordered_multimap/requirements/
+	cliterators.cc: Edit.
+	* testsuite/23_containers/unordered_multimap/requirements/
+	citerators.cc: Edit.
+	* testsuite/23_containers/unordered_multimap/requirements/
+	explicit_instantiation/1.cc: New.
+	* testsuite/23_containers/unordered_multimap/requirements/
+	explicit_instantiation/2.cc: Edit.: New.
+	* testsuite/23_containers/unordered_multimap/requirements/
+	explicit_instantiation/3.cc: New.
+	* testsuite/23_containers/unordered_multimap/requirements/
+	typedefs.cc: Edit.
+	* testsuite/23_containers/unordered_multimap/requirements/
+	explicit_instantiation.cc: Move to nested.
+	* testsuite/23_containers/forward_list/requirements/citerators.cc: New.
+	* testsuite/23_containers/forward_list/requirements/1.cc: Remove.
+	* testsuite/23_containers/forward_list/requirements/dr438/
+	insert_neg.cc: New.
+	* testsuite/23_containers/forward_list/requirements/dr438/
+	assign_neg.cc: New.
+	* testsuite/23_containers/forward_list/requirements/dr438/
+	constructor_1_neg.cc: New.
+	* testsuite/23_containers/forward_list/requirements/dr438/
+	constructor_2_neg.cc: New.
+	* testsuite/23_containers/forward_list/requirements/dr438/
+	constructor.cc: New.
+	* testsuite/23_containers/forward_list/requirements/typedefs.cc: New.
+	* testsuite/23_containers/unordered_set/requirements/
+	cliterators.cc: Edit.
+	* testsuite/23_containers/unordered_set/requirements/
+	citerators.cc: Edit.
+	* testsuite/23_containers/unordered_set/requirements/
+	explicit_instantiation/1.cc: New.
+	* testsuite/23_containers/unordered_set/requirements/
+	explicit_instantiation/2.cc: New.
+	* testsuite/23_containers/unordered_set/requirements/
+	explicit_instantiation/3.cc: New.
+	* testsuite/23_containers/unordered_set/requirements/typedefs.cc: Edit.
+	* testsuite/23_containers/unordered_set/requirements/
+	explicit_instantiation.cc: Move to nested.
+	* testsuite/23_containers/vector/requirements/citerators.cc: Edit.
+	* testsuite/23_containers/vector/requirements/dr438/bool/
+	constructor.cc: Move.
+	* testsuite/23_containers/vector/requirements/typedefs.cc: New.
+	* testsuite/23_containers/vector/bool/requirements/citerators.cc: Edit.
+	* testsuite/23_containers/vector/bool/requirements/dr438/
+	constructor.cc: New.
+	* testsuite/23_containers/deque/requirements/citerators.cc: Edit.
+	* testsuite/23_containers/deque/requirements/typedefs.cc
+	* testsuite/23_containers/stack/requirements/typedefs.cc
+	* testsuite/23_containers/multiset/requirements/citerators.cc: Edit.
+	* testsuite/23_containers/multiset/requirements/typedefs.cc: New.
+	* testsuite/23_containers/list/requirements/citerators.cc: Edit.
+	* testsuite/23_containers/list/requirements/typedefs.cc: New.
+	* testsuite/23_containers/unordered_multiset/requirements/
+	cliterators.cc: Edit.
+	* testsuite/23_containers/unordered_multiset/requirements/
+	citerators.cc: Edit.
+	* testsuite/23_containers/unordered_multiset/requirements/
+	explicit_instantiation.cc: Move.
+	* testsuite/23_containers/unordered_multiset/requirements/
+	explicit_instantiation/1.cc: New.
+	* testsuite/23_containers/unordered_multiset/requirements/
+	explicit_instantiation/2.cc: New.
+	* testsuite/23_containers/unordered_multiset/requirements/
+	explicit_instantiation/3.cc: New.
+	* testsuite/23_containers/unordered_multiset/requirements/typedefs.cc
+	* testsuite/23_containers/map/requirements/citerators.cc: Edit.
+	* testsuite/23_containers/map/requirements/typedefs.cc: New.
+	* testsuite/23_containers/array/requirements/citerators.cc: Edit.
+	* testsuite/23_containers/array/requirements/explicit_instantiation.cc:
+	Move.
+	* testsuite/23_containers/array/requirements/
+	explicit_instantiation/1.cc: New.
+	* testsuite/23_containers/array/requirements/
+	explicit_instantiation/2.cc: New.
+	* testsuite/23_containers/array/requirements/typedefs.cc: New.
+
+2009-08-24  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac (AC_PREREQ): Bump to 2.64.
+
+2009-08-24  Chris Jefferson  <chris@bubblescope.net>
+
+	* include/stl_algo.h (__unguarded_partition_pivot,
+	__move_median_first): New.
+	(__insertion_sort, __unguarded_insertion_sort): Adjust for move-only
+	types.
+	(__unguarded_linear_insert): Assume always inserting value at __last.
+	(__unguarded_partition): Take pivot by reference.
+	(__introsort_loop, __introselect): Use __unguarded_partition_pivot.
+	* testsuite/25_algorithms/nth_element/moveable.cc: Enable.
+
+2009-08-23  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* libsupc++/Makefile.am (LTCOMPILE): Expand $(LIBTOOLFLAGS)
+	before --mode argument.
+	* libsupc++/Makefile.in: Regenerate.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* doc/xml/manual/build_hacking.xml: Use tools from Autoconf
+	2.64 and Automake 1.11 in examples; update link to Autoconf
+	manual page about quadrigraphs.
+	* Makefile.am (install-html, install-pdf): Remove.
+	* Makefile.in: Regenerate.
+
+	* Makefile.in: Regenerate.
+	* acinclude.m4: Regenerate.
+	* aclocal.m4: Regenerate.
+	* config.h.in: Regenerate.
+	* configure: Regenerate.
+	* doc/Makefile.in: Regenerate.
+	* include/Makefile.in: Regenerate.
+	* libsupc++/Makefile.in: Regenerate.
+	* po/Makefile.in: Regenerate.
+	* python/Makefile.in: Regenerate.
+	* src/Makefile.in: Regenerate.
+	* testsuite/Makefile.in: Regenerate.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* libsupc++/Makefile.am (LTCOMPILE, LTCXXCOMPILE, CXXLINK): Add
+	$(LIBTOOLFLAGS).
+	* libsupc++/Makefile.in: Regenerate.
+	* src/Makefile.am (LTCXXCOMPILE, CXXLINK): Add $(AM_LIBTOOLFLAGS)
+	and $(LIBTOOLFLAGS).
+	* src/Makefile.in: Regenerate.
+
+2009-08-20  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* testsuite/30_threads/packaged_task/requirements/typedefs.cc: Add
+	missing dg-require directives.
+
+2009-08-20  Edward Smith-Rowland  <3dw4rd@verizon.net>
+
+	* include/tr1/gamma.tcc: Change include guard from _TR1_GAMMA_TCC
+	to _GLIBCXX_TR1_GAMMA_TCC to match the rest of the headers in tr1.
+	* include/tr1/exp_integral.tcc: Replace _TR1_GAMMA_TCC with
+	__numeric_constants<_Tp>::__gamma_e().
+
+2009-08-17  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* testsuite/30_threads/packaged_task/requirements/typedefs.cc: New.
+
+2009-08-15  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac: Move guarded checks for CC and CXX ...
+	* acinclude.m4 (GLIBCXX_CONFIGURE): ... from here.
+	* configure: Regenerate.
+
+2009-08-14  Edward Smith-Rowland  <3dw4rd@verizon.net>
+	    Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/41061
+	* include/bits/random.h (operator<<(std::basic_ostream<>&,
+	const std::lognormal_distribution<>&),
+	operator>>(std::basic_istream<>&, std::lognormal_distribution<>&),
+	operator<<(std::basic_ostream<>&, const std::gamma_distribution<>&),
+	operator>>(std::basic_istream<>&, std::gamma_distribution<>&),
+	operator<<(std::basic_ostream<>&,
+	const std::chi_squared_distribution<>&),
+	operator>>(std::basic_istream<>&, std::chi_squared_distribution<>&),
+	operator<<(std::basic_ostream<>&,
+	const std::fisher_f_distribution<>&),
+	operator>>(std::basic_istream<>&, std::fisher_f_distribution<>&),
+	operator<<(std::basic_ostream<>&,
+	const std::student_t_distribution<>&),
+	operator>>(std::basic_istream<>&, std::student_t_distribution<>&),
+	operator<<(std::basic_ostream<>&,
+	const std::negative_binomial_distribution<>&)): Declare friend.
+	* testsuite/26_numerics/random/uniform_real_distribution/operators/
+	serialize.cc: New.
+	* testsuite/26_numerics/random/piecewise_constant_distribution/
+	operators/serialize.cc: Likewise.
+	* testsuite/26_numerics/random/chi_squared_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/normal_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/uniform_int_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/poisson_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/bernoulli_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/discrete_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/weibull_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/negative_binomial_distribution/
+	operators/serialize.cc: Likewise.
+	* testsuite/26_numerics/random/cauchy_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/gamma_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/fisher_f_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/exponential_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/lognormal_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/binomial_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/extreme_value_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_linear_distribution/
+	operators/serialize.cc
+	* testsuite/26_numerics/random/student_t_distribution/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/geometric_distribution/operators/
+	serialize.cc: Likewise.
+
+2009-08-14  Edward Smith-Rowland  <3dw4rd@verizon.net>
+
+	* include/bits/stl_tree.h: In C++0x mode make erase return
+	an iterator as per DR 130.
+	* include/bits/stl_set.h: Same.
+	* include/bits/stl_multiset.h: Same.
+	* include/bits/stl_map.h: Same.
+	* include/bits/stl_multimap.h: Same.
+	* doc/xml/manual/intro.xml: Document.
+	* testsuite/23_containers/set/dr130.cc: New.
+	* testsuite/23_containers/multiset/dr130.cc: New.
+	* testsuite/23_containers/map/dr130.cc: New.
+	* testsuite/23_containers/multimap/dr130.cc: New.
+
+2009-08-14  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* include/ext/pointer.h: Add pragma system_header, use
+	_GLIBCXX_USE_LONG_LONG, macro cleanup.
+
+2009-08-14  Uros Bizjak  <ubizjak@gmail.com>
+
+	* src/compatibility-ldbl.cc: Include cmath.
+
+2009-08-13  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* src/compatibility-ldbl.cc: Include tr1/functional.
+
+2009-08-12  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* src/compatibility-ldbl.cc: Add explicit namespace scope.
+
+2009-08-11  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* include/precompiled/extc++.h: Don't include TR1 if C++0x.
+	* include/precompiled/stdc++.h: Don't include cassert if
+	_GLIBCXX_NO_ASSERT defined.
+	* include/ext/cast.h (_GLIBCXX_BEGIN_NAMESPACE): Remove extra
+	semi-colon.
+	* include/ext/pointer.h (_GCC_CXX_POINTER_COMPARISON_OPERATION_SET):
+	Same.
+
+	* testsuite/17_intro/headers/all.cc: Move into dialect-specific
+	directory.
+	* testsuite/17_intro/headers/all_pedantic_errors.cc: Same.
+	* testsuite/17_intro/headers/all_assert_neg.cc: Same.
+	* testsuite/17_intro/headers/all_c++200x_compatibility.cc: Same.
+
+	* testsuite/17_intro/headers/c++1998/all.cc: Use extc++.h include.
+	* testsuite/17_intro/headers/c++1998/stdc++.cc: Converted all.cc,
+	use stdc++.h include.
+	* testsuite/17_intro/headers/c++1998/all_pedantic_errors.cc: Same.
+	* testsuite/17_intro/headers/c++1998/stdc++_assert_neg.cc: Same.
+	* testsuite/17_intro/headers/c++1998/all_c++200x_compatibility.cc: Same.
+	* testsuite/17_intro/headers/c++1998/all_no_exceptions.cc: New.
+	* testsuite/17_intro/headers/c++1998/all_multiple_inclusion.cc: To...
+	* testsuite/17_intro/headers/c++1998/stdc++_multiple_inclusion.cc
+	...this.
+	* testsuite/17_intro/headers/c++200x/all.cc: To...
+	* testsuite/17_intro/headers/c++200x/stdc++.cc: ..this.
+	* testsuite/17_intro/headers/c++200x/all_multiple_inclusion.cc: To...
+	* testsuite/17_intro/headers/c++200x/stdc++_multiple_inclusion.cc:
+	...this.
+	* testsuite/17_intro/headers/c++200x/all_no_exceptions.cc: New.
+	* testsuite/17_intro/headers/c++200x/all_pedantic_errors.cc: New.
+
+2009-08-10  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* include/std/future: Move error handling bits outside macro guard.
+	* src/future.cc: Adjust.
+
+	* include/precompiled/stdc++.h: Add future.
+	* doc/xml/manual/using.xml: Same.
+
+2009-08-10  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* src/hashtable.cc: Just definitions.
+	* src/hashtable_c++0x.cc: Compile C++0x versions.
+	* src/hash.cc: Same.
+	* src/hash_c++0x.cc: Same.
+	src/hash_tr1.cc: Compile TR1 versions.
+	src/hashtable_tr1.cc: Same.
+
+	* src/limits_c++0x.cc: Sync build error handling.
+
+	* src/Makefile.am (sources): Change hash.cc to hash_tr1.cc,
+	hashtable.cc to hashtable_tr1.cc.
+	* src/Makefile.in: Regenerate.
+
+2009-08-10  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* include/tr1_impl/functional: Doxygen markup.
+
+	* doc/html/*: Regenerate.
+
+2009-08-10  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* include/std/future: Fixes for -fno-exceptions.
+	* include/bits/functexcept.h: Same.
+	* libsupc++/exception_ptr.h: Same.
+	* src/pool_allocator.cc: Same.
+	* src/future.cc: Same.
+	* src/functexcept.cc: Same.
+	* config/abi/pre/gnu.ver: New exports.
+	* testsuite/30_threads/packaged_task/cons/assign_neg.cc: Adjust.
+	* testsuite/30_threads/packaged_task/cons/copy_neg.cc: Same.
+	* testsuite/30_threads/unique_future/cons/assign_neg.cc: Same.
+	* testsuite/30_threads/unique_future/cons/copy_neg.cc: Same.
+	* testsuite/30_threads/shared_future/cons/assign_neg.cc: Same.
+	* testsuite/30_threads/promise/cons/assign_neg.cc: Same.
+	* testsuite/30_threads/promise/cons/copy_neg.cc: Same.
+
+	* testsuite/23_containers/deque/operators/1.cc: Separate in two...
+	* testsuite/23_containers/deque/operators/2.cc: New.
+
+2009-08-07  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* src/hash.cc (hash<string>::operator()(string),
+	hash<wstring>::operator()(wstring)): Do not decorate as throwing
+	nothing.
+	* include/bits/functional_hash.h (hash<error_code>::
+	operator()(error_code)): Likewise.
+
+2009-08-06  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* src/compatibility.cc: Make C++0x safe, add in explicit casts to
+	bool for stream sentry objects.
+	* include/bits/istream.tcc: Same.
+	* include/bits/ostream.tcc: Same.
+	* include/bits/basic_string.tcc: Same.
+	* include/bits/ostream_insert.h: Same.
+	* src/istream.cc: Same.
+
+2009-08-04  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/15523
+	* include/debug/safe_iterator.h (_Safe_iterator<>::
+	_Safe_iterator(const _Safe_iterator&), _Safe_iterator<>::
+	operator=(const _Safe_iterator&)): Implement resolution of DR 408,
+	do not error out when the source is a value-initialized iterator.
+	* testsuite/23_containers/vector/15523.cc: New.
+	* doc/xml/manual/intro.xml: Add an entry for DR 408.
+
+2009-08-03  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/std/istream (operator>>(basic_istream<>&&, _Tp&)): Minor
+	cosmetic changes, inline.
+	* include/std/ostream (operator<<(basic_ostream<>&&, const _Tp&)):
+	Likewise.
+	* include/bits/move.h: Minor cosmetic changes.
+
+2009-08-02  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/40912 (final)
+	* testsuite/26_numerics/random/mt19937.cc: dg-require-cstdint.
+	* testsuite/26_numerics/random/uniform_real_distribution/cons/
+	parms_neg.cc: Likewise.
+	* testsuite/26_numerics/random/uniform_real_distribution/cons/
+	parms.cc: Likewise.
+	* testsuite/26_numerics/random/uniform_real_distribution/cons/
+	default.cc: Likewise.
+	* testsuite/26_numerics/random/uniform_real_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_constant_distribution/
+	cons/range.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_constant_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_constant_distribution/
+	cons/num_xbound_fun.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_constant_distribution/
+	cons/initlist_fun.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_constant_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/minstd_rand.cc: Likewise.
+	* testsuite/26_numerics/random/chi_squared_distribution/cons/
+	parms.cc: Likewise.
+	* testsuite/26_numerics/random/chi_squared_distribution/cons/
+	default.cc: Likewise.
+	* testsuite/26_numerics/random/chi_squared_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/normal_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/normal_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/normal_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/seed_seq/cons/
+	range.cc: Likewise.
+	* testsuite/26_numerics/random/seed_seq/cons/
+	initlist.cc: Likewise.
+	* testsuite/26_numerics/random/seed_seq/cons/
+	default.cc: Likewise.
+	* testsuite/26_numerics/random/seed_seq/requirements/
+	typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/uniform_int_distribution/
+	cons/parms_neg.cc: Likewise.
+	* testsuite/26_numerics/random/uniform_int_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/uniform_int_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/uniform_int_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/poisson_distribution/cons/
+	parms.cc: Likewise.
+	* testsuite/26_numerics/random/poisson_distribution/cons/
+	default.cc: Likewise.
+	* testsuite/26_numerics/random/poisson_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/bernoulli_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/bernoulli_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/bernoulli_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/ranlux24_base.cc: Likewise.
+	* testsuite/26_numerics/random/
+	default_random_engine.cc: Likewise.
+	* testsuite/26_numerics/random/discrete_distribution/
+	cons/range.cc: Likewise.
+	* testsuite/26_numerics/random/discrete_distribution/
+	cons/initlist.cc: Likewise.
+	* testsuite/26_numerics/random/discrete_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/discrete_distribution/
+	cons/num_xbound_fun.cc: Likewise.
+	* testsuite/26_numerics/random/discrete_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/weibull_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/weibull_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/weibull_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/independent_bits_engine/
+	cons/base_move.cc: Likewise.
+	* testsuite/26_numerics/random/independent_bits_engine/
+	cons/seed1.cc: Likewise.
+	* testsuite/26_numerics/random/independent_bits_engine/
+	cons/seed2.cc: Likewise.
+	* testsuite/26_numerics/random/independent_bits_engine/
+	cons/base_copy.cc: Likewise.
+	* testsuite/26_numerics/random/independent_bits_engine/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/independent_bits_engine/
+	cons/seed_seq.cc: Likewise.
+	* testsuite/26_numerics/random/independent_bits_engine/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/independent_bits_engine/
+	operators/equal.cc: Likewise.
+	* testsuite/26_numerics/random/independent_bits_engine/
+	operators/serialize.cc: Likewise.
+	* testsuite/26_numerics/random/ranlux48_base.cc: Likewise.
+	* testsuite/26_numerics/random/minstd_rand0.cc: Likewise.
+	* testsuite/26_numerics/random/subtract_with_carry_engine/
+	cons/seed1.cc: Likewise.
+	* testsuite/26_numerics/random/subtract_with_carry_engine/
+	cons/seed2.cc: Likewise.
+	* testsuite/26_numerics/random/subtract_with_carry_engine/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/subtract_with_carry_engine/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/subtract_with_carry_engine/
+	operators/equal.cc: Likewise.
+	* testsuite/26_numerics/random/subtract_with_carry_engine/
+	operators/serialize.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/
+	base_move.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/
+	seed1.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/
+	seed2.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/
+	base_copy.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/
+	default.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/
+	seed_seq.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/
+	operators/equal.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/
+	operators/serialize.cc: Likewise.
+	* testsuite/26_numerics/random/cauchy_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/cauchy_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/cauchy_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/negative_binomial_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/negative_binomial_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/negative_binomial_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/gamma_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/gamma_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/gamma_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/mersenne_twister_engine/
+	cons/seed1.cc: Likewise.
+	* testsuite/26_numerics/random/mersenne_twister_engine/
+	cons/seed2.cc: Likewise.
+	* testsuite/26_numerics/random/mersenne_twister_engine/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/mersenne_twister_engine/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/mersenne_twister_engine/
+	operators/equal.cc: Likewise.
+	* testsuite/26_numerics/random/mersenne_twister_engine/
+	operators/serialize.cc: Likewise.
+	* testsuite/26_numerics/random/fisher_f_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/fisher_f_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/fisher_f_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/exponential_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/exponential_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/exponential_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/binomial_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/binomial_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/binomial_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/lognormal_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/lognormal_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/lognormal_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/mt19937_64.cc: Likewise.
+	* testsuite/26_numerics/random/random_device/cons/
+	token.cc: Likewise.
+	* testsuite/26_numerics/random/random_device/cons/
+	default.cc: Likewise.
+	* testsuite/26_numerics/random/random_device/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/ranlux24.cc: Likewise.
+	* testsuite/26_numerics/random/extreme_value_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/extreme_value_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/extreme_value_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_linear_distribution/
+	cons/range.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_linear_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_linear_distribution/
+	cons/num_xbound_fun.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_linear_distribution/
+	cons/initlist_fun.cc: Likewise.
+	* testsuite/26_numerics/random/piecewise_linear_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/student_t_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/student_t_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/student_t_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/linear_congruential_engine/
+	cons/seed1.cc: Likewise.
+	* testsuite/26_numerics/random/linear_congruential_engine/
+	cons/seed2.cc: Likewise.
+	* testsuite/26_numerics/random/linear_congruential_engine/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/linear_congruential_engine/
+	requirements/non_uint_neg.cc: Likewise.
+	* testsuite/26_numerics/random/linear_congruential_engine/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/linear_congruential_engine/
+	operators/equal.cc: Likewise.
+	* testsuite/26_numerics/random/linear_congruential_engine/
+	operators/serialize.cc: Likewise.
+	* testsuite/26_numerics/random/ranlux48.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/cons/
+	base_move.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/cons/
+	seed1.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/cons/
+	seed2.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/cons/
+	base_copy.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/cons/
+	default.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/cons/
+	seed_seq.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/
+	operators/equal.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/
+	operators/serialize.cc: Likewise.
+	* testsuite/26_numerics/random/geometric_distribution/
+	cons/parms.cc: Likewise.
+	* testsuite/26_numerics/random/geometric_distribution/
+	cons/default.cc: Likewise.
+	* testsuite/26_numerics/random/geometric_distribution/
+	requirements/typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/knuth_b.cc: Likewise.
+
+2009-07-31  Jason Merrill  <jason@redhat.com>
+	    Douglas Gregor  <doug.gregor@gmail.com>
+
+	* include/bits/move.h (forward): Implement as in N2835.
+	(move): Implement as in N2831.
+	* include/std/istream (rvalue stream operator>>): New.
+	* include/std/ostream (rvalue stream operator<<): New.
+	* testsuite/27_io/rvalue_streams.cc: New.
+
+2009-07-31  Jason Merrill  <jason@redhat.com>
+
+	* include/bits/forward_list.h (splice_after): Use forward.
+	(merge): Likewise.
+	* include/bits/stl_iterator.h (move_iterator::operator*): Use move.
+	(move_iterator::operator[]): Use move.
+	* include/bits/stl_list.h (insert): Use move.
+	* include/std/thread (_Callable constructor): Use forward.
+	* include/std/tuple: Don't specify explicit template args to move.
+
+	* testsuite/20_util/forward/requirements/explicit_instantiation.cc:
+	Adjust signature.
+	* testsuite/20_util/tuple/swap.cc: Swap takes lvalue reference.
+	* testsuite/30_threads/shared_future/cons/copy.cc: Return rvalue
+	reference.
+	* testsuite/20_util/shared_ptr/assign/auto_ptr.cc,
+	testsuite/20_util/shared_ptr/assign/auto_ptr_neg.cc,
+	testsuite/20_util/shared_ptr/cons/auto_ptr.cc,
+	testsuite/20_util/shared_ptr/cons/auto_ptr_neg.cc,
+	testsuite/23_containers/forward_list/ext_pointer/operations/1.cc,
+	testsuite/23_containers/forward_list/ext_pointer/operations/5.cc,
+	testsuite/23_containers/forward_list/operations/1.cc,
+	testsuite/23_containers/forward_list/operations/5.cc: Use move.
+	* testsuite/23_containers/list/requirements/dr438/assign_neg.cc,
+	testsuite/23_containers/list/requirements/dr438/constructor_1_neg.cc,
+	testsuite/23_containers/list/requirements/dr438/constructor_2_neg.cc,
+	testsuite/23_containers/list/requirements/dr438/insert_neg.cc,
+	testsuite/30_threads/thread/cons/assign_neg.cc: Adjust line numbers.
+
+2009-07-31  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/40912 (partial)
+	* include/std/random: Disable the facility if <stdint.h> is not
+	available.
+
 2009-07-30  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
 
 	PR libstdc++/40919
@@ -520,7 +1406,7 @@
 	const param_type&): Define here.
 	(geometric_distribution<>::operator()(_UniformRandomNumberGenerator&,
 	const param_type&), discrete_distribution<>::operator()
-	(_UniformRandomNumberGenerator&, const param_type&), 
+	(_UniformRandomNumberGenerator&, const param_type&),
 	piecewise_constant_distribution<>::operator()
 	(_UniformRandomNumberGenerator&, const param_type&),
 	piecewise_linear_distribution<>::operator()

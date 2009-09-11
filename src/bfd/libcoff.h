@@ -110,6 +110,9 @@ typedef struct coff_tdata
      used by ARM code.  */
   flagword flags;
 
+  /* coff-stgo32 EXE stub header after BFD tdata has been allocated.  Its data
+     is kept in internal_filehdr.go32stub beforehand.  */
+  char *go32stub;
 } coff_data_type;
 
 /* Tdata for pe image files.  */
@@ -255,7 +258,7 @@ struct coff_link_hash_entry
   unsigned short type;
 
   /* Symbol class.  */
-  unsigned char class;
+  unsigned char symbol_class;
 
   /* Number of auxiliary entries.  */
   char numaux;
@@ -395,7 +398,7 @@ struct coff_debug_merge_type
   struct coff_debug_merge_type *next;
 
   /* Class of type.  */
-  int class;
+  int type_class;
 
   /* Symbol index where this type is defined.  */
   long indx;
@@ -604,7 +607,6 @@ extern bfd_boolean ppc_allocate_toc_section
   (struct bfd_link_info *);
 extern bfd_boolean ppc_process_before_allocation
   (bfd *, struct bfd_link_info *);
-
 /* Extracted from coffcode.h.  */
 typedef struct coff_ptr_struct
 {

@@ -63,21 +63,8 @@ minloc0_8_i4 (gfc_array_i8 * const restrict retarray,
   else
     {
       if (unlikely (compile_options.bounds_check))
-	{
-	  int ret_rank;
-	  index_type ret_extent;
-
-	  ret_rank = GFC_DESCRIPTOR_RANK (retarray);
-	  if (ret_rank != 1)
-	    runtime_error ("rank of return array in MINLOC intrinsic"
-			   " should be 1, is %ld", (long int) ret_rank);
-
-	  ret_extent = GFC_DESCRIPTOR_EXTENT(retarray,0);
-	  if (ret_extent != rank)
-	    runtime_error ("Incorrect extent in return value of"
-			   " MINLOC intrnisic: is %ld, should be %ld",
-			   (long int) ret_extent, (long int) rank);
-	}
+	bounds_iforeach_return ((array_t *) retarray, (array_t *) array,
+				"MINLOC");
     }
 
   dstride = GFC_DESCRIPTOR_STRIDE(retarray,0);
@@ -100,51 +87,83 @@ minloc0_8_i4 (gfc_array_i8 * const restrict retarray,
 
   /* Initialize the return value.  */
   for (n = 0; n < rank; n++)
-    dest[n * dstride] = 0;
+    dest[n * dstride] = 1;
   {
 
-  GFC_INTEGER_4 minval;
+    GFC_INTEGER_4 minval;
+#if defined(GFC_INTEGER_4_QUIET_NAN)
+    int fast = 0;
+#endif
 
-  minval = GFC_INTEGER_4_HUGE;
-
+#if defined(GFC_INTEGER_4_INFINITY)
+    minval = GFC_INTEGER_4_INFINITY;
+#else
+    minval = GFC_INTEGER_4_HUGE;
+#endif
   while (base)
     {
-      {
-        /* Implementation start.  */
+      do
+	{
+	  /* Implementation start.  */
 
-  if (*base < minval || !dest[0])
-    {
-      minval = *base;
-      for (n = 0; n < rank; n++)
-        dest[n * dstride] = count[n] + 1;
-    }
-        /* Implementation end.  */
-      }
-      /* Advance to the next element.  */
-      count[0]++;
-      base += sstride[0];
+#if defined(GFC_INTEGER_4_QUIET_NAN)
+	}
+      while (0);
+      if (unlikely (!fast))
+	{
+	  do
+	    {
+	      if (*base <= minval)
+		{
+		  fast = 1;
+		  minval = *base;
+		  for (n = 0; n < rank; n++)
+		    dest[n * dstride] = count[n] + 1;
+		  break;
+		}
+	      base += sstride[0];
+	    }
+	  while (++count[0] != extent[0]);
+	  if (likely (fast))
+	    continue;
+	}
+      else do
+	{
+#endif
+	  if (*base < minval)
+	    {
+	      minval = *base;
+	      for (n = 0; n < rank; n++)
+		dest[n * dstride] = count[n] + 1;
+	    }
+	  /* Implementation end.  */
+	  /* Advance to the next element.  */
+	  base += sstride[0];
+	}
+      while (++count[0] != extent[0]);
       n = 0;
-      while (count[n] == extent[n])
-        {
-          /* When we get to the end of a dimension, reset it and increment
-             the next dimension.  */
-          count[n] = 0;
-          /* We could precalculate these products, but this is a less
-             frequently used path so probably not worth it.  */
-          base -= sstride[n] * extent[n];
-          n++;
-          if (n == rank)
-            {
-              /* Break out of the loop.  */
-              base = NULL;
-              break;
-            }
-          else
-            {
-              count[n]++;
-              base += sstride[n];
-            }
-        }
+      do
+	{
+	  /* When we get to the end of a dimension, reset it and increment
+	     the next dimension.  */
+	  count[n] = 0;
+	  /* We could precalculate these products, but this is a less
+	     frequently used path so probably not worth it.  */
+	  base -= sstride[n] * extent[n];
+	  n++;
+	  if (n == rank)
+	    {
+	      /* Break out of the loop.  */
+	      base = NULL;
+	      break;
+	    }
+	  else
+	    {
+	      count[n]++;
+	      base += sstride[n];
+	    }
+	}
+      while (count[n] == extent[n]);
     }
   }
 }
@@ -186,38 +205,11 @@ mminloc0_8_i4 (gfc_array_i8 * const restrict retarray,
     {
       if (unlikely (compile_options.bounds_check))
 	{
-	  int ret_rank, mask_rank;
-	  index_type ret_extent;
-	  int n;
-	  index_type array_extent, mask_extent;
 
-	  ret_rank = GFC_DESCRIPTOR_RANK (retarray);
-	  if (ret_rank != 1)
-	    runtime_error ("rank of return array in MINLOC intrinsic"
-			   " should be 1, is %ld", (long int) ret_rank);
-
-	  ret_extent = GFC_DESCRIPTOR_EXTENT(retarray,0);
-	  if (ret_extent != rank)
-	    runtime_error ("Incorrect extent in return value of"
-			   " MINLOC intrnisic: is %ld, should be %ld",
-			   (long int) ret_extent, (long int) rank);
-	
-	  mask_rank = GFC_DESCRIPTOR_RANK (mask);
-	  if (rank != mask_rank)
-	    runtime_error ("rank of MASK argument in MINLOC intrnisic"
-	                   "should be %ld, is %ld", (long int) rank,
-			   (long int) mask_rank);
-
-	  for (n=0; n<rank; n++)
-	    {
-	      array_extent = GFC_DESCRIPTOR_EXTENT(array,n);
-	      mask_extent = GFC_DESCRIPTOR_EXTENT(mask,n);
-	      if (array_extent != mask_extent)
-		runtime_error ("Incorrect extent in MASK argument of"
-			       " MINLOC intrinsic in dimension %ld:"
-			       " is %ld, should be %ld", (long int) n + 1,
-			       (long int) mask_extent, (long int) array_extent);
-	    }
+	  bounds_iforeach_return ((array_t *) retarray, (array_t *) array,
+				  "MINLOC");
+	  bounds_equal_extents ((array_t *) mask, (array_t *) array,
+				  "MASK argument", "MINLOC");
 	}
     }
 
@@ -259,50 +251,87 @@ mminloc0_8_i4 (gfc_array_i8 * const restrict retarray,
   {
 
   GFC_INTEGER_4 minval;
+   int fast = 0;
 
-  minval = GFC_INTEGER_4_HUGE;
-
+#if defined(GFC_INTEGER_4_INFINITY)
+    minval = GFC_INTEGER_4_INFINITY;
+#else
+    minval = GFC_INTEGER_4_HUGE;
+#endif
   while (base)
     {
-      {
-        /* Implementation start.  */
+      do
+	{
+	  /* Implementation start.  */
 
-  if (*mbase && (*base < minval || !dest[0]))
-    {
-      minval = *base;
-      for (n = 0; n < rank; n++)
-        dest[n * dstride] = count[n] + 1;
-    }
-        /* Implementation end.  */
-      }
-      /* Advance to the next element.  */
-      count[0]++;
-      base += sstride[0];
-      mbase += mstride[0];
+	}
+      while (0);
+      if (unlikely (!fast))
+	{
+	  do
+	    {
+	      if (*mbase)
+		{
+#if defined(GFC_INTEGER_4_QUIET_NAN)
+		  if (unlikely (dest[0] == 0))
+		    for (n = 0; n < rank; n++)
+		      dest[n * dstride] = count[n] + 1;
+		  if (*base <= minval)
+#endif
+		    {
+		      fast = 1;
+		      minval = *base;
+		      for (n = 0; n < rank; n++)
+			dest[n * dstride] = count[n] + 1;
+		      break;
+		    }
+		}
+	      base += sstride[0];
+	      mbase += mstride[0];
+	    }
+	  while (++count[0] != extent[0]);
+	  if (likely (fast))
+	    continue;
+	}
+      else do
+	{
+	  if (*mbase && *base < minval)
+	    {
+	      minval = *base;
+	      for (n = 0; n < rank; n++)
+		dest[n * dstride] = count[n] + 1;
+	    }
+	  /* Implementation end.  */
+	  /* Advance to the next element.  */
+	  base += sstride[0];
+	  mbase += mstride[0];
+	}
+      while (++count[0] != extent[0]);
       n = 0;
-      while (count[n] == extent[n])
-        {
-          /* When we get to the end of a dimension, reset it and increment
-             the next dimension.  */
-          count[n] = 0;
-          /* We could precalculate these products, but this is a less
-             frequently used path so probably not worth it.  */
-          base -= sstride[n] * extent[n];
-          mbase -= mstride[n] * extent[n];
-          n++;
-          if (n == rank)
-            {
-              /* Break out of the loop.  */
-              base = NULL;
-              break;
-            }
-          else
-            {
-              count[n]++;
-              base += sstride[n];
-              mbase += mstride[n];
-            }
-        }
+      do
+	{
+	  /* When we get to the end of a dimension, reset it and increment
+	     the next dimension.  */
+	  count[n] = 0;
+	  /* We could precalculate these products, but this is a less
+	     frequently used path so probably not worth it.  */
+	  base -= sstride[n] * extent[n];
+	  mbase -= mstride[n] * extent[n];
+	  n++;
+	  if (n == rank)
+	    {
+	      /* Break out of the loop.  */
+	      base = NULL;
+	      break;
+	    }
+	  else
+	    {
+	      count[n]++;
+	      base += sstride[n];
+	      mbase += mstride[n];
+	    }
+	}
+      while (count[n] == extent[n]);
     }
   }
 }
@@ -340,22 +369,10 @@ sminloc0_8_i4 (gfc_array_i8 * const restrict retarray,
       retarray->offset = 0;
       retarray->data = internal_malloc_size (sizeof (GFC_INTEGER_8) * rank);
     }
-  else
+  else if (unlikely (compile_options.bounds_check))
     {
-      if (unlikely (compile_options.bounds_check))
-	{
-	  int ret_rank;
-	  index_type ret_extent;
-
-	  ret_rank = GFC_DESCRIPTOR_RANK (retarray);
-	  if (ret_rank != 1)
-	    runtime_error ("rank of return array in MINLOC intrinsic"
-			   " should be 1, is %ld", (long int) ret_rank);
-
-	  ret_extent = GFC_DESCRIPTOR_EXTENT(retarray,0);
-	    if (ret_extent != rank)
-	      runtime_error ("dimension of return array incorrect");
-	}
+       bounds_iforeach_return ((array_t *) retarray, (array_t *) array,
+			       "MINLOC");
     }
 
   dstride = GFC_DESCRIPTOR_STRIDE(retarray,0);

@@ -1,7 +1,7 @@
 10
 
 dir
-149693
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.oliva
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,14 +502,14 @@ mmitchel
 
 284
 
-expr1.C
+template4.C
 file
 
 
 
 
 2009-04-24T17:44:36.000000Z
-f8dc1e3b047760a647ca3fc66b22ab14
+4bf2b2de8531cb926b80c542226b064c
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -534,7 +534,7 @@ mmitchel
 
 
 
-373
+465
 
 inline1.C
 file
@@ -570,14 +570,14 @@ mmitchel
 
 400
 
-template4.C
+expr1.C
 file
 
 
 
 
 2009-04-24T17:44:36.000000Z
-4bf2b2de8531cb926b80c542226b064c
+f8dc1e3b047760a647ca3fc66b22ab14
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -602,41 +602,7 @@ mmitchel
 
 
 
-465
-
-expr2.C
-file
-
-
-
-
-2009-04-24T17:44:36.000000Z
-c0514fbc4a06765f363ceaa37f304896
-2005-04-04T05:02:10.000000Z
-97522
-sayle
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-296
+373
 
 template5.C
 file
@@ -672,17 +638,17 @@ mmitchel
 
 257
 
-ns1.C
+expr2.C
 file
 
 
 
 
 2009-04-24T17:44:36.000000Z
-ad3eac5cce6247b57053146272ad863a
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
+c0514fbc4a06765f363ceaa37f304896
+2005-04-04T05:02:10.000000Z
+97522
+sayle
 
 
 
@@ -704,7 +670,7 @@ mmitchel
 
 
 
-281
+296
 
 template6.C
 file
@@ -740,14 +706,14 @@ nathan
 
 414
 
-ns2.C
+ns1.C
 file
 
 
 
 
 2009-04-24T17:44:36.000000Z
-6145af5e9f76316b1d149f4bc47f97db
+ad3eac5cce6247b57053146272ad863a
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -772,7 +738,7 @@ mmitchel
 
 
 
-332
+281
 
 template7.C
 file
@@ -808,17 +774,17 @@ mmitchel
 
 359
 
-ns3.C
+ns2.C
 file
 
 
 
 
 2009-04-24T17:44:36.000000Z
-9909ce1d76f79ca2d7e88855206eeffd
-2005-12-14T18:19:39.456556Z
-108526
-ghazi
+6145af5e9f76316b1d149f4bc47f97db
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
 
 
 
@@ -840,7 +806,7 @@ ghazi
 
 
 
-282
+332
 
 template8.C
 file
@@ -875,6 +841,40 @@ mmitchel
 
 
 468
+
+ns3.C
+file
+
+
+
+
+2009-04-24T17:44:36.000000Z
+9909ce1d76f79ca2d7e88855206eeffd
+2005-12-14T18:19:39.456556Z
+108526
+ghazi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+282
 
 template9.C
 file
@@ -944,17 +944,17 @@ jsm28
 
 2670
 
-template10.C
+nameret1.C
 file
 
 
 
 
 2009-04-24T17:44:36.000000Z
-13f959e91589085e8519a7ce7cb5d4bc
-2004-11-24T10:40:16.000000Z
-91145
-giovannibajo
+bfe4a3c085addec5f331484e5310a5e5
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
 
 
 
@@ -976,7 +976,7 @@ giovannibajo
 
 
 
-732
+292
 
 stkalign.C
 file
@@ -1012,17 +1012,17 @@ ghazi
 
 299
 
-nameret1.C
+template10.C
 file
 
 
 
 
 2009-04-24T17:44:36.000000Z
-bfe4a3c085addec5f331484e5310a5e5
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
+13f959e91589085e8519a7ce7cb5d4bc
+2004-11-24T10:40:16.000000Z
+91145
+giovannibajo
 
 
 
@@ -1044,7 +1044,7 @@ mmitchel
 
 
 
-292
+732
 
 nameret2.C
 file

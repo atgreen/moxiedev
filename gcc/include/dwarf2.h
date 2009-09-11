@@ -194,6 +194,8 @@ enum dwarf_tag
     DW_TAG_imported_unit = 0x3d,
     DW_TAG_condition = 0x3f,
     DW_TAG_shared_type = 0x40,
+    /* DWARF 4.  */
+    DW_TAG_type_unit = 0x41,
 
     DW_TAG_lo_user = 0x4080,
     DW_TAG_hi_user = 0xffff,
@@ -208,6 +210,9 @@ enum dwarf_tag
     DW_TAG_class_template = 0x4103,	/* For C++.  */
     DW_TAG_GNU_BINCL = 0x4104,
     DW_TAG_GNU_EINCL = 0x4105,
+    /* Template template parameter.
+       See http://gcc.gnu.org/wiki/TemplateParmsDwarf .  */
+    DW_TAG_GNU_template_template_param = 0x4106,
     /* Extensions for UPC.  See: http://upc.gwu.edu/~upc.  */
     DW_TAG_upc_shared_type = 0x8765,
     DW_TAG_upc_strict_type = 0x8766,
@@ -244,7 +249,12 @@ enum dwarf_form
     DW_FORM_ref4 = 0x13,
     DW_FORM_ref8 = 0x14,
     DW_FORM_ref_udata = 0x15,
-    DW_FORM_indirect = 0x16
+    DW_FORM_indirect = 0x16,
+    /* DWARF 4.  */
+    DW_FORM_sec_offset = 0x17,
+    DW_FORM_exprloc = 0x18,
+    DW_FORM_flag_present = 0x19,
+    DW_FORM_sig8 = 0x20
   };
 
 /* Attribute names and codes.  */
@@ -342,6 +352,8 @@ enum dwarf_attribute
     DW_AT_elemental     = 0x66,
     DW_AT_pure          = 0x67,
     DW_AT_recursive     = 0x68,
+    /* DWARF 4.  */
+    DW_AT_signature     = 0x69,
 
     DW_AT_lo_user = 0x2000,	/* Implementation-defined range start.  */
     DW_AT_hi_user = 0x3ff0,	/* Implementation-defined range end.  */
@@ -381,6 +393,9 @@ enum dwarf_attribute
     DW_AT_body_begin = 0x2105,
     DW_AT_body_end   = 0x2106,
     DW_AT_GNU_vector = 0x2107,
+    /* Template template argument name.
+       See http://gcc.gnu.org/wiki/TemplateParmsDwarf .  */
+    DW_AT_GNU_template_name = 0x2110,
     /* VMS extensions.  */
     DW_AT_VMS_rtnbeg_pd_address = 0x2201,
     /* UPC extension.  */

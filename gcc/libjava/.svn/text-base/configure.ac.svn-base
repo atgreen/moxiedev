@@ -1,5 +1,5 @@
 dnl # Process this with autoconf to create configure
-AC_PREREQ(2.59)
+AC_PREREQ(2.64)
 # Still use "libjava" here to placate dejagnu.
 AC_INIT([libjava], [version-unused],, [libjava])
 
@@ -159,7 +159,7 @@ CXXFLAGS="$CXXFLAGS -fno-builtin"
 AC_PROG_CC
 AC_PROG_CXX
 CXXFLAGS="$save_CXXFLAGS"
-m4_rename([glibcxx_PRECIOUS],[_AC_ARG_VAR_PRECIOUS])
+m4_rename_force([glibcxx_PRECIOUS],[_AC_ARG_VAR_PRECIOUS])
 AC_SUBST(CFLAGS)
 AC_SUBST(CXXFLAGS)
 AC_SUBST(LDFLAGS)
@@ -1078,8 +1078,10 @@ AC_CONFIG_LINKS(sysdep/descriptor.h:$descriptor_h)
 LIBGCJ_SPEC="%{s-bc-abi:} -lgcj"
 if test "$use_libgcj_bc" = yes; then
   LIBGCJ_SPEC="%{static|static-libgcj|!s-bc-abi:-lgcj;:-lgcj_bc}"
+  LIBGCJ_BC_SPEC="%{findirect-dispatch:-fPIC}"
 fi
 AC_SUBST(LIBGCJ_SPEC)
+AC_SUBST(LIBGCJ_BC_SPEC)
 
 HASH_SYNC_SPEC=
 # Hash synchronization is only useful with posix threads right now.
@@ -1447,6 +1449,7 @@ AC_SUBST(CHECKREFSPEC)
 AC_SUBST(EXCEPTIONSPEC)
 AC_SUBST(BACKTRACESPEC)
 AC_SUBST(IEEESPEC)
+AC_SUBST(ATOMICSPEC)
 
 AM_CONDITIONAL(NATIVE, test "$NATIVE" = yes)
 AM_CONDITIONAL(ENABLE_SHARED, test "$enable_shared" = yes)

@@ -1,6 +1,6 @@
 /* Generic target-file-type support for the BFD library.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
    Written by Cygnus Support.
 
@@ -625,6 +625,7 @@ extern const bfd_target bfd_elf32_mcore_big_vec;
 extern const bfd_target bfd_elf32_mcore_little_vec;
 extern const bfd_target bfd_elf32_mep_vec;
 extern const bfd_target bfd_elf32_mep_little_vec;
+extern const bfd_target bfd_elf32_microblaze_vec;
 extern const bfd_target bfd_elf32_mn10200_vec;
 extern const bfd_target bfd_elf32_mn10300_vec;
 extern const bfd_target bfd_elf32_mt_vec;
@@ -959,6 +960,7 @@ static const bfd_target * const _bfd_target_vector[] =
 	&bfd_elf32_mcore_big_vec,
 	&bfd_elf32_mcore_little_vec,
 	&bfd_elf32_mep_vec,
+	&bfd_elf32_microblaze_vec,
 	&bfd_elf32_mn10200_vec,
 	&bfd_elf32_mn10300_vec,
 	&bfd_elf32_mt_vec,

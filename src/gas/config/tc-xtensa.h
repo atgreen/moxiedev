@@ -1,5 +1,6 @@
 /* tc-xtensa.h -- Header file for tc-xtensa.c.
-   Copyright (C) 2003, 2004, 2005, 2007, 2008 Free Software Foundation, Inc.
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -263,9 +264,10 @@ struct xtensa_frag_type
   symbolS *slot_symbols[MAX_SLOTS];
   offsetT slot_offsets[MAX_SLOTS];
 
-  /* The global aligner needs to walk backward through the list of
-     frags.  This field is only valid after xtensa_end.  */
-  fragS *fr_prev;
+  /* When marking frags after this one in the chain as no transform,
+     cache the last one in the chain, so that we can skip to the
+     end of the chain.  */
+  fragS *no_transform_end;
 };
 
 

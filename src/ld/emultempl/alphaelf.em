@@ -1,5 +1,6 @@
 # This shell script emits a C file. -*- C -*-
-#   Copyright 2003, 2004, 2005, 2007, 2008 Free Software Foundation, Inc.
+#   Copyright 2003, 2004, 2005, 2007, 2008, 2009
+#   Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -98,7 +99,7 @@ alpha_finish (void)
   if (limit_32bit)
     elf_elfheader (link_info.output_bfd)->e_flags |= EF_ALPHA_32BIT;
 
-  gld${EMULATION_NAME}_finish ();
+  finish_default ();
 }
 EOF
 

@@ -90,8 +90,6 @@
 /jaloverflow.s/1.1/Mon Jul  6 10:46:46 2009//
 /jr.s/1.1/Mon Jul  6 10:46:46 2009//
 /mips-dyn.ld/1.1/Mon Jul  6 10:46:46 2009//
-/mips-elf-flags.exp/1.8/Mon Jul  6 10:46:46 2009//
-/mips-elf.exp/1.59/Mon Jul  6 10:46:46 2009//
 /mips-lib.ld/1.1/Mon Jul  6 10:46:46 2009//
 /mips16-1.d/1.2/Mon Jul  6 10:46:46 2009//
 /mips16-1a.s/1.1/Mon Jul  6 10:46:46 2009//
@@ -329,4 +327,6 @@
 /pic-and-nonpic-6-n32.dd/1.2/Fri Jul 31 11:10:15 2009//
 /pic-and-nonpic-6-n64.dd/1.2/Fri Jul 31 11:10:15 2009//
 /pic-and-nonpic-6-o32.dd/1.2/Fri Jul 31 11:10:15 2009//
+/mips-elf-flags.exp/1.9/Tue Sep  8 03:27:48 2009//
+/mips-elf.exp/1.60/Tue Sep  8 03:27:48 2009//
 D

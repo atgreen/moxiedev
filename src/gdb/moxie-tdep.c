@@ -174,29 +174,37 @@ moxie_analyze_prologue (CORE_ADDR start_addr, CORE_ADDR end_addr,
 	  cache->saved_regs[regnum] = cache->framesize;
 	  next_addr += 2;
 	}
+    }
 
-      /* Optional stack allocation for args and local vars <= 4
-	 byte.  */
-      else if (inst == 0x0170)           /* ldi.l $r5, X */
+  inst = read_memory_unsigned_integer (next_addr, 2, byte_order);
+
+  /* Optional stack allocation for args and local vars <= 4
+     byte.  */
+  if (inst == 0x0170)           /* ldi.l $r5, X */
+    {
+      offset = read_memory_integer (next_addr + 2, 4, byte_order);
+      inst2 = read_memory_unsigned_integer (next_addr + 6, 2, byte_order);
+      
+      if (inst2 == 0x0517)           /* add.l $sp, $r5 */
 	{
-	  offset = read_memory_integer (next_addr + 2, 4, byte_order);
-	  inst2 = read_memory_unsigned_integer (next_addr + 6, 2, byte_order);
-
-	  if (inst2 == 0x0517)           /* add.l $sp, $r5 */
-	    {
-	      cache->framesize += offset;
-	    }
-
-	  return (next_addr + 8);
+	  cache->framesize += offset;
 	}
-      else if ((inst & 0xff00) == 0x91)   /* dec $sp, X */
+      
+      return (next_addr + 8);
+    }
+  else if ((inst & 0xff00) == 0x91)   /* dec $sp, X */
+    {
+      cache->framesize += (inst & 0x00ff);
+      next_addr += 2;
+
+      while (next_addr < end_addr)
 	{
+	  inst = read_memory_unsigned_integer (next_addr, 2, byte_order);
+	  if ((inst & 0xff00) != 0x91) /* no more dec $sp, X */
+	    break;
 	  cache->framesize += (inst & 0x00ff);
-	  return (next_addr + 2);
+	  next_addr += 2;
 	}
-
-/* This is not a prologue instruction.  */
-	break;
     }
 
   return next_addr;
@@ -419,7 +427,7 @@ moxie_frame_this_id (struct frame_info *this_frame,
 		    void **this_prologue_cache, struct frame_id *this_id)
 {
   struct moxie_frame_cache *cache = moxie_frame_cache (this_frame,
-						   this_prologue_cache);
+						       this_prologue_cache);
 
   /* This marks the outermost frame.  */
   if (cache->base == 0)
@@ -435,7 +443,7 @@ moxie_frame_prev_register (struct frame_info *this_frame,
 			  void **this_prologue_cache, int regnum)
 {
   struct moxie_frame_cache *cache = moxie_frame_cache (this_frame,
-						   this_prologue_cache);
+						       this_prologue_cache);
 
   gdb_assert (regnum >= 0);
 

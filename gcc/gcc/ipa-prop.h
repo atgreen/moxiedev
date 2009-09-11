@@ -31,18 +31,26 @@ along with GCC; see the file COPYING3.  If not see
 
 /* A jump function for a callsite represents the values passed as actual
    arguments of the callsite. There are three main types of values :
-   Formal - the caller's formal parameter is passed as an actual argument.
-   Constant - a constant is passed as an actual argument.
-   Unknown - neither of the above.
-   Integer and real constants are represented as IPA_JF_CONST.
-   Finally, IPA_JF_CONST_MEMBER_PTR stands for C++ member pointers
-   constants.  */
+
+   Pass-through - the caller's formal parameter is passed as an actual
+                  argument, possibly one simple operation performed on it.
+   Constant     - a constant (is_gimple_ip_invariant)is passed as an actual
+                  argument.
+   Unknown      - neither of the above.
+
+   IPA_JF_CONST_MEMBER_PTR stands for C++ member pointers, other constants are
+   represented with IPA_JF_CONST.
+
+   In addition to "ordinary" pass through functions represented by
+   IPA_JF_PASS_THROUGH, IPA_JF_ANCESTOR represents getting addresses of of
+   ancestor fields in C++ (e.g. &this_1(D)->D.1766.D.1756).  */
 enum jump_func_type
 {
   IPA_JF_UNKNOWN = 0,  /* newly allocated and zeroed jump functions default */
   IPA_JF_CONST,
   IPA_JF_CONST_MEMBER_PTR,
-  IPA_JF_PASS_THROUGH
+  IPA_JF_PASS_THROUGH,
+  IPA_JF_ANCESTOR
 };
 
 /* All formal parameters in the program have a lattice associated with it
@@ -61,6 +69,36 @@ enum ipa_lattice_type
   IPA_TOP
 };
 
+
+/* Structure holding data required to describe a pass-through jump function.  */
+
+struct ipa_pass_through_data
+{
+  /* If an operation is to be performed on the original parameter, this is the
+     second (constant) operand.  */
+  tree operand;
+  /* Number of the caller's formal parameter being passed.  */
+  int formal_id;
+  /* Operation that is performed on the argument before it is passed on.
+     NOP_EXPR means no operation.  Otherwise oper must be a simple binary
+     arithmetic operation where the caller's parameter is the first operand and
+     operand field from this structure is the second one.  */
+  enum tree_code operation;
+};
+
+/* Structure holding data required to describe and ancestor pass throu
+   funkci.  */
+
+struct ipa_ancestor_jf_data
+{
+  /* Offset of the field representing the ancestor.  */
+  HOST_WIDE_INT offset;
+  /* TYpe of the result.  */
+  tree type;
+  /* Number of the caller's formal parameter being passed.  */
+  int formal_id;
+};
+
 /* Structure holding a C++ member pointer constant.  Holds a pointer to the
    method and delta offset.  */
 struct ipa_member_ptr_cst
@@ -69,15 +107,14 @@ struct ipa_member_ptr_cst
   tree delta;
 };
 
-/* Represents a value of a jump function.  formal_id is used only in jump
-   function context and represents pass-through parameter (the formal parameter
-   of the caller is passed as argument).  constant represents the actual
-   constant in constant jump functions and member_cst holds constant c++ member
-   functions.  */
+/* Represents a value of a jump function.  pass_through is used only in jump
+   function context.  constant represents the actual constant in constant jump
+   functions and member_cst holds constant c++ member functions.  */
 union jump_func_value
 {
-  unsigned int formal_id;
   tree constant;
+  struct ipa_pass_through_data pass_through;
+  struct ipa_ancestor_jf_data ancestor;
   struct ipa_member_ptr_cst member_cst;
 };
 
@@ -109,7 +146,7 @@ struct ipa_param_call_note
   /* Statement that contains the call to the parameter above.  */
   gimple stmt;
   /* Index of the parameter that is called.  */
-  unsigned int formal_id;
+  int formal_id;
   /* Expected number of executions: calculated in profile.c.  */
   gcov_type count;
   /* Expected frequency of executions within the function. see cgraph_edge in
@@ -402,5 +439,76 @@ void ipa_print_node_params (FILE *, struct cgraph_node *node);
 void ipa_print_all_params (FILE *);
 void ipa_print_node_jump_functions (FILE *f, struct cgraph_node *node);
 void ipa_print_all_jump_functions (FILE * f);
+
+/* Structure to describe transformations of formal parameters and actual
+   arguments.  Each instance describes one new parameter and they are meant to
+   be stored in a vector.  Additionally, most users will probably want to store
+   adjustments about parameters that are being removed altogether so that SSA
+   names belonging to them can be replaced by SSA names of an artificial
+   variable.  */
+struct ipa_parm_adjustment
+{
+  /* The original PARM_DECL itself, helpful for processing of the body of the
+     function itself.  Intended for traversing function bodies.
+     ipa_modify_formal_parameters, ipa_modify_call_arguments and
+     ipa_combine_adjustments ignore this and use base_index.
+     ipa_modify_formal_parameters actually sets this.  */
+  tree base;
+
+  /* Type of the new parameter.  However, if by_ref is true, the real type will
+     be a pointer to this type.  */
+  tree type;
+
+  /* The new declaration when creating/replacing a parameter.  Created by
+     ipa_modify_formal_parameters, useful for functions modifying the body
+     accordingly. */
+  tree reduction;
+
+  /* New declaration of a substitute variable that we may use to replace all
+     non-default-def ssa names when a parm decl is going away.  */
+  tree new_ssa_base;
+
+  /* If non-NULL and the original parameter is to be removed (copy_param below
+     is NULL), this is going to be its nonlocalized vars value.  */
+  tree nonlocal_value;
+
+  /* Offset into the original parameter (for the cases when the new parameter
+     is a component of an original one).  */
+  HOST_WIDE_INT offset;
+
+  /* Zero based index of the original parameter this one is based on.  (ATM
+     there is no way to insert a new parameter out of the blue because there is
+     no need but if it arises the code can be easily exteded to do so.)  */
+  int base_index;
+
+  /* This new parameter is an unmodified parameter at index base_index. */
+  unsigned copy_param : 1;
+
+  /* This adjustment describes a parameter that is about to be removed
+     completely.  Most users will probably need to book keep those so that they
+     don't leave behinfd any non default def ssa names belonging to them.  */
+  unsigned remove_param : 1;
+
+  /* The parameter is to be passed by reference.  */
+  unsigned by_ref : 1;
+};
+
+typedef struct ipa_parm_adjustment ipa_parm_adjustment_t;
+DEF_VEC_O (ipa_parm_adjustment_t);
+DEF_VEC_ALLOC_O (ipa_parm_adjustment_t, heap);
+
+typedef VEC (ipa_parm_adjustment_t, heap) *ipa_parm_adjustment_vec;
+
+VEC(tree, heap) *ipa_get_vector_of_formal_parms (tree fndecl);
+void ipa_modify_formal_parameters (tree fndecl, ipa_parm_adjustment_vec,
+				   const char *);
+void ipa_modify_call_arguments (struct cgraph_edge *, gimple,
+				ipa_parm_adjustment_vec);
+ipa_parm_adjustment_vec ipa_combine_adjustments (ipa_parm_adjustment_vec,
+						 ipa_parm_adjustment_vec);
+void ipa_dump_param_adjustments (FILE *, ipa_parm_adjustment_vec, tree);
+
+/* From tree-sra.c:  */
+bool build_ref_for_offset (tree *, tree, HOST_WIDE_INT, tree, bool);
 
 #endif /* IPA_PROP_H */

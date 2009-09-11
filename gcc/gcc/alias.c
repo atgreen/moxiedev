@@ -680,11 +680,20 @@ get_alias_set (tree t)
     }
 
   /* Variant qualifiers don't affect the alias set, so get the main
-     variant.  Always use the canonical type as well.
-     If this is a type with a known alias set, return it.  */
+     variant.  */
   t = TYPE_MAIN_VARIANT (t);
-  if (TYPE_CANONICAL (t))
-    t = TYPE_CANONICAL (t);
+
+  /* Always use the canonical type as well.  If this is a type that
+     requires structural comparisons to identify compatible types
+     use alias set zero.  */
+  if (TYPE_STRUCTURAL_EQUALITY_P (t))
+    return 0;
+  t = TYPE_CANONICAL (t);
+  /* Canonical types shouldn't form a tree nor should the canonical
+     type require structural equality checks.  */
+  gcc_assert (!TYPE_STRUCTURAL_EQUALITY_P (t) && TYPE_CANONICAL (t) == t);
+
+  /* If this is a type with a known alias set, return it.  */
   if (TYPE_ALIAS_SET_KNOWN_P (t))
     return TYPE_ALIAS_SET (t);
 
@@ -1979,6 +1988,9 @@ static bool
 nonoverlapping_component_refs_p (const_tree x, const_tree y)
 {
   const_tree fieldx, fieldy, typex, typey, orig_y;
+
+  if (!flag_strict_aliasing)
+    return false;
 
   do
     {

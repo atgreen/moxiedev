@@ -1017,8 +1017,8 @@ gfc_trans_do (gfc_code * code)
       tmp = fold_convert (utype, tmp);
       tmp = fold_build2 (TRUNC_DIV_EXPR, utype, tmp,
 			 fold_convert (utype, step));
-      tmp = build2 (MODIFY_EXPR, void_type_node, countm1, tmp);
-      pos = build2 (COMPOUND_EXPR, void_type_node, pos, tmp);
+      tmp = fold_build2 (MODIFY_EXPR, void_type_node, countm1, tmp);
+      pos = fold_build2 (COMPOUND_EXPR, void_type_node, pos, tmp);
 
       tmp = fold_build2 (GT_EXPR, boolean_type_node, to, from);
       neg = fold_build3 (COND_EXPR, void_type_node, tmp,
@@ -1029,8 +1029,8 @@ gfc_trans_do (gfc_code * code)
       tmp = fold_build2 (TRUNC_DIV_EXPR, utype, tmp,
 			 fold_convert (utype, fold_build1 (NEGATE_EXPR,
 							   type, step)));
-      tmp = build2 (MODIFY_EXPR, void_type_node, countm1, tmp);
-      neg = build2 (COMPOUND_EXPR, void_type_node, neg, tmp);
+      tmp = fold_build2 (MODIFY_EXPR, void_type_node, countm1, tmp);
+      neg = fold_build2 (COMPOUND_EXPR, void_type_node, neg, tmp);
 
       tmp = fold_build3 (COND_EXPR, void_type_node, pos_step, pos, neg);
       gfc_add_expr_to_block (&block, tmp);
@@ -1830,7 +1830,7 @@ check_forall_dependencies (gfc_code *c, stmtblock_t *pre, stmtblock_t *post)
      pointer components.  We therefore leave these to their
      own devices.  */
   if (lsym->ts.type == BT_DERIVED
-	&& lsym->ts.derived->attr.pointer_comp)
+	&& lsym->ts.u.derived->attr.pointer_comp)
     return need_temp;
 
   new_symtree = NULL;
@@ -2539,17 +2539,17 @@ gfc_trans_assign_need_temp (gfc_expr * expr1, gfc_expr * expr2,
 					&lss, &rss);
 
   /* The type of LHS. Used in function allocate_temp_for_forall_nest */
-  if (expr1->ts.type == BT_CHARACTER && expr1->ts.cl->length)
+  if (expr1->ts.type == BT_CHARACTER && expr1->ts.u.cl->length)
     {
-      if (!expr1->ts.cl->backend_decl)
+      if (!expr1->ts.u.cl->backend_decl)
 	{
 	  gfc_se tse;
 	  gfc_init_se (&tse, NULL);
-	  gfc_conv_expr (&tse, expr1->ts.cl->length);
-	  expr1->ts.cl->backend_decl = tse.expr;
+	  gfc_conv_expr (&tse, expr1->ts.u.cl->length);
+	  expr1->ts.u.cl->backend_decl = tse.expr;
 	}
       type = gfc_get_character_type_len (gfc_default_character_kind,
-				         expr1->ts.cl->backend_decl);
+				         expr1->ts.u.cl->backend_decl);
     }
   else
     type = gfc_typenode_for_spec (&expr1->ts);
@@ -2694,7 +2694,7 @@ gfc_trans_pointer_assign_need_temp (gfc_expr * expr1, gfc_expr * expr2,
       parmtype = gfc_get_element_type (TREE_TYPE (desc));
       parmtype = gfc_get_array_type_bounds (parmtype, loop.dimen,
                                             loop.from, loop.to, 1,
-					    GFC_ARRAY_UNKNOWN);
+					    GFC_ARRAY_UNKNOWN, true);
 
       /* Allocate temporary for nested forall construct.  */
       tmp1 = allocate_temp_for_forall_nest (nested_forall_info, parmtype,
@@ -4024,10 +4024,10 @@ gfc_trans_allocate (gfc_code * code)
 	      gfc_add_expr_to_block (&se.pre, tmp);
 	    }
 
-	  if (expr->ts.type == BT_DERIVED && expr->ts.derived->attr.alloc_comp)
+	  if (expr->ts.type == BT_DERIVED && expr->ts.u.derived->attr.alloc_comp)
 	    {
 	      tmp = build_fold_indirect_ref_loc (input_location, se.expr);
-	      tmp = gfc_nullify_alloc_comp (expr->ts.derived, tmp, 0);
+	      tmp = gfc_nullify_alloc_comp (expr->ts.u.derived, tmp, 0);
 	      gfc_add_expr_to_block (&se.pre, tmp);
 	    }
 
@@ -4081,6 +4081,44 @@ gfc_trans_allocate (gfc_code * code)
       gfc_add_expr_to_block (&block, tmp);
     }
 
+  /* SOURCE block.  Note, by C631, we know that code->ext.alloc_list
+     has a single entity.  */
+  if (code->expr3)
+    {
+      gfc_ref *ref;
+      gfc_array_ref *ar;
+      int n;
+
+      /* If there is a terminating array reference, this is converted
+	 to a full array, so that gfc_trans_assignment can scalarize the
+	 expression for the source.  */
+      for (ref = code->ext.alloc_list->expr->ref; ref; ref = ref->next)
+	{
+	  if (ref->next == NULL)
+	    {
+	      if (ref->type != REF_ARRAY)
+		break;
+
+	      ref->u.ar.type = AR_FULL;
+	      ar = &ref->u.ar;
+	      ar->dimen = ar->as->rank;
+	      for (n = 0; n < ar->dimen; n++)
+		{
+		  ar->dimen_type[n] = DIMEN_RANGE;
+		  gfc_free_expr (ar->start[n]);
+		  gfc_free_expr (ar->end[n]);
+		  gfc_free_expr (ar->stride[n]);
+		  ar->start[n] = NULL;
+		  ar->end[n] = NULL;
+		  ar->stride[n] = NULL;
+		}
+	    }
+	}
+
+      tmp = gfc_trans_assignment (code->ext.alloc_list->expr, code->expr3, false);
+      gfc_add_expr_to_block (&block, tmp);
+    }
+
   return gfc_finish_block (&block);
 }
 
@@ -4130,7 +4168,7 @@ gfc_trans_deallocate (gfc_code *code)
       se.descriptor_only = 1;
       gfc_conv_expr (&se, expr);
 
-      if (expr->ts.type == BT_DERIVED && expr->ts.derived->attr.alloc_comp)
+      if (expr->ts.type == BT_DERIVED && expr->ts.u.derived->attr.alloc_comp)
         {
 	  gfc_ref *ref;
 	  gfc_ref *last = NULL;
@@ -4143,7 +4181,7 @@ gfc_trans_deallocate (gfc_code *code)
 	  if (!(last && last->u.c.component->attr.pointer)
 		&& !(!last && expr->symtree->n.sym->attr.pointer))
 	    {
-	      tmp = gfc_deallocate_alloc_comp (expr->ts.derived, se.expr,
+	      tmp = gfc_deallocate_alloc_comp (expr->ts.u.derived, se.expr,
 					       expr->rank);
 	      gfc_add_expr_to_block (&se.pre, tmp);
 	    }

@@ -1,6 +1,6 @@
 /* Defs for interface to demanglers.
    Copyright 1992, 1993, 1994, 1995, 1996, 1997, 1998, 2000, 2001, 2002,
-   2003, 2004, 2005, 2007 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2007, 2008, 2009 Free Software Foundation, Inc.
    
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public License
@@ -377,6 +377,10 @@ enum demangle_component_type
   DEMANGLE_COMPONENT_CHARACTER,
   /* A decltype type.  */
   DEMANGLE_COMPONENT_DECLTYPE,
+  /* Global constructors keyed to name.  */
+  DEMANGLE_COMPONENT_GLOBAL_CONSTRUCTORS,
+  /* Global destructors keyed to name.  */
+  DEMANGLE_COMPONENT_GLOBAL_DESTRUCTORS,
   /* A pack expansion.  */
   DEMANGLE_COMPONENT_PACK_EXPANSION
 };

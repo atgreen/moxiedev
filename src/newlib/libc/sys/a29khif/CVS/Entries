@@ -1,6 +1,4 @@
 D/sys////
-/Makefile.am/1.4/Mon Jul  6 10:46:48 2009/-ko/
-/Makefile.in/1.14/Mon Jul  6 10:46:48 2009/-ko/
 /_alloc.S/1.1/Mon Jul  6 10:46:48 2009//
 /_close.S/1.1/Mon Jul  6 10:46:48 2009//
 /_cycles.S/1.1/Mon Jul  6 10:46:48 2009//
@@ -39,3 +37,5 @@ D/sys////
 /stubs.S/1.1/Mon Jul  6 10:46:48 2009//
 /systime.S/1.1/Mon Jul  6 10:46:48 2009//
 /vec.S/1.1/Mon Jul  6 10:46:48 2009//
+/Makefile.am/1.5/Tue Sep  8 03:27:43 2009/-ko/
+/Makefile.in/1.15/Tue Sep  8 03:27:43 2009/-ko/

@@ -565,8 +565,15 @@ varobj_create (char *objname,
          we must select the appropriate frame before parsing
          the expression, otherwise the value will not be current.
          Since select_frame is so benign, just call it for all cases. */
-      if (innermost_block && fi != NULL)
+      if (innermost_block)
 	{
+	  /* User could specify explicit FRAME-ADDR which was not found but
+	     EXPRESSION is frame specific and we would not be able to evaluate
+	     it correctly next time.  With VALID_BLOCK set we must also set
+	     FRAME and THREAD_ID.  */
+	  if (fi == NULL)
+	    error (_("Failed to find the specified frame"));
+
 	  var->root->frame = get_frame_id (fi);
 	  var->root->thread_id = pid_to_thread_id (inferior_ptid);
 	  old_fi = get_selected_frame (NULL);
@@ -899,16 +906,7 @@ update_dynamic_varobj_children (struct varobj *var,
       if (!PyArg_ParseTuple (item, "sO", &name, &py_v))
 	error (_("Invalid item from the child list"));
       
-      if (PyObject_TypeCheck (py_v, &value_object_type))
-	{
-	  /* If we just call convert_value_from_python for this type,
-	     we won't know who owns the result.  For this one case we
-	     need to copy the resulting value.  */
-	  v = value_object_to_value (py_v);
-	  v = value_copy (v);
-	}
-      else
-	v = convert_value_from_python (py_v);
+      v = convert_value_from_python (py_v);
 
       /* TODO: This assume the name of the i-th child never changes.  */
 
@@ -2184,7 +2182,6 @@ static char *
 value_get_print_value (struct value *value, enum varobj_display_formats format,
 		       struct varobj *var)
 {
-  long dummy;
   struct ui_file *stb;
   struct cleanup *old_chain;
   gdb_byte *thevalue = NULL;
@@ -2256,7 +2253,7 @@ value_get_print_value (struct value *value, enum varobj_display_formats format,
     }
   else
     common_val_print (value, stb, 0, &opts, current_language);
-  thevalue = ui_file_xstrdup (stb, &dummy);
+  thevalue = ui_file_xstrdup (stb, NULL);
 
   do_cleanups (old_chain);
   return thevalue;

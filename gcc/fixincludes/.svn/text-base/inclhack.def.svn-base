@@ -356,6 +356,21 @@ fix = {
 
 
 /*
+ * complex.h on AIX 5 and AIX 6 define _Complex_I and I in terms of __I,
+ * which only is provided by AIX xlc C99.
+ */
+fix = {
+    hackname  = aix_complex;
+    mach      = "*-*-aix*";
+    files     = complex.h;
+    select    = "#define[ \t]_Complex_I[ \t]__I";
+    c_fix     = format;
+    c_fix_arg = "#define _Complex_I (__extension__ 1.0iF)";
+    test_text = "#define _Complex_I	__I\n";
+};
+
+
+/*
  *  pthread.h on AIX 4.3.3 tries to define a macro without whitspace
  *  which violates a requirement of ISO C.
  */
@@ -367,6 +382,106 @@ fix = {
     c_fix_arg = "%1 %2";
     test_text = "#define PTHREAD_MUTEX_INITIALIZER\\\\\n"
                 "{...init stuff...}";
+};
+
+
+/*
+ *  AIX stdint.h fixes.
+ */
+fix = {
+    hackname  = aix_stdint_1;
+    mach      = "*-*-aix*";
+    files     = stdint.h;
+    select    = "#define[ \t]UINT8_MAX[ \t]\\(255U\\)\n"
+		"#define[ \t]UINT16_MAX[ \t]\\(65535U\\)";
+    c_fix     = format;
+    c_fix_arg = "#define UINT8_MAX	(255)\n"
+		"#define UINT16_MAX	(65535)";
+    test_text = "#define UINT8_MAX	(255U)\n"
+		"#define UINT16_MAX	(65535U)";
+};
+
+
+fix = {
+    hackname  = aix_stdint_2;
+    mach      = "*-*-aix*";
+    files     = stdint.h;
+    select    = "#define[ \t]INTPTR_MIN[ \t]INT64_MIN\n"
+		"#define[ \t]INTPTR_MAX[ \t]INT64_MAX\n"
+		"#define[ \t]UINTPTR_MAX[ \t]UINT64_MAX\n"
+		"#else\n"
+		"#define[ \t]INTPTR_MIN[ \t]INT32_MIN\n"
+		"#define[ \t]INTPTR_MAX[ \t]INT32_MAX\n"
+		"#define[ \t]UINTPTR_MAX[ \t]UINT32_MAX";
+    c_fix     = format;
+    c_fix_arg = "#define INTPTR_MIN	(-INTPTR_MAX-1)\n"
+		"#define INTPTR_MAX	9223372036854775807L\n"
+		"#define UINTPTR_MAX	18446744073709551615UL\n"
+		"#else\n"
+		"#define INTPTR_MIN	(-INTPTR_MAX-1)\n"
+		"#define INTPTR_MAX	2147483647L\n"
+		"#define UINTPTR_MAX	4294967295UL";
+    test_text = "#define INTPTR_MIN	INT64_MIN\n"
+		"#define INTPTR_MAX	INT64_MAX\n"
+		"#define UINTPTR_MAX	UINT64_MAX\n"
+		"#else\n"
+		"#define INTPTR_MIN	INT32_MIN\n"
+		"#define INTPTR_MAX	INT32_MAX\n"
+		"#define UINTPTR_MAX	UINT32_MAX";
+};
+
+
+fix = {
+    hackname  = aix_stdint_3;
+    mach      = "*-*-aix*";
+    files     = stdint.h;
+    select    = "#define[ \t]PTRDIFF_MIN[ \t]INT64_MIN\n"
+		"#define[ \t]PTRDIFF_MAX[ \t]INT64_MAX\n"
+		"#else\n"
+		"#define[ \t]PTRDIFF_MIN[ \t]*INT32_MIN\n"
+		"#define[ \t]PTRDIFF_MAX[ \t]*INT32_MAX";
+    c_fix     = format;
+    c_fix_arg = "#define PTRDIFF_MIN	(-9223372036854775807L - 1)\n"
+		"#define PTRDIFF_MAX	9223372036854775807L\n"
+		"#else\n"
+		"#define PTRDIFF_MIN	(-2147483647L - 1)\n"
+		"#define PTRDIFF_MAX	2147483647L";
+    test_text = "#define PTRDIFF_MIN	INT64_MIN\n"
+		"#define PTRDIFF_MAX	INT64_MAX\n"
+		"#else\n"
+		"#define PTRDIFF_MIN     INT32_MIN\n"
+		"#define PTRDIFF_MAX	INT32_MAX";
+};
+
+
+fix = {
+    hackname  = aix_stdint_4;
+    mach      = "*-*-aix*";
+    files     = stdint.h;
+    select    = "#define[ \t]SIZE_MAX[ \t]UINT64_MAX\n"
+		"#else\n"
+		"#define[ \t]SIZE_MAX[ \t]*UINT32_MAX";
+    c_fix     = format;
+    c_fix_arg = "#define SIZE_MAX	18446744073709551615UL\n"
+		"#else\n"
+		"#define SIZE_MAX	4294967295UL";
+    test_text = "#define SIZE_MAX	UINT64_MAX\n"
+		"#else\n"
+		"#define SIZE_MAX        UINT32_MAX";
+};
+
+
+fix = {
+    hackname  = aix_stdint_5;
+    mach      = "*-*-aix*";
+    files     = stdint.h;
+    select    = "#define[ \t]UINT8_C\\(c\\)[ \t]__CONCAT__\\(c,U\\)\n"
+		"#define[ \t]UINT16_C\\(c\\)[ \t]__CONCAT__\\(c,U\\)";
+    c_fix     = format;
+    c_fix_arg = "#define UINT8_C(c)	c\n"
+		"#define UINT16_C(c)	c";
+    test_text = "#define UINT8_C(c)	__CONCAT__(c,U)\n"
+		"#define UINT16_C(c)	__CONCAT__(c,U)";
 };
 
 
@@ -1336,10 +1451,19 @@ fix = {
     hackname  = glibc_c99_inline_2;
     files     = sys/stat.h, '*/sys/stat.h';
     select    = "extern __inline__ int";
-    sed     = "s/extern int \\(stat\\|lstat\\|fstat\\|mknod\\)/"
+    sed     = "s/extern int \\(stat\\)/"
               "#ifdef __GNUC_GNU_INLINE__\\\nextern\\\n#endif\\\n"
               "__inline__ int \\1/";
-    sed     = "s/extern int __REDIRECT\\(_NTH\\|\\) (\\(stat\\|lstat\\|fstat\\)/"
+    sed     = "s/extern int \\([lf]stat\\)/"
+              "#ifdef __GNUC_GNU_INLINE__\\\nextern\\\n#endif\\\n"
+              "__inline__ int \\1/";
+    sed     = "s/extern int \\(mknod\\)/"
+              "#ifdef __GNUC_GNU_INLINE__\\\nextern\\\n#endif\\\n"
+              "__inline__ int \\1/";
+    sed     = "s/extern int __REDIRECT\\(_NTH\\)\\{0,1\\} (\\(stat\\)/"
+              "#ifdef __GNUC_GNU_INLINE__\\\nextern\\\n#endif\\\n"
+              "__inline__ int __REDIRECT\\1 (\\2/";
+    sed     = "s/extern int __REDIRECT\\(_NTH\\)\\{0,1\\} (\\([lf]stat\\)/"
               "#ifdef __GNUC_GNU_INLINE__\\\nextern\\\n#endif\\\n"
               "__inline__ int __REDIRECT\\1 (\\2/";
     sed     = "s/^extern __inline__ int/"
@@ -1394,25 +1518,33 @@ fix = {
     hackname = glibc_mutex_init;
     files    = pthread.h;
     select   = '\{ *\{ *0, *\} *\}';
-    sed      = "/define[ \t]\\+PTHREAD_MUTEX_INITIALIZER[ \t]*\\\\/{\n"
+    sed      = "/define[ \t]\\{1,\\}PTHREAD_MUTEX_INITIALIZER[ \t]*\\\\/{\n"
                "N\ns/{ { 0, } }/{ { 0, 0, 0, 0, 0, 0 } }/\n}";
     sed      = "s/{ \\(0, 0, 0, 0, PTHREAD_MUTEX_"
-               "\\(RECURSIVE\\|ERRORCHECK\\|ADAPTIVE\\)_NP\\) }/{ \\1, 0 }/";
+               "\\(RECURSIVE\\)_NP\\) }/{ \\1, 0 }/";
+    sed      = "s/{ \\(0, 0, 0, 0, PTHREAD_MUTEX_"
+               "\\(ERRORCHECK\\)_NP\\) }/{ \\1, 0 }/";
+    sed      = "s/{ \\(0, 0, 0, 0, PTHREAD_MUTEX_"
+               "\\(ADAPTIVE\\)_NP\\) }/{ \\1, 0 }/";
     sed      = "s/{ \\(0, 0, 0, PTHREAD_MUTEX_"
-               "\\(RECURSIVE\\|ERRORCHECK\\|ADAPTIVE\\)_NP\\) }/{ \\1, 0, 0 }/";
-    sed      = "/define[ \t]\\+PTHREAD_RWLOCK_INITIALIZER[ \t]*\\\\/"
+               "\\(RECURSIVE\\)_NP\\) }/{ \\1, 0, 0 }/";
+    sed      = "s/{ \\(0, 0, 0, PTHREAD_MUTEX_"
+               "\\(ERRORCHECK\\)_NP\\) }/{ \\1, 0, 0 }/";
+    sed      = "s/{ \\(0, 0, 0, PTHREAD_MUTEX_"
+               "\\(ADAPTIVE\\)_NP\\) }/{ \\1, 0, 0 }/";
+    sed      = "/define[ \t]\\{1,\\}PTHREAD_RWLOCK_INITIALIZER[ \t]*\\\\/"
                "N;s/^[ \t]*#[ \t]*"
-               "\\(define[ \t]\\+PTHREAD_RWLOCK_INITIALIZER[ \t]*\\\\\\)\\n"
-               "[ \t]*{ { 0, } }/# if __WORDSIZE == 64\\n"
-               "#  \\1\\n"
-               "  { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } }\\n"
-               "# else\\n"
-               "#  \\1\\n"
-               "  { { 0, 0, 0, 0, 0, 0, 0, 0 } }\\n"
+               "\\(define[ \t]\\{1,\\}PTHREAD_RWLOCK_INITIALIZER[ \t]*\\\\\\)\\n"
+               "[ \t]*{ { 0, } }/# if __WORDSIZE == 64\\\n"
+               "#  \\1\\\n"
+               "  { { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } }\\\n"
+               "# else\\\n"
+               "#  \\1\\\n"
+               "  { { 0, 0, 0, 0, 0, 0, 0, 0 } }\\\n"
                "# endif/";
     sed      = "s/{ \\(0, 0, 0, 0, 0, 0, "
                "PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP\\) }/{ \\1, 0 }/";
-    sed      = "/define[ \t]\\+PTHREAD_COND_INITIALIZER/"
+    sed      = "/define[ \t]\\{1,\\}PTHREAD_COND_INITIALIZER/"
                "s/{ { 0, } }/{ { 0, 0, 0, 0, 0, (void *) 0, 0, 0 } }/";
 
     test_text = <<- _EOText_
@@ -2075,43 +2207,44 @@ fix = {
 };
 
 fix = {
-    hackname  = hpux_stdint_least;
+    hackname  = hpux_stdint_least_fast;
     mach      = "*-hp-hpux11.2*";
     files     = stdint.h;
-    select    = "^[ \t]*#[ \t]*define[ \t]*UINT_LEAST64_MAX[ \t]*ULLONG_MAX";
+    select    =
+        "^[ \t]*#[ \t]*define[ \t]+UINT_(LEAST|FAST)64_MAX[ \t]+ULLONG_MAX";
     c_fix     = format;
-    c_fix_arg = "#ifdef __LP64__\n#  define	UINT_LEAST64_MAX	ULONG_MAX\n#else\n%0\n#endif\n";
-    test_text ="#  define       UINT_LEAST64_MAX        ULLONG_MAX\n";
-};
-
-fix = {
-    hackname  = hpux_stdint_fast;
-    mach      = "*-hp-hpux11.2*";
-    files     = stdint.h;
-    select    = "^[ \t]*#[ \t]*define[ \t]*UINT_FAST64_MAX[ \t]*ULLONG_MAX";
-    c_fix     = format;
-    c_fix_arg = "#ifdef __LP64__\n#  define	UINT_FAST64_MAX		ULONG_MAX\n#else\n%0\n#endif\n";
-    test_text ="#  define       UINT_FAST64_MAX        ULLONG_MAX\n";
-};
-
-fix = {
-    hackname  = hpux_inttype_int_least8_t;
-    mach      = "*-hp-hpux11.*";
-    files     = sys/_inttypes.h;
-    select    = "^[ \t]*typedef[ \t]*char[ \t]*int_least8_t.*";
-    c_fix     = format;
-    c_fix_arg = "typedef signed char int_least8_t;";
-    test_text ="typedef char int_least8_t;\n";
+    c-fix-arg = <<- _EOFix_
+	#ifdef __LP64__
+	#  define	UINT_%164_MAX	ULONG_MAX
+	#else
+	%0
+	#endif
+	_EOFix_;
+    test-text = <<- _EOFix_
+	#  define       UINT_FAST64_MAX        ULLONG_MAX
+	#  define       UINT_LEAST64_MAX        ULLONG_MAX
+	_EOFix_;
 };
 
 fix = {
     hackname  = hpux_inttype_int8_t;
-    mach      = "*-hp-hpux11.*";
+    mach      = "*-hp-hpux1[01].*";
     files     = sys/_inttypes.h;
-    select    = "^[ \t]*typedef[ \t]*char[ \t]*int8_t.*";
+    select    = "^[ \t]*typedef[ \t]*char[ \t]*int(_least){0,1}8_t.*";
     c_fix     = format;
-    c_fix_arg = "typedef signed char int8_t;";
-    test_text ="typedef char int8_t;\n";
+    c_fix_arg = "typedef signed char int%18_t;";
+    test_text = "typedef char int_least8_t;\n"
+                "typedef char int8_t;\n";
+};
+
+fix = {
+    hackname  = hpux_imaginary_i;
+    mach      = "ia64-hp-hpux11.*";
+    files     = complex.h;
+    select    = "^[ \t]*#[ \t]*define[ \t]*_Complex_I.*";
+    c_fix     = format;
+    c_fix_arg = "#define _Complex_I (__extension__ 1.0iF)";
+    test_text = "#define _Complex_I (0.f+_Imaginary_I)\n";
 };
 
 /*
@@ -2317,6 +2450,29 @@ fix = {
     c_fix_arg = "%1 are";
     c_fix_arg = "^([ \t]*#.*[Ww]e)'re";
     test_text = "\t# and we're on vacation";
+};
+
+
+/*
+ * IRIX 6.5 complex.h defines _Complex_I and _Imaginary_I in terms of __I__,
+ * which is a MIPSpro compiler builtin.  Remove _Imaginary_I and imaginary
+ * definitions which are not supported by GCC. 
+ */
+fix = {
+    hackname  = irix_complex;
+    mach      = "mips-sgi-irix6.5";
+    files     = complex.h;
+    select    = "#define[ \t]_Complex_I[ \t]\\(\\(float[ \t]_Complex\\)[ \t]\\(__I__\\)\\)";
+    sed	      = "s/#define[ \t]_Complex_I[ \t]((float[ \t]_Complex)[ \t](__I__))/"
+		"#define _Complex_I (__extension__ 1.0iF)/";
+    sed	      = "/#define[ \t]imaginary[ \t]_Imaginary/d";
+    sed	      = "/#define[ \t]_Imaginary_I/d";
+    sed       = "s/#define[ \t]I[ \t]_Imaginary_I/#define I _Complex_I/";
+    test_text = "#define _Complex_I ((float _Complex) (__I__))\n"
+		"#define imaginary _Imaginary\n"
+		"// #define _Imaginary_I ((float _Imaginary) 1)\n"
+		"#define _Imaginary_I __I__\n"
+		"#define I _Imaginary_I";
 };
 
 
@@ -3083,23 +3239,47 @@ fix = {
 "/.*__builtin_generic/a\\\n"
 "#else\\\n"
 "#define __fp_class(a) \\\\\\\n"
-"  __builtin_choose_expr(__builtin_types_compatible_p(typeof(a),long double),\\\\\\\n"
-"   __fpclassifyl(a), \\\\\\\n"
-"    __builtin_choose_expr(__builtin_types_compatible_p(typeof(a), float), \\\\\\\n"
-"      __fpclassifyf(a),__fpclassify(a)))\\\n"
-"#endif";
+"\\  __builtin_choose_expr(__builtin_types_compatible_p(typeof(a),long double),\\\\\\\n"
+"\\   __fpclassifyl(a), \\\\\\\n"
+"\\    __builtin_choose_expr(__builtin_types_compatible_p(typeof(a), float), \\\\\\\n"
+"\\      __fpclassifyf(a),__fpclassify(a)))\\\n"
+"#endif\n";
 
-    sed      = "/extern \"C\\+\\+\"/N;"
+    sed      = "/extern \"C++\"/N;"
 	       "/inline double abs/i\\\n"
                "#ifndef __GNUC__\n";
     sed      = "/inline long double trunc/N;"
-	       "/inline long double trunc.*}.*extern \"C\\+\\+\"/a\\\n"
-	       "#endif /* ! __GNUC__ */";
+	       "/inline long double trunc.*}.*extern \"C++\"/a\\\n"
+	       "#endif /* ! __GNUC__ */\n";
 
     test_text =
     "#define __fp_class(a) \\\\\n"
     " __builtin_generic(a,\"ld:__fplcassifyl;f:__fpclassifyf;:__fpclassify\")\n";
 
+};
+
+
+/*
+ * Solaris 10+ complex.h defines _Complex_I and _Imaginary_I in terms of
+ * themselves, which are Sun Studio compiler intrinsics.  Remove _Imaginary_I
+ * and imaginary definitions which are not supported by GCC.
+ */
+fix = {
+    hackname  = solaris_complex;
+    mach      = "*-*-solaris2.*";
+    files     = complex.h;
+    select    = "#define[ \t]_Complex_I[ \t]_Complex_I";
+    sed	      = "s/#define[ \t]_Complex_I[ \t]_Complex_I/"
+		"#define\t_Complex_I\t(__extension__ 1.0iF)/";
+    sed	      = "/#define[ \t]_Imaginary_I[ \t]_Imaginary_I/d";
+    sed	      = "/#define[ \t]imaginary[ \t]_Imaginary/d";
+    sed       = "s/#define[ \t]I[ \t]\\{1,\\}_Imaginary_I/#define\tI\t\t_Complex_I/";
+    test_text = "#define	_Complex_I	_Complex_I\n"
+    		"#define	complex		_Complex\n"
+		"#define	_Imaginary_I	_Imaginary_I\n"
+		"#define	imaginary	_Imaginary\n"
+		"#undef	I\n"
+		"#define	I		_Imaginary_I";
 };
 
 
@@ -4275,7 +4455,7 @@ fix = {
 
     sed      = "/Widget\told, new;/i\\\n"
                    "#ifdef __cplusplus\\\n"
-                   "\tWidget\told, c_new;\\\n"
+                   "\\\tWidget\told, c_new;\\\n"
                    "#else\n";
 
     sed      = "/Widget\told, new;/a\\\n"
@@ -4284,7 +4464,7 @@ fix = {
     sed      = "s/Widget new,/Widget c_new,/g";
     test_text =
     "struct wedge {\n"
-    "   Widget\told, new; /* fixinc check FAILS ON BSD */\n"
+    "   Widget\told, new;\n"
     "};\nextern Wedged( Widget new, Widget old );";
 };
 

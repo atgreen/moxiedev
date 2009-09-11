@@ -1741,6 +1741,8 @@ get_output_file_with_visibility (const char *input_file)
      headers with source files (and their special purpose gt-*.h headers).  */
   else if (strcmp (basename, "c-common.h") == 0)
     output_name = "gt-c-common.h", for_name = "c-common.c";
+  else if (strcmp (basename, "c-lang.h") == 0)
+    output_name = "gt-c-decl.h", for_name = "c-decl.c";
   else if (strcmp (basename, "c-tree.h") == 0)
     output_name = "gt-c-decl.h", for_name = "c-decl.c";
   else if (strncmp (basename, "cp", 2) == 0 && IS_DIR_SEPARATOR (basename[2])
@@ -3669,6 +3671,7 @@ main (int argc, char **argv)
   do_scalar_typedef ("REAL_VALUE_TYPE", &pos); pos.line++;
   do_scalar_typedef ("FIXED_VALUE_TYPE", &pos); pos.line++;
   do_scalar_typedef ("double_int", &pos); pos.line++;
+  do_scalar_typedef ("uint64_t", &pos); pos.line++;
   do_scalar_typedef ("uint8", &pos); pos.line++;
   do_scalar_typedef ("jword", &pos); pos.line++;
   do_scalar_typedef ("JCF_u2", &pos); pos.line++;

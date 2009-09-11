@@ -1,6 +1,6 @@
 /* tc-sh.c -- Assemble code for the Renesas / SuperH SH
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007  Free Software Foundation, Inc.
+   2003, 2004, 2005, 2006, 2007, 2008, 2009  Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -1350,7 +1350,7 @@ static char *
 parse_exp (char *s, sh_operand_info *op)
 {
   char *save;
-  char *new;
+  char *new_pointer;
 
   save = input_line_pointer;
   input_line_pointer = s;
@@ -1363,9 +1363,9 @@ parse_exp (char *s, sh_operand_info *op)
 	   || sh_PIC_related_p (op->immediate.X_op_symbol))
     as_bad (_("misplaced PIC operand"));
 #endif
-  new = input_line_pointer;
+  new_pointer = input_line_pointer;
   input_line_pointer = save;
-  return new;
+  return new_pointer;
 }
 
 /* The many forms of operand:
@@ -4183,6 +4183,9 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
 	val = ((val >> shift)
 	       | ((long) -1 & ~ ((long) -1 >> shift)));
     }
+
+  /* Extend sign for 64-bit host.  */
+  val = ((val & 0xffffffff) ^ 0x80000000) - 0x80000000;
   if (max != 0 && (val < min || val > max))
     as_bad_where (fixP->fx_file, fixP->fx_line, _("offset out of range"));
   else if (max != 0)

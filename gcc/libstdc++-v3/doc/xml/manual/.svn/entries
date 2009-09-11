@@ -1,15 +1,15 @@
 10
 
 dir
-150304
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/doc/xml/manual
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-29T01:53:49.543369Z
-150195
-bkoz
+2009-08-22T13:41:50.702364Z
+151015
+rwild
 
 
 
@@ -130,7 +130,7 @@ bkoz
 
 numerics.xml
 file
-149693
+
 
 
 
@@ -304,11 +304,11 @@ file
 
 
 
-2009-07-31T04:48:18.000000Z
-2294aaed95f96d979b924aa715e06999
-2009-07-23T15:50:16.346961Z
-150016
-paolo
+2009-09-08T13:01:55.000000Z
+d444a3d5e58ab7eb83e699ba572c918c
+2009-08-14T17:54:44.582551Z
+150768
+bkoz
 
 
 
@@ -330,7 +330,7 @@ paolo
 
 
 
-37083
+37773
 
 abi.xml
 file
@@ -368,7 +368,7 @@ bkoz
 
 status_cxxtr1.xml
 file
-149693
+
 
 
 
@@ -606,7 +606,7 @@ bkoz
 
 appendix_porting.xml
 file
-149693
+
 
 
 
@@ -640,7 +640,7 @@ bkoz
 
 utilities.xml
 file
-149693
+
 
 
 
@@ -780,11 +780,11 @@ file
 
 
 
-2009-07-31T04:48:18.000000Z
-37ba2c240745f322045038725980fea9
-2009-07-21T04:28:41.625116Z
-149845
-bkoz
+2009-09-08T13:01:55.000000Z
+2a16be68700606c16396d3431a3369ee
+2009-08-22T13:41:50.702364Z
+151015
+rwild
 
 
 
@@ -806,7 +806,7 @@ bkoz
 
 
 
-12447
+12439
 
 evolution.xml
 file
@@ -848,10 +848,10 @@ file
 
 
 
-2009-07-31T04:48:18.000000Z
-78e55a6aea718b33ede1d4f5bc8442c5
-2009-07-21T04:28:41.625116Z
-149845
+2009-09-08T13:01:55.000000Z
+b8b9d5b17880c6f14c62f5d7ce79cc9c
+2009-08-11T04:30:35.368415Z
+150642
 bkoz
 
 
@@ -874,7 +874,7 @@ bkoz
 
 
 
-49877
+49939
 
 debug.xml
 file
@@ -1116,7 +1116,7 @@ bkoz
 
 prerequisites.xml
 file
-149693
+
 
 
 
@@ -1252,7 +1252,7 @@ bkoz
 
 appendix_free.xml
 file
-149693
+
 
 
 
@@ -1354,7 +1354,7 @@ bkoz
 
 status_cxx200x.xml
 file
-149693
+
 
 
 

@@ -10,8 +10,6 @@
 /gdb792.cc/1.1/Mon Jul  6 10:46:43 2009//
 /gdb792.exp/1.12/Mon Jul  6 10:46:43 2009//
 /mi-async.exp/1.8/Mon Jul  6 10:46:43 2009//
-/mi-basics.exp/1.22/Mon Jul  6 10:46:43 2009//
-/mi-break.exp/1.24/Mon Jul  6 10:46:43 2009//
 /mi-cli.exp/1.20/Mon Jul  6 10:46:43 2009//
 /mi-console.c/1.1/Mon Jul  6 10:46:43 2009//
 /mi-console.exp/1.25/Mon Jul  6 10:46:43 2009//
@@ -44,13 +42,11 @@
 /mi-var-child-f.exp/1.9/Mon Jul  6 10:46:43 2009//
 /mi-var-child.c/1.10/Mon Jul  6 10:46:43 2009//
 /mi-var-child.exp/1.33/Mon Jul 13 11:34:26 2009//
-/mi-var-cmd.exp/1.43/Mon Jul  6 10:46:43 2009//
 /mi-var-cp.cc/1.11/Mon Jul  6 10:46:43 2009//
 /mi-var-cp.exp/1.10/Mon Jul  6 10:46:43 2009//
 /mi-var-display.exp/1.32/Mon Jul 13 11:34:26 2009//
 /mi-var-invalidate.exp/1.6/Mon Jul  6 10:46:43 2009//
 /mi-watch.exp/1.24/Mon Jul  6 10:46:43 2009//
-/mi2-basics.exp/1.14/Mon Jul  6 10:46:43 2009//
 /mi2-break.exp/1.13/Mon Jul  6 10:46:43 2009//
 /mi2-cli.exp/1.15/Mon Jul  6 10:46:43 2009//
 /mi2-console.exp/1.13/Mon Jul  6 10:46:43 2009//
@@ -69,7 +65,6 @@
 /mi2-until.exp/1.14/Mon Jul  6 10:46:43 2009//
 /mi2-var-block.exp/1.13/Mon Jul  6 10:46:43 2009//
 /mi2-var-child.exp/1.14/Mon Jul  6 10:46:43 2009//
-/mi2-var-cmd.exp/1.23/Mon Jul 13 11:34:26 2009//
 /mi2-var-display.exp/1.25/Mon Jul 13 11:34:26 2009//
 /mi2-watch.exp/1.15/Mon Jul  6 10:46:43 2009//
 /non-stop-exit.c/1.1/Mon Jul  6 10:46:43 2009//
@@ -81,4 +76,9 @@
 /testcmds/1.1/Mon Jul  6 10:46:43 2009//
 /until.c/1.1/Mon Jul  6 10:46:43 2009//
 /var-cmd.c/1.19/Mon Jul  6 10:46:43 2009//
+/mi-basics.exp/1.23/Tue Sep  8 03:29:17 2009//
+/mi-break.exp/1.25/Tue Sep  8 03:29:17 2009//
+/mi-var-cmd.exp/1.44/Tue Sep  8 03:29:17 2009//
+/mi2-basics.exp/1.15/Tue Sep  8 03:29:17 2009//
+/mi2-var-cmd.exp/1.24/Tue Sep  8 03:29:17 2009//
 D

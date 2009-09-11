@@ -1,5 +1,5 @@
 /* tc-bfin.h - header file for tc-bfin.c
-   Copyright 2005, 2007, 2008
+   Copyright 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -39,10 +39,8 @@
 
 #define WORKING_DOT_WORD
 
-extern void bfin_start_line_hook (void);
-extern bfd_boolean bfin_start_label (char *);
+extern bfd_boolean bfin_start_label (char *, char *);
 
-#define md_start_line_hook()    bfin_start_line_hook()
 #define md_number_to_chars	number_to_chars_littleendian
 #define md_convert_frag(b,s,f)	as_fatal ("bfin convert_frag\n");
 
@@ -61,7 +59,7 @@ extern bfd_boolean bfin_eol_in_insn (char *);
 
 #define DOUBLESLASH_LINE_COMMENTS
 
-#define TC_START_LABEL(ch ,ptr) (ch == ':' && bfin_start_label (ptr))
+#define TC_START_LABEL(c, s, ptr) (c == ':' && bfin_start_label (s, ptr))
 #define tc_fix_adjustable(FIX) bfin_fix_adjustable (FIX)
 extern bfd_boolean bfin_fix_adjustable (struct fix *);
 
@@ -77,5 +75,11 @@ extern long md_pcrel_from_section (struct fix *, segT);
 
 /* This target is buggy, and sets fix size too large.  */
 #define TC_FX_SIZE_SLACK(FIX) 2
+
+extern unsigned int bfin_anomaly_checks;
+
+/* Anomaly checking */
+#define AC_05000074 0x00000001
+#define ENABLE_AC_05000074 (bfin_anomaly_checks & AC_05000074)
 
 /* end of tc-bfin.h */

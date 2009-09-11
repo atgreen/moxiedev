@@ -391,6 +391,7 @@ get_attr_length_1 (rtx insn ATTRIBUTE_UNUSED,
       case NOTE:
       case BARRIER:
       case CODE_LABEL:
+      case DEBUG_INSN:
 	return 0;
 
       case CALL_INSN:
@@ -1080,7 +1081,7 @@ shorten_branches (rtx first ATTRIBUTE_UNUSED)
       INSN_ADDRESSES (uid) = insn_current_address + insn_lengths[uid];
 
       if (NOTE_P (insn) || BARRIER_P (insn)
-	  || LABEL_P (insn))
+	  || LABEL_P (insn) || DEBUG_INSN_P(insn))
 	continue;
       if (INSN_DELETED_P (insn))
 	continue;
@@ -1450,10 +1451,10 @@ add_debug_prefix_map (const char *arg)
       return;
     }
   map = XNEW (debug_prefix_map);
-  map->old_prefix = ggc_alloc_string (arg, p - arg);
+  map->old_prefix = xstrndup (arg, p - arg);
   map->old_len = p - arg;
   p++;
-  map->new_prefix = ggc_strdup (p);
+  map->new_prefix = xstrdup (p);
   map->new_len = strlen (p);
   map->next = debug_prefix_maps;
   debug_prefix_maps = map;
@@ -4381,7 +4382,8 @@ rest_of_clean_state (void)
 	  && (!NOTE_P (insn) ||
 	      (NOTE_KIND (insn) != NOTE_INSN_VAR_LOCATION
 	       && NOTE_KIND (insn) != NOTE_INSN_BLOCK_BEG
-	       && NOTE_KIND (insn) != NOTE_INSN_BLOCK_END)))
+	       && NOTE_KIND (insn) != NOTE_INSN_BLOCK_END
+	       && NOTE_KIND (insn) != NOTE_INSN_CFA_RESTORE_STATE)))
 	print_rtl_single (final_output, insn);
 
     }

@@ -287,10 +287,10 @@ static void
 eat_line (st_parameter_dt *dtp)
 {
   char c;
-  if (!is_internal_unit (dtp))
-    do
-      c = next_char (dtp);
-    while (c != '\n');
+
+  do
+    c = next_char (dtp);
+  while (c != '\n');
 }
 
 
@@ -2374,10 +2374,10 @@ nml_read_obj (st_parameter_dt *dtp, namelist_info * nl, index_type offset,
 	  if (dtp->u.p.input_complete)
 	    return SUCCESS;
 
-	  /* GFC_TYPE_UNKNOWN through for nulls and is detected
-	     after the switch block.  */
+	  /* BT_NULL (equivalent to GFC_DTYPE_UNKNOWN) falls through
+	     for nulls and is detected at default: of switch block.  */
 
-	  dtp->u.p.saved_type = GFC_DTYPE_UNKNOWN;
+	  dtp->u.p.saved_type = BT_NULL;
 	  free_saved (dtp);
 
           switch (nl->type)
@@ -2467,7 +2467,7 @@ nml_read_obj (st_parameter_dt *dtp, namelist_info * nl, index_type offset,
 	  return SUCCESS;
 	}
 
-      if (dtp->u.p.saved_type == GFC_DTYPE_UNKNOWN)
+      if (dtp->u.p.saved_type == BT_NULL)
 	{
 	  dtp->u.p.expanded_read = 0;
 	  goto incr_idx;
@@ -2773,7 +2773,7 @@ get_name:
 
   if (nl->type == GFC_DTYPE_DERIVED)
     nml_touch_nodes (nl);
-  if (component_flag && nl->var_rank > 0)
+  if (component_flag && nl->var_rank > 0 && nl->next)
     nl = first_nl;
 
   /* Make sure no extraneous qualifiers are there.  */

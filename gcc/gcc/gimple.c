@@ -33,6 +33,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-flow.h"
 #include "value-prof.h"
 #include "flags.h"
+#include "demangle.h"
 
 #define DEFGSCODE(SYM, NAME, STRUCT)	NAME,
 const char *const gimple_code_name[] = {
@@ -102,6 +103,7 @@ gss_for_code (enum gimple_code code)
     case GIMPLE_COND:
     case GIMPLE_GOTO:
     case GIMPLE_LABEL:
+    case GIMPLE_DEBUG:
     case GIMPLE_SWITCH:			return GSS_WITH_OPS;
     case GIMPLE_ASM:			return GSS_ASM;
     case GIMPLE_BIND:			return GSS_BIND;
@@ -253,7 +255,7 @@ gimple_set_subcode (gimple g, unsigned subcode)
   gimple_build_with_ops_stat (c, s, n MEM_STAT_INFO)
 
 static gimple
-gimple_build_with_ops_stat (enum gimple_code code, enum tree_code subcode,
+gimple_build_with_ops_stat (enum gimple_code code, unsigned subcode,
 		            unsigned num_ops MEM_STAT_DECL)
 {
   gimple s = gimple_alloc_stat (code, num_ops PASS_MEM_STAT);
@@ -427,7 +429,7 @@ gimple_build_assign_with_ops_stat (enum tree_code subcode, tree lhs, tree op1,
      code).  */
   num_ops = get_gimple_rhs_num_ops (subcode) + 1;
   
-  p = gimple_build_with_ops_stat (GIMPLE_ASSIGN, subcode, num_ops
+  p = gimple_build_with_ops_stat (GIMPLE_ASSIGN, (unsigned)subcode, num_ops
   			          PASS_MEM_STAT);
   gimple_assign_set_lhs (p, lhs);
   gimple_assign_set_rhs1 (p, op1);
@@ -831,6 +833,29 @@ gimple_build_switch_vec (tree index, tree default_label, VEC(tree, heap) *args)
 }
 
 
+/* Build a new GIMPLE_DEBUG_BIND statement.
+
+   VAR is bound to VALUE; block and location are taken from STMT.  */
+
+gimple
+gimple_build_debug_bind_stat (tree var, tree value, gimple stmt MEM_STAT_DECL)
+{
+  gimple p = gimple_build_with_ops_stat (GIMPLE_DEBUG,
+					 (unsigned)GIMPLE_DEBUG_BIND, 2
+					 PASS_MEM_STAT);
+
+  gimple_debug_bind_set_var (p, var);
+  gimple_debug_bind_set_value (p, value);
+  if (stmt)
+    {
+      gimple_set_block (p, gimple_block (stmt));
+      gimple_set_location (p, gimple_location (stmt));
+    }
+
+  return p;
+}
+
+
 /* Build a GIMPLE_OMP_CRITICAL statement.
 
    BODY is the sequence of statements for which only one thread can execute.
@@ -1213,11 +1238,11 @@ empty_body_p (gimple_seq body)
 {
   gimple_stmt_iterator i;
 
-
   if (gimple_seq_empty_p (body))
     return true;
   for (i = gsi_start (body); !gsi_end_p (i); gsi_next (&i))
-    if (!empty_stmt_p (gsi_stmt (i)))
+    if (!empty_stmt_p (gsi_stmt (i))
+	&& !is_gimple_debug (gsi_stmt (i)))
       return false;
 
   return true;
@@ -2224,6 +2249,9 @@ gimple_has_side_effects (const_gimple s)
 {
   unsigned i;
 
+  if (is_gimple_debug (s))
+    return false;
+
   /* We don't have to scan the arguments to check for
      volatile arguments, though, at present, we still
      do a scan to check for TREE_SIDE_EFFECTS.  */
@@ -2317,6 +2345,8 @@ gimple_rhs_has_side_effects (const_gimple s)
 	    return true;
 	  }
     }
+  else if (is_gimple_debug (s))
+    return false;
   else
     {
       /* For statements without an LHS, examine all arguments.  */
@@ -3396,6 +3426,77 @@ gimple_ior_addresses_taken (bitmap addresses_taken, gimple stmt)
 {
   return walk_stmt_load_store_addr_ops (stmt, addresses_taken, NULL, NULL,
 					gimple_ior_addresses_taken_1);
+}
+
+
+/* Return a printable name for symbol DECL.  */
+
+const char *
+gimple_decl_printable_name (tree decl, int verbosity)
+{
+  gcc_assert (decl && DECL_NAME (decl));
+
+  if (DECL_ASSEMBLER_NAME_SET_P (decl))
+    {
+      const char *str, *mangled_str;
+      int dmgl_opts = DMGL_NO_OPTS;
+
+      if (verbosity >= 2)
+	{
+	  dmgl_opts = DMGL_VERBOSE
+		      | DMGL_TYPES
+		      | DMGL_ANSI
+		      | DMGL_GNU_V3
+		      | DMGL_RET_POSTFIX;
+	  if (TREE_CODE (decl) == FUNCTION_DECL)
+	    dmgl_opts |= DMGL_PARAMS;
+	}
+
+      mangled_str = IDENTIFIER_POINTER (DECL_ASSEMBLER_NAME (decl));
+      str = cplus_demangle_v3 (mangled_str, dmgl_opts);
+      return (str) ? str : mangled_str;
+    }
+
+  return IDENTIFIER_POINTER (DECL_NAME (decl));
+}
+
+
+/* Fold a OBJ_TYPE_REF expression to the address of a function.
+   KNOWN_TYPE carries the true type of OBJ_TYPE_REF_OBJECT(REF).  Adapted
+   from cp_fold_obj_type_ref, but it tolerates types with no binfo
+   data.  */
+
+tree
+gimple_fold_obj_type_ref (tree ref, tree known_type)
+{
+  HOST_WIDE_INT index;
+  HOST_WIDE_INT i;
+  tree v;
+  tree fndecl;
+
+  if (TYPE_BINFO (known_type) == NULL_TREE)
+    return NULL_TREE;
+
+  v = BINFO_VIRTUALS (TYPE_BINFO (known_type));
+  index = tree_low_cst (OBJ_TYPE_REF_TOKEN (ref), 1);
+  i = 0;
+  while (i != index)
+    {
+      i += (TARGET_VTABLE_USES_DESCRIPTORS
+	    ? TARGET_VTABLE_USES_DESCRIPTORS : 1);
+      v = TREE_CHAIN (v);
+    }
+
+  fndecl = TREE_VALUE (v);
+
+#ifdef ENABLE_CHECKING
+  gcc_assert (tree_int_cst_equal (OBJ_TYPE_REF_TOKEN (ref),
+				  DECL_VINDEX (fndecl)));
+#endif
+
+  cgraph_node (fndecl)->local.vtable_method = true;
+
+  return build_fold_addr_expr (fndecl);
 }
 
 #include "gt-gimple.h"

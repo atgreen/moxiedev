@@ -393,6 +393,12 @@ requirements of the license of GCC.
     <listitem><para>These functions set <code>failbit</code> on error now.
     </para></listitem></varlistentry>
 
+    <varlistentry><term><ulink url="../ext/lwg-defects.html#130">130</ulink>:
+        <emphasis>Return type of container::erase(iterator) differs for associative containers</emphasis>
+    </term>
+    <listitem><para>Make member <code>erase</code> return iterator for <code>set</code>, <code>multiset</code>, <code>map</code>, <code>multimap</code>. 
+    </para></listitem></varlistentry>
+
     <varlistentry><term><ulink url="../ext/lwg-defects.html#136">136</ulink>:
         <emphasis>seekp, seekg setting wrong streams?</emphasis>
     </term>
@@ -602,6 +608,14 @@ requirements of the license of GCC.
         <emphasis>Wrong new expression in [some_]allocator::construct</emphasis>
     </term>
     <listitem><para>Replace &quot;new&quot; with &quot;::new&quot;.
+    </para></listitem></varlistentry>
+
+    <varlistentry><term><ulink url="../ext/lwg-active.html#408">408</ulink>:
+        <emphasis>
+        Is vector&lt;reverse_iterator&lt;char*&gt; &gt; forbidden?
+        </emphasis>
+    </term>
+    <listitem><para>Tweak the debug-mode checks in _Safe_iterator.
     </para></listitem></varlistentry>
 
     <varlistentry><term><ulink url="../ext/lwg-defects.html#409">409</ulink>:

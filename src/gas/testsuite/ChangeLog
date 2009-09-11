@@ -1,3 +1,141 @@
+2009-09-08  Alan Modra  <amodra@bigpond.net.au>
+
+	* gas/all/gas.exp (do_comment): Don't run on m32c.
+	* gas/all/align.d: Likewise.
+	* gas/all/incbin.d: Likewise.
+	* gas/macros/semi.d: Likewise.
+	* gas/elf/ifunc-1.d: Don't run on alpha.
+
+2009-09-04  Jie Zhang  <jie.zhang@analog.com>
+
+	* gas/bfin/arithmetic.s, gas/bfin/arithmetic.d: Add check
+	for (IU) option for multiply and multiply-accumulate to
+	data register instructon.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* gas/bfin/parallel5.s: New test.
+	* gas/bfin/error.exp: New test.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* gas/bfin/line_number.l, gas/bfin/line_number.s: New test.
+	* gas/bfin/bfin.exp: Add the new test.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* gas/bfin/expected_move_errors.s,
+	gas/bfin/expected_move_errors.l: Add "LC1 = I0;".
+	* gas/bfin/move.s, gas/bfin/move.d: Remove "CYCLES = A0.W".
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* gas/bfin/expected_comparison_errors.l: Expect error on Line 13.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* gas/bfin/loop.s, gas/bfin/loop.d: New test.
+	* gas/bfin/loop2.s, gas/bfin/loop2.d: New test.
+	* gas/bfin/loop3.s, gas/bfin/loop3.d: New test.
+	* gas/bfin/bfin.exp: Add the new tests.
+
+2009-09-02  Jie Zhang  <jie.zhang@analog.com>
+
+	From  Bernd Schmidt  <bernd.schmidt@analog.com>
+	* gas/bfin/expected_errors.l, gas/bfin/expected_errors.s:
+	Check error messages for invalid load/store insns.
+
+2009-09-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/att-regs.s: Add ymm tests for 16bit and 64bit.
+	* gas/i386/intel-regs.s: Likewise.
+
+	* gas/i386/att-regs.d: Updated.
+	* gas/i386/intel-regs.d: Likewise.
+
+2009-09-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/att-regs.s: Remove a tab.
+
+2009-09-01  Jie Zhang  <jie.zhang@analog.com>
+
+	* gas/bfin/expected_comparison_errors.s: Add more cases.
+	* gas/bfin/expected_comparison_errors.l: Update accordingly.
+
+2009-09-01  Jie Zhang  <jie.zhang@analog.com>
+
+	* gas/bfin/stack2.s: Add pop multiple instruction with a label
+	on the same line.
+	* gas/bfin/stack2.d: Adjust accordingly.
+
+2009-08-31  Jan Beulich  <jbeulich@novell.com>
+
+	* gas/elf/section5.l: Remove no longer issued warning pattern.
+
+2009-08-29  Matt Fleming  <matt@console-pimps.org>
+
+	* gas/sh/sign-extension.d: New file.
+	* gas/sh/sign-extension.s: New file.
+	* gas/sh/basic.exp: Run new test.
+
+2009-08-28  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/l1om.d: Check elf64-l1om format.
+
+2006-08-11  Bernd Schmidt  <bernd.schmidt@analog.com>
+
+	* gas/bfin/parallel.s: Add more test cases.
+	* gas/bfin/parallel.d: Update accordingly.
+	* gas/bfin/resource_conflict.l: New test.
+	* gas/bfin/resource_conflict.s: New test.
+	* gas/bfin/bfin.exp: Add resource_conflict.
+
+2009-08-11  Nick Clifton  <nickc@redhat.com>
+
+	PR 10443
+	* gas/arm/t16-bad.l: Update expected messages for moves with
+	shifted operands.
+
+2009-08-10  Daniel Gutson  <dgutson@codesourcery.com>
+
+	PR gas/10479
+	* gas/arm/sp-pc-usage-t.d: New test case.
+	* gas/arm/sp-pc-usage-t.s: New file.
+
+2006-08-09  Bernd Schmidt  <bernd.schmidt@analog.com>
+
+	From Mike Frysinger <michael.frysinger@analog.com>
+	* gas/bfin/reloc.d: Adjust for the renamed relocations.
+
+2009-08-07  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gas/arm/mapping2.s: Test code after .ident.
+
+2009-08-05  Chao-ying Fu  <fu@mips.com>
+
+	* gas/mips/jal-svr4pic.d, gas/mips/jal-xgot.d,
+	gas/mips/mips-abi32-pic2.d: Add R_MIPS_JALR relocations after jalr.
+
+2009-08-04  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* gas/arm/missing.s: New.
+	* gas/arm/missing.d: New.
+	* gas/arm/missing.l: New.
+
+2009-07-15  Daniel Gutson  <dgutson@codesourcery.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gas/arm/mapdir.d, gas/arm/mapdir.s: New files.
+	* gas/arm/mapping.d: Adapted to new symbols generation.
+	* gas/arm/mapping2.d: New test case.
+	* gas/arm/mapping2.s: New file.
+	* gas/arm/mapping3.d: New test case.
+	* gas/arm/mapping3.s: New file.
+	* gas/arm/mapping4.d: New test case.
+	* gas/arm/mapping4.s: New file.
+	* gas/arm/mapshort-eabi.d: Adapted to new symbols generation.
+	* gas/elf/section2.e-armeabi: Adapted to new symbols generation.
+
 2009-07-27  Jan Beulich  <jbeulich@novell.com>
 
 	* gas/elf/file.[ds]: New.
@@ -219,6 +357,7 @@
 
 2009-06-19  Alan Modra  <amodra@bigpond.net.au>
 
+	PR gas/10255
 	* gas/cfi/cfi-common-7.s: Skip a multiple of four.
 	* gas/cfi/cfi-common-7.d: Adjust.
 

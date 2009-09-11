@@ -190,9 +190,7 @@
 /jal-newabi.s/1.1/Mon Jul  6 10:46:42 2009//
 /jal-range.l/1.4/Mon Jul  6 10:46:42 2009//
 /jal-range.s/1.3/Mon Jul  6 10:46:42 2009//
-/jal-svr4pic.d/1.6/Mon Jul  6 10:46:42 2009//
 /jal-svr4pic.s/1.3/Mon Jul  6 10:46:42 2009//
-/jal-xgot.d/1.6/Mon Jul  6 10:46:42 2009//
 /jal.d/1.3/Mon Jul  6 10:46:42 2009//
 /jal.s/1.1.1.1/Mon Jul  6 10:46:42 2009//
 /jalr.l/1.2/Mon Jul  6 10:46:42 2009//
@@ -263,7 +261,6 @@
 /macro-warn-4.s/1.1/Mon Jul  6 10:46:42 2009//
 /mips-abi32-pic.d/1.4/Mon Jul  6 10:46:42 2009//
 /mips-abi32-pic.s/1.5/Mon Jul  6 10:46:42 2009//
-/mips-abi32-pic2.d/1.2/Mon Jul  6 10:46:42 2009//
 /mips-abi32-pic2.s/1.1/Mon Jul  6 10:46:42 2009//
 /mips-abi32.d/1.4/Mon Jul  6 10:46:42 2009//
 /mips-abi32.s/1.4/Mon Jul  6 10:46:42 2009//
@@ -511,4 +508,7 @@
 /vxworks1.s/1.1/Mon Jul  6 10:46:42 2009//
 /xlr-ext.d/1.1/Mon Jul  6 10:46:42 2009//
 /xlr-ext.s/1.1/Mon Jul  6 10:46:42 2009//
+/jal-svr4pic.d/1.7/Tue Sep  8 03:27:41 2009//
+/jal-xgot.d/1.7/Tue Sep  8 03:27:42 2009//
+/mips-abi32-pic2.d/1.3/Tue Sep  8 03:27:42 2009//
 D

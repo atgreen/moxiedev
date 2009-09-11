@@ -1,6 +1,6 @@
 /* BFD semi-generic back-end for a.out binaries.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
    Written by Cygnus Support.
 
@@ -1668,12 +1668,12 @@ NAME (aout, make_empty_symbol) (bfd *abfd)
 {
   bfd_size_type amt = sizeof (aout_symbol_type);
 
-  aout_symbol_type *new = bfd_zalloc (abfd, amt);
-  if (!new)
+  aout_symbol_type *new_symbol = (aout_symbol_type *) bfd_zalloc (abfd, amt);
+  if (!new_symbol)
     return NULL;
-  new->symbol.the_bfd = abfd;
+  new_symbol->symbol.the_bfd = abfd;
 
-  return &new->symbol;
+  return &new_symbol->symbol;
 }
 
 /* Translate a set of internal symbols into external symbols.  */

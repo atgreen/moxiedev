@@ -1,5 +1,5 @@
 /* PEF support for BFD.
-   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
+   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -361,7 +361,7 @@ bfd_pef_parse_imported_symbol (bfd *abfd ATTRIBUTE_UNUSED,
   BFD_ASSERT (len == 4);
 
   value = bfd_getb32 (buf);
-  symbol->class = value >> 24;
+  symbol->symbol_class = value >> 24;
   symbol->name = value & 0x00ffffff;
 
   return 0;

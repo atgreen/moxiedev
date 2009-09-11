@@ -183,6 +183,22 @@ DEF_VEC_P(tree);
 DEF_VEC_ALLOC_P(tree,gc);
 DEF_VEC_ALLOC_P(tree,heap);
 
+/* We have to be able to tell cgraph about the needed-ness of the target
+   of an alias.  This requires that the decl have been defined.  Aliases
+   that precede their definition have to be queued for later processing.  */
+
+typedef struct GTY(()) alias_pair
+{
+  tree decl;
+  tree target;
+} alias_pair;
+
+/* Define gc'd vector type.  */
+DEF_VEC_O(alias_pair);
+DEF_VEC_ALLOC_O(alias_pair,gc);
+
+extern GTY(()) VEC(alias_pair,gc) * alias_pairs;
+
 
 /* Classify which part of the compiler has defined a given builtin function.
    Note that we assume below that this is no more than two bits.  */
@@ -1049,12 +1065,17 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
   (SCALAR_FLOAT_TYPE_P (TYPE)			\
    && DECIMAL_FLOAT_MODE_P (TYPE_MODE (TYPE)))
 
+/* Nonzero if TYPE is a record or union type.  */
+#define RECORD_OR_UNION_TYPE_P(TYPE)		\
+  (TREE_CODE (TYPE) == RECORD_TYPE		\
+   || TREE_CODE (TYPE) == UNION_TYPE		\
+   || TREE_CODE (TYPE) == QUAL_UNION_TYPE)
+
 /* Nonzero if TYPE represents an aggregate (multi-component) type.
    Keep these checks in ascending code order.  */
 
 #define AGGREGATE_TYPE_P(TYPE) \
-  (TREE_CODE (TYPE) == ARRAY_TYPE || TREE_CODE (TYPE) == RECORD_TYPE \
-   || TREE_CODE (TYPE) == UNION_TYPE || TREE_CODE (TYPE) == QUAL_UNION_TYPE)
+  (TREE_CODE (TYPE) == ARRAY_TYPE || RECORD_OR_UNION_TYPE_P (TYPE))
 
 /* Nonzero if TYPE represents a pointer or reference type.
    (It should be renamed to INDIRECT_TYPE_P.)  Keep these checks in
@@ -1259,7 +1280,7 @@ extern void omp_clause_range_check_failed (const_tree, const char *, int,
    This is interesting in an inline function, since it might not need
    to be compiled separately.
    Nonzero in a RECORD_TYPE, UNION_TYPE, QUAL_UNION_TYPE or ENUMERAL_TYPE
-   if the sdb debugging info for the type has been written.
+   if the debugging info for the type has been written.
    In a BLOCK node, nonzero if reorder_blocks has already seen this block.
    In an SSA_NAME node, nonzero if the SSA_NAME occurs in an abnormal
    PHI node.  */
@@ -1531,6 +1552,9 @@ struct GTY(()) tree_constructor {
    that field to avoid infinite recursion in expanding the macros.  */
 #define VL_EXP_OPERAND_LENGTH(NODE) \
   ((int)TREE_INT_CST_LOW (VL_EXP_CHECK (NODE)->exp.operands[0]))
+
+/* Nonzero if is_gimple_debug() may possibly hold.  */
+#define MAY_HAVE_DEBUG_STMTS    (flag_var_tracking_assignments)
 
 /* In a LOOP_EXPR node.  */
 #define LOOP_EXPR_BODY(NODE) TREE_OPERAND_CHECK_CODE (NODE, LOOP_EXPR, 0)
@@ -2032,6 +2056,8 @@ struct GTY(()) tree_block {
 #define TYPE_NEXT_VARIANT(NODE) (TYPE_CHECK (NODE)->type.next_variant)
 #define TYPE_MAIN_VARIANT(NODE) (TYPE_CHECK (NODE)->type.main_variant)
 #define TYPE_CONTEXT(NODE) (TYPE_CHECK (NODE)->type.context)
+#define TYPE_MAXVAL(NODE) (TYPE_CHECK (NODE)->type.maxval)
+#define TYPE_MINVAL(NODE) (TYPE_CHECK (NODE)->type.minval)
 
 /* Vector types need to check target flags to determine type.  */
 extern enum machine_mode vector_type_mode (const_tree);
@@ -2436,9 +2462,9 @@ struct function;
 
 /*  For FIELD_DECLs, this is the RECORD_TYPE, UNION_TYPE, or
     QUAL_UNION_TYPE node that the field is a member of.  For VAR_DECL,
-    PARM_DECL, FUNCTION_DECL, LABEL_DECL, and CONST_DECL nodes, this
-    points to either the FUNCTION_DECL for the containing function,
-    the RECORD_TYPE or UNION_TYPE for the containing type, or
+    PARM_DECL, FUNCTION_DECL, LABEL_DECL, RESULT_DECL, and CONST_DECL
+    nodes, this points to either the FUNCTION_DECL for the containing
+    function, the RECORD_TYPE or UNION_TYPE for the containing type, or
     NULL_TREE or a TRANSLATION_UNIT_DECL if the given decl has "file
     scope".  */
 #define DECL_CONTEXT(NODE) (DECL_MINIMAL_CHECK (NODE)->decl_minimal.context)
@@ -3807,6 +3833,10 @@ extern tree build6_stat (enum tree_code, tree, tree, tree, tree, tree,
 #define build6(c,t1,t2,t3,t4,t5,t6,t7) \
   build6_stat (c,t1,t2,t3,t4,t5,t6,t7 MEM_STAT_INFO)
 
+extern tree build_var_debug_value_stat (tree, tree MEM_STAT_DECL);
+#define build_var_debug_value(t1,t2) \
+  build_var_debug_value_stat (t1,t2 MEM_STAT_INFO)
+
 extern tree build_int_cst (tree, HOST_WIDE_INT);
 extern tree build_int_cst_type (tree, HOST_WIDE_INT);
 extern tree build_int_cstu (tree, unsigned HOST_WIDE_INT);
@@ -4180,6 +4210,7 @@ extern tree expr_last (tree);
 extern tree size_in_bytes (const_tree);
 extern HOST_WIDE_INT int_size_in_bytes (const_tree);
 extern HOST_WIDE_INT max_int_size_in_bytes (const_tree);
+extern tree tree_expr_size (const_tree);
 extern tree bit_position (const_tree);
 extern HOST_WIDE_INT int_bit_position (const_tree);
 extern tree byte_position (const_tree);
@@ -4251,10 +4282,6 @@ extern tree tree_cons_stat (tree, tree, tree MEM_STAT_DECL);
 /* Return the last tree node in a chain.  */
 
 extern tree tree_last (tree);
-
-/* Return the node in a chain whose TREE_VALUE is x, NULL if not found.  */
-
-extern tree tree_find_value (tree, tree);
 
 /* Reverse the order of elements in a chain, and return the new head.  */
 
@@ -4879,7 +4906,9 @@ extern int simple_cst_equal (const_tree, const_tree);
 extern hashval_t iterative_hash_expr (const_tree, hashval_t);
 extern hashval_t iterative_hash_exprs_commutative (const_tree,
                                                    const_tree, hashval_t);
+extern hashval_t iterative_hash_host_wide_int (HOST_WIDE_INT, hashval_t);
 extern hashval_t iterative_hash_hashval_t (hashval_t, hashval_t);
+extern hashval_t iterative_hash_host_wide_int (HOST_WIDE_INT, hashval_t);
 extern int compare_tree_int (const_tree, unsigned HOST_WIDE_INT);
 extern int type_list_equal (const_tree, const_tree);
 extern int chain_member (const_tree, const_tree);
@@ -5038,6 +5067,7 @@ extern void process_pending_assemble_externals (void);
 extern void finish_aliases_1 (void);
 extern void finish_aliases_2 (void);
 extern tree emutls_decl (tree);
+extern void remove_unreachable_alias_pairs (void);
 
 /* In stmt.c */
 extern void expand_computed_goto (tree);
@@ -5045,9 +5075,9 @@ extern bool parse_output_constraint (const char **, int, int, int,
 				     bool *, bool *, bool *);
 extern bool parse_input_constraint (const char **, int, int, int, int,
 				    const char * const *, bool *, bool *);
-extern void expand_asm_expr (tree);
+extern void expand_asm_stmt (gimple);
 extern tree resolve_asm_operand_names (tree, tree, tree);
-extern void expand_case (tree);
+extern void expand_case (gimple);
 extern void expand_decl (tree);
 #ifdef HARD_CONST
 /* Silly ifdef to avoid having all includers depend on hard-reg-set.h.  */
@@ -5156,6 +5186,7 @@ extern bool in_gimple_form;
 
 /* In gimple.c.  */
 extern tree get_base_address (tree t);
+extern void mark_addressable (tree);
 
 /* In tree-vectorizer.c.  */
 extern void vect_set_verbosity_level (const char *);
@@ -5205,6 +5236,10 @@ struct GTY(()) tree_priority_map {
 #define tree_priority_map_eq tree_map_base_eq
 #define tree_priority_map_hash tree_map_base_hash
 #define tree_priority_map_marked_p tree_map_base_marked_p
+
+/* In tree-ssa.c */
+
+tree target_for_debug_bind (tree);
 
 /* In tree-ssa-ccp.c */
 extern tree maybe_fold_offset_to_reference (location_t, tree, tree, tree);

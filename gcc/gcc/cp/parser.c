@@ -11967,10 +11967,18 @@ cp_parser_enum_specifier (cp_parser* parser)
   else
     identifier = make_anon_name ();
 
-  /* Check for the `:' that denotes a specified underlying type in C++0x.  */
+  /* Check for the `:' that denotes a specified underlying type in C++0x.
+     Note that a ':' could also indicate a bitfield width, however.  */
   if (cp_lexer_next_token_is (parser->lexer, CPP_COLON))
     {
       cp_decl_specifier_seq type_specifiers;
+
+      /* Consume the `:'.  */
+      cp_lexer_consume_token (parser->lexer);
+
+      /* Parse the type-specifier-seq.  */
+      cp_parser_type_specifier_seq (parser, /*is_condition=*/false,
+                                    &type_specifiers);
 
       /* At this point this is surely not elaborated type specifier.  */
       if (!cp_parser_parse_definitely (parser))
@@ -11979,14 +11987,7 @@ cp_parser_enum_specifier (cp_parser* parser)
       if (cxx_dialect == cxx98)
         maybe_warn_cpp0x ("scoped enums");
 
-      /* Consume the `:'.  */
-      cp_lexer_consume_token (parser->lexer);
-
       has_underlying_type = true;
-
-      /* Parse the type-specifier-seq.  */
-      cp_parser_type_specifier_seq (parser, /*is_condition=*/false,
-                                    &type_specifiers);
 
       /* If that didn't work, stop.  */
       if (type_specifiers.type != error_mark_node)
@@ -14615,12 +14616,6 @@ cp_parser_default_argument (cp_parser *parser, bool template_parm_p)
      appear in a default argument.  */
   saved_local_variables_forbidden_p = parser->local_variables_forbidden_p;
   parser->local_variables_forbidden_p = true;
-  /* The default argument expression may cause implicitly
-     defined member functions to be synthesized, which will
-     result in garbage collection.  We must treat this
-     situation as if we were within the body of function so as
-     to avoid collecting live data on the stack.  */
-  ++function_depth;
   /* Parse the assignment-expression.  */
   if (template_parm_p)
     push_deferring_access_checks (dk_no_deferred);
@@ -14628,8 +14623,6 @@ cp_parser_default_argument (cp_parser *parser, bool template_parm_p)
     = cp_parser_assignment_expression (parser, /*cast_p=*/false, NULL);
   if (template_parm_p)
     pop_deferring_access_checks ();
-  /* Restore saved state.  */
-  --function_depth;
   parser->greater_than_is_operator_p = saved_greater_than_is_operator_p;
   parser->local_variables_forbidden_p = saved_local_variables_forbidden_p;
 
@@ -18179,8 +18172,8 @@ cp_parser_save_member_function_body (cp_parser* parser,
   cp_token *last;
   tree fn;
 
-  /* Create the function-declaration.  */
-  fn = start_method (decl_specifiers, declarator, attributes);
+  /* Create the FUNCTION_DECL.  */
+  fn = grokmethod (decl_specifiers, declarator, attributes);
   /* If something went badly wrong, bail out now.  */
   if (fn == error_mark_node)
     {
@@ -18227,9 +18220,6 @@ cp_parser_save_member_function_body (cp_parser* parser,
   /* We need to know that this was defined in the class, so that
      friend templates are handled correctly.  */
   DECL_INITIALIZED_IN_CLASS_P (fn) = 1;
-
-  /* We're done with the inline definition.  */
-  finish_method (fn);
 
   /* Add FN to the queue of functions to be parsed later.  */
   TREE_VALUE (parser->unparsed_functions_queues)

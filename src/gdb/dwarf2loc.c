@@ -36,6 +36,7 @@
 #include "dwarf2.h"
 #include "dwarf2expr.h"
 #include "dwarf2loc.h"
+#include "dwarf2-frame.h"
 
 #include "gdb_string.h"
 #include "gdb_assert.h"
@@ -194,6 +195,16 @@ dwarf_expr_frame_base (void *baton, gdb_byte **start, size_t * length)
 	   SYMBOL_NATURAL_NAME (framefunc));
 }
 
+/* Helper function for dwarf2_evaluate_loc_desc.  Computes the CFA for
+   the frame in BATON.  */
+
+static CORE_ADDR
+dwarf_expr_frame_cfa (void *baton)
+{
+  struct dwarf_expr_baton *debaton = (struct dwarf_expr_baton *) baton;
+  return dwarf2_frame_cfa (debaton->frame);
+}
+
 /* Using the objfile specified in BATON, find the address for the
    current thread's thread-local storage with offset OFFSET.  */
 static CORE_ADDR
@@ -203,6 +214,125 @@ dwarf_expr_tls_address (void *baton, CORE_ADDR offset)
 
   return target_translate_tls_address (debaton->objfile, offset);
 }
+
+struct piece_closure
+{
+  /* The number of pieces used to describe this variable.  */
+  int n_pieces;
+
+  /* The pieces themselves.  */
+  struct dwarf_expr_piece *pieces;
+};
+
+/* Allocate a closure for a value formed from separately-described
+   PIECES.  */
+
+static struct piece_closure *
+allocate_piece_closure (int n_pieces, struct dwarf_expr_piece *pieces)
+{
+  struct piece_closure *c = XZALLOC (struct piece_closure);
+
+  c->n_pieces = n_pieces;
+  c->pieces = XCALLOC (n_pieces, struct dwarf_expr_piece);
+
+  memcpy (c->pieces, pieces, n_pieces * sizeof (struct dwarf_expr_piece));
+
+  return c;
+}
+
+static void
+read_pieced_value (struct value *v)
+{
+  int i;
+  long offset = 0;
+  gdb_byte *contents;
+  struct piece_closure *c = (struct piece_closure *) value_computed_closure (v);
+  struct frame_info *frame = frame_find_by_id (VALUE_FRAME_ID (v));
+
+  contents = value_contents_raw (v);
+  for (i = 0; i < c->n_pieces; i++)
+    {
+      struct dwarf_expr_piece *p = &c->pieces[i];
+
+      if (frame == NULL)
+	{
+	  memset (contents + offset, 0, p->size);
+	  set_value_optimized_out (v, 1);
+	}
+      else if (p->in_reg)
+	{
+	  struct gdbarch *arch = get_frame_arch (frame);
+	  gdb_byte regval[MAX_REGISTER_SIZE];
+	  int gdb_regnum = gdbarch_dwarf2_reg_to_regnum (arch, p->value);
+
+	  get_frame_register (frame, gdb_regnum, regval);
+	  memcpy (contents + offset, regval, p->size);
+	}
+      else
+	{
+	  read_memory (p->value, contents + offset, p->size);
+	}
+      offset += p->size;
+    }
+}
+
+static void
+write_pieced_value (struct value *to, struct value *from)
+{
+  int i;
+  long offset = 0;
+  gdb_byte *contents;
+  struct piece_closure *c = (struct piece_closure *) value_computed_closure (to);
+  struct frame_info *frame = frame_find_by_id (VALUE_FRAME_ID (to));
+
+  if (frame == NULL)
+    {
+      set_value_optimized_out (to, 1);
+      return;
+    }
+
+  contents = value_contents_raw (from);
+  for (i = 0; i < c->n_pieces; i++)
+    {
+      struct dwarf_expr_piece *p = &c->pieces[i];
+      if (p->in_reg)
+	{
+	  struct gdbarch *arch = get_frame_arch (frame);
+	  int gdb_regnum = gdbarch_dwarf2_reg_to_regnum (arch, p->value);
+	  put_frame_register (frame, gdb_regnum, contents + offset);
+	}
+      else
+	{
+	  write_memory (p->value, contents + offset, p->size);
+	}
+      offset += p->size;
+    }
+}
+
+static void *
+copy_pieced_value_closure (struct value *v)
+{
+  struct piece_closure *c = (struct piece_closure *) value_computed_closure (v);
+  
+  return allocate_piece_closure (c->n_pieces, c->pieces);
+}
+
+static void
+free_pieced_value_closure (struct value *v)
+{
+  struct piece_closure *c = (struct piece_closure *) value_computed_closure (v);
+
+  xfree (c->pieces);
+  xfree (c);
+}
+
+/* Functions for accessing a variable described by DW_OP_piece.  */
+static struct lval_funcs pieced_value_funcs = {
+  read_pieced_value,
+  write_pieced_value,
+  copy_pieced_value_closure,
+  free_pieced_value_closure
+};
 
 /* Evaluate a location description, starting at DATA and with length
    SIZE, to find the current location of variable VAR in the context
@@ -215,6 +345,7 @@ dwarf2_evaluate_loc_desc (struct symbol *var, struct frame_info *frame,
   struct value *retval;
   struct dwarf_expr_baton baton;
   struct dwarf_expr_context *ctx;
+  struct cleanup *old_chain;
 
   if (size == 0)
     {
@@ -228,40 +359,28 @@ dwarf2_evaluate_loc_desc (struct symbol *var, struct frame_info *frame,
   baton.objfile = dwarf2_per_cu_objfile (per_cu);
 
   ctx = new_dwarf_expr_context ();
+  old_chain = make_cleanup_free_dwarf_expr_context (ctx);
+
   ctx->gdbarch = get_objfile_arch (baton.objfile);
   ctx->addr_size = dwarf2_per_cu_addr_size (per_cu);
   ctx->baton = &baton;
   ctx->read_reg = dwarf_expr_read_reg;
   ctx->read_mem = dwarf_expr_read_mem;
   ctx->get_frame_base = dwarf_expr_frame_base;
+  ctx->get_frame_cfa = dwarf_expr_frame_cfa;
   ctx->get_tls_address = dwarf_expr_tls_address;
 
   dwarf_expr_eval (ctx, data, size);
   if (ctx->num_pieces > 0)
     {
-      int i;
-      long offset = 0;
-      bfd_byte *contents;
+      struct piece_closure *c;
+      struct frame_id frame_id = get_frame_id (frame);
 
-      retval = allocate_value (SYMBOL_TYPE (var));
-      contents = value_contents_raw (retval);
-      for (i = 0; i < ctx->num_pieces; i++)
-	{
-	  struct dwarf_expr_piece *p = &ctx->pieces[i];
-	  if (p->in_reg)
-	    {
-	      struct gdbarch *arch = get_frame_arch (frame);
-	      bfd_byte regval[MAX_REGISTER_SIZE];
-	      int gdb_regnum = gdbarch_dwarf2_reg_to_regnum (arch, p->value);
-	      get_frame_register (frame, gdb_regnum, regval);
-	      memcpy (contents + offset, regval, p->size);
-	    }
-	  else /* In memory?  */
-	    {
-	      read_memory (p->value, contents + offset, p->size);
-	    }
-	  offset += p->size;
-	}
+      c = allocate_piece_closure (ctx->num_pieces, ctx->pieces);
+      retval = allocate_computed_value (SYMBOL_TYPE (var),
+					&pieced_value_funcs,
+					c);
+      VALUE_FRAME_ID (retval) = frame_id;
     }
   else if (ctx->in_reg)
     {
@@ -277,12 +396,13 @@ dwarf2_evaluate_loc_desc (struct symbol *var, struct frame_info *frame,
       retval = allocate_value (SYMBOL_TYPE (var));
       VALUE_LVAL (retval) = lval_memory;
       set_value_lazy (retval, 1);
+      set_value_stack (retval, 1);
       set_value_address (retval, address);
     }
 
   set_value_initialized (retval, ctx->initialized);
 
-  free_dwarf_expr_context (ctx);
+  do_cleanups (old_chain);
 
   return retval;
 }
@@ -327,6 +447,16 @@ needs_frame_frame_base (void *baton, gdb_byte **start, size_t * length)
   nf_baton->needs_frame = 1;
 }
 
+/* CFA accesses require a frame.  */
+
+static CORE_ADDR
+needs_frame_frame_cfa (void *baton)
+{
+  struct needs_frame_baton *nf_baton = baton;
+  nf_baton->needs_frame = 1;
+  return 1;
+}
+
 /* Thread-local accesses do require a frame.  */
 static CORE_ADDR
 needs_frame_tls_address (void *baton, CORE_ADDR offset)
@@ -346,16 +476,20 @@ dwarf2_loc_desc_needs_frame (gdb_byte *data, unsigned short size,
   struct needs_frame_baton baton;
   struct dwarf_expr_context *ctx;
   int in_reg;
+  struct cleanup *old_chain;
 
   baton.needs_frame = 0;
 
   ctx = new_dwarf_expr_context ();
+  old_chain = make_cleanup_free_dwarf_expr_context (ctx);
+
   ctx->gdbarch = get_objfile_arch (dwarf2_per_cu_objfile (per_cu));
   ctx->addr_size = dwarf2_per_cu_addr_size (per_cu);
   ctx->baton = &baton;
   ctx->read_reg = needs_frame_read_reg;
   ctx->read_mem = needs_frame_read_mem;
   ctx->get_frame_base = needs_frame_frame_base;
+  ctx->get_frame_cfa = needs_frame_frame_cfa;
   ctx->get_tls_address = needs_frame_tls_address;
 
   dwarf_expr_eval (ctx, data, size);
@@ -373,7 +507,7 @@ dwarf2_loc_desc_needs_frame (gdb_byte *data, unsigned short size,
           in_reg = 1;
     }
 
-  free_dwarf_expr_context (ctx);
+  do_cleanups (old_chain);
 
   return baton.needs_frame || in_reg;
 }

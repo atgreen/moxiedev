@@ -1039,27 +1039,24 @@ sign-extend the result to 64 bits.  On such machines, set
 Do not define this macro if it would never modify @var{m}.
 @end defmac
 
-@defmac PROMOTE_FUNCTION_MODE
-Like @code{PROMOTE_MODE}, but is applied to outgoing function arguments or
-function return values, as specified by @code{TARGET_PROMOTE_FUNCTION_ARGS}
-and @code{TARGET_PROMOTE_FUNCTION_RETURN}, respectively.
+@deftypefn {Target Hook} enum machine_mode TARGET_PROMOTE_FUNCTION_MODE (tree @var{type}, enum machine_mode @var{mode}, int *@var{punsignedp}, tree @var{funtype}, int @var{for_return})
+Like @code{PROMOTE_MODE}, but it is applied to outgoing function arguments or
+function return values.  The target hook should return the new mode
+and possibly change @code{*@var{punsignedp}} if the promotion should
+change signedness.  This function is called only for scalar @emph{or
+pointer} types.
 
-The default is @code{PROMOTE_MODE}.
-@end defmac
+@var{for_return} allows to distinguish the promotion of arguments and
+return values.  If it is @code{1}, a return value is being promoted and
+@code{TARGET_FUNCTION_VALUE} must perform the same promotions done here.
+If it is @code{2}, the returned mode should be that of the register in
+which an incoming parameter is copied, or the outgoing result is computed;
+then the hook should return the same mode as @code{promote_mode}, though
+the signedness may be different.
 
-@deftypefn {Target Hook} bool TARGET_PROMOTE_FUNCTION_ARGS (tree @var{fntype})
-This target hook should return @code{true} if the promotion described by
-@code{PROMOTE_FUNCTION_MODE} should be done for outgoing function
-arguments.
-@end deftypefn
-
-@deftypefn {Target Hook} bool TARGET_PROMOTE_FUNCTION_RETURN (tree @var{fntype})
-This target hook should return @code{true} if the promotion described by
-@code{PROMOTE_FUNCTION_MODE} should be done for the return value of
-functions.
-
-If this target hook returns @code{true}, @code{TARGET_FUNCTION_VALUE}
-must perform the same promotions done by @code{PROMOTE_FUNCTION_MODE}.
+The default is to not promote arguments and return values.  You can
+also define the hook to @code{default_promote_function_mode_always_promote}
+if you would like to apply the same rules given by @code{PROMOTE_MODE}.
 @end deftypefn
 
 @defmac PARM_BOUNDARY
@@ -3815,16 +3812,16 @@ Note that the elimination of the argument pointer with the stack pointer is
 specified first since that is the preferred elimination.
 @end defmac
 
-@defmac CAN_ELIMINATE (@var{from-reg}, @var{to-reg})
-A C expression that returns @code{true} if the compiler is allowed to try
-to replace register number @var{from-reg} with register number
-@var{to-reg}.  This macro need only be defined if @code{ELIMINABLE_REGS}
+@deftypefn {Target Hook} bool TARGET_CAN_ELIMINATE (const int @var{from-reg}, const int @var{to-reg})
+This target hook should returns @code{true} if the compiler is allowed to
+try to replace register number @var{from-reg} with register number
+@var{to-reg}.  This target hook need only be defined if @code{ELIMINABLE_REGS}
 is defined, and will usually be @code{true}, since most of the cases
 preventing register elimination are things that the compiler already
 knows about.
 
-Default value is @code{true}.
-@end defmac
+Default return value is @code{true}.
+@end deftypefn
 
 @defmac INITIAL_ELIMINATION_OFFSET (@var{from-reg}, @var{to-reg}, @var{offset-var})
 This macro is similar to @code{INITIAL_FRAME_POINTER_OFFSET}.  It
@@ -4393,6 +4390,18 @@ support routine, used to perform arithmetic, whose name is known
 specially by the compiler and was not mentioned in the C code being
 compiled.
 @end defmac
+
+@deftypefn {Target Hook} rtx TARGET_LIBCALL_VALUE (enum machine_mode
+@var{mode}, rtx @var{fun})
+Define this hook if the back-end needs to know the name of the libcall
+function in order to determine where the result should be returned.  
+
+The mode of the result is given by @var{mode} and the name of the called
+library function is given by @var{fun}.  The hook should return an RTX 
+representing the place where the library function result will be returned.
+
+If this hook is not defined, then LIBCALL_VALUE will be used.
+@end deftypefn
 
 @defmac FUNCTION_VALUE_REGNO_P (@var{regno})
 A C expression that is nonzero if @var{regno} is the number of a hard
@@ -9148,6 +9157,13 @@ given @var{size}.  The label is known to be defined in the given @var{section}.
 @defmac ASM_OUTPUT_DWARF_PCREL (@var{stream}, @var{size}, @var{label})
 A C statement to issue assembly directives that create a self-relative
 reference to the given @var{label}, using an integer of the given @var{size}.
+@end defmac
+
+@defmac ASM_OUTPUT_DWARF_TABLE_REF (@var{label})
+A C statement to issue assembly directives that create a reference to
+the DWARF table identifier @var{label} from the current section.  This
+is used on some systems to avoid garbage collecting a DWARF table which
+is referenced by a function.
 @end defmac
 
 @deftypefn {Target Hook} void TARGET_ASM_OUTPUT_DWARF_DTPREL (FILE *@var{FILE}, int @var{size}, rtx @var{x})

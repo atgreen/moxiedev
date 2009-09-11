@@ -1,3 +1,10 @@
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* config.in: Regenerate.
+	* configure: Likewise.
+
+	* configure: Regenerate.
+
 2009-01-07  Hans-Peter Nilsson  <hp@axis.com>
 
 	* sem.c: Regenerate.

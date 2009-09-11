@@ -379,7 +379,6 @@ score7_output_mi_thunk (FILE *file, tree thunk_fndecl ATTRIBUTE_UNUSED,
   final_start_function (insn, file, 1);
   final (insn, file, 1);
   final_end_function ();
-  free_after_compilation (cfun);
 
   /* Clean up the vars set above.  Note that final_end_function resets
      the global pointer for us.  */
@@ -850,15 +849,14 @@ score7_function_arg (const CUMULATIVE_ARGS *cum, enum machine_mode mode,
    VALTYPE is the return type and MODE is VOIDmode.  For libcalls,
    VALTYPE is null and MODE is the mode of the return value.  */
 rtx
-score7_function_value (tree valtype, tree func ATTRIBUTE_UNUSED,
-                       enum machine_mode mode)
+score7_function_value (tree valtype, tree func, enum machine_mode mode)
 {
   if (valtype)
     {
       int unsignedp;
       mode = TYPE_MODE (valtype);
       unsignedp = TYPE_UNSIGNED (valtype);
-      mode = promote_mode (valtype, mode, &unsignedp, 1);
+      mode = promote_function_mode (valtype, mode, &unsignedp, func, 1);
     }
   return gen_rtx_REG (mode, RT_REGNUM);
 }

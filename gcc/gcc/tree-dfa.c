@@ -88,7 +88,12 @@ find_referenced_vars (void)
   FOR_EACH_BB (bb)
     {
       for (si = gsi_start_bb (bb); !gsi_end_p (si); gsi_next (&si))
-	find_referenced_vars_in (gsi_stmt (si));
+	{
+	  gimple stmt = gsi_stmt (si);
+	  if (is_gimple_debug (stmt))
+	    continue;
+	  find_referenced_vars_in (gsi_stmt (si));
+	}
 
       for (si = gsi_start_phis (bb); !gsi_end_p (si); gsi_next (&si))
 	find_referenced_vars_in (gsi_stmt (si));
@@ -149,6 +154,32 @@ renumber_gimple_stmt_uids (void)
   FOR_ALL_BB (bb)
     {
       gimple_stmt_iterator bsi;
+      for (bsi = gsi_start_bb (bb); !gsi_end_p (bsi); gsi_next (&bsi))
+	{
+	  gimple stmt = gsi_stmt (bsi);
+	  gimple_set_uid (stmt, inc_gimple_stmt_max_uid (cfun));
+	}
+    }
+}
+
+/* Like renumber_gimple_stmt_uids, but only do work on the basic blocks
+   in BLOCKS, of which there are N_BLOCKS.  Also renumbers PHIs.  */
+
+void 
+renumber_gimple_stmt_uids_in_blocks (basic_block *blocks, int n_blocks)
+{
+  int i;
+
+  set_gimple_stmt_max_uid (cfun, 0);
+  for (i = 0; i < n_blocks; i++)
+    {
+      basic_block bb = blocks[i];
+      gimple_stmt_iterator bsi;
+      for (bsi = gsi_start_phis (bb); !gsi_end_p (bsi); gsi_next (&bsi))
+	{
+	  gimple stmt = gsi_stmt (bsi);
+	  gimple_set_uid (stmt, inc_gimple_stmt_max_uid (cfun));
+	}
       for (bsi = gsi_start_bb (bb); !gsi_end_p (bsi); gsi_next (&bsi))
 	{
 	  gimple stmt = gsi_stmt (bsi);

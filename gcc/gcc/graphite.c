@@ -54,14 +54,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "pointer-set.h"
 #include "gimple.h"
 #include "sese.h"
+#include "predict.h"
 
 #ifdef HAVE_cloog
-
-/* The CLooG header file is not -Wc++-compat ready as of 2009-05-11.
-   This #pragma should be removed when it is ready.  */
-#if GCC_VERSION >= 4003
-#pragma GCC diagnostic warning "-Wc++-compat"
-#endif
 
 #include "cloog/cloog.h"
 #include "ppl_c.h"
@@ -229,7 +224,12 @@ static void
 graphite_finalize (bool need_cfg_cleanup_p)
 {
   if (need_cfg_cleanup_p)
-    cleanup_tree_cfg ();
+    {
+      cleanup_tree_cfg ();
+      profile_status = PROFILE_ABSENT;
+      release_recorded_exits ();
+      tree_estimate_probability ();
+    }
 
   cloog_finalize ();
   free_original_copy_tables ();
@@ -283,7 +283,7 @@ graphite_transform_loops (void)
 	}
     }
 
-  if (flag_graphite_force_parallel)
+  if (flag_loop_parallelize_all)
     mark_loops_parallel (bb_pbb_mapping);
 
   htab_delete (bb_pbb_mapping);

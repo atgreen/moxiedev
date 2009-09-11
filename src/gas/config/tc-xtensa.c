@@ -1,5 +1,6 @@
 /* tc-xtensa.c -- Assemble Xtensa instructions.
-   Copyright 2003, 2004, 2005, 2006, 2007, 2008 Free Software Foundation, Inc.
+   Copyright 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
 
@@ -527,6 +528,7 @@ static int get_num_stack_literal_bytes (IStack *);
 /* vliw_insn functions.  */
 
 static void xg_init_vinsn (vliw_insn *);
+static void xg_copy_vinsn (vliw_insn *, vliw_insn *);
 static void xg_clear_vinsn (vliw_insn *);
 static bfd_boolean vinsn_has_specific_opcodes (vliw_insn *);
 static void xg_free_vinsn (vliw_insn *);
@@ -586,6 +588,7 @@ static xtensa_opcode xtensa_retw_opcode;
 static xtensa_opcode xtensa_retw_n_opcode;
 static xtensa_opcode xtensa_rsr_lcount_opcode;
 static xtensa_opcode xtensa_waiti_opcode;
+static int config_max_slots = 0;
 
 
 /* Command-line Options.  */
@@ -5103,6 +5106,7 @@ md_begin (void)
   segT current_section = now_seg;
   int current_subsec = now_subseg;
   xtensa_isa isa;
+  int i;
 
   xtensa_default_isa = xtensa_isa_init (0, 0);
   isa = xtensa_default_isa;
@@ -5113,8 +5117,6 @@ md_begin (void)
   memset (&default_lit_sections, 0, sizeof (default_lit_sections));
 
   subseg_set (current_section, current_subsec);
-
-  xg_init_vinsn (&cur_vinsn);
 
   xtensa_addi_opcode = xtensa_opcode_lookup (isa, "addi");
   xtensa_addmi_opcode = xtensa_opcode_lookup (isa, "addmi");
@@ -5147,6 +5149,15 @@ md_begin (void)
   xtensa_retw_n_opcode = xtensa_opcode_lookup (isa, "retw.n");
   xtensa_rsr_lcount_opcode = xtensa_opcode_lookup (isa, "rsr.lcount");
   xtensa_waiti_opcode = xtensa_opcode_lookup (isa, "waiti");
+
+  for (i = 0; i < xtensa_isa_num_formats (isa); i++) 
+    {
+      int format_slots = xtensa_format_num_slots (isa, i);
+      if (format_slots > config_max_slots)
+	config_max_slots = format_slots;
+    }
+
+  xg_init_vinsn (&cur_vinsn);
 
   xtensa_num_pipe_stages = xtensa_isa_num_pipe_stages (isa);
 
@@ -5210,16 +5221,18 @@ xtensa_frob_label (symbolS *sym)
 
   /* No target aligning in the absolute section.  */
   if (now_seg != absolute_section
-      && do_align_targets ()
       && !is_unaligned_label (sym)
       && !generating_literals)
     {
       xtensa_set_frag_assembly_state (frag_now);
 
-      frag_var (rs_machine_dependent,
-		0, (int) freq,
-		RELAX_DESIRE_ALIGN_IF_TARGET,
-		frag_now->fr_symbol, frag_now->fr_offset, NULL);
+      if (do_align_targets ())
+	frag_var (rs_machine_dependent, 0, (int) freq,
+		  RELAX_DESIRE_ALIGN_IF_TARGET, frag_now->fr_symbol,
+		  frag_now->fr_offset, NULL);
+      else
+	frag_var (rs_fill, 0, 0, frag_now->fr_subtype,
+		  frag_now->fr_symbol, frag_now->fr_offset, NULL);
       xtensa_set_frag_assembly_state (frag_now);
       xtensa_move_labels (frag_now, 0);
     }
@@ -6651,7 +6664,6 @@ xg_find_narrowest_format (vliw_insn *vinsn)
 
   xtensa_isa isa = xtensa_default_isa;
   xtensa_format format;
-  vliw_insn v_copy = *vinsn;
   xtensa_opcode nop_opcode = xtensa_nop_opcode;
 
   if (vinsn->num_slots == 1)
@@ -6659,7 +6671,8 @@ xg_find_narrowest_format (vliw_insn *vinsn)
 
   for (format = 0; format < xtensa_isa_num_formats (isa); format++)
     {
-      v_copy = *vinsn;
+      vliw_insn v_copy;
+      xg_copy_vinsn (&v_copy, vinsn);
       if (xtensa_format_num_slots (isa, format) == v_copy.num_slots)
 	{
 	  int slot;
@@ -6694,7 +6707,7 @@ xg_find_narrowest_format (vliw_insn *vinsn)
 	    }
 	  if (fit == v_copy.num_slots)
 	    {
-	      *vinsn = v_copy;
+	      xg_copy_vinsn (vinsn, &v_copy);
 	      xtensa_format_encode (isa, format, vinsn->insnbuf);
 	      vinsn->format = format;
 	      break;
@@ -6878,7 +6891,7 @@ total_frag_text_expansion (fragS *fragP)
   int slot;
   int total_expansion = 0;
 
-  for (slot = 0; slot < MAX_SLOTS; slot++)
+  for (slot = 0; slot < config_max_slots; slot++)
     total_expansion += fragP->tc_frag_data.text_expansion[slot];
 
   return total_expansion;
@@ -7458,6 +7471,7 @@ xtensa_mark_difference_of_two_symbols (void)
 	    {
 	      fragS *start;
 	      fragS *end;
+	      fragS *walk;
 
 	      if (symbol_get_frag (left)->fr_address 
 		  <= symbol_get_frag (right)->fr_address)
@@ -7470,12 +7484,19 @@ xtensa_mark_difference_of_two_symbols (void)
 		  start = symbol_get_frag (right);
 		  end = symbol_get_frag (left);
 		}
+
+	      if (start->tc_frag_data.no_transform_end != NULL)
+		walk = start->tc_frag_data.no_transform_end;
+	      else
+		walk = start;
 	      do 
 		{
-		  start->tc_frag_data.is_no_transform = 1;
-		  start = start->fr_next;
+		  walk->tc_frag_data.is_no_transform = 1;
+		  walk = walk->fr_next;
 		}
-	      while (start && start->fr_address < end->fr_address);
+	      while (walk && walk->fr_address < end->fr_address);
+
+	      start->tc_frag_data.no_transform_end = walk;
 	    }
 	}
     }
@@ -10488,7 +10509,7 @@ static void add_xt_block_frags
 static bfd_boolean xtensa_frag_flags_is_empty (const frag_flags *);
 static void xtensa_frag_flags_init (frag_flags *);
 static void get_frag_property_flags (const fragS *, frag_flags *);
-static bfd_vma frag_flags_to_number (const frag_flags *);
+static flagword frag_flags_to_number (const frag_flags *);
 static void add_xt_prop_frags (segT, xtensa_block_info **, frag_flags_fn);
 
 /* Set up property tables after relaxation.  */
@@ -10714,7 +10735,7 @@ xtensa_create_xproperty_segments (frag_flags_fn flag_fn,
 				      cur_block->size, 4);
 		  md_number_to_chars (&frag_data[8 + i * 12],
 				      frag_flags_to_number (&cur_block->flags),
-				      4);
+				      sizeof (flagword));
 		  cur_block = cur_block->next;
 		}
 	      frag_wane (frag_now);
@@ -10794,7 +10815,6 @@ add_xt_block_frags (segT sec,
 		    frag_predicate property_function,
 		    frag_predicate end_property_function)
 {
-  bfd_vma seg_offset;
   fragS *fragP;
 
   /* Build it if needed.  */
@@ -10803,8 +10823,6 @@ add_xt_block_frags (segT sec,
   /* We are either at NULL at the beginning or at the end.  */
 
   /* Walk through the frags.  */
-  seg_offset = 0;
-
   if (seg_info (sec)->frchainP)
     {
       for (fragP = seg_info (sec)->frchainP->frch_root;
@@ -10902,10 +10920,10 @@ get_frag_property_flags (const fragS *fragP, frag_flags *prop_flags)
 }
 
 
-static bfd_vma
+static flagword
 frag_flags_to_number (const frag_flags *prop_flags)
 {
-  bfd_vma num = 0;
+  flagword num = 0;
   if (prop_flags->is_literal)
     num |= XTENSA_PROP_LITERAL;
   if (prop_flags->is_insn)
@@ -11051,7 +11069,6 @@ add_xt_prop_frags (segT sec,
 		   xtensa_block_info **xt_block,
 		   frag_flags_fn property_function)
 {
-  bfd_vma seg_offset;
   fragS *fragP;
 
   /* Build it if needed.  */
@@ -11062,8 +11079,6 @@ add_xt_prop_frags (segT sec,
   /* We are either at NULL at the beginning or at the end.  */
 
   /* Walk through the frags.  */
-  seg_offset = 0;
-
   if (seg_info (sec)->frchainP)
     {
       for (fragP = seg_info (sec)->frchainP->frch_root; fragP;
@@ -11670,7 +11685,7 @@ xg_init_vinsn (vliw_insn *v)
   if (v->insnbuf == NULL)
     as_fatal (_("out of memory"));
 
-  for (i = 0; i < MAX_SLOTS; i++)
+  for (i = 0; i < config_max_slots; i++)
     {
       v->slotbuf[i] = xtensa_insnbuf_alloc (isa);
       if (v->slotbuf[i] == NULL)
@@ -11684,7 +11699,8 @@ xg_clear_vinsn (vliw_insn *v)
 {
   int i;
 
-  memset (v, 0, offsetof (vliw_insn, insnbuf));
+  memset (v, 0, offsetof (vliw_insn, slots) 
+                + sizeof(TInsn) * config_max_slots);
 
   v->format = XTENSA_UNDEFINED;
   v->num_slots = 0;
@@ -11693,8 +11709,18 @@ xg_clear_vinsn (vliw_insn *v)
   if (xt_saved_debug_type != DEBUG_NONE)
     debug_type = xt_saved_debug_type;
 
-  for (i = 0; i < MAX_SLOTS; i++)
+  for (i = 0; i < config_max_slots; i++)
     v->slots[i].opcode = XTENSA_UNDEFINED;
+}
+
+
+static void
+xg_copy_vinsn (vliw_insn *dst, vliw_insn *src)
+{
+  memcpy (dst, src, 
+	  offsetof(vliw_insn, slots) + src->num_slots * sizeof(TInsn));
+  dst->insnbuf = src->insnbuf;
+  memcpy (dst->slotbuf, src->slotbuf, src->num_slots * sizeof(xtensa_insnbuf));
 }
 
 
@@ -11717,7 +11743,7 @@ xg_free_vinsn (vliw_insn *v)
 {
   int i;
   xtensa_insnbuf_free (xtensa_default_isa, v->insnbuf);
-  for (i = 0; i < MAX_SLOTS; i++)
+  for (i = 0; i < config_max_slots; i++)
     xtensa_insnbuf_free (xtensa_default_isa, v->slotbuf[i]);
 }
 

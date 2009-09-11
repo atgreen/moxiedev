@@ -62,7 +62,6 @@
 /iscanf.c/1.2/Mon Jul  6 10:46:48 2009//
 /local.h/1.29/Mon Jul  6 10:46:48 2009/-ko/
 /makebuf.c/1.9/Mon Jul  6 10:46:48 2009/-ko/
-/mktemp.c/1.11/Mon Jul 13 12:30:34 2009/-ko/
 /open_memstream.c/1.5/Mon Jul  6 10:46:48 2009//
 /perror.c/1.4/Mon Jul  6 10:46:48 2009/-ko/
 /printf.c/1.7/Mon Jul  6 10:46:48 2009/-ko/
@@ -129,4 +128,5 @@
 /wscanf.c/1.1/Mon Jul  6 10:46:48 2009//
 /wsetup.c/1.6/Mon Jul  6 10:46:48 2009/-ko/
 /fflush.c/1.14/Fri Jul 31 11:10:19 2009/-ko/
+/mktemp.c/1.14/Tue Sep  8 03:27:43 2009/-ko/
 D

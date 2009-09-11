@@ -1,3 +1,16 @@
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* avr/config.in: Regenerate.
+	* avr/configure: Likewise.
+	* configure: Likewise.
+	* cris/config.in: Likewise.
+	* cris/configure: Likewise.
+
+	* configure.ac: m4_include toplevel config/override.m4.
+	* configure: Regenerate.
+	* avr/configure: Regenerate.
+	* cris/configure: Regenerate.
+
 2009-07-30  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
 
 	* Makefile.in (datarootdir): New variable.

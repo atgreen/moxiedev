@@ -257,6 +257,11 @@ static bool sh_pretend_outgoing_varargs_named (CUMULATIVE_ARGS *);
 static tree sh_build_builtin_va_list (void);
 static void sh_va_start (tree, rtx);
 static tree sh_gimplify_va_arg_expr (tree, tree, gimple_seq *, gimple_seq *);
+static enum machine_mode sh_promote_function_mode (const_tree type,
+						   enum machine_mode,
+						   int *punsignedp,
+						   const_tree funtype,
+						   int for_return);
 static bool sh_pass_by_reference (CUMULATIVE_ARGS *, enum machine_mode,
 				  const_tree, bool);
 static bool sh_callee_copies (CUMULATIVE_ARGS *, enum machine_mode,
@@ -437,10 +442,8 @@ static const struct attribute_spec sh_attribute_table[] =
 
 #undef TARGET_PROMOTE_PROTOTYPES
 #define TARGET_PROMOTE_PROTOTYPES sh_promote_prototypes
-#undef TARGET_PROMOTE_FUNCTION_ARGS
-#define TARGET_PROMOTE_FUNCTION_ARGS sh_promote_prototypes
-#undef TARGET_PROMOTE_FUNCTION_RETURN
-#define TARGET_PROMOTE_FUNCTION_RETURN sh_promote_prototypes
+#undef TARGET_PROMOTE_FUNCTION_MODE
+#define TARGET_PROMOTE_FUNCTION_MODE sh_promote_function_mode
 
 #undef TARGET_STRUCT_VALUE_RTX
 #define TARGET_STRUCT_VALUE_RTX sh_struct_value_rtx
@@ -869,6 +872,29 @@ sh_override_options (void)
 	}
       else if (flag_schedule_insns == 2)
 	flag_schedule_insns = 0;
+    }
+
+  /* Unwinding with -freorder-blocks-and-partition does not work on this
+     architecture, because it requires far jumps to label crossing between
+     hot/cold sections which are rejected on this architecture.  */
+  if (flag_reorder_blocks_and_partition)
+    {
+      if (flag_exceptions)
+	{
+	  inform (input_location, 
+		  "-freorder-blocks-and-partition does not work with "
+		  "exceptions on this architecture");
+	  flag_reorder_blocks_and_partition = 0;
+	  flag_reorder_blocks = 1;
+	}
+      else if (flag_unwind_tables)
+	{
+	  inform (input_location,
+		  "-freorder-blocks-and-partition does not support unwind "
+		  "info on this architecture");
+	  flag_reorder_blocks_and_partition = 0;
+	  flag_reorder_blocks = 1;
+	}
     }
 
   if (align_loops == 0)
@@ -5815,9 +5841,10 @@ split_branches (rtx first)
 
 	    next = next_active_insn (insn);
 
-	    if ((JUMP_P (next)
-		 || ((next = next_active_insn (next))
-		     && JUMP_P (next)))
+	    if (next
+		&& (JUMP_P (next)
+		    || ((next = next_active_insn (next))
+			&& JUMP_P (next)))
 		&& GET_CODE (PATTERN (next)) == SET
 		&& recog_memoized (next) == CODE_FOR_jump_compact
 		&& ((INSN_ADDRESSES
@@ -6743,13 +6770,19 @@ sh_expand_prologue (void)
   /* If we're supposed to switch stacks at function entry, do so now.  */
   if (sp_switch_attr)
     {
+      rtx lab, newsrc;
       /* The argument specifies a variable holding the address of the
 	 stack the interrupt function should switch to/from at entry/exit.  */
+      tree arg = TREE_VALUE ( TREE_VALUE (sp_switch_attr));
       const char *s
-	= ggc_strdup (TREE_STRING_POINTER (TREE_VALUE (sp_switch_attr)));
+	= ggc_strdup (TREE_STRING_POINTER (arg));
       rtx sp_switch = gen_rtx_SYMBOL_REF (Pmode, s);
 
-      emit_insn (gen_sp_switch_1 (sp_switch));
+      lab = add_constant (sp_switch, SImode, 0);
+      newsrc = gen_rtx_LABEL_REF (VOIDmode, lab);
+      newsrc = gen_const_mem (SImode, newsrc);
+
+      emit_insn (gen_sp_switch_1 (newsrc));
     }
 
   d = calc_live_regs (&live_regs_mask);
@@ -7888,6 +7921,17 @@ sh_dwarf_register_span (rtx reg)
 					      DBX_REGISTER_NUMBER (regno+1)),
 				 gen_rtx_REG (SFmode,
 					      DBX_REGISTER_NUMBER (regno))));
+}
+
+static enum machine_mode
+sh_promote_function_mode (const_tree type, enum machine_mode mode,
+			  int *punsignedp, const_tree funtype,
+			  int for_return ATTRIBUTE_UNUSED)
+{
+  if (sh_promote_prototypes (funtype))
+    return promote_mode (type, mode, punsignedp);
+  else
+    return mode;
 }
 
 bool
@@ -11239,7 +11283,6 @@ sh_output_mi_thunk (FILE *file, tree thunk_fndecl ATTRIBUTE_UNUSED,
   final_start_function (insns, file, 1);
   final (insns, file, 1);
   final_end_function ();
-  free_after_compilation (cfun);
 
   reload_completed = 0;
   epilogue_completed = 0;

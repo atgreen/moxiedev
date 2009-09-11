@@ -138,14 +138,16 @@
    ;; Distinguish a 32-bit version of an insn from a 16-bit version.
    (UNSPEC_32BIT 11)
    (UNSPEC_NOP 12)
-   (UNSPEC_ONES 12)])
+   (UNSPEC_ONES 13)
+   (UNSPEC_ATOMIC 14)])
 
 (define_constants
   [(UNSPEC_VOLATILE_CSYNC 1)
    (UNSPEC_VOLATILE_SSYNC 2)
    (UNSPEC_VOLATILE_LOAD_FUNCDESC 3)
    (UNSPEC_VOLATILE_STORE_EH_HANDLER 4)
-   (UNSPEC_VOLATILE_DUMMY 5)])
+   (UNSPEC_VOLATILE_DUMMY 5)
+   (UNSPEC_VOLATILE_STALL 6)])
 
 (define_constants
   [(MACFLAG_NONE 0)
@@ -162,27 +164,41 @@
    (MACFLAG_IH 11)])
 
 (define_attr "type"
-  "move,movcc,mvi,mcld,mcst,dsp32,mult,alu0,shft,brcc,br,call,misc,sync,compare,dummy"
+  "move,movcc,mvi,mcld,mcst,dsp32,dsp32shiftimm,mult,alu0,shft,brcc,br,call,misc,sync,compare,dummy,stall"
   (const_string "misc"))
 
-(define_attr "addrtype" "32bit,preg,ireg"
+(define_attr "addrtype" "32bit,preg,spreg,ireg"
   (cond [(and (eq_attr "type" "mcld")
-	      (and (match_operand 0 "d_register_operand" "")
+	      (and (match_operand 0 "dp_register_operand" "")
 		   (match_operand 1 "mem_p_address_operand" "")))
 	   (const_string "preg")
 	 (and (eq_attr "type" "mcld")
-	      (and (match_operand 0 "d_register_operand" "")
+	      (and (match_operand 0 "dp_register_operand" "")
+		   (match_operand 1 "mem_spfp_address_operand" "")))
+	   (const_string "spreg")
+	 (and (eq_attr "type" "mcld")
+	      (and (match_operand 0 "dp_register_operand" "")
 		   (match_operand 1 "mem_i_address_operand" "")))
 	   (const_string "ireg")
 	 (and (eq_attr "type" "mcst")
-	      (and (match_operand 1 "d_register_operand" "")
+	      (and (match_operand 1 "dp_register_operand" "")
 		   (match_operand 0 "mem_p_address_operand" "")))
 	   (const_string "preg")
 	 (and (eq_attr "type" "mcst")
-	      (and (match_operand 1 "d_register_operand" "")
+	      (and (match_operand 1 "dp_register_operand" "")
+		   (match_operand 0 "mem_spfp_address_operand" "")))
+	   (const_string "spreg")
+	 (and (eq_attr "type" "mcst")
+	      (and (match_operand 1 "dp_register_operand" "")
 		   (match_operand 0 "mem_i_address_operand" "")))
 	   (const_string "ireg")]
 	(const_string "32bit")))
+
+(define_attr "storereg" "preg,other"
+  (cond [(and (eq_attr "type" "mcst")
+	      (match_operand 1 "p_register_operand" ""))
+	   (const_string "preg")]
+	(const_string "other")))
 
 ;; Scheduling definitions
 
@@ -198,6 +214,13 @@
 (define_cpu_unit "store" "bfin")
 (define_cpu_unit "pregs" "bfin")
 
+;; A dummy unit used to delay scheduling of loads after a conditional
+;; branch.
+(define_cpu_unit "load" "bfin")
+
+;; A logical unit used to work around anomaly 05000074.
+(define_cpu_unit "anomaly_05000074" "bfin")
+
 (define_reservation "core" "slot0+slot1+slot2")
 
 (define_insn_reservation "alu" 1
@@ -212,20 +235,37 @@
   (eq_attr "type" "dsp32")
   "slot0")
 
+(define_insn_reservation "dsp32shiftimm" 1
+  (and (eq_attr "type" "dsp32shiftimm")
+       (eq (symbol_ref "ENABLE_WA_05000074")
+	   (const_int 0)))
+  "slot0")
+
+(define_insn_reservation "dsp32shiftimm_anomaly_05000074" 1
+  (and (eq_attr "type" "dsp32shiftimm")
+       (ne (symbol_ref "ENABLE_WA_05000074")
+	   (const_int 0)))
+  "slot0+anomaly_05000074")
+
 (define_insn_reservation "load32" 1
   (and (not (eq_attr "seq_insns" "multi"))
        (and (eq_attr "type" "mcld") (eq_attr "addrtype" "32bit")))
-  "core")
+  "core+load")
 
 (define_insn_reservation "loadp" 1
   (and (not (eq_attr "seq_insns" "multi"))
        (and (eq_attr "type" "mcld") (eq_attr "addrtype" "preg")))
-  "(slot1|slot2)+pregs")
+  "slot1+pregs+load")
+
+(define_insn_reservation "loadsp" 1
+  (and (not (eq_attr "seq_insns" "multi"))
+       (and (eq_attr "type" "mcld") (eq_attr "addrtype" "spreg")))
+  "slot1+pregs")
 
 (define_insn_reservation "loadi" 1
   (and (not (eq_attr "seq_insns" "multi"))
        (and (eq_attr "type" "mcld") (eq_attr "addrtype" "ireg")))
-  "(slot1|slot2)")
+  "(slot1|slot2)+load")
 
 (define_insn_reservation "store32" 1
   (and (not (eq_attr "seq_insns" "multi"))
@@ -233,18 +273,54 @@
   "core")
 
 (define_insn_reservation "storep" 1
-  (and (not (eq_attr "seq_insns" "multi"))
-       (and (eq_attr "type" "mcst") (eq_attr "addrtype" "preg")))
-  "(slot1|slot2)+pregs+store")
+  (and (and (not (eq_attr "seq_insns" "multi"))
+	    (and (eq_attr "type" "mcst")
+		 (ior (eq_attr "addrtype" "preg")
+		      (eq_attr "addrtype" "spreg"))))
+       (ior (eq (symbol_ref "ENABLE_WA_05000074")
+		(const_int 0))
+	    (eq_attr "storereg" "other")))
+  "slot1+pregs+store")
+
+(define_insn_reservation "storep_anomaly_05000074" 1
+  (and (and (not (eq_attr "seq_insns" "multi"))
+	    (and (eq_attr "type" "mcst")
+		 (ior (eq_attr "addrtype" "preg")
+		      (eq_attr "addrtype" "spreg"))))
+       (and (ne (symbol_ref "ENABLE_WA_05000074")
+		(const_int 0))
+	    (eq_attr "storereg" "preg")))
+  "slot1+anomaly_05000074+pregs+store")
 
 (define_insn_reservation "storei" 1
-  (and (not (eq_attr "seq_insns" "multi"))
-       (and (eq_attr "type" "mcst") (eq_attr "addrtype" "ireg")))
+  (and (and (not (eq_attr "seq_insns" "multi"))
+	    (and (eq_attr "type" "mcst") (eq_attr "addrtype" "ireg")))
+       (ior (eq (symbol_ref "ENABLE_WA_05000074")
+		(const_int 0))
+	    (eq_attr "storereg" "other")))
   "(slot1|slot2)+store")
+
+(define_insn_reservation "storei_anomaly_05000074" 1
+  (and (and (not (eq_attr "seq_insns" "multi"))
+	    (and (eq_attr "type" "mcst") (eq_attr "addrtype" "ireg")))
+       (and (ne (symbol_ref "ENABLE_WA_05000074")
+		(const_int 0))
+	    (eq_attr "storereg" "preg")))
+  "((slot1+anomaly_05000074)|slot2)+store")
 
 (define_insn_reservation "multi" 2
   (eq_attr "seq_insns" "multi")
   "core")
+
+(define_insn_reservation "load_stall1" 1
+  (and (eq_attr "type" "stall")
+       (match_operand 0 "const1_operand" ""))
+  "core+load*2")
+
+(define_insn_reservation "load_stall3" 1
+  (and (eq_attr "type" "stall")
+       (match_operand 0 "const3_operand" ""))
+  "core+load*4")
 
 (absence_set "slot0" "slot1,slot2")
 (absence_set "slot1" "slot2")
@@ -302,6 +378,7 @@
 	 (eq_attr "type" "move") (const_int 2)
 
 	 (eq_attr "type" "dsp32") (const_int 4)
+	 (eq_attr "type" "dsp32shiftimm") (const_int 4)
 	 (eq_attr "type" "call")  (const_int 4)
 
          (eq_attr "type" "br")
@@ -555,7 +632,7 @@
  "@
    %0 = ROT %1 BY 0%!
    %0 = %0 -|- %0%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm,dsp32")])
 
 (define_split
   [(set (match_operand:SI 0 "d_register_operand" "")
@@ -678,7 +755,7 @@
   "@
    %d0 = %h1 << 0%!
    %d0 = %1;"
-  [(set_attr "type" "dsp32,mvi")])
+  [(set_attr "type" "dsp32shiftimm,mvi")])
 
 (define_expand "insv"
   [(set (zero_extract:SI (match_operand:SI 0 "register_operand" "")
@@ -1588,7 +1665,7 @@
   [(set (match_dup 0) (ashift:SI (match_dup 1) (const_int 2)))
    (set (match_dup 0) (ashift:SI (match_dup 0) (match_dup 3)))]
   "operands[3] = GEN_INT (INTVAL (operands[2]) - 2);"
-  [(set_attr "type" "shft,dsp32,shft,shft,*")])
+  [(set_attr "type" "shft,dsp32shiftimm,shft,shft,*")])
 
 (define_insn "ashrsi3"
   [(set (match_operand:SI 0 "register_operand" "=d,d")
@@ -1598,7 +1675,7 @@
   "@
    %0 >>>= %2;
    %0 = %1 >>> %2%!"
-  [(set_attr "type" "shft,dsp32")])
+  [(set_attr "type" "shft,dsp32shiftimm")])
 
 (define_insn "rotl16"
   [(set (match_operand:SI 0 "register_operand" "=d")
@@ -1639,7 +1716,7 @@
 	(zero_extract:BI (match_dup 1) (const_int 1) (const_int 0)))]
   ""
   "%0 = ROT %1 BY -1%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm")])
 
 (define_insn "rol_one"
   [(set (match_operand:SI 0 "register_operand" "+d")
@@ -1649,7 +1726,7 @@
 	(zero_extract:BI (match_dup 1) (const_int 31) (const_int 0)))]
   ""
   "%0 = ROT %1 BY 1%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm")])
 
 (define_expand "lshrdi3"
   [(set (match_operand:DI 0 "register_operand" "")
@@ -1724,7 +1801,7 @@
    %0 >>= %2;
    %0 = %1 >> %2%!
    %0 = %1 >> %2;"
-  [(set_attr "type" "shft,dsp32,shft")])
+  [(set_attr "type" "shft,dsp32shiftimm,shft")])
 
 (define_insn "lshrpdi3"
   [(set (match_operand:PDI 0 "register_operand" "=e")
@@ -1732,7 +1809,7 @@
 		      (match_operand:SI 2 "nonmemory_operand" "Ku5")))]
   ""
   "%0 = %1 >> %2%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm")])
 
 (define_insn "ashrpdi3"
   [(set (match_operand:PDI 0 "register_operand" "=e")
@@ -1740,7 +1817,7 @@
 		      (match_operand:SI 2 "nonmemory_operand" "Ku5")))]
   ""
   "%0 = %1 >>> %2%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm")])
 
 ;; A pattern to reload the equivalent of
 ;;   (set (Dreg) (plus (FP) (large_constant)))
@@ -2005,7 +2082,8 @@
   [(call (mem:SI (match_operand:SI 0 "symbol_ref_operand" "Q"))
 	 (match_operand 1 "general_operand" "g"))
    (use (match_operand:SI 2 "register_operand" "Z"))
-   (use (match_operand 3 "" ""))]
+   (use (match_operand 3 "" ""))
+   (clobber (reg:SI REG_RETS))]
   "! SIBLING_CALL_P (insn)
    && GET_CODE (operands[0]) == SYMBOL_REF
    && !bfin_longcall_p (operands[0], INTVAL (operands[3]))"
@@ -2031,7 +2109,8 @@
         (call (mem:SI (match_operand:SI 1 "symbol_ref_operand" "Q"))
 	      (match_operand 2 "general_operand" "g")))
    (use (match_operand:SI 3 "register_operand" "Z"))
-   (use (match_operand 4 "" ""))]
+   (use (match_operand 4 "" ""))
+   (clobber (reg:SI REG_RETS))]
   "! SIBLING_CALL_P (insn)
    && GET_CODE (operands[1]) == SYMBOL_REF
    && !bfin_longcall_p (operands[1], INTVAL (operands[4]))"
@@ -2057,7 +2136,8 @@
   [(call (mem:SI (match_operand:SI 0 "register_no_elim_operand" "Y"))
 	 (match_operand 1 "general_operand" "g"))
    (use (match_operand:SI 2 "register_operand" "Z"))
-   (use (match_operand 3 "" ""))]
+   (use (match_operand 3 "" ""))
+   (clobber (reg:SI REG_RETS))]
   "! SIBLING_CALL_P (insn)"
   "call (%0);"
   [(set_attr "type" "call")
@@ -2079,7 +2159,8 @@
         (call (mem:SI (match_operand:SI 1 "register_no_elim_operand" "Y"))
 	      (match_operand 2 "general_operand" "g")))
    (use (match_operand:SI 3 "register_operand" "Z"))
-   (use (match_operand 4 "" ""))]
+   (use (match_operand 4 "" ""))
+   (clobber (reg:SI REG_RETS))]
   "! SIBLING_CALL_P (insn)"
   "call (%1);"
   [(set_attr "type" "call")
@@ -2100,7 +2181,8 @@
 (define_insn "*call_symbol"
   [(call (mem:SI (match_operand:SI 0 "symbol_ref_operand" "Q"))
 	 (match_operand 1 "general_operand" "g"))
-   (use (match_operand 2 "" ""))]
+   (use (match_operand 2 "" ""))
+   (clobber (reg:SI REG_RETS))]
   "! SIBLING_CALL_P (insn)
    && (!TARGET_ID_SHARED_LIBRARY || TARGET_LEAF_ID_SHARED_LIBRARY)
    && GET_CODE (operands[0]) == SYMBOL_REF
@@ -2126,7 +2208,8 @@
   [(set (match_operand 0 "register_operand" "=d")
         (call (mem:SI (match_operand:SI 1 "symbol_ref_operand" "Q"))
 	      (match_operand 2 "general_operand" "g")))
-   (use (match_operand 3 "" ""))]
+   (use (match_operand 3 "" ""))
+   (clobber (reg:SI REG_RETS))]
   "! SIBLING_CALL_P (insn)
    && (!TARGET_ID_SHARED_LIBRARY || TARGET_LEAF_ID_SHARED_LIBRARY)
    && GET_CODE (operands[1]) == SYMBOL_REF
@@ -2152,7 +2235,8 @@
 (define_insn "*call_insn"
   [(call (mem:SI (match_operand:SI 0 "register_no_elim_operand" "a"))
 	 (match_operand 1 "general_operand" "g"))
-   (use (match_operand 2 "" ""))]
+   (use (match_operand 2 "" ""))
+   (clobber (reg:SI REG_RETS))]
   "! SIBLING_CALL_P (insn)"
   "call (%0);"
   [(set_attr "type" "call")
@@ -2172,7 +2256,8 @@
   [(set (match_operand 0 "register_operand" "=d")
         (call (mem:SI (match_operand:SI 1 "register_no_elim_operand" "a"))
 	      (match_operand 2 "general_operand" "g")))
-   (use (match_operand 3 "" ""))]
+   (use (match_operand 3 "" ""))
+   (clobber (reg:SI REG_RETS))]
   "! SIBLING_CALL_P (insn)"
   "call (%1);"
   [(set_attr "type" "call")
@@ -2641,23 +2726,26 @@
 
 (define_insn "return_internal"
   [(return)
-   (unspec [(match_operand 0 "immediate_operand" "i")] UNSPEC_RETURN)]
+   (use (match_operand 0 "register_operand" ""))]
   "reload_completed"
 {
-  switch (INTVAL (operands[0]))
+  switch (REGNO (operands[0]))
     {
-    case EXCPT_HANDLER:
+    case REG_RETX:
       return "rtx;";
-    case NMI_HANDLER:
+    case REG_RETN:
       return "rtn;";
-    case INTERRUPT_HANDLER:
+    case REG_RETI:
       return "rti;";
-    case SUBROUTINE:
+    case REG_RETS:
       return "rts;";
     }
   gcc_unreachable ();
 })
 
+;; When used at a location where CC contains 1, causes a speculative load
+;; that is later cancelled.  This is used for certain workarounds in
+;; interrupt handler prologues.
 (define_insn "dummy_load"
   [(unspec_volatile [(match_operand 0 "register_operand" "a")
 		     (match_operand 1 "register_operand" "C")]
@@ -2667,6 +2755,17 @@
  [(set_attr "type" "misc")
   (set_attr "length" "4")
   (set_attr "seq_insns" "multi")])
+
+;; A placeholder insn inserted before the final scheduling pass.  It is used
+;; to improve scheduling of loads when workarounds for speculative loads are
+;; needed, by not placing them in the first few cycles after a conditional
+;; branch.
+(define_insn "stall"
+  [(unspec_volatile [(match_operand 0 "const_int_operand" "P1P3")]
+		    UNSPEC_VOLATILE_STALL)]
+  ""
+  ""
+  [(set_attr "type" "stall")])
 
 (define_insn "csync"
   [(unspec_volatile [(const_int 0)] UNSPEC_VOLATILE_CSYNC)]
@@ -2707,7 +2806,7 @@
 			(parallel [(const_int 1)]))))]
   ""
   "%h0 = %h2 << 0%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm")])
 
 (define_insn "movhiv2hi_high"
   [(set (match_operand:V2HI 0 "register_operand" "=d")
@@ -2717,7 +2816,7 @@
 	 (match_operand:HI 2 "register_operand" "d")))]
   ""
   "%d0 = %h2 << 0%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm")])
 
 ;; No earlyclobber on alternative two since our sequence ought to be safe.
 ;; The order of operands is intentional to match the VDSP builtin (high word
@@ -2740,7 +2839,7 @@
 	 (match_dup 2)
 	 (vec_select:HI (match_dup 0) (parallel [(const_int 1)]))))]
   ""
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm")])
 
 ; Like composev2hi, but operating on elements of V2HI vectors.
 ; Useful on its own, and as a combiner bridge for the multiply and
@@ -2763,7 +2862,7 @@
    %0 = PACK (%h2,%d1)%!
    %0 = PACK (%d2,%h1)%!
    %0 = PACK (%d2,%d1)%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm,dsp32shiftimm,dsp32shiftimm,dsp32shiftimm,dsp32,dsp32,dsp32,dsp32")])
 
 (define_insn "movv2hi_hi"
   [(set (match_operand:HI 0 "register_operand" "=d,d,d")
@@ -2774,7 +2873,7 @@
    /* optimized out */
    %h0 = %h1 << 0%!
    %h0 = %d1 << 0%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32shiftimm")])
 
 (define_expand "movv2hi_hi_low"
   [(set (match_operand:HI 0 "register_operand" "")
@@ -4038,7 +4137,7 @@
    %0 = ASHIFT %1 BY %h2 (V, S)%!
    %0 = %1 << %2 (V,S)%!
    %0 = %1 >>> %N2 (V,S)%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32,dsp32shiftimm,dsp32shiftimm")])
 
 (define_insn "ssashifthi3"
   [(set (match_operand:HI 0 "register_operand" "=d,d,d")
@@ -4052,7 +4151,7 @@
    %0 = ASHIFT %1 BY %h2 (V, S)%!
    %0 = %1 << %2 (V,S)%!
    %0 = %1 >>> %N2 (V,S)%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32,dsp32shiftimm,dsp32shiftimm")])
 
 (define_insn "ssashiftsi3"
   [(set (match_operand:SI 0 "register_operand" "=d,d,d")
@@ -4066,7 +4165,7 @@
    %0 = ASHIFT %1 BY %h2 (S)%!
    %0 = %1 << %2 (S)%!
    %0 = %1 >>> %N2 (S)%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32,dsp32shiftimm,dsp32shiftimm")])
 
 (define_insn "lshiftv2hi3"
   [(set (match_operand:V2HI 0 "register_operand" "=d,d,d")
@@ -4080,7 +4179,7 @@
    %0 = LSHIFT %1 BY %h2 (V)%!
    %0 = %1 << %2 (V)%!
    %0 = %1 >> %N2 (V)%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32,dsp32shiftimm,dsp32shiftimm")])
 
 (define_insn "lshifthi3"
   [(set (match_operand:HI 0 "register_operand" "=d,d,d")
@@ -4094,7 +4193,7 @@
    %0 = LSHIFT %1 BY %h2 (V)%!
    %0 = %1 << %2 (V)%!
    %0 = %1 >> %N2 (V)%!"
-  [(set_attr "type" "dsp32")])
+  [(set_attr "type" "dsp32,dsp32shiftimm,dsp32shiftimm")])
 
 ;; Load without alignment exception (masking off low bits)
 
@@ -4106,3 +4205,5 @@
   "DISALGNEXCPT || %0 = [%1];"
   [(set_attr "type" "mcld")
    (set_attr "length" "8")])
+
+(include "sync.md")

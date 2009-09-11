@@ -63,6 +63,7 @@ struct GTY(()) machine_function
   /* Set if we are notified by the doloop pass that a hardware loop
      was created.  */
   int has_hardware_loops;
+
   /* Set if we create a memcpy pattern that uses loop registers.  */
   int has_loopreg_clobber;
 };
@@ -81,6 +82,7 @@ const char *dregs_pair_names[] =  DREGS_PAIR_NAMES;
 const char *byte_reg_names[]   =  BYTE_REGISTER_NAMES;
 
 static int arg_regs[] = FUNCTION_ARG_REGISTERS;
+static int ret_regs[] = FUNCTION_RETURN_REGISTERS;
 
 /* Nonzero if -mshared-library-id was given.  */
 static int bfin_lib_id_given;
@@ -115,184 +117,223 @@ struct bfin_cpu
 struct bfin_cpu bfin_cpus[] =
 {
   {"bf512", BFIN_CPU_BF512, 0x0000,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
 
   {"bf514", BFIN_CPU_BF514, 0x0000,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
 
   {"bf516", BFIN_CPU_BF516, 0x0000,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
 
   {"bf518", BFIN_CPU_BF518, 0x0000,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
 
   {"bf522", BFIN_CPU_BF522, 0x0002,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
   {"bf522", BFIN_CPU_BF522, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
   {"bf522", BFIN_CPU_BF522, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
 
   {"bf523", BFIN_CPU_BF523, 0x0002,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
   {"bf523", BFIN_CPU_BF523, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
   {"bf523", BFIN_CPU_BF523, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
 
   {"bf524", BFIN_CPU_BF524, 0x0002,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
   {"bf524", BFIN_CPU_BF524, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
   {"bf524", BFIN_CPU_BF524, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
 
   {"bf525", BFIN_CPU_BF525, 0x0002,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
   {"bf525", BFIN_CPU_BF525, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
   {"bf525", BFIN_CPU_BF525, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
 
   {"bf526", BFIN_CPU_BF526, 0x0002,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
   {"bf526", BFIN_CPU_BF526, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
   {"bf526", BFIN_CPU_BF526, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
 
   {"bf527", BFIN_CPU_BF527, 0x0002,
-   WA_SPECULATIVE_LOADS},
+   WA_SPECULATIVE_LOADS | WA_05000074},
   {"bf527", BFIN_CPU_BF527, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
   {"bf527", BFIN_CPU_BF527, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000074},
 
   {"bf531", BFIN_CPU_BF531, 0x0006,
-   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS | WA_05000074},
   {"bf531", BFIN_CPU_BF531, 0x0005,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000283 | WA_05000315 | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000283 | WA_05000315
+   | WA_LOAD_LCREGS | WA_05000074},
   {"bf531", BFIN_CPU_BF531, 0x0004,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
   {"bf531", BFIN_CPU_BF531, 0x0003,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
 
   {"bf532", BFIN_CPU_BF532, 0x0006,
-   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS | WA_05000074},
   {"bf532", BFIN_CPU_BF532, 0x0005,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000283 | WA_05000315 | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000283 | WA_05000315
+   | WA_LOAD_LCREGS | WA_05000074},
   {"bf532", BFIN_CPU_BF532, 0x0004,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
   {"bf532", BFIN_CPU_BF532, 0x0003,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
 
   {"bf533", BFIN_CPU_BF533, 0x0006,
-   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS | WA_05000074},
   {"bf533", BFIN_CPU_BF533, 0x0005,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000283 | WA_05000315 | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_05000283 | WA_05000315
+   | WA_LOAD_LCREGS | WA_05000074},
   {"bf533", BFIN_CPU_BF533, 0x0004,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
   {"bf533", BFIN_CPU_BF533, 0x0003,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
 
   {"bf534", BFIN_CPU_BF534, 0x0003,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS | WA_05000074},
   {"bf534", BFIN_CPU_BF534, 0x0002,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
   {"bf534", BFIN_CPU_BF534, 0x0001,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
 
   {"bf536", BFIN_CPU_BF536, 0x0003,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS | WA_05000074},
   {"bf536", BFIN_CPU_BF536, 0x0002,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
   {"bf536", BFIN_CPU_BF536, 0x0001,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
 
   {"bf537", BFIN_CPU_BF537, 0x0003,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS | WA_05000074},
   {"bf537", BFIN_CPU_BF537, 0x0002,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
   {"bf537", BFIN_CPU_BF537, 0x0001,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
 
   {"bf538", BFIN_CPU_BF538, 0x0005,
-   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS | WA_05000074},
   {"bf538", BFIN_CPU_BF538, 0x0004,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS | WA_05000074},
   {"bf538", BFIN_CPU_BF538, 0x0003,
    WA_SPECULATIVE_LOADS | WA_RETS
-   | WA_05000283 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000315 | WA_LOAD_LCREGS | WA_05000074},
   {"bf538", BFIN_CPU_BF538, 0x0002,
    WA_SPECULATIVE_LOADS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
 
   {"bf539", BFIN_CPU_BF539, 0x0005,
-   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_LOAD_LCREGS | WA_05000074},
   {"bf539", BFIN_CPU_BF539, 0x0004,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_LOAD_LCREGS | WA_05000074},
   {"bf539", BFIN_CPU_BF539, 0x0003,
    WA_SPECULATIVE_LOADS | WA_RETS
-   | WA_05000283 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000315 | WA_LOAD_LCREGS | WA_05000074},
   {"bf539", BFIN_CPU_BF539, 0x0002,
    WA_SPECULATIVE_LOADS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
+
+  {"bf542m", BFIN_CPU_BF542M, 0x0003,
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
 
   {"bf542", BFIN_CPU_BF542, 0x0002,
-   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf542", BFIN_CPU_BF542, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf542", BFIN_CPU_BF542, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS
+   | WA_05000074},
+
+  {"bf544m", BFIN_CPU_BF544M, 0x0003,
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
 
   {"bf544", BFIN_CPU_BF544, 0x0002,
-   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf544", BFIN_CPU_BF544, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf544", BFIN_CPU_BF544, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS
+   | WA_05000074},
+
+  {"bf547m", BFIN_CPU_BF547M, 0x0003,
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
 
   {"bf547", BFIN_CPU_BF547, 0x0002,
-   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf547", BFIN_CPU_BF547, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf547", BFIN_CPU_BF547, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS
+   | WA_05000074},
+
+  {"bf548m", BFIN_CPU_BF548M, 0x0003,
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
 
   {"bf548", BFIN_CPU_BF548, 0x0002,
-   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf548", BFIN_CPU_BF548, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf548", BFIN_CPU_BF548, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS
+   | WA_05000074},
+
+  {"bf549m", BFIN_CPU_BF549M, 0x0003,
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
 
   {"bf549", BFIN_CPU_BF549, 0x0002,
-   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf549", BFIN_CPU_BF549, 0x0001,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_05000074},
   {"bf549", BFIN_CPU_BF549, 0x0000,
-   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS},
+   WA_SPECULATIVE_LOADS | WA_RETS | WA_INDIRECT_CALLS | WA_LOAD_LCREGS
+   | WA_05000074},
 
   {"bf561", BFIN_CPU_BF561, 0x0005, WA_RETS
-   | WA_05000283 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000315 | WA_LOAD_LCREGS | WA_05000074},
   {"bf561", BFIN_CPU_BF561, 0x0003,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
   {"bf561", BFIN_CPU_BF561, 0x0002,
    WA_SPECULATIVE_LOADS | WA_SPECULATIVE_SYNCS | WA_RETS
-   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS},
+   | WA_05000283 | WA_05000257 | WA_05000315 | WA_LOAD_LCREGS
+   | WA_05000074},
 
   {NULL, 0, 0, 0}
 };
@@ -532,7 +573,14 @@ n_pregs_to_save (bool is_inthandler, bool consecutive)
 static bool
 must_save_fp_p (void)
 {
-  return frame_pointer_needed || df_regs_ever_live_p (REG_FP);
+  return df_regs_ever_live_p (REG_FP);
+}
+
+/* Determine if we are going to save the RETS register.  */
+static bool
+must_save_rets_p (void)
+{
+  return df_regs_ever_live_p (REG_RETS);
 }
 
 static bool
@@ -844,13 +892,12 @@ n_regs_saved_by_prologue (void)
   int i;
 
   if (all || stack_frame_needed_p ())
-    /* We use a LINK instruction in this case.  */
     n += 2;
   else
     {
       if (must_save_fp_p ())
 	n++;
-      if (! current_function_is_leaf)
+      if (must_save_rets_p ())
 	n++;
     }
 
@@ -881,6 +928,17 @@ n_regs_saved_by_prologue (void)
       n += i == REG_A0 || i == REG_A1 ? 2 : 1;
 
   return n;
+}
+
+/* Given FROM and TO register numbers, say whether this elimination is
+   allowed.  Frame pointer elimination is automatically handled.
+
+   All other eliminations are valid.  */
+
+static bool
+bfin_can_eliminate (const int from ATTRIBUTE_UNUSED, const int to)
+{
+  return (to == STACK_POINTER_REGNUM ? ! frame_pointer_needed : true);
 }
 
 /* Return the offset between two registers, one to be eliminated, and the other
@@ -1081,12 +1139,13 @@ do_link (rtx spreg, HOST_WIDE_INT frame_size, bool all)
 {
   frame_size += arg_area_size ();
 
-  if (all || stack_frame_needed_p ()
-      || (must_save_fp_p () && ! current_function_is_leaf))
+  if (all
+      || stack_frame_needed_p ()
+      || (must_save_rets_p () && must_save_fp_p ()))
     emit_link_insn (spreg, frame_size);
   else
     {
-      if (! current_function_is_leaf)
+      if (must_save_rets_p ())
 	{
 	  rtx pat = gen_movsi (gen_rtx_MEM (Pmode,
 					    gen_rtx_PRE_DEC (Pmode, spreg)),
@@ -1116,20 +1175,20 @@ do_unlink (rtx spreg, HOST_WIDE_INT frame_size, bool all, int epilogue_p)
 {
   frame_size += arg_area_size ();
 
-  if (all || stack_frame_needed_p ())
+  if (stack_frame_needed_p ())
     emit_insn (gen_unlink ());
   else 
     {
       rtx postinc = gen_rtx_MEM (Pmode, gen_rtx_POST_INC (Pmode, spreg));
 
       add_to_reg (spreg, frame_size, 0, epilogue_p);
-      if (must_save_fp_p ())
+      if (all || must_save_fp_p ())
 	{
 	  rtx fpreg = gen_rtx_REG (Pmode, REG_FP);
 	  emit_move_insn (fpreg, postinc);
 	  emit_use (fpreg);
 	}
-      if (! current_function_is_leaf)
+      if (all || must_save_rets_p ())
 	{
 	  emit_move_insn (bfin_rets_rtx, postinc);
 	  emit_use (bfin_rets_rtx);
@@ -1183,9 +1242,7 @@ expand_interrupt_handler_prologue (rtx spreg, e_funkind fkind, bool all)
   
   if (lookup_attribute ("nesting", attrs))
     {
-      rtx srcreg = gen_rtx_REG (Pmode, (fkind == EXCPT_HANDLER ? REG_RETX
-					: fkind == NMI_HANDLER ? REG_RETN
-					: REG_RETI));
+      rtx srcreg = gen_rtx_REG (Pmode, ret_regs[fkind]);
       insn = emit_move_insn (predec, srcreg);
       RTX_FRAME_RELATED_P (insn) = 1;
     }
@@ -1227,9 +1284,7 @@ expand_interrupt_handler_epilogue (rtx spreg, e_funkind fkind, bool all)
 
   if (lookup_attribute ("nesting", attrs))
     {
-      rtx srcreg = gen_rtx_REG (Pmode, (fkind == EXCPT_HANDLER ? REG_RETX
-					: fkind == NMI_HANDLER ? REG_RETN
-					: REG_RETI));
+      rtx srcreg = gen_rtx_REG (Pmode, ret_regs[fkind]);
       emit_move_insn (srcreg, postinc);
     }
 
@@ -1245,7 +1300,7 @@ expand_interrupt_handler_epilogue (rtx spreg, e_funkind fkind, bool all)
   if (fkind == EXCPT_HANDLER)
     emit_insn (gen_addsi3 (spreg, spreg, GEN_INT (12)));
 
-  emit_jump_insn (gen_return_internal (GEN_INT (fkind)));
+  emit_jump_insn (gen_return_internal (gen_rtx_REG (Pmode, ret_regs[fkind])));
 }
 
 /* Used while emitting the prologue to generate code to load the correct value
@@ -1381,7 +1436,7 @@ bfin_expand_epilogue (int need_return, int eh_return, bool sibcall_p)
   if (eh_return)
     emit_insn (gen_addsi3 (spreg, spreg, gen_rtx_REG (Pmode, REG_P2)));
 
-  emit_jump_insn (gen_return_internal (GEN_INT (SUBROUTINE)));
+  emit_jump_insn (gen_return_internal (gen_rtx_REG (Pmode, REG_RETS)));
 }
 
 /* Return nonzero if register OLD_REG can be renamed to register NEW_REG.  */
@@ -2182,9 +2237,10 @@ bfin_expand_call (rtx retval, rtx fnaddr, rtx callarg1, rtx cookie, int sibcall)
 {
   rtx use = NULL, call;
   rtx callee = XEXP (fnaddr, 0);
-  int nelts = 2 + !!sibcall;
+  int nelts = 3;
   rtx pat;
   rtx picreg = get_hard_reg_initial_val (SImode, FDPIC_REGNO);
+  rtx retsreg = gen_rtx_REG (Pmode, REG_RETS);
   int n;
 
   /* In an untyped call, we can get NULL for operand 2.  */
@@ -2261,6 +2317,8 @@ bfin_expand_call (rtx retval, rtx fnaddr, rtx callarg1, rtx cookie, int sibcall)
   XVECEXP (pat, 0, n++) = gen_rtx_USE (VOIDmode, cookie);
   if (sibcall)
     XVECEXP (pat, 0, n++) = gen_rtx_RETURN (VOIDmode);
+  else
+    XVECEXP (pat, 0, n++) = gen_rtx_CLOBBER (VOIDmode, retsreg);
   call = emit_call_insn (pat);
   if (use)
     CALL_INSN_FUNCTION_USAGE (call) = use;
@@ -4166,7 +4224,10 @@ bfin_optimize_loop (loop_info loop)
 	  seq_end = emit_insn (copy_rtx (PATTERN (last_insn)));
 	}
       else
-	seq_end = emit_jump_insn (gen_jump (label));
+	{
+	  emit_jump_insn (gen_jump (label));
+	  seq_end = emit_barrier ();
+	}
     }
 
   seq = get_insns ();
@@ -4214,6 +4275,7 @@ bfin_optimize_loop (loop_info loop)
 	  else
 	    redirect_edge_succ (e, new_bb);
 	}
+      e = make_edge (new_bb, loop->head, 0);
     }
 
   delete_insn (loop->loop_end);
@@ -4761,15 +4823,27 @@ bfin_gen_bundles (void)
       for (insn = BB_HEAD (bb);; insn = next)
 	{
 	  int at_end;
+	  rtx delete_this = NULL_RTX;
+
 	  if (INSN_P (insn))
 	    {
-	      if (get_attr_type (insn) == TYPE_DSP32)
-		slot[0] = insn;
-	      else if (slot[1] == NULL_RTX)
-		slot[1] = insn;
+	      enum attr_type type = get_attr_type (insn);
+
+	      if (type == TYPE_STALL)
+		{
+		  gcc_assert (n_filled == 0);
+		  delete_this = insn;
+		}
 	      else
-		slot[2] = insn;
-	      n_filled++;
+		{
+		  if (type == TYPE_DSP32 || type == TYPE_DSP32SHIFTIMM)
+		    slot[0] = insn;
+		  else if (slot[1] == NULL_RTX)
+		    slot[1] = insn;
+		  else
+		    slot[2] = insn;
+		  n_filled++;
+		}
 	    }
 
 	  next = NEXT_INSN (insn);
@@ -4784,7 +4858,7 @@ bfin_gen_bundles (void)
 
 	  /* BB_END can change due to emitting extra NOPs, so check here.  */
 	  at_end = insn == BB_END (bb);
-	  if (at_end || GET_MODE (next) == TImode)
+	  if (delete_this == NULL_RTX && (at_end || GET_MODE (next) == TImode))
 	    {
 	      if ((n_filled < 2
 		   || !gen_one_bundle (slot))
@@ -4803,6 +4877,8 @@ bfin_gen_bundles (void)
 	      n_filled = 0;
 	      slot[0] = slot[1] = slot[2] = NULL_RTX;
 	    }
+	  if (delete_this != NULL_RTX)
+	    delete_insn (delete_this);
 	  if (at_end)
 	    break;
 	}
@@ -4963,28 +5039,38 @@ type_for_anomaly (rtx insn)
     return get_attr_type (insn);
 }
 
-/* Return nonzero if INSN contains any loads that may trap.  It handles
-   SEQUENCEs correctly.  */
+/* Return true iff the address found in MEM is based on the register
+   NP_REG and optionally has a positive offset.  */
+static bool
+harmless_null_pointer_p (rtx mem, int np_reg)
+{
+  mem = XEXP (mem, 0);
+  if (GET_CODE (mem) == POST_INC || GET_CODE (mem) == POST_DEC)
+    mem = XEXP (mem, 0);
+  if (REG_P (mem) && REGNO (mem) == np_reg)
+    return true;
+  if (GET_CODE (mem) == PLUS
+      && REG_P (XEXP (mem, 0)) && REGNO (XEXP (mem, 0)) == np_reg)
+    {
+      mem = XEXP (mem, 1);
+      if (GET_CODE (mem) == CONST_INT && INTVAL (mem) > 0)
+	return true;
+    }
+  return false;
+}
+
+/* Return nonzero if INSN contains any loads that may trap.  */
 
 static bool
-trapping_loads_p (rtx insn)
+trapping_loads_p (rtx insn, int np_reg, bool after_np_branch)
 {
   rtx pat = PATTERN (insn);
-  if (GET_CODE (pat) == SEQUENCE)
-    {
-      enum attr_type t;
-      t = get_attr_type (XVECEXP (pat, 0, 1));
-      if (t == TYPE_MCLD
-	  && may_trap_p (SET_SRC (PATTERN (XVECEXP (pat, 0, 1)))))
-	return true;
-      t = get_attr_type (XVECEXP (pat, 0, 2));
-      if (t == TYPE_MCLD
-	  && may_trap_p (SET_SRC (PATTERN (XVECEXP (pat, 0, 2)))))
-	return true;
-      return false;
-    }
-  else
-    return may_trap_p (SET_SRC (single_set (insn)));
+  rtx mem = SET_SRC (single_set (insn));
+
+  if (!after_np_branch)
+    np_reg = -1;
+  return ((np_reg == -1 || !harmless_null_pointer_p (mem, np_reg))
+	  && may_trap_p (mem));
 }
 
 /* Return INSN if it is of TYPE_MCLD.  Alternatively, if INSN is the start of
@@ -5022,6 +5108,24 @@ indirect_call_p (rtx pat)
   return REG_P (pat);
 }
 
+/* During workaround_speculation, track whether we're in the shadow of a
+   conditional branch that tests a P register for NULL.  If so, we can omit
+   emitting NOPs if we see a load from that P register, since a speculative
+   access at address 0 isn't a problem, and the load is executed in all other
+   cases anyway.
+   Global for communication with note_np_check_stores through note_stores.
+   */
+int np_check_regno = -1;
+bool np_after_branch = false;
+
+/* Subroutine of workaround_speculation, called through note_stores.  */
+static void
+note_np_check_stores (rtx x, const_rtx pat, void *data ATTRIBUTE_UNUSED)
+{
+  if (REG_P (x) && (REGNO (x) == REG_CC || REGNO (x) == np_check_regno))
+    np_check_regno = -1;
+}
+
 static void
 workaround_speculation (void)
 {
@@ -5043,17 +5147,38 @@ workaround_speculation (void)
 
       next = find_next_insn_start (insn);
       
-      if (NOTE_P (insn) || BARRIER_P (insn) || LABEL_P (insn))
+      if (NOTE_P (insn) || BARRIER_P (insn))
 	continue;
+
+      if (LABEL_P (insn))
+	{
+	  np_check_regno = -1;
+	  continue;
+	}
 
       pat = PATTERN (insn);
       if (GET_CODE (pat) == USE || GET_CODE (pat) == CLOBBER
-	  || GET_CODE (pat) == ASM_INPUT || GET_CODE (pat) == ADDR_VEC
-	  || GET_CODE (pat) == ADDR_DIFF_VEC || asm_noperands (pat) >= 0)
+	  || GET_CODE (pat) == ADDR_VEC || GET_CODE (pat) == ADDR_DIFF_VEC)
 	continue;
+      
+      if (GET_CODE (pat) == ASM_INPUT || asm_noperands (pat) >= 0)
+	{
+	  np_check_regno = -1;
+	  continue;
+	}
 
       if (JUMP_P (insn))
 	{
+	  /* Is this a condjump based on a null pointer comparison we saw
+	     earlier?  */
+	  if (np_check_regno != -1
+	      && recog_memoized (insn) == CODE_FOR_cbranchbi4)
+	    {
+	      rtx op = XEXP (SET_SRC (PATTERN (insn)), 0);
+	      gcc_assert (GET_CODE (op) == EQ || GET_CODE (op) == NE);
+	      if (GET_CODE (op) == NE)
+		np_after_branch = true;
+	    }
 	  if (any_condjump_p (insn)
 	      && ! cbranch_predicted_taken_p (insn))
 	    {
@@ -5066,6 +5191,7 @@ workaround_speculation (void)
 	}
       else if (CALL_P (insn))
 	{
+	  np_check_regno = -1;
 	  if (cycles_since_jump < INT_MAX)
 	    cycles_since_jump++;
 	  if (indirect_call_p (pat) && ENABLE_WA_INDIRECT_CALLS)
@@ -5081,13 +5207,44 @@ workaround_speculation (void)
 	  if (cycles_since_jump < INT_MAX)
 	    cycles_since_jump++;
 
+	  /* Detect a comparison of a P register with zero.  If we later
+	     see a condjump based on it, we have found a null pointer
+	     check.  */
+	  if (recog_memoized (insn) == CODE_FOR_compare_eq)
+	    {
+	      rtx src = SET_SRC (PATTERN (insn));
+	      if (REG_P (XEXP (src, 0))
+		  && P_REGNO_P (REGNO (XEXP (src, 0)))
+		  && XEXP (src, 1) == const0_rtx)
+		{
+		  np_check_regno = REGNO (XEXP (src, 0));
+		  np_after_branch = false;
+		}
+	      else
+		np_check_regno = -1;
+	    }
+
 	  if (load_insn && ENABLE_WA_SPECULATIVE_LOADS)
 	    {
-	      if (trapping_loads_p (load_insn))
+	      if (trapping_loads_p (load_insn, np_check_regno,
+				    np_after_branch))
 		delay_needed = 4;
 	    }
 	  else if (type == TYPE_SYNC && ENABLE_WA_SPECULATIVE_SYNCS)
 	    delay_needed = 3;
+
+	  /* See if we need to forget about a null pointer comparison
+	     we found earlier.  */
+	  if (recog_memoized (insn) != CODE_FOR_compare_eq)
+	    {
+	      note_stores (PATTERN (insn), note_np_check_stores, NULL);
+	      if (np_check_regno != -1)
+		{
+		  if (find_regno_note (insn, REG_INC, np_check_regno))
+		    np_check_regno = -1;
+		}
+	    }
+
 	}
 
       if (delay_needed > cycles_since_jump
@@ -5165,7 +5322,7 @@ workaround_speculation (void)
 
 		  if (load_insn && ENABLE_WA_SPECULATIVE_LOADS)
 		    {
-		      if (trapping_loads_p (load_insn))
+		      if (trapping_loads_p (load_insn, -1, false))
 			delay_needed = 2;
 		    }
 		  else if (type == TYPE_SYNC && ENABLE_WA_SPECULATIVE_SYNCS)
@@ -5203,6 +5360,65 @@ workaround_speculation (void)
     }
 }
 
+/* Called just before the final scheduling pass.  If we need to insert NOPs
+   later on to work around speculative loads, insert special placeholder
+   insns that cause loads to be delayed for as many cycles as necessary
+   (and possible).  This reduces the number of NOPs we need to add.
+   The dummy insns we generate are later removed by bfin_gen_bundles.  */
+static void
+add_sched_insns_for_speculation (void)
+{
+  rtx insn;
+
+  if (! ENABLE_WA_SPECULATIVE_LOADS && ! ENABLE_WA_SPECULATIVE_SYNCS
+      && ! ENABLE_WA_INDIRECT_CALLS)
+    return;
+
+  /* First pass: find predicted-false branches; if something after them
+     needs nops, insert them or change the branch to predict true.  */
+  for (insn = get_insns (); insn; insn = NEXT_INSN (insn))
+    {
+      rtx pat;
+
+      if (NOTE_P (insn) || BARRIER_P (insn) || LABEL_P (insn))
+	continue;
+
+      pat = PATTERN (insn);
+      if (GET_CODE (pat) == USE || GET_CODE (pat) == CLOBBER
+	  || GET_CODE (pat) == ASM_INPUT || GET_CODE (pat) == ADDR_VEC
+	  || GET_CODE (pat) == ADDR_DIFF_VEC || asm_noperands (pat) >= 0)
+	continue;
+
+      if (JUMP_P (insn))
+	{
+	  if (any_condjump_p (insn)
+	      && !cbranch_predicted_taken_p (insn))
+	    {
+	      rtx n = next_real_insn (insn);
+	      emit_insn_before (gen_stall (GEN_INT (3)), n);
+	    }
+	}
+    }
+
+  /* Second pass: for predicted-true branches, see if anything at the
+     branch destination needs extra nops.  */
+  for (insn = get_insns (); insn; insn = NEXT_INSN (insn))
+    {
+      if (JUMP_P (insn)
+	  && any_condjump_p (insn)
+	  && (cbranch_predicted_taken_p (insn)))
+	{
+	  rtx target = JUMP_LABEL (insn);
+	  rtx next = next_real_insn (target);
+
+	  if (GET_CODE (PATTERN (next)) == UNSPEC_VOLATILE
+	      && get_attr_type (next) == TYPE_STALL)
+	    continue;
+	  emit_insn_before (gen_stall (GEN_INT (1)), next);	  
+	}
+    }
+}
+
 /* We use the machine specific reorg pass for emitting CSYNC instructions
    after conditional branches as needed.
 
@@ -5235,6 +5451,8 @@ bfin_reorg (void)
       splitting_for_sched = 1;
       split_all_insns ();
       splitting_for_sched = 0;
+
+      add_sched_insns_for_speculation ();
 
       timevar_push (TV_SCHED2);
       schedule_insns ();
@@ -6296,12 +6514,8 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
 #undef TARGET_SCHED_ISSUE_RATE
 #define TARGET_SCHED_ISSUE_RATE bfin_issue_rate
 
-#undef TARGET_PROMOTE_PROTOTYPES
-#define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
-#undef TARGET_PROMOTE_FUNCTION_ARGS
-#define TARGET_PROMOTE_FUNCTION_ARGS hook_bool_const_tree_true
-#undef TARGET_PROMOTE_FUNCTION_RETURN
-#define TARGET_PROMOTE_FUNCTION_RETURN hook_bool_const_tree_true
+#undef TARGET_PROMOTE_FUNCTION_MODE
+#define TARGET_PROMOTE_FUNCTION_MODE default_promote_function_mode_always_promote
 
 #undef TARGET_ARG_PARTIAL_BYTES
 #define TARGET_ARG_PARTIAL_BYTES bfin_arg_partial_bytes
@@ -6341,5 +6555,8 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
 
 #undef TARGET_FRAME_POINTER_REQUIRED
 #define TARGET_FRAME_POINTER_REQUIRED bfin_frame_pointer_required
+
+#undef TARGET_CAN_ELIMINATE
+#define TARGET_CAN_ELIMINATE bfin_can_eliminate
 
 struct gcc_target targetm = TARGET_INITIALIZER;

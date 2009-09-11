@@ -1,5 +1,5 @@
 /* dwarf.c -- display DWARF contents of a BFD binary file
-   Copyright 2005, 2006, 2007, 2008
+   Copyright 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
@@ -1985,9 +1985,22 @@ process_debug_info (struct dwarf_section *section,
 	  abbrev_number = read_leb128 (tags, & bytes_read, 0);
 	  tags += bytes_read;
 
-	  /* A null DIE marks the end of a list of siblings.  */
+	  /* A null DIE marks the end of a list of siblings or it may also be
+	     a section padding.  */
 	  if (abbrev_number == 0)
 	    {
+	      /* Check if it can be a section padding for the last CU.  */
+	      if (level == 0 && start == end)
+		{
+		  unsigned char *chk;
+
+		  for (chk = tags; chk < start; chk++)
+		    if (*chk != 0)
+		      break;
+		  if (chk == start)
+		    break;
+		}
+
 	      --level;
 	      if (level < 0)
 		{

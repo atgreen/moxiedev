@@ -40,8 +40,6 @@ along with GCC; see the file COPYING3.  If not see
 #define LANG_HOOKS_POST_OPTIONS c_common_post_options
 #undef LANG_HOOKS_GET_ALIAS_SET
 #define LANG_HOOKS_GET_ALIAS_SET c_common_get_alias_set
-#undef LANG_HOOKS_MARK_ADDRESSABLE
-#define LANG_HOOKS_MARK_ADDRESSABLE c_mark_addressable
 #undef LANG_HOOKS_PARSE_FILE
 #define LANG_HOOKS_PARSE_FILE c_common_parse_file
 #undef LANG_HOOKS_FINISH_INCOMPLETE_DECL
@@ -54,8 +52,6 @@ along with GCC; see the file COPYING3.  If not see
 #define LANG_HOOKS_TYPES_COMPATIBLE_P c_types_compatible_p
 #undef LANG_HOOKS_MISSING_NORETURN_OK_P
 #define LANG_HOOKS_MISSING_NORETURN_OK_P c_missing_noreturn_ok_p
-#undef LANG_HOOKS_DUP_LANG_SPECIFIC_DECL
-#define LANG_HOOKS_DUP_LANG_SPECIFIC_DECL c_dup_lang_specific_decl
 #undef  LANG_HOOKS_BUILTIN_FUNCTION
 #define LANG_HOOKS_BUILTIN_FUNCTION c_builtin_function
 #undef  LANG_HOOKS_BUILTIN_FUNCTION_EXT_SCOPE

@@ -1,6 +1,6 @@
 # Process this file with autoreconf to produce a configure script.
 
-AC_PREREQ(2.59)
+AC_PREREQ(2.64)
 AC_INIT(package-unused, version-unused,, libstdc++)
 AC_CONFIG_SRCDIR(src/ios.cc)
 AC_CONFIG_HEADER(config.h)
@@ -12,7 +12,7 @@ AC_CONFIG_HEADER(config.h)
 ### am handles this now?  ORIGINAL_LD_FOR_MULTILIBS=$LD
 
 # For libtool versioning info, format is CURRENT:REVISION:AGE
-libtool_VERSION=6:13:0
+libtool_VERSION=6:14:0
 AC_SUBST(libtool_VERSION)
 
 # Find the rest of the source tree framework.
@@ -78,7 +78,36 @@ AM_INIT_AUTOMAKE([1.9.3 no-define foreign no-dependencies -Wall -Wno-portability
 AH_TEMPLATE(PACKAGE, [Name of package])
 AH_TEMPLATE(VERSION, [Version number of package])
 
-# Runs configure.host, finds CC, CXX, and assorted other critical bits.  Sets
+# We're almost certainly being configured before anything else which uses
+# C++, so all of our AC_PROG_* discoveries will be cached.  It's vital that
+# we not cache the value of CXX that we "discover" here, because it's set
+# to something unique for us and libjava.  Other target libraries need to
+# find CXX for themselves.  We yank the rug out from under the normal AC_*
+# process by sneakily renaming the cache variable.  This also lets us debug
+# the value of "our" CXX in postmortems.
+#
+# We must also force CXX to /not/ be a precious variable, otherwise the
+# wrong (non-multilib-adjusted) value will be used in multilibs.  This
+# little trick also affects CPPFLAGS, CXXFLAGS, and LDFLAGS.  And as a side
+# effect, CXXFLAGS is no longer automagically subst'd, so we have to do
+# that ourselves.  Un-preciousing AC_PROG_CC also affects CC and CFLAGS.
+#
+# -fno-builtin must be present here so that a non-conflicting form of
+# std::exit can be guessed by AC_PROG_CXX, and used in later tests.
+
+m4_define([ac_cv_prog_CXX],[glibcxx_cv_prog_CXX])
+m4_rename([_AC_ARG_VAR_PRECIOUS],[glibcxx_PRECIOUS])
+m4_define([_AC_ARG_VAR_PRECIOUS],[])
+save_CXXFLAGS="$CXXFLAGS"
+CXXFLAGS="$CXXFLAGS -fno-builtin"
+AC_PROG_CC
+AC_PROG_CXX
+CXXFLAGS="$save_CXXFLAGS"
+m4_rename_force([glibcxx_PRECIOUS],[_AC_ARG_VAR_PRECIOUS])
+AC_SUBST(CFLAGS)
+AC_SUBST(CXXFLAGS)
+
+# Runs configure.host, and assorted other critical bits.  Sets
 # up critical shell variables.
 GLIBCXX_CONFIGURE
 
@@ -359,45 +388,32 @@ AC_SUBST(LIBSUPCXX_PICFLAGS)
 dnl In autoconf 2.5x, AC_OUTPUT is replaced by four AC_CONFIG_* macros,
 dnl which can all be called multiple times as needed, plus one (different)
 dnl AC_OUTPUT macro.  This one lists the files to be created:
-AC_CONFIG_FILES( \
-  Makefile \
-  AC_FOREACH([DIR], glibcxx_SUBDIRS, [DIR/Makefile ])
-  )
+AC_CONFIG_FILES(Makefile)
 AC_CONFIG_FILES([scripts/testsuite_flags],[chmod +x scripts/testsuite_flags])
 
-dnl These commands are run at the end of config.status:
-AC_CONFIG_COMMANDS([default],
-[if test -n "$CONFIG_FILES"; then
-   # Multilibs need MULTISUBDIR defined correctly in certain makefiles so
-   # that multilib installs will end up installed in the correct place.
-   # The testsuite needs it for multilib-aware ABI baseline files.
-   # To work around this not being passed down from config-ml.in ->
-   # srcdir/Makefile.am -> srcdir/{src,libsupc++,...}/Makefile.am, manually
-   # append it here.  Only modify Makefiles that have just been created.
-   #
-   # Also, get rid of this simulated-VPATH thing that automake does.
-   cat > vpsed << \_EOF
+# Multilibs need MULTISUBDIR defined correctly in certain makefiles so
+# that multilib installs will end up installed in the correct place.
+# The testsuite needs it for multilib-aware ABI baseline files.
+# To work around this not being passed down from config-ml.in ->
+# srcdir/Makefile.am -> srcdir/{src,libsupc++,...}/Makefile.am, manually
+# append it here.  Only modify Makefiles that have just been created.
+#
+# Also, get rid of this simulated-VPATH thing that automake does.
+AC_CONFIG_FILES(AC_FOREACH([DIR], glibcxx_SUBDIRS, [DIR/Makefile ]),
+  [cat > vpsed$$ << \_EOF
 s!`test -f '$<' || echo '$(srcdir)/'`!!
 _EOF
-   for i in $SUBDIRS; do
-    case $CONFIG_FILES in
-     *${i}/Makefile*)
-       #echo "Adding MULTISUBDIR to $i/Makefile"
-       sed -f vpsed $i/Makefile > tmp
-       grep '^MULTISUBDIR =' Makefile >> tmp
-       mv tmp $i/Makefile
-       ;;
-    esac
-   done
-   rm vpsed
- fi
- (cd include && ${MAKE-make})
-],
-[
-# Variables needed in config.status (file generation) which aren't already
-# passed by autoconf.
-SUBDIRS="$SUBDIRS"
+   sed -f vpsed$$ $ac_file > tmp$$
+   mv tmp$$ $ac_file
+   rm vpsed$$
+   echo 'MULTISUBDIR =' >> $ac_file
+   ml_norecursion=yes
+   . ${multi_basedir}/config-ml.in
+   AS_UNSET([ml_norecursion])
 ])
+
+AC_CONFIG_COMMANDS([generate-headers],
+  [(cd include && ${MAKE-make} pch_build= )])
 
 dnl And this actually makes things happen:
 AC_OUTPUT

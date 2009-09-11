@@ -116,12 +116,12 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
       _M_gcount = 0;
       sentry __cerb(*this, true);
-      if (__cerb && __n > 0)
+      if (__n > 0 && __cerb)
 	{
 	  ios_base::iostate __err = ios_base::goodbit;
 	  __try
 	    {
-	      const char_type __cdelim = traits_type::to_char_type(__delim);	      
+	      const char_type __cdelim = traits_type::to_char_type(__delim);
 	      const int_type __eof = traits_type::eof();
 	      __streambuf_type* __sb = this->rdbuf();
 	      int_type __c = __sb->sgetc();
@@ -523,12 +523,12 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
       _M_gcount = 0;
       sentry __cerb(*this, true);
-      if (__cerb && __n > 0)
+      if (__n > 0 && __cerb)
 	{
 	  ios_base::iostate __err = ios_base::goodbit;
 	  __try
 	    {
-	      const char_type __cdelim = traits_type::to_char_type(__delim);	      
+	      const char_type __cdelim = traits_type::to_char_type(__delim);
 	      const int_type __eof = traits_type::eof();
 	      __streambuf_type* __sb = this->rdbuf();
 	      int_type __c = __sb->sgetc();

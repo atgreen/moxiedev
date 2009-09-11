@@ -1,3 +1,76 @@
+2009-09-01  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Caching Data of Remote Targets): Add note on
+	non-stop mode's affect on remote caching.
+
+2009-08-31  Jacob Potter  <jdpotter@google.com>
+	    Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Caching Data of Remote Targets): Update text.
+	Mark `set/show remotecache' options as obsolete.
+	Document new `set/show stack-cache' option.
+	Update text for `info dcache'.
+
+2009-08-27  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Symbols): Delete `set print symbol-loading'.
+	(Files): Add note on new optional regex arg to `info sharedlibrary'.
+
+2009-08-26  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* gdbint.texinfo (Releasing GDB): Fix confusing sentence
+	about autoconf.
+
+2009-08-25  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (Debugging Multiple Inferiors): Add "info inferiors"
+	small example, and describe its columns.  Replace "inferior-id" by
+	"infno" throughout.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* gdbint.texinfo (Releasing GDB): Point to
+	README-maintainer-mode file for required autoconf version.
+	* configure.ac: Do not substitute datarootdir, htmldir,
+	pdfdir, docdir.  Do not process --with-datarootdir,
+	--with-htmldir, --with-pdfdir, --with-docdir.
+	* configure: Regenerate.
+
+	* configure: Regenerate.
+
+2009-08-20  Reid Kleckner  <reid@kleckner.net>
+
+	* gdb.texinfo: Add chapter on JIT interface.
+
+2009-08-07  Nick Roberts  <nickrob@snap.net.nz>
+
+	* gdb.texinfo (Server Prefix): Explain that server prefix suppresses
+	confirmation request. 
+
+2009-08-05  Jeremy Bennett  <jeremy.bennett@embecosm.com>
+
+        * gdb.texinfo (Separate Debug Files, Remote Protocol): Clarified
+        CRC definitions.
+
+2009-08-03  Vladimir Prus  <vladimir@codesourcery.com>
+
+	* gdb.texinfo (GDB/MI Breakpoint Commands): Document
+    	-break-commands.
+
+2009-07-31  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdb.texinfo (Cell Broadband Engine SPU architecture): Document the
+	"set spu auto-flush-cache" and "show spu auto-flush-cache" commands.
+
+2009-07-31  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdb.texinfo (Cell Broadband Engine SPU architecture): Document the
+	"set spu stop-on-load" and "show spu stop-on-load" commands.
+
+2009-07-31  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* gdb.texinfo (Target Descriptions): Document <compatible> element.
+
 2009-07-28  Daniel Jacobowitz  <dan@codesourcery.com>
 
 	* gdb.texinfo (ARM Features): Document org.gnu.gdb.arm.vfp and

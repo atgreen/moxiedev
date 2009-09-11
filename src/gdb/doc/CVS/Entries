@@ -3,10 +3,7 @@
 /a4rc.sed/1.1.1.1/Mon Jul  6 10:46:43 2009/-ko/
 /all-cfg.texi/1.5/Mon Jul  6 10:46:43 2009/-ko/
 /annotate.texinfo/1.11/Mon Jul  6 10:46:43 2009//
-/configure/1.6/Mon Jul  6 10:46:43 2009/-ko/
-/configure.ac/1.4/Mon Jul  6 10:46:43 2009//
 /fdl.texi/1.6/Mon Jul  6 10:46:43 2009//
-/gdbint.texinfo/1.309/Mon Jul 13 11:34:13 2009/-ko/
 /gpl.texi/1.2/Mon Jul  6 10:46:43 2009//
 /lpsrc.sed/1.1.1.1/Mon Jul  6 10:46:43 2009/-ko/
 /observer.texi/1.25/Mon Jul  6 10:46:43 2009//
@@ -19,6 +16,9 @@
 /stack_frame.svg/1.1/Mon Jul  6 10:46:43 2009//
 /stack_frame.txt/1.1/Mon Jul  6 10:46:43 2009//
 /agentexpr.texi/1.8/Wed Jul 15 17:46:07 2009/-ko/
-/ChangeLog/1.934/Fri Jul 31 11:10:10 2009/-ko/
-/gdb.texinfo/1.609/Fri Jul 31 11:10:10 2009/-ko/
+/ChangeLog/1.948/Tue Sep  8 03:29:05 2009/-ko/
+/configure/1.8/Tue Sep  8 03:29:06 2009/-ko/
+/configure.ac/1.5/Tue Sep  8 03:29:06 2009//
+/gdb.texinfo/1.620/Tue Sep  8 03:29:06 2009/-ko/
+/gdbint.texinfo/1.311/Tue Sep  8 03:29:06 2009/-ko/
 D

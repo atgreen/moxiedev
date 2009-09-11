@@ -1,3 +1,80 @@
+2009-09-04  Ozkan Sezer  <sezeroz@gmail.com>
+
+	PR target/39065
+	* configure.ac: Replace AC_CHECK_TYPE() for intptr_t and uintptr_t
+	with AC_TYPE_INTPTR_T and AC_TYPE_UINTPTR_T.
+	* config.in: Regenerated.
+	* configure: Regenerated.
+
+2009-09-03  Ozkan Sezer  <sezeroz@gmail.com>
+
+	PR target/39065
+	* configure.ac: Also check for intptr_t.
+	* config.h.in: Regenerated.
+	* configure: Regenerated.
+	* hashtab.c (hash_pointer): Cast the pointer argument to intptr_t
+	instead of of long.
+
+2009-09-02  Tristan Gingold  <gingold@adacore.com>
+
+	* vmsbuild.com: Removed as unused and superceeded by makefile.vms.
+	* makefile.vms: Ported to Itanium VMS.  Remove useless targets and
+	dependencies.  Remove unused FORMAT variable.
+	* configure.com: New file to create build.com DCL script for
+	Itanium VMS or Alpha VMS.
+
+2009-08-24  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac (AC_PREREQ): Bump to 2.64.
+
+2009-08-23  H.J. Lu  <hongjiu.lu@intel.com>
+
+	 PR ld/10536
+	 * Makefile.in (install-html-recursive): Removed.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2009-07-30  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.in (AUTOCONF, configure_deps): New variables.
+	($(srcdir)/configure): New rule, active only in maintainer mode.
+
+2009-07-29  Douglas B Rupp  <rupp@gnat.com>
+
+	* make-temp-file.c (choose_tmpdir): Try standard temp logical on VMS.
+
+2009-07-27  Douglas B Rupp  <rupp@gnat.com>
+
+	* pex-unix.c (vfork): Remove VMS specific definition (get from header
+	file instead).
+	(to_ptr32): New function.
+	(pex_unix_exec_child): Use it.
+
+2009-07-24  Ian Lance Taylor  <iant@google.com>
+
+	PR bootstrap/40854
+	* crc32.c (xcrc32): Rename from crc32.
+
+2009-07-24  Ian Lance Taylor  <iant@google.com>
+
+	* crc32.c: New file.
+	* Makefile.in: Rebuild dependencies.
+	(CFILES): Add crc32.c.
+	(REQUIRED_OFILES): Add ./crc32.o.
+	* functions.texi: Rebuild.
+
+2009-07-17  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* cp-demangle.c (d_print_comp <DEMANGLE_COMPONENT_GLOBAL_CONSTRUCTORS>)
+	(d_print_comp <DEMANGLE_COMPONENT_GLOBAL_DESTRUCTORS): New.
+	(d_make_comp <DEMANGLE_COMPONENT_GLOBAL_CONSTRUCTORS>)
+	(d_make_comp <DEMANGLE_COMPONENT_GLOBAL_DESTRUCTORS): New.
+	(d_demangle_callback): The variable type is now declared as enum.
+	Replace parser of _GLOBAL_ symbols by a d_make_comp call.
+
 2009-06-21  Jakub Jelinek  <jakub@redhat.com>
 
 	* hashtab.c (htab_traverse): Don't call htab_expand for
@@ -83,7 +160,7 @@
        * libiberty/configure.ac: Fix Linux/MIPS matching rule.
        * libiberty/configure: Regenerate.
 
-2008-03-27  Ian Lance Taylor  <iant@google.com>
+2009-03-27  Ian Lance Taylor  <iant@google.com>
 
 	* memmem.c: New file, from gnulib.
 	* configure.ac: Add memmem to list of functions provided if they

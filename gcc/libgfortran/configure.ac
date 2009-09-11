@@ -1,7 +1,7 @@
 # Process this file with autoconf to produce a configure script, like so:
 # aclocal && autoconf && autoheader && automake
 
-AC_PREREQ(2.59)
+AC_PREREQ(2.64)
 AC_INIT([GNU Fortran Runtime Library], 0.3,,[libgfortran])
 AC_CONFIG_HEADER(config.h)
 GCC_TOPLEV_SUBDIRS
@@ -119,7 +119,7 @@ AC_SUBST(toolexeclibdir)
 m4_rename([_AC_ARG_VAR_PRECIOUS],[real_PRECIOUS])
 m4_define([_AC_ARG_VAR_PRECIOUS],[])
 AC_PROG_CC
-m4_rename([real_PRECIOUS],[_AC_ARG_VAR_PRECIOUS])
+m4_rename_force([real_PRECIOUS],[_AC_ARG_VAR_PRECIOUS])
 
 # Add -Wall -fno-repack-arrays -fno-underscoring if we are using GCC.
 if test "x$GCC" = "xyes"; then
@@ -447,6 +447,10 @@ AC_CHECK_FUNC([fp_enable],[have_fp_enable=yes AC_DEFINE([HAVE_FP_ENABLE],[1],[fp
 AC_MSG_NOTICE([FPU dependent file will be ${fpu_host}.h])
 FPU_HOST_HEADER=config/${fpu_host}.h
 AC_SUBST(FPU_HOST_HEADER)
+
+# Some targets require additional compiler options for IEEE compatibility.
+IEEE_FLAGS="${ieee_flags}"
+AC_SUBST(IEEE_FLAGS)
 
 # Check out attribute support.
 LIBGFOR_CHECK_ATTRIBUTE_VISIBILITY

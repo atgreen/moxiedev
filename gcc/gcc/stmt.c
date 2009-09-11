@@ -48,6 +48,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "predict.h"
 #include "optabs.h"
 #include "target.h"
+#include "gimple.h"
 #include "regs.h"
 #include "alloc-pool.h"
 #include "pretty-print.h"
@@ -737,7 +738,7 @@ expand_asm_operands (tree string, tree outputs, tree inputs,
 	      || (DECL_P (val)
 		  && REG_P (DECL_RTL (val))
 		  && GET_MODE (DECL_RTL (val)) != TYPE_MODE (type))))
-	lang_hooks.mark_addressable (val);
+	mark_addressable (val);
 
       if (is_inout)
 	ninout++;
@@ -766,7 +767,7 @@ expand_asm_operands (tree string, tree outputs, tree inputs,
 	return;
 
       if (! allows_reg && allows_mem)
-	lang_hooks.mark_addressable (TREE_VALUE (tail));
+	mark_addressable (TREE_VALUE (tail));
     }
 
   /* Second pass evaluates arguments.  */
@@ -1075,20 +1076,65 @@ expand_asm_operands (tree string, tree outputs, tree inputs,
 }
 
 void
-expand_asm_expr (tree exp)
+expand_asm_stmt (gimple stmt)
 {
-  int noutputs, i;
-  tree outputs, tail;
+  int noutputs;
+  tree outputs, tail, t;
   tree *o;
+  size_t i, n;
+  const char *s;
+  tree str, out, in, cl;
 
-  if (ASM_INPUT_P (exp))
+  /* Meh... convert the gimple asm operands into real tree lists.
+     Eventually we should make all routines work on the vectors instead
+     of relying on TREE_CHAIN.  */
+  out = NULL_TREE;
+  n = gimple_asm_noutputs (stmt);
+  if (n > 0)
     {
-      expand_asm_loc (ASM_STRING (exp), ASM_VOLATILE_P (exp), input_location);
+      t = out = gimple_asm_output_op (stmt, 0);
+      for (i = 1; i < n; i++)
+	{
+	  TREE_CHAIN (t) = gimple_asm_output_op (stmt, i);
+	  t = gimple_asm_output_op (stmt, i);
+	}
+    }
+
+  in = NULL_TREE;
+  n = gimple_asm_ninputs (stmt);
+  if (n > 0)
+    {
+      t = in = gimple_asm_input_op (stmt, 0);
+      for (i = 1; i < n; i++)
+	{
+	  TREE_CHAIN (t) = gimple_asm_input_op (stmt, i);
+	  t = gimple_asm_input_op (stmt, i);
+	}
+    }
+
+  cl = NULL_TREE;
+  n = gimple_asm_nclobbers (stmt);
+  if (n > 0)
+    {
+      t = cl = gimple_asm_clobber_op (stmt, 0);
+      for (i = 1; i < n; i++)
+	{
+	  TREE_CHAIN (t) = gimple_asm_clobber_op (stmt, i);
+	  t = gimple_asm_clobber_op (stmt, i);
+	}
+    }
+
+  s = gimple_asm_string (stmt);
+  str = build_string (strlen (s), s);
+
+  if (gimple_asm_input_p (stmt))
+    {
+      expand_asm_loc (str, gimple_asm_volatile_p (stmt), input_location);
       return;
     }
 
-  outputs = ASM_OUTPUTS (exp);
-  noutputs = list_length (outputs);
+  outputs = out;
+  noutputs = gimple_asm_noutputs (stmt);
   /* o[I] is the place that output number I should be written.  */
   o = (tree *) alloca (noutputs * sizeof (tree));
 
@@ -1098,8 +1144,7 @@ expand_asm_expr (tree exp)
 
   /* Generate the ASM_OPERANDS insn; store into the TREE_VALUEs of
      OUTPUTS some trees for where the values were actually stored.  */
-  expand_asm_operands (ASM_STRING (exp), outputs, ASM_INPUTS (exp),
-		       ASM_CLOBBERS (exp), ASM_VOLATILE_P (exp),
+  expand_asm_operands (str, outputs, in, cl, gimple_asm_volatile_p (stmt),
 		       input_location);
 
   /* Copy all the intermediate outputs into the specified outputs.  */
@@ -1511,24 +1556,22 @@ expand_naked_return (void)
 static void
 expand_value_return (rtx val)
 {
-  /* Copy the value to the return location
-     unless it's already there.  */
+  /* Copy the value to the return location unless it's already there.  */
 
-  rtx return_reg = DECL_RTL (DECL_RESULT (current_function_decl));
+  tree decl = DECL_RESULT (current_function_decl);
+  rtx return_reg = DECL_RTL (decl);
   if (return_reg != val)
     {
-      tree type = TREE_TYPE (DECL_RESULT (current_function_decl));
-      if (targetm.calls.promote_function_return (TREE_TYPE (current_function_decl)))
-      {
-	int unsignedp = TYPE_UNSIGNED (type);
-	enum machine_mode old_mode
-	  = DECL_MODE (DECL_RESULT (current_function_decl));
-	enum machine_mode mode
-	  = promote_mode (type, old_mode, &unsignedp, 1);
+      tree funtype = TREE_TYPE (current_function_decl);
+      tree type = TREE_TYPE (decl);
+      int unsignedp = TYPE_UNSIGNED (type);
+      enum machine_mode old_mode = DECL_MODE (decl);
+      enum machine_mode mode = promote_function_mode (type, old_mode,
+						      &unsignedp, funtype, 1);
 
-	if (mode != old_mode)
-	  val = convert_modes (mode, old_mode, val, unsignedp);
-      }
+      if (mode != old_mode)
+	val = convert_modes (mode, old_mode, val, unsignedp);
+
       if (GET_CODE (return_reg) == PARALLEL)
 	emit_group_load (return_reg, val, type, int_size_in_bytes (type));
       else
@@ -1848,9 +1891,7 @@ expand_decl (tree decl)
   else if (use_register_for_decl (decl))
     {
       /* Automatic variable that can go in a register.  */
-      int unsignedp = TYPE_UNSIGNED (type);
-      enum machine_mode reg_mode
-	= promote_mode (type, DECL_MODE (decl), &unsignedp, 0);
+      enum machine_mode reg_mode = promote_decl_mode (decl, NULL);
 
       SET_DECL_RTL (decl, gen_reg_rtx (reg_mode));
 
@@ -2158,7 +2199,7 @@ emit_case_bit_tests (tree index_type, tree index_expr, tree minval,
    Generate the code to test it and jump to the right place.  */
 
 void
-expand_case (tree exp)
+expand_case (gimple stmt)
 {
   tree minval = NULL_TREE, maxval = NULL_TREE, range = NULL_TREE;
   rtx default_label = 0;
@@ -2171,9 +2212,7 @@ expand_case (tree exp)
   int i;
   rtx before_case, end, lab;
 
-  tree vec = SWITCH_LABELS (exp);
-  tree orig_type = TREE_TYPE (exp);
-  tree index_expr = SWITCH_COND (exp);
+  tree index_expr = gimple_switch_index (stmt);
   tree index_type = TREE_TYPE (index_expr);
   int unsignedp = TYPE_UNSIGNED (index_type);
 
@@ -2192,11 +2231,6 @@ expand_case (tree exp)
                                                  sizeof (struct case_node),
                                                  100);
 
-  /* The switch body is lowered in gimplify.c, we should never have
-     switches with a non-NULL SWITCH_BODY here.  */
-  gcc_assert (!SWITCH_BODY (exp));
-  gcc_assert (SWITCH_LABELS (exp));
-
   do_pending_stack_adjust ();
 
   /* An ERROR_MARK occurs for various reasons including invalid data type.  */
@@ -2204,24 +2238,24 @@ expand_case (tree exp)
     {
       tree elt;
       bitmap label_bitmap;
-      int vl = TREE_VEC_LENGTH (vec);
+      int stopi = 0;
 
       /* cleanup_tree_cfg removes all SWITCH_EXPR with their index
 	 expressions being INTEGER_CST.  */
       gcc_assert (TREE_CODE (index_expr) != INTEGER_CST);
 
-      /* The default case, if ever taken, is at the end of TREE_VEC.  */
-      elt = TREE_VEC_ELT (vec, vl - 1);
+      /* The default case, if ever taken, is the first element.  */
+      elt = gimple_switch_label (stmt, 0);
       if (!CASE_LOW (elt) && !CASE_HIGH (elt))
 	{
 	  default_label_decl = CASE_LABEL (elt);
-	  --vl;
+	  stopi = 1;
 	}
 
-      for (i = vl - 1; i >= 0; --i)
+      for (i = gimple_switch_num_labels (stmt) - 1; i >= stopi; --i)
 	{
 	  tree low, high;
-	  elt = TREE_VEC_ELT (vec, i);
+	  elt = gimple_switch_label (stmt, i);
 
 	  low = CASE_LOW (elt);
 	  gcc_assert (low);
@@ -2375,9 +2409,7 @@ expand_case (tree exp)
 	     decision tree an unconditional jump to the
 	     default code is emitted.  */
 
-	  use_cost_table
-	    = (TREE_CODE (orig_type) != ENUMERAL_TYPE
-	       && estimate_case_costs (case_list));
+	  use_cost_table = estimate_case_costs (case_list);
 	  balance_case_nodes (&case_list, NULL);
 	  emit_case_nodes (index, case_list, default_label, index_type);
 	  if (default_label)

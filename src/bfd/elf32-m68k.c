@@ -374,13 +374,17 @@ static reloc_howto_type howto_table[] = {
 };
 
 static void
-rtype_to_howto (abfd, cache_ptr, dst)
-     bfd *abfd ATTRIBUTE_UNUSED;
-     arelent *cache_ptr;
-     Elf_Internal_Rela *dst;
+rtype_to_howto (bfd *abfd, arelent *cache_ptr, Elf_Internal_Rela *dst)
 {
-  BFD_ASSERT (ELF32_R_TYPE(dst->r_info) < (unsigned int) R_68K_max);
-  cache_ptr->howto = &howto_table[ELF32_R_TYPE(dst->r_info)];
+  unsigned int indx = ELF32_R_TYPE (dst->r_info);
+
+  if (indx >= (unsigned int) R_68K_max)
+    {
+      (*_bfd_error_handler) (_("%B: invalid relocation type %d"),
+			     abfd, (int) indx);
+      indx = R_68K_NONE;
+    }
+  cache_ptr->howto = &howto_table[indx];
 }
 
 #define elf_info_to_howto rtype_to_howto
@@ -1531,7 +1535,7 @@ elf_m68k_get_got_entry (struct elf_m68k_got *got,
 static enum elf_m68k_reloc_type
 elf_m68k_update_got_entry_type (struct elf_m68k_got *got,
 				enum elf_m68k_reloc_type was,
-				enum elf_m68k_reloc_type new)
+				enum elf_m68k_reloc_type new_reloc)
 {
   enum elf_m68k_got_offset_size was_size;
   enum elf_m68k_got_offset_size new_size;
@@ -1543,20 +1547,20 @@ elf_m68k_update_got_entry_type (struct elf_m68k_got *got,
       /* Update all got->n_slots counters, including n_slots[R_32].  */
       was_size = R_LAST;
 
-      was = new;
+      was = new_reloc;
     }
   else
     {
       /* !!! We, probably, should emit an error rather then fail on assert
 	 in such a case.  */
       BFD_ASSERT (elf_m68k_reloc_got_type (was)
-		  == elf_m68k_reloc_got_type (new));
+		  == elf_m68k_reloc_got_type (new_reloc));
 
       was_size = elf_m68k_reloc_got_offset_size (was);
     }
 
-  new_size = elf_m68k_reloc_got_offset_size (new);
-  n_slots = elf_m68k_reloc_got_n_slots (new);
+  new_size = elf_m68k_reloc_got_offset_size (new_reloc);
+  n_slots = elf_m68k_reloc_got_n_slots (new_reloc);
 
   while (was_size > new_size)
     {
@@ -1564,10 +1568,10 @@ elf_m68k_update_got_entry_type (struct elf_m68k_got *got,
       got->n_slots[was_size] += n_slots;
     }
 
-  if (new > was)
+  if (new_reloc > was)
     /* Relocations are ordered from bigger got offset size to lesser,
        so choose the relocation type with lesser offset size.  */
-    was = new;
+    was = new_reloc;
 
   return was;
 }
@@ -2487,6 +2491,10 @@ elf_m68k_copy_indirect_symbol (struct bfd_link_info *info,
   dir = elf_m68k_hash_entry (_dir);
   ind = elf_m68k_hash_entry (_ind);
 
+  /* Any absolute non-dynamic relocations against an indirect or weak
+     definition will be against the target symbol.  */
+  _dir->non_got_ref |= _ind->non_got_ref;
+
   /* We might have a direct symbol already having entries in the GOTs.
      Update its key only in case indirect symbol has GOT entries and
      assert that both indirect and direct symbols don't have GOT entries
@@ -2580,6 +2588,14 @@ elf_m68k_check_relocs (abfd, info, sec, relocs)
 	case R_68K_TLS_IE8:
 	case R_68K_TLS_IE16:
 	case R_68K_TLS_IE32:
+
+	case R_68K_TLS_TPREL32:
+	case R_68K_TLS_DTPREL32:
+
+	  if (ELF32_R_TYPE (rel->r_info) == R_68K_TLS_TPREL32
+	      && info->shared)
+	    /* Do the special chorus for libraries with static TLS.  */
+	    info->flags |= DF_STATIC_TLS;
 
 	  /* This symbol requires a global offset table entry.  */
 
@@ -2739,6 +2755,10 @@ elf_m68k_check_relocs (abfd, info, sec, relocs)
 	      /* Make sure a plt entry is created for this symbol if it
 		 turns out to be a function defined by a dynamic object.  */
 	      h->plt.refcount++;
+
+	      if (!info->shared)
+		/* This symbol needs a non-GOT reference.  */
+		h->non_got_ref = 1;
 	    }
 
 	  /* If we are creating a shared library, we need to copy the
@@ -2945,6 +2965,9 @@ elf_m68k_gc_sweep_hook (bfd *abfd,
 	case R_68K_TLS_IE8:
 	case R_68K_TLS_IE16:
 	case R_68K_TLS_IE32:
+
+	case R_68K_TLS_TPREL32:
+	case R_68K_TLS_DTPREL32:
 
 	  if (got == NULL)
 	    {
@@ -3157,6 +3180,11 @@ elf_m68k_adjust_dynamic_symbol (info, h)
      For such cases we need not do anything here; the relocations will
      be handled correctly by relocate_section.  */
   if (info->shared)
+    return TRUE;
+
+  /* If there are no references to this symbol that do not use the
+     GOT, we don't need to generate a copy reloc.  */
+  if (!h->non_got_ref)
     return TRUE;
 
   if (h->size == 0)
@@ -3422,9 +3450,11 @@ elf_m68k_install_rela (bfd *output_bfd,
   bfd_elf32_swap_reloca_out (output_bfd, rela, loc);
 }
 
-/* Return the base VMA address which should be subtracted from real addresses
-   when resolving @dtpoff relocation.
-   This is PT_TLS segment p_vaddr.  */
+/* Find the base offsets for thread-local storage in this object,
+   for GD/LD and IE/LE respectively.  */
+
+#define DTP_OFFSET 0x8000
+#define TP_OFFSET  0x7000
 
 static bfd_vma
 dtpoff_base (struct bfd_link_info *info)
@@ -3432,23 +3462,116 @@ dtpoff_base (struct bfd_link_info *info)
   /* If tls_sec is NULL, we should have signalled an error already.  */
   if (elf_hash_table (info)->tls_sec == NULL)
     return 0;
-  return elf_hash_table (info)->tls_sec->vma;
+  return elf_hash_table (info)->tls_sec->vma + DTP_OFFSET;
 }
 
-/* Return the relocation value for @tpoff relocation
-   if STT_TLS virtual address is ADDRESS.  */
-
 static bfd_vma
-tpoff (struct bfd_link_info *info, bfd_vma address)
+tpoff_base (struct bfd_link_info *info)
 {
-  struct elf_link_hash_table *htab = elf_hash_table (info);
-  bfd_vma base;
-
   /* If tls_sec is NULL, we should have signalled an error already.  */
-  if (htab->tls_sec == NULL)
+  if (elf_hash_table (info)->tls_sec == NULL)
     return 0;
-  base = align_power ((bfd_vma) 8, htab->tls_sec->alignment_power);
-  return address - htab->tls_sec->vma + base;
+  return elf_hash_table (info)->tls_sec->vma + TP_OFFSET;
+}
+
+/* Output necessary relocation to handle a symbol during static link.
+   This function is called from elf_m68k_relocate_section.  */
+
+static void
+elf_m68k_init_got_entry_static (struct bfd_link_info *info,
+				bfd *output_bfd,
+				enum elf_m68k_reloc_type r_type,
+				asection *sgot,
+				bfd_vma got_entry_offset,
+				bfd_vma relocation)
+{
+  switch (elf_m68k_reloc_got_type (r_type))
+    {
+    case R_68K_GOT32O:
+      bfd_put_32 (output_bfd, relocation, sgot->contents + got_entry_offset);
+      break;
+
+    case R_68K_TLS_GD32:
+      /* We know the offset within the module,
+	 put it into the second GOT slot.  */
+      bfd_put_32 (output_bfd, relocation - dtpoff_base (info),
+		  sgot->contents + got_entry_offset + 4);
+      /* FALLTHRU */
+
+    case R_68K_TLS_LDM32:
+      /* Mark it as belonging to module 1, the executable.  */
+      bfd_put_32 (output_bfd, 1, sgot->contents + got_entry_offset);
+      break;
+
+    case R_68K_TLS_IE32:
+      bfd_put_32 (output_bfd, relocation - tpoff_base (info),
+		  sgot->contents + got_entry_offset);
+      break;
+
+    default:
+      BFD_ASSERT (FALSE);
+    }
+}
+
+/* Output necessary relocation to handle a local symbol
+   during dynamic link.
+   This function is called either from elf_m68k_relocate_section
+   or from elf_m68k_finish_dynamic_symbol.  */
+
+static void
+elf_m68k_init_got_entry_local_shared (struct bfd_link_info *info,
+				      bfd *output_bfd,
+				      enum elf_m68k_reloc_type r_type,
+				      asection *sgot,
+				      bfd_vma got_entry_offset,
+				      bfd_vma relocation,
+				      asection *srela)
+{
+  Elf_Internal_Rela outrel;
+
+  switch (elf_m68k_reloc_got_type (r_type))
+    {
+    case R_68K_GOT32O:
+      /* Emit RELATIVE relocation to initialize GOT slot
+	 at run-time.  */
+      outrel.r_info = ELF32_R_INFO (0, R_68K_RELATIVE);
+      outrel.r_addend = relocation;
+      break;
+
+    case R_68K_TLS_GD32:
+      /* We know the offset within the module,
+	 put it into the second GOT slot.  */
+      bfd_put_32 (output_bfd, relocation - dtpoff_base (info),
+		  sgot->contents + got_entry_offset + 4);
+      /* FALLTHRU */
+
+    case R_68K_TLS_LDM32:
+      /* We don't know the module number,
+	 create a relocation for it.  */
+      outrel.r_info = ELF32_R_INFO (0, R_68K_TLS_DTPMOD32);
+      outrel.r_addend = 0;
+      break;
+
+    case R_68K_TLS_IE32:
+      /* Emit TPREL relocation to initialize GOT slot
+	 at run-time.  */
+      outrel.r_info = ELF32_R_INFO (0, R_68K_TLS_TPREL32);
+      outrel.r_addend = relocation - elf_hash_table (info)->tls_sec->vma;
+      break;
+
+    default:
+      BFD_ASSERT (FALSE);
+    }
+
+  /* Offset of the GOT entry.  */
+  outrel.r_offset = (sgot->output_section->vma
+		     + sgot->output_offset
+		     + got_entry_offset);
+
+  /* Install one of the above relocations.  */
+  elf_m68k_install_rela (output_bfd, srela, &outrel);
+
+  bfd_put_32 (output_bfd, outrel.r_addend, sgot->contents + got_entry_offset);
 }
 
 /* Relocate an M68K ELF section.  */
@@ -3471,6 +3594,7 @@ elf_m68k_relocate_section (output_bfd, info, input_bfd, input_section,
   asection *sgot;
   asection *splt;
   asection *sreloc;
+  asection *srela;
   struct elf_m68k_got *got;
   Elf_Internal_Rela *rel;
   Elf_Internal_Rela *relend;
@@ -3482,6 +3606,7 @@ elf_m68k_relocate_section (output_bfd, info, input_bfd, input_section,
   sgot = NULL;
   splt = NULL;
   sreloc = NULL;
+  srela = NULL;
 
   got = NULL;
 
@@ -3680,7 +3805,7 @@ elf_m68k_relocate_section (output_bfd, info, input_bfd, input_section,
 			/* This is actually a static link, or it is a
 			   -Bsymbolic link and the symbol is defined
 			   locally, or the symbol was forced to be local
-			   because of a version file..  We must initialize
+			   because of a version file.  We must initialize
 			   this entry in the global offset table.  Since
 			   the offset must always be a multiple of 4, we
 			   use the least significant bit to record whether
@@ -3690,26 +3815,12 @@ elf_m68k_relocate_section (output_bfd, info, input_bfd, input_section,
 			   relocation entry to initialize the value.  This
 			   is done in the finish_dynamic_symbol routine.  */
 
-			if (elf_m68k_reloc_got_type (r_type) == R_68K_GOT32O)
-			  bfd_put_32 (output_bfd, relocation,
-				      sgot->contents + off);
-			else if (elf_m68k_reloc_got_type (r_type)
-				 == R_68K_TLS_GD32)
-			  /* Mark it as belonging to module 1,
-			     the executable.  */
-			  {
-			    bfd_put_32 (output_bfd, 1,
-					sgot->contents + off);
-			    bfd_put_32 (output_bfd, (relocation
-						     - dtpoff_base (info)),
-					sgot->contents + off + 4);
-			  }
-			else if (elf_m68k_reloc_got_type (r_type)
-				 == R_68K_TLS_IE32)
-			  bfd_put_32 (output_bfd, tpoff (info, relocation),
-				      sgot->contents + off);
-			else
-			  BFD_ASSERT (FALSE);
+			elf_m68k_init_got_entry_static (info,
+							output_bfd,
+							r_type,
+							sgot,
+							off,
+							relocation);
 
 			*off_ptr |= 1;
 		      }
@@ -3717,103 +3828,32 @@ elf_m68k_relocate_section (output_bfd, info, input_bfd, input_section,
 		      unresolved_reloc = FALSE;
 		  }
 		else if (info->shared) /* && h == NULL */
+		  /* Process local symbol during dynamic link.  */
 		  {
-		    asection *srela;
-		    Elf_Internal_Rela outrel;
-
-		    srela = bfd_get_section_by_name (dynobj, ".rela.got");
-		    BFD_ASSERT (srela != NULL);
-
-		    if (elf_m68k_reloc_got_type (r_type) == R_68K_GOT32O)
+		    if (srela == NULL)
 		      {
-			/* Emit RELATIVE relocation to initialize GOT slot
-			   at run-time.  */
-			outrel.r_info = ELF32_R_INFO (0, R_68K_RELATIVE);
-			outrel.r_addend = relocation;
-			outrel.r_offset = (sgot->output_section->vma
-					   + sgot->output_offset
-					   + off);
-
-			elf_m68k_install_rela (output_bfd, srela, &outrel);
+			srela = bfd_get_section_by_name (dynobj, ".rela.got");
+			BFD_ASSERT (srela != NULL);
 		      }
-		    else if (elf_m68k_reloc_got_type (r_type)
-			     == R_68K_TLS_LDM32)
-		      {
-			/* If we don't know the module number, create
-			   a relocation for it.  */
-			outrel.r_info = ELF32_R_INFO (0, R_68K_TLS_DTPMOD32);
-			outrel.r_addend = 0;
-			outrel.r_offset = (sgot->output_section->vma
-					   + sgot->output_offset
-					   + off);
 
-			elf_m68k_install_rela (output_bfd, srela, &outrel);
-		      }
-		    else if (elf_m68k_reloc_got_type (r_type)
-			     == R_68K_TLS_GD32)
-		      {
-			/* If we don't know the module number, create
-			   a relocation for it.  */
-			outrel.r_info = ELF32_R_INFO (0, R_68K_TLS_DTPMOD32);
-			outrel.r_addend = 0;
-			outrel.r_offset = (sgot->output_section->vma
-					   + sgot->output_offset
-					   + off);
-
-			elf_m68k_install_rela (output_bfd, srela, &outrel);
-
-			bfd_put_32 (output_bfd, (relocation
-						 - dtpoff_base (info)),
-				    sgot->contents + off + 4);
-		      }
-		    else if (elf_m68k_reloc_got_type (r_type)
-			     == R_68K_TLS_IE32)
-		      {
-			outrel.r_info = ELF32_R_INFO (0, R_68K_TLS_TPREL32);
-			outrel.r_addend = relocation - dtpoff_base (info);
-			outrel.r_offset = (sgot->output_section->vma
-					   + sgot->output_offset
-					   + off);
-
-			elf_m68k_install_rela (output_bfd, srela, &outrel);
-		      }
-		    else
-		      BFD_ASSERT (FALSE);
-
-		    bfd_put_32 (output_bfd, outrel.r_addend,
-				sgot->contents + off);
+		    elf_m68k_init_got_entry_local_shared (info,
+							  output_bfd,
+							  r_type,
+							  sgot,
+							  off,
+							  relocation,
+							  srela);
 
 		    *off_ptr |= 1;
 		  }
 		else /* h == NULL && !info->shared */
 		  {
-		    if (elf_m68k_reloc_got_type (r_type) == R_68K_GOT32O)
-		      bfd_put_32 (output_bfd, relocation,
-				  sgot->contents + off);
-		    else if (elf_m68k_reloc_got_type (r_type)
-			     == R_68K_TLS_LDM32)
-		      /* If this is a static link, put the number of the
-			 only module in the GOT slot.  */
-		      bfd_put_32 (output_bfd, 1, sgot->contents + off);
-		    else if (elf_m68k_reloc_got_type (r_type)
-			     == R_68K_TLS_GD32)
-		      {
-			/* If we are not emitting relocations for a
-			   general dynamic reference, then we must be in a
-			   static link or an executable link with the
-			   symbol binding locally.  Mark it as belonging
-			   to module 1, the executable.  */
-			bfd_put_32 (output_bfd, 1, sgot->contents + off);
-			bfd_put_32 (output_bfd, (relocation
-						 - dtpoff_base (info)),
-				    sgot->contents + off + 4);
-		      }
-		    else if (elf_m68k_reloc_got_type (r_type)
-			     == R_68K_TLS_IE32)
-		      bfd_put_32 (output_bfd, tpoff (info, relocation),
-				  sgot->contents + off);
-		    else
-		      BFD_ASSERT (FALSE);
+		    elf_m68k_init_got_entry_static (info,
+						    output_bfd,
+						    r_type,
+						    sgot,
+						    off,
+						    relocation);
 
 		    *off_ptr |= 1;
 		  }
@@ -3843,7 +3883,6 @@ elf_m68k_relocate_section (output_bfd, info, input_bfd, input_section,
 		  }
 
 		/* This relocation does not use the addend.  */
-		BFD_ASSERT (rel->r_addend == 0);
 		rel->r_addend = 0;
 	      }
 	    else
@@ -3871,7 +3910,7 @@ elf_m68k_relocate_section (output_bfd, info, input_bfd, input_section,
 	      return FALSE;
 	    }
 	  else
-	    relocation = tpoff (info, relocation);
+	    relocation -= tpoff_base (info);
 
 	  break;
 
@@ -4270,14 +4309,11 @@ elf_m68k_finish_dynamic_symbol (output_bfd, info, h, sym)
 
       while (got_entry != NULL)
 	{
-	  Elf_Internal_Rela rela;
+	  enum elf_m68k_reloc_type r_type;
 	  bfd_vma got_entry_offset;
 
+	  r_type = got_entry->key_.type;
 	  got_entry_offset = got_entry->u.s2.offset &~ (bfd_vma) 1;
-
-	  rela.r_offset = (sgot->output_section->vma
-			   + sgot->output_offset
-			   + got_entry_offset);
 
 	  /* If this is a -Bsymbolic link, and the symbol is defined
 	     locally, we just want to emit a RELATIVE reloc.  Likewise if
@@ -4287,33 +4323,43 @@ elf_m68k_finish_dynamic_symbol (output_bfd, info, h, sym)
 	  if (info->shared
 	      && SYMBOL_REFERENCES_LOCAL (info, h))
 	    {
-	      rela.r_addend = bfd_get_signed_32 (output_bfd,
-						 (sgot->contents
-						  + got_entry_offset));
+	      bfd_vma relocation;
 
-	      switch (elf_m68k_reloc_got_type (got_entry->key_.type))
+	      relocation = bfd_get_signed_32 (output_bfd,
+					      (sgot->contents
+					       + got_entry_offset));
+
+	      /* Undo TP bias.  */
+	      switch (elf_m68k_reloc_got_type (r_type))
 		{
 		case R_68K_GOT32O:
-		  rela.r_info = ELF32_R_INFO (0, R_68K_RELATIVE);
+		case R_68K_TLS_LDM32:
 		  break;
 
 		case R_68K_TLS_GD32:
-		  rela.r_info = ELF32_R_INFO (0, R_68K_TLS_DTPMOD32);
+		  relocation += dtpoff_base (info);
 		  break;
 
 		case R_68K_TLS_IE32:
-		  rela.r_info = ELF32_R_INFO (0, R_68K_TLS_TPREL32);
+		  relocation += tpoff_base (info);
 		  break;
 
 		default:
 		  BFD_ASSERT (FALSE);
-		  break;
 		}
 
-		elf_m68k_install_rela (output_bfd, srela, &rela);
+	      elf_m68k_init_got_entry_local_shared (info,
+						    output_bfd,
+						    r_type,
+						    sgot,
+						    got_entry_offset,
+						    relocation,
+						    srela);
 	    }
 	  else
 	    {
+	      Elf_Internal_Rela rela;
+
 	      /* Put zeros to GOT slots that will be initialized
 		 at run-time.  */
 	      {
@@ -4327,8 +4373,11 @@ elf_m68k_finish_dynamic_symbol (output_bfd, info, h, sym)
 	      }
 
 	      rela.r_addend = 0;
+	      rela.r_offset = (sgot->output_section->vma
+			       + sgot->output_offset
+			       + got_entry_offset);
 
-	      switch (elf_m68k_reloc_got_type (got_entry->key_.type))
+	      switch (elf_m68k_reloc_got_type (r_type))
 		{
 		case R_68K_GOT32O:
 		  rela.r_info = ELF32_R_INFO (h->dynindx, R_68K_GLOB_DAT);

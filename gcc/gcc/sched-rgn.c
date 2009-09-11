@@ -530,7 +530,20 @@ find_single_block_region (bool ebbs_p)
 static int
 rgn_estimate_number_of_insns (basic_block bb)
 {
-  return INSN_LUID (BB_END (bb)) - INSN_LUID (BB_HEAD (bb));
+  int count;
+
+  count = INSN_LUID (BB_END (bb)) - INSN_LUID (BB_HEAD (bb));
+
+  if (MAY_HAVE_DEBUG_INSNS)
+    {
+      rtx insn;
+
+      FOR_BB_INSNS (bb, insn)
+	if (DEBUG_INSN_P (insn))
+	  count--;
+    }
+
+  return count;
 }
 
 /* Update number of blocks and the estimate for number of insns
@@ -2129,7 +2142,7 @@ init_ready_list (void)
 	src_head = head;
 
 	for (insn = src_head; insn != src_next_tail; insn = NEXT_INSN (insn))
-	  if (INSN_P (insn))
+	  if (INSN_P (insn) && !BOUNDARY_DEBUG_INSN_P (insn))
 	    try_ready (insn);
       }
 }
@@ -2438,6 +2451,9 @@ add_branch_dependences (rtx head, rtx tail)
      are not moved before reload because we can wind up with register
      allocation failures.  */
 
+  while (tail != head && DEBUG_INSN_P (tail))
+    tail = PREV_INSN (tail);
+
   insn = tail;
   last = 0;
   while (CALL_P (insn)
@@ -2472,7 +2488,9 @@ add_branch_dependences (rtx head, rtx tail)
       if (insn == head)
 	break;
 
-      insn = PREV_INSN (insn);
+      do
+	insn = PREV_INSN (insn);
+      while (insn != head && DEBUG_INSN_P (insn));
     }
 
   /* Make sure these insns are scheduled last in their block.  */
@@ -2482,7 +2500,8 @@ add_branch_dependences (rtx head, rtx tail)
       {
 	insn = prev_nonnote_insn (insn);
 
-	if (TEST_BIT (insn_referenced, INSN_LUID (insn)))
+	if (TEST_BIT (insn_referenced, INSN_LUID (insn))
+	    || DEBUG_INSN_P (insn))
 	  continue;
 
 	if (! sched_insns_conditions_mutex_p (last, insn))
@@ -2594,6 +2613,8 @@ deps_join (struct deps *succ_deps, struct deps *pred_deps)
 
       succ_rl->uses = concat_INSN_LIST (pred_rl->uses, succ_rl->uses);
       succ_rl->sets = concat_INSN_LIST (pred_rl->sets, succ_rl->sets);
+      succ_rl->implicit_sets
+	= concat_INSN_LIST (pred_rl->implicit_sets, succ_rl->implicit_sets);
       succ_rl->clobbers = concat_INSN_LIST (pred_rl->clobbers,
                                             succ_rl->clobbers);
       succ_rl->uses_length += pred_rl->uses_length;
@@ -2623,6 +2644,11 @@ deps_join (struct deps *succ_deps, struct deps *pred_deps)
   succ_deps->last_function_call
     = concat_INSN_LIST (pred_deps->last_function_call,
                         succ_deps->last_function_call);
+
+  /* last_function_call_may_noreturn is inherited by successor.  */
+  succ_deps->last_function_call_may_noreturn
+    = concat_INSN_LIST (pred_deps->last_function_call_may_noreturn,
+                        succ_deps->last_function_call_may_noreturn);
 
   /* sched_before_next_call is inherited by successor.  */
   succ_deps->sched_before_next_call
@@ -2671,12 +2697,14 @@ propagate_deps (int bb, struct deps *pred_deps)
    bb's successors.
 
    Specifically for reg-reg data dependences, the block insns are
-   scanned by sched_analyze () top-to-bottom.  Two lists are
+   scanned by sched_analyze () top-to-bottom.  Three lists are
    maintained by sched_analyze (): reg_last[].sets for register DEFs,
-   and reg_last[].uses for register USEs.
+   reg_last[].implicit_sets for implicit hard register DEFs, and
+   reg_last[].uses for register USEs.
 
    When analysis is completed for bb, we update for its successors:
    ;  - DEFS[succ] = Union (DEFS [succ], DEFS [bb])
+   ;  - IMPLICIT_DEFS[succ] = Union (IMPLICIT_DEFS [succ], IMPLICIT_DEFS [bb])
    ;  - USES[succ] = Union (USES [succ], DEFS [bb])
 
    The mechanism for computing mem-mem data dependence is very
@@ -2718,6 +2746,9 @@ free_block_dependencies (int bb)
   rtx tail;
 
   get_ebb_head_tail (EBB_FIRST_BB (bb), EBB_LAST_BB (bb), &head, &tail);
+
+  if (no_real_insns_p (head, tail))
+    return;
 
   sched_free_deps (head, tail, true);
 }
@@ -2876,6 +2907,9 @@ compute_priorities (void)
       gcc_assert (EBB_FIRST_BB (bb) == EBB_LAST_BB (bb));
       get_ebb_head_tail (EBB_FIRST_BB (bb), EBB_LAST_BB (bb), &head, &tail);
 
+      if (no_real_insns_p (head, tail))
+	continue;
+
       rgn_n_insns += set_priorities (head, tail);
     }
   current_sched_info->sched_max_insns_priority++;
@@ -2908,6 +2942,28 @@ schedule_region (int rgn)
   compute_priorities ();
 
   sched_extend_ready_list (rgn_n_insns);
+
+  if (sched_pressure_p)
+    {
+      sched_init_region_reg_pressure_info ();
+      for (bb = 0; bb < current_nr_blocks; bb++)
+	{
+	  basic_block first_bb, last_bb;
+	  rtx head, tail;
+	  
+	  first_bb = EBB_FIRST_BB (bb);
+	  last_bb = EBB_LAST_BB (bb);
+	  
+	  get_ebb_head_tail (first_bb, last_bb, &head, &tail);
+	  
+	  if (no_real_insns_p (head, tail))
+	    {
+	      gcc_assert (first_bb == last_bb);
+	      continue;
+	    }
+	  sched_setup_bb_reg_pressure_info (first_bb, PREV_INSN (head));
+	}
+    }
 
   /* Now we can schedule all blocks.  */
   for (bb = 0; bb < current_nr_blocks; bb++)

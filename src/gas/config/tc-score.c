@@ -539,7 +539,7 @@ static struct s3_datafield_range s3_score_df_range[] =
 struct s3_asm_opcode
 {
   /* Instruction name.  */
-  const char *template;
+  const char *template_name;
 
   /* Instruction Opcode.  */
   bfd_vma value;
@@ -2490,7 +2490,7 @@ s3_get_insn_class_from_type (enum score_insn_type type)
    32-bit instruction: 1, 0.
    16-bit instruction: 0.  */
 static bfd_vma
-s3_adjust_paritybit (bfd_vma m_code, enum insn_class class)
+s3_adjust_paritybit (bfd_vma m_code, enum insn_class i_class)
 {
   bfd_vma result = 0;
   bfd_vma m_code_high = 0;
@@ -2500,7 +2500,7 @@ s3_adjust_paritybit (bfd_vma m_code, enum insn_class class)
   unsigned long pb_middle = 0;
   unsigned long pb_low = 0;
 
-  if (class == INSN_CLASS_48)
+  if (i_class == INSN_CLASS_48)
     {
       pb_high = 0x800000000000LL;
       pb_middle = 0x80000000;
@@ -2512,7 +2512,7 @@ s3_adjust_paritybit (bfd_vma m_code, enum insn_class class)
                pb_middle | (m_code_middle << 1) |
                pb_low | m_code_low;
     }
-  else if (class == INSN_CLASS_32 || class == INSN_CLASS_SYN)
+  else if (i_class == INSN_CLASS_32 || i_class == INSN_CLASS_SYN)
     {
       pb_high = 0x80000000;
       pb_low = 0x00000000;
@@ -2520,7 +2520,7 @@ s3_adjust_paritybit (bfd_vma m_code, enum insn_class class)
       m_code_low = m_code & 0x00007fff;
       result = pb_high | (m_code_high << 1) | pb_low | m_code_low;
     }
-  else if (class == INSN_CLASS_16)
+  else if (i_class == INSN_CLASS_16)
     {
       pb_high = 0;
       pb_low = 0;
@@ -2528,7 +2528,7 @@ s3_adjust_paritybit (bfd_vma m_code, enum insn_class class)
       m_code_low = m_code & 0x00007fff;
       result = pb_high | (m_code_high << 1) | pb_low | m_code_low;
     }
-  else if (class == INSN_CLASS_PCE)
+  else if (i_class == INSN_CLASS_PCE)
     {
       /* Keep original.  */
       pb_high = 0;
@@ -2681,7 +2681,7 @@ s3_parse_16_32_inst (char *insnstr, bfd_boolean gen_frag_p)
       s3_inst.size = s3_GET_INSN_SIZE (s3_inst.type);
       s3_inst.relax_size = 0;
       s3_inst.bwarn = 0;
-      sprintf (s3_inst.name, "%s", opcode->template);
+      sprintf (s3_inst.name, "%s", opcode->template_name);
       strcpy (s3_inst.reg, "");
       s3_inst.error = NULL;
       s3_inst.reloc.type = BFD_RELOC_NONE;
@@ -2727,7 +2727,7 @@ s3_parse_48_inst (char *insnstr, bfd_boolean gen_frag_p)
       s3_inst.size = s3_GET_INSN_SIZE (s3_inst.type);
       s3_inst.relax_size = 0;
       s3_inst.bwarn = 0;
-      sprintf (s3_inst.name, "%s", opcode->template);
+      sprintf (s3_inst.name, "%s", opcode->template_name);
       strcpy (s3_inst.reg, "");
       s3_inst.error = NULL;
       s3_inst.reloc.type = BFD_RELOC_NONE;
@@ -4993,7 +4993,8 @@ s3_do_macro_ldst_label (char *str)
         {
           int ldst_idx = 0;
           ldst_idx = s3_inst.instruction & OPC_PSEUDOLDST_MASK;
-          s3_build_lwst_pic (reg_rd, s3_inst.reloc.exp, s3_score_ldst_insns[ldst_idx * 3 + 0].template);
+          s3_build_lwst_pic (reg_rd, s3_inst.reloc.exp,
+                             s3_score_ldst_insns[ldst_idx * 3 + 0].template_name);
           return;
         }
       else
@@ -6319,20 +6320,22 @@ s3_build_score_ops_hsh (void)
   for (i = 0; i < sizeof (s3_score_insns) / sizeof (struct s3_asm_opcode); i++)
     {
       const struct s3_asm_opcode *insn = s3_score_insns + i;
-      unsigned len = strlen (insn->template);
-      struct s3_asm_opcode *new;
-      char *template;
-      new = obstack_alloc (&insn_obstack, sizeof (struct s3_asm_opcode));
-      template = obstack_alloc (&insn_obstack, len + 1);
+      unsigned len = strlen (insn->template_name);
+      struct s3_asm_opcode *new_opcode;
+      char *template_name;
+      new_opcode = (struct s3_asm_opcode *)
+          obstack_alloc (&insn_obstack, sizeof (struct s3_asm_opcode));
+      template_name = (char *) obstack_alloc (& insn_obstack, len + 1);
 
-      strcpy (template, insn->template);
-      new->template = template;
-      new->parms = insn->parms;
-      new->value = insn->value;
-      new->relax_value = insn->relax_value;
-      new->type = insn->type;
-      new->bitmask = insn->bitmask;
-      hash_insert (s3_score_ops_hsh, new->template, (void *) new);
+      strcpy (template_name, insn->template_name);
+      new_opcode->template_name = template_name;
+      new_opcode->parms = insn->parms;
+      new_opcode->value = insn->value;
+      new_opcode->relax_value = insn->relax_value;
+      new_opcode->type = insn->type;
+      new_opcode->bitmask = insn->bitmask;
+      hash_insert (s3_score_ops_hsh, new_opcode->template_name,
+                   (void *) new_opcode);
     }
 }
 
@@ -6347,14 +6350,18 @@ s3_build_dependency_insn_hsh (void)
     {
       const struct s3_insn_to_dependency *tmp = s3_insn_to_dependency_table + i;
       unsigned len = strlen (tmp->insn_name);
-      struct s3_insn_to_dependency *new;
+      struct s3_insn_to_dependency *new_i2n;
 
-      new = obstack_alloc (&dependency_obstack, sizeof (struct s3_insn_to_dependency));
-      new->insn_name = obstack_alloc (&dependency_obstack, len + 1);
+      new_i2n = (struct s3_insn_to_dependency *)
+          obstack_alloc (&dependency_obstack,
+                         sizeof (struct s3_insn_to_dependency));
+      new_i2n->insn_name = (char *) obstack_alloc (&dependency_obstack,
+                                                   len + 1);
 
-      strcpy (new->insn_name, tmp->insn_name);
-      new->type = tmp->type;
-      hash_insert (s3_dependency_insn_hsh, new->insn_name, (void *) new);
+      strcpy (new_i2n->insn_name, tmp->insn_name);
+      new_i2n->type = tmp->type;
+      hash_insert (s3_dependency_insn_hsh, new_i2n->insn_name,
+                   (void *) new_i2n);
     }
 }
 
@@ -7023,28 +7030,28 @@ s3_relax_frag (asection * sec ATTRIBUTE_UNUSED, fragS * fragp, long stretch ATTR
 static void
 s3_convert_frag (bfd * abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED, fragS * fragp)
 {
-  int old;
-  int new;
+  int r_old;
+  int r_new;
   char backup[20];
   fixS *fixp;
 
-  old = s3_RELAX_OLD (fragp->fr_subtype);
-  new = s3_RELAX_NEW (fragp->fr_subtype);
+  r_old = s3_RELAX_OLD (fragp->fr_subtype);
+  r_new = s3_RELAX_NEW (fragp->fr_subtype);
 
   /* fragp->fr_opcode indicates whether this frag should be relaxed.  */
   if (fragp->fr_opcode == NULL)
     {
-      memcpy (backup, fragp->fr_literal, old);
-      fragp->fr_fix = old;
+      memcpy (backup, fragp->fr_literal, r_old);
+      fragp->fr_fix = r_old;
     }
   else
     {
-      memcpy (backup, fragp->fr_literal + old, new);
-      fragp->fr_fix = new;
+      memcpy (backup, fragp->fr_literal + r_old, r_new);
+      fragp->fr_fix = r_new;
     }
 
   fixp = fragp->tc_frag_data.fixp;
-  while (fixp && fixp->fx_frag == fragp && fixp->fx_where < old)
+  while (fixp && fixp->fx_frag == fragp && fixp->fx_where < r_old)
     {
       if (fragp->fr_opcode)
 	fixp->fx_done = 1;
@@ -7053,7 +7060,7 @@ s3_convert_frag (bfd * abfd ATTRIBUTE_UNUSED, segT sec ATTRIBUTE_UNUSED, fragS *
   while (fixp && fixp->fx_frag == fragp)
     {
       if (fragp->fr_opcode)
-	fixp->fx_where -= old + fragp->insn_addr;
+	fixp->fx_where -= r_old + fragp->insn_addr;
       else
 	fixp->fx_done = 1;
       fixp = fixp->fx_next;

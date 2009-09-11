@@ -1,6 +1,6 @@
 /* linker.c -- BFD linker routines
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008
+   2003, 2004, 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
    Written by Steve Chamberlain and Ian Lance Taylor, Cygnus Support
 
@@ -2604,21 +2604,21 @@ struct bfd_link_order *
 bfd_new_link_order (bfd *abfd, asection *section)
 {
   bfd_size_type amt = sizeof (struct bfd_link_order);
-  struct bfd_link_order *new;
+  struct bfd_link_order *new_lo;
 
-  new = bfd_zalloc (abfd, amt);
-  if (!new)
+  new_lo = (struct bfd_link_order *) bfd_zalloc (abfd, amt);
+  if (!new_lo)
     return NULL;
 
-  new->type = bfd_undefined_link_order;
+  new_lo->type = bfd_undefined_link_order;
 
   if (section->map_tail.link_order != NULL)
-    section->map_tail.link_order->next = new;
+    section->map_tail.link_order->next = new_lo;
   else
-    section->map_head.link_order = new;
-  section->map_tail.link_order = new;
+    section->map_head.link_order = new_lo;
+  section->map_tail.link_order = new_lo;
 
-  return new;
+  return new_lo;
 }
 
 /* Default link order processing routine.  Note that we can not handle
@@ -3271,14 +3271,17 @@ DESCRIPTION
 
 struct bfd_elf_version_tree *
 bfd_find_version_for_sym (struct bfd_elf_version_tree *verdefs,
-		      const char *sym_name,
-		      bfd_boolean *hide)
+			  const char *sym_name,
+			  bfd_boolean *hide)
 {
   struct bfd_elf_version_tree *t;
   struct bfd_elf_version_tree *local_ver, *global_ver, *exist_ver;
+  struct bfd_elf_version_tree *star_local_ver, *star_global_ver;
 
   local_ver = NULL;
   global_ver = NULL;
+  star_local_ver = NULL;
+  star_global_ver = NULL;
   exist_ver = NULL;
   for (t = verdefs; t != NULL; t = t->next)
     {
@@ -3288,7 +3291,10 @@ bfd_find_version_for_sym (struct bfd_elf_version_tree *verdefs,
 
 	  while ((d = (*t->match) (&t->globals, d, sym_name)) != NULL)
 	    {
-	      global_ver = t;
+	      if (d->literal || strcmp (d->pattern, "*") != 0)
+		global_ver = t;
+	      else
+		star_global_ver = t;
 	      if (d->symver)
 		exist_ver = t;
 	      d->script = 1;
@@ -3308,13 +3314,17 @@ bfd_find_version_for_sym (struct bfd_elf_version_tree *verdefs,
 
 	  while ((d = (*t->match) (&t->locals, d, sym_name)) != NULL)
 	    {
-	      local_ver = t;
+	      if (d->literal || strcmp (d->pattern, "*") != 0)
+		local_ver = t;
+	      else
+		star_local_ver = t;
 	      /* If the match is a wildcard pattern, keep looking for
 		 a more explicit, perhaps even global, match.  */
 	      if (d->literal)
 		{
 		  /* An exact match overrides a global wildcard.  */
 		  global_ver = NULL;
+		  star_global_ver = NULL;
 		  break;
 		}
 	    }
@@ -3323,6 +3333,9 @@ bfd_find_version_for_sym (struct bfd_elf_version_tree *verdefs,
 	    break;
 	}
     }
+
+  if (global_ver == NULL && local_ver == NULL)
+    global_ver = star_global_ver;
 
   if (global_ver != NULL)
     {
@@ -3334,6 +3347,9 @@ bfd_find_version_for_sym (struct bfd_elf_version_tree *verdefs,
       return global_ver;
     }
 
+  if (local_ver == NULL)
+    local_ver = star_local_ver;
+
   if (local_ver != NULL)
     {
       *hide = TRUE;
@@ -3342,4 +3358,3 @@ bfd_find_version_for_sym (struct bfd_elf_version_tree *verdefs,
 
   return NULL;
 }
-

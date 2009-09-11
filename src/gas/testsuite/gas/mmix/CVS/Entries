@@ -168,9 +168,6 @@
 /local-1.s/1.1/Mon Jul  6 10:46:42 2009//
 /locall1.d/1.2/Mon Jul  6 10:46:42 2009//
 /locall1.s/1.1/Mon Jul  6 10:46:42 2009//
-/mmix-err.exp/1.3/Mon Jul  6 10:46:42 2009//
-/mmix-list.exp/1.4/Mon Jul  6 10:46:42 2009//
-/mmix.exp/1.3/Mon Jul  6 10:46:42 2009//
 /odd-1.d/1.3/Mon Jul  6 10:46:42 2009//
 /odd-1.s/1.1/Mon Jul  6 10:46:42 2009//
 /op-0-1.d/1.4/Mon Jul  6 10:46:42 2009//
@@ -293,4 +290,7 @@
 /weak1.s/1.1/Mon Jul  6 10:46:42 2009//
 /zerop-1.d/1.2/Mon Jul  6 10:46:42 2009//
 /zerop-1.s/1.1/Mon Jul  6 10:46:42 2009//
+/mmix-err.exp/1.4/Tue Sep  8 03:27:42 2009//
+/mmix-list.exp/1.5/Tue Sep  8 03:27:42 2009//
+/mmix.exp/1.4/Tue Sep  8 03:27:42 2009//
 D

@@ -1,6 +1,6 @@
 /* tc-ppc.h -- Header file for tc-ppc.c.
    Copyright 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-   2004, 2005, 2006, 2007, 2008 Free Software Foundation, Inc.
+   2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
    Written by Ian Lance Taylor, Cygnus Support.
 
    This file is part of GAS, the GNU Assembler.
@@ -134,7 +134,7 @@ struct ppc_tc_sy
      .globl or .lglobl statement.  */
   int output;
   /* The symbol class.  */
-  int class;
+  int symbol_class;
   /* The real name, if the symbol was renamed.  */
   char *real_name;
   /* For a csect symbol, the subsegment we are using.  This is zero
@@ -195,7 +195,7 @@ do {								\
     S_SET_SEGMENT (dest, S_GET_SEGMENT (src));			\
   symbol_get_tc (dest)->size = symbol_get_tc (src)->size;	\
   symbol_get_tc (dest)->align = symbol_get_tc (src)->align;	\
-  symbol_get_tc (dest)->class = symbol_get_tc (src)->class;	\
+  symbol_get_tc (dest)->symbol_class = symbol_get_tc (src)->symbol_class;	\
   symbol_get_tc (dest)->within = symbol_get_tc (src)->within;	\
 } while (0)
 

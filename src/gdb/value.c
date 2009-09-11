@@ -196,6 +196,10 @@ struct value
   /* If value is a variable, is it initialized or not.  */
   int initialized;
 
+  /* If value is from the stack.  If this is set, read_stack will be
+     used instead of read_memory to enable extra caching.  */
+  int stack;
+
   /* Actual contents of the value.  Target byte-order.  NULL or not
      valid if lazy is nonzero.  */
   gdb_byte *contents;
@@ -312,31 +316,6 @@ allocate_repeat_value (struct type *type, int count)
   return allocate_value (array_type);
 }
 
-/* Needed if another module needs to maintain its on list of values.  */
-void
-value_prepend_to_list (struct value **head, struct value *val)
-{
-  val->next = *head;
-  *head = val;
-}
-
-/* Needed if another module needs to maintain its on list of values.  */
-void
-value_remove_from_list (struct value **head, struct value *val)
-{
-  struct value *prev;
-
-  if (*head == val)
-    *head = (*head)->next;
-  else
-    for (prev = *head; prev->next; prev = prev->next)
-      if (prev->next == val)
-      {
-	prev->next = val->next;
-	break;
-      }
-}
-
 struct value *
 allocate_computed_value (struct type *type,
                          struct lval_funcs *funcs,
@@ -447,6 +426,18 @@ void
 set_value_lazy (struct value *value, int val)
 {
   value->lazy = val;
+}
+
+int
+value_stack (struct value *value)
+{
+  return value->stack;
+}
+
+void
+set_value_stack (struct value *value, int val)
+{
+  value->stack = val;
 }
 
 const gdb_byte *
@@ -663,7 +654,8 @@ value_free_to_mark (struct value *mark)
 }
 
 /* Free all the values that have been allocated (except for those released).
-   Called after each command, successful or not.  */
+   Call after each command, successful or not.
+   In practice this is called before each command, which is sufficient.  */
 
 void
 free_all_values (void)
@@ -945,8 +937,11 @@ struct internalvar
       /* The internal variable holds a GDB internal convenience function.  */
       INTERNALVAR_FUNCTION,
 
-      /* The variable holds a simple scalar value.  */
-      INTERNALVAR_SCALAR,
+      /* The variable holds an integer value.  */
+      INTERNALVAR_INTEGER,
+
+      /* The variable holds a pointer value.  */
+      INTERNALVAR_POINTER,
 
       /* The variable holds a GDB-provided string.  */
       INTERNALVAR_STRING,
@@ -969,19 +964,22 @@ struct internalvar
 	  int canonical;
 	} fn;
 
-      /* A scalar value used with INTERNALVAR_SCALAR.  */
+      /* An integer value used with INTERNALVAR_INTEGER.  */
       struct
         {
 	  /* If type is non-NULL, it will be used as the type to generate
 	     a value for this internal variable.  If type is NULL, a default
 	     integer type for the architecture is used.  */
 	  struct type *type;
-	  union
-	    {
-	      LONGEST l;    /* Used with TYPE_CODE_INT and NULL types.  */
-	      CORE_ADDR a;  /* Used with TYPE_CODE_PTR types.  */
-	    } val;
-        } scalar;
+	  LONGEST val;
+        } integer;
+
+      /* A pointer value used with INTERNALVAR_POINTER.  */
+      struct
+        {
+	  struct type *type;
+	  CORE_ADDR val;
+        } pointer;
 
       /* A string value used with INTERNALVAR_STRING.  */
       char *string;
@@ -1107,16 +1105,16 @@ value_of_internalvar (struct gdbarch *gdbarch, struct internalvar *var)
       val = allocate_value (builtin_type (gdbarch)->internal_fn);
       break;
 
-    case INTERNALVAR_SCALAR:
-      if (!var->u.scalar.type)
+    case INTERNALVAR_INTEGER:
+      if (!var->u.integer.type)
 	val = value_from_longest (builtin_type (gdbarch)->builtin_int,
-				  var->u.scalar.val.l);
-      else if (TYPE_CODE (var->u.scalar.type) == TYPE_CODE_INT)
-	val = value_from_longest (var->u.scalar.type, var->u.scalar.val.l);
-      else if (TYPE_CODE (var->u.scalar.type) == TYPE_CODE_PTR)
-	val = value_from_pointer (var->u.scalar.type, var->u.scalar.val.a);
+				  var->u.integer.val);
       else
-        internal_error (__FILE__, __LINE__, "bad type");
+	val = value_from_longest (var->u.integer.type, var->u.integer.val);
+      break;
+
+    case INTERNALVAR_POINTER:
+      val = value_from_pointer (var->u.pointer.type, var->u.pointer.val);
       break;
 
     case INTERNALVAR_STRING:
@@ -1170,14 +1168,9 @@ get_internalvar_integer (struct internalvar *var, LONGEST *result)
 {
   switch (var->kind)
     {
-    case INTERNALVAR_SCALAR:
-      if (var->u.scalar.type == NULL
-	  || TYPE_CODE (var->u.scalar.type) == TYPE_CODE_INT)
-	{
-	  *result = var->u.scalar.val.l;
-	  return 1;
-	}
-      /* Fall through.  */
+    case INTERNALVAR_INTEGER:
+      *result = var->u.integer.val;
+      return 1;
 
     default:
       return 0;
@@ -1249,15 +1242,15 @@ set_internalvar (struct internalvar *var, struct value *val)
       break;
 
     case TYPE_CODE_INT:
-      new_kind = INTERNALVAR_SCALAR;
-      new_data.scalar.type = value_type (val);
-      new_data.scalar.val.l = value_as_long (val);
+      new_kind = INTERNALVAR_INTEGER;
+      new_data.integer.type = value_type (val);
+      new_data.integer.val = value_as_long (val);
       break;
 
     case TYPE_CODE_PTR:
-      new_kind = INTERNALVAR_SCALAR;
-      new_data.scalar.type = value_type (val);
-      new_data.scalar.val.a = value_as_address (val);
+      new_kind = INTERNALVAR_POINTER;
+      new_data.pointer.type = value_type (val);
+      new_data.pointer.val = value_as_address (val);
       break;
 
     default:
@@ -1294,9 +1287,9 @@ set_internalvar_integer (struct internalvar *var, LONGEST l)
   /* Clean up old contents.  */
   clear_internalvar (var);
 
-  var->kind = INTERNALVAR_SCALAR;
-  var->u.scalar.type = NULL;
-  var->u.scalar.val.l = l;
+  var->kind = INTERNALVAR_INTEGER;
+  var->u.integer.type = NULL;
+  var->u.integer.val = l;
 }
 
 void
@@ -1430,7 +1423,7 @@ add_internal_function (const char *name, const char *doc,
 /* Update VALUE before discarding OBJFILE.  COPIED_TYPES is used to
    prevent cycles / duplicates.  */
 
-static void
+void
 preserve_one_value (struct value *value, struct objfile *objfile,
 		    htab_t copied_types)
 {
@@ -1451,10 +1444,16 @@ preserve_one_internalvar (struct internalvar *var, struct objfile *objfile,
 {
   switch (var->kind)
     {
-    case INTERNALVAR_SCALAR:
-      if (var->u.scalar.type && TYPE_OBJFILE (var->u.scalar.type) == objfile)
-	var->u.scalar.type
-	  = copy_type_recursive (objfile, var->u.scalar.type, copied_types);
+    case INTERNALVAR_INTEGER:
+      if (var->u.integer.type && TYPE_OBJFILE (var->u.integer.type) == objfile)
+	var->u.integer.type
+	  = copy_type_recursive (objfile, var->u.integer.type, copied_types);
+      break;
+
+    case INTERNALVAR_POINTER:
+      if (TYPE_OBJFILE (var->u.pointer.type) == objfile)
+	var->u.pointer.type
+	  = copy_type_recursive (objfile, var->u.pointer.type, copied_types);
       break;
 
     case INTERNALVAR_VALUE:
@@ -1490,8 +1489,7 @@ preserve_values (struct objfile *objfile)
   for (var = internalvars; var; var = var->next)
     preserve_one_internalvar (var, objfile, copied_types);
 
-  for (val = values_in_python; val; val = val->next)
-    preserve_one_value (val, objfile, copied_types);
+  preserve_python_values (objfile, copied_types);
 
   htab_delete (copied_types);
 }
@@ -1896,7 +1894,7 @@ value_primitive_field (struct value *arg1, int offset,
 	v->bitpos = bitpos % container_bitsize;
       else
 	v->bitpos = bitpos % 8;
-      v->offset = value_offset (arg1) + value_embedded_offset (arg1)
+      v->offset = value_embedded_offset (arg1)
 	+ (bitpos - v->bitpos) / 8;
       v->parent = arg1;
       value_incref (v->parent);
@@ -2049,15 +2047,23 @@ unpack_bits_as_long (struct type *field_type, const gdb_byte *valaddr,
   ULONGEST val;
   ULONGEST valmask;
   int lsbcount;
+  int bytes_read;
+
+  /* Read the minimum number of bytes required; there may not be
+     enough bytes to read an entire ULONGEST.  */
+  CHECK_TYPEDEF (field_type);
+  if (bitsize)
+    bytes_read = ((bitpos % 8) + bitsize + 7) / 8;
+  else
+    bytes_read = TYPE_LENGTH (field_type);
 
   val = extract_unsigned_integer (valaddr + bitpos / 8,
-				  sizeof (val), byte_order);
-  CHECK_TYPEDEF (field_type);
+				  bytes_read, byte_order);
 
   /* Extract bits.  See comment above. */
 
   if (gdbarch_bits_big_endian (get_type_arch (field_type)))
-    lsbcount = (sizeof val * 8 - bitpos % 8 - bitsize);
+    lsbcount = (bytes_read * 8 - bitpos % 8 - bitsize);
   else
     lsbcount = (bitpos % 8);
   val >>= lsbcount;
@@ -2190,7 +2196,7 @@ struct value *
 value_from_pointer (struct type *type, CORE_ADDR addr)
 {
   struct value *val = allocate_value (type);
-  store_typed_address (value_contents_raw (val), type, addr);
+  store_typed_address (value_contents_raw (val), check_typedef (type), addr);
   return val;
 }
 

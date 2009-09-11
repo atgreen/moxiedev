@@ -669,17 +669,21 @@ alpha*-dec-osf[45]*)
 	;;
 alpha64-dec-*vms*)
 	tm_file="${tm_file} alpha/vms.h alpha/vms64.h"
-	xm_file="alpha/xm-vms.h"
-	tmake_file="alpha/t-alpha alpha/t-vms alpha/t-vms64 alpha/t-ieee"
-	prefix=/gnu
-	local_prefix=/gnu
+	xm_file="alpha/xm-vms.h vms/xm-vms64.h"
+	tmake_file="alpha/t-alpha vms/t-vms vms/t-vms64 alpha/t-vms alpha/t-ieee"
+	xmake_file=vms/x-vms
+	exeext=.exe
+	install_headers_dir=install-headers-cp
+	extra_options="${extra_options} vms/vms.opt"
 	;;
 alpha*-dec-*vms*)
 	tm_file="${tm_file} alpha/vms.h"
-	xm_file=alpha/xm-vms.h
-	tmake_file="alpha/t-alpha alpha/t-vms alpha/t-ieee"
-	prefix=/gnu
-	local_prefix=/gnu
+	xm_file="alpha/xm-vms.h"
+	tmake_file="alpha/t-alpha vms/t-vms alpha/t-vms alpha/t-ieee"
+	xmake_file=vms/x-vms
+	exeext=.exe
+	install_headers_dir=install-headers-cp
+	extra_options="${extra_options} vms/vms.opt"
 	;;
 arc-*-elf*)
 	tm_file="dbxelf.h elfos.h svr4.h newlib-stdint.h ${tm_file}"
@@ -894,6 +898,15 @@ moxie-*-elf)
 	extra_parts="crti.o crtn.o crtbegin.o crtend.o"
 	tmake_file="${tmake_file} moxie/t-moxie moxie/t-moxie-softfp soft-fp/t-softfp"
 	;;
+moxie-*-uclinux*)
+	gas=yes
+	gnu_ld=yes
+	tm_file="dbxelf.h elfos.h svr4.h ${tm_file} linux.h glibc-stdint.h moxie/uclinux.h"
+	extra_parts="crti.o crtn.o crtbegin.o crtend.o"
+	tmake_file="${tmake_file} moxie/t-moxie moxie/t-moxie-softfp soft-fp/t-softfp"
+	tm_defines="${tm_defines} UCLIBC_DEFAULT=1"
+	extra_options="${extra_options} linux.opt"
+	;;
 h8300-*-rtems*)
 	tmake_file="h8300/t-h8300 h8300/t-elf t-rtems h8300/t-rtems"
 	tm_file="h8300/h8300.h dbxelf.h elfos.h h8300/elf.h h8300/rtems.h rtems.h newlib-stdint.h"
@@ -942,6 +955,8 @@ hppa[12]*-*-hpux10*)
 		extra_options="${extra_options} pa/pa-hpux1010.opt"
 		;;
 	esac
+	use_gcc_stdint=provide
+	tm_file="${tm_file} hpux-stdint.h"
 	tmake_file="pa/t-pa-hpux10 pa/t-pa-hpux pa/t-hpux-shlib"
 	case ${enable_threads} in
 	  "")
@@ -1157,6 +1172,7 @@ i[34567]86-pc-msdosdjgpp*)
 	extra_options="${extra_options} i386/djgpp.opt"
 	gnu_ld=yes
 	gas=yes
+	use_gcc_stdint=wrap
 	;;
 i[34567]86-*-lynxos*)
 	xm_defines=POSIX
@@ -1404,6 +1420,20 @@ ia64*-*-hpux*)
 	extra_options="${extra_options} ia64/ilp32.opt"
 	use_gcc_stdint=wrap
 	tm_file="${tm_file} hpux-stdint.h"
+	;;
+ia64-hp-*vms*)
+	tm_file="${tm_file} elfos.h ia64/sysv4.h ia64/elf.h ia64/vms.h ia64/vms64.h"
+	xm_file="vms/xm-vms.h vms/xm-vms64.h"
+	tmake_file="vms/t-vms vms/t-vms64 ia64/t-ia64 ia64/t-vms"
+	xmake_file=vms/x-vms
+	target_cpu_default="0"
+	if test x$gas = xyes
+	then
+		target_cpu_default="${target_cpu_default}|MASK_GNU_AS"
+	fi
+	exeext=.exe
+	install_headers_dir=install-headers-cp
+	extra_options="${extra_options} vms/vms.opt"
 	;;
 iq2000*-*-elf*)
         tm_file="svr4.h elfos.h newlib-stdint.h iq2000/iq2000.h"
@@ -1897,7 +1927,7 @@ powerpc-*-linux* | powerpc64-*-linux*)
 		tm_file="${tm_file} rs6000/linux.h glibc-stdint.h"
 		;;
 	esac
-	tmake_file="${tmake_file} rs6000/t-fprules-softfp soft-fp/t-softfp"
+	tmake_file="${tmake_file} t-slibgcc-libgcc rs6000/t-fprules-softfp soft-fp/t-softfp"
 	case ${target} in
 	    powerpc*-*-linux*altivec*)
 		tm_file="${tm_file} rs6000/linuxaltivec.h" ;;
@@ -1913,19 +1943,19 @@ powerpc-*-linux* | powerpc64-*-linux*)
 powerpc64-*-gnu*)
 	tm_file="${tm_file} elfos.h svr4.h freebsd-spec.h gnu.h rs6000/sysv4.h rs6000/default64.h rs6000/linux64.h rs6000/gnu.h glibc-stdint.h"
 	extra_options="${extra_options} rs6000/sysv4.opt rs6000/linux64.opt"
-	tmake_file="t-slibgcc-elf-ver t-gnu"
+	tmake_file="t-slibgcc-elf-ver t-slibgcc-libgcc t-gnu"
 	;;
 powerpc-*-gnu-gnualtivec*)
 	tm_file="${cpu_type}/${cpu_type}.h elfos.h svr4.h freebsd-spec.h gnu.h rs6000/sysv4.h rs6000/linux.h rs6000/linuxaltivec.h rs6000/gnu.h glibc-stdint.h"
 	extra_options="${extra_options} rs6000/sysv4.opt"
-	tmake_file="rs6000/t-fprules rs6000/t-fprules-fpbit rs6000/t-ppcos t-slibgcc-elf-ver t-gnu rs6000/t-ppccomm"
+	tmake_file="rs6000/t-fprules rs6000/t-fprules-fpbit rs6000/t-ppcos t-slibgcc-elf-ver t-slibgcc-libgcc t-gnu rs6000/t-ppccomm"
 	if test x$enable_threads = xyes; then
 		thread_file='posix'
 	fi
 	;;
 powerpc-*-gnu*)
 	tm_file="${cpu_type}/${cpu_type}.h elfos.h svr4.h freebsd-spec.h gnu.h rs6000/sysv4.h rs6000/linux.h rs6000/gnu.h glibc-stdint.h"
-	tmake_file="rs6000/t-fprules rs6000/t-fprules-fpbit rs6000/t-ppcos t-slibgcc-elf-ver t-gnu rs6000/t-ppccomm"
+	tmake_file="rs6000/t-fprules rs6000/t-fprules-fpbit rs6000/t-ppcos t-slibgcc-elf-ver t-slibgcc-libgcc t-gnu rs6000/t-ppccomm"
 	extra_options="${extra_options} rs6000/sysv4.opt"
 	if test x$enable_threads = xyes; then
 		thread_file='posix'
@@ -2088,10 +2118,11 @@ sh-*-symbianelf* | sh[12346l]*-*-symbianelf* | \
 			tm_file="${tm_file} linux.h glibc-stdint.h sh/linux.h" ;;
 	sh*-*-netbsd*)	tm_file="${tm_file} netbsd.h netbsd-elf.h sh/netbsd-elf.h" ;;
 	sh*-superh-elf)	if test x$with_libgloss != xno; then
-				with_libgloss=yes
-				tm_file="${tm_file} sh/newlib.h"
-			fi
-			tm_file="${tm_file} sh/embed-elf.h sh/superh.h"
+                                with_libgloss=yes
+                                tm_file="${tm_file} sh/newlib.h"
+                        fi
+			tm_file="${tm_file} sh/embed-elf.h"
+			tm_file="${tm_file} sh/superh.h"
 			tmake_file="${tmake_file} sh/t-superh"
 			extra_options="${extra_options} sh/superh.opt" ;;
 	*)		if test x$with_newlib = xyes \

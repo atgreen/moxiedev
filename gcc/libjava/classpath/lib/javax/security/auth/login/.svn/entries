@@ -1,7 +1,7 @@
 10
 
 dir
-149693
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/security/auth/login
 svn://gcc.gnu.org/svn/gcc
 
@@ -128,40 +128,6 @@ has-props
 
 550
 
-AppConfigurationEntry$LoginModuleControlFlag.class
-file
-
-
-
-
-2009-04-24T17:48:13.000000Z
-8d43f94591fe0c9164bc75d146fcd207
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-923
-
 AccountNotFoundException.class
 file
 
@@ -195,6 +161,40 @@ has-props
 
 
 584
+
+AppConfigurationEntry$LoginModuleControlFlag.class
+file
+
+
+
+
+2009-04-24T17:48:13.000000Z
+8d43f94591fe0c9164bc75d146fcd207
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+923
 
 CredentialException.class
 file
@@ -264,14 +264,14 @@ has-props
 
 2363
 
-FailedLoginException.class
+AccountExpiredException.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-666e921d336fd09c3d859aeae72c3ddb
+5949d12540ba3caa4d9e6acbc7365adc
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -296,7 +296,7 @@ has-props
 
 
 
-570
+581
 
 Configuration$1.class
 file
@@ -332,14 +332,14 @@ has-props
 
 747
 
-AccountExpiredException.class
+FailedLoginException.class
 file
 
 
 
 
 2009-04-24T17:48:13.000000Z
-5949d12540ba3caa4d9e6acbc7365adc
+666e921d336fd09c3d859aeae72c3ddb
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -364,7 +364,7 @@ has-props
 
 
 
-581
+570
 
 AccountLockedException.class
 file

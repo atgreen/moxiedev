@@ -1,6 +1,6 @@
 /* Main program of GNU linker.
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
    Written by Steve Chamberlain steve@cygnus.com
 
@@ -280,6 +280,8 @@ main (int argc, char **argv)
   emulation = get_emulation (argc, argv);
   ldemul_choose_mode (emulation);
   default_target = ldemul_choose_target (argc, argv);
+  config.maxpagesize = bfd_emul_get_maxpagesize (default_target);
+  config.commonpagesize = bfd_emul_get_commonpagesize (default_target);
   lang_init ();
   ldemul_before_parse ();
   lang_has_input_file = FALSE;

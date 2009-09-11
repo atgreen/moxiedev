@@ -838,8 +838,7 @@ fatal (const char *string, ...)
 NORETURN void
 error_stream (struct ui_file *stream)
 {
-  long len;
-  char *message = ui_file_xstrdup (stream, &len);
+  char *message = ui_file_xstrdup (stream, NULL);
   make_cleanup (xfree, message);
   error (("%s"), message);
 }
@@ -1099,6 +1098,9 @@ Show whether GDB will quit when an %s is detected"),
 			set_cmd_list,
 			show_cmd_list);
 
+  xfree (set_doc);
+  xfree (show_doc);
+
   set_doc = xstrprintf (_("\
 Set whether GDB should create a core file of GDB when %s is detected"),
 			problem->name);
@@ -1115,6 +1117,9 @@ Show whether GDB will create a core file of GDB when %s is detected"),
 			NULL, /* showfunc */
 			set_cmd_list,
 			show_cmd_list);
+
+  xfree (set_doc);
+  xfree (show_doc);
 }
 
 /* Print the system error message for errno, and also mention STRING
@@ -1436,8 +1441,8 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
     }
 
   /* Automatically answer the default value if the user did not want
-     prompts.  */
-  if (! caution)
+     prompts or the command was issued with the server prefix.  */
+  if (! caution || server_command)
     return def_value;
 
   /* If input isn't coming from the user directly, just say what
@@ -3307,7 +3312,7 @@ xfullpath (const char *filename)
 unsigned long
 gnu_debuglink_crc32 (unsigned long crc, unsigned char *buf, size_t len)
 {
-  static const unsigned long crc32_table[256] = {
+  static const unsigned int crc32_table[256] = {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419,
     0x706af48f, 0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4,
     0xe0d5e91e, 0x97d2d988, 0x09b64c2b, 0x7eb17cbd, 0xe7b82d07,

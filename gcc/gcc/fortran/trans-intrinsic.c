@@ -3479,7 +3479,7 @@ gfc_conv_intrinsic_len (gfc_se * se, gfc_expr * expr)
 		&& (sym->result == sym))
 	    decl = gfc_get_fake_result_decl (sym, 0);
 
-	  len = sym->ts.cl->backend_decl;
+	  len = sym->ts.u.cl->backend_decl;
 	  gcc_assert (len);
 	  break;
 	}
@@ -4564,10 +4564,22 @@ gfc_conv_allocated (gfc_se *se, gfc_expr *expr)
   gfc_init_se (&arg1se, NULL);
   arg1 = expr->value.function.actual;
   ss1 = gfc_walk_expr (arg1->expr);
-  arg1se.descriptor_only = 1;
-  gfc_conv_expr_descriptor (&arg1se, arg1->expr, ss1);
 
-  tmp = gfc_conv_descriptor_data_get (arg1se.expr);
+  if (ss1 == gfc_ss_terminator)
+    {
+      /* Allocatable scalar.  */
+      arg1se.want_pointer = 1;
+      gfc_conv_expr (&arg1se, arg1->expr);
+      tmp = arg1se.expr;
+    }
+  else
+    {
+      /* Allocatable array.  */
+      arg1se.descriptor_only = 1;
+      gfc_conv_expr_descriptor (&arg1se, arg1->expr, ss1);
+      tmp = gfc_conv_descriptor_data_get (arg1se.expr);
+    }
+
   tmp = fold_build2 (NE_EXPR, boolean_type_node,
 		     tmp, fold_convert (TREE_TYPE (tmp), null_pointer_node));
   se->expr = convert (gfc_typenode_for_spec (&expr->ts), tmp);
@@ -4629,7 +4641,7 @@ gfc_conv_associated (gfc_se *se, gfc_expr *expr)
       nonzero_charlen = NULL_TREE;
       if (arg1->expr->ts.type == BT_CHARACTER)
 	nonzero_charlen = fold_build2 (NE_EXPR, boolean_type_node,
-				       arg1->expr->ts.cl->backend_decl,
+				       arg1->expr->ts.u.cl->backend_decl,
 				       integer_zero_node);
 
       if (ss1 == gfc_ss_terminator)
@@ -4883,7 +4895,7 @@ gfc_conv_intrinsic_repeat (gfc_se * se, gfc_expr * expr)
   dlen = fold_build2 (MULT_EXPR, gfc_charlen_type_node,
 		      fold_convert (gfc_charlen_type_node, slen),
 		      fold_convert (gfc_charlen_type_node, ncopies));
-  type = gfc_get_character_type (expr->ts.kind, expr->ts.cl);
+  type = gfc_get_character_type (expr->ts.kind, expr->ts.u.cl);
   dest = gfc_conv_string_tmp (se, build_pointer_type (type), dlen);
 
   /* Generate the code to do the repeat operation:

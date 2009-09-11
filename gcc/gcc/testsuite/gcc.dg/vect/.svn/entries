@@ -1,15 +1,15 @@
 10
 
 dir
-150304
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/vect
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-31T02:50:11.756775Z
-150304
-spop
+2009-09-08T19:16:18.155168Z
+151533
+ktietz
 
 
 
@@ -28,7 +28,7 @@ spop
 
 vect-reduc-dot-s16b.c
 file
-149693
+
 
 
 
@@ -62,7 +62,7 @@ hjl
 
 bb-slp-21.c
 file
-149693
+
 
 
 
@@ -96,7 +96,7 @@ irar
 
 vect-multitypes-14.c
 file
-149693
+
 
 
 
@@ -130,7 +130,7 @@ hjl
 
 vect-reduc-6.c
 file
-149693
+
 
 
 
@@ -164,7 +164,7 @@ hubicka
 
 vect-105.c
 file
-149693
+
 
 
 
@@ -198,7 +198,7 @@ froydnj
 
 vect-vfa-slp.c
 file
-149693
+
 
 
 
@@ -232,7 +232,7 @@ sje
 
 vect-ifcvt-5.c
 file
-149693
+
 
 
 
@@ -266,7 +266,7 @@ rguenth
 
 wrapv-vect-reduc-2short.c
 file
-149693
+
 
 
 
@@ -300,7 +300,7 @@ rguenth
 
 no-scevccp-slp-31.c
 file
-149693
+
 
 
 
@@ -334,7 +334,7 @@ irar
 
 vect-reduc-dot-u8a.c
 file
-149693
+
 
 
 
@@ -368,7 +368,7 @@ hjl
 
 vect-iv-7.c
 file
-149693
+
 
 
 
@@ -402,7 +402,7 @@ hubicka
 
 vect-50.c
 file
-149693
+
 
 
 
@@ -470,7 +470,7 @@ irar
 
 vect-33.c
 file
-149693
+
 
 
 
@@ -502,43 +502,9 @@ revitale
 
 1039
 
-pr24059.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-5333d6d7b598846ce5c108d9000394a4
-2005-09-30T05:30:18.000000Z
-104812
-uros
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-335
-
 vect-16.c
 file
-149693
+
 
 
 
@@ -570,9 +536,43 @@ irar
 
 681
 
+pr24059.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+5333d6d7b598846ce5c108d9000394a4
+2005-09-30T05:30:18.000000Z
+104812
+uros
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+335
+
 vect-float-extend-1.c
 file
-149693
+
 
 
 
@@ -606,7 +606,7 @@ rguenth
 
 pr37482.c
 file
-149693
+
 
 
 
@@ -640,7 +640,7 @@ irar
 
 pr36493.c
 file
-149693
+
 
 
 
@@ -674,7 +674,7 @@ hjl
 
 vect-outer-4.c
 file
-149693
+
 
 
 
@@ -708,7 +708,7 @@ hubicka
 
 vect-ifcvt-17.c
 file
-149693
+
 
 
 
@@ -742,7 +742,7 @@ rguenth
 
 bb-slp-13.c
 file
-149693
+
 
 
 
@@ -776,7 +776,7 @@ irar
 
 slp-6.c
 file
-149693
+
 
 
 
@@ -810,7 +810,7 @@ rguenth
 
 slp-perm-7.c
 file
-149693
+
 
 
 
@@ -842,43 +842,9 @@ irar
 
 1841
 
-no-section-anchors-vect-69.c
-file
-149693
-
-
-
-2009-06-10T05:24:44.000000Z
-8c29f6962c7575c3e23a955838eb8123
-2009-06-05T15:28:50.693894Z
-148211
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2508
-
 vect-114.c
 file
-149693
+
 
 
 
@@ -910,9 +876,77 @@ hubicka
 
 642
 
+no-section-anchors-vect-69.c
+file
+
+
+
+
+2009-06-10T05:24:44.000000Z
+8c29f6962c7575c3e23a955838eb8123
+2009-06-05T15:28:50.693894Z
+148211
+revitale
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2508
+
+O1-pr33854.c
+file
+
+
+
+
+2009-09-09T20:40:28.000000Z
+8938cedeb8945eaa4d271008400ebae0
+2009-09-08T19:16:18.155168Z
+151533
+ktietz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+434
+
 vect-outer-4g.c
 file
-149693
+
 
 
 
@@ -944,43 +978,9 @@ irar
 
 1173
 
-O1-pr33854.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-b22fe35efe1542eae60bd4558f8ccc1f
-2007-10-22T12:05:36.183617Z
-129549
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-438
-
 vect-complex-5.c
 file
-149693
+
 
 
 
@@ -1014,7 +1014,7 @@ hjl
 
 no-scevccp-vect-iv-1.c
 file
-149693
+
 
 
 
@@ -1048,7 +1048,7 @@ hubicka
 
 bb-slp-4.c
 file
-149693
+
 
 
 
@@ -1082,7 +1082,7 @@ irar
 
 vect-multitypes-5.c
 file
-149693
+
 
 
 
@@ -1116,7 +1116,7 @@ rguenth
 
 no-scevccp-outer-18.c
 file
-149693
+
 
 
 
@@ -1150,7 +1150,7 @@ irar
 
 pr23816-1.c
 file
-149693
+
 
 
 
@@ -1184,7 +1184,7 @@ uros
 
 pr21591.c
 file
-149693
+
 
 
 
@@ -1218,7 +1218,7 @@ rguenth
 
 vect-42.c
 file
-149693
+
 
 
 
@@ -1252,7 +1252,7 @@ revitale
 
 vect-25.c
 file
-149693
+
 
 
 
@@ -1286,7 +1286,7 @@ hubicka
 
 pr37474.c
 file
-149693
+
 
 
 
@@ -1320,7 +1320,7 @@ irar
 
 bb-slp-22.c
 file
-149693
+
 
 
 
@@ -1354,7 +1354,7 @@ irar
 
 vect-multitypes-15.c
 file
-149693
+
 
 
 
@@ -1388,7 +1388,7 @@ hjl
 
 vect-strided-a-u16-mult.c
 file
-149693
+
 
 
 
@@ -1422,7 +1422,7 @@ hubicka
 
 vect-reduc-7.c
 file
-149693
+
 
 
 
@@ -1456,7 +1456,7 @@ hubicka
 
 vect-106.c
 file
-149693
+
 
 
 
@@ -1490,7 +1490,7 @@ hubicka
 
 vect-ifcvt-6.c
 file
-149693
+
 
 
 
@@ -1524,7 +1524,7 @@ rguenth
 
 vect-reduc-dot-u8b.c
 file
-149693
+
 
 
 
@@ -1558,7 +1558,7 @@ hjl
 
 vect-iv-8.c
 file
-149693
+
 
 
 
@@ -1592,7 +1592,7 @@ hubicka
 
 no-vfa-vect-79.c
 file
-149693
+
 
 
 
@@ -1660,7 +1660,7 @@ irar
 
 vect-34.c
 file
-149693
+
 
 
 
@@ -1694,7 +1694,7 @@ rguenth
 
 no-vfa-vect-102a.c
 file
-149693
+
 
 
 
@@ -1728,7 +1728,7 @@ irar
 
 vect-17.c
 file
-149693
+
 
 
 
@@ -1762,7 +1762,7 @@ dorit
 
 vect-align-1.c
 file
-149693
+
 
 
 
@@ -1796,7 +1796,7 @@ revitale
 
 pr37385.c
 file
-149693
+
 
 
 
@@ -1830,7 +1830,7 @@ hjl
 
 no-scevccp-outer-6-global.c
 file
-149693
+
 
 
 
@@ -1864,7 +1864,7 @@ dorit
 
 vect-outer-5.c
 file
-149693
+
 
 
 
@@ -1898,7 +1898,7 @@ hjl
 
 vect-1.c
 file
-149693
+
 
 
 
@@ -1932,7 +1932,7 @@ rguenth
 
 bb-slp-14.c
 file
-149693
+
 
 
 
@@ -1966,7 +1966,7 @@ irar
 
 slp-7.c
 file
-149693
+
 
 
 
@@ -2000,7 +2000,7 @@ hjl
 
 slp-perm-8.c
 file
-149693
+
 
 
 
@@ -2034,7 +2034,7 @@ irar
 
 vect-115.c
 file
-149693
+
 
 
 
@@ -2071,7 +2071,7 @@ dir
 
 no-scevccp-vect-iv-2.c
 file
-149693
+
 
 
 
@@ -2103,43 +2103,9 @@ hubicka
 
 866
 
-vect-widen-mult-u8.c
-file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-a188d34ef098f105d8f43dcc44aa3dfb
-2009-05-08T13:39:01.482444Z
-147286
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-857
-
 vect-strided-u32-i4.c
 file
-149693
+
 
 
 
@@ -2171,9 +2137,43 @@ hubicka
 
 1322
 
+vect-widen-mult-u8.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+a188d34ef098f105d8f43dcc44aa3dfb
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+857
+
 nodump-pr23073.c
 file
-149693
+
 
 
 
@@ -2205,145 +2205,9 @@ dorit
 
 222
 
-bb-slp-5.c
-file
-149693
-
-
-
-2009-05-28T13:02:19.000000Z
-f34326b25e33ceeb66e3a3babfe8939f
-2009-05-24T08:44:56.074841Z
-147829
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-947
-
-vect-multitypes-6.c
-file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-84b382172bfb815584bc61ffeb36269d
-2009-05-08T13:39:01.482444Z
-147286
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2408
-
-vect-fold-1.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-d6ef2e02794fee37f8590d18ec4faab7
-2008-08-21T16:15:08.890001Z
-139398
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-350
-
-pr27151.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-131e17545e93d091919134458f67d54e
-2007-02-09T09:32:30.968230Z
-121739
-uros
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-329
-
 pr25413a.c
 file
-149693
+
 
 
 
@@ -2375,17 +2239,17 @@ dorit
 
 2471
 
-pr30843.c
+pr27151.c
 file
-149693
+
 
 
 
 2009-04-24T17:45:25.000000Z
-b91bc3e7c6c2a7734103e5275eb1f070
-2007-02-22T12:30:12.116441Z
-122225
-irar
+131e17545e93d091919134458f67d54e
+2007-02-09T09:32:30.968230Z
+121739
+uros
 
 
 
@@ -2407,18 +2271,86 @@ irar
 
 
 
-572
+329
 
-no-scevccp-outer-19.c
+vect-fold-1.c
 file
-149693
 
 
 
-2009-04-24T17:45:25.000000Z
-e7abd4a5dc02d7d55005e05f45ea1786
-2007-10-21T10:01:16.357751Z
-129529
+
+2009-04-24T17:45:26.000000Z
+d6ef2e02794fee37f8590d18ec4faab7
+2008-08-21T16:15:08.890001Z
+139398
+rguenth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+350
+
+vect-multitypes-6.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+84b382172bfb815584bc61ffeb36269d
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2408
+
+bb-slp-5.c
+file
+
+
+
+
+2009-05-28T13:02:19.000000Z
+f34326b25e33ceeb66e3a3babfe8939f
+2009-05-24T08:44:56.074841Z
+147829
 irar
 
 
@@ -2441,11 +2373,11 @@ irar
 
 
 
-853
+947
 
 pr34407.c
 file
-149693
+
 
 
 
@@ -2477,21 +2409,17 @@ uros
 
 339
 
-vect-60.c
+no-scevccp-outer-19.c
 file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-bb176d91f9efc71ac639635261ebcf64
-2009-05-08T13:39:01.482444Z
-147286
-hjl
 
 
 
 
+2009-04-24T17:45:25.000000Z
+e7abd4a5dc02d7d55005e05f45ea1786
+2007-10-21T10:01:16.357751Z
+129529
+irar
 
 
 
@@ -2509,11 +2437,49 @@ hjl
 
 
 
-1846
+
+
+
+
+853
+
+pr30843.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+b91bc3e7c6c2a7734103e5275eb1f070
+2007-02-22T12:30:12.116441Z
+122225
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+572
 
 pr23816-2.c
 file
-149693
+
 
 
 
@@ -2545,9 +2511,43 @@ uros
 
 260
 
+vect-60.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+bb176d91f9efc71ac639635261ebcf64
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1846
+
 vect-26.c
 file
-149693
+
 
 
 
@@ -2581,7 +2581,7 @@ revitale
 
 pr37539.c
 file
-149693
+
 
 
 
@@ -2615,7 +2615,7 @@ irar
 
 vect-floatint-conversion-1.c
 file
-149693
+
 
 
 
@@ -2649,7 +2649,7 @@ rguenth
 
 vect-multitypes-16.c
 file
-149693
+
 
 
 
@@ -2681,43 +2681,9 @@ hjl
 
 903
 
-vect-reduc-8.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-91aabf82a5282ed3215c5db56cd1232a
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1659
-
 vect-107.c
 file
-149693
+
 
 
 
@@ -2749,9 +2715,43 @@ rguenth
 
 1158
 
+vect-reduc-8.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+91aabf82a5282ed3215c5db56cd1232a
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1659
+
 pr31041.c
 file
-149693
+
 
 
 
@@ -2785,7 +2785,7 @@ victork
 
 vect-ifcvt-7.c
 file
-149693
+
 
 
 
@@ -2817,43 +2817,9 @@ rguenth
 
 685
 
-vect-iv-9.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-58bfd301dee3eb6ba3bebd81f5a6cbc4
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-713
-
 pr30771.c
 file
-149693
+
 
 
 
@@ -2885,9 +2851,43 @@ dorit
 
 317
 
+vect-iv-9.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+58bfd301dee3eb6ba3bebd81f5a6cbc4
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+713
+
 vect-52.c
 file
-149693
+
 
 
 
@@ -2921,7 +2921,7 @@ hjl
 
 vect-35.c
 file
-149693
+
 
 
 
@@ -2955,7 +2955,7 @@ hjl
 
 vect-18.c
 file
-149693
+
 
 
 
@@ -2989,7 +2989,7 @@ dorit
 
 vect-align-2.c
 file
-149693
+
 
 
 
@@ -3023,7 +3023,7 @@ revitale
 
 ggc-pr37574.c
 file
-149693
+
 
 
 
@@ -3057,7 +3057,7 @@ uros
 
 no-scevccp-outer-1.c
 file
-149693
+
 
 
 
@@ -3091,7 +3091,7 @@ hubicka
 
 O3-vect-pr32243.c
 file
-149693
+
 
 
 
@@ -3123,43 +3123,9 @@ uros
 
 770
 
-vect-outer-6.c
-file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-895aa105092429bddbd27b7c69ed803b
-2009-05-08T13:39:01.482444Z
-147286
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1184
-
 vect-2.c
 file
-149693
+
 
 
 
@@ -3191,9 +3157,43 @@ dorit
 
 687
 
+vect-outer-6.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+895aa105092429bddbd27b7c69ed803b
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1184
+
 bb-slp-15.c
 file
-149693
+
 
 
 
@@ -3225,43 +3225,9 @@ irar
 
 951
 
-slp-8.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-8aba146fd9021d8e856f4d60db7d80ba
-2008-08-19T09:06:54.419851Z
-139226
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1116
-
 tree-vect.h
 file
-149693
+
 
 
 
@@ -3293,17 +3259,17 @@ revitale
 
 1067
 
-vect-strided-u8-i2-gap.c
+slp-8.c
 file
-149693
+
 
 
 
 2009-04-24T17:45:26.000000Z
-ec82e418af0b5f8e6d591e94e4d12d88
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
+8aba146fd9021d8e856f4d60db7d80ba
+2008-08-19T09:06:54.419851Z
+139226
+rguenth
 
 
 
@@ -3325,11 +3291,11 @@ hubicka
 
 
 
-1165
+1116
 
 no-math-errno-slp-32.c
 file
-149693
+
 
 
 
@@ -3361,9 +3327,43 @@ irar
 
 375
 
+vect-strided-u8-i2-gap.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+ec82e418af0b5f8e6d591e94e4d12d88
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1165
+
 slp-perm-9.c
 file
-149693
+
 
 
 
@@ -3397,7 +3397,7 @@ irar
 
 vect-116.c
 file
-149693
+
 
 
 
@@ -3431,7 +3431,7 @@ hubicka
 
 vect-outer-4i.c
 file
-149693
+
 
 
 
@@ -3465,7 +3465,7 @@ dorit
 
 no-scevccp-vect-iv-3.c
 file
-149693
+
 
 
 
@@ -3497,43 +3497,9 @@ hubicka
 
 759
 
-wrapv-vect-reduc-dot-s8b.c
-file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-3d5e5f3957e344192acd9a441f82efd1
-2009-05-08T13:39:01.482444Z
-147286
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1952
-
 slp-10.c
 file
-149693
+
 
 
 
@@ -3565,48 +3531,14 @@ rguenth
 
 3377
 
-bb-slp-6.c
+wrapv-vect-reduc-dot-s8b.c
 file
-149693
 
-
-
-2009-05-28T13:02:19.000000Z
-b8f34081e23e04f99bd7d597ea530edd
-2009-05-24T08:44:56.074841Z
-147829
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-974
-
-vect-multitypes-7.c
-file
-149693
 
 
 
 2009-05-11T03:52:37.000000Z
-030450689906f74aed0fbbb75fc599c7
+3d5e5f3957e344192acd9a441f82efd1
 2009-05-08T13:39:01.482444Z
 147286
 hjl
@@ -3631,11 +3563,11 @@ hjl
 
 
 
-900
+1952
 
 pr23831.c
 file
-149693
+
 
 
 
@@ -3667,9 +3599,77 @@ uros
 
 230
 
+vect-multitypes-7.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+030450689906f74aed0fbbb75fc599c7
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+900
+
+bb-slp-6.c
+file
+
+
+
+
+2009-05-28T13:02:19.000000Z
+b8f34081e23e04f99bd7d597ea530edd
+2009-05-24T08:44:56.074841Z
+147829
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+974
+
 pr32366.c
 file
-149693
+
 
 
 
@@ -3703,7 +3703,7 @@ uros
 
 vect-44.c
 file
-149693
+
 
 
 
@@ -3737,7 +3737,7 @@ revitale
 
 vect-27.c
 file
-149693
+
 
 
 
@@ -3771,7 +3771,7 @@ dorit
 
 pr38529.c
 file
-149693
+
 
 
 
@@ -3805,7 +3805,7 @@ irar
 
 vect-floatint-conversion-2.c
 file
-149693
+
 
 
 
@@ -3839,7 +3839,7 @@ hubicka
 
 vect-multitypes-17.c
 file
-149693
+
 
 
 
@@ -3873,7 +3873,7 @@ hjl
 
 vect-strided-u8-i8.c
 file
-149693
+
 
 
 
@@ -3907,7 +3907,7 @@ hubicka
 
 vect-outer-fir-lb.c
 file
-149693
+
 
 
 
@@ -3939,77 +3939,9 @@ hubicka
 
 1499
 
-vect-double-reduc-1.c
-file
-149693
-
-
-
-2009-07-14T13:03:14.000000Z
-0fab0ab98606c18dcb904501095a7e12
-2009-07-12T07:09:07.440573Z
-149526
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1240
-
-vect-reduc-9.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-46d1a85389ba590c5c8d2c5efab9ecc5
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1884
-
 vect-108.c
 file
-149693
+
 
 
 
@@ -4041,9 +3973,77 @@ rguenth
 
 742
 
+vect-reduc-9.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+46d1a85389ba590c5c8d2c5efab9ecc5
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1884
+
+vect-double-reduc-1.c
+file
+
+
+
+
+2009-07-14T13:03:14.000000Z
+0fab0ab98606c18dcb904501095a7e12
+2009-07-12T07:09:07.440573Z
+149526
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1240
+
 vect-70.c
 file
-149693
+
 
 
 
@@ -4077,7 +4077,7 @@ revitale
 
 vect-36.c
 file
-149693
+
 
 
 
@@ -4111,7 +4111,7 @@ dorit
 
 vect-19.c
 file
-149693
+
 
 
 
@@ -4145,7 +4145,7 @@ dorit
 
 no-scevccp-outer-2.c
 file
-149693
+
 
 
 
@@ -4179,7 +4179,7 @@ irar
 
 vect-3.c
 file
-149693
+
 
 
 
@@ -4213,7 +4213,7 @@ dorit
 
 bb-slp-16.c
 file
-149693
+
 
 
 
@@ -4247,7 +4247,7 @@ irar
 
 slp-9.c
 file
-149693
+
 
 
 
@@ -4281,7 +4281,7 @@ hjl
 
 fast-math-slp-27.c
 file
-149693
+
 
 
 
@@ -4315,7 +4315,7 @@ irar
 
 vect-all.c
 file
-149693
+
 
 
 
@@ -4349,7 +4349,7 @@ dorit
 
 vect-117.c
 file
-149693
+
 
 
 
@@ -4383,7 +4383,7 @@ uros
 
 vect-outer-4j.c
 file
-149693
+
 
 
 
@@ -4451,7 +4451,7 @@ spop
 
 slp-11.c
 file
-149693
+
 
 
 
@@ -4485,7 +4485,7 @@ rguenth
 
 vect-strided-u16-i2.c
 file
-149693
+
 
 
 
@@ -4519,7 +4519,7 @@ hubicka
 
 bb-slp-7.c
 file
-149693
+
 
 
 
@@ -4553,7 +4553,7 @@ irar
 
 vect-multitypes-8.c
 file
-149693
+
 
 
 
@@ -4587,7 +4587,7 @@ hjl
 
 pr25371.c
 file
-149693
+
 
 
 
@@ -4621,7 +4621,7 @@ uros
 
 pr33373.c
 file
-149693
+
 
 
 
@@ -4655,7 +4655,7 @@ dorit
 
 vect-62.c
 file
-149693
+
 
 
 
@@ -4689,7 +4689,7 @@ hubicka
 
 vect-28.c
 file
-149693
+
 
 
 
@@ -4723,7 +4723,7 @@ revitale
 
 no-section-anchors-vect-31.c
 file
-149693
+
 
 
 
@@ -4757,7 +4757,7 @@ revitale
 
 slp-multitypes-10.c
 file
-149693
+
 
 
 
@@ -4791,7 +4791,7 @@ irar
 
 vect-reduc-dot-u16a.c
 file
-149693
+
 
 
 
@@ -4825,7 +4825,7 @@ hjl
 
 vect-double-reduc-2.c
 file
-149693
+
 
 
 
@@ -4859,7 +4859,7 @@ irar
 
 vect-109.c
 file
-149693
+
 
 
 
@@ -4893,7 +4893,7 @@ revitale
 
 slp-20.c
 file
-149693
+
 
 
 
@@ -4927,7 +4927,7 @@ irar
 
 vect-ifcvt-9.c
 file
-149693
+
 
 
 
@@ -4961,7 +4961,7 @@ ghazi
 
 pr33804.c
 file
-149693
+
 
 
 
@@ -4995,7 +4995,7 @@ sje
 
 vect-71.c
 file
-149693
+
 
 
 
@@ -5029,7 +5029,7 @@ hubicka
 
 vect-54.c
 file
-149693
+
 
 
 
@@ -5063,7 +5063,7 @@ revitale
 
 vect-strided-a-mult.c
 file
-149693
+
 
 
 
@@ -5097,7 +5097,7 @@ hubicka
 
 no-scevccp-outer-3.c
 file
-149693
+
 
 
 
@@ -5131,7 +5131,7 @@ hubicka
 
 O3-vect-pr34223.c
 file
-149693
+
 
 
 
@@ -5165,7 +5165,7 @@ sje
 
 vect-4.c
 file
-149693
+
 
 
 
@@ -5199,7 +5199,7 @@ dorit
 
 vect-nest-cycle-1.c
 file
-149693
+
 
 
 
@@ -5233,7 +5233,7 @@ irar
 
 bb-slp-17.c
 file
-149693
+
 
 
 
@@ -5267,7 +5267,7 @@ irar
 
 vect-77-alignchecks.c
 file
-149693
+
 
 
 
@@ -5301,7 +5301,7 @@ hjl
 
 vect-strided-store-u32-i2.c
 file
-149693
+
 
 
 
@@ -5335,7 +5335,7 @@ rguenth
 
 vect-outer-4k.c
 file
-149693
+
 
 
 
@@ -5369,7 +5369,7 @@ irar
 
 no-vfa-vect-depend-1.c
 file
-149693
+
 
 
 
@@ -5403,7 +5403,7 @@ rguenth
 
 bb-slp-8.c
 file
-149693
+
 
 
 
@@ -5437,7 +5437,7 @@ irar
 
 vect-multitypes-9.c
 file
-149693
+
 
 
 
@@ -5471,7 +5471,7 @@ hjl
 
 pr18308.c
 file
-149693
+
 
 
 
@@ -5505,7 +5505,7 @@ janis
 
 vect-80.c
 file
-149693
+
 
 
 
@@ -5539,7 +5539,7 @@ hjl
 
 vect-63.c
 file
-149693
+
 
 
 
@@ -5573,7 +5573,7 @@ hubicka
 
 vect-46.c
 file
-149693
+
 
 
 
@@ -5607,7 +5607,7 @@ rguenth
 
 vect-29.c
 file
-149693
+
 
 
 
@@ -5641,7 +5641,7 @@ dorit
 
 slp-multitypes-11.c
 file
-149693
+
 
 
 
@@ -5675,7 +5675,7 @@ irar
 
 vect-strided-u8-i8-gap2.c
 file
-149693
+
 
 
 
@@ -5709,7 +5709,7 @@ hubicka
 
 vect-reduc-dot-u16b.c
 file
-149693
+
 
 
 
@@ -5743,7 +5743,7 @@ hjl
 
 vect-double-reduc-3.c
 file
-149693
+
 
 
 
@@ -5777,7 +5777,7 @@ irar
 
 vect-shift-1.c
 file
-149693
+
 
 
 
@@ -5811,7 +5811,7 @@ rguenth
 
 slp-21.c
 file
-149693
+
 
 
 
@@ -5845,7 +5845,7 @@ irar
 
 vect-iv-8a.c
 file
-149693
+
 
 
 
@@ -5879,7 +5879,7 @@ hubicka
 
 vect-72.c
 file
-149693
+
 
 
 
@@ -5913,7 +5913,7 @@ irar
 
 vect-38.c
 file
-149693
+
 
 
 
@@ -5947,7 +5947,7 @@ hubicka
 
 pr28952.c
 file
-149693
+
 
 
 
@@ -5981,7 +5981,7 @@ uros
 
 pr39529.c
 file
-149693
+
 
 
 
@@ -6015,7 +6015,7 @@ irar
 
 no-scevccp-outer-4.c
 file
-149693
+
 
 
 
@@ -6049,7 +6049,7 @@ hubicka
 
 vect-5.c
 file
-149693
+
 
 
 
@@ -6083,7 +6083,7 @@ dorit
 
 vect-nest-cycle-2.c
 file
-149693
+
 
 
 
@@ -6117,7 +6117,7 @@ irar
 
 bb-slp-18.c
 file
-149693
+
 
 
 
@@ -6151,7 +6151,7 @@ irar
 
 vect-outer-4l.c
 file
-149693
+
 
 
 
@@ -6185,7 +6185,7 @@ irar
 
 pr24300.c
 file
-149693
+
 
 
 
@@ -6219,7 +6219,7 @@ uros
 
 vect-reduc-1short.c
 file
-149693
+
 
 
 
@@ -6253,7 +6253,7 @@ rguenth
 
 slp-13.c
 file
-149693
+
 
 
 
@@ -6287,7 +6287,7 @@ irar
 
 vect-strided-u16-i4.c
 file
-149693
+
 
 
 
@@ -6321,7 +6321,7 @@ hubicka
 
 vect-strided-u32-i8.c
 file
-149693
+
 
 
 
@@ -6355,7 +6355,7 @@ hubicka
 
 bb-slp-9.c
 file
-149693
+
 
 
 
@@ -6389,7 +6389,7 @@ irar
 
 vect-64.c
 file
-149693
+
 
 
 
@@ -6423,7 +6423,7 @@ dorit
 
 slp-multitypes-12.c
 file
-149693
+
 
 
 
@@ -6457,7 +6457,7 @@ irar
 
 vect-outer-1a.c
 file
-149693
+
 
 
 
@@ -6491,7 +6491,7 @@ irar
 
 no-tree-dom-vect-bug.c
 file
-149693
+
 
 
 
@@ -6525,7 +6525,7 @@ hubicka
 
 no-tree-reassoc-bb-slp-12.c
 file
-149693
+
 
 
 
@@ -6559,7 +6559,7 @@ irar
 
 no-vfa-vect-51.c
 file
-149693
+
 
 
 
@@ -6593,7 +6593,7 @@ hubicka
 
 slp-multitypes-1.c
 file
-149693
+
 
 
 
@@ -6627,7 +6627,7 @@ irar
 
 vect-double-reduc-4.c
 file
-149693
+
 
 
 
@@ -6661,7 +6661,7 @@ irar
 
 vect-shift-2.c
 file
-149693
+
 
 
 
@@ -6695,7 +6695,7 @@ uros
 
 pr32230.c
 file
-149693
+
 
 
 
@@ -6729,7 +6729,7 @@ jsm28
 
 slp-22.c
 file
-149693
+
 
 
 
@@ -6763,7 +6763,7 @@ irar
 
 no-trapping-math-1.c
 file
-149693
+
 
 
 
@@ -6797,7 +6797,7 @@ jconner
 
 vect-73.c
 file
-149693
+
 
 
 
@@ -6831,7 +6831,7 @@ dorit
 
 vect-56.c
 file
-149693
+
 
 
 
@@ -6865,7 +6865,7 @@ hjl
 
 no-scevccp-outer-5.c
 file
-149693
+
 
 
 
@@ -6899,7 +6899,7 @@ hubicka
 
 no-scevccp-outer-9a.c
 file
-149693
+
 
 
 
@@ -6933,7 +6933,7 @@ hubicka
 
 vect-6.c
 file
-149693
+
 
 
 
@@ -6967,7 +6967,7 @@ dorit
 
 vect-nest-cycle-3.c
 file
-149693
+
 
 
 
@@ -7001,7 +7001,7 @@ irar
 
 bb-slp-19.c
 file
-149693
+
 
 
 
@@ -7035,7 +7035,7 @@ irar
 
 no-vfa-vect-43.c
 file
-149693
+
 
 
 
@@ -7069,7 +7069,7 @@ sje
 
 vect-strided-a-u8-i8-gap2.c
 file
-149693
+
 
 
 
@@ -7103,7 +7103,7 @@ hubicka
 
 vect-outer-4m.c
 file
-149693
+
 
 
 
@@ -7137,7 +7137,7 @@ hubicka
 
 fast-math-pr35982.c
 file
-149693
+
 
 
 
@@ -7171,7 +7171,7 @@ victork
 
 slp-12a.c
 file
-149693
+
 
 
 
@@ -7205,7 +7205,7 @@ rguenth
 
 slp-14.c
 file
-149693
+
 
 
 
@@ -7239,7 +7239,7 @@ rguenth
 
 pr18425.c
 file
-149693
+
 
 
 
@@ -7273,7 +7273,7 @@ janis
 
 pr36228.c
 file
-149693
+
 
 
 
@@ -7307,7 +7307,7 @@ spop
 
 pr30784.c
 file
-149693
+
 
 
 
@@ -7341,7 +7341,7 @@ dorit
 
 vect-82.c
 file
-149693
+
 
 
 
@@ -7375,7 +7375,7 @@ froydnj
 
 vect-65.c
 file
-149693
+
 
 
 
@@ -7409,7 +7409,7 @@ dorit
 
 vect-48.c
 file
-149693
+
 
 
 
@@ -7443,7 +7443,7 @@ hjl
 
 no-section-anchors-vect-34.c
 file
-149693
+
 
 
 
@@ -7477,7 +7477,7 @@ dorit
 
 vect-outer-1b.c
 file
-149693
+
 
 
 
@@ -7511,7 +7511,7 @@ dorit
 
 vect-strided-u8-i8-gap4.c
 file
-149693
+
 
 
 
@@ -7545,7 +7545,7 @@ hubicka
 
 slp-multitypes-2.c
 file
-149693
+
 
 
 
@@ -7579,7 +7579,7 @@ irar
 
 vect-double-reduc-5.c
 file
-149693
+
 
 
 
@@ -7613,7 +7613,7 @@ irar
 
 vect-outer-fir.c
 file
-149693
+
 
 
 
@@ -7647,7 +7647,7 @@ hubicka
 
 slp-23.c
 file
-149693
+
 
 
 
@@ -7681,7 +7681,7 @@ rguenth
 
 vect-strided-u32-mult.c
 file
-149693
+
 
 
 
@@ -7715,7 +7715,7 @@ hubicka
 
 no-trapping-math-2.c
 file
-149693
+
 
 
 
@@ -7749,7 +7749,7 @@ rguenth
 
 vect-float-truncate-1.c
 file
-149693
+
 
 
 
@@ -7783,7 +7783,7 @@ hubicka
 
 vect-91.c
 file
-149693
+
 
 
 
@@ -7817,7 +7817,7 @@ revitale
 
 vect-74.c
 file
-149693
+
 
 
 
@@ -7851,7 +7851,7 @@ hjl
 
 no-vfa-vect-dv-2.c
 file
-149693
+
 
 
 
@@ -7885,7 +7885,7 @@ irar
 
 vect-outer-2a.c
 file
-149693
+
 
 
 
@@ -7919,7 +7919,7 @@ hjl
 
 no-scevccp-outer-6.c
 file
-149693
+
 
 
 
@@ -7953,7 +7953,7 @@ dorit
 
 no-scevccp-outer-9b.c
 file
-149693
+
 
 
 
@@ -7987,7 +7987,7 @@ hubicka
 
 vect-7.c
 file
-149693
+
 
 
 
@@ -8021,7 +8021,7 @@ dorit
 
 no-vfa-vect-61.c
 file
-149693
+
 
 
 
@@ -8055,7 +8055,7 @@ hjl
 
 no-trapping-math-vect-ifcvt-11.c
 file
-149693
+
 
 
 
@@ -8089,7 +8089,7 @@ rguenth
 
 pr34005.c
 file
-149693
+
 
 
 
@@ -8123,7 +8123,7 @@ jakub
 
 slp-12b.c
 file
-149693
+
 
 
 
@@ -8157,7 +8157,7 @@ rguenth
 
 slp-15.c
 file
-149693
+
 
 
 
@@ -8191,19 +8191,15 @@ rguenth
 
 pr33833.c
 file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-45e81e5cd30d6064340769dda58bb40c
-2007-10-25T16:41:45.819971Z
-129628
-irar
 
 
 
 
+2009-09-09T20:40:28.000000Z
+b5937a9184f30e877071be4c94e0ba79
+2009-09-08T19:16:18.155168Z
+151533
+ktietz
 
 
 
@@ -8221,11 +8217,15 @@ irar
 
 
 
-605
+
+
+
+
+676
 
 vect-83.c
 file
-149693
+
 
 
 
@@ -8259,7 +8259,7 @@ froydnj
 
 vect-66.c
 file
-149693
+
 
 
 
@@ -8293,7 +8293,7 @@ hubicka
 
 wrapv-vect-reduc-2char.c
 file
-149693
+
 
 
 
@@ -8327,7 +8327,7 @@ rguenth
 
 no-vfa-vect-53.c
 file
-149693
+
 
 
 
@@ -8361,7 +8361,7 @@ hjl
 
 slp-multitypes-3.c
 file
-149693
+
 
 
 
@@ -8395,7 +8395,7 @@ irar
 
 vect-double-reduc-6.c
 file
-149693
+
 
 
 
@@ -8429,7 +8429,7 @@ irar
 
 fast-math-vect-pr29925.c
 file
-149693
+
 
 
 
@@ -8463,7 +8463,7 @@ hubicka
 
 slp-24.c
 file
-149693
+
 
 
 
@@ -8497,7 +8497,7 @@ rguenth
 
 pr36630.c
 file
-149693
+
 
 
 
@@ -8531,7 +8531,7 @@ jakub
 
 vect-widen-mult-sum.c
 file
-149693
+
 
 
 
@@ -8565,7 +8565,7 @@ hubicka
 
 vect-92.c
 file
-149693
+
 
 
 
@@ -8599,7 +8599,7 @@ revitale
 
 pr33369.c
 file
-149693
+
 
 
 
@@ -8633,7 +8633,7 @@ irar
 
 pr30858.c
 file
-149693
+
 
 
 
@@ -8667,7 +8667,7 @@ dorit
 
 vect-75.c
 file
-149693
+
 
 
 
@@ -8701,7 +8701,7 @@ hjl
 
 vect-58.c
 file
-149693
+
 
 
 
@@ -8735,7 +8735,7 @@ revitale
 
 vect-outer-2b.c
 file
-149693
+
 
 
 
@@ -8769,7 +8769,7 @@ hjl
 
 no-scevccp-outer-7.c
 file
-149693
+
 
 
 
@@ -8803,7 +8803,7 @@ hubicka
 
 fast-math-vect-pr25911.c
 file
-149693
+
 
 
 
@@ -8837,7 +8837,7 @@ dorit
 
 vect-8.c
 file
-149693
+
 
 
 
@@ -8871,7 +8871,7 @@ hubicka
 
 no-scevccp-outer-10.c
 file
-149693
+
 
 
 
@@ -8903,43 +8903,9 @@ hubicka
 
 857
 
-no-vfa-vect-45.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-77831a5d6c9a77d22d79dcbbf673628f
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1250
-
 no-scevccp-outer-10a.c
 file
-149693
+
 
 
 
@@ -8971,9 +8937,43 @@ hubicka
 
 931
 
+no-vfa-vect-45.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+77831a5d6c9a77d22d79dcbbf673628f
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1250
+
 no-trapping-math-vect-ifcvt-12.c
 file
-149693
+
 
 
 
@@ -9005,43 +9005,9 @@ rguenth
 
 680
 
-pr32224.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-2f2e2a817a3079441d9c5c5710f068f3
-2007-06-14T09:39:31.515977Z
-125703
-dorit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-379
-
 pr16105.c
 file
-149693
+
 
 
 
@@ -9073,9 +9039,43 @@ dorit
 
 610
 
+pr32224.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+2f2e2a817a3079441d9c5c5710f068f3
+2007-06-14T09:39:31.515977Z
+125703
+dorit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+379
+
 slp-33.c
 file
-149693
+
 
 
 
@@ -9109,7 +9109,7 @@ rguenth
 
 slp-16.c
 file
-149693
+
 
 
 
@@ -9143,7 +9143,7 @@ rguenth
 
 fast-math-vect-pow-1.c
 file
-149693
+
 
 
 
@@ -9177,7 +9177,7 @@ rguenth
 
 vect-vfa-01.c
 file
-149693
+
 
 
 
@@ -9209,43 +9209,9 @@ hubicka
 
 710
 
-vect-iv-10.c
-file
-149693
-
-
-
-2009-05-16T13:52:10.000000Z
-b7ccbd046bc690d9b43a284be9624753
-2009-05-15T17:02:28.044927Z
-147585
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-557
-
 vect-67.c
 file
-149693
+
 
 
 
@@ -9277,21 +9243,17 @@ hubicka
 
 943
 
-no-section-anchors-vect-36.c
+vect-iv-10.c
 file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-2228ddbfcf592f49fff7209275120fb0
-2007-10-30T05:25:10.825343Z
-129764
-dorit
 
 
 
 
+2009-05-16T13:52:10.000000Z
+b7ccbd046bc690d9b43a284be9624753
+2009-05-15T17:02:28.044927Z
+147585
+hubicka
 
 
 
@@ -9309,11 +9271,15 @@ dorit
 
 
 
-821
+
+
+
+
+557
 
 vect-outer-3a.c
 file
-149693
+
 
 
 
@@ -9345,21 +9311,17 @@ hjl
 
 1036
 
-no-vfa-vect-37.c
+no-section-anchors-vect-36.c
 file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-0c89a601210655e4f79829f07f3b8c5f
-2009-05-08T13:39:01.482444Z
-147286
-hjl
 
 
 
 
+2009-04-24T17:45:25.000000Z
+2228ddbfcf592f49fff7209275120fb0
+2007-10-30T05:25:10.825343Z
+129764
+dorit
 
 
 
@@ -9377,11 +9339,15 @@ hjl
 
 
 
-1391
+
+
+
+
+821
 
 slp-multitypes-4.c
 file
-149693
+
 
 
 
@@ -9413,9 +9379,43 @@ irar
 
 1579
 
+no-vfa-vect-37.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+0c89a601210655e4f79829f07f3b8c5f
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1391
+
 vect-double-reduc-7.c
 file
-149693
+
 
 
 
@@ -9449,7 +9449,7 @@ irar
 
 pr32216.c
 file
-149693
+
 
 
 
@@ -9483,7 +9483,7 @@ uros
 
 vect-reduc-2short.c
 file
-149693
+
 
 
 
@@ -9517,7 +9517,7 @@ hubicka
 
 slp-25.c
 file
-149693
+
 
 
 
@@ -9551,7 +9551,7 @@ revitale
 
 vect-ifcvt-10.c
 file
-149693
+
 
 
 
@@ -9585,7 +9585,7 @@ billingd
 
 pr30795.c
 file
-149693
+
 
 
 
@@ -9619,7 +9619,7 @@ dorit
 
 vect-93.c
 file
-149693
+
 
 
 
@@ -9651,43 +9651,9 @@ revitale
 
 2296
 
-vect-widen-mult-s16.c
-file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-ce59b654f92a9cdb4c7a22da382b6624
-2009-05-08T13:39:01.482444Z
-147286
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-776
-
 vect-76.c
 file
-149693
+
 
 
 
@@ -9719,9 +9685,43 @@ rguenth
 
 1307
 
+vect-widen-mult-s16.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+ce59b654f92a9cdb4c7a22da382b6624
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+776
+
 vect-strided-a-u16-i2.c
 file
-149693
+
 
 
 
@@ -9755,7 +9755,7 @@ hubicka
 
 vect-outer-2c.c
 file
-149693
+
 
 
 
@@ -9789,7 +9789,7 @@ hjl
 
 no-scevccp-outer-8.c
 file
-149693
+
 
 
 
@@ -9823,7 +9823,7 @@ revitale
 
 vect-9.c
 file
-149693
+
 
 
 
@@ -9855,77 +9855,9 @@ rguenth
 
 690
 
-vect-reduc-pattern-1a.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-aa04357b2eba063207c98e450247b6d7
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-898
-
-no-scevccp-outer-11.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-d832ab358b4d2ad319cc3259ca45833a
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-730
-
 slp-widen-mult-u8.c
 file
-149693
+
 
 
 
@@ -9957,9 +9889,77 @@ hjl
 
 1324
 
+no-scevccp-outer-11.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+d832ab358b4d2ad319cc3259ca45833a
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+730
+
+vect-reduc-pattern-1a.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+aa04357b2eba063207c98e450247b6d7
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+898
+
 no-scevccp-outer-10b.c
 file
-149693
+
 
 
 
@@ -9993,7 +9993,7 @@ hubicka
 
 pr32421.c
 file
-149693
+
 
 
 
@@ -10027,7 +10027,7 @@ pinskia
 
 no-trapping-math-vect-ifcvt-13.c
 file
-149693
+
 
 
 
@@ -10061,7 +10061,7 @@ rguenth
 
 slp-34.c
 file
-149693
+
 
 
 
@@ -10095,7 +10095,7 @@ rguenth
 
 slp-17.c
 file
-149693
+
 
 
 
@@ -10129,7 +10129,7 @@ rguenth
 
 fast-math-vect-pow-2.c
 file
-149693
+
 
 
 
@@ -10163,7 +10163,7 @@ irar
 
 pr33373b.c
 file
-149693
+
 
 
 
@@ -10195,77 +10195,9 @@ dorit
 
 213
 
-vect-vfa-02.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-934140931f68b32d8dc8606c6fd74354
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-905
-
-vect-77-global.c
-file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-7f777c5ea8150a9434976a424904a57f
-2009-05-08T13:39:01.482444Z
-147286
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1369
-
 section-anchors-vect-69.c
 file
-149693
+
 
 
 
@@ -10297,9 +10229,77 @@ dorit
 
 2245
 
+vect-77-global.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+7f777c5ea8150a9434976a424904a57f
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1369
+
+vect-vfa-02.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+934140931f68b32d8dc8606c6fd74354
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+905
+
 vect-85.c
 file
-149693
+
 
 
 
@@ -10331,43 +10331,9 @@ hjl
 
 791
 
-vect-iv-11.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-c08b88b2c3de30f8f8f64b5b81cb2ae3
-2007-02-11T11:46:07.003659Z
-121818
-dorit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-503
-
 vect-68.c
 file
-149693
+
 
 
 
@@ -10399,9 +10365,43 @@ dorit
 
 1362
 
+vect-iv-11.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+c08b88b2c3de30f8f8f64b5b81cb2ae3
+2007-02-11T11:46:07.003659Z
+121818
+dorit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+503
+
 vect-outer-3b.c
 file
-149693
+
 
 
 
@@ -10435,7 +10435,7 @@ hjl
 
 vect-strided-u8-i8-gap7.c
 file
-149693
+
 
 
 
@@ -10467,43 +10467,9 @@ hubicka
 
 1865
 
-vect-iv-1.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-b77237cce186d3cf1f897b047c4128f8
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-719
-
 no-scevccp-outer-20.c
 file
-149693
+
 
 
 
@@ -10535,9 +10501,43 @@ hubicka
 
 887
 
+vect-iv-1.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+b77237cce186d3cf1f897b047c4128f8
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+719
+
 slp-multitypes-5.c
 file
-149693
+
 
 
 
@@ -10569,43 +10569,9 @@ irar
 
 1617
 
-pr31343.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-af99d2dafc9c70226f9b160e566ea1d5
-2007-04-11T00:09:35.461288Z
-123708
-spop
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-627
-
 vect-10.c
 file
-149693
+
 
 
 
@@ -10637,9 +10603,43 @@ janis
 
 592
 
+pr31343.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+af99d2dafc9c70226f9b160e566ea1d5
+2007-04-11T00:09:35.461288Z
+123708
+spop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+627
+
 pr40074.c
 file
-149693
+
 
 
 
@@ -10673,7 +10673,7 @@ irar
 
 slp-26.c
 file
-149693
+
 
 
 
@@ -10707,7 +10707,7 @@ irar
 
 vect-77.c
 file
-149693
+
 
 
 
@@ -10741,7 +10741,7 @@ hjl
 
 slp-perm-1.c
 file
-149693
+
 
 
 
@@ -10775,7 +10775,7 @@ irar
 
 vect-outer-4a.c
 file
-149693
+
 
 
 
@@ -10809,7 +10809,7 @@ dorit
 
 vect-outer-2d.c
 file
-149693
+
 
 
 
@@ -10843,7 +10843,7 @@ hjl
 
 vect-82_64.c
 file
-149693
+
 
 
 
@@ -10877,7 +10877,7 @@ hubicka
 
 no-scevccp-outer-9.c
 file
-149693
+
 
 
 
@@ -10911,7 +10911,7 @@ hubicka
 
 vect-strided-store-u16-i4.c
 file
-149693
+
 
 
 
@@ -10943,43 +10943,9 @@ irar
 
 1263
 
-vect-reduc-pattern-1b.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-43efd9393a03bb2e074e07c9ef126b98
-2008-08-12T06:31:57.712674Z
-138988
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-940
-
 no-scevccp-outer-12.c
 file
-149693
+
 
 
 
@@ -11011,9 +10977,43 @@ hubicka
 
 801
 
+vect-reduc-pattern-1b.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+43efd9393a03bb2e074e07c9ef126b98
+2008-08-12T06:31:57.712674Z
+138988
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+940
+
 no-trapping-math-vect-ifcvt-14.c
 file
-149693
+
 
 
 
@@ -11047,7 +11047,7 @@ rguenth
 
 pr22506.c
 file
-149693
+
 
 
 
@@ -11081,7 +11081,7 @@ janis
 
 slp-35.c
 file
-149693
+
 
 
 
@@ -11113,43 +11113,9 @@ irar
 
 1361
 
-no-vfa-vect-101.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-faf09dfa25b9008a6f9e3c531ad8c9b7
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-974
-
 slp-18.c
 file
-149693
+
 
 
 
@@ -11181,9 +11147,43 @@ victork
 
 2796
 
+no-vfa-vect-101.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+faf09dfa25b9008a6f9e3c531ad8c9b7
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+974
+
 vect-vfa-03.c
 file
-149693
+
 
 
 
@@ -11214,6 +11214,74 @@ irar
 
 
 1288
+
+O1-pr41008.c
+file
+
+
+
+
+2009-09-08T03:18:09.000000Z
+67c5def463039ac78366262aa319f3ea
+2009-08-09T12:13:19.272895Z
+150591
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+326
+
+vect-86.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+6b4748b2a577ae0b6c94d72a6350a713
+2007-10-30T05:25:10.825343Z
+129764
+dorit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+972
 
 vect-pre-interact.c
 file
@@ -11249,77 +11317,9 @@ matz
 
 453
 
-vect-86.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-6b4748b2a577ae0b6c94d72a6350a713
-2007-10-30T05:25:10.825343Z
-129764
-dorit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-972
-
-vect-reduc-1.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-b11a063a4bf318b3146c469ad147874c
-2008-08-19T09:06:54.419851Z
-139226
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1179
-
 vect-100.c
 file
-149693
+
 
 
 
@@ -11351,9 +11351,43 @@ hubicka
 
 1418
 
+vect-reduc-1.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+b11a063a4bf318b3146c469ad147874c
+2008-08-19T09:06:54.419851Z
+139226
+rguenth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1179
+
 vect-outer-3c.c
 file
-149693
+
 
 
 
@@ -11387,7 +11421,7 @@ hjl
 
 vect-strided-a-u32-mult.c
 file
-149693
+
 
 
 
@@ -11421,7 +11455,7 @@ hubicka
 
 pr35821-altivec.c
 file
-149693
+
 
 
 
@@ -11455,7 +11489,7 @@ irar
 
 Os-vect-95.c
 file
-149693
+
 
 
 
@@ -11487,77 +11521,9 @@ hjl
 
 1289
 
-vect-reduc-pattern-2a.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-baa1dc147adef5d6379f18c8f0d8de65
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-892
-
-vect-iv-2.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-ad5666706ec9032ff69dd751b76c5d3c
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-850
-
 no-scevccp-outer-21.c
 file
-149693
+
 
 
 
@@ -11589,9 +11555,77 @@ irar
 
 941
 
+vect-iv-2.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+ad5666706ec9032ff69dd751b76c5d3c
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+850
+
+vect-reduc-pattern-2a.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+baa1dc147adef5d6379f18c8f0d8de65
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+892
+
 slp-multitypes-6.c
 file
-149693
+
 
 
 
@@ -11623,43 +11657,9 @@ irar
 
 1764
 
-pr40254.c
-file
-149693
-
-
-
-2009-05-28T13:02:19.000000Z
-11e882effb7744ba3c092f26846c0275
-2009-05-28T09:02:53.276331Z
-147945
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-498
-
 vect-11.c
 file
-149693
+
 
 
 
@@ -11691,9 +11691,43 @@ rguenth
 
 768
 
+pr40254.c
+file
+
+
+
+
+2009-05-28T13:02:19.000000Z
+11e882effb7744ba3c092f26846c0275
+2009-05-28T09:02:53.276331Z
+147945
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+498
+
 no-trapping-math-vect-111.c
 file
-149693
+
 
 
 
@@ -11727,7 +11761,7 @@ rguenth
 
 pr34591.c
 file
-149693
+
 
 
 
@@ -11761,7 +11795,7 @@ dorit
 
 pr18536.c
 file
-149693
+
 
 
 
@@ -11793,43 +11827,9 @@ janis
 
 496
 
-vect-95.c
-file
-149693
-
-
-
-2009-06-10T05:24:44.000000Z
-63803e39d6152f28a3a68fb10bb76625
-2009-06-05T15:28:50.693894Z
-148211
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2115
-
 slp-1.c
 file
-149693
+
 
 
 
@@ -11861,9 +11861,43 @@ irar
 
 2412
 
+vect-95.c
+file
+
+
+
+
+2009-06-10T05:24:44.000000Z
+63803e39d6152f28a3a68fb10bb76625
+2009-06-05T15:28:50.693894Z
+148211
+revitale
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2115
+
 vect-78.c
 file
-149693
+
 
 
 
@@ -11895,43 +11929,9 @@ hjl
 
 886
 
-vect-strided-a-u16-i4.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-0a86423f61276c0b1a82b5eb0b371500
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1378
-
 slp-perm-2.c
 file
-149693
+
 
 
 
@@ -11963,9 +11963,43 @@ irar
 
 1226
 
+vect-strided-a-u16-i4.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+0a86423f61276c0b1a82b5eb0b371500
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1378
+
 no-section-anchors-vect-64.c
 file
-149693
+
 
 
 
@@ -11999,7 +12033,7 @@ revitale
 
 vect-outer-4b.c
 file
-149693
+
 
 
 
@@ -12033,7 +12067,7 @@ dorit
 
 vect-78-alignchecks.c
 file
-149693
+
 
 
 
@@ -12065,43 +12099,9 @@ hjl
 
 2060
 
-vect-reduc-pattern-1c.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-3f1ab1668b0ee29be14571dcad9f4129
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-906
-
 no-scevccp-outer-13.c
 file
-149693
+
 
 
 
@@ -12133,9 +12133,43 @@ hubicka
 
 1172
 
+vect-reduc-pattern-1c.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+3f1ab1668b0ee29be14571dcad9f4129
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+906
+
 vect-strided-a-u8-i8-gap7.c
 file
-149693
+
 
 
 
@@ -12167,43 +12201,9 @@ hubicka
 
 1841
 
-no-trapping-math-vect-ifcvt-15.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-df0e5fefe2ff5df2a28ff7c361ddbfa0
-2008-08-19T09:06:54.419851Z
-139226
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-682
-
 vect-20.c
 file
-149693
+
 
 
 
@@ -12235,17 +12235,17 @@ dorit
 
 1676
 
-no-scevccp-noreassoc-outer-1.c
+no-trapping-math-vect-ifcvt-15.c
 file
-149693
+
 
 
 
 2009-04-24T17:45:25.000000Z
-d81a3a379a84eb9888777f04fcebc228
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
+df0e5fefe2ff5df2a28ff7c361ddbfa0
+2008-08-19T09:06:54.419851Z
+139226
+rguenth
 
 
 
@@ -12267,11 +12267,11 @@ hubicka
 
 
 
-738
+682
 
 slp-36.c
 file
-149693
+
 
 
 
@@ -12303,17 +12303,17 @@ irar
 
 1412
 
-no-vfa-vect-102.c
+no-scevccp-noreassoc-outer-1.c
 file
-149693
+
 
 
 
 2009-04-24T17:45:25.000000Z
-2694501bf534731cd005e83eb477a375
-2007-09-12T08:48:44.784481Z
-128420
-irar
+d81a3a379a84eb9888777f04fcebc228
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
 
 
 
@@ -12335,11 +12335,11 @@ irar
 
 
 
-1096
+738
 
 slp-19.c
 file
-149693
+
 
 
 
@@ -12371,21 +12371,17 @@ rguenth
 
 4362
 
-vect-vfa-04.c
+no-vfa-vect-102.c
 file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-b5af896397ac4a2a894ce0d5bbb3a8de
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
 
 
 
 
+2009-04-24T17:45:25.000000Z
+2694501bf534731cd005e83eb477a375
+2007-09-12T08:48:44.784481Z
+128420
+irar
 
 
 
@@ -12403,11 +12399,15 @@ hubicka
 
 
 
-718
+
+
+
+
+1096
 
 vect-multitypes-10.c
 file
-149693
+
 
 
 
@@ -12439,9 +12439,43 @@ hjl
 
 1262
 
+vect-vfa-04.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+b5af896397ac4a2a894ce0d5bbb3a8de
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+718
+
 vect-87.c
 file
-149693
+
 
 
 
@@ -12475,7 +12509,7 @@ revitale
 
 vect-reduc-2.c
 file
-149693
+
 
 
 
@@ -12509,7 +12543,7 @@ rguenth
 
 vect-recip.c
 file
-149693
+
 
 
 
@@ -12543,7 +12577,7 @@ uros
 
 vect-intfloat-conversion-4a.c
 file
-149693
+
 
 
 
@@ -12577,7 +12611,7 @@ rguenth
 
 O3-pr36098.c
 file
-149693
+
 
 
 
@@ -12609,111 +12643,9 @@ irar
 
 457
 
-vect-reduc-pattern-2b.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-ae6a7438c551ba61a29eea8626e35ab9
-2008-08-12T06:31:57.712674Z
-138988
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-934
-
-vect-iv-3.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-edb068f1a63e440e2ed49b3cd760cc1b
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-738
-
-no-section-anchors-vect-outer-4h.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-42bd848a790b9fb7b6c681374a1fa986
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-723
-
 no-scevccp-outer-22.c
 file
-149693
+
 
 
 
@@ -12745,21 +12677,17 @@ hubicka
 
 804
 
-vect-reduc-dot-s8a.c
+no-section-anchors-vect-outer-4h.c
 file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-4e0ec50ad0a37ab5a881b0f43c39b31e
-2009-05-08T13:39:01.482444Z
-147286
-hjl
 
 
 
 
+2009-04-24T17:45:25.000000Z
+42bd848a790b9fb7b6c681374a1fa986
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
 
 
 
@@ -12777,11 +12705,83 @@ hjl
 
 
 
-1407
+
+
+
+
+723
+
+vect-iv-3.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+edb068f1a63e440e2ed49b3cd760cc1b
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+738
+
+vect-reduc-pattern-2b.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+ae6a7438c551ba61a29eea8626e35ab9
+2008-08-12T06:31:57.712674Z
+138988
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+934
 
 no-vfa-vect-57.c
 file
-149693
+
 
 
 
@@ -12813,9 +12813,43 @@ hjl
 
 1705
 
+vect-reduc-dot-s8a.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+4e0ec50ad0a37ab5a881b0f43c39b31e
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1407
+
 slp-multitypes-7.c
 file
-149693
+
 
 
 
@@ -12883,7 +12917,7 @@ irar
 
 vect-12.c
 file
-149693
+
 
 
 
@@ -12917,7 +12951,7 @@ hubicka
 
 pr40238.c
 file
-149693
+
 
 
 
@@ -12951,7 +12985,7 @@ irar
 
 slp-28.c
 file
-149693
+
 
 
 
@@ -12985,19 +13019,15 @@ rguenth
 
 pr33846.c
 file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-70108da1608ff6c875e90ad8a126a831
-2007-10-23T20:15:04.463875Z
-129589
-uros
 
 
 
 
+2009-09-09T20:40:28.000000Z
+1bc05de6cbb59041cb461872d7f9e337
+2009-09-08T19:16:18.155168Z
+151533
+ktietz
 
 
 
@@ -13015,11 +13045,15 @@ uros
 
 
 
-446
+
+
+
+
+486
 
 pr21969.c
 file
-149693
+
 
 
 
@@ -13051,77 +13085,9 @@ sje
 
 128
 
-vect-reduc-1char.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-b817cacc75beed419ccbcba1999077b3
-2008-08-19T09:06:54.419851Z
-139226
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1066
-
-vect-96.c
-file
-149693
-
-
-
-2009-06-26T14:46:43.000000Z
-49dab57d1e7e29c2eba4b1eaf64226e7
-2009-06-21T11:36:03.641682Z
-148762
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1394
-
 slp-2.c
 file
-149693
+
 
 
 
@@ -13153,9 +13119,77 @@ irar
 
 3368
 
+vect-96.c
+file
+
+
+
+
+2009-06-26T14:46:43.000000Z
+49dab57d1e7e29c2eba4b1eaf64226e7
+2009-06-21T11:36:03.641682Z
+148762
+revitale
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1394
+
+vect-reduc-1char.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+b817cacc75beed419ccbcba1999077b3
+2008-08-19T09:06:54.419851Z
+139226
+rguenth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1066
+
 slp-perm-3.c
 file
-149693
+
 
 
 
@@ -13187,77 +13221,9 @@ irar
 
 1611
 
-vect-intfloat-conversion-1.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-9c2a2baca0040e41d7490dc75bdc98e1
-2008-08-19T09:06:54.419851Z
-139226
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-714
-
-no-section-anchors-vect-65.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-c82651d9048aa99020bf7554b74d3058
-2007-10-30T05:25:10.825343Z
-129764
-dorit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2388
-
 vect-110.c
 file
-149693
+
 
 
 
@@ -13289,9 +13255,77 @@ hubicka
 
 733
 
+no-section-anchors-vect-65.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+c82651d9048aa99020bf7554b74d3058
+2007-10-30T05:25:10.825343Z
+129764
+dorit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2388
+
+vect-intfloat-conversion-1.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+9c2a2baca0040e41d7490dc75bdc98e1
+2008-08-19T09:06:54.419851Z
+139226
+rguenth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+714
+
 vect-outer-4c.c
 file
-149693
+
 
 
 
@@ -13325,7 +13359,7 @@ sje
 
 vect-complex-1.c
 file
-149693
+
 
 
 
@@ -13359,7 +13393,7 @@ hjl
 
 pr20122.c
 file
-149693
+
 
 
 
@@ -13391,43 +13425,9 @@ hjl
 
 1592
 
-vect-strided-mult.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-79280d2aec6774cecded10fa7eb5e780
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1319
-
 vect-multitypes-1.c
 file
-149693
+
 
 
 
@@ -13459,9 +13459,43 @@ revitale
 
 2608
 
+vect-strided-mult.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+79280d2aec6774cecded10fa7eb5e780
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1319
+
 no-scevccp-outer-14.c
 file
-149693
+
 
 
 
@@ -13495,7 +13529,7 @@ hubicka
 
 no-vfa-vect-49.c
 file
-149693
+
 
 
 
@@ -13529,7 +13563,7 @@ hjl
 
 vect-21.c
 file
-149693
+
 
 
 
@@ -13560,6 +13594,74 @@ dorit
 
 
 2228
+
+slp-37.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+33e455751ec22a0b2a49ea0c314e0712
+2007-09-09T08:46:12.685255Z
+128289
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1114
+
+pr37730.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+832328a8f7e5e685ebb92fbe2a1e8ffd
+2008-10-30T12:49:31.604012Z
+141461
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+363
 
 no-scevccp-noreassoc-outer-2.c
 file
@@ -13595,77 +13697,9 @@ simonb
 
 744
 
-pr37730.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-832328a8f7e5e685ebb92fbe2a1e8ffd
-2008-10-30T12:49:31.604012Z
-141461
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-363
-
-slp-37.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-33e455751ec22a0b2a49ea0c314e0712
-2007-09-09T08:46:12.685255Z
-128289
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1114
-
 pr33953.c
 file
-149693
+
 
 
 
@@ -13699,7 +13733,7 @@ sje
 
 pr35821-spu.c
 file
-149693
+
 
 
 
@@ -13733,7 +13767,7 @@ irar
 
 vect-multitypes-11.c
 file
-149693
+
 
 
 
@@ -13767,7 +13801,7 @@ hjl
 
 vect-88.c
 file
-149693
+
 
 
 
@@ -13801,7 +13835,7 @@ revitale
 
 vect-strided-u8-i2.c
 file
-149693
+
 
 
 
@@ -13835,7 +13869,7 @@ hubicka
 
 vect-reduc-3.c
 file
-149693
+
 
 
 
@@ -13869,7 +13903,7 @@ rguenth
 
 vect-83_64.c
 file
-149693
+
 
 
 
@@ -13903,7 +13937,7 @@ hubicka
 
 vect-intfloat-conversion-4b.c
 file
-149693
+
 
 
 
@@ -13937,7 +13971,7 @@ rguenth
 
 vect-ifcvt-2.c
 file
-149693
+
 
 
 
@@ -13969,43 +14003,9 @@ rguenth
 
 679
 
-vect-reduc-pattern-2c.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-316c3da25c86852dcce57e4cf86fa1b8
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1161
-
 vect-iv-4.c
 file
-149693
+
 
 
 
@@ -14037,9 +14037,43 @@ hubicka
 
 786
 
+vect-reduc-pattern-2c.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+316c3da25c86852dcce57e4cf86fa1b8
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1161
+
 vect-reduc-dot-s8b.c
 file
-149693
+
 
 
 
@@ -14073,7 +14107,7 @@ hjl
 
 slp-multitypes-8.c
 file
-149693
+
 
 
 
@@ -14104,6 +14138,40 @@ irar
 
 
 1018
+
+vect-30.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+0201966ef2327252a88fb63a26a4d3a2
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+952
 
 vect-cond-2.c
 file
@@ -14139,77 +14207,9 @@ irar
 
 878
 
-vect-30.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-0201966ef2327252a88fb63a26a4d3a2
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-952
-
-vect-strided-a-u8-i2-gap.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-419df757971c8abc9074f0e2bf69532a
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1141
-
 vect-13.c
 file
-149693
+
 
 
 
@@ -14241,9 +14241,43 @@ dorit
 
 793
 
+vect-strided-a-u8-i2-gap.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+419df757971c8abc9074f0e2bf69532a
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1141
+
 vect-strided-same-dr.c
 file
-149693
+
 
 
 
@@ -14277,7 +14311,7 @@ hubicka
 
 fast-math-vect-reduc-5.c
 file
-149693
+
 
 
 
@@ -14311,7 +14345,7 @@ rguenth
 
 vect-outer-1.c
 file
-149693
+
 
 
 
@@ -14343,43 +14377,9 @@ hjl
 
 755
 
-bb-slp-10.c
-file
-149693
-
-
-
-2009-06-01T03:56:10.000000Z
-bf50cc51d1d3d9ec1230f140ae6d3507
-2009-05-31T06:55:37.342529Z
-148010
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1068
-
 vect-widen-mult-u16.c
 file
-149693
+
 
 
 
@@ -14411,21 +14411,17 @@ hjl
 
 1068
 
-vect-97.c
+bb-slp-10.c
 file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-f6123733ce48b8e09728942295c1f2e5
-2009-05-08T13:39:01.482444Z
-147286
-hjl
 
 
 
 
+2009-06-01T03:56:10.000000Z
+bf50cc51d1d3d9ec1230f140ae6d3507
+2009-05-31T06:55:37.342529Z
+148010
+irar
 
 
 
@@ -14443,11 +14439,15 @@ hjl
 
 
 
-1445
+
+
+
+
+1068
 
 slp-3.c
 file
-149693
+
 
 
 
@@ -14479,9 +14479,43 @@ hubicka
 
 4005
 
+vect-97.c
+file
+
+
+
+
+2009-05-11T03:52:37.000000Z
+f6123733ce48b8e09728942295c1f2e5
+2009-05-08T13:39:01.482444Z
+147286
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1445
+
 slp-perm-4.c
 file
-149693
+
 
 
 
@@ -14513,43 +14547,9 @@ irar
 
 1970
 
-vect-intfloat-conversion-2.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-e139237677244e589958236fb6d8b709
-2008-08-19T09:06:54.419851Z
-139226
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-797
-
 no-section-anchors-vect-66.c
 file
-149693
+
 
 
 
@@ -14581,9 +14581,43 @@ revitale
 
 1746
 
+vect-intfloat-conversion-2.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+e139237677244e589958236fb6d8b709
+2008-08-19T09:06:54.419851Z
+139226
+rguenth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+797
+
 vect-outer-4d.c
 file
-149693
+
 
 
 
@@ -14617,7 +14651,7 @@ hubicka
 
 vect-strided-mult-char-ls.c
 file
-149693
+
 
 
 
@@ -14651,7 +14685,7 @@ hubicka
 
 vect-complex-2.c
 file
-149693
+
 
 
 
@@ -14685,7 +14719,7 @@ victork
 
 vect-dv-1.c
 file
-149693
+
 
 
 
@@ -14719,7 +14753,7 @@ billingd
 
 vect-strided-store-a-u8-i2.c
 file
-149693
+
 
 
 
@@ -14751,43 +14785,9 @@ irar
 
 899
 
-bb-slp-1.c
-file
-149693
-
-
-
-2009-05-28T13:02:19.000000Z
-c6b88e6b1b50a667c97516974f722c35
-2009-05-24T08:44:56.074841Z
-147829
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1945
-
 vect-multitypes-2.c
 file
-149693
+
 
 
 
@@ -14819,9 +14819,43 @@ rguenth
 
 1080
 
+bb-slp-1.c
+file
+
+
+
+
+2009-05-28T13:02:19.000000Z
+c6b88e6b1b50a667c97516974f722c35
+2009-05-24T08:44:56.074841Z
+147829
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1945
+
 no-scevccp-outer-15.c
 file
-149693
+
 
 
 
@@ -14855,7 +14889,7 @@ hubicka
 
 pr40542.c
 file
-149693
+
 
 
 
@@ -14889,7 +14923,7 @@ irar
 
 vect-22.c
 file
-149693
+
 
 
 
@@ -14923,7 +14957,7 @@ dorit
 
 no-scevccp-noreassoc-outer-3.c
 file
-149693
+
 
 
 
@@ -14957,7 +14991,7 @@ hubicka
 
 pr31699.c
 file
-149693
+
 
 
 
@@ -14991,7 +15025,7 @@ rguenth
 
 vect-multitypes-12.c
 file
-149693
+
 
 
 
@@ -15025,7 +15059,7 @@ hjl
 
 vect-89.c
 file
-149693
+
 
 
 
@@ -15059,7 +15093,7 @@ revitale
 
 vect-103.c
 file
-149693
+
 
 
 
@@ -15091,17 +15125,17 @@ hubicka
 
 1159
 
-section-anchors-nest-1.c
+aligned-section-anchors-nest-1.c
 file
 
 
 
 
-2009-07-31T04:47:40.000000Z
-ccf1f095d300b3b26b1b6c1a88def3cf
-2009-07-21T12:35:38.606848Z
-149853
-pbrook
+2009-09-08T03:18:09.000000Z
+24a49eb435513c45d9d55920f99ac976
+2009-08-18T16:58:35.297891Z
+150880
+froydnj
 
 
 
@@ -15123,45 +15157,11 @@ pbrook
 
 
 
-772
-
-vect-ifcvt-3.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-600cdf5b4d727d446f9f74593c107b09
-2008-08-19T09:06:54.419851Z
-139226
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-677
+655
 
 no-vfa-pr29145.c
 file
-149693
+
 
 
 
@@ -15193,9 +15193,77 @@ sje
 
 903
 
+vect-ifcvt-3.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+600cdf5b4d727d446f9f74593c107b09
+2008-08-19T09:06:54.419851Z
+139226
+rguenth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+677
+
+vect.exp
+file
+
+
+
+
+2009-09-08T03:18:09.000000Z
+c0b87322f4c63a2636db41622ed72814
+2009-08-18T16:58:35.297891Z
+150880
+froydnj
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+10313
+
 wrapv-vect-reduc-pattern-2c.c
 file
-149693
+
 
 
 
@@ -15227,43 +15295,9 @@ hubicka
 
 901
 
-vect.exp
-file
-149693
-
-
-
-2009-06-30T14:24:03.000000Z
-c5139dc91d6a5ffc22171eb2719b9263
-2009-06-27T14:40:29.045597Z
-149006
-bonzini
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-10026
-
 vect-iv-5.c
 file
-149693
+
 
 
 
@@ -15297,7 +15331,7 @@ hubicka
 
 vect-reduc-dot-s8c.c
 file
-149693
+
 
 
 
@@ -15329,77 +15363,9 @@ hjl
 
 827
 
-no-tree-pre-slp-29.c
-file
-149693
-
-
-
-2009-04-24T17:45:25.000000Z
-d1130b8b8e0d2b97826012854757c87a
-2007-09-09T08:46:12.685255Z
-128289
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1712
-
-slp-multitypes-9.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-d6a71c9a1ebd1b36ba7ca1d01690081d
-2008-08-19T08:31:41.205137Z
-139225
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1084
-
 vect-11a.c
 file
-149693
+
 
 
 
@@ -15431,17 +15397,17 @@ rguenth
 
 1474
 
-vect-31.c
+slp-multitypes-9.c
 file
-149693
+
 
 
 
 2009-04-24T17:45:26.000000Z
-6aacee27197033c8345525841e9c8901
-2007-10-30T05:25:10.825343Z
-129764
-dorit
+d6a71c9a1ebd1b36ba7ca1d01690081d
+2008-08-19T08:31:41.205137Z
+139225
+irar
 
 
 
@@ -15463,7 +15429,41 @@ dorit
 
 
 
-1380
+1084
+
+no-tree-pre-slp-29.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+d1130b8b8e0d2b97826012854757c87a
+2007-09-09T08:46:12.685255Z
+128289
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1712
 
 vect-cond-3.c
 file
@@ -15499,9 +15499,43 @@ irar
 
 1478
 
+vect-31.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+6aacee27197033c8345525841e9c8901
+2007-10-30T05:25:10.825343Z
+129764
+dorit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1380
+
 vect-14.c
 file
-149693
+
 
 
 
@@ -15535,7 +15569,7 @@ hubicka
 
 vect-78-global.c
 file
-149693
+
 
 
 
@@ -15569,7 +15603,7 @@ hjl
 
 vect-outer-2.c
 file
-149693
+
 
 
 
@@ -15603,7 +15637,7 @@ hjl
 
 bb-slp-11.c
 file
-149693
+
 
 
 
@@ -15635,43 +15669,9 @@ irar
 
 1020
 
-vect-98.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-1b9a8aa9cc2e846f8c85c217e7cb9755
-2008-08-02T12:05:47.061753Z
-138553
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-972
-
 slp-4.c
 file
-149693
+
 
 
 
@@ -15703,9 +15703,43 @@ irar
 
 3490
 
+vect-98.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+1b9a8aa9cc2e846f8c85c217e7cb9755
+2008-08-02T12:05:47.061753Z
+138553
+rguenth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+972
+
 vect-strided-float.c
 file
-149693
+
 
 
 
@@ -15739,7 +15773,7 @@ rguenth
 
 slp-perm-5.c
 file
-149693
+
 
 
 
@@ -15771,43 +15805,9 @@ irar
 
 1855
 
-vect-intfloat-conversion-3.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-aab8f51bd5deba5ebf001dce651547e6
-2008-08-19T09:06:54.419851Z
-139226
-rguenth
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-719
-
 vect-112.c
 file
-149693
+
 
 
 
@@ -15839,9 +15839,43 @@ rguenth
 
 671
 
+vect-intfloat-conversion-3.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+aab8f51bd5deba5ebf001dce651547e6
+2008-08-19T09:06:54.419851Z
+139226
+rguenth
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+719
+
 vect-outer-4e.c
 file
-149693
+
 
 
 
@@ -15875,7 +15909,7 @@ dorit
 
 vect-widen-mult-s8.c
 file
-149693
+
 
 
 
@@ -15907,77 +15941,9 @@ hjl
 
 791
 
-bb-slp-2.c
-file
-149693
-
-
-
-2009-05-28T13:02:19.000000Z
-c1ea6e759fcf202cdac862b1c2174e85
-2009-05-24T08:44:56.074841Z
-147829
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1488
-
-vect-multitypes-3.c
-file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-618366c7c32dab33807d46cb05d4b487
-2009-05-08T13:39:01.482444Z
-147286
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1636
-
 pr18400.c
 file
-149693
+
 
 
 
@@ -16009,21 +15975,17 @@ hubicka
 
 567
 
-pr25413.c
+vect-multitypes-3.c
 file
-149693
-
-
-
-2009-06-10T05:24:44.000000Z
-09241d0e2485ebd487be54b5d59bf2f1
-2009-06-08T13:26:44.609069Z
-148275
-revitale
 
 
 
 
+2009-05-11T03:52:37.000000Z
+618366c7c32dab33807d46cb05d4b487
+2009-05-08T13:39:01.482444Z
+147286
+hjl
 
 
 
@@ -16041,11 +16003,49 @@ revitale
 
 
 
-1062
+
+
+
+
+1636
+
+bb-slp-2.c
+file
+
+
+
+
+2009-05-28T13:02:19.000000Z
+c1ea6e759fcf202cdac862b1c2174e85
+2009-05-24T08:44:56.074841Z
+147829
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1488
 
 no-scevccp-outer-16.c
 file
-149693
+
 
 
 
@@ -16077,9 +16077,43 @@ irar
 
 936
 
+pr25413.c
+file
+
+
+
+
+2009-06-10T05:24:44.000000Z
+09241d0e2485ebd487be54b5d59bf2f1
+2009-06-08T13:26:44.609069Z
+148275
+revitale
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1062
+
 pr22480.c
 file
-149693
+
 
 
 
@@ -16113,7 +16147,7 @@ uros
 
 vect-40.c
 file
-149693
+
 
 
 
@@ -16147,7 +16181,7 @@ rguenth
 
 vect-23.c
 file
-149693
+
 
 
 
@@ -16181,7 +16215,7 @@ hubicka
 
 pr24049.c
 file
-149693
+
 
 
 
@@ -16215,7 +16249,7 @@ rth
 
 section-anchors-pr27770.c
 file
-149693
+
 
 
 
@@ -16249,7 +16283,7 @@ dorit
 
 no-scevccp-noreassoc-outer-4.c
 file
-149693
+
 
 
 
@@ -16283,7 +16317,7 @@ hubicka
 
 fast-math-vect-complex-3.c
 file
-149693
+
 
 
 
@@ -16317,7 +16351,7 @@ rguenth
 
 pr33597.c
 file
-149693
+
 
 
 
@@ -16351,7 +16385,7 @@ uros
 
 vect-reduc-dot-s16a.c
 file
-149693
+
 
 
 
@@ -16385,7 +16419,7 @@ hjl
 
 bb-slp-20.c
 file
-149693
+
 
 
 
@@ -16419,7 +16453,7 @@ irar
 
 vect-multitypes-13.c
 file
-149693
+
 
 
 
@@ -16453,7 +16487,7 @@ hjl
 
 wrapv-vect-7.c
 file
-149693
+
 
 
 
@@ -16487,7 +16521,7 @@ dorit
 
 vect-104.c
 file
-149693
+
 
 
 
@@ -16521,7 +16555,7 @@ irar
 
 vect-ifcvt-4.c
 file
-149693
+
 
 
 
@@ -16555,7 +16589,7 @@ rguenth
 
 no-scevccp-slp-30.c
 file
-149693
+
 
 
 
@@ -16589,7 +16623,7 @@ irar
 
 vect-iv-6.c
 file
-149693
+
 
 
 
@@ -16620,40 +16654,6 @@ sje
 
 
 1173
-
-vect-32.c
-file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-9f350a80febd72a9eff6c63f3d1f1088
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-644
 
 vect-cond-4.c
 file
@@ -16689,9 +16689,43 @@ irar
 
 1373
 
+vect-32.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+9f350a80febd72a9eff6c63f3d1f1088
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+644
+
 vect-15.c
 file
-149693
+
 
 
 
@@ -16725,7 +16759,7 @@ hubicka
 
 no-math-errno-vect-pow-1.c
 file
-149693
+
 
 
 
@@ -16759,7 +16793,7 @@ rguenth
 
 fast-math-vect-reduc-7.c
 file
-149693
+
 
 
 
@@ -16793,7 +16827,7 @@ rguenth
 
 pr33866.c
 file
-149693
+
 
 
 
@@ -16825,43 +16859,9 @@ revitale
 
 783
 
-vect-outer-3.c
-file
-149693
-
-
-
-2009-05-11T03:52:37.000000Z
-4b82c65890fec9a7d315a475ae884ea8
-2009-05-08T13:39:01.482444Z
-147286
-hjl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-876
-
 unswitch-loops-pr26969.c
 file
-149693
+
 
 
 
@@ -16893,21 +16893,17 @@ victork
 
 292
 
-vect-reduc-2char.c
+vect-outer-3.c
 file
-149693
-
-
-
-2009-04-24T17:45:26.000000Z
-bdec4ee0b19e55866eb180e9e3f131e6
-2007-09-04T13:05:19.907999Z
-128079
-hubicka
 
 
 
 
+2009-05-11T03:52:37.000000Z
+4b82c65890fec9a7d315a475ae884ea8
+2009-05-08T13:39:01.482444Z
+147286
+hjl
 
 
 
@@ -16925,11 +16921,15 @@ hubicka
 
 
 
-1019
+
+
+
+
+876
 
 vect-ifcvt-16.c
 file
-149693
+
 
 
 
@@ -16961,17 +16961,17 @@ rguenth
 
 688
 
-vect-99.c
+vect-reduc-2char.c
 file
-149693
+
 
 
 
 2009-04-24T17:45:26.000000Z
-688e17f10836494c24f1cdf44dc162c0
-2008-02-25T09:07:13.393584Z
-132613
-uros
+bdec4ee0b19e55866eb180e9e3f131e6
+2007-09-04T13:05:19.907999Z
+128079
+hubicka
 
 
 
@@ -16993,11 +16993,11 @@ uros
 
 
 
-480
+1019
 
 slp-5.c
 file
-149693
+
 
 
 
@@ -17029,9 +17029,43 @@ irar
 
 3520
 
+vect-99.c
+file
+
+
+
+
+2009-04-24T17:45:26.000000Z
+688e17f10836494c24f1cdf44dc162c0
+2008-02-25T09:07:13.393584Z
+132613
+uros
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+480
+
 slp-perm-6.c
 file
-149693
+
 
 
 
@@ -17063,43 +17097,9 @@ irar
 
 1859
 
-no-section-anchors-vect-68.c
-file
-149693
-
-
-
-2009-06-10T05:24:44.000000Z
-cc4f83a989a15ba69f877c901192877b
-2009-06-05T15:28:50.693894Z
-148211
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1715
-
 vect-113.c
 file
-149693
+
 
 
 
@@ -17131,9 +17131,43 @@ hubicka
 
 574
 
+no-section-anchors-vect-68.c
+file
+
+
+
+
+2009-06-10T05:24:44.000000Z
+cc4f83a989a15ba69f877c901192877b
+2009-06-05T15:28:50.693894Z
+148211
+revitale
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1715
+
 vect-outer-4f.c
 file
-149693
+
 
 
 
@@ -17167,7 +17201,7 @@ irar
 
 vect-complex-4.c
 file
-149693
+
 
 
 
@@ -17201,7 +17235,7 @@ hjl
 
 O3-pr39675-2.c
 file
-149693
+
 
 
 
@@ -17233,43 +17267,9 @@ irar
 
 680
 
-bb-slp-3.c
-file
-149693
-
-
-
-2009-05-28T13:02:19.000000Z
-bcf12f620bf52dadfec4e87c57694b67
-2009-05-24T08:44:56.074841Z
-147829
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-759
-
 vect-multitypes-4.c
 file
-149693
+
 
 
 
@@ -17301,9 +17301,43 @@ revitale
 
 2993
 
+bb-slp-3.c
+file
+
+
+
+
+2009-05-28T13:02:19.000000Z
+bcf12f620bf52dadfec4e87c57694b67
+2009-05-24T08:44:56.074841Z
+147829
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+759
+
 no-scevccp-outer-17.c
 file
-149693
+
 
 
 
@@ -17337,7 +17371,7 @@ irar
 
 vect-24.c
 file
-149693
+
 
 
 
@@ -17371,7 +17405,7 @@ hubicka
 
 no-scevccp-noreassoc-outer-5.c
 file
-149693
+
 
 
 
@@ -17405,7 +17439,7 @@ hubicka
 
 slp-widen-mult-s16.c
 file
-149693
+
 
 
 
@@ -17439,7 +17473,7 @@ hjl
 
 trapv-vect-reduc-4.c
 file
-149693
+
 
 
 

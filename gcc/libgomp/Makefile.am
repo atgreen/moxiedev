@@ -28,7 +28,7 @@ libgomp_version_script =
 endif
 libgomp_version_info = -version-info $(libtool_VERSION)
 libgomp_la_LDFLAGS = $(libgomp_version_info) $(libgomp_version_script) \
-        -no-undefined
+        -no-undefined -bindir "$(bindir)"
 
 libgomp_la_SOURCES = alloc.c barrier.c critical.c env.c error.c iter.c \
 	iter_ull.c loop.c loop_ull.c ordered.c parallel.c sections.c single.c \
@@ -43,8 +43,8 @@ endif
 
 LTLDFLAGS = $(shell $(SHELL) $(top_srcdir)/../libtool-ldflags $(LDFLAGS))
 
-LINK = $(LIBTOOL) --tag CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
-	$(AM_LDFLAGS) $(LTLDFLAGS) -o $@
+LINK = $(LIBTOOL) --tag CC $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link \
+	$(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LTLDFLAGS) -o $@
 
 omp_lib_kinds.mod: omp_lib.mod
 	:
@@ -55,20 +55,6 @@ fortran.o: libgomp_f.h
 env.lo: libgomp_f.h
 env.o: libgomp_f.h
 
-
-# No install-html or install-pdf support in automake yet
-.PHONY: install-html install-pdf
-install-html:
-
-install-pdf: $(PDFS)
-	@$(NORMAL_INSTALL)
-	test -z "$(pdfdir)" || $(mkinstalldirs) "$(DESTDIR)$(pdfdir)"
-	@list='$(PDFS)'; for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  f=$(am__strip_dir) \
-	  echo " $(INSTALL_DATA) '$$d$$p' '$(DESTDIR)$(pdfdir)/$$f'"; \
-	  $(INSTALL_DATA) "$$d$$p" "$(DESTDIR)$(pdfdir)/$$f"; \
-	done
 
 # Automake Documentation:
 # If your package has Texinfo files in many directories, you can use the

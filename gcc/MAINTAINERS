@@ -111,7 +111,7 @@ freebsd			Loren J. Rittle		ljrittle@acm.org
 GNU/Hurd		Thomas Schwinge		tschwinge@gnu.org
 hpux			John David Anglin	dave.anglin@nrc-cnrc.gc.ca
 hpux			Steve Ellcey		sje@cup.hp.com
-irix, osf		Rainer Orth		ro@TechFak.Uni-Bielefeld.DE
+irix, osf		Rainer Orth		ro@CeBiTec.Uni-Bielefeld.DE
 netbsd			Jason Thorpe		thorpej@netbsd.org
 netbsd			Krister Walfridsson	krister.walfridsson@gmail.com
 sh-linux-gnu		Kaz Kojima		kkojima@gcc.gnu.org
@@ -245,6 +245,7 @@ outside of the parts of the compiler they maintain.
 dataflow		Paolo Bonzini		bonzini@gnu.org
 dataflow		Seongbae Park		seongbae.park@gmail.com
 dataflow 		Kenneth Zadeck		zadeck@naturalbridge.com
+driver			Joseph Myers		jsm@polyomino.org.uk
 Fortran			Janne Blomqvist		jb@gcc.gnu.org
 Fortran			Tobias Burnus		burnus@net-b.de
 Fortran			Jerry DeLisle		jvdelisle@gcc.gnu.org
@@ -313,6 +314,7 @@ Cary Coutant					ccoutant@google.com
 Ian Dall					ian@beware.dropbear.id.au
 David Daney					david.daney@caviumnetworks.com
 Bud Davis					jmdavis@link.com
+Chris Demetriou					cgd@google.com
 Benoit Dupont de Dinechin			benoit.dupont-de-dinechin@st.com
 Michael Eager					eager@eagercon.com
 Mohan Embar					gnustuff@thisiscool.com
@@ -336,6 +338,7 @@ Jon Grimm					jgrimm2@us.ibm.com
 Laurent Guerby					laurent@guerby.net
 Xuepeng Guo					xuepeng.guo@intel.com
 Wei Guozhi					carrot@google.com
+Daniel Gutson					dgutson@codesourcery.com
 Mostafa Hagog					hagog@gcc.gnu.org
 Olivier Hainque					hainque@act-europe.fr
 Stuart Hastings					stuart@apple.com
@@ -371,7 +374,7 @@ Doug Kwan					dougkwan@google.com
 Scott Robert Ladd				scott.ladd@coyotegulch.com
 Razya Ladelsky					razya@gcc.gnu.org
 Aaron W. LaFramboise				aaronavay62@aaronwl.com
-Rask Ingemann Lambertsen			rask@sygehus.dk
+Rask Ingemann Lambertsen			ccc94453@vip.cybercity.dk
 Asher Langton					langton2@llnl.gov
 Chris Lattner					sabre@nondot.org
 Terry Laurenzo					tlaurenzo@gmail.com
@@ -456,6 +459,7 @@ Samuel Tardieu					sam@rfc1149.net
 Kresten Krab Thorup				krab@gcc.gnu.org
 Caroline Tice					ctice@apple.com
 David Ung					davidu@mips.com
+Neil Vachharajani				nvachhar@gmail.com
 Kris Van Hees					kris.van.hees@oracle.com
 Jonathan Wakely					redi@gcc.gnu.org
 Feng Wang					fengwang@nudt.edu.cn

@@ -1,3 +1,306 @@
+2009-09-08  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/decl.c (gnat_to_gnu_entity) <E_Array_Subtype>: Tidy
+	flow of control.
+	Avoid useless work when processing the Treat_As_Volatile flag.
+
+2009-09-08  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/targtyps.c: Reorder include directives.
+
+2009-09-07  Laurent GUERBY  <laurent@guerby.net>
+
+	* gcc-interface/targtyps.c: Add missing include for tm_p.h.
+	* gcc-interface/Make-lang.in: Update dependencies.
+
+2009-09-07  Laurent GUERBY  <laurent@guerby.net>
+
+        * make.adb: Add missing documentation for multilib handling.
+	
+2009-09-03  Diego Novillo  <dnovillo@google.com>
+
+	* gcc-interface/misc.c (lang_hooks): Remove const qualifier.
+
+2009-09-02  Richard Henderson  <rth@redhat.com>
+
+	* tb-gcc.c (__gnat_backtrace): Mark all arguments unused.
+
+2009-09-02  Olivier Hainque  <hainque@adacore.com>
+
+	* init.c (__gnat_error_handler, AIX): Add ATTRIBUTE_UNUSED on si
+	and uc arguments.
+	
+2009-09-02  Olivier Hainque  <hainque@adacore.com>
+
+	* gcc-interface/decl.c (cannot_be_superflat_p): Handle
+	Signed_Integer_Type_Definition Scalar_Ranges.
+
+2009-09-02  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/trans.c (gnat_gimplify_expr) <ADDR_EXPR>: Gimplify the
+	SAVE_EXPR built for misaligned arguments.  Remove redundant stuff.
+	(addressable_p): Return true for more rvalues.
+
+2009-09-01  Jakub Jelinek  <jakub@redhat.com>
+
+	* gcc-interface/utils2.c (maybe_wrap_malloc, maybe_wrap_free): Cast
+	POINTER_SIZE to HOST_WIDE_INT.
+
+2009-09-01  Richard Guenther  <rguenther@suse.de>
+
+	* gcc-interface/misc.c (LANG_HOOKS_MARK_ADDRESSABLE): Remove.
+
+2009-08-25  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/trans.c (call_to_gnu): Tidy.
+	(gnat_to_gnu) <N_Slice>: Set TYPE_ARRAY_MAX_SIZE if the slice has
+	non-constant size but the array itself has constant size.
+	* gcc-interface/utils.c (convert_vms_descriptor64): Fix type
+	consistency error.
+	(convert_vms_descriptor32): Likewise.
+
+2009-08-22  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* gcc-interface/Makefile.in: Add Ada support for 
+	GNU/kFreeBSD x86_64.
+	* system-freebsd-x86_64.ads: New file based on 
+	system-freebsd-x86.ads.
+
+2009-08-20  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/utils.c (convert): In the padded case, do the final
+	conversion as an unchecked conversion if the underlying types are
+	array types with variable size.
+
+2009-08-20  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/ada-tree.h (SET_TYPE_RM_VALUE): Mark the expression
+	as visited.
+	* gcc-interface/misc.c (gnat_get_subrange_bounds): Always return the
+	bounds.
+	* gcc-interface/trans.c (add_decl_expr): Do not mark gigi-specific
+	fields.
+	(gnat_gimplify_expr) <DECL_EXPR>: New case.
+
+2009-08-17  Aurelien Jarno  <aurelien@aurel32.net>
+
+	* s-osinte-kfreebsd-gnu.ads (SA_ONSTACK): New constant.
+	(stack_t): New record type.
+	(sigaltstack): New imported function.
+	(Alternate_Stack): New imported variable.
+	(Alternate_Stack_Size): New constant.
+
+2009-08-17  Vasiliy Fofanov  <fofanov@adacore.com>
+
+	* a-calend-vms.adb: Fix typo.
+
+2009-08-17  Tristan Gingold  <gingold@adacore.com>
+
+	* s-taprop-posix.adb: Round up the stack size to avoid failure on
+	Darwin.
+
+2009-08-17  Gary Dismukes  <dismukes@adacore.com>
+
+	* sem_cat.adb (Validate_Static_Object_Name): Update comment.
+
+2009-08-17  Vincent Celier  <celier@adacore.com>
+
+	* make.adb (Arguments_Collected): Unneeded, removed
+	(Change_To_Object_Directory): Use Project directly. Add pragma Assert to
+	ensure caller does not pass in No_Project.
+	(Compile): Add new parameter Project. Let procedure
+	Collect_Arguments_And_Compile provide the proper value.
+
+	* switch-c.adb: Add documentation for -gnatea and -gnatez
+
+2009-08-17  Ben Brosgol  <brosgol@adacore.com>
+
+	* gnat_ugn.texi: Changed name of package in SAL example, to avoid
+	clash with Ada 2005 reserved word (interface).
+
+2009-08-17  Robert Dewar  <dewar@adacore.com>
+
+	* a-crbtgk.adb, a-crdlli.adb, a-direct.adb, a-caldel-vms.adb,
+	a-calend-vms.adb, a-calfor.adb, a-cdlili.adb, a-chahan.adb,
+	a-cidlli.adb, a-coinve.adb, a-comlin.adb: Minor code reorganization
+	(use conditional expressions).
+
+2009-08-17  Robert Dewar  <dewar@adacore.com>
+
+	* make.adb: Add ??? comment
+	* tbuild.adb: Minor reformatting
+
+2009-08-17  Thomas Quinot  <quinot@adacore.com>
+
+	* exp_ch4.adb (Exp_Ch4.Expand_N_Slice.Make_Temporary): Rename to
+	Make_Temporary_For_Slice to avoid confusion with Tbuild.Make_Temporary.
+	Use Tbuild.Make_Temporary to create entity for the temporary.
+
+2009-08-17  Arnaud Charlet  <charlet@adacore.com>
+
+	* make.adb (Process_Multilib, Scan_Make_Arg): Refine previous change
+	and ignore -mieee switch to avoid spawning an extra gcc in this case.
+
+2009-08-17  Thomas Quinot  <quinot@adacore.com>
+
+	* tbuild.adb: Minor reformatting
+
+2009-08-17  Ed Schonberg  <schonberg@adacore.com>
+
+	* exp_ch3.adb (Build_Discriminant_Formals): If the discriminals already
+	exist, as is the case for synchronized types, use the type of the
+	discriminal in the parameter specification, to prevent a spurious
+	subtype mismatch in gigi.
+
+2009-08-17  Robert Dewar  <dewar@adacore.com>
+
+	* prj-env.adb: Minor reformatting
+	* make.adb: Minor reformatting
+	Comment updates
+
+2009-08-17  Javier Miranda  <miranda@adacore.com>
+
+	* exp_ch7.adb (Wrap_Transient_Expression): Update comments.
+
+2009-08-17  Emmanuel Briot  <briot@adacore.com>
+
+	* prj-part.adb, prj.adb, prj.ads, prj-nmsc.adb, prj-conf.adb
+	(Processing_Flags.Require_Obj_Dirs): new field, which controls whether
+	object directories must be present. In the case of gprclean at least,
+	these are optional (if they do not exist there is nothing to clean)
+
+2009-08-17  Robert Dewar  <dewar@adacore.com>
+
+	* prj-env.adb: Minor reformatting
+	* sem_ch3.adb: Minor reformatting
+
+2009-08-17  Hristian Kirtchev  <kirtchev@adacore.com>
+
+	* sysdep.c (__gnat_localtime_tzoff): VxWorks case - Flip the sign of
+	the time zone since VxWorks chose positive values to represent west
+	time zones and negative for east zones.
+
+2009-08-17  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_ch3.adb (Access_Definition): Do not create an Itype reference for
+	an anonymous access type whose designated type is generic.
+
+2009-08-17  Arnaud Charlet  <charlet@adacore.com>
+
+	* comperr.adb (Compiler_Abort): Do not generate a bug box when in
+	codepeer mode, friendlier.
+
+2009-08-10  Laurent GUERBY  <laurent@guerby.net>
+
+        * make.adb: Handle multilib
+	
+2009-08-10  Vincent Celier  <celier@adacore.com>
+
+	* prj-env.adb (Create_Config_Pragmas_File.Write_Temp_File): Do not use
+	the temporary file name in the error message when the temporary file
+	cannot be created.
+
+2009-08-10  Yannick Moy  <moy@adacore.com>
+
+	* gnat_ugn.texi: Fix typo
+
+2009-08-10  Robert Dewar  <dewar@adacore.com>
+
+	* exp_ch7.adb: Add ??? comment for last change
+
+2009-08-10  Vincent Celier  <celier@adacore.com>
+
+	* prj-env.adb (Add_To_Buffer): New procedure
+	(Create_Config_Pragmas_File): Write to temporary file in one shot
+	(Create_Mapping_File): Ditto
+	(Set_Ada_Paths): Ditto
+
+2009-08-10  Vincent Celier  <celier@adacore.com>
+
+	PR ada/17566
+	* xref_lib.adb (Print_Xref): Make sure that there is at least one space
+	between a declaration name and its type.
+
+2009-08-07  Javier Miranda  <miranda@adacore.com>
+
+	* exp_ch7.adb (Wrap_Transient_Expression): Add missing adjustment of
+	SCIL node.
+
+2009-08-07  Robert Dewar  <dewar@adacore.com>
+
+	* sem_warn.adb (Warn_On_Unreferenced_Entity): Fix obvious typo.
+
+2009-08-07  Vincent Celier  <celier@adacore.com>
+
+	* gnatcmd.adb (GNATCmd): If -U is not used, one and only one main is
+	specified on the command line and there are switches in the Compiler
+	package of the project file, use these compilation switches to invoke
+	the tool.
+
+2009-08-07  Ben Brosgol  <brosgol@adacore.com>
+
+	* gnat_ugn.texi: Wordsmithing edits at beginning of gnatcheck chapter.
+
+2009-08-07  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_ch10.adb (Analyze_Proper_Body): Indicate name of missing subunit
+	even if not in main unit, to simplify debugging.
+
+2009-08-07  Arnaud Charlet  <charlet@adacore.com>
+
+	* gcc-interface/Makefile.in: Fix handling of GCC_FOR_TARGET.
+	* gcc-interface/Make-lang.in: Update dependencies.
+
+2009-08-07  Robert Dewar  <dewar@adacore.com>
+
+	* types.ads: Minor reformatting
+	* sem_ch12.ads (Check_Generic_Child_Unit): Add missing documentation.
+	* frontend.adb, sem_warn.adb, sem_warn.ads: Fix spelling of
+	Output_Non_Modified_In_Out_Warnings.
+	* sem_ch13.adb: Remove ??? comment.
+
+2009-08-07  Vincent Celier  <celier@adacore.com>
+
+	* mlib-prj.adb (Build_Library): Include binder generate object file
+	for SAL when library name is only one character.
+
+2009-08-07  Thomas Quinot  <quinot@adacore.com>
+
+	* targparm.adb: Minor reformatting
+	* sem.adb: Minor reformatting
+	* exp_ch4.adb (Expand_N_Conditional_Expression): Add comment.
+
+2009-08-07  Emmanuel Briot  <briot@adacore.com>
+
+	* prj-conf.adb: Remove duplicate directory separator in the output when
+	an object directory does not exist.
+
+2009-08-07  Robert Dewar  <dewar@adacore.com>
+
+	* exp_util.adb: Minor reformatting
+
+2009-08-07  Vincent Celier  <celier@adacore.com>
+
+	* mlib-prj.adb (Build_Library): Fixed bug in name of ALI file (wrong
+	length used).
+
+2009-08-07  Ed Schonberg  <schonberg@adacore.com>
+
+	* exp_ch9.adb (Expand_N_Protected_Type_Declaration): In Ravenscar mode,
+	detect non-static private components that will violate restriction
+	No_Implicit_Heap_Allocation.
+
+2009-08-07  Ben Brosgol  <brosgol@adacore.com>
+
+	* gnat_ugn.texi: Edited Rule Exemption section of gnatcheck chapter.
+
+2009-08-02  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/gigi.h (end_subprog_body): Tweak comment.
+	* gcc-interface/utils.c (end_subprog_body): Likewise.
+	* gcc-interface/trans.c (gigi): Likewise.
+	(gnat_to_gnu): Likewise.
+
 2009-07-30  Ben Brosgol  <brosgol@adacore.com>
 
 	* gnat_ugn.texi: Correct minor texi glitch.
@@ -520,9 +823,14 @@
 2009-07-23  Thomas Quinot  <quinot@adacore.com>
 
 	* scos.ads: Minor typo fix
+
 	* gcc-interface/decl.c (validate_alignment): For the case of an
 	implicit array base type, look for alignment clause on first subtype.
-	Code clean up.
+
+2009-07-23  Robert Dewar  <dewar@adacore.com>
+
+	* gcc-interface/decl.c (gnat_to_gnu_field): Don't check for overlap
+	with tagged parent if tagged parent is fully repped.
 
 2009-07-23  Ed Schonberg  <schonberg@adacore.com>
 

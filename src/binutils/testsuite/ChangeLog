@@ -1,3 +1,44 @@
+2009-09-07  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* binutils-all/testranges.s (.debug_info): Pad the only CU.
+
+2009-09-07  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* binutils-all/testranges.s: Replace all .long by .4byte.
+
+2009-09-04  DJ Delorie  <dj@redhat.com>
+
+	* binutils-all/objdump.exp: Add m16c and m32c to the list of
+	expected cpus.
+
+2009-09-02  Jie Zhang  <jie.zhang@analog.com>
+
+	* binutils-all/bfin/unknown-mode.s: New test.
+	* binutils-all/bfin/objdump.exp: New test.
+
+2009-08-17  Nick Clifton  <nickc@redhat.com>
+
+	* binutils-all/strip-10.d: Accept "<OS specific>: 10" for the type
+	of the UNIQUE symbol.
+
+2009-08-07  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* binutils-all/testranges.s: Use %progbits.  Use ";#" for comments.
+
+2009-08-06  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/10492
+	* binutils-all/objcopy.exp: Run strip-10.
+
+	* binutils-all/strip-10.d: New.
+	* binutils-all/unique.s: Likewise.
+
+2009-07-31  Daniel Gutson  <dgutson@codesourcery.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* binutils-all/arm/thumb2-cond.s: Use instructions instead of
+	.short.
+
 2009-07-29  Alan Modra  <amodra@bigpond.net.au>
 
 	* binutils-all/testranges.s: Replace .value with .short.

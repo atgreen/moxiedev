@@ -1,6 +1,6 @@
 /* Definitions of target machine for GNU compiler, for IBM S/390.
-   Copyright (C) 2000, 2002, 2003, 2004, 2005, 2007, 2008 Free
-   Software Foundation, Inc.
+   Copyright (C) 2000, 2002, 2003, 2004, 2005, 2007, 2008, 2009
+   Free Software Foundation, Inc.
 
    Contributed by Hartmut Penner (hpenner@de.ibm.com)
 
@@ -36,7 +36,6 @@ extern bool s390_check_symref_alignment (rtx addr, HOST_WIDE_INT alignment);
 
 extern void optimization_options (int, int);
 extern void override_options (void);
-extern bool s390_can_eliminate (int, int);
 extern HOST_WIDE_INT s390_initial_elimination_offset (int, int);
 extern void s390_emit_prologue (void);
 extern void s390_emit_epilogue (bool);
@@ -125,6 +124,6 @@ extern void s390_function_arg_advance (CUMULATIVE_ARGS *, enum machine_mode,
 				       tree, int);
 #ifdef RTX_CODE
 extern rtx s390_function_arg (CUMULATIVE_ARGS *, enum machine_mode, tree, int);
-extern rtx s390_function_value (const_tree, enum machine_mode);
+extern rtx s390_function_value (const_tree, const_tree, enum machine_mode);
 #endif /* RTX_CODE */
 #endif /* TREE_CODE */

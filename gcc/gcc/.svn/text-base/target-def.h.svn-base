@@ -488,7 +488,7 @@
 #define TARGET_CANNOT_COPY_INSN_P NULL
 #define TARGET_COMMUTATIVE_P hook_bool_const_rtx_commutative_p
 #define TARGET_LEGITIMIZE_ADDRESS default_legitimize_address
-#define TARGET_DELEGITIMIZE_ADDRESS hook_rtx_rtx_identity
+#define TARGET_DELEGITIMIZE_ADDRESS delegitimize_mem_from_attrs
 #define TARGET_LEGITIMATE_ADDRESS_P default_legitimate_address_p
 #define TARGET_USE_BLOCKS_FOR_CONSTANT_P hook_bool_mode_const_rtx_false
 #define TARGET_MIN_ANCHOR_OFFSET 0
@@ -574,8 +574,7 @@
 
 #define TARGET_ARM_EABI_UNWINDER false
 
-#define TARGET_PROMOTE_FUNCTION_ARGS hook_bool_const_tree_false
-#define TARGET_PROMOTE_FUNCTION_RETURN hook_bool_const_tree_false
+#define TARGET_PROMOTE_FUNCTION_MODE default_promote_function_mode
 #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_false
 
 #define TARGET_STRUCT_VALUE_RTX hook_rtx_tree_int_null
@@ -599,14 +598,14 @@
 #define TARGET_ARG_PARTIAL_BYTES hook_int_CUMULATIVE_ARGS_mode_tree_bool_0
 
 #define TARGET_FUNCTION_VALUE default_function_value
+#define TARGET_LIBCALL_VALUE default_libcall_value
 #define TARGET_INTERNAL_ARG_POINTER default_internal_arg_pointer
 #define TARGET_UPDATE_STACK_BOUNDARY NULL
 #define TARGET_GET_DRAP_RTX NULL
 #define TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS hook_bool_void_true
 
 #define TARGET_CALLS {						\
-   TARGET_PROMOTE_FUNCTION_ARGS,				\
-   TARGET_PROMOTE_FUNCTION_RETURN,				\
+   TARGET_PROMOTE_FUNCTION_MODE,				\
    TARGET_PROMOTE_PROTOTYPES,					\
    TARGET_STRUCT_VALUE_RTX,					\
    TARGET_RETURN_IN_MEMORY,					\
@@ -622,6 +621,7 @@
    TARGET_ARG_PARTIAL_BYTES,					\
    TARGET_INVALID_ARG_FOR_UNPROTOTYPED_FN,			\
    TARGET_FUNCTION_VALUE,					\
+   TARGET_LIBCALL_VALUE,					\
    TARGET_INTERNAL_ARG_POINTER,					\
    TARGET_UPDATE_STACK_BOUNDARY,				\
    TARGET_GET_DRAP_RTX,						\
@@ -630,10 +630,6 @@
 
 #ifndef TARGET_UNWIND_TABLES_DEFAULT
 #define TARGET_UNWIND_TABLES_DEFAULT false
-#endif
-
-#ifndef TARGET_HANDLE_PRAGMA_REDEFINE_EXTNAME
-#define TARGET_HANDLE_PRAGMA_REDEFINE_EXTNAME 0
 #endif
 
 #ifndef TARGET_HANDLE_PRAGMA_EXTERN_PREFIX
@@ -668,6 +664,10 @@
 
 #ifndef TARGET_FRAME_POINTER_REQUIRED
 #define TARGET_FRAME_POINTER_REQUIRED hook_bool_void_false
+#endif
+
+#ifndef TARGET_CAN_ELIMINATE
+#define TARGET_CAN_ELIMINATE hook_bool_const_int_const_int_true
 #endif
 
 /* C specific.  */
@@ -943,6 +943,7 @@
   TARGET_HARD_REGNO_SCRATCH_OK,			\
   TARGET_CASE_VALUES_THRESHOLD,			\
   TARGET_FRAME_POINTER_REQUIRED,		\
+  TARGET_CAN_ELIMINATE,				\
   TARGET_C,					\
   TARGET_CXX,					\
   TARGET_EMUTLS,				\
@@ -957,7 +958,6 @@
   TARGET_TERMINATE_DW2_EH_FRAME_INFO,		\
   TARGET_ASM_FILE_START_APP_OFF,		\
   TARGET_ASM_FILE_START_FILE_DIRECTIVE,		\
-  TARGET_HANDLE_PRAGMA_REDEFINE_EXTNAME,	\
   TARGET_HANDLE_PRAGMA_EXTERN_PREFIX,		\
   TARGET_RELAXED_ORDERING,			\
   TARGET_ARM_EABI_UNWINDER			\

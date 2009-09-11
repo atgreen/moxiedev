@@ -1,5 +1,5 @@
 /* tc-sh64.c -- Assemble code for the SuperH SH SHcompact and SHmedia.
-   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
+   Copyright 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
    Free Software Foundation.
 
    This file is part of GAS, the GNU Assembler.
@@ -2204,16 +2204,16 @@ static char *
 shmedia_parse_exp (char *s, shmedia_operand_info *op)
 {
   char *save;
-  char *new;
+  char *new_pointer;
 
   save = input_line_pointer;
   input_line_pointer = s;
   expression (&op->immediate);
   if (op->immediate.X_op == O_absent)
     as_bad (_("missing operand"));
-  new = input_line_pointer;
+  new_pointer = input_line_pointer;
   input_line_pointer = save;
-  return new;
+  return new_pointer;
 }
 
 /* Parse an operand.  Store pointer to next character in *PTR.  */

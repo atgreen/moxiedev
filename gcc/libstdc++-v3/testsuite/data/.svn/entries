@@ -1,7 +1,7 @@
 10
 
 dir
-149693
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/data
 svn://gcc.gnu.org/svn/gcc
 
@@ -672,40 +672,6 @@ paolo
 
 16500
 
-filebuf_virtuals-1.txt
-file
-
-
-
-
-2009-04-24T17:50:35.000000Z
-ccd8d09610bb1187b124063e4b7d62b2
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8218
-
 seekoff-1out.tst
 file
 
@@ -739,6 +705,40 @@ bkoz
 
 
 116
+
+filebuf_virtuals-1.txt
+file
+
+
+
+
+2009-04-24T17:50:35.000000Z
+ccd8d09610bb1187b124063e4b7d62b2
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8218
 
 istream_unformatted-1.tst
 file
@@ -808,40 +808,6 @@ jakub
 
 8218
 
-wostream_inserter_other-2.tst
-file
-
-
-
-
-2009-04-24T17:50:35.000000Z
-ccd8d09610bb1187b124063e4b7d62b2
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-8218
-
 wostream_inserter_char-1.txt
 file
 
@@ -876,17 +842,17 @@ paolo
 
 10000
 
-seekpos.txt
+wostream_inserter_other-2.tst
 file
 
 
 
 
 2009-04-24T17:50:35.000000Z
-b764f52b36be7850b3d1f9862b1dfd53
-2003-07-01T03:04:43.000000Z
-68757
-bkoz
+ccd8d09610bb1187b124063e4b7d62b2
+2009-04-09T15:00:19.611803Z
+145841
+jakub
 
 
 
@@ -908,7 +874,7 @@ bkoz
 
 
 
-116
+8218
 
 cin_unget-1.txt
 file
@@ -943,6 +909,40 @@ ljrittle
 
 
 5
+
+seekpos.txt
+file
+
+
+
+
+2009-04-24T17:50:35.000000Z
+b764f52b36be7850b3d1f9862b1dfd53
+2003-07-01T03:04:43.000000Z
+68757
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+116
 
 ostream_inserter_char-1.tst
 file

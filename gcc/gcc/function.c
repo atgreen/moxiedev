@@ -922,7 +922,7 @@ assign_temp (tree type_or_decl, int keep, int memory_required,
 
 #ifdef PROMOTE_MODE
   if (! dont_promote)
-    mode = promote_mode (type, mode, &unsignedp, 0);
+    mode = promote_mode (type, mode, &unsignedp);
 #endif
 
   return gen_reg_rtx (mode);
@@ -1775,8 +1775,11 @@ instantiate_virtual_regs (void)
 	    || GET_CODE (PATTERN (insn)) == ADDR_DIFF_VEC
 	    || GET_CODE (PATTERN (insn)) == ASM_INPUT)
 	  continue;
-
-	instantiate_virtual_regs_in_insn (insn);
+	else if (DEBUG_INSN_P (insn))
+	  for_each_rtx (&INSN_VAR_LOCATION (insn),
+			instantiate_virtual_regs_in_rtx, NULL);
+	else
+	  instantiate_virtual_regs_in_insn (insn);
 
 	if (INSN_DELETED_P (insn))
 	  continue;
@@ -2167,6 +2170,7 @@ assign_parm_find_data_types (struct assign_parm_data_all *all, tree parm,
 {
   tree nominal_type, passed_type;
   enum machine_mode nominal_mode, passed_mode, promoted_mode;
+  int unsignedp;
 
   memset (data, 0, sizeof (*data));
 
@@ -2219,13 +2223,9 @@ assign_parm_find_data_types (struct assign_parm_data_all *all, tree parm,
     }
 
   /* Find mode as it is passed by the ABI.  */
-  promoted_mode = passed_mode;
-  if (targetm.calls.promote_function_args (TREE_TYPE (current_function_decl)))
-    {
-      int unsignedp = TYPE_UNSIGNED (passed_type);
-      promoted_mode = promote_mode (passed_type, promoted_mode,
-				    &unsignedp, 1);
-    }
+  unsignedp = TYPE_UNSIGNED (passed_type);
+  promoted_mode = promote_function_mode (passed_type, passed_mode, &unsignedp,
+				         TREE_TYPE (current_function_decl), 0);
 
  egress:
   data->nominal_type = nominal_type;
@@ -2433,20 +2433,25 @@ assign_parm_find_stack_rtl (tree parm, struct assign_parm_data_one *data)
     stack_parm = gen_rtx_PLUS (Pmode, stack_parm, offset_rtx);
   stack_parm = gen_rtx_MEM (data->promoted_mode, stack_parm);
 
-  set_mem_attributes (stack_parm, parm, 1);
-  /* set_mem_attributes could set MEM_SIZE to the passed mode's size,
-     while promoted mode's size is needed.  */
-  if (data->promoted_mode != BLKmode
-      && data->promoted_mode != DECL_MODE (parm))
+  if (!data->passed_pointer)
     {
-      set_mem_size (stack_parm, GEN_INT (GET_MODE_SIZE (data->promoted_mode)));
-      if (MEM_EXPR (stack_parm) && MEM_OFFSET (stack_parm))
+      set_mem_attributes (stack_parm, parm, 1);
+      /* set_mem_attributes could set MEM_SIZE to the passed mode's size,
+	 while promoted mode's size is needed.  */
+      if (data->promoted_mode != BLKmode
+	  && data->promoted_mode != DECL_MODE (parm))
 	{
-	  int offset = subreg_lowpart_offset (DECL_MODE (parm),
-					      data->promoted_mode);
-	  if (offset)
-	    set_mem_offset (stack_parm,
-			    plus_constant (MEM_OFFSET (stack_parm), -offset));
+	  set_mem_size (stack_parm,
+			GEN_INT (GET_MODE_SIZE (data->promoted_mode)));
+	  if (MEM_EXPR (stack_parm) && MEM_OFFSET (stack_parm))
+	    {
+	      int offset = subreg_lowpart_offset (DECL_MODE (parm),
+						  data->promoted_mode);
+	      if (offset)
+		set_mem_offset (stack_parm,
+				plus_constant (MEM_OFFSET (stack_parm),
+					       -offset));
+	    }
 	}
     }
 
@@ -2773,12 +2778,11 @@ assign_parm_setup_reg (struct assign_parm_data_all *all, tree parm,
   bool did_conversion = false;
 
   /* Store the parm in a pseudoregister during the function, but we may
-     need to do it in a wider mode.  */
-
-  /* This is not really promoting for a call.  However we need to be
-     consistent with assign_parm_find_data_types and expand_expr_real_1.  */
+     need to do it in a wider mode.  Using 2 here makes the result
+     consistent with promote_decl_mode and thus expand_expr_real_1.  */
   promoted_nominal_mode
-    = promote_mode (data->nominal_type, data->nominal_mode, &unsignedp, 1);
+    = promote_function_mode (data->nominal_type, data->nominal_mode, &unsignedp,
+			     TREE_TYPE (current_function_decl), 2);
 
   parmreg = gen_reg_rtx (promoted_nominal_mode);
 
@@ -2798,7 +2802,8 @@ assign_parm_setup_reg (struct assign_parm_data_all *all, tree parm,
 
   assign_parm_remove_parallels (data);
 
-  /* Copy the value into the register.  */
+  /* Copy the value into the register, thus bridging between
+     assign_parm_find_data_types and expand_expr_real_1.  */
   if (data->nominal_mode != data->passed_mode
       || promoted_nominal_mode != data->promoted_mode)
     {
@@ -4722,10 +4727,9 @@ expand_function_end (void)
 	  else if (GET_MODE (real_decl_rtl) != GET_MODE (decl_rtl))
 	    {
 	      int unsignedp = TYPE_UNSIGNED (TREE_TYPE (decl_result));
-
-	      if (targetm.calls.promote_function_return (TREE_TYPE (current_function_decl)))
-		promote_mode (TREE_TYPE (decl_result), GET_MODE (decl_rtl),
-			      &unsignedp, 1);
+	      promote_function_mode (TREE_TYPE (decl_result),
+				     GET_MODE (decl_rtl), &unsignedp,
+				     TREE_TYPE (current_function_decl), 1);
 
 	      convert_move (real_decl_rtl, decl_rtl, unsignedp);
 	    }

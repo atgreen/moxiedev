@@ -1,6 +1,5 @@
 /badgotr1.d/1.5/Mon Jul  6 10:46:44 2009//
 /comref1.s/1.1/Mon Jul  6 10:46:44 2009//
-/cris.exp/1.4/Mon Jul  6 10:46:44 2009//
 /def2.d/1.1/Mon Jul  6 10:46:44 2009//
 /def3.d/1.1/Mon Jul  6 10:46:44 2009//
 /dso-1.s/1.3/Mon Jul  6 10:46:44 2009//
@@ -250,4 +249,5 @@
 /weakref2.d/1.5/Mon Jul  6 10:46:44 2009//
 /weakref3.d/1.1/Mon Jul  6 10:46:44 2009//
 /weakref4.d/1.1/Mon Jul  6 10:46:44 2009//
+/cris.exp/1.5/Tue Sep  8 03:27:47 2009//
 D

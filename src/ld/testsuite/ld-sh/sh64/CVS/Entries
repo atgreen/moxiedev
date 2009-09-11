@@ -44,12 +44,10 @@
 /mix2-noexp.sd/1.3/Mon Jul  6 10:46:47 2009//
 /mix2.sd/1.3/Mon Jul  6 10:46:47 2009//
 /mix2.xd/1.9/Mon Jul  6 10:46:47 2009//
-/rd-sh64.exp/1.5/Mon Jul  6 10:46:47 2009//
 /rel-1.s/1.1/Mon Jul  6 10:46:47 2009//
 /rel-2.s/1.1/Mon Jul  6 10:46:47 2009//
 /rel32.xd/1.6/Mon Jul  6 10:46:47 2009//
 /rel64.xd/1.5/Mon Jul  6 10:46:47 2009//
-/relax.exp/1.7/Mon Jul  6 10:46:47 2009//
 /relax1.s/1.1/Mon Jul  6 10:46:47 2009//
 /relax2.s/1.1/Mon Jul  6 10:46:47 2009//
 /relax3.s/1.1/Mon Jul  6 10:46:47 2009//
@@ -58,11 +56,9 @@
 /reldl-2.s/1.1/Mon Jul  6 10:46:47 2009//
 /reldl32.rd/1.5/Mon Jul  6 10:46:47 2009//
 /reldl64.rd/1.6/Mon Jul  6 10:46:47 2009//
-/relfail.exp/1.7/Mon Jul  6 10:46:47 2009//
 /relfail.s/1.1/Mon Jul  6 10:46:47 2009//
 /sh64-1.s/1.1/Mon Jul  6 10:46:47 2009//
 /sh64-2.s/1.1/Mon Jul  6 10:46:47 2009//
-/sh64.exp/1.10/Mon Jul  6 10:46:47 2009//
 /shcmp-1.s/1.1/Mon Jul  6 10:46:47 2009//
 /shdl-1.s/1.1/Mon Jul  6 10:46:47 2009//
 /shdl-2.s/1.1/Mon Jul  6 10:46:47 2009//
@@ -76,4 +72,8 @@
 /stobin-1.d/1.1/Mon Jul  6 10:46:47 2009//
 /stobin.s/1.1/Mon Jul  6 10:46:47 2009//
 /stolib.s/1.1/Mon Jul  6 10:46:47 2009//
+/rd-sh64.exp/1.6/Tue Sep  8 03:27:48 2009//
+/relax.exp/1.8/Tue Sep  8 03:27:48 2009//
+/relfail.exp/1.8/Tue Sep  8 03:27:48 2009//
+/sh64.exp/1.11/Tue Sep  8 03:27:48 2009//
 D

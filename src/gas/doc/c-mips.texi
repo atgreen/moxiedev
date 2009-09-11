@@ -1,5 +1,5 @@
 @c Copyright 1991, 1992, 1993, 1994, 1995, 1997, 1999, 2000, 2001,
-@c 2002, 2003, 2004
+@c 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
 @c Free Software Foundation, Inc.
 @c This is part of the GAS manual.
 @c For copying conditions, see the file as.texinfo.
@@ -272,6 +272,10 @@ m4kp,
 74kf,
 74kf1_1,
 74kf3_2,
+1004kc,
+1004kf2_1,
+1004kf,
+1004kf1_1,
 5kc,
 5kf,
 20kc,

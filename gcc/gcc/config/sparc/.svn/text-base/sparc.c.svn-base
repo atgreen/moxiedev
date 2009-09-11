@@ -404,6 +404,8 @@ static int get_some_local_dynamic_name_1 (rtx *, void *);
 static bool sparc_rtx_costs (rtx, int, int, int *, bool);
 static bool sparc_promote_prototypes (const_tree);
 static rtx sparc_struct_value_rtx (tree, int);
+static enum machine_mode sparc_promote_function_mode (const_tree, enum machine_mode,
+						      int *, const_tree, int);
 static bool sparc_return_in_memory (const_tree, const_tree);
 static bool sparc_strict_argument_naming (CUMULATIVE_ARGS *);
 static void sparc_va_start (tree, rtx);
@@ -418,6 +420,7 @@ static void sparc_dwarf_handle_frame_unspec (const char *, rtx, int);
 static void sparc_output_dwarf_dtprel (FILE *, int, rtx) ATTRIBUTE_UNUSED;
 static void sparc_file_end (void);
 static bool sparc_frame_pointer_required (void);
+static bool sparc_can_eliminate (const int, const int);
 #ifdef TARGET_ALTERNATE_LONG_DOUBLE_MANGLING
 static const char *sparc_mangle_type (const_tree);
 #endif
@@ -524,17 +527,8 @@ static bool fpu_option_set = false;
 #undef TARGET_ADDRESS_COST
 #define TARGET_ADDRESS_COST hook_int_rtx_bool_0
 
-/* This is only needed for TARGET_ARCH64, but since PROMOTE_FUNCTION_MODE is a
-   no-op for TARGET_ARCH32 this is ok.  Otherwise we'd need to add a runtime
-   test for this value.  */
-#undef TARGET_PROMOTE_FUNCTION_ARGS
-#define TARGET_PROMOTE_FUNCTION_ARGS hook_bool_const_tree_true
-
-/* This is only needed for TARGET_ARCH64, but since PROMOTE_FUNCTION_MODE is a
-   no-op for TARGET_ARCH32 this is ok.  Otherwise we'd need to add a runtime
-   test for this value.  */
-#undef TARGET_PROMOTE_FUNCTION_RETURN
-#define TARGET_PROMOTE_FUNCTION_RETURN hook_bool_const_tree_true
+#undef TARGET_PROMOTE_FUNCTION_MODE
+#define TARGET_PROMOTE_FUNCTION_MODE sparc_promote_function_mode
 
 #undef TARGET_PROMOTE_PROTOTYPES
 #define TARGET_PROMOTE_PROTOTYPES sparc_promote_prototypes
@@ -594,6 +588,9 @@ static bool fpu_option_set = false;
 
 #undef TARGET_FRAME_POINTER_REQUIRED
 #define TARGET_FRAME_POINTER_REQUIRED sparc_frame_pointer_required
+
+#undef TARGET_CAN_ELIMINATE
+#define TARGET_CAN_ELIMINATE sparc_can_eliminate
 
 #ifdef TARGET_ALTERNATE_LONG_DOUBLE_MANGLING
 #undef TARGET_MANGLE_TYPE
@@ -4642,6 +4639,36 @@ sparc_promote_prototypes (const_tree fntype ATTRIBUTE_UNUSED)
   return TARGET_ARCH32 ? true : false;
 }
 
+/* Handle promotion of pointer and integer arguments.  */
+
+static enum machine_mode
+sparc_promote_function_mode (const_tree type ATTRIBUTE_UNUSED,
+                             enum machine_mode mode,
+                             int *punsignedp ATTRIBUTE_UNUSED,
+                             const_tree fntype ATTRIBUTE_UNUSED,
+                             int for_return ATTRIBUTE_UNUSED)
+{
+  if (POINTER_TYPE_P (type))
+    {
+      *punsignedp = POINTERS_EXTEND_UNSIGNED;
+      return Pmode;
+    }
+
+  /* For TARGET_ARCH64 we need this, as we don't have instructions
+     for arithmetic operations which do zero/sign extension at the same time,
+     so without this we end up with a srl/sra after every assignment to an
+     user variable,  which means very very bad code.  */
+
+  if (TARGET_ARCH64
+      && GET_MODE_CLASS (mode) == MODE_INT
+      && GET_MODE_SIZE (mode) < UNITS_PER_WORD)
+    return word_mode;
+
+  return mode;
+}
+
+
+
 /* Handle the TARGET_STRICT_ARGUMENT_NAMING target hook.  */
 
 static bool
@@ -5784,7 +5811,8 @@ function_value (const_tree type, enum machine_mode mode, int incoming_p)
 	    mclass = MODE_INT;
 	}
 
-      /* This must match PROMOTE_FUNCTION_MODE.  */
+      /* This must match sparc_promote_function_mode.
+	 ??? Maybe 32-bit pointers should actually remain in Pmode?  */
       else if (mclass == MODE_INT && GET_MODE_SIZE (mode) < UNITS_PER_WORD)
 	mode = word_mode;
     }
@@ -6231,7 +6259,7 @@ rtx
 sparc_emit_float_lib_cmp (rtx x, rtx y, enum rtx_code comparison)
 {
   const char *qpfunc;
-  rtx slot0, slot1, result, tem, tem2;
+  rtx slot0, slot1, result, tem, tem2, libfunc;
   enum machine_mode mode;
   enum rtx_code new_comparison;
 
@@ -6294,7 +6322,8 @@ sparc_emit_float_lib_cmp (rtx x, rtx y, enum rtx_code comparison)
 	  emit_move_insn (slot1, y);
 	}
 
-      emit_library_call (gen_rtx_SYMBOL_REF (Pmode, qpfunc), LCT_NORMAL,
+      libfunc = gen_rtx_SYMBOL_REF (Pmode, qpfunc);
+      emit_library_call (libfunc, LCT_NORMAL,
 			 DImode, 2,
 			 XEXP (slot0, 0), Pmode,
 			 XEXP (slot1, 0), Pmode);
@@ -6302,7 +6331,8 @@ sparc_emit_float_lib_cmp (rtx x, rtx y, enum rtx_code comparison)
     }
   else
     {
-      emit_library_call (gen_rtx_SYMBOL_REF (Pmode, qpfunc), LCT_NORMAL,
+      libfunc = gen_rtx_SYMBOL_REF (Pmode, qpfunc);
+      emit_library_call (libfunc, LCT_NORMAL,
 			 SImode, 2,
 			 x, TFmode, y, TFmode);
       mode = SImode;
@@ -6313,7 +6343,7 @@ sparc_emit_float_lib_cmp (rtx x, rtx y, enum rtx_code comparison)
      register so reload doesn't clobber the value if it needs
      the return register for a spill reg.  */
   result = gen_reg_rtx (mode);
-  emit_move_insn (result, hard_libcall_value (mode));
+  emit_move_insn (result, hard_libcall_value (mode, libfunc));
 
   switch (comparison)
     {
@@ -8916,7 +8946,6 @@ sparc_output_mi_thunk (FILE *file, tree thunk_fndecl ATTRIBUTE_UNUSED,
   final_start_function (insn, file, 1);
   final (insn, file, 1);
   final_end_function ();
-  free_after_compilation (cfun);
 
   reload_completed = 0;
   epilogue_completed = 0;

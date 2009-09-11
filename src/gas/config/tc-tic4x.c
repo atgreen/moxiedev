@@ -1285,8 +1285,8 @@ tic4x_inst_add (const tic4x_inst_t *insts)
   d = name;
 
   /* We do not care about INSNs that is not a part of our
-     oplevel setting */
-  if (!insts->oplevel & tic4x_oplevel)
+     oplevel setting.  */
+  if ((insts->oplevel & tic4x_oplevel) == 0)
     return ok;
 
   while (1)
@@ -1516,7 +1516,7 @@ tic4x_operand_parse (char *s, tic4x_operand_t *operand)
   expressionS *exp = &operand->expr;
   char *save = input_line_pointer;
   char *str;
-  char *new;
+  char *new_pointer;
   struct hash_entry *entry = NULL;
 
   input_line_pointer = s;
@@ -1524,7 +1524,7 @@ tic4x_operand_parse (char *s, tic4x_operand_t *operand)
 
   str = input_line_pointer;
   c = get_symbol_end ();	/* Get terminator.  */
-  new = input_line_pointer;
+  new_pointer = input_line_pointer;
   if (strlen (str) && (entry = hash_find (tic4x_asg_hash, str)) != NULL)
     {
       *input_line_pointer = c;
@@ -1666,9 +1666,9 @@ tic4x_operand_parse (char *s, tic4x_operand_t *operand)
 #endif
     }
   if (entry == NULL)
-    new = input_line_pointer;
+    new_pointer = input_line_pointer;
   input_line_pointer = save;
-  return new;
+  return new_pointer;
 }
 
 static int 

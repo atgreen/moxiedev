@@ -2769,7 +2769,8 @@ displaced_write_reg (struct regcache *regs, struct displaced_step_closure *dsc,
 	  break;
 
 	default:
-	  abort ();
+	  internal_error (__FILE__, __LINE__,
+			  _("Invalid argument to displaced_write_reg"));
 	}
 
       dsc->wrote_to_pc = 1;
@@ -6081,7 +6082,7 @@ _initialize_arm_tdep (void)
 		      _("The valid values are:\n"),
 		      regdesc,
 		      _("The default is \"std\"."));
-  helptext = ui_file_xstrdup (stb, &length);
+  helptext = ui_file_xstrdup (stb, NULL);
   ui_file_delete (stb);
 
   add_setshow_enum_cmd("disassembler", no_class,

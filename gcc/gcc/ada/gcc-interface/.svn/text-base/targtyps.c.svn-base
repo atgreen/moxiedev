@@ -28,8 +28,9 @@
 #include "config.h"
 #include "system.h"
 #include "coretypes.h"
-#include "tm.h"
 #include "tree.h"
+#include "tm.h"
+#include "tm_p.h"
 
 #include "ada.h"
 #include "types.h"

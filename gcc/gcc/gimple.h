@@ -117,6 +117,14 @@ enum gf_mask {
     GF_PREDICT_TAKEN		= 1 << 15
 };
 
+/* Currently, there's only one type of gimple debug stmt.  Others are
+   envisioned, for example, to enable the generation of is_stmt notes
+   in line number information, to mark sequence points, etc.  This
+   subcode is to be used to tell them apart.  */
+enum gimple_debug_subcode {
+  GIMPLE_DEBUG_BIND = 0
+};
+
 /* Masks for selecting a pass local flag (PLF) to work on.  These
    masks are used by gimple_set_plf and gimple_plf.  */
 enum plf_mask {
@@ -754,6 +762,10 @@ gimple gimple_build_assign_with_ops_stat (enum tree_code, tree, tree,
 #define gimple_build_assign_with_ops(c,o1,o2,o3) \
   gimple_build_assign_with_ops_stat (c, o1, o2, o3 MEM_STAT_INFO)
 
+gimple gimple_build_debug_bind_stat (tree, tree, gimple MEM_STAT_DECL);
+#define gimple_build_debug_bind(var,val,stmt)			\
+  gimple_build_debug_bind_stat ((var), (val), (stmt) MEM_STAT_INFO)
+
 gimple gimple_build_call_vec (tree, VEC(tree, heap) *);
 gimple gimple_build_call (tree, unsigned, ...);
 gimple gimple_build_call_from_tree (tree);
@@ -824,6 +836,8 @@ bool gimple_assign_rhs_could_trap_p (gimple);
 void gimple_regimplify_operands (gimple, gimple_stmt_iterator *);
 bool empty_body_p (gimple_seq);
 unsigned get_gimple_rhs_num_ops (enum tree_code);
+const char *gimple_decl_printable_name (tree, int);
+tree gimple_fold_obj_type_ref (tree, tree);
 
 /* Returns true iff T is a valid GIMPLE statement.  */
 extern bool is_gimple_stmt (tree);
@@ -3158,6 +3172,105 @@ gimple_switch_set_default_label (gimple gs, tree label)
   gimple_switch_set_label (gs, 0, label);
 }
 
+/* Return true if GS is a GIMPLE_DEBUG statement.  */
+
+static inline bool
+is_gimple_debug (const_gimple gs)
+{
+  return gimple_code (gs) == GIMPLE_DEBUG;
+}
+
+/* Return true if S is a GIMPLE_DEBUG BIND statement.  */
+
+static inline bool
+gimple_debug_bind_p (const_gimple s)
+{
+  if (is_gimple_debug (s))
+    return s->gsbase.subcode == GIMPLE_DEBUG_BIND;
+
+  return false;
+}
+
+/* Return the variable bound in a GIMPLE_DEBUG bind statement.  */
+
+static inline tree
+gimple_debug_bind_get_var (gimple dbg)
+{
+  GIMPLE_CHECK (dbg, GIMPLE_DEBUG);
+  gcc_assert (gimple_debug_bind_p (dbg));
+  return gimple_op (dbg, 0);
+}
+
+/* Return the value bound to the variable in a GIMPLE_DEBUG bind
+   statement.  */
+
+static inline tree
+gimple_debug_bind_get_value (gimple dbg)
+{
+  GIMPLE_CHECK (dbg, GIMPLE_DEBUG);
+  gcc_assert (gimple_debug_bind_p (dbg));
+  return gimple_op (dbg, 1);
+}
+
+/* Return a pointer to the value bound to the variable in a
+   GIMPLE_DEBUG bind statement.  */
+
+static inline tree *
+gimple_debug_bind_get_value_ptr (gimple dbg)
+{
+  GIMPLE_CHECK (dbg, GIMPLE_DEBUG);
+  gcc_assert (gimple_debug_bind_p (dbg));
+  return gimple_op_ptr (dbg, 1);
+}
+
+/* Set the variable bound in a GIMPLE_DEBUG bind statement.  */
+
+static inline void
+gimple_debug_bind_set_var (gimple dbg, tree var)
+{
+  GIMPLE_CHECK (dbg, GIMPLE_DEBUG);
+  gcc_assert (gimple_debug_bind_p (dbg));
+  gimple_set_op (dbg, 0, var);
+}
+
+/* Set the value bound to the variable in a GIMPLE_DEBUG bind
+   statement.  */
+
+static inline void
+gimple_debug_bind_set_value (gimple dbg, tree value)
+{
+  GIMPLE_CHECK (dbg, GIMPLE_DEBUG);
+  gcc_assert (gimple_debug_bind_p (dbg));
+  gimple_set_op (dbg, 1, value);
+}
+
+/* The second operand of a GIMPLE_DEBUG_BIND, when the value was
+   optimized away.  */
+#define GIMPLE_DEBUG_BIND_NOVALUE NULL_TREE /* error_mark_node */
+
+/* Remove the value bound to the variable in a GIMPLE_DEBUG bind
+   statement.  */
+
+static inline void
+gimple_debug_bind_reset_value (gimple dbg)
+{
+  GIMPLE_CHECK (dbg, GIMPLE_DEBUG);
+  gcc_assert (gimple_debug_bind_p (dbg));
+  gimple_set_op (dbg, 1, GIMPLE_DEBUG_BIND_NOVALUE);
+}
+
+/* Return true if the GIMPLE_DEBUG bind statement is bound to a
+   value.  */
+
+static inline bool
+gimple_debug_bind_has_value_p (gimple dbg)
+{
+  GIMPLE_CHECK (dbg, GIMPLE_DEBUG);
+  gcc_assert (gimple_debug_bind_p (dbg));
+  return gimple_op (dbg, 1) != GIMPLE_DEBUG_BIND_NOVALUE;
+}
+
+#undef GIMPLE_DEBUG_BIND_NOVALUE
 
 /* Return the body for the OMP statement GS.  */
 
@@ -4077,23 +4190,32 @@ gimple_return_set_retval (gimple gs, tree retval)
 
 /* Returns true when the gimple statment STMT is any of the OpenMP types.  */
 
+#define CASE_GIMPLE_OMP				\
+    case GIMPLE_OMP_PARALLEL:			\
+    case GIMPLE_OMP_TASK:			\
+    case GIMPLE_OMP_FOR:			\
+    case GIMPLE_OMP_SECTIONS:			\
+    case GIMPLE_OMP_SECTIONS_SWITCH:		\
+    case GIMPLE_OMP_SINGLE:			\
+    case GIMPLE_OMP_SECTION:			\
+    case GIMPLE_OMP_MASTER:			\
+    case GIMPLE_OMP_ORDERED:			\
+    case GIMPLE_OMP_CRITICAL:			\
+    case GIMPLE_OMP_RETURN:			\
+    case GIMPLE_OMP_ATOMIC_LOAD:		\
+    case GIMPLE_OMP_ATOMIC_STORE:		\
+    case GIMPLE_OMP_CONTINUE
+
 static inline bool
 is_gimple_omp (const_gimple stmt)
 {
-  return (gimple_code (stmt) == GIMPLE_OMP_PARALLEL
-	  || gimple_code (stmt) == GIMPLE_OMP_TASK
-	  || gimple_code (stmt) == GIMPLE_OMP_FOR
-	  || gimple_code (stmt) == GIMPLE_OMP_SECTIONS
-	  || gimple_code (stmt) == GIMPLE_OMP_SECTIONS_SWITCH
-	  || gimple_code (stmt) == GIMPLE_OMP_SINGLE
-	  || gimple_code (stmt) == GIMPLE_OMP_SECTION
-	  || gimple_code (stmt) == GIMPLE_OMP_MASTER
-	  || gimple_code (stmt) == GIMPLE_OMP_ORDERED
-	  || gimple_code (stmt) == GIMPLE_OMP_CRITICAL
-	  || gimple_code (stmt) == GIMPLE_OMP_RETURN
-	  || gimple_code (stmt) == GIMPLE_OMP_ATOMIC_LOAD
-	  || gimple_code (stmt) == GIMPLE_OMP_ATOMIC_STORE
-	  || gimple_code (stmt) == GIMPLE_OMP_CONTINUE);
+  switch (gimple_code (stmt))
+    {
+    CASE_GIMPLE_OMP:
+      return true;
+    default:
+      return false;
+    }
 }
 
 
@@ -4306,6 +4428,58 @@ gsi_after_labels (basic_block bb)
     gsi_next (&gsi);
 
   return gsi;
+}
+
+/* Advance the iterator to the next non-debug gimple statement.  */
+
+static inline void
+gsi_next_nondebug (gimple_stmt_iterator *i)
+{
+  do
+    {
+      gsi_next (i);
+    }
+  while (!gsi_end_p (*i) && is_gimple_debug (gsi_stmt (*i)));
+}
+
+/* Advance the iterator to the next non-debug gimple statement.  */
+
+static inline void
+gsi_prev_nondebug (gimple_stmt_iterator *i)
+{
+  do
+    {
+      gsi_prev (i);
+    }
+  while (!gsi_end_p (*i) && is_gimple_debug (gsi_stmt (*i)));
+}
+
+/* Return a new iterator pointing to the first non-debug statement in
+   basic block BB.  */
+
+static inline gimple_stmt_iterator
+gsi_start_nondebug_bb (basic_block bb)
+{
+  gimple_stmt_iterator i = gsi_start_bb (bb);
+
+  if (!gsi_end_p (i) && is_gimple_debug (gsi_stmt (i)))
+    gsi_next_nondebug (&i);
+
+  return i;
+}
+
+/* Return a new iterator pointing to the last non-debug statement in
+   basic block BB.  */
+
+static inline gimple_stmt_iterator
+gsi_last_nondebug_bb (basic_block bb)
+{
+  gimple_stmt_iterator i = gsi_last_bb (bb);
+
+  if (!gsi_end_p (i) && is_gimple_debug (gsi_stmt (i)))
+    gsi_prev_nondebug (&i);
+
+  return i;
 }
 
 /* Return a pointer to the current stmt.

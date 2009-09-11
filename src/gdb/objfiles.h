@@ -414,12 +414,6 @@ struct objfile
 
 #define OBJF_USERLOADED	(1 << 3)	/* User loaded */
 
-/* The bfd of this objfile is used outside of the objfile (e.g. by solib).
-   Do not try to free it.  */
-
-#define OBJF_KEEPBFD	(1 << 4)	/* Do not delete bfd */
-
-
 /* The object file that the main symbol table was loaded from (e.g. the
    argument to the "symbol-file" or "file" command).  */
 
@@ -478,6 +472,10 @@ extern void free_all_objfiles (void);
 
 extern void objfile_relocate (struct objfile *, struct section_offsets *);
 
+extern int objfile_has_partial_symbols (struct objfile *objfile);
+
+extern int objfile_has_full_symbols (struct objfile *objfile);
+
 extern int have_partial_symbols (void);
 
 extern int have_full_symbols (void);
@@ -510,6 +508,9 @@ extern void set_objfile_data (struct objfile *objfile,
 			      const struct objfile_data *data, void *value);
 extern void *objfile_data (struct objfile *objfile,
 			   const struct objfile_data *data);
+
+extern struct bfd *gdb_bfd_ref (struct bfd *abfd);
+extern void gdb_bfd_unref (struct bfd *abfd);
 
 
 /* Traverse all object files.  ALL_OBJFILES_SAFE works even if you delete

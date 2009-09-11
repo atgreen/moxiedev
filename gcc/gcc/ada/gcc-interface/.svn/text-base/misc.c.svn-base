@@ -106,8 +106,6 @@ static void gnat_get_subrange_bounds	(const_tree, tree *, tree *);
 #define LANG_HOOKS_WRITE_GLOBALS	gnat_write_global_declarations
 #undef  LANG_HOOKS_GET_ALIAS_SET
 #define LANG_HOOKS_GET_ALIAS_SET	gnat_get_alias_set
-#undef  LANG_HOOKS_MARK_ADDRESSABLE
-#define LANG_HOOKS_MARK_ADDRESSABLE	gnat_mark_addressable
 #undef  LANG_HOOKS_PRINT_DECL
 #define LANG_HOOKS_PRINT_DECL		gnat_print_decl
 #undef  LANG_HOOKS_PRINT_TYPE
@@ -133,7 +131,7 @@ static void gnat_get_subrange_bounds	(const_tree, tree *, tree *);
 #undef  LANG_HOOKS_BUILTIN_FUNCTION
 #define LANG_HOOKS_BUILTIN_FUNCTION        gnat_builtin_function
 
-const struct lang_hooks lang_hooks = LANG_HOOKS_INITIALIZER;
+struct lang_hooks lang_hooks = LANG_HOOKS_INITIALIZER;
 
 /* How much we want of our DWARF extensions.  Some of our dwarf+ extensions
    are incompatible with regular GDB versions, so we must make sure to only
@@ -656,14 +654,8 @@ gnat_type_max_size (const_tree gnu_type)
 static void
 gnat_get_subrange_bounds (const_tree gnu_type, tree *lowval, tree *highval)
 {
-  tree min = TYPE_MIN_VALUE (gnu_type);
-  tree max = TYPE_MAX_VALUE (gnu_type);
-  /* If the bounds aren't constant, use non-representable constant values
-     to get the same effect on debug info without tree sharing issues.  */
-  *lowval
-    = TREE_CONSTANT (min) ? min : build_int_cstu (integer_type_node, -1);
-  *highval
-    = TREE_CONSTANT (max) ? max : build_int_cstu (integer_type_node, -1);
+  *lowval = TYPE_MIN_VALUE (gnu_type);
+  *highval = TYPE_MAX_VALUE (gnu_type);
 }
 
 /* GNU_TYPE is a type. Determine if it should be passed by reference by

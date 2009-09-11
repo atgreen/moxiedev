@@ -1,5 +1,4 @@
 /COPYING/1.2/Mon Jul  6 10:46:49 2009/-ko/
-/ChangeLog/1.102/Mon Jul  6 10:46:49 2009/-ko/
 /Makefile.in/1.14/Mon Jul  6 10:46:49 2009/-ko/
 /README/1.1/Mon Jul  6 10:46:49 2009//
 /armcopro.c/1.14/Mon Jul  6 10:46:49 2009/-ko/
@@ -18,8 +17,6 @@
 /bag.h/1.2/Mon Jul  6 10:46:49 2009/-ko/
 /communicate.c/1.2/Mon Jul  6 10:46:49 2009/-ko/
 /communicate.h/1.2/Mon Jul  6 10:46:49 2009/-ko/
-/config.in/1.4/Mon Jul  6 10:46:49 2009/-ko/
-/configure/1.19/Mon Jul  6 10:46:49 2009/-ko/
 /configure.ac/1.4/Mon Jul  6 10:46:49 2009//
 /dbg_conf.h/1.2/Mon Jul  6 10:46:49 2009/-ko/
 /dbg_cp.h/1.2/Mon Jul  6 10:46:49 2009/-ko/
@@ -36,4 +33,7 @@
 /tconfig.in/1.1.1.1/Mon Jul  6 10:46:49 2009/-ko/
 /thumbemu.c/1.7/Mon Jul  6 10:46:49 2009/-ko/
 /wrapper.c/1.37/Mon Jul  6 10:46:49 2009/-ko/
+/ChangeLog/1.104/Tue Sep  8 03:27:50 2009/-ko/
+/config.in/1.5/Tue Sep  8 03:27:50 2009/-ko/
+/configure/1.21/Tue Sep  8 03:27:51 2009/-ko/
 D

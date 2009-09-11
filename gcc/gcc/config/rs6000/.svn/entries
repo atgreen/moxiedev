@@ -1,15 +1,15 @@
 10
 
 dir
-150304
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/rs6000
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-30T20:48:17.088459Z
-150271
-meissner
+2009-09-09T19:50:42.852133Z
+151575
+segher
 
 
 
@@ -28,7 +28,7 @@ meissner
 
 aix53.h
 file
-149693
+
 
 
 
@@ -62,7 +62,7 @@ meissner
 
 t-netbsd
 file
-149693
+
 
 
 
@@ -96,7 +96,7 @@ jsm28
 
 e300c2c3.md
 file
-149693
+
 
 
 
@@ -130,7 +130,7 @@ dje
 
 t-fprules
 file
-149693
+
 
 
 
@@ -164,7 +164,7 @@ jsm28
 
 6xx.md
 file
-149693
+
 
 
 
@@ -198,7 +198,7 @@ nickc
 
 t-darwin
 file
-149693
+
 
 
 
@@ -232,7 +232,7 @@ jsm28
 
 linux.h
 file
-149693
+
 
 
 
@@ -266,7 +266,7 @@ nickc
 
 darwin-ldouble.c
 file
-149693
+
 
 
 
@@ -300,7 +300,7 @@ jakub
 
 e500crtsav32gpr.asm
 file
-149693
+
 
 
 
@@ -334,7 +334,7 @@ jakub
 
 paired.h
 file
-149693
+
 
 
 
@@ -368,7 +368,7 @@ jakub
 
 secureplt.h
 file
-149693
+
 
 
 
@@ -402,7 +402,7 @@ nickc
 
 linuxspe.h
 file
-149693
+
 
 
 
@@ -436,7 +436,7 @@ jakub
 
 eabialtivec.h
 file
-149693
+
 
 
 
@@ -470,7 +470,7 @@ nickc
 
 e500crtres64gpr.asm
 file
-149693
+
 
 
 
@@ -504,7 +504,7 @@ jakub
 
 x-rs6000
 file
-149693
+
 
 
 
@@ -538,7 +538,7 @@ ian
 
 8540.md
 file
-149693
+
 
 
 
@@ -606,7 +606,7 @@ meissner
 
 tramp.asm
 file
-149693
+
 
 
 
@@ -640,7 +640,7 @@ jakub
 
 e500crtres64gprctr.asm
 file
-149693
+
 
 
 
@@ -674,7 +674,7 @@ jakub
 
 sol-cn.asm
 file
-149693
+
 
 
 
@@ -708,7 +708,7 @@ jakub
 
 spu2vmx.h
 file
-149693
+
 
 
 
@@ -742,7 +742,7 @@ jakub
 
 sfp-machine.h
 file
-149693
+
 
 
 
@@ -776,7 +776,7 @@ uros
 
 aix.opt
 file
-149693
+
 
 
 
@@ -810,7 +810,7 @@ nickc
 
 darwin.md
 file
-149693
+
 
 
 
@@ -844,7 +844,7 @@ nickc
 
 darwin.opt
 file
-149693
+
 
 
 
@@ -878,7 +878,7 @@ bje
 
 e500crtresx64gpr.asm
 file
-149693
+
 
 
 
@@ -912,7 +912,7 @@ jakub
 
 spe.md
 file
-149693
+
 
 
 
@@ -946,7 +946,7 @@ meissner
 
 x-aix
 file
-149693
+
 
 
 
@@ -980,7 +980,7 @@ dje
 
 rios2.md
 file
-149693
+
 
 
 
@@ -1014,7 +1014,7 @@ nickc
 
 7450.md
 file
-149693
+
 
 
 
@@ -1048,7 +1048,7 @@ nickc
 
 darwin-ldouble-format
 file
-149693
+
 
 
 
@@ -1082,7 +1082,7 @@ jsm28
 
 t-ppcendian
 file
-149693
+
 
 
 
@@ -1116,7 +1116,7 @@ jsm28
 
 x-darwin64
 file
-149693
+
 
 
 
@@ -1184,7 +1184,7 @@ meissner
 
 440.md
 file
-149693
+
 
 
 
@@ -1218,7 +1218,7 @@ nickc
 
 eabi-ci.asm
 file
-149693
+
 
 
 
@@ -1252,7 +1252,7 @@ jakub
 
 libgcc-ppc-glibc.ver
 file
-149693
+
 
 
 
@@ -1286,7 +1286,7 @@ jsm28
 
 si2vmx.h
 file
-149693
+
 
 
 
@@ -1320,7 +1320,7 @@ jakub
 
 750cl.h
 file
-149693
+
 
 
 
@@ -1354,7 +1354,7 @@ jakub
 
 power6.md
 file
-149693
+
 
 
 
@@ -1422,7 +1422,7 @@ meissner
 
 darwin-tramp.asm
 file
-149693
+
 
 
 
@@ -1490,7 +1490,7 @@ meissner
 
 e500crtres32gpr.asm
 file
-149693
+
 
 
 
@@ -1524,7 +1524,7 @@ jakub
 
 crtsavgpr.asm
 file
-149693
+
 
 
 
@@ -1558,7 +1558,7 @@ jakub
 
 t-rtems
 file
-149693
+
 
 
 
@@ -1592,7 +1592,7 @@ jsm28
 
 rs6000-modes.def
 file
-149693
+
 
 
 
@@ -1626,7 +1626,7 @@ nickc
 
 rs64.md
 file
-149693
+
 
 
 
@@ -1660,7 +1660,7 @@ nickc
 
 eabisim.h
 file
-149693
+
 
 
 
@@ -1694,7 +1694,7 @@ nickc
 
 darwin7.h
 file
-149693
+
 
 
 
@@ -1728,7 +1728,7 @@ nickc
 
 xfpu.h
 file
-149693
+
 
 
 
@@ -1762,7 +1762,7 @@ dje
 
 linux64.opt
 file
-149693
+
 
 
 
@@ -1796,7 +1796,7 @@ meissner
 
 spe.h
 file
-149693
+
 
 
 
@@ -1830,7 +1830,7 @@ jakub
 
 e500crtsavg64gprctr.asm
 file
-149693
+
 
 
 
@@ -1864,7 +1864,7 @@ jakub
 
 t-ppcgas
 file
-149693
+
 
 
 
@@ -1898,7 +1898,7 @@ jsm28
 
 vxworksae.h
 file
-149693
+
 
 
 
@@ -1932,7 +1932,7 @@ nickc
 
 ppc64-fp.c
 file
-149693
+
 
 
 
@@ -1966,7 +1966,7 @@ jakub
 
 lynx.h
 file
-149693
+
 
 
 
@@ -2000,7 +2000,7 @@ nickc
 
 e500crtresx32gpr.asm
 file
-149693
+
 
 
 
@@ -2034,7 +2034,7 @@ jakub
 
 darwin-libgcc.10.5.ver
 file
-149693
+
 
 
 
@@ -2068,7 +2068,7 @@ jsm28
 
 crtresxgpr.asm
 file
-149693
+
 
 
 
@@ -2102,7 +2102,7 @@ jakub
 
 sysv4.opt
 file
-149693
+
 
 
 
@@ -2136,7 +2136,7 @@ meissner
 
 paired.md
 file
-149693
+
 
 
 
@@ -2170,19 +2170,15 @@ jakub
 
 rs6000-protos.h
 file
-149693
-
-
-
-2009-06-26T14:47:09.000000Z
-5a40e0f8bca3a720d8c3821dbda8b6c2
-2009-06-25T23:07:07.168253Z
-148955
-meissner
 
 
 
 
+2009-09-08T13:01:47.000000Z
+3856beafa14c98835ec3fa750265d82c
+2009-08-28T09:04:52.737265Z
+151157
+hainque
 
 
 
@@ -2200,11 +2196,15 @@ meissner
 
 
 
-8895
+
+
+
+
+8956
 
 netbsd.h
 file
-149693
+
 
 
 
@@ -2238,19 +2238,15 @@ jakub
 
 aix.h
 file
-149693
-
-
-
-2009-06-20T15:53:29.000000Z
-a480c2d7f3528bc098158c42e0127837
-2009-06-16T18:51:54.352559Z
-148546
-dje
 
 
 
 
+2009-09-08T13:01:47.000000Z
+f0b200dbca65e3d80f830b1a83e8fa25
+2009-08-28T09:04:52.737265Z
+151157
+hainque
 
 
 
@@ -2268,11 +2264,15 @@ dje
 
 
 
-9512
+
+
+
+
+9867
 
 40x.md
 file
-149693
+
 
 
 
@@ -2306,7 +2306,7 @@ nickc
 
 t-xilinx
 file
-149693
+
 
 
 
@@ -2340,7 +2340,7 @@ eager
 
 aix51.h
 file
-149693
+
 
 
 
@@ -2374,7 +2374,7 @@ rsandifo
 
 power4.md
 file
-149693
+
 
 
 
@@ -2408,7 +2408,7 @@ vmakarov
 
 host-darwin.c
 file
-149693
+
 
 
 
@@ -2442,7 +2442,7 @@ sayle
 
 xfpu.md
 file
-149693
+
 
 
 
@@ -2476,7 +2476,7 @@ dje
 
 t-fprules-fpbit
 file
-149693
+
 
 
 
@@ -2510,7 +2510,7 @@ jsm28
 
 t-ppcos
 file
-149693
+
 
 
 
@@ -2544,7 +2544,7 @@ zack
 
 eabi.h
 file
-149693
+
 
 
 
@@ -2578,7 +2578,7 @@ nickc
 
 t-spe
 file
-149693
+
 
 
 
@@ -2612,7 +2612,7 @@ jsm28
 
 x-darwin
 file
-149693
+
 
 
 
@@ -2646,7 +2646,7 @@ ian
 
 crtsavfpr.asm
 file
-149693
+
 
 
 
@@ -2680,7 +2680,7 @@ jakub
 
 crtresgpr.asm
 file
-149693
+
 
 
 
@@ -2714,7 +2714,7 @@ jakub
 
 xcoff.h
 file
-149693
+
 
 
 
@@ -2782,7 +2782,7 @@ meissner
 
 darwin8.h
 file
-149693
+
 
 
 
@@ -2816,7 +2816,7 @@ nickc
 
 sol-ci.asm
 file
-149693
+
 
 
 
@@ -2850,7 +2850,7 @@ jakub
 
 603.md
 file
-149693
+
 
 
 
@@ -2884,7 +2884,7 @@ nickc
 
 libgcc-ppc64.ver
 file
-149693
+
 
 
 
@@ -2918,7 +2918,7 @@ dje
 
 x-linux-relax
 file
-149693
+
 
 
 
@@ -2952,7 +2952,7 @@ jakub
 
 aix43.h
 file
-149693
+
 
 
 
@@ -2986,7 +2986,7 @@ rsandifo
 
 cell.md
 file
-149693
+
 
 
 
@@ -3020,7 +3020,7 @@ nickc
 
 mpc.md
 file
-149693
+
 
 
 
@@ -3054,7 +3054,7 @@ nickc
 
 gnu.h
 file
-149693
+
 
 
 
@@ -3088,7 +3088,7 @@ nickc
 
 t-fprules-softfp
 file
-149693
+
 
 
 
@@ -3122,7 +3122,7 @@ jsm28
 
 rtems.h
 file
-149693
+
 
 
 
@@ -3156,7 +3156,7 @@ nickc
 
 crtresxfpr.asm
 file
-149693
+
 
 
 
@@ -3190,7 +3190,7 @@ jakub
 
 e500crtrest64gpr.asm
 file
-149693
+
 
 
 
@@ -3258,7 +3258,7 @@ meissner
 
 t-vxworks
 file
-149693
+
 
 
 
@@ -3292,7 +3292,7 @@ jsm28
 
 default64.h
 file
-149693
+
 
 
 
@@ -3326,7 +3326,7 @@ nickc
 
 darwin64.h
 file
-149693
+
 
 
 
@@ -3360,7 +3360,7 @@ nickc
 
 darwin-fpsave.asm
 file
-149693
+
 
 
 
@@ -3394,7 +3394,7 @@ jakub
 
 7xx.md
 file
-149693
+
 
 
 
@@ -3428,7 +3428,7 @@ nickc
 
 vec_types.h
 file
-149693
+
 
 
 
@@ -3462,7 +3462,7 @@ jakub
 
 darwin-asm.h
 file
-149693
+
 
 
 
@@ -3564,7 +3564,7 @@ meissner
 
 darwin-vecsave.asm
 file
-149693
+
 
 
 
@@ -3598,7 +3598,7 @@ hjl
 
 linuxaltivec.h
 file
-149693
+
 
 
 
@@ -3632,7 +3632,7 @@ nickc
 
 linux64.h
 file
-149693
+
 
 
 
@@ -3666,7 +3666,7 @@ meissner
 
 e500crtsavg64gpr.asm
 file
-149693
+
 
 
 
@@ -3700,7 +3700,7 @@ jakub
 
 darwin.h
 file
-149693
+
 
 
 
@@ -3734,7 +3734,7 @@ jakub
 
 host-ppc64-darwin.c
 file
-149693
+
 
 
 
@@ -3772,11 +3772,11 @@ file
 
 
 
-2009-07-31T04:48:16.000000Z
-8bf6de4a3b88a14da226628617469b9f
-2009-07-30T20:48:17.088459Z
-150271
-meissner
+2009-09-08T13:01:47.000000Z
+3b38b4f4fe992dd79684e21248a5e812
+2009-09-02T02:42:21.851804Z
+151312
+aoliva
 
 
 
@@ -3798,11 +3798,11 @@ meissner
 
 
 
-804366
+806694
 
 eabi-cn.asm
 file
-149693
+
 
 
 
@@ -3836,7 +3836,7 @@ jakub
 
 aix52.h
 file
-149693
+
 
 
 
@@ -3870,7 +3870,7 @@ rsandifo
 
 eabi.asm
 file
-149693
+
 
 
 
@@ -3942,11 +3942,11 @@ file
 
 
 
-2009-07-31T04:48:16.000000Z
-92449c5d80d498b9a020558e0a294ce1
-2009-07-30T20:48:17.088459Z
-150271
-meissner
+2009-09-08T13:01:47.000000Z
+67c3908fd7c532e319767150647f7857
+2009-08-25T21:09:00.855165Z
+151096
+aesok
 
 
 
@@ -3968,7 +3968,7 @@ meissner
 
 
 
-121640
+121029
 
 altivec.md
 file
@@ -4006,7 +4006,7 @@ meissner
 
 linux-unwind.h
 file
-149693
+
 
 
 
@@ -4040,7 +4040,7 @@ bje
 
 darwin-world.asm
 file
-149693
+
 
 
 
@@ -4074,7 +4074,7 @@ jakub
 
 crtresfpr.asm
 file
-149693
+
 
 
 
@@ -4108,7 +4108,7 @@ jakub
 
 t-aix43
 file
-149693
+
 
 
 
@@ -4142,7 +4142,7 @@ jsm28
 
 t-vxworksae
 file
-149693
+
 
 
 
@@ -4176,7 +4176,7 @@ pme
 
 aix64.opt
 file
-149693
+
 
 
 
@@ -4210,7 +4210,7 @@ bje
 
 rios1.md
 file
-149693
+
 
 
 
@@ -4244,7 +4244,7 @@ nickc
 
 singlefp.h
 file
-149693
+
 
 
 
@@ -4278,7 +4278,7 @@ dje
 
 e500crtsav64gpr.asm
 file
-149693
+
 
 
 
@@ -4312,7 +4312,7 @@ jakub
 
 sysv4le.h
 file
-149693
+
 
 
 
@@ -4346,7 +4346,7 @@ nickc
 
 darwin-fallback.c
 file
-149693
+
 
 
 
@@ -4380,7 +4380,7 @@ tromey
 
 e500crtsav64gprctr.asm
 file
-149693
+
 
 
 
@@ -4414,7 +4414,7 @@ jakub
 
 dfp.md
 file
-149693
+
 
 
 
@@ -4448,7 +4448,7 @@ eager
 
 t-linux64
 file
-149693
+
 
 
 
@@ -4482,7 +4482,7 @@ jsm28
 
 aix-stdint.h
 file
-149693
+
 
 
 
@@ -4516,7 +4516,7 @@ dje
 
 sync.md
 file
-149693
+
 
 
 
@@ -4550,7 +4550,7 @@ meissner
 
 darwin-unwind.h
 file
-149693
+
 
 
 
@@ -4584,7 +4584,7 @@ jakub
 
 e500crtrest32gpr.asm
 file
-149693
+
 
 
 
@@ -4618,7 +4618,7 @@ jakub
 
 aix61.h
 file
-149693
+
 
 
 
@@ -4652,7 +4652,7 @@ meissner
 
 power5.md
 file
-149693
+
 
 
 
@@ -4686,7 +4686,7 @@ vmakarov
 
 darwin-libgcc.10.4.ver
 file
-149693
+
 
 
 
@@ -4720,7 +4720,7 @@ jsm28
 
 biarch64.h
 file
-149693
+
 
 
 
@@ -4754,7 +4754,7 @@ jakub
 
 e500mc.md
 file
-149693
+
 
 
 
@@ -4788,7 +4788,7 @@ dje
 
 t-aix52
 file
-149693
+
 
 
 
@@ -4826,11 +4826,11 @@ file
 
 
 
-2009-07-31T04:48:17.000000Z
-f2e2a666eb87d14141ce2aabcf0b63ad
-2009-07-30T20:48:17.088459Z
-150271
-meissner
+2009-09-09T20:40:57.000000Z
+7d202d583080b3aede02d44f05293b05
+2009-09-09T19:50:42.852133Z
+151575
+segher
 
 
 
@@ -4852,11 +4852,11 @@ meissner
 
 
 
-511984
+513564
 
 t-lynx
 file
-149693
+
 
 
 
@@ -4890,7 +4890,7 @@ jsm28
 
 eabispe.h
 file
-149693
+
 
 
 
@@ -4924,7 +4924,7 @@ jakub
 
 ppu_intrinsics.h
 file
-149693
+
 
 
 
@@ -4958,7 +4958,7 @@ eager
 
 e500.h
 file
-149693
+
 
 
 
@@ -4992,7 +4992,7 @@ meissner
 
 t-ppccomm
 file
-149693
+
 
 
 
@@ -5026,19 +5026,15 @@ jsm28
 
 freebsd.h
 file
-149693
-
-
-
-2009-04-24T17:43:27.000000Z
-58c487445e8741222b6c26d86872ea56
-2007-08-02T10:49:31.520855Z
-127157
-nickc
 
 
 
 
+2009-09-08T13:01:47.000000Z
+8bef90c241df598d3c49b20e3bbc297f
+2009-08-10T18:23:57.201060Z
+150632
+andreast
 
 
 
@@ -5056,11 +5052,15 @@ nickc
 
 
 
-2343
+
+
+
+
+2472
 
 e500crtsavg32gpr.asm
 file
-149693
+
 
 
 
@@ -5094,7 +5094,7 @@ jakub
 
 milli.exp
 file
-149693
+
 
 
 
@@ -5128,7 +5128,7 @@ law
 
 xilinx.h
 file
-149693
+
 
 
 
@@ -5162,7 +5162,7 @@ eager
 
 option-defaults.h
 file
-149693
+
 
 
 
@@ -5196,7 +5196,7 @@ jsm28
 
 driver-rs6000.c
 file
-149693
+
 
 
 
@@ -5230,7 +5230,7 @@ meissner
 
 e500-double.h
 file
-149693
+
 
 
 
@@ -5264,7 +5264,7 @@ nickc
 
 vxworks.h
 file
-149693
+
 
 
 
@@ -5298,7 +5298,7 @@ nickc
 
 t-darwin8
 file
-149693
+
 
 
 
@@ -5366,7 +5366,7 @@ meissner
 
 sysv4.h
 file
-149693
+
 
 
 

@@ -254,10 +254,8 @@ static char picochip_get_vliw_alu_id (void);
 #undef TARGET_ARG_PARTIAL_BYTES
 #define TARGET_ARG_PARTIAL_BYTES picochip_arg_partial_bytes
 
-#undef TARGET_PROMOTE_FUNCTION_ARGS
-#define TARGET_PROMOTE_FUNCTION_ARGS hook_bool_const_tree_true
-#undef TARGET_PROMOTE_FUNCTION_RETURN
-#define TARGET_PROMOTE_FUNCTION_RETURN hook_bool_const_tree_true
+#undef TARGET_PROMOTE_FUNCTION_MODE
+#define TARGET_PROMOTE_FUNCTION_MODE default_promote_function_mode_always_promote
 #undef TARGET_PROMOTE_PROTOTYPES
 #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
 
@@ -2922,7 +2920,7 @@ reorder_var_tracking_notes (void)
 	{
 	  next = NEXT_INSN (insn);
 
-	  if (INSN_P (insn))
+	  if (NONDEBUG_INSN_P (insn))
 	    {
 	      /* Emit queued up notes before the first instruction of a bundle.  */
 	      if (GET_MODE (insn) == TImode)
@@ -3018,7 +3016,7 @@ picochip_reorg (void)
                   INSN_LOCATOR (insn1) = vliw_insn_location;
               }
               /* Tag subsequent instructions with the same location. */
-              if (INSN_P (insn))
+              if (NONDEBUG_INSN_P (insn))
                 INSN_LOCATOR (insn) = vliw_insn_location;
 	    }
 	}
@@ -3162,7 +3160,7 @@ picochip_reset_vliw (rtx insn)
   local_insn = insn;
   do
     {
-      if (NOTE_P (local_insn))
+      if (NOTE_P (local_insn) || DEBUG_INSN_P(local_insn))
 	{
 	  local_insn = NEXT_INSN (local_insn);
 	  continue;
@@ -3601,7 +3599,7 @@ picochip_final_prescan_insn (rtx insn, rtx * opvec ATTRIBUTE_UNUSED,
   for (local_insn = NEXT_INSN (local_insn); local_insn;
        local_insn = NEXT_INSN (local_insn))
     {
-      if (NOTE_P (local_insn))
+      if (NOTE_P (local_insn) || DEBUG_INSN_P(local_insn))
 	continue;
       else if (!INSN_P (local_insn))
 	break;
@@ -3613,7 +3611,7 @@ picochip_final_prescan_insn (rtx insn, rtx * opvec ATTRIBUTE_UNUSED,
   /* Set the continuation flag if the next instruction can be packed
      with the current instruction (i.e., the next instruction is
      valid, and isn't the start of a new cycle). */
-  picochip_vliw_continuation = (local_insn && INSN_P (local_insn) &&
+  picochip_vliw_continuation = (local_insn && NONDEBUG_INSN_P (local_insn) &&
 				(GET_MODE (local_insn) != TImode));
 
 }
@@ -4144,7 +4142,7 @@ warn_of_byte_access (void)
 }
 
 rtx
-picochip_function_value (const_tree valtype, const_tree func ATTRIBUTE_UNUSED,
+picochip_function_value (const_tree valtype, const_tree func,
                          bool outgoing ATTRIBUTE_UNUSED)
 {
   enum machine_mode mode = TYPE_MODE (valtype);
@@ -4152,7 +4150,7 @@ picochip_function_value (const_tree valtype, const_tree func ATTRIBUTE_UNUSED,
 
   /* Since we define PROMOTE_FUNCTION_RETURN, we must promote the mode
      just as PROMOTE_MODE does.  */
-  mode = promote_mode (valtype, mode, &unsignedp, 1);
+  mode = promote_function_mode (valtype, mode, &unsignedp, func, 1);
 
   return gen_rtx_REG (mode, 0);
 

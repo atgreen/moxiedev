@@ -1,3 +1,304 @@
+2009-09-09  Jason Merrill  <jason@redhat.com>
+
+	* error.c (find_typenames_r): Also add decltypes.
+
+2009-09-09  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR c++/28293
+	* decl2.c (grokfield): Check for explicit template argument lists.
+
+2009-09-09  Jack Howarth  <howarth@bromo.med.uc.edu>
+
+	PR bootstrap/41180
+	* Make-lang.in: Remove redundant code from linkage for darwin10.
+
+2009-09-08  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR c++/39923
+	* decl.c (build_init_list_var_init): Check return value of
+	perform_implicit_conversion.
+
+2009-09-03  Jason Merrill  <jason@redhat.com>
+
+	* class.c (currently_open_class): Make sure we're dealing with the
+	main variant.
+
+	* cp-tree.h (enum overload_flags): Remove OP_FLAG.
+	* method.c (lazily_declare_fn): Check for dtorness in ABI warning.
+
+	* name-lookup.c (is_class_level): Remove.
+	(push_binding_level, leave_scope, resume_scope): Adjust.
+	(pushlevel_class): Adjust.
+	(poplevel_class): Make sure we're on class_binding_level.
+
+	* decl.c (grokmethod): Rename from start_method.
+	(finish_method): Remove.
+	* cp-tree.h: Adjust.
+	* parser.c (cp_parser_save_member_function_body): Adjust.
+
+2009-09-03  Doug Kwan  <dougkwan@google.com>
+
+	* tree.c (cp_fix_function_decl_p): New.
+	(cp_free_lang_data): New.
+
+2009-09-03  Diego Novillo  <dnovillo@google.com>
+
+	* Make-lang.in (decl2.o): Add dependency on $(POINTER_SET_H).
+	* decl2.c: Include pointer-set.h.
+	(collect_candidates_for_java_method_aliases): New.
+	(cp_write_global_declarations): Call it.
+	Add local variable CANDIDATES.  If set, call
+	build_java_method_aliases.
+	(build_java_method_aliases): Add argument CANDIDATES.
+	Use it to determine if FNDECL should get a hidden alias.
+	* cp-objcp-common.h (LANG_HOOKS_FREE_LANG_DATA): Define.
+	* cp-tree.h (cp_free_lang_data): Declare.
+
+2009-09-03  Richard Guenther  <rguenther@suse.de>
+
+	* method.c (use_thunk): Use cgraph_finalize_function to hand
+	off thunks to the cgraph.
+	* semantics.c (emit_associated_thunks): Do not emit thunks
+	for really extern functions.
+
+2009-09-03  Diego Novillo  <dnovillo@google.com>
+
+	* cp-lang.c (lang_hooks): Remove const qualifier.
+
+2009-09-02  Jason Merrill  <jason@redhat.com>
+
+	* semantics.c (describable_type): Don't pretend to be in a template.
+
+	* ptree.c (cxx_print_type) [DECLTYPE_TYPE]: Print the expression.
+
+2009-09-01  Alexandre Oliva  <aoliva@redhat.com>
+
+	* cp-tree.h (TFF_NO_OMIT_DEFAULT_TEMPLATE_ARGUMENTS): New.
+	* cp-lang.c (cxx_dwarf_name): Pass it.
+	* error.c (count_non_default_template_args): Take flags as
+	argument.  Adjust all callers.  Skip counting of default
+	arguments if the new flag is given.
+
+2009-09-01  Dodji Seketeli  <dodji@redhat.com>
+
+	PR bootstrap/41205
+	* pt.c (make_ith_pack_parameter_name): Don't use strnlen that is a
+	GNU extension.
+
+2009-09-01  Richard Guenther  <rguenther@suse.de>
+
+	* cp-objcp-common.c (cp_expr_size): Use tree_expr_size.
+	* cp-objcp-common.h (LANG_HOOKS_EXPR_SIZE): Do not define.
+
+2009-09-01  Richard Guenther  <rguenther@suse.de>
+
+	* cp-objcp-common.h (LANG_HOOKS_MARK_ADDRESSABLE): Remove.
+
+2009-08-31  Dodji Seketeli  <dodji@redhat.com>
+
+	PR debug/30161
+	* cp-tree.h (get_template_info): Parameter should be const.
+	(CLASSTYPE_SPECIALIZATION_OF_PRIMARY_TEMPLATE_P): Fix typo.
+	(get_template_argument_pack_elems,
+	get_primary_template_innermost_parameters,
+	get_template_innermost_arguments, template_template_parameter_p):
+	Declare ...
+	* pt.c (get_template_argument_pack_elems,
+	get_template_innermost_parameters, get_template_innermost_arguments,
+	template_template_parameter_p):
+	... New C++ front end implementation of new language hooks.
+	(primary_template_instantiation_p): New private helper.
+	(make_ith_pack_parameter_name): Use snprintf and strnlen instead of
+	printf and strlen.
+	(get_template_info): Const-ify parameter.
+	* cp-lang.c (LANG_HOOKS_GET_INNERMOST_GENERIC_PARMS,
+	LANG_HOOKS_GET_INNERMOST_GENERIC_ARGS,
+	LANG_HOOKS_GET_ARGUMENT_PACK_ELEMS,
+	LANG_HOOKS_GENERIC_TYPE_PARAMETER_DECL_P): Initialize these
+	interfaces for the C++ front-end.
+
+2009-08-31  Jason Merrill  <jason@redhat.com>
+
+	PR c++/41127
+	* parser.c (cp_parser_enum_specifier): Make sure the : is followed by a
+	type-specifier-seq before we commit.
+
+2009-08-28  Richard Guenther  <rguenther@suse.de>
+
+	PR lto/41058
+	* cp-gimplify.c (cp_genericize_r): Do not leak zero-sized stores
+	into the generic IL.
+
+2009-08-27  Richard Guenther  <rguenther@suse.de>
+
+	* class.c (build_vtbl_ref_1): Remove excess vertical space.
+	* Make-lang.in (CXX_TREE_H): Remove c-common.def dependency
+	tracked by $(TREE_H).
+	* semantics.c (expand_or_defer_fn): Zero DECL_SAVED_TREE.
+
+2009-08-26  Jason Merrill  <jason@redhat.com>
+
+	* call.c (build_builtin_candidate): Don't set LOOKUP_ONLYCONVERTING
+	if we're contextually converting to bool.
+	(build_conditional_expr): Likewise.
+	* typeck.c (condition_conversion): Likewise.
+
+	* call.c (build_conditional_expr): Fix logic errors.
+	(build_new_op): Remove dead COND_EXPR handling.
+
+2009-08-24  Jason Merrill  <jason@redhat.com>
+
+	* cp-tree.h (DECL_DEFERRED_FN): Remove.
+	(struct lang_decl_fn): Remove deferred flag.
+	* class.c (build_clone): Don't set it.
+	* decl2.c (note_vague_linkage_fn): Don't check or set it.
+	(mark_used): Don't check it.
+	* method.c (make_thunk, make_alias_for): Don't set it.
+
+	* decl2.c (mark_used): Streamline logic.
+
+	PR c++/41109
+	PR c++/41110
+	PR c++/41134
+	* cp-tree.h (DECL_ODR_USED): New macro.
+	(struct lang_decl_base): Add odr_used flag.
+	* decl.c (duplicate_decls): Propagate it.  Use it for error.
+	* pt.c (register_specialization): Use it for error.
+	* decl2.c (mark_used): Use it as gating flag rather than TREE_USED.
+	(cp_write_global_declarations): Use it for error.
+	(tree_used_ok): Remove.
+	* cp-tree.h: Remove tree_used_ok.
+	* call.c (build_call_a): Don't call it.
+	* init.c (build_offset_ref): Likewise.
+
+2009-08-21  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/41131
+	* tree.c (lvalue_p_1) <case CONST_DECL>: Return clk_none if
+	not TREE_STATIC.
+
+2009-08-19  Jason Merrill  <jason@redhat.com>
+
+	PR c++/41119
+	PR c++/41120
+	* decl2.c (mark_used): Increment function_depth during synthesis.
+	* parser.c (cp_parser_default_argument): Not here.
+
+2009-08-19  Jakub Jelinek  <jakub@redhat.com>
+
+	* method.c (use_thunk): Call free_after_compilation after
+	assemble_end_function.
+
+2009-08-17  Richard Guenther  <rguenther@suse.de>
+
+	* decl.c (build_ptrmemfunc_type): Keep variant chain intact.
+	Avoid useless copy.
+	(finish_enum): Keep variant chain intact.
+	* tree.c (cp_build_reference_type): Likewise.
+
+2009-08-16  Jason Merrill  <jason@redhat.com>
+
+	Make TREE_USED match the [basic.def.odr] concept for FUNCTION_DECL
+	and VAR_DECL, so mark_used only has effect the first time.
+	* decl2.c (mark_used): Just return if TREE_USED is already set.
+	Don't set TREE_USED if cp_unevaluated_operand is set.
+	(tree_used_ok): New fn.
+	* init.c (build_offset_ref): Check it instead of TREE_USED.
+	* call.c (build_call_a): Likewise.
+	* cp-tree.h: Declare it.
+	(DECL_NO_LINKAGE_CHECKED): No longer needed.
+	(struct lang_decl_base): Remove no_linkage_checked bitfield.
+
+	* decl2.c (finish_static_data_member_decl): Don't set TREE_USED.
+
+	* decl2.c (mark_used): It's ok to synthesize for default args now.
+
+2009-08-10  Jason Merrill  <jason@redhat.com>
+
+	Implement DR 757: It's OK for a decl to use a type without linkage
+	so long as the decl is defined in the current translation unit.
+	* decl2.c (no_linkage_decls): New vector.
+	(mark_used): Add decls that use types with no linkage.
+	(cp_write_global_declarations): Check that they are defined.
+	(decl_defined_p, no_linkage_error): New fns.
+	* cp-tree.h (DECL_NO_LINKAGE_CHECKED): New macro.
+	(struct lang_decl_base): Add flag.
+	* decl.c (grokfndecl): Don't check type linkage.
+	(grokvardecl): If the type has no linkage, just make sure
+	DECL_LANG_SPECIFIC is set.
+	* pt.c (check_instantiated_arg): Don't check type linkage.
+	* name-lookup.c (is_local_extern): New fn.
+	* name-lookup.h: Declare it.
+
+2009-08-05  Jason Merrill  <jason@redhat.com>
+
+	PR c++/40948
+	* init.c (build_vec_init): Evaluate the initializer before
+	starting the initialization try block.
+
+2009-08-05  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR c++/36069
+	* typeck.c (convert_for_assignment): Do not warn for any boolean
+	variant. Use explicit location.
+
+2009-08-04  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/39987
+	* pt.c (tsubst_default_argument): Let access checks of the
+	default argument happen in the context of the current function.
+
+2009-08-04  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR c++/16696
+	* call.c (build_new_op): Only try prefix operator if -fpermissive,
+	otherwise just error.
+
+2009-08-04  Dodji Seketeli  <dodji@redhat.com>
+
+	PR debug/39706
+	* error.c (lang_decl_name): Print qualified names for decls
+	in  namespace scope.
+
+2009-08-03  Jason Merrill  <jason@redhat.com>
+	    Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/40948
+	* init.c (build_vec_init): Look through a TARGET_EXPR around a
+	CONSTRUCTOR.
+
+2009-07-31  Jason Merrill  <jason@redhat.com>
+	    Douglas Gregor  <doug.gregor@gmail.com>
+
+	Remove implicit binding of lvalues to rvalue references (N2831)
+	* call.c (convert_class_to_reference): Binding an lvalue to an
+	rvalue reference is bad.  If the user-defined conversion is bad,
+	set bad_p before merging conversions.
+	(maybe_handle_ref_bind): Don't push down bad_p.
+	(reference_binding): Binding an lvalue to an rvalue reference is bad.
+	(convert_like_real): Give a helpful error about binding lvalue
+	to rvalue reference.
+	(reference_related_p): No longer static.
+	* typeck.c (build_typed_address): New.
+	(build_static_cast_1): Add static_cast from lvalue to &&.
+	* cp-tree.h: Adjust.
+
+2009-07-31  Jason Merrill  <jason@redhat.com>
+
+	* call.c (reference_binding): Rename lvalue_p to is_lvalue.
+	Do direct binding of "rvalues" in memory to rvalue references.
+	* tree.c (lvalue_p_1): Can't be both non-addressable lvalue and
+	"rvalue" in memory.
+	* typeck.c (build_static_cast_1): Do direct binding of memory
+	"rvalues" to rvalue references.
+	* cvt.c (cp_fold_convert): New.
+	* cp-tree.h: Declare it.
+
+2009-07-31  Jason Merrill  <jason@redhat.com>
+
+	* typeck.c (build_address): Do fold away ADDR_EXPR of INDIRECT_REF.
+	* tree.c (rvalue): Use cp_build_qualified_type, not TYPE_MAIN_VARIANT.
+
 2009-07-29  Jason Merrill  <jason@redhat.com>
 
 	PR c++/14912

@@ -22,11 +22,9 @@
 /interrupted-hand-call.c/1.1/Mon Jul  6 10:46:43 2009//
 /interrupted-hand-call.exp/1.1/Mon Jul  6 10:46:43 2009//
 /killed.c/1.7/Mon Jul  6 10:46:43 2009//
-/killed.exp/1.12/Mon Jul  6 10:46:43 2009//
 /linux-dp.c/1.2/Mon Jul  6 10:46:43 2009/-ko/
 /linux-dp.exp/1.21/Mon Jul  6 10:46:43 2009/-ko/
 /manythreads.c/1.9/Mon Jul  6 10:46:43 2009//
-/manythreads.exp/1.14/Mon Jul  6 10:46:43 2009//
 /multi-create.c/1.3/Mon Jul  6 10:46:43 2009//
 /multi-create.exp/1.3/Mon Jul  6 10:46:43 2009//
 /pending-step.c/1.2/Mon Jul  6 10:46:43 2009//
@@ -42,7 +40,6 @@
 /sigthread.c/1.3/Mon Jul  6 10:46:43 2009//
 /sigthread.exp/1.4/Mon Jul  6 10:46:43 2009//
 /staticthreads.c/1.5/Mon Jul  6 10:46:43 2009//
-/staticthreads.exp/1.8/Mon Jul  6 10:46:43 2009//
 /step.c/1.1.1.1/Mon Jul  6 10:46:43 2009/-ko/
 /step.exp/1.6/Mon Jul  6 10:46:43 2009/-ko/
 /step2.exp/1.6/Mon Jul  6 10:46:43 2009/-ko/
@@ -73,4 +70,7 @@
 /watchthreads.exp/1.8/Mon Jul  6 10:46:43 2009//
 /watchthreads2.c/1.1/Mon Jul  6 10:46:43 2009//
 /watchthreads2.exp/1.1/Mon Jul  6 10:46:43 2009//
+/killed.exp/1.13/Tue Sep  8 03:29:18 2009//
+/manythreads.exp/1.15/Tue Sep  8 03:29:18 2009//
+/staticthreads.exp/1.9/Tue Sep  8 03:29:18 2009//
 D

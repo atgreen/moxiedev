@@ -361,6 +361,8 @@ CODE_FRAGMENT
 
 */
 
+#include "libiberty.h"
+
 #ifdef COFF_WITH_PE
 #include "peicode.h"
 #else
@@ -1992,6 +1994,11 @@ coff_mkobject_hook (bfd * abfd,
     abfd->flags |= HAS_DEBUG;
 #endif
 
+  if ((internal_f->f_flags & F_GO32STUB) != 0)
+    coff->go32stub = (char *) bfd_alloc (abfd, (bfd_size_type) GO32_STUBSIZE);
+  if (coff->go32stub != NULL)
+    memcpy (coff->go32stub, internal_f->go32stub, GO32_STUBSIZE);
+
   return coff;
 }
 #endif
@@ -2438,9 +2445,9 @@ coff_pointerize_aux_hook (bfd *abfd ATTRIBUTE_UNUSED,
 			  unsigned int indaux,
 			  combined_entry_type *aux)
 {
-  int class = symbol->u.syment.n_sclass;
+  int n_sclass = symbol->u.syment.n_sclass;
 
-  if (CSECT_SYM_P (class)
+  if (CSECT_SYM_P (n_sclass)
       && indaux + 1 == symbol->u.syment.n_numaux)
     {
       if (SMTYP_SMTYP (aux->u.auxent.x_csect.x_smtyp) == XTY_LD)

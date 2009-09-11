@@ -1594,17 +1594,6 @@ typedef struct frv_stack {
   {FRAME_POINTER_REGNUM, STACK_POINTER_REGNUM}				\
 }
 
-/* A C expression that returns nonzero if the compiler is allowed to try to
-   replace register number FROM with register number TO.  This macro need only
-   be defined if `ELIMINABLE_REGS' is defined, and will usually be the constant
-   1, since most of the cases preventing register elimination are things that
-   the compiler already knows about.  */
-
-#define CAN_ELIMINATE(FROM, TO)						\
-  ((FROM) == ARG_POINTER_REGNUM && (TO) == STACK_POINTER_REGNUM		\
-   ? ! frame_pointer_needed						\
-   : 1)
-
 /* This macro is similar to `INITIAL_FRAME_POINTER_OFFSET'.  It specifies the
    initial difference between the specified pair of registers.  This macro must
    be defined if `ELIMINABLE_REGS' is defined.  */
@@ -1763,10 +1752,6 @@ typedef struct frv_stack {
    represent that type.  On many machines, only the mode is relevant.
    (Actually, on most machines, scalar values are returned in the same place
    regardless of mode).
-
-   If `TARGET_PROMOTE_FUNCTION_RETURN' is defined to return true, you
-   must apply the same promotion rules specified in `PROMOTE_MODE' if
-   VALTYPE is a scalar type.
 
    If the precise function being called is known, FUNC is a tree node
    (`FUNCTION_DECL') for it; otherwise, FUNC is a null pointer.  This makes it

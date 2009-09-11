@@ -59,6 +59,7 @@
 #include "top.h"
 #include "wrapper.h"
 #include "valprint.h"
+#include "jit.h"
 
 /* readline include files */
 #include "readline/readline.h"
@@ -319,6 +320,9 @@ static int executing_breakpoint_commands;
 /* Are overlay event breakpoints enabled? */
 static int overlay_events_enabled;
 
+/* Are we executing startup code?  */
+static int executing_startup;
+
 /* Walk the following statement or block through all breakpoints.
    ALL_BREAKPOINTS_SAFE does so even if the statment deletes the current
    breakpoint.  */
@@ -559,6 +563,20 @@ get_number_or_range (char **pp)
   return last_retval;
 }
 
+/* Return the breakpoint with the specified number, or NULL
+   if the number does not refer to an existing breakpoint.  */
+
+struct breakpoint *
+get_breakpoint (int num)
+{
+  struct breakpoint *b;
+
+  ALL_BREAKPOINTS (b)
+    if (b->number == num)
+      return b;
+  
+  return NULL;
+}
 
 
 /* condition N EXP -- set break condition of breakpoint N to EXP.  */
@@ -623,6 +641,17 @@ condition_command (char *arg, int from_tty)
   error (_("No breakpoint number %d."), bnum);
 }
 
+/* Set the command list of B to COMMANDS.  */
+
+void
+breakpoint_set_commands (struct breakpoint *b, struct command_line *commands)
+{
+  free_command_lines (&b->commands);
+  b->commands = commands;
+  breakpoints_changed ();
+  observer_notify_breakpoint_modified (b->number);
+}
+
 static void
 commands_command (char *arg, int from_tty)
 {
@@ -652,10 +681,7 @@ commands_command (char *arg, int from_tty)
 	struct cleanup *cleanups = make_cleanup (xfree, tmpbuf);
 	l = read_command_lines (tmpbuf, from_tty, 1);
 	do_cleanups (cleanups);
-	free_command_lines (&b->commands);
-	b->commands = l;
-	breakpoints_changed ();
-	observer_notify_breakpoint_modified (b->number);
+	breakpoint_set_commands (b, l);
 	return;
     }
   error (_("No breakpoint number %d."), bnum);
@@ -1406,36 +1432,28 @@ int
 remove_breakpoints (void)
 {
   struct bp_location *b;
-  int val;
+  int val = 0;
 
   ALL_BP_LOCATIONS (b)
   {
     if (b->inserted)
-      {
-	val = remove_breakpoint (b, mark_uninserted);
-	if (val != 0)
-	  return val;
-      }
+      val |= remove_breakpoint (b, mark_uninserted);
   }
-  return 0;
+  return val;
 }
 
 int
 remove_hw_watchpoints (void)
 {
   struct bp_location *b;
-  int val;
+  int val = 0;
 
   ALL_BP_LOCATIONS (b)
   {
     if (b->inserted && b->loc_type == bp_loc_hardware_watchpoint)
-      {
-	val = remove_breakpoint (b, mark_uninserted);
-	if (val != 0)
-	  return val;
-      }
+      val |= remove_breakpoint (b, mark_uninserted);
   }
-  return 0;
+  return val;
 }
 
 int
@@ -1575,6 +1593,13 @@ update_breakpoints_after_exec (void)
 	continue;
       }
 
+    /* JIT breakpoints must be explicitly reset after an exec(). */
+    if (b->type == bp_jit_event)
+      {
+	delete_breakpoint (b);
+	continue;
+      }
+
     /* Thread event breakpoints must be set anew after an exec(),
        as must overlay event and longjmp master breakpoints.  */
     if (b->type == bp_thread_event || b->type == bp_overlay_event
@@ -1660,7 +1685,7 @@ int
 detach_breakpoints (int pid)
 {
   struct bp_location *b;
-  int val;
+  int val = 0;
   struct cleanup *old_chain = save_inferior_ptid ();
 
   if (pid == PIDGET (inferior_ptid))
@@ -1671,17 +1696,10 @@ detach_breakpoints (int pid)
   ALL_BP_LOCATIONS (b)
   {
     if (b->inserted)
-      {
-	val = remove_breakpoint (b, mark_inserted);
-	if (val != 0)
-	  {
-	    do_cleanups (old_chain);
-	    return val;
-	  }
-      }
+      val |= remove_breakpoint (b, mark_inserted);
   }
   do_cleanups (old_chain);
-  return 0;
+  return val;
 }
 
 static int
@@ -2573,6 +2591,7 @@ print_it_typical (bpstat bs)
     case bp_watchpoint_scope:
     case bp_call_dummy:
     case bp_tracepoint:
+    case bp_jit_event:
     default:
       result = PRINT_UNKNOWN;
       break;
@@ -3298,6 +3317,9 @@ bpstat_what (bpstat bs)
       /* We hit the shared library event breakpoint.  */
       shlib_event,
 
+      /* We hit the jit event breakpoint.  */
+      jit_event,
+
       /* This is just used to count how many enums there are.  */
       class_last
     };
@@ -3313,6 +3335,7 @@ bpstat_what (bpstat bs)
 #define clr BPSTAT_WHAT_CLEAR_LONGJMP_RESUME
 #define sr BPSTAT_WHAT_STEP_RESUME
 #define shl BPSTAT_WHAT_CHECK_SHLIBS
+#define jit BPSTAT_WHAT_CHECK_JIT
 
 /* "Can't happen."  Might want to print an error message.
    abort() is not out of the question, but chances are GDB is just
@@ -3333,12 +3356,13 @@ bpstat_what (bpstat bs)
      back and decide something of a lower priority is better.  The
      ordering is:
 
-     kc   < clr sgl shl slr sn sr ss
-     sgl  < shl slr sn sr ss
-     slr  < err shl sn sr ss
-     clr  < err shl sn sr ss
-     ss   < shl sn sr
-     sn   < shl sr
+     kc   < jit clr sgl shl slr sn sr ss
+     sgl  < jit shl slr sn sr ss
+     slr  < jit err shl sn sr ss
+     clr  < jit err shl sn sr ss
+     ss   < jit shl sn sr
+     sn   < jit shl sr
+     jit  < shl sr
      shl  < sr
      sr   <
 
@@ -3356,28 +3380,18 @@ bpstat_what (bpstat bs)
     table[(int) class_last][(int) BPSTAT_WHAT_LAST] =
   {
   /*                              old action */
-  /*       kc    ss    sn    sgl    slr   clr   sr   shl
-   */
-/*no_effect */
-    {kc, ss, sn, sgl, slr, clr, sr, shl},
-/*wp_silent */
-    {ss, ss, sn, ss, ss, ss, sr, shl},
-/*wp_noisy */
-    {sn, sn, sn, sn, sn, sn, sr, shl},
-/*bp_nostop */
-    {sgl, ss, sn, sgl, slr, slr, sr, shl},
-/*bp_silent */
-    {ss, ss, sn, ss, ss, ss, sr, shl},
-/*bp_noisy */
-    {sn, sn, sn, sn, sn, sn, sr, shl},
-/*long_jump */
-    {slr, ss, sn, slr, slr, err, sr, shl},
-/*long_resume */
-    {clr, ss, sn, err, err, err, sr, shl},
-/*step_resume */
-    {sr, sr, sr, sr, sr, sr, sr, sr},
-/*shlib */
-    {shl, shl, shl, shl, shl, shl, sr, shl}
+  /*               kc   ss   sn   sgl  slr  clr  sr  shl  jit */
+/* no_effect */   {kc,  ss,  sn,  sgl, slr, clr, sr, shl, jit},
+/* wp_silent */   {ss,  ss,  sn,  ss,  ss,  ss,  sr, shl, jit},
+/* wp_noisy */    {sn,  sn,  sn,  sn,  sn,  sn,  sr, shl, jit},
+/* bp_nostop */   {sgl, ss,  sn,  sgl, slr, slr, sr, shl, jit},
+/* bp_silent */   {ss,  ss,  sn,  ss,  ss,  ss,  sr, shl, jit},
+/* bp_noisy */    {sn,  sn,  sn,  sn,  sn,  sn,  sr, shl, jit},
+/* long_jump */   {slr, ss,  sn,  slr, slr, err, sr, shl, jit},
+/* long_resume */ {clr, ss,  sn,  err, err, err, sr, shl, jit},
+/* step_resume */ {sr,  sr,  sr,  sr,  sr,  sr,  sr, sr,  sr },
+/* shlib */       {shl, shl, shl, shl, shl, shl, sr, shl, shl},
+/* jit_event */   {jit, jit, jit, jit, jit, jit, sr, jit, jit}
   };
 
 #undef kc
@@ -3390,6 +3404,7 @@ bpstat_what (bpstat bs)
 #undef sr
 #undef ts
 #undef shl
+#undef jit
   enum bpstat_what_main_action current_action = BPSTAT_WHAT_KEEP_CHECKING;
   struct bpstat_what retval;
 
@@ -3459,6 +3474,9 @@ bpstat_what (bpstat bs)
 	  break;
 	case bp_shlib_event:
 	  bs_class = shlib_event;
+	  break;
+	case bp_jit_event:
+	  bs_class = jit_event;
 	  break;
 	case bp_thread_event:
 	case bp_overlay_event:
@@ -3593,6 +3611,7 @@ print_one_breakpoint_location (struct breakpoint *b,
     {bp_longjmp_master, "longjmp master"},
     {bp_catchpoint, "catchpoint"},
     {bp_tracepoint, "tracepoint"},
+    {bp_jit_event, "jit events"},
   };
   
   static char bpenables[] = "nynny";
@@ -3721,6 +3740,7 @@ print_one_breakpoint_location (struct breakpoint *b,
       case bp_overlay_event:
       case bp_longjmp_master:
       case bp_tracepoint:
+      case bp_jit_event:
 	if (opts.addressprint)
 	  {
 	    annotate_field (4);
@@ -4140,7 +4160,8 @@ describe_other_breakpoints (struct gdbarch *gdbarch, CORE_ADDR pc,
 	      printf_filtered (" (thread %d)", b->thread);
 	    printf_filtered ("%s%s ",
 			     ((b->enable_state == bp_disabled
-			       || b->enable_state == bp_call_disabled) 
+			       || b->enable_state == bp_call_disabled
+			       || b->enable_state == bp_startup_disabled)
 			      ? " (disabled)"
 			      : b->enable_state == bp_permanent 
 			      ? " (permanent)"
@@ -4211,6 +4232,7 @@ check_duplicates_for (CORE_ADDR address, struct obj_section *section)
   ALL_BP_LOCATIONS (b)
     if (b->owner->enable_state != bp_disabled
 	&& b->owner->enable_state != bp_call_disabled
+	&& b->owner->enable_state != bp_startup_disabled
 	&& b->enabled
 	&& !b->shlib_disabled
 	&& b->address == address	/* address / overlay match */
@@ -4247,6 +4269,7 @@ check_duplicates_for (CORE_ADDR address, struct obj_section *section)
 	    if (b->owner->enable_state != bp_permanent
 		&& b->owner->enable_state != bp_disabled
 		&& b->owner->enable_state != bp_call_disabled
+		&& b->owner->enable_state != bp_startup_disabled
 		&& b->enabled && !b->shlib_disabled		
 		&& b->address == address	/* address / overlay match */
 		&& (!overlay_debugging || b->section == section)
@@ -4362,6 +4385,7 @@ allocate_bp_location (struct breakpoint *bpt)
     case bp_shlib_event:
     case bp_thread_event:
     case bp_overlay_event:
+    case bp_jit_event:
     case bp_longjmp_master:
       loc->loc_type = bp_loc_software_breakpoint;
       break;
@@ -4644,6 +4668,17 @@ struct lang_and_radix
     int radix;
   };
 
+/* Create a breakpoint for JIT code registration and unregistration.  */
+
+struct breakpoint *
+create_jit_event_breakpoint (struct gdbarch *gdbarch, CORE_ADDR address)
+{
+  struct breakpoint *b;
+
+  b = create_internal_breakpoint (gdbarch, address, bp_jit_event);
+  update_global_location_list_nothrow (1);
+  return b;
+}
 
 void
 remove_solib_event_breakpoints (void)
@@ -5095,6 +5130,52 @@ enable_watchpoints_after_interactive_call_stop (void)
   }
 }
 
+void
+disable_breakpoints_before_startup (void)
+{
+  struct breakpoint *b;
+  int found = 0;
+
+  ALL_BREAKPOINTS (b)
+    {
+      if ((b->type == bp_breakpoint
+	   || b->type == bp_hardware_breakpoint)
+	  && breakpoint_enabled (b))
+	{
+	  b->enable_state = bp_startup_disabled;
+	  found = 1;
+	}
+    }
+
+  if (found)
+    update_global_location_list (0);
+
+  executing_startup = 1;
+}
+
+void
+enable_breakpoints_after_startup (void)
+{
+  struct breakpoint *b;
+  int found = 0;
+
+  executing_startup = 0;
+
+  ALL_BREAKPOINTS (b)
+    {
+      if ((b->type == bp_breakpoint
+	   || b->type == bp_hardware_breakpoint)
+	  && b->enable_state == bp_startup_disabled)
+	{
+	  b->enable_state = bp_enabled;
+	  found = 1;
+	}
+    }
+
+  if (found)
+    breakpoint_re_set ();
+}
+
 
 /* Set a breakpoint that will evaporate an end of command
    at address specified by SAL.
@@ -5279,6 +5360,7 @@ mention (struct breakpoint *b)
       case bp_shlib_event:
       case bp_thread_event:
       case bp_overlay_event:
+      case bp_jit_event:
       case bp_longjmp_master:
 	break;
       }
@@ -5437,6 +5519,11 @@ create_breakpoint (struct gdbarch *gdbarch,
 	  b->ignore_count = ignore_count;
 	  b->enable_state = enabled ? bp_enabled : bp_disabled;
 	  b->disposition = disposition;
+
+	  if (enabled && executing_startup
+	      && (b->type == bp_breakpoint
+		  || b->type == bp_hardware_breakpoint))
+	    b->enable_state = bp_startup_disabled;
 
 	  loc = b->loc;
 	}
@@ -5992,6 +6079,11 @@ break_command_really (struct gdbarch *gdbarch,
       b->condition_not_parsed = 1;
       b->ops = ops;
       b->enable_state = enabled ? bp_enabled : bp_disabled;
+
+      if (enabled && executing_startup
+	  && (b->type == bp_breakpoint
+	      || b->type == bp_hardware_breakpoint))
+	b->enable_state = bp_startup_disabled;
 
       mention (b);
     }
@@ -7585,6 +7677,7 @@ delete_command (char *arg, int from_tty)
       {
 	if (b->type != bp_call_dummy
 	    && b->type != bp_shlib_event
+	    && b->type != bp_jit_event
 	    && b->type != bp_thread_event
 	    && b->type != bp_overlay_event
 	    && b->type != bp_longjmp_master
@@ -7604,6 +7697,7 @@ delete_command (char *arg, int from_tty)
 	    if (b->type != bp_call_dummy
 		&& b->type != bp_shlib_event
 		&& b->type != bp_thread_event
+		&& b->type != bp_jit_event
 		&& b->type != bp_overlay_event
 		&& b->type != bp_longjmp_master
 		&& b->number >= 0)
@@ -7792,6 +7886,10 @@ breakpoint_re_set_one (void *bint)
     case bp_breakpoint:
     case bp_hardware_breakpoint:
     case bp_tracepoint:
+      /* Do not attempt to re-set breakpoints disabled during startup.  */
+      if (b->enable_state == bp_startup_disabled)
+	return 0;
+
       if (b->addr_string == NULL)
 	{
 	  /* Anything without a string can't be re-set. */
@@ -7926,6 +8024,7 @@ breakpoint_re_set_one (void *bint)
     case bp_step_resume:
     case bp_longjmp:
     case bp_longjmp_resume:
+    case bp_jit_event:
       break;
     }
 
@@ -7953,6 +8052,8 @@ breakpoint_re_set (void)
   }
   set_language (save_language);
   input_radix = save_input_radix;
+
+  jit_breakpoint_re_set ();
 
   create_overlay_event_breakpoint ("_ovly_debug_event");
   create_longjmp_master_breakpoint ("longjmp");

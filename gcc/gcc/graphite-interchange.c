@@ -53,271 +53,228 @@ along with GCC; see the file COPYING3.  If not see
 #include "graphite.h"
 #include "graphite-poly.h"
 
-/* Returns the subscript dimension defined by CSTR in PDR.  */
+/* Builds a linear expression, of dimension DIM, representing PDR's
+   memory access:
 
-static ppl_dimension_type
-compute_subscript (poly_dr_p pdr, ppl_const_Constraint_t cstr)
+   L = r_{n}*r_{n-1}*...*r_{1}*s_{0} + ... + r_{n}*s_{n-1} + s_{n}.
+
+   For an array A[10][20] with two subscript locations s0 and s1, the
+   linear memory access is 20 * s0 + s1: a stride of 1 in subscript s0
+   corresponds to a memory stride of 20.  */
+
+static ppl_Linear_Expression_t
+build_linearized_memory_access (poly_dr_p pdr)
 {
-  graphite_dim_t i;
-  ppl_Linear_Expression_t expr;
-  ppl_Coefficient_t coef;
-  Value val;
+  ppl_Linear_Expression_t res;
+  ppl_Linear_Expression_t le;
+  ppl_dimension_type i;
+  ppl_dimension_type first = pdr_subscript_dim (pdr, 0);
+  ppl_dimension_type last = pdr_subscript_dim (pdr, PDR_NB_SUBSCRIPTS (pdr));
+  Value size, sub_size;
+  graphite_dim_t dim = pdr_dim (pdr);
 
-  value_init (val);
-  ppl_new_Coefficient (&coef);
+  ppl_new_Linear_Expression_with_dimension (&res, dim);
 
-  for (i = 0; i < pdr_nb_subscripts (pdr); i++)
+  value_init (size);
+  value_set_si (size, 1);
+  value_init (sub_size);
+  value_set_si (sub_size, 1);
+
+  for (i = last - 1; i >= first; i--)
     {
-      ppl_dimension_type sub_dim = pdr_subscript_dim (pdr, i);
+      ppl_set_coef_gmp (res, i, size);
 
-      ppl_new_Linear_Expression_from_Constraint (&expr, cstr);
-      ppl_Linear_Expression_coefficient (expr, sub_dim, coef);
-      ppl_delete_Linear_Expression (expr);
-      ppl_Coefficient_to_mpz_t (coef, val);
-
-      if (value_notzero_p (val))
-	{
-	  gcc_assert (value_one_p (val)
-		      || value_mone_p (val));
-
-	  value_clear (val);
-	  ppl_delete_Coefficient (coef);
-	  return sub_dim;
-	}
+      ppl_new_Linear_Expression_with_dimension (&le, dim);
+      ppl_set_coef (le, i, 1);
+      ppl_max_for_le_pointset (PDR_ACCESSES (pdr), le, sub_size);
+      value_multiply (size, size, sub_size);
+      ppl_delete_Linear_Expression (le);
     }
 
-  gcc_unreachable ();
-  return 0;
+  value_clear (sub_size);
+  value_clear (size);
+  return res;
 }
+
+/* Set STRIDE to the stride of PDR in memory by advancing by one in
+   loop DEPTH.  */
 
 static void
-compute_array_size_cstr (ppl_dimension_type sub_dim, Value res,
-			 ppl_const_Constraint_t cstr)
+memory_stride_in_loop (Value stride, graphite_dim_t depth, poly_dr_p pdr)
 {
-  ppl_Linear_Expression_t expr;
-  ppl_Coefficient_t coef;
-  Value val;
+  ppl_Linear_Expression_t le, lma;
+  ppl_Constraint_t new_cstr;
+  ppl_Pointset_Powerset_C_Polyhedron_t p1, p2;
+  graphite_dim_t nb_subscripts = PDR_NB_SUBSCRIPTS (pdr);
+  ppl_dimension_type i, *map;
+  ppl_dimension_type dim = pdr_dim (pdr);
+  ppl_dimension_type dim_i = pdr_iterator_dim (pdr, depth);
+  ppl_dimension_type dim_k = dim;
+  ppl_dimension_type dim_L1 = dim + nb_subscripts + 1;
+  ppl_dimension_type dim_L2 = dim + nb_subscripts + 2;
+  ppl_dimension_type new_dim = dim + nb_subscripts + 3;
 
-  value_init (val);
-  ppl_new_Coefficient (&coef);
-  ppl_new_Linear_Expression_from_Constraint (&expr, cstr);
-  ppl_Linear_Expression_coefficient (expr, sub_dim, coef);
-  ppl_Coefficient_to_mpz_t (coef, val);
+  /* Add new dimensions to the polyhedron corresponding to
+     k, s0', s1',..., L1, and L2.  These new variables are at
+     dimensions dim, dim + 1,... of the polyhedron P1 respectively.  */
+  ppl_new_Pointset_Powerset_C_Polyhedron_from_Pointset_Powerset_C_Polyhedron
+    (&p1, PDR_ACCESSES (pdr));
+  ppl_Pointset_Powerset_C_Polyhedron_add_space_dimensions_and_embed
+    (p1, nb_subscripts + 3);
 
-  value_set_si (res, 0);
+  lma = build_linearized_memory_access (pdr);
+  ppl_set_coef (lma, dim_L1, -1);
+  ppl_new_Constraint (&new_cstr, lma, PPL_CONSTRAINT_TYPE_EQUAL);
+  ppl_Pointset_Powerset_C_Polyhedron_add_constraint (p1, new_cstr);
 
-  if (value_notzero_p (val))
-    {
-      gcc_assert (value_one_p (val) || value_mone_p (val));
-      ppl_Linear_Expression_inhomogeneous_term (expr, coef);
-      ppl_Coefficient_to_mpz_t (coef, res);
-      value_absolute (res, res);
-    }
+  /* Build P2.  */
+  ppl_new_Pointset_Powerset_C_Polyhedron_from_Pointset_Powerset_C_Polyhedron
+    (&p2, p1);
+  map = ppl_new_id_map (new_dim);
+  ppl_interchange (map, dim_L1, dim_L2);
+  ppl_interchange (map, dim_i, dim_k);
+  for (i = 0; i < PDR_NB_SUBSCRIPTS (pdr); i++)
+    ppl_interchange (map, pdr_subscript_dim (pdr, i), dim + i + 1);
+  ppl_Pointset_Powerset_C_Polyhedron_map_space_dimensions (p2, map, new_dim);
+  free (map);
 
-  value_clear (val);
-  ppl_delete_Coefficient (coef);
-  ppl_delete_Linear_Expression (expr);
+  /* Add constraint k = i + 1.  */
+  ppl_new_Linear_Expression_with_dimension (&le, new_dim);
+  ppl_set_coef (le, dim_i, 1);
+  ppl_set_coef (le, dim_k, -1);
+  ppl_set_inhomogeneous (le, 1);
+  ppl_new_Constraint (&new_cstr, le, PPL_CONSTRAINT_TYPE_EQUAL);
+  ppl_Pointset_Powerset_C_Polyhedron_add_constraint (p2, new_cstr);
+  ppl_delete_Linear_Expression (le);
+  ppl_delete_Constraint (new_cstr);
+
+  /* P1 = P1 inter P2.  */
+  ppl_Pointset_Powerset_C_Polyhedron_intersection_assign (p1, p2);
+  ppl_delete_Pointset_Powerset_C_Polyhedron (p2);
+
+  /* Maximise the expression L2 - L1.  */
+  ppl_new_Linear_Expression_with_dimension (&le, new_dim);
+  ppl_set_coef (le, dim_L2, 1);
+  ppl_set_coef (le, dim_L1, -1);
+  ppl_max_for_le_pointset (p1, le, stride);
+  ppl_delete_Linear_Expression (le);
 }
 
-/* Returns in ARRAY_SIZE the size in bytes of the array PDR for the
-   subscript at dimension SUB_DIM.  */
 
-static void
-compute_array_size_poly (poly_dr_p pdr, ppl_dimension_type sub_dim, Value array_size,
-			 ppl_const_Polyhedron_t ph)
-{
-  ppl_const_Constraint_System_t pcs;
-  ppl_Constraint_System_const_iterator_t cit, cend;
-  ppl_const_Constraint_t cstr;
-  Value val;
-  Value res;
+/* Returns true when it is profitable to interchange loop at DEPTH1
+   and loop at DEPTH2 with DEPTH1 < DEPTH2 for PBB.
 
-  if (sub_dim >= pdr_subscript_dim (pdr, pdr_nb_subscripts (pdr)))
-    {
-      value_set_si (array_size, 1);
-      return;
-    }
+   Example:
 
-  value_init (val);
-  value_init (res);
+   | int a[100][100];
+   |
+   | int
+   | foo (int N)
+   | {
+   |   int j;
+   |   int i;
+   |
+   |   for (i = 0; i < N; i++)
+   |     for (j = 0; j < N; j++)
+   |       a[j][2 * i] += 1;
+   |
+   |   return a[N][12];
+   | }
 
-  value_set_si (res, 0);
+   The data access A[j][i] is described like this:
 
-  ppl_Polyhedron_get_constraints (ph, &pcs);
-  ppl_new_Constraint_System_const_iterator (&cit);
-  ppl_new_Constraint_System_const_iterator (&cend);
-      
-  for (ppl_Constraint_System_begin (pcs, cit),
-	 ppl_Constraint_System_end (pcs, cend);
-       !ppl_Constraint_System_const_iterator_equal_test (cit, cend);
-       ppl_Constraint_System_const_iterator_increment (cit))
-    {
-      ppl_Constraint_System_const_iterator_dereference (cit, &cstr);
+   | i   j   N   a  s0  s1   1
+   | 0   0   0   1   0   0  -5    = 0
+   | 0  -1   0   0   1   0   0    = 0
+   |-2   0   0   0   0   1   0    = 0
+   | 0   0   0   0   1   0   0   >= 0
+   | 0   0   0   0   0   1   0   >= 0
+   | 0   0   0   0  -1   0 100   >= 0
+   | 0   0   0   0   0  -1 100   >= 0
 
-      if (ppl_Constraint_type (cstr) == PPL_CONSTRAINT_TYPE_EQUAL)
-	continue;
+   The linearized memory access L to A[100][100] is:
 
-      compute_array_size_cstr (sub_dim, val, cstr);
-      value_max (res, res, val);
-    }
+   | i   j   N   a  s0  s1   1
+   | 0   0   0   0 100   1   0
 
-  compute_array_size_poly (pdr, sub_dim + 1, val, ph);
-  value_multiply (array_size, res, val);
+   Next, to measure the impact of iterating once in loop "i", we build
+   a maximization problem: first, we add to DR accesses the dimensions
+   k, s2, s3, L1 = 100 * s0 + s1, L2, and D1: polyhedron P1.
 
-  value_clear (res);
-  value_clear (val);
-}
+   | i   j   N   a  s0  s1   k  s2  s3  L1  L2  D1   1
+   | 0   0   0   1   0   0   0   0   0   0   0   0  -5    = 0  alias = 5
+   | 0  -1   0   0   1   0   0   0   0   0   0   0   0    = 0  s0 = j
+   |-2   0   0   0   0   1   0   0   0   0   0   0   0    = 0  s1 = 2 * i
+   | 0   0   0   0   1   0   0   0   0   0   0   0   0   >= 0
+   | 0   0   0   0   0   1   0   0   0   0   0   0   0   >= 0
+   | 0   0   0   0  -1   0   0   0   0   0   0   0 100   >= 0
+   | 0   0   0   0   0  -1   0   0   0   0   0   0 100   >= 0
+   | 0   0   0   0 100   1   0   0   0  -1   0   0   0    = 0  L1 = 100 * s0 + s1
 
-/* Initializes ARRAY_SIZE, the size in bytes of the array for the
-   subscript at dimension SUB_DIM in PDR.  */
+   Then, we generate the polyhedron P2 by interchanging the dimensions
+   (s0, s2), (s1, s3), (L1, L2), (i0, i)
 
-static void
-compute_array_size (poly_dr_p pdr, ppl_dimension_type sub_dim, Value array_size)
-{
-  ppl_Pointset_Powerset_C_Polyhedron_t data_container = PDR_DATA_CONTAINER (pdr);
-  ppl_Pointset_Powerset_C_Polyhedron_iterator_t it, end;
-  Value val;
+   | i   j   N   a  s0  s1   k  s2  s3  L1  L2  D1   1
+   | 0   0   0   1   0   0   0   0   0   0   0   0  -5    = 0  alias = 5
+   | 0  -1   0   0   0   0   0   1   0   0   0   0   0    = 0  s2 = j
+   | 0   0   0   0   0   0  -2   0   1   0   0   0   0    = 0  s3 = 2 * k
+   | 0   0   0   0   0   0   0   1   0   0   0   0   0   >= 0
+   | 0   0   0   0   0   0   0   0   1   0   0   0   0   >= 0
+   | 0   0   0   0   0   0   0  -1   0   0   0   0 100   >= 0
+   | 0   0   0   0   0   0   0   0  -1   0   0   0 100   >= 0
+   | 0   0   0   0   0   0   0 100   1   0  -1   0   0    = 0  L2 = 100 * s2 + s3
 
-  value_set_si (array_size, 1);
-  if (sub_dim >= pdr_subscript_dim (pdr, pdr_nb_subscripts (pdr)))
-    return;
+   then we add to P2 the equality k = i + 1:
 
-  value_init (val);
-  ppl_new_Pointset_Powerset_C_Polyhedron_iterator (&it);
-  ppl_new_Pointset_Powerset_C_Polyhedron_iterator (&end);
+   |-1   0   0   0   0   0   1   0   0   0   0   0  -1    = 0  k = i + 1
 
-  for (ppl_Pointset_Powerset_C_Polyhedron_iterator_begin (data_container, it),
-       ppl_Pointset_Powerset_C_Polyhedron_iterator_end (data_container, end);
-       !ppl_Pointset_Powerset_C_Polyhedron_iterator_equal_test (it, end);
-       ppl_Pointset_Powerset_C_Polyhedron_iterator_increment (it))
-    {
-      ppl_const_Polyhedron_t ph;
+   and finally we maximize the expression "D1 = max (P1 inter P2, L2 - L1)".
 
-      ppl_Pointset_Powerset_C_Polyhedron_iterator_dereference (it, &ph);
-      compute_array_size_poly (pdr, sub_dim, val, ph);
-      value_max (array_size, array_size, val);
-    }
+   For determining the impact of one iteration on loop "j", we
+   interchange (k, j), we add "k = j + 1", and we compute D2 the
+   maximal value of the difference.
 
-  value_clear (val);
-  ppl_delete_Pointset_Powerset_C_Polyhedron_iterator (it);
-  ppl_delete_Pointset_Powerset_C_Polyhedron_iterator (end);
-}
-
-/* Computes ACCESS_STRIDES, the sum of all the strides of PDR at
-   LOOP_DEPTH.  */
-
-static void
-gather_access_strides_poly (poly_dr_p pdr, ppl_const_Polyhedron_t ph,
-			    ppl_dimension_type loop_dim, Value res)
-{
-  ppl_const_Constraint_System_t pcs;
-  ppl_Constraint_System_const_iterator_t cit, cend;
-  ppl_const_Constraint_t cstr;
-  ppl_Linear_Expression_t expr;
-  ppl_Coefficient_t coef;
-  Value stride;
-  Value array_size;
-
-  value_init (array_size);
-  value_init (stride);
-  ppl_new_Coefficient (&coef);
-  value_set_si (res, 0);
-
-  ppl_Polyhedron_get_constraints (ph, &pcs);
-  ppl_new_Constraint_System_const_iterator (&cit);
-  ppl_new_Constraint_System_const_iterator (&cend);
-
-  for (ppl_Constraint_System_begin (pcs, cit),
-	 ppl_Constraint_System_end (pcs, cend);
-       !ppl_Constraint_System_const_iterator_equal_test (cit, cend);
-       ppl_Constraint_System_const_iterator_increment (cit))
-    {
-      ppl_Constraint_System_const_iterator_dereference (cit, &cstr);
-      ppl_new_Linear_Expression_from_Constraint (&expr, cstr);
-      ppl_Linear_Expression_coefficient (expr, loop_dim, coef);
-      ppl_delete_Linear_Expression (expr);
-      ppl_Coefficient_to_mpz_t (coef, stride);
-
-      if (value_zero_p (stride))
-	continue;
-
-      value_absolute (stride, stride);
-      compute_array_size (pdr, compute_subscript (pdr, cstr), array_size);
-      value_multiply (stride, stride, array_size);
-      value_addto (res, res, stride);
-    }
-
-  value_clear (array_size);
-  value_clear (stride);
-  ppl_delete_Coefficient (coef);
-  ppl_delete_Constraint_System_const_iterator (cit);
-  ppl_delete_Constraint_System_const_iterator (cend);
-}
-
-/* Computes ACCESS_STRIDES, the sum of all the strides of PDR at
-   LOOP_DEPTH.  */
-
-static void
-gather_access_strides (poly_dr_p pdr, graphite_dim_t loop_depth,
-		       Value access_strides)
-{
-  ppl_dimension_type loop_dim = pdr_iterator_dim (pdr, loop_depth);
-
-  ppl_Pointset_Powerset_C_Polyhedron_t accesses = PDR_ACCESSES (pdr);
-  ppl_Pointset_Powerset_C_Polyhedron_iterator_t it, end;
-  Value res;
-
-  value_init (res);
-  ppl_new_Pointset_Powerset_C_Polyhedron_iterator (&it);
-  ppl_new_Pointset_Powerset_C_Polyhedron_iterator (&end);
-
-  for (ppl_Pointset_Powerset_C_Polyhedron_iterator_begin (accesses, it),
-       ppl_Pointset_Powerset_C_Polyhedron_iterator_end (accesses, end);
-       !ppl_Pointset_Powerset_C_Polyhedron_iterator_equal_test (it, end);
-       ppl_Pointset_Powerset_C_Polyhedron_iterator_increment (it))
-    {
-      ppl_const_Polyhedron_t ph;
-
-      ppl_Pointset_Powerset_C_Polyhedron_iterator_dereference (it, &ph);
-      gather_access_strides_poly (pdr, ph, loop_dim, res);
-      value_addto (access_strides, access_strides, res);
-    }
-
-  value_clear (res);
-  ppl_delete_Pointset_Powerset_C_Polyhedron_iterator (it);
-  ppl_delete_Pointset_Powerset_C_Polyhedron_iterator (end);
-}
-
-/* Returns true when it is profitable to interchange loop at depth1
-   and loop at depth2 with depth1 < depth2 for the polyhedral black
-   box PBB.  */
+   Finally, the profitability test is D1 < D2: if in the outer loop
+   the strides are smaller than in the inner loop, then it is
+   profitable to interchange the loops at DEPTH1 and DEPTH2.  */
 
 static bool
-pbb_interchange_profitable_p (graphite_dim_t depth1, graphite_dim_t depth2, poly_bb_p pbb)
+pbb_interchange_profitable_p (graphite_dim_t depth1, graphite_dim_t depth2,
+			      poly_bb_p pbb)
 {
   int i;
   poly_dr_p pdr;
-  Value access_strides1, access_strides2;
+  Value d1, d2, s, n;
   bool res;
 
   gcc_assert (depth1 < depth2);
 
-  value_init (access_strides1);
-  value_init (access_strides2);
-
-  value_set_si (access_strides1, 0);
-  value_set_si (access_strides2, 0);
+  value_init (d1);
+  value_set_si (d1, 0);
+  value_init (d2);
+  value_set_si (d2, 0);
+  value_init (s);
+  value_init (n);
 
   for (i = 0; VEC_iterate (poly_dr_p, PBB_DRS (pbb), i, pdr); i++)
     {
-      gather_access_strides (pdr, depth1, access_strides1);
-      gather_access_strides (pdr, depth2, access_strides2);
+      value_set_si (n, PDR_NB_REFS (pdr));
+
+      memory_stride_in_loop (s, depth1, pdr);
+      value_multiply (s, s, n);
+      value_addto (d1, d1, s);
+
+      memory_stride_in_loop (s, depth2, pdr);
+      value_multiply (s, s, n);
+      value_addto (d2, d2, s);
     }
 
-  res = value_lt (access_strides1, access_strides2);
+  res = value_lt (d1, d2);
 
-  value_clear (access_strides1);
-  value_clear (access_strides2);
+  value_clear (d1);
+  value_clear (d2);
+  value_clear (s);
+  value_clear (n);
 
   return res;
 }
@@ -388,8 +345,19 @@ scop_do_interchange (scop_p scop)
   poly_bb_p pbb;
   bool transform_done = false;
 
+  store_scattering (scop);
+
   for (i = 0; VEC_iterate (poly_bb_p, SCOP_BBS (scop), i, pbb); i++)
     transform_done |= pbb_do_interchange (pbb, scop);
+
+  if (!transform_done)
+    return false;
+
+  if (!graphite_legal_transform (scop))
+    {
+      restore_scattering (scop);
+      return false;
+    }
 
   return transform_done;
 }

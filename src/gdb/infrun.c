@@ -50,6 +50,7 @@
 #include "event-top.h"
 #include "record.h"
 #include "inline-frame.h"
+#include "jit.h"
 
 /* Prototypes for local functions */
 
@@ -543,6 +544,8 @@ follow_exec (ptid_t pid, char *execd_pathname)
 #else
   solib_create_inferior_hook ();
 #endif
+
+  jit_inferior_created_hook ();
 
   /* Reinsert all breakpoints.  (Those which were symbolic have
      been reset to the proper address in the new a.out, thanks
@@ -1943,7 +1946,6 @@ print_target_wait_results (ptid_t waiton_ptid, ptid_t result_ptid,
   char *status_string = target_waitstatus_to_string (ws);
   struct ui_file *tmp_stream = mem_fileopen ();
   char *text;
-  long len;
 
   /* The text is split over several lines because it was getting too long.
      Call fprintf_unfiltered (gdb_stdlog) once so that the text is still
@@ -1963,7 +1965,7 @@ print_target_wait_results (ptid_t waiton_ptid, ptid_t result_ptid,
 		      "infrun:   %s\n",
 		      status_string);
 
-  text = ui_file_xstrdup (tmp_stream, &len);
+  text = ui_file_xstrdup (tmp_stream, NULL);
 
   /* This uses %s in part to handle %'s in the text, but also to avoid
      a gcc error: the format attribute requires a string literal.  */
@@ -3540,6 +3542,22 @@ infrun: BPSTAT_WHAT_SET_LONGJMP_RESUME (!gdbarch_get_longjmp_target)\n");
 	    }
 	}
 	break;
+
+      case BPSTAT_WHAT_CHECK_JIT:
+        if (debug_infrun)
+          fprintf_unfiltered (gdb_stdlog, "infrun: BPSTAT_WHAT_CHECK_JIT\n");
+
+        /* Switch terminal for any messages produced by breakpoint_re_set.  */
+        target_terminal_ours_for_output ();
+
+        jit_event_handler (gdbarch);
+
+        target_terminal_inferior ();
+
+        /* We want to step over this breakpoint, then keep going.  */
+        ecs->event_thread->stepping_over_breakpoint = 1;
+
+        break;
 
       case BPSTAT_WHAT_LAST:
 	/* Not a real code, but listed here to shut up gcc -Wall.  */

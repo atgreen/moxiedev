@@ -561,18 +561,9 @@ copy_reference_ops_from_ref (tree ref, VEC(vn_reference_op_s, heap) **result)
 	case ARRAY_REF:
 	  /* Record index as operand.  */
 	  temp.op0 = TREE_OPERAND (ref, 1);
-	  /* Record even constant lower bounds.  */
-	  if (TREE_OPERAND (ref, 2))
-	    temp.op1 = TREE_OPERAND (ref, 2);
-	  else
-	    {
-	      tree domain = TYPE_DOMAIN (TREE_TYPE (TREE_OPERAND (ref, 0)));
-	      if (domain
-		  && TYPE_MIN_VALUE (domain)
-		  && !integer_zerop (TYPE_MIN_VALUE (domain)))
-		temp.op1 = TYPE_MIN_VALUE (domain);
-	    }
-	  temp.op2 = TREE_OPERAND (ref, 3);
+	  /* Always record lower bounds and element size.  */
+	  temp.op1 = array_ref_low_bound (ref);
+	  temp.op2 = array_ref_element_size (ref);
 	  break;
 	case STRING_CST:
 	case INTEGER_CST:
@@ -731,19 +722,17 @@ ao_ref_init_from_vn_reference (ao_ref *ref,
 
 	case ARRAY_RANGE_REF:
 	case ARRAY_REF:
-	  /* Same for ARRAY_REFs.  We do not have access to the array
-	     type here, but we recorded the lower bound in op1.  */
-	  if (op->op2
-	      || !host_integerp (op->op0, 0)
-	      || (op->op1 && !host_integerp (op->op1, 0))
-	      || !host_integerp (TYPE_SIZE (op->type), 1))
+	  /* We recorded the lower bound and the element size.  */
+	  if (!host_integerp (op->op0, 0)
+	      || !host_integerp (op->op1, 0)
+	      || !host_integerp (op->op2, 0))
 	    max_size = -1;
 	  else
 	    {
 	      HOST_WIDE_INT hindex = TREE_INT_CST_LOW (op->op0);
-	      if (op->op1)
-		hindex -= TREE_INT_CST_LOW (op->op1);
-	      hindex *= TREE_INT_CST_LOW (TYPE_SIZE (op->type));
+	      hindex -= TREE_INT_CST_LOW (op->op1);
+	      hindex *= TREE_INT_CST_LOW (op->op2);
+	      hindex *= BITS_PER_UNIT;
 	      offset += hindex;
 	    }
 	  break;
@@ -863,8 +852,8 @@ vn_reference_fold_indirect (VEC (vn_reference_op_s, heap) **ops,
       if ((dom = TYPE_DOMAIN (TREE_TYPE (TREE_OPERAND (op->op0, 0))))
 	  && TYPE_MIN_VALUE (dom))
 	aref.op0 = TYPE_MIN_VALUE (dom);
-      aref.op1 = NULL_TREE;
-      aref.op2 = NULL_TREE;
+      aref.op1 = aref.op0;
+      aref.op2 = TYPE_SIZE_UNIT (TREE_TYPE (TREE_TYPE (op->op0)));
       VEC_safe_push (vn_reference_op_s, heap, mem, &aref);
     }
   copy_reference_ops_from_ref (TREE_OPERAND (op->op0, 0), &mem);
@@ -1131,7 +1120,7 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_)
       copy_reference_ops_from_ref (gimple_assign_lhs (def_stmt), &lhs);
       i = VEC_length (vn_reference_op_s, vr->operands) - 1;
       j = VEC_length (vn_reference_op_s, lhs) - 1;
-      while (j >= 0
+      while (j >= 0 && i >= 0
 	     && vn_reference_op_eq (VEC_index (vn_reference_op_s,
 					       vr->operands, i),
 				    VEC_index (vn_reference_op_s, lhs, j)))
@@ -1139,13 +1128,14 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_)
 	  i--;
 	  j--;
 	}
+
+      VEC_free (vn_reference_op_s, heap, lhs);
       /* i now points to the first additional op.
 	 ???  LHS may not be completely contained in VR, one or more
 	 VIEW_CONVERT_EXPRs could be in its way.  We could at least
 	 try handling outermost VIEW_CONVERT_EXPRs.  */
       if (j != -1)
 	return (void *)-1;
-      VEC_free (vn_reference_op_s, heap, lhs);
 
       /* Now re-write REF to be based on the rhs of the assignment.  */
       copy_reference_ops_from_ref (gimple_assign_rhs1 (def_stmt), &rhs);

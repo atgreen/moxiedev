@@ -53,7 +53,7 @@ static bool java_post_options (const char **);
 
 static int java_handle_option (size_t scode, const char *arg, int value);
 static void put_decl_string (const char *, int);
-static void put_decl_node (tree);
+static void put_decl_node (tree, int);
 static void java_print_error_function (diagnostic_context *, const char *,
 				       diagnostic_info *);
 static int merge_init_test_initialization (void * *, void *);
@@ -129,8 +129,6 @@ struct GTY(()) language_function {
 #define LANG_HOOKS_POST_OPTIONS java_post_options
 #undef LANG_HOOKS_PARSE_FILE
 #define LANG_HOOKS_PARSE_FILE java_parse_file
-#undef LANG_HOOKS_MARK_ADDRESSABLE
-#define LANG_HOOKS_MARK_ADDRESSABLE java_mark_addressable
 #undef LANG_HOOKS_DUP_LANG_SPECIFIC_DECL
 #define LANG_HOOKS_DUP_LANG_SPECIFIC_DECL java_dup_lang_specific_decl
 #undef LANG_HOOKS_DECL_PRINTABLE_NAME
@@ -161,7 +159,7 @@ struct GTY(()) language_function {
 #define LANG_HOOKS_ATTRIBUTE_TABLE java_attribute_table
 
 /* Each front end provides its own.  */
-const struct lang_hooks lang_hooks = LANG_HOOKS_INITIALIZER;
+struct lang_hooks lang_hooks = LANG_HOOKS_INITIALIZER;
 
 /*
  * process java-specific compiler command-line options
@@ -354,10 +352,13 @@ put_decl_string (const char *str, int len)
   decl_bufpos += len;
 }
 
-/* Append to decl_buf a printable name for NODE. */
+/* Append to decl_buf a printable name for NODE.
+   Depending on VERBOSITY, more information about NODE
+   is printed. Read the comments of decl_printable_name in
+   langhooks.h for more.  */
 
 static void
-put_decl_node (tree node)
+put_decl_node (tree node, int verbosity)
 {
   int was_pointer = 0;
   if (TREE_CODE (node) == POINTER_TYPE)
@@ -369,17 +370,32 @@ put_decl_node (tree node)
     {
       if (TREE_CODE (node) == FUNCTION_DECL)
 	{
+	  if (verbosity == 0 && DECL_NAME (node))
+	  /* We have been instructed to just print the bare name
+	     of the function.  */
+	    {
+	      put_decl_node (DECL_NAME (node), 0);
+	      return;
+	    }
+
 	  /* We want to print the type the DECL belongs to. We don't do
 	     that when we handle constructors. */
 	  if (! DECL_CONSTRUCTOR_P (node)
-	      && ! DECL_ARTIFICIAL (node) && DECL_CONTEXT (node))
+	      && ! DECL_ARTIFICIAL (node) && DECL_CONTEXT (node)
+              /* We want to print qualified DECL names only
+                 if verbosity is higher than 1.  */
+              && verbosity >= 1)
 	    {
-	      put_decl_node (TYPE_NAME (DECL_CONTEXT (node)));
+	      put_decl_node (TYPE_NAME (DECL_CONTEXT (node)),
+                               verbosity);
 	      put_decl_string (".", 1);
 	    }
 	  if (! DECL_CONSTRUCTOR_P (node))
-	    put_decl_node (DECL_NAME (node));
-	  if (TREE_TYPE (node) != NULL_TREE)
+	    put_decl_node (DECL_NAME (node), verbosity);
+	  if (TREE_TYPE (node) != NULL_TREE
+              /* We want to print function parameters only if verbosity
+                 is higher than 2.  */
+              && verbosity >= 2)
 	    {
 	      int i = 0;
 	      tree args = TYPE_ARG_TYPES (TREE_TYPE (node));
@@ -390,19 +406,22 @@ put_decl_node (tree node)
 		{
 		  if (i > 0)
 		    put_decl_string (",", 1);
-		  put_decl_node (TREE_VALUE (args));
+		  put_decl_node (TREE_VALUE (args), verbosity);
 		}
 	      put_decl_string (")", 1);
 	    }
 	}
       else
-	put_decl_node (DECL_NAME (node));
+	put_decl_node (DECL_NAME (node), verbosity);
     }
   else if (TYPE_P (node) && TYPE_NAME (node) != NULL_TREE)
     {
-      if (TREE_CODE (node) == RECORD_TYPE && TYPE_ARRAY_P (node))
+      if (TREE_CODE (node) == RECORD_TYPE && TYPE_ARRAY_P (node)
+          /* Print detailed array information only if verbosity is higher
+            than 2.  */
+          && verbosity >= 2)
 	{
-	  put_decl_node (TYPE_ARRAY_ELEMENT (node));
+	  put_decl_node (TYPE_ARRAY_ELEMENT (node), verbosity);
 	  put_decl_string("[]", 2);
 	}
       else if (node == promoted_byte_type_node)
@@ -416,7 +435,7 @@ put_decl_node (tree node)
       else if (node == void_type_node && was_pointer)
 	put_decl_string ("null", 4);
       else
-	put_decl_node (TYPE_NAME (node));
+	put_decl_node (TYPE_NAME (node), verbosity);
     }
   else if (TREE_CODE (node) == IDENTIFIER_NODE)
     put_decl_string (IDENTIFIER_POINTER (node), IDENTIFIER_LENGTH (node));
@@ -433,10 +452,7 @@ const char *
 lang_printable_name (tree decl, int v)
 {
   decl_bufpos = 0;
-  if (v == 0 && TREE_CODE (decl) == FUNCTION_DECL)
-    put_decl_node (DECL_NAME (decl));
-  else
-    put_decl_node (decl);
+  put_decl_node (decl, v);
   put_decl_string ("", 1);
   return decl_buf;
 }

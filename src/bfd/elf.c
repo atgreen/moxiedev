@@ -331,7 +331,7 @@ bfd_elf_string_from_elf_section (bfd *abfd,
 	 (shindex == shstrndx && strindex == hdr->sh_name
 	  ? ".shstrtab"
 	  : bfd_elf_string_from_elf_section (abfd, shstrndx, hdr->sh_name)));
-      return "";
+      return NULL;
     }
 
   return ((char *) hdr->contents) + strindex;
@@ -971,25 +971,8 @@ _bfd_elf_make_section_from_shdr (bfd *abfd,
       phdr = elf_tdata (abfd)->phdr;
       for (i = 0; i < elf_elfheader (abfd)->e_phnum; i++, phdr++)
 	{
-	  /* This section is part of this segment if its file
-	     offset plus size lies within the segment's memory
-	     span and, if the section is loaded, the extent of the
-	     loaded data lies within the extent of the segment.
-
-	     Note - we used to check the p_paddr field as well, and
-	     refuse to set the LMA if it was 0.  This is wrong
-	     though, as a perfectly valid initialised segment can
-	     have a p_paddr of zero.  Some architectures, eg ARM,
-	     place special significance on the address 0 and
-	     executables need to be able to have a segment which
-	     covers this address.  */
 	  if (phdr->p_type == PT_LOAD
-	      && (bfd_vma) hdr->sh_offset >= phdr->p_offset
-	      && (hdr->sh_offset + hdr->sh_size
-		  <= phdr->p_offset + phdr->p_memsz)
-	      && ((flags & SEC_LOAD) == 0
-		  || (hdr->sh_offset + hdr->sh_size
-		      <= phdr->p_offset + phdr->p_filesz)))
+	      && ELF_IS_SECTION_IN_SEGMENT (hdr, phdr))
 	    {
 	      if ((flags & SEC_LOAD) == 0)
 		newsect->lma = (phdr->p_paddr
@@ -2439,6 +2422,18 @@ _bfd_elf_init_reloc_shdr (bfd *abfd,
   return TRUE;
 }
 
+/* Return the default section type based on the passed in section flags.  */
+
+int
+bfd_elf_get_default_section_type (flagword flags)
+{
+  if ((flags & SEC_ALLOC) != 0
+      && ((flags & (SEC_LOAD | SEC_HAS_CONTENTS)) == 0
+	  || (flags & SEC_NEVER_LOAD) != 0))
+    return SHT_NOBITS;
+  return SHT_PROGBITS;
+}
+
 /* Set up an ELF internal section header for a section.  */
 
 static void
@@ -2488,12 +2483,8 @@ elf_fake_sections (bfd *abfd, asection *asect, void *failedptrarg)
      asect->flags.  */
   if ((asect->flags & SEC_GROUP) != 0)
     sh_type = SHT_GROUP;
-  else if ((asect->flags & SEC_ALLOC) != 0
-	   && (((asect->flags & (SEC_LOAD | SEC_HAS_CONTENTS)) == 0)
-	       || (asect->flags & SEC_NEVER_LOAD) != 0))
-    sh_type = SHT_NOBITS;
   else
-    sh_type = SHT_PROGBITS;
+    sh_type = bfd_elf_get_default_section_type (asect->flags);
 
   if (this_hdr->sh_type == SHT_NULL)
     this_hdr->sh_type = sh_type;
@@ -3084,7 +3075,7 @@ sym_is_global (bfd *abfd, asymbol *sym)
   if (bed->elf_backend_sym_is_global)
     return (*bed->elf_backend_sym_is_global) (abfd, sym);
 
-  return ((sym->flags & (BSF_GLOBAL | BSF_WEAK)) != 0
+  return ((sym->flags & (BSF_GLOBAL | BSF_WEAK | BSF_GNU_UNIQUE)) != 0
 	  || bfd_is_und_section (bfd_get_section (sym))
 	  || bfd_is_com_section (bfd_get_section (sym)));
 }

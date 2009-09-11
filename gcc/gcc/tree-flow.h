@@ -554,6 +554,7 @@ extern const char *op_symbol_code (enum tree_code);
 /* In tree-dfa.c  */
 extern var_ann_t create_var_ann (tree);
 extern void renumber_gimple_stmt_uids (void);
+extern void renumber_gimple_stmt_uids_in_blocks (basic_block *, int);
 extern tree_ann_common_t create_tree_common_ann (tree);
 extern void dump_dfa_stats (FILE *);
 extern void debug_dfa_stats (void);
@@ -596,6 +597,7 @@ extern void record_vars (tree);
 extern bool block_may_fallthru (const_tree);
 extern bool gimple_seq_may_fallthru (gimple_seq);
 extern bool gimple_stmt_may_fallthru (gimple);
+extern bool gimple_check_call_args (gimple);
 
 
 /* In tree-ssa.c  */
@@ -634,6 +636,11 @@ typedef bool (*walk_use_def_chains_fn) (tree, gimple, void *);
 
 extern void walk_use_def_chains (tree, walk_use_def_chains_fn, void *, bool);
 
+void propagate_defs_into_debug_stmts (gimple, basic_block,
+				      const gimple_stmt_iterator *);
+void propagate_var_def_into_debug_stmts (tree, basic_block,
+					 const gimple_stmt_iterator *);
+void release_defs_bitset (bitmap toremove);
 
 /* In tree-into-ssa.c  */
 void update_ssa (unsigned);
@@ -888,12 +895,12 @@ tree force_gimple_operand (tree, gimple_seq *, bool, tree);
 tree force_gimple_operand_gsi (gimple_stmt_iterator *, tree, bool, tree,
 			       bool, enum gsi_iterator_update);
 tree gimple_fold_indirect_ref (tree);
-void mark_addressable (tree);
 
 /* In tree-ssa-live.c */
 extern void remove_unused_locals (void);
 extern void dump_scope_blocks (FILE *, int);
 extern void debug_scope_blocks (int);
+extern void debug_scope_block (tree, int);
 
 /* In tree-ssa-address.c  */
 

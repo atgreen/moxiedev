@@ -636,16 +636,6 @@ extern struct sparc_cpu_select sparc_select[];
    if ptr_mode and Pmode are the same.  */
 #define POINTERS_EXTEND_UNSIGNED 1
 
-/* For TARGET_ARCH64 we need this, as we don't have instructions
-   for arithmetic operations which do zero/sign extension at the same time,
-   so without this we end up with a srl/sra after every assignment to an
-   user variable,  which means very very bad code.  */
-#define PROMOTE_FUNCTION_MODE(MODE, UNSIGNEDP, TYPE) \
-if (TARGET_ARCH64				\
-    && GET_MODE_CLASS (MODE) == MODE_INT	\
-    && GET_MODE_SIZE (MODE) < UNITS_PER_WORD)	\
-  (MODE) = word_mode;
-
 /* Allocation boundary (in *bits*) for storing arguments in argument list.  */
 #define PARM_BOUNDARY (TARGET_ARCH64 ? 64 : 32)
 
@@ -1378,12 +1368,6 @@ extern char leaf_reg_remap[];
 #define ELIMINABLE_REGS \
   {{ FRAME_POINTER_REGNUM, STACK_POINTER_REGNUM}, \
    { FRAME_POINTER_REGNUM, HARD_FRAME_POINTER_REGNUM} }
-
-/* The way this is structured, we can't eliminate SFP in favor of SP
-   if the frame pointer is required: we want to use the SFP->HFP elimination
-   in that case.  But the test in update_eliminables doesn't know we are
-   assuming below that we only do the former elimination.  */
-#define CAN_ELIMINATE(FROM, TO) sparc_can_eliminate((FROM), (TO))
 
 /* We always pretend that this is a leaf function because if it's not,
    there's no point in trying to eliminate the frame pointer.  If it

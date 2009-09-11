@@ -1,12 +1,9 @@
 /ChangeLog-1999-2003/1.1/Mon Jul  6 10:46:43 2009//
 /gdb-mi.el/1.13/Mon Jul  6 10:46:43 2009//
-/mi-cmd-break.c/1.24/Mon Jul 13 11:34:17 2009//
 /mi-cmd-env.c/1.17/Mon Jul  6 10:46:43 2009//
 /mi-cmd-file.c/1.10/Mon Jul  6 10:46:43 2009//
 /mi-cmd-stack.c/1.44/Mon Jul  6 10:46:43 2009//
 /mi-cmd-target.c/1.4/Mon Jul  6 10:46:43 2009//
-/mi-cmds.c/1.41/Mon Jul  6 10:46:43 2009//
-/mi-cmds.h/1.38/Mon Jul  6 10:46:43 2009//
 /mi-common.c/1.7/Mon Jul  6 10:46:43 2009//
 /mi-common.h/1.7/Mon Jul  6 10:46:43 2009//
 /mi-console.c/1.15/Mon Jul  6 10:46:43 2009//
@@ -14,7 +11,6 @@
 /mi-getopt.c/1.15/Mon Jul  6 10:46:43 2009//
 /mi-getopt.h/1.10/Mon Jul  6 10:46:43 2009//
 /mi-interp.c/1.50/Mon Jul  6 10:46:43 2009//
-/mi-main.c/1.156/Mon Jul 13 11:34:17 2009//
 /mi-main.h/1.12/Mon Jul  6 10:46:43 2009//
 /mi-out.c/1.35/Mon Jul  6 10:46:43 2009//
 /mi-out.h/1.12/Mon Jul  6 10:46:43 2009//
@@ -23,4 +19,8 @@
 /mi-symbol-cmds.c/1.9/Mon Jul 13 11:34:17 2009//
 /mi-cmd-disas.c/1.32/Sat Jul 18 13:18:29 2009//
 /mi-cmd-var.c/1.60/Fri Jul 31 11:10:10 2009//
+/mi-cmd-break.c/1.25/Tue Sep  8 03:29:08 2009//
+/mi-cmds.c/1.42/Tue Sep  8 03:29:08 2009//
+/mi-cmds.h/1.39/Tue Sep  8 03:29:08 2009//
+/mi-main.c/1.157/Tue Sep  8 03:29:09 2009//
 D

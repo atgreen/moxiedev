@@ -385,7 +385,7 @@ proc check_gc_sections_available { } {
 
 	# Check if the ld used by gcc supports --gc-sections.
 	set gcc_spec [${tool}_target_compile "-dumpspecs" "" "none" ""]
-	regsub ".*\n\*linker:\[ \t\]*\n(\[^ \t\n\]*).*" "$gcc_spec" {\1} linker
+	regsub ".*\n\\*linker:\[ \t\]*\n(\[^ \t\n\]*).*" "$gcc_spec" {\1} linker
 	set gcc_ld [lindex [${tool}_target_compile "-print-prog-name=$linker" "" "none" ""] 0]
 	set ld_output [remote_exec host "$gcc_ld" "--help"]
 	if { [ string first "--gc-sections" $ld_output ] >= 0 } {
@@ -1356,7 +1356,8 @@ proc check_effective_target_vect_cmdline_needed { } {
 	verbose "check_effective_target_vect_cmdline_needed: using cached result" 2
     } else {
 	set et_vect_cmdline_needed_saved 1
-	if { [istarget ia64-*-*]
+	if { [istarget alpha*-*-*]
+	     || [istarget ia64-*-*]
 	     || (([istarget x86_64-*-*] || [istarget i?86-*-*])
 		 && [check_effective_target_lp64])
 	     || ([istarget powerpc*-*-*]
@@ -1511,6 +1512,20 @@ proc check_effective_target_arm_vfp_ok { } {
     }
 }
 
+# Return 1 if this is an ARM target supporting -mfpu=vfp
+# -mfloat-abi=hard.  Some multilibs may be incompatible with these
+# options.
+
+proc check_effective_target_arm_hard_vfp_ok { } {
+    if { [check_effective_target_arm32] } {
+	return [check_no_compiler_messages arm_hard_vfp_ok executable {
+	    int main() { return 0;}
+	} "-mfpu=vfp -mfloat-abi=hard"]
+    } else {
+	return 0
+    }
+}
+
 # Return 1 if this is an ARM target supporting -mfpu=neon
 # -mfloat-abi=softfp.  Some multilibs may be incompatible with these
 # options.
@@ -1518,6 +1533,7 @@ proc check_effective_target_arm_vfp_ok { } {
 proc check_effective_target_arm_neon_ok { } {
     if { [check_effective_target_arm32] } {
         return [check_no_compiler_messages arm_neon_ok object {
+	    #include "arm_neon.h"
             int dummy;
         } "-mfpu=neon -mfloat-abi=softfp"]
     } else {
@@ -1602,6 +1618,19 @@ proc check_effective_target_arm_eabi { } {
 	int dummy;
 	#endif
     }]
+}
+
+# Return 1 if this is an ARM target supporting -mcpu=iwmmxt.
+# Some multilibs may be incompatible with this option.
+
+proc check_effective_target_arm_iwmmxt_ok { } {
+    if { [check_effective_target_arm32] } {
+	return [check_no_compiler_messages arm_iwmmxt_ok object {
+	    int dummy;
+	} "-mcpu=iwmmxt"]
+    } else {
+	return 0
+    }
 }
 
 # Return 1 if this is a PowerPC target with floating-point registers.
@@ -2641,6 +2670,7 @@ proc check_effective_target_sync_int_long { } {
 	     || [istarget i?86-*-*]
 	     || [istarget x86_64-*-*]
 	     || [istarget alpha*-*-*] 
+	     || [istarget bfin*-*linux*]
 	     || [istarget s390*-*-*] 
 	     || [istarget powerpc*-*-*]
 	     || [istarget sparc64-*-*]
@@ -2942,6 +2972,17 @@ proc add_options_for_c99_runtime { flags } {
     return $flags
 }
 
+# Add to FLAGS all the target-specific flags needed to enable
+# full IEEE compliance mode.
+
+proc add_options_for_ieee { flags } {
+    if { [istarget "alpha*-*-*"]
+         || [istarget "sh*-*-*"] } {
+       return "$flags -mieee"
+    }
+    return $flags
+}
+
 # Return 1 if the target provides a full C99 runtime.
 
 proc check_effective_target_c99_runtime { } {
@@ -3066,7 +3107,7 @@ proc check_effective_target_mpc { } {
 # Return 1 if the MPC library with mpc_pow is integrated with GCC, 0 otherwise.
 
 proc check_effective_target_mpc_pow { } {
-    return [check_no_compiler_messages mpc executable {
+    return [check_no_compiler_messages mpc_pow executable {
 	extern void link_error(void);
 	int main ()
 	{
@@ -3074,4 +3115,24 @@ proc check_effective_target_mpc_pow { } {
 	    link_error();
 	}
     }]
+}
+
+# Return 1 if the language for the compiler under test is C.
+
+proc check_effective_target_c { } {
+ global tool
+    if [string match $tool "gcc"] {
+   return 1
+    }
+ return 0
+}
+
+# Return 1 if the language for the compiler under test is C++.
+
+proc check_effective_target_c++ { } {
+ global tool
+    if [string match $tool "g++"] {
+   return 1
+    }
+ return 0
 }

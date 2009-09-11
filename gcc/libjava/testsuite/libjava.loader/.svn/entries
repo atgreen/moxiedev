@@ -1,7 +1,7 @@
 10
 
 dir
-149693
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/testsuite/libjava.loader
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,17 +94,17 @@ has-props
 
 1571
 
-MyLoader.java
+TestLeak.java
 file
 
 
 
 
 2009-04-24T17:49:48.000000Z
-af7de4bf25be605f48cd26c138c55941
-2002-11-04T14:00:15.000000Z
-58793
-green
+792b7188f5cf525c5f5db1f46557cfab
+2007-01-09T19:58:05.773323Z
+120621
+tromey
 
 
 
@@ -126,7 +126,7 @@ green
 
 
 
-212
+618
 
 TestEarlyGC.out
 file
@@ -162,48 +162,14 @@ green
 
 0
 
-TestLeak.java
+MyLoader.java
 file
 
 
 
 
 2009-04-24T17:49:48.000000Z
-792b7188f5cf525c5f5db1f46557cfab
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-618
-
-TestParent.out
-file
-
-
-
-
-2009-04-24T17:49:48.000000Z
-d41d8cd98f00b204e9800998ecf8427e
+af7de4bf25be605f48cd26c138c55941
 2002-11-04T14:00:15.000000Z
 58793
 green
@@ -228,7 +194,7 @@ green
 
 
 
-0
+212
 
 dummy.class
 file
@@ -264,41 +230,7 @@ has-props
 
 184
 
-TestEarlyGC.jar
-file
-
-
-
-
-2009-04-24T17:49:48.000000Z
-43b0f04bcb07bda3b8b0138ab7e7826b
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2452
-
-TestMultiple.out
+TestParent.out
 file
 
 
@@ -306,8 +238,8 @@ file
 
 2009-04-24T17:49:48.000000Z
 d41d8cd98f00b204e9800998ecf8427e
-2002-11-04T01:31:12.000000Z
-58778
+2002-11-04T14:00:15.000000Z
+58793
 green
 
 
@@ -366,6 +298,74 @@ tromey
 
 2199
 
+TestMultiple.out
+file
+
+
+
+
+2009-04-24T17:49:48.000000Z
+d41d8cd98f00b204e9800998ecf8427e
+2002-11-04T01:31:12.000000Z
+58778
+green
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+0
+
+TestEarlyGC.jar
+file
+
+
+
+
+2009-04-24T17:49:48.000000Z
+43b0f04bcb07bda3b8b0138ab7e7826b
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2452
+
 TestParent.jar
 file
 
@@ -400,40 +400,6 @@ has-props
 
 1182
 
-TestEarlyGC.java
-file
-
-
-
-
-2009-04-24T17:49:48.000000Z
-28ac591946ef46ddea1cf86272f71ad8
-2003-01-28T23:21:13.000000Z
-62047
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2139
-
 TestMultiple.jar
 file
 
@@ -467,6 +433,40 @@ has-props
 
 
 1165
+
+TestEarlyGC.java
+file
+
+
+
+
+2009-04-24T17:49:48.000000Z
+28ac591946ef46ddea1cf86272f71ad8
+2003-01-28T23:21:13.000000Z
+62047
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2139
 
 TestParent.java
 file

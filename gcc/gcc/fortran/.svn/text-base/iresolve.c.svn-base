@@ -62,16 +62,16 @@ gfc_get_string (const char *format, ...)
 static void
 check_charlen_present (gfc_expr *source)
 {
-  if (source->ts.cl == NULL)
-    source->ts.cl = gfc_new_charlen (gfc_current_ns);
+  if (source->ts.u.cl == NULL)
+    source->ts.u.cl = gfc_new_charlen (gfc_current_ns, NULL);
 
   if (source->expr_type == EXPR_CONSTANT)
     {
-      source->ts.cl->length = gfc_int_expr (source->value.character.length);
+      source->ts.u.cl->length = gfc_int_expr (source->value.character.length);
       source->rank = 0;
     }
   else if (source->expr_type == EXPR_ARRAY)
-    source->ts.cl->length =
+    source->ts.u.cl->length =
 	gfc_int_expr (source->value.constructor->expr->value.character.length);
 }
 
@@ -161,8 +161,8 @@ gfc_resolve_char_achar (gfc_expr *f, gfc_expr *x, gfc_expr *kind,
   f->ts.type = BT_CHARACTER;
   f->ts.kind = (kind == NULL)
 	     ? gfc_default_character_kind : mpz_get_si (kind->value.integer);
-  f->ts.cl = gfc_new_charlen (gfc_current_ns);
-  f->ts.cl->length = gfc_int_expr (1);
+  f->ts.u.cl = gfc_new_charlen (gfc_current_ns, NULL);
+  f->ts.u.cl->length = gfc_int_expr (1);
 
   f->value.function.name = gfc_get_string (name, f->ts.kind,
 					   gfc_type_letter (x->ts.type),
@@ -651,8 +651,8 @@ gfc_resolve_ctime (gfc_expr *f, gfc_expr *time)
     {
       ts.type = BT_INTEGER;
       ts.kind = 8;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (time, &ts, 2);
     }
 
@@ -1058,8 +1058,8 @@ gfc_resolve_index_func (gfc_expr *f, gfc_expr *str,
     {
       ts.type = BT_LOGICAL;
       ts.kind = gfc_default_integer_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (back, &ts, 2);
     }
 
@@ -1125,8 +1125,8 @@ gfc_resolve_isatty (gfc_expr *f, gfc_expr *u)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (u, &ts, 2);
     }
 
@@ -2175,8 +2175,8 @@ gfc_resolve_fgetc (gfc_expr *f, gfc_expr *u, gfc_expr *c ATTRIBUTE_UNUSED)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (u, &ts, 2);
     }
 
@@ -2205,8 +2205,8 @@ gfc_resolve_fputc (gfc_expr *f, gfc_expr *u, gfc_expr *c ATTRIBUTE_UNUSED)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (u, &ts, 2);
     }
 
@@ -2235,8 +2235,8 @@ gfc_resolve_ftell (gfc_expr *f, gfc_expr *u)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (u, &ts, 2);
     }
 
@@ -2340,9 +2340,19 @@ gfc_resolve_transfer (gfc_expr *f, gfc_expr *source ATTRIBUTE_UNUSED,
   /* TODO: Make this do something meaningful.  */
   static char transfer0[] = "__transfer0", transfer1[] = "__transfer1";
 
-  if (mold->ts.type == BT_CHARACTER && !mold->ts.cl->length
-	&& !(mold->expr_type == EXPR_VARIABLE && mold->symtree->n.sym->attr.dummy))
-    mold->ts.cl->length = gfc_int_expr (mold->value.character.length);
+  if (mold->ts.type == BT_CHARACTER
+	&& !mold->ts.u.cl->length
+	&& gfc_is_constant_expr (mold))
+    {
+      int len;
+      if (mold->expr_type == EXPR_CONSTANT)
+	mold->ts.u.cl->length = gfc_int_expr (mold->value.character.length);
+      else
+	{
+	  len = mold->value.constructor->expr->value.character.length;
+	  mold->ts.u.cl->length = gfc_int_expr (len);
+	}
+    }
 
   f->ts = mold->ts;
 
@@ -2488,8 +2498,8 @@ gfc_resolve_ttynam (gfc_expr *f, gfc_expr *unit)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (unit, &ts, 2);
     }
 
@@ -3067,8 +3077,8 @@ gfc_resolve_ctime_sub (gfc_code *c)
     {
       ts.type = BT_INTEGER;
       ts.kind = 8;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (c->ext.actual->expr, &ts, 2);
     }
 
@@ -3170,8 +3180,8 @@ gfc_resolve_fgetc_sub (gfc_code *c)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (u, &ts, 2);
     }
 
@@ -3215,8 +3225,8 @@ gfc_resolve_fputc_sub (gfc_code *c)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (u, &ts, 2);
     }
 
@@ -3264,8 +3274,8 @@ gfc_resolve_fseek_sub (gfc_code *c)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (unit, &ts, 2);
     }
 
@@ -3273,8 +3283,8 @@ gfc_resolve_fseek_sub (gfc_code *c)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_intio_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (offset, &ts, 2);
     }
 
@@ -3282,8 +3292,8 @@ gfc_resolve_fseek_sub (gfc_code *c)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (whence, &ts, 2);
     }
 
@@ -3306,8 +3316,8 @@ gfc_resolve_ftell_sub (gfc_code *c)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (unit, &ts, 2);
     }
 
@@ -3326,8 +3336,8 @@ gfc_resolve_ttynam_sub (gfc_code *c)
     {
       ts.type = BT_INTEGER;
       ts.kind = gfc_c_int_kind;
-      ts.derived = NULL;
-      ts.cl = NULL;
+      ts.u.derived = NULL;
+      ts.u.cl = NULL;
       gfc_convert_type (c->ext.actual->expr, &ts, 2);
     }
 

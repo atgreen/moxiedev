@@ -1257,7 +1257,6 @@ check_for_out_of_scope_variable (tree decl)
 static bool keep_next_level_flag;
 
 static int binding_depth = 0;
-static int is_class_level = 0;
 
 static void
 indent (int depth)
@@ -1339,7 +1338,6 @@ push_binding_level (struct cp_binding_level *scope)
       scope->binding_depth = binding_depth;
       indent (binding_depth);
       cxx_scope_debug (scope, input_line, "push");
-      is_class_level = 0;
       binding_depth++;
     }
 }
@@ -1427,12 +1425,6 @@ leave_scope (void)
     {
       indent (--binding_depth);
       cxx_scope_debug (scope, input_line, "leave");
-      if (is_class_level != (scope == class_binding_level))
-	{
-	  indent (binding_depth);
-	  verbatim ("XXX is_class_level != (current_scope == class_scope)\n");
-	}
-      is_class_level = 0;
     }
 
   /* Move one nesting level up.  */
@@ -1482,7 +1474,6 @@ resume_scope (struct cp_binding_level* b)
       b->binding_depth = binding_depth;
       indent (binding_depth);
       cxx_scope_debug (b, input_line, "resume");
-      is_class_level = 0;
       binding_depth++;
     }
 }
@@ -2562,9 +2553,6 @@ pop_inner_scope (tree outer, tree inner)
 void
 pushlevel_class (void)
 {
-  if (ENABLE_SCOPE_CHECKING)
-    is_class_level = 1;
-
   class_binding_level = begin_scope (sk_class, current_class_type);
 }
 
@@ -2602,9 +2590,7 @@ poplevel_class (void)
 
   /* Now, pop out of the binding level which we created up in the
      `pushlevel_class' routine.  */
-  if (ENABLE_SCOPE_CHECKING)
-    is_class_level = 1;
-
+  gcc_assert (current_binding_level == level);
   leave_scope ();
   timevar_pop (TV_NAME_LOOKUP);
 }
@@ -4390,6 +4376,34 @@ lookup_name_innermost_nonclass_level (tree name)
     }
 
   POP_TIMEVAR_AND_RETURN (TV_NAME_LOOKUP, t);
+}
+
+/* Returns true iff DECL is a block-scope extern declaration of a function
+   or variable.  */
+
+bool
+is_local_extern (tree decl)
+{
+  cxx_binding *binding;
+
+  /* For functions, this is easy.  */
+  if (TREE_CODE (decl) == FUNCTION_DECL)
+    return DECL_LOCAL_FUNCTION_P (decl);
+
+  if (TREE_CODE (decl) != VAR_DECL)
+    return false;
+  if (!current_function_decl)
+    return false;
+
+  /* For variables, this is not easy.  We need to look at the binding stack
+     for the identifier to see whether the decl we have is a local.  */
+  for (binding = IDENTIFIER_BINDING (DECL_NAME (decl));
+       binding && binding->scope->kind != sk_namespace;
+       binding = binding->previous)
+    if (binding->value == decl)
+      return LOCAL_BINDING_P (binding);
+
+  return false;
 }
 
 /* Like lookup_name_innermost_nonclass_level, but for types.  */

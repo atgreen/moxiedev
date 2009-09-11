@@ -1,11 +1,7 @@
 /README/1.1/Mon Jul  6 10:46:43 2009//
 /VERSION/1.1/Mon Jul  6 10:46:43 2009//
-/aclocal.m4/1.5/Mon Jul  6 10:46:43 2009//
 /bindtextdom.c/1.5/Mon Jul  6 10:46:43 2009//
-/config.h.in/1.1/Mon Jul  6 10:46:43 2009//
 /config.intl.in/1.1/Mon Jul  6 10:46:43 2009//
-/configure/1.6/Mon Jul  6 10:46:43 2009//
-/configure.ac/1.1/Mon Jul  6 10:46:43 2009//
 /dcgettext.c/1.5/Mon Jul  6 10:46:43 2009//
 /dcigettext.c/1.1/Mon Jul  6 10:46:43 2009//
 /dcngettext.c/1.1/Mon Jul  6 10:46:43 2009//
@@ -38,6 +34,10 @@
 /relocatable.c/1.1/Mon Jul  6 10:46:44 2009//
 /relocatable.h/1.1/Mon Jul  6 10:46:44 2009//
 /textdomain.c/1.5/Mon Jul  6 10:46:44 2009//
-/ChangeLog/1.18/Fri Jul 31 11:10:12 2009//
 /Makefile.in/1.12/Fri Jul 31 11:10:12 2009//
+/ChangeLog/1.20/Tue Sep  8 03:28:41 2009//
+/aclocal.m4/1.6/Tue Sep  8 03:28:41 2009//
+/config.h.in/1.2/Tue Sep  8 03:28:41 2009//
+/configure/1.7/Tue Sep  8 03:28:43 2009//
+/configure.ac/1.2/Tue Sep  8 03:28:43 2009//
 D

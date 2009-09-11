@@ -1,5 +1,5 @@
 /* SEC_MERGE support.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007
+   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
    Written by Jakub Jelinek <jakub@redhat.com>.
 
@@ -792,6 +792,7 @@ _bfd_write_merged_section (bfd *output_bfd, asection *sec, void *psecinfo)
   if (secinfo->first_str == NULL)
     return TRUE;
 
+  /* FIXME: octets_per_byte.  */
   pos = sec->output_section->filepos + sec->output_offset;
   if (bfd_seek (output_bfd, pos, SEEK_SET) != 0)
     return FALSE;

@@ -159,6 +159,9 @@ static enum reg_class pa_secondary_reload (bool, rtx, enum reg_class,
 					   enum machine_mode,
 					   secondary_reload_info *);
 static void pa_extra_live_on_entry (bitmap);
+static enum machine_mode pa_promote_function_mode (const_tree,
+						   enum machine_mode, int *,
+						   const_tree, int);
 
 /* The following extra sections are only used for SOM.  */
 static GTY(()) section *som_readonly_data_section;
@@ -285,8 +288,8 @@ static size_t n_deferred_plabels = 0;
 #define TARGET_INIT_LIBFUNCS pa_hpux_init_libfuncs
 #endif
 
-#undef TARGET_PROMOTE_FUNCTION_RETURN
-#define TARGET_PROMOTE_FUNCTION_RETURN hook_bool_const_tree_true
+#undef TARGET_PROMOTE_FUNCTION_MODE
+#define TARGET_PROMOTE_FUNCTION_MODE pa_promote_function_mode
 #undef TARGET_PROMOTE_PROTOTYPES
 #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
 
@@ -1616,7 +1619,7 @@ emit_move_sequence (rtx *operands, enum machine_mode mode, rtx scratch_reg)
       /* D might not fit in 14 bits either; for such cases load D into
 	 scratch reg.  */
       if (GET_CODE (operand1) == MEM
-	  && !memory_address_p (Pmode, XEXP (operand1, 0)))
+	  && !memory_address_p (GET_MODE (operand0), XEXP (operand1, 0)))
 	{
 	  /* We are reloading the address into the scratch register, so we
 	     want to make sure the scratch register is a full register.  */
@@ -9187,11 +9190,25 @@ insn_refs_are_delayed (rtx insn)
 	   && get_attr_type (insn) == TYPE_MILLI));
 }
 
+/* Promote the return value, but not the arguments.  */
+
+static enum machine_mode
+pa_promote_function_mode (const_tree type ATTRIBUTE_UNUSED,
+                          enum machine_mode mode,
+                          int *punsignedp ATTRIBUTE_UNUSED,
+                          const_tree fntype ATTRIBUTE_UNUSED,
+                          int for_return)
+{
+  if (for_return == 0)
+    return mode;
+  return promote_mode (type, mode, punsignedp);
+}
+
 /* On the HP-PA the value is found in register(s) 28(-29), unless
    the mode is SF or DF. Then the value is returned in fr4 (32).
 
-   This must perform the same promotions as PROMOTE_MODE, else
-   TARGET_PROMOTE_FUNCTION_RETURN will not work correctly.
+   This must perform the same promotions as PROMOTE_MODE, else promoting
+   return values in TARGET_PROMOTE_FUNCTION_MODE will not work correctly.
 
    Small structures must be returned in a PARALLEL on PA64 in order
    to match the HP Compiler ABI.  */

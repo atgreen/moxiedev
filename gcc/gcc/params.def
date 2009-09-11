@@ -185,7 +185,7 @@ DEFPARAM(PARAM_IPCP_UNIT_GROWTH,
 DEFPARAM(PARAM_EARLY_INLINING_INSNS,
 	 "early-inlining-insns",
 	 "maximal estimated growth of function body caused by early inlining of single call",
-	 12, 0, 0)
+	 8, 0, 0)
 DEFPARAM(PARAM_LARGE_STACK_FRAME,
 	 "large-stack-frame",
 	 "The size of stack frame to be considered large",
@@ -751,6 +751,13 @@ DEFPARAM (PARAM_PREFETCH_MIN_INSN_TO_MEM_RATIO,
 	  "prefetch-min-insn-to-mem-ratio",
 	  "min. ratio of insns to mem ops to enable prefetching in a loop",
 	  3, 0, 0)
+
+/* Set minimum insn uid for non-debug insns.  */
+
+DEFPARAM (PARAM_MIN_NONDEBUG_INSN_UID,
+	  "min-nondebug-insn-uid",
+	  "The minimum UID to be used for a nondebug insn",
+	  0, 1, 0)
 
 /*
 Local variables:

@@ -246,7 +246,7 @@ expr_size (tree exp)
     size = TREE_OPERAND (exp, 1);
   else
     {
-      size = lang_hooks.expr_size (exp);
+      size = tree_expr_size (exp);
       gcc_assert (size);
       gcc_assert (size == SUBSTITUTE_PLACEHOLDER_IN_EXPR (size, exp));
     }
@@ -266,7 +266,7 @@ int_expr_size (tree exp)
     size = TREE_OPERAND (exp, 1);
   else
     {
-      size = lang_hooks.expr_size (exp);
+      size = tree_expr_size (exp);
       gcc_assert (size);
     }
 
@@ -749,63 +749,94 @@ copy_to_suggested_reg (rtx x, rtx target, enum machine_mode mode)
   return temp;
 }
 
-/* Return the mode to use to store a scalar of TYPE and MODE.
+/* Return the mode to use to pass or return a scalar of TYPE and MODE.
    PUNSIGNEDP points to the signedness of the type and may be adjusted
    to show what signedness to use on extension operations.
 
-   FOR_CALL is nonzero if this call is promoting args for a call.  */
-
-#if defined(PROMOTE_MODE) && !defined(PROMOTE_FUNCTION_MODE)
-#define PROMOTE_FUNCTION_MODE PROMOTE_MODE
-#endif
+   FOR_RETURN is nonzero if the caller is promoting the return value
+   of FNDECL, else it is for promoting args.  */
 
 enum machine_mode
-promote_mode (const_tree type, enum machine_mode mode, int *punsignedp,
-	      int for_call ATTRIBUTE_UNUSED)
+promote_function_mode (const_tree type, enum machine_mode mode, int *punsignedp,
+		       const_tree funtype, int for_return)
 {
+  switch (TREE_CODE (type))
+    {
+    case INTEGER_TYPE:   case ENUMERAL_TYPE:   case BOOLEAN_TYPE:
+    case REAL_TYPE:      case OFFSET_TYPE:     case FIXED_POINT_TYPE:
+    case POINTER_TYPE:   case REFERENCE_TYPE:
+      return targetm.calls.promote_function_mode (type, mode, punsignedp, funtype,
+						  for_return);
+
+    default:
+      return mode;
+    }
+}
+/* Return the mode to use to store a scalar of TYPE and MODE.
+   PUNSIGNEDP points to the signedness of the type and may be adjusted
+   to show what signedness to use on extension operations.  */
+
+enum machine_mode
+promote_mode (const_tree type ATTRIBUTE_UNUSED, enum machine_mode mode,
+	      int *punsignedp ATTRIBUTE_UNUSED)
+{
+  /* FIXME: this is the same logic that was there until GCC 4.4, but we
+     probably want to test POINTERS_EXTEND_UNSIGNED even if PROMOTE_MODE
+     is not defined.  The affected targets are M32C, S390, SPARC.  */
+#ifdef PROMOTE_MODE
   const enum tree_code code = TREE_CODE (type);
   int unsignedp = *punsignedp;
 
-#ifndef PROMOTE_MODE
-  if (! for_call)
-    return mode;
-#endif
-
   switch (code)
     {
-#ifdef PROMOTE_FUNCTION_MODE
     case INTEGER_TYPE:   case ENUMERAL_TYPE:   case BOOLEAN_TYPE:
     case REAL_TYPE:      case OFFSET_TYPE:     case FIXED_POINT_TYPE:
-#ifdef PROMOTE_MODE
-      if (for_call)
-	{
-#endif
-	  PROMOTE_FUNCTION_MODE (mode, unsignedp, type);
-#ifdef PROMOTE_MODE
-	}
-      else
-	{
-	  PROMOTE_MODE (mode, unsignedp, type);
-	}
-#endif
+      PROMOTE_MODE (mode, unsignedp, type);
+      *punsignedp = unsignedp;
+      return mode;
       break;
-#endif
 
 #ifdef POINTERS_EXTEND_UNSIGNED
     case REFERENCE_TYPE:
     case POINTER_TYPE:
-      mode = Pmode;
-      unsignedp = POINTERS_EXTEND_UNSIGNED;
+      *punsignedp = POINTERS_EXTEND_UNSIGNED;
+      return Pmode;
       break;
 #endif
 
     default:
-      break;
+      return mode;
     }
-
-  *punsignedp = unsignedp;
+#else
   return mode;
+#endif
 }
+
+
+/* Use one of promote_mode or promote_function_mode to find the promoted
+   mode of DECL.  If PUNSIGNEDP is not NULL, store there the unsignedness
+   of DECL after promotion.  */
+
+enum machine_mode
+promote_decl_mode (const_tree decl, int *punsignedp)
+{
+  tree type = TREE_TYPE (decl);
+  int unsignedp = TYPE_UNSIGNED (type);
+  enum machine_mode mode = DECL_MODE (decl);
+  enum machine_mode pmode;
+
+  if (TREE_CODE (decl) == RESULT_DECL
+      || TREE_CODE (decl) == PARM_DECL)
+    pmode = promote_function_mode (type, mode, &unsignedp,
+                                   TREE_TYPE (current_function_decl), 2);
+  else
+    pmode = promote_mode (type, mode, &unsignedp);
+
+  if (punsignedp)
+    *punsignedp = unsignedp;
+  return pmode;
+}
+
 
 /* Adjust the stack pointer by ADJUST (an rtx for a number of bytes).
    This pops when ADJUST is positive.  ADJUST need not be constant.  */
@@ -1496,9 +1527,9 @@ hard_function_value (const_tree valtype, const_tree func, const_tree fntype,
    in which a scalar value of mode MODE was returned by a library call.  */
 
 rtx
-hard_libcall_value (enum machine_mode mode)
+hard_libcall_value (enum machine_mode mode, rtx fun)
 {
-  return LIBCALL_VALUE (mode);
+  return targetm.calls.libcall_value (mode, fun);
 }
 
 /* Look up the tree code for a given rtx code

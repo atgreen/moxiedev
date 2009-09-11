@@ -1,5 +1,5 @@
 # This shell script emits a C file. -*- C -*-
-#   Copyright 2003, 2005, 2007, 2008 Free Software Foundation, Inc.
+#   Copyright 2003, 2005, 2007, 2008, 2009 Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
 #
@@ -136,12 +136,12 @@ ppc_before_allocation (void)
 	{
 	  if ((o->flags & (SEC_ALLOC | SEC_CODE)) != (SEC_ALLOC | SEC_CODE))
 	    continue;
-	  if (o->size == 0)
+	  if (o->rawsize == 0)
 	    continue;
 	  if (low > o->vma)
 	    low = o->vma;
-	  if (high < o->vma + o->size - 1)
-	    high = o->vma + o->size - 1;
+	  if (high < o->vma + o->rawsize - 1)
+	    high = o->vma + o->rawsize - 1;
 	}
       if (high > low && high - low > (1 << 25) - 1)
 	command_line.relax = TRUE;

@@ -55,22 +55,6 @@ ANSI_SYNOPSIS
 	int *_mkstemp_r(struct _reent *<[reent]>, char *<[path]>);
 	int *_mkstemps_r(struct _reent *<[reent]>, char *<[path]>, int <[len]>);
 
-TRAD_SYNOPSIS
-	#include <stdlib.h>
-	char *mktemp(<[path]>)
-	char *<[path]>;
-
-	int mkstemp(<[path]>)
-	char *<[path]>;
-
-	char *_mktemp_r(<[reent]>, <[path]>)
-	struct _reent *<[reent]>;
-	char *<[path]>;
-
-	int _mkstemp_r(<[reent]>, <[path]>)
-	struct _reent *<[reent]>;
-	char *<[path]>;
-
 DESCRIPTION
 <<mktemp>>, <<mkstemp>>, and <<mkstemps>> attempt to generate a file name
 that is not yet in use for any existing file.  <<mkstemp>> and <<mkstemps>>
@@ -122,6 +106,7 @@ Supporting OS subroutines required: <<getpid>>, <<mkdir>>, <<open>>, <<stat>>.
 */
 
 #include <_ansi.h>
+#include <stdlib.h>
 #include <reent.h>
 #include <sys/types.h>
 #include <fcntl.h>
@@ -201,10 +186,15 @@ _DEFUN(_gettemp, (ptr, path, doopen, domkdir, suffixlen),
 #if !defined _ELIX_LEVEL || _ELIX_LEVEL >= 4
       if (domkdir)
 	{
+#ifdef HAVE_MKDIR
 	  if (_mkdir_r (ptr, path, 0700) == 0)
 	    return 1;
 	  if (ptr->_errno != EEXIST)
 	    return 0;
+#else /* !HAVE_MKDIR */
+	  ptr->_errno = ENOSYS;
+	  return 0;
+#endif /* !HAVE_MKDIR */
 	}
       else
 #endif /* _ELIX_LEVEL */
@@ -296,7 +286,7 @@ _DEFUN(mkstemp, (path),
 
 # if !defined _ELIX_LEVEL || _ELIX_LEVEL >= 4
 char *
-_DEFUN(mkdemp, (path),
+_DEFUN(mkdtemp, (path),
        char *path)
 {
   return (_gettemp (_REENT, path, (int *) NULL, 1, 0) ? path : NULL);

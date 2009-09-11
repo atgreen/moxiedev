@@ -97,7 +97,7 @@ along with GCC; see the file COPYING3.  If not see
 
 /* True if INSN is a mips.md pattern or asm statement.  */
 #define USEFUL_INSN_P(INSN)						\
-  (INSN_P (INSN)							\
+  (NONDEBUG_INSN_P (INSN)						\
    && GET_CODE (PATTERN (INSN)) != USE					\
    && GET_CODE (PATTERN (INSN)) != CLOBBER				\
    && GET_CODE (PATTERN (INSN)) != ADDR_VEC				\
@@ -440,9 +440,9 @@ int mips_dbx_regno[FIRST_PSEUDO_REGISTER];
 int mips_dwarf_regno[FIRST_PSEUDO_REGISTER];
 
 /* The nesting depth of the PRINT_OPERAND '%(', '%<' and '%[' constructs.  */
-int set_noreorder;
-int set_nomacro;
-static int set_noat;
+struct mips_asm_switch mips_noreorder = { "reorder", 0 };
+struct mips_asm_switch mips_nomacro = { "macro", 0 };
+struct mips_asm_switch mips_noat = { "at", 0 };
 
 /* True if we're writing out a branch-likely instruction rather than a
    normal branch.  */
@@ -685,6 +685,11 @@ static const struct mips_cpu_info mips_cpu_info_table[] = {
   { "74kfx", PROCESSOR_74KF1_1, 33, 0 },
   { "74kx", PROCESSOR_74KF1_1, 33, 0 },
   { "74kf3_2", PROCESSOR_74KF3_2, 33, 0 },
+
+  { "1004kc", PROCESSOR_24KC, 33, 0 }, /* 1004K with MT/DSP.  */
+  { "1004kf2_1", PROCESSOR_24KF2_1, 33, 0 },
+  { "1004kf", PROCESSOR_24KF2_1, 33, 0 },
+  { "1004kf1_1", PROCESSOR_24KF1_1, 33, 0 },
 
   /* MIPS64 processors.  */
   { "5kc", PROCESSOR_5KC, 64, 0 },
@@ -3758,6 +3763,132 @@ mips_address_cost (rtx addr, bool speed ATTRIBUTE_UNUSED)
   return mips_address_insns (addr, SImode, false);
 }
 
+/* Information about a single instruction in a multi-instruction
+   asm sequence.  */
+struct mips_multi_member {
+  /* True if this is a label, false if it is code.  */
+  bool is_label_p;
+
+  /* The output_asm_insn format of the instruction.  */
+  const char *format;
+
+  /* The operands to the instruction.  */
+  rtx operands[MAX_RECOG_OPERANDS];
+};
+typedef struct mips_multi_member mips_multi_member;
+
+/* Vector definitions for the above.  */
+DEF_VEC_O(mips_multi_member);
+DEF_VEC_ALLOC_O(mips_multi_member, heap);
+
+/* The instructions that make up the current multi-insn sequence.  */
+static VEC (mips_multi_member, heap) *mips_multi_members;
+
+/* How many instructions (as opposed to labels) are in the current
+   multi-insn sequence.  */
+static unsigned int mips_multi_num_insns;
+
+/* Start a new multi-insn sequence.  */
+
+static void
+mips_multi_start (void)
+{
+  VEC_truncate (mips_multi_member, mips_multi_members, 0);
+  mips_multi_num_insns = 0;
+}
+
+/* Add a new, uninitialized member to the current multi-insn sequence.  */
+
+static struct mips_multi_member *
+mips_multi_add (void)
+{
+  return VEC_safe_push (mips_multi_member, heap, mips_multi_members, 0);
+}
+
+/* Add a normal insn with the given asm format to the current multi-insn
+   sequence.  The other arguments are a null-terminated list of operands.  */
+
+static void
+mips_multi_add_insn (const char *format, ...)
+{
+  struct mips_multi_member *member;
+  va_list ap;
+  unsigned int i;
+  rtx op;
+
+  member = mips_multi_add ();
+  member->is_label_p = false;
+  member->format = format;
+  va_start (ap, format);
+  i = 0;
+  while ((op = va_arg (ap, rtx)))
+    member->operands[i++] = op;
+  va_end (ap);
+  mips_multi_num_insns++;
+}
+
+/* Add the given label definition to the current multi-insn sequence.
+   The definition should include the colon.  */
+
+static void
+mips_multi_add_label (const char *label)
+{
+  struct mips_multi_member *member;
+
+  member = mips_multi_add ();
+  member->is_label_p = true;
+  member->format = label;
+}
+
+/* Return the index of the last member of the current multi-insn sequence.  */
+
+static unsigned int
+mips_multi_last_index (void)
+{
+  return VEC_length (mips_multi_member, mips_multi_members) - 1;
+}
+
+/* Add a copy of an existing instruction to the current multi-insn
+   sequence.  I is the index of the instruction that should be copied.  */
+
+static void
+mips_multi_copy_insn (unsigned int i)
+{
+  struct mips_multi_member *member;
+
+  member = mips_multi_add ();
+  memcpy (member, VEC_index (mips_multi_member, mips_multi_members, i),
+	  sizeof (*member));
+  gcc_assert (!member->is_label_p);
+}
+
+/* Change the operand of an existing instruction in the current
+   multi-insn sequence.  I is the index of the instruction,
+   OP is the index of the operand, and X is the new value.  */
+
+static void
+mips_multi_set_operand (unsigned int i, unsigned int op, rtx x)
+{
+  VEC_index (mips_multi_member, mips_multi_members, i)->operands[op] = x;
+}
+
+/* Write out the asm code for the current multi-insn sequence.  */
+
+static void
+mips_multi_write (void)
+{
+  struct mips_multi_member *member;
+  unsigned int i;
+
+  for (i = 0;
+       VEC_iterate (mips_multi_member, mips_multi_members, i, member);
+       i++)
+    if (member->is_label_p)
+      fprintf (asm_out_file, "%s\n", member->format);
+    else
+      output_asm_insn (member->format, member->operands);
+}
+
 /* Return one word of double-word value OP, taking into account the fixed
    endianness of certain registers.  HIGH_P is true to select the high part,
    false to select the low part.  */
@@ -4976,7 +5107,7 @@ mips_return_fpr_pair (enum machine_mode mode,
    VALTYPE is null and MODE is the mode of the return value.  */
 
 rtx
-mips_function_value (const_tree valtype, enum machine_mode mode)
+mips_function_value (const_tree valtype, const_tree func, enum machine_mode mode)
 {
   if (valtype)
     {
@@ -4986,9 +5117,9 @@ mips_function_value (const_tree valtype, enum machine_mode mode)
       mode = TYPE_MODE (valtype);
       unsigned_p = TYPE_UNSIGNED (valtype);
 
-      /* Since TARGET_PROMOTE_FUNCTION_RETURN unconditionally returns true,
-	 we must promote the mode just as PROMOTE_MODE does.  */
-      mode = promote_mode (valtype, mode, &unsigned_p, 1);
+      /* Since TARGET_PROMOTE_FUNCTION_MODE unconditionally promotes,
+	 return values, promote the mode here too.  */
+      mode = promote_function_mode (valtype, mode, &unsigned_p, func, 1);
 
       /* Handle structures whose fields are returned in $f0/$f2.  */
       switch (mips_fpr_return_fields (valtype, fields))
@@ -6781,6 +6912,18 @@ mask_low_and_shift_p (enum machine_mode mode, rtx mask, rtx shift, int maxlen)
   return IN_RANGE (mask_low_and_shift_len (mode, mask, shift), 1, maxlen);
 }
 
+/* Return true iff OP1 and OP2 are valid operands together for the
+   *and<MODE>3 and *and<MODE>3_mips16 patterns.  For the cases to consider,
+   see the table in the comment before the pattern.  */
+
+bool
+and_operands_ok (enum machine_mode mode, rtx op1, rtx op2)
+{
+  return (memory_operand (op1, mode)
+	  ? and_load_operand (op2, mode)
+	  : and_reg_operand (op2, mode));
+}
+
 /* The canonical form of a mask-low-and-shift-left operation is
    (and (ashift X SHIFT) MASK) where MASK has the lower SHIFT number of bits
    cleared.  Thus we need to shift MASK to the right before checking if it
@@ -6972,6 +7115,45 @@ mips_print_operand_reloc (FILE *file, rtx op, enum mips_symbol_context context,
       fputc (')', file);
 }
 
+/* Start a new block with the given asm switch enabled.  If we need
+   to print a directive, emit PREFIX before it and SUFFIX after it.  */
+
+static void
+mips_push_asm_switch_1 (struct mips_asm_switch *asm_switch,
+			const char *prefix, const char *suffix)
+{
+  if (asm_switch->nesting_level == 0)
+    fprintf (asm_out_file, "%s.set\tno%s%s", prefix, asm_switch->name, suffix);
+  asm_switch->nesting_level++;
+}
+
+/* Likewise, but end a block.  */
+
+static void
+mips_pop_asm_switch_1 (struct mips_asm_switch *asm_switch,
+		       const char *prefix, const char *suffix)
+{
+  gcc_assert (asm_switch->nesting_level);
+  asm_switch->nesting_level--;
+  if (asm_switch->nesting_level == 0)
+    fprintf (asm_out_file, "%s.set\t%s%s", prefix, asm_switch->name, suffix);
+}
+
+/* Wrappers around mips_push_asm_switch_1 and mips_pop_asm_switch_1
+   that either print a complete line or print nothing.  */
+
+void
+mips_push_asm_switch (struct mips_asm_switch *asm_switch)
+{
+  mips_push_asm_switch_1 (asm_switch, "\t", "\n");
+}
+
+void
+mips_pop_asm_switch (struct mips_asm_switch *asm_switch)
+{
+  mips_pop_asm_switch_1 (asm_switch, "\t", "\n");
+}
+
 /* Print the text for PRINT_OPERAND punctation character CH to FILE.
    The punctuation characters are:
 
@@ -6991,8 +7173,6 @@ mips_print_operand_reloc (FILE *file, rtx op, enum mips_symbol_context context,
    '^'	Print the name of the pic call-through register (t9 or $25).
    '+'	Print the name of the gp register (usually gp or $28).
    '$'	Print the name of the stack pointer register (sp or $29).
-   '|'	Print ".set push; .set mips2" if !ISA_HAS_LL_SC.
-   '-'	Print ".set pop" under the same conditions for '|'.
 
    See also mips_init_print_operand_pucnt.  */
 
@@ -7002,36 +7182,27 @@ mips_print_operand_punctuation (FILE *file, int ch)
   switch (ch)
     {
     case '(':
-      if (set_noreorder++ == 0)
-	fputs (".set\tnoreorder\n\t", file);
+      mips_push_asm_switch_1 (&mips_noreorder, "", "\n\t");
       break;
 
     case ')':
-      gcc_assert (set_noreorder > 0);
-      if (--set_noreorder == 0)
-	fputs ("\n\t.set\treorder", file);
+      mips_pop_asm_switch_1 (&mips_noreorder, "\n\t", "");
       break;
 
     case '[':
-      if (set_noat++ == 0)
-	fputs (".set\tnoat\n\t", file);
+      mips_push_asm_switch_1 (&mips_noat, "", "\n\t");
       break;
 
     case ']':
-      gcc_assert (set_noat > 0);
-      if (--set_noat == 0)
-	fputs ("\n\t.set\tat", file);
+      mips_pop_asm_switch_1 (&mips_noat, "\n\t", "");
       break;
 
     case '<':
-      if (set_nomacro++ == 0)
-	fputs (".set\tnomacro\n\t", file);
+      mips_push_asm_switch_1 (&mips_nomacro, "", "\n\t");
       break;
 
     case '>':
-      gcc_assert (set_nomacro > 0);
-      if (--set_nomacro == 0)
-	fputs ("\n\t.set\tmacro", file);
+      mips_pop_asm_switch_1 (&mips_nomacro, "\n\t", "");
       break;
 
     case '*':
@@ -7043,7 +7214,7 @@ mips_print_operand_punctuation (FILE *file, int ch)
       break;
 
     case '#':
-      if (set_noreorder != 0)
+      if (mips_noreorder.nesting_level > 0)
 	fputs ("\n\tnop", file);
       break;
 
@@ -7051,7 +7222,7 @@ mips_print_operand_punctuation (FILE *file, int ch)
       /* Print an extra newline so that the delayed insn is separated
 	 from the following ones.  This looks neater and is consistent
 	 with non-nop delayed sequences.  */
-      if (set_noreorder != 0 && final_sequence == 0)
+      if (mips_noreorder.nesting_level > 0 && final_sequence == 0)
 	fputs ("\n\tnop\n", file);
       break;
 
@@ -7085,16 +7256,6 @@ mips_print_operand_punctuation (FILE *file, int ch)
       fputs (reg_names[STACK_POINTER_REGNUM], file);
       break;
 
-    case '|':
-      if (!ISA_HAS_LL_SC)
-	fputs (".set\tpush\n\t.set\tmips2\n\t", file);
-      break;
-
-    case '-':
-      if (!ISA_HAS_LL_SC)
-	fputs ("\n\t.set\tpop", file);
-      break;
-
     default:
       gcc_unreachable ();
       break;
@@ -7108,7 +7269,7 @@ mips_init_print_operand_punct (void)
 {
   const char *p;
 
-  for (p = "()[]<>*#/?~.@^+$|-"; *p; p++)
+  for (p = "()[]<>*#/?~.@^+$"; *p; p++)
     mips_print_operand_punct[(unsigned char) *p] = true;
 }
 
@@ -8103,7 +8264,7 @@ mips16e_collect_argument_saves (void)
   for (insn = get_insns (); insn; insn = next)
     {
       next = NEXT_INSN (insn);
-      if (NOTE_P (insn))
+      if (NOTE_P (insn) || DEBUG_INSN_P (insn))
 	continue;
 
       if (!INSN_P (insn))
@@ -8942,6 +9103,15 @@ mips_frame_pointer_required (void)
   return false;
 }
 
+/* Make sure that we're not trying to eliminate to the wrong hard frame
+   pointer.  */
+
+static bool
+mips_can_eliminate (const int from ATTRIBUTE_UNUSED, const int to)
+{
+  return (to == HARD_FRAME_POINTER_REGNUM || to == STACK_POINTER_REGNUM);
+}
+
 /* Implement INITIAL_ELIMINATION_OFFSET.  FROM is either the frame pointer
    or argument pointer.  TO is either the stack pointer or hard frame
    pointer.  */
@@ -9250,14 +9420,23 @@ mips_output_function_prologue (FILE *file, HOST_WIDE_INT size ATTRIBUTE_UNUSED)
 	  output_asm_insn ("sll\t$2,16", 0);
 	  output_asm_insn ("addu\t$2,$3", 0);
 	}
-      /* .cpload must be in a .set noreorder but not a .set nomacro block.  */
-      else if (!cfun->machine->all_noreorder_p)
-	output_asm_insn ("%(.cpload\t%^%)", 0);
       else
-	output_asm_insn ("%(.cpload\t%^\n\t%<", 0);
+	{
+	  /* .cpload must be in a .set noreorder but not a
+	     .set nomacro block.  */
+	  mips_push_asm_switch (&mips_noreorder);
+	  output_asm_insn (".cpload\t%^", 0);
+	  if (!cfun->machine->all_noreorder_p)
+	    mips_pop_asm_switch (&mips_noreorder);
+	  else
+	    mips_push_asm_switch (&mips_nomacro);
+	}
     }
   else if (cfun->machine->all_noreorder_p)
-    output_asm_insn ("%(%<", 0);
+    {
+      mips_push_asm_switch (&mips_noreorder);
+      mips_push_asm_switch (&mips_nomacro);
+    }
 
   /* Tell the assembler which register we're using as the global
      pointer.  This is needed for thunks, since they can use either
@@ -9279,10 +9458,8 @@ mips_output_function_epilogue (FILE *file ATTRIBUTE_UNUSED,
 
   if (cfun->machine->all_noreorder_p)
     {
-      /* Avoid using %>%) since it adds excess whitespace.  */
-      output_asm_insn (".set\tmacro", 0);
-      output_asm_insn (".set\treorder", 0);
-      set_noreorder = set_nomacro = 0;
+      mips_pop_asm_switch (&mips_nomacro);
+      mips_pop_asm_switch (&mips_noreorder);
     }
 
   /* Get the function name the same way that toplev.c does before calling
@@ -10745,15 +10922,279 @@ mips_output_order_conditional_branch (rtx insn, rtx *operands, bool inverted_p)
   return mips_output_conditional_branch (insn, operands, branch[1], branch[0]);
 }
 
-/* Return the assembly code for __sync_*() loop LOOP.  The loop should support
-   both normal and likely branches, using %? and %~ where appropriate.  */
+/* Start a block of code that needs access to the LL, SC and SYNC
+   instructions.  */
+
+static void
+mips_start_ll_sc_sync_block (void)
+{
+  if (!ISA_HAS_LL_SC)
+    {
+      output_asm_insn (".set\tpush", 0);
+      output_asm_insn (".set\tmips2", 0);
+    }
+}
+
+/* End a block started by mips_start_ll_sc_sync_block.  */
+
+static void
+mips_end_ll_sc_sync_block (void)
+{
+  if (!ISA_HAS_LL_SC)
+    output_asm_insn (".set\tpop", 0);
+}
+
+/* Output and/or return the asm template for a sync instruction.  */
 
 const char *
-mips_output_sync_loop (const char *loop)
+mips_output_sync (void)
 {
-  /* Use branch-likely instructions to work around the LL/SC R10000 errata.  */
+  mips_start_ll_sc_sync_block ();
+  output_asm_insn ("sync", 0);
+  mips_end_ll_sc_sync_block ();
+  return "";
+}
+
+/* Return the asm template associated with sync_insn1 value TYPE.
+   IS_64BIT_P is true if we want a 64-bit rather than 32-bit operation.  */
+
+static const char *
+mips_sync_insn1_template (enum attr_sync_insn1 type, bool is_64bit_p)
+{
+  switch (type)
+    {
+    case SYNC_INSN1_MOVE:
+      return "move\t%0,%z2";
+    case SYNC_INSN1_LI:
+      return "li\t%0,%2";
+    case SYNC_INSN1_ADDU:
+      return is_64bit_p ? "daddu\t%0,%1,%z2" : "addu\t%0,%1,%z2";
+    case SYNC_INSN1_ADDIU:
+      return is_64bit_p ? "daddiu\t%0,%1,%2" : "addiu\t%0,%1,%2";
+    case SYNC_INSN1_SUBU:
+      return is_64bit_p ? "dsubu\t%0,%1,%z2" : "subu\t%0,%1,%z2";
+    case SYNC_INSN1_AND:
+      return "and\t%0,%1,%z2";
+    case SYNC_INSN1_ANDI:
+      return "andi\t%0,%1,%2";
+    case SYNC_INSN1_OR:
+      return "or\t%0,%1,%z2";
+    case SYNC_INSN1_ORI:
+      return "ori\t%0,%1,%2";
+    case SYNC_INSN1_XOR:
+      return "xor\t%0,%1,%z2";
+    case SYNC_INSN1_XORI:
+      return "xori\t%0,%1,%2";
+    }
+  gcc_unreachable ();
+}
+
+/* Return the asm template associated with sync_insn2 value TYPE.  */
+
+static const char *
+mips_sync_insn2_template (enum attr_sync_insn2 type)
+{
+  switch (type)
+    {
+    case SYNC_INSN2_NOP:
+      gcc_unreachable ();
+    case SYNC_INSN2_AND:
+      return "and\t%0,%1,%z2";
+    case SYNC_INSN2_XOR:
+      return "xor\t%0,%1,%z2";
+    case SYNC_INSN2_NOT:
+      return "nor\t%0,%1,%.";
+    }
+  gcc_unreachable ();
+}
+
+/* OPERANDS are the operands to a sync loop instruction and INDEX is
+   the value of the one of the sync_* attributes.  Return the operand
+   referred to by the attribute, or DEFAULT_VALUE if the insn doesn't
+   have the associated attribute.  */
+
+static rtx
+mips_get_sync_operand (rtx *operands, int index, rtx default_value)
+{
+  if (index > 0)
+    default_value = operands[index - 1];
+  return default_value;
+}
+
+/* INSN is a sync loop with operands OPERANDS.  Build up a multi-insn
+   sequence for it.  */
+
+static void
+mips_process_sync_loop (rtx insn, rtx *operands)
+{
+  rtx at, mem, oldval, newval, inclusive_mask, exclusive_mask;
+  rtx required_oldval, insn1_op2, tmp1, tmp2, tmp3;
+  unsigned int tmp3_insn;
+  enum attr_sync_insn1 insn1;
+  enum attr_sync_insn2 insn2;
+  bool is_64bit_p;
+
+  /* Read an operand from the sync_WHAT attribute and store it in
+     variable WHAT.  DEFAULT is the default value if no attribute
+     is specified.  */
+#define READ_OPERAND(WHAT, DEFAULT) \
+  WHAT = mips_get_sync_operand (operands, (int) get_attr_sync_##WHAT (insn), \
+  				DEFAULT)
+
+  /* Read the memory.  */
+  READ_OPERAND (mem, 0);
+  gcc_assert (mem);
+  is_64bit_p = (GET_MODE_BITSIZE (GET_MODE (mem)) == 64);
+
+  /* Read the other attributes.  */
+  at = gen_rtx_REG (GET_MODE (mem), AT_REGNUM);
+  READ_OPERAND (oldval, at);
+  READ_OPERAND (newval, at);
+  READ_OPERAND (inclusive_mask, 0);
+  READ_OPERAND (exclusive_mask, 0);
+  READ_OPERAND (required_oldval, 0);
+  READ_OPERAND (insn1_op2, 0);
+  insn1 = get_attr_sync_insn1 (insn);
+  insn2 = get_attr_sync_insn2 (insn);
+
+  mips_multi_start ();
+
+  /* Output the release side of the memory barrier.  */
+  if (get_attr_sync_release_barrier (insn) == SYNC_RELEASE_BARRIER_YES)
+    mips_multi_add_insn ("sync", NULL);
+
+  /* Output the branch-back label.  */
+  mips_multi_add_label ("1:");
+
+  /* OLDVAL = *MEM.  */
+  mips_multi_add_insn (is_64bit_p ? "lld\t%0,%1" : "ll\t%0,%1",
+		       oldval, mem, NULL);
+
+  /* if ((OLDVAL & INCLUSIVE_MASK) != REQUIRED_OLDVAL) goto 2.  */
+  if (required_oldval)
+    {
+      if (inclusive_mask == 0)
+	tmp1 = oldval;
+      else
+	{
+	  gcc_assert (oldval != at);
+	  mips_multi_add_insn ("and\t%0,%1,%2",
+			       at, oldval, inclusive_mask, NULL);
+	  tmp1 = at;
+	}
+      mips_multi_add_insn ("bne\t%0,%z1,2f", tmp1, required_oldval, NULL);
+    }
+
+  /* $TMP1 = OLDVAL & EXCLUSIVE_MASK.  */
+  if (exclusive_mask == 0)
+    tmp1 = const0_rtx;
+  else
+    {
+      gcc_assert (oldval != at);
+      mips_multi_add_insn ("and\t%0,%1,%z2",
+			   at, oldval, exclusive_mask, NULL);
+      tmp1 = at;
+    }
+
+  /* $TMP2 = INSN1 (OLDVAL, INSN1_OP2).
+
+     We can ignore moves if $TMP4 != INSN1_OP2, since we'll still emit
+     at least one instruction in that case.  */
+  if (insn1 == SYNC_INSN1_MOVE
+      && (tmp1 != const0_rtx || insn2 != SYNC_INSN2_NOP))
+    tmp2 = insn1_op2;
+  else
+    {
+      mips_multi_add_insn (mips_sync_insn1_template (insn1, is_64bit_p),
+			   newval, oldval, insn1_op2, NULL);
+      tmp2 = newval;
+    }
+
+  /* $TMP3 = INSN2 ($TMP2, INCLUSIVE_MASK).  */
+  if (insn2 == SYNC_INSN2_NOP)
+    tmp3 = tmp2;
+  else
+    {
+      mips_multi_add_insn (mips_sync_insn2_template (insn2),
+			   newval, tmp2, inclusive_mask, NULL);
+      tmp3 = newval;
+    }
+  tmp3_insn = mips_multi_last_index ();
+
+  /* $AT = $TMP1 | $TMP3.  */
+  if (tmp1 == const0_rtx || tmp3 == const0_rtx)
+    {
+      mips_multi_set_operand (tmp3_insn, 0, at);
+      tmp3 = at;
+    }
+  else
+    {
+      gcc_assert (tmp1 != tmp3);
+      mips_multi_add_insn ("or\t%0,%1,%2", at, tmp1, tmp3, NULL);
+    }
+
+  /* if (!commit (*MEM = $AT)) goto 1.
+
+     This will sometimes be a delayed branch; see the write code below
+     for details.  */
+  mips_multi_add_insn (is_64bit_p ? "scd\t%0,%1" : "sc\t%0,%1", at, mem, NULL);
+  mips_multi_add_insn ("beq%?\t%0,%.,1b", at, NULL);
+
+  /* if (INSN1 != MOVE && INSN1 != LI) NEWVAL = $TMP3 [delay slot].  */
+  if (insn1 != SYNC_INSN1_MOVE && insn1 != SYNC_INSN1_LI && tmp3 != newval)
+    {
+      mips_multi_copy_insn (tmp3_insn);
+      mips_multi_set_operand (mips_multi_last_index (), 0, newval);
+    }
+  else
+    mips_multi_add_insn ("nop", NULL);
+
+  /* Output the acquire side of the memory barrier.  */
+  if (TARGET_SYNC_AFTER_SC)
+    mips_multi_add_insn ("sync", NULL);
+
+  /* Output the exit label, if needed.  */
+  if (required_oldval)
+    mips_multi_add_label ("2:");
+
+#undef READ_OPERAND
+}
+
+/* Output and/or return the asm template for sync loop INSN, which has
+   the operands given by OPERANDS.  */
+
+const char *
+mips_output_sync_loop (rtx insn, rtx *operands)
+{
+  mips_process_sync_loop (insn, operands);
+
+  /* Use branch-likely instructions to work around the LL/SC R10000
+     errata.  */
   mips_branch_likely = TARGET_FIX_R10000;
-  return loop;
+
+  mips_push_asm_switch (&mips_noreorder);
+  mips_push_asm_switch (&mips_nomacro);
+  mips_push_asm_switch (&mips_noat);
+  mips_start_ll_sc_sync_block ();
+
+  mips_multi_write ();
+
+  mips_end_ll_sc_sync_block ();
+  mips_pop_asm_switch (&mips_noat);
+  mips_pop_asm_switch (&mips_nomacro);
+  mips_pop_asm_switch (&mips_noreorder);
+
+  return "";
+}
+
+/* Return the number of individual instructions in sync loop INSN,
+   which has the operands given by OPERANDS.  */
+
+unsigned int
+mips_sync_loop_insns (rtx insn, rtx *operands)
+{
+  mips_process_sync_loop (insn, operands);
+  return mips_multi_num_insns;
 }
 
 /* Return the assembly code for DIV or DDIV instruction DIVISION, which has
@@ -11330,7 +11771,7 @@ static enum attr_type mips_last_74k_agen_insn = TYPE_UNKNOWN;
 static void
 mips_74k_agen_init (rtx insn)
 {
-  if (!insn || !NONJUMP_INSN_P (insn))
+  if (!insn || CALL_P (insn) || JUMP_P (insn))
     mips_last_74k_agen_insn = TYPE_UNKNOWN;
   else
     {
@@ -12639,7 +13080,7 @@ mips16_lay_out_constants (void)
   for (insn = get_insns (); insn; insn = NEXT_INSN (insn))
     {
       /* Rewrite constant pool references in INSN.  */
-      if (INSN_P (insn))
+      if (USEFUL_INSN_P (insn))
 	{
 	  info.insn = insn;
 	  info.pool = &pool;
@@ -13009,7 +13450,7 @@ r10k_insert_cache_barriers (void)
 	 - the first instruction in an unprotected region otherwise.  */
       for (insn = BB_HEAD (bb); insn != end; insn = NEXT_INSN (insn))
 	{
-	  if (unprotected_region && INSN_P (insn))
+	  if (unprotected_region && USEFUL_INSN_P (insn))
 	    {
 	      if (recog_memoized (insn) == CODE_FOR_mips_cache)
 		/* This CACHE instruction protects the following code.  */
@@ -13672,7 +14113,7 @@ mips_reorg_process_insns (void)
   /* Make a first pass over the instructions, recording all the LO_SUMs.  */
   for (insn = get_insns (); insn != 0; insn = NEXT_INSN (insn))
     FOR_EACH_SUBINSN (subinsn, insn)
-      if (INSN_P (subinsn))
+      if (USEFUL_INSN_P (subinsn))
 	for_each_rtx (&PATTERN (subinsn), mips_record_lo_sum, htab);
 
   last_insn = 0;
@@ -13686,7 +14127,7 @@ mips_reorg_process_insns (void)
   for (insn = get_insns (); insn != 0; insn = next_insn)
     {
       next_insn = NEXT_INSN (insn);
-      if (INSN_P (insn))
+      if (USEFUL_INSN_P (insn))
 	{
 	  if (GET_CODE (PATTERN (insn)) == SEQUENCE)
 	    {
@@ -13872,7 +14313,6 @@ mips_output_mi_thunk (FILE *file, tree thunk_fndecl ATTRIBUTE_UNUSED,
   final_start_function (insn, file, 1);
   final (insn, file, 1);
   final_end_function ();
-  free_after_compilation (cfun);
 
   /* Clean up the vars set above.  Note that final_end_function resets
      the global pointer for us.  */
@@ -14730,36 +15170,38 @@ mips_at_reg_p (rtx *x, void *data ATTRIBUTE_UNUSED)
   return REG_P (*x) && REGNO (*x) == AT_REGNUM;
 }
 
+/* Return true if INSN needs to be wrapped in ".set noat".
+   INSN has NOPERANDS operands, stored in OPVEC.  */
+
+static bool
+mips_need_noat_wrapper_p (rtx insn, rtx *opvec, int noperands)
+{
+  int i;
+
+  if (recog_memoized (insn) >= 0)
+    for (i = 0; i < noperands; i++)
+      if (for_each_rtx (&opvec[i], mips_at_reg_p, NULL))
+	return true;
+  return false;
+}
 
 /* Implement FINAL_PRESCAN_INSN.  */
 
 void
 mips_final_prescan_insn (rtx insn, rtx *opvec, int noperands)
 {
-  int i;
-
-  /* We need to emit ".set noat" before an instruction that accesses
-     $1 (AT).  */
-  if (recog_memoized (insn) >= 0)
-    for (i = 0; i < noperands; i++)
-      if (for_each_rtx (&opvec[i], mips_at_reg_p, NULL))
-	if (set_noat++ == 0)
-	  fprintf (asm_out_file, "\t.set\tnoat\n");
+  if (mips_need_noat_wrapper_p (insn, opvec, noperands))
+    mips_push_asm_switch (&mips_noat);
 }
 
 /* Implement TARGET_ASM_FINAL_POSTSCAN_INSN.  */
 
 static void
-mips_final_postscan_insn (FILE *file, rtx insn, rtx *opvec, int noperands)
+mips_final_postscan_insn (FILE *file ATTRIBUTE_UNUSED, rtx insn,
+			  rtx *opvec, int noperands)
 {
-  int i;
-
-  /* Close any ".set noat" block opened by mips_final_prescan_insn.  */
-  if (recog_memoized (insn) >= 0)
-    for (i = 0; i < noperands; i++)
-      if (for_each_rtx (&opvec[i], mips_at_reg_p, NULL))
-	if (--set_noat == 0)
-	  fprintf (file, "\t.set\tat\n");
+  if (mips_need_noat_wrapper_p (insn, opvec, noperands))
+    mips_pop_asm_switch (&mips_noat);
 }
 
 /* Initialize the GCC target structure.  */
@@ -14851,10 +15293,8 @@ mips_final_postscan_insn (FILE *file, rtx insn, rtx *opvec, int noperands)
 #undef TARGET_GIMPLIFY_VA_ARG_EXPR
 #define TARGET_GIMPLIFY_VA_ARG_EXPR mips_gimplify_va_arg_expr
 
-#undef TARGET_PROMOTE_FUNCTION_ARGS
-#define TARGET_PROMOTE_FUNCTION_ARGS hook_bool_const_tree_true
-#undef TARGET_PROMOTE_FUNCTION_RETURN
-#define TARGET_PROMOTE_FUNCTION_RETURN hook_bool_const_tree_true
+#undef  TARGET_PROMOTE_FUNCTION_MODE
+#define TARGET_PROMOTE_FUNCTION_MODE default_promote_function_mode_always_promote
 #undef TARGET_PROMOTE_PROTOTYPES
 #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
 
@@ -14940,6 +15380,9 @@ mips_final_postscan_insn (FILE *file, rtx insn, rtx *opvec, int noperands)
 
 #undef TARGET_FRAME_POINTER_REQUIRED
 #define TARGET_FRAME_POINTER_REQUIRED mips_frame_pointer_required
+
+#undef TARGET_CAN_ELIMINATE
+#define TARGET_CAN_ELIMINATE mips_can_eliminate
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 

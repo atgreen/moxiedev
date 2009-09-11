@@ -1,7 +1,7 @@
 10
 
 dir
-150304
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/sh
 svn://gcc.gnu.org/svn/gcc
 
@@ -28,7 +28,7 @@ chrbr
 
 sh4a-sincosf.c
 file
-149693
+
 
 
 
@@ -62,7 +62,7 @@ uros
 
 sh2a-movrt.c
 file
-149693
+
 
 
 
@@ -96,7 +96,7 @@ kkojima
 
 sh2a-jsrn.c
 file
-149693
+
 
 
 
@@ -130,7 +130,7 @@ kkojima
 
 pr21255-2-mb.c
 file
-149693
+
 
 
 
@@ -164,7 +164,7 @@ uros
 
 sh2a-bclrmem.c
 file
-149693
+
 
 
 
@@ -198,7 +198,7 @@ kkojima
 
 sh2a-bor.c
 file
-149693
+
 
 
 
@@ -232,7 +232,7 @@ kkojima
 
 sh4a-cos.c
 file
-149693
+
 
 
 
@@ -266,7 +266,7 @@ uros
 
 pr21255-2-ml.c
 file
-149693
+
 
 
 
@@ -300,7 +300,7 @@ uros
 
 sh4a-sin.c
 file
-149693
+
 
 
 
@@ -334,7 +334,7 @@ uros
 
 sh2a-bsetmem.c
 file
-149693
+
 
 
 
@@ -368,7 +368,7 @@ kkojima
 
 sh2a-bset.c
 file
-149693
+
 
 
 
@@ -436,7 +436,7 @@ chrbr
 
 sh4a-sincos.c
 file
-149693
+
 
 
 
@@ -470,7 +470,7 @@ uros
 
 sh2a-tbr-jump.c
 file
-149693
+
 
 
 
@@ -502,43 +502,9 @@ kkojima
 
 638
 
-sh2a-bld.c
-file
-149693
-
-
-
-2009-04-24T17:45:50.000000Z
-8396fb7a26422205c3b4f1ae2303baa1
-2008-04-04T23:36:19.391471Z
-133919
-kkojima
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-878
-
 sh4a-sinf.c
 file
-149693
+
 
 
 
@@ -570,9 +536,43 @@ uros
 
 374
 
+sh2a-bld.c
+file
+
+
+
+
+2009-04-24T17:45:50.000000Z
+8396fb7a26422205c3b4f1ae2303baa1
+2008-04-04T23:36:19.391471Z
+133919
+kkojima
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+878
+
 sh2a-band.c
 file
-149693
+
 
 
 
@@ -606,7 +606,7 @@ kkojima
 
 sh-relax-vxworks.c
 file
-149693
+
 
 
 
@@ -640,7 +640,7 @@ uros
 
 sh2a-bxor.c
 file
-149693
+
 
 
 
@@ -674,7 +674,7 @@ kkojima
 
 sh4a-fsrra.c
 file
-149693
+
 
 
 
@@ -708,7 +708,7 @@ uros
 
 sh2a-bclr.c
 file
-149693
+
 
 
 
@@ -742,7 +742,7 @@ kkojima
 
 pr21255-1.c
 file
-149693
+
 
 
 
@@ -774,43 +774,9 @@ uros
 
 543
 
-pr21255-3.c
-file
-149693
-
-
-
-2009-04-24T17:45:50.000000Z
-1dafc074e32f7f4500b329fda15b704f
-2007-08-27T08:47:33.275849Z
-127828
-uros
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-387
-
 sh2a-resbank.c
 file
-149693
+
 
 
 
@@ -842,14 +808,14 @@ kkojima
 
 328
 
-pr21255-4.c
+pr21255-3.c
 file
-149693
+
 
 
 
 2009-04-24T17:45:50.000000Z
-0d4dde217cb36efaf268d58522a8a42f
+1dafc074e32f7f4500b329fda15b704f
 2007-08-27T08:47:33.275849Z
 127828
 uros
@@ -874,11 +840,11 @@ uros
 
 
 
-342
+387
 
 sh2a-rtsn.c
 file
-149693
+
 
 
 
@@ -910,14 +876,14 @@ kkojima
 
 310
 
-sh-relax.c
+pr21255-4.c
 file
-149693
+
 
 
 
 2009-04-24T17:45:50.000000Z
-e21f6ad0f71c5acbd58d0b5dc9016512
+0d4dde217cb36efaf268d58522a8a42f
 2007-08-27T08:47:33.275849Z
 127828
 uros
@@ -942,45 +908,11 @@ uros
 
 
 
-657
-
-sh4a-bitmovua.c
-file
-149693
-
-
-
-2009-04-24T17:45:50.000000Z
-1c581960aca02b7dd6d8f81a478d9657
-2009-04-06T11:17:36.417723Z
-145587
-ams
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1494
+342
 
 sh4a-memmovua.c
 file
-149693
+
 
 
 
@@ -1012,9 +944,77 @@ ams
 
 409
 
+sh4a-bitmovua.c
+file
+
+
+
+
+2009-04-24T17:45:50.000000Z
+1c581960aca02b7dd6d8f81a478d9657
+2009-04-06T11:17:36.417723Z
+145587
+ams
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1494
+
+sh-relax.c
+file
+
+
+
+
+2009-04-24T17:45:50.000000Z
+e21f6ad0f71c5acbd58d0b5dc9016512
+2007-08-27T08:47:33.275849Z
+127828
+uros
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+657
+
 sh.exp
 file
-149693
+
 
 
 
@@ -1048,7 +1048,7 @@ uros
 
 sh4a-cosf.c
 file
-149693
+
 
 
 
@@ -1082,7 +1082,7 @@ uros
 
 sh4a-fprun.c
 file
-149693
+
 
 
 
@@ -1116,7 +1116,7 @@ uros
 
 sh2a-movi20s.c
 file
-149693
+
 
 
 
@@ -1150,7 +1150,7 @@ kkojima
 
 sh2a-prefetch.c
 file
-149693
+
 
 
 
@@ -1184,7 +1184,7 @@ kkojima
 
 20080410-1.c
 file
-149693
+
 
 
 

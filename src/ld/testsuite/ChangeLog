@@ -1,3 +1,109 @@
+2009-09-08  Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-elf/eh5.d: Don't run on hppa64.  Allow non-pcrel encoding.
+	Skip extra CIEs emitted on embedded targets and adjust FDE
+	matches to suit.
+
+2009-09-05  Jie Zhang  <jie.zhang@analog.com>
+
+	* ld-elf/sec64k.exp: Use ".set" instead of "=" for bfin-*-*.
+
+2009-09-03  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* ld-pe/longsecn.d: Adjusted to match new .text section merging
+	in default PE linker scripts.
+	* ld-pe/longsecn-1.d: Likewise.
+	* ld-pe/longsecn-2.d: Likewise.
+
+2009-08-31  Jie Zhang  <jie.zhang@analog.com>
+
+	* lib/ld-lib.exp (is_elf_format): Return 1 for bfin-*-uclinux.
+
+2009-08-31  Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-ifunc/ifunc.exp: Match R_PPC64_JUMP_IREL.
+
+2009-08-30  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10569
+	* ld-elf/commonpage2.d: New.
+	* ld-elf/maxpage4.d: Likewise.
+	* ld-elf/maxpage4.t: Likewise.
+
+2009-08-26  Maxim Kuvyrkov  <maxim@codesourcery.com>
+
+	* ld-m68k/tls-def-1.s: New file.
+	* ld-m68k/tls-def-1.d: New file.
+	* ld-m68k/tls-gd-1.d2: New file.
+	* ld-m68k/tls-gd-1.d3: New file.
+	* ld-m68k/tls-main-1.s: New file.
+	* ld-m68k/tls-main-1.d: New file.
+	* ld-m68k/m68k.exp: Run new TLS tests.
+
+2009-08-23  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* ld-powerpc/powerpc.exp: Move relaxing and relocatable relaxing
+	tests from ppc64elftest to ppcelftest and pass -a32 to assembler.
+
+	* ld-powerpc/relax.d: Fix whitespace.
+	* ld-powerpc/relaxr.d: Likewise.
+
+2009-08-21  Daniel Gutson  <dgutson@codesourcery.com>
+
+	* ld-arm/callweak.d: Opcodes updated.
+	* ld-arm/callweak.s: Architecture specified.
+	* ld-arm/callweak-2.d: New test case.
+	* ld-arm/callweak-2.s: New file.
+
+2009-08-17  Nick Clifton  <nickc@redhat.com>
+
+	* ld-elf/linkonce1.d: Accept "UNUSED" as part of the name of an
+	unused reloc.
+	* ld-elf/linkonce2.d: Likewise.
+
+2009-08-10  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Test go32 stub preservation by objcopy.
+	* ld-i386/i386.exp (go32 stub, go32 stub patch the source)
+	(go32 stub objcopy, go32 stub comparison after objcopy): New.
+
+2009-08-10  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* ld-powerpc/relax.s: New.
+	* ld-powerpc/relax.d: New.
+	* ld-powerpc/relaxr.d: New.
+	* ld-powerpc/powerpc.exp: Add new tests.
+
+2009-08-06  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* ld-arm/arm-elf.exp: Add new test.
+	* ld-arm/cortex-a8-fix-hdr.d: New.
+	* ld-arm/cortex-a8-fix-hdr.s: New.
+	* ld-arm/cortex-a8-fix-hdr.t: New.
+
+2009-08-05  Trevor Smigiel  <Trevor_Smigiel@playstation.sony.com>
+
+	* ld-spu/fixup.d: New.
+	* ld-spu/fixup.s: New.
+
+2009-08-05  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* ld-arm/cortex-a8-far-1.s: New.
+	* ld-arm/cortex-a8-far-2.s: New.
+	* ld-arm/cortex-a8-far.d: New.
+	* ld-arm/arm-elf.exp: Add new test.
+
+2009-08-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/6443
+	* ld-i386/i386.exp: Run tlspie1.
+	* ld-x86-64/x86-64.exp: tlspie1.
+
+	* ld-i386/tlspie1.d: New.
+	* ld-i386/tlspie1.s: Likewise.
+	* ld-x86-64/tlspie1.d: Likewise.
+	* ld-x86-64/tlspie1.s: Likewise.
+
 2009-07-31  Hans-Peter Nilsson  <hp@bitrange.com>
 
 	* ld-mmix/x.s, ld-mmix/y.s, ld-mmix/zeroeh.ld,

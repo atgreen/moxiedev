@@ -120,6 +120,9 @@ enum bptype
     bp_catchpoint,
 
     bp_tracepoint,
+
+    /* Event for JIT compiled code generation or deletion.  */
+    bp_jit_event,
   };
 
 /* States of enablement of breakpoint. */
@@ -135,6 +138,12 @@ enum enable_state
 			   automatically enabled and reset when the call 
 			   "lands" (either completes, or stops at another 
 			   eventpoint). */
+    bp_startup_disabled,/* The eventpoint has been disabled during inferior
+			   startup.  This is necessary on some targets where
+			   the main executable will get relocated during
+			   startup, making breakpoint addresses invalid.
+			   The eventpoint will be automatically enabled and
+			   reset once inferior startup is complete.  */
     bp_permanent	/* There is a breakpoint instruction hard-wired into
 			   the target's code.  Don't try to write another
 			   breakpoint instruction on top of it, or restore
@@ -548,6 +557,9 @@ enum bpstat_what_main_action
        keep checking.  */
     BPSTAT_WHAT_CHECK_SHLIBS,
 
+    /* Check for new JITed code.  */
+    BPSTAT_WHAT_CHECK_JIT,
+
     /* This is just used to keep track of how many enums there are.  */
     BPSTAT_WHAT_LAST
   };
@@ -810,6 +822,19 @@ extern void disable_watchpoints_before_interactive_call_start (void);
 
 extern void enable_watchpoints_after_interactive_call_stop (void);
 
+/* These functions disable and re-enable all breakpoints during
+   inferior startup.  They are intended to be called from solib
+   code where necessary.  This is needed on platforms where the
+   main executable is relocated at some point during startup
+   processing, making breakpoint addresses invalid.
+
+   If additional breakpoints are created after the routine
+   disable_breakpoints_before_startup but before the routine
+   enable_breakpoints_after_startup was called, they will also
+   be marked as disabled.  */
+extern void disable_breakpoints_before_startup (void);
+extern void enable_breakpoints_after_startup (void);
+
 /* For script interpreters that need to define breakpoint commands
    after they've already read the commands into a struct command_line.  */
 extern enum command_control_type commands_from_control_command
@@ -820,6 +845,8 @@ extern void clear_breakpoint_hit_counts (void);
 extern int get_number (char **);
 
 extern int get_number_or_range (char **);
+
+extern struct breakpoint *get_breakpoint (int num);
 
 /* The following are for displays, which aren't really breakpoints, but
    here is as good a place as any for them.  */
@@ -836,10 +863,16 @@ extern void disable_breakpoint (struct breakpoint *);
 
 extern void enable_breakpoint (struct breakpoint *);
 
+extern void breakpoint_set_commands (struct breakpoint *b, 
+				     struct command_line *commands);
+
 /* Clear the "inserted" flag in all breakpoints.  */
 extern void mark_breakpoints_out (void);
 
 extern void make_breakpoint_permanent (struct breakpoint *);
+
+extern struct breakpoint *create_jit_event_breakpoint (struct gdbarch *,
+                                                       CORE_ADDR);
 
 extern struct breakpoint *create_solib_event_breakpoint (struct gdbarch *,
 							 CORE_ADDR);

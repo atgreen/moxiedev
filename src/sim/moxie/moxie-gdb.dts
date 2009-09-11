@@ -40,20 +40,10 @@
 		#cpus = <0x1>;
 		#size-cells = <0>;
 		moxie_0: cpu@0 {
-			clock-frequency = <125000000>;
-			compatible = "xlnx,moxie-7.10.d";
-			d-cache-baseaddr = <0x90000000>;
-			d-cache-highaddr = <0x9fffffff>;
-			d-cache-line-size = <0x10>;
-			d-cache-size = <0x2000>;
+			compatible = "moxie,moxie-0.99";
 			device_type = "cpu";
-			i-cache-baseaddr = <0x90000000>;
-			i-cache-highaddr = <0x9fffffff>;
-			i-cache-line-size = <0x10>;
-			i-cache-size = <0x2000>;
-			model = "moxie,7.10.d";
+			model = "moxie,0.99";
 			reg = <0>;
-			timebase-frequency = <125000000>;
 		} ;
 	} ;
 }  ;

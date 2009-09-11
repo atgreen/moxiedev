@@ -159,6 +159,7 @@ software in general.  We will miss him.
 * Emacs::                       Using @value{GDBN} under @sc{gnu} Emacs
 * GDB/MI::                      @value{GDBN}'s Machine Interface.
 * Annotations::                 @value{GDBN}'s annotation interface.
+* JIT Interface::               Using the JIT debugging interface.
 
 * GDB Bugs::                    Reporting bugs in @value{GDBN}
 
@@ -1649,7 +1650,7 @@ short paragraph on how to use that command.
 @item apropos @var{args}
 The @code{apropos} command searches through all of the @value{GDBN}
 commands, and their documentation, for the regular expression specified in
-@var{args}. It prints out all matches found. For example:
+@var{args}.  It prints out all matches found.  For example:
 
 @smallexample
 apropos reload
@@ -2374,17 +2375,40 @@ To find out what inferiors exist at any moment, use @code{info inferiors}:
 @kindex info inferiors
 @item info inferiors
 Print a list of all inferiors currently being managed by @value{GDBN}.
+
+@value{GDBN} displays for each inferior (in this order):
+
+@enumerate
+@item
+the inferior number assigned by @value{GDBN}
+
+@item
+the target system's inferior identifier
+@end enumerate
+
+@noindent
+An asterisk @samp{*} preceding the @value{GDBN} inferior number
+indicates the current inferior.
+
+For example,
 @end table
+@c end table here to get a little more width for example
+
+@smallexample
+(@value{GDBP}) info inferiors
+  Num  Description
+* 1    process 2307
+  2    process 3401
+@end smallexample
 
 To switch focus between inferiors, use the @code{inferior} command:
 
 @table @code
-@kindex inferior @var{inferior-id}
-@item inferior @var{inferior-id}
-Make inferior number @var{inferior-id} the current inferior.  The
-argument @var{inferior-id} is the internal inferior number assigned by
-@value{GDBN}, as shown in the first field of the @samp{info inferiors}
-display.
+@kindex inferior @var{infno}
+@item inferior @var{infno}
+Make inferior number @var{infno} the current inferior.  The argument
+@var{infno} is the inferior number assigned by @value{GDBN}, as shown
+in the first field of the @samp{info inferiors} display.
 @end table
 
 To quit debugging one of the inferiors, you can either detach from it
@@ -2392,15 +2416,15 @@ by using the @w{@code{detach inferior}} command (allowing it to run
 independently), or kill it using the @w{@code{kill inferior}} command:
 
 @table @code
-@kindex detach inferior @var{inferior-id}
-@item detach inferior @var{inferior-id}
+@kindex detach inferior @var{infno}
+@item detach inferior @var{infno}
 Detach from the inferior identified by @value{GDBN} inferior number
-@var{inferior-id}, and remove it from the inferior list.
+@var{infno}, and remove it from the inferior list.
 
-@kindex kill inferior @var{inferior-id}
-@item kill inferior @var{inferior-id}
+@kindex kill inferior @var{infno}
+@item kill inferior @var{infno}
 Kill the inferior identified by @value{GDBN} inferior number
-@var{inferior-id}, and remove it from the inferior list.
+@var{infno}, and remove it from the inferior list.
 @end table
 
 To be notified when inferiors are started or exit under @value{GDBN}'s
@@ -3887,7 +3911,7 @@ one.
 Break conditions can have side effects, and may even call functions in
 your program.  This can be useful, for example, to activate functions
 that log program progress, or to use your own print functions to
-format special data structures. The effects are completely predictable
+format special data structures.  The effects are completely predictable
 unless there is another enabled breakpoint at the same address.  (In
 that case, @value{GDBN} might see the other breakpoint first and stop your
 program without checking the condition of this one.)  Note that
@@ -8397,32 +8421,53 @@ character.
 @section Caching Data of Remote Targets
 @cindex caching data of remote targets
 
-@value{GDBN} can cache data exchanged between the debugger and a
+@value{GDBN} caches data exchanged between the debugger and a
 remote target (@pxref{Remote Debugging}).  Such caching generally improves
 performance, because it reduces the overhead of the remote protocol by
-bundling memory reads and writes into large chunks.  Unfortunately,
-@value{GDBN} does not currently know anything about volatile
-registers, and thus data caching will produce incorrect results when
-volatile registers are in use.
+bundling memory reads and writes into large chunks.  Unfortunately, simply
+caching everything would lead to incorrect results, since @value{GDBN} 
+does not necessarily know anything about volatile values, memory-mapped I/O
+addresses, etc.  Furthermore, in non-stop mode (@pxref{Non-Stop Mode})
+memory can be changed @emph{while} a gdb command is executing.
+Therefore, by default, @value{GDBN} only caches data
+known to be on the stack@footnote{In non-stop mode, it is moderately
+rare for a running thread to modify the stack of a stopped thread
+in a way that would interfere with a backtrace, and caching of
+stack reads provides a significant speed up of remote backtraces.}.
+Other regions of memory can be explicitly marked as
+cacheable; see @pxref{Memory Region Attributes}.
 
 @table @code
 @kindex set remotecache
 @item set remotecache on
 @itemx set remotecache off
-Set caching state for remote targets.  When @code{ON}, use data
-caching.  By default, this option is @code{OFF}.
+This option no longer does anything; it exists for compatibility
+with old scripts.
 
 @kindex show remotecache
 @item show remotecache
-Show the current state of data caching for remote targets.
+Show the current state of the obsolete remotecache flag.
+
+@kindex set stack-cache
+@item set stack-cache on
+@itemx set stack-cache off
+Enable or disable caching of stack accesses.  When @code{ON}, use
+caching.  By default, this option is @code{ON}.
+
+@kindex show stack-cache
+@item show stack-cache
+Show the current state of data caching for memory accesses.
 
 @kindex info dcache
-@item info dcache
+@item info dcache @r{[}line@r{]}
 Print the information about the data cache performance.  The
-information displayed includes: the dcache width and depth; and for
-each cache line, how many times it was referenced, and its data and
-state (invalid, dirty, valid).  This command is useful for debugging
-the data cache operation.
+information displayed includes the dcache width and depth, and for
+each cache line, its number, address, and how many times it was
+referenced.  This command is useful for debugging the data cache
+operation.
+
+If a line number is specified, the contents of that line will be
+printed in hex.
 @end table
 
 @node Searching Memory
@@ -10834,7 +10879,7 @@ specified by the extension to support decimal floating-point arithmetic.
 
 There are two encodings in use, depending on the architecture: BID (Binary
 Integer Decimal) for x86 and x86-64, and DPD (Densely Packed Decimal) for
-PowerPC. @value{GDBN} will use the appropriate encoding for the configured
+PowerPC.  @value{GDBN} will use the appropriate encoding for the configured
 target.
 
 Because of a limitation in @file{libdecnumber}, the library used by @value{GDBN}
@@ -10846,8 +10891,8 @@ point computations, error checking in decimal float operations ignores
 underflow, overflow and divide by zero exceptions.
 
 In the PowerPC architecture, @value{GDBN} provides a set of pseudo-registers
-to inspect @code{_Decimal128} values stored in floating point registers. See
-@ref{PowerPC,,PowerPC} for more details.
+to inspect @code{_Decimal128} values stored in floating point registers.
+See @ref{PowerPC,,PowerPC} for more details.
 
 @node Objective-C
 @subsection Objective-C
@@ -10982,7 +11027,7 @@ arithmetic types.  Operators are often defined on groups of types.
 
 @table @code
 @item **
-The exponentiation operator. It raises the first operand to the power
+The exponentiation operator.  It raises the first operand to the power
 of the second one.
 
 @item :
@@ -11154,7 +11199,7 @@ Integer division and remainder.  Defined on integral types.  Same
 precedence as @code{*}.
 
 @item -
-Negative. Defined on @code{INTEGER} and @code{REAL} data.
+Negative.  Defined on @code{INTEGER} and @code{REAL} data.
 
 @item ^
 Pointer dereferencing.  Defined on pointer types.
@@ -12613,22 +12658,6 @@ is printed as follows:
 @item show opaque-type-resolution
 Show whether opaque types are resolved or not.
 
-@kindex set print symbol-loading
-@cindex print messages when symbols are loaded
-@item set print symbol-loading
-@itemx set print symbol-loading on
-@itemx set print symbol-loading off
-The @code{set print symbol-loading} command allows you to enable or
-disable printing of messages when @value{GDBN} loads symbols.
-By default, these messages will be printed, and normally this is what
-you want.  Disabling these messages is useful when debugging applications
-with lots of shared libraries where the quantity of output can be more
-annoying than useful.
-
-@kindex show print symbol-loading
-@item show print symbol-loading
-Show whether messages will be printed when @value{GDBN} loads symbols.
-
 @kindex maint print symbols
 @cindex symbol dump
 @kindex maint print psymbols
@@ -13501,9 +13530,11 @@ command:
 @table @code
 @kindex info sharedlibrary
 @kindex info share
-@item info share
-@itemx info sharedlibrary
-Print the names of the shared libraries which are currently loaded.
+@item info share @var{regex}
+@itemx info sharedlibrary @var{regex}
+Print the names of the shared libraries which are currently loaded
+that match @var{regex}.  If @var{regex} is omitted then print
+all shared libraries that are loaded.
 
 @kindex sharedlibrary
 @kindex share
@@ -13644,9 +13675,9 @@ the separate debug info file.  The separate debug file's name is
 usually @file{@var{executable}.debug}, where @var{executable} is the
 name of the corresponding executable file without leading directories
 (e.g., @file{ls.debug} for @file{/usr/bin/ls}).  In addition, the
-debug link specifies a CRC32 checksum for the debug file, which
-@value{GDBN} uses to validate that the executable and the debug file
-came from the same build.
+debug link specifies a 32-bit @dfn{Cyclic Redundancy Check} (CRC)
+checksum for the debug file, which @value{GDBN} uses to validate that
+the executable and the debug file came from the same build.
 
 @item
 The executable contains a @dfn{build ID}, a unique bit string that is
@@ -13796,10 +13827,47 @@ utilities (Binutils) package since version 2.18.
 
 @noindent
 
-Since there are many different ways to compute CRC's for the debug
-link (different polynomials, reversals, byte ordering, etc.), the
-simplest way to describe the CRC used in @code{.gnu_debuglink}
-sections is to give the complete code for a function that computes it:
+@cindex CRC algorithm definition
+The CRC used in @code{.gnu_debuglink} is the CRC-32 defined in
+IEEE 802.3 using the polynomial:
+
+@c TexInfo requires naked braces for multi-digit exponents for Tex
+@c output, but this causes HTML output to barf. HTML has to be set using
+@c raw commands. So we end up having to specify this equation in 2
+@c different ways!
+@ifhtml
+@display
+@html
+ <em>x</em><sup>32</sup> + <em>x</em><sup>26</sup> + <em>x</em><sup>23</sup> + <em>x</em><sup>22</sup> + <em>x</em><sup>16</sup> + <em>x</em><sup>12</sup> + <em>x</em><sup>11</sup>
+ + <em>x</em><sup>10</sup> + <em>x</em><sup>8</sup> + <em>x</em><sup>7</sup> + <em>x</em><sup>5</sup> + <em>x</em><sup>4</sup> + <em>x</em><sup>2</sup> + <em>x</em> + 1
+@end html
+@end display
+@end ifhtml
+@ifnothtml
+@display
+ @math{x^{32} + x^{26} + x^{23} + x^{22} + x^{16} + x^{12} + x^{11}}
+ @math{+ x^{10} + x^8 + x^7 + x^5 + x^4 + x^2 + x + 1}
+@end display
+@end ifnothtml
+
+The function is computed byte at a time, taking the least
+significant bit of each byte first.  The initial pattern
+@code{0xffffffff} is used, to ensure leading zeros affect the CRC and
+the final result is inverted to ensure trailing zeros also affect the
+CRC.
+
+@emph{Note:} This is the same CRC polynomial as used in handling the
+@dfn{Remote Serial Protocol} @code{qCRC} packet (@pxref{Remote Protocol,
+, @value{GDBN} Remote Serial Protocol}).  However in the
+case of the Remote Serial Protocol, the CRC is computed @emph{most}
+significant bit first, and the result is not inverted, so trailing
+zeros have no effect on the CRC value.
+
+To complete the description, we show below the code of the function
+which produces the CRC used in @code{.gnu_debuglink}.  Inverting the
+initially supplied @code{crc} argument means that an initial call to
+this function passing in zero will start computing the CRC using
+@code{0xffffffff}.
 
 @kindex gnu_debuglink_crc32
 @smallexample
@@ -15835,14 +15903,14 @@ In keeping with the naming conventions used by the Microsoft debugging
 tools, DLL export symbols are made available with a prefix based on the
 DLL name, for instance @code{KERNEL32!CreateFileA}.  The plain name is
 also entered into the symbol table, so @code{CreateFileA} is often
-sufficient. In some cases there will be name clashes within a program
+sufficient.  In some cases there will be name clashes within a program
 (particularly if the executable itself includes full debugging symbols)
 necessitating the use of the fully qualified name when referring to the
-contents of the DLL. Use single-quotes around the name to avoid the
+contents of the DLL.  Use single-quotes around the name to avoid the
 exclamation mark (``!'')  being interpreted as a language operator.
 
 Note that the internal name of the DLL may be all upper-case, even
-though the file name of the DLL is lower-case, or vice-versa. Since
+though the file name of the DLL is lower-case, or vice-versa.  Since
 symbols within @value{GDBN} are @emph{case-sensitive} this may cause
 some confusion. If in doubt, try the @code{info functions} and
 @code{info variables} commands or even @code{maint print msymbols}
@@ -17490,6 +17558,33 @@ and local store addresses and transfer size are shown.
 
 @end table
  
+When @value{GDBN} is debugging a combined PowerPC/SPU application
+on the Cell Broadband Engine, it provides in addition the following
+special commands:
+
+@table @code
+@item set spu stop-on-load @var{arg}
+@kindex set spu
+Set whether to stop for new SPE threads.  When set to @code{on}, @value{GDBN}
+will give control to the user when a new SPE thread enters its @code{main}
+function.  The default is @code{off}.
+
+@item show spu stop-on-load
+@kindex show spu
+Show whether to stop for new SPE threads.
+
+@item set spu auto-flush-cache @var{arg}
+Set whether to automatically flush the software-managed cache.  When set to
+@code{on}, @value{GDBN} will automatically cause the SPE software-managed
+cache to be flushed whenever SPE execution stops.  This provides a consistent
+view of PowerPC memory that is accessed via the cache.  If an application
+does not use the software-managed cache, this option has no effect.
+
+@item show spu auto-flush-cache
+Show whether to automatically flush the software-managed cache.
+
+@end table
+
 @node PowerPC
 @subsection PowerPC
 @cindex PowerPC architecture
@@ -17945,6 +18040,7 @@ Displays how many symbol complaints @value{GDBN} is permitted to produce.
 
 @end table
 
+@anchor{confirmation requests}
 By default, @value{GDBN} is cautious, and asks what sometimes seems to be a
 lot of stupid questions to confirm certain commands.  For example, if
 you try to run a program which is already running:
@@ -21465,11 +21561,41 @@ line="5",times="0",ignore="3"@}]@}
 @ignore
 @subheading The @code{-break-catch} Command
 @findex -break-catch
+@end ignore
 
 @subheading The @code{-break-commands} Command
 @findex -break-commands
-@end ignore
 
+@subsubheading Synopsis
+
+@smallexample
+ -break-commands @var{number} [ @var{command1} ... @var{commandN} ]
+@end smallexample
+
+Specifies the CLI commands that should be executed when breakpoint
+@var{number} is hit.  The parameters @var{command1} to @var{commandN}
+are the commands.  If no command is specified, any previously-set
+commands are cleared.  @xref{Break Commands}.  Typical use of this
+functionality is tracing a program, that is, printing of values of
+some variables whenever breakpoint is hit and then continuing.
+
+@subsubheading @value{GDBN} Command
+
+The corresponding @value{GDBN} command is @samp{commands}.
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-break-insert main
+^done,bkpt=@{number="1",type="breakpoint",disp="keep",
+enabled="y",addr="0x000100d0",func="main",file="hello.c",
+fullname="/home/foo/hello.c",line="5",times="0"@}
+(gdb)
+-break-commands 1 "print v" "continue"
+^done
+(gdb)
+@end smallexample
 
 @subheading The @code{-break-condition} Command
 @findex -break-condition
@@ -25603,9 +25729,13 @@ command to repeat if @key{RET} is pressed on a line by itself.  This
 means that commands can be run behind a user's back by a front-end in
 a transparent manner.
 
-The server prefix does not affect the recording of values into the value
-history; to print a value without recording it into the value history,
-use the @code{output} command instead of the @code{print} command.
+The @code{server } prefix does not affect the recording of values into
+the value history; to print a value without recording it into the
+value history, use the @code{output} command instead of the
+@code{print} command.
+
+Using this prefix also disables confirmation requests
+(@pxref{confirmation requests}).
 
 @node Prompting
 @section Annotation for @value{GDBN} Input
@@ -25821,6 +25951,136 @@ line, or @samp{beg} if @var{addr} is at the beginning of the line, and
 source which is being displayed.  @var{addr} is in the form @samp{0x}
 followed by one or more lowercase hex digits (note that this does not
 depend on the language).
+
+@node JIT Interface
+@chapter JIT Compilation Interface
+@cindex just-in-time compilation
+@cindex JIT compilation interface
+
+This chapter documents @value{GDBN}'s @dfn{just-in-time} (JIT) compilation
+interface.  A JIT compiler is a program or library that generates native
+executable code at runtime and executes it, usually in order to achieve good
+performance while maintaining platform independence. 
+
+Programs that use JIT compilation are normally difficult to debug because
+portions of their code are generated at runtime, instead of being loaded from
+object files, which is where @value{GDBN} normally finds the program's symbols
+and debug information.  In order to debug programs that use JIT compilation,
+@value{GDBN} has an interface that allows the program to register in-memory
+symbol files with @value{GDBN} at runtime.
+
+If you are using @value{GDBN} to debug a program that uses this interface, then
+it should work transparently so long as you have not stripped the binary.  If
+you are developing a JIT compiler, then the interface is documented in the rest
+of this chapter.  At this time, the only known client of this interface is the
+LLVM JIT.
+
+Broadly speaking, the JIT interface mirrors the dynamic loader interface.  The
+JIT compiler communicates with @value{GDBN} by writing data into a global
+variable and calling a fuction at a well-known symbol.  When @value{GDBN}
+attaches, it reads a linked list of symbol files from the global variable to
+find existing code, and puts a breakpoint in the function so that it can find
+out about additional code.
+
+@menu
+* Declarations::                Relevant C struct declarations
+* Registering Code::            Steps to register code
+* Unregistering Code::          Steps to unregister code
+@end menu
+
+@node Declarations
+@section JIT Declarations
+
+These are the relevant struct declarations that a C program should include to
+implement the interface:
+
+@smallexample
+typedef enum
+@{
+  JIT_NOACTION = 0,
+  JIT_REGISTER_FN,
+  JIT_UNREGISTER_FN
+@} jit_actions_t;
+
+struct jit_code_entry
+@{
+  struct jit_code_entry *next_entry;
+  struct jit_code_entry *prev_entry;
+  const char *symfile_addr;
+  uint64_t symfile_size;
+@};
+
+struct jit_descriptor
+@{
+  uint32_t version;
+  /* This type should be jit_actions_t, but we use uint32_t
+     to be explicit about the bitwidth.  */
+  uint32_t action_flag;
+  struct jit_code_entry *relevant_entry;
+  struct jit_code_entry *first_entry;
+@};
+
+/* GDB puts a breakpoint in this function.  */
+void __attribute__((noinline)) __jit_debug_register_code() @{ @};
+
+/* Make sure to specify the version statically, because the
+   debugger may check the version before we can set it.  */
+struct jit_descriptor __jit_debug_descriptor = @{ 1, 0, 0, 0 @};
+@end smallexample
+
+If the JIT is multi-threaded, then it is important that the JIT synchronize any
+modifications to this global data properly, which can easily be done by putting
+a global mutex around modifications to these structures.
+
+@node Registering Code
+@section Registering Code
+
+To register code with @value{GDBN}, the JIT should follow this protocol:
+
+@itemize @bullet
+@item
+Generate an object file in memory with symbols and other desired debug
+information.  The file must include the virtual addresses of the sections.
+
+@item
+Create a code entry for the file, which gives the start and size of the symbol
+file.
+
+@item
+Add it to the linked list in the JIT descriptor.
+
+@item
+Point the relevant_entry field of the descriptor at the entry.
+
+@item
+Set @code{action_flag} to @code{JIT_REGISTER} and call
+@code{__jit_debug_register_code}.
+@end itemize
+
+When @value{GDBN} is attached and the breakpoint fires, @value{GDBN} uses the
+@code{relevant_entry} pointer so it doesn't have to walk the list looking for
+new code.  However, the linked list must still be maintained in order to allow
+@value{GDBN} to attach to a running process and still find the symbol files.
+
+@node Unregistering Code
+@section Unregistering Code
+
+If code is freed, then the JIT should use the following protocol:
+
+@itemize @bullet
+@item
+Remove the code entry corresponding to the code from the linked list.
+
+@item
+Point the @code{relevant_entry} field of the descriptor at the code entry.
+
+@item
+Set @code{action_flag} to @code{JIT_UNREGISTER} and call
+@code{__jit_debug_register_code}.
+@end itemize
+
+If the JIT frees or recompiles code without unregistering it, then @value{GDBN}
+and the JIT will leak the memory used for the associated symbol files.
 
 @node GDB Bugs
 @chapter Reporting Bugs in @value{GDBN}
@@ -28035,7 +28295,18 @@ Any other reply implies the old thread ID.
 @item qCRC:@var{addr},@var{length}
 @cindex CRC of memory block, remote request
 @cindex @samp{qCRC} packet
-Compute the CRC checksum of a block of memory.
+Compute the CRC checksum of a block of memory using CRC-32 defined in
+IEEE 802.3.  The CRC is computed byte at a time, taking the most
+significant bit of each byte first.  The initial pattern code
+@code{0xffffffff} is used to ensure leading zeros affect the CRC.
+
+@emph{Note:} This is the same CRC used in validating separate debug
+files (@pxref{Separate Debug Files, , Debugging Information in Separate
+Files}).  However the algorithm is slightly different.  When validating
+separate debug files, the CRC is computed taking the @emph{least}
+significant bit of each byte first, and the final result is inverted to
+detect trailing zeros.
+
 Reply:
 @table @samp
 @item E @var{NN}
@@ -30807,6 +31078,7 @@ are explained further below.
 <target version="1.0">
   @r{[}@var{architecture}@r{]}
   @r{[}@var{osabi}@r{]}
+  @r{[}@var{compatible}@r{]}
   @r{[}@var{feature}@dots{}@r{]}
 </target>
 @end smallexample
@@ -30858,9 +31130,8 @@ An @samp{<architecture>} element has this form:
   <architecture>@var{arch}</architecture>
 @end smallexample
 
-@var{arch} is an architecture name from the same selection
-accepted by @code{set architecture} (@pxref{Targets, ,Specifying a
-Debugging Target}).
+@var{arch} is one of the architectures from the set accepted by
+@code{set architecture} (@pxref{Targets, ,Specifying a Debugging Target}).
 
 @subsection OS ABI
 @cindex @code{<osabi>}
@@ -30876,6 +31147,34 @@ An @samp{<osabi>} element has this form:
 
 @var{abi-name} is an OS ABI name from the same selection accepted by
 @w{@code{set osabi}} (@pxref{ABI, ,Configuring the Current ABI}).
+
+@subsection Compatible Architecture
+@cindex @code{<compatible>}
+
+This optional field was introduced in @value{GDBN} version 7.0.
+Previous versions of @value{GDBN} ignore it.
+
+A @samp{<compatible>} element has this form:
+
+@smallexample
+  <compatible>@var{arch}</compatible>
+@end smallexample
+
+@var{arch} is one of the architectures from the set accepted by
+@code{set architecture} (@pxref{Targets, ,Specifying a Debugging Target}).
+
+A @samp{<compatible>} element is used to specify that the target
+is able to run binaries in some other than the main target architecture
+given by the @samp{<architecture>} element.  For example, on the
+Cell Broadband Engine, the main architecture is @code{powerpc:common}
+or @code{powerpc:common64}, but the system is able to run binaries
+in the @code{spu} architecture as well.  The way to describe this
+capability with @samp{<compatible>} is as follows:
+
+@smallexample
+  <architecture>powerpc:common</architecture>
+  <compatible>spu</compatible>
+@end smallexample
 
 @subsection Features
 @cindex <feature>

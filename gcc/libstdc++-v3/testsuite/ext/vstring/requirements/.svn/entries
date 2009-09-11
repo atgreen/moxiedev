@@ -1,15 +1,15 @@
 10
 
 dir
-149693
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/ext/vstring/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-05T17:59:29.888123Z
-149260
-jsm28
+2009-08-25T22:29:08.525821Z
+151106
+bkoz
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-07-14T13:03:51.000000Z
-f9a434cb0bc7e5d7d473b38b19bb67d8
-2009-07-05T17:59:29.888123Z
-149260
-jsm28
+2009-09-08T13:21:28.000000Z
+c5aecd96842177116db930bc29e34520
+2009-08-25T22:29:08.525821Z
+151106
+bkoz
 
 
 
@@ -58,11 +58,45 @@ jsm28
 
 
 
-1302
+1060
 
 dr438
 dir
 
 explicit_instantiation
 dir
+
+typedefs.cc
+file
+
+
+
+
+2009-09-08T13:21:28.000000Z
+a6ae4e4e7823058024054c18a4857fb0
+2009-08-25T22:29:08.525821Z
+151106
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+959
 

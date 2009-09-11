@@ -1,6 +1,4 @@
 /COPYRIGHT/1.1/Mon Jul  6 10:46:48 2009//
-/Makefile.am/1.11/Mon Jul  6 10:46:48 2009/-ko/
-/Makefile.in/1.25/Mon Jul  6 10:46:48 2009/-ko/
 /_isatty.c/1.2/Mon Jul  6 10:46:48 2009//
 /cclass.h/1.1/Mon Jul  6 10:46:48 2009//
 /closedir.c/1.3/Mon Jul  6 10:46:48 2009/-ko/
@@ -23,7 +21,6 @@
 /isatty.c/1.3/Mon Jul  6 10:46:48 2009/-ko/
 /namespace.h/1.2/Mon Jul  6 10:46:48 2009//
 /opendir.c/1.4/Mon Jul  6 10:46:48 2009/-ko/
-/popen.c/1.7/Mon Jul  6 10:46:48 2009/-ko/
 /readdir.c/1.3/Mon Jul  6 10:46:48 2009/-ko/
 /readdir_r.c/1.2/Mon Jul  6 10:46:48 2009//
 /regcomp.c/1.1/Mon Jul  6 10:46:48 2009//
@@ -45,4 +42,8 @@
 /utils.h/1.1/Mon Jul  6 10:46:48 2009//
 /wordexp.c/1.1/Mon Jul  6 10:46:48 2009//
 /wordfree.c/1.1/Mon Jul  6 10:46:48 2009//
+/Makefile.am/1.12/Tue Sep  8 03:27:43 2009/-ko/
+/Makefile.in/1.26/Tue Sep  8 03:27:43 2009/-ko/
+/popen.c/1.9/Tue Sep  8 03:27:43 2009/-ko/
+/posix.tex/1.1/Tue Aug 18 16:43:21 2009//
 D

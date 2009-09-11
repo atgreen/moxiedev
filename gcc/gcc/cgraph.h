@@ -388,8 +388,11 @@ void cgraph_node_remove_callees (struct cgraph_node *node);
 struct cgraph_edge *cgraph_create_edge (struct cgraph_node *,
 					struct cgraph_node *,
 					gimple, gcov_type, int, int);
+
+struct cgraph_node * cgraph_get_node (tree);
 struct cgraph_node *cgraph_node (tree);
-struct cgraph_node *cgraph_node_for_asm (tree asmname);
+struct cgraph_node *cgraph_node_for_asm (tree);
+struct cgraph_node *cgraph_node_for_decl (tree);
 struct cgraph_edge *cgraph_edge (struct cgraph_node *, gimple);
 void cgraph_set_call_stmt (struct cgraph_edge *, gimple);
 void cgraph_set_call_stmt_including_clones (struct cgraph_node *, gimple, gimple);

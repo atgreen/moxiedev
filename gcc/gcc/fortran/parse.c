@@ -849,6 +849,8 @@ next_fixed (void)
 blank_line:
   if (digit_flag)
     gfc_warning ("Ignoring statement label in empty statement at %C");
+    
+  gfc_current_locus.lb->truncated = 0;
   gfc_advance_line ();
   return ST_NONE;
 }
@@ -862,6 +864,7 @@ next_statement (void)
 {
   gfc_statement st;
   locus old_locus;
+
   gfc_new_block = NULL;
 
   gfc_current_ns->old_cl_list = gfc_current_ns->cl_list;
@@ -871,14 +874,7 @@ next_statement (void)
       gfc_buffer_error (1);
 
       if (gfc_at_eol ())
-	{
-	  if ((gfc_option.warn_line_truncation || gfc_current_form == FORM_FREE)
-	      && gfc_current_locus.lb
-	      && gfc_current_locus.lb->truncated)
-	    gfc_warning_now ("Line truncated at %C");
-
-	  gfc_advance_line ();
-	}
+	gfc_advance_line ();
 
       gfc_skip_comments ();
 
@@ -2049,24 +2045,24 @@ endType:
     {
       /* Look for allocatable components.  */
       if (c->attr.allocatable
-	  || (c->ts.type == BT_DERIVED && c->ts.derived->attr.alloc_comp))
+	  || (c->ts.type == BT_DERIVED && c->ts.u.derived->attr.alloc_comp))
 	sym->attr.alloc_comp = 1;
 
       /* Look for pointer components.  */
       if (c->attr.pointer
-	  || (c->ts.type == BT_DERIVED && c->ts.derived->attr.pointer_comp))
+	  || (c->ts.type == BT_DERIVED && c->ts.u.derived->attr.pointer_comp))
 	sym->attr.pointer_comp = 1;
 
       /* Look for procedure pointer components.  */
       if (c->attr.proc_pointer
 	  || (c->ts.type == BT_DERIVED
-	      && c->ts.derived->attr.proc_pointer_comp))
+	      && c->ts.u.derived->attr.proc_pointer_comp))
 	sym->attr.proc_pointer_comp = 1;
 
       /* Look for private components.  */
       if (sym->component_access == ACCESS_PRIVATE
 	  || c->attr.access == ACCESS_PRIVATE
-	  || (c->ts.type == BT_DERIVED && c->ts.derived->attr.private_comp))
+	  || (c->ts.type == BT_DERIVED && c->ts.u.derived->attr.private_comp))
 	sym->attr.private_comp = 1;
     }
 
@@ -2320,7 +2316,7 @@ match_deferred_characteristics (gfc_typespec * ts)
     {
       ts->kind = 0;
 
-      if (!ts->derived || !ts->derived->components)
+      if (!ts->u.derived || !ts->u.derived->components)
 	m = MATCH_ERROR;
     }
 
@@ -2360,8 +2356,8 @@ check_function_result_typed (void)
 
   /* Check type-parameters, at the moment only CHARACTER lengths possible.  */
   /* TODO:  Extend when KIND type parameters are implemented.  */
-  if (ts->type == BT_CHARACTER && ts->cl && ts->cl->length)
-    gfc_expr_check_typed (ts->cl->length, gfc_current_ns, true);
+  if (ts->type == BT_CHARACTER && ts->u.cl && ts->u.cl->length)
+    gfc_expr_check_typed (ts->u.cl->length, gfc_current_ns, true);
 }
 
 
@@ -2540,7 +2536,7 @@ declSt:
 
       gfc_current_block ()->ts.kind = 0;
       /* Keep the derived type; if it's bad, it will be discovered later.  */
-      if (!(ts->type == BT_DERIVED && ts->derived))
+      if (!(ts->type == BT_DERIVED && ts->u.derived))
 	ts->type = BT_UNKNOWN;
     }
 
@@ -3760,6 +3756,8 @@ loop:
       st = next_statement ();
       goto loop;
     }
+
+  s->ns = gfc_current_ns;
 }
 
 
@@ -3806,6 +3804,76 @@ add_global_program (void)
       s->defined = 1;
       s->ns = gfc_current_ns;
     }
+}
+
+
+/* Resolve all the program units when whole file scope option
+   is active. */
+static void
+resolve_all_program_units (gfc_namespace *gfc_global_ns_list)
+{
+  gfc_free_dt_list ();
+  gfc_current_ns = gfc_global_ns_list;
+  for (; gfc_current_ns; gfc_current_ns = gfc_current_ns->sibling)
+    {
+      gfc_current_locus = gfc_current_ns->proc_name->declared_at;
+      gfc_resolve (gfc_current_ns);
+      gfc_current_ns->derived_types = gfc_derived_types;
+      gfc_derived_types = NULL;
+    }
+}
+
+
+static void
+clean_up_modules (gfc_gsymbol *gsym)
+{
+  if (gsym == NULL)
+    return;
+
+  clean_up_modules (gsym->left);
+  clean_up_modules (gsym->right);
+
+  if (gsym->type != GSYM_MODULE || !gsym->ns)
+    return;
+
+  gfc_current_ns = gsym->ns;
+  gfc_derived_types = gfc_current_ns->derived_types;
+  gfc_done_2 ();
+  gsym->ns = NULL;
+  return;
+}
+
+
+/* Translate all the program units when whole file scope option
+   is active. This could be in a different order to resolution if
+   there are forward references in the file.  */
+static void
+translate_all_program_units (gfc_namespace *gfc_global_ns_list)
+{
+  int errors;
+
+  gfc_current_ns = gfc_global_ns_list;
+  gfc_get_errors (NULL, &errors);
+
+  for (; !errors && gfc_current_ns; gfc_current_ns = gfc_current_ns->sibling)
+    {
+      gfc_current_locus = gfc_current_ns->proc_name->declared_at;
+      gfc_derived_types = gfc_current_ns->derived_types;
+      gfc_generate_code (gfc_current_ns);
+      gfc_current_ns->translated = 1;
+    }
+
+  /* Clean up all the namespaces after translation.  */
+  gfc_current_ns = gfc_global_ns_list;
+  for (;gfc_current_ns;)
+    {
+      gfc_namespace *ns = gfc_current_ns->sibling;
+      gfc_derived_types = gfc_current_ns->derived_types;
+      gfc_done_2 ();
+      gfc_current_ns = ns;
+    }
+
+  clean_up_modules (gfc_gsym_root);
 }
 
 
@@ -3933,15 +4001,24 @@ loop:
       gfc_dump_module (s.sym->name, errors_before == errors);
       if (errors == 0)
 	gfc_generate_module_code (gfc_current_ns);
+      pop_state ();
+      if (!gfc_option.flag_whole_file)
+	gfc_done_2 ();
+      else
+	{
+	  gfc_current_ns->derived_types = gfc_derived_types;
+	  gfc_derived_types = NULL;
+	  gfc_current_ns = NULL;
+	}
     }
   else
     {
       if (errors == 0)
 	gfc_generate_code (gfc_current_ns);
+      pop_state ();
+      gfc_done_2 ();
     }
 
-  pop_state ();
-  gfc_done_2 ();
   goto loop;
 
 prog_units:
@@ -3964,35 +4041,23 @@ prog_units:
   if (!gfc_option.flag_whole_file)
     goto termination;
 
-  /* Do the resolution.  */ 
-  gfc_current_ns = gfc_global_ns_list;
-  for (; gfc_current_ns; gfc_current_ns = gfc_current_ns->sibling)
-    {
-      gfc_current_locus = gfc_current_ns->proc_name->declared_at;
-      gfc_resolve (gfc_current_ns);
-    }
+  /* Do the resolution.  */
+  resolve_all_program_units (gfc_global_ns_list);
 
   /* Do the parse tree dump.  */ 
-  gfc_current_ns = gfc_option.dump_parse_tree ? gfc_global_ns_list : NULL;
+  gfc_current_ns
+	= gfc_option.dump_parse_tree ? gfc_global_ns_list : NULL;
+
   for (; gfc_current_ns; gfc_current_ns = gfc_current_ns->sibling)
     {
       gfc_dump_parse_tree (gfc_current_ns, stdout);
-      fputs ("-----------------------------------------\n\n", stdout);
+      fputs ("------------------------------------------\n\n", stdout);
     }
 
-  gfc_current_ns = gfc_global_ns_list;
-  gfc_get_errors (NULL, &errors);
-
-  /* Do the translation.  This could be in a different order to
-     resolution if there are forward references in the file.  */
-  for (; !errors && gfc_current_ns; gfc_current_ns = gfc_current_ns->sibling)
-    {
-      gfc_current_locus = gfc_current_ns->proc_name->declared_at;
-      gfc_generate_code (gfc_current_ns);
-    }
+  /* Do the translation.  */
+  translate_all_program_units (gfc_global_ns_list);
 
 termination:
-  gfc_free_dt_list ();
 
   gfc_end_source_files ();
   return SUCCESS;

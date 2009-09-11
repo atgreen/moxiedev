@@ -1,6 +1,6 @@
 /* MIPS-specific support for 32-bit ELF
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2007 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
 
    Most of the information added by Ian Lance Taylor, Cygnus Support,
    <ian@cygnus.com>.
@@ -2289,7 +2289,7 @@ mips_elf_sym_is_global (bfd *abfd ATTRIBUTE_UNUSED, asymbol *sym)
   if (SGI_COMPAT (abfd))
     return (sym->flags & BSF_SECTION_SYM) == 0;
   else
-    return ((sym->flags & (BSF_GLOBAL | BSF_WEAK)) != 0
+    return ((sym->flags & (BSF_GLOBAL | BSF_WEAK | BSF_GNU_UNIQUE)) != 0
 	    || bfd_is_und_section (bfd_get_section (sym))
 	    || bfd_is_com_section (bfd_get_section (sym)));
 }

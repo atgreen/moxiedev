@@ -39,7 +39,9 @@ prefix = @prefix@
 
 # Nonstandard autoconf-set variables.
 enable_shared = @enable_shared@
+
 LN_S=@LN_S@
+AWK=@AWK@
 
 # Variables for the user (or the top level) to override.
 objext=.o
@@ -171,9 +173,15 @@ Makefile: $(srcdir)/Makefile.in config.status
 config.status: $(srcdir)/configure
 	$(SHELL) ./config.status --recheck
 
-$(srcdir)/configure: @MAINT@ $(srcdir)/configure.ac \
-	$(srcdir)/../config/acx.m4 $(srcdir)/../config/override.m4
-	cd $(srcdir) && autoconf
+AUTOCONF = autoconf
+configure_deps = \
+	$(srcdir)/configure.ac \
+	$(srcdir)/../config/acx.m4 \
+	$(srcdir)/../config/override.m4 \
+	$(srcdir)/../config/multi.m4
+
+$(srcdir)/configure: @MAINT@ $(configure_deps)
+	cd $(srcdir) && $(AUTOCONF)
 
 # Don't export variables to the environment, in order to not confuse
 # configure.

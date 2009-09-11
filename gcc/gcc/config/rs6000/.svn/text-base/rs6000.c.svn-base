@@ -979,6 +979,7 @@ static void rs6000_init_dwarf_reg_sizes_extra (tree);
 static rtx rs6000_legitimize_address (rtx, rtx, enum machine_mode);
 static rtx rs6000_debug_legitimize_address (rtx, rtx, enum machine_mode);
 static rtx rs6000_legitimize_tls_address (rtx, enum tls_model);
+static rtx rs6000_delegitimize_address (rtx);
 static void rs6000_output_dwarf_dtprel (FILE *, int, rtx) ATTRIBUTE_UNUSED;
 static rtx rs6000_tls_get_addr (void);
 static rtx rs6000_got_sym (void);
@@ -1088,6 +1089,7 @@ static const enum reg_class *rs6000_ira_cover_classes (void);
 
 const int INSN_NOT_AVAILABLE = -1;
 static enum machine_mode rs6000_eh_return_filter_mode (void);
+static bool rs6000_can_eliminate (const int, const int);
 
 /* Hash table stuff for keeping track of TOC entries.  */
 
@@ -1347,10 +1349,8 @@ static const struct attribute_spec rs6000_attribute_table[] =
 
 /* On rs6000, function arguments are promoted, as are function return
    values.  */
-#undef TARGET_PROMOTE_FUNCTION_ARGS
-#define TARGET_PROMOTE_FUNCTION_ARGS hook_bool_const_tree_true
-#undef TARGET_PROMOTE_FUNCTION_RETURN
-#define TARGET_PROMOTE_FUNCTION_RETURN hook_bool_const_tree_true
+#undef TARGET_PROMOTE_FUNCTION_MODE
+#define TARGET_PROMOTE_FUNCTION_MODE default_promote_function_mode_always_promote
 
 #undef TARGET_RETURN_IN_MEMORY
 #define TARGET_RETURN_IN_MEMORY rs6000_return_in_memory
@@ -1437,6 +1437,9 @@ static const struct attribute_spec rs6000_attribute_table[] =
 #undef TARGET_USE_BLOCKS_FOR_CONSTANT_P
 #define TARGET_USE_BLOCKS_FOR_CONSTANT_P rs6000_use_blocks_for_constant_p
 
+#undef TARGET_DELEGITIMIZE_ADDRESS
+#define TARGET_DELEGITIMIZE_ADDRESS rs6000_delegitimize_address
+
 #undef TARGET_BUILTIN_RECIPROCAL
 #define TARGET_BUILTIN_RECIPROCAL rs6000_builtin_reciprocal
 
@@ -1454,6 +1457,9 @@ static const struct attribute_spec rs6000_attribute_table[] =
 
 #undef TARGET_LEGITIMATE_ADDRESS_P
 #define TARGET_LEGITIMATE_ADDRESS_P rs6000_legitimate_address_p
+
+#undef TARGET_CAN_ELIMINATE
+#define TARGET_CAN_ELIMINATE rs6000_can_eliminate
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 
@@ -2200,7 +2206,7 @@ rs6000_override_options (const char *default_cpu)
   };
 
   /* Set the pointer size.  */
-  if (TARGET_POWERPC64)
+  if (TARGET_64BIT)
     {
       rs6000_pmode = (int)DImode;
       rs6000_pointer_size = 64;
@@ -4859,6 +4865,8 @@ static rtx
 rs6000_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
 			   enum machine_mode mode)
 {
+  unsigned int extra = 0;
+
   if (!reg_offset_addressing_ok_p (mode))
     {
       if (virtual_stack_registers_memory_p (x))
@@ -4883,10 +4891,33 @@ rs6000_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
       if (model != 0)
 	return rs6000_legitimize_tls_address (x, model);
     }
+
+  switch (mode)
+    {
+    case DFmode:
+    case DDmode:
+      extra = 4;
+      break;
+    case DImode:
+      if (!TARGET_POWERPC64)
+	extra = 4;
+      break;
+    case TFmode:
+    case TDmode:
+      extra = 12;
+      break;
+    case TImode:
+      extra = TARGET_POWERPC64 ? 8 : 12;
+      break;
+    default:
+      break;
+    }
+
   if (GET_CODE (x) == PLUS
       && GET_CODE (XEXP (x, 0)) == REG
       && GET_CODE (XEXP (x, 1)) == CONST_INT
-      && (unsigned HOST_WIDE_INT) (INTVAL (XEXP (x, 1)) + 0x8000) >= 0x10000
+      && ((unsigned HOST_WIDE_INT) (INTVAL (XEXP (x, 1)) + 0x8000)
+	  >= 0x10000 - extra)
       && !((TARGET_POWERPC64
 	    && (mode == DImode || mode == TImode)
 	    && (INTVAL (XEXP (x, 1)) & 3) != 0)
@@ -4898,10 +4929,12 @@ rs6000_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
       HOST_WIDE_INT high_int, low_int;
       rtx sum;
       low_int = ((INTVAL (XEXP (x, 1)) & 0xffff) ^ 0x8000) - 0x8000;
+      if (low_int >= 0x8000 - extra)
+	low_int = 0;
       high_int = INTVAL (XEXP (x, 1)) - low_int;
       sum = force_operand (gen_rtx_PLUS (Pmode, XEXP (x, 0),
 					 GEN_INT (high_int)), 0);
-      return gen_rtx_PLUS (Pmode, sum, GEN_INT (low_int));
+      return plus_constant (sum, low_int);
     }
   else if (GET_CODE (x) == PLUS
 	   && GET_CODE (XEXP (x, 0)) == REG
@@ -5049,6 +5082,33 @@ rs6000_debug_legitimize_address (rtx x, rtx oldx, enum machine_mode mode)
     emit_insn (insns);
 
   return ret;
+}
+
+/* If ORIG_X is a constant pool reference, return its known value,
+   otherwise ORIG_X.  */
+
+static rtx
+rs6000_delegitimize_address (rtx x)
+{
+  rtx orig_x = delegitimize_mem_from_attrs (x);
+
+  x = orig_x;
+
+  if (!MEM_P (x))
+    return orig_x;
+
+  x = XEXP (x, 0);
+
+  if (legitimate_constant_pool_address_p (x)
+      && GET_CODE (XEXP (x, 1)) == CONST
+      && GET_CODE (XEXP (XEXP (x, 1), 0)) == MINUS
+      && GET_CODE (XEXP (XEXP (XEXP (x, 1), 0), 0)) == SYMBOL_REF
+      && constant_pool_expr_p (XEXP (XEXP (XEXP (x, 1), 0), 0))
+      && GET_CODE (XEXP (XEXP (XEXP (x, 1), 0), 1)) == SYMBOL_REF
+      && toc_relative_expr_p (XEXP (XEXP (XEXP (x, 1), 0), 1)))
+    return get_pool_constant (XEXP (XEXP (XEXP (x, 1), 0), 0));
+
+  return orig_x;
 }
 
 /* This is called from dwarf2out.c via TARGET_ASM_OUTPUT_DWARF_DTPREL.
@@ -10969,7 +11029,7 @@ rs6000_init_builtins (void)
     {
       tdecl = build_decl (BUILTINS_LOCATION,
 			  TYPE_DECL, get_identifier ("__vector double"),
-			  unsigned_V2DI_type_node);
+			  V2DF_type_node);
       TYPE_NAME (V2DF_type_node) = tdecl;
       (*lang_hooks.decls.pushdecl) (tdecl);
 
@@ -17583,6 +17643,15 @@ create_TOC_reference (rtx symbol)
 	       gen_rtx_UNSPEC (Pmode, gen_rtvec (1, symbol), UNSPEC_TOCREL)));
 }
 
+/* Issue assembly directives that create a reference to the given DWARF
+   FRAME_TABLE_LABEL from the current function section.  */
+void
+rs6000_aix_asm_output_dwarf_table_ref (char * frame_table_label)
+{
+  fprintf (asm_out_file, "\t.ref %s\n",
+	   TARGET_STRIP_NAME_ENCODING (frame_table_label));
+}
+
 /* If _Unwind_* has been called from within the same module,
    toc register is not guaranteed to be saved to 40(1) on function
    entry.  Save it there in that case.  */
@@ -20092,7 +20161,6 @@ rs6000_output_mi_thunk (FILE *file, tree thunk_fndecl ATTRIBUTE_UNUSED,
   final_start_function (insn, file, 1);
   final (insn, file, 1);
   final_end_function ();
-  free_after_compilation (cfun);
 
   reload_completed = 0;
   epilogue_completed = 0;
@@ -21267,7 +21335,7 @@ rs6000_debug_adjust_cost (rtx insn, rtx link, rtx dep_insn, int cost)
 static bool
 is_microcoded_insn (rtx insn)
 {
-  if (!insn || !INSN_P (insn)
+  if (!insn || !NONDEBUG_INSN_P (insn)
       || GET_CODE (PATTERN (insn)) == USE
       || GET_CODE (PATTERN (insn)) == CLOBBER)
     return false;
@@ -21295,7 +21363,7 @@ is_microcoded_insn (rtx insn)
 static bool
 is_cracked_insn (rtx insn)
 {
-  if (!insn || !INSN_P (insn)
+  if (!insn || !NONDEBUG_INSN_P (insn)
       || GET_CODE (PATTERN (insn)) == USE
       || GET_CODE (PATTERN (insn)) == CLOBBER)
     return false;
@@ -21323,7 +21391,7 @@ is_cracked_insn (rtx insn)
 static bool
 is_branch_slot_insn (rtx insn)
 {
-  if (!insn || !INSN_P (insn)
+  if (!insn || !NONDEBUG_INSN_P (insn)
       || GET_CODE (PATTERN (insn)) == USE
       || GET_CODE (PATTERN (insn)) == CLOBBER)
     return false;
@@ -21482,7 +21550,7 @@ static bool
 is_nonpipeline_insn (rtx insn)
 {
   enum attr_type type;
-  if (!insn || !INSN_P (insn)
+  if (!insn || !NONDEBUG_INSN_P (insn)
       || GET_CODE (PATTERN (insn)) == USE
       || GET_CODE (PATTERN (insn)) == CLOBBER)
     return false;
@@ -22061,8 +22129,8 @@ insn_must_be_first_in_group (rtx insn)
   enum attr_type type;
 
   if (!insn
-      || insn == NULL_RTX
       || GET_CODE (insn) == NOTE
+      || DEBUG_INSN_P (insn)
       || GET_CODE (PATTERN (insn)) == USE
       || GET_CODE (PATTERN (insn)) == CLOBBER)
     return false;
@@ -22192,8 +22260,8 @@ insn_must_be_last_in_group (rtx insn)
   enum attr_type type;
 
   if (!insn
-      || insn == NULL_RTX
       || GET_CODE (insn) == NOTE
+      || DEBUG_INSN_P (insn)
       || GET_CODE (PATTERN (insn)) == USE
       || GET_CODE (PATTERN (insn)) == CLOBBER)
     return false;
@@ -22319,7 +22387,7 @@ force_new_group (int sched_verbose, FILE *dump, rtx *group_insns,
   bool end = *group_end;
   int i;
 
-  if (next_insn == NULL_RTX)
+  if (next_insn == NULL_RTX || DEBUG_INSN_P (next_insn))
     return can_issue_more;
 
   if (rs6000_sched_insert_nops > sched_finish_regroup_exact)
@@ -22803,7 +22871,15 @@ rs6000_handle_altivec_attribute (tree *node,
   mode = TYPE_MODE (type);
 
   /* Check for invalid AltiVec type qualifiers.  */
-  if (!TARGET_VSX)
+  if (type == long_double_type_node)
+    error ("use of %<long double%> in AltiVec types is invalid");
+  else if (type == boolean_type_node)
+    error ("use of boolean types in AltiVec types is invalid");
+  else if (TREE_CODE (type) == COMPLEX_TYPE)
+    error ("use of %<complex%> in AltiVec types is invalid");
+  else if (DECIMAL_FLOAT_MODE_P (mode))
+    error ("use of decimal floating point types in AltiVec types is invalid");
+  else if (!TARGET_VSX)
     {
       if (type == long_unsigned_type_node || type == long_integer_type_node)
 	{
@@ -22821,14 +22897,6 @@ rs6000_handle_altivec_attribute (tree *node,
       else if (type == double_type_node)
 	error ("use of %<double%> in AltiVec types is invalid without -mvsx");
     }
-  else if (type == long_double_type_node)
-    error ("use of %<long double%> in AltiVec types is invalid");
-  else if (type == boolean_type_node)
-    error ("use of boolean types in AltiVec types is invalid");
-  else if (TREE_CODE (type) == COMPLEX_TYPE)
-    error ("use of %<complex%> in AltiVec types is invalid");
-  else if (DECIMAL_FLOAT_MODE_P (mode))
-    error ("use of decimal floating point types in AltiVec types is invalid");
 
   switch (altivec_type)
     {
@@ -24985,6 +25053,26 @@ rs6000_libcall_value (enum machine_mode mode)
     regno = GP_ARG_RETURN;
 
   return gen_rtx_REG (mode, regno);
+}
+
+
+/* Given FROM and TO register numbers, say whether this elimination is allowed.
+   Frame pointer elimination is automatically handled.
+
+   For the RS/6000, if frame pointer elimination is being done, we would like
+   to convert ap into fp, not sp.
+
+   We need r30 if -mminimal-toc was specified, and there are constant pool
+   references.  */
+
+bool
+rs6000_can_eliminate (const int from, const int to)
+{
+  return (from == ARG_POINTER_REGNUM && to == STACK_POINTER_REGNUM
+          ? ! frame_pointer_needed
+          : from == RS6000_PIC_OFFSET_TABLE_REGNUM
+            ? ! TARGET_MINIMAL_TOC || TARGET_NO_TOC || get_pool_size () == 0
+            : true);
 }
 
 /* Define the offset between two registers, FROM to be eliminated and its

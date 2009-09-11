@@ -1,5 +1,5 @@
 /* bfin-lex.l  ADI Blackfin lexer
-   Copyright 2005, 2006, 2007
+   Copyright 2005, 2006, 2007, 2008
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -63,8 +63,8 @@ int yylex (void);
 [sS][yY][sS][cC][fF][gG]       _REG.regno = REG_SYSCFG; return REG;
 [sS][tT][iI]                            return STI;
 [sS][sS][yY][nN][cC]                    return SSYNC;
-[sS][pP]"."[lL]                         _REG.regno = REG_SP; return HALF_REG;
-[sS][pP]"."[hH]                         _REG.regno = REG_SP | F_REG_HIGH; return HALF_REG;
+[sS][pP]"."[lL]                         _REG.regno = REG_SP; _REG.flags = F_REG_LOW; return HALF_REG;
+[sS][pP]"."[hH]                         _REG.regno = REG_SP; _REG.flags = F_REG_HIGH; return HALF_REG;
 [sS][pP]                                _REG.regno = REG_SP; return REG;
 [sS][iI][gG][nN][bB][iI][tT][sS]        return SIGNBITS;
 [sS][iI][gG][nN]                        return SIGN;
@@ -158,8 +158,8 @@ int yylex (void);
 [gG][eE]                                return GE;
 [fF][uU]                                yylval.value = M_FU; return MMOD;
 [fF][pP]         _REG.regno = REG_FP; return REG;
-[fF][pP]"."[lL]  _REG.regno = REG_FP; return HALF_REG;
-[fF][pP]"."[hH]  _REG.regno = REG_FP | F_REG_HIGH; return HALF_REG;
+[fF][pP]"."[lL]  _REG.regno = REG_FP; _REG.flags = F_REG_LOW; return HALF_REG;
+[fF][pP]"."[hH]  _REG.regno = REG_FP; _REG.flags = F_REG_HIGH; return HALF_REG;
 
 [eE][xX][tT][rR][aA][cC][tT]            return EXTRACT;
 [eE][xX][pP][aA][dD][jJ]                return EXPADJ;
@@ -215,7 +215,6 @@ int yylex (void);
 [aA][vV]0[sS] _REG.regno = S_AV0S; return STATUS_REG;
 [aA][vV]1 _REG.regno = S_AV1;  return STATUS_REG;
 [aA][vV]1[sS] _REG.regno = S_AV1S; return STATUS_REG;
-[vV] _REG.regno = S_V; return STATUS_REG;
 [vV][sS]  _REG.regno = S_VS;   return STATUS_REG;
 
 
@@ -509,6 +508,7 @@ static long parse_int (char **end)
 static int parse_reg (Register *r, int cl, char *rt)
 {
   r->regno = cl | (rt[1] - '0');
+  r->flags = F_REG_NONE;
   return REG;
 }
 
@@ -524,11 +524,12 @@ static int parse_halfreg (Register *r, int cl, char *rt)
 
       case 'l':
       case 'L':
+	r->flags = F_REG_LOW;
 	break;
 
       case 'h':
       case 'H':
-	r->regno |= F_REG_HIGH;
+	r->flags = F_REG_HIGH;
 	break;
     }
 

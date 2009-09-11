@@ -30,7 +30,9 @@
 // 17.4.1.2 Headers
 
 // C
+#ifndef _GLIBCXX_NO_ASSERT
 #include <cassert>
+#endif
 #include <cctype>
 #include <cerrno>
 #include <cfloat>
@@ -98,6 +100,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <forward_list>
+#include <future>
 #include <mutex>
 #include <random>
 #include <ratio>

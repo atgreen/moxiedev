@@ -360,13 +360,13 @@ together with GCC@.
 
 @heading Tools/packages necessary for modifying GCC
 @table @asis
-@item autoconf version 2.59
-@itemx GNU m4 version 1.4 (or later)
+@item autoconf version 2.64
+@itemx GNU m4 version 1.4.6 (or later)
 
 Necessary when modifying @file{configure.ac}, @file{aclocal.m4}, etc.@:
 to regenerate @file{configure} and @file{config.in} files.
 
-@item automake version 1.9.6
+@item automake version 1.11
 
 Necessary when modifying a @file{Makefile.am} file to regenerate its
 associated @file{Makefile.in}.
@@ -377,8 +377,8 @@ file.  Specifically this applies to the @file{gcc}, @file{intl},
 as any of their subdirectories.
 
 For directories that use automake, GCC requires the latest release in
-the 1.9.x series, which is currently 1.9.6.  When regenerating a directory
-to a newer version, please update all the directories using an older 1.9.x
+the 1.11 series, which is currently 1.11.  When regenerating a directory
+to a newer version, please update all the directories using an older 1.11
 to the latest released version.
 
 @item gettext version 0.14.5 (or later)
@@ -714,18 +714,34 @@ The default is @file{@var{exec-prefix}/libexec}.
 Specify the installation directory for the shared libgcc library.  The
 default is @file{@var{libdir}}.
 
+@item --datarootdir=@var{dirname}
+Specify the root of the directory tree for read-only architecture-independent
+data files referenced by GCC@.  The default is @file{@var{prefix}/share}.
+
 @item --infodir=@var{dirname}
 Specify the installation directory for documentation in info format.
-The default is @file{@var{prefix}/info}.
+The default is @file{@var{datarootdir}/info}.
 
 @item --datadir=@var{dirname}
 Specify the installation directory for some architecture-independent
-data files referenced by GCC@.  The default is @file{@var{prefix}/share}.
+data files referenced by GCC@.  The default is @file{@var{datarootdir}}.
+
+@item --docdir=@var{dirname}
+Specify the installation directory for documentation files (other
+than Info) for GCC@.  The default is @file{@var{datarootdir}/doc}.
+
+@item --htmldir=@var{dirname}
+Specify the installation directory for HTML documentation files.
+The default is @file{@var{docdir}}.
+
+@item --pdfdir=@var{dirname}
+Specify the installation directory for PDF documentation files.
+The default is @file{@var{docdir}}.
 
 @item --mandir=@var{dirname}
 Specify the installation directory for manual pages.  The default is
-@file{@var{prefix}/man}.  (Note that the manual pages are only extracts from
-the full GCC manuals, which are provided in Texinfo format.  The manpages
+@file{@var{datarootdir}/man}.  (Note that the manual pages are only extracts
+from the full GCC manuals, which are provided in Texinfo format.  The manpages
 are derived by an automatic conversion process from parts of the full
 manual.)
 
@@ -1595,6 +1611,13 @@ option), if the linker supports it.  If you specify
 support @option{--build-id} option, a warning is issued and the
 @option{--enable-linker-build-id} option is ignored.  The default is off.
 
+@item --enable-gnu-unique-object
+@itemx --disable-gnu-unique-object
+Tells GCC to use the gnu_unique_object relocation for C++ template
+static data members and inline function local statics.  Enabled by
+default for a native toolchain with an assembler that accepts it and
+GLIBC 2.11 or above, otherwise disabled.
+
 @end table
 
 @subheading Cross-Compiler-Specific Options
@@ -2057,11 +2080,13 @@ the one you are building on: for example, you could build a
 @code{powerpc64-unknown-linux-gnu} host.  In this case, pass
 @option{--enable-bootstrap} to the configure script.
 
-@code{BUILD_CONFIG} can be used to bring in additional customization to
-the build.  It can be set to a whitespace-separated list of names.  For
-each such @code{NAME}, top-level @file{config/@code{NAME}.mk} will be
-included by the top-level @file{Makefile}, bringing in any settings it
-contains.  Some examples are:
+@code{BUILD_CONFIG} can be used to bring in additional customization
+to the build.  It can be set to a whitespace-separated list of names.
+For each such @code{NAME}, top-level @file{config/@code{NAME}.mk} will
+be included by the top-level @file{Makefile}, bringing in any settings
+it contains.  The default @code{BUILD_CONFIG} can be set using the
+configure option @option{--with-build-config=@code{NAME}...}.  Some
+examples of supported build configurations are:
 
 @table @asis
 @item @samp{bootstrap-O1}
@@ -2073,8 +2098,56 @@ Removes any @option{-O}-started option from @code{BOOT_CFLAGS}, and adds
 Analogous to @code{bootstrap-O1}.
 
 @item @samp{bootstrap-debug}
-Builds stage2 without debug information, and uses
-@file{contrib/compare-debug} to compare object files.
+Verifies that the compiler generates the same executable code, whether
+or not it is asked to emit debug information.  To this end, this
+option builds stage2 host programs without debug information, and uses
+@file{contrib/compare-debug} to compare them with the stripped stage3
+object files.  If @code{BOOT_CFLAGS} is overridden so as to not enable
+debug information, stage2 will have it, and stage3 won't.  This option
+is enabled by default when GCC bootstrapping is enabled, if
+@code{strip} can turn object files compiled with and without debug
+info into identical object files.  In addition to better test
+coverage, this option makes default bootstraps faster and leaner.
+
+@item @samp{bootstrap-debug-big}
+Rather than comparing stripped object files, as in
+@code{bootstrap-debug}, this option saves internal compiler dumps
+during stage2 and stage3 and compares them as well, which helps catch
+additional potential problems, but at a great cost in terms of disk
+space.  It can be specified in addition to @samp{bootstrap-debug}.
+
+@item @samp{bootstrap-debug-lean}
+This option saves disk space compared with @code{bootstrap-debug-big},
+but at the expense of some recompilation.  Instead of saving the dumps
+of stage2 and stage3 until the final compare, it uses
+@option{-fcompare-debug} to generate, compare and remove the dumps
+during stage3, repeating the compilation that already took place in
+stage2, whose dumps were not saved.
+
+@item @samp{bootstrap-debug-lib}
+This option tests executable code invariance over debug information
+generation on target libraries, just like @code{bootstrap-debug-lean}
+tests it on host programs.  It builds stage3 libraries with
+@option{-fcompare-debug}, and it can be used along with any of the
+@code{bootstrap-debug} options above.
+
+There aren't @code{-lean} or @code{-big} counterparts to this option
+because most libraries are only build in stage3, so bootstrap compares
+would not get significant coverage.  Moreover, the few libraries built
+in stage2 are used in stage3 host programs, so we wouldn't want to
+compile stage2 libraries with different options for comparison purposes.
+
+@item @samp{bootstrap-debug-ckovw}
+Arranges for error messages to be issued if the compiler built on any
+stage is run without the option @option{-fcompare-debug}.  This is
+useful to verify the full @option{-fcompare-debug} testing coverage.  It
+must be used along with @code{bootstrap-debug-lean} and
+@code{bootstrap-debug-lib}.
+
+@item @samp{bootstrap-time}
+Arranges for the run time of each program started by the GCC driver,
+built in any stage, to be logged to @file{time.log}, in the top level of
+the build tree.
 
 @end table
 
@@ -2588,7 +2661,7 @@ printing with programs such as @command{dvips}.  Alternately, by using
 @samp{make pdf} in place of @samp{make dvi}, you can create documentation
 in the form of @file{.pdf} files; this requires @command{texi2pdf}, which
 is included with Texinfo version 4.8 and later.  You can also
-@uref{http://www.gnu.org/order/order.html,,buy printed manuals from the
+@uref{http://shop.fsf.org/,,buy printed manuals from the
 Free Software Foundation}, though such manuals may not be for the most
 recent version of GCC@.
 
@@ -3106,48 +3179,30 @@ and includes all the necessary compilation tools and libraries.
 @end html
 @heading @anchor{x-x-freebsd}*-*-freebsd*
 
-The version of binutils installed in @file{/usr/bin} probably works with
-this release of GCC@.  However, on FreeBSD 4, bootstrapping against the
-latest FSF binutils is known to improve overall testsuite results; and,
-on FreeBSD/alpha, using binutils 2.14 or later is required to build libjava.
+Support for FreeBSD 1 was discontinued in GCC 3.2.  Support for
+FreeBSD 2 (and any mutant a.out variants of FreeBSD 3) was
+discontinued in GCC 4.0.
 
-Support for FreeBSD 1 was discontinued in GCC 3.2.
-
-Support for FreeBSD 2 will be discontinued after GCC 3.4.  The
-following was true for GCC 3.1 but the current status is unknown.
-For FreeBSD 2 or any mutant a.out versions of FreeBSD 3: All
-configuration support and files as shipped with GCC 2.95 are still in
-place.  FreeBSD 2.2.7 has been known to bootstrap completely; however,
-it is unknown which version of binutils was used (it is assumed that it
-was the system copy in @file{/usr/bin}) and C++ EH failures were noted.
-
-For FreeBSD using the ELF file format: DWARF 2 debugging is now the
-default for all CPU architectures.  It had been the default on
-FreeBSD/alpha since its inception.  You may use @option{-gstabs} instead
-of @option{-g}, if you really want the old debugging format.  There are
+We support FreeBSD using the ELF file format with DWARF 2 debugging
+for all CPU architectures.  You may use @option{-gstabs} instead of
+@option{-g}, if you really want the old debugging format.  There are
 no known issues with mixing object files and libraries with different
-debugging formats.  Otherwise, this release of GCC should now match more
-of the configuration used in the stock FreeBSD configuration of GCC@.  In
-particular, @option{--enable-threads} is now configured by default.
-However, as a general user, do not attempt to replace the system
-compiler with this release.  Known to bootstrap and check with good
-results on FreeBSD 4.9-STABLE and 5-CURRENT@.  In the past, known to
-bootstrap and check with good results on FreeBSD 3.0, 3.4, 4.0, 4.2,
-4.3, 4.4, 4.5, 4.8-STABLE@.
+debugging formats.  Otherwise, this release of GCC should now match
+more of the configuration used in the stock FreeBSD configuration of
+GCC@.  In particular, @option{--enable-threads} is now configured by
+default.  However, as a general user, do not attempt to replace the
+system compiler with this release.  Known to bootstrap and check with
+good results on FreeBSD 7.2-STABLE@.  In the past, known to bootstrap
+and check with good results on FreeBSD 3.0, 3.4, 4.0, 4.2, 4.3, 4.4,
+4.5, 4.8, 4.9 and 5-CURRENT@.
 
-In principle, @option{--enable-threads} is now compatible with
-@option{--enable-libgcj} on FreeBSD@.  However, it has only been built
-and tested on @samp{i386-*-freebsd[45]} and @samp{alpha-*-freebsd[45]}.
-The static
-library may be incorrectly built (symbols are missing at link time).
-There is a rare timing-based startup hang (probably involves an
-assumption about the thread library).  Multi-threaded boehm-gc (required for
-libjava) exposes severe threaded signal-handling bugs on FreeBSD before
-4.5-RELEASE@.  Other CPU architectures
-supported by FreeBSD will require additional configuration tuning in, at
-the very least, both boehm-gc and libffi.
-
-Shared @file{libgcc_s.so} is now built and installed by default.
+The version of binutils installed in @file{/usr/bin} probably works
+with this release of GCC@.  Bootstrapping against the latest GNU
+binutils and/or the version found in /usr/ports/devel/binutils has
+been known to enable additional features and improve overall testsuite
+results.  However, it is currently known that boehm-gc (which itself
+is required for java) may not configure properly on FreeBSD prior to
+the FreeBSD 7.0 release with GNU binutils after 2.16.1.
 
 @html
 <hr />

@@ -498,11 +498,6 @@ extern unsigned int mep_selected_isa;
   {FRAME_POINTER_REGNUM, STACK_POINTER_REGNUM}			\
 }
 
-#define CAN_ELIMINATE(FROM, TO)					\
- ((FROM) == ARG_POINTER_REGNUM && (TO) == STACK_POINTER_REGNUM	\
-  ? ! frame_pointer_needed					\
-  : 1)
-
 #define INITIAL_ELIMINATION_OFFSET(FROM, TO, OFFSET) \
 	(OFFSET) = mep_elimination_offset (FROM, TO)
 
@@ -536,7 +531,9 @@ typedef struct
 
 #define FUNCTION_ARG_REGNO_P(REGNO) \
 	(((REGNO) >= 1 && (REGNO) <= 4) \
-	 || ((REGNO) >= FIRST_CR_REGNO + 1 && (REGNO) <= FIRST_CR_REGNO + 4))
+	 || ((REGNO) >= FIRST_CR_REGNO + 1 \
+	     && (REGNO) <= FIRST_CR_REGNO + 4 \
+	     && TARGET_COP))
 
 #define RETURN_VALUE_REGNUM	 0
 

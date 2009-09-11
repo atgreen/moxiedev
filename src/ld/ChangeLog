@@ -1,3 +1,230 @@
+2009-09-07  Tristan Gingold  <gingold@adacore.com>
+
+	* po/ld.pot: Regenerate.
+
+2009-09-05  Martin Thuresson  <martin@mtme.org>
+
+	* emultempl/elf32.em (gld${EMULATION_NAME}_load_symbols,
+	gld${EMULATION_NAME}_try_needed): Rename variable class to
+	link_class.
+
+2009-09-04  Tristan Gingold  <gingold@adacore.com>
+
+	* NEWS: Add marker for 2.20.
+
+2009-09-04  Alan Modra  <amodra@bigpond.net.au>
+
+	* scripttempl/elf.sc (.text): Add cold text sections.
+
+2009-09-04  Jie Zhang  <jie.zhang@analog.com>
+
+	* emulparams/elf32bfinfd.sh (OTHER_SECTIONS): Add .l2.text
+	and .l2.data.
+
+2009-09-03  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* scripttempl/pe.sc (.text): Add "*(.text.*)" in order to catch
+	new GCC hot/cold/unlikely partitions.
+	* scripttempl/pep.sc: Likewise.
+	* scripttempl/epocpe.sc: Likewise.
+	* scripttempl/mcorepe.sc: Likewise.
+	* scripttempl/ppcpe.sc: Likewise.
+
+2009-09-01  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (ldgram.o, ldlex.o, deffilep.o): Supply correct
+	source file name for generated files which may be in $(srcdir).
+	* Makefile.in: Regenerate.
+
+2009-09-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ldver.c (ldversion): Change to "Copyright 2009".
+
+2009-09-01  Jie Zhang  <jie.zhang@analog.com>
+
+	* scripttempl/elf.sc: Add ${USER_LABEL_PREFIX} to _start, etext,
+	_stack and __bss_start.
+	* emulparams/bfin.sh (ENTRY): Remove.
+
+2009-08-30  Alan Modra  <amodra@bigpond.net.au>
+
+	PR ld/10569
+	* ldexp.c (fold_name <MAXPAGESIZE>): Return config.maxpagesize.
+	(fold_name <COMMONPAGESIZE>): Similarly.
+	* ldlang.c (output_target): Make global.
+	* ldlang.h (output_target): Declare.
+	* ldmain.c (main): Set config.maxpagesize from bfd_emul_get_maxpagesize.
+	Similarly for config.commonpagesize.
+	* ldemul.c (set_output_arch_default): Call bfd_emul_set_maxpagesize
+	and bfd_emul_set_commonpagesize.
+	* emultempl/elf32.em (gld${EMULATION_NAME}_handle_option): Don't call
+	bfd_emul_set_maxpagesize or bfd_emul_set_commonpagesize here.
+
+2009-08-29  Martin Thuresson  <martin@mtme.org>
+
+	* ldexp.c (exp_intop, exp_bigintop, exp_relop, exp_binop)
+	(exp_trinop, exp_unop, exp_nameop, exp_assop): Rename variable new
+	to new_e.
+	* ldfile.c (ldfile_add_library_path): Rename variable new to
+	new_dirs. (ldfile_add_arch): Rename variable new to new_arch.
+	* ldlang.c (new_statement, lang_final, lang_add_wild)
+	(lang_target, lang_add_fill, lang_add_data, lang_add_assignment)
+	(lang_add_insert): Rename variable new to new_stmt. (new_afile):
+	Added missing cast. (lang_memory_region_lookup): Rename variable
+	new to new_region. (init_os): Rename variable new to
+	new_userdata. (lang_add_section): Rename variable new to
+	new_section. (ldlang_add_undef): Rename variable new to
+	new_undef. (realsymbol): Rename variable new to new_name.
+
+2009-08-26  Nick Clifton  <nickc@redhat.com>
+
+	PR ld/10555
+	* emultempl/elf32.em (_after_open): Do not create a
+	.note.gnu-build-id section if there are no input files.
+
+2009-08-24  Nick Clifton  <nickc@redhat.com>
+
+	* scripttempl/elfxtensa.sc (DISCARDED): Discard sections with
+	.gnu.lto_ prefix.
+	* scripttempl/armbpabi.sc: Likewise.
+	* scripttempl/elf32sh-symbian.sc: Likewise.
+	* scripttempl/elf64hppa.sc: Likewise.
+	* scripttempl/mep.sc: Likewise.
+
+2009-08-24  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (ldmain.o, ldfile.o): Fix typos in non-fastdep
+	rules.
+	(eelf32_spu.o): Add dependency tracking.
+	* Makefile.in: Regenerate.
+
+	* Makefile.am (am__skiplex, am__skipyacc): New.
+	* Makefile.in: Regenerate.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (bin_PROGRAMS): Renamed from ...
+	(noinst_PROGRAMS): ... this.
+	(transform): Override, including the renaming of ld-new to ld.
+	(install-exec-local): Installation of ld in $(bindir) not needed
+	here any more.
+	(AM_CPPFLAGS): Renamed from ...
+	(INCLUDES): ... this.
+	(MAINTAINERCLEANFILES): Add ld.1.
+	* Makefile.in: Regenerate.
+
+	* Makefile.am (AUTOMAKE_OPTIONS): Remove cygnus.  Add
+	no-texinfo.tex, no-dist, foreign.
+	(TEXINFO_TEX): New variable.
+	(install-data-local): Removed, not needed any more.
+	(all): Dependencies upon info and ld.1 not needed any more.
+	(MKDEP, DEP, DEP1, dep.sed, dep, dep-in, dep-am): Removed.
+	(mkdep generated section): Removed.
+	(ldgram.o, ldlex.o, deffilep.o, ldmain.o, ldfile.o): Rewrite to
+	use automake dependency tracking mechanism.
+	(EXTRA_ld_new_SOURCES): Add pep-dll.c, pe-dll.c, and
+	$(ALL_EMULATIONS:.o=.c) $(ALL_64_EMULATIONS:.o=.c) so their
+	dependencies are tracked too.
+	(BUILT_SOURCES): New, list $(GENERATED_HFILES) to ensure they
+	are built early.
+	* configure.in: Use AM_MAINTAINER_MODE.
+	* aclocal.m4, configure, Makefile.in: Regenerate.
+
+	* Makefile.am (pdf__strip_dir, install-pdf, install-pdf-am)
+	(install-pdf-recursive, html__strip_dir, install-html)
+	(install-html-am, install-html-recursive): Remove.
+	* Makefile.in: Regenerate.
+
+	* Makefile.in: Regenerate.
+	* aclocal.m4: Likewise.
+	* config.in: Likewise.
+	* configure: Likewise.
+
+2009-08-21  Richard Guenther  <rguenther@suse.de>
+
+	* scripttempl/elf.sc: Discard sections with .gnu.lto_ prefix.
+
+2009-08-12  Tristan Gingold  <gingold@adacore.com>
+
+	* ld.h (fat_user_section_struct): Add map_symbol_def_count field.
+	* ldlang.c (hash_entry_addr_cmp): New function.
+	(print_all_symbols): Sort the symbols by address before printing them.
+
+2009-08-10  Alan Modra  <amodra@bigpond.net.au>
+
+	PR 10474
+	* ldemul.c (after_allocation_default): Run lang_relax_sections.
+	* ldlang.h (lang_relax_sections): Declare.
+	* ldlang.c (relax_sections): Delete.
+	(lang_relax_sections): New function.
+	(lang_process): Don't relax directly from here.
+	* emultempl/alphaelf.em (alpha_finish): Call finish_default.
+	* emultempl/armelf.em (arm_elf_after_allocation): Delete.  Move body..
+	(gld${EMULATION_NAME}_finish): ..to here.  Move existing code..
+	(gld${EMULATION_NAME}_after_allocation): ..to here.  New function.
+	(LDEMUL_AFTER_ALLOCATION): Update.
+	* emultempl/avrelf.em (avr_elf_finish, LDEMUL_FINISH): Delete.
+	(avr_elf_after_allocation): New function.
+	(LDEMUL_AFTER_ALLOCATION): Define.
+	* emultempl/elf-generic.em (gld${EMULATION_NAME}_map_segments): Call
+	lang_relax_sections.
+	* emultempl/elf32.em (gld${EMULATION_NAME}_finish): Delete.  Move..
+	(gld${EMULATION_NAME}_after_allocation): ..code to here.  New function.
+	(LDEMUL_AFTER_ALLOCATION, LDEMUL_FINISH): Update.
+	* emultempl/genelf.em (gld${EMULATION_NAME}_finish): Delete.  Move..
+	(gld${EMULATION_NAME}_after_allocation): ..code to here.  New function.
+	(LDEMUL_FINISH): Delete.
+	(LDEMUL_AFTER_ALLOCATION): Define.
+	* emultempl/hppaelf.em (gld${EMULATION_NAME}_finish): Delete.  Move..
+	(gld${EMULATION_NAME}_after_allocation): ..to here.  New function.
+	(LDEMUL_FINISH): Delete.
+	(LDEMUL_AFTER_ALLOCATION): Define.
+	* emultempl/m68hc1xelf.em (m68hc11elf_finish): Delete.  Move..
+	(m68hc11elf_after_allocation): ..to here.  New function.
+	(LDEMUL_FINISH): Delete.
+	(LDEMUL_AFTER_ALLOCATION): Define.
+	* emultempl/m68kelf.em (m68k_elf_after_allocation): Call
+	gld${EMULATION_NAME}_after_allocation.
+	* emultempl/mmix-elfnmmo.em (mmix_after_allocation): Call
+	gld${EMULATION_NAME}_after_allocation.
+	* emultempl/mmo.em (mmo_finish): Delete.  Move body..
+	(gld${EMULATION_NAME}_after_allocation): ..to here.  New function.
+	(LDEMUL_FINISH): Define.
+	* emultempl/ppc64elf.em (ppc_layout_sections_again): Set elf_gp.
+	(gld${EMULATION_NAME}_finish): Move code sizing sections..
+	(gld${EMULATION_NAME}_after_allocation): ..to here.
+	* emultempl/sh64elf.em (sh64_elf_${EMULATION_NAME}_after_allocation):
+	Call gld${EMULATION_NAME}_after_allocation.
+	* emultempl/spuelf.em (gld${EMULATION_NAME}_finish): Delete
+	bfd_elf_discard_info and map_segments call.
+
+2009-08-06  Michael Eager <eager@eagercon.com>
+
+	* Makefile.am: Add eelf32mb_linux.o, eelf32microblaze.o to 
+	ALL_EMULATIONS, targets.
+	* Makefile.in: Regenerate.
+	* configure.tgt: Add microblaze*-linux*, microblaze* targets.
+	* emulparams/elf32mb_linux.sh: New.
+	* emulparams/elf32microblaze.sh. New.
+	* scripttempl/elfmicroblaze.sc: New. 
+
+2009-08-05  Trevor Smigiel  <Trevor_Smigiel@playstation.sony.com>
+
+	* emulparams/elf32_spu.sh (OTHER_READONLY_SECTIONS): Add .fixup
+	section and __fixup_start symbol.
+	* emultempl/spuelf.em (params): Initialize emit_fixups member.
+	(spu_before_allocation): Call spu_elf_size_sections.
+	(OPTION_SPU_EMIT_FIXUPS): Define.
+	(PARSE_AND_LIST_LONGOPTS): Add --emit-fixups.
+	(PARSE_AND_LIST_ARGS_CASES): Handle --emit-fixups.
+	* ld.texinfo (--emit-fixups): Document.
+
+2009-08-04  Alan Modra  <amodra@bigpond.net.au>
+
+   	PR 10474
+	* emultempl/ppc32elf.em (ppc_before_allocation): Test rawsize,
+	not size, after lang_reset_memory_regions.
+
 2009-07-30  Alan Modra  <amodra@bigpond.net.au>
 
 	* emulparams/elf32ppc.sh (PLT): Don't include ".iplt".

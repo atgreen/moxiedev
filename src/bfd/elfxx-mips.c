@@ -1,6 +1,6 @@
 /* MIPS-specific support for ELF
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
 
    Most of the information added by Ian Lance Taylor, Cygnus Support,
    <ian@cygnus.com>.
@@ -667,6 +667,17 @@ static bfd *reldyn_sorting_bfd;
 #define LOAD_INTERLOCKS_P(abfd) \
   (   ((elf_elfheader (abfd)->e_flags & EF_MIPS_ARCH) != E_MIPS_ARCH_1) \
    || ((elf_elfheader (abfd)->e_flags & EF_MIPS_MACH) == E_MIPS_MACH_3900))
+
+/* True if ABFD is for CPUs that are faster if JAL is converted to BAL.
+   This should be safe for all architectures.  We enable this predicate
+   for RM9000 for now.  */
+#define JAL_TO_BAL_P(abfd) \
+  ((elf_elfheader (abfd)->e_flags & EF_MIPS_MACH) == E_MIPS_MACH_9000)
+
+/* True if ABFD is for CPUs that are faster if JALR is converted to BAL.
+   This should be safe for all architectures.  We enable this predicate for
+   all CPUs.  */
+#define JALR_TO_BAL_P(abfd) 1
 
 /* True if ABFD is a PIC object.  */
 #define PIC_OBJECT_P(abfd) \
@@ -5478,8 +5489,8 @@ mips_elf_calculate_relocation (bfd *abfd, bfd *input_bfd,
     case R_MIPS_JALR:
       /* This relocation is only a hint.  In some cases, we optimize
 	 it into a bal instruction.  But we don't try to optimize
-	 branches to the PLT; that will wind up wasting time.  */
-      if (h != NULL && h->root.plt.offset != (bfd_vma) -1)
+	 when the symbol does not resolve locally.  */
+      if (h != NULL && !SYMBOL_CALLS_LOCAL (info, &h->root))
 	return bfd_reloc_continue;
       value = symbol + addend;
       break;
@@ -5586,15 +5597,15 @@ mips_elf_perform_relocation (struct bfd_link_info *info,
       x = (x & ~(0x3f << 26)) | (jalx_opcode << 26);
     }
 
-  /* On the RM9000, bal is faster than jal, because bal uses branch
-     prediction hardware.  If we are linking for the RM9000, and we
-     see jal, and bal fits, use it instead.  Note that this
-     transformation should be safe for all architectures.  */
-  if (bfd_get_mach (input_bfd) == bfd_mach_mips9000
-      && !info->relocatable
+  /* Try converting JAL and JALR to BAL, if the target is in range.  */
+  if (!info->relocatable
       && !require_jalx
-      && ((r_type == R_MIPS_26 && (x >> 26) == 0x3)	    /* jal addr */
-	  || (r_type == R_MIPS_JALR && x == 0x0320f809)))   /* jalr t9 */
+      && ((JAL_TO_BAL_P (input_bfd)
+	   && r_type == R_MIPS_26
+	   && (x >> 26) == 0x3)		/* jal addr */
+	  || (JALR_TO_BAL_P (input_bfd)
+	      && r_type == R_MIPS_JALR
+	      && x == 0x0320f809)))	/* jalr t9 */
     {
       bfd_vma addr;
       bfd_vma dest;
@@ -7490,6 +7501,11 @@ _bfd_mips_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	      bfd_set_error (bfd_error_bad_value);
 	      return FALSE;
 	    }
+	  break;
+
+	  /* This is just a hint; it can safely be ignored.  Don't set
+	     has_static_relocs for the corresponding symbol.  */
+	case R_MIPS_JALR:
 	  break;
 
 	case R_MIPS_32:

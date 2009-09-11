@@ -32,14 +32,16 @@
 #define RECORD_IS_REPLAY \
      (record_list->next || execution_direction == EXEC_REVERSE)
 
-/* These are the core struct of record function.
+/* These are the core structs of the process record functionality.
 
-   An record_entry is a record of the value change of a register
+   A record_entry is a record of the value change of a register
    ("record_reg") or a part of memory ("record_mem").  And each
-   instruction must has a struct record_entry ("record_end") that points out this
-   is the last struct record_entry of this instruction.
+   instruction must have a struct record_entry ("record_end") that
+   indicates that this is the last struct record_entry of this
+   instruction.
 
-   Each struct record_entry is linked to "record_list" by "prev" and "next". */
+   Each struct record_entry is linked to "record_list" by "prev" and
+   "next" pointers.  */
 
 struct record_reg_entry
 {
@@ -51,6 +53,9 @@ struct record_mem_entry
 {
   CORE_ADDR addr;
   int len;
+  /* Set this flag if target memory for this entry
+     can no longer be accessed.  */
+  int mem_entry_not_accessible;
   gdb_byte *val;
 };
 
@@ -154,7 +159,7 @@ record_list_release_next (void)
   while (tmp)
     {
       rec = tmp->next;
-      if (tmp->type == record_reg)
+      if (tmp->type == record_end)
 	record_insn_num--;
       else if (tmp->type == record_reg)
 	xfree (tmp->u.reg.val);
@@ -275,6 +280,7 @@ record_arch_list_add_mem (CORE_ADDR addr, int len)
   rec->type = record_mem;
   rec->u.mem.addr = addr;
   rec->u.mem.len = len;
+  rec->u.mem.mem_entry_not_accessible = 0;
 
   if (target_read_memory (addr, rec->u.mem.val, len))
     {
@@ -510,7 +516,6 @@ record_close (int quitting)
 }
 
 static int record_resume_step = 0;
-static enum target_signal record_resume_siggnal;
 static int record_resume_error;
 
 static void
@@ -518,7 +523,6 @@ record_resume (struct target_ops *ops, ptid_t ptid, int step,
                enum target_signal siggnal)
 {
   record_resume_step = step;
-  record_resume_siggnal = siggnal;
 
   if (!RECORD_IS_REPLAY)
     {
@@ -594,7 +598,7 @@ record_wait (struct target_ops *ops,
 	{
 	  /* This is a single step.  */
 	  return record_beneath_to_wait (record_beneath_to_wait_ops,
-					 ptid, status, 0);
+					 ptid, status, options);
 	}
       else
 	{
@@ -605,7 +609,7 @@ record_wait (struct target_ops *ops,
 	  while (1)
 	    {
 	      ret = record_beneath_to_wait (record_beneath_to_wait_ops,
-					    ptid, status, 0);
+					    ptid, status, options);
 
 	      if (status->kind == TARGET_WAITKIND_STOPPED
 		  && status->value.sig == TARGET_SIGNAL_TRAP)
@@ -634,7 +638,7 @@ record_wait (struct target_ops *ops,
 			}
 		      record_beneath_to_resume (record_beneath_to_resume_ops,
 						ptid, 1,
-						record_resume_siggnal);
+						TARGET_SIGNAL_0);
 		      continue;
 		    }
 		}
@@ -727,32 +731,55 @@ record_wait (struct target_ops *ops,
 	  else if (record_list->type == record_mem)
 	    {
 	      /* mem */
-	      gdb_byte *mem = alloca (record_list->u.mem.len);
-	      if (record_debug > 1)
-		fprintf_unfiltered (gdb_stdlog,
-				    "Process record: record_mem %s to "
-				    "inferior addr = %s len = %d.\n",
-				    host_address_to_string (record_list),
-				    paddress (gdbarch, record_list->u.mem.addr),
-				    record_list->u.mem.len);
+	      /* Nothing to do if the entry is flagged not_accessible.  */
+	      if (!record_list->u.mem.mem_entry_not_accessible)
+		{
+		  gdb_byte *mem = alloca (record_list->u.mem.len);
+		  if (record_debug > 1)
+		    fprintf_unfiltered (gdb_stdlog,
+				        "Process record: record_mem %s to "
+				        "inferior addr = %s len = %d.\n",
+				        host_address_to_string (record_list),
+				        paddress (gdbarch,
+					          record_list->u.mem.addr),
+				        record_list->u.mem.len);
 
-	      if (target_read_memory
-		  (record_list->u.mem.addr, mem, record_list->u.mem.len))
-		error (_("Process record: error reading memory at "
-			 "addr = %s len = %d."),
-		       paddress (gdbarch, record_list->u.mem.addr),
-		       record_list->u.mem.len);
-
-	      if (target_write_memory
-		  (record_list->u.mem.addr, record_list->u.mem.val,
-		   record_list->u.mem.len))
-		error (_
-		       ("Process record: error writing memory at "
-			"addr = %s len = %d."),
-		       paddress (gdbarch, record_list->u.mem.addr),
-		       record_list->u.mem.len);
-
-	      memcpy (record_list->u.mem.val, mem, record_list->u.mem.len);
+		  if (target_read_memory (record_list->u.mem.addr, mem,
+		                          record_list->u.mem.len))
+	            {
+		      if (execution_direction != EXEC_REVERSE)
+		        error (_("Process record: error reading memory at "
+			         "addr = %s len = %d."),
+		               paddress (gdbarch, record_list->u.mem.addr),
+		               record_list->u.mem.len);
+		      else
+			/* Read failed -- 
+			   flag entry as not_accessible.  */
+		        record_list->u.mem.mem_entry_not_accessible = 1;
+		    }
+		  else
+		    {
+		      if (target_write_memory (record_list->u.mem.addr,
+			                       record_list->u.mem.val,
+		                               record_list->u.mem.len))
+	                {
+			  if (execution_direction != EXEC_REVERSE)
+			    error (_("Process record: error writing memory at "
+			             "addr = %s len = %d."),
+		                   paddress (gdbarch, record_list->u.mem.addr),
+		                   record_list->u.mem.len);
+			  else
+			    /* Write failed -- 
+			       flag entry as not_accessible.  */
+			    record_list->u.mem.mem_entry_not_accessible = 1;
+			}
+		      else
+		        {
+			  memcpy (record_list->u.mem.val, mem,
+				  record_list->u.mem.len);
+			}
+		    }
+		}
 	    }
 	  else
 	    {
@@ -932,7 +959,6 @@ record_store_registers (struct target_ops *ops, struct regcache *regcache,
       if (RECORD_IS_REPLAY)
 	{
 	  int n;
-	  struct cleanup *old_cleanups;
 
 	  /* Let user choose if he wants to write register or not.  */
 	  if (regno < 0)
@@ -1264,15 +1290,15 @@ _initialize_record (void)
 
   /* Record instructions number limit command.  */
   add_setshow_boolean_cmd ("stop-at-limit", no_class,
-			    &record_stop_at_limit, _("\
+			   &record_stop_at_limit, _("\
 Set whether record/replay stops when record/replay buffer becomes full."), _("\
 Show whether record/replay stops when record/replay buffer becomes full."), _("\
 Default is ON.\n\
 When ON, if the record/replay buffer becomes full, ask user what to do.\n\
 When OFF, if the record/replay buffer becomes full,\n\
 delete the oldest recorded instruction to make room for each new one."),
-			    NULL, NULL,
-                            &set_record_cmdlist, &show_record_cmdlist);
+			   NULL, NULL,
+			   &set_record_cmdlist, &show_record_cmdlist);
   add_setshow_zinteger_cmd ("insn-number-max", no_class,
 			    &record_insn_max_num,
 			    _("Set record/replay buffer limit."),
@@ -1282,6 +1308,6 @@ record/replay buffer.  Zero means unlimited.  Default is 200000."),
 			    set_record_insn_max_num,
 			    NULL, &set_record_cmdlist, &show_record_cmdlist);
   add_cmd ("insn-number", class_obscure, show_record_insn_number,
-	    _("Show the current number of instructions in the "
-	      "record/replay buffer."), &info_record_cmdlist);
+	   _("Show the current number of instructions in the "
+	     "record/replay buffer."), &info_record_cmdlist);
 }

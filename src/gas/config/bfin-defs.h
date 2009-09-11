@@ -1,5 +1,5 @@
 /* bfin-defs.h ADI Blackfin gas header file
-   Copyright 2005, 2006, 2007
+   Copyright 2005, 2006, 2007, 2009
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -82,8 +82,9 @@ typedef enum
 #define T_NOGROUP     0xa0
 
 /* Flags.  */
-#define F_REG_ALL    0x1000
-#define F_REG_HIGH   0x2000  /* Half register: high half.  */
+#define F_REG_NONE 0
+#define F_REG_HIGH 1
+#define F_REG_LOW 2
 
 enum machine_registers
 {
@@ -180,12 +181,12 @@ enum reg_class
 
 #define REG_SAME(a, b)   ((a).regno == (b).regno)
 #define REG_EQUAL(a, b)  (((a).regno & CODE_MASK) == ((b).regno & CODE_MASK))
-#define REG_CLASS(a)     ((a.regno) & 0xf0)
+#define REG_CLASS(a)     ((a).regno & 0xf0)
 #define IS_A1(a)         ((a).regno == REG_A1)
-#define IS_H(a)          ((a).regno & F_REG_HIGH ? 1: 0)
-#define IS_EVEN(r)       (r.regno % 2 == 0)
+#define IS_H(a)          ((a).flags & F_REG_HIGH ? 1: 0)
+#define IS_EVEN(r)       ((r).regno % 2 == 0)
 #define IS_HCOMPL(a, b)  (REG_EQUAL(a, b) && \
-                         ((a).regno & F_REG_HIGH) != ((b).regno & F_REG_HIGH))
+                         ((a).flags & F_REG_HIGH) != ((b).flags & F_REG_HIGH))
 
 /* register type checking.  */
 #define _TYPECHECK(r, x) (((r).regno & CLASS_MASK) == T_REG_##x)
@@ -200,6 +201,25 @@ enum reg_class
 #define IS_LREG(r)       (((r).regno & 0xf4) == T_REG_L)
 #define IS_CREG(r)       ((r).regno == REG_LC0 || (r).regno == REG_LC1)
 #define IS_ALLREG(r)     ((r).regno < T_NOGROUP)
+
+#define IS_GENREG(r) \
+  (IS_DREG (r) || IS_PREG (r)				\
+   || (r).regno == REG_A0x || (r).regno == REG_A0w	\
+   || (r).regno == REG_A1x || (r).regno == REG_A1w)
+
+#define IS_DAGREG(r) \
+  (IS_IREG (r) || IS_MREG (r) || IS_BREG (r) || IS_LREG (r))
+
+#define IS_SYSREG(r) \
+  ((r).regno == REG_ASTAT || (r).regno == REG_SEQSTAT		\
+   || (r).regno == REG_SYSCFG || (r).regno == REG_RETI		\
+   || (r).regno == REG_RETX || (r).regno == REG_RETN		\
+   || (r).regno == REG_RETE || (r).regno == REG_RETS		\
+   || (r).regno == REG_LC0 || (r).regno == REG_LC1		\
+   || (r).regno == REG_LT0 || (r).regno == REG_LT1		\
+   || (r).regno == REG_LB0 || (r).regno == REG_LB1		\
+   || (r).regno == REG_CYCLES || (r).regno == REG_CYCLES2	\
+   || (r).regno == REG_EMUDAT)
 
 /* Expression value macros.  */
 
@@ -287,7 +307,7 @@ typedef enum
 typedef union
 {
   const char *s_value;		/* if relocation symbol, the text.  */
-  int i_value;			/* if constant, the value.  */
+  long long i_value;		/* if constant, the value.  */
   Expr_Op_Type op_value;	/* if operator, the value.  */
 } Expr_Node_Value;
 
@@ -374,6 +394,7 @@ EXPR_T mkexpr (int, SYMBOL_T);
 /* Defined in bfin-lex.l.  */
 void set_start_state (void);
 
+extern int insn_regmask (int, int);
 #ifdef __cplusplus
 }
 #endif

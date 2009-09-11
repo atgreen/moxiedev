@@ -72,4 +72,8 @@
 /rs6000.xml/1.5/Mon Jul  6 10:46:43 2009//
 /powerpc-405.c/1.1/Tue Jul 21 20:21:20 2009//
 /powerpc-405.xml/1.1/Tue Jul 21 20:21:20 2009//
+/powerpc-cell32l.c/1.1/Fri Jul 31 15:23:20 2009//
+/powerpc-cell32l.xml/1.1/Fri Jul 31 15:23:20 2009//
+/powerpc-cell64l.c/1.1/Fri Jul 31 15:23:20 2009//
+/powerpc-cell64l.xml/1.1/Fri Jul 31 15:23:20 2009//
 D

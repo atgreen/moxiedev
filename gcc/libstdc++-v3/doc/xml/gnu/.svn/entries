@@ -1,7 +1,7 @@
 10
 
 dir
-150304
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/doc/xml/gnu
 svn://gcc.gnu.org/svn/gcc
 
@@ -62,7 +62,7 @@ bkoz
 
 fdl-1.2.xml
 file
-149693
+
 
 
 
@@ -96,7 +96,7 @@ bkoz
 
 gpl-2.0.xml
 file
-149693
+
 
 
 

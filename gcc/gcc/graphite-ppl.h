@@ -44,6 +44,9 @@ void ppl_insert_dimensions_pointset (ppl_Pointset_Powerset_C_Polyhedron_t, int,
 				     int);
 void ppl_set_inhomogeneous_gmp (ppl_Linear_Expression_t, Value);
 void ppl_set_coef_gmp (ppl_Linear_Expression_t, ppl_dimension_type, Value);
+void ppl_max_for_le_pointset (ppl_Pointset_Powerset_C_Polyhedron_t,
+                              ppl_Linear_Expression_t, Value);
+
 
 /* Assigns to RES the value of the INTEGER_CST T.  */
 
@@ -127,6 +130,32 @@ value_max (Value res, Value v1, Value v2)
   if (value_compare (v1, v2) < 0)
     value_assign (res, v2);
   value_assign (res, v1);
+}
+
+/* Builds a new identity map for dimension DIM.  */
+
+static inline ppl_dimension_type *
+ppl_new_id_map (ppl_dimension_type dim)
+{
+  ppl_dimension_type *map, i;
+
+  map = (ppl_dimension_type *) XNEWVEC (ppl_dimension_type, dim);
+
+  for (i = 0; i < dim; i++)
+    map[i] = i;
+
+  return map;
+}
+
+/* Builds an interchange of dimensions A and B in MAP.  */
+
+static inline void
+ppl_interchange (ppl_dimension_type *map,
+		 ppl_dimension_type a,
+		 ppl_dimension_type b)
+{
+  map[a] = b;
+  map[b] = a;
 }
 
 #endif

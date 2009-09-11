@@ -1,6 +1,6 @@
 /* ldemul.c -- clearing house for ld emulation states
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2005, 2007, 2008
+   2001, 2002, 2003, 2005, 2007, 2008, 2009
    Free Software Foundation, Inc.
 
    This file is part of the GNU Binutils.
@@ -205,6 +205,7 @@ after_open_default (void)
 void
 after_allocation_default (void)
 {
+  lang_relax_sections (FALSE);
 }
 
 void
@@ -227,6 +228,9 @@ set_output_arch_default (void)
   /* Set the output architecture and machine if possible.  */
   bfd_set_arch_mach (link_info.output_bfd,
 		     ldfile_output_architecture, ldfile_output_machine);
+
+  bfd_emul_set_maxpagesize (output_target, config.maxpagesize);
+  bfd_emul_set_commonpagesize (output_target, config.commonpagesize);
 }
 
 void

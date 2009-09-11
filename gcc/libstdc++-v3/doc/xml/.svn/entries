@@ -1,15 +1,15 @@
 10
 
 dir
-150304
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/doc/xml
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-29T01:53:49.543369Z
-150195
-bkoz
+2009-08-22T13:41:50.702364Z
+151015
+rwild
 
 
 
@@ -28,7 +28,7 @@ bkoz
 
 authors.xml
 file
-149693
+
 
 
 
@@ -133,7 +133,7 @@ bkoz
 
 class.txml
 file
-149693
+
 
 
 
@@ -170,7 +170,7 @@ dir
 
 chapter.txml
 file
-149693
+
 
 
 

@@ -929,9 +929,14 @@ try_fwprop_subst (df_ref use, rtx *loc, rtx new_rtx, rtx def_insn, bool set_reg_
   int flags = DF_REF_FLAGS (use);
   rtx set = single_set (insn);
   bool speed = optimize_bb_for_speed_p (BLOCK_FOR_INSN (insn));
-  int old_cost = rtx_cost (SET_SRC (set), SET, speed);
+  int old_cost = 0;
   bool ok;
 
+  /* forward_propagate_subreg may be operating on an instruction with
+     multiple sets.  If so, assume the cost of the new instruction is
+     not greater than the old one.  */
+  if (set)
+    old_cost = rtx_cost (SET_SRC (set), SET, speed);
   if (dump_file)
     {
       fprintf (dump_file, "\nIn insn %d, replacing\n ", INSN_UID (insn));
@@ -951,6 +956,7 @@ try_fwprop_subst (df_ref use, rtx *loc, rtx new_rtx, rtx def_insn, bool set_reg_
     }
 
   else if (DF_REF_TYPE (use) == DF_REF_REG_USE
+	   && set
 	   && rtx_cost (SET_SRC (set), SET, speed) > old_cost)
     {
       if (dump_file)
@@ -1008,8 +1014,56 @@ try_fwprop_subst (df_ref use, rtx *loc, rtx new_rtx, rtx def_insn, bool set_reg_
   return ok;
 }
 
+/* For the given single_set INSN, containing SRC known to be a
+   ZERO_EXTEND or SIGN_EXTEND of a register, return true if INSN
+   is redundant due to the register being set by a LOAD_EXTEND_OP
+   load from memory.  */
 
-/* If USE is a paradoxical subreg, see if it can be replaced by a pseudo.  */
+static bool
+free_load_extend (rtx src, rtx insn)
+{
+  rtx reg;
+  df_ref *use_vec;
+  df_ref use, def;
+
+  reg = XEXP (src, 0);
+#ifdef LOAD_EXTEND_OP
+  if (LOAD_EXTEND_OP (GET_MODE (reg)) != GET_CODE (src))
+#endif
+    return false;
+
+  for (use_vec = DF_INSN_USES (insn); *use_vec; use_vec++)
+    {
+      use = *use_vec;
+
+      if (!DF_REF_IS_ARTIFICIAL (use)
+	  && DF_REF_TYPE (use) == DF_REF_REG_USE
+	  && DF_REF_REG (use) == reg)
+	break;
+    }
+  if (!use)
+    return false;
+
+  def = get_def_for_use (use);
+  if (!def)
+    return false;
+
+  if (DF_REF_IS_ARTIFICIAL (def))
+    return false;
+
+  if (NONJUMP_INSN_P (DF_REF_INSN (def)))
+    {
+      rtx patt = PATTERN (DF_REF_INSN (def));
+
+      if (GET_CODE (patt) == SET
+	  && GET_CODE (SET_SRC (patt)) == MEM
+	  && rtx_equal_p (SET_DEST (patt), reg))
+	return true;
+    }
+  return false;
+}
+
+/* If USE is a subreg, see if it can be replaced by a pseudo.  */
 
 static bool
 forward_propagate_subreg (df_ref use, rtx def_insn, rtx def_set)
@@ -1017,30 +1071,51 @@ forward_propagate_subreg (df_ref use, rtx def_insn, rtx def_set)
   rtx use_reg = DF_REF_REG (use);
   rtx use_insn, src;
 
-  /* Only consider paradoxical subregs... */
+  /* Only consider subregs... */
   enum machine_mode use_mode = GET_MODE (use_reg);
   if (GET_CODE (use_reg) != SUBREG
-      || !REG_P (SET_DEST (def_set))
-      || GET_MODE_SIZE (use_mode)
-	 <= GET_MODE_SIZE (GET_MODE (SUBREG_REG (use_reg))))
+      || !REG_P (SET_DEST (def_set)))
     return false;
 
-  /* If this is a paradoxical SUBREG, we have no idea what value the
-     extra bits would have.  However, if the operand is equivalent to
-     a SUBREG whose operand is the same as our mode, and all the modes
-     are within a word, we can just use the inner operand because
-     these SUBREGs just say how to treat the register.  */
-  use_insn = DF_REF_INSN (use);
-  src = SET_SRC (def_set);
-  if (GET_CODE (src) == SUBREG
-      && REG_P (SUBREG_REG (src))
-      && GET_MODE (SUBREG_REG (src)) == use_mode
-      && subreg_lowpart_p (src)
-      && all_uses_available_at (def_insn, use_insn))
-    return try_fwprop_subst (use, DF_REF_LOC (use), SUBREG_REG (src),
-			     def_insn, false);
-  else
-    return false;
+  /* If this is a paradoxical SUBREG...  */
+  if (GET_MODE_SIZE (use_mode)
+      > GET_MODE_SIZE (GET_MODE (SUBREG_REG (use_reg))))
+    {
+      /* If this is a paradoxical SUBREG, we have no idea what value the
+	 extra bits would have.  However, if the operand is equivalent to
+	 a SUBREG whose operand is the same as our mode, and all the modes
+	 are within a word, we can just use the inner operand because
+	 these SUBREGs just say how to treat the register.  */
+      use_insn = DF_REF_INSN (use);
+      src = SET_SRC (def_set);
+      if (GET_CODE (src) == SUBREG
+	  && REG_P (SUBREG_REG (src))
+	  && GET_MODE (SUBREG_REG (src)) == use_mode
+	  && subreg_lowpart_p (src)
+	  && all_uses_available_at (def_insn, use_insn))
+	return try_fwprop_subst (use, DF_REF_LOC (use), SUBREG_REG (src),
+				 def_insn, false);
+    }
+
+  /* If this is a SUBREG of a ZERO_EXTEND or SIGN_EXTEND, and the SUBREG
+     is the low part of the reg being extended then just use the inner
+     operand.  Don't do this if the ZERO_EXTEND or SIGN_EXTEND insn will
+     be removed due to it matching a LOAD_EXTEND_OP load from memory.  */
+  else if (subreg_lowpart_p (use_reg))
+    {
+      use_insn = DF_REF_INSN (use);
+      src = SET_SRC (def_set);
+      if ((GET_CODE (src) == ZERO_EXTEND
+	   || GET_CODE (src) == SIGN_EXTEND)
+	  && REG_P (XEXP (src, 0))
+	  && GET_MODE (XEXP (src, 0)) == use_mode
+	  && !free_load_extend (src, def_insn)
+	  && all_uses_available_at (def_insn, use_insn))
+	return try_fwprop_subst (use, DF_REF_LOC (use), XEXP (src, 0),
+				 def_insn, false);
+    }
+
+  return false;
 }
 
 /* Try to replace USE with SRC (defined in DEF_INSN) in __asm.  */
@@ -1133,7 +1208,7 @@ forward_propagate_and_simplify (df_ref use, rtx def_insn, rtx def_set)
   if (INSN_CODE (use_insn) < 0)
     asm_use = asm_noperands (PATTERN (use_insn));
 
-  if (!use_set && asm_use < 0)
+  if (!use_set && asm_use < 0 && !DEBUG_INSN_P (use_insn))
     return false;
 
   /* Do not propagate into PC, CC0, etc.  */
@@ -1188,6 +1263,11 @@ forward_propagate_and_simplify (df_ref use, rtx def_insn, rtx def_set)
   if (DF_REF_TYPE (use) == DF_REF_REG_MEM_STORE)
     {
       loc = &SET_DEST (use_set);
+      set_reg_equal = false;
+    }
+  else if (!use_set)
+    {
+      loc = &INSN_VAR_LOCATION_LOC (use_insn);
       set_reg_equal = false;
     }
   else

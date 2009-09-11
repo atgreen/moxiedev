@@ -624,7 +624,6 @@ build_vtbl_ref_1 (tree instance, tree idx)
   if (!vtbl)
     vtbl = build_vfield_ref (instance, basetype);
 
-
   aref = build_array_ref (input_location, vtbl, idx);
   TREE_CONSTANT (aref) |= TREE_CONSTANT (vtbl) && TREE_CONSTANT (idx);
 
@@ -3881,8 +3880,6 @@ build_clone (tree fn, tree name)
   /* There's no pending inline data for this function.  */
   DECL_PENDING_INLINE_INFO (clone) = NULL;
   DECL_PENDING_INLINE_P (clone) = 0;
-  /* And it hasn't yet been deferred.  */
-  DECL_DEFERRED_FN (clone) = 0;
 
   /* The base-class destructor is not virtual.  */
   if (name == base_dtor_identifier)
@@ -5848,6 +5845,8 @@ currently_open_class (tree t)
 
   if (!CLASS_TYPE_P (t))
     return false;
+
+  t = TYPE_MAIN_VARIANT (t);
 
   /* We start looking from 1 because entry 0 is from global scope,
      and has no type.  */

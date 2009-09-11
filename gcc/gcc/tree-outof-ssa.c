@@ -1,5 +1,6 @@
 /* Convert a program in SSA form into Normal form.
-   Copyright (C) 2004, 2005, 2006, 2007, 2008 Free Software Foundation, Inc.
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009
+   Free Software Foundation, Inc.
    Contributed by Andrew Macleod <amacleod@redhat.com>
 
 This file is part of GCC.
@@ -119,6 +120,8 @@ set_location_for_edge (edge e)
 	  for (gsi = gsi_last_bb (bb); !gsi_end_p (gsi); gsi_prev (&gsi))
 	    {
 	      gimple stmt = gsi_stmt (gsi);
+	      if (is_gimple_debug (stmt))
+		continue;
 	      if (gimple_has_location (stmt) || gimple_block (stmt))
 		{
 		  set_curr_insn_source_location (gimple_location (stmt));
@@ -195,7 +198,10 @@ static void
 insert_value_copy_on_edge (edge e, int dest, tree src, source_location locus)
 {
   rtx seq, x;
-  enum machine_mode mode;
+  enum machine_mode dest_mode, src_mode;
+  int unsignedp;
+  tree var;
+
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
       fprintf (dump_file,
@@ -214,14 +220,22 @@ insert_value_copy_on_edge (edge e, int dest, tree src, source_location locus)
     set_curr_insn_source_location (locus);
 
   start_sequence ();
-  mode = GET_MODE (SA.partition_to_pseudo[dest]);
-  x = expand_expr (src, SA.partition_to_pseudo[dest], mode, EXPAND_NORMAL);
-  if (GET_MODE (x) != VOIDmode && GET_MODE (x) != mode)
-    x = convert_to_mode (mode, x, TYPE_UNSIGNED (TREE_TYPE (src)));
-  if (CONSTANT_P (x) && GET_MODE (x) == VOIDmode
-      && mode != TYPE_MODE (TREE_TYPE (src)))
-    x = convert_modes (mode, TYPE_MODE (TREE_TYPE (src)),
-			  x, TYPE_UNSIGNED (TREE_TYPE (src)));
+
+  var = SSA_NAME_VAR (partition_to_var (SA.map, dest));
+  src_mode = TYPE_MODE (TREE_TYPE (src));
+  dest_mode = promote_decl_mode (var, &unsignedp);
+  gcc_assert (src_mode == TYPE_MODE (TREE_TYPE (var)));
+  gcc_assert (dest_mode == GET_MODE (SA.partition_to_pseudo[dest]));
+
+  if (src_mode != dest_mode)
+    {
+      x = expand_expr (src, NULL, src_mode, EXPAND_NORMAL);
+      x = convert_modes (dest_mode, src_mode, x, unsignedp);
+    }
+  else
+    x = expand_expr (src, SA.partition_to_pseudo[dest],
+		     dest_mode, EXPAND_NORMAL);
+
   if (x != SA.partition_to_pseudo[dest])
     emit_move_insn (SA.partition_to_pseudo[dest], x);
   seq = get_insns ();
@@ -566,9 +580,8 @@ get_temp_reg (tree name)
 {
   tree var = TREE_CODE (name) == SSA_NAME ? SSA_NAME_VAR (name) : name;
   tree type = TREE_TYPE (var);
-  int unsignedp = TYPE_UNSIGNED (type);
-  enum machine_mode reg_mode
-    = promote_mode (type, DECL_MODE (var), &unsignedp, 0);
+  int unsignedp;
+  enum machine_mode reg_mode = promote_decl_mode (var, &unsignedp);
   rtx x = gen_reg_rtx (reg_mode);
   if (POINTER_TYPE_P (type))
     mark_reg_pointer (x, TYPE_ALIGN (TREE_TYPE (TREE_TYPE (var))));

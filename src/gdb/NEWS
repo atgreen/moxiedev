@@ -3,6 +3,12 @@
 
 *** Changes since GDB 6.8
 
+* GDB now has an interface for JIT compilation.  Applications that
+dynamically generate code can create symbol files in memory and register
+them with GDB.  For users, the feature should work transparently, and
+for JIT developers, the interface is documented in the GDB manual in the
+"JIT Compilation Interface" chapter.
+
 * Tracepoints may now be conditional.  The syntax is as for
 breakpoints; either an "if" clause appended to the "trace" command,
 or the "condition" command is available.  GDB sends the condition to
@@ -41,6 +47,9 @@ the installation instructions for more information.
 remote targets.  To use this feature, specify a system root that begins
 with the `remote:' prefix, either via the `set sysroot' command or via
 the `--with-sysroot' configure-time option.
+
+* "info sharedlibrary" now takes an optional regex of libraries to show,
+and it now reports if a shared library has no debugging information.
 
 * Commands `set debug-file-directory', `set solib-search-path' and `set args'
 now complete on file names.
@@ -203,6 +212,26 @@ add new commands to existing prefixes, e.g. "target".
 "Target Description Format" section in the user manual for more
 information.
 
+* Target descriptions can now describe "compatible" architectures
+to indicate that the target can execute applications for a different
+architecture in addition to those for the main target architecture.
+See the "Target Description Format" section in the user manual for
+more information.
+
+* Multi-architecture debugging.
+
+  GDB now includes general supports for debugging applications on
+  hybrid systems that use more than one single processor architecture
+  at the same time.  Each such hybrid architecture still requires
+  specific support to be added.  The only hybrid architecture supported
+  in this version of GDB is the Cell Broadband Engine.
+
+* GDB now supports integrated debugging of Cell/B.E. applications that
+use both the PPU and SPU architectures.  To enable support for hybrid
+Cell/B.E. debugging, you need to configure GDB to support both the
+powerpc-linux or powerpc64-linux and the spu-elf targets, using the
+--enable-targets configure option.
+
 * New commands (for set/show, see "New options" below)
 
 find [/size-char] [/max-count] start-address, end-address|+search-space-size,
@@ -239,13 +268,18 @@ kill inferior NUM
 
 * New options
 
+set spu stop-on-load
+show spu stop-on-load
+  Control whether to stop for new SPE threads during Cell/B.E. debugging.
+
+set spu auto-flush-cache
+show spu auto-flush-cache
+  Control whether to automatically flush the software-managed cache
+  during Cell/B.E. debugging.
+
 set sh calling-convention
 show sh calling-convention
   Control the calling convention used when calling SH target functions.
-
-set print symbol-loading
-show print symbol-loading
-  Control printing of symbol loading messages.
 
 set debug timestamp
 show debug timestamp
@@ -360,6 +394,12 @@ show schedule-multiple
   Allow GDB to resume all threads of all processes or only threads of
   the current process.
 
+set stack-cache
+show stack-cache
+  Use more aggressive caching for accesses to the stack.  This improves
+  performance of remote debugging (particularly backtraces) without
+  affecting correctness.
+
 * Removed commands
 
 info forks
@@ -401,6 +441,7 @@ x86_64 MinGW			x86_64-*-mingw*
 Lattice Mico32                  lm32-*
 x86 DICOS			i[34567]86-*-dicos*
 x86_64 DICOS		        x86_64-*-dicos*
+S+core 3			score-*-*
 
 * The GDB remote stub, gdbserver, now supports x86 Windows CE
   (mingw32ce) debugging.

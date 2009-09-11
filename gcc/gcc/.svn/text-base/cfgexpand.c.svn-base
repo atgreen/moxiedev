@@ -70,7 +70,13 @@ gimple_assign_rhs_to_tree (gimple stmt)
 		TREE_TYPE (gimple_assign_lhs (stmt)),
 		gimple_assign_rhs1 (stmt));
   else if (grhs_class == GIMPLE_SINGLE_RHS)
-    t = gimple_assign_rhs1 (stmt);
+    {
+      t = gimple_assign_rhs1 (stmt);
+      /* Avoid modifying this tree in place below.  */
+      if (gimple_has_location (stmt) && CAN_HAVE_LOCATION_P (t)
+	  && gimple_location (stmt) != EXPR_LOCATION (t))
+	t = copy_node (t);
+    }
   else
     gcc_unreachable ();
 
@@ -78,326 +84,6 @@ gimple_assign_rhs_to_tree (gimple stmt)
     SET_EXPR_LOCATION (t, gimple_location (stmt));
 
   return t;
-}
-
-/* Return an expression tree corresponding to the PREDICATE of GIMPLE_COND
-   statement STMT.  */
-
-static tree
-gimple_cond_pred_to_tree (gimple stmt)
-{
-  /* We're sometimes presented with such code:
-       D.123_1 = x < y;
-       if (D.123_1 != 0)
-         ...
-     This would expand to two comparisons which then later might
-     be cleaned up by combine.  But some pattern matchers like if-conversion
-     work better when there's only one compare, so make up for this
-     here as special exception if TER would have made the same change.  */
-  tree lhs = gimple_cond_lhs (stmt);
-  if (SA.values
-      && TREE_CODE (lhs) == SSA_NAME
-      && bitmap_bit_p (SA.values, SSA_NAME_VERSION (lhs)))
-    lhs = gimple_assign_rhs_to_tree (SSA_NAME_DEF_STMT (lhs));
-
-  return build2 (gimple_cond_code (stmt), boolean_type_node,
-		 lhs, gimple_cond_rhs (stmt));
-}
-
-/* Helper for gimple_to_tree.  Set EXPR_LOCATION for every expression
-   inside *TP.  DATA is the location to set.  */
-
-static tree
-set_expr_location_r (tree *tp, int *ws ATTRIBUTE_UNUSED, void *data)
-{
-  location_t *loc = (location_t *) data;
-  if (EXPR_P (*tp))
-    SET_EXPR_LOCATION (*tp, *loc);
-
-  return NULL_TREE;
-}
-
-
-/* RTL expansion has traditionally been done on trees, so the
-   transition to doing it on GIMPLE tuples is very invasive to the RTL
-   expander.  To facilitate the transition, this function takes a
-   GIMPLE tuple STMT and returns the same statement in the form of a
-   tree.  */
-
-static tree
-gimple_to_tree (gimple stmt)
-{
-  tree t;
-  int rn;
-  tree_ann_common_t ann;
-  location_t loc;
-
-  switch (gimple_code (stmt))
-    {
-    case GIMPLE_ASSIGN:
-      {
-	tree lhs = gimple_assign_lhs (stmt);
-
-	t = gimple_assign_rhs_to_tree (stmt);
-	t = build2 (MODIFY_EXPR, TREE_TYPE (lhs), lhs, t);
-	if (gimple_assign_nontemporal_move_p (stmt))
-	  MOVE_NONTEMPORAL (t) = true;
-      }
-      break;
-	                                 
-    case GIMPLE_COND:
-      t = gimple_cond_pred_to_tree (stmt);
-      t = build3 (COND_EXPR, void_type_node, t, NULL_TREE, NULL_TREE);
-      break;
-
-    case GIMPLE_GOTO:
-      t = build1 (GOTO_EXPR, void_type_node, gimple_goto_dest (stmt));
-      break;
-
-    case GIMPLE_LABEL:
-      t = build1 (LABEL_EXPR, void_type_node, gimple_label_label (stmt));
-      break;
-
-    case GIMPLE_RETURN:
-      {
-	tree retval = gimple_return_retval (stmt);
-
-	if (retval && retval != error_mark_node)
-	  {
-	    tree result = DECL_RESULT (current_function_decl);
-
-	    /* If we are not returning the current function's RESULT_DECL,
-	       build an assignment to it.  */
-	    if (retval != result)
-	      {
-		/* I believe that a function's RESULT_DECL is unique.  */
-		gcc_assert (TREE_CODE (retval) != RESULT_DECL);
-
-		retval = build2 (MODIFY_EXPR, TREE_TYPE (result),
-				 result, retval);
-	      }
-	  }
-	t = build1 (RETURN_EXPR, void_type_node, retval);
-      }
-      break;
-
-    case GIMPLE_ASM:
-      {
-	size_t i, n;
-	tree out, in, cl;
-	const char *s;
-
-	out = NULL_TREE;
-	n = gimple_asm_noutputs (stmt);
-	if (n > 0)
-	  {
-	    t = out = gimple_asm_output_op (stmt, 0);
-	    for (i = 1; i < n; i++)
-	      {
-		TREE_CHAIN (t) = gimple_asm_output_op (stmt, i);
-		t = gimple_asm_output_op (stmt, i);
-	      }
-	  }
-
-	in = NULL_TREE;
-	n = gimple_asm_ninputs (stmt);
-	if (n > 0)
-	  {
-	    t = in = gimple_asm_input_op (stmt, 0);
-	    for (i = 1; i < n; i++)
-	      {
-		TREE_CHAIN (t) = gimple_asm_input_op (stmt, i);
-		t = gimple_asm_input_op (stmt, i);
-	      }
-	  }
-
-	cl = NULL_TREE;
-	n = gimple_asm_nclobbers (stmt);
-	if (n > 0)
-	  {
-	    t = cl = gimple_asm_clobber_op (stmt, 0);
-	    for (i = 1; i < n; i++)
-	      {
-		TREE_CHAIN (t) = gimple_asm_clobber_op (stmt, i);
-		t = gimple_asm_clobber_op (stmt, i);
-	      }
-	  }
-
-	s = gimple_asm_string (stmt);
-	t = build4 (ASM_EXPR, void_type_node, build_string (strlen (s), s),
-	            out, in, cl);
-        ASM_VOLATILE_P (t) = gimple_asm_volatile_p (stmt);
-        ASM_INPUT_P (t) = gimple_asm_input_p (stmt);
-      }
-    break;
-
-    case GIMPLE_CALL:
-      {
-	size_t i;
-        tree fn;
-	tree_ann_common_t ann;
-        
-	t = build_vl_exp (CALL_EXPR, gimple_call_num_args (stmt) + 3);
-
-        CALL_EXPR_FN (t) = gimple_call_fn (stmt);
-        TREE_TYPE (t) = gimple_call_return_type (stmt);
-	CALL_EXPR_STATIC_CHAIN (t) = gimple_call_chain (stmt);
-
-	for (i = 0; i < gimple_call_num_args (stmt); i++)
-	  CALL_EXPR_ARG (t, i) = gimple_call_arg (stmt, i);
-
-	if (!(gimple_call_flags (stmt) & (ECF_CONST | ECF_PURE)))
-	  TREE_SIDE_EFFECTS (t) = 1;
-
-	if (gimple_call_flags (stmt) & ECF_NOTHROW)
-	  TREE_NOTHROW (t) = 1;
-
-        CALL_EXPR_TAILCALL (t) = gimple_call_tail_p (stmt);
-        CALL_EXPR_RETURN_SLOT_OPT (t) = gimple_call_return_slot_opt_p (stmt);
-        CALL_FROM_THUNK_P (t) = gimple_call_from_thunk_p (stmt);
-        CALL_CANNOT_INLINE_P (t) = gimple_call_cannot_inline_p (stmt);
-        CALL_EXPR_VA_ARG_PACK (t) = gimple_call_va_arg_pack_p (stmt);
-
-        /* If the call has a LHS then create a MODIFY_EXPR to hold it.  */
-	{
-	  tree lhs = gimple_call_lhs (stmt);
-
-	  if (lhs)
-	    t = build2 (MODIFY_EXPR, TREE_TYPE (lhs), lhs, t);
-	}
-
-        /* Record the original call statement, as it may be used
-           to retrieve profile information during expansion.  */
-
-	if ((fn = gimple_call_fndecl (stmt)) != NULL_TREE
-	    && DECL_BUILT_IN (fn))
-	  {
-	    ann = get_tree_common_ann (t);
-	    ann->stmt = stmt;
-	  }
-      }
-    break;
-
-    case GIMPLE_SWITCH:
-      {
-	tree label_vec;
-	size_t i;
-	tree elt = gimple_switch_label (stmt, 0);
-
-	label_vec = make_tree_vec (gimple_switch_num_labels (stmt));
-
-	if (!CASE_LOW (elt) && !CASE_HIGH (elt))
-	  {
-	    for (i = 1; i < gimple_switch_num_labels (stmt); i++)
-	      TREE_VEC_ELT (label_vec, i - 1) = gimple_switch_label (stmt, i);
-
-	    /* The default case in a SWITCH_EXPR must be at the end of
-	       the label vector.  */
-	    TREE_VEC_ELT (label_vec, i - 1) = gimple_switch_label (stmt, 0);
-	  }
-	else
-	  {
-	    for (i = 0; i < gimple_switch_num_labels (stmt); i++)
-	      TREE_VEC_ELT (label_vec, i) = gimple_switch_label (stmt, i);
-	  }
-
-	t = build3 (SWITCH_EXPR, void_type_node, gimple_switch_index (stmt),
-		    NULL, label_vec);
-      }
-    break;
-
-    case GIMPLE_NOP:
-    case GIMPLE_PREDICT:
-      t = build1 (NOP_EXPR, void_type_node, size_zero_node);
-      break;
-
-    case GIMPLE_RESX:
-      t = build_resx (gimple_resx_region (stmt));
-      break;
-	
-    default:
-      if (errorcount == 0)
-	{
-	  error ("Unrecognized GIMPLE statement during RTL expansion");
-	  print_gimple_stmt (stderr, stmt, 4, 0);
-	  gcc_unreachable ();
-	}
-      else
-	{
-	  /* Ignore any bad gimple codes if we're going to die anyhow,
-	     so we can at least set TREE_ASM_WRITTEN and have the rest
-	     of compilation advance without sudden ICE death.  */
-	  t = build1 (NOP_EXPR, void_type_node, size_zero_node);
-	  break;
-	}
-    }
-
-  /* If STMT is inside an exception region, record it in the generated
-     expression.  */
-  rn = lookup_stmt_eh_region (stmt);
-  if (rn >= 0)
-    {
-      tree call = get_call_expr_in (t);
-
-      ann = get_tree_common_ann (t);
-      ann->rn = rn;
-      
-      /* For a CALL_EXPR on the RHS of an assignment, calls.c looks up
- 	 the CALL_EXPR not the assignment statment for EH region number. */
-      if (call && call != t)
-	{
-	  ann = get_tree_common_ann (call);
-	  ann->rn = rn;
-	}
-    }
-
-  /* Set EXPR_LOCATION in all the embedded expressions.  */
-  loc = gimple_location (stmt);
-  walk_tree (&t, set_expr_location_r, (void *) &loc, NULL);
-
-  TREE_BLOCK (t) = gimple_block (stmt);
-
-  return t;
-}
-
-
-/* Release back to GC memory allocated by gimple_to_tree.  */
-
-static void
-release_stmt_tree (gimple stmt, tree stmt_tree)
-{
-  tree_ann_common_t ann;
-
-  switch (gimple_code (stmt))
-    {
-    case GIMPLE_ASSIGN:
-      if (get_gimple_rhs_class (gimple_expr_code (stmt)) != GIMPLE_SINGLE_RHS)
-	ggc_free (TREE_OPERAND (stmt_tree, 1));
-      break;
-    case GIMPLE_COND:
-      ggc_free (COND_EXPR_COND (stmt_tree));
-      break;
-    case GIMPLE_RETURN:
-      if (TREE_OPERAND (stmt_tree, 0)
-	  && TREE_CODE (TREE_OPERAND (stmt_tree, 0)) == MODIFY_EXPR)
-	ggc_free (TREE_OPERAND (stmt_tree, 0));
-      break;
-    case GIMPLE_CALL:
-      if (gimple_call_lhs (stmt))
-	{
-	  ann = tree_common_ann (TREE_OPERAND (stmt_tree, 1));
-	  if (ann)
-	    ggc_free (ann);
-	  ggc_free (TREE_OPERAND (stmt_tree, 1));
-	}
-      break;
-    default:
-      break;
-    }
-  ann = tree_common_ann (stmt_tree);
-  if (ann)
-    ggc_free (ann);
-  ggc_free (stmt_tree);
 }
 
 
@@ -1202,9 +888,7 @@ expand_one_register_var (tree var)
 {
   tree decl = SSAVAR (var);
   tree type = TREE_TYPE (decl);
-  int unsignedp = TYPE_UNSIGNED (type);
-  enum machine_mode reg_mode
-    = promote_mode (type, DECL_MODE (decl), &unsignedp, 0);
+  enum machine_mode reg_mode = promote_decl_mode (decl, NULL);
   rtx x = gen_reg_rtx (reg_mode);
 
   set_rtl (var, x);
@@ -1836,7 +1520,8 @@ maybe_dump_rtl_for_gimple_stmt (gimple stmt, rtx since)
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
       fprintf (dump_file, "\n;; ");
-      print_gimple_stmt (dump_file, stmt, 0, TDF_SLIM);
+      print_gimple_stmt (dump_file, stmt, 0,
+			 TDF_SLIM | (dump_flags & TDF_LINENO));
       fprintf (dump_file, "\n");
 
       print_rtl (dump_file, since ? NEXT_INSN (since) : since);
@@ -1930,7 +1615,6 @@ maybe_cleanup_end_of_block (edge e)
     }
 }
 
-
 /* A subroutine of expand_gimple_basic_block.  Expand one GIMPLE_COND.
    Returns a new basic block if we've terminated the current basic
    block and created a new one.  */
@@ -1942,8 +1626,36 @@ expand_gimple_cond (basic_block bb, gimple stmt)
   edge new_edge;
   edge true_edge;
   edge false_edge;
-  tree pred = gimple_cond_pred_to_tree (stmt);
   rtx last2, last;
+  enum tree_code code;
+  tree op0, op1;
+
+  code = gimple_cond_code (stmt);
+  op0 = gimple_cond_lhs (stmt);
+  op1 = gimple_cond_rhs (stmt);
+  /* We're sometimes presented with such code:
+       D.123_1 = x < y;
+       if (D.123_1 != 0)
+         ...
+     This would expand to two comparisons which then later might
+     be cleaned up by combine.  But some pattern matchers like if-conversion
+     work better when there's only one compare, so make up for this
+     here as special exception if TER would have made the same change.  */
+  if (gimple_cond_single_var_p (stmt)
+      && SA.values
+      && TREE_CODE (op0) == SSA_NAME
+      && bitmap_bit_p (SA.values, SSA_NAME_VERSION (op0)))
+    {
+      gimple second = SSA_NAME_DEF_STMT (op0);
+      if (gimple_code (second) == GIMPLE_ASSIGN
+	  && TREE_CODE_CLASS (gimple_assign_rhs_code (second))
+	     == tcc_comparison)
+	{
+	  code = gimple_assign_rhs_code (second);
+	  op0 = gimple_assign_rhs1 (second);
+	  op1 = gimple_assign_rhs2 (second);
+	}
+    }
 
   last2 = last = get_last_insn ();
 
@@ -1962,7 +1674,7 @@ expand_gimple_cond (basic_block bb, gimple stmt)
      two-way jump that needs to be decomposed into two basic blocks.  */
   if (false_edge->dest == bb->next_bb)
     {
-      jumpif (pred, label_rtx_for_bb (true_edge->dest));
+      jumpif_1 (code, op0, op1, label_rtx_for_bb (true_edge->dest));
       add_reg_br_prob_note (last, true_edge->probability);
       maybe_dump_rtl_for_gimple_stmt (stmt, last);
       if (true_edge->goto_locus)
@@ -1973,13 +1685,12 @@ expand_gimple_cond (basic_block bb, gimple stmt)
 	}
       true_edge->goto_block = NULL;
       false_edge->flags |= EDGE_FALLTHRU;
-      ggc_free (pred);
       maybe_cleanup_end_of_block (false_edge);
       return NULL;
     }
   if (true_edge->dest == bb->next_bb)
     {
-      jumpifnot (pred, label_rtx_for_bb (false_edge->dest));
+      jumpifnot_1 (code, op0, op1, label_rtx_for_bb (false_edge->dest));
       add_reg_br_prob_note (last, false_edge->probability);
       maybe_dump_rtl_for_gimple_stmt (stmt, last);
       if (false_edge->goto_locus)
@@ -1990,12 +1701,11 @@ expand_gimple_cond (basic_block bb, gimple stmt)
 	}
       false_edge->goto_block = NULL;
       true_edge->flags |= EDGE_FALLTHRU;
-      ggc_free (pred);
       maybe_cleanup_end_of_block (true_edge);
       return NULL;
     }
 
-  jumpif (pred, label_rtx_for_bb (true_edge->dest));
+  jumpif_1 (code, op0, op1, label_rtx_for_bb (true_edge->dest));
   add_reg_br_prob_note (last, true_edge->probability);
   last = get_last_insn ();
   if (false_edge->goto_locus)
@@ -2035,8 +1745,273 @@ expand_gimple_cond (basic_block bb, gimple stmt)
     }
   true_edge->goto_block = NULL;
 
-  ggc_free (pred);
   return new_bb;
+}
+
+/* A subroutine of expand_gimple_stmt_1, expanding one GIMPLE_CALL
+   statement STMT.  */
+
+static void
+expand_call_stmt (gimple stmt)
+{
+  tree exp;
+  tree lhs = gimple_call_lhs (stmt);
+  tree fndecl = gimple_call_fndecl (stmt);
+  size_t i;
+
+  exp = build_vl_exp (CALL_EXPR, gimple_call_num_args (stmt) + 3);
+
+  CALL_EXPR_FN (exp) = gimple_call_fn (stmt);
+  TREE_TYPE (exp) = gimple_call_return_type (stmt);
+  CALL_EXPR_STATIC_CHAIN (exp) = gimple_call_chain (stmt);
+
+  for (i = 0; i < gimple_call_num_args (stmt); i++)
+    CALL_EXPR_ARG (exp, i) = gimple_call_arg (stmt, i);
+
+  if (!(gimple_call_flags (stmt) & (ECF_CONST | ECF_PURE)))
+    TREE_SIDE_EFFECTS (exp) = 1;
+
+  if (gimple_call_flags (stmt) & ECF_NOTHROW)
+    TREE_NOTHROW (exp) = 1;
+
+  CALL_EXPR_TAILCALL (exp) = gimple_call_tail_p (stmt);
+  CALL_EXPR_RETURN_SLOT_OPT (exp) = gimple_call_return_slot_opt_p (stmt);
+  CALL_FROM_THUNK_P (exp) = gimple_call_from_thunk_p (stmt);
+  CALL_CANNOT_INLINE_P (exp) = gimple_call_cannot_inline_p (stmt);
+  CALL_EXPR_VA_ARG_PACK (exp) = gimple_call_va_arg_pack_p (stmt);
+  SET_EXPR_LOCATION (exp, gimple_location (stmt));
+  TREE_BLOCK (exp) = gimple_block (stmt);
+
+  /* Record the original call statement, as it may be used
+     to retrieve profile information during expansion.  */
+
+  if (fndecl && DECL_BUILT_IN (fndecl))
+    {
+      tree_ann_common_t ann = get_tree_common_ann (exp);
+      ann->stmt = stmt;
+    }
+
+  if (lhs)
+    expand_assignment (lhs, exp, false);
+  else
+    expand_expr_real_1 (exp, const0_rtx, VOIDmode, EXPAND_NORMAL, NULL);
+}
+
+/* A subroutine of expand_gimple_stmt, expanding one gimple statement
+   STMT that doesn't require special handling for outgoing edges.  That
+   is no tailcalls and no GIMPLE_COND.  */
+
+static void
+expand_gimple_stmt_1 (gimple stmt)
+{
+  tree op0;
+  switch (gimple_code (stmt))
+    {
+    case GIMPLE_GOTO:
+      op0 = gimple_goto_dest (stmt);
+      if (TREE_CODE (op0) == LABEL_DECL)
+	expand_goto (op0);
+      else
+	expand_computed_goto (op0);
+      break;
+    case GIMPLE_LABEL:
+      expand_label (gimple_label_label (stmt));
+      break;
+    case GIMPLE_NOP:
+    case GIMPLE_PREDICT:
+      break;
+    case GIMPLE_RESX:
+      expand_resx_stmt (stmt);
+      break;
+    case GIMPLE_SWITCH:
+      expand_case (stmt);
+      break;
+    case GIMPLE_ASM:
+      expand_asm_stmt (stmt);
+      break;
+    case GIMPLE_CALL:
+      expand_call_stmt (stmt);
+      break;
+
+    case GIMPLE_RETURN:
+      op0 = gimple_return_retval (stmt);
+
+      if (op0 && op0 != error_mark_node)
+	{
+	  tree result = DECL_RESULT (current_function_decl);
+
+	  /* If we are not returning the current function's RESULT_DECL,
+	     build an assignment to it.  */
+	  if (op0 != result)
+	    {
+	      /* I believe that a function's RESULT_DECL is unique.  */
+	      gcc_assert (TREE_CODE (op0) != RESULT_DECL);
+
+	      /* ??? We'd like to use simply expand_assignment here,
+	         but this fails if the value is of BLKmode but the return
+		 decl is a register.  expand_return has special handling
+		 for this combination, which eventually should move
+		 to common code.  See comments there.  Until then, let's
+		 build a modify expression :-/  */
+	      op0 = build2 (MODIFY_EXPR, TREE_TYPE (result),
+			    result, op0);
+	    }
+	}
+      if (!op0)
+	expand_null_return ();
+      else
+	expand_return (op0);
+      break;
+
+    case GIMPLE_ASSIGN:
+      {
+	tree lhs = gimple_assign_lhs (stmt);
+
+	/* Tree expand used to fiddle with |= and &= of two bitfield
+	   COMPONENT_REFs here.  This can't happen with gimple, the LHS
+	   of binary assigns must be a gimple reg.  */
+
+	if (TREE_CODE (lhs) != SSA_NAME
+	    || get_gimple_rhs_class (gimple_expr_code (stmt))
+	       == GIMPLE_SINGLE_RHS)
+	  {
+	    tree rhs = gimple_assign_rhs1 (stmt);
+	    gcc_assert (get_gimple_rhs_class (gimple_expr_code (stmt))
+			== GIMPLE_SINGLE_RHS);
+	    if (gimple_has_location (stmt) && CAN_HAVE_LOCATION_P (rhs))
+	      SET_EXPR_LOCATION (rhs, gimple_location (stmt));
+	    expand_assignment (lhs, rhs,
+			       gimple_assign_nontemporal_move_p (stmt));
+	  }
+	else
+	  {
+	    rtx target, temp;
+	    bool nontemporal = gimple_assign_nontemporal_move_p (stmt);
+	    struct separate_ops ops;
+	    bool promoted = false;
+
+	    target = expand_expr (lhs, NULL_RTX, VOIDmode, EXPAND_WRITE);
+	    if (GET_CODE (target) == SUBREG && SUBREG_PROMOTED_VAR_P (target))
+	      promoted = true;
+
+	    ops.code = gimple_assign_rhs_code (stmt);
+	    ops.type = TREE_TYPE (lhs);
+	    switch (get_gimple_rhs_class (gimple_expr_code (stmt)))
+	      {
+		case GIMPLE_BINARY_RHS:
+		  ops.op1 = gimple_assign_rhs2 (stmt);
+		  /* Fallthru */
+		case GIMPLE_UNARY_RHS:
+		  ops.op0 = gimple_assign_rhs1 (stmt);
+		  break;
+		default:
+		  gcc_unreachable ();
+	      }
+	    ops.location = gimple_location (stmt);
+
+	    /* If we want to use a nontemporal store, force the value to
+	       register first.  If we store into a promoted register,
+	       don't directly expand to target.  */
+	    temp = nontemporal || promoted ? NULL_RTX : target;
+	    temp = expand_expr_real_2 (&ops, temp, GET_MODE (target),
+				       EXPAND_NORMAL);
+
+	    if (temp == target)
+	      ;
+	    else if (promoted)
+	      {
+		int unsignedp = SUBREG_PROMOTED_UNSIGNED_P (target);
+		/* If TEMP is a VOIDmode constant, use convert_modes to make
+		   sure that we properly convert it.  */
+		if (CONSTANT_P (temp) && GET_MODE (temp) == VOIDmode)
+		  {
+		    temp = convert_modes (GET_MODE (target),
+					  TYPE_MODE (ops.type),
+					  temp, unsignedp);
+		    temp = convert_modes (GET_MODE (SUBREG_REG (target)),
+					  GET_MODE (target), temp, unsignedp);
+		  }
+
+		convert_move (SUBREG_REG (target), temp, unsignedp);
+	      }
+	    else if (nontemporal && emit_storent_insn (target, temp))
+	      ;
+	    else
+	      {
+		temp = force_operand (temp, target);
+		if (temp != target)
+		  emit_move_insn (target, temp);
+	      }
+	  }
+      }
+      break;
+
+    default:
+      gcc_unreachable ();
+    }
+}
+
+/* Expand one gimple statement STMT and return the last RTL instruction
+   before any of the newly generated ones.
+
+   In addition to generating the necessary RTL instructions this also
+   sets REG_EH_REGION notes if necessary and sets the current source
+   location for diagnostics.  */
+
+static rtx
+expand_gimple_stmt (gimple stmt)
+{
+  int rn = -1;
+  rtx last = NULL;
+  location_t saved_location = input_location;
+
+  last = get_last_insn ();
+
+  /* If this is an expression of some kind and it has an associated line
+     number, then emit the line number before expanding the expression.
+
+     We need to save and restore the file and line information so that
+     errors discovered during expansion are emitted with the right
+     information.  It would be better of the diagnostic routines
+     used the file/line information embedded in the tree nodes rather
+     than globals.  */
+  gcc_assert (cfun);
+
+  if (gimple_has_location (stmt))
+    {
+      input_location = gimple_location (stmt);
+      set_curr_insn_source_location (input_location);
+
+      /* Record where the insns produced belong.  */
+      set_curr_insn_block (gimple_block (stmt));
+    }
+
+  expand_gimple_stmt_1 (stmt);
+  /* Free any temporaries used to evaluate this statement.  */
+  free_temp_slots ();
+
+  input_location = saved_location;
+
+  /* Mark all insns that may trap.  */
+  rn = lookup_stmt_eh_region (stmt);
+  if (rn >= 0)
+    {
+      rtx insn;
+      for (insn = next_real_insn (last); insn;
+	   insn = next_real_insn (insn))
+	{
+	  if (! find_reg_note (insn, REG_EH_REGION, NULL_RTX)
+	      /* If we want exceptions for non-call insns, any
+		 may_trap_p instruction may throw.  */
+	      && GET_CODE (PATTERN (insn)) != CLOBBER
+	      && GET_CODE (PATTERN (insn)) != USE
+	      && (CALL_P (insn)
+		  || (flag_non_call_exceptions && may_trap_p (PATTERN (insn)))))
+	    add_reg_note (insn, REG_EH_REGION, GEN_INT (rn));
+	}
+    }
+
+  return last;
 }
 
 /* A subroutine of expand_gimple_basic_block.  Expand one GIMPLE_CALL
@@ -2057,13 +2032,8 @@ expand_gimple_tailcall (basic_block bb, gimple stmt, bool *can_fallthru)
   edge_iterator ei;
   int probability;
   gcov_type count;
-  tree stmt_tree = gimple_to_tree (stmt);
 
-  last2 = last = get_last_insn ();
-
-  expand_expr_stmt (stmt_tree);
-
-  release_stmt_tree (stmt, stmt_tree);
+  last2 = last = expand_gimple_stmt (stmt);
 
   for (last = NEXT_INSN (last); last; last = NEXT_INSN (last))
     if (CALL_P (last) && SIBLING_CALL_P (last))
@@ -2149,6 +2119,808 @@ expand_gimple_tailcall (basic_block bb, gimple stmt, bool *can_fallthru)
   return bb;
 }
 
+/* Return the difference between the floor and the truncated result of
+   a signed division by OP1 with remainder MOD.  */
+static rtx
+floor_sdiv_adjust (enum machine_mode mode, rtx mod, rtx op1)
+{
+  /* (mod != 0 ? (op1 / mod < 0 ? -1 : 0) : 0) */
+  return gen_rtx_IF_THEN_ELSE
+    (mode, gen_rtx_NE (BImode, mod, const0_rtx),
+     gen_rtx_IF_THEN_ELSE
+     (mode, gen_rtx_LT (BImode,
+			gen_rtx_DIV (mode, op1, mod),
+			const0_rtx),
+      constm1_rtx, const0_rtx),
+     const0_rtx);
+}
+
+/* Return the difference between the ceil and the truncated result of
+   a signed division by OP1 with remainder MOD.  */
+static rtx
+ceil_sdiv_adjust (enum machine_mode mode, rtx mod, rtx op1)
+{
+  /* (mod != 0 ? (op1 / mod > 0 ? 1 : 0) : 0) */
+  return gen_rtx_IF_THEN_ELSE
+    (mode, gen_rtx_NE (BImode, mod, const0_rtx),
+     gen_rtx_IF_THEN_ELSE
+     (mode, gen_rtx_GT (BImode,
+			gen_rtx_DIV (mode, op1, mod),
+			const0_rtx),
+      const1_rtx, const0_rtx),
+     const0_rtx);
+}
+
+/* Return the difference between the ceil and the truncated result of
+   an unsigned division by OP1 with remainder MOD.  */
+static rtx
+ceil_udiv_adjust (enum machine_mode mode, rtx mod, rtx op1 ATTRIBUTE_UNUSED)
+{
+  /* (mod != 0 ? 1 : 0) */
+  return gen_rtx_IF_THEN_ELSE
+    (mode, gen_rtx_NE (BImode, mod, const0_rtx),
+     const1_rtx, const0_rtx);
+}
+
+/* Return the difference between the rounded and the truncated result
+   of a signed division by OP1 with remainder MOD.  Halfway cases are
+   rounded away from zero, rather than to the nearest even number.  */
+static rtx
+round_sdiv_adjust (enum machine_mode mode, rtx mod, rtx op1)
+{
+  /* (abs (mod) >= abs (op1) - abs (mod)
+      ? (op1 / mod > 0 ? 1 : -1)
+      : 0) */
+  return gen_rtx_IF_THEN_ELSE
+    (mode, gen_rtx_GE (BImode, gen_rtx_ABS (mode, mod),
+		       gen_rtx_MINUS (mode,
+				      gen_rtx_ABS (mode, op1),
+				      gen_rtx_ABS (mode, mod))),
+     gen_rtx_IF_THEN_ELSE
+     (mode, gen_rtx_GT (BImode,
+			gen_rtx_DIV (mode, op1, mod),
+			const0_rtx),
+      const1_rtx, constm1_rtx),
+     const0_rtx);
+}
+
+/* Return the difference between the rounded and the truncated result
+   of a unsigned division by OP1 with remainder MOD.  Halfway cases
+   are rounded away from zero, rather than to the nearest even
+   number.  */
+static rtx
+round_udiv_adjust (enum machine_mode mode, rtx mod, rtx op1)
+{
+  /* (mod >= op1 - mod ? 1 : 0) */
+  return gen_rtx_IF_THEN_ELSE
+    (mode, gen_rtx_GE (BImode, mod,
+		       gen_rtx_MINUS (mode, op1, mod)),
+     const1_rtx, const0_rtx);
+}
+
+/* Wrap modeless constants in CONST:MODE.  */
+rtx
+wrap_constant (enum machine_mode mode, rtx x)
+{
+  if (GET_MODE (x) != VOIDmode)
+    return x;
+
+  if (CONST_INT_P (x)
+      || GET_CODE (x) == CONST_FIXED
+      || GET_CODE (x) == CONST_DOUBLE
+      || GET_CODE (x) == LABEL_REF)
+    {
+      gcc_assert (mode != VOIDmode);
+
+      x = gen_rtx_CONST (mode, x);
+    }
+
+  return x;
+}
+
+/* Remove CONST wrapper added by wrap_constant().  */
+rtx
+unwrap_constant (rtx x)
+{
+  rtx ret = x;
+
+  if (GET_CODE (x) != CONST)
+    return x;
+
+  x = XEXP (x, 0);
+
+  if (CONST_INT_P (x)
+      || GET_CODE (x) == CONST_FIXED
+      || GET_CODE (x) == CONST_DOUBLE
+      || GET_CODE (x) == LABEL_REF)
+    ret = x;
+
+  return ret;
+}
+
+/* Return an RTX equivalent to the value of the tree expression
+   EXP.  */
+
+static rtx
+expand_debug_expr (tree exp)
+{
+  rtx op0 = NULL_RTX, op1 = NULL_RTX, op2 = NULL_RTX;
+  enum machine_mode mode = TYPE_MODE (TREE_TYPE (exp));
+  int unsignedp = TYPE_UNSIGNED (TREE_TYPE (exp));
+
+  switch (TREE_CODE_CLASS (TREE_CODE (exp)))
+    {
+    case tcc_expression:
+      switch (TREE_CODE (exp))
+	{
+	case COND_EXPR:
+	  goto ternary;
+
+	case TRUTH_ANDIF_EXPR:
+	case TRUTH_ORIF_EXPR:
+	case TRUTH_AND_EXPR:
+	case TRUTH_OR_EXPR:
+	case TRUTH_XOR_EXPR:
+	  goto binary;
+
+	case TRUTH_NOT_EXPR:
+	  goto unary;
+
+	default:
+	  break;
+	}
+      break;
+
+    ternary:
+      op2 = expand_debug_expr (TREE_OPERAND (exp, 2));
+      if (!op2)
+	return NULL_RTX;
+      /* Fall through.  */
+
+    binary:
+    case tcc_binary:
+    case tcc_comparison:
+      op1 = expand_debug_expr (TREE_OPERAND (exp, 1));
+      if (!op1)
+	return NULL_RTX;
+      /* Fall through.  */
+
+    unary:
+    case tcc_unary:
+      op0 = expand_debug_expr (TREE_OPERAND (exp, 0));
+      if (!op0)
+	return NULL_RTX;
+      break;
+
+    case tcc_type:
+    case tcc_statement:
+      gcc_unreachable ();
+
+    case tcc_constant:
+    case tcc_exceptional:
+    case tcc_declaration:
+    case tcc_reference:
+    case tcc_vl_exp:
+      break;
+    }
+
+  switch (TREE_CODE (exp))
+    {
+    case STRING_CST:
+      if (!lookup_constant_def (exp))
+	{
+	  op0 = gen_rtx_CONST_STRING (Pmode, TREE_STRING_POINTER (exp));
+	  op0 = gen_rtx_MEM (BLKmode, op0);
+	  set_mem_attributes (op0, exp, 0);
+	  return op0;
+	}
+      /* Fall through...  */
+
+    case INTEGER_CST:
+    case REAL_CST:
+    case FIXED_CST:
+      op0 = expand_expr (exp, NULL_RTX, mode, EXPAND_INITIALIZER);
+      return op0;
+
+    case COMPLEX_CST:
+      gcc_assert (COMPLEX_MODE_P (mode));
+      op0 = expand_debug_expr (TREE_REALPART (exp));
+      op0 = wrap_constant (GET_MODE_INNER (mode), op0);
+      op1 = expand_debug_expr (TREE_IMAGPART (exp));
+      op1 = wrap_constant (GET_MODE_INNER (mode), op1);
+      return gen_rtx_CONCAT (mode, op0, op1);
+
+    case VAR_DECL:
+    case PARM_DECL:
+    case FUNCTION_DECL:
+    case LABEL_DECL:
+    case CONST_DECL:
+    case RESULT_DECL:
+      op0 = DECL_RTL_IF_SET (exp);
+
+      /* This decl was probably optimized away.  */
+      if (!op0)
+	return NULL;
+
+      op0 = copy_rtx (op0);
+
+      if (GET_MODE (op0) == BLKmode)
+	{
+	  gcc_assert (MEM_P (op0));
+	  op0 = adjust_address_nv (op0, mode, 0);
+	  return op0;
+	}
+
+      /* Fall through.  */
+
+    adjust_mode:
+    case PAREN_EXPR:
+    case NOP_EXPR:
+    case CONVERT_EXPR:
+      {
+	enum machine_mode inner_mode = GET_MODE (op0);
+
+	if (mode == inner_mode)
+	  return op0;
+
+	if (inner_mode == VOIDmode)
+	  {
+	    inner_mode = TYPE_MODE (TREE_TYPE (TREE_OPERAND (exp, 0)));
+	    if (mode == inner_mode)
+	      return op0;
+	  }
+
+	if (FLOAT_MODE_P (mode) && FLOAT_MODE_P (inner_mode))
+	  {
+	    if (GET_MODE_BITSIZE (mode) == GET_MODE_BITSIZE (inner_mode))
+	      op0 = simplify_gen_subreg (mode, op0, inner_mode, 0);
+	    else if (GET_MODE_BITSIZE (mode) < GET_MODE_BITSIZE (inner_mode))
+	      op0 = simplify_gen_unary (FLOAT_TRUNCATE, mode, op0, inner_mode);
+	    else
+	      op0 = simplify_gen_unary (FLOAT_EXTEND, mode, op0, inner_mode);
+	  }
+	else if (FLOAT_MODE_P (mode))
+	  {
+	    if (TYPE_UNSIGNED (TREE_TYPE (TREE_OPERAND (exp, 0))))
+	      op0 = simplify_gen_unary (UNSIGNED_FLOAT, mode, op0, inner_mode);
+	    else
+	      op0 = simplify_gen_unary (FLOAT, mode, op0, inner_mode);
+	  }
+	else if (FLOAT_MODE_P (inner_mode))
+	  {
+	    if (unsignedp)
+	      op0 = simplify_gen_unary (UNSIGNED_FIX, mode, op0, inner_mode);
+	    else
+	      op0 = simplify_gen_unary (FIX, mode, op0, inner_mode);
+	  }
+	else if (CONSTANT_P (op0)
+		 || GET_MODE_BITSIZE (mode) <= GET_MODE_BITSIZE (inner_mode))
+	  op0 = simplify_gen_subreg (mode, op0, inner_mode,
+				     subreg_lowpart_offset (mode,
+							    inner_mode));
+	else if (unsignedp)
+	  op0 = gen_rtx_ZERO_EXTEND (mode, op0);
+	else
+	  op0 = gen_rtx_SIGN_EXTEND (mode, op0);
+
+	return op0;
+      }
+
+    case INDIRECT_REF:
+    case ALIGN_INDIRECT_REF:
+    case MISALIGNED_INDIRECT_REF:
+      op0 = expand_debug_expr (TREE_OPERAND (exp, 0));
+      if (!op0)
+	return NULL;
+
+      gcc_assert (GET_MODE (op0) == Pmode
+		  || GET_CODE (op0) == CONST_INT
+		  || GET_CODE (op0) == CONST_DOUBLE);
+
+      if (TREE_CODE (exp) == ALIGN_INDIRECT_REF)
+	{
+	  int align = TYPE_ALIGN_UNIT (TREE_TYPE (exp));
+	  op0 = gen_rtx_AND (Pmode, op0, GEN_INT (-align));
+	}
+
+      op0 = gen_rtx_MEM (mode, op0);
+
+      set_mem_attributes (op0, exp, 0);
+
+      return op0;
+
+    case TARGET_MEM_REF:
+      if (TMR_SYMBOL (exp) && !DECL_RTL_SET_P (TMR_SYMBOL (exp)))
+	return NULL;
+
+      op0 = expand_debug_expr
+	(tree_mem_ref_addr (build_pointer_type (TREE_TYPE (exp)),
+			    exp));
+      if (!op0)
+	return NULL;
+
+      gcc_assert (GET_MODE (op0) == Pmode
+		  || GET_CODE (op0) == CONST_INT
+		  || GET_CODE (op0) == CONST_DOUBLE);
+
+      op0 = gen_rtx_MEM (mode, op0);
+
+      set_mem_attributes (op0, exp, 0);
+
+      return op0;
+
+    case ARRAY_REF:
+    case ARRAY_RANGE_REF:
+    case COMPONENT_REF:
+    case BIT_FIELD_REF:
+    case REALPART_EXPR:
+    case IMAGPART_EXPR:
+    case VIEW_CONVERT_EXPR:
+      {
+	enum machine_mode mode1;
+	HOST_WIDE_INT bitsize, bitpos;
+	tree offset;
+	int volatilep = 0;
+	tree tem = get_inner_reference (exp, &bitsize, &bitpos, &offset,
+					&mode1, &unsignedp, &volatilep, false);
+	rtx orig_op0;
+
+	orig_op0 = op0 = expand_debug_expr (tem);
+
+	if (!op0)
+	  return NULL;
+
+	if (offset)
+	  {
+	    gcc_assert (MEM_P (op0));
+
+	    op1 = expand_debug_expr (offset);
+	    if (!op1)
+	      return NULL;
+
+	    op0 = gen_rtx_MEM (mode, gen_rtx_PLUS (Pmode, XEXP (op0, 0), op1));
+	  }
+
+	if (MEM_P (op0))
+	  {
+	    if (bitpos >= BITS_PER_UNIT)
+	      {
+		op0 = adjust_address_nv (op0, mode1, bitpos / BITS_PER_UNIT);
+		bitpos %= BITS_PER_UNIT;
+	      }
+	    else if (bitpos < 0)
+	      {
+		int units = (-bitpos + BITS_PER_UNIT - 1) / BITS_PER_UNIT;
+		op0 = adjust_address_nv (op0, mode1, units);
+		bitpos += units * BITS_PER_UNIT;
+	      }
+	    else if (bitpos == 0 && bitsize == GET_MODE_BITSIZE (mode))
+	      op0 = adjust_address_nv (op0, mode, 0);
+	    else if (GET_MODE (op0) != mode1)
+	      op0 = adjust_address_nv (op0, mode1, 0);
+	    else
+	      op0 = copy_rtx (op0);
+	    if (op0 == orig_op0)
+	      op0 = shallow_copy_rtx (op0);
+	    set_mem_attributes (op0, exp, 0);
+	  }
+
+	if (bitpos == 0 && mode == GET_MODE (op0))
+	  return op0;
+
+	if ((bitpos % BITS_PER_UNIT) == 0
+	    && bitsize == GET_MODE_BITSIZE (mode1))
+	  {
+	    enum machine_mode opmode = GET_MODE (op0);
+
+	    gcc_assert (opmode != BLKmode);
+
+	    if (opmode == VOIDmode)
+	      opmode = mode1;
+
+	    /* This condition may hold if we're expanding the address
+	       right past the end of an array that turned out not to
+	       be addressable (i.e., the address was only computed in
+	       debug stmts).  The gen_subreg below would rightfully
+	       crash, and the address doesn't really exist, so just
+	       drop it.  */
+	    if (bitpos >= GET_MODE_BITSIZE (opmode))
+	      return NULL;
+
+	    return simplify_gen_subreg (mode, op0, opmode,
+					bitpos / BITS_PER_UNIT);
+	  }
+
+	return simplify_gen_ternary (SCALAR_INT_MODE_P (GET_MODE (op0))
+				     && TYPE_UNSIGNED (TREE_TYPE (exp))
+				     ? SIGN_EXTRACT
+				     : ZERO_EXTRACT, mode,
+				     GET_MODE (op0) != VOIDmode
+				     ? GET_MODE (op0) : mode1,
+				     op0, GEN_INT (bitsize), GEN_INT (bitpos));
+      }
+
+    case EXC_PTR_EXPR:
+      /* ??? Do not call get_exception_pointer(), we don't want to gen
+	 it if it hasn't been created yet.  */
+      return get_exception_pointer ();
+
+    case FILTER_EXPR:
+      /* Likewise get_exception_filter().  */
+      return get_exception_filter ();
+
+    case ABS_EXPR:
+      return gen_rtx_ABS (mode, op0);
+
+    case NEGATE_EXPR:
+      return gen_rtx_NEG (mode, op0);
+
+    case BIT_NOT_EXPR:
+      return gen_rtx_NOT (mode, op0);
+
+    case FLOAT_EXPR:
+      if (unsignedp)
+	return gen_rtx_UNSIGNED_FLOAT (mode, op0);
+      else
+	return gen_rtx_FLOAT (mode, op0);
+
+    case FIX_TRUNC_EXPR:
+      if (unsignedp)
+	return gen_rtx_UNSIGNED_FIX (mode, op0);
+      else
+	return gen_rtx_FIX (mode, op0);
+
+    case POINTER_PLUS_EXPR:
+    case PLUS_EXPR:
+      return gen_rtx_PLUS (mode, op0, op1);
+
+    case MINUS_EXPR:
+      return gen_rtx_MINUS (mode, op0, op1);
+
+    case MULT_EXPR:
+      return gen_rtx_MULT (mode, op0, op1);
+
+    case RDIV_EXPR:
+    case TRUNC_DIV_EXPR:
+    case EXACT_DIV_EXPR:
+      if (unsignedp)
+	return gen_rtx_UDIV (mode, op0, op1);
+      else
+	return gen_rtx_DIV (mode, op0, op1);
+
+    case TRUNC_MOD_EXPR:
+      if (unsignedp)
+	return gen_rtx_UMOD (mode, op0, op1);
+      else
+	return gen_rtx_MOD (mode, op0, op1);
+
+    case FLOOR_DIV_EXPR:
+      if (unsignedp)
+	return gen_rtx_UDIV (mode, op0, op1);
+      else
+	{
+	  rtx div = gen_rtx_DIV (mode, op0, op1);
+	  rtx mod = gen_rtx_MOD (mode, op0, op1);
+	  rtx adj = floor_sdiv_adjust (mode, mod, op1);
+	  return gen_rtx_PLUS (mode, div, adj);
+	}
+
+    case FLOOR_MOD_EXPR:
+      if (unsignedp)
+	return gen_rtx_UMOD (mode, op0, op1);
+      else
+	{
+	  rtx mod = gen_rtx_MOD (mode, op0, op1);
+	  rtx adj = floor_sdiv_adjust (mode, mod, op1);
+	  adj = gen_rtx_NEG (mode, gen_rtx_MULT (mode, adj, op1));
+	  return gen_rtx_PLUS (mode, mod, adj);
+	}
+
+    case CEIL_DIV_EXPR:
+      if (unsignedp)
+	{
+	  rtx div = gen_rtx_UDIV (mode, op0, op1);
+	  rtx mod = gen_rtx_UMOD (mode, op0, op1);
+	  rtx adj = ceil_udiv_adjust (mode, mod, op1);
+	  return gen_rtx_PLUS (mode, div, adj);
+	}
+      else
+	{
+	  rtx div = gen_rtx_DIV (mode, op0, op1);
+	  rtx mod = gen_rtx_MOD (mode, op0, op1);
+	  rtx adj = ceil_sdiv_adjust (mode, mod, op1);
+	  return gen_rtx_PLUS (mode, div, adj);
+	}
+
+    case CEIL_MOD_EXPR:
+      if (unsignedp)
+	{
+	  rtx mod = gen_rtx_UMOD (mode, op0, op1);
+	  rtx adj = ceil_udiv_adjust (mode, mod, op1);
+	  adj = gen_rtx_NEG (mode, gen_rtx_MULT (mode, adj, op1));
+	  return gen_rtx_PLUS (mode, mod, adj);
+	}
+      else
+	{
+	  rtx mod = gen_rtx_MOD (mode, op0, op1);
+	  rtx adj = ceil_sdiv_adjust (mode, mod, op1);
+	  adj = gen_rtx_NEG (mode, gen_rtx_MULT (mode, adj, op1));
+	  return gen_rtx_PLUS (mode, mod, adj);
+	}
+
+    case ROUND_DIV_EXPR:
+      if (unsignedp)
+	{
+	  rtx div = gen_rtx_UDIV (mode, op0, op1);
+	  rtx mod = gen_rtx_UMOD (mode, op0, op1);
+	  rtx adj = round_udiv_adjust (mode, mod, op1);
+	  return gen_rtx_PLUS (mode, div, adj);
+	}
+      else
+	{
+	  rtx div = gen_rtx_DIV (mode, op0, op1);
+	  rtx mod = gen_rtx_MOD (mode, op0, op1);
+	  rtx adj = round_sdiv_adjust (mode, mod, op1);
+	  return gen_rtx_PLUS (mode, div, adj);
+	}
+
+    case ROUND_MOD_EXPR:
+      if (unsignedp)
+	{
+	  rtx mod = gen_rtx_UMOD (mode, op0, op1);
+	  rtx adj = round_udiv_adjust (mode, mod, op1);
+	  adj = gen_rtx_NEG (mode, gen_rtx_MULT (mode, adj, op1));
+	  return gen_rtx_PLUS (mode, mod, adj);
+	}
+      else
+	{
+	  rtx mod = gen_rtx_MOD (mode, op0, op1);
+	  rtx adj = round_sdiv_adjust (mode, mod, op1);
+	  adj = gen_rtx_NEG (mode, gen_rtx_MULT (mode, adj, op1));
+	  return gen_rtx_PLUS (mode, mod, adj);
+	}
+
+    case LSHIFT_EXPR:
+      return gen_rtx_ASHIFT (mode, op0, op1);
+
+    case RSHIFT_EXPR:
+      if (unsignedp)
+	return gen_rtx_LSHIFTRT (mode, op0, op1);
+      else
+	return gen_rtx_ASHIFTRT (mode, op0, op1);
+
+    case LROTATE_EXPR:
+      return gen_rtx_ROTATE (mode, op0, op1);
+
+    case RROTATE_EXPR:
+      return gen_rtx_ROTATERT (mode, op0, op1);
+
+    case MIN_EXPR:
+      if (unsignedp)
+	return gen_rtx_UMIN (mode, op0, op1);
+      else
+	return gen_rtx_SMIN (mode, op0, op1);
+
+    case MAX_EXPR:
+      if (unsignedp)
+	return gen_rtx_UMAX (mode, op0, op1);
+      else
+	return gen_rtx_SMAX (mode, op0, op1);
+
+    case BIT_AND_EXPR:
+    case TRUTH_AND_EXPR:
+      return gen_rtx_AND (mode, op0, op1);
+
+    case BIT_IOR_EXPR:
+    case TRUTH_OR_EXPR:
+      return gen_rtx_IOR (mode, op0, op1);
+
+    case BIT_XOR_EXPR:
+    case TRUTH_XOR_EXPR:
+      return gen_rtx_XOR (mode, op0, op1);
+
+    case TRUTH_ANDIF_EXPR:
+      return gen_rtx_IF_THEN_ELSE (mode, op0, op1, const0_rtx);
+
+    case TRUTH_ORIF_EXPR:
+      return gen_rtx_IF_THEN_ELSE (mode, op0, const_true_rtx, op1);
+
+    case TRUTH_NOT_EXPR:
+      return gen_rtx_EQ (mode, op0, const0_rtx);
+
+    case LT_EXPR:
+      if (unsignedp)
+	return gen_rtx_LTU (mode, op0, op1);
+      else
+	return gen_rtx_LT (mode, op0, op1);
+
+    case LE_EXPR:
+      if (unsignedp)
+	return gen_rtx_LEU (mode, op0, op1);
+      else
+	return gen_rtx_LE (mode, op0, op1);
+
+    case GT_EXPR:
+      if (unsignedp)
+	return gen_rtx_GTU (mode, op0, op1);
+      else
+	return gen_rtx_GT (mode, op0, op1);
+
+    case GE_EXPR:
+      if (unsignedp)
+	return gen_rtx_GEU (mode, op0, op1);
+      else
+	return gen_rtx_GE (mode, op0, op1);
+
+    case EQ_EXPR:
+      return gen_rtx_EQ (mode, op0, op1);
+
+    case NE_EXPR:
+      return gen_rtx_NE (mode, op0, op1);
+
+    case UNORDERED_EXPR:
+      return gen_rtx_UNORDERED (mode, op0, op1);
+
+    case ORDERED_EXPR:
+      return gen_rtx_ORDERED (mode, op0, op1);
+
+    case UNLT_EXPR:
+      return gen_rtx_UNLT (mode, op0, op1);
+
+    case UNLE_EXPR:
+      return gen_rtx_UNLE (mode, op0, op1);
+
+    case UNGT_EXPR:
+      return gen_rtx_UNGT (mode, op0, op1);
+
+    case UNGE_EXPR:
+      return gen_rtx_UNGE (mode, op0, op1);
+
+    case UNEQ_EXPR:
+      return gen_rtx_UNEQ (mode, op0, op1);
+
+    case LTGT_EXPR:
+      return gen_rtx_LTGT (mode, op0, op1);
+
+    case COND_EXPR:
+      return gen_rtx_IF_THEN_ELSE (mode, op0, op1, op2);
+
+    case COMPLEX_EXPR:
+      gcc_assert (COMPLEX_MODE_P (mode));
+      if (GET_MODE (op0) == VOIDmode)
+	op0 = gen_rtx_CONST (GET_MODE_INNER (mode), op0);
+      if (GET_MODE (op1) == VOIDmode)
+	op1 = gen_rtx_CONST (GET_MODE_INNER (mode), op1);
+      return gen_rtx_CONCAT (mode, op0, op1);
+
+    case ADDR_EXPR:
+      op0 = expand_debug_expr (TREE_OPERAND (exp, 0));
+      if (!op0 || !MEM_P (op0))
+	return NULL;
+
+      return XEXP (op0, 0);
+
+    case VECTOR_CST:
+      exp = build_constructor_from_list (TREE_TYPE (exp),
+					 TREE_VECTOR_CST_ELTS (exp));
+      /* Fall through.  */
+
+    case CONSTRUCTOR:
+      if (TREE_CODE (TREE_TYPE (exp)) == VECTOR_TYPE)
+	{
+	  unsigned i;
+	  tree val;
+
+	  op0 = gen_rtx_CONCATN
+	    (mode, rtvec_alloc (TYPE_VECTOR_SUBPARTS (TREE_TYPE (exp))));
+
+	  FOR_EACH_CONSTRUCTOR_VALUE (CONSTRUCTOR_ELTS (exp), i, val)
+	    {
+	      op1 = expand_debug_expr (val);
+	      if (!op1)
+		return NULL;
+	      XVECEXP (op0, 0, i) = op1;
+	    }
+
+	  if (i < TYPE_VECTOR_SUBPARTS (TREE_TYPE (exp)))
+	    {
+	      op1 = expand_debug_expr
+		(fold_convert (TREE_TYPE (TREE_TYPE (exp)), integer_zero_node));
+
+	      if (!op1)
+		return NULL;
+
+	      for (; i < TYPE_VECTOR_SUBPARTS (TREE_TYPE (exp)); i++)
+		XVECEXP (op0, 0, i) = op1;
+	    }
+
+	  return op0;
+	}
+      else
+	goto flag_unsupported;
+
+    case CALL_EXPR:
+      /* ??? Maybe handle some builtins?  */
+      return NULL;
+
+    case SSA_NAME:
+      {
+	int part = var_to_partition (SA.map, exp);
+
+	if (part == NO_PARTITION)
+	  return NULL;
+
+	gcc_assert (part >= 0 && (unsigned)part < SA.map->num_partitions);
+
+	op0 = SA.partition_to_pseudo[part];
+	goto adjust_mode;
+      }
+
+    case ERROR_MARK:
+      return NULL;
+
+    default:
+    flag_unsupported:
+#ifdef ENABLE_CHECKING
+      debug_tree (exp);
+      gcc_unreachable ();
+#else
+      return NULL;
+#endif
+    }
+}
+
+/* Expand the _LOCs in debug insns.  We run this after expanding all
+   regular insns, so that any variables referenced in the function
+   will have their DECL_RTLs set.  */
+
+static void
+expand_debug_locations (void)
+{
+  rtx insn;
+  rtx last = get_last_insn ();
+  int save_strict_alias = flag_strict_aliasing;
+
+  /* New alias sets while setting up memory attributes cause
+     -fcompare-debug failures, even though it doesn't bring about any
+     codegen changes.  */
+  flag_strict_aliasing = 0;
+
+  for (insn = get_insns (); insn; insn = NEXT_INSN (insn))
+    if (DEBUG_INSN_P (insn))
+      {
+	tree value = (tree)INSN_VAR_LOCATION_LOC (insn);
+	rtx val;
+	enum machine_mode mode;
+
+	if (value == NULL_TREE)
+	  val = NULL_RTX;
+	else
+	  {
+	    val = expand_debug_expr (value);
+	    gcc_assert (last == get_last_insn ());
+	  }
+
+	if (!val)
+	  val = gen_rtx_UNKNOWN_VAR_LOC ();
+	else
+	  {
+	    mode = GET_MODE (INSN_VAR_LOCATION (insn));
+
+	    gcc_assert (mode == GET_MODE (val)
+			|| (GET_MODE (val) == VOIDmode
+			    && (CONST_INT_P (val)
+				|| GET_CODE (val) == CONST_FIXED
+				|| GET_CODE (val) == CONST_DOUBLE
+				|| GET_CODE (val) == LABEL_REF)));
+	  }
+
+	INSN_VAR_LOCATION_LOC (insn) = val;
+      }
+
+  flag_strict_aliasing = save_strict_alias;
+}
+
 /* Expand basic block BB from GIMPLE trees to RTL.  */
 
 static basic_block
@@ -2211,9 +2983,7 @@ expand_gimple_basic_block (basic_block bb)
 
       if (stmt)
 	{
-	  tree stmt_tree = gimple_to_tree (stmt);
-	  expand_expr_stmt (stmt_tree);
-	  release_stmt_tree (stmt, stmt_tree);
+	  expand_gimple_stmt (stmt);
 	  gsi_next (&gsi);
 	}
 
@@ -2236,8 +3006,9 @@ expand_gimple_basic_block (basic_block bb)
 
   for (; !gsi_end_p (gsi); gsi_next (&gsi))
     {
-      gimple stmt = gsi_stmt (gsi);
       basic_block new_bb;
+
+      stmt = gsi_stmt (gsi);
 
       /* Expand this statement, then evaluate the resulting RTL and
 	 fixup the CFG accordingly.  */
@@ -2246,6 +3017,60 @@ expand_gimple_basic_block (basic_block bb)
 	  new_bb = expand_gimple_cond (bb, stmt);
 	  if (new_bb)
 	    return new_bb;
+	}
+      else if (gimple_debug_bind_p (stmt))
+	{
+	  location_t sloc = get_curr_insn_source_location ();
+	  tree sblock = get_curr_insn_block ();
+	  gimple_stmt_iterator nsi = gsi;
+
+	  for (;;)
+	    {
+	      tree var = gimple_debug_bind_get_var (stmt);
+	      tree value;
+	      rtx val;
+	      enum machine_mode mode;
+
+	      if (gimple_debug_bind_has_value_p (stmt))
+		value = gimple_debug_bind_get_value (stmt);
+	      else
+		value = NULL_TREE;
+
+	      last = get_last_insn ();
+
+	      set_curr_insn_source_location (gimple_location (stmt));
+	      set_curr_insn_block (gimple_block (stmt));
+
+	      if (DECL_P (var))
+		mode = DECL_MODE (var);
+	      else
+		mode = TYPE_MODE (TREE_TYPE (var));
+
+	      val = gen_rtx_VAR_LOCATION
+		(mode, var, (rtx)value, VAR_INIT_STATUS_INITIALIZED);
+
+	      val = emit_debug_insn (val);
+
+	      if (dump_file && (dump_flags & TDF_DETAILS))
+		{
+		  /* We can't dump the insn with a TREE where an RTX
+		     is expected.  */
+		  INSN_VAR_LOCATION_LOC (val) = const0_rtx;
+		  maybe_dump_rtl_for_gimple_stmt (stmt, last);
+		  INSN_VAR_LOCATION_LOC (val) = (rtx)value;
+		}
+
+	      gsi = nsi;
+	      gsi_next (&nsi);
+	      if (gsi_end_p (nsi))
+		break;
+	      stmt = gsi_stmt (nsi);
+	      if (!gimple_debug_bind_p (stmt))
+		break;
+	    }
+
+	  set_curr_insn_source_location (sloc);
+	  set_curr_insn_block (sblock);
 	}
       else
 	{
@@ -2264,7 +3089,6 @@ expand_gimple_basic_block (basic_block bb)
 	  else
 	    {
 	      def_operand_p def_p;
-	      tree stmt_tree;
 	      def_p = SINGLE_SSA_DEF_OPERAND (stmt, SSA_OP_DEF);
 
 	      if (def_p != NULL)
@@ -2276,11 +3100,8 @@ expand_gimple_basic_block (basic_block bb)
 				       SSA_NAME_VERSION (DEF_FROM_PTR (def_p))))
 		    continue;
 		}
-	      stmt_tree = gimple_to_tree (stmt);
-	      last = get_last_insn ();
-	      expand_expr_stmt (stmt_tree);
+	      last = expand_gimple_stmt (stmt);
 	      maybe_dump_rtl_for_gimple_stmt (stmt, last);
-	      release_stmt_tree (stmt, stmt_tree);
 	    }
 	}
     }
@@ -2719,6 +3540,9 @@ gimple_expand_cfg (void)
   lab_rtx_for_bb = pointer_map_create ();
   FOR_BB_BETWEEN (bb, init_block->next_bb, EXIT_BLOCK_PTR, next_bb)
     bb = expand_gimple_basic_block (bb);
+
+  if (MAY_HAVE_DEBUG_INSNS)
+    expand_debug_locations ();
 
   execute_free_datastructures ();
   finish_out_of_ssa (&SA);

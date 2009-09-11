@@ -1,3 +1,165 @@
+2009-08-31  Takaki Makino  <t@snowelm.com>
+
+	* libm/machine/i386/f_pow.c(_f_pow): Alter ASM so it works with
+	newer gcc versions.
+	* libm/maachine/i386/f_powf.c(_f_powf): Ditto.
+
+2009-08-25  Andy Koppe  <andy.koppe@gmail.com>
+
+	* libc/stdlib/sb_charsets.c (__micro_atoi): Allow five-digit codepage
+	numbers.
+	* libc/locale/locale.c (loadlocale): Set MB_CUR_MAX to 1 for KOI8
+	charsets.
+	* libc/stdlib/local.h (__cp_conv): Remove incorrect number of codepages.
+
+2009-08-24  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c: Update documentation.
+	(loadlocale): Map "KOI8-R" and "KOI8-U" to CP20866 and CP21866.
+
+2009-08-24  Andy Koppe  <andy.koppe@gmail.com>
+
+	* libc/stdlib/sb_charsets.c (__cp_conv): Add KOI8-R (Russian, CP20866)
+	and KOI8-U (Ukrainian, CP21866) to Windows codepage conversion tables.
+	* libc/ctype/ctype_cp.h (__ctype_cp): Likewise for ctype tables.
+
+2009-08-24  Andy Koppe  <andy.koppe@gmail.com>
+
+	* libc/ctype/iswspace.c (iswspace): Include "non-breaking
+	space" (U+00A0).
+	* libc/ctype/iswblank.c (iswblank): Likewise.
+
+2009-08-21  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Throughout check charset string
+	case insensitive and store internal charset string uppercased.  Allow
+	"UTF8" additionally to "UTF-8".  Add this change to documentation.
+
+2009-08-21  Eric Blake  <ebb9@byu.net>
+
+	* libc/include/iconv.h (iconv): Match POSIX prototype.
+	* libc/iconv/lib/iconv.c (iconv): Likewise.
+
+2009-08-21  Craig Howland <howland@LGSInnovations.com>
+
+	* libm/common/s_remquo.c (remquo):  Fix sign of quotient when |x|==|y|.
+	* libc/stdio/mktemp.c:  Add #include <stdlib.h> for function prototypes.
+
+2009-08-19  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* iconvdata/Makefile.am (all): Remove.
+	* libc/sys/a29khif/Makefile.am (all-am): Rename from ...
+	(all): ... this.
+	* libc/sys/arc/Makefile.am: Likewise.
+	* libc/sys/arm/Makefile.am: Likewise.
+	* libc/sys/d10v/Makefile.am: Likewise.
+	* libc/sys/decstation/Makefile.am: Likewise.
+	* libc/sys/h8300hms/Makefile.am: Likewise.
+	* libc/sys/h8500hms/Makefile.am: Likewise.
+	* libc/sys/linux/Makefile.am: Likewise.
+	* libc/sys/linux/machine/i386/Makefile.am: Likewise.
+	* libc/sys/m88kbug/Makefile.am: Likewise.
+	* libc/sys/mmixware/Makefile.am: Likewise.
+	* libc/sys/netware/Makefile.am: Likewise.
+	* libc/sys/rdos/Makefile.am: Likewise.
+	* libc/sys/rtems/Makefile.am: Likewise.
+	* libc/sys/sh/Makefile.am: Likewise.
+	* libc/sys/sparc64/Makefile.am: Likewise.
+	* libc/sys/sun4/Makefile.am: Likewise.
+	* libc/sys/sysmec/Makefile.am: Likewise.
+	* libc/sys/sysnec810/Makefile.am: Likewise.
+	* libc/sys/sysnecv850/Makefile.am: Likewise.
+	* libc/sys/sysvi386/Makefile.am: Likewise.
+	* libc/sys/sysvnecv70/Makefile.am: Likewise.
+	* libc/sys/tic80/Makefile.am: Likewise.
+	* libc/sys/w65/Makefile.am: Likewise.
+	* libc/sys/z8ksim/Makefile.am: Likewise.
+	* iconvdata/Makefile.in: Regenerate.
+	* libc/sys/a29khif/Makefile.in: Likewise.
+	* libc/sys/arc/Makefile.in: Likewise.
+	* libc/sys/arm/Makefile.in: Likewise.
+	* libc/sys/d10v/Makefile.in: Likewise.
+	* libc/sys/decstation/Makefile.in: Likewise.
+	* libc/sys/h8300hms/Makefile.in: Likewise.
+	* libc/sys/h8500hms/Makefile.in: Likewise.
+	* libc/sys/linux/Makefile.in: Likewise.
+	* libc/sys/linux/machine/i386/Makefile.in: Likewise.
+	* libc/sys/m88kbug/Makefile.in: Likewise.
+	* libc/sys/mmixware/Makefile.in: Likewise.
+	* libc/sys/netware/Makefile.in: Likewise.
+	* libc/sys/rdos/Makefile.in: Likewise.
+	* libc/sys/rtems/Makefile.in: Likewise.
+	* libc/sys/sh/Makefile.in: Likewise.
+	* libc/sys/sparc64/Makefile.in: Likewise.
+	* libc/sys/sun4/Makefile.in: Likewise.
+	* libc/sys/sysmec/Makefile.in: Likewise.
+	* libc/sys/sysnec810/Makefile.in: Likewise.
+	* libc/sys/sysnecv850/Makefile.in: Likewise.
+	* libc/sys/sysvi386/Makefile.in: Likewise.
+	* libc/sys/sysvnecv70/Makefile.in: Likewise.
+	* libc/sys/tic80/Makefile.in: Likewise.
+	* libc/sys/w65/Makefile.in: Likewise.
+	* libc/sys/z8ksim/Makefile.in: Likewise.
+
+	* configure.in (newlib_cv_ldbl_eq_dbl): Rename cache variable
+	from newlib_ldbl_eq_dbl.
+	* configure: Regenerate.
+
+2009-08-19  Eric Blake  <ebb9@byu.net>
+
+	* libc/Makefile.am (SUBDEFS): Correctly build popen docs.
+	* libc/libc.texinfo (Top): Add posix node to menu.
+
+2009-08-18  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* newlib.hin: Add comment regarding file being manually edited.
+	* Makefile.am: Add no-op rule for newlib.hin.
+	* Makefile.in: Regenerated.
+
+2009-08-18  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* acconfig.h: Add templates for _HAVE_LONG_DOUBLE and _LDBL_EQ_DBL.
+
+2009-08-18  Eric Blake  <ebb9@byu.net>
+
+	* libc/posix/popen.c (popen): Fix documented prototype.
+
+	Improve popen compatibility with glibc.
+	* libc/posix/popen.c (popen): The 2006-08-22 change to use
+	FD_CLOEXEC disagrees with other implementations; instead, use
+	pidlist to work even when fcntl is not available.  Meanwhile,
+	support the 'e' modifier to set CLOEXEC, as in glibc.  Drop
+	cygwin-specific code, now that cygwin has its own version.
+	* libc/posix/Makefile.am (CHEWOUT_FILES): Document popen.
+	* libc/posix/posix.tex: New file.
+
+2009-08-17  Craig Howland <howland@LGSInnovations.com>
+
+	* libc/string/wcsncpy.c (wcsncpy):  Re-write function based on small
+	version of strncpy() (fixing two bugs).
+
+2009-08-13  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdio/mktemp.c (mkdtemp): Fix typo in function name.
+
+2009-08-12  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/stdio/mktemp.c (_gettemp): Do not call _mkdir_r unless
+	HAVE_MKDIR is defined.
+
+2009-08-12  Hans-Peter Nilsson  <hp@axis.com>
+
+	* libc/include/reent.h: Add prototype and definition of _mkdir_r.
+	* libc/reent/Makefile.am (GENERAL_SOURCES): Add mkdirr.c.
+	(CHEWOUT_FILES): Add mkdirr.def.
+	* libc/reent/Makefile.in: Regenerate.
+	* libc/reent/mkdirr.c: New file.
+
+2009-08-10  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/stdlib/wcstombs.c: Change documentation to specify size_t
+	return type instead of int.
+
 2009-07-29  Jeff Johnston  <jjohnstn@redhat.com>
 
 	* libc/stdlib/a64l.c: Fix to use 'a' instead of 'A' in calculation

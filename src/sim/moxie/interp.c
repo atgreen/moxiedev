@@ -1167,7 +1167,6 @@ sim_open (kind, cb, abfd, argv)
 
   sim_do_command(sd," memory region 0x00000000,0x4000000") ; 
   sim_do_command(sd," memory region 0xE0000000,0x10000") ; 
-  sim_do_commandf (sd, "memory-info");
 
   myname = argv[0];
   callback = cb;
@@ -1187,6 +1186,9 @@ sim_close (sd, quitting)
 {
   /* nothing to do */
 }
+
+
+/* Load the device tree blob.  */
 
 static void
 load_dtb (SIM_DESC sd, const char *filename)
@@ -1339,30 +1341,9 @@ sim_do_command (sd, cmd)
      char * cmd;
 {
   if (sim_args_command (sd, cmd) != SIM_RC_OK)
-    sim_io_printf (sd, "Error: \"%s\" is not a valid moxie simulator command.\n",
+    sim_io_printf (sd, 
+		   "Error: \"%s\" is not a valid moxie simulator command.\n",
 		   cmd);
-#if 0
-  /* Nothing there yet; it's all an error.  */
-  
-  if (cmd != NULL)
-    {
-      char ** simargv = buildargv (cmd);
-      if (strcmp (simargv[0], "verbose") == 0)
-	{
-	  issue_messages = 2;
-	}
-      else
-	{
-	  fprintf (stderr,"Error: \"%s\" is not a valid moxie simulator command.\n",
-		   cmd);
-	}
-    }
-  else
-    {
-      fprintf (stderr, "moxie sim commands: \n");
-      fprintf (stderr, "  verbose\n");
-    }
-#endif
 }
 
 void

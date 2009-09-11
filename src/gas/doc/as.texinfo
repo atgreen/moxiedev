@@ -363,6 +363,10 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
    [@b{-jsri2bsr}] [@b{-sifilter}] [@b{-relax}]
    [@b{-mcpu=[210|340]}]
 @end ifset
+@ifset MICROBLAZE
+@emph{Target MICROBLAZE options:}
+@c MicroBlaze has no machine-dependent assembler options.
+@end ifset
 @ifset MIPS
 
 @emph{Target MIPS options:}
@@ -3267,6 +3271,10 @@ by an equals sign @samp{=}, followed by an expression
 directive.  @xref{Set,,@code{.set}}.  In the same way, using a double
 equals sign @samp{=}@samp{=} here represents an equivalent of the
 @code{.eqv} directive.  @xref{Eqv,,@code{.eqv}}.
+
+@ifset Blackfin
+Blackfin does not support symbol assignment with @samp{=}.
+@end ifset
 
 @node Symbol Names
 @section Symbol Names
@@ -6712,8 +6720,8 @@ subject, see the hardware manufacturer's manual.
 @ifset AVR
 * AVR-Dependent::               AVR Dependent Features
 @end ifset
-@ifset BFIN
-* BFIN-Dependent::		BFIN Dependent Features
+@ifset Blackfin
+* Blackfin-Dependent::		Blackfin Dependent Features
 @end ifset
 @ifset CR16
 * CR16-Dependent::              CR16 Dependent Features
@@ -6765,6 +6773,9 @@ subject, see the hardware manufacturer's manual.
 @end ifset
 @ifset M68HC11
 * M68HC11-Dependent::           M68HC11 and 68HC12 Dependent Features
+@end ifset
+@ifset MICROBLAZE
+* MicroBlaze-Dependent::	MICROBLAZE Dependent Features
 @end ifset
 @ifset MIPS
 * MIPS-Dependent::              MIPS Dependent Features
@@ -6844,7 +6855,7 @@ subject, see the hardware manufacturer's manual.
 @include c-avr.texi
 @end ifset
 
-@ifset BFIN
+@ifset Blackfin
 @include c-bfin.texi
 @end ifset
 
@@ -6932,6 +6943,10 @@ family.
 
 @ifset M68HC11
 @include c-m68hc11.texi
+@end ifset
+
+@ifset MICROBLAZE 
+@include c-microblaze.texi
 @end ifset
 
 @ifset MIPS

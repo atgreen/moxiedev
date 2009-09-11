@@ -79,6 +79,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "gimple.h"
 #include "tree-flow.h"
+#include "ipa-prop.h"
 #include "diagnostic.h"
 #include "statistics.h"
 #include "tree-dump.h"
@@ -164,6 +165,10 @@ struct access
   /* Does this group contain a read access?  This flag is propagated down the
      access tree.  */
   unsigned grp_read : 1;
+  /* Other passes of the analysis use this bit to make function
+     analyze_access_subtree create scalar replacements for this group if
+     possible.  */
+  unsigned grp_hint : 1;
   /* Is the subtree rooted in this access fully covered by scalar
      replacements?  */
   unsigned grp_covered : 1;
@@ -260,12 +265,14 @@ dump_access (FILE *f, struct access *access, bool grp)
   fprintf (f, ", type = ");
   print_generic_expr (f, access->type, 0);
   if (grp)
-    fprintf (f, ", grp_write = %d, grp_read = %d, grp_covered = %d, "
-	     "grp_unscalarizable_region = %d, grp_unscalarized_data = %d, "
-	     "grp_partial_lhs = %d, grp_to_be_replaced = %d\n",
-	     access->grp_write, access->grp_read, access->grp_covered,
-	     access->grp_unscalarizable_region, access->grp_unscalarized_data,
-	     access->grp_partial_lhs, access->grp_to_be_replaced);
+    fprintf (f, ", grp_write = %d, grp_read = %d, grp_hint = %d, "
+	     "grp_covered = %d, grp_unscalarizable_region = %d, "
+	     "grp_unscalarized_data = %d, grp_partial_lhs = %d, "
+	     "grp_to_be_replaced = %d\n",
+	     access->grp_write, access->grp_read, access->grp_hint,
+	     access->grp_covered, access->grp_unscalarizable_region,
+	     access->grp_unscalarized_data, access->grp_partial_lhs,
+	     access->grp_to_be_replaced);
   else
     fprintf (f, ", write = %d, grp_partial_lhs = %d\n", access->write,
 	     access->grp_partial_lhs);
@@ -1032,7 +1039,7 @@ build_ref_for_offset_1 (tree *res, tree type, HOST_WIDE_INT offset,
   while (1)
     {
       tree fld;
-      tree tr_size, index;
+      tree tr_size, index, minidx;
       HOST_WIDE_INT el_size;
 
       if (offset == 0 && exp_type
@@ -1083,13 +1090,14 @@ build_ref_for_offset_1 (tree *res, tree type, HOST_WIDE_INT offset,
 	    return false;
 	  el_size = tree_low_cst (tr_size, 1);
 
+	  minidx = TYPE_MIN_VALUE (TYPE_DOMAIN (type));
+	  if (TREE_CODE (minidx) != INTEGER_CST)
+	    return false;
 	  if (res)
 	    {
 	      index = build_int_cst (TYPE_DOMAIN (type), offset / el_size);
-	      if (!integer_zerop (TYPE_MIN_VALUE (TYPE_DOMAIN (type))))
-		index = int_const_binop (PLUS_EXPR, index,
-					 TYPE_MIN_VALUE (TYPE_DOMAIN (type)),
-					 0);
+	      if (!integer_zerop (minidx))
+		index = int_const_binop (PLUS_EXPR, index, minidx, 0);
 	      *res = build4 (ARRAY_REF, TREE_TYPE (type), *res, index,
 			     NULL_TREE, NULL_TREE);
 	    }
@@ -1119,7 +1127,7 @@ build_ref_for_offset_1 (tree *res, tree type, HOST_WIDE_INT offset,
    minor rewrite of fold_stmt.
  */
 
-static bool
+bool
 build_ref_for_offset (tree *expr, tree type, HOST_WIDE_INT offset,
 		      tree exp_type, bool allow_ptr)
 {
@@ -1157,7 +1165,13 @@ find_var_candidates (void)
 	  || !COMPLETE_TYPE_P (type)
 	  || !host_integerp (TYPE_SIZE (type), 1)
           || tree_low_cst (TYPE_SIZE (type), 1) == 0
-	  || type_internals_preclude_sra_p (type))
+	  || type_internals_preclude_sra_p (type)
+	  /* Fix for PR 41089.  tree-stdarg.c needs to have va_lists intact but
+	      we also want to schedule it rather late.  Thus we ignore it in
+	      the early pass. */
+	  || (sra_mode == SRA_MODE_EARLY_INTRA
+	      && (TYPE_MAIN_VARIANT (TREE_TYPE (var))
+		  == TYPE_MAIN_VARIANT (va_list_type_node))))
 	continue;
 
       bitmap_set_bit (candidate_bitmap, DECL_UID (var));
@@ -1202,8 +1216,9 @@ sort_and_splice_var_accesses (tree var)
   while (i < access_count)
     {
       struct access *access = VEC_index (access_p, access_vec, i);
-      bool modification = access->write;
+      bool grp_write = access->write;
       bool grp_read = !access->write;
+      bool multiple_reads = false;
       bool grp_partial_lhs = access->grp_partial_lhs;
       bool first_scalar = is_gimple_reg_type (access->type);
       bool unscalarizable_region = access->grp_unscalarizable_region;
@@ -1226,8 +1241,15 @@ sort_and_splice_var_accesses (tree var)
 	  struct access *ac2 = VEC_index (access_p, access_vec, j);
 	  if (ac2->offset != access->offset || ac2->size != access->size)
 	    break;
-	  modification |= ac2->write;
-	  grp_read |= !ac2->write;
+	  if (ac2->write)
+	    grp_write = true;
+	  else
+	    {
+	      if (grp_read)
+		multiple_reads = true;
+	      else
+		grp_read = true;
+	    }
 	  grp_partial_lhs |= ac2->grp_partial_lhs;
 	  unscalarizable_region |= ac2->grp_unscalarizable_region;
 	  relink_to_new_repr (access, ac2);
@@ -1243,8 +1265,9 @@ sort_and_splice_var_accesses (tree var)
       i = j;
 
       access->group_representative = access;
-      access->grp_write = modification;
+      access->grp_write = grp_write;
       access->grp_read = grp_read;
+      access->grp_hint = multiple_reads;
       access->grp_partial_lhs = grp_partial_lhs;
       access->grp_unscalarizable_region = unscalarizable_region;
       if (access->first_link)
@@ -1362,6 +1385,22 @@ build_access_trees (struct access *access)
     }
 }
 
+/* Return true if expr contains some ARRAY_REFs into a variable bounded
+   array.  */
+
+static bool
+expr_with_var_bounded_array_refs_p (tree expr)
+{
+  while (handled_component_p (expr))
+    {
+      if (TREE_CODE (expr) == ARRAY_REF
+	  && !host_integerp (array_ref_low_bound (expr), 0))
+	return true;
+      expr = TREE_OPERAND (expr, 0);
+    }
+  return false;
+}
+
 /* Analyze the subtree of accesses rooted in ROOT, scheduling replacements when
    both seeming beneficial and when ALLOW_REPLACEMENTS allows it.  Also set
    all sorts of access flags appropriately along the way, notably always ser
@@ -1376,6 +1415,7 @@ analyze_access_subtree (struct access *root, bool allow_replacements,
   HOST_WIDE_INT covered_to = root->offset;
   bool scalar = is_gimple_reg_type (root->type);
   bool hole = false, sth_created = false;
+  bool direct_read = root->grp_read;
 
   if (mark_read)
     root->grp_read = true;
@@ -1388,6 +1428,9 @@ analyze_access_subtree (struct access *root, bool allow_replacements,
     mark_write = true;
 
   if (root->grp_unscalarizable_region)
+    allow_replacements = false;
+
+  if (allow_replacements && expr_with_var_bounded_array_refs_p (root->expr))
     allow_replacements = false;
 
   for (child = root->first_child; child; child = child->next_sibling)
@@ -1404,7 +1447,9 @@ analyze_access_subtree (struct access *root, bool allow_replacements,
       hole |= !child->grp_covered;
     }
 
-  if (allow_replacements && scalar && !root->first_child)
+  if (allow_replacements && scalar && !root->first_child
+      && (root->grp_hint
+	  || (direct_read && root->grp_write)))
     {
       if (dump_file && (dump_flags & TDF_DETAILS))
 	{
@@ -1477,31 +1522,11 @@ child_would_conflict_in_lacc (struct access *lacc, HOST_WIDE_INT norm_offset,
   return false;
 }
 
-/* Set the expr of TARGET to one just like MODEL but with is own base at the
-   bottom of the handled components.  */
-
-static void
-duplicate_expr_for_different_base (struct access *target,
-				   struct access *model)
-{
-  tree t, expr = unshare_expr (model->expr);
-
-  gcc_assert (handled_component_p (expr));
-  t = expr;
-  while (handled_component_p (TREE_OPERAND (t, 0)))
-    t = TREE_OPERAND (t, 0);
-  gcc_assert (TREE_OPERAND (t, 0) == model->base);
-  TREE_OPERAND (t, 0) = target->base;
-
-  target->expr = expr;
-}
-
-
 /* Create a new child access of PARENT, with all properties just like MODEL
    except for its offset and with its grp_write false and grp_read true.
-   Return the new access. Note that this access is created long after all
-   splicing and sorting, it's not located in any access vector and is
-   automatically a representative of its group.  */
+   Return the new access or NULL if it cannot be created.  Note that this access
+   is created long after all splicing and sorting, it's not located in any
+   access vector and is automatically a representative of its group.  */
 
 static struct access *
 create_artificial_child_access (struct access *parent, struct access *model,
@@ -1509,15 +1534,20 @@ create_artificial_child_access (struct access *parent, struct access *model,
 {
   struct access *access;
   struct access **child;
+  tree expr = parent->base;;
 
   gcc_assert (!model->grp_unscalarizable_region);
+
+  if (!build_ref_for_offset (&expr, TREE_TYPE (expr), new_offset,
+			     model->type, false))
+    return NULL;
 
   access = (struct access *) pool_alloc (access_pool);
   memset (access, 0, sizeof (struct access));
   access->base = parent->base;
+  access->expr = expr;
   access->offset = new_offset;
   access->size = model->size;
-  duplicate_expr_for_different_base (access, model);
   access->type = model->type;
   access->grp_write = true;
   access->grp_read = false;
@@ -1535,14 +1565,13 @@ create_artificial_child_access (struct access *parent, struct access *model,
 
 /* Propagate all subaccesses of RACC across an assignment link to LACC. Return
    true if any new subaccess was created.  Additionally, if RACC is a scalar
-   access but LACC is not, change the type of the latter.  */
+   access but LACC is not, change the type of the latter, if possible.  */
 
 static bool
 propagate_subacesses_accross_link (struct access *lacc, struct access *racc)
 {
   struct access *rchild;
   HOST_WIDE_INT norm_delta = lacc->offset - racc->offset;
-
   bool ret = false;
 
   if (is_gimple_reg_type (lacc->type)
@@ -1553,8 +1582,14 @@ propagate_subacesses_accross_link (struct access *lacc, struct access *racc)
   if (!lacc->first_child && !racc->first_child
       && is_gimple_reg_type (racc->type))
     {
-      duplicate_expr_for_different_base (lacc, racc);
-      lacc->type = racc->type;
+      tree t = lacc->base;
+
+      if (build_ref_for_offset (&t, TREE_TYPE (t), lacc->offset, racc->type,
+				false))
+	{
+	  lacc->expr = t;
+	  lacc->type = racc->type;
+	}
       return false;
     }
 
@@ -1569,8 +1604,13 @@ propagate_subacesses_accross_link (struct access *lacc, struct access *racc)
       if (child_would_conflict_in_lacc (lacc, norm_offset, rchild->size,
 					&new_acc))
 	{
-	  if (new_acc && rchild->first_child)
-	    ret |= propagate_subacesses_accross_link (new_acc, rchild);
+	  if (new_acc)
+	    {
+	      rchild->grp_hint = 1;
+	      new_acc->grp_hint |= new_acc->grp_read;
+	      if (rchild->first_child)
+		ret |= propagate_subacesses_accross_link (new_acc, rchild);
+	    }
 	  continue;
 	}
 
@@ -1581,11 +1621,14 @@ propagate_subacesses_accross_link (struct access *lacc, struct access *racc)
 				 rchild->type, false))
 	continue;
 
+      rchild->grp_hint = 1;
       new_acc = create_artificial_child_access (lacc, rchild, norm_offset);
-      if (racc->first_child)
-	propagate_subacesses_accross_link (new_acc, rchild);
-
-      ret = true;
+      if (new_acc)
+	{
+	  ret = true;
+	  if (racc->first_child)
+	    propagate_subacesses_accross_link (new_acc, rchild);
+	}
     }
 
   return ret;

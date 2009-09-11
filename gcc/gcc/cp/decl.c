@@ -1890,6 +1890,7 @@ duplicate_decls (tree newdecl, tree olddecl, bool newdecl_is_friend)
 	}
       DECL_TEMPLATE_INSTANTIATED (newdecl)
 	|= DECL_TEMPLATE_INSTANTIATED (olddecl);
+      DECL_ODR_USED (newdecl) |= DECL_ODR_USED (olddecl);
 
       /* If the OLDDECL is an instantiation and/or specialization,
 	 then the NEWDECL must be too.  But, it may not yet be marked
@@ -1955,7 +1956,7 @@ duplicate_decls (tree newdecl, tree olddecl, bool newdecl_is_friend)
 	     should have exited above, returning 0.  */
 	  gcc_assert (DECL_TEMPLATE_SPECIALIZATION (newdecl));
 
-	  if (TREE_USED (olddecl))
+	  if (DECL_ODR_USED (olddecl))
 	    /* From [temp.expl.spec]:
 
 	       If a template, a member template or the member of a class
@@ -4414,6 +4415,9 @@ build_init_list_var_init (tree decl, tree type, tree init, tree *cleanup)
 {
   tree aggr_init, array, arrtype;
   init = perform_implicit_conversion (type, init, tf_warning_or_error);
+  if (error_operand_p (init))
+    return error_mark_node;
+
   aggr_init = TARGET_EXPR_INITIAL (init);
   init = build2 (INIT_EXPR, type, decl, init);
 
@@ -6747,36 +6751,6 @@ grokfndecl (tree ctype,
 		|| decl_function_context (TYPE_MAIN_DECL (ctype))))
     publicp = 0;
 
-  if (publicp)
-    {
-      /* [basic.link]: A name with no linkage (notably, the name of a class
-	 or enumeration declared in a local scope) shall not be used to
-	 declare an entity with linkage.
-
-	 Only check this for public decls for now.  See core 319, 389.  */
-      t = no_linkage_check (TREE_TYPE (decl),
-			    /*relaxed_p=*/false);
-      if (t)
-	{
-	  if (TYPE_ANONYMOUS_P (t))
-	    {
-	      if (DECL_EXTERN_C_P (decl))
-		/* Allow this; it's pretty common in C.  */;
-	      else
-		{
-		  permerror (input_location, "non-local function %q#D uses anonymous type",
-			      decl);
-		  if (DECL_ORIGINAL_TYPE (TYPE_NAME (t)))
-		    permerror (input_location, "%q+#D does not refer to the unqualified "
-			       "type, so it is not used for linkage",
-			       TYPE_NAME (t));
-		}
-	    }
-	  else
-	    permerror (input_location, "non-local function %q#D uses local type %qT", decl, t);
-	}
-    }
-
   TREE_PUBLIC (decl) = publicp;
   if (! publicp)
     {
@@ -7021,36 +6995,13 @@ grokvardecl (tree type,
 
   if (TREE_PUBLIC (decl))
     {
-      /* [basic.link]: A name with no linkage (notably, the name of a class
-	 or enumeration declared in a local scope) shall not be used to
-	 declare an entity with linkage.
-
-	 Only check this for public decls for now.  */
-      tree t = no_linkage_check (TREE_TYPE (decl), /*relaxed_p=*/false);
-      if (t)
-	{
-	  if (TYPE_ANONYMOUS_P (t))
-	    {
-	      if (DECL_EXTERN_C_P (decl))
-		/* Allow this; it's pretty common in C.  */
-		  ;
-	      else
-		{
-		  /* DRs 132, 319 and 389 seem to indicate types with
-		     no linkage can only be used to declare extern "C"
-		     entities.  Since it's not always an error in the
-		     ISO C++ 90 Standard, we only issue a warning.  */
-		  warning (0, "non-local variable %q#D uses anonymous type",
-			   decl);
-		  if (DECL_ORIGINAL_TYPE (TYPE_NAME (t)))
-		    warning (0, "%q+#D does not refer to the unqualified "
-			     "type, so it is not used for linkage",
-			     TYPE_NAME (t));
-		}
-	    }
-	  else
-	    warning (0, "non-local variable %q#D uses local type %qT", decl, t);
-	}
+      /* If the type of the decl has no linkage, make sure that we'll
+	 notice that in mark_used.  */
+      if (DECL_LANG_SPECIFIC (decl) == NULL
+	  && TREE_PUBLIC (decl)
+	  && !DECL_EXTERN_C_P (decl)
+	  && no_linkage_check (TREE_TYPE (decl), /*relaxed_p=*/false))
+	retrofit_lang_decl (decl);
     }
   else
     DECL_INTERFACE_KNOWN (decl) = 1;
@@ -7109,10 +7060,14 @@ build_ptrmemfunc_type (tree type)
   /* If this is not the unqualified form of this pointer-to-member
      type, set the TYPE_MAIN_VARIANT for this type to be the
      unqualified type.  Since they are actually RECORD_TYPEs that are
-     not variants of each other, we must do this manually.  */
+     not variants of each other, we must do this manually.
+     As we just built a new type there is no need to do yet another copy.  */
   if (cp_type_quals (type) != TYPE_UNQUALIFIED)
     {
-      t = build_qualified_type (t, cp_type_quals (type));
+      int type_quals = cp_type_quals (type);
+      TYPE_READONLY (t) = (type_quals & TYPE_QUAL_CONST) != 0;
+      TYPE_VOLATILE (t) = (type_quals & TYPE_QUAL_VOLATILE) != 0;
+      TYPE_RESTRICT (t) = (type_quals & TYPE_QUAL_RESTRICT) != 0;
       TYPE_MAIN_VARIANT (t) = unqualified_variant;
       TYPE_NEXT_VARIANT (t) = TYPE_NEXT_VARIANT (unqualified_variant);
       TYPE_NEXT_VARIANT (unqualified_variant) = t;
@@ -11217,7 +11172,8 @@ finish_enum (tree enumtype)
       /* Set the underlying type of the enumeration type to the
          computed enumeration type, restricted to the enumerator
          values. */
-      ENUM_UNDERLYING_TYPE (enumtype) = copy_node (underlying_type);
+      ENUM_UNDERLYING_TYPE (enumtype)
+	= build_distinct_type_copy (underlying_type);
       set_min_and_max_values_for_integral_type 
         (ENUM_UNDERLYING_TYPE (enumtype), precision, unsignedp);
     }
@@ -12491,8 +12447,8 @@ finish_function (int flags)
    CHANGES TO CODE IN `grokfield'.  */
 
 tree
-start_method (cp_decl_specifier_seq *declspecs,
-	      const cp_declarator *declarator, tree attrlist)
+grokmethod (cp_decl_specifier_seq *declspecs,
+	    const cp_declarator *declarator, tree attrlist)
 {
   tree fndecl = grokdeclarator (declarator, declspecs, MEMFUNCDEF, 0,
 				&attrlist);
@@ -12546,61 +12502,8 @@ start_method (cp_decl_specifier_seq *declspecs,
 
   cp_finish_decl (fndecl, NULL_TREE, false, NULL_TREE, 0);
 
-  /* Make a place for the parms.  */
-  begin_scope (sk_function_parms, fndecl);
-
   DECL_IN_AGGR_P (fndecl) = 1;
   return fndecl;
-}
-
-/* Go through the motions of finishing a function definition.
-   We don't compile this method until after the whole class has
-   been processed.
-
-   FINISH_METHOD must return something that looks as though it
-   came from GROKFIELD (since we are defining a method, after all).
-
-   This is called after parsing the body of the function definition.
-   STMTS is the chain of statements that makes up the function body.
-
-   DECL is the ..._DECL that `start_method' provided.  */
-
-tree
-finish_method (tree decl)
-{
-  tree fndecl = decl;
-  tree old_initial;
-
-  tree link;
-
-  if (decl == void_type_node)
-    return decl;
-
-  old_initial = DECL_INITIAL (fndecl);
-
-  /* Undo the level for the parms (from start_method).
-     This is like poplevel, but it causes nothing to be
-     saved.  Saving information here confuses symbol-table
-     output routines.  Besides, this information will
-     be correctly output when this method is actually
-     compiled.  */
-
-  /* Clear out the meanings of the local variables of this level;
-     also record in each decl which block it belongs to.  */
-
-  for (link = current_binding_level->names; link; link = TREE_CHAIN (link))
-    {
-      if (DECL_NAME (link) != NULL_TREE)
-	pop_binding (DECL_NAME (link), link);
-      gcc_assert (TREE_CODE (link) != FUNCTION_DECL);
-      DECL_CONTEXT (link) = NULL_TREE;
-    }
-
-  poplevel (0, 0, 0);
-
-  DECL_INITIAL (fndecl) = old_initial;
-
-  return decl;
 }
 
 

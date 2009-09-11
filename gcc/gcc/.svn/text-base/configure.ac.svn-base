@@ -24,7 +24,7 @@
 # Initialization and sanity checks
 # --------------------------------
 
-AC_PREREQ(2.59)
+AC_PREREQ(2.64)
 AC_INIT
 AC_CONFIG_SRCDIR(tree.c)
 AC_CONFIG_HEADER(auto-host.h:config.in)
@@ -311,6 +311,7 @@ AC_CHECK_SIZEOF(int)
 AC_CHECK_SIZEOF(long)
 AC_CHECK_TYPES([long long], [AC_CHECK_SIZEOF(long long)])
 AC_CHECK_TYPES([__int64], [AC_CHECK_SIZEOF(__int64)])
+GCC_STDINT_TYPES
 
 # ---------------------
 # Warnings and checking
@@ -818,11 +819,6 @@ AC_ARG_ENABLE(languages,
 		;;
 esac],
 [enable_languages=c])
-
-# Used by documentation targets
-AC_SUBST(datarootdir)
-AC_SUBST(docdir)
-AC_SUBST(htmldir)
 
 AC_ARG_WITH(multilib-list,
 [  --with-multilib-list    Select multilibs (SH only)],
@@ -2398,7 +2394,13 @@ else
    [elf,2,16,0], [--fatal-warnings],
    [.section .text,"axG",%progbits,.foo,comdat])
 fi
-if test $in_tree_ld != yes && test x"$ld_vers" != x; then
+if test $in_tree_ld = yes ; then
+  comdat_group=no
+  if test "$gcc_cv_gld_major_version" -eq 2 -a "$gcc_cv_gld_minor_version" -ge 16 -o "$gcc_cv_gld_major_version" -gt 2 \
+     && test $in_tree_ld_is_elf = yes; then
+     comdat_group=yes
+  fi
+elif test x"$ld_vers" != x; then
   comdat_group=yes
   if test 0"$ld_date" -lt 20050308; then
     if test -n "$ld_date"; then
@@ -3379,6 +3381,32 @@ gcc_GAS_CHECK_FEATURE([.lcomm with alignment], gcc_cv_as_lcomm_with_alignment,
 [AC_DEFINE(HAVE_GAS_LCOMM_WITH_ALIGNMENT, 1,
   [Define if your assembler supports .lcomm with an alignment field.])])
 
+AC_ARG_ENABLE(gnu-unique-object,
+ [  --enable-gnu-unique-object	enable the use of the @gnu_unique_object ELF extension on
+				glibc systems],
+ [case $enable_gnu_unique_object in
+    yes | no) ;;
+    *) AC_MSG_ERROR(['$enable_gnu_unique_object' is an invalid value for --enable-gnu-unique-object.
+Valid choices are 'yes' and 'no'.]) ;;
+  esac],
+ [gcc_GAS_CHECK_FEATURE([gnu_unique_object], gcc_cv_as_gnu_unique_object,
+   [elf,2,19,52],,
+   [.type foo, @gnu_unique_object],,
+# Also check for ld.so support, i.e. glibc 2.11 or higher.
+   [if test x$host = x$build -a x$host = x$target &&
+       glibcver=`ldd --version 2>/dev/null`; then
+      glibcmajor=`expr "$glibcver" : "ldd (GNU libc) \([[0-9]]*\)"`
+      glibcminor=`expr "$glibcver" : "ldd (GNU libc) [[0-9]]*\.\([[0-9]]*\)"`
+      glibcnum=`expr $glibcmajor \* 1000 + $glibcminor`
+      if test "$glibcnum" -ge 2011 ; then
+        enable_gnu_unique_object=yes
+      fi
+    fi])])
+if test x$enable_gnu_unique_object = xyes; then
+  AC_DEFINE(HAVE_GAS_GNU_UNIQUE_OBJECT, 1,
+   [Define if your assembler supports @gnu_unique_object.])
+fi
+
 AC_CACHE_CHECK([assembler for tolerance to line number 0],
  [gcc_cv_as_line_zero],
  [gcc_cv_as_line_zero=no
@@ -3996,24 +4024,6 @@ else
   slibdir='$(libdir)'
 fi)
 AC_SUBST(slibdir)
-
-AC_ARG_WITH(datarootdir,
-[  --with-datarootdir=DIR  Use DIR as the data root [[PREFIX/share]]],
-datarootdir="\${prefix}/$with_datarootdir",
-datarootdir='$(prefix)/share')
-AC_SUBST(datarootdir)
-
-AC_ARG_WITH(docdir,
-[  --with-docdir=DIR       Install documentation in DIR [[DATAROOTDIR]]],
-docdir="\${prefix}/$with_docdir",
-docdir='$(datarootdir)')
-AC_SUBST(docdir)
-
-AC_ARG_WITH(htmldir,
-[  --with-htmldir=DIR      html documentation in in DIR [[DOCDIR]]],
-htmldir="\${prefix}/$with_htmldir",
-htmldir='$(docdir)')
-AC_SUBST(htmldir)
 
 # Substitute configuration variables
 AC_SUBST(subdirs)

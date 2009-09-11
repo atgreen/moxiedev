@@ -1,3 +1,24 @@
+2009-09-05  Martin Thuresson  <martin@mtme.org>
+
+	* ti.h (GET_LNSZ_SIZE, PUT_LNSZ_SIZE): Updated name of class
+	variable to in_class to match changes in function that use this
+	macro.
+
+2009-08-10  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix references past allocated memory for i386-*-go32.
+	* ti.h (COFF_ADJUST_FILEHDR_IN_POST, COFF_ADJUST_FILEHDR_OUT_POST):
+	Reference F_TARGET_ID only when !COFF0_P.
+
+2009-08-10  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Stop using bfd_usrdata in libbfd.
+	* go32exe.h (struct external_filehdr_go32_exe <stub>, FILHSZ): Replace
+	STUBSIZE by GO32_STUBSIZE.
+	(STUBSIZE): Move the definition ...
+	* internal.h (GO32_STUBSIZE): ... here and rename it.
+	(struct internal_filehdr <go32stub>, F_GO32STUB): New.
+
 2009-06-03  Ulrich Weigand  <uweigand@de.ibm.com>
 
 	* symconst.h (btLong64, btULong64, btLongLong64, btULongLong64,

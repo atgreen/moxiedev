@@ -1,14 +1,14 @@
 10
 
 dir
-150304
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/22_locale
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-19T18:20:47.044835Z
-147714
+2009-07-18T22:58:10.598929Z
+149782
 paolo
 
 
@@ -23,7 +23,7 @@ paolo
 
 
 
-incomplete
+
 138bc75d-0d04-0410-961f-82ee72b054a4
 
 ctype_byname

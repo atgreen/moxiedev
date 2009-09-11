@@ -1,3 +1,158 @@
+2009-09-03  Joseph Myers  <joseph@codesourcery.com>
+
+	* gdb.base/ending-run.exp: Restrict regular expression matching
+	line number to require closing brace following.
+
+2009-09-03  Doug Evans  <dje@google.com>
+
+	* gdb.base/store.exp (check_set): Fix typo in expected value message.
+
+2009-09-02  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.dwarf2/callframecfa.exp: Use gdb_continue_to_breakpoint.
+
+2009-09-02  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.dwarf2/callframecfa.exp: New file.
+	* gdb.dwarf2/callframecfa.S: New file.
+
+2009-09-01  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/solib-overlap.exp, gdb.base/solib-overlap-lib.c,
+	gdb.base/solib-overlap-main.c: New.
+
+2009-08-28  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	PR gdb/10565
+
+	* gdb.base/bitfields.c (struct container, container): New.
+	(main): Initialize it and call break5.
+	* gdb.base/bitfields.exp (bitfield_at_offset): New test.
+
+2009-08-28  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Support constant DW_AT_data_member_location by GCC PR debug/40659.
+	* gdb.dwarf2/dw2-inheritance.exp, gdb.dwarf2/dw2-inheritance.S: New.
+
+2009-08-27  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.mi/mi2-var-cmd.exp (create variable with invalid FRAME-ADDR): New.
+
+2009-08-26  Michael Snyder  <msnyder@vmware.com>
+
+	* gdb.base/i386-reverse.c: New file.
+	* gdb.base/i386-reverse.exp: New file.
+	* gdb.base/Makefile.in: Add new files to be removed.
+
+2009-08-26  Joseph Myers  <joseph@codesourcery.com>
+
+	* gdb.mi/mi-basics.exp (test_cwd_specification): Do not test
+	environment-pwd for remote host.
+	* gdb.mi/mi2-basics.exp (test_cwd_specification): Likewise.
+
+2009-08-24  Keith Seitz  <keiths@redhat.com>
+
+	* gdb.cp/cpcompletion.exp (test_class_complete): New procedure.
+	Add two new C++ completer tests which limit the output to a
+	given class. 
+
+2009-08-24  Michael Snyder  <msnyder@vmware.com>
+
+	* gdb.base/del.exp: Fix typo in comment.
+	* gdb.base/step-bt.exp: Fix cut and paste error in comment.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure: Regenerate.
+	* gdb.hp/configure: Likewise.
+	* gdb.hp/gdb.aCC/configure: Likewise.
+	* gdb.hp/gdb.base-hp/configure: Likewise.
+	* gdb.hp/gdb.compat/configure: Likewise.
+	* gdb.hp/gdb.defects/configure: Likewise.
+	* gdb.hp/gdb.objdbg/configure: Likewise.
+	* gdb.stabs/configure: Likewise.
+
+2009-08-19  Doug Evans  <dje@google.com>
+
+	* gdb.base/gdbvars.c: New file.
+	* gdb.base/gdbvars.exp: Test convenience vars with program variables.
+
+2009-08-14  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.threads/killed.exp, gdb.threads/manythreads.exp,
+	gdb.threads/staticthreads.exp: Adjust to "quit" output changes.
+
+2009-08-13  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.base/default.exp: Adjust "set language test": it's now an
+	enum command.  Larger help string moved to "help set language".
+	* gdb.base/help.exp: Adjust "help set language" expected output,
+	now lists all known languages.
+
+2009-08-11  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* gdb.arch/altivec-abi.exp (altivec_abi_tests): Turn on printing of
+	all frame arguments.
+	* gdb.arch/altivec-regs.exp: Likewise.
+
+2009-08-07  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.base/setshow.exp: Add tests for changes to set language, set
+	check range, and set check type.
+
+2009-08-03  Vladimir Prus  <vladimir@codesourcery.com>
+
+	* lib/mi-support.exp (mi_list_breakpoints): Make it work.
+	* gdb.mi/mi-break.exp (test_breakpoint_commands): New.
+    	Call it.
+
+2009-07-31  Ulrich Weigand  <Ulrich.Weigand@de.ibm.com>
+
+	* configure.ac: Run gdb.cell tests when appropriate.
+	* configure: Regenerate.
+	* lib/cell.exp: New file.
+	* gdb.cell: New directory.
+	* gdb.cell/configure.ac: New file.
+	* gdb.cell/configure: New file.
+	* gdb.cell/Makefile.in: New file.
+	* gdb.cell/arch.exp: New file.
+	* gdb.cell/break.c: New file.
+	* gdb.cell/break.exp: New file.
+	* gdb.cell/break-spu.c: New file.
+	* gdb.cell/bt.c: New file.
+	* gdb.cell/bt2-spu.c: New file.
+	* gdb.cell/bt-spu.c: New file.
+	* gdb.cell/bt.exp: New file.
+	* gdb.cell/coremaker.c: New file.
+	* gdb.cell/coremaker-spu.c: New file.
+	* gdb.cell/core.exp: New file.
+	* gdb.cell/gcore.exp: New file.
+	* gdb.cell/data.c: New file.
+	* gdb.cell/data.exp: New file.
+	* gdb.cell/data-spu.c: New file.
+	* gdb.cell/ea-cache.exp: New file.
+	* gdb.cell/ea-cache.c: New file.
+	* gdb.cell/ea-cache-spu.c: New file.
+	* gdb.cell/ea-standalone.c: New file.
+	* gdb.cell/ea-standalone.exp: New file.
+	* gdb.cell/ea-test.c: New file.
+	* gdb.cell/ea-test.exp: New file.
+	* gdb.cell/f-regs.exp: New file.
+	* gdb.cell/mem-access.c: New file.
+	* gdb.cell/mem-access.exp: New file.
+	* gdb.cell/mem-access-spu.c: New file.
+	* gdb.cell/ptype.exp: New file.
+	* gdb.cell/registers.exp: New file.
+	* gdb.cell/size.c: New file.
+	* gdb.cell/sizeof.exp: New file.
+	* gdb.cell/size-spu.c: New file.
+	* gdb.cell/solib.exp: New file.
+	* gdb.cell/solib-symbol.exp: New file.
+
+2009-07-31  Ulrich Weigand  <Ulrich.Weigand@de.ibm.com>
+
+	* gdb.xml/tdesc-regs.exp: Skip for SPU targets.
+
 2009-07-28  Daniel Jacobowitz  <dan@codesourcery.com>
 
 	* gdb.base/float.exp: Handle VFP registers.

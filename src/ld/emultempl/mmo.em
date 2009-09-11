@@ -1,5 +1,5 @@
 # This shell script emits a C file. -*- C -*-
-#   Copyright 2001, 2002, 2003, 2004, 2006, 2007, 2008
+#   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
 #   Free Software Foundation, Inc.
 #
 # This file is part of the GNU Binutils.
@@ -35,6 +35,8 @@ fragment <<EOF
    get a weird testcase right; ld-mmix/bpo-22, forcing ELF to be
    output from the mmo emulation: -m mmo --oformat elf64-mmix!  */
 #include "elf-bfd.h"
+
+static void gld${EMULATION_NAME}_after_allocation (void);
 EOF
 
 source_em ${srcdir}/emultempl/elf-generic.em
@@ -119,11 +121,10 @@ mmo_wipe_sec_reloc_flag (bfd *abfd, asection *sec, void *ptr ATTRIBUTE_UNUSED)
 /* Iterate with bfd_map_over_sections over mmo_wipe_sec_reloc_flag... */
 
 static void
-mmo_finish (void)
+gld${EMULATION_NAME}_after_allocation (void)
 {
   bfd_map_over_sections (link_info.output_bfd, mmo_wipe_sec_reloc_flag, NULL);
   gld${EMULATION_NAME}_map_segments (FALSE);
-  finish_default ();
 }
 
 /* To get on-demand global register allocation right, we need to parse the
@@ -154,5 +155,4 @@ mmo_after_open (void)
 EOF
 
 LDEMUL_PLACE_ORPHAN=mmo_place_orphan
-LDEMUL_FINISH=mmo_finish
 LDEMUL_AFTER_OPEN=mmo_after_open

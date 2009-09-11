@@ -1,15 +1,15 @@
 10
 
 dir
-150304
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-28T06:37:36.685986Z
-150141
-jbeulich
+2009-08-10T20:47:55.461956Z
+150634
+jason
 
 
 
@@ -29,16 +29,16 @@ jbeulich
 g++.warn
 dir
 
-g++.robertl
-dir
-
 g++.brendan
 dir
 
-g++.jason
+g++.robertl
 dir
 
 g++.oliva
+dir
+
+g++.jason
 dir
 
 g++.rfg
@@ -47,19 +47,19 @@ dir
 g++.ns
 dir
 
-g++.niklas
-dir
-
 g++.other
 dir
 
-g++.pt
+g++.niklas
+dir
+
+g++.law
 dir
 
 g++.benjamin
 dir
 
-g++.law
+g++.pt
 dir
 
 g++.mike
@@ -79,7 +79,7 @@ dir
 
 old-deja.exp
 file
-149693
+
 
 
 

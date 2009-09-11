@@ -410,17 +410,17 @@ gfc_compare_derived_types (gfc_symbol *derived1, gfc_symbol *derived2)
 
       /* Make sure that link lists do not put this function into an 
 	 endless recursive loop!  */
-      if (!(dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.derived)
-	    && !(dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.derived)
+      if (!(dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.u.derived)
+	    && !(dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.u.derived)
 	    && gfc_compare_types (&dt1->ts, &dt2->ts) == 0)
 	return 0;
 
-      else if ((dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.derived)
-		&& !(dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.derived))
+      else if ((dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.u.derived)
+		&& !(dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.u.derived))
 	return 0;
 
-      else if (!(dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.derived)
-		&& (dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.derived))
+      else if (!(dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.u.derived)
+		&& (dt1->ts.type == BT_DERIVED && derived1 == dt1->ts.u.derived))
 	return 0;
 
       dt1 = dt1->next;
@@ -454,10 +454,10 @@ gfc_compare_types (gfc_typespec *ts1, gfc_typespec *ts2)
     return (ts1->kind == ts2->kind);
 
   /* Compare derived types.  */
-  if (ts1->derived == ts2->derived)
+  if (ts1->u.derived == ts2->u.derived)
     return 1;
 
-  return gfc_compare_derived_types (ts1->derived ,ts2->derived);
+  return gfc_compare_derived_types (ts1->u.derived ,ts2->u.derived);
 }
 
 
@@ -544,17 +544,16 @@ find_keyword_arg (const char *name, gfc_formal_arglist *f)
 /* Given an operator interface and the operator, make sure that all
    interfaces for that operator are legal.  */
 
-static void
-check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
+bool
+gfc_check_operator_interface (gfc_symbol *sym, gfc_intrinsic_op op,
+			      locus opwhere)
 {
   gfc_formal_arglist *formal;
   sym_intent i1, i2;
-  gfc_symbol *sym;
   bt t1, t2;
   int args, r1, r2, k1, k2;
 
-  if (intr == NULL)
-    return;
+  gcc_assert (sym);
 
   args = 0;
   t1 = t2 = BT_UNKNOWN;
@@ -562,33 +561,31 @@ check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
   r1 = r2 = -1;
   k1 = k2 = -1;
 
-  for (formal = intr->sym->formal; formal; formal = formal->next)
+  for (formal = sym->formal; formal; formal = formal->next)
     {
-      sym = formal->sym;
-      if (sym == NULL)
+      gfc_symbol *fsym = formal->sym;
+      if (fsym == NULL)
 	{
 	  gfc_error ("Alternate return cannot appear in operator "
-		     "interface at %L", &intr->sym->declared_at);
-	  return;
+		     "interface at %L", &sym->declared_at);
+	  return false;
 	}
       if (args == 0)
 	{
-	  t1 = sym->ts.type;
-	  i1 = sym->attr.intent;
-	  r1 = (sym->as != NULL) ? sym->as->rank : 0;
-	  k1 = sym->ts.kind;
+	  t1 = fsym->ts.type;
+	  i1 = fsym->attr.intent;
+	  r1 = (fsym->as != NULL) ? fsym->as->rank : 0;
+	  k1 = fsym->ts.kind;
 	}
       if (args == 1)
 	{
-	  t2 = sym->ts.type;
-	  i2 = sym->attr.intent;
-	  r2 = (sym->as != NULL) ? sym->as->rank : 0;
-	  k2 = sym->ts.kind;
+	  t2 = fsym->ts.type;
+	  i2 = fsym->attr.intent;
+	  r2 = (fsym->as != NULL) ? fsym->as->rank : 0;
+	  k2 = fsym->ts.kind;
 	}
       args++;
     }
-
-  sym = intr->sym;
 
   /* Only +, - and .not. can be unary operators.
      .not. cannot be a binary operator.  */
@@ -598,8 +595,8 @@ check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
       || (args == 2 && op == INTRINSIC_NOT))
     {
       gfc_error ("Operator interface at %L has the wrong number of arguments",
-		 &intr->sym->declared_at);
-      return;
+		 &sym->declared_at);
+      return false;
     }
 
   /* Check that intrinsics are mapped to functions, except
@@ -609,20 +606,20 @@ check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
       if (!sym->attr.subroutine)
 	{
 	  gfc_error ("Assignment operator interface at %L must be "
-		     "a SUBROUTINE", &intr->sym->declared_at);
-	  return;
+		     "a SUBROUTINE", &sym->declared_at);
+	  return false;
 	}
       if (args != 2)
 	{
 	  gfc_error ("Assignment operator interface at %L must have "
-		     "two arguments", &intr->sym->declared_at);
-	  return;
+		     "two arguments", &sym->declared_at);
+	  return false;
 	}
 
       /* Allowed are (per F2003, 12.3.2.1.2 Defined assignments):
-         - First argument an array with different rank than second,
-         - Types and kinds do not conform, and
-         - First argument is of derived type.  */
+	 - First argument an array with different rank than second,
+	 - Types and kinds do not conform, and
+	 - First argument is of derived type.  */
       if (sym->formal->sym->ts.type != BT_DERIVED
 	  && (r1 == 0 || r1 == r2)
 	  && (sym->formal->sym->ts.type == sym->formal->next->sym->ts.type
@@ -630,8 +627,8 @@ check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
 		  && gfc_numeric_ts (&sym->formal->next->sym->ts))))
 	{
 	  gfc_error ("Assignment operator interface at %L must not redefine "
-		     "an INTRINSIC type assignment", &intr->sym->declared_at);
-	  return;
+		     "an INTRINSIC type assignment", &sym->declared_at);
+	  return false;
 	}
     }
   else
@@ -639,8 +636,8 @@ check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
       if (!sym->attr.function)
 	{
 	  gfc_error ("Intrinsic operator interface at %L must be a FUNCTION",
-		     &intr->sym->declared_at);
-	  return;
+		     &sym->declared_at);
+	  return false;
 	}
     }
 
@@ -648,22 +645,34 @@ check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
   if (op == INTRINSIC_ASSIGN)
     {
       if (i1 != INTENT_OUT && i1 != INTENT_INOUT)
-	gfc_error ("First argument of defined assignment at %L must be "
-		   "INTENT(OUT) or INTENT(INOUT)", &intr->sym->declared_at);
+	{
+	  gfc_error ("First argument of defined assignment at %L must be "
+		     "INTENT(OUT) or INTENT(INOUT)", &sym->declared_at);
+	  return false;
+	}
 
       if (i2 != INTENT_IN)
-	gfc_error ("Second argument of defined assignment at %L must be "
-		   "INTENT(IN)", &intr->sym->declared_at);
+	{
+	  gfc_error ("Second argument of defined assignment at %L must be "
+		     "INTENT(IN)", &sym->declared_at);
+	  return false;
+	}
     }
   else
     {
       if (i1 != INTENT_IN)
-	gfc_error ("First argument of operator interface at %L must be "
-		   "INTENT(IN)", &intr->sym->declared_at);
+	{
+	  gfc_error ("First argument of operator interface at %L must be "
+		     "INTENT(IN)", &sym->declared_at);
+	  return false;
+	}
 
       if (args == 2 && i2 != INTENT_IN)
-	gfc_error ("Second argument of operator interface at %L must be "
-		   "INTENT(IN)", &intr->sym->declared_at);
+	{
+	  gfc_error ("Second argument of operator interface at %L must be "
+		     "INTENT(IN)", &sym->declared_at);
+	  return false;
+	}
     }
 
   /* From now on, all we have to do is check that the operator definition
@@ -686,7 +695,7 @@ check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
       if (t1 == BT_LOGICAL)
 	goto bad_repl;
       else
-	return;
+	return true;
     }
 
   if (args == 1 && (op == INTRINSIC_PLUS || op == INTRINSIC_MINUS))
@@ -694,20 +703,20 @@ check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
       if (IS_NUMERIC_TYPE (t1))
 	goto bad_repl;
       else
-	return;
+	return true;
     }
 
   /* Character intrinsic operators have same character kind, thus
      operator definitions with operands of different character kinds
      are always safe.  */
   if (t1 == BT_CHARACTER && t2 == BT_CHARACTER && k1 != k2)
-    return;
+    return true;
 
   /* Intrinsic operators always perform on arguments of same rank,
      so different ranks is also always safe.  (rank == 0) is an exception
      to that, because all intrinsic operators are elemental.  */
   if (r1 != r2 && r1 != 0 && r2 != 0)
-    return;
+    return true;
 
   switch (op)
   {
@@ -760,14 +769,14 @@ check_operator_interface (gfc_interface *intr, gfc_intrinsic_op op)
       break;
   }
 
-  return;
+  return true;
 
 #undef IS_NUMERIC_TYPE
 
 bad_repl:
   gfc_error ("Operator interface at %L conflicts with intrinsic interface",
-	     &intr->where);
-  return;
+	     &opwhere);
+  return false;
 }
 
 
@@ -934,31 +943,31 @@ generic_correspondence (gfc_formal_arglist *f1, gfc_formal_arglist *f2)
    required to match, which is not the case for ambiguity checks.*/
 
 int
-gfc_compare_interfaces (gfc_symbol *s1, gfc_symbol *s2, int generic_flag,
-			int intent_flag, char *errmsg, int err_len)
+gfc_compare_interfaces (gfc_symbol *s1, gfc_symbol *s2, const char *name2,
+			int generic_flag, int intent_flag,
+			char *errmsg, int err_len)
 {
   gfc_formal_arglist *f1, *f2;
 
   if (s1->attr.function && (s2->attr.subroutine
       || (!s2->attr.function && s2->ts.type == BT_UNKNOWN
-	  && gfc_get_default_type (s2->name, s2->ns)->type == BT_UNKNOWN)))
+	  && gfc_get_default_type (name2, s2->ns)->type == BT_UNKNOWN)))
     {
       if (errmsg != NULL)
-	snprintf (errmsg, err_len, "'%s' is not a function", s2->name);
+	snprintf (errmsg, err_len, "'%s' is not a function", name2);
       return 0;
     }
 
   if (s1->attr.subroutine && s2->attr.function)
     {
       if (errmsg != NULL)
-	snprintf (errmsg, err_len, "'%s' is not a subroutine", s2->name);
+	snprintf (errmsg, err_len, "'%s' is not a subroutine", name2);
       return 0;
     }
 
   /* If the arguments are functions, check type and kind
      (only for dummy procedures and procedure pointer assignments).  */
-  if ((s1->attr.dummy || s1->attr.proc_pointer)
-      && s1->attr.function && s2->attr.function)
+  if (!generic_flag && intent_flag && s1->attr.function && s2->attr.function)
     {
       if (s1->ts.type == BT_UNKNOWN)
 	return 1;
@@ -966,7 +975,7 @@ gfc_compare_interfaces (gfc_symbol *s1, gfc_symbol *s2, int generic_flag,
 	{
 	  if (errmsg != NULL)
 	    snprintf (errmsg, err_len, "Type/kind mismatch in return value "
-		      "of '%s'", s2->name);
+		      "of '%s'", name2);
 	  return 0;
 	}
     }
@@ -1003,7 +1012,7 @@ gfc_compare_interfaces (gfc_symbol *s1, gfc_symbol *s2, int generic_flag,
 	  {
 	    if (errmsg != NULL)
 	      snprintf (errmsg, err_len, "'%s' has the wrong number of "
-			"arguments", s2->name);
+			"arguments", name2);
 	    return 0;
 	  }
 
@@ -1111,7 +1120,8 @@ check_interface1 (gfc_interface *p, gfc_interface *q0,
 	if (p->sym->name == q->sym->name && p->sym->module == q->sym->module)
 	  continue;
 
-	if (gfc_compare_interfaces (p->sym, q->sym, generic_flag, 0, NULL, 0))
+	if (gfc_compare_interfaces (p->sym, q->sym, NULL, generic_flag, 0,
+				    NULL, 0))
 	  {
 	    if (referenced)
 	      {
@@ -1229,7 +1239,9 @@ gfc_check_interfaces (gfc_namespace *ns)
       if (check_interface0 (ns->op[i], interface_name))
 	continue;
 
-      check_operator_interface (ns->op[i], (gfc_intrinsic_op) i);
+      if (ns->op[i])
+	gfc_check_operator_interface (ns->op[i]->sym, (gfc_intrinsic_op) i,
+				      ns->op[i]->where);
 
       for (ns2 = ns; ns2; ns2 = ns2->parent)
 	{
@@ -1375,9 +1387,9 @@ compare_parameter (gfc_symbol *formal, gfc_expr *actual,
     return 1;
 
   if (formal->ts.type == BT_DERIVED
-      && formal->ts.derived && formal->ts.derived->ts.is_iso_c
+      && formal->ts.u.derived && formal->ts.u.derived->ts.is_iso_c
       && actual->ts.type == BT_DERIVED
-      && actual->ts.derived && actual->ts.derived->ts.is_iso_c)
+      && actual->ts.u.derived && actual->ts.u.derived->ts.is_iso_c)
     return 1;
 
   if (actual->ts.type == BT_PROCEDURE)
@@ -1392,7 +1404,7 @@ compare_parameter (gfc_symbol *formal, gfc_expr *actual,
 	  return 0;
 	}
 
-      if (!gfc_compare_interfaces (formal, act_sym, 0, 1, err,
+      if (!gfc_compare_interfaces (formal, act_sym, act_sym->name, 0, 1, err,
 				   sizeof(err)))
 	{
 	  if (where)
@@ -1540,9 +1552,9 @@ get_sym_storage_size (gfc_symbol *sym)
 
   if (sym->ts.type == BT_CHARACTER)
     {
-      if (sym->ts.cl && sym->ts.cl->length
-          && sym->ts.cl->length->expr_type == EXPR_CONSTANT)
-	strlen = mpz_get_ui (sym->ts.cl->length->value.integer);
+      if (sym->ts.u.cl && sym->ts.u.cl->length
+          && sym->ts.u.cl->length->expr_type == EXPR_CONSTANT)
+	strlen = mpz_get_ui (sym->ts.u.cl->length->value.integer);
       else
 	return 0;
     }
@@ -1588,11 +1600,11 @@ get_expr_storage_size (gfc_expr *e)
   
   if (e->ts.type == BT_CHARACTER)
     {
-      if (e->ts.cl && e->ts.cl->length
-          && e->ts.cl->length->expr_type == EXPR_CONSTANT)
-	strlen = mpz_get_si (e->ts.cl->length->value.integer);
+      if (e->ts.u.cl && e->ts.u.cl->length
+          && e->ts.u.cl->length->expr_type == EXPR_CONSTANT)
+	strlen = mpz_get_si (e->ts.u.cl->length->value.integer);
       else if (e->expr_type == EXPR_CONSTANT
-	       && (e->ts.cl == NULL || e->ts.cl->length == NULL))
+	       && (e->ts.u.cl == NULL || e->ts.u.cl->length == NULL))
 	strlen = e->value.character.length;
       else
 	return 0;
@@ -1858,28 +1870,28 @@ compare_actual_formal (gfc_actual_arglist **ap, gfc_formal_arglist *formal,
 	 and assumed-shape dummies, the string length needs to match
 	 exactly.  */
       if (a->expr->ts.type == BT_CHARACTER
-	   && a->expr->ts.cl && a->expr->ts.cl->length
-	   && a->expr->ts.cl->length->expr_type == EXPR_CONSTANT
-	   && f->sym->ts.cl && f->sym->ts.cl && f->sym->ts.cl->length
-	   && f->sym->ts.cl->length->expr_type == EXPR_CONSTANT
+	   && a->expr->ts.u.cl && a->expr->ts.u.cl->length
+	   && a->expr->ts.u.cl->length->expr_type == EXPR_CONSTANT
+	   && f->sym->ts.u.cl && f->sym->ts.u.cl && f->sym->ts.u.cl->length
+	   && f->sym->ts.u.cl->length->expr_type == EXPR_CONSTANT
 	   && (f->sym->attr.pointer || f->sym->attr.allocatable
 	       || (f->sym->as && f->sym->as->type == AS_ASSUMED_SHAPE))
-	   && (mpz_cmp (a->expr->ts.cl->length->value.integer,
-			f->sym->ts.cl->length->value.integer) != 0))
+	   && (mpz_cmp (a->expr->ts.u.cl->length->value.integer,
+			f->sym->ts.u.cl->length->value.integer) != 0))
 	 {
 	   if (where && (f->sym->attr.pointer || f->sym->attr.allocatable))
 	     gfc_warning ("Character length mismatch (%ld/%ld) between actual "
 			  "argument and pointer or allocatable dummy argument "
 			  "'%s' at %L",
-			  mpz_get_si (a->expr->ts.cl->length->value.integer),
-			  mpz_get_si (f->sym->ts.cl->length->value.integer),
+			  mpz_get_si (a->expr->ts.u.cl->length->value.integer),
+			  mpz_get_si (f->sym->ts.u.cl->length->value.integer),
 			  f->sym->name, &a->expr->where);
 	   else if (where)
 	     gfc_warning ("Character length mismatch (%ld/%ld) between actual "
 			  "argument and assumed-shape dummy argument '%s' "
 			  "at %L",
-			  mpz_get_si (a->expr->ts.cl->length->value.integer),
-			  mpz_get_si (f->sym->ts.cl->length->value.integer),
+			  mpz_get_si (a->expr->ts.u.cl->length->value.integer),
+			  mpz_get_si (f->sym->ts.u.cl->length->value.integer),
 			  f->sym->name, &a->expr->where);
 	   return 0;
 	 }
@@ -2543,16 +2555,119 @@ gfc_find_sym_in_symtree (gfc_symbol *sym)
 }
 
 
+/* See if the arglist to an operator-call contains a derived-type argument
+   with a matching type-bound operator.  If so, return the matching specific
+   procedure defined as operator-target as well as the base-object to use
+   (which is the found derived-type argument with operator).  */
+
+static gfc_typebound_proc*
+matching_typebound_op (gfc_expr** tb_base,
+		       gfc_actual_arglist* args,
+		       gfc_intrinsic_op op, const char* uop)
+{
+  gfc_actual_arglist* base;
+
+  for (base = args; base; base = base->next)
+    if (base->expr->ts.type == BT_DERIVED)
+      {
+	gfc_typebound_proc* tb;
+	gfc_symbol* derived;
+	gfc_try result;
+
+	derived = base->expr->ts.u.derived;
+
+	if (op == INTRINSIC_USER)
+	  {
+	    gfc_symtree* tb_uop;
+
+	    gcc_assert (uop);
+	    tb_uop = gfc_find_typebound_user_op (derived, &result, uop,
+						 false, NULL);
+
+	    if (tb_uop)
+	      tb = tb_uop->n.tb;
+	    else
+	      tb = NULL;
+	  }
+	else
+	  tb = gfc_find_typebound_intrinsic_op (derived, &result, op,
+						false, NULL);
+
+	/* This means we hit a PRIVATE operator which is use-associated and
+	   should thus not be seen.  */
+	if (result == FAILURE)
+	  tb = NULL;
+
+	/* Look through the super-type hierarchy for a matching specific
+	   binding.  */
+	for (; tb; tb = tb->overridden)
+	  {
+	    gfc_tbp_generic* g;
+
+	    gcc_assert (tb->is_generic);
+	    for (g = tb->u.generic; g; g = g->next)
+	      {
+		gfc_symbol* target;
+		gfc_actual_arglist* argcopy;
+		bool matches;
+
+		gcc_assert (g->specific);
+		if (g->specific->error)
+		  continue;
+
+		target = g->specific->u.specific->n.sym;
+
+		/* Check if this arglist matches the formal.  */
+		argcopy = gfc_copy_actual_arglist (args);
+		matches = gfc_arglist_matches_symbol (&argcopy, target);
+		gfc_free_actual_arglist (argcopy);
+
+		/* Return if we found a match.  */
+		if (matches)
+		  {
+		    *tb_base = base->expr;
+		    return g->specific;
+		  }
+	      }
+	  }
+      }
+
+  return NULL;
+}
+
+
+/* For the 'actual arglist' of an operator call and a specific typebound
+   procedure that has been found the target of a type-bound operator, build the
+   appropriate EXPR_COMPCALL and resolve it.  We take this indirection over
+   type-bound procedures rather than resolving type-bound operators 'directly'
+   so that we can reuse the existing logic.  */
+
+static void
+build_compcall_for_operator (gfc_expr* e, gfc_actual_arglist* actual,
+			     gfc_expr* base, gfc_typebound_proc* target)
+{
+  e->expr_type = EXPR_COMPCALL;
+  e->value.compcall.tbp = target;
+  e->value.compcall.name = "operator"; /* Should not matter.  */
+  e->value.compcall.actual = actual;
+  e->value.compcall.base_object = base;
+  e->value.compcall.ignore_pass = 1;
+  e->value.compcall.assign = 0;
+}
+
+
 /* This subroutine is called when an expression is being resolved.
    The expression node in question is either a user defined operator
    or an intrinsic operator with arguments that aren't compatible
    with the operator.  This subroutine builds an actual argument list
    corresponding to the operands, then searches for a compatible
    interface.  If one is found, the expression node is replaced with
-   the appropriate function call.  */
+   the appropriate function call.
+   real_error is an additional output argument that specifies if FAILURE
+   is because of some real error and not because no match was found.  */
 
 gfc_try
-gfc_extend_expr (gfc_expr *e)
+gfc_extend_expr (gfc_expr *e, bool *real_error)
 {
   gfc_actual_arglist *actual;
   gfc_symbol *sym;
@@ -2564,6 +2679,8 @@ gfc_extend_expr (gfc_expr *e)
 
   actual = gfc_get_actual_arglist ();
   actual->expr = e->value.op.op1;
+
+  *real_error = false;
 
   if (e->value.op.op2 != NULL)
     {
@@ -2594,47 +2711,20 @@ gfc_extend_expr (gfc_expr *e)
 	     to check if either is defined.  */
 	  switch (i)
 	    {
-	      case INTRINSIC_EQ:
-	      case INTRINSIC_EQ_OS:
-		sym = gfc_search_interface (ns->op[INTRINSIC_EQ], 0, &actual);
-		if (sym == NULL)
-		  sym = gfc_search_interface (ns->op[INTRINSIC_EQ_OS], 0, &actual);
-		break;
-
-	      case INTRINSIC_NE:
-	      case INTRINSIC_NE_OS:
-		sym = gfc_search_interface (ns->op[INTRINSIC_NE], 0, &actual);
-		if (sym == NULL)
-		  sym = gfc_search_interface (ns->op[INTRINSIC_NE_OS], 0, &actual);
-		break;
-
-	      case INTRINSIC_GT:
-	      case INTRINSIC_GT_OS:
-		sym = gfc_search_interface (ns->op[INTRINSIC_GT], 0, &actual);
-		if (sym == NULL)
-		  sym = gfc_search_interface (ns->op[INTRINSIC_GT_OS], 0, &actual);
-		break;
-
-	      case INTRINSIC_GE:
-	      case INTRINSIC_GE_OS:
-		sym = gfc_search_interface (ns->op[INTRINSIC_GE], 0, &actual);
-		if (sym == NULL)
-		  sym = gfc_search_interface (ns->op[INTRINSIC_GE_OS], 0, &actual);
-		break;
-
-	      case INTRINSIC_LT:
-	      case INTRINSIC_LT_OS:
-		sym = gfc_search_interface (ns->op[INTRINSIC_LT], 0, &actual);
-		if (sym == NULL)
-		  sym = gfc_search_interface (ns->op[INTRINSIC_LT_OS], 0, &actual);
-		break;
-
-	      case INTRINSIC_LE:
-	      case INTRINSIC_LE_OS:
-		sym = gfc_search_interface (ns->op[INTRINSIC_LE], 0, &actual);
-		if (sym == NULL)
-		  sym = gfc_search_interface (ns->op[INTRINSIC_LE_OS], 0, &actual);
-		break;
+#define CHECK_OS_COMPARISON(comp) \
+  case INTRINSIC_##comp: \
+  case INTRINSIC_##comp##_OS: \
+    sym = gfc_search_interface (ns->op[INTRINSIC_##comp], 0, &actual); \
+    if (!sym) \
+      sym = gfc_search_interface (ns->op[INTRINSIC_##comp##_OS], 0, &actual); \
+    break;
+	      CHECK_OS_COMPARISON(EQ)
+	      CHECK_OS_COMPARISON(NE)
+	      CHECK_OS_COMPARISON(GT)
+	      CHECK_OS_COMPARISON(GE)
+	      CHECK_OS_COMPARISON(LT)
+	      CHECK_OS_COMPARISON(LE)
+#undef CHECK_OS_COMPARISON
 
 	      default:
 		sym = gfc_search_interface (ns->op[i], 0, &actual);
@@ -2645,8 +2735,59 @@ gfc_extend_expr (gfc_expr *e)
 	}
     }
 
+  /* TODO: Do an ambiguity-check and error if multiple matching interfaces are
+     found rather than just taking the first one and not checking further.  */
+
   if (sym == NULL)
     {
+      gfc_typebound_proc* tbo;
+      gfc_expr* tb_base;
+
+      /* See if we find a matching type-bound operator.  */
+      if (i == INTRINSIC_USER)
+	tbo = matching_typebound_op (&tb_base, actual,
+				     i, e->value.op.uop->name);
+      else
+	switch (i)
+	  {
+#define CHECK_OS_COMPARISON(comp) \
+  case INTRINSIC_##comp: \
+  case INTRINSIC_##comp##_OS: \
+    tbo = matching_typebound_op (&tb_base, actual, \
+				 INTRINSIC_##comp, NULL); \
+    if (!tbo) \
+      tbo = matching_typebound_op (&tb_base, actual, \
+				   INTRINSIC_##comp##_OS, NULL); \
+    break;
+	    CHECK_OS_COMPARISON(EQ)
+	    CHECK_OS_COMPARISON(NE)
+	    CHECK_OS_COMPARISON(GT)
+	    CHECK_OS_COMPARISON(GE)
+	    CHECK_OS_COMPARISON(LT)
+	    CHECK_OS_COMPARISON(LE)
+#undef CHECK_OS_COMPARISON
+
+	    default:
+	      tbo = matching_typebound_op (&tb_base, actual, i, NULL);
+	      break;
+	  }
+	      
+      /* If there is a matching typebound-operator, replace the expression with
+	 a call to it and succeed.  */
+      if (tbo)
+	{
+	  gfc_try result;
+
+	  gcc_assert (tb_base);
+	  build_compcall_for_operator (e, actual, tb_base, tbo);
+
+	  result = gfc_resolve_expr (e);
+	  if (result == FAILURE)
+	    *real_error = true;
+
+	  return result;
+	}
+
       /* Don't use gfc_free_actual_arglist().  */
       if (actual->next != NULL)
 	gfc_free (actual->next);
@@ -2664,15 +2805,11 @@ gfc_extend_expr (gfc_expr *e)
   e->value.function.name = NULL;
   e->user_operator = 1;
 
-  if (gfc_pure (NULL) && !gfc_pure (sym))
+  if (gfc_resolve_expr (e) == FAILURE)
     {
-      gfc_error ("Function '%s' called in lieu of an operator at %L must "
-		 "be PURE", sym->name, &e->where);
+      *real_error = true;
       return FAILURE;
     }
-
-  if (gfc_resolve_expr (e) == FAILURE)
-    return FAILURE;
 
   return SUCCESS;
 }
@@ -2715,8 +2852,33 @@ gfc_extend_assign (gfc_code *c, gfc_namespace *ns)
 	break;
     }
 
+  /* TODO: Ambiguity-check, see above for gfc_extend_expr.  */
+
   if (sym == NULL)
     {
+      gfc_typebound_proc* tbo;
+      gfc_expr* tb_base;
+
+      /* See if we find a matching type-bound assignment.  */
+      tbo = matching_typebound_op (&tb_base, actual,
+				   INTRINSIC_ASSIGN, NULL);
+	      
+      /* If there is one, replace the expression with a call to it and
+	 succeed.  */
+      if (tbo)
+	{
+	  gcc_assert (tb_base);
+	  c->expr1 = gfc_get_expr ();
+	  build_compcall_for_operator (c->expr1, actual, tb_base, tbo);
+	  c->expr1->value.compcall.assign = 1;
+	  c->expr2 = NULL;
+	  c->op = EXEC_COMPCALL;
+
+	  /* c is resolved from the caller, so no need to do it here.  */
+
+	  return SUCCESS;
+	}
+
       gfc_free (actual->next);
       gfc_free (actual);
       return FAILURE;

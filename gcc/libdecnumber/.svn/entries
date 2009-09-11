@@ -1,15 +1,15 @@
 10
 
 dir
-150304
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libdecnumber
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-30T22:33:49.680443Z
-150277
-rwild
+2009-09-09T19:42:21.962562Z
+151574
+bonzini
 has-props
 
 
@@ -28,15 +28,15 @@ has-props
 
 configure
 file
-149693
 
 
 
-2009-04-24T17:46:15.000000Z
-8e57ee354bc4ba88bca39258783c309d
-2008-06-17T23:13:35.450043Z
-136876
-rwild
+
+2009-09-09T20:40:00.000000Z
+0d914a88005f786e869c62a6c1752c9f
+2009-09-09T19:42:21.962562Z
+151574
+bonzini
 has-props
 
 
@@ -58,7 +58,7 @@ has-props
 
 
 
-266362
+184567
 
 Makefile.in
 file
@@ -96,7 +96,7 @@ rwild
 
 decDPDSymbols.h
 file
-149693
+
 
 
 
@@ -130,7 +130,7 @@ janis
 
 decRound.c
 file
-149693
+
 
 
 
@@ -164,7 +164,7 @@ jakub
 
 decNumber.c
 file
-149693
+
 
 
 
@@ -198,7 +198,7 @@ jakub
 
 decExcept.c
 file
-149693
+
 
 
 
@@ -232,7 +232,7 @@ jakub
 
 decDoubleSymbols.h
 file
-149693
+
 
 
 
@@ -266,7 +266,7 @@ janis
 
 decRound.h
 file
-149693
+
 
 
 
@@ -300,7 +300,7 @@ jakub
 
 decNumber.h
 file
-149693
+
 
 
 
@@ -334,7 +334,7 @@ ian
 
 decExcept.h
 file
-149693
+
 
 
 
@@ -371,7 +371,7 @@ dir
 
 decContextSymbols.h
 file
-149693
+
 
 
 
@@ -405,7 +405,7 @@ janis
 
 decLibrary.c
 file
-149693
+
 
 
 
@@ -439,7 +439,7 @@ jakub
 
 decCommonSymbols.h
 file
-149693
+
 
 
 
@@ -473,15 +473,15 @@ janis
 
 configure.ac
 file
-149693
 
 
 
-2009-04-24T17:46:15.000000Z
-f044da7cfcc8df54bb4425248b965bd6
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+
+2009-09-08T03:17:52.000000Z
+c556536a9d74e70a4154cc79a1850b99
+2009-08-24T19:08:51.161283Z
+151059
+rwild
 
 
 
@@ -507,7 +507,7 @@ jakub
 
 decNumberLocal.h
 file
-149693
+
 
 
 
@@ -541,7 +541,7 @@ jakub
 
 decQuadSymbols.h
 file
-149693
+
 
 
 
@@ -575,7 +575,7 @@ janis
 
 decDouble.c
 file
-149693
+
 
 
 
@@ -609,19 +609,15 @@ jakub
 
 config.in
 file
-149693
-
-
-
-2009-04-24T17:46:15.000000Z
-af852a51fecdcb9edcf1950268b6158b
-2007-03-24T17:04:47.113309Z
-123185
-meissner
 
 
 
 
+2009-09-08T03:17:52.000000Z
+76d4afd0dd1c0f5e776cbc40cf2e91b3
+2009-08-22T13:22:20.806489Z
+151014
+rwild
 
 
 
@@ -639,11 +635,15 @@ meissner
 
 
 
-2184
+
+
+
+
+2495
 
 decDouble.h
 file
-149693
+
 
 
 
@@ -677,7 +677,7 @@ jakub
 
 decSingle.c
 file
-149693
+
 
 
 
@@ -711,19 +711,15 @@ jakub
 
 decContext.c
 file
-149693
-
-
-
-2009-04-24T17:46:15.000000Z
-8ee0bf1cb0c3135bfa73fd85326075a0
-2009-04-09T15:00:19.611803Z
-145841
-jakub
 
 
 
 
+2009-09-08T03:17:52.000000Z
+94b3c9506a9ac0de47d644e86f58ca5c
+2009-08-13T16:54:28.876869Z
+150720
+janis
 
 
 
@@ -741,11 +737,15 @@ jakub
 
 
 
-20291
+
+
+
+
+20334
 
 decSingle.h
 file
-149693
+
 
 
 
@@ -779,7 +779,7 @@ jakub
 
 decPacked.c
 file
-149693
+
 
 
 
@@ -813,19 +813,15 @@ jakub
 
 decCommon.c
 file
-149693
-
-
-
-2009-04-24T17:46:15.000000Z
-cf2f0946c8cbe4cbe172c221f07b452e
-2009-04-09T15:00:19.611803Z
-145841
-jakub
 
 
 
 
+2009-09-08T03:17:52.000000Z
+f6eb7878b1dd7ee7a4fe1d0ca059fe16
+2009-08-13T16:54:28.876869Z
+150720
+janis
 
 
 
@@ -843,11 +839,15 @@ jakub
 
 
 
-74549
+
+
+
+
+74583
 
 decContext.h
 file
-149693
+
 
 
 
@@ -885,11 +885,11 @@ file
 
 
 
-2009-07-31T04:47:29.000000Z
-b7c6a050a7de8d56e885fafa4da14062
-2009-07-30T22:33:49.680443Z
-150277
-rwild
+2009-09-09T20:40:00.000000Z
+5922280963d05c87c2d92faf3e4e7a21
+2009-09-09T19:42:21.962562Z
+151574
+bonzini
 
 
 
@@ -911,11 +911,11 @@ rwild
 
 
 
-15830
+16423
 
 decQuad.c
 file
-149693
+
 
 
 
@@ -949,7 +949,7 @@ jakub
 
 decPacked.h
 file
-149693
+
 
 
 
@@ -983,7 +983,7 @@ jakub
 
 decQuad.h
 file
-149693
+
 
 
 
@@ -1017,7 +1017,7 @@ jakub
 
 decSingleSymbols.h
 file
-149693
+
 
 
 
@@ -1051,7 +1051,7 @@ janis
 
 dconfig.h
 file
-149693
+
 
 
 
@@ -1085,7 +1085,7 @@ jakub
 
 decPackedSymbols.h
 file
-149693
+
 
 
 
@@ -1119,7 +1119,7 @@ janis
 
 decNumberSymbols.h
 file
-149693
+
 
 
 
@@ -1156,7 +1156,7 @@ dir
 
 decDPD.h
 file
-149693
+
 
 
 
@@ -1190,19 +1190,15 @@ ian
 
 aclocal.m4
 file
-149693
-
-
-
-2009-04-24T17:46:15.000000Z
-fadf2817f83f012f9f3e7dfd466a54aa
-2008-04-18T10:28:53.841355Z
-134434
-bonzini
 
 
 
 
+2009-09-08T03:17:52.000000Z
+146963a4bf170f856798d1dab6fe7dee
+2009-08-22T13:22:20.806489Z
+151014
+rwild
 
 
 
@@ -1220,11 +1216,15 @@ bonzini
 
 
 
-686
+
+
+
+
+709
 
 decBasic.c
 file
-149693
+
 
 
 

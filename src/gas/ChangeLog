@@ -1,3 +1,627 @@
+2009-09-07  Daniel Gutson  <dgutson@codesourcery.com>
+
+	* config/tc-arm.c (arm_cpus): cortex-r4f CPU added.
+	* doc/c-arm.texi: cortex-r4f CPU added.
+
+2009-09-07  Tristan Gingold  <gingold@adacore.com>
+
+	* po/POTFILES.in: Regenerate.
+	* po/gas.pot: Regenerate.
+
+	* Makefile.am (TARG_ENV_CFILES): New variable.  Set to te-vms.c
+	(POTFILES): Add $(TARG_ENV_CFILES) in definition.
+	(EXTRA_as_new_SOURCES): Ditto.
+	* Makefile: Regenerate.
+	* acinclude.m4 (BFD_HAVE_TIME_TYPE_MEMBER,
+	BFD_HAVE_SYS_STAT_TYPE_MEMBER): New macro created from bfd/bfd.m4.
+	* configure.in: Add Tests for tm_gmtoff, st_mtim.tv_sec and
+	st_mtim.tv_nsec (from bfd/configure.in).  Check for time.h and
+	sys/stat.h headers.
+	Add te-vms.o in extra_objects if te_file is vms.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+	* config/te-vms.c: New file, from bfd/vmsutil.c
+	(vms_dwarf2_file_time_name, vms_dwarf2_file_size_name)
+	(vms_dwarf2_file_name): New functions.
+	(vms_file_stats_name): Make it static, add a dirname parameter to
+	locally create the full pathname.
+	* config/te-vms.h: Add a copyright header.
+	Declare the above functions.
+	(DWARF2_FILE_TIME_NAME, DWARF2_FILE_SIZE_NAME, DWARF2_FILE_NAME): Use
+	the above functions in the definition.
+	* makefile.vms (OBJS): Add te-vms.obj.
+	(te-vms.obj): Create a specific target.
+	* configure.com: Create targ-env.h using a per target value.
+	Compile te-vms.c for ia64.
+
+2009-09-05  Jie Zhang  <jie.zhang@analog.com>
+
+	* doc/as.texinfo: Document that Blackfin GAS does not
+	accept SYMBOL = VALUE.
+
+2009-09-05  Martin Thuresson  <martin@mtme.org>
+
+	* config/tc-arc.c (struct syntax_classes): Rename member class
+	to s_class. (arc_extinst): Rename variable class to
+	s_class. Update code to use renamed members.
+	* config/tc-mips.c (insn_uses_reg): Rename argument class to
+	regclass.
+	* config/tc-ppc.c (ppc_csect, ppc_change_csect, ppc_function)
+	(ppc_tc, ppc_is_toc_sym, ppc_symbol_new_hook, ppc_frob_label)
+	(ppc_fix_adjustable, md_apply_fix): Update code to use renamed
+	members.
+	* config/tc-ppc.h (struct ppc_tc_sy): Change name of member
+	from class to symbol_class. (OBJ_COPY_SYMBOL_ATTRIBUTES): Update
+	code to use renamed members.
+	* config/tc-score.c (s3_adjust_paritybit): Rename argument
+	class to i_class.
+	* config/tc-score7.c (s7_adjust_paritybit): Rename argument
+	class to i_class.
+
+2009-09-04  Tristan Gingold  <gingold@adacore.com>
+
+	* NEWS: Add marker for 2.20.
+
+2009-09-04  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-parse.y (asm_1): Implement HLT instruction.
+	Fix comments for DBGA, DBGAH and DBGAL.
+	* config/tc-bfin.c (bfin_gen_pseudodbg_assert): Change according
+	to the new encoding of DBGA, DBGAH, and DBGAL.
+
+2009-09-04  Jie Zhang  <jie.zhang@analog.com>
+
+	* doc/all.texi: Replace BFIN with Blackfin.
+	* doc/as.texinfo: Likewise.
+	* doc/c-bfin.texi: Likewise.
+	* doc/asconfig.texi: Likewise.
+
+	* doc/c-bfin.texi: Update -mcpu= option with bf512, bf514,
+	bf516 and bf518.
+
+2009-09-04  Jie Zhang  <jie.zhang@analog.com>
+
+	* Makefile.am (bfin-parse.o): Remove bfin-parse.h from
+	the prerequisite. Add $(srcdir)/config/bfin-aux.h to the
+	prerequisite.
+	(bfin-defs.h, $(srcdir)/config/bfin-defs.h): Rename to ...
+	(bfin-parse.h, $(srcdir)/config/bfin-parse.h): ... these. 
+	(bfin-lex.o): Add bfin-parse.h and $(srcdir)/config/bfin-defs.h
+	to the prerequisite.
+	* Makefile.in: Regenerate.
+
+2009-09-03  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (itbl-lex.o): Depend on itbl-parse.h.
+	(itbl-ops.o, itbl-tops.o): Likewise.
+	(itbl-parse.h): Use separate rule.
+	* Makefile.in: Regenerate.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/tc-bfin.c (md_parse_option): Call as_fatal for bad
+	-mcpu= option.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-lex.l: Remove V as STATUS_REG.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-parse.y: Remove trailing whitespace.
+	(ccstat): Indent.
+	* config/tc-bfin.c (struct bfin_reg_entry): Remove.
+	(bfin_reg_info[]): Remove.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-defs.h (F_REG_ALL): Remove macro.
+	(F_REG_HIGH): Redefine.
+	(F_REG_NONE): New macro.
+	(F_REG_LOW): New macro.
+	(REG_CLASS): Enclose macro argument in parentheses when used.
+	(REG_EVEN): Likewise.
+	(IS_H): Use flags.
+	(IS_HCOMPL): Use flags.
+	* config/bfin-lex.l (SP.L, SP.H, FP.L, FP.H): Set flags.
+	(parse_reg): Set flags.
+	(parse_halfreg): Set flags.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-parse.y (gen_multi_instr_1): Check anomaly
+	05000074 only when both slot1 and slot2 are filled.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/tc-bfin.c (md_assemble): Bump line counters if there is
+	EOL in the instruction.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-defs.h (IS_GENREG): Define.
+	(IS_DAGREG): Define.
+	(IS_SYSREG): Define.
+	* config/bfin-parse.y (asm_1): Check illegal register move
+	instructions.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-parse.y (asm_1): Fix a typo.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-parse.y (asm_1): Add LOOP_BEGIN and LOOP_END.
+	* config/tc-bfin.c (bfin_start_line_hook): Remove.
+	(bfin_loop_beginend): New.
+	* config/tc-bfin.h (bfin_start_line_hook): Don't declare.
+	(md_start_line_hook): Don't define.
+	* config/bfin-aux.h (bfin_loop_beginend): Declare.
+
+2009-09-03  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-ia64.c (ia64_vms_note): Use lbasename instead of basename.
+	Call xstrdup on the result and free the buffer after use.
+
+2009-09-03  Tristan Gingold  <gingold@adacore.com>
+
+	* as.h (__PRETTY_FUNCTION__): Use the same definition as bfd/libbfd.h.
+
+2009-09-02  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-parse.y (value_match): Use int instead of long.
+
+	From  Michael Frysinger  <michael.frysinger@analog.com>
+	* config/bfin-defs.h (Expr_Node_Value): Declare the i_value
+	member as long long.
+
+2009-09-02  Jie Zhang  <jie.zhang@analog.com>
+
+	From  Bernd Schmidt  <bernd.schmidt@analog.com>
+	* config/gas/bfin-parse.y (asm_1): Clean up and unify error handling
+	for load and store insns.
+	(neg_value): Delete function.
+
+2009-09-01  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (m68k-parse.o, bfin-lex.o, itbl-lex.o, itbl-parse.o):
+	Supply correct source file name for generated files which may be
+	in $(srcdir).
+	* Makefile.in: Regenerate.
+
+2009-09-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* version.c (parse_args): Change to "Copyright 2009".
+
+2009-09-01  Tristan Gingold  <gingold@adacore.com>
+
+	* makefile.vms: Adjust include pathes.  Remove useless vaxctrl
+	library.
+	* configure.com: Ported to Itanium VMS.  Create build.com DCL script.
+	Make edit silent.
+
+2009-09-01  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-parse.y (asm_1): Only PREG and DREG are allowed
+	in comparison.
+
+2009-09-01  Jie Zhang  <jie.zhang@analog.com>
+
+	2007-09-28  Bernd Schmidt  <bernd.schmidt@analog.com>
+	* config/tc-bfin.c (bfin_fix_adjustable): Partially revert the
+	2007-08-23 change; BFD_RELOC_BFIN_GOT is not adjustable.
+
+	2007-08-23  Jie Zhang  <jie.zhang@analog.com>
+	* config/tc-bfin.c (bfin_fix_adjustable): Adjust
+	BFD_RELOC_BFIN_GOT, BFD_RELOC_BFIN_GOT17M4 and
+	BFD_RELOC_BFIN_FUNCDESC_GOT17M4.
+
+2009-09-01  Jie Zhang  <jie.zhang@analog.com>
+
+	* read.c (TC_START_LABEL): Add a new argument.
+	(read_a_source_file): Pass the beginning of the symbol through
+	the new argument of TC_START_LABEL.
+	* config/tc-arm.h (TC_START_LABEL): Add a new argument.
+	* config/tc-bfin.c (bfin_start_label): Only search '(' and '['
+	from the beginning of the symbol.
+	* config/tc-bfin.h (TC_START_LABEL): Add the new argument.
+	* config/tc-d30v.h (TC_START_LABEL): Likewise.
+	* config/tc-fr30.h (TC_START_LABEL): Likewise.
+	* config/tc-m32c.h (TC_START_LABEL): Likewise.
+	* config/tc-m32r.h (TC_START_LABEL): Likewise.
+	* config/tc-mep.h (TC_START_LABEL): Likewise.
+
+2009-08-31  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10570
+	* write.c (write_object_file): Revert the accidental change
+	made in revision 1.124 on 2009-08-17.
+
+2009-08-31  Jan Beulich  <jbeulich@novell.com>
+
+	* config/obj-elf.c (obj_elf_change_section): Set default type
+	by calling bfd_elf_get_default_section_type.
+
+2009-08-31  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-aux.h: Change format from DOS to UNIX.
+
+2009-08-29  Martin Thuresson  <martin@mtme.org>
+
+	* config/tc-arm.c (struct asm_cond, struct asm_psr, struct
+	asm_barrier_opt): Change member template to
+	template_name. (md_begin): Update code to reflect new member
+	names.
+	* config/tc-i386.c (struct templates, struct _i386_insn)
+	(match_template, cpu_flags_match, match_reg_size, match_mem_size)
+	(operand_size_match, md_begin, i386_print_statistics, pi)
+	(build_vex_prefix, md_assemble, parse_insn, optimize_imm)
+	(optimize_disp): Updated code to use new names. (parse_insn):
+	Added casts.
+	* config/tc-ia64.c (dot_template, emit_one_bundle): Updated
+	code to use new names.
+	* config/tc-score.c (struct s3_asm_opcode): Renamed member
+	template to template_name. (s3_parse_16_32_inst, s3_parse_48_inst,
+	s3_do_macro_ldst_label, s3_build_score_ops_hsh): Update code to
+	use new names.
+	* config/tc-score7.c (struct s7_asm_opcode): Renamed member
+	template to template_name. (s7_parse_16_32_inst,
+	s7_do_macro_ldst_label, s7_build_score_ops_hsh): Update code to
+	use new names.
+	* config/tc-tic30.c (md_begin, struct tic30_insn)
+	(md_assemble): Update code to use new names.
+	* config/tc-tic54x.c (struct _tic54x_insn, md_begin)
+	(optimize_insn, tic54x_parse_insn, next_line_shows_parallel):
+	Update code to use new names.
+	* config/tc-arm.c (insert_reg_alias): Rename variable new to
+	new_reg.
+	* config/tc-dlx.c (parse_operand): Rename variable new to
+	new_pos.
+	* config/tc-ia64.c (ia64_gen_real_reloc_type): Rename variable
+	new to newr.
+	* config/tc-mcore.c (parse_exp, parse_imm): Rename variable
+	new to new_pointer.
+	* config/tc-microblaze.c (parse_exp, parse_imm, check_got):
+	Change name from new to new_pointer.
+	* config/tc-or32.c (parse_operand): Rename variable new to
+	new_pointer.
+	* config/tc-pdp11.c (md_assemble): Rename variable new to
+	new_pointer.
+	* config/tc-pj.c (alias): Change argument new to new_name.
+	* config/tc-score.c (s3_build_score_ops_hsh): Rename variable
+	new to new_opcode. (s3_build_dependency_insn_hsh) Rename variable
+	new to new_i2n. (s3_convert): Rename variables old and new to
+	r_old and r_new.
+	* config/tc-score7.c (s7_build_score_ops_hsh): Rename variable
+	new to new_opcode. (s7_build_dependency_insn_hsh): Rename variable
+	new to new_i2d. (s7_b32_relax_to_b16, s7_convert_frag): Rename
+	variables old and new to r_old and r_new.
+	* config/tc-sh.c (parse_exp): Rename variable new to
+	new_pointer.
+	* config/tc-sh64.c (shmedia_parse_exp): Rename variable new to
+	new_pointer.
+	* config/tc-tic4x.c (tic4x_operand_parse): Rename variable new
+	to new_pointer.
+	* config/tc-z8k.c (parse_exp): Rename variable new to
+	new_pointer.
+	* listing.c (listing_newline): Rename variable new to new_i.
+
+2009-08-29  Matt Fleming  <matt@console-pimps.org>
+
+	* config/tc-sh.c (md_apply_fix): Extend sign of the offset value
+	for 64-bit host.
+
+2009-08-28  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (cpu_arch): Use PROCESSOR_L1OM on "l1om".
+	(i386_align_code): Handle PROCESSOR_L1OM.
+	(check_cpu_arch_compatible): Fix a typo in comments.
+	(set_cpu_arch): Check cpu_arch_isa instead of
+	cpu_arch_isa_flags.bitfield.cpul1om.
+	(i386_mach): Likewise.
+	(i386_target_format): Likewise.
+
+	* config/tc-i386.h (processor_type): Add PROCESSOR_L1OM.
+
+2009-08-26  DJ Delorie  <dj@redhat.com>
+
+	* config/tc-mep.c (md_pcrel_from_section): Handle any other
+	forced-relocation cases.
+
+2009-08-26  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (TARGET_CPU_CFILES): Add config/tc-moxie.c.
+	* config/tc-moxie.c (md_assemble): Fix typos in strings.  Fix
+	syntax error.
+	* Makefile.in: Regenerate.
+	* po/POTFILES.in: Likewise.
+	* po/gas.pot: Likewise.
+
+2009-08-26  Nick Clifton  <nickc@redhat.com>
+
+	* config/obj-coff-seh.c (seh_arm_write_pdata): Test for
+	seh_ctx_root being NULL.
+
+2009-08-24  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (am__skiplex, am__skipyacc): New.
+	* Makefile.in: Regenerate.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (YFLAGS): Remove, not needed any more.
+	(AM_CPPFLAGS): Renamed from ...
+	(INCLUDES): ... this.
+	* Makefile.in: Regenerate.
+
+	* Makefile.am (AUTOMAKE_OPTIONS): Remove 1.8 cygnus, add 1.11,
+	foreign and no-dist.
+	(all): Remove now-unneeded dependency upon info.
+	(DIST_SUBDIRS, MKDEP, DEP_INCLUDES, DEP_FLAGS, CLEANFILES)
+	(DEP_FILE_DEPS): Remove variables.
+	(OBJ_FORMAT_CFILES): Add config/obj-multi.c.
+	(OBJ_FORMAT_HFILES): Add config/obj-multi.h.
+	($(OBJS), ecoff.o): Remove now-unneeded manual dependencies.
+	($(TARG_CPU_O), $(ATOF_TARG_O), obj-aout.o, obj-coff.o obj-ecoff.o)
+	(obj-elf.o obj-evax.o, obj-fdpicelf.o, obj-multi.o, obj-som.o)
+	(e-mipself.o, e-mipsecoff.o, e-i386aout.o, e-i386coff.o, e-i386elf.o)
+	(e-crisaout.o, e-criself.o, tc-i386.o, xtensa-relax.o): Remove
+	now-unneeded rules.
+	(EXTRA_as_new_SOURCES): Add $(CFILES), $(HFILES), $(TARGET_CPU_CFILES),
+	$(TARGET_CPU_HFILES), $(OBJ_FORMAT_CFILES), $(OBJ_FORMAT_HFILES),
+	$(CONFIG_ATOF_CFILES), $(MULTI_CFILES), so their dependency fragments
+	are picked up in the Makefile.
+	(itbl-lex.c, itbl-ops.o): Remove manual dependencies.
+	(m68k-parse.o, bfin-lex.o, itbl-lex.o, itbl-parse.o, itbl-tops.o)
+	(itbl-test.o): Rewrite using automake-style dependency
+	tracking rules; only list the dependency upon the primary source
+	file, but no included headers.
+	(DEP, DEP1, DEPTC, DEPOBJ, DEP2, dep.sed, dep, dep-in, dep-am):
+	Remove.
+	(mkdep section): Remove.
+	* Makefile.in: Regenerate.
+	* gas/po/POTFILES.in, gas/po/gas.pot: Regenerate.
+
+	* Makefile.am (install-pdf, install-pdf-recursive, install-html)
+	(install-html-recursive): Remove.
+	* Makefile.in: Regenerate.
+	* doc/Makefile.am (pdf__strip_dir, install-pdf, install-pdf-am)
+	(html__strip_dir, install-html, install-html-am): Remove.
+	* doc/Makefile.in: Regenerate.
+
+	* Makefile.in: Regenerate.
+	* aclocal.m4: Likewise.
+	* config.in: Likewise.
+	* configure: Likewise.
+	* doc/Makefile.in: Likewise.
+
+2009-08-21  Sterling Augustine  <sterling@jaw.hq.tensilica.com>
+
+	* config/tc-xtensa.c (config_max_slots): New global variable.
+	(md_begin): Set config_max_slots.
+	(total_frag_text_expansion): Use config_max_slots instead of
+	MAX_SLOTS.
+	(xg_init_vinsn): Likewise.
+	(xg_clear_vinsn): Likewise.
+	(xg_free_vinsn): Likewise.
+
+2009-08-20  Sterling Augustine  <sterling@jaw.hq.tensilica.com>
+
+	* config/tc-xtensa.c (xg_copy_vinsn): New function.
+	(finish_vinsn): Call xg_copy_vinsn.
+
+2009-08-19  Sterling Augustine  <sterling@tensilica.com>
+
+	* config/tc-xtensa.h (xtensa_frag_data): Rename unused field fr_prev
+	to no_transform_end.
+	* config/tc-xtensa.c (xtensa_mark_difference_of_two_symbols): Set
+	and use no_transform_end.
+
+2009-08-18  Kai Tietz  <kai.tietz@onevision.com>
+
+	* config/obj-coff-seh.c: Add copyright notice.
+	* config/obj-coff-seh.h: Add copyright notice.
+	Add x64 specific macros from coff/pe.h header.
+
+2009-08-18  Sterling Augustine  <sterling@tensilica.com>
+
+	* config/tc-xtensa.c (xtensa_create_xproperty_segments): Use
+	sizeof instead of hard-coded value.
+	(add_xt_block_frags): Remove unused local variable.
+	(frag_flags_to_number): Change return type to flagword.  Remove
+	unused local variable.
+
+2009-08-17  Sterling Augustine  <sterling@tensilica.com>
+
+	* config/tc-xtensa.c (xtensa_frob_label): move call to 
+	do_align_targets to set frag_type only.
+
+2009-08-17  Kai Tietz  <kai.tietz@onevision.com>
+
+	* config/obj-coff-seh.c: New file.
+	* config/obj-coff-seh.h: Likewise.
+	* config/obj-coff.c (obj-coff-seh.c): Add include.
+	(coff_pseudo_table): Add new .seh... commands.
+	* config/obj-coff.h (obj_coff_seh_do_final): Add new
+	function prototype.
+	(obj_coff_generate_pdata): New obj-coff hook.
+	* gas/write.c (size_seg): Avoid sizing of already sized
+	sections.
+	(write_object_file): Call conditional hook
+	objc_coff_generate_pdata.
+	* Makefile.am: Add dependencies for new files.
+	* Makefile.in: Regenerated.
+
+2009-08-17  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-microblaze.c: Include safe-ctype.h instad of ctype.h.
+	(parse_reg): Use safe-ctype.h macros.
+	(parse_exp): Likewise.
+	(md_assemble): Likewise.
+
+2009-08-11  DJ Delorie  <dj@redhat.com>
+
+	* config/tc-mep.c (md_estimate_size_before_relax): Handle weak
+	symbols correctly.
+	(md_convert_frag): Likewise.
+	(md_pcrel_from_section): Likewise.
+	(mep_force_relocation): Likewise.
+
+2009-08-11  Bernd Schmidt  <bernd.schmidt@analog.com>
+
+	* config/bfin-parse.y (gen_multi_instr_1): New function.
+	(asm): Use it instead of bfin_gen_multi_instr.
+	(error): Add a format string when calling as_bad.
+	* config/bfin-defs.h (insn_regmask): Declare.
+	* config/tc-bfin.c (DREG_MASK, DREGH_MASK, DREGL_MASK, IREG_MASK): New
+	macros.
+	(decode_ProgCtrl_0, decode_LDSTpmod_0, decode_dagMODim_0,
+	decode_dagMODik_0, decode_dspLDST_0, decode_LDST_0, decode_LDSTiiFP_0,
+	decode_LDSTii_0, decode_dsp32mac_0, decode_dsp32mult_0,
+	decode_dsp32alu_0, decode_dsp32shift_0, decode_dsp32shitimm_0,
+	insn_regmask): New functions.
+
+	From Jie Zhang  <jie.zhang@analog.com>
+	* config/tc-bfin.h (bfin_anomaly_checks): Declare.
+	(AC_05000074): Define.
+	(ENABLE_AC_05000074): Define.
+	* config/tc-bfin.c (enum bfin_cpu_type): New.
+	(bfin_cpu_t): Typedef.
+	(bfin_cpu_type): Define.
+	(bfin_si_revision): Define.
+	(bfin_anomaly_checks): Define.
+	(struct bfin_cpu): New.
+	(bfin_cpus[]): New. (struct bfin_cpu_isa): Define.
+	(bfin_isa): New global variable.
+	(OPTION_MCPU): Define.
+	(md_longopts[]): Add -mcpu option.
+	(md_parse_option): Deal with -mcpu option and initialize
+	bfin_anomaly_checks.
+	* doc/c-bfin.texi: Rename BFIN to Blackfin throughout.  Document
+	-mcpu option.
+	* config/bfin-parse.y (gen_multi_instr_1): Check anomaly
+	05000074.
+
+2009-08-11  Mike Frysinger  <vapier@gentoo.org>
+
+	* config/bfin-parse.y (binary): Change "compiler" to "assembler".
+	(unary): Likewise.
+
+2009-08-11  Nick Clifton  <nickc@redhat.com>
+
+	PR 10443
+	* config/tc-arm.c (do_t_mov_cmp): Do not silently ignore shifted
+	operands.
+
+2009-08-10  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix compilation of i386-*-go32.
+	* config/tc-i386.c (i386_target_format <TE_GO32>): New.
+	(i386_target_format <OBJ_MAYBE_COFF>): Compile only if !TE_GO32.
+	* config/te-go32.h (TARGET_FORMAT): Move the definition ...
+	* config/tc-i386.h <!i386_target_format>: ... here.
+
+2009-08-10  Daniel Gutson  <dgutson@codesourcery.com>
+
+	PR gas/10479
+	* config/tc-arm.c (do_t_add_sub_w): Fixed constraints.
+
+2009-08-07  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* config/tc-arm.c (marked_pr_dependency, mapstate): Delete global
+	variables.
+	(mapping_state): Use the section's mapstate.
+	(mapping_state_2): Likewise.  Skip special sections.
+	(s_arm_unwind_fnend): Use the section's marked_pr_dependency.
+	(arm_elf_change_section): Do not set deleted globals.
+	* config/tc-arm.h (struct arm_segment_info_type): Document
+	marked_pr_dependency.
+
+2009-08-07  Michael Eager <eager@eagercon.com>
+
+	* NEWS: Mention MicroBlaze support.
+
+2009-08-06  Michael Eager <eager@eagercon.com>
+
+	* Makefile.am: add microblaze to CPU_TYPES, config/tc-microblaze.c to
+	TARGET_CPU_CFILES, config/tc-microblaze.h to TARGET_CPU_HFILES, add 
+	DEP_microblaze_elf target.
+	* Makefile.in: Regenerate.
+	* config/tc-microblaze.c: Add MicroBlaze assembler.
+	* config/tc-microblaze.h: Add header for tc-microblaze.c.
+	* configure.in: Add microblaze target.
+	* configure: Regenerate.
+	* configure.tgt: Same. 
+	* doc/Makefile.am: Add c-microblaze.texi to CPU_DOCS.
+	* doc/Makefile.in: Same.
+	* doc/all.texi: Set MICROBLAZE.
+	* doc/as.texinfo: Add MicroBlaze doc links.
+	* doc/c-microblaze.texi: New MicroBlaze docs.
+
+2009-08-06  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-arm.c (md_assemble): Call mapping_state from inside a
+	block in case it is a null macro.
+
+2009-08-05  Chao-ying Fu  <fu@mips.com>
+
+	* config/tc-mips.c (MIPS_JALR_HINT_P): New define. For IRIX, it is
+	true for new abi.  For non-IRIX targets, it is always true.
+	(macro_build_jalr): If MIPS_JALR_HINT_P, emit BFD_RELOC_MIPS_JALR.
+
+2009-08-05  Eric B. Weddington  <eric.weddington@atmel.com>
+
+	* config/tc-avr.c (mcu_types): Add attiny2313a, attiny4313, attiny261a,
+	attiny861a, atmega644pa, attiny24a, attiny44a.
+	* doc/c-avr.texi: Likewise.
+
+2009-08-04  Sandra Loosemore  <sandra@codesourcery.com>
+
+	* doc/c-mips.texi (MIPS Opts): List 1004K options for -march.
+	* config/tc-mips.c (mips_cpu_info_table): Add 1004K cores.
+
+2009-08-04  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* config/tc-arm.c (my_get_expression): Detect missing expressions.
+
+2009-08-02  Eric B. Weddington  <eric.weddington@atmel.com>
+
+	* config/tc-avr.c (mcu_types): Add atmega8m1, atmega8c1, atmega16c1.
+	* doc/c-avr.texi: Likewise.
+
+2009-08-01  Eric B. Weddington  <eric.weddington@atmel.com>
+
+	* config/tc-avr.c (mcu_types): Add atmega8u2, atmega16u2, atmega32u2.
+	* doc/c-avr.texi: Likewise.
+
+2009-07-31  Daniel Gutson  <dgutson@codesourcery.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* config/obj-elf.c (obj_elf_ident): Notify section change to the hook.
+	* config/tc-arm.c (make_mapping_symbol): New function, from
+	mapping_state.  Save mapping symbols in the frag.
+	(insert_data_mapping_symbol): New.
+	(mapping_state): Use make_mapping_symbol, improve state transitions.
+	(mapping_state_2): New.  Provide dummy definition.
+	(opcode_select): Do not call mapping_state.
+	(s_bss): Call md_elf_section_change_hook instead of mapping_state.
+	(output_inst): Update use of tc_frag_data.
+	(new_automatic_it_block): Call mapping_state before emitting the
+	IT instruction.
+	(md_assemble): Move mapping_state to just before outputting the
+	new instruction.
+	(arm_handle_align): Update use of tc_frag_data.
+	Call insert_data_mapping_symbol.
+	(arm_init_frag): Update use of tc_frag_data.  Call
+	mapping_state_2.
+	(arm_elf_change_section): Always update the mapping symbol FSM state.
+	(check_mapping_symbols): New function.
+	(arm_adjust_symtab): Use check_mapping_symbols.
+	* config/tc-arm.h (struct arm_frag_type): New.
+	(TC_FRAG_TYPE): Change to struct arm_frag_type.
+	(TC_FRAG_INIT): Pass max_chars.
+	(arm_init_frag): Update prototype.
+
 2009-07-31  Anthony Green  <green@moxielogic.com>
 
 	* configure.tgt (generic_target): Add moxie-uclinux support.

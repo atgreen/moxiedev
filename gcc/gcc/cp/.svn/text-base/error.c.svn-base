@@ -84,7 +84,7 @@ static void dump_template_bindings (tree, tree, VEC(tree,gc) *);
 static void dump_scope (tree, int);
 static void dump_template_parms (tree, int, int);
 
-static int count_non_default_template_args (tree, tree);
+static int count_non_default_template_args (tree, tree, int);
 
 static const char *function_category (tree);
 static void maybe_print_instantiation_context (diagnostic_context *);
@@ -163,13 +163,20 @@ dump_template_argument (tree arg, int flags)
    match the (optional) default template parameter in PARAMS  */
 
 static int
-count_non_default_template_args (tree args, tree params)
+count_non_default_template_args (tree args, tree params, int flags)
 {
   tree inner_args = INNERMOST_TEMPLATE_ARGS (args);
   int n = TREE_VEC_LENGTH (inner_args);
   int last;
 
-  if (params == NULL_TREE || !flag_pretty_templates)
+  if (params == NULL_TREE
+      /* We use this flag when generating debug information.  We don't
+	 want to expand templates at this point, for this may generate
+	 new decls, which gets decl counts out of sync, which may in
+	 turn cause codegen differences between compilations with and
+	 without -g.  */
+      || (flags & TFF_NO_OMIT_DEFAULT_TEMPLATE_ARGUMENTS) != 0
+      || !flag_pretty_templates)
     return n;
 
   for (last = n - 1; last >= 0; --last)
@@ -201,7 +208,7 @@ count_non_default_template_args (tree args, tree params)
 static void
 dump_template_argument_list (tree args, tree parms, int flags)
 {
-  int n = count_non_default_template_args (args, parms);
+  int n = count_non_default_template_args (args, parms, flags);
   int need_comma = 0;
   int i;
 
@@ -1152,7 +1159,8 @@ dump_template_decl (tree t, int flags)
 }
 
 /* find_typenames looks through the type of the function template T
-   and returns a VEC containing any typedefs or TYPENAME_TYPEs it finds.  */
+   and returns a VEC containing any typedefs, decltypes or TYPENAME_TYPEs
+   it finds.  */
 
 struct find_typenames_t
 {
@@ -1169,7 +1177,8 @@ find_typenames_r (tree *tp, int *walk_subtrees ATTRIBUTE_UNUSED, void *data)
   if (TYPE_P (*tp) && is_typedef_decl (TYPE_NAME (*tp)))
     /* Add the type of the typedef without any additional cv-quals.  */
     mv = TREE_TYPE (TYPE_NAME (*tp));
-  else if (TREE_CODE (*tp) == TYPENAME_TYPE)
+  else if (TREE_CODE (*tp) == TYPENAME_TYPE
+	   || TREE_CODE (*tp) == DECLTYPE_TYPE)
     /* Add the typename without any cv-qualifiers.  */
     mv = TYPE_MAIN_VARIANT (*tp);
 
@@ -1448,7 +1457,7 @@ dump_template_parms (tree info, int primary, int flags)
 		     ? DECL_INNERMOST_TEMPLATE_PARMS (TI_TEMPLATE (info))
 		     : NULL_TREE);
 
-      len = count_non_default_template_args (args, params);
+      len = count_non_default_template_args (args, params, flags);
 
       args = INNERMOST_TEMPLATE_ARGS (args);
       for (ix = 0; ix != len; ix++)
@@ -2331,7 +2340,10 @@ lang_decl_name (tree decl, int v, bool translate)
 
   reinit_cxx_pp ();
   pp_translate_identifiers (cxx_pp) = translate;
-  if (v == 1 && DECL_CLASS_SCOPE_P (decl))
+  if (v == 1
+      && (DECL_CLASS_SCOPE_P (decl)
+	  || (DECL_NAMESPACE_SCOPE_P (decl)
+	      && CP_DECL_CONTEXT (decl) != global_namespace)))
     {
       dump_type (CP_DECL_CONTEXT (decl), TFF_PLAIN_IDENTIFIER);
       pp_cxx_colon_colon (cxx_pp);

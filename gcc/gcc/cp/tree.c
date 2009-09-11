@@ -132,6 +132,12 @@ lvalue_p_1 (const_tree ref)
       return clk_ordinary;
 
     case CONST_DECL:
+      /* CONST_DECL without TREE_STATIC are enumeration values and
+	 thus not lvalues.  With TREE_STATIC they are used by ObjC++
+	 in objc_build_string_object and need to be considered as
+	 lvalues.  */
+      if (! TREE_STATIC (ref))
+	return clk_none;
     case VAR_DECL:
       if (TREE_READONLY (ref) && ! TREE_STATIC (ref)
 	  && DECL_LANG_SPECIFIC (ref)
@@ -214,10 +220,14 @@ lvalue_p_1 (const_tree ref)
   /* Otherwise, it's an lvalue, and it has all the odd properties
      contributed by either operand.  */
   op1_lvalue_kind = op1_lvalue_kind | op2_lvalue_kind;
-  /* It's not an ordinary lvalue if it involves either a bit-field or
-     a class rvalue.  */
+  /* It's not an ordinary lvalue if it involves any other kind.  */
   if ((op1_lvalue_kind & ~clk_ordinary) != clk_none)
     op1_lvalue_kind &= ~clk_ordinary;
+  /* It can't be both a pseudo-lvalue and a non-addressable lvalue.
+     A COND_EXPR of those should be wrapped in a TARGET_EXPR.  */
+  if ((op1_lvalue_kind & (clk_rvalueref|clk_class))
+      && (op1_lvalue_kind & (clk_bitfield|clk_packed)))
+    op1_lvalue_kind = clk_none;
   return op1_lvalue_kind;
 }
 
@@ -530,7 +540,7 @@ rvalue (tree expr)
      Non-class rvalues always have cv-unqualified types.  */
   type = TREE_TYPE (expr);
   if (!CLASS_TYPE_P (type) && cp_type_quals (type))
-    type = TYPE_MAIN_VARIANT (type);
+    type = cp_build_qualified_type (type, TYPE_UNQUALIFIED);
 
   /* We need to do this for rvalue refs as well to get the right answer
      from decltype; see c++/36628.  */
@@ -696,12 +706,11 @@ cp_build_reference_type (tree to_type, bool rval)
     if (TYPE_REF_IS_RVALUE (t))
       return t;
 
-  t = copy_node (lvalue_ref);
+  t = build_distinct_type_copy (lvalue_ref);
 
   TYPE_REF_IS_RVALUE (t) = true;
   TYPE_NEXT_REF_TO (t) = TYPE_NEXT_REF_TO (lvalue_ref);
   TYPE_NEXT_REF_TO (lvalue_ref) = t;
-  TYPE_MAIN_VARIANT (t) = t;
 
   if (TYPE_STRUCTURAL_EQUALITY_P (to_type))
     SET_TYPE_STRUCTURAL_EQUALITY (t);
@@ -3019,6 +3028,53 @@ cast_valid_in_integral_constant_expression_p (tree type)
   return (INTEGRAL_OR_ENUMERATION_TYPE_P (type)
 	  || dependent_type_p (type)
 	  || type == error_mark_node);
+}
+
+/* Return true if we need to fix linkage information of DECL.  */
+
+static bool
+cp_fix_function_decl_p (tree decl)
+{
+  /* Skip if DECL is not externally visible.  */
+  if (!TREE_PUBLIC (decl))
+    return false;
+
+  /* We need to fix DECL if it a appears to be exported but with no
+     function body.  Thunks do not have CFGs and we may need to
+     handle them specially later.   */
+  if (!gimple_has_body_p (decl)
+      && !DECL_THUNK_P (decl)
+      && !DECL_EXTERNAL (decl))
+    return true;
+
+  return false;
+}
+
+/* Clean the C++ specific parts of the tree T. */
+
+void
+cp_free_lang_data (tree t)
+{
+  if (TREE_CODE (t) == METHOD_TYPE
+      || TREE_CODE (t) == FUNCTION_TYPE)
+    {
+      /* Default args are not interesting anymore.  */
+      tree argtypes = TYPE_ARG_TYPES (t);
+      while (argtypes)
+        {
+	  TREE_PURPOSE (argtypes) = 0;
+	  argtypes = TREE_CHAIN (argtypes);
+	}
+    }
+  else if (TREE_CODE (t) == FUNCTION_DECL
+	   && cp_fix_function_decl_p (t))
+    {
+      /* If T is used in this translation unit at all,  the definition
+	 must exist somewhere else since we have decided to not emit it
+	 in this TU.  So make it an external reference.  */
+      DECL_EXTERNAL (t) = 1;
+      TREE_STATIC (t) = 0;
+    }
 }
 
 

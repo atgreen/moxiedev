@@ -113,6 +113,29 @@ default_unspec_may_trap_p (const_rtx x, unsigned flags)
 }
 
 enum machine_mode
+default_promote_function_mode (const_tree type ATTRIBUTE_UNUSED,
+			       enum machine_mode mode,
+			       int *punsignedp ATTRIBUTE_UNUSED,
+			       const_tree funtype ATTRIBUTE_UNUSED,
+			       int for_return ATTRIBUTE_UNUSED)
+{
+  if (for_return == 2)
+    return promote_mode (type, mode, punsignedp);
+  return mode;
+}
+
+enum machine_mode
+default_promote_function_mode_always_promote (const_tree type,
+					      enum machine_mode mode,
+					      int *punsignedp,
+					      const_tree funtype ATTRIBUTE_UNUSED,
+					      int for_return ATTRIBUTE_UNUSED)
+{
+  return promote_mode (type, mode, punsignedp);
+}
+
+
+enum machine_mode
 default_cc_modes_compatible (enum machine_mode m1, enum machine_mode m2)
 {
   if (m1 == m2)
@@ -582,6 +605,12 @@ default_function_value (const_tree ret_type ATTRIBUTE_UNUSED,
 #else
   return NULL_RTX;
 #endif
+}
+
+rtx
+default_libcall_value (enum machine_mode mode, rtx fun ATTRIBUTE_UNUSED)
+{
+  return LIBCALL_VALUE (mode);
 }
 
 rtx

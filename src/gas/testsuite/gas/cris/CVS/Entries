@@ -35,7 +35,6 @@
 /clear.d/1.4/Mon Jul  6 10:46:42 2009//
 /continue.d/1.3/Mon Jul  6 10:46:42 2009//
 /continue.s/1.3/Mon Jul  6 10:46:42 2009//
-/cris.exp/1.5/Mon Jul  6 10:46:42 2009//
 /diffexp-ovwr.d/1.2/Mon Jul  6 10:46:42 2009//
 /diffexp-ovwr.s/1.2/Mon Jul  6 10:46:42 2009//
 /fragtest.d/1.2/Mon Jul  6 10:46:42 2009//
@@ -223,4 +222,5 @@
 /x-to-dcr1-sreg.d/1.3/Mon Jul  6 10:46:42 2009//
 /x-to-dword-sreg.d/1.4/Mon Jul  6 10:46:42 2009//
 /x-to-word-sreg.d/1.4/Mon Jul  6 10:46:42 2009//
+/cris.exp/1.6/Tue Sep  8 03:27:41 2009//
 D

@@ -84,15 +84,15 @@ maxval_i1 (gfc_array_i1 * const restrict retarray,
       size_t alloc_size, str;
 
       for (n = 0; n < rank; n++)
-        {
-          if (n == 0)
+	{
+	  if (n == 0)
 	    str = 1;
-          else
-            str = GFC_DESCRIPTOR_STRIDE(retarray,n-1) * extent[n-1];
+	  else
+	    str = GFC_DESCRIPTOR_STRIDE(retarray,n-1) * extent[n-1];
 
 	  GFC_DIMENSION_SET(retarray->dim[n], 0, extent[n] - 1, str);
 
-        }
+	}
 
       retarray->offset = 0;
       retarray->dtype = (array->dtype & ~GFC_DTYPE_RANK_MASK) | rank;
@@ -119,19 +119,8 @@ maxval_i1 (gfc_array_i1 * const restrict retarray,
 		       (long int) rank);
 
       if (unlikely (compile_options.bounds_check))
-	{
-	  for (n=0; n < rank; n++)
-	    {
-	      index_type ret_extent;
-
-	      ret_extent = GFC_DESCRIPTOR_EXTENT(retarray,n);
-	      if (extent[n] != ret_extent)
-		runtime_error ("Incorrect extent in return value of"
-			       " MAXVAL intrinsic in dimension %ld:"
-			       " is %ld, should be %ld", (long int) n + 1,
-			       (long int) ret_extent, (long int) extent[n]);
-	    }
-	}
+	bounds_ifunction_return ((array_t *) retarray, extent,
+				 "return value", "MAXVAL");
     }
 
   for (n = 0; n < rank; n++)
@@ -139,7 +128,7 @@ maxval_i1 (gfc_array_i1 * const restrict retarray,
       count[n] = 0;
       dstride[n] = GFC_DESCRIPTOR_STRIDE(retarray,n);
       if (extent[n] <= 0)
-        len = 0;
+	len = 0;
     }
 
   base = array->data;
@@ -153,17 +142,30 @@ maxval_i1 (gfc_array_i1 * const restrict retarray,
       src = base;
       {
 
-  result = (-GFC_INTEGER_1_HUGE-1);
-        if (len <= 0)
+#if defined (GFC_INTEGER_1_INFINITY)
+	result = -GFC_INTEGER_1_INFINITY;
+#else
+	result = (-GFC_INTEGER_1_HUGE-1);
+#endif
+	if (len <= 0)
 	  *dest = (-GFC_INTEGER_1_HUGE-1);
 	else
 	  {
 	    for (n = 0; n < len; n++, src += delta)
 	      {
 
-  if (*src > result)
-    result = *src;
-          }
+#if defined (GFC_INTEGER_1_QUIET_NAN)
+		if (*src >= result)
+		  break;
+	      }
+	    if (unlikely (n >= len))
+	      result = GFC_INTEGER_1_QUIET_NAN;
+	    else for (; n < len; n++, src += delta)
+	      {
+#endif
+		if (*src > result)
+		  result = *src;
+	      }
 	    *dest = result;
 	  }
       }
@@ -173,28 +175,28 @@ maxval_i1 (gfc_array_i1 * const restrict retarray,
       dest += dstride[0];
       n = 0;
       while (count[n] == extent[n])
-        {
-          /* When we get to the end of a dimension, reset it and increment
-             the next dimension.  */
-          count[n] = 0;
-          /* We could precalculate these products, but this is a less
-             frequently used path so probably not worth it.  */
-          base -= sstride[n] * extent[n];
-          dest -= dstride[n] * extent[n];
-          n++;
-          if (n == rank)
-            {
-              /* Break out of the look.  */
+	{
+	  /* When we get to the end of a dimension, reset it and increment
+	     the next dimension.  */
+	  count[n] = 0;
+	  /* We could precalculate these products, but this is a less
+	     frequently used path so probably not worth it.  */
+	  base -= sstride[n] * extent[n];
+	  dest -= dstride[n] * extent[n];
+	  n++;
+	  if (n == rank)
+	    {
+	      /* Break out of the look.  */
 	      continue_loop = 0;
 	      break;
-            }
-          else
-            {
-              count[n]++;
-              base += sstride[n];
-              dest += dstride[n];
-            }
-        }
+	    }
+	  else
+	    {
+	      count[n]++;
+	      base += sstride[n];
+	      dest += dstride[n];
+	    }
+	}
     }
 }
 
@@ -274,15 +276,15 @@ mmaxval_i1 (gfc_array_i1 * const restrict retarray,
       size_t alloc_size, str;
 
       for (n = 0; n < rank; n++)
-        {
-          if (n == 0)
-            str = 1;
-          else
-            str= GFC_DESCRIPTOR_STRIDE(retarray,n-1) * extent[n-1];
+	{
+	  if (n == 0)
+	    str = 1;
+	  else
+	    str= GFC_DESCRIPTOR_STRIDE(retarray,n-1) * extent[n-1];
 
 	  GFC_DIMENSION_SET(retarray->dim[n], 0, extent[n] - 1, str);
 
-        }
+	}
 
       alloc_size = sizeof (GFC_INTEGER_1) * GFC_DESCRIPTOR_STRIDE(retarray,rank-1)
     		   * extent[rank-1];
@@ -307,29 +309,10 @@ mmaxval_i1 (gfc_array_i1 * const restrict retarray,
 
       if (unlikely (compile_options.bounds_check))
 	{
-	  for (n=0; n < rank; n++)
-	    {
-	      index_type ret_extent;
-
-	      ret_extent = GFC_DESCRIPTOR_EXTENT(retarray,n);
-	      if (extent[n] != ret_extent)
-		runtime_error ("Incorrect extent in return value of"
-			       " MAXVAL intrinsic in dimension %ld:"
-			       " is %ld, should be %ld", (long int) n + 1,
-			       (long int) ret_extent, (long int) extent[n]);
-	    }
-          for (n=0; n<= rank; n++)
-            {
-              index_type mask_extent, array_extent;
-
-	      array_extent = GFC_DESCRIPTOR_EXTENT(array,n);
-	      mask_extent = GFC_DESCRIPTOR_EXTENT(mask,n);
-	      if (array_extent != mask_extent)
-		runtime_error ("Incorrect extent in MASK argument of"
-			       " MAXVAL intrinsic in dimension %ld:"
-			       " is %ld, should be %ld", (long int) n + 1,
-			       (long int) mask_extent, (long int) array_extent);
-	    }
+	  bounds_ifunction_return ((array_t *) retarray, extent,
+				   "return value", "MAXVAL");
+	  bounds_equal_extents ((array_t *) mask, (array_t *) array,
+	  			"MASK argument", "MAXVAL");
 	}
     }
 
@@ -338,7 +321,7 @@ mmaxval_i1 (gfc_array_i1 * const restrict retarray,
       count[n] = 0;
       dstride[n] = GFC_DESCRIPTOR_STRIDE(retarray,n);
       if (extent[n] <= 0)
-        return;
+	return;
     }
 
   dest = retarray->data;
@@ -353,17 +336,45 @@ mmaxval_i1 (gfc_array_i1 * const restrict retarray,
       msrc = mbase;
       {
 
-  result = (-GFC_INTEGER_1_HUGE-1);
-        if (len <= 0)
+#if defined (GFC_INTEGER_1_INFINITY)
+	result = -GFC_INTEGER_1_INFINITY;
+#else
+	result = (-GFC_INTEGER_1_HUGE-1);
+#endif
+#if defined (GFC_INTEGER_1_QUIET_NAN)
+	int non_empty_p = 0;
+#endif
+	if (len <= 0)
 	  *dest = (-GFC_INTEGER_1_HUGE-1);
 	else
 	  {
 	    for (n = 0; n < len; n++, src += delta, msrc += mdelta)
 	      {
 
-  if (*msrc && *src > result)
-    result = *src;
-              }
+#if defined (GFC_INTEGER_1_INFINITY) || defined (GFC_INTEGER_1_QUIET_NAN)
+		if (*msrc)
+		  {
+#if defined (GFC_INTEGER_1_QUIET_NAN)
+		    non_empty_p = 1;
+		    if (*src >= result)
+#endif
+		      break;
+		  }
+	      }
+	    if (unlikely (n >= len))
+	      {
+#if defined (GFC_INTEGER_1_QUIET_NAN)
+		result = non_empty_p ? GFC_INTEGER_1_QUIET_NAN : (-GFC_INTEGER_1_HUGE-1);
+#else
+		result = (-GFC_INTEGER_1_HUGE-1);
+#endif
+	      }
+	    else for (; n < len; n++, src += delta, msrc += mdelta)
+	      {
+#endif
+		if (*msrc && *src > result)
+		  result = *src;
+	      }
 	    *dest = result;
 	  }
       }
@@ -374,30 +385,30 @@ mmaxval_i1 (gfc_array_i1 * const restrict retarray,
       dest += dstride[0];
       n = 0;
       while (count[n] == extent[n])
-        {
-          /* When we get to the end of a dimension, reset it and increment
-             the next dimension.  */
-          count[n] = 0;
-          /* We could precalculate these products, but this is a less
-             frequently used path so probably not worth it.  */
-          base -= sstride[n] * extent[n];
-          mbase -= mstride[n] * extent[n];
-          dest -= dstride[n] * extent[n];
-          n++;
-          if (n == rank)
-            {
-              /* Break out of the look.  */
-              base = NULL;
-              break;
-            }
-          else
-            {
-              count[n]++;
-              base += sstride[n];
-              mbase += mstride[n];
-              dest += dstride[n];
-            }
-        }
+	{
+	  /* When we get to the end of a dimension, reset it and increment
+	     the next dimension.  */
+	  count[n] = 0;
+	  /* We could precalculate these products, but this is a less
+	     frequently used path so probably not worth it.  */
+	  base -= sstride[n] * extent[n];
+	  mbase -= mstride[n] * extent[n];
+	  dest -= dstride[n] * extent[n];
+	  n++;
+	  if (n == rank)
+	    {
+	      /* Break out of the look.  */
+	      base = NULL;
+	      break;
+	    }
+	  else
+	    {
+	      count[n]++;
+	      base += sstride[n];
+	      mbase += mstride[n];
+	      dest += dstride[n];
+	    }
+	}
     }
 }
 
@@ -445,10 +456,10 @@ smaxval_i1 (gfc_array_i1 * const restrict retarray,
     {
       sstride[n] = GFC_DESCRIPTOR_STRIDE(array,n + 1);
       extent[n] =
-        GFC_DESCRIPTOR_EXTENT(array,n + 1);
+	GFC_DESCRIPTOR_EXTENT(array,n + 1);
 
       if (extent[n] <= 0)
-        extent[n] = 0;
+	extent[n] = 0;
     }
 
   if (retarray->data == NULL)
@@ -456,15 +467,15 @@ smaxval_i1 (gfc_array_i1 * const restrict retarray,
       size_t alloc_size, str;
 
       for (n = 0; n < rank; n++)
-        {
-          if (n == 0)
-            str = 1;
-          else
-            str = GFC_DESCRIPTOR_STRIDE(retarray,n-1) * extent[n-1];
+	{
+	  if (n == 0)
+	    str = 1;
+	  else
+	    str = GFC_DESCRIPTOR_STRIDE(retarray,n-1) * extent[n-1];
 
 	  GFC_DIMENSION_SET(retarray->dim[n], 0, extent[n] - 1, str);
 
-        }
+	}
 
       retarray->offset = 0;
       retarray->dtype = (array->dtype & ~GFC_DTYPE_RANK_MASK) | rank;
@@ -520,21 +531,21 @@ smaxval_i1 (gfc_array_i1 * const restrict retarray,
       dest += dstride[0];
       n = 0;
       while (count[n] == extent[n])
-        {
+	{
 	  /* When we get to the end of a dimension, reset it and increment
-             the next dimension.  */
-          count[n] = 0;
-          /* We could precalculate these products, but this is a less
-             frequently used path so probably not worth it.  */
-          dest -= dstride[n] * extent[n];
-          n++;
-          if (n == rank)
+	     the next dimension.  */
+	  count[n] = 0;
+	  /* We could precalculate these products, but this is a less
+	     frequently used path so probably not worth it.  */
+	  dest -= dstride[n] * extent[n];
+	  n++;
+	  if (n == rank)
 	    return;
-          else
-            {
-              count[n]++;
-              dest += dstride[n];
-            }
+	  else
+	    {
+	      count[n]++;
+	      dest += dstride[n];
+	    }
       	}
     }
 }

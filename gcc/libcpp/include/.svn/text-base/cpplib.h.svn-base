@@ -28,10 +28,6 @@ along with this program; see the file COPYING3.  If not see
 #include "symtab.h"
 #include "line-map.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 typedef struct cpp_reader cpp_reader;
 typedef struct cpp_buffer cpp_buffer;
 typedef struct cpp_options cpp_options;
@@ -509,6 +505,12 @@ struct cpp_callbacks
   void (*before_define) (cpp_reader *);
 };
 
+#ifdef VMS
+#define INO_T_CPP ino_t ino[3]
+#else
+#define INO_T_CPP ino_t ino
+#endif
+
 /* Chain of directories to look for include files in.  */
 struct cpp_dir
 {
@@ -542,7 +544,7 @@ struct cpp_dir
 
   /* The C front end uses these to recognize duplicated
      directories in the search path.  */
-  ino_t ino;
+  INO_T_CPP;
   dev_t dev;
 };
 
@@ -932,9 +934,5 @@ extern int cpp_valid_state (cpp_reader *, const char *, int);
 extern void cpp_prepare_state (cpp_reader *, struct save_macro_data **);
 extern int cpp_read_state (cpp_reader *, const char *, FILE *,
 			   struct save_macro_data *);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* ! LIBCPP_CPPLIB_H */

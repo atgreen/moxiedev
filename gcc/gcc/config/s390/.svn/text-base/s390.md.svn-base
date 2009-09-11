@@ -202,7 +202,7 @@
 (define_attr "type" "none,integer,load,lr,la,larl,lm,stm,
 	             cs,vs,store,sem,idiv,
                      imulhi,imulsi,imuldi,
-		     branch,jsr,fsimptf,fsimpdf,fsimpsf,
+		     branch,jsr,fsimptf,fsimpdf,fsimpsf,fhex,
 		     floadtf,floaddf,floadsf,fstoredf,fstoresf,
 		     fmultf,fmuldf,fmulsf,fdivtf,fdivdf,fdivsf,
 		     ftoi,fsqrttf,fsqrtdf,fsqrtsf,
@@ -1046,6 +1046,64 @@
                       (const_int 6) (const_int 12)))]) ; 8 byte for clr/jg
                                                        ; 10 byte for clgr/jg
 
+; And now the same two patterns as above but with a negated CC mask.
+
+; cij, cgij, crj, cgrj, cfi, cgfi, cr, cgr
+; The following instructions do a complementary access of their second
+; operand (z01 only): crj_c, cgrjc, cr, cgr
+(define_insn "*icmp_and_br_signed_<mode>"
+  [(set (pc)
+	(if_then_else (match_operator 0 "s390_signed_integer_comparison"
+			[(match_operand:GPR 1 "register_operand"  "d,d")
+			 (match_operand:GPR 2 "nonmemory_operand" "d,C")])
+		      (pc)
+		      (label_ref (match_operand 3 "" ""))))
+   (clobber (reg:CC CC_REGNUM))]
+  "TARGET_Z10"
+{
+  if (get_attr_length (insn) == 6)
+    return which_alternative ?
+      "c<g>ij%D0\t%1,%c2,%l3" : "c<g>rj%D0\t%1,%2,%l3";
+  else
+    return which_alternative ?
+      "c<g>fi\t%1,%c2\;jg%D0\t%l3" : "c<g>r\t%1,%2\;jg%D0\t%l3";
+}
+  [(set_attr "op_type" "RIE")
+   (set_attr "type"    "branch")
+   (set_attr "z10prop" "z10_super_c,z10_super")
+   (set (attr "length")
+        (if_then_else (lt (abs (minus (pc) (match_dup 3))) (const_int 60000))
+                      (const_int 6) (const_int 12)))]) ; 8 byte for cr/jg
+                                                       ; 10 byte for cgr/jg
+
+; clij, clgij, clrj, clgrj, clfi, clgfi, clr, clgr
+; The following instructions do a complementary access of their second
+; operand (z10 only): clrj, clgrj, clr, clgr
+(define_insn "*icmp_and_br_unsigned_<mode>"
+  [(set (pc)
+	(if_then_else (match_operator 0 "s390_unsigned_integer_comparison"
+			[(match_operand:GPR 1 "register_operand"  "d,d")
+			 (match_operand:GPR 2 "nonmemory_operand" "d,I")])
+		      (pc)
+		      (label_ref (match_operand 3 "" ""))))
+   (clobber (reg:CC CC_REGNUM))]
+  "TARGET_Z10"
+{
+  if (get_attr_length (insn) == 6)
+    return which_alternative ?
+      "cl<g>ij%D0\t%1,%b2,%l3" : "cl<g>rj%D0\t%1,%2,%l3";
+  else
+    return which_alternative ?
+      "cl<g>fi\t%1,%b2\;jg%D0\t%l3" : "cl<g>r\t%1,%2\;jg%D0\t%l3";
+}
+  [(set_attr "op_type" "RIE")
+   (set_attr "type"    "branch")
+   (set_attr "z10prop" "z10_super_c,z10_super")
+   (set (attr "length")
+        (if_then_else (lt (abs (minus (pc) (match_dup 3))) (const_int 60000))
+                      (const_int 6) (const_int 12)))]) ; 8 byte for clr/jg
+                                                       ; 10 byte for clgr/jg
+
 ;;
 ;;- Move instructions.
 ;;
@@ -1879,7 +1937,7 @@
    #
    #"
   [(set_attr "op_type" "RRE,RRE,*,*,RSY,RSY,*,*")
-   (set_attr "type"    "fsimptf,fsimptf,*,*,lm,stm,*,*")])
+   (set_attr "type"    "fhex,fsimptf,*,*,lm,stm,*,*")])
 
 (define_insn "*mov<mode>_31"
   [(set (match_operand:TD_TF 0 "nonimmediate_operand" "=f,f,f,o")
@@ -1891,7 +1949,7 @@
    #
    #"
   [(set_attr "op_type" "RRE,RRE,*,*")
-   (set_attr "type"    "fsimptf,fsimptf,*,*")])
+   (set_attr "type"    "fhex,fsimptf,*,*")])
 
 ; TFmode in GPRs splitters
 
@@ -1999,7 +2057,7 @@
    lg\t%0,%1
    stg\t%1,%0"
   [(set_attr "op_type" "RRE,RR,RRE,RRE,RX,RXY,RX,RXY,RRE,RXY,RXY")
-   (set_attr "type" "fsimpdf,floaddf,floaddf,floaddf,floaddf,floaddf,
+   (set_attr "type" "fhex,floaddf,floaddf,floaddf,floaddf,floaddf,
                      fstoredf,fstoredf,lr,load,store")
    (set_attr "z10prop" "*,
                         *,
@@ -2029,7 +2087,7 @@
    lg\t%0,%1
    stg\t%1,%0"
   [(set_attr "op_type" "RRE,RR,RX,RXY,RX,RXY,RRE,RXY,RXY")
-   (set_attr "type" "fsimp<mode>,fload<mode>,fload<mode>,fload<mode>,
+   (set_attr "type" "fhex,fload<mode>,fload<mode>,fload<mode>,
                      fstore<mode>,fstore<mode>,lr,load,store")
    (set_attr "z10prop" "*,
                         *,
@@ -2061,7 +2119,7 @@
    #
    #"
   [(set_attr "op_type" "RRE,RR,RX,RXY,RX,RXY,RS,RSY,RS,RSY,*,*")
-   (set_attr "type" "fsimp<mode>,fload<mode>,fload<mode>,fload<mode>,
+   (set_attr "type" "fhex,fload<mode>,fload<mode>,fload<mode>,
                      fstore<mode>,fstore<mode>,lm,lm,stm,stm,*,*")])
 
 (define_split
@@ -2128,7 +2186,7 @@
    st\t%1,%0
    sty\t%1,%0"
   [(set_attr "op_type" "RRE,RR,RX,RXY,RX,RXY,RR,RX,RXY,RX,RXY")
-   (set_attr "type" "fsimp<mode>,fload<mode>,fload<mode>,fload<mode>,
+   (set_attr "type" "fhex,fload<mode>,fload<mode>,fload<mode>,
                      fstore<mode>,fstore<mode>,lr,load,load,store,store")
    (set_attr "z10prop" "*,
                         *,
@@ -5228,8 +5286,8 @@
 ; madbr, maebr, maxb, madb, maeb
 (define_insn "*fmadd<mode>"
   [(set (match_operand:DSF 0 "register_operand" "=f,f")
-	(plus:DSF (mult:DSF (match_operand:DSF 1 "register_operand" "%f,f")
-			    (match_operand:DSF 2 "nonimmediate_operand"  "f,R"))
+	(plus:DSF (mult:DSF (match_operand:DSF 1 "nonimmediate_operand" "%f,f")
+			    (match_operand:DSF 2 "nonimmediate_operand" "f,R"))
 		 (match_operand:DSF 3 "register_operand" "0,0")))]
   "TARGET_HARD_FLOAT && TARGET_FUSED_MADD"
   "@
@@ -5241,8 +5299,8 @@
 ; msxbr, msdbr, msebr, msxb, msdb, mseb
 (define_insn "*fmsub<mode>"
   [(set (match_operand:DSF 0 "register_operand" "=f,f")
-	(minus:DSF (mult:DSF (match_operand:DSF 1 "register_operand" "f,f")
-			     (match_operand:DSF 2 "nonimmediate_operand"  "f,R"))
+	(minus:DSF (mult:DSF (match_operand:DSF 1 "nonimmediate_operand" "f,f")
+			     (match_operand:DSF 2 "nonimmediate_operand" "f,R"))
 		 (match_operand:DSF 3 "register_operand" "0,0")))]
   "TARGET_HARD_FLOAT && TARGET_FUSED_MADD"
   "@
@@ -7560,6 +7618,180 @@
 ;;
 ;;  This is all complicated by the fact that since this is a jump insn
 ;;  we must handle our own output reloads.
+
+;; branch on index
+
+; This splitter will be matched by combine and has to add the 2 moves
+; necessary to load the compare and the increment values into a
+; register pair as needed by brxle.
+
+(define_insn_and_split "*brx_stage1_<GPR:mode>"
+  [(set (pc)
+        (if_then_else
+	 (match_operator 6 "s390_brx_operator"
+	    [(plus:GPR (match_operand:GPR 1 "register_operand" "")
+		       (match_operand:GPR 2 "general_operand"  ""))
+	     (match_operand:GPR 3 "register_operand" "")])
+	 (label_ref (match_operand 0 "" ""))
+	 (pc)))
+   (set (match_operand:GPR 4 "nonimmediate_operand" "")
+        (plus:GPR (match_dup 1) (match_dup 2)))
+   (clobber (match_scratch:GPR 5 ""))]
+  "TARGET_CPU_ZARCH"
+  "#"
+  "!reload_completed && !reload_in_progress"
+  [(set (match_dup 7) (match_dup 2)) ; the increment
+   (set (match_dup 8) (match_dup 3)) ; the comparison value
+   (parallel [(set (pc)
+		   (if_then_else
+		    (match_op_dup 6
+		       [(plus:GPR (match_dup 1) (match_dup 7))
+			(match_dup 8)])
+		    (label_ref (match_dup 0))
+		    (pc)))
+	      (set (match_dup 4)
+		   (plus:GPR (match_dup 1) (match_dup 7)))
+	      (clobber (match_dup 5))
+	      (clobber (reg:CC CC_REGNUM))])]
+  {
+    rtx dreg = gen_reg_rtx (word_mode == DImode ? TImode : DImode);
+    operands[7] = gen_lowpart (<GPR:MODE>mode,
+			       gen_highpart (word_mode, dreg));
+    operands[8] = gen_lowpart (<GPR:MODE>mode,
+			       gen_lowpart (word_mode, dreg));
+  })
+
+; brxlg, brxhg
+
+(define_insn_and_split "*brxg_64bit"
+  [(set (pc)
+        (if_then_else
+          (match_operator 5 "s390_brx_operator"
+	     [(plus:DI (match_operand:DI 1 "register_operand" "d,d,d")
+		       (subreg:DI (match_operand:TI 2 "register_operand" "d,d,d") 0))
+              (subreg:DI (match_dup 2) 8)])
+          (label_ref (match_operand 0 "" ""))
+          (pc)))
+   (set (match_operand:DI 3 "nonimmediate_operand" "=1,?X,?X")
+        (plus:DI (match_dup 1)
+		 (subreg:DI (match_dup 2) 0)))
+   (clobber (match_scratch:DI 4 "=X,&1,&?d"))
+   (clobber (reg:CC CC_REGNUM))]
+  "TARGET_64BIT"
+{
+  if (which_alternative != 0)
+    return "#";
+  else if (get_attr_length (insn) == 6)
+    return "brx%E5g\t%1,%2,%l0";
+  else
+    return "agr\t%1,%2\;cgr\t%1,%M2\;jg%C5\t%l0";
+}
+  "&& reload_completed
+   && (!REG_P (operands[3])
+       || !rtx_equal_p (operands[1], operands[3]))"
+  [(set (match_dup 4) (match_dup 1))
+   (parallel [(set (match_dup 4) (plus:DI (match_dup 4) (subreg:DI (match_dup 2) 0)))
+	      (clobber (reg:CC CC_REGNUM))])
+   (set (reg:CCS CC_REGNUM) (compare:CCS (match_dup 4) (subreg:DI (match_dup 2) 8)))
+   (set (match_dup 3) (match_dup 4))
+   (set (pc) (if_then_else (match_op_dup 5 [(reg:CCS CC_REGNUM) (const_int 0)])
+			   (label_ref (match_dup 0))
+			   (pc)))]
+  ""
+  [(set_attr "op_type"  "RIE")
+   (set_attr "type"  "branch")
+   (set (attr "length")
+        (if_then_else (lt (abs (minus (pc) (match_dup 0))) (const_int 60000))
+                      (const_int 6) (const_int 16)))])
+
+; brxle, brxh
+
+(define_insn_and_split "*brx_64bit"
+  [(set (pc)
+        (if_then_else
+          (match_operator 5 "s390_brx_operator"
+	     [(plus:SI (match_operand:SI 1 "register_operand" "d,d,d")
+		       (subreg:SI (match_operand:TI 2 "register_operand" "d,d,d") 4))
+              (subreg:SI (match_dup 2) 12)])
+          (label_ref (match_operand 0 "" ""))
+          (pc)))
+   (set (match_operand:SI 3 "nonimmediate_operand" "=1,?X,?X")
+        (plus:SI (match_dup 1)
+		 (subreg:SI (match_dup 2) 4)))
+   (clobber (match_scratch:SI 4 "=X,&1,&?d"))
+   (clobber (reg:CC CC_REGNUM))]
+  "TARGET_64BIT"
+{
+  if (which_alternative != 0)
+    return "#";
+  else if (get_attr_length (insn) == 6)
+    return "brx%C5\t%1,%2,%l0";
+  else
+    return "ar\t%1,%2\;cr\t%1,%M2\;jg%C5\t%l0";
+}
+  "&& reload_completed
+   && (!REG_P (operands[3])
+       || !rtx_equal_p (operands[1], operands[3]))"
+  [(set (match_dup 4) (match_dup 1))
+   (parallel [(set (match_dup 4) (plus:SI (match_dup 4) (subreg:SI (match_dup 2) 4)))
+	      (clobber (reg:CC CC_REGNUM))])
+   (set (reg:CCS CC_REGNUM) (compare:CCS (match_dup 4) (subreg:SI (match_dup 2) 12)))
+   (set (match_dup 3) (match_dup 4))
+   (set (pc) (if_then_else (match_op_dup 5 [(reg:CCS CC_REGNUM) (const_int 0)])
+			   (label_ref (match_dup 0))
+			   (pc)))]
+  ""
+  [(set_attr "op_type"  "RSI")
+   (set_attr "type"  "branch")
+   (set (attr "length")
+        (if_then_else (lt (abs (minus (pc) (match_dup 0))) (const_int 60000))
+                      (const_int 6) (const_int 14)))])
+
+; brxle, brxh
+
+(define_insn_and_split "*brx_31bit"
+  [(set (pc)
+        (if_then_else
+          (match_operator 5 "s390_brx_operator"
+	    [(plus:SI (match_operand:SI 1 "register_operand" "d,d,d")
+		      (subreg:SI (match_operand:DI 2 "register_operand" "d,d,d") 0))
+	     (subreg:SI (match_dup 2) 4)])
+          (label_ref (match_operand 0 "" ""))
+          (pc)))
+   (set (match_operand:SI 3 "nonimmediate_operand" "=1,?X,?X")
+        (plus:SI (match_dup 1)
+		 (subreg:SI (match_dup 2) 0)))
+   (clobber (match_scratch:SI 4 "=X,&1,&?d"))
+   (clobber (reg:CC CC_REGNUM))]
+  "!TARGET_64BIT && TARGET_CPU_ZARCH"
+{
+  if (which_alternative != 0)
+    return "#";
+  else if (get_attr_length (insn) == 6)
+    return "brx%C5\t%1,%2,%l0";
+  else
+    return "ar\t%1,%2\;cr\t%1,%M2\;jg%C5\t%l0";
+}
+  "&& reload_completed
+   && (!REG_P (operands[3])
+       || !rtx_equal_p (operands[1], operands[3]))"
+  [(set (match_dup 4) (match_dup 1))
+   (parallel [(set (match_dup 4) (plus:SI (match_dup 4) (subreg:SI (match_dup 2) 0)))
+	      (clobber (reg:CC CC_REGNUM))])
+   (set (reg:CCS CC_REGNUM) (compare:CCS (match_dup 4) (subreg:SI (match_dup 2) 4)))
+   (set (match_dup 3) (match_dup 4))
+   (set (pc) (if_then_else (match_op_dup 5 [(reg:CCS CC_REGNUM) (const_int 0)])
+			   (label_ref (match_dup 0))
+			   (pc)))]
+  ""
+  [(set_attr "op_type"  "RSI")
+   (set_attr "type"  "branch")
+   (set (attr "length")
+        (if_then_else (lt (abs (minus (pc) (match_dup 0))) (const_int 60000))
+                      (const_int 6) (const_int 14)))])
+
+
+;; branch on count
 
 (define_expand "doloop_end"
   [(use (match_operand 0 "" ""))        ; loop pseudo

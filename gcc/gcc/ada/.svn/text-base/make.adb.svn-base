@@ -197,6 +197,9 @@ package body Make is
    RTS_Specified : String_Access := null;
    --  Used to detect multiple --RTS= switches
 
+   N_M_Switch : Natural := 0;
+   --  Used to count -mxxx switches that can affect multilib
+
    type Q_Record is record
       File  : File_Name_Type;
       Unit  : Unit_Name_Type;
@@ -516,10 +519,6 @@ package body Make is
    Last_Argument : Natural := 0;
    --  Last index of arguments in Arguments above
 
-   Arguments_Collected : Boolean := False;
-   --  Set to True when the arguments for the next invocation of the compiler
-   --  have been collected.
-
    Arguments_Project : Project_Id;
    --  Project id, if any, of the source to be compiled
 
@@ -640,6 +639,9 @@ package body Make is
    --  Check if, when using a project file, the ALI file is in the project
    --  directory of the ultimate extending project. If it is not, we ignore
    --  the fact that this ALI file is read-only.
+
+   procedure Process_Multilib;
+   --  Add appropriate --RTS argument to handle multilib
 
    ----------------------------------------------------
    -- Compiler, Binder & Linker Data and Subprograms --
@@ -1353,32 +1355,24 @@ package body Make is
    --------------------------------
 
    procedure Change_To_Object_Directory (Project : Project_Id) is
-      Actual_Project   : Project_Id;
       Object_Directory : Path_Name_Type;
 
    begin
-      --  For sources outside of any project, compilation occurs in the object
-      --  directory of the main project, otherwise we use the project given.
-
-      if Project = No_Project then
-         Actual_Project := Main_Project;
-      else
-         Actual_Project := Project;
-      end if;
+      pragma Assert (Project /= No_Project);
 
       --  Nothing to do if the current working directory is already the correct
       --  object directory.
 
-      if Project_Of_Current_Object_Directory /= Actual_Project then
-         Project_Of_Current_Object_Directory := Actual_Project;
-         Object_Directory := Actual_Project.Object_Directory.Name;
+      if Project_Of_Current_Object_Directory /= Project then
+         Project_Of_Current_Object_Directory := Project;
+         Object_Directory := Project.Object_Directory.Name;
 
          --  Set the working directory to the object directory of the actual
          --  project.
 
          if Verbose_Mode then
             Write_Str  ("Changing to object directory of """);
-            Write_Name (Actual_Project.Display_Name);
+            Write_Name (Project.Display_Name);
             Write_Str  (""": """);
             Write_Name (Object_Directory);
             Write_Line ("""");
@@ -1393,9 +1387,9 @@ package body Make is
       when Directory_Error =>
          Make_Failed ("unable to change to object directory """ &
                       Path_Or_File_Name
-                        (Actual_Project.Object_Directory.Name) &
+                        (Project.Object_Directory.Name) &
                       """ of project " &
-                      Get_Name_String (Actual_Project.Display_Name));
+                      Get_Name_String (Project.Display_Name));
    end Change_To_Object_Directory;
 
    -----------
@@ -2195,7 +2189,6 @@ package body Make is
       Args           : Argument_List)
    is
    begin
-      Arguments_Collected := True;
       Arguments_Project := No_Project;
       Last_Argument := 0;
       Add_Arguments (Args);
@@ -2496,13 +2489,12 @@ package body Make is
       procedure Check_Standard_Library;
       --  Check if s-stalib.adb needs to be compiled
 
-      procedure Collect_Arguments_And_Compile
-        (Source_File  : File_Name_Type;
-         Source_Index : Int);
+      procedure Collect_Arguments_And_Compile (Source_Index : Int);
       --  Collect arguments from project file (if any) and compile
 
       function Compile
-        (S            : File_Name_Type;
+        (Project      : Project_Id;
+         S            : File_Name_Type;
          L            : File_Name_Type;
          Source_Index : Int;
          Args         : Argument_List) return Process_Id;
@@ -2703,22 +2695,12 @@ package body Make is
       -- Collect_Arguments_And_Compile --
       -----------------------------------
 
-      procedure Collect_Arguments_And_Compile
-        (Source_File  : File_Name_Type;
-         Source_Index : Int)
-      is
+      procedure Collect_Arguments_And_Compile (Source_Index : Int) is
       begin
          --  Process_Created will be set True if an attempt is made to compile
          --  the source, that is if it is not in an externally built project.
 
          Process_Created := False;
-
-         --  If arguments not yet collected (in Check), collect them now
-
-         if not Arguments_Collected then
-            Collect_Arguments
-              (Source_File, Source_Index, Source_File = Main_Source, Args);
-         end if;
 
          --  If we use mapping file (-P or -C switches), then get one
 
@@ -2763,13 +2745,10 @@ package body Make is
                   end;
                end if;
 
-               --  Change to object directory of the project file, if necessary
-
-               Change_To_Object_Directory (Arguments_Project);
-
                Pid :=
                  Compile
-                   (File_Name_Type (Arguments_Path_Name),
+                   (Arguments_Project,
+                    File_Name_Type (Arguments_Path_Name),
                     Lib_File,
                     Source_Index,
                     Arguments (1 .. Last_Argument));
@@ -2780,12 +2759,13 @@ package body Make is
             --  If this is a source outside of any project file, make sure it
             --  will be compiled in object directory of the main project file.
 
-            if Main_Project /= No_Project then
-               Change_To_Object_Directory (Arguments_Project);
-            end if;
-
-            Pid := Compile (Full_Source_File, Lib_File, Source_Index,
-                            Arguments (1 .. Last_Argument));
+            Pid :=
+              Compile
+                (Main_Project,
+                 Full_Source_File,
+                 Lib_File,
+                 Source_Index,
+                 Arguments (1 .. Last_Argument));
             Process_Created := True;
          end if;
       end Collect_Arguments_And_Compile;
@@ -2795,7 +2775,8 @@ package body Make is
       -------------
 
       function Compile
-        (S            : File_Name_Type;
+        (Project      : Project_Id;
+         S            : File_Name_Type;
          L            : File_Name_Type;
          Source_Index : Int;
          Args         : Argument_List) return Process_Id
@@ -2978,6 +2959,12 @@ package body Make is
 
          Comp_Last := Comp_Last + 1;
          Comp_Args (Comp_Last) := new String'(Name_Buffer (1 .. Name_Len));
+
+         --  Change to object directory of the project file, if necessary
+
+         if Project /= No_Project then
+            Change_To_Object_Directory (Project);
+         end if;
 
          GNAT.OS_Lib.Normalize_Arguments (Comp_Args (Args'First .. Comp_Last));
 
@@ -3219,8 +3206,6 @@ package body Make is
                --  The source file that we are checking can be located
 
                else
-                  Arguments_Collected := False;
-
                   Collect_Arguments (Source_File, Source_Index,
                                      Source_File = Main_Source, Args);
 
@@ -3308,8 +3293,7 @@ package body Make is
                         --  Start the compilation and record it. We can do
                         --  this because there is at least one free process.
 
-                        Collect_Arguments_And_Compile
-                          (Source_File, Source_Index);
+                        Collect_Arguments_And_Compile (Source_Index);
 
                         --  Make sure we could successfully start
                         --  the Compilation.
@@ -6570,6 +6554,7 @@ package body Make is
       Dependencies.Init;
 
       RTS_Specified := null;
+      N_M_Switch := 0;
 
       Mains.Delete;
 
@@ -6628,6 +6613,10 @@ package body Make is
       Scan_Args : for Next_Arg in 1 .. Argument_Count loop
          Scan_Make_Arg (Argument (Next_Arg), And_Save => True);
       end loop Scan_Args;
+
+      if N_M_Switch > 0 and RTS_Specified = null then
+         Process_Multilib;
+      end if;
 
       if Commands_To_Stdout then
          Set_Standard_Output;
@@ -7288,6 +7277,115 @@ package body Make is
       Set_Name_Table_Byte (N, B or Mark);
    end Mark_Directory;
 
+   ----------------------
+   -- Process_Multilib --
+   ----------------------
+
+   procedure Process_Multilib is
+      Output_FD         : File_Descriptor;
+      Output_Name       : String_Access;
+      Arg_Index         : Natural := 0;
+      Success           : Boolean := False;
+      Return_Code       : Integer := 0;
+      Multilib_Gcc_Path : String_Access;
+      Multilib_Gcc      : String_Access;
+      N_Read            : Integer := 0;
+      Line              : String (1 .. 1000);
+      Args              : Argument_List (1 .. N_M_Switch + 1);
+
+   begin
+      pragma Assert (N_M_Switch > 0 and RTS_Specified = null);
+
+      --  In case we detected a multilib switch and the user has not
+      --  manually specified a specific RTS we emulate the following command:
+      --  gnatmake $FLAGS --RTS=$(gcc -print-multi-directory $FLAGS)
+
+      --  First select the flags which might have an impact on multilib
+      --  processing. Note that this is an heuristic selection and it
+      --  will need to be maintained over time. The condition has to
+      --  be kept synchronized with N_M_Switch counting in Scan_Make_Arg.
+
+      for Next_Arg in 1 .. Argument_Count loop
+         declare
+            Argv : constant String := Argument (Next_Arg);
+         begin
+            if Argv'Length > 2
+              and then Argv (1) = '-'
+              and then Argv (2) = 'm'
+              and then Argv /= "-margs"
+
+              --  Ignore -mieee to avoid spawning an extra gcc in this case
+
+              and then Argv /= "-mieee"
+            then
+               Arg_Index := Arg_Index + 1;
+               Args (Arg_Index) := new String'(Argv);
+            end if;
+         end;
+      end loop;
+
+      pragma Assert (Arg_Index = N_M_Switch);
+
+      Args (Args'Last) := new String'("-print-multi-directory");
+
+      --  Call the GCC driver with the collected flags and save its
+      --  output. Alternate design would be to link in gnatmake the
+      --  relevant part of the GCC driver.
+
+      if Saved_Gcc /= null then
+         Multilib_Gcc := Saved_Gcc;
+      else
+         Multilib_Gcc := Gcc;
+      end if;
+
+      Multilib_Gcc_Path := GNAT.OS_Lib.Locate_Exec_On_Path (Multilib_Gcc.all);
+
+      Create_Temp_File (Output_FD, Output_Name);
+
+      if Output_FD = Invalid_FD then
+         return;
+      end if;
+
+      GNAT.OS_Lib.Spawn
+        (Multilib_Gcc_Path.all, Args, Output_FD, Return_Code, False);
+      Close (Output_FD);
+
+      if Return_Code /= 0 then
+         return;
+      end if;
+
+      --  Parse the GCC driver output which is a single line, removing CR/LF
+
+      Output_FD := Open_Read (Output_Name.all, Binary);
+
+      if Output_FD = Invalid_FD then
+         return;
+      end if;
+
+      N_Read := Read (Output_FD, Line (1)'Address, Line'Length);
+      Close (Output_FD);
+      Delete_File (Output_Name.all, Success);
+
+      for J in reverse 1 .. N_Read loop
+         if Line (J) = ASCII.CR or else Line (J) = ASCII.LF then
+            N_Read := N_Read - 1;
+         else
+            exit;
+         end if;
+      end loop;
+
+      --  In case the standard RTS is selected do nothing
+
+      if N_Read = 0 or else Line (1 .. N_Read) = "." then
+         return;
+      end if;
+
+      --  Otherwise add -margs --RTS=output
+
+      Scan_Make_Arg ("-margs", And_Save => True);
+      Scan_Make_Arg ("--RTS=" & Line (1 .. N_Read), And_Save => True);
+   end Process_Multilib;
+
    -----------------------------
    -- Recursive_Compute_Depth --
    -----------------------------
@@ -7297,6 +7395,7 @@ package body Make is
       Seen : Project_Boolean_Htable.Instance := Project_Boolean_Htable.Nil;
 
       procedure Recurse (Prj : Project_Id; Depth : Natural);
+      --  Recursive procedure that does the work, keeping track of the depth
 
       -------------
       -- Recurse --
@@ -7761,6 +7860,15 @@ package body Make is
          then
             Add_Switch (Argv, Compiler, And_Save => And_Save);
             Add_Switch (Argv, Linker, And_Save => And_Save);
+
+            --  The following condition has to be kept synchronized with
+            --  the Process_Multilib one.
+
+            if Argv (2) = 'm'
+              and then Argv /= "-mieee"
+            then
+               N_M_Switch := N_M_Switch + 1;
+            end if;
 
          --  -C=<mapping file>
 

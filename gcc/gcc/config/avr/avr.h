@@ -114,6 +114,7 @@ extern GTY(()) section *progmem_section;
 #define AVR_HAVE_LPMX (avr_current_arch->have_movw_lpmx)
 #define AVR_HAVE_RAMPZ (avr_current_arch->have_elpm)
 #define AVR_HAVE_EIJMP_EICALL (avr_current_arch->have_eijmp_eicall)
+#define AVR_HAVE_8BIT_SP (avr_current_device->short_sp || TARGET_TINY_STACK)
 
 #define AVR_2_BYTE_PC (!AVR_HAVE_EIJMP_EICALL)
 #define AVR_3_BYTE_PC (AVR_HAVE_EIJMP_EICALL)
@@ -362,8 +363,6 @@ enum reg_class {
       {ARG_POINTER_REGNUM, FRAME_POINTER_REGNUM},		\
 	{FRAME_POINTER_REGNUM, STACK_POINTER_REGNUM}		\
        ,{FRAME_POINTER_REGNUM+1,STACK_POINTER_REGNUM+1}}
-
-#define CAN_ELIMINATE(FROM, TO)	avr_can_eliminate (FROM, TO)
 
 #define INITIAL_ELIMINATION_OFFSET(FROM, TO, OFFSET)			\
   OFFSET = avr_initial_elimination_offset (FROM, TO)

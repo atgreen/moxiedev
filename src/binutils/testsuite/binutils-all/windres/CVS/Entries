@@ -39,7 +39,6 @@
 /listbox.rsd/1.1/Mon Jul  6 10:46:39 2009//
 /messagetable.rc/1.1/Mon Jul  6 10:46:39 2009//
 /messagetable.rsd/1.1/Mon Jul  6 10:46:39 2009//
-/msupdate/1.3/Mon Jul  6 10:46:39 2009//
 /nocaption.rc/1.1/Mon Jul  6 10:46:39 2009//
 /nocaption.rsd/1.2/Mon Jul  6 10:46:39 2009//
 /printstyle.rc/1.1/Mon Jul  6 10:46:39 2009//
@@ -57,5 +56,6 @@
 /version.rsd/1.1/Mon Jul  6 10:46:39 2009//
 /version_cat.rc/1.1/Mon Jul  6 10:46:39 2009//
 /version_cat.rsd/1.1/Mon Jul  6 10:46:39 2009//
-/windres.exp/1.12/Mon Jul  6 10:46:39 2009//
+/msupdate/1.4/Tue Sep  8 03:27:15 2009//
+/windres.exp/1.13/Tue Sep  8 03:27:15 2009//
 D

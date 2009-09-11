@@ -119,6 +119,7 @@
 #include "elf/m68hc11.h"
 #include "elf/mcore.h"
 #include "elf/mep.h"
+#include "elf/microblaze.h"
 #include "elf/mips.h"
 #include "elf/mmix.h"
 #include "elf/mn10200.h"
@@ -614,6 +615,8 @@ guess_is_rela (unsigned int e_machine)
     case EM_XSTORMY16:
     case EM_XTENSA:
     case EM_XTENSA_OLD:
+    case EM_MICROBLAZE:
+    case EM_MICROBLAZE_OLD:
       return TRUE;
 
     case EM_68HC05:
@@ -1196,6 +1199,11 @@ dump_relocations (FILE * file,
 	case EM_CR16:
 	case EM_CR16_OLD:
 	  rtype = elf_cr16_reloc_type (type);
+	  break;
+	
+	case EM_MICROBLAZE:
+	case EM_MICROBLAZE_OLD:
+	  rtype = elf_microblaze_reloc_type (type);
 	  break;
 	}
 
@@ -1865,6 +1873,8 @@ get_machine_name (unsigned e_machine)
     case EM_CYGNUS_MEP:         return "Toshiba MeP Media Engine";
     case EM_CR16:
     case EM_CR16_OLD:		return "National Semiconductor's CR16";
+    case EM_MICROBLAZE:		return "Xilinx MicroBlaze";
+    case EM_MICROBLAZE_OLD:	return "Xilinx MicroBlaze";
     default:
       snprintf (buff, sizeof (buff), _("<unknown>: 0x%x"), e_machine);
       return buff;
@@ -2716,12 +2726,11 @@ get_arm_section_type_name (unsigned int sh_type)
 {
   switch (sh_type)
     {
-    case SHT_ARM_EXIDX:
-      return "ARM_EXIDX";
-    case SHT_ARM_PREEMPTMAP:
-      return "ARM_PREEMPTMAP";
-    case SHT_ARM_ATTRIBUTES:
-      return "ARM_ATTRIBUTES";
+    case SHT_ARM_EXIDX:           return "ARM_EXIDX";
+    case SHT_ARM_PREEMPTMAP:      return "ARM_PREEMPTMAP";
+    case SHT_ARM_ATTRIBUTES:      return "ARM_ATTRIBUTES";
+    case SHT_ARM_DEBUGOVERLAY:    return "ARM_DEBUGOVERLAY";
+    case SHT_ARM_OVERLAYSECTION:  return "ARM_OVERLAYSECTION";
     default:
       break;
     }
@@ -7930,7 +7939,8 @@ is_32bit_abs_reloc (unsigned int reloc_type)
     case EM_OR32:
       return reloc_type == 1; /* R_OR32_32.  */
     case EM_PARISC:
-      return reloc_type == 1; /* R_PARISC_DIR32.  */
+      return (reloc_type == 1 /* R_PARISC_DIR32.  */
+	      || reloc_type == 41); /* R_PARISC_SECREL32.  */
     case EM_PJ:
     case EM_PJ_OLD:
       return reloc_type == 1; /* R_PJ_DATA_DIR32.  */
@@ -8153,6 +8163,12 @@ is_none_reloc (unsigned int reloc_type)
     case EM_MN10300: /* R_MN10300_NONE.  */
     case EM_M32R:    /* R_M32R_NONE.  */
       return reloc_type == 0;
+    case EM_XTENSA_OLD:
+    case EM_XTENSA:
+      return reloc_type == 0      /* R_XTENSA_NONE.  */
+	     || reloc_type == 17  /* R_XTENSA_DIFF8.  */
+	     || reloc_type == 18  /* R_XTENSA_DIFF16.  */
+	     || reloc_type == 19; /* R_XTENSA_DIFF32.  */
     }
   return FALSE;
 }

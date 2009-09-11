@@ -1,15 +1,15 @@
 10
 
 dir
-149693
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/tr1/5_numerical_facilities/special_functions/19_legendre
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2009-08-31T22:29:47.693149Z
+151251
+kkojima
 
 
 
@@ -66,11 +66,11 @@ file
 
 
 
-2009-04-24T17:50:41.000000Z
-cf06aa00331978cba9f6c0cf97c79ffc
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2009-09-10T17:50:38.000000Z
+bcd128543acb038eefff69f1f8a92bc8
+2009-08-31T22:29:47.693149Z
+151251
+kkojima
 
 
 
@@ -92,7 +92,7 @@ jakub
 
 
 
-1661
+1642
 
 check_value.cc
 file

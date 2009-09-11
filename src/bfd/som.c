@@ -1,6 +1,6 @@
 /* bfd back-end for HP PA-RISC SOM objects.
    Copyright 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
 
    Contributed by the Center for Software Science at the
@@ -4472,13 +4472,13 @@ static asymbol *
 som_make_empty_symbol (bfd *abfd)
 {
   bfd_size_type amt = sizeof (som_symbol_type);
-  som_symbol_type *new = bfd_zalloc (abfd, amt);
+  som_symbol_type *new_symbol_type = bfd_zalloc (abfd, amt);
 
-  if (new == NULL)
+  if (new_symbol_type == NULL)
     return NULL;
-  new->symbol.the_bfd = abfd;
+  new_symbol_type->symbol.the_bfd = abfd;
 
-  return &new->symbol;
+  return &new_symbol_type->symbol;
 }
 
 /* Print symbol information.  */

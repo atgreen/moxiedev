@@ -1,6 +1,6 @@
 /* nlmconv.c -- NLM conversion program
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
 
@@ -476,23 +476,23 @@ main (int argc, char **argv)
 		    ++sym->name;
 		  else
 		    {
-		      char *new;
+		      char *new_name;
 
-		      new = xmalloc (strlen (bfd_asymbol_name (sym)) + 1);
-		      new[0] = outlead;
-		      strcpy (new + 1, bfd_asymbol_name (sym) + 1);
-		      sym->name = new;
+		      new_name = xmalloc (strlen (bfd_asymbol_name (sym)) + 1);
+		      new_name[0] = outlead;
+		      strcpy (new_name + 1, bfd_asymbol_name (sym) + 1);
+		      sym->name = new_name;
 		    }
 		}
 	    }
 	  else
 	    {
-	      char *new;
+	      char *new_name;
 
-	      new = xmalloc (strlen (bfd_asymbol_name (sym)) + 2);
-	      new[0] = outlead;
-	      strcpy (new + 1, bfd_asymbol_name (sym));
-	      sym->name = new;
+	      new_name = xmalloc (strlen (bfd_asymbol_name (sym)) + 2);
+	      new_name[0] = outlead;
+	      strcpy (new_name + 1, bfd_asymbol_name (sym));
+	      sym->name = new_name;
 	    }
 	}
 

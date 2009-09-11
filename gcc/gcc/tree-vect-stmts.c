@@ -145,6 +145,9 @@ vect_stmt_relevant_p (gimple stmt, loop_vec_info loop_vinfo,
 	      if (vect_print_dump_info (REPORT_DETAILS))
 		fprintf (vect_dump, "vec_stmt_relevant_p: used out of loop.");
 
+	      if (is_gimple_debug (USE_STMT (use_p)))
+		continue;
+
 	      /* We expect all such uses to be in the loop exit phis
 		 (because of loop closed form)   */
 	      gcc_assert (gimple_code (USE_STMT (use_p)) == GIMPLE_PHI);
@@ -3889,7 +3892,7 @@ vectorizable_condition (gimple stmt, gimple_stmt_iterator *gsi,
   if (!vec_stmt) 
     {
       STMT_VINFO_TYPE (stmt_info) = condition_vec_info_type;
-      return expand_vec_cond_expr_p (op, vec_mode);
+      return expand_vec_cond_expr_p (TREE_TYPE (op), vec_mode);
     }
 
   /* Transform */

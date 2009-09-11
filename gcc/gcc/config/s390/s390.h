@@ -216,13 +216,6 @@ extern int s390_arch_flags;
 #endif
 #define MAX_BITS_PER_WORD 64
 
-/* Function arguments and return values are promoted to word size.  */
-#define PROMOTE_FUNCTION_MODE(MODE, UNSIGNEDP, TYPE)		\
-if (INTEGRAL_MODE_P (MODE) &&	        	    	\
-    GET_MODE_SIZE (MODE) < UNITS_PER_WORD) { 		\
-  (MODE) = Pmode;					\
-	  }
-
 /* Allocation boundary (in *bits*) for storing arguments in argument list.  */
 #define PARM_BOUNDARY (TARGET_64BIT ? 64 : 32)
 
@@ -653,9 +646,6 @@ extern const enum reg_class regclass_map[FIRST_PSEUDO_REGISTER];
  { RETURN_ADDRESS_POINTER_REGNUM, HARD_FRAME_POINTER_REGNUM },	\
  { BASE_REGNUM, BASE_REGNUM }}
 
-#define CAN_ELIMINATE(FROM, TO) \
-  s390_can_eliminate ((FROM), (TO))
-
 #define INITIAL_ELIMINATION_OFFSET(FROM, TO, OFFSET) \
   (OFFSET) = s390_initial_elimination_offset ((FROM), (TO))
 
@@ -697,10 +687,10 @@ CUMULATIVE_ARGS;
 /* Scalar return values.  */
 
 #define FUNCTION_VALUE(VALTYPE, FUNC) \
-  s390_function_value ((VALTYPE), VOIDmode)
+  s390_function_value ((VALTYPE), (FUNC), VOIDmode)
 
 #define LIBCALL_VALUE(MODE) \
-  s390_function_value (NULL, (MODE))
+  s390_function_value (NULL, NULL, (MODE))
 
 /* Only gpr 2 and fpr 0 are ever used as return registers.  */
 #define FUNCTION_VALUE_REGNO_P(N) ((N) == 2 || (N) == 16)

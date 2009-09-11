@@ -41,11 +41,6 @@ struct value_print_options;
 
 struct value;
 
-/* Needed if another module needs to maintain its own list of values.  */
-
-void value_prepend_to_list (struct value **head, struct value *val);
-void value_remove_from_list (struct value **head, struct value *val);
-
 /* Values are stored in a chain, so that they can be deleted easily
    over calls to the inferior.  Values assigned to internal variables,
    put into the value history or exposed to Python are taken off this
@@ -219,6 +214,9 @@ extern void *value_computed_closure (struct value *value);
 
 extern int value_lazy (struct value *);
 extern void set_value_lazy (struct value *value, int val);
+
+extern int value_stack (struct value *);
+extern void set_value_stack (struct value *value, int val);
 
 /* value_contents() and value_contents_raw() both return the address
    of the gdb buffer used to hold a copy of the contents of the lval.
@@ -663,6 +661,8 @@ extern void preserve_values (struct objfile *);
 /* From values.c */
 
 extern struct value *value_copy (struct value *);
+
+extern void preserve_one_value (struct value *, struct objfile *, htab_t);
 
 /* From valops.c */
 

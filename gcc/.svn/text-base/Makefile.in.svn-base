@@ -140,6 +140,8 @@ BASE_EXPORTS = \
 	BISON="$(BISON)"; export BISON; \
 	YACC="$(YACC)"; export YACC; \
 	M4="$(M4)"; export M4; \
+	SED="$(SED)"; export SED; \
+	AWK="$(AWK)"; export AWK; \
 	MAKEINFO="$(MAKEINFO)"; export MAKEINFO;
 
 # This is the list of variables to export in the environment when
@@ -334,6 +336,8 @@ BOOT_CFLAGS= -g -O2
 BOOT_LDFLAGS=
 BOOT_ADAFLAGS=-gnatpg -gnata
 
+AWK = @AWK@
+SED = @SED@
 BISON = @BISON@
 YACC = @YACC@
 FLEX = @FLEX@
@@ -599,6 +603,7 @@ BASE_FLAGS_TO_PASS = \
 	"tooldir=$(tooldir)" \
 	"build_tooldir=$(build_tooldir)" \
 	"target_alias=$(target_alias)" \
+	"AWK=$(AWK)" \
 	"BISON=$(BISON)" \
 	"CC_FOR_BUILD=$(CC_FOR_BUILD)" \
 	"CFLAGS_FOR_BUILD=$(CFLAGS_FOR_BUILD)" \
@@ -615,6 +620,7 @@ BASE_FLAGS_TO_PASS = \
 	"MAKE=$(MAKE)" \
 	"RUNTEST=$(RUNTEST)" \
 	"RUNTESTFLAGS=$(RUNTESTFLAGS)" \
+	"SED=$(SED)" \
 	"SHELL=$(SHELL)" \
 	"YACC=$(YACC)" \
 	"`echo 'ADAFLAGS=$(ADAFLAGS)' | sed -e s'/[^=][^=]*=$$/XFOO=/'`" \
@@ -765,7 +771,7 @@ EXTRA_GCC_FLAGS = \
 GCC_FLAGS_TO_PASS = $(BASE_FLAGS_TO_PASS) $(EXTRA_HOST_FLAGS) $(EXTRA_GCC_FLAGS)
 
 @if gcc
-BUILD_CONFIG =
+BUILD_CONFIG = @BUILD_CONFIG@
 ifneq ($(BUILD_CONFIG),)
 include $(foreach CONFIG, $(BUILD_CONFIG), $(srcdir)/config/$(CONFIG).mk)
 endif
@@ -55870,6 +55876,10 @@ configure-target-libstdc++-v3: maybe-configure-target-libgomp
 all-target-libgloss: maybe-all-target-newlib
 all-target-winsup: maybe-all-target-libiberty
 all-target-winsup: maybe-all-target-libtermcap
+configure-target-libiberty: maybe-all-binutils
+configure-target-libiberty: maybe-all-ld
+configure-target-newlib: maybe-all-binutils
+configure-target-newlib: maybe-all-ld
 
 
 # Dependencies for target modules on other target modules are

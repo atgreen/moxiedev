@@ -1,7 +1,7 @@
 10
 
 dir
-149693
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_filebuf
 svn://gcc.gnu.org/svn/gcc
 
@@ -32,10 +32,10 @@ dir
 sgetn
 dir
 
-seekoff
+in_avail
 dir
 
-in_avail
+seekoff
 dir
 
 requirements
@@ -53,10 +53,10 @@ dir
 sputc
 dir
 
-open
+imbue
 dir
 
-imbue
+open
 dir
 
 cons

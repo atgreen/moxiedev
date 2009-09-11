@@ -290,6 +290,14 @@ static int file_ase_mips16;
 			      || mips_opts.isa == ISA_MIPS64		\
 			      || mips_opts.isa == ISA_MIPS64R2)
 
+/* True if we want to create R_MIPS_JALR for jalr $25.  */
+#ifdef TE_IRIX
+#define MIPS_JALR_HINT_P HAVE_NEWABI
+#else
+/* As a GNU extension, we use R_MIPS_JALR for o32 too.  */
+#define MIPS_JALR_HINT_P 1
+#endif
+
 /* True if -mips3d was passed or implied by arguments passed on the
    command line (e.g., by -march).  */
 static int file_ase_mips3d;
@@ -2213,20 +2221,20 @@ fixup_has_matching_lo_p (fixS *fixp)
 
 static int
 insn_uses_reg (const struct mips_cl_insn *ip, unsigned int reg,
-	       enum mips_regclass class)
+	       enum mips_regclass regclass)
 {
-  if (class == MIPS16_REG)
+  if (regclass == MIPS16_REG)
     {
       gas_assert (mips_opts.mips16);
       reg = mips16_to_32_reg_map[reg];
-      class = MIPS_GR_REG;
+      regclass = MIPS_GR_REG;
     }
 
   /* Don't report on general register ZERO, since it never changes.  */
-  if (class == MIPS_GR_REG && reg == ZERO)
+  if (regclass == MIPS_GR_REG && reg == ZERO)
     return 0;
 
-  if (class == MIPS_FP_REG)
+  if (regclass == MIPS_FP_REG)
     {
       gas_assert (! mips_opts.mips16);
       /* If we are called with either $f0 or $f1, we must check $f0.
@@ -3922,13 +3930,13 @@ macro_build_jalr (expressionS *ep)
 {
   char *f = NULL;
 
-  if (HAVE_NEWABI)
+  if (MIPS_JALR_HINT_P)
     {
       frag_grow (8);
       f = frag_more (0);
     }
   macro_build (NULL, "jalr", "d,s", RA, PIC_CALL_REG);
-  if (HAVE_NEWABI)
+  if (MIPS_JALR_HINT_P)
     fix_new_exp (frag_now, f - frag_now->fr_literal,
 		 4, ep, FALSE, BFD_RELOC_MIPS_JALR);
 }
@@ -15256,6 +15264,15 @@ static const struct mips_cpu_info mips_cpu_info_table[] =
   { "74kfx",          MIPS_CPU_ASE_DSP | MIPS_CPU_ASE_DSPR2,
 						ISA_MIPS32R2,	CPU_MIPS32R2 },
   { "74kx",           MIPS_CPU_ASE_DSP | MIPS_CPU_ASE_DSPR2,
+						ISA_MIPS32R2,	CPU_MIPS32R2 },
+  /* 1004K cores are multiprocessor versions of the 34K.  */
+  { "1004kc",         MIPS_CPU_ASE_DSP | MIPS_CPU_ASE_MT,
+						ISA_MIPS32R2,	CPU_MIPS32R2 },
+  { "1004kf2_1",      MIPS_CPU_ASE_DSP | MIPS_CPU_ASE_MT,
+						ISA_MIPS32R2,	CPU_MIPS32R2 },
+  { "1004kf",         MIPS_CPU_ASE_DSP | MIPS_CPU_ASE_MT,
+						ISA_MIPS32R2,	CPU_MIPS32R2 },
+  { "1004kf1_1",      MIPS_CPU_ASE_DSP | MIPS_CPU_ASE_MT,
 						ISA_MIPS32R2,	CPU_MIPS32R2 },
 
   /* MIPS 64 */

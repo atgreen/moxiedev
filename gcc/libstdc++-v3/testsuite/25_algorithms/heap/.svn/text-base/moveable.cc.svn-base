@@ -22,7 +22,6 @@
 // 25.3.6 Heap operations [lib.alg.heap.operations]
 
 #undef _GLIBCXX_CONCEPT_CHECKS
-#define  _GLIBCXX_TESTSUITE_ALLOW_RVALREF_ALIASING
 
 #include <algorithm>
 #include <testsuite_hooks.h>
@@ -40,11 +39,11 @@ using __gnu_test::rvalstruct;
 typedef test_container<rvalstruct, random_access_iterator_wrapper> container;
 typedef test_container<int, random_access_iterator_wrapper> container_ref;
 
-bool test __attribute__((unused)) = true;
-
 void 
 check_make(int* array, int length)
 {
+  bool test __attribute__((unused)) = true;
+
   rvalstruct makeheap[9];
   int        makeheap_ref[9];
   std::copy(array, array + length, makeheap);
@@ -63,6 +62,8 @@ check_make(int* array, int length)
 void
 check_pop(int* array, int length)
 {
+  bool test __attribute__((unused)) = true;
+
   rvalstruct popheap[9];
   int        popheap_ref[9];
   std::copy(array, array + length, popheap);
@@ -81,6 +82,8 @@ check_pop(int* array, int length)
 void
 check_sort(int* array, int length)
 {
+  bool test __attribute__((unused)) = true;
+
   rvalstruct sortheap[9];
   int        sortheap_ref[9];
   std::copy(array, array + length, sortheap);
@@ -99,6 +102,8 @@ check_sort(int* array, int length)
 void
 check_push(int* array, int pushval, int length)
 {
+  bool test __attribute__((unused)) = true;
+
   rvalstruct pushheap[10];
   int        pushheap_ref[10];
   std::copy(array, array + length, pushheap);

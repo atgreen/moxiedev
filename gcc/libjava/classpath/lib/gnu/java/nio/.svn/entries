@@ -1,7 +1,7 @@
 10
 
 dir
-149693
+151600
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/nio
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ has-props
 
 1290
 
-PipeImpl.class
-file
-
-
-
-
-2009-04-24T17:47:35.000000Z
-6507641b9cc4671415dcca7301a32067
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1200
-
 PipeImpl$SourceChannelImpl.class
 file
 
@@ -161,6 +127,40 @@ has-props
 
 
 1917
+
+PipeImpl.class
+file
+
+
+
+
+2009-04-24T17:47:35.000000Z
+6507641b9cc4671415dcca7301a32067
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1200
 
 SelectionKeyImpl.class
 file
@@ -196,40 +196,6 @@ has-props
 
 1511
 
-NIOConstants.class
-file
-
-
-
-
-2009-04-24T17:47:35.000000Z
-d62ed39f1d3ddb8af3a18feee4cd65c2
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-346
-
 SocketChannelSelectionKeyImpl.class
 file
 
@@ -264,16 +230,16 @@ has-props
 
 843
 
-PipeImpl$SinkChannelImpl.class
+NIOConstants.class
 file
 
 
 
 
 2009-04-24T17:47:35.000000Z
-5ae42949d945e13f4e2428a298f60d0e
-2007-07-27T21:14:19.002073Z
-126998
+d62ed39f1d3ddb8af3a18feee4cd65c2
+2006-12-12T18:41:51.528840Z
+119793
 tromey
 has-props
 
@@ -296,7 +262,7 @@ has-props
 
 
 
-1906
+346
 
 VMSelector.class
 file
@@ -332,8 +298,39 @@ has-props
 
 359
 
-charset
-dir
+PipeImpl$SinkChannelImpl.class
+file
+
+
+
+
+2009-04-24T17:47:35.000000Z
+5ae42949d945e13f4e2428a298f60d0e
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1906
 
 NIOServerSocket.class
 file
@@ -369,6 +366,9 @@ has-props
 
 1431
 
+charset
+dir
+
 VMChannelOwner.class
 file
 
@@ -403,9 +403,6 @@ has-props
 
 174
 
-channels
-dir
-
 ServerSocketChannelSelectionKey.class
 file
 
@@ -439,6 +436,9 @@ has-props
 
 
 826
+
+channels
+dir
 
 DatagramChannelSelectionKey.class
 file

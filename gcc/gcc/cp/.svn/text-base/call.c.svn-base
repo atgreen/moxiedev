@@ -190,7 +190,6 @@ static struct z_candidate *add_candidate
 	 conversion **, tree, tree, int);
 static tree source_type (conversion *);
 static void add_warning (struct z_candidate *, struct z_candidate *);
-static bool reference_related_p (tree, tree);
 static bool reference_compatible_p (tree, tree);
 static conversion *convert_class_to_reference (tree, tree, tree, int);
 static conversion *direct_reference_binding (tree, conversion *);
@@ -966,7 +965,7 @@ standard_conversion (tree to, tree from, tree expr, bool c_cast_p,
 
 /* Returns nonzero if T1 is reference-related to T2.  */
 
-static bool
+bool
 reference_related_p (tree t1, tree t2)
 {
   t1 = TYPE_MAIN_VARIANT (t1);
@@ -1110,6 +1109,11 @@ convert_class_to_reference (tree reference_type, tree s, tree expr, int flags)
 		= TYPE_REF_IS_RVALUE (TREE_TYPE (TREE_TYPE (cand->fn)))
 		  == TYPE_REF_IS_RVALUE (reference_type);
 	      cand->second_conv->bad_p |= cand->convs[0]->bad_p;
+
+              /* Don't allow binding of lvalues to rvalue references.  */
+              if (TYPE_REF_IS_RVALUE (reference_type)
+                  && !TYPE_REF_IS_RVALUE (TREE_TYPE (TREE_TYPE (cand->fn))))
+                cand->second_conv->bad_p = true;
 	    }
 	}
     }
@@ -1137,12 +1141,12 @@ convert_class_to_reference (tree reference_type, tree s, tree expr, int flags)
 		     build_identity_conv (TREE_TYPE (expr), expr));
   conv->cand = cand;
 
+  if (cand->viable == -1)
+    conv->bad_p = true;
+
   /* Merge it with the standard conversion sequence from the
      conversion function's return type to the desired type.  */
   cand->second_conv = merge_conversion_sequences (conv, cand->second_conv);
-
-  if (cand->viable == -1)
-    conv->bad_p = true;
 
   return cand->second_conv;
 }
@@ -1205,7 +1209,7 @@ reference_binding (tree rto, tree rfrom, tree expr, bool c_cast_p, int flags)
   tree tfrom;
   bool related_p;
   bool compatible_p;
-  cp_lvalue_kind lvalue_p = clk_none;
+  cp_lvalue_kind is_lvalue = clk_none;
 
   if (TREE_CODE (to) == FUNCTION_TYPE && expr && type_unknown_p (expr))
     {
@@ -1218,7 +1222,7 @@ reference_binding (tree rto, tree rfrom, tree expr, bool c_cast_p, int flags)
   if (TREE_CODE (from) == REFERENCE_TYPE)
     {
       /* Anything with reference type is an lvalue.  */
-      lvalue_p = clk_ordinary;
+      is_lvalue = clk_ordinary;
       from = TREE_TYPE (from);
     }
 
@@ -1235,11 +1239,11 @@ reference_binding (tree rto, tree rfrom, tree expr, bool c_cast_p, int flags)
 	}
     }
 
-  if (lvalue_p == clk_none && expr)
-    lvalue_p = real_lvalue_p (expr);
+  if (is_lvalue == clk_none && expr)
+    is_lvalue = real_lvalue_p (expr);
 
   tfrom = from;
-  if ((lvalue_p & clk_bitfield) != 0)
+  if ((is_lvalue & clk_bitfield) != 0)
     tfrom = unlowered_expr_type (expr);
 
   /* Figure out whether or not the types are reference-related and
@@ -1256,12 +1260,15 @@ reference_binding (tree rto, tree rfrom, tree expr, bool c_cast_p, int flags)
   /* Directly bind reference when target expression's type is compatible with
      the reference and expression is an lvalue. In DR391, the wording in
      [8.5.3/5 dcl.init.ref] is changed to also require direct bindings for
-     const and rvalue references to rvalues of compatible class type. */
+     const and rvalue references to rvalues of compatible class type.
+     We should also do direct bindings for non-class "rvalues" derived from
+     rvalue references.  */
   if (compatible_p
-      && (lvalue_p
-	  || (!(flags & LOOKUP_NO_TEMP_BIND)
-	      && (CP_TYPE_CONST_NON_VOLATILE_P(to) || TYPE_REF_IS_RVALUE (rto))
-	      && CLASS_TYPE_P (from))))
+      && (is_lvalue
+	  || (((CP_TYPE_CONST_NON_VOLATILE_P (to)
+		&& !(flags & LOOKUP_NO_TEMP_BIND))
+	       || TYPE_REF_IS_RVALUE (rto))
+	      && (CLASS_TYPE_P (from) || (expr && lvalue_p (expr))))))
     {
       /* [dcl.init.ref]
 
@@ -1288,10 +1295,10 @@ reference_binding (tree rto, tree rfrom, tree expr, bool c_cast_p, int flags)
 	conv->rvaluedness_matches_p = TYPE_REF_IS_RVALUE (rto);
       else
 	conv->rvaluedness_matches_p 
-          = (TYPE_REF_IS_RVALUE (rto) == !lvalue_p);
+          = (TYPE_REF_IS_RVALUE (rto) == !is_lvalue);
 
-      if ((lvalue_p & clk_bitfield) != 0
-	  || ((lvalue_p & clk_packed) != 0 && !TYPE_PACKED (to)))
+      if ((is_lvalue & clk_bitfield) != 0
+	  || ((is_lvalue & clk_packed) != 0 && !TYPE_PACKED (to)))
 	/* For the purposes of overload resolution, we ignore the fact
 	   this expression is a bitfield or packed field. (In particular,
 	   [over.ics.ref] says specifically that a function with a
@@ -1304,6 +1311,11 @@ reference_binding (tree rto, tree rfrom, tree expr, bool c_cast_p, int flags)
 	   a temporary, so we just issue an error when the conversion
 	   actually occurs.  */
 	conv->need_temporary_p = true;
+
+      /* Don't allow binding of lvalues to rvalue references.  */
+      if (is_lvalue && TYPE_REF_IS_RVALUE (rto)
+          && !(flags & LOOKUP_PREFER_RVALUE))
+	conv->bad_p = true;
 
       return conv;
     }
@@ -1766,7 +1778,14 @@ build_builtin_candidate (struct z_candidate **candidates, tree fnname,
 
   num_convs =  args[2] ? 3 : (args[1] ? 2 : 1);
   convs = alloc_conversions (num_convs);
-  flags |= LOOKUP_ONLYCONVERTING;
+
+  /* TRUTH_*_EXPR do "contextual conversion to bool", which means explicit
+     conversion ops are allowed.  We handle that here by just checking for
+     boolean_type_node because other operators don't ask for it.  COND_EXPR
+     also does contextual conversion to bool for the first operand, but we
+     handle that in build_conditional_expr, and type1 here is operand 2.  */
+  if (type1 != boolean_type_node)
+    flags |= LOOKUP_ONLYCONVERTING;
 
   for (i = 0; i < 2; ++i)
     {
@@ -3581,7 +3600,8 @@ build_conditional_expr (tree arg1, tree arg2, tree arg3,
 
      The first expression is implicitly converted to bool (clause
      _conv_).  */
-  arg1 = perform_implicit_conversion (boolean_type_node, arg1, complain);
+  arg1 = perform_implicit_conversion_flags (boolean_type_node, arg1, complain,
+					    LOOKUP_NORMAL);
 
   /* If something has already gone wrong, just pass that fact up the
      tree.  */
@@ -3779,7 +3799,7 @@ build_conditional_expr (tree arg1, tree arg2, tree arg3,
       bool any_viable_p;
 
       /* Rearrange the arguments so that add_builtin_candidate only has
-	 to know about two args.  In build_builtin_candidates, the
+	 to know about two args.  In build_builtin_candidate, the
 	 arguments are unscrambled.  */
       args[0] = arg2;
       args[1] = arg3;
@@ -3825,8 +3845,10 @@ build_conditional_expr (tree arg1, tree arg2, tree arg3,
       arg1 = convert_like (conv, arg1, complain);
       conv = cand->convs[1];
       arg2 = convert_like (conv, arg2, complain);
+      arg2_type = TREE_TYPE (arg2);
       conv = cand->convs[2];
       arg3 = convert_like (conv, arg3, complain);
+      arg3_type = TREE_TYPE (arg3);
     }
 
   /* [expr.cond]
@@ -3845,7 +3867,7 @@ build_conditional_expr (tree arg1, tree arg2, tree arg3,
     arg2_type = TREE_TYPE (arg2);
 
   arg3 = force_rvalue (arg3);
-  if (!CLASS_TYPE_P (arg2_type))
+  if (!CLASS_TYPE_P (arg3_type))
     arg3_type = TREE_TYPE (arg3);
 
   if (arg2 == error_mark_node || arg3 == error_mark_node)
@@ -4145,14 +4167,8 @@ build_new_op (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
   arg3 = prep_operand (arg3);
 
   if (code == COND_EXPR)
-    {
-      if (arg2 == NULL_TREE
-	  || TREE_CODE (TREE_TYPE (arg2)) == VOID_TYPE
-	  || TREE_CODE (TREE_TYPE (arg3)) == VOID_TYPE
-	  || (! IS_OVERLOAD_TYPE (TREE_TYPE (arg2))
-	      && ! IS_OVERLOAD_TYPE (TREE_TYPE (arg3))))
-	goto builtin;
-    }
+    /* Use build_conditional_expr instead.  */
+    gcc_unreachable ();
   else if (! IS_OVERLOAD_TYPE (TREE_TYPE (arg1))
 	   && (! arg2 || ! IS_OVERLOAD_TYPE (TREE_TYPE (arg2))))
     goto builtin;
@@ -4194,22 +4210,9 @@ build_new_op (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
 			flags, &candidates);
     }
 
-  /* Rearrange the arguments for ?: so that add_builtin_candidate only has
-     to know about two args; a builtin candidate will always have a first
-     parameter of type bool.  We'll handle that in
-     build_builtin_candidate.  */
-  if (code == COND_EXPR)
-    {
-      args[0] = arg2;
-      args[1] = arg3;
-      args[2] = arg1;
-    }
-  else
-    {
-      args[0] = arg1;
-      args[1] = arg2;
-      args[2] = NULL_TREE;
-    }
+  args[0] = arg1;
+  args[1] = arg2;
+  args[2] = NULL_TREE;
 
   add_builtin_candidates (&candidates, code, code2, fnname, args, flags);
 
@@ -4243,13 +4246,23 @@ build_new_op (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
 	  if (!(complain & tf_error))
 	    return error_mark_node;
 
-	  /* Look for an `operator++ (int)'.  If they didn't have
-	     one, then we fall back to the old way of doing things.  */
+	  /* Look for an `operator++ (int)'. Pre-1985 C++ didn't
+	     distinguish between prefix and postfix ++ and
+	     operator++() was used for both, so we allow this with
+	     -fpermissive.  */
 	  if (flags & LOOKUP_COMPLAIN)
-	    permerror (input_location, "no %<%D(int)%> declared for postfix %qs, "
-		       "trying prefix operator instead",
-		       fnname,
-		       operator_name_info[code].name);
+	    {
+	      const char *msg = (flag_permissive) 
+		? G_("no %<%D(int)%> declared for postfix %qs,"
+		     " trying prefix operator instead")
+		: G_("no %<%D(int)%> declared for postfix %qs");
+	      permerror (input_location, msg, fnname,
+			 operator_name_info[code].name);
+	    }
+
+	  if (!flag_permissive)
+	    return error_mark_node;
+
 	  if (code == POSTINCREMENT_EXPR)
 	    code = PREINCREMENT_EXPR;
 	  else
@@ -4440,9 +4453,6 @@ build_new_op (enum tree_code code, int flags, tree arg1, tree arg2, tree arg3,
 
     case ARRAY_REF:
       return build_array_ref (input_location, arg1, arg2);
-
-    case COND_EXPR:
-      return build_conditional_expr (arg1, arg2, arg3, complain);
 
     case MEMBER_REF:
       return build_m_component_ref (cp_build_indirect_ref (arg1, NULL, 
@@ -4957,6 +4967,19 @@ convert_like_real (conversion *convs, tree expr, tree fn, int argnum,
     case ck_ref_bind:
       {
 	tree ref_type = totype;
+
+	if (convs->bad_p && TYPE_REF_IS_RVALUE (ref_type)
+	    && real_lvalue_p (expr))
+	  {
+	    if (complain & tf_error)
+	      {
+		error ("cannot bind %qT lvalue to %qT",
+		       TREE_TYPE (expr), totype);
+		if (fn)
+		  error ("  initializing argument %P of %q+D", argnum, fn);
+	      }
+	    return error_mark_node;
+	  }
 
 	/* If necessary, create a temporary. 
 
@@ -6456,7 +6479,6 @@ maybe_handle_ref_bind (conversion **ics)
       conversion *old_ics = *ics;
       *ics = old_ics->u.next;
       (*ics)->user_conv_p = old_ics->user_conv_p;
-      (*ics)->bad_p = old_ics->bad_p;
       return old_ics;
     }
 

@@ -1,3 +1,102 @@
+2009-09-08  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	PR testsuite/29737
+	PR bootstrap/35938
+	PR testsuite/39655
+	* check.tpl: Fix typos.
+	* README: Likewise.  Also, document that 'select' uses ERE.
+	* mkheaders.in: Update copyright years in --version output.
+	* inclhack.def (sco_math): Add missing final newline in sed
+	script 'a', 'c', or 'i' commands, for BSD sed.
+	(sco_math): In the text of 'a', 'c', or 'i' sed
+	commands, prepend leading white space with a backslash to avoid
+	the whitespace to be removed by BSD sed.
+	(sco_math): Match plain 'C++' instead of 'C\+\+' in sed regex.
+	(x11_new): Fix sed expression, for BSD sed.
+	(glibc_mutex_init): Fix newlines in sed 's' command replacement
+	part, for GNU sed 3.02 and Solaris sed.
+	(glibc_mutex_init): Replace unportable \+ sed regex operator
+	with \{1,\}.
+	(glibc_c99_inline_2, glibc_mutex_init): Avoid unportable sed
+	alternation \| regex operator.
+	(solaris_complex): Remove superfluous backslashes from
+	replacement string.  Replace \+ operator with \{1,\}.
+	* tests/base/Xm/Traversal.h: This is fixed for BSD sed now.
+	* fixincl.x: Regenerate.
+
+2009-09-02  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR libfortran/41169
+	* inclhack.def (irix_complex): New fix.
+	(solaris_complex): Likewise.
+	* fixincl.x: Regenerate.
+	* tests/base/complex.h [IRIX_COMPLEX_CHECK, SOLARIS_COMPLEX_CHECK]:
+	New tests.
+
+2009-08-28   Bruce Korb <bkorb@gnu.org>
+	     Steve Ellcey  <sje@cup.hp.com>
+
+	* README (files): Describe files entry.
+	* inclhack.def (hpux_stdint_least): Remove.
+	(hpux_stdint_fast): Remove.
+	(hpux_stdint_fast): Remove.
+	(hpux_stdint_least_fast): New.
+	(hpux_inttype_int_least8_t): Remove.
+	(hpux_inttype_int8_t): Modify.
+	* fixincl.x: Regenerate.
+	* tests/base/stdint.h: Update.
+	* tests/base/sys/_inttypes.h: Update.
+
+2009-08-28  Steve Ellcey  <sje@cup.hp.com>
+
+	* inclhack.def (hpux_imaginary_i): Remove spaces.
+	* fixincl.x: Regenerate.
+	* tests/base/stdint.h: Update AIX fixes. 
+	* tests/base/complex.h: Change HPUX_IMAGINARY_I_CHECK fix.
+
+2009-08-24  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac (AC_PREREQ): Bump to 2.64.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+	* config.h.in: Regenerate.
+
+2009-08-17  David Edelsohn  <edelsohn@gnu.org>
+
+	* inclhack.def (aix_complex): Redefine _Complex_I.  Do not
+	redefine I.
+	* (aix_stdint_[12345]): New fixes.
+	* fixincl.x: Regenerate.
+	* tests/base/complex.h: Update check.
+	* tests/base/stdint.h: Add AIX stdint.h checks.
+
+2009-08-14  Steve Ellcey  <sje@cup.hp.com>
+
+	* inclhack.def (hpux_imaginary_i): New fix.
+	* fixincl.x: Regenerate.
+	* tests/base/complex.h: New file.
+
+2009-08-12  David Edelsohn  <edelsohn@gnu.org>
+
+	* inclhack.def (aix_complex): New fix.
+	* fixincl.x: Regenerate.
+	
+2009-08-01  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	* inclhack.def (hpux_inttype_int_least8_t): Also apply on hpux10*.
+	(hpux_inttype_int8_t): Likewise.
+	* fixincl.x: Regenerate.
+
+2009-07-30  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.in (AUTOCONF, AUTOHEADER, ACLOCAL, ACLOCAL_AMFLAGS):
+	New variables.
+	($(srcdir)/configure, $(srcdir)/config.h.in, $(srcdir)/aclocal.m4):
+	Use them.
+
 2009-07-04  Francois-Xavier Coudert  <fxcoudert@gcc.gnu.org>
 
 	* inclhack.def (darwin_stdint_5, darwin_stdint_6,

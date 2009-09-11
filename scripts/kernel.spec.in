@@ -1,0 +1,38 @@
+Name:		kernel
+Version:	2.6
+Release:	0.@BUILDNUM@
+Summary:	The Linux kernel (the core of the Linux operating system)
+
+Group:		System Environment/Kernel
+License:	GPLv2
+URL:		http://moxielogic.com/blog
+Source0:	kernel-2.6.tar.gz
+BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+
+%description
+The kernel package contains the Linux kernel (vmlinuz), the core of any
+Linux operating system.  The kernel handles the basic functions
+of the operating system:  memory allocation, process allocation, device
+input and output, etc.
+
+%prep
+
+%setup -q
+
+%build
+cp arch/moxie/configs/nommu_defconfig arch/moxie/defconfig
+make ARCH=moxie CROSS_COMPILE=moxie-elf- defconfig
+make ARCH=moxie CROSS_COMPILE=moxie-elf- vmlinux
+
+%install
+make ARCH=moxie CROSS_COMPILE=moxie-elf- install INSTALL_HDR_PATH=$RPM_BUILD_ROOT/usr/moxie-uclinux/usr headers_install
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root,-)
+
+%changelog
+* @DATE@ Anthony Green <green@moxielogic.com> @VERSION@-1
+- Created.

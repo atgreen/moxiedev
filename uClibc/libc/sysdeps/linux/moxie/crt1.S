@@ -18,7 +18,7 @@ _start:
 	ldo.l  $r1, 0($sp)	/* argc */
 	ldo.l  $r2, 4($sp)	/* argv */
 	dec    $sp, 28
-	ldi.l  $r3, 0		/* rtld_fini */
+	xor    $r3, $r3		/* rtld_fini */
 	sto.l  20($sp), $r3
 	mov    $r3, $sp		/* stack_end */
 	sto.l  24($sp), $r3

@@ -17,6 +17,9 @@
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
 // 02110-1301, USA.
 
+// Include opcode encodings
+`include "opcode_def.v"
+
 // Set the boot address upon system reset
 `define BOOT_ADDRESS 32'h00001000 
 

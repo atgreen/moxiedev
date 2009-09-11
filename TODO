@@ -92,3 +92,17 @@ foo:
     this common operation. Maybe cmp1 might even make sense. This is easy
     to measure.
 
+-------------------------------------------------------------------------------
+* uClinux Port
+-------------------------------------------------------------------------------
+
+  - Design early boot / handoff from firmware.  Here are some initial thoughts..
+
+  - The kernel should assume that pointer to a flattened device tree is in one of
+    the special registers.  How would it get there?
+
+      1) gdb sim.. import a dts/dtb file into the sim and force it into the end or RAM, 
+  	then load a pointer to it into one of the special regsters.
+
+      2) qemu.. similarly, but we should load the dtb from a file (as a .o maybe?) whose
+	name is based on the board/SoC we're simulation (moxiesim, for instance)

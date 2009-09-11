@@ -1,3 +1,7 @@
+2009-09-10  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Fix initramfs reference before building kernel.
+
 2009-08-02  Anthony Green  <green@moxielogic.com>
 
 	* dtc/*: New files.

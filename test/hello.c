@@ -5,6 +5,16 @@
 #define MOXIE_EX_IRQ  2 /* Interrupt request */
 #define MOXIE_EX_SWI  3 /* Software interrupt */
 
+int bar (int x)
+{
+  return x * 2;
+}
+
+int foo (int x)
+{
+  return bar (x + 5);
+}
+
 void handler (void)
 {
   int et;
@@ -53,6 +63,8 @@ int divide (int a, int b)
 
 int main()
 {
+  foo (42);
+
   install_handler((void*)handler);
 
   puts ("Hello, World!");

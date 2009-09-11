@@ -27,7 +27,21 @@ module moxiesoc (/*AUTOARG*/
 
    reg rst;
 
-   moxie mx (rst_i, clk_i);
+   wire idif_used_insn_o;
+   wire idif_used_data_o;
+
+   wire [15:0] ifid_insn_i;
+   wire [31:0] ifid_insn_data_i;
+   wire [0:0] ifid_insn_valid_i;
+   wire [0:0] ifid_insn_data_valid_i;
+
+   cpu_ifetch cif (ifid_insn_i, ifid_insn_data_i, ifid_insn_valid_i,
+		   ifid_insn_data_valid_i, rst_i, clk_i, idif_used_insn_o,
+		   idif_used_data_o);
+
+   cpu_idecode cid (idif_used_insn_o, idif_used_data_o,
+		    rst_i, clk_i, ifid_insn_i,
+		    ifid_insn_data_i, ifid_insn_valid_i, ifid_insn_data_valid_i);
    
    always @ (posedge clk_i) begin
       

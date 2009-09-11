@@ -4,7 +4,7 @@
 # mercurial seems to ignore empty dirs that svn needs.
 
 for d in `find ./ -name \*.svn`; do
-  for e in tmp/prop-base tmp/props tmp/text-base; do
+  for e in tmp/prop-base tmp/props tmp/text-base text-base prop-base; do
     if ! test -d $d/$e; then
       mkdir -p $d/$e
     fi

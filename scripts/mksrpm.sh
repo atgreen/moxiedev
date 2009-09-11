@@ -31,6 +31,7 @@ sed -i "s/@DATE@/$DATE/g" dist/moxie-elf-newlib.spec
 cp scripts/moxie-elf-qemu.spec.in dist/moxie-elf-qemu.spec
 sed -i "s/@VERSION@/$QEMU_VERSION/g" dist/moxie-elf-qemu.spec
 sed -i "s/@DATE@/$DATE/g" dist/moxie-elf-qemu.spec
+cp scripts/kernel.spec.in dist/kernel.spec
 
 sed -i "s/@BUILDNUM@/$BUILDNUM/g" dist/moxie-elf-binutils.spec
 sed -i "s/@BUILDNUM@/$BUILDNUM/g" dist/moxie-elf-gdb.spec
@@ -130,3 +131,10 @@ rpmbuild --nodeps \
 --define "_srcrpmdir dist" \
 -bs dist/moxie-elf-newlib.spec
 
+tar \
+-czf dist/linux-2.6.tar.gz linux-2.6
+
+rpmbuild --nodeps \
+--define "_sourcedir dist" \
+--define "_srcrpmdir dist" \
+-bs dist/kernel.spec

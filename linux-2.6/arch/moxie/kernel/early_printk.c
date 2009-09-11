@@ -28,17 +28,17 @@ static u32 base_addr;
 static void early_libgloss_printk_write(struct console *unused,
 					const char *s, unsigned n)
 {
-  /* First, try the simulator escape... */
-  asm ("ldi.l $r0, 0x0");
-  asm ("swi 5");
-
-  /* Then try writing to the qemu serial port... */
-  {
-    int i = 0;
-    while (i < n)
-      *(char *)0x3f8 = s[i++];
-    return n;
-  }
+	/* First, try the simulator escape... */
+	asm ("ldi.l $r0, 0x0");
+	asm ("swi 5");
+	
+	/* Then try writing to the qemu serial port... */
+	{
+		int i = 0;
+		while (i < n)
+			*(char *)0x3f8 = s[i++];
+		return n;
+	}
 }
 
 extern struct tty_driver *hp_simserial_driver;

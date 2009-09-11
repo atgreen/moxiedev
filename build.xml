@@ -328,7 +328,7 @@
       <arg value="-c"/>
       <arg value="(cd linux-2.6; cp arch/moxie/configs/nommu_defconfig arch/moxie/defconfig)"/>
     </exec>
-    <replace file="${basedir}/linux-2.6/arch/moxie/defconfig" token="@ROOTFS@" value="${basedir}/initfs/uclinux/root/" />
+    <replace file="${basedir}/linux-2.6/arch/moxie/defconfig" token="@ROOTFS@" value="${basedir}/initfs/uclinux/initramfs.txt" />
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=linux-2.6"/>
@@ -438,9 +438,23 @@
     </exec>
 
     <echo message="===================================================================="/>
+    <echo message="====== Building BusyBox ============================================"/>
+    <echo message="===================================================================="/>
+    <mkdir dir="build/elf2flt"/>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=busybox"/>
+    </exec>
+
+    <echo message="===================================================================="/>
     <echo message="====== Building initfs for uClinux ================================="/>
     <echo message="===================================================================="/>
     <mkdir dir="build/gcc-uclinux"/>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd initfs/uclinux; cp initramfs.txt.in initramfs.txt"/>
+    </exec>
+    <replace file="${basedir}/initfs/uclinux/initramfs.txt" token="@TOP@" value="${basedir}" />
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=initfs/uclinux/src"/>

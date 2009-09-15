@@ -1354,6 +1354,24 @@ gimple_can_merge_blocks_p (basic_block a, basic_block b)
       && DECL_NONLOCAL (gimple_label_label (stmt)))
     return false;
 
+  /* Examine the labels at the beginning of B.  */
+  for (gsi = gsi_start_bb (b); !gsi_end_p (gsi); gsi_next (&gsi))
+    {
+      tree lab;
+      stmt = gsi_stmt (gsi);
+      if (gimple_code (stmt) != GIMPLE_LABEL)
+	break;
+      lab = gimple_label_label (stmt);
+
+      /* Do not remove user labels.  */
+      if (!DECL_ARTIFICIAL (lab))
+	return false;
+    }
+
+  /* Protect the loop latches.  */
+  if (current_loops && b->loop_father->latch == b)
+    return false;
+
   /* It must be possible to eliminate all phi nodes in B.  If ssa form
      is not up-to-date, we cannot eliminate any phis; however, if only
      some symbols as whole are marked for renaming, this is not a problem,
@@ -1376,21 +1394,6 @@ gimple_can_merge_blocks_p (basic_block a, basic_block b)
 	    return false;
 	}
     }
-
-  /* Do not remove user labels.  */
-  for (gsi = gsi_start_bb (b); !gsi_end_p (gsi); gsi_next (&gsi))
-    {
-      stmt = gsi_stmt (gsi);
-      if (gimple_code (stmt) != GIMPLE_LABEL)
-	break;
-      if (!DECL_ARTIFICIAL (gimple_label_label (stmt)))
-	return false;
-    }
-
-  /* Protect the loop latches.  */
-  if (current_loops
-      && b->loop_father->latch == b)
-    return false;
 
   return true;
 }
@@ -2732,11 +2735,17 @@ gimple_cfg2vcg (FILE *file)
 bool
 is_ctrl_stmt (gimple t)
 {
-  return gimple_code (t) == GIMPLE_COND
-    || gimple_code (t) == GIMPLE_SWITCH
-    || gimple_code (t) == GIMPLE_GOTO
-    || gimple_code (t) == GIMPLE_RETURN
-    || gimple_code (t) == GIMPLE_RESX;
+  switch (gimple_code (t))
+    {
+    case GIMPLE_COND:
+    case GIMPLE_SWITCH:
+    case GIMPLE_GOTO:
+    case GIMPLE_RETURN:
+    case GIMPLE_RESX:
+      return true;
+    default:
+      return false;
+    }
 }
 
 
@@ -2972,11 +2981,15 @@ static basic_block
 split_edge_bb_loc (edge edge_in)
 {
   basic_block dest = edge_in->dest;
+  basic_block dest_prev = dest->prev_bb;
 
-  if (dest->prev_bb && find_edge (dest->prev_bb, dest))
-    return edge_in->src;
-  else
-    return dest->prev_bb;
+  if (dest_prev)
+    {
+      edge e = find_edge (dest_prev, dest);
+      if (e && !(e->flags & EDGE_COMPLEX))
+	return edge_in->src;
+    }
+  return dest_prev;
 }
 
 /* Split a (typically critical) edge EDGE_IN.  Return the new block.
@@ -5032,15 +5045,18 @@ gimple_redirect_edge_and_branch (edge e, basic_block dest)
   if (e->flags & EDGE_ABNORMAL)
     return NULL;
 
-  if (e->src != ENTRY_BLOCK_PTR
-      && (ret = gimple_try_redirect_by_replacing_jump (e, dest)))
-    return ret;
-
   if (e->dest == dest)
     return NULL;
 
   if (e->flags & EDGE_EH)
     return redirect_eh_edge (e, dest);
+
+  if (e->src != ENTRY_BLOCK_PTR)
+    {
+      ret = gimple_try_redirect_by_replacing_jump (e, dest);
+      if (ret)
+	return ret;
+    }
 
   gsi = gsi_last_bb (bb);
   stmt = gsi_end_p (gsi) ? NULL : gsi_stmt (gsi);
@@ -6426,7 +6442,7 @@ dump_function_to_file (tree fn, FILE *file, int flags)
     print_node (file, "", fn, 2);
 
   dsf = DECL_STRUCT_FUNCTION (fn);
-  if (dsf && (flags & TDF_DETAILS))
+  if (dsf && (flags & TDF_EH))
     dump_eh_tree (file, dsf);
 
   if (flags & TDF_RAW && !gimple_has_body_p (fn))
@@ -7250,7 +7266,7 @@ split_critical_edges (void)
 	     Go ahead and split them too.  This matches the logic in
 	     gimple_find_edge_insert_loc.  */
 	  else if ((!single_pred_p (e->dest)
-	            || phi_nodes (e->dest)
+	            || !gimple_seq_empty_p (phi_nodes (e->dest))
 	            || e->dest == EXIT_BLOCK_PTR)
 		   && e->src != ENTRY_BLOCK_PTR
 	           && !(e->flags & EDGE_ABNORMAL))

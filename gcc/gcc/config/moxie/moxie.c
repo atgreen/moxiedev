@@ -48,6 +48,9 @@
 #include "langhooks.h"
 #include "df.h"
 
+/* The register number to be used for the PIC offset register.  */
+unsigned moxie_pic_register = INVALID_REGNUM;
+
 #define LOSE_AND_RETURN(msgid, x)		\
   do						\
     {						\

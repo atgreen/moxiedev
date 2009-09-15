@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/net
 svn://gcc.gnu.org/svn/gcc
 
@@ -199,6 +199,9 @@ doko
 
 5798
 
+protocol
+dir
+
 EmptyX509TrustManager.java
 file
 
@@ -232,9 +235,6 @@ tromey
 
 
 2463
-
-protocol
-dir
 
 CRLFInputStream.java
 file
@@ -270,40 +270,6 @@ mark
 
 4722
 
-CRLFOutputStream.java
-file
-
-
-
-
-2009-04-24T17:46:52.000000Z
-74ae555092ef0cd022b4c561b62c40cf
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4654
-
 LineInputStream.java
 file
 
@@ -338,6 +304,43 @@ mark
 
 6053
 
+CRLFOutputStream.java
+file
+
+
+
+
+2009-04-24T17:46:52.000000Z
+74ae555092ef0cd022b4c561b62c40cf
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4654
+
+loader
+dir
+
 GetLocalHostAction.java
 file
 
@@ -371,9 +374,6 @@ doko
 
 
 2244
-
-loader
-dir
 
 DefaultProxySelector.java
 file

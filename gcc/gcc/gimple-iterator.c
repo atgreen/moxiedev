@@ -623,9 +623,9 @@ gimple_find_edge_insert_loc (edge e, gimple_stmt_iterator *gsi,
      would have to examine the PHIs to prove that none of them used
      the value set by the statement we want to insert on E.  That
      hardly seems worth the effort.  */
-restart:
+ restart:
   if (single_pred_p (dest)
-      && ! phi_nodes (dest)
+      && gimple_seq_empty_p (phi_nodes (dest))
       && dest != EXIT_BLOCK_PTR)
     {
       *gsi = gsi_start_bb (dest);
@@ -667,10 +667,13 @@ restart:
       if (!stmt_ends_bb_p (tmp))
 	return true;
 
-      if (gimple_code (tmp) == GIMPLE_RETURN)
-        {
-	  gsi_prev (gsi);
-	  return true;
+      switch (gimple_code (tmp))
+	{
+	case GIMPLE_RETURN:
+	case GIMPLE_RESX:
+	  return false;
+	default:
+	  break;
         }
     }
 

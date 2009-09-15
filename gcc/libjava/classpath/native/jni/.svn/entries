@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/native/jni
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,6 +25,15 @@ has-props
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+midi-dssi
+dir
+
+gstreamer-peer
+dir
+
+classpath
+dir
 
 Makefile.in
 file
@@ -60,15 +69,6 @@ rwild
 
 21440
 
-classpath
-dir
-
-gstreamer-peer
-dir
-
-midi-dssi
-dir
-
 gconf-peer
 dir
 
@@ -81,10 +81,10 @@ dir
 java-util
 dir
 
-java-lang
+midi-alsa
 dir
 
-midi-alsa
+java-lang
 dir
 
 java-nio

@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_istream/extractors_arithmetic/char
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ paolo
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-9555-ia.cc
-file
-
-
-
-
-2009-04-24T17:50:27.000000Z
-80b1dcc74ee78a637bb89c0d4299e9a8
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1656
 
 exceptions_failbit_throw.cc
 file
@@ -93,6 +59,40 @@ jakub
 
 
 1753
+
+9555-ia.cc
+file
+
+
+
+
+2009-04-24T17:50:27.000000Z
+80b1dcc74ee78a637bb89c0d4299e9a8
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1656
 
 exceptions_badbit_throw.cc
 file
@@ -196,40 +196,6 @@ jakub
 
 1662
 
-01.cc
-file
-
-
-
-
-2009-04-24T17:50:27.000000Z
-308c5d9921aba906c4c843a5d95440ed
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3251
-
 10.cc
 file
 
@@ -264,14 +230,14 @@ jakub
 
 3092
 
-02.cc
+01.cc
 file
 
 
 
 
 2009-04-24T17:50:27.000000Z
-a0b2a1e0e9d314eac6491ad5a680c598
+308c5d9921aba906c4c843a5d95440ed
 2009-04-09T15:00:19.611803Z
 145841
 jakub
@@ -296,7 +262,7 @@ jakub
 
 
 
-1286
+3251
 
 11.cc
 file
@@ -332,14 +298,14 @@ jakub
 
 1488
 
-03.cc
+02.cc
 file
 
 
 
 
 2009-04-24T17:50:27.000000Z
-83f6f1e141ba5eb6993edd07e1eb6041
+a0b2a1e0e9d314eac6491ad5a680c598
 2009-04-09T15:00:19.611803Z
 145841
 jakub
@@ -364,7 +330,7 @@ jakub
 
 
 
-1300
+1286
 
 12.cc
 file
@@ -399,6 +365,40 @@ jakub
 
 
 2244
+
+03.cc
+file
+
+
+
+
+2009-04-24T17:50:27.000000Z
+83f6f1e141ba5eb6993edd07e1eb6041
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1300
 
 13.cc
 file

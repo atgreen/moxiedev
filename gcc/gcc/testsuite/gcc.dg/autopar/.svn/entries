@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/autopar
 svn://gcc.gnu.org/svn/gcc
 
@@ -332,40 +332,6 @@ razya
 
 2257
 
-reduc-1short.c
-file
-
-
-
-
-2009-09-08T03:18:05.000000Z
-a7184a2c39bb4c86b27e240f8f327e4a
-2009-09-03T08:59:25.629377Z
-151372
-razya
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1416
-
 pr39500-1.c
 file
 
@@ -400,14 +366,14 @@ razya
 
 620
 
-reduc-2short.c
+reduc-1short.c
 file
 
 
 
 
 2009-09-08T03:18:05.000000Z
-2654d0f9c1915d98921923395f4197ca
+a7184a2c39bb4c86b27e240f8f327e4a
 2009-09-03T08:59:25.629377Z
 151372
 razya
@@ -432,7 +398,7 @@ razya
 
 
 
-1312
+1416
 
 pr39500-2.c
 file
@@ -467,6 +433,40 @@ spop
 
 
 507
+
+reduc-2short.c
+file
+
+
+
+
+2009-09-08T03:18:05.000000Z
+2654d0f9c1915d98921923395f4197ca
+2009-09-03T08:59:25.629377Z
+151372
+razya
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1312
 
 autopar.exp
 file

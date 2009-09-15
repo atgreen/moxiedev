@@ -17,13 +17,11 @@ _start:
 	ldi.l  $r0, main	/* main */
 	ldo.l  $r1, 0($sp)	/* argc */
 	ldo.l  $r2, 4($sp)	/* argv */
-	dec    $sp, 28
-	xor    $r3, $r3		/* rtld_fini */
-	sto.l  20($sp), $r3
-	mov    $r3, $sp		/* stack_end */
-	sto.l  24($sp), $r3
 	ldi.l  $r3, _init	/* _init */
 	ldi.l  $r4, _fini	/* _fini */
+	xor    $r5, $r5		/* rtld_fini */
+	dec    $sp, 28
+	sto.l  24($sp), $sp	/* stack_end */
 	jsra   __uClibc_main
 
 /* Stick in a dummy reference to `main', so that if an application

@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/debug/dwarf2
 svn://gcc.gnu.org/svn/gcc
 
@@ -570,40 +570,6 @@ jakub
 
 262
 
-imported-module-3.C
-file
-
-
-
-
-2009-04-24T17:44:06.000000Z
-82a4be36e2c22edb65751c2f29a2ec73
-2009-03-17T17:49:28.362558Z
-144911
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-214
-
 imported-module.C
 file
 
@@ -638,14 +604,14 @@ dodji
 
 411
 
-imported-module-4.C
+imported-module-3.C
 file
 
 
 
 
 2009-04-24T17:44:06.000000Z
-27dc215b1c0da59878d4d0ad71856d4f
+82a4be36e2c22edb65751c2f29a2ec73
 2009-03-17T17:49:28.362558Z
 144911
 jakub
@@ -670,7 +636,7 @@ jakub
 
 
 
-243
+214
 
 const1.C
 file
@@ -705,6 +671,40 @@ jakub
 
 
 166
+
+imported-module-4.C
+file
+
+
+
+
+2009-04-24T17:44:06.000000Z
+27dc215b1c0da59878d4d0ad71856d4f
+2009-03-17T17:49:28.362558Z
+144911
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+243
 
 const2.C
 file
@@ -910,40 +910,6 @@ dodji
 
 595
 
-fesd-none.h
-file
-
-
-
-
-2009-04-24T17:44:06.000000Z
-9b015014257af56d73a48e0f2e546d29
-2007-07-09T22:23:04.963549Z
-126497
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2242
-
 template-func-params-1.C
 file
 
@@ -978,17 +944,17 @@ dodji
 
 314
 
-static-data-member1.C
+fesd-none.h
 file
 
 
 
 
 2009-04-24T17:44:06.000000Z
-96933c6078c20c140753c3375df5ea03
-2009-04-08T20:00:48.191049Z
-145770
-jakub
+9b015014257af56d73a48e0f2e546d29
+2007-07-09T22:23:04.963549Z
+126497
+ebotcazou
 
 
 
@@ -1010,7 +976,41 @@ jakub
 
 
 
-367
+2242
+
+template-func-params-2.C
+file
+
+
+
+
+2009-09-08T03:18:11.000000Z
+e7092c2aaf941b7bf325bb2d45c5687d
+2009-08-31T21:48:04.304812Z
+151249
+dodji
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+428
 
 local-var-in-contructor.C
 file
@@ -1046,17 +1046,17 @@ dodji
 
 321
 
-template-func-params-2.C
+static-data-member1.C
 file
 
 
 
 
-2009-09-08T03:18:11.000000Z
-e7092c2aaf941b7bf325bb2d45c5687d
-2009-08-31T21:48:04.304812Z
-151249
-dodji
+2009-04-24T17:44:06.000000Z
+96933c6078c20c140753c3375df5ea03
+2009-04-08T20:00:48.191049Z
+145770
+jakub
 
 
 
@@ -1078,7 +1078,7 @@ dodji
 
 
 
-428
+367
 
 template-func-params-3.C
 file

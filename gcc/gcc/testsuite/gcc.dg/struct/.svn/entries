@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/struct
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ rguenth
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-w_prof_two_strs.c
-file
-
-
-
-
-2009-04-24T17:45:18.000000Z
-e3dba255a08780fbbdc986135787c723
-2008-09-08T22:41:27.160780Z
-140126
-hutchinsonandy
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-923
 
 wo_prof_escape_arg_to_local.c
 file
@@ -94,6 +60,40 @@ hutchinsonandy
 
 831
 
+w_prof_two_strs.c
+file
+
+
+
+
+2009-04-24T17:45:18.000000Z
+e3dba255a08780fbbdc986135787c723
+2008-09-08T22:41:27.160780Z
+140126
+hutchinsonandy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+923
+
 wo_prof_global_var.c
 file
 
@@ -128,17 +128,17 @@ mkuvyrkov
 
 766
 
-wo_prof_single_str_pointer.c
+w_prof_local_array.c
 file
 
 
 
 
 2009-04-24T17:45:18.000000Z
-0ab9ffb8b47e4f121d1cb0d8873d1e6b
-2009-01-12T21:29:43.822763Z
-143309
-froydnj
+24423fc250d70e3ac1a59c559d9f0aa0
+2008-09-08T22:41:27.160780Z
+140126
+hutchinsonandy
 
 
 
@@ -160,7 +160,7 @@ froydnj
 
 
 
-758
+615
 
 wo_prof_malloc_size_var.c
 file
@@ -196,17 +196,17 @@ hutchinsonandy
 
 816
 
-w_prof_local_array.c
+wo_prof_single_str_pointer.c
 file
 
 
 
 
 2009-04-24T17:45:18.000000Z
-24423fc250d70e3ac1a59c559d9f0aa0
-2008-09-08T22:41:27.160780Z
-140126
-hutchinsonandy
+0ab9ffb8b47e4f121d1cb0d8873d1e6b
+2009-01-12T21:29:43.822763Z
+143309
+froydnj
 
 
 
@@ -228,7 +228,7 @@ hutchinsonandy
 
 
 
-615
+758
 
 w_prof_single_str_global.c
 file
@@ -332,40 +332,6 @@ hutchinsonandy
 
 719
 
-struct-reorg.exp
-file
-
-
-
-
-2009-04-24T17:45:18.000000Z
-3c8aa53a3579dd733101f3b88b58db14
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2460
-
 w_prof_global_array.c
 file
 
@@ -399,6 +365,40 @@ olga
 
 
 483
+
+struct-reorg.exp
+file
+
+
+
+
+2009-04-24T17:45:18.000000Z
+3c8aa53a3579dd733101f3b88b58db14
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2460
 
 wo_prof_array_field.c
 file
@@ -434,40 +434,6 @@ hutchinsonandy
 
 528
 
-wo_prof_single_str_local.c
-file
-
-
-
-
-2009-04-24T17:45:18.000000Z
-4c540da9a7a3632edb5adf510699ec58
-2009-01-12T21:29:43.822763Z
-143309
-froydnj
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-638
-
 w_prof_local_var.c
 file
 
@@ -501,6 +467,40 @@ hutchinsonandy
 
 
 702
+
+wo_prof_single_str_local.c
+file
+
+
+
+
+2009-04-24T17:45:18.000000Z
+4c540da9a7a3632edb5adf510699ec58
+2009-01-12T21:29:43.822763Z
+143309
+froydnj
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+638
 
 wo_prof_two_strs.c
 file

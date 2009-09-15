@@ -1,14 +1,14 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-10T15:14:39.825920Z
-151596
+2009-09-11T11:21:26.170931Z
+151632
 uros
 
 
@@ -25,9 +25,6 @@ uros
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-gcc.c-torture
-dir
 
 README.compat
 file
@@ -62,6 +59,9 @@ jsm28
 
 
 4059
+
+gcc.c-torture
+dir
 
 ChangeLog-1993-2007
 file
@@ -103,10 +103,10 @@ dir
 gnat.dg
 dir
 
-ada
+gcc.dg
 dir
 
-gcc.dg
+ada
 dir
 
 gcc.misc-tests
@@ -118,11 +118,11 @@ file
 
 
 
-2009-09-10T17:49:04.000000Z
-b653182eb448eaa02f16e103f870da2e
-2009-09-10T15:14:39.825920Z
-151596
-uros
+2009-09-11T18:58:25.000000Z
+f01e2918e4b7a630a9c778c209b378dc
+2009-09-11T11:08:38.444857Z
+151631
+matz
 
 
 
@@ -144,7 +144,7 @@ uros
 
 
 
-253510
+254177
 
 README.gcc
 file

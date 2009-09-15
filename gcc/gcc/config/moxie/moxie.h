@@ -525,6 +525,15 @@ do									      \
    elements of a jump-table should have.  */
 #define CASE_VECTOR_MODE SImode
 
+/* Position Independent Code.  */
+/* We decide which pseudo register to use at compile time.  We pull it
+   out of special register 5, the GOT special register.  */
+extern unsigned moxie_pic_register;
+
+/* The register number of the register used to address a table of static
+   data addresses in memory.  */
+#define PIC_OFFSET_TABLE_REGNUM moxie_pic_register
+
 /* A C compound statement with a conditional `goto LABEL;' executed
    if X (an RTX) is a legitimate memory address on the target machine
    for a memory operand of mode MODE.  */

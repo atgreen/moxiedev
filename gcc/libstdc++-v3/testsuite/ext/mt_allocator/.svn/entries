@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/ext/mt_allocator
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ bkoz
 
 1773
 
-deallocate_global_thread-1.cc
-file
-
-
-
-
-2009-05-28T13:02:30.000000Z
-4b8d844e790e924bf60ba72fde78681f
-2009-05-28T00:17:00.094831Z
-147937
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1507
-
 deallocate_local_thread-7.cc
 file
 
@@ -229,6 +195,40 @@ bkoz
 
 
 1842
+
+deallocate_global_thread-1.cc
+file
+
+
+
+
+2009-05-28T13:02:30.000000Z
+4b8d844e790e924bf60ba72fde78681f
+2009-05-28T00:17:00.094831Z
+147937
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1507
 
 deallocate_global_thread-3.cc
 file
@@ -264,40 +264,6 @@ bkoz
 
 1523
 
-deallocate_local-2.cc
-file
-
-
-
-
-2009-05-28T13:02:30.000000Z
-ebb212df440a98e5678204581a478a45
-2009-05-28T00:17:00.094831Z
-147937
-bkoz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1475
-
 22309_thread.cc
 file
 
@@ -331,6 +297,40 @@ jakub
 
 
 2034
+
+deallocate_local-2.cc
+file
+
+
+
+
+2009-05-28T13:02:30.000000Z
+ebb212df440a98e5678204581a478a45
+2009-05-28T00:17:00.094831Z
+147937
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1475
 
 deallocate_local-4.cc
 file
@@ -366,40 +366,6 @@ bkoz
 
 1519
 
-check_allocate_big_per_type.cc
-file
-
-
-
-
-2009-04-24T17:50:36.000000Z
-ac96b4e2f5a4ec5316765916929f2ccc
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1567
-
 tune-1.cc
 file
 
@@ -434,17 +400,17 @@ jakub
 
 2106
 
-deallocate_local-6.cc
+check_allocate_big_per_type.cc
 file
 
 
 
 
-2009-05-28T13:02:30.000000Z
-2f5cde802ce683f10883ca740c84623a
-2009-05-28T00:17:00.094831Z
-147937
-bkoz
+2009-04-24T17:50:36.000000Z
+ac96b4e2f5a4ec5316765916929f2ccc
+2009-04-09T15:00:19.611803Z
+145841
+jakub
 
 
 
@@ -466,7 +432,7 @@ bkoz
 
 
 
-1778
+1567
 
 tune-2.cc
 file
@@ -501,6 +467,40 @@ jakub
 
 
 2127
+
+deallocate_local-6.cc
+file
+
+
+
+
+2009-05-28T13:02:30.000000Z
+2f5cde802ce683f10883ca740c84623a
+2009-05-28T00:17:00.094831Z
+147937
+bkoz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1778
 
 check_deallocate_null_thread.cc
 file

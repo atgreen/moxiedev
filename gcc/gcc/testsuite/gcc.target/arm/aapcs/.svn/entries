@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/arm/aapcs
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ has-props
 
 695
 
-abitest.h
-file
-
-
-
-
-2009-09-08T03:17:58.000000Z
-405a301d10a3512c930000ac65a9e97e
-2009-08-06T18:15:19.441847Z
-150536
-rearnsha
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2101
-
 vfp14.c
 file
 
@@ -162,17 +128,18 @@ has-props
 
 574
 
-aapcs.exp
+abitest.h
 file
 
 
 
 
 2009-09-08T03:17:58.000000Z
-218e2b46558024f95228ac53a3c55b2b
-2009-03-06T18:44:08.155729Z
-144678
+405a301d10a3512c930000ac65a9e97e
+2009-08-06T18:15:19.441847Z
+150536
 rearnsha
+has-props
 
 
 
@@ -193,8 +160,7 @@ rearnsha
 
 
 
-
-1040
+2101
 
 vfp15.c
 file
@@ -229,6 +195,40 @@ rearnsha
 
 
 482
+
+aapcs.exp
+file
+
+
+
+
+2009-09-08T03:17:58.000000Z
+218e2b46558024f95228ac53a3c55b2b
+2009-03-06T18:44:08.155729Z
+144678
+rearnsha
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1040
 
 vfp16.c
 file

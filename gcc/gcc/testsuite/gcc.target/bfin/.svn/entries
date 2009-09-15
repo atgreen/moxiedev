@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/bfin
 svn://gcc.gnu.org/svn/gcc
 
@@ -774,40 +774,6 @@ bernds
 
 862
 
-arith.c
-file
-
-
-
-
-2009-04-24T17:45:39.000000Z
-bf1c248fa1b1520ecdeed5e768375da7
-2007-05-03T13:24:03.234645Z
-124377
-bernds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1224
-
 mcpu-bf548m.c
 file
 
@@ -841,6 +807,40 @@ bernds
 
 
 862
+
+arith.c
+file
+
+
+
+
+2009-04-24T17:45:39.000000Z
+bf1c248fa1b1520ecdeed5e768375da7
+2007-05-03T13:24:03.234645Z
+124377
+bernds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1224
 
 loop-autoinc.c
 file
@@ -944,40 +944,6 @@ bernds
 
 622
 
-workarounds-2.c
-file
-
-
-
-
-2009-04-24T17:45:39.000000Z
-d99e21daa442a34b446fb3a6656be294
-2008-05-31T10:09:51.409572Z
-136236
-bernds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-620
-
 shift.c
 file
 
@@ -1011,6 +977,40 @@ bernds
 
 
 2019
+
+workarounds-2.c
+file
+
+
+
+
+2009-04-24T17:45:39.000000Z
+d99e21daa442a34b446fb3a6656be294
+2008-05-31T10:09:51.409572Z
+136236
+bernds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+620
 
 workarounds-3.c
 file

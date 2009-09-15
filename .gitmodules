@@ -1,3 +1,0 @@
-[submodule "linux-2.6"]
-	path = linux-2.6
-	url = git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux-2.6.git

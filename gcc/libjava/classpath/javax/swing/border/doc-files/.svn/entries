@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/swing/border/doc-files
 svn://gcc.gnu.org/svn/gcc
 
@@ -400,40 +400,6 @@ has-props
 
 4820
 
-EtchedBorder-2.png
-file
-
-
-
-
-2009-04-24T17:47:22.000000Z
-de4211aae692e6fd920637abf7d24f62
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3850
-
 BevelBorder-1.png
 file
 
@@ -468,14 +434,14 @@ has-props
 
 4440
 
-EmptyBorder-1.png
+EtchedBorder-2.png
 file
 
 
 
 
 2009-04-24T17:47:22.000000Z
-6f3212edd48ff7d8c282c0ea987d67dd
+de4211aae692e6fd920637abf7d24f62
 2005-09-23T17:31:48.000000Z
 104575
 tromey
@@ -500,7 +466,7 @@ has-props
 
 
 
-11522
+3850
 
 BevelBorder-2.png
 file
@@ -535,6 +501,40 @@ has-props
 
 
 3667
+
+EmptyBorder-1.png
+file
+
+
+
+
+2009-04-24T17:47:22.000000Z
+6f3212edd48ff7d8c282c0ea987d67dd
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+11522
 
 BevelBorder-3.png
 file

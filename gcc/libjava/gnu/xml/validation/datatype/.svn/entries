@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/xml/validation/datatype
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ tromey
 
 1101
 
-NormalizedStringType.h
-file
-
-
-
-
-2009-04-24T17:49:11.000000Z
-4d22054656b838caa988dd65f97fbcdb
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1147
-
 NonPositiveIntegerType.h
 file
 
@@ -161,6 +127,40 @@ tromey
 
 
 1268
+
+NormalizedStringType.h
+file
+
+
+
+
+2009-04-24T17:49:11.000000Z
+4d22054656b838caa988dd65f97fbcdb
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1147
 
 TypeLibraryFactory.h
 file
@@ -196,40 +196,6 @@ tromey
 
 891
 
-GDayType$GDay.h
-file
-
-
-
-
-2009-04-24T17:49:10.000000Z
-a631dde243b88908eb3109b32f788850
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-909
-
 WhiteSpaceFacet.h
 file
 
@@ -263,6 +229,40 @@ tromey
 
 
 1043
+
+GDayType$GDay.h
+file
+
+
+
+
+2009-04-24T17:49:10.000000Z
+a631dde243b88908eb3109b32f788850
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+909
 
 DecimalType.h
 file
@@ -468,40 +468,6 @@ tromey
 
 935
 
-PositiveIntegerType.h
-file
-
-
-
-
-2009-04-24T17:49:11.000000Z
-0847dee79b5d8569276e47bec72efd5d
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1250
-
 NameType.h
 file
 
@@ -535,6 +501,40 @@ tromey
 
 
 1075
+
+PositiveIntegerType.h
+file
+
+
+
+
+2009-04-24T17:49:11.000000Z
+0847dee79b5d8569276e47bec72efd5d
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1250
 
 GDayType.h
 file
@@ -1080,40 +1080,6 @@ tromey
 
 1234
 
-BooleanType.h
-file
-
-
-
-
-2009-04-24T17:49:10.000000Z
-4929e49d836b1ea0681530d67d28f3c0
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1244
-
 Type.h
 file
 
@@ -1148,14 +1114,14 @@ aph
 
 892
 
-NegativeIntegerType.h
+BooleanType.h
 file
 
 
 
 
-2009-04-24T17:49:11.000000Z
-74f08627b6bd9260e5ee7f2a65d47a8d
+2009-04-24T17:49:10.000000Z
+4929e49d836b1ea0681530d67d28f3c0
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -1180,7 +1146,7 @@ tromey
 
 
 
-1250
+1244
 
 Facet.h
 file
@@ -1215,6 +1181,40 @@ tromey
 
 
 1275
+
+NegativeIntegerType.h
+file
+
+
+
+
+2009-04-24T17:49:11.000000Z
+74f08627b6bd9260e5ee7f2a65d47a8d
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1250
 
 TypeBuilder.h
 file
@@ -1284,40 +1284,6 @@ tromey
 
 948
 
-GMonthType.h
-file
-
-
-
-
-2009-04-24T17:49:10.000000Z
-9a4b9b1a36771dd2ffa3f908fd45892f
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1196
-
 UnsignedLongType.h
 file
 
@@ -1351,6 +1317,40 @@ tromey
 
 
 1297
+
+GMonthType.h
+file
+
+
+
+
+2009-04-24T17:49:10.000000Z
+9a4b9b1a36771dd2ffa3f908fd45892f
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1196
 
 IntegerType.h
 file
@@ -1386,40 +1386,6 @@ tromey
 
 1202
 
-ShortType.h
-file
-
-
-
-
-2009-04-24T17:49:11.000000Z
-0c72daa4185ff009e42fa215119b39ef
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1298
-
 LongType.h
 file
 
@@ -1453,6 +1419,40 @@ tromey
 
 
 1292
+
+ShortType.h
+file
+
+
+
+
+2009-04-24T17:49:11.000000Z
+0c72daa4185ff009e42fa215119b39ef
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1298
 
 UnsignedByteType.h
 file
@@ -1590,40 +1590,6 @@ tromey
 
 1078
 
-AnyURIType.h
-file
-
-
-
-
-2009-04-24T17:49:10.000000Z
-b04f0f852a9f19628da3d32816beabab
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1087
-
 GYearType.h
 file
 
@@ -1658,14 +1624,14 @@ tromey
 
 1190
 
-MaxInclusiveFacet.h
+AnyURIType.h
 file
 
 
 
 
 2009-04-24T17:49:10.000000Z
-f532748ab05cb0c2ab8f3f1b229fca88
+b04f0f852a9f19628da3d32816beabab
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -1690,16 +1656,16 @@ tromey
 
 
 
-1078
+1087
 
-MinExclusiveFacet.h
+MaxInclusiveFacet.h
 file
 
 
 
 
 2009-04-24T17:49:10.000000Z
-9926bd78293179035c35639df1b5c174
+f532748ab05cb0c2ab8f3f1b229fca88
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -1759,6 +1725,40 @@ tromey
 
 
 1120
+
+MinExclusiveFacet.h
+file
+
+
+
+
+2009-04-24T17:49:10.000000Z
+9926bd78293179035c35639df1b5c174
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1078
 
 MaxExclusiveFacet.h
 file
@@ -1930,40 +1930,6 @@ tromey
 
 1148
 
-MinLengthFacet.h
-file
-
-
-
-
-2009-04-24T17:49:10.000000Z
-2c7c8a8485d5671f5f13b8a64e25bfb8
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-936
-
 AtomicSimpleType.h
 file
 
@@ -1998,14 +1964,14 @@ aph
 
 1409
 
-AnyType.h
+MinLengthFacet.h
 file
 
 
 
 
 2009-04-24T17:49:10.000000Z
-ce64b889fafa9d95ab9ba53255d7c465
+2c7c8a8485d5671f5f13b8a64e25bfb8
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -2030,7 +1996,7 @@ tromey
 
 
 
-674
+936
 
 EnumerationFacet.h
 file
@@ -2065,6 +2031,40 @@ tromey
 
 
 956
+
+AnyType.h
+file
+
+
+
+
+2009-04-24T17:49:10.000000Z
+ce64b889fafa9d95ab9ba53255d7c465
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+674
 
 SimpleType.h
 file

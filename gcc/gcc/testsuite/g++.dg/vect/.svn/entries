@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/vect
 svn://gcc.gnu.org/svn/gcc
 
@@ -434,40 +434,6 @@ dorit
 
 599
 
-pr37174.cc
-file
-
-
-
-
-2009-04-24T17:44:23.000000Z
-2dff334c9a92b9aeb51b6a2dec8696ab
-2008-08-23T10:42:34.564760Z
-139508
-irar
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-500
-
 pr33835.cc
 file
 
@@ -501,6 +467,40 @@ dorit
 
 
 767
+
+pr37174.cc
+file
+
+
+
+
+2009-04-24T17:44:23.000000Z
+2dff334c9a92b9aeb51b6a2dec8696ab
+2008-08-23T10:42:34.564760Z
+139508
+irar
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+500
 
 pr19951.cc
 file

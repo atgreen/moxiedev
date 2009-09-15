@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/java/awt/dnd
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ tromey
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-DropTarget.class
-file
-
-
-
-
-2009-04-24T17:47:53.000000Z
-4c7cc6b310b5d4777cf156fe408075a1
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6159
 
 DropTargetDragEvent.class
 file
@@ -94,14 +60,14 @@ has-props
 
 2244
 
-DropTargetAdapter.class
+DropTarget.class
 file
 
 
 
 
 2009-04-24T17:47:53.000000Z
-9298b62883fccd4da85cdd4ec609e4eb
+4c7cc6b310b5d4777cf156fe408075a1
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -126,7 +92,7 @@ has-props
 
 
 
-817
+6159
 
 InvalidDnDOperationException.class
 file
@@ -162,14 +128,14 @@ has-props
 
 553
 
-DropTargetEvent.class
+DropTargetAdapter.class
 file
 
 
 
 
 2009-04-24T17:47:53.000000Z
-5424c7ce62464b40143f36c5085f6d9b
+9298b62883fccd4da85cdd4ec609e4eb
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -194,7 +160,7 @@ has-props
 
 
 
-629
+817
 
 MouseDragGestureRecognizer.class
 file
@@ -229,6 +195,40 @@ has-props
 
 
 2199
+
+DropTargetEvent.class
+file
+
+
+
+
+2009-04-24T17:47:53.000000Z
+5424c7ce62464b40143f36c5085f6d9b
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+629
 
 DragGestureEvent.class
 file
@@ -468,9 +468,6 @@ has-props
 
 1240
 
-peer
-dir
-
 Autoscroll.class
 file
 
@@ -504,6 +501,9 @@ has-props
 
 
 209
+
+peer
+dir
 
 DragSourceMotionListener.class
 file

@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/java/text
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ gandalf
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-ParsePosition.java
-file
-
-
-
-
-2009-04-24T17:47:12.000000Z
-f1a4c59d384a4b0d05774b9262235c5b
-2005-11-15T23:20:01.014789Z
-107049
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4692
 
 DateFormatSymbols.java
 file
@@ -93,6 +59,40 @@ doko
 
 
 24212
+
+ParsePosition.java
+file
+
+
+
+
+2009-04-24T17:47:12.000000Z
+f1a4c59d384a4b0d05774b9262235c5b
+2005-11-15T23:20:01.014789Z
+107049
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4692
 
 SimpleDateFormat.java
 file
@@ -196,40 +196,6 @@ doko
 
 15609
 
-RuleBasedCollator.java
-file
-
-
-
-
-2009-04-24T17:47:12.000000Z
-d05d5f03ea4013df8ecbb70e23ea109c
-2009-01-06T22:44:05.987047Z
-143139
-gandalf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-31728
-
 CharacterIterator.java
 file
 
@@ -264,17 +230,17 @@ mark
 
 5201
 
-Bidi.java
+RuleBasedCollator.java
 file
 
 
 
 
 2009-04-24T17:47:12.000000Z
-52d372532a4a549e7f73c813bfcecdcf
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+d05d5f03ea4013df8ecbb70e23ea109c
+2009-01-06T22:44:05.987047Z
+143139
+gandalf
 
 
 
@@ -296,7 +262,7 @@ tromey
 
 
 
-35915
+31728
 
 DecimalFormat.java
 file
@@ -332,17 +298,17 @@ doko
 
 71315
 
-AttributedStringIterator.java
+Bidi.java
 file
 
 
 
 
 2009-04-24T17:47:12.000000Z
-1345a09d5bab46293e16f41692950fec
-2007-06-03T23:18:43.019099Z
-125302
-doko
+52d372532a4a549e7f73c813bfcecdcf
+2007-01-09T19:58:05.773323Z
+120621
+tromey
 
 
 
@@ -364,7 +330,41 @@ doko
 
 
 
-10762
+35915
+
+FieldPosition.java
+file
+
+
+
+
+2009-04-24T17:47:12.000000Z
+f75e6c636ccaeee625b611171650c24d
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6506
 
 CollationElementIterator.java
 file
@@ -400,17 +400,17 @@ doko
 
 13885
 
-FieldPosition.java
+AttributedStringIterator.java
 file
 
 
 
 
 2009-04-24T17:47:12.000000Z
-f75e6c636ccaeee625b611171650c24d
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+1345a09d5bab46293e16f41692950fec
+2007-06-03T23:18:43.019099Z
+125302
+doko
 
 
 
@@ -432,7 +432,7 @@ tromey
 
 
 
-6506
+10762
 
 Annotation.java
 file

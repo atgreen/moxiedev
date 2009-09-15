@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/org/w3c/dom/html2
 svn://gcc.gnu.org/svn/gcc
 
@@ -570,40 +570,6 @@ has-props
 
 359
 
-HTMLInputElement.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-5337b89ab77e79aef607af8e6ba9b12d
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1075
-
 HTMLFieldSetElement.class
 file
 
@@ -638,14 +604,14 @@ has-props
 
 232
 
-HTMLStyleElement.class
+HTMLInputElement.class
 file
 
 
 
 
 2009-04-24T17:48:31.000000Z
-5581afe8c47999a00412930a86c6dac8
+5337b89ab77e79aef607af8e6ba9b12d
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -670,7 +636,7 @@ has-props
 
 
 
-346
+1075
 
 HTMLUListElement.class
 file
@@ -706,6 +672,40 @@ has-props
 
 306
 
+HTMLStyleElement.class
+file
+
+
+
+
+2009-04-24T17:48:31.000000Z
+5581afe8c47999a00412930a86c6dac8
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+346
+
 HTMLHeadElement.class
 file
 
@@ -739,74 +739,6 @@ has-props
 
 
 255
-
-HTMLIsIndexElement.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-ec90aa79622801ad1db8f6c97715d837
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-317
-
-HTMLFormElement.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-fa7442d93f98652469781c2c0a272d6f
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-591
 
 HTMLBRElement.class
 file
@@ -842,14 +774,14 @@ has-props
 
 247
 
-HTMLHtmlElement.class
+HTMLFormElement.class
 file
 
 
 
 
 2009-04-24T17:48:31.000000Z
-36e6c254263dd2e25028c7529b81e503
+fa7442d93f98652469781c2c0a272d6f
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -874,7 +806,41 @@ has-props
 
 
 
-255
+591
+
+HTMLIsIndexElement.class
+file
+
+
+
+
+2009-04-24T17:48:31.000000Z
+ec90aa79622801ad1db8f6c97715d837
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+317
 
 HTMLMenuElement.class
 file
@@ -909,6 +875,40 @@ has-props
 
 
 221
+
+HTMLHtmlElement.class
+file
+
+
+
+
+2009-04-24T17:48:31.000000Z
+36e6c254263dd2e25028c7529b81e503
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+255
 
 HTMLTableCaptionElement.class
 file
@@ -978,40 +978,6 @@ has-props
 
 293
 
-HTMLAreaElement.class
-file
-
-
-
-
-2009-04-24T17:48:31.000000Z
-351cd18c82975dc244938abd5691dc5a
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-557
-
 HTMLOptionElement.class
 file
 
@@ -1045,6 +1011,40 @@ has-props
 
 
 553
+
+HTMLAreaElement.class
+file
+
+
+
+
+2009-04-24T17:48:31.000000Z
+351cd18c82975dc244938abd5691dc5a
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+557
 
 HTMLHRElement.class
 file

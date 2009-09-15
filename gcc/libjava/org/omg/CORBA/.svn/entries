@@ -1,7 +1,7 @@
 10
 
 dir
-151600
+151642
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/org/omg/CORBA
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ tromey
 
 914
 
-StringSeqHolder.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-31b25e0b3aadf60900dc9dd95637d7b2
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1207
-
 UnknownUserException.h
 file
 
@@ -603,6 +569,40 @@ tromey
 
 
 841
+
+StringSeqHolder.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+31b25e0b3aadf60900dc9dd95637d7b2
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1207
 
 ContextList.h
 file
@@ -978,40 +978,6 @@ tromey
 
 579
 
-UNSUPPORTED_POLICY_VALUE.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-407360f740682164ced7a9574e2e6655
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-619
-
 FloatHolder.h
 file
 
@@ -1045,6 +1011,40 @@ tromey
 
 
 965
+
+UNSUPPORTED_POLICY_VALUE.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+407360f740682164ced7a9574e2e6655
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+619
 
 OMGVMCID.h
 file
@@ -2038,6 +2038,40 @@ tromey
 
 1214
 
+BAD_OPERATION.h
+file
+
+
+
+
+2009-04-24T17:49:38.000000Z
+771fb6a843d39d5a68d702db8d4a1423
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+847
+
 NO_RESOURCES.h
 file
 
@@ -2105,40 +2139,6 @@ tromey
 
 
 574
-
-BAD_OPERATION.h
-file
-
-
-
-
-2009-04-24T17:49:38.000000Z
-771fb6a843d39d5a68d702db8d4a1423
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-847
 
 WCharSeqHelper.h
 file
@@ -2208,40 +2208,6 @@ tromey
 
 1218
 
-ServiceDetail.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-8d8caa5a4bff8705a173eaeb66cc5352
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-708
-
 ServiceDetailHelper.h
 file
 
@@ -2275,6 +2241,40 @@ tromey
 
 
 1239
+
+ServiceDetail.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+8d8caa5a4bff8705a173eaeb66cc5352
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+708
 
 CharSeqHolder.h
 file
@@ -2344,40 +2344,6 @@ tromey
 
 1186
 
-LongHolder.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-9f16526ce8af0a960b43e5fb71c09674
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-959
-
 ShortHolder.h
 file
 
@@ -2412,14 +2378,14 @@ tromey
 
 965
 
-PolicyHelper.h
+LongHolder.h
 file
 
 
 
 
 2009-04-24T17:49:39.000000Z
-5bb9063f568baf3ff2dae2e4148e1e2f
+9f16526ce8af0a960b43e5fb71c09674
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -2444,7 +2410,41 @@ tromey
 
 
 
-1206
+959
+
+UNKNOWN.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+2797ca86080d6c646b6acf87fafc312c
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+794
 
 Policy.h
 file
@@ -2480,14 +2480,14 @@ tromey
 
 2017
 
-UNKNOWN.h
+PolicyHelper.h
 file
 
 
 
 
 2009-04-24T17:49:39.000000Z
-2797ca86080d6c646b6acf87fafc312c
+5bb9063f568baf3ff2dae2e4148e1e2f
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -2512,7 +2512,7 @@ tromey
 
 
 
-794
+1206
 
 VersionSpecHelper.h
 file
@@ -2650,40 +2650,6 @@ tromey
 
 1108
 
-LongSeqHelper.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-5415c7bfe00d17048da00bea8ad7b81a
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1070
-
 ShortSeqHelper.h
 file
 
@@ -2717,6 +2683,40 @@ tromey
 
 
 1084
+
+LongSeqHelper.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+5415c7bfe00d17048da00bea8ad7b81a
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1070
 
 VM_CUSTOM.h
 file
@@ -2888,40 +2888,6 @@ tromey
 
 1187
 
-Any.h
-file
-
-
-
-
-2009-04-24T17:49:38.000000Z
-c0a5d79a123a4d50fabd02f5f48fdadd
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3674
-
 DynValue.h
 file
 
@@ -2955,6 +2921,40 @@ tromey
 
 
 4390
+
+Any.h
+file
+
+
+
+
+2009-04-24T17:49:38.000000Z
+c0a5d79a123a4d50fabd02f5f48fdadd
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3674
 
 TRANSACTION_UNAVAILABLE.h
 file
@@ -2990,40 +2990,6 @@ tromey
 
 937
 
-NameValuePairHelper.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-c35be86be9d835b80e5e8ddebf6e4010
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1239
-
 TRANSACTION_MODE.h
 file
 
@@ -3057,6 +3023,40 @@ tromey
 
 
 873
+
+NameValuePairHelper.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+c35be86be9d835b80e5e8ddebf6e4010
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1239
 
 BAD_CONTEXT.h
 file
@@ -3262,40 +3262,6 @@ tromey
 
 2540
 
-PolicyErrorHolder.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-f73aad4d01d49f5984fb6cbc82d91a12
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1023
-
 TRANSACTION_ROLLEDBACK.h
 file
 
@@ -3330,8 +3296,39 @@ tromey
 
 928
 
-ORBPackage
-dir
+PolicyErrorHolder.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+f73aad4d01d49f5984fb6cbc82d91a12
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1023
 
 BAD_QOS.h
 file
@@ -3366,6 +3363,9 @@ tromey
 
 
 793
+
+ORBPackage
+dir
 
 PolicyError.h
 file
@@ -3503,40 +3503,6 @@ tromey
 
 1262
 
-FREE_MEM.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-769b810761c57636eafc77c8b28738d0
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-803
-
 StringSeqHelper.h
 file
 
@@ -3570,6 +3536,40 @@ tromey
 
 
 1154
+
+FREE_MEM.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+769b810761c57636eafc77c8b28738d0
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+803
 
 LocalObject.h
 file
@@ -3605,40 +3605,6 @@ tromey
 
 2768
 
-ParameterModeHolder.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-4cb764369de6420e56255d6f61fca210
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1043
-
 IMP_LIMIT.h
 file
 
@@ -3672,6 +3638,40 @@ tromey
 
 
 812
+
+ParameterModeHolder.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+4cb764369de6420e56255d6f61fca210
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1043
 
 ParameterMode.h
 file
@@ -3741,40 +3741,6 @@ tromey
 
 793
 
-ARG_INOUT.h
-file
-
-
-
-
-2009-04-24T17:49:38.000000Z
-b64c7d71542b0478723006bfbeb1e4ee
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-542
-
 VisibilityHelper.h
 file
 
@@ -3808,6 +3774,40 @@ tromey
 
 
 1024
+
+ARG_INOUT.h
+file
+
+
+
+
+2009-04-24T17:49:38.000000Z
+b64c7d71542b0478723006bfbeb1e4ee
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+542
 
 ACTIVITY_COMPLETED.h
 file
@@ -3877,40 +3877,6 @@ tromey
 
 1049
 
-INVALID_TRANSACTION.h
-file
-
-
-
-
-2009-04-24T17:49:39.000000Z
-861fe44b60acf65fa377cc16c6d63c87
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-902
-
 ULongSeqHolder.h
 file
 
@@ -3944,6 +3910,40 @@ tromey
 
 
 1164
+
+INVALID_TRANSACTION.h
+file
+
+
+
+
+2009-04-24T17:49:39.000000Z
+861fe44b60acf65fa377cc16c6d63c87
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+902
 
 ACTIVITY_REQUIRED.h
 file
@@ -4047,9 +4047,6 @@ tromey
 
 4395
 
-TypeCodePackage
-dir
-
 DynAny.h
 file
 
@@ -4083,6 +4080,9 @@ tromey
 
 
 4020
+
+TypeCodePackage
+dir
 
 ServiceInformationHolder.h
 file

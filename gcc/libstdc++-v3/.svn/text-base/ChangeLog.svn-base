@@ -1,3 +1,35 @@
+2009-09-11  Johannes Singler  <singler@ira.uka.de>
+
+        * include/parallel/multiway_merge.h
+        (multiway_merge_exact_splitting): Deallocate borders correctly.
+        (parallel_multiway_merge): Remove unnecessarily complicated
+        allocation, random access iterators are default-constructible;
+        deallocate ne_seqs correctly.
+
+2009-09-11  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/41316
+	* include/bits/forward_list.h (_Fwd_list_node_base<>::_M_sort_after):
+	Remove.
+	(forward_list<>::sort(_Comp)): Only declare.
+	(forward_list<>::sort()): Forward to the latter.
+	* include/bits/forward_list.tcc (_Fwd_list_node_base<>::_M_sort_after):
+	Remove definition.
+	(forward_list<>::sort(_Comp)): Define.
+	* testsuite/23_containers/forward_list/requirements/dr438/
+	assign_neg.cc: Adjust dg-error line number.
+	* testsuite/23_containers/forward_list/requirements/dr438/
+	insert_neg.cc: Likewise.
+	* testsuite/23_containers/forward_list/requirements/dr438/
+	constructor_1_neg.cc: Likewise.
+	* testsuite/23_containers/forward_list/requirements/dr438/
+	constructor_2_neg.cc: Likewise.
+
+2009-09-11  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* src/Makefile.am (libstdc___la_LINK): New.
+	* src/Makefile.in: Regenerate.
+
 2009-09-09  Loren J. Rittle  <ljrittle@acm.org>
 
 	* testsuite/30_threads/thread/native_handle/typesizes.cc: Remove

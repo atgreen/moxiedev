@@ -1,3 +1,104 @@
+2009-09-11  Bernd Schmidt  <bernd.schmidt@analog.com>
+
+	From Jie Zhang <jie.zhang@analog.com>:
+	* doc/extend.texi (node Function Attributes): Document l2
+	function attribute.
+	(node Blackfin Variable Attributes): Document l2 variable attributes.
+
+2009-09-11  Loren J. Rittle  <ljrittle@acm.org>
+
+	* config.gcc (*-*-freebsd*): Enable default_use_cxa_atexit
+	to match the system compiler's configuration at inflection point.
+	Add comment to remark a remaining difference with system compiler.
+
+	* configure.ac (*-*-freebsd*): Enable check for __stack_chk_fail.
+	* configure: Regenerate.
+
+2009-09-11  Bernd Schmidt  <bernd.schmidt@analog.com>
+
+	From Jie Zhang <jie.zhang@analog.com>:
+	* config/bfin/bfin.c (bfin_expand_call): Handle L2 functions.
+	(bfin_handle_l2_attribute): New.
+	(bfin_attribute_table): Add l2 attribute.
+
+2009-09-11  Michael Matz  <matz@suse.de>
+
+	PR middle-end/41275
+	* tree-inline.c (remap_decls): Don't put DECL_EXTERNAL decls
+	on the local_decls list.
+
+2009-09-11  Alexandre Oliva  <aoliva@redhat.com>
+
+	PR debug/41276
+	PR debug/41307
+	* cselib.c (cselib_expand_value_rtx_cb): Document callback
+	interface.
+	(cselib_expand_value_rtx_1): Use callback for SUBREGs.  Adjust
+	for VALUEs, to implement the documented interface.
+	* var-tracking.c (vt_expand_loc_callback): Handle SUBREGs.
+	Adjust for VALUEs and anything else, to implement the
+	documented interface.
+
+2009-09-10  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* config/rs6000/rs6000.h (DATA_ALIGNMENT): Check that we are dealing
+	with actual SPE/paired vector modes before using 64-bit alignment.
+	Check that TYPE is a REAL_TYPE for TARGET_E500_DOUBLE.
+
+2009-09-10  DJ Delorie  <dj@redhat.com>
+
+	* config/mep/mep.md (eh_epilogue): Defer until after epilogue is
+	emitted.
+
+	* config/mep/mep.h (LEGITIMATE_CONSTANT_P): New.
+	* config/mep/mep.c (mep_legitimate_constant_p): New.
+	* config/mep/mep-protos.h: Prototype it.
+
+2009-09-10  Richard Henderson  <rth@redhat.com>
+
+	* print-rtl.c (print_rtx): Fix JUMP_LABEL index.
+
+2009-09-10  Jason Merrill  <jason@redhat.com>
+
+	* tree.c (chain_index): New fn.
+	* tree.h: Declare it.
+
+2009-09-10  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* config/sol2-c.c (cmn_err_length_specs): Initialize
+	scalar_identity_flag.
+
+2009-09-10  Richard Henderson  <rth@redhat.com>
+
+	* tree.h (struct tree_decl_common): Move align member earlier;
+	move label_decl_uid member ...
+	(struct tree_label_decl): ... here.
+	(LABEL_DECL_UID): Update to match.
+
+	* tree-cfg.c (dump_function_to_file): Dump eh tree with TDF_EH,
+	not TDF_DETAILS.
+
+	* tree-cfg.c (gimple_redirect_edge_and_branch): Do
+	gimple_try_redirect_by_replacing_jump test after no-op and EH tests.
+
+	* tree-cfg.c (split_edge_bb_loc): Don't disallow placement at
+	dest_prev if the edge is complex.
+
+	* tree-cfg.c (is_ctrl_stmt): Use a switch.
+
+	* tree-cfg.c (gimple_can_merge_blocks_p): Move label and
+	loop latch tests earlier.
+
+	* gimple-iterator.c (gimple_find_edge_insert_loc): Insert
+	before GIMPLE_RETURN, not after its predecessor; insert
+	before GIMPLE_RESX.
+
+	* gimple-iterator.c (gimple_find_edge_insert_loc): Use
+	gimple_seq_empty_p to test for no PHI nodes.
+	* tree-cfg.c (split_critical_edges): Likewise.
+
+	* c-common.h (c_dialect_cxx, c_dialect_objc): Boolify.
+
 2009-09-10  Hariharan Sandanagobalane  <hariharan@picochip.com>
 
 	* final.c (shorten_branches) : Ignore DEBUG_INSN_P instructions

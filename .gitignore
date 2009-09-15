@@ -1,2 +1,7 @@
 root
 build
+*~
+dtc/convert-dtsv0
+dtc/convert-dtsv0-lexer.lex.c
+dtc/dtc-lexer.lex.c
+dtc/version_gen.h

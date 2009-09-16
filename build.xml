@@ -210,6 +210,7 @@
       <arg value="(cd build/src; ../../src/configure --target=moxie-elf --disable-gdbtk --prefix=`(cd ../../root/usr; pwd)`)"/>
     </exec>
     <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/src"/>
       <arg value="-j2"/>
       <arg value="all-binutils"/>
@@ -383,6 +384,7 @@
       <arg value="(cd build/src-uclinux; ../../src/configure --target=moxie-uclinux --disable-gdbtk --prefix=`(cd ../../root/usr; pwd)` --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`)"/>
     </exec>
     <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/src-uclinux"/>
       <arg value="-j2"/>
       <arg value="all-binutils"/>
@@ -440,7 +442,11 @@
     <echo message="===================================================================="/>
     <echo message="====== Building BusyBox ============================================"/>
     <echo message="===================================================================="/>
-    <mkdir dir="build/elf2flt"/>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=busybox"/>
+      <arg value="oldconfig"/>
+    </exec>    
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=busybox"/>
@@ -449,10 +455,9 @@
     <echo message="===================================================================="/>
     <echo message="====== Building initfs for uClinux ================================="/>
     <echo message="===================================================================="/>
-    <mkdir dir="build/gcc-uclinux"/>
     <exec executable="sh">
       <arg value="-c"/>
-      <arg value="(cd initfs/uclinux; cp initramfs.txt.in initramfs.txt"/>
+      <arg value="(cd initfs/uclinux; cp initramfs.txt.in initramfs.txt)"/>
     </exec>
     <replace file="${basedir}/initfs/uclinux/initramfs.txt" token="@TOP@" value="${basedir}" />
     <exec executable="make">

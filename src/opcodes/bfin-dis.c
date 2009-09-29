@@ -1,5 +1,5 @@
 /* Disassemble ADI Blackfin Instructions.
-   Copyright 2005, 2007, 2008 Free Software Foundation, Inc.
+   Copyright 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
 
    This file is part of libopcodes.
 
@@ -122,9 +122,6 @@ static struct
   { "huimm32",   32, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
   { "huimm32e",  32, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 };
-
-int _print_insn_bfin (bfd_vma pc, disassemble_info * outf);
-int print_insn_bfin (bfd_vma pc, disassemble_info * outf);
 
 static char comment = 0;
 static char parallel = 0;
@@ -317,7 +314,6 @@ static enum machine_registers decode_dregs_byte[] =
 };
 
 #define dregs_byte(x) REGNAME (decode_dregs_byte[(x) & 7])
-#define dregs_pair(x) REGNAME (decode_dregs_pair[(x) & 7])
 
 /* P(0..5) SP FP.  */
 static enum machine_registers decode_pregs[] =
@@ -408,9 +404,7 @@ static enum machine_registers decode_statbits[] =
   REG_V, REG_VS, REG_LASTREG, REG_LASTREG, REG_LASTREG, REG_LASTREG, REG_LASTREG, REG_LASTREG,
 };
 
-#define statbits(x)	REGNAME (decode_statbits[(x) & 31])
-#define ignore_bits(x)	REGNAME (decode_ignore_bits[(x) & 7])
-#define ccstat(x)	REGNAME (decode_ccstat[(x) & 0])
+#define statbits(x) REGNAME (decode_statbits[(x) & 31])
 
 /* LC0 LC1.  */
 static enum machine_registers decode_counters[] =
@@ -432,8 +426,17 @@ static enum machine_registers decode_allregs[] =
   REG_A0x, REG_A0w, REG_A1x, REG_A1w, REG_GP, REG_LASTREG, REG_ASTAT, REG_RETS,
   REG_LASTREG, REG_LASTREG, REG_LASTREG, REG_LASTREG, REG_LASTREG, REG_LASTREG, REG_LASTREG, REG_LASTREG,
   REG_LC0, REG_LT0, REG_LB0, REG_LC1, REG_LT1, REG_LB1, REG_CYCLES, REG_CYCLES2,
-  REG_USP, REG_SEQSTAT, REG_SYSCFG, REG_RETI, REG_RETX, REG_RETN, REG_RETE, REG_EMUDAT, REG_LASTREG,
+  REG_USP, REG_SEQSTAT, REG_SYSCFG, REG_RETI, REG_RETX, REG_RETN, REG_RETE, REG_EMUDAT,
+  REG_LASTREG,
 };
+
+#define IS_DREG(g,r)	((g) == 0)
+#define IS_PREG(g,r)	((g) == 1)
+#define IS_AREG(g,r)	((g) == 4 && (r) >= 0 && (r) < 4)
+#define IS_GENREG(g,r)	((g) == 0 || (g) == 1 || IS_AREG (g, r))
+#define IS_DAGREG(g,r)	((g) == 2 || (g) == 3)
+#define IS_SYSREG(g,r) \
+  (((g) == 4 && ((r) == 6 || (r) == 7)) || (g) == 6 || (g) == 7)
 
 #define allregs(x,i)	REGNAME (decode_allregs[((i) << 3) | x])
 #define uimm16s4(x)	fmtconst (c_uimm16s4, x, 0, outf)
@@ -1323,6 +1326,19 @@ decode_REGMV_0 (TIword iw0, disassemble_info *outf)
   int gd  = ((iw0 >> RegMv_gd_bits) & RegMv_gd_mask);
   int src = ((iw0 >> RegMv_src_bits) & RegMv_src_mask);
   int dst = ((iw0 >> RegMv_dst_bits) & RegMv_dst_mask);
+
+  if (!((IS_GENREG (gd, dst) && IS_GENREG (gs, src))
+	|| (IS_GENREG (gd, dst) && IS_DAGREG (gs, src))
+	|| (IS_DAGREG (gd, dst) && IS_GENREG (gs, src))
+	|| (IS_DAGREG (gd, dst) && IS_DAGREG (gs, src))
+	|| (IS_GENREG (gd, dst) && gs == 7 && src == 0)
+	|| (gd == 7 && dst == 0 && IS_GENREG (gs, src))
+	|| (IS_DREG (gd, dst) && IS_SYSREG (gs, src))
+	|| (IS_PREG (gd, dst) && IS_SYSREG (gs, src))
+	|| (IS_SYSREG (gd, dst) && IS_DREG (gs, src))
+	|| (IS_SYSREG (gd, dst) && IS_PREG (gs, src))
+	|| (IS_SYSREG (gd, dst) && gs == 7 && src == 0)))
+    return 0;
 
   OUTS (outf, allregs (dst, gd));
   OUTS (outf, " = ");
@@ -4558,17 +4574,18 @@ decode_pseudodbg_assert_0 (TIword iw0, TIword iw1, disassemble_info *outf)
 {
   /* pseudodbg_assert
      +---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+
-     | 1 | 1 | 1 | 1 | 0 | - | - | - | - | - |.dbgop.....|.regtest...|
+     | 1 | 1 | 1 | 1 | 0 | - | - | - | dbgop |.grp.......|.regtest...|
      |.expected......................................................|
      +---+---+---+---|---+---+---+---|---+---+---+---|---+---+---+---+  */
   int expected = ((iw1 >> PseudoDbg_Assert_expected_bits) & PseudoDbg_Assert_expected_mask);
   int dbgop    = ((iw0 >> (PseudoDbg_Assert_dbgop_bits - 16)) & PseudoDbg_Assert_dbgop_mask);
+  int grp      = ((iw0 >> (PseudoDbg_Assert_grp_bits - 16)) & PseudoDbg_Assert_grp_mask);
   int regtest  = ((iw0 >> (PseudoDbg_Assert_regtest_bits - 16)) & PseudoDbg_Assert_regtest_mask);
 
   if (dbgop == 0)
     {
       OUTS (outf, "DBGA (");
-      OUTS (outf, dregs_lo (regtest));
+      OUTS (outf, regs_lo (regtest, grp));
       OUTS (outf, ", ");
       OUTS (outf, uimm16 (expected));
       OUTS (outf, ")");
@@ -4576,7 +4593,7 @@ decode_pseudodbg_assert_0 (TIword iw0, TIword iw1, disassemble_info *outf)
   else if (dbgop == 1)
     {
       OUTS (outf, "DBGA (");
-      OUTS (outf, dregs_hi (regtest));
+      OUTS (outf, regs_hi (regtest, grp));
       OUTS (outf, ", ");
       OUTS (outf, uimm16 (expected));
       OUTS (outf, ")");
@@ -4584,7 +4601,7 @@ decode_pseudodbg_assert_0 (TIword iw0, TIword iw1, disassemble_info *outf)
   else if (dbgop == 2)
     {
       OUTS (outf, "DBGAL (");
-      OUTS (outf, dregs (regtest));
+      OUTS (outf, allregs (regtest, grp));
       OUTS (outf, ", ");
       OUTS (outf, uimm16 (expected));
       OUTS (outf, ")");
@@ -4592,7 +4609,7 @@ decode_pseudodbg_assert_0 (TIword iw0, TIword iw1, disassemble_info *outf)
   else if (dbgop == 3)
     {
       OUTS (outf, "DBGAH (");
-      OUTS (outf, dregs (regtest));
+      OUTS (outf, allregs (regtest, grp));
       OUTS (outf, ", ");
       OUTS (outf, uimm16 (expected));
       OUTS (outf, ")");
@@ -4602,7 +4619,7 @@ decode_pseudodbg_assert_0 (TIword iw0, TIword iw1, disassemble_info *outf)
   return 4;
 }
 
-int
+static int
 _print_insn_bfin (bfd_vma pc, disassemble_info *outf)
 {
   bfd_byte buf[4];
@@ -4696,7 +4713,7 @@ _print_insn_bfin (bfd_vma pc, disassemble_info *outf)
   else if ((iw0 & 0xFF00) == 0xF900)
     rv = decode_pseudoOChar_0 (iw0, iw1, pc, outf);
 #endif
-  else if ((iw0 & 0xFFC0) == 0xf000 && (iw1 & 0x0000) == 0x0000)
+  else if ((iw0 & 0xFF00) == 0xf000 && (iw1 & 0x0000) == 0x0000)
     rv = decode_pseudodbg_assert_0 (iw0, iw1, outf);
 
   return rv;

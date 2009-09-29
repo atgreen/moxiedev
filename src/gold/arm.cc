@@ -74,18 +74,14 @@ class Output_data_plt_arm;
 // R_ARM_TARGET1
 // R_ARM_PREL31
 // 
-// Coming soon (pending patches):
-// - Defining section symbols __exidx_start and __exidx_stop.
-// - Support interworking.
-// - Mergeing all .ARM.xxx.yyy sections into .ARM.xxx.  Currently, they
-//   are incorrectly merged into an .ARM section.
-//
 // TODOs:
-// - Create a PT_ARM_EXIDX program header for a shared object that
-//   might throw an exception.
+// - Generate various branch stubs.
+// - Support interworking.
+// - Define section symbols __exidx_start and __exidx_stop.
 // - Support more relocation types as needed. 
 // - Make PLTs more flexible for different architecture features like
 //   Thumb-2 and BE8.
+// There are probably a lot more.
 
 // Utilities for manipulating integers of up to 32-bits
 
@@ -116,6 +112,23 @@ namespace utils
     if (no_bits == 32)
       return false;
     int32_t max = (1 << (no_bits - 1)) - 1;
+    int32_t min = -(1 << (no_bits - 1));
+    int32_t as_signed = static_cast<int32_t>(bits);
+    return as_signed > max || as_signed < min;
+  }
+
+  // Detects overflow of an NO_BITS integer stored in a uint32_t when it
+  // fits in the given number of bits as either a signed or unsigned value.
+  // For example, has_signed_unsigned_overflow<8> would check
+  // -128 <= bits <= 255
+  template<int no_bits>
+  static inline bool
+  has_signed_unsigned_overflow(uint32_t bits)
+  {
+    gold_assert(no_bits >= 2 && no_bits <= 32);
+    if (no_bits == 32)
+      return false;
+    int32_t max = static_cast<int32_t>((1U << no_bits) - 1);
     int32_t min = -(1 << (no_bits - 1));
     int32_t as_signed = static_cast<int32_t>(bits);
     return as_signed > max || as_signed < min;
@@ -559,6 +572,26 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
   }
 
  public:
+
+  // R_ARM_ABS8: S + A
+  static inline typename This::Status
+  abs8(unsigned char *view,
+       const Sized_relobj<32, big_endian>* object,
+       const Symbol_value<32>* psymval, bool has_thumb_bit)
+  {
+    typedef typename elfcpp::Swap<8, big_endian>::Valtype Valtype;
+    typedef typename elfcpp::Swap<32, big_endian>::Valtype Reltype;
+    Valtype* wv = reinterpret_cast<Valtype*>(view);
+    Valtype val = elfcpp::Swap<8, big_endian>::readval(wv);
+    Reltype addend = utils::sign_extend<8>(val);
+    Reltype x = This::arm_symbol_value(object, psymval, addend, has_thumb_bit);
+    val = utils::bit_select(val, x, 0xffU);
+    elfcpp::Swap<8, big_endian>::writeval(wv, val);
+    return (utils::has_signed_unsigned_overflow<8>(x)
+	    ? This::STATUS_OVERFLOW
+	    : This::STATUS_OKAY);
+  }
+
   // R_ARM_ABS32: (S + A) | T
   static inline typename This::Status
   abs32(unsigned char *view,
@@ -1078,6 +1111,15 @@ Target_arm<big_endian>::Scan::local(const General_options&,
     case elfcpp::R_ARM_NONE:
       break;
 
+    case elfcpp::R_ARM_ABS8:
+      if (parameters->options().output_is_position_independent())
+	{
+	  // FIXME: Create a dynamic relocation for this location.
+	  gold_error(_("%s: gold bug: need dynamic ABS8 reloc"),
+		     object->name().c_str());
+	}
+      break;
+
     case elfcpp::R_ARM_ABS32:
       // If building a shared library (or a position-independent
       // executable), we need to create a dynamic relocation for
@@ -1189,6 +1231,16 @@ Target_arm<big_endian>::Scan::global(const General_options&,
   switch (r_type)
     {
     case elfcpp::R_ARM_NONE:
+      break;
+
+    case elfcpp::R_ARM_ABS8:
+      // Make a dynamic relocation if necessary.
+      if (gsym->needs_dynamic_reloc(Symbol::ABSOLUTE_REF))
+	{
+	  // FIXME: Create a dynamic relocation for this location.
+	  gold_error(_("%s: gold bug: need dynamic ABS8 reloc for %s"),
+		     object->name().c_str(), gsym->demangled_name().c_str());
+	}
       break;
 
     case elfcpp::R_ARM_ABS32:
@@ -1463,6 +1515,25 @@ Target_arm<big_endian>::do_finalize_sections(Layout* layout)
   // relocs.
   if (this->copy_relocs_.any_saved_relocs())
     this->copy_relocs_.emit(this->rel_dyn_section(layout));
+
+  // For the ARM target, we need to add a PT_ARM_EXIDX segment for
+  // the .ARM.exidx section.
+  if (!layout->script_options()->saw_phdrs_clause()
+      && !parameters->options().relocatable())
+    {
+      Output_section* exidx_section =
+	layout->find_output_section(".ARM.exidx");
+
+      if (exidx_section != NULL
+	  && exidx_section->type() == elfcpp::SHT_ARM_EXIDX)
+	{
+	  gold_assert(layout->find_output_segment(elfcpp::PT_ARM_EXIDX, 0, 0)
+		      == NULL);
+	  Output_segment*  exidx_segment =
+	    layout->make_output_segment(elfcpp::PT_ARM_EXIDX, elfcpp::PF_R);
+	  exidx_segment->add_output_section(exidx_section, elfcpp::PF_R);
+	}
+    }
 }
 
 // Return whether a direct absolute static relocation needs to be applied.
@@ -1578,6 +1649,13 @@ Target_arm<big_endian>::Relocate::relocate(
   switch (r_type)
     {
     case elfcpp::R_ARM_NONE:
+      break;
+
+    case elfcpp::R_ARM_ABS8:
+      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, false,
+				    output_section))
+	reloc_status = Arm_relocate_functions::abs8(view, object, psymval,
+						    has_thumb_bit);
       break;
 
     case elfcpp::R_ARM_ABS32:
@@ -1748,6 +1826,9 @@ Target_arm<big_endian>::Relocatable_size_for_reloc::get_size_for_reloc(
     {
     case elfcpp::R_ARM_NONE:
       return 0;
+
+    case elfcpp::R_ARM_ABS8:
+      return 1;
 
     case elfcpp::R_ARM_ABS32:
     case elfcpp::R_ARM_REL32:

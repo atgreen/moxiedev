@@ -1,6 +1,6 @@
 # Process this file with automake to generate Makefile.in
 
-AUTOMAKE_OPTIONS =
+AUTOMAKE_OPTIONS = foreign
 
 SUBDIRS = po testsuite
 
@@ -11,7 +11,7 @@ ACLOCAL_AMFLAGS = -I ../bfd -I ../config
 AM_CFLAGS = $(WARN_CFLAGS) $(LFS_CFLAGS) $(RANDOM_SEED_CFLAGS)
 AM_CXXFLAGS = $(WARN_CXXFLAGS) $(LFS_CFLAGS) $(RANDOM_SEED_CFLAGS)
 
-INCLUDES = \
+AM_CPPFLAGS = \
 	-I$(srcdir) -I$(srcdir)/../include -I$(srcdir)/../elfcpp \
 	-DLOCALEDIR="\"$(datadir)/locale\"" \
 	-DBINDIR="\"$(bindir)\"" -DTOOLBINDIR="\"$(tooldir)/bin\"" \
@@ -28,6 +28,11 @@ THREADSLIB = -lpthread
 endif
 
 AM_YFLAGS = -d
+
+# Automake 1.10+ disables lex and yacc output file regeneration if
+# maintainer mode is disabled.  Avoid this.
+am__skiplex =
+am__skipyacc =
 
 noinst_PROGRAMS = ld-new
 noinst_LIBRARIES = libgold.a
@@ -51,6 +56,7 @@ CCFILES = \
         gc.cc \
 	gold.cc \
 	gold-threads.cc \
+	icf.cc \
 	incremental.cc \
 	layout.cc \
 	mapfile.cc \
@@ -93,6 +99,7 @@ HFILES = \
         gc.h \
 	gold.h \
 	gold-threads.h \
+	icf.h \
 	layout.h \
 	mapfile.h \
 	merge.h \

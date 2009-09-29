@@ -3168,11 +3168,6 @@ Enable/disable the generation of the sse4.2 instructions.
 @cindex @code{target("sse4a")} attribute
 Enable/disable the generation of the SSE4A instructions.
 
-@item sse5
-@itemx no-sse5
-@cindex @code{target("sse5")} attribute
-Enable/disable the generation of the SSE5 instructions.
-
 @item ssse3
 @itemx no-ssse3
 @cindex @code{target("ssse3")} attribute
@@ -3244,8 +3239,8 @@ options, or you can separate the option with a comma (@code{,}).
 On the 386, the inliner will not inline a function that has different
 target options than the caller, unless the callee has a subset of the
 target options of the caller.  For example a function declared with
-@code{target("sse5")} can inline a function with
-@code{target("sse2")}, since @code{-msse5} implies @code{-msse2}.
+@code{target("sse3")} can inline a function with
+@code{target("sse2")}, since @code{-msse3} implies @code{-msse2}.
 
 The @code{target} attribute is not implemented in GCC versions earlier
 than 4.4, and at present only the 386 uses it.
@@ -5251,7 +5246,7 @@ and most Unix assemblers do.
 Speaking of labels, jumps from one @code{asm} to another are not
 supported.  The compiler's optimizers do not know about these jumps, and
 therefore they cannot take account of them when deciding how to
-optimize.
+optimize.  @xref{Extended asm with goto}.
 
 @cindex macros containing @code{asm}
 Usually the most convenient way to use these @code{asm} instructions is to
@@ -5349,6 +5344,94 @@ test it.  This problem doesn't arise for ordinary ``test'' and
 For reasons similar to those described above, it is not possible to give
 an assembler instruction access to the condition code left by previous
 instructions.
+
+@anchor{Extended asm with goto}
+As of GCC version 4.5, @code{asm goto} may be used to have the assembly
+jump to one or more C labels.  In this form, a fifth section after the
+clobber list contains a list of all C labels to which the assembly may jump.
+Each label operand is implicitly self-named.  The @code{asm} is also assumed
+to fall through to the next statement.
+
+This form of @code{asm} is restricted to not have outputs.  This is due
+to a internal restriction in the compiler that control transfer instructions
+cannot have outputs.  This restriction on @code{asm goto} may be lifted
+in some future version of the compiler.  In the mean time, @code{asm goto}
+may include a memory clobber, and so leave outputs in memory.
+
+@smallexample
+int frob(int x)
+@{
+  int y;
+  asm goto ("frob %%r5, %1; jc %l[error]; mov (%2), %%r5"
+            : : "r"(x), "r"(&y) : "r5", "memory" : error);
+  return y;
+ error:
+  return -1;
+@}
+@end smallexample
+
+In this (inefficient) example, the @code{frob} instruction sets the
+carry bit to indicate an error.  The @code{jc} instruction detects
+this and branches to the @code{error} label.  Finally, the output 
+of the @code{frob} instruction (@code{%r5}) is stored into the memory
+for variable @code{y}, which is later read by the @code{return} statement.
+
+@smallexample
+void doit(void)
+@{
+  int i = 0;
+  asm goto ("mfsr %%r1, 123; jmp %%r1;"
+            ".pushsection doit_table;"
+	    ".long %l0, %l1, %l2, %l3;"
+	    ".popsection"
+	    : : : "r1" : label1, label2, label3, label4);
+  __builtin_unreachable ();
+
+ label1:
+  f1();
+  return;
+ label2:
+  f2();
+  return;
+ label3:
+  i = 1;
+ label4:
+  f3(i);
+@}
+@end smallexample
+
+In this (also inefficient) example, the @code{mfsr} instruction reads
+an address from some out-of-band machine register, and the following
+@code{jmp} instruction branches to that address.  The address read by
+the @code{mfsr} instruction is assumed to have been previously set via
+some application-specific mechanism to be one of the four values stored
+in the @code{doit_table} section.  Finally, the @code{asm} is followed
+by a call to @code{__builtin_unreachable} to indicate that the @code{asm}
+does not in fact fall through.
+
+@smallexample
+#define TRACE1(NUM)                         \
+  do @{                                      \
+    asm goto ("0: nop;"                     \
+              ".pushsection trace_table;"   \
+              ".long 0b, %l0;"              \
+              ".popsection"                 \
+              : : : : trace#NUM);           \
+    if (0) @{ trace#NUM: trace(); @}          \
+  @} while (0)
+#define TRACE  TRACE1(__COUNTER__)
+@end smallexample
+
+In this example (which in fact inspired the @code{asm goto} feature)
+we want on rare occasions to call the @code{trace} function; on other
+occasions we'd like to keep the overhead to the absolute minimum.
+The normal code path consists of a single @code{nop} instruction.
+However, we record the address of this @code{nop} together with the
+address of a label that calls the @code{trace} function.  This allows
+the @code{nop} instruction to be patched at runtime to be an 
+unconditional branch to the stored label.  It is assumed that an
+optimizing compiler will move the labeled block out of line, to
+optimize the fall through path from the @code{asm}.
 
 If you are writing a header file that should be includable in ISO C
 programs, write @code{__asm__} instead of @code{asm}.  @xref{Alternate
@@ -8803,223 +8886,6 @@ v2di __builtin_ia32_extrq  (v2di, v16qi)
 v2di __builtin_ia32_extrqi (v2di, const unsigned int, const unsigned int)
 v2di __builtin_ia32_insertq (v2di, v2di)
 v2di __builtin_ia32_insertqi (v2di, v2di, const unsigned int, const unsigned int)
-@end smallexample
-
-The following built-in functions are available when @option{-msse5} is used.
-All of them generate the machine instruction that is part of the name
-with MMX registers.
-
-@smallexample
-v2df __builtin_ia32_comeqpd (v2df, v2df)
-v2df __builtin_ia32_comeqps (v2df, v2df)
-v4sf __builtin_ia32_comeqsd (v4sf, v4sf)
-v4sf __builtin_ia32_comeqss (v4sf, v4sf)
-v2df __builtin_ia32_comfalsepd (v2df, v2df)
-v2df __builtin_ia32_comfalseps (v2df, v2df)
-v4sf __builtin_ia32_comfalsesd (v4sf, v4sf)
-v4sf __builtin_ia32_comfalsess (v4sf, v4sf)
-v2df __builtin_ia32_comgepd (v2df, v2df)
-v2df __builtin_ia32_comgeps (v2df, v2df)
-v4sf __builtin_ia32_comgesd (v4sf, v4sf)
-v4sf __builtin_ia32_comgess (v4sf, v4sf)
-v2df __builtin_ia32_comgtpd (v2df, v2df)
-v2df __builtin_ia32_comgtps (v2df, v2df)
-v4sf __builtin_ia32_comgtsd (v4sf, v4sf)
-v4sf __builtin_ia32_comgtss (v4sf, v4sf)
-v2df __builtin_ia32_comlepd (v2df, v2df)
-v2df __builtin_ia32_comleps (v2df, v2df)
-v4sf __builtin_ia32_comlesd (v4sf, v4sf)
-v4sf __builtin_ia32_comless (v4sf, v4sf)
-v2df __builtin_ia32_comltpd (v2df, v2df)
-v2df __builtin_ia32_comltps (v2df, v2df)
-v4sf __builtin_ia32_comltsd (v4sf, v4sf)
-v4sf __builtin_ia32_comltss (v4sf, v4sf)
-v2df __builtin_ia32_comnepd (v2df, v2df)
-v2df __builtin_ia32_comneps (v2df, v2df)
-v4sf __builtin_ia32_comnesd (v4sf, v4sf)
-v4sf __builtin_ia32_comness (v4sf, v4sf)
-v2df __builtin_ia32_comordpd (v2df, v2df)
-v2df __builtin_ia32_comordps (v2df, v2df)
-v4sf __builtin_ia32_comordsd (v4sf, v4sf)
-v4sf __builtin_ia32_comordss (v4sf, v4sf)
-v2df __builtin_ia32_comtruepd (v2df, v2df)
-v2df __builtin_ia32_comtrueps (v2df, v2df)
-v4sf __builtin_ia32_comtruesd (v4sf, v4sf)
-v4sf __builtin_ia32_comtruess (v4sf, v4sf)
-v2df __builtin_ia32_comueqpd (v2df, v2df)
-v2df __builtin_ia32_comueqps (v2df, v2df)
-v4sf __builtin_ia32_comueqsd (v4sf, v4sf)
-v4sf __builtin_ia32_comueqss (v4sf, v4sf)
-v2df __builtin_ia32_comugepd (v2df, v2df)
-v2df __builtin_ia32_comugeps (v2df, v2df)
-v4sf __builtin_ia32_comugesd (v4sf, v4sf)
-v4sf __builtin_ia32_comugess (v4sf, v4sf)
-v2df __builtin_ia32_comugtpd (v2df, v2df)
-v2df __builtin_ia32_comugtps (v2df, v2df)
-v4sf __builtin_ia32_comugtsd (v4sf, v4sf)
-v4sf __builtin_ia32_comugtss (v4sf, v4sf)
-v2df __builtin_ia32_comulepd (v2df, v2df)
-v2df __builtin_ia32_comuleps (v2df, v2df)
-v4sf __builtin_ia32_comulesd (v4sf, v4sf)
-v4sf __builtin_ia32_comuless (v4sf, v4sf)
-v2df __builtin_ia32_comultpd (v2df, v2df)
-v2df __builtin_ia32_comultps (v2df, v2df)
-v4sf __builtin_ia32_comultsd (v4sf, v4sf)
-v4sf __builtin_ia32_comultss (v4sf, v4sf)
-v2df __builtin_ia32_comunepd (v2df, v2df)
-v2df __builtin_ia32_comuneps (v2df, v2df)
-v4sf __builtin_ia32_comunesd (v4sf, v4sf)
-v4sf __builtin_ia32_comuness (v4sf, v4sf)
-v2df __builtin_ia32_comunordpd (v2df, v2df)
-v2df __builtin_ia32_comunordps (v2df, v2df)
-v4sf __builtin_ia32_comunordsd (v4sf, v4sf)
-v4sf __builtin_ia32_comunordss (v4sf, v4sf)
-v2df __builtin_ia32_fmaddpd (v2df, v2df, v2df)
-v4sf __builtin_ia32_fmaddps (v4sf, v4sf, v4sf)
-v2df __builtin_ia32_fmaddsd (v2df, v2df, v2df)
-v4sf __builtin_ia32_fmaddss (v4sf, v4sf, v4sf)
-v2df __builtin_ia32_fmsubpd (v2df, v2df, v2df)
-v4sf __builtin_ia32_fmsubps (v4sf, v4sf, v4sf)
-v2df __builtin_ia32_fmsubsd (v2df, v2df, v2df)
-v4sf __builtin_ia32_fmsubss (v4sf, v4sf, v4sf)
-v2df __builtin_ia32_fnmaddpd (v2df, v2df, v2df)
-v4sf __builtin_ia32_fnmaddps (v4sf, v4sf, v4sf)
-v2df __builtin_ia32_fnmaddsd (v2df, v2df, v2df)
-v4sf __builtin_ia32_fnmaddss (v4sf, v4sf, v4sf)
-v2df __builtin_ia32_fnmsubpd (v2df, v2df, v2df)
-v4sf __builtin_ia32_fnmsubps (v4sf, v4sf, v4sf)
-v2df __builtin_ia32_fnmsubsd (v2df, v2df, v2df)
-v4sf __builtin_ia32_fnmsubss (v4sf, v4sf, v4sf)
-v2df __builtin_ia32_frczpd (v2df)
-v4sf __builtin_ia32_frczps (v4sf)
-v2df __builtin_ia32_frczsd (v2df, v2df)
-v4sf __builtin_ia32_frczss (v4sf, v4sf)
-v2di __builtin_ia32_pcmov (v2di, v2di, v2di)
-v2di __builtin_ia32_pcmov_v2di (v2di, v2di, v2di)
-v4si __builtin_ia32_pcmov_v4si (v4si, v4si, v4si)
-v8hi __builtin_ia32_pcmov_v8hi (v8hi, v8hi, v8hi)
-v16qi __builtin_ia32_pcmov_v16qi (v16qi, v16qi, v16qi)
-v2df __builtin_ia32_pcmov_v2df (v2df, v2df, v2df)
-v4sf __builtin_ia32_pcmov_v4sf (v4sf, v4sf, v4sf)
-v16qi __builtin_ia32_pcomeqb (v16qi, v16qi)
-v8hi __builtin_ia32_pcomeqw (v8hi, v8hi)
-v4si __builtin_ia32_pcomeqd (v4si, v4si)
-v2di __builtin_ia32_pcomeqq (v2di, v2di)
-v16qi __builtin_ia32_pcomequb (v16qi, v16qi)
-v4si __builtin_ia32_pcomequd (v4si, v4si)
-v2di __builtin_ia32_pcomequq (v2di, v2di)
-v8hi __builtin_ia32_pcomequw (v8hi, v8hi)
-v8hi __builtin_ia32_pcomeqw (v8hi, v8hi)
-v16qi __builtin_ia32_pcomfalseb (v16qi, v16qi)
-v4si __builtin_ia32_pcomfalsed (v4si, v4si)
-v2di __builtin_ia32_pcomfalseq (v2di, v2di)
-v16qi __builtin_ia32_pcomfalseub (v16qi, v16qi)
-v4si __builtin_ia32_pcomfalseud (v4si, v4si)
-v2di __builtin_ia32_pcomfalseuq (v2di, v2di)
-v8hi __builtin_ia32_pcomfalseuw (v8hi, v8hi)
-v8hi __builtin_ia32_pcomfalsew (v8hi, v8hi)
-v16qi __builtin_ia32_pcomgeb (v16qi, v16qi)
-v4si __builtin_ia32_pcomged (v4si, v4si)
-v2di __builtin_ia32_pcomgeq (v2di, v2di)
-v16qi __builtin_ia32_pcomgeub (v16qi, v16qi)
-v4si __builtin_ia32_pcomgeud (v4si, v4si)
-v2di __builtin_ia32_pcomgeuq (v2di, v2di)
-v8hi __builtin_ia32_pcomgeuw (v8hi, v8hi)
-v8hi __builtin_ia32_pcomgew (v8hi, v8hi)
-v16qi __builtin_ia32_pcomgtb (v16qi, v16qi)
-v4si __builtin_ia32_pcomgtd (v4si, v4si)
-v2di __builtin_ia32_pcomgtq (v2di, v2di)
-v16qi __builtin_ia32_pcomgtub (v16qi, v16qi)
-v4si __builtin_ia32_pcomgtud (v4si, v4si)
-v2di __builtin_ia32_pcomgtuq (v2di, v2di)
-v8hi __builtin_ia32_pcomgtuw (v8hi, v8hi)
-v8hi __builtin_ia32_pcomgtw (v8hi, v8hi)
-v16qi __builtin_ia32_pcomleb (v16qi, v16qi)
-v4si __builtin_ia32_pcomled (v4si, v4si)
-v2di __builtin_ia32_pcomleq (v2di, v2di)
-v16qi __builtin_ia32_pcomleub (v16qi, v16qi)
-v4si __builtin_ia32_pcomleud (v4si, v4si)
-v2di __builtin_ia32_pcomleuq (v2di, v2di)
-v8hi __builtin_ia32_pcomleuw (v8hi, v8hi)
-v8hi __builtin_ia32_pcomlew (v8hi, v8hi)
-v16qi __builtin_ia32_pcomltb (v16qi, v16qi)
-v4si __builtin_ia32_pcomltd (v4si, v4si)
-v2di __builtin_ia32_pcomltq (v2di, v2di)
-v16qi __builtin_ia32_pcomltub (v16qi, v16qi)
-v4si __builtin_ia32_pcomltud (v4si, v4si)
-v2di __builtin_ia32_pcomltuq (v2di, v2di)
-v8hi __builtin_ia32_pcomltuw (v8hi, v8hi)
-v8hi __builtin_ia32_pcomltw (v8hi, v8hi)
-v16qi __builtin_ia32_pcomneb (v16qi, v16qi)
-v4si __builtin_ia32_pcomned (v4si, v4si)
-v2di __builtin_ia32_pcomneq (v2di, v2di)
-v16qi __builtin_ia32_pcomneub (v16qi, v16qi)
-v4si __builtin_ia32_pcomneud (v4si, v4si)
-v2di __builtin_ia32_pcomneuq (v2di, v2di)
-v8hi __builtin_ia32_pcomneuw (v8hi, v8hi)
-v8hi __builtin_ia32_pcomnew (v8hi, v8hi)
-v16qi __builtin_ia32_pcomtrueb (v16qi, v16qi)
-v4si __builtin_ia32_pcomtrued (v4si, v4si)
-v2di __builtin_ia32_pcomtrueq (v2di, v2di)
-v16qi __builtin_ia32_pcomtrueub (v16qi, v16qi)
-v4si __builtin_ia32_pcomtrueud (v4si, v4si)
-v2di __builtin_ia32_pcomtrueuq (v2di, v2di)
-v8hi __builtin_ia32_pcomtrueuw (v8hi, v8hi)
-v8hi __builtin_ia32_pcomtruew (v8hi, v8hi)
-v4df __builtin_ia32_permpd (v2df, v2df, v16qi)
-v4sf __builtin_ia32_permps (v4sf, v4sf, v16qi)
-v4si __builtin_ia32_phaddbd (v16qi)
-v2di __builtin_ia32_phaddbq (v16qi)
-v8hi __builtin_ia32_phaddbw (v16qi)
-v2di __builtin_ia32_phadddq (v4si)
-v4si __builtin_ia32_phaddubd (v16qi)
-v2di __builtin_ia32_phaddubq (v16qi)
-v8hi __builtin_ia32_phaddubw (v16qi)
-v2di __builtin_ia32_phaddudq (v4si)
-v4si __builtin_ia32_phadduwd (v8hi)
-v2di __builtin_ia32_phadduwq (v8hi)
-v4si __builtin_ia32_phaddwd (v8hi)
-v2di __builtin_ia32_phaddwq (v8hi)
-v8hi __builtin_ia32_phsubbw (v16qi)
-v2di __builtin_ia32_phsubdq (v4si)
-v4si __builtin_ia32_phsubwd (v8hi)
-v4si __builtin_ia32_pmacsdd (v4si, v4si, v4si)
-v2di __builtin_ia32_pmacsdqh (v4si, v4si, v2di)
-v2di __builtin_ia32_pmacsdql (v4si, v4si, v2di)
-v4si __builtin_ia32_pmacssdd (v4si, v4si, v4si)
-v2di __builtin_ia32_pmacssdqh (v4si, v4si, v2di)
-v2di __builtin_ia32_pmacssdql (v4si, v4si, v2di)
-v4si __builtin_ia32_pmacsswd (v8hi, v8hi, v4si)
-v8hi __builtin_ia32_pmacssww (v8hi, v8hi, v8hi)
-v4si __builtin_ia32_pmacswd (v8hi, v8hi, v4si)
-v8hi __builtin_ia32_pmacsww (v8hi, v8hi, v8hi)
-v4si __builtin_ia32_pmadcsswd (v8hi, v8hi, v4si)
-v4si __builtin_ia32_pmadcswd (v8hi, v8hi, v4si)
-v16qi __builtin_ia32_pperm (v16qi, v16qi, v16qi)
-v16qi __builtin_ia32_protb (v16qi, v16qi)
-v4si __builtin_ia32_protd (v4si, v4si)
-v2di __builtin_ia32_protq (v2di, v2di)
-v8hi __builtin_ia32_protw (v8hi, v8hi)
-v16qi __builtin_ia32_pshab (v16qi, v16qi)
-v4si __builtin_ia32_pshad (v4si, v4si)
-v2di __builtin_ia32_pshaq (v2di, v2di)
-v8hi __builtin_ia32_pshaw (v8hi, v8hi)
-v16qi __builtin_ia32_pshlb (v16qi, v16qi)
-v4si __builtin_ia32_pshld (v4si, v4si)
-v2di __builtin_ia32_pshlq (v2di, v2di)
-v8hi __builtin_ia32_pshlw (v8hi, v8hi)
-@end smallexample
-
-The following builtin-in functions are available when @option{-msse5}
-is used.  The second argument must be an integer constant and generate
-the machine instruction that is part of the name with the @samp{_imm}
-suffix removed.
-
-@smallexample
-v16qi __builtin_ia32_protb_imm (v16qi, int)
-v4si __builtin_ia32_protd_imm (v4si, int)
-v2di __builtin_ia32_protq_imm (v2di, int)
-v8hi __builtin_ia32_protw_imm (v8hi, int)
 @end smallexample
 
 The following built-in functions are available when @option{-m3dnow} is used.

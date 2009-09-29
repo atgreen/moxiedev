@@ -1,3 +1,326 @@
+2009-09-25  Michael Eager  <eager@eagercon.com>
+
+	* microblaze-dis.c (get_insn_microblaze, microblaze_get_target_address, 
+	microblaze_decode_insn): Add declarations.  
+	(get_delay_slots_microblaze): Remove. 
+
+2009-09-25  Martin Thuresson  <martint@google.com>
+
+	Update soruces to make arc and arm targets compile cleanly with
+	-Wc++-compat:
+	* arc-dis.c Fix casts.
+	* arc-ext.c: Add casts.
+	* arm-dis.c (enum opcode_sentinel_enum): Gave name to anonymous
+	enum.
+
+2009-09-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-gen.c (opcode_modifiers): Remove Vex256.
+	(set_bitfield): Handle XXX=V.
+
+	* i386-opc.h (Vex): Update comments.
+	(Vex256): Removed.
+	(VexNDS): Updated.
+	(i386_opcode_modifier): Change vex to 2 bits.  Remove vex256. 
+
+	* i386-opc.tbl: Replace "Vex|Vex256" with Vex=2.
+	* i386-tbl.h: Regenerated.
+
+2009-09-23  Nick Clifton  <nickc@redhat.com>
+
+	* po/fr.po: Updated French translation.
+
+2009-09-21  Ben Elliston  <bje@au.ibm.com>
+	    Peter Bergner  <bergner@vnet.ibm.com>
+
+	* ppc-dis.c (ppc_opts): Add "ppca2" entry.
+	* ppc-opc.c (powerpc_opcodes): Add eratilx, eratsx, eratsx.,
+	eratre, wchkall, eratwe, ldawx., mdfcrx., mfdcr. mtdcrx., icswx,
+	icswx., mtdcr., dci, wclrone, wclrall, wclr, erativax, tlbsrx.,
+	ici mnemonics.
+	(ERAT_T): New operand.
+	(XWC_MASK): New mask.
+	(XOPL2): New macro.
+	(PPCA2): Define.
+
+2009-09-18  Nick Clifton  <nickc@redhat.com>
+
+	* po/es.po: Updated Spanish translation.
+	* po/vi.po: Updated Vietnamese translation.
+
+2009-09-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-dis.c (OP_E_memory): Don't print '-' in Intel mode if
+	disp == -disp.
+
+2009-09-14  Nick Clifton  <nickc@redhat.com>
+
+	* po/nl.po: Updated Dutch translation.
+
+2009-09-11  Nick Clifton  <nickc@redhat.com>
+
+	* po/opcodes.pot: Updated by the Translation project.
+
+2009-09-11  Martin Thuresson  <martint@google.com>
+
+	Updated sources to compile cleanly with -Wc++-compat:
+	* ld.h (enum endian_enum,enum symbolic_enum,enum dynamic_list_enum): Move to top level.
+	* ldcref.c: Add casts.
+	* ldctor.c: Add casts.
+	* ldexp.c
+	* ldexp.h (enum node_tree_enum,enum phase_enum): Move to top level.
+	* ldlang.c: Add casts. (lang_insert_orphan): Use enum name instead of integer.
+	* ldlang.h (enum statement_enum): Move to top level.
+	* ldmain.c: Add casts.
+	* ldwrite.c: Add casts.
+	* lexsup.c: Add casts. (enum control_enum): Move to top level.
+	* mri.c: Add casts. (mri_draw_tree): Use enum name instead of integer.
+
+2009-09-10  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+	
+	* s390-dis.c (print_insn_s390): Avoid 'long long'.
+
+2009-09-10  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+	
+	* s390-dis.c (s390_extract_operand): Remove the shift for pcrel operands.
+	(print_insn_s390): Signextend and shift pcrel operands before printing.
+
+2009-09-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-dis.c (vex_len_table): Change VEX_LEN_AE_R_X_M0 to
+	VEX_LEN_AE_R_X_M_0 in comments.
+
+2009-09-08  DJ Delorie  <dj@redhat.com>
+
+	* mep-opc.c: Regenerate.
+
+2009-09-08  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* z8kgen.c (struct op): Replace unused flavor with id.
+	(opt): Remove extra xorb entry.
+	(func): Use id field as fallback.
+	(sub): Return new string, caller changed.
+	(internal): Allocate end marker.  Assign unique id before sorting.
+	(gas): Likewise.  Fix loop end condition.
+	* z8k-opc.h: Regenerate.
+
+2009-09-08  Alan Modra  <amodra@bigpond.net.au>
+
+	* ppc-opc.c (powerpc_macros <extrdi>): Allow n+b of 64.
+
+2009-09-07  Alan Modra  <amodra@bigpond.net.au>
+
+	* z8kgen.c (func): Fix thinko last patch.
+
+2009-09-07  Alan Modra  <amodra@bigpond.net.au>
+
+	* z8kgen.c (func): Stabilize qsort of identically named entries.
+	* z8k-opc.h: Regenerate.
+
+2009-09-07  Tristan Gingold  <gingold@adacore.com>
+
+	* po/opcodes.pot: Regenerate.
+
+2009-09-07  Alan Modra  <amodra@bigpond.net.au>
+
+	* configure.in (BUILD_LIBS, BUILD_LIB_DEPS): Define and subst.
+	* configure: Regenerate.
+	* Makefile.am (LIBIBERTY, BUILD_LIBIBERTY, BUILD_LIBINTL): Delete.
+	(BUILD_LIBS, BUILD_LIB_DEPS): Define.  Use..
+	(i386-gen, ia64-gen, z8kgen): ..here.
+	* Makefile.in: Regenerate.
+
+2009-09-07  Tristan Gingold  <gingold@adacore.com>
+
+	* z8k-opc.h: Regenerate.
+
+2009-09-05  Martin Thuresson  <martin@mtme.org>
+
+	* ia64-dis.c (print_insn_ia64): Update code to use renamed member.
+	* m88k-dis.c (m88kdis): Rename variable class to in_class.
+	* tic80-opc.c (tic80_symbol_to_value, tic80_value_to_symbol):
+	Rename argument class to symbol_class.
+
+2009-09-04  Jie Zhang  <jie.zhang@analog.com>
+
+	* bfin-dis.c (decode_pseudodbg_assert_0): Change according
+	to the new encoding of DBGA, DBGAH, and DBGAL.
+	(_print_insn_bfin): Likewise.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* bfin-dis.c (_print_insn_bfin): Don't declare.
+	(print_insn_bfin): Don't declare.
+	(dregs_pair): Remove.
+	(ignore_bits): Remove.
+	(ccstat): Remove.
+
+2009-09-03  Jie Zhang  <jie.zhang@analog.com>
+
+	* bfin-dis.c (IS_DREG): Define.
+	(IS_PREG): Define.
+	(IS_AREG): Define.
+	(IS_GENREG): Define.
+	(IS_DAGREG): Define.
+	(IS_SYSREG): Define.
+	(decode_REGMV_0): Check illegal register move instructions.
+
+2009-09-03  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* Makefile.am (BUILD_LIBINTL): New variable.
+	(i386-gen$(EXEEXT_FOR_BUILD)): Use it.
+	(ia64-gen$(EXEEXT_FOR_BUILD)): And here.
+	(z8kgen$(EXEEXT_FOR_BUILD)): And here.
+	* Makefile.in: Regenerate.
+
+2009-09-01  DJ Delorie  <dj@redhat.com>
+
+	* mep-asm.c: Regenerate.
+	* mep-desc.c: Regenerate.
+	* mep-opc.c: Regenerate.
+
+2009-09-01  Tristan Gingold  <gingold@adacore.com>
+
+	* makefile.vms: Ported to Itanium VMS.  Remove useless targets and
+	dependencies.  Remove unused FORMAT variable.
+	* configure.com: New file to create build.com DCL script for
+	Itanium VMS or Alpha VMS.
+
+2009-08-29  Martin Thuresson  <martin@mtme.org>
+
+	* cris-dis.c (bytes_to_skip): Update code to use new name.
+	* i386-dis.c (putop): Update code to use new name.
+	* i386-gen.c (process_i386_opcodes): Update code to use
+	new name.
+	* i386-opc.h (struct template): Rename struct template to
+	insn_template. Update code accordingly.
+	* i386-tbl.h (i386_optab): Update type to use new name.
+	* ia64-dis.c (print_insn_ia64): Rename variable template
+	to template_val.
+	* tic30-dis.c (struct instruction, get_tic30_instruction):
+	Update code to use new name.
+	* tic54x-dis.c (has_lkaddr, get_insn_size)
+	(print_parallel_instruction, print_insn_tic54x, tic54x_get_insn):
+	Update code to use new name.
+	* tic54x-opc.c (tic54x_unknown_opcode, tic54x_optab):
+	Update type to new name.
+	* z8kgen.c (internal, gas): Rename variable new to new_op.
+
+2009-08-28  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* Makefile.am (COMPILE_FOR_BUILD): Remove BUILD_CPPFLAGS.
+	Replace BUILD_CFLAGS with CFLAGS_FOR_BUILD.
+	(LINK_FOR_BUILD): Replace BUILD_CFLAGS/BUILD_LDFLAGS with
+	CFLAGS_FOR_BUILD/LDFLAGS_FOR_BUILD.
+	* Makefile.in: Regenerated.
+
+2009-08-27  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (bfdlibdir, bfdincludedir): Move definition ...
+	[INSTALL_LIBBFD]: ... here, ...
+	[INSTALL_LIBBFD]: ... and empty overrides here.
+	[!INSTALL_LIBBFD]: (rpath_bfdlibdir): New variable.
+	[!INSTALL_LIBBFD] (libbfd_la_LDFLAGS): Use it.
+	* Makefile.in: Regenerate.
+	* configure: Regenerate.
+
+2009-08-26  Philippe De Muyter  <phdm@macqel.be>
+
+	* m68k-dis.c (print_insn_arg): Add movecr register names for
+	coldfire v4e families.
+
+2009-08-25  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (SUBDIRS): Build '.' before 'po'.
+	(COMPILE_FOR_BUILD, LINK_FOR_BUILD, BUILD_LIBIBERTY)
+	(MOSTLYCLEANFILES, MAINTAINERCLEANFILES): New variables.
+	(i386-gen$(EXEEXT_FOR_BUILD)): Renamed from i386-gen, rewrite
+	using *BUILD variables, depend upon $(BUILD_LIBIBERTY).
+	(i386-gen.o): New rule.
+	($(srcdir)/i386-init.h): Adjust.
+	(i386-opc.lo): Depend on $(srcdir)/i386-tbl.h.
+	(ia64-gen$(EXEEXT_FOR_BUILD)): Rename from ia64-gen, adjust likewise.
+	(ia64-gen.o): New rule.
+	(ia64_asmtab_deps): New variable.
+	($(srcdir)/ia64-asmtab.c): Use it; adjust likewise.
+	(ia64-opc.lo): Depend on $(srcdir)/ia64-asmtab.c.
+	(s390-mkopc$(EXEEXT_FOR_BUILD)): Rename from s390-mkopc, adjust
+	likewise.
+	(s390-opc.tab): Adjust.
+	(z8kgen$(EXEEXT_FOR_BUILD), z8kgen.o, $(srcdir)/z8k-opc.h): New
+	rules.
+	(z8k-dis.lo): Depend on $(srcdir)/z8k-opc.h.
+	* Makefile.in: Regenerate.
+	* z8kgen.c (gas): Avoid '/*' in comment.
+	* z8k-opc.h (func): Regenerate.
+
+2009-08-24  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (TARGET_LIBOPCODES_CFILES): New variable, taken
+	from $(CFILES), sorted, with dis-buf.c, dis-init.c, disassemble.c,
+	i386-gen.c, ia64-opc-a.c, ia64-opc-b.c, ia64-opc-f.c, ia64-opc-i.c,
+	ia64-opc-m.c, ia64-opc-d.c, ia64-gen.c, ia64-asmtab.c removed, and
+	msp430-dis.c added.
+	(LIBOPCODES_CFILES): New variable, adding to
+	TARGET_LIBOPCODES_CFILES also non-target library sources.
+	(CFILES): Factorize based on $(LIBOPCODES_CFILES), adding generator
+	files.
+	(ALL_MACHINES): Factorize based on $(TARGET_LIBOPCODES_CFILES).
+	(EXTRA_libopcodes_la_SOURCES): Use $(LIBOPCODES_CFILES).
+	* Makefile.in: Regenerate.
+	* po/POTFILES.in: Regenerate.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.am (libopcodes_la_LDFLAGS): Initialize early.
+	[INSTALL_LIBBFD] (bfdlib_LTLIBRARIES): Set only in this condition.
+	[INSTALL_LIBBFD] (bfdinclude_DATA): New.
+	[!INSTALL_LIBBFD] (noinst_LTLIBRARIES): New.
+	[!INSTALL_LIBBFD] (libopcodes_la_LDFLAGS): Ensure libopcodes.la
+	is built shared even if it is not to be installed.
+	(install-bfdlibLTLIBRARIES,uninstall-bfdlibLTLIBRARIES)
+	(install_libopcodes, uninstall_libopcodes): Remove.
+	(AM_CPPFLAGS): Renamed from ...
+	(INCLUDES): ... this.
+	* Makefile.in: Regenerate.
+
+	* Makefile.am (AUTOMAKE_OPTIONS): Remove 1.9 and cygnus, add
+	1.11, foreign, no-dist.
+	(MKDEP, m32c_opc_h): Remove variables.
+	(disassemble.lo): Rewrite using automake-style dependency
+	tracking rules; only list the dependency upon the primary source
+	file, but no included headers.
+	(m32c-asm.lo, m32c-desc.lo, m32c-dis.lo, m32c-ibld.lo, m32c-opc.lo)
+	(i386-gen.o, ia64-gen.o): Remove dependency statements.
+	(EXTRA_libopcodes_la_SOURCES): New variable, list $(CFILES) to
+	ensure all dependency fragments are included in the Makefile.
+	(s390-opc.lo): Depend on s390-opc.tab.
+	(DEP, DEP1, dep.sed, dep, dep-in, dep-am): Remove rules.
+	(mkdep section): Remove.
+	* Makefile.in: Regenerate.
+	* po/POTFILES.in: Regenerate.
+
+	* Makefile.am (install-pdf, install-html): Remove.
+	* Makefile.in: Regenerate.
+
+	* Makefile.in: Regenerate.
+	* aclocal.m4: Likewise.
+	* config.in: Likewise.
+	* configure: Likewise.
+
+2009-08-06  Michael Eager <eager@eagercon.com>
+
+	* Makefile.am: Add microblaze-opc.h to HFILES, microblaze-dis.c to
+	CFILES, microblaze-dis.lo to ALL_MACHINES, targets.
+	* Makefile.in: Regenerate.
+	* configure.in: Add bfd_microblaze_arch target.
+	* configure: Regenerate.
+	* disassemble.c: Define ARCH_microblaze, return 
+	print_insn_microblaze().
+	* microblaze-dis.c: New MicroBlaze disassembler.
+	* microblaze-opc.h: New MicroBlaze opcode definitions.
+	* microblaze-opcm.h: New MicroBlaze opcode types.
+
 2009-07-25  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* configure.in: Handle bfd_l1om_arch.

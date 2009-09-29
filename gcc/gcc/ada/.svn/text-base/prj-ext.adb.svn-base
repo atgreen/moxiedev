@@ -23,63 +23,33 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with System.OS_Lib; use System.OS_Lib;
 with Hostparm;
-with Makeutl;  use Makeutl;
-with Osint;    use Osint;
+with Makeutl;       use Makeutl;
+with Osint;         use Osint;
+with Prj.Tree;      use Prj.Tree;
 with Sdefault;
-with Table;
-
-with GNAT.HTable;
 
 package body Prj.Ext is
 
-   Ada_Project_Path : constant String := "ADA_PROJECT_PATH";
-   --  Name of alternate env. variable that contain path name(s) of directories
-   --  where project files may reside. GPR_PROJECT_PATH has precedence over
-   --  ADA_PROJECT_PATH.
-
-   Gpr_Prj_Path : constant String_Access := Getenv (Gpr_Project_Path);
-   Ada_Prj_Path : constant String_Access := Getenv (Ada_Project_Path);
-   --  The path name(s) of directories where project files may reside.
-   --  May be empty.
-
    No_Project_Default_Dir : constant String := "-";
+   --  Indicator in the project path to indicate that the default search
+   --  directories should not be added to the path
 
-   Current_Project_Path : String_Access;
-   --  The project path. Initialized by procedure Initialize_Project_Path
-   --  below.
+   Uninitialized_Prefix : constant String := '#' & Path_Separator;
+   --  Prefix to indicate that the project path has not been initilized yet.
+   --  Must be two characters long
 
-   procedure Initialize_Project_Path;
+   procedure Initialize_Project_Path (Tree : Prj.Tree.Project_Node_Tree_Ref);
    --  Initialize Current_Project_Path
-
-   package Htable is new GNAT.HTable.Simple_HTable
-     (Header_Num => Header_Num,
-      Element    => Name_Id,
-      No_Element => No_Name,
-      Key        => Name_Id,
-      Hash       => Hash,
-      Equal      => "=");
-   --  External references are stored in this hash table, either by procedure
-   --  Add (directly or through a call to function Check) or by function
-   --  Value_Of when an environment variable is found non empty. Value_Of
-   --  first for external reference in this table, before checking the
-   --  environment. Htable is emptied (reset) by procedure Reset.
-
-   package Search_Directories is new Table.Table
-     (Table_Component_Type => Name_Id,
-      Table_Index_Type     => Natural,
-      Table_Low_Bound      => 1,
-      Table_Initial        => 4,
-      Table_Increment      => 100,
-      Table_Name           => "Prj.Ext.Search_Directories");
-   --  The table for the directories specified with -aP switches
 
    ---------
    -- Add --
    ---------
 
    procedure Add
-     (External_Name : String;
+     (Tree          : Prj.Tree.Project_Node_Tree_Ref;
+      External_Name : String;
       Value         : String)
    is
       The_Key   : Name_Id;
@@ -92,34 +62,45 @@ package body Prj.Ext is
       Name_Buffer (1 .. Name_Len) := External_Name;
       Canonical_Case_File_Name (Name_Buffer (1 .. Name_Len));
       The_Key := Name_Find;
-      Htable.Set (The_Key, The_Value);
+      Name_To_Name_HTable.Set (Tree.External_References, The_Key, The_Value);
    end Add;
 
-   -----------
    ----------------------------------
    -- Add_Search_Project_Directory --
    ----------------------------------
 
-   procedure Add_Search_Project_Directory (Path : String) is
+   procedure Add_Search_Project_Directory
+     (Tree : Prj.Tree.Project_Node_Tree_Ref;
+      Path : String)
+   is
+      Tmp : String_Access;
    begin
-      Name_Len := 0;
-      Add_Str_To_Name_Buffer (Path);
-      Search_Directories.Append (Name_Find);
+      if Tree.Project_Path = null then
+         Tree.Project_Path := new String'(Uninitialized_Prefix & Path);
+      else
+         Tmp := Tree.Project_Path;
+         Tree.Project_Path := new String'(Tmp.all & Path_Separator & Path);
+         Free (Tmp);
+      end if;
    end Add_Search_Project_Directory;
 
+   -----------
    -- Check --
    -----------
 
-   function Check (Declaration : String) return Boolean is
+   function Check
+     (Tree        : Prj.Tree.Project_Node_Tree_Ref;
+      Declaration : String) return Boolean
+   is
    begin
       for Equal_Pos in Declaration'Range loop
          if Declaration (Equal_Pos) = '=' then
             exit when Equal_Pos = Declaration'First;
-            exit when Equal_Pos = Declaration'Last;
             Add
-              (External_Name =>
+              (Tree          => Tree,
+               External_Name =>
                  Declaration (Declaration'First .. Equal_Pos - 1),
-               Value =>
+               Value         =>
                  Declaration (Equal_Pos + 1 .. Declaration'Last));
             return True;
          end if;
@@ -132,41 +113,56 @@ package body Prj.Ext is
    -- Initialize_Project_Path --
    -----------------------------
 
-   procedure Initialize_Project_Path is
+   procedure Initialize_Project_Path (Tree : Prj.Tree.Project_Node_Tree_Ref) is
       Add_Default_Dir : Boolean := True;
       First           : Positive;
       Last            : Positive;
       New_Len         : Positive;
       New_Last        : Positive;
 
+      Ada_Project_Path : constant String := "ADA_PROJECT_PATH";
+      Gpr_Project_Path : constant String := "GPR_PROJECT_PATH";
+      --  Name of alternate env. variable that contain path name(s) of
+      --  directories where project files may reside. GPR_PROJECT_PATH has
+      --  precedence over ADA_PROJECT_PATH.
+
+      Gpr_Prj_Path : String_Access := Getenv (Gpr_Project_Path);
+      Ada_Prj_Path : String_Access := Getenv (Ada_Project_Path);
+      --  The path name(s) of directories where project files may reside.
+      --  May be empty.
+
    begin
-      --  The current directory is always first
+      --  The current directory is always first in the search path. Since the
+      --  Project_Path currently starts with '#:' as a sign that it isn't
+      --  initialized, we simply replace '#' with '.'
 
-      Name_Len := 1;
-      Name_Buffer (Name_Len) := '.';
+      if Tree.Project_Path = null then
+         Tree.Project_Path := new String'('.' & Path_Separator);
+      else
+         Tree.Project_Path (Tree.Project_Path'First) := '.';
+      end if;
 
-      --  If there are directories in the Search_Directories table, add them
+      --  Then the reset of the project path (if any) currently contains the
+      --  directories added through Add_Search_Project_Directory
 
-      for J in 1 .. Search_Directories.Last loop
-         Name_Len := Name_Len + 1;
-         Name_Buffer (Name_Len) := Path_Separator;
-         Add_Str_To_Name_Buffer
-           (Get_Name_String (Search_Directories.Table (J)));
-      end loop;
-
-      --  If environment variable is defined and not empty, add its content
+      --  If environment variables are defined and not empty, add their content
 
       if Gpr_Prj_Path.all /= "" then
-         Name_Len := Name_Len + 1;
-         Name_Buffer (Name_Len) := Path_Separator;
-         Add_Str_To_Name_Buffer (Gpr_Prj_Path.all);
+         Add_Search_Project_Directory (Tree, Gpr_Prj_Path.all);
       end if;
 
+      Free (Gpr_Prj_Path);
+
       if Ada_Prj_Path.all /= "" then
-         Name_Len := Name_Len + 1;
-         Name_Buffer (Name_Len) := Path_Separator;
-         Add_Str_To_Name_Buffer (Ada_Prj_Path.all);
+         Add_Search_Project_Directory (Tree, Ada_Prj_Path.all);
       end if;
+
+      Free (Ada_Prj_Path);
+
+      --  Copy to Name_Buffer, since we will need to manipulate the path
+
+      Name_Len := Tree.Project_Path'Length;
+      Name_Buffer (1 .. Name_Len) := Tree.Project_Path.all;
 
       --  Scan the directory path to see if "-" is one of the directories.
       --  Remove each occurrence of "-" and set Add_Default_Dir to False.
@@ -239,6 +235,8 @@ package body Prj.Ext is
          First := Last + 1;
       end loop;
 
+      Free (Tree.Project_Path);
+
       --  Set the initial value of Current_Project_Path
 
       if Add_Default_Dir then
@@ -260,7 +258,7 @@ package body Prj.Ext is
                end if;
 
             else
-               Current_Project_Path :=
+               Tree.Project_Path :=
                  new String'(Name_Buffer (1 .. Name_Len) & Path_Separator &
                              Prefix.all &
                              ".." &  Directory_Separator &
@@ -272,8 +270,8 @@ package body Prj.Ext is
          end;
       end if;
 
-      if Current_Project_Path = null then
-         Current_Project_Path := new String'(Name_Buffer (1 .. Name_Len));
+      if Tree.Project_Path = null then
+         Tree.Project_Path := new String'(Name_Buffer (1 .. Name_Len));
       end if;
    end Initialize_Project_Path;
 
@@ -281,32 +279,36 @@ package body Prj.Ext is
    -- Project_Path --
    ------------------
 
-   function Project_Path return String is
+   function Project_Path (Tree : Project_Node_Tree_Ref) return String is
    begin
-      if Current_Project_Path = null then
-         Initialize_Project_Path;
+      if Tree.Project_Path = null
+        or else Tree.Project_Path (Tree.Project_Path'First) = '#'
+      then
+         Initialize_Project_Path (Tree);
       end if;
 
-      return Current_Project_Path.all;
+      return Tree.Project_Path.all;
    end Project_Path;
 
    -----------
    -- Reset --
    -----------
 
-   procedure Reset is
+   procedure Reset (Tree : Prj.Tree.Project_Node_Tree_Ref) is
    begin
-      Htable.Reset;
+      Name_To_Name_HTable.Reset (Tree.External_References);
    end Reset;
 
    ----------------------
    -- Set_Project_Path --
    ----------------------
 
-   procedure Set_Project_Path (New_Path : String) is
+   procedure Set_Project_Path
+     (Tree     : Project_Node_Tree_Ref;
+      New_Path : String) is
    begin
-      Free (Current_Project_Path);
-      Current_Project_Path := new String'(New_Path);
+      Free (Tree.Project_Path);
+      Tree.Project_Path := new String'(New_Path);
    end Set_Project_Path;
 
    --------------
@@ -314,7 +316,8 @@ package body Prj.Ext is
    --------------
 
    function Value_Of
-     (External_Name : Name_Id;
+     (Tree          : Prj.Tree.Project_Node_Tree_Ref;
+      External_Name : Name_Id;
       With_Default  : Name_Id := No_Name)
       return          Name_Id
    is
@@ -325,7 +328,8 @@ package body Prj.Ext is
       Canonical_Case_File_Name (Name);
       Name_Len := Name'Length;
       Name_Buffer (1 .. Name_Len) := Name;
-      The_Value := Htable.Get (Name_Find);
+      The_Value :=
+        Name_To_Name_HTable.Get (Tree.External_References, Name_Find);
 
       if The_Value /= No_Name then
          return The_Value;
@@ -341,7 +345,8 @@ package body Prj.Ext is
             Name_Len := Env_Value'Length;
             Name_Buffer (1 .. Name_Len) := Env_Value.all;
             The_Value := Name_Find;
-            Htable.Set (External_Name, The_Value);
+            Name_To_Name_HTable.Set
+              (Tree.External_References, External_Name, The_Value);
             Free (Env_Value);
             return The_Value;
 

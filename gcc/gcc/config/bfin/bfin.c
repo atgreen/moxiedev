@@ -1396,7 +1396,7 @@ bfin_expand_prologue (void)
     }
   expand_prologue_reg_save (spreg, all, false);
 
-  do_link (spreg, frame_size, false);
+  do_link (spreg, frame_size, all);
 
   if (TARGET_ID_SHARED_LIBRARY
       && !TARGET_SEP_DATA
@@ -1425,7 +1425,7 @@ bfin_expand_epilogue (int need_return, int eh_return, bool sibcall_p)
       return;
     }
 
-  do_unlink (spreg, get_frame_size (), false, e);
+  do_unlink (spreg, get_frame_size (), all, e);
 
   expand_epilogue_reg_restore (spreg, all, false);
 
@@ -2094,37 +2094,67 @@ bfin_function_ok_for_sibcall (tree decl ATTRIBUTE_UNUSED,
   return !called_func->local || this_func->local;
 }
 
-/* Emit RTL insns to initialize the variable parts of a trampoline at
-   TRAMP. FNADDR is an RTX for the address of the function's pure
-   code.  CXT is an RTX for the static chain value for the function.  */
+/* Write a template for a trampoline to F.  */
 
-void
-initialize_trampoline (rtx tramp, rtx fnaddr, rtx cxt)
+static void
+bfin_asm_trampoline_template (FILE *f)
 {
-  rtx t1 = copy_to_reg (fnaddr);
-  rtx t2 = copy_to_reg (cxt);
-  rtx addr;
+  if (TARGET_FDPIC)
+    {
+      fprintf (f, "\t.dd\t0x00000000\n");	/* 0 */
+      fprintf (f, "\t.dd\t0x00000000\n");	/* 0 */
+      fprintf (f, "\t.dd\t0x0000e109\n");	/* p1.l = fn low */
+      fprintf (f, "\t.dd\t0x0000e149\n");	/* p1.h = fn high */
+      fprintf (f, "\t.dd\t0x0000e10a\n");	/* p2.l = sc low */
+      fprintf (f, "\t.dd\t0x0000e14a\n");	/* p2.h = sc high */
+      fprintf (f, "\t.dw\t0xac4b\n");		/* p3 = [p1 + 4] */
+      fprintf (f, "\t.dw\t0x9149\n");		/* p1 = [p1] */
+      fprintf (f, "\t.dw\t0x0051\n");		/* jump (p1)*/
+    }
+  else
+    {
+      fprintf (f, "\t.dd\t0x0000e109\n");	/* p1.l = fn low */
+      fprintf (f, "\t.dd\t0x0000e149\n");	/* p1.h = fn high */
+      fprintf (f, "\t.dd\t0x0000e10a\n");	/* p2.l = sc low */
+      fprintf (f, "\t.dd\t0x0000e14a\n");	/* p2.h = sc high */
+      fprintf (f, "\t.dw\t0x0051\n");		/* jump (p1)*/
+    }
+}
+
+/* Emit RTL insns to initialize the variable parts of a trampoline at
+   M_TRAMP. FNDECL is the target function.  CHAIN_VALUE is an RTX for
+   the static chain value for the function.  */
+
+static void
+bfin_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
+{
+  rtx t1 = copy_to_reg (XEXP (DECL_RTL (fndecl), 0));
+  rtx t2 = copy_to_reg (chain_value);
+  rtx mem;
   int i = 0;
+
+  emit_block_move (m_tramp, assemble_trampoline_template (),
+		   GEN_INT (TRAMPOLINE_SIZE), BLOCK_OP_NORMAL);
 
   if (TARGET_FDPIC)
     {
-      rtx a = memory_address (Pmode, plus_constant (tramp, 8));
-      addr = memory_address (Pmode, tramp);
-      emit_move_insn (gen_rtx_MEM (SImode, addr), a);
+      rtx a = force_reg (Pmode, plus_constant (XEXP (m_tramp, 0), 8));
+      mem = adjust_address (m_tramp, Pmode, 0);
+      emit_move_insn (mem, a);
       i = 8;
     }
 
-  addr = memory_address (Pmode, plus_constant (tramp, i + 2));
-  emit_move_insn (gen_rtx_MEM (HImode, addr), gen_lowpart (HImode, t1));
+  mem = adjust_address (m_tramp, HImode, i + 2);
+  emit_move_insn (mem, gen_lowpart (HImode, t1));
   emit_insn (gen_ashrsi3 (t1, t1, GEN_INT (16)));
-  addr = memory_address (Pmode, plus_constant (tramp, i + 6));
-  emit_move_insn (gen_rtx_MEM (HImode, addr), gen_lowpart (HImode, t1));
+  mem = adjust_address (m_tramp, HImode, i + 6);
+  emit_move_insn (mem, gen_lowpart (HImode, t1));
 
-  addr = memory_address (Pmode, plus_constant (tramp, i + 10));
-  emit_move_insn (gen_rtx_MEM (HImode, addr), gen_lowpart (HImode, t2));
+  mem = adjust_address (m_tramp, HImode, i + 10);
+  emit_move_insn (mem, gen_lowpart (HImode, t2));
   emit_insn (gen_ashrsi3 (t2, t2, GEN_INT (16)));
-  addr = memory_address (Pmode, plus_constant (tramp, i + 14));
-  emit_move_insn (gen_rtx_MEM (HImode, addr), gen_lowpart (HImode, t2));
+  mem = adjust_address (m_tramp, HImode, i + 14);
+  emit_move_insn (mem, gen_lowpart (HImode, t2));
 }
 
 /* Emit insns to move operands[1] into operands[0].  */
@@ -2219,6 +2249,8 @@ bool
 bfin_longcall_p (rtx op, int call_cookie)
 {
   gcc_assert (GET_CODE (op) == SYMBOL_REF);
+  if (SYMBOL_REF_WEAK (op))
+    return 1;
   if (call_cookie & CALL_SHORT)
     return 0;
   if (call_cookie & CALL_LONG)
@@ -3834,7 +3866,7 @@ length_for_loop (rtx insn)
 	length = 4;
     }
 
-  if (INSN_P (insn))
+  if (NONDEBUG_INSN_P (insn))
     length += get_attr_length (insn);
 
   return length;
@@ -4071,7 +4103,7 @@ bfin_optimize_loop (loop_info loop)
     {
       for (; last_insn != BB_HEAD (bb);
 	   last_insn = find_prev_insn_start (last_insn))
-	if (INSN_P (last_insn))
+	if (NONDEBUG_INSN_P (last_insn))
 	  break;
 
       if (last_insn != BB_HEAD (bb))
@@ -4835,7 +4867,7 @@ bfin_gen_bundles (void)
 	  int at_end;
 	  rtx delete_this = NULL_RTX;
 
-	  if (INSN_P (insn))
+	  if (NONDEBUG_INSN_P (insn))
 	    {
 	      enum attr_type type = get_attr_type (insn);
 
@@ -5089,6 +5121,8 @@ trapping_loads_p (rtx insn, int np_reg, bool after_np_branch)
 static rtx
 find_load (rtx insn)
 {
+  if (!NONDEBUG_INSN_P (insn))
+    return NULL_RTX;
   if (get_attr_type (insn) == TYPE_MCLD)
     return insn;
   if (GET_MODE (insn) != SImode)
@@ -5209,7 +5243,7 @@ workaround_speculation (void)
 	      delay_needed = 3;
 	    }
 	}
-      else if (INSN_P (insn))
+      else if (NONDEBUG_INSN_P (insn))
 	{
 	  rtx load_insn = find_load (insn);
 	  enum attr_type type = type_for_anomaly (insn);
@@ -5322,7 +5356,7 @@ workaround_speculation (void)
 		  || GET_CODE (pat) == ADDR_DIFF_VEC || asm_noperands (pat) >= 0)
 		continue;
 
-	      if (INSN_P (target))
+	      if (NONDEBUG_INSN_P (target))
 		{
 		  rtx load_insn = find_load (target);
 		  enum attr_type type = type_for_anomaly (target);
@@ -6340,6 +6374,10 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
       if (! target
 	  || !register_operand (target, SImode))
 	target = gen_reg_rtx (SImode);
+      if (! register_operand (op0, SImode))
+	op0 = copy_to_mode_reg (SImode, op0);
+      if (! register_operand (op1, SImode))
+	op1 = copy_to_mode_reg (SImode, op1);
 
       a1reg = gen_rtx_REG (PDImode, REG_A1);
       a0reg = gen_rtx_REG (PDImode, REG_A0);
@@ -6393,6 +6431,7 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
       op0 = expand_expr (arg0, NULL_RTX, VOIDmode, 0);
       op1 = expand_expr (arg1, NULL_RTX, VOIDmode, 0);
       accvec = gen_reg_rtx (V2PDImode);
+      icode = CODE_FOR_flag_macv2hi_parts;
 
       if (! target
 	  || GET_MODE (target) != V2HImode
@@ -6429,6 +6468,7 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
       op1 = expand_expr (arg1, NULL_RTX, VOIDmode, 0);
       op2 = expand_expr (arg2, NULL_RTX, VOIDmode, 0);
       accvec = gen_reg_rtx (V2PDImode);
+      icode = CODE_FOR_flag_macv2hi_parts;
 
       if (! target
 	  || GET_MODE (target) != V2HImode
@@ -6608,5 +6648,10 @@ bfin_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
 
 #undef TARGET_CAN_ELIMINATE
 #define TARGET_CAN_ELIMINATE bfin_can_eliminate
+
+#undef TARGET_ASM_TRAMPOLINE_TEMPLATE
+#define TARGET_ASM_TRAMPOLINE_TEMPLATE bfin_asm_trampoline_template
+#undef TARGET_TRAMPOLINE_INIT
+#define TARGET_TRAMPOLINE_INIT bfin_trampoline_init
 
 struct gcc_target targetm = TARGET_INITIALIZER;

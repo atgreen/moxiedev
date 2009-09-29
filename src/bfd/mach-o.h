@@ -132,7 +132,8 @@ typedef enum bfd_mach_o_load_command_type
   BFD_MACH_O_LC_SEGMENT_SPLIT_INFO = 0x1e, /* Local of info to split seg.  */
   BFD_MACH_O_LC_REEXPORT_DYLIB = 0x1f,  /* Load and re-export lib.  */
   BFD_MACH_O_LC_LAZY_LOAD_DYLIB = 0x20, /* Delay load of lib until use.  */
-  BFD_MACH_O_LC_ENCRYPTION_INFO = 0x21  /* Encrypted segment info.  */
+  BFD_MACH_O_LC_ENCRYPTION_INFO = 0x21, /* Encrypted segment info.  */
+  BFD_MACH_O_LC_DYLD_INFO = 0x22	/* Compressed dyld information.  */
 }
 bfd_mach_o_load_command_type;
 
@@ -165,14 +166,17 @@ bfd_mach_o_cpu_subtype;
 
 typedef enum bfd_mach_o_filetype
 {
-  BFD_MACH_O_MH_OBJECT = 1,
-  BFD_MACH_O_MH_EXECUTE = 2,
-  BFD_MACH_O_MH_FVMLIB = 3,
-  BFD_MACH_O_MH_CORE = 4,
-  BFD_MACH_O_MH_PRELOAD = 5,
-  BFD_MACH_O_MH_DYLIB = 6,
-  BFD_MACH_O_MH_DYLINKER = 7,
-  BFD_MACH_O_MH_BUNDLE = 8
+  BFD_MACH_O_MH_OBJECT      = 0x01,
+  BFD_MACH_O_MH_EXECUTE     = 0x02,
+  BFD_MACH_O_MH_FVMLIB      = 0x03,
+  BFD_MACH_O_MH_CORE        = 0x04,
+  BFD_MACH_O_MH_PRELOAD     = 0x05,
+  BFD_MACH_O_MH_DYLIB       = 0x06,
+  BFD_MACH_O_MH_DYLINKER    = 0x07,
+  BFD_MACH_O_MH_BUNDLE      = 0x08,
+  BFD_MACH_O_MH_DYLIB_STUB  = 0x09,
+  BFD_MACH_O_MH_DSYM        = 0x0a,
+  BFD_MACH_O_MH_KEXT_BUNDLE = 0x0b
 }
 bfd_mach_o_filetype;
 
@@ -768,6 +772,30 @@ typedef struct bfd_mach_o_str_command
 }
 bfd_mach_o_str_command;
 
+typedef struct bfd_mach_o_dyld_info_command
+{
+  /* File offset and size to rebase info.  */
+  unsigned int rebase_off; 
+  unsigned int rebase_size;
+
+  /* File offset and size of binding info.  */
+  unsigned int bind_off;
+  unsigned int bind_size;
+
+  /* File offset and size of weak binding info.  */
+  unsigned int weak_bind_off;
+  unsigned int weak_bind_size;
+
+  /* File offset and size of lazy binding info.  */
+  unsigned int lazy_bind_off;
+  unsigned int lazy_bind_size;
+
+  /* File offset and size of export info.  */
+  unsigned int export_off;
+  unsigned int export_size;
+}
+bfd_mach_o_dyld_info_command;
+
 typedef struct bfd_mach_o_load_command
 {
   bfd_mach_o_load_command_type type;
@@ -786,6 +814,7 @@ typedef struct bfd_mach_o_load_command
     bfd_mach_o_uuid_command uuid;
     bfd_mach_o_linkedit_command linkedit;
     bfd_mach_o_str_command str;
+    bfd_mach_o_dyld_info_command dyld_info;
   }
   command;
 }

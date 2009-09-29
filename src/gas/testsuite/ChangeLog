@@ -1,3 +1,209 @@
+2009-09-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10677
+	* gas/i386/i386.exp: Run x86-64-localpic.
+
+	* gas/i386/x86-64-localpic.d: New.
+	* gas/i386/x86-64-localpic.s: Likewise.
+
+2009-09-23  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/localpic.d: Updated.
+
+2009-09-23  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/i386.exp: Run localpic.
+
+	* gas/i386/localpic.d: New.
+	* gas/i386/localpic.s: Likewise.
+
+2009-09-23  Alan Modra  <amodra@bigpond.net.au>
+
+	* gas/arm/thumbver.d: Tolerate some whitespace differences.
+	* gas/elf/elf.exp: Likewise.
+	* gas/elf/section2.e: Likewise.
+	* gas/elf/section2.e-armeabi: Likewise.
+	* gas/elf/section2.e-armelf: Likewise.
+	* gas/elf/section2.e-m32r: Likewise.
+	* gas/elf/section2.e-mips: Likewise.
+	* gas/elf/section2.e-miwmmxt: Likewise.
+	* gas/elf/section2.e-score: Likewise.
+	* gas/elf/section2.e-xtensa: Likewise.
+	* gas/elf/type-noifunc.e: Likewise.
+	* gas/elf/type.e: Likewise.
+	* gas/ia64/alias-ilp32.d: Likewise.
+	* gas/ia64/alias.d: Likewise.
+	* gas/ia64/global.d: Likewise.
+	* gas/mips/mips16-vis-1.d: Likewise.
+	* gas/mmix/bspec-1.d: Likewise.
+	* gas/mmix/byte-1.d: Likewise.
+	* gas/mmix/comment-1.d: Likewise.
+	* gas/mmix/loc-1.d: Likewise.
+	* gas/mmix/loc-2.d: Likewise.
+	* gas/mmix/loc-3.d: Likewise.
+	* gas/mmix/loc-4.d: Likewise.
+	* gas/mmix/loc-5.d: Likewise.
+	* gas/mmix/loc-6.d: Likewise.
+	* gas/mmix/loc-7.d: Likewise.
+
+2009-09-22  Alan Modra  <amodra@bigpond.net.au>
+
+	* gas/ppc/a2.d: Match PPC64 relocs.
+
+2009-09-21  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* lib/gas-defs.exp (gas_test_error): Mark internal error/assertion
+	failures seen in output as fails.  Also record output being
+	matched for fails.
+
+2009-09-21  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* gas/mips/eret-1.d: Adjust regexps for robustness.
+	* gas/mips/eret-2.d: Likewise.
+	* gas/mips/eret-3.d: Likewise.
+	* gas/mips/eret-1.s: Reformat for readability.  Add a label
+	at the beginning.
+	* gas/mips/eret-2.s: Add a label at the beginning.
+
+2009-09-21  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* gas/mips/eret-1.s: Add trailing padding.
+	* gas/mips/eret-2.s: Likewise.
+	* gas/mips/eret-3.s: Likewise.
+	* gas/mips/eret-1.d: Adjust accordingly.  Force a 32-bit ABI.
+	* gas/mips/eret-2.d: Likewise.
+	* gas/mips/eret-3.d: Likewise.
+
+2009-09-21  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* gas/mips/mips.exp: Fix a typo.
+
+2009-09-21  Ben Elliston  <bje@au.ibm.com>
+	    Peter Bergner  <bergner@vnet.ibm.com>
+
+	* gas/ppc/a2.s: New.
+	* gas/ppc/a2.d: Likewise.
+	* gas/ppc/ppc.exp: Run the a2 dump test.
+
+2009-09-21  Ben Elliston  <bje@au.ibm.com>
+
+	* gas/ppc/e500mc.d: Remove blank line at the end of file.
+
+2009-09-15  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/disp.s: Add an offset test.
+	* gas/i386/x86-64-disp.s: Likewise.
+
+	* gas/i386/intelbad.s: Comment out "byte ptr [1]" test.
+
+	* gas/i386/disp.d: Updated.
+	* gas/i386/disp-intel.d: Likewise.
+	* gas/i386/intelbad.l: Likewise.
+	* gas/i386/x86-64-disp.d: Likewise.
+	* gas/i386/x86-64-disp-intel.d: Likewise.
+
+2009-09-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10637
+	* gas/i386/disp.s: Add tests for Intel syntax.
+	* gas/i386/x86-64-disp.s: Likewise.
+
+	* gas/i386/disp.d: Updated.
+	* gas/i386/intelok.d: Likewise.
+	* gas/i386/x86-64-disp.d: Likewise.
+
+	* gas/i386/disp-intel.d: New.
+	* gas/i386/x86-64-disp-intel.d: Likewise.
+
+	* gas/i386/i386.exp: Run disp-intel and x86-64-disp-intel.
+
+2009-09-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/merom.[ds]: Renamed to ...
+	* gas/i386/ssse3.[ds]: This.
+
+	* gas/i386/nops-1-merom.d: Renamed to ...
+	* gas/i386/nops-1-core2.d: This.
+
+	* gas/i386/nops-2-merom.d: Renamed to ...
+	* gas/i386/nops-2-core2.d: This.
+
+	* gas/i386/prescott.[ds]: Renamed to ...
+	* gas/i386/sse3.[ds]: This.
+
+	* gas/i386/x86-64-merom.[ds]: Renamed to ...
+	* gas/i386/x86-64-ssse3.[ds]: This.
+
+	* gas/i386/x86-64-nops-1-merom.d: Renamed to ...
+	* gas/i386/x86-64-nops-1-core2.d: This.
+
+	* gas/i386/x86-64-prescott.[ds]: Renamed to ...
+	* gas/i386/x86-64-sse3.[ds]: This.
+
+	* gas/i386/i386.exp: Updated.
+
+2009-09-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10636
+	* gas/i386/disp.d: New.
+	* gas/i386/disp.s: Likewise.
+	* gas/i386/x86-64-disp.d: Likewise.
+	* gas/i386/x86-64-disp.s: Likewise.
+
+	* gas/i386/i386.exp: Run disp and x86-64-disp.
+
+	* gas/i386/x86-64-addr32.s: Add high 32bit displacement tests.
+
+	* gas/i386/x86-64-addr32.d: Updated.
+	* gas/i386/x86-64-addr32-intel.d: Likewise.
+	* gas/i386/x86-64-inval.l: Likewise.
+	* gas/i386/x86-64-prescott.d: Likewise.
+
+	* gas/i386/x86-64-inval.s: Add invalid displacement tests.
+
+	* gas/i386/x86-64-prescott.s: Replace 0x90909090 displacement
+	with 0x909090.
+
+2009-09-13  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* gas/mips/jalr2.s, gas/mips/jalr2.d: New test.
+	* gas/mips/jal-svr4pic.d: Don't expect R_MIPS_JALRs to be reduced.
+	* gas/mips/jal-xgot.d: Likewise.
+	* gas/mips/mips-abi32-pic2.d: Likewise.
+	* gas/mips/mips.exp: Run it.
+
+2009-09-13  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* gas/mips/mips16-dwarf2-n32.d: Expect odd addresses.
+
+2009-09-11  Hans-Peter Nilsson  <hp@bitrange.com>
+
+	PR gas/10623
+	* gas/mmix/err-swym1.s, gas/mmix/swym-opreg1.d,
+	gas/mmix/swym-opreg1.s, gas/mmix/swym-opreg2.d,
+	gas/mmix/swym-opreg2.s: New tests.
+	* gas/mmix/odd-1.d: Adjust for reloc change.
+
+2009-09-11  Alan Modra  <amodra@bigpond.net.au>
+
+	* gas/lns/lns-common-1.s: Use two nops between each .loc.
+	* gas/lns/lns.exp: Don't exclude d10v.
+
+2009-09-09  Kaz Kojima  <kkojima@rr.iij4u.or.jp>
+
+	* gas/sh/sh64/syntax-1.s: Regenerate.
+
+2009-09-08  Kaz Kojima  <kkojima@rr.iij4u.or.jp>
+
+	* gas/sh/basic.exp: Add -big to ASFLAGS for sh*l*-*-netbsdelf*.
+
+2009-09-08  Alan Modra  <amodra@bigpond.net.au>
+
+	* gas/d30v/serial2.l: Adjust position of page break.
+	* gas/lns/lns-common-1-alt.d: Match 2009-04-24 change.
+	* gas/mt/ms1-16-003.d: Correct reloc name.
+	* gas/mt/relocs.d: Elide incorrect file format strings.
+
 2009-09-08  Alan Modra  <amodra@bigpond.net.au>
 
 	* gas/all/gas.exp (do_comment): Don't run on m32c.
@@ -1048,9 +1254,9 @@
 2009-01-15  Nick Clifton  <nickc@redhat.com>
 
 	PR 9722
-	* gas/testsuite/gas/arm/archv6m.d: Update expected NOP opcode.
-	* gas/testsuite/gas/arm/pr9722.s: New test.
-	* gas/testsuite/gas/arm/pr9722.d: Expected disassembly.
+	* gas/arm/archv6m.d: Update expected NOP opcode.
+	* gas/arm/pr9722.s: New test.
+	* gas/arm/pr9722.d: Expected disassembly.
 
 2009-01-14  Peter Bergner  <bergner@vnet.ibm.com>
 

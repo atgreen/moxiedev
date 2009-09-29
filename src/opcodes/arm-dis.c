@@ -1,6 +1,6 @@
 /* Instruction printing code for the ARM
    Copyright 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-   2004, 2007, 2009  Free Software Foundation, Inc.
+   2004, 2005, 2006, 2007, 2008, 2009  Free Software Foundation, Inc.
    Contributed by Richard Earnshaw (rwe@pegasus.esprit.ec.org)
    Modification by James G. Smith (jsmith@cygnus.co.uk)
 
@@ -106,7 +106,7 @@ struct opcode16
 			(print "32" when 0)
    %r			print register offset address for wldt/wstr instruction.  */
 
-enum
+enum opcode_sentinel_enum
 {
   SENTINEL_IWMMXT_START = 1,
   SENTINEL_IWMMXT_END,

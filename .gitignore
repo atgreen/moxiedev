@@ -5,3 +5,7 @@ dtc/convert-dtsv0
 dtc/convert-dtsv0-lexer.lex.c
 dtc/dtc-lexer.lex.c
 dtc/version_gen.h
+build.log
+initfs/uclinux/initramfs.txt
+initfs/uclinux/src/init
+initfs/uclinux/src/init.gdb

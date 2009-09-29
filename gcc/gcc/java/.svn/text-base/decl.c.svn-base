@@ -1,7 +1,7 @@
 /* Process declarations and variables for the GNU compiler for the
    Java(TM) language.
    Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007,
-   2005, 2006, 2007, 2008 Free Software Foundation, Inc.
+   2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -508,12 +508,6 @@ create_primitive_vtable (const char *name)
 		  VAR_DECL, get_identifier (buf), ptr_type_node);
   DECL_EXTERNAL (r) = 1;
   return r;
-}
-
-static tree
-do_nothing (tree t)
-{
-  return t;
 }
 
 /* Parse the version string and compute the ABI version number.  */
@@ -1194,18 +1188,8 @@ java_init_decl_processing (void)
 			    build_function_type (long_type_node, t),
 			    0, NOT_BUILT_IN, NULL, NULL_TREE);
 
-  /* Initialize variables for except.c.  */
-  eh_personality_libfunc = init_one_libfunc (USING_SJLJ_EXCEPTIONS
-                                             ? "__gcj_personality_sj0"
-                                             : "__gcj_personality_v0");
-  if (targetm.arm_eabi_unwinder)
-    unwind_resume_libfunc = init_one_libfunc ("__cxa_end_cleanup");
-  else
-    default_init_unwind_resume_libfunc ();
-
-  lang_eh_runtime_type = do_nothing;
-
   initialize_builtins ();
+
   soft_fmod_node = built_in_decls[BUILT_IN_FMOD];
 
   parse_version ();

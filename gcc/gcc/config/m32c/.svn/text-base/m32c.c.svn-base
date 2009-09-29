@@ -422,6 +422,9 @@ m32c_override_options (void)
     }
   else
     target_memregs = 16;
+
+  if (TARGET_A24)
+    flag_ivopts = 0;
 }
 
 /* Defining data structures for per-function information */
@@ -638,6 +641,8 @@ m32c_reg_class_from_constraint (char c ATTRIBUTE_UNUSED, const char *s)
     return R3_REGS;
   if (memcmp (s, "R02", 3) == 0)
     return R02_REGS;
+  if (memcmp (s, "R13", 3) == 0)
+    return R13_REGS;
   if (memcmp (s, "R03", 3) == 0)
     return R03_REGS;
   if (memcmp (s, "Rdi", 3) == 0)
@@ -1717,11 +1722,16 @@ m32c_trampoline_alignment (void)
   return 2;
 }
 
-/* Implements INITIALIZE_TRAMPOLINE.  */
-void
-m32c_initialize_trampoline (rtx tramp, rtx function, rtx chainval)
+/* Implements TARGET_TRAMPOLINE_INIT.  */
+
+#undef TARGET_TRAMPOLINE_INIT
+#define TARGET_TRAMPOLINE_INIT m32c_trampoline_init
+static void
+m32c_trampoline_init (rtx m_tramp, tree fndecl, rtx chainval)
 {
-#define A0(m,i) gen_rtx_MEM (m, plus_constant (tramp, i))
+  rtx function = XEXP (DECL_RTL (fndecl), 0);
+
+#define A0(m,i) adjust_address (m_tramp, m, i)
   if (TARGET_A16)
     {
       /* Note: we subtract a "word" because the moves want signed
@@ -4052,8 +4062,26 @@ m32c_emit_epilogue (void)
       if (!bank_switch_p (cfun->decl) && cfun->machine->intr_pushm)
 	emit_insn (gen_popm (GEN_INT (cfun->machine->intr_pushm)));
 
+      /* The FREIT (Fast REturn from InTerrupt) instruction should be
+         generated only for M32C/M32CM targets (generate the REIT
+         instruction otherwise).  */
       if (fast_interrupt_p (cfun->decl))
-	emit_jump_insn (gen_epilogue_freit ());
+        {
+          /* Check if fast_attribute is set for M32C or M32CM.  */
+          if (TARGET_A24)
+            {
+              emit_jump_insn (gen_epilogue_freit ());
+            }
+          /* If fast_interrupt attribute is set for an R8C or M16C
+             target ignore this attribute and generated REIT
+             instruction.  */
+          else
+	    {
+	      warning (OPT_Wattributes,
+		       "%<fast_interrupt%> attribute directive ignored");
+	      emit_jump_insn (gen_epilogue_reit_16 ());
+	    }
+        }
       else if (TARGET_A16)
 	emit_jump_insn (gen_epilogue_reit_16 ());
       else

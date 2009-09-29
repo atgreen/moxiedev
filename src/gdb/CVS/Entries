@@ -13,12 +13,6 @@ D/tui////
 D/gdbtk////
 D/python////
 D/common////
-D/29k-share////
-D/nindy-share////
-D/nlm////
-D/rdi-share////
-D/signals////
-D/vx-share////
 /COPYING/1.2/Mon Jul  6 10:46:43 2009/-ko/
 /ChangeLog-1990/1.1/Mon Jul  6 10:46:43 2009//
 /ChangeLog-1991/1.1/Mon Jul  6 10:46:43 2009//
@@ -672,6 +666,12 @@ D/vx-share////
 /value.c/1.96/Tue Sep  8 03:29:04 2009//
 /value.h/1.149/Tue Sep  8 03:29:04 2009/-ko/
 /varobj.c/1.147/Tue Sep  8 03:29:04 2009/-ko/
-/version.in/1.2989/Tue Sep  8 03:29:04 2009//
 /xml-tdesc.c/1.17/Tue Sep  8 03:29:04 2009//
 /xtensa-tdep.c/1.39/Tue Sep  8 03:29:04 2009//
+D/29k-share////
+D/nindy-share////
+D/nlm////
+D/rdi-share////
+D/signals////
+D/vx-share////
+/version.in/1.3009/Sun Sep 27 05:22:08 2009//

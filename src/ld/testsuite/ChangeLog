@@ -1,3 +1,308 @@
+2009-09-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10630
+	* ld-alpha/tlsbin.rd: Remove HIDDEN/.hidden on local symbols.
+	* ld-alpha/tlsbinr.rd: Likewise.
+	* ld-alpha/tlspic.rd: Likewise.
+	* ld-cris/libdso-2.d: Likewise.
+	* ld-cris/locref1.d: Likewise.
+	* ld-cris/locref2.d: Likewise.
+	* ld-cris/tls-e-20a.d: Likewise.
+	* ld-cris/tls-e-20.d: Likewise.
+	* ld-cris/tls-e-80.d: Likewise.
+	* ld-cris/tls-gc-68.d: Likewise.
+	* ld-cris/tls-gc-69.d: Likewise.
+	* ld-cris/tls-gc-70.d: Likewise.
+	* ld-cris/tls-gc-75.d: Likewise.
+	* ld-cris/tls-gc-76.d: Likewise.
+	* ld-cris/tls-gc-79.d: Likewise.
+	* ld-cris/tls-gd-1h.d: Likewise.
+	* ld-cris/tls-gd-2h.d: Likewise.
+	* ld-cris/tls-ld-4.d: Likewise.
+	* ld-cris/tls-ld-5.d: Likewise.
+	* ld-cris/tls-ld-6.d: Likewise.
+	* ld-cris/tls-ld-7.d: Likewise.
+	* ld-cris/tls-ldgd-14.d: Likewise.
+	* ld-cris/tls-ldgd-15.d: Likewise.
+	* ld-cris/tls-local-63.d: Likewise.
+	* ld-cris/tls-local-64.d: Likewise.
+	* ld-elf/pr9676.rd: Likewise.
+	* ld-elf/pr9679.rd: Likewise.
+	* ld-elfvsb/hidden2.d: Likewise.
+	* ld-i386/tlsbindesc.rd: Likewise.
+	* ld-i386/tlsbin.rd: Likewise.
+	* ld-i386/tlsdesc.rd: Likewise.
+	* ld-i386/tlsgdesc.rd: Likewise.
+	* ld-i386/tlsnopic.rd: Likewise.
+	* ld-i386/tlspic.rd: Likewise.
+	* ld-ia64/tlsbin.rd: Likewise.
+	* ld-ia64/tlspic.rd: Likewise.
+	* ld-powerpc/tlsexe32.r: Likewise.
+	* ld-powerpc/tlsexe.r: Likewise.
+	* ld-powerpc/tlsexetoc.r: Likewise.
+	* ld-powerpc/tlsso32.r: Likewise.
+	* ld-powerpc/tlsso.r: Likewise.
+	* ld-powerpc/tlstocso.r: Likewise.
+	* ld-s390/tlsbin_64.rd: Likewise.
+	* ld-s390/tlsbin.rd: Likewise.
+	* ld-s390/tlspic_64.rd: Likewise.
+	* ld-s390/tlspic.rd: Likewise.
+	* ld-sparc/gotop32.rd: Likewise.
+	* ld-sparc/gotop64.rd: Likewise.
+	* ld-sparc/tlssunbin32.rd: Likewise.
+	* ld-sparc/tlssunbin64.rd: Likewise.
+	* ld-sparc/tlssunnopic32.rd: Likewise.
+	* ld-sparc/tlssunnopic64.rd: Likewise.
+	* ld-sparc/tlssunpic32.rd: Likewise.
+	* ld-sparc/tlssunpic64.rd: Likewise.
+	* ld-x86-64/tlsbindesc.rd: Likewise.
+	* ld-x86-64/tlsbin.rd: Likewise.
+	* ld-x86-64/tlsdesc.rd: Likewise.
+	* ld-x86-64/tlsgdesc.rd: Likewise.
+	* ld-x86-64/tlspic.rd: Likewise.
+	* ld-xtensa/tlsbin.rd: Likewise.
+	* ld-xtensa/tlspic.rd: Likewise.
+
+	* ld-elf/local1.d: New.
+	* ld-elf/local1.map: Likewise.
+	* ld-elf/local1.s: Likewise.
+	* ld-ia64/local1.d: Likewise.
+	* ld-ia64/local1.map: Likewise.
+	* ld-ia64/local1.s: Likewise.
+
+2009-09-23  Matt Rice  <ratmice@gmail.com>
+
+	* ld-elf/audit.exp: New.
+	* ld-elf/audit.rd: New.
+	* ld-elf/depaudit.rd: New.
+	* ld-elf/depaudit2.rd: New.
+
+2009-09-23  Jie Zhang  <jie.zhang@analog.com>
+
+	* ld-srec/srec.exp: Add xfails for bfin-*-linux-uclibc.
+
+2009-09-23  Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-alpha/tlsbin.rd: Tolerate some whitespace differences.
+	* ld-alpha/tlsbinr.rd: Likewise.
+	* ld-alpha/tlspic.rd: Likewise.
+	* ld-arm/armthumb-lib.sym: Likewise.
+	* ld-arm/farcall-mixed-app.sym: Likewise.
+	* ld-arm/mixed-app.sym: Likewise.
+	* ld-arm/mixed-lib.sym: Likewise.
+	* ld-arm/preempt-app.sym: Likewise.
+	* ld-arm/use-thumb-lib.sym: Likewise.
+	* ld-cris/libdso-2.d: Likewise.
+	* ld-cris/tls-local-63.d: Likewise.
+	* ld-cris/tls-local-64.d: Likewise.
+	* ld-cris/tls-und-38.d: Likewise.
+	* ld-cris/tls-und-42.d: Likewise.
+	* ld-cris/tls-und-46.d: Likewise.
+	* ld-cris/tls-und-50.d: Likewise.
+	* ld-cris/weakref3.d: Likewise.
+	* ld-cris/weakref4.d: Likewise.
+	* ld-elf/empty.d: Likewise.
+	* ld-elf/group1.d: Likewise.
+	* ld-elf/group3a.d: Likewise.
+	* ld-elf/group3b.d: Likewise.
+	* ld-elf/hash.d: Likewise.
+	* ld-elf/warn1.d: Likewise.
+	* ld-elf/warn2.d: Likewise.
+	* ld-elfvers/vers24.rd: Likewise.
+	* ld-elfvsb/hidden0.d: Likewise.
+	* ld-elfvsb/hidden1.d: Likewise.
+	* ld-elfvsb/hidden2.d: Likewise.
+	* ld-elfvsb/internal0.d: Likewise.
+	* ld-elfvsb/internal1.d: Likewise.
+	* ld-elfvsb/protected0.d: Likewise.
+	* ld-elfvsb/protected1.d: Likewise.
+	* ld-i386/tlsbin.rd: Likewise.
+	* ld-i386/tlsbindesc.rd: Likewise.
+	* ld-i386/tlsdesc.rd: Likewise.
+	* ld-i386/tlsgdesc.rd: Likewise.
+	* ld-i386/tlsnopic.rd: Likewise.
+	* ld-i386/tlspic.rd: Likewise.
+	* ld-ia64/tlsbin.rd: Likewise.
+	* ld-ia64/tlspic.rd: Likewise.
+	* ld-mips-elf/got-vers-1.sd: Likewise.
+	* ld-mips-elf/mips16-pic-2.nd: Likewise.
+	* ld-mips-elf/mips16-pic-4a.nd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-1-rel.nd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-1.nd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-3b.nd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-4b.nd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-5b.nd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-6-n32.nd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-6-n64.nd: Likewise.
+	* ld-mips-elf/pic-and-nonpic-6-o32.nd: Likewise.
+	* ld-mips-elf/vxworks1-lib.nd: Likewise.
+	* ld-mmix/bspec1.d: Likewise.
+	* ld-mmix/bspec2.d: Likewise.
+	* ld-mmix/local1.d: Likewise.
+	* ld-mmix/local3.d: Likewise.
+	* ld-mmix/local5.d: Likewise.
+	* ld-mmix/local7.d: Likewise.
+	* ld-mmix/undef-3.d: Likewise.
+	* ld-mn10300/i135409-1.d: Likewise.
+	* ld-mn10300/i135409-2.d: Likewise.
+	* ld-powerpc/tlsexe.r: Likewise.
+	* ld-powerpc/tlsexe32.r: Likewise.
+	* ld-powerpc/tlsexetoc.r: Likewise.
+	* ld-powerpc/tlsso.r: Likewise.
+	* ld-powerpc/tlsso32.r: Likewise.
+	* ld-powerpc/tlstocso.r: Likewise.
+	* ld-powerpc/vxworks1-lib.nd: Likewise.
+	* ld-s390/tlsbin.rd: Likewise.
+	* ld-s390/tlsbin_64.rd: Likewise.
+	* ld-s390/tlspic.rd: Likewise.
+	* ld-s390/tlspic_64.rd: Likewise.
+	* ld-sh/tlsbin-2.d: Likewise.
+	* ld-sh/tlspic-2.d: Likewise.
+	* ld-sh/vxworks1-lib.nd: Likewise.
+	* ld-sh/sh64/crange1.rd: Likewise.
+	* ld-sh/sh64/crange2.rd: Likewise.
+	* ld-sh/sh64/crange3-cmpct.rd: Likewise.
+	* ld-sh/sh64/crange3-media.rd: Likewise.
+	* ld-sh/sh64/crange3.rd: Likewise.
+	* ld-sh/sh64/crangerel1.rd: Likewise.
+	* ld-sh/sh64/crangerel2.rd: Likewise.
+	* ld-sh/sh64/reldl32.rd: Likewise.
+	* ld-sh/sh64/reldl64.rd: Likewise.
+	* ld-sparc/gotop32.rd: Likewise.
+	* ld-sparc/gotop64.rd: Likewise.
+	* ld-sparc/tlssunbin32.rd: Likewise.
+	* ld-sparc/tlssunbin64.rd: Likewise.
+	* ld-sparc/tlssunnopic32.rd: Likewise.
+	* ld-sparc/tlssunnopic64.rd: Likewise.
+	* ld-sparc/tlssunpic32.rd: Likewise.
+	* ld-sparc/tlssunpic64.rd: Likewise.
+	* ld-vxworks/plt-mips1.d: Likewise.
+	* ld-x86-64/tlsbin.rd: Likewise.
+	* ld-x86-64/tlsbindesc.rd: Likewise.
+	* ld-x86-64/tlsdesc.rd: Likewise.
+	* ld-x86-64/tlsgdesc.rd: Likewise.
+	* ld-x86-64/tlspic.rd: Likewise.
+	* ld-xtensa/tlsbin.rd: Likewise.
+	* ld-xtensa/tlspic.rd: Likewise.
+
+2009-09-21  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	PR ld/10681
+	* ld-elf/eh6.d: Expect absolute pointers in shared libraries to
+	be converted into PC-relative form.
+
+2009-09-21  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* ld-mips-elf/eh-frame5.d: Expect PC-relative encodings
+	to include DW_EH_PE_sdata4.
+
+2009-09-21  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* ld-mips-elf/eh-frame1-n32.d: Expect PC-relative encodings
+	to include DW_EH_PE_sdata4.
+	* ld-mips-elf/eh-frame2-n32.d: Likewise.
+	* ld-mips-elf/eh-frame1-n64.d: Expect PC-relative encodings
+	to include DW_EH_PE_sdata8.
+	* ld-mips-elf/eh-frame2-n64.d: Likewise.
+
+2009-09-21  Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-powerpc/tlslib.s: Delete dot-symbol entry syms.  Add
+	__tls_get_addr_opt.
+	* ld-powerpc/tlslib32.s: Add __tls_get_addr_opt.
+	* ld-powerpc/oldtlslib.s: New file, old-abi version of tlslib.s.
+	* ld-powerpc/powerpc.exp: Build old-abi library and use it in
+	two new link tests.
+	* ld-powerpc/tlsexe.d: Update for new __tls_get_addr stub.
+	* ld-powerpc/tlsexe.g, * ld-powerpc/tlsexe.r, *ld-powerpc/tlsexe32.d,
+	* ld-powerpc/tlsexe32.g, * ld-powerpc/tlsexe32.r,
+	* ld-powerpc/tlsexetoc.d, * ld-powerpc/tlsexetoc.g,
+	* ld-powerpc/tlsexetoc.r: Likewise.
+
+2009-09-20  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* ld-mips-elf/elf-rel-got-n64-linux.d: Expect BALs.
+	* ld-mips-elf/elf-rel-xgot-n64-linux.d: Likewise.
+
+2009-09-19  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* ld-mips-elf/eh-frame5.s, ld-mips-elf/eh-frame5.ld,
+	ld-mips-elf/eh-frame5.d: New test.
+	* ld-mips-elf/mips-elf.exp: Run it.
+
+2009-09-18  Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-powerpc/tlsso.d: Update.
+	* ld-powerpc/tlsso.r: Update.
+	* ld-powerpc/tlstocso.d: Update.
+	* ld-powerpc/tlstocso.r: Update.
+
+2009-09-15  Kaz Kojima  <kkojima@rr.iij4u.or.jp>
+
+	* ld-elfcomm/elfcomm.exp: Add appropriate emulation option
+	for sh64*-*-*.
+	* ld-gc/gc.exp (test_gc): Likewise.
+
+2009-09-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-undefined/entry-7.d: New.
+
+2009-09-13  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* ld-mips-elf/eh-frame1-n32.d: Change "the section \.eh_frame"
+	to "the \.eh_frame section".
+	* ld-mips-elf/eh-frame1-n64.d: Likewise.
+	* ld-mips-elf/eh-frame2-n32.d: Likewise.
+	* ld-mips-elf/eh-frame2-n64.d: Likewise.
+	* ld-mips-elf/eh-frame3.d: Likewise.
+	* ld-mips-elf/eh-frame4.d: Likewise.
+	* ld-mips-elf/elf-rel-got-n32.d: Expect bals.
+	* ld-mips-elf/elf-rel-xgot-n32.d: Likewise.
+	* ld-mips-elf/mips-elf.exp: Force the MIPS16 PIC tests to use -mips1.
+
+2009-09-11  Jie Zhang  <jie.zhang@analog.com>
+
+	* ld-elf/warn2.d: `Foo' appears in section 3 when target
+	is bfin-*-linux-uclibc.
+
+2009-09-09  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* ld-arm/farcall-mixed-lib.d: Update.
+
+2009-09-09  Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-elf/sec64k.exp: For frv-linux use "aw" sections.
+	* ld-elf/seg.d: Cater for GNU_STACK segment.
+	* ld-elf/symbol1ref.s: Use data section.
+	* ld-elf/symbol2ref.s: Likewise.
+	* ld-scripts/empty-address-1.d: Don't run on frv-linux.
+	* ld-scripts/empty-address-2a.d: Likewise.
+	* ld-scripts/empty-address-2b.d: Likewise.
+	* ld-scripts/empty-aligned.d: Likewise.
+	* ld-elf/extract-symbol-1sym.d: Tolerate extra target supplied syms.
+	* ld-scripts/sort_b_a-1.d: Likewise.
+	* ld-scripts/sort_b_a.d: Likewise.
+	* ld-scripts/sort_b_a_a-1.d: Likewise.
+	* ld-scripts/sort_b_a_a-2.d: Likewise.
+	* ld-scripts/sort_b_a_a-3.d: Likewise.
+	* ld-scripts/sort_b_a_n-1.d: Likewise.
+	* ld-scripts/sort_b_a_n-2.d: Likewise.
+	* ld-scripts/sort_b_a_n-3.d: Likewise.
+	* ld-scripts/sort_b_n-1.d: Likewise.
+	* ld-scripts/sort_b_n.d: Likewise.
+	* ld-scripts/sort_b_n_a-1.d: Likewise.
+	* ld-scripts/sort_b_n_a-2.d: Likewise.
+	* ld-scripts/sort_b_n_a-3.d: Likewise.
+	* ld-scripts/sort_b_n_n-1.d: Likewise.
+	* ld-scripts/sort_b_n_n-2.d: Likewise.
+	* ld-scripts/sort_b_n_n-3.d: Likewise.
+	* ld-scripts/sort_no-1.d: Likewise.
+	* ld-scripts/sort_no-2.d: Likewise.
+
+2009-09-08  M R Swami Reddy <MR.Swami.Reddy@nsc.com>
+
+        * ld-elf/merge.d: xfail cr16-*-*.
+
 2009-09-08  Alan Modra  <amodra@bigpond.net.au>
 
 	* ld-elf/eh5.d: Don't run on hppa64.  Allow non-pcrel encoding.
@@ -566,7 +871,7 @@
 
 	* ld-arm/arm-elf.exp (armeabitests): Add thumb2-bl-blx-interwork test.
 	* ld-arm/thumb2-bl-blx-interwork.s: New.
-	* ld-arm/thumb2-bl-blx-interwork.d: New.  
+	* ld-arm/thumb2-bl-blx-interwork.d: New.
 
 2009-04-30  Nick Clifton  <nickc@redhat.com>
 

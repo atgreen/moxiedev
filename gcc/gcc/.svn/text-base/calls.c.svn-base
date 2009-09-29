@@ -166,7 +166,7 @@ static void restore_fixed_argument_area (rtx, rtx, int, int);
    CALL_INSN_FUNCTION_USAGE information.  */
 
 rtx
-prepare_call_address (rtx funexp, rtx static_chain_value,
+prepare_call_address (tree fndecl, rtx funexp, rtx static_chain_value,
 		      rtx *call_fusage, int reg_parm_seen, int sibcallp)
 {
   /* Make a valid memory address and copy constants through pseudo-regs,
@@ -187,11 +187,15 @@ prepare_call_address (rtx funexp, rtx static_chain_value,
 
   if (static_chain_value != 0)
     {
-      static_chain_value = convert_memory_address (Pmode, static_chain_value);
-      emit_move_insn (static_chain_rtx, static_chain_value);
+      rtx chain;
 
-      if (REG_P (static_chain_rtx))
-	use_reg (call_fusage, static_chain_rtx);
+      gcc_assert (fndecl);
+      chain = targetm.calls.static_chain (fndecl, false);
+      static_chain_value = convert_memory_address (Pmode, static_chain_value);
+
+      emit_move_insn (chain, static_chain_value);
+      if (REG_P (chain))
+	use_reg (call_fusage, chain);
     }
 
   return funexp;
@@ -376,10 +380,8 @@ emit_call_1 (rtx funexp, tree fntree ATTRIBUTE_UNUSED, tree fndecl ATTRIBUTE_UNU
   if (ecf_flags & ECF_LOOPING_CONST_OR_PURE)
     RTL_LOOPING_CONST_OR_PURE_CALL_P (call_insn) = 1;
 
-  /* If this call can't throw, attach a REG_EH_REGION reg note to that
-     effect.  */
-  if (ecf_flags & ECF_NOTHROW)
-    add_reg_note (call_insn, REG_EH_REGION, const0_rtx);
+  /* Create a nothrow REG_EH_REGION note, if needed.  */
+  make_reg_eh_region_note (call_insn, ecf_flags, 0);
 
   if (ecf_flags & ECF_NORETURN)
     add_reg_note (call_insn, REG_NORETURN, const0_rtx);
@@ -2809,7 +2811,7 @@ expand_call (tree exp, rtx target, int ignore)
 	}
 
       after_args = get_last_insn ();
-      funexp = prepare_call_address (funexp, static_chain_value,
+      funexp = prepare_call_address (fndecl, funexp, static_chain_value,
 				     &call_fusage, reg_parm_seen, pass == 0);
 
       load_register_parameters (args, num_actuals, &call_fusage, flags,
@@ -3737,7 +3739,7 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
   else
     argnum = 0;
 
-  fun = prepare_call_address (fun, NULL, &call_fusage, 0, 0);
+  fun = prepare_call_address (NULL, fun, NULL, &call_fusage, 0, 0);
 
   /* Now load any reg parms into their regs.  */
 

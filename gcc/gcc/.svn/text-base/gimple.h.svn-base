@@ -444,9 +444,6 @@ struct GTY(()) gimple_statement_eh_filter {
   /* [ WORD 1-4 ]  */
   struct gimple_statement_base gsbase;
 
-  /* Subcode: EH_FILTER_MUST_NOT_THROW.  A boolean flag analogous to
-     the tree counterpart.  */
-
   /* [ WORD 5 ]
      Filter types.  */
   tree types;
@@ -456,6 +453,16 @@ struct GTY(()) gimple_statement_eh_filter {
   gimple_seq failure;
 };
 
+
+/* GIMPLE_EH_MUST_NOT_THROW */
+
+struct GTY(()) gimple_statement_eh_mnt {
+  /* [ WORD 1-4 ]  */
+  struct gimple_statement_base gsbase;
+
+  /* [ WORD 5 ] Abort function decl.  */
+  tree fndecl;
+};
 
 /* GIMPLE_PHI */
 
@@ -475,9 +482,10 @@ struct GTY(()) gimple_statement_phi {
 };
 
 
-/* GIMPLE_RESX */
+/* GIMPLE_RESX, GIMPLE_EH_DISPATCH */
 
-struct GTY(()) gimple_statement_resx {
+struct GTY(()) gimple_statement_eh_ctrl
+{
   /* [ WORD 1-4 ]  */
   struct gimple_statement_base gsbase;
 
@@ -545,10 +553,11 @@ struct GTY(()) gimple_statement_asm
   const char *string;
 
   /* [ WORD 10 ]
-       Number of inputs, outputs and clobbers.  */
+       Number of inputs, outputs, clobbers, labels.  */
   unsigned char ni;
   unsigned char no;
-  unsigned short nc;
+  unsigned char nc;
+  unsigned char nl;
 
   /* [ WORD 11 ]
      Operand vector.  NOTE!  This must always be the last field
@@ -714,12 +723,12 @@ struct GTY(()) gimple_statement_omp_atomic_store {
   tree val;
 };
 
+#define DEFGSSTRUCT(SYM, STRUCT, HAS_TREE_OP)	SYM,
 enum gimple_statement_structure_enum {
-#define DEFGSSTRUCT(SYM, STRING)	SYM,
 #include "gsstruct.def"
-#undef DEFGSSTRUCT
     LAST_GSS_ENUM
 };
+#undef DEFGSSTRUCT
 
 
 /* Define the overall contents of a gimple tuple.  It may be any of the
@@ -733,8 +742,9 @@ union GTY ((desc ("gimple_statement_structure (&%h)"))) gimple_statement_d {
   struct gimple_statement_bind GTY ((tag ("GSS_BIND"))) gimple_bind;
   struct gimple_statement_catch GTY ((tag ("GSS_CATCH"))) gimple_catch;
   struct gimple_statement_eh_filter GTY ((tag ("GSS_EH_FILTER"))) gimple_eh_filter;
+  struct gimple_statement_eh_mnt GTY ((tag ("GSS_EH_MNT"))) gimple_eh_mnt;
   struct gimple_statement_phi GTY ((tag ("GSS_PHI"))) gimple_phi;
-  struct gimple_statement_resx GTY ((tag ("GSS_RESX"))) gimple_resx;
+  struct gimple_statement_eh_ctrl GTY ((tag ("GSS_EH_CTRL"))) gimple_eh_ctrl;
   struct gimple_statement_try GTY ((tag ("GSS_TRY"))) gimple_try;
   struct gimple_statement_wce GTY ((tag ("GSS_WCE"))) gimple_wce;
   struct gimple_statement_asm GTY ((tag ("GSS_ASM"))) gimple_asm;
@@ -750,6 +760,14 @@ union GTY ((desc ("gimple_statement_structure (&%h)"))) gimple_statement_d {
 };
 
 /* In gimple.c.  */
+
+/* Offset in bytes to the location of the operand vector.
+   Zero if there is no operand vector for this tuple structure.  */
+extern size_t const gimple_ops_offset_[];
+
+/* Map GIMPLE codes to GSS codes.  */
+extern enum gimple_statement_structure_enum const gss_for_code_[];
+
 gimple gimple_build_return (tree);
 
 gimple gimple_build_assign_stat (tree, tree MEM_STAT_DECL);
@@ -775,14 +793,16 @@ gimple gimple_build_label (tree label);
 gimple gimple_build_goto (tree dest);
 gimple gimple_build_nop (void);
 gimple gimple_build_bind (tree, gimple_seq, tree);
-gimple gimple_build_asm (const char *, unsigned, unsigned, unsigned, ...);
 gimple gimple_build_asm_vec (const char *, VEC(tree,gc) *, VEC(tree,gc) *,
-                             VEC(tree,gc) *);
+                             VEC(tree,gc) *, VEC(tree,gc) *);
 gimple gimple_build_catch (tree, gimple_seq);
 gimple gimple_build_eh_filter (tree, gimple_seq);
+gimple gimple_build_eh_must_not_throw (tree);
 gimple gimple_build_try (gimple_seq, gimple_seq, enum gimple_try_flags);
 gimple gimple_build_wce (gimple_seq);
 gimple gimple_build_resx (int);
+gimple gimple_build_eh_dispatch (int);
+gimple gimple_build_switch_nlabels (unsigned, tree, tree);
 gimple gimple_build_switch (unsigned, tree, tree, ...);
 gimple gimple_build_switch_vec (tree, tree, VEC(tree,heap) *);
 gimple gimple_build_omp_parallel (gimple_seq, tree, tree, tree);
@@ -801,7 +821,6 @@ gimple gimple_build_cdt (tree, tree);
 gimple gimple_build_omp_atomic_load (tree, tree);
 gimple gimple_build_omp_atomic_store (tree);
 gimple gimple_build_predict (enum br_predictor, enum prediction);
-enum gimple_statement_structure_enum gimple_statement_structure (gimple);
 enum gimple_statement_structure_enum gss_for_assign (enum tree_code);
 void sort_case_labels (VEC(tree,heap) *);
 void gimple_set_body (tree, gimple_seq);
@@ -1020,6 +1039,25 @@ static inline enum gimple_code
 gimple_code (const_gimple g)
 {
   return g->gsbase.code;
+}
+
+
+/* Return the GSS code used by a GIMPLE code.  */
+
+static inline enum gimple_statement_structure_enum
+gss_for_code (enum gimple_code code)
+{
+  gcc_assert ((unsigned int)code < LAST_AND_UNUSED_GIMPLE_CODE);
+  return gss_for_code_[code];
+}
+
+
+/* Return which GSS code is used by GS.  */
+
+static inline enum gimple_statement_structure_enum
+gimple_statement_structure (gimple gs)
+{
+  return gss_for_code (gimple_code (gs));
 }
 
 
@@ -1557,16 +1595,15 @@ gimple_set_num_ops (gimple gs, unsigned num_ops)
 static inline tree *
 gimple_ops (gimple gs)
 {
-  /* Offset in bytes to the location of the operand vector in every
-     tuple structure.  Defined in gimple.c  */
-  extern size_t const gimple_ops_offset_[];
-
-  if (!gimple_has_ops (gs))
-    return NULL;
+  size_t off;
 
   /* All the tuples have their operand vector at the very bottom
-     of the structure.  */
-  return ((tree *) ((char *) gs + gimple_ops_offset_[gimple_code (gs)]));
+     of the structure.  Note that those structures that do not
+     have an operand vector have a zero offset.  */
+  off = gimple_ops_offset_[gimple_statement_structure (gs)];
+  gcc_assert (off != 0);
+
+  return (tree *) ((char *) gs + off);
 }
 
 
@@ -2577,6 +2614,14 @@ gimple_asm_nclobbers (const_gimple gs)
   return gs->gimple_asm.nc;
 }
 
+/* Return the number of label operands for GIMPLE_ASM GS.  */
+
+static inline unsigned
+gimple_asm_nlabels (const_gimple gs)
+{
+  GIMPLE_CHECK (gs, GIMPLE_ASM);
+  return gs->gimple_asm.nl;
+}
 
 /* Return input operand INDEX of GIMPLE_ASM GS.  */
 
@@ -2666,6 +2711,26 @@ gimple_asm_set_clobber_op (gimple gs, unsigned index, tree clobber_op)
   gimple_set_op (gs, index + gs->gimple_asm.ni + gs->gimple_asm.no, clobber_op);
 }
 
+/* Return label operand INDEX of GIMPLE_ASM GS.  */
+
+static inline tree
+gimple_asm_label_op (const_gimple gs, unsigned index)
+{
+  GIMPLE_CHECK (gs, GIMPLE_ASM);
+  gcc_assert (index <= gs->gimple_asm.nl);
+  return gimple_op (gs, index + gs->gimple_asm.ni + gs->gimple_asm.nc);
+}
+
+/* Set LABEL_OP to be label operand INDEX in GIMPLE_ASM GS.  */
+
+static inline void
+gimple_asm_set_label_op (gimple gs, unsigned index, tree label_op)
+{
+  GIMPLE_CHECK (gs, GIMPLE_ASM);
+  gcc_assert (index <= gs->gimple_asm.nl);
+  gcc_assert (TREE_CODE (label_op) == TREE_LIST);
+  gimple_set_op (gs, index + gs->gimple_asm.ni + gs->gimple_asm.nc, label_op);
+}
 
 /* Return the string representing the assembly instruction in
    GIMPLE_ASM GS.  */
@@ -2838,25 +2903,14 @@ gimple_eh_filter_set_failure (gimple gs, gimple_seq failure)
   gs->gimple_eh_filter.failure = failure;
 }
 
-/* Return the EH_FILTER_MUST_NOT_THROW flag.  */
+/* Get the function decl to be called by the MUST_NOT_THROW region.  */
 
-static inline bool
-
-gimple_eh_filter_must_not_throw (gimple gs)
+static inline tree
+gimple_eh_must_not_throw_fndecl (gimple gs)
 {
-  GIMPLE_CHECK (gs, GIMPLE_EH_FILTER);
-  return gs->gsbase.subcode != 0;
+  GIMPLE_CHECK (gs, GIMPLE_EH_MUST_NOT_THROW);
+  return gs->gimple_eh_mnt.fndecl;
 }
-
-/* Set the EH_FILTER_MUST_NOT_THROW flag to the value MNTP.  */
-
-static inline void
-gimple_eh_filter_set_must_not_throw (gimple gs, bool mntp)
-{
-  GIMPLE_CHECK (gs, GIMPLE_EH_FILTER);
-  gs->gsbase.subcode = (unsigned int) mntp;
-}
-
 
 /* GIMPLE_TRY accessors. */
 
@@ -3067,7 +3121,7 @@ static inline int
 gimple_resx_region (const_gimple gs)
 {
   GIMPLE_CHECK (gs, GIMPLE_RESX);
-  return gs->gimple_resx.region;
+  return gs->gimple_eh_ctrl.region;
 }
 
 /* Set REGION to be the region number for GIMPLE_RESX GS.  */
@@ -3076,9 +3130,26 @@ static inline void
 gimple_resx_set_region (gimple gs, int region)
 {
   GIMPLE_CHECK (gs, GIMPLE_RESX);
-  gs->gimple_resx.region = region;
+  gs->gimple_eh_ctrl.region = region;
 }
 
+/* Return the region number for GIMPLE_EH_DISPATCH GS.  */
+
+static inline int
+gimple_eh_dispatch_region (const_gimple gs)
+{
+  GIMPLE_CHECK (gs, GIMPLE_EH_DISPATCH);
+  return gs->gimple_eh_ctrl.region;
+}
+
+/* Set REGION to be the region number for GIMPLE_EH_DISPATCH GS.  */
+
+static inline void
+gimple_eh_dispatch_set_region (gimple gs, int region)
+{
+  GIMPLE_CHECK (gs, GIMPLE_EH_DISPATCH);
+  gs->gimple_eh_ctrl.region = region;
+}
 
 /* Return the number of labels associated with the switch statement GS.  */
 
@@ -4227,6 +4298,14 @@ gimple_nop_p (const_gimple g)
   return gimple_code (g) == GIMPLE_NOP;
 }
 
+
+/* Return true if GS is a GIMPLE_RESX.  */
+
+static inline bool
+is_gimple_resx (const_gimple gs)
+{
+  return gimple_code (gs) == GIMPLE_RESX;
+}
 
 /* Return the predictor of GIMPLE_PREDICT statement GS.  */
 

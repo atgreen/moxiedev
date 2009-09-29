@@ -89,7 +89,7 @@ package body Prj is
                       Include_Path                   => null,
                       Include_Data_Set               => False,
                       Source_Dirs                    => Nil_String,
-                      Known_Order_Of_Source_Dirs     => True,
+                      Source_Dir_Ranks               => No_Number_List,
                       Object_Directory               => No_Path_Information,
                       Library_TS                     => Empty_Time_Stamp,
                       Exec_Directory                 => No_Path_Information,
@@ -100,6 +100,7 @@ package body Prj is
                       Imported_Projects              => null,
                       All_Imported_Projects          => null,
                       Ada_Include_Path               => null,
+                      Imported_Directories_Switches  => null,
                       Ada_Objects_Path               => null,
                       Objects_Path                   => null,
                       Include_Path_File              => No_Path,
@@ -841,6 +842,7 @@ package body Prj is
    begin
       if Tree /= null then
          Name_List_Table.Free (Tree.Name_Lists);
+         Number_List_Table.Free (Tree.Number_Lists);
          String_Element_Table.Free (Tree.String_Elements);
          Variable_Element_Table.Free (Tree.Variable_Elements);
          Array_Element_Table.Free (Tree.Array_Elements);
@@ -868,6 +870,7 @@ package body Prj is
       --  Visible tables
 
       Name_List_Table.Init          (Tree.Name_Lists);
+      Number_List_Table.Init        (Tree.Number_Lists);
       String_Element_Table.Init     (Tree.String_Elements);
       Variable_Element_Table.Init   (Tree.Variable_Elements);
       Array_Element_Table.Init      (Tree.Array_Elements);

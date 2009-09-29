@@ -257,14 +257,15 @@ typedef union i386_cpu_flags
 #define Rex64			(NoRex64 + 1)
 /* deprecated fp insn, gets a warning */
 #define Ugh			(Rex64 + 1)
-/* insn has VEX prefix. */
+/* insn has VEX prefix:
+	1: 128bit VEX prefix.
+	2: 256bit VEX prefix.
+ */
 #define Vex			(Ugh + 1)
-/* insn has 256bit VEX prefix. */
-#define Vex256			(Vex + 1)
 /* insn has VEX NDS. Register-only source is encoded in Vex prefix.
    We use VexNDS on insns with VEX DDS since the register-only source
    is the second source register.  */
-#define VexNDS			(Vex256 + 1)
+#define VexNDS			(Vex + 1)
 /* insn has VEX NDD. Register destination is encoded in Vex
    prefix. */
 #define VexNDD			(VexNDS + 1)
@@ -336,8 +337,7 @@ typedef struct i386_opcode_modifier
   unsigned int norex64:1;
   unsigned int rex64:1;
   unsigned int ugh:1;
-  unsigned int vex:1;
-  unsigned int vex256:1;
+  unsigned int vex:2;
   unsigned int vexnds:1;
   unsigned int vexndd:1;
   unsigned int vexw0:1;
@@ -524,7 +524,7 @@ typedef union i386_operand_type
   unsigned int array[OTNumOfUints];
 } i386_operand_type;
 
-typedef struct template
+typedef struct insn_template
 {
   /* instruction name sans width suffix ("mov" for movl insns) */
   char *name;
@@ -566,9 +566,9 @@ typedef struct template
      either a register or an immediate operand.  */
   i386_operand_type operand_types[MAX_OPERANDS];
 }
-template;
+insn_template;
 
-extern const template i386_optab[];
+extern const insn_template i386_optab[];
 
 /* these are for register name --> number & type hash lookup */
 typedef struct

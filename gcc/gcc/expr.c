@@ -7110,7 +7110,7 @@ rtx
 expand_expr_real (tree exp, rtx target, enum machine_mode tmode,
 		  enum expand_modifier modifier, rtx *alt_rtl)
 {
-  int rn = -1;
+  int lp_nr = 0;
   rtx ret, last = NULL;
 
   /* Handle ERROR_MARK before anybody tries to access its type.  */
@@ -7123,10 +7123,8 @@ expand_expr_real (tree exp, rtx target, enum machine_mode tmode,
 
   if (flag_non_call_exceptions)
     {
-      rn = lookup_expr_eh_region (exp);
-
-      /* If rn < 0, then either (1) tree-ssa not used or (2) doesn't throw.  */
-      if (rn >= 0)
+      lp_nr = lookup_expr_eh_lp (exp);
+      if (lp_nr)
 	last = get_last_insn ();
     }
 
@@ -7159,7 +7157,7 @@ expand_expr_real (tree exp, rtx target, enum machine_mode tmode,
   /* If using non-call exceptions, mark all insns that may trap.
      expand_call() will mark CALL_INSNs before we get to this code,
      but it doesn't handle libcalls, and these may trap.  */
-  if (rn >= 0)
+  if (lp_nr)
     {
       rtx insn;
       for (insn = next_real_insn (last); insn;
@@ -7170,8 +7168,8 @@ expand_expr_real (tree exp, rtx target, enum machine_mode tmode,
 		 may_trap_p instruction may throw.  */
 	      && GET_CODE (PATTERN (insn)) != CLOBBER
 	      && GET_CODE (PATTERN (insn)) != USE
-	      && (CALL_P (insn) || may_trap_p (PATTERN (insn))))
-	    add_reg_note (insn, REG_EH_REGION, GEN_INT (rn));
+	      && insn_could_throw_p (insn))
+	    make_reg_eh_region_note (insn, 0, lp_nr);
 	}
     }
 
@@ -7239,6 +7237,7 @@ expand_expr_real_2 (sepops ops, rtx target, enum machine_mode tmode,
 
   switch (code)
     {
+    case NON_LVALUE_EXPR:
     case PAREN_EXPR:
     CASE_CONVERT:
       if (treeop0 == error_mark_node)
@@ -9490,7 +9489,6 @@ expand_expr_real_1 (tree exp, rtx target, enum machine_mode tmode,
     case GOTO_EXPR:
     case SWITCH_EXPR:
     case ASM_EXPR:
-    case RESX_EXPR:
       /* Expanded in cfgexpand.c.  */
       gcc_unreachable ();
 
@@ -9518,12 +9516,6 @@ expand_expr_real_1 (tree exp, rtx target, enum machine_mode tmode,
     case EXIT_EXPR:
       /* Lowered by gimplify.c.  */
       gcc_unreachable ();
-
-    case EXC_PTR_EXPR:
-      return get_exception_pointer ();
-
-    case FILTER_EXPR:
-      return get_exception_filter ();
 
     case FDESC_EXPR:
       /* Function descriptors are not valid except for as
@@ -10214,4 +10206,52 @@ const_vector_from_tree (tree exp)
 
   return gen_rtx_CONST_VECTOR (mode, v);
 }
+
+
+/* Build a decl for a EH personality function named NAME. */
+
+tree
+build_personality_function (const char *name)
+{
+  tree decl, type;
+
+  type = build_function_type_list (integer_type_node, integer_type_node,
+				   long_long_unsigned_type_node,
+				   ptr_type_node, ptr_type_node, NULL_TREE);
+  decl = build_decl (UNKNOWN_LOCATION, FUNCTION_DECL,
+		     get_identifier (name), type);
+  DECL_ARTIFICIAL (decl) = 1;
+  DECL_EXTERNAL (decl) = 1;
+  TREE_PUBLIC (decl) = 1;
+
+  /* Zap the nonsensical SYMBOL_REF_DECL for this.  What we're left with
+     are the flags assigned by targetm.encode_section_info.  */
+  SET_SYMBOL_REF_DECL (XEXP (DECL_RTL (decl), 0), NULL);
+
+  return decl;
+}
+
+/* Extracts the personality function of DECL and returns the corresponding
+   libfunc.  */
+
+rtx
+get_personality_function (tree decl)
+{
+  tree personality = DECL_FUNCTION_PERSONALITY (decl);
+  enum eh_personality_kind pk;
+
+  pk = function_needs_eh_personality (DECL_STRUCT_FUNCTION (decl));
+  if (pk == eh_personality_none)
+    return NULL;
+
+  if (!personality
+      && pk == eh_personality_any)
+    personality = lang_hooks.eh_personality ();
+
+  if (pk == eh_personality_lang)
+    gcc_assert (personality != NULL_TREE);
+
+  return XEXP (DECL_RTL (personality), 0);
+}
+
 #include "gt-expr.h"

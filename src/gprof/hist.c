@@ -1,6 +1,6 @@
 /* hist.c  -  Histogram related operations.
 
-   Copyright 1999, 2000, 2001, 2002, 2004, 2005, 2007
+   Copyright 1999, 2000, 2001, 2002, 2004, 2005, 2007, 2009
    Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
@@ -48,6 +48,8 @@ extern void flat_blurb (FILE * fp);
 static histogram *find_histogram (bfd_vma lowpc, bfd_vma highpc);
 static histogram *find_histogram_for_pc (bfd_vma pc);
 
+histogram * histograms;
+unsigned num_histograms;
 double hist_scale;
 static char hist_dimension[16] = "seconds";
 static char hist_dimension_abbrev = 's';
@@ -198,8 +200,8 @@ hist_read_rec (FILE * ifp, const char *filename)
 
       /* This is new record.  Add it to global array and allocate space for
 	 the samples.  */
-      histograms = xrealloc (histograms,
-			     sizeof (histogram) * (num_histograms + 1));
+      histograms = (struct histogram *)
+          xrealloc (histograms, sizeof (histogram) * (num_histograms + 1));
       memcpy (histograms + num_histograms,
 	      &n_record, sizeof (histogram));
       record = &histograms[num_histograms];      

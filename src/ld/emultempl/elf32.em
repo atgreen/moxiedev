@@ -137,7 +137,8 @@ gld${EMULATION_NAME}_load_symbols (lang_input_statement_type *entry)
       || (bfd_get_file_flags (entry->the_bfd) & DYNAMIC) == 0)
     return FALSE;
 
-  bfd_elf_set_dyn_lib_class (entry->the_bfd, link_class);
+  bfd_elf_set_dyn_lib_class (entry->the_bfd,
+                             (enum dynamic_lib_link_class) link_class);
 
   /* Continue on with normal load_symbols processing.  */
   return FALSE;
@@ -156,6 +157,10 @@ static lang_input_statement_type *global_found;
 static struct bfd_link_needed_list *global_vercheck_needed;
 static bfd_boolean global_vercheck_failed;
 
+/* These variables are used to implement target options */
+
+static char *audit; /* colon (typically) separated list of libs */
+static char *depaudit; /* colon (typically) separated list of libs */
 
 /* On Linux, it's possible to have different versions of the same
    shared library linked against different versions of libc.  The
@@ -428,7 +433,7 @@ fragment <<EOF
       && (bfd_elf_get_dyn_lib_class (needed->by) & DYN_NO_ADD_NEEDED) != 0)
     link_class |= DYN_NO_NEEDED | DYN_NO_ADD_NEEDED;
 
-  bfd_elf_set_dyn_lib_class (abfd, link_class);
+  bfd_elf_set_dyn_lib_class (abfd, (enum dynamic_lib_link_class) link_class);
 
   /* Add this file into the symbol table.  */
   if (! bfd_link_add_symbols (abfd, &link_info))
@@ -930,7 +935,7 @@ static bfd_boolean
 gld${EMULATION_NAME}_write_build_id_section (bfd *abfd)
 {
   const struct elf_backend_data *bed = get_elf_backend_data (abfd);
-  struct build_id_info *info =
+  struct build_id_info *info = (struct build_id_info *)
     elf_tdata (abfd)->after_write_object_contents_info;
   asection *asec;
   Elf_Internal_Shdr *i_shdr;
@@ -950,13 +955,13 @@ gld${EMULATION_NAME}_write_build_id_section (bfd *abfd)
   if (i_shdr->contents == NULL)
     {
       if (asec->contents == NULL)
-	asec->contents = xmalloc (asec->size);
+	asec->contents = (unsigned char *) xmalloc (asec->size);
       contents = asec->contents;
     }
   else
     contents = i_shdr->contents + asec->output_offset;
 
-  e_note = (void *) contents;
+  e_note = (Elf_External_Note *) contents;
   size = offsetof (Elf_External_Note, name[sizeof "GNU"]);
   size = (size + 3) & -(bfd_size_type) 4;
   id_bits = contents + size;
@@ -1075,7 +1080,8 @@ gld${EMULATION_NAME}_after_open (void)
 	      if (s != NULL && bfd_set_section_alignment (abfd, s, 2))
 		{
 		  struct elf_obj_tdata *t = elf_tdata (link_info.output_bfd);
-		  struct build_id_info *b = xmalloc (sizeof *b);
+		  struct build_id_info *b =
+                      (struct build_id_info *) xmalloc (sizeof *b);
 
 		  b->style = link_info.emit_note_gnu_build_id;
 		  b->sec = s;
@@ -1394,6 +1400,46 @@ if test x"$LDEMUL_BEFORE_ALLOCATION" != xgld"$EMULATION_NAME"_before_allocation;
   fi
 fragment <<EOF
 
+/* used by before_allocation and handle_option. */
+static void 
+gld${EMULATION_NAME}_append_to_separated_string (char **to, char *optarg)
+{
+  if (*to == NULL)
+    *to = xstrdup (optarg);
+  else
+    {
+      size_t to_len = strlen (*to);
+      size_t optarg_len = strlen (optarg);
+      char *buf;
+      char *cp = *to;
+
+      /* First see whether OPTARG is already in the path.  */
+      do
+	{
+	  if (strncmp (optarg, cp, optarg_len) == 0
+	      && (cp[optarg_len] == 0
+		  || cp[optarg_len] == config.rpath_separator))
+	    /* We found it.  */
+	    break;
+
+	  /* Not yet found.  */
+	  cp = strchr (cp, config.rpath_separator);
+	  if (cp != NULL)
+	    ++cp;
+	}
+      while (cp != NULL);
+
+      if (cp == NULL)
+	{
+	  buf = xmalloc (to_len + optarg_len + 2);
+	  sprintf (buf, "%s%c%s", *to,
+		   config.rpath_separator, optarg);
+	  free (*to);
+	  *to = buf;
+	}
+    }
+}
+
 /* This is called after the sections have been attached to output
    sections, but before any sizes or addresses have been set.  */
 
@@ -1402,6 +1448,7 @@ gld${EMULATION_NAME}_before_allocation (void)
 {
   const char *rpath;
   asection *sinterp;
+  bfd *abfd;
 
   if (link_info.hash->type == bfd_link_elf_hash_table)
     _bfd_elf_tls_setup (link_info.output_bfd, &link_info);
@@ -1416,9 +1463,39 @@ gld${EMULATION_NAME}_before_allocation (void)
   rpath = command_line.rpath;
   if (rpath == NULL)
     rpath = (const char *) getenv ("LD_RUN_PATH");
+
+  for (abfd = link_info.input_bfds; abfd; abfd = abfd->link_next)
+    {
+      const char *audit_libs = elf_dt_audit (abfd);
+
+      /* If the input bfd contains an audit entry, we need to add it as 
+         a dep audit entry.  */
+      if (audit_libs && *audit_libs != '\0')
+	{
+	  char *cp = xstrdup (audit_libs);
+	  do
+	    {
+	      int more = 0;
+	      char *cp2 = strchr (cp, config.rpath_separator);
+
+	      if (cp2)
+		{
+	          *cp2 = '\0';
+		  more = 1;
+		}
+	      
+	      if (cp != NULL && *cp != '\0')
+	        gld${EMULATION_NAME}_append_to_separated_string (&depaudit, cp);
+
+	      cp = more ? ++cp2 : NULL;
+	    }
+	  while (cp != NULL);
+	}
+    }
+
   if (! (bfd_elf_size_dynamic_sections
 	 (link_info.output_bfd, command_line.soname, rpath,
-	  command_line.filter_shlib,
+	  command_line.filter_shlib, audit, depaudit,
 	  (const char * const *) command_line.auxiliary_filters,
 	  &link_info, &sinterp, lang_elf_version_info)))
     einfo ("%P%F: failed to set dynamic section sizes: %E\n");
@@ -1453,7 +1530,7 @@ ${ELF_INTERPRETER_SET_DEFAULT}
 	  continue;
 
 	sz = s->size;
-	msg = xmalloc ((size_t) (sz + 1));
+	msg = (char *) xmalloc ((size_t) (sz + 1));
 	if (! bfd_get_section_contents (is->the_bfd, s,	msg,
 					(file_ptr) 0, sz))
 	  einfo ("%F%B: Can't read contents of section .gnu.warning: %E\n",
@@ -2005,15 +2082,18 @@ fragment <<EOF
 #define OPTION_EXCLUDE_LIBS		(OPTION_EH_FRAME_HDR + 1)
 #define OPTION_HASH_STYLE		(OPTION_EXCLUDE_LIBS + 1)
 #define OPTION_BUILD_ID			(OPTION_HASH_STYLE + 1)
+#define OPTION_AUDIT			(OPTION_BUILD_ID + 1)
 
 static void
 gld${EMULATION_NAME}_add_options
   (int ns, char **shortopts, int nl, struct option **longopts,
    int nrl ATTRIBUTE_UNUSED, struct option **really_longopts ATTRIBUTE_UNUSED)
 {
-  static const char xtra_short[] = "${PARSE_AND_LIST_SHORTOPTS}z:";
+  static const char xtra_short[] = "${PARSE_AND_LIST_SHORTOPTS}z:P:";
   static const struct option xtra_long[] = {
     {"build-id", optional_argument, NULL, OPTION_BUILD_ID},
+    {"audit", required_argument, NULL, OPTION_AUDIT},
+    {"depaudit", required_argument, NULL, 'P'},
 EOF
 
 if test x"$GENERATE_SHLIB_SCRIPT" = xyes; then
@@ -2065,6 +2145,12 @@ gld${EMULATION_NAME}_handle_option (int optc)
       if (strcmp (optarg, "none"))
 	link_info.emit_note_gnu_build_id = xstrdup (optarg);
       break;
+    case OPTION_AUDIT:
+  	gld${EMULATION_NAME}_append_to_separated_string (&audit, optarg); 
+	break;
+    case 'P':
+	gld${EMULATION_NAME}_append_to_separated_string (&depaudit, optarg);
+	break;
 
 EOF
 
@@ -2216,6 +2302,11 @@ gld${EMULATION_NAME}_list_options (FILE * file)
 {
   fprintf (file, _("\
   --build-id[=STYLE]          Generate build ID note\n"));
+  fprintf (file, _("\
+  --audit=AUDITLIB            Specify a library to use for auditing\n"));
+  fprintf (file, _("\
+  -P AUDITLIB, --depaudit=AUDITLIB\n" "\
+                              Specify a library to use for auditing dependencies\n"));
 EOF
 
 if test x"$GENERATE_SHLIB_SCRIPT" = xyes; then

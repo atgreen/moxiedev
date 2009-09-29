@@ -50,6 +50,9 @@ Boston, MA 02110-1301, USA.  */
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
+#ifdef HAVE_INTTYPES_H
+#include <inttypes.h>
+#endif
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
 #endif
@@ -196,7 +199,7 @@ higher_prime_index (unsigned long n)
 static hashval_t
 hash_pointer (const PTR p)
 {
-  return (hashval_t) ((long)p >> 3);
+  return (hashval_t) ((intptr_t)p >> 3);
 }
 
 /* Returns non-zero if P1 and P2 are equal.  */

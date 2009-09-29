@@ -2195,7 +2195,7 @@ static int
 bfd_mach_o_scan_read_str (bfd *abfd, bfd_mach_o_load_command *command)
 {
   bfd_mach_o_str_command *cmd = &command->command.str;
-  char buf[8];
+  char buf[4];
   unsigned long off;
 
   if (bfd_seek (abfd, command->offset + 8, SEEK_SET) != 0
@@ -2211,6 +2211,29 @@ bfd_mach_o_scan_read_str (bfd *abfd, bfd_mach_o_load_command *command)
   if (bfd_seek (abfd, cmd->stroff, SEEK_SET) != 0
       || bfd_bread ((PTR) cmd->str, cmd->str_len, abfd) != cmd->str_len)
     return -1;
+  return 0;
+}
+
+static int
+bfd_mach_o_scan_read_dyld_info (bfd *abfd, bfd_mach_o_load_command *command)
+{
+  bfd_mach_o_dyld_info_command *cmd = &command->command.dyld_info;
+  char buf[40];
+
+  if (bfd_seek (abfd, command->offset + 8, SEEK_SET) != 0
+      || bfd_bread ((PTR) buf, sizeof (buf), abfd) != sizeof (buf))
+    return -1;
+
+  cmd->rebase_off = bfd_get_32 (abfd, buf + 0);
+  cmd->rebase_size = bfd_get_32 (abfd, buf + 4);
+  cmd->bind_off = bfd_get_32 (abfd, buf + 8);
+  cmd->bind_size = bfd_get_32 (abfd, buf + 12);
+  cmd->weak_bind_off = bfd_get_32 (abfd, buf + 16);
+  cmd->weak_bind_size = bfd_get_32 (abfd, buf + 20);
+  cmd->lazy_bind_off = bfd_get_32 (abfd, buf + 24);
+  cmd->lazy_bind_size = bfd_get_32 (abfd, buf + 28);
+  cmd->export_off = bfd_get_32 (abfd, buf + 32);
+  cmd->export_size = bfd_get_32 (abfd, buf + 36);
   return 0;
 }
 
@@ -2382,6 +2405,10 @@ bfd_mach_o_scan_read_command (bfd *abfd, bfd_mach_o_load_command *command)
     case BFD_MACH_O_LC_CODE_SIGNATURE:
     case BFD_MACH_O_LC_SEGMENT_SPLIT_INFO:
       if (bfd_mach_o_scan_read_linkedit (abfd, command) != 0)
+	return -1;
+      break;
+    case BFD_MACH_O_LC_DYLD_INFO:
+      if (bfd_mach_o_scan_read_dyld_info (abfd, command) != 0)
 	return -1;
       break;
     default:
@@ -3054,33 +3081,36 @@ bfd_mach_o_get_name (const bfd_mach_o_xlat_name *table, unsigned long val)
 
 static bfd_mach_o_xlat_name bfd_mach_o_cpu_name[] =
 {
-  { "vax", BFD_MACH_O_CPU_TYPE_VAX},
-  { "mc680x0", BFD_MACH_O_CPU_TYPE_MC680x0},
-  { "i386", BFD_MACH_O_CPU_TYPE_I386},
-  { "mips", BFD_MACH_O_CPU_TYPE_MIPS},
-  { "mc98000", BFD_MACH_O_CPU_TYPE_MC98000},
-  { "hppa", BFD_MACH_O_CPU_TYPE_HPPA},
-  { "arm", BFD_MACH_O_CPU_TYPE_ARM},
-  { "mc88000", BFD_MACH_O_CPU_TYPE_MC88000},
-  { "sparc", BFD_MACH_O_CPU_TYPE_SPARC},
-  { "i860", BFD_MACH_O_CPU_TYPE_I860},
-  { "alpha", BFD_MACH_O_CPU_TYPE_ALPHA},
-  { "powerpc", BFD_MACH_O_CPU_TYPE_POWERPC},
-  { "powerpc_64", BFD_MACH_O_CPU_TYPE_POWERPC_64},
-  { "x86_64", BFD_MACH_O_CPU_TYPE_X86_64},
+  { "vax", BFD_MACH_O_CPU_TYPE_VAX },
+  { "mc680x0", BFD_MACH_O_CPU_TYPE_MC680x0 },
+  { "i386", BFD_MACH_O_CPU_TYPE_I386 },
+  { "mips", BFD_MACH_O_CPU_TYPE_MIPS },
+  { "mc98000", BFD_MACH_O_CPU_TYPE_MC98000 },
+  { "hppa", BFD_MACH_O_CPU_TYPE_HPPA },
+  { "arm", BFD_MACH_O_CPU_TYPE_ARM },
+  { "mc88000", BFD_MACH_O_CPU_TYPE_MC88000 },
+  { "sparc", BFD_MACH_O_CPU_TYPE_SPARC },
+  { "i860", BFD_MACH_O_CPU_TYPE_I860 },
+  { "alpha", BFD_MACH_O_CPU_TYPE_ALPHA },
+  { "powerpc", BFD_MACH_O_CPU_TYPE_POWERPC },
+  { "powerpc_64", BFD_MACH_O_CPU_TYPE_POWERPC_64 },
+  { "x86_64", BFD_MACH_O_CPU_TYPE_X86_64 },
   { NULL, 0}
 };
 
 static bfd_mach_o_xlat_name bfd_mach_o_filetype_name[] = 
 {
-  { "object", BFD_MACH_O_MH_OBJECT},
-  { "execute", BFD_MACH_O_MH_EXECUTE},
-  { "fvmlib", BFD_MACH_O_MH_FVMLIB},
-  { "core", BFD_MACH_O_MH_CORE},
-  { "preload", BFD_MACH_O_MH_PRELOAD},
-  { "dylib", BFD_MACH_O_MH_DYLIB},
-  { "dylinker", BFD_MACH_O_MH_DYLINKER},
-  { "bundle", BFD_MACH_O_MH_BUNDLE},
+  { "object", BFD_MACH_O_MH_OBJECT },
+  { "execute", BFD_MACH_O_MH_EXECUTE },
+  { "fvmlib", BFD_MACH_O_MH_FVMLIB },
+  { "core", BFD_MACH_O_MH_CORE },
+  { "preload", BFD_MACH_O_MH_PRELOAD },
+  { "dylib", BFD_MACH_O_MH_DYLIB },
+  { "dylinker", BFD_MACH_O_MH_DYLINKER },
+  { "bundle", BFD_MACH_O_MH_BUNDLE },
+  { "dylib_stub", BFD_MACH_O_MH_DYLIB_STUB },
+  { "dym", BFD_MACH_O_MH_DSYM },
+  { "kext_bundle", BFD_MACH_O_MH_KEXT_BUNDLE },
   { NULL, 0}
 };
 
@@ -3183,6 +3213,7 @@ static bfd_mach_o_xlat_name bfd_mach_o_load_command_name[] =
   { "reexport_dylib", BFD_MACH_O_LC_REEXPORT_DYLIB},
   { "lazy_load_dylib", BFD_MACH_O_LC_LAZY_LOAD_DYLIB},
   { "encryption_info", BFD_MACH_O_LC_ENCRYPTION_INFO},
+  { "dyld_info", BFD_MACH_O_LC_DYLD_INFO},
   { NULL, 0}
 };
 
@@ -3192,7 +3223,7 @@ bfd_mach_o_print_private_header (bfd *abfd, FILE *file)
   bfd_mach_o_data_struct *mdata = bfd_mach_o_get_data (abfd);
   bfd_mach_o_header *h = &mdata->header;
 
-  fprintf (file, _("Mach-O header:\n"));
+  fputs (_("Mach-O header:\n"), file);
   fprintf (file, _(" magic     : %08lx\n"), h->magic);
   fprintf (file, _(" cputype   : %08lx (%s)\n"), h->cputype,
            bfd_mach_o_get_name (bfd_mach_o_cpu_name, h->cputype));
@@ -3204,7 +3235,7 @@ bfd_mach_o_print_private_header (bfd *abfd, FILE *file)
   fprintf (file, _(" sizeofcmds: %08lx\n"), h->sizeofcmds);
   fprintf (file, _(" flags     : %08lx ("), h->flags);
   bfd_mach_o_print_flags (bfd_mach_o_header_flags_name, h->flags, file);
-  fprintf (file, _(")\n"));
+  fputs (_(")\n"), file);
   fprintf (file, _(" reserved  : %08x\n"), h->reserved);
 }
 
@@ -3215,8 +3246,8 @@ bfd_mach_o_print_section_map (bfd *abfd, FILE *file)
   unsigned int i, j;
   unsigned int sec_nbr = 0;
 
-  fprintf (file, _("Segments and Sections:\n"));
-  fprintf (file, _(" #: Segment name     Section name     Address\n"));
+  fputs (_("Segments and Sections:\n"), file);
+  fputs (_(" #: Segment name     Section name     Address\n"), file);
 
   for (i = 0; i < mdata->header.ncmds; i++)
     {
@@ -3250,6 +3281,26 @@ bfd_mach_o_print_section_map (bfd *abfd, FILE *file)
     }
 }
 
+/* Return the size of an entry for section SEC.
+   Must be called only for symbol pointer section and symbol stubs
+   sections.  */
+
+static unsigned int
+bfd_mach_o_section_get_entry_size (bfd *abfd, bfd_mach_o_section *sec)
+{
+  switch (sec->flags & BFD_MACH_O_SECTION_TYPE_MASK)
+    {
+    case BFD_MACH_O_S_NON_LAZY_SYMBOL_POINTERS:
+    case BFD_MACH_O_S_LAZY_SYMBOL_POINTERS:
+      return bfd_mach_o_wide_p (abfd) ? 8 : 4;
+    case BFD_MACH_O_S_SYMBOL_STUBS:
+      return sec->reserved2;
+    default:
+      BFD_FAIL ();
+      return 0;
+    }
+}
+
 /* Return the number of indirect symbols for a section.
    Must be called only for symbol pointer section and symbol stubs
    sections.  */
@@ -3259,22 +3310,11 @@ bfd_mach_o_section_get_nbr_indirect (bfd *abfd, bfd_mach_o_section *sec)
 {
   unsigned int elsz;
 
-  switch (sec->flags & BFD_MACH_O_SECTION_TYPE_MASK)
-    {
-    case BFD_MACH_O_S_NON_LAZY_SYMBOL_POINTERS:
-    case BFD_MACH_O_S_LAZY_SYMBOL_POINTERS:
-      elsz = bfd_mach_o_wide_p (abfd) ? 8 : 4;
-      return sec->size / elsz;
-    case BFD_MACH_O_S_SYMBOL_STUBS:
-      elsz = sec->reserved2;
-      if (elsz)
-        return sec->size / elsz;
-      else
-        return 0;
-    default:
-      BFD_FAIL ();
-      return 0;
-    }
+  elsz = bfd_mach_o_section_get_entry_size (abfd, sec);
+  if (elsz == 0)
+    return 0;
+  else
+    return sec->size / elsz;
 }
 
 static void
@@ -3487,6 +3527,8 @@ bfd_mach_o_print_dysymtab (bfd *abfd ATTRIBUTE_UNUSED,
           bfd_mach_o_section *sec = mdata->sections[i];
           unsigned int j, first, last;
           bfd_mach_o_symtab_command *symtab = mdata->symtab;
+          bfd_vma addr;
+          bfd_vma entry_size;
       
           switch (sec->flags & BFD_MACH_O_SECTION_TYPE_MASK)
             {
@@ -3495,13 +3537,17 @@ bfd_mach_o_print_dysymtab (bfd *abfd ATTRIBUTE_UNUSED,
             case BFD_MACH_O_S_SYMBOL_STUBS:
               first = sec->reserved1;
               last = first + bfd_mach_o_section_get_nbr_indirect (abfd, sec);
+              addr = sec->addr;
+              entry_size = bfd_mach_o_section_get_entry_size (abfd, sec);
               fprintf (file, "  for section %s.%s:\n",
                        sec->segname, sec->sectname);
               for (j = first; j < last; j++)
                 {
                   unsigned int isym = dysymtab->indirect_syms[j];
                   
-                  fprintf (file, "  %5u: 0x%08x (%u)", j, isym, isym);
+                  fprintf (file, "   ");
+                  fprintf_vma (file, addr);
+                  fprintf (file, " %5u: 0x%08x", j, isym);
                   if (isym & BFD_MACH_O_INDIRECT_SYMBOL_LOCAL)
                     fprintf (file, " LOCAL");
                   if (isym & BFD_MACH_O_INDIRECT_SYMBOL_ABS)
@@ -3511,6 +3557,7 @@ bfd_mach_o_print_dysymtab (bfd *abfd ATTRIBUTE_UNUSED,
                       && symtab->symbols[isym].symbol.name)
                     fprintf (file, " %s", symtab->symbols[isym].symbol.name);
                   fprintf (file, "\n");
+                  addr += entry_size;
                 }
               break;
             default:
@@ -3536,6 +3583,24 @@ bfd_mach_o_print_dysymtab (bfd *abfd ATTRIBUTE_UNUSED,
         }
     }
 
+}
+
+static void
+bfd_mach_o_print_dyld_info (bfd *abfd ATTRIBUTE_UNUSED,
+                            bfd_mach_o_load_command *cmd, FILE *file)
+{
+  bfd_mach_o_dyld_info_command *info = &cmd->command.dyld_info;
+
+  fprintf (file, "       rebase: off: 0x%08x  size: %-8u\n",
+           info->rebase_off, info->rebase_size);
+  fprintf (file, "         bind: off: 0x%08x  size: %-8u\n",
+           info->bind_off, info->bind_size);
+  fprintf (file, "    weak bind: off: 0x%08x  size: %-8u\n",
+           info->weak_bind_off, info->weak_bind_size);
+  fprintf (file, "    lazy bind: off: 0x%08x  size: %-8u\n",
+           info->lazy_bind_off, info->lazy_bind_size);
+  fprintf (file, "       export: off: 0x%08x  size: %-8u\n",
+           info->export_off, info->export_size);
 }
 
 bfd_boolean
@@ -3660,6 +3725,10 @@ bfd_mach_o_bfd_print_private_bfd_data (bfd *abfd, PTR ptr)
               }
             break;
           }
+	case BFD_MACH_O_LC_DYLD_INFO:
+          fprintf (file, "\n");
+          bfd_mach_o_print_dyld_info (abfd, cmd, file);
+          break;
 	default:
 	  fprintf (file, "\n");
 	  break;

@@ -774,6 +774,9 @@ class General_options
   DEFINE_bool(relax, options::TWO_DASHES, '\0', false,
 	      N_("Relax branches on certain targets"), NULL);
 
+  DEFINE_string(retain_symbols_file, options::EXACTLY_ONE_DASH, '\0', NULL,
+                N_("keep only symbols listed in this file"), N_("[file]"));
+
   // -R really means -rpath, but can mean --just-symbols for
   // compatibility with GNU ld.  -rpath is always -rpath, so we list
   // it separately.
@@ -799,8 +802,9 @@ class General_options
   DEFINE_bool(strip_lto_sections, options::TWO_DASHES, '\0', true,
               N_("Strip LTO intermediate code sections"), NULL);
 
-  DEFINE_bool(no_keep_memory, options::TWO_DASHES, 's', false,
-              N_("Use less memory and more disk I/O (included only for compatibility with GNU ld)"), NULL);
+  DEFINE_bool(no_keep_memory, options::TWO_DASHES, '\0', false,
+              N_("Use less memory and more disk I/O "
+                 "(included only for compatibility with GNU ld)"), NULL);
 
   DEFINE_bool(shared, options::ONE_DASH, '\0', false,
               N_("Generate shared library"), NULL);
@@ -812,6 +816,20 @@ class General_options
   // a non-standard accessor-function name because 'static' is a keyword.
   DEFINE_special(static, options::ONE_DASH, '\0',
                  N_("Do not link against shared libraries"), NULL);
+
+  DEFINE_bool(icf, options::TWO_DASHES, '\0', false,
+              N_("Identical Code Folding (Fold identical functions)"),
+              N_("Don't fold identical functions (default)"));
+
+  DEFINE_uint(icf_iterations, options::TWO_DASHES , '\0', 0,
+              N_("Number of iterations of ICF (default 2)"), N_("COUNT"));
+
+  DEFINE_bool(print_icf_sections, options::TWO_DASHES, '\0', false,
+              N_("List folded identical sections on stderr"),
+              N_("Do not list folded identical sections"));
+
+  DEFINE_set(keep_unique, options::TWO_DASHES, '\0',
+	     N_("Do not fold this symbol during ICF"), N_("SYMBOL"));
 
   DEFINE_bool(gc_sections, options::TWO_DASHES, '\0', false,
               N_("Remove unused sections"),
@@ -1006,6 +1024,15 @@ class General_options
   bool
   is_in_system_directory(const std::string& name) const;
 
+  // RETURN whether SYMBOL_NAME should be kept, according to symbols_to_retain_.
+  bool
+  should_retain_symbol(const char* symbol_name) const
+    {
+      if (symbols_to_retain_.empty())    // means flag wasn't specified
+        return true;
+      return symbols_to_retain_.find(symbol_name) != symbols_to_retain_.end();
+    }
+
   // These are the best way to get access to the execstack state,
   // not execstack() and noexecstack() which are hard to use properly.
   bool
@@ -1117,8 +1144,10 @@ class General_options
   // build (--incremental-changed, --incremental-unchanged or
   // --incremental-unknown)
   bool implicit_incremental_;
-  // Libraries excluded from automatic export via --exclude-libs
+  // Libraries excluded from automatic export, via --exclude-libs.
   Unordered_set<std::string> excluded_libs_;
+  // List of symbol-names to keep, via -retain-symbol-info.
+  Unordered_set<std::string> symbols_to_retain_;
 };
 
 // The position-dependent options.  We use this to store the state of
@@ -1464,6 +1493,16 @@ class Command_line
   Command_line(const Command_line&);
   Command_line& operator=(const Command_line&);
 
+  // This is a dummy class to provide a constructor that runs before
+  // the constructor for the General_options.  The Pre_options constructor
+  // is used as a hook to set the flag enabling the options to register
+  // themselves.
+  struct Pre_options {
+    Pre_options();
+  };
+
+  // This must come before options_!
+  Pre_options pre_options_;
   General_options options_;
   Position_dependent_options position_options_;
   Script_options script_options_;

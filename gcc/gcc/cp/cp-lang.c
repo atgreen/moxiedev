@@ -32,11 +32,14 @@ along with GCC; see the file COPYING3.  If not see
 #include "debug.h"
 #include "cp-objcp-common.h"
 #include "hashtab.h"
+#include "except.h"
+#include "expr.h"
 
 enum c_language_kind c_language = clk_cxx;
 static void cp_init_ts (void);
 static const char * cxx_dwarf_name (tree t, int verbosity);
 static enum classify_record cp_classify_record (tree type);
+static tree cp_eh_personality (void);
 
 /* Lang hooks common to C++ and ObjC++ are declared in cp/cp-objcp-common.h;
    consequently, there should be very few hooks below.  */
@@ -56,13 +59,20 @@ static enum classify_record cp_classify_record (tree type);
 #undef LANG_HOOKS_GET_INNERMOST_GENERIC_ARGS
 #define LANG_HOOKS_GET_INNERMOST_GENERIC_ARGS \
 	get_template_innermost_arguments
+#undef LANG_HOOKS_FUNCTION_PARAMETER_PACK_P
+#define LANG_HOOKS_FUNCTION_PARAMETER_PACK_P \
+	function_parameter_pack_p
 #undef LANG_HOOKS_GET_ARGUMENT_PACK_ELEMS
 #define LANG_HOOKS_GET_ARGUMENT_PACK_ELEMS \
 	get_template_argument_pack_elems
 #undef LANG_HOOKS_GENERIC_GENERIC_PARAMETER_DECL_P
 #define LANG_HOOKS_GENERIC_GENERIC_PARAMETER_DECL_P \
 	template_template_parameter_p
-
+#undef LANG_HOOKS_FUNCTION_PARM_EXPANDED_FROM_PACK_P
+#define LANG_HOOKS_FUNCTION_PARM_EXPANDED_FROM_PACK_P \
+	function_parameter_expanded_from_pack_p
+#undef LANG_HOOKS_GET_GENERIC_FUNCTION_DECL
+#define LANG_HOOKS_GET_GENERIC_FUNCTION_DECL get_function_template_decl
 #undef LANG_HOOKS_DECL_PRINTABLE_NAME
 #define LANG_HOOKS_DECL_PRINTABLE_NAME	cxx_printable_name
 #undef LANG_HOOKS_DWARF_NAME
@@ -71,6 +81,10 @@ static enum classify_record cp_classify_record (tree type);
 #define LANG_HOOKS_FOLD_OBJ_TYPE_REF cp_fold_obj_type_ref
 #undef LANG_HOOKS_INIT_TS
 #define LANG_HOOKS_INIT_TS cp_init_ts
+#undef LANG_HOOKS_EH_PERSONALITY
+#define LANG_HOOKS_EH_PERSONALITY cp_eh_personality
+#undef LANG_HOOKS_EH_RUNTIME_TYPE
+#define LANG_HOOKS_EH_RUNTIME_TYPE build_eh_type_type
 
 /* Each front end provides its own lang hook initializer.  */
 struct lang_hooks lang_hooks = LANG_HOOKS_INITIALIZER;
@@ -143,6 +157,28 @@ cp_classify_record (tree type)
 void
 finish_file (void)
 {
+}
+
+static GTY(()) tree cp_eh_personality_decl;
+
+static tree
+cp_eh_personality (void)
+{
+  if (!cp_eh_personality_decl)
+    {
+      if (!pragma_java_exceptions)
+	cp_eh_personality_decl
+	  = build_personality_function (USING_SJLJ_EXCEPTIONS
+					? "__gxx_personality_sj0"
+					: "__gxx_personality_v0");
+      else
+	cp_eh_personality_decl
+	  = build_personality_function (USING_SJLJ_EXCEPTIONS
+					? "__gcj_personality_sj0"
+					: "__gcj_personality_v0");
+    }
+
+  return cp_eh_personality_decl;
 }
 
 #include "gtype-cp.h"

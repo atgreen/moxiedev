@@ -1,3 +1,134 @@
+2009-09-25  Dimitry Gorbachev  <d.g.gorbachev@gmail.com>
+
+	PR 10656
+	* readelf.c: Remove duplicate declaration of variable do_wide.
+	* dwarf.h: Add export of do_wide.
+
+2009-09-24  Cary Coutant  <ccoutant@google.com>
+
+	* dwarf.c (get_TAG_name): Add missing DWARF-3 and new DWARF-4 tags.
+	(get_FORM_name): Add new DWARF-4 forms.
+	(read_and_display_attr_value): Add DW_FORM_ref_sig8, DW_LANG_Python.
+	(get_AT_name): Add new DWARF-4 and GNU-specific attributes.
+	(process_debug_info): Add do_types parameter; change all callers.
+	Add support for .debug_types sections.
+	(display_debug_types): New function.
+	(debug_displays): Add .debug_types section.
+	* readelf.c (process_section_headers): Add .debug_types section.
+	(display_debug_section): Simplify call to streq.
+
+2009-09-25  Alan Modra  <amodra@bigpond.net.au>
+
+	* readelf.c (print_dynamic_symbol): Format entries as for
+	normal symbol table.
+	(process_symbol_table): Use -7s format string for visibility.
+
+2009-09-22  Richard Sandiford  <rdsandiford@googlemail.com>
+
+	* objdump.c (disassemble_section): Use bfd_get_arch_size
+	instead of assuming that the address size is 32 bits.
+
+2009-09-21  Alan Modra  <amodra@bigpond.net.au>
+
+	* readelf.c (get_ppc_dynamic_type): Add TLSOPT.
+	(get_ppc64_dynamic_type): Likewise.
+
+2009-09-18  Nick Clifton  <nickc@redhat.com>
+
+	* po/es.po: Updated Spanish translation.
+	* po/vi.po: Updated Vietnamese translation.
+
+2009-09-11  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* readelf.c (process_version_sections, process_symbol_table):
+	Use symbolic constants.
+
+2009-09-11  Nick Clifton  <nickc@redhat.com>
+
+	* po/binutils.pot: Updated by the Translation project.
+
+2009-09-11  Philippe De Muyter  <phdm@macqel.be>
+
+	* obcopy.c (copy_object): New parameter `input_arch', architecture
+	of input file, if not specified in input file itself; all callers
+	updated; `binary_architecture' hack removed.
+	(copy_archive, copy_file): New parameter `input_arch', for
+	`copy_object' usage.
+	(copy_main): Accept `-B' (`--binary-architecture') option also
+	for any arch-less input ifile format, not only `binary'; remove
+	bfd_external_binary_architecture hack; instead, add `input_arch'
+	to calls to `copy_file'.
+	* windres.c, windmc.c : Obsolete and useless external references
+	to `bfd_external_binary_architecture' or `bfd_external_machine'
+	removed.
+	* doc/binutils.texi: Mention that -B parameter can be used for any
+	input file type which does not have its own architecture.
+
+2009-09-10  Martin Thuresson  <martin@mtme.org>
+
+	Update soruces to compile cleanly with -Wc++-compat:
+
+	* addr2line.c (slurp_symtab): Fix casts. Introduce variable
+	minisyms to avoid aliasing varning.
+	* ar.c: Add casts.
+	(normalize): Use name del instead of delete.
+	(display_target_list,display_info_table): Change loop counter
+	variable a to int.
+	* bucomm.c: Add casts.
+	* debug.c: Update function to use new names.
+	(struct debug_baseclass): Rename member from virtual to
+	is_virtual.
+	(struct debug_type_s, struct debug_field_s, struct
+	debug_baseclass_s, struct debug_method_s, struct
+	debug_method_variant_s, struct debug_type_s): Rename struct from
+	avoid name collision.
+	* debug.h: Use new struct names.
+	* dwarf.c: Add casts.
+	(free_debug_memory): Change loop counter variable a to int.
+	* ieee.c: Add casts.
+	(enum ieee_var_kind): Move to top level.
+	(ieee_class_baseclass): Rename parameter virtual to is_virtual.
+	(ieee_class_method_var): Rename variable virtual to is_virtual.
+	* nm.c: Add casts.
+	* objcopy.c: Add casts.
+	(copy_archive): Rename variable delete to del.
+	* objdump.c: Add casts.
+	(dump_dwarf_section): Change loop counter variable i to int.
+	* prdbg.c: Add casts.
+	(pr_class_baseclass,tg_class_baseclass): Rename parameters virtual
+	to is_virtual.
+	* readelf.c: Add casts.
+	(struct ia64_unw_table_entry,struct hppa_unw_table_entry): Move to
+	top level.
+	* size.c: Add casts.
+	* stabs.c (parse_stab_type, parse_stab_range_type,
+	(parse_stab_cpp_abbrev): Rename parameter from typename to
+	type_name.
+	(parse_stab_baseclasses): Rename variable virtual to is_virtual.
+	* strings.c: Add casts.
+	* wrstabs.c (stab_class_baseclass): Rename parameter virtual to
+	is_virtual.
+
+2009-09-09  Nick Clifton  <nickc@redhat.com>
+
+	PR 10478:
+	readelf.c (get_elf_section_flags): Add support for SHF_EXCLUDE and
+	SHF_ORDERED.
+	(process_section_headers): Warn about out of range sh_link
+	values.  When displaying detailed section header information
+	annote the SHN_BEFORE and SHN_AFTER values.
+
+2009-09-08  Alan Modra  <amodra@bigpond.net.au>
+
+	* dwarf.c (byte_get_little_endian): Handle size of 3.
+	(byte_get_big_endian): Likewise.
+	* readelf.c (byte_put_little_endian): Likewise.
+	(byte_put_big_endian): Likewise.
+	(is_24bit_abs_reloc): New function.
+	(is_none_reloc): Formatting.
+	(apply_relocations): Use is_24bit_abs_reloc.  Handle pj and xtensa
+	reloc peculiarity.
+
 2009-09-07  Jan Kratochvil  <jan.kratochvil@redhat.com>
 
 	* readelf.c (is_none_reloc <EM_XTENSA_OLD>, is_none_reloc <EM_XTENSA>):
@@ -33,7 +164,7 @@
 
 	* dlltool.c (delayimp_name): Add new global variable
 	(usage, long_options, main): Add new option "-y" / "--output-delaylib"
-	(struct mac): Add fields how_dljtab_size, how_dljtab_roff1, 
+	(struct mac): Add fields how_dljtab_size, how_dljtab_roff1,
 	how_dljtab_roff2, how_dljtab, trampoline.
 	(i386_dljtab): Add binary stub for x86 delay import.
 	(i386_trampoline): Add text assembly stub for x86 delay import.
@@ -566,7 +697,7 @@
 2009-03-27  Nick Clifton  <nickc@redhat.com>
 
 	* dwarf.c (display_debug_ranges): Add the base address to the
-	displayed values for 'Begin' and 'End'. 
+	displayed values for 'Begin' and 'End'.
 
 2009-03-25  Ryan Mansfield  <rmansfield@qnx.com>
 
@@ -808,7 +939,7 @@
 
 	Cleanup code related to --identify option.
 
-	* binutils/dlltool.c (file scope): Removed globals identify_ms,
+	* dlltool.c (file scope): Removed globals identify_ms,
 	identify_member_contains_symname_result,
 	identify_dll_name_list_head, and identify_dll_name_list_tail.
 	Renamed existing typedef dll_name_list_type to

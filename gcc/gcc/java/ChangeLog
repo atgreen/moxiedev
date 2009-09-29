@@ -1,3 +1,32 @@
+2009-09-28  Richard Henderson  <rth@redhat.com>
+
+	* builtins.c (initialize_builtins): Update call to
+	build_common_builtin_nodes.
+	* lang.c (LANG_HOOKS_EH_USE_CXA_END_CLEANUP): New.
+
+2009-09-14  Richard Henderson  <rth@redhat.com>
+
+	* builtins.c (initialize_builtins): Update call to
+	build_common_builtin_nodes.
+	* decl.c (java_init_decl_processing): Don't call
+	default_init_unwind_resume_libfunc.
+	* except.c: Include tree-iterator.h.
+	(build_exception_object_var): New.
+	(build_exception_object_ref): Use it.
+	(expand_end_java_handler): Initialize it from __builtin_eh_pointer.
+	Attach all CATCH_EXPRs to a single TRY_CATCH_EXPR.
+	* java-tree.h (DECL_FUNCTION_EXC_OBJ): New.
+
+2009-09-13  Richard Guenther  <rguenther@suse.de>
+	Rafael Avila de Espindola  <espindola@google.com>
+
+	* decl.c (do_nothing): Remove.
+	(java_init_decl_processing): Do not set lang_eh_runtime_type.
+	* Make-lang.in (lang.o): Add $(EXCEPT_H) dependency.
+	* lang.c (java_eh_personality): New.
+	(java_eh_personality_decl): Likewise.
+	(LANG_HOOKS_EH_PERSONALITY): Define.
+
 2009-09-03  Diego Novillo  <dnovillo@google.com>
 
 	* lang.c (lang_hooks): Remove const qualifier.

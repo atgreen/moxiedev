@@ -41,6 +41,8 @@
 #include "reloc.h"
 #include "defstd.h"
 #include "plugin.h"
+#include "icf.h"
+#include "incremental.h"
 
 namespace gold
 {
@@ -175,6 +177,20 @@ queue_initial_tasks(const General_options& options,
     thread_count = cmdline.number_of_input_files();
   workqueue->set_thread_count(thread_count);
 
+  if (cmdline.options().incremental())
+    {
+      Incremental_checker incremental_checker(
+          parameters->options().output_file_name());
+      if (incremental_checker.can_incrementally_link_output_file())
+        {
+          // TODO: remove when incremental linking implemented.
+          printf("Incremental linking might be possible "
+              "(not implemented yet)\n");
+        }
+      // TODO: If we decide on an incremental build, fewer tasks
+      // should be scheduled.
+    }
+
   // Read the input files.  We have to add the symbols to the symbol
   // table in order.  We do this by creating a separate blocker for
   // each input file.  We associate the blocker with the following
@@ -203,10 +219,10 @@ queue_initial_tasks(const General_options& options,
     }
 
   if (parameters->options().relocatable()
-      && parameters->options().gc_sections())
-    gold_error(_("cannot mix -r with garbage collection"));
+      && (parameters->options().gc_sections() || parameters->options().icf()))
+    gold_error(_("cannot mix -r with --gc-sections or --icf"));
 
-  if (parameters->options().gc_sections())
+  if (parameters->options().gc_sections() || parameters->options().icf())
     {
       workqueue->queue(new Task_function(new Gc_runner(options,
                                                        input_objects,
@@ -228,8 +244,8 @@ queue_initial_tasks(const General_options& options,
     }
 }
 
-// Queue up a set of tasks to be done before queueing the middle set 
-// of tasks.  This is only necessary when garbage collection 
+// Queue up a set of tasks to be done before queueing the middle set
+// of tasks.  This is only necessary when garbage collection
 // (--gc-sections) of unused sections is desired.  The relocs are read
 // and processed here early to determine the garbage sections before the
 // relocs can be scanned in later tasks.
@@ -309,8 +325,23 @@ queue_middle_tasks(const General_options& options,
       gold_assert(symtab->gc() != NULL);
       // Do a transitive closure on all references to determine the worklist.
       symtab->gc()->do_transitive_closure();
-      // Call do_layout again to determine the output_sections for all 
-      // referenced input sections.
+    }
+
+  // If identical code folding (--icf) is chosen it makes sense to do it 
+  // only after garbage collection (--gc-sections) as we do not want to 
+  // be folding sections that will be garbage.
+  if (parameters->options().icf())
+    {
+      symtab->icf()->find_identical_sections(input_objects, symtab);
+    }
+
+  // Call Object::layout for the second time to determine the 
+  // output_sections for all referenced input sections.  When 
+  // --gc-sections or --icf is turned on, Object::layout is 
+  // called twice.  It is called the first time when the 
+  // symbols are added.
+  if (parameters->options().gc_sections() || parameters->options().icf())
+    {
       for (Input_objects::Relobj_iterator p = input_objects->relobj_begin();
            p != input_objects->relobj_end();
            ++p)
@@ -318,6 +349,7 @@ queue_middle_tasks(const General_options& options,
           (*p)->layout(symtab, layout, NULL);
         }
     }
+
   // Layout deferred objects due to plugins.
   if (parameters->options().has_plugins())
     {
@@ -325,7 +357,8 @@ queue_middle_tasks(const General_options& options,
       gold_assert(plugins != NULL);
       plugins->layout_deferred_objects();
     }     
-  if (parameters->options().gc_sections())
+
+  if (parameters->options().gc_sections() || parameters->options().icf())
     {
       for (Input_objects::Relobj_iterator p = input_objects->relobj_begin();
            p != input_objects->relobj_end();
@@ -420,7 +453,7 @@ queue_middle_tasks(const General_options& options,
 
   // If doing garbage collection, the relocations have already been read.
   // Otherwise, read and scan the relocations.
-  if (parameters->options().gc_sections())
+  if (parameters->options().gc_sections() || parameters->options().icf())
     {
       for (Input_objects::Relobj_iterator p = input_objects->relobj_begin();
            p != input_objects->relobj_end();

@@ -1956,8 +1956,8 @@ layout_type (tree type)
 	  {
 	    tree ub = TYPE_MAX_VALUE (index);
 	    tree lb = TYPE_MIN_VALUE (index);
+	    tree element_size = TYPE_SIZE (element);
 	    tree length;
-	    tree element_size;
 
 	    /* The initial subtraction should happen in the original type so
 	       that (possible) negative values are handled appropriately.  */
@@ -1968,45 +1968,15 @@ layout_type (tree type)
 							    TREE_TYPE (lb),
 							    ub, lb)));
 
-	    /* Special handling for arrays of bits (for Chill).  */
-	    element_size = TYPE_SIZE (element);
-	    if (TYPE_PACKED (type) && INTEGRAL_TYPE_P (element)
-		&& (integer_zerop (TYPE_MAX_VALUE (element))
-		    || integer_onep (TYPE_MAX_VALUE (element)))
-		&& host_integerp (TYPE_MIN_VALUE (element), 1))
-	      {
-		HOST_WIDE_INT maxvalue
-		  = tree_low_cst (TYPE_MAX_VALUE (element), 1);
-		HOST_WIDE_INT minvalue
-		  = tree_low_cst (TYPE_MIN_VALUE (element), 1);
-
-		if (maxvalue - minvalue == 1
-		    && (maxvalue == 1 || maxvalue == 0))
-		  element_size = integer_one_node;
-	      }
-
-	    /* If neither bound is a constant and sizetype is signed, make
-	       sure the size is never negative.  We should really do this
-	       if *either* bound is non-constant, but this is the best
-	       compromise between C and Ada.  */
-	    if (!TYPE_UNSIGNED (sizetype)
-		&& TREE_CODE (TYPE_MIN_VALUE (index)) != INTEGER_CST
-		&& TREE_CODE (TYPE_MAX_VALUE (index)) != INTEGER_CST)
-	      length = size_binop (MAX_EXPR, length, size_zero_node);
-
 	    TYPE_SIZE (type) = size_binop (MULT_EXPR, element_size,
 					   fold_convert (bitsizetype,
 							 length));
 
-	    /* If we know the size of the element, calculate the total
-	       size directly, rather than do some division thing below.
-	       This optimization helps Fortran assumed-size arrays
-	       (where the size of the array is determined at runtime)
-	       substantially.
-	       Note that we can't do this in the case where the size of
-	       the elements is one bit since TYPE_SIZE_UNIT cannot be
-	       set correctly in that case.  */
-	    if (TYPE_SIZE_UNIT (element) != 0 && ! integer_onep (element_size))
+	    /* If we know the size of the element, calculate the total size
+	       directly, rather than do some division thing below.  This
+	       optimization helps Fortran assumed-size arrays (where the
+	       size of the array is determined at runtime) substantially.  */
+	    if (TYPE_SIZE_UNIT (element))
 	      TYPE_SIZE_UNIT (type)
 		= size_binop (MULT_EXPR, TYPE_SIZE_UNIT (element), length);
 	  }
@@ -2310,9 +2280,9 @@ set_sizetype (tree type)
   if (TYPE_UNSIGNED (type))
     {
       fixup_unsigned_type (bitsizetype);
-      ssizetype = build_distinct_type_copy (make_signed_type (oprecision));
+      ssizetype = make_signed_type (oprecision);
       TYPE_IS_SIZETYPE (ssizetype) = 1;
-      sbitsizetype = build_distinct_type_copy (make_signed_type (precision));
+      sbitsizetype = make_signed_type (precision);
       TYPE_IS_SIZETYPE (sbitsizetype) = 1;
     }
   else

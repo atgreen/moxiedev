@@ -75,10 +75,19 @@ extern void set_block_for_group (tree);
    Get SLOC from GNAT_ENTITY.  */
 extern void add_decl_expr (tree gnu_decl, Entity_Id gnat_entity);
 
-/* Mark nodes rooted at *TP with TREE_VISITED and types as having their
+/* Mark nodes rooted at T with TREE_VISITED and types as having their
    sized gimplified.  We use this to indicate all variable sizes and
    positions in global types may not be shared by any subprogram.  */
-extern void mark_visited (tree *tp);
+extern void mark_visited (tree t);
+
+/* This macro calls the above function but short-circuits the common
+   case of a constant to save time and also checks for NULL.  */
+
+#define MARK_VISITED(EXP)		\
+do {					\
+  if((EXP) && !TREE_CONSTANT (EXP))	\
+    mark_visited (EXP);			\
+} while (0)
 
 /* Finalize any From_With_Type incomplete types.  We do this after processing
    our compilation unit and after processing its spec, if this is a body.  */
@@ -741,6 +750,10 @@ extern tree remove_conversions (tree exp, bool true_address);
    likewise return an expression pointing to the underlying array.  */
 extern tree maybe_unconstrained_array (tree exp);
 
+/* If EXP's type is a VECTOR_TYPE, return EXP converted to the associated
+   TYPE_REPRESENTATIVE_ARRAY.  */
+extern tree maybe_vector_array (tree exp);
+
 /* Return an expression that does an unchecked conversion of EXPR to TYPE.
    If NOTRUNC_P is true, truncation operations should be suppressed.  */
 extern tree unchecked_convert (tree type, tree expr, bool notrunc_p);
@@ -766,20 +779,6 @@ extern bool is_double_scalar_or_array (Entity_Id gnat_type,
 /* Return true if GNU_TYPE is suitable as the type of a non-aliased
    component of an aggregate type.  */
 extern bool type_for_nonaliased_component_p (tree gnu_type);
-
-/* Prepare expr to be an argument of a TRUTH_NOT_EXPR or other logical
-   operation.
-
-   This preparation consists of taking the ordinary
-   representation of an expression EXPR and producing a valid tree
-   boolean expression describing whether EXPR is nonzero.  We could
-   simply always do build_binary_op (NE_EXPR, expr, integer_zero_node, 1),
-   but we optimize comparisons, &&, ||, and !.
-
-   The resulting type should always be the same as the input type.
-   This function is simpler than the corresponding C version since
-   the only possible operands will be things of Boolean type.  */
-extern tree gnat_truthvalue_conversion (tree expr);
 
 /* Return the base type of TYPE.  */
 extern tree get_base_type (tree type);
@@ -956,3 +955,6 @@ extern Nat get_target_double_scalar_alignment (void);
 #ifndef TARGET_MALLOC64
 #define TARGET_MALLOC64 0
 #endif
+
+/* Convenient shortcuts.  */
+#define VECTOR_TYPE_P(TYPE) (TREE_CODE (TYPE) == VECTOR_TYPE)

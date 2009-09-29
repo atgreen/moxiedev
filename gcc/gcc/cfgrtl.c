@@ -956,6 +956,45 @@ patch_jump_insn (rtx insn, rtx old_label, basic_block new_bb)
 	  ++LABEL_NUSES (new_label);
 	}
     }
+  else if ((tmp = extract_asm_operands (PATTERN (insn))) != NULL)
+    {
+      int i, n = ASM_OPERANDS_LABEL_LENGTH (tmp);
+      rtx new_label, note;
+
+      if (new_bb == EXIT_BLOCK_PTR)
+	return false;
+      new_label = block_label (new_bb);
+
+      for (i = 0; i < n; ++i)
+	{
+	  rtx old_ref = ASM_OPERANDS_LABEL (tmp, i);
+	  gcc_assert (GET_CODE (old_ref) == LABEL_REF);
+	  if (XEXP (old_ref, 0) == old_label)
+	    {
+	      ASM_OPERANDS_LABEL (tmp, i)
+		= gen_rtx_LABEL_REF (Pmode, new_label);
+	      --LABEL_NUSES (old_label);
+	      ++LABEL_NUSES (new_label);
+	    }
+	}
+
+      if (JUMP_LABEL (insn) == old_label)
+	{
+	  JUMP_LABEL (insn) = new_label;
+	  note = find_reg_note (insn, REG_LABEL_TARGET, new_label);
+	  if (note)
+	    remove_note (insn, note);
+	}
+      else
+	{
+	  note = find_reg_note (insn, REG_LABEL_TARGET, old_label);
+	  if (note)
+	    remove_note (insn, note);
+	  if (JUMP_LABEL (insn) != new_label
+	      && !find_reg_note (insn, REG_LABEL_TARGET, new_label))
+	    add_reg_note (insn, REG_LABEL_TARGET, new_label);
+	}
+    }
   else
     {
       /* ?? We may play the games with moving the named labels from
@@ -1873,10 +1912,14 @@ rtl_verify_flow_info_1 (void)
 	    n_abnormal++;
 	}
 
-      if (n_eh && GET_CODE (PATTERN (BB_END (bb))) != RESX
-	  && !find_reg_note (BB_END (bb), REG_EH_REGION, NULL_RTX))
+      if (n_eh && !find_reg_note (BB_END (bb), REG_EH_REGION, NULL_RTX))
 	{
 	  error ("missing REG_EH_REGION note in the end of bb %i", bb->index);
+	  err = 1;
+	}
+      if (n_eh > 1)
+	{
+	  error ("too many eh edges %i", bb->index);
 	  err = 1;
 	}
       if (n_branch
@@ -1894,7 +1937,8 @@ rtl_verify_flow_info_1 (void)
 	}
       if (n_branch != 1 && any_uncondjump_p (BB_END (bb)))
 	{
-	  error ("wrong amount of branch edges after unconditional jump %i", bb->index);
+	  error ("wrong number of branch edges after unconditional jump %i",
+		 bb->index);
 	  err = 1;
 	}
       if (n_branch != 1 && any_condjump_p (BB_END (bb))
@@ -2217,39 +2261,33 @@ purge_dead_edges (basic_block bb)
   /* Cleanup abnormal edges caused by exceptions or non-local gotos.  */
   for (ei = ei_start (bb->succs); (e = ei_safe_edge (ei)); )
     {
+      bool remove = false;
+
       /* There are three types of edges we need to handle correctly here: EH
 	 edges, abnormal call EH edges, and abnormal call non-EH edges.  The
 	 latter can appear when nonlocal gotos are used.  */
-      if (e->flags & EDGE_EH)
+      if (e->flags & EDGE_ABNORMAL_CALL)
 	{
-	  if (can_throw_internal (insn)
-	      /* If this is a call edge, verify that this is a call insn.  */
-	      && (! (e->flags & EDGE_ABNORMAL_CALL)
-		  || CALL_P (insn)))
-	    {
-	      ei_next (&ei);
-	      continue;
-	    }
+	  if (!CALL_P (insn))
+	    remove = true;
+	  else if (can_nonlocal_goto (insn))
+	    ;
+	  else if ((e->flags & EDGE_EH) && can_throw_internal (insn))
+	    ;
+	  else
+	    remove = true;
 	}
-      else if (e->flags & EDGE_ABNORMAL_CALL)
+      else if (e->flags & EDGE_EH)
+	remove = !can_throw_internal (insn);
+
+      if (remove)
 	{
-	  if (CALL_P (insn)
-	      && (! (note = find_reg_note (insn, REG_EH_REGION, NULL))
-		  || INTVAL (XEXP (note, 0)) >= 0))
-	    {
-	      ei_next (&ei);
-	      continue;
-	    }
+	  remove_edge (e);
+	  df_set_bb_dirty (bb);
+	  purged = true;
 	}
       else
-	{
-	  ei_next (&ei);
-	  continue;
-	}
-
-      remove_edge (e);
-      df_set_bb_dirty (bb);
-      purged = true;
+	ei_next (&ei);
     }
 
   if (JUMP_P (insn))

@@ -182,7 +182,7 @@ enum reg_class
 
 /* A C expression whose value is a register class containing hard
    register REGNO.  */
-#define REGNO_REG_CLASS(R) ((R < MOXIE_PC) ? GENERAL_REGS : \
+#define REGNO_REG_CLASS(R) ((R < MOXIE_PC) ? GENERAL_REGS :		\
                             (R == MOXIE_CC ? CC_REGS : SPECIAL_REGS))
 
 /* A C expression for the number of consecutive hard registers,
@@ -263,7 +263,7 @@ enum reg_class
    : (unsigned) int_size_in_bytes (TYPE))
 
 #define FUNCTION_ARG_ADVANCE(CUM,MODE,TYPE,NAMED) \
-  (CUM = (CUM < MOXIE_R5 ?                        \
+  (CUM = (CUM < MOXIE_R6 ?                        \
           CUM + ((3 + MOXIE_FUNCTION_ARG_SIZE(MODE,TYPE))/4) : CUM ))
 
 /* How Scalar Function Values Are Returned */
@@ -299,7 +299,7 @@ enum reg_class
 
 /* Define this if it is the responsibility of the caller to allocate
    the area reserved for arguments passed in registers.  */
-#define REG_PARM_STACK_SPACE(FNDECL) (5 * UNITS_PER_WORD)
+#define REG_PARM_STACK_SPACE(FNDECL) (6 * UNITS_PER_WORD)
 
 /* Offset from the argument pointer register to the first argument's
    address.  On some machines it may depend on the data type of the
@@ -391,31 +391,6 @@ enum reg_class
 /* Alignment required for trampolines, in bits.  */
 #define TRAMPOLINE_ALIGNMENT 16
 
-/* A C statement to initialize the variable parts of a trampoline.  ADDR is an
-   RTX for the address of the trampoline; FNADDR is an RTX for the address of
-   the nested function; STATIC_CHAIN is an RTX for the static chain value that
-   should be passed to the function when it is called.  */
-#define INITIALIZE_TRAMPOLINE(ADDR, FNADDR, STATIC_CHAIN)		      \
-do									      \
-{									      \
-  emit_move_insn (gen_rtx_MEM (SImode,                                        \
-                               plus_constant (ADDR, 4)), STATIC_CHAIN);       \
-  emit_move_insn (gen_rtx_MEM (SImode, plus_constant (ADDR, 18)), FNADDR);    \
-} while (0);
-
-/* A C statement to output, on the stream FILE, assembler code for a
-   block of data that contains the constant parts of a trampoline.
-   This code should not include a label--the label is taken care of
-   automatically.  */
-#define TRAMPOLINE_TEMPLATE(FILE)	       	\
-{						\
-  fprintf (FILE, "\tpush  $sp, $r0\n");         \
-  fprintf (FILE, "\tldi.l $r0, 0x0\n"); 	\
-  fprintf (FILE, "\tsto.l 0x8($fp), $r0\n");	\
-  fprintf (FILE, "\tpop   $sp, $r0\n");		\
-  fprintf (FILE, "\tjmpa  0x0\n");	        \
-}
-
 /* An alias for the machine mode for pointers.  */
 #define Pmode         SImode
 
@@ -435,17 +410,6 @@ do									      \
    access the function's argument list.  */
 #define ARG_POINTER_REGNUM MOXIE_QAP
 
-/* If the static chain is passed in memory, these macros provide rtx
-   giving 'mem' expressions that denote where they are stored.
-   'STATIC_CHAIN' and 'STATIC_CHAIN_INCOMING' give the locations as
-   seen by the calling and called functions, respectively.  */
-
-#define STATIC_CHAIN							\
-  gen_rtx_MEM (Pmode, plus_constant (stack_pointer_rtx, -UNITS_PER_WORD))
-
-#define STATIC_CHAIN_INCOMING						\
-  gen_rtx_MEM (Pmode, plus_constant (arg_pointer_rtx, 2 * UNITS_PER_WORD))
-
 #define HARD_FRAME_POINTER_REGNUM MOXIE_FP
 
 #define ELIMINABLE_REGS							\
@@ -463,7 +427,7 @@ do									      \
 
 /* A C expression that is nonzero if REGNO is the number of a hard
    register in which function arguments are sometimes passed.  */
-#define FUNCTION_ARG_REGNO_P(r) (r >= MOXIE_R0 && r <= MOXIE_R4)
+#define FUNCTION_ARG_REGNO_P(r) (r >= MOXIE_R0 && r <= MOXIE_R5)
 
 /* A C expression that is nonzero if REGNO is the number of a hard
    register in which the values of called function may come back.  */

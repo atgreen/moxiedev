@@ -1,3 +1,132 @@
+2009-09-25  Martin Thuresson  <martint@google.com>
+
+	Update soruces to make arm targets compile cleanly with
+	-Wc++-compat:
+	* emultempl/armelf.em: Add casts.
+
+2009-09-23  Matt Rice  <ratmice@gmail.com>
+
+	* emultempl/elf32.em (gld${EMULATION_NAME}_add_options): Add --audit,
+	--depaudit, and -P options.
+	(gld${EULATION_NAME}_handle_options): Ditto.
+	(gld${EULATION_NAME}_list_options): Ditto.
+	(gld${EMULATION_NAME}_append_to_separated_string): New function for
+	handling rpath-like colon separated strings.
+	(gld${EMULATION_NAME}_before_allocation): Pass the audit and depaudit
+	libs to bfd.  Propagate DT_AUDIT from needed libs to depaudit.
+	* ld.texinfo: Document new options.
+
+2009-09-23  Nick Clifton  <nickc@redhat.com>
+
+	* po/vi.po: Updated Vietnamese translation.
+
+2009-09-22  Alan Modra  <amodra@bigpond.net.au>
+
+	* scripttempl/a29k.sc: Delete.
+	* scripttempl/ebmon29k.sc: Delete.
+	* scripttempl/m68klynx.sc: Delete.
+	* scripttempl/sa29200.sc: Delete.
+	* scripttempl/sparclynx.sc: Delete.
+
+2009-09-21  Alan Modra  <amodra@bigpond.net.au>
+
+	* emultempl/ppc32elf.em (no_tls_get_addr_opt): New var.
+	(ppc_before_allocation): Pass to ppc_elf_tls_setup.
+	(OPTION_NO_TLS_GET_ADDR_OPT): Define.  Redefine other options in
+	terms of previous option.
+	(PARSE_AND_LIST_LONGOPTS, PARSE_AND_LIST_OPTIONS): Add
+	--no-tls-get-addr-optimize.
+	(PARSE_AND_LIST_ARGS_CASES): Handle it.
+	* emultempl/ppc64elf.em (no_tls_get_addr_opt): New var.
+	(ppc_before_allocation): Pass to ppc64_elf_tls_setup.
+	(OPTION_NO_TLS_GET_ADDR_OPT): Define.
+	(PARSE_AND_LIST_LONGOPTS, PARSE_AND_LIST_OPTIONS): Add
+	--no-tls-get-addr-optimize.
+	(PARSE_AND_LIST_ARGS_CASES): Handle it.
+
+2009-09-18  Nick Clifton  <nickc@redhat.com>
+
+	* po/es.po: Updated Spanish translation.
+
+2009-09-13  Alan Modra  <amodra@bigpond.net.au>
+
+     	PR ld/6766
+	* lexsup.c (parse_args <-e>): Revert 2009-03-18 change.
+	* ldemul.c (after_parse_default): Add entry symbol as undef.
+	* emultempl/alphaelf.em (alpha_after_parse): Call after_parse_default.
+	* emultempl/cr16elf.em (cr16elf_after_parse): Likewise.
+	* emultempl/crxelf.em (crxelf_after_parse): Likewise.
+	* emultempl/hppaelf.em (hppaelf_after_parse): Likewise.
+	* emultempl/ia64elf.em (gld${EMULATION_NAME}_after_parse): Likewise.
+	* emultempl/pe.em (gld_${EMULATION_NAME}_after_parse): Call
+	after_parse_default and delete now duplicate code.
+	* emultempl/pep.em (gld_${EMULATION_NAME}_after_parse): Likewise.
+	* scripttempl/elf32cr16.sc: No need to make entry extern.
+	* scripttempl/elf32cr16c.sc: Likewise.
+	* scripttempl/elf32crx.sc: Likewise.
+	* scripttempl/elf32xc16xs.sc: Only provide ENTRY on final link.
+
+2009-09-11  Nick Clifton  <nickc@redhat.com>
+
+	* po/ld.pot: Updated by the Translation project.
+	* po/fi.po: Updated Finnish translation.
+
+2009-09-11  Martin Thuresson  <martint@google.com>
+
+	Updated sources to compile cleanly with -Wc++-compat:
+	* ld.h (enum endian_enum,enum symbolic_enum,enum
+	dynamic_list_enum): Move to top level.
+	* ldcref.c: Add casts.
+	* ldctor.c: Add casts.
+	* ldexp.c
+	* ldexp.h (enum node_tree_enum,enum phase_enum): Move to top level.
+	* ldlang.c: Add casts. (lang_insert_orphan): Use enum name instead
+	of integer.
+	* ldlang.h (enum statement_enum): Move to top level.
+	* ldmain.c: Add casts.
+	* ldwrite.c: Add casts.
+	* lexsup.c: Add casts. (enum control_enum): Move to top level.
+	* mri.c: Add casts. (mri_draw_tree): Use enum name instead of
+	integer.
+
+2009-09-09  Alan Modra  <amodra@bigpond.net.au>
+
+	* scripttempl/aix.sc: Only provide ENTRY on final link.
+	* scripttempl/alpha.sc: Likewise.
+	* scripttempl/armcoff.sc: Likewise.
+	* scripttempl/crisaout.sc: Likewise.
+	* scripttempl/delta68.sc: Likewise.
+	* scripttempl/ebmon29k.sc: Likewise.
+	* scripttempl/elf32xc16x.sc: Likewise.
+	* scripttempl/elf32xc16xl.sc: Likewise.
+	* scripttempl/elfmicroblaze.sc: Likewise.
+	* scripttempl/epocpe.sc: Likewise.
+	* scripttempl/h8300.sc: Likewise.
+	* scripttempl/h8300h.sc: Likewise.
+	* scripttempl/h8300hn.sc: Likewise.
+	* scripttempl/h8300s.sc: Likewise.
+	* scripttempl/h8300sn.sc: Likewise.
+	* scripttempl/h8300sx.sc: Likewise.
+	* scripttempl/h8300sxn.sc: Likewise.
+	* scripttempl/hppaelf.sc: Likewise.
+	* scripttempl/i386beos.sc: Likewise.
+	* scripttempl/i386coff.sc: Likewise.
+	* scripttempl/i386go32.sc: Likewise.
+	* scripttempl/m68kaux.sc: Likewise.
+	* scripttempl/m68klynx.sc: Likewise.
+	* scripttempl/m88kbcs.sc: Likewise.
+	* scripttempl/maxqcoff.sc: Likewise.
+	* scripttempl/mcorepe.sc: Likewise.
+	* scripttempl/mips.sc: Likewise.
+	* scripttempl/ppcpe.sc: Likewise.
+	* scripttempl/sa29200.sc: Likewise.
+	* scripttempl/sparccoff.sc: Likewise.
+	* scripttempl/sparclynx.sc: Likewise.
+	* scripttempl/tic4xcoff.sc: Likewise.
+	* scripttempl/tic54xcoff.sc: Likewise.
+	* scripttempl/tic80coff.sc: Likewise.
+	* scripttempl/z8000.sc: Likewise.
+
 2009-09-07  Tristan Gingold  <gingold@adacore.com>
 
 	* po/ld.pot: Regenerate.
@@ -200,13 +329,13 @@
 
 2009-08-06  Michael Eager <eager@eagercon.com>
 
-	* Makefile.am: Add eelf32mb_linux.o, eelf32microblaze.o to 
+	* Makefile.am: Add eelf32mb_linux.o, eelf32microblaze.o to
 	ALL_EMULATIONS, targets.
 	* Makefile.in: Regenerate.
 	* configure.tgt: Add microblaze*-linux*, microblaze* targets.
 	* emulparams/elf32mb_linux.sh: New.
 	* emulparams/elf32microblaze.sh. New.
-	* scripttempl/elfmicroblaze.sc: New. 
+	* scripttempl/elfmicroblaze.sc: New.
 
 2009-08-05  Trevor Smigiel  <Trevor_Smigiel@playstation.sony.com>
 
@@ -297,7 +426,7 @@
 
 	* scripttempl/pep.sc: Put .eh_frame in its own section.
 	* scripttempl/pe.sc: Ditto.
-	
+
 2009-06-26  Kai Tietz  <kai.tietz@onevision.com>
 
 	* scripttempl/pe.sc (.debug_pubtypes): Added section rule.
@@ -830,7 +959,7 @@
 2009-02-24  Sandra Loosemore  <sandra@codesourcery.com>
 
 	* ld.texinfo (Options): Correct typos in example.  Recommend
-	using joined forms of syntax for passing options with arguments 
+	using joined forms of syntax for passing options with arguments
 	from a driver.
 	(-a): Use consistent syntax for documenting option arguments.
 	Clean up indexing and markup.

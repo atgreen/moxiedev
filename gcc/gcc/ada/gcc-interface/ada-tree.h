@@ -195,6 +195,10 @@ do {							    \
    refer to the routine gnat_to_gnu_entity.  */
 #define TYPE_CI_CO_LIST(NODE) TYPE_LANG_SLOT_1 (FUNCTION_TYPE_CHECK (NODE))
 
+/* For a VECTOR_TYPE, this is the representative array type.  */
+#define TYPE_REPRESENTATIVE_ARRAY(NODE) \
+  TYPE_LANG_SLOT_1 (VECTOR_TYPE_CHECK (NODE))
+
 /* For numerical types, this holds various RM-defined values.  */
 #define TYPE_RM_VALUES(NODE) TYPE_LANG_SLOT_1 (NUMERICAL_TYPE_CHECK (NODE))
 
@@ -210,8 +214,7 @@ do {						   \
     TYPE_RM_VALUES (NODE) = make_tree_vec (3);	   \
   /* ??? The field is not visited by the generic   \
      code so we need to mark it manually.  */	   \
-  if (!TREE_CONSTANT (tmp))			   \
-    mark_visited (&tmp);			   \
+  MARK_VISITED (tmp);				   \
   TREE_VEC_ELT (TYPE_RM_VALUES (NODE), (N)) = tmp; \
 } while (0)
 

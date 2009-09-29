@@ -212,7 +212,8 @@ package body Prj.Part is
    --  file (.cgpr) since some specific checks apply.
 
    function Project_Path_Name_Of
-     (Project_File_Name : String;
+     (In_Tree           : Project_Node_Tree_Ref;
+      Project_File_Name : String;
       Directory         : String) return String;
    --  Returns the path name of a project file. Returns an empty string
    --  if project file cannot be found.
@@ -455,13 +456,14 @@ package body Prj.Part is
 
       if Current_Verbosity >= Medium then
          Write_Str ("GPR_PROJECT_PATH=""");
-         Write_Str (Project_Path);
+         Write_Str (Project_Path (In_Tree));
          Write_Line ("""");
       end if;
 
       declare
          Path_Name : constant String :=
-                       Project_Path_Name_Of (Real_Project_File_Name.all,
+                       Project_Path_Name_Of (In_Tree,
+                                             Real_Project_File_Name.all,
                                              Directory   => Current_Directory);
 
       begin
@@ -478,7 +480,7 @@ package body Prj.Part is
               ("project file """
                & Project_File_Name
                & """ not found in "
-               & Project_Path);
+               & Project_Path (In_Tree));
             Project := Empty_Node;
             return;
          end if;
@@ -755,7 +757,8 @@ package body Prj.Part is
 
                Imported_Path_Name : constant String :=
                                       Project_Path_Name_Of
-                                        (Original_Path,
+                                        (In_Tree,
+                                         Original_Path,
                                          Project_Directory_Path);
 
                Resolved_Path : constant String :=
@@ -941,6 +944,7 @@ package body Prj.Part is
       Name_From_Path  : constant Name_Id :=
         Project_Name_From (Path_Name, Is_Config_File => Is_Config_File);
       Name_Of_Project : Name_Id := No_Name;
+      Display_Name_Of_Project : Name_Id := No_Name;
 
       Duplicated : Boolean := False;
 
@@ -1298,9 +1302,6 @@ package body Prj.Part is
 
          --  To get expected name of the project file, replace dots by dashes
 
-         Name_Len := Buffer_Last;
-         Name_Buffer (1 .. Name_Len) := Buffer (1 .. Buffer_Last);
-
          for Index in 1 .. Name_Len loop
             if Name_Buffer (Index) = '.' then
                Name_Buffer (Index) := '-';
@@ -1335,6 +1336,21 @@ package body Prj.Part is
                   & Extension.all & "`",
                   Token_Ptr);
             end if;
+         end;
+
+         --  Read the original casing of the project name
+
+         declare
+            Loc : Source_Ptr;
+
+         begin
+            Loc := Location_Of (Project, In_Tree);
+            for J in 1 .. Name_Len loop
+               Name_Buffer (J) := Sinput.Source (Loc);
+               Loc := Loc + 1;
+            end loop;
+
+            Display_Name_Of_Project := Name_Find;
          end;
 
          declare
@@ -1421,7 +1437,8 @@ package body Prj.Part is
 
                Extended_Project_Path_Name : constant String :=
                                               Project_Path_Name_Of
-                                                (Original_Path_Name,
+                                                (In_Tree,
+                                                 Original_Path_Name,
                                                  Get_Name_String
                                                    (Project_Directory));
 
@@ -1700,6 +1717,7 @@ package body Prj.Part is
            (T => In_Tree.Projects_HT,
             K => Name_Of_Project,
             E => (Name           => Name_Of_Project,
+                  Display_Name   => Display_Name_Of_Project,
                   Node           => Project,
                   Canonical_Path => Canonical_Path_Name,
                   Extended       => Extended,
@@ -1897,7 +1915,8 @@ package body Prj.Part is
    --------------------------
 
    function Project_Path_Name_Of
-     (Project_File_Name : String;
+     (In_Tree           : Project_Node_Tree_Ref;
+      Project_File_Name : String;
       Directory         : String) return String
    is
 
@@ -1910,7 +1929,7 @@ package body Prj.Part is
       -------------------
 
       function Try_Path_Name (Path : String) return String_Access is
-         Prj_Path : constant String := Project_Path;
+         Prj_Path : constant String := Project_Path (In_Tree);
          First    : Natural;
          Last     : Natural;
          Result   : String_Access := null;

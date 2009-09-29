@@ -3863,7 +3863,7 @@
    (set (match_operand:SF 0 "register_operand" "")
 	(if_then_else:SF (eq (match_dup 3) (match_dup 4))
 			 (match_dup 1) (match_dup 2)))]
-  "TARGET_FP"
+  "TARGET_FP && alpha_fptm < ALPHA_FPTM_SU"
 {
   operands[3] = gen_reg_rtx (DFmode);
   operands[4] = CONST0_RTX (DFmode);
@@ -3876,7 +3876,7 @@
    (set (match_operand:SF 0 "register_operand" "")
 	(if_then_else:SF (ne (match_dup 3) (match_dup 4))
 		      (match_dup 1) (match_dup 2)))]
-  "TARGET_FP"
+  "TARGET_FP && alpha_fptm < ALPHA_FPTM_SU"
 {
   operands[3] = gen_reg_rtx (DFmode);
   operands[4] = CONST0_RTX (DFmode);
@@ -4869,7 +4869,7 @@
   "jmp $31,(%0),0"
   [(set_attr "type" "ibr")])
 
-;; Cache flush.  Used by INITIALIZE_TRAMPOLINE.  0x86 is PAL_imb, but we don't
+;; Cache flush.  Used by alpha_trampoline_init.  0x86 is PAL_imb, but we don't
 ;; want to have to include pal.h in our .s file.
 (define_insn "imb"
   [(unspec_volatile [(const_int 0)] UNSPECV_IMB)]

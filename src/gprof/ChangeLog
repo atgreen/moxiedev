@@ -1,3 +1,40 @@
+2009-09-25  Dimitry Gorbachev  <d.g.gorbachev@gmail.com>
+
+	PR 10656
+	* hist.h: Move declaration of histograms and num_histograms
+	variables from here to...
+	* hist.c: ...here.
+
+2009-09-23  Nick Clifton  <nickc@redhat.com>
+
+	* po/vi.po: Updated Vietnamese translation.
+
+2009-09-18  Nick Clifton  <nickc@redhat.com>
+
+	* po/es.po: Updated Spanish translation.
+	* po/fi.po: Updated Finnish translation.
+
+2009-09-14  Nick Clifton  <nickc@redhat.com>
+
+	* po/de.po: Updated German translation.
+	* po/nl.po: Update Dutch translation.
+
+2009-09-11  Nick Clifton  <nickc@redhat.com>
+
+	* po/gprof.pot: Updated by the Translation project.
+	* po/sv.po: Updated Swedish translation.
+
+2009-09-11  Martin Thuresson  <martint@google.com>
+
+	Updated sources to compile cleanly with -Wc++-compat:
+	* basic_blocks.c: Add casts.
+	* cg_dfn.c: Add cast.
+	* corefile.c: Add casts.
+	* gmon_io.c: Add casts.
+	* hist.c: Add cast.
+	* source.c: Add cast.
+	* sym_ids.c (struct match): Moved to top level.
+
 2009-09-07  Tristan Gingold  <gingold@adacore.com>
 
 	* po/gprof.pot: Regenerate.

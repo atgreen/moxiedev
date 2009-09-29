@@ -22,8 +22,10 @@
 
 #include "gold.h"
 
+#include <cerrno>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <vector>
 #include <iostream>
 #include <sys/stat.h>
@@ -47,6 +49,11 @@ Position_dependent_options::default_options_;
 namespace options
 {
 
+// This flag is TRUE if we should register the command-line options as they
+// are constructed.  It is set after contruction of the options within
+// class Position_dependent_options.
+static bool ready_to_register = false;
+
 // This global variable is set up as General_options is constructed.
 static std::vector<const One_option*> registered_options;
 
@@ -60,6 +67,9 @@ static One_option* short_options[128];
 void
 One_option::register_option()
 {
+  if (!ready_to_register)
+    return;
+
   registered_options.push_back(this);
 
   // We can't make long_options a static Option_map because we can't
@@ -75,7 +85,10 @@ One_option::register_option()
   const int shortname_as_int = static_cast<int>(this->shortname);
   gold_assert(shortname_as_int >= 0 && shortname_as_int < 128);
   if (this->shortname != '\0')
-    short_options[shortname_as_int] = this;
+    {
+      gold_assert(short_options[shortname_as_int] == NULL);
+      short_options[shortname_as_int] = this;
+    }
 }
 
 void
@@ -714,6 +727,8 @@ General_options::General_options()
     do_demangle_(false), plugins_(),
     incremental_disposition_(INCREMENTAL_CHECK), implicit_incremental_(false)
 {
+  // Turn off option registration once construction is complete.
+  gold::options::ready_to_register = false;
 }
 
 General_options::Object_format
@@ -925,6 +940,25 @@ General_options::finalize()
       this->add_to_library_path_with_sysroot("/usr/lib");
     }
 
+  // Parse the contents of -retain-symbols-file into a set.
+  if (this->retain_symbols_file())
+    {
+      std::ifstream in;
+      in.open(this->retain_symbols_file());
+      if (!in)
+        gold_fatal(_("unable to open -retain-symbols-file file %s: %s"),
+                   this->retain_symbols_file(), strerror(errno));
+      std::string line;
+      std::getline(in, line);   // this chops off the trailing \n, if any
+      while (in)
+        {
+          if (!line.empty() && line[line.length() - 1] == '\r')   // Windows
+            line.resize(line.length() - 1);
+          this->symbols_to_retain_.insert(line);
+          std::getline(in, line);
+        }
+    }
+
   if (this->shared() && !this->user_set_allow_shlib_undefined())
     this->set_allow_shlib_undefined(true);
 
@@ -938,6 +972,10 @@ General_options::finalize()
 
   if (this->shared() && this->relocatable())
     gold_fatal(_("-shared and -r are incompatible"));
+
+  // TODO: implement support for -retain-symbols-file with -r, if needed.
+  if (this->relocatable() && this->retain_symbols_file())
+    gold_fatal(_("-retain-symbols-file does not yet work with -r"));
 
   if (this->oformat_enum() != General_options::OBJECT_FORMAT_ELF
       && (this->shared() || this->relocatable()))
@@ -1037,6 +1075,13 @@ Input_arguments::end_group()
 
 Command_line::Command_line()
 {
+}
+
+// Pre_options is the hook that sets the ready_to_register flag.
+
+Command_line::Pre_options::Pre_options()
+{
+  gold::options::ready_to_register = true;
 }
 
 // Process the command line options.  For process_one_option, i is the

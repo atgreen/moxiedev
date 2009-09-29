@@ -1,3 +1,120 @@
+2009-09-28  Janis Johnson  <janis187@us.ibm.com>
+
+	* mangle.c (write_builtin_type): Support decimal float types.
+
+2009-09-28  Richard Henderson  <rth@redhat.com>
+
+	* cp-objcp-common.h (LANG_HOOKS_EH_USE_CXA_END_CLEANUP): New.
+
+2009-09-24  Jakub Jelinek  <jakub@redhat.com>
+
+	* method.c (make_thunk, make_alias_for): Don't set
+	DECL_NO_STATIC_CHAIN.
+	* decl.c (builtin_function_1, grokfndecl): Likewise.
+	* lex.c (build_lang_decl): Likewise.
+
+2009-09-23  Dodji Seketeli  <dodji@redhat.com>
+
+	PR debug/41065
+	* decl.c (cp_finish_decl): Record the types used by the global
+	variable declaration we've just parsed.
+
+2009-09-22  Dodji Seketeli  <dodji@redhat.com>
+
+	* cp-lang.c (LANG_HOOKS_FUNCTION_PARAMETER_PACK_P,
+	LANG_HOOKS_FUNCTION_PARM_EXPANDED_FROM_PACK_P,
+	LANG_HOOKS_GET_GENERIC_FUNCTION_DECL): Initialize these
+	hooks for the c++ FE.
+	* cp-tree.h (function_parameter_pack_p, get_function_template_decl,
+	function_parameter_expanded_from_pack_p): Declare ...
+	* pt.c (function_parameter_pack_p, get_function_template_decl,
+	function_parameter_expanded_from_pack_p): ... new hooks.
+	(get_template_info): Make this more robust.
+	(template_args_variadic_p, make_ith_pack_parameter_name): Add a new
+	line between comment and function.
+	(get_template_argument_pack_elems): Fix comment.
+	(tsubst_decl): Arguments of function parameter packs are not
+	parameter packs themselves.
+
+2009-09-21  Jason Merrill  <jason@redhat.com>
+
+	PR c++/41421
+	* tree.c (trivial_type_p): Fix logic.
+
+2009-09-21  Jason Merrill  <jason@redhat.com>
+
+	* name-lookup.c (push_class_level_binding): Sanity check.
+
+2009-09-18  Jason Merrill  <jason@redhat.com>
+
+	* decl2.c (determine_visibility): Make anonymous types internal.
+	(mark_used): Complain about types without linkage used in
+	decls with internal linkage.
+	(vague_linkage_fn_p): Split out from...
+	* decl.c (maybe_commonize_var): ...here.
+	(grokdeclarator): Adjust linkage when a typedef gives linkage name.
+	* tree.c (no_linkage_check): Check the enclosing class and template
+	arguments.
+
+	* cp-tree.h (TYPE_NAMESPACE_SCOPE_P): New.
+
+	* pt.c (get_pattern_parm): New.
+	(listify): Split out from...
+	(listify_autos): ...here.
+	(unify): Deduce std::initializer_list for T.
+	* call.c (build_over_call): Warn about it.
+
+2009-09-17  Andrew Pinski  <pinskia@gcc.gnu.org>
+
+	PR c++/39365
+	* typeck.c (cp_build_unary_op): Check TREE_CODE for bools instead of
+	using same_type_p.
+	(convert_for_assignment): Likewise.
+	* cvt.c (type_promotes_to): Likewise.
+
+2009-09-14  Richard Henderson  <rth@redhat.com>
+            Jakub Jelinek  <jakub@redhat.com>
+
+	* cp-tree.h (finish_asm_stmt): Update decl.
+	* parser.c (cp_parser_asm_definition): Parse asm goto.
+	(cp_parser_asm_label_list): New.
+	* pt.c (tsubst_copy_asm_operands): Don't recurse on labels.
+	(tsubst_expr): Handle asm labels.
+	* semantics.c (finish_asm_stmt): Add and use labels parameter.
+
+2009-09-14  Richard Henderson  <rth@redhat.com>
+
+	* except.c (init_exception_processing): Don't call
+	default_init_unwind_resume_libfunc.
+	(cp_protect_cleanup_actions): Return the decl to call.
+	(build_exc_ptr): Use __builtin_eh_pointer.
+	* optimize.c (clone_body): Set eh_lp_nr, not eh_region.
+
+2009-09-13  Richard Guenther  <rguenther@suse.de>
+	Rafael Avila de Espindola  <espindola@google.com>
+
+	* except.c (init_exception_processing): Do not set
+	lang_eh_runtime_type.
+	(choose_personality_routine): Do not set eh_personality_decl,
+	set pragma_java_exceptions.
+	* cp-lang.c (LANG_HOOKS_EH_RUNTIME_TYPE): Define.
+	(LANG_HOOKS_EH_PERSONALITY): Likewise.
+	(cp_eh_personality_decl): New.
+	(cp_eh_personality): Likewise.
+	* Make-lang.in (cp-lang.o): Add $(EXPR_H) and $(EXCEPT_H)
+	dependencies.
+
+2009-09-13  Wei Guozhi  <carrot@google.com>
+
+	PR c++/3187
+	* cp/optimize.c (build_delete_destructor_body): New function.
+	(maybe_clone_body): Call build_delete_destructor_body for
+	deleting destructor.
+
+2009-09-10  Jason Merrill  <jason@redhat.com>
+
+	* repo.c (extract_string, get_base_filename, init_repo): constify.
+
 2009-09-09  Jason Merrill  <jason@redhat.com>
 
 	* error.c (find_typenames_r): Also add decltypes.
@@ -18,7 +135,7 @@
 	* decl.c (build_init_list_var_init): Check return value of
 	perform_implicit_conversion.
 
-2009-09-03  Jason Merrill  <jason@redhat.com>
+2009-09-08  Jason Merrill  <jason@redhat.com>
 
 	* class.c (currently_open_class): Make sure we're dealing with the
 	main variant.

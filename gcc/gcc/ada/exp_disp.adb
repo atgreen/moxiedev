@@ -692,7 +692,9 @@ package body Exp_Disp is
                Append_To (New_Params,
                  Duplicate_Subexpr_Move_Checks (Param));
 
-            else
+            elsif Nkind (Parent (Param)) /= N_Parameter_Association
+              or else not Is_Accessibility_Actual (Parent (Param))
+            then
                Append_To (New_Params, Relocate_Node (Param));
             end if;
 
@@ -1739,6 +1741,48 @@ package body Exp_Disp is
 
       return False;
    end Is_Predefined_Dispatching_Operation;
+
+   ---------------------------------------
+   -- Is_Predefined_Internal_Operation  --
+   ---------------------------------------
+
+   function Is_Predefined_Internal_Operation
+     (E : Entity_Id) return Boolean
+   is
+      TSS_Name : TSS_Name_Type;
+
+   begin
+      if not Is_Dispatching_Operation (E) then
+         return False;
+      end if;
+
+      Get_Name_String (Chars (E));
+
+      --  Most predefined primitives have internally generated names. Equality
+      --  must be treated differently; the predefined operation is recognized
+      --  as a homogeneous binary operator that returns Boolean.
+
+      if Name_Len > TSS_Name_Type'Last then
+         TSS_Name :=
+           TSS_Name_Type
+             (Name_Buffer (Name_Len - TSS_Name'Length + 1 .. Name_Len));
+
+         if        Chars (E) = Name_uSize
+           or else Chars (E) = Name_uAlignment
+           or else
+             (Chars (E) = Name_Op_Eq
+                and then Etype (First_Entity (E)) = Etype (Last_Entity (E)))
+           or else Chars (E) = Name_uAssign
+           or else TSS_Name  = TSS_Deep_Adjust
+           or else TSS_Name  = TSS_Deep_Finalize
+           or else Is_Predefined_Interface_Primitive (E)
+         then
+            return True;
+         end if;
+      end if;
+
+      return False;
+   end Is_Predefined_Internal_Operation;
 
    -------------------------------------
    -- Is_Predefined_Dispatching_Alias --
@@ -5096,9 +5140,8 @@ package body Exp_Disp is
 
             exit when Parent_Typ = Current_Typ;
 
-            if Is_CPP_Class (Parent_Typ)
-              or else Is_Interface (Typ)
-            then
+            if Is_CPP_Class (Parent_Typ) then
+
                --  The tags defined in the C++ side will be inherited when
                --  the object is constructed (Exp_Ch3.Build_Init_Procedure)
 

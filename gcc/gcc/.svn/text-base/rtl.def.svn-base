@@ -187,8 +187,9 @@ DEF_RTL_EXPR(ASM_INPUT, "asm_input", "si", RTX_EXTRA)
    5th is a vector of modes and constraints for the input operands.
      Each element is an ASM_INPUT containing a constraint string
      and whose mode indicates the mode of the input operand.
-   6th is the source line number.  */
-DEF_RTL_EXPR(ASM_OPERANDS, "asm_operands", "ssiEEi", RTX_EXTRA)
+   6th is a vector of labels that may be branched to by the asm.
+   7th is the source line number.  */
+DEF_RTL_EXPR(ASM_OPERANDS, "asm_operands", "ssiEEEi", RTX_EXTRA)
 
 /* A machine-specific operation.
    1st operand is a vector of operands being used by the operation so that
@@ -300,11 +301,6 @@ DEF_RTL_EXPR(EH_RETURN, "eh_return", "", RTX_EXTRA)
    Operand 2 is the trap code.
    For an unconditional trap, make the condition (const_int 1).  */
 DEF_RTL_EXPR(TRAP_IF, "trap_if", "ee", RTX_EXTRA)
-
-/* Placeholder for _Unwind_Resume before we know if a function call
-   or a branch is needed.  Operand 1 is the exception region from
-   which control is flowing.  */
-DEF_RTL_EXPR(RESX, "resx", "i", RTX_EXTRA)
 
 /* ----------------------------------------------------------------------
    Primitive values for use in expressions.

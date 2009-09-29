@@ -301,7 +301,8 @@ else
 fi
 
 if test x"$ac_cv_has_union_semun" = x"yes" -a x"$ac_cv_sysv_sem" = x"yes" ; then
-  sim_hwflags="-DHAS_UNION_SEMUN";
+  AC_DEFINE(HAVE_UNION_SEMUN, 1,
+	    [Define if union semun is defined in <sys/sem.h>])
 fi
 
 

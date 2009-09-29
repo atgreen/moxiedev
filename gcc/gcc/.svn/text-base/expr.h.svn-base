@@ -618,7 +618,7 @@ extern HOST_WIDE_INT int_expr_size (tree);
    in its original home.  This becomes invalid if any more code is emitted.  */
 extern rtx hard_function_value (const_tree, const_tree, const_tree, int);
 
-extern rtx prepare_call_address (rtx, rtx, rtx *, int, int);
+extern rtx prepare_call_address (tree, rtx, rtx, rtx *, int, int);
 
 extern bool shift_return_value (enum machine_mode, bool, rtx);
 
@@ -813,6 +813,12 @@ extern void init_all_optabs (void);
 /* Call this to initialize an optab function entry.  */
 extern rtx init_one_libfunc (const char *);
 extern rtx set_user_assembler_libfunc (const char *, const char *);
+
+/* Build a decl for a libfunc named NAME. */
+extern tree build_libfunc_function (const char *);
+
+/* Get the personality libfunc for a function decl.  */
+rtx get_personality_function (tree);
 
 extern int vector_mode_valid_p (enum machine_mode);
 

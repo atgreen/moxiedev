@@ -192,6 +192,8 @@ static void perform_typedefs_access_check (tree tmpl, tree targs);
 static void append_type_to_template_for_access_check_1 (tree, tree, tree);
 static hashval_t iterative_hash_template_arg (tree arg, hashval_t val);
 static bool primary_template_instantiation_p (const_tree);
+static tree listify (tree);
+static tree listify_autos (tree, tree);
 
 /* Make the current scope suitable for access checking when we are
    processing T.  T can be FUNCTION_DECL for instantiated function
@@ -291,6 +293,9 @@ tree
 get_template_info (const_tree t)
 {
   tree tinfo = NULL_TREE;
+
+  if (!t || t == error_mark_node)
+    return NULL;
 
   if (DECL_P (t) && DECL_LANG_SPECIFIC (t))
     tinfo = DECL_TEMPLATE_INFO (t);
@@ -2615,6 +2620,7 @@ comp_template_parms (const_tree parms1, const_tree parms2)
 }
 
 /* Determine whether PARM is a parameter pack.  */
+
 bool 
 template_parameter_pack_p (const_tree parm)
 {
@@ -2633,8 +2639,49 @@ template_parameter_pack_p (const_tree parm)
 	  && TEMPLATE_TYPE_PARAMETER_PACK (parm));
 }
 
+/* Determine if T is a function parameter pack.  */
+
+bool
+function_parameter_pack_p (const_tree t)
+{
+  if (t && TREE_CODE (t) == PARM_DECL)
+    return FUNCTION_PARAMETER_PACK_P (t);
+  return false;
+}
+
+/* Return the function template declaration of PRIMARY_FUNC_TMPL_INST.
+   PRIMARY_FUNC_TMPL_INST is a primary function template instantiation.  */
+
+tree
+get_function_template_decl (const_tree primary_func_tmpl_inst)
+{
+  if (! primary_func_tmpl_inst
+      || TREE_CODE (primary_func_tmpl_inst) != FUNCTION_DECL
+      || ! primary_template_instantiation_p (primary_func_tmpl_inst))
+    return NULL;
+
+  return DECL_TEMPLATE_RESULT (DECL_TI_TEMPLATE (primary_func_tmpl_inst));
+}
+
+/* Return true iff the function parameter PARAM_DECL was expanded
+   from the function parameter pack PACK.  */
+
+bool
+function_parameter_expanded_from_pack_p (tree param_decl, tree pack)
+{
+    if (! function_parameter_pack_p (pack))
+      return false;
+
+    gcc_assert (DECL_NAME (param_decl) && DECL_NAME (pack));
+
+    /* The parameter pack and its pack arguments have the same
+       DECL_PARM_INDEX.  */
+    return DECL_PARM_INDEX (pack) == DECL_PARM_INDEX (param_decl);
+}
+
 /* Determine whether ARGS describes a variadic template args list,
    i.e., one that is terminated by a template argument pack.  */
+
 static bool 
 template_args_variadic_p (tree args)
 {
@@ -2657,6 +2704,7 @@ template_args_variadic_p (tree args)
 
 /* Generate a new name for the parameter pack name NAME (an
    IDENTIFIER_NODE) that incorporates its */
+
 static tree
 make_ith_pack_parameter_name (tree name, int i)
 {
@@ -2733,7 +2781,8 @@ get_template_innermost_arguments (const_tree t)
   return args;
 }
 
-/* Return the arguments pack of T if T is a template, NULL otherwise.  */
+/* Return the argument pack elements of T if T is a template argument pack,
+   NULL otherwise.  */
 
 tree
 get_template_argument_pack_elems (const_tree t)
@@ -8033,6 +8082,36 @@ tsubst_pack_expansion (tree t, tree args, tsubst_flags_t complain,
   return result;
 }
 
+/* Given PARM_DECL PARM, find the corresponding PARM_DECL in the template
+   TMPL.  We do this using DECL_PARM_INDEX, which should work even with
+   parameter packs; all parms generated from a function parameter pack will
+   have the same DECL_PARM_INDEX.  */
+
+tree
+get_pattern_parm (tree parm, tree tmpl)
+{
+  tree pattern = DECL_TEMPLATE_RESULT (tmpl);
+  tree patparm;
+
+  if (DECL_ARTIFICIAL (parm))
+    {
+      for (patparm = DECL_ARGUMENTS (pattern);
+	   patparm; patparm = TREE_CHAIN (patparm))
+	if (DECL_ARTIFICIAL (patparm)
+	    && DECL_NAME (parm) == DECL_NAME (patparm))
+	  break;
+    }
+  else
+    {
+      patparm = FUNCTION_FIRST_USER_PARM (DECL_TEMPLATE_RESULT (tmpl));
+      patparm = chain_index (DECL_PARM_INDEX (parm)-1, patparm);
+      gcc_assert (DECL_PARM_INDEX (patparm)
+		  == DECL_PARM_INDEX (parm));
+    }
+
+  return patparm;
+}
+
 /* Substitute ARGS into the vector or list of template arguments T.  */
 
 static tree
@@ -8792,6 +8871,10 @@ tsubst_decl (tree t, tree args, tsubst_flags_t complain)
             r = copy_node (t);
             if (DECL_TEMPLATE_PARM_P (t))
               SET_DECL_TEMPLATE_PARM_P (r);
+
+	    /* An argument of a function parameter pack is not a parameter
+	       pack.  */
+	    FUNCTION_PARAMETER_PACK_P (r) = false;
 
             if (expanded_types)
               /* We're on the Ith parameter of the function parameter
@@ -10818,7 +10901,7 @@ tsubst_copy_asm_operands (tree t, tree args, tsubst_flags_t complain,
   if (purpose)
     purpose = RECUR (purpose);
   value = TREE_VALUE (t);
-  if (value)
+  if (value && TREE_CODE (value) != LABEL_DECL)
     value = RECUR (value);
   chain = TREE_CHAIN (t);
   if (chain && chain != void_type_node)
@@ -11210,7 +11293,8 @@ tsubst_expr (tree t, tree args, tsubst_flags_t complain, tree in_decl,
 	 RECUR (ASM_STRING (t)),
 	 tsubst_copy_asm_operands (ASM_OUTPUTS (t), args, complain, in_decl),
 	 tsubst_copy_asm_operands (ASM_INPUTS (t), args, complain, in_decl),
-	 tsubst_copy_asm_operands (ASM_CLOBBERS (t), args, complain, in_decl));
+	 tsubst_copy_asm_operands (ASM_CLOBBERS (t), args, complain, in_decl),
+	 tsubst_copy_asm_operands (ASM_LABELS (t), args, complain, in_decl));
       {
 	tree asm_expr = tmp;
 	if (TREE_CODE (asm_expr) == CLEANUP_POINT_EXPR)
@@ -13726,6 +13810,12 @@ unify (tree tparms, tree targs, tree parm, tree arg, int strict)
     {
       tree elt, elttype;
       unsigned i;
+      tree orig_parm = parm;
+
+      /* Replace T with std::initializer_list<T> for deduction.  */
+      if (TREE_CODE (parm) == TEMPLATE_TYPE_PARM
+	  && flag_deduce_init_list)
+	parm = listify (parm);
 
       if (!is_std_init_list (parm))
 	/* We can only deduce from an initializer list argument if the
@@ -13750,6 +13840,16 @@ unify (tree tparms, tree targs, tree parm, tree arg, int strict)
 
 	  if (unify (tparms, targs, elttype, elt, elt_strict))
 	    return 1;
+	}
+
+      /* If the std::initializer_list<T> deduction worked, replace the
+	 deduced A with std::initializer_list<A>.  */
+      if (orig_parm != parm)
+	{
+	  idx = TEMPLATE_TYPE_IDX (orig_parm);
+	  targ = TREE_VEC_ELT (INNERMOST_TEMPLATE_ARGS (targs), idx);
+	  targ = listify (targ);
+	  TREE_VEC_ELT (INNERMOST_TEMPLATE_ARGS (targs), idx) = targ;
 	}
       return 0;
     }
@@ -17445,26 +17545,33 @@ make_auto (void)
   return au;
 }
 
+/* Given type ARG, return std::initializer_list<ARG>.  */
+
+static tree
+listify (tree arg)
+{
+  tree std_init_list = namespace_binding
+    (get_identifier ("initializer_list"), std_node);
+  tree argvec;
+  if (!std_init_list || !DECL_CLASS_TEMPLATE_P (std_init_list))
+    {    
+      error ("deducing from brace-enclosed initializer list requires "
+	     "#include <initializer_list>");
+      return error_mark_node;
+    }
+  argvec = make_tree_vec (1);
+  TREE_VEC_ELT (argvec, 0) = arg;
+  return lookup_template_class (std_init_list, argvec, NULL_TREE,
+				NULL_TREE, 0, tf_warning_or_error);
+}
+
 /* Replace auto in TYPE with std::initializer_list<auto>.  */
 
 static tree
 listify_autos (tree type, tree auto_node)
 {
-  tree std_init_list = namespace_binding
-    (get_identifier ("initializer_list"), std_node);
-  tree argvec;
-  tree init_auto;
-  if (!std_init_list || !DECL_CLASS_TEMPLATE_P (std_init_list))
-    {    
-      error ("deducing auto from brace-enclosed initializer list requires "
-	     "#include <initializer_list>");
-      return error_mark_node;
-    }
-  argvec = make_tree_vec (1);
-  TREE_VEC_ELT (argvec, 0) = auto_node;
-  init_auto = lookup_template_class (std_init_list, argvec, NULL_TREE,
-				     NULL_TREE, 0, tf_warning_or_error);
-
+  tree init_auto = listify (auto_node);
+  tree argvec = make_tree_vec (1);
   TREE_VEC_ELT (argvec, 0) = init_auto;
   if (processing_template_decl)
     argvec = add_to_template_args (current_template_args (), argvec);

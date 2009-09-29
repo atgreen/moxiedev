@@ -273,25 +273,22 @@ moxie_expand_prologue (void)
 
   if (cfun->machine->size_for_adjusting_sp > 0)
     {
-      if (cfun->machine->size_for_adjusting_sp <= 255)
+      int i = cfun->machine->size_for_adjusting_sp;
+      while (i > 255)
 	{
 	  insn = emit_insn (gen_subsi3 (stack_pointer_rtx, 
 					stack_pointer_rtx, 
-					GEN_INT (cfun->machine->size_for_adjusting_sp)));
+					GEN_INT (255)));
+	  RTX_FRAME_RELATED_P (insn) = 1;
+	  i -= 255;
+	}
+      if (i > 0)
+	{
+	  insn = emit_insn (gen_subsi3 (stack_pointer_rtx, 
+					stack_pointer_rtx, 
+					GEN_INT (i)));
 	  RTX_FRAME_RELATED_P (insn) = 1;
 	}
-      else
-	{
-	  insn = 
-	    emit_insn (gen_movsi 
-		       (gen_rtx_REG (Pmode, MOXIE_R5), 
-			GEN_INT (-cfun->machine->size_for_adjusting_sp)));
-	  RTX_FRAME_RELATED_P (insn) = 1;
-	  insn = emit_insn (gen_addsi3 (stack_pointer_rtx, 
-					stack_pointer_rtx, 
-					gen_rtx_REG (Pmode, MOXIE_R5)));
-	  RTX_FRAME_RELATED_P (insn) = 1;
-	}	
     }
 }
 
@@ -359,14 +356,14 @@ moxie_setup_incoming_varargs (CUMULATIVE_ARGS *cum,
 			      int *pretend_size, int no_rtl)
 {
   int regno;
-  int regs = 7 - *cum;
+  int regs = 8 - *cum;
   
   *pretend_size = regs < 0 ? 0 : GET_MODE_SIZE (SImode) * regs;
   
   if (no_rtl)
     return;
   
-  for (regno = *cum; regno < 7; regno++)
+  for (regno = *cum; regno < 8; regno++)
     {
       rtx reg = gen_rtx_REG (SImode, regno);
       rtx slot = gen_rtx_PLUS (Pmode,
@@ -395,7 +392,7 @@ rtx
 moxie_function_arg (CUMULATIVE_ARGS cum, enum machine_mode mode,
 		    tree type ATTRIBUTE_UNUSED, int named ATTRIBUTE_UNUSED)
 {
-  if (cum < 7)
+  if (cum < 8)
     return gen_rtx_REG (mode, cum);
   else 
     return NULL_RTX;
@@ -420,7 +417,7 @@ moxie_pass_by_reference (CUMULATIVE_ARGS *cum ATTRIBUTE_UNUSED,
   else
     size = GET_MODE_SIZE (mode);
 
-  return size > 4*5;
+  return size > 4*6;
 }
 
 /* Some function arguments will only partially fit in the registers
@@ -434,7 +431,7 @@ moxie_arg_partial_bytes (CUMULATIVE_ARGS *cum,
 {
   int bytes_left, size;
 
-  if (*cum >= 7)
+  if (*cum >= 8)
     return 0;
 
   if (moxie_pass_by_reference (cum, mode, type, named))
@@ -448,12 +445,61 @@ moxie_arg_partial_bytes (CUMULATIVE_ARGS *cum,
   else
     size = GET_MODE_SIZE (mode);
 
-  bytes_left = (4 * 5) - ((*cum - 2) * 4);
+  bytes_left = (4 * 6) - ((*cum - 2) * 4);
 
   if (size > bytes_left)
     return bytes_left;
   else
     return 0;
+}
+
+/* Worker function for TARGET_STATIC_CHAIN.  */
+
+static rtx
+moxie_static_chain (const_tree fndecl, bool incoming_p)
+{
+  rtx addr, mem;
+
+  if (!DECL_STATIC_CHAIN (fndecl))
+    return NULL;
+
+  if (incoming_p)
+    addr = plus_constant (arg_pointer_rtx, 2 * UNITS_PER_WORD);
+  else
+    addr = plus_constant (stack_pointer_rtx, -UNITS_PER_WORD);
+
+  mem = gen_rtx_MEM (Pmode, addr);
+  MEM_NOTRAP_P (mem) = 1;
+
+  return mem;
+}
+
+/* Worker function for TARGET_ASM_TRAMPOLINE_TEMPLATE.  */
+
+static void
+moxie_asm_trampoline_template (FILE *f)
+{
+  fprintf (f, "\tpush  $sp, $r0\n");
+  fprintf (f, "\tldi.l $r0, 0x0\n");
+  fprintf (f, "\tsto.l 0x8($fp), $r0\n");
+  fprintf (f, "\tpop   $sp, $r0\n");
+  fprintf (f, "\tjmpa  0x0\n");
+}
+
+/* Worker function for TARGET_TRAMPOLINE_INIT.  */
+
+static void
+moxie_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
+{
+  rtx mem, fnaddr = XEXP (DECL_RTL (fndecl), 0);
+
+  emit_block_move (m_tramp, assemble_trampoline_template (),
+		   GEN_INT (TRAMPOLINE_SIZE), BLOCK_OP_NORMAL);
+
+  mem = adjust_address (m_tramp, SImode, 4);
+  emit_move_insn (mem, chain_value);
+  mem = adjust_address (m_tramp, SImode, 18);
+  emit_move_insn (mem, fnaddr);
 }
 
 /* The Global `targetm' Variable.  */
@@ -487,6 +533,13 @@ moxie_arg_partial_bytes (CUMULATIVE_ARGS *cum,
 
 #undef TARGET_FRAME_POINTER_REQUIRED
 #define TARGET_FRAME_POINTER_REQUIRED hook_bool_void_true
+
+#undef TARGET_STATIC_CHAIN
+#define TARGET_STATIC_CHAIN moxie_static_chain
+#undef TARGET_ASM_TRAMPOLINE_TEMPLATE
+#define TARGET_ASM_TRAMPOLINE_TEMPLATE moxie_asm_trampoline_template
+#undef TARGET_TRAMPOLINE_INIT
+#define TARGET_TRAMPOLINE_INIT moxie_trampoline_init
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 

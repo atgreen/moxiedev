@@ -162,13 +162,6 @@ gfc_add_modify (stmtblock_t * pblock, tree lhs, tree rhs)
   tree t1, t2;
   t1 = TREE_TYPE (rhs);
   t2 = TREE_TYPE (lhs);
-  /* ??? This is actually backwards, we should test the "base" type
-     from which the nontarget_type was copied, but we don't have this
-     backlink.  This will do for now, it's for checking anyway.  */
-  if (TYPE_LANG_SPECIFIC (t1))
-    t1 = TYPE_LANG_SPECIFIC (t1)->nontarget_type;
-  if (TYPE_LANG_SPECIFIC (t2))
-    t2 = TYPE_LANG_SPECIFIC (t2)->nontarget_type;
   /* Make sure that the types of the rhs and the lhs are the same
      for scalar assignments.  We should probably have something
      similar for aggregates, but right now removing that check just
@@ -1162,6 +1155,10 @@ gfc_trans_code (gfc_code * code)
 
 	case EXEC_ARITHMETIC_IF:
 	  res = gfc_trans_arithmetic_if (code);
+	  break;
+
+	case EXEC_BLOCK:
+	  res = gfc_trans_block_construct (code);
 	  break;
 
 	case EXEC_DO:

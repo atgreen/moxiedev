@@ -1188,7 +1188,10 @@ do {									\
   XSTR (XCVECEXP (RTX, 4, N, ASM_OPERANDS), 0)
 #define ASM_OPERANDS_INPUT_MODE(RTX, N)  \
   GET_MODE (XCVECEXP (RTX, 4, N, ASM_OPERANDS))
-#define ASM_OPERANDS_SOURCE_LOCATION(RTX) XCUINT (RTX, 5, ASM_OPERANDS)
+#define ASM_OPERANDS_LABEL_VEC(RTX) XCVEC (RTX, 5, ASM_OPERANDS)
+#define ASM_OPERANDS_LABEL_LENGTH(RTX) XCVECLEN (RTX, 5, ASM_OPERANDS)
+#define ASM_OPERANDS_LABEL(RTX, N) XCVECEXP (RTX, 5, N, ASM_OPERANDS)
+#define ASM_OPERANDS_SOURCE_LOCATION(RTX) XCUINT (RTX, 6, ASM_OPERANDS)
 #define ASM_INPUT_SOURCE_LOCATION(RTX) XCUINT (RTX, 1, ASM_INPUT)
 
 /* 1 if RTX is a mem that is statically allocated in read-only memory.  */
@@ -1841,6 +1844,13 @@ extern int volatile_insn_p (const_rtx);
 extern int may_trap_p_1 (const_rtx, unsigned);
 extern int may_trap_p (const_rtx);
 extern int may_trap_or_fault_p (const_rtx);
+extern bool can_throw_internal (const_rtx);
+extern bool can_throw_external (const_rtx);
+extern bool insn_could_throw_p (const_rtx);
+extern bool insn_nothrow_p (const_rtx);
+extern bool can_nonlocal_goto (const_rtx);
+extern void copy_reg_eh_region_note_forward (rtx, rtx, rtx);
+extern void copy_reg_eh_region_note_backward(rtx, rtx, rtx);
 extern int inequality_comparisons_p (const_rtx);
 extern rtx replace_rtx (rtx, rtx, rtx);
 extern int replace_label (rtx *, void *);
@@ -1919,6 +1929,7 @@ extern bool resize_reg_info (void);
 extern void free_reg_info (void);
 
 /* recog.c */
+extern rtx extract_asm_operands (rtx);
 extern int asm_noperands (const_rtx);
 extern const char *decode_asm_operands (rtx, rtx *, rtx **, const char **,
 					enum machine_mode *, location_t *);
@@ -2013,8 +2024,6 @@ extern GTY(()) rtx global_rtl[GR_MAX];
 #define arg_pointer_rtx		(global_rtl[GR_ARG_POINTER])
 
 extern GTY(()) rtx pic_offset_table_rtx;
-extern GTY(()) rtx static_chain_rtx;
-extern GTY(()) rtx static_chain_incoming_rtx;
 extern GTY(()) rtx return_address_pointer_rtx;
 
 /* Include the RTL generation functions.  */

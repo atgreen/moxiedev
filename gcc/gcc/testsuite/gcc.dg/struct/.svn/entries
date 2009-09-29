@@ -1,15 +1,15 @@
 10
 
 dir
-151642
+152280
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/struct
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-26T09:41:29.165476Z
-147864
-rguenth
+2009-09-17T11:35:38.400833Z
+151800
+jamborm
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:45:18.000000Z
-ff0f184a6f91067986eac50bccdd6822
-2008-09-08T22:41:27.160780Z
-140126
-hutchinsonandy
+2009-09-27T03:30:01.000000Z
+6d154c81791d5944bed1995b0c92b972
+2009-09-17T11:35:38.400833Z
+151800
+jamborm
 
 
 
@@ -58,7 +58,7 @@ hutchinsonandy
 
 
 
-831
+844
 
 w_prof_two_strs.c
 file

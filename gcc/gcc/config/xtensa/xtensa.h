@@ -383,17 +383,6 @@ extern char xtensa_hard_regno_mode_ok[][FIRST_PSEUDO_REGISTER];
 /* Base register for access to arguments of the function.  */
 #define ARG_POINTER_REGNUM (GP_REG_FIRST + 17)
 
-/* If the static chain is passed in memory, these macros provide rtx
-   giving 'mem' expressions that denote where they are stored.
-   'STATIC_CHAIN' and 'STATIC_CHAIN_INCOMING' give the locations as
-   seen by the calling and called functions, respectively.  */
-
-#define STATIC_CHAIN							\
-  gen_rtx_MEM (Pmode, plus_constant (stack_pointer_rtx, -5 * UNITS_PER_WORD))
-
-#define STATIC_CHAIN_INCOMING						\
-  gen_rtx_MEM (Pmode, plus_constant (arg_pointer_rtx, -5 * UNITS_PER_WORD))
-
 /* For now we don't try to use the full set of boolean registers.  Without
    software pipelining of FP operations, there's not much to gain and it's
    a real pain to get them reloaded.  */
@@ -677,19 +666,12 @@ typedef struct xtensa_args
 /* Stack pointer value doesn't matter at exit.  */
 #define EXIT_IGNORE_STACK 1
 
-#define TRAMPOLINE_TEMPLATE(STREAM) xtensa_trampoline_template (STREAM)
-
 /* Size in bytes of the trampoline, as an integer.  Make sure this is
    a multiple of TRAMPOLINE_ALIGNMENT to avoid -Wpadded warnings.  */
 #define TRAMPOLINE_SIZE (TARGET_CONST16 || TARGET_ABSOLUTE_LITERALS ? 60 : 52)
 
 /* Alignment required for trampolines, in bits.  */
 #define TRAMPOLINE_ALIGNMENT 32
-
-/* A C statement to initialize the variable parts of a trampoline.  */
-#define INITIALIZE_TRAMPOLINE(ADDR, FUNC, CHAIN)			\
-  xtensa_initialize_trampoline (ADDR, FUNC, CHAIN)
-
 
 /* If defined, a C expression that produces the machine-specific code
    to setup the stack so that arbitrary frames can be accessed.

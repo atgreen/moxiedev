@@ -1,15 +1,15 @@
 10
 
 dir
-151642
+152280
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gnat.dg
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-04T11:08:12.562375Z
-151420
-jamborm
+2009-09-28T17:00:46.522334Z
+152243
+hainque
 
 
 
@@ -2106,11 +2106,11 @@ file
 
 
 
-2009-06-26T14:45:11.000000Z
-f7053b56b4ea3ffe32675cc6bdce4152
-2009-06-26T08:54:26.778865Z
-148966
-ebotcazou
+2009-09-27T03:29:55.000000Z
+c428e267874da1cd58bd5e0392d75d62
+2009-09-25T09:05:16.901185Z
+152163
+hainque
 
 
 
@@ -2132,7 +2132,7 @@ ebotcazou
 
 
 
-279
+488
 
 inline_scope.adb
 file
@@ -2582,11 +2582,11 @@ file
 
 
 
-2009-06-26T14:45:11.000000Z
-ab99dc85cc0beb624cf55a8362fa4194
-2009-06-26T08:54:26.778865Z
-148966
-ebotcazou
+2009-09-27T03:29:55.000000Z
+d3c3ea85a2d542a334f54886bc6d0e68
+2009-09-25T09:14:09.497472Z
+152164
+hainque
 
 
 
@@ -2608,7 +2608,7 @@ ebotcazou
 
 
 
-217
+484
 
 loop_optimization5_pkg.ads
 file
@@ -3119,6 +3119,74 @@ hainque
 
 
 211
+
+nested_proc.adb
+file
+
+
+
+
+2009-09-27T03:29:55.000000Z
+7238e417faeb58b2f0dd08614daf5225
+2009-09-24T11:52:05.497400Z
+152115
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+566
+
+alignment9.adb
+file
+
+
+
+
+2009-09-16T16:25:40.000000Z
+d845359337435f578035928aae3a54a9
+2009-09-16T15:02:25.548539Z
+151757
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+444
 
 deferred_const1.adb
 file
@@ -6724,6 +6792,40 @@ ebotcazou
 
 402
 
+array9.adb
+file
+
+
+
+
+2009-09-27T03:29:55.000000Z
+9e79ec4077e627de01176e9d19ff0054
+2009-09-26T11:25:23.145358Z
+152201
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+309
+
 spipaterr.adb
 file
 
@@ -7233,6 +7335,40 @@ charlet
 
 
 1317
+
+sse_nolib.adb
+file
+
+
+
+
+2009-09-27T03:29:55.000000Z
+8f8466eb85a32dcace2e15aabb7535d7
+2009-09-25T09:33:17.988830Z
+152165
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1250
 
 interface1.adb
 file
@@ -11450,6 +11586,40 @@ charlet
 
 260
 
+tagged_alloc_free.adb
+file
+
+
+
+
+2009-09-29T17:13:20.000000Z
+d8319b2f811af06cb44f146ec7da6b96
+2009-09-28T17:00:46.522334Z
+152243
+hainque
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+560
+
 forward_vla.adb
 file
 
@@ -15196,6 +15366,40 @@ hainque
 
 1359
 
+discr20.adb
+file
+
+
+
+
+2009-09-16T16:25:40.000000Z
+ecd00db1035fc11c90e55ce31177ed62
+2009-09-16T14:05:47.874915Z
+151755
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+141
+
 oconst2.ads
 file
 
@@ -15637,6 +15841,40 @@ hainque
 
 
 404
+
+discr20.ads
+file
+
+
+
+
+2009-09-16T16:25:40.000000Z
+de1bccdd6943410d06a27758bfb3234f
+2009-09-16T14:05:47.874915Z
+151755
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+605
 
 test_equal1.adb
 file

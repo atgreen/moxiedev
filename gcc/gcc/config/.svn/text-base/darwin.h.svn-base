@@ -446,7 +446,7 @@ extern GTY(()) int darwin_ms_struct;
 
 #define DBX_DEBUGGING_INFO 1
 
-#define DWARF2_DEBUGGING_INFO
+#define DWARF2_DEBUGGING_INFO 1
 #define PREFERRED_DEBUGGING_TYPE DBX_DEBUG
 
 #define DEBUG_FRAME_SECTION	"__DWARF,__debug_frame,regular,debug"
@@ -982,7 +982,7 @@ void add_framework_path (char *);
 #endif
 
 /* Attempt to turn on execute permission for the stack.  This may be
-    used by INITIALIZE_TRAMPOLINE of the target needs it (that is,
+    used by TARGET_TRAMPOLINE_INIT if the target needs it (that is,
     if the target machine can change execute permissions on a page).
 
     There is no way to query the execute permission of the stack, so

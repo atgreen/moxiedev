@@ -1,5 +1,6 @@
 /* Disassembly routines for TMS320C30 architecture
-   Copyright 1998, 1999, 2000, 2002, 2005, 2007 Free Software Foundation, Inc.
+   Copyright 1998, 1999, 2000, 2002, 2005, 2007, 2009
+   Free Software Foundation, Inc.
    Contributed by Steven Haworth (steve@pm.cse.rmit.edu.au)
 
    This file is part of the GNU opcodes library.
@@ -64,7 +65,7 @@ static unsigned int _pc;
 struct instruction
 {
   int type;
-  template *tm;
+  insn_template *tm;
   partemplate *ptm;
 };
 
@@ -78,7 +79,7 @@ get_tic30_instruction (unsigned long insn_word, struct instruction *insn)
     case THREE_OPERAND:
       insn->type = NORMAL_INSN;
       {
-	template *current_optab = (template *) tic30_optab;
+	insn_template *current_optab = (insn_template *) tic30_optab;
 
 	for (; current_optab < tic30_optab_end; current_optab++)
 	  {
@@ -145,7 +146,7 @@ get_tic30_instruction (unsigned long insn_word, struct instruction *insn)
     case BRANCHES:
       insn->type = NORMAL_INSN;
       {
-	template *current_optab = (template *) tic30_optab;
+	insn_template *current_optab = (insn_template *) tic30_optab;
 
 	for (; current_optab < tic30_optab_end; current_optab++)
 	  {

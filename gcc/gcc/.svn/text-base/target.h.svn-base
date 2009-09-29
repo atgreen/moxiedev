@@ -253,6 +253,9 @@ struct gcc_target
 
     /* Some target machines need to postscan each insn after it is output.  */
     void (*final_postscan_insn) (FILE *, rtx, rtx *, int);
+
+    /* Emit the trampoline template.  This hook may be NULL.  */
+    void (*trampoline_template) (FILE *);
   } asm_out;
 
   /* Functions relating to instruction scheduling.  */
@@ -481,6 +484,11 @@ struct gcc_target
 
     /* Target builtin that implements vector permute.  */
     tree (* builtin_vec_perm) (tree, tree*);
+    /* Return true if the target supports misaligned store/load of a
+       specific factor denoted in the third parameter.  The last parameter
+       is true if the access is defined in a packed struct.  */
+    bool (* builtin_support_vector_misalignment) (enum machine_mode, 
+                                                  const_tree, int, bool);
   } vectorize;
 
   /* The initial value of target_flags.  */
@@ -910,7 +918,17 @@ struct gcc_target
     /* Return true if all function parameters should be spilled to the
        stack.  */
     bool (*allocate_stack_slots_for_args) (void);
-    
+
+    /* Return an rtx for the static chain for FNDECL.  If INCOMING_P is true,
+       then it should be for the callee; otherwise for the caller.  */
+    rtx (*static_chain) (const_tree fndecl, bool incoming_p);
+
+    /* Fill in the trampoline at MEM with a call to FNDECL and a 
+       static chain value of CHAIN.  */
+    void (*trampoline_init) (rtx mem, tree fndecl, rtx chain);
+
+    /* Adjust the address of the trampoline in a target-specific way.  */
+    rtx (*trampoline_adjust_address) (rtx addr);
   } calls;
 
   /* Return the diagnostic message string if conversion from FROMTYPE

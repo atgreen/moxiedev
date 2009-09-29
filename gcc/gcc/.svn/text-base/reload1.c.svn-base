@@ -447,7 +447,6 @@ static rtx inc_for_reload (rtx, rtx, rtx, int);
 #ifdef AUTO_INC_DEC
 static void add_auto_inc_notes (rtx, rtx);
 #endif
-static void copy_eh_notes (rtx, rtx);
 static void substitute (rtx *, const_rtx, rtx);
 static bool gen_reload_chain_without_interm_reg_p (int, int);
 static int reloads_conflict (int, int);
@@ -1242,39 +1241,54 @@ reload (rtx first, int global)
 	{
 	  rtx reg = regno_reg_rtx[i];
 	  rtx equiv = 0;
-	  df_ref use;
+	  df_ref use, next;
 
 	  if (reg_equiv_constant[i])
 	    equiv = reg_equiv_constant[i];
 	  else if (reg_equiv_invariant[i])
 	    equiv = reg_equiv_invariant[i];
 	  else if (reg && MEM_P (reg))
-	    {
-	      equiv = targetm.delegitimize_address (reg);
-	      if (equiv == reg)
-		equiv = 0;
-	    }
+	    equiv = targetm.delegitimize_address (reg);
 	  else if (reg && REG_P (reg) && (int)REGNO (reg) != i)
 	    equiv = reg;
 
-	  if (equiv)
-	    for (use = DF_REG_USE_CHAIN (i); use;
-		 use = DF_REF_NEXT_REG (use))
-	      if (DEBUG_INSN_P (DF_REF_INSN (use)))
-		{
-		  rtx *loc = DF_REF_LOC (use);
-		  rtx x = *loc;
+	  if (equiv == reg)
+	    continue;
 
-		  if (x == reg)
-		    *loc = copy_rtx (equiv);
-		  else if (GET_CODE (x) == SUBREG
-			   && SUBREG_REG (x) == reg)
-		    *loc = simplify_gen_subreg (GET_MODE (x), equiv,
-						GET_MODE (reg),
-						SUBREG_BYTE (x));
+	  for (use = DF_REG_USE_CHAIN (i); use; use = next)
+	    {
+	      rtx *loc = DF_REF_LOC (use);
+	      rtx x = *loc;
+
+	      insn = DF_REF_INSN (use);
+	      next = DF_REF_NEXT_REG (use);
+
+	      if (DEBUG_INSN_P (insn))
+		{
+		  gcc_assert (x == reg
+			      || (GET_CODE (x) == SUBREG
+				  && SUBREG_REG (x) == reg));
+
+		  if (!equiv)
+		    {
+		      INSN_VAR_LOCATION_LOC (insn) = gen_rtx_UNKNOWN_VAR_LOC ();
+		      df_insn_rescan_debug_internal (insn);
+		    }
 		  else
-		    gcc_unreachable ();
+		    {
+		      if (x == reg)
+			*loc = copy_rtx (equiv);
+		      else if (GET_CODE (x) == SUBREG
+			       && SUBREG_REG (x) == reg)
+			*loc = simplify_gen_subreg (GET_MODE (x), equiv,
+						    GET_MODE (reg),
+						    SUBREG_BYTE (x));
+		      else
+			gcc_unreachable ();
+		    *loc = wrap_constant (GET_MODE (x), *loc);
+		    }
 		}
+	    }
 	}
     }
 
@@ -4132,17 +4146,11 @@ static void
 fixup_eh_region_note (rtx insn, rtx prev, rtx next)
 {
   rtx note = find_reg_note (insn, REG_EH_REGION, NULL_RTX);
-  rtx i;
-
   if (note == NULL)
     return;
-
-  if (! may_trap_p (PATTERN (insn)))
+  if (!insn_could_throw_p (insn))
     remove_note (insn, note);
-
-  for (i = NEXT_INSN (prev); i != next; i = NEXT_INSN (i))
-    if (INSN_P (i) && i != insn && may_trap_p (PATTERN (i)))
-      add_reg_note (i, REG_EH_REGION, XEXP (note, 0));
+  copy_reg_eh_region_note_forward (note, NEXT_INSN (prev), next);
 }
 
 /* Reload pseudo-registers into hard regs around each insn as needed.
@@ -7294,7 +7302,7 @@ emit_input_reload_insns (struct insn_chain *chain, struct reload *rl,
     }
 
   if (flag_non_call_exceptions)
-    copy_eh_notes (insn, get_insns ());
+    copy_reg_eh_region_note_forward (insn, get_insns (), NULL);
 
   /* End this sequence.  */
   *where = get_insns ();
@@ -7514,7 +7522,7 @@ emit_output_reload_insns (struct insn_chain *chain, struct reload *rl,
     output_reload_insns[rl->opnum] = get_insns ();
 
   if (flag_non_call_exceptions)
-    copy_eh_notes (insn, get_insns ());
+    copy_reg_eh_region_note_forward (insn, get_insns (), NULL);
 
   end_sequence ();
 }
@@ -8889,21 +8897,6 @@ add_auto_inc_notes (rtx insn, rtx x)
     }
 }
 #endif
-
-/* Copy EH notes from an insn to its reloads.  */
-static void
-copy_eh_notes (rtx insn, rtx x)
-{
-  rtx eh_note = find_reg_note (insn, REG_EH_REGION, NULL_RTX);
-  if (eh_note)
-    {
-      for (; x != 0; x = NEXT_INSN (x))
-	{
-	  if (may_trap_p (PATTERN (x)))
-	    add_reg_note (x, REG_EH_REGION, XEXP (eh_note, 0));
-	}
-    }
-}
 
 /* This is used by reload pass, that does emit some instructions after
    abnormal calls moving basic block end, but in fact it wants to emit

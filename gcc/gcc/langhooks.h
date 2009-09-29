@@ -172,6 +172,13 @@ struct lang_hooks_for_decls
      of a generic type, e.g a template template parameter for the C++ FE.  */
   bool (*generic_generic_parameter_decl_p) (const_tree);
 
+  /* Determine if a function parameter got expanded from a
+     function parameter pack.  */
+  bool (*function_parm_expanded_from_pack_p) (tree, tree);
+
+  /* Returns the generic declaration of a generic function instantiations.  */
+  tree (*get_generic_function_decl) (const_tree);
+
   /* Returns true when we should warn for an unused global DECL.
      We will already have checked that it has static binding.  */
   bool (*warn_unused_global) (const_tree);
@@ -379,13 +386,16 @@ struct lang_hooks
 
   struct lang_hooks_for_types types;
 
-  /* Retuns the generic parameters of an instantiation of
+  /* Returns the generic parameters of an instantiation of
      a generic type or decl, e.g. C++ template instantiation.  */
   tree (*get_innermost_generic_parms) (const_tree);
 
   /* Returns the TREE_VEC of arguments of an instantiation
      of a generic type of decl, e.g. C++ template instantiation.  */
   tree (*get_innermost_generic_args) (const_tree);
+
+  /* Determine if a tree is a function parameter pack.  */
+  bool (*function_parameter_pack_p) (const_tree);
 
   /* Perform language-specific gimplification on the argument.  Returns an
      enum gimplify_status, though we can't see that type here.  */
@@ -413,6 +423,16 @@ struct lang_hooks
      to a contained expression or DECL, possibly updating *TC or *SE
      if in the process TREE_CONSTANT or TREE_SIDE_EFFECTS need updating.  */
   tree (*expr_to_decl) (tree expr, bool *tc, bool *se);
+
+  /* The EH personality function decl.  */
+  tree (*eh_personality) (void);
+
+  /* Map a type to a runtime object to match type.  */
+  tree (*eh_runtime_type) (tree);
+
+  /* True if this language uses __cxa_end_cleanup when the ARM EABI
+     is enabled.  */
+  bool eh_use_cxa_end_cleanup;
 
   /* Whenever you add entries here, make sure you adjust langhooks-def.h
      and langhooks.c accordingly.  */

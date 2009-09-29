@@ -3488,6 +3488,60 @@ expand_abs (enum machine_mode mode, rtx op0, rtx target,
   return target;
 }
 
+/* Emit code to compute the one's complement absolute value of OP0
+   (if (OP0 < 0) OP0 = ~OP0), with result to TARGET if convenient.
+   (TARGET may be NULL_RTX.)  The return value says where the result
+   actually is to be found.
+
+   MODE is the mode of the operand; the mode of the result is
+   different but can be deduced from MODE.  */
+
+rtx
+expand_one_cmpl_abs_nojump (enum machine_mode mode, rtx op0, rtx target)
+{
+  rtx temp;
+
+  /* Not applicable for floating point modes.  */
+  if (FLOAT_MODE_P (mode))
+    return NULL_RTX;
+
+  /* If we have a MAX insn, we can do this as MAX (x, ~x).  */
+  if (optab_handler (smax_optab, mode)->insn_code != CODE_FOR_nothing)
+    {
+      rtx last = get_last_insn ();
+
+      temp = expand_unop (mode, one_cmpl_optab, op0, NULL_RTX, 0);
+      if (temp != 0)
+	temp = expand_binop (mode, smax_optab, op0, temp, target, 0,
+			     OPTAB_WIDEN);
+
+      if (temp != 0)
+	return temp;
+
+      delete_insns_since (last);
+    }
+
+  /* If this machine has expensive jumps, we can do one's complement
+     absolute value of X as (((signed) x >> (W-1)) ^ x).  */
+
+  if (GET_MODE_CLASS (mode) == MODE_INT
+      && BRANCH_COST (optimize_insn_for_speed_p (),
+	             false) >= 2)
+    {
+      rtx extended = expand_shift (RSHIFT_EXPR, mode, op0,
+				   size_int (GET_MODE_BITSIZE (mode) - 1),
+				   NULL_RTX, 0);
+
+      temp = expand_binop (mode, xor_optab, extended, op0, target, 0,
+			   OPTAB_LIB_WIDEN);
+
+      if (temp != 0)
+	return temp;
+    }
+
+  return NULL_RTX;
+}
+
 /* A subroutine of expand_copysign, perform the copysign operation using the
    abs and neg primitives advertised to exist on the target.  The assumption
    is that we have a split register file, and leaving op0 in fp registers,
@@ -3858,32 +3912,31 @@ emit_libcall_block (rtx insns, rtx target, rtx result, rtx equiv)
 
   /* If we're using non-call exceptions, a libcall corresponding to an
      operation that may trap may also trap.  */
+  /* ??? See the comment in front of make_reg_eh_region_note.  */
   if (flag_non_call_exceptions && may_trap_p (equiv))
     {
       for (insn = insns; insn; insn = NEXT_INSN (insn))
 	if (CALL_P (insn))
 	  {
 	    rtx note = find_reg_note (insn, REG_EH_REGION, NULL_RTX);
-
-	    if (note != 0 && INTVAL (XEXP (note, 0)) <= 0)
-	      remove_note (insn, note);
+	    if (note)
+	      {
+		int lp_nr = INTVAL (XEXP (note, 0));
+		if (lp_nr == 0 || lp_nr == INT_MIN)
+		  remove_note (insn, note);
+	      }
 	  }
     }
   else
-  /* look for any CALL_INSNs in this sequence, and attach a REG_EH_REGION
-     reg note to indicate that this call cannot throw or execute a nonlocal
-     goto (unless there is already a REG_EH_REGION note, in which case
-     we update it).  */
-    for (insn = insns; insn; insn = NEXT_INSN (insn))
-      if (CALL_P (insn))
-	{
-	  rtx note = find_reg_note (insn, REG_EH_REGION, NULL_RTX);
-
-	  if (note != 0)
-	    XEXP (note, 0) = constm1_rtx;
-	  else
-	    add_reg_note (insn, REG_EH_REGION, constm1_rtx);
-	}
+    {
+      /* Look for any CALL_INSNs in this sequence, and attach a REG_EH_REGION
+	 reg note to indicate that this call cannot throw or execute a nonlocal
+	 goto (unless there is already a REG_EH_REGION note, in which case
+	 we update it).  */
+      for (insn = insns; insn; insn = NEXT_INSN (insn))
+	if (CALL_P (insn))
+	  make_reg_eh_region_note_nothrow_nononlocal (insn);
+    }
 
   /* First emit all insns that set pseudos.  Remove them from the list as
      we go.  Avoid insns that set pseudos which were referenced in previous
@@ -6023,6 +6076,28 @@ libfunc_decl_eq (const void *entry1, const void *entry2)
   return DECL_NAME ((const_tree) entry1) == (const_tree) entry2;
 }
 
+/* Build a decl for a libfunc named NAME. */
+
+tree
+build_libfunc_function (const char *name)
+{
+  tree decl = build_decl (UNKNOWN_LOCATION, FUNCTION_DECL,
+			  get_identifier (name),
+                          build_function_type (integer_type_node, NULL_TREE));
+  /* ??? We don't have any type information except for this is
+     a function.  Pretend this is "int foo()".  */
+  DECL_ARTIFICIAL (decl) = 1;
+  DECL_EXTERNAL (decl) = 1;
+  TREE_PUBLIC (decl) = 1;
+  gcc_assert (DECL_ASSEMBLER_NAME (decl));
+
+  /* Zap the nonsensical SYMBOL_REF_DECL for this.  What we're left with
+     are the flags assigned by targetm.encode_section_info.  */
+  SET_SYMBOL_REF_DECL (XEXP (DECL_RTL (decl), 0), NULL);
+
+  return decl;
+}
+
 rtx
 init_one_libfunc (const char *name)
 {
@@ -6043,19 +6118,7 @@ init_one_libfunc (const char *name)
     {
       /* Create a new decl, so that it can be passed to
 	 targetm.encode_section_info.  */
-      /* ??? We don't have any type information except for this is
-	 a function.  Pretend this is "int foo()".  */
-      decl = build_decl (UNKNOWN_LOCATION,
-			 FUNCTION_DECL, get_identifier (name),
-			 build_function_type (integer_type_node, NULL_TREE));
-      DECL_ARTIFICIAL (decl) = 1;
-      DECL_EXTERNAL (decl) = 1;
-      TREE_PUBLIC (decl) = 1;
-
-      /* Zap the nonsensical SYMBOL_REF_DECL for this.  What we're left with
-	 are the flags assigned by targetm.encode_section_info.  */
-      SET_SYMBOL_REF_DECL (XEXP (DECL_RTL (decl), 0), NULL);
-
+      decl = build_libfunc_function (name);
       *slot = decl;
     }
   return XEXP (DECL_RTL (decl), 0);

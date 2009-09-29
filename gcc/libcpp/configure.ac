@@ -62,7 +62,7 @@ if test "$ENABLE_BUILD_WITH_CXX" = "no"; then
 else
    AC_LANG(C++)
    AC_CHECK_HEADERS(locale.h fcntl.h limits.h stddef.h \
-	stdlib.h strings.h string.h sys/file.h unistd.h)
+	stdlib.h strings.h string.h sys/stat.h sys/file.h unistd.h)
 fi
 
 # Checks for typedefs, structures, and compiler characteristics.
@@ -146,6 +146,7 @@ case $target in
 	hppa*64*-*-* | \
 	i[34567]86-*-darwin* | \
 	i[34567]86-*-solaris2.1[0-9]* | \
+	i[34567]86-w64-mingw* | \
 	mips*-*-* | \
 	mmix-*-* | \
 	powerpc*-*-* | \

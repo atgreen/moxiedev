@@ -1,15 +1,15 @@
 10
 
 dir
-151642
+152280
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/torture
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-08T19:16:18.155168Z
-151533
-ktietz
+2009-09-24T20:44:55.205475Z
+152145
+ghazi
 
 
 
@@ -1794,6 +1794,40 @@ ghazi
 
 1835
 
+calleesave-sse.c
+file
+
+
+
+
+2009-09-27T03:30:01.000000Z
+2444c3fc9e91edb0f19509c8f19dde3f
+2009-09-21T13:24:37.466710Z
+151918
+ktietz
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+860
+
 arm-fp16-ops-8.c
 file
 
@@ -2616,11 +2650,11 @@ file
 
 
 
-2009-09-08T03:18:06.000000Z
-ead1ef8928dd5c7064c0ebb370938c42
-2009-08-31T22:23:27.961821Z
-151250
-kkojima
+2009-09-27T03:30:01.000000Z
+88cc4708b613c0f573b2a823470b2895
+2009-09-24T20:44:55.205475Z
+152145
+ghazi
 
 
 
@@ -2642,7 +2676,7 @@ kkojima
 
 
 
-2231
+3064
 
 arm-fp16-int-convert-ieee.c
 file

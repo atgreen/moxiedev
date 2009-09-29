@@ -642,8 +642,8 @@ extern struct bfd_link_needed_list *bfd_elf_get_needed_list
 extern bfd_boolean bfd_elf_get_bfd_needed_list
   (bfd *, struct bfd_link_needed_list **);
 extern bfd_boolean bfd_elf_size_dynamic_sections
-  (bfd *, const char *, const char *, const char *, const char * const *,
-   struct bfd_link_info *, struct bfd_section **,
+  (bfd *, const char *, const char *, const char *, const char *, const char *,
+   const char * const *, struct bfd_link_info *, struct bfd_section **,
    struct bfd_elf_version_tree *);
 extern bfd_boolean bfd_elf_size_dynsym_hash_dynstr
   (bfd *, struct bfd_link_info *);
@@ -4783,6 +4783,14 @@ bfd_boolean bfd_copy_private_symbol_data
             (ibfd, isymbol, obfd, osymbol))
 
 /* Extracted from bfd.c.  */
+enum bfd_direction
+  {
+    no_direction = 0,
+    read_direction = 1,
+    write_direction = 2,
+    both_direction = 3
+  };
+
 struct bfd
 {
   /* A unique identifier of the BFD  */
@@ -4817,14 +4825,7 @@ struct bfd
   bfd_format format;
 
   /* The direction with which the BFD was opened.  */
-  enum bfd_direction
-    {
-      no_direction = 0,
-      read_direction = 1,
-      write_direction = 2,
-      both_direction = 3
-    }
-  direction;
+  enum bfd_direction direction;
 
   /* Format_specific flags.  */
   flagword flags;

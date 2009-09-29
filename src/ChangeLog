@@ -1,3 +1,236 @@
+2009-09-25  Nick Clifton  <nickc@redhat.com>
+
+	* configure.ac: Pass any --cache-file=/dev/null option on to
+	subconfigures.
+	* configure: Regenerate.
+
+2009-09-23  Nick Clifton  <nickc@redhat.com>
+
+	* config.sub, config.guess: Update from upstream sources.
+
+2009-09-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	PR bootstrap/32272
+	* configure.ac: Error out if $srcdir isn't '.' but contains
+	host-${host_noncanonical}.
+	* configure: Regenerate.
+
+2009-09-21  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac: If bootstrapping a combined tree with
+	--enable-gold, require c++ in stage1_languages.
+	* configure: Regenerate.
+
+	* configure.ac: Also add target_libs of stage1_languages to
+	bootstrap_target_libs.
+	* configure: Regenerate.
+
+	* configure.ac: Diagnose --enable-build-with-cxx bootstrap
+	with --enable-languages not containing c++.
+	* configure: Regenerate.
+
+2009-09-16  Jie Zhang  <jie.zhang@analog.com>
+
+	* configure.ac: Disable java and boehm-gc for bfin-*-*.
+	* configure: Regenerate.
+
+2009-09-08  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac: Do not use $extrasub for replacing @if/@endif
+	parts in Makefile; instead, use additional arguments to
+	AC_CONFIG_COMMANDS to do the replacement manually, with several
+	sed invocations, to avoid HP-UX sed command limits.
+	* configure: Regenerate.
+
+2009-09-04  Alexandre Oliva  <aoliva@redhat.com>
+
+	* configure.ac (with-build-config): Document.  Handle without.
+	Handle missing argument.
+	* configure: Rebuilt.
+
+2009-09-03  Alexandre Oliva  <aoliva@redhat.com>
+
+	* configure.ac (--with-build-config): New.  Set BUILD_CONFIG.
+	Default to bootstrap-debug only if compare-debug works.
+	* configure: Rebuilt.
+	* Makefile.tpl: Make BUILD_CONFIG configure-configurable.
+	* Makefile.in: Rebuilt.
+
+2009-09-01  Alexandre Oliva  <aoliva@redhat.com>
+
+	* Makefile.tpl (BUILD_CONFIG): Default to bootstrap-debug.
+	* Makefile.in: Rebuilt.
+
+2009-09-02  Paolo Bonzini  <bonzini@gnu.org>
+
+	* Makefile.tpl (AWK): Fix typo.
+	* Makefile.in: Regenerate.
+
+2009-09-02  Paolo Bonzini  <bonzini@gnu.org>
+
+	* configure.ac: Detect awk and sed.
+	* Makefile.def (flags_to_pass): Add AWK and SED.
+	* Makefile.tpl (AWK, SED): New.
+	(BASE_FLAGS_TO_PASS): Add AWK and SED.
+	* configure: Regenerate.
+	* Makefile.in: Regenerate.
+
+2009-09-01  Tristan Gingold  <gingold@adacore.com>
+
+	* setup.com: Ported to Itanium VMS.  Can also build using DCL scripts.
+	Remove logical names.
+
+2009-08-31  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* ltmain.sh (func_normal_abspath): New function.
+	(func_relative_path): Likewise.
+	(func_mode_help): Document new -bindir option for link mode.
+	(func_mode_link): Add new -bindir option, and use it to place
+	output DLL if specified.
+
+2009-08-24  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac (AC_PREREQ): Bump to 2.64.
+
+2009-08-22  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* README-maintainer-mode: Point directly to upstream locations
+	for autoconf, automake, libtool, gettext, instead of copies on
+	sources.redhat.com.  Document required versions.
+	* configure.ac: Do not substitute datarootdir, htmldir,
+	pdfdir, docdir.  Do not process --with-datarootdir,
+	--with-htmldir, --with-pdfdir, --with-docdir.
+	* configure: Regenerate.
+
+	* configure: Regenerate.
+
+	* compile: Sync from Automake 1.11.
+	* depcomp: Likewise.
+	* install-sh: Likewise.
+	* missing: Likewise.
+	* mkinstalldirs: Likewise.
+	* ylwrap: Likewise.
+
+2009-08-19  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac: Call AC_DISABLE_OPTION_CHECKING.
+	(baseargs): Add --disable-option-checking.
+	* configure: Regenerate.
+
+	* Makefile.def (configure-target-libiberty): Depend on
+	all-binutils and all-ld.
+	(configure-target-newlib): Likewise.
+	* Makefile.in: Regenerate.
+
+2009-08-19  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	Sync with GCC, merge:
+
+	2009-07-31  Christian Bruel  <christian.bruel@st.com>
+
+	* configure.ac (sh*-*-elf): Don't add target-libgloss to noconfigdirs.
+	* configure: Regenerate.
+
+	2009-07-06  Ian Lance Taylor  <iant@google.com>
+
+	* configure.ac: Add missing comma in AC_ARG_WITH(boot-libs).
+	* configure: Rebuild.
+
+	2009-06-26  Steve Ellcey  <sje@cup.hp.com>
+
+	PR bootstrap/40338
+	* configure.ac (comparestring): Create new variable.
+	* Makefile.tpl (comparestring): Use to skip some comparisions.
+	* configure: Regenerate.
+	* Makefile.in: Regenerate.
+
+	2009-06-23  Ian Lance Taylor  <iant@google.com>
+
+	* configure.ac: Add --enable-build-with-cxx.  When set, add c++ to
+	boot_languages.  Only bootstrap target libraries listed in
+	target_libs for some boot language.  Add --with-stage1-ldflags,
+	--with-stage1-libs, --with-boot-ldflags, --with-boot-libs.  Remove
+	with_host_libstdcxx from ppllibs.  Only add -fkeep-inline-functions
+	if not building with C++.
+	* Makefile.def: For target_module libstdc++-v3, set bootstrap=true.
+	* Makefile.tpl (STAGE1_LDFLAGS, STAGE1_LIBS): New variables.
+	(POSTSTAGE1_LDFLAGS, POSTSTAGE1_LIBS): New variables.
+	(HOST_EXPORTS): Add STAGE1_LDFLAGS to LDFLAGS.  Export HOST_LIBS.
+	(POSTSTAGE1_HOST_EXPORTS): Set CXX and CXX_FOR_BUILD.  Add
+	POSTSTAGE1_LDFLAGS to LDFLAGS.  Export HOST_LIBS.
+	(POSTSTAGE1_FLAGS_TO_PASS): Likewise.
+	* configure, Makefile.in: Rebuild.
+
+	2009-06-08  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
+
+	* configure.ac: Detect MPC in default directory.
+	* configure: Regenerate.
+
+	2009-06-02  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* configure.ac (powerpc-*-aix*, rs6000-*-aix*): Add target-newlib
+	to noconfdirs.
+	* configure: Regenerate.
+
+	2009-05-29  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
+
+	* Makefile.def: Add MPC support and dependencies.
+	* configure.ac: Likewise.  Reorganize GMP/MPFR checks.
+
+	* Makefile.in, configure: Regenerate.
+
+	2009-05-24  Nicolas Roche  <roche@adacore.com>
+
+	* Makefile.tpl (compare-target): Skip ./ada/*tools directories.
+	* Makefile.in: Regenerate.
+
+	2009-05-21  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* configure.ac (cygwin noconfigdirs):  Remove libgcj.
+	* configure:  Regenerate.
+
+	2009-05-07  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* configure.ac ($with_ppl):  Default to no if not supplied.
+	($with_cloog):  Likewise.
+	configure:  Regenerate.
+
+	2009-04-24  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
+
+	PR bootstrap/39739
+	* configure.ac (extra_mpfr_configure_flags): Set and AC_SUBST.
+	* Makefile.def (module=mpfr): Use extra_mpfr_configure_flags.
+
+	* configure, Makefile.in: Regenerate.
+
+	2009-04-14  Jakub Jelinek  <jakub@redhat.com>
+
+	* configure.ac: Change copyright header to refer to version
+	3 of the GNU General Public License and to point readers at the
+	COPYING3 file and the FSF's license web page.
+	* Makefile.def: Likewise.
+	* Makefile.tpl: Likewise.
+	* Makefile.in: Regenerate.
+
+	2009-04-09  Jack Howarth  <howarth@bromo.med.uc.edu>
+
+	* configure.ac: Restore match for darwin9 or later. Use double
+	brackets since regeneration eats one pair.
+	* configure: Regenerate.
+
+2009-08-18  Christopher Faylor  <me+cygwin@cgf.cx>
+
+	* MAINTAINERS: Perform some obvious fixups.
+
+2009-08-17  Ben Elliston  <bje@au.ibm.com>
+
+	* config.sub, config.guess: Update from upstream sources.
+
+2009-08-06  Michael Eager <eager@eagercon.com>
+
+	* configure.ac: Add Microblaze target.
+	* configure: Regenerate.
+
 2009-07-02  Tristan Gingold  <gingold@adacore.com>
 
 	* configure.ac: Do not exclude gas for i386-*-darwin.

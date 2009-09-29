@@ -85,7 +85,7 @@
 proc mips_arch_init {} {
     global mips_arches
 
-    # Catch becuase the variable won't be set the first time through.
+    # Catch because the variable won't be set the first time through.
     catch {unset mips_arches}
 }
 
@@ -706,6 +706,7 @@ if { [istarget mips*-*-vxworks*] } {
 
 	run_list_test "tls-ill" "-32"
 	run_dump_test "tls-o32"
+	run_dump_test "jalr2"
     }
 
     if $has_newabi {

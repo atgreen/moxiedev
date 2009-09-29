@@ -617,10 +617,6 @@ valid_gimple_rhs_p (tree expr)
 	    return false;
 	  break;
 
-	case EXC_PTR_EXPR:
-	case FILTER_EXPR:
-	  break;
-
 	default:
 	  return false;
 	}
@@ -860,7 +856,7 @@ struct prop_stats_d
 {
   long num_const_prop;
   long num_copy_prop;
-  long num_pred_folded;
+  long num_stmts_folded;
   long num_dce;
 };
 
@@ -962,92 +958,24 @@ replace_phi_args_in (gimple phi, prop_value_t *prop_value)
 }
 
 
-/* If the statement pointed by SI has a predicate whose value can be
-   computed using the value range information computed by VRP, compute
-   its value and return true.  Otherwise, return false.  */
-
-static bool
-fold_predicate_in (gimple_stmt_iterator *si)
-{
-  bool assignment_p = false;
-  tree val;
-  gimple stmt = gsi_stmt (*si);
-
-  if (is_gimple_assign (stmt)
-      && TREE_CODE_CLASS (gimple_assign_rhs_code (stmt)) == tcc_comparison)
-    {
-      assignment_p = true;
-      val = vrp_evaluate_conditional (gimple_assign_rhs_code (stmt),
-				      gimple_assign_rhs1 (stmt),
-				      gimple_assign_rhs2 (stmt),
-				      stmt);
-    }
-  else if (gimple_code (stmt) == GIMPLE_COND)
-    val = vrp_evaluate_conditional (gimple_cond_code (stmt),
-				    gimple_cond_lhs (stmt),
-				    gimple_cond_rhs (stmt),
-				    stmt);
-  else
-    return false;
-
-
-  if (val)
-    {
-      if (assignment_p)
-        val = fold_convert (gimple_expr_type (stmt), val);
-      
-      if (dump_file)
-	{
-	  fprintf (dump_file, "Folding predicate ");
-	  print_gimple_expr (dump_file, stmt, 0, 0);
-	  fprintf (dump_file, " to ");
-	  print_generic_expr (dump_file, val, 0);
-	  fprintf (dump_file, "\n");
-	}
-
-      prop_stats.num_pred_folded++;
-
-      if (is_gimple_assign (stmt))
-	gimple_assign_set_rhs_from_tree (si, val);
-      else
-	{
-	  gcc_assert (gimple_code (stmt) == GIMPLE_COND);
-	  if (integer_zerop (val))
-	    gimple_cond_make_false (stmt);
-	  else if (integer_onep (val))
-	    gimple_cond_make_true (stmt);
-	  else
-	    gcc_unreachable ();
-	}
-
-      return true;
-    }
-
-  return false;
-}
-
-
 /* Perform final substitution and folding of propagated values.
 
    PROP_VALUE[I] contains the single value that should be substituted
    at every use of SSA name N_I.  If PROP_VALUE is NULL, no values are
    substituted.
 
-   If USE_RANGES_P is true, statements that contain predicate
-   expressions are evaluated with a call to vrp_evaluate_conditional.
-   This will only give meaningful results when called from tree-vrp.c
-   (the information used by vrp_evaluate_conditional is built by the
-   VRP pass).  
+   If FOLD_FN is non-NULL the function will be invoked on all statements
+   before propagating values for pass specific simplification.
 
    Return TRUE when something changed.  */
 
 bool
-substitute_and_fold (prop_value_t *prop_value, bool use_ranges_p)
+substitute_and_fold (prop_value_t *prop_value, ssa_prop_fold_stmt_fn fold_fn)
 {
   basic_block bb;
   bool something_changed = false;
 
-  if (prop_value == NULL && !use_ranges_p)
+  if (prop_value == NULL && !fold_fn)
     return false;
 
   if (dump_file && (dump_flags & TDF_DETAILS))
@@ -1073,6 +1001,10 @@ substitute_and_fold (prop_value_t *prop_value, bool use_ranges_p)
 	  gimple stmt = gsi_stmt (i);
 	  gimple old_stmt;
 	  enum gimple_code code = gimple_code (stmt);
+	  gimple_stmt_iterator oldi;
+
+	  oldi = i;
+	  gsi_prev (&i);
 
 	  /* Ignore ASSERT_EXPRs.  They are used by VRP to generate
 	     range information for names and they are discarded
@@ -1080,10 +1012,7 @@ substitute_and_fold (prop_value_t *prop_value, bool use_ranges_p)
 
 	  if (code == GIMPLE_ASSIGN
 	      && TREE_CODE (gimple_assign_rhs1 (stmt)) == ASSERT_EXPR)
-	    {
-	      gsi_prev (&i);
-	      continue;
-	    }
+	    continue;
 
 	  /* No point propagating into a stmt whose result is not used,
 	     but instead we might be able to remove a trivially dead stmt.  */
@@ -1102,7 +1031,6 @@ substitute_and_fold (prop_value_t *prop_value, bool use_ranges_p)
 		  fprintf (dump_file, "\n");
 		}
 	      prop_stats.num_dce++;
-	      gsi_prev (&i);
 	      i2 = gsi_for_stmt (stmt);
 	      gsi_remove (&i2, true);
 	      release_defs (stmt);
@@ -1118,13 +1046,16 @@ substitute_and_fold (prop_value_t *prop_value, bool use_ranges_p)
 	      print_gimple_stmt (dump_file, stmt, 0, TDF_SLIM);
 	    }
 
-	  /* If we have range information, see if we can fold
-	     predicate expressions.  */
-	  if (use_ranges_p)
+	  old_stmt = stmt;
+
+	  /* Some statements may be simplified using propagator
+	     specific information.  Do this before propagating
+	     into the stmt to not disturb pass specific information.  */
+	  if (fold_fn
+	      && (*fold_fn)(&oldi))
 	    {
-	      did_replace = fold_predicate_in (&i);
-	      /* fold_predicate_in should not have reallocated STMT.  */
-	      gcc_assert (gsi_stmt (i) == stmt);
+	      did_replace = true;
+	      prop_stats.num_stmts_folded++;
 	    }
 
 	  /* Only replace real uses if we couldn't fold the
@@ -1134,24 +1065,13 @@ substitute_and_fold (prop_value_t *prop_value, bool use_ranges_p)
 	    did_replace |= replace_uses_in (stmt, prop_value);
 
 	  /* If we made a replacement, fold the statement.  */
-
-	  old_stmt = stmt;
 	  if (did_replace)
-	    fold_stmt (&i);
-
-	  /* Some statements may be simplified using ranges.  For
-	     example, division may be replaced by shifts, modulo
-	     replaced with bitwise and, etc.   Do this after 
-	     substituting constants, folding, etc so that we're
-	     presented with a fully propagated, canonicalized
-	     statement.  */
-	  if (use_ranges_p)
-	    did_replace |= simplify_stmt_using_ranges (&i);
+	    fold_stmt (&oldi);
 
 	  /* Now cleanup.  */
 	  if (did_replace)
 	    {
-	      stmt = gsi_stmt (i);
+	      stmt = gsi_stmt (oldi);
 
               /* If we cleaned up EH information from the statement,
                  remove EH edges.  */
@@ -1185,8 +1105,6 @@ substitute_and_fold (prop_value_t *prop_value, bool use_ranges_p)
 	      else
 		fprintf (dump_file, "Not folded\n");
 	    }
-
-	  gsi_prev (&i);
 	}
     }
 
@@ -1194,8 +1112,8 @@ substitute_and_fold (prop_value_t *prop_value, bool use_ranges_p)
 			    prop_stats.num_const_prop);
   statistics_counter_event (cfun, "Copies propagated",
 			    prop_stats.num_copy_prop);
-  statistics_counter_event (cfun, "Predicates folded",
-			    prop_stats.num_pred_folded);
+  statistics_counter_event (cfun, "Statements folded",
+			    prop_stats.num_stmts_folded);
   statistics_counter_event (cfun, "Statements deleted",
 			    prop_stats.num_dce);
   return something_changed;

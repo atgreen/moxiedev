@@ -265,6 +265,10 @@ package body GNAT.Sockets is
    --  fd_set component is actually cleared. Note that the case where it is
    --  not can occur for an uninitialized Socket_Set_Type object.
 
+   function Is_Open (S : Selector_Type) return Boolean;
+   --  Return True for an "open" Selector_Type object, i.e. one for which
+   --  Create_Selector has been called and Close_Selector has not been called.
+
    ---------
    -- "+" --
    ---------
@@ -282,6 +286,10 @@ package body GNAT.Sockets is
       Res : C.int;
 
    begin
+      if not Is_Open (Selector) then
+         raise Program_Error with "closed selector";
+      end if;
+
       --  Send one byte to unblock select system call
 
       Res := Signalling_Fds.Write (C.int (Selector.W_Sig_Socket));
@@ -330,6 +338,10 @@ package body GNAT.Sockets is
       Status   : out Selector_Status)
    is
    begin
+      if Selector /= null and then not Is_Open (Selector.all) then
+         raise Program_Error with "closed selector";
+      end if;
+
       --  Wait for socket to become available for reading
 
       Wait_On_Socket
@@ -473,11 +485,15 @@ package body GNAT.Sockets is
    is
       Res  : C.int;
       Last : C.int;
-      RSig : Socket_Type renames Selector.R_Sig_Socket;
+      RSig : constant Socket_Type := Selector.R_Sig_Socket;
       TVal : aliased Timeval;
       TPtr : Timeval_Access;
 
    begin
+      if not Is_Open (Selector) then
+         raise Program_Error with "closed selector";
+      end if;
+
       Status := Completed;
 
       --  No timeout or Forever is indicated by a null timeval pointer
@@ -563,6 +579,13 @@ package body GNAT.Sockets is
 
    procedure Close_Selector (Selector : in out Selector_Type) is
    begin
+      if not Is_Open (Selector) then
+
+         --  Selector already in closed state: nothing to do
+
+         return;
+      end if;
+
       --  Close the signalling file descriptors used internally for the
       --  implementation of Abort_Selector.
 
@@ -636,6 +659,10 @@ package body GNAT.Sockets is
       --  Used to set Socket to non-blocking I/O
 
    begin
+      if Selector /= null and then not Is_Open (Selector.all) then
+         raise Program_Error with "closed selector";
+      end if;
+
       --  Set the socket to non-blocking I/O
 
       Req := (Name => Non_Blocking_IO, Enabled => True);
@@ -727,6 +754,12 @@ package body GNAT.Sockets is
       Res     : C.int;
 
    begin
+      if Is_Open (Selector) then
+         --  Raise exception to prevent socket descriptor leak
+
+         raise Program_Error with "selector already open";
+      end if;
+
       --  We open two signalling file descriptors. One of them is used to send
       --  data to the other, which is included in a C_Select socket set. The
       --  communication is used to force a call to C_Select to complete, and
@@ -1352,6 +1385,22 @@ package body GNAT.Sockets is
 
       return True;
    end Is_IP_Address;
+
+   -------------
+   -- Is_Open --
+   -------------
+
+   function Is_Open (S : Selector_Type) return Boolean is
+   begin
+      --  Either both controlling socket descriptors are valid (case of an
+      --  open selector) or neither (case of a closed selector).
+
+      pragma Assert ((S.R_Sig_Socket /= No_Socket)
+                       =
+                     (S.W_Sig_Socket /= No_Socket));
+
+      return S.R_Sig_Socket /= No_Socket;
+   end Is_Open;
 
    ------------
    -- Is_Set --

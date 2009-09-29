@@ -40,6 +40,7 @@ enum plugin_event
   PLUGIN_GGC_MARKING,		/* Extend the GGC marking. */
   PLUGIN_GGC_END,		/* Called at end of GGC. */
   PLUGIN_REGISTER_GGC_ROOTS,	/* Register an extra GGC root table. */
+  PLUGIN_REGISTER_GGC_CACHES,	/* Register an extra GGC cache table. */
   PLUGIN_ATTRIBUTES,            /* Called during attribute registration.  */
   PLUGIN_START_UNIT,            /* Called before processing a translation unit.  */
   PLUGIN_EVENT_LAST             /* Dummy event used for indexing callback
@@ -52,24 +53,6 @@ struct plugin_argument
 {
   char *key;    /* key of the argument.  */
   char *value;  /* value is optional and can be NULL.  */
-};
-
-enum pass_positioning_ops
-{
-  PASS_POS_INSERT_AFTER,  /* Insert after the reference pass.  */
-  PASS_POS_INSERT_BEFORE, /* Insert before the reference pass.  */
-  PASS_POS_REPLACE        /* Replace the reference pass.  */
-};
-
-struct plugin_pass
-{
-  struct opt_pass *pass;            /* New pass provided by the plugin.  */
-  const char *reference_pass_name;  /* Name of the reference pass for hooking
-                                       up the new pass.  */
-  int ref_pass_instance_number;     /* Insert the pass at the specified
-                                       instance number of the reference pass.
-                                       Do it for every instance if it is 0.  */
-  enum pass_positioning_ops pos_op; /* how to insert the new pass.  */
 };
 
 /* Additional information about the plugin. Used by --help and --version. */
@@ -144,8 +127,8 @@ typedef void (*plugin_callback_func) (void *gcc_data, void *user_data);
 */
 
 /* This is also called without a callback routine for the
-   PLUGIN_PASS_MANAGER_SETUP, PLUGIN_INFO, PLUGIN_REGISTER_GGC_ROOTS
-   pseudo-events, with a specific user_data.
+   PLUGIN_PASS_MANAGER_SETUP, PLUGIN_INFO, PLUGIN_REGISTER_GGC_ROOTS and
+   PLUGIN_REGISTER_GGC_CACHES pseudo-events, with a specific user_data.
   */
 
 extern void register_callback (const char *plugin_name,

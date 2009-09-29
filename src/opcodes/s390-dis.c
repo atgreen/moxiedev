@@ -1,5 +1,6 @@
 /* s390-dis.c -- Disassemble S390 instructions
-   Copyright 2000, 2001, 2002, 2003, 2005, 2007 Free Software Foundation, Inc.
+   Copyright 2000, 2001, 2002, 2003, 2005, 2007, 2008
+   Free Software Foundation, Inc.
    Contributed by Martin Schwidefsky (schwidefsky@de.ibm.com).
 
    This file is part of the GNU opcodes library.
@@ -80,6 +81,10 @@ init_disasm (struct disassemble_info *info)
 }
 
 /* Extracts an operand value from an instruction.  */
+/* We do not perform the shift operation for larl-type address
+   operands here since that would lead to an overflow of the 32 bit
+   integer value.  Instead the shift operation is done when printing
+   the operand in print_insn_s390.  */
 
 static inline unsigned int
 s390_extract_operand (unsigned char *insn, const struct s390_operand *operand)
@@ -109,10 +114,6 @@ s390_extract_operand (unsigned char *insn, const struct s390_operand *operand)
   if ((operand->flags & (S390_OPERAND_SIGNED | S390_OPERAND_PCREL))
       && (val & (1U << (operand->bits - 1))))
     val |= (-1U << (operand->bits - 1)) << 1;
-
-  /* Double value if the operand is pc relative.  */
-  if (operand->flags & S390_OPERAND_PCREL)
-    val <<= 1;
 
   /* Length x in an instructions has real length x + 1.  */
   if (operand->flags & S390_OPERAND_LENGTH)
@@ -221,7 +222,8 @@ print_insn_s390 (bfd_vma memaddr, struct disassemble_info *info)
 	      else if (operand->flags & S390_OPERAND_CR)
 		(*info->fprintf_func) (info->stream, "%%c%i", value);
 	      else if (operand->flags & S390_OPERAND_PCREL)
-		(*info->print_address_func) (memaddr + (int) value, info);
+		(*info->print_address_func) (memaddr + (int)value + (int)value,
+					     info);
 	      else if (operand->flags & S390_OPERAND_SIGNED)
 		(*info->fprintf_func) (info->stream, "%i", (int) value);
 	      else

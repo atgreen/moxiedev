@@ -2348,13 +2348,6 @@ fi
 
 
 
-
-
-
-
-
-
-
 sim_inline="-DDEFAULT_INLINE=0"
 
 
@@ -3008,10 +3001,12 @@ done
 
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-
+#include <stdio.h>
 int
 main ()
 {
+FILE *f = fopen ("conftest.out", "w");
+ return ferror (f) || fclose (f) != 0;
 
   ;
   return 0;

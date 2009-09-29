@@ -983,6 +983,10 @@ package body Prj.Tree is
    begin
       Project_Node_Table.Init (Tree.Project_Nodes);
       Projects_Htable.Reset (Tree.Projects_HT);
+
+      --  Do not reset the external references, in case we are reloading a
+      --  project, since we want to preserve the current environment
+      --  Name_To_Name_HTable.Reset (Tree.External_References);
    end Initialize;
 
    ----------
@@ -2854,6 +2858,7 @@ package body Prj.Tree is
             Name,
             Prj.Tree.Tree_Private_Part.Project_Name_And_Node'
               (Name           => Name,
+               Display_Name   => Name,
                Canonical_Path => No_Path,
                Node           => Project,
                Extended       => False,

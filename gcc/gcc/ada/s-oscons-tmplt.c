@@ -58,7 +58,7 @@ pragma Style_Checks ("M32766");
  **  s-oscons-tmpl.s.
  **
  **  The default one assumes that the template can be compiled by the newly-
- **  build cross compiler. It uses markup produced in the (pseudo-)assembly
+ **  built cross compiler. It uses markup produced in the (pseudo-)assembly
  **  listing:
  **
  **     xgcc -DTARGET=\"$target\" -C -E s-oscons-tmplt.c > s-oscons-tmplt.i
@@ -79,8 +79,16 @@ pragma Style_Checks ("M32766");
  **/
 
 #if defined (__linux__) && !defined (_XOPEN_SOURCE)
-/* For Linux _XOPEN_SOURCE must be defined, otherwise IOV_MAX is not defined */
+/** For Linux _XOPEN_SOURCE must be defined, otherwise IOV_MAX is not defined
+ **/
 #define _XOPEN_SOURCE 500
+
+#elif defined (__mips) && defined (__sgi)
+/** For IRIX _XOPEN5 must be defined and _XOPEN_IOV_MAX must be used as IOV_MAX,
+ ** otherwise IOV_MAX is not defined.
+ **/
+#define _XOPEN5
+#define IOV_MAX _XOPEN_IOV_MAX
 #endif
 
 #include <stdlib.h>
@@ -175,6 +183,9 @@ int counter = 0;
 
 #endif
 
+#define STR(x) STR1(x)
+#define STR1(x) #x
+
 #ifdef __MINGW32__
 unsigned int _CRT_fmode = _O_BINARY;
 #endif
@@ -216,6 +227,25 @@ package System.OS_Constants is
  **  General constants (all platforms)
  **/
 
+/*
+
+   -----------------------------
+   -- Platform identification --
+   -----------------------------
+
+*/
+TXT("   Target_Name : constant String := " STR(TARGET) ";")
+/*
+   type Target_OS_Type is (Windows, VMS, Other_OS);
+*/
+#if defined (__MINGW32__)
+# define TARGET_OS "Windows"
+#elif defined (__VMS)
+# define TARGET_OS "VMS"
+#else
+# define TARGET_OS "Other_OS"
+#endif
+TXT("   Target_OS : constant Target_OS_Type := " TARGET_OS ";")
 /*
 
    -------------------

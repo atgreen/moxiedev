@@ -101,6 +101,16 @@ static const st_option decimal_opt[] = {
   {NULL, 0}
 };
 
+static const st_option round_opt[] = {
+  {"up", ROUND_UP},
+  {"down", ROUND_DOWN},
+  {"zero", ROUND_ZERO},
+  {"nearest", ROUND_NEAREST},
+  {"compatible", ROUND_COMPATIBLE},
+  {"processor_defined", ROUND_PROCDEFINED},
+  {NULL, 0}
+};
+
 
 static const st_option sign_opt[] = {
   {"plus", SIGN_SP},
@@ -232,21 +242,28 @@ read_sf (st_parameter_dt *dtp, int * length, int no_error)
 
       if (q == '\n' || q == '\r')
 	{
-	  /* Unexpected end of line.  */
+	  /* Unexpected end of line. Set the position.  */
+	  fbuf_seek (dtp->u.p.current_unit, n + 1 ,SEEK_CUR);
+	  dtp->u.p.sf_seen_eor = 1;
 
 	  /* If we see an EOR during non-advancing I/O, we need to skip
 	     the rest of the I/O statement.  Set the corresponding flag.  */
 	  if (dtp->u.p.advance_status == ADVANCE_NO || dtp->u.p.seen_dollar)
 	    dtp->u.p.eor_condition = 1;
-
+	    
 	  /* If we encounter a CR, it might be a CRLF.  */
 	  if (q == '\r') /* Probably a CRLF */
 	    {
-	      if (n < *length && *(p + 1) == '\n')
-		dtp->u.p.sf_seen_eor = 2;
+	      /* See if there is an LF. Use fbuf_read rather then fbuf_getc so
+		 the position is not advanced unless it really is an LF.  */
+	      int readlen = 1;
+	      p = fbuf_read (dtp->u.p.current_unit, &readlen);
+	      if (*p == '\n' && readlen == 1)
+	        {
+		  dtp->u.p.sf_seen_eor = 2;
+		  fbuf_seek (dtp->u.p.current_unit, 1 ,SEEK_CUR);
+		}
 	    }
-          else
-            dtp->u.p.sf_seen_eor = 1;
 
 	  /* Without padding, terminate the I/O statement without assigning
 	     the value.  With padding, the value still needs to be assigned,
@@ -260,7 +277,7 @@ read_sf (st_parameter_dt *dtp, int * length, int no_error)
 	    }
 
 	  *length = n;
-	  break;
+	  goto done;
 	}
       /*  Short circuit the read if a comma is found during numeric input.
 	  The flag is set to zero during character reads so that commas in
@@ -274,19 +291,17 @@ read_sf (st_parameter_dt *dtp, int * length, int no_error)
 	    *length = n;
 	    break;
 	  }
-
       n++;
       p++;
     } 
 
-  fbuf_seek (dtp->u.p.current_unit, n + dtp->u.p.sf_seen_eor + seen_comma, 
-             SEEK_CUR);
+  fbuf_seek (dtp->u.p.current_unit, n + seen_comma, SEEK_CUR);
 
   /* A short read implies we hit EOF, unless we hit EOR, a comma, or
      some other stuff. Set the relevant flags.  */
   if (lorig > *length && !dtp->u.p.sf_seen_eor && !seen_comma)
     {
-      if (no_error)
+      if (n > 0 || no_error)
         dtp->u.p.at_eof = 1;
       else
         {
@@ -1197,6 +1212,36 @@ formatted_transfer_scalar_read (st_parameter_dt *dtp, bt type, void *p, int kind
 	  consume_data_flag = 0;
 	  dtp->u.p.current_unit->decimal_status = DECIMAL_POINT;
 	  break;
+	
+	case FMT_RC:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_COMPATIBLE;
+	  break;
+
+	case FMT_RD:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_DOWN;
+	  break;
+
+	case FMT_RN:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_NEAREST;
+	  break;
+
+	case FMT_RP:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_PROCDEFINED;
+	  break;
+
+	case FMT_RU:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_UP;
+	  break;
+
+	case FMT_RZ:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_ZERO;
+	  break;
 
 	case FMT_P:
 	  consume_data_flag = 0;
@@ -1559,6 +1604,36 @@ formatted_transfer_scalar_write (st_parameter_dt *dtp, bt type, void *p, int kin
 	case FMT_DP:
 	  consume_data_flag = 0;
 	  dtp->u.p.current_unit->decimal_status = DECIMAL_POINT;
+	  break;
+
+	case FMT_RC:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_COMPATIBLE;
+	  break;
+
+	case FMT_RD:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_DOWN;
+	  break;
+
+	case FMT_RN:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_NEAREST;
+	  break;
+
+	case FMT_RP:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_PROCDEFINED;
+	  break;
+
+	case FMT_RU:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_UP;
+	  break;
+
+	case FMT_RZ:
+	  consume_data_flag = 0;
+	  dtp->u.p.current_unit->round_status = ROUND_ZERO;
 	  break;
 
 	case FMT_P:
@@ -2246,6 +2321,16 @@ data_transfer_init (st_parameter_dt *dtp, int read_flag)
 
   if (dtp->u.p.current_unit->decimal_status == DECIMAL_UNSPECIFIED)
 	dtp->u.p.current_unit->decimal_status = dtp->u.p.current_unit->flags.decimal;
+
+  /* Check the round mode.  */
+  dtp->u.p.current_unit->round_status
+	= !(cf & IOPARM_DT_HAS_ROUND) ? ROUND_UNSPECIFIED :
+	  find_option (&dtp->common, dtp->round, dtp->round_len,
+			round_opt, "Bad ROUND parameter in data transfer "
+			"statement");
+
+  if (dtp->u.p.current_unit->round_status == ROUND_UNSPECIFIED)
+	dtp->u.p.current_unit->round_status = dtp->u.p.current_unit->flags.round;
 
   /* Check the sign mode. */
   dtp->u.p.sign_status

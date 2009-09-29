@@ -4033,12 +4033,12 @@ build_conditional_expr (location_t colon_loc, tree ifexp, bool ifexp_bcp,
   /* Merge const and volatile flags of the incoming types.  */
   result_type
     = build_type_variant (result_type,
-			  TREE_READONLY (op1) || TREE_READONLY (op2),
-			  TREE_THIS_VOLATILE (op1) || TREE_THIS_VOLATILE (op2));
+			  TYPE_READONLY (type1) || TYPE_READONLY (type2),
+			  TYPE_VOLATILE (type1) || TYPE_VOLATILE (type2));
 
-  if (result_type != TREE_TYPE (op1))
+  if (result_type != type1)
     op1 = convert_and_check (result_type, op1);
-  if (result_type != TREE_TYPE (op2))
+  if (result_type != type2)
     op2 = convert_and_check (result_type, op2);
 
   if (ifexp_bcp && ifexp == truthvalue_true_node)
@@ -7920,7 +7920,7 @@ build_asm_stmt (tree cv_qualifier, tree args)
    are subtly different.  We use a ASM_EXPR node to represent this.  */
 tree
 build_asm_expr (location_t loc, tree string, tree outputs, tree inputs,
-		tree clobbers, bool simple)
+		tree clobbers, tree labels, bool simple)
 {
   tree tail;
   tree args;
@@ -7934,7 +7934,7 @@ build_asm_expr (location_t loc, tree string, tree outputs, tree inputs,
   noutputs = list_length (outputs);
   oconstraints = (const char **) alloca (noutputs * sizeof (const char *));
 
-  string = resolve_asm_operand_names (string, outputs, inputs);
+  string = resolve_asm_operand_names (string, outputs, inputs, labels);
 
   /* Remove output conversions that change the type but not the mode.  */
   for (i = 0, tail = outputs; tail; ++i, tail = TREE_CHAIN (tail))
@@ -8004,7 +8004,11 @@ build_asm_expr (location_t loc, tree string, tree outputs, tree inputs,
       TREE_VALUE (tail) = input;
     }
 
-  args = build_stmt (loc, ASM_EXPR, string, outputs, inputs, clobbers);
+  /* ASMs with labels cannot have outputs.  This should have been
+     enforced by the parser.  */
+  gcc_assert (outputs == NULL || labels == NULL);
+
+  args = build_stmt (loc, ASM_EXPR, string, outputs, inputs, clobbers, labels);
 
   /* asm statements without outputs, including simple ones, are treated
      as volatile.  */
@@ -9461,6 +9465,7 @@ build_binary_op (location_t location, enum tree_code code,
 	    unsigned_arg = TYPE_UNSIGNED (TREE_TYPE (op0));
 
 	  if (TYPE_PRECISION (TREE_TYPE (arg0)) < TYPE_PRECISION (result_type)
+	      && tree_int_cst_sgn (op1) > 0
 	      /* We can shorten only if the shift count is less than the
 		 number of bits in the smaller type size.  */
 	      && compare_tree_int (op1, TYPE_PRECISION (TREE_TYPE (arg0))) < 0

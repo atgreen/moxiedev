@@ -499,7 +499,7 @@
   </target>
 
   <!-- =================================================================== -->
-  <!-- Run the gcc testsuite on the moxie simulator                      -->
+  <!-- Run the gdb testsuite on the moxie simulator                        -->
   <!-- =================================================================== -->
 
   <target name="gdbcheck">

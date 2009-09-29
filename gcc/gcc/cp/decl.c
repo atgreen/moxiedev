@@ -3580,10 +3580,6 @@ builtin_function_1 (tree decl, tree context, bool is_global)
 
   retrofit_lang_decl (decl);
 
-  /* All nesting of C++ functions is lexical; there is never a "static
-     chain" in the sense of GNU C nested functions.  */
-  DECL_NO_STATIC_CHAIN (decl) = 1;
-
   DECL_ARTIFICIAL (decl) = 1;
   SET_OVERLOADED_OPERATOR_CODE (decl, ERROR_MARK);
   SET_DECL_LANGUAGE (decl, lang_c);
@@ -4615,13 +4611,7 @@ maybe_commonize_var (tree decl)
       /* Don't mess with __FUNCTION__.  */
       && ! DECL_ARTIFICIAL (decl)
       && DECL_FUNCTION_SCOPE_P (decl)
-      /* Unfortunately, import_export_decl has not always been called
-	 before the function is processed, so we cannot simply check
-	 DECL_COMDAT.  */
-      && (DECL_COMDAT (DECL_CONTEXT (decl))
-	  || ((DECL_DECLARED_INLINE_P (DECL_CONTEXT (decl))
-	       || DECL_TEMPLATE_INSTANTIATION (DECL_CONTEXT (decl)))
-	      && TREE_PUBLIC (DECL_CONTEXT (decl)))))
+      && vague_linkage_fn_p (DECL_CONTEXT (decl)))
     {
       if (flag_weak)
 	{
@@ -5807,6 +5797,15 @@ cp_finish_decl (tree decl, tree init, bool init_const_expr_p,
 	 type.  */
       else if (TREE_CODE (type) == ARRAY_TYPE)
 	layout_type (type);
+
+      if (!processing_template_decl
+	  && TREE_STATIC (decl)
+	  && !at_function_scope_p ()
+	  && current_function_decl == NULL)
+	/* So decl is a global variable or a static member of a
+	   non local class. Record the types it uses
+	   so that we can decide later to emit debug info for them.  */
+	record_types_used_by_current_var_decl (decl);
     }
   else if (TREE_CODE (decl) == FIELD_DECL
 	   && TYPE_FOR_JAVA (type) && MAYBE_CLASS_TYPE_P (type))
@@ -6775,9 +6774,6 @@ grokfndecl (tree ctype,
   if (IDENTIFIER_OPNAME_P (DECL_NAME (decl))
       && !grok_op_properties (decl, /*complain=*/true))
     return NULL_TREE;
-
-  if (ctype && decl_function_context (decl))
-    DECL_NO_STATIC_CHAIN (decl) = 1;
 
   if (funcdef_flag)
     /* Make the init_value nonzero so pushdecl knows this is not
@@ -8844,6 +8840,10 @@ grokdeclarator (const cp_declarator *declarator,
 	  if (TYPE_LANG_SPECIFIC (type) && CLASSTYPE_TEMPLATE_INFO (type))
 	    DECL_NAME (CLASSTYPE_TI_TEMPLATE (type))
 	      = TYPE_IDENTIFIER (type);
+
+	  /* Adjust linkage now that we aren't anonymous anymore.  */
+	  set_linkage_according_to_type (type, TYPE_MAIN_DECL (type));
+	  determine_visibility (TYPE_MAIN_DECL (type));
 
 	  /* FIXME remangle member functions; member functions of a
 	     type with external linkage have external linkage.  */

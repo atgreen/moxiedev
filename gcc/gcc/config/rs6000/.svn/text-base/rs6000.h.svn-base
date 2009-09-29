@@ -1518,13 +1518,6 @@ extern enum rs6000_abi rs6000_current_abi;	/* available for use by subtarget */
 
 #define RETURN_POPS_ARGS(FUNDECL,FUNTYPE,SIZE) 0
 
-/* Define how to find the value returned by a function.
-   VALTYPE is the data type of the value (as a tree).
-   If the precise function being called is known, FUNC is its FUNCTION_DECL;
-   otherwise, FUNC is 0.  */
-
-#define FUNCTION_VALUE(VALTYPE, FUNC) rs6000_function_value ((VALTYPE), (FUNC))
-
 /* Define how to find the value returned by a library function
    assuming the value has mode MODE.  */
 
@@ -1727,18 +1720,9 @@ typedef struct rs6000_args
        && (REGNO) == 2))
 
 
-/* TRAMPOLINE_TEMPLATE deleted */
-
 /* Length in units of the trampoline for entering a nested function.  */
 
 #define TRAMPOLINE_SIZE rs6000_trampoline_size ()
-
-/* Emit RTL insns to initialize the variable parts of a trampoline.
-   FNADDR is an RTX for the address of the function's pure code.
-   CXT is an RTX for the static chain value for the function.  */
-
-#define INITIALIZE_TRAMPOLINE(ADDR, FNADDR, CXT)		\
-  rs6000_initialize_trampoline (ADDR, FNADDR, CXT)
 
 /* Definitions for __builtin_return_address and __builtin_frame_address.
    __builtin_return_address (0) should give link register (65), enable
@@ -3175,18 +3159,12 @@ enum rs6000_builtins
   RS6000_BUILTIN_BSWAP_HI,
 
   /* VSX builtins.  */
-  VSX_BUILTIN_LXSDUX,
   VSX_BUILTIN_LXSDX,
-  VSX_BUILTIN_LXVD2UX,
   VSX_BUILTIN_LXVD2X,
   VSX_BUILTIN_LXVDSX,
-  VSX_BUILTIN_LXVW4UX,
   VSX_BUILTIN_LXVW4X,
-  VSX_BUILTIN_STXSDUX,
   VSX_BUILTIN_STXSDX,
-  VSX_BUILTIN_STXVD2UX,
   VSX_BUILTIN_STXVD2X,
-  VSX_BUILTIN_STXVW4UX,
   VSX_BUILTIN_STXVW4X,
   VSX_BUILTIN_XSABSDP,
   VSX_BUILTIN_XSADDDP,

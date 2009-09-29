@@ -109,7 +109,6 @@ extern void rs6000_emit_swdivsf (rtx, rtx, rtx);
 extern void rs6000_emit_swdivdf (rtx, rtx, rtx);
 extern void rs6000_emit_swrsqrtsf (rtx, rtx);
 extern void output_toc (FILE *, rtx, int, enum machine_mode);
-extern void rs6000_initialize_trampoline (rtx, rtx, rtx);
 extern rtx rs6000_longcall_ref (rtx);
 extern void rs6000_fatal_bad_address (rtx);
 extern rtx create_TOC_reference (rtx);
@@ -142,7 +141,6 @@ extern void function_arg_advance (CUMULATIVE_ARGS *, enum machine_mode,
 extern int function_arg_boundary (enum machine_mode, tree);
 extern rtx function_arg (CUMULATIVE_ARGS *, enum machine_mode, tree, int);
 extern tree altivec_resolve_overloaded_builtin (location_t, tree, void *);
-extern rtx rs6000_function_value (const_tree, const_tree);
 extern rtx rs6000_libcall_value (enum machine_mode);
 extern rtx rs6000_va_arg (tree, tree);
 extern int function_ok_for_sibcall (tree);

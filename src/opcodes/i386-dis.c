@@ -7632,13 +7632,13 @@ static const struct dis386 vex_len_table[][2] = {
     { "(bad)",		{ XX } },
   },
 
-  /* VEX_LEN_AE_R_2_M0 */
+  /* VEX_LEN_AE_R_2_M_0 */
   {
     { "vldmxcsr",	{ Md } },
     { "(bad)",		{ XX } },
   },
 
-  /* VEX_LEN_AE_R_3_M0 */
+  /* VEX_LEN_AE_R_3_M_0 */
   {
     { "vstmxcsr",	{ Md } },
     { "(bad)",		{ XX } },
@@ -10184,7 +10184,7 @@ OP_STi (int bytemode ATTRIBUTE_UNUSED, int sizeflag ATTRIBUTE_UNUSED)
 
 /* Capital letters in template are macros.  */
 static int
-putop (const char *template, int sizeflag)
+putop (const char *in_template, int sizeflag)
 {
   const char *p;
   int alt = 0;
@@ -10198,7 +10198,7 @@ putop (const char *template, int sizeflag)
   else					\
     abort ();
 
-  for (p = template; *p; p++)
+  for (p = in_template; *p; p++)
     {
       switch (*p)
 	{
@@ -11107,7 +11107,7 @@ OP_E_memory (int bytemode, int sizeflag)
 		  *obufp++ = '+';
 		  *obufp = '\0';
 		}
-	      else if (modrm.mod != 1)
+	      else if (modrm.mod != 1 && disp != -disp)
 		{
 		  *obufp++ = '-';
 		  *obufp = '\0';

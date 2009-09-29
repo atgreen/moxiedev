@@ -1,15 +1,15 @@
 10
 
 dir
-151642
+152280
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/x86_64/abi
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-18T16:53:25.946387Z
-147667
-hjl
+2009-09-18T15:16:44.761340Z
+151855
+uros
 
 
 
@@ -820,11 +820,11 @@ file
 
 
 
-2009-04-24T17:45:51.000000Z
-c83a4f21bf4e2d51b02cbc459ccd8821
-2006-09-13T01:07:27.608613Z
-116916
-echristo
+2009-09-27T03:29:55.000000Z
+883a90fab4aeed88172f24cf6f04de38
+2009-09-18T15:16:44.761340Z
+151855
+uros
 
 
 
@@ -846,7 +846,7 @@ echristo
 
 
 
-1675
+1705
 
 test_basic_sizes.c
 file

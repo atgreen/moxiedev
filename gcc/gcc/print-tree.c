@@ -381,8 +381,8 @@ print_node (FILE *file, const char *prefix, tree node, int indent)
 	fputs (" autoinline", file);
       if (code == FUNCTION_DECL && DECL_BUILT_IN (node))
 	fputs (" built-in", file);
-      if (code == FUNCTION_DECL && DECL_NO_STATIC_CHAIN (node))
-	fputs (" no-static-chain", file);
+      if (code == FUNCTION_DECL && DECL_STATIC_CHAIN (node))
+	fputs (" static-chain", file);
 
       if (code == FIELD_DECL && DECL_PACKED (node))
 	fputs (" packed", file);
@@ -393,6 +393,8 @@ print_node (FILE *file, const char *prefix, tree node, int indent)
 
       if (code == LABEL_DECL && DECL_ERROR_ISSUED (node))
 	fputs (" error-issued", file);
+      if (code == LABEL_DECL && EH_LANDING_PAD_NR (node))
+	fprintf (file, " landing-pad:%d", EH_LANDING_PAD_NR (node));
 
       if (code == VAR_DECL && DECL_IN_TEXT_SECTION (node))
 	fputs (" in-text-section", file);

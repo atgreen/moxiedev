@@ -565,10 +565,6 @@ typedef struct
    run-time also.  */
 
 #define TRAMPOLINE_SIZE 20
-
-#define INITIALIZE_TRAMPOLINE(ADDR, FNADDR, STATIC_CHAIN) \
-	mep_init_trampoline (ADDR, FNADDR, STATIC_CHAIN)
-
 
 
 #define CONSTANT_ADDRESS_P(X) CONSTANT_P (X)
@@ -620,6 +616,8 @@ typedef struct
 #define BSS_SECTION_ASM_OP  ".bss"
 
 #define USE_SELECT_SECTION_FOR_FUNCTIONS 1
+
+#define JUMP_TABLES_IN_TEXT_SECTION 1
 
 #define TARGET_ASM_FILE_END mep_file_cleanups
 

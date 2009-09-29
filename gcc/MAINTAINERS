@@ -111,7 +111,7 @@ freebsd			Loren J. Rittle		ljrittle@acm.org
 GNU/Hurd		Thomas Schwinge		tschwinge@gnu.org
 hpux			John David Anglin	dave.anglin@nrc-cnrc.gc.ca
 hpux			Steve Ellcey		sje@cup.hp.com
-irix, osf		Rainer Orth		ro@CeBiTec.Uni-Bielefeld.DE
+irix, osf, solaris	Rainer Orth		ro@CeBiTec.Uni-Bielefeld.DE
 netbsd			Jason Thorpe		thorpej@netbsd.org
 netbsd			Krister Walfridsson	krister.walfridsson@gmail.com
 sh-linux-gnu		Kaz Kojima		kkojima@gcc.gnu.org
@@ -263,6 +263,7 @@ Fortran			Janus Weil		janus@gcc.gnu.org
 Graphite		Daniel Berlin		dberlin@dberlin.org
 Graphite 		Tobias Grosser		grosser@fim.uni-passau.de
 Graphite		Sebastian Pop		sebastian.pop@amd.com
+Plug-in			Rafael Espíndola	rafael.espindola@gmail.com
 register allocation	Peter Bergner		bergner@vnet.ibm.com
 register allocation	Vladimir Makarov	vmakarov@redhat.com
 register allocation	Kenneth Zadeck		zadeck@naturalbridge.com
@@ -329,6 +330,7 @@ Thomas Fitzsimmons				fitzsim@redhat.com
 Brian Ford					ford@vss.fsi.com
 Nathan Froyd					froydnj@codesourcery.com
 Chao-ying Fu					fu@mips.com
+Gary Funck					gary@intrepid.com
 Kaveh Ghazi					ghazi@caip.rutgers.edu
 Matthew Gingell					gingell@gnat.com
 Tristan Gingold					gingold@adacore.com
@@ -427,7 +429,6 @@ Dwarakanath Rajagopal				dwarak.rajagopal@amd.com
 Ramana Radhakrishnan				ramana.r@gmail.com
 Rolf Rasmussen					rolfwr@gcc.gnu.org
 Volker Reichelt					v.reichelt@netcologne.de
-Joern Rennecke					joern.rennecke@arc.com
 Bernhard Reutner-Fischer			rep.dot.nop@gmail.com
 Tom Rix						trix@redhat.com
 Craig Rodrigues					rodrigc@gcc.gnu.org
@@ -479,6 +480,10 @@ Jie Zhang					jie.zhang@analog.com
 Jon Ziegler					jonz@apple.com
 Roman Zippel					zippel@linux-m68k.org
 Josef Zlomek					josef.zlomek@email.cz
+
+Waiting for paperwork:
+
+Joern Rennecke					joern.rennecke@embecosm.com
 
 Bug database only accounts
 

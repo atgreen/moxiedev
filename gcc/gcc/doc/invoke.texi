@@ -313,7 +313,8 @@ Objective-C and Objective-C++ Dialects}.
 -ftest-coverage  -ftime-report -fvar-tracking @gol
 -fvar-tracking-assigments  -fvar-tracking-assignments-toggle @gol
 -g  -g@var{level}  -gtoggle  -gcoff  -gdwarf-@var{version} @gol
--ggdb  -gstabs  -gstabs+  -gvms  -gxcoff  -gxcoff+ @gol
+-ggdb  -gstabs  -gstabs+  -gstrict-dwarf  -gno-strict-dwarf @gol
+-gvms  -gxcoff  -gxcoff+ @gol
 -fno-merge-debug-strings -fno-dwarf2-cfi-asm @gol
 -fdebug-prefix-map=@var{old}=@var{new} @gol
 -femit-struct-debug-baseonly -femit-struct-debug-reduced @gol
@@ -335,7 +336,7 @@ Objective-C and Objective-C++ Dialects}.
 -fcse-follow-jumps -fcse-skip-blocks -fcx-fortran-rules -fcx-limited-range @gol
 -fdata-sections -fdce -fdce @gol
 -fdelayed-branch -fdelete-null-pointer-checks -fdse -fdse @gol
--fearly-inlining -fexpensive-optimizations -ffast-math @gol
+-fearly-inlining -fipa-sra -fexpensive-optimizations -ffast-math @gol
 -ffinite-math-only -ffloat-store -fexcess-precision=@var{style} @gol
 -fforward-propagate -ffunction-sections @gol
 -fgcse -fgcse-after-reload -fgcse-las -fgcse-lm @gol
@@ -705,7 +706,8 @@ Objective-C and Objective-C++ Dialects}.
 -mflush-func=@var{func}  -mno-flush-func @gol
 -mbranch-cost=@var{num}  -mbranch-likely  -mno-branch-likely @gol
 -mfp-exceptions -mno-fp-exceptions @gol
--mvr4130-align -mno-vr4130-align -msynci -mno-synci}
+-mvr4130-align -mno-vr4130-align -msynci -mno-synci @gol
+-mrelax-pic-calls -mno-relax-pic-calls}
 
 @emph{MMIX Options}
 @gccoptlist{-mlibfuncs  -mno-libfuncs  -mepsilon  -mno-epsilon  -mabi=gnu @gol
@@ -1784,6 +1786,27 @@ two definitions were merged.
 
 This option is no longer useful on most targets, now that support has
 been added for putting variables into BSS without making them common.
+
+@item -fno-deduce-init-list
+@opindex fno-deduce-init-list
+Disable deduction of a template type parameter as
+std::initializer_list from a brace-enclosed initializer list, i.e.
+
+@smallexample
+template <class T> auto forward(T t) -> decltype (realfn (t))
+@{
+  return realfn (t);
+@}
+
+void f()
+@{
+  forward(@{1,2@}); // call forward<std::initializer_list<int>>
+@}
+@end smallexample
+
+This option is present because this deduction is an extension to the
+current specification in the C++0x working draft, and there was
+some concern about potential overload resolution problems.
 
 @item -ffriend-injection
 @opindex ffriend-injection
@@ -3002,20 +3025,6 @@ requiring a non-null value by the @code{nonnull} function attribute.
 @option{-Wnonnull} is included in @option{-Wall} and @option{-Wformat}.  It
 can be disabled with the @option{-Wno-nonnull} option.
 
-@item -Wjump-misses-init @r{(C, Objective-C only)}
-@opindex Wjump-misses-init
-@opindex Wno-jump-misses-init
-Warn if a @code{goto} statement or a @code{switch} statement jumps
-forward across the initialization of a variable, or jumps backward to a
-label after the variable has been initialized.  This only warns about
-variables which are initialized when they are declared.  This warning is
-only supported for C and Objective C; in C++ this sort of branch is an
-error in any case.
-
-@option{-Wjump-misses-init} is included in @option{-Wall} and
-@option{-Wc++-compat}.  It can be disabled with the
-@option{-Wno-jump-misses-init} option.
-
 @item -Winit-self @r{(C, C++, Objective-C and Objective-C++ only)}
 @opindex Winit-self
 @opindex Wno-init-self
@@ -3827,6 +3836,19 @@ Warn about a comparison between values of different enum types. In C++
 this warning is enabled by default.  In C this warning is enabled by
 @option{-Wall}.
 
+@item -Wjump-misses-init @r{(C, Objective-C only)}
+@opindex Wjump-misses-init
+@opindex Wno-jump-misses-init
+Warn if a @code{goto} statement or a @code{switch} statement jumps
+forward across the initialization of a variable, or jumps backward to a
+label after the variable has been initialized.  This only warns about
+variables which are initialized when they are declared.  This warning is
+only supported for C and Objective C; in C++ this sort of branch is an
+error in any case.
+
+@option{-Wjump-misses-init} is included in @option{-Wc++-compat}.  It
+can be disabled with the @option{-Wno-jump-misses-init} option.
+
 @item -Wsign-compare
 @opindex Wsign-compare
 @opindex Wno-sign-compare
@@ -4405,6 +4427,17 @@ use, some non-conflicting DWARF 3 extensions in the unwind tables.
 
 Version 4 may require GDB 7.0 and @option{-fvar-tracking-assignments}
 for maximum benefit.
+
+@item -gstrict-dwarf
+@opindex gstrict-dwarf
+Disallow using extensions of later DWARF standard version than selected
+with @option{-gdwarf-@var{version}}.  On most targets using non-conflicting
+DWARF extensions from later standard versions is allowed.
+
+@item -gno-strict-dwarf
+@opindex gno-strict-dwarf
+Allow using extensions of later DWARF standard version than selected with
+@option{-gdwarf-@var{version}}.
 
 @item -gvms
 @opindex gvms
@@ -5659,6 +5692,7 @@ also turns on the following optimization flags:
 -fgcse  -fgcse-lm  @gol
 -finline-small-functions @gol
 -findirect-inlining @gol
+-fipa-sra @gol
 -foptimize-sibling-calls @gol
 -fpeephole2 @gol
 -fregmove @gol
@@ -5818,6 +5852,14 @@ makes profiling significantly cheaper and usually inlining faster on programs
 having large chains of nested wrapper functions.
 
 Enabled by default.
+
+@item -fipa-sra
+@opindex fipa-sra
+Perform interprocedural scalar replacement of aggregates, removal of
+unused parameters and replacement of parameters passed by reference
+by parameters passed by value.
+
+Enabled at levels @option{-O2}, @option{-O3} and @option{-Os}.
 
 @item -finline-limit=@var{n}
 @opindex finline-limit
@@ -6869,7 +6911,7 @@ Enabled at levels @option{-O2}, @option{-O3}, @option{-Os}.
 
 @item -fstrict-aliasing
 @opindex fstrict-aliasing
-Allows the compiler to assume the strictest aliasing rules applicable to
+Allow the compiler to assume the strictest aliasing rules applicable to
 the language being compiled.  For C (and C++), this activates
 optimizations based on the type of expressions.  In particular, an
 object of one type is assumed never to reside at the same address as an
@@ -6886,7 +6928,7 @@ union a_union @{
 @};
 
 int f() @{
-  a_union t;
+  union a_union t;
   t.d = 3.0;
   return t.i;
 @}
@@ -6899,7 +6941,7 @@ expected.  @xref{Structures unions enumerations and bit-fields
 implementation}.  However, this code might not:
 @smallexample
 int f() @{
-  a_union t;
+  union a_union t;
   int* ip;
   t.d = 3.0;
   ip = &t.i;
@@ -7634,7 +7676,7 @@ a lot of functions that would otherwise not be considered for inlining
 by the compiler will be investigated.  To those functions, a different
 (more restrictive) limit compared to functions declared inline can
 be applied.
-The default value is 60.
+The default value is 50.
 
 @item large-function-insns
 The limit specifying really large functions.  For functions larger than this
@@ -8126,6 +8168,12 @@ Use uids starting at this parameter for nondebug insns.  The range below
 the parameter is reserved exclusively for debug insns created by
 @option{-fvar-tracking-assignments}, but debug insns may get
 (non-overlapping) uids above it if the reserved range is exhausted.
+
+@item ipa-sra-ptr-growth-factor
+IPA-SRA will replace a pointer to an aggregate with one or more new
+parameters only when their cumulative size is less or equal to
+@option{ipa-sra-ptr-growth-factor} times the size of the original
+pointer parameter.
 
 @end table
 @end table
@@ -13870,6 +13918,20 @@ When compiling code for single processor systems, it is generally safe
 to use @code{synci}.  However, on many multi-core (SMP) systems, it
 will not invalidate the instruction caches on all cores and may lead
 to undefined behavior.
+
+@item -mrelax-pic-calls
+@itemx -mno-relax-pic-calls
+@opindex mrelax-pic-calls
+Try to turn PIC calls that are normally dispatched via register
+@code{$25} into direct calls.  This is only possible if the linker can
+resolve the destination at link-time and if the destination is within
+range for a direct call.
+
+@option{-mrelax-pic-calls} is the default if GCC was configured to use
+an assembler and a linker that supports the @code{.reloc} assembly
+directive and @code{-mexplicit-relocs} is in effect.  With
+@code{-mno-explicit-relocs}, this optimization can be performed by the
+assembler and the linker alone without help from the compiler.
 @end table
 
 @node MMIX Options
@@ -14321,7 +14383,7 @@ Supported values for @var{cpu_type} are @samp{401}, @samp{403},
 @samp{860}, @samp{970}, @samp{8540}, @samp{e300c2}, @samp{e300c3},
 @samp{e500mc}, @samp{ec603e}, @samp{G3}, @samp{G4}, @samp{G5},
 @samp{power}, @samp{power2}, @samp{power3}, @samp{power4},
-@samp{power5}, @samp{power5+}, @samp{power6}, @samp{power6x}, @samp{power7}
+@samp{power5}, @samp{power5+}, @samp{power6}, @samp{power6x}, @samp{power7},
 @samp{common}, @samp{powerpc}, @samp{powerpc64}, @samp{rios},
 @samp{rios1}, @samp{rios2}, @samp{rsc}, and @samp{rs64}.
 

@@ -247,6 +247,8 @@
 #define TARGET_ASM_RECORD_GCC_SWITCHES_SECTION ".GCC.command.line"
 #endif
 
+#define TARGET_ASM_TRAMPOLINE_TEMPLATE NULL
+
 #define TARGET_ASM_ALIGNED_INT_OP				\
 		       {TARGET_ASM_ALIGNED_HI_OP,		\
 			TARGET_ASM_ALIGNED_SI_OP,		\
@@ -296,7 +298,8 @@
 			TARGET_ASM_RECORD_GCC_SWITCHES_SECTION,	\
 			TARGET_ASM_OUTPUT_ANCHOR,		\
 			TARGET_ASM_OUTPUT_DWARF_DTPREL,		\
-			TARGET_ASM_FINAL_POSTSCAN_INSN}
+			TARGET_ASM_FINAL_POSTSCAN_INSN,		\
+			TARGET_ASM_TRAMPOLINE_TEMPLATE }
 
 /* Scheduler hooks.  All of these default to null pointers, which
    haifa-sched.c looks for and handles.  */
@@ -388,6 +391,9 @@
 #define TARGET_VECTOR_ALIGNMENT_REACHABLE \
   default_builtin_vector_alignment_reachable
 #define TARGET_VECTORIZE_BUILTIN_VEC_PERM 0
+#define TARGET_SUPPORT_VECTOR_MISALIGNMENT \
+  default_builtin_support_vector_misalignment 
+   
 
 #define TARGET_VECTORIZE                                                \
   {									\
@@ -398,7 +404,8 @@
     TARGET_VECTORIZE_BUILTIN_MUL_WIDEN_ODD,				\
     TARGET_VECTORIZE_BUILTIN_VECTORIZATION_COST,			\
     TARGET_VECTOR_ALIGNMENT_REACHABLE,                                  \
-    TARGET_VECTORIZE_BUILTIN_VEC_PERM                                   \
+    TARGET_VECTORIZE_BUILTIN_VEC_PERM,					\
+    TARGET_SUPPORT_VECTOR_MISALIGNMENT				\
   }
 
 #define TARGET_DEFAULT_TARGET_FLAGS 0
@@ -603,6 +610,9 @@
 #define TARGET_UPDATE_STACK_BOUNDARY NULL
 #define TARGET_GET_DRAP_RTX NULL
 #define TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS hook_bool_void_true
+#define TARGET_STATIC_CHAIN default_static_chain
+#define TARGET_TRAMPOLINE_INIT default_trampoline_init
+#define TARGET_TRAMPOLINE_ADJUST_ADDRESS NULL
 
 #define TARGET_CALLS {						\
    TARGET_PROMOTE_FUNCTION_MODE,				\
@@ -625,7 +635,10 @@
    TARGET_INTERNAL_ARG_POINTER,					\
    TARGET_UPDATE_STACK_BOUNDARY,				\
    TARGET_GET_DRAP_RTX,						\
-   TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS				\
+   TARGET_ALLOCATE_STACK_SLOTS_FOR_ARGS,			\
+   TARGET_STATIC_CHAIN,						\
+   TARGET_TRAMPOLINE_INIT,					\
+   TARGET_TRAMPOLINE_ADJUST_ADDRESS				\
    }
 
 #ifndef TARGET_UNWIND_TABLES_DEFAULT

@@ -201,7 +201,6 @@ create_tree_common_ann (tree t)
   ann = GGC_CNEW (struct tree_ann_common_d);
 
   ann->type = TREE_ANN_COMMON;
-  ann->rn = -1;
   t->base.ann = (tree_ann_t) ann;
 
   return ann;
@@ -753,7 +752,6 @@ get_ref_base_and_extent (tree exp, HOST_WIDE_INT *poffset,
   tree size_tree = NULL_TREE;
   HOST_WIDE_INT bit_offset = 0;
   bool seen_variable_array_ref = false;
-  bool seen_union = false;
 
   /* First get the final access size from just the outermost expression.  */
   if (TREE_CODE (exp) == COMPONENT_REF)
@@ -795,17 +793,41 @@ get_ref_base_and_extent (tree exp, HOST_WIDE_INT *poffset,
 	    tree field = TREE_OPERAND (exp, 1);
 	    tree this_offset = component_ref_field_offset (exp);
 
-	    if (TREE_CODE (TREE_TYPE (TREE_OPERAND (exp, 0))) == UNION_TYPE)
-	      seen_union = true;
-
 	    if (this_offset
 		&& TREE_CODE (this_offset) == INTEGER_CST
 		&& host_integerp (this_offset, 0))
 	      {
 		HOST_WIDE_INT hthis_offset = TREE_INT_CST_LOW (this_offset);
 		hthis_offset *= BITS_PER_UNIT;
+		hthis_offset
+		  += TREE_INT_CST_LOW (DECL_FIELD_BIT_OFFSET (field));
 		bit_offset += hthis_offset;
-		bit_offset += TREE_INT_CST_LOW (DECL_FIELD_BIT_OFFSET (field));
+
+		/* If we had seen a variable array ref already and we just
+		   referenced the last field of a struct or a union member
+		   then we have to adjust maxsize by the padding at the end
+		   of our field.  */
+		if (seen_variable_array_ref
+		    && maxsize != -1)
+		  {
+		    tree stype = TREE_TYPE (TREE_OPERAND (exp, 0));
+		    tree next = TREE_CHAIN (field);
+		    while (next && TREE_CODE (next) != FIELD_DECL)
+		      next = TREE_CHAIN (next);
+		    if (!next
+			|| TREE_CODE (stype) != RECORD_TYPE)
+		      {
+			tree fsize = DECL_SIZE_UNIT (field);
+			tree ssize = TYPE_SIZE_UNIT (stype);
+			if (host_integerp (fsize, 0)
+			    && host_integerp (ssize, 0))
+			  maxsize += ((TREE_INT_CST_LOW (ssize)
+				       - TREE_INT_CST_LOW (fsize))
+				      * BITS_PER_UNIT - hthis_offset);
+			else
+			  maxsize = -1;
+		      }
+		  }
 	      }
 	    else
 	      {
@@ -873,7 +895,6 @@ get_ref_base_and_extent (tree exp, HOST_WIDE_INT *poffset,
 	  break;
 
 	case VIEW_CONVERT_EXPR:
-	  /* ???  We probably should give up here and bail out.  */
 	  break;
 
 	default:
@@ -888,24 +909,17 @@ get_ref_base_and_extent (tree exp, HOST_WIDE_INT *poffset,
        struct { int length; int a[1]; } x;           x.a[d]
        struct { struct { int a; int b; } a[1]; } x;  x.a[d].a
        struct { struct { int a[1]; } a[1]; } x;      x.a[0][d], x.a[d][0]
+       struct { int len; union { int a[1]; struct X x; } u; } x; x.u.a[d]
      where we do not know maxsize for variable index accesses to
      the array.  The simplest way to conservatively deal with this
      is to punt in the case that offset + maxsize reaches the
-     base type boundary.
-
-     Unfortunately this is difficult to determine reliably when unions are
-     involved and so we are conservative in such cases.
-
-     FIXME: This approach may be too conservative, we probably want to at least
-     check that the union is the last field/element at its level or even
-     propagate the calculated offsets back up the access chain and check
-     there.  */
+     base type boundary.  This needs to include possible trailing padding
+     that is there for alignment purposes.  */
 
   if (seen_variable_array_ref
-      && (seen_union
-	  || (maxsize != -1
-	      && host_integerp (TYPE_SIZE (TREE_TYPE (exp)), 1)
-	      && bit_offset + maxsize
+      && maxsize != -1
+      && (!host_integerp (TYPE_SIZE (TREE_TYPE (exp)), 1)
+	  || (bit_offset + maxsize
 	      == (signed) TREE_INT_CST_LOW (TYPE_SIZE (TREE_TYPE (exp))))))
     maxsize = -1;
 

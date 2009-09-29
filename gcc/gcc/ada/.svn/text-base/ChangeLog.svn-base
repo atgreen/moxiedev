@@ -1,3 +1,393 @@
+2009-09-29  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/decl.c (gnat_to_gnu_entity) <E_Array_Type>: Factor out
+	common code processing the component type into...
+	<E_Array_Subtype>: Likewise.
+	(gnat_to_gnu_component_type): ...this new static function.
+	(maybe_pad_type): Minor cleanup.
+
+2009-09-29  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/decl.c (gnat_to_gnu_entity) <E_Record_Subtype>: Rewrite
+	the handling of constrained discriminated record subtypes.
+	(components_to_record): Declare the type of the variants and of the
+	qualified union.
+	(build_subst_list): Move around.
+	(compute_field_positions): Rename into...
+	(build_position_list): ...this.  Return a TREE_VEC.
+	(annotate_rep): Adjust for above renaming.
+	(build_variant_list): New static function.
+	(create_field_decl_from): Likewise.
+	(get_rep_part): Likewise.
+	(get_variant_part): Likewise.
+	(create_variant_part_from): Likewise.
+	(copy_and_substitute_in_size): Likewise.
+
+2009-09-28  Olivier Hainque  <hainque@adacore.com>
+
+	PR ada/41100
+	* gcc-interface/targtyps.c (get_target_default_allocator_alignment):
+	Account for observable alignments out of default allocators.
+
+2009-09-28  Richard Henderson  <rth@redhat.com>
+
+	* gcc-interface/utils.c (gnat_install_builtins): Update call to
+	build_common_builtin_nodes.
+
+2009-09-26  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/decl.c (gnat_to_gnu_entity) <E_Array_Type>: Filter out
+	negative size for the array dimensions like in the constrained case.
+	<E_Array_Subtype>: Do not create an artificially non-constant high
+	bound if the low bound is non-constant.  Minor tweaks.
+
+	* gcc-interface/trans.c (lvalue_required_p): Add CONSTANT parameter
+	and turn ALIASED into a boolean parameter.  Adjust calls to self.
+	<N_Attribute_Reference>: Return 1 for more attributes.
+	<N_Object_Renaming_Declaration>: Return 1 for non-constant objects.
+	<N_Assignment_Statement>: Return 1 for the LHS.
+	(Identifier_to_gnu): Adjust calls to lvalue_required_p.
+	(call_to_gnu): Be prepared for wrapped boolean rvalues.
+
+2009-09-25  Olivier Hainquqe  <hainque@adacore.com>
+            Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/ada-tree.h (TYPE_REPRESENTATIVE_ARRAY): New language
+	specific node.	Representative array type for VECTOR_TYPE entities.
+	* gcc-interface/utils.c (handle_vector_type_attribute): New handler.
+	Turn an ARRAY_TYPE entity into a VECTOR_TYPE.	
+	(gnat_types_compatible_p): Handle VECTOR_TYPEs.
+	(convert): Likewise.  Arrange to produce VECTOR_CST out of constant
+	array aggregates for VECTOR_TYPE entities.
+	(unchecked_convert): Likewise.
+	(maybe_vector_array): New function. If EXP has VECTOR_TYPE, return EXP
+	converted to the associated TYPE_REPRESENTATIVE_ARRAY.
+	(handle_pure_attribute, handle_sentinel_attribute,
+	handle_noreturn_attribute, handle_malloc_attribute,
+	handle_vector_size_attribute): Replace uses of qE format by qs.
+	Remove GCC_DIAG_STYLE definition.
+	* gcc-interface/trans.c (gnat_to_gnu) <N_Indexed_Component>: Convert
+	vector input to representative array type on entry.
+	<N_Op_Eq, etc>: Likewise.
+	* gcc-interface/gigi.h (maybe_vector_array): Declare.
+	(VECTOR_TYPE_P): New predicate.
+	* gcc-interface/misc.c (gnat_print_type): Handle VECTOR_TYPE.
+
+2009-09-24  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/ada.h: Fix outdated comment.
+	* gcc-interface/ada-tree.h (SET_TYPE_RM_VALUE): Use MARK_VISITED in
+	lieu of mark_visited.
+	* gcc-interface/gigi.h (mark_visited): Change type of parameter.
+	(MARK_VISITED): New macro.
+	(gnat_truthvalue_conversion): Delete.
+	* gcc-interface/decl.c (gnat_to_gnu_entity): Use MARK_VISITED in lieu
+	of mark_visited.
+	(annotate_rep): Fix formatting and tidy.
+	(compute_field_positions): Get rid of useless variable.
+	* gcc-interface/trans.c (gnat_to_gnu): Retrieve the Nkind of the GNAT
+	node only once.  Use IN operator for the Nkind in more cases.
+	Remove calls to gnat_truthvalue_conversion.
+	(mark_visited): Change type of parameter and adjust.
+	(mark_visited_r): Dereference TP only once.
+	(add_decl_expr): Use MARK_VISITED in lieu of mark_visited.
+	* gcc-interface/utils2.c (gnat_truthvalue_conversion): Delete.
+	(build_binary_op): Remove calls to gnat_truthvalue_conversion.
+	(build_unary_op): Likewise.
+
+2009-09-24  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* gcc-interface/Makefile.in (LIBGNAT_TARGET_PAIRS): Simplify test for
+	a-except% in target pairs list; don't (implicitly) compare whitespace.
+
+2009-09-24  Jakub Jelinek  <jakub@redhat.com>
+
+	* gcc-interface/utils.c (gnat_pushdecl): Don't set
+	DECL_NO_STATIC_CHAIN, set DECL_STATIC_CHAIN for
+	nested functions.
+
+2009-09-21  Joel Sherrill  <joel.sherrill@oarcorp.com>
+
+	* s-osinte-rtems.ad[bs]: Get_Page_Size cannot return 0.
+	Bind to getpagesize() in RTEMS 4.10 and newer.
+
+2009-09-21  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* env.c [__alpha__ && __osf__] (_BSD): Define.
+	* init.c [__alpha__ && __osf__] (__gnat_error_handler): Cast msg
+	to const char *.
+
+2009-09-18  Pascal Obry  <obry@adacore.com>
+
+	* mingw32.h: Activate Unicode support for x86-64 Windows platform.
+
+2009-09-18  Vadim Godunko  <godunko@adacore.com>
+
+	* s-oscons-tmplt.c: Add circuit for handling IOV_MAX macro on IRIX.
+
+2009-09-18  Javier Miranda  <miranda@adacore.com>
+
+	* exp_aggr.adb (Backend_Processing_Possible): Disable backend
+	processing for array aggregates in the VM backend if the array has
+	aliased components.
+
+2009-09-18  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_ch4.adb (Analyze_Indexed_Component): Emit error if the type of
+	the prefix indicates a previous semantic error, and this is the first
+	error in the program.
+
+2009-09-18  Bob Duff  <duff@adacore.com>
+
+	* gnat_ugn.texi: Minor editing.
+
+2009-09-18  Vincent Celier  <celier@adacore.com>
+
+	* prj.ads, prj.adb (Project_Data): New component
+	Imported_Directories_Switches.
+
+2009-09-18  Pascal Obry  <obry@adacore.com>
+
+	* mingw32.h: Include standard _mingw.h file.
+	Define _WIN32_WINNT only if not already defined.
+
+2009-09-18  Thomas Quinot  <quinot@adacore.com>
+
+	* g-socket.adb (Is_Open): New function indicating whether a
+	Selector_Type object is open.
+
+2009-09-18  Vincent Celier  <celier@adacore.com>
+
+	* osint-c.adb (Create_Output_Library_Info): Make sure that the ALI file
+	is deleted before creating it.
+
+2009-09-18  Robert Dewar  <dewar@adacore.com>
+
+	* bindgen.adb: Minor reformatting
+
+2009-09-18  Arnaud Charlet  <charlet@adacore.com>
+
+	* s-taprop-tru64.adb, s-taprop-linux.adb, s-taprop-solaris.adb,
+	s-taprop-irix.adb, s-taprop-posix.adb (Abort_Task): Do nothing if no
+	signal handler is installed.
+	* s-tassta.adb (Finalize_Global_Tasks): Do not wait for independent
+	tasks if Abort_Task_Interrupt cannot be used.
+
+2009-09-18  Vincent Celier  <celier@adacore.com>
+
+	* prj-tree.ads: Minor comment update
+
+2009-09-17  Bob Duff  <duff@adacore.com>
+
+	* g-socket.ads: Document the fact that Close_Selector has no effect on
+	a closed selector.
+	* g-socket.adb: Raise an exception when a Selector that should be open
+	is closed.
+	(Check_Selector): Declare RSig as a constant rather than a renames,
+	less confusing.
+
+2009-09-17  Robert Dewar  <dewar@adacore.com>
+
+	* exp_ch9.adb, exp_ch5.adb, exp_ch4.adb, prj-conf.adb, prj-env.ads,
+	prj-ext.adb, prj-ext.ads, prj-pars.adb, prj-part.adb, prj-proc.adb,
+	prj-tree.ads: Minor reformatting
+
+2009-09-17  Emmanuel Briot  <briot@adacore.com>
+
+	* prj-conf.adb, prj-env.adb, prj-env.ads (Create_Temp_File): Moved to
+	spec.
+	(Do_Autoconf): If the object directory does not exists, create auto.cgpr
+	in a temporary directory instead
+
+2009-09-17  Bob Duff  <duff@adacore.com>
+
+	* a-dynpri.adb (Set_Priority): Don't do anything if the task is already
+	terminated.
+	(Get_Priority): Correct message for "terminated" case -- it said "null".
+
+2009-09-17  Robert Dewar  <dewar@adacore.com>
+
+	* exp_ch6.adb: Minor reformatting
+
+2009-09-17  Emmanuel Briot  <briot@adacore.com>
+
+	* gnatcmd.adb, make.adb, prj-part.adb, prj-ext.adb, prj-ext.ads,
+	switch-m.adb, switch-m.ads, clean.adb, prj-tree.ads
+	(Project_Node_Tree_Data.Project_Path): New field.
+
+	* prj-conf.adb (Do_Autoconf): Remove "creating auto.cgpr" message
+
+2009-09-17  Emmanuel Briot  <briot@adacore.com>
+
+	* prj-ext.adb, prj-ext.ads, makeutl.adb (Is_External_Assignment):
+	Remove duplicate code.
+	(Prj.Ext): Fix memory leak
+	(Check): Now allow the syntax "-Xfoo=" to set an empty value to the
+	variable. This was previously allowed in the code in
+	Is_External_Assignment, and some tests rely on it
+
+2009-09-17  Bob Duff  <duff@adacore.com>
+
+	* gnat_rm.texi, s-oscons-tmplt.c: Minor typo
+
+2009-09-17  Emmanuel Briot  <briot@adacore.com>
+
+	* gnatcmd.adb, prj-proc.adb, make.adb, prj-ext.adb, prj-ext.ads,
+	makeutl.adb, makeutl.ads, clean.adb, prj-pars.adb, prj-pars.ads,
+	prj-conf.adb, prj-conf.ads, prj-tree.adb, prj-tree.ads, prj-proc.ads,
+	prj-nmsc.ads (Add, Value_Of, Reset): new parameter Tree.
+	Scenario variables are now specific to each project tree loaded in
+	memory.
+	Code clean ups.
+
+2009-09-17  Javier Miranda  <miranda@adacore.com>
+
+	* exp_disp.adb (Make_DT): Remove wrong line of code that was
+	undocumented and probably added by mistake.
+
+2009-09-16  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/trans.c (Attribute_to_gnu) <Attr_Size>: Strip
+	conversions between original and packable version of types from
+	the expression.
+
+2009-09-16  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/decl.c (gnat_to_gnu_field): Add DEBUG_INFO_P parameter.
+	If a padding type was made for the field, declare it.
+	(components_to_record): Add DEBUG_INFO_P parameter.  Adjust call
+	to gnat_to_gnu_field and call to self.
+	(gnat_to_gnu_entity) <E_Array_Type>: Do not redeclare padding types.
+	<E_Array_Subtype>: Likewise.
+	Adjust calls to gnat_to_gnu_field and components_to_record.
+
+2009-09-16  Robert Dewar  <dewar@adacore.com>
+
+	* prj-nmsc.adb: Minor reformatting
+
+2009-09-16  Ed Schonberg  <schonberg@adacore.com>
+
+	* exp_ch4.adb (Expand_N_Conditional_Expression): If the type of the
+	expression is a by-reference type (tagged or inherently limited)
+	introduce an access type to capture references to the values of each
+	branch of the conditional.
+
+2009-09-16  Emmanuel Briot  <briot@adacore.com>
+
+	* prj-proc.adb, prj-part.adb, prj-tree.adb, prj-tree.ads
+	(Project_Name_And_Node.Display_Name): new field
+	The display name of a project (as written in the .gpr file) is now
+	computed when the project file itself is parsed, not when it is
+	processed.
+
+2009-09-16  Thomas Quinot  <quinot@adacore.com>
+
+	* freeze.adb, exp_intr.adb (Expand_Intrinsic_Call): Leave calls to
+	intrinsics untouched (to be expanded later on by gigi) if an external
+	name has been specified.
+	(Freeze_Entity): Do not generate a default external name for
+	imported subprograms with convention Intrinsic (so that the above code
+	can identify the case where an external name has been explicitly
+	provided).
+
+	* s-oscons-tmplt.c: Quote TARGET_OS early so that it is not erroneously
+	replaced by something else due to an existing #define clause.
+
+2009-09-16  Ed Schonberg  <schonberg@adacore.com>
+
+	* sinfo.ads, sinfo.adb (Is_Accessibility_Actual): New flag on
+	Parameter_Association node, created for the extra actual generated for
+	an access parameter of a function that dispatches on result, to prevent
+	double generation of such actuals when the call is rewritten is a
+	dispatching call.
+	* exp_ch6.adb (Expand_Call): Set Is_Accessibility_Actual when needed.
+	* exp_disp.adb (Expand_Dispatching_Call): Do not transfer extra actuals
+	that carry this flag when rewriting the original call as a dispatching
+	call, after propagating the controlling tag.
+
+2009-09-16  Vincent Celier  <celier@adacore.com>
+
+	* prj-nmsc.adb (Add_Source): New parameter Source_Dir_Rank to be put
+	in the source data.
+	(Check_File): New parameter Source_Dir_Rank, to check if a duplicate
+	source is allowed.
+	(Find_Source_Dirs): New parameter Rank to be recorded with the source
+	directories.
+	(Search_Directories): Call Check_File with the rank of the directory
+	* prj.adb (Project_Empty): Add new component Source_Dir_Ranks
+	(Free): Free also Number_Lists
+	(Reset): Init also Number_Lists
+	* prj.ads (Number_List_Table): New dynamic table for lists of numbers
+	(Source_Data): New component Source_Dir_Rank. Remove component
+	Known_Order_Of_Source_Dirs, no longer needed.
+	(Project_Data): New component Source_Dir_Ranks
+	(Project_Tree_Data): New components Number_Lists
+
+2009-09-16  Vincent Celier  <celier@adacore.com>
+
+	* gprep.adb (Yes_No): New global constant
+	Unix_Line_Terminators: New global Boolean variable
+	(Process_One_File): Create the out file with a "Text_Translation=" form
+	that depends on the use of option -T.
+	(Scan_Command_Line): Add option -T
+	(Usage): Add line for option -T
+
+2009-09-16  Ed Schonberg  <schonberg@adacore.com>
+
+	* exp_disp.ads, exp_disp.adb (Is_Predefined_Internal_Operation): New
+	predicate that describes a proper subset of
+	Is_Predefined_Dispatching_Operation and excludes stream operations,
+	which can be overridden by the user.
+	* sem_ch6.adb (Create_Extra_Formals): use
+	Is_Predefined_Internal_Operation, so that stream operations get extra
+	formals.
+	* exp_ch6.adb (Prevent double generation of extra actuals in calls to
+	'Input, which may be expanded twice, first as a function call and then
+	as a dispatching call.
+
+2009-09-16  Thomas Quinot  <quinot@adacore.com>
+
+	* s-oscons-tmplt.c (Target_OS, Target_Name): New constants.
+	* g-expect.adb (Set_Up_Child_Communications): Use
+	System.OS_Constants.Target_OS to determine whether running on Windows.
+
+2009-09-14  Richard Henderson  <rth@redhat.com>
+
+	* gcc-interface/trans.c (Pragma_to_gnu): Use build5 for ASM_EXPR.
+
+2009-09-14  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exp_dbug.ads (Packed Array Encoding): Document the new encoding for
+	the unconstrained case.
+	* gcc-interfaces/decl.c (gnat_to_gnu_entity) <E_Array_Type>: Implement
+	the encoding.  Do not give a name to the pointer type to the XUT type.
+	* gcc-interfaces/utils.c (gnat_pushdecl): Propagate DECL_ORIGINAL_TYPE
+	for fat pointer types, if any.  Make sure DECL_ARTIFICIAL is cleared
+	on nodes with DECL_ORIGINAL_TYPE set.
+	(update_pointer_to): Set DECL_ORIGINAL_TYPE to the original pointer
+	for fat pointer types.  Make sure DECL_ARTIFICIAL is cleared.
+
+2009-09-14  Richard Henderson  <rth@redhat.com>
+
+	* gcc-interface/misc.c (gnat_init_gcc_eh): Don't call
+	default_init_unwind_resume_libfunc.
+	* gcc-interface/trans.c (Exception_Handler_to_gnu_zcx): Use
+	__builtin_eh_pointer.
+	* gcc-interface/utils.c (gnat_install_builtins): Update call
+	to build_common_builtin_nodes.
+
+2009-09-13  Richard Guenther  <rguenther@suse.de>
+	    Rafael Avila de Espindola  <espindola@google.com>
+
+	* gcc-interface/misc.c (gnat_init_gcc_eh): Do not set variables
+	eh_personality_libfunc and lang_eh_runtime_type.
+	(LANG_HOOKS_EH_PERSONALITY): Define.
+	(gnat_eh_personality_decl): New static variable.
+	(gnat_eh_personality): New static function.
+	Include gt-ada-misc.h.
+	* gcc-interface/Make-lang.in (misc.o): Add gt-ada-misc.h dependency.
+	* gcc-interface/config-lang.in (gtfiles): Add misc.c.
+
 2009-09-10  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 
 	PR ada/18302

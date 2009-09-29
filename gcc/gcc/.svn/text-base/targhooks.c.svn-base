@@ -628,6 +628,44 @@ default_internal_arg_pointer (void)
     return virtual_incoming_args_rtx;
 }
 
+rtx
+default_static_chain (const_tree fndecl, bool incoming_p)
+{
+  if (!DECL_STATIC_CHAIN (fndecl))
+    return NULL;
+
+  if (incoming_p)
+    {
+#ifdef STATIC_CHAIN_INCOMING_REGNUM
+      return gen_rtx_REG (Pmode, STATIC_CHAIN_INCOMING_REGNUM);
+#endif
+    }
+
+#ifdef STATIC_CHAIN_REGNUM
+  return gen_rtx_REG (Pmode, STATIC_CHAIN_REGNUM);
+#endif
+
+  {
+    static bool issued_error;
+    if (!issued_error)
+      {
+	issued_error = true;
+	sorry ("nested functions not supported on this target");
+      }
+
+    /* It really doesn't matter what we return here, so long at it
+       doesn't cause the rest of the compiler to crash.  */
+    return gen_rtx_MEM (Pmode, stack_pointer_rtx);
+  }
+}
+
+void
+default_trampoline_init (rtx ARG_UNUSED (m_tramp), tree ARG_UNUSED (t_func),
+			 rtx ARG_UNUSED (r_chain))
+{
+  sorry ("nested function trampolines not supported on this target");
+}
+
 enum reg_class
 default_branch_target_register_class (void)
 {
@@ -769,6 +807,23 @@ default_builtin_vector_alignment_reachable (const_tree type, bool is_packed)
   /* Assuming that types whose size is <= pointer-size
      are naturally aligned.  */
   return true;
+}
+
+/* By default, assume that a target supports any factor of misalignment
+   memory access if it supports movmisalign patten. 
+   is_packed is true if the memory access is defined in a packed struct.  */
+bool
+default_builtin_support_vector_misalignment (enum machine_mode mode,
+					     const_tree type
+					     ATTRIBUTE_UNUSED,
+					     int misalignment
+					     ATTRIBUTE_UNUSED,
+					     bool is_packed
+					     ATTRIBUTE_UNUSED)
+{
+  if (optab_handler (movmisalign_optab, mode)->insn_code != CODE_FOR_nothing)
+    return true;
+  return false;
 }
 
 bool

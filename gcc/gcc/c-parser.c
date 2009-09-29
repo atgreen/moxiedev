@@ -58,6 +58,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "target.h"
 #include "cgraph.h"
 #include "plugin.h"
+#include "except.h"
 
 
 /* Initialization routine for this file.  */
@@ -902,6 +903,7 @@ static void c_parser_do_statement (c_parser *);
 static void c_parser_for_statement (c_parser *);
 static tree c_parser_asm_statement (c_parser *);
 static tree c_parser_asm_operands (c_parser *, bool);
+static tree c_parser_asm_goto_operands (c_parser *);
 static tree c_parser_asm_clobbers (c_parser *);
 static struct c_expr c_parser_expr_no_commas (c_parser *, struct c_expr *);
 static struct c_expr c_parser_conditional_expression (c_parser *,
@@ -1321,6 +1323,11 @@ c_parser_declaration_or_fndef (c_parser *parser, bool fndef_ok, bool empty_ok,
       if (nested)
 	{
 	  tree decl = current_function_decl;
+	  /* Mark nested functions as needing static-chain initially.
+	     lower_nested_functions will recompute it but the
+	     DECL_STATIC_CHAIN flag is also used before that happens,
+	     by initializer_constant_valid_p.  See gcc.dg/nested-fn-2.c.  */
+	  DECL_STATIC_CHAIN (decl) = 1;
 	  add_stmt (fnbody);
 	  finish_function ();
 	  c_pop_function_context ();
@@ -4225,12 +4232,17 @@ c_parser_for_statement (c_parser *parser)
 
    asm-statement:
      asm type-qualifier[opt] ( asm-argument ) ;
+     asm type-qualifier[opt] goto ( asm-goto-argument ) ;
 
    asm-argument:
      asm-string-literal
      asm-string-literal : asm-operands[opt]
      asm-string-literal : asm-operands[opt] : asm-operands[opt]
-     asm-string-literal : asm-operands[opt] : asm-operands[opt] : asm-clobbers
+     asm-string-literal : asm-operands[opt] : asm-operands[opt] : asm-clobbers[opt]
+
+   asm-goto-argument:
+     asm-string-literal : : asm-operands[opt] : asm-clobbers[opt] \
+       : asm-goto-operands
 
    Qualifiers other than volatile are accepted in the syntax but
    warned for.  */
@@ -4238,9 +4250,11 @@ c_parser_for_statement (c_parser *parser)
 static tree
 c_parser_asm_statement (c_parser *parser)
 {
-  tree quals, str, outputs, inputs, clobbers, ret;
-  bool simple;
+  tree quals, str, outputs, inputs, clobbers, labels, ret;
+  bool simple, is_goto;
   location_t asm_loc = c_parser_peek_token (parser)->location;
+  int section, nsections;
+
   gcc_assert (c_parser_next_token_is_keyword (parser, RID_ASM));
   c_parser_consume_token (parser);
   if (c_parser_next_token_is_keyword (parser, RID_VOLATILE))
@@ -4260,85 +4274,96 @@ c_parser_asm_statement (c_parser *parser)
     }
   else
     quals = NULL_TREE;
+
+  is_goto = false;
+  if (c_parser_next_token_is_keyword (parser, RID_GOTO))
+    {
+      c_parser_consume_token (parser);
+      is_goto = true;
+    }
+
   /* ??? Follow the C++ parser rather than using the
      lex_untranslated_string kludge.  */
   parser->lex_untranslated_string = true;
+  ret = NULL;
+
   if (!c_parser_require (parser, CPP_OPEN_PAREN, "expected %<(%>"))
-    {
-      parser->lex_untranslated_string = false;
-      return NULL_TREE;
-    }
+    goto error;
+
   str = c_parser_asm_string_literal (parser);
   if (str == NULL_TREE)
+    goto error_close_paren;
+
+  simple = true;
+  outputs = NULL_TREE;
+  inputs = NULL_TREE;
+  clobbers = NULL_TREE;
+  labels = NULL_TREE;
+
+  if (c_parser_next_token_is (parser, CPP_CLOSE_PAREN) && !is_goto)
+    goto done_asm;
+
+  /* Parse each colon-delimited section of operands.  */
+  nsections = 3 + is_goto;
+  for (section = 0; section < nsections; ++section)
     {
-      parser->lex_untranslated_string = false;
-      c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
-      return NULL_TREE;
+      if (!c_parser_require (parser, CPP_COLON,
+			     is_goto
+			     ? "expected %<:%>"
+			     : "expected %<:%> or %<)%>"))
+	goto error_close_paren;
+
+      /* Once past any colon, we're no longer a simple asm.  */
+      simple = false;
+
+      if ((!c_parser_next_token_is (parser, CPP_COLON)
+	   && !c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
+	  || section == 3)
+	switch (section)
+	  {
+	  case 0:
+	    /* For asm goto, we don't allow output operands, but reserve
+	       the slot for a future extension that does allow them.  */
+	    if (!is_goto)
+	      outputs = c_parser_asm_operands (parser, false);
+	    break;
+	  case 1:
+	    inputs = c_parser_asm_operands (parser, true);
+	    break;
+	  case 2:
+	    clobbers = c_parser_asm_clobbers (parser);
+	    break;
+	  case 3:
+	    labels = c_parser_asm_goto_operands (parser);
+	    break;
+	  default:
+	    gcc_unreachable ();
+	  }
+
+      if (c_parser_next_token_is (parser, CPP_CLOSE_PAREN) && !is_goto)
+	goto done_asm;
     }
-  if (c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
-    {
-      simple = true;
-      outputs = NULL_TREE;
-      inputs = NULL_TREE;
-      clobbers = NULL_TREE;
-      goto done_asm;
-    }
-  if (!c_parser_require (parser, CPP_COLON, "expected %<:%> or %<)%>"))
-    {
-      parser->lex_untranslated_string = false;
-      c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
-      return NULL_TREE;
-    }
-  simple = false;
-  /* Parse outputs.  */
-  if (c_parser_next_token_is (parser, CPP_COLON)
-      || c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
-    outputs = NULL_TREE;
-  else
-    outputs = c_parser_asm_operands (parser, false);
-  if (c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
-    {
-      inputs = NULL_TREE;
-      clobbers = NULL_TREE;
-      goto done_asm;
-    }
-  if (!c_parser_require (parser, CPP_COLON, "expected %<:%> or %<)%>"))
-    {
-      parser->lex_untranslated_string = false;
-      c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
-      return NULL_TREE;
-    }
-  /* Parse inputs.  */
-  if (c_parser_next_token_is (parser, CPP_COLON)
-      || c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
-    inputs = NULL_TREE;
-  else
-    inputs = c_parser_asm_operands (parser, true);
-  if (c_parser_next_token_is (parser, CPP_CLOSE_PAREN))
-    {
-      clobbers = NULL_TREE;
-      goto done_asm;
-    }
-  if (!c_parser_require (parser, CPP_COLON, "expected %<:%> or %<)%>"))
-    {
-      parser->lex_untranslated_string = false;
-      c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
-      return NULL_TREE;
-    }
-  /* Parse clobbers.  */
-  clobbers = c_parser_asm_clobbers (parser);
+
  done_asm:
-  parser->lex_untranslated_string = false;
   if (!c_parser_require (parser, CPP_CLOSE_PAREN, "expected %<)%>"))
     {
       c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
-      return NULL_TREE;
+      goto error;
     }
+
   if (!c_parser_require (parser, CPP_SEMICOLON, "expected %<;%>"))
     c_parser_skip_to_end_of_block_or_statement (parser);
+
   ret = build_asm_stmt (quals, build_asm_expr (asm_loc, str, outputs, inputs,
-					       clobbers, simple));
+					       clobbers, labels, simple));
+
+ error:
+  parser->lex_untranslated_string = false;
   return ret;
+
+ error_close_paren:
+  c_parser_skip_until_found (parser, CPP_CLOSE_PAREN, NULL);
+  goto error;
 }
 
 /* Parse asm operands, a GNU extension.  If CONVERT_P (for inputs but
@@ -4438,6 +4463,45 @@ c_parser_asm_clobbers (c_parser *parser)
 	break;
     }
   return list;
+}
+
+/* Parse asm goto labels, a GNU extension.
+ 
+   asm-goto-operands:
+     identifier
+     asm-goto-operands , identifier
+*/
+
+static tree
+c_parser_asm_goto_operands (c_parser *parser)
+{
+  tree list = NULL_TREE;
+  while (true)
+    {
+      tree name, label;
+
+      if (c_parser_next_token_is (parser, CPP_NAME))
+	{
+	  c_token *tok = c_parser_peek_token (parser);
+	  name = tok->value;
+	  label = lookup_label_for_goto (tok->location, name);
+	  c_parser_consume_token (parser);
+	  TREE_USED (label) = 1;
+	}
+      else
+	{
+	  c_parser_error (parser, "expected identifier");
+	  return NULL_TREE;
+	}
+
+      name = build_string (IDENTIFIER_LENGTH (name),
+			   IDENTIFIER_POINTER (name));
+      list = tree_cons (name, label, list);
+      if (c_parser_next_token_is (parser, CPP_COMMA))
+	c_parser_consume_token (parser);
+      else
+	return nreverse (list);
+    }
 }
 
 /* Parse an expression other than a compound expression; that is, an
@@ -8489,12 +8553,6 @@ c_parser_omp_construct (c_parser *parser)
   p_kind = c_parser_peek_token (parser)->pragma_kind;
   c_parser_consume_pragma (parser);
 
-  /* For all constructs below except #pragma omp atomic
-     MUST_NOT_THROW catch handlers are needed when exceptions
-     are enabled.  */
-  if (p_kind != PRAGMA_OMP_ATOMIC)
-    c_maybe_initialize_eh ();
-
   switch (p_kind)
     {
     case PRAGMA_OMP_ATOMIC:
@@ -8606,6 +8664,10 @@ c_parse_file (void)
 
   the_parser = GGC_NEW (c_parser);
   *the_parser = tparser;
+
+  /* Initialize EH, if we've been told to do so.  */
+  if (flag_exceptions)
+    using_eh_for_cleanups ();
 
   c_parser_translation_unit (the_parser);
   the_parser = NULL;

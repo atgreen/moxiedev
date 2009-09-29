@@ -2129,6 +2129,9 @@ struct GTY(()) lang_decl {
   (!DECL_TEMPLATE_PARM_P (NODE)					\
    && TREE_CODE (CP_DECL_CONTEXT (NODE)) == NAMESPACE_DECL)
 
+#define TYPE_NAMESPACE_SCOPE_P(NODE) \
+  (TREE_CODE (CP_TYPE_CONTEXT (NODE)) == NAMESPACE_DECL)
+
 /* 1 iff NODE is a class member.  */
 #define DECL_CLASS_SCOPE_P(NODE) \
   (DECL_CONTEXT (NODE) && TYPE_P (DECL_CONTEXT (NODE)))
@@ -4457,6 +4460,7 @@ extern bool check_java_method			(tree);
 extern tree build_memfn_type			(tree, tree, cp_cv_quals);
 extern void maybe_retrofit_in_chrg		(tree);
 extern void maybe_make_one_only			(tree);
+extern bool vague_linkage_fn_p			(tree);
 extern void grokclassfn				(tree, tree,
 						 enum overload_flags);
 extern tree grok_array_decl			(tree, tree);
@@ -4521,6 +4525,7 @@ extern void choose_personality_routine		(enum languages);
 extern tree eh_type_info			(tree);
 extern tree begin_eh_spec_block			(void);
 extern void finish_eh_spec_block		(tree, tree);
+extern tree build_eh_type_type			(tree);
 
 /* in expr.c */
 extern tree cplus_expand_constant		(tree);
@@ -4638,6 +4643,8 @@ extern tree instantiate_decl			(tree, int, bool);
 extern int comp_template_parms			(const_tree, const_tree);
 extern bool uses_parameter_packs                (tree);
 extern bool template_parameter_pack_p           (const_tree);
+extern bool function_parameter_pack_p		(const_tree);
+extern bool function_parameter_expanded_from_pack_p (tree, tree);
 extern tree make_pack_expansion                 (tree);
 extern bool check_for_bare_parameter_packs      (tree);
 extern tree get_template_info			(const_tree);
@@ -4645,6 +4652,7 @@ extern tree get_types_needing_access_check	(tree);
 extern int template_class_depth			(tree);
 extern int is_specialization_of			(tree, tree);
 extern bool is_specialization_of_friend		(tree, tree);
+extern tree get_pattern_parm			(tree, tree);
 extern int comp_template_args			(tree, tree);
 extern tree maybe_process_partial_specialization (tree);
 extern tree most_specialized_instantiation	(tree);
@@ -4686,7 +4694,7 @@ bool template_template_parameter_p		(const_tree);
 extern tree get_primary_template_innermost_parameters	(const_tree);
 extern tree get_template_innermost_arguments	(const_tree);
 extern tree get_template_argument_pack_elems	(const_tree);
-
+extern tree get_function_template_decl (const_tree);
 /* in repo.c */
 extern void init_repo				(void);
 extern int repo_emit_p				(tree);
@@ -4819,7 +4827,8 @@ enum {
 extern tree begin_compound_stmt			(unsigned int);
 
 extern void finish_compound_stmt		(tree);
-extern tree finish_asm_stmt			(int, tree, tree, tree, tree);
+extern tree finish_asm_stmt			(int, tree, tree, tree, tree,
+						 tree);
 extern tree finish_label_stmt			(tree);
 extern void finish_label_decl			(tree);
 extern tree finish_parenthesized_expr		(tree);

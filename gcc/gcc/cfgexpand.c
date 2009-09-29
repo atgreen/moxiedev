@@ -1820,9 +1820,6 @@ expand_gimple_stmt_1 (gimple stmt)
     case GIMPLE_NOP:
     case GIMPLE_PREDICT:
       break;
-    case GIMPLE_RESX:
-      expand_resx_stmt (stmt);
-      break;
     case GIMPLE_SWITCH:
       expand_case (stmt);
       break;
@@ -1961,7 +1958,7 @@ expand_gimple_stmt_1 (gimple stmt)
 static rtx
 expand_gimple_stmt (gimple stmt)
 {
-  int rn = -1;
+  int lp_nr = 0;
   rtx last = NULL;
   location_t saved_location = input_location;
 
@@ -1993,8 +1990,8 @@ expand_gimple_stmt (gimple stmt)
   input_location = saved_location;
 
   /* Mark all insns that may trap.  */
-  rn = lookup_stmt_eh_region (stmt);
-  if (rn >= 0)
+  lp_nr = lookup_stmt_eh_lp (stmt);
+  if (lp_nr)
     {
       rtx insn;
       for (insn = next_real_insn (last); insn;
@@ -2005,9 +2002,8 @@ expand_gimple_stmt (gimple stmt)
 		 may_trap_p instruction may throw.  */
 	      && GET_CODE (PATTERN (insn)) != CLOBBER
 	      && GET_CODE (PATTERN (insn)) != USE
-	      && (CALL_P (insn)
-		  || (flag_non_call_exceptions && may_trap_p (PATTERN (insn)))))
-	    add_reg_note (insn, REG_EH_REGION, GEN_INT (rn));
+	      && insn_could_throw_p (insn))
+	    make_reg_eh_region_note (insn, 0, lp_nr);
 	}
     }
 
@@ -2238,6 +2234,38 @@ unwrap_constant (rtx x)
   return ret;
 }
 
+/* Convert X to MODE, that must be Pmode or ptr_mode, without emitting
+   any rtl.  */
+
+static rtx
+convert_debug_memory_address (enum machine_mode mode, rtx x)
+{
+  enum machine_mode xmode = GET_MODE (x);
+
+#ifndef POINTERS_EXTEND_UNSIGNED
+  gcc_assert (mode == Pmode);
+  gcc_assert (xmode == mode || xmode == VOIDmode);
+#else
+  gcc_assert (mode == Pmode || mode == ptr_mode);
+
+  if (GET_MODE (x) == mode || GET_MODE (x) == VOIDmode)
+    return x;
+
+  if (GET_MODE_BITSIZE (mode) < GET_MODE_BITSIZE (xmode))
+    x = simplify_gen_subreg (mode, x, xmode,
+			     subreg_lowpart_offset
+			     (mode, xmode));
+  else if (POINTERS_EXTEND_UNSIGNED > 0)
+    x = gen_rtx_ZERO_EXTEND (mode, x);
+  else if (!POINTERS_EXTEND_UNSIGNED)
+    x = gen_rtx_SIGN_EXTEND (mode, x);
+  else
+    gcc_unreachable ();
+#endif /* POINTERS_EXTEND_UNSIGNED */
+
+  return x;
+}
+
 /* Return an RTX equivalent to the value of the tree expression
    EXP.  */
 
@@ -2414,6 +2442,7 @@ expand_debug_expr (tree exp)
 	return NULL;
 
       gcc_assert (GET_MODE (op0) == Pmode
+		  || GET_MODE (op0) == ptr_mode
 		  || GET_CODE (op0) == CONST_INT
 		  || GET_CODE (op0) == CONST_DOUBLE);
 
@@ -2440,6 +2469,7 @@ expand_debug_expr (tree exp)
 	return NULL;
 
       gcc_assert (GET_MODE (op0) == Pmode
+		  || GET_MODE (op0) == ptr_mode
 		  || GET_CODE (op0) == CONST_INT
 		  || GET_CODE (op0) == CONST_DOUBLE);
 
@@ -2472,13 +2502,32 @@ expand_debug_expr (tree exp)
 
 	if (offset)
 	  {
+	    enum machine_mode addrmode, offmode;
+
 	    gcc_assert (MEM_P (op0));
+
+	    op0 = XEXP (op0, 0);
+	    addrmode = GET_MODE (op0);
+	    if (addrmode == VOIDmode)
+	      addrmode = Pmode;
 
 	    op1 = expand_debug_expr (offset);
 	    if (!op1)
 	      return NULL;
 
-	    op0 = gen_rtx_MEM (mode, gen_rtx_PLUS (Pmode, XEXP (op0, 0), op1));
+	    offmode = GET_MODE (op1);
+	    if (offmode == VOIDmode)
+	      offmode = TYPE_MODE (TREE_TYPE (offset));
+
+	    if (addrmode != offmode)
+	      op1 = simplify_gen_subreg (addrmode, op1, offmode,
+					 subreg_lowpart_offset (addrmode,
+								offmode));
+
+	    /* Don't use offset_address here, we don't need a
+	       recognizable address, and we don't want to generate
+	       code.  */
+	    op0 = gen_rtx_MEM (mode, gen_rtx_PLUS (addrmode, op0, op1));
 	  }
 
 	if (MEM_P (op0))
@@ -2539,15 +2588,6 @@ expand_debug_expr (tree exp)
 				     ? GET_MODE (op0) : mode1,
 				     op0, GEN_INT (bitsize), GEN_INT (bitpos));
       }
-
-    case EXC_PTR_EXPR:
-      /* ??? Do not call get_exception_pointer(), we don't want to gen
-	 it if it hasn't been created yet.  */
-      return get_exception_pointer ();
-
-    case FILTER_EXPR:
-      /* Likewise get_exception_filter().  */
-      return get_exception_filter ();
 
     case ABS_EXPR:
       return gen_rtx_ABS (mode, op0);
@@ -2798,7 +2838,9 @@ expand_debug_expr (tree exp)
       if (!op0 || !MEM_P (op0))
 	return NULL;
 
-      return XEXP (op0, 0);
+      op0 = convert_debug_memory_address (mode, XEXP (op0, 0));
+
+      return op0;
 
     case VECTOR_CST:
       exp = build_constructor_from_list (TREE_TYPE (exp),
@@ -3556,12 +3598,10 @@ gimple_expand_cfg (void)
   set_curr_insn_block (DECL_INITIAL (current_function_decl));
   insn_locators_finalize ();
 
-  /* Convert tree EH labels to RTL EH labels and zap the tree EH table.  */
-  convert_from_eh_region_ranges ();
+  /* Zap the tree EH table.  */
   set_eh_throw_stmt_table (cfun, NULL);
 
   rebuild_jump_labels (get_insns ());
-  find_exception_handler_labels ();
 
   FOR_BB_BETWEEN (bb, ENTRY_BLOCK_PTR, EXIT_BLOCK_PTR, next_bb)
     {

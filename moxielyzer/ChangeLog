@@ -1,4 +1,9 @@
 2009-10-15  Anthony Green  <green@moxielogic.com>
 
+	* insn_hist.c (track_insn_usage): New file.
+	* insns.c: New file.
+	* scan.c: Fix bugs.
+	* Makefile: Update.
+
 	* All files: Poof!  Created.
 

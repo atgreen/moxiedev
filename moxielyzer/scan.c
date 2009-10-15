@@ -51,7 +51,7 @@ moxielyze (bfd_size_type size, bfd_byte *code, bfd_vma *addr, moxie_analyzer *an
       analyzer->ioffsets[icount] = offset;
 						   
       /* Fetch the instruction at pc.  */	 
-      insn = code[offset] << 8 + code[offset+1]; 
+      insn = (code[offset] << 8) + code[offset+1]; 
       						 
       /* Decode instruction.  */		 
       if (insn & (1 << 15))			 
@@ -181,7 +181,6 @@ moxielyze (bfd_size_type size, bfd_byte *code, bfd_vma *addr, moxie_analyzer *an
 	      break;						
 	    }							
 	}
-      icount++;
     }
   
   offset = 0;
@@ -191,13 +190,15 @@ moxielyze (bfd_size_type size, bfd_byte *code, bfd_vma *addr, moxie_analyzer *an
       opc = pc;				  
       					  
       /* Fetch the instruction at pc.  */	 
-      insn = code[analyzer->ioffsets[i]] << 8 
+      insn = (code[analyzer->ioffsets[i]] << 8)
 	+ code[analyzer->ioffsets[i]+1]; 
       						 
-#define CALLBACK(INSN) if (analyzer->callback[INSN]) (analyzer->callback[INSN])(analyzer, i, INSN)
-
-      CALLBACK(moxie_i);
-
+#define CALLBACK(INSN)							              \ 
+ {									              \ 
+   if (analyzer->callback[INSN]) (analyzer->callback[INSN])(analyzer, i, INSN);       \
+   if (analyzer->callback[moxie_i]) (analyzer->callback[moxie_i])(analyzer, i, INSN); \
+ }
+	
       /* Decode instruction.  */		 
       if (insn & (1 << 15))			 
 	{					 

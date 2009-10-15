@@ -68,4 +68,6 @@ enum moxie_insn {
   moxie_i_xor,
   MOXIE_LAST_INSN};
 
+extern const char *moxie_insn_names[];
+
 #endif

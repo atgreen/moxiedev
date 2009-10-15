@@ -91,8 +91,8 @@ analyze (bfd *abfd, asection *section, void *vanalyzer)
 static int
 compare_pnames (const void * a, const void * b)
 {
-  return strcmp (((struct plugin *) b)->name,
-		 ((struct plugin *) a)->name);
+  return strcmp (((struct plugin *) a)->name,
+		 ((struct plugin *) b)->name);
 }
 
 int 

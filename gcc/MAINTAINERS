@@ -263,11 +263,16 @@ Fortran			Janus Weil		janus@gcc.gnu.org
 Graphite		Daniel Berlin		dberlin@dberlin.org
 Graphite 		Tobias Grosser		grosser@fim.uni-passau.de
 Graphite		Sebastian Pop		sebastian.pop@amd.com
-Plug-in			Rafael Espíndola	rafael.espindola@gmail.com
+Plugin			Rafael Espíndola	espindola@google.com
 register allocation	Peter Bergner		bergner@vnet.ibm.com
 register allocation	Vladimir Makarov	vmakarov@redhat.com
 register allocation	Kenneth Zadeck		zadeck@naturalbridge.com
 register allocation	Seongbae Park		seongbae.park@gmail.com
+LTO			Diego Novillo		dnovillo@google.com
+LTO			Richard Guenther	rguenther@suse.de
+LTO			Rafael Espíndola	espindola@google.com
+LTO plugin		Rafael Espíndola	espindola@google.com
+LTO plugin		Cary Coutant		ccoutant@google.com
 
 Note that while reviewers can approve changes to parts of the compiler
 that they maintain, they still need approval for their own patches
@@ -328,6 +333,7 @@ Chris Fairles					cfairles@gcc.gnu.org
 Li Feng						nemokingdom@gmail.com
 Thomas Fitzsimmons				fitzsim@redhat.com
 Brian Ford					ford@vss.fsi.com
+John Freeman					jfreeman08@gmail.com
 Nathan Froyd					froydnj@codesourcery.com
 Chao-ying Fu					fu@mips.com
 Gary Funck					gary@intrepid.com
@@ -409,6 +415,7 @@ Alexander Monakov				amonakov@ispras.ru
 Catherine Moore					clm@codesourcery.com
 James A. Morrison				phython@gcc.gnu.org
 Dirk Mueller					dmueller@suse.de
+Phil Muldoon					pmuldoon@redhat.com
 Adam Nemet					anemet@caviumnetworks.com
 Thomas Neumann					tneumann@users.sourceforge.net
 Dan Nicolaescu					dann@ics.uci.edu

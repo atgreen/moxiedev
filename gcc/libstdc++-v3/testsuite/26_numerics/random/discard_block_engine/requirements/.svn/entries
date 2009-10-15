@@ -1,14 +1,14 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/26_numerics/random/discard_block_engine/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-08-02T23:35:41.271549Z
-150361
+2009-10-12T19:11:31.492555Z
+152682
 paolo
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2009-09-08T13:21:25.000000Z
-d28d8436825419d0d9896603038f465b
-2009-08-02T23:35:41.271549Z
-150361
+2009-10-13T10:02:46.000000Z
+2a5fadfe37a088f9a3c4ec50c7609d05
+2009-10-12T19:11:31.492555Z
+152682
 paolo
 
 
@@ -58,5 +58,5 @@ paolo
 
 
 
-1261
+1270
 

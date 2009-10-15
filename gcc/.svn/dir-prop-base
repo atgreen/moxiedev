@@ -41,4 +41,10 @@ Makefile
 lost+found
 update.out
 LAST_UPDATED
+K 13
+svn:mergeinfo
+V 93
+/branches/cxx0x-lambdas-branch:136126-152315
+/branches/lto:125576-152074
+/trunk:130803-130804
 END

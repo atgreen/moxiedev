@@ -312,6 +312,7 @@ decode_statement (void)
   match (NULL, gfc_match_block, ST_BLOCK);
   match (NULL, gfc_match_do, ST_DO);
   match (NULL, gfc_match_select, ST_SELECT_CASE);
+  match (NULL, gfc_match_select_type, ST_SELECT_TYPE);
 
   /* General statement matching: Instead of testing every possible
      statement, we eliminate most possibilities by peeking at the
@@ -343,6 +344,7 @@ decode_statement (void)
       match ("case", gfc_match_case, ST_CASE);
       match ("common", gfc_match_common, ST_COMMON);
       match ("contains", gfc_match_eos, ST_CONTAINS);
+      match ("class", gfc_match_class_is, ST_CLASS_IS);
       break;
 
     case 'd':
@@ -432,6 +434,7 @@ decode_statement (void)
     case 't':
       match ("target", gfc_match_target, ST_ATTR_DECL);
       match ("type", gfc_match_derived_decl, ST_DERIVED_DECL);
+      match ("type is", gfc_match_type_is, ST_TYPE_IS);
       break;
 
     case 'u':
@@ -936,7 +939,8 @@ next_statement (void)
 
 #define case_exec_markers case ST_DO: case ST_FORALL_BLOCK: \
   case ST_IF_BLOCK: case ST_BLOCK: \
-  case ST_WHERE_BLOCK: case ST_SELECT_CASE: case ST_OMP_PARALLEL: \
+  case ST_WHERE_BLOCK: case ST_SELECT_CASE: case ST_SELECT_TYPE: \
+  case ST_OMP_PARALLEL: \
   case ST_OMP_PARALLEL_SECTIONS: case ST_OMP_SECTIONS: case ST_OMP_ORDERED: \
   case ST_OMP_CRITICAL: case ST_OMP_MASTER: case ST_OMP_SINGLE: \
   case ST_OMP_DO: case ST_OMP_PARALLEL_DO: case ST_OMP_ATOMIC: \
@@ -1359,6 +1363,15 @@ gfc_ascii_statement (gfc_statement st)
       break;
     case ST_SELECT_CASE:
       p = "SELECT CASE";
+      break;
+    case ST_SELECT_TYPE:
+      p = "SELECT TYPE";
+      break;
+    case ST_TYPE_IS:
+      p = "TYPE IS";
+      break;
+    case ST_CLASS_IS:
+      p = "CLASS IS";
       break;
     case ST_SEQUENCE:
       p = "SEQUENCE";
@@ -2874,6 +2887,93 @@ parse_select_block (void)
 }
 
 
+/* Pop the current selector from the SELECT TYPE stack.  */
+
+static void
+select_type_pop (void)
+{
+  gfc_select_type_stack *old = select_type_stack;
+  select_type_stack = old->prev;
+  gfc_free (old);
+}
+
+
+/* Parse a SELECT TYPE construct (F03:R821).  */
+
+static void
+parse_select_type_block (void)
+{
+  gfc_statement st;
+  gfc_code *cp;
+  gfc_state_data s;
+
+  accept_statement (ST_SELECT_TYPE);
+
+  cp = gfc_state_stack->tail;
+  push_state (&s, COMP_SELECT_TYPE, gfc_new_block);
+
+  /* Make sure that the next statement is a TYPE IS, CLASS IS, CLASS DEFAULT
+     or END SELECT.  */
+  for (;;)
+    {
+      st = next_statement ();
+      if (st == ST_NONE)
+	unexpected_eof ();
+      if (st == ST_END_SELECT)
+	/* Empty SELECT CASE is OK.  */
+	goto done;
+      if (st == ST_TYPE_IS || st == ST_CLASS_IS)
+	break;
+
+      gfc_error ("Expected TYPE IS, CLASS IS or END SELECT statement "
+		 "following SELECT TYPE at %C");
+
+      reject_statement ();
+    }
+
+  /* At this point, we're got a nonempty select block.  */
+  cp = new_level (cp);
+  *cp = new_st;
+
+  accept_statement (st);
+
+  do
+    {
+      st = parse_executable (ST_NONE);
+      switch (st)
+	{
+	case ST_NONE:
+	  unexpected_eof ();
+
+	case ST_TYPE_IS:
+	case ST_CLASS_IS:
+	  cp = new_level (gfc_state_stack->head);
+	  *cp = new_st;
+	  gfc_clear_new_st ();
+
+	  accept_statement (st);
+	  /* Fall through */
+
+	case ST_END_SELECT:
+	  break;
+
+	/* Can't have an executable statement because of
+	   parse_executable().  */
+	default:
+	  unexpected_statement (st);
+	  break;
+	}
+    }
+  while (st != ST_END_SELECT);
+
+done:
+  pop_state ();
+  accept_statement (st);
+  gfc_current_ns = gfc_current_ns->parent;
+  select_type_pop ();
+}
+
+
 /* Given a symbol, make sure it is not an iteration variable for a DO
    statement.  This subroutine is called when the symbol is seen in a
    context that causes it to become redefined.  If the symbol is an
@@ -2943,18 +3043,13 @@ check_do_closure (void)
 static void parse_progunit (gfc_statement);
 
 
-/* Parse a BLOCK construct.  */
+/* Set up the local namespace for a BLOCK construct.  */
 
-static void
-parse_block_construct (void)
+gfc_namespace*
+gfc_build_block_ns (gfc_namespace *parent_ns)
 {
-  gfc_namespace* parent_ns;
   gfc_namespace* my_ns;
-  gfc_state_data s;
 
-  gfc_notify_std (GFC_STD_F2008, "Fortran 2008: BLOCK construct at %C");
-
-  parent_ns = gfc_current_ns;
   my_ns = gfc_get_namespace (parent_ns, 1);
   my_ns->construct_entities = 1;
 
@@ -2976,6 +3071,22 @@ parse_block_construct (void)
     }
   my_ns->proc_name->attr.recursive = parent_ns->proc_name->attr.recursive;
 
+  return my_ns;
+}
+
+
+/* Parse a BLOCK construct.  */
+
+static void
+parse_block_construct (void)
+{
+  gfc_namespace* my_ns;
+  gfc_state_data s;
+
+  gfc_notify_std (GFC_STD_F2008, "Fortran 2008: BLOCK construct at %C");
+
+  my_ns = gfc_build_block_ns (gfc_current_ns);
+
   new_st.op = EXEC_BLOCK;
   new_st.ext.ns = my_ns;
   accept_statement (ST_BLOCK);
@@ -2985,7 +3096,7 @@ parse_block_construct (void)
 
   parse_progunit (ST_NONE);
 
-  gfc_current_ns = parent_ns;
+  gfc_current_ns = gfc_current_ns->parent;
   pop_state ();
 }
 
@@ -3393,6 +3504,10 @@ parse_executable (gfc_statement st)
 
 	case ST_SELECT_CASE:
 	  parse_select_block ();
+	  break;
+
+	case ST_SELECT_TYPE:
+	  parse_select_type_block();
 	  break;
 
 	case ST_DO:

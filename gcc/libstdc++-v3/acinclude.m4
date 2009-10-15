@@ -209,8 +209,8 @@ AC_DEFUN([GLIBCXX_CHECK_LINKER_FEATURES], [
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
     changequote([,])
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) [$]3=0; print ([$]1*100+[$]2)*100+[$]3 }'`
@@ -2220,6 +2220,44 @@ AC_DEFUN([GLIBCXX_ENABLE_LONG_LONG], [
   AC_MSG_RESULT([$enable_long_long])
 ])
 
+
+dnl
+dnl Check for decimal floating point.
+dnl See:
+dnl http://gcc.gnu.org/onlinedocs/gcc/Decimal-Float.html#Decimal-Float
+dnl
+dnl This checks to see if the host supports decimal floating point types.
+dnl
+dnl Defines:
+dnl  _GLIBCXX_USE_DECIMAL_FLOAT
+dnl
+AC_DEFUN([GLIBCXX_ENABLE_DECIMAL_FLOAT], [
+
+  # Fake what AC_TRY_COMPILE does, without linking as this is
+  # unnecessary for this test.
+
+    cat > conftest.$ac_ext << EOF
+[#]line __oline__ "configure"
+int main()
+{
+  _Decimal32 d1;
+  _Decimal64 d2;
+  _Decimal128 d3;
+  return 0;
+}
+EOF
+
+    AC_MSG_CHECKING([for ISO/IEC TR 24733 ])
+    if AC_TRY_EVAL(ac_compile); then
+      AC_DEFINE(_GLIBCXX_USE_DECIMAL_FLOAT, 1,
+      [Define if ISO/IEC TR 24733 decimal floating point types are supported on this host.])
+      enable_dfp=yes
+    else
+      enable_dfp=no
+    fi
+    AC_MSG_RESULT($enable_dfp)
+    rm -f conftest*
+])
 
 dnl
 dnl Check for template specializations for the 'wchar_t' type.

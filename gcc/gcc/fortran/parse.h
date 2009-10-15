@@ -32,7 +32,7 @@ typedef enum
   COMP_BLOCK_DATA, COMP_INTERFACE, COMP_DERIVED, COMP_DERIVED_CONTAINS,
   COMP_BLOCK, COMP_IF,
   COMP_DO, COMP_SELECT, COMP_FORALL, COMP_WHERE, COMP_CONTAINS, COMP_ENUM,
-  COMP_OMP_STRUCTURED_BLOCK
+  COMP_SELECT_TYPE, COMP_OMP_STRUCTURED_BLOCK
 }
 gfc_compile_state;
 
@@ -70,4 +70,5 @@ match gfc_match_enumerator_def (void);
 void gfc_free_enum_history (void);
 extern bool gfc_matching_function;
 match gfc_match_prefix (gfc_typespec *);
+gfc_namespace* gfc_build_block_ns (gfc_namespace *);
 #endif  /* GFC_PARSE_H  */

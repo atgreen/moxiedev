@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/special
 svn://gcc.gnu.org/svn/gcc
 
@@ -332,40 +332,6 @@ danglin
 
 363
 
-weak-1a.c
-file
-
-
-
-
-2009-04-24T17:45:18.000000Z
-f92cc2fa14e5fe946fde0490c2b6321b
-1999-09-04T15:09:22.000000Z
-29102
-law
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-32
-
 weak-2.c
 file
 
@@ -400,17 +366,17 @@ mmitchel
 
 226
 
-alias-1.c
+weak-1a.c
 file
 
 
 
 
 2009-04-24T17:45:18.000000Z
-58b6b7734c2d9522f6acba13d91a557a
-2003-06-05T22:18:55.000000Z
-67514
-mmitchel
+f92cc2fa14e5fe946fde0490c2b6321b
+1999-09-04T15:09:22.000000Z
+29102
+law
 
 
 
@@ -432,7 +398,7 @@ mmitchel
 
 
 
-237
+32
 
 weak-2a.c
 file
@@ -468,14 +434,14 @@ law
 
 70
 
-alias-2.c
+alias-1.c
 file
 
 
 
 
 2009-04-24T17:45:18.000000Z
-4b29f93ef3bc27cb9d83fdbc6aaa5b4a
+58b6b7734c2d9522f6acba13d91a557a
 2003-06-05T22:18:55.000000Z
 67514
 mmitchel
@@ -535,6 +501,40 @@ law
 
 
 32
+
+alias-2.c
+file
+
+
+
+
+2009-04-24T17:45:18.000000Z
+4b29f93ef3bc27cb9d83fdbc6aaa5b4a
+2003-06-05T22:18:55.000000Z
+67514
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+237
 
 special.exp
 file

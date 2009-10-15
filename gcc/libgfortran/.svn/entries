@@ -1,14 +1,14 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/libgfortran
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-29T02:47:54.936018Z
-152263
+2009-10-13T01:43:39.327387Z
+152695
 jvdelisle
 has-props
 
@@ -137,6 +137,40 @@ has-props
 intrinsics
 dir
 
+ChangeLog
+file
+
+
+
+
+2009-10-13T10:02:46.000000Z
+a359495284b848c800c58a7f8aa92491
+2009-10-13T01:43:39.327387Z
+152695
+jvdelisle
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+181679
+
 libtool-version
 file
 
@@ -170,40 +204,6 @@ fxcoudert
 
 
 252
-
-ChangeLog
-file
-
-
-
-
-2009-09-29T17:13:25.000000Z
-281831eb8d52a42fb6c9a488e5f1b953
-2009-09-29T02:47:54.936018Z
-152263
-jvdelisle
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-180777
 
 configure.host
 file
@@ -239,6 +239,9 @@ kkojima
 
 1195
 
+generated
+dir
+
 gfortran.map
 file
 
@@ -272,9 +275,6 @@ jb
 
 
 34007
-
-generated
-dir
 
 libgfortran.h
 file
@@ -310,40 +310,6 @@ tkoenig
 
 41938
 
-config.h.in
-file
-
-
-
-
-2009-09-27T03:30:26.000000Z
-4bb0d26e4328e56f62b95f0ae0879fe9
-2009-09-22T10:23:06.891180Z
-151972
-tobi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-17363
-
 c99_protos.h
 file
 
@@ -377,6 +343,40 @@ burnus
 
 
 13937
+
+config.h.in
+file
+
+
+
+
+2009-09-27T03:30:26.000000Z
+4bb0d26e4328e56f62b95f0ae0879fe9
+2009-09-22T10:23:06.891180Z
+151972
+tobi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+17363
 
 configure.ac
 file

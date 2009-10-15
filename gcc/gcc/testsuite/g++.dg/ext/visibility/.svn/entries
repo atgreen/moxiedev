@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/ext/visibility
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ janis
 
 352
 
-anon5.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-78ae1691e214193d8b3ffd248e757842
-2007-08-28T16:08:02.754734Z
-127863
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-155
-
 staticdatamem.C
 file
 
@@ -603,6 +569,40 @@ mmitchel
 
 
 396
+
+anon5.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+78ae1691e214193d8b3ffd248e757842
+2007-08-28T16:08:02.754734Z
+127863
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+155
 
 anon6.C
 file
@@ -706,40 +706,6 @@ jakub
 
 500
 
-anon9.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-42860d01e474344b2b2c19b124253c3c
-2007-12-11T08:22:10.394469Z
-130771
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-146
-
 fvisibility-inlines-hidden-2.C
 file
 
@@ -774,17 +740,17 @@ geoffk
 
 369
 
-fvisibility-inlines-hidden.C
+anon9.C
 file
 
 
 
 
 2009-04-24T17:44:09.000000Z
-18d8a1310b12aec50bcac70a4583e44d
-2004-08-06T02:03:29.000000Z
-85621
-mmitchel
+42860d01e474344b2b2c19b124253c3c
+2007-12-11T08:22:10.394469Z
+130771
+jakub
 
 
 
@@ -806,41 +772,7 @@ mmitchel
 
 
 
-330
-
-fvisibility-inlines-hidden-3.C
-file
-
-
-
-
-2009-04-24T17:44:09.000000Z
-5c8d17e33f840c89b8d56a22d680b9d1
-2006-07-21T20:39:19.835663Z
-115649
-mrs
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-576
+146
 
 visibility-1.C
 file
@@ -876,17 +808,17 @@ mmitchel
 
 188
 
-class1.C
+fvisibility-inlines-hidden-3.C
 file
 
 
 
 
-2009-04-30T05:14:13.000000Z
-a8317da9e00ddec3e791760e8c323a20
-2009-04-29T08:03:33.371857Z
-146926
-nathan
+2009-04-24T17:44:09.000000Z
+5c8d17e33f840c89b8d56a22d680b9d1
+2006-07-21T20:39:19.835663Z
+115649
+mrs
 
 
 
@@ -908,7 +840,41 @@ nathan
 
 
 
-556
+576
+
+fvisibility-inlines-hidden.C
+file
+
+
+
+
+2009-04-24T17:44:09.000000Z
+18d8a1310b12aec50bcac70a4583e44d
+2004-08-06T02:03:29.000000Z
+85621
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+330
 
 visibility-2.C
 file
@@ -943,6 +909,40 @@ mmitchel
 
 
 220
+
+class1.C
+file
+
+
+
+
+2009-04-30T05:14:13.000000Z
+a8317da9e00ddec3e791760e8c323a20
+2009-04-29T08:03:33.371857Z
+146926
+nathan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+556
 
 visibility-3.C
 file

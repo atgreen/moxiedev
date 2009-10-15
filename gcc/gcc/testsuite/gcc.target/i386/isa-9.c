@@ -1,5 +1,5 @@
 /* { dg-do run } */
-/* { dg-options "-march=amdfam10 -mno-sse5" } */
+/* { dg-options "-march=amdfam10 -mno-fma4" } */
 
 extern void abort (void);
 
@@ -27,7 +27,7 @@ main ()
 #if !defined __SSE4A__
   abort ();
 #endif
-#if defined __SSE5__
+#if defined __FMA4__
   abort ();
 #endif
   return 0;

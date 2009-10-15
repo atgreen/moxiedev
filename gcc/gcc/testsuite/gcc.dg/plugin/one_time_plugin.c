@@ -31,7 +31,7 @@ struct gimple_opt_pass one_pass =
 {
   {
   GIMPLE_PASS,
-  "useless",                           /* name */
+  "cfg",                           /* name */
   one_pass_gate,                         /* gate */
   one_pass_exec,       /* execute */
   NULL,                                 /* sub */
@@ -50,10 +50,10 @@ struct gimple_opt_pass one_pass =
 int plugin_init (struct plugin_name_args *plugin_info,
                  struct plugin_gcc_version *version)
 {
-  struct plugin_pass p;
+  struct register_pass_info p;
 
   p.pass = &one_pass.pass;
-  p.reference_pass_name = "useless";
+  p.reference_pass_name = "cfg";
   p.ref_pass_instance_number = 1;
   p.pos_op = PASS_POS_INSERT_AFTER;
 

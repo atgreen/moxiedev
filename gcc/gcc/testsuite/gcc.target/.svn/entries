@@ -1,15 +1,15 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-29T17:15:32.511102Z
-152280
-hjagasia
+2009-10-12T16:36:37.591890Z
+152670
+rth
 
 
 
@@ -26,16 +26,16 @@ hjagasia
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-arm
-dir
-
 powerpc
 dir
 
-alpha
+arm
 dir
 
 m68k
+dir
+
+alpha
 dir
 
 avr
@@ -50,19 +50,16 @@ dir
 frv
 dir
 
-s390
+x86_64
 dir
 
-x86_64
+s390
 dir
 
 cris
 dir
 
 ia64
-dir
-
-spu
 dir
 
 vsx-vectorize-1.c
@@ -98,6 +95,9 @@ revitale
 
 
 1249
+
+spu
+dir
 
 mips
 dir

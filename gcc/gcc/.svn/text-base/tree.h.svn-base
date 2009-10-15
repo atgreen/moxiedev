@@ -2455,6 +2455,10 @@ struct function;
 /* Every ..._DECL node gets a unique number.  */
 #define DECL_UID(NODE) (DECL_MINIMAL_CHECK (NODE)->decl_minimal.uid)
 
+/* DEBUG_EXPR_DECLs get negative UID numbers, to catch erroneous
+   uses.  */
+#define DEBUG_TEMP_UID(NODE) (-DECL_UID (TREE_CHECK ((NODE), DEBUG_EXPR_DECL)))
+
 /* These two fields describe where in the source code the declaration
    was.  If the declaration appears in several places (as for a C
    function that is declared first and then defined later), this
@@ -2484,10 +2488,11 @@ struct GTY(()) tree_decl_minimal {
 
 
 /* For any sort of a ..._DECL node, this points to the original (abstract)
-   decl node which this decl is an instance of, or else it is NULL indicating
-   that this decl is not an instance of some other decl.  For example,
-   in a nested declaration of an inline function, this points back to the
-   definition.  */
+   decl node which this decl is an inlined/cloned instance of, or else it
+   is NULL indicating that this decl is not an instance of some other decl.
+
+   The C front-end also uses this in a nested declaration of an inline
+   function, to point back to the definition.  */
 #define DECL_ABSTRACT_ORIGIN(NODE) (DECL_COMMON_CHECK (NODE)->decl_common.abstract_origin)
 
 /* Like DECL_ABSTRACT_ORIGIN, but returns NODE if there's no abstract
@@ -2597,6 +2602,7 @@ struct GTY(()) tree_decl_minimal {
 #define DECL_LANG_FLAG_5(NODE) (DECL_COMMON_CHECK (NODE)->decl_common.lang_flag_5)
 #define DECL_LANG_FLAG_6(NODE) (DECL_COMMON_CHECK (NODE)->decl_common.lang_flag_6)
 #define DECL_LANG_FLAG_7(NODE) (DECL_COMMON_CHECK (NODE)->decl_common.lang_flag_7)
+#define DECL_LANG_FLAG_8(NODE) (DECL_COMMON_CHECK (NODE)->decl_common.lang_flag_8)
 
 /* Nonzero for a decl which is at file scope.  */
 #define DECL_FILE_SCOPE_P(EXP) 					\
@@ -2639,6 +2645,7 @@ struct GTY(()) tree_decl_common {
   unsigned lang_flag_5 : 1;
   unsigned lang_flag_6 : 1;
   unsigned lang_flag_7 : 1;
+  unsigned lang_flag_8 : 1;
 
   /* In LABEL_DECL, this is DECL_ERROR_ISSUED.
      In VAR_DECL and PARM_DECL, this is DECL_REGISTER.  */
@@ -2657,8 +2664,9 @@ struct GTY(()) tree_decl_common {
   unsigned decl_by_reference_flag : 1;
   /* In VAR_DECL, PARM_DECL and RESULT_DECL, this is DECL_RESTRICTED_P.  */
   unsigned decl_restricted_flag : 1;
+
   /* Padding so that 'off_align' can be on a 32-bit boundary.  */
-  unsigned decl_common_unused : 3;
+  unsigned decl_common_unused : 2;
 
   /* DECL_OFFSET_ALIGN, used only for FIELD_DECLs.  */
   unsigned int off_align : 8;
@@ -4902,7 +4910,8 @@ extern bool validate_arglist (const_tree, ...);
 extern rtx builtin_memset_read_str (void *, HOST_WIDE_INT, enum machine_mode);
 extern bool can_trust_pointer_alignment (void);
 extern int get_pointer_alignment (tree, unsigned int);
-extern bool is_builtin_name (const char*);
+extern bool is_builtin_name (const char *);
+extern bool is_builtin_fn (tree);
 extern int get_object_alignment (tree, unsigned int, unsigned int);
 extern tree fold_call_stmt (gimple, bool);
 extern tree gimple_fold_builtin_snprintf_chk (gimple, tree, enum built_in_function);
@@ -4910,6 +4919,7 @@ extern tree make_range (tree, int *, tree *, tree *, bool *);
 extern tree build_range_check (location_t, tree, tree, int, tree, tree);
 extern bool merge_ranges (int *, tree *, tree *, int, tree, tree, int, 
 			  tree, tree);
+extern void set_builtin_user_assembler_name (tree decl, const char *asmspec);
 
 /* In convert.c */
 extern tree strip_float_extensions (tree);
@@ -5404,5 +5414,12 @@ more_const_call_expr_args_p (const const_call_expr_arg_iterator *iter)
 #define FOR_EACH_CONST_CALL_EXPR_ARG(arg, iter, call)			\
   for ((arg) = first_const_call_expr_arg ((call), &(iter)); (arg);	\
        (arg) = next_const_call_expr_arg (&(iter)))
+
+/* Return true if tree node T is a language-specific node.  */
+static inline bool
+is_lang_specific (tree t)
+{
+  return TREE_CODE (t) == LANG_TYPE || TREE_CODE (t) >= NUM_TREE_CODES;
+}
 
 #endif  /* GCC_TREE_H  */

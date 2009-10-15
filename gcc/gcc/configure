@@ -741,6 +741,8 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 enable_plugin
 pluginlibs
+LIBELFINC
+LIBELFLIBS
 CLOOGINC
 CLOOGLIBS
 PPLINC
@@ -808,6 +810,7 @@ subdirs
 slibdir
 dollar
 gcc_tooldir
+enable_lto
 MAINT
 zlibinc
 zlibdir
@@ -1061,7 +1064,9 @@ GMPINC
 PPLLIBS
 PPLINC
 CLOOGLIBS
-CLOOGINC'
+CLOOGINC
+LIBELFLIBS
+LIBELFINC'
 
 
 # Initialize some variables set by options.
@@ -1799,6 +1804,8 @@ Some influential environment variables:
   PPLINC      How to find PPL include files
   CLOOGLIBS   How to link CLOOG
   CLOOGINC    How to find CLOOG include files
+  LIBELFLIBS  How to link libelf
+  LIBELFINC   How to find libelf include files
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -11565,13 +11572,13 @@ if test "${lt_cv_nm_interface+set}" = set; then :
 else
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:11568: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:11575: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:11571: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:11578: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:11574: output\"" >&5)
+  (eval echo "\"\$as_me:11581: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -12776,7 +12783,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 12779 "configure"' > conftest.$ac_ext
+  echo '#line 12786 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -14436,11 +14443,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14439: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14446: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:14443: \$? = $ac_status" >&5
+   echo "$as_me:14450: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -14775,11 +14782,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14778: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14785: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:14782: \$? = $ac_status" >&5
+   echo "$as_me:14789: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -14880,11 +14887,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14883: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14890: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:14887: \$? = $ac_status" >&5
+   echo "$as_me:14894: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -14935,11 +14942,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14938: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14945: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:14942: \$? = $ac_status" >&5
+   echo "$as_me:14949: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -17317,7 +17324,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 17320 "configure"
+#line 17327 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -17413,7 +17420,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 17416 "configure"
+#line 17423 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -19369,11 +19376,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:19372: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:19379: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:19376: \$? = $ac_status" >&5
+   echo "$as_me:19383: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -19468,11 +19475,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:19471: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:19478: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:19475: \$? = $ac_status" >&5
+   echo "$as_me:19482: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -19520,11 +19527,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:19523: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:19530: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:19527: \$? = $ac_status" >&5
+   echo "$as_me:19534: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -21542,6 +21549,42 @@ cat >>confdefs.h <<_ACEOF
 _ACEOF
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for cfi sections directive" >&5
+$as_echo_n "checking assembler for cfi sections directive... " >&6; }
+if test "${gcc_cv_as_cfi_sections_directive+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  gcc_cv_as_cfi_sections_directive=no
+  if test x$gcc_cv_as != x; then
+    echo '	.text
+	.cfi_sections .debug_frame, .eh_frame
+	.cfi_startproc
+	.cfi_endproc' > conftest.s
+    if { ac_try='$gcc_cv_as  -o conftest.o conftest.s >&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+    then
+	gcc_cv_as_cfi_sections_directive=yes
+    else
+      echo "configure: failed program was" >&5
+      cat conftest.s >&5
+    fi
+    rm -f conftest.o conftest.s
+  fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_as_cfi_sections_directive" >&5
+$as_echo "$gcc_cv_as_cfi_sections_directive" >&6; }
+
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_GAS_CFI_SECTIONS_DIRECTIVE `if test $gcc_cv_as_cfi_sections_directive = yes;
+    then echo 1; else echo 0; fi`
+_ACEOF
+
+
 # GAS versions up to and including 2.11.0 may mis-optimize
 # .eh_frame data.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for eh_frame optimization" >&5
@@ -22874,6 +22917,37 @@ $as_echo "#define HAVE_AS_IX86_SAHF 1" >>confdefs.h
 
 fi
 
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for swap suffix" >&5
+$as_echo_n "checking assembler for swap suffix... " >&6; }
+if test "${gcc_cv_as_ix86_swap+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  gcc_cv_as_ix86_swap=no
+  if test x$gcc_cv_as != x; then
+    echo 'movl.s %esp, %ebp' > conftest.s
+    if { ac_try='$gcc_cv_as  -o conftest.o conftest.s >&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+    then
+	gcc_cv_as_ix86_swap=yes
+    else
+      echo "configure: failed program was" >&5
+      cat conftest.s >&5
+    fi
+    rm -f conftest.o conftest.s
+  fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_as_ix86_swap" >&5
+$as_echo "$gcc_cv_as_ix86_swap" >&6; }
+if test $gcc_cv_as_ix86_swap = yes; then
+
+$as_echo "#define HAVE_AS_IX86_SWAP 1" >>confdefs.h
+
+fi
+
     { $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for different section symbol subtraction" >&5
 $as_echo_n "checking assembler for different section symbol subtraction... " >&6; }
 if test "${gcc_cv_as_ix86_diff_sect_delta+set}" = set; then :
@@ -23469,6 +23543,50 @@ $as_echo "$gcc_cv_as_powerpc_lwsync" >&6; }
 if test $gcc_cv_as_powerpc_lwsync = yes; then
 
 $as_echo "#define HAVE_AS_LWSYNC 1" >>confdefs.h
+
+fi
+
+    case $target in
+      *-*-aix*) conftest_s='	.machine "476"
+	.csect .text[PR]
+	dci 0';;
+      *) conftest_s='	.machine "476"
+	.text
+	dci 0';;
+    esac
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for data cache invalidate support" >&5
+$as_echo_n "checking assembler for data cache invalidate support... " >&6; }
+if test "${gcc_cv_as_powerpc_dci+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  gcc_cv_as_powerpc_dci=no
+    if test $in_tree_gas = yes; then
+    if test $gcc_cv_gas_vers -ge `expr \( \( 9 \* 1000 \) + 99 \) \* 1000 + 0`
+  then gcc_cv_as_powerpc_dci=yes
+fi
+  elif test x$gcc_cv_as != x; then
+    echo "$conftest_s" > conftest.s
+    if { ac_try='$gcc_cv_as -a32 -o conftest.o conftest.s >&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+    then
+	gcc_cv_as_powerpc_dci=yes
+    else
+      echo "configure: failed program was" >&5
+      cat conftest.s >&5
+    fi
+    rm -f conftest.o conftest.s
+  fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_as_powerpc_dci" >&5
+$as_echo "$gcc_cv_as_powerpc_dci" >&6; }
+if test $gcc_cv_as_powerpc_dci = yes; then
+
+$as_echo "#define HAVE_AS_DCI 1" >>confdefs.h
 
 fi
 
@@ -24724,6 +24842,16 @@ do
 	all_compilers="$all_compilers $compilers"
 	all_outputs="$all_outputs $outputs"
 	all_gtfiles="$all_gtfiles [$subdir] $gtfiles"
+        case ",$enable_languages," in
+        	*,lto,*)
+
+$as_echo "#define ENABLE_LTO 1" >>confdefs.h
+
+		    enable_lto=yes
+
+		    ;;
+		*) ;;
+	esac
 done
 
 # Pick up gtfiles for c
@@ -24905,6 +25033,14 @@ $as_echo "#define HAVE_cloog 1" >>confdefs.h
 
 fi
 
+
+
+if test "x${LIBELFLIBS}" != "x" ; then
+
+$as_echo "#define HAVE_libelf 1" >>confdefs.h
+
+fi
+
 # Check for plugin support
 # Check whether --enable-plugin was given.
 if test "${enable_plugin+set}" = set; then :
@@ -24952,30 +25088,63 @@ rm -f core conftest.err conftest.$ac_objext \
   fi
 
   # Check -ldl
-  LIBS="$LIBS -ldl"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for -ldl" >&5
-$as_echo_n "checking for -ldl... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
+$as_echo_n "checking for library containing dlopen... " >&6; }
+if test "${ac_cv_search_dlopen+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include <dlfcn.h>
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char dlopen ();
 int
 main ()
 {
-volatile int f = 0; if (f) dlopen ("dummy", 0);
+return dlopen ();
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }; have_dl=yes
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
+for ac_lib in '' dl; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_dlopen=$ac_res
 fi
 rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  if test x"$have_dl" = x"yes"; then
+    conftest$ac_exeext
+  if test "${ac_cv_search_dlopen+set}" = set; then :
+  break
+fi
+done
+if test "${ac_cv_search_dlopen+set}" = set; then :
+
+else
+  ac_cv_search_dlopen=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_dlopen" >&5
+$as_echo "$ac_cv_search_dlopen" >&6; }
+ac_res=$ac_cv_search_dlopen
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+  if test x"$ac_cv_search_dlopen" = x"-ldl"; then
     pluginlibs="$pluginlibs -ldl"
   fi
 
@@ -25003,7 +25172,7 @@ $as_echo "no" >&6; }; have_pic_shared=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-  if test x"$have_pic_shared" != x"yes"; then
+  if test x"$have_pic_shared" != x"yes" -o x"$ac_cv_search_dlopen" = x"no"; then
     pluginlibs=
     enable_plugin=no
   fi

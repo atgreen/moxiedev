@@ -1,8 +1,5 @@
 ! { dg-do compile }
 !
-! FIXME: Remove -w after polymorphic entities are supported.
-! { dg-options "-w" }
-!
 ! PR 40940: CLASS statement
 !
 ! Contributed by Janus Weil <janus@gcc.gnu.org>
@@ -36,6 +33,11 @@ abstract interface
     type(t4) :: arg
   end subroutine
 end interface
+
+type t6
+  integer :: i
+  class(t6), allocatable :: foo  ! { dg-error "must have the POINTER attribute" }
+end type t6
 
 
 class(t1) :: o1  ! { dg-error "must be dummy, allocatable or pointer" }

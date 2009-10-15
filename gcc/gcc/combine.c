@@ -321,7 +321,7 @@ static rtx *uid_log_links;
 
 static int label_tick;
 
-/* Reset to label_tick for each label.  */
+/* Reset to label_tick for each extended basic block in scanning order.  */
 
 static int label_tick_ebb_start;
 
@@ -1010,9 +1010,6 @@ clear_log_links (void)
     if (INSN_P (insn))
       free_INSN_LIST_list (&LOG_LINKS (insn));
 }
-
-
-
 
 /* Main entry point for combiner.  F is the first insn of the function.
    NREGS is the first unused pseudo-reg number.
@@ -1028,6 +1025,7 @@ combine_instructions (rtx f, unsigned int nregs)
 #endif
   rtx links, nextlinks;
   rtx first;
+  basic_block last_bb;
 
   int new_direct_jump_p = 0;
 
@@ -1058,6 +1056,7 @@ combine_instructions (rtx f, unsigned int nregs)
      problems when, for example, we have j <<= 1 in a loop.  */
 
   nonzero_sign_valid = 0;
+  label_tick = label_tick_ebb_start = 1;
 
   /* Scan all SETs and see if we can deduce anything about what
      bits are known to be zero for some registers and how many copies
@@ -1067,18 +1066,23 @@ combine_instructions (rtx f, unsigned int nregs)
      for what bits are known to be set.  */
 
   setup_incoming_promotions (first);
+  /* Allow the entry block and the first block to fall into the same EBB.
+     Conceptually the incoming promotions are assigned to the entry block.  */
+  last_bb = ENTRY_BLOCK_PTR;
 
   create_log_links ();
-  label_tick_ebb_start = ENTRY_BLOCK_PTR->index;
   FOR_EACH_BB (this_basic_block)
     {
       optimize_this_for_speed_p = optimize_bb_for_speed_p (this_basic_block);
       last_call_luid = 0;
       mem_last_set = -1;
-      label_tick = this_basic_block->index;
+
+      label_tick++;
       if (!single_pred_p (this_basic_block)
-	  || single_pred (this_basic_block)->index != label_tick - 1)
+	  || single_pred (this_basic_block) != last_bb)
 	label_tick_ebb_start = label_tick;
+      last_bb = this_basic_block;
+
       FOR_BB_INSNS (this_basic_block, insn)
         if (INSN_P (insn) && BLOCK_FOR_INSN (insn))
 	  {
@@ -1109,20 +1113,23 @@ combine_instructions (rtx f, unsigned int nregs)
   nonzero_sign_valid = 1;
 
   /* Now scan all the insns in forward order.  */
-
-  label_tick_ebb_start = ENTRY_BLOCK_PTR->index;
+  label_tick = label_tick_ebb_start = 1;
   init_reg_last ();
   setup_incoming_promotions (first);
+  last_bb = ENTRY_BLOCK_PTR;
 
   FOR_EACH_BB (this_basic_block)
     {
       optimize_this_for_speed_p = optimize_bb_for_speed_p (this_basic_block);
       last_call_luid = 0;
       mem_last_set = -1;
-      label_tick = this_basic_block->index;
+
+      label_tick++;
       if (!single_pred_p (this_basic_block)
-	  || single_pred (this_basic_block)->index != label_tick - 1)
+	  || single_pred (this_basic_block) != last_bb)
 	label_tick_ebb_start = label_tick;
+      last_bb = this_basic_block;
+
       rtl_profile_for_bb (this_basic_block);
       for (insn = BB_HEAD (this_basic_block);
 	   insn != NEXT_INSN (BB_END (this_basic_block));
@@ -8811,6 +8818,12 @@ distribute_and_simplify_rtx (rtx x, int n)
   enum rtx_code outer_code, inner_code;
   rtx decomposed, distributed, inner_op0, inner_op1, new_op0, new_op1, tmp;
 
+  /* Distributivity is not true for floating point as it can change the
+     value.  So we don't do it unless -funsafe-math-optimizations.  */
+  if (FLOAT_MODE_P (GET_MODE (x))
+      && ! flag_unsafe_math_optimizations)
+    return NULL_RTX;
+
   decomposed = XEXP (x, n);
   if (!ARITHMETIC_P (decomposed))
     return NULL_RTX;
@@ -11752,12 +11765,10 @@ record_value_for_reg (rtx reg, rtx insn, rtx value)
      case, we must replace it with (clobber (const_int 0)) to prevent
      infinite loops.  */
   rsp = VEC_index (reg_stat_type, reg_stat, regno);
-  if (value && ! get_last_value_validate (&value, insn,
-					  rsp->last_set_label, 0))
+  if (value && !get_last_value_validate (&value, insn, label_tick, 0))
     {
       value = copy_rtx (value);
-      if (! get_last_value_validate (&value, insn,
-				     rsp->last_set_label, 1))
+      if (!get_last_value_validate (&value, insn, label_tick, 1))
 	value = 0;
     }
 
@@ -12049,15 +12060,14 @@ check_promoted_subreg (rtx insn, rtx x)
     }
 }
 
-/* Utility routine for the following function.  Verify that all the registers
-   mentioned in *LOC are valid when *LOC was part of a value set when
-   label_tick == TICK.  Return 0 if some are not.
-
-   If REPLACE is nonzero, replace the invalid reference with
-   (clobber (const_int 0)) and return 1.  This replacement is useful because
-   we often can get useful information about the form of a value (e.g., if
-   it was produced by a shift that always produces -1 or 0) even though
-   we don't know exactly what registers it was produced from.  */
+/* Verify that all the registers and memory references mentioned in *LOC are
+   still valid.  *LOC was part of a value set in INSN when label_tick was
+   equal to TICK.  Return 0 if some are not.  If REPLACE is nonzero, replace
+   the invalid references with (clobber (const_int 0)) and return 1.  This
+   replacement is useful because we often can get useful information about
+   the form of a value (e.g., if it was produced by a shift that always
+   produces -1 or 0) even though we don't know exactly what registers it
+   was produced from.  */
 
 static int
 get_last_value_validate (rtx *loc, rtx insn, int tick, int replace)
@@ -12093,11 +12103,12 @@ get_last_value_validate (rtx *loc, rtx insn, int tick, int replace)
 
       return 1;
     }
-  /* If this is a memory reference, make sure that there were
-     no stores after it that might have clobbered the value.  We don't
-     have alias info, so we assume any store invalidates it.  */
+  /* If this is a memory reference, make sure that there were no stores after
+     it that might have clobbered the value.  We don't have alias info, so we
+     assume any store invalidates it.  Moreover, we only have local UIDs, so
+     we also assume that there were stores in the intervening basic blocks.  */
   else if (MEM_P (x) && !MEM_READONLY_P (x)
-	   && DF_INSN_LUID (insn) <= mem_last_set)
+	   && (tick != label_tick || DF_INSN_LUID (insn) <= mem_last_set))
     {
       if (replace)
 	*loc = gen_rtx_CLOBBER (GET_MODE (x), const0_rtx);
@@ -12207,16 +12218,14 @@ get_last_value (const_rtx x)
     return 0;
 
   /* If the value has all its registers valid, return it.  */
-  if (get_last_value_validate (&value, rsp->last_set,
-			       rsp->last_set_label, 0))
+  if (get_last_value_validate (&value, rsp->last_set, rsp->last_set_label, 0))
     return value;
 
   /* Otherwise, make a copy and replace any invalid register with
      (clobber (const_int 0)).  If that fails for some reason, return 0.  */
 
   value = copy_rtx (value);
-  if (get_last_value_validate (&value, rsp->last_set,
-			       rsp->last_set_label, 1))
+  if (get_last_value_validate (&value, rsp->last_set, rsp->last_set_label, 1))
     return value;
 
   return 0;

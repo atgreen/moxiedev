@@ -28,7 +28,7 @@ void test01()
   typedef std::list<int> list_type;
   list_type l;
 
-#ifndef _GLIBCXX_DEBUG
+#if ! defined _GLIBCXX_DEBUG && ! defined _GLIBCXX_PROFILE
   using std::_List_node;
 #else
   using std::_GLIBCXX_STD_D::_List_node;

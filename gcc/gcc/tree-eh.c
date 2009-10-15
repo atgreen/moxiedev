@@ -1919,21 +1919,27 @@ lower_eh_constructs_2 (struct leh_state *state, gimple_stmt_iterator *gsi)
       else
 	{
 	  x = gimple_seq_first_stmt (gimple_try_cleanup (stmt));
-	  switch (gimple_code (x))
+	  if (!x)
 	    {
-	    case GIMPLE_CATCH:
-	      replace = lower_catch (state, stmt);
-	      break;
-	    case GIMPLE_EH_FILTER:
-	      replace = lower_eh_filter (state, stmt);
-	      break;
-	    case GIMPLE_EH_MUST_NOT_THROW:
-	      replace = lower_eh_must_not_throw (state, stmt);
-	      break;
-	    default:
-	      replace = lower_cleanup (state, stmt);
-	      break;
+	      replace = gimple_try_eval (stmt);
+	      lower_eh_constructs_1 (state, replace);
 	    }
+	  else
+	    switch (gimple_code (x))
+	      {
+		case GIMPLE_CATCH:
+		    replace = lower_catch (state, stmt);
+		    break;
+		case GIMPLE_EH_FILTER:
+		    replace = lower_eh_filter (state, stmt);
+		    break;
+		case GIMPLE_EH_MUST_NOT_THROW:
+		    replace = lower_eh_must_not_throw (state, stmt);
+		    break;
+		default:
+		    replace = lower_cleanup (state, stmt);
+		    break;
+	      }
 	}
 
       /* Remove the old stmt and insert the transformed sequence
@@ -3368,6 +3374,12 @@ unsplit_eh (eh_landing_pad lp)
       if (lp_nr && get_eh_region_from_lp_number (lp_nr) != lp->region)
 	return false;
     }
+
+  /* The new destination block must not already be a destination of
+     the source block, lest we merge fallthru and eh edges and get
+     all sorts of confused.  */
+  if (find_edge (e_in->src, e_out->dest))
+    return false;
 
   /* ??? I can't imagine there would be PHI nodes, since by nature
      of critical edge splitting this block should never have been

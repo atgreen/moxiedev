@@ -456,6 +456,22 @@ build_cplus_new (tree type, tree init)
   return rval;
 }
 
+/* Return a TARGET_EXPR which expresses the direct-initialization of one
+   array from another.  */
+
+tree
+build_array_copy (tree init)
+{
+  tree type = TREE_TYPE (init);
+  tree slot = build_local_temp (type);
+  init = build2 (VEC_INIT_EXPR, type, slot, init);
+  SET_EXPR_LOCATION (init, input_location);
+  init = build_target_expr (slot, init);
+  TARGET_EXPR_IMPLICIT_P (init) = 1;
+
+  return init;
+}
+
 /* Build a TARGET_EXPR using INIT to initialize a new temporary of the
    indicated TYPE.  */
 
@@ -623,7 +639,7 @@ build_cplus_array_type_1 (tree elt_type, tree index_type)
       else
 	{
 	  /* Build a new array type.  */
-	  t = make_node (ARRAY_TYPE);
+	  t = cxx_make_type (ARRAY_TYPE);
 	  TREE_TYPE (t) = elt_type;
 	  TYPE_DOMAIN (t) = index_type;
 
@@ -724,6 +740,17 @@ cp_build_reference_type (tree to_type, bool rval)
 
   return t;
 
+}
+
+/* Returns EXPR cast to rvalue reference type, like std::move.  */
+
+tree
+move (tree expr)
+{
+  tree type = TREE_TYPE (expr);
+  gcc_assert (TREE_CODE (type) != REFERENCE_TYPE);
+  type = cp_build_reference_type (type, /*rval*/true);
+  return build_static_cast (type, expr, tf_warning_or_error);
 }
 
 /* Used by the C++ front end to build qualified array types.  However,
@@ -915,7 +942,6 @@ cp_build_qualified_type_real (tree type,
       && (TYPE_LANG_SPECIFIC (TYPE_CANONICAL (result)) 
           == TYPE_LANG_SPECIFIC (TYPE_CANONICAL (type))))
     TYPE_LANG_SPECIFIC (TYPE_CANONICAL (result)) = NULL;
-      
 
   return result;
 }
@@ -1258,6 +1284,8 @@ build_qualified_name (tree type, tree scope, tree name, bool template_p)
     return error_mark_node;
   t = build2 (SCOPE_REF, type, scope, name);
   QUALIFIED_NAME_IS_TEMPLATE (t) = template_p;
+  if (type)
+    t = convert_from_reference (t);
   return t;
 }
 
@@ -1530,28 +1558,18 @@ no_linkage_check (tree t, bool relaxed_p)
     case RECORD_TYPE:
       if (TYPE_PTRMEMFUNC_P (t))
 	goto ptrmem;
+      /* Lambda types that don't have mangling scope have no linkage.  We
+	 check CLASSTYPE_LAMBDA_EXPR here rather than LAMBDA_TYPE_P because
+	 when we get here from pushtag none of the lambda information is
+	 set up yet, so we want to assume that the lambda has linkage and
+	 fix it up later if not.  */
+      if (CLASSTYPE_LAMBDA_EXPR (t)
+	  && LAMBDA_TYPE_EXTRA_SCOPE (t) == NULL_TREE)
+	return t;
       /* Fall through.  */
     case UNION_TYPE:
       if (!CLASS_TYPE_P (t))
 	return NULL_TREE;
-
-      /* Check template type-arguments.  I think that types with no linkage
-         can't occur in non-type arguments, though that might change with
-         constexpr.  */
-      r = CLASSTYPE_TEMPLATE_INFO (t);
-      if (r)
-	{
-	  tree args = INNERMOST_TEMPLATE_ARGS (TI_ARGS (r));
-	  int i;
-
-	  for (i = TREE_VEC_LENGTH (args); i-- > 0; )
-	    {
-	      tree elt = TREE_VEC_ELT (args, i);
-	      if (TYPE_P (elt)
-		  && (r = no_linkage_check (elt, relaxed_p), r))
-		return r;
-	    }
-	}
       /* Fall through.  */
     case ENUMERAL_TYPE:
       /* Only treat anonymous types as having no linkage if they're at
@@ -1559,15 +1577,22 @@ no_linkage_check (tree t, bool relaxed_p)
       if (TYPE_ANONYMOUS_P (t) && TYPE_NAMESPACE_SCOPE_P (t))
 	return t;
 
-      r = CP_TYPE_CONTEXT (t);
-      if (TYPE_P (r))
-	return no_linkage_check (TYPE_CONTEXT (t), relaxed_p);
-      else if (TREE_CODE (r) == FUNCTION_DECL)
+      for (r = CP_TYPE_CONTEXT (t); ; )
 	{
-	  if (!relaxed_p || !TREE_PUBLIC (r) || !vague_linkage_fn_p (r))
-	    return t;
+	  /* If we're a nested type of a !TREE_PUBLIC class, we might not
+	     have linkage, or we might just be in an anonymous namespace.
+	     If we're in a TREE_PUBLIC class, we have linkage.  */
+	  if (TYPE_P (r) && !TREE_PUBLIC (TYPE_NAME (r)))
+	    return no_linkage_check (TYPE_CONTEXT (t), relaxed_p);
+	  else if (TREE_CODE (r) == FUNCTION_DECL)
+	    {
+	      if (!relaxed_p || !vague_linkage_fn_p (r))
+		return t;
+	      else
+		r = CP_DECL_CONTEXT (r);
+	    }
 	  else
-	    return no_linkage_check (CP_DECL_CONTEXT (r), relaxed_p);
+	    break;
 	}
 
       return NULL_TREE;
@@ -2759,6 +2784,8 @@ special_function_p (const_tree decl)
      DECL_LANG_SPECIFIC.  */
   if (DECL_COPY_CONSTRUCTOR_P (decl))
     return sfk_copy_constructor;
+  if (DECL_MOVE_CONSTRUCTOR_P (decl))
+    return sfk_move_constructor;
   if (DECL_CONSTRUCTOR_P (decl))
     return sfk_constructor;
   if (DECL_OVERLOADED_OPERATOR_P (decl) == NOP_EXPR)
@@ -3101,6 +3128,17 @@ cp_free_lang_data (tree t)
 	 in this TU.  So make it an external reference.  */
       DECL_EXTERNAL (t) = 1;
       TREE_STATIC (t) = 0;
+    }
+  if (CP_AGGREGATE_TYPE_P (t)
+      && TYPE_NAME (t))
+    {
+      tree name = TYPE_NAME (t);
+      if (TREE_CODE (name) == TYPE_DECL)
+	name = DECL_NAME (name);
+      /* Drop anonymous names.  */
+      if (name != NULL_TREE
+	  && ANON_AGGRNAME_P (name))
+	TYPE_NAME (t) = NULL_TREE;
     }
 }
 

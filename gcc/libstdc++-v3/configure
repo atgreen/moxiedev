@@ -15358,6 +15358,40 @@ $as_echo "$as_me: WARNING: Performance of certain classes will degrade as a resu
 
 
 
+
+  # Fake what AC_TRY_COMPILE does, without linking as this is
+  # unnecessary for this test.
+
+    cat > conftest.$ac_ext << EOF
+#line 15366 "configure"
+int main()
+{
+  _Decimal32 d1;
+  _Decimal64 d2;
+  _Decimal128 d3;
+  return 0;
+}
+EOF
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ISO/IEC TR 24733 " >&5
+$as_echo_n "checking for ISO/IEC TR 24733 ... " >&6; }
+    if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
+  (eval $ac_compile) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+
+$as_echo "#define _GLIBCXX_USE_DECIMAL_FLOAT 1" >>confdefs.h
+
+      enable_dfp=yes
+    else
+      enable_dfp=no
+    fi
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $enable_dfp" >&5
+$as_echo "$enable_dfp" >&6; }
+    rm -f conftest*
+
+
 # Checks for compiler support that doesn't require linking.
 
   # All these tests are for C++; save the language and the compiler flags.
@@ -19507,8 +19541,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -26409,8 +26443,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -32224,8 +32258,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -43869,8 +43903,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -44083,8 +44117,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -44558,8 +44592,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -50727,8 +50761,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -56527,8 +56561,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -56694,8 +56728,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -56843,8 +56877,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -57010,8 +57044,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`
@@ -57182,8 +57216,8 @@ $as_echo_n "checking for ld version... " >&6; }
     if $LD --version 2>/dev/null | grep 'GNU gold' >/dev/null 2>&1; then
       glibcxx_ld_is_gold=yes
     fi
-    ldver=`$LD --version 2>/dev/null | head -1 | \
-           sed -e 's/GNU \(go\)\{0,1\}ld \(version \)\{0,1\}\(([^)]*) \)\{0,1\}\([0-9.][0-9.]*\).*/\4/'`
+    ldver=`$LD --version 2>/dev/null |
+	   sed -e 's/GNU g*o*ld v*e*r*s*i*o*n* *\(([^)]*)* *\) \([0-9.][0-9.]*\).*/\2/; q'`
 
     glibcxx_gnu_ld_version=`echo $ldver | \
            $AWK -F. '{ if (NF<3) $3=0; print ($1*100+$2)*100+$3 }'`

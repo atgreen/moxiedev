@@ -1,9 +1,323 @@
+2009-10-12  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/random.h (class linear_congruential_engine,
+	class mersenne_twister_engine, class subtract_with_carry_engine,
+	class discard_block_engine, class independent_bits_engine,
+	class shuffle_order_engine, class uniform_int_distribution,
+	class binomial_distribution, class geometric_distribution,
+	class negative_binomial_distribution, class poisson_distribution,
+	class discrete_distribution): Do not use simulated concept checks,
+	tidy startic_asserts on argument types and ranges.
+	(class uniform_real_distribution, class normal_distribution,
+	class lognormal_distribution, class gamma_distribution,
+	class chi_squared_distribution, class cauchy_distribution,
+	class fisher_f_distribution, class student_t_distribution,
+	class exponential_distribution, class weibull_distribution,
+	class extreme_value_distribution, class piecewise_linear_distribution,
+	class piecewise_constant_distribution): Add static_assert on
+	template argument type.
+	* include/std/random: Do not include <bits/concept_check.h>.
+	* testsuite/26_numerics/random/discard_block_engine/cons/base_move.cc:
+	Fix.
+	* testsuite/26_numerics/random/discard_block_engine/cons/seed1.cc:
+	Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/seed2.cc:
+	Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/base_copy.cc:
+	Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/default.cc:
+	Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/cons/seed_seq.cc:
+	Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/requirements/
+	typedefs.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/operators/
+	equal.cc: Likewise.
+	* testsuite/26_numerics/random/discard_block_engine/operators/
+	serialize.cc: Likewise.
+	* testsuite/26_numerics/random/linear_congruential_engine/
+	requirements/non_uint_neg.cc: Tweak.
+
+2009-10-10  Gerald Pfeifer  <gerald@pfeifer.com>
+
+	* doc/xml/manual/messages.xml: Update GNU gettext reference.
+
+2009-10-10  Gerald Pfeifer  <gerald@pfeifer.com>
+
+	* doc/xml/manual/codecvt.xml: Refer to The Open Group Base
+	Specifications, Issue 6 (IEEE Std. 1003.1-2004).
+	Update link to bogus site with reference to unix.org.
+	* doc/xml/manual/ctype.xml: Ditto.
+	* doc/xml/manual/locale.xml: Ditto.
+                                             
+2009-10-09  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/parallel/numeric (__adjacent_difference_switch): Fix typo.
+	* include/parallel/for_each_selectors.h
+	(__adjacent_difference_selector): Likewise.
+
+2009-10-08  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/ext/bitmap_allocator.h: Minor clean-ups.
+
+2009-10-08  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* config/abi/pre/gnu.ver: Adjust exports.
+
+2009-10-07  Phil Muldoon <pmuldoon@redhat.com>
+
+	* doc/xml/manual/debug.xml: Rewrite and expand GDB Python
+	pretty-printer section.
+
+2009-10-07  Chris Jefferson  <chris@bubblescope.net>
+
+	* testsuite/25_algorithms/rotate/moveable2.cc: New.
+
+2009-10-06  Janis Johnson  <janis187@us.ibm.com>
+
+	* testsuite/decimal/binary-arith.cc: Fix directive to skip test.
+	* testsuite/decimal/cast_neg.cc: Ditto.
+	* testsuite/decimal/comparison.cc: Ditto.
+	* testsuite/decimal/compound-assignment.cc: Ditto.
+	* testsuite/decimal/compound-assignment-memfunc.cc: Ditto.
+	* testsuite/decimal/conversion-from-float.cc: Ditto.
+	* testsuite/decimal/conversion-from-integral.cc: Ditto.
+	* testsuite/decimal/conversion-to-generic-float.cc: Ditto.
+	* testsuite/decimal/conversion-to-integral.cc: Ditto.
+	* testsuite/decimal/ctor.cc: Ditto.
+	* testsuite/decimal/incdec.cc: Ditto.
+	* testsuite/decimal/incdec-memfunc.cc: Ditto.
+	* testsuite/decimal/make-decimal.cc: Ditto.
+	* testsuite/decimal/mixed-mode_neg.cc: Ditto.
+	* testsuite/decimal/operator_neg.cc: Ditto.
+	* testsuite/decimal/unary-arith.cc: Ditto.
+
+2009-10-05  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* doc/html/*: Regenerate.
+
+2009-10-05  John Bytheway  <jbytheway@gmail.com>
+
+	PR libstdc++/41530
+	* include/std/tuple (_Tuple_impl<>::_Tuple_impl(_Tuple_impl<>&&)):
+	Fix to just move.
+	* testsuite/20_util/tuple/cons/41530.cc: New.
+
+2009-10-05  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* doc/xml/manual/debug.xml: Add narrative for GDB Python pretty
+	printers. Add links to GDB wiki/online manual.
+
+2009-10-05  Benjamin Kosnik  <bkoz@redhat.com>
+	    Edward Smith-Rowland  <3dw4rd@verizon.net>
+
+	* include/decimal/decimal: Warn if decimal floating point types
+	are not available.
+	* acinclude.m4 (GLIBCXX_ENABLE_DECIMAL_FLOAT): New.
+	* configure.ac: Use it.
+	* configure: Regenerate.
+	* config.h.in: Regenerate.
+
+2009-10-05  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* include/Makefile.am: Remove stray line break.
+
+	* include/decimal/decimal: Brief class doxygen markup.
+	* libsupc++/exception: Whitespace cleanup.
+
+	* testsuite/libstdc++-dg/conformance.exp: Add testsuite directory
+	decimal.
+	* scripts/create_testsuite_files (dlist): Same.
+
+	* doc/xml/manual/using.xml: One column in table. Move after TR1.
+
+	* testsuite/decimal/bad-cast.cc: Move to...
+	* testsuite/decimal/cast_neg.cc: ...here.
+	* testsuite/decimal/bad-mixed-mode.cc: Move to...
+	* testsuite/decimal/mixed-mode_neg.cc: ...here.
+	* testsuite/decimal/bad-operator.cc: Move to...
+	* testsuite/decimal/operator_neg.cc: ...here.
+
+	* doc/doxygen/user.cfg.in (INPUT): Add decimal/decimal.
+
+2009-10-05  Janis Johnson  <janis187@us.ibm.com>
+
+	* doc/Makefile.am: Process new file.
+	* doc/xml/manual/intro.xml: Ditto.
+	* doc/xml/manual/using.xml: Document new header.
+	* doc/xml/manual/status_cxxdecimal.xml: New file.
+	* include/Makefile.am: Process new headers.
+	* include/decimal/decimal: New file.
+	* include/decimal/decimal.h: New file.
+
+2009-10-05  Janis Johnson  <janis187@us.ibm.com>
+
+	* testsuite/decimal: New directory.
+	* testsuite/decimal/bad-cast.cc: New test.
+	* testsuite/decimal/bad-mixed-mode.cc: New test.
+	* testsuite/decimal/bad-operator.cc: New test.
+	* testsuite/decimal/binary-arith.cc: New test.
+	* testsuite/decimal/comparison.cc: New test.
+	* testsuite/decimal/compound-assignment.cc: New test.
+	* testsuite/decimal/compound-assignment-memfunc.cc: New test.
+	* testsuite/decimal/conversion-from-float.cc: New test.
+	* testsuite/decimal/conversion-from-integral.cc: New test.
+	* testsuite/decimal/conversion-to-generic-float.cc: New test.
+	* testsuite/decimal/conversion-to-integral.cc: New test.
+	* testsuite/decimal/ctor.cc: New test.
+	* testsuite/decimal/incdec.cc: New test.
+	* testsuite/decimal/incdec-memfunc.cc: New test.
+	* testsuite/decimal/make-decimal.cc: New test.
+	* testsuite/decimal/unary-arith.cc: New test.
+
+2009-10-05  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* testsuite/lib/libstdc++.exp (check_v3_target_rvalref): Remove.
+	* testsuite/lib/dg-options.exp (dg-require-rvalref): Likewise.
+
+2009-10-05  Chris Jefferson  <chris@bubblescope.net>
+
+	* include/bits/stl_algo.h (__stable_partition_adaptive,
+	__rotate_adaptive, __merge_adaptive, __merge_sort_loop):
+	Extend to work with rvalue references in C++0x mode.
+	* testsuite/25_algorithms/inplace_merge/moveable2.cc: New.
+	* testsuite/25_algorithms/inplace_merge/moveable.cc: Likewise.
+	* testsuite/25_algorithms/stable_partition/moveable.cc: Likewise.
+	* testsuite/25_algorithms/stable_sort/moveable2.cc: Likewise.
+	* testsuite/25_algorithms/stable_sort/moveable.cc: Likewise.
+
+2009-10-04  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* doc/xml/manual/using.xml: Add profile headers.
+	* testsuite/ext/profile/mh.cc: Restrict to linux.
+
+2009-10-02  Silvius Rus  <silvius.rus@gmail.com>
+
+	* configure: Add check for execinfo.h.
+	* config.h.in: Add undef for HAVE_EXECINFO_H.
+	* include/Makefile.am: Add build support for profile mode.
+	* include/Makefile.in: Same.
+	* include/profile/base.h: New file.
+	* include/profile/bitset: Same.
+	* include/profile/deque: Same.
+	* include/profile/hashtable.h: Same.
+	* include/profile/list: Same.
+	* include/profile/map: Same.
+	* include/profile/map.h: Same.
+	* include/profile/multimap.h: Same.
+	* include/profile/multiset.h: Same.
+	* include/profile/set: Same.
+	* include/profile/set.h: Same.
+	* include/profile/unordered_map: Same.
+	* include/profile/unordered_set: Same.
+	* include/profile/vector: Same.
+	* include/profile/impl/profiler.h: Same.
+	* include/profile/impl/profiler_container_size.h: Same.
+	* include/profile/impl/profiler_hash_func.h: Same.
+	* include/profile/impl/profiler_hashtable_size.h: Same.
+	* include/profile/impl/profiler_map_to_unordered_map.h: Same.
+	* include/profile/impl/profiler_node.h: Same.
+	* include/profile/impl/profiler_state.h: Same.
+	* include/profile/impl/profiler_trace.h: Same.
+	* include/profile/impl/profiler_vector_size.h: Same.
+	* include/profile/impl/profiler_vector_to_list.h: Same.
+	* include/std/vector: Include corresponding profile header guarded by
+	_GLIBCXX_PROFILE.
+	* include/std/deque: Same.
+	* include/std/list: Same.
+	* include/std/map: Same.
+	* include/std/unordered_map: Same.
+	* include/std/bitset: Same.
+	* include/std/set: Same.
+	* include/std/unordered_set: Same.
+	* include/backward/hash_map: Same.
+	* include/backward/hash_set: Same.
+	* include/tr1_impl/hashtable (_Hashtable): Expose insert_return_type.
+	* include/bits/c++config: Define profile namespace.
+	* testsuite/Makefile.in: Add check-profile.
+	* testsuite/Makefile.am: Same.
+	* testsuite/ext/profile/all.cc: New file.
+	* testsuite/ext/profile/mh.cc: Same.
+	* testsuite/ext/profile/mutex_extensions.cc: Same.
+	* testsuite/23_containers/unordered_map/profile/hash_map.cc: Same.
+	* testsuite/23_containers/unordered_map/profile/unordered.cc: Same.
+	* testsuite/23_containers/vector/profile/vector.cc: Same.
+	* testsuite/23_containers/vector/resize/moveable.cc: Make it pass
+	in profile mode.
+	* testsuite/23_containers/deque/capacity/moveable.cc: Same.
+	* testsuite/23_containers/list/capacity/29134.cc: Same.
+	* doc/Makefile.in: Add reference to profile_mode.xml.
+	* doc/Makefile.am: Same.
+	* doc/xml/manual/profile_mode.xml: New file.
+	* doc/xml/manual/debug.xml: Add link to profile mode section.
+	* doc/xml/manual/extensions.xml: Add profile mode.  Update numbering.
+	* doc/doxygen/user.cfg.in: Add profile mode files.
+
+2009-10-02  Johannes Singler  <singler@ira.uka.de>
+
+	* include/parallel/base.h: Take integer types from <tr1/cstdint>.
+	* include/parallel/compatibility.h: Likewise.
+	* include/parallel/multiseq_selection.h: Likewise.
+	* include/parallel/random_shuffle.h: Likewise.
+	* include/parallel/random_number.h: Likewise;
+	use numeric_limits<>::digit instead of sizeof()*8.
+	* include/parallel/types.h: Likewise.
+	* doc/html/manual/bk01pt12ch31s03.html:
+	Document dependency on stdint.h.
+
+2009-10-01  Phil Muldoon <pmuldoon@redhat.com>
+
+	* python/libstdcxx/v6/printers.py (StdListPrinter):
+	Add -D_GLIBCXX_DEBUG implementation changes. Receive typename from
+	printer registration.
+	(StdListIteratorPrinter): Likewise.
+	(StdDebugIteratorPrinter): New printer.
+	(build_libstdcxx_dictionary): Add -D_GLIBCXX_DEBUG registration
+	entries.  Always pass a typename where the type can change.
+	(StdSlistPrinter) Receive typename from printer registration.  Use
+	in printer output.
+	(StdBitsetPrinter): Likewise.
+	(StdDequePrinter): Likewise.
+
+2009-09-29  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/random.tcc: Define static const data members.
+	* include/tr1/random.tcc: Likewise.
+	* testsuite/26_numerics/random/subtract_with_carry_engine/
+	requirements/constants.cc: New.
+	* testsuite/26_numerics/random/mersenne_twister_engine/
+	requirements/constants.cc: Likewise.
+	* testsuite/26_numerics/random/linear_congruential_engine/
+	requirements/constants.cc: Likewise.
+	* testsuite/26_numerics/random/shuffle_order_engine/requirements/
+	constants.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/random/subtract_with_carry/
+	requirements/constants.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/random/
+	subtract_with_carry_01/requirements/constants.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/random/discard_block/
+	requirements/constants.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/random/linear_congruential/
+	requirements/constants.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/random/mersenne_twister/
+	requirements/constants.cc: Likewise.
+	* testsuite/tr1/5_numerical_facilities/random/xor_combine/
+	requirements/constants.cc: Likewise.
+
+2009-09-29  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	PR libstdc++/38923
+	* acinclude.m4 (GLIBCXX_CHECK_LINKER_FEATURES): Avoid 'head',
+	use sed script portable to Solaris /bin/sed for extracting ld
+	version.
+	* configure: Regenerate.
+
 2009-09-28  Benjamin Kosnik  <bkoz@redhat.com>
 
-	*  libsupc++/eh_terminate.cc: Fixes for -fno-exceptions.
-	*  libsupc++/vec.cc: Same.
-	*  libsupc++/vterminate.cc: Same.
-	*  libsupc++/new_opnt.cc: Same.
+	* libsupc++/eh_terminate.cc: Fixes for -fno-exceptions.
+	* libsupc++/vec.cc: Same.
+	* libsupc++/vterminate.cc: Same.
+	* libsupc++/new_opnt.cc: Same.
 
 2009-09-28  Johannes Singler  <singler@ira.uka.de>
 

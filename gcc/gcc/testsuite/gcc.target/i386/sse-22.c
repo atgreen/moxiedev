@@ -5,7 +5,7 @@
 #include <mm_malloc.h>
 
 /* Test that the intrinsics compile without optimization.  All of them are
-   defined as inline functions in {,x,e,p,t,s,w,a,b}mmintrin.h  and mm3dnow.h
+   defined as inline functions in {,x,e,p,t,s,w,a}mmintrin.h  and mm3dnow.h
    that reference the proper builtin functions.  Defining away "extern" and
    "__inline" results in all of them being compiled as proper functions.  */
 
@@ -37,7 +37,7 @@
 
 
 #ifndef DIFFERENT_PRAGMAS
-#pragma GCC target ("mmx,3dnow,sse,sse2,sse3,ssse3,sse4.1,sse4.2,sse5,aes,pclmul")
+#pragma GCC target ("mmx,3dnow,sse,sse2,sse3,ssse3,sse4.1,sse4.2,sse4a,aes,pclmul")
 #endif
 
 /* Following intrinsics require immediate arguments.  They
@@ -146,16 +146,6 @@ test_4 (_mm_cmpestro, int, __m128i, int, __m128i, int, 1)
 test_4 (_mm_cmpestrs, int, __m128i, int, __m128i, int, 1)
 test_4 (_mm_cmpestrz, int, __m128i, int, __m128i, int, 1)
 
-/* bmmintrin.h (SSE5).  */
-#ifdef DIFFERENT_PRAGMAS
-#pragma GCC target ("sse5")
-#endif
-#include <bmmintrin.h>
-test_1 (_mm_roti_epi8, __m128i, __m128i, 1)
-test_1 (_mm_roti_epi16, __m128i, __m128i, 1)
-test_1 (_mm_roti_epi32, __m128i, __m128i, 1)
-test_1 (_mm_roti_epi64, __m128i, __m128i, 1)
-
 /* wmmintrin.h (AES/PCLMUL).  */
 #ifdef DIFFERENT_PRAGMAS
 #pragma GCC target ("aes,pclmul")
@@ -164,7 +154,7 @@ test_1 (_mm_roti_epi64, __m128i, __m128i, 1)
 test_1 (_mm_aeskeygenassist_si128, __m128i, __m128i, 1)
 test_2 (_mm_clmulepi64_si128, __m128i, __m128i, __m128i, 1)
 
-/* mmintrin-common.h */
+/* smmintrin.h (SSE4.1).  */
 test_1 (_mm_round_pd, __m128d, __m128d, 1)
 test_1 (_mm_round_ps, __m128, __m128, 1)
 test_2 (_mm_round_sd, __m128d, __m128d, __m128d, 1)

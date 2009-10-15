@@ -620,7 +620,7 @@ struct cum_arg {int nbytes; };
 
 /* 1 if X is an rtx for a constant that is a valid address.  */
 
-#define CONSTANT_ADDRESS_P(X)   CONSTANT_P (X)
+#define CONSTANT_ADDRESS_P(X)   (CONSTANT_P (X) && GET_CODE (X) != CONST_DOUBLE)
 
 /* Maximum number of registers that can appear in a valid memory address.  */
 
@@ -759,6 +759,9 @@ struct cum_arg {int nbytes; };
 
 #define ASM_APP_OFF "#NO_APP\n"
 
+#undef  USER_LABEL_PREFIX
+#define USER_LABEL_PREFIX "_"
+
 /* This says how to output the assembler to define a global
    uninitialized but not common symbol.
    Try to use asm_output_bss to implement this macro.  */
@@ -774,7 +777,7 @@ struct cum_arg {int nbytes; };
 
 #undef ASM_OUTPUT_LABELREF
 #define ASM_OUTPUT_LABELREF(FILE, NAME) \
-  fprintf (FILE, "_%s", (*targetm.strip_name_encoding) (NAME))
+  asm_fprintf (FILE, "%U%s", (*targetm.strip_name_encoding) (NAME))
 
 #define ASM_PN_FORMAT "%s___%lu"
 

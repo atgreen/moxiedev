@@ -1399,13 +1399,23 @@ static int
 asm_insn_count (rtx body)
 {
   const char *templ;
-  int count = 1;
 
   if (GET_CODE (body) == ASM_INPUT)
     templ = XSTR (body, 0);
   else
     templ = decode_asm_operands (body, NULL, NULL, NULL, NULL, NULL);
 
+  return asm_str_count (templ);
+}
+#endif
+
+/* Return the number of machine instructions likely to be generated for the
+   inline-asm template. */
+int
+asm_str_count (const char *templ)
+{
+  int count = 1;
+  
   if (!*templ)
     return 0;
 
@@ -1416,7 +1426,6 @@ asm_insn_count (rtx body)
 
   return count;
 }
-#endif
 
 /* ??? This is probably the wrong place for these.  */
 /* Structure recording the mapping from source file and directory
@@ -2674,6 +2683,26 @@ final_scan_insn (rtx insn, FILE *file, int optimize ATTRIBUTE_UNUSED,
 
 	/* Output assembler code from the template.  */
 	output_asm_insn (templ, recog_data.operand);
+
+	/* Record point-of-call information for ICF debugging.  */
+	if (flag_enable_icf_debug && CALL_P (insn))
+	  {
+	    rtx x = call_from_call_insn (insn);
+	    x = XEXP (x, 0);
+	    if (x && MEM_P (x))
+	      {
+	        if (GET_CODE (XEXP (x, 0)) == SYMBOL_REF)
+	          {
+		    tree t;
+		    x = XEXP (x, 0);
+		    t = SYMBOL_REF_DECL (x);
+		    if (t)
+		      (*debug_hooks->direct_call) (t);
+	          }
+	        else
+	          (*debug_hooks->virtual_call) (INSN_UID (insn));
+	      }
+	  }
 
 	/* Some target machines need to postscan each insn after
 	   it is output.  */

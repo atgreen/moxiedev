@@ -1323,6 +1323,14 @@ build_ref_for_offset (tree *expr, tree type, HOST_WIDE_INT offset,
   return build_ref_for_offset_1 (expr, type, offset, exp_type);
 }
 
+/* Return true iff TYPE is stdarg va_list type.  */
+
+static inline bool
+is_va_list_type (tree type)
+{
+  return TYPE_MAIN_VARIANT (type) == TYPE_MAIN_VARIANT (va_list_type_node);
+}
+
 /* The very first phase of intraprocedural SRA.  It marks in candidate_bitmap
    those with type which is suitable for scalarization.  */
 
@@ -1350,8 +1358,7 @@ find_var_candidates (void)
 	      we also want to schedule it rather late.  Thus we ignore it in
 	      the early pass. */
 	  || (sra_mode == SRA_MODE_EARLY_INTRA
-	      && (TYPE_MAIN_VARIANT (TREE_TYPE (var))
-		  == TYPE_MAIN_VARIANT (va_list_type_node))))
+	      && is_va_list_type (type)))
 	continue;
 
       bitmap_set_bit (candidate_bitmap, DECL_UID (var));
@@ -2731,11 +2738,13 @@ find_param_candidates (void)
        parm;
        parm = TREE_CHAIN (parm))
     {
-      tree type;
+      tree type = TREE_TYPE (parm);
 
       count++;
+
       if (TREE_THIS_VOLATILE (parm)
-	  || TREE_ADDRESSABLE (parm))
+	  || TREE_ADDRESSABLE (parm)
+	  || is_va_list_type (type))
 	continue;
 
       if (is_unused_scalar_param (parm))
@@ -2744,7 +2753,6 @@ find_param_candidates (void)
 	  continue;
 	}
 
-      type = TREE_TYPE (parm);
       if (POINTER_TYPE_P (type))
 	{
 	  type = TREE_TYPE (type);
@@ -2752,6 +2760,7 @@ find_param_candidates (void)
 	  if (TREE_CODE (type) == FUNCTION_TYPE
 	      || TYPE_VOLATILE (type)
 	      || !is_gimple_reg (parm)
+	      || is_va_list_type (type)
 	      || ptr_parm_has_direct_uses (parm))
 	    continue;
 	}
@@ -3637,6 +3646,7 @@ convert_callers (struct cgraph_node *node, ipa_parm_adjustment_vec adjustments)
   tree old_cur_fndecl = current_function_decl;
   struct cgraph_edge *cs;
   basic_block this_block;
+  bitmap recomputed_callers = BITMAP_ALLOC (NULL);
 
   for (cs = node->callers; cs; cs = cs->next_caller)
     {
@@ -3644,15 +3654,24 @@ convert_callers (struct cgraph_node *node, ipa_parm_adjustment_vec adjustments)
       push_cfun (DECL_STRUCT_FUNCTION (cs->caller->decl));
 
       if (dump_file)
-	fprintf (dump_file, "Adjusting call %s -> %s\n",
+	fprintf (dump_file, "Adjusting call (%i -> %i) %s -> %s\n",
+		 cs->caller->uid, cs->callee->uid,
 		 cgraph_node_name (cs->caller),
 		 cgraph_node_name (cs->callee));
 
       ipa_modify_call_arguments (cs, cs->call_stmt, adjustments);
-      compute_inline_parameters (cs->caller);
 
       pop_cfun ();
     }
+
+  for (cs = node->callers; cs; cs = cs->next_caller)
+    if (!bitmap_bit_p (recomputed_callers, cs->caller->uid))
+      {
+	compute_inline_parameters (cs->caller);
+	bitmap_set_bit (recomputed_callers, cs->caller->uid);
+      }
+  BITMAP_FREE (recomputed_callers);
+
   current_function_decl = old_cur_fndecl;
   FOR_EACH_BB (this_block)
     {

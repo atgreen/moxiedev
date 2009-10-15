@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/testsuite/libjava.jvmti/interp
 svn://gcc.gnu.org/svn/gcc
 
@@ -264,40 +264,6 @@ kgallowa
 
 332
 
-natgetlocalvartable.cc
-file
-
-
-
-
-2009-04-24T17:49:44.000000Z
-1bf9cb33f0e0fa0f81af2945a3109917
-2007-03-06T18:22:28.485729Z
-122630
-kgallowa
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2234
-
 getargssize.jar
 file
 
@@ -331,6 +297,40 @@ has-props
 
 
 1111
+
+natgetlocalvartable.cc
+file
+
+
+
+
+2009-04-24T17:49:44.000000Z
+1bf9cb33f0e0fa0f81af2945a3109917
+2007-03-06T18:22:28.485729Z
+122630
+kgallowa
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2234
 
 getstacktrace.java
 file

@@ -286,8 +286,9 @@ i[34567]86-*-*)
 	cxx_target_objs="i386-c.o"
 	extra_headers="cpuid.h mmintrin.h mm3dnow.h xmmintrin.h emmintrin.h
 		       pmmintrin.h tmmintrin.h ammintrin.h smmintrin.h
-		       nmmintrin.h bmmintrin.h wmmintrin.h immintrin.h
-		       x86intrin.h avxintrin.h ia32intrin.h cross-stdarg.h"
+		       nmmintrin.h bmmintrin.h fma4intrin.h wmmintrin.h
+		       immintrin.h x86intrin.h avxintrin.h 
+		       ia32intrin.h cross-stdarg.h"
 	;;
 x86_64-*-*)
 	cpu_type=i386
@@ -295,8 +296,9 @@ x86_64-*-*)
 	cxx_target_objs="i386-c.o"
 	extra_headers="cpuid.h mmintrin.h mm3dnow.h xmmintrin.h emmintrin.h
 		       pmmintrin.h tmmintrin.h ammintrin.h smmintrin.h
-		       nmmintrin.h bmmintrin.h wmmintrin.h immintrin.h
-		       x86intrin.h avxintrin.h ia32intrin.h cross-stdarg.h"
+		       nmmintrin.h bmmintrin.h fma4intrin.h wmmintrin.h
+		       immintrin.h x86intrin.h avxintrin.h 
+		       ia32intrin.h cross-stdarg.h"
 	need_64bit_hwint=yes
 	;;
 ia64-*-*)
@@ -325,7 +327,7 @@ powerpc*-*-*)
 	extra_headers="ppc-asm.h altivec.h spe.h ppu_intrinsics.h paired.h spu2vmx.h vec_types.h si2vmx.h"
 	need_64bit_hwint=yes
 	case x$with_cpu in
-	    xpowerpc64|xdefault64|x6[23]0|x970|xG5|xpower[34567]|xpower6x|xrs64a|xcell)
+	    xpowerpc64|xdefault64|x6[23]0|x970|xG5|xpower[34567]|xpower6x|xrs64a|xcell|xa2)
 		cpu_is_64bit=yes
 		;;
 	esac
@@ -2077,7 +2079,6 @@ rs6000-ibm-aix[6789].* | powerpc-ibm-aix[6789].*)
 	;;
 s390-*-linux*)
 	tm_file="s390/s390.h dbxelf.h elfos.h svr4.h linux.h glibc-stdint.h s390/linux.h"
-	tmake_file="${tmake_file} t-dfprules s390/t-crtstuff s390/t-linux"
 	;;
 s390x-*-linux*)
 	tm_file="s390/s390x.h s390/s390.h dbxelf.h elfos.h svr4.h linux.h glibc-stdint.h s390/linux.h"
@@ -2085,7 +2086,7 @@ s390x-*-linux*)
 	md_file=s390/s390.md
 	extra_modes=s390/s390-modes.def
 	out_file=s390/s390.c
-	tmake_file="${tmake_file} t-dfprules s390/t-crtstuff s390/t-linux s390/t-linux64"
+	tmake_file="${tmake_file} s390/t-linux64"
 	;;
 s390x-ibm-tpf*)
         tm_file="s390/s390x.h s390/s390.h dbxelf.h elfos.h svr4.h s390/tpf.h"
@@ -2094,7 +2095,6 @@ s390x-ibm-tpf*)
         extra_modes=s390/s390-modes.def
         out_file=s390/s390.c
         extra_parts="crtbeginS.o crtendS.o"
-        tmake_file="s390/t-crtstuff s390/t-tpf"
         thread_file='tpf'
 	extra_options="${extra_options} s390/tpf.opt"
 	;;
@@ -2182,7 +2182,8 @@ sh-*-symbianelf* | sh[12346l]*-*-symbianelf* | \
 	*-*-symbianelf*)
 		tmake_file="sh/t-symbian"
 		tm_file="sh/symbian-pre.h sh/little.h ${tm_file} sh/symbian-post.h"
-		extra_objs="symbian.o"
+		c_target_objs="symbian-base.o symbian-c.o"
+		cxx_target_objs="symbian-base.o symbian-cxx.o"
 		extra_parts="crt1.o crti.o crtn.o crtbegin.o crtend.o crtbeginS.o crtendS.o"
 		;;
 	*-*-elf*)
@@ -3065,9 +3066,9 @@ case "${target}" in
 			| power | power[234567] | power6x | powerpc | powerpc64 \
 			| rios | rios1 | rios2 | rsc | rsc1 | rs64a \
 			| 401 | 403 | 405 | 405fp | 440 | 440fp | 464 | 464fp \
-			| 505 | 601 | 602 | 603 | 603e | ec603e | 604 \
-			| 604e | 620 | 630 | 740 | 750 | 7400 | 7450 \
-			| e300c[23] | 854[08] | e500mc \
+			| 476 | 476fp | 505 | 601 | 602 | 603 | 603e | ec603e \
+			| 604 | 604e | 620 | 630 | 740 | 750 | 7400 | 7450 \
+			| a2 | e300c[23] | 854[08] | e500mc \
 			| 801 | 821 | 823 | 860 | 970 | G3 | G4 | G5 | cell)
 				# OK
 				;;

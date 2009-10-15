@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/native/jni/xmlj
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ has-props
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-xmlj_io.c
-file
-
-
-
-
-2009-04-24T17:48:34.000000Z
-f768ba6066e9ed34c4f45e11914bd70f
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-22926
 
 Makefile.in
 file
@@ -93,6 +59,40 @@ rwild
 
 
 21444
+
+xmlj_io.c
+file
+
+
+
+
+2009-04-24T17:48:34.000000Z
+f768ba6066e9ed34c4f45e11914bd70f
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+22926
 
 xmlj_transform.c
 file
@@ -264,40 +264,6 @@ mark
 
 2431
 
-xmlj_dom.h
-file
-
-
-
-
-2009-04-24T17:48:34.000000Z
-f596295ba3e499ce77130f3598958826
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3020
-
 xmlj_xpath.c
 file
 
@@ -332,14 +298,14 @@ doko
 
 17376
 
-xmlj_node.c
+xmlj_dom.h
 file
 
 
 
 
 2009-04-24T17:48:34.000000Z
-46df6f39e85ca06a1760e02ebe4daa22
+f596295ba3e499ce77130f3598958826
 2005-09-23T17:31:48.000000Z
 104575
 tromey
@@ -364,7 +330,7 @@ tromey
 
 
 
-5435
+3020
 
 BUGS
 file
@@ -399,6 +365,40 @@ tromey
 
 
 1109
+
+xmlj_node.c
+file
+
+
+
+
+2009-04-24T17:48:34.000000Z
+46df6f39e85ca06a1760e02ebe4daa22
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5435
 
 xmlj_error.c
 file

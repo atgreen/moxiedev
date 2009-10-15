@@ -1025,6 +1025,80 @@ verify_c_interop_param (gfc_symbol *sym)
 }
 
 
+/* Build a polymorphic CLASS entity, using the symbol that comes from build_sym.
+   A CLASS entity is represented by an encapsulating type, which contains the
+   declared type as '$data' component, plus an integer component '$vindex'
+   which determines the dynamic type.  */
+
+static gfc_try
+encapsulate_class_symbol (gfc_typespec *ts, symbol_attribute *attr,
+			  gfc_array_spec **as)
+{
+  char name[GFC_MAX_SYMBOL_LEN + 5];
+  gfc_symbol *fclass;
+  gfc_component *c;
+
+  /* Determine the name of the encapsulating type.  */
+  if ((*as) && (*as)->rank && attr->allocatable)
+    sprintf (name, ".class.%s.%d.a", ts->u.derived->name, (*as)->rank);
+  else if ((*as) && (*as)->rank)
+    sprintf (name, ".class.%s.%d", ts->u.derived->name, (*as)->rank);
+  else if (attr->allocatable)
+    sprintf (name, ".class.%s.a", ts->u.derived->name);
+  else
+    sprintf (name, ".class.%s", ts->u.derived->name);
+
+  gfc_find_symbol (name, ts->u.derived->ns, 0, &fclass);
+  if (fclass == NULL)
+    {
+      gfc_symtree *st;
+      /* If not there, create a new symbol.  */
+      fclass = gfc_new_symbol (name, ts->u.derived->ns);
+      st = gfc_new_symtree (&ts->u.derived->ns->sym_root, name);
+      st->n.sym = fclass;
+      gfc_set_sym_referenced (fclass);
+      fclass->refs++;
+      fclass->ts.type = BT_UNKNOWN;
+      fclass->vindex = ts->u.derived->vindex;
+      fclass->attr.abstract = ts->u.derived->attr.abstract;
+      if (ts->u.derived->f2k_derived)
+	fclass->f2k_derived = gfc_get_namespace (NULL, 0);
+      if (gfc_add_flavor (&fclass->attr, FL_DERIVED,
+	  NULL, &gfc_current_locus) == FAILURE)
+	return FAILURE;
+
+      /* Add component '$data'.  */
+      if (gfc_add_component (fclass, "$data", &c) == FAILURE)
+   	return FAILURE;
+      c->ts = *ts;
+      c->ts.type = BT_DERIVED;
+      c->attr.access = ACCESS_PRIVATE;
+      c->ts.u.derived = ts->u.derived;
+      c->attr.pointer = attr->pointer || attr->dummy;
+      c->attr.allocatable = attr->allocatable;
+      c->attr.dimension = attr->dimension;
+      c->attr.abstract = ts->u.derived->attr.abstract;
+      c->as = (*as);
+      c->initializer = gfc_get_expr ();
+      c->initializer->expr_type = EXPR_NULL;
+
+      /* Add component '$vindex'.  */
+      if (gfc_add_component (fclass, "$vindex", &c) == FAILURE)
+   	return FAILURE;
+      c->ts.type = BT_INTEGER;
+      c->ts.kind = 4;
+      c->attr.access = ACCESS_PRIVATE;
+      c->initializer = gfc_int_expr (0);
+    }
+
+  fclass->attr.extension = 1;
+  fclass->attr.is_class = 1;
+  ts->u.derived = fclass;
+  attr->allocatable = attr->pointer = attr->dimension = 0;
+  (*as) = NULL;  /* XXX */
+  return SUCCESS;
+}
+
 /* Function called by variable_decl() that adds a name to the symbol table.  */
 
 static gfc_try
@@ -1096,6 +1170,9 @@ build_sym (const char *name, gfc_charlen *cl,
     }
 
   sym->attr.implied_index = 0;
+
+  if (sym->ts.type == BT_CLASS)
+    encapsulate_class_symbol (&sym->ts, &sym->attr, &sym->as);
 
   return SUCCESS;
 }
@@ -1250,6 +1327,7 @@ add_init_expr_to_sym (const char *name, gfc_expr **initp, locus *var_locus)
       /* Check if the assignment can happen. This has to be put off
 	 until later for a derived type variable.  */
       if (sym->ts.type != BT_DERIVED && init->ts.type != BT_DERIVED
+	  && sym->ts.type != BT_CLASS && init->ts.type != BT_CLASS
 	  && gfc_check_assign_symbol (sym, init) == FAILURE)
 	return FAILURE;
 
@@ -1386,9 +1464,9 @@ build_struct (const char *name, gfc_charlen *cl, gfc_expr **init,
 {
   gfc_component *c;
 
-  /* If the current symbol is of the same derived type that we're
+  /* F03:C438/C439. If the current symbol is of the same derived type that we're
      constructing, it must have the pointer attribute.  */
-  if (current_ts.type == BT_DERIVED
+  if ((current_ts.type == BT_DERIVED || current_ts.type == BT_CLASS)
       && current_ts.u.derived == gfc_current_block ()
       && current_attr.pointer == 0)
     {
@@ -1467,17 +1545,12 @@ build_struct (const char *name, gfc_charlen *cl, gfc_expr **init,
 	}
     }
 
+  if (c->ts.type == BT_CLASS)
+    encapsulate_class_symbol (&c->ts, &c->attr, &c->as);
+
   /* Check array components.  */
   if (!c->attr.dimension)
-    {
-      if (c->attr.allocatable)
-	{
-	  gfc_error ("Allocatable component at %C must be an array");
-	  return FAILURE;
-	}
-      else
-	return SUCCESS;
-    }
+    return SUCCESS;
 
   if (c->attr.pointer)
     {
@@ -2370,23 +2443,19 @@ gfc_match_decl_type_spec (gfc_typespec *ts, int implicit_flag)
     }
 
   m = gfc_match (" type ( %n )", name);
-  if (m != MATCH_YES)
+  if (m == MATCH_YES)
+    ts->type = BT_DERIVED;
+  else
     {
       m = gfc_match (" class ( %n )", name);
       if (m != MATCH_YES)
 	return m;
-      ts->is_class = 1;
+      ts->type = BT_CLASS;
 
       if (gfc_notify_std (GFC_STD_F2003, "Fortran 2003: CLASS statement at %C")
 			  == FAILURE)
 	return MATCH_ERROR;
-
-      /* TODO: Implement Polymorphism.  */
-      gfc_warning ("Polymorphic entities are not yet implemented. "
-		   "CLASS will be treated like TYPE at %C");
     }
-
-  ts->type = BT_DERIVED;
 
   /* Defer association of the derived type until the end of the
      specification block.  However, if the derived type can be
@@ -5441,6 +5510,7 @@ gfc_match_end (gfc_statement *st)
       break;
 
     case COMP_SELECT:
+    case COMP_SELECT_TYPE:
       *st = ST_END_SELECT;
       target = " select";
       eos_ok = 0;
@@ -6192,6 +6262,7 @@ do_parm (void)
   gfc_symbol *sym;
   gfc_expr *init;
   match m;
+  gfc_try t;
 
   m = gfc_match_symbol (&sym, 0);
   if (m == MATCH_NO)
@@ -6233,35 +6304,8 @@ do_parm (void)
       goto cleanup;
     }
 
-  if (sym->ts.type == BT_CHARACTER
-      && sym->ts.u.cl != NULL
-      && sym->ts.u.cl->length != NULL
-      && sym->ts.u.cl->length->expr_type == EXPR_CONSTANT
-      && init->expr_type == EXPR_CONSTANT
-      && init->ts.type == BT_CHARACTER)
-    gfc_set_constant_character_len (
-      mpz_get_si (sym->ts.u.cl->length->value.integer), init, -1);
-  else if (sym->ts.type == BT_CHARACTER && sym->ts.u.cl != NULL
-	   && sym->ts.u.cl->length == NULL)
-	{
-	  int clen;
-	  if (init->expr_type == EXPR_CONSTANT)
-	    {
-	      clen = init->value.character.length;
-	      sym->ts.u.cl->length = gfc_int_expr (clen);
-	    }
-	  else if (init->expr_type == EXPR_ARRAY)
-	    {
-	      gfc_expr *p = init->value.constructor->expr;
-	      clen = p->value.character.length;
-	      sym->ts.u.cl->length = gfc_int_expr (clen);
-	    }
-	  else if (init->ts.u.cl && init->ts.u.cl->length)
-	    sym->ts.u.cl->length = gfc_copy_expr (sym->value->ts.u.cl->length);
-	}
-
-  sym->value = init;
-  return MATCH_YES;
+  t = add_init_expr_to_sym (sym->name, &init, &gfc_current_locus);
+  return (t == SUCCESS) ? MATCH_YES : MATCH_ERROR;
 
 cleanup:
   gfc_free_expr (init);
@@ -6703,6 +6747,46 @@ gfc_get_type_attr_spec (symbol_attribute *attr, char *name)
 }
 
 
+/* Assign a hash value for a derived type. The algorithm is that of
+   SDBM. The hashed string is '[module_name #] derived_name'.  */
+static unsigned int
+hash_value (gfc_symbol *sym)
+{
+  unsigned int hash = 0;
+  const char *c;
+  int i, len;
+
+  /* Hash of the module or procedure name.  */
+  if (sym->module != NULL)
+    c = sym->module;
+  else if (sym->ns && sym->ns->proc_name
+	     && sym->ns->proc_name->attr.flavor == FL_MODULE)
+    c = sym->ns->proc_name->name;
+  else
+    c = NULL;
+
+  if (c)
+    { 
+      len = strlen (c);
+      for (i = 0; i < len; i++, c++)
+	hash =  (hash << 6) + (hash << 16) - hash + (*c);
+
+      /* Disambiguate between 'a' in 'aa' and 'aa' in 'a'.  */ 
+      hash =  (hash << 6) + (hash << 16) - hash + '#';
+    }
+
+  /* Hash of the derived type name.  */
+  len = strlen (sym->name);
+  c = sym->name;
+  for (i = 0; i < len; i++, c++)
+    hash = (hash << 6) + (hash << 16) - hash + (*c);
+
+  /* Return the hash but take the modulus for the sake of module read,
+     even though this slightly increases the chance of collision.  */
+  return (hash % 100000000);
+}
+
+
 /* Match the beginning of a derived type declaration.  If a type name
    was the result of a function, then it is possible to have a symbol
    already to be known as a derived type yet have no components.  */
@@ -6822,6 +6906,10 @@ gfc_match_derived_decl (void)
       st = gfc_new_symtree (&extended->f2k_derived->sym_root, sym->name);
       st->n.sym = sym;
     }
+
+  if (!sym->vindex)
+    /* Set the vindex for this type.  */
+    sym->vindex = hash_value (sym);
 
   /* Take over the ABSTRACT attribute.  */
   sym->attr.abstract = attr.abstract;

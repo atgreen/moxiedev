@@ -2082,7 +2082,7 @@ assemble_variable (tree decl, int top_level ATTRIBUTE_UNUSED,
 	     Without this, if the variable is placed in a
 	     section-anchored block, the template will only be marked
 	     when it's too late.  */
-	  record_references_in_initializer (to);
+	  record_references_in_initializer (to, false);
 	}
 
       decl = to;
@@ -5997,8 +5997,13 @@ default_elf_asm_named_section (const char *name, unsigned int flags,
       if (flags & SECTION_ENTSIZE)
 	fprintf (asm_out_file, ",%d", flags & SECTION_ENTSIZE);
       if (HAVE_COMDAT_GROUP && (flags & SECTION_LINKONCE))
-	fprintf (asm_out_file, ",%s,comdat",
-		 IDENTIFIER_POINTER (DECL_COMDAT_GROUP (decl)));
+	{
+	  if (TREE_CODE (decl) == IDENTIFIER_NODE)
+	    fprintf (asm_out_file, ",%s,comdat", IDENTIFIER_POINTER (decl));
+	  else
+	    fprintf (asm_out_file, ",%s,comdat",
+		     IDENTIFIER_POINTER (DECL_COMDAT_GROUP (decl)));
+	}
     }
 
   putc ('\n', asm_out_file);

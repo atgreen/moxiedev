@@ -33,13 +33,16 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-pass.h"
 
 /* Walk tree and record all calls and references to functions/variables.
-   Called via walk_tree: TP is pointer to tree to be examined.  */
+   Called via walk_tree: TP is pointer to tree to be examined.  
+   When DATA is non-null, record references to callgraph.
+   */
 
 static tree
-record_reference (tree *tp, int *walk_subtrees, void *data ATTRIBUTE_UNUSED)
+record_reference (tree *tp, int *walk_subtrees, void *data)
 {
   tree t = *tp;
   tree decl;
+  bool do_callgraph = data != NULL;
 
   switch (TREE_CODE (t))
     {
@@ -57,7 +60,7 @@ record_reference (tree *tp, int *walk_subtrees, void *data ATTRIBUTE_UNUSED)
       /* Record dereferences to the functions.  This makes the
 	 functions reachable unconditionally.  */
       decl = TREE_OPERAND (*tp, 0);
-      if (TREE_CODE (decl) == FUNCTION_DECL)
+      if (TREE_CODE (decl) == FUNCTION_DECL && do_callgraph)
 	cgraph_mark_address_taken_node (cgraph_node (decl));
       break;
 
@@ -76,6 +79,29 @@ record_reference (tree *tp, int *walk_subtrees, void *data ATTRIBUTE_UNUSED)
     }
 
   return NULL_TREE;
+}
+
+/* Reset inlining information of all incoming call edges of NODE.  */
+
+void
+reset_inline_failed (struct cgraph_node *node)
+{
+  struct cgraph_edge *e;
+
+  for (e = node->callers; e; e = e->next_caller)
+    {
+      e->callee->global.inlined_to = NULL;
+      if (!node->analyzed)
+	e->inline_failed = CIF_BODY_NOT_AVAILABLE;
+      else if (node->local.redefined_extern_inline)
+	e->inline_failed = CIF_REDEFINED_EXTERN_INLINE;
+      else if (!node->local.inlinable)
+	e->inline_failed = CIF_FUNCTION_NOT_INLINABLE;
+      else if (e->call_stmt_cannot_inline_p)
+	e->inline_failed = CIF_MISMATCHED_ARGUMENTS;
+      else
+	e->inline_failed = CIF_FUNCTION_NOT_CONSIDERED;
+    }
 }
 
 /* Computes the frequency of the call statement so that it can be stored in
@@ -195,13 +221,15 @@ struct gimple_opt_pass pass_build_cgraph_edges =
 };
 
 /* Record references to functions and other variables present in the
-   initial value of DECL, a variable.  */
+   initial value of DECL, a variable.  
+   When ONLY_VARS is true, we mark needed only variables, not functions.  */
 
 void
-record_references_in_initializer (tree decl)
+record_references_in_initializer (tree decl, bool only_vars)
 {
   struct pointer_set_t *visited_nodes = pointer_set_create ();
-  walk_tree (&DECL_INITIAL (decl), record_reference, NULL, visited_nodes);
+  walk_tree (&DECL_INITIAL (decl), record_reference, 
+            only_vars ? NULL : decl, visited_nodes);
   pointer_set_destroy (visited_nodes);
 }
 

@@ -223,7 +223,7 @@ cgraph_clone_inlined_nodes (struct cgraph_edge *e, bool duplicate,
       /* We may eliminate the need for out-of-line copy to be output.
 	 In that case just go ahead and re-use it.  */
       if (!e->callee->callers->next_caller
-	  && !e->callee->needed
+	  && cgraph_can_remove_if_no_direct_calls_p (e->callee)
 	  && !cgraph_new_nodes)
 	{
 	  gcc_assert (!e->callee->global.inlined_to);
@@ -233,12 +233,13 @@ cgraph_clone_inlined_nodes (struct cgraph_edge *e, bool duplicate,
 	      nfunctions_inlined++;
 	    }
 	  duplicate = false;
+	  e->callee->local.externally_visible = false;
 	}
       else
 	{
 	  struct cgraph_node *n;
 	  n = cgraph_clone_node (e->callee, e->count, e->frequency, e->loop_nest, 
-				 update_original);
+				 update_original, NULL);
 	  cgraph_redirect_edge_callee (e, n);
 	}
     }
@@ -286,7 +287,7 @@ cgraph_mark_inline_edge (struct cgraph_edge *e, bool update_original,
   e->callee->global.inlined = true;
 
   if (e->callee->callers->next_caller
-      || e->callee->needed)
+      || !cgraph_can_remove_if_no_direct_calls_p (e->callee))
     duplicate = true;
   cgraph_clone_inlined_nodes (e, true, update_original);
 
@@ -326,7 +327,7 @@ cgraph_mark_inline (struct cgraph_edge *edge)
   struct cgraph_node *what = edge->callee;
   struct cgraph_edge *e, *next;
 
-  gcc_assert (!gimple_call_cannot_inline_p (edge->call_stmt));
+  gcc_assert (!edge->call_stmt_cannot_inline_p);
   /* Look for all calls, mark them inline and clone recursively
      all inlined functions.  */
   for (e = what->callers; e; e = next)
@@ -368,7 +369,8 @@ cgraph_estimate_growth (struct cgraph_node *node)
      we decide to not inline for different reasons, but it is not big deal
      as in that case we will keep the body around, but we will also avoid
      some inlining.  */
-  if (!node->needed && !DECL_EXTERNAL (node->decl) && !self_recursive)
+  if (cgraph_only_called_directly_p (node)
+      && !DECL_EXTERNAL (node->decl) && !self_recursive)
     growth -= node->global.size;
 
   node->global.estimated_growth = growth;
@@ -723,7 +725,8 @@ cgraph_decide_recursive_inlining (struct cgraph_node *node,
 	     cgraph_node_name (node));
 
   /* We need original clone to copy around.  */
-  master_clone = cgraph_clone_node (node, node->count, CGRAPH_FREQ_BASE, 1, false);
+  master_clone = cgraph_clone_node (node, node->count, CGRAPH_FREQ_BASE, 1,
+  				    false, NULL);
   master_clone->needed = true;
   for (e = master_clone->callees; e; e = e->next_callee)
     if (!e->inline_failed)
@@ -1030,7 +1033,7 @@ cgraph_decide_inlining_of_small_functions (void)
       else
 	{
 	  struct cgraph_node *callee;
-	  if (gimple_call_cannot_inline_p (edge->call_stmt)
+	  if (edge->call_stmt_cannot_inline_p
 	      || !cgraph_check_inline_limits (edge->caller, edge->callee,
 					      &edge->inline_failed, true))
 	    {
@@ -1110,7 +1113,13 @@ cgraph_decide_inlining (void)
   bool redo_always_inline = true;
   int initial_size = 0;
 
-  cgraph_remove_function_insertion_hook (function_insertion_hook_holder);
+  /* FIXME lto.  We need to rethink how to coordinate different passes. */
+  if (flag_ltrans)
+    return 0;
+
+  /* FIXME lto.  We need to re-think about how the passes get invoked. */
+  if (!flag_wpa)
+    cgraph_remove_function_insertion_hook (function_insertion_hook_holder);
 
   max_count = 0;
   max_benefit = 0;
@@ -1120,7 +1129,6 @@ cgraph_decide_inlining (void)
 	struct cgraph_edge *e;
 
 	gcc_assert (inline_summary (node)->self_size == node->global.size);
-	gcc_assert (node->needed || node->reachable);
 	initial_size += node->global.size;
 	for (e = node->callees; e; e = e->next_callee)
 	  if (max_count < e->count)
@@ -1128,7 +1136,9 @@ cgraph_decide_inlining (void)
 	if (max_benefit < inline_summary (node)->time_inlining_benefit)
 	  max_benefit = inline_summary (node)->time_inlining_benefit;
       }
-  gcc_assert (!max_count || (profile_info && flag_branch_probabilities));
+  gcc_assert (in_lto_p
+	      || !max_count
+	      || (profile_info && flag_branch_probabilities));
   overall_size = initial_size;
 
   nnodes = cgraph_postorder (order);
@@ -1176,8 +1186,7 @@ cgraph_decide_inlining (void)
 	  for (e = node->callers; e; e = next)
 	    {
 	      next = e->next_caller;
-	      if (!e->inline_failed
-		  || gimple_call_cannot_inline_p (e->call_stmt))
+	      if (!e->inline_failed || e->call_stmt_cannot_inline_p)
 		continue;
 	      if (cgraph_recursive_inlining_p (e->caller, e->callee,
 					       &e->inline_failed))
@@ -1219,12 +1228,12 @@ cgraph_decide_inlining (void)
 
 	  if (node->callers
 	      && !node->callers->next_caller
-	      && !node->needed
+	      && cgraph_only_called_directly_p (node)
 	      && node->local.inlinable
 	      && node->callers->inline_failed
 	      && node->callers->caller != node
 	      && node->callers->caller->global.inlined_to != node
-	      && !gimple_call_cannot_inline_p (node->callers->call_stmt)
+	      && !node->callers->call_stmt_cannot_inline_p
 	      && !DECL_EXTERNAL (node->decl)
 	      && !DECL_COMDAT (node->decl))
 	    {
@@ -1410,7 +1419,7 @@ cgraph_decide_inlining_incrementally (struct cgraph_node *node,
 	if (!e->callee->local.disregard_inline_limits
 	    && (mode != INLINE_ALL || !e->callee->local.inlinable))
 	  continue;
-	if (gimple_call_cannot_inline_p (e->call_stmt))
+	if (e->call_stmt_cannot_inline_p)
 	  continue;
 	/* When the edge is already inlined, we just need to recurse into
 	   it in order to fully flatten the leaves.  */
@@ -1528,7 +1537,7 @@ cgraph_decide_inlining_incrementally (struct cgraph_node *node,
 	  }
 	if (!cgraph_check_inline_limits (node, e->callee, &e->inline_failed,
 				         false)
-	    || gimple_call_cannot_inline_p (e->call_stmt))
+	    || e->call_stmt_cannot_inline_p)
 	  {
 	    if (dump_file)
 	      {
@@ -1631,6 +1640,7 @@ static bool
 cgraph_gate_ipa_early_inlining (void)
 {
   return (flag_early_inlining
+	  && !in_lto_p
 	  && (flag_branch_probabilities || flag_test_coverage
 	      || profile_arc_flag));
 }
@@ -1917,6 +1927,10 @@ static void
 inline_generate_summary (void)
 {
   struct cgraph_node *node;
+
+  /* FIXME lto.  We should not run any IPA-summary pass in LTRANS mode.  */
+  if (flag_ltrans)
+    return;
 
   function_insertion_hook_holder =
       cgraph_add_function_insertion_hook (&add_new_function, NULL);

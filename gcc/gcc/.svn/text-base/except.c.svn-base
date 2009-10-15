@@ -552,8 +552,11 @@ duplicate_eh_regions_1 (struct duplicate_eh_regions_data *data,
 
     case ERT_ALLOWED_EXCEPTIONS:
       new_r->u.allowed.type_list = old_r->u.allowed.type_list;
-      new_r->u.allowed.label
-	= data->label_map (old_r->u.allowed.label, data->label_map_data);
+      if (old_r->u.allowed.label)
+	new_r->u.allowed.label
+	    = data->label_map (old_r->u.allowed.label, data->label_map_data);
+      else
+	new_r->u.allowed.label = NULL_TREE;
       break;
 
     case ERT_MUST_NOT_THROW:
@@ -2886,7 +2889,14 @@ output_ttype (tree type, int tt_format, int tt_format_size)
     {
       struct varpool_node *node;
 
-      type = lookup_type_for_runtime (type);
+      /* FIXME lto.  pass_ipa_free_lang_data changes all types to
+	 runtime types so TYPE should already be a runtime type
+	 reference.  When pass_ipa_free_lang data is made a default
+	 pass, we can then remove the call to lookup_type_for_runtime
+	 below.  */
+      if (TYPE_P (type))
+	type = lookup_type_for_runtime (type);
+
       value = expand_expr (type, NULL_RTX, VOIDmode, EXPAND_INITIALIZER);
 
       /* Let cgraph know that the rtti decl is used.  Not all of the

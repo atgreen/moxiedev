@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/libffi/src
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,10 +26,10 @@ ktietz
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-arm
+powerpc
 dir
 
-powerpc
+arm
 dir
 
 closures.c
@@ -72,15 +72,6 @@ dir
 sh64
 dir
 
-x86
-dir
-
-alpha
-dir
-
-m68k
-dir
-
 types.c
 file
 
@@ -115,19 +106,25 @@ aph
 
 2904
 
+m68k
+dir
+
+alpha
+dir
+
+x86
+dir
+
 frv
 dir
 
 s390
 dir
 
-cris
-dir
-
 pa
 dir
 
-ia64
+cris
 dir
 
 raw_api.c
@@ -163,6 +160,9 @@ aph
 
 
 6067
+
+ia64
+dir
 
 java_raw_api.c
 file

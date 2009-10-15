@@ -482,7 +482,8 @@ gfc_conv_component_ref (gfc_se * se, gfc_ref * ref)
       se->string_length = tmp;
     }
 
-  if ((c->attr.pointer && c->attr.dimension == 0 && c->ts.type != BT_CHARACTER)
+  if (((c->attr.pointer || c->attr.allocatable) && c->attr.dimension == 0
+       && c->ts.type != BT_CHARACTER)
       || c->attr.proc_pointer)
     se->expr = build_fold_indirect_ref_loc (input_location,
 					se->expr);
@@ -510,8 +511,12 @@ conv_parent_component_references (gfc_se * se, gfc_ref * ref)
 
   if (dt->attr.extension && dt->components)
     {
+      if (dt->attr.is_class)
+	cmp = dt->components;
+      else
+	cmp = dt->components->next;
       /* Return if the component is not in the parent type.  */
-      for (cmp = dt->components->next; cmp; cmp = cmp->next)
+      for (; cmp; cmp = cmp->next)
 	if (strcmp (c->name, cmp->name) == 0)
 	  return;
 	
@@ -1518,10 +1523,134 @@ get_proc_ptr_comp (gfc_expr *e)
 }
 
 
+/* Select a class typebound procedure at runtime.  */
+static void
+select_class_proc (gfc_se *se, gfc_class_esym_list *elist,
+		   tree declared, locus *where)
+{
+  tree end_label;
+  tree label;
+  tree tmp;
+  tree vindex;
+  stmtblock_t body;
+  gfc_class_esym_list *next_elist, *tmp_elist;
+
+  /* Calculate the switch expression: class_object.vindex.  */
+  gcc_assert (elist->class_object->ts.type == BT_CLASS);
+  tmp = elist->class_object->ts.u.derived->components->next->backend_decl;
+  vindex = fold_build3 (COMPONENT_REF, TREE_TYPE (tmp),
+			elist->class_object->backend_decl,
+			tmp, NULL_TREE);
+  vindex = gfc_evaluate_now (vindex, &se->pre);
+
+  /* Fix the function type to be that of the declared type.  */
+  declared = gfc_create_var (TREE_TYPE (declared), "method");
+
+  end_label = gfc_build_label_decl (NULL_TREE);
+
+  gfc_init_block (&body);
+
+  /* Go through the list of extensions.  */
+  for (; elist; elist = next_elist)
+    {
+      /* This case has already been added.  */
+      if (elist->derived == NULL)
+	goto free_elist;
+
+      /* Run through the chain picking up all the cases that call the
+	 same procedure.  */
+      tmp_elist = elist;
+      for (; elist; elist = elist->next)
+	{
+	  tree cval;
+
+	  if (elist->esym != tmp_elist->esym)
+	    continue;
+
+	  cval = build_int_cst (TREE_TYPE (vindex),
+				elist->derived->vindex);
+	  /* Build a label for the vindex value.  */
+	  label = gfc_build_label_decl (NULL_TREE);
+	  tmp = fold_build3 (CASE_LABEL_EXPR, void_type_node,
+			     cval, NULL_TREE, label);
+	  gfc_add_expr_to_block (&body, tmp);
+
+	  /* Null the reference the derived type so that this case is
+	     not used again.  */
+	  elist->derived = NULL;
+	}
+
+      elist = tmp_elist;
+
+      /* Get a pointer to the procedure,  */
+      tmp = gfc_get_symbol_decl (elist->esym);
+      if (!POINTER_TYPE_P (TREE_TYPE (tmp)))
+	{
+	  gcc_assert (TREE_CODE (tmp) == FUNCTION_DECL);
+	  tmp = gfc_build_addr_expr (NULL_TREE, tmp);
+	}
+
+      /* Assign the pointer to the appropriate procedure.  */
+      gfc_add_modify (&body, declared,
+		      fold_convert (TREE_TYPE (declared), tmp));
+
+      /* Break to the end of the construct.  */
+      tmp = build1_v (GOTO_EXPR, end_label);
+      gfc_add_expr_to_block (&body, tmp);
+
+      /* Free the elists as we go; freeing them in gfc_free_expr causes
+	 segfaults because it occurs too early and too often.  */
+    free_elist:
+      next_elist = elist->next;
+      gfc_free (elist);
+      elist = NULL;
+    }
+
+  /* Default is an error.  */
+  label = gfc_build_label_decl (NULL_TREE);
+  tmp = fold_build3 (CASE_LABEL_EXPR, void_type_node,
+		     NULL_TREE, NULL_TREE, label);
+  gfc_add_expr_to_block (&body, tmp);
+  tmp = gfc_trans_runtime_error (true, where,
+		"internal error: bad vindex in dynamic dispatch");
+  gfc_add_expr_to_block (&body, tmp);
+
+  /* Write the switch expression.  */
+  tmp = gfc_finish_block (&body);
+  tmp = build3_v (SWITCH_EXPR, vindex, tmp, NULL_TREE);
+  gfc_add_expr_to_block (&se->pre, tmp);
+
+  tmp = build1_v (LABEL_EXPR, end_label);
+  gfc_add_expr_to_block (&se->pre, tmp);
+
+  se->expr = declared;
+  return;
+}
+
+
 static void
 conv_function_val (gfc_se * se, gfc_symbol * sym, gfc_expr * expr)
 {
   tree tmp;
+
+  if (expr && expr->symtree
+	&& expr->value.function.class_esym)
+    {
+      if (!sym->backend_decl)
+	sym->backend_decl = gfc_get_extern_function_decl (sym);
+
+      tmp = sym->backend_decl;
+
+      if (!POINTER_TYPE_P (TREE_TYPE (tmp)))
+	{
+	  gcc_assert (TREE_CODE (tmp) == FUNCTION_DECL);
+	  tmp = gfc_build_addr_expr (NULL_TREE, tmp);
+	}
+
+      select_class_proc (se, expr->value.function.class_esym,
+			 tmp, &expr->where);
+      return;
+    }
 
   if (gfc_is_proc_ptr_comp (expr, NULL))
     tmp = get_proc_ptr_comp (expr);
@@ -2641,6 +2770,49 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 		parmse.string_length = build_int_cst (gfc_charlen_type_node, 0);
 	    }
 	}
+      else if (fsym && fsym->ts.type == BT_CLASS
+		 && e->ts.type == BT_DERIVED)
+	{
+	  tree data;
+	  tree vindex;
+
+	  /* The derived type needs to be converted to a temporary
+	     CLASS object.  */
+	  gfc_init_se (&parmse, se);
+	  type = gfc_typenode_for_spec (&fsym->ts);
+	  var = gfc_create_var (type, "class");
+
+	  /* Get the components.  */
+	  tmp = fsym->ts.u.derived->components->backend_decl;
+	  data = fold_build3 (COMPONENT_REF, TREE_TYPE (tmp),
+			      var, tmp, NULL_TREE);
+	  tmp = fsym->ts.u.derived->components->next->backend_decl;
+	  vindex = fold_build3 (COMPONENT_REF, TREE_TYPE (tmp),
+			      var, tmp, NULL_TREE);
+
+	  /* Set the vindex.  */
+	  tmp = build_int_cst (TREE_TYPE (vindex),
+			       e->ts.u.derived->vindex);
+	  gfc_add_modify (&parmse.pre, vindex, tmp);
+
+	  /* Now set the data field.  */
+	  argss = gfc_walk_expr (e);
+	  if (argss == gfc_ss_terminator)
+            {
+	      gfc_conv_expr_reference (&parmse, e);
+	      tmp = fold_convert (TREE_TYPE (data),
+				  parmse.expr);
+	      gfc_add_modify (&parmse.pre, data, tmp);
+	    }
+	  else
+	    {
+	      gfc_conv_expr (&parmse, e);
+	      gfc_add_modify (&parmse.pre, data, parmse.expr);
+	    }
+
+	  /* Pass the address of the class object.  */
+	  parmse.expr = gfc_build_addr_expr (NULL_TREE, var);
+	}
       else if (se->ss && se->ss->useflags)
 	{
 	  /* An elemental function inside a scalarized loop.  */
@@ -3607,6 +3779,7 @@ gfc_conv_initializer (gfc_expr * expr, gfc_typespec * ts, tree type,
       switch (ts->type)
 	{
 	case BT_DERIVED:
+	case BT_CLASS:
 	  gfc_init_se (&se, NULL);
 	  gfc_conv_structure (&se, expr, 1);
 	  return se.expr;
@@ -3770,6 +3943,13 @@ gfc_trans_subcomponent_assign (tree dest, gfc_component * cm, gfc_expr * expr)
 			       fold_convert (TREE_TYPE (dest), se.expr));
 	  gfc_add_block_to_block (&block, &se.post);
 	}
+    }
+  else if (cm->ts.type == BT_CLASS && expr->expr_type == EXPR_NULL)
+    {
+      /* NULL initialization for CLASS components.  */
+      tmp = gfc_trans_structure_assign (dest,
+					gfc_default_initializer (&cm->ts));
+      gfc_add_expr_to_block (&block, tmp);
     }
   else if (cm->attr.dimension)
     {
@@ -3966,12 +4146,26 @@ gfc_conv_structure (gfc_se * se, gfc_expr * expr, int init)
       if (!c->expr || cm->attr.allocatable)
         continue;
 
-      val = gfc_conv_initializer (c->expr, &cm->ts,
-	  TREE_TYPE (cm->backend_decl), cm->attr.dimension,
-	  cm->attr.pointer || cm->attr.proc_pointer);
+      if (cm->ts.type == BT_CLASS)
+	{
+	  val = gfc_conv_initializer (c->expr, &cm->ts,
+	      TREE_TYPE (cm->ts.u.derived->components->backend_decl),
+	      cm->ts.u.derived->components->attr.dimension,
+	      cm->ts.u.derived->components->attr.pointer);
 
-      /* Append it to the constructor list.  */
-      CONSTRUCTOR_APPEND_ELT (v, cm->backend_decl, val);
+	  /* Append it to the constructor list.  */
+	  CONSTRUCTOR_APPEND_ELT (v, cm->ts.u.derived->components->backend_decl,
+				  val);
+	}
+      else
+	{
+	  val = gfc_conv_initializer (c->expr, &cm->ts,
+	      TREE_TYPE (cm->backend_decl), cm->attr.dimension,
+	      cm->attr.pointer || cm->attr.proc_pointer);
+
+	  /* Append it to the constructor list.  */
+	  CONSTRUCTOR_APPEND_ELT (v, cm->backend_decl, val);
+	}
     }
   se->expr = build_constructor (type, v);
   if (init) 

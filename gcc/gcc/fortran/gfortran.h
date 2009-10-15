@@ -142,9 +142,8 @@ gfc_source_form;
 /* Basic types.  BT_VOID is used by ISO C Binding so funcs like c_f_pointer
    can take any arg with the pointer attribute as a param.  */
 typedef enum
-{ BT_UNKNOWN = 1, BT_INTEGER, BT_REAL, BT_COMPLEX,
-  BT_LOGICAL, BT_CHARACTER, BT_DERIVED, BT_PROCEDURE, BT_HOLLERITH,
-  BT_VOID
+{ BT_UNKNOWN = 1, BT_INTEGER, BT_REAL, BT_COMPLEX, BT_LOGICAL, BT_CHARACTER,
+  BT_DERIVED, BT_CLASS, BT_PROCEDURE, BT_HOLLERITH, BT_VOID
 }
 bt;
 
@@ -222,7 +221,7 @@ typedef enum
   ST_STOP, ST_SUBROUTINE, ST_TYPE, ST_USE, ST_WHERE_BLOCK, ST_WHERE, ST_WAIT, 
   ST_WRITE, ST_ASSIGNMENT, ST_POINTER_ASSIGNMENT, ST_SELECT_CASE, ST_SEQUENCE,
   ST_SIMPLE_IF, ST_STATEMENT_FUNCTION, ST_DERIVED_DECL, ST_LABEL_ASSIGNMENT,
-  ST_ENUM, ST_ENUMERATOR, ST_END_ENUM,
+  ST_ENUM, ST_ENUMERATOR, ST_END_ENUM, ST_SELECT_TYPE, ST_TYPE_IS, ST_CLASS_IS,
   ST_OMP_ATOMIC, ST_OMP_BARRIER, ST_OMP_CRITICAL, ST_OMP_END_CRITICAL,
   ST_OMP_END_DO, ST_OMP_END_MASTER, ST_OMP_END_ORDERED, ST_OMP_END_PARALLEL,
   ST_OMP_END_PARALLEL_DO, ST_OMP_END_PARALLEL_SECTIONS,
@@ -364,6 +363,7 @@ enum gfc_isym_id
   GFC_ISYM_EXIT,
   GFC_ISYM_EXP,
   GFC_ISYM_EXPONENT,
+  GFC_ISYM_EXTENDS_TYPE_OF,
   GFC_ISYM_FDATE,
   GFC_ISYM_FGET,
   GFC_ISYM_FGETC,
@@ -478,6 +478,7 @@ enum gfc_isym_id
   GFC_ISYM_RESHAPE,
   GFC_ISYM_RRSPACING,
   GFC_ISYM_RSHIFT,
+  GFC_ISYM_SAME_TYPE_AS,
   GFC_ISYM_SC_KIND,
   GFC_ISYM_SCALE,
   GFC_ISYM_SCAN,
@@ -670,6 +671,7 @@ typedef struct
 
   unsigned is_bind_c:1;		/* say if is bound to C.  */
   unsigned extension:1;		/* extends a derived type.  */
+  unsigned is_class:1;		/* is a CLASS container.  */
 
   /* These flags are both in the typespec and attribute.  The attribute
      list is what gets read from/written to a module file.  The typespec
@@ -849,7 +851,6 @@ typedef struct
   u;
 
   struct gfc_symbol *interface;	/* For PROCEDURE declarations.  */
-  unsigned int is_class:1;
   int is_c_interop;
   int is_iso_c;
   bt f90_type; 
@@ -1133,6 +1134,11 @@ typedef struct gfc_symbol
   /* Defined only for Cray pointees; points to their pointer.  */
   struct gfc_symbol *cp_pointer;
 
+  int entry_id;			/* Used in resolve.c for entries.  */
+
+  /* CLASS vindex for declared and dynamic types in the class.  */
+  int vindex;
+
   struct gfc_symbol *common_next;	/* Links for COMMON syms */
 
   /* This is in fact a gfc_common_head but it is only used for pointer
@@ -1142,8 +1148,6 @@ typedef struct gfc_symbol
   /* Make sure setup code for dummy arguments is generated in the correct
      order.  */
   int dummy_order;
-
-  int entry_id;
 
   gfc_namelist *namelist, *namelist_tail;
 
@@ -1590,6 +1594,17 @@ typedef struct gfc_intrinsic_sym
 gfc_intrinsic_sym;
 
 
+typedef struct gfc_class_esym_list
+{
+  gfc_symbol *derived;
+  gfc_symbol *esym;
+  gfc_symbol *class_object;
+  struct gfc_class_esym_list *next;
+}
+gfc_class_esym_list;
+
+#define gfc_get_class_esym_list() XCNEW (gfc_class_esym_list)
+
 /* Expression nodes.  The expression node types deserve explanations,
    since the last couple can be easily misconstrued:
 
@@ -1611,6 +1626,10 @@ gfc_intrinsic_sym;
 #include <mpc.h>
 # if MPC_VERSION >= MPC_VERSION_NUM(0,6,1)
 #  define HAVE_mpc_pow
+# endif
+# if MPC_VERSION >= MPC_VERSION_NUM(0,7,1)
+#  define HAVE_mpc_arc
+#  define HAVE_mpc_pow_z
 # endif
 #else
 #define mpc_realref(X) ((X).r)
@@ -1698,6 +1717,7 @@ typedef struct gfc_expr
       const char *name;	/* Points to the ultimate name of the function */
       gfc_intrinsic_sym *isym;
       gfc_symbol *esym;
+      gfc_class_esym_list *class_esym;
     }
     function;
 
@@ -1856,6 +1876,9 @@ typedef struct gfc_case
      represents the default case.  */
   gfc_expr *low, *high;
 
+  /* Only used for SELECT TYPE.  */
+  gfc_typespec ts;
+
   /* Next case label in the list of cases for a single CASE label.  */
   struct gfc_case *next;
 
@@ -1972,7 +1995,7 @@ typedef enum
   EXEC_ENTRY, EXEC_PAUSE, EXEC_STOP, EXEC_CONTINUE, EXEC_INIT_ASSIGN,
   EXEC_IF, EXEC_ARITHMETIC_IF, EXEC_DO, EXEC_DO_WHILE, EXEC_SELECT, EXEC_BLOCK,
   EXEC_FORALL, EXEC_WHERE, EXEC_CYCLE, EXEC_EXIT, EXEC_CALL_PPC,
-  EXEC_ALLOCATE, EXEC_DEALLOCATE, EXEC_END_PROCEDURE,
+  EXEC_ALLOCATE, EXEC_DEALLOCATE, EXEC_END_PROCEDURE, EXEC_SELECT_TYPE,
   EXEC_OPEN, EXEC_CLOSE, EXEC_WAIT,
   EXEC_READ, EXEC_WRITE, EXEC_IOLENGTH, EXEC_TRANSFER, EXEC_DT_END,
   EXEC_BACKSPACE, EXEC_ENDFILE, EXEC_INQUIRE, EXEC_REWIND, EXEC_FLUSH,
@@ -2006,7 +2029,14 @@ typedef struct gfc_code
     gfc_actual_arglist *actual;
     gfc_case *case_list;
     gfc_iterator *iterator;
-    gfc_alloc *alloc_list;
+
+    struct
+    {
+      gfc_typespec ts;
+      gfc_alloc *list;
+    }
+    alloc;
+
     gfc_open *open;
     gfc_close *close;
     gfc_filepos *filepos;
@@ -2176,6 +2206,18 @@ typedef struct iterator_stack
 }
 iterator_stack;
 extern iterator_stack *iter_stack;
+
+
+/* Used for (possibly nested) SELECT TYPE statements.  */
+typedef struct gfc_select_type_stack
+{
+  gfc_symbol *selector;			/* Current selector variable.  */
+  gfc_symtree *tmp;			/* Current temporary variable.  */
+  struct gfc_select_type_stack *prev;	/* Previous element on stack.  */
+}
+gfc_select_type_stack;
+extern gfc_select_type_stack *select_type_stack;
+#define gfc_get_select_type_stack() XCNEW (gfc_select_type_stack)
 
 
 /* Node in the linked list used for storing finalizer procedures.  */
@@ -2476,6 +2518,8 @@ gfc_gsymbol *gfc_find_gsymbol (gfc_gsymbol *, const char *);
 
 gfc_typebound_proc* gfc_get_typebound_proc (void);
 gfc_symbol* gfc_get_derived_super_type (gfc_symbol*);
+gfc_symbol* gfc_get_ultimate_derived_super_type (gfc_symbol*);
+bool gfc_type_is_extension_of (gfc_symbol *, gfc_symbol *);
 bool gfc_type_compatible (gfc_typespec *, gfc_typespec *);
 gfc_symtree* gfc_find_typebound_proc (gfc_symbol*, gfc_try*,
 				      const char*, bool, locus*);
@@ -2548,9 +2592,9 @@ void gfc_resolve_omp_do_blocks (gfc_code *, gfc_namespace *);
 void gfc_free_actual_arglist (gfc_actual_arglist *);
 gfc_actual_arglist *gfc_copy_actual_arglist (gfc_actual_arglist *);
 const char *gfc_extract_int (gfc_expr *, int *);
-gfc_expr *gfc_expr_to_initialize (gfc_expr *);
 bool is_subref_array (gfc_expr *);
 
+void gfc_add_component_ref (gfc_expr *, const char *);
 gfc_expr *gfc_build_conversion (gfc_expr *);
 void gfc_free_ref_list (gfc_ref *);
 void gfc_type_convert_binary (gfc_expr *);
@@ -2614,6 +2658,8 @@ gfc_try gfc_resolve_dim_arg (gfc_expr *);
 int gfc_is_formal_arg (void);
 void gfc_resolve_substring_charlen (gfc_expr *);
 match gfc_iso_c_sub_interface(gfc_code *, gfc_symbol *);
+gfc_expr *gfc_expr_to_initialize (gfc_expr *);
+bool gfc_type_is_extensible (gfc_symbol *sym);
 
 
 /* array.c */

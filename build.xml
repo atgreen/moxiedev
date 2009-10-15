@@ -203,6 +203,22 @@
     </exec>
 
     <echo message="===================================================================="/>
+    <echo message="====== Building libelf ============================================="/>
+    <echo message="===================================================================="/>
+    <mkdir dir="build/libelf"/>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd build/libelf; ../../libelf/configure --prefix=`(cd ../../root/usr; pwd)` --disable-shared)"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=build/libelf"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=build/libelf"/>
+      <arg value="install"/>
+    </exec>
+
+    <echo message="===================================================================="/>
     <echo message="====== Building binutils ==========================================="/>
     <echo message="===================================================================="/>
     <exec executable="sh">
@@ -233,7 +249,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc; ../../gcc/configure --enable-build-with-cxx --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-newlib)"/>
+      <arg value="(cd build/gcc; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -270,7 +286,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc; ../../gcc/configure --enable-build-with-cxx --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-newlib --with-headers=`(cd ../../root/usr/moxie-elf/include; pwd)`)"/>
+      <arg value="(cd build/gcc; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-newlib --with-headers=`(cd ../../root/usr/moxie-elf/include; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -426,7 +442,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc-uclinux; ../../gcc/configure --enable-build-with-cxx --target=moxie-uclinux --enable-threads --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)` --with-build-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`)"/>
+      <arg value="(cd build/gcc-uclinux; ../../gcc/configure  --target=moxie-uclinux --enable-threads --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)` --with-build-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>

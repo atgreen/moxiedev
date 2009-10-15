@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/ipa
 svn://gcc.gnu.org/svn/gcc
 
@@ -468,40 +468,6 @@ hjl
 
 789
 
-noclone-1.c
-file
-
-
-
-
-2009-07-31T04:47:40.000000Z
-8f25b749b3343bbe5e9448d44019f76c
-2009-07-25T18:09:42.996118Z
-150086
-jamborm
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-530
-
 ipa-sra-2.c
 file
 
@@ -535,6 +501,40 @@ hjl
 
 
 1120
+
+noclone-1.c
+file
+
+
+
+
+2009-07-31T04:47:40.000000Z
+8f25b749b3343bbe5e9448d44019f76c
+2009-07-25T18:09:42.996118Z
+150086
+jamborm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+530
 
 modif-1.c
 file

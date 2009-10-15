@@ -141,10 +141,11 @@ static void oprintf (outf_p o, const char *S, ...)
 static outf_p output_files;
 
 /* The plugin input files and their number; in that case only
-   corresponding gt-<plugin>.h are generated in the current
-   directory.  */
+   a single file is produced.  */
 static char** plugin_files;
 static size_t nb_plugin_files;
+/* the generated plugin output name & file */
+static outf_p plugin_output;
 
 /* The output header file that is included into pretty much every
    source file.  */
@@ -1116,6 +1117,8 @@ adjust_field_rtx_def (type_p t, options_p ARG_UNUSED (opt))
 		t = scalar_tp, subname = "rt_int";
 	      else if (i == VALUE && aindex == 0)
 		t = scalar_tp, subname = "rt_int";
+	      else if (i == DEBUG_EXPR && aindex == 0)
+		t = tree_tp, subname = "rt_tree";
 	      else if (i == REG && aindex == 1)
 		t = scalar_tp, subname = "rt_int";
 	      else if (i == REG && aindex == 2)
@@ -1714,15 +1717,14 @@ get_output_file_with_visibility (const char *input_file)
 
   /* In plugin mode, return NULL unless the input_file is one of the
      plugin_files.  */
-  if (plugin_files && nb_plugin_files > 0) 
-    { 
-      int ix= -1;
+  if (plugin_files)
+    {
       size_t i;
-      for (i = 0; i < nb_plugin_files && ix < 0; i++)
-      if (strcmp (input_file, plugin_files[i]) == 0) 
-	ix = i;
-      if (ix < 0) 
-	return NULL;
+      for (i = 0; i < nb_plugin_files; i++)
+	if (strcmp (input_file, plugin_files[i]) == 0)
+	  return plugin_output;
+
+      return NULL;
     }
 
   /* Determine the output file name.  */
@@ -2718,6 +2720,9 @@ write_types (outf_p output_header, type_p structures, type_p param_structs,
   type_p s;
 
   oprintf (output_header, "\n/* %s*/\n", wtd->comment);
+  /* We first emit the macros and the declarations. Functions' code is
+     emitted afterwards.  This is needed in plugin mode.  */
+  oprintf (output_header, "/* macros and declarations */\n");
   for (s = structures; s; s = s->next)
     if (s->gc_used == GC_POINTED_TO
 	|| s->gc_used == GC_MAYBE_POINTED_TO)
@@ -2766,21 +2771,11 @@ write_types (outf_p output_header, type_p structures, type_p param_structs,
 		     s->u.s.tag);
 	    continue;
 	  }
-
-	if (s->kind == TYPE_LANG_STRUCT)
-	  {
-	    type_p ss;
-	    for (ss = s->u.s.lang_struct; ss; ss = ss->next)
-	      write_func_for_structure (s, ss, NULL, wtd);
-	  }
-	else
-	  write_func_for_structure (s, s, NULL, wtd);
       }
 
   for (s = param_structs; s; s = s->next)
     if (s->gc_used == GC_POINTED_TO)
       {
-	type_p * param = s->u.param_struct.param;
 	type_p stru = s->u.param_struct.stru;
 
 	/* Declare the marker procedure.  */
@@ -2794,7 +2789,41 @@ write_types (outf_p output_header, type_p structures, type_p param_structs,
 		     s->u.s.tag);
 	    continue;
 	  }
+      }
+  
+  /* At last we emit the functions code.  */ 
+  oprintf (output_header, "\n/* functions code */\n");
+  for (s = structures; s; s = s->next)
+    if (s->gc_used == GC_POINTED_TO
+	|| s->gc_used == GC_MAYBE_POINTED_TO)
+      {
+	options_p opt;
 
+	if (s->gc_used == GC_MAYBE_POINTED_TO
+	    && s->u.s.line.file == NULL)
+	  continue;
+	for (opt = s->u.s.opt; opt; opt = opt->next)
+	  if (strcmp (opt->name, "ptr_alias") == 0)
+	    break;
+	if (opt)
+	  continue;
+	
+	if (s->kind == TYPE_LANG_STRUCT)
+	  {
+	    type_p ss;
+	    for (ss = s->u.s.lang_struct; ss; ss = ss->next)
+	      write_func_for_structure (s, ss, NULL, wtd);
+	  }
+	else
+	  write_func_for_structure (s, s, NULL, wtd);
+      }
+  for (s = param_structs; s; s = s->next)
+    if (s->gc_used == GC_POINTED_TO)
+      {
+	type_p *param = s->u.param_struct.param;
+	type_p stru = s->u.param_struct.stru;
+	if (stru->u.s.line.file == NULL)
+	  continue;
 	if (stru->kind == TYPE_LANG_STRUCT)
 	  {
 	    type_p ss;
@@ -3667,20 +3696,24 @@ main (int argc, char **argv)
   size_t i;
   static struct fileloc pos = { this_file, 0 };
   char* inputlist = 0;
+  outf_p output_header;
+  char* plugin_output_filename = NULL;
   /* fatal uses this */
   progname = "gengtype";
 
-  if (argc >= 5 && !strcmp (argv[1], "-p")) 
+  if (argc >= 6 && !strcmp (argv[1], "-P"))
     {
-      srcdir = argv[2];
-      inputlist = argv[3];
-      nb_plugin_files = argc-4;
+      plugin_output_filename = argv[2];
+      plugin_output = create_file ("GCC", plugin_output_filename);
+      srcdir = argv[3];
+      inputlist = argv[4];
+      nb_plugin_files = argc - 5;
       plugin_files = XCNEWVEC (char *, nb_plugin_files);
       for (i = 0; i < nb_plugin_files; i++)
       {
         /* Place an all zero lang_bitmap before the plugin file
 	   name.  */
-        char *name = argv[i + 4];
+        char *name = argv[i + 5];
         int len = strlen(name) + 1 + sizeof (lang_bitmap);
         plugin_files[i] = XCNEWVEC (char, len) + sizeof (lang_bitmap);
         strcpy (plugin_files[i], name);
@@ -3692,7 +3725,8 @@ main (int argc, char **argv)
       inputlist = argv[2];
     } 
   else
-    fatal ("usage: gengtype [-p] srcdir input-list [file1 file2 ... fileN]");
+    fatal ("usage: gengtype [-P pluginout.h] srcdir input-list "
+           "[file1 file2 ... fileN]");
 
   srcdir_len = strlen (srcdir);
 
@@ -3728,7 +3762,8 @@ main (int argc, char **argv)
 
   open_base_files ();
   write_enum_defn (structures, param_structs);
-  write_types (header_file, structures, param_structs, &ggc_wtd);
+  output_header = plugin_output ? plugin_output : header_file;
+  write_types (output_header, structures, param_structs, &ggc_wtd);
   if (plugin_files == NULL)
     {
       write_types (header_file, structures, param_structs, &pch_wtd);

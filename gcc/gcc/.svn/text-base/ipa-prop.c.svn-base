@@ -1150,6 +1150,10 @@ bool
 ipa_propagate_indirect_call_infos (struct cgraph_edge *cs,
 				   VEC (cgraph_edge_p, heap) **new_edges)
 {
+  /* FIXME lto: We do not stream out indirect call information.  */
+  if (flag_wpa)
+    return false;
+
   /* Do nothing if the preparation phase has not been carried out yet
      (i.e. during early inlining).  */
   if (!ipa_node_params_vector)
@@ -1394,7 +1398,9 @@ ipa_print_node_params (FILE * f, struct cgraph_node *node)
       temp = ipa_get_param (info, i);
       if (TREE_CODE (temp) == PARM_DECL)
 	fprintf (f, "    param %d : %s", i,
-		 (*lang_hooks.decl_printable_name) (temp, 2));
+                 (DECL_NAME (temp)
+                  ? (*lang_hooks.decl_printable_name) (temp, 2)
+                  : "(unnamed)"));
       if (ipa_is_param_modified (info, i))
 	fprintf (f, " modified");
       if (ipa_is_param_called (info, i))

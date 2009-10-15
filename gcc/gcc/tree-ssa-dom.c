@@ -816,13 +816,11 @@ remove_local_expressions_from_table (void)
   /* Remove all the expressions made available in this block.  */
   while (VEC_length (expr_hash_elt_t, avail_exprs_stack) > 0)
     {
-      struct expr_hash_elt element;
       expr_hash_elt_t victim = VEC_pop (expr_hash_elt_t, avail_exprs_stack);
+      void **slot;
 
       if (victim == NULL)
 	break;
-
-      element = *victim;
 
       /* This must precede the actual removal from the hash table,
          as ELEMENT and the table entry may share a call argument
@@ -830,10 +828,13 @@ remove_local_expressions_from_table (void)
       if (dump_file && (dump_flags & TDF_DETAILS))
         {
           fprintf (dump_file, "<<<< ");
-          print_expr_hash_elt (dump_file, &element);
+          print_expr_hash_elt (dump_file, victim);
         }
 
-      htab_remove_elt_with_hash (avail_exprs, &element, element.hash);
+      slot = htab_find_slot_with_hash (avail_exprs,
+				       victim, victim->hash, NO_INSERT);
+      gcc_assert (slot && *slot == (void *) victim);
+      htab_clear_slot (avail_exprs, slot);
     }
 }
 
@@ -1998,6 +1999,12 @@ cprop_operand (gimple stmt, use_operand_p op_p)
       if (loop_depth_of_name (val) > loop_depth_of_name (op))
 	return;
 
+      /* Do not propagate copies into simple IV increment statements.
+         See PR23821 for how this can disturb IV analysis.  */
+      if (TREE_CODE (val) != INTEGER_CST
+	  && simple_iv_increment_p (stmt))
+	return;
+
       /* Dump details.  */
       if (dump_file && (dump_flags & TDF_DETAILS))
 	{
@@ -2131,8 +2138,6 @@ optimize_stmt (basic_block bb, gimple_stmt_iterator si)
 
   if (may_optimize_p)
     {
-      eliminate_redundant_computations (&si);
-      stmt = gsi_stmt (si);
       if (gimple_code (stmt) == GIMPLE_CALL)
 	{
 	  /* Resolve __builtin_constant_p.  If it hasn't been
@@ -2147,6 +2152,10 @@ optimize_stmt (basic_block bb, gimple_stmt_iterator si)
 	      stmt = gsi_stmt (si);
 	    }
 	}
+
+      update_stmt_if_modified (stmt);
+      eliminate_redundant_computations (&si);
+      stmt = gsi_stmt (si);
     }
 
   /* Record any additional equivalences created by this statement.  */
@@ -2182,7 +2191,7 @@ optimize_stmt (basic_block bb, gimple_stmt_iterator si)
     {
       tree val = NULL;
       
-      update_stmt (stmt);
+      update_stmt_if_modified (stmt);
 
       if (gimple_code (stmt) == GIMPLE_COND)
         val = fold_binary_loc (gimple_location (stmt),

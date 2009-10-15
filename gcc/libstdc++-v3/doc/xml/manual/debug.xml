@@ -217,6 +217,56 @@
    set print demangle on
    set demangle-style gnu-v3
 </programlisting>
+
+<para>
+  Starting with version 7.0, GDB includes support for writing
+  pretty-printers in Python.  Pretty printers for STL classes are
+  distributed with GCC from version 4.5.0.  The most recent version of
+  these printers are always found in libstdc++ svn repository.
+  To enable these printers, check-out the latest printers to a local
+  directory:
+</para>
+
+<programlisting>
+  svn co svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/python 
+</programlisting>
+
+<para>
+  Next, add the following section to your ~/.gdbinit  The path must
+  match the location where the Python module above was checked-out.
+  So if checked out to: /home/maude/gdb_printers/, the path would be as
+  written in the example below.
+</para>
+
+<programlisting>
+  python
+  import sys
+  sys.path.insert(0, '/home/maude/gdb_printers/python')
+  from libstdcxx.v6.printers import register_libstdcxx_printers
+  register_libstdcxx_printers (None)
+  end
+</programlisting>
+
+<para>
+  The path should be the only element that needs to be adjusted in the
+  example.  Once loaded, STL classes that the printers support
+  should print in a more human-readable format.  To print the classes
+  in the old style, use the /r (raw) switch in the print command
+  (i.e., print /r foo).  This will print the classes as if the Python
+  pretty-printers were not loaded.
+</para>
+
+<para>
+  For additional information on STL support and GDB please visit:
+  <ulink url="http://sourceware.org/gdb/wiki/STLSupport"> "GDB Support
+  for STL" </ulink> in the GDB wiki.  Additionally, in-depth
+  documentation and discussion of the pretty printing feature can be
+  found in "Pretty Printing" node in the GDB manual.  You can find
+  on-line versions of the GDB user manual in GDB's homepage, at
+  <ulink url="http://sourceware.org/gdb/"> "GDB: The GNU Project
+  Debugger" </ulink>.
+</para>
+
 </sect2>
 
 <sect2 id="debug.exceptions">
@@ -240,6 +290,14 @@
 <title>Compile Time Checking</title>
   <para> The <link linkend="manual.ext.compile_checks">Compile-Time
   Checks</link> Extension has compile-time checks for many algorithms.
+  </para>
+</sect2>
+
+<sect2 id="debug.profile_mode" xreflabel="debug.profile_mode">
+<title>Profile-based Performance Analysis</title>
+  <para> The <link linkend="manual.ext.profile_mode">Profile-based 
+  Performance Analysis</link> Extension has performance checks for many 
+  algorithms.
   </para>
 </sect2>
 

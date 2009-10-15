@@ -2337,6 +2337,9 @@ expand_debug_expr (tree exp)
     case STRING_CST:
       if (!lookup_constant_def (exp))
 	{
+	  if (strlen (TREE_STRING_POINTER (exp)) + 1
+	      != (size_t) TREE_STRING_LENGTH (exp))
+	    return NULL_RTX;
 	  op0 = gen_rtx_CONST_STRING (Pmode, TREE_STRING_POINTER (exp));
 	  op0 = gen_rtx_MEM (BLKmode, op0);
 	  set_mem_attributes (op0, exp, 0);
@@ -2358,6 +2361,18 @@ expand_debug_expr (tree exp)
       op1 = wrap_constant (GET_MODE_INNER (mode), op1);
       return gen_rtx_CONCAT (mode, op0, op1);
 
+    case DEBUG_EXPR_DECL:
+      op0 = DECL_RTL_IF_SET (exp);
+
+      if (op0)
+	return op0;
+
+      op0 = gen_rtx_DEBUG_EXPR (mode);
+      XTREE (op0, 0) = exp;
+      SET_DECL_RTL (exp, op0);
+
+      return op0;
+
     case VAR_DECL:
     case PARM_DECL:
     case FUNCTION_DECL:
@@ -2368,9 +2383,23 @@ expand_debug_expr (tree exp)
 
       /* This decl was probably optimized away.  */
       if (!op0)
-	return NULL;
+	{
+	  if (TREE_CODE (exp) != VAR_DECL
+	      || DECL_EXTERNAL (exp)
+	      || !TREE_STATIC (exp)
+	      || !DECL_NAME (exp)
+	      || DECL_HARD_REGISTER (exp))
+	    return NULL;
 
-      op0 = copy_rtx (op0);
+	  op0 = DECL_RTL (exp);
+ 	  SET_DECL_RTL (exp, NULL);
+	  if (!MEM_P (op0)
+	      || GET_CODE (XEXP (op0, 0)) != SYMBOL_REF
+	      || SYMBOL_REF_DECL (XEXP (op0, 0)) != exp)
+	    return NULL;
+	}
+      else
+	op0 = copy_rtx (op0);
 
       if (GET_MODE (op0) == BLKmode)
 	{

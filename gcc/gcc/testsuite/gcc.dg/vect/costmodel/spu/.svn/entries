@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/vect/costmodel/spu
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ nickc
 
 2264
 
-costmodel-vect-31a.c
-file
-
-
-
-
-2009-04-24T17:45:25.000000Z
-8df0034a4ef6c3bf159b226e9490cd9c
-2007-07-12T12:17:03.158791Z
-126584
-dorit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-881
-
 costmodel-vect-iv-9.c
 file
 
@@ -162,14 +128,14 @@ irar
 
 719
 
-costmodel-vect-31b.c
+costmodel-vect-31a.c
 file
 
 
 
 
 2009-04-24T17:45:25.000000Z
-342fc78aef4d3c5c2338eff1487fe39c
+8df0034a4ef6c3bf159b226e9490cd9c
 2007-07-12T12:17:03.158791Z
 126584
 dorit
@@ -194,7 +160,7 @@ dorit
 
 
 
-795
+881
 
 costmodel-vect-33.c
 file
@@ -229,6 +195,40 @@ irar
 
 
 644
+
+costmodel-vect-31b.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+342fc78aef4d3c5c2338eff1487fe39c
+2007-07-12T12:17:03.158791Z
+126584
+dorit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+795
 
 costmodel-vect-31c.c
 file
@@ -332,40 +332,6 @@ dorit
 
 902
 
-costmodel-vect-68a.c
-file
-
-
-
-
-2009-04-24T17:45:25.000000Z
-0c5edbbba2c8db95a4f5f68f5ec20bc3
-2007-07-12T12:17:03.158791Z
-126584
-dorit
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-725
-
 costmodel-vect-76b.c
 file
 
@@ -400,14 +366,14 @@ irar
 
 1038
 
-costmodel-vect-68b.c
+costmodel-vect-68a.c
 file
 
 
 
 
 2009-04-24T17:45:25.000000Z
-3ede768d8044a72078ba4996079161db
+0c5edbbba2c8db95a4f5f68f5ec20bc3
 2007-07-12T12:17:03.158791Z
 126584
 dorit
@@ -432,7 +398,7 @@ dorit
 
 
 
-728
+725
 
 costmodel-vect-76c.c
 file
@@ -467,6 +433,40 @@ irar
 
 
 900
+
+costmodel-vect-68b.c
+file
+
+
+
+
+2009-04-24T17:45:25.000000Z
+3ede768d8044a72078ba4996079161db
+2007-07-12T12:17:03.158791Z
+126584
+dorit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+728
 
 costmodel-vect-68c.c
 file

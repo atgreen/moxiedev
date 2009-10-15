@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/bfin
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,16 +536,16 @@ bernds
 
 791
 
-mcpu-bf526.c
+mcpu-default.c
 file
 
 
 
 
 2009-04-24T17:45:39.000000Z
-be702aa944d619b76d97d2ba6bcd974b
-2008-10-22T19:42:56.286403Z
-141305
+7181515ddaf67755c472c7eaad75663d
+2008-05-31T10:09:51.409572Z
+136236
 bernds
 
 
@@ -568,7 +568,7 @@ bernds
 
 
 
-791
+1864
 
 mcpu-bf544.c
 file
@@ -604,16 +604,16 @@ bernds
 
 791
 
-mcpu-default.c
+mcpu-bf526.c
 file
 
 
 
 
 2009-04-24T17:45:39.000000Z
-7181515ddaf67755c472c7eaad75663d
-2008-05-31T10:09:51.409572Z
-136236
+be702aa944d619b76d97d2ba6bcd974b
+2008-10-22T19:42:56.286403Z
+141305
 bernds
 
 
@@ -636,7 +636,7 @@ bernds
 
 
 
-1864
+791
 
 mcpu-bf527.c
 file
@@ -876,40 +876,6 @@ bernds
 
 862
 
-mcpu-bf548m.c
-file
-
-
-
-
-2009-09-08T03:18:03.000000Z
-ea5de66ef026e56b55cb29998323f4f6
-2009-09-07T18:59:49.731551Z
-151488
-bernds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-862
-
 arith.c
 file
 
@@ -943,6 +909,40 @@ bernds
 
 
 1224
+
+mcpu-bf548m.c
+file
+
+
+
+
+2009-09-08T03:18:03.000000Z
+ea5de66ef026e56b55cb29998323f4f6
+2009-09-07T18:59:49.731551Z
+151488
+bernds
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+862
 
 loop-autoinc.c
 file

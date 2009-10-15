@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/classpath/jdwp/exception
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,40 +94,6 @@ tromey
 
 792
 
-InvalidObjectException.h
-file
-
-
-
-
-2009-04-24T17:48:55.000000Z
-953d11a898abfd9525734a51eeb13532
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-799
-
 InvalidStringException.h
 file
 
@@ -161,6 +127,40 @@ tromey
 
 
 849
+
+InvalidObjectException.h
+file
+
+
+
+
+2009-04-24T17:48:55.000000Z
+953d11a898abfd9525734a51eeb13532
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+799
 
 InvalidThreadException.h
 file
@@ -230,40 +230,6 @@ tromey
 
 808
 
-AbsentInformationException.h
-file
-
-
-
-
-2009-04-24T17:48:55.000000Z
-59fc0f27775a3cb199ba97d5c4fe14e3
-2007-03-06T21:09:22.211189Z
-122639
-kgallowa
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-787
-
 InvalidTagException.h
 file
 
@@ -297,6 +263,40 @@ kseitz
 
 
 728
+
+AbsentInformationException.h
+file
+
+
+
+
+2009-04-24T17:48:55.000000Z
+59fc0f27775a3cb199ba97d5c4fe14e3
+2007-03-06T21:09:22.211189Z
+122639
+kgallowa
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+787
 
 NotImplementedException.h
 file
@@ -332,40 +332,6 @@ tromey
 
 769
 
-NativeMethodException.h
-file
-
-
-
-
-2009-04-24T17:48:56.000000Z
-98dba1685eca5f44b2fc9d5826c4b56c
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-792
-
 InvalidMethodException.h
 file
 
@@ -399,6 +365,40 @@ tromey
 
 
 799
+
+NativeMethodException.h
+file
+
+
+
+
+2009-04-24T17:48:56.000000Z
+98dba1685eca5f44b2fc9d5826c4b56c
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+792
 
 InvalidSlotException.h
 file
@@ -434,40 +434,6 @@ kseitz
 
 781
 
-InvalidEventTypeException.h
-file
-
-
-
-
-2009-04-24T17:48:55.000000Z
-d49e9c8cdb9a2283815e996dbf1b5af2
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-820
-
 InvalidFieldException.h
 file
 
@@ -501,6 +467,40 @@ tromey
 
 
 792
+
+InvalidEventTypeException.h
+file
+
+
+
+
+2009-04-24T17:48:55.000000Z
+d49e9c8cdb9a2283815e996dbf1b5af2
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+820
 
 InvalidThreadGroupException.h
 file

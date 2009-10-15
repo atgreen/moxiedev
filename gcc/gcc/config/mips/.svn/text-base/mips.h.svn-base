@@ -1311,10 +1311,10 @@ enum mips_code_readable_setting {
 #define DWARF_FRAME_REGNUM(REGNO) mips_dwarf_regno[REGNO]
 
 /* The DWARF 2 CFA column which tracks the return address.  */
-#define DWARF_FRAME_RETURN_COLUMN (GP_REG_FIRST + 31)
+#define DWARF_FRAME_RETURN_COLUMN RETURN_ADDR_REGNUM
 
 /* Before the prologue, RA lives in r31.  */
-#define INCOMING_RETURN_ADDR_RTX  gen_rtx_REG (VOIDmode, GP_REG_FIRST + 31)
+#define INCOMING_RETURN_ADDR_RTX gen_rtx_REG (VOIDmode, RETURN_ADDR_REGNUM)
 
 /* Describe how we implement __builtin_eh_return.  */
 #define EH_RETURN_DATA_REGNO(N) \
@@ -2386,7 +2386,7 @@ typedef struct mips_args {
     }									\
   mips_push_asm_switch (&mips_noat);					\
   fprintf (FILE, "\tmove\t%s,%s\t\t# save current return address\n",	\
-	   reg_names[GP_REG_FIRST + 1], reg_names[GP_REG_FIRST + 31]);	\
+	   reg_names[AT_REGNUM], reg_names[RETURN_ADDR_REGNUM]);	\
   /* _mcount treats $2 as the static chain register.  */		\
   if (cfun->static_chain_decl != NULL)					\
     fprintf (FILE, "\tmove\t%s,%s\n", reg_names[2],			\
@@ -2433,14 +2433,15 @@ typedef struct mips_args {
 #define EXIT_IGNORE_STACK 1
 
 
-/* A C expression for the size in bytes of the trampoline, as an
-   integer.  */
+/* Trampolines are a block of code followed by two pointers.  */
 
-#define TRAMPOLINE_SIZE (ptr_mode == DImode ? 48 : 36)
+#define TRAMPOLINE_SIZE \
+  (mips_trampoline_code_size () + GET_MODE_SIZE (ptr_mode) * 2)
 
-/* Alignment required for trampolines, in bits.  */
+/* Forcing a 64-bit alignment for 32-bit targets allows us to load two
+   pointers from a single LUI base.  */
 
-#define TRAMPOLINE_ALIGNMENT GET_MODE_BITSIZE (ptr_mode)
+#define TRAMPOLINE_ALIGNMENT 64
 
 /* mips_trampoline_init calls this library function to flush
    program and data caches.  */

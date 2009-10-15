@@ -631,6 +631,7 @@ const struct c_common_resword c_common_reswords[] =
   { "char32_t",		RID_CHAR32,	D_CXXONLY | D_CXX0X | D_CXXWARN },
   { "class",		RID_CLASS,	D_CXX_OBJC | D_CXXWARN },
   { "const",		RID_CONST,	0 },
+  { "constexpr",	RID_CONSTEXPR,	D_CXXONLY | D_CXX0X | D_CXXWARN },
   { "const_cast",	RID_CONSTCAST,	D_CXXONLY | D_CXXWARN },
   { "continue",		RID_CONTINUE,	0 },
   { "decltype",         RID_DECLTYPE,   D_CXXONLY | D_CXX0X | D_CXXWARN },
@@ -1218,6 +1219,7 @@ c_fully_fold_internal (tree expr, bool in_init, bool *maybe_const_operands,
       op2 = TREE_OPERAND (expr, 2);
       op0 = c_fully_fold_internal (op0, in_init, maybe_const_operands,
 				   maybe_const_itself);
+      STRIP_TYPE_NOPS (op0);
       if (op0 != orig_op0)
 	ret = build3 (COMPONENT_REF, TREE_TYPE (expr), op0, op1, op2);
       if (ret != expr)
@@ -1234,8 +1236,10 @@ c_fully_fold_internal (tree expr, bool in_init, bool *maybe_const_operands,
       op3 = TREE_OPERAND (expr, 3);
       op0 = c_fully_fold_internal (op0, in_init, maybe_const_operands,
 				   maybe_const_itself);
+      STRIP_TYPE_NOPS (op0);
       op1 = c_fully_fold_internal (op1, in_init, maybe_const_operands,
 				   maybe_const_itself);
+      STRIP_TYPE_NOPS (op1);
       op1 = decl_constant_value_for_optimization (op1);
       if (op0 != orig_op0 || op1 != orig_op1)
 	ret = build4 (ARRAY_REF, TREE_TYPE (expr), op0, op1, op2, op3);
@@ -1292,6 +1296,7 @@ c_fully_fold_internal (tree expr, bool in_init, bool *maybe_const_operands,
       orig_op1 = op1 = TREE_OPERAND (expr, 1);
       op0 = c_fully_fold_internal (op0, in_init, maybe_const_operands,
 				   maybe_const_itself);
+      STRIP_TYPE_NOPS (op0);
       if (code != MODIFY_EXPR
 	  && code != PREDECREMENT_EXPR
 	  && code != PREINCREMENT_EXPR
@@ -1303,6 +1308,7 @@ c_fully_fold_internal (tree expr, bool in_init, bool *maybe_const_operands,
       if (code != MODIFY_EXPR)
 	op1 = c_fully_fold_internal (op1, in_init, maybe_const_operands,
 				     maybe_const_itself);
+      STRIP_TYPE_NOPS (op1);
       op1 = decl_constant_value_for_optimization (op1);
       if (op0 != orig_op0 || op1 != orig_op1 || in_init)
 	ret = in_init
@@ -1332,6 +1338,7 @@ c_fully_fold_internal (tree expr, bool in_init, bool *maybe_const_operands,
       orig_op0 = op0 = TREE_OPERAND (expr, 0);
       op0 = c_fully_fold_internal (op0, in_init, maybe_const_operands,
 				   maybe_const_itself);
+      STRIP_TYPE_NOPS (op0);
       if (code != ADDR_EXPR && code != REALPART_EXPR && code != IMAGPART_EXPR)
 	op0 = decl_constant_value_for_optimization (op0);
       if (op0 != orig_op0 || in_init)
@@ -1371,12 +1378,14 @@ c_fully_fold_internal (tree expr, bool in_init, bool *maybe_const_operands,
       orig_op0 = op0 = TREE_OPERAND (expr, 0);
       orig_op1 = op1 = TREE_OPERAND (expr, 1);
       op0 = c_fully_fold_internal (op0, in_init, &op0_const, &op0_const_self);
+      STRIP_TYPE_NOPS (op0);
 
       unused_p = (op0 == (code == TRUTH_ANDIF_EXPR
 			  ? truthvalue_false_node
 			  : truthvalue_true_node));
       c_inhibit_evaluation_warnings += unused_p;
       op1 = c_fully_fold_internal (op1, in_init, &op1_const, &op1_const_self);
+      STRIP_TYPE_NOPS (op1);
       c_inhibit_evaluation_warnings -= unused_p;
 
       if (op0 != orig_op0 || op1 != orig_op1 || in_init)
@@ -1408,12 +1417,15 @@ c_fully_fold_internal (tree expr, bool in_init, bool *maybe_const_operands,
       orig_op2 = op2 = TREE_OPERAND (expr, 2);
       op0 = c_fully_fold_internal (op0, in_init, &op0_const, &op0_const_self);
 
+      STRIP_TYPE_NOPS (op0);
       c_inhibit_evaluation_warnings += (op0 == truthvalue_false_node);
       op1 = c_fully_fold_internal (op1, in_init, &op1_const, &op1_const_self);
+      STRIP_TYPE_NOPS (op1);
       c_inhibit_evaluation_warnings -= (op0 == truthvalue_false_node);
 
       c_inhibit_evaluation_warnings += (op0 == truthvalue_true_node);
       op2 = c_fully_fold_internal (op2, in_init, &op2_const, &op2_const_self);
+      STRIP_TYPE_NOPS (op2);
       c_inhibit_evaluation_warnings -= (op0 == truthvalue_true_node);
 
       if (op0 != orig_op0 || op1 != orig_op1 || op2 != orig_op2)
@@ -3789,6 +3801,31 @@ pointer_int_sum (location_t loc, enum tree_code resultcode,
   return ret;
 }
 
+/* Wrap a C_MAYBE_CONST_EXPR around an expression that is fully folded
+   and if NON_CONST is known not to be permitted in an evaluated part
+   of a constant expression.  */
+
+tree
+c_wrap_maybe_const (tree expr, bool non_const)
+{
+  bool nowarning = TREE_NO_WARNING (expr);
+  location_t loc = EXPR_LOCATION (expr);
+
+  /* This should never be called for C++.  */
+  if (c_dialect_cxx ())
+    gcc_unreachable ();
+
+  /* The result of folding may have a NOP_EXPR to set TREE_NO_WARNING.  */
+  STRIP_TYPE_NOPS (expr);
+  expr = build2 (C_MAYBE_CONST_EXPR, TREE_TYPE (expr), NULL, expr);
+  C_MAYBE_CONST_EXPR_NON_CONST (expr) = non_const;
+  if (nowarning)
+    TREE_NO_WARNING (expr) = 1;
+  protected_set_expr_location (expr, loc);
+
+  return expr;
+}
+
 /* Wrap a SAVE_EXPR around EXPR, if appropriate.  Like save_expr, but
    for C folds the inside expression and wraps a C_MAYBE_CONST_EXPR
    around the SAVE_EXPR if needed so that c_fully_fold does not need
@@ -3803,10 +3840,7 @@ c_save_expr (tree expr)
   expr = c_fully_fold (expr, false, &maybe_const);
   expr = save_expr (expr);
   if (!maybe_const)
-    {
-      expr = build2 (C_MAYBE_CONST_EXPR, TREE_TYPE (expr), NULL, expr);
-      C_MAYBE_CONST_EXPR_NON_CONST (expr) = 1;
-    }
+    expr = c_wrap_maybe_const (expr, true);
   return expr;
 }
 
@@ -5029,44 +5063,6 @@ c_common_nodes_and_builtins (void)
 
   /* Since builtin_types isn't gc'ed, don't export these nodes.  */
   memset (builtin_types, 0, sizeof (builtin_types));
-}
-
-/* Look up the function in built_in_decls that corresponds to DECL
-   and set ASMSPEC as its user assembler name.  DECL must be a
-   function decl that declares a builtin.  */
-
-void
-set_builtin_user_assembler_name (tree decl, const char *asmspec)
-{
-  tree builtin;
-  gcc_assert (TREE_CODE (decl) == FUNCTION_DECL
-	      && DECL_BUILT_IN_CLASS (decl) == BUILT_IN_NORMAL
-	      && asmspec != 0);
-
-  builtin = built_in_decls [DECL_FUNCTION_CODE (decl)];
-  set_user_assembler_name (builtin, asmspec);
-  switch (DECL_FUNCTION_CODE (decl))
-    {
-    case BUILT_IN_MEMCPY:
-      init_block_move_fn (asmspec);
-      memcpy_libfunc = set_user_assembler_libfunc ("memcpy", asmspec);
-      break;
-    case BUILT_IN_MEMSET:
-      init_block_clear_fn (asmspec);
-      memset_libfunc = set_user_assembler_libfunc ("memset", asmspec);
-      break;
-    case BUILT_IN_MEMMOVE:
-      memmove_libfunc = set_user_assembler_libfunc ("memmove", asmspec);
-      break;
-    case BUILT_IN_MEMCMP:
-      memcmp_libfunc = set_user_assembler_libfunc ("memcmp", asmspec);
-      break;
-    case BUILT_IN_ABORT:
-      abort_libfunc = set_user_assembler_libfunc ("abort", asmspec);
-      break;
-    default:
-      break;
-    }
 }
 
 /* The number of named compound-literals generated thus far.  */

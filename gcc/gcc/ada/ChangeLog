@@ -1,3 +1,36 @@
+2009-10-10  Samuel Tardieu  <sam@rfc1149.net>
+
+	* sem_eval.adb: Give a more precise error message.
+
+2009-10-06  Samuel Tardieu  <sam@rfc1149.net>
+
+	PR ada/41383
+	* a-rttiev.adb (Time_Of_Event): Return Time_First for unset event.
+
+2009-10-06  Samuel Tardieu  <sam@rfc1149.net>
+
+	PR ada/38333
+	* sem_prag.adb (Process_Import_Or_Interface): Forbid an abstract
+	subprogram to be completed with a "pragma Import".
+
+2009-10-02  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/decl.c (gnat_to_gnu_entity) <E_Record_Subtype>:
+	Generate an XVZ variable alongside the XVS type if the size is
+	not constant.
+	(maybe_pad_type): Minor tweak.
+
+2009-10-02  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/decl.c (check_ok_for_atomic): Do nothing if the type
+	doesn't come from source.
+
+2009-10-02  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/decl.c (gnat_to_gnu_component_type): Force at least
+	unit size for the component size of an array with aliased components.
+	(maybe_pad_type): Do not warn for MAX_EXPR.
+
 2009-09-29  Eric Botcazou  <ebotcazou@adacore.com>
 
 	* gcc-interface/decl.c (gnat_to_gnu_entity) <E_Array_Type>: Factor out

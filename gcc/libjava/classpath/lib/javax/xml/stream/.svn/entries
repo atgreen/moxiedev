@@ -1,7 +1,7 @@
 10
 
 dir
-152280
+152699
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/xml/stream
 svn://gcc.gnu.org/svn/gcc
 
@@ -230,40 +230,6 @@ has-props
 
 1355
 
-XMLStreamReader.class
-file
-
-
-
-
-2009-04-24T17:48:25.000000Z
-7f70e256c391d20ef30d82936149cd7e
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1768
-
 XMLEventWriter.class
 file
 
@@ -297,6 +263,40 @@ has-props
 
 
 769
+
+XMLStreamReader.class
+file
+
+
+
+
+2009-04-24T17:48:25.000000Z
+7f70e256c391d20ef30d82936149cd7e
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1768
 
 events
 dir
@@ -335,40 +335,6 @@ has-props
 
 179
 
-XMLInputFactory.class
-file
-
-
-
-
-2009-04-24T17:48:25.000000Z
-60091d8d96b53228ce621a27280acc6d
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5951
-
 Location.class
 file
 
@@ -403,8 +369,73 @@ has-props
 
 266
 
-util
-dir
+XMLInputFactory.class
+file
+
+
+
+
+2009-04-24T17:48:25.000000Z
+60091d8d96b53228ce621a27280acc6d
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5951
+
+XMLStreamConstants.class
+file
+
+
+
+
+2009-04-24T17:48:25.000000Z
+d011c6ca1104361815de680d08bd7dbe
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+688
 
 XMLStreamWriter.class
 file
@@ -440,39 +471,8 @@ has-props
 
 1556
 
-XMLStreamConstants.class
-file
-
-
-
-
-2009-04-24T17:48:25.000000Z
-d011c6ca1104361815de680d08bd7dbe
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-688
+util
+dir
 
 XMLOutputFactory.class
 file

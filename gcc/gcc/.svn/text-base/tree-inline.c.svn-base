@@ -1632,6 +1632,7 @@ copy_bb (copy_body_data *id, basic_block bb, int frequency_scale,
 		  edge = cgraph_edge (id->src_node, orig_stmt);
 		  if (edge)
 		    edge = cgraph_clone_edge (edge, id->dst_node, stmt,
+					      gimple_uid (stmt),
 					      REG_BR_PROB_BASE, 1,
 					      edge->frequency, true);
 		  break;
@@ -3345,7 +3346,7 @@ estimate_num_insns (gimple stmt, eni_weights *weights)
       return 0;
 
     case GIMPLE_ASM:
-      return 1;
+      return asm_str_count (gimple_asm_string (stmt));
 
     case GIMPLE_RESX:
       /* This is either going to be an external function call with one
@@ -5119,13 +5120,16 @@ tree_can_inline_p (struct cgraph_edge *e)
     {
       e->inline_failed = CIF_TARGET_OPTION_MISMATCH;
       gimple_call_set_cannot_inline (e->call_stmt, true);
+      e->call_stmt_cannot_inline_p = true;
       return false;
     }
 
-  if (!gimple_check_call_args (e->call_stmt))
+  if (e->call_stmt
+      && !gimple_check_call_args (e->call_stmt))
     {
       e->inline_failed = CIF_MISMATCHED_ARGUMENTS;
       gimple_call_set_cannot_inline (e->call_stmt, true);
+      e->call_stmt_cannot_inline_p = true;
       return false;
     }
 

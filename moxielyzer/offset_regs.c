@@ -73,7 +73,7 @@ report_offset_regs ()
   printf ("Offset Register Usage: \n");
   for (r = 0; r < 16; r++)
     {
-      printf ("\t%d:\t%u\n", r, offset_count[r]);
+      printf ("\t%s:\t%u\n", moxie_reg_names[r], offset_count[r]);
     }
 }
 

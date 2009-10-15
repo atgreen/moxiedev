@@ -69,5 +69,6 @@ enum moxie_insn {
   MOXIE_LAST_INSN};
 
 extern const char *moxie_insn_names[];
+extern const char *moxie_reg_names[];
 
 #endif

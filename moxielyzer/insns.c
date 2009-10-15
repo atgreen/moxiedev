@@ -17,6 +17,26 @@ You should have received a copy of the GNU General Public License
 along with The Incredible Moxielyzer; see the file COPYING3.  If not
 see <http://www.gnu.org/licenses/>.  */
 
+const char *moxie_reg_names[] =
+  {
+    "$fp",
+    "$sp",
+    "$r0",
+    "$r1",
+    "$r2",
+    "$r3",
+    "$r4",
+    "$r5",
+    "$r6",
+    "$r7",
+    "$r8",
+    "$r9",
+    "$r10",
+    "$r11",
+    "$r12",
+    "$r13"
+  };
+
 const char *moxie_insn_names[] =
   {
     "ALL",

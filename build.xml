@@ -96,7 +96,7 @@
     </exec>
     <exec executable="make">
       <arg value="--directory=arm-build/src"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
       <arg value="all-binutils"/>
       <arg value="all-gas"/>
       <arg value="all-ld"/>
@@ -122,7 +122,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
       <arg value="--directory=arm-build/gcc"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
@@ -159,7 +159,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
       <arg value="--directory=arm-build/gcc"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/arm-root/usr/bin:${env.PATH}"/>
@@ -221,20 +221,22 @@
     <echo message="===================================================================="/>
     <echo message="====== Building binutils ==========================================="/>
     <echo message="===================================================================="/>
-    <exec executable="sh">
+    <exec executable="sh" searchpath="yes">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/src; ../../src/configure --target=moxie-elf --disable-gdbtk --prefix=`(cd ../../root/usr; pwd)`)"/>
+      <arg value="(cd build/src; echo $PATH; which dtc; ../../src/configure --target=moxie-elf --disable-gdbtk --prefix=`(cd ../../root/usr; pwd)`)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/src"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
       <arg value="all-binutils"/>
       <arg value="all-gas"/>
       <arg value="all-ld"/>
       <arg value="all-sim"/>
     </exec>
     <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/src"/>
       <arg value="install-binutils"/>
       <arg value="install-gas"/>
@@ -249,12 +251,12 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto)"/>
+      <arg value="(cd build/gcc; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/gcc"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -286,12 +288,12 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-newlib --with-headers=`(cd ../../root/usr/moxie-elf/include; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto)"/>
+      <arg value="(cd build/gcc; ../../gcc/configure  --target=moxie-elf --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-newlib --with-headers=`(cd ../../root/usr/moxie-elf/include; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/gcc"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -320,7 +322,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=qemu"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
       <arg value="install"/>
     </exec>
 
@@ -402,7 +404,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/src-uclinux"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
       <arg value="all-binutils"/>
       <arg value="all-gas"/>
       <arg value="all-ld"/>
@@ -442,12 +444,12 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc-uclinux; ../../gcc/configure  --target=moxie-uclinux --enable-threads --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)` --with-build-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto)"/>
+      <arg value="(cd build/gcc-uclinux; ../../gcc/configure  --target=moxie-uclinux --enable-threads --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)` --with-build-sysroot=`(cd ../../root/usr/moxie-uclinux; pwd)`  --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/gcc-uclinux"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -479,7 +481,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=initfs/uclinux/src"/>
-      <arg value="-j2"/>
+      <arg value="-j1"/>
     </exec>
 
     <echo message="===================================================================="/>

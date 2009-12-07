@@ -459,7 +459,9 @@
 	  "=w,Uv,w, w,  ?r,?w,?r,?r, ?Us")
 	(match_operand:VD 1 "general_operand"
 	  " w,w, Dn,Uvi, w, r, r, Usi,r"))]
-  "TARGET_NEON"
+  "TARGET_NEON
+   && (register_operand (operands[0], <MODE>mode)
+       || register_operand (operands[1], <MODE>mode))"
 {
   if (which_alternative == 2)
     {
@@ -506,7 +508,9 @@
   	  "=w,Un,w, w,  ?r,?w,?r,?r,  ?Us")
 	(match_operand:VQXMOV 1 "general_operand"
 	  " w,w, Dn,Uni, w, r, r, Usi, r"))]
-  "TARGET_NEON"
+  "TARGET_NEON
+   && (register_operand (operands[0], <MODE>mode)
+       || register_operand (operands[1], <MODE>mode))"
 {
   if (which_alternative == 2)
     {
@@ -549,6 +553,11 @@
 	(match_operand:TI 1 "general_operand" ""))]
   "TARGET_NEON"
 {
+  if (can_create_pseudo_p ())
+    {
+      if (GET_CODE (operands[0]) != REG)
+	operands[1] = force_reg (TImode, operands[1]);
+    }
 })
 
 (define_expand "mov<mode>"
@@ -556,12 +565,19 @@
 	(match_operand:VSTRUCT 1 "general_operand" ""))]
   "TARGET_NEON"
 {
+  if (can_create_pseudo_p ())
+    {
+      if (GET_CODE (operands[0]) != REG)
+	operands[1] = force_reg (<MODE>mode, operands[1]);
+    }
 })
 
 (define_insn "*neon_mov<mode>"
   [(set (match_operand:VSTRUCT 0 "nonimmediate_operand"	"=w,Ut,w")
 	(match_operand:VSTRUCT 1 "general_operand"	" w,w, Ut"))]
-  "TARGET_NEON"
+  "TARGET_NEON
+   && (register_operand (operands[0], <MODE>mode)
+       || register_operand (operands[1], <MODE>mode))"
 {
   switch (which_alternative)
     {
@@ -2671,11 +2687,24 @@
 })
 
 (define_insn "neon_vdup_n<mode>"
-  [(set (match_operand:VDQW 0 "s_register_operand" "=w")
-	(unspec:VDQW [(match_operand:<V_elem> 1 "s_register_operand" "r")]
-                    UNSPEC_VDUP_N))]
+  [(set (match_operand:VX 0 "s_register_operand" "=w")
+	(unspec:VX [(match_operand:<V_elem> 1 "s_register_operand" "r")]
+		   UNSPEC_VDUP_N))]
   "TARGET_NEON"
   "vdup%?.<V_sz_elem>\t%<V_reg>0, %1"
+  ;; Assume this schedules like vmov.
+  [(set_attr "predicable" "yes")
+   (set_attr "neon_type" "neon_bp_simple")]
+)
+
+(define_insn "neon_vdup_n<mode>"
+  [(set (match_operand:V32 0 "s_register_operand" "=w,w")
+	(unspec:V32 [(match_operand:<V_elem> 1 "s_register_operand" "r,t")]
+		    UNSPEC_VDUP_N))]
+  "TARGET_NEON"
+  "@
+  vdup%?.<V_sz_elem>\t%<V_reg>0, %1
+  vdup%?.<V_sz_elem>\t%<V_reg>0, %y1"
   ;; Assume this schedules like vmov.
   [(set_attr "predicable" "yes")
    (set_attr "neon_type" "neon_bp_simple")]
@@ -3655,7 +3684,8 @@
 			  UNSPEC_VSHLL_N))]
   "TARGET_NEON"
 {
-  neon_const_bounds (operands[2], 0, neon_element_bits (<MODE>mode));
+  /* The boundaries are: 0 < imm <= size.  */
+  neon_const_bounds (operands[2], 0, neon_element_bits (<MODE>mode) + 1);
   return "vshll.%T3%#<V_sz_elem>\t%q0, %P1, %2";
 }
   [(set_attr "neon_type" "neon_shift_1")]

@@ -525,8 +525,7 @@ __gnat_install_handler (void)
 /* GNU/Linux Section */
 /*********************/
 
-#elif defined (linux) && (defined (i386) || defined (__x86_64__) \
-                          || defined (__ia64__) || defined (__powerpc__))
+#elif defined (linux)
 
 #include <signal.h>
 
@@ -602,14 +601,14 @@ __gnat_adjust_context_for_raise (int signo ATTRIBUTE_UNUSED, void *ucontext)
      time this happens.  */
 
 #if defined (i386)
-  unsigned long pattern = *(unsigned long *)mcontext->gregs[REG_EIP];
+  unsigned long *pc = (unsigned long *)mcontext->gregs[REG_EIP];
   /* The pattern is "orl $0x0,(%esp)" for a probe in 32-bit mode.  */
-  if (signo == SIGSEGV && pattern == 0x00240c83)
+  if (signo == SIGSEGV && pc && *pc == 0x00240c83)
     mcontext->gregs[REG_ESP] += 4096 + 4 * sizeof (unsigned long);
 #elif defined (__x86_64__)
-  unsigned long pattern = *(unsigned long *)mcontext->gregs[REG_RIP];
+  unsigned long *pc = (unsigned long *)mcontext->gregs[REG_RIP];
   /* The pattern is "orq $0x0,(%rsp)" for a probe in 64-bit mode.  */
-  if (signo == SIGSEGV && (pattern & 0xffffffffff) == 0x00240c8348)
+  if (signo == SIGSEGV && pc && (*pc & 0xffffffffff) == 0x00240c8348)
     mcontext->gregs[REG_RSP] += 4096 + 4 * sizeof (unsigned long);
 #elif defined (__ia64__)
   /* ??? The IA-64 unwinder doesn't compensate for signals.  */
@@ -2114,6 +2113,7 @@ __gnat_install_handler(void)
 #elif defined(__APPLE__)
 
 #include <signal.h>
+#include <sys/syscall.h>
 #include <mach/mach_vm.h>
 #include <mach/mach_init.h>
 #include <mach/vm_statistics.h>
@@ -2123,9 +2123,9 @@ char __gnat_alternate_stack[32 * 1024]; /* 1 * MINSIGSTKSZ */
 
 static void __gnat_error_handler (int sig, siginfo_t * si, void * uc);
 
-/* Defined in xnu unix_signal.c  */
+/* Defined in xnu unix_signal.c.
+   Tell the kernel to re-use alt stack when delivering a signal.  */
 #define	UC_RESET_ALT_STACK	0x80000000
-extern int sigreturn (void *uc, int flavour);
 
 /* Return true if ADDR is within a stack guard area.  */
 static int
@@ -2173,8 +2173,9 @@ __gnat_error_handler (int sig, siginfo_t * si, void * uc ATTRIBUTE_UNUSED)
 	  msg = "erroneous memory access";
 	}
       /* Reset the use of alt stack, so that the alt stack will be used
-	 for the next signal delivery.  */
-      sigreturn (NULL, UC_RESET_ALT_STACK);
+	 for the next signal delivery.
+         The stack can't be used in case of stack checking.  */
+      syscall (SYS_sigreturn, NULL, UC_RESET_ALT_STACK);
       break;
 
     case SIGFPE:
@@ -2301,8 +2302,10 @@ __gnat_adjust_context_for_raise (int signo ATTRIBUTE_UNUSED,
 {
   /* We used to compensate here for the raised from call vs raised from signal
      exception discrepancy with the GCC ZCX scheme, but this now can be dealt
-     with generically in the unwinder (see GCC PR other/26208).  Only the VMS
-     ports still do the compensation described in the few lines below.
+     with generically in the unwinder (see GCC PR other/26208).  This however
+     requires the use of the _Unwind_GetIPInfo routine in raise-gcc.c, which
+     is predicated on the definition of HAVE_GETIPINFO at compile time.  Only
+     the VMS ports still do the compensation described in the few lines below.
 
      *** Call vs signal exception discrepancy with GCC ZCX scheme ***
 

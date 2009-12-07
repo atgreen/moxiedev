@@ -1,4 +1,4 @@
-/* Discover if the stack pointer is modified in a function. 
+/* Discover if the stack pointer is modified in a function.
    Copyright (C) 2007, 2008, 2009
    Free Software Foundation, Inc.
 
@@ -95,7 +95,7 @@ struct rtl_opt_pass pass_stack_ptr_mod =
 {
  {
   RTL_PASS,
-  NULL,		                        /* name */
+  "*stack_ptr_mod",                     /* name */
   NULL,                                 /* gate */
   rest_of_handle_stack_ptr_mod,         /* execute */
   NULL,                                 /* sub */

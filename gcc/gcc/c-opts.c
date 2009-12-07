@@ -270,7 +270,7 @@ c_common_handle_option (size_t scode, const char *arg, int value)
   /* Prevent resetting the language standard to a C dialect when the driver
      has already determined that we're looking at assembler input.  */
   bool preprocessing_asm_p = (cpp_get_options (parse_in)->lang == CLK_ASM);
- 
+
   switch (code)
     {
     default:
@@ -466,10 +466,10 @@ c_common_handle_option (size_t scode, const char *arg, int value)
       global_dc->warning_as_error_requested = value;
       break;
 
-    case OPT_Werror_implicit_function_declaration: 
+    case OPT_Werror_implicit_function_declaration:
       /* For backward compatibility, this is the same as
 	 -Werror=implicit-function-declaration.  */
-      enable_warning_as_error ("implicit-function-declaration", value, CL_C | CL_ObjC); 
+      enable_warning_as_error ("implicit-function-declaration", value, CL_C | CL_ObjC);
       break;
 
     case OPT_Wformat:
@@ -1033,29 +1033,6 @@ c_common_post_options (const char **pfilename)
   C_COMMON_OVERRIDE_OPTIONS;
 #endif
 
-  if (flag_lto || flag_whopr)
-    {
-#ifdef ENABLE_LTO
-      flag_generate_lto = 1;
-
-      /* When generating IL, do not operate in whole-program mode.
-	 Otherwise, symbols will be privatized too early, causing link
-	 errors later.  */
-      flag_whole_program = 0;
-
-      /* FIXME lto.  Disable var-tracking until debug information
-	 is properly handled in free_lang_data.  */
-      flag_var_tracking = 0;
-#else
-      error ("LTO support has not been enabled in this configuration");
-#endif
-    }
-
-  /* Reconcile -flto and -fwhopr.  Set additional flags as appropriate and
-     check option consistency.  */
-  if (flag_lto && flag_whopr)
-    error ("-flto and -fwhopr are mutually exclusive");
-
   /* Excess precision other than "fast" requires front-end
      support.  */
   if (c_dialect_cxx ())
@@ -1168,7 +1145,7 @@ c_common_post_options (const char **pfilename)
     }
 
   /* -Wimplicit-function-declaration is enabled by default for C99.  */
-  if (warn_implicit_function_declaration == -1) 
+  if (warn_implicit_function_declaration == -1)
     warn_implicit_function_declaration = flag_isoc99;
 
   /* If we're allowing C++0x constructs, don't warn about C++0x
@@ -1458,7 +1435,7 @@ sanitize_cpp_opts (void)
 
   /* Wlong-long is disabled by default. It is enabled by:
       [-pedantic | -Wtraditional] -std=[gnu|c]++98 ; or
-      [-pedantic | -Wtraditional] -std=non-c99 . 
+      [-pedantic | -Wtraditional] -std=non-c99 .
 
       Either -Wlong-long or -Wno-long-long override any other settings.  */
   if (warn_long_long == -1)

@@ -59,7 +59,10 @@ io/write.c \
 io/fbuf.c
 
 gfor_io_headers= \
-io/io.h
+io/io.h \
+io/fbuf.h \
+io/format.h \
+io/unix.h
 
 gfor_helper_src= \
 intrinsics/associated.c \
@@ -82,6 +85,7 @@ intrinsics/eoshift2.c \
 intrinsics/erfc_scaled.c \
 intrinsics/etime.c \
 intrinsics/exit.c \
+intrinsics/extends_type_of.c \
 intrinsics/fnum.c \
 intrinsics/gerror.c \
 intrinsics/getcwd.c \

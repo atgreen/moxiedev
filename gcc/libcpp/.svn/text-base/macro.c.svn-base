@@ -379,7 +379,8 @@ stringify_arg (cpp_reader *pfile, macro_arg *arg)
       escape_it = (token->type == CPP_STRING || token->type == CPP_CHAR
 		   || token->type == CPP_WSTRING || token->type == CPP_WCHAR
 		   || token->type == CPP_STRING32 || token->type == CPP_CHAR32
-		   || token->type == CPP_STRING16 || token->type == CPP_CHAR16);
+		   || token->type == CPP_STRING16 || token->type == CPP_CHAR16
+		   || token->type == CPP_UTF8STRING);
 
       /* Room for each char being written in octal, initial space and
 	 final quote and NUL.  */
@@ -883,6 +884,9 @@ enter_macro_context (cpp_reader *pfile, cpp_hashnode *node,
 	  if (pfile->cb.used_define)
 	    pfile->cb.used_define (pfile, pfile->directive_line, node);
 	}
+
+      if (pfile->cb.used)
+	pfile->cb.used (pfile, result->src_loc, node);
 
       macro->used = 1;
 

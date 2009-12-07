@@ -2137,6 +2137,181 @@ package body Sem_Util is
 
    end Denotes_Discriminant;
 
+   -------------------------
+   -- Denotes_Same_Object --
+   -------------------------
+
+   function Denotes_Same_Object (A1, A2 : Node_Id) return Boolean is
+   begin
+      --  If we have entity names, then must be same entity
+
+      if Is_Entity_Name (A1) then
+         if Is_Entity_Name (A2) then
+            return Entity (A1) = Entity (A2);
+         else
+            return False;
+         end if;
+
+      --  No match if not same node kind
+
+      elsif Nkind (A1) /= Nkind (A2) then
+         return False;
+
+      --  For selected components, must have same prefix and selector
+
+      elsif Nkind (A1) = N_Selected_Component then
+         return Denotes_Same_Object (Prefix (A1), Prefix (A2))
+           and then
+         Entity (Selector_Name (A1)) = Entity (Selector_Name (A2));
+
+      --  For explicit dereferences, prefixes must be same
+
+      elsif Nkind (A1) = N_Explicit_Dereference then
+         return Denotes_Same_Object (Prefix (A1), Prefix (A2));
+
+      --  For indexed components, prefixes and all subscripts must be the same
+
+      elsif Nkind (A1) = N_Indexed_Component then
+         if Denotes_Same_Object (Prefix (A1), Prefix (A2)) then
+            declare
+               Indx1 : Node_Id;
+               Indx2 : Node_Id;
+
+            begin
+               Indx1 := First (Expressions (A1));
+               Indx2 := First (Expressions (A2));
+               while Present (Indx1) loop
+
+                  --  Shouldn't we be checking that values are the same???
+
+                  if not Denotes_Same_Object (Indx1, Indx2) then
+                     return False;
+                  end if;
+
+                  Next (Indx1);
+                  Next (Indx2);
+               end loop;
+
+               return True;
+            end;
+         else
+            return False;
+         end if;
+
+      --  For slices, prefixes must match and bounds must match
+
+      elsif Nkind (A1) = N_Slice
+        and then Denotes_Same_Object (Prefix (A1), Prefix (A2))
+      then
+         declare
+            Lo1, Lo2, Hi1, Hi2 : Node_Id;
+
+         begin
+            Get_Index_Bounds (Etype (A1), Lo1, Hi1);
+            Get_Index_Bounds (Etype (A2), Lo2, Hi2);
+
+            --  Check whether bounds are statically identical. There is no
+            --  attempt to detect partial overlap of slices.
+
+            --  What about an array and a slice of an array???
+
+            return Denotes_Same_Object (Lo1, Lo2)
+              and then Denotes_Same_Object (Hi1, Hi2);
+         end;
+
+         --  Literals will appear as indices. Isn't this where we should check
+         --  Known_At_Compile_Time at least if we are generating warnings ???
+
+      elsif Nkind (A1) = N_Integer_Literal then
+         return Intval (A1) = Intval (A2);
+
+      else
+         return False;
+      end if;
+   end Denotes_Same_Object;
+
+   -------------------------
+   -- Denotes_Same_Prefix --
+   -------------------------
+
+   function Denotes_Same_Prefix (A1, A2 : Node_Id) return Boolean is
+
+   begin
+      if Is_Entity_Name (A1) then
+         if Nkind_In (A2, N_Selected_Component, N_Indexed_Component) then
+            return Denotes_Same_Object (A1, Prefix (A2))
+              or else Denotes_Same_Prefix (A1, Prefix (A2));
+         else
+            return False;
+         end if;
+
+      elsif Is_Entity_Name (A2) then
+         return Denotes_Same_Prefix (A2, A1);
+
+      elsif Nkind_In (A1, N_Selected_Component, N_Indexed_Component, N_Slice)
+              and then
+            Nkind_In (A2, N_Selected_Component, N_Indexed_Component, N_Slice)
+      then
+         declare
+            Root1, Root2 : Node_Id;
+            Depth1, Depth2 : Int := 0;
+
+         begin
+            Root1 := Prefix (A1);
+            while not Is_Entity_Name (Root1) loop
+               if not Nkind_In
+                 (Root1, N_Selected_Component, N_Indexed_Component)
+               then
+                  return False;
+               else
+                  Root1 := Prefix (Root1);
+               end if;
+
+               Depth1 := Depth1 + 1;
+            end loop;
+
+            Root2 := Prefix (A2);
+            while not Is_Entity_Name (Root2) loop
+               if not Nkind_In
+                 (Root2, N_Selected_Component, N_Indexed_Component)
+               then
+                  return False;
+               else
+                  Root2 := Prefix (Root2);
+               end if;
+
+               Depth2 := Depth2 + 1;
+            end loop;
+
+            --  If both have the same depth and they do not denote the same
+            --  object, they are disjoint and not warning is needed.
+
+            if Depth1 = Depth2 then
+               return False;
+
+            elsif Depth1 > Depth2 then
+               Root1 := Prefix (A1);
+               for I in 1 .. Depth1 - Depth2 - 1 loop
+                  Root1 := Prefix (Root1);
+               end loop;
+
+               return Denotes_Same_Object (Root1, A2);
+
+            else
+               Root2 := Prefix (A2);
+               for I in 1 .. Depth2 - Depth1 - 1 loop
+                  Root2 := Prefix (Root2);
+               end loop;
+
+               return Denotes_Same_Object (A1, Root2);
+            end if;
+         end;
+
+      else
+         return False;
+      end if;
+   end Denotes_Same_Prefix;
+
    ----------------------
    -- Denotes_Variable --
    ----------------------
@@ -6865,9 +7040,58 @@ package body Sem_Util is
    function Is_Value_Type (T : Entity_Id) return Boolean is
    begin
       return VM_Target = CLI_Target
+        and then Nkind (T) in N_Has_Chars
         and then Chars (T) /= No_Name
         and then Get_Name_String (Chars (T)) = "valuetype";
    end Is_Value_Type;
+
+   -----------------
+   -- Is_Delegate --
+   -----------------
+
+   function Is_Delegate (T : Entity_Id) return Boolean is
+      Desig_Type : Entity_Id;
+
+   begin
+      if VM_Target /= CLI_Target then
+         return False;
+      end if;
+
+      --  Access-to-subprograms are delegates in CIL
+
+      if Ekind (T) = E_Access_Subprogram_Type then
+         return True;
+      end if;
+
+      if Ekind (T) not in Access_Kind then
+
+         --  A delegate is a managed pointer. If no designated type is defined
+         --  it means that it's not a delegate.
+
+         return False;
+      end if;
+
+      Desig_Type := Etype (Directly_Designated_Type (T));
+
+      if not Is_Tagged_Type (Desig_Type) then
+         return False;
+      end if;
+
+      --  Test if the type is inherited from [mscorlib]System.Delegate
+
+      while Etype (Desig_Type) /= Desig_Type loop
+         if Chars (Scope (Desig_Type)) /= No_Name
+           and then Is_Imported (Scope (Desig_Type))
+           and then Get_Name_String (Chars (Scope (Desig_Type))) = "delegate"
+         then
+            return True;
+         end if;
+
+         Desig_Type := Etype (Desig_Type);
+      end loop;
+
+      return False;
+   end Is_Delegate;
 
    -----------------
    -- Is_Variable --
@@ -6876,11 +7100,11 @@ package body Sem_Util is
    function Is_Variable (N : Node_Id) return Boolean is
 
       Orig_Node : constant Node_Id := Original_Node (N);
-      --  We do the test on the original node, since this is basically a
-      --  test of syntactic categories, so it must not be disturbed by
-      --  whatever rewriting might have occurred. For example, an aggregate,
-      --  which is certainly NOT a variable, could be turned into a variable
-      --  by expansion.
+      --  We do the test on the original node, since this is basically a test
+      --  of syntactic categories, so it must not be disturbed by whatever
+      --  rewriting might have occurred. For example, an aggregate, which is
+      --  certainly NOT a variable, could be turned into a variable by
+      --  expansion.
 
       function In_Protected_Function (E : Entity_Id) return Boolean;
       --  Within a protected function, the private components of the
@@ -7062,6 +7286,18 @@ package body Sem_Util is
          end case;
       end if;
    end Is_Variable;
+
+   ---------------------------
+   -- Is_Visibly_Controlled --
+   ---------------------------
+
+   function Is_Visibly_Controlled (T : Entity_Id) return Boolean is
+      Root : constant Entity_Id := Root_Type (T);
+   begin
+      return Chars (Scope (Root)) = Name_Finalization
+        and then Chars (Scope (Scope (Root))) = Name_Ada
+        and then Scope (Scope (Scope (Root))) = Standard_Standard;
+   end Is_Visibly_Controlled;
 
    ------------------------
    -- Is_Volatile_Object --
@@ -10253,6 +10489,10 @@ package body Sem_Util is
                end loop;
             end;
 
+            if Ekind (T) = E_Class_Wide_Subtype then
+               Set_Debug_Info_Needed_If_Not_Set (Equivalent_Type (T));
+            end if;
+
          elsif Is_Array_Type (T) then
             Set_Debug_Info_Needed_If_Not_Set (Component_Type (T));
 
@@ -11140,7 +11380,15 @@ package body Sem_Util is
                L  : constant Node_Id := Left_Opnd (Op);
                R  : constant Node_Id := Right_Opnd (Op);
             begin
-               if Etype (L) = Found_Type
+               --  The case for the message is when the left operand of the
+               --  comparison is the same modular type, or when it is an
+               --  integer literal (or other universal integer expression),
+               --  which would have been typed as the modular type if the
+               --  parens had been there.
+
+               if (Etype (L) = Found_Type
+                     or else
+                   Etype (L) = Universal_Integer)
                  and then Is_Integer_Type (Etype (R))
                then
                   Error_Msg_N

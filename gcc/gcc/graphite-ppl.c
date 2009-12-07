@@ -561,6 +561,30 @@ ppl_print_polyhedron_matrix (FILE *file, ppl_const_Polyhedron_t ph)
   cloog_matrix_free (mat);
 }
 
+/* Print to FILE the linear expression LE.  */
+
+void
+ppl_print_linear_expr (FILE *file, ppl_Linear_Expression_t le)
+{
+  ppl_Constraint_t c;
+  ppl_Polyhedron_t pol;
+  ppl_dimension_type dim;
+
+  ppl_Linear_Expression_space_dimension (le, &dim);
+  ppl_new_C_Polyhedron_from_space_dimension (&pol, dim, 0);
+  ppl_new_Constraint (&c, le, PPL_CONSTRAINT_TYPE_EQUAL);
+  ppl_Polyhedron_add_constraint (pol, c);
+  ppl_print_polyhedron_matrix (file, pol);
+}
+
+/* Print to STDERR the linear expression LE.  */
+
+void
+debug_ppl_linear_expr (ppl_Linear_Expression_t le)
+{
+  ppl_print_linear_expr (stderr, le);
+}
+
 /* Print to FILE the powerset PS in its PolyLib matrix form.  */
 
 void
@@ -644,5 +668,37 @@ ppl_max_for_le_pointset (ppl_Pointset_Powerset_C_Polyhedron_t ps,
   ppl_delete_Coefficient (num);
   ppl_delete_Coefficient (denom);
 }
+
+/* Return in RES the maximum of the linear expression LE on the
+   polyhedron POL.  */
+
+void
+ppl_min_for_le_polyhedron (ppl_Polyhedron_t pol,
+			   ppl_Linear_Expression_t le, Value res)
+{
+  ppl_Coefficient_t num, denom;
+  Value dv, nv;
+  int maximum, err;
+
+  value_init (nv);
+  value_init (dv);
+  ppl_new_Coefficient (&num);
+  ppl_new_Coefficient (&denom);
+  err = ppl_Polyhedron_minimize (pol, le, num, denom, &maximum);
+
+  if (err > 0)
+    {
+      ppl_Coefficient_to_mpz_t (num, nv);
+      ppl_Coefficient_to_mpz_t (denom, dv);
+      gcc_assert (value_notzero_p (dv));
+      value_division (res, nv, dv);
+    }
+
+  value_clear (nv);
+  value_clear (dv);
+  ppl_delete_Coefficient (num);
+  ppl_delete_Coefficient (denom);
+}
+
 
 #endif

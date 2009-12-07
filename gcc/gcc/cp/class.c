@@ -2677,7 +2677,8 @@ add_implicitly_declared_members (tree t,
       CLASSTYPE_LAZY_COPY_CTOR (t) = 1;
     }
 
-  /* Currently only lambdas get a lazy move ctor.  */
+  /* Currently only lambdas get a lazy move ctor, but N2987 adds them for
+     other classes.  */
   if (LAMBDA_TYPE_P (t))
     CLASSTYPE_LAZY_MOVE_CTOR (t) = 1;
 
@@ -3843,7 +3844,7 @@ check_methods (tree t)
 	    VEC_safe_push (tree, gc, CLASSTYPE_PURE_VIRTUALS (t), x);
 	}
       /* All user-provided destructors are non-trivial.  */
-      if (DECL_DESTRUCTOR_P (x) && !DECL_DEFAULTED_FN (x))
+      if (DECL_DESTRUCTOR_P (x) && user_provided_p (x))
 	TYPE_HAS_NONTRIVIAL_DESTRUCTOR (t) = 1;
     }
 }
@@ -4103,6 +4104,7 @@ adjust_clone_args (tree decl)
 	      /* A default parameter has been added. Adjust the
 		 clone's parameters.  */
 	      tree exceptions = TYPE_RAISES_EXCEPTIONS (TREE_TYPE (clone));
+	      tree attrs = TYPE_ATTRIBUTES (TREE_TYPE (clone));
 	      tree basetype = TYPE_METHOD_BASETYPE (TREE_TYPE (clone));
 	      tree type;
 
@@ -4120,6 +4122,8 @@ adjust_clone_args (tree decl)
 						 clone_parms);
 	      if (exceptions)
 		type = build_exception_variant (type, exceptions);
+	      if (attrs)
+		type = cp_build_type_attribute_variant (type, attrs);
 	      TREE_TYPE (clone) = type;
 
 	      clone_parms = NULL_TREE;
@@ -4174,17 +4178,17 @@ type_has_user_nondefault_constructor (tree t)
 }
 
 /* Returns true iff FN is a user-provided function, i.e. user-declared
-   and not defaulted at its first declaration.  */
+   and not defaulted at its first declaration; or explicit, private,
+   protected, or non-const.  */
 
-static bool
+bool
 user_provided_p (tree fn)
 {
   if (TREE_CODE (fn) == TEMPLATE_DECL)
     return true;
   else
     return (!DECL_ARTIFICIAL (fn)
-	    && !(DECL_DEFAULTED_FN (fn)
-		 && DECL_INITIALIZED_IN_CLASS_P (fn)));
+	    && !DECL_DEFAULTED_IN_CLASS_P (fn));
 }
 
 /* Returns true iff class T has a user-provided constructor.  */
@@ -4238,31 +4242,6 @@ type_has_user_provided_default_constructor (tree t)
   return false;
 }
 
-/* Returns true if FN can be explicitly defaulted.  */
-
-bool
-defaultable_fn_p (tree fn)
-{
-  if (DECL_CONSTRUCTOR_P (fn))
-    {
-      if (FUNCTION_FIRST_USER_PARMTYPE (fn) == void_list_node)
-	return true;
-      else if (copy_fn_p (fn) > 0
-	       && (TREE_CHAIN (FUNCTION_FIRST_USER_PARMTYPE (fn))
-		   == void_list_node))
-	return true;
-      else
-	return false;
-    }
-  else if (DECL_DESTRUCTOR_P (fn))
-    return true;
-  else if (DECL_ASSIGNMENT_OPERATOR_P (fn)
-	   && DECL_OVERLOADED_OPERATOR_P (fn) == NOP_EXPR)
-    return copy_fn_p (fn);
-  else
-    return false;
-}
-
 /* Remove all zero-width bit-fields from T.  */
 
 static void
@@ -4275,7 +4254,12 @@ remove_zero_width_bit_fields (tree t)
     {
       if (TREE_CODE (*fieldsp) == FIELD_DECL
 	  && DECL_C_BIT_FIELD (*fieldsp)
-	  && DECL_INITIAL (*fieldsp))
+          /* We should not be confused by the fact that grokbitfield
+	     temporarily sets the width of the bit field into
+	     DECL_INITIAL (*fieldsp).
+	     check_bitfield_decl eventually sets DECL_SIZE (*fieldsp)
+	     to that width.  */
+	  && integer_zerop (DECL_SIZE (*fieldsp)))
 	*fieldsp = TREE_CHAIN (*fieldsp);
       else
 	fieldsp = &TREE_CHAIN (*fieldsp);
@@ -4356,6 +4340,7 @@ check_bases_and_members (tree t)
   tree access_decls;
   bool saved_complex_asn_ref;
   bool saved_nontrivial_dtor;
+  tree fn;
 
   /* By default, we use const reference arguments and generate default
      constructors.  */
@@ -4452,6 +4437,31 @@ check_bases_and_members (tree t)
   add_implicitly_declared_members (t,
 				   cant_have_const_ctor,
 				   no_const_asn_ref);
+
+  /* Check defaulted declarations here so we have cant_have_const_ctor
+     and don't need to worry about clones.  */
+  for (fn = TYPE_METHODS (t); fn; fn = TREE_CHAIN (fn))
+    if (DECL_DEFAULTED_IN_CLASS_P (fn))
+      {
+	int copy = copy_fn_p (fn);
+	if (copy > 0)
+	  {
+	    bool imp_const_p
+	      = (DECL_CONSTRUCTOR_P (fn) ? !cant_have_const_ctor
+		 : !no_const_asn_ref);
+	    bool fn_const_p = (copy == 2);
+
+	    if (fn_const_p && !imp_const_p)
+	      /* If the function is defaulted outside the class, we just
+		 give the synthesis error.  */
+	      error ("%q+D declared to take const reference, but implicit "
+		     "declaration would take non-const", fn);
+	    else if (imp_const_p && !fn_const_p)
+	      error ("%q+D declared to take non-const reference cannot be "
+		     "defaulted in the class body", fn);
+	  }
+	defaulted_late_check (fn);
+      }
 
   if (LAMBDA_TYPE_P (t))
     {
@@ -5514,6 +5524,9 @@ finish_struct (tree t, tree attributes)
 	if (DECL_PURE_VIRTUAL_P (x))
 	  VEC_safe_push (tree, gc, CLASSTYPE_PURE_VIRTUALS (t), x);
       complete_vars (t);
+
+      /* Remember current #pragma pack value.  */
+      TYPE_PRECISION (t) = maximum_field_alignment;
     }
   else
     finish_struct_1 (t);
@@ -6051,12 +6064,12 @@ resolve_address_of_overloaded_function (tree target_type,
        selected function.  */
 
   int is_ptrmem = 0;
-  int is_reference = 0;
   /* We store the matches in a TREE_LIST rooted here.  The functions
      are the TREE_PURPOSE, not the TREE_VALUE, in this list, for easy
      interoperability with most_specialized_instantiation.  */
   tree matches = NULL_TREE;
   tree fn;
+  tree target_fn_type;
 
   /* By the time we get here, we should be seeing only real
      pointer-to-member types, not the internal POINTER_TYPE to
@@ -6073,12 +6086,9 @@ resolve_address_of_overloaded_function (tree target_type,
     /* This is OK, too.  */
     is_ptrmem = 1;
   else if (TREE_CODE (target_type) == FUNCTION_TYPE)
-    {
-      /* This is OK, too.  This comes from a conversion to reference
-	 type.  */
-      target_type = build_reference_type (target_type);
-      is_reference = 1;
-    }
+    /* This is OK, too.  This comes from a conversion to reference
+       type.  */
+    target_type = build_reference_type (target_type);
   else
     {
       if (flags & tf_error)
@@ -6087,6 +6097,15 @@ resolve_address_of_overloaded_function (tree target_type,
 	       DECL_NAME (OVL_FUNCTION (overload)), target_type);
       return error_mark_node;
     }
+
+  /* Non-member functions and static member functions match targets of type
+     "pointer-to-function" or "reference-to-function."  Nonstatic member
+     functions match targets of type "pointer-to-member-function;" the
+     function type of the pointer to member is used to select the member
+     function from the set of overloaded member functions.
+
+     So figure out the FUNCTION_TYPE that we want to match against.  */
+  target_fn_type = static_fn_type (target_type);
 
   /* If we can find a non-template function that matches, we can just
      use it.  There's no point in generating template instantiations
@@ -6099,7 +6118,6 @@ resolve_address_of_overloaded_function (tree target_type,
       for (fns = overload; fns; fns = OVL_NEXT (fns))
 	{
 	  tree fn = OVL_CURRENT (fns);
-	  tree fntype;
 
 	  if (TREE_CODE (fn) == TEMPLATE_DECL)
 	    /* We're not looking for templates just yet.  */
@@ -6117,13 +6135,7 @@ resolve_address_of_overloaded_function (tree target_type,
 	    continue;
 
 	  /* See if there's a match.  */
-	  fntype = TREE_TYPE (fn);
-	  if (is_ptrmem)
-	    fntype = build_ptrmemfunc_type (build_pointer_type (fntype));
-	  else if (!is_reference)
-	    fntype = build_pointer_type (fntype);
-
-	  if (can_convert_arg (target_type, fntype, fn, LOOKUP_NORMAL))
+	  if (same_type_p (target_fn_type, static_fn_type (fn)))
 	    matches = tree_cons (fn, NULL_TREE, matches);
 	}
     }
@@ -6133,7 +6145,6 @@ resolve_address_of_overloaded_function (tree target_type,
      match we need to look at them, too.  */
   if (!matches)
     {
-      tree target_fn_type;
       tree target_arg_types;
       tree target_ret_type;
       tree fns;
@@ -6141,17 +6152,8 @@ resolve_address_of_overloaded_function (tree target_type,
       unsigned int nargs, ia;
       tree arg;
 
-      if (is_ptrmem)
-	target_fn_type
-	  = TREE_TYPE (TYPE_PTRMEMFUNC_FN_TYPE (target_type));
-      else
-	target_fn_type = TREE_TYPE (target_type);
       target_arg_types = TYPE_ARG_TYPES (target_fn_type);
       target_ret_type = TREE_TYPE (target_fn_type);
-
-      /* Never do unification on the 'this' parameter.  */
-      if (TREE_CODE (target_fn_type) == METHOD_TYPE)
-	target_arg_types = TREE_CHAIN (target_arg_types);
 
       nargs = list_length (target_arg_types);
       args = XALLOCAVEC (tree, nargs);
@@ -6165,7 +6167,6 @@ resolve_address_of_overloaded_function (tree target_type,
 	{
 	  tree fn = OVL_CURRENT (fns);
 	  tree instantiation;
-	  tree instantiation_type;
 	  tree targs;
 
 	  if (TREE_CODE (fn) != TEMPLATE_DECL)
@@ -6193,14 +6194,7 @@ resolve_address_of_overloaded_function (tree target_type,
 	    continue;
 
 	  /* See if there's a match.  */
-	  instantiation_type = TREE_TYPE (instantiation);
-	  if (is_ptrmem)
-	    instantiation_type =
-	      build_ptrmemfunc_type (build_pointer_type (instantiation_type));
-	  else if (!is_reference)
-	    instantiation_type = build_pointer_type (instantiation_type);
-	  if (can_convert_arg (target_type, instantiation_type, instantiation,
-			       LOOKUP_NORMAL))
+	  if (same_type_p (target_fn_type, static_fn_type (instantiation)))
 	    matches = tree_cons (instantiation, fn, matches);
 	}
 
@@ -6520,6 +6514,7 @@ build_self_reference (void)
   DECL_CONTEXT (value) = current_class_type;
   DECL_ARTIFICIAL (value) = 1;
   SET_DECL_SELF_REFERENCE_P (value);
+  set_underlying_type (value);
 
   if (processing_template_decl)
     value = push_template_decl (value);
@@ -8049,12 +8044,10 @@ build_rtti_vtbl_entries (tree binfo, vtbl_init_data* vid)
 {
   tree b;
   tree t;
-  tree basetype;
   tree offset;
   tree decl;
   tree init;
 
-  basetype = BINFO_TYPE (binfo);
   t = BINFO_TYPE (vid->rtti_binfo);
 
   /* To find the complete object, we will first convert to our most

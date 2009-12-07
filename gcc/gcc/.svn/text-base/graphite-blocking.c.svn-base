@@ -174,11 +174,11 @@ pbb_strip_mine_time_depth (poly_bb_p pbb, int time_depth, int stride)
 }
 
 /* Returns true when strip mining with STRIDE of the loop around PBB
-   at scattering time TIME_DEPTH is profitable.  */
+   at DEPTH is profitable.  */
 
 static bool
 pbb_strip_mine_profitable_p (poly_bb_p pbb,
-			     graphite_dim_t time_depth,
+			     graphite_dim_t depth,
 			     int stride)
 {
   Value niter, strip_stride;
@@ -187,7 +187,7 @@ pbb_strip_mine_profitable_p (poly_bb_p pbb,
   value_init (strip_stride);
   value_init (niter);
   value_set_si (strip_stride, stride);
-  pbb_number_of_iterations_at_time (pbb, time_depth, niter);
+  pbb_number_of_iterations_at_time (pbb, psct_dynamic_dim (pbb, depth), niter);
   res = value_gt (niter, strip_stride);
   value_clear (strip_stride);
   value_clear (niter);
@@ -195,26 +195,64 @@ pbb_strip_mine_profitable_p (poly_bb_p pbb,
   return res;
 }
 
-/* Strip mines all the loops around PBB.  Nothing profitable in all this:
-   this is just a driver function.  */
+/* Strip-mines all the loops of LST that are considered profitable to
+   strip-mine.  Return true if it did strip-mined some loops.  */
 
 static bool
-pbb_do_strip_mine (poly_bb_p pbb)
+lst_do_strip_mine_loop (lst_p lst, int depth)
 {
-  graphite_dim_t s_dim;
-  int stride = 64;
-  bool transform_done = false;
+  int i;
+  lst_p l;
+  int stride = PARAM_VALUE (PARAM_LOOP_BLOCK_TILE_SIZE);
+  poly_bb_p pbb;
 
-  for (s_dim = 0; s_dim < pbb_nb_dynamic_scattering_transform (pbb); s_dim++)
-    if (pbb_strip_mine_profitable_p (pbb, psct_dynamic_dim (pbb, s_dim),
-                                     stride))
-      {
-	ppl_dimension_type d = psct_dynamic_dim (pbb, s_dim);
-	transform_done |= pbb_strip_mine_time_depth (pbb, d, stride);
-	s_dim++;
-      }
+  if (!lst)
+    return false;
 
-  return transform_done;
+  if (LST_LOOP_P (lst))
+    {
+      bool res = false;
+
+      for (i = 0; VEC_iterate (lst_p, LST_SEQ (lst), i, l); i++)
+	res |= lst_do_strip_mine_loop (l, depth);
+
+      return res;
+    }
+
+  pbb = LST_PBB (lst);
+  return pbb_strip_mine_time_depth (pbb, psct_dynamic_dim (pbb, depth),
+				    stride);
+}
+
+/* Strip-mines all the loops of LST that are considered profitable to
+   strip-mine.  Return true if it did strip-mined some loops.  */
+
+static bool
+lst_do_strip_mine (lst_p lst)
+{
+  int i;
+  lst_p l;
+  bool res = false;
+  int stride = PARAM_VALUE (PARAM_LOOP_BLOCK_TILE_SIZE);
+  int depth;
+
+  if (!lst
+      || !LST_LOOP_P (lst))
+    return false;
+
+  for (i = 0; VEC_iterate (lst_p, LST_SEQ (lst), i, l); i++)
+    res |= lst_do_strip_mine (l);
+
+  depth = lst_depth (lst);
+  if (depth >= 0
+      && pbb_strip_mine_profitable_p (LST_PBB (lst_find_first_pbb (lst)),
+				      depth, stride))
+    {
+      res |= lst_do_strip_mine_loop (lst, lst_depth (lst));
+      lst_add_loop_under_loop (lst);
+    }
+
+  return res;
 }
 
 /* Strip mines all the loops in SCOP.  Nothing profitable in all this:
@@ -223,14 +261,11 @@ pbb_do_strip_mine (poly_bb_p pbb)
 bool
 scop_do_strip_mine (scop_p scop)
 {
-  poly_bb_p pbb;
-  int i;
   bool transform_done = false;
 
   store_scattering (scop);
 
-  for (i = 0; VEC_iterate (poly_bb_p, SCOP_BBS (scop), i, pbb); i++)
-    transform_done |= pbb_do_strip_mine (pbb);
+  transform_done = lst_do_strip_mine (SCOP_TRANSFORMED_SCHEDULE (scop));
 
   if (!transform_done)
     return false;
@@ -241,7 +276,34 @@ scop_do_strip_mine (scop_p scop)
       return false;
     }
 
-  return true;
+  return transform_done;
+}
+
+/* Loop blocks all the loops in SCOP.  Returns true when we manage to
+   block some loops.  */
+
+bool
+scop_do_block (scop_p scop)
+{
+  bool transform_done = false;
+
+  store_scattering (scop);
+
+  lst_do_strip_mine (SCOP_TRANSFORMED_SCHEDULE (scop));
+  transform_done = scop_do_interchange (scop);
+
+  /* If we don't interchange loops, then the strip mine is not
+     profitable, and the transform is not a loop blocking.  */
+  if (!transform_done
+      || !graphite_legal_transform (scop))
+    {
+      restore_scattering (scop);
+      return false;
+    }
+  else if (dump_file && (dump_flags & TDF_DETAILS))
+    fprintf (dump_file, "SCoP will be loop blocked.\n");
+
+  return transform_done;
 }
 
 #endif

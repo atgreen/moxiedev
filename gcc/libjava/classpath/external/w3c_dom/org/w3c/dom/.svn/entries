@@ -1,7 +1,7 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/external/w3c_dom/org/w3c/dom
 svn://gcc.gnu.org/svn/gcc
 
@@ -505,9 +505,6 @@ tromey
 
 2408
 
-bootstrap
-dir
-
 TypeInfo.java
 file
 
@@ -542,7 +539,7 @@ tromey
 
 9818
 
-ls
+bootstrap
 dir
 
 DOMException.java
@@ -578,6 +575,9 @@ tromey
 
 
 5275
+
+ls
+dir
 
 ranges
 dir
@@ -653,9 +653,6 @@ tromey
 xpath
 dir
 
-html2
-dir
-
 UserDataHandler.java
 file
 
@@ -689,6 +686,9 @@ tromey
 
 
 3069
+
+html2
+dir
 
 css
 dir
@@ -730,40 +730,6 @@ tromey
 views
 dir
 
-Document.java
-file
-
-
-
-
-2009-04-24T17:46:45.000000Z
-530dc17fe4f0bc7718c42684baa32e72
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-44096
-
 ProcessingInstruction.java
 file
 
@@ -797,6 +763,40 @@ tromey
 
 
 2207
+
+Document.java
+file
+
+
+
+
+2009-04-24T17:46:45.000000Z
+530dc17fe4f0bc7718c42684baa32e72
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+44096
 
 traversal
 dir

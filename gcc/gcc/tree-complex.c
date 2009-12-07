@@ -3,17 +3,17 @@
    Free Software Foundation, Inc.
 
 This file is part of GCC.
-   
+
 GCC is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation; either version 3, or (at your option) any
 later version.
-   
+
 GCC is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 for more details.
-   
+
 You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
@@ -66,7 +66,7 @@ static VEC(tree, heap) *complex_ssa_name_components;
 
 /* Lookup UID in the complex_variable_components hashtable and return the
    associated tree.  */
-static tree 
+static tree
 cvc_lookup (unsigned int uid)
 {
   struct int_tree_map *h, in;
@@ -74,12 +74,12 @@ cvc_lookup (unsigned int uid)
   h = (struct int_tree_map *) htab_find_with_hash (complex_variable_components, &in, uid);
   return h ? h->to : NULL;
 }
- 
+
 /* Insert the pair UID, TO into the complex_variable_components hashtable.  */
 
-static void 
+static void
 cvc_insert (unsigned int uid, tree to)
-{ 
+{
   struct int_tree_map *h;
   void **loc;
 
@@ -215,7 +215,7 @@ init_dont_simulate_again (void)
 	  stmt = gsi_stmt (gsi);
 	  op0 = op1 = NULL_TREE;
 
-	  /* Most control-altering statements must be initially 
+	  /* Most control-altering statements must be initially
 	     simulated, else we won't cover the entire cfg.  */
 	  sim_again_p = stmt_ends_bb_p (stmt);
 
@@ -434,11 +434,9 @@ create_one_component_var (tree type, tree orig, const char *prefix,
   if (DECL_NAME (orig) && !DECL_IGNORED_P (orig))
     {
       const char *name = IDENTIFIER_POINTER (DECL_NAME (orig));
-      tree inner_type;
 
       DECL_NAME (r) = get_identifier (ACONCAT ((name, suffix, NULL)));
 
-      inner_type = TREE_TYPE (TREE_TYPE (orig));
       SET_DECL_DEBUG_EXPR (r, build1 (code, type, orig));
       DECL_DEBUG_EXPR_IS_FROM (r) = 1;
       DECL_IGNORED_P (r) = 0;
@@ -571,7 +569,7 @@ set_component_ssa_name (tree ssa_name, bool imag_p, tree value)
      a new ssa name.  */
   else
     comp = get_component_ssa_name (ssa_name, imag_p);
-  
+
   /* Do all the work to assign VALUE to COMP.  */
   list = NULL;
   value = force_gimple_operand (value, &list, false, NULL);
@@ -1066,7 +1064,7 @@ expand_complex_multiplication (gimple_stmt_iterator *gsi, tree inner_type,
 }
 
 /* Keep this algorithm in sync with fold-const.c:const_binop().
-   
+
    Expand complex division to scalars, straightforward algorithm.
 	a / b = ((ar*br + ai*bi)/t) + i((ai*br - ar*bi)/t)
 	    t = br*br + bi*bi
@@ -1114,12 +1112,12 @@ expand_complex_div_wide (gimple_stmt_iterator *gsi, tree inner_type,
   t1 = gimplify_build1 (gsi, ABS_EXPR, inner_type, br);
   t2 = gimplify_build1 (gsi, ABS_EXPR, inner_type, bi);
   compare = fold_build2_loc (gimple_location (gsi_stmt (*gsi)),
-			 LT_EXPR, boolean_type_node, t1, t2);
+			     LT_EXPR, boolean_type_node, t1, t2);
   STRIP_NOPS (compare);
 
   bb_cond = bb_true = bb_false = bb_join = NULL;
   rr = ri = tr = ti = NULL;
-  if (!TREE_CONSTANT (compare))
+  if (TREE_CODE (compare) != INTEGER_CST)
     {
       edge e;
       gimple stmt;
@@ -1544,7 +1542,7 @@ expand_complex_operations_1 (gimple_stmt_iterator *gsi)
     case RDIV_EXPR:
       expand_complex_division (gsi, inner_type, ar, ai, br, bi, code, al, bl);
       break;
-      
+
     case NEGATE_EXPR:
       expand_complex_negation (gsi, inner_type, ar, ai);
       break;
@@ -1612,7 +1610,7 @@ tree_lower_complex (void)
   return 0;
 }
 
-struct gimple_opt_pass pass_lower_complex = 
+struct gimple_opt_pass pass_lower_complex =
 {
  {
   GIMPLE_PASS,
@@ -1663,7 +1661,7 @@ gate_no_optimization (void)
   return optimize == 0 || sorrycount || errorcount;
 }
 
-struct gimple_opt_pass pass_lower_complex_O0 = 
+struct gimple_opt_pass pass_lower_complex_O0 =
 {
  {
   GIMPLE_PASS,

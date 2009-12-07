@@ -32,9 +32,10 @@ along with GCC; see the file COPYING3.  If not see
 
 /* Initialize FILE, an LTO file object for FILENAME.  */
 static void
-lto_file_init (lto_file *file, const char *filename)
+lto_file_init (lto_file *file, const char *filename, off_t offset)
 {
   file->filename = filename;
+  file->offset = offset;
 }
 
 /* An ELF file.  */
@@ -167,9 +168,11 @@ lto_elf_build_section_table (lto_file *lto_file)
   lto_elf_file *elf_file = (lto_elf_file *)lto_file;
   htab_t section_hash_table;
   Elf_Scn *section;
+  size_t base_offset;
 
   section_hash_table = htab_create (37, hash_name, eq_name, free);
 
+  base_offset = elf_getbase (elf_file->elf);
   for (section = elf_getscn (elf_file->elf, 0);
        section;
        section = elf_nextscn (elf_file->elf, section)) 
@@ -206,7 +209,7 @@ lto_elf_build_section_table (lto_file *lto_file)
 
 	  new_slot->name = new_name;
 	  /* The offset into the file for this section.  */
-	  new_slot->start = shdr->sh_offset;
+	  new_slot->start = base_offset + shdr->sh_offset;
 	  new_slot->len = shdr->sh_size;
 	  *slot = new_slot;
 	}
@@ -530,7 +533,6 @@ init_ehdr (lto_elf_file *elf_file)
     }
 }
 
-
 /* Open ELF file FILENAME.  If WRITABLE is true, the file is opened for write
    and, if necessary, created.  Otherwise, the file is opened for reading.
    Returns the opened file.  */
@@ -539,19 +541,43 @@ lto_file *
 lto_elf_file_open (const char *filename, bool writable)
 {
   lto_elf_file *elf_file;
-  lto_file *result;
+  lto_file *result = NULL;
+  off_t offset;
+  off_t header_offset;
+  const char *offset_p;
+  char *fname;
+
+  offset_p = strchr (filename, '@');
+  if (!offset_p)
+    {
+      fname = xstrdup (filename);
+      offset = 0;
+      header_offset = 0;
+    }
+  else
+    {
+      fname = (char *) xmalloc (offset_p - filename + 1);
+      memcpy (fname, filename, offset_p - filename);
+      fname[offset_p - filename] = '\0';
+      offset_p += 3; /* skip the @0x */
+      offset = lto_parse_hex (offset_p);
+      /* elf_rand expects the offset to point to the ar header, not the
+         object itself. Subtract the size of the ar header (60 bytes).
+         We don't uses sizeof (struct ar_hd) to avoid including ar.h */
+      header_offset = offset - 60;
+    }
 
   /* Set up.  */
   elf_file = XCNEW (lto_elf_file);
   result = (lto_file *) elf_file;
-  lto_file_init (result, filename);
+  lto_file_init (result, fname, offset);
   elf_file->fd = -1;
 
   /* Open the file.  */
-  elf_file->fd = open (filename, writable ? O_WRONLY|O_CREAT : O_RDONLY, 0666);
+  elf_file->fd = open (fname, writable ? O_WRONLY|O_CREAT : O_RDONLY, 0666);
   if (elf_file->fd == -1)
     {
-      error ("could not open file %s", filename);
+      error ("could not open file %s", fname);
       goto fail;
     }
 
@@ -571,6 +597,26 @@ lto_elf_file_open (const char *filename, bool writable)
       goto fail;
     }
 
+  if (offset != 0)
+    {
+      Elf *e;
+      off_t t = elf_rand (elf_file->elf, header_offset);
+      if (t != header_offset)
+        {
+          error ("could not seek in archive");
+          goto fail;
+        }
+
+      e = elf_begin (elf_file->fd, ELF_C_READ, elf_file->elf);
+      if (e == NULL)
+        {
+          error("could not find archive member");
+          goto fail;
+        }
+      elf_end (elf_file->elf);
+      elf_file->elf = e;
+    }
+
   if (writable)
     {
       init_ehdr (elf_file);
@@ -586,7 +632,8 @@ lto_elf_file_open (const char *filename, bool writable)
   return result;
 
  fail:
-  lto_elf_file_close (result);
+  if (result)
+    lto_elf_file_close (result);
   return NULL;
 }
 

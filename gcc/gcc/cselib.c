@@ -278,7 +278,7 @@ entry_and_rtx_equal_p (const void *entry, const void *x_arg)
 
   gcc_assert (!CONST_INT_P (x) && GET_CODE (x) != CONST_FIXED
 	      && (mode != VOIDmode || GET_CODE (x) != CONST_DOUBLE));
-  
+
   if (mode != GET_MODE (v->val_rtx))
     return 0;
 
@@ -662,6 +662,19 @@ rtx_equal_for_cselib_p (rtx x, rtx y)
   return 1;
 }
 
+/* We need to pass down the mode of constants through the hash table
+   functions.  For that purpose, wrap them in a CONST of the appropriate
+   mode.  */
+static rtx
+wrap_constant (enum machine_mode mode, rtx x)
+{
+  if (!CONST_INT_P (x) && GET_CODE (x) != CONST_FIXED
+      && (GET_CODE (x) != CONST_DOUBLE || GET_MODE (x) != VOIDmode))
+    return x;
+  gcc_assert (mode != VOIDmode);
+  return gen_rtx_CONST (mode, x);
+}
+
 /* Hash an rtx.  Return 0 if we couldn't hash the rtx.
    For registers and memory locations, we look up their cselib_val structure
    and return its VALUE element.
@@ -705,7 +718,8 @@ cselib_hash_rtx (rtx x, int create)
       return e->value;
 
     case DEBUG_EXPR:
-      hash += ((unsigned) DEBUG_EXPR << 7) + DEBUG_TEMP_UID (XTREE (x, 0));
+      hash += ((unsigned) DEBUG_EXPR << 7)
+	      + DEBUG_TEMP_UID (DEBUG_EXPR_TREE_DECL (x));
       return hash ? hash : (unsigned int) DEBUG_EXPR;
 
     case CONST_INT:
@@ -801,10 +815,10 @@ cselib_hash_rtx (rtx x, int create)
 	  {
 	    rtx tem = XEXP (x, i);
 	    unsigned int tem_hash = cselib_hash_rtx (tem, create);
-	    
+
 	    if (tem_hash == 0)
 	      return 0;
-	    
+
 	    hash += tem_hash;
 	  }
 	  break;
@@ -813,10 +827,10 @@ cselib_hash_rtx (rtx x, int create)
 	    {
 	      unsigned int tem_hash
 		= cselib_hash_rtx (XVECEXP (x, i, j), create);
-	      
+
 	      if (tem_hash == 0)
 		return 0;
-	      
+
 	      hash += tem_hash;
 	    }
 	  break;
@@ -824,13 +838,13 @@ cselib_hash_rtx (rtx x, int create)
 	case 's':
 	  {
 	    const unsigned char *p = (const unsigned char *) XSTR (x, i);
-	    
+
 	    if (p)
 	      while (*p)
 		hash += *p++;
 	    break;
 	  }
-	  
+
 	case 'i':
 	  hash += XINT (x, i);
 	  break;
@@ -839,7 +853,7 @@ cselib_hash_rtx (rtx x, int create)
 	case 't':
 	  /* unused */
 	  break;
-	  
+
 	default:
 	  gcc_unreachable ();
 	}
@@ -957,7 +971,7 @@ cselib_lookup_mem (rtx x, int create)
    non-reg results, we just take the first one because they will all
    expand to the same place.  */
 
-static rtx 
+static rtx
 expand_loc (struct elt_loc_list *p, struct expand_value_data *evd,
 	    int max_depth)
 {
@@ -969,8 +983,8 @@ expand_loc (struct elt_loc_list *p, struct expand_value_data *evd,
     {
       /* Avoid infinite recursion trying to expand a reg into a
 	 the same reg.  */
-      if ((REG_P (p->loc)) 
-	  && (REGNO (p->loc) < regno) 
+      if ((REG_P (p->loc))
+	  && (REGNO (p->loc) < regno)
 	  && !bitmap_bit_p (evd->regs_active, REGNO (p->loc)))
 	{
 	  reg_result = p->loc;
@@ -978,7 +992,7 @@ expand_loc (struct elt_loc_list *p, struct expand_value_data *evd,
 	}
       /* Avoid infinite recursion and do not try to expand the
 	 value.  */
-      else if (GET_CODE (p->loc) == VALUE 
+      else if (GET_CODE (p->loc) == VALUE
 	       && CSELIB_VAL_PTR (p->loc)->locs == p_in)
 	continue;
       else if (!REG_P (p->loc))
@@ -999,9 +1013,9 @@ expand_loc (struct elt_loc_list *p, struct expand_value_data *evd,
 	  if (result)
 	    return result;
 	}
-	
+
     }
-  
+
   if (regno != UINT_MAX)
     {
       rtx result;
@@ -1020,7 +1034,7 @@ expand_loc (struct elt_loc_list *p, struct expand_value_data *evd,
 	  print_inline_rtx (dump_file, reg_result, 0);
 	  fprintf (dump_file, "\n");
 	}
-      else 
+      else
 	fprintf (dump_file, "NULL\n");
     }
   return reg_result;
@@ -1031,7 +1045,7 @@ expand_loc (struct elt_loc_list *p, struct expand_value_data *evd,
    This is the opposite of common subexpression.  Because local value
    numbering is such a weak optimization, the expanded expression is
    pretty much unique (not from a pointer equals point of view but
-   from a tree shape point of view.  
+   from a tree shape point of view.
 
    This function returns NULL if the expansion fails.  The expansion
    will fail if there is no value number for one of the operands or if
@@ -1110,7 +1124,7 @@ cselib_expand_value_rtx_1 (rtx orig, struct expand_value_data *evd,
 	    {
 	      rtx result;
 	      int regno = REGNO (orig);
-	      
+
 	      /* The only thing that we are not willing to do (this
 		 is requirement of dse and if others potential uses
 		 need this function we should add a parm to control
@@ -1142,11 +1156,11 @@ cselib_expand_value_rtx_1 (rtx orig, struct expand_value_data *evd,
 
 	      if (result)
 		return result;
-	      else 
+	      else
 		return orig;
 	    }
       }
-      
+
     case CONST_INT:
     case CONST_DOUBLE:
     case CONST_VECTOR:
@@ -1339,21 +1353,9 @@ cselib_expand_value_rtx_1 (rtx orig, struct expand_value_data *evd,
     default:
       break;
     }
-  if (scopy == NULL_RTX)
-    {
-      XEXP (copy, 0)
-	= gen_rtx_CONST (GET_MODE (XEXP (orig, 0)), XEXP (copy, 0));
-      if (dump_file && (dump_flags & TDF_DETAILS))
-	fprintf (dump_file, "  wrapping const_int result in const to preserve mode %s\n",
-		 GET_MODE_NAME (GET_MODE (XEXP (copy, 0))));
-    }
   scopy = simplify_rtx (copy);
   if (scopy)
-    {
-      if (GET_MODE (copy) != GET_MODE (scopy))
-	scopy = wrap_constant (GET_MODE (copy), scopy);
-      return scopy;
-    }
+    return scopy;
   return copy;
 }
 
@@ -1420,30 +1422,31 @@ cselib_subst_to_values (rtx x)
 	{
 	  rtx t = cselib_subst_to_values (XEXP (x, i));
 
-	  if (t != XEXP (x, i) && x == copy)
-	    copy = shallow_copy_rtx (x);
-
-	  XEXP (copy, i) = t;
+	  if (t != XEXP (x, i))
+	    {
+	      if (x == copy)
+		copy = shallow_copy_rtx (x);
+	      XEXP (copy, i) = t;
+	    }
 	}
       else if (fmt[i] == 'E')
 	{
-	  int j, k;
+	  int j;
 
 	  for (j = 0; j < XVECLEN (x, i); j++)
 	    {
 	      rtx t = cselib_subst_to_values (XVECEXP (x, i, j));
 
-	      if (t != XVECEXP (x, i, j) && XVEC (x, i) == XVEC (copy, i))
+	      if (t != XVECEXP (x, i, j))
 		{
-		  if (x == copy)
-		    copy = shallow_copy_rtx (x);
-
-		  XVEC (copy, i) = rtvec_alloc (XVECLEN (x, i));
-		  for (k = 0; k < j; k++)
-		    XVECEXP (copy, i, k) = XVECEXP (x, i, k);
+		  if (XVEC (x, i) == XVEC (copy, i))
+		    {
+		      if (x == copy)
+			copy = shallow_copy_rtx (x);
+		      XVEC (copy, i) = shallow_copy_rtvec (XVEC (x, i));
+		    }
+		  XVECEXP (copy, i, j) = t;
 		}
-
-	      XVECEXP (copy, i, j) = t;
 	    }
 	}
     }
@@ -1887,7 +1890,13 @@ cselib_record_sets (rtx insn)
 	    src = gen_rtx_IF_THEN_ELSE (GET_MODE (dest), cond, src, dest);
 	  sets[i].src_elt = cselib_lookup (src, GET_MODE (dest), 1);
 	  if (MEM_P (dest))
-	    sets[i].dest_addr_elt = cselib_lookup (XEXP (dest, 0), Pmode, 1);
+	    {
+	      enum machine_mode address_mode
+		= targetm.addr_space.address_mode (MEM_ADDR_SPACE (dest));
+
+	      sets[i].dest_addr_elt = cselib_lookup (XEXP (dest, 0),
+						     address_mode, 1);
+	    }
 	  else
 	    sets[i].dest_addr_elt = 0;
 	}
@@ -1970,7 +1979,7 @@ cselib_process_insn (rtx insn)
       for (i = 0; i < FIRST_PSEUDO_REGISTER; i++)
 	if (call_used_regs[i]
 	    || (REG_VALUES (i) && REG_VALUES (i)->elt
-		&& HARD_REGNO_CALL_PART_CLOBBERED (i, 
+		&& HARD_REGNO_CALL_PART_CLOBBERED (i,
 		      GET_MODE (REG_VALUES (i)->elt->val_rtx))))
 	  cselib_invalidate_regno (i, reg_raw_mode[i]);
 
@@ -2016,11 +2025,11 @@ cselib_process_insn (rtx insn)
 void
 cselib_init (bool record_memory)
 {
-  elt_list_pool = create_alloc_pool ("elt_list", 
+  elt_list_pool = create_alloc_pool ("elt_list",
 				     sizeof (struct elt_list), 10);
-  elt_loc_list_pool = create_alloc_pool ("elt_loc_list", 
+  elt_loc_list_pool = create_alloc_pool ("elt_loc_list",
 				         sizeof (struct elt_loc_list), 10);
-  cselib_val_pool = create_alloc_pool ("cselib_val_list", 
+  cselib_val_pool = create_alloc_pool ("cselib_val_list",
 				       sizeof (cselib_val), 10);
   value_pool = create_alloc_pool ("value", RTX_CODE_SIZE (VALUE), 100);
   cselib_record_memory = record_memory;

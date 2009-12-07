@@ -97,6 +97,9 @@ ia64-*-*)
 hppa*-*-*)
 	cpu_type=pa
 	;;
+lm32*-*-*)
+	cpu_type=lm32
+	;;
 m32r*-*-*)
         cpu_type=m32r
         ;;
@@ -354,6 +357,14 @@ ia64-hp-*vms*)
 	;;
 iq2000*-*-elf*)
         ;;
+lm32-*-elf*)
+        extra_parts="crtbegin.o crtend.o crti.o crtn.o"
+        tmake_file="lm32/t-lm32 lm32/t-elf t-softfp"
+	;;
+lm32-*-uclinux*)
+        extra_parts="crtbegin.o crtend.o crtbeginS.o crtendS.o crtbeginT.o"
+        tmake_file="lm32/t-lm32 lm32/t-uclinux t-softfp"
+	;;	
 m32r-*-elf*|m32r-*-rtems*)
  	;;
 m32rle-*-elf*)
@@ -481,6 +492,10 @@ rs6000-ibm-aix4.[3456789]* | powerpc-ibm-aix4.[3456789]*)
 rs6000-ibm-aix5.1.* | powerpc-ibm-aix5.1.*)
 	;;
 rs6000-ibm-aix[56789].* | powerpc-ibm-aix[56789].*)
+	;;
+rx-*-elf)
+	extra_parts="crtbegin.o crtend.o"
+	tmake_file="rx/t-rx"
 	;;
 s390-*-linux*)
 	tmake_file="${tmake_file} s390/t-crtstuff s390/t-linux s390/32/t-floattodi"

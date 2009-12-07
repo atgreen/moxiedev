@@ -24,6 +24,18 @@ if { ![istarget i?86*-*-*] && ![istarget x86_64-*-*] } then {
 # Load support procs.
 load_lib gcc-dg.exp
 
+# Return 1 if attribute ms_hook_prologue is supported.
+proc check_effective_target_ms_hook_prologue { } {
+    if { [check_effective_target_ilp32]
+	 && [check_no_compiler_messages ms_hook_prologue object {
+	     void __attribute__ ((__ms_hook_prologue__)) foo ();
+	 } ""] } {
+	return 1
+    } else {
+	return 0
+    }
+}
+
 # Return 1 if ssse3 instructions can be compiled.
 proc check_effective_target_ssse3 { } {
     return [check_no_compiler_messages ssse3 object {
@@ -132,6 +144,20 @@ proc check_effective_target_fma4 { } {
 						     (__v4sf)__C);
 	}
     } "-O2 -mfma4" ]
+}
+
+# Return 1 if xop instructions can be compiled.
+proc check_effective_target_xop { } {
+    return [check_no_compiler_messages xop object {
+	typedef long long __m128i __attribute__ ((__vector_size__ (16), __may_alias__));
+	typedef short __v8hi __attribute__ ((__vector_size__ (16)));
+	__m128i _mm_maccs_epi16(__m128i __A, __m128i __B, __m128i __C)
+	{
+	    return (__m128i) __builtin_ia32_vpmacssww ((__v8hi)__A,
+						       (__v8hi)__B,
+						       (__v8hi)__C);
+	}
+    } "-O2 -mxop" ]
 }
 
 # If a testcase doesn't have special options, use these.

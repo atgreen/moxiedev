@@ -33,7 +33,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree-pass.h"
 
 /* Walk tree and record all calls and references to functions/variables.
-   Called via walk_tree: TP is pointer to tree to be examined.  
+   Called via walk_tree: TP is pointer to tree to be examined.
    When DATA is non-null, record references to callgraph.
    */
 
@@ -109,7 +109,8 @@ reset_inline_failed (struct cgraph_node *node)
 int
 compute_call_stmt_bb_frequency (tree decl, basic_block bb)
 {
-  int entry_freq = ENTRY_BLOCK_PTR->frequency;
+  int entry_freq = ENTRY_BLOCK_PTR_FOR_FUNCTION
+  		     (DECL_STRUCT_FUNCTION (decl))->frequency;
   int freq = bb->frequency;
 
   if (profile_status_for_function (DECL_STRUCT_FUNCTION (decl)) == PROFILE_ABSENT)
@@ -205,7 +206,7 @@ struct gimple_opt_pass pass_build_cgraph_edges =
 {
  {
   GIMPLE_PASS,
-  NULL,					/* name */
+  "*build_cgraph_edges",			/* name */
   NULL,					/* gate */
   build_cgraph_edges,			/* execute */
   NULL,					/* sub */
@@ -221,14 +222,14 @@ struct gimple_opt_pass pass_build_cgraph_edges =
 };
 
 /* Record references to functions and other variables present in the
-   initial value of DECL, a variable.  
+   initial value of DECL, a variable.
    When ONLY_VARS is true, we mark needed only variables, not functions.  */
 
 void
 record_references_in_initializer (tree decl, bool only_vars)
 {
   struct pointer_set_t *visited_nodes = pointer_set_create ();
-  walk_tree (&DECL_INITIAL (decl), record_reference, 
+  walk_tree (&DECL_INITIAL (decl), record_reference,
             only_vars ? NULL : decl, visited_nodes);
   pointer_set_destroy (visited_nodes);
 }
@@ -270,7 +271,7 @@ struct gimple_opt_pass pass_rebuild_cgraph_edges =
 {
  {
   GIMPLE_PASS,
-  NULL,					/* name */
+  "*rebuild_cgraph_edges",		/* name */
   NULL,					/* gate */
   rebuild_cgraph_edges,			/* execute */
   NULL,					/* sub */
@@ -297,7 +298,7 @@ struct gimple_opt_pass pass_remove_cgraph_callee_edges =
 {
  {
   GIMPLE_PASS,
-  NULL,					/* name */
+  "*remove_cgraph_callee_edges",		/* name */
   NULL,					/* gate */
   remove_cgraph_callee_edges,		/* execute */
   NULL,					/* sub */

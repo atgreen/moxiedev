@@ -52,9 +52,9 @@ unsigned int maximum_field_alignment = TARGET_DEFAULT_PACK_STRUCT * BITS_PER_UNI
 /* ... and its original value in bytes, specified via -fpack-struct=<value>.  */
 unsigned int initial_max_fld_align = TARGET_DEFAULT_PACK_STRUCT;
 
-/* Nonzero if all REFERENCE_TYPEs are internal and hence should be
-   allocated in Pmode, not ptr_mode.   Set only by internal_reference_types
-   called only by a front end.  */
+/* Nonzero if all REFERENCE_TYPEs are internal and hence should be allocated
+   in the address spaces' address_mode, not pointer_mode.   Set only by
+   internal_reference_types called only by a front end.  */
 static int reference_types_internal = 0;
 
 static tree self_referential_size (tree);
@@ -71,8 +71,8 @@ extern void debug_rli (record_layout_info);
 
 static GTY(()) tree pending_sizes;
 
-/* Show that REFERENCE_TYPES are internal and should be Pmode.  Called only
-   by front end.  */
+/* Show that REFERENCE_TYPES are internal and should use address_mode.
+   Called only by front end.  */
 
 void
 internal_reference_types (void)
@@ -1118,7 +1118,8 @@ place_field (record_layout_info rli, tree field)
       /* No, we need to skip space before this field.
 	 Bump the cumulative size to multiple of field alignment.  */
 
-      warning (OPT_Wpadded, "padding struct to align %q+D", field);
+      if (DECL_SOURCE_LOCATION (field) != BUILTINS_LOCATION)
+	warning (OPT_Wpadded, "padding struct to align %q+D", field);
 
       /* If the alignment is still within offset_align, just align
 	 the bit position.  */
@@ -1483,7 +1484,8 @@ finalize_record_size (record_layout_info rli)
     = round_up_loc (input_location, unpadded_size_unit, TYPE_ALIGN_UNIT (rli->t));
 
   if (TREE_CONSTANT (unpadded_size)
-      && simple_cst_equal (unpadded_size, TYPE_SIZE (rli->t)) == 0)
+      && simple_cst_equal (unpadded_size, TYPE_SIZE (rli->t)) == 0
+      && input_location != BUILTINS_LOCATION)
     warning (OPT_Wpadded, "padding struct size to alignment boundary");
 
   if (warn_packed && TREE_CODE (rli->t) == RECORD_TYPE
@@ -1915,6 +1917,7 @@ layout_type (tree type)
       /* A pointer might be MODE_PARTIAL_INT,
 	 but ptrdiff_t must be integral.  */
       SET_TYPE_MODE (type, mode_for_size (POINTER_SIZE, MODE_INT, 0));
+      TYPE_PRECISION (type) = POINTER_SIZE;
       break;
 
     case FUNCTION_TYPE:
@@ -1930,16 +1933,17 @@ layout_type (tree type)
     case POINTER_TYPE:
     case REFERENCE_TYPE:
       {
-	enum machine_mode mode = ((TREE_CODE (type) == REFERENCE_TYPE
-				   && reference_types_internal)
-				  ? Pmode : TYPE_MODE (type));
+	enum machine_mode mode = TYPE_MODE (type);
+	if (TREE_CODE (type) == REFERENCE_TYPE && reference_types_internal)
+	  {
+	    addr_space_t as = TYPE_ADDR_SPACE (TREE_TYPE (type));
+	    mode = targetm.addr_space.address_mode (as);
+	  }
 
-	int nbits = GET_MODE_BITSIZE (mode);
-
-	TYPE_SIZE (type) = bitsize_int (nbits);
+	TYPE_SIZE (type) = bitsize_int (GET_MODE_BITSIZE (mode));
 	TYPE_SIZE_UNIT (type) = size_int (GET_MODE_SIZE (mode));
 	TYPE_UNSIGNED (type) = 1;
-	TYPE_PRECISION (type) = nbits;
+	TYPE_PRECISION (type) = GET_MODE_BITSIZE (mode);
       }
       break;
 
@@ -2094,7 +2098,7 @@ layout_type (tree type)
    change the result of vector_mode_supported_p and have_regs_of_mode
    on a per-function basis.  Thus the TYPE_MODE of a VECTOR_TYPE can
    change on a per-function basis.  */
-/* ??? Possibly a better solution is to run through all the types 
+/* ??? Possibly a better solution is to run through all the types
    referenced by a function and re-compute the TYPE_MODE once, rather
    than make the TYPE_MODE macro call a function.  */
 

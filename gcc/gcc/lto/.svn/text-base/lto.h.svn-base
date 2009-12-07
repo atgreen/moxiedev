@@ -28,6 +28,7 @@ typedef struct lto_file_struct
 {
   /* The name of the file.  */
   const char *filename;
+  off_t offset;
 } lto_file;
 
 /* In lto-lang.c  */
@@ -56,5 +57,6 @@ struct lto_section_slot
   size_t len;
 };
 
+int64_t lto_parse_hex (const char *p);
 
 #endif /* LTO_H */

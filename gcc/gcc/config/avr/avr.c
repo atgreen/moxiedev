@@ -461,6 +461,31 @@ rtx avr_builtin_setjmp_frame_value (void)
 			 gen_int_mode (STARTING_FRAME_OFFSET, Pmode));
 }
 
+/* Return contents of MEM at frame pointer + stack size + 1 (+2 if 3 byte PC).
+   This is return address of function.  */
+rtx 
+avr_return_addr_rtx (int count, const_rtx tem)
+{
+  rtx r;
+    
+  /* Can only return this functions return address. Others not supported.  */
+  if (count)
+     return NULL;
+
+  if (AVR_3_BYTE_PC)
+    {
+      r = gen_rtx_SYMBOL_REF (Pmode, ".L__stack_usage+2");
+      warning (0, "'builtin_return_address' contains only 2 bytes of address");
+    }
+  else
+    r = gen_rtx_SYMBOL_REF (Pmode, ".L__stack_usage+1");
+
+  r = gen_rtx_PLUS (Pmode, tem, r);
+  r = gen_frame_mem (Pmode, memory_address (Pmode, r));
+  r = gen_rtx_ROTATE (HImode, r, GEN_INT (8));
+  return  r;
+}
+
 /* Return 1 if the function epilogue is just a single "ret".  */
 
 int
@@ -560,6 +585,7 @@ expand_prologue (void)
   cfun->machine->is_signal = signal_function_p (current_function_decl);
   cfun->machine->is_OS_task = avr_OS_task_function_p (current_function_decl);
   cfun->machine->is_OS_main = avr_OS_main_function_p (current_function_decl);
+  cfun->machine->stack_usage = 0;
   
   /* Prologue: naked.  */
   if (cfun->machine->is_naked)
@@ -588,10 +614,12 @@ expand_prologue (void)
       /* Push zero reg.  */
       insn = emit_move_insn (pushbyte, zero_reg_rtx);
       RTX_FRAME_RELATED_P (insn) = 1;
+      cfun->machine->stack_usage++;
 
       /* Push tmp reg.  */
       insn = emit_move_insn (pushbyte, tmp_reg_rtx);
       RTX_FRAME_RELATED_P (insn) = 1;
+      cfun->machine->stack_usage++;
 
       /* Push SREG.  */
       insn = emit_move_insn (tmp_reg_rtx, 
@@ -599,6 +627,7 @@ expand_prologue (void)
       RTX_FRAME_RELATED_P (insn) = 1;
       insn = emit_move_insn (pushbyte, tmp_reg_rtx);
       RTX_FRAME_RELATED_P (insn) = 1;
+      cfun->machine->stack_usage++;
 
       /* Push RAMPZ.  */
       if(AVR_HAVE_RAMPZ 
@@ -609,6 +638,7 @@ expand_prologue (void)
           RTX_FRAME_RELATED_P (insn) = 1;
           insn = emit_move_insn (pushbyte, tmp_reg_rtx);
           RTX_FRAME_RELATED_P (insn) = 1;
+          cfun->machine->stack_usage++;
         }
 	
       /* Clear zero reg.  */
@@ -630,6 +660,7 @@ expand_prologue (void)
         emit_insn (gen_call_prologue_saves (gen_int_mode (live_seq, HImode),
 					    gen_int_mode (size + live_seq, HImode)));
       RTX_FRAME_RELATED_P (insn) = 1;
+      cfun->machine->stack_usage += size + live_seq;
     }
   else
     {
@@ -641,6 +672,7 @@ expand_prologue (void)
               /* Emit push of register to save.  */
               insn=emit_move_insn (pushbyte, gen_rtx_REG (QImode, reg));
               RTX_FRAME_RELATED_P (insn) = 1;
+              cfun->machine->stack_usage++;
             }
         }
       if (frame_pointer_needed)
@@ -650,6 +682,7 @@ expand_prologue (void)
               /* Push frame pointer.  */
 	      insn = emit_move_insn (pushword, frame_pointer_rtx);
               RTX_FRAME_RELATED_P (insn) = 1;
+	      cfun->machine->stack_usage += 2;
 	    }
 
           if (!size)
@@ -756,6 +789,7 @@ expand_prologue (void)
 		emit_insn (sp_plus_insns);
               else
 		emit_insn (fp_plus_insns);
+	      cfun->machine->stack_usage += size;
             }
         }
     }
@@ -785,6 +819,11 @@ avr_asm_function_end_prologue (FILE *file)
     }
   fprintf (file, "/* frame size = " HOST_WIDE_INT_PRINT_DEC " */\n",
                  get_frame_size());
+  fprintf (file, "/* stack size = %d */\n",
+                 cfun->machine->stack_usage);
+  /* Create symbol stack offset here so all functions have it. Add 1 to stack
+     usage for offset so that SP + .L__stack_offset = return address.  */
+  fprintf (file, ".L__stack_usage = %d\n", cfun->machine->stack_usage);
 }
 
 
@@ -5877,12 +5916,12 @@ avr_hard_regno_rename_ok (unsigned int old_reg ATTRIBUTE_UNUSED,
   return 1;
 }
 
-/* Output a branch that tests a single bit of a register (QI, HI or SImode)
+/* Output a branch that tests a single bit of a register (QI, HI, SI or DImode)
    or memory location in the I/O space (QImode only).
 
    Operand 0: comparison operator (must be EQ or NE, compare bit to zero).
    Operand 1: register operand to test, or CONST_INT memory address.
-   Operand 2: bit number (for QImode operand) or mask (HImode, SImode).
+   Operand 2: bit number.
    Operand 3: label to jump to if the test is true.  */
 
 const char *
@@ -5930,9 +5969,7 @@ avr_out_sbxx_branch (rtx insn, rtx operands[])
       else  /* HImode or SImode */
 	{
 	  static char buf[] = "sbrc %A1,0";
-	  int bit_nr = exact_log2 (INTVAL (operands[2])
-				   & GET_MODE_MASK (GET_MODE (operands[1])));
-
+	  int bit_nr = INTVAL (operands[2]);
 	  buf[3] = (comp == EQ) ? 's' : 'c';
 	  buf[6] = 'A' + (bit_nr >> 3);
 	  buf[9] = '0' + (bit_nr & 7);

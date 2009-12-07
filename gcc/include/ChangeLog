@@ -1,3 +1,25 @@
+2009-11-06  Jonas Maebe  <jonas.maebe@elis.ugent.be>
+
+	Add DWARF attribute value for the "Borland fastcall" calling
+	convention.
+	* elf/dwarf2.h: Add DW_CC_GNU_borland_fastcall_i386 constant.
+
+2009-10-23  Kai Tietz  <kai.tietz@onevision.com>
+
+	* splay-tree.h (libi_uhostptr_t): Add gcc specific
+	__extension__ for long long type case to silent cX9.
+	(libi_shostptr_t): Likewise.
+
+2009-10-19  Rafael Avila de Espindola  <espindola@google.com>
+
+	PR40790
+        * plugin-api.h: Don't include stdint.h unconditionally.
+
+2009-10-15  Jakub Jelinek  <jakub@redhat.com>
+
+	* include/dwarf2.h (DW_LANG_Python): Add comment that it is
+	a DWARF 4 addition.
+
 2009-10-09  Rafael Espindola  <espindola@google.com>
 
 	* plugin-api.h (ld_plugin_add_input_library): Change argument name to

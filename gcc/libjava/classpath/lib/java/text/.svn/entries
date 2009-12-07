@@ -1,7 +1,7 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/java/text
 svn://gcc.gnu.org/svn/gcc
 
@@ -539,40 +539,6 @@ has-props
 
 10825
 
-CollationElementIterator.class
-file
-
-
-
-
-2009-04-24T17:48:03.000000Z
-405cfbd61b1cbfd4a0409f34d95d8283
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5555
-
 AttributedStringIterator.class
 file
 
@@ -607,14 +573,14 @@ has-props
 
 5288
 
-DateFormat.class
+CollationElementIterator.class
 file
 
 
 
 
 2009-04-24T17:48:03.000000Z
-9cbfeb01849582d710f4b5a1816c7703
+405cfbd61b1cbfd4a0409f34d95d8283
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -639,7 +605,7 @@ has-props
 
 
 
-9760
+5555
 
 AttributedCharacterIterator$Attribute.class
 file
@@ -675,6 +641,40 @@ has-props
 
 1922
 
+DateFormat.class
+file
+
+
+
+
+2009-04-24T17:48:03.000000Z
+9cbfeb01849582d710f4b5a1816c7703
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+9760
+
 Format.class
 file
 
@@ -708,40 +708,6 @@ has-props
 
 
 2009
-
-ParseException.class
-file
-
-
-
-
-2009-04-24T17:48:03.000000Z
-1e5b33654080d0a4528934337e4d3dff
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-585
 
 RuleBasedCollator$CollationElement.class
 file
@@ -777,14 +743,14 @@ has-props
 
 925
 
-StringCharacterIterator.class
+ParseException.class
 file
 
 
 
 
 2009-04-24T17:48:03.000000Z
-67100920358e68ce500c676a1e2e5575
+1e5b33654080d0a4528934337e4d3dff
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -809,7 +775,7 @@ has-props
 
 
 
-2733
+585
 
 CollationKey.class
 file
@@ -844,6 +810,40 @@ has-props
 
 
 1695
+
+StringCharacterIterator.class
+file
+
+
+
+
+2009-04-24T17:48:03.000000Z
+67100920358e68ce500c676a1e2e5575
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2733
 
 BreakIterator.class
 file
@@ -981,40 +981,6 @@ has-props
 
 1206
 
-CharacterIterator.class
-file
-
-
-
-
-2009-04-24T17:48:03.000000Z
-d0d00eda960cd4289b9c8691ac2fc464
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-488
-
 RuleBasedCollator.class
 file
 
@@ -1048,6 +1014,40 @@ has-props
 
 
 11122
+
+CharacterIterator.class
+file
+
+
+
+
+2009-04-24T17:48:03.000000Z
+d0d00eda960cd4289b9c8691ac2fc464
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+488
 
 DecimalFormat.class
 file

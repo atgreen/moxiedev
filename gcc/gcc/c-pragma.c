@@ -37,6 +37,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "target.h"
 #include "diagnostic.h"
 #include "opts.h"
+#include "plugin.h"
 
 #define GCC_BAD(gmsgid) \
   do { warning (OPT_Wpragmas, gmsgid); return; } while (0)
@@ -242,144 +243,6 @@ handle_pragma_pack (cpp_reader * ARG_UNUSED (dummy))
     }
 }
 #endif  /* HANDLE_PRAGMA_PACK */
-
-struct GTY(()) def_pragma_macro_value {
-  struct def_pragma_macro_value *prev;
-  cpp_macro *value;
-};
-
-struct GTY(()) def_pragma_macro {
-  hashval_t hash;
-  const char *name;
-  struct def_pragma_macro_value value;
-};
-
-static GTY((param_is (struct def_pragma_macro))) htab_t pushed_macro_table;
-
-#ifdef HANDLE_PRAGMA_PUSH_POP_MACRO
-/* Hash table control functions for pushed_macro_table.  */
-static hashval_t
-dpm_hash (const void *p)
-{
-  return ((const struct def_pragma_macro *)p)->hash;
-}
-
-static int
-dpm_eq (const void *pa, const void *pb)
-{
-  const struct def_pragma_macro *const a = (const struct def_pragma_macro *) pa,
-    *const b = (const struct def_pragma_macro *) pb;
-  return a->hash == b->hash && strcmp (a->name, b->name) == 0;
-}
-
-/* #pragma push_macro("MACRO_NAME")
-   #pragma pop_macro("MACRO_NAME") */
-
-static void
-handle_pragma_push_macro (cpp_reader *reader)
-{
-  tree x, id = 0;
-  enum cpp_ttype token;
-  struct def_pragma_macro dummy, *c;
-  const char *macroname;
-  void **slot;
-
-  if (pragma_lex (&x) != CPP_OPEN_PAREN)
-    GCC_BAD ("missing %<(%> after %<#pragma push_macro%> - ignored");
-
-  token = pragma_lex (&id);
-
-  /* Silently ignore */
-  if (token == CPP_CLOSE_PAREN)
-    return;
-  if (token != CPP_STRING)
-    GCC_BAD ("invalid constant in %<#pragma push_macro%> - ignored");
-
-  if (pragma_lex (&x) != CPP_CLOSE_PAREN)
-    GCC_BAD ("missing %<)%> after %<#pragma push_macro%> - ignored");
-
-  if (pragma_lex (&x) != CPP_EOF)
-    warning (OPT_Wpragmas, "junk at end of %<#pragma push_macro%>");
-
-  /* Check for empty string, and silently ignore.  */
-  if (TREE_STRING_LENGTH (id) < 1)
-    return;
-  macroname = TREE_STRING_POINTER (id);
-
-  if (pushed_macro_table == NULL)
-    pushed_macro_table = htab_create_ggc (15, dpm_hash, dpm_eq, 0);
-
-  dummy.hash = htab_hash_string (macroname);
-  dummy.name = macroname;
-  slot = htab_find_slot_with_hash (pushed_macro_table, &dummy,
-				   dummy.hash, INSERT);
-  c = (struct def_pragma_macro *) *slot;
-  if (c == NULL)
-    {
-      *slot = c = GGC_NEW (struct def_pragma_macro);
-      c->hash = dummy.hash;
-      c->name = ggc_alloc_string (macroname, TREE_STRING_LENGTH (id) - 1);
-      c->value.prev = NULL;
-    }
-  else
-    {
-      struct def_pragma_macro_value *v;
-      v = GGC_NEW (struct def_pragma_macro_value);
-      *v = c->value;
-      c->value.prev = v;
-    }
-
-  c->value.value = cpp_push_definition (reader, macroname);
-}
-
-static void
-handle_pragma_pop_macro (cpp_reader *reader)
-{
-  tree x, id = 0;
-  enum cpp_ttype token;
-  struct def_pragma_macro dummy, *c;
-  const char *macroname;
-  void **slot = NULL;
-
-  if (pragma_lex (&x) != CPP_OPEN_PAREN)
-    GCC_BAD ("missing %<(%> after %<#pragma pop_macro%> - ignored");
-
-  token = pragma_lex (&id);
-
-  /* Silently ignore */
-  if (token == CPP_CLOSE_PAREN)
-    return;
-  if (token != CPP_STRING)
-    GCC_BAD ("invalid constant in %<#pragma pop_macro%> - ignored");
-
-  if (pragma_lex (&x) != CPP_CLOSE_PAREN)
-    GCC_BAD ("missing %<)%> after %<#pragma pop_macro%> - ignored");
-
-  if (pragma_lex (&x) != CPP_EOF)
-    warning (OPT_Wpragmas, "junk at end of %<#pragma pop_macro%>");
-
-  /* Check for empty string, and silently ignore.  */
-  if (TREE_STRING_LENGTH (id) < 1)
-    return;
-  macroname = TREE_STRING_POINTER (id);
-
-  dummy.hash = htab_hash_string (macroname);
-  dummy.name = macroname;
-  if (pushed_macro_table)
-    slot = htab_find_slot_with_hash (pushed_macro_table, &dummy,
-				     dummy.hash, NO_INSERT);
-  if (slot == NULL)
-    return;
-  c = (struct def_pragma_macro *) *slot;
-
-  cpp_pop_definition (reader, c->name, c->value.value);
-
-  if (c->value.prev)
-    c->value = *c->value.prev;
-  else
-    htab_clear_slot (pushed_macro_table, slot);
-}
-#endif /* HANDLE_PRAGMA_PUSH_POP_MACRO */
 
 static GTY(()) tree pending_weaks;
 
@@ -723,19 +586,20 @@ maybe_apply_renaming_pragma (tree decl, tree asmname)
 #ifdef HANDLE_PRAGMA_VISIBILITY
 static void handle_pragma_visibility (cpp_reader *);
 
-typedef enum symbol_visibility visibility;
-DEF_VEC_I (visibility);
-DEF_VEC_ALLOC_I (visibility, heap);
-static VEC (visibility, heap) *visstack;
+static VEC (int, heap) *visstack;
 
 /* Push the visibility indicated by STR onto the top of the #pragma
-   visibility stack.  */
+   visibility stack.  KIND is 0 for #pragma GCC visibility, 1 for
+   C++ namespace with visibility attribute and 2 for C++ builtin
+   ABI namespace.  push_visibility/pop_visibility calls must have
+   matching KIND, it is not allowed to push visibility using one
+   KIND and pop using a different one.  */
 
 void
-push_visibility (const char *str)
+push_visibility (const char *str, int kind)
 {
-  VEC_safe_push (visibility, heap, visstack,
-		 default_visibility);
+  VEC_safe_push (int, heap, visstack,
+		 ((int) default_visibility) | (kind << 8));
   if (!strcmp (str, "default"))
     default_visibility = VISIBILITY_DEFAULT;
   else if (!strcmp (str, "internal"))
@@ -749,14 +613,21 @@ push_visibility (const char *str)
   visibility_options.inpragma = 1;
 }
 
-/* Pop a level of the #pragma visibility stack.  */
+/* Pop a level of the #pragma visibility stack.  Return true if
+   successful.  */
 
-void
-pop_visibility (void)
+bool
+pop_visibility (int kind)
 {
-  default_visibility = VEC_pop (visibility, visstack);
+  if (!VEC_length (int, visstack))
+    return false;
+  if ((VEC_last (int, visstack) >> 8) != kind)
+    return false;
+  default_visibility
+    = (enum symbol_visibility) (VEC_pop (int, visstack) & 0xff);
   visibility_options.inpragma
-    = VEC_length (visibility, visstack) != 0;
+    = VEC_length (int, visstack) != 0;
+  return true;
 }
 
 /* Sets the default visibility for symbols to something other than that
@@ -785,10 +656,8 @@ handle_pragma_visibility (cpp_reader *dummy ATTRIBUTE_UNUSED)
     {
       if (pop == action)
 	{
-	  if (!VEC_length (visibility, visstack))
+	  if (! pop_visibility (0))
 	    GCC_BAD ("no matching push for %<#pragma GCC visibility pop%>");
-	  else
-	    pop_visibility ();
 	}
       else
 	{
@@ -798,7 +667,7 @@ handle_pragma_visibility (cpp_reader *dummy ATTRIBUTE_UNUSED)
 	  if (token != CPP_NAME)
 	    GCC_BAD ("malformed #pragma GCC visibility push");
 	  else
-	    push_visibility (IDENTIFIER_POINTER (x));
+	    push_visibility (IDENTIFIER_POINTER (x), 0);
 	  if (pragma_lex (&x) != CPP_CLOSE_PAREN)
 	    GCC_BAD ("missing %<(%> after %<#pragma GCC visibility push%> - ignored");
 	}
@@ -1415,10 +1284,6 @@ init_pragma (void)
   c_register_pragma (0, "pack", handle_pragma_pack);
 #endif
 #endif
-#ifdef HANDLE_PRAGMA_PUSH_POP_MACRO
-  c_register_pragma (0 ,"push_macro", handle_pragma_push_macro);
-  c_register_pragma (0 ,"pop_macro", handle_pragma_pop_macro);
-#endif
 #ifdef HANDLE_PRAGMA_WEAK
   c_register_pragma (0, "weak", handle_pragma_weak);
 #endif
@@ -1444,6 +1309,9 @@ init_pragma (void)
 #ifdef REGISTER_TARGET_PRAGMAS
   REGISTER_TARGET_PRAGMAS ();
 #endif
+
+  /* Allow plugins to register their own pragmas. */
+  invoke_plugin_callbacks (PLUGIN_PRAGMAS, NULL);
 }
 
 #include "gt-c-pragma.h"

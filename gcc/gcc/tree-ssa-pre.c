@@ -1156,7 +1156,7 @@ fully_constant_expression (pre_expr e)
 	    }
 	  case tcc_reference:
 	    if (nary->opcode != REALPART_EXPR
-		&& nary->opcode != IMAGPART_EXPR 
+		&& nary->opcode != IMAGPART_EXPR
 		&& nary->opcode != VIEW_CONVERT_EXPR)
 	      return e;
 	    /* Fallthrough.  */
@@ -1243,43 +1243,74 @@ do_unary:
 }
 
 /* Translate the VUSE backwards through phi nodes in PHIBLOCK, so that
-   it has the value it would have in BLOCK.  */
+   it has the value it would have in BLOCK.  Set *SAME_VALID to true
+   in case the new vuse doesn't change the value id of the OPERANDS.  */
 
 static tree
 translate_vuse_through_block (VEC (vn_reference_op_s, heap) *operands,
 			      alias_set_type set, tree type, tree vuse,
 			      basic_block phiblock,
-			      basic_block block)
+			      basic_block block, bool *same_valid)
 {
   gimple phi = SSA_NAME_DEF_STMT (vuse);
   ao_ref ref;
+  edge e = NULL;
+  bool use_oracle;
+
+  *same_valid = true;
 
   if (gimple_bb (phi) != phiblock)
     return vuse;
 
-  if (gimple_code (phi) == GIMPLE_PHI)
-    {
-      edge e = find_edge (block, phiblock);
-      return PHI_ARG_DEF (phi, e->dest_idx);
-    }
-
-  if (!ao_ref_init_from_vn_reference (&ref, set, type, operands))
-    return NULL_TREE;
+  use_oracle = ao_ref_init_from_vn_reference (&ref, set, type, operands);
 
   /* Use the alias-oracle to find either the PHI node in this block,
      the first VUSE used in this block that is equivalent to vuse or
      the first VUSE which definition in this block kills the value.  */
-  while (!stmt_may_clobber_ref_p_1 (phi, &ref))
+  if (gimple_code (phi) == GIMPLE_PHI)
+    e = find_edge (block, phiblock);
+  else if (use_oracle)
+    while (!stmt_may_clobber_ref_p_1 (phi, &ref))
+      {
+	vuse = gimple_vuse (phi);
+	phi = SSA_NAME_DEF_STMT (vuse);
+	if (gimple_bb (phi) != phiblock)
+	  return vuse;
+	if (gimple_code (phi) == GIMPLE_PHI)
+	  {
+	    e = find_edge (block, phiblock);
+	    break;
+	  }
+      }
+  else
+    return NULL_TREE;
+
+  if (e)
     {
-      vuse = gimple_vuse (phi);
-      phi = SSA_NAME_DEF_STMT (vuse);
-      if (gimple_bb (phi) != phiblock)
-	return vuse;
-      if (gimple_code (phi) == GIMPLE_PHI)
+      if (use_oracle)
 	{
-	  edge e = find_edge (block, phiblock);
-	  return PHI_ARG_DEF (phi, e->dest_idx);
+	  bitmap visited = NULL;
+	  /* Try to find a vuse that dominates this phi node by skipping
+	     non-clobbering statements.  */
+	  vuse = get_continuation_for_phi (phi, &ref, &visited);
+	  if (visited)
+	    BITMAP_FREE (visited);
 	}
+      else
+	vuse = NULL_TREE;
+      if (!vuse)
+	{
+	  /* If we didn't find any, the value ID can't stay the same,
+	     but return the translated vuse.  */
+	  *same_valid = false;
+	  vuse = PHI_ARG_DEF (phi, e->dest_idx);
+	}
+      /* ??? We would like to return vuse here as this is the canonical
+         upmost vdef that this reference is associated with.  But during
+	 insertion of the references into the hash tables we only ever
+	 directly insert with their direct gimple_vuse, hence returning
+	 something else would make us not find the other expression.  */
+      return PHI_ARG_DEF (phi, e->dest_idx);
     }
 
   return NULL_TREE;
@@ -1541,7 +1572,7 @@ phi_translate_1 (pre_expr expr, bitmap_set_t set1, bitmap_set_t set2,
 	tree vuse = ref->vuse;
 	tree newvuse = vuse;
 	VEC (vn_reference_op_s, heap) *newoperands = NULL;
-	bool changed = false;
+	bool changed = false, same_valid = true;
 	unsigned int i, j;
 	vn_reference_op_t operand;
 	vn_reference_t newref;
@@ -1647,16 +1678,16 @@ phi_translate_1 (pre_expr expr, bitmap_set_t set1, bitmap_set_t set2,
 	  {
 	    newvuse = translate_vuse_through_block (newoperands,
 						    ref->set, ref->type,
-						    vuse, phiblock, pred);
+						    vuse, phiblock, pred,
+						    &same_valid);
 	    if (newvuse == NULL_TREE)
 	      {
 		VEC_free (vn_reference_op_s, heap, newoperands);
 		return NULL;
 	      }
 	  }
-	changed |= newvuse != vuse;
 
-	if (changed)
+	if (changed || newvuse != vuse)
 	  {
 	    unsigned int new_val_id;
 	    pre_expr constant;
@@ -1690,9 +1721,15 @@ phi_translate_1 (pre_expr expr, bitmap_set_t set1, bitmap_set_t set2,
 	      }
 	    else
 	      {
-		new_val_id = get_next_value_id ();
-		VEC_safe_grow_cleared (bitmap_set_t, heap, value_expressions,
-				       get_max_value_id() + 1);
+		if (changed || !same_valid)
+		  {
+		    new_val_id = get_next_value_id ();
+		    VEC_safe_grow_cleared (bitmap_set_t, heap,
+					   value_expressions,
+					   get_max_value_id() + 1);
+		  }
+		else
+		  new_val_id = ref->value_id;
 		newref = vn_reference_insert_pieces (newvuse, ref->set,
 						     ref->type,
 						     newoperands,
@@ -2961,7 +2998,7 @@ create_expression_by_pieces (basic_block block, pre_expr expr,
 		genop2 = fold_convert (sizetype, genop2);
 	      else
 		genop2 = fold_convert (TREE_TYPE (nary->op[1]), genop2);
-	      
+
 	      folded = fold_build2 (nary->opcode, nary->type,
 				    genop1, genop2);
 	    }
@@ -3220,7 +3257,7 @@ insert_into_preds_of_block (basic_block block, unsigned int exprnum,
 	  if (!useless_type_conversion_p (type, TREE_TYPE (constant)))
 	    {
 	      tree builtexpr = fold_convert (type, constant);
-	      if (!is_gimple_min_invariant (builtexpr)) 
+	      if (!is_gimple_min_invariant (builtexpr))
 		{
 		  tree forcedexpr = force_gimple_operand (builtexpr,
 							  &stmts, true,
@@ -3405,6 +3442,7 @@ do_regular_insertion (basic_block block, basic_block dom)
 	  pre_expr eprime = NULL;
 	  edge_iterator ei;
 	  pre_expr edoubleprime = NULL;
+	  bool do_insertion = false;
 
 	  val = get_expr_value_id (expr);
 	  if (bitmap_set_contains_value (PHI_GEN (block), val))
@@ -3456,6 +3494,10 @@ do_regular_insertion (basic_block block, basic_block dom)
 		{
 		  avail[bprime->index] = edoubleprime;
 		  by_some = true;
+		  /* We want to perform insertions to remove a redundancy on
+		     a path in the CFG we want to optimize for speed.  */
+		  if (optimize_edge_for_speed_p (pred))
+		    do_insertion = true;
 		  if (first_s == NULL)
 		    first_s = edoubleprime;
 		  else if (!pre_expr_eq (first_s, edoubleprime))
@@ -3466,7 +3508,8 @@ do_regular_insertion (basic_block block, basic_block dom)
 	     already existing along every predecessor, and
 	     it's defined by some predecessor, it is
 	     partially redundant.  */
-	  if (!cant_insert && !all_same && by_some && dbg_cnt (treepre_insert))
+	  if (!cant_insert && !all_same && by_some && do_insertion
+	      && dbg_cnt (treepre_insert))
 	    {
 	      if (insert_into_preds_of_block (block, get_expression_id (expr),
 					      avail))
@@ -3908,7 +3951,7 @@ compute_avail (void)
 
 		      vn_reference_lookup (gimple_assign_rhs1 (stmt),
 					   gimple_vuse (stmt),
-					   false, &ref);
+					   true, &ref);
 		      if (!ref)
 			continue;
 
@@ -4419,8 +4462,10 @@ remove_dead_inserted_code (void)
 	  if (gimple_code (t) == GIMPLE_PHI)
 	    remove_phi_node (&gsi, true);
 	  else
-	    gsi_remove (&gsi, true);
-	  release_defs (t);
+	    {
+	      gsi_remove (&gsi, true);
+	      release_defs (t);
+	    }
 	}
     }
   VEC_free (gimple, heap, worklist);
@@ -4526,11 +4571,11 @@ fini_pre (bool do_fre)
    only wants to do full redundancy elimination.  */
 
 static unsigned int
-execute_pre (bool do_fre ATTRIBUTE_UNUSED)
+execute_pre (bool do_fre)
 {
   unsigned int todo = 0;
 
-  do_partial_partial = optimize > 2;
+  do_partial_partial = optimize > 2 && optimize_function_for_speed_p (cfun);
 
   /* This has to happen before SCCVN runs because
      loop_optimizer_init may create new phis, etc.  */
@@ -4544,7 +4589,7 @@ execute_pre (bool do_fre ATTRIBUTE_UNUSED)
 	  remove_dead_inserted_code ();
 	  loop_optimizer_finalize ();
 	}
-      
+
       return 0;
     }
   init_pre (do_fre);
@@ -4615,8 +4660,7 @@ do_pre (void)
 static bool
 gate_pre (void)
 {
-  /* PRE tends to generate bigger code.  */
-  return flag_tree_pre != 0 && optimize_function_for_speed_p (cfun);
+  return flag_tree_pre != 0;
 }
 
 struct gimple_opt_pass pass_pre =

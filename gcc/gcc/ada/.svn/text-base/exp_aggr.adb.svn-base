@@ -509,7 +509,7 @@ package body Exp_Aggr is
 
    --   10. No controlled actions need to be generated for components
 
-   --   11. The backend is a No_VM backend and the array has aliased components
+   --   11. For a VM back end, the array should have no aliased components
 
    function Backend_Processing_Possible (N : Node_Id) return Boolean is
       Typ : constant Entity_Id := Etype (N);
@@ -3298,8 +3298,14 @@ package body Exp_Aggr is
                                               N_Discriminant_Specification
       then
          Flist := Empty;
-      else
+
+      elsif Needs_Finalization (Typ) then
          Flist := Find_Final_List (Access_Type);
+
+      --  Otherwise there are no controlled actions to be performed.
+
+      else
+         Flist := Empty;
       end if;
 
       if Is_Array_Type (Typ) then

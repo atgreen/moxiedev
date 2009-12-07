@@ -268,7 +268,8 @@ static bool alternative_allows_const_pool_ref (rtx, const char *, int);
 static rtx find_reloads_toplev (rtx, int, enum reload_type, int, int, rtx,
 				int *);
 static rtx make_memloc (rtx, int);
-static int maybe_memory_address_p (enum machine_mode, rtx, rtx *);
+static int maybe_memory_address_addr_space_p (enum machine_mode, rtx,
+					      addr_space_t, rtx *);
 static int find_reloads_address (enum machine_mode, rtx *, rtx, rtx *,
 				 int, enum reload_type, int, rtx);
 static rtx subst_reg_equivs (rtx, rtx);
@@ -612,7 +613,8 @@ get_secondary_mem (rtx x ATTRIBUTE_UNUSED, enum machine_mode mode,
      didn't give us a new MEM, make a new one if it isn't valid.  */
 
   loc = eliminate_regs (secondary_memlocs[(int) mode], VOIDmode, NULL_RTX);
-  mem_valid = strict_memory_address_p (mode, XEXP (loc, 0));
+  mem_valid = strict_memory_address_addr_space_p (mode, XEXP (loc, 0),
+						  MEM_ADDR_SPACE (loc));
 
   if (! mem_valid && loc == secondary_memlocs[(int) mode])
     loc = copy_rtx (loc);
@@ -1284,7 +1286,7 @@ push_reload (rtx in, rtx out, rtx *inloc, rtx *outloc,
 	     Returning zero here ought to be safe as we take care in
 	     find_reloads to not process the reloads when instruction was
 	     replaced by USE.  */
-	    
+
 	  return 0;
 	}
     }
@@ -2129,21 +2131,23 @@ hard_reg_set_here_p (unsigned int beg_regno, unsigned int end_regno, rtx x)
   return 0;
 }
 
-/* Return 1 if ADDR is a valid memory address for mode MODE,
-   and check that each pseudo reg has the proper kind of
-   hard reg.  */
+/* Return 1 if ADDR is a valid memory address for mode MODE
+   in address space AS, and check that each pseudo reg has the
+   proper kind of hard reg.  */
 
 int
-strict_memory_address_p (enum machine_mode mode ATTRIBUTE_UNUSED, rtx addr)
+strict_memory_address_addr_space_p (enum machine_mode mode ATTRIBUTE_UNUSED,
+				    rtx addr, addr_space_t as)
 {
 #ifdef GO_IF_LEGITIMATE_ADDRESS
+  gcc_assert (ADDR_SPACE_GENERIC_P (as));
   GO_IF_LEGITIMATE_ADDRESS (mode, addr, win);
   return 0;
 
  win:
   return 1;
 #else
-  return targetm.legitimate_address_p (mode, addr, 1);
+  return targetm.addr_space.legitimate_address_p (mode, addr, 1, as);
 #endif
 }
 
@@ -2247,6 +2251,10 @@ operands_match_p (rtx x, rtx y)
   if (GET_MODE (x) != GET_MODE (y))
     return 0;
 
+  /* MEMs refering to different address space are not equivalent.  */
+  if (code == MEM && MEM_ADDR_SPACE (x) != MEM_ADDR_SPACE (y))
+    return 0;
+
   switch (code)
     {
     case CONST_INT:
@@ -2341,7 +2349,7 @@ decompose (rtx x)
       {
 	rtx base = NULL_RTX, offset = 0;
 	rtx addr = XEXP (x, 0);
-	
+
 	if (GET_CODE (addr) == PRE_DEC || GET_CODE (addr) == PRE_INC
 	    || GET_CODE (addr) == POST_DEC || GET_CODE (addr) == POST_INC)
 	  {
@@ -2351,7 +2359,7 @@ decompose (rtx x)
 	    val.safe = REGNO (val.base) == STACK_POINTER_REGNUM;
 	    return val;
 	  }
-	
+
 	if (GET_CODE (addr) == PRE_MODIFY || GET_CODE (addr) == POST_MODIFY)
 	  {
 	    if (GET_CODE (XEXP (addr, 1)) == PLUS
@@ -2365,7 +2373,7 @@ decompose (rtx x)
 		return val;
 	      }
 	  }
-	
+
 	if (GET_CODE (addr) == CONST)
 	  {
 	    addr = XEXP (addr, 0);
@@ -2384,7 +2392,7 @@ decompose (rtx x)
 		offset = XEXP (addr, 1);
 	      }
 	  }
-	
+
 	if (offset == 0)
 	  {
 	    base = addr;
@@ -2415,18 +2423,18 @@ decompose (rtx x)
 	    base = gen_rtx_PLUS (GET_MODE (base), base, offset);
 	    offset = const0_rtx;
 	  }
-	
+
 	if (all_const && GET_CODE (base) == PLUS)
 	  base = gen_rtx_CONST (GET_MODE (base), base);
-	
+
 	gcc_assert (CONST_INT_P (offset));
-	
+
 	val.start = INTVAL (offset);
 	val.end = val.start + GET_MODE_SIZE (GET_MODE (x));
 	val.base = base;
       }
       break;
-      
+
     case REG:
       val.reg_flag = 1;
       val.start = true_regnum (x);
@@ -2557,7 +2565,7 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
      a register.  */
   enum reg_class preferred_class[MAX_RECOG_OPERANDS];
   char pref_or_nothing[MAX_RECOG_OPERANDS];
-  /* Nonzero for a MEM operand whose entire address needs a reload. 
+  /* Nonzero for a MEM operand whose entire address needs a reload.
      May be -1 to indicate the entire address may or may not need a reload.  */
   int address_reloaded[MAX_RECOG_OPERANDS];
   /* Nonzero for an address operand that needs to be completely reloaded.
@@ -3979,12 +3987,15 @@ find_reloads (rtx insn, int replace, int ind_levels, int live_known,
 		 && MEM_P (recog_data.operand[i]))
 	  {
 	    /* If the address to be reloaded is a VOIDmode constant,
-	       use Pmode as mode of the reload register, as would have
-	       been done by find_reloads_address.  */
+	       use the default address mode as mode of the reload register,
+	       as would have been done by find_reloads_address.  */
 	    enum machine_mode address_mode;
 	    address_mode = GET_MODE (XEXP (recog_data.operand[i], 0));
 	    if (address_mode == VOIDmode)
-	      address_mode = Pmode;
+	      {
+		addr_space_t as = MEM_ADDR_SPACE (recog_data.operand[i]);
+		address_mode = targetm.addr_space.address_mode (as);
+	      }
 
 	    operand_reloadnum[i]
 	      = push_reload (XEXP (recog_data.operand[i], 0), NULL_RTX,
@@ -4760,8 +4771,9 @@ find_reloads_toplev (rtx x, int opnum, enum reload_type type,
 #endif
 	       && (reg_equiv_address[regno] != 0
 		   || (reg_equiv_mem[regno] != 0
-		       && (! strict_memory_address_p (GET_MODE (x),
-						      XEXP (reg_equiv_mem[regno], 0))
+		       && (! strict_memory_address_addr_space_p
+			       (GET_MODE (x), XEXP (reg_equiv_mem[regno], 0),
+				MEM_ADDR_SPACE (reg_equiv_mem[regno]))
 			   || ! offsettable_memref_p (reg_equiv_mem[regno])
 			   || num_not_at_initial_offset))))
 	x = find_reloads_subreg_address (x, 1, opnum, type, ind_levels,
@@ -4819,18 +4831,19 @@ make_memloc (rtx ad, int regno)
 }
 
 /* Returns true if AD could be turned into a valid memory reference
-   to mode MODE by reloading the part pointed to by PART into a
-   register.  */
+   to mode MODE in address space AS by reloading the part pointed to
+   by PART into a register.  */
 
 static int
-maybe_memory_address_p (enum machine_mode mode, rtx ad, rtx *part)
+maybe_memory_address_addr_space_p (enum machine_mode mode, rtx ad,
+				   addr_space_t as, rtx *part)
 {
   int retv;
   rtx tem = *part;
   rtx reg = gen_rtx_REG (GET_MODE (tem), max_reg_num ());
 
   *part = reg;
-  retv = memory_address_p (mode, ad);
+  retv = memory_address_addr_space_p (mode, ad, as);
   *part = tem;
 
   return retv;
@@ -4866,6 +4879,8 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 		      rtx *loc, int opnum, enum reload_type type,
 		      int ind_levels, rtx insn)
 {
+  addr_space_t as = memrefloc? MEM_ADDR_SPACE (*memrefloc)
+			     : ADDR_SPACE_GENERIC;
   int regno;
   int removed_and = 0;
   int op_index;
@@ -4893,7 +4908,9 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 	  if (reg_equiv_address[regno] != 0 || num_not_at_initial_offset)
 	    {
 	      tem = make_memloc (ad, regno);
-	      if (! strict_memory_address_p (GET_MODE (tem), XEXP (tem, 0)))
+	      if (! strict_memory_address_addr_space_p (GET_MODE (tem),
+							XEXP (tem, 0),
+							MEM_ADDR_SPACE (tem)))
 		{
 		  rtx orig = tem;
 
@@ -4909,7 +4926,7 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 		 address: only reg or reg+constant.  */
 
 	      if (ind_levels > 0
-		  && strict_memory_address_p (mode, tem)
+		  && strict_memory_address_addr_space_p (mode, tem, as)
 		  && (REG_P (XEXP (tem, 0))
 		      || (GET_CODE (XEXP (tem, 0)) == PLUS
 			  && REG_P (XEXP (XEXP (tem, 0), 0))
@@ -4953,7 +4970,7 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
       return 1;
     }
 
-  if (strict_memory_address_p (mode, ad))
+  if (strict_memory_address_addr_space_p (mode, ad, as))
     {
       /* The address appears valid, so reloads are not needed.
 	 But the address may contain an eliminable register.
@@ -4976,14 +4993,14 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 	return 0;
 
       /* Check result for validity after substitution.  */
-      if (strict_memory_address_p (mode, ad))
+      if (strict_memory_address_addr_space_p (mode, ad, as))
 	return 0;
     }
 
 #ifdef LEGITIMIZE_RELOAD_ADDRESS
   do
     {
-      if (memrefloc)
+      if (memrefloc && ADDR_SPACE_GENERIC_P (as))
 	{
 	  LEGITIMIZE_RELOAD_ADDRESS (ad, GET_MODE (*memrefloc), opnum, type,
 				     ind_levels, win);
@@ -5099,7 +5116,7 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 	     That will at least work.  */
 	  find_reloads_address_part (ad, loc,
 				     base_reg_class (mode, MEM, SCRATCH),
-				     Pmode, opnum, type, ind_levels);
+				     GET_MODE (ad), opnum, type, ind_levels);
 	}
       return ! removed_and;
     }
@@ -5139,7 +5156,7 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 	  continue;
 
       inner_code = GET_CODE (XEXP (ad, 0));
-      if (!(GET_CODE (ad) == PLUS 
+      if (!(GET_CODE (ad) == PLUS
 	    && CONST_INT_P (XEXP (ad, 1))
 	    && (inner_code == PLUS || inner_code == LO_SUM)))
 	continue;
@@ -5160,8 +5177,8 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 	   || operand == arg_pointer_rtx
 #endif
 	   || operand == stack_pointer_rtx)
-	  && ! maybe_memory_address_p (mode, ad, 
-				       &XEXP (XEXP (ad, 0), 1 - op_index)))
+	  && ! maybe_memory_address_addr_space_p
+		(mode, ad, as, &XEXP (XEXP (ad, 0), 1 - op_index)))
 	{
 	  rtx offset_reg;
 	  enum reg_class cls;
@@ -5170,17 +5187,17 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 
 	  /* Form the adjusted address.  */
 	  if (GET_CODE (XEXP (ad, 0)) == PLUS)
-	    ad = gen_rtx_PLUS (GET_MODE (ad), 
-			       op_index == 0 ? offset_reg : addend, 
+	    ad = gen_rtx_PLUS (GET_MODE (ad),
+			       op_index == 0 ? offset_reg : addend,
 			       op_index == 0 ? addend : offset_reg);
 	  else
-	    ad = gen_rtx_LO_SUM (GET_MODE (ad), 
-				 op_index == 0 ? offset_reg : addend, 
+	    ad = gen_rtx_LO_SUM (GET_MODE (ad),
+				 op_index == 0 ? offset_reg : addend,
 				 op_index == 0 ? addend : offset_reg);
 	  *loc = ad;
 
 	  cls = base_reg_class (mode, MEM, GET_CODE (addend));
-	  find_reloads_address_part (XEXP (ad, op_index), 
+	  find_reloads_address_part (XEXP (ad, op_index),
 				     &XEXP (ad, op_index), cls,
 				     GET_MODE (ad), opnum, type, ind_levels);
 	  find_reloads_address_1 (mode,
@@ -5199,7 +5216,7 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
   tem = ad;
   if (GET_CODE (ad) == PLUS)
     tem = subst_indexed_address (ad);
-  if (tem != ad && strict_memory_address_p (mode, tem))
+  if (tem != ad && strict_memory_address_addr_space_p (mode, tem, as))
     {
       /* Ok, we win that way.  Replace any additional eliminable
 	 registers.  */
@@ -5209,7 +5226,8 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 
       /* Make sure that didn't make the address invalid again.  */
 
-      if (! subst_reg_equivs_changed || strict_memory_address_p (mode, tem))
+      if (! subst_reg_equivs_changed
+	  || strict_memory_address_addr_space_p (mode, tem, as))
 	{
 	  *loc = tem;
 	  return 0;
@@ -5218,8 +5236,12 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 
   /* If constants aren't valid addresses, reload the constant address
      into a register.  */
-  if (CONSTANT_P (ad) && ! strict_memory_address_p (mode, ad))
+  if (CONSTANT_P (ad) && ! strict_memory_address_addr_space_p (mode, ad, as))
     {
+      enum machine_mode address_mode = GET_MODE (ad);
+      if (address_mode == VOIDmode)
+	address_mode = targetm.addr_space.address_mode (as);
+
       /* If AD is an address in the constant pool, the MEM rtx may be shared.
 	 Unshare it so we can safely alter it.  */
       if (memrefloc && GET_CODE (ad) == SYMBOL_REF
@@ -5232,7 +5254,7 @@ find_reloads_address (enum machine_mode mode, rtx *memrefloc, rtx ad,
 	}
 
       find_reloads_address_part (ad, loc, base_reg_class (mode, MEM, SCRATCH),
-				 Pmode, opnum, type, ind_levels);
+				 address_mode, opnum, type, ind_levels);
       return ! removed_and;
     }
 
@@ -5319,16 +5341,12 @@ subst_reg_equivs (rtx ad, rtx insn)
    This routine assumes both inputs are already in canonical form.  */
 
 rtx
-form_sum (rtx x, rtx y)
+form_sum (enum machine_mode mode, rtx x, rtx y)
 {
   rtx tem;
-  enum machine_mode mode = GET_MODE (x);
 
-  if (mode == VOIDmode)
-    mode = GET_MODE (y);
-
-  if (mode == VOIDmode)
-    mode = Pmode;
+  gcc_assert (GET_MODE (x) == mode || GET_MODE (x) == VOIDmode);
+  gcc_assert (GET_MODE (y) == mode || GET_MODE (y) == VOIDmode);
 
   if (CONST_INT_P (x))
     return plus_constant (y, INTVAL (x));
@@ -5338,12 +5356,12 @@ form_sum (rtx x, rtx y)
     tem = x, x = y, y = tem;
 
   if (GET_CODE (x) == PLUS && CONSTANT_P (XEXP (x, 1)))
-    return form_sum (XEXP (x, 0), form_sum (XEXP (x, 1), y));
+    return form_sum (mode, XEXP (x, 0), form_sum (mode, XEXP (x, 1), y));
 
   /* Note that if the operands of Y are specified in the opposite
      order in the recursive calls below, infinite recursion will occur.  */
   if (GET_CODE (y) == PLUS && CONSTANT_P (XEXP (y, 1)))
-    return form_sum (form_sum (x, XEXP (y, 0)), XEXP (y, 1));
+    return form_sum (mode, form_sum (mode, x, XEXP (y, 0)), XEXP (y, 1));
 
   /* If both constant, encapsulate sum.  Otherwise, just form sum.  A
      constant will have been placed second.  */
@@ -5410,9 +5428,9 @@ subst_indexed_address (rtx addr)
 
       /* Compute the sum.  */
       if (op2 != 0)
-	op1 = form_sum (op1, op2);
+	op1 = form_sum (GET_MODE (addr), op1, op2);
       if (op1 != 0)
-	op0 = form_sum (op0, op1);
+	op0 = form_sum (GET_MODE (addr), op0, op1);
 
       return op0;
     }
@@ -5482,7 +5500,7 @@ find_reloads_address_1 (enum machine_mode mode, rtx x, int context,
 #define REG_OK_FOR_CONTEXT(CONTEXT, REGNO, MODE, OUTER, INDEX)		\
   ((CONTEXT) == 0							\
    ? regno_ok_for_base_p (REGNO, MODE, OUTER, INDEX)			\
-   : REGNO_OK_FOR_INDEX_P (REGNO))					
+   : REGNO_OK_FOR_INDEX_P (REGNO))
 
   enum reg_class context_reg_class;
   RTX_CODE code = GET_CODE (x);
@@ -5812,7 +5830,8 @@ find_reloads_address_1 (enum machine_mode mode, rtx x, int context,
 	      rtx equiv = (MEM_P (XEXP (x, 0))
 			   ? XEXP (x, 0)
 			   : reg_equiv_mem[regno]);
-	      int icode = (int) optab_handler (add_optab, Pmode)->insn_code;
+	      int icode
+		= (int) optab_handler (add_optab, GET_MODE (x))->insn_code;
 	      if (insn && NONJUMP_INSN_P (insn) && equiv
 		  && memory_operand (equiv, GET_MODE (equiv))
 #ifdef HAVE_cc0
@@ -5820,9 +5839,9 @@ find_reloads_address_1 (enum machine_mode mode, rtx x, int context,
 #endif
 		  && ! (icode != CODE_FOR_nothing
 			&& ((*insn_data[icode].operand[0].predicate)
-			    (equiv, Pmode))
+			    (equiv, GET_MODE (x)))
 			&& ((*insn_data[icode].operand[1].predicate)
-			    (equiv, Pmode))))
+			    (equiv, GET_MODE (x)))))
 		{
 		  /* We use the original pseudo for loc, so that
 		     emit_reload_insns() knows which pseudo this
@@ -5988,7 +6007,7 @@ find_reloads_address_1 (enum machine_mode mode, rtx x, int context,
 	      if ((unsigned) CLASS_MAX_NREGS (rclass, GET_MODE (SUBREG_REG (x)))
 		  > reg_class_size[rclass])
 		{
-		  x = find_reloads_subreg_address (x, 0, opnum, 
+		  x = find_reloads_subreg_address (x, 0, opnum,
 						   ADDR_TYPE (type),
 						   ind_levels, insn);
 		  push_reload (x, NULL_RTX, loc, (rtx*) 0, rclass,
@@ -6180,8 +6199,9 @@ find_reloads_subreg_address (rtx x, int force_replace, int opnum,
 		 the address, there is nothing further to do.  */
 	      if (reloaded == 0
 		  && reg_equiv_mem[regno] != 0
-		  && !strict_memory_address_p (GET_MODE (x),
-					       XEXP (reg_equiv_mem[regno], 0)))
+		  && !strict_memory_address_addr_space_p
+			(GET_MODE (x), XEXP (reg_equiv_mem[regno], 0),
+			 MEM_ADDR_SPACE (reg_equiv_mem[regno])))
 		push_reload (XEXP (tem, 0), NULL_RTX, &XEXP (tem, 0), (rtx*) 0,
 			     base_reg_class (GET_MODE (tem), MEM, SCRATCH),
 			     GET_MODE (XEXP (tem, 0)), VOIDmode, 0, 0,
@@ -6624,7 +6644,7 @@ reg_overlap_mentioned_for_reload_p (rtx x, rtx in)
   else if (GET_CODE (x) == SCRATCH || GET_CODE (x) == PC
 	   || GET_CODE (x) == CC0)
     return reg_mentioned_p (x, in);
-  else 
+  else
     {
       gcc_assert (GET_CODE (x) == PLUS);
 
@@ -7198,7 +7218,7 @@ find_inc_amount (rtx x, rtx inced)
    REG_INC note in insn INSN.  REGNO must refer to a hard register.  */
 
 #ifdef AUTO_INC_DEC
-static int 
+static int
 reg_inc_found_and_valid_p (unsigned int regno, unsigned int endregno,
 			   rtx insn)
 {
@@ -7208,13 +7228,13 @@ reg_inc_found_and_valid_p (unsigned int regno, unsigned int endregno,
 
   if (! INSN_P (insn))
     return 0;
-    
+
   for (link = REG_NOTES (insn); link; link = XEXP (link, 1))
     if (REG_NOTE_KIND (link) == REG_INC)
       {
 	unsigned int test = (int) REGNO (XEXP (link, 0));
 	if (test >= regno && test < endregno)
-	  return 1; 
+	  return 1;
       }
   return 0;
 }
@@ -7222,7 +7242,7 @@ reg_inc_found_and_valid_p (unsigned int regno, unsigned int endregno,
 
 #define reg_inc_found_and_valid_p(regno,endregno,insn) 0
 
-#endif 
+#endif
 
 /* Return 1 if register REGNO is the subject of a clobber in insn INSN.
    If SETS is 1, also consider SETs.  If SETS is 2, enable checking
@@ -7250,8 +7270,8 @@ regno_clobbered_p (unsigned int regno, rtx insn, enum machine_mode mode,
     }
 
   if (sets == 2 && reg_inc_found_and_valid_p (regno, endregno, insn))
-    return 1; 
-  
+    return 1;
+
   if (GET_CODE (PATTERN (insn)) == PARALLEL)
     {
       int i = XVECLEN (PATTERN (insn), 0) - 1;
@@ -7270,7 +7290,7 @@ regno_clobbered_p (unsigned int regno, rtx insn, enum machine_mode mode,
 	    }
 	  if (sets == 2
 	      && reg_inc_found_and_valid_p (regno, endregno, elt))
-	    return 1; 
+	    return 1;
 	}
     }
 

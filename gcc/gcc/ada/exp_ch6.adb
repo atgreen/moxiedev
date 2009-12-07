@@ -2314,9 +2314,9 @@ package body Exp_Ch6 is
 
                      end case;
 
-                  --  For allocators we pass the level of the execution of
-                  --  the called subprogram, which is one greater than the
-                  --  current scope level.
+                  --  For allocators we pass the level of the execution of the
+                  --  called subprogram, which is one greater than the current
+                  --  scope level.
 
                   when N_Allocator =>
                      Add_Extra_Actual
@@ -2778,6 +2778,19 @@ package body Exp_Ch6 is
                         Rewrite (Actual,
                           Unchecked_Convert_To (Parent_Typ,
                             Relocate_Node (Actual)));
+
+                        --  If the relocated node is a function call then it
+                        --  can be part of the expansion of the predefined
+                        --  equality operator of a tagged type and we may
+                        --  need to adjust its SCIL dispatching node.
+
+                        if Generate_SCIL
+                          and then Nkind (Actual) /= N_Null
+                          and then Nkind (Expression (Actual))
+                                     = N_Function_Call
+                        then
+                           Adjust_SCIL_Node (Actual, Expression (Actual));
+                        end if;
 
                         Analyze (Actual);
                         Resolve (Actual, Parent_Typ);
@@ -4489,6 +4502,21 @@ package body Exp_Ch6 is
             Analyze (Prot_Decl);
             Insert_Actions (N, Freeze_Entity (Prot_Id, Loc));
             Set_Protected_Body_Subprogram (Subp, Prot_Id);
+
+            --  Create protected operation as well. Even though the operation
+            --  is only accessible within the body, it is possible to make it
+            --  available outside of the protected object by using 'Access to
+            --  provide a callback, so we build the protected version in all
+            --  cases.
+
+            Prot_Decl :=
+                 Make_Subprogram_Declaration (Loc,
+                   Specification =>
+                     Build_Protected_Sub_Specification
+                      (N, Scop, Protected_Mode));
+            Insert_Before (Prot_Bod, Prot_Decl);
+            Analyze (Prot_Decl);
+
             Pop_Scope;
          end if;
 

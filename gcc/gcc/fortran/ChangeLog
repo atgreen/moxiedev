@@ -1,3 +1,483 @@
+2009-12-07  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
+
+	PR other/40302
+	* arith.c: Remove HAVE_mpc* checks throughout.
+	* expr.c: Likewise.
+	* gfortran.h: Likewise.
+	* resolve.c: Likewise.
+	* simplify.c: Likewise.
+	* target-memory.c: Likewise.
+	* target-memory.h: Likewise.
+
+2009-12-06  Daniel Franke  <franke.daniel@gmail.com>
+
+	PR fortran/40904
+	* intrinsics.texi: Fixed description of COUNT.
+
+2009-12-01  Janne Blomqvist  <jb@gcc.gnu.org>
+
+	PR fortran/42131
+	* trans-stmt.c (gfc_trans_do): Sign test using ternary operator.
+
+2009-11-30  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/42053
+	* resolve.c (resolve_select_type): Check for duplicate CLASS IS blocks.
+
+2009-11-30  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41631
+	* decl.c (gfc_match_derived_decl): Set extension level.
+	* gfortran.h (symbol_attribute): Expand 'extension' bit field to 8 bit.
+	* iresolve.c (gfc_resolve_extends_type_of): Return value of
+	'is_extension_of' has kind=4.
+	* match.c (select_type_set_tmp,gfc_match_class_is): Create temporary
+	for CLASS IS blocks.
+	* module.c (MOD_VERSION): Bump module version.
+	(ab_attribute,attr_bits): Remove AB_EXTENSION.
+	(mio_symbol_attribute): Handle expanded 'extension' field.
+	* resolve.c (resolve_select_type): Implement CLASS IS blocks.
+	(resolve_fl_variable_derived): Show correct type name.
+	* symbol.c (gfc_build_class_symbol): Set extension level.
+
+2009-11-30  Janus Weil  <janus@gcc.gnu.org>
+
+	* intrinsic.h (gfc_resolve_extends_type_of): Add prototype.
+	* intrinsic.c (add_functions): Use 'gfc_resolve_extends_type_of'.
+	* iresolve.c (gfc_resolve_extends_type_of): New function, which
+	replaces the call to EXTENDS_TYPE_OF by the library function
+	'is_extension_of' and modifies the arguments.
+	* trans-intrinsic.c (gfc_conv_extends_type_of): Removed.
+	(gfc_conv_intrinsic_function): FOR EXTENDS_TYPE_OF, don't call
+	gfc_conv_extends_type_of but gfc_conv_intrinsic_funcall.
+
+2009-11-30  Paul Thomas  <pault@gcc.gnu.org>
+	    Janus Weil  <janus@gcc.gnu.org>
+
+	* decl.c (encapsulate_class_symbol): Replaced by
+	'gfc_build_class_symbol'.
+	(build_sym,build_struct): Call 'gfc_build_class_symbol'.
+	(gfc_match_derived_decl): Replace vindex by hash_value.
+	* dump-parse-tree.c (show_symbol): Replace vindex by hash_value.
+	* gfortran.h (symbol_attribute): Add field 'vtab'.
+	(gfc_symbol): Replace vindex by hash_value.
+	(gfc_class_esym_list): Ditto.
+	(gfc_get_derived_type,gfc_build_class_symbol,gfc_find_derived_vtab):
+	New prototypes.
+	* module.c (mio_symbol): Replace vindex by hash_value.
+	* resolve.c (vindex_expr): Rename to 'hash_value_expr'.
+	(resolve_class_compcall,resolve_class_typebound_call): Renamed
+	'vindex_expr'.
+	(resolve_select_type): Replace $vindex by $vptr->$hash.
+	* symbol.c (gfc_add_save): Handle vtab symbols.
+	(gfc_type_compatible): Rewrite.
+	(gfc_build_class_symbol): New function which replaces
+	'encapsulate_class_symbol'.
+	(gfc_find_derived_vtab): New function to set up a vtab symbol for a
+	derived type.
+	* trans-decl.c (gfc_create_module_variable): Handle vtab symbols.
+	* trans-expr.c (select_class_proc): Replace vindex by hash_value.
+	(gfc_conv_derived_to_class): New function to construct a temporary
+	CLASS variable from a derived type expression.
+	(gfc_conv_procedure_call): Call 'gfc_conv_derived_to_class'.
+	(gfc_conv_structure): Initialize the $extends and $size fields of
+	vtab symbols.
+	(gfc_trans_class_assign): Replace $vindex by $vptr. Remove the $size
+	assignment.
+	* trans-intrinsic.c (gfc_conv_same_type_as): Replace $vindex by
+	$vptr->$hash, and replace vindex by hash_value.
+	* trans-stmt.c (gfc_trans_allocate): Insert $vptr references, replace
+	$vindex by $vptr. Remove the $size assignment.
+	* trans-types.c (gfc_get_derived_type): Make it non-static.
+
+2009-11-30  Thomas Koenig  <tkoenig@gcc.gnu.org>
+
+	PR fortran/42131
+	* trans-stmt.c (gfc_trans_do):  Calculate loop count
+	without if statements.
+
+2009-11-28  Jakub Jelinek  <jakub@redhat.com>
+
+	* trans-common.c (create_common): Remove unused offset variable.
+	* io.c (gfc_match_wait): Remove unused loc variable.
+	* trans-openmp.c (gfc_trans_omp_clauses): Remove unused old_clauses
+	variable.
+	(gfc_trans_omp_do): Remove unused outermost variable.
+	* iresolve.c (gfc_resolve_alarm_sub, gfc_resolve_fseek_sub): Remove
+	unused status variable.
+	* module.c (number_use_names): Remove unused c variable.
+	(load_derived_extensions): Remove unused nuse variable.
+	* trans-expr.c (gfc_conv_substring): Remove unused var variable.
+	* trans-types.c (gfc_get_array_descr_info): Remove unused offset_off
+	variable.
+	* matchexp.c (match_primary): Remove unused where variable.
+	* trans-intrinsic.c (gfc_conv_intrinsic_bound): Remove unused cond2
+	variable.
+	(gfc_conv_intrinsic_sizeof): Remove unused source variable.
+	(gfc_conv_intrinsic_transfer): Remove unused stride variable.
+	(gfc_conv_intrinsic_function): Remove unused isym variable.
+	* arith.c (gfc_hollerith2real, gfc_hollerith2complex,
+	gfc_hollerith2logical): Remove unused len variable.
+	* parse.c (parse_derived): Remove unused derived_sym variable.
+	* decl.c (variable_decl): Remove unused old_locus variable.
+	* resolve.c (check_class_members): Remove unused tbp_sym variable.
+	(resolve_ordinary_assign): Remove unused assign_proc variable.
+	(resolve_equivalence): Remove unused value_name variable.
+	* data.c (get_array_index): Remove unused re variable.
+	* trans-array.c (gfc_conv_array_transpose): Remove unused src_info
+	variable.
+	(gfc_conv_resolve_dependencies): Remove unused aref and temp_dim
+	variables.
+	(gfc_conv_loop_setup): Remove unused dim and len variables.
+	(gfc_walk_variable_expr): Remove unused head variable.
+	* match.c (match_typebound_call): Remove unused var variable.
+	* intrinsic.c (gfc_convert_chartype): Remove unused from_ts variable.
+
+2009-11-26  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/41807
+	* trans-const.c (gfc_conv_const): Set se->expr to a constant on error.
+
+2009-11-26  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/41278
+	* trans-array.c (gfc_conv_array_transpose): Delete unnecessary assert.
+
+2009-11-26  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/42048
+	PR fortran/42167
+	* gfortran.h (gfc_is_function_return_value): New prototype.
+	* match.c (gfc_match_call): Use new function
+	'gfc_is_function_return_value'.
+	* primary.c (gfc_is_function_return_value): New function to check if a
+	symbol is the return value of an encompassing function.
+	(match_actual_arg,gfc_match_rvalue,match_variable): Use new function
+	'gfc_is_function_return_value'.
+	* resolve.c (resolve_common_blocks,resolve_actual_arglist): Ditto.
+
+2009-11-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR fortran/42162
+	* trans-openmp.c (gfc_trans_omp_do): When dovar isn't a VAR_DECL,
+	don't use simple loop and handle clauses properly.
+
+2009-11-24  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/42008
+	* decl.c (variable_decl): Do not error on initialization within a
+	derived type specification of a pure procedure.
+
+2009-11-24  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/42045
+	* resolve.c (resolve_actual_arglist): Make sure procedure pointer
+	actual arguments are resolved correctly.
+	(resolve_function): An EXPR_FUNCTION which is a procedure pointer
+	component, has already been resolved.
+	(resolve_fl_derived): Procedure pointer components should not be
+	implicitly typed.
+
+2009-11-21  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/41807
+	* trans-const.c (gfc_conv_const): Fix typo in comment. Replace assert
+	with error message if not constant.
+	* resolve.c (next_data_value): Delete check for constant.
+
+2009-11-20  Janus Weil  <janus@gcc.gnu.org>
+
+	* intrinsic.texi (C_F_PROCPOINTER): Remove obsolete comment.
+
+2009-11-20  Paul Thomas  <pault@gcc.gnu.org>
+	    Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/42104
+	* trans-expr.c (gfc_conv_procedure_call): If procedure pointer
+	component call, use the component's 'always_explicit' attr
+	for array arguments.
+
+2009-11-19  Janus Weil  <janus@gcc.gnu.org>
+
+	* trans-expr.c (conv_isocbinding_procedure): New function.
+	(gfc_conv_procedure_call): Move ISO_C_BINDING stuff to
+	separate function.
+
+2009-11-19  Tobias Burnus  <burnus@net-b.de>
+
+	* gfortran.texi (Interoperable Subroutines and Functions): Fix
+	example.
+
+2009-11-18  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/42072
+	* trans-expr.c (gfc_conv_procedure_call): Handle procedure pointer
+	dummies which are passed to C_F_PROCPOINTER.
+
+2009-11-18  Alexandre Oliva  <aoliva@redhat.com>
+
+	* module.c (mio_f2k_derived): Initialize op.
+
+2009-11-15  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/42048
+	* match.c (gfc_match_call): If we're inside a function with derived
+	type return value, allow calling a TBP of the result variable.
+
+2009-11-12  Tobias Burnus  <burnus@net-b.de>
+
+	* intrinsic.texi (XOR): Refer also to .NEQV.
+	(ISO_FORTRAN_ENV): State which parameters are F2008.
+
+2009-11-11  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41978
+	* resolve.c (resolve_ref): Take care of procedure pointer component
+	references.
+
+2009-11-06  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/41909
+	* resolve.c (is_illegal_recursion): Return false if sym is program.
+
+2009-11-06  Steven G. Kargl  <kargl@gcc.gnu.org>
+
+	* resolve.c (check_typebound_override): Remove duplicate "in" in error
+	message.
+
+2009-11-05  Steven G. Kargl  <kargl@gcc.gnu.org>
+
+	PR fortran/41918
+	* fortran/trans-decl.c: Silence intent(out) warning for derived type
+	dummy arguments with default initialization.
+
+2009-11-05  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41556
+	* interface.c (matching_typebound_op,gfc_extend_assign): Handle CLASS
+	variables.
+
+2009-11-05  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41556
+	PR fortran/41873
+	* resolve.c (resolve_function,resolve_call): Prevent abstract interfaces
+	from being called, but allow deferred type-bound procedures with
+	abstract interface.
+
+2009-11-04  Tobias Burnus <burnus@gcc.gnu.org>
+	    Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41556
+	PR fortran/41937
+	* interface.c (gfc_check_operator_interface): Handle CLASS arguments.
+	* resolve.c (resolve_allocate_expr): Handle allocatable components of
+	CLASS variables.
+
+2009-11-04  Richard Guenther  <rguenther@suse.de>
+
+	* options.c (gfc_post_options): Rely on common code processing
+	LTO options.  Only enable -fwhole-file here.
+
+2009-11-03  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/41907
+	* trans-expr.c (gfc_conv_procedure_call): Fix presence check
+	for optional arguments.
+
+2009-11-01  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/41872
+	* trans-decl.c (gfc_trans_deferred_vars): Do not nullify
+	autodeallocated allocatable scalars at the end of scope.
+	(gfc_generate_function_code): Fix indention.
+	* trans-expr.c (gfc_conv_procedure_call): For allocatable
+	scalars, fix calling by reference and autodeallocating
+	of intent out variables.
+
+2009-11-01  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/41850
+	* trans-expr.c (gfc_conv_procedure_call): Deallocate intent-out
+	variables only when present. Remove unneccessary present check.
+
+2009-10-29  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/41777
+	* trans-expr.c (gfc_conv_procedure_call,gfc_conv_expr_reference):
+	Use for generic EXPR_FUNCTION the attributes of the specific
+	function.
+
+2009-10-29  Janne Blomqvist  <jb@gcc.gnu.org>
+
+	PR fortran/41860
+	* resolve.c (apply_default_init_local): Treat -fno-automatic as if
+	var was saved.
+
+2009-10-28  Rafael Avila de Espindola  <espindola@google.com>
+
+	* trans-common.c (create_common): Set TREE_PUBLIC to false on
+	fake variables.
+
+2009-10-26  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41714
+	* trans.c (gfc_trans_code): Remove call to
+	'tree_annotate_all_with_location'. Location should already be set.
+	* trans-openmp.c (gfc_trans_omp_workshare): Ditto.
+	* trans-stmt.c (gfc_trans_allocate): Do correct data initialization for
+	CLASS variables with SOURCE tag, plus some cleanup.
+
+2009-10-24  Janus Weil  <janus@gcc.gnu.org>
+	    Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/41784
+	* module.c (load_derived_extensions): Skip symbols which are not being
+	loaded.
+
+2009-10-24  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/41772
+	* trans-intrinsic.c (gfc_conv_intrinsic_transfer): Stop'extent'
+	from going negative.
+
+2009-10-23  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41800
+	* trans-expr.c (gfc_trans_scalar_assign): Handle CLASS variables.
+
+2009-10-23  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41758
+	* match.c (conformable_arrays): Move to resolve.c.
+	(gfc_match_allocate): Don't resolve SOURCE expr yet, and move some
+	checks to resolve_allocate_expr.
+	* resolve.c (conformable_arrays): Moved here from match.c.
+	(resolve_allocate_expr): Moved some checks here from gfc_match_allocate.
+	(resolve_code): Resolve SOURCE tag for ALLOCATE expressions.
+
+2009-10-22  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41781
+	* resolve.c (resolve_codes): Don't clear 'cs_base' for BLOCK constructs,
+	to make sure labels are treated correctly.
+	* symbol.c (gfc_get_st_label): Create labels in the right namespace.
+	For BLOCK constructs go into the parent namespace.
+
+2009-10-21  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41706
+	PR fortran/41766
+	* match.c (select_type_set_tmp): Set flavor for temporary.
+	* resolve.c (resolve_class_typebound_call): Correctly resolve actual
+	arguments.
+
+2009-10-20  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/41706
+	* resolve.c (resolve_arg_exprs): New function.
+	(resolve_class_compcall): Call the above.
+	(resolve_class_typebound_call): The same.
+
+2009-10-19  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41586
+	* parse.c (parse_derived): Correctly set 'alloc_comp' and 'pointer_comp'
+	for CLASS variables.
+	* trans-array.c (structure_alloc_comps): Handle deallocation and
+	nullification of allocatable scalar components.
+	* trans-decl.c (gfc_get_symbol_decl): Remember allocatable scalars for
+	automatic deallocation.
+	(gfc_trans_deferred_vars): Automatically deallocate allocatable scalars.
+
+2009-10-19  Tobias Burnus  <burnus@net-b.de>
+	    Steven G. Kargl  <kargl@gcc.gnu.org>
+
+	PR fortran/41755
+	* symbol.c (gfc_undo_symbols): Add NULL check.
+	* match.c (gfc_match_equivalence): Add check for
+	missing comma.
+
+2009-10-19  Richard Guenther  <rguenther@suse.de>
+
+	PR fortran/41494
+	* trans-expr.c (gfc_trans_scalar_assign): Do not call
+	gfc_evaluate_now.
+
+2009-10-17  Janus Weil  <janus@gcc.gnu.org>
+	    Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/41608
+	* decl.c (gfc_match_data_decl): Add BT_CLASS for undefined type
+	and empty type errors.
+	* parse.c (gfc_build_block_ns): Only set recursive if parent ns
+	has a proc_name.
+
+	PR fortran/41629
+	PR fortran/41618
+	PR fortran/41587
+	* gfortran.h : Add class_ok bitfield to symbol_attr.
+	* decl.c (build_sym): Set attr.class_ok if dummy, pointer or
+	allocatable.
+	(build_struct): Use gfc_try 't' to carry errors past the call
+	to encapsulate_class_symbol.
+	(attr_decl1): For a CLASS object, apply the new attribute to
+	the data component.
+	* match.c (gfc_match_select_type): Set attr.class_ok for an
+	assigned selector.
+	* resolve.c (resolve_fl_variable_derived): Check a CLASS object
+	is dummy, pointer or allocatable by testing the class_ok and
+	the use_assoc attribute.
+
+2009-10-16  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41719
+	* resolve.c (resolve_ordinary_assign): Reject intrinsic assignments
+	to polymorphic variables.
+
+2009-10-16  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/41648
+	PR fortran/41656
+	* trans-expr.c (select_class_proc): Convert the expression for the
+	vindex, carried on the first member of the esym list.
+	* gfortran.h : Add the vindex field to the esym_list structure.
+	and eliminate the class_object field.
+	* resolve.c (check_class_members): Remove the setting of the
+	class_object field.
+	(vindex_expr): New function.
+	(get_class_from_expr): New function.
+	(resolve_class_compcall): Call the above to find the ultimate
+	class or derived component.  If derived, do not generate the
+	esym list.  Add and expression for the vindex to the esym list
+	by calling the above.
+	(resolve_class_typebound_call): The same.
+
+2009-10-15  Steven G. Kargl  <kargl@gcc.gnu.org>
+
+	PR fortran/41712
+	* intrinsic.texi: Explicitly state that ETIME and DTIME take
+	REAL(4) arguments.  Fix nearby typographically errors where 
+	/leq was used instead of \leq.
+
+2009-10-13  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/41581
+	* decl.c (encapsulate_class_symbol): Add new component '$size'.
+	* resolve.c (resolve_allocate_expr): Move CLASS handling to
+	gfc_trans_allocate.
+	(resolve_class_assign): Replaced by gfc_trans_class_assign.
+	(resolve_code): Remove calls to resolve_class_assign.
+	* trans.c (gfc_trans_code): Use new function gfc_trans_class_assign.
+	* trans-expr.c (get_proc_ptr_comp): Fix a memory leak.
+	(gfc_conv_procedure_call): For CLASS dummies, set the
+	$size component.
+	(gfc_trans_class_assign): New function, replacing resolve_class_assign.
+	* trans-stmt.h (gfc_trans_class_assign): New prototype.
+	* trans-stmt.c (gfc_trans_allocate): Use correct size when allocating
+	CLASS variables. Do proper initialization. Move some code here from
+	resolve_allocate_expr.
+
 2009-10-11 Jerry DeLisle  <jvdelisle@gcc.gnu.org>
 
 	PR fortran/38439

@@ -55,6 +55,7 @@ through the macros defined in the @file{.h} file.
 * MIPS Coprocessors::   MIPS coprocessor support and how to customize it.
 * PCH Target::          Validity checking for precompiled headers.
 * C++ ABI::             Controlling C++ ABI changes.
+* Named Address Spaces:: Adding support for named address spaces
 * Misc::                Everything else.
 @end menu
 
@@ -813,7 +814,21 @@ parsed.
 
 Don't use this macro to turn on various extra optimizations for
 @option{-O}.  That is what @code{OPTIMIZATION_OPTIONS} is for.
+
+If you need to do something whenever the optimization level is
+changed via the optimize attribute or pragma, see
+@code{TARGET_OVERRIDE_OPTIONS_AFTER_CHANGE}
 @end defmac
+
+@deftypefn {Target Hook} void TARGET_OVERRIDE_OPTIONS_AFTER_CHANGE (void)
+This target function is similar to the macro @code{OVERRIDE_OPTIONS}
+but is called when the optimize level is changed via an attribute or
+pragma or when it is reset at the end of the code affected by the
+attribute or pragma.  It is not called at the beginning of compilation
+when @code{OVERRIDE_OPTIONS} is called so if you want to perform these
+actions then, you should have @code{OVERRIDE_OPTIONS} call
+@code{TARGET_OVERRIDE_OPTIONS_AFTER_CHANGE}.
+@end deftypefn
 
 @defmac C_COMMON_OVERRIDE_OPTIONS
 This is similar to @code{OVERRIDE_OPTIONS} but is only used in the C
@@ -2349,6 +2364,11 @@ with it, as well as defining these macros.
 Define this if the machine has any stack-like registers.
 @end defmac
 
+@defmac STACK_REG_COVER_CLASS
+This is a cover class containing the stack registers.  Define this if
+the machine has any stack-like registers.
+@end defmac
+
 @defmac FIRST_STACK_REG
 The number of the first stack-like register.  This one is the top
 of the stack.
@@ -3524,7 +3544,7 @@ dynamically if their size exceeds @code{STACK_CHECK_MAX_VAR_SIZE} bytes.
 @defmac STACK_CHECK_BUILTIN
 A nonzero value if stack checking is done by the configuration files in a
 machine-dependent manner.  You should define this macro if stack checking
-is require by the ABI of your machine or if you would like to do stack
+is required by the ABI of your machine or if you would like to do stack
 checking in some more efficient way than the generic approach.  The default
 value of this macro is zero.
 @end defmac
@@ -3536,17 +3556,27 @@ like to do static stack checking in some more efficient way than the generic
 approach.  The default value of this macro is zero.
 @end defmac
 
-@defmac STACK_CHECK_PROBE_INTERVAL
-An integer representing the interval at which GCC must generate stack
-probe instructions.  You will normally define this macro to be no larger
-than the size of the ``guard pages'' at the end of a stack area.  The
-default value of 4096 is suitable for most systems.
+@defmac STACK_CHECK_PROBE_INTERVAL_EXP
+An integer specifying the interval at which GCC must generate stack probe
+instructions, defined as 2 raised to this integer.  You will normally
+define this macro so that the interval be no larger than the size of
+the ``guard pages'' at the end of a stack area.  The default value
+of 12 (4096-byte interval) is suitable for most systems.
 @end defmac
 
 @defmac STACK_CHECK_PROBE_LOAD
 An integer which is nonzero if GCC should perform the stack probe
 as a load instruction and zero if GCC should use a store instruction.
 The default is zero, which is the most efficient choice on most systems.
+@end defmac
+
+@defmac STACK_CHECK_MOVING_SP
+An integer which is nonzero if GCC should move the stack pointer page by page
+when doing probes.  This can be necessary on systems where the stack pointer
+contains the bottom address of the memory area accessible to the executing
+thread at any point in time.  In this situation an alternate signal stack
+is required in order to be able to recover from a stack overflow.  The
+default value of this macro is zero.
 @end defmac
 
 @defmac STACK_CHECK_PROTECT
@@ -3783,7 +3813,7 @@ registers @code{regs_ever_live} and @code{call_used_regs}.
 
 If @code{ELIMINABLE_REGS} is defined, this macro will be not be used and
 need not be defined.  Otherwise, it must be defined even if
-@code{TARGET_FRAME_POINTER_REQUIRED} is always return true; in that
+@code{TARGET_FRAME_POINTER_REQUIRED} always returns true; in that
 case, you may set @var{depth-var} to anything.
 @end defmac
 
@@ -4200,7 +4230,6 @@ on the stack.  The compiler knows how to track the amount of stack space
 used for arguments without any special help.
 @end defmac
 
-
 @defmac FUNCTION_ARG_OFFSET (@var{mode}, @var{type})
 If defined, a C expression that is the number of bytes to add to the
 offset of the argument passed in memory.  This is needed for the SPU,
@@ -4394,7 +4423,7 @@ compiled.
 @end defmac
 
 @deftypefn {Target Hook} rtx TARGET_LIBCALL_VALUE (enum machine_mode
-@var{mode}, rtx @var{fun})
+@var{mode}, const_rtx @var{fun})
 Define this hook if the back-end needs to know the name of the libcall
 function in order to determine where the result should be returned.  
 
@@ -5365,9 +5394,10 @@ post-address side-effect generation involving a register displacement.
 
 @defmac CONSTANT_ADDRESS_P (@var{x})
 A C expression that is 1 if the RTX @var{x} is a constant which
-is a valid address.  On most machines, this can be defined as
-@code{CONSTANT_P (@var{x})}, but a few machines are more restrictive
-in which constant addresses are supported.
+is a valid address.  On most machines the default definition of
+@code{(CONSTANT_P (@var{x}) && GET_CODE (@var{x}) != CONST_DOUBLE)}
+is acceptable, but a few machines are more restrictive as to which
+constant addresses are supported. 
 @end defmac
 
 @defmac CONSTANT_P (@var{x})
@@ -5628,7 +5658,7 @@ should comply with the semantics expected by @code{REALIGN_LOAD}
 described above.
 If this hook is not defined, then @var{addr} will be used as
 the argument @var{OFF} to @code{REALIGN_LOAD}, in which case the low
-log2(@var{VS})-1 bits of @var{addr} will be considered.
+log2(@var{VS}) @minus{} 1 bits of @var{addr} will be considered.
 @end deftypefn
 
 @deftypefn {Target Hook} tree TARGET_VECTORIZE_BUILTIN_MUL_WIDEN_EVEN (tree @var{x})
@@ -6122,7 +6152,7 @@ this macro is defined, it should produce a nonzero value when
 @code{STRICT_ALIGNMENT} is nonzero.
 @end defmac
 
-@defmac MOVE_RATIO
+@defmac MOVE_RATIO (@var{speed})
 The threshold of number of scalar memory-to-memory move insns, @emph{below}
 which a sequence of insns should be generated instead of a
 string move insn or a library call.  Increasing the value will always
@@ -6131,6 +6161,9 @@ make code faster, but eventually incurs high cost in increased code size.
 Note that on machines where the corresponding move insn is a
 @code{define_expand} that emits a sequence of insns, this macro counts
 the number of such sequences.
+
+The parameter @var{speed} is true if the code is currently being
+optimized for speed rather than size.
 
 If you don't define this, a reasonable default is used.
 @end defmac
@@ -6147,11 +6180,14 @@ A C expression used by @code{move_by_pieces} to determine the largest unit
 a load or store used to copy memory is.  Defaults to @code{MOVE_MAX}.
 @end defmac
 
-@defmac CLEAR_RATIO
+@defmac CLEAR_RATIO (@var{speed})
 The threshold of number of scalar move insns, @emph{below} which a sequence
 of insns should be generated to clear memory instead of a string clear insn
 or a library call.  Increasing the value will always make code faster, but
 eventually incurs high cost in increased code size.
+
+The parameter @var{speed} is true if the code is currently being
+optimized for speed rather than size.
 
 If you don't define this, a reasonable default is used.
 @end defmac
@@ -6163,12 +6199,15 @@ will be used.  Defaults to 1 if @code{move_by_pieces_ninsns} returns less
 than @code{CLEAR_RATIO}.
 @end defmac
 
-@defmac SET_RATIO
+@defmac SET_RATIO (@var{speed})
 The threshold of number of scalar move insns, @emph{below} which a sequence
 of insns should be generated to set memory to a constant value, instead of
 a block set insn or a library call.  
 Increasing the value will always make code faster, but
 eventually incurs high cost in increased code size.
+
+The parameter @var{speed} is true if the code is currently being
+optimized for speed rather than size.
 
 If you don't define this, it defaults to the value of @code{MOVE_RATIO}.
 @end defmac
@@ -6184,7 +6223,7 @@ than @code{SET_RATIO}.
 
 @defmac STORE_BY_PIECES_P (@var{size}, @var{alignment})
 A C expression used to determine whether @code{store_by_pieces} will be
-used to set a chunk of memory to a constant string value, or whether some 
+used to set a chunk of memory to a constant string value, or whether some
 other mechanism will be used.  Used by @code{__builtin_strcpy} when
 called with a constant source string.
 Defaults to 1 if @code{move_by_pieces_ninsns} returns less
@@ -6250,7 +6289,7 @@ Define this macro if a non-short-circuit operation produced by
 @code{BRANCH_COST} is greater than or equal to the value 2.
 @end defmac
 
-@deftypefn {Target Hook} bool TARGET_RTX_COSTS (rtx @var{x}, int @var{code}, int @var{outer_code}, int *@var{total})
+@deftypefn {Target Hook} bool TARGET_RTX_COSTS (rtx @var{x}, int @var{code}, int @var{outer_code}, int *@var{total}, bool @var{speed})
 This target hook describes the relative costs of RTL expressions.
 
 The cost may depend on the precise form of the expression, which is
@@ -6269,15 +6308,15 @@ necessary.  Traditionally, the default costs are @code{COSTS_N_INSNS (5)}
 for multiplications, @code{COSTS_N_INSNS (7)} for division and modulus
 operations, and @code{COSTS_N_INSNS (1)} for all other operations.
 
-When optimizing for code size, i.e.@: when @code{optimize_size} is
-nonzero, this target hook should be used to estimate the relative
+When optimizing for code size, i.e.@: when @code{speed} is
+false, this target hook should be used to estimate the relative
 size cost of an expression, again relative to @code{COSTS_N_INSNS}.
 
 The hook returns true when all subexpressions of @var{x} have been
 processed, and false when @code{rtx_cost} should recurse.
 @end deftypefn
 
-@deftypefn {Target Hook} int TARGET_ADDRESS_COST (rtx @var{address})
+@deftypefn {Target Hook} int TARGET_ADDRESS_COST (rtx @var{address}, bool @var{speed})
 This hook computes the cost of an addressing mode that contains
 @var{address}.  If not defined, the cost is computed from
 the @var{address} expression and the @code{TARGET_RTX_COST} hook.
@@ -6379,7 +6418,7 @@ debug output to.  @var{verbose} is the verbose level provided by
 list of instructions that are ready to be scheduled.  @var{n_readyp} is
 a pointer to the number of elements in the ready list.  The scheduler
 reads the ready list in reverse order, starting with
-@var{ready}[@var{*n_readyp}-1] and going to @var{ready}[0].  @var{clock}
+@var{ready}[@var{*n_readyp} @minus{} 1] and going to @var{ready}[0].  @var{clock}
 is the timer tick of the scheduler.  You may modify the ready list and
 the number of ready insns.  The return value is the number of insns that
 can issue this cycle; normally this is just @code{issue_rate}.  See also
@@ -6610,7 +6649,7 @@ speculative dependencies and therefore can be scheduled speculatively.
 The hook is used to check if the pattern of @var{insn} has a speculative
 version and, in case of successful check, to generate that speculative
 pattern.  The hook should return 1, if the instruction has a speculative form,
-or -1, if it doesn't.  @var{request} describes the type of requested
+or @minus{}1, if it doesn't.  @var{request} describes the type of requested
 speculation.  If the return value equals 1 then @var{new_pat} is assigned
 the generated speculative pattern.
 @end deftypefn
@@ -9511,7 +9550,7 @@ attributes, or a copy of the list may be made if further changes are
 needed.
 @end deftypefn
 
-@deftypefn {Target Hook} bool TARGET_FUNCTION_ATTRIBUTE_INLINABLE_P (tree @var{fndecl})
+@deftypefn {Target Hook} bool TARGET_FUNCTION_ATTRIBUTE_INLINABLE_P (const_tree @var{fndecl})
 @cindex inlining
 This target hook returns @code{true} if it is ok to inline @var{fndecl}
 into the current function, despite its having target-specific
@@ -9809,6 +9848,105 @@ unloaded. The default is to return false.
 @var{type} is a C++ class (i.e., RECORD_TYPE or UNION_TYPE) that has just been
 defined.  Use this hook to make adjustments to the class (eg, tweak
 visibility or perform any other required target modifications).
+@end deftypefn
+
+@node Named Address Spaces
+@section Adding support for named address spaces
+@cindex named address spaces
+
+The draft technical report of the ISO/IEC JTC1 S22 WG14 N1275
+standards committee, @cite{Programming Languages - C - Extensions to
+support embedded processors}, specifies a syntax for embedded
+processors to specify alternate address spaces.  You can configure a
+GCC port to support section 5.1 of the draft report to add support for
+address spaces other than the default address space.  These address
+spaces are new keywords that are similar to the @code{volatile} and
+@code{const} type attributes.
+
+Pointers to named address spaces can a a different size than
+pointers to the generic address space.
+
+For example, the SPU port uses the @code{__ea} address space to refer
+to memory in the host processor, rather than memory local to the SPU
+processor.  Access to memory in the @code{__ea} address space involves
+issuing DMA operations to move data between the host processor and the
+local processor memory address space.  Pointers in the @code{__ea}
+address space are either 32 bits or 64 bits based on the
+@option{-mea32} or @option{-mea64} switches (native SPU pointers are
+always 32 bits).
+
+Internally, address spaces are represented as a small integer in the
+range 0 to 15 with address space 0 being reserved for the generic
+address space.
+
+@defmac TARGET_ADDR_SPACE_KEYWORDS
+A list of @code{ADDR_SPACE_KEYWORD} macros to define each named
+address keyword.  The @code{ADDR_SPACE_KEYWORD} macro takes two
+arguments, the keyword string and the number of the named address
+space.  For example, the SPU port uses the following to declare
+@code{__ea} as the keyword for named address space #1:
+@smallexample
+#define ADDR_SPACE_EA 1
+#define TARGET_ADDR_SPACE_KEYWORDS ADDR_SPACE_KEYWORD ("__ea", ADDR_SPACE_EA)
+@end smallexample
+@end defmac
+
+@deftypefn {Target Hook} {enum machine_mode} TARGET_ADDR_SPACE_POINTER_MODE (addr_space_t @var{address_space})
+Define this to return the machine mode to use for pointers to
+@var{address_space} if the target supports named address spaces.
+The default version of this hook returns @code{ptr_mode} for the
+generic address space only.
+@end deftypefn
+
+@deftypefn {Target Hook} {enum machine_mode} TARGET_ADDR_SPACE_ADDRESS_MODE (addr_space_t @var{address_space})
+Define this to return the machine mode to use for addresses in
+@var{address_space} if the target supports named address spaces.
+The default version of this hook returns @code{Pmode} for the
+generic address space only.
+@end deftypefn
+
+@deftypefn {Target Hook} bool TARGET_ADDR_SPACE_VALID_POINTER_MODE (enum machine_mode @var{mode}, addr_space_t @var{as})
+Define this to return nonzero if the port can handle pointers
+with machine mode @var{mode} to address space @var{as}.  This target
+hook is the same as the @code{TARGET_VALID_POINTER_MODE} target hook,
+except that it includes explicit named address space support.  The default
+version of this hook returns true for the modes returned by either the
+@code{TARGET_ADDR_SPACE_POINTER_MODE} or @code{TARGET_ADDR_SPACE_ADDRESS_MODE}
+target hooks for the given address space.
+@end deftypefn
+
+@deftypefn {Target Hook} {bool} TARGET_ADDR_SPACE_LEGITIMATE_ADDRESS_P (enum machine_mode @var{mode}, rtx @var{exp}, bool @var{strict}, addr_space_t @var{as})
+Define this to return true if @var{exp} is a valid address for mode
+@var{mode} in the named address space @var{as}.  The @var{strict}
+parameter says whether strict addressing is in effect after reload has
+finished.  This target hook is the same as the
+@code{TARGET_LEGITIMATE_ADDRESS_P} target hook, except that it includes
+explicit named address space support.
+@end deftypefn
+
+@deftypefn {Target Hook} {rtx} TARGET_ADDR_SPACE_LEGITIMIZE_ADDRESS (rtx @var{x}, rtx @var{oldx}, enum machine_mode @var{mode}, addr_space_t @var{as})
+Define this to modify an invalid address @var{x} to be a valid address
+with mode @var{mode} in the named address space @var{as}.  This target
+hook is the same as the @code{TARGET_LEGITIMIZE_ADDRESS} target hook,
+except that it includes explicit named address space support.
+@end deftypefn
+
+@deftypefn {Target Hook} {bool} TARGET_ADDR_SPACE_SUBSET_P (addr_space_t @var{superset}, addr_space_t @var{subset})
+Define this to return whether the @var{subset} named address space is
+contained within the @var{superset} named address space.  Pointers to
+a named address space that is a subset of another named address space
+will be converted automatically without a cast if used together in
+arithmetic operations.  Pointers to a superset address space can be
+converted to pointers to a subset address space via explict casts.
+@end deftypefn
+
+@deftypefn {Target Hook} {rtx} TARGET_ADDR_SPACE_CONVERT (rtx @var{op}, tree @var{from_type}, tree @var{to_type})
+Define this to convert the pointer expression represented by the RTL
+@var{op} with type @var{from_type} that points to a named address
+space to a new pointer expression with type @var{to_type} that points
+to a different named address space.  When this hook it called, it is
+guaranteed that one of the two address spaces is a subset of the other,
+as determined by the @code{TARGET_ADDR_SPACE_SUBSET_P} target hook.
 @end deftypefn
 
 @node Misc
@@ -10338,18 +10476,6 @@ This must be a value that would also be valid to use with
 @samp{#pragma pack()} (that is, a small power of two).
 @end defmac
 
-@findex #pragma
-@findex pragma
-@defmac HANDLE_PRAGMA_PUSH_POP_MACRO
-Define this macro if you want to support the Win32 style pragmas
-@samp{#pragma push_macro(macro-name-as-string)} and @samp{#pragma
-pop_macro(macro-name-as-string)}.  The @samp{#pragma push_macro(
-macro-name-as-string)} pragma saves the named macro and via
-@samp{#pragma pop_macro(macro-name-as-string)} it will return to the
-previous value.
-@end defmac
-
-
 @defmac DOLLARS_IN_IDENTIFIERS
 Define this macro to control use of the character @samp{$} in
 identifier names for the C family of languages.  0 means @samp{$} is
@@ -10728,6 +10854,12 @@ to have to make special provisions in @code{INITIAL_ELIMINATION_OFFSET}
 to reserve space for caller-saved target registers.
 @end deftypefn
 
+@deftypefn {Target Hook} bool TARGET_HAVE_CONDITIONAL_EXECUTION (void)
+This target hook returns true if the target supports conditional execution.
+This target hook is required only when the target has several different
+modes and they have different conditional execution capability, such as ARM.
+@end deftypefn
+
 @defmac POWI_MAX_MULTS
 If defined, this macro is interpreted as a signed integer C expression
 that specifies the maximum number of floating point multiplications
@@ -10904,7 +11036,6 @@ cannot safely move arguments from the registers in which they are passed
 to the stack.  Therefore, this hook should return true in general, but
 false for naked functions.  The default implementation always returns true.
 @end deftypefn
-
 
 @deftypevr {Target Hook} {unsigned HOST_WIDE_INT} TARGET_CONST_ANCHOR
 On some architectures it can take multiple instructions to synthesize

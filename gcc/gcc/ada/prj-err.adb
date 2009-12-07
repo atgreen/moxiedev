@@ -23,8 +23,9 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Output;  use Output;
-with Stringt; use Stringt;
+with Err_Vars;
+with Output;   use Output;
+with Stringt;  use Stringt;
 
 package body Prj.Err is
 
@@ -117,7 +118,13 @@ package body Prj.Err is
       if Flags.Report_Error /= null then
          Flags.Report_Error
            (Project,
-            Is_Warning => Msg (Msg'First) = '?' or else Msg (Msg'First) = '<');
+            Is_Warning =>
+              Msg (Msg'First) = '?'
+                or else (Msg (Msg'First) = '<'
+                          and then Err_Vars.Error_Msg_Warn)
+                or else (Msg (Msg'First) = '\'
+                          and then Msg (Msg'First + 1) = '<'
+                          and then Err_Vars.Error_Msg_Warn));
       end if;
    end Error_Msg;
 

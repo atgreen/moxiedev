@@ -1,7 +1,7 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/java/util/logging
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,17 +60,17 @@ has-props
 
 13528
 
-SimpleFormatter.class
+Handler.class
 file
 
 
 
 
 2009-04-24T17:48:07.000000Z
-eaadefe1ae06e5d125805c6e6d0cf241
-2008-10-21T17:55:01.166395Z
-141271
-doko
+9e50357b05cef09d0904017871ccafb6
+2006-12-12T18:41:51.528840Z
+119793
+tromey
 has-props
 
 
@@ -92,7 +92,7 @@ has-props
 
 
 
-2032
+2968
 
 FileHandler.class
 file
@@ -128,17 +128,17 @@ has-props
 
 6273
 
-Handler.class
+SimpleFormatter.class
 file
 
 
 
 
 2009-04-24T17:48:07.000000Z
-9e50357b05cef09d0904017871ccafb6
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+eaadefe1ae06e5d125805c6e6d0cf241
+2008-10-21T17:55:01.166395Z
+141271
+doko
 has-props
 
 
@@ -160,7 +160,7 @@ has-props
 
 
 
-2968
+2032
 
 Logger.class
 file
@@ -264,40 +264,6 @@ has-props
 
 395
 
-XMLFormatter.class
-file
-
-
-
-
-2009-04-24T17:48:07.000000Z
-390d435b8af614df21e0d06acef4c487
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4531
-
 ErrorManager.class
 file
 
@@ -331,6 +297,40 @@ has-props
 
 
 1654
+
+XMLFormatter.class
+file
+
+
+
+
+2009-04-24T17:48:07.000000Z
+390d435b8af614df21e0d06acef4c487
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4531
 
 Filter.class
 file
@@ -400,40 +400,6 @@ has-props
 
 1932
 
-StreamHandler.class
-file
-
-
-
-
-2009-04-24T17:48:07.000000Z
-e1f797c94df909abf307109d2aa518ba
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5354
-
 FileHandler$ostr.class
 file
 
@@ -467,6 +433,40 @@ has-props
 
 
 1249
+
+StreamHandler.class
+file
+
+
+
+
+2009-04-24T17:48:07.000000Z
+e1f797c94df909abf307109d2aa518ba
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5354
 
 LoggingPermission.class
 file

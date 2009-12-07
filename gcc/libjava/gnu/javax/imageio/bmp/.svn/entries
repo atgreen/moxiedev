@@ -1,7 +1,7 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/javax/imageio/bmp
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ tromey
 
 2401
 
-BMPException.h
-file
-
-
-
-
-2009-04-24T17:49:06.000000Z
-8dd2c12b625685beb7c6457f35a0a4c2
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-634
-
 EncodeRGB32.h
 file
 
@@ -128,6 +94,40 @@ tromey
 
 1462
 
+BMPException.h
+file
+
+
+
+
+2009-04-24T17:49:06.000000Z
+8dd2c12b625685beb7c6457f35a0a4c2
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+634
+
 EncodeRGB24.h
 file
 
@@ -136,6 +136,40 @@ file
 
 2009-04-24T17:49:06.000000Z
 a358ff59623e9e12bdeacd7fc8a56a68
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1462
+
+EncodeRGB16.h
+file
+
+
+
+
+2009-04-24T17:49:06.000000Z
+08bb1c03ca1ecb85a4d7a859e27f8135
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -196,14 +230,14 @@ tromey
 
 1125
 
-EncodeRGB16.h
+DecodeBF32.h
 file
 
 
 
 
 2009-04-24T17:49:06.000000Z
-08bb1c03ca1ecb85a4d7a859e27f8135
+6a76abd27cd77f9f9d100af133487df0
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -228,16 +262,16 @@ tromey
 
 
 
-1462
+1312
 
-DecodeBF32.h
+DecodeBF16.h
 file
 
 
 
 
 2009-04-24T17:49:06.000000Z
-6a76abd27cd77f9f9d100af133487df0
+97d4dde281deb1762da99cd94ee65369
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -298,40 +332,6 @@ tromey
 
 1125
 
-DecodeBF16.h
-file
-
-
-
-
-2009-04-24T17:49:06.000000Z
-97d4dde281deb1762da99cd94ee65369
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1312
-
 BMPInfoHeader.h
 file
 
@@ -366,40 +366,6 @@ tromey
 
 2010
 
-BMPImageReader.h
-file
-
-
-
-
-2009-04-24T17:49:06.000000Z
-b0cc95064a8a462aba6db7ee200f815b
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2070
-
 BMPDecoder.h
 file
 
@@ -433,6 +399,40 @@ tromey
 
 
 1803
+
+BMPImageReader.h
+file
+
+
+
+
+2009-04-24T17:49:06.000000Z
+b0cc95064a8a462aba6db7ee200f815b
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2070
 
 DecodeRGB8.h
 file

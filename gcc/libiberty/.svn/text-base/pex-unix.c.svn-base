@@ -368,7 +368,8 @@ static void
 pex_child_error (struct pex_obj *obj, const char *executable,
 		 const char *errmsg, int err)
 {
-#define writeerr(s) (void) write (STDERR_FILE_NO, s, strlen (s))
+  int retval = 0;
+#define writeerr(s) retval |= (write (STDERR_FILE_NO, s, strlen (s)) < 0)
   writeerr (obj->pname);
   writeerr (": error trying to exec '");
   writeerr (executable);
@@ -377,7 +378,9 @@ pex_child_error (struct pex_obj *obj, const char *executable,
   writeerr (": ");
   writeerr (xstrerror (err));
   writeerr ("\n");
-  _exit (-1);
+#undef writeerr
+  /* Exit with -2 if the error output failed, too.  */
+  _exit (retval == 0 ? -1 : -2);
 }
 
 /* Execute a child.  */

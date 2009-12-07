@@ -49,6 +49,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "graph.h"
 #include "cfgloop.h"
 #include "except.h"
+#include "plugin.h"
 
 
 /* Gate: execute, or not, all of the non-trivial optimizations.  */
@@ -57,7 +58,7 @@ static bool
 gate_all_optimizations (void)
 {
   return (optimize >= 1
-	  /* Don't bother doing anything if the program has errors. 
+	  /* Don't bother doing anything if the program has errors.
 	     We have to pass down the queue if we already went into SSA */
 	  && (!(errorcount || sorrycount) || gimple_in_ssa_p (cfun)));
 }
@@ -201,7 +202,7 @@ struct gimple_opt_pass pass_cleanup_cfg_post_optimizing =
 {
  {
   GIMPLE_PASS,
-  "optimized",			/* name */
+  "optimized",				/* name */
   NULL,					/* gate */
   execute_cleanup_cfg_post_optimizing,	/* execute */
   NULL,					/* sub */
@@ -245,36 +246,55 @@ execute_fixup_cfg (void)
   basic_block bb;
   gimple_stmt_iterator gsi;
   int todo = gimple_in_ssa_p (cfun) ? TODO_verify_ssa : 0;
+  gcov_type count_scale;
+  edge e;
+  edge_iterator ei;
 
-  if (cfun->eh)
-    FOR_EACH_BB (bb)
-      {
-	for (gsi = gsi_start_bb (bb); !gsi_end_p (gsi); gsi_next (&gsi))
-	  {
-	    gimple stmt = gsi_stmt (gsi);
-	    tree decl = is_gimple_call (stmt)
-	                ? gimple_call_fndecl (stmt)
-			: NULL;
+  if (ENTRY_BLOCK_PTR->count)
+    count_scale = (cgraph_node (current_function_decl)->count * REG_BR_PROB_BASE
+    		   + ENTRY_BLOCK_PTR->count / 2) / ENTRY_BLOCK_PTR->count;
+  else
+    count_scale = REG_BR_PROB_BASE;
 
-	    if (decl
-		&& gimple_call_flags (stmt) & (ECF_CONST
-					       | ECF_PURE 
-					       | ECF_LOOPING_CONST_OR_PURE))
-	      {
-		if (gimple_in_ssa_p (cfun))
-		  {
-		    todo |= TODO_update_ssa | TODO_cleanup_cfg;
-		    mark_symbols_for_renaming (stmt);
-	            update_stmt (stmt);
-		  }
-	      }
+  ENTRY_BLOCK_PTR->count = cgraph_node (current_function_decl)->count;
+  EXIT_BLOCK_PTR->count = (EXIT_BLOCK_PTR->count * count_scale
+  			   + REG_BR_PROB_BASE / 2) / REG_BR_PROB_BASE;
 
-	    maybe_clean_eh_stmt (stmt);
-	  }
+  FOR_EACH_BB (bb)
+    {
+      bb->count = (bb->count * count_scale
+		   + REG_BR_PROB_BASE / 2) / REG_BR_PROB_BASE;
+      for (gsi = gsi_start_bb (bb); !gsi_end_p (gsi); gsi_next (&gsi))
+	{
+	  gimple stmt = gsi_stmt (gsi);
+	  tree decl = is_gimple_call (stmt)
+		      ? gimple_call_fndecl (stmt)
+		      : NULL;
 
-	if (gimple_purge_dead_eh_edges (bb))
-          todo |= TODO_cleanup_cfg;
-      }
+	  if (decl
+	      && gimple_call_flags (stmt) & (ECF_CONST
+					     | ECF_PURE
+					     | ECF_LOOPING_CONST_OR_PURE))
+	    {
+	      if (gimple_in_ssa_p (cfun))
+		{
+		  todo |= TODO_update_ssa | TODO_cleanup_cfg;
+		  mark_symbols_for_renaming (stmt);
+		  update_stmt (stmt);
+		}
+	    }
+
+	  maybe_clean_eh_stmt (stmt);
+	}
+
+      if (gimple_purge_dead_eh_edges (bb))
+	todo |= TODO_cleanup_cfg;
+      FOR_EACH_EDGE (e, ei, bb->succs)
+        e->count = (e->count * count_scale
+		    + REG_BR_PROB_BASE / 2) / REG_BR_PROB_BASE;
+    }
+  if (count_scale != REG_BR_PROB_BASE)
+    compute_function_frequency ();
 
   /* Dump a textual representation of the flowgraph.  */
   if (dump_file)
@@ -287,9 +307,9 @@ struct gimple_opt_pass pass_fixup_cfg =
 {
  {
   GIMPLE_PASS,
-  NULL,					/* name */
+  "*free_cfg_annotations",		/* name */
   NULL,					/* gate */
-  execute_fixup_cfg,		/* execute */
+  execute_fixup_cfg,			/* execute */
   NULL,					/* sub */
   NULL,					/* next */
   0,					/* static_pass_number */
@@ -317,7 +337,7 @@ struct gimple_opt_pass pass_init_datastructures =
 {
  {
   GIMPLE_PASS,
-  NULL,					/* name */
+  "*init_datastructures",		/* name */
   NULL,					/* gate */
   execute_init_datastructures,		/* execute */
   NULL,					/* sub */
@@ -359,13 +379,10 @@ void
 tree_rest_of_compilation (tree fndecl)
 {
   location_t saved_loc;
-  struct cgraph_node *node;
 
   timevar_push (TV_EXPAND);
 
   gcc_assert (cgraph_global_info_ready);
-
-  node = cgraph_node (fndecl);
 
   /* Initialize the default bitmap obstack.  */
   bitmap_obstack_initialize (NULL);
@@ -381,7 +398,7 @@ tree_rest_of_compilation (tree fndecl)
      We haven't necessarily assigned RTL to all variables yet, so it's
      not safe to try to expand expressions involving them.  */
   cfun->dont_save_pending_sizes_p = 1;
-  
+
   gimple_register_cfg_hooks ();
 
   bitmap_obstack_initialize (&reg_obstack); /* FIXME, only at RTL generation*/
@@ -389,13 +406,20 @@ tree_rest_of_compilation (tree fndecl)
   execute_all_ipa_transforms ();
 
   /* Perform all tree transforms and optimizations.  */
+
+  /* Signal the start of passes.  */
+  invoke_plugin_callbacks (PLUGIN_ALL_PASSES_START, NULL);
+
   execute_pass_list (all_passes);
-  
+
+  /* Signal the end of passes.  */
+  invoke_plugin_callbacks (PLUGIN_ALL_PASSES_END, NULL);
+
   bitmap_obstack_release (&reg_obstack);
 
   /* Release the default bitmap obstack.  */
   bitmap_obstack_release (NULL);
-  
+
   set_cfun (NULL);
 
   /* If requested, warn about function definitions where the function will

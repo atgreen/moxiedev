@@ -1,7 +1,7 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/xml/validation/relaxng
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ mark
 
 2023
 
-NameClass.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-ad0b0107c398eb519e753aa9eff804c0
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1960
-
 NotAllowedPattern.java
 file
 
@@ -230,14 +196,14 @@ mark
 
 2000
 
-DataPattern.java
+NameClass.java
 file
 
 
 
 
 2009-04-24T17:47:03.000000Z
-6920e5a7004ee9f73210ba7547beee36
+ad0b0107c398eb519e753aa9eff804c0
 2006-03-10T13:25:35.074455Z
 111932
 mark
@@ -262,7 +228,7 @@ mark
 
 
 
-2161
+1960
 
 NameNameClass.java
 file
@@ -298,6 +264,40 @@ mark
 
 2087
 
+DataPattern.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+6920e5a7004ee9f73210ba7547beee36
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2161
+
 NSNameNameClass.java
 file
 
@@ -331,40 +331,6 @@ mark
 
 
 2172
-
-ListPattern.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-f837d178202bb70dca4cdf2828dacb2d
-2006-03-10T13:25:35.074455Z
-111932
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1931
 
 RELAXNGSchemaFactory.java
 file
@@ -400,14 +366,14 @@ mark
 
 5238
 
-RefPattern.java
+ListPattern.java
 file
 
 
 
 
 2009-04-24T17:47:03.000000Z
-9d0b7db5900dc4fc8c5746cfc4df42b0
+f837d178202bb70dca4cdf2828dacb2d
 2006-03-10T13:25:35.074455Z
 111932
 mark
@@ -432,7 +398,7 @@ mark
 
 
 
-1924
+1931
 
 ValuePattern.java
 file
@@ -467,6 +433,40 @@ mark
 
 
 2082
+
+RefPattern.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+9d0b7db5900dc4fc8c5746cfc4df42b0
+2006-03-10T13:25:35.074455Z
+111932
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1924
 
 Pattern.java
 file

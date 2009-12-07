@@ -407,12 +407,12 @@ static int vars_copy_1 (void **, void *);
 static void vars_copy (htab_t, htab_t);
 static tree var_debug_decl (tree);
 static void var_reg_set (dataflow_set *, rtx, enum var_init_status, rtx);
-static void var_reg_delete_and_set (dataflow_set *, rtx, bool, 
+static void var_reg_delete_and_set (dataflow_set *, rtx, bool,
 				    enum var_init_status, rtx);
 static void var_reg_delete (dataflow_set *, rtx, bool);
 static void var_regno_delete (dataflow_set *, int);
 static void var_mem_set (dataflow_set *, rtx, enum var_init_status, rtx);
-static void var_mem_delete_and_set (dataflow_set *, rtx, bool, 
+static void var_mem_delete_and_set (dataflow_set *, rtx, bool,
 				    enum var_init_status, rtx);
 static void var_mem_delete (dataflow_set *, rtx, bool);
 
@@ -521,7 +521,7 @@ stack_adjust_offset_pre_post (rtx pattern, HOST_WIDE_INT *pre,
 	      /* We handle only adjustments by constant amount.  */
 	      gcc_assert (GET_CODE (XEXP (src, 1)) == PLUS &&
 			  CONST_INT_P (val));
-	      
+
 	      if (code == PRE_MODIFY)
 		*pre -= INTVAL (val);
 	      else
@@ -1367,7 +1367,7 @@ get_init_value (dataflow_set *set, rtx loc, decl_or_value dv)
    part.  */
 
 static void
-var_reg_delete_and_set (dataflow_set *set, rtx loc, bool modify, 
+var_reg_delete_and_set (dataflow_set *set, rtx loc, bool modify,
 			enum var_init_status initialized, rtx set_src)
 {
   tree decl = REG_EXPR (loc);
@@ -1465,7 +1465,7 @@ var_mem_decl_set (dataflow_set *set, rtx loc, enum var_init_status initialized,
    Adjust the address first if it is stack pointer based.  */
 
 static void
-var_mem_set (dataflow_set *set, rtx loc, enum var_init_status initialized, 
+var_mem_set (dataflow_set *set, rtx loc, enum var_init_status initialized,
 	     rtx set_src)
 {
   tree decl = MEM_EXPR (loc);
@@ -1483,7 +1483,7 @@ var_mem_set (dataflow_set *set, rtx loc, enum var_init_status initialized,
    Adjust the address first if it is stack pointer based.  */
 
 static void
-var_mem_delete_and_set (dataflow_set *set, rtx loc, bool modify, 
+var_mem_delete_and_set (dataflow_set *set, rtx loc, bool modify,
 			enum var_init_status initialized, rtx set_src)
 {
   tree decl = MEM_EXPR (loc);
@@ -1687,7 +1687,7 @@ val_resolve (dataflow_set *set, rtx val, rtx loc, rtx insn)
 		       VAR_INIT_STATUS_INITIALIZED, NULL_RTX, INSERT);
 }
 
-/* Initialize dataflow set SET to be empty. 
+/* Initialize dataflow set SET to be empty.
    VARS_SIZE is the initial size of hash table VARS.  */
 
 static void
@@ -1758,7 +1758,7 @@ variable_union_info_cmp_pos (const void *n1, const void *n2)
 
   if (i1->pos != i2->pos)
     return i1->pos - i2->pos;
-  
+
   return (i1->pos_dst - i2->pos_dst);
 }
 
@@ -4128,8 +4128,8 @@ track_expr_p (tree expr, bool need_rtl)
   decl_rtl = DECL_RTL_IF_SET (expr);
   if (!decl_rtl && need_rtl)
     return 0;
-  
-  /* If this expression is really a debug alias of some other declaration, we 
+
+  /* If this expression is really a debug alias of some other declaration, we
      don't need to track this expression if the ultimate declaration is
      ignored.  */
   realdecl = expr;
@@ -4143,7 +4143,7 @@ track_expr_p (tree expr, bool need_rtl)
     }
 
   /* Do not track EXPR if REALDECL it should be ignored for debugging
-     purposes.  */ 
+     purposes.  */
   if (DECL_IGNORED_P (realdecl))
     return 0;
 
@@ -4359,7 +4359,9 @@ replace_expr_with_values (rtx loc)
     return NULL;
   else if (MEM_P (loc))
     {
-      cselib_val *addr = cselib_lookup (XEXP (loc, 0), Pmode, 0);
+      enum machine_mode address_mode
+	= targetm.addr_space.address_mode (MEM_ADDR_SPACE (loc));
+      cselib_val *addr = cselib_lookup (XEXP (loc, 0), address_mode, 0);
       if (addr)
 	return replace_equiv_address_nv (loc, addr->val_rtx);
       else
@@ -4493,7 +4495,9 @@ count_uses (rtx *loc, void *cuip)
 	  if (MEM_P (*loc)
 	      && !REG_P (XEXP (*loc, 0)) && !MEM_P (XEXP (*loc, 0)))
 	    {
-	      val = cselib_lookup (XEXP (*loc, 0), Pmode, false);
+	      enum machine_mode address_mode
+		= targetm.addr_space.address_mode (MEM_ADDR_SPACE (*loc));
+	      val = cselib_lookup (XEXP (*loc, 0), address_mode, false);
 
 	      if (val && !cselib_preserved_value_p (val))
 		{
@@ -4613,7 +4617,10 @@ add_uses (rtx *loc, void *data)
 	      && !REG_P (XEXP (vloc, 0)) && !MEM_P (XEXP (vloc, 0)))
 	    {
 	      rtx mloc = vloc;
-	      cselib_val *val = cselib_lookup (XEXP (mloc, 0), Pmode, 0);
+	      enum machine_mode address_mode
+		= targetm.addr_space.address_mode (MEM_ADDR_SPACE (mloc));
+	      cselib_val *val
+		= cselib_lookup (XEXP (mloc, 0), address_mode, 0);
 
 	      if (val && !cselib_preserved_value_p (val))
 		{
@@ -4624,7 +4631,8 @@ add_uses (rtx *loc, void *data)
 		  cselib_preserve_value (val);
 		  mo->type = MO_VAL_USE;
 		  mloc = cselib_subst_to_values (XEXP (mloc, 0));
-		  mo->u.loc = gen_rtx_CONCAT (Pmode, val->val_rtx, mloc);
+		  mo->u.loc = gen_rtx_CONCAT (address_mode,
+					      val->val_rtx, mloc);
 		  if (dump_file && (dump_flags & TDF_DETAILS))
 		    log_op_type (mo->u.loc, cui->bb, cui->insn,
 				 mo->type, dump_file);
@@ -4680,7 +4688,10 @@ add_uses (rtx *loc, void *data)
 	      && !REG_P (XEXP (oloc, 0)) && !MEM_P (XEXP (oloc, 0)))
 	    {
 	      rtx mloc = oloc;
-	      cselib_val *val = cselib_lookup (XEXP (mloc, 0), Pmode, 0);
+	      enum machine_mode address_mode
+		= targetm.addr_space.address_mode (MEM_ADDR_SPACE (mloc));
+	      cselib_val *val
+		= cselib_lookup (XEXP (mloc, 0), address_mode, 0);
 
 	      if (val && !cselib_preserved_value_p (val))
 		{
@@ -4691,7 +4702,8 @@ add_uses (rtx *loc, void *data)
 		  cselib_preserve_value (val);
 		  mo->type = MO_VAL_USE;
 		  mloc = cselib_subst_to_values (XEXP (mloc, 0));
-		  mo->u.loc = gen_rtx_CONCAT (Pmode, val->val_rtx, mloc);
+		  mo->u.loc = gen_rtx_CONCAT (address_mode,
+					      val->val_rtx, mloc);
 		  mo->insn = cui->insn;
 		  if (dump_file && (dump_flags & TDF_DETAILS))
 		    log_op_type (mo->u.loc, cui->bb, cui->insn,
@@ -4824,14 +4836,16 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
 	  && !REG_P (XEXP (loc, 0)) && !MEM_P (XEXP (loc, 0)))
 	{
 	  rtx mloc = loc;
-	  cselib_val *val = cselib_lookup (XEXP (mloc, 0), Pmode, 0);
+	  enum machine_mode address_mode
+	    = targetm.addr_space.address_mode (MEM_ADDR_SPACE (mloc));
+	  cselib_val *val = cselib_lookup (XEXP (mloc, 0), address_mode, 0);
 
 	  if (val && !cselib_preserved_value_p (val))
 	    {
 	      cselib_preserve_value (val);
 	      mo->type = MO_VAL_USE;
 	      mloc = cselib_subst_to_values (XEXP (mloc, 0));
-	      mo->u.loc = gen_rtx_CONCAT (Pmode, val->val_rtx, mloc);
+	      mo->u.loc = gen_rtx_CONCAT (address_mode, val->val_rtx, mloc);
 	      mo->insn = cui->insn;
 	      if (dump_file && (dump_flags & TDF_DETAILS))
 		log_op_type (mo->u.loc, cui->bb, cui->insn,
@@ -5102,14 +5116,14 @@ find_src_set_src (dataflow_set *set, rtx src)
 	{
 	  found = false;
 	  for (i = 0; i < var->n_var_parts && !found; i++)
-	    for (nextp = var->var_part[i].loc_chain; nextp && !found; 
+	    for (nextp = var->var_part[i].loc_chain; nextp && !found;
 		 nextp = nextp->next)
 	      if (rtx_equal_p (nextp->loc, src))
 		{
 		  set_src = nextp->set_src;
 		  found = true;
 		}
-	      
+
 	}
     }
 
@@ -6246,24 +6260,6 @@ delete_variable_part (dataflow_set *set, rtx loc, decl_or_value dv,
   slot = delete_slot_part (set, loc, slot, offset);
 }
 
-/* Wrap result in CONST:MODE if needed to preserve the mode.  */
-
-static rtx
-check_wrap_constant (enum machine_mode mode, rtx result)
-{
-  if (!result || GET_MODE (result) == mode)
-    return result;
-
-  if (dump_file && (dump_flags & TDF_DETAILS))
-    fprintf (dump_file, "  wrapping result in const to preserve mode %s\n",
-	     GET_MODE_NAME (mode));
-
-  result = wrap_constant (mode, result);
-  gcc_assert (GET_MODE (result) == mode);
-
-  return result;
-}
-
 /* Callback for cselib_expand_value, that looks for expressions
    holding the value in the var-tracking hash tables.  Return X for
    standard processing, anything else is to be used as-is.  */
@@ -6304,7 +6300,7 @@ vt_expand_loc_callback (rtx x, bitmap regs, int max_depth, void *data)
       return result;
 
     case DEBUG_EXPR:
-      dv = dv_from_decl (XTREE (x, 0));
+      dv = dv_from_decl (DEBUG_EXPR_TREE_DECL (x));
       xret = NULL;
       break;
 
@@ -6337,7 +6333,6 @@ vt_expand_loc_callback (rtx x, bitmap regs, int max_depth, void *data)
     {
       result = cselib_expand_value_rtx_cb (loc->loc, regs, max_depth,
 					   vt_expand_loc_callback, vars);
-      result = check_wrap_constant (GET_MODE (loc->loc), result);
       if (result)
 	break;
     }
@@ -6355,14 +6350,11 @@ vt_expand_loc_callback (rtx x, bitmap regs, int max_depth, void *data)
 static rtx
 vt_expand_loc (rtx loc, htab_t vars)
 {
-  rtx newloc;
-
   if (!MAY_HAVE_DEBUG_INSNS)
     return loc;
 
-  newloc = cselib_expand_value_rtx_cb (loc, scratch_regs, 5,
-				       vt_expand_loc_callback, vars);
-  loc = check_wrap_constant (GET_MODE (loc), newloc);
+  loc = cselib_expand_value_rtx_cb (loc, scratch_regs, 5,
+				    vt_expand_loc_callback, vars);
 
   if (loc && MEM_P (loc))
     loc = targetm.delegitimize_address (loc);
@@ -6424,7 +6416,7 @@ emit_note_insn_var_location (void **varp, void *data)
 	  continue;
 	}
       loc[n_var_parts] = loc2;
-      mode = GET_MODE (loc[n_var_parts]);
+      mode = GET_MODE (var->var_part[i].loc_chain->loc);
       initialized = var->var_part[i].loc_chain->init;
       last_limit = offsets[n_var_parts] + GET_MODE_SIZE (mode);
 
@@ -6435,9 +6427,10 @@ emit_note_insn_var_location (void **varp, void *data)
 	  break;
       if (j < var->n_var_parts
 	  && wider_mode != VOIDmode
+	  && mode == GET_MODE (var->var_part[j].loc_chain->loc)
+	  && (REG_P (loc[n_var_parts]) || MEM_P (loc[n_var_parts]))
 	  && (loc2 = vt_expand_loc (var->var_part[j].loc_chain->loc, vars))
 	  && GET_CODE (loc[n_var_parts]) == GET_CODE (loc2)
-	  && mode == GET_MODE (loc2)
 	  && last_limit == var->var_part[j].offset)
 	{
 	  rtx new_loc = NULL;
@@ -6520,7 +6513,7 @@ emit_note_insn_var_location (void **varp, void *data)
 	= gen_rtx_EXPR_LIST (VOIDmode, loc[0], GEN_INT (offsets[0]));
 
       NOTE_VAR_LOCATION (note) = gen_rtx_VAR_LOCATION (VOIDmode, decl,
-						       expr_list, 
+						       expr_list,
 						       (int) initialized);
     }
   else if (n_var_parts)
@@ -6534,7 +6527,7 @@ emit_note_insn_var_location (void **varp, void *data)
       parallel = gen_rtx_PARALLEL (VOIDmode,
 				   gen_rtvec_v (n_var_parts, loc));
       NOTE_VAR_LOCATION (note) = gen_rtx_VAR_LOCATION (VOIDmode, decl,
-						       parallel, 
+						       parallel,
 						       (int) initialized);
     }
 
@@ -7102,7 +7095,7 @@ static void
 vt_add_function_parameters (void)
 {
   tree parm;
-  
+
   for (parm = DECL_ARGUMENTS (current_function_decl);
        parm; parm = TREE_CHAIN (parm))
     {

@@ -287,8 +287,8 @@ i[34567]86-*-*)
 	extra_headers="cpuid.h mmintrin.h mm3dnow.h xmmintrin.h emmintrin.h
 		       pmmintrin.h tmmintrin.h ammintrin.h smmintrin.h
 		       nmmintrin.h bmmintrin.h fma4intrin.h wmmintrin.h
-		       immintrin.h x86intrin.h avxintrin.h 
-		       ia32intrin.h cross-stdarg.h"
+		       immintrin.h x86intrin.h avxintrin.h xopintrin.h
+		       ia32intrin.h cross-stdarg.h lwpintrin.h"
 	;;
 x86_64-*-*)
 	cpu_type=i386
@@ -297,8 +297,8 @@ x86_64-*-*)
 	extra_headers="cpuid.h mmintrin.h mm3dnow.h xmmintrin.h emmintrin.h
 		       pmmintrin.h tmmintrin.h ammintrin.h smmintrin.h
 		       nmmintrin.h bmmintrin.h fma4intrin.h wmmintrin.h
-		       immintrin.h x86intrin.h avxintrin.h 
-		       ia32intrin.h cross-stdarg.h"
+		       immintrin.h x86intrin.h avxintrin.h xopintrin.h
+		       ia32intrin.h cross-stdarg.h lwpintrin.h"
 	need_64bit_hwint=yes
 	;;
 ia64-*-*)
@@ -327,7 +327,7 @@ powerpc*-*-*)
 	extra_headers="ppc-asm.h altivec.h spe.h ppu_intrinsics.h paired.h spu2vmx.h vec_types.h si2vmx.h"
 	need_64bit_hwint=yes
 	case x$with_cpu in
-	    xpowerpc64|xdefault64|x6[23]0|x970|xG5|xpower[34567]|xpower6x|xrs64a|xcell|xa2)
+	    xpowerpc64|xdefault64|x6[23]0|x970|xG5|xpower[34567]|xpower6x|xrs64a|xcell|xa2|xe500mc64)
 		cpu_is_64bit=yes
 		;;
 	esac
@@ -651,6 +651,7 @@ alpha*-dec-osf[45]*)
 	tmake_file="alpha/t-alpha alpha/t-ieee alpha/t-crtfm alpha/t-osf4"
 	tm_file="${tm_file} alpha/osf.h"
 	extra_headers=va_list.h
+	use_gcc_stdint=provide
 	case ${target} in
 	  *-*-osf4*)
 	    # Define TARGET_SUPPORT_ARCH except on 4.0a.
@@ -722,7 +723,7 @@ arm*-*-linux*)			# ARM GNU/Linux with ELF
 	case ${target} in
 	arm*-*-linux-*eabi)
 	    tm_file="$tm_file arm/bpabi.h arm/linux-eabi.h"
-	    tmake_file="$tmake_file arm/t-arm-elf arm/t-bpabi arm/t-linux-eabi"
+	    tmake_file="$tmake_file arm/t-arm-elf arm/t-bpabi arm/t-linux-eabi t-slibgcc-libgcc"
   	    # The BPABI long long divmod functions return a 128-bit value in
 	    # registers r0-r3.  Correctly modeling that requires the use of
 	    # TImode.
@@ -932,7 +933,7 @@ hppa*-*-linux*)
 	target_cpu_default="MASK_PA_11|MASK_NO_SPACE_REGS"
 	tm_file="${tm_file} dbxelf.h elfos.h svr4.h linux.h glibc-stdint.h pa/pa-linux.h \
 		 pa/pa32-regs.h pa/pa32-linux.h"
-	tmake_file="${tmake_file} pa/t-linux"
+	tmake_file="${tmake_file} pa/t-linux t-slibgcc-libgcc"
 	# Set the libgcc version number
 	if test x$sjlj = x1; then
 	    tmake_file="$tmake_file pa/t-slibgcc-sjlj-ver"
@@ -1468,6 +1469,14 @@ iq2000*-*-elf*)
         tmake_file=iq2000/t-iq2000
         out_file=iq2000/iq2000.c
         md_file=iq2000/iq2000.md
+        ;;
+lm32-*-elf*)
+        tm_file="dbxelf.h elfos.h ${tm_file}"
+	tmake_file="${tmake_file} lm32/t-fprules-softfp soft-fp/t-softfp"
+        ;;
+lm32-*-uclinux*)
+        tm_file="dbxelf.h elfos.h ${tm_file} linux.h lm32/uclinux-elf.h"
+	tmake_file="${tmake_file} lm32/t-fprules-softfp soft-fp/t-softfp"
         ;;
 m32r-*-elf*)
 	tm_file="dbxelf.h elfos.h svr4.h newlib-stdint.h ${tm_file}"
@@ -2077,6 +2086,10 @@ rs6000-ibm-aix[6789].* | powerpc-ibm-aix[6789].*)
 	use_gcc_stdint=wrap
 	extra_headers=altivec.h
 	;;
+rx-*-elf*)
+	tm_file="dbxelf.h elfos.h svr4.h newlib-stdint.h ${tm_file} ../../libgcc/config/rx/rx-abi.h"
+	tmake_file="${tmake_file} rx/t-rx"
+	;;
 s390-*-linux*)
 	tm_file="s390/s390.h dbxelf.h elfos.h svr4.h linux.h glibc-stdint.h s390/linux.h"
 	;;
@@ -2445,7 +2458,7 @@ sparc64-*-netbsd*)
 spu-*-elf*)
 	tm_file="dbxelf.h elfos.h spu/spu-elf.h spu/spu.h newlib-stdint.h"
 	tmake_file="spu/t-spu-elf"
-	extra_headers="spu_intrinsics.h spu_internals.h vmx2spu.h spu_mfcio.h vec_types.h"
+	extra_headers="spu_intrinsics.h spu_internals.h vmx2spu.h spu_mfcio.h vec_types.h spu_cache.h"
 	extra_modes=spu/spu-modes.def
 	c_target_objs="${c_target_objs} spu-c.o"
 	cxx_target_objs="${cxx_target_objs} spu-c.o"
@@ -2499,7 +2512,7 @@ v850-*-*)
 	;;
 vax-*-linux*)
 	tm_file="${tm_file} dbxelf.h elfos.h svr4.h linux.h vax/elf.h vax/linux.h"
-	tmake_file=vax/t-linux
+	tmake_file="${tmake_file} vax/t-linux"
 	;;
 vax-*-netbsdelf*)
 	tm_file="${tm_file} elfos.h netbsd.h netbsd-elf.h vax/elf.h vax/netbsd-elf.h"
@@ -2813,7 +2826,7 @@ case "${target}" in
 
 		case "$with_fpu" in
 		"" \
-		| fpa | fpe2 | fpe3 | maverick | vfp | vfp3 | neon )
+		| fpa | fpe2 | fpe3 | maverick | vfp | vfp3 | vfpv3 | vfpv3-fp16 | vfpv3-d16 | vfpv3-d16-fp16 | vfpv3xd | vfpv3xd-fp16 | neon | neon-fp16 | vfpv4 | vfpv4-d16 | fpv4-sp-d16 | neon-vfpv4)
 			# OK
 			;;
 		*)
@@ -3068,7 +3081,7 @@ case "${target}" in
 			| 401 | 403 | 405 | 405fp | 440 | 440fp | 464 | 464fp \
 			| 476 | 476fp | 505 | 601 | 602 | 603 | 603e | ec603e \
 			| 604 | 604e | 620 | 630 | 740 | 750 | 7400 | 7450 \
-			| a2 | e300c[23] | 854[08] | e500mc \
+			| a2 | e300c[23] | 854[08] | e500mc | e500mc64 \
 			| 801 | 821 | 823 | 860 | 970 | G3 | G4 | G5 | cell)
 				# OK
 				;;

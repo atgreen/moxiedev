@@ -57,6 +57,7 @@
 ;; X -- don't print any sort of PIC '@' suffix for a symbol.
 ;; & -- print some in-use local-dynamic symbol name.
 ;; H -- print a memory address offset by 8; used for sse high-parts
+;; Y -- print condition for XOP pcom* instruction.
 ;; + -- print a branch hint as 'cs' or 'ds' prefix
 ;; ; -- print a semicolon (after prefixes due to bug in older gas).
 
@@ -199,6 +200,15 @@
    (UNSPEC_FMA4_INTRINSIC	150)
    (UNSPEC_FMA4_FMADDSUB	151)
    (UNSPEC_FMA4_FMSUBADD	152)
+   (UNSPEC_XOP_UNSIGNED_CMP	151)
+   (UNSPEC_XOP_TRUEFALSE	152)
+   (UNSPEC_XOP_PERMUTE		153)
+   (UNSPEC_FRCZ			154)
+   (UNSPEC_LLWP_INTRINSIC	155)
+   (UNSPEC_SLWP_INTRINSIC	156)
+   (UNSPECV_LWPVAL_INTRINSIC	157)
+   (UNSPECV_LWPINS_INTRINSIC	158)
+
    ; For AES support
    (UNSPEC_AESENC		159)
    (UNSPEC_AESENCLAST		160)
@@ -253,6 +263,20 @@
    (COM_TRUE_S			4)
    (COM_TRUE_P			5)
   ])
+
+;; Constants used in the XOP pperm instruction
+(define_constants
+  [(PPERM_SRC			0x00)	/* copy source */
+   (PPERM_INVERT		0x20)	/* invert source */
+   (PPERM_REVERSE		0x40)	/* bit reverse source */
+   (PPERM_REV_INV		0x60)	/* bit reverse & invert src */
+   (PPERM_ZERO			0x80)	/* all 0's */
+   (PPERM_ONES			0xa0)	/* all 1's */
+   (PPERM_SIGN			0xc0)	/* propagate sign bit */
+   (PPERM_INV_SIGN		0xe0)	/* invert & propagate sign */
+   (PPERM_SRC1			0x00)	/* use first source byte */
+   (PPERM_SRC2			0x10)	/* use second source byte */
+   ])
 
 ;; Registers by name.
 (define_constants
@@ -333,7 +357,7 @@
    fmov,fop,fsgn,fmul,fdiv,fpspc,fcmov,fcmp,fxch,fistp,fisttp,frndint,
    sselog,sselog1,sseiadd,sseiadd1,sseishft,sseimul,
    sse,ssemov,sseadd,ssemul,ssecmp,ssecomi,ssecvt,ssecvt1,sseicvt,ssediv,sseins,
-   ssemuladd,sse4arg,
+   ssemuladd,sse4arg,lwp,
    mmx,mmxmov,mmxadd,mmxmul,mmxcmp,mmxcvt,mmxshft"
   (const_string "other"))
 
@@ -653,11 +677,11 @@
    (set_attr "type" "multi")])
 
 ;; All integer comparison codes.
-(define_code_iterator int_cond [ne eq ge gt le lt geu gtu leu ltu ])
+(define_code_iterator int_cond [ne eq ge gt le lt geu gtu leu ltu])
 
 ;; All floating-point comparison codes.
 (define_code_iterator fp_cond [unordered ordered
-			       uneq unge ungt unle unlt ltgt ])
+			       uneq unge ungt unle unlt ltgt])
 
 (define_code_iterator plusminus [plus minus])
 
@@ -672,6 +696,8 @@
 (define_code_attr plusminus_mnemonic
   [(plus "add") (ss_plus "adds") (us_plus "addus")
    (minus "sub") (ss_minus "subs") (us_minus "subus")])
+(define_code_attr plusminus_carry_mnemonic
+  [(plus "adc") (minus "sbb")])
 
 ;; Mark commutative operators as such in constraints.
 (define_code_attr comm [(plus "%") (ss_plus "%") (us_plus "%")
@@ -692,10 +718,13 @@
 (define_code_attr maxminfprefix [(smax "max") (smin "min")])
 
 ;; Mapping of parallel logic operators
-(define_code_iterator plogic [and ior xor])
+(define_code_iterator any_logic [and ior xor])
+
+;; Mapping of parallel logic operators
+(define_code_iterator any_or [ior xor])
 
 ;; Base name for insn mnemonic.
-(define_code_attr plogicprefix [(and "and") (ior "or") (xor "xor")])
+(define_code_attr logicprefix [(and "and") (ior "or") (xor "xor")])
 
 ;; Mapping of abs neg operators
 (define_code_iterator absneg [abs neg])
@@ -706,13 +735,13 @@
 ;; Used in signed and unsigned widening multiplications.
 (define_code_iterator any_extend [sign_extend zero_extend])
 
-;; Used in signed and unsigned divisions.
-(define_code_iterator any_div [div udiv])
-
 ;; Various insn prefixes for signed and unsigned operations.
 (define_code_attr u [(sign_extend "") (zero_extend "u")
 		     (div "") (udiv "u")])
 (define_code_attr s [(sign_extend "s") (zero_extend "u")])
+
+;; Used in signed and unsigned divisions.
+(define_code_iterator any_div [div udiv])
 
 ;; Instruction prefix for signed and unsigned operations.
 (define_code_attr sgnprefix [(sign_extend "i") (zero_extend "")
@@ -720,6 +749,9 @@
 
 ;; All single word integer modes.
 (define_mode_iterator SWI [QI HI SI (DI "TARGET_64BIT")])
+
+;; Single word integer modes without DImode.
+(define_mode_iterator SWI124 [QI HI SI])
 
 ;; Single word integer modes without QImode.
 (define_mode_iterator SWI248 [HI SI (DI "TARGET_64BIT")])
@@ -759,7 +791,7 @@
 (define_mode_attr i [(QI "n") (HI "n") (SI "i") (DI "e")])
 
 ;; General operand constraint for word modes.
-(define_mode_attr g [(SI "g") (DI "rme")])
+(define_mode_attr g [(QI "qmn") (HI "rmn") (SI "g") (DI "rme")])
 
 ;; Immediate operand constraint for double integer modes.
 (define_mode_attr di [(SI "iF") (DI "e")])
@@ -771,6 +803,13 @@
 	 (SI "general_operand")
 	 (DI "x86_64_general_operand")
 	 (TI "x86_64_general_operand")])
+
+;; General sign/zero extend operand predicate for integer modes.
+(define_mode_attr general_szext_operand
+	[(QI "general_operand")
+	 (HI "general_operand")
+	 (SI "general_operand")
+	 (DI "x86_64_szext_general_operand")])
 
 ;; SSE and x87 SFmode and DFmode floating point modes
 (define_mode_iterator MODEF [SF DF])
@@ -819,322 +858,80 @@
 
 ;; Compare and branch/compare and store instructions.
 
-(define_expand "cbranchti4"
+(define_expand "cbranch<mode>4"
   [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:TI 1 "nonimmediate_operand" "")
-		    (match_operand:TI 2 "x86_64_general_operand" "")))
+	(compare:CC (match_operand:SDWIM 1 "nonimmediate_operand" "")
+		    (match_operand:SDWIM 2 "<general_operand>" "")))
    (set (pc) (if_then_else
-              (match_operator 0 "comparison_operator"
-               [(reg:CC FLAGS_REG)
-                (const_int 0)])
-              (label_ref (match_operand 3 "" ""))
-              (pc)))]
-  "TARGET_64BIT"
-{
-  if (MEM_P (operands[1]) && MEM_P (operands[2]))
-    operands[1] = force_reg (TImode, operands[1]);
-  ix86_compare_op0 = operands[1];
-  ix86_compare_op1 = operands[2];
-  ix86_expand_branch (GET_CODE (operands[0]), operands[3]);
-  DONE;
-})
-
-(define_expand "cbranchdi4"
-  [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:DI 1 "nonimmediate_operand" "")
-		    (match_operand:DI 2 "x86_64_general_operand" "")))
-   (set (pc) (if_then_else
-              (match_operator 0 "comparison_operator"
-               [(reg:CC FLAGS_REG)
-                (const_int 0)])
-              (label_ref (match_operand 3 "" ""))
-              (pc)))]
+	       (match_operator 0 "comparison_operator"
+		[(reg:CC FLAGS_REG) (const_int 0)])
+	       (label_ref (match_operand 3 "" ""))
+	       (pc)))]
   ""
 {
   if (MEM_P (operands[1]) && MEM_P (operands[2]))
-    operands[1] = force_reg (DImode, operands[1]);
+    operands[1] = force_reg (<MODE>mode, operands[1]);
   ix86_compare_op0 = operands[1];
   ix86_compare_op1 = operands[2];
   ix86_expand_branch (GET_CODE (operands[0]), operands[3]);
   DONE;
 })
 
-(define_expand "cstoredi4"
+(define_expand "cstore<mode>4"
   [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:DI 2 "nonimmediate_operand" "")
-		    (match_operand:DI 3 "x86_64_general_operand" "")))
+	(compare:CC (match_operand:SWIM 2 "nonimmediate_operand" "")
+		    (match_operand:SWIM 3 "<general_operand>" "")))
    (set (match_operand:QI 0 "register_operand" "")
-              (match_operator 1 "comparison_operator"
-               [(reg:CC FLAGS_REG)
-                (const_int 0)]))]
-  "TARGET_64BIT"
+	(match_operator 1 "comparison_operator"
+	  [(reg:CC FLAGS_REG) (const_int 0)]))]
+  ""
 {
   if (MEM_P (operands[2]) && MEM_P (operands[3]))
-    operands[2] = force_reg (DImode, operands[2]);
+    operands[2] = force_reg (<MODE>mode, operands[2]);
   ix86_compare_op0 = operands[2];
   ix86_compare_op1 = operands[3];
   ix86_expand_setcc (GET_CODE (operands[1]), operands[0]);
   DONE;
 })
 
-(define_expand "cbranchsi4"
+(define_expand "cmp<mode>_1"
   [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:SI 1 "cmpsi_operand" "")
-		    (match_operand:SI 2 "general_operand" "")))
-   (set (pc) (if_then_else
-              (match_operator 0 "comparison_operator"
-               [(reg:CC FLAGS_REG)
-                (const_int 0)])
-              (label_ref (match_operand 3 "" ""))
-              (pc)))]
-  ""
-{
-  if (MEM_P (operands[1]) && MEM_P (operands[2]))
-    operands[1] = force_reg (SImode, operands[1]);
-  ix86_compare_op0 = operands[1];
-  ix86_compare_op1 = operands[2];
-  ix86_expand_branch (GET_CODE (operands[0]), operands[3]);
-  DONE;
-})
-
-(define_expand "cstoresi4"
-  [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:SI 2 "cmpsi_operand" "")
-		    (match_operand:SI 3 "general_operand" "")))
-   (set (match_operand:QI 0 "register_operand" "")
-              (match_operator 1 "comparison_operator"
-               [(reg:CC FLAGS_REG)
-                (const_int 0)]))]
-  ""
-{
-  if (MEM_P (operands[2]) && MEM_P (operands[3]))
-    operands[2] = force_reg (SImode, operands[2]);
-  ix86_compare_op0 = operands[2];
-  ix86_compare_op1 = operands[3];
-  ix86_expand_setcc (GET_CODE (operands[1]), operands[0]);
-  DONE;
-})
-
-(define_expand "cbranchhi4"
-  [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:HI 1 "nonimmediate_operand" "")
-		    (match_operand:HI 2 "general_operand" "")))
-   (set (pc) (if_then_else
-              (match_operator 0 "comparison_operator"
-               [(reg:CC FLAGS_REG)
-                (const_int 0)])
-              (label_ref (match_operand 3 "" ""))
-              (pc)))]
-  ""
-{
-  if (MEM_P (operands[1]) && MEM_P (operands[2]))
-    operands[1] = force_reg (HImode, operands[1]);
-  ix86_compare_op0 = operands[1];
-  ix86_compare_op1 = operands[2];
-  ix86_expand_branch (GET_CODE (operands[0]), operands[3]);
-  DONE;
-})
-
-(define_expand "cstorehi4"
-  [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:HI 2 "nonimmediate_operand" "")
-		    (match_operand:HI 3 "general_operand" "")))
-   (set (match_operand:QI 0 "register_operand" "")
-              (match_operator 1 "comparison_operator"
-               [(reg:CC FLAGS_REG)
-                (const_int 0)]))]
-  ""
-{
-  if (MEM_P (operands[2]) && MEM_P (operands[3]))
-    operands[2] = force_reg (HImode, operands[2]);
-  ix86_compare_op0 = operands[2];
-  ix86_compare_op1 = operands[3];
-  ix86_expand_setcc (GET_CODE (operands[1]), operands[0]);
-  DONE;
-})
-
-
-(define_expand "cbranchqi4"
-  [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:QI 1 "nonimmediate_operand" "")
-		    (match_operand:QI 2 "general_operand" "")))
-   (set (pc) (if_then_else
-              (match_operator 0 "comparison_operator"
-               [(reg:CC FLAGS_REG)
-                (const_int 0)])
-              (label_ref (match_operand 3 "" ""))
-              (pc)))]
-  ""
-{
-  if (MEM_P (operands[1]) && MEM_P (operands[2]))
-    operands[1] = force_reg (QImode, operands[1]);
-  ix86_compare_op0 = operands[1];
-  ix86_compare_op1 = operands[2];
-  ix86_expand_branch (GET_CODE (operands[0]), operands[3]);
-  DONE;
-})
-
-
-(define_expand "cstoreqi4"
-  [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:QI 2 "nonimmediate_operand" "")
-		    (match_operand:QI 3 "general_operand" "")))
-   (set (match_operand:QI 0 "register_operand" "")
-              (match_operator 1 "comparison_operator"
-               [(reg:CC FLAGS_REG)
-                (const_int 0)]))]
-  ""
-{
-  if (MEM_P (operands[2]) && MEM_P (operands[3]))
-    operands[2] = force_reg (QImode, operands[2]);
-  ix86_compare_op0 = operands[2];
-  ix86_compare_op1 = operands[3];
-  ix86_expand_setcc (GET_CODE (operands[1]), operands[0]);
-  DONE;
-})
-
-
-(define_insn "cmpdi_ccno_1_rex64"
-  [(set (reg FLAGS_REG)
-	(compare (match_operand:DI 0 "nonimmediate_operand" "r,?mr")
-		 (match_operand:DI 1 "const0_operand" "")))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)"
-  "@
-   test{q}\t%0, %0
-   cmp{q}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "test,icmp")
-   (set_attr "length_immediate" "0,1")
-   (set_attr "mode" "DI")])
-
-(define_insn "*cmpdi_minus_1_rex64"
-  [(set (reg FLAGS_REG)
-	(compare (minus:DI (match_operand:DI 0 "nonimmediate_operand" "rm,r")
-			   (match_operand:DI 1 "x86_64_general_operand" "re,mr"))
-		 (const_int 0)))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCGOCmode)"
-  "cmp{q}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "icmp")
-   (set_attr "mode" "DI")])
-
-(define_expand "cmpdi_1_rex64"
-  [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:DI 0 "nonimmediate_operand" "")
-		    (match_operand:DI 1 "general_operand" "")))]
-  "TARGET_64BIT"
-  "")
-
-(define_insn "cmpdi_1_insn_rex64"
-  [(set (reg FLAGS_REG)
-	(compare (match_operand:DI 0 "nonimmediate_operand" "mr,r")
-		 (match_operand:DI 1 "x86_64_general_operand" "re,mr")))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCmode)"
-  "cmp{q}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "icmp")
-   (set_attr "mode" "DI")])
-
-
-(define_insn "*cmpsi_ccno_1"
-  [(set (reg FLAGS_REG)
-	(compare (match_operand:SI 0 "nonimmediate_operand" "r,?mr")
-		 (match_operand:SI 1 "const0_operand" "")))]
-  "ix86_match_ccmode (insn, CCNOmode)"
-  "@
-   test{l}\t%0, %0
-   cmp{l}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "test,icmp")
-   (set_attr "length_immediate" "0,1")
-   (set_attr "mode" "SI")])
-
-(define_insn "*cmpsi_minus_1"
-  [(set (reg FLAGS_REG)
-	(compare (minus:SI (match_operand:SI 0 "nonimmediate_operand" "rm,r")
-			   (match_operand:SI 1 "general_operand" "ri,mr"))
-		 (const_int 0)))]
-  "ix86_match_ccmode (insn, CCGOCmode)"
-  "cmp{l}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "icmp")
-   (set_attr "mode" "SI")])
-
-(define_expand "cmpsi_1"
-  [(set (reg:CC FLAGS_REG)
-	(compare:CC (match_operand:SI 0 "nonimmediate_operand" "")
-		    (match_operand:SI 1 "general_operand" "")))]
+	(compare:CC (match_operand:SWI48 0 "nonimmediate_operand" "")
+		    (match_operand:SWI48 1 "<general_operand>" "")))]
   ""
   "")
 
-(define_insn "*cmpsi_1_insn"
+(define_insn "*cmp<mode>_ccno_1"
   [(set (reg FLAGS_REG)
-	(compare (match_operand:SI 0 "nonimmediate_operand" "rm,r")
-		 (match_operand:SI 1 "general_operand" "ri,mr")))]
-  "!(MEM_P (operands[0]) && MEM_P (operands[1]))
-    && ix86_match_ccmode (insn, CCmode)"
-  "cmp{l}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "icmp")
-   (set_attr "mode" "SI")])
-
-(define_insn "*cmphi_ccno_1"
-  [(set (reg FLAGS_REG)
-	(compare (match_operand:HI 0 "nonimmediate_operand" "r,?mr")
-		 (match_operand:HI 1 "const0_operand" "")))]
+	(compare (match_operand:SWI 0 "nonimmediate_operand" "<r>,?m<r>")
+		 (match_operand:SWI 1 "const0_operand" "")))]
   "ix86_match_ccmode (insn, CCNOmode)"
   "@
-   test{w}\t%0, %0
-   cmp{w}\t{%1, %0|%0, %1}"
+   test{<imodesuffix>}\t%0, %0
+   cmp{<imodesuffix>}\t{%1, %0|%0, %1}"
   [(set_attr "type" "test,icmp")
    (set_attr "length_immediate" "0,1")
-   (set_attr "mode" "HI")])
+   (set_attr "mode" "<MODE>")])
 
-(define_insn "*cmphi_minus_1"
+(define_insn "*cmp<mode>_1"
   [(set (reg FLAGS_REG)
-	(compare (minus:HI (match_operand:HI 0 "nonimmediate_operand" "rm,r")
-			   (match_operand:HI 1 "general_operand" "rn,mr"))
-		 (const_int 0)))]
+	(compare (match_operand:SWI 0 "nonimmediate_operand" "<r>m,<r>")
+		 (match_operand:SWI 1 "<general_operand>" "<r><i>,<r>m")))]
+  "ix86_match_ccmode (insn, CCmode)"
+  "cmp{<imodesuffix>}\t{%1, %0|%0, %1}"
+  [(set_attr "type" "icmp")
+   (set_attr "mode" "<MODE>")])
+
+(define_insn "*cmp<mode>_minus_1"
+  [(set (reg FLAGS_REG)
+	(compare
+	  (minus:SWI (match_operand:SWI 0 "nonimmediate_operand" "<r>m,<r>")
+		     (match_operand:SWI 1 "<general_operand>" "<r><i>,<r>m"))
+	  (const_int 0)))]
   "ix86_match_ccmode (insn, CCGOCmode)"
-  "cmp{w}\t{%1, %0|%0, %1}"
+  "cmp{<imodesuffix>}\t{%1, %0|%0, %1}"
   [(set_attr "type" "icmp")
-   (set_attr "mode" "HI")])
-
-(define_insn "*cmphi_1"
-  [(set (reg FLAGS_REG)
-	(compare (match_operand:HI 0 "nonimmediate_operand" "rm,r")
-		 (match_operand:HI 1 "general_operand" "rn,mr")))]
-  "!(MEM_P (operands[0]) && MEM_P (operands[1]))
-   && ix86_match_ccmode (insn, CCmode)"
-  "cmp{w}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "icmp")
-   (set_attr "mode" "HI")])
-
-(define_insn "*cmpqi_ccno_1"
-  [(set (reg FLAGS_REG)
-	(compare (match_operand:QI 0 "nonimmediate_operand" "q,?mq")
-		 (match_operand:QI 1 "const0_operand" "")))]
-  "ix86_match_ccmode (insn, CCNOmode)"
-  "@
-   test{b}\t%0, %0
-   cmp{b}\t{$0, %0|%0, 0}"
-  [(set_attr "type" "test,icmp")
-   (set_attr "length_immediate" "0,1")
-   (set_attr "mode" "QI")])
-
-(define_insn "*cmpqi_1"
-  [(set (reg FLAGS_REG)
-	(compare (match_operand:QI 0 "nonimmediate_operand" "qm,q")
-		 (match_operand:QI 1 "general_operand" "qn,mq")))]
-  "!(MEM_P (operands[0]) && MEM_P (operands[1]))
-    && ix86_match_ccmode (insn, CCmode)"
-  "cmp{b}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "icmp")
-   (set_attr "mode" "QI")])
-
-(define_insn "*cmpqi_minus_1"
-  [(set (reg FLAGS_REG)
-	(compare (minus:QI (match_operand:QI 0 "nonimmediate_operand" "qm,q")
-			   (match_operand:QI 1 "general_operand" "qn,mq"))
-		 (const_int 0)))]
-  "ix86_match_ccmode (insn, CCGOCmode)"
-  "cmp{b}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "icmp")
-   (set_attr "mode" "QI")])
+   (set_attr "mode" "<MODE>")])
 
 (define_insn "*cmpqi_ext_1"
   [(set (reg FLAGS_REG)
@@ -1187,11 +984,11 @@
 	      (match_operand 0 "ext_register_operand" "")
 	      (const_int 8)
 	      (const_int 8)) 0)
-	  (match_operand:QI 1 "general_operand" "")))]
+	  (match_operand:QI 1 "immediate_operand" "")))]
   ""
   "")
 
-(define_insn "cmpqi_ext_3_insn"
+(define_insn "*cmpqi_ext_3_insn"
   [(set (reg FLAGS_REG)
 	(compare
 	  (subreg:QI
@@ -1206,7 +1003,7 @@
    (set_attr "modrm" "1")
    (set_attr "mode" "QI")])
 
-(define_insn "cmpqi_ext_3_insn_rex64"
+(define_insn "*cmpqi_ext_3_insn_rex64"
   [(set (reg FLAGS_REG)
 	(compare
 	  (subreg:QI
@@ -4588,7 +4385,8 @@
 	}
       else
 	operands[3] = simplify_gen_subreg (V4SFmode, operands[1], SFmode, 0);
-      emit_insn (gen_sse_unpcklps (operands[3], operands[3], operands[3]));
+      emit_insn (gen_vec_interleave_lowv4sf (operands[3], operands[3],
+      		 			     operands[3]));
     }
   else
     emit_insn (gen_vec_setv4sf_0 (operands[3],
@@ -5469,7 +5267,6 @@
   "TARGET_80387
    || ((<SSEMODEI24:MODE>mode != DImode || TARGET_64BIT)
        && SSE_FLOAT_MODE_P (<X87MODEF:MODE>mode) && TARGET_SSE_MATH)"
-  "
 {
   if (!((<SSEMODEI24:MODE>mode != DImode || TARGET_64BIT)
 	&& SSE_FLOAT_MODE_P (<X87MODEF:MODE>mode) && TARGET_SSE_MATH)
@@ -5490,7 +5287,7 @@
       emit_insn (insn);
       DONE;
     }
-}")
+})
 
 ;; Pre-reload splitter to add memory clobber to the pattern.
 (define_insn_and_split "*float<SSEMODEI24:mode><X87MODEF:mode>2_1"
@@ -5985,7 +5782,8 @@
 			      gen_rtx_SUBREG (SImode, operands[1], 0)));
   emit_insn (gen_sse2_loadld (operands[4], CONST0_RTX (V4SImode),
 			      gen_rtx_SUBREG (SImode, operands[1], 4)));
-  emit_insn (gen_sse2_punpckldq (operands[3], operands[3], operands[4]));
+  emit_insn (gen_vec_interleave_lowv4si (operands[3], operands[3],
+  	    				 operands[4]));
 
   operands[3] = gen_rtx_REG (DImode, REGNO (operands[3]));
 })
@@ -6126,41 +5924,12 @@
 		   (plus:DWIH (match_dup 1) (match_dup 2)))])
    (parallel [(set (match_dup 3)
 		   (plus:DWIH
+		     (match_dup 4)
 		     (plus:DWIH
 		       (ltu:DWIH (reg:CC FLAGS_REG) (const_int 0))
-		       (match_dup 4))
-		     (match_dup 5)))
+		       (match_dup 5))))
 	      (clobber (reg:CC FLAGS_REG))])]
   "split_<dwi> (&operands[0], 3, &operands[0], &operands[3]);")
-
-(define_insn "add<mode>3_carry"
-  [(set (match_operand:SWI 0 "nonimmediate_operand" "=<r>m,<r>")
-	(plus:SWI
-	  (plus:SWI (match_operand:SWI 3 "ix86_carry_flag_operator" "")
-		    (match_operand:SWI 1 "nonimmediate_operand" "%0,0"))
-	  (match_operand:SWI 2 "<general_operand>" "<r><i>,<r>m")))
-   (clobber (reg:CC FLAGS_REG))]
-  "ix86_binary_operator_ok (PLUS, <MODE>mode, operands)"
-  "adc{<imodesuffix>}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "use_carry" "1")
-   (set_attr "pent_pair" "pu")
-   (set_attr "mode" "<MODE>")])
-
-(define_insn "*addsi3_carry_zext"
-  [(set (match_operand:DI 0 "register_operand" "=r")
-	(zero_extend:DI
-	  (plus:SI
-	    (plus:SI (match_operand:SI 3 "ix86_carry_flag_operator" "")
-		     (match_operand:SI 1 "nonimmediate_operand" "%0"))
-	  (match_operand:SI 2 "general_operand" "g"))))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT && ix86_binary_operator_ok (PLUS, SImode, operands)"
-  "adc{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "use_carry" "1")
-   (set_attr "pent_pair" "pu")
-   (set_attr "mode" "SI")])
 
 (define_insn "*add<mode>3_cc"
   [(set (reg:CC FLAGS_REG)
@@ -6187,19 +5956,6 @@
   "add{b}\t{%2, %0|%0, %2}"
   [(set_attr "type" "alu")
    (set_attr "mode" "QI")])
-
-(define_insn "*add<mode>3_cconly_overflow"
-  [(set (reg:CCC FLAGS_REG)
-	(compare:CCC
-	  (plus:SWI
-	    (match_operand:SWI 1 "nonimmediate_operand" "%0")
-	    (match_operand:SWI 2 "<general_operand>" "<r><i>m"))
-	  (match_dup 1)))
-   (clobber (match_scratch:SWI 0 "=<r>"))]
-  "ix86_binary_operator_ok (PLUS, <MODE>mode, operands)"
-  "add{<imodesuffix>}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "<MODE>")])
 
 (define_insn "*lea_1"
   [(set (match_operand:DWIH 0 "register_operand" "=r")
@@ -7658,46 +7414,6 @@
 	      (clobber (reg:CC FLAGS_REG))])]
   "split_<dwi> (&operands[0], 3, &operands[0], &operands[3]);")
 
-(define_insn "sub<mode>3_carry"
-  [(set (match_operand:SWI 0 "nonimmediate_operand" "=<r>m,<r>")
-	  (minus:SWI
-	    (match_operand:SWI 1 "nonimmediate_operand" "0,0")
-	    (plus:SWI
-	      (match_operand:SWI 3 "ix86_carry_flag_operator" "")
-	      (match_operand:SWI 2 "<general_operand>" "<r><i>,<r>m"))))
-   (clobber (reg:CC FLAGS_REG))]
-  "ix86_binary_operator_ok (MINUS, <MODE>mode, operands)"
-  "sbb{<imodesuffix>}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "use_carry" "1")
-   (set_attr "pent_pair" "pu")
-   (set_attr "mode" "<MODE>")])
-
-(define_insn "*subsi3_carry_zext"
-  [(set (match_operand:DI 0 "register_operand" "=r")
-	  (zero_extend:DI
-	    (minus:SI (match_operand:SI 1 "register_operand" "0")
-	      (plus:SI (match_operand:SI 3 "ix86_carry_flag_operator" "")
-		 (match_operand:SI 2 "general_operand" "g")))))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT && ix86_binary_operator_ok (MINUS, SImode, operands)"
-  "sbb{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "pent_pair" "pu")
-   (set_attr "mode" "SI")])
-
-(define_insn "*sub<mode>3_cconly_overflow"
-  [(set (reg:CCC FLAGS_REG)
-	(compare:CCC
-	  (minus:SWI
-	    (match_operand:SWI 0 "nonimmediate_operand" "<r>m,<r>")
-	    (match_operand:SWI 1 "<general_operand>" "<r><i>,<r>m"))
-	  (match_dup 0)))]
-  ""
-  "cmp{<imodesuffix>}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "icmp")
-   (set_attr "mode" "<MODE>")])
-
 (define_insn "*sub<mode>_1"
   [(set (match_operand:SWI 0 "nonimmediate_operand" "=<r>m,<r>")
 	(minus:SWI
@@ -7787,7 +7503,93 @@
   "sub{l}\t{%2, %1|%1, %2}"
   [(set_attr "type" "alu")
    (set_attr "mode" "SI")])
+
+;; Add with carry and subtract with borrow
 
+(define_expand "<plusminus_insn><mode>3_carry"
+  [(parallel
+    [(set (match_operand:SWI 0 "nonimmediate_operand" "")
+	  (plusminus:SWI
+	    (match_operand:SWI 1 "nonimmediate_operand" "")
+	    (plus:SWI (match_operator:SWI 4 "ix86_carry_flag_operator"
+		       [(match_operand 3 "flags_reg_operand" "")
+			(const_int 0)])
+		      (match_operand:SWI 2 "<general_operand>" ""))))
+     (clobber (reg:CC FLAGS_REG))])]
+  "ix86_binary_operator_ok (<CODE>, <MODE>mode, operands)"
+  "")
+
+(define_insn "*<plusminus_insn><mode>3_carry"
+  [(set (match_operand:SWI 0 "nonimmediate_operand" "=<r>m,<r>")
+	(plusminus:SWI
+	  (match_operand:SWI 1 "nonimmediate_operand" "<comm>0,0")
+	  (plus:SWI
+	    (match_operator 3 "ix86_carry_flag_operator"
+	     [(reg FLAGS_REG) (const_int 0)])
+	    (match_operand:SWI 2 "<general_operand>" "<r><i>,<r>m"))))
+   (clobber (reg:CC FLAGS_REG))]
+  "ix86_binary_operator_ok (PLUS, <MODE>mode, operands)"
+  "<plusminus_carry_mnemonic>{<imodesuffix>}\t{%2, %0|%0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "use_carry" "1")
+   (set_attr "pent_pair" "pu")
+   (set_attr "mode" "<MODE>")])
+
+(define_insn "*addsi3_carry_zext"
+  [(set (match_operand:DI 0 "register_operand" "=r")
+	(zero_extend:DI
+	  (plus:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
+		   (plus:SI (match_operator 3 "ix86_carry_flag_operator"
+			     [(reg FLAGS_REG) (const_int 0)])
+			    (match_operand:SI 2 "general_operand" "g")))))
+   (clobber (reg:CC FLAGS_REG))]
+  "TARGET_64BIT && ix86_binary_operator_ok (PLUS, SImode, operands)"
+  "adc{l}\t{%2, %k0|%k0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "use_carry" "1")
+   (set_attr "pent_pair" "pu")
+   (set_attr "mode" "SI")])
+
+(define_insn "*subsi3_carry_zext"
+  [(set (match_operand:DI 0 "register_operand" "=r")
+	(zero_extend:DI
+	  (minus:SI (match_operand:SI 1 "register_operand" "0")
+		    (plus:SI (match_operator 3 "ix86_carry_flag_operator"
+			      [(reg FLAGS_REG) (const_int 0)])
+			     (match_operand:SI 2 "general_operand" "g")))))
+   (clobber (reg:CC FLAGS_REG))]
+  "TARGET_64BIT && ix86_binary_operator_ok (MINUS, SImode, operands)"
+  "sbb{l}\t{%2, %k0|%k0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "pent_pair" "pu")
+   (set_attr "mode" "SI")])
+
+;; Overflow setting add and subtract instructions
+
+(define_insn "*add<mode>3_cconly_overflow"
+  [(set (reg:CCC FLAGS_REG)
+	(compare:CCC
+	  (plus:SWI
+	    (match_operand:SWI 1 "nonimmediate_operand" "%0")
+	    (match_operand:SWI 2 "<general_operand>" "<r><i>m"))
+	  (match_dup 1)))
+   (clobber (match_scratch:SWI 0 "=<r>"))]
+  "ix86_binary_operator_ok (PLUS, <MODE>mode, operands)"
+  "add{<imodesuffix>}\t{%2, %0|%0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "mode" "<MODE>")])
+
+(define_insn "*sub<mode>3_cconly_overflow"
+  [(set (reg:CCC FLAGS_REG)
+	(compare:CCC
+	  (minus:SWI
+	    (match_operand:SWI 0 "nonimmediate_operand" "<r>m,<r>")
+	    (match_operand:SWI 1 "<general_operand>" "<r><i>,<r>m"))
+	  (match_dup 0)))]
+  ""
+  "cmp{<imodesuffix>}\t{%1, %0|%0, %1}"
+  [(set_attr "type" "icmp")
+   (set_attr "mode" "<MODE>")])
 
 (define_insn "*<plusminus_insn><mode>3_cc_overflow"
   [(set (reg:CCC FLAGS_REG)
@@ -8317,12 +8119,30 @@
 ;; On Pentium, "test imm, reg" is pairable only with eax, ax, and al.
 ;; Note that this excludes ah.
 
-(define_insn "*testdi_1_rex64"
+(define_expand "testsi_ccno_1"
+  [(set (reg:CCNO FLAGS_REG)
+	(compare:CCNO
+	  (and:SI (match_operand:SI 0 "nonimmediate_operand" "")
+		  (match_operand:SI 1 "nonmemory_operand" ""))
+	  (const_int 0)))]
+  ""
+  "")
+
+(define_expand "testqi_ccz_1"
+  [(set (reg:CCZ FLAGS_REG)
+        (compare:CCZ (and:QI (match_operand:QI 0 "nonimmediate_operand" "")
+			     (match_operand:QI 1 "nonmemory_operand" ""))
+		 (const_int 0)))]
+  ""
+  "")
+
+(define_insn "*testdi_1"
   [(set (reg FLAGS_REG)
 	(compare
-	  (and:DI (match_operand:DI 0 "nonimmediate_operand" "%!*a,r,!*a,r,rm")
-		  (match_operand:DI 1 "x86_64_szext_general_operand" "Z,Z,e,e,re"))
-	  (const_int 0)))]
+	 (and:DI
+	  (match_operand:DI 0 "nonimmediate_operand" "%!*a,r,!*a,r,rm")
+	  (match_operand:DI 1 "x86_64_szext_general_operand" "Z,Z,e,e,re"))
+	 (const_int 0)))]
   "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
    && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
   "@
@@ -8333,52 +8153,7 @@
    test{q}\t{%1, %0|%0, %1}"
   [(set_attr "type" "test")
    (set_attr "modrm" "0,1,0,1,1")
-   (set_attr "mode" "SI,SI,DI,DI,DI")
-   (set_attr "pent_pair" "uv,np,uv,np,uv")])
-
-(define_insn "testsi_1"
-  [(set (reg FLAGS_REG)
-	(compare
-	  (and:SI (match_operand:SI 0 "nonimmediate_operand" "%!*a,r,rm")
-		  (match_operand:SI 1 "general_operand" "i,i,ri"))
-	  (const_int 0)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
-  "test{l}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "test")
-   (set_attr "modrm" "0,1,1")
-   (set_attr "mode" "SI")
-   (set_attr "pent_pair" "uv,np,uv")])
-
-(define_expand "testsi_ccno_1"
-  [(set (reg:CCNO FLAGS_REG)
-	(compare:CCNO
-	  (and:SI (match_operand:SI 0 "nonimmediate_operand" "")
-		  (match_operand:SI 1 "nonmemory_operand" ""))
-	  (const_int 0)))]
-  ""
-  "")
-
-(define_insn "*testhi_1"
-  [(set (reg FLAGS_REG)
-        (compare (and:HI (match_operand:HI 0 "nonimmediate_operand" "%!*a,r,rm")
-			 (match_operand:HI 1 "general_operand" "n,n,rn"))
-		 (const_int 0)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
-  "test{w}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "test")
-   (set_attr "modrm" "0,1,1")
-   (set_attr "mode" "HI")
-   (set_attr "pent_pair" "uv,np,uv")])
-
-(define_expand "testqi_ccz_1"
-  [(set (reg:CCZ FLAGS_REG)
-        (compare:CCZ (and:QI (match_operand:QI 0 "nonimmediate_operand" "")
-			     (match_operand:QI 1 "nonmemory_operand" ""))
-		 (const_int 0)))]
-  ""
-  "")
+   (set_attr "mode" "SI,SI,DI,DI,DI")])
 
 (define_insn "*testqi_1_maybe_si"
   [(set (reg FLAGS_REG)
@@ -8405,19 +8180,19 @@
    (set_attr "mode" "QI,QI,QI,SI")
    (set_attr "pent_pair" "uv,np,uv,np")])
 
-(define_insn "*testqi_1"
+(define_insn "*test<mode>_1"
   [(set (reg FLAGS_REG)
-        (compare
-	  (and:QI
-	    (match_operand:QI 0 "nonimmediate_operand" "%!*a,q,qm")
-	    (match_operand:QI 1 "general_operand" "n,n,qn"))
-	  (const_int 0)))]
-  "!(MEM_P (operands[0]) && MEM_P (operands[1]))
-   && ix86_match_ccmode (insn, CCNOmode)"
-  "test{b}\t{%1, %0|%0, %1}"
+	(compare
+	 (and:SWI124
+	  (match_operand:SWI124 0 "nonimmediate_operand" "%!*a,<r>,<r>m")
+	  (match_operand:SWI124 1 "general_operand" "<i>,<i>,<r><i>"))
+	 (const_int 0)))]
+  "ix86_match_ccmode (insn, CCNOmode)
+   && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
+  "test{<imodesuffix>}\t{%1, %0|%0, %1}"
   [(set_attr "type" "test")
    (set_attr "modrm" "0,1,1")
-   (set_attr "mode" "QI")
+   (set_attr "mode" "<MODE>")
    (set_attr "pent_pair" "uv,np,uv")])
 
 (define_expand "testqi_ext_ccno_0"
@@ -8451,23 +8226,6 @@
    (set_attr "modrm" "1")
    (set_attr "pent_pair" "np")])
 
-(define_insn "*testqi_ext_1"
-  [(set (reg FLAGS_REG)
-	(compare
-	  (and:SI
-	    (zero_extract:SI
-	      (match_operand 0 "ext_register_operand" "Q")
-	      (const_int 8)
-	      (const_int 8))
-	    (zero_extend:SI
-	      (match_operand:QI 1 "general_operand" "Qm")))
-	  (const_int 0)))]
-  "!TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
-  "test{b}\t{%1, %h0|%h0, %1}"
-  [(set_attr "type" "test")
-   (set_attr "mode" "QI")])
-
 (define_insn "*testqi_ext_1_rex64"
   [(set (reg FLAGS_REG)
 	(compare
@@ -8480,6 +8238,22 @@
 	      (match_operand:QI 1 "register_operand" "Q")))
 	  (const_int 0)))]
   "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)"
+  "test{b}\t{%1, %h0|%h0, %1}"
+  [(set_attr "type" "test")
+   (set_attr "mode" "QI")])
+
+(define_insn "*testqi_ext_1"
+  [(set (reg FLAGS_REG)
+	(compare
+	  (and:SI
+	    (zero_extract:SI
+	      (match_operand 0 "ext_register_operand" "Q")
+	      (const_int 8)
+	      (const_int 8))
+	    (zero_extend:SI
+	      (match_operand:QI 1 "general_operand" "Qm")))
+	  (const_int 0)))]
+  "!TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)"
   "test{b}\t{%1, %h0|%h0, %1}"
   [(set_attr "type" "test")
    (set_attr "mode" "QI")])
@@ -8502,24 +8276,6 @@
   [(set_attr "type" "test")
    (set_attr "mode" "QI")])
 
-;; Combine likes to form bit extractions for some tests.  Humor it.
-(define_insn "*testqi_ext_3"
-  [(set (reg FLAGS_REG)
-        (compare (zero_extract:SI
-		   (match_operand 0 "nonimmediate_operand" "rm")
-		   (match_operand:SI 1 "const_int_operand" "")
-		   (match_operand:SI 2 "const_int_operand" ""))
-		 (const_int 0)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && INTVAL (operands[1]) > 0
-   && INTVAL (operands[2]) >= 0
-   && INTVAL (operands[1]) + INTVAL (operands[2]) <= 32
-   && (GET_MODE (operands[0]) == SImode
-       || (TARGET_64BIT && GET_MODE (operands[0]) == DImode)
-       || GET_MODE (operands[0]) == HImode
-       || GET_MODE (operands[0]) == QImode)"
-  "#")
-
 (define_insn "*testqi_ext_3_rex64"
   [(set (reg FLAGS_REG)
         (compare (zero_extract:DI
@@ -8537,6 +8293,24 @@
 	   && INTVAL (operands[1]) > 32))
    && (GET_MODE (operands[0]) == SImode
        || GET_MODE (operands[0]) == DImode
+       || GET_MODE (operands[0]) == HImode
+       || GET_MODE (operands[0]) == QImode)"
+  "#")
+
+;; Combine likes to form bit extractions for some tests.  Humor it.
+(define_insn "*testqi_ext_3"
+  [(set (reg FLAGS_REG)
+        (compare (zero_extract:SI
+		   (match_operand 0 "nonimmediate_operand" "rm")
+		   (match_operand:SI 1 "const_int_operand" "")
+		   (match_operand:SI 2 "const_int_operand" ""))
+		 (const_int 0)))]
+  "ix86_match_ccmode (insn, CCNOmode)
+   && INTVAL (operands[1]) > 0
+   && INTVAL (operands[2]) >= 0
+   && INTVAL (operands[1]) + INTVAL (operands[2]) <= 32
+   && (GET_MODE (operands[0]) == SImode
+       || (TARGET_64BIT && GET_MODE (operands[0]) == DImode)
        || GET_MODE (operands[0]) == HImode
        || GET_MODE (operands[0]) == QImode)"
   "#")
@@ -8640,22 +8414,22 @@
   "operands[2] = gen_lowpart (QImode, operands[2]);
    operands[3] = gen_lowpart (QImode, operands[3]);")
 
-
 ;; %%% This used to optimize known byte-wide and operations to memory,
 ;; and sometimes to QImode registers.  If this is considered useful,
 ;; it should be done with splitters.
 
-(define_expand "anddi3"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "")
-	(and:DI (match_operand:DI 1 "nonimmediate_operand" "")
-		(match_operand:DI 2 "x86_64_szext_general_operand" "")))]
-  "TARGET_64BIT"
-  "ix86_expand_binary_operator (AND, DImode, operands); DONE;")
+(define_expand "and<mode>3"
+  [(set (match_operand:SWIM 0 "nonimmediate_operand" "")
+	(and:SWIM (match_operand:SWIM 1 "nonimmediate_operand" "")
+		  (match_operand:SWIM 2 "<general_szext_operand>" "")))]
+  ""
+  "ix86_expand_binary_operator (AND, <MODE>mode, operands); DONE;")
 
-(define_insn "*anddi_1_rex64"
+(define_insn "*anddi_1"
   [(set (match_operand:DI 0 "nonimmediate_operand" "=r,rm,r,r")
-	(and:DI (match_operand:DI 1 "nonimmediate_operand" "%0,0,0,qm")
-		(match_operand:DI 2 "x86_64_szext_general_operand" "Z,re,rm,L")))
+	(and:DI
+	 (match_operand:DI 1 "nonimmediate_operand" "%0,0,0,qm")
+	 (match_operand:DI 2 "x86_64_szext_general_operand" "Z,re,rm,L")))
    (clobber (reg:CC FLAGS_REG))]
   "TARGET_64BIT && ix86_binary_operator_ok (AND, DImode, operands)"
 {
@@ -8699,29 +8473,6 @@
        (const_string "1")
        (const_string "*")))
    (set_attr "mode" "SI,DI,DI,SI")])
-
-(define_insn "*anddi_2"
-  [(set (reg FLAGS_REG)
-	(compare (and:DI (match_operand:DI 1 "nonimmediate_operand" "%0,0,0")
-			 (match_operand:DI 2 "x86_64_szext_general_operand" "Z,rem,re"))
-		 (const_int 0)))
-   (set (match_operand:DI 0 "nonimmediate_operand" "=r,r,rm")
-	(and:DI (match_dup 1) (match_dup 2)))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (AND, DImode, operands)"
-  "@
-   and{l}\t{%k2, %k0|%k0, %k2}
-   and{q}\t{%2, %0|%0, %2}
-   and{q}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI,DI,DI")])
-
-(define_expand "andsi3"
-  [(set (match_operand:SI 0 "nonimmediate_operand" "")
-	(and:SI (match_operand:SI 1 "nonimmediate_operand" "")
-		(match_operand:SI 2 "general_operand" "")))]
-  ""
-  "ix86_expand_binary_operator (AND, SImode, operands); DONE;")
 
 (define_insn "*andsi_1"
   [(set (match_operand:SI 0 "nonimmediate_operand" "=rm,r,r")
@@ -8768,43 +8519,6 @@
    (set_attr "length_immediate" "*,*,0")
    (set_attr "mode" "SI")])
 
-(define_split
-  [(set (match_operand 0 "register_operand" "")
-	(and (match_dup 0)
-	     (const_int -65536)))
-   (clobber (reg:CC FLAGS_REG))]
-  "optimize_function_for_size_p (cfun) || (TARGET_FAST_PREFIX && !TARGET_PARTIAL_REG_STALL)"
-  [(set (strict_low_part (match_dup 1)) (const_int 0))]
-  "operands[1] = gen_lowpart (HImode, operands[0]);")
-
-(define_split
-  [(set (match_operand 0 "ext_register_operand" "")
-	(and (match_dup 0)
-	     (const_int -256)))
-   (clobber (reg:CC FLAGS_REG))]
-  "(optimize_function_for_size_p (cfun) || !TARGET_PARTIAL_REG_STALL) && reload_completed"
-  [(set (strict_low_part (match_dup 1)) (const_int 0))]
-  "operands[1] = gen_lowpart (QImode, operands[0]);")
-
-(define_split
-  [(set (match_operand 0 "ext_register_operand" "")
-	(and (match_dup 0)
-	     (const_int -65281)))
-   (clobber (reg:CC FLAGS_REG))]
-  "(optimize_function_for_size_p (cfun) || !TARGET_PARTIAL_REG_STALL) && reload_completed"
-  [(parallel [(set (zero_extract:SI (match_dup 0)
-				    (const_int 8)
-				    (const_int 8))
-		   (xor:SI
-		     (zero_extract:SI (match_dup 0)
-				      (const_int 8)
-				      (const_int 8))
-		     (zero_extract:SI (match_dup 0)
-				      (const_int 8)
-				      (const_int 8))))
-	      (clobber (reg:CC FLAGS_REG))])]
-  "operands[0] = gen_lowpart (SImode, operands[0]);")
-
 ;; See comment for addsi_1_zext why we do use nonimmediate_operand
 (define_insn "*andsi_1_zext"
   [(set (match_operand:DI 0 "register_operand" "=r")
@@ -8816,40 +8530,6 @@
   "and{l}\t{%2, %k0|%k0, %2}"
   [(set_attr "type" "alu")
    (set_attr "mode" "SI")])
-
-(define_insn "*andsi_2"
-  [(set (reg FLAGS_REG)
-	(compare (and:SI (match_operand:SI 1 "nonimmediate_operand" "%0,0")
-			 (match_operand:SI 2 "general_operand" "g,ri"))
-		 (const_int 0)))
-   (set (match_operand:SI 0 "nonimmediate_operand" "=r,rm")
-	(and:SI (match_dup 1) (match_dup 2)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (AND, SImode, operands)"
-  "and{l}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-;; See comment for addsi_1_zext why we do use nonimmediate_operand
-(define_insn "*andsi_2_zext"
-  [(set (reg FLAGS_REG)
-	(compare (and:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
-			 (match_operand:SI 2 "general_operand" "g"))
-		 (const_int 0)))
-   (set (match_operand:DI 0 "register_operand" "=r")
-	(zero_extend:DI (and:SI (match_dup 1) (match_dup 2))))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (AND, SImode, operands)"
-  "and{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_expand "andhi3"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "")
-	(and:HI (match_operand:HI 1 "nonimmediate_operand" "")
-		(match_operand:HI 2 "general_operand" "")))]
-  "TARGET_HIMODE_MATH"
-  "ix86_expand_binary_operator (AND, HImode, operands); DONE;")
 
 (define_insn "*andhi_1"
   [(set (match_operand:HI 0 "nonimmediate_operand" "=rm,r,r")
@@ -8881,26 +8561,6 @@
        (const_string "*")))
    (set_attr "mode" "HI,HI,SI")])
 
-(define_insn "*andhi_2"
-  [(set (reg FLAGS_REG)
-	(compare (and:HI (match_operand:HI 1 "nonimmediate_operand" "%0,0")
-			 (match_operand:HI 2 "general_operand" "rmn,rn"))
-		 (const_int 0)))
-   (set (match_operand:HI 0 "nonimmediate_operand" "=r,rm")
-	(and:HI (match_dup 1) (match_dup 2)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (AND, HImode, operands)"
-  "and{w}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "HI")])
-
-(define_expand "andqi3"
-  [(set (match_operand:QI 0 "nonimmediate_operand" "")
-	(and:QI (match_operand:QI 1 "nonimmediate_operand" "")
-		(match_operand:QI 2 "general_operand" "")))]
-  "TARGET_QIMODE_MATH"
-  "ix86_expand_binary_operator (AND, QImode, operands); DONE;")
-
 ;; %%% Potential partial reg stall on alternative 2.  What to do?
 (define_insn "*andqi_1"
   [(set (match_operand:QI 0 "nonimmediate_operand" "=qm,q,r")
@@ -8920,17 +8580,75 @@
 	(and:QI (match_dup 0)
 		(match_operand:QI 1 "general_operand" "qn,qmn")))
    (clobber (reg:CC FLAGS_REG))]
-  "(! TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
+  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
    && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
   "and{b}\t{%1, %0|%0, %1}"
   [(set_attr "type" "alu1")
    (set_attr "mode" "QI")])
 
+(define_split
+  [(set (match_operand 0 "register_operand" "")
+	(and (match_dup 0)
+	     (const_int -65536)))
+   (clobber (reg:CC FLAGS_REG))]
+  "(TARGET_FAST_PREFIX && !TARGET_PARTIAL_REG_STALL)
+    || optimize_function_for_size_p (cfun)"
+  [(set (strict_low_part (match_dup 1)) (const_int 0))]
+  "operands[1] = gen_lowpart (HImode, operands[0]);")
+
+(define_split
+  [(set (match_operand 0 "ext_register_operand" "")
+	(and (match_dup 0)
+	     (const_int -256)))
+   (clobber (reg:CC FLAGS_REG))]
+  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
+   && reload_completed"
+  [(set (strict_low_part (match_dup 1)) (const_int 0))]
+  "operands[1] = gen_lowpart (QImode, operands[0]);")
+
+(define_split
+  [(set (match_operand 0 "ext_register_operand" "")
+	(and (match_dup 0)
+	     (const_int -65281)))
+   (clobber (reg:CC FLAGS_REG))]
+  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
+   && reload_completed"
+  [(parallel [(set (zero_extract:SI (match_dup 0)
+				    (const_int 8)
+				    (const_int 8))
+		   (xor:SI
+		     (zero_extract:SI (match_dup 0)
+				      (const_int 8)
+				      (const_int 8))
+		     (zero_extract:SI (match_dup 0)
+				      (const_int 8)
+				      (const_int 8))))
+	      (clobber (reg:CC FLAGS_REG))])]
+  "operands[0] = gen_lowpart (SImode, operands[0]);")
+
+(define_insn "*anddi_2"
+  [(set (reg FLAGS_REG)
+	(compare
+	 (and:DI
+	  (match_operand:DI 1 "nonimmediate_operand" "%0,0,0")
+	  (match_operand:DI 2 "x86_64_szext_general_operand" "Z,rem,re"))
+	 (const_int 0)))
+   (set (match_operand:DI 0 "nonimmediate_operand" "=r,r,rm")
+	(and:DI (match_dup 1) (match_dup 2)))]
+  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
+   && ix86_binary_operator_ok (AND, DImode, operands)"
+  "@
+   and{l}\t{%k2, %k0|%k0, %k2}
+   and{q}\t{%2, %0|%0, %2}
+   and{q}\t{%2, %0|%0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "mode" "SI,DI,DI")])
+
 (define_insn "*andqi_2_maybe_si"
   [(set (reg FLAGS_REG)
 	(compare (and:QI
-		      (match_operand:QI 1 "nonimmediate_operand" "%0,0,0")
-		      (match_operand:QI 2 "general_operand" "qmn,qn,n"))
+		  (match_operand:QI 1 "nonimmediate_operand" "%0,0,0")
+		  (match_operand:QI 2 "general_operand" "qmn,qn,n"))
 		 (const_int 0)))
    (set (match_operand:QI 0 "nonimmediate_operand" "=q,qm,*r")
 	(and:QI (match_dup 1) (match_dup 2)))]
@@ -8950,19 +8668,34 @@
   [(set_attr "type" "alu")
    (set_attr "mode" "QI,QI,SI")])
 
-(define_insn "*andqi_2"
+(define_insn "*and<mode>_2"
   [(set (reg FLAGS_REG)
-	(compare (and:QI
-		   (match_operand:QI 1 "nonimmediate_operand" "%0,0")
-		   (match_operand:QI 2 "general_operand" "qmn,qn"))
+	(compare (and:SWI124
+		  (match_operand:SWI124 1 "nonimmediate_operand" "%0,0")
+		  (match_operand:SWI124 2 "general_operand" "<g>,<r><i>"))
 		 (const_int 0)))
-   (set (match_operand:QI 0 "nonimmediate_operand" "=q,qm")
-	(and:QI (match_dup 1) (match_dup 2)))]
+   (set (match_operand:SWI124 0 "nonimmediate_operand" "=<r>,<r>m")
+	(and:SWI124 (match_dup 1) (match_dup 2)))]
   "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (AND, QImode, operands)"
-  "and{b}\t{%2, %0|%0, %2}"
+   && ix86_binary_operator_ok (AND, <MODE>mode, operands)"
+  "and{<imodesuffix>}\t{%2, %0|%0, %2}"
   [(set_attr "type" "alu")
-   (set_attr "mode" "QI")])
+   (set_attr "mode" "<MODE>")])
+
+;; See comment for addsi_1_zext why we do use nonimmediate_operand
+(define_insn "*andsi_2_zext"
+  [(set (reg FLAGS_REG)
+	(compare (and:SI
+		  (match_operand:SI 1 "nonimmediate_operand" "%0")
+		  (match_operand:SI 2 "general_operand" "g"))
+		 (const_int 0)))
+   (set (match_operand:DI 0 "register_operand" "=r")
+	(zero_extend:DI (and:SI (match_dup 1) (match_dup 2))))]
+  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
+   && ix86_binary_operator_ok (AND, SImode, operands)"
+  "and{l}\t{%2, %k0|%k0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "mode" "SI")])
 
 (define_insn "*andqi_2_slp"
   [(set (reg FLAGS_REG)
@@ -8972,7 +8705,7 @@
 		 (const_int 0)))
    (set (strict_low_part (match_dup 0))
 	(and:QI (match_dup 0) (match_dup 1)))]
-  "(! TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
+  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
    && ix86_match_ccmode (insn, CCNOmode)
    && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
   "and{b}\t{%1, %0|%0, %1}"
@@ -8982,7 +8715,6 @@
 ;; ??? A bug in recog prevents it from recognizing a const_int as an
 ;; operand to zero_extend in andqi_ext_1.  It was checking explicitly
 ;; for a QImode operand, which of course failed.
-
 (define_insn "andqi_ext_0"
   [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
 			 (const_int 8)
@@ -9003,7 +8735,6 @@
 
 ;; Generated by peephole translating test to and.  This shows up
 ;; often in fp comparisons.
-
 (define_insn "*andqi_ext_0_cc"
   [(set (reg FLAGS_REG)
 	(compare
@@ -9030,24 +8761,6 @@
    (set_attr "modrm" "1")
    (set_attr "mode" "QI")])
 
-(define_insn "*andqi_ext_1"
-  [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
-			 (const_int 8)
-			 (const_int 8))
-	(and:SI
-	  (zero_extract:SI
-	    (match_operand 1 "ext_register_operand" "0")
-	    (const_int 8)
-	    (const_int 8))
-	  (zero_extend:SI
-	    (match_operand:QI 2 "general_operand" "Qm"))))
-   (clobber (reg:CC FLAGS_REG))]
-  "!TARGET_64BIT"
-  "and{b}\t{%2, %h0|%h0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "length_immediate" "0")
-   (set_attr "mode" "QI")])
-
 (define_insn "*andqi_ext_1_rex64"
   [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
 			 (const_int 8)
@@ -9061,6 +8774,24 @@
 	    (match_operand 2 "ext_register_operand" "Q"))))
    (clobber (reg:CC FLAGS_REG))]
   "TARGET_64BIT"
+  "and{b}\t{%2, %h0|%h0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "length_immediate" "0")
+   (set_attr "mode" "QI")])
+
+(define_insn "*andqi_ext_1"
+  [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
+			 (const_int 8)
+			 (const_int 8))
+	(and:SI
+	  (zero_extract:SI
+	    (match_operand 1 "ext_register_operand" "0")
+	    (const_int 8)
+	    (const_int 8))
+	  (zero_extend:SI
+	    (match_operand:QI 2 "general_operand" "Qm"))))
+   (clobber (reg:CC FLAGS_REG))]
+  "!TARGET_64BIT"
   "and{b}\t{%2, %h0|%h0, %2}"
   [(set_attr "type" "alu")
    (set_attr "length_immediate" "0")
@@ -9131,304 +8862,170 @@
    operands[1] = gen_lowpart (QImode, operands[1]);
    operands[2] = gen_lowpart (QImode, operands[2]);")
 
-;; Logical inclusive OR instructions
+;; Logical inclusive and exclusive OR instructions
 
 ;; %%% This used to optimize known byte-wide and operations to memory.
 ;; If this is considered useful, it should be done with splitters.
 
-(define_expand "iordi3"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "")
-	(ior:DI (match_operand:DI 1 "nonimmediate_operand" "")
-		(match_operand:DI 2 "x86_64_general_operand" "")))]
-  "TARGET_64BIT"
-  "ix86_expand_binary_operator (IOR, DImode, operands); DONE;")
-
-(define_insn "*iordi_1_rex64"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "=rm,r")
-	(ior:DI (match_operand:DI 1 "nonimmediate_operand" "%0,0")
-		(match_operand:DI 2 "x86_64_general_operand" "re,rme")))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT
-   && ix86_binary_operator_ok (IOR, DImode, operands)"
-  "or{q}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "DI")])
-
-(define_insn "*iordi_2_rex64"
-  [(set (reg FLAGS_REG)
-	(compare (ior:DI (match_operand:DI 1 "nonimmediate_operand" "%0,0")
-			 (match_operand:DI 2 "x86_64_general_operand" "rem,re"))
-		 (const_int 0)))
-   (set (match_operand:DI 0 "nonimmediate_operand" "=r,rm")
-	(ior:DI (match_dup 1) (match_dup 2)))]
-  "TARGET_64BIT
-   && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (IOR, DImode, operands)"
-  "or{q}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "DI")])
-
-(define_insn "*iordi_3_rex64"
-  [(set (reg FLAGS_REG)
-	(compare (ior:DI (match_operand:DI 1 "nonimmediate_operand" "%0")
-			 (match_operand:DI 2 "x86_64_general_operand" "rem"))
-		 (const_int 0)))
-   (clobber (match_scratch:DI 0 "=r"))]
-  "TARGET_64BIT
-   && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (IOR, DImode, operands)"
-  "or{q}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "DI")])
-
-
-(define_expand "iorsi3"
-  [(set (match_operand:SI 0 "nonimmediate_operand" "")
-	(ior:SI (match_operand:SI 1 "nonimmediate_operand" "")
-		(match_operand:SI 2 "general_operand" "")))]
+(define_expand "<code><mode>3"
+  [(set (match_operand:SWIM 0 "nonimmediate_operand" "")
+	(any_or:SWIM (match_operand:SWIM 1 "nonimmediate_operand" "")
+		     (match_operand:SWIM 2 "<general_operand>" "")))]
   ""
-  "ix86_expand_binary_operator (IOR, SImode, operands); DONE;")
+  "ix86_expand_binary_operator (<CODE>, <MODE>mode, operands); DONE;")
 
-(define_insn "*iorsi_1"
-  [(set (match_operand:SI 0 "nonimmediate_operand" "=rm,r")
-	(ior:SI (match_operand:SI 1 "nonimmediate_operand" "%0,0")
-		(match_operand:SI 2 "general_operand" "ri,g")))
+(define_insn "*<code><mode>_1"
+  [(set (match_operand:SWI248 0 "nonimmediate_operand" "=r,rm")
+	(any_or:SWI248
+	 (match_operand:SWI248 1 "nonimmediate_operand" "%0,0")
+	 (match_operand:SWI248 2 "<general_operand>" "<g>,r<i>")))
    (clobber (reg:CC FLAGS_REG))]
-  "ix86_binary_operator_ok (IOR, SImode, operands)"
-  "or{l}\t{%2, %0|%0, %2}"
+  "ix86_binary_operator_ok (<CODE>, <MODE>mode, operands)"
+  "<logicprefix>{<imodesuffix>}\t{%2, %0|%0, %2}"
   [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-;; See comment for addsi_1_zext why we do use nonimmediate_operand
-(define_insn "*iorsi_1_zext"
-  [(set (match_operand:DI 0 "register_operand" "=r")
-	(zero_extend:DI
-	  (ior:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
-		  (match_operand:SI 2 "general_operand" "g"))))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT && ix86_binary_operator_ok (IOR, SImode, operands)"
-  "or{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_insn "*iorsi_1_zext_imm"
-  [(set (match_operand:DI 0 "register_operand" "=r")
-	(ior:DI (zero_extend:DI (match_operand:SI 1 "register_operand" "%0"))
-		(match_operand:DI 2 "x86_64_zext_immediate_operand" "Z")))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT"
-  "or{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_insn "*iorsi_2"
-  [(set (reg FLAGS_REG)
-	(compare (ior:SI (match_operand:SI 1 "nonimmediate_operand" "%0,0")
-			 (match_operand:SI 2 "general_operand" "g,ri"))
-		 (const_int 0)))
-   (set (match_operand:SI 0 "nonimmediate_operand" "=r,rm")
-	(ior:SI (match_dup 1) (match_dup 2)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (IOR, SImode, operands)"
-  "or{l}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-;; See comment for addsi_1_zext why we do use nonimmediate_operand
-;; ??? Special case for immediate operand is missing - it is tricky.
-(define_insn "*iorsi_2_zext"
-  [(set (reg FLAGS_REG)
-	(compare (ior:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
-			 (match_operand:SI 2 "general_operand" "g"))
-		 (const_int 0)))
-   (set (match_operand:DI 0 "register_operand" "=r")
-	(zero_extend:DI (ior:SI (match_dup 1) (match_dup 2))))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (IOR, SImode, operands)"
-  "or{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_insn "*iorsi_2_zext_imm"
-  [(set (reg FLAGS_REG)
-	(compare (ior:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
-			 (match_operand 2 "x86_64_zext_immediate_operand" "Z"))
-		 (const_int 0)))
-   (set (match_operand:DI 0 "register_operand" "=r")
-	(ior:DI (zero_extend:DI (match_dup 1)) (match_dup 2)))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (IOR, SImode, operands)"
-  "or{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_insn "*iorsi_3"
-  [(set (reg FLAGS_REG)
-	(compare (ior:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
-			 (match_operand:SI 2 "general_operand" "g"))
-		 (const_int 0)))
-   (clobber (match_scratch:SI 0 "=r"))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[1]) && MEM_P (operands[2]))"
-  "or{l}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_expand "iorhi3"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "")
-	(ior:HI (match_operand:HI 1 "nonimmediate_operand" "")
-		(match_operand:HI 2 "general_operand" "")))]
-  "TARGET_HIMODE_MATH"
-  "ix86_expand_binary_operator (IOR, HImode, operands); DONE;")
-
-(define_insn "*iorhi_1"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "=r,m")
-	(ior:HI (match_operand:HI 1 "nonimmediate_operand" "%0,0")
-		(match_operand:HI 2 "general_operand" "rmn,rn")))
-   (clobber (reg:CC FLAGS_REG))]
-  "ix86_binary_operator_ok (IOR, HImode, operands)"
-  "or{w}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "HI")])
-
-(define_insn "*iorhi_2"
-  [(set (reg FLAGS_REG)
-	(compare (ior:HI (match_operand:HI 1 "nonimmediate_operand" "%0,0")
-			 (match_operand:HI 2 "general_operand" "rmn,rn"))
-		 (const_int 0)))
-   (set (match_operand:HI 0 "nonimmediate_operand" "=r,rm")
-	(ior:HI (match_dup 1) (match_dup 2)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (IOR, HImode, operands)"
-  "or{w}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "HI")])
-
-(define_insn "*iorhi_3"
-  [(set (reg FLAGS_REG)
-	(compare (ior:HI (match_operand:HI 1 "nonimmediate_operand" "%0")
-			 (match_operand:HI 2 "general_operand" "rmn"))
-		 (const_int 0)))
-   (clobber (match_scratch:HI 0 "=r"))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[1]) && MEM_P (operands[2]))"
-  "or{w}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "HI")])
-
-(define_expand "iorqi3"
-  [(set (match_operand:QI 0 "nonimmediate_operand" "")
-	(ior:QI (match_operand:QI 1 "nonimmediate_operand" "")
-		(match_operand:QI 2 "general_operand" "")))]
-  "TARGET_QIMODE_MATH"
-  "ix86_expand_binary_operator (IOR, QImode, operands); DONE;")
+   (set_attr "mode" "<MODE>")])
 
 ;; %%% Potential partial reg stall on alternative 2.  What to do?
-(define_insn "*iorqi_1"
+(define_insn "*<code>qi_1"
   [(set (match_operand:QI 0 "nonimmediate_operand" "=q,m,r")
-	(ior:QI (match_operand:QI 1 "nonimmediate_operand" "%0,0,0")
-		(match_operand:QI 2 "general_operand" "qmn,qn,rn")))
+	(any_or:QI (match_operand:QI 1 "nonimmediate_operand" "%0,0,0")
+		   (match_operand:QI 2 "general_operand" "qmn,qn,rn")))
    (clobber (reg:CC FLAGS_REG))]
-  "ix86_binary_operator_ok (IOR, QImode, operands)"
+  "ix86_binary_operator_ok (<CODE>, QImode, operands)"
   "@
-   or{b}\t{%2, %0|%0, %2}
-   or{b}\t{%2, %0|%0, %2}
-   or{l}\t{%k2, %k0|%k0, %k2}"
+   <logicprefix>{b}\t{%2, %0|%0, %2}
+   <logicprefix>{b}\t{%2, %0|%0, %2}
+   <logicprefix>{l}\t{%k2, %k0|%k0, %k2}"
   [(set_attr "type" "alu")
    (set_attr "mode" "QI,QI,SI")])
 
-(define_insn "*iorqi_1_slp"
-  [(set (strict_low_part (match_operand:QI 0 "nonimmediate_operand" "+q,m"))
-	(ior:QI (match_dup 0)
-		(match_operand:QI 1 "general_operand" "qmn,qn")))
+;; See comment for addsi_1_zext why we do use nonimmediate_operand
+(define_insn "*<code>si_1_zext"
+  [(set (match_operand:DI 0 "register_operand" "=r")
+	(zero_extend:DI
+	 (any_or:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
+		    (match_operand:SI 2 "general_operand" "g"))))
    (clobber (reg:CC FLAGS_REG))]
-  "(! TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
+  "TARGET_64BIT && ix86_binary_operator_ok (<CODE>, SImode, operands)"
+  "<logicprefix>{l}\t{%2, %k0|%k0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "mode" "SI")])
+
+(define_insn "*<code>si_1_zext_imm"
+  [(set (match_operand:DI 0 "register_operand" "=r")
+	(any_or:DI
+	 (zero_extend:DI (match_operand:SI 1 "register_operand" "%0"))
+	 (match_operand:DI 2 "x86_64_zext_immediate_operand" "Z")))
+   (clobber (reg:CC FLAGS_REG))]
+  "TARGET_64BIT && ix86_binary_operator_ok (<CODE>, SImode, operands)"
+  "<logicprefix>{l}\t{%2, %k0|%k0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "mode" "SI")])
+
+(define_insn "*<code>qi_1_slp"
+  [(set (strict_low_part (match_operand:QI 0 "nonimmediate_operand" "+q,m"))
+	(any_or:QI (match_dup 0)
+		   (match_operand:QI 1 "general_operand" "qmn,qn")))
+   (clobber (reg:CC FLAGS_REG))]
+  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
    && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
-  "or{b}\t{%1, %0|%0, %1}"
+  "<logicprefix>{b}\t{%1, %0|%0, %1}"
   [(set_attr "type" "alu1")
    (set_attr "mode" "QI")])
 
-(define_insn "*iorqi_2"
+(define_insn "*<code><mode>_2"
   [(set (reg FLAGS_REG)
-	(compare (ior:QI (match_operand:QI 1 "nonimmediate_operand" "%0,0")
-			 (match_operand:QI 2 "general_operand" "qmn,qn"))
+	(compare (any_or:SWI
+		  (match_operand:SWI 1 "nonimmediate_operand" "%0,0")
+		  (match_operand:SWI 2 "<general_operand>" "<g>,<r><i>"))
 		 (const_int 0)))
-   (set (match_operand:QI 0 "nonimmediate_operand" "=q,qm")
-	(ior:QI (match_dup 1) (match_dup 2)))]
+   (set (match_operand:SWI 0 "nonimmediate_operand" "=<r>,<r>m")
+	(any_or:SWI (match_dup 1) (match_dup 2)))]
   "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (IOR, QImode, operands)"
-  "or{b}\t{%2, %0|%0, %2}"
+   && ix86_binary_operator_ok (<CODE>, <MODE>mode, operands)"
+  "<logicprefix>{<imodesuffix>}\t{%2, %0|%0, %2}"
   [(set_attr "type" "alu")
-   (set_attr "mode" "QI")])
+   (set_attr "mode" "<MODE>")])
 
-(define_insn "*iorqi_2_slp"
+;; See comment for addsi_1_zext why we do use nonimmediate_operand
+;; ??? Special case for immediate operand is missing - it is tricky.
+(define_insn "*<code>si_2_zext"
   [(set (reg FLAGS_REG)
-	(compare (ior:QI (match_operand:QI 0 "nonimmediate_operand" "+q,qm")
-			 (match_operand:QI 1 "general_operand" "qmn,qn"))
+	(compare (any_or:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
+			    (match_operand:SI 2 "general_operand" "g"))
+		 (const_int 0)))
+   (set (match_operand:DI 0 "register_operand" "=r")
+	(zero_extend:DI (any_or:SI (match_dup 1) (match_dup 2))))]
+  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
+   && ix86_binary_operator_ok (<CODE>, SImode, operands)"
+  "<logicprefix>{l}\t{%2, %k0|%k0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "mode" "SI")])
+
+(define_insn "*<code>si_2_zext_imm"
+  [(set (reg FLAGS_REG)
+	(compare (any_or:SI
+		  (match_operand:SI 1 "nonimmediate_operand" "%0")
+		  (match_operand:SI 2 "x86_64_zext_immediate_operand" "Z"))
+		 (const_int 0)))
+   (set (match_operand:DI 0 "register_operand" "=r")
+	(any_or:DI (zero_extend:DI (match_dup 1)) (match_dup 2)))]
+  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
+   && ix86_binary_operator_ok (<CODE>, SImode, operands)"
+  "<logicprefix>{l}\t{%2, %k0|%k0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "mode" "SI")])
+
+(define_insn "*<code>qi_2_slp"
+  [(set (reg FLAGS_REG)
+	(compare (any_or:QI (match_operand:QI 0 "nonimmediate_operand" "+q,qm")
+			    (match_operand:QI 1 "general_operand" "qmn,qn"))
 		 (const_int 0)))
    (set (strict_low_part (match_dup 0))
-	(ior:QI (match_dup 0) (match_dup 1)))]
-  "(! TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
+	(any_or:QI (match_dup 0) (match_dup 1)))]
+  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
    && ix86_match_ccmode (insn, CCNOmode)
    && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
-  "or{b}\t{%1, %0|%0, %1}"
+  "<logicprefix>{b}\t{%1, %0|%0, %1}"
   [(set_attr "type" "alu1")
    (set_attr "mode" "QI")])
 
-(define_insn "*iorqi_3"
+(define_insn "*<code><mode>_3"
   [(set (reg FLAGS_REG)
-	(compare (ior:QI (match_operand:QI 1 "nonimmediate_operand" "%0")
-			 (match_operand:QI 2 "general_operand" "qmn"))
+	(compare (any_or:SWI
+		  (match_operand:SWI 1 "nonimmediate_operand" "%0")
+		  (match_operand:SWI 2 "<general_operand>" "<g>"))
 		 (const_int 0)))
-   (clobber (match_scratch:QI 0 "=q"))]
+   (clobber (match_scratch:SWI 0 "=<r>"))]
   "ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[1]) && MEM_P (operands[2]))"
-  "or{b}\t{%2, %0|%0, %2}"
+   && ix86_binary_operator_ok (<CODE>, <MODE>mode, operands)"
+  "<logicprefix>{<imodesuffix>}\t{%2, %0|%0, %2}"
   [(set_attr "type" "alu")
-   (set_attr "mode" "QI")])
+   (set_attr "mode" "<MODE>")])
 
-(define_insn "*iorqi_ext_0"
+(define_insn "*<code>qi_ext_0"
   [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
 			 (const_int 8)
 			 (const_int 8))
-	(ior:SI
+	(any_or:SI
 	  (zero_extract:SI
 	    (match_operand 1 "ext_register_operand" "0")
 	    (const_int 8)
 	    (const_int 8))
 	  (match_operand 2 "const_int_operand" "n")))
    (clobber (reg:CC FLAGS_REG))]
-  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))"
-  "or{b}\t{%2, %h0|%h0, %2}"
+  "!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun)"
+  "<logicprefix>{b}\t{%2, %h0|%h0, %2}"
   [(set_attr "type" "alu")
    (set_attr "length_immediate" "1")
    (set_attr "modrm" "1")
    (set_attr "mode" "QI")])
 
-(define_insn "*iorqi_ext_1"
+(define_insn "*<code>qi_ext_1_rex64"
   [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
 			 (const_int 8)
 			 (const_int 8))
-	(ior:SI
-	  (zero_extract:SI
-	    (match_operand 1 "ext_register_operand" "0")
-	    (const_int 8)
-	    (const_int 8))
-	  (zero_extend:SI
-	    (match_operand:QI 2 "general_operand" "Qm"))))
-   (clobber (reg:CC FLAGS_REG))]
-  "!TARGET_64BIT
-   && (!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))"
-  "or{b}\t{%2, %h0|%h0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "length_immediate" "0")
-   (set_attr "mode" "QI")])
-
-(define_insn "*iorqi_ext_1_rex64"
-  [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
-			 (const_int 8)
-			 (const_int 8))
-	(ior:SI
+	(any_or:SI
 	  (zero_extract:SI
 	    (match_operand 1 "ext_register_operand" "0")
 	    (const_int 8)
@@ -9438,16 +9035,35 @@
    (clobber (reg:CC FLAGS_REG))]
   "TARGET_64BIT
    && (!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))"
-  "or{b}\t{%2, %h0|%h0, %2}"
+  "<logicprefix>{b}\t{%2, %h0|%h0, %2}"
   [(set_attr "type" "alu")
    (set_attr "length_immediate" "0")
    (set_attr "mode" "QI")])
 
-(define_insn "*iorqi_ext_2"
+(define_insn "*<code>qi_ext_1"
   [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
 			 (const_int 8)
 			 (const_int 8))
-	(ior:SI
+	(any_or:SI
+	  (zero_extract:SI
+	    (match_operand 1 "ext_register_operand" "0")
+	    (const_int 8)
+	    (const_int 8))
+	  (zero_extend:SI
+	    (match_operand:QI 2 "general_operand" "Qm"))))
+   (clobber (reg:CC FLAGS_REG))]
+  "!TARGET_64BIT
+   && (!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))"
+  "<logicprefix>{b}\t{%2, %h0|%h0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "length_immediate" "0")
+   (set_attr "mode" "QI")])
+
+(define_insn "*<code>qi_ext_2"
+  [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
+			 (const_int 8)
+			 (const_int 8))
+	(any_or:SI
 	  (zero_extract:SI (match_operand 1 "ext_register_operand" "0")
 	  		   (const_int 8)
 			   (const_int 8))
@@ -9455,16 +9071,16 @@
 	  		   (const_int 8)
 			   (const_int 8))))
    (clobber (reg:CC FLAGS_REG))]
-  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))"
-  "ior{b}\t{%h2, %h0|%h0, %h2}"
+  "!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun)"
+  "<logicprefix>{b}\t{%h2, %h0|%h0, %h2}"
   [(set_attr "type" "alu")
    (set_attr "length_immediate" "0")
    (set_attr "mode" "QI")])
 
 (define_split
   [(set (match_operand 0 "register_operand" "")
-	(ior (match_operand 1 "register_operand" "")
-	     (match_operand 2 "const_int_operand" "")))
+	(any_or (match_operand 1 "register_operand" "")
+		(match_operand 2 "const_int_operand" "")))
    (clobber (reg:CC FLAGS_REG))]
    "reload_completed
     && QI_REG_P (operands[0])
@@ -9472,9 +9088,9 @@
     && !(INTVAL (operands[2]) & ~(255 << 8))
     && GET_MODE (operands[0]) != QImode"
   [(parallel [(set (zero_extract:SI (match_dup 0) (const_int 8) (const_int 8))
-		   (ior:SI (zero_extract:SI (match_dup 1)
-					    (const_int 8) (const_int 8))
-			   (match_dup 2)))
+		   (any_or:SI (zero_extract:SI (match_dup 1)
+					       (const_int 8) (const_int 8))
+			      (match_dup 2)))
 	      (clobber (reg:CC FLAGS_REG))])]
   "operands[0] = gen_lowpart (SImode, operands[0]);
    operands[1] = gen_lowpart (SImode, operands[1]);
@@ -9484,8 +9100,8 @@
 ;; profitable when 7th bit is set.
 (define_split
   [(set (match_operand 0 "register_operand" "")
-	(ior (match_operand 1 "general_operand" "")
-	     (match_operand 2 "const_int_operand" "")))
+	(any_or (match_operand 1 "general_operand" "")
+		(match_operand 2 "const_int_operand" "")))
    (clobber (reg:CC FLAGS_REG))]
    "reload_completed
     && ANY_QI_REG_P (operands[0])
@@ -9494,388 +9110,12 @@
     && (INTVAL (operands[2]) & 128)
     && GET_MODE (operands[0]) != QImode"
   [(parallel [(set (strict_low_part (match_dup 0))
-		   (ior:QI (match_dup 1)
-			   (match_dup 2)))
+		   (any_or:QI (match_dup 1)
+			      (match_dup 2)))
 	      (clobber (reg:CC FLAGS_REG))])]
   "operands[0] = gen_lowpart (QImode, operands[0]);
    operands[1] = gen_lowpart (QImode, operands[1]);
    operands[2] = gen_lowpart (QImode, operands[2]);")
-
-;; Logical XOR instructions
-
-;; %%% This used to optimize known byte-wide and operations to memory.
-;; If this is considered useful, it should be done with splitters.
-
-(define_expand "xordi3"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "")
-	(xor:DI (match_operand:DI 1 "nonimmediate_operand" "")
-		(match_operand:DI 2 "x86_64_general_operand" "")))]
-  "TARGET_64BIT"
-  "ix86_expand_binary_operator (XOR, DImode, operands); DONE;")
-
-(define_insn "*xordi_1_rex64"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "=rm,r")
-	(xor:DI (match_operand:DI 1 "nonimmediate_operand" "%0,0")
-		(match_operand:DI 2 "x86_64_general_operand" "re,rm")))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT
-   && ix86_binary_operator_ok (XOR, DImode, operands)"
-  "xor{q}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "DI")])
-
-(define_insn "*xordi_2_rex64"
-  [(set (reg FLAGS_REG)
-	(compare (xor:DI (match_operand:DI 1 "nonimmediate_operand" "%0,0")
-			 (match_operand:DI 2 "x86_64_general_operand" "rem,re"))
-		 (const_int 0)))
-   (set (match_operand:DI 0 "nonimmediate_operand" "=r,rm")
-	(xor:DI (match_dup 1) (match_dup 2)))]
-  "TARGET_64BIT
-   && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (XOR, DImode, operands)"
-  "xor{q}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "DI")])
-
-(define_insn "*xordi_3_rex64"
-  [(set (reg FLAGS_REG)
-	(compare (xor:DI (match_operand:DI 1 "nonimmediate_operand" "%0")
-			 (match_operand:DI 2 "x86_64_general_operand" "rem"))
-		 (const_int 0)))
-   (clobber (match_scratch:DI 0 "=r"))]
-  "TARGET_64BIT
-   && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (XOR, DImode, operands)"
-  "xor{q}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "DI")])
-
-(define_expand "xorsi3"
-  [(set (match_operand:SI 0 "nonimmediate_operand" "")
-	(xor:SI (match_operand:SI 1 "nonimmediate_operand" "")
-		(match_operand:SI 2 "general_operand" "")))]
-  ""
-  "ix86_expand_binary_operator (XOR, SImode, operands); DONE;")
-
-(define_insn "*xorsi_1"
-  [(set (match_operand:SI 0 "nonimmediate_operand" "=rm,r")
-	(xor:SI (match_operand:SI 1 "nonimmediate_operand" "%0,0")
-		(match_operand:SI 2 "general_operand" "ri,rm")))
-   (clobber (reg:CC FLAGS_REG))]
-  "ix86_binary_operator_ok (XOR, SImode, operands)"
-  "xor{l}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-;; See comment for addsi_1_zext why we do use nonimmediate_operand
-;; Add speccase for immediates
-(define_insn "*xorsi_1_zext"
-  [(set (match_operand:DI 0 "register_operand" "=r")
-	(zero_extend:DI
-	  (xor:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
-		  (match_operand:SI 2 "general_operand" "g"))))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT && ix86_binary_operator_ok (XOR, SImode, operands)"
-  "xor{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_insn "*xorsi_1_zext_imm"
-  [(set (match_operand:DI 0 "register_operand" "=r")
-	(xor:DI (zero_extend:DI (match_operand:SI 1 "register_operand" "%0"))
-		(match_operand:DI 2 "x86_64_zext_immediate_operand" "Z")))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT && ix86_binary_operator_ok (XOR, SImode, operands)"
-  "xor{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_insn "*xorsi_2"
-  [(set (reg FLAGS_REG)
-	(compare (xor:SI (match_operand:SI 1 "nonimmediate_operand" "%0,0")
-			 (match_operand:SI 2 "general_operand" "g,ri"))
-		 (const_int 0)))
-   (set (match_operand:SI 0 "nonimmediate_operand" "=r,rm")
-	(xor:SI (match_dup 1) (match_dup 2)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (XOR, SImode, operands)"
-  "xor{l}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-;; See comment for addsi_1_zext why we do use nonimmediate_operand
-;; ??? Special case for immediate operand is missing - it is tricky.
-(define_insn "*xorsi_2_zext"
-  [(set (reg FLAGS_REG)
-	(compare (xor:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
-			 (match_operand:SI 2 "general_operand" "g"))
-		 (const_int 0)))
-   (set (match_operand:DI 0 "register_operand" "=r")
-	(zero_extend:DI (xor:SI (match_dup 1) (match_dup 2))))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (XOR, SImode, operands)"
-  "xor{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_insn "*xorsi_2_zext_imm"
-  [(set (reg FLAGS_REG)
-	(compare (xor:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
-			 (match_operand 2 "x86_64_zext_immediate_operand" "Z"))
-		 (const_int 0)))
-   (set (match_operand:DI 0 "register_operand" "=r")
-	(xor:DI (zero_extend:DI (match_dup 1)) (match_dup 2)))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (XOR, SImode, operands)"
-  "xor{l}\t{%2, %k0|%k0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_insn "*xorsi_3"
-  [(set (reg FLAGS_REG)
-	(compare (xor:SI (match_operand:SI 1 "nonimmediate_operand" "%0")
-			 (match_operand:SI 2 "general_operand" "g"))
-		 (const_int 0)))
-   (clobber (match_scratch:SI 0 "=r"))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[1]) && MEM_P (operands[2]))"
-  "xor{l}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "SI")])
-
-(define_expand "xorhi3"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "")
-	(xor:HI (match_operand:HI 1 "nonimmediate_operand" "")
-		(match_operand:HI 2 "general_operand" "")))]
-  "TARGET_HIMODE_MATH"
-  "ix86_expand_binary_operator (XOR, HImode, operands); DONE;")
-
-(define_insn "*xorhi_1"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "=r,m")
-	(xor:HI (match_operand:HI 1 "nonimmediate_operand" "%0,0")
-		(match_operand:HI 2 "general_operand" "rmn,rn")))
-   (clobber (reg:CC FLAGS_REG))]
-  "ix86_binary_operator_ok (XOR, HImode, operands)"
-  "xor{w}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "HI")])
-
-(define_insn "*xorhi_2"
-  [(set (reg FLAGS_REG)
-	(compare (xor:HI (match_operand:HI 1 "nonimmediate_operand" "%0,0")
-			 (match_operand:HI 2 "general_operand" "rmn,rn"))
-		 (const_int 0)))
-   (set (match_operand:HI 0 "nonimmediate_operand" "=r,rm")
-	(xor:HI (match_dup 1) (match_dup 2)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (XOR, HImode, operands)"
-  "xor{w}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "HI")])
-
-(define_insn "*xorhi_3"
-  [(set (reg FLAGS_REG)
-	(compare (xor:HI (match_operand:HI 1 "nonimmediate_operand" "%0")
-			 (match_operand:HI 2 "general_operand" "rmn"))
-		 (const_int 0)))
-   (clobber (match_scratch:HI 0 "=r"))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[1]) && MEM_P (operands[2]))"
-  "xor{w}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "HI")])
-
-(define_expand "xorqi3"
-  [(set (match_operand:QI 0 "nonimmediate_operand" "")
-	(xor:QI (match_operand:QI 1 "nonimmediate_operand" "")
-		(match_operand:QI 2 "general_operand" "")))]
-  "TARGET_QIMODE_MATH"
-  "ix86_expand_binary_operator (XOR, QImode, operands); DONE;")
-
-;; %%% Potential partial reg stall on alternative 2.  What to do?
-(define_insn "*xorqi_1"
-  [(set (match_operand:QI 0 "nonimmediate_operand" "=q,m,r")
-	(xor:QI (match_operand:QI 1 "nonimmediate_operand" "%0,0,0")
-		(match_operand:QI 2 "general_operand" "qmn,qn,rn")))
-   (clobber (reg:CC FLAGS_REG))]
-  "ix86_binary_operator_ok (XOR, QImode, operands)"
-  "@
-   xor{b}\t{%2, %0|%0, %2}
-   xor{b}\t{%2, %0|%0, %2}
-   xor{l}\t{%k2, %k0|%k0, %k2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "QI,QI,SI")])
-
-(define_insn "*xorqi_1_slp"
-  [(set (strict_low_part (match_operand:QI 0 "nonimmediate_operand" "+qm,q"))
-	(xor:QI (match_dup 0)
-		(match_operand:QI 1 "general_operand" "qn,qmn")))
-   (clobber (reg:CC FLAGS_REG))]
-  "(! TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
-   && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
-  "xor{b}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "alu1")
-   (set_attr "mode" "QI")])
-
-(define_insn "*xorqi_ext_0"
-  [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
-			 (const_int 8)
-			 (const_int 8))
-	(xor:SI
-	  (zero_extract:SI
-	    (match_operand 1 "ext_register_operand" "0")
-	    (const_int 8)
-	    (const_int 8))
-	  (match_operand 2 "const_int_operand" "n")))
-   (clobber (reg:CC FLAGS_REG))]
-  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))"
-  "xor{b}\t{%2, %h0|%h0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "length_immediate" "1")
-   (set_attr "modrm" "1")
-   (set_attr "mode" "QI")])
-
-(define_insn "*xorqi_ext_1"
-  [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
-			 (const_int 8)
-			 (const_int 8))
-	(xor:SI
-	  (zero_extract:SI
-	    (match_operand 1 "ext_register_operand" "0")
-	    (const_int 8)
-	    (const_int 8))
-	  (zero_extend:SI
-	    (match_operand:QI 2 "general_operand" "Qm"))))
-   (clobber (reg:CC FLAGS_REG))]
-  "!TARGET_64BIT
-   && (!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))"
-  "xor{b}\t{%2, %h0|%h0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "length_immediate" "0")
-   (set_attr "mode" "QI")])
-
-(define_insn "*xorqi_ext_1_rex64"
-  [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
-			 (const_int 8)
-			 (const_int 8))
-	(xor:SI
-	  (zero_extract:SI
-	    (match_operand 1 "ext_register_operand" "0")
-	    (const_int 8)
-	    (const_int 8))
-	  (zero_extend:SI
-	    (match_operand 2 "ext_register_operand" "Q"))))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT
-   && (!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))"
-  "xor{b}\t{%2, %h0|%h0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "length_immediate" "0")
-   (set_attr "mode" "QI")])
-
-(define_insn "*xorqi_ext_2"
-  [(set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
-			 (const_int 8)
-			 (const_int 8))
-	(xor:SI
-	  (zero_extract:SI (match_operand 1 "ext_register_operand" "0")
-	  		   (const_int 8)
-			   (const_int 8))
-	  (zero_extract:SI (match_operand 2 "ext_register_operand" "Q")
-	  		   (const_int 8)
-			   (const_int 8))))
-   (clobber (reg:CC FLAGS_REG))]
-  "(!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))"
-  "xor{b}\t{%h2, %h0|%h0, %h2}"
-  [(set_attr "type" "alu")
-   (set_attr "length_immediate" "0")
-   (set_attr "mode" "QI")])
-
-(define_insn "*xorqi_cc_1"
-  [(set (reg FLAGS_REG)
-	(compare
-	  (xor:QI (match_operand:QI 1 "nonimmediate_operand" "%0,0")
-		  (match_operand:QI 2 "general_operand" "qmn,qn"))
-	  (const_int 0)))
-   (set (match_operand:QI 0 "nonimmediate_operand" "=q,qm")
-	(xor:QI (match_dup 1) (match_dup 2)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_binary_operator_ok (XOR, QImode, operands)"
-  "xor{b}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "QI")])
-
-(define_insn "*xorqi_2_slp"
-  [(set (reg FLAGS_REG)
-	(compare (xor:QI (match_operand:QI 0 "nonimmediate_operand" "+q,qm")
-			 (match_operand:QI 1 "general_operand" "qmn,qn"))
-		 (const_int 0)))
-   (set (strict_low_part (match_dup 0))
-	(xor:QI (match_dup 0) (match_dup 1)))]
-  "(! TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
-   && ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[0]) && MEM_P (operands[1]))"
-  "xor{b}\t{%1, %0|%0, %1}"
-  [(set_attr "type" "alu1")
-   (set_attr "mode" "QI")])
-
-(define_insn "*xorqi_cc_2"
-  [(set (reg FLAGS_REG)
-	(compare
-	  (xor:QI (match_operand:QI 1 "nonimmediate_operand" "%0")
-		  (match_operand:QI 2 "general_operand" "qmn"))
-	  (const_int 0)))
-   (clobber (match_scratch:QI 0 "=q"))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && !(MEM_P (operands[1]) && MEM_P (operands[2]))"
-  "xor{b}\t{%2, %0|%0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "mode" "QI")])
-
-(define_insn "*xorqi_cc_ext_1"
-  [(set (reg FLAGS_REG)
-	(compare
-	  (xor:SI
-	    (zero_extract:SI
-	      (match_operand 1 "ext_register_operand" "0")
-	      (const_int 8)
-	      (const_int 8))
-	    (match_operand:QI 2 "general_operand" "qmn"))
-	  (const_int 0)))
-   (set (zero_extract:SI (match_operand 0 "ext_register_operand" "=q")
-			 (const_int 8)
-			 (const_int 8))
-	(xor:SI
-	  (zero_extract:SI (match_dup 1) (const_int 8) (const_int 8))
-	  (match_dup 2)))]
-  "!TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)"
-  "xor{b}\t{%2, %h0|%h0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "modrm" "1")
-   (set_attr "mode" "QI")])
-
-(define_insn "*xorqi_cc_ext_1_rex64"
-  [(set (reg FLAGS_REG)
-	(compare
-	  (xor:SI
-	    (zero_extract:SI
-	      (match_operand 1 "ext_register_operand" "0")
-	      (const_int 8)
-	      (const_int 8))
-	    (match_operand:QI 2 "nonmemory_operand" "Qn"))
-	  (const_int 0)))
-   (set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
-			 (const_int 8)
-			 (const_int 8))
-	(xor:SI
-	  (zero_extract:SI (match_dup 1) (const_int 8) (const_int 8))
-	  (match_dup 2)))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)"
-  "xor{b}\t{%2, %h0|%h0, %2}"
-  [(set_attr "type" "alu")
-   (set_attr "modrm" "1")
-   (set_attr "mode" "QI")])
 
 (define_expand "xorqi_cc_ext_1"
   [(parallel [
@@ -9892,169 +9132,111 @@
 			   (const_int 8)
 			   (const_int 8))
 	  (xor:SI
-	    (zero_extract:SI (match_dup 1) (const_int 8) (const_int 8))
+	    (zero_extract:SI
+	     (match_dup 1)
+	     (const_int 8)
+	     (const_int 8))
 	    (match_dup 2)))])]
   ""
   "")
 
-(define_split
-  [(set (match_operand 0 "register_operand" "")
-	(xor (match_operand 1 "register_operand" "")
-	     (match_operand 2 "const_int_operand" "")))
-   (clobber (reg:CC FLAGS_REG))]
-   "reload_completed
-    && QI_REG_P (operands[0])
-    && (!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
-    && !(INTVAL (operands[2]) & ~(255 << 8))
-    && GET_MODE (operands[0]) != QImode"
-  [(parallel [(set (zero_extract:SI (match_dup 0) (const_int 8) (const_int 8))
-		   (xor:SI (zero_extract:SI (match_dup 1)
-					    (const_int 8) (const_int 8))
-			   (match_dup 2)))
-	      (clobber (reg:CC FLAGS_REG))])]
-  "operands[0] = gen_lowpart (SImode, operands[0]);
-   operands[1] = gen_lowpart (SImode, operands[1]);
-   operands[2] = gen_int_mode ((INTVAL (operands[2]) >> 8) & 0xff, SImode);")
+(define_insn "*xorqi_cc_ext_1_rex64"
+  [(set (reg FLAGS_REG)
+	(compare
+	  (xor:SI
+	    (zero_extract:SI
+	      (match_operand 1 "ext_register_operand" "0")
+	      (const_int 8)
+	      (const_int 8))
+	    (match_operand:QI 2 "nonmemory_operand" "Qn"))
+	  (const_int 0)))
+   (set (zero_extract:SI (match_operand 0 "ext_register_operand" "=Q")
+			 (const_int 8)
+			 (const_int 8))
+	(xor:SI
+	  (zero_extract:SI
+	   (match_dup 1)
+	   (const_int 8)
+	   (const_int 8))
+	  (match_dup 2)))]
+  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)"
+  "xor{b}\t{%2, %h0|%h0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "modrm" "1")
+   (set_attr "mode" "QI")])
 
-;; Since XOR can be encoded with sign extended immediate, this is only
-;; profitable when 7th bit is set.
-(define_split
-  [(set (match_operand 0 "register_operand" "")
-	(xor (match_operand 1 "general_operand" "")
-	     (match_operand 2 "const_int_operand" "")))
-   (clobber (reg:CC FLAGS_REG))]
-   "reload_completed
-    && ANY_QI_REG_P (operands[0])
-    && (!TARGET_PARTIAL_REG_STALL || optimize_function_for_size_p (cfun))
-    && !(INTVAL (operands[2]) & ~255)
-    && (INTVAL (operands[2]) & 128)
-    && GET_MODE (operands[0]) != QImode"
-  [(parallel [(set (strict_low_part (match_dup 0))
-		   (xor:QI (match_dup 1)
-			   (match_dup 2)))
-	      (clobber (reg:CC FLAGS_REG))])]
-  "operands[0] = gen_lowpart (QImode, operands[0]);
-   operands[1] = gen_lowpart (QImode, operands[1]);
-   operands[2] = gen_lowpart (QImode, operands[2]);")
+(define_insn "*xorqi_cc_ext_1"
+  [(set (reg FLAGS_REG)
+	(compare
+	  (xor:SI
+	    (zero_extract:SI
+	      (match_operand 1 "ext_register_operand" "0")
+	      (const_int 8)
+	      (const_int 8))
+	    (match_operand:QI 2 "general_operand" "qmn"))
+	  (const_int 0)))
+   (set (zero_extract:SI (match_operand 0 "ext_register_operand" "=q")
+			 (const_int 8)
+			 (const_int 8))
+	(xor:SI
+	  (zero_extract:SI
+	   (match_dup 1)
+	   (const_int 8)
+	   (const_int 8))
+	  (match_dup 2)))]
+  "!TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)"
+  "xor{b}\t{%2, %h0|%h0, %2}"
+  [(set_attr "type" "alu")
+   (set_attr "modrm" "1")
+   (set_attr "mode" "QI")])
 
 ;; Negation instructions
 
-(define_expand "negti2"
-  [(set (match_operand:TI 0 "nonimmediate_operand" "")
-	(neg:TI (match_operand:TI 1 "nonimmediate_operand" "")))]
-  "TARGET_64BIT"
-  "ix86_expand_unary_operator (NEG, TImode, operands); DONE;")
+(define_expand "neg<mode>2"
+  [(set (match_operand:SDWIM 0 "nonimmediate_operand" "")
+	(neg:SDWIM (match_operand:SDWIM 1 "nonimmediate_operand" "")))]
+  ""
+  "ix86_expand_unary_operator (NEG, <MODE>mode, operands); DONE;")
 
-(define_insn "*negti2_1"
-  [(set (match_operand:TI 0 "nonimmediate_operand" "=ro")
-	(neg:TI (match_operand:TI 1 "nonimmediate_operand" "0")))
+(define_insn_and_split "*neg<dwi>2_doubleword"
+  [(set (match_operand:<DWI> 0 "nonimmediate_operand" "=ro")
+	(neg:<DWI> (match_operand:<DWI> 1 "nonimmediate_operand" "0")))
    (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT
-   && ix86_unary_operator_ok (NEG, TImode, operands)"
-  "#")
-
-(define_split
-  [(set (match_operand:TI 0 "nonimmediate_operand" "")
-	(neg:TI (match_operand:TI 1 "nonimmediate_operand" "")))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT && reload_completed"
+  "ix86_unary_operator_ok (NEG, <DWI>mode, operands)"
+  "#"
+  "reload_completed"
   [(parallel
     [(set (reg:CCZ FLAGS_REG)
-	  (compare:CCZ (neg:DI (match_dup 1)) (const_int 0)))
-     (set (match_dup 0) (neg:DI (match_dup 1)))])
+	  (compare:CCZ (neg:DWIH (match_dup 1)) (const_int 0)))
+     (set (match_dup 0) (neg:DWIH (match_dup 1)))])
    (parallel
     [(set (match_dup 2)
-	  (plus:DI (plus:DI (ltu:DI (reg:CC FLAGS_REG) (const_int 0))
-			    (match_dup 3))
-		   (const_int 0)))
+	  (plus:DWIH (match_dup 3)
+		     (plus:DWIH (ltu:DWIH (reg:CC FLAGS_REG) (const_int 0))
+				(const_int 0))))
      (clobber (reg:CC FLAGS_REG))])
    (parallel
     [(set (match_dup 2)
-	  (neg:DI (match_dup 2)))
+	  (neg:DWIH (match_dup 2)))
      (clobber (reg:CC FLAGS_REG))])]
-  "split_ti (&operands[0], 2, &operands[0], &operands[2]);")
+  "split_<dwi> (&operands[0], 2, &operands[0], &operands[2]);")
 
-(define_expand "negdi2"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "")
-	(neg:DI (match_operand:DI 1 "nonimmediate_operand" "")))]
-  ""
-  "ix86_expand_unary_operator (NEG, DImode, operands); DONE;")
-
-(define_insn "*negdi2_1"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "=ro")
-	(neg:DI (match_operand:DI 1 "general_operand" "0")))
+(define_insn "*neg<mode>2_1"
+  [(set (match_operand:SWI 0 "nonimmediate_operand" "=<r>m")
+	(neg:SWI (match_operand:SWI 1 "nonimmediate_operand" "0")))
    (clobber (reg:CC FLAGS_REG))]
-  "!TARGET_64BIT
-   && ix86_unary_operator_ok (NEG, DImode, operands)"
-  "#")
-
-(define_split
-  [(set (match_operand:DI 0 "nonimmediate_operand" "")
-	(neg:DI (match_operand:DI 1 "general_operand" "")))
-   (clobber (reg:CC FLAGS_REG))]
-  "!TARGET_64BIT && reload_completed"
-  [(parallel
-    [(set (reg:CCZ FLAGS_REG)
-	  (compare:CCZ (neg:SI (match_dup 1)) (const_int 0)))
-     (set (match_dup 0) (neg:SI (match_dup 1)))])
-   (parallel
-    [(set (match_dup 2)
-	  (plus:SI (plus:SI (ltu:SI (reg:CC FLAGS_REG) (const_int 0))
-			    (match_dup 3))
-		   (const_int 0)))
-     (clobber (reg:CC FLAGS_REG))])
-   (parallel
-    [(set (match_dup 2)
-	  (neg:SI (match_dup 2)))
-     (clobber (reg:CC FLAGS_REG))])]
-  "split_di (&operands[0], 2, &operands[0], &operands[2]);");
-
-(define_insn "*negdi2_1_rex64"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "=rm")
-	(neg:DI (match_operand:DI 1 "nonimmediate_operand" "0")))
-   (clobber (reg:CC FLAGS_REG))]
-  "TARGET_64BIT && ix86_unary_operator_ok (NEG, DImode, operands)"
-  "neg{q}\t%0"
+  "ix86_unary_operator_ok (NEG, <MODE>mode, operands)"
+  "neg{<imodesuffix>}\t%0"
   [(set_attr "type" "negnot")
-   (set_attr "mode" "DI")])
-
-;; The problem with neg is that it does not perform (compare x 0),
-;; it really performs (compare 0 x), which leaves us with the zero
-;; flag being the only useful item.
-
-(define_insn "*negdi2_cmpz_rex64"
-  [(set (reg:CCZ FLAGS_REG)
-	(compare:CCZ (neg:DI (match_operand:DI 1 "nonimmediate_operand" "0"))
-		     (const_int 0)))
-   (set (match_operand:DI 0 "nonimmediate_operand" "=rm")
-	(neg:DI (match_dup 1)))]
-  "TARGET_64BIT && ix86_unary_operator_ok (NEG, DImode, operands)"
-  "neg{q}\t%0"
-  [(set_attr "type" "negnot")
-   (set_attr "mode" "DI")])
-
-
-(define_expand "negsi2"
-  [(set (match_operand:SI 0 "nonimmediate_operand" "")
-	(neg:SI (match_operand:SI 1 "nonimmediate_operand" "")))]
-  ""
-  "ix86_expand_unary_operator (NEG, SImode, operands); DONE;")
-
-(define_insn "*negsi2_1"
-  [(set (match_operand:SI 0 "nonimmediate_operand" "=rm")
-	(neg:SI (match_operand:SI 1 "nonimmediate_operand" "0")))
-   (clobber (reg:CC FLAGS_REG))]
-  "ix86_unary_operator_ok (NEG, SImode, operands)"
-  "neg{l}\t%0"
-  [(set_attr "type" "negnot")
-   (set_attr "mode" "SI")])
+   (set_attr "mode" "<MODE>")])
 
 ;; Combine is quite creative about this pattern.
 (define_insn "*negsi2_1_zext"
   [(set (match_operand:DI 0 "register_operand" "=r")
-	(lshiftrt:DI (neg:DI (ashift:DI (match_operand:DI 1 "register_operand" "0")
-					(const_int 32)))
-		     (const_int 32)))
+	(lshiftrt:DI
+	  (neg:DI (ashift:DI (match_operand:DI 1 "register_operand" "0")
+			     (const_int 32)))
+	(const_int 32)))
    (clobber (reg:CC FLAGS_REG))]
   "TARGET_64BIT && ix86_unary_operator_ok (NEG, SImode, operands)"
   "neg{l}\t%k0"
@@ -10065,25 +9247,27 @@
 ;; it really performs (compare 0 x), which leaves us with the zero
 ;; flag being the only useful item.
 
-(define_insn "*negsi2_cmpz"
+(define_insn "*neg<mode>2_cmpz"
   [(set (reg:CCZ FLAGS_REG)
-	(compare:CCZ (neg:SI (match_operand:SI 1 "nonimmediate_operand" "0"))
-		     (const_int 0)))
-   (set (match_operand:SI 0 "nonimmediate_operand" "=rm")
-	(neg:SI (match_dup 1)))]
-  "ix86_unary_operator_ok (NEG, SImode, operands)"
-  "neg{l}\t%0"
+	(compare:CCZ
+	  (neg:SWI (match_operand:SWI 1 "nonimmediate_operand" "0"))
+		   (const_int 0)))
+   (set (match_operand:SWI 0 "nonimmediate_operand" "=<r>m")
+	(neg:SWI (match_dup 1)))]
+  "ix86_unary_operator_ok (NEG, <MODE>mode, operands)"
+  "neg{<imodesuffix>}\t%0"
   [(set_attr "type" "negnot")
-   (set_attr "mode" "SI")])
+   (set_attr "mode" "<MODE>")])
 
 (define_insn "*negsi2_cmpz_zext"
   [(set (reg:CCZ FLAGS_REG)
-	(compare:CCZ (lshiftrt:DI
-		       (neg:DI (ashift:DI
-				 (match_operand:DI 1 "register_operand" "0")
-				 (const_int 32)))
-		       (const_int 32))
-		     (const_int 0)))
+	(compare:CCZ
+	  (lshiftrt:DI
+	    (neg:DI (ashift:DI
+		      (match_operand:DI 1 "register_operand" "0")
+		      (const_int 32)))
+	    (const_int 32))
+	  (const_int 0)))
    (set (match_operand:DI 0 "register_operand" "=r")
 	(lshiftrt:DI (neg:DI (ashift:DI (match_dup 1)
 					(const_int 32)))
@@ -10092,58 +9276,6 @@
   "neg{l}\t%k0"
   [(set_attr "type" "negnot")
    (set_attr "mode" "SI")])
-
-(define_expand "neghi2"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "")
-	(neg:HI (match_operand:HI 1 "nonimmediate_operand" "")))]
-  "TARGET_HIMODE_MATH"
-  "ix86_expand_unary_operator (NEG, HImode, operands); DONE;")
-
-(define_insn "*neghi2_1"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "=rm")
-	(neg:HI (match_operand:HI 1 "nonimmediate_operand" "0")))
-   (clobber (reg:CC FLAGS_REG))]
-  "ix86_unary_operator_ok (NEG, HImode, operands)"
-  "neg{w}\t%0"
-  [(set_attr "type" "negnot")
-   (set_attr "mode" "HI")])
-
-(define_insn "*neghi2_cmpz"
-  [(set (reg:CCZ FLAGS_REG)
-	(compare:CCZ (neg:HI (match_operand:HI 1 "nonimmediate_operand" "0"))
-		     (const_int 0)))
-   (set (match_operand:HI 0 "nonimmediate_operand" "=rm")
-	(neg:HI (match_dup 1)))]
-  "ix86_unary_operator_ok (NEG, HImode, operands)"
-  "neg{w}\t%0"
-  [(set_attr "type" "negnot")
-   (set_attr "mode" "HI")])
-
-(define_expand "negqi2"
-  [(set (match_operand:QI 0 "nonimmediate_operand" "")
-	(neg:QI (match_operand:QI 1 "nonimmediate_operand" "")))]
-  "TARGET_QIMODE_MATH"
-  "ix86_expand_unary_operator (NEG, QImode, operands); DONE;")
-
-(define_insn "*negqi2_1"
-  [(set (match_operand:QI 0 "nonimmediate_operand" "=qm")
-	(neg:QI (match_operand:QI 1 "nonimmediate_operand" "0")))
-   (clobber (reg:CC FLAGS_REG))]
-  "ix86_unary_operator_ok (NEG, QImode, operands)"
-  "neg{b}\t%0"
-  [(set_attr "type" "negnot")
-   (set_attr "mode" "QI")])
-
-(define_insn "*negqi2_cmpz"
-  [(set (reg:CCZ FLAGS_REG)
-	(compare:CCZ (neg:QI (match_operand:QI 1 "nonimmediate_operand" "0"))
-		     (const_int 0)))
-   (set (match_operand:QI 0 "nonimmediate_operand" "=qm")
-	(neg:QI (match_dup 1)))]
-  "ix86_unary_operator_ok (NEG, QImode, operands)"
-  "neg{b}\t%0"
-  [(set_attr "type" "negnot")
-   (set_attr "mode" "QI")])
 
 ;; Changing of sign for FP values is doable using integer unit too.
 
@@ -10427,96 +9559,66 @@
 
 ;; One complement instructions
 
-(define_expand "one_cmpldi2"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "")
-	(not:DI (match_operand:DI 1 "nonimmediate_operand" "")))]
-  "TARGET_64BIT"
-  "ix86_expand_unary_operator (NOT, DImode, operands); DONE;")
-
-(define_insn "*one_cmpldi2_1_rex64"
-  [(set (match_operand:DI 0 "nonimmediate_operand" "=rm")
-	(not:DI (match_operand:DI 1 "nonimmediate_operand" "0")))]
-  "TARGET_64BIT && ix86_unary_operator_ok (NOT, DImode, operands)"
-  "not{q}\t%0"
-  [(set_attr "type" "negnot")
-   (set_attr "mode" "DI")])
-
-(define_insn "*one_cmpldi2_2_rex64"
-  [(set (reg FLAGS_REG)
-	(compare (not:DI (match_operand:DI 1 "nonimmediate_operand" "0"))
-		 (const_int 0)))
-   (set (match_operand:DI 0 "nonimmediate_operand" "=rm")
-	(not:DI (match_dup 1)))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)
-   && ix86_unary_operator_ok (NOT, DImode, operands)"
-  "#"
-  [(set_attr "type" "alu1")
-   (set_attr "mode" "DI")])
-
-(define_split
-  [(set (match_operand 0 "flags_reg_operand" "")
-	(match_operator 2 "compare_operator"
-	  [(not:DI (match_operand:DI 3 "nonimmediate_operand" ""))
-	   (const_int 0)]))
-   (set (match_operand:DI 1 "nonimmediate_operand" "")
-	(not:DI (match_dup 3)))]
-  "TARGET_64BIT && ix86_match_ccmode (insn, CCNOmode)"
-  [(parallel [(set (match_dup 0)
-		   (match_op_dup 2
-		     [(xor:DI (match_dup 3) (const_int -1))
-		      (const_int 0)]))
-	      (set (match_dup 1)
-		   (xor:DI (match_dup 3) (const_int -1)))])]
-  "")
-
-(define_expand "one_cmplsi2"
-  [(set (match_operand:SI 0 "nonimmediate_operand" "")
-	(not:SI (match_operand:SI 1 "nonimmediate_operand" "")))]
+(define_expand "one_cmpl<mode>2"
+  [(set (match_operand:SWIM 0 "nonimmediate_operand" "")
+	(not:SWIM (match_operand:SWIM 1 "nonimmediate_operand" "")))]
   ""
-  "ix86_expand_unary_operator (NOT, SImode, operands); DONE;")
+  "ix86_expand_unary_operator (NOT, <MODE>mode, operands); DONE;")
 
-(define_insn "*one_cmplsi2_1"
-  [(set (match_operand:SI 0 "nonimmediate_operand" "=rm")
-	(not:SI (match_operand:SI 1 "nonimmediate_operand" "0")))]
-  "ix86_unary_operator_ok (NOT, SImode, operands)"
-  "not{l}\t%0"
+(define_insn "*one_cmpl<mode>2_1"
+  [(set (match_operand:SWI248 0 "nonimmediate_operand" "=rm")
+	(not:SWI248 (match_operand:SWI248 1 "nonimmediate_operand" "0")))]
+  "ix86_unary_operator_ok (NOT, <MODE>mode, operands)"
+  "not{<imodesuffix>}\t%0"
   [(set_attr "type" "negnot")
-   (set_attr "mode" "SI")])
+   (set_attr "mode" "<MODE>")])
+
+;; %%% Potential partial reg stall on alternative 1.  What to do?
+(define_insn "*one_cmplqi2_1"
+  [(set (match_operand:QI 0 "nonimmediate_operand" "=qm,r")
+	(not:QI (match_operand:QI 1 "nonimmediate_operand" "0,0")))]
+  "ix86_unary_operator_ok (NOT, QImode, operands)"
+  "@
+   not{b}\t%0
+   not{l}\t%k0"
+  [(set_attr "type" "negnot")
+   (set_attr "mode" "QI,SI")])
 
 ;; ??? Currently never generated - xor is used instead.
 (define_insn "*one_cmplsi2_1_zext"
   [(set (match_operand:DI 0 "register_operand" "=r")
-	(zero_extend:DI (not:SI (match_operand:SI 1 "register_operand" "0"))))]
+	(zero_extend:DI
+	  (not:SI (match_operand:SI 1 "register_operand" "0"))))]
   "TARGET_64BIT && ix86_unary_operator_ok (NOT, SImode, operands)"
   "not{l}\t%k0"
   [(set_attr "type" "negnot")
    (set_attr "mode" "SI")])
 
-(define_insn "*one_cmplsi2_2"
+(define_insn "*one_cmpl<mode>2_2"
   [(set (reg FLAGS_REG)
-	(compare (not:SI (match_operand:SI 1 "nonimmediate_operand" "0"))
+	(compare (not:SWI (match_operand:SWI 1 "nonimmediate_operand" "0"))
 		 (const_int 0)))
-   (set (match_operand:SI 0 "nonimmediate_operand" "=rm")
-	(not:SI (match_dup 1)))]
+   (set (match_operand:SWI 0 "nonimmediate_operand" "=<r>m")
+	(not:SWI (match_dup 1)))]
   "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_unary_operator_ok (NOT, SImode, operands)"
+   && ix86_unary_operator_ok (NOT, <MODE>mode, operands)"
   "#"
   [(set_attr "type" "alu1")
-   (set_attr "mode" "SI")])
+   (set_attr "mode" "<MODE>")])
 
 (define_split
   [(set (match_operand 0 "flags_reg_operand" "")
 	(match_operator 2 "compare_operator"
-	  [(not:SI (match_operand:SI 3 "nonimmediate_operand" ""))
+	  [(not:SWI (match_operand:SWI 3 "nonimmediate_operand" ""))
 	   (const_int 0)]))
-   (set (match_operand:SI 1 "nonimmediate_operand" "")
-	(not:SI (match_dup 3)))]
+   (set (match_operand:SWI 1 "nonimmediate_operand" "")
+	(not:SWI (match_dup 3)))]
   "ix86_match_ccmode (insn, CCNOmode)"
   [(parallel [(set (match_dup 0)
-		   (match_op_dup 2 [(xor:SI (match_dup 3) (const_int -1))
+		   (match_op_dup 2 [(xor:SWI (match_dup 3) (const_int -1))
 				    (const_int 0)]))
 	      (set (match_dup 1)
-		   (xor:SI (match_dup 3) (const_int -1)))])]
+		   (xor:SWI (match_dup 3) (const_int -1)))])]
   "")
 
 ;; ??? Currently never generated - xor is used instead.
@@ -10545,91 +9647,6 @@
 				    (const_int 0)]))
 	      (set (match_dup 1)
 		   (zero_extend:DI (xor:SI (match_dup 3) (const_int -1))))])]
-  "")
-
-(define_expand "one_cmplhi2"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "")
-	(not:HI (match_operand:HI 1 "nonimmediate_operand" "")))]
-  "TARGET_HIMODE_MATH"
-  "ix86_expand_unary_operator (NOT, HImode, operands); DONE;")
-
-(define_insn "*one_cmplhi2_1"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "=rm")
-	(not:HI (match_operand:HI 1 "nonimmediate_operand" "0")))]
-  "ix86_unary_operator_ok (NOT, HImode, operands)"
-  "not{w}\t%0"
-  [(set_attr "type" "negnot")
-   (set_attr "mode" "HI")])
-
-(define_insn "*one_cmplhi2_2"
-  [(set (reg FLAGS_REG)
-	(compare (not:HI (match_operand:HI 1 "nonimmediate_operand" "0"))
-		 (const_int 0)))
-   (set (match_operand:HI 0 "nonimmediate_operand" "=rm")
-	(not:HI (match_dup 1)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_unary_operator_ok (NEG, HImode, operands)"
-  "#"
-  [(set_attr "type" "alu1")
-   (set_attr "mode" "HI")])
-
-(define_split
-  [(set (match_operand 0 "flags_reg_operand" "")
-	(match_operator 2 "compare_operator"
-	  [(not:HI (match_operand:HI 3 "nonimmediate_operand" ""))
-	   (const_int 0)]))
-   (set (match_operand:HI 1 "nonimmediate_operand" "")
-	(not:HI (match_dup 3)))]
-  "ix86_match_ccmode (insn, CCNOmode)"
-  [(parallel [(set (match_dup 0)
-		   (match_op_dup 2 [(xor:HI (match_dup 3) (const_int -1))
-		      		    (const_int 0)]))
-	      (set (match_dup 1)
-		   (xor:HI (match_dup 3) (const_int -1)))])]
-  "")
-
-;; %%% Potential partial reg stall on alternative 1.  What to do?
-(define_expand "one_cmplqi2"
-  [(set (match_operand:QI 0 "nonimmediate_operand" "")
-	(not:QI (match_operand:QI 1 "nonimmediate_operand" "")))]
-  "TARGET_QIMODE_MATH"
-  "ix86_expand_unary_operator (NOT, QImode, operands); DONE;")
-
-(define_insn "*one_cmplqi2_1"
-  [(set (match_operand:QI 0 "nonimmediate_operand" "=qm,r")
-	(not:QI (match_operand:QI 1 "nonimmediate_operand" "0,0")))]
-  "ix86_unary_operator_ok (NOT, QImode, operands)"
-  "@
-   not{b}\t%0
-   not{l}\t%k0"
-  [(set_attr "type" "negnot")
-   (set_attr "mode" "QI,SI")])
-
-(define_insn "*one_cmplqi2_2"
-  [(set (reg FLAGS_REG)
-	(compare (not:QI (match_operand:QI 1 "nonimmediate_operand" "0"))
-		 (const_int 0)))
-   (set (match_operand:QI 0 "nonimmediate_operand" "=qm")
-	(not:QI (match_dup 1)))]
-  "ix86_match_ccmode (insn, CCNOmode)
-   && ix86_unary_operator_ok (NOT, QImode, operands)"
-  "#"
-  [(set_attr "type" "alu1")
-   (set_attr "mode" "QI")])
-
-(define_split
-  [(set (match_operand 0 "flags_reg_operand" "")
-	(match_operator 2 "compare_operator"
-	  [(not:QI (match_operand:QI 3 "nonimmediate_operand" ""))
-	   (const_int 0)]))
-   (set (match_operand:QI 1 "nonimmediate_operand" "")
-	(not:QI (match_dup 3)))]
-  "ix86_match_ccmode (insn, CCNOmode)"
-  [(parallel [(set (match_dup 0)
-		   (match_op_dup 2 [(xor:QI (match_dup 3) (const_int -1))
-		      		    (const_int 0)]))
-	      (set (match_dup 1)
-		   (xor:QI (match_dup 3) (const_int -1)))])]
   "")
 
 ;; Arithmetic shift instructions
@@ -14538,6 +13555,10 @@
 ;; checked for calls.  This is a bug in the generic code, but it isn't that
 ;; easy to fix.  Ignore it for now and be prepared to fix things up.
 
+;; P6 processors will jump to the address after the decrement when %esp
+;; is used as a call operand, so they will execute return address as a code.
+;; See Pentium Pro errata 70, Pentium 2 errata A33 and Pentium 3 errata E17.
+ 
 ;; Call subroutine returning no value.
 
 (define_expand "call_pop"
@@ -14548,15 +13569,17 @@
 			    (match_operand:SI 3 "" "")))])]
   "!TARGET_64BIT"
 {
-  ix86_expand_call (NULL, operands[0], operands[1], operands[2], operands[3], 0);
+  ix86_expand_call (NULL, operands[0], operands[1],
+		    operands[2], operands[3], 0);
   DONE;
 })
 
 (define_insn "*call_pop_0"
   [(call (mem:QI (match_operand:SI 0 "constant_call_address_operand" ""))
 	 (match_operand:SI 1 "" ""))
-   (set (reg:SI SP_REG) (plus:SI (reg:SI SP_REG)
-			    (match_operand:SI 2 "immediate_operand" "")))]
+   (set (reg:SI SP_REG)
+	(plus:SI (reg:SI SP_REG)
+		 (match_operand:SI 2 "immediate_operand" "")))]
   "!TARGET_64BIT"
 {
   if (SIBLING_CALL_P (insn))
@@ -14567,11 +13590,12 @@
   [(set_attr "type" "call")])
 
 (define_insn "*call_pop_1"
-  [(call (mem:QI (match_operand:SI 0 "call_insn_operand" "rsm"))
+  [(call (mem:QI (match_operand:SI 0 "call_insn_operand" "lsm"))
 	 (match_operand:SI 1 "" ""))
-   (set (reg:SI SP_REG) (plus:SI (reg:SI SP_REG)
-			    (match_operand:SI 2 "immediate_operand" "i")))]
-  "!SIBLING_CALL_P (insn) && !TARGET_64BIT"
+   (set (reg:SI SP_REG)
+	(plus:SI (reg:SI SP_REG)
+		 (match_operand:SI 2 "immediate_operand" "i")))]
+  "!TARGET_64BIT && !SIBLING_CALL_P (insn)"
 {
   if (constant_call_address_operand (operands[0], Pmode))
     return "call\t%P0";
@@ -14582,9 +13606,10 @@
 (define_insn "*sibcall_pop_1"
   [(call (mem:QI (match_operand:SI 0 "sibcall_insn_operand" "s,U"))
 	 (match_operand:SI 1 "" ""))
-   (set (reg:SI SP_REG) (plus:SI (reg:SI SP_REG)
-			    (match_operand:SI 2 "immediate_operand" "i,i")))]
-  "SIBLING_CALL_P (insn) && !TARGET_64BIT"
+   (set (reg:SI SP_REG)
+	(plus:SI (reg:SI SP_REG)
+		 (match_operand:SI 2 "immediate_operand" "i,i")))]
+  "!TARGET_64BIT && SIBLING_CALL_P (insn)"
   "@
    jmp\t%P0
    jmp\t%A0"
@@ -14623,9 +13648,9 @@
   [(set_attr "type" "call")])
 
 (define_insn "*call_1"
-  [(call (mem:QI (match_operand:SI 0 "call_insn_operand" "rsm"))
+  [(call (mem:QI (match_operand:SI 0 "call_insn_operand" "lsm"))
 	 (match_operand 1 "" ""))]
-  "!SIBLING_CALL_P (insn) && !TARGET_64BIT"
+  "!TARGET_64BIT && !SIBLING_CALL_P (insn)"
 {
   if (constant_call_address_operand (operands[0], Pmode))
     return "call\t%P0";
@@ -14636,7 +13661,7 @@
 (define_insn "*sibcall_1"
   [(call (mem:QI (match_operand:SI 0 "sibcall_insn_operand" "s,U"))
 	 (match_operand 1 "" ""))]
-  "SIBLING_CALL_P (insn) && !TARGET_64BIT"
+  "!TARGET_64BIT && SIBLING_CALL_P (insn)"
   "@
    jmp\t%P0
    jmp\t%A0"
@@ -14645,7 +13670,7 @@
 (define_insn "*call_1_rex64"
   [(call (mem:QI (match_operand:DI 0 "call_insn_operand" "rsm"))
 	 (match_operand 1 "" ""))]
-  "!SIBLING_CALL_P (insn) && TARGET_64BIT
+  "TARGET_64BIT && !SIBLING_CALL_P (insn)
    && ix86_cmodel != CM_LARGE && ix86_cmodel != CM_LARGE_PIC"
 {
   if (constant_call_address_operand (operands[0], Pmode))
@@ -14670,7 +13695,7 @@
    (clobber (reg:TI XMM15_REG))
    (clobber (reg:DI SI_REG))
    (clobber (reg:DI DI_REG))]
-  "!SIBLING_CALL_P (insn) && TARGET_64BIT"
+  "TARGET_64BIT && !SIBLING_CALL_P (insn)"
 {
   if (constant_call_address_operand (operands[0], Pmode))
     return "call\t%P0";
@@ -14681,14 +13706,14 @@
 (define_insn "*call_1_rex64_large"
   [(call (mem:QI (match_operand:DI 0 "call_insn_operand" "rm"))
 	 (match_operand 1 "" ""))]
-  "!SIBLING_CALL_P (insn) && TARGET_64BIT"
+  "TARGET_64BIT && !SIBLING_CALL_P (insn)"
   "call\t%A0"
   [(set_attr "type" "call")])
 
 (define_insn "*sibcall_1_rex64"
   [(call (mem:QI (match_operand:DI 0 "sibcall_insn_operand" "s,U"))
 	 (match_operand 1 "" ""))]
-  "SIBLING_CALL_P (insn) && TARGET_64BIT"
+  "TARGET_64BIT && SIBLING_CALL_P (insn)"
   "@
    jmp\t%P0
    jmp\t%A0"
@@ -14714,10 +13739,11 @@
 	(call (match_operand:QI 1 "" "")
 	      (match_operand:SI 2 "" "")))
    (use (match_operand:SI 3 "" ""))]
-  ;; Operand 2 not used on the i386.
+  ;; Operand 3 is not used on the i386.
   ""
 {
-  ix86_expand_call (operands[0], operands[1], operands[2], operands[3], NULL, 0);
+  ix86_expand_call (operands[0], operands[1], operands[2],
+		    operands[3], NULL, 0);
   DONE;
 })
 
@@ -14726,10 +13752,11 @@
 	(call (match_operand:QI 1 "" "")
 	      (match_operand:SI 2 "" "")))
    (use (match_operand:SI 3 "" ""))]
-  ;; Operand 2 not used on the i386.
+  ;; Operand 3 is not used on the i386.
   ""
 {
-  ix86_expand_call (operands[0], operands[1], operands[2], operands[3], NULL, 1);
+  ix86_expand_call (operands[0], operands[1], operands[2],
+		    operands[3], NULL, 1);
   DONE;
 })
 
@@ -19192,10 +18219,13 @@
     }
   else
     {
+      rtx (*cmp_insn)(rtx, rtx);
+
       if (TARGET_64BIT)
-	emit_insn (gen_cmpdi_1_rex64 (countreg, countreg));
+	cmp_insn = gen_cmpdi_1;
       else
-	emit_insn (gen_cmpsi_1 (countreg, countreg));
+	cmp_insn = gen_cmpsi_1;
+      emit_insn (cmp_insn (countreg, countreg));
       emit_insn (gen_cmpstrnqi_1 (addr1, addr2, countreg, align,
 				  operands[1], operands[2]));
     }
@@ -19482,9 +18512,23 @@
 ;; the register first winds up with `sbbl $0,reg', which is also weird.
 ;; So just document what we're doing explicitly.
 
-(define_insn "x86_mov<mode>cc_0_m1"
+(define_expand "x86_mov<mode>cc_0_m1"
+  [(parallel
+    [(set (match_operand:SWI48 0 "register_operand" "")
+	  (if_then_else:SWI48
+	    (match_operator:SWI48 2 "ix86_carry_flag_operator"
+	     [(match_operand 1 "flags_reg_operand" "")
+	      (const_int 0)])
+	    (const_int -1)
+	    (const_int 0)))
+     (clobber (reg:CC FLAGS_REG))])]
+  ""
+  "")
+
+(define_insn "*x86_mov<mode>cc_0_m1"
   [(set (match_operand:SWI48 0 "register_operand" "=r")
-	(if_then_else:SWI48 (match_operand 1 "ix86_carry_flag_operator" "")
+	(if_then_else:SWI48 (match_operator 1 "ix86_carry_flag_operator"
+			     [(reg FLAGS_REG) (const_int 0)])
 	  (const_int -1)
 	  (const_int 0)))
    (clobber (reg:CC FLAGS_REG))]
@@ -19502,7 +18546,8 @@
 
 (define_insn "*x86_mov<mode>cc_0_m1_se"
   [(set (match_operand:SWI48 0 "register_operand" "=r")
-	(sign_extract:SWI48 (match_operand 1 "ix86_carry_flag_operator" "")
+	(sign_extract:SWI48 (match_operator 1 "ix86_carry_flag_operator"
+			     [(reg FLAGS_REG) (const_int 0)])
 			    (const_int 1)
 			    (const_int 0)))
    (clobber (reg:CC FLAGS_REG))]
@@ -19518,7 +18563,8 @@
 
 (define_insn "*x86_mov<mode>cc_0_m1_neg"
   [(set (match_operand:SWI48 0 "register_operand" "=r")
-	(neg:SWI48 (match_operand 1 "ix86_carry_flag_operator" "")))]
+	(neg:SWI48 (match_operator 1 "ix86_carry_flag_operator"
+		    [(reg FLAGS_REG) (const_int 0)])))]
   ""
   "sbb{<imodesuffix>}\t%0, %0"
   [(set_attr "type" "alu")
@@ -19651,6 +18697,20 @@
    fcmov%f1\t{%3, %0|%0, %3}"
   [(set_attr "type" "fcmov")
    (set_attr "mode" "XF")])
+
+;; All moves in XOP pcmov instructions are 128 bits and hence we restrict
+;; the scalar versions to have only XMM registers as operands.
+
+;; XOP conditional move
+(define_insn "*xop_pcmov_<mode>"
+  [(set (match_operand:MODEF 0 "register_operand" "=x")
+	(if_then_else:MODEF
+	  (match_operand:MODEF 1 "register_operand" "x")
+	  (match_operand:MODEF 2 "register_operand" "x")
+	  (match_operand:MODEF 3 "register_operand" "x")))]
+  "TARGET_XOP"
+  "vpcmov\t{%1, %3, %2, %0|%0, %2, %3, %1}"
+  [(set_attr "type" "sse4arg")])
 
 ;; These versions of the min/max patterns are intentionally ignorant of
 ;; their behavior wrt -0.0 and NaN (via the commutative operand mark).
@@ -19958,6 +19018,18 @@
     }
 
   emit_move_insn (operands[0], virtual_stack_dynamic_rtx);
+  DONE;
+})
+
+;; Use IOR for stack probes, this is shorter.
+(define_expand "probe_stack"
+  [(match_operand 0 "memory_operand" "")]
+  ""
+{
+  if (GET_MODE (operands[0]) == DImode)
+    emit_insn (gen_iordi3 (operands[0], operands[0], const0_rtx));
+  else
+    emit_insn (gen_iorsi3 (operands[0], operands[0], const0_rtx));
   DONE;
 })
 
@@ -20464,7 +19536,9 @@
                      [(match_dup 0)
                       (match_operand:SI 1 "nonmemory_operand" "")]))
               (clobber (reg:CC FLAGS_REG))])]
-  "optimize_insn_for_speed_p () && ! TARGET_READ_MODIFY_WRITE"
+  "optimize_insn_for_speed_p () && ! TARGET_READ_MODIFY_WRITE
+   /* Do not split stack checking probes.  */
+   && GET_CODE (operands[3]) != IOR && operands[1] != const0_rtx"
   [(set (match_dup 2) (match_dup 0))
    (parallel [(set (match_dup 2)
                    (match_op_dup 3 [(match_dup 2) (match_dup 1)]))
@@ -20479,7 +19553,9 @@
                      [(match_operand:SI 1 "nonmemory_operand" "")
                       (match_dup 0)]))
               (clobber (reg:CC FLAGS_REG))])]
-  "optimize_insn_for_speed_p () && ! TARGET_READ_MODIFY_WRITE"
+  "optimize_insn_for_speed_p () && ! TARGET_READ_MODIFY_WRITE
+   /* Do not split stack checking probes.  */
+   && GET_CODE (operands[3]) != IOR && operands[1] != const0_rtx"
   [(set (match_dup 2) (match_dup 0))
    (parallel [(set (match_dup 2)
                    (match_op_dup 3 [(match_dup 1) (match_dup 2)]))
@@ -21073,8 +20149,9 @@
   [(set (match_operand 0 "" "")
 	(call (mem:QI (match_operand:SI 1 "constant_call_address_operand" ""))
 	      (match_operand:SI 2 "" "")))
-   (set (reg:SI SP_REG) (plus:SI (reg:SI SP_REG)
-			    (match_operand:SI 3 "immediate_operand" "")))]
+   (set (reg:SI SP_REG)
+	(plus:SI (reg:SI SP_REG)
+		 (match_operand:SI 3 "immediate_operand" "")))]
   "!TARGET_64BIT"
 {
   if (SIBLING_CALL_P (insn))
@@ -21086,11 +20163,12 @@
 
 (define_insn "*call_value_pop_1"
   [(set (match_operand 0 "" "")
-	(call (mem:QI (match_operand:SI 1 "call_insn_operand" "rsm"))
+	(call (mem:QI (match_operand:SI 1 "call_insn_operand" "lsm"))
 	      (match_operand:SI 2 "" "")))
-   (set (reg:SI SP_REG) (plus:SI (reg:SI SP_REG)
-			    (match_operand:SI 3 "immediate_operand" "i")))]
-  "!SIBLING_CALL_P (insn) && !TARGET_64BIT"
+   (set (reg:SI SP_REG)
+	(plus:SI (reg:SI SP_REG)
+		 (match_operand:SI 3 "immediate_operand" "i")))]
+  "!TARGET_64BIT && !SIBLING_CALL_P (insn)"
 {
   if (constant_call_address_operand (operands[1], Pmode))
     return "call\t%P1";
@@ -21102,9 +20180,10 @@
   [(set (match_operand 0 "" "")
 	(call (mem:QI (match_operand:SI 1 "sibcall_insn_operand" "s,U"))
 	      (match_operand:SI 2 "" "")))
-   (set (reg:SI SP_REG) (plus:SI (reg:SI SP_REG)
-			    (match_operand:SI 3 "immediate_operand" "i,i")))]
-  "SIBLING_CALL_P (insn) && !TARGET_64BIT"
+   (set (reg:SI SP_REG)
+	(plus:SI (reg:SI SP_REG)
+		 (match_operand:SI 3 "immediate_operand" "i,i")))]
+  "!TARGET_64BIT && SIBLING_CALL_P (insn)"
   "@
    jmp\t%P1
    jmp\t%A1"
@@ -21153,7 +20232,7 @@
    (clobber (reg:TI XMM15_REG))
    (clobber (reg:DI SI_REG))
    (clobber (reg:DI DI_REG))]
-  "!SIBLING_CALL_P (insn) && TARGET_64BIT"
+  "TARGET_64BIT && !SIBLING_CALL_P (insn)"
 {
   if (SIBLING_CALL_P (insn))
     return "jmp\t%P1";
@@ -21164,9 +20243,9 @@
 
 (define_insn "*call_value_1"
   [(set (match_operand 0 "" "")
-	(call (mem:QI (match_operand:SI 1 "call_insn_operand" "rsm"))
+	(call (mem:QI (match_operand:SI 1 "call_insn_operand" "lsm"))
 	      (match_operand:SI 2 "" "")))]
-  "!SIBLING_CALL_P (insn) && !TARGET_64BIT"
+  "!TARGET_64BIT && !SIBLING_CALL_P (insn)"
 {
   if (constant_call_address_operand (operands[1], Pmode))
     return "call\t%P1";
@@ -21178,7 +20257,7 @@
   [(set (match_operand 0 "" "")
 	(call (mem:QI (match_operand:SI 1 "sibcall_insn_operand" "s,U"))
 	      (match_operand:SI 2 "" "")))]
-  "SIBLING_CALL_P (insn) && !TARGET_64BIT"
+  "!TARGET_64BIT && SIBLING_CALL_P (insn)"
   "@
    jmp\t%P1
    jmp\t%A1"
@@ -21188,7 +20267,7 @@
   [(set (match_operand 0 "" "")
 	(call (mem:QI (match_operand:DI 1 "call_insn_operand" "rsm"))
 	      (match_operand:DI 2 "" "")))]
-  "!SIBLING_CALL_P (insn) && TARGET_64BIT
+  "TARGET_64BIT && !SIBLING_CALL_P (insn)
    && ix86_cmodel != CM_LARGE && ix86_cmodel != CM_LARGE_PIC"
 {
   if (constant_call_address_operand (operands[1], Pmode))
@@ -21202,19 +20281,19 @@
 	(call (mem:QI (match_operand:DI 1 "call_insn_operand" "rsm"))
 	      (match_operand:DI 2 "" "")))
    (unspec [(const_int 0)] UNSPEC_MS_TO_SYSV_CALL)
-   (clobber (reg:TI 27))
-   (clobber (reg:TI 28))
-   (clobber (reg:TI 45))
-   (clobber (reg:TI 46))
-   (clobber (reg:TI 47))
-   (clobber (reg:TI 48))
-   (clobber (reg:TI 49))
-   (clobber (reg:TI 50))
-   (clobber (reg:TI 51))
-   (clobber (reg:TI 52))
+   (clobber (reg:TI XMM6_REG))
+   (clobber (reg:TI XMM7_REG))
+   (clobber (reg:TI XMM8_REG))
+   (clobber (reg:TI XMM9_REG))
+   (clobber (reg:TI XMM10_REG))
+   (clobber (reg:TI XMM11_REG))
+   (clobber (reg:TI XMM12_REG))
+   (clobber (reg:TI XMM13_REG))
+   (clobber (reg:TI XMM14_REG))
+   (clobber (reg:TI XMM15_REG))
    (clobber (reg:DI SI_REG))
    (clobber (reg:DI DI_REG))]
-  "!SIBLING_CALL_P (insn) && TARGET_64BIT"
+  "TARGET_64BIT && !SIBLING_CALL_P (insn)"
 {
   if (constant_call_address_operand (operands[1], Pmode))
     return "call\t%P1";
@@ -21226,7 +20305,7 @@
   [(set (match_operand 0 "" "")
 	(call (mem:QI (match_operand:DI 1 "call_insn_operand" "rm"))
 	      (match_operand:DI 2 "" "")))]
-  "!SIBLING_CALL_P (insn) && TARGET_64BIT"
+  "TARGET_64BIT && !SIBLING_CALL_P (insn)"
   "call\t%A1"
   [(set_attr "type" "callv")])
 
@@ -21234,7 +20313,7 @@
   [(set (match_operand 0 "" "")
 	(call (mem:QI (match_operand:DI 1 "sibcall_insn_operand" "s,U"))
 	      (match_operand:DI 2 "" "")))]
-  "SIBLING_CALL_P (insn) && TARGET_64BIT"
+  "TARGET_64BIT && SIBLING_CALL_P (insn)"
   "@
    jmp\t%P1
    jmp\t%A1"
@@ -21253,14 +20332,14 @@
 
 (define_expand "sse_prologue_save"
   [(parallel [(set (match_operand:BLK 0 "" "")
-		   (unspec:BLK [(reg:DI 21)
-				(reg:DI 22)
-				(reg:DI 23)
-				(reg:DI 24)
-				(reg:DI 25)
-				(reg:DI 26)
-				(reg:DI 27)
-				(reg:DI 28)] UNSPEC_SSE_PROLOGUE_SAVE))
+		   (unspec:BLK [(reg:DI XMM0_REG)
+				(reg:DI XMM1_REG)
+				(reg:DI XMM2_REG)
+				(reg:DI XMM3_REG)
+				(reg:DI XMM4_REG)
+				(reg:DI XMM5_REG)
+				(reg:DI XMM6_REG)
+				(reg:DI XMM7_REG)] UNSPEC_SSE_PROLOGUE_SAVE))
 	      (use (match_operand:DI 1 "register_operand" ""))
 	      (use (match_operand:DI 2 "immediate_operand" ""))
 	      (use (label_ref:DI (match_operand 3 "" "")))])]
@@ -21270,14 +20349,14 @@
 (define_insn "*sse_prologue_save_insn"
   [(set (mem:BLK (plus:DI (match_operand:DI 0 "register_operand" "R")
 			  (match_operand:DI 4 "const_int_operand" "n")))
-	(unspec:BLK [(reg:DI 21)
-		     (reg:DI 22)
-		     (reg:DI 23)
-		     (reg:DI 24)
-		     (reg:DI 25)
-		     (reg:DI 26)
-		     (reg:DI 27)
-		     (reg:DI 28)] UNSPEC_SSE_PROLOGUE_SAVE))
+	(unspec:BLK [(reg:DI XMM0_REG)
+		     (reg:DI XMM1_REG)
+		     (reg:DI XMM2_REG)
+		     (reg:DI XMM3_REG)
+		     (reg:DI XMM4_REG)
+		     (reg:DI XMM5_REG)
+		     (reg:DI XMM6_REG)
+		     (reg:DI XMM7_REG)] UNSPEC_SSE_PROLOGUE_SAVE))
    (use (match_operand:DI 1 "register_operand" "r"))
    (use (match_operand:DI 2 "const_int_operand" "i"))
    (use (label_ref:DI (match_operand 3 "" "X")))]
@@ -21553,18 +20632,14 @@
   }
   [(set_attr "type" "multi")])
 
-(define_mode_iterator CRC32MODE [QI HI SI])
-(define_mode_attr crc32modesuffix [(QI "b") (HI "w") (SI "l")])
-(define_mode_attr crc32modeconstraint [(QI "qm") (HI "rm") (SI "rm")])
-
 (define_insn "sse4_2_crc32<mode>"
   [(set (match_operand:SI 0 "register_operand" "=r")
 	(unspec:SI
 	  [(match_operand:SI 1 "register_operand" "0")
-	   (match_operand:CRC32MODE 2 "nonimmediate_operand" "<crc32modeconstraint>")]
+	   (match_operand:SWI124 2 "nonimmediate_operand" "<r>m")]
 	  UNSPEC_CRC32))]
   "TARGET_SSE4_2 || TARGET_CRC32"
-  "crc32<crc32modesuffix>\t{%2, %0|%0, %2}"
+  "crc32{<imodesuffix>}\t{%2, %0|%0, %2}"
   [(set_attr "type" "sselog1")
    (set_attr "prefix_rep" "1")
    (set_attr "prefix_extra" "1")
@@ -21585,7 +20660,7 @@
 	   (match_operand:DI 2 "nonimmediate_operand" "rm")]
 	  UNSPEC_CRC32))]
   "TARGET_64BIT && (TARGET_SSE4_2 || TARGET_CRC32)"
-  "crc32q\t{%2, %0|%0, %2}"
+  "crc32{q}\t{%2, %0|%0, %2}"
   [(set_attr "type" "sselog1")
    (set_attr "prefix_rep" "1")
    (set_attr "prefix_extra" "1")
@@ -21753,6 +20828,120 @@
   "rdtscp"
   [(set_attr "type" "other")
    (set_attr "length" "3")])
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;; LWP instructions
+;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define_insn "lwp_llwpcbhi1"
+  [(unspec [(match_operand:HI 0 "register_operand" "r")]
+  	   UNSPEC_LLWP_INTRINSIC)]
+  "TARGET_LWP"
+  "llwpcb\t%0"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "HI")])
+
+(define_insn "lwp_llwpcbsi1"
+  [(unspec [(match_operand:SI 0 "register_operand" "r")]
+  	   UNSPEC_LLWP_INTRINSIC)]
+  "TARGET_LWP"
+  "llwpcb\t%0"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "SI")])
+
+(define_insn "lwp_llwpcbdi1"
+  [(unspec [(match_operand:DI 0 "register_operand" "r")]
+  	   UNSPEC_LLWP_INTRINSIC)]
+  "TARGET_LWP"
+  "llwpcb\t%0"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "DI")])
+
+(define_insn "lwp_slwpcbhi1"
+  [(unspec [(match_operand:HI 0 "register_operand" "r")]
+  	   UNSPEC_SLWP_INTRINSIC)]
+  "TARGET_LWP"
+  "slwpcb\t%0"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "HI")])
+
+(define_insn "lwp_slwpcbsi1"
+  [(unspec [(match_operand:SI 0 "register_operand" "r")]
+  	   UNSPEC_SLWP_INTRINSIC)]
+  "TARGET_LWP"
+  "slwpcb\t%0"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "SI")])
+
+(define_insn "lwp_slwpcbdi1"
+  [(unspec [(match_operand:DI 0 "register_operand" "r")]
+  	   UNSPEC_SLWP_INTRINSIC)]
+  "TARGET_LWP"
+  "slwpcb\t%0"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "DI")])
+
+(define_insn "lwp_lwpvalhi3"
+  [(unspec_volatile [(match_operand:HI 0 "register_operand" "r")
+  	   	     (match_operand:SI 1 "nonimmediate_operand" "rm")
+	   	     (match_operand:HI 2 "const_int_operand" "")]
+  	   	    UNSPECV_LWPVAL_INTRINSIC)]
+  "TARGET_LWP"
+  "lwpval\t{%2, %1, %0|%0, %1, %2}"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "HI")])
+
+(define_insn "lwp_lwpvalsi3"
+  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r")
+    	    	     (match_operand:SI 1 "nonimmediate_operand" "rm")
+	    	     (match_operand:SI 2 "const_int_operand" "")]
+		    UNSPECV_LWPVAL_INTRINSIC)]
+  "TARGET_LWP"
+  "lwpval\t{%2, %1, %0|%0, %1, %2}"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "SI")])
+
+(define_insn "lwp_lwpvaldi3"
+  [(unspec_volatile [(match_operand:DI 0 "register_operand" "r")
+  		     (match_operand:SI 1 "nonimmediate_operand" "rm")
+		     (match_operand:SI 2 "const_int_operand" "")]
+		    UNSPECV_LWPVAL_INTRINSIC)]
+  "TARGET_LWP"
+  "lwpval\t{%2, %1, %0|%0, %1, %2}"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "DI")])
+
+(define_insn "lwp_lwpinshi3"
+  [(unspec_volatile [(match_operand:HI 0 "register_operand" "r")
+  		     (match_operand:SI 1 "nonimmediate_operand" "rm")
+		     (match_operand:HI 2 "const_int_operand" "")]
+		    UNSPECV_LWPINS_INTRINSIC)]
+  "TARGET_LWP"
+  "lwpins\t{%2, %1, %0|%0, %1, %2}"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "HI")])
+
+(define_insn "lwp_lwpinssi3"
+  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r")
+  		     (match_operand:SI 1 "nonimmediate_operand" "rm")
+		     (match_operand:SI 2 "const_int_operand" "")]
+		    UNSPECV_LWPINS_INTRINSIC)]
+  "TARGET_LWP"
+  "lwpins\t{%2, %1, %0|%0, %1, %2}"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "SI")])
+
+(define_insn "lwp_lwpinsdi3"
+  [(unspec_volatile [(match_operand:DI 0 "register_operand" "r")
+  		     (match_operand:SI 1 "nonimmediate_operand" "rm")
+		     (match_operand:SI 2 "const_int_operand" "")]
+		    UNSPECV_LWPINS_INTRINSIC)]
+  "TARGET_LWP"
+  "lwpins\t{%2, %1, %0|%0, %1, %2}"
+  [(set_attr "type" "lwp")
+   (set_attr "mode" "DI")])
 
 (include "mmx.md")
 (include "sse.md")

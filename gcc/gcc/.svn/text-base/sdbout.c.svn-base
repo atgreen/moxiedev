@@ -307,6 +307,7 @@ const struct gcc_debug_hooks sdb_debug_hooks =
 {
   sdbout_init,			         /* init */
   sdbout_finish,		         /* finish */
+  debug_nothing_void,			 /* assembly_start */
   debug_nothing_int_charstar,	         /* define */
   debug_nothing_int_charstar,	         /* undef */
   sdbout_start_source_file,	         /* start_source_file */
@@ -339,6 +340,7 @@ const struct gcc_debug_hooks sdb_debug_hooks =
   debug_nothing_void,                    /* switch_text_section */
   debug_nothing_tree,		         /* direct_call */
   debug_nothing_tree_int,		 /* virtual_call_token */
+  debug_nothing_rtx_rtx,	         /* copy_call_info */
   debug_nothing_uid,		         /* virtual_call */
   debug_nothing_tree_tree,		 /* set_name */
   0                                      /* start_end_main_source_file */
@@ -1154,7 +1156,7 @@ sdbout_one_type (tree type)
 	      {
 		tree child_type = BINFO_TYPE (child);
 		tree child_type_name;
-		
+
 		if (TYPE_NAME (child_type) == 0)
 		  continue;
 		if (TREE_CODE (TYPE_NAME (child_type)) == IDENTIFIER_NODE)
@@ -1705,6 +1707,7 @@ const struct gcc_debug_hooks sdb_debug_hooks =
 {
   0,		/* init */
   0,		/* finish */
+  0,		/* assembly_start */
   0,		/* define */
   0,		/* undef */
   0,		/* start_source_file */
@@ -1730,6 +1733,7 @@ const struct gcc_debug_hooks sdb_debug_hooks =
   0,		/* switch_text_section */
   0,		/* direct_call */
   0,		/* virtual_call_token */
+  0,	        /* copy_call_info */
   0,		/* virtual_call */
   0,		/* set_name */
   0		/* start_end_main_source_file */

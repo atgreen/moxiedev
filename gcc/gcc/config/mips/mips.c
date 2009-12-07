@@ -319,6 +319,9 @@ struct GTY(())  mips_frame_info {
   HOST_WIDE_INT acc_sp_offset;
   HOST_WIDE_INT cop0_sp_offset;
 
+  /* Similar, but the value passed to _mcount.  */
+  HOST_WIDE_INT ra_fp_offset;
+
   /* The offset of arg_pointer_rtx from the bottom of the frame.  */
   HOST_WIDE_INT arg_pointer_offset;
 
@@ -2444,6 +2447,28 @@ mips_emit_move (rtx dest, rtx src)
 	  : emit_move_insn_1 (dest, src));
 }
 
+/* Emit an instruction of the form (set TARGET (CODE OP0)).  */
+
+static void
+mips_emit_unary (enum rtx_code code, rtx target, rtx op0)
+{
+  emit_insn (gen_rtx_SET (VOIDmode, target,
+			  gen_rtx_fmt_e (code, GET_MODE (op0), op0)));
+}
+
+/* Compute (CODE OP0) and store the result in a new register of mode MODE.
+   Return that new register.  */
+
+static rtx
+mips_force_unary (enum machine_mode mode, enum rtx_code code, rtx op0)
+{
+  rtx reg;
+
+  reg = gen_reg_rtx (mode);
+  mips_emit_unary (code, reg, op0);
+  return reg;
+}
+
 /* Emit an instruction of the form (set TARGET (CODE OP0 OP1)).  */
 
 static void
@@ -3387,10 +3412,11 @@ mips_immediate_operand_p (int code, HOST_WIDE_INT x)
 
 /* Return the cost of binary operation X, given that the instruction
    sequence for a word-sized or smaller operation has cost SINGLE_COST
-   and that the sequence of a double-word operation has cost DOUBLE_COST.  */
+   and that the sequence of a double-word operation has cost DOUBLE_COST.
+   If SPEED is true, optimize for speed otherwise optimize for size.  */
 
 static int
-mips_binary_cost (rtx x, int single_cost, int double_cost)
+mips_binary_cost (rtx x, int single_cost, int double_cost, bool speed)
 {
   int cost;
 
@@ -3399,8 +3425,8 @@ mips_binary_cost (rtx x, int single_cost, int double_cost)
   else
     cost = single_cost;
   return (cost
-	  + rtx_cost (XEXP (x, 0), SET, !optimize_size)
-	  + rtx_cost (XEXP (x, 1), GET_CODE (x), !optimize_size));
+	  + rtx_cost (XEXP (x, 0), SET, speed)
+	  + rtx_cost (XEXP (x, 1), GET_CODE (x), speed));
 }
 
 /* Return the cost of floating-point multiplications of mode MODE.  */
@@ -3470,8 +3496,7 @@ mips_zero_extend_cost (enum machine_mode mode, rtx op)
 /* Implement TARGET_RTX_COSTS.  */
 
 static bool
-mips_rtx_costs (rtx x, int code, int outer_code, int *total,
-		bool speed)
+mips_rtx_costs (rtx x, int code, int outer_code, int *total, bool speed)
 {
   enum machine_mode mode = GET_MODE (x);
   bool float_mode_p = FLOAT_MODE_P (mode);
@@ -3527,8 +3552,7 @@ mips_rtx_costs (rtx x, int code, int outer_code, int *total,
 	     operand needs to be forced into a register, we will often be
 	     able to hoist the constant load out of the loop, so the load
 	     should not contribute to the cost.  */
-	  if (!optimize_size
-	      || mips_immediate_operand_p (outer_code, INTVAL (x)))
+	  if (speed || mips_immediate_operand_p (outer_code, INTVAL (x)))
 	    {
 	      *total = 0;
 	      return true;
@@ -3626,7 +3650,8 @@ mips_rtx_costs (rtx x, int code, int outer_code, int *total,
     case IOR:
     case XOR:
       /* Double-word operations use two single-word operations.  */
-      *total = mips_binary_cost (x, COSTS_N_INSNS (1), COSTS_N_INSNS (2));
+      *total = mips_binary_cost (x, COSTS_N_INSNS (1), COSTS_N_INSNS (2),
+				 speed);
       return true;
 
     case ASHIFT:
@@ -3635,9 +3660,11 @@ mips_rtx_costs (rtx x, int code, int outer_code, int *total,
     case ROTATE:
     case ROTATERT:
       if (CONSTANT_P (XEXP (x, 1)))
-	*total = mips_binary_cost (x, COSTS_N_INSNS (1), COSTS_N_INSNS (4));
+	*total = mips_binary_cost (x, COSTS_N_INSNS (1), COSTS_N_INSNS (4),
+				   speed);
       else
-	*total = mips_binary_cost (x, COSTS_N_INSNS (1), COSTS_N_INSNS (12));
+	*total = mips_binary_cost (x, COSTS_N_INSNS (1), COSTS_N_INSNS (12),
+				   speed);
       return true;
 
     case ABS:
@@ -3673,7 +3700,8 @@ mips_rtx_costs (rtx x, int code, int outer_code, int *total,
 	  *total = mips_cost->fp_add;
 	  return false;
 	}
-      *total = mips_binary_cost (x, COSTS_N_INSNS (1), COSTS_N_INSNS (4));
+      *total = mips_binary_cost (x, COSTS_N_INSNS (1), COSTS_N_INSNS (4),
+				 speed);
       return true;
 
     case MINUS:
@@ -3724,7 +3752,8 @@ mips_rtx_costs (rtx x, int code, int outer_code, int *total,
 	 an SLTU.  The MIPS16 version then needs to move the result of
 	 the SLTU from $24 to a MIPS16 register.  */
       *total = mips_binary_cost (x, COSTS_N_INSNS (1),
-				 COSTS_N_INSNS (TARGET_MIPS16 ? 5 : 4));
+				 COSTS_N_INSNS (TARGET_MIPS16 ? 5 : 4),
+				 speed);
       return true;
 
     case NEG:
@@ -3760,10 +3789,10 @@ mips_rtx_costs (rtx x, int code, int outer_code, int *total,
       else if (mode == DImode && !TARGET_64BIT)
 	/* Synthesized from 2 mulsi3s, 1 mulsidi3 and two additions,
 	   where the mulsidi3 always includes an MFHI and an MFLO.  */
-	*total = (optimize_size
-		  ? COSTS_N_INSNS (ISA_HAS_MUL3 ? 7 : 9)
-		  : mips_cost->int_mult_si * 3 + 6);
-      else if (optimize_size)
+	*total = (speed
+		  ? mips_cost->int_mult_si * 3 + 6
+		  : COSTS_N_INSNS (ISA_HAS_MUL3 ? 7 : 9));
+      else if (!speed)
 	*total = (ISA_HAS_MUL3 ? 1 : 2);
       else if (mode == DImode)
 	*total = mips_cost->int_mult_di;
@@ -3800,7 +3829,7 @@ mips_rtx_costs (rtx x, int code, int outer_code, int *total,
 
     case UDIV:
     case UMOD:
-      if (optimize_size)
+      if (!speed)
 	{
 	  /* It is our responsibility to make division by a power of 2
 	     as cheap as 2 register additions if we want the division
@@ -6685,7 +6714,14 @@ mips_expand_block_move (rtx dest, rtx src, rtx length)
 void
 mips_expand_synci_loop (rtx begin, rtx end)
 {
-  rtx inc, label, cmp, cmp_result;
+  rtx inc, label, end_label, cmp_result, mask, length;
+
+  /* Create end_label.  */
+  end_label = gen_label_rtx ();
+
+  /* Check if begin equals end.  */
+  cmp_result = gen_rtx_EQ (VOIDmode, begin, end);
+  emit_jump_insn (gen_condjump (cmp_result, end_label));
 
   /* Load INC with the cache line size (rdhwr INC,$1).  */
   inc = gen_reg_rtx (Pmode);
@@ -6693,18 +6729,36 @@ mips_expand_synci_loop (rtx begin, rtx end)
 	     ? gen_rdhwr_synci_step_si (inc)
 	     : gen_rdhwr_synci_step_di (inc));
 
+  /* Check if inc is 0.  */
+  cmp_result = gen_rtx_EQ (VOIDmode, inc, const0_rtx);
+  emit_jump_insn (gen_condjump (cmp_result, end_label));
+
+  /* Calculate mask.  */
+  mask = mips_force_unary (Pmode, NEG, inc);
+
+  /* Mask out begin by mask.  */
+  begin = mips_force_binary (Pmode, AND, begin, mask);
+
+  /* Calculate length.  */
+  length = mips_force_binary (Pmode, MINUS, end, begin);
+
   /* Loop back to here.  */
   label = gen_label_rtx ();
   emit_label (label);
 
   emit_insn (gen_synci (begin));
 
-  cmp = mips_force_binary (Pmode, GTU, begin, end);
+  /* Update length.  */
+  mips_emit_binary (MINUS, length, length, inc);
 
+  /* Update begin.  */
   mips_emit_binary (PLUS, begin, begin, inc);
 
-  cmp_result = gen_rtx_EQ (VOIDmode, cmp, const0_rtx);
+  /* Check if length is greater than 0.  */
+  cmp_result = gen_rtx_GT (VOIDmode, length, const0_rtx);
   emit_jump_insn (gen_condjump (cmp_result, label));
+
+  emit_label (end_label);
 }
 
 /* Expand a QI or HI mode atomic memory operation.
@@ -9533,7 +9587,10 @@ mips_restore_gp_from_cprestore_slot (rtx temp)
   gcc_assert (TARGET_ABICALLS && TARGET_OLDABI && epilogue_completed);
 
   if (!cfun->machine->must_restore_gp_when_clobbered_p)
-    return;
+    {
+      emit_note (NOTE_INSN_DELETED);
+      return;
+    }
 
   if (TARGET_MIPS16)
     {
@@ -9612,6 +9669,9 @@ mips_for_each_saved_gpr_and_fpr (HOST_WIDE_INT sp_offset,
   for (regno = GP_REG_LAST; regno >= GP_REG_FIRST; regno--)
     if (BITSET_P (cfun->machine->frame.mask, regno - GP_REG_FIRST))
       {
+	/* Record the ra offset for use by mips_function_profiler.  */
+	if (regno == RETURN_ADDR_REGNUM)
+	  cfun->machine->frame.ra_fp_offset = offset + sp_offset;
 	mips_save_restore_reg (word_mode, regno, offset, fn);
 	offset -= UNITS_PER_WORD;
       }
@@ -15922,6 +15982,39 @@ mips_final_postscan_insn (FILE *file ATTRIBUTE_UNUSED, rtx insn,
   if (mips_need_noat_wrapper_p (insn, opvec, noperands))
     mips_pop_asm_switch (&mips_noat);
 }
+
+/* Return the function that is used to expand the <u>mulsidi3 pattern.
+   EXT_CODE is the code of the extension used.  Return NULL if widening
+   multiplication shouldn't be used.  */
+
+mulsidi3_gen_fn
+mips_mulsidi3_gen_fn (enum rtx_code ext_code)
+{
+  bool signed_p;
+
+  signed_p = ext_code == SIGN_EXTEND;
+  if (TARGET_64BIT)
+    {
+      /* Don't use widening multiplication with MULT when we have DMUL.  Even
+	 with the extension of its input operands DMUL is faster.  Note that
+	 the extension is not needed for signed multiplication.  In order to
+	 ensure that we always remove the redundant sign-extension in this
+	 case we still expand mulsidi3 for DMUL.  */
+      if (ISA_HAS_DMUL3)
+	return signed_p ? gen_mulsidi3_64bit_dmul : NULL;
+      if (TARGET_FIX_R4000)
+	return NULL;
+      return signed_p ? gen_mulsidi3_64bit : gen_umulsidi3_64bit;
+    }
+  else
+    {
+      if (TARGET_FIX_R4000)
+	return signed_p ? gen_mulsidi3_32bit_r4000 : gen_umulsidi3_32bit_r4000;
+      if (ISA_HAS_DSPR2)
+	return signed_p ? gen_mips_mult : gen_mips_multu;
+      return signed_p ? gen_mulsidi3_32bit : gen_umulsidi3_32bit;
+    }
+}
 
 /* Return the size in bytes of the trampoline code, padded to
    TRAMPOLINE_ALIGNMENT bits.  The static chain pointer and target
@@ -16083,6 +16176,59 @@ mips_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
   /* Flush the code part of the trampoline.  */
   emit_insn (gen_add3_insn (end_addr, addr, GEN_INT (TRAMPOLINE_SIZE)));
   emit_insn (gen_clear_cache (addr, end_addr));
+}
+
+/* Implement FUNCTION_PROFILER.  */
+
+void mips_function_profiler (FILE *file)
+{
+  if (TARGET_MIPS16)
+    sorry ("mips16 function profiling");
+  if (TARGET_LONG_CALLS)
+    {
+      /* For TARGET_LONG_CALLS use $3 for the address of _mcount.  */
+      if (Pmode == DImode)
+	fprintf (file, "\tdla\t%s,_mcount\n", reg_names[3]);
+      else
+	fprintf (file, "\tla\t%s,_mcount\n", reg_names[3]);
+    }
+  mips_push_asm_switch (&mips_noat);
+  fprintf (file, "\tmove\t%s,%s\t\t# save current return address\n",
+	   reg_names[AT_REGNUM], reg_names[RETURN_ADDR_REGNUM]);
+  /* _mcount treats $2 as the static chain register.  */
+  if (cfun->static_chain_decl != NULL)
+    fprintf (file, "\tmove\t%s,%s\n", reg_names[2],
+	     reg_names[STATIC_CHAIN_REGNUM]);
+  if (TARGET_MCOUNT_RA_ADDRESS)
+    {
+      /* If TARGET_MCOUNT_RA_ADDRESS load $12 with the address of the
+	 ra save location.  */
+      if (cfun->machine->frame.ra_fp_offset == 0)
+	/* ra not saved, pass zero.  */
+	fprintf (file, "\tmove\t%s,%s\n", reg_names[12], reg_names[0]);
+      else
+	fprintf (file, "\t%s\t%s," HOST_WIDE_INT_PRINT_DEC "(%s)\n",
+		 Pmode == DImode ? "dla" : "la", reg_names[12],
+		 cfun->machine->frame.ra_fp_offset,
+		 reg_names[STACK_POINTER_REGNUM]);
+    }
+  if (!TARGET_NEWABI)
+    fprintf (file,
+	     "\t%s\t%s,%s,%d\t\t# _mcount pops 2 words from  stack\n",
+	     TARGET_64BIT ? "dsubu" : "subu",
+	     reg_names[STACK_POINTER_REGNUM],
+	     reg_names[STACK_POINTER_REGNUM],
+	     Pmode == DImode ? 16 : 8);
+
+  if (TARGET_LONG_CALLS)
+    fprintf (file, "\tjalr\t%s\n", reg_names[3]);
+  else
+    fprintf (file, "\tjal\t_mcount\n");
+  mips_pop_asm_switch (&mips_noat);
+  /* _mcount treats $2 as the static chain register.  */
+  if (cfun->static_chain_decl != NULL)
+    fprintf (file, "\tmove\t%s,%s\n", reg_names[STATIC_CHAIN_REGNUM],
+	     reg_names[2]);
 }
 
 /* Initialize the GCC target structure.  */

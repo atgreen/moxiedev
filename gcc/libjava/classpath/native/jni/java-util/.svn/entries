@@ -1,14 +1,14 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/native/jni/java-util
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-08-22T13:22:20.806489Z
-151014
+2009-12-05T17:18:53.298892Z
+155012
 rwild
 has-props
 
@@ -32,10 +32,10 @@ file
 
 
 
-2009-09-10T17:51:01.000000Z
-8c7ca777f887df10a02e84c126f85c55
-2009-08-22T13:22:20.806489Z
-151014
+2009-12-07T15:33:30.687940Z
+d810135f508842afa9060c6e2eac7532
+2009-12-05T17:18:53.298892Z
+155012
 rwild
 
 
@@ -58,7 +58,7 @@ rwild
 
 
 
-20513
+20493
 
 Makefile.am
 file

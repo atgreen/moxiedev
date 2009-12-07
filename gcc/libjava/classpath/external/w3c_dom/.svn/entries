@@ -1,14 +1,14 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/external/w3c_dom
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-08-22T13:22:20.806489Z
-151014
+2009-12-05T17:18:53.298892Z
+155012
 rwild
 has-props
 
@@ -32,10 +32,10 @@ file
 
 
 
-2009-09-10T17:51:00.000000Z
-0e217167238f0beaa0e6abeaeddc2e50
-2009-08-22T13:22:20.806489Z
-151014
+2009-12-07T15:33:30.101951Z
+ff9b3fe85471e69a671a092087d17e0f
+2009-12-05T17:18:53.298892Z
+155012
 rwild
 
 
@@ -58,7 +58,7 @@ rwild
 
 
 
-18890
+18870
 
 org
 dir

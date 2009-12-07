@@ -1,14 +1,14 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-08-22T13:22:20.806489Z
-151014
+2009-12-05T17:18:53.298892Z
+155012
 rwild
 has-props
 
@@ -69,10 +69,10 @@ file
 
 
 
-2009-09-10T17:51:02.000000Z
-99fb757ed3e34fc63f144ff5aab40488
-2009-08-22T13:22:20.806489Z
-151014
+2009-12-07T15:33:31.110941Z
+78463ba3af50e1c7458de1f76bfd2f90
+2009-12-05T17:18:53.298892Z
+155012
 rwild
 
 
@@ -95,7 +95,7 @@ rwild
 
 
 
-20788
+20768
 
 copy-vmresources.sh.in
 file

@@ -1,5 +1,5 @@
 /* CFG cleanup for trees.
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008
+   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -511,7 +511,7 @@ cleanup_omp_return (basic_block bb)
   control_bb = single_pred (bb);
   stmt = last_stmt (control_bb);
 
-  if (gimple_code (stmt) != GIMPLE_OMP_SECTIONS_SWITCH)
+  if (stmt == NULL || gimple_code (stmt) != GIMPLE_OMP_SECTIONS_SWITCH)
     return false;
 
   /* The block with the control statement normally has two entry edges -- one
@@ -537,7 +537,7 @@ cleanup_tree_cfg_bb (basic_block bb)
     return true;
 
   retval = cleanup_control_flow_bb (bb);
-  
+
   /* Forwarder blocks can carry line number information which is
      useful when debugging, so we only clean them up when
      optimizing.  */
@@ -606,7 +606,7 @@ cleanup_tree_cfg_1 (void)
 	 calls.  */
       retval |= split_bbs_on_noreturn_calls ();
     }
-  
+
   end_recording_case_labels ();
   BITMAP_FREE (cfgcleanup_altered_bbs);
   return retval;
@@ -924,7 +924,7 @@ gate_merge_phi (void)
   return 1;
 }
 
-struct gimple_opt_pass pass_merge_phi = 
+struct gimple_opt_pass pass_merge_phi =
 {
  {
   GIMPLE_PASS,

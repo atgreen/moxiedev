@@ -1,3 +1,9 @@
+2009-12-05  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Set path for make install of binutils so we pick up
+	dtc.
+	* gcc/cloog-ppl, gcc/gmp, gcc/mpfr, gcc/ppl: Deleted.
+
 2009-10-13  Anthony Green  <green@moxielogic.com>
 
 	* build.xml: Don't --enable-build-with-cxx for GCC.  New LTO

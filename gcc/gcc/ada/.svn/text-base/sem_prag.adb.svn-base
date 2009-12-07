@@ -596,11 +596,13 @@ package body Sem_Prag is
       procedure Process_Compile_Time_Warning_Or_Error;
       --  Common processing for Compile_Time_Error and Compile_Time_Warning
 
-      procedure Process_Convention (C : out Convention_Id; E : out Entity_Id);
+      procedure Process_Convention
+        (C   : out Convention_Id;
+         Ent : out Entity_Id);
       --  Common processing for Convention, Interface, Import and Export.
       --  Checks first two arguments of pragma, and sets the appropriate
       --  convention value in the specified entity or entities. On return
-      --  C is the convention, E is the referenced entity.
+      --  C is the convention, Ent is the referenced entity.
 
       procedure Process_Extended_Import_Export_Exception_Pragma
         (Arg_Internal : Node_Id;
@@ -1152,6 +1154,14 @@ package body Sem_Prag is
          String_Val : constant String_Id := Strval (Nam);
 
       begin
+         --  We allow duplicated export names in CIL, as they are always
+         --  enclosed in a namespace that differentiates them, and overloaded
+         --  entities are supported by the VM.
+
+         if VM_Target = CLI_Target then
+            return;
+         end if;
+
          --  We are only interested in the export case, and in the case of
          --  generics, it is the instance, not the template, that is the
          --  problem (the template will generate a warning in any case).
@@ -2347,10 +2357,11 @@ package body Sem_Prag is
       ------------------------
 
       procedure Process_Convention
-        (C : out Convention_Id;
-         E : out Entity_Id)
+        (C   : out Convention_Id;
+         Ent : out Entity_Id)
       is
          Id        : Node_Id;
+         E         : Entity_Id;
          E1        : Entity_Id;
          Cname     : Name_Id;
          Comp_Unit : Unit_Number_Type;
@@ -2482,6 +2493,10 @@ package body Sem_Prag is
 
          E := Entity (Id);
 
+         --  Set entity to return
+
+         Ent := E;
+
          --  Go to renamed subprogram if present, since convention applies to
          --  the actual renamed entity, not to the renaming entity. If the
          --  subprogram is inherited, go to parent subprogram.
@@ -2504,6 +2519,10 @@ package body Sem_Prag is
               and then Scope (E) = Scope (Alias (E))
             then
                E := Alias (E);
+
+               --  Return the parent subprogram the entity was inherited from
+
+               Ent := E;
             end if;
          end if;
 
@@ -2617,7 +2636,9 @@ package body Sem_Prag is
                Generate_Reference (E, Id, 'b');
             end if;
 
-            E1 := E;
+            --  Loop through the homonyms of the pragma argument's entity
+
+            E1 := Ent;
             loop
                E1 := Homonym (E1);
                exit when No (E1) or else Scope (E1) /= Current_Scope;
@@ -2642,7 +2663,7 @@ package body Sem_Prag is
                   Set_Convention_From_Pragma (E1);
 
                   if Prag_Id = Pragma_Import then
-                     Generate_Reference (E, Id, 'b');
+                     Generate_Reference (E1, Id, 'b');
                   end if;
                end if;
             end loop;
@@ -3458,6 +3479,8 @@ package body Sem_Prag is
 
                else
                   Set_Imported (Def_Id);
+
+                  --  Reject an Import applied to an abstract subprogram
 
                   if Is_Subprogram (Def_Id)
                     and then Is_Abstract_Subprogram (Def_Id)
@@ -5212,8 +5235,12 @@ package body Sem_Prag is
          -- Annotate --
          --------------
 
-         --  pragma Annotate (IDENTIFIER {, ARG});
+         --  pragma Annotate (IDENTIFIER [, IDENTIFIER {, ARG}]);
          --  ARG ::= NAME | EXPRESSION
+
+         --  The first two arguments are by convention intended to refer to an
+         --  external tool and a tool-specific function. These arguments are
+         --  not analyzed.
 
          when Pragma_Annotate => Annotate : begin
             GNAT_Pragma;
@@ -5225,26 +5252,33 @@ package body Sem_Prag is
                Exp : Node_Id;
 
             begin
-               Arg := Arg2;
-               while Present (Arg) loop
-                  Exp := Expression (Arg);
-                  Analyze (Exp);
+               --  Second unanalyzed parameter is optional
 
-                  if Is_Entity_Name (Exp) then
-                     null;
+               if No (Arg2) then
+                  null;
+               else
+                  Arg := Next (Arg2);
+                  while Present (Arg) loop
+                     Exp := Expression (Arg);
+                     Analyze (Exp);
 
-                  elsif Nkind (Exp) = N_String_Literal then
-                     Resolve (Exp, Standard_String);
+                     if Is_Entity_Name (Exp) then
+                        null;
 
-                  elsif Is_Overloaded (Exp) then
-                     Error_Pragma_Arg ("ambiguous argument for pragma%", Exp);
+                     elsif Nkind (Exp) = N_String_Literal then
+                        Resolve (Exp, Standard_String);
 
-                  else
-                     Resolve (Exp);
-                  end if;
+                     elsif Is_Overloaded (Exp) then
+                           Error_Pragma_Arg
+                             ("ambiguous argument for pragma%", Exp);
 
-                  Next (Arg);
-               end loop;
+                     else
+                        Resolve (Exp);
+                     end if;
+
+                     Next (Arg);
+                  end loop;
+               end if;
             end;
          end Annotate;
 
@@ -10658,7 +10692,23 @@ package body Sem_Prag is
          when Pragma_Reviewable =>
             Check_Ada_83_Warning;
             Check_Arg_Count (0);
+
+            --  Call dummy debugging function rv. This is done to assist front
+            --  end debugging. By placing a Reviewable pragma in the source
+            --  program, a breakpoint on rv catches this place in the source,
+            --  allowing convenient stepping to the point of interest.
+
             rv;
+
+         --------------------------
+         -- Short_Circuit_And_Or --
+         --------------------------
+
+         when Pragma_Short_Circuit_And_Or =>
+            GNAT_Pragma;
+            Check_Arg_Count (0);
+            Check_Valid_Configuration_Pragma;
+            Short_Circuit_And_Or := True;
 
          -------------------
          -- Share_Generic --
@@ -11979,6 +12029,14 @@ package body Sem_Prag is
             Check_At_Least_N_Arguments (1);
             Check_No_Identifiers;
 
+            --  If debug flag -gnatd.i is set, pragma is ignored
+
+            if Debug_Flag_Dot_I then
+               return;
+            end if;
+
+            --  Process various forms of the pragma
+
             declare
                Argx : constant Node_Id := Get_Pragma_Arg (Arg1);
 
@@ -12522,6 +12580,7 @@ package body Sem_Prag is
       Pragma_Restriction_Warnings          => -1,
       Pragma_Restrictions                  => -1,
       Pragma_Reviewable                    => -1,
+      Pragma_Short_Circuit_And_Or          => -1,
       Pragma_Share_Generic                 => -1,
       Pragma_Shared                        => -1,
       Pragma_Shared_Passive                => -1,

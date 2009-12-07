@@ -212,18 +212,44 @@ package GNAT.Sockets.Thin_Common is
                       C.Strings.Null_Ptr);
    --  Arrays of C (char *)
 
-   type Servent is record
-      S_Name    : C.Strings.chars_ptr;
-      S_Aliases : Chars_Ptr_Pointers.Pointer;
-      S_Port    : C.int;
-      S_Proto   : C.Strings.chars_ptr;
-   end record;
-   pragma Convention (C, Servent);
-   --  Service entry
+   type Servent is new
+     System.Storage_Elements.Storage_Array (1 .. SOSC.SIZEOF_struct_servent);
+   for Servent'Alignment use 8;
+   --  Service entry. This is an opaque type used only via the following
+   --  accessor functions, because 'struct servent' has different layouts on
+   --  different platforms.
 
    type Servent_Access is access all Servent;
    pragma Convention (C, Servent_Access);
    --  Access to service entry
+
+   function Servent_S_Name
+     (E : Servent_Access) return C.Strings.chars_ptr;
+
+   function Servent_S_Aliases
+     (E : Servent_Access) return Chars_Ptr_Pointers.Pointer;
+
+   function Servent_S_Port
+     (E : Servent_Access) return C.int;
+
+   function Servent_S_Proto
+     (E : Servent_Access) return C.Strings.chars_ptr;
+
+   procedure Servent_Set_S_Name
+     (E      : Servent_Access;
+      S_Name : C.Strings.chars_ptr);
+
+   procedure Servent_Set_S_Aliases
+     (E         : Servent_Access;
+      S_Aliases : Chars_Ptr_Pointers.Pointer);
+
+   procedure Servent_Set_S_Port
+     (E      : Servent_Access;
+      S_Port : C.int);
+
+   procedure Servent_Set_S_Proto
+     (E       : Servent_Access;
+      S_Proto : C.Strings.chars_ptr);
 
    ------------------
    -- Host entries --
@@ -335,4 +361,13 @@ private
    pragma Import (C, Reset_Socket_Set, "__gnat_reset_socket_set");
    pragma Import (C, C_Ioctl, "__gnat_socket_ioctl");
    pragma Import (C, Inet_Pton, SOSC.Inet_Pton_Linkname);
+
+   pragma Import (C, Servent_S_Name, "__gnat_servent_s_name");
+   pragma Import (C, Servent_S_Aliases, "__gnat_servent_s_aliases");
+   pragma Import (C, Servent_S_Port, "__gnat_servent_s_port");
+   pragma Import (C, Servent_S_Proto, "__gnat_servent_s_proto");
+   pragma Import (C, Servent_Set_S_Name, "__gnat_servent_set_s_name");
+   pragma Import (C, Servent_Set_S_Aliases, "__gnat_servent_set_s_aliases");
+   pragma Import (C, Servent_Set_S_Port, "__gnat_servent_set_s_port");
+   pragma Import (C, Servent_Set_S_Proto, "__gnat_servent_set_s_proto");
 end GNAT.Sockets.Thin_Common;

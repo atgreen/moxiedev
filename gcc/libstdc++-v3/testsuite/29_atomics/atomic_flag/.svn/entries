@@ -1,15 +1,15 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/29_atomics/atomic_flag
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2009-10-16T20:17:39.571023Z
+152918
+bkoz
 
 
 
@@ -30,6 +30,9 @@ cons
 dir
 
 requirements
+dir
+
+clear
 dir
 
 test_and_set

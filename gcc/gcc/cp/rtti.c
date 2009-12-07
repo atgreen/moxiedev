@@ -22,6 +22,7 @@ along with GCC; see the file COPYING3.  If not see
 
 #include "config.h"
 #include "system.h"
+#include "intl.h"
 #include "coretypes.h"
 #include "tm.h"
 #include "tree.h"
@@ -102,7 +103,7 @@ VEC(tree,gc) *unemitted_tinfo_decls;
 static GTY (()) VEC(tinfo_s,gc) *tinfo_descs;
 
 static tree ifnonnull (tree, tree);
-static tree tinfo_name (tree);
+static tree tinfo_name (tree, bool);
 static tree build_dynamic_cast_1 (tree, tree, tsubst_flags_t);
 static tree throw_bad_cast (void);
 static tree throw_bad_typeid (void);
@@ -128,13 +129,13 @@ static void
 push_abi_namespace (void)
 {
   push_nested_namespace (abi_node);
-  push_visibility ("default");
+  push_visibility ("default", 2);
 }
 
 static void
 pop_abi_namespace (void)
 {
-  pop_visibility ();
+  pop_visibility (2);
   pop_nested_namespace (abi_node);
 }
 
@@ -245,6 +246,8 @@ get_tinfo_decl_dynamic (tree exp)
   if (error_operand_p (exp))
     return error_mark_node;
 
+  exp = resolve_nondeduced_context (exp);
+
   /* peel back references, so they match.  */
   type = non_reference (TREE_TYPE (exp));
 
@@ -349,16 +352,30 @@ build_typeid (tree exp)
   return exp;
 }
 
-/* Generate the NTBS name of a type.  */
+/* Generate the NTBS name of a type.  If MARK_PRIVATE, put a '*' in front so that
+   comparisons will be done by pointer rather than string comparison.  */
 static tree
-tinfo_name (tree type)
+tinfo_name (tree type, bool mark_private)
 {
   const char *name;
+  int length;
   tree name_string;
 
-  name = mangle_type_string_for_rtti (type);
-  name_string = fix_string_type (build_string (strlen (name) + 1, name));
-  return name_string;
+  name = mangle_type_string (type);
+  length = strlen (name);
+
+  if (mark_private)
+    {
+      /* Inject '*' at beginning of name to force pointer comparison.  */
+      char* buf = (char*) XALLOCAVEC (char, length + 2);
+      buf[0] = '*';
+      memcpy (buf + 1, name, length + 1);
+      name_string = build_string (length + 2, buf);
+    }
+  else
+    name_string = build_string (length + 1, name);
+
+  return fix_string_type (name_string);
 }
 
 /* Return a VAR_DECL for the internal ABI defined type_info object for
@@ -509,18 +526,18 @@ build_dynamic_cast_1 (tree type, tree expr, tsubst_flags_t complain)
     case REFERENCE_TYPE:
       if (! MAYBE_CLASS_TYPE_P (TREE_TYPE (type)))
 	{
-	  errstr = "target is not pointer or reference to class";
+	  errstr = _("target is not pointer or reference to class");
 	  goto fail;
 	}
       if (!COMPLETE_TYPE_P (complete_type (TREE_TYPE (type))))
 	{
-	  errstr = "target is not pointer or reference to complete type";
+	  errstr = _("target is not pointer or reference to complete type");
 	  goto fail;
 	}
       break;
 
     default:
-      errstr = "target is not pointer or reference";
+      errstr = _("target is not pointer or reference");
       goto fail;
     }
 
@@ -531,17 +548,17 @@ build_dynamic_cast_1 (tree type, tree expr, tsubst_flags_t complain)
 
       if (TREE_CODE (exprtype) != POINTER_TYPE)
 	{
-	  errstr = "source is not a pointer";
+	  errstr = _("source is not a pointer");
 	  goto fail;
 	}
       if (! MAYBE_CLASS_TYPE_P (TREE_TYPE (exprtype)))
 	{
-	  errstr = "source is not a pointer to class";
+	  errstr = _("source is not a pointer to class");
 	  goto fail;
 	}
       if (!COMPLETE_TYPE_P (complete_type (TREE_TYPE (exprtype))))
 	{
-	  errstr = "source is a pointer to incomplete type";
+	  errstr = _("source is a pointer to incomplete type");
 	  goto fail;
 	}
     }
@@ -554,12 +571,12 @@ build_dynamic_cast_1 (tree type, tree expr, tsubst_flags_t complain)
 
       if (! MAYBE_CLASS_TYPE_P (TREE_TYPE (exprtype)))
 	{
-	  errstr = "source is not of class type";
+	  errstr = _("source is not of class type");
 	  goto fail;
 	}
       if (!COMPLETE_TYPE_P (complete_type (TREE_TYPE (exprtype))))
 	{
-	  errstr = "source is of incomplete class type";
+	  errstr = _("source is of incomplete class type");
 	  goto fail;
 	}
 
@@ -572,7 +589,7 @@ build_dynamic_cast_1 (tree type, tree expr, tsubst_flags_t complain)
   if (!at_least_as_qualified_p (TREE_TYPE (type),
 				TREE_TYPE (exprtype)))
     {
-      errstr = "conversion casts away constness";
+      errstr = _("conversion casts away constness");
       goto fail;
     }
 
@@ -732,7 +749,7 @@ build_dynamic_cast_1 (tree type, tree expr, tsubst_flags_t complain)
 	}
     }
   else
-    errstr = "source type is not polymorphic";
+    errstr = _("source type is not polymorphic");
 
  fail:
   if (complain & tf_error)
@@ -839,13 +856,12 @@ tinfo_base_init (tinfo_s *ti, tree target)
   tree vtable_ptr;
 
   {
-    tree name_name;
+    tree name_name, name_string;
 
     /* Generate the NTBS array variable.  */
     tree name_type = build_cplus_array_type
 		     (build_qualified_type (char_type_node, TYPE_QUAL_CONST),
 		     NULL_TREE);
-    tree name_string = tinfo_name (target);
 
     /* Determine the name of the variable -- and remember with which
        type it is associated.  */
@@ -862,6 +878,7 @@ tinfo_base_init (tinfo_s *ti, tree target)
     DECL_TINFO_P (name_decl) = 1;
     set_linkage_according_to_type (target, name_decl);
     import_export_decl (name_decl);
+    name_string = tinfo_name (target, !TREE_PUBLIC (name_decl));
     DECL_INITIAL (name_decl) = name_string;
     mark_used (name_decl);
     pushdecl_top_level_and_finish (name_decl, name_string);
@@ -1434,6 +1451,7 @@ emit_support_tinfos (void)
     &long_integer_type_node, &long_unsigned_type_node,
     &long_long_integer_type_node, &long_long_unsigned_type_node,
     &float_type_node, &double_type_node, &long_double_type_node,
+    &dfloat32_type_node, &dfloat64_type_node, &dfloat128_type_node,
     0
   };
   int ix;

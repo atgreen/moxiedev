@@ -974,10 +974,11 @@ begin
       --  The one argument ON/OFF case is processed by the parser, since it may
       --  control parser warnings as well as semantic warnings, and in any case
       --  we want to be absolutely sure that the range in the warnings table is
-      --  set well before any semantic analysis is performed.
+      --  set well before any semantic analysis is performed. Note that we
+      --  ignore this pragma if debug flag -gnatd.i is set.
 
       when Pragma_Warnings =>
-         if Arg_Count = 1 then
+         if Arg_Count = 1 and then not Debug_Flag_Dot_I then
             Check_No_Identifier (Arg1);
 
             declare
@@ -1171,6 +1172,7 @@ begin
            Pragma_Share_Generic                 |
            Pragma_Shared                        |
            Pragma_Shared_Passive                |
+           Pragma_Short_Circuit_And_Or          |
            Pragma_Storage_Size                  |
            Pragma_Storage_Unit                  |
            Pragma_Static_Elaboration_Desired    |

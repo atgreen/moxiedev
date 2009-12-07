@@ -55,7 +55,7 @@ Scott Bambrough for help porting the Java compiler.
 Wolfgang Bangerth for processing tons of bug reports.
 
 @item
-Jon Beniston for his Microsoft Windows port of Java.
+Jon Beniston for his Microsoft Windows port of Java and port to Lattice Mico32.
 
 @item
 Daniel Berlin for better DWARF2 support, faster/better optimizations,
@@ -173,8 +173,8 @@ The @uref{http://www.gnu.org/software/classpath/,,GNU Classpath project}
 for all of their merged runtime code.
 
 @item
-Nick Clifton for arm, mcore, fr30, v850, m32r work, @option{--help}, and
-other random hacking.
+Nick Clifton for arm, mcore, fr30, v850, m32r, rx work,
+@option{--help}, and other random hacking.
 
 @item
 Michael Cook for libstdc++ cleanup patches to reduce warnings.
@@ -324,6 +324,10 @@ Stu Grossman for gdb hacking, allowing GCJ developers to debug Java code.
 
 @item
 Michael K. Gschwind contributed the port to the PDP-11.
+
+@item
+Richard Guenther for his ongoing middle-end contributions and bug fixes
+and for release management.
 
 @item
 Ron Guilmette implemented the @command{protoize} and @command{unprotoize}

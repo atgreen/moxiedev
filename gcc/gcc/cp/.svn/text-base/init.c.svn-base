@@ -1248,13 +1248,13 @@ build_aggr_init (tree exp, tree init, int flags, tsubst_flags_t complain)
       /* Must arrange to initialize each element of EXP
 	 from elements of INIT.  */
       itype = init ? TREE_TYPE (init) : NULL_TREE;
-      if (cp_type_quals (type) != TYPE_UNQUALIFIED)
-	TREE_TYPE (exp) = TYPE_MAIN_VARIANT (type);
-      if (itype && cp_type_quals (itype) != TYPE_UNQUALIFIED)
-	itype = TREE_TYPE (init) = TYPE_MAIN_VARIANT (itype);
+      if (cv_qualified_p (type))
+	TREE_TYPE (exp) = cv_unqualified (type);
+      if (itype && cv_qualified_p (itype))
+	TREE_TYPE (init) = cv_unqualified (itype);
       stmt_expr = build_vec_init (exp, NULL_TREE, init,
 				  /*explicit_value_init_p=*/false,
-				  itype && same_type_p (itype,
+				  itype && same_type_p (TREE_TYPE (init),
 							TREE_TYPE (exp)),
                                   complain);
       TREE_READONLY (exp) = was_const;
@@ -2666,7 +2666,6 @@ build_vec_init (tree base, tree maxindex, tree init,
 {
   tree rval;
   tree base2 = NULL_TREE;
-  tree size;
   tree itype = NULL_TREE;
   tree iterator;
   /* The type of BASE.  */
@@ -2724,7 +2723,6 @@ build_vec_init (tree base, tree maxindex, tree init,
     }
 
   maxindex = cp_convert (ptrdiff_type_node, maxindex);
-  size = size_in_bytes (type);
   if (TREE_CODE (atype) == ARRAY_TYPE)
     {
       ptype = build_pointer_type (type);

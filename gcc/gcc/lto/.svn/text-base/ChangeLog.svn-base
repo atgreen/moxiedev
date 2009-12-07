@@ -1,3 +1,85 @@
+2009-11-28  Jakub Jelinek  <jakub@redhat.com>
+
+	* lto-lang.c (handle_nonnull_attribute): Remove unused attr_arg_num
+	variable.
+
+2009-11-19  Rafael Avila de Espindola  <espindola@google.com>
+
+	PR bootstrap/42096
+	* lto-elf.c (lto_elf_file_open): Use lto_parse_hex.
+	* lto.c (lto_parse_hex): New.
+	(lto_resolution_read): Use lto_parse_hex.
+	* lto.h (lto_parse_hex): New.
+
+2009-11-17  Rafael Avila de Espindola  <espindola@google.com>
+
+	* lto-elf.c (lto_file_init): Add offset argument.
+	(lto_elf_file_open): Record the offset.
+	* lto.c (lto_resolution_read): Change file_name into a lto_file
+	argument. Check offsets.
+	(lto_file_read): Update call to lto_resolution_read.
+	* lto.h (lto_file_struct): Add the offset field.
+
+2009-11-16  Rafael Avila de Espindola  <espindola@google.com>
+
+	* lto-elf.c (lto_elf_file_open): Use strtoll to parse the offset.
+
+2009-11-14  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (read_cgraph_and_symbols): Set also ipa_transforms_to_apply.
+
+2009-11-12  Rafael Avila de Espindola  <espindola@google.com>
+
+	* lang.opt (fresolution): Renamed from resolution.
+	* lto-lang.c (lto_handle_option): Handle new option name.
+	* lto.c (lto_resolution_read): Add more checks. Discard rest of line.
+
+2009-11-04  Richard Guenther  <rguenther@suse.de>
+            Rafael Avila de Espindola  <espindola@google.com>
+
+	* lto-elf.c (lto_elf_build_section_table): Add the base offset.
+	(lto_elf_file_open): Handle offsets in arguments name@offest.
+
+2009-10-30  Richard Guenther  <rguenther@suse.de>
+
+	PR lto/41858
+	* lto.c (lto_file_read): Do not set file_data->fd.
+	(lto_read_section_data): Use a single-entry file-descriptor cache.
+	Do not check the result of xmalloc.
+	(free_section_data): Do not use file_data->fd.
+	(lto_read_all_file_options): Likewise.
+
+2009-10-22  Richard Guenther  <rguenther@suse.de>
+
+	* lto.c (lto_fixup_jump_functions): Remove.
+	(lto_fixup_decls): Do not fixup jump functions.
+	(read_cgraph_and_symbols): Schedule cgraph merging after
+	summary reading.  Schedule type and decl fixup before
+	summary reading.
+
+2009-10-22  Richard Guenther  <rguenther@suse.de>
+
+	* lto.c (lto_fixup_data_t): Remove free_list member.
+	(lto_fixup_tree): Do not insert into free_list.
+	(free_decl): Remove.
+	(lto_fixup_decls): Remove free-list handling.
+
+2009-10-22  Jan Hubicka  <jh@suse.cz>
+
+	* lto.c (lto_fixup_jump_functions): New function.
+	(lto_fixup_decls): Use it.
+
+2009-10-16  Richard Guenther  <rguenther@suse.de>
+
+	PR lto/41715
+	* lto.c (lto_fixup_tree): Revert last change.
+
+2009-10-14  Richard Guenther  <rguenther@suse.de>
+
+	* lto.c (lto_fixup_tree): In case the prevailing decl is not
+	compatible with the one we replace wrap it around a
+	VIEW_CONVERT_EXPR.
+
 2009-10-09  Richard Guenther  <rguenther@suse.de>
 
 	PR lto/41635

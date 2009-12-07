@@ -6,7 +6,7 @@
 --                                                                          --
 --                                 B o d y                                  --
 --                                                                          --
---                     Copyright (C) 2007, AdaCore                          --
+--                   Copyright (C) 2007-2009, AdaCore                       --
 --                                                                          --
 -- GNAT is free software;  you can  redistribute it  and/or modify it under --
 -- terms of the  GNU General Public License as published  by the Free Soft- --
@@ -57,8 +57,8 @@ package body GNAT.Sockets.Thin.Task_Safe_NetDB is
    --  is too small for the associated data).
 
    procedure Copy_Service_Entry
-     (Source_Servent       : Servent;
-      Target_Servent       : out Servent;
+     (Source_Servent       : Servent_Access;
+      Target_Servent       : Servent_Access;
       Target_Buffer        : System.Address;
       Target_Buffer_Length : C.int;
       Result               : out C.int);
@@ -194,8 +194,8 @@ package body GNAT.Sockets.Thin.Task_Safe_NetDB is
    ------------------------
 
    procedure Copy_Service_Entry
-     (Source_Servent       : Servent;
-      Target_Servent       : out Servent;
+     (Source_Servent       : Servent_Access;
+      Target_Servent       : Servent_Access;
       Target_Buffer        : System.Address;
       Target_Buffer_Length : C.int;
       Result               : out C.int)
@@ -206,14 +206,15 @@ package body GNAT.Sockets.Thin.Task_Safe_NetDB is
 
       Source_Aliases : Chars_Ptr_Array
         renames Chars_Ptr_Pointers.Value
-          (Source_Servent.S_Aliases, Terminator => C.Strings.Null_Ptr);
+          (Servent_S_Aliases (Source_Servent),
+           Terminator => C.Strings.Null_Ptr);
       --  Null-terminated list of aliases (last element of this array is
       --  Null_Ptr).
 
    begin
       Result := -1;
-      Names_Length := C.Strings.Strlen (Source_Servent.S_Name) + 1
-                    + C.Strings.Strlen (Source_Servent.S_Proto) + 1;
+      Names_Length := C.Strings.Strlen (Servent_S_Name (Source_Servent)) + 1 +
+                      C.Strings.Strlen (Servent_S_Proto (Source_Servent)) + 1;
 
       for J in Source_Aliases'Range loop
          if Source_Aliases (J) /= C.Strings.Null_Ptr then
@@ -235,6 +236,8 @@ package body GNAT.Sockets.Thin.Task_Safe_NetDB is
          Names_Index : size_t := Netdb_Data.Names'First;
          --  Index of first available location in Netdb_Data.Names
 
+         Stored_Name : C.Strings.chars_ptr;
+
       begin
          if Netdb_Data'Size / 8 > Target_Buffer_Length then
             return;
@@ -243,26 +246,29 @@ package body GNAT.Sockets.Thin.Task_Safe_NetDB is
          --  Copy service name
 
          Store_Name
-           (C.Strings.Value (Source_Servent.S_Name),
+           (C.Strings.Value (Servent_S_Name (Source_Servent)),
             Netdb_Data.Names, Names_Index,
-            Target_Servent.S_Name);
+            Stored_Name);
+         Servent_Set_S_Name (Target_Servent, Stored_Name);
 
          --  Copy aliases (null-terminated string pointer array)
 
-         Target_Servent.S_Aliases :=
-           Netdb_Data.Aliases_List
-             (Netdb_Data.Aliases_List'First)'Unchecked_Access;
+         Servent_Set_S_Aliases
+           (Target_Servent,
+            Netdb_Data.Aliases_List
+              (Netdb_Data.Aliases_List'First)'Unchecked_Access);
 
          --  Copy port number
 
-         Target_Servent.S_Port := Source_Servent.S_Port;
+         Servent_Set_S_Port (Target_Servent, Servent_S_Port (Source_Servent));
 
          --  Copy protocol name
 
          Store_Name
-           (C.Strings.Value (Source_Servent.S_Proto),
+           (C.Strings.Value (Servent_S_Proto (Source_Servent)),
             Netdb_Data.Names, Names_Index,
-            Target_Servent.S_Proto);
+            Stored_Name);
+         Servent_Set_S_Proto (Target_Servent, Stored_Name);
 
          for J in Netdb_Data.Aliases_List'Range loop
             if J = Netdb_Data.Aliases_List'Last then
@@ -377,11 +383,14 @@ package body GNAT.Sockets.Thin.Task_Safe_NetDB is
          goto Unlock_Return;
       end if;
 
-      --  Now copy the data to the user-provided buffer
+      --  Now copy the data to the user-provided buffer. We convert Ret to
+      --  type Servent_Access using the .all'Unchecked_Access trick to avoid
+      --  an accessibility check. Ret could be pointing to a nested variable,
+      --  and we don't want to raise an exception in that case.
 
       Copy_Service_Entry
-        (Source_Servent       => SE.all,
-         Target_Servent       => Ret.all,
+        (Source_Servent       => SE,
+         Target_Servent       => Ret.all'Unchecked_Access,
          Target_Buffer        => Buf,
          Target_Buffer_Length => Buflen,
          Result               => Result);
@@ -414,11 +423,12 @@ package body GNAT.Sockets.Thin.Task_Safe_NetDB is
          goto Unlock_Return;
       end if;
 
-      --  Now copy the data to the user-provided buffer
+      --  Now copy the data to the user-provided buffer. See Safe_Getservbyname
+      --  for comment regarding .all'Unchecked_Access.
 
       Copy_Service_Entry
-        (Source_Servent       => SE.all,
-         Target_Servent       => Ret.all,
+        (Source_Servent       => SE,
+         Target_Servent       => Ret.all'Unchecked_Access,
          Target_Buffer        => Buf,
          Target_Buffer_Length => Buflen,
          Result               => Result);

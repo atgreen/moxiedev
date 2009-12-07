@@ -218,14 +218,19 @@ do {								\
 #define STACK_CHECK_STATIC_BUILTIN 0
 #endif
 
-/* The default interval is one page.  */
-#ifndef STACK_CHECK_PROBE_INTERVAL
-#define STACK_CHECK_PROBE_INTERVAL 4096
+/* The default interval is one page (4096 bytes).  */
+#ifndef STACK_CHECK_PROBE_INTERVAL_EXP
+#define STACK_CHECK_PROBE_INTERVAL_EXP 12
 #endif
 
 /* The default is to do a store into the stack.  */
 #ifndef STACK_CHECK_PROBE_LOAD
 #define STACK_CHECK_PROBE_LOAD 0
+#endif
+
+/* The default is not to move the stack pointer.  */
+#ifndef STACK_CHECK_MOVING_SP
+#define STACK_CHECK_MOVING_SP 0
 #endif
 
 /* This is a kludge to try to capture the discrepancy between the old
@@ -252,7 +257,7 @@ do {								\
    one probe per function.  */
 #ifndef STACK_CHECK_MAX_FRAME_SIZE
 #define STACK_CHECK_MAX_FRAME_SIZE \
-  (STACK_CHECK_PROBE_INTERVAL - UNITS_PER_WORD)
+  ((1 << STACK_CHECK_PROBE_INTERVAL_EXP) - UNITS_PER_WORD)
 #endif
 
 /* This is arbitrary, but should be large enough everywhere.  */
@@ -390,7 +395,7 @@ extern rtx builtin_strncpy_read_str (void *, HOST_WIDE_INT, enum machine_mode);
 
 /* Functions from expr.c:  */
 
-/* This is run during target initialization to set up which modes can be 
+/* This is run during target initialization to set up which modes can be
    used directly in memory and to initialize the block move optab.  */
 extern void init_expr_target (void);
 
@@ -479,7 +484,7 @@ extern rtx clear_storage_hints (rtx, rtx, enum block_op_methods,
 rtx set_storage_via_libcall (rtx, rtx, rtx, bool);
 
 /* Expand a setmem pattern; return true if successful.  */
-extern bool set_storage_via_setmem (rtx, rtx, rtx, unsigned int, 
+extern bool set_storage_via_setmem (rtx, rtx, rtx, unsigned int,
 				    unsigned int, HOST_WIDE_INT);
 
 /* Determine whether the LEN bytes can be moved by using several move
@@ -541,7 +546,7 @@ extern rtx store_expr (tree, rtx, int, bool);
 extern rtx force_operand (rtx, rtx);
 
 /* Work horses for expand_expr.  */
-extern rtx expand_expr_real (tree, rtx, enum machine_mode, 
+extern rtx expand_expr_real (tree, rtx, enum machine_mode,
 			     enum expand_modifier, rtx *);
 extern rtx expand_expr_real_1 (tree, rtx, enum machine_mode,
 			       enum expand_modifier, rtx *);
@@ -650,9 +655,15 @@ extern rtx force_label_rtx (tree);
    The constant terms are added and stored via a second arg.  */
 extern rtx eliminate_constant_term (rtx, rtx *);
 
-/* Convert arg to a valid memory address for specified machine mode,
-   by emitting insns to perform arithmetic if nec.  */
-extern rtx memory_address (enum machine_mode, rtx);
+/* Convert arg to a valid memory address for specified machine mode that points
+   to a specific named address space, by emitting insns to perform arithmetic
+   if necessary.  */
+extern rtx memory_address_addr_space (enum machine_mode, rtx, addr_space_t);
+
+/* Like memory_address_addr_space, except assume the memory address points to
+   the generic named address space.  */
+#define memory_address(MODE,RTX) \
+	memory_address_addr_space ((MODE), (RTX), ADDR_SPACE_GENERIC)
 
 /* Return a memory reference like MEMREF, but with its mode changed
    to MODE and its address changed to ADDR.
@@ -756,6 +767,9 @@ extern void adjust_stack (rtx);
 /* Add some bytes to the stack.  An rtx says how many.  */
 extern void anti_adjust_stack (rtx);
 
+/* Add some bytes to the stack while probing it.  An rtx says how many. */
+extern void anti_adjust_stack_and_probe (rtx, bool);
+
 /* This enum is used for the following two functions.  */
 enum save_level {SAVE_BLOCK, SAVE_FUNCTION, SAVE_NONLOCAL};
 
@@ -773,10 +787,9 @@ extern void update_nonlocal_goto_save_area (void);
 extern rtx allocate_dynamic_stack_space (rtx, rtx, int);
 
 /* Probe a range of stack addresses from FIRST to FIRST+SIZE, inclusive.
-   FIRST is a constant and size is a Pmode RTX.  These are offsets from the
-   current stack pointer.  STACK_GROWS_DOWNWARD says whether to add or
-   subtract from the stack.  If SIZE is constant, this is done
-   with a fixed number of probes.  Otherwise, we must make a loop.  */
+   FIRST is a constant and size is a Pmode RTX.  These are offsets from
+   the current stack pointer.  STACK_GROWS_DOWNWARD says whether to add
+   or subtract them from the stack pointer.  */
 extern void probe_stack_range (HOST_WIDE_INT, rtx);
 
 /* Return an rtx that refers to the value returned by a library call

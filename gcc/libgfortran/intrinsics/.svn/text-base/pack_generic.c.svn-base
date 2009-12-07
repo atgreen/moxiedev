@@ -87,7 +87,6 @@ pack_internal (gfc_array_char *ret, const gfc_array_char *array,
 
   index_type count[GFC_MAX_DIMENSIONS];
   index_type extent[GFC_MAX_DIMENSIONS];
-  int zero_sized;
   index_type n;
   index_type dim;
   index_type nelem;
@@ -117,13 +116,10 @@ pack_internal (gfc_array_char *ret, const gfc_array_char *array,
   else
     runtime_error ("Funny sized logical array");
 
-  zero_sized = 0;
   for (n = 0; n < dim; n++)
     {
       count[n] = 0;
       extent[n] = GFC_DESCRIPTOR_EXTENT(array,n);
-      if (extent[n] <= 0)
-       zero_sized = 1;
       sstride[n] = GFC_DESCRIPTOR_STRIDE_BYTES(array,n);
       mstride[n] = GFC_DESCRIPTOR_STRIDE_BYTES(mask,n);
     }
@@ -350,7 +346,7 @@ pack (gfc_array_char *ret, const gfc_array_char *array,
 
     case GFC_DTYPE_DERIVED_2:
       if (GFC_UNALIGNED_2(ret->data) || GFC_UNALIGNED_2(array->data)
-	  || GFC_UNALIGNED_2(vector->data))
+	  || (vector && GFC_UNALIGNED_2(vector->data)))
 	break;
       else
 	{
@@ -361,7 +357,7 @@ pack (gfc_array_char *ret, const gfc_array_char *array,
 
     case GFC_DTYPE_DERIVED_4:
       if (GFC_UNALIGNED_4(ret->data) || GFC_UNALIGNED_4(array->data)
-	  || GFC_UNALIGNED_4(vector->data))
+	  || (vector && GFC_UNALIGNED_4(vector->data)))
 	break;
       else
 	{
@@ -372,7 +368,7 @@ pack (gfc_array_char *ret, const gfc_array_char *array,
 
     case GFC_DTYPE_DERIVED_8:
       if (GFC_UNALIGNED_8(ret->data) || GFC_UNALIGNED_8(array->data)
-	  || GFC_UNALIGNED_8(vector->data))
+	  || (vector && GFC_UNALIGNED_8(vector->data)))
 	break;
       else
 	{
@@ -383,7 +379,7 @@ pack (gfc_array_char *ret, const gfc_array_char *array,
 #ifdef HAVE_GFC_INTEGER_16
     case GFC_DTYPE_DERIVED_16:
       if (GFC_UNALIGNED_16(ret->data) || GFC_UNALIGNED_16(array->data)
-	  || GFC_UNALIGNED_16(vector->data))
+	  || (vector && GFC_UNALIGNED_16(vector->data)))
 	break;
       else
 	{

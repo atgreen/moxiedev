@@ -28,7 +28,7 @@
 // reasons why the executable file might be covered by the GNU General
 // Public License.
 
-/** @file profile/impl/profiler_hashtable_size.cc
+/** @file profile/impl/profiler_hashtable_size.h
  *  @brief Collection of hashtable size traces.
  */
 
@@ -52,7 +52,7 @@
 #include "profile/impl/profiler_state.h"
 #include "profile/impl/profiler_container_size.h"
 
-namespace __cxxprof_impl
+namespace __gnu_profile
 {
 
 /** @brief Hashtable size instrumentation trace producer.  */
@@ -110,6 +110,6 @@ inline void __trace_hashtable_size_resize(const void* __obj, size_t __from,
   __tables<0>::_S_hashtable_size->__resize(__obj, __from, __to);
 }
 
-} // namespace __cxxprof_impl
+} // namespace __gnu_profile
 
 #endif /* PROFCXX_PROFILER_HASHTABLE_SIZE_H__ */

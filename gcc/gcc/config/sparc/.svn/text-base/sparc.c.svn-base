@@ -3733,27 +3733,22 @@ enum sparc_mode_class {
 #define SF_MODES (S_MODES)
 
 /* Modes for double-float and smaller quantities.  */
-#define DF_MODES (S_MODES | D_MODES)
+#define DF_MODES (D_MODES)
+
+/* Modes for quad-float and smaller quantities.  */
+#define TF_MODES (DF_MODES | (1 << (int) TF_MODE))
+
+/* Modes for quad-float pairs and smaller quantities.  */
+#define OF_MODES (TF_MODES | (1 << (int) OF_MODE))
 
 /* Modes for double-float only quantities.  */
 #define DF_MODES_NO_S ((1 << (int) D_MODE) | (1 << (int) DF_MODE))
 
-/* Modes for quad-float only quantities.  */
-#define TF_ONLY_MODES (1 << (int) TF_MODE)
+/* Modes for quad-float and double-float only quantities.  */
+#define TF_MODES_NO_S (DF_MODES_NO_S | (1 << (int) TF_MODE))
 
-/* Modes for quad-float and smaller quantities.  */
-#define TF_MODES (DF_MODES | TF_ONLY_MODES)
-
-/* Modes for quad-float and double-float quantities.  */
-#define TF_MODES_NO_S (DF_MODES_NO_S | TF_ONLY_MODES)
-
-/* Modes for quad-float pair only quantities.  */
-#define OF_ONLY_MODES (1 << (int) OF_MODE)
-
-/* Modes for quad-float pairs and smaller quantities.  */
-#define OF_MODES (TF_MODES | OF_ONLY_MODES)
-
-#define OF_MODES_NO_S (TF_MODES_NO_S | OF_ONLY_MODES)
+/* Modes for quad-float pairs and double-float only quantities.  */
+#define OF_MODES_NO_S (TF_MODES_NO_S | (1 << (int) OF_MODE))
 
 /* Modes for condition codes.  */
 #define CC_MODES (1 << (int) CC_MODE)
@@ -6958,19 +6953,19 @@ print_operand (FILE *file, rtx x, int code)
       /* Output the right displacement from the saved PC on function return.
 	 The caller may have placed an "unimp" insn immediately after the call
 	 so we have to account for it.  This insn is used in the 32-bit ABI
-	 when calling a function that returns a non zero-sized structure. The
+	 when calling a function that returns a non zero-sized structure.  The
 	 64-bit ABI doesn't have it.  Be careful to have this test be the same
-	 as that used on the call. The exception here is that when 
-	 sparc_std_struct_return is enabled, the psABI is followed exactly
-	 and the adjustment is made by the code in sparc_struct_value_rtx. 
-	 The call emitted is the same when sparc_std_struct_return is 
-	 present. */
-     if (! TARGET_ARCH64
+	 as that for the call.  The exception is when sparc_std_struct_return
+	 is enabled, the psABI is followed exactly and the adjustment is made
+	 by the code in sparc_struct_value_rtx.  The call emitted is the same
+	 when sparc_std_struct_return is enabled. */
+     if (!TARGET_ARCH64
 	 && cfun->returns_struct
-	 && ! sparc_std_struct_return
-	 && (TREE_CODE (DECL_SIZE (DECL_RESULT (current_function_decl)))
-	     == INTEGER_CST)
-	 && ! integer_zerop (DECL_SIZE (DECL_RESULT (current_function_decl))))
+	 && !sparc_std_struct_return
+	 && DECL_SIZE (DECL_RESULT (current_function_decl))
+	 && TREE_CODE (DECL_SIZE (DECL_RESULT (current_function_decl)))
+	     == INTEGER_CST
+	 && !integer_zerop (DECL_SIZE (DECL_RESULT (current_function_decl))))
 	fputs ("12", file);
       else
         fputc ('8', file);

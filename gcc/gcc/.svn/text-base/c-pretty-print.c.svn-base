@@ -225,7 +225,11 @@ pp_c_space_for_pointer_operator (c_pretty_printer *pp, tree t)
        const
        restrict                              -- C99
        __restrict__                          -- GNU C
-       volatile    */
+       address-space-qualifier		     -- GNU C
+       volatile
+
+   address-space-qualifier:
+       identifier			     -- GNU C  */
 
 void
 pp_c_type_qualifier_list (c_pretty_printer *pp, tree t)
@@ -245,6 +249,12 @@ pp_c_type_qualifier_list (c_pretty_printer *pp, tree t)
     pp_c_cv_qualifier (pp, "volatile");
   if (qualifiers & TYPE_QUAL_RESTRICT)
     pp_c_cv_qualifier (pp, flag_isoc99 ? "restrict" : "__restrict__");
+
+  if (!ADDR_SPACE_GENERIC_P (TYPE_ADDR_SPACE (t)))
+    {
+      const char *as = c_addr_space_name (TYPE_ADDR_SPACE (t));
+      pp_c_identifier (pp, as);
+    }
 }
 
 /* pointer:
@@ -837,7 +847,7 @@ pp_c_integer_constant (c_pretty_printer *pp, tree i)
 	  high = ~high + !low;
 	  low = -low;
 	}
-      sprintf (pp_buffer (pp)->digit_buffer, HOST_WIDE_INT_PRINT_DOUBLE_HEX, 
+      sprintf (pp_buffer (pp)->digit_buffer, HOST_WIDE_INT_PRINT_DOUBLE_HEX,
 	       (unsigned HOST_WIDE_INT) high, (unsigned HOST_WIDE_INT) low);
       pp_string (pp, pp_buffer (pp)->digit_buffer);
     }
@@ -1943,7 +1953,7 @@ pp_c_conditional_expression (c_pretty_printer *pp, tree e)
 static void
 pp_c_assignment_expression (c_pretty_printer *pp, tree e)
 {
-  if (TREE_CODE (e) == MODIFY_EXPR 
+  if (TREE_CODE (e) == MODIFY_EXPR
       || TREE_CODE (e) == INIT_EXPR)
     {
       pp_c_unary_expression (pp, TREE_OPERAND (e, 0));

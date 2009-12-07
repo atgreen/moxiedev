@@ -77,7 +77,7 @@ along with GCC; see the file COPYING3.  If not see
 
 /* Don't put any single quote (') in MOD_VERSION, 
    if yout want it to be recognized.  */
-#define MOD_VERSION "3"
+#define MOD_VERSION "4"
 
 
 /* Structure that describes a position within a module file.  */
@@ -741,8 +741,7 @@ static int
 number_use_names (const char *name, bool interface)
 {
   int i = 0;
-  const char *c;
-  c = find_use_name_n (name, &i, interface);
+  find_use_name_n (name, &i, interface);
   return i;
 }
 
@@ -1672,7 +1671,7 @@ typedef enum
   AB_CRAY_POINTER, AB_CRAY_POINTEE, AB_THREADPRIVATE, AB_ALLOC_COMP,
   AB_POINTER_COMP, AB_PRIVATE_COMP, AB_VALUE, AB_VOLATILE, AB_PROTECTED,
   AB_IS_BIND_C, AB_IS_C_INTEROP, AB_IS_ISO_C, AB_ABSTRACT, AB_ZERO_COMP,
-  AB_EXTENSION, AB_IS_CLASS, AB_PROCEDURE, AB_PROC_POINTER
+  AB_IS_CLASS, AB_PROCEDURE, AB_PROC_POINTER
 }
 ab_attribute;
 
@@ -1712,7 +1711,6 @@ static const mstring attr_bits[] =
     minit ("ZERO_COMP", AB_ZERO_COMP),
     minit ("PROTECTED", AB_PROTECTED),
     minit ("ABSTRACT", AB_ABSTRACT),
-    minit ("EXTENSION", AB_EXTENSION),
     minit ("IS_CLASS", AB_IS_CLASS),
     minit ("PROCEDURE", AB_PROCEDURE),
     minit ("PROC_POINTER", AB_PROC_POINTER),
@@ -1772,7 +1770,7 @@ static void
 mio_symbol_attribute (symbol_attribute *attr)
 {
   atom_type t;
-  unsigned ext_attr;
+  unsigned ext_attr,extension_level;
 
   mio_lparen ();
 
@@ -1781,9 +1779,14 @@ mio_symbol_attribute (symbol_attribute *attr)
   attr->proc = MIO_NAME (procedure_type) (attr->proc, procedures);
   attr->if_source = MIO_NAME (ifsrc) (attr->if_source, ifsrc_types);
   attr->save = MIO_NAME (save_state) (attr->save, save_status);
+  
   ext_attr = attr->ext_attr;
   mio_integer ((int *) &ext_attr);
   attr->ext_attr = ext_attr;
+
+  extension_level = attr->extension;
+  mio_integer ((int *) &extension_level);
+  attr->extension = extension_level;
 
   if (iomode == IO_OUTPUT)
     {
@@ -1859,8 +1862,6 @@ mio_symbol_attribute (symbol_attribute *attr)
 	MIO_NAME (ab_attribute) (AB_PRIVATE_COMP, attr_bits);
       if (attr->zero_comp)
 	MIO_NAME (ab_attribute) (AB_ZERO_COMP, attr_bits);
-      if (attr->extension)
-	MIO_NAME (ab_attribute) (AB_EXTENSION, attr_bits);
       if (attr->is_class)
 	MIO_NAME (ab_attribute) (AB_IS_CLASS, attr_bits);
       if (attr->procedure)
@@ -1984,9 +1985,6 @@ mio_symbol_attribute (symbol_attribute *attr)
 	      break;
 	    case AB_ZERO_COMP:
 	      attr->zero_comp = 1;
-	      break;
-	    case AB_EXTENSION:
-	      attr->extension = 1;
 	      break;
 	    case AB_IS_CLASS:
 	      attr->is_class = 1;
@@ -3469,7 +3467,7 @@ mio_f2k_derived (gfc_namespace *f2k)
   else
     while (peek_atom () != ATOM_RPAREN)
       {
-	gfc_intrinsic_op op;
+	gfc_intrinsic_op op = 0; /* Silence GCC.  */
 
 	mio_lparen ();
 	mio_intrinsic_op (&op);
@@ -3575,7 +3573,7 @@ mio_symbol (gfc_symbol *sym)
   mio_integer (&(sym->intmod_sym_id));
 
   if (sym->attr.flavor == FL_DERIVED)
-    mio_integer (&(sym->vindex));
+    mio_integer (&(sym->hash_value));
 
   mio_rparen ();
 }
@@ -3977,7 +3975,7 @@ load_equiv (void)
 static void
 load_derived_extensions (void)
 {
-  int symbol, nuse, j;
+  int symbol, j;
   gfc_symbol *derived;
   gfc_symbol *dt;
   gfc_symtree *st;
@@ -3994,6 +3992,14 @@ load_derived_extensions (void)
       info = get_integer (symbol);
       derived = info->u.rsym.sym;
 
+      /* This one is not being loaded.  */
+      if (!info || !derived)
+	{
+	  while (peek_atom () != ATOM_RPAREN)
+	    skip_list ();
+	  continue;
+	}
+
       gcc_assert (derived->attr.flavor == FL_DERIVED);
       if (derived->f2k_derived == NULL)
 	derived->f2k_derived = gfc_get_namespace (NULL, 0);
@@ -4005,19 +4011,21 @@ load_derived_extensions (void)
 	  mio_internal_string (module);
 
           /* Only use one use name to find the symbol.  */
-	  nuse = number_use_names (name, false);
 	  j = 1;
 	  p = find_use_name_n (name, &j, false);
-	  st = gfc_find_symtree (gfc_current_ns->sym_root, p);
-	  dt = st->n.sym;
-	  st = gfc_find_symtree (derived->f2k_derived->sym_root, name);
-	  if (st == NULL)
+	  if (p)
 	    {
-	      /* Only use the real name in f2k_derived to ensure a single
-		 symtree.  */
-	      st = gfc_new_symtree (&derived->f2k_derived->sym_root, name);
-	      st->n.sym = dt;
-	      st->n.sym->refs++;
+	      st = gfc_find_symtree (gfc_current_ns->sym_root, p);
+	      dt = st->n.sym;
+	      st = gfc_find_symtree (derived->f2k_derived->sym_root, name);
+	      if (st == NULL)
+		{
+		  /* Only use the real name in f2k_derived to ensure a single
+		    symtree.  */
+		  st = gfc_new_symtree (&derived->f2k_derived->sym_root, name);
+		  st->n.sym = dt;
+		  st->n.sym->refs++;
+		}
 	    }
 	  mio_rparen ();
 	}

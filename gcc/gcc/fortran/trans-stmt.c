@@ -1009,44 +1009,57 @@ gfc_trans_do (gfc_code * code)
 
   /* Initialize loop count and jump to exit label if the loop is empty.
      This code is executed before we enter the loop body. We generate:
+     step_sign = sign(1,step);
      if (step > 0)
        {
-	 if (to < from) goto exit_label;
-	 countm1 = (to - from) / step;
+	 if (to < from)
+	   goto exit_label;
        }
      else
        {
-	 if (to > from) goto exit_label;
-	 countm1 = (from - to) / -step;
-       }  */
+	 if (to > from)
+	   goto exit_label;
+       }
+       countm1 = (to*step_sign - from*step_sign) / (step*step_sign);
+
+  */
+
   if (TREE_CODE (type) == INTEGER_TYPE)
     {
-      tree pos, neg;
+      tree pos, neg, step_sign, to2, from2, step2;
+
+      /* Calculate SIGN (1,step), as (step < 0 ? -1 : 1)  */
+
+      tmp = fold_build2 (LT_EXPR, boolean_type_node, step, 
+			 build_int_cst (TREE_TYPE (step), 0));
+      step_sign = fold_build3 (COND_EXPR, type, tmp, 
+			       build_int_cst (type, -1), 
+			       build_int_cst (type, 1));
 
       tmp = fold_build2 (LT_EXPR, boolean_type_node, to, from);
       pos = fold_build3 (COND_EXPR, void_type_node, tmp,
 			 build1_v (GOTO_EXPR, exit_label),
 			 build_empty_stmt (input_location));
-      tmp = fold_build2 (MINUS_EXPR, type, to, from);
-      tmp = fold_convert (utype, tmp);
-      tmp = fold_build2 (TRUNC_DIV_EXPR, utype, tmp,
-			 fold_convert (utype, step));
-      tmp = fold_build2 (MODIFY_EXPR, void_type_node, countm1, tmp);
-      pos = fold_build2 (COMPOUND_EXPR, void_type_node, pos, tmp);
 
       tmp = fold_build2 (GT_EXPR, boolean_type_node, to, from);
       neg = fold_build3 (COND_EXPR, void_type_node, tmp,
 			 build1_v (GOTO_EXPR, exit_label),
 			 build_empty_stmt (input_location));
-      tmp = fold_build2 (MINUS_EXPR, type, from, to);
-      tmp = fold_convert (utype, tmp);
-      tmp = fold_build2 (TRUNC_DIV_EXPR, utype, tmp,
-			 fold_convert (utype, fold_build1 (NEGATE_EXPR,
-							   type, step)));
-      tmp = fold_build2 (MODIFY_EXPR, void_type_node, countm1, tmp);
-      neg = fold_build2 (COMPOUND_EXPR, void_type_node, neg, tmp);
-
       tmp = fold_build3 (COND_EXPR, void_type_node, pos_step, pos, neg);
+
+      gfc_add_expr_to_block (&block, tmp);
+
+      /* Calculate the loop count.  to-from can overflow, so
+	 we cast to unsigned.  */
+
+      to2 = fold_build2 (MULT_EXPR, type, step_sign, to);
+      from2 = fold_build2 (MULT_EXPR, type, step_sign, from);
+      step2 = fold_build2 (MULT_EXPR, type, step_sign, step);
+      step2 = fold_convert (utype, step2);
+      tmp = fold_build2 (MINUS_EXPR, type, to2, from2);
+      tmp = fold_convert (utype, tmp);
+      tmp = fold_build2 (TRUNC_DIV_EXPR, utype, tmp, step2);
+      tmp = fold_build2 (MODIFY_EXPR, void_type_node, countm1, tmp);
       gfc_add_expr_to_block (&block, tmp);
     }
   else
@@ -3976,19 +3989,20 @@ tree
 gfc_trans_allocate (gfc_code * code)
 {
   gfc_alloc *al;
-  gfc_expr *expr, *init_e, *rhs;
+  gfc_expr *expr, *init_e;
   gfc_se se;
   tree tmp;
   tree parm;
   tree stat;
   tree pstat;
   tree error_label;
+  tree memsz;
   stmtblock_t block;
 
   if (!code->ext.alloc.list)
     return NULL_TREE;
 
-  pstat = stat = error_label = tmp = NULL_TREE;
+  pstat = stat = error_label = tmp = memsz = NULL_TREE;
 
   gfc_start_block (&block);
 
@@ -4006,7 +4020,10 @@ gfc_trans_allocate (gfc_code * code)
 
   for (al = code->ext.alloc.list; al != NULL; al = al->next)
     {
-      expr = al->expr;
+      expr = gfc_copy_expr (al->expr);
+
+      if (expr->ts.type == BT_CLASS)
+	gfc_add_component_ref (expr, "$data");
 
       gfc_init_se (&se, NULL);
       gfc_start_block (&se.pre);
@@ -4022,25 +4039,27 @@ gfc_trans_allocate (gfc_code * code)
 	  /* Determine allocate size.  */
 	  if (code->expr3 && code->expr3->ts.type == BT_CLASS)
 	    {
-	      gfc_typespec *ts;
-	      /* TODO: Size must be determined at run time, since it must equal
-		 the size of the dynamic type of SOURCE, not the declared type.  */
-	      gfc_error ("Using SOURCE= with a class variable at %L not "
-			 "supported yet", &code->loc);
-	      ts = &code->expr3->ts.u.derived->components->ts;
-	      tmp = TYPE_SIZE_UNIT (gfc_typenode_for_spec (ts));
+	      gfc_expr *sz;
+	      gfc_se se_sz;
+	      sz = gfc_copy_expr (code->expr3);
+	      gfc_add_component_ref (sz, "$vptr");
+	      gfc_add_component_ref (sz, "$size");
+	      gfc_init_se (&se_sz, NULL);
+	      gfc_conv_expr (&se_sz, sz);
+	      gfc_free_expr (sz);
+	      memsz = se_sz.expr;
 	    }
 	  else if (code->expr3 && code->expr3->ts.type != BT_CLASS)
-	    tmp = TYPE_SIZE_UNIT (gfc_typenode_for_spec (&code->expr3->ts));
+	    memsz = TYPE_SIZE_UNIT (gfc_typenode_for_spec (&code->expr3->ts));
 	  else if (code->ext.alloc.ts.type != BT_UNKNOWN)
-	    tmp = TYPE_SIZE_UNIT (gfc_typenode_for_spec (&code->ext.alloc.ts));
+	    memsz = TYPE_SIZE_UNIT (gfc_typenode_for_spec (&code->ext.alloc.ts));
 	  else
-	    tmp = TYPE_SIZE_UNIT (TREE_TYPE (TREE_TYPE (se.expr)));
+	    memsz = TYPE_SIZE_UNIT (TREE_TYPE (TREE_TYPE (se.expr)));
 
-	  if (expr->ts.type == BT_CHARACTER && tmp == NULL_TREE)
-	    tmp = se.string_length;
+	  if (expr->ts.type == BT_CHARACTER && memsz == NULL_TREE)
+	    memsz = se.string_length;
 
-	  tmp = gfc_allocate_with_status (&se.pre, tmp, pstat);
+	  tmp = gfc_allocate_with_status (&se.pre, memsz, pstat);
 	  tmp = fold_build2 (MODIFY_EXPR, void_type_node, se.expr,
 			     fold_convert (TREE_TYPE (se.expr), tmp));
 	  gfc_add_expr_to_block (&se.pre, tmp);
@@ -4070,17 +4089,98 @@ gfc_trans_allocate (gfc_code * code)
       /* Initialization via SOURCE block.  */
       if (code->expr3)
 	{
-	  rhs = gfc_copy_expr (code->expr3);
-	  if (rhs->ts.type == BT_CLASS)
-	    gfc_add_component_ref (rhs, "$data");
-	  tmp = gfc_trans_assignment (gfc_expr_to_initialize (expr), rhs, false);
+	  gfc_expr *rhs = gfc_copy_expr (code->expr3);
+	  if (al->expr->ts.type == BT_CLASS)
+	    {
+	      gfc_se dst,src;
+	      if (rhs->ts.type == BT_CLASS)
+		gfc_add_component_ref (rhs, "$data");
+	      gfc_init_se (&dst, NULL);
+	      gfc_init_se (&src, NULL);
+	      gfc_conv_expr (&dst, expr);
+	      gfc_conv_expr (&src, rhs);
+	      gfc_add_block_to_block (&block, &src.pre);
+	      tmp = gfc_build_memcpy_call (dst.expr, src.expr, memsz);
+	    }
+	  else
+	    tmp = gfc_trans_assignment (gfc_expr_to_initialize (expr),
+					rhs, false);
+	  gfc_free_expr (rhs);
+	  gfc_add_expr_to_block (&block, tmp);
+	}
+      /* Default initializer for CLASS variables.  */
+      else if (al->expr->ts.type == BT_CLASS
+	       && code->ext.alloc.ts.type == BT_DERIVED
+	       && (init_e = gfc_default_initializer (&code->ext.alloc.ts)))
+	{
+	  gfc_se dst,src;
+	  gfc_init_se (&dst, NULL);
+	  gfc_init_se (&src, NULL);
+	  gfc_conv_expr (&dst, expr);
+	  gfc_conv_expr (&src, init_e);
+	  gfc_add_block_to_block (&block, &src.pre);
+	  tmp = gfc_build_memcpy_call (dst.expr, src.expr, memsz);
 	  gfc_add_expr_to_block (&block, tmp);
 	}
       /* Add default initializer for those derived types that need them.  */
-      else if (expr->ts.type == BT_DERIVED && (init_e = gfc_default_initializer (&expr->ts)))
+      else if (expr->ts.type == BT_DERIVED
+	       && (init_e = gfc_default_initializer (&expr->ts)))
 	{
-	  tmp = gfc_trans_assignment (gfc_expr_to_initialize (expr), init_e, true);
+	  tmp = gfc_trans_assignment (gfc_expr_to_initialize (expr),
+				      init_e, true);
 	  gfc_add_expr_to_block (&block, tmp);
+	}
+
+      /* Allocation of CLASS entities.  */
+      gfc_free_expr (expr);
+      expr = al->expr;
+      if (expr->ts.type == BT_CLASS)
+	{
+	  gfc_expr *lhs,*rhs;
+	  gfc_se lse;
+
+	  /* Initialize VPTR for CLASS objects.  */
+	  lhs = gfc_expr_to_initialize (expr);
+	  gfc_add_component_ref (lhs, "$vptr");
+	  rhs = NULL;
+	  if (code->expr3 && code->expr3->ts.type == BT_CLASS)
+	    {
+	      /* VPTR must be determined at run time.  */
+	      rhs = gfc_copy_expr (code->expr3);
+	      gfc_add_component_ref (rhs, "$vptr");
+	      tmp = gfc_trans_pointer_assignment (lhs, rhs);
+	      gfc_add_expr_to_block (&block, tmp);
+	      gfc_free_expr (rhs);
+	    }
+	  else
+	    {
+	      /* VPTR is fixed at compile time.  */
+	      gfc_symbol *vtab;
+	      gfc_typespec *ts;
+	      if (code->expr3)
+		ts = &code->expr3->ts;
+	      else if (expr->ts.type == BT_DERIVED)
+		ts = &expr->ts;
+	      else if (code->ext.alloc.ts.type == BT_DERIVED)
+		ts = &code->ext.alloc.ts;
+	      else if (expr->ts.type == BT_CLASS)
+		ts = &expr->ts.u.derived->components->ts;
+	      else
+		ts = &expr->ts;
+
+	      if (ts->type == BT_DERIVED)
+		{
+		  vtab = gfc_find_derived_vtab (ts->u.derived);
+		  gcc_assert (vtab);
+		  gfc_init_se (&lse, NULL);
+		  lse.want_pointer = 1;
+		  gfc_conv_expr (&lse, lhs);
+		  tmp = gfc_build_addr_expr (NULL_TREE,
+					     gfc_get_symbol_decl (vtab));
+		  gfc_add_modify (&block, lse.expr,
+			fold_convert (TREE_TYPE (lse.expr), tmp));
+		}
+	    }
 	}
 
     }

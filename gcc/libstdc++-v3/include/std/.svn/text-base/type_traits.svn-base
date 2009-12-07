@@ -57,7 +57,8 @@
 
 namespace std
 {
-  /** @addtogroup metaprogramming
+  /**
+   * @addtogroup metaprogramming
    * @{
    */
 
@@ -154,7 +155,7 @@ namespace std
 
   template<typename _Tp>
     struct __is_signed_helper<_Tp, true, false>
-    : public integral_constant<bool, _Tp(-1) < _Tp(0)>
+    : public integral_constant<bool, static_cast<bool>(_Tp(-1) < _Tp(0))>
     { };
 
   /// is_signed
@@ -239,53 +240,31 @@ namespace std
     : public integral_constant<bool, __is_base_of(_Base, _Derived)>
     { };
 
+  template<typename _Tp>
+    typename add_rvalue_reference<_Tp>::type declval();
+
   // Relationships between types.
+  template<typename _From, typename _To,
+	   bool = (is_void<_From>::value || is_void<_To>::value
+		   || is_function<_To>::value || is_array<_To>::value)>
+    struct __is_convertible_helper
+    { static const bool __value = (is_void<_From>::value
+				   && is_void<_To>::value); };
+
   template<typename _From, typename _To>
-    struct __is_convertible_simple
+    struct __is_convertible_helper<_From, _To, false>
     : public __sfinae_types
     {
     private:
       static __one __test(_To);
       static __two __test(...);
-      static _From __makeFrom();
-    
+
     public:
-      static const bool __value = sizeof(__test(__makeFrom())) == 1;
+      static const bool __value = sizeof(__test(declval<_From>())) == 1;
     };
-
-  template<typename _Tp>
-    struct __is_int_or_cref
-    {
-      typedef typename remove_reference<_Tp>::type __rr_Tp;
-      static const bool __value = (is_integral<_Tp>::value
-				   || (is_integral<__rr_Tp>::value
-				       && is_const<__rr_Tp>::value
-				       && !is_volatile<__rr_Tp>::value));
-    };
-
-  template<typename _From, typename _To,
-	   bool = (is_void<_From>::value || is_void<_To>::value
-		   || is_function<_To>::value || is_array<_To>::value
-		   // This special case is here only to avoid warnings.
-		   || (is_floating_point<typename
-		       remove_reference<_From>::type>::value
-		       && __is_int_or_cref<_To>::__value))>
-    struct __is_convertible_helper
-    {
-      // "An imaginary lvalue of type From...".
-      static const bool __value = (__is_convertible_simple<typename
-				   add_lvalue_reference<_From>::type,
-				   _To>::__value);
-    };
-
-  template<typename _From, typename _To>
-    struct __is_convertible_helper<_From, _To, true>
-    { static const bool __value = (is_void<_To>::value
-				   || (__is_int_or_cref<_To>::__value
-				       && !is_void<_From>::value)); };
 
   // XXX FIXME
-  // The C++0x specifications are different, see N2255.
+  // The C++0x specifications require front-end support, see N2255.
   /// is_convertible
   template<typename _From, typename _To>
     struct is_convertible
@@ -579,23 +558,11 @@ namespace std
 
   template<typename _Tp>
     struct common_type<_Tp>
-    {
-      static_assert(sizeof(_Tp) > 0, "must be complete type");
-      typedef _Tp type;
-    };
+    { typedef _Tp type; };
 
   template<typename _Tp, typename _Up>
-    class common_type<_Tp, _Up>
-    {
-      static_assert(sizeof(_Tp) > 0, "must be complete type");
-      static_assert(sizeof(_Up) > 0, "must be complete type");
-
-      static _Tp&& __t();
-      static _Up&& __u();
-
-    public:
-      typedef decltype(true ? __t() : __u()) type;
-    };
+    struct common_type<_Tp, _Up>
+    { typedef decltype(true ? declval<_Tp>() : declval<_Up>()) type; };
 
   template<typename _Tp, typename _Up, typename... _Vp>
     struct common_type<_Tp, _Up, _Vp...>
@@ -603,11 +570,26 @@ namespace std
       typedef typename
         common_type<typename common_type<_Tp, _Up>::type, _Vp...>::type type;
     };
-
   // @} group metaprogramming
+
+  /// declval
+  template<typename _Tp>
+    struct __declval_protector
+    {
+      static const bool __stop = false;
+      static typename add_rvalue_reference<_Tp>::type __delegate();
+    };
+
+  template<typename _Tp>
+    inline typename add_rvalue_reference<_Tp>::type
+    declval()
+    {
+      static_assert(__declval_protector<_Tp>::__stop,
+		    "declval() must not be used!");
+      return __declval_protector<_Tp>::__delegate();
+    }
 }
 
 #endif  // __GXX_EXPERIMENTAL_CXX0X__
 
-#endif  // _GLIBCXX_TYPE_TRAITS 
-
+#endif  // _GLIBCXX_TYPE_TRAITS

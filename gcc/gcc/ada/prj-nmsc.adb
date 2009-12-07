@@ -655,7 +655,7 @@ package body Prj.Nmsc is
                   Location, Project);
 
                Error_Msg_Name_1 := Project.Name;
-               Error_Msg_Name_2 := Name_Id (Path.Name);
+               Error_Msg_Name_2 := Name_Id (Path.Display_Name);
                Error_Msg
                  (Data.Flags, "\  project %%, %%", Location, Project);
 
@@ -775,6 +775,10 @@ package body Prj.Nmsc is
       if Path /= No_Path_Information then
          Id.Path := Path;
          Source_Paths_Htable.Set (Data.Tree.Source_Paths_HT, Path.Name, Id);
+      end if;
+
+      if Index /= 0 then
+         Project.Has_Multi_Unit_Sources := True;
       end if;
 
       --  Add the source to the language list
@@ -1431,6 +1435,34 @@ package body Prj.Nmsc is
                                 From_List => Element.Value.Values,
                                 In_Tree   => Data.Tree);
 
+                        when Name_Multi_Unit_Switches =>
+                           Put (Into_List =>
+                                  Lang_Index.Config.Multi_Unit_Switches,
+                                From_List => Element.Value.Values,
+                                In_Tree   => Data.Tree);
+
+                        when Name_Multi_Unit_Object_Separator =>
+                           Get_Name_String (Element.Value.Value);
+
+                           if Name_Len /= 1 then
+                              Error_Msg
+                                (Data.Flags,
+                                 "multi-unit object separator must have " &
+                                 "a single character",
+                                 Element.Value.Location, Project);
+
+                           elsif Name_Buffer (1) = ' ' then
+                              Error_Msg
+                                (Data.Flags,
+                                 "multi-unit object separator cannot be " &
+                                 "a space",
+                                 Element.Value.Location, Project);
+
+                           else
+                              Lang_Index.Config.Multi_Unit_Object_Separator :=
+                                Name_Buffer (1);
+                           end if;
+
                         when Name_Path_Syntax =>
                            begin
                               Lang_Index.Config.Path_Syntax :=
@@ -1552,10 +1584,18 @@ package body Prj.Nmsc is
                            Lang_Index.Config.Config_Body :=
                              Element.Value.Value;
 
+                        when Name_Config_Body_File_Name_Index =>
+
+                           --  Attribute Config_Body_File_Name_Index
+                           --     ( < Language > )
+
+                           Lang_Index.Config.Config_Body_Index :=
+                             Element.Value.Value;
+
                         when Name_Config_Body_File_Name_Pattern =>
 
                            --  Attribute Config_Body_File_Name_Pattern
-                           --  (<language>)
+                           --    (<language>)
 
                            Lang_Index.Config.Config_Body_Pattern :=
                              Element.Value.Value;
@@ -1567,10 +1607,18 @@ package body Prj.Nmsc is
                            Lang_Index.Config.Config_Spec :=
                              Element.Value.Value;
 
+                        when Name_Config_Spec_File_Name_Index =>
+
+                           --  Attribute Config_Spec_File_Name_Index
+                           --    ( < Language > )
+
+                           Lang_Index.Config.Config_Spec_Index :=
+                             Element.Value.Value;
+
                         when Name_Config_Spec_File_Name_Pattern =>
 
                            --  Attribute Config_Spec_File_Name_Pattern
-                           --  (<language>)
+                           --    (<language>)
 
                            Lang_Index.Config.Config_Spec_Pattern :=
                              Element.Value.Value;
@@ -2472,6 +2520,12 @@ package body Prj.Nmsc is
                         Project.Decl.Attributes,
                         Data.Tree);
 
+      Library_Interface : constant Prj.Variable_Value :=
+                            Prj.Util.Value_Of
+                              (Snames.Name_Library_Interface,
+                               Project.Decl.Attributes,
+                               Data.Tree);
+
       List      : String_List_Id;
       Element   : String_Element;
       Name      : File_Name_Type;
@@ -2556,22 +2610,90 @@ package body Prj.Nmsc is
 
          Project.Interfaces_Defined := True;
 
-      elsif Project.Extends /= No_Project then
-         Project.Interfaces_Defined := Project.Extends.Interfaces_Defined;
+      elsif Project.Library and then not Library_Interface.Default then
 
-         if Project.Interfaces_Defined then
-            Iter := For_Each_Source (Data.Tree, Project);
+         --  Set In_Interfaces to False for all sources. It will be set to True
+         --  later for the sources in the Library_Interface list.
+
+         Project_2 := Project;
+         while Project_2 /= No_Project loop
+            Iter := For_Each_Source (Data.Tree, Project_2);
             loop
                Source := Prj.Element (Iter);
                exit when Source = No_Source;
-
-               if not Source.Declared_In_Interfaces then
-                  Source.In_Interfaces := False;
-               end if;
-
+               Source.In_Interfaces := False;
                Next (Iter);
             end loop;
-         end if;
+
+            Project_2 := Project_2.Extends;
+         end loop;
+
+         List := Library_Interface.Values;
+         while List /= Nil_String loop
+            Element := Data.Tree.String_Elements.Table (List);
+            Get_Name_String (Element.Value);
+            To_Lower (Name_Buffer (1 .. Name_Len));
+            Name := Name_Find;
+
+            Project_2 := Project;
+            Big_Loop_2 :
+            while Project_2 /= No_Project loop
+               Iter := For_Each_Source (Data.Tree, Project_2);
+
+               loop
+                  Source := Prj.Element (Iter);
+                  exit when Source = No_Source;
+
+                  if Source.Unit /= No_Unit_Index and then
+                     Source.Unit.Name = Name_Id (Name)
+                  then
+                     if not Source.Locally_Removed then
+                        Source.In_Interfaces := True;
+                        Source.Declared_In_Interfaces := True;
+
+                        Other := Other_Part (Source);
+
+                        if Other /= No_Source then
+                           Other.In_Interfaces := True;
+                           Other.Declared_In_Interfaces := True;
+                        end if;
+
+                        if Current_Verbosity = High then
+                           Write_Str ("   interface: ");
+                           Write_Line (Get_Name_String (Source.Path.Name));
+                        end if;
+                     end if;
+
+                     exit Big_Loop_2;
+                  end if;
+
+                  Next (Iter);
+               end loop;
+
+               Project_2 := Project_2.Extends;
+            end loop Big_Loop_2;
+
+            List := Element.Next;
+         end loop;
+
+         Project.Interfaces_Defined := True;
+
+      elsif Project.Extends /= No_Project
+        and then Project.Extends.Interfaces_Defined
+      then
+         Project.Interfaces_Defined := True;
+
+         Iter := For_Each_Source (Data.Tree, Project);
+         loop
+            Source := Prj.Element (Iter);
+            exit when Source = No_Source;
+
+            if not Source.Declared_In_Interfaces then
+               Source.In_Interfaces := False;
+            end if;
+
+            Next (Iter);
+         end loop;
       end if;
    end Check_Interfaces;
 
@@ -4707,26 +4829,121 @@ package body Prj.Nmsc is
          Removed  : Boolean := False)
       is
          Directory : constant String := Get_Name_String (From);
-         Element   : String_Element;
+
+         procedure Add_To_Or_Remove_From_List
+           (Path_Id         : Name_Id;
+            Display_Path_Id : Name_Id);
+         --  When Removed = False, the directory Path_Id to the list of
+         --  source_dirs if not already in the list. When Removed = True,
+         --  removed directory Path_Id if in the list.
 
          procedure Recursive_Find_Dirs (Path : Name_Id);
          --  Find all the subdirectories (recursively) of Path and add them
          --  to the list of source directories of the project.
+
+         --------------------------------
+         -- Add_To_Or_Remove_From_List --
+         --------------------------------
+
+         procedure Add_To_Or_Remove_From_List
+           (Path_Id         : Name_Id;
+            Display_Path_Id : Name_Id)
+         is
+            List       : String_List_Id;
+            Prev       : String_List_Id;
+            Rank_List  : Number_List_Index;
+            Prev_Rank  : Number_List_Index;
+            Element    : String_Element;
+
+         begin
+            Prev      := Nil_String;
+            Prev_Rank := No_Number_List;
+            List      := Project.Source_Dirs;
+            Rank_List := Project.Source_Dir_Ranks;
+            while List /= Nil_String loop
+               Element := Data.Tree.String_Elements.Table (List);
+               exit when Element.Value = Path_Id;
+               Prev := List;
+               List := Element.Next;
+               Prev_Rank := Rank_List;
+               Rank_List := Data.Tree.Number_Lists.Table (Prev_Rank).Next;
+            end loop;
+
+            --  The directory is in the list if List is not Nil_String
+
+            if not Removed and then List = Nil_String then
+               if Current_Verbosity = High then
+                  Write_Str  ("   Adding Source Dir=");
+                  Write_Line (Get_Name_String (Path_Id));
+               end if;
+
+               String_Element_Table.Increment_Last (Data.Tree.String_Elements);
+               Element :=
+                 (Value         => Path_Id,
+                  Index         => 0,
+                  Display_Value => Display_Path_Id,
+                  Location      => No_Location,
+                  Flag          => False,
+                  Next          => Nil_String);
+
+               Number_List_Table.Increment_Last (Data.Tree.Number_Lists);
+
+               if Last_Source_Dir = Nil_String then
+
+                  --  This is the first source directory
+
+                  Project.Source_Dirs :=
+                    String_Element_Table.Last (Data.Tree.String_Elements);
+                  Project.Source_Dir_Ranks :=
+                    Number_List_Table.Last (Data.Tree.Number_Lists);
+
+               else
+                  --  We already have source directories, link the previous
+                  --  last to the new one.
+
+                  Data.Tree.String_Elements.Table (Last_Source_Dir).Next :=
+                    String_Element_Table.Last (Data.Tree.String_Elements);
+                  Data.Tree.Number_Lists.Table (Last_Src_Dir_Rank).Next :=
+                    Number_List_Table.Last (Data.Tree.Number_Lists);
+               end if;
+
+               --  And register this source directory as the new last
+
+               Last_Source_Dir :=
+                 String_Element_Table.Last (Data.Tree.String_Elements);
+               Data.Tree.String_Elements.Table (Last_Source_Dir) := Element;
+               Last_Src_Dir_Rank :=
+                 Number_List_Table.Last (Data.Tree.Number_Lists);
+               Data.Tree.Number_Lists.Table (Last_Src_Dir_Rank) :=
+                 (Number => Rank, Next => No_Number_List);
+
+            elsif Removed and then List /= Nil_String then
+
+               --  Remove source dir, if present
+
+               if Prev = Nil_String then
+                  Project.Source_Dirs :=
+                    Data.Tree.String_Elements.Table (List).Next;
+                  Project.Source_Dir_Ranks :=
+                    Data.Tree.Number_Lists.Table (Rank_List).Next;
+
+               else
+                  Data.Tree.String_Elements.Table (Prev).Next :=
+                    Data.Tree.String_Elements.Table (List).Next;
+                  Data.Tree.Number_Lists.Table (Prev_Rank).Next :=
+                    Data.Tree.Number_Lists.Table (Rank_List).Next;
+               end if;
+            end if;
+         end Add_To_Or_Remove_From_List;
 
          -------------------------
          -- Recursive_Find_Dirs --
          -------------------------
 
          procedure Recursive_Find_Dirs (Path : Name_Id) is
-            Dir     : Dir_Type;
-            Name    : String (1 .. 250);
-            Last    : Natural;
-            List    : String_List_Id;
-            Prev    : String_List_Id;
-            Rank_List : Number_List_Index;
-            Prev_Rank : Number_List_Index;
-            Element : String_Element;
-            Found   : Boolean := False;
+            Dir  : Dir_Type;
+            Name : String (1 .. 250);
+            Last : Natural;
 
             Non_Canonical_Path : Name_Id := No_Name;
             Canonical_Path     : Name_Id := No_Name;
@@ -4763,94 +4980,13 @@ package body Prj.Nmsc is
                end if;
             end if;
 
-            --  Check if directory is already in list
+            Add_To_Or_Remove_From_List
+              (Path_Id         => Canonical_Path,
+               Display_Path_Id => Non_Canonical_Path);
 
-            List := Project.Source_Dirs;
-            Prev := Nil_String;
-            Rank_List := Project.Source_Dir_Ranks;
-            Prev_Rank := No_Number_List;
-            while List /= Nil_String loop
-               Element := Data.Tree.String_Elements.Table (List);
-
-               if Element.Value /= No_Name then
-                  Found := Element.Value = Canonical_Path;
-                  exit when Found;
-               end if;
-
-               Prev := List;
-               List := Element.Next;
-               Prev_Rank := Rank_List;
-               Rank_List := Data.Tree.Number_Lists.Table (Rank_List).Next;
-            end loop;
-
-            --  If directory is not already in list, put it there
-
-            if (not Removed) and (not Found) then
-               if Current_Verbosity = High then
-                  Write_Str  ("   ");
-                  Write_Line (The_Path (The_Path'First .. The_Path_Last));
-               end if;
-
-               String_Element_Table.Increment_Last (Data.Tree.String_Elements);
-               Element :=
-                 (Value         => Canonical_Path,
-                  Display_Value => Non_Canonical_Path,
-                  Location      => No_Location,
-                  Flag          => False,
-                  Next          => Nil_String,
-                  Index         => 0);
-
-               Number_List_Table.Increment_Last (Data.Tree.Number_Lists);
-
-               --  Case of first source directory
-
-               if Last_Source_Dir = Nil_String then
-                  Project.Source_Dirs :=
-                    String_Element_Table.Last (Data.Tree.String_Elements);
-                  Project.Source_Dir_Ranks :=
-                    Number_List_Table.Last (Data.Tree.Number_Lists);
-
-                  --  Here we already have source directories
-
-               else
-                  --  Link the previous last to the new one
-
-                  Data.Tree.String_Elements.Table
-                    (Last_Source_Dir).Next :=
-                    String_Element_Table.Last (Data.Tree.String_Elements);
-                  Data.Tree.Number_Lists.Table
-                    (Last_Src_Dir_Rank).Next :=
-                    Number_List_Table.Last (Data.Tree.Number_Lists);
-
-               end if;
-
-               --  And register this source directory as the new last
-
-               Last_Source_Dir :=
-                 String_Element_Table.Last (Data.Tree.String_Elements);
-               Data.Tree.String_Elements.Table (Last_Source_Dir) := Element;
-               Last_Src_Dir_Rank :=
-                 Number_List_Table.Last (Data.Tree.Number_Lists);
-               Data.Tree.Number_Lists.Table (Last_Src_Dir_Rank) :=
-                 (Number => Rank, Next => No_Number_List);
-
-            elsif Removed and Found then
-               if Prev = Nil_String then
-                  Project.Source_Dirs :=
-                    Data.Tree.String_Elements.Table (List).Next;
-                  Project.Source_Dir_Ranks :=
-                    Data.Tree.Number_Lists.Table (Rank_List).Next;
-               else
-                  Data.Tree.String_Elements.Table (Prev).Next :=
-                    Data.Tree.String_Elements.Table (List).Next;
-                  Data.Tree.Number_Lists.Table (Prev_Rank).Next :=
-                    Data.Tree.Number_Lists.Table (Rank_List).Next;
-               end if;
-            end if;
-
-            --  Now look for subdirectories. We do that even when this
-            --  directory is already in the list, because some of its
-            --  subdirectories may not be in the list yet.
+            --  Now look for subdirectories. Do that even when this directory
+            --  is already in the list, because some of its subdirectories may
+            --  not be in the list yet.
 
             Open (Dir, The_Path (The_Path'First .. The_Path_Last));
 
@@ -4870,12 +5006,14 @@ package body Prj.Nmsc is
 
                   declare
                      Path_Name : constant String :=
-                       Normalize_Pathname
-                         (Name      => Name (1 .. Last),
-                          Directory =>
-                            The_Path (The_Path'First .. The_Path_Last),
-                          Resolve_Links  => Opt.Follow_Links_For_Dirs,
-                          Case_Sensitive => True);
+                                   Normalize_Pathname
+                                     (Name           => Name (1 .. Last),
+                                      Directory      =>
+                                        The_Path
+                                          (The_Path'First .. The_Path_Last),
+                                      Resolve_Links  =>
+                                        Opt.Follow_Links_For_Dirs,
+                                      Case_Sensitive => True);
 
                   begin
                      if Is_Directory (Path_Name) then
@@ -4945,7 +5083,8 @@ package body Prj.Nmsc is
                                Directory =>
                                  Get_Name_String
                                    (Project.Directory.Display_Name),
-                               Resolve_Links  => False,
+                               Resolve_Links  =>
+                                 Opt.Follow_Links_For_Dirs,
                                Case_Sensitive => True);
 
             begin
@@ -4987,10 +5126,6 @@ package body Prj.Nmsc is
          else
             declare
                Path_Name  : Path_Information;
-               List       : String_List_Id;
-               Prev       : String_List_Id;
-               Rank_List  : Number_List_Index;
-               Prev_Rank  : Number_List_Index;
                Dir_Exists : Boolean;
 
             begin
@@ -5019,8 +5154,16 @@ package body Prj.Nmsc is
 
                else
                   declare
-                     Path              : constant String :=
-                                           Get_Name_String (Path_Name.Name);
+                     Path : constant String :=
+                              Normalize_Pathname
+                                (Name           =>
+                                   Get_Name_String (Path_Name.Name),
+                                 Directory      =>
+                                   Get_Name_String (Project.Directory.Name),
+                                 Resolve_Links  => Opt.Follow_Links_For_Dirs,
+                                 Case_Sensitive => True) &
+                              Directory_Separator;
+
                      Last_Path         : constant Natural :=
                                            Compute_Directory_Last (Path);
                      Path_Id           : Name_Id;
@@ -5036,113 +5179,16 @@ package body Prj.Nmsc is
                      Name_Len := 0;
                      Add_Str_To_Name_Buffer (Path (Path'First .. Last_Path));
                      Path_Id := Name_Find;
+
                      Name_Len := 0;
                      Add_Str_To_Name_Buffer
                        (Display_Path
                           (Display_Path'First .. Last_Display_Path));
                      Display_Path_Id := Name_Find;
 
-                     --  Check if the directory is already in the list
-
-                     Prev := Nil_String;
-                     Prev_Rank := No_Number_List;
-
-                     --  Look for source dir in current list
-
-                     List := Project.Source_Dirs;
-                     Rank_List := Project.Source_Dir_Ranks;
-                     while List /= Nil_String loop
-                        Element := Data.Tree.String_Elements.Table (List);
-                        exit when Element.Value = Path_Id;
-                        Prev := List;
-                        List := Element.Next;
-                        Prev_Rank := Rank_List;
-                        Rank_List :=
-                          Data.Tree.Number_Lists.Table (Prev_Rank).Next;
-                     end loop;
-
-                     --  The directory is in the list if List is not Nil_String
-
-                     if not Removed then
-
-                        --  As it is an existing directory, we add it to the
-                        --  list of directories, if not already in the list.
-
-                        if List = Nil_String then
-                           String_Element_Table.Increment_Last
-                             (Data.Tree.String_Elements);
-                           Element :=
-                             (Value         => Path_Id,
-                              Index         => 0,
-                              Display_Value => Display_Path_Id,
-                              Location      => No_Location,
-                              Flag          => False,
-                              Next          => Nil_String);
-                           Number_List_Table.Increment_Last
-                             (Data.Tree.Number_Lists);
-
-                           if Last_Source_Dir = Nil_String then
-
-                              --  This is the first source directory
-
-                              Project.Source_Dirs :=
-                                String_Element_Table.Last
-                                  (Data.Tree.String_Elements);
-                              Project.Source_Dir_Ranks :=
-                                Number_List_Table.Last
-                                  (Data.Tree.Number_Lists);
-
-                           else
-                              --  We already have source directories, link the
-                              --  previous last to the new one.
-
-                              Data.Tree.String_Elements.Table
-                                (Last_Source_Dir).Next :=
-                                String_Element_Table.Last
-                                  (Data.Tree.String_Elements);
-                              Data.Tree.Number_Lists.Table
-                                (Last_Src_Dir_Rank).Next :=
-                                Number_List_Table.Last
-                                  (Data.Tree.Number_Lists);
-
-                           end if;
-
-                           --  And register this source directory as the new
-                           --  last.
-
-                           Last_Source_Dir :=
-                             String_Element_Table.Last
-                               (Data.Tree.String_Elements);
-                           Data.Tree.String_Elements.Table
-                             (Last_Source_Dir) := Element;
-                           Last_Src_Dir_Rank :=
-                             Number_List_Table.Last
-                               (Data.Tree.Number_Lists);
-                           Data.Tree.Number_Lists.Table
-                             (Last_Src_Dir_Rank) :=
-                             (Number => Rank, Next => No_Number_List);
-                        end if;
-
-                     else
-                        --  Remove source dir, if present
-
-                        if List /= Nil_String then
-                           --  Source dir was found, remove it from the list
-
-                           if Prev = Nil_String then
-                              Project.Source_Dirs :=
-                                Data.Tree.String_Elements.Table (List).Next;
-                              Project.Source_Dir_Ranks :=
-                                Data.Tree.Number_Lists.Table (Rank_List).Next;
-
-                           else
-                              Data.Tree.String_Elements.Table (Prev).Next :=
-                                Data.Tree.String_Elements.Table (List).Next;
-                              Data.Tree.Number_Lists.Table (Prev_Rank).Next :=
-                                Data.Tree.Number_Lists.Table (Rank_List).Next;
-                           end if;
-                        end if;
-                     end if;
+                     Add_To_Or_Remove_From_List
+                       (Path_Id         => Path_Id,
+                        Display_Path_Id => Display_Path_Id);
                   end;
                end if;
             end;
@@ -6861,12 +6907,15 @@ package body Prj.Nmsc is
 
                      exit when Last = 0;
 
-                     --  ??? Duplicate system call here, we just did a a
-                     --  similar one. Maybe Ada.Directories would be more
-                     --  appropriate here.
+                     --  In fast project loading mode (without -eL), the user
+                     --  guarantees that no directory has a name which is a
+                     --  valid source name, so we can avoid doing a system call
+                     --  here. This provides a very significant speed up on
+                     --  slow file systems (remote files for instance).
 
-                     if Is_Regular_File
-                          (Source_Directory & Name (1 .. Last))
+                     if not Opt.Follow_Links_For_Files
+                       or else Is_Regular_File
+                                 (Source_Directory & Name (1 .. Last))
                      then
                         if Current_Verbosity = High then
                            Write_Str  ("   Checking ");

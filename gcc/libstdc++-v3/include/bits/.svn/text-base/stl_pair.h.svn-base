@@ -60,6 +60,10 @@
 #include <bits/move.h> // for std::move / std::forward, std::decay, and
                        // std::swap
 
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+#include <type_traits>
+#endif
+
 _GLIBCXX_BEGIN_NAMESPACE(std)
 
   /// pair holds two objects of arbitrary type.
@@ -84,7 +88,22 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       : first(__a), second(__b) { }
 
 #ifdef __GXX_EXPERIMENTAL_CXX0X__
-      template<class _U1, class _U2>
+      // DR 811.
+      template<class _U1, class = typename
+	       std::enable_if<std::is_convertible<_U1, _T1>::value>::type>
+        pair(_U1&& __x, const _T2& __y)
+	: first(std::forward<_U1>(__x)),
+	  second(__y) { }
+
+      template<class _U2, class = typename
+	       std::enable_if<std::is_convertible<_U2, _T2>::value>::type>
+        pair(const _T1& __x, _U2&& __y)
+	: first(__x),
+	  second(std::forward<_U2>(__y)) { }
+
+      template<class _U1, class _U2, class = typename
+	       std::enable_if<std::is_convertible<_U1, _T1>::value
+			      && std::is_convertible<_U2, _T2>::value>::type>
         pair(_U1&& __x, _U2&& __y)
 	: first(std::forward<_U1>(__x)),
 	  second(std::forward<_U2>(__y)) { }
@@ -105,13 +124,6 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
         pair(pair<_U1, _U2>&& __p)
 	: first(std::move(__p.first)),
 	  second(std::move(__p.second)) { }
-
-      // http://gcc.gnu.org/ml/libstdc++/2007-08/msg00052.html
-      template<class _U1, class _Arg0, class... _Args>
-        pair(_U1&& __x, _Arg0&& __arg0, _Args&&... __args)
-	: first(std::forward<_U1>(__x)),
-	  second(std::forward<_Arg0>(__arg0),
-		 std::forward<_Args>(__args)...) { }
 
       pair&
       operator=(pair&& __p)

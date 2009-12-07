@@ -1,3 +1,64 @@
+2009-12-07  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* configure.ac (net/if.h check): Include sys/socket.h if present.
+	* configure: Regenerate.
+
+2009-12-05  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.in: Regenerate.
+	* configure: Regenerate.
+	* gcj/Makefile.in: Regenerate.
+	* include/Makefile.in: Regenerate.
+	* testsuite/Makefile.in: Regenerate.
+
+2009-12-02  Ben Elliston  <bje@au.ibm.com>
+
+	* java/net/natVMURLConnection.cc (guessContentTypeFromBuffer):
+	Mark `bytes' and `valid' parameters as potentially unused.
+
+2009-11-30  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* testsuite/lib/libjava.exp (libjava_init):  Add host-dependent
+	settings for LC_ALL and LANG.
+
+2009-11-30  Ben Elliston  <bje@au.ibm.com>
+
+	* jni.cc (_Jv_JNI_GetObjectRefType): Mark `object' parameter as
+	maybe unused.
+
+2009-11-26  Ben Elliston  <bje@au.ibm.com>
+
+	* posix-threads.cc (ParkHelper::unpark): Do not initialise result,
+	but assign it instead. Eliminates an unused variable warning when
+	the result == 0 assertion is disabled.
+
+2009-11-17  Andrew Haley  <aph@redhat.com>
+
+	* posix-threads.cc (park): Rewrite code to handle time.
+	Move mutex lock before the call to compare_and_swap to avoid a
+	race condition.
+	Add some assertions.
+	(unpark): Add an assertion.
+	(init): Move here from posix-threads.h.
+	* include/posix-threads.h (destroy): removed.
+
+2009-11-13  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* exception.cc (PERSONALITY_FUNCTION): Fix oversight.
+
+2009-11-02  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	PR bootstrap/38867
+	* configure.ac (expanded_prefix): New variable, set to the
+	default prefix if none was passed on the command line.
+	* configure: Regenerate.
+
+2009-10-22  Matthias Klose  <doko@ubuntu.com>
+
+	* configure.ac: Rename --enable-plugin to --enable-browser-plugin,
+	pass --{en,dis}able-plugin to the classpath configure.
+	* configure: Regenerate.
+
 2009-09-30  Dave Korn  <dave.korn.cygwin@gmail.com>
 
 	* configure.host (libgcj_sublib_ltflags): New variable.

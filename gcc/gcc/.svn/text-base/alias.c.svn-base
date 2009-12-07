@@ -452,8 +452,8 @@ walk_mems_2 (rtx *x, rtx mem)
     {
       if (alias_sets_conflict_p (MEM_ALIAS_SET(*x), MEM_ALIAS_SET(mem)))
         return 1;
-        
-      return -1;  
+
+      return -1;
     }
   return 0;
 }
@@ -467,7 +467,7 @@ walk_mems_1 (rtx *x, rtx *pat)
       if (for_each_rtx (pat, (rtx_function) walk_mems_2, *x))
         /* Indicate that dependence was determined and stop traversal.  */
         return 1;
-        
+
       return -1;
     }
   return 0;
@@ -640,7 +640,7 @@ get_alias_set (tree t)
      aren't types.  */
   if (! TYPE_P (t))
     {
-      tree inner = t;
+      tree inner;
 
       /* Remove any nops, then give the language a chance to do
 	 something with this tree before we look at it.  */
@@ -649,8 +649,13 @@ get_alias_set (tree t)
       if (set != -1)
 	return set;
 
+      /* Retrieve the original memory reference if needed.  */
+      if (TREE_CODE (t) == TARGET_MEM_REF)
+	t = TMR_ORIGINAL (t);
+
       /* First see if the actual object referenced is an INDIRECT_REF from a
 	 restrict-qualified pointer or a "void *".  */
+      inner = t;
       while (handled_component_p (inner))
 	{
 	  inner = TREE_OPERAND (inner, 0);
@@ -691,7 +696,14 @@ get_alias_set (tree t)
      requires structural comparisons to identify compatible types
      use alias set zero.  */
   if (TYPE_STRUCTURAL_EQUALITY_P (t))
-    return 0;
+    {
+      /* Allow the language to specify another alias set for this
+	 type.  */
+      set = lang_hooks.get_alias_set (t);
+      if (set != -1)
+	return set;
+      return 0;
+    }
   t = TYPE_CANONICAL (t);
   /* Canonical types shouldn't form a tree nor should the canonical
      type require structural equality checks.  */
@@ -1053,6 +1065,11 @@ find_base_value (rtx src)
       return 0;
 
     case TRUNCATE:
+      /* As we do not know which address space the pointer is refering to, we can
+	 handle this only if the target does not support different pointer or
+	 address modes depending on the address space.  */
+      if (!target_default_pointer_address_modes_p ())
+	break;
       if (GET_MODE_SIZE (GET_MODE (src)) < GET_MODE_SIZE (Pmode))
 	break;
       /* Fall through.  */
@@ -1067,6 +1084,12 @@ find_base_value (rtx src)
 
     case ZERO_EXTEND:
     case SIGN_EXTEND:	/* used for NT/Alpha pointers */
+      /* As we do not know which address space the pointer is refering to, we can
+	 handle this only if the target does not support different pointer or
+	 address modes depending on the address space.  */
+      if (!target_default_pointer_address_modes_p ())
+	break;
+
       {
 	rtx temp = find_base_value (XEXP (src, 0));
 
@@ -1459,6 +1482,11 @@ find_base_term (rtx x)
       return REG_BASE_VALUE (x);
 
     case TRUNCATE:
+      /* As we do not know which address space the pointer is refering to, we can
+	 handle this only if the target does not support different pointer or
+	 address modes depending on the address space.  */
+      if (!target_default_pointer_address_modes_p ())
+	return 0;
       if (GET_MODE_SIZE (GET_MODE (x)) < GET_MODE_SIZE (Pmode))
 	return 0;
       /* Fall through.  */
@@ -1473,6 +1501,12 @@ find_base_term (rtx x)
 
     case ZERO_EXTEND:
     case SIGN_EXTEND:	/* Used for Alpha/NT pointers */
+      /* As we do not know which address space the pointer is refering to, we can
+	 handle this only if the target does not support different pointer or
+	 address modes depending on the address space.  */
+      if (!target_default_pointer_address_modes_p ())
+	return 0;
+
       {
 	rtx temp = find_base_term (XEXP (x, 0));
 
@@ -2171,6 +2205,13 @@ nonoverlapping_memrefs_p (const_rtx x, const_rtx y)
   if (! DECL_P (exprx) || ! DECL_P (expry))
     return 0;
 
+  /* With invalid code we can end up storing into the constant pool.
+     Bail out to avoid ICEing when creating RTL for this.
+     See gfortran.dg/lto/20091028-2_0.f90.  */
+  if (TREE_CODE (exprx) == CONST_DECL
+      || TREE_CODE (expry) == CONST_DECL)
+    return 1;
+
   rtlx = DECL_RTL (exprx);
   rtly = DECL_RTL (expry);
 
@@ -2180,6 +2221,13 @@ nonoverlapping_memrefs_p (const_rtx x, const_rtx y)
   if ((!MEM_P (rtlx) || !MEM_P (rtly))
       && ! rtx_equal_p (rtlx, rtly))
     return 1;
+
+  /* If we have MEMs refering to different address spaces (which can
+     potentially overlap), we cannot easily tell from the addresses
+     whether the references overlap.  */
+  if (MEM_P (rtlx) && MEM_P (rtly)
+      && MEM_ADDR_SPACE (rtlx) != MEM_ADDR_SPACE (rtly))
+    return 0;
 
   /* Get the base and offsets of both decls.  If either is a register, we
      know both are and are the same, so use that as the base.  The only
@@ -2272,6 +2320,12 @@ true_dependence (const_rtx mem, enum machine_mode mem_mode, const_rtx x,
   if (nonoverlapping_memrefs_p (mem, x))
     return 0;
 
+  /* If we have MEMs refering to different address spaces (which can
+     potentially overlap), we cannot easily tell from the addresses
+     whether the references overlap.  */
+  if (MEM_ADDR_SPACE (mem) != MEM_ADDR_SPACE (x))
+    return 1;
+
   if (mem_mode == VOIDmode)
     mem_mode = GET_MODE (mem);
 
@@ -2349,6 +2403,12 @@ canon_true_dependence (const_rtx mem, enum machine_mode mem_mode, rtx mem_addr,
   if (nonoverlapping_memrefs_p (x, mem))
     return 0;
 
+  /* If we have MEMs refering to different address spaces (which can
+     potentially overlap), we cannot easily tell from the addresses
+     whether the references overlap.  */
+  if (MEM_ADDR_SPACE (mem) != MEM_ADDR_SPACE (x))
+    return 1;
+
   if (! x_addr)
     x_addr = get_addr (XEXP (x, 0));
 
@@ -2408,6 +2468,12 @@ write_dependence_p (const_rtx mem, const_rtx x, int writep)
 
   if (nonoverlapping_memrefs_p (x, mem))
     return 0;
+
+  /* If we have MEMs refering to different address spaces (which can
+     potentially overlap), we cannot easily tell from the addresses
+     whether the references overlap.  */
+  if (MEM_ADDR_SPACE (mem) != MEM_ADDR_SPACE (x))
+    return 1;
 
   x_addr = get_addr (XEXP (x, 0));
   mem_addr = get_addr (XEXP (mem, 0));

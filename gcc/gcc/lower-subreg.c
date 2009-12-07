@@ -1174,12 +1174,10 @@ decompose_multiword_subregs (void)
 
 	  FOR_BB_INSNS (bb, insn)
 	    {
-	      rtx next, pat;
+	      rtx pat;
 
 	      if (!INSN_P (insn))
 		continue;
-
-	      next = NEXT_INSN (insn);
 
 	      pat = PATTERN (insn);
 	      if (GET_CODE (pat) == CLOBBER)
@@ -1307,7 +1305,7 @@ decompose_multiword_subregs (void)
 	BITMAP_FREE (b);
   }
 
-  VEC_free (bitmap, heap, reg_copy_graph);  
+  VEC_free (bitmap, heap, reg_copy_graph);
 
   BITMAP_FREE (decomposable_context);
   BITMAP_FREE (non_decomposable_context);

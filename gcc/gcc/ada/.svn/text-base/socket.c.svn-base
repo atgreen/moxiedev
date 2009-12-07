@@ -35,11 +35,24 @@
 #ifdef VMS
 /*
  * For VMS, gsocket.h can't include sockets-related DEC C header files
- * when building the runtime (because these files are in DEC C archives,
- * not accessable to GCC). So, we generate a separate header file along
- * with s-oscons.ads and include it here.
+ * when building the runtime (because these files are in a DEC C text library
+ * (DECC$RTLDEF.TLB) not accessable to GCC). So, we generate a separate header
+ * file along with s-oscons.ads and include it here.
  */
 # include "s-oscons.h"
+
+/*
+ * We also need the declaration of struct servent, which s-oscons can't
+ * provide, so we copy it manually here. This needs to be kept in synch
+ * with the definition of that structure in the DEC C headers, which
+ * hopefully won't change frequently.
+ */
+struct servent {
+  char *s_name;     /* official service name */
+  char **s_aliases; /* alias list */
+  int  s_port;      /* port # */
+  char *s_proto;    /* protocol to use */
+};
 #endif
 
 #if defined(HAVE_SOCKETS)
@@ -74,6 +87,14 @@ extern void __gnat_remove_socket_from_set (fd_set *, int);
 extern void __gnat_reset_socket_set (fd_set *);
 extern int  __gnat_get_h_errno (void);
 extern int  __gnat_socket_ioctl (int, int, int *);
+extern char * __gnat_servent_s_name (struct servent *);
+extern char ** __gnat_servent_s_aliases (struct servent *);
+extern int __gnat_servent_s_port (struct servent *);
+extern char * __gnat_servent_s_proto (struct servent *);
+extern void __gnat_servent_set_s_name (struct servent *, char *);
+extern void __gnat_servent_set_s_aliases (struct servent *, char **);
+extern void __gnat_servent_set_s_port (struct servent *, int);
+extern void __gnat_servent_set_s_proto (struct servent *, char *);
 #if defined (__vxworks) || defined (_WIN32)
 extern int  __gnat_inet_pton (int, const char *, void *);
 #endif
@@ -487,6 +508,88 @@ __gnat_inet_pton (int af, const char *src, void *dst) {
 #endif
 }
 #endif
+
+/*
+ * Accessor functions for struct servent.
+ *
+ * These are needed because servent has different representations on different
+ * platforms, and we don't want to deal with that on the Ada side. For example,
+ * on Linux, we have (see /usr/include netdb.h):
+ *
+ *   struct servent
+ *   {
+ *     char *s_name;
+ *     char **s_aliases;
+ *     int s_port;
+ *     char *s_proto;
+ *   };
+ *
+ * and on Windows (see mingw's socket.h):
+ *
+ *   struct servent {
+ *     char *s_name;
+ *     char **s_aliases;
+ *   #ifdef _WIN64
+ *     char *s_proto;
+ *     short s_port;
+ *   #else
+ *     short s_port;
+ *     char *s_proto;
+ *   #endif
+ *   };
+ */
+
+/* Getters */
+
+char *
+__gnat_servent_s_name (struct servent * s)
+{
+  return s->s_name;
+}
+
+char **
+__gnat_servent_s_aliases (struct servent * s)
+{
+  return s->s_aliases;
+}
+
+int
+__gnat_servent_s_port (struct servent * s)
+{
+  return s->s_port;
+}
+
+char *
+__gnat_servent_s_proto (struct servent * s)
+{
+  return s->s_proto;
+}
+
+/* Setters */
+
+void
+__gnat_servent_set_s_name (struct servent * s, char * s_name)
+{
+  s->s_name = s_name;
+}
+
+void
+__gnat_servent_set_s_aliases (struct servent * s, char ** s_aliases)
+{
+  s->s_aliases = s_aliases;
+}
+
+void
+__gnat_servent_set_s_port (struct servent * s, int s_port)
+{
+  s->s_port = s_port;
+}
+
+void
+__gnat_servent_set_s_proto (struct servent * s, char * s_proto)
+{
+  s->s_proto = s_proto;
+}
 
 #else
 # warning Sockets are not supported on this platform

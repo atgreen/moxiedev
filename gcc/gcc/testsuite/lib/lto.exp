@@ -17,10 +17,21 @@
 # Contributed by Diego Novillo <dnovillo@google.com>
 
 
-# lto_init -- called at the start of eac subdir of tests
+# lto_init -- called at the start of each subdir of tests
 
 proc lto_init { args } {
     global LTO_OPTIONS
+
+    if {[info exists args] && $args == "no-mathlib"} {
+	global board_info
+	global saved_mathlib
+
+	set dest [target_info name]
+	if [board_info $dest exists mathlib] {
+	    set saved_mathlib [board_info $dest mathlib]
+	}
+	set board_info($dest,mathlib) " "
+    }
 
     # Each test is run with the compiler options from this list.
     # The default option lists can be overridden by LTO_OPTIONS="[list
@@ -37,6 +48,22 @@ proc lto_init { args } {
     }
 }
 
+#
+# lto_finish -- called at the end of each subdir of tests if mathlib is
+#		changed.
+#
+
+proc lto_finish { } {
+    global board_info
+    global saved_mathlib
+
+    set dest [target_info name]
+    if [info exists saved_mathlib] {
+	set board_info($dest,mathlib) $saved_mathlib
+    } elseif [board_info $dest exists mathlib] {
+	unset board_info($dest,mathlib)
+    }
+}
 
 # Subsets of tests can be selectively disabled by members of this list:
 #  - ATTRIBUTE: disable all tests using the __attribute__ extension,
@@ -284,7 +311,7 @@ proc lto-get-options { src } {
 # SID identifies a test suite in the names of temporary files.
 proc lto-execute { src1 sid } {
     global srcdir tmpdir
-    global option_list
+    global lto_option_list
     global tool
     global verbose
     global testcase
@@ -307,12 +334,12 @@ proc lto-execute { src1 sid } {
     set compile_xfail(0) "" 
 
     # If the main file defines dg-options, those flags are used to
-    # overwrite the default option_list taken from LTO_OPTIONS.
+    # overwrite the default lto_option_list taken from LTO_OPTIONS.
     if { [string length $extra_flags(0)] > 0 } {
-	set option_list $extra_flags(0)
+	set lto_option_list $extra_flags(0)
 	set extra_flags(0) ""
     } else {
-	set option_list $LTO_OPTIONS
+	set lto_option_list $LTO_OPTIONS
     }
 
     # Check whether this test is supported for this target.
@@ -390,7 +417,7 @@ proc lto-execute { src1 sid } {
 
     # Loop through all of the option lists used for this test.
     set count 0
-    foreach option $option_list {
+    foreach option $lto_option_list {
 	verbose "Testing $testcase, $option"
 
 	# There's a unique name for each executable we generate.
@@ -493,7 +520,7 @@ proc scan-symbol { args } {
 	verbose -log "nm is $nm"
     }
 
-    set output_file $execname
+    set output_file "[glob -nocomplain $execname]"
     if { $output_file == "" } {
 	fail "scan-symbol $args: dump file does not exist"
 	return

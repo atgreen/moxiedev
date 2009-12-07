@@ -68,6 +68,12 @@ typedef int (* print_switch_fn_type) (print_switch_type, const char *);
 /* An example implementation for ELF targets.  Defined in varasm.c  */
 extern int elf_record_gcc_switches (print_switch_type type, const char *);
 
+/* Some places still assume that all pointer or address modes are the
+   standard Pmode and ptr_mode.  These optimizations become invalid if
+   the target actually supports multiple different modes.  For now,
+   we disable such optimizations on such targets, using this function.  */
+extern bool target_default_pointer_address_modes_p (void);
+
 struct stdarg_info;
 struct spec_info_def;
 
@@ -468,7 +474,7 @@ struct gcc_target
     tree (* builtin_conversion) (unsigned, tree);
 
     /* Target builtin that implements vector widening multiplication.
-       builtin_mul_widen_eve computes the element-by-element products 
+       builtin_mul_widen_eve computes the element-by-element products
        for the even elements, and builtin_mul_widen_odd computes the
        element-by-element products for the odd elements.  */
     tree (* builtin_mul_widen_even) (tree);
@@ -484,15 +490,24 @@ struct gcc_target
 
     /* Target builtin that implements vector permute.  */
     tree (* builtin_vec_perm) (tree, tree*);
+
+    /* Return true if a vector created for builtin_vec_perm is valid.  */
+    bool (* builtin_vec_perm_ok) (tree, tree);
+
     /* Return true if the target supports misaligned store/load of a
        specific factor denoted in the third parameter.  The last parameter
        is true if the access is defined in a packed struct.  */
-    bool (* builtin_support_vector_misalignment) (enum machine_mode, 
+    bool (* builtin_support_vector_misalignment) (enum machine_mode,
                                                   const_tree, int, bool);
   } vectorize;
 
   /* The initial value of target_flags.  */
   int default_target_flags;
+
+  /* Allow target specific overriding of option settings after options have
+     been changed by an attribute or pragma or when it is reset at the
+     end of the code affected by an attribute or pragma.  */
+  void (* override_options_after_change) (void);
 
   /* Handle target switch CODE (an OPT_* value).  ARG is the argument
      passed to the switch; it is NULL if no argument was.  VALUE is the
@@ -615,6 +630,9 @@ struct gcc_target
      already been generated.  */
   bool (* branch_target_register_callee_saved) (bool after_pe_gen);
 
+  /* Return true if the target supports conditional execution.  */
+  bool (* have_conditional_execution) (void);
+
   /* True if the constant X cannot be placed in the constant pool.  */
   bool (* cannot_force_const_mem) (rtx);
 
@@ -693,6 +711,36 @@ struct gcc_target
 
   /* True if MODE is valid for a pointer in __attribute__((mode("MODE"))).  */
   bool (* valid_pointer_mode) (enum machine_mode mode);
+
+  /* Support for named address spaces.  */
+  struct addr_space {
+    /* MODE to use for a pointer into another address space.  */
+    enum machine_mode (* pointer_mode) (addr_space_t);
+
+    /* MODE to use for an address in another address space.  */
+    enum machine_mode (* address_mode) (addr_space_t);
+
+    /* True if MODE is valid for a pointer in __attribute__((mode("MODE")))
+       in another address space.  */
+    bool (* valid_pointer_mode) (enum machine_mode, addr_space_t);
+
+    /* True if an address is a valid memory address to a given named address
+       space for a given mode.  */
+    bool (* legitimate_address_p) (enum machine_mode, rtx, bool, addr_space_t);
+
+    /* Return an updated address to convert an invalid pointer to a named
+       address space to a valid one.  If NULL_RTX is returned use machine
+       independent methods to make the address valid.  */
+    rtx (* legitimize_address) (rtx, rtx, enum machine_mode, addr_space_t);
+
+    /* True if one named address space is a subset of another named address. */
+    bool (* subset_p) (addr_space_t, addr_space_t);
+
+    /* Function to convert an rtl expression from one address space to
+       another.  */
+    rtx (* convert) (rtx, tree, tree);
+
+  } addr_space;
 
   /* True if MODE is valid for the target.  By "valid", we mean able to
      be manipulated in non-trivial ways.  In particular, this means all
@@ -908,7 +956,7 @@ struct gcc_target
 
     /* Return the rtx for the result of a libcall of mode MODE,
        calling the function FN_NAME.  */
-    rtx (*libcall_value) (enum machine_mode, rtx);
+    rtx (*libcall_value) (enum machine_mode, const_rtx);
 
     /* Return an rtx for the argument pointer incoming to the
        current function.  */
@@ -929,7 +977,7 @@ struct gcc_target
        then it should be for the callee; otherwise for the caller.  */
     rtx (*static_chain) (const_tree fndecl, bool incoming_p);
 
-    /* Fill in the trampoline at MEM with a call to FNDECL and a 
+    /* Fill in the trampoline at MEM with a call to FNDECL and a
        static chain value of CHAIN.  */
     void (*trampoline_init) (rtx mem, tree fndecl, rtx chain);
 
@@ -991,7 +1039,7 @@ struct gcc_target
   /* Return the smallest number of different values for which it is best to
      use a jump-table instead of a tree of conditional branches.  */
   unsigned int (* case_values_threshold) (void);
-  
+
   /* Retutn true if a function must have and use a frame pointer.  */
   bool (* frame_pointer_required) (void);
 
@@ -1071,7 +1119,7 @@ struct gcc_target
     /* Prefixes for proxy variable and template.  */
     const char *var_prefix;
     const char *tmpl_prefix;
-    
+
     /* Function to generate field definitions of the proxy variable.  */
     tree (*var_fields) (tree, tree *);
 
@@ -1084,7 +1132,7 @@ struct gcc_target
 
     /* Whether we can emit debug information for TLS vars.  */
     bool debug_form_tls_address;
-  } emutls;  
+  } emutls;
 
   struct target_option_hooks {
     /* Function to validate the attribute((option(...))) strings or NULL.  If
@@ -1116,8 +1164,8 @@ struct gcc_target
 
   /* For targets that need to mark extra registers as live on entry to
      the function, they should define this target hook and set their
-     bits in the bitmap passed in. */  
-  void (*live_on_entry) (bitmap); 
+     bits in the bitmap passed in. */
+  void (*live_on_entry) (bitmap);
 
   /* True if unwinding tables should be generated by default.  */
   bool unwind_tables_default;

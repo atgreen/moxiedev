@@ -1,3 +1,41 @@
+2009-11-18  Iain Sandoe <iain.sandoe@sandoe-acoustics.co.uk>
+
+	PR other/39888
+	* config/t-slibgcc-darwin: Fix embedded rpaths for
+	--enable-version-specific-runtime-libs, build extension stub
+	libs exposing features available from current libgcc_s.
+
+2009-11-11  Jon Beniston <jon@beniston.com>
+
+        * config.host: Add lm32 targets.
+        * config/lm32: New directory.
+        * config/lm32/libgcc_lm32.h: New file.
+        * config/lm32/_mulsi3.c: New file.
+        * config/lm32/_udivmodsi4.c: New file.
+        * config/lm32/_divsi3.c: New file.
+        * config/lm32/_modsi3.c: New file.
+        * config/lm32/_udivsi3.c: New file.
+        * config/lm32/_umodsi3.c: New file.
+        * config/lm32/_lshrsi3.S: New file.
+        * config/lm32/_ashrsi3.S: New file.
+        * config/lm32/_ashlsi3.S: New file.
+        * config/lm32/crti.S: New file.
+        * config/lm32/crtn.S: New file.
+        * config/lm32/t-lm32: New file.
+        * config/lm32/t-elf: New file.
+        * config/lm32/t-uclinux: New file.
+
+2009-10-26  Nick Clifton  <nickc@redhat.com>
+
+	* config.host: Add support for RX target.
+	* config/rx: New directory.
+	* config/rx/rx-abi-functions.c: New file. Supplementary
+	functions for libgcc to support the RX ABI.
+	* config/rx/rx-abi.h: New file.  Supplementary header file for
+	libgcc RX ABI functions.
+	* config/rx/t-rx: New file: Makefile fragment for building
+	libgcc for the RX.
+
 2009-10-09  Uros Bizjak  <ubizjak@gmail.com>
 
 	* config/i386/32/sfp-machine.h (__FP_FRAC_SUB_4): Change operand

@@ -190,9 +190,9 @@ extern void (*arm_lang_output_object_attributes_hook)(void);
 #define TARGET_HARD_FLOAT		(arm_float_abi != ARM_FLOAT_ABI_SOFT)
 /* Use hardware floating point calling convention.  */
 #define TARGET_HARD_FLOAT_ABI		(arm_float_abi == ARM_FLOAT_ABI_HARD)
-#define TARGET_FPA			(arm_fp_model == ARM_FP_MODEL_FPA)
-#define TARGET_MAVERICK			(arm_fp_model == ARM_FP_MODEL_MAVERICK)
-#define TARGET_VFP			(arm_fp_model == ARM_FP_MODEL_VFP)
+#define TARGET_FPA		(arm_fpu_desc->model == ARM_FP_MODEL_FPA)
+#define TARGET_MAVERICK		(arm_fpu_desc->model == ARM_FP_MODEL_MAVERICK)
+#define TARGET_VFP		(arm_fpu_desc->model == ARM_FP_MODEL_VFP)
 #define TARGET_IWMMXT			(arm_arch_iwmmxt)
 #define TARGET_REALLY_IWMMXT		(TARGET_IWMMXT && TARGET_32BIT)
 #define TARGET_IWMMXT_ABI (TARGET_32BIT && arm_abi == ARM_ABI_IWMMXT)
@@ -216,6 +216,8 @@ extern void (*arm_lang_output_object_attributes_hook)(void);
 #define TARGET_THUMB2			(TARGET_THUMB && arm_arch_thumb2)
 /* Thumb-1 only.  */
 #define TARGET_THUMB1_ONLY		(TARGET_THUMB1 && !arm_arch_notm)
+/* FPA emulator without LFM.  */
+#define TARGET_FPA_EMU2			(TARGET_FPA && arm_fpu_desc->rev == 2)
 
 /* The following two macros concern the ability to execute coprocessor
    instructions for VFPv3 or NEON.  TARGET_VFP3/TARGET_VFPD32 are currently
@@ -223,34 +225,37 @@ extern void (*arm_lang_output_object_attributes_hook)(void);
    to be more careful with TARGET_NEON as noted below.  */
 
 /* FPU is has the full VFPv3/NEON register file of 32 D registers.  */
-#define TARGET_VFPD32 (arm_fp_model == ARM_FP_MODEL_VFP \
-		       && (arm_fpu_arch == FPUTYPE_VFP3 \
-			   || arm_fpu_arch == FPUTYPE_NEON \
-			   || arm_fpu_arch == FPUTYPE_NEON_FP16))
+#define TARGET_VFPD32 (TARGET_VFP && arm_fpu_desc->regs == VFP_REG_D32)
 
 /* FPU supports VFPv3 instructions.  */
-#define TARGET_VFP3 (arm_fp_model == ARM_FP_MODEL_VFP \
-		     && (arm_fpu_arch == FPUTYPE_VFP3D16 \
-			 || TARGET_VFPD32))
+#define TARGET_VFP3 (TARGET_VFP && arm_fpu_desc->rev >= 3)
 
-/* FPU supports NEON/VFP half-precision floating-point.  */
-#define TARGET_NEON_FP16 (arm_fpu_arch == FPUTYPE_NEON_FP16)
+/* FPU only supports VFP single-precision instructions.  */
+#define TARGET_VFP_SINGLE (TARGET_VFP && arm_fpu_desc->regs == VFP_REG_SINGLE)
+
+/* FPU supports VFP double-precision instructions.  */
+#define TARGET_VFP_DOUBLE (TARGET_VFP && arm_fpu_desc->regs != VFP_REG_SINGLE)
+
+/* FPU supports half-precision floating-point with NEON element load/store.  */
+#define TARGET_NEON_FP16 \
+  (TARGET_VFP && arm_fpu_desc->neon && arm_fpu_desc->fp16)
+
+/* FPU supports VFP half-precision floating-point.  */
+#define TARGET_FP16 (TARGET_VFP && arm_fpu_desc->fp16)
 
 /* FPU supports Neon instructions.  The setting of this macro gets
    revealed via __ARM_NEON__ so we add extra guards upon TARGET_32BIT
    and TARGET_HARD_FLOAT to ensure that NEON instructions are
    available.  */
 #define TARGET_NEON (TARGET_32BIT && TARGET_HARD_FLOAT \
-		     && arm_fp_model == ARM_FP_MODEL_VFP \
-		     && (arm_fpu_arch == FPUTYPE_NEON \
-			 || arm_fpu_arch == FPUTYPE_NEON_FP16))
+		     && TARGET_VFP && arm_fpu_desc->neon)
 
 /* "DSP" multiply instructions, eg. SMULxy.  */
 #define TARGET_DSP_MULTIPLY \
-  (TARGET_32BIT && arm_arch5e && arm_arch_notm)
+  (TARGET_32BIT && arm_arch5e && (arm_arch_notm || arm_arch7em))
 /* Integer SIMD instructions, and extend-accumulate instructions.  */
 #define TARGET_INT_SIMD \
-  (TARGET_32BIT && arm_arch6 && arm_arch_notm)
+  (TARGET_32BIT && arm_arch6 && (arm_arch_notm || arm_arch7em))
 
 /* Should MOVW/MOVT be used in preference to a constant pool.  */
 #define TARGET_USE_MOVT (arm_arch_thumb2 && !optimize_size)
@@ -300,42 +305,26 @@ enum arm_fp_model
   ARM_FP_MODEL_VFP
 };
 
-extern enum arm_fp_model arm_fp_model;
-
-/* Which floating point hardware is available.  Also update
-   fp_model_for_fpu in arm.c when adding entries to this list.  */
-enum fputype
+enum vfp_reg_type
 {
-  /* No FP hardware.  */
-  FPUTYPE_NONE,
-  /* Full FPA support.  */
-  FPUTYPE_FPA,
-  /* Emulated FPA hardware, Issue 2 emulator (no LFM/SFM).  */
-  FPUTYPE_FPA_EMU2,
-  /* Emulated FPA hardware, Issue 3 emulator.  */
-  FPUTYPE_FPA_EMU3,
-  /* Cirrus Maverick floating point co-processor.  */
-  FPUTYPE_MAVERICK,
-  /* VFP.  */
-  FPUTYPE_VFP,
-  /* VFPv3-D16.  */
-  FPUTYPE_VFP3D16,
-  /* VFPv3.  */
-  FPUTYPE_VFP3,
-  /* Neon.  */
-  FPUTYPE_NEON,
-  /* Neon with half-precision float extensions.  */
-  FPUTYPE_NEON_FP16
+  VFP_NONE = 0,
+  VFP_REG_D16,
+  VFP_REG_D32,
+  VFP_REG_SINGLE
 };
 
-/* Recast the floating point class to be the floating point attribute.  */
-#define arm_fpu_attr ((enum attr_fpu) arm_fpu_tune)
+extern const struct arm_fpu_desc
+{
+  const char *name;
+  enum arm_fp_model model;
+  int rev;
+  enum vfp_reg_type regs;
+  int neon;
+  int fp16;
+} *arm_fpu_desc;
 
-/* What type of floating point to tune for */
-extern enum fputype arm_fpu_tune;
-
-/* What type of floating point instructions are available */
-extern enum fputype arm_fpu_arch;
+/* Which floating point hardware to schedule for.  */
+extern int arm_fpu_attr;
 
 enum float_abi_type
 {
@@ -410,6 +399,9 @@ extern int arm_arch6;
 
 /* Nonzero if instructions not present in the 'M' profile can be used.  */
 extern int arm_arch_notm;
+
+/* Nonzero if instructions present in ARMv7E-M can be used.  */
+extern int arm_arch7em;
 
 /* Nonzero if this chip can benefit from load scheduling.  */
 extern int arm_ld_sched;
@@ -1283,7 +1275,7 @@ enum reg_class
    In general this is just CLASS, but for the Thumb core registers and
    immediate constants we prefer a LO_REGS class or a subset.  */
 #define PREFERRED_RELOAD_CLASS(X, CLASS)		\
-  (TARGET_ARM ? (CLASS) :				\
+  (TARGET_32BIT ? (CLASS) :				\
    ((CLASS) == GENERAL_REGS || (CLASS) == HI_REGS	\
     || (CLASS) == NO_REGS || (CLASS) == STACK_REG	\
    ? LO_REGS : (CLASS)))
@@ -2283,24 +2275,44 @@ extern int making_const_table;
 #define ASM_APP_OFF (TARGET_THUMB1 ? "\t.code\t16\n" : \
 		     TARGET_THUMB2 ? "\t.thumb\n" : "")
 
-/* Output a push or a pop instruction (only used when profiling).  */
+/* Output a push or a pop instruction (only used when profiling).
+   We can't push STATIC_CHAIN_REGNUM (r12) directly with Thumb-1.  We know
+   that ASM_OUTPUT_REG_PUSH will be matched with ASM_OUTPUT_REG_POP, and
+   that r7 isn't used by the function profiler, so we can use it as a
+   scratch reg.  WARNING: This isn't safe in the general case!  It may be
+   sensitive to future changes in final.c:profile_function.  */
 #define ASM_OUTPUT_REG_PUSH(STREAM, REGNO)		\
   do							\
     {							\
       if (TARGET_ARM)					\
 	asm_fprintf (STREAM,"\tstmfd\t%r!,{%r}\n",	\
 		     STACK_POINTER_REGNUM, REGNO);	\
+      else if (TARGET_THUMB1				\
+	       && (REGNO) == STATIC_CHAIN_REGNUM)	\
+	{						\
+	  asm_fprintf (STREAM, "\tpush\t{r7}\n");	\
+	  asm_fprintf (STREAM, "\tmov\tr7, %r\n", REGNO);\
+	  asm_fprintf (STREAM, "\tpush\t{r7}\n");	\
+	}						\
       else						\
 	asm_fprintf (STREAM, "\tpush {%r}\n", REGNO);	\
     } while (0)
 
 
+/* See comment for ASM_OUTPUT_REG_PUSH concerning Thumb-1 issue.  */
 #define ASM_OUTPUT_REG_POP(STREAM, REGNO)		\
   do							\
     {							\
       if (TARGET_ARM)					\
 	asm_fprintf (STREAM, "\tldmfd\t%r!,{%r}\n",	\
 		     STACK_POINTER_REGNUM, REGNO);	\
+      else if (TARGET_THUMB1				\
+	       && (REGNO) == STATIC_CHAIN_REGNUM)	\
+	{						\
+	  asm_fprintf (STREAM, "\tpop\t{r7}\n");	\
+	  asm_fprintf (STREAM, "\tmov\t%r, r7\n", REGNO);\
+	  asm_fprintf (STREAM, "\tpop\t{r7}\n");	\
+	}						\
       else						\
 	asm_fprintf (STREAM, "\tpop {%r}\n", REGNO);	\
     } while (0)

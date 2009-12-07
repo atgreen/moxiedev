@@ -56,7 +56,12 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #if HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
+
+#ifdef __MINGW32__
+typedef off64_t gfc_offset;
+#else
 typedef off_t gfc_offset;
+#endif
 
 #ifndef NULL
 #define NULL (void *) 0
@@ -672,10 +677,18 @@ internal_proto(show_backtrace);
 
 /* error.c */
 
+#if defined(HAVE_GFC_REAL_16)
+#define GFC_LARGEST_BUF (sizeof (GFC_REAL_16))
+#elif defined(HAVE_GFC_REAL_10)
+#define GFC_LARGEST_BUF (sizeof (GFC_REAL_10))
+#else
+#define GFC_LARGEST_BUF (sizeof (GFC_INTEGER_LARGEST))
+#endif
+
 #define GFC_ITOA_BUF_SIZE (sizeof (GFC_INTEGER_LARGEST) * 3 + 2)
-#define GFC_XTOA_BUF_SIZE (sizeof (GFC_UINTEGER_LARGEST) * 2 + 1)
-#define GFC_OTOA_BUF_SIZE (sizeof (GFC_INTEGER_LARGEST) * 3 + 1)
-#define GFC_BTOA_BUF_SIZE (sizeof (GFC_INTEGER_LARGEST) * 8 + 1)
+#define GFC_XTOA_BUF_SIZE (GFC_LARGEST_BUF * 2 + 1)
+#define GFC_OTOA_BUF_SIZE (GFC_LARGEST_BUF * 3 + 1)
+#define GFC_BTOA_BUF_SIZE (GFC_LARGEST_BUF * 8 + 1)
 
 extern void sys_exit (int) __attribute__ ((noreturn));
 internal_proto(sys_exit);

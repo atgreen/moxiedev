@@ -31,6 +31,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "timevar.h"
 #include "params.h"
 #include "tree-flow.h"
+#include "cfgloop.h"
 #include "plugin.h"
 
 /* Prefer MAP_ANON(YMOUS) to /dev/zero, since we don't need to keep a
@@ -157,6 +158,24 @@ along with GCC; see the file COPYING3.  If not see
 #define OFFSET_TO_BIT(OFFSET, ORDER) \
   (((OFFSET) * DIV_MULT (ORDER)) >> DIV_SHIFT (ORDER))
 
+/* We use this structure to determine the alignment required for
+   allocations.  For power-of-two sized allocations, that's not a
+   problem, but it does matter for odd-sized allocations.
+   We do not care about alignment for floating-point types.  */
+
+struct max_alignment {
+  char c;
+  union {
+    HOST_WIDEST_INT i;
+    void *p;
+  } u;
+};
+
+/* The biggest alignment required.  */
+
+#define MAX_ALIGNMENT (offsetof (struct max_alignment, u))
+
+
 /* The number of extra orders, not corresponding to power-of-two sized
    objects.  */
 
@@ -173,41 +192,34 @@ along with GCC; see the file COPYING3.  If not see
    thing you need to do to add a new special allocation size.  */
 
 static const size_t extra_order_size_table[] = {
-  sizeof (struct var_ann_d),
+  /* Extra orders for small non-power-of-two multiples of MAX_ALIGNMENT.
+     There are a lot of structures with these sizes and explicitly
+     listing them risks orders being dropped because they changed size.  */
+  MAX_ALIGNMENT * 3,
+  MAX_ALIGNMENT * 5,
+  MAX_ALIGNMENT * 6,
+  MAX_ALIGNMENT * 7,
+  MAX_ALIGNMENT * 9,
+  MAX_ALIGNMENT * 10,
+  MAX_ALIGNMENT * 11,
+  MAX_ALIGNMENT * 12,
+  MAX_ALIGNMENT * 13,
+  MAX_ALIGNMENT * 14,
+  MAX_ALIGNMENT * 15,
   sizeof (struct tree_decl_non_common),
   sizeof (struct tree_field_decl),
   sizeof (struct tree_parm_decl),
   sizeof (struct tree_var_decl),
-  sizeof (struct tree_list),
-  sizeof (struct tree_ssa_name),
+  sizeof (struct tree_type),
   sizeof (struct function),
   sizeof (struct basic_block_def),
-  sizeof (bitmap_element),
-  sizeof (bitmap_head),
-  TREE_EXP_SIZE (2),
-  RTL_SIZE (2),			/* MEM, PLUS, etc.  */
-  RTL_SIZE (9),			/* INSN */
+  sizeof (struct cgraph_node),
+  sizeof (struct loop),
 };
 
 /* The total number of orders.  */
 
 #define NUM_ORDERS (HOST_BITS_PER_PTR + NUM_EXTRA_ORDERS)
-
-/* We use this structure to determine the alignment required for
-   allocations.  For power-of-two sized allocations, that's not a
-   problem, but it does matter for odd-sized allocations.  */
-
-struct max_alignment {
-  char c;
-  union {
-    HOST_WIDEST_INT i;
-    long double d;
-  } u;
-};
-
-/* The biggest alignment required.  */
-
-#define MAX_ALIGNMENT (offsetof (struct max_alignment, u))
 
 /* Compute the smallest nonnegative number which when added to X gives
    a multiple of F.  */
@@ -323,6 +335,16 @@ typedef struct page_table_chain
 
 #endif
 
+#ifdef ENABLE_GC_ALWAYS_COLLECT
+/* List of free objects to be verified as actually free on the
+   next collection.  */
+struct free_object
+{
+  void *object;
+  struct free_object *next;
+};
+#endif
+
 /* The rest of the global variables.  */
 static struct globals
 {
@@ -409,11 +431,7 @@ static struct globals
 #ifdef ENABLE_GC_ALWAYS_COLLECT
   /* List of free objects to be verified as actually free on the
      next collection.  */
-  struct free_object
-  {
-    void *object;
-    struct free_object *next;
-  } *free_object_list;
+  struct free_object *free_object_list;
 #endif
 
 #ifdef GATHER_STATISTICS
@@ -427,16 +445,16 @@ static struct globals
     /* Total allocations and overhead for sizes less than 32, 64 and 128.
        These sizes are interesting because they are typical cache line
        sizes.  */
-   
+
     unsigned long long total_allocated_under32;
     unsigned long long total_overhead_under32;
-  
+
     unsigned long long total_allocated_under64;
     unsigned long long total_overhead_under64;
-  
+
     unsigned long long total_allocated_under128;
     unsigned long long total_overhead_under128;
-  
+
     /* The allocations for each of the allocation orders.  */
     unsigned long long total_allocated_per_order[NUM_ORDERS];
 
@@ -933,7 +951,7 @@ free_page (page_entry *entry)
       /* We cannot free a page from a context deeper than the current
 	 one.  */
       gcc_assert (entry->context_depth == top->context_depth);
-      
+
       /* Put top element into freed slot.  */
       G.by_depth[i] = top;
       G.save_in_use[i] = G.save_in_use[G.by_depth_in_use-1];
@@ -1401,7 +1419,7 @@ ggc_free (void *p)
 
 #ifdef ENABLE_GC_ALWAYS_COLLECT
   /* In the completely-anal-checking mode, we do *not* immediately free
-     the data, but instead verify that the data is *actually* not 
+     the data, but instead verify that the data is *actually* not
      reachable the next time we collect.  */
   {
     struct free_object *fo = XNEW (struct free_object);
@@ -1428,7 +1446,7 @@ ggc_free (void *p)
 	/* If the page is completely full, then it's supposed to
 	   be after all pages that aren't.  Since we've freed one
 	   object from a page that was full, we need to move the
-	   page to the head of the list. 
+	   page to the head of the list.
 
 	   PE is the node we want to move.  Q is the previous node
 	   and P is the next node in the list.  */
@@ -1472,7 +1490,7 @@ ggc_free (void *p)
 static void
 compute_inverse (unsigned order)
 {
-  size_t size, inv; 
+  size_t size, inv;
   unsigned int e;
 
   size = OBJECT_SIZE (order);
@@ -1732,7 +1750,7 @@ sweep_pages (void)
 		G.pages[order] = next;
 	      else
 		previous->next = next;
-	    
+
 	      /* Splice P out of the back pointers too.  */
 	      if (next)
 		next->prev = previous;
@@ -2032,7 +2050,7 @@ ggc_print_statistics (void)
 	   SCALE (G.allocated), STAT_LABEL(G.allocated),
 	   SCALE (total_overhead), STAT_LABEL (total_overhead));
 
-#ifdef GATHER_STATISTICS  
+#ifdef GATHER_STATISTICS
   {
     fprintf (stderr, "\nTotal allocations and overheads during the compilation process\n");
 
@@ -2053,7 +2071,7 @@ ggc_print_statistics (void)
              G.stats.total_overhead_under128);
     fprintf (stderr, "Total Allocated under 128B:            %10lld\n",
              G.stats.total_allocated_under128);
-   
+
     for (i = 0; i < NUM_ORDERS; i++)
       if (G.stats.total_allocated_per_order[i])
         {

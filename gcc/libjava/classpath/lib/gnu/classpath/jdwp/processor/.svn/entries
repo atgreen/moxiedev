@@ -1,7 +1,7 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/classpath/jdwp/processor
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,17 +162,17 @@ has-props
 
 5526
 
-VirtualMachineCommandSet.class
+ClassObjectReferenceCommandSet.class
 file
 
 
 
 
 2009-04-24T17:47:29.000000Z
-4a120daec96aa7a36662176bd8f6dd13
-2008-10-21T17:55:01.166395Z
-141271
-doko
+944c8c63dd96a11996ddcd2ffd332069
+2006-12-12T18:41:51.528840Z
+119793
+tromey
 has-props
 
 
@@ -194,7 +194,7 @@ has-props
 
 
 
-9301
+2157
 
 ClassLoaderReferenceCommandSet.class
 file
@@ -230,17 +230,17 @@ has-props
 
 2719
 
-ClassObjectReferenceCommandSet.class
+VirtualMachineCommandSet.class
 file
 
 
 
 
 2009-04-24T17:47:29.000000Z
-944c8c63dd96a11996ddcd2ffd332069
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+4a120daec96aa7a36662176bd8f6dd13
+2008-10-21T17:55:01.166395Z
+141271
+doko
 has-props
 
 
@@ -262,7 +262,7 @@ has-props
 
 
 
-2157
+9301
 
 CommandSet.class
 file
@@ -298,17 +298,17 @@ has-props
 
 631
 
-ArrayTypeCommandSet.class
+StackFrameCommandSet.class
 file
 
 
 
 
 2009-04-24T17:47:29.000000Z
-53503a2a045f65f21f98751e970a0e45
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+7734e8ca30485e01c99c8567a0ff66d9
+2007-03-27T18:40:48.163473Z
+123265
+kseitz
 has-props
 
 
@@ -330,7 +330,7 @@ has-props
 
 
 
-2446
+3779
 
 MethodCommandSet.class
 file
@@ -366,17 +366,17 @@ has-props
 
 3307
 
-StackFrameCommandSet.class
+ArrayTypeCommandSet.class
 file
 
 
 
 
 2009-04-24T17:47:29.000000Z
-7734e8ca30485e01c99c8567a0ff66d9
-2007-03-27T18:40:48.163473Z
-123265
-kseitz
+53503a2a045f65f21f98751e970a0e45
+2006-12-12T18:41:51.528840Z
+119793
+tromey
 has-props
 
 
@@ -398,7 +398,7 @@ has-props
 
 
 
-3779
+2446
 
 FieldCommandSet.class
 file
@@ -434,40 +434,6 @@ has-props
 
 814
 
-ObjectReferenceCommandSet.class
-file
-
-
-
-
-2009-04-24T17:47:29.000000Z
-36ab8442a2cdea07c0870a71f59d4b9c
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6519
-
 StringReferenceCommandSet.class
 file
 
@@ -501,6 +467,40 @@ has-props
 
 
 1977
+
+ObjectReferenceCommandSet.class
+file
+
+
+
+
+2009-04-24T17:47:29.000000Z
+36ab8442a2cdea07c0870a71f59d4b9c
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6519
 
 ThreadReferenceCommandSet.class
 file

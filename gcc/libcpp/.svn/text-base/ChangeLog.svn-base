@@ -1,3 +1,57 @@
+2009-11-20  Arnaud Charlet  <charlet@adacore.com>
+
+	* macro.c (enter_macro_context): Call cb.used callback if defined.
+	* directives.c (do_idef, do_ifndef): Ditto.
+	* include/cpplib.h (struct cpp_callbacks): Add used callback.
+
+2009-11-11  Kai Tietz  <kai.tietz@onevision.com>
+
+	* directives.c (do_pragma_push_macro): New pragma handler.
+	(do_pragma_pop_macro): Likewise.
+	(_cpp_init_internal_pragmas): Add push_macro and
+	pop_macro handler to internal pragmas.
+	(lex_macro_node_from_str): Removed.
+	(cpp_push_definition): Replace lex_macro_node_from_str
+	by _cpp_lex_identifier.
+	(cpp_pop_definition): Likewise.
+	* internal.h (_cpp_lex_identifier): New prototype.
+	(def_pragma_macro): New structure.
+	(cpp_reader): New member pushed_macros.
+	* lex.c (_cpp_lex_identifier): New function.
+	(lex_identifier_intern): New function.
+	* init.c (cpp_create_reader): Initialize pushed_macros
+	member.
+	(cpp_destroy): Free elements in pushed_macros member.
+	* pch.c (_cpp_save_pushed_macros): New function.
+	(_cpp_restore_pushed_macros): Likewise.
+	(_cpp_restore_pushed_macros): Use _cpp_save_pushed_macros.
+	(cpp_read_state): Use _cpp_restore_pushed_macros.
+
+2009-10-19  Jakub Jelinek  <jakub@redhat.com>
+
+	* charset.c (cpp_init_iconv): Initialize utf8_cset_desc.
+	(_cpp_destroy_iconv): Destroy utf8_cset_desc, char16_cset_desc
+	and char32_cset_desc.
+	(converter_for_type): Handle CPP_UTF8STRING.
+	(cpp_interpret_string): Handle CPP_UTF8STRING and raw-strings.
+	* directives.c (get__Pragma_string): Handle CPP_UTF8STRING.
+	(parse_include): Reject raw strings.
+	* include/cpplib.h (CPP_UTF8STRING): New token type.
+	* internal.h (struct cpp_reader): Add utf8_cset_desc field.
+	* lex.c (lex_raw_string): New function.
+	(lex_string): Handle u8 string literals, call lex_raw_string
+	for raw string literals.
+	(_cpp_lex_direct): Call lex_string even for u8" and {,u,U,L,u8}R"
+	sequences.
+	* macro.c (stringify_arg): Handle CPP_UTF8STRING.
+
+2009-10-14  Jakub Jelinek  <jakub@redhat.com>
+
+	PR preprocessor/41543
+	* include/line-map.h (RESERVED_LOCATION_COUNT): Define.
+	* line-map.c (linemap_init): Initialize highest_location and
+	highest_line to RESERVED_LOCATION_COUNT-1 instead of 0.
+
 2009-10-09  Jason Merrill  <jason@redhat.com>
 
 	* charset.c (_cpp_valid_ucn): Update C++0x restrictions.

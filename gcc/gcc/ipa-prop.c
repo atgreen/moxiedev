@@ -33,11 +33,12 @@ along with GCC; see the file COPYING3.  If not see
 #include "timevar.h"
 #include "flags.h"
 #include "diagnostic.h"
+#include "lto-streamer.h"
 
 /* Vector where the parameter infos are actually stored. */
 VEC (ipa_node_params_t, heap) *ipa_node_params_vector;
 /* Vector where the parameter infos are actually stored. */
-VEC (ipa_edge_args_t, heap) *ipa_edge_args_vector;
+VEC (ipa_edge_args_t, gc) *ipa_edge_args_vector;
 
 /* Holders of ipa cgraph hooks: */
 static struct cgraph_edge_hook_list *edge_removal_hook_holder;
@@ -248,7 +249,7 @@ ipa_count_arguments (struct cgraph_edge *cs)
   arg_num = gimple_call_num_args (stmt);
   if (VEC_length (ipa_edge_args_t, ipa_edge_args_vector)
       <= (unsigned) cgraph_edge_max_uid)
-    VEC_safe_grow_cleared (ipa_edge_args_t, heap,
+    VEC_safe_grow_cleared (ipa_edge_args_t, gc,
 			   ipa_edge_args_vector, cgraph_edge_max_uid + 1);
   ipa_set_cs_argument_count (IPA_EDGE_REF (cs), arg_num);
 }
@@ -357,6 +358,9 @@ compute_complex_pass_through (struct ipa_node_params *info,
     {
       if (TREE_CODE (op1) != SSA_NAME
 	  || !SSA_NAME_IS_DEFAULT_DEF (op1)
+	  || (TREE_CODE_CLASS (gimple_expr_code (stmt)) != tcc_comparison
+	      && !useless_type_conversion_p (TREE_TYPE (name),
+					     TREE_TYPE (op1)))
 	  || !is_gimple_ip_invariant (op2))
 	return;
 
@@ -658,8 +662,8 @@ ipa_compute_jump_functions (struct cgraph_edge *cs)
 
   if (ipa_get_cs_argument_count (arguments) == 0 || arguments->jump_functions)
     return;
-  arguments->jump_functions = XCNEWVEC (struct ipa_jump_func,
-					ipa_get_cs_argument_count (arguments));
+  arguments->jump_functions = GGC_CNEWVEC (struct ipa_jump_func,
+					   ipa_get_cs_argument_count (arguments));
 
   call = cs->call_stmt;
   gcc_assert (is_gimple_call (call));
@@ -747,8 +751,10 @@ ipa_note_param_call (struct ipa_node_params *info, int formal_id,
   note = XCNEW (struct ipa_param_call_note);
   note->formal_id = formal_id;
   note->stmt = stmt;
+  note->lto_stmt_uid = gimple_uid (stmt);
   note->count = bb->count;
   note->frequency = compute_call_stmt_bb_frequency (current_function_decl, bb);
+  note->loop_nest = bb->loop_depth;
 
   note->next = info->param_calls;
   info->param_calls = note;
@@ -1096,6 +1102,7 @@ update_call_notes_after_inlining (struct cgraph_edge *cs,
 	  new_indirect_edge = cgraph_create_edge (node, callee, nt->stmt,
 						  nt->count, nt->frequency,
 						  nt->loop_nest);
+	  new_indirect_edge->lto_stmt_uid = nt->lto_stmt_uid;
 	  new_indirect_edge->indirect_call = 1;
 	  ipa_check_create_edge_args ();
 	  if (new_edges)
@@ -1170,7 +1177,7 @@ void
 ipa_free_edge_args_substructures (struct ipa_edge_args *args)
 {
   if (args->jump_functions)
-    free (args->jump_functions);
+    ggc_free (args->jump_functions);
 
   memset (args, 0, sizeof (*args));
 }
@@ -1188,7 +1195,7 @@ ipa_free_all_edge_args (void)
        i++)
     ipa_free_edge_args_substructures (args);
 
-  VEC_free (ipa_edge_args_t, heap, ipa_edge_args_vector);
+  VEC_free (ipa_edge_args_t, gc, ipa_edge_args_vector);
   ipa_edge_args_vector = NULL;
 }
 
@@ -1259,7 +1266,22 @@ duplicate_array (void *src, size_t n)
   if (!src)
     return NULL;
 
-  p = xcalloc (1, n);
+  p = xmalloc (n);
+  memcpy (p, src, n);
+  return p;
+}
+
+/* Like duplicate_array byt in GGC memory.  */
+
+static void *
+duplicate_ggc_array (void *src, size_t n)
+{
+  void *p;
+
+  if (!src)
+    return NULL;
+
+  p = ggc_alloc (n);
   memcpy (p, src, n);
   return p;
 }
@@ -1281,8 +1303,8 @@ ipa_edge_duplication_hook (struct cgraph_edge *src, struct cgraph_edge *dst,
   arg_count = ipa_get_cs_argument_count (old_args);
   ipa_set_cs_argument_count (new_args, arg_count);
   new_args->jump_functions = (struct ipa_jump_func *)
-    duplicate_array (old_args->jump_functions,
-		     sizeof (struct ipa_jump_func) * arg_count);
+    duplicate_ggc_array (old_args->jump_functions,
+		         sizeof (struct ipa_jump_func) * arg_count);
 }
 
 /* Hook that is called by cgraph.c when a node is duplicated.  */
@@ -1872,3 +1894,352 @@ ipa_dump_param_adjustments (FILE *file, ipa_parm_adjustment_vec adjustments,
   VEC_free (tree, heap, parms);
 }
 
+/* Stream out jump function JUMP_FUNC to OB.  */
+
+static void
+ipa_write_jump_function (struct output_block *ob,
+			 struct ipa_jump_func *jump_func)
+{
+  lto_output_uleb128_stream (ob->main_stream,
+			     jump_func->type);
+
+  switch (jump_func->type)
+    {
+    case IPA_JF_UNKNOWN:
+      break;
+    case IPA_JF_CONST:
+      lto_output_tree (ob, jump_func->value.constant, true);
+      break;
+    case IPA_JF_PASS_THROUGH:
+      lto_output_tree (ob, jump_func->value.pass_through.operand, true);
+      lto_output_uleb128_stream (ob->main_stream,
+				 jump_func->value.pass_through.formal_id);
+      lto_output_uleb128_stream (ob->main_stream,
+				 jump_func->value.pass_through.operation);
+      break;
+    case IPA_JF_ANCESTOR:
+      lto_output_uleb128_stream (ob->main_stream,
+				 jump_func->value.ancestor.offset);
+      lto_output_tree (ob, jump_func->value.ancestor.type, true);
+      lto_output_uleb128_stream (ob->main_stream,
+				 jump_func->value.ancestor.formal_id);
+      break;
+    case IPA_JF_CONST_MEMBER_PTR:
+      lto_output_tree (ob, jump_func->value.member_cst.pfn, true);
+      lto_output_tree (ob, jump_func->value.member_cst.delta, false);
+      break;
+    }
+}
+
+/* Read in jump function JUMP_FUNC from IB.  */
+
+static void
+ipa_read_jump_function (struct lto_input_block *ib,
+			struct ipa_jump_func *jump_func,
+			struct data_in *data_in)
+{
+  jump_func->type = (enum jump_func_type) lto_input_uleb128 (ib);
+
+  switch (jump_func->type)
+    {
+    case IPA_JF_UNKNOWN:
+      break;
+    case IPA_JF_CONST:
+      jump_func->value.constant = lto_input_tree (ib, data_in);
+      break;
+    case IPA_JF_PASS_THROUGH:
+      jump_func->value.pass_through.operand = lto_input_tree (ib, data_in);
+      jump_func->value.pass_through.formal_id = lto_input_uleb128 (ib);
+      jump_func->value.pass_through.operation = (enum tree_code) lto_input_uleb128 (ib);
+      break;
+    case IPA_JF_ANCESTOR:
+      jump_func->value.ancestor.offset = lto_input_uleb128 (ib);
+      jump_func->value.ancestor.type = lto_input_tree (ib, data_in);
+      jump_func->value.ancestor.formal_id = lto_input_uleb128 (ib);
+      break;
+    case IPA_JF_CONST_MEMBER_PTR:
+      jump_func->value.member_cst.pfn = lto_input_tree (ib, data_in);
+      jump_func->value.member_cst.delta = lto_input_tree (ib, data_in);
+      break;
+    }
+}
+
+/* Stream out a parameter call note.  */
+
+static void
+ipa_write_param_call_note (struct output_block *ob,
+			   struct ipa_param_call_note *note)
+{
+  gcc_assert (!note->processed);
+  lto_output_uleb128_stream (ob->main_stream, gimple_uid (note->stmt));
+  lto_output_sleb128_stream (ob->main_stream, note->formal_id);
+  lto_output_sleb128_stream (ob->main_stream, note->count);
+  lto_output_sleb128_stream (ob->main_stream, note->frequency);
+  lto_output_sleb128_stream (ob->main_stream, note->loop_nest);
+}
+
+/* Read in a parameter call note.  */
+
+static void
+ipa_read_param_call_note (struct lto_input_block *ib,
+			  struct ipa_node_params *info)
+
+{
+  struct ipa_param_call_note *note = XCNEW (struct ipa_param_call_note);
+
+  note->lto_stmt_uid = (unsigned int) lto_input_uleb128 (ib);
+  note->formal_id = (int) lto_input_sleb128 (ib);
+  note->count = (gcov_type) lto_input_sleb128 (ib);
+  note->frequency = (int) lto_input_sleb128 (ib);
+  note->loop_nest = (int) lto_input_sleb128 (ib);
+
+  note->next = info->param_calls;
+  info->param_calls = note;
+}
+
+
+/* Stream out NODE info to OB.  */
+
+static void
+ipa_write_node_info (struct output_block *ob, struct cgraph_node *node)
+{
+  int node_ref;
+  lto_cgraph_encoder_t encoder;
+  struct ipa_node_params *info = IPA_NODE_REF (node);
+  int j;
+  struct cgraph_edge *e;
+  struct bitpack_d *bp;
+  int note_count = 0;
+  struct ipa_param_call_note *note;
+
+  encoder = ob->decl_state->cgraph_node_encoder;
+  node_ref = lto_cgraph_encoder_encode (encoder, node);
+  lto_output_uleb128_stream (ob->main_stream, node_ref);
+
+  bp = bitpack_create ();
+  bp_pack_value (bp, info->called_with_var_arguments, 1);
+  gcc_assert (info->modification_analysis_done
+	      || ipa_get_param_count (info) == 0);
+  gcc_assert (info->uses_analysis_done || ipa_get_param_count (info) == 0);
+  gcc_assert (!info->node_enqueued);
+  gcc_assert (!info->ipcp_orig_node);
+  for (j = 0; j < ipa_get_param_count (info); j++)
+    {
+      bp_pack_value (bp, info->params[j].modified, 1);
+      bp_pack_value (bp, info->params[j].called, 1);
+    }
+  lto_output_bitpack (ob->main_stream, bp);
+  bitpack_delete (bp);
+  for (e = node->callees; e; e = e->next_callee)
+    {
+      struct ipa_edge_args *args = IPA_EDGE_REF (e);
+
+      lto_output_uleb128_stream (ob->main_stream,
+				 ipa_get_cs_argument_count (args));
+      for (j = 0; j < ipa_get_cs_argument_count (args); j++)
+	ipa_write_jump_function (ob, ipa_get_ith_jump_func (args, j));
+    }
+
+  for (note = info->param_calls; note; note = note->next)
+    note_count++;
+  lto_output_uleb128_stream (ob->main_stream, note_count);
+  for (note = info->param_calls; note; note = note->next)
+    ipa_write_param_call_note (ob, note);
+}
+
+/* Srtream in NODE info from IB.  */
+
+static void
+ipa_read_node_info (struct lto_input_block *ib, struct cgraph_node *node,
+		    struct data_in *data_in)
+{
+  struct ipa_node_params *info = IPA_NODE_REF (node);
+  int k;
+  struct cgraph_edge *e;
+  struct bitpack_d *bp;
+  int i, note_count;
+
+  ipa_initialize_node_params (node);
+
+  bp = lto_input_bitpack (ib);
+  info->called_with_var_arguments = bp_unpack_value (bp, 1);
+  if (ipa_get_param_count (info) != 0)
+    {
+      info->modification_analysis_done = true;
+      info->uses_analysis_done = true;
+    }
+  info->node_enqueued = false;
+  for (k = 0; k < ipa_get_param_count (info); k++)
+    {
+      info->params[k].modified = bp_unpack_value (bp, 1);
+      info->params[k].called = bp_unpack_value (bp, 1);
+    }
+  bitpack_delete (bp);
+  for (e = node->callees; e; e = e->next_callee)
+    {
+      struct ipa_edge_args *args = IPA_EDGE_REF (e);
+      int count = lto_input_uleb128 (ib);
+
+      ipa_set_cs_argument_count (args, count);
+      if (!count)
+	continue;
+
+      args->jump_functions = GGC_CNEWVEC (struct ipa_jump_func,
+				          ipa_get_cs_argument_count (args));
+      for (k = 0; k < ipa_get_cs_argument_count (args); k++)
+	ipa_read_jump_function (ib, ipa_get_ith_jump_func (args, k), data_in);
+    }
+
+  note_count = lto_input_uleb128 (ib);
+  for (i = 0; i < note_count; i++)
+    ipa_read_param_call_note (ib, info);
+}
+
+/* Write jump functions for nodes in SET.  */
+
+void
+ipa_prop_write_jump_functions (cgraph_node_set set)
+{
+  struct cgraph_node *node;
+  struct output_block *ob = create_output_block (LTO_section_jump_functions);
+  unsigned int count = 0;
+  cgraph_node_set_iterator csi;
+
+  ob->cgraph_node = NULL;
+
+  for (csi = csi_start (set); !csi_end_p (csi); csi_next (&csi))
+    {
+      node = csi_node (csi);
+      if (node->analyzed && IPA_NODE_REF (node) != NULL)
+	count++;
+    }
+
+  lto_output_uleb128_stream (ob->main_stream, count);
+
+  /* Process all of the functions.  */
+  for (csi = csi_start (set); !csi_end_p (csi); csi_next (&csi))
+    {
+      node = csi_node (csi);
+      if (node->analyzed && IPA_NODE_REF (node) != NULL)
+        ipa_write_node_info (ob, node);
+    }
+  lto_output_1_stream (ob->main_stream, 0);
+  produce_asm (ob, NULL);
+  destroy_output_block (ob);
+}
+
+/* Read section in file FILE_DATA of length LEN with data DATA.  */
+
+static void
+ipa_prop_read_section (struct lto_file_decl_data *file_data, const char *data,
+		       size_t len)
+{
+  const struct lto_function_header *header =
+    (const struct lto_function_header *) data;
+  const int32_t cfg_offset = sizeof (struct lto_function_header);
+  const int32_t main_offset = cfg_offset + header->cfg_size;
+  const int32_t string_offset = main_offset + header->main_size;
+  struct data_in *data_in;
+  struct lto_input_block ib_main;
+  unsigned int i;
+  unsigned int count;
+
+  LTO_INIT_INPUT_BLOCK (ib_main, (const char *) data + main_offset, 0,
+			header->main_size);
+
+  data_in =
+    lto_data_in_create (file_data, (const char *) data + string_offset,
+			header->string_size, NULL);
+  count = lto_input_uleb128 (&ib_main);
+
+  for (i = 0; i < count; i++)
+    {
+      unsigned int index;
+      struct cgraph_node *node;
+      lto_cgraph_encoder_t encoder;
+
+      index = lto_input_uleb128 (&ib_main);
+      encoder = file_data->cgraph_node_encoder;
+      node = lto_cgraph_encoder_deref (encoder, index);
+      ipa_read_node_info (&ib_main, node, data_in);
+    }
+  lto_free_section_data (file_data, LTO_section_jump_functions, NULL, data,
+			 len);
+  lto_data_in_delete (data_in);
+}
+
+/* Read ipcp jump functions.  */
+
+void
+ipa_prop_read_jump_functions (void)
+{
+  struct lto_file_decl_data **file_data_vec = lto_get_file_decl_data ();
+  struct lto_file_decl_data *file_data;
+  unsigned int j = 0;
+
+  ipa_check_create_node_params ();
+  ipa_check_create_edge_args ();
+  ipa_register_cgraph_hooks ();
+
+  while ((file_data = file_data_vec[j++]))
+    {
+      size_t len;
+      const char *data = lto_get_section_data (file_data, LTO_section_jump_functions, NULL, &len);
+
+      if (data)
+        ipa_prop_read_section (file_data, data, len);
+    }
+}
+
+/* After merging units, we can get mismatch in argument counts.
+   Also decl merging might've rendered parameter lists obsolette.
+   Also compute called_with_variable_arg info.  */
+
+void
+ipa_update_after_lto_read (void)
+{
+  struct cgraph_node *node;
+  struct cgraph_edge *cs;
+
+  ipa_check_create_node_params ();
+  ipa_check_create_edge_args ();
+
+  for (node = cgraph_nodes; node; node = node->next)
+    {
+      if (!node->analyzed)
+	continue;
+      ipa_initialize_node_params (node);
+      for (cs = node->callees; cs; cs = cs->next_callee)
+	{
+	  if (ipa_get_cs_argument_count (IPA_EDGE_REF (cs))
+	      != ipa_get_param_count (IPA_NODE_REF (cs->callee)))
+	    ipa_set_called_with_variable_arg (IPA_NODE_REF (cs->callee));
+	}
+    }
+}
+
+/* Walk param call notes of NODE and set their call statements given the uid
+   stored in each note and STMTS which is an array of statements indexed by the
+   uid.  */
+
+void
+lto_ipa_fixup_call_notes (struct cgraph_node *node, gimple *stmts)
+{
+  struct ipa_node_params *info;
+  struct ipa_param_call_note *note;
+
+  ipa_check_create_node_params ();
+  info = IPA_NODE_REF (node);
+  note = info->param_calls;
+  /* If there are no notes or they have already been fixed up (the same fixup
+     is called for both inlining and ipa-cp), there's nothing to do. */
+  if (!note || note->stmt)
+    return;
+
+  do
+    {
+      note->stmt = stmts[note->lto_stmt_uid];
+      note = note->next;
+    }
+  while (note);
+}

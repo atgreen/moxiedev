@@ -396,7 +396,7 @@ default_fixed_point_supported_p (void)
 
 /* NULL if INSN insn is valid within a low-overhead loop, otherwise returns
    an error message.
-  
+
    This function checks whether a given INSN is valid within a low-overhead
    loop.  If INSN is invalid it returns the reason for that, otherwise it
    returns NULL. A called function may clobber any special registers required
@@ -409,10 +409,10 @@ default_invalid_within_doloop (const_rtx insn)
 {
   if (CALL_P (insn))
     return "Function call in loop.";
-  
+
   if (JUMP_TABLE_DATA_P (insn))
     return "Computed branch in the loop.";
-  
+
   return NULL;
 }
 
@@ -472,7 +472,7 @@ hook_int_CUMULATIVE_ARGS_mode_tree_bool_0 (
   return 0;
 }
 
-void 
+void
 hook_void_bitmap (bitmap regs ATTRIBUTE_UNUSED)
 {
 }
@@ -517,7 +517,7 @@ default_stack_protect_guard (void)
 
 static GTY(()) tree stack_chk_fail_decl;
 
-tree 
+tree
 default_external_stack_protect_fail (void)
 {
   tree t = stack_chk_fail_decl;
@@ -603,14 +603,19 @@ default_function_value (const_tree ret_type ATTRIBUTE_UNUSED,
 #ifdef FUNCTION_VALUE
   return FUNCTION_VALUE (ret_type, fn_decl_or_type);
 #else
-  return NULL_RTX;
+  gcc_unreachable ();
 #endif
 }
 
 rtx
-default_libcall_value (enum machine_mode mode, rtx fun ATTRIBUTE_UNUSED)
+default_libcall_value (enum machine_mode mode ATTRIBUTE_UNUSED,
+		       const_rtx fun ATTRIBUTE_UNUSED)
 {
+#ifdef LIBCALL_VALUE
   return LIBCALL_VALUE (mode);
+#else
+  gcc_unreachable ();
+#endif
 }
 
 rtx
@@ -810,7 +815,7 @@ default_builtin_vector_alignment_reachable (const_tree type, bool is_packed)
 }
 
 /* By default, assume that a target supports any factor of misalignment
-   memory access if it supports movmisalign patten. 
+   memory access if it supports movmisalign patten.
    is_packed is true if the memory access is defined in a packed struct.  */
 bool
 default_builtin_support_vector_misalignment (enum machine_mode mode,
@@ -824,6 +829,107 @@ default_builtin_support_vector_misalignment (enum machine_mode mode,
   if (optab_handler (movmisalign_optab, mode)->insn_code != CODE_FOR_nothing)
     return true;
   return false;
+}
+
+/* Determine whether or not a pointer mode is valid. Assume defaults
+   of ptr_mode or Pmode - can be overridden.  */
+bool
+default_valid_pointer_mode (enum machine_mode mode)
+{
+  return (mode == ptr_mode || mode == Pmode);
+}
+
+/* Return the mode for a pointer to a given ADDRSPACE, defaulting to ptr_mode
+   for the generic address space only.  */
+
+enum machine_mode
+default_addr_space_pointer_mode (addr_space_t addrspace ATTRIBUTE_UNUSED)
+{
+  gcc_assert (ADDR_SPACE_GENERIC_P (addrspace));
+  return ptr_mode;
+}
+
+/* Return the mode for an address in a given ADDRSPACE, defaulting to Pmode
+   for the generic address space only.  */
+
+enum machine_mode
+default_addr_space_address_mode (addr_space_t addrspace ATTRIBUTE_UNUSED)
+{
+  gcc_assert (ADDR_SPACE_GENERIC_P (addrspace));
+  return Pmode;
+}
+
+/* Named address space version of valid_pointer_mode.  */
+
+bool
+default_addr_space_valid_pointer_mode (enum machine_mode mode, addr_space_t as)
+{
+  if (!ADDR_SPACE_GENERIC_P (as))
+    return (mode == targetm.addr_space.pointer_mode (as)
+	    || mode == targetm.addr_space.address_mode (as));
+
+  return targetm.valid_pointer_mode (mode);
+}
+
+/* Some places still assume that all pointer or address modes are the
+   standard Pmode and ptr_mode.  These optimizations become invalid if
+   the target actually supports multiple different modes.  For now,
+   we disable such optimizations on such targets, using this function.  */
+
+bool
+target_default_pointer_address_modes_p (void)
+{
+  if (targetm.addr_space.address_mode != default_addr_space_address_mode)
+    return false;
+  if (targetm.addr_space.pointer_mode != default_addr_space_pointer_mode)
+    return false;
+
+  return true;
+}
+
+/* Named address space version of legitimate_address_p.  */
+
+bool
+default_addr_space_legitimate_address_p (enum machine_mode mode, rtx mem,
+					 bool strict, addr_space_t as)
+{
+  if (!ADDR_SPACE_GENERIC_P (as))
+    gcc_unreachable ();
+
+  return targetm.legitimate_address_p (mode, mem, strict);
+}
+
+/* Named address space version of LEGITIMIZE_ADDRESS.  */
+
+rtx
+default_addr_space_legitimize_address (rtx x, rtx oldx,
+				       enum machine_mode mode, addr_space_t as)
+{
+  if (!ADDR_SPACE_GENERIC_P (as))
+    return x;
+
+  return targetm.legitimize_address (x, oldx, mode);
+}
+
+/* The default hook for determining if one named address space is a subset of
+   another and to return which address space to use as the common address
+   space.  */
+
+bool
+default_addr_space_subset_p (addr_space_t subset, addr_space_t superset)
+{
+  return (subset == superset);
+}
+
+/* The default hook for TARGET_ADDR_SPACE_CONVERT. This hook should never be
+   called for targets with only a generic address space.  */
+
+rtx
+default_addr_space_convert (rtx op ATTRIBUTE_UNUSED,
+			    tree from_type ATTRIBUTE_UNUSED,
+			    tree to_type ATTRIBUTE_UNUSED)
+{
+  gcc_unreachable ();
 }
 
 bool
@@ -890,6 +996,16 @@ default_target_can_inline_p (tree caller, tree callee)
 unsigned int default_case_values_threshold (void)
 {
   return (HAVE_casesi ? 4 : 5);
+}
+
+bool
+default_have_conditional_execution (void)
+{
+#ifdef HAVE_conditional_execution
+  return HAVE_conditional_execution;
+#else
+  return false;
+#endif
 }
 
 #include "gt-targhooks.h"

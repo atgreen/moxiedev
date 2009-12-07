@@ -684,9 +684,15 @@ proper position among the other output files.  */
 #endif
 
 /* config.h can define SWITCHES_NEED_SPACES to control which options
-   require spaces between the option and the argument.  */
+   require spaces between the option and the argument.
+
+   We define SWITCHES_NEED_SPACES to include "o" by default.  This
+   causes "-ofoo.o" to be split into "-o foo.o" during the initial
+   processing of the command-line, before being seen by the specs
+   machinery.  This makes sure we record "foo.o" as the temporary file
+   to be deleted in the case of error, rather than "-ofoo.o".  */
 #ifndef SWITCHES_NEED_SPACES
-#define SWITCHES_NEED_SPACES ""
+#define SWITCHES_NEED_SPACES "o"
 #endif
 
 /* config.h can define ENDFILE_SPEC to override the default crtn files.  */
@@ -770,7 +776,7 @@ proper position among the other output files.  */
 #define LINK_COMMAND_SPEC "\
 %{!fsyntax-only:%{!c:%{!M:%{!MM:%{!E:%{!S:\
     %(linker) \
-    %{use-linker-plugin: \
+    %{fuse-linker-plugin: \
     -plugin %(linker_plugin_file) \
     -plugin-opt=%(lto_wrapper) \
     -plugin-opt=%(lto_gcc) \
@@ -984,7 +990,7 @@ static struct user_specs *user_specs_head, *user_specs_tail;
 #ifdef HAVE_TARGET_EXECUTABLE_SUFFIX
 /* This defines which switches stop a full compilation.  */
 #define DEFAULT_SWITCH_CURTAILS_COMPILATION(CHAR) \
-  ((CHAR) == 'c' || (CHAR) == 'S')
+  ((CHAR) == 'c' || (CHAR) == 'S' || (CHAR) == 'E')
 
 #ifndef SWITCH_CURTAILS_COMPILATION
 #define SWITCH_CURTAILS_COMPILATION(CHAR) \
@@ -2000,7 +2006,7 @@ static int argbuf_index;
 
 static int have_o_argbuf_index = 0;
 
-/* Were the options -c or -S passed.  */
+/* Were the options -c, -S or -E passed.  */
 static int have_c = 0;
 
 /* Was the option -o passed.  */
@@ -2954,7 +2960,7 @@ execute (void)
 
   commands[0].prog = argbuf[0]; /* first command.  */
   commands[0].argv = &argbuf[0];
- 
+
   if (!wrapper_string)
     {
       string = find_a_file (&exec_prefixes, commands[0].prog, X_OK, false);
@@ -4142,6 +4148,7 @@ process_command (int argc, const char **argv)
 
 	    case 'S':
 	    case 'c':
+	    case 'E':
 	      if (p[1] == 0)
 		{
 		  have_c = 1;
@@ -4157,7 +4164,7 @@ process_command (int argc, const char **argv)
 		{
 		  int skip;
 
-		  /* Forward scan, just in case -S or -c is specified
+		  /* Forward scan, just in case -S, -E or -c is specified
 		     after -o.  */
 		  int j = i + 1;
 		  if (p[1] == 0)
@@ -4302,7 +4309,7 @@ process_command (int argc, const char **argv)
   /* Set up the search paths.  We add directories that we expect to
      contain GNU Toolchain components before directories specified by
      the machine description so that we will find GNU components (like
-     the GNU assembler) before those of the host system.  */ 
+     the GNU assembler) before those of the host system.  */
 
   /* If we don't know where the toolchain has been installed, use the
      configured-in locations.  */
@@ -4561,20 +4568,32 @@ process_command (int argc, const char **argv)
 	}
       else
 	{
+          const char *p = strchr (argv[i], '@');
+          char *fname;
 #ifdef HAVE_TARGET_OBJECT_SUFFIX
 	  argv[i] = convert_filename (argv[i], 0, access (argv[i], F_OK));
 #endif
+          if (!p)
+            fname = xstrdup (argv[i]);
+          else
+            {
+              fname = (char *)xmalloc (p - argv[i] + 1);
+              memcpy (fname, argv[i], p - argv[i]);
+              fname[p - argv[i]] = '\0';
+            }
 
-	  if (strcmp (argv[i], "-") != 0 && access (argv[i], F_OK) < 0)
-	    {
-	      perror_with_name (argv[i]);
-	      error_count++;
-	    }
-	  else
-	    {
-	      infiles[n_infiles].language = spec_lang;
-	      infiles[n_infiles++].name = argv[i];
-	    }
+          if (strcmp (fname, "-") != 0 && access (fname, F_OK) < 0)
+            {
+              perror_with_name (fname);
+              error_count++;
+            }
+          else
+            {
+              infiles[n_infiles].language = spec_lang;
+              infiles[n_infiles++].name = argv[i];
+            }
+
+          free (fname);
 	}
     }
 
@@ -6246,7 +6265,7 @@ handle_braces (const char *p)
 	  if (atom == end_atom)
 	    {
 	      if (!n_way_choice || disj_matched || *p == '|'
-		  || a_is_negated || a_is_suffix || a_is_spectype 
+		  || a_is_negated || a_is_suffix || a_is_spectype
 		  || a_is_starred)
 		goto invalid;
 
@@ -7029,9 +7048,9 @@ main (int argc, char **argv)
       else if (*cross_compile == '0')
 	{
 	  add_prefix (&startfile_prefixes,
-		      concat (gcc_exec_prefix 
-			      ? gcc_exec_prefix : standard_exec_prefix, 
-			      machine_suffix, 
+		      concat (gcc_exec_prefix
+			      ? gcc_exec_prefix : standard_exec_prefix,
+			      machine_suffix,
 			      standard_startfile_prefix, NULL),
 		      NULL, PREFIX_PRIORITY_LAST, 0, 1);
 	}
@@ -7304,7 +7323,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
     }
 
   if (!combine_inputs && have_c && have_o && lang_n_infiles > 1)
-   fatal ("cannot specify -o with -c or -S with multiple files");
+   fatal ("cannot specify -o with -c, -S or -E with multiple files");
 
   if (combine_flag && save_temps_flag)
     {
@@ -7512,7 +7531,7 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
   if (num_linker_inputs > 0 && error_count == 0 && print_subprocess_help < 2)
     {
       int tmp = execution_count;
-      const char *use_linker_plugin = "use-linker-plugin";
+      const char *fuse_linker_plugin = "fuse-linker-plugin";
 
       /* We'll use ld if we can't find collect2.  */
       if (! strcmp (linker_name_spec, "collect2"))
@@ -7522,14 +7541,14 @@ warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"
 	    linker_name_spec = "ld";
 	}
 
-      if (switch_matches (use_linker_plugin,
-			  use_linker_plugin + strlen (use_linker_plugin), 0))
+      if (switch_matches (fuse_linker_plugin,
+			  fuse_linker_plugin + strlen (fuse_linker_plugin), 0))
 	{
 	  linker_plugin_file_spec = find_a_file (&exec_prefixes,
 						 "liblto_plugin.so", X_OK,
 						 false);
 	  if (!linker_plugin_file_spec)
-	    fatal ("-use-linker-plugin, but liblto_plugin.so not found");
+	    fatal ("-fuse-linker-plugin, but liblto_plugin.so not found");
 
 	  lto_libgcc_spec = find_a_file (&startfile_prefixes, "libgcc.a",
 					 R_OK, true);
@@ -8545,9 +8564,9 @@ getenv_spec_function (int argc, const char **argv)
       ptr[0] = '\\';
       ptr[1] = *value++;
     }
-  
+
   strcpy (ptr, argv[1]);
-  
+
   return result;
 }
 

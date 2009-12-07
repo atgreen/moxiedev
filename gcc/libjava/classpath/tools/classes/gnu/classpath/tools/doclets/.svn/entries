@@ -1,7 +1,7 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/tools/classes/gnu/classpath/tools/doclets
 svn://gcc.gnu.org/svn/gcc
 
@@ -28,40 +28,6 @@ doko
 
 debugdoclet
 dir
-
-AbstractDoclet$InterfaceRelation.class
-file
-
-
-
-
-2009-04-24T17:48:45.000000Z
-269cd316eaed8ac30b02db29f1c7d440
-2008-08-15T20:31:42.599946Z
-139136
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-663
 
 DocletConfigurationException.class
 file
@@ -96,6 +62,40 @@ has-props
 
 
 432
+
+AbstractDoclet$InterfaceRelation.class
+file
+
+
+
+
+2009-04-24T17:48:45.000000Z
+269cd316eaed8ac30b02db29f1c7d440
+2008-08-15T20:31:42.599946Z
+139136
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+663
 
 AbstractDoclet$DocletOptionTag.class
 file
@@ -165,39 +165,8 @@ has-props
 
 187
 
-AbstractDoclet$DocletOptionTaglet.class
-file
-
-
-
-
-2009-04-24T17:48:45.000000Z
-d2830eeadffe80a9da2ce3a6a9d86856
-2008-08-15T20:31:42.599946Z
-139136
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4359
+xmldoclet
+dir
 
 DocletOptionColonSeparated.class
 file
@@ -233,17 +202,14 @@ has-props
 
 1139
 
-xmldoclet
-dir
-
-AbstractDoclet$UsageType.class
+AbstractDoclet$DocletOptionTaglet.class
 file
 
 
 
 
 2009-04-24T17:48:45.000000Z
-87ca70a8cc746d907e5c0f1ba7096f14
+d2830eeadffe80a9da2ce3a6a9d86856
 2008-08-15T20:31:42.599946Z
 139136
 doko
@@ -268,7 +234,7 @@ has-props
 
 
 
-1848
+4359
 
 DocletOptionPackageWildcard.class
 file
@@ -304,6 +270,40 @@ has-props
 
 2108
 
+AbstractDoclet$UsageType.class
+file
+
+
+
+
+2009-04-24T17:48:45.000000Z
+87ca70a8cc746d907e5c0f1ba7096f14
+2008-08-15T20:31:42.599946Z
+139136
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1848
+
 DocletOptionString.class
 file
 
@@ -338,6 +338,9 @@ has-props
 
 776
 
+htmldoclet
+dir
+
 InvalidPackageWildcardException.class
 file
 
@@ -371,9 +374,6 @@ has-props
 
 
 437
-
-htmldoclet
-dir
 
 DocletOptionFlag.class
 file

@@ -210,10 +210,10 @@ package Sem_Util is
    --  of Old is set and Old has no yet been Frozen (i.e. Is_Frozen is false);
 
    function Copy_Parameter_List (Subp_Id : Entity_Id) return List_Id;
-   --  Utility to create a parameter profile for a new subprogram spec,
-   --  when the subprogram has a body that acts as spec. This is done for
-   --  some cases of inlining, and for private protected ops. Also used
-   --  to create bodies for stubbed subprograms.
+   --  Utility to create a parameter profile for a new subprogram spec, when
+   --  the subprogram has a body that acts as spec. This is done for some cases
+   --  of inlining, and for private protected ops. Also used to create bodies
+   --  for stubbed subprograms.
 
    function Current_Entity (N : Node_Id) return Entity_Id;
    --  Find the currently visible definition for a given identifier, that is to
@@ -230,9 +230,9 @@ package Sem_Util is
 
    function Current_Subprogram return Entity_Id;
    --  Returns current enclosing subprogram. If Current_Scope is a subprogram,
-   --  then that is what is returned, otherwise the Enclosing_Subprogram of
-   --  the Current_Scope is returned. The returned value is Empty if this
-   --  is called from a library package which is not within any subprogram.
+   --  then that is what is returned, otherwise the Enclosing_Subprogram of the
+   --  Current_Scope is returned. The returned value is Empty if this is called
+   --  from a library package which is not within any subprogram.
 
    function Defining_Entity (N : Node_Id) return Entity_Id;
    --  Given a declaration N, returns the associated defining entity. If
@@ -250,6 +250,15 @@ package Sem_Util is
    --  type. This is necessary to disable some optimizations on private
    --  components of protected types, and constraint checks on entry
    --  families constrained by discriminants.
+
+   function Denotes_Same_Object (A1, A2 : Node_Id) return Boolean;
+   function Denotes_Same_Prefix (A1, A2 : Node_Id) return Boolean;
+   --  Functions to detect suspicious overlapping between actuals in a call,
+   --  when one of them is writable. The predicates are those proposed in
+   --  AI05-0144, to detect dangerous order dependence in complex calls.
+   --  I would add a parameter Warn which enables more extensive testing of
+   --  cases as we find appropriate when we are only warning ??? Or perhaps
+   --  return an indication of (Error, Warn, OK) ???
 
    function Denotes_Variable (N : Node_Id) return Boolean;
    --  Returns True if node N denotes a single variable without parentheses
@@ -610,10 +619,9 @@ package Sem_Util is
    --  corresponding private part must not.
 
    procedure Insert_Explicit_Dereference (N : Node_Id);
-   --  In a context that requires a composite or subprogram type and
-   --  where a prefix is an access type, rewrite the access type node
-   --  N (which is the prefix, e.g. of an indexed component) as an
-   --  explicit dereference.
+   --  In a context that requires a composite or subprogram type and where a
+   --  prefix is an access type, rewrite the access type node N (which is the
+   --  prefix, e.g. of an indexed component) as an explicit dereference.
 
    procedure Inspect_Deferred_Constant_Completion (Decls : List_Id);
    --  Examine all deferred constants in the declaration list Decls and check
@@ -621,13 +629,12 @@ package Sem_Util is
    --  Import pragma. Emit the error message if that is not the case.
 
    function Is_AAMP_Float (E : Entity_Id) return Boolean;
-   --  Defined for all type entities. Returns True only for the base type
-   --  of float types with AAMP format. The particular format is determined
-   --  by the Digits_Value value which is 6 for the 32-bit floating point type,
-   --  or 9 for the 48-bit type. This is not an attribute function (like
-   --  VAX_Float) in order to not use up an extra flag and to prevent
-   --  the dependency of Einfo on Targparm which would be required for a
-   --  synthesized attribute.
+   --  Defined for all type entities. Returns True only for the base type of
+   --  float types with AAMP format. The particular format is determined by the
+   --  Digits_Value value which is 6 for the 32-bit floating point type, or 9
+   --  for the 48-bit type. This is not an attribute function (like VAX_Float)
+   --  in order to not use up an extra flag and to prevent the dependency of
+   --  Einfo on Targparm which would be required for a synthesized attribute.
 
    function Is_Actual_Out_Parameter (N : Node_Id) return Boolean;
    --  Determines if N is an actual parameter of out mode in a subprogram call
@@ -668,10 +675,10 @@ package Sem_Util is
    --  False. The nodes passed to this function are assumed to denote objects.
 
    function Is_Dereferenced (N : Node_Id) return Boolean;
-   --  N is a subexpression node of an access type. This function returns
-   --  true if N appears as the prefix of a node that does a dereference
-   --  of the access value (selected/indexed component, explicit dereference
-   --  or a slice), and false otherwise.
+   --  N is a subexpression node of an access type. This function returns true
+   --  if N appears as the prefix of a node that does a dereference of the
+   --  access value (selected/indexed component, explicit dereference or a
+   --  slice), and false otherwise.
 
    function Is_Descendent_Of (T1 : Entity_Id; T2 : Entity_Id) return Boolean;
    --  Returns True if type T1 is a descendent of type T2, and false otherwise.
@@ -712,8 +719,8 @@ package Sem_Util is
    --  i.e. a library unit or an entity declared in a library package.
 
    function Is_Local_Variable_Reference (Expr : Node_Id) return Boolean;
-   --  Determines whether Expr is a reference to a variable or IN OUT
-   --  mode parameter of the current enclosing subprogram.
+   --  Determines whether Expr is a reference to a variable or IN OUT mode
+   --  parameter of the current enclosing subprogram.
    --  Why are OUT parameters not considered here ???
 
    function Is_Object_Reference (N : Node_Id) return Boolean;
@@ -728,12 +735,11 @@ package Sem_Util is
    --  target are considered view conversions and hence variables.
 
    function Is_Partially_Initialized_Type (Typ : Entity_Id) return Boolean;
-   --  Typ is a type entity. This function returns true if this type is
-   --  partly initialized, meaning that an object of the type is at least
-   --  partly initialized (in particular in the record case, that at least
-   --  one component has an initialization expression). Note that
-   --  initialization resulting from the use of pragma Normalized_Scalars does
-   --  not count.
+   --  Typ is a type entity. This function returns true if this type is partly
+   --  initialized, meaning that an object of the type is at least partly
+   --  initialized (in particular in the record case, that at least one
+   --  component has an initialization expression). Note that initialization
+   --  resulting from the use of pragma Normalized_Scalars does not count.
 
    function Is_Potentially_Persistent_Type (T : Entity_Id) return Boolean;
    --  Determines if type T is a potentially persistent type. A potentially
@@ -790,24 +796,35 @@ package Sem_Util is
 
    function Is_Value_Type (T : Entity_Id) return Boolean;
    --  Returns true if type T represents a value type. This is only relevant to
-   --  CIL, will always return false for other targets.
-   --  What is a "value type", since this is not an Ada term, it should be
-   --  defined here ???
+   --  CIL, will always return false for other targets. A value type is a CIL
+   --  object that is accessed directly, as opposed to the other CIL objects
+   --  that are accessed through managed pointers.
+
+   function Is_Delegate (T : Entity_Id) return Boolean;
+   --  Returns true if type T represents a delegate. A Delegate is the CIL
+   --  object used to represent access-to-subprogram types. This is only
+   --  relevant to CIL, will always return false for other targets.
 
    function Is_Variable (N : Node_Id) return Boolean;
-   --  Determines if the tree referenced by N represents a variable, i.e.
-   --  can appear on the left side of an assignment. There is one situation,
-   --  namely formal parameters, in which non-tagged type conversions are
-   --  also considered variables, but Is_Variable returns False for such
-   --  cases, since it has no knowledge of the context. Note that this is
-   --  the point at which Assignment_OK is checked, and True is returned
-   --  for any tree thus marked.
+   --  Determines if the tree referenced by N represents a variable, i.e. can
+   --  appear on the left side of an assignment. There is one situation (formal
+   --  parameters) in which non-tagged type conversions are also considered
+   --  variables, but Is_Variable returns False for such cases, since it has
+   --  no knowledge of the context. Note that this is the point at which
+   --  Assignment_OK is checked, and True is returned for any tree thus marked.
+
+   function Is_Visibly_Controlled (T : Entity_Id) return Boolean;
+   --  Check whether T is derived from a visibly controlled type. This is true
+   --  if the root type is declared in Ada.Finalization. If T is derived
+   --  instead from a private type whose full view is controlled, an explicit
+   --  Initialize/Adjust/Finalize subprogram does not override the inherited
+   --  one.
 
    function Is_Volatile_Object (N : Node_Id) return Boolean;
-   --  Determines if the given node denotes an volatile object in the sense
-   --  of the legality checks described in RM C.6(12). Note that the test
-   --  here is for something actually declared as volatile, not for an object
-   --  that gets treated as volatile (see Einfo.Treat_As_Volatile).
+   --  Determines if the given node denotes an volatile object in the sense of
+   --  the legality checks described in RM C.6(12). Note that the test here is
+   --  for something actually declared as volatile, not for an object that gets
+   --  treated as volatile (see Einfo.Treat_As_Volatile).
 
    procedure Kill_Current_Values (Last_Assignment_Only : Boolean := False);
    --  This procedure is called to clear all constant indications from all
@@ -845,8 +862,8 @@ package Sem_Util is
    procedure Kill_Size_Check_Code (E : Entity_Id);
    --  Called when an address clause or pragma Import is applied to an entity.
    --  If the entity is a variable or a constant, and size check code is
-   --  present, this size check code is killed, since the object will not
-   --  be allocated by the program.
+   --  present, this size check code is killed, since the object will not be
+   --  allocated by the program.
 
    function Known_To_Be_Assigned (N : Node_Id) return Boolean;
    --  The node N is an entity reference. This function determines whether the

@@ -54,10 +54,6 @@
 #include <smmintrin.h>
 #endif
 
-#ifdef __FMA4__
-#include <fma4intrin.h>
-#endif
-
 #if defined (__AES__) || defined (__PCLMUL__)
 #include <wmmintrin.h>
 #endif
@@ -67,6 +63,22 @@
 
 #ifdef __3dNOW__
 #include <mm3dnow.h>
+#endif
+
+#ifdef __FMA4__
+#include <fma4intrin.h>
+#endif
+
+#ifdef __XOP__
+#include <xopintrin.h>
+#endif
+
+#ifdef __LWP__
+#include <lwpintrin.h>
+#endif
+
+#ifdef __ABM__
+#include <abmintrin.h>
 #endif
 
 #endif /* _X86INTRIN_H_INCLUDED */

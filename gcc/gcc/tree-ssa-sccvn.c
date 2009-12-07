@@ -324,7 +324,7 @@ vn_constant_eq (const void *p1, const void *p2)
 }
 
 /* Hash table hash function for vn_constant_t.  */
-   
+
 static hashval_t
 vn_constant_hash (const void *p1)
 {
@@ -358,11 +358,11 @@ get_or_alloc_constant_value_id (tree constant)
 {
   void **slot;
   vn_constant_t vc = XNEW (struct vn_constant_s);
-  
+
   vc->hashcode = vn_hash_constant_with_type (constant);
   vc->constant = constant;
   slot = htab_find_slot_with_hash (constant_to_value_id, vc,
-				   vc->hashcode, INSERT);  
+				   vc->hashcode, INSERT);
   if (*slot)
     {
       free (vc);
@@ -379,7 +379,7 @@ get_or_alloc_constant_value_id (tree constant)
 bool
 value_id_constant_p (unsigned int v)
 {
-  return bitmap_bit_p (constant_value_ids, v);  
+  return bitmap_bit_p (constant_value_ids, v);
 }
 
 /* Compare two reference operands P1 and P2 for equality.  Return true if
@@ -980,7 +980,7 @@ vn_reference_lookup_1 (vn_reference_t vr, vn_reference_t *vnresult)
 	*vnresult = (vn_reference_t)*slot;
       return ((vn_reference_t)*slot)->result;
     }
-  
+
   return NULL_TREE;
 }
 
@@ -1007,7 +1007,7 @@ vn_reference_lookup_2 (ao_ref *op ATTRIBUTE_UNUSED, tree vuse, void *vr_)
 				     hash, NO_INSERT);
   if (slot)
     return *slot;
-  
+
   return NULL;
 }
 
@@ -1023,11 +1023,10 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_)
   gimple def_stmt = SSA_NAME_DEF_STMT (vuse);
   tree fndecl;
   tree base;
-  HOST_WIDE_INT offset, size, maxsize;
+  HOST_WIDE_INT offset, maxsize;
 
   base = ao_ref_base (ref);
   offset = ref->offset;
-  size = ref->size;
   maxsize = ref->max_size;
 
   /* If we cannot constrain the size of the reference we cannot
@@ -1157,7 +1156,9 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_)
       /* Adjust *ref from the new operands.  */
       if (!ao_ref_init_from_vn_reference (&r, vr->set, vr->type, vr->operands))
 	return (void *)-1;
-      gcc_assert (ref->size == r.size);
+      /* This can happen with bitfields.  */
+      if (ref->size != r.size)
+	return (void *)-1;
       *ref = r;
 
       /* Keep looking for the adjusted *REF / VR pair.  */
@@ -1334,7 +1335,7 @@ vn_reference_insert_pieces (tree vuse, alias_set_type set, tree type,
 
   slot = htab_find_slot_with_hash (current_info->references, vr1, vr1->hashcode,
 				   INSERT);
-  
+
   /* At this point we should have all the things inserted that we have
      seen before, and we should never try inserting something that
      already exists.  */
@@ -1415,7 +1416,7 @@ vn_nary_op_eq (const void *p1, const void *p2)
 tree
 vn_nary_op_lookup_pieces (unsigned int length, enum tree_code code,
 			  tree type, tree op0, tree op1, tree op2,
-			  tree op3, vn_nary_op_t *vnresult) 
+			  tree op3, vn_nary_op_t *vnresult)
 {
   void **slot;
   struct vn_nary_op_s vno1;
@@ -1519,7 +1520,7 @@ vn_nary_op_insert_pieces (unsigned int length, enum tree_code code,
 			  tree type, tree op0,
 			  tree op1, tree op2, tree op3,
 			  tree result,
-			  unsigned int value_id) 
+			  unsigned int value_id)
 {
   void **slot;
   vn_nary_op_t vno1;
@@ -1547,7 +1548,7 @@ vn_nary_op_insert_pieces (unsigned int length, enum tree_code code,
 
   *slot = vno1;
   return vno1;
-  
+
 }
 
 /* Insert OP into the current hash table with a value number of
@@ -2980,12 +2981,12 @@ init_scc_vn (void)
   sccstack = NULL;
   constant_to_value_id = htab_create (23, vn_constant_hash, vn_constant_eq,
 				  free);
-  
+
   constant_value_ids = BITMAP_ALLOC (NULL);
-  
+
   next_dfs_num = 1;
   next_value_id = 1;
-  
+
   vn_ssa_aux_table = VEC_alloc (vn_ssa_aux_t, heap, num_ssa_names + 1);
   /* VEC_alloc doesn't actually grow it to the right size, it just
      preallocates the space to do so.  */
@@ -3072,7 +3073,7 @@ set_hashtable_value_ids (void)
      table.  */
 
   FOR_EACH_HTAB_ELEMENT (valid_info->nary,
-			 vno, vn_nary_op_t, hi) 
+			 vno, vn_nary_op_t, hi)
     {
       if (vno->result)
 	{
@@ -3084,7 +3085,7 @@ set_hashtable_value_ids (void)
     }
 
   FOR_EACH_HTAB_ELEMENT (valid_info->phis,
-			 vp, vn_phi_t, hi) 
+			 vp, vn_phi_t, hi)
     {
       if (vp->result)
 	{
@@ -3096,7 +3097,7 @@ set_hashtable_value_ids (void)
     }
 
   FOR_EACH_HTAB_ELEMENT (valid_info->references,
-			 vr, vn_reference_t, hi) 
+			 vr, vn_reference_t, hi)
     {
       if (vr->result)
 	{
@@ -3117,7 +3118,7 @@ run_scc_vn (bool may_insert_arg)
   size_t i;
   tree param;
   bool changed = true;
-  
+
   may_insert = may_insert_arg;
 
   init_scc_vn ();
@@ -3149,7 +3150,7 @@ run_scc_vn (bool may_insert_arg)
     }
 
   /* Initialize the value ids.  */
-      
+
   for (i = 1; i < num_ssa_names; ++i)
     {
       tree name = ssa_name (i);
@@ -3163,7 +3164,7 @@ run_scc_vn (bool may_insert_arg)
       else if (is_gimple_min_invariant (info->valnum))
 	info->value_id = get_or_alloc_constant_value_id (info->valnum);
     }
-  
+
   /* Propagate until they stop changing.  */
   while (changed)
     {
@@ -3184,9 +3185,9 @@ run_scc_vn (bool may_insert_arg)
 	    }
 	}
     }
-  
+
   set_hashtable_value_ids ();
-  
+
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
       fprintf (dump_file, "Value numbers:\n");
@@ -3212,7 +3213,7 @@ run_scc_vn (bool may_insert_arg)
 /* Return the maximum value id we have ever seen.  */
 
 unsigned int
-get_max_value_id (void) 
+get_max_value_id (void)
 {
   return next_value_id;
 }

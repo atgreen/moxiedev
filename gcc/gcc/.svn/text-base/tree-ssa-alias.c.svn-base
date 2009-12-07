@@ -325,7 +325,7 @@ dump_alias_info (FILE *file)
   fprintf (file, "\n\nAlias information for %s\n\n", funcname);
 
   fprintf (file, "Aliased symbols\n\n");
-  
+
   FOR_EACH_REFERENCED_VAR (var, rvi)
     {
       if (may_be_aliased (var))
@@ -345,7 +345,7 @@ dump_alias_info (FILE *file)
     {
       tree ptr = ssa_name (i);
       struct ptr_info_def *pi;
-      
+
       if (ptr == NULL_TREE
 	  || SSA_NAME_IN_FREE_LIST (ptr))
 	continue;
@@ -553,10 +553,10 @@ same_type_for_tbaa (tree type1, tree type2)
    on an indirect reference may alias.  */
 
 static bool
-nonaliasing_component_refs_p (tree ref1, tree type1,
-			      HOST_WIDE_INT offset1, HOST_WIDE_INT max_size1,
-			      tree ref2, tree type2,
-			      HOST_WIDE_INT offset2, HOST_WIDE_INT max_size2)
+aliasing_component_refs_p (tree ref1, tree type1,
+			   HOST_WIDE_INT offset1, HOST_WIDE_INT max_size1,
+			   tree ref2, tree type2,
+			   HOST_WIDE_INT offset2, HOST_WIDE_INT max_size2)
 {
   /* If one reference is a component references through pointers try to find a
      common base and apply offset based disambiguation.  This handles
@@ -600,9 +600,19 @@ nonaliasing_component_refs_p (tree ref1, tree type1,
       offset1 -= offadj;
       return ranges_overlap_p (offset1, max_size1, offset2, max_size2);
     }
-  /* If we have two type access paths B1.path1 and B2.path2 they may
-     only alias if either B1 is in B2.path2 or B2 is in B1.path1.  */
-  return false;
+
+  /* We haven't found any common base to apply offset-based disambiguation.
+     There are two cases:
+       1. The base access types have the same alias set.  This can happen
+	  in Ada when a function with an unconstrained parameter passed by
+	  reference is called on a constrained object and inlined: the types
+	  have the same alias set but aren't equivalent.  The references may
+	  alias in this case.
+       2. The base access types don't have the same alias set, i.e. one set
+	  is a subset of the other.  We have proved that B1 is not in the
+	  access path B2.path and that B2 is not in the access path B1.path
+	  so the references may not alias.  */
+  return get_alias_set (type1) == get_alias_set (type2);
 }
 
 /* Return true if two memory references based on the variables BASE1
@@ -681,10 +691,10 @@ indirect_ref_may_alias_decl_p (tree ref1, tree ptr1,
   if (ref1 && ref2
       && handled_component_p (ref1)
       && handled_component_p (ref2))
-    return nonaliasing_component_refs_p (ref1, TREE_TYPE (TREE_TYPE (ptr1)),
-					 offset1, max_size1,
-					 ref2, TREE_TYPE (base2),
-					 offset2, max_size2);
+    return aliasing_component_refs_p (ref1, TREE_TYPE (TREE_TYPE (ptr1)),
+				      offset1, max_size1,
+				      ref2, TREE_TYPE (base2),
+				      offset2, max_size2);
 
   return true;
 }
@@ -742,10 +752,10 @@ indirect_refs_may_alias_p (tree ref1, tree ptr1,
   if (ref1 && ref2
       && handled_component_p (ref1)
       && handled_component_p (ref2))
-    return nonaliasing_component_refs_p (ref1, TREE_TYPE (TREE_TYPE (ptr1)),
-					 offset1, max_size1,
-					 ref2, TREE_TYPE (TREE_TYPE (ptr2)),
-					 offset2, max_size2);
+    return aliasing_component_refs_p (ref1, TREE_TYPE (TREE_TYPE (ptr1)),
+				      offset1, max_size1,
+				      ref2, TREE_TYPE (TREE_TYPE (ptr2)),
+				      offset2, max_size2);
 
   return true;
 }
@@ -757,7 +767,6 @@ refs_may_alias_p_1 (ao_ref *ref1, ao_ref *ref2, bool tbaa_p)
 {
   tree base1, base2;
   HOST_WIDE_INT offset1 = 0, offset2 = 0;
-  HOST_WIDE_INT size1 = -1, size2 = -1;
   HOST_WIDE_INT max_size1 = -1, max_size2 = -1;
   bool var1_p, var2_p, ind1_p, ind2_p;
   alias_set_type set;
@@ -766,21 +775,21 @@ refs_may_alias_p_1 (ao_ref *ref1, ao_ref *ref2, bool tbaa_p)
 	       || SSA_VAR_P (ref1->ref)
 	       || handled_component_p (ref1->ref)
 	       || INDIRECT_REF_P (ref1->ref)
-	       || TREE_CODE (ref1->ref) == TARGET_MEM_REF)
+	       || TREE_CODE (ref1->ref) == TARGET_MEM_REF
+	       || TREE_CODE (ref1->ref) == CONST_DECL)
 	      && (!ref2->ref
 		  || SSA_VAR_P (ref2->ref)
 		  || handled_component_p (ref2->ref)
 		  || INDIRECT_REF_P (ref2->ref)
-		  || TREE_CODE (ref2->ref) == TARGET_MEM_REF));
+		  || TREE_CODE (ref2->ref) == TARGET_MEM_REF
+		  || TREE_CODE (ref2->ref) == CONST_DECL));
 
   /* Decompose the references into their base objects and the access.  */
   base1 = ao_ref_base (ref1);
   offset1 = ref1->offset;
-  size1 = ref1->size;
   max_size1 = ref1->max_size;
   base2 = ao_ref_base (ref2);
   offset2 = ref2->offset;
-  size2 = ref2->size;
   max_size2 = ref2->max_size;
 
   /* We can end up with registers or constants as bases for example from
@@ -788,6 +797,8 @@ refs_may_alias_p_1 (ao_ref *ref1, ao_ref *ref2, bool tbaa_p)
      which is seen as a struct copy.  */
   if (TREE_CODE (base1) == SSA_NAME
       || TREE_CODE (base2) == SSA_NAME
+      || TREE_CODE (base1) == CONST_DECL
+      || TREE_CODE (base2) == CONST_DECL
       || is_gimple_min_invariant (base1)
       || is_gimple_min_invariant (base2))
     return false;
@@ -924,7 +935,6 @@ ref_maybe_used_by_call_p_1 (gimple call, ao_ref *ref)
 	   their first argument.  */
 	case BUILT_IN_STRCPY:
 	case BUILT_IN_STRNCPY:
-	case BUILT_IN_BCOPY:
 	case BUILT_IN_MEMCPY:
 	case BUILT_IN_MEMMOVE:
 	case BUILT_IN_MEMPCPY:
@@ -942,8 +952,18 @@ ref_maybe_used_by_call_p_1 (gimple call, ao_ref *ref)
 					   size);
 	    return refs_may_alias_p_1 (&dref, ref, false);
 	  }
+	case BUILT_IN_BCOPY:
+	  {
+	    ao_ref dref;
+	    tree size = gimple_call_arg (call, 2);
+	    ao_ref_init_from_ptr_and_size (&dref,
+					   gimple_call_arg (call, 0),
+					   size);
+	    return refs_may_alias_p_1 (&dref, ref, false);
+	  }
 	/* The following builtins do not read from memory.  */
 	case BUILT_IN_FREE:
+	case BUILT_IN_MALLOC:
 	case BUILT_IN_MEMSET:
 	case BUILT_IN_FREXP:
 	case BUILT_IN_FREXPF:
@@ -1141,7 +1161,6 @@ call_may_clobber_ref_p_1 (gimple call, ao_ref *ref)
 	   their first argument.  */
 	case BUILT_IN_STRCPY:
 	case BUILT_IN_STRNCPY:
-	case BUILT_IN_BCOPY:
 	case BUILT_IN_MEMCPY:
 	case BUILT_IN_MEMMOVE:
 	case BUILT_IN_MEMPCPY:
@@ -1160,6 +1179,19 @@ call_may_clobber_ref_p_1 (gimple call, ao_ref *ref)
 					   size);
 	    return refs_may_alias_p_1 (&dref, ref, false);
 	  }
+	case BUILT_IN_BCOPY:
+	  {
+	    ao_ref dref;
+	    tree size = gimple_call_arg (call, 2);
+	    ao_ref_init_from_ptr_and_size (&dref,
+					   gimple_call_arg (call, 1),
+					   size);
+	    return refs_may_alias_p_1 (&dref, ref, false);
+	  }
+	/* Allocating memory does not have any side-effects apart from
+	   being the definition point for the pointer.  */
+	case BUILT_IN_MALLOC:
+	  return false;
 	/* Freeing memory kills the pointed-to memory.  More importantly
 	   the call has to serve as a barrier for moving loads and stores
 	   across it.  */
@@ -1303,8 +1335,6 @@ stmt_may_clobber_ref_p (gimple stmt, tree ref)
 }
 
 
-static tree get_continuation_for_phi (gimple, ao_ref *, bitmap *);
-
 /* Walk the virtual use-def chain of VUSE until hitting the virtual operand
    TARGET or a statement clobbering the memory reference REF in which
    case false is returned.  The walk starts with VUSE, one argument of PHI.  */
@@ -1348,7 +1378,7 @@ maybe_skip_until (gimple phi, tree target, ao_ref *ref,
    clobber REF.  Returns NULL_TREE if no suitable virtual operand can
    be found.  */
 
-static tree
+tree
 get_continuation_for_phi (gimple phi, ao_ref *ref, bitmap *visited)
 {
   unsigned nargs = gimple_phi_num_args (phi);
@@ -1365,6 +1395,7 @@ get_continuation_for_phi (gimple phi, ao_ref *ref, bitmap *visited)
       tree arg1 = PHI_ARG_DEF (phi, 1);
       gimple def0 = SSA_NAME_DEF_STMT (arg0);
       gimple def1 = SSA_NAME_DEF_STMT (arg1);
+      tree common_vuse;
 
       if (arg0 == arg1)
 	return arg0;
@@ -1382,6 +1413,26 @@ get_continuation_for_phi (gimple phi, ao_ref *ref, bitmap *visited)
 	{
 	  if (maybe_skip_until (phi, arg1, ref, arg0, visited))
 	    return arg1;
+	}
+      /* Special case of a diamond:
+	   MEM_1 = ...
+	   goto (cond) ? L1 : L2
+	   L1: store1 = ...    #MEM_2 = vuse(MEM_1)
+	       goto L3
+	   L2: store2 = ...    #MEM_3 = vuse(MEM_1)
+	   L3: MEM_4 = PHI<MEM_2, MEM_3>
+	 We were called with the PHI at L3, MEM_2 and MEM_3 don't
+	 dominate each other, but still we can easily skip this PHI node
+	 if we recognize that the vuse MEM operand is the same for both,
+	 and that we can skip both statements (they don't clobber us).
+	 This is still linear.  Don't use maybe_skip_until, that might
+	 potentially be slow.  */
+      else if ((common_vuse = gimple_vuse (def0))
+	       && common_vuse == gimple_vuse (def1))
+	{
+	  if (!stmt_may_clobber_ref_p_1 (def0, ref)
+	      && !stmt_may_clobber_ref_p_1 (def1, ref))
+	    return common_vuse;
 	}
     }
 

@@ -73,7 +73,7 @@ static bitmap lto_nothrow_fndecls;
    #include "a.h"
    a::a() {}
    a::~a() {}
-   
+
    When main.cc is compiled, gcc only sees the constructor declaration, so
    the constructor and hence the call to it are marked as exception throwing.
    When a.cc is compiled, the body of the constructor is available and is
@@ -111,7 +111,7 @@ lto_fixup_nothrow_decls (void)
 	    gcc_assert (call_stmt);
 	    if (lookup_stmt_eh_lp_fn (caller_function, call_stmt) != 0)
 	      remove_stmt_from_eh_lp_fn (caller_function, call_stmt);
-	  } 
+	  }
       }
 }
 
@@ -123,7 +123,7 @@ lto_mark_nothrow_fndecl (tree fndecl)
   gcc_assert (TREE_CODE (fndecl) == FUNCTION_DECL);
   if (!lto_nothrow_fndecls)
     lto_nothrow_fndecls = lto_bitmap_alloc ();
-    
+
   bitmap_set_bit (lto_nothrow_fndecls, DECL_UID (fndecl));
 }
 
@@ -153,7 +153,7 @@ lto_output_wpa_fixup (cgraph_node_set set)
       {
 	struct cgraph_edge *e;
 	struct cgraph_node *n;
-	
+
 	n = csi_node (csi);
 	fndecl = n->decl;
 
@@ -183,7 +183,7 @@ lto_output_wpa_fixup (cgraph_node_set set)
       }
 
   /* Write out number of DECLs, followed by the DECLs.  */
-  count = VEC_length (tree, decls); 
+  count = VEC_length (tree, decls);
   lto_output_uleb128_stream (ob->main_stream, count);
   for (i = 0; i < count; i++)
     {
@@ -274,6 +274,7 @@ struct ipa_opt_pass_d pass_ipa_lto_wpa_fixup =
  lto_output_wpa_fixup,			/* write_summary */
  lto_input_wpa_fixup,			/* read_summary */
  NULL,					/* function_read_summary */
+ NULL,					/* stmt_fixup */
  0,					/* TODOs */
  NULL,			                /* function_transform */
  NULL					/* variable_transform */

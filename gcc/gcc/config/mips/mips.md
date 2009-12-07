@@ -1847,15 +1847,10 @@
   [(set (match_operand:DI 0 "register_operand")
 	(mult:DI (any_extend:DI (match_operand:SI 1 "register_operand"))
 		 (any_extend:DI (match_operand:SI 2 "register_operand"))))]
-  "!TARGET_64BIT || !TARGET_FIX_R4000"
+  "mips_mulsidi3_gen_fn (<CODE>) != NULL"
 {
-  if (TARGET_64BIT)
-    emit_insn (gen_<u>mulsidi3_64bit (operands[0], operands[1], operands[2]));
-  else if (TARGET_FIX_R4000)
-    emit_insn (gen_<u>mulsidi3_32bit_r4000 (operands[0], operands[1],
-					    operands[2]));
-  else
-    emit_insn (gen_<u>mulsidi3_32bit (operands[0], operands[1], operands[2]));
+  mulsidi3_gen_fn fn = mips_mulsidi3_gen_fn (<CODE>);
+  emit_insn (fn (operands[0], operands[1], operands[2]));
   DONE;
 })
 
@@ -1879,45 +1874,75 @@
    (set_attr "mode" "SI")
    (set_attr "length" "12")])
 
-(define_insn_and_split "<u>mulsidi3_64bit"
+(define_insn "<u>mulsidi3_64bit"
   [(set (match_operand:DI 0 "register_operand" "=d")
 	(mult:DI (any_extend:DI (match_operand:SI 1 "register_operand" "d"))
 		 (any_extend:DI (match_operand:SI 2 "register_operand" "d"))))
    (clobber (match_scratch:TI 3 "=x"))
    (clobber (match_scratch:DI 4 "=d"))]
-  "TARGET_64BIT && !TARGET_FIX_R4000"
+  "TARGET_64BIT && !TARGET_FIX_R4000 && !ISA_HAS_DMUL3"
   "#"
-  "&& reload_completed"
+  [(set_attr "type" "imul")
+   (set_attr "mode" "SI")
+   (set (attr "length")
+	(if_then_else (ne (symbol_ref "ISA_HAS_EXT_INS") (const_int 0))
+		      (const_int 16)
+		      (const_int 28)))])
+
+(define_split
+  [(set (match_operand:DI 0 "d_operand")
+	(mult:DI (any_extend:DI (match_operand:SI 1 "d_operand"))
+		 (any_extend:DI (match_operand:SI 2 "d_operand"))))
+   (clobber (match_operand:TI 3 "hilo_operand"))
+   (clobber (match_operand:DI 4 "d_operand"))]
+  "TARGET_64BIT && !TARGET_FIX_R4000 && ISA_HAS_EXT_INS && reload_completed"
   [(set (match_dup 3)
 	(unspec:TI [(mult:DI (any_extend:DI (match_dup 1))
 			     (any_extend:DI (match_dup 2)))]
 		   UNSPEC_SET_HILO))
 
-   ;; OP4 <- LO, OP0 <- HI
-   (set (match_dup 4) (match_dup 5))
-   (set (match_dup 0) (unspec:DI [(match_dup 3)] UNSPEC_MFHI))
+   ;; OP0 <- LO, OP4 <- HI
+   (set (match_dup 0) (match_dup 5))
+   (set (match_dup 4) (unspec:DI [(match_dup 3)] UNSPEC_MFHI))
 
-   ;; Zero-extend OP4.
-   (set (match_dup 4)
-	(ashift:DI (match_dup 4)
-		   (const_int 32)))
-   (set (match_dup 4)
-	(lshiftrt:DI (match_dup 4)
-		     (const_int 32)))
+   (set (zero_extract:DI (match_dup 0) (const_int 32) (const_int 32))
+	(match_dup 4))]
+  { operands[5] = gen_rtx_REG (DImode, LO_REGNUM); })
 
-   ;; Shift OP0 into place.
+(define_split
+  [(set (match_operand:DI 0 "d_operand")
+	(mult:DI (any_extend:DI (match_operand:SI 1 "d_operand"))
+		 (any_extend:DI (match_operand:SI 2 "d_operand"))))
+   (clobber (match_operand:TI 3 "hilo_operand"))
+   (clobber (match_operand:DI 4 "d_operand"))]
+  "TARGET_64BIT && !TARGET_FIX_R4000 && !ISA_HAS_EXT_INS && reload_completed"
+  [(set (match_dup 3)
+	(unspec:TI [(mult:DI (any_extend:DI (match_dup 1))
+			     (any_extend:DI (match_dup 2)))]
+		   UNSPEC_SET_HILO))
+
+   ;; OP0 <- LO, OP4 <- HI
+   (set (match_dup 0) (match_dup 5))
+   (set (match_dup 4) (unspec:DI [(match_dup 3)] UNSPEC_MFHI))
+
+   ;; Zero-extend OP0.
    (set (match_dup 0)
 	(ashift:DI (match_dup 0)
+		   (const_int 32)))
+   (set (match_dup 0)
+	(lshiftrt:DI (match_dup 0)
+		     (const_int 32)))
+
+   ;; Shift OP4 into place.
+   (set (match_dup 4)
+	(ashift:DI (match_dup 4)
 		   (const_int 32)))
 
    ;; OR the two halves together
    (set (match_dup 0)
 	(ior:DI (match_dup 0)
 		(match_dup 4)))]
-  { operands[5] = gen_rtx_REG (DImode, LO_REGNUM); }
-  [(set_attr "type" "imul")
-   (set_attr "mode" "SI")
-   (set_attr "length" "24")])
+  { operands[5] = gen_rtx_REG (DImode, LO_REGNUM); })
 
 (define_insn "<u>mulsidi3_64bit_hilo"
   [(set (match_operand:TI 0 "register_operand" "=x")
@@ -1930,6 +1955,17 @@
   "mult<u>\t%1,%2"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")])
+
+;; See comment before the ISA_HAS_DMUL3 case in mips_mulsidi3_gen_fn.
+(define_insn "mulsidi3_64bit_dmul"
+  [(set (match_operand:DI 0 "register_operand" "=d")
+	(mult:DI (sign_extend:DI (match_operand:SI 1 "register_operand" "d"))
+		 (sign_extend:DI (match_operand:SI 2 "register_operand" "d"))))
+   (clobber (match_scratch:DI 3 "=l"))]
+  "TARGET_64BIT && ISA_HAS_DMUL3"
+  "dmul\t%0,%1,%2"
+  [(set_attr "type" "imul3")
+   (set_attr "mode" "DI")])
 
 ;; Widening multiply with negation.
 (define_insn "*muls<u>_di"

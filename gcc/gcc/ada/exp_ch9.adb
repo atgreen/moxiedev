@@ -2180,6 +2180,58 @@ package body Exp_Ch9 is
    is
       Def     : Node_Id;
       Rec_Typ : Entity_Id;
+      procedure Scan_Declarations (L : List_Id);
+      --  Common processing for visible and private declarations
+      --  of a protected type.
+
+      procedure Scan_Declarations (L : List_Id) is
+         Decl      : Node_Id;
+         Wrap_Decl : Node_Id;
+         Wrap_Spec : Node_Id;
+
+      begin
+         if No (L) then
+            return;
+         end if;
+
+         Decl := First (L);
+         while Present (Decl) loop
+            Wrap_Spec := Empty;
+
+            if Nkind (Decl) = N_Entry_Declaration
+              and then Ekind (Defining_Identifier (Decl)) = E_Entry
+            then
+               Wrap_Spec :=
+                 Build_Wrapper_Spec
+                   (Subp_Id => Defining_Identifier (Decl),
+                    Obj_Typ => Rec_Typ,
+                    Formals => Parameter_Specifications (Decl));
+
+            elsif Nkind (Decl) = N_Subprogram_Declaration then
+               Wrap_Spec :=
+                 Build_Wrapper_Spec
+                   (Subp_Id => Defining_Unit_Name (Specification (Decl)),
+                    Obj_Typ => Rec_Typ,
+                    Formals =>
+                      Parameter_Specifications (Specification (Decl)));
+            end if;
+
+            if Present (Wrap_Spec) then
+               Wrap_Decl :=
+                 Make_Subprogram_Declaration (Loc,
+                   Specification => Wrap_Spec);
+
+               Insert_After (N, Wrap_Decl);
+               N := Wrap_Decl;
+
+               Analyze (Wrap_Decl);
+            end if;
+
+            Next (Decl);
+         end loop;
+      end Scan_Declarations;
+
+      --  start of processing for Build_Wrapper_Specs
 
    begin
       if Is_Protected_Type (Typ) then
@@ -2191,54 +2243,14 @@ package body Exp_Ch9 is
       Rec_Typ := Corresponding_Record_Type (Typ);
 
       --  Generate wrapper specs for a concurrent type which implements an
-      --  interface and has visible entries and/or protected procedures.
+      --  interface. Operations in both the visible and private parts may
+      --  implement progenitor operations.
 
       if Present (Interfaces (Rec_Typ))
         and then Present (Def)
-        and then Present (Visible_Declarations (Def))
       then
-         declare
-            Decl      : Node_Id;
-            Wrap_Decl : Node_Id;
-            Wrap_Spec : Node_Id;
-
-         begin
-            Decl := First (Visible_Declarations (Def));
-            while Present (Decl) loop
-               Wrap_Spec := Empty;
-
-               if Nkind (Decl) = N_Entry_Declaration
-                 and then Ekind (Defining_Identifier (Decl)) = E_Entry
-               then
-                  Wrap_Spec :=
-                    Build_Wrapper_Spec
-                      (Subp_Id => Defining_Identifier (Decl),
-                       Obj_Typ => Rec_Typ,
-                       Formals => Parameter_Specifications (Decl));
-
-               elsif Nkind (Decl) = N_Subprogram_Declaration then
-                  Wrap_Spec :=
-                    Build_Wrapper_Spec
-                      (Subp_Id => Defining_Unit_Name (Specification (Decl)),
-                       Obj_Typ => Rec_Typ,
-                       Formals =>
-                         Parameter_Specifications (Specification (Decl)));
-               end if;
-
-               if Present (Wrap_Spec) then
-                  Wrap_Decl :=
-                    Make_Subprogram_Declaration (Loc,
-                      Specification => Wrap_Spec);
-
-                  Insert_After (N, Wrap_Decl);
-                  N := Wrap_Decl;
-
-                  Analyze (Wrap_Decl);
-               end if;
-
-               Next (Decl);
-            end loop;
-         end;
+         Scan_Declarations (Visible_Declarations (Def));
+         Scan_Declarations (Private_Declarations (Def));
       end if;
    end Build_Wrapper_Specs;
 
@@ -2550,6 +2562,70 @@ package body Exp_Ch9 is
          end if;
       end loop;
    end Build_Master_Entity;
+
+   -----------------------------------------
+   -- Build_Private_Protected_Declaration --
+   -----------------------------------------
+
+   function Build_Private_Protected_Declaration
+     (N : Node_Id) return Entity_Id
+   is
+      Loc      : constant Source_Ptr := Sloc (N);
+      Body_Id  : constant Entity_Id := Defining_Entity (N);
+      Decl     : Node_Id;
+      Plist    : List_Id;
+      Formal   : Entity_Id;
+      New_Spec : Node_Id;
+      Spec_Id  : Entity_Id;
+
+   begin
+      Formal := First_Formal (Body_Id);
+
+      --  The protected operation always has at least one formal, namely the
+      --  object itself, but it is only placed in the parameter list if
+      --  expansion is enabled.
+
+      if Present (Formal) or else Expander_Active then
+         Plist := Copy_Parameter_List (Body_Id);
+      else
+         Plist := No_List;
+      end if;
+
+      if Nkind (Specification (N)) = N_Procedure_Specification then
+         New_Spec :=
+           Make_Procedure_Specification (Loc,
+              Defining_Unit_Name       =>
+                Make_Defining_Identifier (Sloc (Body_Id),
+                  Chars => Chars (Body_Id)),
+              Parameter_Specifications =>
+                Plist);
+      else
+         New_Spec :=
+           Make_Function_Specification (Loc,
+              Defining_Unit_Name       =>
+                Make_Defining_Identifier (Sloc (Body_Id),
+                  Chars => Chars (Body_Id)),
+              Parameter_Specifications =>
+                Plist,
+              Result_Definition        =>
+                New_Occurrence_Of (Etype (Body_Id), Loc));
+      end if;
+
+      Decl := Make_Subprogram_Declaration (Loc, Specification => New_Spec);
+      Insert_Before (N, Decl);
+      Spec_Id := Defining_Unit_Name (New_Spec);
+
+      --  Indicate that the entity comes from source, to ensure that cross-
+      --  reference information is properly generated. The body itself is
+      --  rewritten during expansion, and the body entity will not appear in
+      --  calls to the operation.
+
+      Set_Comes_From_Source (Spec_Id, True);
+      Analyze (Decl);
+      Set_Has_Completion (Spec_Id);
+      Set_Convention (Spec_Id, Convention_Protected);
+      return Spec_Id;
+   end Build_Private_Protected_Declaration;
 
    ---------------------------
    -- Build_Protected_Entry --
@@ -3983,9 +4059,21 @@ package body Exp_Ch9 is
       Spec_Id : Entity_Id;
 
    begin
-      Spec_Id :=
-        Make_Defining_Identifier (Loc,
-          Chars => New_External_Name (Chars (T), 'B'));
+      --  Case of explicit task type, suffix TB
+
+      if Comes_From_Source (T) then
+         Spec_Id :=
+           Make_Defining_Identifier (Loc,
+             Chars => New_External_Name (Chars (T), "TB"));
+
+      --  Case of anonymous task type, suffix B
+
+      else
+         Spec_Id :=
+           Make_Defining_Identifier (Loc,
+             Chars => New_External_Name (Chars (T), 'B'));
+      end if;
+
       Set_Is_Internal (Spec_Id);
 
       --  Associate the procedure with the task, if this is the declaration
@@ -7170,7 +7258,6 @@ package body Exp_Ch9 is
       New_Op_Body  : Node_Id;
       Num_Entries  : Natural := 0;
       Op_Body      : Node_Id;
-      Op_Decl      : Node_Id;
       Op_Id        : Entity_Id;
 
       Chain        : Entity_Id := Empty;
@@ -7332,41 +7419,36 @@ package body Exp_Ch9 is
                   --  to an external caller. This is the common idiom in code
                   --  that uses the Ada 2005 Timing_Events package. As a result
                   --  we need to produce the protected body for both visible
-                  --  and private operations.
+                  --  and private operations, as well as operations that only
+                  --  have a body in the source, and for which we create a
+                  --  declaration in the protected body itself.
 
                   if Present (Corresponding_Spec (Op_Body)) then
-                     Op_Decl :=
-                       Unit_Declaration_Node (Corresponding_Spec (Op_Body));
+                     New_Op_Body :=
+                       Build_Protected_Subprogram_Body (
+                         Op_Body, Pid, Specification (New_Op_Body));
 
-                     if Nkind (Parent (Op_Decl)) =
-                          N_Protected_Definition
+                     Insert_After (Current_Node, New_Op_Body);
+                     Analyze (New_Op_Body);
+
+                     Current_Node := New_Op_Body;
+
+                     --  Generate an overriding primitive operation body for
+                     --  this subprogram if the protected type implements an
+                     --  interface.
+
+                     if Ada_Version >= Ada_05
+                          and then
+                        Present (Interfaces (Corresponding_Record_Type (Pid)))
                      then
-                        New_Op_Body :=
-                          Build_Protected_Subprogram_Body (
-                            Op_Body, Pid, Specification (New_Op_Body));
+                        Disp_Op_Body :=
+                          Build_Dispatching_Subprogram_Body
+                            (Op_Body, Pid, New_Op_Body);
 
-                        Insert_After (Current_Node, New_Op_Body);
-                        Analyze (New_Op_Body);
+                        Insert_After (Current_Node, Disp_Op_Body);
+                        Analyze (Disp_Op_Body);
 
-                        Current_Node := New_Op_Body;
-
-                        --  Generate an overriding primitive operation body for
-                        --  this subprogram if the protected type implements
-                        --  an interface.
-
-                        if Ada_Version >= Ada_05
-                          and then Present (Interfaces (
-                                     Corresponding_Record_Type (Pid)))
-                        then
-                           Disp_Op_Body :=
-                             Build_Dispatching_Subprogram_Body (
-                               Op_Body, Pid, New_Op_Body);
-
-                           Insert_After (Current_Node, Disp_Op_Body);
-                           Analyze (Disp_Op_Body);
-
-                           Current_Node := Disp_Op_Body;
-                        end if;
+                        Current_Node := Disp_Op_Body;
                      end if;
                   end if;
                end if;
@@ -7422,8 +7504,8 @@ package body Exp_Ch9 is
       end loop;
 
       --  Finally, create the body of the function that maps an entry index
-      --  into the corresponding body index, except when there is no entry,
-      --  or in a ravenscar-like profile.
+      --  into the corresponding body index, except when there is no entry, or
+      --  in a Ravenscar-like profile.
 
       if Corresponding_Runtime_Package (Pid) =
            System_Tasking_Protected_Objects_Entries
@@ -7821,20 +7903,23 @@ package body Exp_Ch9 is
 
                declare
                   Old_Comp : constant Node_Id   := Component_Definition (Priv);
-                  Pent     : constant Entity_Id := Defining_Identifier (Priv);
+                  Oent     : constant Entity_Id := Defining_Identifier (Priv);
                   New_Comp : Node_Id;
+                  Nent     : constant Entity_Id :=
+                               Make_Defining_Identifier (Sloc (Oent),
+                                 Chars => Chars (Oent));
 
                begin
                   if Present (Subtype_Indication (Old_Comp)) then
                      New_Comp :=
-                       Make_Component_Definition (Sloc (Pent),
+                       Make_Component_Definition (Sloc (Oent),
                          Aliased_Present    => False,
                          Subtype_Indication =>
                            New_Copy_Tree (Subtype_Indication (Old_Comp),
                                            Discr_Map));
                   else
                      New_Comp :=
-                       Make_Component_Definition (Sloc (Pent),
+                       Make_Component_Definition (Sloc (Oent),
                          Aliased_Present    => False,
                          Access_Definition  =>
                            New_Copy_Tree (Access_Definition (Old_Comp),
@@ -7843,10 +7928,12 @@ package body Exp_Ch9 is
 
                   New_Priv :=
                     Make_Component_Declaration (Loc,
-                      Defining_Identifier =>
-                        Make_Defining_Identifier (Sloc (Pent), Chars (Pent)),
+                      Defining_Identifier  => Nent,
                       Component_Definition => New_Comp,
-                      Expression => Expression (Priv));
+                      Expression           => Expression (Priv));
+
+                  Set_Has_Per_Object_Constraint (Nent,
+                    Has_Per_Object_Constraint (Oent));
 
                   Append_To (Cdecls, New_Priv);
                end;

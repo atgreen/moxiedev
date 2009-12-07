@@ -38,6 +38,8 @@ void ppl_print_polyhedron_matrix (FILE *, ppl_const_Polyhedron_t);
 void ppl_print_powerset_matrix (FILE *, ppl_Pointset_Powerset_C_Polyhedron_t);
 void debug_ppl_polyhedron_matrix (ppl_Polyhedron_t);
 void debug_ppl_powerset_matrix (ppl_Pointset_Powerset_C_Polyhedron_t);
+void ppl_print_linear_expr (FILE *, ppl_Linear_Expression_t);
+void debug_ppl_linear_expr (ppl_Linear_Expression_t);
 void ppl_read_polyhedron_matrix (ppl_Polyhedron_t *, FILE *);
 void ppl_insert_dimensions (ppl_Polyhedron_t, int, int);
 void ppl_insert_dimensions_pointset (ppl_Pointset_Powerset_C_Polyhedron_t, int,
@@ -46,7 +48,8 @@ void ppl_set_inhomogeneous_gmp (ppl_Linear_Expression_t, Value);
 void ppl_set_coef_gmp (ppl_Linear_Expression_t, ppl_dimension_type, Value);
 void ppl_max_for_le_pointset (ppl_Pointset_Powerset_C_Polyhedron_t,
                               ppl_Linear_Expression_t, Value);
-
+void ppl_min_for_le_polyhedron (ppl_Polyhedron_t, ppl_Linear_Expression_t,
+				Value);
 
 /* Assigns to RES the value of the INTEGER_CST T.  */
 

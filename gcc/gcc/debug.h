@@ -31,6 +31,10 @@ struct gcc_debug_hooks
   /* Output debug symbols.  */
   void (* finish) (const char *main_filename);
 
+  /* Called from cgraph_optimize before starting to assemble
+     functions/variables/toplevel asms.  */
+  void (* assembly_start) (void);
+
   /* Macro defined on line LINE with name and expansion TEXT.  */
   void (* define) (unsigned int line, const char *text);
 
@@ -139,6 +143,12 @@ struct gcc_debug_hooks
      point.  */
   void (* virtual_call_token) (tree addr, int insn_uid);
 
+  /* Copies the OBJ_TYPE_REF_TOKEN for a virtual call from OLD_INSN to
+     NEW_INSN.  Called from emit-rtl.c:try_split when a CALL_INSN is
+     split, so that the vtable slot index remains associated with the
+     new CALL_INSN.  */
+  void (* copy_call_info) (rtx old_insn, rtx new_insn);
+
   /* Records a virtual call given INSN_UID, which is the UID of the call
      instruction.  The UID is then mapped to the vtable slot index noted
      during the lowering phase.  Called from final_scan_insn when ICF
@@ -170,6 +180,7 @@ extern void debug_nothing_tree_int (tree, int);
 extern void debug_nothing_tree_tree_tree_bool (tree, tree, tree, bool);
 extern bool debug_true_const_tree (const_tree);
 extern void debug_nothing_rtx (rtx);
+extern void debug_nothing_rtx_rtx (rtx, rtx);
 extern void debug_nothing_uid (int);
 
 /* Hooks for various debug formats.  */

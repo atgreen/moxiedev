@@ -30,7 +30,7 @@
 
 /* Section 4.1 of the AAPCS requires the use of VFP format.  */
 #undef  FPUTYPE_DEFAULT
-#define FPUTYPE_DEFAULT FPUTYPE_VFP
+#define FPUTYPE_DEFAULT "vfp"
 
 /* TARGET_BIG_ENDIAN_DEFAULT is set in
    config.gcc for big endian configurations.  */
@@ -53,6 +53,8 @@
 
 #define TARGET_FIX_V4BX_SPEC " %{mcpu=arm8|mcpu=arm810|mcpu=strongarm*|march=armv4:--fix-v4bx}"
 
+#define BE8_LINK_SPEC " %{mbig-endian:%{march=armv7-a|mcpu=cortex-a5|mcpu=cortex-a8|mcpu=cortex-a9:%{!r:--be8}}}"
+
 /* Tell the assembler to build BPABI binaries.  */
 #undef  SUBTARGET_EXTRA_ASM_SPEC
 #define SUBTARGET_EXTRA_ASM_SPEC "%{mabi=apcs-gnu|mabi=atpcs:-meabi=gnu;:-meabi=5}" TARGET_FIX_V4BX_SPEC
@@ -65,7 +67,7 @@
 #define BPABI_LINK_SPEC \
   "%{mbig-endian:-EB} %{mlittle-endian:-EL} "		\
   "%{static:-Bstatic} %{shared:-shared} %{symbolic:-Bsymbolic} "	\
-  "-X" SUBTARGET_EXTRA_LINK_SPEC TARGET_FIX_V4BX_SPEC
+  "-X" SUBTARGET_EXTRA_LINK_SPEC TARGET_FIX_V4BX_SPEC BE8_LINK_SPEC
 
 #undef  LINK_SPEC
 #define LINK_SPEC BPABI_LINK_SPEC

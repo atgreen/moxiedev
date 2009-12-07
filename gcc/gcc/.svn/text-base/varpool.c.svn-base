@@ -30,7 +30,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "hashtab.h"
 #include "ggc.h"
 #include "timevar.h"
-#include "debug.h" 
+#include "debug.h"
 #include "target.h"
 #include "output.h"
 #include "gimple.h"
@@ -57,21 +57,21 @@ struct varpool_node *varpool_nodes;
 
 /* Queue of cgraph nodes scheduled to be lowered and output.
    The queue is maintained via mark_needed_node, linked via node->next_needed
-   pointer. 
+   pointer.
 
    LAST_NEEDED_NODE points to the end of queue, so it can be
    maintained in forward order.  GTY is needed to make it friendly to
    PCH.
- 
+
    During compilation we construct the queue of needed variables
    twice: first time it is during cgraph construction, second time it is at the
    end of compilation in VARPOOL_REMOVE_UNREFERENCED_DECLS so we can avoid
    optimized out variables being output.
-   
-   Each variable is thus first analyzed and then later possibly output.  
+
+   Each variable is thus first analyzed and then later possibly output.
    FIRST_UNANALYZED_NODE points to first node in queue that was not analyzed
    yet and is moved via VARPOOL_ANALYZE_PENDING_DECLS.  */
-   
+
 struct varpool_node *varpool_nodes_queue;
 static GTY(()) struct varpool_node *varpool_last_needed_node;
 static GTY(()) struct varpool_node *varpool_first_unanalyzed_node;
@@ -80,7 +80,7 @@ static GTY(()) struct varpool_node *varpool_first_unanalyzed_node;
 static GTY(()) struct varpool_node *varpool_assembled_nodes_queue;
 
 /* Return name of the node used in debug output.  */
-static const char *
+const char *
 varpool_node_name (struct varpool_node *node)
 {
   return lang_hooks.decl_printable_name (node->decl, 2);
@@ -229,7 +229,8 @@ bool
 decide_is_variable_needed (struct varpool_node *node, tree decl)
 {
   /* If the user told us it is used, then it must be so.  */
-  if (node->externally_visible || node->force_output)
+  if ((node->externally_visible && !DECL_COMDAT (decl))
+      || node->force_output)
     return true;
 
   /* ??? If the assembler name is set by hand, it is possible to assemble
@@ -237,11 +238,6 @@ decide_is_variable_needed (struct varpool_node *node, tree decl)
      in assemble_name then.  This is arguably a bug.  */
   if (DECL_ASSEMBLER_NAME_SET_P (decl)
       && TREE_SYMBOL_REFERENCED (DECL_ASSEMBLER_NAME (decl)))
-    return true;
-
-  /* If we decided it was needed before, but at the time we didn't have
-     the definition available, then it's still needed.  */
-  if (node->needed)
     return true;
 
   /* Externally visible variables must be output.  The exception is

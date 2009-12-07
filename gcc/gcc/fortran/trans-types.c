@@ -53,8 +53,6 @@ along with GCC; see the file COPYING3.  If not see
 /* array of structs so we don't have to worry about xmalloc or free */
 CInteropKind_t c_interop_kinds_table[ISOCBINDING_NUMBER];
 
-static tree gfc_get_derived_type (gfc_symbol * derived);
-
 tree gfc_array_index_type;
 tree gfc_array_range_type;
 tree gfc_character1_type_node;
@@ -1941,7 +1939,7 @@ gfc_get_ppc_type (gfc_component* c)
    at the same time.  If an equal derived type has been built
    in a parent namespace, this is used.  */
 
-static tree
+tree
 gfc_get_derived_type (gfc_symbol * derived)
 {
   tree typenode = NULL, field = NULL, field_type = NULL, fieldlist = NULL;
@@ -2490,7 +2488,7 @@ gfc_get_array_descr_info (const_tree type, struct array_descr_info *info)
   int rank, dim;
   bool indirect = false;
   tree etype, ptype, field, t, base_decl;
-  tree data_off, offset_off, dim_off, dim_size, elem_size;
+  tree data_off, dim_off, dim_size, elem_size;
   tree lower_suboff, upper_suboff, stride_suboff;
 
   if (! GFC_DESCRIPTOR_TYPE_P (type))
@@ -2546,7 +2544,6 @@ gfc_get_array_descr_info (const_tree type, struct array_descr_info *info)
   field = TYPE_FIELDS (TYPE_MAIN_VARIANT (type));
   data_off = byte_position (field);
   field = TREE_CHAIN (field);
-  offset_off = byte_position (field);
   field = TREE_CHAIN (field);
   field = TREE_CHAIN (field);
   dim_off = byte_position (field);

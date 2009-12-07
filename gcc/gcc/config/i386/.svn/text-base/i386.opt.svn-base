@@ -244,6 +244,12 @@ mcld
 Target Report Mask(CLD) Save
 Generate cld instruction in the function prologue.
 
+mfused-madd
+Target Report Mask(FUSED_MADD) Save
+Enable automatic generation of fused floating point multiply-add instructions
+if the ISA supports such instructions.  The -mfused-madd option is on by
+default.
+
 ;; ISA support
 
 m32
@@ -313,6 +319,14 @@ Support MMX, SSE, SSE2, SSE3 and SSE4A built-in functions and code generation
 mfma4
 Target Report Mask(ISA_FMA4) Var(ix86_isa_flags) VarExists Save
 Support FMA4 built-in functions and code generation 
+
+mxop
+Target Report Mask(ISA_XOP) Var(ix86_isa_flags) VarExists Save
+Support XOP built-in functions and code generation 
+
+mlwp
+Target Report Mask(ISA_LWP) Var(ix86_isa_flags) VarExists Save
+Support LWP built-in functions and code generation 
 
 mabm
 Target Report Mask(ISA_ABM) Var(ix86_isa_flags) VarExists Save

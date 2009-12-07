@@ -38,10 +38,10 @@ procedure Usage is
 
    procedure Write_Switch_Char (Sw : String; Prefix : String := "gnat");
    --  Output two spaces followed by the switch character minus followed
-   --  Prefix, followed by the string given as the argument, and then
-   --  enough blanks to tab to column 13, i.e. assuming Sw is not longer
-   --  than 5 characters, the maximum allowed, Write_Switch_Char will
-   --  always output exactly 12 characters.
+   --  Prefix, followed by the string given as the argument, and then enough
+   --  blanks to tab to column 13, i.e. assuming Sw is not longer than 5
+   --  characters, the maximum allowed, Write_Switch_Char will always output
+   --  exactly 12 characters.
 
    -----------------------
    -- Write_Switch_Char --
@@ -397,9 +397,9 @@ begin
 
    Write_Switch_Char ("wxx");
    Write_Line ("Enable selected warning modes, xx = list of parameters:");
-   Write_Line ("        a    turn on all optional warnings " &
+   Write_Line ("        a    turn on all optional info/warnings " &
                                                   "(except dhl.ot.w)");
-   Write_Line ("        A    turn off all optional warnings");
+   Write_Line ("        A    turn off all optional info/warnings");
    Write_Line ("        .a*  turn on warnings for failing assertion");
    Write_Line ("        .A   turn off warnings for failing assertion");
    Write_Line ("        b    turn on warnings for bad fixed value " &
@@ -414,8 +414,9 @@ begin
    Write_Line ("        .C*  turn off warnings for unrepped components");
    Write_Line ("        d    turn on warnings for implicit dereference");
    Write_Line ("        D*   turn off warnings for implicit dereference");
-   Write_Line ("        e    treat all warnings as errors");
-   Write_Line ("        .e   turn on every optional warning (no exceptions)");
+   Write_Line ("        e    treat all warnings (but not info) as errors");
+   Write_Line ("        .e   turn on every optional info/warning " &
+                                                  "(no exceptions)");
    Write_Line ("        f    turn on warnings for unreferenced formal");
    Write_Line ("        F*   turn off warnings for unreferenced formal");
    Write_Line ("        g*   turn on warnings for unrecognized pragma");
@@ -424,6 +425,8 @@ begin
    Write_Line ("        H*   turn off warnings for hiding variable");
    Write_Line ("        i*   turn on warnings for implementation unit");
    Write_Line ("        I    turn off warnings for implementation unit");
+   Write_Line ("        .i   turn on warnings for overlapping actuals");
+   Write_Line ("        .I*  turn off warnings for overlapping actuals");
    Write_Line ("        j    turn on warnings for obsolescent " &
                                                   "(annex J) feature");
    Write_Line ("        J*   turn off warnings for obsolescent " &
@@ -463,18 +466,20 @@ begin
    Write_Line ("        R*   turn off warnings for redundant construct");
    Write_Line ("        .r   turn on warnings for object renaming function");
    Write_Line ("        .R*  turn off warnings for object renaming function");
-   Write_Line ("        s    suppress all warnings");
+   Write_Line ("        s    suppress all info/warnings");
    Write_Line ("        t    turn on warnings for tracking deleted code");
    Write_Line ("        T*   turn off warnings for tracking deleted code");
    Write_Line ("        u    turn on warnings for unused entity");
    Write_Line ("        U*   turn off warnings for unused entity");
    Write_Line ("        v*   turn on warnings for unassigned variable");
    Write_Line ("        V    turn off warnings for unassigned variable");
+   Write_Line ("        .v*  turn on info messages for reverse bit order");
+   Write_Line ("        .V   turn off info messages for reverse bit order");
    Write_Line ("        w*   turn on warnings for wrong low bound assumption");
    Write_Line ("        W    turn off warnings for wrong low bound " &
                                                   "assumption");
    Write_Line ("        .w   turn on warnings on pragma Warnings Off");
-   Write_Line ("        .w*  turn off warnings on pragma Warnings Off");
+   Write_Line ("        .W*  turn off warnings on pragma Warnings Off");
    Write_Line ("        x*   turn on warnings for export/import");
    Write_Line ("        X    turn off warnings for export/import");
    Write_Line ("        .x   turn on warnings for non-local exception");

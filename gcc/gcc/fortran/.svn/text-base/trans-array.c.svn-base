@@ -837,7 +837,7 @@ gfc_conv_array_transpose (gfc_se * se, gfc_expr * expr)
 {
   tree dest, src, dest_index, src_index;
   gfc_loopinfo *loop;
-  gfc_ss_info *dest_info, *src_info;
+  gfc_ss_info *dest_info;
   gfc_ss *dest_ss, *src_ss;
   gfc_se src_se;
   int n;
@@ -847,10 +847,8 @@ gfc_conv_array_transpose (gfc_se * se, gfc_expr * expr)
   src_ss = gfc_walk_expr (expr);
   dest_ss = se->ss;
 
-  src_info = &src_ss->data.info;
   dest_info = &dest_ss->data.info;
   gcc_assert (dest_info->dimen == 2);
-  gcc_assert (src_info->dimen == 2);
 
   /* Get a descriptor for EXPR.  */
   gfc_init_se (&src_se, NULL);
@@ -3459,13 +3457,9 @@ gfc_conv_resolve_dependencies (gfc_loopinfo * loop, gfc_ss * dest,
   gfc_ss *ss;
   gfc_ref *lref;
   gfc_ref *rref;
-  gfc_ref *aref;
   int nDepend = 0;
-  int temp_dim = 0;
 
   loop->temp_ss = NULL;
-  aref = dest->data.info.ref;
-  temp_dim = 0;
 
   for (ss = rss; ss != gfc_ss_terminator; ss = ss->next)
     {
@@ -3514,7 +3508,6 @@ gfc_conv_resolve_dependencies (gfc_loopinfo * loop, gfc_ss * dest,
 		  if (depends[n])
 		  loop->order[dim++] = n;
 		}
-	      temp_dim = dim;
 	      for (n = 0; n < loop->dimen; n++)
 	        {
 		  if (! depends[n])
@@ -3557,12 +3550,10 @@ void
 gfc_conv_loop_setup (gfc_loopinfo * loop, locus * where)
 {
   int n;
-  int dim;
   gfc_ss_info *info;
   gfc_ss_info *specinfo;
   gfc_ss *ss;
   tree tmp;
-  tree len;
   gfc_ss *loopspec[GFC_MAX_DIMENSIONS];
   bool dynamic[GFC_MAX_DIMENSIONS];
   gfc_constructor *c;
@@ -3743,7 +3734,6 @@ gfc_conv_loop_setup (gfc_loopinfo * loop, locus * where)
 			 loop->temp_ss->string_length);
 
       tmp = loop->temp_ss->data.temp.type;
-      len = loop->temp_ss->string_length;
       n = loop->temp_ss->data.temp.dimen;
       memset (&loop->temp_ss->data.info, 0, sizeof (gfc_ss_info));
       loop->temp_ss->type = GFC_SS_SECTION;
@@ -3775,8 +3765,6 @@ gfc_conv_loop_setup (gfc_loopinfo * loop, locus * where)
 
       for (n = 0; n < info->dimen; n++)
 	{
-	  dim = info->dim[n];
-
 	  /* If we are specifying the range the delta is already set.  */
 	  if (loopspec[n] != ss)
 	    {
@@ -5906,6 +5894,36 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl,
 	      tmp = gfc_trans_dealloc_allocated (comp);
 	      gfc_add_expr_to_block (&fnblock, tmp);
 	    }
+	  else if (c->attr.allocatable)
+	    {
+	      /* Allocatable scalar components.  */
+	      comp = fold_build3 (COMPONENT_REF, ctype, decl, cdecl, NULL_TREE);
+
+	      tmp = gfc_deallocate_with_status (comp, NULL_TREE, true, NULL);
+	      gfc_add_expr_to_block (&fnblock, tmp);
+
+	      tmp = fold_build2 (MODIFY_EXPR, void_type_node, comp,
+				 build_int_cst (TREE_TYPE (comp), 0));
+	      gfc_add_expr_to_block (&fnblock, tmp);
+	    }
+	  else if (c->ts.type == BT_CLASS
+		   && c->ts.u.derived->components->attr.allocatable)
+	    {
+	      /* Allocatable scalar CLASS components.  */
+	      comp = fold_build3 (COMPONENT_REF, ctype, decl, cdecl, NULL_TREE);
+	      
+	      /* Add reference to '$data' component.  */
+	      tmp = c->ts.u.derived->components->backend_decl;
+	      comp = fold_build3 (COMPONENT_REF, TREE_TYPE (tmp),
+				  comp, tmp, NULL_TREE);
+
+	      tmp = gfc_deallocate_with_status (comp, NULL_TREE, true, NULL);
+	      gfc_add_expr_to_block (&fnblock, tmp);
+
+	      tmp = fold_build2 (MODIFY_EXPR, void_type_node, comp,
+				 build_int_cst (TREE_TYPE (comp), 0));
+	      gfc_add_expr_to_block (&fnblock, tmp);
+	    }
 	  break;
 
 	case NULLIFY_ALLOC_COMP:
@@ -5916,6 +5934,27 @@ structure_alloc_comps (gfc_symbol * der_type, tree decl,
 	      comp = fold_build3 (COMPONENT_REF, ctype,
 				  decl, cdecl, NULL_TREE);
 	      gfc_conv_descriptor_data_set (&fnblock, comp, null_pointer_node);
+	    }
+	  else if (c->attr.allocatable)
+	    {
+	      /* Allocatable scalar components.  */
+	      comp = fold_build3 (COMPONENT_REF, ctype, decl, cdecl, NULL_TREE);
+	      tmp = fold_build2 (MODIFY_EXPR, void_type_node, comp,
+				 build_int_cst (TREE_TYPE (comp), 0));
+	      gfc_add_expr_to_block (&fnblock, tmp);
+	    }
+	  else if (c->ts.type == BT_CLASS
+		   && c->ts.u.derived->components->attr.allocatable)
+	    {
+	      /* Allocatable scalar CLASS components.  */
+	      comp = fold_build3 (COMPONENT_REF, ctype, decl, cdecl, NULL_TREE);
+	      /* Add reference to '$data' component.  */
+	      tmp = c->ts.u.derived->components->backend_decl;
+	      comp = fold_build3 (COMPONENT_REF, TREE_TYPE (tmp),
+				  comp, tmp, NULL_TREE);
+	      tmp = fold_build2 (MODIFY_EXPR, void_type_node, comp,
+				 build_int_cst (TREE_TYPE (comp), 0));
+	      gfc_add_expr_to_block (&fnblock, tmp);
 	    }
           else if (cmp_has_alloc_comps)
 	    {
@@ -6129,7 +6168,6 @@ gfc_walk_variable_expr (gfc_ss * ss, gfc_expr * expr)
   gfc_ref *ref;
   gfc_array_ref *ar;
   gfc_ss *newss;
-  gfc_ss *head;
   int n;
 
   for (ref = expr->ref; ref; ref = ref->next)
@@ -6201,8 +6239,6 @@ gfc_walk_variable_expr (gfc_ss * ss, gfc_expr * expr)
 	  newss->next = ss;
 	  newss->data.info.dimen = 0;
 	  newss->data.info.ref = ref;
-
-	  head = newss;
 
           /* We add SS chains for all the subscripts in the section.  */
 	  for (n = 0; n < ar->dimen; n++)

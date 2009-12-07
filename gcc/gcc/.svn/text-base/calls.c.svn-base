@@ -256,10 +256,6 @@ emit_call_1 (rtx funexp, tree fntree ATTRIBUTE_UNUSED, tree fndecl ATTRIBUTE_UNU
   rtx call_insn;
   int already_popped = 0;
   HOST_WIDE_INT n_popped = RETURN_POPS_ARGS (fndecl, funtype, stack_size);
-#if defined (HAVE_call) && defined (HAVE_call_value)
-  rtx struct_value_size_rtx;
-  struct_value_size_rtx = GEN_INT (struct_value_size);
-#endif
 
 #ifdef CALL_POPS_ARGS
   n_popped += CALL_POPS_ARGS (* args_so_far);
@@ -341,7 +337,7 @@ emit_call_1 (rtx funexp, tree fntree ATTRIBUTE_UNUSED, tree fndecl ATTRIBUTE_UNU
       else
 	emit_call_insn (GEN_SIBCALL (gen_rtx_MEM (FUNCTION_MODE, funexp),
 				     rounded_stack_size_rtx, next_arg_reg,
-				     struct_value_size_rtx));
+				     GEN_INT (struct_value_size)));
     }
   else
 #endif
@@ -357,7 +353,7 @@ emit_call_1 (rtx funexp, tree fntree ATTRIBUTE_UNUSED, tree fndecl ATTRIBUTE_UNU
       else
 	emit_call_insn (GEN_CALL (gen_rtx_MEM (FUNCTION_MODE, funexp),
 				  rounded_stack_size_rtx, next_arg_reg,
-				  struct_value_size_rtx));
+				  GEN_INT (struct_value_size)));
     }
   else
 #endif
@@ -589,12 +585,9 @@ int
 flags_from_decl_or_type (const_tree exp)
 {
   int flags = 0;
-  const_tree type = exp;
 
   if (DECL_P (exp))
     {
-      type = TREE_TYPE (exp);
-
       /* The function exp may have the `malloc' attribute.  */
       if (DECL_IS_MALLOC (exp))
 	flags |= ECF_MALLOC;
@@ -906,7 +899,7 @@ store_unaligned_arguments_into_pseudos (struct arg_data *args, int num_actuals)
 }
 
 /* Fill in ARGS_SIZE and ARGS array based on the parameters found in
-   CALL_EXPR EXP.  
+   CALL_EXPR EXP.
 
    NUM_ACTUALS is the total number of parameters.
 
@@ -1346,7 +1339,7 @@ precompute_arguments (int num_actuals, struct arg_data *args)
    compute and return the final value for MUST_PREALLOCATE.  */
 
 static int
-finalize_must_preallocate (int must_preallocate, int num_actuals, 
+finalize_must_preallocate (int must_preallocate, int num_actuals,
 			   struct arg_data *args, struct args_size *args_size)
 {
   /* See if we have or want to preallocate stack space.

@@ -420,6 +420,11 @@ the size is implied by the mode.
 @findex MEM_ALIGN
 @item MEM_ALIGN (@var{x})
 The known alignment in bits of the memory reference.
+
+@findex MEM_ADDR_SPACE
+@item MEM_ADDR_SPACE (@var{x})
+The address space of the memory reference.  This will commonly be zero
+for the generic address space.
 @end table
 
 @item REG
@@ -2364,9 +2369,14 @@ Similar but represent left and right rotate.  If @var{c} is a constant,
 use @code{rotate}.
 
 @findex abs
+@findex ss_abs
 @cindex absolute value
 @item (abs:@var{m} @var{x})
+@item (ss_abs:@var{m} @var{x})
 Represents the absolute value of @var{x}, computed in mode @var{m}.
+@code{ss_abs} ensures that an out-of-bounds result saturates to the
+maximum signed value.
+
 
 @findex sqrt
 @cindex square root

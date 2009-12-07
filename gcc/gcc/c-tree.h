@@ -277,6 +277,8 @@ struct c_declspecs {
   BOOL_BITFIELD restrict_p : 1;
   /* Whether "_Sat" was specified.  */
   BOOL_BITFIELD saturating_p : 1;
+  /* The address space that the declaration belongs to.  */
+  addr_space_t address_space;
 };
 
 /* The various kinds of declarators in C.  */
@@ -476,6 +478,8 @@ extern struct c_declspecs *declspecs_add_type (location_t,
 					       struct c_typespec);
 extern struct c_declspecs *declspecs_add_scspec (struct c_declspecs *, tree);
 extern struct c_declspecs *declspecs_add_attrs (struct c_declspecs *, tree);
+extern struct c_declspecs *declspecs_add_addrspace (struct c_declspecs *,
+						    addr_space_t);
 extern struct c_declspecs *finish_declspecs (struct c_declspecs *);
 
 /* in c-objc-common.c */
@@ -517,7 +521,7 @@ extern struct c_expr c_expr_sizeof_expr (location_t, struct c_expr);
 extern struct c_expr c_expr_sizeof_type (location_t, struct c_type_name *);
 extern struct c_expr parser_build_unary_op (location_t, enum tree_code,
     					    struct c_expr);
-extern struct c_expr parser_build_binary_op (location_t, 
+extern struct c_expr parser_build_binary_op (location_t,
     					     enum tree_code, struct c_expr,
 					     struct c_expr);
 extern tree build_conditional_expr (location_t, tree, bool, tree, tree,

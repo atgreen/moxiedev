@@ -121,6 +121,7 @@ bits_headers = \
 	${bits_srcdir}/stream_iterator.h \
 	${bits_srcdir}/streambuf_iterator.h \
 	${bits_srcdir}/shared_ptr.h \
+	${bits_srcdir}/shared_ptr_base.h \
 	${bits_srcdir}/slice_array.h \
 	${bits_srcdir}/sstream.tcc \
 	${bits_srcdir}/stl_algo.h \
@@ -608,8 +609,6 @@ tr1_impl_headers = \
 	${tr1_impl_srcdir}/cstdlib \
 	${tr1_impl_srcdir}/cwchar \
 	${tr1_impl_srcdir}/cwctype \
-	${tr1_impl_srcdir}/functional \
-	${tr1_impl_srcdir}/functional_hash.h \
 	${tr1_impl_srcdir}/hashtable \
 	${tr1_impl_srcdir}/hashtable_policy.h \
 	${tr1_impl_srcdir}/regex \

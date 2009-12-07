@@ -203,21 +203,6 @@ lookup_stmt_eh_lp (gimple t)
   return lookup_stmt_eh_lp_fn (cfun, t);
 }
 
-/* Likewise, but reference a tree expression instead.  */
-
-int
-lookup_expr_eh_lp (tree t)
-{
-  if (cfun && cfun->eh->throw_stmt_table && t && EXPR_P (t))
-    {
-      tree_ann_common_t ann = tree_common_ann (t);
-      if (ann)
-	return ann->lp_nr;
-    }
-  return 0;
-}
-
-
 /* First pass of EH node decomposition.  Build up a tree of GIMPLE_TRY_FINALLY
    nodes and LABEL_DECL nodes.  We will use this during the second phase to
    determine if a goto leaves the body of a TRY_FINALLY_EXPR node.  */
@@ -334,13 +319,13 @@ outside_finally_tree (treemple start, gimple target)
    The eh region creation is straight-forward, but frobbing all the gotos
    and such into shape isn't.  */
 
-/* The sequence into which we record all EH stuff.  This will be 
+/* The sequence into which we record all EH stuff.  This will be
    placed at the end of the function when we're all done.  */
 static gimple_seq eh_seq;
 
 /* Record whether an EH region contains something that can throw,
    indexed by EH region number.  */
-static bitmap eh_region_may_contain_throw;
+static bitmap eh_region_may_contain_throw_map;
 
 /* The GOTO_QUEUE is is an array of GIMPLE_GOTO and GIMPLE_RETURN
    statements that are seen to escape this GIMPLE_TRY_FINALLY node.
@@ -863,13 +848,22 @@ emit_eh_dispatch (gimple_seq *seq, eh_region region)
 static void
 note_eh_region_may_contain_throw (eh_region region)
 {
-  while (!bitmap_bit_p (eh_region_may_contain_throw, region->index))
+  while (!bitmap_bit_p (eh_region_may_contain_throw_map, region->index))
     {
-      bitmap_set_bit (eh_region_may_contain_throw, region->index);
+      bitmap_set_bit (eh_region_may_contain_throw_map, region->index);
       region = region->outer;
       if (region == NULL)
 	break;
     }
+}
+
+/* Check if REGION has been marked as containing a throw.  If REGION is
+   NULL, this predicate is false.  */
+
+static inline bool
+eh_region_may_contain_throw (eh_region r)
+{
+  return r && bitmap_bit_p (eh_region_may_contain_throw_map, r->index);
 }
 
 /* We want to transform
@@ -1192,12 +1186,11 @@ lower_try_finally_copy (struct leh_state *state, struct leh_tf_state *tf)
 
   if (tf->may_throw)
     {
-      emit_post_landing_pad (&eh_seq, tf->region);
-
       seq = lower_try_finally_dup_block (finally, state);
       lower_eh_constructs_1 (state, seq);
-      gimple_seq_add_seq (&eh_seq, seq);
 
+      emit_post_landing_pad (&eh_seq, tf->region);
+      gimple_seq_add_seq (&eh_seq, seq);
       emit_resx (&eh_seq, tf->region);
     }
 
@@ -1560,8 +1553,7 @@ lower_try_finally (struct leh_state *state, gimple tp)
 
   /* Determine if any exceptions are possible within the try block.  */
   if (using_eh_for_cleanups_p)
-    this_tf.may_throw = bitmap_bit_p (eh_region_may_contain_throw,
-				      this_tf.region->index);
+    this_tf.may_throw = eh_region_may_contain_throw (this_tf.region);
   if (this_tf.may_throw)
     honor_protect_cleanup_actions (state, &this_state, &this_tf);
 
@@ -1619,22 +1611,23 @@ lower_try_finally (struct leh_state *state, gimple tp)
 static gimple_seq
 lower_catch (struct leh_state *state, gimple tp)
 {
-  eh_region try_region;
-  struct leh_state this_state;
+  eh_region try_region = NULL;
+  struct leh_state this_state = *state;
   gimple_stmt_iterator gsi;
   tree out_label;
   gimple_seq new_seq;
   gimple x;
   location_t try_catch_loc = gimple_location (tp);
 
-  try_region = gen_eh_region_try (state->cur_region);
-
-  this_state = *state;
-  this_state.cur_region = try_region;
+  if (flag_exceptions)
+    {
+      try_region = gen_eh_region_try (state->cur_region);
+      this_state.cur_region = try_region;
+    }
 
   lower_eh_constructs_1 (&this_state, gimple_try_eval (tp));
 
-  if (!bitmap_bit_p (eh_region_may_contain_throw, try_region->index))
+  if (!eh_region_may_contain_throw (try_region))
     return gimple_try_eval (tp);
 
   new_seq = NULL;
@@ -1673,6 +1666,8 @@ lower_catch (struct leh_state *state, gimple tp)
 	  x = gimple_build_goto (out_label);
 	  gimple_seq_add_stmt (&new_seq, x);
 	}
+      if (!c->type_list)
+	break;
     }
 
   gimple_try_set_cleanup (tp, new_seq);
@@ -1687,21 +1682,23 @@ lower_catch (struct leh_state *state, gimple tp)
 static gimple_seq
 lower_eh_filter (struct leh_state *state, gimple tp)
 {
-  struct leh_state this_state;
-  eh_region this_region;
+  struct leh_state this_state = *state;
+  eh_region this_region = NULL;
   gimple inner, x;
   gimple_seq new_seq;
 
   inner = gimple_seq_first_stmt (gimple_try_cleanup (tp));
 
-  this_region = gen_eh_region_allowed (state->cur_region,
-				       gimple_eh_filter_types (inner));
-  this_state = *state;
-  this_state.cur_region = this_region;
+  if (flag_exceptions)
+    {
+      this_region = gen_eh_region_allowed (state->cur_region,
+				           gimple_eh_filter_types (inner));
+      this_state.cur_region = this_region;
+    }
 
   lower_eh_constructs_1 (&this_state, gimple_try_eval (tp));
 
-  if (!bitmap_bit_p (eh_region_may_contain_throw, this_region->index))
+  if (!eh_region_may_contain_throw (this_region))
     return gimple_try_eval (tp);
 
   new_seq = NULL;
@@ -1730,24 +1727,25 @@ lower_eh_filter (struct leh_state *state, gimple tp)
 static gimple_seq
 lower_eh_must_not_throw (struct leh_state *state, gimple tp)
 {
-  struct leh_state this_state;
-  eh_region this_region;
-  gimple inner;
+  struct leh_state this_state = *state;
 
-  inner = gimple_seq_first_stmt (gimple_try_cleanup (tp));
+  if (flag_exceptions)
+    {
+      gimple inner = gimple_seq_first_stmt (gimple_try_cleanup (tp));
+      eh_region this_region;
 
-  this_region = gen_eh_region_must_not_throw (state->cur_region);
-  this_region->u.must_not_throw.failure_decl
-    = gimple_eh_must_not_throw_fndecl (inner);
-  this_region->u.must_not_throw.failure_loc = gimple_location (tp);
+      this_region = gen_eh_region_must_not_throw (state->cur_region);
+      this_region->u.must_not_throw.failure_decl
+	= gimple_eh_must_not_throw_fndecl (inner);
+      this_region->u.must_not_throw.failure_loc = gimple_location (tp);
 
-  /* In order to get mangling applied to this decl, we must mark it
-     used now.  Otherwise, pass_ipa_free_lang_data won't think it
-     needs to happen.  */
-  TREE_USED (this_region->u.must_not_throw.failure_decl) = 1;
+      /* In order to get mangling applied to this decl, we must mark it
+	 used now.  Otherwise, pass_ipa_free_lang_data won't think it
+	 needs to happen.  */
+      TREE_USED (this_region->u.must_not_throw.failure_decl) = 1;
 
-  this_state = *state;
-  this_state.cur_region = this_region;
+      this_state.cur_region = this_region;
+    }
 
   lower_eh_constructs_1 (&this_state, gimple_try_eval (tp));
 
@@ -1760,26 +1758,20 @@ lower_eh_must_not_throw (struct leh_state *state, gimple tp)
 static gimple_seq
 lower_cleanup (struct leh_state *state, gimple tp)
 {
-  struct leh_state this_state;
-  eh_region this_region;
+  struct leh_state this_state = *state;
+  eh_region this_region = NULL;
   struct leh_tf_state fake_tf;
   gimple_seq result;
 
-  /* If not using eh, then exception-only cleanups are no-ops.  */
-  if (!flag_exceptions)
+  if (flag_exceptions)
     {
-      result = gimple_try_eval (tp);
-      lower_eh_constructs_1 (state, result);
-      return result;
+      this_region = gen_eh_region_cleanup (state->cur_region);
+      this_state.cur_region = this_region;
     }
-
-  this_region = gen_eh_region_cleanup (state->cur_region);
-  this_state = *state;
-  this_state.cur_region = this_region;
 
   lower_eh_constructs_1 (&this_state, gimple_try_eval (tp));
 
-  if (!bitmap_bit_p (eh_region_may_contain_throw, this_region->index))
+  if (!eh_region_may_contain_throw (this_region))
     return gimple_try_eval (tp);
 
   /* Build enough of a try-finally state so that we can reuse
@@ -1878,9 +1870,12 @@ lower_eh_constructs_2 (struct leh_state *state, gimple_stmt_iterator *gsi)
     case GIMPLE_ASSIGN:
       /* If the stmt can throw use a new temporary for the assignment
          to a LHS.  This makes sure the old value of the LHS is
-	 available on the EH edge.  */
+	 available on the EH edge.  Only do so for statements that
+	 potentially fall thru (no noreturn calls e.g.), otherwise
+	 this new assignment might create fake fallthru regions.  */
       if (stmt_could_throw_p (stmt)
 	  && gimple_has_lhs (stmt)
+	  && gimple_stmt_may_fallthru (stmt)
 	  && !tree_could_throw_p (gimple_get_lhs (stmt))
 	  && is_gimple_reg_type (TREE_TYPE (gimple_get_lhs (stmt))))
 	{
@@ -1980,7 +1975,7 @@ lower_eh_constructs (void)
     return 0;
 
   finally_tree = htab_create (31, struct_ptr_hash, struct_ptr_eq, free);
-  eh_region_may_contain_throw = BITMAP_ALLOC (NULL);
+  eh_region_may_contain_throw_map = BITMAP_ALLOC (NULL);
   memset (&null_state, 0, sizeof (null_state));
 
   collect_finally_tree_1 (bodyp, NULL);
@@ -1997,7 +1992,7 @@ lower_eh_constructs (void)
   gcc_assert (bodyp == gimple_body (current_function_decl));
 
   htab_delete (finally_tree);
-  BITMAP_FREE (eh_region_may_contain_throw);
+  BITMAP_FREE (eh_region_may_contain_throw_map);
   eh_seq = NULL;
 
   /* If this function needs a language specific EH personality routine
@@ -2128,7 +2123,7 @@ redirect_eh_edge_1 (edge edge_in, basic_block new_bb, bool change_region)
     {
       new_lp = get_eh_landing_pad_from_number (new_lp_nr);
       gcc_assert (new_lp);
-      
+
       /* Unless CHANGE_REGION is true, the new and old landing pad
 	 had better be associated with the same EH region.  */
       gcc_assert (change_region || new_lp->region == old_lp->region);
@@ -3288,7 +3283,7 @@ remove_unreachable_handlers (void)
 	  fprintf (dump_file, "Removing unreachable landing pad %d\n", lp_nr);
 	remove_eh_landing_pad (lp);
       }
-    
+
   if (dump_file)
     {
       fprintf (dump_file, "\n\nAfter removal of unreachable regions:\n");
@@ -3381,12 +3376,31 @@ unsplit_eh (eh_landing_pad lp)
   if (find_edge (e_in->src, e_out->dest))
     return false;
 
-  /* ??? I can't imagine there would be PHI nodes, since by nature
-     of critical edge splitting this block should never have been
-     a dominance frontier.  If cfg cleanups somehow confuse this,
-     due to single edges in and out we ought to have degenerate PHIs
-     and can easily propagate the PHI arguments.  */
-  gcc_assert (gimple_seq_empty_p (phi_nodes (bb)));
+  /* ??? We can get degenerate phis due to cfg cleanups.  I would have
+     thought this should have been cleaned up by a phicprop pass, but
+     that doesn't appear to handle virtuals.  Propagate by hand.  */
+  if (!gimple_seq_empty_p (phi_nodes (bb)))
+    {
+      for (gsi = gsi_start_phis (bb); !gsi_end_p (gsi); )
+	{
+	  gimple use_stmt, phi = gsi_stmt (gsi);
+	  tree lhs = gimple_phi_result (phi);
+	  tree rhs = gimple_phi_arg_def (phi, 0);
+	  use_operand_p use_p;
+	  imm_use_iterator iter;
+
+	  FOR_EACH_IMM_USE_STMT (use_stmt, iter, lhs)
+	    {
+	      FOR_EACH_IMM_USE_ON_STMT (use_p, iter)
+		SET_USE (use_p, rhs);
+	    }
+
+	  if (SSA_NAME_OCCURS_IN_ABNORMAL_PHI (lhs))
+	    SSA_NAME_OCCURS_IN_ABNORMAL_PHI (rhs) = 1;
+
+	  remove_phi_node (&gsi, true);
+	}
+    }
 
   if (dump_file && (dump_flags & TDF_DETAILS))
     fprintf (dump_file, "Unsplit EH landing pad %d to block %i.\n",
@@ -3431,7 +3445,7 @@ unsplit_all_eh (void)
 
 static bool
 cleanup_empty_eh_merge_phis (basic_block new_bb, basic_block old_bb,
-			     edge old_bb_out)
+			     edge old_bb_out, bool change_region)
 {
   gimple_stmt_iterator ngsi, ogsi;
   edge_iterator ei;
@@ -3531,7 +3545,7 @@ cleanup_empty_eh_merge_phis (basic_block new_bb, basic_block old_bb,
   for (ei = ei_start (old_bb->preds); (e = ei_safe_edge (ei)); )
     if (e->flags & EDGE_EH)
       {
-	redirect_eh_edge_1 (e, new_bb, true);
+	redirect_eh_edge_1 (e, new_bb, change_region);
 	redirect_edge_succ (e, new_bb);
 	flush_pending_stmts (e);
       }
@@ -3579,14 +3593,13 @@ cleanup_empty_eh_move_lp (basic_block bb, edge e_out,
 }
 
 /* A subroutine of cleanup_empty_eh.  Handle more complex cases of
-   unsplitting than unsplit_eh was prepared to handle, e.g. when 
+   unsplitting than unsplit_eh was prepared to handle, e.g. when
    multiple incoming edges and phis are involved.  */
 
 static bool
-cleanup_empty_eh_unsplit (basic_block bb, edge e_out, eh_landing_pad olp)
+cleanup_empty_eh_unsplit (basic_block bb, edge e_out, eh_landing_pad lp)
 {
   gimple_stmt_iterator gsi;
-  eh_landing_pad nlp;
   tree lab;
 
   /* We really ought not have totally lost everything following
@@ -3594,35 +3607,30 @@ cleanup_empty_eh_unsplit (basic_block bb, edge e_out, eh_landing_pad olp)
      be a successor.  */
   gcc_assert (e_out != NULL);
 
-  /* Look for an EH label in the successor block.  */
+  /* The destination block must not already have a landing pad
+     for a different region.  */
   lab = NULL;
   for (gsi = gsi_start_bb (e_out->dest); !gsi_end_p (gsi); gsi_next (&gsi))
     {
       gimple stmt = gsi_stmt (gsi);
+      int lp_nr;
+
       if (gimple_code (stmt) != GIMPLE_LABEL)
 	break;
       lab = gimple_label_label (stmt);
-      if (EH_LANDING_PAD_NR (lab))
-	goto found;
+      lp_nr = EH_LANDING_PAD_NR (lab);
+      if (lp_nr && get_eh_region_from_lp_number (lp_nr) != lp->region)
+	return false;
     }
-  return false;
- found:
-
-  /* The other label had better be part of the same EH region.  Given that
-     we've not lowered RESX, there should be no way to have a totally empty
-     landing pad that crosses to another EH region.  */
-  nlp = get_eh_landing_pad_from_number (EH_LANDING_PAD_NR (lab));
-  gcc_assert (nlp->region == olp->region);
 
   /* Attempt to move the PHIs into the successor block.  */
-  if (cleanup_empty_eh_merge_phis (e_out->dest, bb, e_out))
+  if (cleanup_empty_eh_merge_phis (e_out->dest, bb, e_out, false))
     {
       if (dump_file && (dump_flags & TDF_DETAILS))
 	fprintf (dump_file,
-		 "Unsplit EH landing pad %d to block %d via lp %d.\n",
-		 olp->index, e_out->dest->index, nlp->index);
-
-      remove_eh_landing_pad (olp);
+		 "Unsplit EH landing pad %d to block %i "
+		 "(via cleanup_empty_eh).\n",
+		 lp->index, e_out->dest->index);
       return true;
     }
 
@@ -3725,7 +3733,7 @@ cleanup_empty_eh (eh_landing_pad lp)
      landing pad block.  If the merge succeeds, we'll already have redirected
      all the EH edges.  The handler itself will go unreachable if there were
      no normal edges.  */
-  if (cleanup_empty_eh_merge_phis (e_out->dest, bb, e_out))
+  if (cleanup_empty_eh_merge_phis (e_out->dest, bb, e_out, true))
     goto succeed;
 
   /* Finally, if all input edges are EH edges, then we can (potentially)

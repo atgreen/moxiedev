@@ -1,7 +1,7 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/tr1/5_numerical_facilities/special_functions
 svn://gcc.gnu.org/svn/gcc
 
@@ -41,13 +41,13 @@ dir
 06_comp_ellint_3
 dir
 
-10_cyl_bessel_k
+19_legendre
 dir
 
 01_assoc_laguerre
 dir
 
-19_legendre
+10_cyl_bessel_k
 dir
 
 testcase.h
@@ -87,16 +87,16 @@ jakub
 22_sph_legendre
 dir
 
-16_hermite
-dir
-
 08_cyl_bessel_i
 dir
 
-09_cyl_bessel_j
+16_hermite
 dir
 
 17_hyperg
+dir
+
+09_cyl_bessel_j
 dir
 
 11_cyl_neumann

@@ -1102,7 +1102,7 @@ pop_scope (void)
 	      error ("label %q+D used but not defined", p);
 	      DECL_INITIAL (p) = error_mark_node;
 	    }
-	  else 
+	  else
 	    warn_for_unused_label (p);
 
 	  /* Labels go in BLOCK_VARS.  */
@@ -1746,8 +1746,35 @@ diagnose_mismatched_decls (tree newdecl, tree olddecl,
 	}
       else
 	{
-	  if (TYPE_QUALS (newtype) != TYPE_QUALS (oldtype))
-	    error ("conflicting type qualifiers for %q+D", newdecl);
+	  int new_quals = TYPE_QUALS (newtype);
+	  int old_quals = TYPE_QUALS (oldtype);
+
+	  if (new_quals != old_quals)
+	    {
+	      addr_space_t new_addr = DECODE_QUAL_ADDR_SPACE (new_quals);
+	      addr_space_t old_addr = DECODE_QUAL_ADDR_SPACE (old_quals);
+	      if (new_addr != old_addr)
+		{
+		  if (ADDR_SPACE_GENERIC_P (new_addr))
+		    error ("conflicting named address spaces (generic vs %s) "
+			   "for %q+D",
+			   c_addr_space_name (old_addr), newdecl);
+		  else if (ADDR_SPACE_GENERIC_P (old_addr))
+		    error ("conflicting named address spaces (%s vs generic) "
+			   "for %q+D",
+			   c_addr_space_name (new_addr), newdecl);
+		  else
+		    error ("conflicting named address spaces (%s vs %s) "
+			   "for %q+D",
+			   c_addr_space_name (new_addr),
+			   c_addr_space_name (old_addr),
+			   newdecl);
+		}
+
+	      if (CLEAR_QUAL_ADDR_SPACE (new_quals)
+		  != CLEAR_QUAL_ADDR_SPACE (old_quals))
+		error ("conflicting type qualifiers for %q+D", newdecl);
+	    }
 	  else
 	    error ("conflicting types for %q+D", newdecl);
 	  diagnose_arglist_conflict (newdecl, olddecl, newtype, oldtype);
@@ -1870,7 +1897,7 @@ diagnose_mismatched_decls (tree newdecl, tree olddecl,
 	    }
 	  else if (warn_traditional)
 	    {
-	      warned |= warning (OPT_Wtraditional, 
+	      warned |= warning (OPT_Wtraditional,
 				 "non-static declaration of %q+D "
 				 "follows static declaration", newdecl);
 	    }
@@ -1948,7 +1975,7 @@ diagnose_mismatched_decls (tree newdecl, tree olddecl,
 		}
 	      else if (warn_traditional)
 		{
-		  warned |= warning (OPT_Wtraditional, 
+		  warned |= warning (OPT_Wtraditional,
 				     "non-static declaration of %q+D "
 				     "follows static declaration", newdecl);
 		}
@@ -2019,14 +2046,14 @@ diagnose_mismatched_decls (tree newdecl, tree olddecl,
       if (DECL_DECLARED_INLINE_P (newdecl)
 	  && lookup_attribute ("noinline", DECL_ATTRIBUTES (olddecl)))
 	{
-	  warned |= warning (OPT_Wattributes, 
+	  warned |= warning (OPT_Wattributes,
 			     "inline declaration of %qD follows "
 			     "declaration with attribute noinline", newdecl);
 	}
       else if (DECL_DECLARED_INLINE_P (olddecl)
 	       && lookup_attribute ("noinline", DECL_ATTRIBUTES (newdecl)))
 	{
-	  warned |= warning (OPT_Wattributes, 
+	  warned |= warning (OPT_Wattributes,
 			     "declaration of %q+D with attribute "
 			     "noinline follows inline declaration ", newdecl);
 	}
@@ -2785,8 +2812,8 @@ implicit_decl_warning (tree id, tree olddecl)
       if (flag_isoc99)
 	warned = pedwarn (input_location, OPT_Wimplicit_function_declaration,
 			  "implicit declaration of function %qE", id);
-      else 
-	warned = warning (OPT_Wimplicit_function_declaration, 
+      else
+	warned = warning (OPT_Wimplicit_function_declaration,
 			  G_("implicit declaration of function %qE"), id);
       if (olddecl && warned)
 	locate_old_decl (olddecl);
@@ -3470,10 +3497,10 @@ c_make_fname_decl (location_t loc, tree id, int type_dep)
 
   if (current_function_decl
       /* For invalid programs like this:
-        
+
          void foo()
          const char* p = __FUNCTION__;
-        
+
 	 the __FUNCTION__ is believed to appear in K&R style function
 	 parameter declarator.  In that case we still don't have
 	 function_scope.  */
@@ -3605,7 +3632,8 @@ shadow_tag_warned (const struct c_declspecs *declspecs, int warned)
 	  else if (!declspecs->tag_defined_p
 		   && (declspecs->const_p
 		       || declspecs->volatile_p
-		       || declspecs->restrict_p))
+		       || declspecs->restrict_p
+		       || declspecs->address_space))
 	    {
 	      if (warned != 1)
 		pedwarn (input_location, 0,
@@ -3676,7 +3704,8 @@ shadow_tag_warned (const struct c_declspecs *declspecs, int warned)
 
   if (!warned && !in_system_header && (declspecs->const_p
 				       || declspecs->volatile_p
-				       || declspecs->restrict_p))
+				       || declspecs->restrict_p
+				       || declspecs->address_space))
     {
       warning (0, "useless type qualifier in empty declaration");
       warned = 2;
@@ -3699,7 +3728,8 @@ quals_from_declspecs (const struct c_declspecs *specs)
 {
   int quals = ((specs->const_p ? TYPE_QUAL_CONST : 0)
 	       | (specs->volatile_p ? TYPE_QUAL_VOLATILE : 0)
-	       | (specs->restrict_p ? TYPE_QUAL_RESTRICT : 0));
+	       | (specs->restrict_p ? TYPE_QUAL_RESTRICT : 0)
+	       | (ENCODE_QUAL_ADDR_SPACE (specs->address_space)));
   gcc_assert (!specs->type
 	      && !specs->decl_attr
 	      && specs->typespec_word == cts_none
@@ -4623,7 +4653,7 @@ warn_variable_length_array (tree name, tree size)
 	}
       else
 	{
-	  if (name) 
+	  if (name)
 	    pedwarn (input_location, OPT_Wvla,
 		     "ISO C90 forbids variable length array %qE",
 		     name);
@@ -4750,6 +4780,7 @@ grokdeclarator (const struct c_declarator *declarator,
   bool bitfield = width != NULL;
   tree element_type;
   struct c_arg_info *arg_info = 0;
+  addr_space_t as1, as2, address_space;
   location_t loc = UNKNOWN_LOCATION;
   const char *errmsg;
   tree expr_dummy;
@@ -4849,11 +4880,11 @@ grokdeclarator (const struct c_declarator *declarator,
       else
 	{
 	  if (name)
-	    pedwarn_c99 (loc, flag_isoc99 ? 0 : OPT_Wimplicit_int, 
+	    pedwarn_c99 (loc, flag_isoc99 ? 0 : OPT_Wimplicit_int,
 			 "type defaults to %<int%> in declaration of %qE",
 			 name);
 	  else
-	    pedwarn_c99 (input_location, flag_isoc99 ? 0 : OPT_Wimplicit_int, 
+	    pedwarn_c99 (input_location, flag_isoc99 ? 0 : OPT_Wimplicit_int,
 			 "type defaults to %<int%> in type name");
 	}
     }
@@ -4880,6 +4911,10 @@ grokdeclarator (const struct c_declarator *declarator,
   constp = declspecs->const_p + TYPE_READONLY (element_type);
   restrictp = declspecs->restrict_p + TYPE_RESTRICT (element_type);
   volatilep = declspecs->volatile_p + TYPE_VOLATILE (element_type);
+  as1 = declspecs->address_space;
+  as2 = TYPE_ADDR_SPACE (element_type);
+  address_space = ADDR_SPACE_GENERIC_P (as1)? as2 : as1;
+
   if (pedantic && !flag_isoc99)
     {
       if (constp > 1)
@@ -4889,11 +4924,17 @@ grokdeclarator (const struct c_declarator *declarator,
       if (volatilep > 1)
 	pedwarn (loc, OPT_pedantic, "duplicate %<volatile%>");
     }
+
+  if (!ADDR_SPACE_GENERIC_P (as1) && !ADDR_SPACE_GENERIC_P (as2) && as1 != as2)
+    error_at (loc, "conflicting named address spaces (%s vs %s)",
+	      c_addr_space_name (as1), c_addr_space_name (as2));
+
   if (!flag_gen_aux_info && (TYPE_QUALS (element_type)))
     type = TYPE_MAIN_VARIANT (type);
   type_quals = ((constp ? TYPE_QUAL_CONST : 0)
 		| (restrictp ? TYPE_QUAL_RESTRICT : 0)
-		| (volatilep ? TYPE_QUAL_VOLATILE : 0));
+		| (volatilep ? TYPE_QUAL_VOLATILE : 0)
+		| ENCODE_QUAL_ADDR_SPACE (address_space));
 
   /* Warn about storage classes that are invalid for certain
      kinds of declarations (parameters, typenames, etc.).  */
@@ -4905,8 +4946,8 @@ grokdeclarator (const struct c_declarator *declarator,
 	  || storage_class == csc_typedef))
     {
       if (storage_class == csc_auto)
-	pedwarn (loc, 
-		 (current_scope == file_scope) ? 0 : OPT_pedantic, 
+	pedwarn (loc,
+		 (current_scope == file_scope) ? 0 : OPT_pedantic,
 		 "function definition declared %<auto%>");
       if (storage_class == csc_register)
 	error_at (loc, "function definition declared %<register%>");
@@ -5309,7 +5350,14 @@ grokdeclarator (const struct c_declarator *declarator,
 	       it, but here we want to make sure we don't ever
 	       modify the shared type, so we gcc_assert (itype)
 	       below.  */
-	      type = build_array_type (type, itype);
+	      {
+		addr_space_t as = DECODE_QUAL_ADDR_SPACE (type_quals);
+		if (!ADDR_SPACE_GENERIC_P (as) && as != TYPE_ADDR_SPACE (type))
+		  type = build_qualified_type (type,
+					       ENCODE_QUAL_ADDR_SPACE (as));
+
+		type = build_array_type (type, itype);
+	      }
 
 	    if (type != error_mark_node)
 	      {
@@ -5514,6 +5562,59 @@ grokdeclarator (const struct c_declarator *declarator,
 
   /* Now TYPE has the actual type, apart from any qualifiers in
      TYPE_QUALS.  */
+
+  /* Warn about address space used for things other than static memory or
+     pointers.  */
+  address_space = DECODE_QUAL_ADDR_SPACE (type_quals);
+  if (!ADDR_SPACE_GENERIC_P (address_space))
+    {
+      if (decl_context == NORMAL)
+	{
+	  switch (storage_class)
+	    {
+	    case csc_auto:
+	      error ("%qs combined with %<auto%> qualifier for %qE",
+		     c_addr_space_name (address_space), name);
+	      break;
+	    case csc_register:
+	      error ("%qs combined with %<register%> qualifier for %qE",
+		     c_addr_space_name (address_space), name);
+	      break;
+	    case csc_none:
+	      if (current_function_scope)
+		{
+		  error ("%qs specified for auto variable %qE",
+			 c_addr_space_name (address_space), name);
+		  break;
+		}
+	      break;
+	    case csc_static:
+	    case csc_extern:
+	    case csc_typedef:
+	      break;
+	    default:
+	      gcc_unreachable ();
+	    }
+	}
+      else if (decl_context == PARM && TREE_CODE (type) != ARRAY_TYPE)
+	{
+	  if (name)
+	    error ("%qs specified for parameter %qE",
+		   c_addr_space_name (address_space), name);
+	  else
+	    error ("%qs specified for unnamed parameter",
+		   c_addr_space_name (address_space));
+	}
+      else if (decl_context == FIELD)
+	{
+	  if (name)
+	    error ("%qs specified for structure field %qE",
+		   c_addr_space_name (address_space), name);
+	  else
+	    error ("%qs specified for structure field",
+		   c_addr_space_name (address_space));
+	}
+    }
 
   /* Check the type and width of a bit-field.  */
   if (bitfield)
@@ -6732,7 +6833,7 @@ finish_struct (location_t loc, tree t, tree fieldlist, tree attributes,
 
       if (pedantic && TREE_CODE (t) == RECORD_TYPE
 	  && flexible_array_type_p (TREE_TYPE (x)))
-	pedwarn (DECL_SOURCE_LOCATION (x), OPT_pedantic, 
+	pedwarn (DECL_SOURCE_LOCATION (x), OPT_pedantic,
 		 "invalid use of structure with flexible array member");
 
       if (DECL_NAME (x))
@@ -7183,7 +7284,7 @@ build_enumerator (location_t loc,
      (6.4.4.3/2 in the C99 Standard).  GCC allows any integer type as
      an extension.  */
   else if (!int_fits_type_p (value, integer_type_node))
-    pedwarn (loc, OPT_pedantic, 
+    pedwarn (loc, OPT_pedantic,
 	     "ISO C restricts enumerator values to range of %<int%>");
 
   /* The ISO C Standard mandates enumerators to have type int, even
@@ -7295,7 +7396,7 @@ start_function (struct c_declspecs *declspecs, struct c_declarator *declarator,
     }
 
   if (warn_about_return_type)
-    pedwarn_c99 (loc, flag_isoc99 ? 0 
+    pedwarn_c99 (loc, flag_isoc99 ? 0
 		 : (warn_return_type ? OPT_Wreturn_type : OPT_Wimplicit_int),
 		 "return type defaults to %<int%>");
 
@@ -7592,7 +7693,7 @@ store_parm_decls_oldstyle (tree fndecl, const struct c_arg_info *arg_info)
 	  if (flag_isoc99)
 	    pedwarn (DECL_SOURCE_LOCATION (decl),
 		     0, "type of %qD defaults to %<int%>", decl);
-	  else 
+	  else
 	    warning_at (DECL_SOURCE_LOCATION (decl),
 			OPT_Wmissing_parameter_type,
 			"type of %qD defaults to %<int%>", decl);
@@ -7938,7 +8039,7 @@ finish_function (void)
   c_determine_visibility (fndecl);
 
   /* For GNU C extern inline functions disregard inline limits.  */
-  if (DECL_EXTERNAL (fndecl) 
+  if (DECL_EXTERNAL (fndecl)
       && DECL_DECLARED_INLINE_P (fndecl))
     DECL_DISREGARD_INLINE_LIMITS (fndecl) = 1;
 
@@ -8297,7 +8398,27 @@ build_null_declspecs (void)
   ret->volatile_p = false;
   ret->restrict_p = false;
   ret->saturating_p = false;
+  ret->address_space = ADDR_SPACE_GENERIC;
   return ret;
+}
+
+/* Add the address space ADDRSPACE to the declaration specifiers
+   SPECS, returning SPECS.  */
+
+struct c_declspecs *
+declspecs_add_addrspace (struct c_declspecs *specs, addr_space_t as)
+{
+  specs->non_sc_seen_p = true;
+  specs->declspecs_seen_p = true;
+
+  if (!ADDR_SPACE_GENERIC_P (specs->address_space)
+      && specs->address_space != as)
+    error ("incompatible address space qualifiers %qs and %qs",
+	   c_addr_space_name (as),
+	   c_addr_space_name (specs->address_space));
+  else
+    specs->address_space = as;
+  return specs;
 }
 
 /* Add the type qualifier QUAL to the declaration specifiers SPECS,
@@ -8775,7 +8896,7 @@ declspecs_add_type (location_t loc, struct c_declspecs *specs,
 	    case RID_DFLOAT32:
 	    case RID_DFLOAT64:
 	    case RID_DFLOAT128:
-	      { 
+	      {
 		const char *str;
 		if (i == RID_DFLOAT32)
 		  str = "_Decimal32";
@@ -8944,7 +9065,7 @@ declspecs_add_scspec (struct c_declspecs *specs, tree scspec)
 	      && C_IS_RESERVED_WORD (scspec));
   i = C_RID_CODE (scspec);
   if (specs->non_sc_seen_p)
-    warning (OPT_Wold_style_declaration, 
+    warning (OPT_Wold_style_declaration,
              "%qE is not at beginning of declaration", scspec);
   switch (i)
     {
@@ -9066,7 +9187,7 @@ finish_declspecs (struct c_declspecs *specs)
       else if (specs->complex_p)
 	{
 	  specs->typespec_word = cts_double;
-	  pedwarn (input_location, OPT_pedantic, 
+	  pedwarn (input_location, OPT_pedantic,
 		   "ISO C does not support plain %<complex%> meaning "
 		   "%<double complex%>");
 	}
@@ -9111,7 +9232,7 @@ finish_declspecs (struct c_declspecs *specs)
 	specs->type = char_type_node;
       if (specs->complex_p)
 	{
-	  pedwarn (input_location, OPT_pedantic, 
+	  pedwarn (input_location, OPT_pedantic,
 		   "ISO C does not support complex integer types");
 	  specs->type = build_complex_type (specs->type);
 	}
@@ -9137,7 +9258,7 @@ finish_declspecs (struct c_declspecs *specs)
 		       : integer_type_node);
       if (specs->complex_p)
 	{
-	  pedwarn (input_location, OPT_pedantic, 
+	  pedwarn (input_location, OPT_pedantic,
 		   "ISO C does not support complex integer types");
 	  specs->type = build_complex_type (specs->type);
 	}

@@ -1,19 +1,19 @@
 /* Interprocedural constant propagation
    Copyright (C) 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
    Contributed by Razya Ladelsky <RAZYA@il.ibm.com>
-   
+
 This file is part of GCC.
-   
+
 GCC is free software; you can redistribute it and/or modify it under
 the terms of the GNU General Public License as published by the Free
 Software Foundation; either version 3, or (at your option) any later
 version.
-   
+
 GCC is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 for more details.
-   
+
 You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
@@ -27,7 +27,7 @@ along with GCC; see the file COPYING3.  If not see
    {
      printf ("value is %d",y);
    }
-   
+
    int f (int x)
    {
      g (x);
@@ -43,32 +43,32 @@ along with GCC; see the file COPYING3.  If not see
      f (3);
      h (3);
    }
-   
-   
+
+
    The IPCP algorithm will find that g's formal argument y is always called
    with the value 3.
 
    The algorithm used is based on "Interprocedural Constant Propagation", by
    Challahan David, Keith D Cooper, Ken Kennedy, Linda Torczon, Comp86, pg
    152-161
-   
+
    The optimization is divided into three stages:
 
    First stage - intraprocedural analysis
    =======================================
    This phase computes jump_function and modification flags.
-   
+
    A jump function for a callsite represents the values passed as an actual
    arguments of a given callsite. There are three types of values:
    Pass through - the caller's formal parameter is passed as an actual argument.
    Constant - a constant is passed as an actual argument.
    Unknown - neither of the above.
-   
+
    The jump function info, ipa_jump_func, is stored in ipa_edge_args
    structure (defined in ipa_prop.h and pointed to by cgraph_node->aux)
    modified_flags are defined in ipa_node_params structure
    (defined in ipa_prop.h and pointed to by cgraph_edge->aux).
-   
+
    -ipcp_init_stage() is the first stage driver.
 
    Second stage - interprocedural analysis
@@ -79,10 +79,10 @@ along with GCC; see the file COPYING3.  If not see
    TOP - unknown.
    BOTTOM - non constant.
    CONSTANT - constant value.
-   
+
    Lattice describing a formal parameter p will have a constant value if all
    callsites invoking this function have the same constant value passed to p.
-   
+
    The lattices are stored in ipcp_lattice which is itself in ipa_node_params
    structure (defined in ipa_prop.h and pointed to by cgraph_edge->aux).
 
@@ -115,7 +115,7 @@ along with GCC; see the file COPYING3.  If not see
    and many calls redirected back to fit the description above.
 
    -ipcp_insert_stage() is the third phase driver.
-   
+
 */
 
 #include "config.h"
@@ -299,9 +299,16 @@ ipcp_lattice_from_jfunc (struct ipa_node_params *info, struct ipcp_lattice *lat,
       cst = caller_lat->constant;
 
       if (jfunc->value.pass_through.operation != NOP_EXPR)
-	cst = fold_binary (jfunc->value.pass_through.operation,
-			   TREE_TYPE (cst), cst,
-			   jfunc->value.pass_through.operand);
+	{
+	  tree restype;
+	  if (TREE_CODE_CLASS (jfunc->value.pass_through.operation)
+	      == tcc_comparison)
+	    restype = boolean_type_node;
+	  else
+	    restype = TREE_TYPE (cst);
+	  cst = fold_binary (jfunc->value.pass_through.operation,
+			     restype, cst, jfunc->value.pass_through.operand);
+	}
       if (!cst || !is_gimple_ip_invariant (cst))
 	lat->type = IPA_BOTTOM;
       lat->constant = cst;
@@ -466,7 +473,7 @@ ipcp_cloning_candidate_p (struct cgraph_node *node)
       if (cgraph_maybe_hot_edge_p (e))
 	n_hot_calls ++;
     }
-  
+
   if (!n_calls)
     {
       if (dump_file)
@@ -480,7 +487,7 @@ ipcp_cloning_candidate_p (struct cgraph_node *node)
         fprintf (dump_file, "Considering %s for cloning; code would shrink.\n",
  	         cgraph_node_name (node));
       return true;
-    }  
+    }
 
   if (!flag_ipa_cp_clone)
     {
@@ -571,7 +578,13 @@ build_const_val (struct ipcp_lattice *lat, tree tree_type)
 
 /* Compute the proper scale for NODE.  It is the ratio between the number of
    direct calls (represented on the incoming cgraph_edges) and sum of all
-   invocations of NODE (represented as count in cgraph_node).  */
+   invocations of NODE (represented as count in cgraph_node).
+
+   FIXME: This code is wrong.  Since the callers can be also clones and
+   the clones are not scaled yet, the sums gets unrealistically high.
+   To properly compute the counts, we would need to do propagation across
+   callgraph (as external call to A might imply call to non-clonned B
+   if A's clone calls clonned B).  */
 static void
 ipcp_compute_node_scale (struct cgraph_node *node)
 {
@@ -582,6 +595,12 @@ ipcp_compute_node_scale (struct cgraph_node *node)
   /* Compute sum of all counts of callers. */
   for (cs = node->callers; cs != NULL; cs = cs->next_caller)
     sum += cs->count;
+  /* Work around the unrealistically high sum problem.  We just don't want
+     the non-cloned body to have negative or very low frequency.  Since
+     majority of execution time will be spent in clones anyway, this should
+     give good enough profile.  */
+  if (sum > node->count * 9 / 10)
+    sum = node->count * 9 / 10;
   if (node->count == 0)
     ipcp_set_node_scale (node, 0);
   else
@@ -607,13 +626,15 @@ ipcp_init_stage (void)
       /* building jump functions  */
       for (cs = node->callees; cs; cs = cs->next_callee)
 	{
-	  if (!cs->callee->analyzed)
+	  /* We do not need to bother analyzing calls to unknown
+	     functions unless they may become known during lto/whopr.  */
+	  if (!cs->callee->analyzed && !flag_lto && !flag_whopr)
 	    continue;
 	  ipa_count_arguments (cs);
 	  if (ipa_get_cs_argument_count (IPA_EDGE_REF (cs))
 	      != ipa_get_param_count (IPA_NODE_REF (cs->callee)))
 	    {
-	      /* Handle cases of functions with 
+	      /* Handle cases of functions with
 	         a variable number of parameters.  */
 	      ipa_set_called_with_variable_arg (IPA_NODE_REF (cs->callee));
 	      if (flag_indirect_inlining)
@@ -689,7 +710,9 @@ ipcp_propagate_stage (void)
 	  struct ipa_node_params *callee_info = IPA_NODE_REF (cs->callee);
 	  struct ipa_edge_args *args = IPA_EDGE_REF (cs);
 
-	  if (ipa_is_called_with_var_arguments (callee_info))
+	  if (ipa_is_called_with_var_arguments (callee_info)
+	      || !cs->callee->analyzed
+	      || ipa_is_called_with_var_arguments (callee_info))
 	    continue;
 
 	  count = ipa_get_cs_argument_count (args);
@@ -720,6 +743,10 @@ ipcp_iterate_stage (void)
 
   if (dump_file)
     fprintf (dump_file, "\nIPA iterate stage:\n\n");
+
+  if (in_lto_p)
+    ipa_update_after_lto_read ();
+
   for (node = cgraph_nodes; node; node = node->next)
     {
       ipcp_initialize_node_lattices (node);
@@ -1264,22 +1291,30 @@ ipcp_generate_summary (void)
   ipa_check_create_node_params ();
   ipa_check_create_edge_args ();
   ipa_register_cgraph_hooks ();
-  /* 1. Call the init stage to initialize 
+  /* 1. Call the init stage to initialize
      the ipa_node_params and ipa_edge_args structures.  */
   ipcp_init_stage ();
+}
+
+/* Write ipcp summary for nodes in SET.  */
+static void
+ipcp_write_summary (cgraph_node_set set)
+{
+  ipa_prop_write_jump_functions (set);
+}
+
+/* Read ipcp summary.  */
+static void
+ipcp_read_summary (void)
+{
+  ipa_prop_read_jump_functions ();
 }
 
 /* Gate for IPCP optimization.  */
 static bool
 cgraph_gate_cp (void)
 {
-  /* FIXME lto.  IPA-CP does not tolerate running when the inlining decisions
-     have not been applied.  This happens when WPA modifies the callgraph.
-     Since those decisions are not applied until after all the IPA passes
-     have been run in LTRANS, this means that IPA passes may see partially
-     modified callgraphs.  The solution to this is to apply WPA decisions
-     early during LTRANS.  */
-  return flag_ipa_cp && !flag_ltrans;
+  return flag_ipa_cp;
 }
 
 struct ipa_opt_pass_d pass_ipa_cp =
@@ -1301,9 +1336,10 @@ struct ipa_opt_pass_d pass_ipa_cp =
   TODO_remove_functions /* todo_flags_finish */
  },
  ipcp_generate_summary,			/* generate_summary */
- NULL,					/* write_summary */
- NULL,					/* read_summary */
+ ipcp_write_summary,			/* write_summary */
+ ipcp_read_summary,			/* read_summary */
  NULL,					/* function_read_summary */
+ lto_ipa_fixup_call_notes, 		/* stmt_fixup */
  0,					/* TODOs */
  NULL,					/* function_transform */
  NULL,					/* variable_transform */

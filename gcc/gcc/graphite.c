@@ -199,7 +199,10 @@ print_graphite_statistics (FILE* file, VEC (scop_p, heap) *scops)
 static bool
 graphite_initialize (void)
 {
-  if (number_of_loops () <= 1)
+  if (number_of_loops () <= 1
+      /* FIXME: This limit on the number of basic blocks of a function
+	 should be removed when the SCOP detection is faster.  */
+      || n_basic_blocks > 100)
     {
       if (dump_file && (dump_flags & TDF_DETAILS))
 	print_global_statistics (dump_file);
@@ -233,7 +236,6 @@ graphite_finalize (bool need_cfg_cleanup_p)
 
   cloog_finalize ();
   free_original_copy_tables ();
-  free_aux_in_new_loops ();
 
   if (dump_file && dump_flags)
     print_loops (dump_file, 3);
@@ -282,9 +284,6 @@ graphite_transform_loops (void)
 	  need_cfg_cleanup_p = true;
 	}
     }
-
-  if (flag_loop_parallelize_all)
-    mark_loops_parallel (bb_pbb_mapping);
 
   htab_delete (bb_pbb_mapping);
   free_scops (scops);

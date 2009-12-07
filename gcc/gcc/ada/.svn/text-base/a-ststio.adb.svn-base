@@ -29,9 +29,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces.C_Streams; use Interfaces.C_Streams;
+with Interfaces.C_Streams;  use Interfaces.C_Streams;
 
 with System;               use System;
+with System.Communication; use System.Communication;
 with System.File_IO;
 with System.Soft_Links;
 with System.CRTL;
@@ -241,11 +242,7 @@ package body Ada.Streams.Stream_IO is
       --  (and furthermore there are situations (such as the case of writing
       --  a sequential Posix FIFO file) where the lseek would cause problems.
 
-      if Mode = Out_File then
-         File.Last_Op := Op_Write;
-      else
-         File.Last_Op := Op_Read;
-      end if;
+      File.Last_Op := (if Mode = Out_File then Op_Write else Op_Read);
    end Open;
 
    ----------
@@ -297,8 +294,8 @@ package body Ada.Streams.Stream_IO is
       end if;
 
       File.Index := File.Index + Count (Nread);
-      Last := Item'First + Stream_Element_Offset (Nread) - 1;
       File.Last_Op := Op_Read;
+      Last := Last_Index (Item'First, Nread);
    end Read;
 
    --  This version of Read is the primitive operation on the underlying

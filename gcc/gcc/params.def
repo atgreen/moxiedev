@@ -24,7 +24,7 @@ along with GCC; see the file COPYING3.  If not see
 
      - The enumeral corresponding to this parameter.
 
-     - The name that can be used to set this parameter using the 
+     - The name that can be used to set this parameter using the
        command-line option `--param <name>=<value>'.
 
      - A help string explaining how the parameter is used.
@@ -39,8 +39,8 @@ along with GCC; see the file COPYING3.  If not see
    Be sure to add an entry to invoke.texi summarizing the parameter.  */
 
 /* The threshold ratio between current and hottest structure counts.
-   We say that if the ratio of the current structure count, 
-   calculated by profiling, to the hottest structure count 
+   We say that if the ratio of the current structure count,
+   calculated by profiling, to the hottest structure count
    in the program is less than this parameter, then structure
    reorganization is not applied. The default is 10%.  */
 DEFPARAM (PARAM_STRUCT_REORG_COLD_STRUCT_RATIO,
@@ -64,7 +64,7 @@ DEFPARAM (PARAM_PREDICTABLE_BRANCH_OUTCOME,
    definition for C++) are affected by this.
    There are more restrictions to inlining: If inlined functions
    call other functions, the already inlined instructions are
-   counted and once the recursive inline limit (see 
+   counted and once the recursive inline limit (see
    "max-inline-insns" parameter) is exceeded, the acceptable size
    gets decreased.  */
 DEFPARAM (PARAM_MAX_INLINE_INSNS_SINGLE,
@@ -123,7 +123,7 @@ DEFPARAM (PARAM_MAX_VARIABLE_EXPANSIONS,
 	  "max-variable-expansions-in-unroller",
 	  "If -fvariable-expansion-in-unroller is used, the maximum number of times that an individual variable will be expanded during loop unrolling",
           1, 0, 0)
-     
+
 /* Limit loop autovectorization to loops with large enough iteration count.  */
 DEFPARAM (PARAM_MIN_VECT_LOOP_BOUND,
 	  "min-vect-loop-bound",
@@ -152,10 +152,10 @@ DEFPARAM(PARAM_MAX_DELAY_SLOT_LIVE_SEARCH,
 	 "The maximum number of instructions to consider to find accurate live register information",
 	 333, 0, 0)
 
-/* This parameter limits the number of branch elements that the 
+/* This parameter limits the number of branch elements that the
    scheduler will track anti-dependencies through without resetting
-   the tracking mechanism.  Large functions with few calls or barriers 
-   can generate lists containing many 1000's of dependencies.  Generally 
+   the tracking mechanism.  Large functions with few calls or barriers
+   can generate lists containing many 1000's of dependencies.  Generally
    the compiler either uses all available memory, or runs for far too long.  */
 DEFPARAM(PARAM_MAX_PENDING_LIST_LENGTH,
 	 "max-pending-list-length",
@@ -176,15 +176,15 @@ DEFPARAM(PARAM_LARGE_UNIT_INSNS,
 	 10000, 0, 0)
 DEFPARAM(PARAM_INLINE_UNIT_GROWTH,
 	 "inline-unit-growth",
-	 "how much can given compilation unit grow because of the inlining (in percent)",
+	 "How much can given compilation unit grow because of the inlining (in percent)",
 	 30, 0, 0)
 DEFPARAM(PARAM_IPCP_UNIT_GROWTH,
 	 "ipcp-unit-growth",
-	 "how much can given compilation unit grow because of the interprocedural constant propagation (in percent)",
+	 "How much can given compilation unit grow because of the interprocedural constant propagation (in percent)",
 	 10, 0, 0)
 DEFPARAM(PARAM_EARLY_INLINING_INSNS,
 	 "early-inlining-insns",
-	 "maximal estimated growth of function body caused by early inlining of single call",
+	 "Maximal estimated growth of function body caused by early inlining of single call",
 	 8, 0, 0)
 DEFPARAM(PARAM_LARGE_STACK_FRAME,
 	 "large-stack-frame",
@@ -221,7 +221,7 @@ DEFPARAM(PARAM_GCSE_AFTER_RELOAD_CRITICAL_FRACTION,
         10, 0, 0)
 /* This parameter limits the number of insns in a loop that will be unrolled,
    and by how much the loop is unrolled.
-   
+
    This limit should be at most half of the peeling limits:  loop unroller
    decides to not unroll loops that iterate fewer than 2*number of allowed
    unrollings and thus we would have loops that are neither peeled or unrolled
@@ -329,7 +329,7 @@ DEFPARAM (PARAM_ALIGN_LOOP_ITERATIONS,
    For functions containing one loop with large known number of iterations
    and other loops having unbounded loops we would end up predicting all
    the other loops cold that is not usually the case.  So we need to artificially
-   flatten the profile.  
+   flatten the profile.
 
    We need to cut the maximal predicted iterations to large enough iterations
    so the loop appears important, but safely within HOT_BB_COUNT_FRACTION
@@ -592,7 +592,7 @@ DEFPARAM (PARAM_INTEGER_SHARE_LIMIT,
 
    PARAM_MIN_VIRTUAL_MAPPINGS specifies the minimum number of virtual
    mappings that should be registered to trigger the heuristic.
-   
+
    PARAM_VIRTUAL_MAPPINGS_TO_SYMS_RATIO specifies the ratio between
    mappings and symbols.  If the number of virtual mappings is
    PARAM_VIRTUAL_MAPPINGS_TO_SYMS_RATIO bigger than the number of
@@ -632,7 +632,7 @@ DEFPARAM (PARAM_MAX_JUMP_THREAD_DUPLICATION_STMTS,
 	  15, 0, 0)
 
 /* This is the maximum number of fields a variable may have before the pointer analysis machinery
-   will stop trying to treat it in a field-sensitive manner.  
+   will stop trying to treat it in a field-sensitive manner.
    There are programs out there with thousands of fields per structure, and handling them
    field-sensitively is not worth the cost.  */
 DEFPARAM (PARAM_MAX_FIELDS_FOR_FIELD_SENSITIVE,
@@ -711,13 +711,18 @@ DEFPARAM (PARAM_SCCVN_MAX_SCC_SIZE,
 
 DEFPARAM (PARAM_IRA_MAX_LOOPS_NUM,
 	  "ira-max-loops-num",
-	  "max loops number for regional RA",
+	  "Max loops number for regional RA",
 	  100, 0, 0)
 
 DEFPARAM (PARAM_IRA_MAX_CONFLICT_TABLE_SIZE,
 	  "ira-max-conflict-table-size",
-	  "max size of conflict table in MB",
+	  "Max size of conflict table in MB",
 	  1000, 0, 0)
+
+DEFPARAM (PARAM_IRA_LOOP_RESERVED_REGS,
+	  "ira-loop-reserved-regs",
+	  "The number of registers in each class kept unused by loop invariant motion",
+	  2, 0, 0)
 
 /* Switch initialization conversion will refuse to create arrays that are
    bigger than this parameter times the number of switch branches.  */
@@ -728,11 +733,18 @@ DEFPARAM (PARAM_SWITCH_CONVERSION_BRANCH_RATIO,
 	  "a switch conversion to take place",
 	  8, 1, 0)
 
+/* Size of tiles when doing loop blocking.  */
+
+DEFPARAM (PARAM_LOOP_BLOCK_TILE_SIZE,
+	  "loop-block-tile-size",
+	  "size of tiles for loop blocking",
+	  51, 0, 0)
+
 /* Avoid doing loop invariant motion on very large loops.  */
 
 DEFPARAM (PARAM_LOOP_INVARIANT_MAX_BBS_IN_LOOP,
 	  "loop-invariant-max-bbs-in-loop",
-	  "max basic blocks number in loop for loop invariant motion",
+	  "Max basic blocks number in loop for loop invariant motion",
 	  10000, 0, 0)
 
 /* Avoid SLP vectorization of large basic blocks.  */
@@ -743,13 +755,13 @@ DEFPARAM (PARAM_SLP_MAX_INSNS_IN_BB,
 
 DEFPARAM (PARAM_MIN_INSN_TO_PREFETCH_RATIO,
 	  "min-insn-to-prefetch-ratio",
-	  "min. ratio of insns to prefetches to enable prefetching for "
+	  "Min. ratio of insns to prefetches to enable prefetching for "
           "a loop with an unknown trip count",
 	  10, 0, 0)
 
 DEFPARAM (PARAM_PREFETCH_MIN_INSN_TO_MEM_RATIO,
 	  "prefetch-min-insn-to-mem-ratio",
-	  "min. ratio of insns to mem ops to enable prefetching in a loop",
+	  "Min. ratio of insns to mem ops to enable prefetching in a loop",
 	  3, 0, 0)
 
 /* Set minimum insn uid for non-debug insns.  */
@@ -761,7 +773,7 @@ DEFPARAM (PARAM_MIN_NONDEBUG_INSN_UID,
 
 DEFPARAM (PARAM_IPA_SRA_PTR_GROWTH_FACTOR,
 	  "ipa-sra-ptr-growth-factor",
-	  "maximum allowed growth of size of new parameters ipa-sra replaces "
+	  "Maximum allowed growth of size of new parameters ipa-sra replaces "
 	  "a pointer to an aggregate with",
 	  2, 0, 0)
 

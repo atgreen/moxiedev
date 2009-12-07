@@ -1087,7 +1087,7 @@
 
 (define_expand "mmx_<code><mode>3"
   [(set (match_operand:MMXMODEI 0 "register_operand" "")
-	(plogic:MMXMODEI
+	(any_logic:MMXMODEI
 	  (match_operand:MMXMODEI 1 "nonimmediate_operand" "")
 	  (match_operand:MMXMODEI 2 "nonimmediate_operand" "")))]
   "TARGET_MMX"
@@ -1095,11 +1095,11 @@
 
 (define_insn "*mmx_<code><mode>3"
   [(set (match_operand:MMXMODEI 0 "register_operand" "=y")
-        (plogic:MMXMODEI
+        (any_logic:MMXMODEI
 	  (match_operand:MMXMODEI 1 "nonimmediate_operand" "%0")
 	  (match_operand:MMXMODEI 2 "nonimmediate_operand" "ym")))]
   "TARGET_MMX && ix86_binary_operator_ok (<CODE>, <MODE>mode, operands)"
-  "p<plogicprefix>\t{%2, %0|%0, %2}"
+  "p<logicprefix>\t{%2, %0|%0, %2}"
   [(set_attr "type" "mmxadd")
    (set_attr "mode" "DI")])
 
@@ -1250,7 +1250,10 @@
   "TARGET_SSE || TARGET_3DNOW_A"
 {
   operands[3] = GEN_INT (exact_log2 (INTVAL (operands[3])));
-  return "pinsrw\t{%3, %k2, %0|%0, %k2, %3}";
+  if (MEM_P (operands[2]))
+    return "pinsrw\t{%3, %2, %0|%0, %2, %3}";
+  else
+    return "pinsrw\t{%3, %k2, %0|%0, %k2, %3}";
 }
   [(set_attr "type" "mmxcvt")
    (set_attr "length_immediate" "1")
@@ -1640,48 +1643,66 @@
   [(set_attr "type" "mmxcvt")
    (set_attr "mode" "DI")])
 
-(define_insn "mmx_emms"
-  [(unspec_volatile [(const_int 0)] UNSPECV_EMMS)
-   (clobber (reg:XF ST0_REG))
-   (clobber (reg:XF ST1_REG))
-   (clobber (reg:XF ST2_REG))
-   (clobber (reg:XF ST3_REG))
-   (clobber (reg:XF ST4_REG))
-   (clobber (reg:XF ST5_REG))
-   (clobber (reg:XF ST6_REG))
-   (clobber (reg:XF ST7_REG))
-   (clobber (reg:DI MM0_REG))
-   (clobber (reg:DI MM1_REG))
-   (clobber (reg:DI MM2_REG))
-   (clobber (reg:DI MM3_REG))
-   (clobber (reg:DI MM4_REG))
-   (clobber (reg:DI MM5_REG))
-   (clobber (reg:DI MM6_REG))
-   (clobber (reg:DI MM7_REG))]
+(define_expand "mmx_emms"
+  [(match_par_dup 0 [(const_int 0)])]
+  "TARGET_MMX"
+{
+  int regno;
+
+  operands[0] = gen_rtx_PARALLEL (VOIDmode, rtvec_alloc (17));
+
+  XVECEXP (operands[0], 0, 0)
+    = gen_rtx_UNSPEC_VOLATILE (VOIDmode, gen_rtvec (1, const0_rtx),
+			       UNSPECV_EMMS);
+
+  for (regno = 0; regno < 8; regno++)
+    {
+      XVECEXP (operands[0], 0, regno + 1)
+	= gen_rtx_CLOBBER (VOIDmode,
+			   gen_rtx_REG (XFmode, FIRST_STACK_REG + regno));
+
+      XVECEXP (operands[0], 0, regno + 9)
+	= gen_rtx_CLOBBER (VOIDmode,
+			   gen_rtx_REG (DImode, FIRST_MMX_REG + regno));
+    }
+})
+
+(define_insn "*mmx_emms"
+  [(match_parallel 0 "emms_operation"
+    [(unspec_volatile [(const_int 0)] UNSPECV_EMMS)])]
   "TARGET_MMX"
   "emms"
   [(set_attr "type" "mmx")
    (set_attr "modrm" "0")
-   (set_attr "memory" "unknown")])
+   (set_attr "memory" "none")])
 
-(define_insn "mmx_femms"
-  [(unspec_volatile [(const_int 0)] UNSPECV_FEMMS)
-   (clobber (reg:XF ST0_REG))
-   (clobber (reg:XF ST1_REG))
-   (clobber (reg:XF ST2_REG))
-   (clobber (reg:XF ST3_REG))
-   (clobber (reg:XF ST4_REG))
-   (clobber (reg:XF ST5_REG))
-   (clobber (reg:XF ST6_REG))
-   (clobber (reg:XF ST7_REG))
-   (clobber (reg:DI MM0_REG))
-   (clobber (reg:DI MM1_REG))
-   (clobber (reg:DI MM2_REG))
-   (clobber (reg:DI MM3_REG))
-   (clobber (reg:DI MM4_REG))
-   (clobber (reg:DI MM5_REG))
-   (clobber (reg:DI MM6_REG))
-   (clobber (reg:DI MM7_REG))]
+(define_expand "mmx_femms"
+  [(match_par_dup 0 [(const_int 0)])]
+  "TARGET_3DNOW"
+{
+  int regno;
+
+  operands[0] = gen_rtx_PARALLEL (VOIDmode, rtvec_alloc (17));
+
+  XVECEXP (operands[0], 0, 0)
+    = gen_rtx_UNSPEC_VOLATILE (VOIDmode, gen_rtvec (1, const0_rtx),
+			       UNSPECV_FEMMS);
+
+  for (regno = 0; regno < 8; regno++)
+    {
+      XVECEXP (operands[0], 0, regno + 1)
+	= gen_rtx_CLOBBER (VOIDmode,
+			   gen_rtx_REG (XFmode, FIRST_STACK_REG + regno));
+
+      XVECEXP (operands[0], 0, regno + 9)
+	= gen_rtx_CLOBBER (VOIDmode,
+			   gen_rtx_REG (DImode, FIRST_MMX_REG + regno));
+    }
+})
+
+(define_insn "*mmx_femms"
+  [(match_parallel 0 "emms_operation"
+    [(unspec_volatile [(const_int 0)] UNSPECV_FEMMS)])]
   "TARGET_3DNOW"
   "femms"
   [(set_attr "type" "mmx")

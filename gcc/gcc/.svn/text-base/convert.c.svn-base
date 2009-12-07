@@ -54,7 +54,17 @@ convert_to_pointer (tree type, tree expr)
     {
     case POINTER_TYPE:
     case REFERENCE_TYPE:
-      return fold_build1_loc (loc, NOP_EXPR, type, expr);
+      {
+        /* If the pointers point to different address spaces, conversion needs
+	   to be done via a ADDR_SPACE_CONVERT_EXPR instead of a NOP_EXPR.  */
+	addr_space_t to_as = TYPE_ADDR_SPACE (TREE_TYPE (type));
+	addr_space_t from_as = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (expr)));
+
+	if (to_as == from_as)
+	  return fold_build1_loc (loc, NOP_EXPR, type, expr);
+	else
+	  return fold_build1_loc (loc, ADDR_SPACE_CONVERT_EXPR, type, expr);
+      }
 
     case INTEGER_TYPE:
     case ENUMERAL_TYPE:
@@ -424,7 +434,7 @@ convert_to_integer (tree type, tree expr)
       tree s_intype = TREE_TYPE (s_expr);
       const enum built_in_function fcode = builtin_mathfn_code (s_expr);
       tree fn = 0;
-      
+
       switch (fcode)
         {
 	CASE_FLT_FN (BUILT_IN_CEIL):
@@ -484,7 +494,7 @@ convert_to_integer (tree type, tree expr)
 	default:
 	  break;
 	}
-      
+
       if (fn)
         {
 	  tree newexpr = build_call_expr (fn, 1, CALL_EXPR_ARG (s_expr, 0));
@@ -505,7 +515,7 @@ convert_to_integer (tree type, tree expr)
       tree s_intype = TREE_TYPE (s_expr);
       const enum built_in_function fcode = builtin_mathfn_code (s_expr);
       tree fn = 0;
-       
+
       switch (fcode)
 	{
 	CASE_FLT_FN (BUILT_IN_LOGB):

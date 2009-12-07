@@ -145,7 +145,7 @@ print_scattering_function (FILE *file, poly_bb_p pbb)
   if (!PBB_TRANSFORMED (pbb))
     return;
 
-  fprintf (file, "scattering bb_%d (\n", GBB_BB (PBB_BLACK_BOX (pbb))->index);
+  fprintf (file, "scattering bb_%d (\n", pbb_index (pbb));
   fprintf (file, "#  eq");
 
   for (i = 0; i < pbb_nb_scattering_transform (pbb); i++)
@@ -250,13 +250,15 @@ apply_poly_transforms (scop_p scop)
     transform_done = true;
 
   if (flag_loop_block)
-    gcc_unreachable (); /* Not yet supported.  */
+    transform_done |= scop_do_block (scop);
+  else
+    {
+      if (flag_loop_strip_mine)
+	transform_done |= scop_do_strip_mine (scop);
 
-  if (flag_loop_strip_mine)
-    transform_done |= scop_do_strip_mine (scop);
-
-  if (flag_loop_interchange)
-    transform_done |= scop_do_interchange (scop);
+      if (flag_loop_interchange)
+	transform_done |= scop_do_interchange (scop);
+    }
 
   return transform_done;
 }
@@ -300,6 +302,9 @@ pbb_remove_duplicate_pdrs (poly_bb_p pbb)
     for (j = 0; VEC_iterate (poly_dr_p, collapsed, j, pdr2); j++)
       if (!can_collapse_pdrs (pdr1, pdr2))
 	VEC_quick_push (poly_dr_p, collapsed, pdr1);
+
+  VEC_free (poly_dr_p, heap, collapsed);
+  PBB_PDR_DUPLICATES_REMOVED (pbb) = true;
 }
 
 /* Create a new polyhedral data reference and add it to PBB.  It is
@@ -307,7 +312,7 @@ pbb_remove_duplicate_pdrs (poly_bb_p pbb)
    NB_SUBSCRIPTS.  */
 
 void
-new_poly_dr (poly_bb_p pbb,
+new_poly_dr (poly_bb_p pbb, int dr_base_object_set,
 	     ppl_Pointset_Powerset_C_Polyhedron_t accesses,
 	     enum poly_dr_type type, void *cdr, graphite_dim_t nb_subscripts)
 {
@@ -315,6 +320,7 @@ new_poly_dr (poly_bb_p pbb,
   poly_dr_p pdr = XNEW (struct poly_dr);
 
   PDR_ID (pdr) = id++;
+  PDR_BASE_OBJECT_SET (pdr) = dr_base_object_set;
   PDR_NB_REFS (pdr) = 1;
   PDR_PBB (pdr) = pbb;
   PDR_ACCESSES (pdr) = accesses;
@@ -336,7 +342,7 @@ free_poly_dr (poly_dr_p pdr)
 /* Create a new polyhedral black box.  */
 
 void
-new_poly_bb (scop_p scop, void *black_box)
+new_poly_bb (scop_p scop, void *black_box, bool reduction)
 {
   poly_bb_p pbb = XNEW (struct poly_bb);
 
@@ -347,6 +353,8 @@ new_poly_bb (scop_p scop, void *black_box)
   PBB_SAVED (pbb) = NULL;
   PBB_ORIGINAL (pbb) = NULL;
   PBB_DRS (pbb) = VEC_alloc (poly_dr_p, heap, 3);
+  PBB_IS_REDUCTION (pbb) = reduction;
+  PBB_PDR_DUPLICATES_REMOVED (pbb) = false;
   VEC_safe_push (poly_bb_p, heap, SCOP_BBS (scop), pbb);
 }
 
@@ -448,12 +456,14 @@ new_scop (void *region)
 {
   scop_p scop = XNEW (struct scop);
 
-  SCOP_DEP_GRAPH (scop) = NULL;
   SCOP_CONTEXT (scop) = NULL;
   scop_set_region (scop, region);
   SCOP_BBS (scop) = VEC_alloc (poly_bb_p, heap, 3);
   SCOP_ORIGINAL_PDDRS (scop) = htab_create (10, hash_poly_ddr_p,
 					    eq_poly_ddr_p, free_poly_ddr);
+  SCOP_ORIGINAL_SCHEDULE (scop) = NULL;
+  SCOP_TRANSFORMED_SCHEDULE (scop) = NULL;
+  SCOP_SAVED_SCHEDULE (scop) = NULL;
   return scop;
 }
 
@@ -474,6 +484,9 @@ free_scop (scop_p scop)
     ppl_delete_Pointset_Powerset_C_Polyhedron (SCOP_CONTEXT (scop));
 
   htab_delete (SCOP_ORIGINAL_PDDRS (scop));
+  free_lst (SCOP_ORIGINAL_SCHEDULE (scop));
+  free_lst (SCOP_TRANSFORMED_SCHEDULE (scop));
+  free_lst (SCOP_SAVED_SCHEDULE (scop));
   XDELETE (scop);
 }
 
@@ -578,7 +591,7 @@ debug_pdrs (poly_bb_p pbb)
 void
 print_pbb (FILE *file, poly_bb_p pbb)
 {
-  fprintf (file, "pbb_%d (\n", GBB_BB (PBB_BLACK_BOX (pbb))->index);
+  fprintf (file, "pbb_%d (\n", pbb_index (pbb));
   dump_gbb_conditions (file, PBB_BLACK_BOX (pbb));
   dump_gbb_cases (file, PBB_BLACK_BOX (pbb));
   print_pdrs (file, pbb);
@@ -639,6 +652,14 @@ print_scop (FILE *file, scop_p scop)
 
   for (i = 0; VEC_iterate (poly_bb_p, SCOP_BBS (scop), i, pbb); i++)
     print_pbb (file, pbb);
+
+  fprintf (file, "original_lst (\n");
+  print_lst (file, SCOP_ORIGINAL_SCHEDULE (scop), 0);
+  fprintf (file, ")\n");
+
+  fprintf (file, "transformed_lst (\n");
+  print_lst (file, SCOP_TRANSFORMED_SCHEDULE (scop), 0);
+  fprintf (file, ")\n");
 
   fprintf (file, ")\n");
 }
@@ -776,33 +797,205 @@ pbb_number_of_iterations_at_time (poly_bb_p pbb,
   ppl_Linear_Expression_t le;
   ppl_dimension_type dim;
 
-  value_set_si (niter, -1);
-
   /* Takes together domain and scattering polyhedrons, and composes
      them into the bigger polyhedron that has the following format:
-     t0..t_{n-1} | l0..l_{nlcl-1} | i0..i_{niter-1} | g0..g_{nparm-1}.
-     t0..t_{n-1} are time dimensions (scattering dimensions)
-     l0..l_{nclc-1} are local variables in scatterin function
-     i0..i_{niter-1} are original iteration variables
-     g0..g_{nparam-1} are global parameters.  */
 
+     t0..t_{n-1} | l0..l_{nlcl-1} | i0..i_{niter-1} | g0..g_{nparm-1}
+
+     where
+     | t0..t_{n-1} are time dimensions (scattering dimensions)
+     | l0..l_{nclc-1} are local variables in scattering function
+     | i0..i_{niter-1} are original iteration variables
+     | g0..g_{nparam-1} are global parameters.  */
+
+  ppl_new_Pointset_Powerset_C_Polyhedron_from_C_Polyhedron (&sctr,
+      PBB_TRANSFORMED_SCATTERING (pbb));
+
+  /* Extend the iteration domain with the scattering dimensions:
+     0..0 | 0..0 | i0..i_{niter-1} | g0..g_{nparm-1}.   */
   ppl_new_Pointset_Powerset_C_Polyhedron_from_Pointset_Powerset_C_Polyhedron
     (&ext_domain, PBB_DOMAIN (pbb));
   ppl_insert_dimensions_pointset (ext_domain, 0,
                                   pbb_nb_scattering_transform (pbb)
                                   + pbb_nb_local_vars (pbb));
-  ppl_new_Pointset_Powerset_C_Polyhedron_from_C_Polyhedron (&sctr,
-      PBB_TRANSFORMED_SCATTERING (pbb));
+
+  /* Add to sctr the extended domain.  */
   ppl_Pointset_Powerset_C_Polyhedron_intersection_assign (sctr, ext_domain);
 
+  /* Extract the number of iterations.  */
   ppl_Pointset_Powerset_C_Polyhedron_space_dimension (sctr, &dim);
   ppl_new_Linear_Expression_with_dimension (&le, dim);
   ppl_set_coef (le, time_depth, 1);
+  value_set_si (niter, -1);
   ppl_max_for_le_pointset (sctr, le, niter);
 
   ppl_delete_Linear_Expression (le);
   ppl_delete_Pointset_Powerset_C_Polyhedron (sctr);
   ppl_delete_Pointset_Powerset_C_Polyhedron (ext_domain);
+}
+
+/* Translates LOOP to LST.  */
+
+static lst_p
+loop_to_lst (loop_p loop, VEC (poly_bb_p, heap) *bbs, int *i)
+{
+  poly_bb_p pbb;
+  VEC (lst_p, heap) *seq = VEC_alloc (lst_p, heap, 5);
+
+  for (; VEC_iterate (poly_bb_p, bbs, *i, pbb); (*i)++)
+    {
+      lst_p stmt;
+      basic_block bb = GBB_BB (PBB_BLACK_BOX (pbb));
+
+      if (bb->loop_father == loop)
+	stmt = new_lst_stmt (pbb);
+      else if (flow_bb_inside_loop_p (loop, bb))
+	{
+	  loop_p next = loop->inner;
+
+	  while (next && !flow_bb_inside_loop_p (next, bb))
+	    next = next->next;
+
+	  stmt = loop_to_lst (next, bbs, i);
+	}
+      else
+	{
+	  (*i)--;
+	  return new_lst_loop (seq);
+	}
+
+      VEC_safe_push (lst_p, heap, seq, stmt);
+    }
+
+  return new_lst_loop (seq);
+}
+
+/* Reads the original scattering of the SCOP and returns an LST
+   representing it.  */
+
+void
+scop_to_lst (scop_p scop)
+{
+  lst_p res;
+  int i, n = VEC_length (poly_bb_p, SCOP_BBS (scop));
+  VEC (lst_p, heap) *seq = VEC_alloc (lst_p, heap, 5);
+  sese region = SCOP_REGION (scop);
+
+  for (i = 0; i < n; i++)
+    {
+      poly_bb_p pbb = VEC_index (poly_bb_p, SCOP_BBS (scop), i);
+      loop_p loop = outermost_loop_in_sese (region, GBB_BB (PBB_BLACK_BOX (pbb)));
+
+      if (loop_in_sese_p (loop, region))
+	res = loop_to_lst (loop, SCOP_BBS (scop), &i);
+      else
+	res = new_lst_stmt (pbb);
+
+      VEC_safe_push (lst_p, heap, seq, res);
+    }
+
+  res = new_lst_loop (seq);
+  SCOP_ORIGINAL_SCHEDULE (scop) = res;
+  SCOP_TRANSFORMED_SCHEDULE (scop) = copy_lst (res);
+}
+
+/* Print LST to FILE with INDENT spaces of indentation.  */
+
+void
+print_lst (FILE *file, lst_p lst, int indent)
+{
+  if (!lst)
+    return;
+
+  indent_to (file, indent);
+
+  if (LST_LOOP_P (lst))
+    {
+      int i;
+      lst_p l;
+
+      if (LST_LOOP_FATHER (lst))
+	fprintf (file, "%d (loop", lst_dewey_number (lst));
+      else
+	fprintf (file, "(root");
+
+      for (i = 0; VEC_iterate (lst_p, LST_SEQ (lst), i, l); i++)
+	print_lst (file, l, indent + 2);
+
+      fprintf (file, ")");
+    }
+  else
+    fprintf (file, "%d stmt_%d", lst_dewey_number (lst), pbb_index (LST_PBB (lst)));
+}
+
+/* Print LST to STDERR.  */
+
+void
+debug_lst (lst_p lst)
+{
+  print_lst (stderr, lst, 0);
+}
+
+/* Pretty print to FILE the loop statement tree LST in DOT format.  */
+
+static void
+dot_lst_1 (FILE *file, lst_p lst)
+{
+  if (!lst)
+    return;
+
+  if (LST_LOOP_P (lst))
+    {
+      int i;
+      lst_p l;
+
+      if (!LST_LOOP_FATHER (lst))
+	fprintf (file, "L -> L_%d_%d\n",
+		 lst_depth (lst),
+		 lst_dewey_number (lst));
+      else
+	fprintf (file, "L_%d_%d -> L_%d_%d\n",
+		 lst_depth (LST_LOOP_FATHER (lst)),
+		 lst_dewey_number (LST_LOOP_FATHER (lst)),
+		 lst_depth (lst),
+		 lst_dewey_number (lst));
+
+      for (i = 0; VEC_iterate (lst_p, LST_SEQ (lst), i, l); i++)
+	dot_lst_1 (file, l);
+    }
+
+  else
+    fprintf (file, "L_%d_%d -> S_%d\n",
+	     lst_depth (LST_LOOP_FATHER (lst)),
+	     lst_dewey_number (LST_LOOP_FATHER (lst)),
+	     pbb_index (LST_PBB (lst)));
+
+}
+
+/* Display the LST using dotty.  */
+
+void
+dot_lst (lst_p lst)
+{
+  /* When debugging, enable the following code.  This cannot be used
+     in production compilers because it calls "system".  */
+#if 0
+  int x;
+  FILE *stream = fopen ("/tmp/lst.dot", "w");
+  gcc_assert (stream);
+
+  fputs ("digraph all {\n", stream);
+  dot_lst_1 (stream, lst);
+  fputs ("}\n\n", stream);
+  fclose (stream);
+
+  x = system ("dotty /tmp/lst.dot");
+#else
+  fputs ("digraph all {\n", stderr);
+  dot_lst_1 (stderr, lst);
+  fputs ("}\n\n", stderr);
+
+#endif
 }
 
 #endif

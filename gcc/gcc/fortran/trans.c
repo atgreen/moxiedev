@@ -1079,7 +1079,10 @@ gfc_trans_code (gfc_code * code)
 	  break;
 
 	case EXEC_ASSIGN:
-	  res = gfc_trans_assign (code);
+	  if (code->expr1->ts.type == BT_CLASS)
+	    res = gfc_trans_class_assign (code);
+	  else
+	    res = gfc_trans_assign (code);
 	  break;
 
         case EXEC_LABEL_ASSIGN:
@@ -1087,7 +1090,10 @@ gfc_trans_code (gfc_code * code)
           break;
 
 	case EXEC_POINTER_ASSIGN:
-	  res = gfc_trans_pointer_assign (code);
+	  if (code->expr1->ts.type == BT_CLASS)
+	    res = gfc_trans_class_assign (code);
+	  else
+	    res = gfc_trans_pointer_assign (code);
 	  break;
 
 	case EXEC_INIT_ASSIGN:
@@ -1275,9 +1281,7 @@ gfc_trans_code (gfc_code * code)
 
       if (res != NULL_TREE && ! IS_EMPTY_STMT (res))
 	{
-	  if (TREE_CODE (res) == STATEMENT_LIST)
-	    tree_annotate_all_with_location (&res, input_location);
-	  else
+	  if (TREE_CODE (res) != STATEMENT_LIST)
 	    SET_EXPR_LOCATION (res, input_location);
 	    
 	  /* Add the new statement to the block.  */

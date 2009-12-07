@@ -4,19 +4,19 @@
    Contributed by Ben Elliston <bje@redhat.com>
    and Andrew MacLeod <amacleod@redhat.com>
    Adapted to use control dependence by Steven Bosscher, SUSE Labs.
- 
+
 This file is part of GCC.
-   
+
 GCC is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation; either version 3, or (at your option) any
 later version.
-   
+
 GCC is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 for more details.
-   
+
 You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
@@ -489,17 +489,18 @@ ref_may_be_aliased (tree ref)
 static bitmap visited = NULL;
 static unsigned int longest_chain = 0;
 static unsigned int total_chain = 0;
+static unsigned int nr_walks = 0;
 static bool chain_ovfl = false;
 
 /* Worker for the walker that marks reaching definitions of REF,
    which is based on a non-aliased decl, necessary.  It returns
    true whenever the defining statement of the current VDEF is
    a kill for REF, as no dominating may-defs are necessary for REF
-   anymore.  DATA points to cached get_ref_base_and_extent data for REF.  */
+   anymore.  DATA points to the basic-block that contains the
+   stmt that refers to REF.  */
 
 static bool
-mark_aliased_reaching_defs_necessary_1 (ao_ref *ref, tree vdef,
-					void *data ATTRIBUTE_UNUSED)
+mark_aliased_reaching_defs_necessary_1 (ao_ref *ref, tree vdef, void *data)
 {
   gimple def_stmt = SSA_NAME_DEF_STMT (vdef);
 
@@ -529,6 +530,12 @@ mark_aliased_reaching_defs_necessary_1 (ao_ref *ref, tree vdef,
 	    }
 	  /* Or they need to be exactly the same.  */
 	  else if (ref->ref
+		   /* Make sure there is no induction variable involved
+		      in the references (gcc.c-torture/execute/pr42142.c).
+		      The simplest way is to check if the kill dominates
+		      the use.  */
+		   && dominated_by_p (CDI_DOMINATORS, (basic_block) data,
+				      gimple_bb (def_stmt))
 		   && operand_equal_p (ref->ref, lhs, 0))
 	    return true;
 	}
@@ -547,10 +554,11 @@ mark_aliased_reaching_defs_necessary (gimple stmt, tree ref)
   ao_ref_init (&refd, ref);
   chain = walk_aliased_vdefs (&refd, gimple_vuse (stmt),
 			      mark_aliased_reaching_defs_necessary_1,
-			      NULL, NULL);
+			      gimple_bb (stmt), NULL);
   if (chain > longest_chain)
     longest_chain = chain;
   total_chain += chain;
+  nr_walks++;
 }
 
 /* Worker for the walker that marks reaching definitions of REF, which
@@ -612,7 +620,7 @@ degenerate_phi_p (gimple phi)
 /* Propagate necessity using the operands of necessary statements.
    Process the uses on each statement in the worklist, and add all
    feeding statements which contribute to the calculation of this
-   value to the worklist. 
+   value to the worklist.
 
    In conservative mode, EL is NULL.  */
 
@@ -620,7 +628,7 @@ static void
 propagate_necessity (struct edge_list *el)
 {
   gimple stmt;
-  bool aggressive = (el ? true : false); 
+  bool aggressive = (el ? true : false);
 
   if (dump_file && (dump_flags & TDF_DETAILS))
     fprintf (dump_file, "\nProcessing worklist:\n");
@@ -688,7 +696,7 @@ propagate_necessity (struct edge_list *el)
       else
 	{
 	  /* Propagate through the operands.  Examine all the USE, VUSE and
-	     VDEF operands in this statement.  Mark all the statements 
+	     VDEF operands in this statement.  Mark all the statements
 	     which feed this statement's uses as necessary.  */
 	  ssa_op_iter iter;
 	  tree use;
@@ -797,11 +805,16 @@ propagate_necessity (struct edge_list *el)
 	    gcc_unreachable ();
 
 	  /* If we over-used our alias oracle budget drop to simple
-	     mode.  The cost metric allows quadratic behavior up to
-	     a constant maximal chain and after that falls back to
+	     mode.  The cost metric allows quadratic behavior
+	     (number of uses times number of may-defs queries) up to
+	     a constant maximal number of queries and after that falls back to
 	     super-linear complexity.  */
-	  if (longest_chain > 256
-	      && total_chain > 256 * longest_chain)
+	  if (/* Constant but quadratic for small functions.  */
+	      total_chain > 128 * 128
+	      /* Linear in the number of may-defs.  */
+	      && total_chain > 32 * longest_chain
+	      /* Linear in the number of uses.  */
+	      && total_chain > nr_walks * 32)
 	    {
 	      chain_ovfl = true;
 	      if (visited)
@@ -1065,8 +1078,8 @@ remove_dead_stmt (gimple_stmt_iterator *i, basic_block bb)
     }
 
   unlink_stmt_vdef (stmt);
-  gsi_remove (i, true);  
-  release_defs (stmt); 
+  gsi_remove (i, true);
+  release_defs (stmt);
 }
 
 /* Eliminate unnecessary statements. Any instruction not marked as necessary
@@ -1129,8 +1142,9 @@ eliminate_unnecessary_stmts (void)
 	  /* If GSI is not necessary then remove it.  */
 	  if (!gimple_plf (stmt, STMT_NECESSARY))
 	    {
+	      if (!is_gimple_debug (stmt))
+		something_changed = true;
 	      remove_dead_stmt (&gsi, bb);
-	      something_changed = true;
 	    }
 	  else if (is_gimple_call (stmt))
 	    {
@@ -1152,7 +1166,7 @@ eliminate_unnecessary_stmts (void)
 			  print_gimple_stmt (dump_file, stmt, 0, TDF_SLIM);
 			  fprintf (dump_file, "\n");
 			}
-		      
+
 		      gimple_call_set_lhs (stmt, NULL_TREE);
 		      maybe_clean_or_replace_eh_stmt (stmt, stmt);
 		      update_stmt (stmt);
@@ -1369,7 +1383,9 @@ perform_tree_ssa_dce (bool aggressive)
 
   longest_chain = 0;
   total_chain = 0;
+  nr_walks = 0;
   chain_ovfl = false;
+  visited = BITMAP_ALLOC (NULL);
   propagate_necessity (el);
   BITMAP_FREE (visited);
 
@@ -1397,7 +1413,7 @@ perform_tree_ssa_dce (bool aggressive)
   free_edge_list (el);
 
   if (something_changed)
-    return (TODO_update_ssa | TODO_cleanup_cfg | TODO_ggc_collect 
+    return (TODO_update_ssa | TODO_cleanup_cfg | TODO_ggc_collect
 	    | TODO_remove_unused_locals);
   else
     return 0;

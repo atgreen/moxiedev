@@ -166,9 +166,14 @@ not attempt to (re-)generate data structures or lower intermediate
 language form based on the requirements of the next pass.  Nevertheless,
 what is present is useful, and a far sight better than nothing at all.
 
+Each pass should have a unique name.
 Each pass may have its own dump file (for GCC debugging purposes).
-Passes without any names, or with a name starting with a star, do not
-dump anything.
+Passes with a name starting with a star do not dump anything.
+Sometimes passes are supposed to share a dump file / option name.
+To still give these unique names, you can use a prefix that is delimited
+by a space from the part that is used for the dump file / option name.
+E.g. When the pass name is "ud dce", the name used for dump file/options
+is "dce".
 
 TODO: describe the global variables set up by the pass manager,
 and a brief description of how a new pass should use it.
@@ -453,6 +458,13 @@ pass is implemented in @file{tree-vectorizer.c} (the main driver),
 
 Autoparallelization.  This pass splits the loop iteration space to run
 into several threads.  The pass is implemented in @file{tree-parloops.c}.
+
+Graphite is a loop transformation framework based on the polyhedral
+model.  Graphite stands for Gimple Represented as Polyhedra.  The
+internals of this infrastructure are documented in
+@w{@uref{http://gcc.gnu.org/wiki/Graphite}}.  The passes working on
+this representation are implemented in the various @file{graphite-*}
+files.
 
 @item Tree level if-conversion for vectorizer
 

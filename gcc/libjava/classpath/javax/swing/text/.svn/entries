@@ -1,7 +1,7 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/javax/swing/text
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-ParagraphView.java
-file
-
-
-
-
-2009-04-24T17:47:24.000000Z
-0699ffd6b6d41a5118e7c1c419195ea4
-2008-06-28T13:29:13.958049Z
-137223
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-14941
 
 Style.java
 file
@@ -94,6 +60,40 @@ tromey
 
 2317
 
+ParagraphView.java
+file
+
+
+
+
+2009-04-24T17:47:24.000000Z
+0699ffd6b6d41a5118e7c1c419195ea4
+2008-06-28T13:29:13.958049Z
+137223
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+14941
+
 StringContent.java
 file
 
@@ -128,17 +128,17 @@ tromey
 
 15865
 
-AbstractDocument.java
+Segment.java
 file
 
 
 
 
 2009-04-24T17:47:24.000000Z
-b1defd8eef5256a6368c40b064bcd201
-2008-10-21T17:55:01.166395Z
-141271
-doko
+94963b4a48a89bd9618948629434b8c0
+2006-08-14T23:12:35.345391Z
+116139
+mark
 
 
 
@@ -160,7 +160,7 @@ doko
 
 
 
-88095
+8403
 
 PlainDocument.java
 file
@@ -196,17 +196,17 @@ mark
 
 9824
 
-Segment.java
+AbstractDocument.java
 file
 
 
 
 
 2009-04-24T17:47:24.000000Z
-94963b4a48a89bd9618948629434b8c0
-2006-08-14T23:12:35.345391Z
-116139
-mark
+b1defd8eef5256a6368c40b064bcd201
+2008-10-21T17:55:01.166395Z
+141271
+doko
 
 
 
@@ -228,7 +228,7 @@ mark
 
 
 
-8403
+88095
 
 ElementIterator.java
 file
@@ -366,40 +366,6 @@ tromey
 
 8170
 
-NumberFormatter.java
-file
-
-
-
-
-2009-04-24T17:47:24.000000Z
-55778c595e09b61b223033f489a27224
-2006-01-17T18:09:40.515436Z
-109831
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2983
-
 TabStop.java
 file
 
@@ -433,6 +399,40 @@ mark
 
 
 5524
+
+NumberFormatter.java
+file
+
+
+
+
+2009-04-24T17:47:24.000000Z
+55778c595e09b61b223033f489a27224
+2006-01-17T18:09:40.515436Z
+109831
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2983
 
 AttributeSet.java
 file
@@ -1080,40 +1080,6 @@ tromey
 
 2076
 
-Highlighter.java
-file
-
-
-
-
-2009-04-24T17:47:24.000000Z
-c1118a1264a85fb5f5744360e596244b
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2470
-
 BadLocationException.java
 file
 
@@ -1147,6 +1113,40 @@ tromey
 
 
 2716
+
+Highlighter.java
+file
+
+
+
+
+2009-04-24T17:47:24.000000Z
+c1118a1264a85fb5f5744360e596244b
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2470
 
 DefaultFormatterFactory.java
 file
@@ -1355,40 +1355,6 @@ doko
 
 5769
 
-IconView.java
-file
-
-
-
-
-2009-04-24T17:47:24.000000Z
-762a192ec75f6f143de153ff058984b9
-2006-08-14T23:12:35.345391Z
-116139
-mark
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5987
-
 BoxView.java
 file
 
@@ -1422,6 +1388,40 @@ tromey
 
 
 35659
+
+IconView.java
+file
+
+
+
+
+2009-04-24T17:47:24.000000Z
+762a192ec75f6f143de153ff058984b9
+2006-08-14T23:12:35.345391Z
+116139
+mark
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5987
 
 html
 dir
@@ -1460,40 +1460,6 @@ tromey
 
 4550
 
-ComponentView.java
-file
-
-
-
-
-2009-04-24T17:47:24.000000Z
-0bdcd2f98ef7b47504fd1cb509304a34
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-13673
-
 StyleConstants.java
 file
 
@@ -1528,17 +1494,17 @@ tromey
 
 33059
 
-EmptyAttributeSet.java
+ComponentView.java
 file
 
 
 
 
 2009-04-24T17:47:24.000000Z
-4c804c69831a093873446e6e508bd3e3
-2006-08-14T23:12:35.345391Z
-116139
-mark
+0bdcd2f98ef7b47504fd1cb509304a34
+2007-01-09T19:58:05.773323Z
+120621
+tromey
 
 
 
@@ -1560,7 +1526,41 @@ mark
 
 
 
-3949
+13673
+
+Caret.java
+file
+
+
+
+
+2009-04-24T17:47:24.000000Z
+e5d7810e3007e087881781b8ad260afc
+2005-09-23T21:31:04.000000Z
+104586
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6534
 
 EditorKit.java
 file
@@ -1596,17 +1596,17 @@ mark
 
 3308
 
-Caret.java
+EmptyAttributeSet.java
 file
 
 
 
 
 2009-04-24T17:47:24.000000Z
-e5d7810e3007e087881781b8ad260afc
-2005-09-23T21:31:04.000000Z
-104586
-tromey
+4c804c69831a093873446e6e508bd3e3
+2006-08-14T23:12:35.345391Z
+116139
+mark
 
 
 
@@ -1628,7 +1628,7 @@ tromey
 
 
 
-6534
+3949
 
 AbstractWriter.java
 file
@@ -1698,40 +1698,6 @@ tromey
 
 2882
 
-GapContent.java
-file
-
-
-
-
-2009-04-24T17:47:24.000000Z
-3a0489786925e078a76e5828fa217048
-2007-01-09T19:58:05.773323Z
-120621
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-30095
-
 FlowView.java
 file
 
@@ -1765,6 +1731,40 @@ tromey
 
 
 27054
+
+GapContent.java
+file
+
+
+
+
+2009-04-24T17:47:24.000000Z
+3a0489786925e078a76e5828fa217048
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+30095
 
 NavigationFilter.java
 file
@@ -1936,40 +1936,6 @@ doko
 
 39617
 
-ChangedCharSetException.java
-file
-
-
-
-
-2009-04-24T17:47:24.000000Z
-0fd1f403dbdcda203d40fd86b5cd661b
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3126
-
 TableView.java
 file
 
@@ -2003,6 +1969,40 @@ mark
 
 
 16245
+
+ChangedCharSetException.java
+file
+
+
+
+
+2009-04-24T17:47:24.000000Z
+0fd1f403dbdcda203d40fd86b5cd661b
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3126
 
 StyledEditorKit.java
 file

@@ -1,3 +1,948 @@
+2009-11-29  Alexander Monakov <amonakov@gcc.gnu.org>
+
+	* testsuite/g++.dg/graphite/pr42130.C: Correct testcase.
+
+2009-11-24  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	* graphite-clast-to-gimple.c (try_mark_loop_parallel,
+	graphite_create_new_loop_guard, translate_clast_for): Fix comments.
+
+2009-11-23  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	PR middle-end/42130
+	* graphite-clast-to-gimple.c (graphite_create_new_loop_guard,
+	translate_clast_for_loop): New.
+	(translate_clast_for): Add a condition around the loop, to do not
+	execute loops with zero iterations.
+	* testsuite/g++.dg/graphite/pr42130.C: New.
+	* testsuite/gcc.dg/graphite/pr35356-2.c: Adapt.
+
+2009-11-23  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	* graphite-clast-to-gimple.c (try_mark_loop_parallel): New.
+	(translate_clast_for, translate_clast_guard, translate_clast, gloog):
+	Remove context_loop and level.
+
+2009-11-23  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	* graphite-clast-to-gimple.c (translate_clast_user,
+	translate_clast_for, translate_clast_guard): Simplify and move common
+	elements to translate_clast().
+	(translate_clast): Simplify and get common elements.
+
+2009-11-23  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	* graphite-clast-to-gimple.c (translate_clast_user,
+	translate_clast_for, translate_clast_guard): Split out of
+	translate_clast.
+
+2009-11-21  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	* graphite-clast-to-gimple.c (clast_name_index, new_clast_name_index,
+	clast_name_to_index, save_clast_name_index, debug_clast_name_index,
+	debug_clast_name_indexes_1, debug_clast_name_indexes,
+	clast_name_index_elt_info, eq_clast_name_indexes): Moved from sese.h.
+	(clast_name_to_gcc, clast_to_gcc_expression,
+	clast_to_gcc_expression_red, gcc_type_for_clast_expr,
+	gcc_type_for_clast_eq, graphite_translate_clast_equation,
+	graphite_create_guard_cond_expr, graphite_create_new_loop,
+	translate_clast): Add params_index.
+	(initialize_cloog_names): Create parameter strings from scratch, do
+	not reference other strings.
+	(create_params_index): New.
+	(gloog): Initialize params_index.
+	* graphite-scop-detection (free_scops_1): Removed.
+	(limit_scops): Use normal free_scops.
+	* graphite-sese-to-poly.c (save_var_names): Removed.
+	(parameter_index_in_region): Do not initialize SESE_PARAM_NAMES
+	and SESE_PARAMS_INDEX.
+	* sese.c (new_sese, free_sese): Dito.
+	* sese.h (struct sese): Remove params_index, params_names.
+	(SESE_PARAMS_INDEX, SESE_PARAMS_NAMES): Removed.
+
+2009-11-20  Sebastian Pop  <sebastian.pop@amd.com>
+
+	Revert the following patch from 2009-09-14:
+	* graphite-blocking.c: Fix order of includes: tree-chrec.h, then
+	tree-scalar-evolution.h, and then tree-data-ref.h.
+	* graphite-clast-to-gimple.c: Same.
+	* graphite-dependences.c: Same.
+	* graphite-interchange.c: Same.
+	* graphite-poly.c: Same.
+	* graphite-scop-detection.c: Same.
+	* graphite-sese-to-poly.c: Same.
+	* graphite.c: Same.
+	* lambda-code.c: Same.
+	* matrix-reorg.c: Same.
+	* tree-data-ref.c: Same.
+	* tree-if-conv.c: Same.
+	* tree-loop-distribu: Same.: Same.
+	* tree-loop-linear.c: Same.
+	* tree-parloops.c: Same.
+	* tree-predcom.c: Same.
+	* tree-vect-patterns.c: Same.
+
+2009-11-20  Sebastian Pop  <sebastian.pop@amd.com>
+
+	Revert patch from 2009-09-14.
+	* tree-ssa-loop.c (gate_graphite_transforms): Re-enable Graphite
+	passes at -O1 and below.
+
+2009-11-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/40281
+	* testsuite/gcc.dg/graphite/pr40281.c: New.
+
+	* tree-scalar-evolution.c (instantiate_scev_poly): Base and stride
+	evolutions should not variate in inner loops.
+
+2009-11-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42050
+	* testsuite/gfortran.dg/graphite/pr42050.f90: New.
+
+2009-11-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (memory_strides_in_loop_depth): New.
+	(pbb_interchange_profitable_p): Call memory_strides_in_loop_depth.
+
+2009-11-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-blocking.c (scop_do_block): New.
+	* graphite-poly.c (apply_poly_transforms): Call scop_do_block.
+	* graphite-poly.h (scop_do_block): Declared.
+
+2009-11-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-blocking.c (pbb_strip_mine_profitable_p): The parameter
+	depth is the loop nesting depth in the LST.  Call psct_dynamic_dim
+	to transform depth into the time_depth before calling
+	pbb_number_of_iterations_at_time.
+	(lst_do_strip_mine): Use a scalar variable instead of recomputing
+	lst_depth.
+
+2009-11-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	Reverted the patch for "scattering permutations" from 2009-10-28.
+
+	* graphite-poly.c (print_permutation): New.
+	(debug_permutation): New.
+	(new_poly_bb): Initialize PBB_PERMUTATION.
+	(free_poly_bb): Free PBB_PERMUTATION.
+	* graphite-poly.h (pbb_permutation_elt_p): Declared.
+	(struct pbb_permutation_elt): New.
+	(PBB_PERMUTATION_ELT_STRIDE): New.
+	(PBB_PERMUTATION_ELT_STRIDED_P): New.
+	(PBB_PERMUTATION_ELT_TIME_DIMENSION): New.
+	(new_pbb_permutation_elt): New.
+	(pbb_permutation_elt_free): New.
+	(struct poly_bb): Add field permutation.
+	(PBB_PERMUTATION): New.
+	(print_permutation): Declared.
+	(debug_permutation): Declared.
+
+2009-11-04  Konrad Trifunovic  <konrad.trifunovic@inria.fr>
+
+        * graphite-interchange.c (build_partial_difference): New.
+        (memory_stride_in_loop): Refactored the computation of
+        equality constraints into build_partial_difference function.
+        Added support for debugging stride computations.
+
+2009-11-03  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-clast-to-gimple.c (gloog): Free if_region,
+	if_region->true_region, and if_region->region.
+	* sese.c (if_region_set_false_region): Free if_region->false_region.
+	(create_if_region_on_edge): Do not use GGC_NEW.
+	(move_sese_in_condition): Remove useless initialization.
+
+2009-11-03  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (lst_perfect_nestify): Pass 3 parameters
+	for the loops created by the loop distribution.  Do not modify the
+	input LSTs.
+	(lst_try_interchange_loops): Same.  Use a temporary LST for the
+	transformed schedule.  Call lst_update_scattering before data
+	dependence analysis.
+	(lst_try_interchange): Pass an extra parameter INDEX.
+	(lst_do_interchange_1): New.
+	(lst_do_interchange): Call lst_do_interchange_1.
+	(scop_do_interchange): Call lst_update_scattering.
+	* graphite-poly.c (apply_poly_transforms): Do not call
+	lst_update_scattering.
+	* graphite-poly.h (lst_pred): New.
+	(lst_succ): New.
+	(lst_find_first_pbb): Return NULL when not found.
+	(lst_empty_p): New.
+	(lst_insert_in_sequence): Allow LST1 to be NULL.
+	(lst_replace): New.
+	(lst_substitute_3): New.
+	* gcc.dg/graphite/interchange-1.c: XFail.
+	* gcc.dg/graphite/interchange-8.c: XFail.
+	* gcc.dg/graphite/interchange-11.c: XFail.
+
+2009-10-30  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (lst_perfectly_nested_p): New.
+	(lst_perfect_nestify): New.
+	(lst_try_interchange_loops): Call store_lst_schedule,
+	lst_perfectly_nested_p, lst_perfect_nestify and restore_lst_schedule.
+	(scop_do_interchange): Avoid redundant legality test.
+	Call lst_do_interchange on a copy of SCOP_TRANSFORMED_SCHEDULE.
+	* graphite-poly.c (apply_poly_transforms): Call lst_update_scattering.
+	* graphite-poly.h (psct_static_dim): New.
+	(lst_dewey_number_at_depth): New.
+	(lst_find_pbb): Restructured.
+	(lst_find_first_pbb): Restructured.
+	(lst_find_last_pbb): New.
+	(lst_contains_p): New.
+	(lst_contains_pbb): New.
+	(lst_create_nest): New.
+	(lst_remove_from_sequence): New.
+	(pbb_update_scattering): New.
+	(lst_update_scattering_under): New.
+	(lst_update_scattering_seq): New.
+	(lst_update_scattering): New.
+	(lst_insert_in_sequence): New.
+	(lst_distribute_lst): New.
+	(lst_remove_all_before_including_pbb): New.
+	(lst_remove_all_before_excluding_pbb): New.
+
+2009-10-30  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-ssa-loop-niter.c (finite_loop_p): Do not call twice
+	get_loop_exit_edges.
+
+2009-10-30  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (pbb_remove_duplicate_pdrs): Free collapsed.
+
+2009-10-28  Konrad Trifunovic  <konrad.trifunovic@gmail.com>
+
+	* graphite-poly.c (print_permutation): New.
+	(debug_permutation): New.
+	(new_poly_bb): Initialize PBB_PERMUTATION.
+	(free_poly_bb): Free PBB_PERMUTATION.
+	* graphite-poly.h (pbb_permutation_elt_p): Declared.
+	(struct pbb_permutation_elt): New.
+	(PBB_PERMUTATION_ELT_STRIDE): New.
+	(PBB_PERMUTATION_ELT_STRIDED_P): New.
+	(PBB_PERMUTATION_ELT_TIME_DIMENSION): New.
+	(new_pbb_permutation_elt): New.
+	(pbb_permutation_elt_free): New.
+	(struct poly_bb): Add field permutation.
+	(PBB_PERMUTATION): New.
+	(print_permutation): Declared.
+	(debug_permutation): Declared.
+
+2009-10-26  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-clast-to-gimple.c (gloog): Do not call
+	sese_reset_aux_in_loops.
+	* graphite-sese-to-poly.c (build_loop_iteration_domains): Pass an
+	extra argument for domains.  Do not use loop->aux.
+	(build_scop_iteration_domain): Initialize and free domains, pass it
+	to build_loop_iteration_domains and extract the information from
+	domains.  Do not use loop->aux.
+	* sese.c (sese_reset_aux_in_loops): Removed.
+	* sese.h (sese_reset_aux_in_loops): Removed.
+
+2009-10-26  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-clast-to-gimple.c (find_pbb_via_hash): Moved up.
+	(dependency_in_loop_p): Same.
+	(translate_clast): Do not use loop->aux.  Initialize
+	loop->can_be_parallel.
+	(mark_loops_parallel): Removed.
+	* graphite-clast-to-gimple.h (mark_loops_parallel): Removed.
+	* graphite.c (free_aux_in_new_loops): Removed.
+	(graphite_finalize): Do not call free_aux_in_new_loops.
+	(graphite_transform_loops): Do not call mark_loops_parallel.
+
+2009-10-26  Li Feng  <nemokingdom@gmail.com>
+
+	* graphite-clast-to-gimple.c (get_stmtfor_depth): Removed.
+	(translate_clast): Pass an extra parameter LEVEL.
+	Call get_scattering_level.
+	* graphite-clast-to-gimple.h (get_scattering_level): New.
+
+2009-10-22  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* cfgloop.c (alloc_loop): Initialize loop->single_iv.
+	* cfgloop.h (struct loop): New field single_iv.
+
+	* graphite-clast-to-gimple.c (pbb_to_depth_to_oldiv): Do not use
+	loop->aux anymore: use loop->single_iv.
+	(graphite_loop_normal_form): Moved...
+	(build_graphite_loop_normal_form): Removed.
+	(gloog): Do not call build_graphite_loop_normal_form.
+	(free_aux_in_new_loops): Moved...
+	(mark_loops_parallel): Restructure.
+	* graphite-clast-to-gimple.h (free_aux_in_new_loops): Do not declare.
+	* graphite-sese-to-poly.c (graphite_loop_normal_form): ...here.
+	(scop_canonicalize_loops): New.
+	(build_poly_scop): Call scop_canonicalize_loops.
+	* graphite.c (free_aux_in_new_loops): ...here.
+
+2009-10-22  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* g++.dg/graphite/graphite.exp: Add the same rules as in
+	gcc.dg/graphite/graphite.exp.
+
+2009-10-22  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* g++.dg/graphite/id-1.C: New.
+
+2009-10-22  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (create_zero_dim_array): Pass an extra
+	argument base_name.
+	(rewrite_close_phi_out_of_ssa): Update use of create_zero_dim_array.
+	(rewrite_phi_out_of_ssa): Same.
+	(rewrite_cross_bb_scalar_deps): Same.
+	(translate_scalar_reduction_to_array): Same.
+
+2009-10-22  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (build_scop_drs): Disable call to
+	dump_alias_graphs.
+
+2009-10-22  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (dump_alias_graphs): New.
+	(build_scop_drs): Call dump_alias_graphs.
+
+2009-10-22  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (new_scop): Initialize SCOP_ORIGINAL_SCHEDULE,
+	SCOP_TRANSFORMED_SCHEDULE, and SCOP_SAVED_SCHEDULE.
+	(free_scop): Call free_lst on SCOP_ORIGINAL_SCHEDULE,
+	SCOP_TRANSFORMED_SCHEDULE, and SCOP_SAVED_SCHEDULE.
+	* graphite-poly.h (free_lst): New.
+	(store_lst_schedule): Free SCOP_SAVED_SCHEDULE.
+	(restore_lst_schedule): Free SCOP_TRANSFORMED_SCHEDULE.
+
+2009-10-22  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.h (struct scop): Add a field saved_schedule.
+	(SCOP_SAVED_SCHEDULE): New.
+	(store_lst_schedule): New.
+	(restore_lst_schedule): New.
+	(store_scattering): Call store_lst_schedule.
+	(restore_scattering): Call restore_lst_schedule.
+
+2009-10-20  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (free_data_refs_aux): Fix formatting.
+	(pdr_add_alias_set): Same.
+	(build_poly_dr): Same.
+	(build_alias_set_optimal_p): Same.
+	(build_base_obj_set_for_drs): Same.  Do not store the result of
+	graphds_dfs.
+
+2009-10-20  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (build_alias_set_optimal_p): Initialize
+	all_components_are_cliques to 1.
+
+2009-10-20  Li Feng  <nemokingdom@gmail.com>
+
+	* graphite-sese-to-poly.c (free_data_refs_aux): Update to free
+	the new structure.
+	(pdr_add_alias_set): Update retrieving alias_set_num.
+	(build_poly_dr): Update retrieving dr_base_object_set.
+	(partition_drs_to_sets): Remove.
+	(build_alias_set_optimal_p): New.
+	(build_alias_set_for_drs): Rename.
+	(build_scop_drs): Update.
+	* graphite-sese-to-poly.h (struct base_alias_pair): New.
+	(ALIAS_SET_INDEX): Remove.
+	(BASE_OBJECT_SET_INDEX): Remove.
+
+2009-10-20  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* sese.c (get_vdef_before_sese): Handle GIMPLE_ASSIGN and GIMPLE_CALL.
+
+2009-10-20  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (pdr_add_data_dimensions): Do not infer
+	loop upper bounds for 1-element arrays at end of structures.
+	* tree-flow.h (array_at_struct_end_p): Declared.
+	* tree-ssa-loop-niter.c (array_at_struct_end_p): Not static anymore.
+
+2009-10-20  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* g++.dg/graphite/pr41305.C: New.
+
+2009-10-20  Alexander Monakov  <amonakov@ispras.ru>
+
+	* graphite-sese-to-poly.c (build_loop_iteration_domains): Generalize
+	construction of parameter constraints from loop iteration analysis.
+	* gcc.dg/graphite/run-id-2.c: New test.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (memory_stride_in_loop): Delete p1, lma
+	and new_cstr.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-dependences.c (dependence_polyhedron_1): Remove
+	unused gdim dimensions from the DDR polyhedron.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-dependences.c (pddr_transformed_scattering): New.
+	(dot_original_deps_stmt_1): New.
+	(dot_transformed_deps_stmt_1): New.
+	(dot_deps_stmt_1): Call dot_original_deps_stmt_1 and
+	dot_transformed_deps_stmt_1.
+	(dot_original_deps): New.
+	(dot_transformed_deps): New.
+	(dot_deps_1): Call dot_original_deps and dot_transformed_deps.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-dependences.c (reduction_dr_1): Remove wrong
+	assert: reduction BBs can have multiple reduction writes
+	to memory.  interchange-3.f90 is an example.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gfortran.dg/graphite/interchange-3.f90: New.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gcc.dg/graphite/interchange-1.c: Un-XFAILed.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-dependences.c (dependence_polyhedron_1): Add the
+	context to the dependence polyhedron.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (pbb_remove_duplicate_pdrs): Initialize
+	PBB_PDR_DUPLICATES_REMOVED.
+	(new_poly_bb): Same.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (find_scop_parameters): Initialize
+	SCOP_CONTEXT.
+	(build_loop_iteration_domains): Extract bounds on parameters
+	based on the data size.
+	(build_scop_context): Do not initialize SCOP_CONTEXT;
+	add new constraints.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-ppl.c (ppl_min_for_le_polyhedron): New.
+	* graphite-ppl.h (graphite-ppl.h): Declared.
+
+2009-10-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-ppl.c (ppl_print_linear_expr): New.
+	(debug_ppl_linear_expr): New.
+	* graphite-ppl.h (ppl_print_linear_expr): Declared.
+	(debug_ppl_linear_expr): Declared.
+
+2009-10-16  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c: Fix comments.
+	* gcc.dg/graphite/block-1.c: Fix comments.
+
+2009-10-16  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gcc.dg/graphite/interchange-7.c: Un-XFAILed.
+	* gcc.dg/graphite/interchange-9.c: Un-XFAILed.
+
+2009-10-16  Sebastian Pop  <sebastian.pop@amd.com>
+
+	Reapply the patch from Alexander Monakov that disappeared during
+	the last merges from trunk.
+
+	2009-09-16  Alexander Monakov  <amonakov@ispras.ru>
+
+	* graphite-sese-to-poly.c (pdr_add_data_dimensions): Add bounds only
+	for ARRAY_REFs.  Use array_ref_{low,up}_bound to determine bounds.
+
+2009-10-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (memory_stride_in_loop): The depth
+	argument corresponds to a dynamic time dimension, so use
+	psct_dynamic_dim to refer to the transformed scattering dimension.
+
+2009-10-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (memory_stride_in_loop): Fix comments.
+
+2009-10-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-blocking.c (lst_do_strip_mine): Avoid strip mining the
+	root of the LST.
+	* graphite-interchange.c (lst_do_interchange): Avoid interchanging
+	the root of the LST.
+	* graphite-poly.c (scop_to_lst): Fix LST sequence in an outermost
+	fake loop.
+	(print_lst): Print the root of LST in a different format.
+	* graphite-poly.h (lst_depth): Adjust to include the root of the LST.
+
+2009-10-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (print_scop): Fix pretty printing of a SCoP.
+
+2009-10-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* doc/passes.texi: Document the Graphite infrastructure.
+
+2009-10-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (insert_copyin): Use gsi_insert_seq_on_edge.
+	(rewrite_commutative_reductions_out_of_ssa): Call gsi_commit_edge_inserts,
+	and check the SSA representation.
+
+	* gfortran.dg/graphite/id-18.f90: New, reduced from PR41193.
+
+2009-10-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gcc.dg/graphite/pr40157.c: Use -floop-block as reported in the PR.
+
+2009-10-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gcc.dg/graphite/interchange-11.c: New.
+
+2009-10-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gcc.dg/graphite/interchange-8.c: Enable loop interchange.
+
+2009-10-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gcc.dg/graphite/graphite.exp (DEFAULT_CFLAGS_GRAPHITE_BLOCK):
+	Add -fno-loop-strip-mine and -fno-loop-interchange.
+	(DEFAULT_FLAGS_GRAPHITE_INTERCHANGE): Add -fno-loop-block and
+	-fno-loop-strip-mine.
+	* gfortran.dg/graphite/graphite.exp: Same.
+
+2009-10-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gcc.dg/graphite/graphite.exp (DEFAULT_CFLAGS_GRAPHITE_BLOCK):
+	Renamed DEFAULT_FLAGS_GRAPHITE_BLOCK.
+	(DEFAULT_CFLAGS_GRAPHITE_IDENTITY): Renamed
+	DEFAULT_FLAGS_GRAPHITE_IDENTITY.
+	(DEFAULT_CFLAGS_GRAPHITE_INTERCHANGE): Renamed
+	DEFAULT_FLAGS_GRAPHITE_INTERCHANGE.
+	(DEFAULT_CFLAGS_GRAPHITE_SCOP): Renamed
+	DEFAULT_FLAGS_GRAPHITE_SCOP.
+	(DEFAULT_CFLAGS_RUN_ID): Renamed DEFAULT_FLAGS_RUN_ID.
+	(DEFAULT_CFLAGS_GRAPHITE): Renamed DEFAULT_FLAGS_GRAPHITE.
+
+2009-10-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (pbb_number_of_iterations_at_time): Cleanup comments.
+
+2009-10-14  Konrad Trifunovic  <konrad.trifunovic@gmail.com>
+	    Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (build_linearized_memory_access): Pass an
+	offset as parameter.
+	(memory_stride_in_loop): Include transform scattering in the
+	access functions to be able to querry the strides in the
+	transformed loops.
+	(pbb_interchange_loop_depths): Interchange the psct_dynamic_dim,
+	not the psct_iterator_dim.
+
+2009-10-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-blocking.c (pbb_do_strip_mine): Removed.
+	(lst_do_strip_mine_loop): New.
+	(lst_do_strip_mine): New.
+	(scop_do_strip_mine): Call lst_do_strip_mine.
+	* graphite-poly.h (lst_add_loop_under_loop): New.
+	(lst_find_first_pbb): New.
+
+2009-10-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (loop_to_lst): Fix LST creation.
+
+2009-10-14  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	* testsuite/gcc.dg/graphite/id-15.c: (8 * 8) replaced with
+	sizeof(unsigned long) to make it run on 32bit systems.
+
+2009-10-14  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	* testsuite/gcc.dg/graphite/run-id-1.c: Use smaller matrix to not
+	SEGFAULT on 32bit.
+
+2009-10-14  Ramakrishna Upadrasta <Ramakrishna.Upadrasta@inria.fr>
+
+	* graphite-sese-to-poly.c (write_alias_graph_to_ascii_dimacs): Fix
+	Comment.
+	(write_alias_graph_to_ascii_dot): New.
+	(write_alias_graph_to_ascii_ecc): Ditto.
+	(partition_drs_to_sets): Add testing of optimality of current method
+	which assigns alias numbers according to DFS Comopnent number.  used
+	as heuristic for the upcoming ECC algorithm.
+	(build_scop_drs): Write to file also with the ecc and dot format.
+
+2009-10-13  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gfortran.dg/graphite/interchange-1.f: XFail.
+
+2009-10-13  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite.c (graphite_initialize): Do not handle functions with
+	more than 100 basic blocks.
+
+2009-10-13  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-blocking.c (pbb_do_strip_mine): Use
+	PARAM_LOOP_BLOCK_TILE_SIZE.
+
+2009-10-13  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (dot_lst_1): New.
+	(dot_lst): New.
+	* graphite-poly.h (dot_lst): Declared.
+
+2009-10-13  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-dependences.c (dot_deps_stmt_1): New.
+	(dot_deps_stmt): New.
+	* graphite-dependences.h (dot_deps_stmt): Declared.
+
+2009-10-09  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (rewrite_cross_bb_scalar_dependence): Do
+	not replace cross BB scalar dependences ending on PHI nodes.
+	(rewrite_cross_bb_scalar_deps): Filter out GIMPLE_PHI nodes.
+
+2009-10-09  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (apply_poly_transforms): Implement the high
+	level driver for flag_loop_block.
+	* tree-ssa-loop.c (gate_graphite_transforms): Remove call to sorry for
+	flag_loop_block.
+
+	* gcc.dg/graphite/graphite.exp (DEFAULT_CFLAGS_GRAPHITE_BLOCK): Add
+	-floop-block.
+	* gfortran.dg/graphite/graphite.exp (DEFAULT_CFLAGS_GRAPHITE_BLOCK):
+	Add -floop-block.
+
+2009-10-09  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.h (lst_find_pbb): New.
+	(find_lst_loop): New.
+
+2009-10-09  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (new_scop): Remove init of SCOP_DEP_GRAPH.
+	* graphite-poly.h (struct scop): Remove dep_graph field.
+	(SCOP_DEP_GRAPH): Removed.
+
+2009-10-09  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.h (copy_lst): Do full copy of LST.
+
+2009-10-07  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (reduction_phi_p): Call remove_invariant_phi
+	when the loop stride is zero.
+
+	* gcc.dg/graphite/id-16.c: New.
+
+2009-10-06  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-dependences.c (reduction_dr_1): New.
+	(reduction_dr_p): New.
+	(graphite_legal_transform_dr): Call reduction_dr_p.
+	(reduction_ddr): Renamed reduction_ddr_p.
+	* graphite-poly.h (same_pdr_p): New.
+	(number_of_write_pdrs): New.
+	* graphite-sese-to-poly.c (nb_data_writes_in_bb): New.
+	(split_reduction_stmt): Do not split reduction statements
+	when there are no writes to memory.
+	(translate_scalar_reduction_to_array_for_stmt): Insert the
+	memory reduction statement just after the scalar reduction statement.
+
+	* gcc.dg/graphite/interchange-10.c: Updated to differ from interchange-4.c.
+	Un-XFAIL-ed.
+	* gcc.dg/graphite/interchange-3.c: Un-XFAIL-ed.
+	* gcc.dg/graphite/interchange-4.c: Un-XFAIL-ed.
+
+2009-10-06  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (lst_apply_interchange): New.
+	(lst_interchange_profitable_p): New.
+	(lst_try_interchange_loops): New.
+	(lst_try_interchange): New.
+	(lst_do_interchange): New.
+	(pbb_do_interchange): Removed.
+	(scop_do_interchange): Call lst_do_interchange.
+
+2009-10-06  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-poly.c (print_scop): Print SCOP_ORIGINAL_SCHEDULE and
+	SCOP_TRANSFORMED_SCHEDULE.
+	(loop_to_lst): New.
+	(scop_to_lst): New.
+	(print_lst): New.
+	(debug_lst): New.
+	* graphite-poly.h (lst_p): New.
+	(struct lst): New.
+	(LST_LOOP_P): New.
+	(LST_LOOP_FATHER): New.
+	(LST_PBB): New.
+	(LST_SEQ): New.
+	(scop_to_lst): Declared.
+	(print_lst): Declared.
+	(debug_lst): Declared.
+	(new_lst_loop): New.
+	(new_lst_stmt): New.
+	(copy_lst): New.
+	(lst_depth): New.
+	(lst_dewey_number): New.
+	(struct scop): Add original_schedule and transformed_schedule fields.
+	(SCOP_ORIGINAL_SCHEDULE): New.
+	(SCOP_TRANSFORMED_SCHEDULE): New.
+	* graphite-sese-to-poly.c (build_poly_scop): Call scop_to_lst.
+
+2009-10-05  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-dependences.c (reduction_ddr): New.
+	(graphite_legal_transform_bb): Call reduction_ddr.
+	* graphite-poly.c (new_poly_bb): Pass a new bool parameter.
+	Initialize PBB_IS_REDUCTION.
+	* graphite-poly.h (struct poly_bb): New bool field is_reduction.
+	(PBB_IS_REDUCTION): New.
+	(new_poly_bb): Update declaration.
+	* graphite-scop-detection.h (build_scop_bbs): Removed.
+	(nb_reductions_in_loop): Removed.
+	* graphite-sese-to-poly.c (try_generate_gimple_bb): Pass a sbitmap
+	parameter for reductions.
+	(try_generate_gimple_bb): Update call to new_poly_bb.
+	(build_scop_bbs_1): Same.
+	(build_scop_bbs): Same.
+	(gsi_for_phi_node): New.
+	(scalar_close_phi_node_p): Remove gcc_assert.
+	(split_reduction_stmt): New.
+	(is_reduction_operation_p): New.
+	(phi_contains_arg): New.
+	(follow_ssa_with_commutative_ops): New.
+	(detect_commutative_reduction_arg): New.
+	(detect_commutative_reduction_assign): New.
+	(follow_inital_value_to_phi): New.
+	(edge_initial_value_for_loop_phi): New.
+	(initial_value_for_loop_phi): New.
+	(detect_commutative_reduction): New.
+	(translate_scalar_reduction_to_array_for_stmt): New.
+	(insert_copyout): New.
+	(insert_copyin): New.
+	(translate_scalar_reduction_to_array): New.
+	(rewrite_commutative_reductions_out_of_ssa_close_phi): New.
+	(rewrite_commutative_reductions_out_of_ssa_loop): New.
+	(rewrite_commutative_reductions_out_of_ssa): New.
+	(build_poly_scop): Call rewrite_commutative_reductions_out_of_ssa.
+	* sese.h (split_region_for_bb): New.
+
+	* gcc.dg/graphite/graphite.exp (DEFAULT_CFLAGS_GRAPHITE_BLOCK): Add -ffast-math.
+	* gcc.dg/graphite/interchange-1.c: Fix format.
+	* gcc.dg/graphite/interchange-10.c: New.
+
+2009-10-05  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (insert_out_of_ssa_copy): Remove
+	buggy assert.
+
+2009-10-05  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (scev_analyzable_p): New.
+	(rewrite_cross_bb_scalar_dependence): New.
+	(rewrite_cross_bb_scalar_deps): New.
+	(rewrite_reductions_out_of_ssa): Use bb_in_sese_p.
+	Call rewrite_cross_bb_scalar_deps.
+
+2009-10-05  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (gsi_for_ssa_name_def): Removed.
+	(insert_out_of_ssa_copy): Directly use gsi_after_labels and
+	gsi_for_stmt.
+
+2009-10-05  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-clast-to-gimple.c (build_cloog_prog): Use pbb_index.
+	* graphite-interchange.c (pbb_do_interchange): Same.
+	* graphite-poly.c (print_scattering_function): Same.
+	(debug_pdrs): Same.
+	* graphite-poly.h (pbb_loop): New.
+	* graphite-sese-to-poly.c (create_linear_expr_from_tree): Use pbb_loop.
+
+2009-09-27  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-scop-detection.c (limit_scops): Do not build poly_bbs.
+
+2009-09-27  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (partition_drs_to_sets): Drs is not modified,
+	so don't pass a pointer to it.
+	(build_alias_set_for_drs): Same.
+	(build_base_obj_set_for_drs): Same.
+	(build_scop_drs): Same.
+
+2009-09-26  Li Feng  <nemokingdom@gmail.com>
+
+	* graphite-sese-to-poly.c (build_scop_drs): Disable writing to file
+	the alias graph of data references.
+
+2009-09-25  Li Feng  <nemokingdom@gmail.com>
+
+	* graphite-sese-to-poly.c (write_alias_graph_to_ascii_dimacs): New.
+	(build_scop_drs): When debugging, write the alias graph to file,
+	otherwise, should be disabled.
+
+2009-09-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-scop-detection.c (stmt_simple_memref_p): Removed.
+	(is_simple_operand): Remove call to stmt_simple_memref_p.
+	(stmt_simple_for_scop_p): Update call to is_simple_operand.
+
+2009-09-17  David Edelsohn  <edelsohn@gnu.org>
+
+	* testsuite/gcc.dg/graphite/interchange-mvt.c: New File.
+	* testsuite/gcc.dg/graphite/scop-dsyrk.c: New File.
+	* testsuite/gcc.dg/graphite/scop-dsyr2k.c: New File.
+	* testsuite/gcc.dg/graphite/scop-mvt.c: New File.
+	* testsuite/gcc.dg/graphite/scop-sor.c: New File.
+
+2009-09-17 Li Feng  <nemokingdom@gmail.com>
+
+	PR middle-end/41118
+	* graphite-dependences.c (poly_drs_may_alias_p): Adjust definition.
+	(pddr_original_scattering): Make sure 2 pdr2 in the same base object set.
+	(graphite_carried_dependence_level_k): Ditto.
+	* graphite-poly.c (new_poly_dr): Add init of PDR_BASE_OBJECT_SET.
+	* graphite-poly.h (struct poly_dr): Add member dr_base_object_set.
+	(new_poly_dr): Adjust declaration.
+	* graphite-sese-to-poly.c (free_data_refs_aux): New.
+	(free_gimple_bb): Added free_data_refs_aux.
+	(build_poly_dr): Add dr_base_object_set.
+	(partition_drs_to_sets): New.
+	(dr_same_base_object_p): New.
+	(build_alias_set_for_drs): New.
+	(build_base_object_set_for_drs): New.
+	(build_scop_drs): Add build_base_obj_set_for_drs.
+	* graphite-sese-to-poly.h: Added #define for alias set number index and
+	base object set index.
+	* libgomp/testsuite/libgomp.graphite/force-parallel-6.c: Refine tests.
+	* libgomp/testsuite/libgomp.graphite/pr4118.c: New.
+
+2009-09-16  Alexander Monakov  <amonakov@ispras.ru>
+
+	* graphite-sese-to-poly.c (pdr_add_data_dimensions): Add bounds only
+	for ARRAY_REFs.  Use array_ref_{low,up}_bound to determine bounds.
+
+2009-09-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-sese-to-poly.c (struct irp_data): Removed.
+	(idx_record_params): Removed.
+	(find_params_in_bb): Scan for parameters the access functions; don't
+	parse the tree representation.
+
+2009-09-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-ssa-loop.c (gate_graphite_transforms): Disable Graphite
+	passes at -O1 and below.
+
+2009-09-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-blocking.c: Fix order of includes: tree-chrec.h, then
+	tree-scalar-evolution.h, and then tree-data-ref.h.
+	* graphite-clast-to-gimple.c: Same.
+	* graphite-dependences.c: Same.
+	* graphite-interchange.c: Same.
+	* graphite-poly.c: Same.
+	* graphite-scop-detection.c: Same.
+	* graphite-sese-to-poly.c: Same.
+	* graphite.c: Same.
+	* lambda-code.c: Same.
+	* matrix-reorg.c: Same.
+	* tree-data-ref.c: Same.
+	* tree-if-conv.c: Same.
+	* tree-loop-distribu: Same.: Same.
+	* tree-loop-linear.c: Same.
+	* tree-parloops.c: Same.
+	* tree-predcom.c: Same.
+	* tree-vect-patterns.c: Same.
+
+2009-09-02  Sebastian Pop  <sebastian.pop@amd.com>
+
+	Partially revert the previous patch, except the following.
+	* tree-scalar-evolution.c (instantiate_scev_not): Adapted to pass
+	as parameters the operands of the not expression.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_assign): New.
+	Do not call analyze_scalar_evolution on assignments.
+	(instantiate_scev_phi): Call analyze_scalar_evolution.
+	(instantiate_scev_name): Call instantiate_scev_assign and
+	instantiate_scev_phi.
+	(instantiate_scev_not): Adapted to pass as parameters the operands
+	of the not expression.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_binary): Adapted
+	to pass as parameters the operands of the binary expression.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_bitnot): Renamed
+	instantiate_scev_not.  Handle NEGATE_EXPR.
+	(instantiate_scev_r): Handle NEGATE_EXPR.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_1): Renamed
+	instantiate_scev_r.
+	(instantiate_scev_r): Move code in instantiate_scev_2
+	and instantiate_scev_1.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_3): New.
+	(instantiate_scev_1): Move code in instantiate_scev_3.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_poly): New.
+	(instantiate_scev_1): Move code in instantiate_scev_poly.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_bitnot): New.
+	(instantiate_scev_1): Move code in instantiate_scev_bitnot.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_convert): New.
+	(instantiate_scev_1): Move code in instantiate_scev_convert.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_binary): New.
+	(instantiate_scev_1): Move code in instantiate_scev_binary.
+
+2009-09-01  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* tree-scalar-evolution.c (instantiate_scev_name): New.
+	(instantiate_scev_1): Move code in instantiate_scev_name.
+
+2009-08-28  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* Merge from mainline (150992:151171).
+
 2009-08-25  Sebastian Pop  <sebastian.pop@amd.com>
 
 	* graphite-dependences.c (graphite_legal_transform_bb): Call

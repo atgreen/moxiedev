@@ -201,7 +201,7 @@ read_counts_file (void)
 
   /* Read and discard the stamp.  */
   gcov_read_unsigned ();
-  
+
   counts_hash = htab_create (10,
 			     htab_counts_entry_hash, htab_counts_entry_eq,
 			     htab_counts_entry_del);
@@ -776,10 +776,10 @@ build_ctr_info_value (unsigned int counter, tree type)
       TREE_TYPE (tree_ctr_tables[counter]) = array_type;
       DECL_SIZE (tree_ctr_tables[counter]) = TYPE_SIZE (array_type);
       DECL_SIZE_UNIT (tree_ctr_tables[counter]) = TYPE_SIZE_UNIT (array_type);
-      assemble_variable (tree_ctr_tables[counter], 0, 0, 0);
+      varpool_finalize_decl (tree_ctr_tables[counter]);
 
       value = tree_cons (fields,
-			 build1 (ADDR_EXPR, TREE_TYPE (fields), 
+			 build1 (ADDR_EXPR, TREE_TYPE (fields),
 					    tree_ctr_tables[counter]),
 			 value);
     }
@@ -795,6 +795,7 @@ build_ctr_info_value (unsigned int counter, tree type)
   TREE_PUBLIC (fn) = 1;
   DECL_ARTIFICIAL (fn) = 1;
   TREE_NOTHROW (fn) = 1;
+  DECL_ASSEMBLER_NAME (fn);  /* Initialize assembler name so we can stream out. */
   value = tree_cons (fields,
 		     build1 (ADDR_EXPR, TREE_TYPE (fields), fn),
 		     value);
@@ -971,7 +972,7 @@ create_coverage (void)
   DECL_INITIAL (gcov_info) = t;
 
   /* Build structure.  */
-  assemble_variable (gcov_info, 0, 0, 0);
+  varpool_finalize_decl (gcov_info);
 
   /* Build a decl for __gcov_init.  */
   t = build_pointer_type (TREE_TYPE (gcov_info));
@@ -980,6 +981,7 @@ create_coverage (void)
 		  FUNCTION_DECL, get_identifier ("__gcov_init"), t);
   TREE_PUBLIC (t) = 1;
   DECL_EXTERNAL (t) = 1;
+  DECL_ASSEMBLER_NAME (t);  /* Initialize assembler name so we can stream out. */
   gcov_init = t;
 
   /* Generate a call to __gcov_init(&gcov_info).  */
@@ -1001,14 +1003,14 @@ coverage_init (const char *filename)
   int len = strlen (filename);
   /* + 1 for extra '/', in case prefix doesn't end with /.  */
   int prefix_len;
- 
+
   if (profile_data_prefix == 0 && filename[0] != '/')
     profile_data_prefix = getpwd ();
 
   prefix_len = (profile_data_prefix) ? strlen (profile_data_prefix) + 1 : 0;
 
   /* Name of da file.  */
-  da_file_name = XNEWVEC (char, len + strlen (GCOV_DATA_SUFFIX) 
+  da_file_name = XNEWVEC (char, len + strlen (GCOV_DATA_SUFFIX)
 			  + prefix_len + 1);
 
   if (profile_data_prefix)

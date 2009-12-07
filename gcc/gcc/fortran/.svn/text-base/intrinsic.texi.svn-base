@@ -2005,9 +2005,6 @@ end program main
 @code{C_F_PROCPOINTER(CPTR, FPTR)} Assign the target of the C function pointer
 @var{CPTR} to the Fortran procedure pointer @var{FPTR}.
 
-Note: Due to the currently lacking support of procedure pointers in GNU Fortran
-this function is not fully operable.
-
 @item @emph{Standard}:
 Fortran 2003 and later
 
@@ -2741,11 +2738,11 @@ Inverse function: @ref{ACOSH}
 @table @asis
 @item @emph{Description}:
 
-@code{COUNT(MASK [, DIM [, KIND]])} counts the number of @code{.TRUE.}
-elements of @var{MASK} along the dimension of @var{DIM}.  If @var{DIM} is
-omitted it is taken to be @code{1}.  @var{DIM} is a scalar of type
-@code{INTEGER} in the range of @math{1 /leq DIM /leq n)} where @math{n}
-is the rank of @var{MASK}.
+Counts the number of @code{.TRUE.} elements in a logical @var{MASK},
+or, if the @var{DIM} argument is supplied, counts the number of
+elements along each row of the array in the @var{DIM} direction.
+If the array has zero size, or all of the elements of @var{MASK} are
+@code{.FALSE.}, then the result is @code{0}.
 
 @item @emph{Standard}:
 Fortran 95 and later, with @var{KIND} argument Fortran 2003 and later
@@ -2754,7 +2751,7 @@ Fortran 95 and later, with @var{KIND} argument Fortran 2003 and later
 Transformational function
 
 @item @emph{Syntax}:
-@code{RESULT = COUNT(MASK [, DIM [, KIND]])}
+@code{RESULT = COUNT(MASK [, DIM, KIND])}
 
 @item @emph{Arguments}:
 @multitable @columnfractions .15 .70
@@ -2767,7 +2764,9 @@ expression indicating the kind parameter of the result.
 @item @emph{Return value}:
 The return value is of type @code{INTEGER} and of kind @var{KIND}. If
 @var{KIND} is absent, the return value is of default integer kind.
-The result has a rank equal to that of @var{MASK}.
+If @var{DIM} is present, the result is an array with a rank one less
+than the rank of @var{ARRAY}, and a size corresponding to the shape
+of @var{ARRAY} with the @var{DIM} dimension removed.
 
 @item @emph{Example}:
 @smallexample
@@ -2864,7 +2863,7 @@ end program test_cpu_time
 @code{CSHIFT(ARRAY, SHIFT [, DIM])} performs a circular shift on elements of
 @var{ARRAY} along the dimension of @var{DIM}.  If @var{DIM} is omitted it is
 taken to be @code{1}.  @var{DIM} is a scalar of type @code{INTEGER} in the
-range of @math{1 /leq DIM /leq n)} where @math{n} is the rank of @var{ARRAY}.
+range of @math{1 \leq DIM \leq n)} where @math{n} is the rank of @var{ARRAY}.
 If the rank of @var{ARRAY} is one, then all elements of @var{ARRAY} are shifted
 by @var{SHIFT} places.  If rank is greater than one, then all complete rank one
 sections of @var{ARRAY} along the given dimension are shifted.  Elements
@@ -3458,8 +3457,8 @@ Subroutine, function
 
 @item @emph{Arguments}:
 @multitable @columnfractions .15 .70
-@item @var{VALUES}@tab The type shall be @code{REAL, DIMENSION(2)}.
-@item @var{TIME}@tab The type shall be @code{REAL}.
+@item @var{VALUES}@tab The type shall be @code{REAL(4), DIMENSION(2)}.
+@item @var{TIME}@tab The type shall be @code{REAL(4)}.
 @end multitable
 
 @item @emph{Return value}:
@@ -3503,7 +3502,7 @@ end program test_dtime
 @code{EOSHIFT(ARRAY, SHIFT[, BOUNDARY, DIM])} performs an end-off shift on
 elements of @var{ARRAY} along the dimension of @var{DIM}.  If @var{DIM} is
 omitted it is taken to be @code{1}.  @var{DIM} is a scalar of type
-@code{INTEGER} in the range of @math{1 /leq DIM /leq n)} where @math{n} is the
+@code{INTEGER} in the range of @math{1 \leq DIM \leq n)} where @math{n} is the
 rank of @var{ARRAY}.  If the rank of @var{ARRAY} is one, then all elements of
 @var{ARRAY} are shifted by @var{SHIFT} places.  If rank is greater than one,
 then all complete rank one sections of @var{ARRAY} along the given dimension are
@@ -3767,8 +3766,8 @@ Subroutine, function
 
 @item @emph{Arguments}:
 @multitable @columnfractions .15 .70
-@item @var{VALUES}@tab The type shall be @code{REAL, DIMENSION(2)}.
-@item @var{TIME}@tab The type shall be @code{REAL}.
+@item @var{VALUES}@tab The type shall be @code{REAL(4), DIMENSION(2)}.
+@item @var{TIME}@tab The type shall be @code{REAL(4)}.
 @end multitable
 
 @item @emph{Return value}:
@@ -11181,7 +11180,8 @@ Bitwise logical exclusive or.
 
 This intrinsic routine is provided for backwards compatibility with 
 GNU Fortran 77.  For integer arguments, programmers should consider
-the use of the @ref{IEOR} intrinsic defined by the Fortran standard.
+the use of the @ref{IEOR} intrinsic and for logical arguments the
+@code{.NEQV.} operator, which are both defined by the Fortran standard.
 
 @item @emph{Standard}:
 GNU extension
@@ -11237,7 +11237,8 @@ Fortran 95 elemental function: @ref{IEOR}
 @section @code{ISO_FORTRAN_ENV}
 @table @asis
 @item @emph{Standard}:
-Fortran 2003 and later
+Fortran 2003 and later; @code{INT8}, @code{INT16}, @code{INT32}, @code{INT64},
+@code{REAL32}, @code{REAL64}, @code{REAL128} are Fortran 2008 or later
 @end table
 
 The @code{ISO_FORTRAN_ENV} module provides the following scalar default-integer

@@ -562,7 +562,7 @@ gigi (Node_Id gnat_root, int max_gnat_node, int number_name,
 	  null_list = tree_cons (field, null_node, null_list);
 	}
 
-      finish_record_type (fdesc_type_node, nreverse (field_list), 0, true);
+      finish_record_type (fdesc_type_node, nreverse (field_list), 0, false);
       record_builtin_type ("descriptor", fdesc_type_node);
       null_fdesc_node = gnat_build_constructor (fdesc_type_node, null_list);
     }
@@ -657,17 +657,16 @@ gigi (Node_Id gnat_root, int max_gnat_node, int number_name,
   error_gnat_node = Empty;
 }
 
-/* Return a positive value if an lvalue is required for GNAT_NODE.
-   GNU_TYPE is the type that will be used for GNAT_NODE in the
-   translated GNU tree.  CONSTANT indicates whether the underlying
-   object represented by GNAT_NODE is constant in the Ada sense,
-   ALIASED whether it is aliased (but the latter doesn't affect
-   the outcome if CONSTANT is not true).
+/* Return a positive value if an lvalue is required for GNAT_NODE.  GNU_TYPE
+   is the type that will be used for GNAT_NODE in the translated GNU tree.
+   CONSTANT indicates whether the underlying object represented by GNAT_NODE
+   is constant in the Ada sense, ALIASED whether it is aliased (but the latter
+   doesn't affect the outcome if CONSTANT is not true).
 
-   The function climbs up the GNAT tree starting from the node and
-   returns 1 upon encountering a node that effectively requires an
-   lvalue downstream.  It returns int instead of bool to facilitate
-   usage in non purely binary logic contexts.  */
+   The function climbs up the GNAT tree starting from the node and returns 1
+   upon encountering a node that effectively requires an lvalue downstream.
+   It returns int instead of bool to facilitate usage in non-purely binary
+   logic contexts.  */
 
 static int
 lvalue_required_p (Node_Id gnat_node, tree gnu_type, bool constant,
@@ -753,6 +752,13 @@ lvalue_required_p (Node_Id gnat_node, tree gnu_type, bool constant,
       return (Name (gnat_parent) == gnat_node
 	      || (Is_Composite_Type (Underlying_Type (Etype (gnat_node)))
 		  && Is_Atomic (Entity (Name (gnat_parent)))));
+
+    case N_Unchecked_Type_Conversion:
+      /* Returning 0 is very likely correct but we get better code if we
+	 go through the conversion.  */
+      return lvalue_required_p (gnat_parent,
+				get_unpadded_type (Etype (gnat_parent)),
+				constant, aliased);
 
     default:
       return 0;
@@ -946,8 +952,7 @@ Identifier_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p)
       || Is_Constr_Subt_For_UN_Aliased (gnat_temp_type))
     {
       gnu_result_type = TREE_TYPE (gnu_result);
-      if (TREE_CODE (gnu_result_type) == RECORD_TYPE
-	  && TYPE_IS_PADDING_P (gnu_result_type))
+      if (TYPE_IS_PADDING_P (gnu_result_type))
 	gnu_result_type = TREE_TYPE (TYPE_FIELDS (gnu_result_type));
     }
 
@@ -1256,7 +1261,7 @@ Attribute_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, int attribute)
 	/* If this is an unconstrained array, we know the object has been
 	   allocated with the template in front of the object.  So compute
 	   the template address.  */
-	if (TYPE_FAT_POINTER_P (TREE_TYPE (gnu_ptr)))
+	if (TYPE_IS_FAT_POINTER_P (TREE_TYPE (gnu_ptr)))
 	  gnu_ptr
 	    = convert (build_pointer_type
 		       (TYPE_OBJECT_RECORD_TYPE
@@ -1318,29 +1323,28 @@ Attribute_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, int attribute)
 	}
 
       /* If we're looking for the size of a field, return the field size.
-	 Otherwise, if the prefix is an object, or if 'Object_Size or
-	 'Max_Size_In_Storage_Elements has been specified, the result is the
-	 GCC size of the type.  Otherwise, the result is the RM size of the
-	 type.  */
+	 Otherwise, if the prefix is an object, or if we're looking for
+	 'Object_Size or 'Max_Size_In_Storage_Elements, the result is the
+	 GCC size of the type.  Otherwise, it is the RM size of the type.  */
       if (TREE_CODE (gnu_prefix) == COMPONENT_REF)
 	gnu_result = DECL_SIZE (TREE_OPERAND (gnu_prefix, 1));
       else if (TREE_CODE (gnu_prefix) != TYPE_DECL
 	       || attribute == Attr_Object_Size
 	       || attribute == Attr_Max_Size_In_Storage_Elements)
 	{
-	  /* If this is a padded type, the GCC size isn't relevant to the
-	     programmer.  Normally, what we want is the RM size, which was set
-	     from the specified size, but if it was not set, we want the size
-	     of the relevant field.  Using the MAX of those two produces the
-	     right result in all case.  Don't use the size of the field if it's
-	     a self-referential type, since that's never what's wanted.  */
-	  if (TREE_CODE (gnu_type) == RECORD_TYPE
+	  /* If the prefix is an object of a padded type, the GCC size isn't
+	     relevant to the programmer.  Normally what we want is the RM size,
+	     which was set from the specified size, but if it was not set, we
+	     want the size of the field.  Using the MAX of those two produces
+	     the right result in all cases.  Don't use the size of the field
+	     if it's self-referential, since that's never what's wanted.  */
+	  if (TREE_CODE (gnu_prefix) != TYPE_DECL
 	      && TYPE_IS_PADDING_P (gnu_type)
 	      && TREE_CODE (gnu_expr) == COMPONENT_REF)
 	    {
 	      gnu_result = rm_size (gnu_type);
-	      if (!(CONTAINS_PLACEHOLDER_P
-		    (DECL_SIZE (TREE_OPERAND (gnu_expr, 1)))))
+	      if (!CONTAINS_PLACEHOLDER_P
+		   (DECL_SIZE (TREE_OPERAND (gnu_expr, 1))))
 		gnu_result
 		  = size_binop (MAX_EXPR, gnu_result,
 				DECL_SIZE (TREE_OPERAND (gnu_expr, 1)));
@@ -1353,7 +1357,7 @@ Attribute_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, int attribute)
 	      tree gnu_ptr_type
 		= TREE_TYPE (gnat_to_gnu (Prefix (gnat_deref)));
 
-	      if (TYPE_FAT_OR_THIN_POINTER_P (gnu_ptr_type)
+	      if (TYPE_IS_FAT_OR_THIN_POINTER_P (gnu_ptr_type)
 		  && Present (gnat_actual_subtype))
 		{
 		  tree gnu_actual_obj_type
@@ -1403,9 +1407,7 @@ Attribute_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, int attribute)
 	unsigned int align;
 
 	if (TREE_CODE (gnu_prefix) == COMPONENT_REF
-	    && (TREE_CODE (TREE_TYPE (TREE_OPERAND (gnu_prefix, 0)))
-		== RECORD_TYPE)
-	    && (TYPE_IS_PADDING_P (TREE_TYPE (TREE_OPERAND (gnu_prefix, 0)))))
+	    && TYPE_IS_PADDING_P (TREE_TYPE (TREE_OPERAND (gnu_prefix, 0))))
 	  gnu_prefix = TREE_OPERAND (gnu_prefix, 0);
 
 	gnu_type = TREE_TYPE (gnu_prefix);
@@ -1622,6 +1624,16 @@ Attribute_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, int attribute)
 	    else
 	      pa->length = gnu_result;
 	  }
+
+	/* Set the source location onto the predicate of the condition in the
+	   'Length case but do not do it if the expression is cached to avoid
+	   messing up the debug info.  */
+	else if ((attribute == Attr_Range_Length || attribute == Attr_Length)
+		 && TREE_CODE (gnu_result) == COND_EXPR
+		 && EXPR_P (TREE_OPERAND (gnu_result, 0)))
+	  set_expr_location_from_node (TREE_OPERAND (gnu_result, 0),
+				       gnat_node);
+
 	break;
       }
 
@@ -1742,9 +1754,7 @@ Attribute_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, int attribute)
 
     case Attr_Component_Size:
       if (TREE_CODE (gnu_prefix) == COMPONENT_REF
-	  && (TREE_CODE (TREE_TYPE (TREE_OPERAND (gnu_prefix, 0)))
-	      == RECORD_TYPE)
-	  && (TYPE_IS_PADDING_P (TREE_TYPE (TREE_OPERAND (gnu_prefix, 0)))))
+	  && TYPE_IS_PADDING_P (TREE_TYPE (TREE_OPERAND (gnu_prefix, 0))))
 	gnu_prefix = TREE_OPERAND (gnu_prefix, 0);
 
       gnu_prefix = maybe_implicit_deref (gnu_prefix);
@@ -2423,22 +2433,27 @@ call_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, tree gnu_target)
       }
     }
 
-  /* If we are calling by supplying a pointer to a target, set up that
-     pointer as the first argument.  Use GNU_TARGET if one was passed;
-     otherwise, make a target by building a variable of the maximum size
-     of the type.  */
+  /* If we are calling by supplying a pointer to a target, set up that pointer
+     as the first argument.  Use GNU_TARGET if one was passed; otherwise, make
+     a target by building a variable and use the maximum size of the type if
+     it has self-referential size.  */
   if (TYPE_RETURNS_BY_TARGET_PTR_P (gnu_subprog_type))
     {
-      tree gnu_real_ret_type
+      tree gnu_ret_type
 	= TREE_TYPE (TREE_VALUE (TYPE_ARG_TYPES (gnu_subprog_type)));
 
       if (!gnu_target)
 	{
-	  tree gnu_obj_type
-	    = maybe_pad_type (gnu_real_ret_type,
-			      max_size (TYPE_SIZE (gnu_real_ret_type), true),
-			      0, Etype (Name (gnat_node)), "PAD", false,
-			      false, false);
+	  tree gnu_obj_type;
+
+	  if (CONTAINS_PLACEHOLDER_P (TYPE_SIZE (gnu_ret_type)))
+	    gnu_obj_type
+	      = maybe_pad_type (gnu_ret_type,
+				max_size (TYPE_SIZE (gnu_ret_type), true),
+				0, Etype (Name (gnat_node)), false, false,
+				false, true);
+	  else
+	    gnu_obj_type = gnu_ret_type;
 
 	  /* ??? We may be about to create a static temporary if we happen to
 	     be at the global binding level.  That's a regression from what
@@ -2454,7 +2469,7 @@ call_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, tree gnu_target)
       gnu_actual_list
 	= tree_cons (NULL_TREE,
 		     build_unary_op (ADDR_EXPR, NULL_TREE,
-				     unchecked_convert (gnu_real_ret_type,
+				     unchecked_convert (gnu_ret_type,
 							gnu_target,
 							false)),
 		     NULL_TREE);
@@ -2557,10 +2572,8 @@ call_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, tree gnu_target)
 
 	  /* Otherwise remove unpadding from the object and reset the copy.  */
 	  else if (TREE_CODE (gnu_name) == COMPONENT_REF
-		   && ((TREE_CODE (TREE_TYPE (TREE_OPERAND (gnu_name, 0)))
-			== RECORD_TYPE)
-			&& (TYPE_IS_PADDING_P
-			    (TREE_TYPE (TREE_OPERAND (gnu_name, 0))))))
+		   && TYPE_IS_PADDING_P
+		      (TREE_TYPE (TREE_OPERAND (gnu_name, 0))))
 	    gnu_name = gnu_copy = TREE_OPERAND (gnu_name, 0);
 
 	  /* Otherwise convert to the nominal type of the object if it's
@@ -2599,7 +2612,6 @@ call_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, tree gnu_target)
       /* If this was a procedure call, we may not have removed any padding.
 	 So do it here for the part we will use as an input, if any.  */
       if (Ekind (gnat_formal) != E_Out_Parameter
-	  && TREE_CODE (TREE_TYPE (gnu_actual)) == RECORD_TYPE
 	  && TYPE_IS_PADDING_P (TREE_TYPE (gnu_actual)))
 	gnu_actual = convert (get_unpadded_type (Etype (gnat_actual)),
 			      gnu_actual);
@@ -2669,8 +2681,7 @@ call_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, tree gnu_target)
 	      gnu_actual = gnu_name;
 
 	      /* If we have a padded type, be sure we've removed padding.  */
-	      if (TREE_CODE (TREE_TYPE (gnu_actual)) == RECORD_TYPE
-		  && TYPE_IS_PADDING_P (TREE_TYPE (gnu_actual))
+	      if (TYPE_IS_PADDING_P (TREE_TYPE (gnu_actual))
 		  && TREE_CODE (gnu_actual) != SAVE_EXPR)
 		gnu_actual = convert (get_unpadded_type (Etype (gnat_actual)),
 				      gnu_actual);
@@ -2703,8 +2714,7 @@ call_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, tree gnu_target)
 	  gnu_actual = maybe_implicit_deref (gnu_actual);
 	  gnu_actual = maybe_unconstrained_array (gnu_actual);
 
-	  if (TREE_CODE (gnu_formal_type) == RECORD_TYPE
-	      && TYPE_IS_PADDING_P (gnu_formal_type))
+	  if (TYPE_IS_PADDING_P (gnu_formal_type))
 	    {
 	      gnu_formal_type = TREE_TYPE (TYPE_FIELDS (gnu_formal_type));
 	      gnu_actual = convert (gnu_formal_type, gnu_actual);
@@ -2896,8 +2906,7 @@ call_to_gnu (Node_Id gnat_node, tree *gnu_result_type_p, tree gnu_target)
 	      = maybe_unconstrained_array (TREE_VALUE (gnu_name_list));
 
 	    /* If the result is a padded type, remove the padding.  */
-	    if (TREE_CODE (TREE_TYPE (gnu_result)) == RECORD_TYPE
-		&& TYPE_IS_PADDING_P (TREE_TYPE (gnu_result)))
+	    if (TYPE_IS_PADDING_P (TREE_TYPE (gnu_result)))
 	      gnu_result = convert (TREE_TYPE (TYPE_FIELDS
 					       (TREE_TYPE (gnu_result))),
 				    gnu_result);
@@ -3433,19 +3442,21 @@ Compilation_Unit_to_gnu (Node_Id gnat_node)
   invalidate_global_renaming_pointers ();
 }
 
-/* Return whether GNAT_NODE, an unchecked type conversion, is on the LHS
-   of an assignment and a no-op as far as gigi is concerned.  */
+/* Return true if GNAT_NODE, an unchecked type conversion, is a no-op as far
+   as gigi is concerned.  This is used to avoid conversions on the LHS.  */
 
 static bool
-unchecked_conversion_lhs_nop (Node_Id gnat_node)
+unchecked_conversion_nop (Node_Id gnat_node)
 {
   Entity_Id from_type, to_type;
 
-  /* The conversion must be on the LHS of an assignment.  Otherwise, even
-     if the conversion was essentially a no-op, it could de facto ensure
-     type consistency and this should be preserved.  */
+  /* The conversion must be on the LHS of an assignment or an actual parameter
+     of a call.  Otherwise, even if the conversion was essentially a no-op, it
+     could de facto ensure type consistency and this should be preserved.  */
   if (!(Nkind (Parent (gnat_node)) == N_Assignment_Statement
-	&& Name (Parent (gnat_node)) == gnat_node))
+	&& Name (Parent (gnat_node)) == gnat_node)
+      && !(Nkind (Parent (gnat_node)) == N_Procedure_Call_Statement
+	   && Name (Parent (gnat_node)) != gnat_node))
     return false;
 
   from_type = Etype (Expression (gnat_node));
@@ -3856,8 +3867,7 @@ gnat_to_gnu (Node_Id gnat_node)
 	gnu_array_object = maybe_unconstrained_array (gnu_array_object);
 
 	/* If we got a padded type, remove it too.  */
-	if (TREE_CODE (TREE_TYPE (gnu_array_object)) == RECORD_TYPE
-	    && TYPE_IS_PADDING_P (TREE_TYPE (gnu_array_object)))
+	if (TYPE_IS_PADDING_P (TREE_TYPE (gnu_array_object)))
 	  gnu_array_object
 	    = convert (TREE_TYPE (TYPE_FIELDS (TREE_TYPE (gnu_array_object))),
 		       gnu_array_object);
@@ -4158,7 +4168,7 @@ gnat_to_gnu (Node_Id gnat_node)
       gnu_result = gnat_to_gnu (Expression (gnat_node));
 
       /* Skip further processing if the conversion is deemed a no-op.  */
-      if (unchecked_conversion_lhs_nop (gnat_node))
+      if (unchecked_conversion_nop (gnat_node))
 	{
 	  gnu_result_type = TREE_TYPE (gnu_result);
 	  break;
@@ -4196,13 +4206,12 @@ gnat_to_gnu (Node_Id gnat_node)
     case N_In:
     case N_Not_In:
       {
-	tree gnu_object = gnat_to_gnu (Left_Opnd (gnat_node));
+	tree gnu_obj = gnat_to_gnu (Left_Opnd (gnat_node));
 	Node_Id gnat_range = Right_Opnd (gnat_node);
-	tree gnu_low;
-	tree gnu_high;
+	tree gnu_low, gnu_high;
 
-	/* GNAT_RANGE is either an N_Range node or an identifier
-	   denoting a subtype.  */
+	/* GNAT_RANGE is either an N_Range node or an identifier denoting a
+	   subtype.  */
 	if (Nkind (gnat_range) == N_Range)
 	  {
 	    gnu_low = gnat_to_gnu (Low_Bound (gnat_range));
@@ -4221,21 +4230,24 @@ gnat_to_gnu (Node_Id gnat_node)
 
 	gnu_result_type = get_unpadded_type (Etype (gnat_node));
 
-	/* If LOW and HIGH are identical, perform an equality test.
-	   Otherwise, ensure that GNU_OBJECT is only evaluated once
-	   and perform a full range test.  */
+	/* If LOW and HIGH are identical, perform an equality test.  Otherwise,
+	   ensure that GNU_OBJ is evaluated only once and perform a full range
+	   test.  */
 	if (operand_equal_p (gnu_low, gnu_high, 0))
-	  gnu_result = build_binary_op (EQ_EXPR, gnu_result_type,
-					gnu_object, gnu_low);
+	  gnu_result
+	    = build_binary_op (EQ_EXPR, gnu_result_type, gnu_obj, gnu_low);
 	else
 	  {
-	    gnu_object = protect_multiple_eval (gnu_object);
+	    tree t1, t2;
+	    gnu_obj = protect_multiple_eval (gnu_obj);
+	    t1 = build_binary_op (GE_EXPR, gnu_result_type, gnu_obj, gnu_low);
+	    if (EXPR_P (t1))
+	      set_expr_location_from_node (t1, gnat_node);
+	    t2 = build_binary_op (LE_EXPR, gnu_result_type, gnu_obj, gnu_high);
+	    if (EXPR_P (t2))
+	      set_expr_location_from_node (t2, gnat_node);
 	    gnu_result
-	      = build_binary_op (TRUTH_ANDIF_EXPR, gnu_result_type,
-				 build_binary_op (GE_EXPR, gnu_result_type,
-						  gnu_object, gnu_low),
-				 build_binary_op (LE_EXPR, gnu_result_type,
-						  gnu_object, gnu_high));
+	      = build_binary_op (TRUTH_ANDIF_EXPR, gnu_result_type, t1, t2);
 	  }
 
 	if (kind == N_Not_In)
@@ -4713,12 +4725,10 @@ gnat_to_gnu (Node_Id gnat_node)
 		   type is self-referential since we want to allocate the fixed
 		   size in that case.  */
 		if (TREE_CODE (gnu_ret_val) == COMPONENT_REF
-		    && (TREE_CODE (TREE_TYPE (TREE_OPERAND (gnu_ret_val, 0)))
-			== RECORD_TYPE)
-		    && (TYPE_IS_PADDING_P
-			(TREE_TYPE (TREE_OPERAND (gnu_ret_val, 0))))
-		    && (CONTAINS_PLACEHOLDER_P
-			(TYPE_SIZE (TREE_TYPE (gnu_ret_val)))))
+		    && TYPE_IS_PADDING_P
+		       (TREE_TYPE (TREE_OPERAND (gnu_ret_val, 0)))
+		    && CONTAINS_PLACEHOLDER_P
+		       (TYPE_SIZE (TREE_TYPE (gnu_ret_val))))
 		  gnu_ret_val = TREE_OPERAND (gnu_ret_val, 0);
 
 		if (TYPE_RETURNS_BY_REF_P (gnu_subprog_type)
@@ -5151,7 +5161,7 @@ gnat_to_gnu (Node_Id gnat_node)
 	     a fat pointer, then go back below to a thin pointer.  The
 	     reason for this is that we need a fat pointer someplace in
 	     order to properly compute the size.  */
-	  if (TYPE_THIN_POINTER_P (TREE_TYPE (gnu_ptr)))
+	  if (TYPE_IS_THIN_POINTER_P (TREE_TYPE (gnu_ptr)))
 	    gnu_ptr = build_unary_op (ADDR_EXPR, NULL_TREE,
 				      build_unary_op (INDIRECT_REF, NULL_TREE,
 						      gnu_ptr));
@@ -5160,7 +5170,7 @@ gnat_to_gnu (Node_Id gnat_node)
 	     have been allocated with the template in front of the object.
 	     So pass the template address, but get the total size.  Do this
 	     by converting to a thin pointer.  */
-	  if (TYPE_FAT_POINTER_P (TREE_TYPE (gnu_ptr)))
+	  if (TYPE_IS_FAT_POINTER_P (TREE_TYPE (gnu_ptr)))
 	    gnu_ptr
 	      = convert (build_pointer_type
 			 (TYPE_OBJECT_RECORD_TYPE
@@ -5174,7 +5184,7 @@ gnat_to_gnu (Node_Id gnat_node)
 	      gnu_actual_obj_type
 		= gnat_to_gnu_type (Actual_Designated_Subtype (gnat_node));
 
-	      if (TYPE_FAT_OR_THIN_POINTER_P (gnu_ptr_type))
+	      if (TYPE_IS_FAT_OR_THIN_POINTER_P (gnu_ptr_type))
 		gnu_actual_obj_type
 		  = build_unc_object_type_from_ptr (gnu_ptr_type,
 						    gnu_actual_obj_type,
@@ -5286,10 +5296,10 @@ gnat_to_gnu (Node_Id gnat_node)
 
 	/* But if the result is a fat pointer type, we have no mechanism to
 	   do that, so we unconditionally warn in problematic cases.  */
-	else if (TYPE_FAT_POINTER_P (gnu_target_type))
+	else if (TYPE_IS_FAT_POINTER_P (gnu_target_type))
 	  {
 	    tree gnu_source_array_type
-	      = TYPE_FAT_POINTER_P (gnu_source_type)
+	      = TYPE_IS_FAT_POINTER_P (gnu_source_type)
 		? TREE_TYPE (TREE_TYPE (TYPE_FIELDS (gnu_source_type)))
 		: NULL_TREE;
 	    tree gnu_target_array_type
@@ -5297,7 +5307,7 @@ gnat_to_gnu (Node_Id gnat_node)
 
 	    if ((TYPE_DUMMY_P (gnu_target_array_type)
 		 || get_alias_set (gnu_target_array_type) != 0)
-		&& (!TYPE_FAT_POINTER_P (gnu_source_type)
+		&& (!TYPE_IS_FAT_POINTER_P (gnu_source_type)
 		    || (TYPE_DUMMY_P (gnu_source_array_type)
 			!= TYPE_DUMMY_P (gnu_target_array_type))
 		    || (TYPE_DUMMY_P (gnu_source_array_type)
@@ -5321,6 +5331,7 @@ gnat_to_gnu (Node_Id gnat_node)
     case N_SCIL_Dispatch_Table_Object_Init:
     case N_SCIL_Dispatch_Table_Tag_Init:
     case N_SCIL_Dispatching_Call:
+    case N_SCIL_Membership_Test:
     case N_SCIL_Tag_Init:
       /* SCIL nodes require no processing for GCC.  */
       gnu_result = alloc_stmt_list ();
@@ -5413,7 +5424,7 @@ gnat_to_gnu (Node_Id gnat_node)
       && ((Nkind (Parent (gnat_node)) == N_Assignment_Statement
 	   && Name (Parent (gnat_node)) == gnat_node)
 	  || (Nkind (Parent (gnat_node)) == N_Unchecked_Type_Conversion
-	      && unchecked_conversion_lhs_nop (Parent (gnat_node)))
+	      && unchecked_conversion_nop (Parent (gnat_node)))
 	  || (Nkind (Parent (gnat_node)) == N_Procedure_Call_Statement
 	      && Name (Parent (gnat_node)) != gnat_node)
 	  || Nkind (Parent (gnat_node)) == N_Parameter_Association
@@ -5438,8 +5449,7 @@ gnat_to_gnu (Node_Id gnat_node)
 	 size: in that case it must be an object of unconstrained type
 	 with a default discriminant and we want to avoid copying too
 	 much data.  */
-      if (TREE_CODE (TREE_TYPE (gnu_result)) == RECORD_TYPE
-	  && TYPE_IS_PADDING_P (TREE_TYPE (gnu_result))
+      if (TYPE_IS_PADDING_P (TREE_TYPE (gnu_result))
 	  && CONTAINS_PLACEHOLDER_P (TYPE_SIZE (TREE_TYPE (TYPE_FIELDS
 				     (TREE_TYPE (gnu_result))))))
 	gnu_result = convert (TREE_TYPE (TYPE_FIELDS (TREE_TYPE (gnu_result))),
@@ -5459,8 +5469,7 @@ gnat_to_gnu (Node_Id gnat_node)
 	       && TREE_CODE (TREE_TYPE (gnu_result)) == RECORD_TYPE))
     {
       /* Remove any padding.  */
-      if (TREE_CODE (TREE_TYPE (gnu_result)) == RECORD_TYPE
-	  && TYPE_IS_PADDING_P (TREE_TYPE (gnu_result)))
+      if (TYPE_IS_PADDING_P (TREE_TYPE (gnu_result)))
 	gnu_result = convert (TREE_TYPE (TYPE_FIELDS (TREE_TYPE (gnu_result))),
 			      gnu_result);
     }
@@ -5579,7 +5588,6 @@ add_decl_expr (tree gnu_decl, Entity_Id gnat_entity)
 	 Note that walk_tree knows how to deal with TYPE_DECL, but neither
 	 VAR_DECL nor CONST_DECL.  This appears to be somewhat arbitrary.  */
       MARK_VISITED (gnu_stmt);
-
       if (TREE_CODE (gnu_decl) == VAR_DECL
 	  || TREE_CODE (gnu_decl) == CONST_DECL)
 	{
@@ -5587,6 +5595,13 @@ add_decl_expr (tree gnu_decl, Entity_Id gnat_entity)
 	  MARK_VISITED (DECL_SIZE_UNIT (gnu_decl));
 	  MARK_VISITED (DECL_INITIAL (gnu_decl));
 	}
+      /* In any case, we have to deal with our own TYPE_ADA_SIZE field.  */
+      else if (TREE_CODE (gnu_decl) == TYPE_DECL
+	       && ((TREE_CODE (type) == RECORD_TYPE
+		    && !TYPE_FAT_POINTER_P (type))
+		   || TREE_CODE (type) == UNION_TYPE
+		   || TREE_CODE (type) == QUAL_UNION_TYPE))
+	MARK_VISITED (TYPE_ADA_SIZE (type));
     }
   else
     add_stmt_with_node (gnu_stmt, gnat_entity);
@@ -5602,7 +5617,7 @@ add_decl_expr (tree gnu_decl, Entity_Id gnat_entity)
     {
       /* If GNU_DECL has a padded type, convert it to the unpadded
 	 type so the assignment is done properly.  */
-      if (TREE_CODE (type) == RECORD_TYPE && TYPE_IS_PADDING_P (type))
+      if (TYPE_IS_PADDING_P (type))
 	t = convert (TREE_TYPE (TYPE_FIELDS (type)), gnu_decl);
       else
 	t = gnu_decl;
@@ -6093,11 +6108,9 @@ process_freeze_entity (Node_Id gnat_node)
   if (Present (Address_Clause (gnat_entity)))
     gnu_old = 0;
 
-  /* Don't do anything for class-wide types they are always
-     transformed into their root type.  */
-  if (Ekind (gnat_entity) == E_Class_Wide_Type
-      || (Ekind (gnat_entity) == E_Class_Wide_Subtype
-	  && Present (Equivalent_Type (gnat_entity))))
+  /* Don't do anything for class-wide types as they are always transformed
+     into their root type.  */
+  if (Ekind (gnat_entity) == E_Class_Wide_Type)
     return;
 
   /* Don't do anything for subprograms that may have been elaborated before
@@ -6786,8 +6799,7 @@ convert_with_check (Entity_Id gnat_type, tree gnu_expr, bool overflowp,
 	= FP_ARITH_MAY_WIDEN ? longest_float_type_node : gnu_in_basetype;
 
       /* FIXME: Should not have padding in the first place.  */
-      if (TREE_CODE (calc_type) == RECORD_TYPE
-	  && TYPE_IS_PADDING_P (calc_type))
+      if (TYPE_IS_PADDING_P (calc_type))
 	calc_type = TREE_TYPE (TYPE_FIELDS (calc_type));
 
       /* Compute the exact value calc_type'Pred (0.5) at compile time.  */
@@ -6962,6 +6974,10 @@ addressable_p (tree gnu_expr, tree gnu_type)
     case CALL_EXPR:
     case PLUS_EXPR:
     case MINUS_EXPR:
+    case BIT_IOR_EXPR:
+    case BIT_XOR_EXPR:
+    case BIT_AND_EXPR:
+    case BIT_NOT_EXPR:
       /* All rvalues are deemed addressable since taking their address will
 	 force a temporary to be created by the middle-end.  */
       return true;
@@ -6984,7 +7000,7 @@ addressable_p (tree gnu_expr, tree gnu_type)
 		    || DECL_ALIGN (TREE_OPERAND (gnu_expr, 1))
 		       >= TYPE_ALIGN (TREE_TYPE (gnu_expr))))
 	       /* The field of a padding record is always addressable.  */
-	       || TYPE_IS_PADDING_P (TREE_TYPE (TREE_OPERAND (gnu_expr, 0))))
+	       || TYPE_PADDING_P (TREE_TYPE (TREE_OPERAND (gnu_expr, 0))))
 	      && addressable_p (TREE_OPERAND (gnu_expr, 0), NULL_TREE));
 
     case ARRAY_REF:  case ARRAY_RANGE_REF:
@@ -7264,13 +7280,12 @@ static tree
 maybe_implicit_deref (tree exp)
 {
   /* If the type is a pointer, dereference it.  */
-
-  if (POINTER_TYPE_P (TREE_TYPE (exp)) || TYPE_FAT_POINTER_P (TREE_TYPE (exp)))
+  if (POINTER_TYPE_P (TREE_TYPE (exp))
+      || TYPE_IS_FAT_POINTER_P (TREE_TYPE (exp)))
     exp = build_unary_op (INDIRECT_REF, NULL_TREE, exp);
 
   /* If we got a padded type, remove it too.  */
-  if (TREE_CODE (TREE_TYPE (exp)) == RECORD_TYPE
-      && TYPE_IS_PADDING_P (TREE_TYPE (exp)))
+  if (TYPE_IS_PADDING_P (TREE_TYPE (exp)))
     exp = convert (TREE_TYPE (TYPE_FIELDS (TREE_TYPE (exp))), exp);
 
   return exp;
@@ -7308,7 +7323,7 @@ protect_multiple_eval (tree exp)
 
   /* If this is a fat pointer or something that can be placed into a
      register, just make a SAVE_EXPR.  */
-  if (TYPE_FAT_POINTER_P (type) || TYPE_MODE (type) != BLKmode)
+  if (TYPE_IS_FAT_POINTER_P (type) || TYPE_MODE (type) != BLKmode)
     return save_expr (exp);
 
   /* Otherwise, reference, protect the address and dereference.  */
@@ -7493,7 +7508,7 @@ gnat_stabilize_reference_1 (tree e, bool force)
 	 fat pointer.  This may be more efficient, but will also allow
 	 us to more easily find the match for the PLACEHOLDER_EXPR.  */
       if (code == COMPONENT_REF
-	  && TYPE_FAT_POINTER_P (TREE_TYPE (TREE_OPERAND (e, 0))))
+	  && TYPE_IS_FAT_POINTER_P (TREE_TYPE (TREE_OPERAND (e, 0))))
 	result = build3 (COMPONENT_REF, type,
 			 gnat_stabilize_reference_1 (TREE_OPERAND (e, 0),
 						     force),

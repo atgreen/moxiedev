@@ -1550,6 +1550,12 @@
 #endif
 
 
+/* Specify plugin linker */
+#ifndef USED_FOR_TARGET
+#undef PLUGIN_LD
+#endif
+
+
 /* Define to PREFIX/include if cpp should also search that directory. */
 #ifndef USED_FOR_TARGET
 #undef PREFIX_INCLUDE_DIR
@@ -1625,6 +1631,13 @@
 /* Define if your assembler mis-optimizes .eh_frame data. */
 #ifndef USED_FOR_TARGET
 #undef USE_AS_TRADITIONAL_FORMAT
+#endif
+
+
+/* Define if you want to generate code by default that assumes that the Cygwin
+   DLL exports wrappers to support libstdc++ function replacement. */
+#ifndef USED_FOR_TARGET
+#undef USE_CYGWIN_LIBSTDCXX_WRAPPERS
 #endif
 
 

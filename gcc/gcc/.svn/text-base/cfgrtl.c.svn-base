@@ -433,7 +433,7 @@ struct rtl_opt_pass pass_free_cfg =
 {
  {
   RTL_PASS,
-  NULL,                                 /* name */
+  "*free_cfg",                          /* name */
   NULL,                                 /* gate */
   rest_of_pass_free_cfg,                /* execute */
   NULL,                                 /* sub */
@@ -470,7 +470,7 @@ emit_insn_at_entry (rtx insn)
 }
 
 /* Update BLOCK_FOR_INSN of insns between BEGIN and END
-   (or BARRIER if found) and notify df of the bb change. 
+   (or BARRIER if found) and notify df of the bb change.
    The insn chain range is inclusive
    (i.e. both BEGIN and END will be updated. */
 
@@ -1256,7 +1256,7 @@ force_nonfallthru_and_redirect (edge e, basic_block target)
   if (abnormal_edge_flags)
     make_edge (src, target, abnormal_edge_flags);
 
-  df_mark_solutions_dirty (); 
+  df_mark_solutions_dirty ();
   return new_bb;
 }
 
@@ -1504,24 +1504,11 @@ commit_one_edge_insertion (edge e)
 	      && targetm.have_named_sections
 	      && e->src != ENTRY_BLOCK_PTR
 	      && BB_PARTITION (e->src) == BB_COLD_PARTITION
-	      && !(e->flags & EDGE_CROSSING))
-	    {
-	      rtx bb_note, cur_insn;
-
-	      bb_note = NULL_RTX;
-	      for (cur_insn = BB_HEAD (bb); cur_insn != NEXT_INSN (BB_END (bb));
-		   cur_insn = NEXT_INSN (cur_insn))
-		if (NOTE_INSN_BASIC_BLOCK_P (cur_insn))
-		  {
-		    bb_note = cur_insn;
-		    break;
-		  }
-
-	      if (JUMP_P (BB_END (bb))
-		  && !any_condjump_p (BB_END (bb))
-		  && (single_succ_edge (bb)->flags & EDGE_CROSSING))
-		add_reg_note (BB_END (bb), REG_CROSSING_JUMP, NULL_RTX);
-	    }
+	      && !(e->flags & EDGE_CROSSING)
+	      && JUMP_P (after)
+	      && !any_condjump_p (after)
+	      && (single_succ_edge (bb)->flags & EDGE_CROSSING))
+	    add_reg_note (after, REG_CROSSING_JUMP, NULL_RTX);
 	}
     }
 
@@ -1625,7 +1612,7 @@ rtl_dump_bb (basic_block bb, FILE *outf, int indent, int flags ATTRIBUTE_UNUSED)
   s_indent = (char *) alloca ((size_t) indent + 1);
   memset (s_indent, ' ', (size_t) indent);
   s_indent[indent] = '\0';
-  
+
   if (df)
     {
       df_dump_top (bb, outf);
@@ -1692,7 +1679,7 @@ print_rtl_with_bb (FILE *outf, const_rtx rtx_first)
 	    {
 	      edge e;
 	      edge_iterator ei;
-	      
+
 	      fprintf (outf, ";; Start of basic block (");
 	      FOR_EACH_EDGE (e, ei, bb->preds)
 		fprintf (outf, " %d", e->src->index);

@@ -4,17 +4,17 @@
    and Sebastian Pop <sebastian.pop@amd.com>.
 
 This file is part of GCC.
-   
+
 GCC is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation; either version 3, or (at your option) any
 later version.
-   
+
 GCC is distributed in the hope that it will be useful, but WITHOUT
 ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
 FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
 for more details.
-   
+
 You should have received a copy of the GNU General Public License
 along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
@@ -26,7 +26,7 @@ along with GCC; see the file COPYING3.  If not see
    |    D(I) = A(I-1)*E
    |ENDDO
 
-   is transformed to 
+   is transformed to
 
    |DOALL I = 2, N
    |   A(I) = B(I) + C
@@ -222,19 +222,20 @@ generate_loops_for_partition (struct loop *loop, bitmap partition, bool copy_p)
 /* Build the size argument for a memset call.  */
 
 static inline tree
-build_size_arg_loc (location_t loc, tree nb_iter, tree op, gimple_seq* stmt_list)
+build_size_arg_loc (location_t loc, tree nb_iter, tree op,
+		    gimple_seq *stmt_list)
 {
-    tree nb_bytes;
-    gimple_seq stmts = NULL;
+  gimple_seq stmts;
+  tree x;
 
-    nb_bytes = fold_build2_loc (loc, MULT_EXPR, size_type_node,
-			    fold_convert_loc (loc, size_type_node, nb_iter),
-			    fold_convert_loc (loc, size_type_node,
-					      TYPE_SIZE_UNIT (TREE_TYPE (op))));
-    nb_bytes = force_gimple_operand (nb_bytes, &stmts, true, NULL);
-    gimple_seq_add_seq (stmt_list, stmts);
+  x = fold_build2_loc (loc, MULT_EXPR, size_type_node,
+		       fold_convert_loc (loc, size_type_node, nb_iter),
+		       fold_convert_loc (loc, size_type_node,
+					 TYPE_SIZE_UNIT (TREE_TYPE (op))));
+  x = force_gimple_operand (x, &stmts, true, NULL);
+  gimple_seq_add_seq (stmt_list, stmts);
 
-    return nb_bytes;
+  return x;
 }
 
 /* Generate a call to memset.  Return true when the operation succeeded.  */
@@ -243,12 +244,11 @@ static bool
 generate_memset_zero (gimple stmt, tree op0, tree nb_iter,
 		      gimple_stmt_iterator bsi)
 {
-  tree addr_base;
-  tree nb_bytes = NULL;
+  tree addr_base, nb_bytes;
   bool res = false;
-  gimple_seq stmts = NULL, stmt_list = NULL;
+  gimple_seq stmt_list = NULL, stmts;
   gimple fn_call;
-  tree mem, fndecl, fntype, fn;
+  tree mem, fn;
   gimple_stmt_iterator i;
   struct data_reference *dr = XCNEW (struct data_reference);
   location_t loc = gimple_location (stmt);
@@ -259,34 +259,35 @@ generate_memset_zero (gimple stmt, tree op0, tree nb_iter,
     goto end;
 
   /* Test for a positive stride, iterating over every element.  */
-  if (integer_zerop (fold_build2_loc (loc,
-				  MINUS_EXPR, integer_type_node, DR_STEP (dr),
-				  TYPE_SIZE_UNIT (TREE_TYPE (op0)))))
+  if (integer_zerop (size_binop (MINUS_EXPR,
+				 fold_convert (sizetype, DR_STEP (dr)),
+				 TYPE_SIZE_UNIT (TREE_TYPE (op0)))))
     {
-      tree offset = fold_convert_loc (loc, sizetype,
-				      size_binop_loc (loc, PLUS_EXPR,
-						      DR_OFFSET (dr),
-						      DR_INIT (dr)));
+      addr_base = fold_convert_loc (loc, sizetype,
+				    size_binop_loc (loc, PLUS_EXPR,
+						    DR_OFFSET (dr),
+						    DR_INIT (dr)));
       addr_base = fold_build2_loc (loc, POINTER_PLUS_EXPR,
-			       TREE_TYPE (DR_BASE_ADDRESS (dr)),
-			       DR_BASE_ADDRESS (dr), offset);
+				   TREE_TYPE (DR_BASE_ADDRESS (dr)),
+				   DR_BASE_ADDRESS (dr), addr_base);
+
+      nb_bytes = build_size_arg_loc (loc, nb_iter, op0, &stmt_list);
     }
 
   /* Test for a negative stride, iterating over every element.  */
-  else if (integer_zerop (fold_build2_loc (loc, PLUS_EXPR, integer_type_node,
-				       TYPE_SIZE_UNIT (TREE_TYPE (op0)),
-				       DR_STEP (dr))))
+  else if (integer_zerop (size_binop (PLUS_EXPR,
+				      TYPE_SIZE_UNIT (TREE_TYPE (op0)),
+				      fold_convert (sizetype, DR_STEP (dr)))))
     {
       nb_bytes = build_size_arg_loc (loc, nb_iter, op0, &stmt_list);
-      addr_base = size_binop_loc (loc, PLUS_EXPR, DR_OFFSET (dr), DR_INIT (dr));
-      addr_base = fold_build2_loc (loc, MINUS_EXPR, sizetype, addr_base,
-			       fold_convert_loc (loc, sizetype, nb_bytes));
-      addr_base = force_gimple_operand (addr_base, &stmts, true, NULL);
-      gimple_seq_add_seq (&stmt_list, stmts);
 
+      addr_base = size_binop_loc (loc, PLUS_EXPR, DR_OFFSET (dr), DR_INIT (dr));
+      addr_base = fold_convert_loc (loc, sizetype, addr_base);
+      addr_base = size_binop_loc (loc, MINUS_EXPR, addr_base,
+				  fold_convert_loc (loc, sizetype, nb_bytes));
       addr_base = fold_build2_loc (loc, POINTER_PLUS_EXPR,
-			       TREE_TYPE (DR_BASE_ADDRESS (dr)),
-			       DR_BASE_ADDRESS (dr), addr_base);
+				   TREE_TYPE (DR_BASE_ADDRESS (dr)),
+				   DR_BASE_ADDRESS (dr), addr_base);
     }
   else
     goto end;
@@ -294,12 +295,7 @@ generate_memset_zero (gimple stmt, tree op0, tree nb_iter,
   mem = force_gimple_operand (addr_base, &stmts, true, NULL);
   gimple_seq_add_seq (&stmt_list, stmts);
 
-  fndecl = implicit_built_in_decls [BUILT_IN_MEMSET];
-  fntype = TREE_TYPE (fndecl);
-  fn = build1 (ADDR_EXPR, build_pointer_type (fntype), fndecl);
-
-  if (!nb_bytes)
-    nb_bytes = build_size_arg_loc (loc, nb_iter, op0, &stmt_list);
+  fn = build_fold_addr_expr (implicit_built_in_decls [BUILT_IN_MEMSET]);
   fn_call = gimple_build_call (fn, 3, mem, integer_zero_node, nb_bytes);
   gimple_seq_add_stmt (&stmt_list, fn_call);
 
@@ -521,7 +517,6 @@ mark_nodes_having_upstream_mem_writes (struct graph *rdg)
       {
 	unsigned i;
 	VEC (int, heap) *nodes = VEC_alloc (int, heap, 3);
-	bool has_upstream_mem_write_p = false;
 
 	graphds_dfs (rdg, &v, 1, &nodes, false, NULL);
 
@@ -539,7 +534,6 @@ mark_nodes_having_upstream_mem_writes (struct graph *rdg)
 		   should be placed in the same partition.  */
 		|| has_anti_dependence (&(rdg->vertices[x])))
 	      {
-		has_upstream_mem_write_p = true;
 		bitmap_set_bit (upstream_mem_writes, x);
 	      }
 	  }
@@ -855,7 +849,7 @@ free_rdg_components (VEC (rdgc, heap) *components)
    of RDG in which the STARTING_VERTICES occur.  */
 
 static void
-rdg_build_components (struct graph *rdg, VEC (int, heap) *starting_vertices, 
+rdg_build_components (struct graph *rdg, VEC (int, heap) *starting_vertices,
 		      VEC (rdgc, heap) **components)
 {
   int i, v;
@@ -910,10 +904,10 @@ rdg_build_partitions (struct graph *rdg, VEC (rdgc, heap) *components,
       bitmap np;
       bool part_has_writes = false;
       int v = VEC_index (int, x->vertices, 0);
-	
+
       if (bitmap_bit_p (processed, v))
 	continue;
-  
+
       np = build_rdg_partition_for_component (rdg, x, &part_has_writes,
 					      other_stores);
       bitmap_ior_into (partition, np);

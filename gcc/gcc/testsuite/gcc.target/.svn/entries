@@ -1,15 +1,15 @@
 10
 
 dir
-152699
+155045
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-10-12T16:36:37.591890Z
-152670
-rth
+2009-12-07T15:27:32.223166Z
+155042
+dje
 
 
 
@@ -26,16 +26,16 @@ rth
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
-dir
-
 arm
 dir
 
-m68k
+powerpc
 dir
 
 alpha
+dir
+
+m68k
 dir
 
 avr
@@ -44,16 +44,19 @@ dir
 i386
 dir
 
+rx
+dir
+
 xstormy16
 dir
 
 frv
 dir
 
-x86_64
+s390
 dir
 
-s390
+x86_64
 dir
 
 cris
@@ -61,40 +64,6 @@ dir
 
 ia64
 dir
-
-vsx-vectorize-1.c
-file
-
-
-
-
-2009-09-27T03:29:55.000000Z
-02e486cc4da2876b19ca6c3f273e11f1
-2009-09-25T05:52:46.490420Z
-152157
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1249
 
 spu
 dir
@@ -105,247 +74,9 @@ dir
 sparc
 dir
 
-vsx-vectorize-2.c
-file
-
-
-
-
-2009-09-27T03:29:55.000000Z
-a6be32904314979a48b32c806ffdf9d7
-2009-09-25T05:52:46.490420Z
-152157
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1681
-
-vsx-vectorize-3.c
-file
-
-
-
-
-2009-09-27T03:29:55.000000Z
-deaac0868069f392810398a823627b66
-2009-09-25T05:52:46.490420Z
-152157
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1507
-
 sh
 dir
 
-vsx-vectorize-4.c
-file
-
-
-
-
-2009-09-27T03:29:55.000000Z
-0c5c338bb9f4d7583494e442e9d4cdfe
-2009-09-25T05:52:46.490420Z
-152157
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1516
-
-vsx-vectorize-5.c
-file
-
-
-
-
-2009-09-27T03:29:55.000000Z
-52bba0d36a922d5ab647a05f4dcbe1c8
-2009-09-25T05:52:46.490420Z
-152157
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1498
-
-vsx-vectorize-6.c
-file
-
-
-
-
-2009-09-27T03:29:55.000000Z
-ec526572d19701db24afd91b8387bd39
-2009-09-25T05:52:46.490420Z
-152157
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1693
-
-vsx-vectorize-7.c
-file
-
-
-
-
-2009-09-27T03:29:55.000000Z
-ba89acfae9fec6c3dee0ab874323a7d4
-2009-09-25T05:52:46.490420Z
-152157
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1657
-
 bfin
 dir
-
-vsx-vectorize-8.c
-file
-
-
-
-
-2009-09-27T03:29:55.000000Z
-f15dbc7b32cf8e8a1f10d9bb963795b6
-2009-09-25T05:52:46.490420Z
-152157
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1681
 

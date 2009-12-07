@@ -104,7 +104,7 @@ along with GCC; see the file COPYING3.  If not see
 
 #undef  ASM_SPEC
 #define ASM_SPEC \
-  "%{v:-V} %{Qy:} %{!Qn:-Qy} %{n} %{T} %{Ym,*} %{Yd,*} %{Wa,*:%*} \
+  "%{v:-V} %{Qy:} %{!Qn:-Qy} %{n} %{T} %{Ym,*} %{Yd,*} %{Wa,*:%*} --32 \
   %{!mno-sse2avx:%{mavx:-msse2avx}} %{msse2avx:%{!mavx:-msse2avx}}"
 
 #undef  SUBTARGET_EXTRA_SPECS
@@ -206,6 +206,9 @@ along with GCC; see the file COPYING3.  If not see
 #define NEED_INDICATE_EXEC_STACK 1
 
 #define MD_UNWIND_SUPPORT "config/i386/linux-unwind.h"
+
+/* The stack pointer needs to be moved while checking the stack.  */
+#define STACK_CHECK_MOVING_SP 1
 
 /* This macro may be overridden in i386/k*bsd-gnu.h.  */
 #define REG_NAME(reg) reg

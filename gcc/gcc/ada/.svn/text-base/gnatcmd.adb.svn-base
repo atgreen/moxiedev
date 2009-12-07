@@ -318,8 +318,31 @@ procedure GNATCmd is
 
       for Index in 1 .. Last_Switches.Last loop
          if Last_Switches.Table (Index) (1) /= '-' then
-            Add_Sources := False;
-            exit;
+            if Index = 1
+              or else
+                (The_Command = Check
+                   and then
+                     Last_Switches.Table (Index - 1).all /= "-o")
+              or else
+                (The_Command = Pretty
+                   and then
+                     Last_Switches.Table (Index - 1).all /= "-o"  and then
+                     Last_Switches.Table (Index - 1).all /= "-of")
+              or else
+                (The_Command = Metric
+                   and then
+                     Last_Switches.Table (Index - 1).all /= "-o"  and then
+                     Last_Switches.Table (Index - 1).all /= "-og" and then
+                     Last_Switches.Table (Index - 1).all /= "-ox" and then
+                     Last_Switches.Table (Index - 1).all /= "-d")
+              or else
+                (The_Command /= Check  and then
+                 The_Command /= Pretty and then
+                 The_Command /= Metric)
+            then
+               Add_Sources := False;
+               exit;
+            end if;
          end if;
       end loop;
 
@@ -552,8 +575,12 @@ procedure GNATCmd is
                                   (Unit.File_Names (Kind).Project, Project)
                        and then not Unit.File_Names (Kind).Locally_Removed
                      then
-                        Get_Name_String
-                          (Unit.File_Names (Kind).Path.Display_Name);
+                        Name_Len := 0;
+                        Add_Char_To_Name_Buffer ('"');
+                        Add_Str_To_Name_Buffer
+                          (Get_Name_String
+                             (Unit.File_Names (Kind).Path.Display_Name));
+                        Add_Char_To_Name_Buffer ('"');
 
                         if FD /= Invalid_FD then
                            Name_Len := Name_Len + 1;
@@ -1612,6 +1639,7 @@ begin
 
                   elsif Argv.all = "-eL" then
                      Follow_Links_For_Files := True;
+                     Follow_Links_For_Dirs  := True;
 
                      Remove_Switch (Arg_Num);
 

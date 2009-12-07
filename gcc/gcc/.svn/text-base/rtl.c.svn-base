@@ -164,6 +164,20 @@ rtvec_alloc (int n)
   return rt;
 }
 
+/* Create a bitwise copy of VEC.  */
+
+rtvec
+shallow_copy_rtvec (rtvec vec)
+{
+  rtvec newvec;
+  int n;
+
+  n = GET_NUM_ELEM (vec);
+  newvec = rtvec_alloc (n);
+  memcpy (&newvec->elem[0], &vec->elem[0], sizeof (rtx) * n);
+  return newvec;
+}
+
 /* Return the number of bytes occupied by rtx value X.  */
 
 unsigned int
@@ -206,7 +220,7 @@ bool
 shared_const_p (const_rtx orig)
 {
   gcc_assert (GET_CODE (orig) == CONST);
-  
+
   /* CONST can be shared if it contains a SYMBOL_REF.  If it contains
      a LABEL_REF, it isn't sharable.  */
   return (GET_CODE (XEXP (orig, 0)) == PLUS
@@ -336,7 +350,7 @@ int currently_expanding_to_rtl;
 
 
 
-/* Same as rtx_equal_p, but call CB on each pair of rtx if CB is not NULL.  
+/* Same as rtx_equal_p, but call CB on each pair of rtx if CB is not NULL.
    When the callback returns true, we continue with the new pair.
    Whenever changing this function check if rtx_equal_p below doesn't need
    changing as well.  */
@@ -369,6 +383,10 @@ rtx_equal_p_cb (const_rtx x, const_rtx y, rtx_equal_p_callback_function cb)
      (REG:SI x) and (REG:HI x) are NOT equivalent.  */
 
   if (GET_MODE (x) != GET_MODE (y))
+    return 0;
+
+  /* MEMs refering to different address space are not equivalent.  */
+  if (code == MEM && MEM_ADDR_SPACE (x) != MEM_ADDR_SPACE (y))
     return 0;
 
   /* Some RTL can be compared nonrecursively.  */
@@ -422,7 +440,7 @@ rtx_equal_p_cb (const_rtx x, const_rtx y, rtx_equal_p_callback_function cb)
 
 	  /* And the corresponding elements must match.  */
 	  for (j = 0; j < XVECLEN (x, i); j++)
-	    if (rtx_equal_p_cb (XVECEXP (x, i, j), 
+	    if (rtx_equal_p_cb (XVECEXP (x, i, j),
                                 XVECEXP (y, i, j), cb) == 0)
 	      return 0;
 	  break;
@@ -485,6 +503,10 @@ rtx_equal_p (const_rtx x, const_rtx y)
      (REG:SI x) and (REG:HI x) are NOT equivalent.  */
 
   if (GET_MODE (x) != GET_MODE (y))
+    return 0;
+
+  /* MEMs refering to different address space are not equivalent.  */
+  if (code == MEM && MEM_ADDR_SPACE (x) != MEM_ADDR_SPACE (y))
     return 0;
 
   /* Some RTL can be compared nonrecursively.  */
@@ -601,7 +623,7 @@ dump_rtx_statistics (void)
   fprintf (stderr, "%-20s %7d %10d\n",
            "Total", total_counts, total_sizes);
   fprintf (stderr, "---------------------------------------\n");
-#endif  
+#endif
 }
 
 #if defined ENABLE_RTL_CHECKING && (GCC_VERSION >= 2007)

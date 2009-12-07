@@ -37,6 +37,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "target.h"
 #include "convert.h"
 #include "tree-flow.h"
+#include "cgraph.h"
 
 static tree bot_manip (tree *, int *, void *);
 static tree bot_replace (tree *, int *, void *);
@@ -555,8 +556,8 @@ rvalue (tree expr)
 
      Non-class rvalues always have cv-unqualified types.  */
   type = TREE_TYPE (expr);
-  if (!CLASS_TYPE_P (type) && cp_type_quals (type))
-    type = cp_build_qualified_type (type, TYPE_UNQUALIFIED);
+  if (!CLASS_TYPE_P (type) && cv_qualified_p (type))
+    type = cv_unqualified (type);
 
   /* We need to do this for rvalue refs as well to get the right answer
      from decltype; see c++/36628.  */
@@ -946,6 +947,16 @@ cp_build_qualified_type_real (tree type,
   return result;
 }
 
+/* Return TYPE with const and volatile removed.  */
+
+tree
+cv_unqualified (tree type)
+{
+  int quals = TYPE_QUALS (type);
+  quals &= ~(TYPE_QUAL_CONST|TYPE_QUAL_VOLATILE);
+  return cp_build_qualified_type (type, quals);
+}
+
 /* Builds a qualified variant of T that is not a typedef variant.
    E.g. consider the following declarations:
      typedef const int ConstInt;
@@ -1040,6 +1051,10 @@ strip_typedefs (tree t)
 	else
 	    result = build_function_type (type,
 					  arg_types);
+
+	if (TYPE_RAISES_EXCEPTIONS (t))
+	  result = build_exception_variant (result,
+					    TYPE_RAISES_EXCEPTIONS (t));
       }
       break;
     default:
@@ -1048,7 +1063,17 @@ strip_typedefs (tree t)
 
   if (!result)
       result = TYPE_MAIN_VARIANT (t);
+  if (TYPE_ATTRIBUTES (t))
+    result = cp_build_type_attribute_variant (result, TYPE_ATTRIBUTES (t));
   return cp_build_qualified_type (result, cp_type_quals (t));
+}
+
+/* Returns true iff TYPE is a type variant created for a typedef. */
+
+bool
+typedef_variant_p (tree type)
+{
+  return is_typedef_decl (TYPE_NAME (type));
 }
 
 
@@ -1466,8 +1491,7 @@ bind_template_template_parm (tree t, tree newargs)
   TEMPLATE_TYPE_PARM_INDEX (t2) = copy_node (TEMPLATE_TYPE_PARM_INDEX (t));
   TEMPLATE_PARM_DECL (TEMPLATE_TYPE_PARM_INDEX (t2)) = decl;
   TEMPLATE_TEMPLATE_PARM_TEMPLATE_INFO (t2)
-    = tree_cons (TEMPLATE_TEMPLATE_PARM_TEMPLATE_DECL (t),
-		 newargs, NULL_TREE);
+    = build_template_info (TEMPLATE_TEMPLATE_PARM_TEMPLATE_DECL (t), newargs);
 
   TREE_TYPE (decl) = t2;
   TYPE_NAME (t2) = decl;
@@ -2081,6 +2105,8 @@ cp_tree_equal (tree t1, tree t2)
     case TEMPLATE_PARM_INDEX:
       return (TEMPLATE_PARM_IDX (t1) == TEMPLATE_PARM_IDX (t2)
 	      && TEMPLATE_PARM_LEVEL (t1) == TEMPLATE_PARM_LEVEL (t2)
+	      && (TEMPLATE_PARM_PARAMETER_PACK (t1)
+		  == TEMPLATE_PARM_PARAMETER_PACK (t2))
 	      && same_type_p (TREE_TYPE (TEMPLATE_PARM_DECL (t1)),
 			      TREE_TYPE (TEMPLATE_PARM_DECL (t2))));
 
@@ -2597,7 +2623,8 @@ cp_build_type_attribute_variant (tree type, tree attributes)
   tree new_type;
 
   new_type = build_type_attribute_variant (type, attributes);
-  if (TREE_CODE (new_type) == FUNCTION_TYPE
+  if ((TREE_CODE (new_type) == FUNCTION_TYPE
+       || TREE_CODE (new_type) == METHOD_TYPE)
       && (TYPE_RAISES_EXCEPTIONS (new_type)
 	  != TYPE_RAISES_EXCEPTIONS (type)))
     new_type = build_exception_variant (new_type,
@@ -3099,7 +3126,16 @@ cp_fix_function_decl_p (tree decl)
   if (!gimple_has_body_p (decl)
       && !DECL_THUNK_P (decl)
       && !DECL_EXTERNAL (decl))
-    return true;
+    {
+      struct cgraph_node *node = cgraph_get_node (decl);
+
+      /* Don't fix same_body aliases.  Although they don't have their own
+	 CFG, they share it with what they alias to.  */
+      if (!node
+	  || node->decl == decl
+	  || !node->same_body)
+	return true;
+    }
 
   return false;
 }

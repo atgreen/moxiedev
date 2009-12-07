@@ -69,6 +69,19 @@ struct GTY(()) inline_summary
   int time_inlining_benefit;
 };
 
+/* Information about thunk, used only for same body aliases.  */
+
+struct GTY(()) cgraph_thunk_info {
+  /* Information about the thunk.  */
+  HOST_WIDE_INT fixed_offset;
+  HOST_WIDE_INT virtual_value;
+  tree alias;
+  bool this_adjusting;
+  bool virtual_offset_p;
+  /* Set to true when alias node is thunk.  */
+  bool thunk_p;
+};
+
 /* Information about the function collected locally.
    Available after function is analyzed.  */
 
@@ -184,16 +197,25 @@ struct GTY((chain_next ("%h.next"), chain_prev ("%h.previous"))) cgraph_node {
   struct cgraph_node *prev_sibling_clone;
   struct cgraph_node *clones;
   struct cgraph_node *clone_of;
+  /* For normal nodes pointer to the list of alias and thunk nodes,
+     in alias/thunk nodes pointer to the normal node.  */
+  struct cgraph_node *same_body;
   /* For functions with many calls sites it holds map from call expression
      to the edge to speed up cgraph_edge function.  */
   htab_t GTY((param_is (struct cgraph_edge))) call_site_hash;
 
   PTR GTY ((skip)) aux;
 
+  /* Interprocedural passes scheduled to have their transform functions
+     applied next time we execute local pass on them.  We maintain it
+     per-function in order to allow IPA passes to introduce new functions.  */
+  VEC(ipa_opt_pass,heap) * GTY((skip)) ipa_transforms_to_apply;
+
   struct cgraph_local_info local;
   struct cgraph_global_info global;
   struct cgraph_rtl_info rtl;
   struct cgraph_clone_info clone;
+  struct cgraph_thunk_info thunk;
 
   /* Expected number of executions: calculated in profile.c.  */
   gcov_type count;
@@ -206,16 +228,24 @@ struct GTY((chain_next ("%h.next"), chain_prev ("%h.previous"))) cgraph_node {
      number of cfg nodes with -fprofile-generate and -fprofile-use */
   int pid;
 
-  /* Set when function must be output - it is externally visible
-     or its address is taken.  */
+  /* Set when function must be output for some reason.  The primary
+     use of this flag is to mark functions needed to be output for
+     non-standard reason.  Functions that are externally visible
+     or reachable from functions needed to be output are marked
+     by specialized flags.  */
   unsigned needed : 1;
-  /* Set when function has address taken.  */
+  /* Set when function has address taken.
+     In current implementation it imply needed flag. */
   unsigned address_taken : 1;
   /* Set when decl is an abstract function pointed to by the
      ABSTRACT_DECL_ORIGIN of a reachable function.  */
   unsigned abstract_and_needed : 1;
   /* Set when function is reachable by call from other function
-     that is either reachable or needed.  */
+     that is either reachable or needed.
+     This flag is computed at original cgraph construction and then
+     updated in cgraph_remove_unreachable_nodes.  Note that after
+     cgraph_remove_unreachable_nodes cgraph still can contain unreachable
+     nodes when they are needed for virtual clone instantiation.  */
   unsigned reachable : 1;
   /* Set once the function is lowered (i.e. its CFG is built).  */
   unsigned lowered : 1;
@@ -228,6 +258,9 @@ struct GTY((chain_next ("%h.next"), chain_prev ("%h.previous"))) cgraph_node {
   unsigned alias : 1;
   /* Set for nodes that was constructed and finalized by frontend.  */
   unsigned finalized_by_frontend : 1;
+  /* Set for alias and thunk nodes, same_body points to the node they are alias
+     of and they are linked through the next/previous pointers.  */
+  unsigned same_body_alias : 1;
 };
 
 typedef struct cgraph_node *cgraph_node_ptr;
@@ -277,6 +310,8 @@ typedef enum {
 } cgraph_inline_failed_t;
 
 struct GTY((chain_next ("%h.next_caller"), chain_prev ("%h.prev_caller"))) cgraph_edge {
+  /* Expected number of executions: calculated in profile.c.  */
+  gcov_type count;
   struct cgraph_node *caller;
   struct cgraph_node *callee;
   struct cgraph_edge *prev_caller;
@@ -284,29 +319,27 @@ struct GTY((chain_next ("%h.next_caller"), chain_prev ("%h.prev_caller"))) cgrap
   struct cgraph_edge *prev_callee;
   struct cgraph_edge *next_callee;
   gimple call_stmt;
-  /* The stmt_uid of this call stmt.  This is used by LTO to recover
-     the call_stmt when the function is serialized in.  */
-  unsigned int lto_stmt_uid;
   PTR GTY ((skip (""))) aux;
   /* When equal to CIF_OK, inline this call.  Otherwise, points to the
      explanation why function was not inlined.  */
   cgraph_inline_failed_t inline_failed;
-  /* Expected number of executions: calculated in profile.c.  */
-  gcov_type count;
-  /* Expected frequency of executions within the function. 
+  /* The stmt_uid of call_stmt.  This is used by LTO to recover the call_stmt
+     when the function is serialized in.  */
+  unsigned int lto_stmt_uid;
+  /* Expected frequency of executions within the function.
      When set to CGRAPH_FREQ_BASE, the edge is expected to be called once
      per function call.  The range is 0 to CGRAPH_FREQ_MAX.  */
   int frequency;
+  /* Unique id of the edge.  */
+  int uid;
   /* Depth of loop nest, 1 means no loop nest.  */
-  unsigned int loop_nest : 30;
+  unsigned short int loop_nest;
   /* Whether this edge describes a call that was originally indirect.  */
   unsigned int indirect_call : 1;
   /* True if the corresponding CALL stmt cannot be inlined.  */
   unsigned int call_stmt_cannot_inline_p : 1;
   /* Can this call throw externally?  */
   unsigned int can_throw_external : 1;
-  /* Unique id of the edge.  */
-  int uid;
 };
 
 #define CGRAPH_FREQ_BASE 1000
@@ -403,8 +436,10 @@ struct cgraph_edge *cgraph_create_edge (struct cgraph_node *,
 
 struct cgraph_node * cgraph_get_node (tree);
 struct cgraph_node *cgraph_node (tree);
+bool cgraph_same_body_alias (tree, tree);
+void cgraph_add_thunk (tree, tree, bool, HOST_WIDE_INT, HOST_WIDE_INT, tree, tree);
+void cgraph_remove_same_body_alias (struct cgraph_node *);
 struct cgraph_node *cgraph_node_for_asm (tree);
-struct cgraph_node *cgraph_node_for_decl (tree);
 struct cgraph_edge *cgraph_edge (struct cgraph_node *, gimple);
 void cgraph_set_call_stmt (struct cgraph_edge *, gimple);
 void cgraph_set_call_stmt_including_clones (struct cgraph_node *, gimple, gimple);
@@ -531,6 +566,7 @@ bool varpool_assemble_decl (struct varpool_node *node);
 bool varpool_analyze_pending_decls (void);
 void varpool_remove_unreferenced_decls (void);
 void varpool_empty_needed_queue (void);
+const char * varpool_node_name (struct varpool_node *node);
 
 /* Walk all reachable static variables.  */
 #define FOR_EACH_STATIC_VARIABLE(node) \
@@ -648,7 +684,7 @@ cgraph_node_set_size (cgraph_node_set set)
 struct GTY(()) constant_descriptor_tree {
   /* A MEM for the constant.  */
   rtx rtl;
-  
+
   /* The value of the constant.  */
   tree value;
 

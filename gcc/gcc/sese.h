@@ -32,12 +32,6 @@ typedef struct sese_s
   /* Parameters used within the SCOP.  */
   VEC (tree, heap) *params;
 
-  /* Used to quickly retrieve the index of a parameter in PARAMS.  */
-  htab_t params_index;
-
-  /* Store the names of the parameters that are passed to CLooG.  */
-  char **params_names;
-
   /* Loops completely contained in the SCOP.  */
   bitmap loops;
   VEC (loop_p, heap) *loop_nest;
@@ -53,8 +47,6 @@ typedef struct sese_s
 #define SESE_EXIT(S) (S->exit)
 #define SESE_EXIT_BB(S) (S->exit->dest)
 #define SESE_PARAMS(S) (S->params)
-#define SESE_PARAMS_INDEX(S) (S->params_index)
-#define SESE_PARAMS_NAMES(S) (S->params_names)
 #define SESE_LOOPS(S) (S->loops)
 #define SESE_LOOP_NEST(S) (S->loop_nest)
 #define SESE_ADD_PARAMS(S) (S->add_params)
@@ -68,7 +60,6 @@ extern edge copy_bb_and_scalar_dependences (basic_block, sese, edge, htab_t);
 extern struct loop *outermost_loop_in_sese (sese, basic_block);
 extern void insert_loop_close_phis (htab_t, loop_p);
 extern void insert_guard_phis (basic_block, edge, edge, htab_t, htab_t);
-extern void sese_reset_aux_in_loops (sese);
 extern tree scalar_evolution_in_region (sese, loop_p, tree);
 
 /* Check that SESE contains LOOP.  */
@@ -102,7 +93,7 @@ bb_in_region (basic_block bb, basic_block entry, basic_block exit)
        predecessors of EXIT are dominated by ENTRY.  */
     FOR_EACH_EDGE (e, ei, exit->preds)
       dominated_by_p (CDI_DOMINATORS, e->src, entry);
- 
+
     /* Check that there are no edges going out of the region: the
        entry is post-dominated by the exit.  FIXME: This cannot be
        checked right now as the CDI_POST_DOMINATORS are needed.  */
@@ -139,7 +130,7 @@ defined_in_sese_p (tree name, sese region)
 
 /* Returns true when LOOP is in REGION.  */
 
-static inline bool 
+static inline bool
 loop_in_sese_p (struct loop *loop, sese region)
 {
   return (bb_in_sese_p (loop->header, region)
@@ -154,7 +145,7 @@ loop_in_sese_p (struct loop *loop, sese region)
    loop_0
      loop_1
        {
-         S0 
+         S0
             <- region start
          S1
 
@@ -163,7 +154,7 @@ loop_in_sese_p (struct loop *loop, sese region)
 
          S3
             <- region end
-       } 
+       }
 
     loop_0 does not exist in the region -> invalid
     loop_1 exists, but is not completely contained in the region -> depth 0
@@ -188,111 +179,39 @@ sese_loop_depth (sese region, loop_p loop)
   return depth;
 }
 
+/* Splits BB to make a single entry single exit region.  */
+
+static inline sese
+split_region_for_bb (basic_block bb)
+{
+  edge entry, exit;
+
+  if (single_pred_p (bb))
+    entry = single_pred_edge (bb);
+  else
+    {
+      entry = split_block_after_labels (bb);
+      bb = single_succ (bb);
+    }
+
+  if (single_succ_p (bb))
+    exit = single_succ_edge (bb);
+  else
+    {
+      gimple_stmt_iterator gsi = gsi_last_bb (bb);
+      gsi_prev (&gsi);
+      exit = split_block (bb, gsi_stmt (gsi));
+    }
+
+  return new_sese (entry, exit);
+}
+
 /* Returns the block preceding the entry of a SESE.  */
 
 static inline basic_block
 block_before_sese (sese sese)
 {
   return SESE_ENTRY (sese)->src;
-}
-
-/* Stores the INDEX in a vector for a given clast NAME.  */
-
-typedef struct clast_name_index {
-  int index;
-  const char *name;
-} *clast_name_index_p;
-
-/* Returns a pointer to a new element of type clast_name_index_p built
-   from NAME and INDEX.  */
-
-static inline clast_name_index_p
-new_clast_name_index (const char *name, int index)
-{
-  clast_name_index_p res = XNEW (struct clast_name_index);
-
-  res->name = name;
-  res->index = index;
-  return res;
-}
-
-/* For a given clast NAME, returns -1 if it does not correspond to any
-   parameter, or otherwise, returns the index in the PARAMS or
-   SCATTERING_DIMENSIONS vector.  */
-
-static inline int
-clast_name_to_index (const char *name, htab_t index_table)
-{
-  struct clast_name_index tmp;
-  PTR *slot;
-
-  tmp.name = name;
-  slot = htab_find_slot (index_table, &tmp, NO_INSERT);
-
-  if (slot && *slot)
-    return ((struct clast_name_index *) *slot)->index;
-
-  return -1;
-}
-
-/* Records in INDEX_TABLE the INDEX for NAME.  */
-
-static inline void
-save_clast_name_index (htab_t index_table, const char *name, int index)
-{
-  struct clast_name_index tmp;
-  PTR *slot;
-
-  tmp.name = name;
-  slot = htab_find_slot (index_table, &tmp, INSERT);
-
-  if (slot)
-    *slot = new_clast_name_index (name, index);
-}
-
-/* Print to stderr the element ELT.  */
-
-static inline void
-debug_clast_name_index (clast_name_index_p elt)
-{
-  fprintf (stderr, "(index = %d, name = %s)\n", elt->index, elt->name);
-}
-
-/* Helper function for debug_rename_map.  */
-
-static inline int
-debug_clast_name_indexes_1 (void **slot, void *s ATTRIBUTE_UNUSED)
-{
-  struct clast_name_index *entry = (struct clast_name_index *) *slot;
-  debug_clast_name_index (entry);
-  return 1;
-}
-
-/* Print to stderr all the elements of MAP.  */
-
-static inline void
-debug_clast_name_indexes (htab_t map)
-{
-  htab_traverse (map, debug_clast_name_indexes_1, NULL);
-}
-
-/* Computes a hash function for database element ELT.  */
-
-static inline hashval_t
-clast_name_index_elt_info (const void *elt)
-{
-  return htab_hash_pointer (((const struct clast_name_index *) elt)->name);
-}
-
-/* Compares database elements E1 and E2.  */
-
-static inline int
-eq_clast_name_indexes (const void *e1, const void *e2)
-{
-  const struct clast_name_index *elt1 = (const struct clast_name_index *) e1;
-  const struct clast_name_index *elt2 = (const struct clast_name_index *) e2;
-
-  return (elt1->name == elt2->name);
 }
 
 
@@ -350,7 +269,7 @@ static inline rename_map_elt
 new_rename_map_elt (tree old_name, tree expr)
 {
   rename_map_elt res;
-  
+
   res = XNEW (struct rename_map_elt_s);
   res->old_name = old_name;
   res->expr = expr;
@@ -376,7 +295,7 @@ static inline ivtype_map_elt
 new_ivtype_map_elt (const char *cloog_iv, tree type)
 {
   ivtype_map_elt res;
-  
+
   res = XNEW (struct ivtype_map_elt_s);
   res->cloog_iv = cloog_iv;
   res->type = type;
@@ -403,19 +322,19 @@ typedef struct gimple_bb
   /* Lists containing the restrictions of the conditional statements
      dominating this bb.  This bb can only be executed, if all conditions
      are true.
- 
+
      Example:
- 
+
      for (i = 0; i <= 20; i++)
      {
        A
- 
+
        if (2i <= 8)
          B
      }
- 
+
      So for B there is an additional condition (2i <= 8).
- 
+
      List of COND_EXPR and SWITCH_EXPR.  A COND_EXPR is true only if the
      corresponding element in CONDITION_CASES is not NULL_TREE.  For a
      SWITCH_EXPR the corresponding element in CONDITION_CASES is a
@@ -440,7 +359,7 @@ gbb_loop (struct gimple_bb *gbb)
   return GBB_BB (gbb)->loop_father;
 }
 
-/* Returns the gimple loop, that corresponds to the loop_iterator_INDEX.  
+/* Returns the gimple loop, that corresponds to the loop_iterator_INDEX.
    If there is no corresponding gimple loop, we return NULL.  */
 
 static inline loop_p
@@ -465,7 +384,7 @@ nb_common_loops (sese region, gimple_bb_p gbb1, gimple_bb_p gbb2)
   loop_p l1 = gbb_loop (gbb1);
   loop_p l2 = gbb_loop (gbb2);
   loop_p common = find_common_loop (l1, l2);
-  
+
   return sese_loop_depth (region, common);
 }
 

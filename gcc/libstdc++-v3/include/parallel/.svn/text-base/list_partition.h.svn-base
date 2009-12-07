@@ -42,17 +42,17 @@ namespace __gnu_parallel
    *  @param __os_starts Start positions worked on (oversampled).
    *  @param __count_to_two Counts up to 2.
    *  @param __range_length Current length of a chunk.
-   *  @param __make_twice Whether the @__c __os_starts is allowed to be
+   *  @param __make_twice Whether the @c __os_starts is allowed to be
    *  grown or not
    */
   template<typename _IIter>
     void
     __shrink_and_double(std::vector<_IIter>& __os_starts,
-                      size_t& __count_to_two, size_t& __range_length,
-                      const bool __make_twice)
+			size_t& __count_to_two, size_t& __range_length,
+			const bool __make_twice)
     {
       ++__count_to_two;
-      if (not __make_twice or __count_to_two < 2)
+      if (!__make_twice || __count_to_two < 2)
         __shrink(__os_starts, __count_to_two, __range_length);
       else
         {
@@ -68,7 +68,7 @@ namespace __gnu_parallel
   template<typename _IIter>
     void
     __shrink(std::vector<_IIter>& __os_starts, size_t& __count_to_two,
-           size_t& __range_length)
+	     size_t& __range_length)
     {
       for (typename std::vector<_IIter>::size_type __i = 0;
            __i <= (__os_starts.size() / 2); ++__i)
@@ -83,16 +83,17 @@ namespace __gnu_parallel
    *  @param __begin Begin iterator of input sequence.
    *  @param __end End iterator of input sequence.
    *  @param __starts Start iterators for the resulting parts, dimension
-   *  @__c __num_parts+1. For convenience, @__c __starts @__c [__num_parts]
+   *  @c __num_parts+1. For convenience, @c __starts @c [__num_parts]
    *  contains the end iterator of the sequence.
    *  @param __lengths Length of the resulting parts.
    *  @param __num_parts Number of parts to split the sequence into.
    *  @param __f Functor to be applied to each element by traversing __it
    *  @param __oversampling Oversampling factor. If 0, then the
-   *  partitions will differ in at most @__f$ \sqrt{\mathrm{__end} -
-   *  \mathrm{__begin}} @__f$ __elements. Otherwise, the ratio between the
-   *  longest and the shortest part is bounded by @__f$
-   *  1/(\mathrm{__oversampling} \cdot \mathrm{num\_parts}) @__f$.
+   *  partitions will differ in at most 
+   *  \sqrt{\mathrm{__end} - \mathrm{__begin}} 
+   *  __elements. Otherwise, the ratio between the
+   *  longest and the shortest part is bounded by
+   *  1/(\mathrm{__oversampling} \cdot \mathrm{num\_parts})
    *  @return Length of the whole sequence.
    */
   template<typename _IIter, typename _FunctorType>
@@ -112,8 +113,8 @@ namespace __gnu_parallel
 
       std::vector<_IIter> __os_starts(2 * __oversampling * __num_parts + 1);
 
-      __os_starts[0]= __begin;
-      _IIter __prev = __begin, __it = __begin;
+      __os_starts[0] = __begin;
+      _IIter __prev  = __begin, __it = __begin;
       size_t __dist_limit = 0, __dist = 0;
       size_t __cur = 1, __next = 1;
       size_t __range_length = 1;

@@ -56,6 +56,7 @@ along with GCC; see the file COPYING3.  If not see
 static tree maybe_convert_cond (tree);
 static tree finalize_nrv_r (tree *, int *, void *);
 static tree capture_decltype (tree);
+static tree thisify_lambda_field (tree);
 
 
 /* Deferred Access Checking Overview
@@ -1253,7 +1254,7 @@ finish_asm_stmt (int volatile_p, tree string, tree output_operands,
 		     effectively const.  */
 		  || (CLASS_TYPE_P (TREE_TYPE (operand))
 		      && C_TYPE_FIELDS_READONLY (TREE_TYPE (operand)))))
-	    readonly_error (operand, "assignment (via 'asm' output)");
+	    readonly_error (operand, REK_ASSIGNMENT_ASM);
 
 	  constraint = TREE_STRING_POINTER (TREE_VALUE (TREE_PURPOSE (t)));
 	  oconstraints[i] = constraint;
@@ -1447,14 +1448,13 @@ finish_non_static_data_member (tree decl, tree object, tree qualifying_scope)
       return error_mark_node;
     }
 
-  /* If decl is a field, object has a lambda type, and decl is not a member
-     of that type, then we have a reference to a member of 'this' from a
+  /* If decl is a non-capture field and object has a lambda type,
+     then we have a reference to a member of 'this' from a
      lambda inside a non-static member function, and we must get to decl
      through the 'this' capture.  If decl is not a member of that object,
      either, then its access will still fail later.  */
   if (LAMBDA_TYPE_P (TREE_TYPE (object))
-      && !same_type_ignoring_top_level_qualifiers_p (DECL_CONTEXT (decl),
-                                                     TREE_TYPE (object)))
+      && !LAMBDA_TYPE_P (DECL_CONTEXT (decl)))
     object = cp_build_indirect_ref (lambda_expr_this_capture
 				    (CLASSTYPE_LAMBDA_EXPR
 				     (TREE_TYPE (object))),
@@ -1485,6 +1485,14 @@ finish_non_static_data_member (tree decl, tree object, tree qualifying_scope)
 
       return build_min (COMPONENT_REF, type, object, decl, NULL_TREE);
     }
+  /* If PROCESSING_TEMPLATE_DECL is nonzero here, then
+     QUALIFYING_SCOPE is also non-null.  Wrap this in a SCOPE_REF
+     for now.  */
+  else if (processing_template_decl)
+    return build_qualified_name (TREE_TYPE (decl),
+				 qualifying_scope,
+				 DECL_NAME (decl),
+				 /*template_p=*/false);
   else
     {
       tree access_type = TREE_TYPE (object);
@@ -1503,15 +1511,6 @@ finish_non_static_data_member (tree decl, tree object, tree qualifying_scope)
 	      return error_mark_node;
 	    }
 	}
-
-      /* If PROCESSING_TEMPLATE_DECL is nonzero here, then
-	 QUALIFYING_SCOPE is also non-null.  Wrap this in a SCOPE_REF
-	 for now.  */
-      if (processing_template_decl)
-	return build_qualified_name (TREE_TYPE (decl),
-				     qualifying_scope,
-				     DECL_NAME (decl),
-				     /*template_p=*/false);
 
       perform_or_defer_access_check (TYPE_BINFO (access_type), decl,
 				     decl);
@@ -1532,6 +1531,37 @@ finish_non_static_data_member (tree decl, tree object, tree qualifying_scope)
     }
 }
 
+/* If we are currently parsing a template and we encountered a typedef
+   TYPEDEF_DECL that is being accessed though CONTEXT, this function
+   adds the typedef to a list tied to the current template.
+   At tempate instantiatin time, that list is walked and access check
+   performed for each typedef.
+   LOCATION is the location of the usage point of TYPEDEF_DECL.  */
+
+void
+add_typedef_to_current_template_for_access_check (tree typedef_decl,
+                                                  tree context,
+						  location_t location)
+{
+    tree template_info = NULL;
+    tree cs = current_scope ();
+
+    if (!is_typedef_decl (typedef_decl)
+	|| !context
+	|| !CLASS_TYPE_P (context)
+	|| !cs)
+      return;
+
+    if (CLASS_TYPE_P (cs) || TREE_CODE (cs) == FUNCTION_DECL)
+      template_info = get_template_info (cs);
+
+    if (template_info
+	&& TI_TEMPLATE (template_info)
+	&& !currently_open_class (context))
+      append_type_to_template_for_access_check (cs, typedef_decl,
+						context, location);
+}
+
 /* DECL was the declaration to which a qualified-id resolved.  Issue
    an error message if it is not accessible.  If OBJECT_TYPE is
    non-NULL, we have just seen `x->' or `x.' and OBJECT_TYPE is the
@@ -1550,27 +1580,11 @@ check_accessibility_of_qualified_id (tree decl,
      add it to a list tied to the template.
      At template instantiation time, that list will be walked and
      access check performed.  */
-  if (is_typedef_decl (decl))
-    {
-      /* This the scope through which type_decl is accessed.
-	 It will be useful information later to do access check for
-	 type_decl usage.  */
-      tree scope = nested_name_specifier
-      ?  nested_name_specifier
-      : DECL_CONTEXT (decl);
-      tree templ_info = NULL;
-      tree cs = current_scope ();
-
-      if (cs && (CLASS_TYPE_P (cs) || TREE_CODE (cs) == FUNCTION_DECL))
-	templ_info = get_template_info (cs);
-
-      if (templ_info
-	  && TI_TEMPLATE (templ_info)
-	  && scope
-	  && CLASS_TYPE_P (scope)
-	  && !currently_open_class (scope))
-	append_type_to_template_for_access_check (current_scope (), decl, scope);
-    }
+  add_typedef_to_current_template_for_access_check (decl,
+						    nested_name_specifier
+						    ? nested_name_specifier
+						    : DECL_CONTEXT (decl),
+						    input_location);
 
   /* If we're not checking, return immediately.  */
   if (deferred_access_no_check)
@@ -1833,6 +1847,35 @@ stmt_expr_value_expr (tree stmt_expr)
   return t;
 }
 
+/* Return TRUE iff EXPR_STMT is an empty list of
+   expression statements.  */
+
+bool
+empty_expr_stmt_p (tree expr_stmt)
+{
+  tree body = NULL_TREE;
+
+  if (expr_stmt == void_zero_node)
+    return true;
+
+  if (expr_stmt)
+    {
+      if (TREE_CODE (expr_stmt) == EXPR_STMT)
+	body = EXPR_STMT_EXPR (expr_stmt);
+      else if (TREE_CODE (expr_stmt) == STATEMENT_LIST)
+	body = expr_stmt;
+    }
+
+  if (body)
+    {
+      if (TREE_CODE (body) == STATEMENT_LIST)
+	return tsi_end_p (tsi_start (body));
+      else
+	return empty_expr_stmt_p (body);
+    }
+  return false;
+}
+
 /* Perform Koenig lookup.  FN is the postfix-expression representing
    the function (or functions) to call; ARGS are the arguments to the
    call.  Returns the functions to be considered by overload
@@ -2063,17 +2106,13 @@ finish_this_expr (void)
 {
   tree result;
 
-  if (current_class_ptr)
-    {
-      tree type = TREE_TYPE (current_class_ref);
-
-      /* In a lambda expression, 'this' refers to the captured 'this'.  */
-      if (LAMBDA_TYPE_P (type))
-        result = lambda_expr_this_capture (CLASSTYPE_LAMBDA_EXPR (type));
-      else
-        result = current_class_ptr;
-
-    }
+  /* In a lambda expression, 'this' refers to the captured 'this'.  */
+  if (current_function_decl
+      && LAMBDA_FUNCTION_P (current_function_decl))
+    result = (lambda_expr_this_capture
+	      (CLASSTYPE_LAMBDA_EXPR (current_class_type)));
+  else if (current_class_ptr)
+    result = current_class_ptr;
   else if (current_function_decl
 	   && DECL_STATIC_FUNCTION_P (current_function_decl))
     {
@@ -2648,6 +2687,18 @@ outer_automatic_var_p (tree decl)
 	  && DECL_CONTEXT (decl) != current_function_decl);
 }
 
+/* Returns true iff DECL is a capture field from a lambda that is not our
+   immediate context.  */
+
+static bool
+outer_lambda_capture_p (tree decl)
+{
+  return (TREE_CODE (decl) == FIELD_DECL
+	  && LAMBDA_TYPE_P (DECL_CONTEXT (decl))
+	  && (!current_class_type
+	      || !DERIVED_FROM_P (DECL_CONTEXT (decl), current_class_type)));
+}
+
 /* ID_EXPRESSION is a representation of parsed, but unprocessed,
    id-expression.  (See cp_parser_id_expression for details.)  SCOPE,
    if non-NULL, is the type or namespace used to explicitly qualify
@@ -2751,7 +2802,8 @@ finish_id_expression (tree id_expression,
 
       /* Disallow uses of local variables from containing functions, except
 	 within lambda-expressions.  */
-      if (outer_automatic_var_p (decl)
+      if ((outer_automatic_var_p (decl)
+	   || outer_lambda_capture_p (decl))
 	  /* It's not a use (3.2) if we're in an unevaluated context.  */
 	  && !cp_unevaluated_operand)
 	{
@@ -2759,6 +2811,7 @@ finish_id_expression (tree id_expression,
 	  tree containing_function = current_function_decl;
 	  tree lambda_stack = NULL_TREE;
 	  tree lambda_expr = NULL_TREE;
+	  tree initializer = decl;
 
 	  /* Core issue 696: "[At the July 2009 meeting] the CWG expressed
 	     support for an approach in which a reference to a local
@@ -2769,6 +2822,13 @@ finish_id_expression (tree id_expression,
 	     FIXME update for final resolution of core issue 696.  */
 	  if (DECL_INTEGRAL_CONSTANT_VAR_P (decl))
 	    return integral_constant_value (decl);
+
+	  if (TYPE_P (context))
+	    {
+	      /* Implicit capture of an explicit capture.  */
+	      context = lambda_function (context);
+	      initializer = thisify_lambda_field (decl);
+	    }
 
 	  /* If we are in a lambda function, we can move out until we hit
 	     1. the context,
@@ -2796,7 +2856,7 @@ finish_id_expression (tree id_expression,
 	    {
 	      decl = add_default_capture (lambda_stack,
 					  /*id=*/DECL_NAME (decl),
-					  /*initializer=*/decl);
+					  initializer);
 	    }
 	  else if (lambda_expr)
 	    {
@@ -3299,8 +3359,8 @@ emit_associated_thunks (tree fn)
 
 /* Generate RTL for FN.  */
 
-void
-expand_or_defer_fn (tree fn)
+bool
+expand_or_defer_fn_1 (tree fn)
 {
   /* When the parser calls us after finishing the body of a template
      function, we don't really want to expand the body.  */
@@ -3314,7 +3374,7 @@ expand_or_defer_fn (tree fn)
 	 is not a GC root.  */
       if (!function_depth)
 	ggc_collect ();
-      return;
+      return false;
     }
 
   gcc_assert (DECL_SAVED_TREE (fn));
@@ -3327,7 +3387,7 @@ expand_or_defer_fn (tree fn)
 	 it out, even though we haven't.  */
       TREE_ASM_WRITTEN (fn) = 1;
       DECL_SAVED_TREE (fn) = NULL_TREE;
-      return;
+      return false;
     }
 
   /* We make a decision about linkage for these functions at the end
@@ -3374,14 +3434,24 @@ expand_or_defer_fn (tree fn)
   /* There's no reason to do any of the work here if we're only doing
      semantic analysis; this code just generates RTL.  */
   if (flag_syntax_only)
-    return;
+    return false;
 
-  function_depth++;
+  return true;
+}
 
-  /* Expand or defer, at the whim of the compilation unit manager.  */
-  cgraph_finalize_function (fn, function_depth > 1);
+void
+expand_or_defer_fn (tree fn)
+{
+  if (expand_or_defer_fn_1 (fn))
+    {
+      function_depth++;
 
-  function_depth--;
+      /* Expand or defer, at the whim of the compilation unit manager.  */
+      cgraph_finalize_function (fn, function_depth > 1);
+      emit_associated_thunks (fn);
+
+      function_depth--;
+    }
 }
 
 struct nrv_data
@@ -4707,7 +4777,13 @@ finish_decltype_type (tree expr, bool id_expression_or_member_access_p)
       return error_mark_node;
     }
 
-  if (type_dependent_expression_p (expr))
+  if (type_dependent_expression_p (expr)
+      /* In a template, a COMPONENT_REF has an IDENTIFIER_NODE for op1 even
+	 if it isn't dependent, so that we can check access control at
+	 instantiation time, so defer the decltype as well (PR 42277).  */
+      || (id_expression_or_member_access_p
+	  && processing_template_decl
+	  && TREE_CODE (expr) == COMPONENT_REF))
     {
       if (id_expression_or_member_access_p)
 	{
@@ -5604,6 +5680,21 @@ add_capture (tree lambda, tree id, tree initializer, bool by_reference_p,
   return member;
 }
 
+/* Given a FIELD_DECL decl belonging to a closure type, return a
+   COMPONENT_REF of it relative to the 'this' parameter of the op() for
+   that type.  */
+
+static tree
+thisify_lambda_field (tree decl)
+{
+  tree context = lambda_function (DECL_CONTEXT (decl));
+  tree object = cp_build_indirect_ref (DECL_ARGUMENTS (context),
+				       /*errorstring*/"",
+				       tf_warning_or_error);
+  return finish_non_static_data_member (decl, object,
+					/*qualifying_scope*/NULL_TREE);
+}
+
 /* Similar to add_capture, except this works on a stack of nested lambdas.
    BY_REFERENCE_P in this case is derived from the default capture mode.
    Returns the capture for the lambda at the bottom of the stack.  */
@@ -5634,16 +5725,7 @@ add_default_capture (tree lambda_stack, tree id, tree initializer)
 			     && (LAMBDA_EXPR_DEFAULT_CAPTURE_MODE (lambda)
 				 == CPLD_REFERENCE)),
 			    /*explicit_init_p=*/false);
-
-      {
-        /* Have to get the old value of current_class_ref.  */
-        tree object = cp_build_indirect_ref (DECL_ARGUMENTS
-                                               (lambda_function (lambda)),
-                                             /*errorstring=*/"",
-                                             /*complain=*/tf_warning_or_error);
-        initializer = finish_non_static_data_member
-                        (member, object, /*qualifying_scope=*/NULL_TREE);
-      }
+      initializer = thisify_lambda_field (member);
     }
 
   current_class_type = saved_class_type;
@@ -5682,10 +5764,7 @@ lambda_expr_this_capture (tree lambda)
 	    {
 	      /* An outer lambda has already captured 'this'.  */
 	      tree cap = LAMBDA_EXPR_THIS_CAPTURE (lambda);
-	      tree lthis
-		= cp_build_indirect_ref (DECL_ARGUMENTS (containing_function),
-					 "", tf_warning_or_error);
-	      init = finish_non_static_data_member (cap, lthis, NULL_TREE);
+	      init = thisify_lambda_field (cap);
 	      break;
 	    }
 
@@ -5735,4 +5814,55 @@ lambda_expr_this_capture (tree lambda)
   return result;
 }
 
+/* If the closure TYPE has a static op(), also add a conversion to function
+   pointer.  */
+
+void
+maybe_add_lambda_conv_op (tree type)
+{
+  bool nested = (current_function_decl != NULL_TREE);
+  tree callop = lambda_function (type);
+  tree rettype, name, fntype, fn, body, compound_stmt;
+
+  if (!DECL_STATIC_FUNCTION_P (callop))
+    return;
+
+  rettype = build_pointer_type (TREE_TYPE (callop));
+  name = mangle_conv_op_name_for_type (rettype);
+  fntype = build_function_type (rettype, void_list_node);
+  fn = build_lang_decl (FUNCTION_DECL, name, fntype);
+  DECL_SOURCE_LOCATION (fn) = DECL_SOURCE_LOCATION (callop);
+
+  if (TARGET_PTRMEMFUNC_VBIT_LOCATION == ptrmemfunc_vbit_in_pfn
+      && DECL_ALIGN (fn) < 2 * BITS_PER_UNIT)
+    DECL_ALIGN (fn) = 2 * BITS_PER_UNIT;
+
+  SET_OVERLOADED_OPERATOR_CODE (fn, TYPE_EXPR);
+  grokclassfn (type, fn, NO_SPECIAL);
+  set_linkage_according_to_type (type, fn);
+  rest_of_decl_compilation (fn, toplevel_bindings_p (), at_eof);
+  DECL_IN_AGGR_P (fn) = 1;
+  DECL_ARTIFICIAL (fn) = 1;
+  DECL_NOT_REALLY_EXTERN (fn) = 1;
+  DECL_DECLARED_INLINE_P (fn) = 1;
+  DECL_STATIC_FUNCTION_P (fn) = 1;
+
+  add_method (type, fn, NULL_TREE);
+
+  if (nested)
+    push_function_context ();
+  start_preparsed_function (fn, NULL_TREE,
+			    SF_PRE_PARSED | SF_INCLASS_INLINE);
+  body = begin_function_body ();
+  compound_stmt = begin_compound_stmt (0);
+
+  finish_return_stmt (decay_conversion (callop));
+
+  finish_compound_stmt (compound_stmt);
+  finish_function_body (body);
+
+  expand_or_defer_fn (finish_function (2));
+  if (nested)
+    pop_function_context ();
+}
 #include "gt-cp-semantics.h"

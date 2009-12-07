@@ -77,8 +77,17 @@ package body System.OS_Lib is
    -----------------------
 
    function Args_Length (Args : Argument_List) return Natural;
-   --  Returns total number of characters needed to create a string
-   --  of all Args terminated by ASCII.NUL characters
+   --  Returns total number of characters needed to create a string of all Args
+   --  terminated by ASCII.NUL characters.
+
+   procedure Create_Temp_File_Internal
+     (FD     : out File_Descriptor;
+      Name   : out String_Access;
+      Stdout : Boolean);
+   --  Internal routine to implement two Create_Temp_File routines. If Stdout
+   --  is set to True the created descriptor is stdout-compatible, otherwise
+   --  it might not be depending on the OS (VMS is one example). The first two
+   --  parameters are as in Create_Temp_File.
 
    function C_String_Length (S : Address) return Integer;
    --  Returns the length of a C string. Does check for null address
@@ -749,9 +758,56 @@ package body System.OS_Lib is
      (FD   : out File_Descriptor;
       Name : out String_Access)
    is
+   begin
+      Create_Temp_File_Internal (FD, Name, Stdout => False);
+   end Create_Temp_File;
+
+   procedure Create_Temp_Output_File
+     (FD   : out File_Descriptor;
+      Name : out String_Access)
+   is
+   begin
+      Create_Temp_File_Internal (FD, Name, Stdout => True);
+   end Create_Temp_Output_File;
+
+   -------------------------------
+   -- Create_Temp_File_Internal --
+   -------------------------------
+
+   procedure Create_Temp_File_Internal
+     (FD        : out File_Descriptor;
+      Name      : out String_Access;
+      Stdout    : Boolean)
+   is
       Pos      : Positive;
       Attempts : Natural := 0;
       Current  : String (Current_Temp_File_Name'Range);
+
+      ---------------------------------
+      -- Create_New_Output_Text_File --
+      ---------------------------------
+
+      function Create_New_Output_Text_File
+        (Name : String) return File_Descriptor;
+      --  Similar to Create_Output_Text_File, except it fails if the file
+      --  already exists. We need this behavior to ensure we don't accidentally
+      --  open a temp file that has just been created by a concurrently running
+      --  process. There is no point exposing this function, as it's generally
+      --  not particularly useful.
+
+      function Create_New_Output_Text_File
+        (Name : String) return File_Descriptor is
+         function C_Create_File
+           (Name : C_File_Name) return File_Descriptor;
+         pragma Import (C, C_Create_File, "__gnat_create_output_file_new");
+
+         C_Name : String (1 .. Name'Length + 1);
+
+      begin
+         C_Name (1 .. Name'Length) := Name;
+         C_Name (C_Name'Last)      := ASCII.NUL;
+         return C_Create_File (C_Name (C_Name'First)'Address);
+      end Create_New_Output_Text_File;
 
    begin
       --  Loop until a new temp file can be created
@@ -814,7 +870,11 @@ package body System.OS_Lib is
 
          --  Attempt to create the file
 
-         FD := Create_New_File (Current, Binary);
+         if Stdout then
+            FD := Create_New_Output_Text_File (Current);
+         else
+            FD := Create_New_File (Current, Binary);
+         end if;
 
          if FD /= Invalid_FD then
             Name := new String'(Current);
@@ -836,7 +896,7 @@ package body System.OS_Lib is
             end if;
          end if;
       end loop File_Loop;
-   end Create_Temp_File;
+   end Create_Temp_File_Internal;
 
    -----------------
    -- Delete_File --

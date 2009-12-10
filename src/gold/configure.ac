@@ -151,6 +151,12 @@ for targ in $target $canon_targets; do
 	default_size=$targ_size
 	default_big_endian=$targ_big_endian
 	default_osabi=$targ_osabi
+
+	AM_CONDITIONAL(DEFAULT_TARGET_ARM, test "$targ_obj" = "arm")
+	AM_CONDITIONAL(DEFAULT_TARGET_I386, test "$targ_obj" = "i386")
+	AM_CONDITIONAL(DEFAULT_TARGET_POWERPC, test "$targ_obj" = "powerpc")
+	AM_CONDITIONAL(DEFAULT_TARGET_SPARC, test "$targ_obj" = "sparc")
+	AM_CONDITIONAL(DEFAULT_TARGET_X86_64, test "$targ_obj" = "x86_64")
       fi
     fi
   fi
@@ -332,7 +338,7 @@ AC_LANG_PUSH(C++)
 AC_CHECK_HEADERS(tr1/unordered_set tr1/unordered_map)
 AC_CHECK_HEADERS(ext/hash_map ext/hash_set)
 AC_CHECK_HEADERS(byteswap.h)
-AC_CHECK_FUNCS(mallinfo posix_fallocate)
+AC_CHECK_FUNCS(mallinfo posix_fallocate readv)
 AC_CHECK_DECLS([basename, ffs, asprintf, vasprintf, snprintf, vsnprintf, strverscmp, strndup, memmem])
 
 # Use of ::std::tr1::unordered_map::rehash causes undefined symbols
@@ -362,6 +368,18 @@ void bar() { foo<int>("%s\n", "foo"); }
 if test "$gold_cv_template_attribute" = "yes"; then
   AC_DEFINE(HAVE_TEMPLATE_ATTRIBUTES, 1,
 	    [Define if attributes work on C++ templates])
+fi
+
+dnl Check if the system has struct stat::st_mtim.
+AC_CACHE_CHECK([for struct stat::st_mtim.],
+[gold_cv_stat_st_mtim],
+[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+#include <sys/stat.h>
+long bar() { struct stat s; return (long)(s.st_mtim.tv_sec + s.st_mtim.tv_sec);}
+]])], [gold_cv_stat_st_mtim=yes], [gold_cv_stat_st_mtim=no])])
+if test "$gold_cv_stat_st_mtim" = "yes"; then
+  AC_DEFINE(HAVE_STAT_ST_MTIM, 1,
+	    [Define if struct stat has a field st_mtim with timespec for mtime])
 fi
 
 AC_LANG_POP(C++)

@@ -94,6 +94,17 @@
 #endif
 #endif
 
+/* Configure small REENT structure for Xilinx MicroBlaze platforms */
+#if defined (__MICROBLAZE__)
+#ifndef _REENT_SMALL
+#define _REENT_SMALL
+#endif
+/* Xilinx XMK uses Unix98 mutex */
+#ifdef __XMK__
+#define _UNIX98_THREAD_MUTEX_ATTRIBUTES
+#endif
+#endif
+
 #if defined(__mips__) && !defined(__rtems__)
 #define __ATTRIBUTE_IMPURE_PTR__ __attribute__((__section__(".sdata")))
 #endif
@@ -175,6 +186,9 @@
 #include <cygwin/config.h>
 #define __LINUX_ERRNO_EXTENSIONS__ 1
 #define _MB_EXTENDED_CHARSETS_ALL 1
+#if !defined (__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L)
+#define __USE_XOPEN2K 1
+#endif
 #endif
 
 #if defined(__rtems__)

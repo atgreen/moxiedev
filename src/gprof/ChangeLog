@@ -1,4 +1,24 @@
-2009-09-25  Dimitry Gorbachev  <d.g.gorbachev@gmail.com>
+2009-11-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* configure: Regenerate.
+
+2009-11-17  Nick Clifton  <nickc@redhat.com>
+
+	* po/bg.po: New Bulgarian translation.
+	* configure.in (ALL_LINGUAS): Add bg.po.
+	* configure: Regenerate.
+
+2009-11-11  Nick Clifton  <nickc@redhat.com>
+
+	* po/id.po: Updated Indonesian translation.
+
+2009-11-11  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* configure.in: Call ACX_LARGEFILE.  Stop calling AC_SYS_LARGEFILE.
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+
+2009-09-25  Dmitry Gorbachev  <d.g.gorbachev@gmail.com>
 
 	PR 10656
 	* hist.h: Move declaration of histograms and num_histograms

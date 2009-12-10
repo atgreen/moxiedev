@@ -436,6 +436,7 @@ BFD_JUMP_TABLE macros.
 .  NAME##_bfd_link_hash_table_free, \
 .  NAME##_bfd_link_add_symbols, \
 .  NAME##_bfd_link_just_syms, \
+.  NAME##_bfd_copy_link_hash_symbol_type, \
 .  NAME##_bfd_final_link, \
 .  NAME##_bfd_link_split_section, \
 .  NAME##_bfd_gc_sections, \
@@ -466,6 +467,12 @@ BFD_JUMP_TABLE macros.
 .
 .  {* Indicate that we are only retrieving symbol values from this section.  *}
 .  void        (*_bfd_link_just_syms) (asection *, struct bfd_link_info *);
+.
+.  {* Copy the symbol type of a linker hash table entry.  *}
+.#define bfd_copy_link_hash_symbol_type(b, t, f) \
+.  BFD_SEND (b, _bfd_copy_link_hash_symbol_type, (b, t, f))
+.  void (*_bfd_copy_link_hash_symbol_type)
+.    (bfd *, struct bfd_link_hash_entry *, struct bfd_link_hash_entry *);
 .
 .  {* Do a link based on the link_order structures attached to each
 .     section of the BFD.  *}
@@ -641,6 +648,8 @@ extern const bfd_target bfd_elf32_pjl_vec;
 extern const bfd_target bfd_elf32_powerpc_vec;
 extern const bfd_target bfd_elf32_powerpcle_vec;
 extern const bfd_target bfd_elf32_powerpc_vxworks_vec;
+extern const bfd_target bfd_elf32_rx_le_vec;
+extern const bfd_target bfd_elf32_rx_be_vec;
 extern const bfd_target bfd_elf32_s390_vec;
 extern const bfd_target bfd_elf32_bigscore_vec;
 extern const bfd_target bfd_elf32_littlescore_vec;
@@ -978,6 +987,8 @@ static const bfd_target * const _bfd_target_vector[] =
 	&bfd_elf32_powerpc_vec,
 	&bfd_elf32_powerpc_vxworks_vec,
 	&bfd_elf32_powerpcle_vec,
+	&bfd_elf32_rx_be_vec,
+	&bfd_elf32_rx_le_vec,
 	&bfd_elf32_s390_vec,
 #ifdef BFD64
 	&bfd_elf32_bigscore_vec,
@@ -1422,6 +1433,122 @@ bfd_find_target (const char *target_name, bfd *abfd)
   if (abfd)
     abfd->xvec = target;
   return target;
+}
+
+/* Helper function for bfd_get_target_info to determine the target's
+   architecture.  This method handles bfd internal target names as
+   tuples and triplets.  */
+static bfd_boolean
+_bfd_find_arch_match (const char *tname, const char **arch,
+		      const char **def_target_arch)
+{
+  if (!arch)
+    return FALSE;
+
+  while (*arch != NULL)
+    {
+      const char *in_a = strstr (*arch, tname);
+      char end_ch = (in_a ? in_a[strlen (tname)] : 0);
+
+      if (in_a && (in_a == *arch || in_a[-1] == ':')
+          && end_ch == 0)
+        {
+          *def_target_arch = *arch;
+          return TRUE;
+        }
+      arch++;
+    }
+  return FALSE;
+}
+
+/*
+FUNCTION
+	bfd_get_target_info
+SYNOPSIS
+	const bfd_target *bfd_get_target_info (const char *target_name,
+					       bfd *abfd,
+				 	       bfd_boolean *is_bigendian,
+					       int *underscoring,
+					       const char **def_target_arch);
+DESCRIPTION
+        Return a pointer to the transfer vector for the object target
+        named @var{target_name}.  If @var{target_name} is <<NULL>>,
+        choose the one in the environment variable <<GNUTARGET>>; if
+        that is null or not defined, then choose the first entry in the
+        target list.  Passing in the string "default" or setting the
+        environment variable to "default" will cause the first entry in
+        the target list to be returned, and "target_defaulted" will be
+        set in the BFD if @var{abfd} isn't <<NULL>>.  This causes
+        <<bfd_check_format>> to loop over all the targets to find the
+        one that matches the file being read.
+	If @var{is_bigendian} is not <<NULL>>, then set this value to target's
+	endian mode. True for big-endian, FALSE for little-endian or for
+	invalid target.
+	If @var{underscoring} is not <<NULL>>, then set this value to target's
+	underscoring mode. Zero for none-underscoring, -1 for invalid target,
+	else the value of target vector's symbol underscoring.
+	If @var{def_target_arch} is not <<NULL>>, then set it to the architecture
+	string specified by the target_name.
+*/
+const bfd_target *
+bfd_get_target_info (const char *target_name, bfd *abfd,
+		     bfd_boolean *is_bigendian,
+		     int *underscoring, const char **def_target_arch)
+{
+  const bfd_target *target_vec;
+
+  if (is_bigendian)
+    *is_bigendian = FALSE;
+  if (underscoring)
+    *underscoring = -1;
+  if (def_target_arch)
+    *def_target_arch = NULL;
+  target_vec = bfd_find_target (target_name, abfd);
+  if (! target_vec)
+    return NULL;
+  if (is_bigendian)
+    *is_bigendian = ((target_vec->byteorder == BFD_ENDIAN_BIG) ? TRUE
+							       : FALSE);
+  if (underscoring)
+    *underscoring = ((int) target_vec->symbol_leading_char) & 0xff;
+
+  if (def_target_arch)
+    {
+      const char *tname = target_vec->name;
+      const char **arches = bfd_arch_list ();
+
+      if (arches && tname)
+        {
+          char *hyp = strchr (tname, '-');
+
+          if (hyp != NULL)
+            {
+              tname = ++hyp;
+
+	      /* Make sure we detect architecture names
+		 for triplets like "pe-arm-wince-little".  */
+	      if (!_bfd_find_arch_match (tname, arches, def_target_arch))
+		{
+		  char new_tname[50];
+
+		  strcpy (new_tname, hyp);
+		  while ((hyp = strrchr (new_tname, '-')) != NULL)
+		    {
+		      *hyp = 0;
+		      if (_bfd_find_arch_match (new_tname, arches,
+			  			def_target_arch))
+			break;
+		    }
+		}
+	    }
+	  else
+	    _bfd_find_arch_match (tname, arches, def_target_arch);
+	}
+
+      if (arches)
+        free (arches);
+    }
+  return target_vec;
 }
 
 /*

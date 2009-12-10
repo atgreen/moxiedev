@@ -1,4 +1,256 @@
-2009-09-25  Dimitry Gorbachev  <d.g.gorbachev@gmail.com>
+2009-12-09  Tristan Gingold  <gingold@adacore.com>
+
+	* addr2line.c (translate_addresses): Display addresses
+	if option -a is used.
+	(with_addresses): New variable.
+	(long_options): Add option '-a'.
+	(usage): Add usage for option '-a'.
+	(main): Handle option '-a'.
+	* doc/binutils.texi (addr2line): Document option '-a'.
+	* NEWS: Mention new feature.
+
+2009-12-08  Cary Coutant  <ccoutant@google.com>
+
+	* dwarf.c (dwarf_select_sections_by_names): Handle pubtypes correctly.
+	(debug_displays): Remove duplicate entry for debug_pubtypes.
+
+2009-12-03  David Daney  <ddaney@caviumnetworks.com>
+	    Adam Nemet  <adambnemet@gmail.com>
+
+	* readelf.c (get_machine_flags): Handle E_MIPS_MACH_OCTEON2 case.
+
+2009-12-03  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/11045
+	* dwarf.c (do_debug_pubtypes): New variable.
+	(dwarf_select_sections_by_names): Handle .debug_pubtypes.
+	(dwarf_select_sections_by_letters): Add 't' for .debug_pubtype.
+	(dwarf_select_sections_all): Set do_debug_pubtypes.
+	(debug_displays): Add support for .debug_pubtypes.
+	* dwarf.h (do_debug_pubtypes): Export.
+	* objdump.c (usage): Add -wt or --dwarf=pubtypes.
+	* readelf.c (usage): Likewise.
+	(process_section_headers): Enable debug display if
+	do_debug_pubtypes is set.
+	* doc/binutils.texi: Document -wt/--dwarf=pubtypes option.
+
+2009-12-02  Jerker Bäck  <jerker.back@gmail.com>
+
+	PR binutils/11017
+	* dlltool.c (PAGE_SIZE): Delete.
+	(PAGE_MASK): Provide default definition based on COFF_PAGE_SIZE.
+	Check for DLLTOOL_DEFAULT_MX86_64 and DLLTOOL_DEFAULT_I386.
+
+2009-12-01  Joseph Myers  <joseph@codesourcery.com>
+
+	* readelf.c (get_machine_name, get_osabi_name): Handle more
+	allocated values.
+
+2009-11-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* configure: Regenerate.
+
+2009-11-20  Nick Clifton  <nickc@redhat.com>
+
+	* readelf.c: Include xc16x.h.
+	(dump_relocations): Handle relocations for the xc16x target.
+	(get_machine_name): Accept EM_C166 for xc16x targets.
+	(is_32bit_abs_reloc): Add support for xc16c 32-bit absolute reloc.
+	(is_16bit_abs_reloc): Add support for xc16c 16-bit absolute reloc.
+	(is_none_reloc): Add support for xc16c null reloc.
+	
+2009-11-20  Ben Elliston  <bje@au.ibm.com>
+
+	* Makefile.am (syslex.o): Use $(NO_WERROR) not -Wno-error.
+	(sysinfo.o): Likewise.
+	* Makefile.in: Regenerate.
+
+2009-11-19  Ben Elliston  <bje@au.ibm.com>
+
+	* arlex.l: Enable noinput, nounput flex options.
+	* syslex.l: Likewise.
+
+2009-11-17  Paul Brook  <paul@codesourcery.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* readelf.c (arm_attr_tag_CPU_arch): Add v7E-M.
+
+2009-11-16  Kai Tietz  <kai.tietz@onevision.com>
+
+	* windmc.c (set_endianess): Use bfd_get_target_info.
+	* windres.c (set_endianess): Likewise.
+	(find_arch_match): Removed.
+
+2009-11-11  Nick Clifton  <nickc@redhat.com>
+
+	* po/id.po: Updated Indonesian translation.
+
+2009-11-11  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* configure.in: Stop checking for fopen64 and stat64.
+	* strings.c (file_off, file_open, statbuf, file_stat): Remove.
+	(strings_file): Change file_off to file_ptr, file_open to fopen,
+	statbuf to struct stat and file_stat to stat.
+	(get_char): Change parameter type file_off * to file_ptr *.
+	(print_strings): Change parameter and variable `start' type file_off to
+	file_ptr.
+	* configure: Regenerate.
+	* config.in: Regenerate.
+
+2009-11-11  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* configure.in: Call ACX_LARGEFILE.  Stop calling AC_PLUGINS,
+	AC_SYS_LARGEFILE and checking the Solaris largefile exception.
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+
+2009-11-09  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* bucomm.c (get_file_size): Update comment for the error return value.
+
+2009-11-08  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	* readelf.c (slurp_hppa_unwind_table): Don't relocate address twice.
+
+2009-11-05  Kai Tietz  <kai.tietz@onevision.com>
+
+	* dllwrap.c (is_leading_underscore): New variable.
+	(cpu_type): New enum type.
+	(which_cpu): New variable.
+	(usage): Add new options --no-leading-underscore
+	and --leading-underscore.
+	(long_options): Likewise.
+	(OPTION_NO_LEADING_UNDERSCORE): New define.
+	(OPTION_LEADING_UNDERSCORE): Likewise.
+	(main): Initialize which_host, pass new options
+	to dlltool, do underscoring dependent on
+	is_leading_underscore, and do '@12' decoration
+	only for x86.
+
+2009-11-02  Paul Brook  <paul@codesourcery.com>
+
+	* readelf.c (arm_attr_tag_VFP_arch): Add VFPv4 and VFPv4-D16.
+
+2009-10-28  Kai Tietz <kai.tietz@onevision.com>
+
+	* dlltool.c (leading_underscore): New local variable.
+	(asm_prefix): Interpret leading_underscore.
+	(xlate): Likewise.
+	(add_excludes): Use leading_underscore for making
+	symbol name.
+	(gen_exp_file): Use leading_underscore for internal
+	_imp_ symbols.
+	(usage): Add display of --no-leading-underscore and
+	--leading-underscore option.
+	(OPTION_NO_LEADING_UNDERSCORE): New.
+	(OPTION_LEADING_UNDERSCORE): New.
+	(long_options): Add --no-leading-underscore and
+	--leading-underscore option.
+	(main): Handle new options.
+	* doc/binutils.text: Add documentation of the options
+	--no-leading-underscore and --leading-underscore.
+
+2009-10-23  Kai Tietz  <kai.tietz@onevision.com>
+
+	* deflex.l: Allow '<' and '>' in ID names.
+
+	* defparse.y (EQUAL): New token constant.
+	(opt_import_name): New rule for emptry or '==' ID.
+	(expline): Add opt_import_name as last line element.
+	(impline): Likewise.
+	* dlltool.c (ifunct): New member its_name.
+	(export): Likewise.
+	(append_import): Add its_name argument.
+	(defexports): Likewise.
+	(defimport): Likewise.
+	(scan_drectve_symbols): Adjust calls to def_exports.
+	(dump_def_info): Print new optinal import/export table
+	symbol name.
+	(generate_idata_ofile): Use its_name member.
+	(make_one_lib_file): Likewise.
+	(nfunc): Take its_name in account on sort.
+	* dlltool.h (def_exports): Add its_name as argument.
+	(def_import): Likewise.
+	* doc/binutils.texi: Add new def file syntax extension.
+	* deflex.l (EQUAL): Add rule for '=='.
+	* NEWS: Mention new feature.
+
+2009-10-23  Thomas Cougnard  <thomas.cougnard@gmail.com>
+
+	* readelf.c (dynamic_info): Correct size of array.
+
+2009-10-21  Ben Elliston  <bje@gnu.org>
+
+	* MAINTAINERS (BUILD SYSTEM, TESTSUITES): Remove myself.
+
+2009-10-19  Jerker Bäck  <jerker.back@gmail.com>
+
+	PR binutils/10793
+	* prdbg.c (tg_end_struct_type): Warning fix.
+
+	PR binutils/10792
+	* dlltool.c (dll_name_list_append): Declare variable at start
+	of block.
+	(dll_name_list_count, dll_name-list_print): Likewise.
+
+2009-10-16  Doug Evans  <dje@sebabeach.org>
+
+	* MAINTAINERS: Add myself as m32r maintainer.
+
+2009-10-16  Jerker Bäck <jerker.back@gmail.com>
+
+	PR 10764
+	* Makefile.am (sysinfo.o, syslex.o): Place source file after all
+	command line switches.
+	* Makefile.in: Regenerate.
+
+2009-10-16  Yann Droneaud  <yann@droneaud.fr>
+
+	PR 10768
+	* dlltool.c (bfd_get_errmsg): New macro.
+	(scan_obj_file): Use it.
+	(make_one_lib_file): Use it.
+	(make_head): Use it.
+	(make_delay_head): Use it.
+	(make_tail): Use it.
+	(gen_lib_file): Use it.
+	(identify_dll_for_implib): Use it.
+	(identify_search_archive):  Use it.
+
+2009-10-16  Nick Clifton  <nickc@redhat.com>
+
+	* readelf.c (usage): Add mention of --debug-dump=frames-interp.
+	Wrap output to 80 columns.
+	* objdump.c (usage): Likewise.
+	* doc/binutils.texi (readelf): Add note about =frames-interp.
+
+2009-10-01  Alan Modra  <amodra@bigpond.net.au>
+
+	* addr2line.c (slurp_symtab): Don't use bfd_read_minisymbols.
+
+2009-09-29  Nick Clifton  <nickc@redhat.com>
+
+	* doc/binutils.texi (c++filt): Remove spurious description of
+	nonexistent --java command line switch for cxxfilt.
+
+2009-09-29  DJ Delorie  <dj@redhat.com>
+
+	* readelf.c: Add support for RX target.
+	* MAINTAINERS: Add DJ and NickC as maintainers for RX.
+
+2009-09-28  Alan Modra  <amodra@bigpond.net.au>
+
+	* configure.in: Don't invoke configure.tgt on $enable_targets.
+	* configure: Regenerate.
+
+2009-09-28  Nick Clifton  <nickc@redhat.com>
+
+	PR 10478
+	* readelf.c (get_elf_section_flags): Allow SHN_BEFORE and
+	SHN_AFTER section link values in x86 binaries.
+	(process_section_headers): Likewise.
+
+2009-09-25  Dmitry Gorbachev  <d.g.gorbachev@gmail.com>
 
 	PR 10656
 	* readelf.c: Remove duplicate declaration of variable do_wide.
@@ -66,8 +318,7 @@
 
 2009-09-10  Martin Thuresson  <martin@mtme.org>
 
-	Update soruces to compile cleanly with -Wc++-compat:
-
+	Update sources to compile cleanly with -Wc++-compat:
 	* addr2line.c (slurp_symtab): Fix casts. Introduce variable
 	minisyms to avoid aliasing varning.
 	* ar.c: Add casts.

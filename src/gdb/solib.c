@@ -86,9 +86,8 @@ set_solib_ops (struct gdbarch *gdbarch, struct target_so_ops *new_ops)
    configuration needs to call set_solib_ops.  */
 struct target_so_ops *current_target_so_ops;
 
-/* local data declarations */
-
-static struct so_list *so_list_head;	/* List of known shared objects */
+/* List of known shared objects */
+#define so_list_head current_program_space->so_list
 
 /* Local function prototypes */
 
@@ -310,7 +309,7 @@ solib_bfd_open (char *pathname)
 
   /* Check bfd arch.  */
   b = gdbarch_bfd_arch_info (target_gdbarch);
-  if (b->compatible (b, bfd_get_arch_info (abfd)) != b)
+  if (!b->compatible (b, bfd_get_arch_info (abfd)))
     warning (_("`%s': Shared library architecture %s is not compatible "
                "with target architecture %s."), found_pathname,
              bfd_get_arch_info (abfd)->printable_name, b->printable_name);
@@ -651,6 +650,7 @@ update_solib_list (int from_tty, struct target_ops *target)
       for (i = inferior; i; i = i->next)
 	{
 	  i->from_tty = from_tty;
+	  i->pspace = current_program_space;
 
 	  /* Fill in the rest of the `struct so_list' node.  */
 	  catch_errors (solib_map_sections, i,
@@ -937,15 +937,32 @@ solib_contains_address_p (const struct so_list *const solib,
  */
 
 char *
-solib_name_from_address (CORE_ADDR address)
+solib_name_from_address (struct program_space *pspace, CORE_ADDR address)
 {
-  struct so_list *so = 0;	/* link map state variable */
+  struct so_list *so = NULL;
 
-  for (so = so_list_head; so; so = so->next)
+  for (so = pspace->so_list; so; so = so->next)
     if (solib_contains_address_p (so, address))
       return (so->so_name);
 
   return (0);
+}
+
+/* Return whether the data starting at VADDR, size SIZE, must be kept
+   in a core file for shared libraries loaded before "gcore" is used
+   to be handled correctly when the core file is loaded.  This only
+   applies when the section would otherwise not be kept in the core
+   file (in particular, for readonly sections).  */
+
+int
+solib_keep_data_in_core (CORE_ADDR vaddr, unsigned long size)
+{
+  struct target_so_ops *ops = solib_ops (target_gdbarch);
+
+  if (ops->keep_data_in_core)
+    return ops->keep_data_in_core (vaddr, size);
+  else
+    return 0;
 }
 
 /* Called by free_all_symtabs */

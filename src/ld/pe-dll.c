@@ -149,6 +149,7 @@ static void add_bfd_to_link (bfd *, const char *, struct bfd_link_info *);
 
 def_file * pe_def_file = 0;
 int pe_dll_export_everything = 0;
+int pe_dll_exclude_all_symbols = 0;
 int pe_dll_do_default_excludes = 1;
 int pe_dll_kill_ats = 0;
 int pe_dll_stdcall_aliases = 0;
@@ -441,8 +442,14 @@ pe_export_sort (const void *va, const void *vb)
 {
   const def_file_export *a = va;
   const def_file_export *b = vb;
+  char *an = a->name;
+  char *bn = b->name;
+  if (a->its_name)
+    an = a->its_name;
+  if (b->its_name)
+    bn = b->its_name;
 
-  return strcmp (a->name, b->name);
+  return strcmp (an, bn);
 }
 
 /* Read and process the .DEF file.  */
@@ -664,14 +671,15 @@ process_def_file_and_drectve (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *
 	}
     }
 
-  /* If we are not building a DLL, when there are no exports
-     we do not build an export table at all.  */
-  if (!pe_dll_export_everything && pe_def_file->num_exports == 0
-      && info->executable)
+  /* If we are building an executable and there is nothing
+     to export, we do not build an export table at all.  */
+  if (info->executable && pe_def_file->num_exports == 0
+      && (!pe_dll_export_everything || pe_dll_exclude_all_symbols))
     return;
 
   /* Now, maybe export everything else the default way.  */
-  if (pe_dll_export_everything || pe_def_file->num_exports == 0)
+  if ((pe_dll_export_everything || pe_def_file->num_exports == 0)
+      && !pe_dll_exclude_all_symbols)
     {
       for (b = info->input_bfds; b; b = b->link_next)
 	{
@@ -730,7 +738,7 @@ process_def_file_and_drectve (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *
 		  if (auto_export (b, pe_def_file, sn))
 		    {
 		      def_file_export *p;
-		      p=def_file_add_export (pe_def_file, sn, 0, -1);
+		      p=def_file_add_export (pe_def_file, sn, 0, -1, NULL);
 		      /* Fill data flag properly, from dlltool.c.  */
 		      p->flag_data = !(symbols[j]->flags & BSF_FUNCTION);
 		    }
@@ -786,7 +794,7 @@ process_def_file_and_drectve (bfd *abfd ATTRIBUTE_UNUSED, struct bfd_link_info *
 	      if (auto_export (NULL, pe_def_file, tmp))
 		def_file_add_export (pe_def_file, tmp,
 				     pe_def_file->exports[i].internal_name,
-				     -1);
+				     -1, NULL);
 	      else
 		free (tmp);
 	    }
@@ -1047,7 +1055,10 @@ generate_edata (bfd *abfd, struct bfd_link_info *info ATTRIBUTE_UNUSED)
 		}
 	      exported_symbols[ei] = i;
 	    }
-	  name_table_size += strlen (pe_def_file->exports[i].name) + 1;
+	  if (pe_def_file->exports[i].its_name)
+	    name_table_size += strlen (pe_def_file->exports[i].its_name) + 1;
+	  else
+	    name_table_size += strlen (pe_def_file->exports[i].name) + 1;
 	}
 
       /* Reserve space for the forward name. */
@@ -1193,6 +1204,8 @@ fill_edata (bfd *abfd, struct bfd_link_info *info ATTRIBUTE_UNUSED)
 	  if (!pe_def_file->exports[s].flag_noname)
 	    {
 	      char *ename = pe_def_file->exports[s].name;
+	      if (pe_def_file->exports[s].its_name)
+		ename = pe_def_file->exports[s].its_name;
 
 	      bfd_put_32 (abfd, ERVA (enamestr), enameptrs);
 	      enameptrs += 4;
@@ -1674,6 +1687,12 @@ pe_dll_generate_def_file (const char *pe_out_def_filename)
 		quoteput (im->name, out, 0);
 	      else
 		fprintf (out, "%d", im->ordinal);
+
+	      if (im->its_name)
+		{
+		  fprintf (out, " == ");
+		  quoteput (im->its_name, out, 0);
+		}
 
 	      fprintf (out, "\n");
 	    }
@@ -2181,7 +2200,10 @@ make_one (def_file_export *exp, bfd *parent, bfd_boolean include_jmp_stub)
   else
     {
       /* { short, asciz }  */
-      len = 2 + strlen (exp->name) + 1;
+      if (exp->its_name)
+	len = 2 + strlen (exp->its_name) + 1;
+      else
+	len = 2 + strlen (exp->name) + 1;
       if (len & 1)
 	len++;
       bfd_set_section_size (abfd, id6, len);
@@ -2190,7 +2212,10 @@ make_one (def_file_export *exp, bfd *parent, bfd_boolean include_jmp_stub)
       memset (d6, 0, len);
       d6[0] = exp->hint & 0xff;
       d6[1] = exp->hint >> 8;
-      strcpy ((char *) d6 + 2, exp->name);
+      if (exp->its_name)
+	strcpy ((char*) d6 + 2, exp->its_name);
+      else
+	strcpy ((char *) d6 + 2, exp->name);
     }
 
   bfd_set_symtab (abfd, symtab, symptr);
@@ -2736,6 +2761,37 @@ pe_dll_generate_implib (def_file *def, const char *impfilename, struct bfd_link_
     }
 }
 
+static struct bfd_link_hash_entry *found_sym;
+
+static bfd_boolean
+pe_undef_alias_cdecl_match (struct bfd_link_hash_entry *h, void *inf)
+{
+  int sl;
+  char *string = inf;
+  const char *hs = h->root.string;
+
+  sl = strlen (string);
+  if (h->type == bfd_link_hash_undefined
+      && ((*hs == '@' && *string == '_'
+	   && strncmp (hs + 1, string + 1, sl - 1) == 0)
+	  || strncmp (hs, string, sl) == 0)
+      && h->root.string[sl] == '@')
+    {
+      found_sym = h;
+      return FALSE;
+    }
+  return TRUE;
+}
+
+static struct bfd_link_hash_entry *
+pe_find_cdecl_alias_match (char *name)
+{
+  found_sym = 0;
+  bfd_link_hash_traverse (link_info.hash, pe_undef_alias_cdecl_match,
+			  (char *) name);
+  return found_sym;
+}
+
 static void
 add_bfd_to_link (bfd *abfd, const char *name, struct bfd_link_info *link_info)
 {
@@ -2783,6 +2839,9 @@ pe_process_import_defs (bfd *output_bfd, struct bfd_link_info *link_info)
 	    size_t len = strlen (pe_def_file->imports[i].internal_name);
 	    char *name = xmalloc (len + 2 + 6);
 	    bfd_boolean include_jmp_stub = FALSE;
+	    bfd_boolean is_cdecl = FALSE;
+	    if (!lead_at && strchr (pe_def_file->imports[i].internal_name, '@') == NULL)
+	        is_cdecl = TRUE;
 
  	    if (lead_at)
 	      sprintf (name, "%s",
@@ -2811,6 +2870,14 @@ pe_process_import_defs (bfd *output_bfd, struct bfd_link_info *link_info)
 	    else
 	      include_jmp_stub = TRUE;
 
+	    if (is_cdecl && !blhe)
+	      {
+		sprintf (name, "%s%s",U (""),
+		         pe_def_file->imports[i].internal_name);
+		blhe = pe_find_cdecl_alias_match (name);
+		include_jmp_stub = TRUE;
+	      }
+
 	    free (name);
 
 	    if (blhe && blhe->type == bfd_link_hash_undefined)
@@ -2825,6 +2892,7 @@ pe_process_import_defs (bfd *output_bfd, struct bfd_link_info *link_info)
 		  }
 		exp.internal_name = pe_def_file->imports[i].internal_name;
 		exp.name = pe_def_file->imports[i].name;
+		exp.its_name = pe_def_file->imports[i].its_name;
 		exp.ordinal = pe_def_file->imports[i].ordinal;
 		exp.hint = exp.ordinal >= 0 ? exp.ordinal : 0;
 		exp.flag_private = 0;
@@ -2913,7 +2981,7 @@ pe_implied_import_dll (const char *filename)
       return FALSE;
     }
 
-  /* Get pe_header, optional header and numbers of export entries.  */
+  /* Get pe_header, optional header and numbers of directory entries.  */
   pe_header_offset = pe_get32 (dll, 0x3c);
   opthdr_ofs = pe_header_offset + 4 + 20;
 #ifdef pe_use_x86_64
@@ -2922,7 +2990,8 @@ pe_implied_import_dll (const char *filename)
   num_entries = pe_get32 (dll, opthdr_ofs + 92);
 #endif
 
-  if (num_entries < 1) /* No exports.  */
+  /* No import or export directory entry.  */
+  if (num_entries < 1)
     return FALSE;
 
 #ifdef pe_use_x86_64
@@ -2932,6 +3001,10 @@ pe_implied_import_dll (const char *filename)
   export_rva = pe_get32 (dll, opthdr_ofs + 96);
   export_size = pe_get32 (dll, opthdr_ofs + 100);
 #endif
+
+  /* No export table - nothing to export.  */
+  if (export_size == 0)
+    return FALSE;
 
   nsections = pe_get16 (dll, pe_header_offset + 4 + 2);
   secptr = (pe_header_offset + 4 + 20 +
@@ -3055,7 +3128,7 @@ pe_implied_import_dll (const char *filename)
 	    || (func_rva >= bss_start && func_rva < bss_end);
 
 	  imp = def_file_add_import (pe_def_file, erva + name_rva,
-				     dll_name, i, 0);
+				     dll_name, i, 0, NULL);
  	  /* Mark symbol type.  */
  	  imp->data = is_data;
 

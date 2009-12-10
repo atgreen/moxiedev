@@ -371,7 +371,7 @@ static const bfd_byte elf_vax_plt0_entry[PLT_ENTRY_SIZE] =
 static const bfd_byte elf_vax_plt_entry[PLT_ENTRY_SIZE] =
 {
   0xfc, 0x0f,		/* .word ^M<r11:r2> */
-  0x16,	0xef,		/* jsb L^(pc) */
+  0x16, 0xef,		/* jsb L^(pc) */
   0, 0, 0, 0,		/* replaced with offset to start of .plt  */
   0, 0, 0, 0,		/* index into .rela.plt */
 };
@@ -1583,7 +1583,7 @@ elf_vax_relocate_section (bfd *output_bfd,
 	  if (sgotplt == NULL)
 	    {
 	      sgotplt = bfd_get_section_by_name (dynobj, ".got.plt");
-	      BFD_ASSERT (splt != NULL);
+	      BFD_ASSERT (sgotplt != NULL);
 	    }
 
 	  plt_index = h->plt.offset / PLT_ENTRY_SIZE - 1;
@@ -1593,7 +1593,7 @@ elf_vax_relocate_section (bfd *output_bfd,
 	     The first two are reserved.  */
 	  got_offset = (plt_index + 3) * 4;
 
-	  /* We want the relocate to point into the .got.plt instead
+	  /* We want the relocation to point into the .got.plt instead
 	     of the plt itself.  */
 	  relocation = (sgotplt->output_section->vma
 			+ sgotplt->output_offset

@@ -92,6 +92,8 @@ static struct symtab *current_source_symtab;
 
 static int current_source_line;
 
+static struct program_space *current_source_pspace;
+
 /* Default number of lines to print with commands like "list".
    This is based on guessing how many long (i.e. more than chars_per_line
    characters) lines there will be.  To be completely correct, "list"
@@ -152,6 +154,7 @@ get_current_source_symtab_and_line (void)
 {
   struct symtab_and_line cursal = { 0 };
 
+  cursal.pspace = current_source_pspace;
   cursal.symtab = current_source_symtab;
   cursal.line = current_source_line;
   cursal.pc = 0;
@@ -190,15 +193,17 @@ struct symtab_and_line
 set_current_source_symtab_and_line (const struct symtab_and_line *sal)
 {
   struct symtab_and_line cursal = { 0 };
-  
+
+  cursal.pspace = current_source_pspace;
   cursal.symtab = current_source_symtab;
   cursal.line = current_source_line;
-
-  current_source_symtab = sal->symtab;
-  current_source_line = sal->line;
   cursal.pc = 0;
   cursal.end = 0;
-  
+
+  current_source_pspace = sal->pspace;
+  current_source_symtab = sal->symtab;
+  current_source_line = sal->line;
+
   return cursal;
 }
 
@@ -232,6 +237,7 @@ select_source_symtab (struct symtab *s)
     {
       current_source_symtab = s;
       current_source_line = 1;
+      current_source_pspace = SYMTAB_PSPACE (s);
       return;
     }
 
@@ -245,6 +251,7 @@ select_source_symtab (struct symtab *s)
       sals = decode_line_spec (main_name (), 1);
       sal = sals.sals[0];
       xfree (sals.sals);
+      current_source_pspace = sal.pspace;
       current_source_symtab = sal.symtab;
       current_source_line = max (sal.line - (lines_to_list - 1), 1);
       if (current_source_symtab)
@@ -256,7 +263,7 @@ select_source_symtab (struct symtab *s)
 
   current_source_line = 1;
 
-  for (ofp = object_files; ofp != NULL; ofp = ofp->next)
+  ALL_OBJFILES (ofp)
     {
       for (s = ofp->symtabs; s; s = s->next)
 	{
@@ -264,15 +271,19 @@ select_source_symtab (struct symtab *s)
 	  int len = strlen (name);
 	  if (!(len > 2 && (strcmp (&name[len - 2], ".h") == 0
 	      || strcmp (name, "<<C++-namespaces>>") == 0)))
-	    current_source_symtab = s;
+	    {
+	      current_source_pspace = current_program_space;
+	      current_source_symtab = s;
+	    }
 	}
     }
+
   if (current_source_symtab)
     return;
 
   /* How about the partial symbol tables?  */
 
-  for (ofp = object_files; ofp != NULL; ofp = ofp->next)
+  ALL_OBJFILES (ofp)
     {
       for (ps = ofp->psymtabs; ps != NULL; ps = ps->next)
 	{
@@ -293,6 +304,7 @@ select_source_symtab (struct symtab *s)
 	}
       else
 	{
+	  current_source_pspace = current_program_space;
 	  current_source_symtab = PSYMTAB_TO_SYMTAB (cs_pst);
 	}
     }
@@ -317,11 +329,13 @@ show_directories (char *ignore, int from_tty)
 void
 forget_cached_source_info (void)
 {
+  struct program_space *pspace;
   struct symtab *s;
   struct objfile *objfile;
   struct partial_symtab *pst;
 
-  for (objfile = object_files; objfile != NULL; objfile = objfile->next)
+  ALL_PSPACES (pspace)
+    ALL_PSPACE_OBJFILES (pspace, objfile)
     {
       for (s = objfile->symtabs; s != NULL; s = s->next)
 	{
@@ -346,6 +360,8 @@ forget_cached_source_info (void)
 	  }
       }
     }
+
+  last_source_visited = NULL;
 }
 
 void
@@ -356,12 +372,6 @@ init_source_path (void)
   sprintf (buf, "$cdir%c$cwd", DIRNAME_SEPARATOR);
   source_path = xstrdup (buf);
   forget_cached_source_info ();
-}
-
-void
-init_last_source_visited (void)
-{
-  last_source_visited = NULL;
 }
 
 /* Add zero or more directories to the front of the source path.  */
@@ -382,11 +392,10 @@ directory_command (char *dirname, int from_tty)
   else
     {
       mod_path (dirname, &source_path);
-      last_source_visited = NULL;
+      forget_cached_source_info ();
     }
   if (from_tty)
     show_directories ((char *) 0, from_tty);
-  forget_cached_source_info ();
 }
 
 /* Add a path given with the -d command line switch.
@@ -1883,6 +1892,8 @@ unset_substitute_path_command (char *args, int from_tty)
 
   if (from != NULL && !rule_found)
     error (_("No substitution rule defined for `%s'"), from);
+
+  forget_cached_source_info ();
 }
 
 /* Add a new source path substitution rule.  */
@@ -1921,6 +1932,7 @@ set_substitute_path_command (char *args, int from_tty)
   /* Insert the new substitution rule.  */
 
   add_substitute_path_rule (argv[0], argv[1]);
+  forget_cached_source_info ();
 }
 
 

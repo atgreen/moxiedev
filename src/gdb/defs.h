@@ -608,6 +608,7 @@ extern int build_address_symbolic (CORE_ADDR addr,
 				   int *unmapped);
 
 extern void print_address (struct gdbarch *, CORE_ADDR, struct ui_file *);
+extern const char *pc_prefix (CORE_ADDR);
 
 /* From source.c */
 
@@ -629,8 +630,6 @@ extern void directory_switch (char *, int);
 extern char *source_path;
 
 extern void init_source_path (void);
-
-extern void init_last_source_visited (void);
 
 /* From exec.c */
 
@@ -1109,7 +1108,6 @@ extern void (*deprecated_readline_begin_hook) (char *, ...)
 extern char *(*deprecated_readline_hook) (char *);
 extern void (*deprecated_readline_end_hook) (void);
 extern void (*deprecated_register_changed_hook) (int regno);
-extern void (*deprecated_memory_changed_hook) (CORE_ADDR addr, int len);
 extern void (*deprecated_context_hook) (int);
 extern ptid_t (*deprecated_target_wait_hook) (ptid_t ptid,
 					      struct target_waitstatus *status,
@@ -1219,5 +1217,10 @@ extern ULONGEST align_down (ULONGEST v, int n);
    which use obstacks.  */
 void *hashtab_obstack_allocate (void *data, size_t size, size_t count);
 void dummy_obstack_deallocate (void *object, void *data);
+
+/* From progspace.c */
+
+extern void initialize_progspace (void);
+extern void initialize_inferiors (void);
 
 #endif /* #ifndef DEFS_H */

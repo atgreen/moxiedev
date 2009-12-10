@@ -1690,15 +1690,10 @@ cris_elf_relocate_section (output_bfd, info, input_bfd, input_section,
 		= -elf_cris_hash_table (info)->dtpmod_refcount;
 	    }
 
-	  /* The thread-based offset to the local symbol is the
-	     relocation.
-	     For the executable, TLS data begins at the thread pointer plus
-	     the negative size of the TLS data.  For a DSO, that's part of
-	     the module TLS offset.  */
+	  /* The relocation is the offset from the start of the module
+	     TLS block to the (local) symbol.  */
 	  relocation -= elf_hash_table (info)->tls_sec == NULL
-	    ? 0 : (elf_hash_table (info)->tls_sec->vma
-		   + (info->shared
-		      ? 0 : elf_hash_table (info)->tls_size));
+	    ? 0 : elf_hash_table (info)->tls_sec->vma;
 	  break;
 
 	case R_CRIS_32_GD:
@@ -2707,6 +2702,21 @@ cris_elf_gc_sweep_hook (bfd *abfd,
     }
 
   return TRUE;
+}
+
+/* The elf_backend_plt_sym_val hook function.  */
+
+static bfd_vma
+cris_elf_plt_sym_val (bfd_vma i, const asection *plt,
+		      const arelent *rel ATTRIBUTE_UNUSED)
+{
+  bfd_size_type plt_entry_size;
+
+  plt_entry_size
+    = (bfd_get_mach (plt->owner) == bfd_mach_cris_v32
+       ? PLT_ENTRY_SIZE_V32 : PLT_ENTRY_SIZE);
+
+  return plt->vma + (i + 1) * plt_entry_size;
 }
 
 /* Make sure we emit a GOT entry if the symbol was supposed to have a PLT
@@ -4317,6 +4327,7 @@ elf_cris_got_elt_size (bfd *abfd ATTRIBUTE_UNUSED,
 #define elf_backend_relocate_section		cris_elf_relocate_section
 #define elf_backend_gc_mark_hook		cris_elf_gc_mark_hook
 #define elf_backend_gc_sweep_hook		cris_elf_gc_sweep_hook
+#define elf_backend_plt_sym_val			cris_elf_plt_sym_val
 #define elf_backend_check_relocs                cris_elf_check_relocs
 #define elf_backend_grok_prstatus		cris_elf_grok_prstatus
 #define elf_backend_grok_psinfo			cris_elf_grok_psinfo

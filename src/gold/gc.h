@@ -28,6 +28,7 @@
 
 #include "elfcpp.h"
 #include "symtab.h"
+#include "icf.h"
 
 namespace gold
 {
@@ -137,7 +138,6 @@ template<int size, bool big_endian, typename Target_type, int sh_type,
 	 typename Scan>
 inline void
 gc_process_relocs(
-    const General_options& ,
     Symbol_table* symtab,
     Layout*,
     Target_type* ,
@@ -162,7 +162,7 @@ gc_process_relocs(
   std::vector<std::pair<long long, long long> >* addendvec = NULL;
   bool is_icf_tracked = false;
 
-  if (parameters->options().icf()
+  if (parameters->options().icf_enabled()
       && is_prefix_of(".text.", (src_obj)->section_name(src_indx).c_str()))
     {
       is_icf_tracked = true;

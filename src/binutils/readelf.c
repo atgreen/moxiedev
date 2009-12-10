@@ -130,6 +130,7 @@
 #include "elf/pj.h"
 #include "elf/ppc.h"
 #include "elf/ppc64.h"
+#include "elf/rx.h"
 #include "elf/s390.h"
 #include "elf/score.h"
 #include "elf/sh.h"
@@ -138,6 +139,7 @@
 #include "elf/v850.h"
 #include "elf/vax.h"
 #include "elf/x86-64.h"
+#include "elf/xc16x.h"
 #include "elf/xstormy16.h"
 #include "elf/xtensa.h"
 
@@ -164,7 +166,7 @@ static Elf_Internal_Syminfo * dynamic_syminfo;
 static unsigned long dynamic_syminfo_offset;
 static unsigned int dynamic_syminfo_nent;
 static char program_interpreter[PATH_MAX];
-static bfd_vma dynamic_info[DT_JMPREL + 1];
+static bfd_vma dynamic_info[DT_ENCODING];
 static bfd_vma dynamic_info_DT_GNU_HASH;
 static bfd_vma version_info[16];
 static Elf_Internal_Ehdr elf_header;
@@ -604,6 +606,7 @@ guess_is_rela (unsigned int e_machine)
     case EM_NIOS32:
     case EM_PPC64:
     case EM_PPC:
+    case EM_RX:
     case EM_S390:
     case EM_S390_OLD:
     case EM_SH:
@@ -1214,6 +1217,15 @@ dump_relocations (FILE * file,
 	case EM_MICROBLAZE:
 	case EM_MICROBLAZE_OLD:
 	  rtype = elf_microblaze_reloc_type (type);
+	  break;
+
+	case EM_RX:
+	  rtype = elf_rx_reloc_type (type);
+	  break;
+
+	case EM_XC16X:
+	case EM_C166:
+	  rtype = elf_xc16x_reloc_type (type);
 	  break;
 	}
 
@@ -1840,6 +1852,9 @@ get_machine_name (unsigned e_machine)
     case EM_ME16:		return "Toyota ME16 processor";
     case EM_ST100:		return "STMicroelectronics ST100 processor";
     case EM_TINYJ:		return "Advanced Logic Corp. TinyJ embedded processor";
+    case EM_PDSP:		return "Sony DSP processor";
+    case EM_PDP10:		return "Digital Equipment Corp. PDP-10";
+    case EM_PDP11:		return "Digital Equipment Corp. PDP-11";
     case EM_FX66:		return "Siemens FX66 microcontroller";
     case EM_ST9PLUS:		return "STMicroelectronics ST9+ 8/16 bit microcontroller";
     case EM_ST7:		return "STMicroelectronics ST7 8-bit microcontroller";
@@ -1867,6 +1882,7 @@ get_machine_name (unsigned e_machine)
     case EM_XSTORMY16:		return "Sanyo Xstormy16 CPU core";
     case EM_OPENRISC:
     case EM_OR32:		return "OpenRISC";
+    case EM_ARC_A5:		return "ARC International ARCompact processor";
     case EM_CRX:		return "National Semiconductor CRX microprocessor";
     case EM_DLX:		return "OpenDLX";
     case EM_IP2K_OLD:
@@ -1874,19 +1890,71 @@ get_machine_name (unsigned e_machine)
     case EM_IQ2000:       	return "Vitesse IQ2000";
     case EM_XTENSA_OLD:
     case EM_XTENSA:		return "Tensilica Xtensa Processor";
+    case EM_VIDEOCORE:		return "Alphamosaic VideoCore processor";
+    case EM_TMM_GPP:		return "Thompson Multimedia General Purpose Processor";
+    case EM_NS32K:		return "National Semiconductor 32000 series";
+    case EM_TPC:		return "Tenor Network TPC processor";
+    case EM_ST200:		return "STMicroelectronics ST200 microcontroller";
+    case EM_MAX:		return "MAX Processor";
+    case EM_CR:			return "National Semiconductor CompactRISC";
+    case EM_F2MC16:		return "Fujitsu F2MC16";
+    case EM_MSP430:		return "Texas Instruments msp430 microcontroller";
     case EM_LATTICEMICO32:	return "Lattice Mico32";
     case EM_M32C_OLD:
     case EM_M32C:	        return "Renesas M32c";
     case EM_MT:                 return "Morpho Techologies MT processor";
     case EM_BLACKFIN:		return "Analog Devices Blackfin";
+    case EM_SE_C33:		return "S1C33 Family of Seiko Epson processors";
+    case EM_SEP:		return "Sharp embedded microprocessor";
+    case EM_ARCA:		return "Arca RISC microprocessor";
+    case EM_UNICORE:		return "Unicore";
+    case EM_EXCESS:		return "eXcess 16/32/64-bit configurable embedded CPU";
+    case EM_DXP:		return "Icera Semiconductor Inc. Deep Execution Processor";
     case EM_NIOS32:		return "Altera Nios";
     case EM_ALTERA_NIOS2:	return "Altera Nios II";
+    case EM_C166:
     case EM_XC16X:		return "Infineon Technologies xc16x";
+    case EM_M16C:		return "Renesas M16C series microprocessors";
+    case EM_DSPIC30F:		return "Microchip Technology dsPIC30F Digital Signal Controller";
+    case EM_CE:			return "Freescale Communication Engine RISC core";
+    case EM_TSK3000:		return "Altium TSK3000 core";
+    case EM_RS08:		return "Freescale RS08 embedded processor";
+    case EM_ECOG2:		return "Cyan Technology eCOG2 microprocessor";
+    case EM_DSP24:		return "New Japan Radio (NJR) 24-bit DSP Processor";
+    case EM_VIDEOCORE3:		return "Broadcom VideoCore III processor";
+    case EM_SE_C17:		return "Seiko Epson C17 family";
+    case EM_TI_C6000:		return "Texas Instruments TMS320C6000 DSP family";
+    case EM_TI_C2000:		return "Texas Instruments TMS320C2000 DSP family";
+    case EM_TI_C5500:		return "Texas Instruments TMS320C55x DSP family";
+    case EM_MMDSP_PLUS:		return "STMicroelectronics 64bit VLIW Data Signal Processor";
+    case EM_CYPRESS_M8C:	return "Cypress M8C microprocessor";
+    case EM_R32C:		return "Renesas R32C series microprocessors";
+    case EM_TRIMEDIA:		return "NXP Semiconductors TriMedia architecture family";
+    case EM_QDSP6:		return "QUALCOMM DSP6 Processor";
+    case EM_8051:		return "Intel 8051 and variants";
+    case EM_STXP7X:		return "STMicroelectronics STxP7x family";
+    case EM_NDS32:		return "Andes Technology compact code size embedded RISC processor family";
+    case EM_ECOG1X:		return "Cyan Technology eCOG1X family";
+    case EM_MAXQ30:		return "Dallas Semiconductor MAXQ30 Core microcontrollers";
+    case EM_XIMO16:		return "New Japan Radio (NJR) 16-bit DSP Processor";
+    case EM_MANIK:		return "M2000 Reconfigurable RISC Microprocessor";
+    case EM_CRAYNV2:		return "Cray Inc. NV2 vector architecture";
     case EM_CYGNUS_MEP:         return "Toshiba MeP Media Engine";
     case EM_CR16:
     case EM_CR16_OLD:		return "National Semiconductor's CR16";
     case EM_MICROBLAZE:		return "Xilinx MicroBlaze";
     case EM_MICROBLAZE_OLD:	return "Xilinx MicroBlaze";
+    case EM_RX:			return "Renesas RX";
+    case EM_METAG:		return "Imagination Technologies META processor architecture";
+    case EM_MCST_ELBRUS:	return "MCST Elbrus general purpose hardware architecture";
+    case EM_ECOG16:		return "Cyan Technology eCOG16 family";
+    case EM_ETPU:		return "Freescale Extended Time Processing Unit";
+    case EM_SLE9X:		return "Infineon Technologies SLE9X core";
+    case EM_AVR32:		return "Atmel Corporation 32-bit microprocessor family";
+    case EM_STM8:		return "STMicroeletronics STM8 8-bit microcontroller";
+    case EM_TILE64:		return "Tilera TILE64 multicore architecture family";
+    case EM_TILEPRO:		return "Tilera TILEPro multicore architecture family";
+    case EM_CUDA:		return "NVIDIA CUDA architecture";
     default:
       snprintf (buff, sizeof (buff), _("<unknown>: 0x%x"), e_machine);
       return buff;
@@ -2269,6 +2337,7 @@ get_machine_flags (unsigned e_flags, unsigned e_machine)
   	    case E_MIPS_MACH_LS2E: strcat (buf, ", loongson-2e"); break;
   	    case E_MIPS_MACH_LS2F: strcat (buf, ", loongson-2f"); break;
 	    case E_MIPS_MACH_OCTEON: strcat (buf, ", octeon"); break;
+	    case E_MIPS_MACH_OCTEON2: strcat (buf, ", octeon2"); break;
 	    case E_MIPS_MACH_XLR:  strcat (buf, ", xlr"); break;
 	    case 0:
 	    /* We simply ignore the field in this case to avoid confusion:
@@ -2431,6 +2500,12 @@ get_machine_flags (unsigned e_flags, unsigned e_machine)
 	  if ((e_flags & EF_VAX_GFLOAT))
 	    strcat (buf, ", G-Float");
 	  break;
+
+	case EM_RX:
+	  if (e_flags & E_FLAG_RX_64BIT_DOUBLES)
+	    strcat (buf, ", 64-bit doubles");
+	  if (e_flags & E_FLAG_RX_DSP)
+	    strcat (buf, ", dsp");	  
 	}
     }
 
@@ -2459,6 +2534,7 @@ get_osabi_name (unsigned int osabi)
     case ELFOSABI_OPENVMS:	return "VMS - OpenVMS";
     case ELFOSABI_NSK:		return "HP - Non-Stop Kernel";
     case ELFOSABI_AROS:		return "AROS";
+    case ELFOSABI_FENIXOS:	return "FenixOS";
     case ELFOSABI_STANDALONE:	return _("Standalone App");
     case ELFOSABI_ARM:		return "ARM";
     default:
@@ -2915,8 +2991,9 @@ usage (FILE * stream)
                          Dump the contents of section <number|name> as strings\n\
   -R --relocated-dump=<number|name>\n\
                          Dump the contents of section <number|name> as relocated bytes\n\
-  -w[lLiaprmfFsoR] or\n\
-  --debug-dump[=rawline,=decodedline,=info,=abbrev,=pubnames,=aranges,=macro,=frames,=str,=loc,=Ranges]\n\
+  -w[lLiaprmfFsoRt] or\n\
+  --debug-dump[=rawline,=decodedline,=info,=abbrev,=pubnames,=aranges,=macro,=frames,\n\
+               =frames-interp,=str,=loc,=Ranges,=pubtypes]\n\
                          Display the contents of DWARF2 debug sections\n"));
 #ifdef SUPPORT_DISASSEMBLY
   fprintf (stream, _("\
@@ -3971,6 +4048,9 @@ get_elf_section_flags (bfd_vma sh_flags)
 #endif
 		  break;
 
+		case EM_386:
+		case EM_486:
+		case EM_X86_64:
 		case EM_OLD_SPARCV9:
 		case EM_SPARC32PLUS:
 		case EM_SPARCV9:
@@ -4262,7 +4342,7 @@ process_section_headers (FILE * file)
       else if (section->sh_type == SHT_RELA)
 	CHECK_ENTSIZE (section, i, Rela);
       else if ((do_debugging || do_debug_info || do_debug_abbrevs
-		|| do_debug_lines || do_debug_pubnames
+		|| do_debug_lines || do_debug_pubnames || do_debug_pubtypes
 		|| do_debug_aranges || do_debug_frames || do_debug_macinfo
 		|| do_debug_str || do_debug_loc || do_debug_ranges)
 	       && (const_strneq (name, ".debug_")
@@ -4279,6 +4359,7 @@ process_section_headers (FILE * file)
 	      || (do_debug_abbrevs  && streq (name, "abbrev"))
 	      || (do_debug_lines    && streq (name, "line"))
 	      || (do_debug_pubnames && streq (name, "pubnames"))
+	      || (do_debug_pubtypes && streq (name, "pubtypes"))
 	      || (do_debug_aranges  && streq (name, "aranges"))
 	      || (do_debug_ranges   && streq (name, "ranges"))
 	      || (do_debug_frames   && streq (name, "frame"))
@@ -4384,9 +4465,12 @@ process_section_headers (FILE * file)
 	    {
 	      link_too_big = "";
 	      /* The sh_link value is out of range.  Normally this indicates
-		 an error but it can have special values in SPARC binaries.  */
+		 an error but it can have special values in Solaris binaries.  */
 	      switch (elf_header.e_machine)
 		{
+		case EM_386:
+		case EM_486:
+		case EM_X86_64:
 		case EM_OLD_SPARCV9:
 		case EM_SPARC32PLUS:
 		case EM_SPARCV9:
@@ -5569,11 +5653,11 @@ slurp_hppa_unwind_table (FILE * file,
 	    {
 	    case 0:
 	      aux->table[i].start.section = sym->st_shndx;
-	      aux->table[i].start.offset += sym->st_value + rp->r_addend;
+	      aux->table[i].start.offset  = sym->st_value + rp->r_addend;
 	      break;
 	    case 1:
 	      aux->table[i].end.section   = sym->st_shndx;
-	      aux->table[i].end.offset   += sym->st_value + rp->r_addend;
+	      aux->table[i].end.offset    = sym->st_value + rp->r_addend;
 	      break;
 	    default:
 	      break;
@@ -8048,6 +8132,8 @@ is_32bit_abs_reloc (unsigned int reloc_type)
       return reloc_type == 1; /* R_PPC64_ADDR32.  */
     case EM_PPC:
       return reloc_type == 1; /* R_PPC_ADDR32.  */
+    case EM_RX:
+      return reloc_type == 1; /* R_RX_DIR32.  */
     case EM_S370:
       return reloc_type == 1; /* R_I370_ADDR31.  */
     case EM_S390_OLD:
@@ -8072,12 +8158,14 @@ is_32bit_abs_reloc (unsigned int reloc_type)
     case EM_X86_64:
     case EM_L1OM:
       return reloc_type == 10; /* R_X86_64_32.  */
+    case EM_XC16X:
+    case EM_C166:
+      return reloc_type == 3; /* R_XC16C_ABS_32.  */
     case EM_XSTORMY16:
       return reloc_type == 1; /* R_XSTROMY16_32.  */
     case EM_XTENSA_OLD:
     case EM_XTENSA:
       return reloc_type == 1; /* R_XTENSA_32.  */
-
     default:
       error (_("Missing knowledge of 32-bit reloc types used in DWARF sections of machine number %d\n"),
 	     elf_header.e_machine);
@@ -8245,6 +8333,9 @@ is_16bit_abs_reloc (unsigned int reloc_type)
     case EM_ALTERA_NIOS2:
     case EM_NIOS32:
       return reloc_type == 9; /* R_NIOS_16.  */
+    case EM_XC16X:
+    case EM_C166:
+      return reloc_type == 2; /* R_XC16C_ABS_16.  */
     default:
       return FALSE;
     }
@@ -8278,6 +8369,8 @@ is_none_reloc (unsigned int reloc_type)
     case EM_L1OM:    /* R_X86_64_NONE.  */
     case EM_MN10300: /* R_MN10300_NONE.  */
     case EM_M32R:    /* R_M32R_NONE.  */
+    case EM_XC16X:
+    case EM_C166:    /* R_XC16X_NONE.  */
       return reloc_type == 0;
     case EM_XTENSA_OLD:
     case EM_XTENSA:
@@ -8940,12 +9033,12 @@ typedef struct
 
 static const char * arm_attr_tag_CPU_arch[] =
   {"Pre-v4", "v4", "v4T", "v5T", "v5TE", "v5TEJ", "v6", "v6KZ", "v6T2",
-   "v6K", "v7", "v6-M", "v6S-M"};
+   "v6K", "v7", "v6-M", "v6S-M", "v7E-M"};
 static const char * arm_attr_tag_ARM_ISA_use[] = {"No", "Yes"};
 static const char * arm_attr_tag_THUMB_ISA_use[] =
   {"No", "Thumb-1", "Thumb-2"};
 static const char * arm_attr_tag_VFP_arch[] =
-  {"No", "VFPv1", "VFPv2", "VFPv3", "VFPv3-D16"};
+  {"No", "VFPv1", "VFPv2", "VFPv3", "VFPv3-D16", "VFPv4", "VFPv4-D16"};
 static const char * arm_attr_tag_WMMX_arch[] = {"No", "WMMXv1", "WMMXv2"};
 static const char * arm_attr_tag_Advanced_SIMD_arch[] = {"No", "NEONv1"};
 static const char * arm_attr_tag_PCS_config[] =

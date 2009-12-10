@@ -1,3 +1,58 @@
+2009-12-02  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* generic/gdbtk-hooks.c (gdbtk_memory_changed): Adjust.
+	(gdbtk_add_hooks): Adjust.
+	
+2009-11-09  Keith Seitz  <keiths@redhat.com>
+
+	* library/srctextwin.itb (lookup_line): Update parameters
+	to gdb_set_bp.
+	* generic/gdbtk-bp.c: Remove extern declarations for symbols
+	in breakpoint.c.
+	(gdb_set_bp_addr): Remove.
+	(Gdbtk_Breakpoint_Init): Remove Tcl command "gdb_set_bp_addr".
+	(gdb_set_bp): Remove file and line arguments; add "addr" argument.
+	Rewrite to use "public" APIs from gdb.
+
+2009-11-09  Keith Seitz  <keiths@redhat.com>
+
+	* README: Update information about using external
+	Tcl, Tk, and Itcl.
+
+2009-11-09  Keith Seitz  <keiths@redhat.com>
+
+	* Makefile.in: Regenerate with autotools 1.11.
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+	* plugins/Makefile.in: Regenerate.
+	* plugins/aclocal.m4: Regenerate.
+	* plugins/configure: Regenerate.
+
+2009-10-08  Keith Seitz  <keiths@redhat.com>
+
+	* library/srctextwin.ith (ExecutableLineLimit): Define.
+	* library/srctextwin.itb (insertBreakTag): Search for next
+	executable line, just in case they changed.
+	When there are no tags on a line, the proper index is
+	line.4, not just 4.
+
+2009-10-08  Keith Seitz  <keiths@redhat.com>
+
+	* library/interface.tcl (gdbtk_tcl_warning): Add warnings for some
+	too frequently occurring DWARF complaints.
+
+	(::tk::MouseWheel): New function based on TIP 171.
+
+2009-09-17  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* generic/gdbtk-varobj.c (variable_children): Initialize new locals
+	used in varobj_list_children function call.
+	
+2009-09-16  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* generic/gdbtk-varobj.c (variable_children): Adapt to
+	varobj_list_children function change.
+	
 2009-07-07  Pierre Muller  <muller@ics.u-strasbg.fr>
 
 	* generic/gdbtk-bp.c: Include "arch-utils.h".

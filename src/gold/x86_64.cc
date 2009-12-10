@@ -38,6 +38,7 @@
 #include "target-select.h"
 #include "tls.h"
 #include "freebsd.h"
+#include "gc.h"
 
 namespace
 {
@@ -73,8 +74,7 @@ class Target_x86_64 : public Target_freebsd<64, false>
 
   // Scan the relocations to look for symbol adjustments.
   void
-  gc_process_relocs(const General_options& options,
-	            Symbol_table* symtab,
+  gc_process_relocs(Symbol_table* symtab,
 	            Layout* layout,
 	            Sized_relobj<64, false>* object,
 	            unsigned int data_shndx,
@@ -88,8 +88,7 @@ class Target_x86_64 : public Target_freebsd<64, false>
 
   // Scan the relocations to look for symbol adjustments.
   void
-  scan_relocs(const General_options& options,
-	      Symbol_table* symtab,
+  scan_relocs(Symbol_table* symtab,
 	      Layout* layout,
 	      Sized_relobj<64, false>* object,
 	      unsigned int data_shndx,
@@ -103,7 +102,7 @@ class Target_x86_64 : public Target_freebsd<64, false>
 
   // Finalize the sections.
   void
-  do_finalize_sections(Layout*);
+  do_finalize_sections(Layout*, const Input_objects*, Symbol_table*);
 
   // Return the value to use for a dynamic which requires special
   // treatment.
@@ -120,12 +119,12 @@ class Target_x86_64 : public Target_freebsd<64, false>
 		   bool needs_special_offset_handling,
 		   unsigned char* view,
 		   elfcpp::Elf_types<64>::Elf_Addr view_address,
-		   section_size_type view_size);
+		   section_size_type view_size,
+		   const Reloc_symbol_changes*);
 
   // Scan the relocs during a relocatable link.
   void
-  scan_relocatable_relocs(const General_options& options,
-			  Symbol_table* symtab,
+  scan_relocatable_relocs(Symbol_table* symtab,
 			  Layout* layout,
 			  Sized_relobj<64, false>* object,
 			  unsigned int data_shndx,
@@ -162,6 +161,13 @@ class Target_x86_64 : public Target_freebsd<64, false>
   do_is_defined_by_abi(const Symbol* sym) const
   { return strcmp(sym->name(), "__tls_get_addr") == 0; }
 
+  // Adjust -fstack-split code which calls non-stack-split code.
+  void
+  do_calls_non_split(Relobj* object, unsigned int shndx,
+		     section_offset_type fnoffset, section_size_type fnsize,
+		     unsigned char* view, section_size_type view_size,
+		     std::string* from, std::string* to) const;
+
   // Return the size of the GOT section.
   section_size_type
   got_size()
@@ -180,8 +186,7 @@ class Target_x86_64 : public Target_freebsd<64, false>
     { }
 
     inline void
-    local(const General_options& options, Symbol_table* symtab,
-	  Layout* layout, Target_x86_64* target,
+    local(Symbol_table* symtab, Layout* layout, Target_x86_64* target,
 	  Sized_relobj<64, false>* object,
 	  unsigned int data_shndx,
 	  Output_section* output_section,
@@ -189,8 +194,7 @@ class Target_x86_64 : public Target_freebsd<64, false>
 	  const elfcpp::Sym<64, false>& lsym);
 
     inline void
-    global(const General_options& options, Symbol_table* symtab,
-	   Layout* layout, Target_x86_64* target,
+    global(Symbol_table* symtab, Layout* layout, Target_x86_64* target,
 	   Sized_relobj<64, false>* object,
 	   unsigned int data_shndx,
 	   Output_section* output_section,
@@ -375,17 +379,6 @@ class Target_x86_64 : public Target_freebsd<64, false>
   Reloc_section*
   rela_dyn_section(Layout*);
 
-  // Return true if the symbol may need a COPY relocation.
-  // References from an executable object to non-function symbols
-  // defined in a dynamic object may need a COPY relocation.
-  bool
-  may_need_copy_reloc(Symbol* gsym)
-  {
-    return (!parameters->options().shared()
-            && gsym->is_from_dynobj()
-            && gsym->type() != elfcpp::STT_FUNC);
-  }
-
   // Add a potential copy relocation.
   void
   copy_reloc(Symbol_table* symtab, Layout* layout,
@@ -446,7 +439,9 @@ const Target::Target_info Target_x86_64::x86_64_info =
   elfcpp::SHN_UNDEF,	// small_common_shndx
   elfcpp::SHN_X86_64_LCOMMON,	// large_common_shndx
   0,			// small_common_section_flags
-  elfcpp::SHF_X86_64_LARGE	// large_common_section_flags
+  elfcpp::SHF_X86_64_LARGE,	// large_common_section_flags
+  NULL,			// attributes_section
+  NULL			// attributes_vendor
 };
 
 // This is called when a new output section is created.  This is where
@@ -474,7 +469,7 @@ Target_x86_64::got_section(Symbol_table* symtab, Layout* layout)
       os = layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
 					   (elfcpp::SHF_ALLOC
 					    | elfcpp::SHF_WRITE),
-					   this->got_);
+					   this->got_, false);
       os->set_is_relro();
 
       // The old GNU linker creates a .got.plt section.  We just
@@ -485,7 +480,7 @@ Target_x86_64::got_section(Symbol_table* symtab, Layout* layout)
       os = layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
 					   (elfcpp::SHF_ALLOC
 					    | elfcpp::SHF_WRITE),
-					   this->got_plt_);
+					   this->got_plt_, false);
       os->set_is_relro();
 
       // The first three entries are reserved.
@@ -513,7 +508,7 @@ Target_x86_64::rela_dyn_section(Layout* layout)
       gold_assert(layout != NULL);
       this->rela_dyn_ = new Reloc_section(parameters->options().combreloc());
       layout->add_output_section_data(".rela.dyn", elfcpp::SHT_RELA,
-				      elfcpp::SHF_ALLOC, this->rela_dyn_);
+				      elfcpp::SHF_ALLOC, this->rela_dyn_, true);
     }
   return this->rela_dyn_;
 }
@@ -613,7 +608,7 @@ Output_data_plt_x86_64::Output_data_plt_x86_64(Layout* layout,
 {
   this->rel_ = new Reloc_section(false);
   layout->add_output_section_data(".rela.plt", elfcpp::SHT_RELA,
-				  elfcpp::SHF_ALLOC, this->rel_);
+				  elfcpp::SHF_ALLOC, this->rel_, true);
 }
 
 void
@@ -809,7 +804,7 @@ Target_x86_64::make_plt_section(Symbol_table* symtab, Layout* layout)
       layout->add_output_section_data(".plt", elfcpp::SHT_PROGBITS,
 				      (elfcpp::SHF_ALLOC
 				       | elfcpp::SHF_EXECINSTR),
-				      this->plt_);
+				      this->plt_, false);
     }
 }
 
@@ -1004,8 +999,7 @@ Target_x86_64::Scan::check_non_pic(Relobj* object, unsigned int r_type)
 // Scan a relocation for a local symbol.
 
 inline void
-Target_x86_64::Scan::local(const General_options&,
-                           Symbol_table* symtab,
+Target_x86_64::Scan::local(Symbol_table* symtab,
                            Layout* layout,
                            Target_x86_64* target,
                            Sized_relobj<64, false>* object,
@@ -1285,8 +1279,7 @@ Target_x86_64::Scan::unsupported_reloc_global(Sized_relobj<64, false>* object,
 // Scan a relocation for a global symbol.
 
 inline void
-Target_x86_64::Scan::global(const General_options&,
-                            Symbol_table* symtab,
+Target_x86_64::Scan::global(Symbol_table* symtab,
                             Layout* layout,
                             Target_x86_64* target,
                             Sized_relobj<64, false>* object,
@@ -1323,7 +1316,7 @@ Target_x86_64::Scan::global(const General_options&,
         // Make a dynamic relocation if necessary.
         if (gsym->needs_dynamic_reloc(Symbol::ABSOLUTE_REF))
           {
-            if (target->may_need_copy_reloc(gsym))
+            if (gsym->may_need_copy_reloc())
               {
                 target->copy_reloc(symtab, layout, object,
                                    data_shndx, output_section, gsym, reloc);
@@ -1359,11 +1352,11 @@ Target_x86_64::Scan::global(const General_options&,
           target->make_plt_entry(symtab, layout, gsym);
         // Make a dynamic relocation if necessary.
         int flags = Symbol::NON_PIC_REF;
-        if (gsym->type() == elfcpp::STT_FUNC)
+        if (gsym->is_func())
           flags |= Symbol::FUNCTION_CALL;
         if (gsym->needs_dynamic_reloc(flags))
           {
-            if (target->may_need_copy_reloc(gsym))
+            if (gsym->may_need_copy_reloc())
               {
                 target->copy_reloc(symtab, layout, object,
                                    data_shndx, output_section, gsym, reloc);
@@ -1578,8 +1571,7 @@ Target_x86_64::Scan::global(const General_options&,
 }
 
 void
-Target_x86_64::gc_process_relocs(const General_options& options,
-                                 Symbol_table* symtab,
+Target_x86_64::gc_process_relocs(Symbol_table* symtab,
                                  Layout* layout,
                                  Sized_relobj<64, false>* object,
                                  unsigned int data_shndx,
@@ -1599,7 +1591,6 @@ Target_x86_64::gc_process_relocs(const General_options& options,
 
    gold::gc_process_relocs<64, false, Target_x86_64, elfcpp::SHT_RELA,
                            Target_x86_64::Scan>(
-    options,
     symtab,
     layout,
     this,
@@ -1616,8 +1607,7 @@ Target_x86_64::gc_process_relocs(const General_options& options,
 // Scan relocations for a section.
 
 void
-Target_x86_64::scan_relocs(const General_options& options,
-                           Symbol_table* symtab,
+Target_x86_64::scan_relocs(Symbol_table* symtab,
                            Layout* layout,
                            Sized_relobj<64, false>* object,
                            unsigned int data_shndx,
@@ -1638,7 +1628,6 @@ Target_x86_64::scan_relocs(const General_options& options,
 
   gold::scan_relocs<64, false, Target_x86_64, elfcpp::SHT_RELA,
       Target_x86_64::Scan>(
-    options,
     symtab,
     layout,
     this,
@@ -1655,16 +1644,21 @@ Target_x86_64::scan_relocs(const General_options& options,
 // Finalize the sections.
 
 void
-Target_x86_64::do_finalize_sections(Layout* layout)
+Target_x86_64::do_finalize_sections(
+    Layout* layout,
+    const Input_objects*,
+    Symbol_table*)
 {
   // Fill in some more dynamic tags.
   Output_data_dynamic* const odyn = layout->dynamic_data();
   if (odyn != NULL)
     {
-      if (this->got_plt_ != NULL)
+      if (this->got_plt_ != NULL
+	  && this->got_plt_->output_section() != NULL)
 	odyn->add_section_address(elfcpp::DT_PLTGOT, this->got_plt_);
 
-      if (this->plt_ != NULL)
+      if (this->plt_ != NULL
+	  && this->plt_->output_section() != NULL)
 	{
 	  const Output_data* od = this->plt_->rel_plt();
 	  odyn->add_section_size(elfcpp::DT_PLTRELSZ, od);
@@ -1682,7 +1676,8 @@ Target_x86_64::do_finalize_sections(Layout* layout)
 	    }
 	}
 
-      if (this->rela_dyn_ != NULL)
+      if (this->rela_dyn_ != NULL
+	  && this->rela_dyn_->output_section() != NULL)
 	{
 	  const Output_data* od = this->rela_dyn_;
 	  odyn->add_section_address(elfcpp::DT_RELA, od);
@@ -2428,15 +2423,17 @@ Target_x86_64::Relocate::tls_ie_to_le(const Relocate_info<64, false>* relinfo,
 // Relocate section data.
 
 void
-Target_x86_64::relocate_section(const Relocate_info<64, false>* relinfo,
-                                unsigned int sh_type,
-                                const unsigned char* prelocs,
-                                size_t reloc_count,
-				Output_section* output_section,
-				bool needs_special_offset_handling,
-                                unsigned char* view,
-                                elfcpp::Elf_types<64>::Elf_Addr address,
-                                section_size_type view_size)
+Target_x86_64::relocate_section(
+    const Relocate_info<64, false>* relinfo,
+    unsigned int sh_type,
+    const unsigned char* prelocs,
+    size_t reloc_count,
+    Output_section* output_section,
+    bool needs_special_offset_handling,
+    unsigned char* view,
+    elfcpp::Elf_types<64>::Elf_Addr address,
+    section_size_type view_size,
+    const Reloc_symbol_changes* reloc_symbol_changes)
 {
   gold_assert(sh_type == elfcpp::SHT_RELA);
 
@@ -2450,7 +2447,8 @@ Target_x86_64::relocate_section(const Relocate_info<64, false>* relinfo,
     needs_special_offset_handling,
     view,
     address,
-    view_size);
+    view_size,
+    reloc_symbol_changes);
 }
 
 // Return the size of a relocation while scanning during a relocatable
@@ -2525,8 +2523,7 @@ Target_x86_64::Relocatable_size_for_reloc::get_size_for_reloc(
 // Scan the relocs during a relocatable link.
 
 void
-Target_x86_64::scan_relocatable_relocs(const General_options& options,
-				       Symbol_table* symtab,
+Target_x86_64::scan_relocatable_relocs(Symbol_table* symtab,
 				       Layout* layout,
 				       Sized_relobj<64, false>* object,
 				       unsigned int data_shndx,
@@ -2546,7 +2543,6 @@ Target_x86_64::scan_relocatable_relocs(const General_options& options,
 
   gold::scan_relocatable_relocs<64, false, elfcpp::SHT_RELA,
       Scan_relocatable_relocs>(
-    options,
     symtab,
     layout,
     object,
@@ -2666,6 +2662,63 @@ Target_x86_64::do_code_fill(section_size_type length) const
   };
 
   return std::string(nops[length], length);
+}
+
+// FNOFFSET in section SHNDX in OBJECT is the start of a function
+// compiled with -fstack-split.  The function calls non-stack-split
+// code.  We have to change the function so that it always ensures
+// that it has enough stack space to run some random function.
+
+void
+Target_x86_64::do_calls_non_split(Relobj* object, unsigned int shndx,
+				  section_offset_type fnoffset,
+				  section_size_type fnsize,
+				  unsigned char* view,
+				  section_size_type view_size,
+				  std::string* from,
+				  std::string* to) const
+{
+  // The function starts with a comparison of the stack pointer and a
+  // field in the TCB.  This is followed by a jump.
+
+  // cmp %fs:NN,%rsp
+  if (this->match_view(view, view_size, fnoffset, "\x64\x48\x3b\x24\x25", 5)
+      && fnsize > 9)
+    {
+      // We will call __morestack if the carry flag is set after this
+      // comparison.  We turn the comparison into an stc instruction
+      // and some nops.
+      view[fnoffset] = '\xf9';
+      this->set_view_to_nop(view, view_size, fnoffset + 1, 8);
+    }
+  // lea NN(%rsp),%r10
+  else if (this->match_view(view, view_size, fnoffset, "\x4c\x8d\x94\x24", 4)
+	   && fnsize > 8)
+    {
+      // This is loading an offset from the stack pointer for a
+      // comparison.  The offset is negative, so we decrease the
+      // offset by the amount of space we need for the stack.  This
+      // means we will avoid calling __morestack if there happens to
+      // be plenty of space on the stack already.
+      unsigned char* pval = view + fnoffset + 4;
+      uint32_t val = elfcpp::Swap_unaligned<32, false>::readval(pval);
+      val -= parameters->options().split_stack_adjust_size();
+      elfcpp::Swap_unaligned<32, false>::writeval(pval, val);
+    }
+  else
+    {
+      if (!object->has_no_split_stack())
+	object->error(_("failed to match split-stack sequence at "
+			"section %u offset %0zx"),
+		      shndx, static_cast<size_t>(fnoffset));
+      return;
+    }
+
+  // We have to change the function so that it calls
+  // __morestack_non_split instead of __morestack.  The former will
+  // allocate additional stack space.
+  *from = "__morestack";
+  *to = "__morestack_non_split";
 }
 
 // The selector for x86_64 object files.

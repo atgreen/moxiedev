@@ -241,8 +241,6 @@
 
 #define show_allnames 0
 
-#define PAGE_SIZE ((bfd_vma) 4096)
-#define PAGE_MASK ((bfd_vma) (-4096))
 #include "sysdep.h"
 #include "bfd.h"
 #include "libiberty.h"
@@ -262,9 +260,23 @@
 #include "coff/arm.h"
 #include "coff/internal.h"
 #endif
-#ifdef DLLTOOL_MX86_64
+#ifdef DLLTOOL_DEFAULT_MX86_64
 #include "coff/x86_64.h"
 #endif
+#ifdef DLLTOOL_DEFAULT_I386
+#include "coff/i386.h"
+#endif
+
+#ifndef COFF_PAGE_SIZE
+#define COFF_PAGE_SIZE ((bfd_vma) 4096)
+#endif
+
+#ifndef PAGE_MASK
+#define PAGE_MASK ((bfd_vma) (- COFF_PAGE_SIZE))
+#endif
+
+/* Get current BFD error message.  */
+#define bfd_get_errmsg() (bfd_errmsg (bfd_get_error ()))
 
 /* Forward references.  */
 static char *look_for_prog (const char *, const char *, int);
@@ -325,13 +337,14 @@ static void mcore_elf_gen_out_file (void);
 typedef struct ifunct
 {
   char *         name;   /* Name of function being imported.  */
+  char *     its_name;	 /* Optional import table symbol name.  */
   int            ord;    /* Two-byte ordinal value associated with function.  */
   struct ifunct *next;
 } ifunctype;
 
 typedef struct iheadt
 {
-  char          *dllname;  /* Name of dll file imported from.  */
+  char *         dllname;  /* Name of dll file imported from.  */
   long           nfuncs;   /* Number of functions in list.  */
   struct ifunct *funchead; /* First function in list.  */
   struct ifunct *functail; /* Last  function in list.  */
@@ -342,12 +355,9 @@ typedef struct iheadt
    (qv "ihead structure").  */
 
 static iheadtype *import_list = NULL;
-
 static char *as_name = NULL;
 static char * as_flags = "";
-
 static char *tmp_prefix;
-
 static int no_idata4;
 static int no_idata5;
 static char *exp_name;
@@ -365,6 +375,7 @@ typedef struct dll_name_list_node_t
   char *                        dllname;
   struct dll_name_list_node_t * next;
 } dll_name_list_node_type;
+
 typedef struct dll_name_list_t
 {
   dll_name_list_node_type * head;
@@ -377,6 +388,7 @@ typedef struct symname_search_data_t
   const char * symname;
   bfd_boolean  found;
 } symname_search_data_type;
+
 typedef struct identify_data_t
 {
    dll_name_list_type * list;
@@ -387,10 +399,14 @@ typedef struct identify_data_t
 static char *head_label;
 static char *imp_name_lab;
 static char *dll_name;
-
 static int add_indirect = 0;
 static int add_underscore = 0;
 static int add_stdcall_underscore = 0;
+/* This variable can hold three different values. The value
+   -1 (default) means that default underscoring should be used,
+   zero means that no underscoring should be done, and one
+   indicates that underscoring should be done.  */
+static int leading_underscore = -1;
 static int dontdeltemps = 0;
 
 /* TRUE if we should export all symbols.  Otherwise, we only export
@@ -584,31 +600,31 @@ static const char i386_trampoline[] =
   "\tjmp *%%eax\n";
 
 struct mac
-  {
-    const char *type;
-    const char *how_byte;
-    const char *how_short;
-    const char *how_long;
-    const char *how_asciz;
-    const char *how_comment;
-    const char *how_jump;
-    const char *how_global;
-    const char *how_space;
-    const char *how_align_short;
-    const char *how_align_long;
-    const char *how_default_as_switches;
-    const char *how_bfd_target;
-    enum bfd_architecture how_bfd_arch;
-    const unsigned char *how_jtab;
-    int how_jtab_size; /* Size of the jtab entry.  */
-    int how_jtab_roff; /* Offset into it for the ind 32 reloc into idata 5.  */
-    const unsigned char *how_dljtab;
-    int how_dljtab_size; /* Size of the dljtab entry.  */
-    int how_dljtab_roff1; /* Offset for the ind 32 reloc into idata 5.  */
-    int how_dljtab_roff2; /* Offset for the ind 32 reloc into idata 5.  */
-    int how_dljtab_roff3; /* Offset for the ind 32 reloc into idata 5.  */
-    const char *trampoline;
-  };
+{
+  const char *type;
+  const char *how_byte;
+  const char *how_short;
+  const char *how_long;
+  const char *how_asciz;
+  const char *how_comment;
+  const char *how_jump;
+  const char *how_global;
+  const char *how_space;
+  const char *how_align_short;
+  const char *how_align_long;
+  const char *how_default_as_switches;
+  const char *how_bfd_target;
+  enum bfd_architecture how_bfd_arch;
+  const unsigned char *how_jtab;
+  int how_jtab_size; /* Size of the jtab entry.  */
+  int how_jtab_roff; /* Offset into it for the ind 32 reloc into idata 5.  */
+  const unsigned char *how_dljtab;
+  int how_dljtab_size; /* Size of the dljtab entry.  */
+  int how_dljtab_roff1; /* Offset for the ind 32 reloc into idata 5.  */
+  int how_dljtab_roff2; /* Offset for the ind 32 reloc into idata 5.  */
+  int how_dljtab_roff3; /* Offset for the ind 32 reloc into idata 5.  */
+  const char *trampoline;
+};
 
 static const struct mac
 mtable[] =
@@ -741,19 +757,20 @@ typedef struct dlist
 dlist_type;
 
 typedef struct export
-  {
-    const char *name;
-    const char *internal_name;
-    const char *import_name;
-    int ordinal;
-    int constant;
-    int noname;		/* Don't put name in image file.  */
-    int private;	/* Don't put reference in import lib.  */
-    int data;
-    int hint;
-    int forward;	/* Number of forward label, 0 means no forward.  */
-    struct export *next;
-  }
+{
+  const char *name;
+  const char *internal_name;
+  const char *import_name;
+  const char *its_name;
+  int ordinal;
+  int constant;
+  int noname;		/* Don't put name in image file.  */
+  int private;	/* Don't put reference in import lib.  */
+  int data;
+  int hint;
+  int forward;	/* Number of forward label, 0 means no forward.  */
+  struct export *next;
+}
 export_type;
 
 /* A list of symbols which we should not export.  */
@@ -771,7 +788,7 @@ static const char *rvabefore (int);
 static const char *asm_prefix (int, const char *);
 static void process_def_file (const char *);
 static void new_directive (char *);
-static void append_import (const char *, const char *, int);
+static void append_import (const char *, const char *, int, const char *);
 static void run (const char *, char *);
 static void scan_drectve_symbols (bfd *);
 static void scan_filtered_symbols (bfd *, void *, long, unsigned int);
@@ -932,7 +949,7 @@ asm_prefix (int machine, const char *name)
     case M386:
     case MX86:
       /* Symbol names starting with ? do not have a leading underscore. */
-      if (name && *name == '?')
+      if ((name && *name == '?') || leading_underscore == 0)
         break;
       else
         return "_";
@@ -1019,12 +1036,14 @@ yyerror (const char * err ATTRIBUTE_UNUSED)
 
 void
 def_exports (const char *name, const char *internal_name, int ordinal,
-	     int noname, int constant, int data, int private)
+	     int noname, int constant, int data, int private,
+	     const char *its_name)
 {
   struct export *p = (struct export *) xmalloc (sizeof (*p));
 
   p->name = name;
   p->internal_name = internal_name ? internal_name : name;
+  p->its_name = its_name;
   p->import_name = name;
   p->ordinal = ordinal;
   p->constant = constant;
@@ -1136,7 +1155,8 @@ def_stacksize (int reserve, int commit)
    import_list.  It is used by def_import.  */
 
 static void
-append_import (const char *symbol_name, const char *dll_name, int func_ordinal)
+append_import (const char *symbol_name, const char *dll_name, int func_ordinal,
+	       const char *its_name)
 {
   iheadtype **pq;
   iheadtype *q;
@@ -1150,6 +1170,7 @@ append_import (const char *symbol_name, const char *dll_name, int func_ordinal)
 	  q->functail = q->functail->next;
 	  q->functail->ord  = func_ordinal;
 	  q->functail->name = xstrdup (symbol_name);
+	  q->functail->its_name = (its_name ? xstrdup (its_name) : NULL);
 	  q->functail->next = NULL;
 	  q->nfuncs++;
 	  return;
@@ -1163,6 +1184,7 @@ append_import (const char *symbol_name, const char *dll_name, int func_ordinal)
   q->functail = q->funchead;
   q->next = NULL;
   q->functail->name = xstrdup (symbol_name);
+  q->functail->its_name = (its_name ? xstrdup (its_name) : NULL);
   q->functail->ord  = func_ordinal;
   q->functail->next = NULL;
 
@@ -1201,7 +1223,7 @@ append_import (const char *symbol_name, const char *dll_name, int func_ordinal)
 
 void
 def_import (const char *app_name, const char *module, const char *dllext,
-	    const char *entry, int ord_val)
+	    const char *entry, int ord_val, const char *its_name)
 {
   const char *application_name;
   char *buf;
@@ -1223,7 +1245,7 @@ def_import (const char *app_name, const char *module, const char *dllext,
       module = buf;
     }
 
-  append_import (application_name, module, ord_val);
+  append_import (application_name, module, ord_val, its_name);
 }
 
 void
@@ -1395,7 +1417,7 @@ scan_drectve_symbols (bfd *abfd)
 	  /* FIXME: The 5th arg is for the `constant' field.
 	     What should it be?  Not that it matters since it's not
 	     currently useful.  */
-	  def_exports (c, 0, -1, 0, 0, ! (flags & BSF_FUNCTION), 0);
+	  def_exports (c, 0, -1, 0, 0, ! (flags & BSF_FUNCTION), 0, NULL);
 
 	  if (add_stdcall_alias && strchr (c, '@'))
 	    {
@@ -1404,7 +1426,7 @@ scan_drectve_symbols (bfd *abfd)
 	      char *atsym = strchr (exported_name, '@');
 	      *atsym = '\0';
 	      /* Note: stdcall alias symbols can never be data.  */
-	      def_exports (exported_name, xstrdup (c), -1, 0, 0, 0, 0);
+	      def_exports (exported_name, xstrdup (c), -1, 0, 0, 0, 0, NULL);
 	    }
 	}
       else
@@ -1443,7 +1465,7 @@ scan_filtered_symbols (bfd *abfd, void *minisyms, long symcount,
 	++symbol_name;
 
       def_exports (xstrdup (symbol_name) , 0, -1, 0, 0,
-		   ! (sym->flags & BSF_FUNCTION), 0);
+		   ! (sym->flags & BSF_FUNCTION), 0, NULL);
 
       if (add_stdcall_alias && strchr (symbol_name, '@'))
         {
@@ -1452,7 +1474,7 @@ scan_filtered_symbols (bfd *abfd, void *minisyms, long symcount,
 	  char *atsym = strchr (exported_name, '@');
 	  *atsym = '\0';
 	  /* Note: stdcall alias symbols can never be data.  */
-	  def_exports (exported_name, xstrdup (symbol_name), -1, 0, 0, 0, 0);
+	  def_exports (exported_name, xstrdup (symbol_name), -1, 0, 0, 0, 0, NULL);
 	}
     }
 }
@@ -1479,7 +1501,8 @@ add_excludes (const char *new_excludes)
       if (*exclude_string == '@')
 	sprintf (new_exclude->string, "%s", exclude_string);
       else
-	sprintf (new_exclude->string, "_%s", exclude_string);
+	sprintf (new_exclude->string, "%s%s", (!leading_underscore ? "" : "_"),
+		 exclude_string);
       new_exclude->next = excludes;
       excludes = new_exclude;
 
@@ -1620,7 +1643,7 @@ scan_obj_file (const char *filename)
 
   if (!f)
     /* xgettext:c-format */
-    fatal (_("Unable to open object file: %s"), filename);
+    fatal (_("Unable to open object file: %s: %s"), filename, bfd_get_errmsg ());
 
   /* xgettext:c-format */
   inform (_("Scanning object file %s"), filename);
@@ -1654,7 +1677,7 @@ scan_obj_file (const char *filename)
   bfd_close (f);
 }
 
-/**********************************************************************/
+
 
 static void
 dump_def_info (FILE *f)
@@ -1667,7 +1690,7 @@ dump_def_info (FILE *f)
   fprintf (f, "\n");
   for (i = 0, exp = d_exports; exp; i++, exp = exp->next)
     {
-      fprintf (f, "%s  %d = %s %s @ %d %s%s%s%s\n",
+      fprintf (f, "%s  %d = %s %s @ %d %s%s%s%s%s%s\n",
 	       ASM_C,
 	       i,
 	       exp->name,
@@ -1676,7 +1699,9 @@ dump_def_info (FILE *f)
 	       exp->noname ? "NONAME " : "",
 	       exp->private ? "PRIVATE " : "",
 	       exp->constant ? "CONSTANT" : "",
-	       exp->data ? "DATA" : "");
+	       exp->data ? "DATA" : "",
+	       exp->its_name ? " ==" : "",
+	       exp->its_name ? exp->its_name : "");
     }
 }
 
@@ -1759,20 +1784,22 @@ gen_def_file (void)
 
       if (strcmp (exp->name, exp->internal_name) == 0)
 	{
-	  fprintf (output_def, "\t%s%s%s @ %d%s%s%s\n",
+	  fprintf (output_def, "\t%s%s%s @ %d%s%s%s%s%s\n",
 		   quote,
 		   exp->name,
 		   quote,
 		   exp->ordinal,
 		   exp->noname ? " NONAME" : "",
 		   exp->private ? "PRIVATE " : "",
-		   exp->data ? " DATA" : "");
+		   exp->data ? " DATA" : "",
+		   exp->its_name ? " ==" : "",
+		   exp->its_name ? exp->its_name : "");
 	}
       else
 	{
 	  char * quote1 = strchr (exp->internal_name, '.') ? "\"" : "";
 	  /* char *alias =  */
-	  fprintf (output_def, "\t%s%s%s = %s%s%s @ %d%s%s%s\n",
+	  fprintf (output_def, "\t%s%s%s = %s%s%s @ %d%s%s%s%s%s\n",
 		   quote,
 		   exp->name,
 		   quote,
@@ -1782,7 +1809,9 @@ gen_def_file (void)
 		   exp->ordinal,
 		   exp->noname ? " NONAME" : "",
 		   exp->private ? "PRIVATE " : "",
-		   exp->data ? " DATA" : "");
+		   exp->data ? " DATA" : "",
+		   exp->its_name ? " ==" : "",
+		   exp->its_name ? exp->its_name : "");
 	}
     }
 
@@ -1886,7 +1915,8 @@ generate_idata_ofile (FILE *filvar)
 	  fprintf (filvar,"funcptr%d_%d:\n", headindex, funcindex);
 	  fprintf (filvar,"\t%s\t%d\n", ASM_SHORT,
 		   ((funcptr->ord) & 0xFFFF));
-	  fprintf (filvar,"\t%s\t\"%s\"\n", ASM_TEXT, funcptr->name);
+	  fprintf (filvar,"\t%s\t\"%s\"\n", ASM_TEXT,
+	    (funcptr->its_name ? funcptr->its_name : funcptr->name));
 	  fprintf (filvar,"\t%s\t0\n", ASM_BYTE);
 	  funcindex++;
 	}
@@ -2021,7 +2051,8 @@ gen_exp_file (void)
 	{
 	  if (!exp->noname || show_allnames)
 	    fprintf (f, "n%d:	%s	\"%s\"\n",
-		     exp->ordinal, ASM_TEXT, xlate (exp->name));
+		     exp->ordinal, ASM_TEXT,
+		     (exp->its_name ? exp->its_name : xlate (exp->name)));
 	  if (exp->forward != 0)
 	    fprintf (f, "f%d:	%s	\"%s\"\n",
 		     exp->forward, ASM_TEXT, exp->internal_name);
@@ -2083,10 +2114,11 @@ gen_exp_file (void)
                cygwin releases.  */
 	    if (create_compat_implib)
 	      fprintf (f, "\t%s\t__imp_%s\n", ASM_GLOBAL, exp->name);
-	    fprintf (f, "\t%s\t_imp__%s\n", ASM_GLOBAL, exp->name);
+	    fprintf (f, "\t%s\t_imp_%s%s\n", ASM_GLOBAL,
+	    	     (!leading_underscore ? "" : "_"), exp->name);
 	    if (create_compat_implib)
 	      fprintf (f, "__imp_%s:\n", exp->name);
-	    fprintf (f, "_imp__%s:\n", exp->name);
+	    fprintf (f, "_imp_%s%s:\n", (!leading_underscore ? "" : "_"), exp->name);
 	    fprintf (f, "\t%s\t%s\n", ASM_LONG, exp->name);
 	  }
     }
@@ -2095,7 +2127,7 @@ gen_exp_file (void)
   if (base_file)
     {
       bfd_vma addr;
-      bfd_vma need[PAGE_SIZE];
+      bfd_vma need[COFF_PAGE_SIZE];
       bfd_vma page_addr;
       bfd_size_type numbytes;
       int num_entries;
@@ -2165,10 +2197,10 @@ static const char *
 xlate (const char *name)
 {
   int lead_at = (*name == '@');
+  int is_stdcall = (!lead_at && strchr (name, '@') != NULL);
 
   if (!lead_at && (add_underscore
-		   || (add_stdcall_underscore
-		       && strchr (name, '@'))))
+		   || (add_stdcall_underscore && is_stdcall)))
     {
       char *copy = xmalloc (strlen (name) + 2);
 
@@ -2367,7 +2399,8 @@ make_one_lib_file (export_type *exp, int i, int delay)
 
   if (!abfd)
     /* xgettext:c-format */
-    fatal (_("bfd_open failed open stub file: %s"), outname);
+    fatal (_("bfd_open failed open stub file: %s: %s"),
+	   outname, bfd_get_errmsg ());
 
   /* xgettext:c-format */
   inform (_("Creating stub file: %s"), outname);
@@ -2388,7 +2421,7 @@ make_one_lib_file (export_type *exp, int i, int delay)
       sinfo *si = secdata + i;
 
       if (si->id != i)
-	abort();
+	abort ();
       si->sec = bfd_make_section_old_way (abfd, si->name);
       bfd_set_section_flags (abfd,
 			     si->sec,
@@ -2660,11 +2693,17 @@ make_one_lib_file (export_type *exp, int i, int delay)
 		 why it did that, and it does not match what I see
 		 in programs compiled with the MS tools.  */
 	      int idx = exp->hint;
-	      si->size = strlen (xlate (exp->import_name)) + 3;
+	      if (exp->its_name)
+	        si->size = strlen (exp->its_name) + 3;
+	      else
+	        si->size = strlen (xlate (exp->import_name)) + 3;
 	      si->data = xmalloc (si->size);
 	      si->data[0] = idx & 0xff;
 	      si->data[1] = idx >> 8;
-	      strcpy ((char *) si->data + 2, xlate (exp->import_name));
+	      if (exp->its_name)
+		strcpy ((char *) si->data + 2, exp->its_name);
+	      else
+		strcpy ((char *) si->data + 2, xlate (exp->import_name));
 	    }
 	  break;
 	case IDATA7:
@@ -2824,6 +2863,11 @@ make_one_lib_file (export_type *exp, int i, int delay)
   bfd_set_symtab (abfd, ptrs, oidx);
   bfd_close (abfd);
   abfd = bfd_openr (outname, HOW_BFD_READ_TARGET);
+  if (!abfd)
+    /* xgettext:c-format */
+    fatal (_("bfd_open failed reopen stub file: %s: %s"),
+	   outname, bfd_get_errmsg ());
+ 
   return abfd;
 }
 
@@ -2831,6 +2875,7 @@ static bfd *
 make_head (void)
 {
   FILE *f = fopen (TMP_HEAD_S, FOPEN_WT);
+  bfd *abfd;
 
   if (f == NULL)
     {
@@ -2893,13 +2938,20 @@ make_head (void)
 
   assemble_file (TMP_HEAD_S, TMP_HEAD_O);
 
-  return bfd_openr (TMP_HEAD_O, HOW_BFD_READ_TARGET);
+  abfd = bfd_openr (TMP_HEAD_O, HOW_BFD_READ_TARGET);
+  if (abfd == NULL)
+    /* xgettext:c-format */
+    fatal (_("failed to open temporary head file: %s: %s"),
+	   TMP_HEAD_O, bfd_get_errmsg ());
+
+  return abfd;
 }
 
 bfd *
 make_delay_head (void)
 {
   FILE *f = fopen (TMP_HEAD_S, FOPEN_WT);
+  bfd *abfd;
 
   if (f == NULL)
     {
@@ -2966,13 +3018,20 @@ make_delay_head (void)
 
   assemble_file (TMP_HEAD_S, TMP_HEAD_O);
 
-  return bfd_openr (TMP_HEAD_O, HOW_BFD_READ_TARGET);
+  abfd = bfd_openr (TMP_HEAD_O, HOW_BFD_READ_TARGET);
+  if (abfd == NULL)
+    /* xgettext:c-format */
+    fatal (_("failed to open temporary head file: %s: %s"),
+	   TMP_HEAD_O, bfd_get_errmsg ());
+
+  return abfd;
 }
 
 static bfd *
 make_tail (void)
 {
   FILE *f = fopen (TMP_TAIL_S, FOPEN_WT);
+  bfd *abfd;
 
   if (f == NULL)
     {
@@ -3030,7 +3089,13 @@ make_tail (void)
 
   assemble_file (TMP_TAIL_S, TMP_TAIL_O);
 
-  return bfd_openr (TMP_TAIL_O, HOW_BFD_READ_TARGET);
+  abfd = bfd_openr (TMP_TAIL_O, HOW_BFD_READ_TARGET);
+  if (abfd == NULL)
+    /* xgettext:c-format */
+    fatal (_("failed to open temporary tail file: %s: %s"),
+	   TMP_TAIL_O, bfd_get_errmsg ());
+
+  return abfd;
 }
 
 static void
@@ -3049,7 +3114,8 @@ gen_lib_file (int delay)
 
   if (!outarch)
     /* xgettext:c-format */
-    fatal (_("Can't open .lib file: %s"), imp_name);
+    fatal (_("Can't create .lib file: %s: %s"),
+	   imp_name, bfd_get_errmsg ());
 
   /* xgettext:c-format */
   inform (_("Creating library file: %s"), imp_name);
@@ -3088,6 +3154,7 @@ gen_lib_file (int delay)
 	  assert (i < PREFIX_ALIAS_BASE);
 	  alias_exp.name = make_imp_label (ext_prefix_alias, exp->name);
 	  alias_exp.internal_name = exp->internal_name;
+	  alias_exp.its_name = exp->its_name;
 	  alias_exp.import_name = exp->name;
 	  alias_exp.ordinal = exp->ordinal;
 	  alias_exp.constant = exp->constant;
@@ -3162,13 +3229,15 @@ gen_lib_file (int delay)
 static void
 dll_name_list_append (dll_name_list_type * list, bfd_byte * data)
 {
+  dll_name_list_node_type * entry;
+
   /* Error checking.  */
   if (! list || ! list->tail)
     return;
 
   /* Allocate new node.  */
-  dll_name_list_node_type * entry =
-    (dll_name_list_node_type *) xmalloc (sizeof (dll_name_list_node_type));
+  entry = ((dll_name_list_node_type *)
+	   xmalloc (sizeof (dll_name_list_node_type)));
 
   /* Initialize its values.  */
   entry->dllname = xstrdup ((char *) data);
@@ -3184,12 +3253,14 @@ dll_name_list_append (dll_name_list_type * list, bfd_byte * data)
 static int 
 dll_name_list_count (dll_name_list_type * list)
 {
+  dll_name_list_node_type * p;
+  int count = 0;
+
   /* Error checking.  */
   if (! list || ! list->head)
     return 0;
 
-  int count = 0;
-  dll_name_list_node_type * p = list->head;
+  p = list->head;
 
   while (p && p->next)
     {
@@ -3204,11 +3275,13 @@ dll_name_list_count (dll_name_list_type * list)
 static void 
 dll_name_list_print (dll_name_list_type * list)
 {
+  dll_name_list_node_type * p;
+
   /* Error checking.  */
   if (! list || ! list->head)
     return;
 
-  dll_name_list_node_type * p = list->head;
+  p = list->head;
 
   while (p && p->next && p->next->dllname && *(p->next->dllname))
     {
@@ -3359,7 +3432,9 @@ identify_dll_for_implib (void)
 
   abfd = bfd_openr (identify_imp_name, 0);
   if (abfd == NULL)
-    bfd_fatal (identify_imp_name);
+    /* xgettext:c-format */
+    fatal (_("Can't open .lib file: %s: %s"),
+	   identify_imp_name, bfd_get_errmsg ());
 
   if (! bfd_check_format (abfd, bfd_archive))
     {
@@ -3588,7 +3663,10 @@ nfunc (const void *a, const void *b)
   export_type *bp = *(export_type **) b;
   const char *an = ap->name;
   const char *bn = bp->name;
-
+  if (ap->its_name)
+    an = ap->its_name;
+  if (bp->its_name)
+    an = bp->its_name;
   if (killat)
     {
       an = (an[0] == '@') ? an + 1 : an;
@@ -3809,6 +3887,8 @@ usage (FILE *file, int status)
   fprintf (file, _("      --use-nul-prefixed-import-tables Use zero prefixed idata$4 and idata$5.\n"));
   fprintf (file, _("   -U --add-underscore       Add underscores to all symbols in interface library.\n"));
   fprintf (file, _("      --add-stdcall-underscore Add underscores to stdcall symbols in interface library.\n"));
+  fprintf (file, _("      --no-leading-underscore All symbols shouldn't be prefixed by an underscore.\n"));
+  fprintf (file, _("      --leading-underscore   All symbols should be prefixed by an underscore.\n"));
   fprintf (file, _("   -k --kill-at              Kill @<n> from exported names.\n"));
   fprintf (file, _("   -A --add-stdcall-alias    Add aliases without @<n>.\n"));
   fprintf (file, _("   -p --ext-prefix-alias <prefix> Add aliases with <prefix>.\n"));
@@ -3841,6 +3921,8 @@ usage (FILE *file, int status)
 #define OPTION_USE_NUL_PREFIXED_IMPORT_TABLES \
   (OPTION_ADD_STDCALL_UNDERSCORE + 1)
 #define OPTION_IDENTIFY_STRICT		(OPTION_USE_NUL_PREFIXED_IMPORT_TABLES + 1)
+#define OPTION_NO_LEADING_UNDERSCORE	(OPTION_IDENTIFY_STRICT + 1)
+#define OPTION_LEADING_UNDERSCORE	(OPTION_NO_LEADING_UNDERSCORE + 1)
 
 static const struct option long_options[] =
 {
@@ -3861,6 +3943,8 @@ static const struct option long_options[] =
   {"input-def", required_argument, NULL, 'd'},
   {"add-underscore", no_argument, NULL, 'U'},
   {"add-stdcall-underscore", no_argument, NULL, OPTION_ADD_STDCALL_UNDERSCORE},
+  {"no-leading-underscore", no_argument, NULL, OPTION_NO_LEADING_UNDERSCORE},
+  {"leading-underscore", no_argument, NULL, OPTION_LEADING_UNDERSCORE},
   {"kill-at", no_argument, NULL, 'k'},
   {"add-stdcall-alias", no_argument, NULL, 'A'},
   {"ext-prefix-alias", required_argument, NULL, 'p'},
@@ -3931,6 +4015,12 @@ main (int ac, char **av)
 	  break;
 	case OPTION_ADD_STDCALL_UNDERSCORE:
 	  add_stdcall_underscore = 1;
+	  break;
+	case OPTION_NO_LEADING_UNDERSCORE:
+	  leading_underscore = 0;
+	  break;
+	case OPTION_LEADING_UNDERSCORE:
+	  leading_underscore = 1;
 	  break;
 	case OPTION_IDENTIFY_STRICT:
 	  identify_strict = 1;

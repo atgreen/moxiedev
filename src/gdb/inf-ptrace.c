@@ -67,6 +67,8 @@ inf_ptrace_follow_fork (struct target_ops *ops, int follow_child)
       child_inf = add_inferior (fpid);
       child_inf->attach_flag = parent_inf->attach_flag;
       copy_terminal_info (child_inf, parent_inf);
+      inf->pspace = parent_inf->pspace;
+      inf->pspace = parent_inf->aspace;
 
       /* Before detaching from the parent, remove all breakpoints from
 	 it.  */
@@ -223,10 +225,10 @@ inf_ptrace_attach (struct target_ops *ops, char *args, int from_tty)
   error (_("This system does not support attaching to a process"));
 #endif
 
-  inferior_ptid = pid_to_ptid (pid);
-
-  inf = add_inferior (pid);
+  inf = current_inferior ();
+  inferior_appeared (inf, pid);
   inf->attach_flag = 1;
+  inferior_ptid = pid_to_ptid (pid);
 
   /* Always add a main thread.  If some target extends the ptrace
      target, it should decorate the ptid later with more info.  */
@@ -332,12 +334,17 @@ inf_ptrace_resume (struct target_ops *ops,
 		   ptid_t ptid, int step, enum target_signal signal)
 {
   pid_t pid = ptid_get_pid (ptid);
-  int request = PT_CONTINUE;
+  int request;
 
   if (pid == -1)
     /* Resume all threads.  Traditionally ptrace() only supports
        single-threaded processes, so simply resume the inferior.  */
     pid = ptid_get_pid (inferior_ptid);
+
+  if (catch_syscall_enabled () > 0)
+    request = PT_SYSCALL;
+  else
+    request = PT_CONTINUE;
 
   if (step)
     {

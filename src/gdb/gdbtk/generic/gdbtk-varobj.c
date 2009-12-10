@@ -416,13 +416,16 @@ variable_children (Tcl_Interp *interp, struct varobj *var)
   VEC(varobj_p) *children;
   struct varobj *child;
   char *childname;
-  int ix;
+  int ix, from, to;
 
   list = Tcl_NewListObj (0, NULL);
 
-  children = varobj_list_children (var);
+  from = -1;
+  to = -1;
 
-  for (ix = 0; VEC_iterate (varobj_p, children, ix, child); ++ix)
+  children = varobj_list_children (var, &from, &to);
+
+  for (ix = from; ix < to && VEC_iterate (varobj_p, children, ix, child); ++ix)
     {
       childname = varobj_get_objname (child);
       /* Add child to result list and install the Tcl command for it. */

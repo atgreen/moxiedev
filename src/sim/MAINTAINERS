@@ -14,13 +14,14 @@ cr16	        M R Swami Reddy <MR.Swami.Reddy@nsc.com>
 frv		Dave Brolley <brolley@redhat.com>
 igen		(igen simulators)
 lm32		Jon Beniston <jon@beniston.com>
+m32r		Doug Evans <dje@sebabeach.org>
 m68hc11		Stephane Carrez <stcarrez@nerim.fr>
+microblaze	Michael Eager <eager@eagercon.com>
 mips		Thiemo Seufer <ths@networkno.de>
 moxie		Anthony Green <green@moxielogic.com>
 sh		(global maintainers)
 sh64		Dave Brolley <brolley@redhat.com>
 m32c		DJ Delorie <dj@redhat.com>
-common		Ben Elliston <bje@gnu.org>
 common		Frank Ch. Eigler <fche@redhat.com>
 *		(target, then global maintainers)
 
@@ -30,6 +31,7 @@ v850		DJ Delorie <dj@redhat.com>
 
 	Past sim maintainers:
 
+common		Ben Elliston <bje@gnu.org>
 mips		Andrew Cagney <ac131313@redhat.com>
 mips		Chris Demetriou <cgd@netbsd.org>
 ppc		Geoff Keating <geoffk@geoffk.org>

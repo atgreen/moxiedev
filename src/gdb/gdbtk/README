@@ -2,7 +2,7 @@
 			   Written by Stu Grossman
 	      Updated 9/26/95 by Fred Fish for gdb 4.15 release
               Updated 4/18/97 by Martin Hunt
-	      Updated 8/15/02 by Keith Seitz
+	      Updated 7/6/09 by Keith Seitz
 
 This file describes how to build, install, use and hack on Insight (formerly
 GDBtk), a TK-based GUI for GDB, the GNU debugger.
@@ -11,7 +11,7 @@ Introduction
 ============
 
 Insight is a version of GDB that uses Tcl/Tk to implement a graphical
-user inter-face.  It is a fully integrated GUI, not a separate
+user interface.  It is a fully integrated GUI, not a separate
 front-end program.  The interface consists of several separate
 windows, which use standard elements like buttons, scrollbars, entry
 boxes and such to create a fairly easy to use interface.  Each window
@@ -24,10 +24,19 @@ Building and Installing
 =======================
 
 Building Insight is very straightforward.  It is configured/built by
-default when you checkout or download Insight.  Right now, Insight MUST
-be built using the versions of Tcl, Tk, and Itcl that come with
-the sources.  We're working to fix that, but it is going to take a lot
-of time.  (Want to help?)
+default when you checkout or download Insight. Insight may be built
+with the supplied Tcl, Tk, and Itcl or with your system's or vendor's
+supplied versions (minimum requirement Tcl/Tk 8.4). When you checkout
+Insight from the repository, you will automatically checkout tcl, tk,
+and itcl.  If you wish to use your system's installed versions, simply 
+erase the checked out versions:
+
+$ rm -rf src/tcl src/tk src/itcl
+
+If you downloaded a snapshot, you may optionally download these versions
+of tcl, tk, and itcl. To use them (and not your system's installed
+versions), simply unpack the tcltk tarball (the leading "src/" prefix
+has been left intact).
 
 On Unix machines, you will also need to have X11 (R4/R5/R6) installed 
 (this is a prerequisite to installing Tk).  

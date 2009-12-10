@@ -858,7 +858,7 @@ bfd_mach_o_backend_data;
   ((bfd_mach_o_backend_data*)(abfd)->xvec->backend_data)
 
 bfd_boolean bfd_mach_o_valid (bfd *);
-int bfd_mach_o_scan_read_dysymtab_symbol (bfd *, bfd_mach_o_dysymtab_command *, bfd_mach_o_symtab_command *, bfd_mach_o_asymbol *, unsigned long);
+int bfd_mach_o_read_dysymtab_symbol (bfd *, bfd_mach_o_dysymtab_command *, bfd_mach_o_symtab_command *, bfd_mach_o_asymbol *, unsigned long);
 int bfd_mach_o_scan_start_address (bfd *);
 int bfd_mach_o_scan (bfd *, bfd_mach_o_header *, bfd_mach_o_data_struct *);
 bfd_boolean bfd_mach_o_mkobject_init (bfd *);
@@ -876,6 +876,8 @@ bfd_boolean bfd_mach_o_bfd_copy_private_section_data (bfd *, asection *,
 bfd_boolean bfd_mach_o_bfd_copy_private_bfd_data (bfd *, bfd *);
 long bfd_mach_o_get_symtab_upper_bound (bfd *);
 long bfd_mach_o_canonicalize_symtab (bfd *, asymbol **);
+long bfd_mach_o_get_synthetic_symtab (bfd *, long, asymbol **, long, 
+                                      asymbol **, asymbol **ret);
 long bfd_mach_o_get_reloc_upper_bound (bfd *, asection *);
 long bfd_mach_o_canonicalize_reloc (bfd *, asection *, arelent **, asymbol **);
 long bfd_mach_o_get_dynamic_reloc_upper_bound (bfd *);

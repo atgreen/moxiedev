@@ -1,7 +1,89 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
-*** Changes since GDB 6.8
+*** Changes since GDB 7.0
+
+* New targets
+
+Xilinx MicroBlaze		microblaze-*-*
+Renesas RX			rx-*-elf
+
+* New Simulators
+
+Xilinx MicroBlaze		microblaze
+Renesas RX			rx
+
+* Multi-program debugging.
+
+  GDB now has support for multi-program (a.k.a. multi-executable or
+  multi-exec) debugging.  This allows for debugging multiple inferiors
+  simultaneously each running a different program under the same GDB
+  session.  See "Debugging Multiple Inferiors and Programs" in the
+  manual for more information.  This implied some user visible changes
+  in the multi-inferior support.  For example, "info inferiors" now
+  lists inferiors that are not running yet or that have exited
+  already.  See also "New commands" and "New options" below.
+
+* Changed commands
+
+disassemble
+  The disassemble command, when invoked with two arguments, now requires
+  the arguments to be comma-separated.
+
+* New commands (for set/show, see "New options" below)
+
+record save [<FILENAME>]
+  Save a file (in core file format) containing the process record 
+  execution log for replay debugging at a later time.
+
+record restore <FILENAME>
+  Restore the process record execution log that was saved at an
+  earlier time, for replay debugging.
+
+add-inferior [-copies <N>] [-exec <FILENAME>]
+  Add a new inferior.
+
+clone-inferior [-copies <N>] [ID]
+  Make a new inferior ready to execute the same program another
+  inferior has loaded.
+
+remove-inferior ID
+  Remove an inferior.
+
+maint info program-spaces
+  List the program spaces loaded into GDB.
+
+set remote interrupt-sequence [Ctrl-C | BREAK | BREAK-g]
+show remote interrupt-sequence
+  Allow the user to select one of ^C, a BREAK signal or BREAK-g
+  as the sequence to the remote target in order to interrupt the execution.
+  Ctrl-C is a default.  Some system prefers BREAK which is high level of
+  serial line for some certain time.  Linux kernel prefers BREAK-g, a.k.a
+  Magic SysRq g.  It is BREAK signal and character 'g'.
+
+set remote interrupt-on-connect [on | off]
+show remote interrupt-on-connect
+  When interrupt-on-connect is ON, gdb sends interrupt-sequence to
+  remote target when gdb connects to it.  This is needed when you debug
+  Linux kernel.
+
+set remotebreak [on | off]
+show remotebreak
+Deprecated.  Use "set/show remote interrupt-sequence" instead.
+
+* New options
+
+set follow-exec-mode new|same
+show follow-exec-mode
+  Control whether GDB reuses the same inferior across an exec call or
+  creates a new one.  This is useful to be able to restart the old
+  executable after the inferior having done an exec call.
+
+* Bug fixes
+
+Process record now works correctly with hardware watchpoints.
+
+*** Changes in GDB 7.0
 
 * GDB now has an interface for JIT compilation.  Applications that
 dynamically generate code can create symbol files in memory and register
@@ -232,7 +314,31 @@ Cell/B.E. debugging, you need to configure GDB to support both the
 powerpc-linux or powerpc64-linux and the spu-elf targets, using the
 --enable-targets configure option.
 
+* Non-stop mode debugging.
+
+  For some targets, GDB now supports an optional mode of operation in
+  which you can examine stopped threads while other threads continue
+  to execute freely.  This is referred to as non-stop mode, with the
+  old mode referred to as all-stop mode.  See the "Non-Stop Mode"
+  section in the user manual for more information.
+
+  To be able to support remote non-stop debugging, a remote stub needs
+  to implement the non-stop mode remote protocol extensions, as
+  described in the "Remote Non-Stop" section of the user manual.  The
+  GDB remote stub, gdbserver, has been adjusted to support these
+  extensions on linux targets.
+
 * New commands (for set/show, see "New options" below)
+
+catch syscall [NAME(S) | NUMBER(S)]
+  Catch system calls.  Arguments, which should be names of system
+  calls or their numbers, mean catch only those syscalls.  Without
+  arguments, every syscall will be caught.  When the inferior issues
+  any of the specified syscalls, GDB will stop and announce the system
+  call, both when it is called and when its call returns.  This
+  feature is currently available with a native GDB running on the
+  Linux Kernel, under the following architectures: x86, x86_64,
+  PowerPC and PowerPC64.
 
 find [/size-char] [/max-count] start-address, end-address|+search-space-size,
     val1 [, val2, ...]
@@ -308,6 +414,14 @@ set remote write-siginfo-object
 show remote write-siginfo-object
   Control use of remote protocol `qXfer:siginfo:write' (write-siginfo-object)
   packet.
+
+set remote reverse-continue
+show remote reverse-continue
+  Control use of remote protocol 'bc' (reverse-continue) packet.
+
+set remote reverse-step
+show remote reverse-step
+  Control use of remote protocol 'bs' (reverse-step) packet.
 
 set displaced-stepping
 show displaced-stepping
@@ -399,6 +513,14 @@ show stack-cache
   Use more aggressive caching for accesses to the stack.  This improves
   performance of remote debugging (particularly backtraces) without
   affecting correctness.
+
+set interactive-mode (on|off|auto)
+show interactive-mode
+  Control whether GDB runs in interactive mode (on) or not (off).
+  When in interactive mode, GDB waits for the user to answer all
+  queries.  Otherwise, GDB does not wait and assumes the default
+  answer.  When set to auto (the default), GDB determines which
+  mode to use based on the stdin settings.
 
 * Removed commands
 

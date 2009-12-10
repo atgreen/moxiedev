@@ -39,6 +39,7 @@
 #include "bucomm.h"
 
 static bfd_boolean unwind_inlines;	/* -i, unwind inlined functions. */
+static bfd_boolean with_addresses;	/* -a, show addresses.  */
 static bfd_boolean with_functions;	/* -f, show function names.  */
 static bfd_boolean do_demangle;		/* -C, demangle names.  */
 static bfd_boolean base_names;		/* -s, strip directory names.  */
@@ -50,6 +51,7 @@ static asymbol **syms;		/* Symbol table.  */
 
 static struct option long_options[] =
 {
+  {"addresses", no_argument, NULL, 'a'},
   {"basenames", no_argument, NULL, 's'},
   {"demangle", optional_argument, NULL, 'C'},
   {"exe", required_argument, NULL, 'e'},
@@ -78,6 +80,7 @@ usage (FILE *stream, int status)
   fprintf (stream, _(" If no addresses are specified on the command line, they will be read from stdin\n"));
   fprintf (stream, _(" The options are:\n\
   @<file>                Read options from <file>\n\
+  -a --addresses         Show addresses\n\
   -b --target=<bfdname>  Set the binary file format\n\
   -e --exe=<executable>  Set the input file name (default is a.out)\n\
   -i --inlines           Unwind inlined functions\n\
@@ -100,17 +103,27 @@ usage (FILE *stream, int status)
 static void
 slurp_symtab (bfd *abfd)
 {
+  long storage;
   long symcount;
-  unsigned int size;
-  void *minisyms = &syms;
+  bfd_boolean dynamic = FALSE;
 
   if ((bfd_get_file_flags (abfd) & HAS_SYMS) == 0)
     return;
 
-  symcount = bfd_read_minisymbols (abfd, FALSE, &minisyms, &size);
-  if (symcount == 0)
-    symcount = bfd_read_minisymbols (abfd, TRUE /* dynamic */, &minisyms, &size);
+  storage = bfd_get_symtab_upper_bound (abfd);
+  if (storage == 0)
+    {
+      storage = bfd_get_dynamic_symtab_upper_bound (abfd);
+      dynamic = TRUE;
+    }
+  if (storage < 0)
+    bfd_fatal (bfd_get_filename (abfd));
 
+  syms = (asymbol **) xmalloc (storage);
+  if (dynamic)
+    symcount = bfd_canonicalize_dynamic_symtab (abfd, syms);
+  else
+    symcount = bfd_canonicalize_symtab (abfd, syms);
   if (symcount < 0)
     bfd_fatal (bfd_get_filename (abfd));
 }
@@ -198,6 +211,13 @@ translate_addresses (bfd *abfd, asection *section)
 	  --naddr;
 	  pc = bfd_scan_vma (*addr++, NULL, 16);
 	}
+
+      if (with_addresses)
+        {
+          printf ("0x");
+          bfd_printf_vma (abfd, pc);
+          printf ("\n");
+        }
 
       found = FALSE;
       if (section)
@@ -344,13 +364,16 @@ main (int argc, char **argv)
   file_name = NULL;
   section_name = NULL;
   target = NULL;
-  while ((c = getopt_long (argc, argv, "b:Ce:sfHhij:Vv", long_options, (int *) 0))
+  while ((c = getopt_long (argc, argv, "ab:Ce:sfHhij:Vv", long_options, (int *) 0))
 	 != EOF)
     {
       switch (c)
 	{
 	case 0:
 	  break;		/* We've been given a long option.  */
+	case 'a':
+	  with_addresses = TRUE;
+	  break;
 	case 'b':
 	  target = optarg;
 	  break;

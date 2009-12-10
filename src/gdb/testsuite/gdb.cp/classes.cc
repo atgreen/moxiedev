@@ -400,7 +400,10 @@ class Base1 {
  public:
   int x;
   Base1(int i) { x = i; }
+  ~Base1 () { }
 };
+
+typedef Base1 base1;
 
 class Foo
 {
@@ -413,6 +416,8 @@ class Foo
   operator int ();
   int times (int y);
 };
+
+typedef Foo ByAnyOtherName;
 
 class Bar : public Base1, public Foo {
  public:
@@ -428,7 +433,7 @@ int Foo::st = 100;
 
 Foo::operator int() { return x; }
 
-Foo foo(10, 11);
+ByAnyOtherName foo(10, 11);
 Bar bar(20, 21, 22);
 
 class ClassWithEnum {
@@ -564,6 +569,8 @@ void use_methods ()
   i = class_param.Aref_x (g_A);
   i = class_param.Aval_a (g_A);
   i = class_param.Aval_x (g_A);
+
+  base1 b (3);
 }
 
 

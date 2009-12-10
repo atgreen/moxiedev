@@ -635,7 +635,7 @@ _maybe_make_executable (bfd * abfd)
   /* If the file was open for writing and is now executable,
      make it so.  */
   if (abfd->direction == write_direction
-      && abfd->flags & EXEC_P)
+      && (abfd->flags & (EXEC_P | DYNAMIC)) != 0)
     {
       struct stat buf;
 
@@ -709,7 +709,9 @@ bfd_close (bfd *abfd)
 	 vector.
 	 Until that's done, at least don't leak memory.  */
       struct bfd_in_memory *bim = (struct bfd_in_memory *) abfd->iostream;
-      free (bim->buffer);
+
+      if (bim->buffer != NULL)
+	free (bim->buffer);
       free (bim);
       ret = TRUE;
     }

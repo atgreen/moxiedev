@@ -1,5 +1,5 @@
 # Paned text widget for source code, for Insight
-# Copyright (C) 1997, 1998, 1999, 2001, 2002, 2008 Red Hat, Inc.
+# Copyright (C) 1997, 1998, 1999, 2001, 2002, 2008, 2009 Red Hat, Inc.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License (GPL) as published by
@@ -1362,6 +1362,14 @@ itcl::body SrcTextWin::insertBreakTag {win linenum tag} {
   # tag.  We will query the length of the previous tag, so we don't have
   # to hard code it here.
   
+  # Find the nearest executable line
+  for {set i 0} {$i < $ExecutableLineLimit} {incr i} {
+    if {[line_is_executable $win [expr {$linenum + $i}]]} {
+      incr linenum $i
+      break
+    }
+  }
+
   set tag_list [$win tag names $linenum.0]
   set img_name [string range $tag 0 [expr [string length $tag] - 5]]
   
@@ -1378,7 +1386,7 @@ itcl::body SrcTextWin::insertBreakTag {win linenum tag} {
     set other_tag [lindex $tag_list \
 		     [lsearch -glob $tag_list {*[bt]p_tag}]]
     if {$other_tag == ""} {
-      set stop 4
+      set stop "$linenum.4"
     } else {
       set stop [lindex [$win tag nextrange $other_tag \
 			  $linenum.0 "$linenum.0 lineend"] 1]
@@ -1748,10 +1756,10 @@ itcl::body SrcTextWin::lookup_line {win y} {
 
   switch $type {
     asm {
-      set set_cmd [list gdb_set_bp_addr $addr]
+      set set_cmd [list gdb_set_bp "*$addr"]
     }
     src {
-      set set_cmd [list gdb_set_bp $current(filename) $addr]
+      set set_cmd [list gdb_set_bp "$current(filename):$addr"]
     }
   }
 

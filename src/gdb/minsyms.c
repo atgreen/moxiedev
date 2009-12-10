@@ -434,13 +434,14 @@ lookup_minimal_symbol_solib_trampoline (const char *name,
 
 /* Search through the minimal symbol table for each objfile and find
    the symbol whose address is the largest address that is still less
-   than or equal to PC, and matches SECTION (if non-NULL).  Returns a
-   pointer to the minimal symbol if such a symbol is found, or NULL if
-   PC is not in a suitable range.  Note that we need to look through
-   ALL the minimal symbol tables before deciding on the symbol that
-   comes closest to the specified PC.  This is because objfiles can
-   overlap, for example objfile A has .text at 0x100 and .data at
-   0x40000 and objfile B has .text at 0x234 and .data at 0x40048.
+   than or equal to PC, and matches SECTION (which is not NULL).
+   Returns a pointer to the minimal symbol if such a symbol is found,
+   or NULL if PC is not in a suitable range.
+   Note that we need to look through ALL the minimal symbol tables
+   before deciding on the symbol that comes closest to the specified PC.
+   This is because objfiles can overlap, for example objfile A has .text
+   at 0x100 and .data at 0x40000 and objfile B has .text at 0x234 and
+   .data at 0x40048.
 
    If WANT_TRAMPOLINE is set, prefer mst_solib_trampoline symbols when
    there are text and trampoline symbols at the same address.
@@ -457,20 +458,12 @@ lookup_minimal_symbol_by_pc_section_1 (CORE_ADDR pc,
   struct objfile *objfile;
   struct minimal_symbol *msymbol;
   struct minimal_symbol *best_symbol = NULL;
-  struct obj_section *pc_section;
   enum minimal_symbol_type want_type, other_type;
 
   want_type = want_trampoline ? mst_solib_trampoline : mst_text;
   other_type = want_trampoline ? mst_text : mst_solib_trampoline;
-  
-  /* PC has to be in a known section.  This ensures that anything
-     beyond the end of the last segment doesn't appear to be part of
-     the last function in the last segment.  */
-  pc_section = find_pc_section (pc);
-  if (pc_section == NULL)
-    return NULL;
 
-  /* We can not require the symbol found to be in pc_section, because
+  /* We can not require the symbol found to be in section, because
      e.g. IRIX 6.5 mdebug relies on this code returning an absolute
      symbol - but find_pc_section won't return an absolute section and
      hence the code below would skip over absolute symbols.  We can
@@ -479,7 +472,8 @@ lookup_minimal_symbol_by_pc_section_1 (CORE_ADDR pc,
      files, search both the file and its separate debug file.  There's
      no telling which one will have the minimal symbols.  */
 
-  objfile = pc_section->objfile;
+  gdb_assert (section != NULL);
+  objfile = section->objfile;
   if (objfile->separate_debug_objfile)
     objfile = objfile->separate_debug_objfile;
 
@@ -680,6 +674,15 @@ lookup_minimal_symbol_by_pc_section_1 (CORE_ADDR pc,
 struct minimal_symbol *
 lookup_minimal_symbol_by_pc_section (CORE_ADDR pc, struct obj_section *section)
 {
+  if (section == NULL)
+    {
+      /* NOTE: cagney/2004-01-27: This was using find_pc_mapped_section to
+	 force the section but that (well unless you're doing overlay
+	 debugging) always returns NULL making the call somewhat useless.  */
+      section = find_pc_section (pc);
+      if (section == NULL)
+	return NULL;
+    }
   return lookup_minimal_symbol_by_pc_section_1 (pc, section, 0);
 }
 
@@ -689,13 +692,7 @@ lookup_minimal_symbol_by_pc_section (CORE_ADDR pc, struct obj_section *section)
 struct minimal_symbol *
 lookup_minimal_symbol_by_pc (CORE_ADDR pc)
 {
-  /* NOTE: cagney/2004-01-27: This was using find_pc_mapped_section to
-     force the section but that (well unless you're doing overlay
-     debugging) always returns NULL making the call somewhat useless.  */
-  struct obj_section *section = find_pc_section (pc);
-  if (section == NULL)
-    return NULL;
-  return lookup_minimal_symbol_by_pc_section (pc, section);
+  return lookup_minimal_symbol_by_pc_section (pc, NULL);
 }
 
 
@@ -760,11 +757,12 @@ prim_record_minimal_symbol (const char *name, CORE_ADDR address,
    newly created.  */
 
 struct minimal_symbol *
-prim_record_minimal_symbol_and_info (const char *name, CORE_ADDR address,
-				     enum minimal_symbol_type ms_type,
-				     int section,
-				     asection *bfd_section,
-				     struct objfile *objfile)
+prim_record_minimal_symbol_full (const char *name, int name_len, int copy_name,
+				 CORE_ADDR address,
+				 enum minimal_symbol_type ms_type,
+				 int section,
+				 asection *bfd_section,
+				 struct objfile *objfile)
 {
   struct obj_section *obj_section;
   struct msym_bunch *new;
@@ -783,7 +781,10 @@ prim_record_minimal_symbol_and_info (const char *name, CORE_ADDR address,
   /* It's safe to strip the leading char here once, since the name
      is also stored stripped in the minimal symbol table. */
   if (name[0] == get_symbol_leading_char (objfile->obfd))
-    ++name;
+    {
+      ++name;
+      --name_len;
+    }
 
   if (ms_type == mst_file_text && strncmp (name, "__gnu_compiled", 14) == 0)
     return (NULL);
@@ -798,7 +799,7 @@ prim_record_minimal_symbol_and_info (const char *name, CORE_ADDR address,
   msymbol = &msym_bunch->contents[msym_bunch_index];
   SYMBOL_INIT_LANGUAGE_SPECIFIC (msymbol, language_unknown);
   SYMBOL_LANGUAGE (msymbol) = language_auto;
-  SYMBOL_SET_NAMES (msymbol, (char *)name, strlen (name), objfile);
+  SYMBOL_SET_NAMES (msymbol, name, name_len, copy_name, objfile);
 
   SYMBOL_VALUE_ADDRESS (msymbol) = address;
   SYMBOL_SECTION (msymbol) = section;
@@ -829,6 +830,21 @@ prim_record_minimal_symbol_and_info (const char *name, CORE_ADDR address,
   msym_count++;
   OBJSTAT (objfile, n_minsyms++);
   return msymbol;
+}
+
+/* Record a minimal symbol in the msym bunches.  Returns the symbol
+   newly created.  */
+
+struct minimal_symbol *
+prim_record_minimal_symbol_and_info (const char *name, CORE_ADDR address,
+				     enum minimal_symbol_type ms_type,
+				     int section,
+				     asection *bfd_section,
+				     struct objfile *objfile)
+{
+  return prim_record_minimal_symbol_full (name, strlen (name), 1,
+					  address, ms_type, section,
+					  bfd_section, objfile);
 }
 
 /* Compare two minimal symbols by address and return a signed result based

@@ -481,8 +481,10 @@ void
 target_terminal_inferior (void)
 {
   /* A background resume (``run&'') should leave GDB in control of the
-     terminal.  */
-  if (target_is_async_p () && !sync_execution)
+     terminal. Use target_can_async_p, not target_is_async_p, since at
+     this point the target is not async yet.  However, if sync_execution
+     is not set, we know it will become async prior to resume.  */
+  if (target_can_async_p () && !sync_execution)
     return;
 
   /* If GDB is resuming the inferior in the foreground, install
@@ -647,6 +649,7 @@ update_current_target (void)
       /* Do not inherit to_follow_fork.  */
       INHERIT (to_insert_exec_catchpoint, t);
       INHERIT (to_remove_exec_catchpoint, t);
+      INHERIT (to_set_syscall_catchpoint, t);
       INHERIT (to_has_exited, t);
       /* Do not inherit to_mourn_inferiour.  */
       INHERIT (to_can_run, t);
@@ -673,6 +676,8 @@ update_current_target (void)
       INHERIT (to_async_mask, t);
       INHERIT (to_find_memory_regions, t);
       INHERIT (to_make_corefile_notes, t);
+      INHERIT (to_get_bookmark, t);
+      INHERIT (to_goto_bookmark, t);
       /* Do not inherit to_get_thread_local_address.  */
       INHERIT (to_can_execute_reverse, t);
       INHERIT (to_thread_architecture, t);
@@ -788,6 +793,9 @@ update_current_target (void)
 	    tcomplain);
   de_fault (to_remove_exec_catchpoint,
 	    (int (*) (int))
+	    tcomplain);
+  de_fault (to_set_syscall_catchpoint,
+	    (int (*) (int, int, int, int, int *))
 	    tcomplain);
   de_fault (to_has_exited,
 	    (int (*) (int, int, int *))
@@ -1177,8 +1185,8 @@ target_section_by_addr (struct target_ops *target, CORE_ADDR addr)
   return NULL;
 }
 
-/* Perform a partial memory transfer.  The arguments and return
-   value are just as for target_xfer_partial.  */
+/* Perform a partial memory transfer.
+   For docs see target.h, to_xfer_partial.  */
 
 static LONGEST
 memory_xfer_partial (struct target_ops *ops, enum target_object object,
@@ -1263,7 +1271,10 @@ memory_xfer_partial (struct target_ops *ops, enum target_object object,
       return -1;
     }
 
-  inf = find_inferior_pid (ptid_get_pid (inferior_ptid));
+  if (!ptid_equal (inferior_ptid, null_ptid))
+    inf = find_inferior_pid (ptid_get_pid (inferior_ptid));
+  else
+    inf = NULL;
 
   if (inf != NULL
       && (region->attrib.cache
@@ -1287,19 +1298,6 @@ memory_xfer_partial (struct target_ops *ops, enum target_object object,
 	    breakpoint_restore_shadows (readbuf, memaddr, reg_len);
 	  return res;
 	}
-    }
-
-  /* Make sure the cache gets updated no matter what - if we are writing
-     to the stack, even if this write is not tagged as such, we still need
-     to update the cache. */
-
-  if (inf != NULL
-      && readbuf == NULL
-      && !region->attrib.cache
-      && stack_cache_enabled_p
-      && object != TARGET_OBJECT_STACK_MEMORY)
-    {
-      dcache_update (target_dcache, memaddr, (void *) writebuf, reg_len);
     }
 
   /* If none of those methods found the memory we wanted, fall back
@@ -1331,6 +1329,20 @@ memory_xfer_partial (struct target_ops *ops, enum target_object object,
   if (readbuf && !show_memory_breakpoints)
     breakpoint_restore_shadows (readbuf, memaddr, reg_len);
 
+  /* Make sure the cache gets updated no matter what - if we are writing
+     to the stack.  Even if this write is not tagged as such, we still need
+     to update the cache.  */
+
+  if (res > 0
+      && inf != NULL
+      && writebuf != NULL
+      && !region->attrib.cache
+      && stack_cache_enabled_p
+      && object != TARGET_OBJECT_STACK_MEMORY)
+    {
+      dcache_update (target_dcache, memaddr, (void *) writebuf, res);
+    }
+
   /* If we still haven't got anything, return the last error.  We
      give up.  */
   return res;
@@ -1351,6 +1363,8 @@ make_show_memory_breakpoints_cleanup (int show)
   return make_cleanup (restore_show_memory_breakpoints,
 		       (void *) (uintptr_t) current);
 }
+
+/* For docs see target.h, to_xfer_partial.  */
 
 static LONGEST
 target_xfer_partial (struct target_ops *ops,
@@ -1465,6 +1479,11 @@ target_read_stack (CORE_ADDR memaddr, gdb_byte *myaddr, int len)
   else
     return EIO;
 }
+
+/* Write LEN bytes from MYADDR to target memory at address MEMADDR.
+   Returns either 0 for success or an errno value if any error occurs.
+   If an error occurs, no guarantee is made about how much data got written.
+   Callers that can deal with partial writes should call target_write.  */
 
 int
 target_write_memory (CORE_ADDR memaddr, const gdb_byte *myaddr, int len)
@@ -1629,11 +1648,7 @@ current_xfer_partial (struct target_ops *ops, enum target_object object,
     return -1;
 }
 
-/* Target vector read/write partial wrapper functions.
-
-   NOTE: cagney/2003-10-21: I wonder if having "to_xfer_partial
-   (inbuf, outbuf)", instead of separate read/write methods, make life
-   easier.  */
+/* Target vector read/write partial wrapper functions.  */
 
 static LONGEST
 target_read_partial (struct target_ops *ops,
@@ -1654,6 +1669,9 @@ target_write_partial (struct target_ops *ops,
 }
 
 /* Wrappers to perform the full transfer.  */
+
+/* For docs on target_read see target.h.  */
+
 LONGEST
 target_read (struct target_ops *ops,
 	     enum target_object object,
@@ -1742,7 +1760,6 @@ target_read_until_error (struct target_ops *ops,
   return len;
 }
 
-
 /* An alternative to target_write with progress callbacks.  */
 
 LONGEST
@@ -1777,6 +1794,8 @@ target_write_with_progress (struct target_ops *ops,
     }
   return len;
 }
+
+/* For docs on target_write see target.h.  */
 
 LONGEST
 target_write (struct target_ops *ops,
@@ -2041,7 +2060,7 @@ target_detach (char *args, int from_tty)
   else
     /* If we're in breakpoints-always-inserted mode, have to remove
        them before detaching.  */
-    remove_breakpoints ();
+    remove_breakpoints_pid (PIDGET (inferior_ptid));
 
   for (t = current_target.beneath; t != NULL; t = t->beneath)
     {
@@ -2297,7 +2316,7 @@ simple_search_memory (struct target_ops *ops,
       if (search_space_len >= pattern_len)
 	{
 	  unsigned keep_len = search_buf_size - chunk_size;
-	  CORE_ADDR read_addr = start_addr + keep_len;
+	  CORE_ADDR read_addr = start_addr + chunk_size + keep_len;
 	  int nr_to_read;
 
 	  /* Copy the trailing part of the previous iteration to the front
@@ -2542,6 +2561,42 @@ target_get_osdata (const char *type)
   return target_read_stralloc (t, TARGET_OBJECT_OSDATA, type);
 }
 
+/* Determine the current address space of thread PTID.  */
+
+struct address_space *
+target_thread_address_space (ptid_t ptid)
+{
+  struct address_space *aspace;
+  struct inferior *inf;
+  struct target_ops *t;
+
+  for (t = current_target.beneath; t != NULL; t = t->beneath)
+    {
+      if (t->to_thread_address_space != NULL)
+	{
+	  aspace = t->to_thread_address_space (t, ptid);
+	  gdb_assert (aspace);
+
+	  if (targetdebug)
+	    fprintf_unfiltered (gdb_stdlog,
+				"target_thread_address_space (%s) = %d\n",
+				target_pid_to_str (ptid),
+				address_space_num (aspace));
+	  return aspace;
+	}
+    }
+
+  /* Fall-back to the "main" address space of the inferior.  */
+  inf = find_inferior_pid (ptid_get_pid (ptid));
+
+  if (inf == NULL || inf->aspace == NULL)
+    internal_error (__FILE__, __LINE__, "\
+Can't determine the current address space of thread %s\n",
+		    target_pid_to_str (ptid));
+
+  return inf->aspace;
+}
+
 static int
 default_region_ok_for_hw_watchpoint (CORE_ADDR addr, int len)
 {
@@ -2653,7 +2708,7 @@ generic_mourn_inferior (void)
   if (!ptid_equal (ptid, null_ptid))
     {
       int pid = ptid_get_pid (ptid);
-      delete_inferior (pid);
+      exit_inferior (pid);
     }
 
   breakpoint_init_inferior (inf_exited);
@@ -2707,18 +2762,35 @@ dummy_pid_to_str (struct target_ops *ops, ptid_t ptid)
   return normal_pid_to_str (ptid);
 }
 
-/* Error-catcher for target_find_memory_regions */
-static int dummy_find_memory_regions (int (*ignore1) (), void *ignore2)
+/* Error-catcher for target_find_memory_regions.  */
+static int
+dummy_find_memory_regions (int (*ignore1) (), void *ignore2)
 {
-  error (_("No target."));
+  error (_("Command not implemented for this target."));
   return 0;
 }
 
-/* Error-catcher for target_make_corefile_notes */
-static char * dummy_make_corefile_notes (bfd *ignore1, int *ignore2)
+/* Error-catcher for target_make_corefile_notes.  */
+static char *
+dummy_make_corefile_notes (bfd *ignore1, int *ignore2)
 {
-  error (_("No target."));
+  error (_("Command not implemented for this target."));
   return NULL;
+}
+
+/* Error-catcher for target_get_bookmark.  */
+static gdb_byte *
+dummy_get_bookmark (char *ignore1, int ignore2)
+{
+  tcomplain ();
+  return NULL;
+}
+
+/* Error-catcher for target_goto_bookmark.  */
+static void
+dummy_goto_bookmark (gdb_byte *ignore, int from_tty)
+{
+  tcomplain ();
 }
 
 /* Set up the handful of non-empty slots needed by the dummy target
@@ -2741,6 +2813,8 @@ init_dummy_target (void)
   dummy_target.to_stratum = dummy_stratum;
   dummy_target.to_find_memory_regions = dummy_find_memory_regions;
   dummy_target.to_make_corefile_notes = dummy_make_corefile_notes;
+  dummy_target.to_get_bookmark = dummy_get_bookmark;
+  dummy_target.to_goto_bookmark = dummy_goto_bookmark;
   dummy_target.to_xfer_partial = default_xfer_partial;
   dummy_target.to_has_all_memory = (int (*) (struct target_ops *)) return_zero;
   dummy_target.to_has_memory = (int (*) (struct target_ops *)) return_zero;
@@ -2865,9 +2939,9 @@ target_waitstatus_to_string (const struct target_waitstatus *ws)
     case TARGET_WAITKIND_EXECD:
       return xstrprintf ("%sexecd", kind_str);
     case TARGET_WAITKIND_SYSCALL_ENTRY:
-      return xstrprintf ("%ssyscall-entry", kind_str);
+      return xstrprintf ("%sentered syscall", kind_str);
     case TARGET_WAITKIND_SYSCALL_RETURN:
-      return xstrprintf ("%ssyscall-return", kind_str);
+      return xstrprintf ("%sexited syscall", kind_str);
     case TARGET_WAITKIND_SPURIOUS:
       return xstrprintf ("%sspurious", kind_str);
     case TARGET_WAITKIND_IGNORE:
@@ -3362,8 +3436,8 @@ debug_to_thread_architecture (struct target_ops *ops, ptid_t ptid)
 
   retval = debug_target.to_thread_architecture (ops, ptid);
 
-  fprintf_unfiltered (gdb_stdlog, "target_thread_architecture (%s) = %p [%s]\n",
-		      target_pid_to_str (ptid), retval,
+  fprintf_unfiltered (gdb_stdlog, "target_thread_architecture (%s) = %s [%s]\n",
+		      target_pid_to_str (ptid), host_address_to_string (retval),
 		      gdbarch_bfd_arch_info (retval)->printable_name);
   return retval;
 }
@@ -3555,7 +3629,7 @@ Tells gdb whether to control the inferior in asynchronous mode."),
 			   &showlist);
 
   add_setshow_boolean_cmd ("stack-cache", class_support,
-			   &stack_cache_enabled_p, _("\
+			   &stack_cache_enabled_p_1, _("\
 Set cache use for stack access."), _("\
 Show cache use for stack access."), _("\
 When on, use the data cache for all stack access, regardless of any\n\

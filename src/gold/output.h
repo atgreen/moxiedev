@@ -38,6 +38,7 @@ class General_options;
 class Object;
 class Symbol;
 class Output_file;
+class Output_merge_base;
 class Output_section;
 class Relocatable_relocs;
 class Target;
@@ -45,6 +46,62 @@ template<int size, bool big_endian>
 class Sized_target;
 template<int size, bool big_endian>
 class Sized_relobj;
+
+// This class specifies an input section.  It is used as a key type
+// for maps.
+
+class Input_section_specifier
+{
+ public:
+  Input_section_specifier(const Relobj* relobj, unsigned int shndx)
+    : relobj_(relobj), shndx_(shndx)
+  { }
+   
+  // Return Relobj of this.
+  const Relobj*
+  relobj() const
+  { return this->relobj_; }
+
+  // Return section index of this.
+  unsigned int
+  shndx() const
+  { return this->shndx_; }
+
+  // Whether this equals to another specifier ISS.
+  bool
+  eq(const Input_section_specifier& iss) const
+  { return this->relobj_ == iss.relobj_ && this->shndx_ == iss.shndx_; }
+
+  // Compute a hash value of this.
+  size_t
+  hash_value() const
+  {
+     return (gold::string_hash<char>(this->relobj_->name().c_str())
+	     ^ this->shndx_);
+   }
+
+  // Functors for containers.
+  struct equal_to
+  {
+    bool
+    operator()(const Input_section_specifier& iss1,
+	       const Input_section_specifier& iss2) const
+    { return iss1.eq(iss2); }
+  };
+ 
+  struct hash
+  {
+    size_t
+    operator()(const Input_section_specifier& iss) const
+    { return iss.hash_value(); }
+  };
+
+ private:
+  // An object.
+  const Relobj* relobj_;
+  // A section index. 
+  unsigned int shndx_;
+};
 
 // An abtract class for data which has to go into the output file.
 
@@ -1987,7 +2044,7 @@ class Output_symtab_xindex : public Output_section_data
 };
 
 // A relaxed input section.
-class Output_relaxed_input_section : public Output_section_data
+class Output_relaxed_input_section : public Output_section_data_build
 {
  public:
   // We would like to call relobj->section_addralign(shndx) to get the
@@ -1995,7 +2052,7 @@ class Output_relaxed_input_section : public Output_section_data
   // are repsonsible for ensuring that.
   Output_relaxed_input_section(Relobj* relobj, unsigned int shndx,
 			       uint64_t addralign)
-    : Output_section_data(addralign), relobj_(relobj), shndx_(shndx)
+    : Output_section_data_build(addralign), relobj_(relobj), shndx_(shndx)
   { }
  
   // Return the Relobj of this relaxed input section.
@@ -2040,6 +2097,10 @@ class Output_section : public Output_data
   // Add generated data POSD to this output section.
   void
   add_output_section_data(Output_section_data* posd);
+
+  // Add a relaxed input section PORIS to this output section.
+  void
+  add_relaxed_input_section(Output_relaxed_input_section* poris);
 
   // Return the section name.
   const char*
@@ -2317,6 +2378,27 @@ class Output_section : public Output_data
   is_large_data_section()
   { return this->is_large_section_ && this->type_ != elfcpp::SHT_NOBITS; }
 
+  // True if this is the .interp section which goes into the PT_INTERP
+  // segment.
+  bool
+  is_interp() const
+  { return this->is_interp_; }
+
+  // Record that this is the interp section.
+  void
+  set_is_interp()
+  { this->is_interp_ = true; }
+
+  // True if this is a section used by the dynamic linker.
+  bool
+  is_dynamic_linker_section() const
+  { return this->is_dynamic_linker_section_; }
+
+  // Record that this is a section used by the dynamic linker.
+  void
+  set_is_dynamic_linker_section()
+  { this->is_dynamic_linker_section_ = true; }
+
   // Return whether this section should be written after all the input
   // sections are complete.
   bool
@@ -2510,6 +2592,16 @@ class Output_section : public Output_data
   void
   restore_states();
 
+  // Convert existing input sections to relaxed input sections.
+  void
+  convert_input_sections_to_relaxed_sections(
+      const std::vector<Output_relaxed_input_section*>& sections);
+
+  // Find a relaxed input section to an input section in OBJECT
+  // with index SHNDX.  Return NULL if none is found.
+  const Output_section_data*
+  find_relaxed_input_section(const Relobj* object, unsigned int shndx) const;
+  
   // Print merge statistics to stderr.
   void
   print_merge_stats();
@@ -2625,7 +2717,6 @@ class Output_section : public Output_data
   void
   write_to_postprocessing_buffer();
 
- private:
   // In some cases we need to keep a list of the input sections
   // associated with this output section.  We only need the list if we
   // might have to change the offsets of the input section within the
@@ -2741,16 +2832,24 @@ class Output_section : public Output_data
     Relobj*
     relobj() const
     {
-      gold_assert(this->is_input_section());
-      return this->u2_.object;
+      if (this->is_input_section())
+        return this->u2_.object;
+      else if (this->is_relaxed_input_section())
+	return this->u2_.poris->relobj();
+      else
+	gold_unreachable();
     }
 
     // Return the input section index for an input section.
     unsigned int
     shndx() const
     {
-      gold_assert(this->is_input_section());
-      return this->shndx_;
+      if (this->is_input_section())
+        return this->shndx_;
+      else if (this->is_relaxed_input_section())
+	return this->u2_.poris->shndx();
+      else
+	gold_unreachable();
     }
 
     // For non-input-sections, return the associated Output_section_data
@@ -2891,6 +2990,12 @@ class Output_section : public Output_data
 
   typedef std::vector<Input_section> Input_section_list;
 
+  // Allow a child class to access the input sections.
+  const Input_section_list&
+  input_sections() const
+  { return this->input_sections_; }
+
+ private:
   // We only save enough information to undo the effects of section layout.
   class Checkpoint_output_section
   {
@@ -2921,9 +3026,9 @@ class Output_section : public Output_data
     { return this->flags_; }
 
     // Return a reference to the input section list copy.
-    const Input_section_list&
-    input_sections() const
-    { return this->input_sections_copy_; }
+    Input_section_list*
+    input_sections()
+    { return &this->input_sections_copy_; }
 
     // Return the size of input_sections at the time when checkpoint is
     // taken.
@@ -2974,7 +3079,6 @@ class Output_section : public Output_data
     bool attached_input_sections_are_sorted_;
   };
 
- private:
   // This class is used to sort the input sections.
   class Input_section_sort_entry;
 
@@ -3018,6 +3122,82 @@ class Output_section : public Output_data
 
   typedef std::vector<Fill> Fill_list;
 
+  // This class describes properties of merge data sections.  It is used
+  // as a key type for maps.
+  class Merge_section_properties
+  {
+   public:
+    Merge_section_properties(bool is_string, uint64_t entsize,
+			     uint64_t addralign)
+      : is_string_(is_string), entsize_(entsize), addralign_(addralign)
+    { }
+
+    // Whether this equals to another Merge_section_properties MSP.
+    bool
+    eq(const Merge_section_properties& msp) const
+    {
+      return ((this->is_string_ == msp.is_string_)
+	      && (this->entsize_ == msp.entsize_)
+	      && (this->addralign_ == msp.addralign_));
+    }
+
+    // Compute a hash value for this using 64-bit FNV-1a hash.
+    size_t
+    hash_value() const
+    {
+      uint64_t h = 14695981039346656037ULL;	// FNV offset basis.
+      uint64_t prime = 1099511628211ULL;
+      h = (h ^ static_cast<uint64_t>(this->is_string_)) * prime;
+      h = (h ^ static_cast<uint64_t>(this->entsize_)) * prime;
+      h = (h ^ static_cast<uint64_t>(this->addralign_)) * prime;
+      return h;
+    }
+    
+    // Functors for associative containers.
+    struct equal_to
+    {
+      bool
+      operator()(const Merge_section_properties& msp1,
+		 const Merge_section_properties& msp2) const
+      { return msp1.eq(msp2); }
+    };
+
+    struct hash
+    {
+      size_t
+      operator()(const Merge_section_properties& msp) const
+      { return msp.hash_value(); }
+    };
+
+   private:
+    // Whether this merge data section is for strings.
+    bool is_string_;
+    // Entsize of this merge data section.
+    uint64_t entsize_;
+    // Address alignment.
+    uint64_t addralign_;
+  };
+
+  // Map that link Merge_section_properties to Output_merge_base.
+  typedef Unordered_map<Merge_section_properties, Output_merge_base*,
+			Merge_section_properties::hash,
+			Merge_section_properties::equal_to>
+    Merge_section_by_properties_map;
+
+  // Map that link Input_section_specifier to Output_section_data.
+  typedef Unordered_map<Input_section_specifier, Output_section_data*,
+			Input_section_specifier::hash,
+			Input_section_specifier::equal_to>
+    Output_section_data_by_input_section_map;
+
+  // Map used during relaxation of existing sections.  This map
+  // an input section specifier to an input section list index.
+  // We assume that Input_section_list is a vector.
+  typedef Unordered_map<Input_section_specifier, size_t,
+			Input_section_specifier::hash,
+			Input_section_specifier::equal_to>
+    Relaxation_map;
+
   // Add a new output section by Input_section.
   void
   add_output_section_data(Input_section*);
@@ -3036,13 +3216,28 @@ class Output_section : public Output_data
   add_output_merge_section(Output_section_data* posd, bool is_string,
 			   uint64_t entsize);
 
-  // Relax an existing input section.
-  void
-  relax_input_section(Output_relaxed_input_section*);
-
   // Sort the attached input sections.
   void
   sort_attached_input_sections();
+
+  // Find the merge section into which an input section with index SHNDX in
+  // OBJECT has been added.  Return NULL if none found.
+  Output_section_data*
+  find_merge_section(const Relobj* object, unsigned int shndx) const;
+
+  // Build a relaxation map.
+  void
+  build_relaxation_map(
+      const Input_section_list& input_sections,
+      size_t limit,
+      Relaxation_map* map) const;
+
+  // Convert input sections in an input section list into relaxed sections.
+  void
+  convert_input_sections_in_list_to_relaxed_sections(
+      const std::vector<Output_relaxed_input_section*>& relaxed_sections,
+      const Relaxation_map& map,
+      Input_section_list* input_sections);
 
   // Most of these fields are only valid after layout.
 
@@ -3144,11 +3339,28 @@ class Output_section : public Output_data
   bool is_small_section_ : 1;
   // True if this is a large section.
   bool is_large_section_ : 1;
+  // True if this is the .interp section going into the PT_INTERP
+  // segment.
+  bool is_interp_ : 1;
+  // True if this is section is read by the dynamic linker.
+  bool is_dynamic_linker_section_ : 1;
+  // Whether code-fills are generated at write.
+  bool generate_code_fills_at_write_ : 1;
   // For SHT_TLS sections, the offset of this section relative to the base
   // of the TLS segment.
   uint64_t tls_offset_;
   // Saved checkpoint.
   Checkpoint_output_section* checkpoint_;
+  // Map from input sections to merge sections.
+  Output_section_data_by_input_section_map merge_section_map_;
+  // Map from merge section properties to merge_sections;
+  Merge_section_by_properties_map merge_section_by_properties_map_;
+  // Map from input sections to relaxed input sections.  This is mutable
+  // because it is updated lazily.  We may need to update it in a
+  // const qualified method.
+  mutable Output_section_data_by_input_section_map relaxed_input_section_map_;
+  // Whether relaxed_input_section_map_ is valid.
+  mutable bool is_relaxed_input_section_map_valid_;
 };
 
 // An output segment.  PT_LOAD segments are built from collections of
@@ -3217,9 +3429,12 @@ class Output_segment
   uint64_t
   maximum_alignment();
 
-  // Add an Output_section to this segment.
+  // Add the Output_section OS to this segment.  SEG_FLAGS is the
+  // segment flags to use.  DO_SORT is true if we should sort the
+  // placement of the input section for more efficient generated code.
   void
-  add_output_section(Output_section* os, elfcpp::Elf_Word seg_flags);
+  add_output_section(Output_section* os, elfcpp::Elf_Word seg_flags,
+		     bool do_sort);
 
   // Remove an Output_section from this segment.  It is an error if it
   // is not present.
@@ -3432,6 +3647,16 @@ class Output_file
   // there are no errors.  This method is thread-unsafe.
   void
   close();
+
+  // Return the size of this file.
+  off_t
+  filesize()
+  { return this->file_size_; }
+
+  // Return the name of this file.
+  const char*
+  filename()
+  { return this->name_; }
 
   // We currently always use mmap which makes the view handling quite
   // simple.  In the future we may support other approaches.

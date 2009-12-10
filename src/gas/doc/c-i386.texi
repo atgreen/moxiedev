@@ -32,6 +32,7 @@ extending the Intel architecture to 64-bits.
 * i386-Jumps::                  Handling of Jump Instructions
 * i386-Float::                  Floating Point
 * i386-SIMD::                   Intel's MMX and AMD's 3DNow! SIMD Operations
+* i386-LWP::                    AMD's Lightweight Profiling Instructions
 * i386-16bit::                  Writing 16-bit Code
 * i386-Arch::                   Specifying an x86 CPU architecture
 * i386-Bugs::                   AT&T Syntax bugs
@@ -140,6 +141,9 @@ accept various extension mnemonics.  For example,
 @code{movbe},
 @code{ept},
 @code{clflush},
+@code{lwp},
+@code{fma4},
+@code{xop},
 @code{syscall},
 @code{rdtscp},
 @code{3dnow},
@@ -308,6 +312,9 @@ this by prefixing memory operands (@emph{not} the instruction mnemonics) with
 @samp{byte ptr}, @samp{word ptr}, @samp{dword ptr} and @samp{qword ptr}.  Thus,
 Intel @samp{mov al, byte ptr @var{foo}} is @samp{movb @var{foo}, %al} in AT&T
 syntax.
+
+In 64-bit code, @samp{movabs} can be used to encode the @samp{mov}
+instruction with the 64-bit displacement or immediate operand.
 
 @cindex return instructions, i386
 @cindex i386 jump, call, return
@@ -796,6 +803,25 @@ as the floating point stack.
 See Intel and AMD documentation, keeping in mind that the operand order in
 instructions is reversed from the Intel syntax.
 
+@node i386-LWP
+@section AMD's Lightweight Profiling Instructions
+
+@cindex LWP, i386
+@cindex LWP, x86-64
+
+@code{@value{AS}} supports AMD's Lightweight Profiling (LWP)
+instruction set, available on AMD's Family 15h (Orochi) processors.
+
+LWP enables applications to collect and manage performance data, and
+react to performance events.  The collection of performance data
+requires no context switches.  LWP runs in the context of a thread and
+so several counters can be used independently across multiple threads.
+LWP can be used in both 64-bit and legacy 32-bit modes.
+
+For detailed information on the LWP instruction set, see the
+@cite{AMD Lightweight Profiling Specification} available at
+@uref{http://developer.amd.com/cpu/LWP,Lightweight Profiling Specification}.
+
 @node i386-16bit
 @section Writing 16-bit Code
 
@@ -812,8 +838,9 @@ or 64-bit x86-64 code depending on the default configuration,
 it also supports writing code to run in real mode or in 16-bit protected
 mode code segments.  To do this, put a @samp{.code16} or
 @samp{.code16gcc} directive before the assembly language instructions to
-be run in 16-bit mode.  You can switch @code{@value{AS}} back to writing
-normal 32-bit code with the @samp{.code32} directive.
+be run in 16-bit mode.  You can switch @code{@value{AS}} to writing
+32-bit code with the @samp{.code32} directive or 64-bit code with the
+@samp{.code64} directive.
 
 @samp{.code16gcc} provides experimental support for generating 16-bit
 code from gcc, and differs from @samp{.code16} in that @samp{call},
@@ -897,6 +924,7 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{.ept} @tab @samp{.clflush}
 @item @samp{.3dnow} @tab @samp{.3dnowa} @tab @samp{.sse4a} @tab @samp{.sse5}
 @item @samp{.syscall} @tab @samp{.rdtscp} @tab @samp{.svme} @tab @samp{.abm}
+@item @samp{.lwp} @tab @samp{.fma4} @tab @samp{.xop}
 @item @samp{.padlock}
 @end multitable
 

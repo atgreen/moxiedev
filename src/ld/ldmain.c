@@ -93,13 +93,14 @@ bfd_boolean version_printed;
 /* Nonzero means link in every member of an archive.  */
 bfd_boolean whole_archive;
 
-/* Nonzero means create DT_NEEDED entries only if a dynamic library
-   actually satisfies some reference in a regular object.  */
-bfd_boolean as_needed;
+/* True means only create DT_NEEDED entries for dynamic libraries
+   if they actually satisfy some reference in a regular object.  */
+bfd_boolean add_DT_NEEDED_for_regular;
 
-/* Nonzero means never create DT_NEEDED entries for dynamic libraries
-   in DT_NEEDED tags.  */
-bfd_boolean add_needed = TRUE;
+/* True means create DT_NEEDED entries for dynamic libraries that
+   are DT_NEEDED by dynamic libraries specifically mentioned on
+   the command line.  */
+bfd_boolean add_DT_NEEDED_for_dynamic = TRUE;
 
 /* TRUE if we should demangle symbol names.  */
 bfd_boolean demangling;
@@ -252,6 +253,7 @@ main (int argc, char **argv)
   command_line.warn_mismatch = TRUE;
   command_line.warn_search_mismatch = TRUE;
   command_line.check_section_addresses = -1;
+  command_line.disable_target_specific_optimizations = -1;
 
   /* We initialize DEMANGLING based on the environment variable
      COLLECT_NO_DEMANGLE.  The gcc collect2 program will demangle the
@@ -905,10 +907,10 @@ multiple_definition (struct bfd_link_info *info ATTRIBUTE_UNUSED,
   if (obfd != NULL)
     einfo (_("%D: first defined here\n"), obfd, osec, oval);
 
-  if (command_line.relax)
+  if (RELAXATION_ENABLED)
     {
       einfo (_("%P: Disabling relaxation: it will not work with multiple definitions\n"));
-      command_line.relax = 0;
+      command_line.disable_target_specific_optimizations = -1;
     }
 
   return TRUE;

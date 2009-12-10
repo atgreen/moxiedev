@@ -371,7 +371,7 @@ static const pseudo_typeS potable[] = {
   {"irpc", s_irp, 1},
   {"irepc", s_irp, 1},
   {"lcomm", s_lcomm, 0},
-  {"lflags", listing_flags, 0},	/* Listing flags.  */
+  {"lflags", s_ignore, 0},	/* Listing flags.  */
   {"linefile", s_app_line, 0},
   {"linkonce", s_linkonce, 0},
   {"list", listing_list, 1},	/* Turn listing on.  */
@@ -620,19 +620,57 @@ read_a_source_file (char *name)
 #endif
       while (input_line_pointer < buffer_limit)
 	{
+	  bfd_boolean was_new_line;
 	  /* We have more of this buffer to parse.  */
 
 	  /* We now have input_line_pointer->1st char of next line.
 	     If input_line_pointer [-1] == '\n' then we just
 	     scanned another line: so bump line counters.  */
-	  if (is_end_of_line[(unsigned char) input_line_pointer[-1]])
+	  was_new_line = is_end_of_line[(unsigned char) input_line_pointer[-1]];
+	  if (was_new_line)
 	    {
 #ifdef md_start_line_hook
 	      md_start_line_hook ();
 #endif
 	      if (input_line_pointer[-1] == '\n')
 		bump_line_counters ();
+	    }
 
+#ifndef NO_LISTING
+	  /* If listing is on, and we are expanding a macro, then give
+	     the listing code the contents of the expanded line.  */
+	  if (listing)
+	    {
+	      if ((listing & LISTING_MACEXP) && macro_nest > 0)
+		{
+		  /* Find the end of the current expanded macro line.  */
+		  s = find_end_of_line (input_line_pointer, flag_m68k_mri);
+
+		  if (s != last_eol)
+		    {
+		      char *copy;
+		      int len;
+
+		      last_eol = s;
+		      /* Copy it for safe keeping.  Also give an indication of
+			 how much macro nesting is involved at this point.  */
+		      len = s - input_line_pointer;
+		      copy = (char *) xmalloc (len + macro_nest + 2);
+		      memset (copy, '>', macro_nest);
+		      copy[macro_nest] = ' ';
+		      memcpy (copy + macro_nest + 1, input_line_pointer, len);
+		      copy[macro_nest + 1 + len] = '\0';
+
+		      /* Install the line with the listing facility.  */
+		      listing_newline (copy);
+		    }
+		}
+	      else
+		listing_newline (NULL);
+	    }
+#endif
+	  if (was_new_line)
+	    {
 	      line_label = NULL;
 
 	      if (LABELS_WITHOUT_COLONS || flag_m68k_mri)
@@ -645,7 +683,6 @@ read_a_source_file (char *name)
 		      char c;
 		      int mri_line_macro;
 
-		      LISTING_NEWLINE ();
 		      HANDLE_CONDITIONAL_ASSEMBLY ();
 
 		      c = get_symbol_end ();
@@ -712,39 +749,6 @@ read_a_source_file (char *name)
 	    c = *input_line_pointer++;
 	  while (c == '\t' || c == ' ' || c == '\f');
 
-#ifndef NO_LISTING
-	  /* If listing is on, and we are expanding a macro, then give
-	     the listing code the contents of the expanded line.  */
-	  if (listing)
-	    {
-	      if ((listing & LISTING_MACEXP) && macro_nest > 0)
-		{
-		  char *copy;
-		  int len;
-
-		  /* Find the end of the current expanded macro line.  */
-		  s = find_end_of_line (input_line_pointer - 1, flag_m68k_mri);
-
-		  if (s != last_eol)
-		    {
-		      last_eol = s;
-		      /* Copy it for safe keeping.  Also give an indication of
-			 how much macro nesting is involved at this point.  */
-		      len = s - (input_line_pointer - 1);
-		      copy = (char *) xmalloc (len + macro_nest + 2);
-		      memset (copy, '>', macro_nest);
-		      copy[macro_nest] = ' ';
-		      memcpy (copy + macro_nest + 1, input_line_pointer - 1, len);
-		      copy[macro_nest + 1 + len] = '\0';
-
-		      /* Install the line with the listing facility.  */
-		      listing_newline (copy);
-		    }
-		}
-	      else
-		listing_newline (NULL);
-	    }
-#endif
 	  /* C is the 1st significant character.
 	     Input_line_pointer points after that character.  */
 	  if (is_name_beginner (c))
@@ -2981,6 +2985,57 @@ do_repeat (int count, const char *start, const char *end)
   buffer_limit = input_scrub_next_buffer (&input_line_pointer);
 }
 
+/* Like do_repeat except that any text matching EXPANDER in the
+   block is replaced by the itteration count.  */
+
+void
+do_repeat_with_expander (int count,
+			 const char * start,
+			 const char * end,
+			 const char * expander)
+{
+  sb one;
+  sb many;
+
+  sb_new (&one);
+  if (!buffer_and_nest (start, end, &one, get_non_macro_line_sb))
+    {
+      as_bad (_("%s without %s"), start, end);
+      return;
+    }
+
+  sb_new (&many);
+
+  if (expander != NULL && strstr (one.ptr, expander) != NULL)
+    {
+      while (count -- > 0)
+	{
+	  int len;
+	  char * sub;
+	  sb processed;
+
+	  sb_new (& processed);
+	  sb_add_sb (& processed, & one);
+	  sub = strstr (processed.ptr, expander);
+	  len = sprintf (sub, "%d", count);
+	  gas_assert (len < 8);
+	  strcpy (sub + len, sub + 8);
+	  processed.len -= (8 - len);
+	  sb_add_sb (& many, & processed);
+	  sb_kill (& processed);
+	}
+    }
+  else
+    while (count-- > 0)
+      sb_add_sb (&many, &one);
+
+  sb_kill (&one);
+
+  input_scrub_include_sb (&many, input_line_pointer, 1);
+  sb_kill (&many);
+  buffer_limit = input_scrub_next_buffer (&input_line_pointer);
+}
+
 /* Skip to end of current repeat loop; EXTRA indicates how many additional
    input buffers to skip.  Assumes that conditionals preceding the loop end
    are properly nested.
@@ -3695,6 +3750,7 @@ pseudo_set (symbolS *symbolP)
 	}
       S_SET_SEGMENT (symbolP, undefined_section);
       symbol_set_value_expression (symbolP, &exp);
+      copy_symbol_attributes (symbolP, exp.X_add_symbol);
       set_zero_frag (symbolP);
       break;
 
@@ -3911,7 +3967,7 @@ s_reloc (int ignore ATTRIBUTE_UNUSED)
   if (*input_line_pointer == ',')
     {
       ++input_line_pointer;
-      expression_and_evaluate (&exp);
+      expression (&exp);
     }
   switch (exp.X_op)
     {

@@ -70,17 +70,15 @@ c_print_type (struct type *type, char *varstring, struct ui_file *stream,
   c_type_print_base (type, stream, show, level);
   code = TYPE_CODE (type);
   if ((varstring != NULL && *varstring != '\0')
-      ||
   /* Need a space if going to print stars or brackets;
      but not if we will print just a type name.  */
-      ((show > 0 || TYPE_NAME (type) == 0)
-       &&
-       (code == TYPE_CODE_PTR || code == TYPE_CODE_FUNC
-	|| code == TYPE_CODE_METHOD
-	|| code == TYPE_CODE_ARRAY
-	|| code == TYPE_CODE_MEMBERPTR
-	|| code == TYPE_CODE_METHODPTR
-	|| code == TYPE_CODE_REF)))
+      || ((show > 0 || TYPE_NAME (type) == 0)
+	  && (code == TYPE_CODE_PTR || code == TYPE_CODE_FUNC
+	      || code == TYPE_CODE_METHOD
+	      || code == TYPE_CODE_ARRAY
+	      || code == TYPE_CODE_MEMBERPTR
+	      || code == TYPE_CODE_METHODPTR
+	      || code == TYPE_CODE_REF)))
     fputs_filtered (" ", stream);
   need_post_space = (varstring != NULL && strcmp (varstring, "") != 0);
   c_type_print_varspec_prefix (type, stream, show, 0, need_post_space);
@@ -747,8 +745,8 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
        * tag  for unnamed struct/union/enum's, which we don't
        * want to print.
        */
-      if (TYPE_TAG_NAME (type) != NULL &&
-	  strncmp (TYPE_TAG_NAME (type), "{unnamed", 8))
+      if (TYPE_TAG_NAME (type) != NULL
+	  && strncmp (TYPE_TAG_NAME (type), "{unnamed", 8))
 	{
 	  fputs_filtered (TYPE_TAG_NAME (type), stream);
 	  if (show > 0)
@@ -763,6 +761,9 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 	}
       else if (show > 0 || TYPE_TAG_NAME (type) == NULL)
 	{
+	  struct type *basetype;
+	  int vptr_fieldno;
+
 	  cp_type_print_derivation_info (stream, type);
 
 	  fprintf_filtered (stream, "{\n");
@@ -785,8 +786,8 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 	     masquerading as a class, if all members are public, there's
 	     no need for a "public:" label. */
 
-	  if ((TYPE_DECLARED_TYPE (type) == DECLARED_TYPE_CLASS) ||
-	      (TYPE_DECLARED_TYPE (type) == DECLARED_TYPE_TEMPLATE))
+	  if ((TYPE_DECLARED_TYPE (type) == DECLARED_TYPE_CLASS)
+	      || (TYPE_DECLARED_TYPE (type) == DECLARED_TYPE_TEMPLATE))
 	    {
 	      QUIT;
 	      len = TYPE_NFIELDS (type);
@@ -814,8 +815,8 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 		    }
 		}
 	    }
-	  else if ((TYPE_DECLARED_TYPE (type) == DECLARED_TYPE_STRUCT) ||
-		   (TYPE_DECLARED_TYPE (type) == DECLARED_TYPE_UNION))
+	  else if ((TYPE_DECLARED_TYPE (type) == DECLARED_TYPE_STRUCT)
+		   || (TYPE_DECLARED_TYPE (type) == DECLARED_TYPE_UNION))
 	    {
 	      QUIT;
 	      len = TYPE_NFIELDS (type);
@@ -834,8 +835,8 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 		      QUIT;
 		      len = TYPE_FN_FIELDLIST_LENGTH (type, j);
 		      for (i = 0; i < len; i++)
-			if (TYPE_FN_FIELD_PRIVATE (TYPE_FN_FIELDLIST1 (type, j), i) ||
-			    TYPE_FN_FIELD_PROTECTED (TYPE_FN_FIELDLIST1 (type, j), i))
+			if (TYPE_FN_FIELD_PRIVATE (TYPE_FN_FIELDLIST1 (type, j), i)
+			    || TYPE_FN_FIELD_PROTECTED (TYPE_FN_FIELDLIST1 (type, j), i))
 			  {
 			    need_access_label = 1;
 			    break;
@@ -850,12 +851,16 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 	     do not print the field that it occupies.  */
 
 	  len = TYPE_NFIELDS (type);
+	  vptr_fieldno = get_vptr_fieldno (type, &basetype);
 	  for (i = TYPE_N_BASECLASSES (type); i < len; i++)
 	    {
 	      QUIT;
-	      /* Don't print out virtual function table.  */
-	      if (strncmp (TYPE_FIELD_NAME (type, i), "_vptr", 5) == 0
-		  && is_cplus_marker ((TYPE_FIELD_NAME (type, i))[5]))
+
+	      /* If we have a virtual table pointer, omit it.  Even if
+		 virtual table pointers are not specifically marked in
+		 the debug info, they should be artificial.  */
+	      if ((type == basetype && i == vptr_fieldno)
+		  || TYPE_FIELD_ARTIFICIAL (type, i))
 		continue;
 
 	      /* If this is a C++ class we can print the various C++ section
@@ -986,9 +991,9 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 					TYPE_FN_FIELD_PHYSNAME (f, j));
 		      break;
 		    }
-		  else if (!is_constructor &&	/* constructors don't have declared types */
-			   !is_full_physname_constructor &&	/*    " "  */
-			   !is_type_conversion_operator (type, i, j))
+		  else if (!is_constructor	/* constructors don't have declared types */
+			   && !is_full_physname_constructor	/*    " "  */
+			   && !is_type_conversion_operator (type, i, j))
 		    {
 		      type_print (TYPE_TARGET_TYPE (TYPE_FN_FIELD_TYPE (f, j)),
 				  "", stream, -1);
@@ -1070,8 +1075,8 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
          "{unnamed struct}"/"{unnamed union}"/"{unnamed enum}"
          tag for unnamed struct/union/enum's, which we don't
          want to print. */
-      if (TYPE_TAG_NAME (type) != NULL &&
-	  strncmp (TYPE_TAG_NAME (type), "{unnamed", 8))
+      if (TYPE_TAG_NAME (type) != NULL
+	  && strncmp (TYPE_TAG_NAME (type), "{unnamed", 8))
 	{
 	  fputs_filtered (TYPE_TAG_NAME (type), stream);
 	  if (show > 0)

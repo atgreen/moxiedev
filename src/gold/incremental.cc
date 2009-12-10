@@ -21,134 +21,243 @@
 // MA 02110-1301, USA.
 
 #include "gold.h"
+
+#include <cstdarg>
+
 #include "elfcpp.h"
 #include "output.h"
 #include "incremental.h"
 #include "archive.h"
 #include "output.h"
-
-using elfcpp::Convert;
+#include "target-select.h"
 
 namespace gold {
 
 // Version information. Will change frequently during the development, later
 // we could think about backward (and forward?) compatibility.
-const int INCREMENTAL_LINK_VERSION = 1;
+const unsigned int INCREMENTAL_LINK_VERSION = 1;
 
-namespace internal {
+// Inform the user why we don't do an incremental link.  Not called in
+// the obvious case of missing output file.  TODO: Is this helpful?
 
-// Header of the .gnu_incremental_input section.
-struct Incremental_inputs_header_data
+void
+vexplain_no_incremental(const char* format, va_list args)
 {
-  // Incremental linker version.
-  elfcpp::Elf_Word version;
-
-  // Numer of input files in the link.
-  elfcpp::Elf_Word input_file_count;
-
-  // Offset of command line options in .gnu_incremental_strtab.
-  elfcpp::Elf_Word command_line_offset;
-
-  // Padding.
-  elfcpp::Elf_Word reserved;
-};
-
-// Data stored in .gnu_incremental_input after the header for each of the
-// Incremental_input_header_data::input_file_count input entries.
-struct Incremental_inputs_entry_data
-{
-  // Offset of file name in .gnu_incremental_strtab section.
-  elfcpp::Elf_Word filename_offset;
-
-  // Offset of data in .gnu_incremental_input.
-  elfcpp::Elf_Word data_offset;
-
-  // Timestamp (in seconds).
-  elfcpp::Elf_Xword timestamp_sec;
-
-  // Nano-second part of timestamp (if supported).
-  elfcpp::Elf_Word timestamp_nsec;
-
-  // Type of the input entry.
-  elfcpp::Elf_Half input_type;
-
-  // Padding.
-  elfcpp::Elf_Half reserved;
-};
-
+  char* buf = NULL;
+  if (vasprintf(&buf, format, args) < 0)
+    gold_nomem();
+  gold_info(_("the link might take longer: "
+              "cannot perform incremental link: %s"), buf);
+  free(buf);
 }
 
-// Accessors.
-
-// See internal::Incremental_input_header for fields descriptions.
-template<int size, bool big_endian>
-class Incremental_inputs_header_write
+void
+explain_no_incremental(const char* format, ...)
 {
- public:
-  Incremental_inputs_header_write(unsigned char *p)
-    : p_(reinterpret_cast<internal::Incremental_inputs_header_data*>(p))
-  { }
+  va_list args;
+  va_start(args, format);
+  vexplain_no_incremental(format, args);
+  va_end(args);
+}
 
-  static const int data_size = sizeof(internal::Incremental_inputs_header_data);
+// Report an error.
 
-  void
-  put_version(elfcpp::Elf_Word v)
-  { this->p_->version = Convert<32, big_endian>::convert_host(v); }
-
-  void
-  put_input_file_count(elfcpp::Elf_Word v)
-  { this->p_->input_file_count = Convert<32, big_endian>::convert_host(v); }
-
-  void
-  put_command_line_offset(elfcpp::Elf_Word v)
-  { this->p_->command_line_offset = Convert<32, big_endian>::convert_host(v); }
-
-  void
-  put_reserved(elfcpp::Elf_Word v)
-  { this->p_->reserved = Convert<32, big_endian>::convert_host(v); }
-
- private:
-  internal::Incremental_inputs_header_data* p_;
-};
-
-// See internal::Incremental_input_entry for fields descriptions.
-template<int size, bool big_endian>
-class Incremental_inputs_entry_write
+void
+Incremental_binary::error(const char* format, ...) const
 {
- public:
-  Incremental_inputs_entry_write(unsigned char *p)
-    : p_(reinterpret_cast<internal::Incremental_inputs_entry_data*>(p))
-  { }
+  va_list args;
+  va_start(args, format);
+  // Current code only checks if the file can be used for incremental linking,
+  // so errors shouldn't fail the build, but only result in a fallback to a
+  // full build.
+  // TODO: when we implement incremental editing of the file, we may need a
+  // flag that will cause errors to be treated seriously.
+  vexplain_no_incremental(format, args);
+  va_end(args);
+}
 
-  static const int data_size = sizeof(internal::Incremental_inputs_entry_data);
+template<int size, bool big_endian>
+bool
+Sized_incremental_binary<size, big_endian>::do_find_incremental_inputs_section(
+    Location* location,
+    unsigned int* strtab_shndx)
+{
+  unsigned int shndx = this->elf_file_.find_section_by_type(
+      elfcpp::SHT_GNU_INCREMENTAL_INPUTS);
+  if (shndx == elfcpp::SHN_UNDEF)  // Not found.
+    return false;
+  *strtab_shndx = this->elf_file_.section_link(shndx);
+  *location = this->elf_file_.section_contents(shndx);
+  return true;
+}
 
-  void
-  put_filename_offset(elfcpp::Elf_Word v)
-  { this->p_->filename_offset = Convert<32, big_endian>::convert_host(v); }
+template<int size, bool big_endian>
+bool
+Sized_incremental_binary<size, big_endian>::do_check_inputs(
+    Incremental_inputs* incremental_inputs)
+{
+  const int entry_size =
+      Incremental_inputs_entry_write<size, big_endian>::data_size;
+  const int header_size =
+      Incremental_inputs_header_write<size, big_endian>::data_size;
 
-  void
-  put_data_offset(elfcpp::Elf_Word v)
-  { this->p_->data_offset = Convert<32, big_endian>::convert_host(v); }
+  unsigned int strtab_shndx;
+  Location location;
 
-  void
-  put_timestamp_sec(elfcpp::Elf_Xword v)
-  { this->p_->timestamp_sec = Convert<64, big_endian>::convert_host(v); }
+  if (!do_find_incremental_inputs_section(&location, &strtab_shndx))
+    {
+      explain_no_incremental(_("no incremental data from previous build"));
+      return false;
+    }
+  if (location.data_size < header_size
+      || strtab_shndx >= this->elf_file_.shnum()
+      || this->elf_file_.section_type(strtab_shndx) != elfcpp::SHT_STRTAB)
+    {
+      explain_no_incremental(_("invalid incremental build data"));
+      return false;
+    }
 
-  void
-  put_timestamp_nsec(elfcpp::Elf_Word v)
-  { this->p_->timestamp_nsec = Convert<32, big_endian>::convert_host(v); }
+  Location strtab_location(this->elf_file_.section_contents(strtab_shndx));
+  View data_view(view(location));
+  View strtab_view(view(strtab_location));
+  elfcpp::Elf_strtab strtab(strtab_view.data(), strtab_location.data_size);
+  Incremental_inputs_header<size, big_endian> header(data_view.data());
 
-  void
-  put_input_type(elfcpp::Elf_Word v)
-  { this->p_->input_type = Convert<32, big_endian>::convert_host(v); }
+  if (header.get_version() != INCREMENTAL_LINK_VERSION)
+    {
+      explain_no_incremental(_("different version of incremental build data"));
+      return false;
+    }
 
-  void
-  put_reserved(elfcpp::Elf_Word v)
-  { this->p_->reserved = Convert<32, big_endian>::convert_host(v); }
+  const char* command_line;
+  // We divide instead of multiplying to make sure there is no integer
+  // overflow.
+  size_t max_input_entries = (location.data_size - header_size) / entry_size;
+  if (header.get_input_file_count() > max_input_entries
+      || !strtab.get_c_string(header.get_command_line_offset(), &command_line))
+    {
+      explain_no_incremental(_("invalid incremental build data"));
+      return false;
+    }
 
- private:
-  internal::Incremental_inputs_entry_data* p_;
-};
+  if (incremental_inputs->command_line() != command_line)
+    {
+      explain_no_incremental(_("command line changed"));
+      return false;
+    }
+
+  // TODO: compare incremental_inputs->inputs() with entries in data_view.
+  return true;
+}
+
+namespace
+{
+
+// Create a Sized_incremental_binary object of the specified size and
+// endianness. Fails if the target architecture is not supported.
+
+template<int size, bool big_endian>
+Incremental_binary*
+make_sized_incremental_binary(Output_file* file,
+                              const elfcpp::Ehdr<size, big_endian>& ehdr)
+{
+  Target* target = select_target(ehdr.get_e_machine(), size, big_endian,
+                                 ehdr.get_e_ident()[elfcpp::EI_OSABI],
+                                 ehdr.get_e_ident()[elfcpp::EI_ABIVERSION]);
+  if (target == NULL)
+    {
+      explain_no_incremental(_("unsupported ELF machine number %d"),
+               ehdr.get_e_machine());
+      return NULL;
+    }
+
+  if (!parameters->target_valid())
+    set_parameters_target(target);
+  else if (target != &parameters->target())
+    gold_error(_("%s: incompatible target"), file->filename());
+
+  return new Sized_incremental_binary<size, big_endian>(file, ehdr, target);
+}
+
+}  // End of anonymous namespace.
+
+// Create an Incremental_binary object for FILE. Returns NULL is this is not
+// possible, e.g. FILE is not an ELF file or has an unsupported target. FILE
+// should be opened.
+
+Incremental_binary*
+open_incremental_binary(Output_file* file)
+{
+  off_t filesize = file->filesize();
+  int want = elfcpp::Elf_recognizer::max_header_size;
+  if (filesize < want)
+    want = filesize;
+
+  const unsigned char* p = file->get_input_view(0, want);
+  if (!elfcpp::Elf_recognizer::is_elf_file(p, want))
+    {
+      explain_no_incremental(_("output is not an ELF file."));
+      return NULL;
+    }
+
+  int size = 0;
+  bool big_endian = false;
+  std::string error;
+  if (!elfcpp::Elf_recognizer::is_valid_header(p, want, &size, &big_endian,
+                                               &error))
+    {
+      explain_no_incremental(error.c_str());
+      return NULL;
+    }
+
+  Incremental_binary* result = NULL;
+  if (size == 32)
+    {
+      if (big_endian)
+        {
+#ifdef HAVE_TARGET_32_BIG
+          result = make_sized_incremental_binary<32, true>(
+              file, elfcpp::Ehdr<32, true>(p));
+#else
+          explain_no_incremental(_("unsupported file: 32-bit, big-endian"));
+#endif
+        }
+      else
+        {
+#ifdef HAVE_TARGET_32_LITTLE
+          result = make_sized_incremental_binary<32, false>(
+              file, elfcpp::Ehdr<32, false>(p));
+#else
+          explain_no_incremental(_("unsupported file: 32-bit, little-endian"));
+#endif
+        }
+    }
+  else if (size == 64)
+    {
+      if (big_endian)
+        {
+#ifdef HAVE_TARGET_64_BIG
+          result = make_sized_incremental_binary<64, true>(
+              file, elfcpp::Ehdr<64, true>(p));
+#else
+          explain_no_incremental(_("unsupported file: 64-bit, big-endian"));
+#endif
+        }
+      else
+        {
+#ifdef HAVE_TARGET_64_LITTLE
+          result = make_sized_incremental_binary<64, false>(
+              file, elfcpp::Ehdr<64, false>(p));
+#else
+          explain_no_incremental(_("unsupported file: 64-bit, little-endian"));
+#endif
+        }
+    }
+  else
+    gold_unreachable();
+
+  return result;
+}
 
 // Analyzes the output file to check if incremental linking is possible and
 // (to be done) what files need to be relinked.
@@ -159,7 +268,10 @@ Incremental_checker::can_incrementally_link_output_file()
   Output_file output(this->output_name_);
   if (!output.open_for_modification())
     return false;
-  return true;
+  Incremental_binary* binary = open_incremental_binary(&output);
+  if (binary == NULL)
+    return false;
+  return binary->check_inputs(this->incremental_inputs_);
 }
 
 // Add the command line to the string table, setting
@@ -196,7 +308,10 @@ Incremental_inputs::report_command_line(int argc, const char* const* argv)
         }
       args.append("'");
     }
-  this->strtab_->add(args.c_str(), true, &this->command_line_key_);
+
+  this->command_line_ = args;
+  this->strtab_->add(this->command_line_.c_str(), false,
+                     &this->command_line_key_);
 }
 
 // Record that the input argument INPUT is an achive ARCHIVE.  This is
@@ -378,10 +493,22 @@ Incremental_inputs::sized_create_inputs_section_data()
       int filename_offset =
           this->strtab_->get_offset_from_key(it->second.filename_key);
       entry.put_filename_offset(filename_offset);
-      // TODO: add per input data and timestamp.  Currently we store
-      // an out-of-bounds offset for future version of gold to reject
-      // such an incremental_inputs section.
-      entry.put_data_offset(0xffffffff);
+      switch (it->second.type)
+        {
+        case INCREMENTAL_INPUT_SCRIPT:
+          entry.put_data_offset(0);
+          break;
+        case INCREMENTAL_INPUT_ARCHIVE:
+        case INCREMENTAL_INPUT_OBJECT:
+        case INCREMENTAL_INPUT_SHARED_LIBRARY:
+          // TODO: add per input data.  Currently we store
+          // an out-of-bounds offset for future version of gold to reject
+          // such an incremental_inputs section.
+          entry.put_data_offset(0xffffffff);
+          break;
+        default:
+          gold_unreachable();
+        }
       entry.put_timestamp_sec(it->second.mtime.seconds);
       entry.put_timestamp_nsec(it->second.mtime.nanoseconds);
       entry.put_input_type(it->second.type);
@@ -391,5 +518,27 @@ Incremental_inputs::sized_create_inputs_section_data()
   return new Output_data_const_buffer(buffer, sz, 8,
 				      "** incremental link inputs list");
 }
+
+// Instantiate the templates we need.
+
+#ifdef HAVE_TARGET_32_LITTLE
+template
+class Sized_incremental_binary<32, false>;
+#endif
+
+#ifdef HAVE_TARGET_32_BIG
+template
+class Sized_incremental_binary<32, true>;
+#endif
+
+#ifdef HAVE_TARGET_64_LITTLE
+template
+class Sized_incremental_binary<64, false>;
+#endif
+
+#ifdef HAVE_TARGET_64_BIG
+template
+class Sized_incremental_binary<64, true>;
+#endif
 
 } // End namespace gold.

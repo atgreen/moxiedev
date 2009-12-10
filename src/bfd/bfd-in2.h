@@ -915,6 +915,10 @@ extern bfd_boolean elf32_arm_build_stubs
 extern bfd_boolean elf32_arm_fix_exidx_coverage
   (struct bfd_section **, unsigned int, struct bfd_link_info *);
 
+/* PowerPC @tls opcode transform/validate.  */
+extern unsigned int _bfd_elf_ppc_at_tls_transform
+  (unsigned int, unsigned int);
+
 /* TI COFF load page support.  */
 extern void bfd_ticoff_set_section_load_page
   (struct bfd_section *, int);
@@ -2047,6 +2051,8 @@ enum bfd_architecture
 #define bfd_mach_cris_v0_v10   255
 #define bfd_mach_cris_v32      32
 #define bfd_mach_cris_v10_v32  1032
+  bfd_arch_rx,        /* Renesas RX.  */
+#define bfd_mach_rx            0x75
   bfd_arch_s390,      /* IBM s390 */
 #define bfd_mach_s390_31       31
 #define bfd_mach_s390_64       64
@@ -3844,6 +3850,32 @@ instructions  */
 instructions  */
   BFD_RELOC_AVR_6_ADIW,
 
+/* Renesas RX Relocations.  */
+  BFD_RELOC_RX_NEG8,
+  BFD_RELOC_RX_NEG16,
+  BFD_RELOC_RX_NEG24,
+  BFD_RELOC_RX_NEG32,
+  BFD_RELOC_RX_16_OP,
+  BFD_RELOC_RX_24_OP,
+  BFD_RELOC_RX_32_OP,
+  BFD_RELOC_RX_8U,
+  BFD_RELOC_RX_16U,
+  BFD_RELOC_RX_24U,
+  BFD_RELOC_RX_DIR3U_PCREL,
+  BFD_RELOC_RX_DIFF,
+  BFD_RELOC_RX_GPRELB,
+  BFD_RELOC_RX_GPRELW,
+  BFD_RELOC_RX_GPRELL,
+  BFD_RELOC_RX_SYM,
+  BFD_RELOC_RX_OP_SUBTRACT,
+  BFD_RELOC_RX_ABS8,
+  BFD_RELOC_RX_ABS16,
+  BFD_RELOC_RX_ABS32,
+  BFD_RELOC_RX_ABS16U,
+  BFD_RELOC_RX_ABS16UW,
+  BFD_RELOC_RX_ABS16UL,
+  BFD_RELOC_RX_RELAX,
+
 /* Direct 12 bit.  */
   BFD_RELOC_390_12,
 
@@ -5569,6 +5601,7 @@ typedef struct bfd_target
   NAME##_bfd_link_hash_table_free, \
   NAME##_bfd_link_add_symbols, \
   NAME##_bfd_link_just_syms, \
+  NAME##_bfd_copy_link_hash_symbol_type, \
   NAME##_bfd_final_link, \
   NAME##_bfd_link_split_section, \
   NAME##_bfd_gc_sections, \
@@ -5599,6 +5632,12 @@ typedef struct bfd_target
 
   /* Indicate that we are only retrieving symbol values from this section.  */
   void        (*_bfd_link_just_syms) (asection *, struct bfd_link_info *);
+
+  /* Copy the symbol type of a linker hash table entry.  */
+#define bfd_copy_link_hash_symbol_type(b, t, f) \
+  BFD_SEND (b, _bfd_copy_link_hash_symbol_type, (b, t, f))
+  void (*_bfd_copy_link_hash_symbol_type)
+    (bfd *, struct bfd_link_hash_entry *, struct bfd_link_hash_entry *);
 
   /* Do a link based on the link_order structures attached to each
      section of the BFD.  */
@@ -5664,6 +5703,11 @@ bfd_boolean bfd_set_default_target (const char *name);
 
 const bfd_target *bfd_find_target (const char *target_name, bfd *abfd);
 
+const bfd_target *bfd_get_target_info (const char *target_name,
+    bfd *abfd,
+    bfd_boolean *is_bigendian,
+    int *underscoring,
+    const char **def_target_arch);
 const char ** bfd_target_list (void);
 
 const bfd_target *bfd_search_for_target

@@ -650,6 +650,7 @@ microblaze
 mips
 mn10300
 moxie
+rx
 sh64
 sh
 erc32
@@ -3699,6 +3700,10 @@ subdirs="$subdirs arm"
 	   subdirs="$subdirs moxie"
 
 	   testsuite=yes
+	   ;;
+       rx-*-*)
+           subdirs="$subdirs rx"
+
 	   ;;
        sh64*-*-*)
            subdirs="$subdirs sh64"

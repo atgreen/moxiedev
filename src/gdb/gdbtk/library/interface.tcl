@@ -368,6 +368,8 @@ proc gdbtk_tcl_warning {message} {
 	"Internal error.*" { gdbtk_tcl_fputs_error $message }
         "incomplete CFI.*" { gdbtk_tcl_fputs_error $message }
 	"RTTI symbol not found for class.*" { gdbtk_tcl_fputs_error $message }
+        "DW_AT.*" { gdbtk_tcl_fputs_error $message }
+        "unsupported tag.*" { gdbtk_tcl_fputs_error $message }
         default {show_warning $message}
        }
 }
@@ -1827,3 +1829,71 @@ proc gdbtk_console_read {} {
   debug "result=$result"
   return $result
 }
+
+# This is based on TIP 171 to enable better default behavior
+# with the MouseWheel event. I don't know why this is not in 
+# Tk yet (at least 8.5), but this allows all of our windows to
+# scroll without having to do anything.
+proc ::tk::MouseWheel {wFired X Y D {shifted 0}} {
+    # Set event to check based on call
+    set evt "<[expr {$shifted?{Shift-}:{}}]MouseWheel>"
+    # do not double-fire in case the class already has a binding
+    if {[bind [winfo class $wFired] $evt] ne ""} { return }
+    # obtain the window the mouse is over
+    set w [winfo containing $X $Y]
+    # if we are outside the app, try and scroll the focus widget
+    if {![winfo exists $w]} { catch {set w [focus]} }
+    if {[winfo exists $w]} {
+	if {[bind $w $evt] ne ""} {
+	    # Awkward ... this widget has a MouseWheel binding, but to
+	    # trigger successfully in it, we must give it focus.
+	    catch {focus} old
+	    if {$w ne $old} { focus $w }
+	    event generate $w $evt -rootx $X -rooty $Y -delta $D
+	    if {$w ne $old} { focus $old }
+	    return
+	}
+	# aqua and x11/win32 have different delta handling
+	if {[tk windowingsystem] ne "aqua"} {
+	    set delta [expr {- ($D / 30)}]
+	} else {
+	    set delta [expr {- ($D)}]
+	}
+	# scrollbars have different call conventions
+	if {[string match "*Scrollbar" [winfo class $w]]} {
+	    catch {tk::ScrollByUnits $w \
+		       [string index [$w cget -orient] 0] $delta}
+	} else {
+	    # Walking up to find the proper widget handles cases like
+	    # embedded widgets in a canvas
+
+	    # 20091008-keiths: This cannot possibly work the way it
+	    # was written in the TIP, so I've rewritten it to work the
+	    # way the comments say it should.
+	    set cmd [list "%W" [expr {$shifted ? "xview" : "yview"}] \
+			 scroll $delta units]
+	    while {[catch [regsub "%W" $cmd $w]] && [winfo toplevel $w] ne $w} {
+		set w [winfo parent $w]
+	    }
+	}
+    }
+}
+
+bind all <MouseWheel> [list ::tk::MouseWheel %W %X %Y %D 0]
+bind all <Shift-MouseWheel> [list ::tk::MouseWheel %W %X %Y %D 1]
+if {[tk windowingsystem] eq "x11"} {
+    # Support for mousewheels on Linux/Unix commonly comes through
+    # mapping the wheel to the extended buttons.
+    bind all <4> [list ::tk::MouseWheel %W %X %Y 120]
+    bind all <5> [list ::tk::MouseWheel %W %X %Y -120]
+}
+
+set mw_classes [list Text Listbox Table TreeCtrl]
+foreach class $mw_classes { bind $class <MouseWheel> {} }
+if {[tk windowingsystem] eq "x11"} {
+    foreach class $mw_classes {
+	 bind $class <4> {}
+	 bind $class <5> {}
+    }
+}
+

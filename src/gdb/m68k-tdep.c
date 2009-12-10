@@ -179,6 +179,9 @@ m68k_register_name (struct gdbarch *gdbarch, int regnum)
   if (regnum < 0 || regnum >= ARRAY_SIZE (m68k_register_names))
     internal_error (__FILE__, __LINE__,
 		    _("m68k_register_name: illegal register number %d"), regnum);
+  else if (regnum >= M68K_FP0_REGNUM && regnum <= M68K_FPI_REGNUM
+	   && gdbarch_tdep (gdbarch)->fpregs_present == 0)
+    return "";
   else
     return m68k_register_names[regnum];
 }
@@ -192,7 +195,7 @@ m68k_convert_register_p (struct gdbarch *gdbarch, int regnum, struct type *type)
   if (!gdbarch_tdep (gdbarch)->fpregs_present)
     return 0;
   return (regnum >= M68K_FP0_REGNUM && regnum <= M68K_FP0_REGNUM + 7
-	  && type != m68881_ext_type (gdbarch));
+	  && type != register_type (gdbarch, M68K_FP0_REGNUM));
 }
 
 /* Read a value of type TYPE from register REGNUM in frame FRAME, and
@@ -1160,6 +1163,13 @@ m68k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
       break;
     }
 
+  if (best_arch != NULL)
+    {
+      if (tdesc_data != NULL)
+	tdesc_data_cleanup (tdesc_data);
+      return best_arch->gdbarch;
+    }
+
   tdep = xzalloc (sizeof (struct gdbarch_tdep));
   gdbarch = gdbarch_alloc (&info, tdep);
   tdep->fpregs_present = has_fp;
@@ -1190,7 +1200,6 @@ m68k_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   set_gdbarch_sp_regnum (gdbarch, M68K_SP_REGNUM);
   set_gdbarch_pc_regnum (gdbarch, M68K_PC_REGNUM);
   set_gdbarch_ps_regnum (gdbarch, M68K_PS_REGNUM);
-  set_gdbarch_fp0_regnum (gdbarch, M68K_FP0_REGNUM);
   set_gdbarch_convert_register_p (gdbarch, m68k_convert_register_p);
   set_gdbarch_register_to_value (gdbarch,  m68k_register_to_value);
   set_gdbarch_value_to_register (gdbarch, m68k_value_to_register);

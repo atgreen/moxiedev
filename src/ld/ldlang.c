@@ -1056,8 +1056,8 @@ new_afile (const char *name,
   p->next_real_file = NULL;
   p->next = NULL;
   p->dynamic = config.dynamic_link;
-  p->add_needed = add_needed;
-  p->as_needed = as_needed;
+  p->add_DT_NEEDED_for_dynamic = add_DT_NEEDED_for_dynamic;
+  p->add_DT_NEEDED_for_regular = add_DT_NEEDED_for_regular;
   p->whole_archive = whole_archive;
   p->loaded = FALSE;
   lang_statement_append (&input_file_chain,
@@ -2592,7 +2592,9 @@ load_symbols (lang_input_statement_type *entry,
     {
       bfd_error_type err;
       bfd_boolean save_ldlang_sysrooted_script;
-      bfd_boolean save_as_needed, save_add_needed;
+      bfd_boolean save_add_DT_NEEDED_for_regular;
+      bfd_boolean save_add_DT_NEEDED_for_dynamic;
+      bfd_boolean save_whole_archive;
 
       err = bfd_get_error ();
 
@@ -2623,10 +2625,12 @@ load_symbols (lang_input_statement_type *entry,
       push_stat_ptr (place);
       save_ldlang_sysrooted_script = ldlang_sysrooted_script;
       ldlang_sysrooted_script = entry->sysrooted;
-      save_as_needed = as_needed;
-      as_needed = entry->as_needed;
-      save_add_needed = add_needed;
-      add_needed = entry->add_needed;
+      save_add_DT_NEEDED_for_regular = add_DT_NEEDED_for_regular;
+      add_DT_NEEDED_for_regular = entry->add_DT_NEEDED_for_regular;
+      save_add_DT_NEEDED_for_dynamic = add_DT_NEEDED_for_dynamic;
+      add_DT_NEEDED_for_dynamic = entry->add_DT_NEEDED_for_dynamic;
+      save_whole_archive = whole_archive;
+      whole_archive = entry->whole_archive;
 
       ldfile_assumed_script = TRUE;
       parser_input = input_script;
@@ -2637,8 +2641,9 @@ load_symbols (lang_input_statement_type *entry,
       ldfile_assumed_script = FALSE;
 
       ldlang_sysrooted_script = save_ldlang_sysrooted_script;
-      as_needed = save_as_needed;
-      add_needed = save_add_needed;
+      add_DT_NEEDED_for_regular = save_add_DT_NEEDED_for_regular;
+      add_DT_NEEDED_for_dynamic = save_add_DT_NEEDED_for_dynamic;
+      whole_archive = save_whole_archive;
       pop_stat_ptr ();
 
       return TRUE;
@@ -4665,6 +4670,14 @@ lang_size_sections_1
 	    lang_memory_region_type *r;
 
 	    os = &s->output_section_statement;
+	    /* FIXME: We shouldn't need to zero section vmas for ld -r
+	       here, in lang_insert_orphan, or in the default linker scripts.
+	       This is covering for coff backend linker bugs.  See PR6945.  */
+	    if (os->addr_tree == NULL
+		&& link_info.relocatable
+		&& (bfd_get_flavour (link_info.output_bfd)
+		    == bfd_target_coff_flavour))
+	      os->addr_tree = exp_intop (0);
 	    if (os->addr_tree != NULL)
 	      {
 		os->processed_vma = FALSE;
@@ -4789,12 +4802,7 @@ lang_size_sections_1
 			     os->name, (unsigned long) (newdot - savedot));
 		  }
 
-		/* PR 6945: Do not update the vma's of output sections
-		   when performing a relocatable link on COFF objects.  */
-		if (! link_info.relocatable
-		    || (bfd_get_flavour (link_info.output_bfd)
-			!= bfd_target_coff_flavour))
-		  bfd_set_section_vma (0, os->bfd_section, newdot);
+		bfd_set_section_vma (0, os->bfd_section, newdot);
 
 		os->bfd_section->output_offset = 0;
 	      }
@@ -6204,7 +6212,7 @@ lang_find_relro_sections (void)
 void
 lang_relax_sections (bfd_boolean need_layout)
 {
-  if (command_line.relax)
+  if (RELAXATION_ENABLED)
     {
       /* We may need more than one relaxation pass.  */
       int i = link_info.relax_pass;
@@ -6356,7 +6364,7 @@ lang_process (void)
     lang_find_relro_sections ();
 
   /* Size up the sections.  */
-  lang_size_sections (NULL, !command_line.relax);
+  lang_size_sections (NULL, ! RELAXATION_ENABLED);
 
   /* See if anything special should be done now we know how big
      everything is.  This is where relaxation is done.  */
@@ -6768,6 +6776,7 @@ lang_new_phdr (const char *name,
 	       etree_type *flags)
 {
   struct lang_phdr *n, **pp;
+  bfd_boolean hdrs;
 
   n = (struct lang_phdr *) stat_alloc (sizeof (struct lang_phdr));
   n->next = NULL;
@@ -6777,9 +6786,18 @@ lang_new_phdr (const char *name,
   n->phdrs = phdrs;
   n->at = at;
   n->flags = flags;
+  
+  hdrs = n->type == 1 && (phdrs || filehdr);
 
   for (pp = &lang_phdr_list; *pp != NULL; pp = &(*pp)->next)
-    ;
+    if (hdrs
+	&& (*pp)->type == 1
+	&& !((*pp)->filehdr || (*pp)->phdrs))
+      {
+	einfo (_("%X%P:%S: PHDRS and FILEHDR are not supported when prior PT_LOAD headers lack them\n"));
+	hdrs = FALSE;
+      }
+
   *pp = n;
 }
 

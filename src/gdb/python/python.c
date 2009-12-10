@@ -309,7 +309,11 @@ execute_gdb_command (PyObject *self, PyObject *args)
 
   TRY_CATCH (except, RETURN_MASK_ALL)
     {
-      execute_command (arg, from_tty);
+      /* Copy the argument text in case the command modifies it.  */
+      char *copy = xstrdup (arg);
+      struct cleanup *cleanup = make_cleanup (xfree, copy);
+      execute_command (copy, from_tty);
+      do_cleanups (cleanup);
     }
   GDB_PY_HANDLE_EXCEPTION (except);
 
@@ -317,6 +321,26 @@ execute_gdb_command (PyObject *self, PyObject *args)
   bpstat_do_actions ();
 
   Py_RETURN_NONE;
+}
+
+/* Parse a string and evaluate it as an expression.  */
+static PyObject *
+gdbpy_parse_and_eval (PyObject *self, PyObject *args)
+{
+  char *expr_str;
+  struct value *result = NULL;
+  volatile struct gdb_exception except;
+
+  if (!PyArg_ParseTuple (args, "s", &expr_str))
+    return NULL;
+
+  TRY_CATCH (except, RETURN_MASK_ALL)
+    {
+      result = parse_and_eval (expr_str);
+    }
+  GDB_PY_HANDLE_EXCEPTION (except);
+
+  return value_to_value_object (result);
 }
 
 
@@ -675,6 +699,11 @@ Return a string explaining unwind stop reason." },
     METH_VARARGS | METH_KEYWORDS,
     "lookup_type (name [, block]) -> type\n\
 Return a Type corresponding to the given name." },
+
+  { "parse_and_eval", gdbpy_parse_and_eval, METH_VARARGS,
+    "parse_and_eval (String) -> Value.\n\
+Parse String as an expression, evaluate it, and return the result as a Value."
+  },
 
   { "write", gdbpy_write, METH_VARARGS,
     "Write a string using gdb's filtered stream." },

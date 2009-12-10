@@ -122,6 +122,8 @@ haven't been loaded yet.
 
 @deftypefun void solib_unloaded (struct so_list *@var{solib})
 The shared library specified by @var{solib} has been unloaded.
+Note that when @value{GDBN} calls this observer, the library's
+symbols have not been unloaded yet, and thus are still available.
 @end deftypefun
 
 @deftypefun void new_objfile (struct objfile *@var{objfile})
@@ -197,13 +199,18 @@ The thread's ptid has changed.  The @var{old_ptid} parameter specifies
 the old value, and @var{new_ptid} specifies the new value.
 @end deftypefun
 
-@deftypefun void new_inferior (int @var{pid})
+@deftypefun void inferior_appeared (int @var{pid})
 @value{GDBN} has attached to a new inferior identified by @var{pid}.
 @end deftypefun
 
 @deftypefun void inferior_exit (int @var{pid})
 Either @value{GDBN} detached from the inferior, or the inferior
 exited.  The argument @var{pid} identifies the inferior.
+@end deftypefun
+
+@deftypefun void memory_changed (CORE_ADDR @var{addr}, int @var{len}, const bfd_byte *@var{data})
+Bytes from @var{data} to @var{data} + @var{len} have been written
+to the current inferior at @var{addr}.
 @end deftypefun
 
  @deftypefun void test_notification (int @var{somearg})

@@ -53,6 +53,8 @@
 #define bfd_mach_o_bfd_link_hash_table_free           _bfd_generic_link_hash_table_free
 #define bfd_mach_o_bfd_link_add_symbols               _bfd_generic_link_add_symbols
 #define bfd_mach_o_bfd_link_just_syms                 _bfd_generic_link_just_syms
+#define bfd_mach_o_bfd_copy_link_hash_symbol_type \
+  _bfd_generic_copy_link_hash_symbol_type
 #define bfd_mach_o_bfd_final_link                     _bfd_generic_final_link
 #define bfd_mach_o_bfd_link_split_section             _bfd_generic_link_split_section
 #define bfd_mach_o_set_arch_mach                      bfd_default_set_arch_mach
@@ -70,7 +72,6 @@
 
 #define bfd_mach_o_get_dynamic_symtab_upper_bound     bfd_mach_o_get_symtab_upper_bound
 #define bfd_mach_o_canonicalize_dynamic_symtab	      bfd_mach_o_canonicalize_symtab
-#define bfd_mach_o_get_synthetic_symtab		      _bfd_nodynamic_get_synthetic_symtab
 
 #define TARGET_NAME_BACKEND XCONCAT2(TARGET_NAME,_backend)
 

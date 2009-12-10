@@ -517,6 +517,9 @@ Tensilica, Inc.@: contributed support for Xtensa processors.  Others
 who have worked on the Xtensa port of @value{GDBN} in the past include
 Steve Tjiang, John Newlin, and Scott Foehner.
 
+Michael Eager and staff of Xilinx, Inc., contributed support for the
+Xilinx MicroBlaze architecture.
+
 @node Sample Session
 @chapter A Sample @value{GDBN} Session
 
@@ -1791,9 +1794,9 @@ kill a child process.
 * Attach::                      Debugging an already-running process
 * Kill Process::                Killing the child process
 
-* Inferiors::                   Debugging multiple inferiors
+* Inferiors and Programs::      Debugging multiple inferiors and programs
 * Threads::                     Debugging programs with multiple threads
-* Processes::                   Debugging programs with multiple processes
+* Forks::                       Debugging forks
 * Checkpoint/Restart::          Setting a @emph{bookmark} to return to later
 @end menu
 
@@ -2346,30 +2349,30 @@ next type @code{run}, @value{GDBN} notices that the file has changed, and
 reads the symbol table again (while trying to preserve your current
 breakpoint settings).
 
-@node Inferiors
-@section Debugging Multiple Inferiors
+@node Inferiors and Programs
+@section Debugging Multiple Inferiors and Programs
 
-Some @value{GDBN} targets are able to run multiple processes created
-from a single executable.  This can happen, for instance, with an
-embedded system reporting back several processes via the remote
-protocol.
+@value{GDBN} lets you run and debug multiple programs in a single
+session.  In addition, @value{GDBN} on some systems may let you run
+several programs simultaneously (otherwise you have to exit from one
+before starting another).  In the most general case, you can have
+multiple threads of execution in each of multiple processes, launched
+from multiple executables.
 
 @cindex inferior
 @value{GDBN} represents the state of each program execution with an
 object called an @dfn{inferior}.  An inferior typically corresponds to
 a process, but is more general and applies also to targets that do not
 have processes.  Inferiors may be created before a process runs, and
-may (in future) be retained after a process exits.  Each run of an
-executable creates a new inferior, as does each attachment to an
-existing process.  Inferiors have unique identifiers that are
-different from process ids, and may optionally be named as well.
-Usually each inferior will also have its own distinct address space,
-although some embedded targets may have several inferiors running in
-different parts of a single space.
+may be retained after a process exits.  Inferiors have unique
+identifiers that are different from process ids.  Usually each
+inferior will also have its own distinct address space, although some
+embedded targets may have several inferiors running in different parts
+of a single address space.  Each inferior may in turn have multiple
+threads running in it.
 
-Each inferior may in turn have multiple threads running in it.
-
-To find out what inferiors exist at any moment, use @code{info inferiors}:
+To find out what inferiors exist at any moment, use @w{@code{info
+inferiors}}:
 
 @table @code
 @kindex info inferiors
@@ -2384,6 +2387,10 @@ the inferior number assigned by @value{GDBN}
 
 @item
 the target system's inferior identifier
+
+@item
+the name of the executable the inferior is running.
+
 @end enumerate
 
 @noindent
@@ -2396,9 +2403,9 @@ For example,
 
 @smallexample
 (@value{GDBP}) info inferiors
-  Num  Description
-* 1    process 2307
-  2    process 3401
+  Num  Description       Executable
+  2    process 2307      hello
+* 1    process 3401      goodbye
 @end smallexample
 
 To switch focus between inferiors, use the @code{inferior} command:
@@ -2411,9 +2418,57 @@ Make inferior number @var{infno} the current inferior.  The argument
 in the first field of the @samp{info inferiors} display.
 @end table
 
-To quit debugging one of the inferiors, you can either detach from it
-by using the @w{@code{detach inferior}} command (allowing it to run
-independently), or kill it using the @w{@code{kill inferior}} command:
+
+You can get multiple executables into a debugging session via the
+@code{add-inferior} and @w{@code{clone-inferior}} commands.  On some
+systems @value{GDBN} can add inferiors to the debug session
+automatically by following calls to @code{fork} and @code{exec}.  To
+remove inferiors from the debugging session use the
+@w{@code{remove-inferior}} command.
+
+@table @code
+@kindex add-inferior
+@item add-inferior [ -copies @var{n} ] [ -exec @var{executable} ]
+Adds @var{n} inferiors to be run using @var{executable} as the
+executable.  @var{n} defaults to 1.  If no executable is specified,
+the inferiors begins empty, with no program.  You can still assign or
+change the program assigned to the inferior at any time by using the
+@code{file} command with the executable name as its argument.
+
+@kindex clone-inferior
+@item clone-inferior [ -copies @var{n} ] [ @var{infno} ]
+Adds @var{n} inferiors ready to execute the same program as inferior
+@var{infno}.  @var{n} defaults to 1.  @var{infno} defaults to the
+number of the current inferior.  This is a convenient command when you
+want to run another instance of the inferior you are debugging.
+
+@smallexample
+(@value{GDBP}) info inferiors
+  Num  Description       Executable
+* 1    process 29964     helloworld
+(@value{GDBP}) clone-inferior
+Added inferior 2.
+1 inferiors added.
+(@value{GDBP}) info inferiors
+  Num  Description       Executable
+  2    <null>            helloworld
+* 1    process 29964     helloworld
+@end smallexample
+
+You can now simply switch focus to inferior 2 and run it.
+
+@kindex remove-inferior
+@item remove-inferior @var{infno}
+Removes the inferior @var{infno}.  It is not possible to remove an
+inferior that is running with this command.  For those, use the
+@code{kill} or @code{detach} command first.
+
+@end table
+
+To quit debugging one of the running inferiors that is not the current
+inferior, you can either detach from it by using the @w{@code{detach
+inferior}} command (allowing it to run independently), or kill it
+using the @w{@code{kill inferior}} command:
 
 @table @code
 @kindex detach inferior @var{infno}
@@ -2426,6 +2481,12 @@ Detach from the inferior identified by @value{GDBN} inferior number
 Kill the inferior identified by @value{GDBN} inferior number
 @var{infno}, and remove it from the inferior list.
 @end table
+
+After the successful completion of a command such as @code{detach},
+@code{detach inferior}, @code{kill} or @code{kill inferior}, or after
+a normal process exit, the inferior is still valid and listed with
+@code{info inferiors}, ready to be restarted.
+
 
 To be notified when inferiors are started or exit under @value{GDBN}'s
 control use @w{@code{set print inferior-events}}:
@@ -2445,6 +2506,67 @@ detached.  By default, these messages will not be printed.
 @item show print inferior-events
 Show whether messages will be printed when @value{GDBN} detects that
 inferiors have started, exited or have been detached.
+@end table
+
+Many commands will work the same with multiple programs as with a
+single program: e.g., @code{print myglobal} will simply display the
+value of @code{myglobal} in the current inferior.
+
+
+Occasionaly, when debugging @value{GDBN} itself, it may be useful to
+get more info about the relationship of inferiors, programs, address
+spaces in a debug session.  You can do that with the @w{@code{maint
+info program-spaces}} command.
+
+@table @code
+@kindex maint info program-spaces
+@item maint info program-spaces
+Print a list of all program spaces currently being managed by
+@value{GDBN}.
+
+@value{GDBN} displays for each program space (in this order):
+
+@enumerate
+@item
+the program space number assigned by @value{GDBN}
+
+@item
+the name of the executable loaded into the program space, with e.g.,
+the @code{file} command.
+
+@end enumerate
+
+@noindent
+An asterisk @samp{*} preceding the @value{GDBN} program space number
+indicates the current program space.
+
+In addition, below each program space line, @value{GDBN} prints extra
+information that isn't suitable to display in tabular form.  For
+example, the list of inferiors bound to the program space.
+
+@smallexample
+(@value{GDBP}) maint info program-spaces
+  Id   Executable
+  2    goodbye
+        Bound inferiors: ID 1 (process 21561)
+* 1    hello
+@end smallexample
+
+Here we can see that no inferior is running the program @code{hello},
+while @code{process 21561} is running the program @code{goodbye}.  On
+some targets, it is possible that multiple inferiors are bound to the
+same program space.  The most common example is that of debugging both
+the parent and child processes of a @code{vfork} call.  For example,
+
+@smallexample
+(@value{GDBP}) maint info program-spaces
+  Id   Executable
+* 1    vfork-test
+        Bound inferiors: ID 2 (process 18050), ID 1 (process 18045)
+@end smallexample
+
+Here, both inferior 2 and inferior 1 are running in the same program
+space as a result of inferior 1 having executed a @code{vfork} call.
 @end table
 
 @node Threads
@@ -2726,8 +2848,8 @@ only on some platforms.
 Display current libthread_db search path.
 @end table
 
-@node Processes
-@section Debugging Programs with Multiple Processes
+@node Forks
+@section Debugging Forks
 
 @cindex fork, debugging programs which call
 @cindex multiple processes
@@ -2818,13 +2940,14 @@ If you choose to set @samp{detach-on-fork} mode off, then @value{GDBN}
 will retain control of all forked processes (including nested forks).
 You can list the forked processes under the control of @value{GDBN} by
 using the @w{@code{info inferiors}} command, and switch from one fork
-to another by using the @code{inferior} command (@pxref{Inferiors,
-,Debugging Multiple Inferiors}).
+to another by using the @code{inferior} command (@pxref{Inferiors and
+Programs, ,Debugging Multiple Inferiors and Programs}).
 
 To quit debugging one of the forked processes, you can either detach
 from it by using the @w{@code{detach inferior}} command (allowing it
 to run independently), or kill it using the @w{@code{kill inferior}}
-command.  @xref{Inferiors, ,Debugging Multiple Inferiors}.
+command.  @xref{Inferiors and Programs, ,Debugging Multiple Inferiors
+and Programs}.
 
 If you ask to debug a child process and a @code{vfork} is followed by an
 @code{exec}, @value{GDBN} executes the new target up to the first
@@ -2836,9 +2959,68 @@ On some systems, when a child process is spawned by @code{vfork}, you
 cannot debug the child or parent until an @code{exec} call completes.
 
 If you issue a @code{run} command to @value{GDBN} after an @code{exec}
-call executes, the new target restarts.  To restart the parent process,
-use the @code{file} command with the parent executable name as its
-argument.
+call executes, the new target restarts.  To restart the parent
+process, use the @code{file} command with the parent executable name
+as its argument.  By default, after an @code{exec} call executes,
+@value{GDBN} discards the symbols of the previous executable image.
+You can change this behaviour with the @w{@code{set follow-exec-mode}}
+command.
+
+@table @code
+@kindex set follow-exec-mode
+@item set follow-exec-mode @var{mode}
+
+Set debugger response to a program call of @code{exec}.  An
+@code{exec} call replaces the program image of a process.
+
+@code{follow-exec-mode} can be:
+
+@table @code
+@item new
+@value{GDBN} creates a new inferior and rebinds the process to this
+new inferior.  The program the process was running before the
+@code{exec} call can be restarted afterwards by restarting the
+original inferior.
+
+For example:
+
+@smallexample
+(@value{GDBP}) info inferiors
+(gdb) info inferior
+  Id   Description   Executable
+* 1    <null>        prog1
+(@value{GDBP}) run
+process 12020 is executing new program: prog2
+Program exited normally.
+(@value{GDBP}) info inferiors
+  Id   Description   Executable
+* 2    <null>        prog2
+  1    <null>        prog1
+@end smallexample
+
+@item same
+@value{GDBN} keeps the process bound to the same inferior.  The new
+executable image replaces the previous executable loaded in the
+inferior.  Restarting the inferior after the @code{exec} call, with
+e.g., the @code{run} command, restarts the executable the process was
+running after the @code{exec} call.  This is the default mode.
+
+For example:
+
+@smallexample
+(@value{GDBP}) info inferiors
+  Id   Description   Executable
+* 1    <null>        prog1
+(@value{GDBP}) run
+process 12020 is executing new program: prog2
+Program exited normally.
+(@value{GDBP}) info inferiors
+  Id   Description   Executable
+* 1    <null>        prog2
+@end smallexample
+
+@end table
+@end table
 
 You can use the @code{catch} command to make @value{GDBN} stop whenever
 a @code{fork}, @code{vfork}, or @code{exec} call is made.  @xref{Set
@@ -3684,6 +3866,137 @@ A failed Ada assertion.
 @cindex break on fork/exec
 A call to @code{exec}.  This is currently only available for HP-UX
 and @sc{gnu}/Linux.
+
+@item syscall
+@itemx syscall @r{[}@var{name} @r{|} @var{number}@r{]} @r{...}
+@cindex break on a system call.
+A call to or return from a system call, a.k.a.@: @dfn{syscall}.  A
+syscall is a mechanism for application programs to request a service
+from the operating system (OS) or one of the OS system services.
+@value{GDBN} can catch some or all of the syscalls issued by the
+debuggee, and show the related information for each syscall.  If no
+argument is specified, calls to and returns from all system calls
+will be caught.
+
+@var{name} can be any system call name that is valid for the
+underlying OS.  Just what syscalls are valid depends on the OS.  On
+GNU and Unix systems, you can find the full list of valid syscall
+names on @file{/usr/include/asm/unistd.h}.
+
+@c For MS-Windows, the syscall names and the corresponding numbers
+@c can be found, e.g., on this URL:
+@c http://www.metasploit.com/users/opcode/syscalls.html
+@c but we don't support Windows syscalls yet.
+
+Normally, @value{GDBN} knows in advance which syscalls are valid for
+each OS, so you can use the @value{GDBN} command-line completion
+facilities (@pxref{Completion,, command completion}) to list the
+available choices.
+
+You may also specify the system call numerically.  A syscall's
+number is the value passed to the OS's syscall dispatcher to
+identify the requested service.  When you specify the syscall by its
+name, @value{GDBN} uses its database of syscalls to convert the name
+into the corresponding numeric code, but using the number directly
+may be useful if @value{GDBN}'s database does not have the complete
+list of syscalls on your system (e.g., because @value{GDBN} lags
+behind the OS upgrades).
+
+The example below illustrates how this command works if you don't provide
+arguments to it:
+
+@smallexample
+(@value{GDBP}) catch syscall
+Catchpoint 1 (syscall)
+(@value{GDBP}) r
+Starting program: /tmp/catch-syscall
+
+Catchpoint 1 (call to syscall 'close'), \
+	   0xffffe424 in __kernel_vsyscall ()
+(@value{GDBP}) c
+Continuing.
+
+Catchpoint 1 (returned from syscall 'close'), \
+	0xffffe424 in __kernel_vsyscall ()
+(@value{GDBP})
+@end smallexample
+
+Here is an example of catching a system call by name:
+
+@smallexample
+(@value{GDBP}) catch syscall chroot
+Catchpoint 1 (syscall 'chroot' [61])
+(@value{GDBP}) r
+Starting program: /tmp/catch-syscall
+
+Catchpoint 1 (call to syscall 'chroot'), \
+		   0xffffe424 in __kernel_vsyscall ()
+(@value{GDBP}) c
+Continuing.
+
+Catchpoint 1 (returned from syscall 'chroot'), \
+	0xffffe424 in __kernel_vsyscall ()
+(@value{GDBP})
+@end smallexample
+
+An example of specifying a system call numerically.  In the case
+below, the syscall number has a corresponding entry in the XML
+file, so @value{GDBN} finds its name and prints it:
+
+@smallexample
+(@value{GDBP}) catch syscall 252
+Catchpoint 1 (syscall(s) 'exit_group')
+(@value{GDBP}) r
+Starting program: /tmp/catch-syscall
+
+Catchpoint 1 (call to syscall 'exit_group'), \
+		   0xffffe424 in __kernel_vsyscall ()
+(@value{GDBP}) c
+Continuing.
+
+Program exited normally.
+(@value{GDBP})
+@end smallexample
+
+However, there can be situations when there is no corresponding name
+in XML file for that syscall number.  In this case, @value{GDBN} prints
+a warning message saying that it was not able to find the syscall name,
+but the catchpoint will be set anyway.  See the example below:
+
+@smallexample
+(@value{GDBP}) catch syscall 764
+warning: The number '764' does not represent a known syscall.
+Catchpoint 2 (syscall 764)
+(@value{GDBP})
+@end smallexample
+
+If you configure @value{GDBN} using the @samp{--without-expat} option,
+it will not be able to display syscall names.  Also, if your
+architecture does not have an XML file describing its system calls,
+you will not be able to see the syscall names.  It is important to
+notice that these two features are used for accessing the syscall
+name database.  In either case, you will see a warning like this:
+
+@smallexample
+(@value{GDBP}) catch syscall
+warning: Could not open "syscalls/i386-linux.xml"
+warning: Could not load the syscall XML file 'syscalls/i386-linux.xml'.
+GDB will not be able to display syscall names.
+Catchpoint 1 (syscall)
+(@value{GDBP})
+@end smallexample
+
+Of course, the file name will change depending on your architecture and system.
+
+Still using the example above, you can also try to catch a syscall by its
+number.  In this case, you would see something like:
+
+@smallexample
+(@value{GDBP}) catch syscall 252
+Catchpoint 1 (syscall(s) 252)
+@end smallexample
+
+Again, in this case @value{GDBN} would not be able to display syscall's names.
 
 @item fork
 A call to @code{fork}.  This is currently only available for HP-UX
@@ -4901,8 +5214,8 @@ breakpoint, the breakpoint applies to @emph{all} threads of your
 program.
 
 You can use the @code{thread} qualifier on conditional breakpoints as
-well; in this case, place @samp{thread @var{threadno}} before the
-breakpoint condition, like this:
+well; in this case, place @samp{thread @var{threadno}} before or
+after the breakpoint condition, like this:
 
 @smallexample
 (@value{GDBP}) break frik.c:13 thread 28 if bartab > lim
@@ -5043,7 +5356,7 @@ the first line of a function, @code{reverse-next} will take you back
 to the caller of that function, @emph{before} the function was called,
 just as the normal @code{next} command would take you from the last 
 line of a function back to its return to its caller
-@footnote{Unles the code is too heavily optimized.}.
+@footnote{Unless the code is too heavily optimized.}.
 
 @kindex reverse-nexti
 @kindex rni @r{(@code{reverse-nexti})}
@@ -5203,9 +5516,25 @@ oldest record to make room for each new one, without asking.
 @item show record stop-at-limit
 Show the current setting of @code{stop-at-limit}.
 
-@kindex info record insn-number
-@item info record insn-number
-Show the current number of recorded instructions.
+@kindex info record
+@item info record
+Show various statistics about the state of process record and its
+in-memory execution log buffer, including:
+
+@itemize @bullet
+@item
+Whether in record mode or replay mode.
+@item
+Lowest recorded instruction number (counting from when the current execution log started recording instructions).
+@item
+Highest recorded instruction number.
+@item
+Current instruction about to be replayed (if in replay mode).
+@item
+Number of instructions contained in the execution log.
+@item
+Maximum number of instructions that may be contained in the execution log.
+@end itemize
 
 @kindex record delete
 @kindex rec del
@@ -6210,48 +6539,58 @@ in symbolic form by specifying the @code{/r}.
 The default memory range is the function surrounding the
 program counter of the selected frame.  A single argument to this
 command is a program counter value; @value{GDBN} dumps the function
-surrounding this value.  Two arguments specify a range of addresses
-(first inclusive, second exclusive) to dump.
+surrounding this value.  When two arguments are given, they should
+be separated by a comma, possibly surrounded by whitespace.  The
+arguments specify a range of addresses (first inclusive, second exclusive)
+to dump.  In that case, the name of the function is also printed (since
+there could be several functions in the given range).
+
+The argument(s) can be any expression yielding a numeric value, such as
+@samp{0x32c4}, @samp{&main+10} or @samp{$pc - 8}.
+
+If the range of memory being disassembled contains current program counter,
+the instruction at that location is shown with a @code{=>} marker.
 @end table
 
 The following example shows the disassembly of a range of addresses of
 HP PA-RISC 2.0 code:
 
 @smallexample
-(@value{GDBP}) disas 0x32c4 0x32e4
+(@value{GDBP}) disas 0x32c4, 0x32e4
 Dump of assembler code from 0x32c4 to 0x32e4:
-0x32c4 <main+204>:      addil 0,dp
-0x32c8 <main+208>:      ldw 0x22c(sr0,r1),r26
-0x32cc <main+212>:      ldil 0x3000,r31
-0x32d0 <main+216>:      ble 0x3f8(sr4,r31)
-0x32d4 <main+220>:      ldo 0(r31),rp
-0x32d8 <main+224>:      addil -0x800,dp
-0x32dc <main+228>:      ldo 0x588(r1),r26
-0x32e0 <main+232>:      ldil 0x3000,r31
+   0x32c4 <main+204>:      addil 0,dp
+   0x32c8 <main+208>:      ldw 0x22c(sr0,r1),r26
+   0x32cc <main+212>:      ldil 0x3000,r31
+   0x32d0 <main+216>:      ble 0x3f8(sr4,r31)
+   0x32d4 <main+220>:      ldo 0(r31),rp
+   0x32d8 <main+224>:      addil -0x800,dp
+   0x32dc <main+228>:      ldo 0x588(r1),r26
+   0x32e0 <main+232>:      ldil 0x3000,r31
 End of assembler dump.
 @end smallexample
 
-Here is an example showing mixed source+assembly for Intel x86:
+Here is an example showing mixed source+assembly for Intel x86, when the
+program is stopped just after function prologue:
 
 @smallexample
 (@value{GDBP}) disas /m main
 Dump of assembler code for function main:
 5       @{
-0x08048330 <main+0>:    push   %ebp
-0x08048331 <main+1>:    mov    %esp,%ebp
-0x08048333 <main+3>:    sub    $0x8,%esp
-0x08048336 <main+6>:    and    $0xfffffff0,%esp
-0x08048339 <main+9>:    sub    $0x10,%esp
+   0x08048330 <+0>:    push   %ebp
+   0x08048331 <+1>:    mov    %esp,%ebp
+   0x08048333 <+3>:    sub    $0x8,%esp
+   0x08048336 <+6>:    and    $0xfffffff0,%esp
+   0x08048339 <+9>:    sub    $0x10,%esp
 
 6         printf ("Hello.\n");
-0x0804833c <main+12>:   movl   $0x8048440,(%esp)
-0x08048343 <main+19>:   call   0x8048284 <puts@@plt>
+=> 0x0804833c <+12>:   movl   $0x8048440,(%esp)
+   0x08048343 <+19>:   call   0x8048284 <puts@@plt>
 
 7         return 0;
 8       @}
-0x08048348 <main+24>:   mov    $0x0,%eax
-0x0804834d <main+29>:   leave
-0x0804834e <main+30>:   ret
+   0x08048348 <+24>:   mov    $0x0,%eax
+   0x0804834d <+29>:   leave
+   0x0804834e <+30>:   ret
 
 End of assembler dump.
 @end smallexample
@@ -6930,6 +7269,18 @@ instructions with @samp{x/3i @var{addr}}, you can inspect the next seven
 with just @samp{x/7}.  If you use @key{RET} to repeat the @code{x} command,
 the repeat count @var{n} is used again; the other arguments default as
 for successive uses of @code{x}.
+
+When examining machine instructions, the instruction at current program
+counter is shown with a @code{=>} marker. For example:
+
+@smallexample
+(@value{GDBP}) x/5i $pc-6
+   0x804837f <main+11>: mov    %esp,%ebp
+   0x8048381 <main+13>: push   %ecx
+   0x8048382 <main+14>: sub    $0x4,%esp
+=> 0x8048385 <main+17>: movl   $0x8048460,(%esp)
+   0x804838c <main+24>: call   0x80482d4 <puts@@plt>
+@end smallexample
 
 @cindex @code{$_}, @code{$__}, and value history
 The addresses and contents printed by the @code{x} command are not saved
@@ -7688,8 +8039,10 @@ the program being debugged terminates.
 
 @item $_siginfo
 @vindex $_siginfo@r{, convenience variable}
-The variable @code{$_siginfo} is bound to extra signal information
-inspection (@pxref{extra signal information}).
+The variable @code{$_siginfo} contains extra signal information
+(@pxref{extra signal information}).  Note that @code{$_siginfo}
+could be empty, if the application has not yet received any signals.
+For example, it will be empty before you execute the @code{run} command.
 @end table
 
 On HP-UX systems, if you refer to a function or variable name that
@@ -13735,13 +14088,14 @@ name @value{GDBN} is currently using.
 @table @code
 
 @kindex set debug-file-directory
-@item set debug-file-directory @var{directory}
-Set the directory which @value{GDBN} searches for separate debugging
-information files to @var{directory}.
+@item set debug-file-directory @var{directories}
+Set the directories which @value{GDBN} searches for separate debugging
+information files to @var{directory}.  Multiple directory components can be set
+concatenating them by a directory separator.
 
 @kindex show debug-file-directory
 @item show debug-file-directory
-Show the directory @value{GDBN} searches for separate debugging
+Show the directories @value{GDBN} searches for separate debugging
 information files.
 
 @end table
@@ -14767,6 +15121,13 @@ Disable or enable general debugging messages.
 Disable or enable specific debugging messages associated with the remote
 protocol (@pxref{Remote Protocol}).
 
+@item monitor set libthread-db-search-path [PATH]
+@cindex gdbserver, search path for @code{libthread_db}
+When this command is issued, @var{path} is a colon-separated list of
+directories to search for @code{libthread_db} (@pxref{Threads,,set
+libthread-db-search-path}).  If you omit @var{path},
+@samp{libthread-db-search-path} will be reset to an empty list.
+
 @item monitor exit
 Tell gdbserver to exit immediately.  This command should be followed by
 @code{disconnect} to close the debugging session.  @code{gdbserver} will
@@ -14877,6 +15238,34 @@ Select the file used for @code{run} with @code{target
 extended-remote}.  This should be set to a filename valid on the
 target system.  If it is not set, the target will use a default
 filename (e.g.@: the last program run).
+
+@item set remote interrupt-sequence
+@cindex interrupt remote programs
+@cindex select Ctrl-C, BREAK or BREAK-g
+Allow the user to select one of @samp{Ctrl-C}, a @code{BREAK} or
+@samp{BREAK-g} as the
+sequence to the remote target in order to interrupt the execution.
+@samp{Ctrl-C} is a default.  Some system prefers @code{BREAK} which
+is high level of serial line for some certain time.
+Linux kernel prefers @samp{BREAK-g}, a.k.a Magic SysRq g.
+It is @code{BREAK} signal followed by character @code{g}.
+
+@item show interrupt-sequence
+Show which of @samp{Ctrl-C}, @code{BREAK} or @code{BREAK-g}
+is sent by @value{GDBN} to interrupt the remote program.
+@code{BREAK-g} is BREAK signal followed by @code{g} and
+also known as Magic SysRq g.
+
+@item set remote interrupt-on-connect
+@cindex send interrupt-sequence on start
+Specify whether interrupt-sequence is sent to remote target when
+@value{GDBN} connects to it.  This is mostly needed when you debug
+Linux kernel.  Linux kernel expects @code{BREAK} followed by @code{g}
+which is known as Magic SysRq g in order to connect @value{GDBN}.
+
+@item show interrupt-on-connect
+Show whether interrupt-sequence is sent
+to remote target when @value{GDBN} connects to it.
 
 @kindex set tcp
 @kindex show tcp
@@ -15767,10 +16156,20 @@ counts of various errors encountered so far.
 @cindex Cygwin-specific commands
 
 @value{GDBN} supports native debugging of MS Windows programs, including
-DLLs with and without symbolic debugging information.  There are various
-additional Cygwin-specific commands, described in this section.
-Working with DLLs that have no debugging symbols is described in
-@ref{Non-debug DLL Symbols}.
+DLLs with and without symbolic debugging information.
+
+@cindex Ctrl-BREAK, MS-Windows
+@cindex interrupt debuggee on MS-Windows
+MS-Windows programs that call @code{SetConsoleMode} to switch off the
+special meaning of the @samp{Ctrl-C} keystroke cannot be interrupted
+by typing @kbd{C-c}.  For this reason, @value{GDBN} on MS-Windows
+supports @kbd{C-@key{BREAK}} as an alternative interrupt key
+sequence, which can be used to interrupt the debuggee even if it
+ignores @kbd{C-c}.
+
+There are various additional Cygwin-specific commands, described in
+this section.  Working with DLLs that have no debugging symbols is
+described in @ref{Non-debug DLL Symbols}.
 
 @table @code
 @kindex info w32
@@ -16427,6 +16826,7 @@ acceptable commands.
 * ARM::                         ARM RDI
 * M32R/D::                      Renesas M32R/D
 * M68K::                        Motorola M68K
+* MicroBlaze::			Xilinx MicroBlaze
 * MIPS Embedded::               MIPS Embedded
 * OpenRISC 1000::               OpenRisc 1000
 * PA::                          HP PA Embedded
@@ -16676,6 +17076,44 @@ target command for the following ROM monitor.
 @item target dbug @var{dev}
 dBUG ROM monitor for Motorola ColdFire.
 
+@end table
+
+@node MicroBlaze
+@subsection MicroBlaze
+@cindex Xilinx MicroBlaze
+@cindex XMD, Xilinx Microprocessor Debugger
+
+The MicroBlaze is a soft-core processor supported on various Xilinx
+FPGAs, such as Spartan or Virtex series.  Boards with these processors
+usually have JTAG ports which connect to a host system running the Xilinx
+Embedded Development Kit (EDK) or Software Development Kit (SDK).
+This host system is used to download the configuration bitstream to
+the target FPGA.  The Xilinx Microprocessor Debugger (XMD) program
+communicates with the target board using the JTAG interface and
+presents a @code{gdbserver} interface to the board.  By default
+@code{xmd} uses port @code{1234}.  (While it is possible to change 
+this default port, it requires the use of undocumented @code{xmd} 
+commands.  Contact Xilinx support if you need to do this.)
+
+Use these GDB commands to connect to the MicroBlaze target processor.
+
+@table @code
+@item target remote :1234
+Use this command to connect to the target if you are running @value{GDBN}
+on the same system as @code{xmd}.
+
+@item target remote @var{xmd-host}:1234
+Use this command to connect to the target if it is connected to @code{xmd}
+running on a different system named @var{xmd-host}.
+
+@item load
+Use this command to download a program to the MicroBlaze target.
+
+@item set debug microblaze @var{n}
+Enable MicroBlaze-specific debugging messages if non-zero.
+
+@item show debug microblaze @var{n}
+Show MicroBlaze-specific debugging level.
 @end table
 
 @node MIPS Embedded
@@ -17620,6 +18058,7 @@ described here.
 * ABI::                         Configuring the current ABI
 * Messages/Warnings::           Optional warnings and messages
 * Debugging Output::            Optional messages about internal happenings
+* Other Misc Settings::         Other Miscellaneous Settings
 @end menu
 
 @node Prompt
@@ -18250,6 +18689,28 @@ Turns on or off debugging messages for built-in XML parsers.
 Displays the current state of XML debugging messages.
 @end table
 
+@node Other Misc Settings
+@section Other Miscellaneous Settings
+@cindex miscellaneous settings
+
+@table @code
+@kindex set interactive-mode
+@item set interactive-mode
+If @code{on}, forces @value{GDBN} to operate interactively.
+If @code{off}, forces @value{GDBN} to operate non-interactively,
+If @code{auto} (the default), @value{GDBN} guesses which mode to use,
+based on whether the debugger was started in a terminal or not.
+
+In the vast majority of cases, the debugger should be able to guess
+correctly which mode should be used.  But this setting can be useful
+in certain specific cases, such as running a MinGW @value{GDBN}
+inside a cygwin window.
+
+@kindex show interactive-mode
+@item show interactive-mode
+Displays whether the debugger is operating in interactive mode or not.
+@end table
+
 @node Extending GDB
 @chapter Extending @value{GDBN}
 @cindex extending GDB
@@ -18867,6 +19328,19 @@ If no exception is raised, the return value is always an instance of
 @code{gdb.Value} (@pxref{Values From Inferior}).
 @end defun
 
+@findex gdb.parse_and_eval
+@defun parse_and_eval expression
+Parse @var{expression} as an expression in the current language,
+evaluate it, and return the result as a @code{gdb.Value}.
+@var{expression} must be a string.
+
+This function can be useful when implementing a new command
+(@pxref{Commands In Python}), as it provides a way to parse the
+command's argument as an expression.  It is also useful simply to
+compute values, for example, it is the only way to get the value of a
+convenience variable (@pxref{Convenience Vars}) as a @code{gdb.Value}.
+@end defun
+
 @findex gdb.write
 @defun write string
 Print a string to @value{GDBN}'s paginated standard output stream.
@@ -18926,8 +19400,8 @@ readable, @value{GDBN} will evaluate it as a Python script.
 
 If this file does not exist, and if the parameter
 @code{debug-file-directory} is set (@pxref{Separate Debug Files}),
-then @value{GDBN} will use the file named
-@file{@var{debug-file-directory}/@var{real-name}}, where
+then @value{GDBN} will use for its each separated directory component
+@code{component} the file named @file{@code{component}/@var{real-name}}, where
 @var{real-name} is the object file's real name, as described above.
 
 Finally, if this file does not exist, then @value{GDBN} will look for
@@ -19017,6 +19491,13 @@ The type of this @code{gdb.Value}.  The value of this attribute is a
 The following methods are provided:
 
 @table @code
+@defmethod Value cast type
+Return a new instance of @code{gdb.Value} that is the result of
+casting this instance to the type described by @var{type}, which must
+be a @code{gdb.Type} object.  If the cast cannot be performed for some
+reason, this method throws an exception.
+@end defmethod
+
 @defmethod Value dereference
 For pointer data types, this method returns a new @code{gdb.Value} object
 whose contents is the object pointed to by the pointer.  For example, if
@@ -19140,6 +19621,12 @@ This is @code{True} if the field is artificial, usually meaning that
 it was provided by the compiler and not the user.  This attribute is
 always provided, and is @code{False} if the field is not artificial.
 
+@item is_base_class
+This is @code{True} if the field represents a base class of a C@t{++}
+structure.  This attribute is always provided, and is @code{False}
+if the field is not a base class of the type that is the argument of
+@code{fields}, or if that type was not a C@t{++} class.
+
 @item bitsize
 If the field is packed, or is a bitfield, then this will have a
 non-zero value, which is the size of the field in bits.  Otherwise,
@@ -19167,8 +19654,20 @@ variant of this type.  That is, the result is neither @code{const} nor
 @code{volatile}.
 @end defmethod
 
+@defmethod Type range
+Return a Python @code{Tuple} object that contains two elements: the
+low bound of the argument type and the high bound of that type.  If
+the type does not have a range, @value{GDBN} will raise a
+@code{RuntimeError} exception.
+@end defmethod
+
 @defmethod Type reference
 Return a new @code{gdb.Type} object which represents a reference to this
+type.
+@end defmethod
+
+@defmethod Type pointer
+Return a new @code{gdb.Type} object which represents a pointer to this
 type.
 @end defmethod
 
@@ -22957,7 +23456,7 @@ For a stack with frame levels 0 through 11:
 @subsubheading Synopsis
 
 @smallexample
- -stack-list-arguments @var{show-values}
+ -stack-list-arguments @var{print-values}
     [ @var{low-frame} @var{high-frame} ]
 @end smallexample
 
@@ -22970,9 +23469,14 @@ larger than the actual number of frames.  On the other hand,
 @var{high-frame} may be larger than the actual number of frames, in
 which case only existing frames will be returned.
 
-The @var{show-values} argument must have a value of 0 or 1.  A value of
-0 means that only the names of the arguments are listed, a value of 1
-means that both names and values of the arguments are printed.
+If @var{print-values} is 0 or @code{--no-values}, print only the names of
+the variables; if it is 1 or @code{--all-values}, print also their
+values; and if it is 2 or @code{--simple-values}, print the name,
+type and value for simple data types, and the name and type for arrays,
+structures and unions.
+
+Use of this command to obtain arguments in a single frame is
+deprecated in favor of the @samp{-stack-list-variables} command.
 
 @subsubheading @value{GDBN} Command
 
@@ -23152,11 +23656,14 @@ Display the local variable names for the selected frame.  If
 @var{print-values} is 0 or @code{--no-values}, print only the names of
 the variables; if it is 1 or @code{--all-values}, print also their
 values; and if it is 2 or @code{--simple-values}, print the name,
-type and value for simple data types and the name and type for arrays,
+type and value for simple data types, and the name and type for arrays,
 structures and unions.  In this last case, a frontend can immediately
 display the value of simple data types and create variable objects for
 other data types when the user wishes to explore their values in
 more detail.
+
+This command is deprecated in favor of the
+@samp{-stack-list-variables} command.
 
 @subsubheading @value{GDBN} Command
 
@@ -23175,6 +23682,31 @@ more detail.
 -stack-list-locals --simple-values
 ^done,locals=[@{name="A",type="int",value="1"@},
   @{name="B",type="int",value="2"@},@{name="C",type="int [3]"@}]
+(gdb)
+@end smallexample
+
+@subheading The @code{-stack-list-variables} Command
+@findex -stack-list-variables
+
+@subsubheading Synopsis
+
+@smallexample
+ -stack-list-variables @var{print-values}
+@end smallexample
+
+Display the names of local variables and function arguments for the selected frame.  If
+@var{print-values} is 0 or @code{--no-values}, print only the names of
+the variables; if it is 1 or @code{--all-values}, print also their
+values; and if it is 2 or @code{--simple-values}, print the name,
+type and value for simple data types, and the name and type for arrays,
+structures and unions.  
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-stack-list-variables --thread 1 --frame 0 --all-values
+^done,variables=[@{name="x",value="11"@},@{name="s",value="@{a = 1, b = 2@}"@}]
 (gdb)
 @end smallexample
 
@@ -23337,6 +23869,8 @@ access this functionality:
 @item @strong{Operation}
 @tab @strong{Description}
 
+@item @code{-enable-pretty-printing}
+@tab enable Python-based pretty-printing
 @item @code{-var-create}
 @tab create a variable object
 @item @code{-var-delete}
@@ -23365,12 +23899,34 @@ access this functionality:
 @tab update the variable and its children
 @item @code{-var-set-frozen}
 @tab set frozeness attribute
+@item @code{-var-set-update-range}
+@tab set range of children to display on update
 @end multitable
 
 In the next subsection we describe each operation in detail and suggest
 how it can be used.
 
 @subheading Description And Use of Operations on Variable Objects
+
+@subheading The @code{-enable-pretty-printing} Command
+@findex -enable-pretty-printing
+
+@smallexample
+-enable-pretty-printing
+@end smallexample
+
+@value{GDBN} allows Python-based visualizers to affect the output of the
+MI variable object commands.  However, because there was no way to
+implement this in a fully backward-compatible way, a front end must
+request that this functionality be enabled.
+
+Once enabled, this feature cannot be disabled.
+
+Note that if Python support has not been compiled into @value{GDBN},
+this command will still succeed (and do nothing).
+
+This feature is currently (as of @value{GDBN} 7.0) experimental, and
+may work differently in future versions of @value{GDBN}.
 
 @subheading The @code{-var-create} Command
 @findex -var-create
@@ -23411,15 +23967,61 @@ begin with a @samp{*}), or one of the following:
 @samp{$@var{regname}} --- a CPU register name
 @end itemize
 
+@cindex dynamic varobj
+A varobj's contents may be provided by a Python-based pretty-printer.  In this
+case the varobj is known as a @dfn{dynamic varobj}.  Dynamic varobjs
+have slightly different semantics in some cases.  If the
+@code{-enable-pretty-printing} command is not sent, then @value{GDBN}
+will never create a dynamic varobj.  This ensures backward
+compatibility for existing clients.
+
 @subsubheading Result
 
-This operation returns the name, number of children and the type of the
-object created.  Type is returned as a string as the ones generated by
-the @value{GDBN} CLI.  If a fixed variable object is bound to a
-specific thread, the thread is is also printed:
+This operation returns attributes of the newly-created varobj.  These
+are:
+
+@table @samp
+@item name
+The name of the varobj.
+
+@item numchild
+The number of children of the varobj.  This number is not necessarily
+reliable for a dynamic varobj.  Instead, you must examine the
+@samp{has_more} attribute.
+
+@item value
+The varobj's scalar value.  For a varobj whose type is some sort of
+aggregate (e.g., a @code{struct}), or for a dynamic varobj, this value
+will not be interesting.
+
+@item type
+The varobj's type.  This is a string representation of the type, as
+would be printed by the @value{GDBN} CLI.
+
+@item thread-id
+If a variable object is bound to a specific thread, then this is the
+thread's identifier.
+
+@item has_more
+For a dynamic varobj, this indicates whether there appear to be any
+children available.  For a non-dynamic varobj, this will be 0.
+
+@item dynamic
+This attribute will be present and have the value @samp{1} if the
+varobj is a dynamic varobj.  If the varobj is not a dynamic varobj,
+then this attribute will not be present.
+
+@item displayhint
+A dynamic varobj can supply a display hint to the front end.  The
+value comes directly from the Python pretty-printer object's
+@code{display_hint} method.  @xref{Pretty Printing}.
+@end table
+
+Typical output will look like this:
 
 @smallexample
- name="@var{name}",numchild="@var{N}",type="@var{type}",thread-id="@var{M}"
+ name="@var{name}",numchild="@var{N}",type="@var{type}",thread-id="@var{M}",
+  has_more="@var{has_more}"
 @end smallexample
 
 
@@ -23497,6 +24099,10 @@ Returns the number of children of a variable object @var{name}:
  numchild=@var{n}
 @end smallexample
 
+Note that this number is not completely reliable for a dynamic varobj.
+It will return the current number of children, but more children may
+be available.
+
 
 @subheading The @code{-var-list-children} Command
 @findex -var-list-children
@@ -23504,7 +24110,7 @@ Returns the number of children of a variable object @var{name}:
 @subsubheading Synopsis
 
 @smallexample
- -var-list-children [@var{print-values}] @var{name}
+ -var-list-children [@var{print-values}] @var{name} [@var{from} @var{to}]
 @end smallexample
 @anchor{-var-list-children}
 
@@ -23517,6 +24123,22 @@ values; and if it is 2 or @code{--simple-values} print the name and
 value for simple data types and just the name for arrays, structures
 and unions.
 
+@var{from} and @var{to}, if specified, indicate the range of children
+to report.  If @var{from} or @var{to} is less than zero, the range is
+reset and all children will be reported.  Otherwise, children starting
+at @var{from} (zero-based) and up to and excluding @var{to} will be
+reported.
+
+If a child range is requested, it will only affect the current call to
+@code{-var-list-children}, but not future calls to @code{-var-update}.
+For this, you must instead use @code{-var-set-update-range}.  The
+intent of this approach is to enable a front end to implement any
+update approach it likes; for example, scrolling a view may cause the
+front end to request more children with @code{-var-list-children}, and
+then the front end could call @code{-var-set-update-range} with a
+different range to ensure that future updates are restricted to just
+the visible items.
+
 For each child the following results are returned:
 
 @table @var
@@ -23528,13 +24150,21 @@ Name of the variable object created for this child.
 The expression to be shown to the user by the front end to designate this child.
 For example this may be the name of a structure member.
 
+For a dynamic varobj, this value cannot be used to form an
+expression.  There is no way to do this at all with a dynamic varobj.
+
 For C/C@t{++} structures there are several pseudo children returned to
 designate access qualifiers.  For these pseudo children @var{exp} is
 @samp{public}, @samp{private}, or @samp{protected}.  In this case the
 type and value are not present.
 
+A dynamic varobj will not report the access qualifying
+pseudo-children, regardless of the language.  This information is not
+available at all with a dynamic varobj.
+
 @item numchild
-Number of children this child has.
+Number of children this child has.  For a dynamic varobj, this will be
+0.
 
 @item type
 The type of the child.
@@ -23548,6 +24178,19 @@ Otherwise this result is not present.
 
 @item frozen
 If the variable object is frozen, this variable will be present with a value of 1.
+@end table
+
+The result may have its own attributes:
+
+@table @samp
+@item displayhint
+A dynamic varobj can supply a display hint to the front end.  The
+value comes directly from the Python pretty-printer object's
+@code{display_hint} method.  @xref{Pretty Printing}.
+
+@item has_more
+This is an integer attribute which is nonzero if there are children
+remaining after the end of the selected range.
 @end table
 
 @subsubheading Example
@@ -23625,6 +24268,9 @@ Compare this with the @code{-var-info-expression} command, which
 result can be used only for UI presentation.  Typical use of
 the @code{-var-info-path-expression} command is creating a 
 watchpoint from a variable object.
+
+This command is currently not valid for children of a dynamic varobj,
+and will give an error when invoked on one.
 
 For example, suppose @code{C} is a C@t{++} class, derived from class
 @code{Base}, and that the @code{Base} class has a member called
@@ -23731,21 +24377,25 @@ With the @samp{*} parameter, if a variable object is bound to a
 currently running thread, it will not be updated, without any
 diagnostic.
 
-@subsubheading Example
+If @code{-var-set-update-range} was previously used on a varobj, then
+only the selected range of children will be reported.
 
-@smallexample
-(gdb)
--var-assign var1 3
-^done,value="3"
-(gdb)
--var-update --all-values var1
-^done,changelist=[@{name="var1",value="3",in_scope="true",
-type_changed="false"@}]
-(gdb)
-@end smallexample
+@code{-var-update} reports all the changed varobjs in a tuple named
+@samp{changelist}.
 
+Each item in the change list is itself a tuple holding:
+
+@table @samp
+@item name
+The name of the varobj.
+
+@item value
+If values were requested for this update, then this field will be
+present and will hold the value of the varobj.
+
+@item in_scope
 @anchor{-var-update}
-The field in_scope may take three values:
+This field is a string which may take one of three values:
 
 @table @code
 @item "true"
@@ -23766,6 +24416,61 @@ objects.
 
 In the future new values may be added to this list so the front should
 be prepared for this possibility.  @xref{GDB/MI Development and Front Ends, ,@sc{GDB/MI} Development and Front Ends}.
+
+@item type_changed
+This is only present if the varobj is still valid.  If the type
+changed, then this will be the string @samp{true}; otherwise it will
+be @samp{false}.
+
+@item new_type
+If the varobj's type changed, then this field will be present and will
+hold the new type.
+
+@item new_num_children
+For a dynamic varobj, if the number of children changed, or if the
+type changed, this will be the new number of children.
+
+The @samp{numchild} field in other varobj responses is generally not
+valid for a dynamic varobj -- it will show the number of children that
+@value{GDBN} knows about, but because dynamic varobjs lazily
+instantiate their children, this will not reflect the number of
+children which may be available.
+
+The @samp{new_num_children} attribute only reports changes to the
+number of children known by @value{GDBN}.  This is the only way to
+detect whether an update has removed children (which necessarily can
+only happen at the end of the update range).
+
+@item displayhint
+The display hint, if any.
+
+@item has_more
+This is an integer value, which will be 1 if there are more children
+available outside the varobj's update range.
+
+@item dynamic
+This attribute will be present and have the value @samp{1} if the
+varobj is a dynamic varobj.  If the varobj is not a dynamic varobj,
+then this attribute will not be present.
+
+@item new_children
+If new children were added to a dynamic varobj within the selected
+update range (as set by @code{-var-set-update-range}), then they will
+be listed in this attribute.
+@end table
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-var-assign var1 3
+^done,value="3"
+(gdb)
+-var-update --all-values var1
+^done,changelist=[@{name="var1",value="3",in_scope="true",
+type_changed="false"@}]
+(gdb)
+@end smallexample
 
 @subheading The @code{-var-set-frozen} Command
 @findex -var-set-frozen
@@ -23796,6 +24501,32 @@ Unfreezing a variable does not update it, only subsequent
 -var-set-frozen V 1
 ^done
 (gdb)
+@end smallexample
+
+@subheading The @code{-var-set-update-range} command
+@findex -var-set-update-range
+@anchor{-var-set-update-range}
+
+@subsubheading Synopsis
+
+@smallexample
+ -var-set-update-range @var{name} @var{from} @var{to}
+@end smallexample
+
+Set the range of children to be returned by future invocations of
+@code{-var-update}.
+
+@var{from} and @var{to} indicate the range of children to report.  If
+@var{from} or @var{to} is less than zero, the range is reset and all
+children will be reported.  Otherwise, children starting at @var{from}
+(zero-based) and up to and excluding @var{to} will be reported.
+
+@subsubheading Example
+
+@smallexample
+(gdb)
+-var-set-update-range V 1 2
+^done
 @end smallexample
 
 @subheading The @code{-var-set-visualizer} command
@@ -27493,16 +28224,18 @@ breakpoint at @var{addr}.
 Don't use this packet.  Use the @samp{Z} and @samp{z} packets instead
 (@pxref{insert breakpoint or watchpoint packet}).
 
-@item bc
 @cindex @samp{bc} packet
+@anchor{bc}
+@item bc
 Backward continue.  Execute the target system in reverse.  No parameter.
 @xref{Reverse Execution}, for more information.
 
 Reply:
 @xref{Stop Reply Packets}, for the reply specifications.
 
-@item bs
 @cindex @samp{bs} packet
+@anchor{bs}
+@item bs
 Backward single step.  Execute one instruction in reverse.  No parameter.
 @xref{Reverse Execution}, for more information.
 
@@ -27822,16 +28555,14 @@ Step.
 Step with signal @var{sig}.  The signal @var{sig} should be two hex digits.
 @item t
 Stop.
-@item T @var{sig}
-Stop with signal @var{sig}.  The signal @var{sig} should be two hex digits.
 @end table
 
 The optional argument @var{addr} normally associated with the 
 @samp{c}, @samp{C}, @samp{s}, and @samp{S} packets is
 not supported in @samp{vCont}.
 
-The @samp{t} and @samp{T} actions are only relevant in non-stop mode
-(@pxref{Remote Non-Stop}) and may be ignored by the stub otherwise.  
+The @samp{t} action is only relevant in non-stop mode
+(@pxref{Remote Non-Stop}) and may be ignored by the stub otherwise.
 A stop reply should be generated for any affected thread not already stopped.
 When a thread is stopped by means of a @samp{t} action,
 the corresponding stop reply should indicate that the thread has stopped with
@@ -28746,6 +29477,16 @@ These are the currently defined stub features and their properties:
 @tab @samp{-}
 @tab No
 
+@item @samp{ReverseContinue}
+@tab No
+@tab @samp{-}
+@tab No
+
+@item @samp{ReverseStep}
+@tab No
+@tab @samp{-}
+@tab No
+
 @end multitable
 
 These are the currently defined stub features, in more detail:
@@ -28826,6 +29567,14 @@ The remote stub understands the @samp{qXfer:osdata:read} packet
 @item ConditionalTracepoints
 The remote stub accepts and implements conditional expressions defined
 for tracepoints (@pxref{Tracepoint Conditions}).
+
+@item ReverseContinue
+The remote stub accepts and implements the reverse continue packet
+(@pxref{bc}).
+
+@item ReverseStep
+The remote stub accepts and implements the reverse step packet
+(@pxref{bs}).
 
 @end table
 
@@ -29401,9 +30150,9 @@ or -1 if an error occurs.  @var{pathname} is a string.
 @cindex interrupts (remote protocol)
 
 When a program on the remote target is running, @value{GDBN} may
-attempt to interrupt it by sending a @samp{Ctrl-C} or a @code{BREAK},
-control of which is specified via @value{GDBN}'s @samp{remotebreak}
-setting (@pxref{set remotebreak}).
+attempt to interrupt it by sending a @samp{Ctrl-C}, @code{BREAK} or
+a @code{BREAK} followed by @code{g},
+control of which is specified via @value{GDBN}'s @samp{interrupt-sequence}.
 
 The precise meaning of @code{BREAK} is defined by the transport
 mechanism and may, in fact, be undefined.  @value{GDBN} does not
@@ -29419,6 +30168,10 @@ transmitted as part of a packet, it is considered to be packet data
 and does @emph{not} represent an interrupt.  E.g., an @samp{X} packet
 (@pxref{X packet}), used for binary downloads, may include an unescaped
 @code{0x03} as part of its packet.
+
+@code{BREAK} followed by @code{g} is also known as Magic SysRq g.
+When Linux kernel receives this sequence from serial port,
+it stops execution and connects to gdb.
 
 Stubs are not required to recognize these interrupt mechanisms and the
 precise meaning associated with receipt of the interrupt is

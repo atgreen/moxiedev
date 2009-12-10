@@ -5038,6 +5038,15 @@ $as_echo "$ac_cv_safe_to_define___extensions__" >&6; }
 
 
 
+# The tests for host and target for $enable_largefile require
+# canonical names.
+
+
+
+# As the $enable_largefile decision depends on --enable-plugins we must set it
+# even in directories otherwise not depending on the $plugins option.
+
+
 # Check whether --enable-plugins was given.
 if test "${enable_plugins+set}" = set; then :
   enableval=$enable_plugins; case "${enableval}" in
@@ -5051,17 +5060,16 @@ fi
 
 
 
-case "${target}" in
+case "${host}" in
   sparc-*-solaris*|i[3-7]86-*-solaris*)
-    # See comment in bfd/configure.in for the reason for this test.
-    # PR 9992/binutils: We have to duplicate the behaviour of bfd's
-    # configure script so that the utilities in this directory agree
-    # on the size of structures used to describe files.
-    if test "${target}" = "${host}" -a "$enable_largefile" != 'yes'; then
-      if test "$plugins" = "no"; then
-        enable_largefile="no"
-      fi
-    fi
+    # On native 32bit sparc and ia32 solaris, large-file and procfs support
+    # are mutually exclusive; and without procfs support, the bfd/ elf module
+    # cannot provide certain routines such as elfcore_write_prpsinfo
+    # or elfcore_write_prstatus.  So unless the user explicitly requested
+    # large-file support through the --enable-largefile switch, disable
+    # large-file support in favor of procfs support.
+    test "${target}" = "${host}" -a "x$plugins" = xno \
+      && : ${enable_largefile="no"}
     ;;
 esac
 
@@ -5262,6 +5270,7 @@ esac
 rm -rf conftest*
   fi
 fi
+
 
 case `pwd` in
   *\ * | *\	*)
@@ -5742,13 +5751,13 @@ if test "${lt_cv_nm_interface+set}" = set; then :
 else
   lt_cv_nm_interface="BSD nm"
   echo "int some_variable = 0;" > conftest.$ac_ext
-  (eval echo "\"\$as_me:5745: $ac_compile\"" >&5)
+  (eval echo "\"\$as_me:5754: $ac_compile\"" >&5)
   (eval "$ac_compile" 2>conftest.err)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5748: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
+  (eval echo "\"\$as_me:5757: $NM \\\"conftest.$ac_objext\\\"\"" >&5)
   (eval "$NM \"conftest.$ac_objext\"" 2>conftest.err > conftest.out)
   cat conftest.err >&5
-  (eval echo "\"\$as_me:5751: output\"" >&5)
+  (eval echo "\"\$as_me:5760: output\"" >&5)
   cat conftest.out >&5
   if $GREP 'External.*some_variable' conftest.out > /dev/null; then
     lt_cv_nm_interface="MS dumpbin"
@@ -6953,7 +6962,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 6956 "configure"' > conftest.$ac_ext
+  echo '#line 6965 "configure"' > conftest.$ac_ext
   if { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_compile\""; } >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -8215,11 +8224,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8218: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8227: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8222: \$? = $ac_status" >&5
+   echo "$as_me:8231: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8554,11 +8563,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8557: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8566: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:8561: \$? = $ac_status" >&5
+   echo "$as_me:8570: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -8659,11 +8668,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8662: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8671: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8666: \$? = $ac_status" >&5
+   echo "$as_me:8675: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -8714,11 +8723,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:8717: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:8726: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:8721: \$? = $ac_status" >&5
+   echo "$as_me:8730: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -11096,7 +11105,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11099 "configure"
+#line 11108 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -11192,7 +11201,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 11195 "configure"
+#line 11204 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -12550,120 +12559,6 @@ $as_echo "#define HAVE_MKDTEMP 1" >>confdefs.h
 fi
 
 
-# Check whether fopen64 is available and whether _LARGEFILE64_SOURCE
-# needs to be defined for it
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for fopen64" >&5
-$as_echo_n "checking for fopen64... " >&6; }
-if test "${bu_cv_have_fopen64+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdio.h>
-int
-main ()
-{
-FILE *f = fopen64 ("/tmp/foo","r");
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  bu_cv_have_fopen64=yes
-else
-  saved_CPPFLAGS=$CPPFLAGS
- CPPFLAGS="$CPPFLAGS -D_LARGEFILE64_SOURCE"
- cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <stdio.h>
-int
-main ()
-{
-FILE *f = fopen64 ("/tmp/foo","r");
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  bu_cv_have_fopen64="need -D_LARGEFILE64_SOURCE"
-else
-  bu_cv_have_fopen64=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
- CPPFLAGS=$saved_CPPFLAGS
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $bu_cv_have_fopen64" >&5
-$as_echo "$bu_cv_have_fopen64" >&6; }
-if test "$bu_cv_have_fopen64" != no; then
-
-$as_echo "#define HAVE_FOPEN64 1" >>confdefs.h
-
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for stat64" >&5
-$as_echo_n "checking for stat64... " >&6; }
-if test "${bu_cv_have_stat64+set}" = set; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <sys/stat.h>
-int
-main ()
-{
-struct stat64 st; stat64 ("/tmp/foo", &st);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  bu_cv_have_stat64=yes
-else
-  saved_CPPFLAGS=$CPPFLAGS
- CPPFLAGS="$CPPFLAGS -D_LARGEFILE64_SOURCE"
- cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <sys/stat.h>
-int
-main ()
-{
-struct stat64 st; stat64 ("/tmp/foo", &st);
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  bu_cv_have_stat64="need -D_LARGEFILE64_SOURCE"
-else
-  bu_cv_have_stat64=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
- CPPFLAGS=$saved_CPPFLAGS
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $bu_cv_have_stat64" >&5
-$as_echo "$bu_cv_have_stat64" >&6; }
-if test "$bu_cv_have_stat64" != no; then
-
-$as_echo "#define HAVE_STAT64 1" >>confdefs.h
-
-fi
-if test "$bu_cv_have_fopen64" = "need -D_LARGEFILE64_SOURCE" \
-   || test "$bu_cv_have_stat64" = "need -D_LARGEFILE64_SOURCE"; then
-
-$as_echo "#define _LARGEFILE64_SOURCE 1" >>confdefs.h
-
-  CPPFLAGS="$CPPFLAGS -D_LARGEFILE64_SOURCE"
-fi
-
 # Some systems have frexp only in -lm, not in -lc.
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing frexp" >&5
 $as_echo_n "checking for library containing frexp... " >&6; }
@@ -13965,21 +13860,10 @@ _ACEOF
 
 
 # Emulation
-for targ_alias in `echo $target_alias $enable_targets | sed 's/,/ /g'`
-do
-  # Canonicalize the secondary target names.
- result=`$ac_config_sub $targ_alias 2>/dev/null`
- if test -n "$result"; then
-   targ=$result
- else
-   targ=$targ_alias
- fi
-
- . ${srcdir}/configure.tgt
-
-  EMULATION=$targ_emul
-  EMULATION_VECTOR=$targ_emul_vector
-done
+targ=$target
+. ${srcdir}/configure.tgt
+EMULATION=$targ_emul
+EMULATION_VECTOR=$targ_emul_vector
 
 
 

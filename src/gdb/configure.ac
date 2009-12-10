@@ -28,6 +28,7 @@ AM_MAINTAINER_MODE
 AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 gl_EARLY
+ACX_LARGEFILE
 AM_PROG_CC_STDC
 
 AC_CONFIG_AUX_DIR(..)
@@ -422,7 +423,7 @@ AC_SEARCH_LIBS(gethostbyname, nsl)
 AC_SEARCH_LIBS(socketpair, socket)
 
 # Link in zlib if we can.  This allows us to read compressed debug sections.
-AC_SEARCH_LIBS(zlibVersion, z, [AC_CHECK_HEADERS(zlib.h)])
+AM_ZLIB
 
 # On HP/UX we may need libxpdl for dlgetmodinfo (used by solib-pa64.c).
 AC_SEARCH_LIBS(dlgetmodinfo, [dl xpdl])
@@ -534,6 +535,21 @@ if test "$with_system_readline" = yes; then
   READLINE=-lreadline
   READLINE_DEPS=
   READLINE_CFLAGS=
+
+  # readline-6.0 started to use the name `_rl_echoing_p'.
+  # `$(READLINE_DIR)/' of bundled readline would not resolve in configure.
+
+  AC_MSG_CHECKING([for readline_echoing_p])
+  save_LIBS=$LIBS
+  LIBS="$LIBS $READLINE"
+  AC_LINK_IFELSE(AC_LANG_PROGRAM(,[[extern int readline_echoing_p;
+				    return readline_echoing_p;]]),
+		 [READLINE_ECHOING_P=yes],
+		 [READLINE_ECHOING_P=no
+		  AC_DEFINE([readline_echoing_p], [_rl_echoing_p],
+			    [readline-6.0 started to use different name.])])
+  LIBS="$save_LIBS"
+  AC_MSG_RESULT([$READLINE_ECHOING_P])
 else
   READLINE='$(READLINE_DIR)/libreadline.a'
   READLINE_DEPS='$(READLINE)'
@@ -683,8 +699,8 @@ if test "${have_libpython}" = yes; then
 else
   # Even if Python support is not compiled in, we need to have these files
   # included in order to recognize the GDB command "python".
-  CONFIG_OBS="$CONFIG_OBS python.o python-value.o python-prettyprint.o"
-  CONFIG_SRCS="$CONFIG_SRCS python/python.c python/python-value.c python/python-prettyprint.c"
+  CONFIG_OBS="$CONFIG_OBS python.o py-value.o py-prettyprint.o"
+  CONFIG_SRCS="$CONFIG_SRCS python/python.c python/py-value.c python/py-prettyprint.c"
 fi
 AC_SUBST(PYTHON_CFLAGS)
 
@@ -1527,7 +1543,7 @@ fi
 # gdb/doc/gdbint.texinfo.
 build_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith \
 -Wformat-nonliteral -Wno-pointer-sign \
--Wno-unused -Wno-switch -Wno-char-subscripts"
+-Wno-unused -Wunused-value -Wno-switch -Wno-char-subscripts"
 
 # Enable -Wno-format by default when using gcc on mingw since many
 # GCC versions complain about %I64.

@@ -25,7 +25,8 @@ AC_USE_SYSTEM_EXTENSIONS
 
 LT_INIT([dlopen])
 
-AC_PLUGINS
+# AC_PLUGINS setting $plugins is called by ACX_LARGEFILE.
+ACX_LARGEFILE
 
 AM_CONDITIONAL(PLUGINS, test "$plugins" = "yes")
 
@@ -36,26 +37,6 @@ if test "$plugins" = "yes"; then
   fi
   enable_targets="$enable_targets plugin"
 fi
-
-case "${target}" in
-changequote(,)dnl
-  sparc-*-solaris*|i[3-7]86-*-solaris*)
-changequote([,])dnl
-    # On native 32bit sparc and ia32 solaris, large-file and procfs support
-    # are mutually exclusive; and without procfs support, the elf module
-    # cannot provide certain routines such as elfcore_write_prpsinfo
-    # or elfcore_write_prstatus.  So unless the user explicitly requested
-    # large-file support through the --enable-largefile switch, disable
-    # large-file support in favor of procfs support.
-    if test "${target}" = "${host}" -a "$enable_largefile" != 'yes'; then
-      if test "$plugins" = "no"; then
-        enable_largefile="no"
-      fi
-    fi
-    ;;
-esac
-
-AC_SYS_LARGEFILE
 
 AC_ARG_ENABLE(64-bit-bfd,
 [  --enable-64-bit-bfd     64-bit support (on hosts with narrower word sizes)],
@@ -225,7 +206,7 @@ AC_CHECK_DECLS(vsnprintf)
 
 # Link in zlib if we can.  This allows us to read compressed debug sections.
 # This is used only by compress.c.
-AC_SEARCH_LIBS(zlibVersion, z, [AC_CHECK_HEADERS(zlib.h)])
+AM_ZLIB
 
 # If we are configured native, pick a core file support file.
 COREFILE=
@@ -756,6 +737,8 @@ do
     bfd_elf32_powerpc_vec)	tb="$tb elf32-ppc.lo elf-vxworks.lo elf32.lo $elf" ;;
     bfd_elf32_powerpcle_vec)	tb="$tb elf32-ppc.lo elf-vxworks.lo elf32.lo $elf" ;;
     bfd_elf32_powerpc_vxworks_vec) tb="$tb elf32-ppc.lo elf-vxworks.lo elf32.lo $elf" ;;
+    bfd_elf32_rx_le_vec)        tb="$tb elf32-rx.lo elf32.lo $elf" ;;
+    bfd_elf32_rx_be_vec)        tb="$tb elf32-rx.lo elf32.lo $elf" ;;
     bfd_elf32_s390_vec)		tb="$tb elf32-s390.lo elf32.lo $elf" ;;
     bfd_elf32_bigscore_vec)     tb="$tb elf32-score.lo elf32-score7.lo elf32.lo $elf"; want64=true; target_size=64;;
     bfd_elf32_littlescore_vec)  tb="$tb elf32-score.lo elf32-score7.lo elf32.lo $elf"; want64=true; target_size=64;;

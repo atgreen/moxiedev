@@ -1,6 +1,0 @@
-/* Generated from ./largeur.cloog by CLooG 0.15 64 bits in 0.01s. */
-for (c1=1;c1<=M;c1++) {
-  for (c2=1;c2<=c1;c2++) {
-    S1(i = c2,j = c1) ;
-  }
-}

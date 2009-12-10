@@ -2,23 +2,23 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2005 Free Software Foundation, Inc.
+Copyright 1996-2009 Free Software Foundation, Inc.
 
 This file is part of the GNU simulators.
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2, or (at your option)
-any later version.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3, or (at your option)
+   any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+   It is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+   License for more details.
 
-You should have received a copy of the GNU General Public License along
-with this program; if not, write to the Free Software Foundation, Inc.,
-51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
 
@@ -92,11 +92,11 @@ static const struct insn_sem lm32bf_insn_sem[] =
   { LM32_INSN_SEXTB, LM32BF_INSN_SEXTB, LM32BF_SFMT_SEXTB },
   { LM32_INSN_SEXTH, LM32BF_INSN_SEXTH, LM32BF_SFMT_SEXTB },
   { LM32_INSN_SH, LM32BF_INSN_SH, LM32BF_SFMT_SH },
-  { LM32_INSN_SL, LM32BF_INSN_SL, LM32BF_SFMT_SL },
+  { LM32_INSN_SL, LM32BF_INSN_SL, LM32BF_SFMT_ADD },
   { LM32_INSN_SLI, LM32BF_INSN_SLI, LM32BF_SFMT_ADDI },
-  { LM32_INSN_SR, LM32BF_INSN_SR, LM32BF_SFMT_SL },
+  { LM32_INSN_SR, LM32BF_INSN_SR, LM32BF_SFMT_ADD },
   { LM32_INSN_SRI, LM32BF_INSN_SRI, LM32BF_SFMT_ADDI },
-  { LM32_INSN_SRU, LM32BF_INSN_SRU, LM32BF_SFMT_SL },
+  { LM32_INSN_SRU, LM32BF_INSN_SRU, LM32BF_SFMT_ADD },
   { LM32_INSN_SRUI, LM32BF_INSN_SRUI, LM32BF_SFMT_ADDI },
   { LM32_INSN_SUB, LM32BF_INSN_SUB, LM32BF_SFMT_ADD },
   { LM32_INSN_SW, LM32BF_INSN_SW, LM32BF_SFMT_SW },
@@ -174,150 +174,54 @@ lm32bf_init_idesc_table (SIM_CPU *cpu)
 
 const IDESC *
 lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
-              CGEN_INSN_INT base_insn, CGEN_INSN_INT entire_insn,
+              CGEN_INSN_WORD base_insn, CGEN_INSN_WORD entire_insn,
               ARGBUF *abuf)
 {
   /* Result of decoder.  */
   LM32BF_INSN_TYPE itype;
 
   {
-    CGEN_INSN_INT insn = base_insn;
+    CGEN_INSN_WORD insn = base_insn;
 
     {
       unsigned int val = (((insn >> 26) & (63 << 0)));
       switch (val)
       {
-      case 0 :
-        if ((entire_insn & 0xfc000000) == 0x0)
-          { itype = LM32BF_INSN_SRUI; goto extract_sfmt_addi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 1 :
-        if ((entire_insn & 0xfc000000) == 0x4000000)
-          { itype = LM32BF_INSN_NORI; goto extract_sfmt_andi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 2 :
-        if ((entire_insn & 0xfc000000) == 0x8000000)
-          { itype = LM32BF_INSN_MULI; goto extract_sfmt_addi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 3 :
-        if ((entire_insn & 0xfc000000) == 0xc000000)
-          { itype = LM32BF_INSN_SH; goto extract_sfmt_sh; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 4 :
-        if ((entire_insn & 0xfc000000) == 0x10000000)
-          { itype = LM32BF_INSN_LB; goto extract_sfmt_lb; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 5 :
-        if ((entire_insn & 0xfc000000) == 0x14000000)
-          { itype = LM32BF_INSN_SRI; goto extract_sfmt_addi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 6 :
-        if ((entire_insn & 0xfc000000) == 0x18000000)
-          { itype = LM32BF_INSN_XORI; goto extract_sfmt_andi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 7 :
-        if ((entire_insn & 0xfc000000) == 0x1c000000)
-          { itype = LM32BF_INSN_LH; goto extract_sfmt_lh; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 8 :
-        if ((entire_insn & 0xfc000000) == 0x20000000)
-          { itype = LM32BF_INSN_ANDI; goto extract_sfmt_andi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 9 :
-        if ((entire_insn & 0xfc000000) == 0x24000000)
-          { itype = LM32BF_INSN_XNORI; goto extract_sfmt_andi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 10 :
-        if ((entire_insn & 0xfc000000) == 0x28000000)
-          { itype = LM32BF_INSN_LW; goto extract_sfmt_lw; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 11 :
-        if ((entire_insn & 0xfc000000) == 0x2c000000)
-          { itype = LM32BF_INSN_LHU; goto extract_sfmt_lh; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 12 :
-        if ((entire_insn & 0xfc000000) == 0x30000000)
-          { itype = LM32BF_INSN_SB; goto extract_sfmt_sb; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 13 :
-        if ((entire_insn & 0xfc000000) == 0x34000000)
-          { itype = LM32BF_INSN_ADDI; goto extract_sfmt_addi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 14 :
-        if ((entire_insn & 0xfc000000) == 0x38000000)
-          { itype = LM32BF_INSN_ORI; goto extract_sfmt_ori; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 15 :
-        if ((entire_insn & 0xfc000000) == 0x3c000000)
-          { itype = LM32BF_INSN_SLI; goto extract_sfmt_addi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 16 :
-        if ((entire_insn & 0xfc000000) == 0x40000000)
-          { itype = LM32BF_INSN_LBU; goto extract_sfmt_lb; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 17 :
-        if ((entire_insn & 0xfc000000) == 0x44000000)
-          { itype = LM32BF_INSN_BE; goto extract_sfmt_be; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 18 :
-        if ((entire_insn & 0xfc000000) == 0x48000000)
-          { itype = LM32BF_INSN_BG; goto extract_sfmt_be; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 19 :
-        if ((entire_insn & 0xfc000000) == 0x4c000000)
-          { itype = LM32BF_INSN_BGE; goto extract_sfmt_be; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 20 :
-        if ((entire_insn & 0xfc000000) == 0x50000000)
-          { itype = LM32BF_INSN_BGEU; goto extract_sfmt_be; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 21 :
-        if ((entire_insn & 0xfc000000) == 0x54000000)
-          { itype = LM32BF_INSN_BGU; goto extract_sfmt_be; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 22 :
-        if ((entire_insn & 0xfc000000) == 0x58000000)
-          { itype = LM32BF_INSN_SW; goto extract_sfmt_sw; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 23 :
-        if ((entire_insn & 0xfc000000) == 0x5c000000)
-          { itype = LM32BF_INSN_BNE; goto extract_sfmt_be; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 24 :
-        if ((entire_insn & 0xfc000000) == 0x60000000)
-          { itype = LM32BF_INSN_ANDHII; goto extract_sfmt_andhii; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 25 :
-        if ((entire_insn & 0xfc000000) == 0x64000000)
-          { itype = LM32BF_INSN_CMPEI; goto extract_sfmt_addi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 26 :
-        if ((entire_insn & 0xfc000000) == 0x68000000)
-          { itype = LM32BF_INSN_CMPGI; goto extract_sfmt_addi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 27 :
-        if ((entire_insn & 0xfc000000) == 0x6c000000)
-          { itype = LM32BF_INSN_CMPGEI; goto extract_sfmt_addi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 28 :
-        if ((entire_insn & 0xfc000000) == 0x70000000)
-          { itype = LM32BF_INSN_CMPGEUI; goto extract_sfmt_andi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 29 :
-        if ((entire_insn & 0xfc000000) == 0x74000000)
-          { itype = LM32BF_INSN_CMPGUI; goto extract_sfmt_andi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 30 :
-        if ((entire_insn & 0xfc000000) == 0x78000000)
-          { itype = LM32BF_INSN_ORHII; goto extract_sfmt_andhii; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 31 :
-        if ((entire_insn & 0xfc000000) == 0x7c000000)
-          { itype = LM32BF_INSN_CMPNEI; goto extract_sfmt_addi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
+      case 0 : itype = LM32BF_INSN_SRUI; goto extract_sfmt_addi;
+      case 1 : itype = LM32BF_INSN_NORI; goto extract_sfmt_andi;
+      case 2 : itype = LM32BF_INSN_MULI; goto extract_sfmt_addi;
+      case 3 : itype = LM32BF_INSN_SH; goto extract_sfmt_sh;
+      case 4 : itype = LM32BF_INSN_LB; goto extract_sfmt_lb;
+      case 5 : itype = LM32BF_INSN_SRI; goto extract_sfmt_addi;
+      case 6 : itype = LM32BF_INSN_XORI; goto extract_sfmt_andi;
+      case 7 : itype = LM32BF_INSN_LH; goto extract_sfmt_lh;
+      case 8 : itype = LM32BF_INSN_ANDI; goto extract_sfmt_andi;
+      case 9 : itype = LM32BF_INSN_XNORI; goto extract_sfmt_andi;
+      case 10 : itype = LM32BF_INSN_LW; goto extract_sfmt_lw;
+      case 11 : itype = LM32BF_INSN_LHU; goto extract_sfmt_lh;
+      case 12 : itype = LM32BF_INSN_SB; goto extract_sfmt_sb;
+      case 13 : itype = LM32BF_INSN_ADDI; goto extract_sfmt_addi;
+      case 14 : itype = LM32BF_INSN_ORI; goto extract_sfmt_ori;
+      case 15 : itype = LM32BF_INSN_SLI; goto extract_sfmt_addi;
+      case 16 : itype = LM32BF_INSN_LBU; goto extract_sfmt_lb;
+      case 17 : itype = LM32BF_INSN_BE; goto extract_sfmt_be;
+      case 18 : itype = LM32BF_INSN_BG; goto extract_sfmt_be;
+      case 19 : itype = LM32BF_INSN_BGE; goto extract_sfmt_be;
+      case 20 : itype = LM32BF_INSN_BGEU; goto extract_sfmt_be;
+      case 21 : itype = LM32BF_INSN_BGU; goto extract_sfmt_be;
+      case 22 : itype = LM32BF_INSN_SW; goto extract_sfmt_sw;
+      case 23 : itype = LM32BF_INSN_BNE; goto extract_sfmt_be;
+      case 24 : itype = LM32BF_INSN_ANDHII; goto extract_sfmt_andhii;
+      case 25 : itype = LM32BF_INSN_CMPEI; goto extract_sfmt_addi;
+      case 26 : itype = LM32BF_INSN_CMPGI; goto extract_sfmt_addi;
+      case 27 : itype = LM32BF_INSN_CMPGEI; goto extract_sfmt_addi;
+      case 28 : itype = LM32BF_INSN_CMPGEUI; goto extract_sfmt_andi;
+      case 29 : itype = LM32BF_INSN_CMPGUI; goto extract_sfmt_andi;
+      case 30 : itype = LM32BF_INSN_ORHII; goto extract_sfmt_andhii;
+      case 31 : itype = LM32BF_INSN_CMPNEI; goto extract_sfmt_addi;
       case 32 :
         if ((entire_insn & 0xfc0007ff) == 0x80000000)
-          { itype = LM32BF_INSN_SRU; goto extract_sfmt_sl; }
+          { itype = LM32BF_INSN_SRU; goto extract_sfmt_add; }
         itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
       case 33 :
         if ((entire_insn & 0xfc0007ff) == 0x84000000)
@@ -337,7 +241,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
         itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
       case 37 :
         if ((entire_insn & 0xfc0007ff) == 0x94000000)
-          { itype = LM32BF_INSN_SR; goto extract_sfmt_sl; }
+          { itype = LM32BF_INSN_SR; goto extract_sfmt_add; }
         itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
       case 38 :
         if ((entire_insn & 0xfc0007ff) == 0x98000000)
@@ -381,7 +285,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
         itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
       case 47 :
         if ((entire_insn & 0xfc0007ff) == 0xbc000000)
-          { itype = LM32BF_INSN_SL; goto extract_sfmt_sl; }
+          { itype = LM32BF_INSN_SL; goto extract_sfmt_add; }
         itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
       case 48 :
         if ((entire_insn & 0xfc1fffff) == 0xc0000000)
@@ -395,10 +299,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
         if ((entire_insn & 0xfc0007ff) == 0xc8000000)
           { itype = LM32BF_INSN_SUB; goto extract_sfmt_add; }
         itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 51 :
-        if ((entire_insn & 0xfc000000) == 0xcc000000)
-          { itype = LM32BF_INSN_USER; goto extract_sfmt_user; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
+      case 51 : itype = LM32BF_INSN_USER; goto extract_sfmt_user;
       case 52 :
         if ((entire_insn & 0xfc00ffff) == 0xd0000000)
           { itype = LM32BF_INSN_WCSR; goto extract_sfmt_wcsr; }
@@ -411,10 +312,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
         if ((entire_insn & 0xfc1f07ff) == 0xdc000000)
           { itype = LM32BF_INSN_SEXTH; goto extract_sfmt_sextb; }
         itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 56 :
-        if ((entire_insn & 0xfc000000) == 0xe0000000)
-          { itype = LM32BF_INSN_BI; goto extract_sfmt_bi; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
+      case 56 : itype = LM32BF_INSN_BI; goto extract_sfmt_bi;
       case 57 :
         if ((entire_insn & 0xfc0007ff) == 0xe4000000)
           { itype = LM32BF_INSN_CMPE; goto extract_sfmt_add; }
@@ -435,10 +333,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
         if ((entire_insn & 0xfc0007ff) == 0xf4000000)
           { itype = LM32BF_INSN_CMPGU; goto extract_sfmt_add; }
         itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
-      case 62 :
-        if ((entire_insn & 0xfc000000) == 0xf8000000)
-          { itype = LM32BF_INSN_CALLI; goto extract_sfmt_calli; }
-        itype = LM32BF_INSN_X_INVALID; goto extract_sfmt_empty;
+      case 62 : itype = LM32BF_INSN_CALLI; goto extract_sfmt_calli;
       case 63 :
         if ((entire_insn & 0xfc0007ff) == 0xfc000000)
           { itype = LM32BF_INSN_CMPNE; goto extract_sfmt_add; }
@@ -466,7 +361,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_add:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_user.f
     UINT f_r0;
     UINT f_r1;
@@ -489,7 +384,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_addi:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_addi.f
     UINT f_r0;
     UINT f_r1;
@@ -497,7 +392,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
 
     f_r0 = EXTRACT_LSB0_UINT (insn, 32, 25, 5);
     f_r1 = EXTRACT_LSB0_UINT (insn, 32, 20, 5);
-    f_imm = EXTRACT_LSB0_INT (insn, 32, 15, 16);
+    f_imm = EXTRACT_LSB0_SINT (insn, 32, 15, 16);
 
   /* Record the fields for the semantic handler.  */
   FLD (f_imm) = f_imm;
@@ -512,7 +407,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_andi:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_andi.f
     UINT f_r0;
     UINT f_r1;
@@ -535,7 +430,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_andhii:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_andi.f
     UINT f_r0;
     UINT f_r1;
@@ -558,7 +453,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_b:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_be.f
     UINT f_r0;
 
@@ -575,11 +470,11 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_bi:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_bi.f
     SI f_call;
 
-    f_call = ((pc) + (((int) (((EXTRACT_LSB0_INT (insn, 32, 25, 26)) << (6))) >> (4))));
+    f_call = ((pc) + (((int) (((EXTRACT_LSB0_SINT (insn, 32, 25, 26)) << (6))) >> (4))));
 
   /* Record the fields for the semantic handler.  */
   FLD (i_call) = f_call;
@@ -592,7 +487,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_be:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_be.f
     UINT f_r0;
     UINT f_r1;
@@ -600,7 +495,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
 
     f_r0 = EXTRACT_LSB0_UINT (insn, 32, 25, 5);
     f_r1 = EXTRACT_LSB0_UINT (insn, 32, 20, 5);
-    f_branch = ((pc) + (((int) (((EXTRACT_LSB0_INT (insn, 32, 15, 16)) << (16))) >> (14))));
+    f_branch = ((pc) + (((int) (((EXTRACT_LSB0_SINT (insn, 32, 15, 16)) << (16))) >> (14))));
 
   /* Record the fields for the semantic handler.  */
   FLD (f_r0) = f_r0;
@@ -615,7 +510,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_call:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_be.f
     UINT f_r0;
 
@@ -632,11 +527,11 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_calli:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_bi.f
     SI f_call;
 
-    f_call = ((pc) + (((int) (((EXTRACT_LSB0_INT (insn, 32, 25, 26)) << (6))) >> (4))));
+    f_call = ((pc) + (((int) (((EXTRACT_LSB0_SINT (insn, 32, 25, 26)) << (6))) >> (4))));
 
   /* Record the fields for the semantic handler.  */
   FLD (i_call) = f_call;
@@ -649,7 +544,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_divu:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_user.f
     UINT f_r0;
     UINT f_r1;
@@ -672,7 +567,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_lb:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_addi.f
     UINT f_r0;
     UINT f_r1;
@@ -680,7 +575,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
 
     f_r0 = EXTRACT_LSB0_UINT (insn, 32, 25, 5);
     f_r1 = EXTRACT_LSB0_UINT (insn, 32, 20, 5);
-    f_imm = EXTRACT_LSB0_INT (insn, 32, 15, 16);
+    f_imm = EXTRACT_LSB0_SINT (insn, 32, 15, 16);
 
   /* Record the fields for the semantic handler.  */
   FLD (f_imm) = f_imm;
@@ -695,7 +590,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_lh:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_addi.f
     UINT f_r0;
     UINT f_r1;
@@ -703,7 +598,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
 
     f_r0 = EXTRACT_LSB0_UINT (insn, 32, 25, 5);
     f_r1 = EXTRACT_LSB0_UINT (insn, 32, 20, 5);
-    f_imm = EXTRACT_LSB0_INT (insn, 32, 15, 16);
+    f_imm = EXTRACT_LSB0_SINT (insn, 32, 15, 16);
 
   /* Record the fields for the semantic handler.  */
   FLD (f_imm) = f_imm;
@@ -718,7 +613,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_lw:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_addi.f
     UINT f_r0;
     UINT f_r1;
@@ -726,7 +621,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
 
     f_r0 = EXTRACT_LSB0_UINT (insn, 32, 25, 5);
     f_r1 = EXTRACT_LSB0_UINT (insn, 32, 20, 5);
-    f_imm = EXTRACT_LSB0_INT (insn, 32, 15, 16);
+    f_imm = EXTRACT_LSB0_SINT (insn, 32, 15, 16);
 
   /* Record the fields for the semantic handler.  */
   FLD (f_imm) = f_imm;
@@ -741,7 +636,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_ori:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_andi.f
     UINT f_r0;
     UINT f_r1;
@@ -764,7 +659,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_rcsr:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_rcsr.f
     UINT f_csr;
     UINT f_r2;
@@ -784,7 +679,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_sb:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_addi.f
     UINT f_r0;
     UINT f_r1;
@@ -792,7 +687,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
 
     f_r0 = EXTRACT_LSB0_UINT (insn, 32, 25, 5);
     f_r1 = EXTRACT_LSB0_UINT (insn, 32, 20, 5);
-    f_imm = EXTRACT_LSB0_INT (insn, 32, 15, 16);
+    f_imm = EXTRACT_LSB0_SINT (insn, 32, 15, 16);
 
   /* Record the fields for the semantic handler.  */
   FLD (f_imm) = f_imm;
@@ -807,7 +702,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_sextb:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_user.f
     UINT f_r0;
     UINT f_r2;
@@ -827,7 +722,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_sh:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_addi.f
     UINT f_r0;
     UINT f_r1;
@@ -835,7 +730,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
 
     f_r0 = EXTRACT_LSB0_UINT (insn, 32, 25, 5);
     f_r1 = EXTRACT_LSB0_UINT (insn, 32, 20, 5);
-    f_imm = EXTRACT_LSB0_INT (insn, 32, 15, 16);
+    f_imm = EXTRACT_LSB0_SINT (insn, 32, 15, 16);
 
   /* Record the fields for the semantic handler.  */
   FLD (f_imm) = f_imm;
@@ -847,33 +742,10 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
     return idesc;
   }
 
- extract_sfmt_sl:
-  {
-    const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
-#define FLD(f) abuf->fields.sfmt_user.f
-    UINT f_r0;
-    UINT f_r1;
-    UINT f_r2;
-
-    f_r0 = EXTRACT_LSB0_UINT (insn, 32, 25, 5);
-    f_r1 = EXTRACT_LSB0_UINT (insn, 32, 20, 5);
-    f_r2 = EXTRACT_LSB0_UINT (insn, 32, 15, 5);
-
-  /* Record the fields for the semantic handler.  */
-  FLD (f_r0) = f_r0;
-  FLD (f_r1) = f_r1;
-  FLD (f_r2) = f_r2;
-  TRACE_EXTRACT (current_cpu, abuf, (current_cpu, pc, "sfmt_sl", "f_r0 0x%x", 'x', f_r0, "f_r1 0x%x", 'x', f_r1, "f_r2 0x%x", 'x', f_r2, (char *) 0));
-
-#undef FLD
-    return idesc;
-  }
-
  extract_sfmt_sw:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_addi.f
     UINT f_r0;
     UINT f_r1;
@@ -881,7 +753,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
 
     f_r0 = EXTRACT_LSB0_UINT (insn, 32, 25, 5);
     f_r1 = EXTRACT_LSB0_UINT (insn, 32, 20, 5);
-    f_imm = EXTRACT_LSB0_INT (insn, 32, 15, 16);
+    f_imm = EXTRACT_LSB0_SINT (insn, 32, 15, 16);
 
   /* Record the fields for the semantic handler.  */
   FLD (f_imm) = f_imm;
@@ -896,7 +768,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_user:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_user.f
     UINT f_r0;
     UINT f_r1;
@@ -922,7 +794,7 @@ lm32bf_decode (SIM_CPU *current_cpu, IADDR pc,
  extract_sfmt_wcsr:
   {
     const IDESC *idesc = &lm32bf_insn_data[itype];
-    CGEN_INSN_INT insn = entire_insn;
+    CGEN_INSN_WORD insn = entire_insn;
 #define FLD(f) abuf->fields.sfmt_wcsr.f
     UINT f_csr;
     UINT f_r1;

@@ -1,6 +1,6 @@
 /* Read dbx symbol tables and convert to internal format, for GDB.
    Copyright (C) 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995,
-   1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2008.
+   1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2008, 2009.
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -520,13 +520,10 @@ record_minimal_symbol (char *name, CORE_ADDR address, int type,
 /* Scan and build partial symbols for a symbol file.
    We have been initialized by a call to dbx_symfile_init, which 
    put all the relevant info into a "struct dbx_symfile_info",
-   hung off the objfile structure.
-
-   MAINLINE is true if we are reading the main symbol
-   table (as opposed to a shared lib or dynamically loaded file).  */
+   hung off the objfile structure.  */
 
 static void
-dbx_symfile_read (struct objfile *objfile, int mainline)
+dbx_symfile_read (struct objfile *objfile, int symfile_flags)
 {
   bfd *sym_bfd;
   int val;
@@ -556,10 +553,8 @@ dbx_symfile_read (struct objfile *objfile, int mainline)
   if (val < 0)
     perror_with_name (objfile->name);
 
-  /* If we are reinitializing, or if we have never loaded syms yet, init */
-  if (mainline
-      || (objfile->global_psymbols.size == 0
-	  &&  objfile->static_psymbols.size == 0))
+  /* Size the symbol table.  */
+  if (objfile->global_psymbols.size == 0 && objfile->static_psymbols.size == 0)
     init_psymbol_list (objfile, DBX_SYMCOUNT (objfile));
 
   symbol_size = DBX_SYMBOL_SIZE (objfile);
@@ -965,8 +960,9 @@ set_namestring (struct objfile *objfile, const struct internal_nlist *nlist)
 {
   char *namestring;
 
-  if (((unsigned) nlist->n_strx + file_string_table_offset)
-      >= DBX_STRINGTAB_SIZE (objfile))
+  if (nlist->n_strx + file_string_table_offset
+      >= DBX_STRINGTAB_SIZE (objfile)
+      || nlist->n_strx + file_string_table_offset < nlist->n_strx)
     {
       complaint (&symfile_complaints, _("bad string table offset in symbol %d"),
 		 symnum);
@@ -1726,7 +1722,7 @@ pos %d"),
 		namestring = gdbarch_static_transform_name (gdbarch,
 							    namestring);
 
-	      add_psymbol_to_list (sym_name, sym_len,
+	      add_psymbol_to_list (sym_name, sym_len, 1,
 				   VAR_DOMAIN, LOC_STATIC,
 				   &objfile->static_psymbols,
 				   0, nlist.n_value,
@@ -1738,7 +1734,7 @@ pos %d"),
 					 data_sect_index);
 	      /* The addresses in these entries are reported to be
 		 wrong.  See the code that reads 'G's for symtabs. */
-	      add_psymbol_to_list (sym_name, sym_len,
+	      add_psymbol_to_list (sym_name, sym_len, 1,
 				   VAR_DOMAIN, LOC_STATIC,
 				   &objfile->global_psymbols,
 				   0, nlist.n_value,
@@ -1756,7 +1752,7 @@ pos %d"),
 		  || (p == namestring + 1
 		      && namestring[0] != ' '))
 		{
-		  add_psymbol_to_list (sym_name, sym_len,
+		  add_psymbol_to_list (sym_name, sym_len, 1,
 				       STRUCT_DOMAIN, LOC_TYPEDEF,
 				       &objfile->static_psymbols,
 				       nlist.n_value, 0,
@@ -1764,7 +1760,7 @@ pos %d"),
 		  if (p[2] == 't')
 		    {
 		      /* Also a typedef with the same name.  */
-		      add_psymbol_to_list (sym_name, sym_len,
+		      add_psymbol_to_list (sym_name, sym_len, 1,
 					   VAR_DOMAIN, LOC_TYPEDEF,
 					   &objfile->static_psymbols,
 					   nlist.n_value, 0,
@@ -1777,7 +1773,7 @@ pos %d"),
 	    case 't':
 	      if (p != namestring)	/* a name is there, not just :T... */
 		{
-		  add_psymbol_to_list (sym_name, sym_len,
+		  add_psymbol_to_list (sym_name, sym_len, 1,
 				       VAR_DOMAIN, LOC_TYPEDEF,
 				       &objfile->static_psymbols,
 				       nlist.n_value, 0,
@@ -1839,7 +1835,7 @@ pos %d"),
 			;
 		      /* Note that the value doesn't matter for
 			 enum constants in psymtabs, just in symtabs.  */
-		      add_psymbol_to_list (p, q - p,
+		      add_psymbol_to_list (p, q - p, 1,
 					   VAR_DOMAIN, LOC_CONST,
 					   &objfile->static_psymbols, 0,
 					   0, psymtab_language, objfile);
@@ -1857,7 +1853,7 @@ pos %d"),
 
 	    case 'c':
 	      /* Constant, e.g. from "const" in Pascal.  */
-	      add_psymbol_to_list (sym_name, sym_len,
+	      add_psymbol_to_list (sym_name, sym_len, 1,
 				   VAR_DOMAIN, LOC_CONST,
 				   &objfile->static_psymbols, nlist.n_value,
 				   0, psymtab_language, objfile);
@@ -1921,7 +1917,7 @@ pos %d"),
 		  pst->textlow = nlist.n_value;
 		  textlow_not_set = 0;
 		}
-	      add_psymbol_to_list (sym_name, sym_len,
+	      add_psymbol_to_list (sym_name, sym_len, 1,
 				   VAR_DOMAIN, LOC_BLOCK,
 				   &objfile->static_psymbols,
 				   0, nlist.n_value,
@@ -1989,7 +1985,7 @@ pos %d"),
 		  pst->textlow = nlist.n_value;
 		  textlow_not_set = 0;
 		}
-	      add_psymbol_to_list (sym_name, sym_len,
+	      add_psymbol_to_list (sym_name, sym_len, 1,
 				   VAR_DOMAIN, LOC_BLOCK,
 				   &objfile->global_psymbols,
 				   0, nlist.n_value,
@@ -3319,8 +3315,6 @@ no enclosing block"));
    OBJFILE is the object file we are reading symbols from.
    ADDR is the address relative to which the symbols are (e.g.
    the base address of the text segment).
-   MAINLINE is true if we are reading the main symbol
-   table (as opposed to a shared lib or dynamically loaded file).
    TEXTADDR is the address of the text section.
    TEXTSIZE is the size of the text section.
    STABSECTS is the list of .stab sections in OBJFILE.
@@ -3331,7 +3325,7 @@ no enclosing block"));
    adjusted for coff details. */
 
 void
-coffstab_build_psymtabs (struct objfile *objfile, int mainline,
+coffstab_build_psymtabs (struct objfile *objfile,
 			 CORE_ADDR textaddr, unsigned int textsize,
 			 struct stab_section_list *stabsects,
 			 file_ptr stabstroffset, unsigned int stabstrsize)
@@ -3414,8 +3408,6 @@ coffstab_build_psymtabs (struct objfile *objfile, int mainline,
    OBJFILE is the object file we are reading symbols from.
    ADDR is the address relative to which the symbols are (e.g.
    the base address of the text segment).
-   MAINLINE is true if we are reading the main symbol
-   table (as opposed to a shared lib or dynamically loaded file).
    STABSECT is the BFD section information for the .stab section.
    STABSTROFFSET and STABSTRSIZE define the location in OBJFILE where the
    .stabstr section exists.
@@ -3424,8 +3416,7 @@ coffstab_build_psymtabs (struct objfile *objfile, int mainline,
    adjusted for elf details. */
 
 void
-elfstab_build_psymtabs (struct objfile *objfile, int mainline,
-			asection *stabsect,
+elfstab_build_psymtabs (struct objfile *objfile, asection *stabsect,
 			file_ptr stabstroffset, unsigned int stabstrsize)
 {
   int val;
@@ -3500,15 +3491,13 @@ elfstab_build_psymtabs (struct objfile *objfile, int mainline,
    OBJFILE is the object file we are reading symbols from.
    ADDR is the address relative to which the symbols are (e.g. the base address
    of the text segment).
-   MAINLINE is true if we are reading the main symbol table (as opposed to a
-   shared lib or dynamically loaded file).
    STAB_NAME is the name of the section that contains the stabs.
    STABSTR_NAME is the name of the section that contains the stab strings.
 
    This routine is mostly copied from dbx_symfile_init and dbx_symfile_read. */
 
 void
-stabsect_build_psymtabs (struct objfile *objfile, int mainline, char *stab_name,
+stabsect_build_psymtabs (struct objfile *objfile, char *stab_name,
 			 char *stabstr_name, char *text_name)
 {
   int val;

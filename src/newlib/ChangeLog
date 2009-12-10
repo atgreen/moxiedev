@@ -1,3 +1,268 @@
+2009-12-08  Eric Blake  <ebb9@byu.net>
+
+	Fix some *at declarations.
+	* libc/include/stdio.h (symlinkat): Move this...
+	* libc/include/sys/_default_fcntl.h (unlinkat): ...and this...
+	* libc/include/sys/unistd.h (symlinkat, unlinkat): ...here, to
+	match POSIX.
+
+2009-12-03  Craig Howland <howland@LGSInnovations.com>
+
+	* libc/stdlib/strtod.c:  Correct "NO_REENT" to "_REENT_ONLY".
+	* libc/stdlib/wcstod.c:  Ditto.
+	* libc/stdlib/dtoastub.c:  Ditto.
+
+2009-11-23  Corinna Vinschen  <corinna@vinschen.de>
+
+	Use NetBSD fix for CVE-2009-0689 security vulnerability.
+	* libc/include/sys/reent.h (_Kmax): Define here based on the sizeof
+	size_t, as in latest NetBSD.
+	* libc/reent/reent.c (_reclaim_reent): Use _Kmax rather than constant
+	value 15.
+	* libc/stdlib/mprec.c (_Kmax): Don't define here.  Explain why.
+
+2009-11-20  Nick Clifton  <nickc@redhat.com>
+
+	* libc/machine/rx/strncat.S (_strncat): Replace use of r6
+	(call-saved) with r14 (call-used).
+
+2009-11-18  Dave Korn  <dave.korn.cygwin@googlemail.com>
+
+	* libm/machine/i386/f_tan.S (_f_tan): Free fp stack register
+	containing useless constant before advancing fp sp over it.
+	(_f_tanf): Likewise.
+
+2009-11-18  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdio/vfprintf.c: Include ../stdlib/local.h.  Replace call to
+	_mbtowc_r with direct call to __mbtowc.
+	* libc/stdio/vfscanf.c: Ditto.
+	* libc/stdlib/btowc.c: Include local.h.  Replace call to _mbtowc_r
+	with direct call to __mbtowc.
+	* libc/stdlib/mblen.c: Ditto.
+	* libc/stdlib/mblen_r.c: Ditto.
+	* libc/stdlib/mbrtowc.c: Ditto.
+	* libc/stdlib/mbstowcs_r.c: Ditto.
+	* libc/stdlib/mbtowc.c: Ditto.
+	* libc/stdlib/wcrtomb.c: Include local.h.  Replace call to _wctomb_r
+	with direct call to __wctomb.
+	* libc/stdlib/wcsnrtombs.c: Ditto.
+	(_wcsnrtombs_r): Ditto.
+	* libc/stdlib/wcstombs_r.c: Ditto.
+	* libc/stdlib/wctob.c: Ditto.
+	* libc/stdlib/wctomb.c: Ditto.
+
+	* libc/stdlib/mbrtowc.c (mbrtowc): Implement independently from
+	_mbrtowc_r, unless PREFER_SIZE_OVER_SPEED or __OPTIMIZE_SIZE__ are
+	defined.
+	* libc/stdlib/wcrtomb.c (wcrtomb): Implement independently from
+	_wcrtomb_r, unless PREFER_SIZE_OVER_SPEED or __OPTIMIZE_SIZE__ are
+	defined.
+
+	* libc/stdlib/mbtowc_r.c (__utf8_mbtowc): Drop unnecessary test for
+	ch >= 0.
+
+2009-11-17  Yaakov Selkowitz  <yselkowitz@users.sourceforge.net>
+
+	* libm/common/fdlibm.h (logb, logbf): Move decls from here...
+	* libc/include/math.h (logb, logbf): ...to here.
+
+2009-11-06  Jon Turney  <jon.turney@dronecode.org.uk>
+
+	* libc/include/ctype.h (__ctype_lookup): Fix precedence.
+
+2009-10-30  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdio/fflush.c (_fflush_r): Store old errno to check for
+	low-level seek error condition.  Restore old errno in case of
+	success.  Don't use new position after seek as error condition,
+	rather check for return value of -1 and errno.  Handle EINVAL
+	just like ESPIPE.  Only set fp->_offset if errno is 0.
+
+2009-10-27  Nick Clifton  <nickc@redhat.com>
+
+	* MAINTAINERS (ARM): Add myself as an ARM maintainer.
+
+2009-10-26  DJ Delorie  <dj@redhat.com>
+
+	* configure.host: Add support for RX architecture.
+	* libc/include/machine/ieeefp.h: Likewise.
+	* libc/include/machine/setjmp.h: Likewise.
+	* libc/include/machine/configure.in: Likewise.
+	* libc/include/machine/configure: Regenerate.
+	* libc/machine/rx: New directory.
+	* libc/machine/rx/*: New files to support RX architecture.
+
+2009-10-24  Eric Blake  <ebb9@byu.net>
+
+	* libc/include/ctype.h (__ctype_lookup): New macro.
+	(isalpha, isupper, islower, isdigit, isxdigit, isspace, ispunct)
+	(isalnum, isprint, isgraph, iscntrl, isblank): Use it to fix bug
+	on 64-bit machines.
+
+2009-10-20  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* configure.host: Don't set -O2 flag in newlib_cflags.  Leave
+	that to CFLAGS.
+	* acinclude.m4: Don't reset CFLAGS before calling _AC_PROG_CC_G
+	as it sets the same flags as we are using.
+	* aclocal.m4: Regenerated.
+	* configure: Ditto.
+	* Makefile.in: Ditto.
+	* iconvdata/aclocal.m4: Ditto.
+	* iconvdata/configure: Ditto.
+	* iconvdata/Makefile.in: Ditto.
+	* doc/aclocal.m4: Ditto.
+	* doc/configure: Ditto.
+	* doc/Makefile.in: Ditto.
+	* libc/aclocal.m4: Ditto.
+	* libc/configure: Ditto.
+	* libc/Makefile.in: Ditto.
+	* libc/*Makefile.in: Ditto.
+	* libc/*aclocal.m4: Ditto.
+	* libc/*configure: Ditto.
+	* libm/*Makefile.in: Ditto.
+	* libm/*aclocal.m4: Ditto.
+	* libm/*configure: Ditto.
+
+2009-10-16  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/include/sys/config.h[__CYGWIN__]: Set __USE_XOPEN2K flag
+	if not __STRICT_ANSI__ or stdc version C99 or greater.
+	* libc/include/stdio.h[__STRICT_ANSI__]: Add __USE_XOPEN2K check
+	for fseeko and ftello prototypes.
+
+2009-10-15  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/include/wchar.h (struct tm0: Declare as incomplete type.
+
+2009-10-15  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/nl_langinfo.c (nl_langinfo): Add Cygwin-specific temporary
+	exception for KOI8 charsets.
+
+2009-10-13  Eric Blake  <ebb9@byu.net>
+
+	* libc/include/sys/unistd.h: Add _PC*, _CS*, and _SC* constants
+	new to POSIX 2008.
+
+2009-10-13  Yaakov Selkowitz  <yselkowitz@users.sourceforge.net>
+
+	* libc/include/sys/signal.h: Include <sys/types.h> always.
+	[__CYGWIN__, __rtems__]: Define kill first argument as pid_t per
+	standards.
+
+2009-10-09  Dave Korn  <dave.korn@artimi.com>
+
+	* libc/include/sys/time.h (_TIMEVAL_DEFINED): Define when
+	defining struct timeval.
+
+2009-10-09  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (DEFAULT_LOCALE): New define.
+	(__default_locale): New global variable set to the default locale.
+	(__get_locale_env): Return __default_locale rather than fixed "C".
+
+2009-10-08  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* configure.host: For RTEMS, define HAVE_ASSERT_FUNC.
+	* libc/stdlib/assert.c (_assert_func): Do not specify
+	__assert_func if HAVE_ASSERT_FUNC flag is set.
+
+2009-10-08  Eric Blake  <ebb9@byu.net>
+
+	* libc/include/getopt.h (__getopt_r, __getopt_long_r)
+	(__getopt_long_only_r): Protect declarations, to avoid compiler
+	warning.
+
+2009-10-07  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/nl_langinfo.c (nl_langinfo): Just return current locale
+	charset on Cygwin.
+
+2009-10-03  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdlib/mbtowc_r.c (__utf8_mbtowc): Allow CESU-8 surrogate
+	value encoding.
+	* libc/stdlib/wctomb_r.c (__utf8_mbtowc): Allow CESU-8 surrogate
+	value decoding.
+
+2009-09-29  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Allow "C." same as "C-" as locale
+	prefix.  Add some words to documentation.
+
+2009-09-29  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdlib/sb_charsets.c: Throughout, translate undefined
+	characters to their corresponding Windows Unicode value.
+
+2009-09-28  Michael Eager <eager@eagercon.com>
+
+	* configure.host: Add microblaze.
+	* libc/include/machine/ieeefp.h [MICROBLAZE]: Define __IEEE_BIG_ENDIAN.
+	* libc/include/machine/setjmp.h [MICROBLAZE]: Define _JBLEN, _JBTYPE.
+	* libc/include/sys/config.h [MICROBLAZE]: Define _REENT_SMALL,
+	_UNIX98_THREAD_MUTEX_ATTRIBUTES.
+	* libc/include/sys/types.h: Treat XMK like rtems, define
+	PTHREAD_MUTEX_NORMAL, PTHREAD_MUTEX_ERRORCHECK, PTHREAD_MUTEX_RECURSIVE,
+	PTHREAD_MUTEX_DEFAULT, PTHREAD_STACK_MIN, define stuct pthread_attr_s.
+	* libc/machine/configure.in: Add microblaze.
+	* libc/machine/configure: Add microblaze (not regenerated).
+	* libc/machine/microblaze/configure.in: NEW.
+	* libc/machine/microblaze/configure: Generate.
+	* libc/machine/microblaze/Makefile.am: NEW.
+	* libc/machine/microblaze/Makefile.in: Generate.
+	* libc/machine/microblaze/{abort.c, strcmp.c, strcpy.c, strlen.c,
+	mallocr.c, longjmp.S, setjmp.S}: NEW.
+	* libc/stdlib/mallocr.c [MICROBLAZE]: Don't declare sbrk prototype,
+	mALLOc(): return malloc value.
+
+2009-09-27  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (lc_ctype_charset): Set to "UTF-8" on Cygwin.
+	(lc_message_charset): Ditto.
+	(loadlocale): Set charset of the "C" locale to "UTF-8" on Cygwin.
+	* libc/stdlib/mbtowc_r.c (__mbtowc): Default to __utf8_mbtowc on
+	Cygwin.
+	* libc/stdlib/wctomb_r.c (__wctomb): Default to __utf8_wctomb on
+	Cygwin.
+
+2009-09-26  Eric Blake  <ebb9@byu.net>
+
+	* libc/include/sys/unistd.h (execvpe, fexecve) [__CYGWIN__]:
+	Add declarations.
+
+2009-09-24  Eric Blake  <ebb9@byu.net>
+
+	* libc/include/sys/unistd.h (eaccess, euidaccess) [__CYGWIN__]:
+	Add declarations.
+
+2009-09-23  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c: Drop Cygwin-specific windows.h include.
+	(loadlocale): Call __set_charset_from_codepage with 0 codepage.
+
+2009-09-22  Ralf Corsépius <ralf.corsepius@rtems.org>
+
+	* libc/include/stdlib.h: Add posix_memalign.
+
+2009-09-22  Ralf Corsépius <ralf.corsepius@rtems.org>
+
+	* configure.host (*-rtems*): Remove -DMISSING_SYSCALL_NAMES.
+	Add -DHAVE_BLKSIZE, -D_NO_WORDEXP -D_NO_POPEN.
+
+2009-09-22  Ralf Corsépius <ralf.corsepius@rtems.org>
+
+	* configure.host (m32c): Move setting -DABORT_PROVIDED to second
+	"case $host".
+
+2009-09-18  Christopher Faylor  <me+cygwin@cgf.cx>
+
+	* libc/include/sys/unistd.h: Declare getpagesize as returning
+	POSIX-mandated int.
+	* libc/sys/linux/sys/unistd.h: Ditto.
+
 2009-08-31  Takaki Makino  <t@snowelm.com>
 
 	* libm/machine/i386/f_pow.c(_f_pow): Alter ASM so it works with

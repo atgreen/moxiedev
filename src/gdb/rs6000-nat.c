@@ -590,7 +590,7 @@ exec_one_dummy_insn (struct regcache *regcache)
      assume that this address will never be executed again by the real
      code. */
 
-  bp = deprecated_insert_raw_breakpoint (gdbarch, DUMMY_INSN_ADDR);
+  bp = deprecated_insert_raw_breakpoint (gdbarch, NULL, DUMMY_INSN_ADDR);
 
   /* You might think this could be done with a single ptrace call, and
      you'd be correct for just about every platform I've ever worked
@@ -915,7 +915,7 @@ If in fact that file has symbols which the mapped files listed by\n\
 symbols to the proper address)."),
 	       symfile_objfile->name);
       free_objfile (symfile_objfile);
-      symfile_objfile = NULL;
+      gdb_assert (symfile_objfile == NULL);
     }
   breakpoint_re_set ();
 }
@@ -935,33 +935,32 @@ vmap_exec (void)
 {
   static bfd *execbfd;
   int i;
+  struct target_section_table *table = target_get_section_table (&exec_ops);
 
   if (execbfd == exec_bfd)
     return;
 
   execbfd = exec_bfd;
 
-  if (!vmap || !exec_ops.to_sections)
-    error (_("vmap_exec: vmap or exec_ops.to_sections == 0."));
+  if (!vmap || !table->sections)
+    error (_("vmap_exec: vmap or table->sections == 0."));
 
-  for (i = 0; &exec_ops.to_sections[i] < exec_ops.to_sections_end; i++)
+  for (i = 0; &table->sections[i] < table->sections_end; i++)
     {
-      if (strcmp (".text", exec_ops.to_sections[i].the_bfd_section->name) == 0)
+      if (strcmp (".text", table->sections[i].the_bfd_section->name) == 0)
 	{
-	  exec_ops.to_sections[i].addr += vmap->tstart - vmap->tvma;
-	  exec_ops.to_sections[i].endaddr += vmap->tstart - vmap->tvma;
+	  table->sections[i].addr += vmap->tstart - vmap->tvma;
+	  table->sections[i].endaddr += vmap->tstart - vmap->tvma;
 	}
-      else if (strcmp (".data",
-		       exec_ops.to_sections[i].the_bfd_section->name) == 0)
+      else if (strcmp (".data", table->sections[i].the_bfd_section->name) == 0)
 	{
-	  exec_ops.to_sections[i].addr += vmap->dstart - vmap->dvma;
-	  exec_ops.to_sections[i].endaddr += vmap->dstart - vmap->dvma;
+	  table->sections[i].addr += vmap->dstart - vmap->dvma;
+	  table->sections[i].endaddr += vmap->dstart - vmap->dvma;
 	}
-      else if (strcmp (".bss",
-		       exec_ops.to_sections[i].the_bfd_section->name) == 0)
+      else if (strcmp (".bss", table->sections[i].the_bfd_section->name) == 0)
 	{
-	  exec_ops.to_sections[i].addr += vmap->dstart - vmap->dvma;
-	  exec_ops.to_sections[i].endaddr += vmap->dstart - vmap->dvma;
+	  table->sections[i].addr += vmap->dstart - vmap->dvma;
+	  table->sections[i].endaddr += vmap->dstart - vmap->dvma;
 	}
     }
 }

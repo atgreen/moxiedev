@@ -1325,10 +1325,17 @@ Output_section_element_input::set_section_addresses(
 
 	isi.set_section_name(relobj->section_name(shndx));
 	if (p->is_relaxed_input_section())
-	  isi.set_size(p->relaxed_input_section()->data_size());
+	  {
+	    // We use current data size because relxed section sizes may not
+	    // have finalized yet.
+	    isi.set_size(p->relaxed_input_section()->current_data_size());
+	    isi.set_addralign(p->relaxed_input_section()->addralign());
+	  }
 	else
-	  isi.set_size(relobj->section_size(shndx));
-	isi.set_addralign(relobj->section_addralign(shndx));
+	  {
+	    isi.set_size(relobj->section_size(shndx));
+	    isi.set_addralign(relobj->section_addralign(shndx));
+	  }
       }
 
       if (!this->match_file_name(relobj->name().c_str()))
@@ -1365,6 +1372,7 @@ Output_section_element_input::set_section_addresses(
   // sections are otherwise equal.  Add each input section to the
   // output section.
 
+  uint64_t dot = *dot_value;
   for (size_t i = 0; i < input_pattern_count; ++i)
     {
       if (matching_sections[i].empty())
@@ -1389,12 +1397,12 @@ Output_section_element_input::set_section_addresses(
 	  if (this_subalign < subalign)
 	    this_subalign = subalign;
 
-	  uint64_t address = align_address(*dot_value, this_subalign);
+	  uint64_t address = align_address(dot, this_subalign);
 
-	  if (address > *dot_value && !fill->empty())
+	  if (address > dot && !fill->empty())
 	    {
 	      section_size_type length =
-		convert_to_section_size_type(address - *dot_value);
+		convert_to_section_size_type(address - dot);
 	      std::string this_fill = this->get_fill_string(fill, length);
 	      Output_section_data* posd = new Output_data_const(this_fill, 0);
 	      output_section->add_output_section_data(posd);
@@ -1405,9 +1413,16 @@ Output_section_element_input::set_section_addresses(
 						       p->size(),
 						       this_subalign);
 
-	  *dot_value = address + p->size();
+	  dot = address + p->size();
 	}
     }
+
+  // An SHF_TLS/SHT_NOBITS section does not take up any
+  // address space.
+  if (output_section == NULL
+      || (output_section->flags() & elfcpp::SHF_TLS) == 0
+      || output_section->type() != elfcpp::SHT_NOBITS)
+    *dot_value = dot;
 
   this->final_dot_value_ = *dot_value;
   this->final_dot_section_ = *dot_section;
@@ -2292,7 +2307,9 @@ Orphan_output_section::set_section_addresses(Symbol_table*, Layout*,
 	Task_lock_obj<Object> tl(task, p->relobj());
 	addralign = p->relobj()->section_addralign(p->shndx());
 	if (p->is_relaxed_input_section())
-	  size = p->relaxed_input_section()->data_size();
+	  // We use current data size because relxed section sizes may not
+	  // have finalized yet.
+	  size = p->relaxed_input_section()->current_data_size();
 	else
 	  size = p->relobj()->section_size(p->shndx());
       }
@@ -2302,12 +2319,18 @@ Orphan_output_section::set_section_addresses(Symbol_table*, Layout*,
       address += size;
     }
 
-  if (!have_load_address)
-    *load_address = address;
-  else
-    *load_address += address - *dot_value;
+  // An SHF_TLS/SHT_NOBITS section does not take up any address space.
+  if (this->os_ == NULL
+      || (this->os_->flags() & elfcpp::SHF_TLS) == 0
+      || this->os_->type() != elfcpp::SHT_NOBITS)
+    {
+      if (!have_load_address)
+	*load_address = address;
+      else
+	*load_address += address - *dot_value;
 
-  *dot_value = address;
+      *dot_value = address;
+    }
 }
 
 // Get the list of segments to use for an allocated section when using
@@ -2464,7 +2487,8 @@ Script_sections::Script_sections()
     orphan_section_placement_(NULL),
     data_segment_align_start_(),
     saw_data_segment_align_(false),
-    saw_relro_end_(false)
+    saw_relro_end_(false),
+    saw_segment_start_expression_(false)
 {
 }
 
@@ -2517,6 +2541,15 @@ Script_sections::add_dot_assignment(Expression* val)
     this->output_section_->add_dot_assignment(val);
   else
     {
+      // The GNU linker permits assignments to . to appears outside of
+      // a SECTIONS clause, and treats it as appearing inside, so
+      // sections_elements_ may be NULL here.
+      if (this->sections_elements_ == NULL)
+	{
+	  this->sections_elements_ = new Sections_elements;
+	  this->saw_sections_clause_ = true;
+	}
+
       Sections_element* p = new Sections_element_dot_assignment(val);
       this->sections_elements_->push_back(p);
     }
@@ -2818,10 +2851,52 @@ Script_sections::set_section_addresses(Symbol_table* symtab, Layout* layout)
   // For a relocatable link, we implicitly set dot to zero.
   uint64_t dot_value = 0;
   uint64_t load_address = 0;
+
+  // Check to see if we want to use any of -Ttext, -Tdata and -Tbss options
+  // to set section addresses.  If the script has any SEGMENT_START
+  // expression, we do not set the section addresses.
+  bool use_tsection_options =
+    (!this->saw_segment_start_expression_
+     && (parameters->options().user_set_Ttext()
+	 || parameters->options().user_set_Tdata()
+	 || parameters->options().user_set_Tbss()));
+
   for (Sections_elements::iterator p = this->sections_elements_->begin();
        p != this->sections_elements_->end();
        ++p)
-    (*p)->set_section_addresses(symtab, layout, &dot_value, &load_address);
+    {
+      Output_section* os = (*p)->get_output_section();
+
+      // Handle -Ttext, -Tdata and -Tbss options.  We do this by looking for
+      // the special sections by names and doing dot assignments. 
+      if (use_tsection_options
+	  && os != NULL
+	  && (os->flags() & elfcpp::SHF_ALLOC) != 0)
+	{
+	  uint64_t new_dot_value = dot_value;
+
+	  if (parameters->options().user_set_Ttext()
+	      && strcmp(os->name(), ".text") == 0)
+	    new_dot_value = parameters->options().Ttext();
+	  else if (parameters->options().user_set_Tdata()
+	      && strcmp(os->name(), ".data") == 0)
+	    new_dot_value = parameters->options().Tdata();
+	  else if (parameters->options().user_set_Tbss()
+	      && strcmp(os->name(), ".bss") == 0)
+	    new_dot_value = parameters->options().Tbss();
+
+	  // Update dot and load address if necessary.
+	  if (new_dot_value < dot_value)
+	    gold_error(_("dot may not move backward"));
+	  else if (new_dot_value != dot_value)
+	    {
+	      dot_value = new_dot_value;
+	      load_address = new_dot_value;
+	    }
+	}
+
+      (*p)->set_section_addresses(symtab, layout, &dot_value, &load_address);
+    } 
 
   if (this->phdrs_elements_ != NULL)
     {
@@ -3019,7 +3094,7 @@ Script_sections::create_segments(Layout* layout)
 	  is_current_seg_readonly = true;
 	}
 
-      current_seg->add_output_section(*p, seg_flags);
+      current_seg->add_output_section(*p, seg_flags, false);
 
       if (((*p)->flags() & elfcpp::SHF_WRITE) != 0)
 	is_current_seg_readonly = false;
@@ -3098,7 +3173,7 @@ Script_sections::create_note_and_tls_segments(
 	    Layout::section_flags_to_segment((*p)->flags());
 	  Output_segment* oseg = layout->make_output_segment(elfcpp::PT_NOTE,
 							     seg_flags);
-	  oseg->add_output_section(*p, seg_flags);
+	  oseg->add_output_section(*p, seg_flags, false);
 
 	  // Incorporate any subsequent SHT_NOTE sections, in the
 	  // hopes that the script is sensible.
@@ -3107,7 +3182,7 @@ Script_sections::create_note_and_tls_segments(
 		 && (*pnext)->type() == elfcpp::SHT_NOTE)
 	    {
 	      seg_flags = Layout::section_flags_to_segment((*pnext)->flags());
-	      oseg->add_output_section(*pnext, seg_flags);
+	      oseg->add_output_section(*pnext, seg_flags, false);
 	      p = pnext;
 	      ++pnext;
 	    }
@@ -3122,14 +3197,14 @@ Script_sections::create_note_and_tls_segments(
 	    Layout::section_flags_to_segment((*p)->flags());
 	  Output_segment* oseg = layout->make_output_segment(elfcpp::PT_TLS,
 							     seg_flags);
-	  oseg->add_output_section(*p, seg_flags);
+	  oseg->add_output_section(*p, seg_flags, false);
 
 	  Layout::Section_list::const_iterator pnext = p + 1;
 	  while (pnext != sections->end()
 		 && ((*pnext)->flags() & elfcpp::SHF_TLS) != 0)
 	    {
 	      seg_flags = Layout::section_flags_to_segment((*pnext)->flags());
-	      oseg->add_output_section(*pnext, seg_flags);
+	      oseg->add_output_section(*pnext, seg_flags, false);
 	      p = pnext;
 	      ++pnext;
 	    }
@@ -3283,7 +3358,7 @@ Script_sections::attach_sections_using_phdrs_clause(Layout* layout)
 
 	      elfcpp::Elf_Word seg_flags =
 		Layout::section_flags_to_segment(os->flags());
-	      r->second->add_output_section(os, seg_flags);
+	      r->second->add_output_section(os, seg_flags, false);
 
 	      if (r->second->type() == elfcpp::PT_LOAD)
 		{

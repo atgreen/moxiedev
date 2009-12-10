@@ -1,6 +1,390 @@
+2009-12-09  Alan Modra  <amodra@bigpond.net.au>
+
+	PR ld/11012
+	* emulparams/elf64ppc.sh (OTHER_GOT_RELOC_SECTIONS): Move .rela.opd ..
+	(INITIAL_RELOC_SECTIONS): .. to here.  New define.
+	* scripttempl/elf.sc: Expand INITIAL_RELOC_SECTIONS.
+
+2009-12-04  Jie Zhang  <jie.zhang@analog.com>
+
+	* ld.texinfo: Make it clear that --nmagic disables linking
+	against shared libraries.
+
+2009-11-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* configure: Regenerate.
+
+2009-11-30  Alan Modra  <amodra@bigpond.net.au>
+
+	PR ld/11006
+	* lexsup.c (parse_args): Allow nested --start-group, --end-group.
+
+2009-11-27  Tristan Gingold  <gingold@adacore.com>
+
+	* pe-dll.c (pe_implied_import_dll): Return early if there is no
+	export entries.
+
+2009-11-26  Nick Clifton  <nickc@redhat.com>
+
+	PR ld/10956
+	* ld.h (struct args_type): Rename 'relax' field to
+	'disable_target_specific_optimizations' and turn it into a
+	tri-state variable.
+	(RELAXATION_DISABLED_BY_DEFAULT): New macro.
+	(RELAXATION_DISABLED_BY_USER): New macro.
+	(RELAXATION_ENABLED): New macro.
+	(DISABLE_RELAXATION): New macro.
+	(ENABLE_RELAXATION): New macro.
+	* lexsup (enum option_values): Add OPTION_NO_RELAX.
+	(struct ld_options): Add --no-relax.
+	(parse_args): Handle OPTION_NO_RELAX.  Use DISABLE_RELAXATION and
+	ENABLE_RELAXATION macros.
+	* ldlang.c (lang_relax_sections): Use RELAXATION_ENABLED macro.
+	(lang_process): Likewise.
+	* ldmain.c (main): Initialise
+	disable_target_specific_optimizations field.
+	(multiple_definition): Use RELAXATION_ENABLED macro.
+	* ld.texinfo: Document new command line option.
+	* emultempl/alphaelf.em: Remove --no-relax option.
+	(before_allocation): Test RELAXATION_DISABLED_BY_USER macro.
+	Use ENABLE_RELAXATION macro.
+	* emultempl/avrelf.em: (after_allocation): Test RELAXATION_ENABLED
+	macro.
+	* emultempl/cr16elf.em: Remove --no-relax option.
+	(before_allocation): Test RELAXATION_DISABLED_BY_USER macro.
+	Use ENABLE_RELAXATION macro.
+	* emultempl/crxelf.em: Remove --no-relax option.
+	(before_allocation): Test RELAXATION_DISABLED_BY_USER macro.
+	Use ENABLE_RELAXATION macro.
+	* emultempl/mmix-elfnmmo.em: (before_allocation): Use
+	ENABLE_RELAXATION macro.
+	* emultempl/needrelax.em: (before_allocation): Use
+	ENABLE_RELAXATION macro.
+	* emultempl/ppc32elf.em: (before_allocation): Test
+	RELAXATION_DISABLED_BY_DEFAULT macro. Use
+	ENABLE_RELAXATION macro.
+	* emultempl/sh64elf.em: (before_allocation): Test
+	RELAXATION_ENABLED macro. Use DISABLE_RELAXATION macro.
+	* emultempl/xtensaelf.em: Remove --no-relax option.
+	(before_allocation): Test RELAXATION_ENABLED macro.
+	Use ENABLE_RELAXATION macro.
+	
+2009-11-25  Kai Tietz  <kai.tietz@onevision.com>
+
+	* scripttempl/pe.sc: (.note.GNU-stack): Mark as discardable.
+	(.gnu.lto_*): Likewise.
+	* scripttempl/pep.sc: (.note.GNU-stack): Mark as discardable.
+	(.gnu.lto_*): Likewise.
+
+2009-11-23  Paul Brook  <paul@codesourcery.com>
+
+	* ldexp.c: Copy symbol type for simple assignments.
+
+2009-11-20  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* emulparams/armelf.sh (OTHER_READONLY_SECTIONS)
+	<__exidx_start, __exidx_end>: Use PROVIDE_HIDDEN.
+	* emulparams/armelf_linux_eabi.sh (OTHER_READONLY_SECTIONS)
+	<__exidx_start, __exidx_end>: Likewise.
+	* emulparams/armsymbian.sh (OTHER_READONLY_SECTIONS)
+	<.ARM.exidx$$Base, __exidx_start, __exidx_end, .ARM.exidx$$Limit>:
+	Likewise.
+
+2009-11-19  Matthias Klose  <doko@ubuntu.com>
+
+	PR ld/9863
+	* emulparams/armelf_linux.sh (DATA_START_SYMBOLS): Use PROVIDE
+	with __data_start.
+
+2009-11-19  Ben Elliston  <bje@au.ibm.com>
+
+	* ldlex.l: Enable nounput flex option.
+
+2009-11-15  Kai Tietz  <kai.tietz@onevision.com>
+
+	* pe-dll.c (pe_undef_alias_cdecl_match): New function.
+	(pe_find_cdecl_alias_match): New function.
+	(pe_process_import_defs): Add matching for import symbols
+	declared as cdecl for fastcall/stdcall.
+	* emultempl/pe.em (pe_undef_cdecl_match): Treat fastcall
+	symbols, too.
+	(pe_fixup_stdcalls): Likewise.
+	(gld_XXX_after_open): Redo scanning for imported
+	fastcall/stdcall symbols as cdecl one.
+	* emultempl/pep.em (pep_undef_cdecl_match): Treat fastcall
+	symbols, too.
+	(pep_fixup_stdcalls): Likewise.
+	(gld_XXX_after_open): Redo scanning for imported
+	fastcall/stdcall symbols as cdecl one.
+
+2009-11-11  Nick Clifton  <nickc@redhat.com>
+
+	* po/id.po: Updated Indonesian translation.
+
+2009-11-11  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* configure.in: Call ACX_LARGEFILE.  Stop calling AC_SYS_LARGEFILE.
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+
+2009-11-10  Nick Clifton  <nickc@redhat.com>
+
+	PR ld/10864
+	* ld.texinfo (Entry Point): Mention that the default entry symbol
+	is not 'start' on some targets.
+
+2009-11-06  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10912
+	* ldmain.c (add_DT_NEEDED_for_dynamic): Default to TRUE.
+
+2009-11-06  Kai Tietz  <kai.tietz@onevision.com>
+
+	* pe.em (DEFAULT_PSEUDO_RELOC_VERSION): New macro.
+	(gld_XXX_before_parse): Set pseudo-relocation default
+	version to DEFAULT_PSEUDO_RELOC_VERSION.
+	(gldXXX_handle_option): Likewise.
+
+
+2009-11-05  Nick Clifton  <nickc@redhat.com>
+
+	* lexsup.c: Rename --add-needed to --copy-dt-needed-entries.
+	* ldlang.h (struct lang_input_statement_struct): Rename add_needed
+	to add_DT_NEEDED_for_dynamic.  Rename as_needed to
+	add_DT_NEEDED_for_regular.
+	* ldlang.c: Likewise.
+	* ldlang.h: Likewise.
+	* ldlang.c: Use the new variable names.
+	* ldgram.y: Likewise.
+	* emultempl/elf32.em: Likewise.
+	* ld.texinfo: Document the renamed option.  Also mention its
+	affect on the resolution of dynamic symbols.
+	* NEWS: Mention the changed option name.
+
+2009-11-04  Kai Tietz  <kai.tietz@onevision.com>
+
+	* emulparams/arm_epoc_pe.sh: Remove ENTRY.
+	* emulparams/arm_wince_pe.sh: Likewise.
+	* emulparams/i386pe.sh: Likewise.
+	* emulparams/i386pe_posix.sh: Likewise.
+	* emulparams/mcorepe.sh: Likewise.
+	* emulparams/mipspe.sh: Likewise.
+	* emulparams/ppcpe.sh: Likewise.
+	* emulparams/armpe.sh: Likewise.
+	* emulparams/i386pep.sh: Likewise.
+	* emulparams/shpe.sh: Likewise.
+	Additionally cleaned up double-defined
+	variables SUBSYSTEM and INITIAL_SYMBOL_CHAR.
+	* emultempl/pe.em: Remove use of ENTRY.
+	(pe_subsystem): New local variable.
+	(gld_XXX_before_parse): Don't set default
+	entry point here.
+	(set_entry_point): New function to set entry
+	point.
+	(set_pe_subsystem): Remove code for entry point.
+	(gld_XXX_after_parse): Use set_entry_point here.
+	* emultempl/pep.em: Likewise.
+
+2009-10-29  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* emulparams/vxworks.sh (OTHER_READONLY_SECTIONS): Move into ...
+	(OTHER_READWRITE_SECTIONS): ... here.
+
+2009-10-28  Kai Tietz  <kai.tietz@onevision.com>
+
+	* emultempl/pep.em (U): Define underscore macro.
+	(init): Use for __ImageBase U macro.
+
+2009-10-23  Kai Tietz  <kai.tietz@onevision.com>
+
+	* deffile.h (def_file_export): New member its_name.
+	(def_file_import): Likewise.
+	(def_file_add_export): Add argument its_name.
+	(def_file_add_import): Likewise.
+	* deffilep.y (def_exports): Add argument its_name.
+	(def_import): Likewise.
+	(EQUAL): Add new token for '=='.
+	(opt_equalequal_name): New rule.
+	(expline): Add rule opt_equalequal_name.
+	(impline): Likewise.
+	(def_file_free): Free for exports and imports
+	the optional member its_name.
+	(def_lex): Add scan of '==' as EQUAL.
+	* pe-dll.c (pe_export_sort): Sort for its_name too.
+	(process_def_file_and_drectve): Adjust calls to
+	def_file_add_export.
+	(generate_edata): Take its_name in account.
+	(make_one): Likewise.
+	(pe_process_import_defs): Likewise.
+	(pe_dll_generate_def_file): Add print of new '==' option.
+	* ld.texinfo: Extend documentation about .def file syntax.
+	* NEWS: Mention new feature.
+
+2009-10-23  Kai Tietz  <kai.tietz@onevision.com>
+
+	* deffilep.y (def_lex): Allow '<' and '>' characters in identifier
+	strings.
+
+2009-10-23  Ryan Mansfield  <rmansfield@qnx.com>
+
+	PR ld/10489
+	* emultempl/elf32.em (gld${EMULATION_NAME}_search_needed): Handle
+	drive specifiers for DOS based filesystems in rpath-link strings.
+
+2009-10-19  Nick Clifton  <nickc@redhat.com>
+
+	* Makefile.am: Remove spurious sanitization marker.
+	* Makefile.in: Regenerate.
+
+2009-10-16  Dmitry Gorbachev  <d.g.gorbachev@gmail.com>
+
+	* emultempl/pe.em (OPTION_EXCLUDE_ALL_SYMBOLS): New macro.
+	(gld${EMULATION_NAME}_add_options): Add new --exclude-all-symbols option
+	to exclude all symbols from automatic export.
+	(gld_${EMULATION_NAME}_list_options): Describe it.
+	(gld${EMULATION_NAME}_handle_option): Handle it.
+	* emultempl/pep.em: Likewise to all the above.
+	* pe-dll.c (pe_dll_exclude_all_symbols): New variable.
+	(process_def_file_and_drectve): Use it.
+	* pe-dll.h (pe_dll_exclude_all_symbols): Declare.
+	* pep-dll.c (pep_dll_exclude_all_symbols): Define pep_ alias.
+	* pep-dll.h (pe_dll_exclude_all_symbols): Declare.
+	* NEWS: Mention the new feature.
+	* ld.texinfo: Document the new command line switch.
+
+2009-10-14  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* ldlex.l (yy_input): Remove second argument and return the value
+	instead.
+	(YY_INPUT): Adjust.
+
+2009-10-14  Alan Modra  <amodra@bigpond.net.au>
+
+	* emultempl/netbsd.em (gldnetbsd_before_parse): Typo fix.
+
+2009-10-14  Ryan Mansfield  <rmansfield@qnx.com>
+
+	* ldlang.c (load_symbols): Set whole_archive from entry when
+	parsing a linker script.
+
+2009-10-10  Alan Modra  <amodra@bigpond.net.au>
+
+	* scripttempl/elf32cr16.sc: Revert 2009-09-28 changes.
+	* scripttempl/elf32cr16c.sc: Likewise.
+	* scripttempl/elf32crx.sc: Likewise.
+	* scripttempl/tic54xcoff.sc: Likewise.
+	* scripttempl/aix.sc: Likewise.
+	* scripttempl/avr.sc: Likewise.
+	* scripttempl/elf32msp430.sc: Likewise.
+	* scripttempl/elf32msp430_3.sc: Likewise.
+	* scripttempl/elf32sh-symbian.sc: Likewise.
+	* scripttempl/elf_chaos.sc: Likewise.
+	* scripttempl/elfi370.sc: Likewise.
+	* scripttempl/nw.sc: Likewise.
+	* scripttempl/psos.sc: Likewise.
+	* scripttempl/armbpabi.sc: Likewise.
+	* scripttempl/elf.sc: Likewise.
+	* scripttempl/elf64hppa.sc: Likewise.
+	* scripttempl/elfd10v.sc: Likewise.
+	* scripttempl/elfd30v.sc: Likewise.
+	* scripttempl/elfm68hc11.sc: Likewise.
+	* scripttempl/elfm68hc12.sc: Likewise.
+	* scripttempl/elfmicroblaze.sc: Likewise.
+	* scripttempl/elfxtensa.sc: Likewise.
+	* scripttempl/iq2000.sc: Likewise.
+	* scripttempl/mep.sc: Likewise.
+	* scripttempl/xstormy16.sc: Likewise.
+
+2009-10-09  Alan Modra  <amodra@bigpond.net.au>
+
+	PR ld/10749
+	* ldlang.c (lang_size_sections_1): Zero section vmas only for COFF.
+
+2009-10-08  Alan Modra  <amodra@bigpond.net.au>
+
+	PR ld/10744
+	* ldlang.c (lang_new_phdr): Allow FILEHDR/PHDRS on more than the
+	first PT_LOAD header.
+	* ld.texinfo: Update.
+
+2009-10-06  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* ldlang.c (lang_new_phdr): Check PHDRS and FILEHDR in loadable
+	segments do not appear after a different loadable segment.
+	* ld.texinfo (PHDRS): Document order of processing segments.
+	Document where PHDRS and FILEHDR may appear.
+
+2009-10-03  Alan Modra  <amodra@bigpond.net.au>
+
+	* emultempl/ppc32elf.em (emit_stub_syms): Init to -1.
+	(ppc_after_open): Set emit_stubs_syms by default when shared.
+	(OPTION_NO_STUBSYMS): Define.
+	(PARSE_AND_LIST_LONGOPTS, PARSE_AND_LIST_OPTIONS,
+	PARSE_AND_LIST_ARGS_CASES): Handle --no-emit-stub-syms.
+	* emultempl/ppc64elf.em (emit_stub_syms): Init to -1.
+	(gld${EMULATION_NAME}_finish): Set emit_stubs_syms by default.
+	(OPTION_NO_STUBSYMS): Define.
+	(PARSE_AND_LIST_LONGOPTS, PARSE_AND_LIST_OPTIONS,
+	PARSE_AND_LIST_ARGS_CASES): Handle --no-emit-stub-syms.
+
+2009-09-29  Joel Sherrill <joel.sherrill@oarcorp.com>
+
+	* emulparams/m68kelf.sh (NOP): Use 0x4e71 (nop) rather than 0x4e75
+	(rts).
+
+2009-09-29  DJ Delorie  <dj@redhat.com>
+
+	* Makefile.am: Add rules to build RX emulation.
+	* configure.tgt: Likewise.
+	* NEWS: Mention support for RX architecture.
+	* Makefile.in: Regenerate.
+	* emulparams/elf32rx.sh: New file.
+	* emultempl/rxelf.em: New file.
+
+2009-09-29  Alan Modra  <amodra@bigpond.net.au>
+
+	* ldlang.c (lang_size_sections_1): Allow scripts to specify a
+	non-zero vma even when relocatable.
+
+2009-09-28  Alan Modra  <amodra@bigpond.net.au>
+
+	* scripttempl/elf32cr16.sc: Emit empty script for ld -r and ld -Ur.
+	* scripttempl/elf32cr16c.sc: Likewise.
+	* scripttempl/elf32crx.sc: Likewise.
+	* scripttempl/tic54xcoff.sc: Likewise.
+	* scripttempl/aix.sc: Delete ${RELOCATING-0}.
+	* scripttempl/avr.sc: Likewise.
+	* scripttempl/elf32msp430.sc: Likewise.
+	* scripttempl/elf32msp430_3.sc: Likewise.
+	* scripttempl/elf32sh-symbian.sc: Likewise.
+	* scripttempl/elf_chaos.sc: Likewise.
+	* scripttempl/elfi370.sc: Likewise.
+	* scripttempl/nw.sc: Likewise.
+	* scripttempl/psos.sc: Likewise.
+	* scripttempl/armbpabi.sc: Delete ${RELOCATING-0} and ${CONSTRUCTING-0}.
+	* scripttempl/elf.sc: Likewise.
+	* scripttempl/elf64hppa.sc: Likewise.
+	* scripttempl/elfd10v.sc: Likewise.
+	* scripttempl/elfd30v.sc: Likewise.
+	* scripttempl/elfm68hc11.sc: Likewise.
+	* scripttempl/elfm68hc12.sc: Likewise.
+	* scripttempl/elfmicroblaze.sc: Likewise.
+	* scripttempl/elfxtensa.sc: Likewise.
+	* scripttempl/iq2000.sc: Likewise.
+	* scripttempl/mep.sc: Likewise.
+	* scripttempl/xstormy16.sc: Likewise.
+
+2009-09-27  Christopher Faylor  <me+cygwin@cgf.cx>
+
+	PR ld/10634
+	* ldlang.c (lang_size_sections_1): Always force output vma to zero for
+	relocatable sections.
+	(lang_size_sections_1): Revert previous COFF-only accommodation for
+	relocatable sections.
+
 2009-09-25  Martin Thuresson  <martint@google.com>
 
-	Update soruces to make arm targets compile cleanly with
+	Update sources to make arm targets compile cleanly with
 	-Wc++-compat:
 	* emultempl/armelf.em: Add casts.
 
@@ -50,7 +434,7 @@
 
 2009-09-13  Alan Modra  <amodra@bigpond.net.au>
 
-     	PR ld/6766
+	PR ld/6766
 	* lexsup.c (parse_args <-e>): Revert 2009-03-18 change.
 	* ldemul.c (after_parse_default): Add entry symbol as undef.
 	* emultempl/alphaelf.em (alpha_after_parse): Call after_parse_default.
@@ -350,7 +734,7 @@
 
 2009-08-04  Alan Modra  <amodra@bigpond.net.au>
 
-   	PR 10474
+	PR 10474
 	* emultempl/ppc32elf.em (ppc_before_allocation): Test rawsize,
 	not size, after lang_reset_memory_regions.
 
@@ -671,7 +1055,7 @@
 
 2009-04-25  Alan Modra  <amodra@bigpond.net.au>
 
-     	PR 10061
+	PR 10061
 	* genscripts.sh: Don't pass $EMULATION_NAME as $CUSTOMIZER_SCRIPT
 	param.
 

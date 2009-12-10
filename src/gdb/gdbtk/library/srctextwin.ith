@@ -1,5 +1,5 @@
 # SrcTextWin class definition, for Insight
-# Copyright (C) 1997, 1998, 1999, 2001 Red Hat, Inc.
+# Copyright (C) 1997, 1998, 1999, 2001, 2009 Red Hat, Inc.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License (GPL) as published by
@@ -160,4 +160,8 @@ itcl::class SrcTextWin {
 
   protected common TimeOut 100 ;# The timeout value for variable balloon help
 
+  # Executabe line search limit: When an executable changes, we might
+  # have a breakpoint at a location that is no longer valid.  This variable
+  # limits the search for the "nearest" (next) executable line.
+  protected common ExecutableLineLimit 100
 }

@@ -80,7 +80,6 @@ case "${target_optspace}:${host}" in
     newlib_cflags="${newlib_cflags} -Os"
     ;;
   no:* | :*)
-    newlib_cflags="${newlib_cflags} -O2"
     ;;
 esac
 
@@ -166,7 +165,7 @@ case "${host_cpu}" in
 	;;
   m32c)
 	machine_dir=m32c
-	newlib_cflags="${newlib_cflags} -DPREFER_SIZE_OVER_SPEED -DABORT_PROVIDED -DSMALL_MEMORY"
+	newlib_cflags="${newlib_cflags} -DPREFER_SIZE_OVER_SPEED -DSMALL_MEMORY"
 	;;
 
   m32r*)
@@ -192,6 +191,9 @@ case "${host_cpu}" in
 	newlib_cflags="${newlib_cflags} -m88110"
 	;;
   mcore)
+	;;
+  microblaze)
+	machine_dir=microblaze
 	;;
   mep)
 	machine_dir=mep
@@ -220,6 +222,11 @@ case "${host_cpu}" in
 	;;
   powerpc*)
 	machine_dir=powerpc
+	;;
+  rx)
+	machine_dir=rx
+	default_newlib_io_long_long="yes"
+	newlib_cflags="${newlib_cflags} -ffunction-sections -fdata-sections "
 	;;
   sh | sh64)
 	machine_dir=sh
@@ -446,6 +453,9 @@ case "${host}" in
 	default_newlib_io_long_long="yes"
 	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES"
 	;;
+  microblaze-*-*)
+	machine_dir=microblaze
+	;;
   mips*-dec-*)
 	sys_dir=decstation
 	;;
@@ -543,9 +553,9 @@ case "${host}" in
   *-*-rtems*)
 	default_newlib_io_long_long="yes"
 	default_newlib_io_c99_formats="yes"
-	newlib_cflags="${newlib_cflags} -DMALLOC_PROVIDED -DEXIT_PROVIDED -DMISSING_SYSCALL_NAMES -DSIGNAL_PROVIDED -DREENTRANT_SYSCALLS_PROVIDED -DHAVE_NANOSLEEP -DHAVE_FCNTL"
+	newlib_cflags="${newlib_cflags} -DMALLOC_PROVIDED -DEXIT_PROVIDED -DSIGNAL_PROVIDED -DREENTRANT_SYSCALLS_PROVIDED -DHAVE_NANOSLEEP -DHAVE_BLKSIZE -DHAVE_FCNTL -DHAVE_ASSERT_FUNC"
         # turn off unsupported items in posix directory 
-	newlib_cflags="${newlib_cflags} -D_NO_GETLOGIN -D_NO_GETPWENT -D_NO_GETUT -D_NO_GETPASS -D_NO_SIGSET"
+	newlib_cflags="${newlib_cflags} -D_NO_GETLOGIN -D_NO_GETPWENT -D_NO_GETUT -D_NO_GETPASS -D_NO_SIGSET -D_NO_WORDEXP -D_NO_POPEN"
 	;;
 # VxWorks supplies its own version of malloc, and the newlib one
 # doesn't work because VxWorks does not have sbrk.
@@ -648,7 +658,7 @@ case "${host}" in
 	;;
   m32c-*-*)
 	default_newlib_io_long_long="yes"
-	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES"
+	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES -DABORT_PROVIDED"
 	syscall_dir=
   	;;
   m32r-*-*)
@@ -668,6 +678,10 @@ case "${host}" in
 	;;
   mcore-*-*)
 	syscall_dir=syscalls
+	;;
+  microblaze-*-*)
+   	default_newlib_io_long_long="yes"
+ 	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES -DSMALL_MEMORY -D_REENT_SMALL"
 	;;
   mips64vr*-*-*)
 	default_newlib_io_long_long="yes"

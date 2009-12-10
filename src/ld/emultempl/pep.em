@@ -1,6 +1,5 @@
 # This shell script emits a C file. -*- C -*-
 # It does some substitutions.
-test -z "${ENTRY}" && ENTRY="_mainCRTStartup"
 if [ -z "$MACHINE" ]; then
   OUTPUT_ARCH=${ARCH}
 else
@@ -98,9 +97,11 @@ fragment <<EOF
 #define PE_DEF_SECTION_ALIGNMENT	0x00000400
 #endif
 
+#define U(S) ${INITIAL_SYMBOL_CHAR} S
 
 static struct internal_extra_pe_aouthdr pep;
 static int dll;
+static int pep_subsystem = ${SUBSYSTEM};
 static flagword real_flags = IMAGE_FILE_LARGE_ADDRESS_AWARE;
 static int support_old_code = 0;
 static lang_assignment_statement_type *image_base_statement = 0;
@@ -126,12 +127,6 @@ gld_${EMULATION_NAME}_before_parse (void)
   config.has_shared = 1;
   link_info.pei386_auto_import = -1;
   link_info.pei386_runtime_pseudo_reloc = 2; /* Use by default version 2.  */
-
-#if (PE_DEF_SUBSYSTEM == 9) || (PE_DEF_SUBSYSTEM == 2)
-  lang_default_entry ("_WinMainCRTStartup");
-#else
-  lang_default_entry ("${ENTRY}");
-#endif
 #endif
 }
 
@@ -158,6 +153,7 @@ enum options
   OPTION_OUT_DEF,
   OPTION_EXPORT_ALL,
   OPTION_EXCLUDE_SYMBOLS,
+  OPTION_EXCLUDE_ALL_SYMBOLS,
   OPTION_KILL_ATS,
   OPTION_STDCALL_ALIASES,
   OPTION_ENABLE_STDCALL_FIXUP,
@@ -227,6 +223,7 @@ gld${EMULATION_NAME}_add_options
     {"output-def", required_argument, NULL, OPTION_OUT_DEF},
     {"export-all-symbols", no_argument, NULL, OPTION_EXPORT_ALL},
     {"exclude-symbols", required_argument, NULL, OPTION_EXCLUDE_SYMBOLS},
+    {"exclude-all-symbols", no_argument, NULL, OPTION_EXCLUDE_ALL_SYMBOLS},
     {"exclude-libs", required_argument, NULL, OPTION_EXCLUDE_LIBS},
     {"exclude-modules-for-implib", required_argument, NULL, OPTION_EXCLUDE_MODULES_FOR_IMPLIB},
     {"kill-at", no_argument, NULL, OPTION_KILL_ATS},
@@ -291,7 +288,7 @@ static definfo init[] =
 #define DLLOFF 1
   {&dll, sizeof(dll), 0, "__dll__", 0},
 #define MSIMAGEBASEOFF	2
-  D(ImageBase,"___ImageBase", NT_EXE_IMAGE_BASE),
+  D(ImageBase, U("__ImageBase"), NT_EXE_IMAGE_BASE),
   D(SectionAlignment,"__section_alignment__", PE_DEF_SECTION_ALIGNMENT),
   D(FileAlignment,"__file_alignment__", PE_DEF_FILE_ALIGNMENT),
   D(MajorOperatingSystemVersion,"__major_os_version__", 4),
@@ -334,6 +331,7 @@ gld_${EMULATION_NAME}_list_options (FILE *file)
   fprintf (file, _("  --disable-stdcall-fixup            Don't link _sym to _sym@nn\n"));
   fprintf (file, _("  --enable-stdcall-fixup             Link _sym to _sym@nn without warnings\n"));
   fprintf (file, _("  --exclude-symbols sym,sym,...      Exclude symbols from automatic export\n"));
+  fprintf (file, _("  --exclude-all-symbols              Exclude all symbols from automatic export\n"));
   fprintf (file, _("  --exclude-libs lib,lib,...         Exclude libraries from automatic export\n"));
   fprintf (file, _("  --exclude-modules-for-implib mod,mod,...\n"));
   fprintf (file, _("                                     Exclude objects, archive members from auto\n"));
@@ -399,36 +397,90 @@ set_pep_name (char *name, bfd_vma val)
   abort ();
 }
 
-
 static void
-set_pep_subsystem (void)
+set_entry_point (void)
 {
-  const char *sver;
   const char *entry;
   const char *initial_symbol_char;
-  char *end;
-  int len;
   int i;
-  int subsystem;
-  unsigned long temp_subsystem;
+
   static const struct
     {
-      const char *name;
       const int value;
       const char *entry;
     }
   v[] =
     {
-      { "native",  1, "NtProcessStartup" },
-      { "windows", 2, "WinMainCRTStartup" },
-      { "console", 3, "mainCRTStartup" },
-      { "posix",   7, "__PosixProcessStartup"},
-      { "wince",   9, "_WinMainCRTStartup" },
-      { "xbox",   14, "mainCRTStartup" },
-      { NULL, 0, NULL }
+      { 1, "NtProcessStartup"  },
+      { 2, "WinMainCRTStartup" },
+      { 3, "mainCRTStartup"    },
+      { 7, "__PosixProcessStartup" },
+      { 9, "WinMainCRTStartup" },
+      {14, "mainCRTStartup"    },
+      { 0, NULL          }
     };
+
   /* Entry point name for arbitrary subsystem numbers.  */
   static const char default_entry[] = "mainCRTStartup";
+
+  if (link_info.shared || dll)
+    {
+      entry = "DllMainCRTStartup";
+    }
+  else
+    {
+      for (i = 0; v[i].entry; i++)
+        if (v[i].value == pep_subsystem)
+          break;
+
+      /* If no match, use the default.  */
+      if (v[i].entry != NULL)
+        entry = v[i].entry;
+      else
+        entry = default_entry;
+    }
+
+  initial_symbol_char = ${INITIAL_SYMBOL_CHAR};
+  if (*initial_symbol_char != '\0')
+    {
+      char *alc_entry;
+
+      /* lang_default_entry expects its argument to be permanently
+	 allocated, so we don't free this string.  */
+      alc_entry = xmalloc (strlen (initial_symbol_char)
+			   + strlen (entry)
+			   + 1);
+      strcpy (alc_entry, initial_symbol_char);
+      strcat (alc_entry, entry);
+      entry = alc_entry;
+    }
+
+  lang_default_entry (entry);
+}
+
+static void
+set_pep_subsystem (void)
+{
+  const char *sver;
+  char *end;
+  int len;
+  int i;
+  unsigned long temp_subsystem;
+  static const struct
+    {
+      const char *name;
+      const int value;
+    }
+  v[] =
+    {
+      { "native",  1 },
+      { "windows", 2 },
+      { "console", 3 },
+      { "posix",   7 },
+      { "wince",   9 },
+      { "xbox",   14 },
+      { NULL, 0 }
+    };
 
   /* Check for the presence of a version number.  */
   sver = strchr (optarg, ':');
@@ -455,14 +507,8 @@ set_pep_subsystem (void)
 	if (v[i].value == (int) temp_subsystem)
 	  break;
 
-      /* If no match, use the default.  */
-      if (v[i].name != NULL)
-	entry = v[i].entry;
-      else
-	entry = default_entry;
-
       /* Use this subsystem.  */
-      subsystem = (int) temp_subsystem;
+      pep_subsystem = (int) temp_subsystem;
     }
   else
     {
@@ -478,28 +524,10 @@ set_pep_subsystem (void)
 	  return;
 	}
 
-      entry = v[i].entry;
-      subsystem = v[i].value;
+      pep_subsystem = v[i].value;
     }
 
-  set_pep_name ("__subsystem__", subsystem);
-
-  initial_symbol_char = ${INITIAL_SYMBOL_CHAR};
-  if (*initial_symbol_char != '\0')
-    {
-      char *alc_entry;
-
-      /* lang_default_entry expects its argument to be permanently
-	 allocated, so we don't free this string.  */
-      alc_entry = xmalloc (strlen (initial_symbol_char)
-			   + strlen (entry)
-			   + 1);
-      strcpy (alc_entry, initial_symbol_char);
-      strcat (alc_entry, entry);
-      entry = alc_entry;
-    }
-
-  lang_default_entry (entry);
+  set_pep_name ("__subsystem__", pep_subsystem);
 
   return;
 }
@@ -608,6 +636,9 @@ gld${EMULATION_NAME}_handle_option (int optc)
       break;
     case OPTION_EXCLUDE_SYMBOLS:
       pep_dll_add_excludes (optarg, EXCLUDESYMS);
+      break;
+    case OPTION_EXCLUDE_ALL_SYMBOLS:
+      pep_dll_exclude_all_symbols = 1;
       break;
     case OPTION_EXCLUDE_LIBS:
       pep_dll_add_excludes (optarg, EXCLUDELIBS);
@@ -820,6 +851,8 @@ gld_${EMULATION_NAME}_after_parse (void)
     einfo (_("%P: warning: --export-dynamic is not supported for PE+ "
       "targets, did you mean --export-all-symbols?\n"));
 
+  set_entry_point ();
+  
   after_parse_default ();
 }
 
@@ -838,10 +871,13 @@ pep_undef_cdecl_match (struct bfd_link_hash_entry *h, void *inf)
 {
   int sl;
   char *string = inf;
+  const char *hs = h->root.string;
 
   sl = strlen (string);
   if (h->type == bfd_link_hash_defined
-      && strncmp (h->root.string, string, sl) == 0
+      && ((*hs == '@' && *string == '_'
+		   && strncmp (hs + 1, string + 1, sl - 1) == 0)
+		  || strncmp (hs, string, sl) == 0)
       && h->root.string[sl] == '@')
     {
       pep_undef_found_sym = h;
@@ -864,15 +900,19 @@ pep_fixup_stdcalls (void)
       {
 	char* at = strchr (undef->root.string, '@');
 	int lead_at = (*undef->root.string == '@');
-	/* For now, don't try to fixup fastcall symbols.  */
-
-	if (at && !lead_at)
+	if (lead_at)
+	  at = strchr (undef->root.string + 1, '@');
+	if (at || lead_at)
 	  {
 	    /* The symbol is a stdcall symbol, so let's look for a
 	       cdecl symbol with the same name and resolve to that.  */
-	    char *cname = xstrdup (undef->root.string /* + lead_at */);
+	    char *cname = xstrdup (undef->root.string);
+
+	    if (lead_at)
+	      *cname = '_';
 	    at = strchr (cname, '@');
-	    *at = 0;
+	    if (at)
+	      *at = 0;
 	    sym = bfd_link_hash_lookup (link_info.hash, cname, 0, 0, 1);
 
 	    if (sym && sym->type == bfd_link_hash_defined)
@@ -1145,6 +1185,11 @@ gld_${EMULATION_NAME}_after_open (void)
   pep_process_import_defs (link_info.output_bfd, &link_info);
 
   pep_find_data_imports ();
+
+  /* As possibly new symbols are added by imports, we rerun
+     stdcall/fastcall fixup here.  */
+  if (pep_enable_stdcall_fixup) /* -1=warn or 1=disable */
+    pep_fixup_stdcalls ();
 
 #ifndef TARGET_IS_i386pep
   if (link_info.shared)

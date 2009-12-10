@@ -25,6 +25,7 @@
 #include "gdb_wait.h"
 #include "charset-list.h"
 #include "vec.h"
+#include "environ.h"
 
 #include <stddef.h>
 #include "gdb_string.h"
@@ -102,17 +103,17 @@
 iconv_t
 iconv_open (const char *to, const char *from)
 {
-  /* We allow conversions from UCS-4BE, wchar_t, and the host charset.
+  /* We allow conversions from UTF-32BE, wchar_t, and the host charset.
      We allow conversions to wchar_t and the host charset.  */
-  if (strcmp (from, "UCS-4BE") && strcmp (from, "wchar_t")
+  if (strcmp (from, "UTF-32BE") && strcmp (from, "wchar_t")
       && strcmp (from, GDB_DEFAULT_HOST_CHARSET))
     return -1;
   if (strcmp (to, "wchar_t") && strcmp (to, GDB_DEFAULT_HOST_CHARSET))
     return -1;
 
-  /* Return 1 if we are converting from UCS-4BE, 0 otherwise.  This is
+  /* Return 1 if we are converting from UTF-32BE, 0 otherwise.  This is
      used as a flag in calls to iconv.  */
-  return !strcmp (from, "UCS-4BE");
+  return !strcmp (from, "UTF-32BE");
 }
 
 int
@@ -122,10 +123,10 @@ iconv_close (iconv_t arg)
 }
 
 size_t
-iconv (iconv_t ucs_flag, const char **inbuf, size_t *inbytesleft,
+iconv (iconv_t utf_flag, const char **inbuf, size_t *inbytesleft,
        char **outbuf, size_t *outbytesleft)
 {
-  if (ucs_flag)
+  if (utf_flag)
     {
       while (*inbytesleft >= 4)
 	{
@@ -193,7 +194,7 @@ iconv (iconv_t ucs_flag, const char **inbuf, size_t *inbytesleft,
 #endif
 
 #ifndef GDB_DEFAULT_TARGET_WIDE_CHARSET
-#define GDB_DEFAULT_TARGET_WIDE_CHARSET "UCS-4"
+#define GDB_DEFAULT_TARGET_WIDE_CHARSET "UTF-32"
 #endif
 
 static const char *auto_host_charset_name = GDB_DEFAULT_HOST_CHARSET;
@@ -705,6 +706,35 @@ find_charset_names (void)
 
 #else
 
+/* Return non-zero if LINE (output from iconv) should be ignored.
+   Older iconv programs (e.g. 2.2.2) include the human readable
+   introduction even when stdout is not a tty.  Newer versions omit
+   the intro if stdout is not a tty.  */
+
+static int
+ignore_line_p (const char *line)
+{
+  /* This table is used to filter the output.  If this text appears
+     anywhere in the line, it is ignored (strstr is used).  */
+  static const char * const ignore_lines[] =
+    {
+      "The following",
+      "not necessarily",
+      "the FROM and TO",
+      "listed with several",
+      NULL
+    };
+  int i;
+
+  for (i = 0; ignore_lines[i] != NULL; ++i)
+    {
+      if (strstr (line, ignore_lines[i]) != NULL)
+	return 1;
+    }
+
+  return 0;
+}
+
 static void
 find_charset_names (void)
 {
@@ -712,6 +742,15 @@ find_charset_names (void)
   char *args[3];
   int err, status;
   int fail = 1;
+  struct gdb_environ *iconv_env;
+
+  /* Older iconvs, e.g. 2.2.2, don't omit the intro text if stdout is not
+     a tty.  We need to recognize it and ignore it.  This text is subject
+     to translation, so force LANGUAGE=C.  */
+  iconv_env = make_environ ();
+  init_environ (iconv_env);
+  set_in_environ (iconv_env, "LANGUAGE", "C");
+  set_in_environ (iconv_env, "LC_ALL", "C");
 
   child = pex_init (0, "iconv", NULL);
 
@@ -719,14 +758,16 @@ find_charset_names (void)
   args[1] = "-l";
   args[2] = NULL;
   /* Note that we simply ignore errors here.  */
-  if (!pex_run (child, PEX_SEARCH | PEX_STDERR_TO_STDOUT, "iconv",
-		args, NULL, NULL, &err))
+  if (!pex_run_in_environment (child, PEX_SEARCH | PEX_STDERR_TO_STDOUT,
+			       "iconv", args, environ_vector (iconv_env),
+			       NULL, NULL, &err))
     {
       FILE *in = pex_read_output (child, 0);
 
       /* POSIX says that iconv -l uses an unspecified format.  We
 	 parse the glibc and libiconv formats; feel free to add others
 	 as needed.  */
+
       while (!feof (in))
 	{
 	  /* The size of buf is chosen arbitrarily.  */
@@ -740,6 +781,9 @@ find_charset_names (void)
 	  len = strlen (r);
 	  if (len <= 3)
 	    continue;
+	  if (ignore_line_p (r))
+	    continue;
+
 	  /* Strip off the newline.  */
 	  --len;
 	  /* Strip off one or two '/'s.  glibc will print lines like
@@ -751,15 +795,21 @@ find_charset_names (void)
 	  buf[len] = '\0';
 
 	  /* libiconv will print multiple entries per line, separated
-	     by spaces.  */
+	     by spaces.  Older iconvs will print multiple entries per line,
+	     indented by two spaces, and separated by ", "
+	     (i.e. the human readable form).  */
 	  start = buf;
 	  while (1)
 	    {
 	      int keep_going;
 	      char *p;
 
-	      /* Find the next space, or end-of-line.  */
-	      for (p = start; *p && *p != ' '; ++p)
+	      /* Skip leading blanks.  */
+	      for (p = start; *p && *p == ' '; ++p)
+		;
+	      start = p;
+	      /* Find the next space, comma, or end-of-line.  */
+	      for ( ; *p && *p != ' ' && *p != ','; ++p)
 		;
 	      /* Ignore an empty result.  */
 	      if (p == start)
@@ -782,6 +832,7 @@ find_charset_names (void)
     }
 
   pex_free (child);
+  free_environ (iconv_env);
 
   if (fail)
     {
@@ -818,8 +869,9 @@ _initialize_charset (void)
 #ifdef HAVE_LANGINFO_CODESET
   auto_host_charset_name = nl_langinfo (CODESET);
   /* Solaris will return `646' here -- but the Solaris iconv then
-     does not accept this.  */
-  if (!strcmp (auto_host_charset_name, "646"))
+     does not accept this.  Darwin (and maybe FreeBSD) may return "" here,
+     which GNU libiconv doesn't like (infinite loop).  */
+  if (!strcmp (auto_host_charset_name, "646") || !*auto_host_charset_name)
     auto_host_charset_name = "ASCII";
   target_charset_name = auto_host_charset_name;
 

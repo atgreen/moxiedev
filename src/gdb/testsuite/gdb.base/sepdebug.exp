@@ -61,6 +61,9 @@ gdb_exit
 gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
+if { $gdb_file_cmd_debug_info != "debug" } then {
+    fail "No debug information found."
+}
 
 if [target_info exists gdb_stub] {
     gdb_step_for_stub;
@@ -949,6 +952,23 @@ set debugfile "${objdir}/${subdir}/${testfile}.debug"
 test_different_dir debuglink "${objdir}/${subdir}" 0
 
 
+# Test CRC mismatch is reported.
+
+if {[build_executable sepdebug.exp sepdebug2 sepdebug2.c debug] != -1
+    && ![gdb_gnu_strip_debug ${objdir}/${subdir}/sepdebug2]} {
+
+    remote_exec build "cp ${debugfile} ${objdir}/${subdir}/.debug/sepdebug2.debug"
+
+    gdb_exit
+    gdb_start
+    gdb_reinitialize_dir $srcdir/$subdir
+
+    set escapedobjdirsubdir [string_to_regexp ${objdir}/${subdir}]
+
+    gdb_test "file ${objdir}/${subdir}/sepdebug2" "warning: the debug information found in \"${escapedobjdirsubdir}/\\.debug/sepdebug2\\.debug\" does not match \"${escapedobjdirsubdir}/sepdebug2\" \\(CRC mismatch\\)\\..*\\(no debugging symbols found\\).*" "CRC mismatch is reported"
+}
+
+
 # NT_GNU_BUILD_ID / .note.gnu.build-id test:
 
 set build_id_debug_filename [build_id_debug_filename_get $binfile]
@@ -974,6 +994,12 @@ if ![string compare $build_id_debug_filename ""] then {
     remote_exec build "mv $debugfile ${objdir}/${subdir}/${build_id_debug_filename}"
 
     test_different_dir build-id "${objdir}/${subdir}" $xfail
+
+    # Test also multiple directories can be specified.  Without the build-id
+    # reference GDB would find the separate debug info just at the same
+    # location as the executable file.
+
+    test_different_dir multiple-dirs "/doesnotexist:${objdir}/${subdir}" $xfail
 
     # Spare debug files may confuse testsuite runs in the future.
     remote_exec build "rm -f ${objdir}/${subdir}/${build_id_debug_filename}"

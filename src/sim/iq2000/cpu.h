@@ -2,22 +2,23 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002 Free Software Foundation, Inc.
+Copyright 1996-2009 Free Software Foundation, Inc.
 
 This file is part of the GNU simulators.
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 3 of the License, or
-(at your option) any later version.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3, or (at your option)
+   any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+   It is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+   License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
 
@@ -30,6 +31,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* Maximum number of instructions that can be executed in parallel.  */
 #define MAX_PARALLEL_INSNS 1
+
+/* The size of an "int" needed to hold an instruction word.
+   This is usually 32 bits, but some architectures needs 64 bits.  */
+typedef CGEN_INSN_INT CGEN_INSN_WORD;
+
+#include "cgen-engine.h"
 
 /* CPU state information.  */
 typedef struct {
@@ -271,7 +278,7 @@ struct scache {
   f_opcode = EXTRACT_LSB0_UINT (insn, 32, 31, 6); \
   f_rs = EXTRACT_LSB0_UINT (insn, 32, 25, 5); \
   f_rt = EXTRACT_LSB0_UINT (insn, 32, 20, 5); \
-  f_offset = ((((EXTRACT_LSB0_INT (insn, 32, 15, 16)) << (2))) + (((pc) + (4)))); \
+  f_offset = ((((EXTRACT_LSB0_SINT (insn, 32, 15, 16)) << (2))) + (((pc) + (4)))); \
 
 #define EXTRACT_IFMT_BBV_VARS \
   UINT f_opcode; \
@@ -284,7 +291,7 @@ struct scache {
   f_opcode = EXTRACT_LSB0_UINT (insn, 32, 31, 6); \
   f_rs = EXTRACT_LSB0_UINT (insn, 32, 25, 5); \
   f_rt = EXTRACT_LSB0_UINT (insn, 32, 20, 5); \
-  f_offset = ((((EXTRACT_LSB0_INT (insn, 32, 15, 16)) << (2))) + (((pc) + (4)))); \
+  f_offset = ((((EXTRACT_LSB0_SINT (insn, 32, 15, 16)) << (2))) + (((pc) + (4)))); \
 
 #define EXTRACT_IFMT_BGEZ_VARS \
   UINT f_opcode; \
@@ -297,7 +304,7 @@ struct scache {
   f_opcode = EXTRACT_LSB0_UINT (insn, 32, 31, 6); \
   f_rs = EXTRACT_LSB0_UINT (insn, 32, 25, 5); \
   f_rt = EXTRACT_LSB0_UINT (insn, 32, 20, 5); \
-  f_offset = ((((EXTRACT_LSB0_INT (insn, 32, 15, 16)) << (2))) + (((pc) + (4)))); \
+  f_offset = ((((EXTRACT_LSB0_SINT (insn, 32, 15, 16)) << (2))) + (((pc) + (4)))); \
 
 #define EXTRACT_IFMT_JALR_VARS \
   UINT f_opcode; \
@@ -430,7 +437,7 @@ struct scache {
   f_opcode = EXTRACT_LSB0_UINT (insn, 32, 31, 6); \
   f_rs = EXTRACT_LSB0_UINT (insn, 32, 25, 5); \
   f_rt = EXTRACT_LSB0_UINT (insn, 32, 20, 5); \
-  f_offset = ((((EXTRACT_LSB0_INT (insn, 32, 15, 16)) << (2))) + (((pc) + (4)))); \
+  f_offset = ((((EXTRACT_LSB0_SINT (insn, 32, 15, 16)) << (2))) + (((pc) + (4)))); \
 
 #define EXTRACT_IFMT_CFC0_VARS \
   UINT f_opcode; \

@@ -1,6 +1,6 @@
 /* plugin-api.h -- External linker plugin API.  */
 
-/* Copyright 2008 Free Software Foundation, Inc.
+/* Copyright 2009 Free Software Foundation, Inc.
    Written by Cary Coutant <ccoutant@google.com>.
 
    This file is part of binutils.
@@ -26,8 +26,16 @@
 #ifndef PLUGIN_API_H
 #define PLUGIN_API_H
 
+#ifdef HAVE_STDINT_H
 #include <stdint.h>
+#elif defined(HAVE_INTTYPES_H)
+#include <inttypes.h>
+#endif
 #include <sys/types.h>
+#if !defined(HAVE_STDINT_H) && !defined(HAVE_INTTYPES_H) && \
+    !defined(UINT64_MAX) && !defined(uint64_t)
+#error can not find uint64_t type
+#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -111,13 +119,34 @@ enum ld_plugin_symbol_visibility
 enum ld_plugin_symbol_resolution
 {
   LDPR_UNKNOWN = 0,
+
+  /* Symbol is still undefined at this point.  */
   LDPR_UNDEF,
+
+  /* This is the prevailing definition of the symbol, with references from
+     regular object code.  */
   LDPR_PREVAILING_DEF,
+
+  /* This is the prevailing definition of the symbol, with no
+     references from regular objects.  It is only referenced from IR
+     code.  */
   LDPR_PREVAILING_DEF_IRONLY,
+
+  /* This definition was pre-empted by a definition in a regular
+     object file.  */
   LDPR_PREEMPTED_REG,
+
+  /* This definition was pre-empted by a definition in another IR file.  */
   LDPR_PREEMPTED_IR,
+
+  /* This symbol was resolved by a definition in another IR file.  */
   LDPR_RESOLVED_IR,
+
+  /* This symbol was resolved by a definition in a regular object
+     linked into the main executable.  */
   LDPR_RESOLVED_EXEC,
+
+  /* This symbol was resolved by a definition in a shared object.  */
   LDPR_RESOLVED_DYN
 };
 
@@ -193,6 +222,12 @@ typedef
 enum ld_plugin_status
 (*ld_plugin_add_input_file) (char *pathname);
 
+/* The linker's interface for adding a library that should be searched.  */
+
+typedef
+enum ld_plugin_status
+(*ld_plugin_add_input_library) (char *libname);
+
 /* The linker's interface for issuing a warning or error message.  */
 
 typedef
@@ -224,7 +259,8 @@ enum ld_plugin_tag
   LDPT_ADD_INPUT_FILE,
   LDPT_MESSAGE,
   LDPT_GET_INPUT_FILE,
-  LDPT_RELEASE_INPUT_FILE
+  LDPT_RELEASE_INPUT_FILE,
+  LDPT_ADD_INPUT_LIBRARY
 };
 
 /* The plugin transfer vector.  */
@@ -245,6 +281,7 @@ struct ld_plugin_tv
     ld_plugin_message tv_message;
     ld_plugin_get_input_file tv_get_input_file;
     ld_plugin_release_input_file tv_release_input_file;
+    ld_plugin_add_input_library tv_add_input_library;
   } tv_u;
 };
 

@@ -734,9 +734,15 @@
 # endif
 #endif
 
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
 /* Define to 1 so <sys/proc.h> gets a definition of anon_hdl. Works around a
    <sys/proc.h> problem on IRIX 5. */
 #undef _KMEMUSER
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
 
 /* Define to 1 if on MINIX. */
 #undef _MINIX
@@ -791,6 +797,9 @@
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef pid_t
+
+/* readline-6.0 started to use different name. */
+#undef readline_echoing_p
 
 /* Define to the equivalent of the C99 'restrict' keyword, or to
    nothing if this is not supported.  Do not define if restrict is

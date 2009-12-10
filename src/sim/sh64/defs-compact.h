@@ -2,22 +2,23 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2005 Free Software Foundation, Inc.
+Copyright 1996-2009 Free Software Foundation, Inc.
 
 This file is part of the GNU simulators.
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 3 of the License, or
-(at your option) any later version.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3, or (at your option)
+   any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+   It is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+   License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
 
@@ -206,7 +207,7 @@ struct scache {
 #define EXTRACT_IFMT_BF_COMPACT_CODE \
   length = 2; \
   f_op8 = EXTRACT_MSB0_UINT (insn, 16, 0, 8); \
-  f_disp8 = ((((EXTRACT_MSB0_INT (insn, 16, 8, 8)) << (1))) + (((pc) + (4)))); \
+  f_disp8 = ((((EXTRACT_MSB0_SINT (insn, 16, 8, 8)) << (1))) + (((pc) + (4)))); \
 
 #define EXTRACT_IFMT_BRA_COMPACT_VARS \
   UINT f_op4; \
@@ -215,7 +216,7 @@ struct scache {
 #define EXTRACT_IFMT_BRA_COMPACT_CODE \
   length = 2; \
   f_op4 = EXTRACT_MSB0_UINT (insn, 16, 0, 4); \
-  f_disp12 = ((((EXTRACT_MSB0_INT (insn, 16, 4, 12)) << (1))) + (((pc) + (4)))); \
+  f_disp12 = ((((EXTRACT_MSB0_SINT (insn, 16, 4, 12)) << (1))) + (((pc) + (4)))); \
 
 #define EXTRACT_IFMT_BRAF_COMPACT_VARS \
   UINT f_op4; \
@@ -365,7 +366,7 @@ struct scache {
   f_rm = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_sub4 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
   f_16_4 = EXTRACT_MSB0_UINT (insn, 32, 16, 4); \
-  f_imm12x8 = ((EXTRACT_MSB0_INT (insn, 32, 20, 12)) << (3)); \
+  f_imm12x8 = ((EXTRACT_MSB0_SINT (insn, 32, 20, 12)) << (3)); \
 
 #define EXTRACT_IFMT_FMOV9_COMPACT_VARS \
   UINT f_op4; \
@@ -384,7 +385,7 @@ struct scache {
   f_11_1 = EXTRACT_MSB0_UINT (insn, 32, 11, 1); \
   f_sub4 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
   f_16_4 = EXTRACT_MSB0_UINT (insn, 32, 16, 4); \
-  f_imm12x8 = ((EXTRACT_MSB0_INT (insn, 32, 20, 12)) << (3)); \
+  f_imm12x8 = ((EXTRACT_MSB0_SINT (insn, 32, 20, 12)) << (3)); \
 
 #define EXTRACT_IFMT_FTRV_COMPACT_VARS \
   UINT f_op4; \
@@ -409,7 +410,7 @@ struct scache {
   length = 4; \
   f_op4 = EXTRACT_MSB0_UINT (insn, 32, 0, 4); \
   f_rn = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
-  f_imm20_hi = EXTRACT_MSB0_INT (insn, 32, 8, 4); \
+  f_imm20_hi = EXTRACT_MSB0_SINT (insn, 32, 8, 4); \
   f_imm20_lo = EXTRACT_MSB0_UINT (insn, 32, 16, 16); \
   f_imm20 = ((((f_imm20_hi) << (16))) | (f_imm20_lo));\
   f_sub4 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
@@ -473,7 +474,7 @@ struct scache {
   f_rm = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_sub4 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
   f_16_4 = EXTRACT_MSB0_UINT (insn, 32, 16, 4); \
-  f_imm12x4 = ((EXTRACT_MSB0_INT (insn, 32, 20, 12)) << (2)); \
+  f_imm12x4 = ((EXTRACT_MSB0_SINT (insn, 32, 20, 12)) << (2)); \
 
 #define EXTRACT_IFMT_MOVW4_COMPACT_VARS \
   UINT f_op8; \

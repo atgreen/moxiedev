@@ -297,6 +297,10 @@ struct remote_state
 
   /* True if the stub reports support for conditional tracepoints.  */
   int cond_tracepoints;
+
+  /* Nonzero if the user has pressed Ctrl-C, but the target hasn't
+     responded to that.  */
+  int ctrlc_pending_p;
 };
 
 /* Returns true if the multi-process extensions are in effect.  */
@@ -546,13 +550,75 @@ static int remote_async_mask_value = 1;
    this can go away.  */
 static int wait_forever_enabled_p = 1;
 
+/* Allow the user to specify what sequence to send to the remote
+   when he requests a program interruption: Although ^C is usually
+   what remote systems expect (this is the default, here), it is
+   sometimes preferable to send a break.  On other systems such
+   as the Linux kernel, a break followed by g, which is Magic SysRq g
+   is required in order to interrupt the execution.  */
+const char interrupt_sequence_control_c[] = "Ctrl-C";
+const char interrupt_sequence_break[] = "BREAK";
+const char interrupt_sequence_break_g[] = "BREAK-g";
+static const char *interrupt_sequence_modes[] =
+  {
+    interrupt_sequence_control_c,
+    interrupt_sequence_break,
+    interrupt_sequence_break_g,
+    NULL
+  };
+static const char *interrupt_sequence_mode = interrupt_sequence_control_c;
 
-/* This variable chooses whether to send a ^C or a break when the user
-   requests program interruption.  Although ^C is usually what remote
-   systems expect, and that is the default here, sometimes a break is
-   preferable instead.  */
+static void
+show_interrupt_sequence (struct ui_file *file, int from_tty,
+			 struct cmd_list_element *c,
+			 const char *value)
+{
+  if (interrupt_sequence_mode == interrupt_sequence_control_c)
+    fprintf_filtered (file,
+		      _("Send the ASCII ETX character (Ctrl-c) "
+			"to the remote target to interrupt the "
+			"execution of the program.\n"));
+  else if (interrupt_sequence_mode == interrupt_sequence_break)
+    fprintf_filtered (file,
+		      _("send a break signal to the remote target "
+			"to interrupt the execution of the program.\n"));
+  else if (interrupt_sequence_mode == interrupt_sequence_break_g)
+    fprintf_filtered (file,
+		      _("Send a break signal and 'g' a.k.a. Magic SysRq g to "
+			"the remote target to interrupt the execution "
+			"of Linux kernel.\n"));
+  else
+    internal_error (__FILE__, __LINE__,
+		    _("Invalid value for interrupt_sequence_mode: %s."),
+		    interrupt_sequence_mode);
+}
 
+/* This boolean variable specifies whether interrupt_sequence is sent
+   to the remote target when gdb connects to it.
+   This is mostly needed when you debug the Linux kernel: The Linux kernel
+   expects BREAK g which is Magic SysRq g for connecting gdb.  */
+static int interrupt_on_connect = 0;
+
+/* This variable is used to implement the "set/show remotebreak" commands.
+   Since these commands are now deprecated in favor of "set/show remote
+   interrupt-sequence", it no longer has any effect on the code.  */
 static int remote_break;
+
+static void
+set_remotebreak (char *args, int from_tty, struct cmd_list_element *c)
+{
+  if (remote_break)
+    interrupt_sequence_mode = interrupt_sequence_break;
+  else
+    interrupt_sequence_mode = interrupt_sequence_control_c;
+}
+
+static void
+show_remotebreak (struct ui_file *file, int from_tty,
+		  struct cmd_list_element *c,
+		  const char *value)
+{
+}
 
 /* Descriptor for I/O to remote machine.  Initialize it to NULL so that
    remote_open knows that we don't have a file open when the program
@@ -1000,6 +1066,8 @@ enum {
   PACKET_qXfer_siginfo_write,
   PACKET_qAttached,
   PACKET_ConditionalTracepoints,
+  PACKET_bc,
+  PACKET_bs,
   PACKET_MAX
 };
 
@@ -1181,7 +1249,26 @@ remote_add_inferior (int pid, int attached)
   if (attached == -1)
     attached = remote_query_attached (pid);
 
-  inf = add_inferior (pid);
+  if (gdbarch_has_global_solist (target_gdbarch))
+    {
+      /* If the target shares code across all inferiors, then every
+	 attach adds a new inferior.  */
+      inf = add_inferior (pid);
+
+      /* ... and every inferior is bound to the same program space.
+	 However, each inferior may still have its own address
+	 space.  */
+      inf->aspace = maybe_new_address_space ();
+      inf->pspace = current_program_space;
+    }
+  else
+    {
+      /* In the traditional debugging scenario, there's a 1-1 match
+	 between program/address spaces.  We simply bind the inferior
+	 to the program space's address space.  */
+      inf = current_inferior ();
+      inferior_appeared (inf, pid);
+    }
 
   inf->attach_flag = attached;
 
@@ -2583,6 +2670,25 @@ struct start_remote_args
   int extended_p;
 };
 
+/* Send interrupt_sequence to remote target.  */
+static void
+send_interrupt_sequence ()
+{
+  if (interrupt_sequence_mode == interrupt_sequence_control_c)
+    serial_write (remote_desc, "\x03", 1);
+  else if (interrupt_sequence_mode == interrupt_sequence_break)
+    serial_send_break (remote_desc);
+  else if (interrupt_sequence_mode == interrupt_sequence_break_g)
+    {
+      serial_send_break (remote_desc);
+      serial_write (remote_desc, "g", 1);
+    }
+  else
+    internal_error (__FILE__, __LINE__,
+		    _("Invalid value for interrupt_sequence_mode: %s."),
+		    interrupt_sequence_mode);
+}
+
 static void
 remote_start_remote (struct ui_out *uiout, void *opaque)
 {
@@ -2595,6 +2701,9 @@ remote_start_remote (struct ui_out *uiout, void *opaque)
 
   /* Ack any packet which the remote side has already sent.  */
   serial_write (remote_desc, "+", 1);
+
+  if (interrupt_on_connect)
+    send_interrupt_sequence ();
 
   /* The first packet we send to the target is the optional "supported
      packets" request.  If the target can answer this, it will tell us
@@ -2636,6 +2745,10 @@ remote_start_remote (struct ui_out *uiout, void *opaque)
   /* Next, if the target can specify a description, read it.  We do
      this before anything involving memory or registers.  */
   target_find_description ();
+
+  /* Next, now that we know something about the target, update the
+     address spaces in the program spaces.  */
+  update_address_spaces ();
 
   /* On OSs where the list of libraries is global to all
      processes, we fetch them early.  */
@@ -3051,6 +3164,10 @@ static struct protocol_feature remote_protocol_features[] = {
     PACKET_qXfer_siginfo_write },
   { "ConditionalTracepoints", PACKET_DISABLE, remote_cond_tracepoint_feature,
     PACKET_ConditionalTracepoints },
+  { "ReverseContinue", PACKET_DISABLE, remote_supported_packet,
+    PACKET_bc },
+  { "ReverseStep", PACKET_DISABLE, remote_supported_packet,
+    PACKET_bs },
 };
 
 static void
@@ -3281,6 +3398,7 @@ remote_open_1 (char *name, int from_tty, struct target_ops *target, int extended
   rs->extended = extended_p;
   rs->non_stop_aware = 0;
   rs->waiting_for_stop_reply = 0;
+  rs->ctrlc_pending_p = 0;
 
   general_thread = not_sent_ptid;
   continue_thread = not_sent_ptid;
@@ -3480,7 +3598,7 @@ extended_remote_attach_1 (struct target_ops *target, char *args, int from_tty)
     error (_("Attaching to %s failed"),
 	   target_pid_to_str (pid_to_ptid (pid)));
 
-  remote_add_inferior (pid, 1);
+  set_current_inferior (remote_add_inferior (pid, 1));
 
   inferior_ptid = pid_to_ptid (pid);
 
@@ -3801,8 +3919,10 @@ remote_resume (struct target_ops *ops,
   remote_pass_signals ();
 
   /* The vCont packet doesn't need to specify threads via Hc.  */
-  if (remote_vcont_resume (ptid, step, siggnal))
-    goto done;
+  /* No reverse support (yet) for vCont.  */
+  if (execution_direction != EXEC_REVERSE)
+    if (remote_vcont_resume (ptid, step, siggnal))
+      goto done;
 
   /* All other supported resume packets do use Hc, so set the continue
      thread.  */
@@ -3818,6 +3938,14 @@ remote_resume (struct target_ops *ops,
       if (info_verbose && siggnal != TARGET_SIGNAL_0)
 	warning (" - Can't pass signal %d to target in reverse: ignored.\n",
 		 siggnal);
+
+      if (step 
+	  && remote_protocol_packets[PACKET_bs].support == PACKET_DISABLE)
+	error (_("Remote reverse-step not supported."));
+      if (!step
+	  && remote_protocol_packets[PACKET_bc].support == PACKET_DISABLE)
+	error (_("Remote reverse-continue not supported."));
+
       strcpy (buf, step ? "bs" : "bc");
     }
   else if (siggnal != TARGET_SIGNAL_0)
@@ -3999,18 +4127,16 @@ remote_stop_as (ptid_t ptid)
 {
   struct remote_state *rs = get_remote_state ();
 
+  rs->ctrlc_pending_p = 1;
+
   /* If the inferior is stopped already, but the core didn't know
      about it yet, just ignore the request.  The cached wait status
      will be collected in remote_wait.  */
   if (rs->cached_wait_status)
     return;
 
-  /* Send a break or a ^C, depending on user preference.  */
-
-  if (remote_break)
-    serial_send_break (remote_desc);
-  else
-    serial_write (remote_desc, "\003", 1);
+  /* Send interrupt_sequence to remote target.  */
+  send_interrupt_sequence ();
 }
 
 /* This is the generic stop called via the target vector. When a target
@@ -4729,6 +4855,11 @@ remote_wait_as (ptid_t ptid, struct target_waitstatus *status, int options)
   /* We got something.  */
   rs->waiting_for_stop_reply = 0;
 
+  /* Assume that the target has acknowledged Ctrl-C unless we receive
+     an 'F' or 'O' packet.  */
+  if (buf[0] != 'F' && buf[0] != 'O')
+    rs->ctrlc_pending_p = 0;
+
   switch (buf[0])
     {
     case 'E':		/* Error of some sort.	*/
@@ -4739,7 +4870,8 @@ remote_wait_as (ptid_t ptid, struct target_waitstatus *status, int options)
       status->value.sig = TARGET_SIGNAL_0;
       break;
     case 'F':		/* File-I/O request.  */
-      remote_fileio_request (buf);
+      remote_fileio_request (buf, rs->ctrlc_pending_p);
+      rs->ctrlc_pending_p = 0;
       break;
     case 'T': case 'S': case 'X': case 'W':
       {
@@ -6763,11 +6895,14 @@ extended_remote_create_inferior_1 (char *exec_file, char *args,
       extended_remote_restart ();
     }
 
-  /* Clean up from the last time we ran, before we mark the target
-     running again.  This will mark breakpoints uninserted, and
-     get_offsets may insert breakpoints.  */
-  init_thread_list ();
-  init_wait_for_inferior ();
+  if (!have_inferiors ())
+    {
+      /* Clean up from the last time we ran, before we mark the target
+	 running again.  This will mark breakpoints uninserted, and
+	 get_offsets may insert breakpoints.  */
+      init_thread_list ();
+      init_wait_for_inferior ();
+    }
 
   /* Now mark the inferior as running before we do anything else.  */
   inferior_ptid = magic_null_ptid;
@@ -8730,12 +8865,14 @@ remote_command (char *args, int from_tty)
   help_list (remote_cmdlist, "remote ", -1, gdb_stdout);
 }
 
-static int remote_target_can_reverse = 1;
-
 static int
 remote_can_execute_reverse (void)
 {
-  return remote_target_can_reverse;
+  if (remote_protocol_packets[PACKET_bs].support == PACKET_ENABLE
+      || remote_protocol_packets[PACKET_bc].support == PACKET_ENABLE)
+    return 1;
+  else
+    return 0;
 }
 
 static int
@@ -8975,6 +9112,8 @@ void
 _initialize_remote (void)
 {
   struct remote_state *rs;
+  struct cmd_list_element *cmd;
+  char *cmd_name;
 
   /* architecture specific data */
   remote_gdbarch_data_handle =
@@ -9042,8 +9181,31 @@ terminating `#' character and checksum."),
 Set whether to send break if interrupted."), _("\
 Show whether to send break if interrupted."), _("\
 If set, a break, instead of a cntrl-c, is sent to the remote target."),
-			   NULL, NULL, /* FIXME: i18n: Whether to send break if interrupted is %s.  */
+			   set_remotebreak, show_remotebreak,
 			   &setlist, &showlist);
+  cmd_name = "remotebreak";
+  cmd = lookup_cmd (&cmd_name, setlist, "", -1, 1);
+  deprecate_cmd (cmd, "set remote interrupt-sequence");
+  cmd_name = "remotebreak"; /* needed because lookup_cmd updates the pointer */
+  cmd = lookup_cmd (&cmd_name, showlist, "", -1, 1);
+  deprecate_cmd (cmd, "show remote interrupt-sequence");
+
+  add_setshow_enum_cmd ("interrupt-sequence", class_support,
+			interrupt_sequence_modes, &interrupt_sequence_mode, _("\
+Set interrupt sequence to remote target."), _("\
+Show interrupt sequence to remote target."), _("\
+Valid value is \"Ctrl-C\", \"BREAK\" or \"BREAK-g\". The default is \"Ctrl-C\"."),
+			NULL, show_interrupt_sequence,
+			&remote_set_cmdlist,
+			&remote_show_cmdlist);
+
+  add_setshow_boolean_cmd ("interrupt-on-connect", class_support,
+			   &interrupt_on_connect, _("\
+Set whether interrupt-sequence is sent to remote target when gdb connects to."), _("		\
+Show whether interrupt-sequence is sent to remote target when gdb connects to."), _("		\
+If set, interrupt sequence is sent to remote target."),
+			   NULL, NULL,
+			   &remote_set_cmdlist, &remote_show_cmdlist);
 
   /* Install commands for configuring memory read/write packets.  */
 
@@ -9164,6 +9326,12 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
   add_packet_config_cmd (&remote_protocol_packets[PACKET_qGetTLSAddr],
 			 "qGetTLSAddr", "get-thread-local-storage-address",
 			 0);
+
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_bc],
+			 "bc", "reverse-continue", 0);
+
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_bs],
+			 "bs", "reverse-step", 0);
 
   add_packet_config_cmd (&remote_protocol_packets[PACKET_qSupported],
 			 "qSupported", "supported-packets", 0);

@@ -1,5 +1,5 @@
 /* Tcl/Tk command definitions for Insight - Breakpoints.
-   Copyright (C) 2001, 2002, 2008 Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2008, 2009 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -31,6 +31,7 @@
 #include "gdbtk-cmds.h"
 #include "observer.h"
 #include "arch-utils.h"
+#include "exceptions.h"
 
 /* From breakpoint.c */
 extern struct breakpoint *breakpoint_chain;
@@ -71,17 +72,6 @@ char *bpdisp[] =
  || (bp)->type == bp_read_watchpoint					      \
  || (bp)->type == bp_access_watchpoint)
 
-/*
- * These are routines we need from breakpoint.c.
- * at some point make these static in breakpoint.c and move GUI code there
- */
-
-extern struct breakpoint *set_raw_breakpoint (struct gdbarch *gdbarch,
-					      struct symtab_and_line,
-					      enum bptype);
-extern void set_breakpoint_count (int);
-extern int breakpoint_count;
-
 /* Breakpoint/Tracepoint lists. Unfortunately, gdb forces us to
    keep a list of breakpoints, too. Why couldn't it be done like
    treacepoints? */
@@ -103,8 +93,6 @@ static int gdb_get_breakpoint_info (ClientData, Tcl_Interp *, int,
 static int gdb_get_breakpoint_list (ClientData, Tcl_Interp *, int,
 				    Tcl_Obj * CONST[]);
 static int gdb_set_bp (ClientData, Tcl_Interp *, int, Tcl_Obj * CONST objv[]);
-static int gdb_set_bp_addr (ClientData, Tcl_Interp *, int,
-			    Tcl_Obj * CONST objv[]);
 
 /* Tracepoint-related functions */
 static int gdb_actions_command (ClientData, Tcl_Interp *, int,
@@ -147,8 +135,6 @@ Gdbtk_Breakpoint_Init (Tcl_Interp *interp)
   Tcl_CreateObjCommand (interp, "gdb_get_breakpoint_list", gdbtk_call_wrapper,
 			gdb_get_breakpoint_list, NULL);
   Tcl_CreateObjCommand (interp, "gdb_set_bp", gdbtk_call_wrapper, gdb_set_bp, NULL);
-  Tcl_CreateObjCommand (interp, "gdb_set_bp_addr", gdbtk_call_wrapper,
-			gdb_set_bp_addr, NULL);
 
   /* Tracepoint commands */
   Tcl_CreateObjCommand (interp, "gdb_actions",
@@ -489,8 +475,7 @@ gdb_get_breakpoint_list (ClientData clientData, Tcl_Interp *interp,
  * It sets breakpoints, and notifies the GUI.
  *
  * Tcl Arguments:
- *    filename: the file in which to set the breakpoint
- *    line:     the line number for the breakpoint
+ *    addr:     the "address" for the breakpoint (either *ADDR or file:line)
  *    type:     the type of the breakpoint
  *    thread:   optional thread number
  * Tcl Result:
@@ -500,109 +485,34 @@ static int
 gdb_set_bp (ClientData clientData, Tcl_Interp *interp,
 	    int objc, Tcl_Obj *CONST objv[])
 {
-  struct symtab_and_line sal;
-  int line, thread = -1;
-  struct breakpoint *b;
-  char *buf, *typestr;
-  enum bpdisp disp;
+  int temp, ignore_count, thread, pending, enabled;
+  char *address, *typestr, *condition;
+  struct gdb_exception e;
 
-  if (objc != 4 && objc != 5)
+  /* Insight does not use all of these (yet?).  */
+  ignore_count = 0;
+  condition = NULL;
+  pending = 0;
+  enabled = 1;
+
+  if (objc != 3 && objc != 4)
     {
-      Tcl_WrongNumArgs (interp, 1, objv, "filename line type ?thread?");
+      Tcl_WrongNumArgs (interp, 1, objv, "addr type ?thread?");
       return TCL_ERROR;
     }
 
-  sal.symtab = lookup_symtab (Tcl_GetStringFromObj (objv[1], NULL));
-  if (sal.symtab == NULL)
-    return TCL_ERROR;
-
-  if (Tcl_GetIntFromObj (interp, objv[2], &line) == TCL_ERROR)
+  address = Tcl_GetStringFromObj (objv[1], NULL);
+  if (address == NULL)
     {
       result_ptr->flags = GDBTK_IN_TCL_RESULT;
       return TCL_ERROR;
     }
 
-  typestr = Tcl_GetStringFromObj (objv[3], NULL);
-  if (strncmp (typestr, "temp", 4) == 0)
-    disp = disp_del;
-  else if (strncmp (typestr, "normal", 6) == 0)
-    disp = disp_donttouch;
-  else
-    {
-      gdbtk_set_result (interp, "type must be \"temp\" or \"normal\"");
-      return TCL_ERROR;
-    }
-
-  if (objc == 5)
-    {
-      if (Tcl_GetIntFromObj (interp, objv[4], &thread) == TCL_ERROR)
-	{
-	  result_ptr->flags = GDBTK_IN_TCL_RESULT;
-	  return TCL_ERROR;
-	}
-    }
-
-  sal.line = line;
-  if (!find_line_pc (sal.symtab, sal.line, &sal.pc))
-    return TCL_ERROR;
-
-  sal.section = find_pc_overlay (sal.pc);
-  b = set_raw_breakpoint (get_current_arch (), sal, bp_breakpoint);
-  set_breakpoint_count (breakpoint_count + 1);
-  b->number = breakpoint_count;
-  b->disposition = disp;
-  b->thread = thread;
-
-  /* FIXME: this won't work for duplicate basenames! */
-  buf = xstrprintf ("%s:%d", lbasename (Tcl_GetStringFromObj (objv[1], NULL)),
-	     line);
-  b->addr_string = xstrdup (buf);
-  free(buf);
-
-  /* now send notification command back to GUI */
-  observer_notify_breakpoint_created (b->number);
-  return TCL_OK;
-}
-
-/* This implements the tcl command "gdb_set_bp_addr"
- * It sets breakpoints, and notifies the GUI.
- *
- * Tcl Arguments:
- *    addr:     the CORE_ADDR at which to set the breakpoint
- *    type:     the type of the breakpoint
- *    thread:   optional thread number
- * Tcl Result:
- *    The return value of the call to gdbtk_tcl_breakpoint.
- */
-static int
-gdb_set_bp_addr (ClientData clientData, Tcl_Interp *interp, int objc,
-		 Tcl_Obj *CONST objv[])
-     
-{
-  struct symtab_and_line sal;
-  int thread = -1;
-  CORE_ADDR addr;
-  Tcl_WideInt waddr;
-  struct breakpoint *b;
-  char *saddr, *typestr;
-  enum bpdisp disp;
-
-  if (objc != 3 && objc != 4)
-    {
-      Tcl_WrongNumArgs (interp, 1, objv, "address type ?thread?");
-      return TCL_ERROR;
-    }
-
-  if (Tcl_GetWideIntFromObj (interp, objv[1], &waddr) != TCL_OK)
-    return TCL_ERROR;
-  addr = waddr;
-  saddr = Tcl_GetStringFromObj (objv[1], NULL);
-
   typestr = Tcl_GetStringFromObj (objv[2], NULL);
   if (strncmp (typestr, "temp", 4) == 0)
-    disp = disp_del;
+    temp = 1;
   else if (strncmp (typestr, "normal", 6) == 0)
-    disp = disp_donttouch;
+    temp = 0;
   else
     {
       gdbtk_set_result (interp, "type must be \"temp\" or \"normal\"");
@@ -618,17 +528,16 @@ gdb_set_bp_addr (ClientData clientData, Tcl_Interp *interp, int objc,
 	}
     }
 
-  sal = find_pc_line (addr, 0);
-  sal.pc = addr;
-  b = set_raw_breakpoint (get_current_arch (), sal, bp_breakpoint);
-  set_breakpoint_count (breakpoint_count + 1);
-  b->number = breakpoint_count;
-  b->disposition = disp;
-  b->thread = thread;
-  b->addr_string = xstrdup (saddr);
+  TRY_CATCH (e, RETURN_MASK_ALL)
+    {
+      set_breakpoint (get_current_arch (), address, condition,
+		      0 /* hardwareflag */, temp, thread, ignore_count,
+		      pending, enabled);
+    }
 
-  /* now send notification command back to GUI */
-  observer_notify_breakpoint_created (b->number);
+  if (e.reason < 0)
+    return TCL_ERROR;
+
   return TCL_OK;
 }
 

@@ -67,6 +67,12 @@ simple_displaced_step_free_closure (struct gdbarch *gdbarch,
   xfree (closure);
 }
 
+int
+default_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
+				      struct displaced_step_closure *closure)
+{
+  return !gdbarch_software_single_step_p (gdbarch);
+}
 
 CORE_ADDR
 displaced_step_at_entry_point (struct gdbarch *gdbarch)
@@ -749,6 +755,14 @@ get_current_arch (void)
     return get_frame_arch (get_selected_frame (NULL));
   else
     return target_gdbarch;
+}
+
+int
+default_has_shared_address_space (struct gdbarch *gdbarch)
+{
+  /* Simply say no.  In most unix-like targets each inferior/process
+     has its own address space.  */
+  return 0;
 }
 
 /* */

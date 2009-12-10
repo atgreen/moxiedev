@@ -1,3 +1,7 @@
+2009-11-09  Keith Seitz  <keiths@redhat.com>
+
+	* configure: Regenerate with autcoconf 2.64.
+
 2008-09-19  Denis Pilat  <denis.pilat@st.com>
 
 	* insight-support.exp (gdbtk_start): test TCL_LIBRARY env. variable

@@ -1,3 +1,49 @@
+2009-11-22  Doug Evans  <dje@sebabeach.org>
+
+	* cgen.h: Include bfd_stdint.h.
+	(CGEN_INSN_LGSINT, CGEN_INSN_LGUINT): New types.
+
+2009-11-18  Paul Brook  <paul@codesourcery.com>
+
+	* arm.h (FPU_VFP_V4_SP_D16, FPU_ARCH_VFP_V4_SP_D16): Define.
+
+2009-11-17  Paul Brook  <paul@codesourcery.com>
+	Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* arm.h (ARM_EXT_V6_DSP): Define.
+	(ARM_AEXT_V6T2, ARM_AEXT_NOTM): Include ARM_EXT_V6_DSP.
+	(ARM_AEXT_V7EM, ARM_ARCH_V7EM): Define.
+
+2009-11-04  DJ Delorie  <dj@redhat.com>
+
+	* rx.h (rx_decode_opcode) (mvtipl): Add.
+	(mvtcp, mvfcp, opecp): Remove.
+
+2009-11-02  Paul Brook  <paul@codesourcery.com>
+
+	* arm.h (FPU_VFP_EXT_V3xD, FPU_VFP_EXT_FP16, FPU_NEON_EXT_FMA,
+	FPU_VFP_EXT_FMA, FPU_VFP_V3xD, FPU_VFP_V4D16, FPU_VFP_V4): Define.
+	(FPU_ARCH_VFP_V3D16_FP16, FPU_ARCH_VFP_V3_FP16, FPU_ARCH_VFP_V3xD,
+	FPU_ARCH_VFP_V3xD_FP16, FPU_ARCH_VFP_V4, FPU_ARCH_VFP_V4D16,
+	FPU_ARCH_NEON_VFP_V4): Define.
+
+2009-10-23  Doug Evans  <dje@sebabeach.org>
+
+	* cgen-bitset.h: Delete, moved to ../cgen/bitset.h.
+	* cgen.h: Update.  Improve multi-inclusion macro name.
+
+2009-10-02  Peter Bergner  <bergner@vnet.ibm.com>
+
+	* ppc.h (PPC_OPCODE_476): Define.
+
+2009-10-01  Peter Bergner  <bergner@vnet.ibm.com>
+
+	* ppc.h (PPC_OPCODE_A2): Rename from PPC_OPCODE_PPCA2.
+
+2009-09-29  DJ Delorie  <dj@redhat.com>
+
+	* rx.h: New file.
+
 2009-09-22  Peter Bergner  <bergner@vnet.ibm.com>
 
 	* ppc.h (ppc_cpu_t): Typedef to uint64_t.

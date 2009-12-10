@@ -3877,6 +3877,7 @@ error_free_dyn:
       bfd_boolean common;
       unsigned int old_alignment;
       bfd *old_bfd;
+      bfd * undef_bfd = NULL;
 
       override = FALSE;
 
@@ -4106,6 +4107,20 @@ error_free_dyn:
 	      memcpy (p, verstr, verlen + 1);
 
 	      name = newname;
+	    }
+
+	  /* If this is a definition of a previously undefined symbol
+	     make a note of the bfd that contained the reference in
+	     case we need to refer to it later on in error messages.  */
+	  if (! bfd_is_und_section (sec))
+	    {
+	      h = elf_link_hash_lookup (elf_hash_table (info), name, FALSE, FALSE, FALSE);
+
+	      if (h != NULL
+		  && (h->root.type == bfd_link_hash_undefined
+		      || h->root.type == bfd_link_hash_undefweak)
+		  && h->root.u.undef.abfd)
+		undef_bfd = h->root.u.undef.abfd;
 	    }
 
 	  if (!_bfd_elf_merge_symbol (abfd, info, name, isym, &sec,
@@ -4373,7 +4388,6 @@ error_free_dyn:
 	  if (definition && (sec->flags & SEC_DEBUGGING) && !info->relocatable)
 	    {
 	      /* We don't want to make debug symbol dynamic.  */
-	      (*bed->elf_backend_hide_symbol) (info, h, TRUE);
 	      dynsym = FALSE;
 	    }
 
@@ -4448,9 +4462,12 @@ error_free_dyn:
 	      if ((elf_dyn_lib_class (abfd) & DYN_NO_NEEDED) != 0)
 		{
 		  (*_bfd_error_handler)
-		    (_("%s: invalid DSO for symbol `%s' definition"),
+		    (_("%B: undefined reference to symbol '%s'"),
+		     undef_bfd == NULL ? info->output_bfd : undef_bfd, name);
+		  (*_bfd_error_handler)
+		    (_("note: '%s' is defined in DSO %B so try adding it to the linker command line"),
 		     abfd, name);
-		  bfd_set_error (bfd_error_bad_value);
+		  bfd_set_error (bfd_error_invalid_operation);
 		  goto error_free_vers;
 		}
 
@@ -8622,9 +8639,11 @@ elf_link_output_extsym (struct elf_link_hash_entry *h, void *data)
     strip = FALSE;
 
   /* If we're stripping it, and it's not a dynamic symbol, there's
-     nothing else to do unless it is a forced local symbol.  */
+     nothing else to do unless it is a forced local symbol or a
+     STT_GNU_IFUNC symbol.  */
   if (strip
       && h->dynindx == -1
+      && h->type != STT_GNU_IFUNC
       && !h->forced_local)
     return TRUE;
 
@@ -12532,7 +12551,7 @@ _bfd_elf_get_dynamic_reloc_section (bfd *       abfd,
    section does not exist it is created and attached to the DYNOBJ
    bfd and stored in the SRELOC field of SEC's elf_section_data
    structure.
-   
+
    ALIGNMENT is the alignment for the newly created section and
    IS_RELA defines whether the name should be .rela.<SEC's name>
    or .rel.<SEC's name>.  The section name is looked up in the
@@ -12576,4 +12595,16 @@ _bfd_elf_make_dynamic_reloc_section (asection *         sec,
     }
 
   return reloc_sec;
+}
+
+/* Copy the ELF symbol type associated with a linker hash entry.  */
+void
+_bfd_elf_copy_link_hash_symbol_type (bfd *abfd ATTRIBUTE_UNUSED,
+    struct bfd_link_hash_entry * hdest,
+    struct bfd_link_hash_entry * hsrc)
+{
+  struct elf_link_hash_entry *ehdest = (struct elf_link_hash_entry *)hdest;
+  struct elf_link_hash_entry *ehsrc = (struct elf_link_hash_entry *)hsrc;
+
+  ehdest->type = ehsrc->type;
 }

@@ -2,22 +2,23 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003 Free Software Foundation, Inc.
+Copyright 1996-2009 Free Software Foundation, Inc.
 
 This file is part of the GNU simulators.
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 3 of the License, or
-(at your option) any later version.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3, or (at your option)
+   any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+   It is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+   License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
 
@@ -30,6 +31,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* Maximum number of instructions that can be executed in parallel.  */
 #define MAX_PARALLEL_INSNS 1
+
+/* The size of an "int" needed to hold an instruction word.
+   This is usually 32 bits, but some architectures needs 64 bits.  */
+typedef CGEN_INSN_INT CGEN_INSN_WORD;
+
+#include "cgen-engine.h"
 
 /* CPU state information.  */
 typedef struct {
@@ -324,7 +331,7 @@ struct scache {
   f_r1 = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
   f_op2 = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_r2 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_simm16 = EXTRACT_MSB0_INT (insn, 32, 16, 16); \
+  f_simm16 = EXTRACT_MSB0_SINT (insn, 32, 16, 16); \
 
 #define EXTRACT_IFMT_AND3_VARS \
   UINT f_op1; \
@@ -365,7 +372,7 @@ struct scache {
   length = 2; \
   f_op1 = EXTRACT_MSB0_UINT (insn, 16, 0, 4); \
   f_r1 = EXTRACT_MSB0_UINT (insn, 16, 4, 4); \
-  f_simm8 = EXTRACT_MSB0_INT (insn, 16, 8, 8); \
+  f_simm8 = EXTRACT_MSB0_SINT (insn, 16, 8, 8); \
 
 #define EXTRACT_IFMT_ADDV3_VARS \
   UINT f_op1; \
@@ -380,7 +387,7 @@ struct scache {
   f_r1 = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
   f_op2 = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_r2 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_simm16 = EXTRACT_MSB0_INT (insn, 32, 16, 16); \
+  f_simm16 = EXTRACT_MSB0_SINT (insn, 32, 16, 16); \
 
 #define EXTRACT_IFMT_BC8_VARS \
   UINT f_op1; \
@@ -391,7 +398,7 @@ struct scache {
   length = 2; \
   f_op1 = EXTRACT_MSB0_UINT (insn, 16, 0, 4); \
   f_r1 = EXTRACT_MSB0_UINT (insn, 16, 4, 4); \
-  f_disp8 = ((((EXTRACT_MSB0_INT (insn, 16, 8, 8)) << (2))) + (((pc) & (-4)))); \
+  f_disp8 = ((((EXTRACT_MSB0_SINT (insn, 16, 8, 8)) << (2))) + (((pc) & (-4)))); \
 
 #define EXTRACT_IFMT_BC24_VARS \
   UINT f_op1; \
@@ -402,7 +409,7 @@ struct scache {
   length = 4; \
   f_op1 = EXTRACT_MSB0_UINT (insn, 32, 0, 4); \
   f_r1 = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
-  f_disp24 = ((((EXTRACT_MSB0_INT (insn, 32, 8, 24)) << (2))) + (pc)); \
+  f_disp24 = ((((EXTRACT_MSB0_SINT (insn, 32, 8, 24)) << (2))) + (pc)); \
 
 #define EXTRACT_IFMT_BEQ_VARS \
   UINT f_op1; \
@@ -417,7 +424,7 @@ struct scache {
   f_r1 = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
   f_op2 = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_r2 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_disp16 = ((((EXTRACT_MSB0_INT (insn, 32, 16, 16)) << (2))) + (pc)); \
+  f_disp16 = ((((EXTRACT_MSB0_SINT (insn, 32, 16, 16)) << (2))) + (pc)); \
 
 #define EXTRACT_IFMT_BEQZ_VARS \
   UINT f_op1; \
@@ -432,7 +439,7 @@ struct scache {
   f_r1 = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
   f_op2 = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_r2 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_disp16 = ((((EXTRACT_MSB0_INT (insn, 32, 16, 16)) << (2))) + (pc)); \
+  f_disp16 = ((((EXTRACT_MSB0_SINT (insn, 32, 16, 16)) << (2))) + (pc)); \
 
 #define EXTRACT_IFMT_CMP_VARS \
   UINT f_op1; \
@@ -460,7 +467,7 @@ struct scache {
   f_r1 = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
   f_op2 = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_r2 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_simm16 = EXTRACT_MSB0_INT (insn, 32, 16, 16); \
+  f_simm16 = EXTRACT_MSB0_SINT (insn, 32, 16, 16); \
 
 #define EXTRACT_IFMT_DIV_VARS \
   UINT f_op1; \
@@ -475,7 +482,7 @@ struct scache {
   f_r1 = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
   f_op2 = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_r2 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_simm16 = EXTRACT_MSB0_INT (insn, 32, 16, 16); \
+  f_simm16 = EXTRACT_MSB0_SINT (insn, 32, 16, 16); \
 
 #define EXTRACT_IFMT_JL_VARS \
   UINT f_op1; \
@@ -514,7 +521,7 @@ struct scache {
   f_r1 = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
   f_op2 = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_r2 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_simm16 = EXTRACT_MSB0_INT (insn, 32, 16, 16); \
+  f_simm16 = EXTRACT_MSB0_SINT (insn, 32, 16, 16); \
 
 #define EXTRACT_IFMT_MVFACHI_VARS \
   UINT f_op1; \
@@ -622,7 +629,7 @@ struct scache {
   f_r1 = EXTRACT_MSB0_UINT (insn, 32, 4, 4); \
   f_op2 = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_r2 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_simm16 = EXTRACT_MSB0_INT (insn, 32, 16, 16); \
+  f_simm16 = EXTRACT_MSB0_SINT (insn, 32, 16, 16); \
 
 #define EXTRACT_IFMT_TRAP_VARS \
   UINT f_op1; \
@@ -663,7 +670,7 @@ struct scache {
   f_uimm3 = EXTRACT_MSB0_UINT (insn, 32, 5, 3); \
   f_op2 = EXTRACT_MSB0_UINT (insn, 32, 8, 4); \
   f_r2 = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_simm16 = EXTRACT_MSB0_INT (insn, 32, 16, 16); \
+  f_simm16 = EXTRACT_MSB0_SINT (insn, 32, 16, 16); \
 
 #define EXTRACT_IFMT_BTST_VARS \
   UINT f_op1; \

@@ -64,6 +64,9 @@ case "${target}" in
 			srv_tgtobj="i386-low.o win32-low.o win32-i386-low.o"
 			;;
   i[34567]86-*-linux*)	srv_regobj=reg-i386-linux.o
+			if test "$gdb_cv_i386_is_x86_64" = yes ; then
+			    srv_regobj="reg-x86-64-linux.o $srv_regobj"
+			fi
 			srv_tgtobj="linux-low.o linux-x86-low.o i386-low.o i387-fp.o"
 			srv_linux_usrregs=yes
 			srv_linux_regsets=yes
@@ -95,13 +98,21 @@ case "${target}" in
 			srv_linux_usrregs=yes
  			srv_linux_thread_db=yes
 			;;
-  m68*-*-linux*)	srv_regobj=reg-m68k.o
+  m68*-*-linux*)	if test "$gdb_cv_m68k_is_coldfire" = yes; then
+                          srv_regobj=reg-cf.o
+                        else
+                          src_regobj=reg-m68k.o
+                        fi
 			srv_tgtobj="linux-low.o linux-m68k-low.o"
 			srv_linux_usrregs=yes
 			srv_linux_regsets=yes
 			srv_linux_thread_db=yes
 			;;
-  m68*-*-uclinux*)	srv_regobj=reg-m68k.o
+  m68*-*-uclinux*)	if test "$gdb_cv_m68k_is_coldfire" = yes; then
+                          srv_regobj=reg-cf.o
+                        else
+                          src_regobj=reg-m68k.o
+                        fi
 			srv_tgtobj="linux-low.o linux-m68k-low.o"
 			srv_linux_usrregs=yes
 			srv_linux_regsets=yes

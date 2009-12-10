@@ -38,14 +38,17 @@
 #include <sys/cygwin.h>
 #endif
 
-#define LOG 0
+#define OUTMSG(X) do { printf X; fflush (stderr); } while (0)
 
-#define OUTMSG(X) do { printf X; fflush (stdout); } while (0)
-#if LOG
-#define OUTMSG2(X) do { printf X; fflush (stdout); } while (0)
-#else
-#define OUTMSG2(X) do ; while (0)
-#endif
+#define OUTMSG2(X) \
+  do						\
+    {						\
+      if (debug_threads)			\
+	{					\
+	  printf X;				\
+	  fflush (stderr);			\
+	}					\
+    } while (0)
 
 #ifndef _T
 #define _T(x) TEXT (x)
@@ -906,6 +909,14 @@ win32_add_one_solib (const char *name, CORE_ADDR load_addr)
 #endif
     }
 
+#ifndef _WIN32_WCE
+  if (strcasecmp (buf, "ntdll.dll") == 0)
+    {
+      GetSystemDirectoryA (buf, sizeof (buf));
+      strcat (buf, "\\ntdll.dll");
+    }
+#endif
+
 #ifdef __CYGWIN__
   cygwin_conv_to_posix_path (buf, buf2);
 #else
@@ -1427,10 +1438,6 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 
  gotevent:
 
-  ptid = debug_event_ptid (&current_event);
-  current_inferior =
-    (struct thread_info *) find_inferior_id (&all_threads, ptid);
-
   switch (current_event.dwDebugEventCode)
     {
     case CREATE_THREAD_DEBUG_EVENT:
@@ -1452,7 +1459,9 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
 		(unsigned) current_event.dwThreadId));
       child_delete_thread (current_event.dwProcessId,
 			   current_event.dwThreadId);
-      break;
+
+      current_inferior = (struct thread_info *) all_threads.head;
+      return 1;
 
     case CREATE_PROCESS_DEBUG_EVENT:
       OUTMSG2 (("gdbserver: kernel event CREATE_PROCESS_DEBUG_EVENT "
@@ -1547,6 +1556,7 @@ get_child_debug_event (struct target_waitstatus *ourstatus)
       break;
     }
 
+  ptid = debug_event_ptid (&current_event);
   current_inferior =
     (struct thread_info *) find_inferior_id (&all_threads, ptid);
   return 1;
@@ -1578,7 +1588,7 @@ win32_wait (ptid_t ptid, struct target_waitstatus *ourstatus, int options)
 	case TARGET_WAITKIND_STOPPED:
 	case TARGET_WAITKIND_LOADED:
 	  OUTMSG2 (("Child Stopped with signal = %d \n",
-		    our_status.value.sig));
+		    ourstatus->value.sig));
 
 	  child_fetch_inferior_registers (-1);
 

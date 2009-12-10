@@ -232,7 +232,7 @@ int	_EXFUN(sprintf, (char *, const char *, ...)
 int	_EXFUN(remove, (const char *));
 int	_EXFUN(rename, (const char *, const char *));
 #endif
-#ifndef __STRICT_ANSI__
+#if !defined(__STRICT_ANSI__) || defined(__USE_XOPEN2K)
 #ifdef _COMPILING_NEWLIB
 int	_EXFUN(fseeko, (FILE *, _off_t, int));
 _off_t	_EXFUN(ftello, ( FILE *));
@@ -240,6 +240,8 @@ _off_t	_EXFUN(ftello, ( FILE *));
 int	_EXFUN(fseeko, (FILE *, off_t, int));
 off_t	_EXFUN(ftello, ( FILE *));
 #endif
+#endif
+#if !defined(__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L)
 #ifndef _REENT_ONLY
 int	_EXFUN(asiprintf, (char **, const char *, ...)
                _ATTRIBUTE ((__format__ (__printf__, 2, 3))));
@@ -346,7 +348,6 @@ FILE *	_EXFUN(fmemopen, (void *, size_t, const char *));
 FILE *	_EXFUN(open_memstream, (char **, size_t *));
 #if defined (__CYGWIN__)
 int	_EXFUN(renameat, (int, const char *, int, const char *));
-int	_EXFUN(symlinkat, (const char *, int, const char *));
 #endif
 int	_EXFUN(vdprintf, (int, const char *, __VALIST)
                _ATTRIBUTE ((__format__ (__printf__, 2, 0))));

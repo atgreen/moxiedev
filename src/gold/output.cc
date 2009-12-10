@@ -442,7 +442,7 @@ Output_file_header::do_sized_write(Output_file* of)
   elfcpp::ET e_type;
   if (parameters->options().relocatable())
     e_type = elfcpp::ET_REL;
-  else if (parameters->options().shared())
+  else if (parameters->options().output_is_position_independent())
     e_type = elfcpp::ET_DYN;
   else
     e_type = elfcpp::ET_EXEC;
@@ -459,10 +459,7 @@ Output_file_header::do_sized_write(Output_file* of)
     oehdr.put_e_phoff(this->segment_header_->offset());
 
   oehdr.put_e_shoff(this->section_header_->offset());
-
-  // FIXME: The target needs to set the flags.
-  oehdr.put_e_flags(0);
-
+  oehdr.put_e_flags(this->target_->processor_specific_flags());
   oehdr.put_e_ehsize(elfcpp::Elf_sizes<size>::ehdr_size);
 
   if (this->segment_header_ == NULL)
@@ -1800,8 +1797,15 @@ Output_section::Output_section(const char* name, elfcpp::Elf_Word type,
     is_relro_local_(false),
     is_small_section_(false),
     is_large_section_(false),
+    is_interp_(false),
+    is_dynamic_linker_section_(false),
+    generate_code_fills_at_write_(false),
     tls_offset_(0),
-    checkpoint_(NULL)
+    checkpoint_(NULL),
+    merge_section_map_(),
+    merge_section_by_properties_map_(),
+    relaxed_input_section_map_(),
+    is_relaxed_input_section_map_valid_(true)
 {
   // An unallocated section has no address.  Forcing this means that
   // we don't need special treatment for symbols defined in debug
@@ -1892,10 +1896,24 @@ Output_section::add_input_section(Sized_relobj<size, big_endian>* object,
   off_t aligned_offset_in_section = align_address(offset_in_section,
                                                   addralign);
 
-  if (aligned_offset_in_section > offset_in_section
+  // Determine if we want to delay code-fill generation until the output
+  // section is written.  When the target is relaxing, we want to delay fill
+  // generating to avoid adjusting them during relaxation.
+  if (!this->generate_code_fills_at_write_
       && !have_sections_script
       && (sh_flags & elfcpp::SHF_EXECINSTR) != 0
-      && object->target()->has_code_fill())
+      && parameters->target().has_code_fill()
+      && parameters->target().may_relax())
+    {
+      gold_assert(this->fills_.empty());
+      this->generate_code_fills_at_write_ = true;
+    }
+
+  if (aligned_offset_in_section > offset_in_section
+      && !this->generate_code_fills_at_write_
+      && !have_sections_script
+      && (sh_flags & elfcpp::SHF_EXECINSTR) != 0
+      && parameters->target().has_code_fill())
     {
       // We need to add some fill data.  Using fill_list_ when
       // possible is an optimization, since we will often have fill
@@ -1905,9 +1923,7 @@ Output_section::add_input_section(Sized_relobj<size, big_endian>* object,
         this->fills_.push_back(Fill(offset_in_section, fill_len));
       else
         {
-          // FIXME: When relaxing, the size needs to adjust to
-          // maintain a constant alignment.
-          std::string fill_data(object->target()->code_fill(fill_len));
+          std::string fill_data(parameters->target().code_fill(fill_len));
           Output_data_const* odc = new Output_data_const(fill_data, 1);
           this->input_sections_.push_back(Input_section(odc));
         }
@@ -1925,7 +1941,7 @@ Output_section::add_input_section(Sized_relobj<size, big_endian>* object,
       || this->may_sort_attached_input_sections()
       || this->must_sort_attached_input_sections()
       || parameters->options().user_set_Map()
-      || object->target()->may_relax())
+      || parameters->target().may_relax())
     this->input_sections_.push_back(Input_section(object, shndx,
 						  shdr.get_sh_size(),
 						  addralign));
@@ -1949,6 +1965,31 @@ Output_section::add_output_section_data(Output_section_data* posd)
       this->set_current_data_size_for_child(aligned_offset_in_section
 					    + posd->data_size());
     }
+}
+
+// Add a relaxed input section.
+
+void
+Output_section::add_relaxed_input_section(Output_relaxed_input_section* poris)
+{
+  Input_section inp(poris);
+  this->add_output_section_data(&inp);
+  if (this->is_relaxed_input_section_map_valid_)
+    {
+      Input_section_specifier iss(poris->relobj(), poris->shndx());
+      this->relaxed_input_section_map_[iss] = poris;
+    }
+
+  // For a relaxed section, we use the current data size.  Linker scripts
+  // get all the input sections, including relaxed one from an output
+  // section and add them back to them same output section to compute the
+  // output section size.  If we do not account for sizes of relaxed input
+  // sections,  an output section would be incorrectly sized.
+  off_t offset_in_section = this->current_data_size_for_child();
+  off_t aligned_offset_in_section = align_address(offset_in_section,
+						  poris->addralign());
+  this->set_current_data_size_for_child(aligned_offset_in_section
+					+ poris->current_data_size());
 }
 
 // Add arbitrary data to an output section by Input_section.
@@ -1995,73 +2036,151 @@ Output_section::add_merge_input_section(Relobj* object, unsigned int shndx,
   // We cannot restore merged input section states.
   gold_assert(this->checkpoint_ == NULL);
 
-  Input_section_list::iterator p;
-  for (p = this->input_sections_.begin();
-       p != this->input_sections_.end();
-       ++p)
-    if (p->is_merge_section(is_string, entsize, addralign))
-      {
-        p->add_input_section(object, shndx);
-        return true;
-      }
+  // Look up merge sections by required properties.
+  Merge_section_properties msp(is_string, entsize, addralign);
+  Merge_section_by_properties_map::const_iterator p =
+    this->merge_section_by_properties_map_.find(msp);
+  if (p != this->merge_section_by_properties_map_.end())
+    {
+      Output_merge_base* merge_section = p->second;
+      merge_section->add_input_section(object, shndx);
+      gold_assert(merge_section->is_string() == is_string
+		  && merge_section->entsize() == entsize
+		  && merge_section->addralign() == addralign);
+
+      // Link input section to found merge section.
+      Input_section_specifier iss(object, shndx);
+      this->merge_section_map_[iss] = merge_section;
+      return true;
+    }
 
   // We handle the actual constant merging in Output_merge_data or
   // Output_merge_string_data.
-  Output_section_data* posd;
+  Output_merge_base* pomb;
   if (!is_string)
-    posd = new Output_merge_data(entsize, addralign);
+    pomb = new Output_merge_data(entsize, addralign);
   else
     {
       switch (entsize)
 	{
         case 1:
-	  posd = new Output_merge_string<char>(addralign);
+	  pomb = new Output_merge_string<char>(addralign);
 	  break;
         case 2:
-	  posd = new Output_merge_string<uint16_t>(addralign);
+	  pomb = new Output_merge_string<uint16_t>(addralign);
 	  break;
         case 4:
-	  posd = new Output_merge_string<uint32_t>(addralign);
+	  pomb = new Output_merge_string<uint32_t>(addralign);
 	  break;
         default:
 	  return false;
 	}
     }
 
-  this->add_output_merge_section(posd, is_string, entsize);
-  posd->add_input_section(object, shndx);
+  // Add new merge section to this output section and link merge section
+  // properties to new merge section in map.
+  this->add_output_merge_section(pomb, is_string, entsize);
+  this->merge_section_by_properties_map_[msp] = pomb;
+
+  // Add input section to new merge section and link input section to new
+  // merge section in map.
+  pomb->add_input_section(object, shndx);
+  Input_section_specifier iss(object, shndx);
+  this->merge_section_map_[iss] = pomb;
 
   return true;
 }
 
-// Relax an existing input section.
+// Build a relaxation map to speed up relaxation of existing input sections.
+// Look up to the first LIMIT elements in INPUT_SECTIONS.
+
 void
-Output_section::relax_input_section(Output_relaxed_input_section *psection)
+Output_section::build_relaxation_map(
+  const Input_section_list& input_sections,
+  size_t limit,
+  Relaxation_map* relaxation_map) const
 {
-  Relobj* relobj = psection->relobj();
-  unsigned int shndx = psection->shndx();
-
-  gold_assert(relobj->target()->may_relax());
-
-  // This is not very efficient if we a going to relax a number of sections
-  // in an Output_section with lot of Input_sections.
-  for (Input_section_list::iterator p = this->input_sections_.begin();
-       p != this->input_sections_.end();
-       ++p)
+  for (size_t i = 0; i < limit; ++i)
     {
-      if (p->is_input_section())
+      const Input_section& is(input_sections[i]);
+      if (is.is_input_section() || is.is_relaxed_input_section())
 	{
-	  if (p->relobj() == relobj && p->shndx() == shndx)
-	    {
-	      gold_assert(p->addralign() == psection->addralign());
-	      *p = Input_section(psection);
-	      return;
-	    }
+	  Input_section_specifier iss(is.relobj(), is.shndx());
+	  (*relaxation_map)[iss] = i;
 	}
-      else if (p->is_relaxed_input_section())
-	gold_assert(p->relobj() != relobj || p->shndx() != shndx);
-
     }
+}
+
+// Convert regular input sections in INPUT_SECTIONS into relaxed input
+// sections in RELAXED_SECTIONS.  MAP is a prebuilt map from input section
+// specifier to indices of INPUT_SECTIONS.
+
+void
+Output_section::convert_input_sections_in_list_to_relaxed_sections(
+  const std::vector<Output_relaxed_input_section*>& relaxed_sections,
+  const Relaxation_map& map,
+  Input_section_list* input_sections)
+{
+  for (size_t i = 0; i < relaxed_sections.size(); ++i)
+    {
+      Output_relaxed_input_section* poris = relaxed_sections[i];
+      Input_section_specifier iss(poris->relobj(), poris->shndx());
+      Relaxation_map::const_iterator p = map.find(iss);
+      gold_assert(p != map.end());
+      gold_assert((*input_sections)[p->second].is_input_section());
+      (*input_sections)[p->second] = Input_section(poris);
+    }
+}
+  
+// Convert regular input sections into relaxed input sections. RELAXED_SECTIONS
+// is a vector of pointers to Output_relaxed_input_section or its derived
+// classes.  The relaxed sections must correspond to existing input sections.
+
+void
+Output_section::convert_input_sections_to_relaxed_sections(
+  const std::vector<Output_relaxed_input_section*>& relaxed_sections)
+{
+  gold_assert(parameters->target().may_relax());
+
+  // We want to make sure that restore_states does not undo the effect of
+  // this.  If there is no checkpoint active, just search the current
+  // input section list and replace the sections there.  If there is
+  // a checkpoint, also replace the sections there.
+  
+  // By default, we look at the whole list.
+  size_t limit = this->input_sections_.size();
+
+  if (this->checkpoint_ != NULL)
+    {
+      // Replace input sections with relaxed input section in the saved
+      // copy of the input section list.
+      if (this->checkpoint_->input_sections_saved())
+	{
+	  Relaxation_map map;
+	  this->build_relaxation_map(
+		    *(this->checkpoint_->input_sections()),
+		    this->checkpoint_->input_sections()->size(),
+		    &map);
+	  this->convert_input_sections_in_list_to_relaxed_sections(
+		    relaxed_sections,
+		    map,
+		    this->checkpoint_->input_sections());
+	}
+      else
+	{
+	  // We have not copied the input section list yet.  Instead, just
+	  // look at the portion that would be saved.
+	  limit = this->checkpoint_->input_sections_size();
+	}
+    }
+
+  // Convert input sections in input_section_list.
+  Relaxation_map map;
+  this->build_relaxation_map(this->input_sections_, limit, &map);
+  this->convert_input_sections_in_list_to_relaxed_sections(
+	    relaxed_sections,
+	    map,
+	    &this->input_sections_);
 }
 
 // Update the output section flags based on input section flags.
@@ -2082,6 +2201,60 @@ Output_section::update_flags_for_input_section(elfcpp::Elf_Xword flags)
 		      | elfcpp::SHF_EXECINSTR));
 }
 
+// Find the merge section into which an input section with index SHNDX in
+// OBJECT has been added.  Return NULL if none found.
+
+Output_section_data*
+Output_section::find_merge_section(const Relobj* object,
+				   unsigned int shndx) const
+{
+  Input_section_specifier iss(object, shndx);
+  Output_section_data_by_input_section_map::const_iterator p =
+    this->merge_section_map_.find(iss);
+  if (p != this->merge_section_map_.end())
+    {
+      Output_section_data* posd = p->second;
+      gold_assert(posd->is_merge_section_for(object, shndx));
+      return posd;
+    }
+  else
+    return NULL;
+}
+
+// Find an relaxed input section corresponding to an input section
+// in OBJECT with index SHNDX.
+
+const Output_section_data*
+Output_section::find_relaxed_input_section(const Relobj* object,
+					   unsigned int shndx) const
+{
+  // Be careful that the map may not be valid due to input section export
+  // to scripts or a check-point restore.
+  if (!this->is_relaxed_input_section_map_valid_)
+    {
+      // Rebuild the map as needed.
+      this->relaxed_input_section_map_.clear();
+      for (Input_section_list::const_iterator p = this->input_sections_.begin();
+	   p != this->input_sections_.end();
+	   ++p)
+	if (p->is_relaxed_input_section())
+	  {
+	    Input_section_specifier iss(p->relobj(), p->shndx());
+	    this->relaxed_input_section_map_[iss] =
+	      p->relaxed_input_section();
+	  }
+      this->is_relaxed_input_section_map_valid_ = true;
+    }
+
+  Input_section_specifier iss(object, shndx);
+  Output_section_data_by_input_section_map::const_iterator p =
+    this->relaxed_input_section_map_.find(iss);
+  if (p != this->relaxed_input_section_map_.end())
+    return p->second;
+  else
+    return NULL;
+}
+
 // Given an address OFFSET relative to the start of input section
 // SHNDX in OBJECT, return whether this address is being included in
 // the final link.  This should only be called if SHNDX in OBJECT has
@@ -2092,6 +2265,20 @@ Output_section::is_input_address_mapped(const Relobj* object,
 					unsigned int shndx,
 					off_t offset) const
 {
+  // Look at the Output_section_data_maps first.
+  const Output_section_data* posd = this->find_merge_section(object, shndx);
+  if (posd == NULL)
+    posd = this->find_relaxed_input_section(object, shndx);
+
+  if (posd != NULL)
+    {
+      section_offset_type output_offset;
+      bool found = posd->output_offset(object, shndx, offset, &output_offset);
+      gold_assert(found);   
+      return output_offset != -1;
+    }
+
+  // Fall back to the slow look-up.
   for (Input_section_list::const_iterator p = this->input_sections_.begin();
        p != this->input_sections_.end();
        ++p)
@@ -2116,9 +2303,23 @@ section_offset_type
 Output_section::output_offset(const Relobj* object, unsigned int shndx,
 			      section_offset_type offset) const
 {
-  // This can only be called meaningfully when layout is complete.
-  gold_assert(Output_data::is_layout_complete());
+  // This can only be called meaningfully when we know the data size
+  // of this.
+  gold_assert(this->is_data_size_valid());
 
+  // Look at the Output_section_data_maps first.
+  const Output_section_data* posd = this->find_merge_section(object, shndx);
+  if (posd == NULL) 
+    posd = this->find_relaxed_input_section(object, shndx);
+  if (posd != NULL)
+    {
+      section_offset_type output_offset;
+      bool found = posd->output_offset(object, shndx, offset, &output_offset);
+      gold_assert(found);   
+      return output_offset;
+    }
+
+  // Fall back to the slow look-up.
   for (Input_section_list::const_iterator p = this->input_sections_.begin();
        p != this->input_sections_.end();
        ++p)
@@ -2138,6 +2339,20 @@ Output_section::output_address(const Relobj* object, unsigned int shndx,
 			       off_t offset) const
 {
   uint64_t addr = this->address() + this->first_input_offset_;
+
+  // Look at the Output_section_data_maps first.
+  const Output_section_data* posd = this->find_merge_section(object, shndx);
+  if (posd == NULL) 
+    posd = this->find_relaxed_input_section(object, shndx);
+  if (posd != NULL && posd->is_address_valid())
+    {
+      section_offset_type output_offset;
+      bool found = posd->output_offset(object, shndx, offset, &output_offset);
+      gold_assert(found);
+      return posd->address() + output_offset;
+    }
+
+  // Fall back to the slow look-up.
   for (Input_section_list::const_iterator p = this->input_sections_.begin();
        p != this->input_sections_.end();
        ++p)
@@ -2169,6 +2384,9 @@ Output_section::find_starting_output_address(const Relobj* object,
 					     unsigned int shndx,
 					     uint64_t* paddr) const
 {
+  // FIXME: This becomes a bottle-neck if we have many relaxed sections.
+  // Looking up the merge section map does not always work as we sometimes
+  // find a merge section without its address set.
   uint64_t addr = this->address() + this->first_input_offset_;
   for (Input_section_list::const_iterator p = this->input_sections_.begin();
        p != this->input_sections_.end();
@@ -2532,6 +2750,9 @@ Output_section::do_write(Output_file* of)
 {
   gold_assert(!this->requires_postprocessing());
 
+  // If the target performs relaxation, we delay filler generation until now.
+  gold_assert(!this->generate_code_fills_at_write_ || this->fills_.empty());
+
   off_t output_section_file_offset = this->offset();
   for (Fill_list::iterator p = this->fills_.begin();
        p != this->fills_.end();
@@ -2542,10 +2763,22 @@ Output_section::do_write(Output_file* of)
 		fill_data.data(), fill_data.size());
     }
 
+  off_t off = this->offset() + this->first_input_offset_;
   for (Input_section_list::iterator p = this->input_sections_.begin();
        p != this->input_sections_.end();
        ++p)
-    p->write(of);
+    {
+      off_t aligned_off = align_address(off, p->addralign());
+      if (this->generate_code_fills_at_write_ && (off != aligned_off))
+	{
+	  size_t fill_len = aligned_off - off;
+	  std::string fill_data(parameters->target().code_fill(fill_len));
+	  of->write(off, fill_data.data(), fill_data.size());
+	}
+
+      p->write(of);
+      off = aligned_off + p->data_size();
+    }
 }
 
 // If a section requires postprocessing, create the buffer to use.
@@ -2586,6 +2819,9 @@ Output_section::write_to_postprocessing_buffer()
 {
   gold_assert(this->requires_postprocessing());
 
+  // If the target performs relaxation, we delay filler generation until now.
+  gold_assert(!this->generate_code_fills_at_write_ || this->fills_.empty());
+
   unsigned char* buffer = this->postprocessing_buffer();
   for (Fill_list::iterator p = this->fills_.begin();
        p != this->fills_.end();
@@ -2601,9 +2837,16 @@ Output_section::write_to_postprocessing_buffer()
        p != this->input_sections_.end();
        ++p)
     {
-      off = align_address(off, p->addralign());
-      p->write_to_buffer(buffer + off);
-      off += p->data_size();
+      off_t aligned_off = align_address(off, p->addralign());
+      if (this->generate_code_fills_at_write_ && (off != aligned_off))
+	{
+	  size_t fill_len = aligned_off - off;
+	  std::string fill_data(parameters->target().code_fill(fill_len));
+	  memcpy(buffer + off, fill_data.data(), fill_data.size());
+	}
+
+      p->write_to_buffer(buffer + aligned_off);
+      off = aligned_off + p->data_size();
     }
 }
 
@@ -2626,6 +2869,9 @@ Output_section::get_input_sections(
   if (this->checkpoint_ != NULL
       && !this->checkpoint_->input_sections_saved())
     this->checkpoint_->save_input_sections();
+
+  // Invalidate the relaxed input section map.
+  this->is_relaxed_input_section_map_valid_ = false;
 
   uint64_t orig_address = address;
 
@@ -2738,11 +2984,15 @@ Output_section::restore_states()
       // extremely large output with hundreads of thousands of input
       // objects.  We may need to re-think how we should pass sections
       // to scripts.
-      this->input_sections_ = checkpoint->input_sections();
+      this->input_sections_ = *checkpoint->input_sections();
     }
 
   this->attached_input_sections_are_sorted_ =
     checkpoint->attached_input_sections_are_sorted();
+
+  // Simply invalidate the relaxed input section map since we do not keep
+  // track of it.
+  this->is_relaxed_input_section_map_valid_ = false;
 }
 
 // Print to the map file.
@@ -2794,11 +3044,13 @@ Output_segment::Output_segment(elfcpp::Elf_Word type, elfcpp::Elf_Word flags)
 
 void
 Output_segment::add_output_section(Output_section* os,
-				   elfcpp::Elf_Word seg_flags)
+				   elfcpp::Elf_Word seg_flags,
+				   bool do_sort)
 {
   gold_assert((os->flags() & elfcpp::SHF_ALLOC) != 0);
   gold_assert(!this->is_max_align_known_);
   gold_assert(os->is_large_data_section() == this->is_large_data_segment());
+  gold_assert(this->type() == elfcpp::PT_LOAD || !do_sort);
 
   // Update the segment flags.
   this->flags_ |= seg_flags;
@@ -2809,19 +3061,12 @@ Output_segment::add_output_section(Output_section* os,
   else
     pdl = &this->output_data_;
 
-  // So that PT_NOTE segments will work correctly, we need to ensure
-  // that all SHT_NOTE sections are adjacent.  This will normally
-  // happen automatically, because all the SHT_NOTE input sections
-  // will wind up in the same output section.  However, it is possible
-  // for multiple SHT_NOTE input sections to have different section
-  // flags, and thus be in different output sections, but for the
-  // different section flags to map into the same segment flags and
-  // thus the same output segment.
-
   // Note that while there may be many input sections in an output
   // section, there are normally only a few output sections in an
-  // output segment.  This loop is expected to be fast.
+  // output segment.  The loops below are expected to be fast.
 
+  // So that PT_NOTE segments will work correctly, we need to ensure
+  // that all SHT_NOTE sections are adjacent.
   if (os->type() == elfcpp::SHT_NOTE && !pdl->empty())
     {
       Output_segment::Output_data_list::iterator p = pdl->end();
@@ -2843,42 +3088,47 @@ Output_segment::add_output_section(Output_section* os,
   // case: we group the SHF_TLS/SHT_NOBITS sections right after the
   // SHF_TLS/SHT_PROGBITS sections.  This lets us set up PT_TLS
   // correctly.  SHF_TLS sections get added to both a PT_LOAD segment
-  // and the PT_TLS segment -- we do this grouping only for the
-  // PT_LOAD segment.
+  // and the PT_TLS segment; we do this grouping only for the PT_LOAD
+  // segment.
   if (this->type_ != elfcpp::PT_TLS
       && (os->flags() & elfcpp::SHF_TLS) != 0)
     {
       pdl = &this->output_data_;
-      bool nobits = os->type() == elfcpp::SHT_NOBITS;
-      bool sawtls = false;
-      Output_segment::Output_data_list::iterator p = pdl->end();
-      do
+      if (!pdl->empty())
 	{
-	  --p;
-	  bool insert;
-	  if ((*p)->is_section_flag_set(elfcpp::SHF_TLS))
+	  bool nobits = os->type() == elfcpp::SHT_NOBITS;
+	  bool sawtls = false;
+	  Output_segment::Output_data_list::iterator p = pdl->end();
+	  gold_assert(p != pdl->begin());
+	  do
 	    {
-	      sawtls = true;
-	      // Put a NOBITS section after the first TLS section.
-	      // Put a PROGBITS section after the first TLS/PROGBITS
-	      // section.
-	      insert = nobits || !(*p)->is_section_type(elfcpp::SHT_NOBITS);
-	    }
-	  else
-	    {
-	      // If we've gone past the TLS sections, but we've seen a
-	      // TLS section, then we need to insert this section now.
-	      insert = sawtls;
-	    }
+	      --p;
+	      bool insert;
+	      if ((*p)->is_section_flag_set(elfcpp::SHF_TLS))
+		{
+		  sawtls = true;
+		  // Put a NOBITS section after the first TLS section.
+		  // Put a PROGBITS section after the first
+		  // TLS/PROGBITS section.
+		  insert = nobits || !(*p)->is_section_type(elfcpp::SHT_NOBITS);
+		}
+	      else
+		{
+		  // If we've gone past the TLS sections, but we've
+		  // seen a TLS section, then we need to insert this
+		  // section now.
+		  insert = sawtls;
+		}
 
-	  if (insert)
-	    {
-	      ++p;
-	      pdl->insert(p, os);
-	      return;
+	      if (insert)
+		{
+		  ++p;
+		  pdl->insert(p, os);
+		  return;
+		}
 	    }
+	  while (p != pdl->begin());
 	}
-      while (p != pdl->begin());
 
       // There are no TLS sections yet; put this one at the requested
       // location in the section list.
@@ -2969,6 +3219,68 @@ Output_segment::add_output_section(Output_section* os,
       gold_unreachable();
     }
 
+  // We do some further output section sorting in order to make the
+  // generated program run more efficiently.  We should only do this
+  // when not using a linker script, so it is controled by the DO_SORT
+  // parameter.
+  if (do_sort)
+    {
+      // FreeBSD requires the .interp section to be in the first page
+      // of the executable.  That is a more efficient location anyhow
+      // for any OS, since it means that the kernel will have the data
+      // handy after it reads the program headers.
+      if (os->is_interp() && !pdl->empty())
+	{
+	  pdl->insert(pdl->begin(), os);
+	  return;
+	}
+
+      // Put loadable non-writable notes immediately after the .interp
+      // sections, so that the PT_NOTE segment is on the first page of
+      // the executable.
+      if (os->type() == elfcpp::SHT_NOTE
+	  && (os->flags() & elfcpp::SHF_WRITE) == 0
+	  && !pdl->empty())
+	{
+	  Output_segment::Output_data_list::iterator p = pdl->begin();
+	  if ((*p)->is_section() && (*p)->output_section()->is_interp())
+	    ++p;
+	  pdl->insert(p, os);
+	  return;
+	}
+
+      // If this section is used by the dynamic linker, and it is not
+      // writable, then put it first, after the .interp section and
+      // any loadable notes.  This makes it more likely that the
+      // dynamic linker will have to read less data from the disk.
+      if (os->is_dynamic_linker_section()
+	  && !pdl->empty()
+	  && (os->flags() & elfcpp::SHF_WRITE) == 0)
+	{
+	  bool is_reloc = (os->type() == elfcpp::SHT_REL
+			   || os->type() == elfcpp::SHT_RELA);
+	  Output_segment::Output_data_list::iterator p = pdl->begin();
+	  while (p != pdl->end()
+		 && (*p)->is_section()
+		 && ((*p)->output_section()->is_dynamic_linker_section()
+		     || (*p)->output_section()->type() == elfcpp::SHT_NOTE))
+	    {
+	      // Put reloc sections after the other ones.  Putting the
+	      // dynamic reloc sections first confuses BFD, notably
+	      // objcopy and strip.
+	      if (!is_reloc
+		  && ((*p)->output_section()->type() == elfcpp::SHT_REL
+		      || (*p)->output_section()->type() == elfcpp::SHT_RELA))
+		break;
+	      ++p;
+	    }
+	  pdl->insert(p, os);
+	  return;
+	}
+    }
+
+  // If there were no constraints on the output section, just add it
+  // to the end of the list.
   pdl->push_back(os);
 }
 
@@ -3238,8 +3550,31 @@ Output_segment::set_section_list_addresses(const Layout* layout, bool reset,
 	{
 	  // The script may have inserted a skip forward, but it
 	  // better not have moved backward.
-	  gold_assert((*p)->address() >= addr + (off - startoff));
-	  off += (*p)->address() - (addr + (off - startoff));
+	  if ((*p)->address() >= addr + (off - startoff))
+	    off += (*p)->address() - (addr + (off - startoff));
+	  else
+	    {
+	      if (!layout->script_options()->saw_sections_clause())
+		gold_unreachable();
+	      else
+		{
+		  Output_section* os = (*p)->output_section();
+
+		  // Cast to unsigned long long to avoid format warnings.
+		  unsigned long long previous_dot =
+		    static_cast<unsigned long long>(addr + (off - startoff));
+		  unsigned long long dot =
+		    static_cast<unsigned long long>((*p)->address());
+
+		  if (os == NULL)
+		    gold_error(_("dot moves backward in linker script "
+				 "from 0x%llx to 0x%llx"), previous_dot, dot);
+		  else
+		    gold_error(_("address of section '%s' moves backward "
+				 "from 0x%llx to 0x%llx"),
+			       os->name(), previous_dot, dot);
+		}
+	    }
 	  (*p)->set_file_offset(off);
 	  (*p)->finalize_data_size();
 	}

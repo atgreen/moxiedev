@@ -227,6 +227,9 @@ set armelftests {
     {"jump19" "-static -T arm.ld" "" {jump19.s}
      {{objdump -dr jump19.d}}
      "jump19"}
+    {"script-type" "-static -T script-type.ld" "" {script-type.s}
+     {{readelf -s script-type.sym}}
+     "script-type"}
     {"callweak" "-static -T arm.ld" "" {callweak.s}
      {{objdump -dr callweak.d}}
      "callweak"}
@@ -419,6 +422,9 @@ set armeabitests {
      {{objdump -fdw farcall-mixed-lib.d}}
      "farcall-mixed-lib.so"}
 
+    {"Long branch with mixed text and data" "-T arm.ld" "" {farcall-data.s}
+     {{objdump -dr farcall-data.d}}
+     "farcall-data"}
 }
 
 run_ld_link_tests $armeabitests
@@ -450,3 +456,13 @@ run_dump_test "unwind-2"
 run_dump_test "unwind-3"
 run_dump_test "unwind-4"
 run_dump_test "unwind-5"
+run_dump_test "attr-merge-vfp-1"
+run_dump_test "attr-merge-vfp-1r"
+run_dump_test "attr-merge-vfp-2"
+run_dump_test "attr-merge-vfp-2r"
+run_dump_test "attr-merge-vfp-3"
+run_dump_test "attr-merge-vfp-3r"
+run_dump_test "attr-merge-vfp-4"
+run_dump_test "attr-merge-vfp-4r"
+run_dump_test "attr-merge-vfp-5"
+run_dump_test "attr-merge-vfp-5r"

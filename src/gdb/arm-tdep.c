@@ -610,14 +610,14 @@ arm_skip_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
       if ((inst & 0xfffff000) == 0xe24dd000)	/* sub sp, sp, #nn */
 	continue;
 
-      if ((inst & 0xffffc000) == 0xe54b0000 ||	/* strb r(0123),[r11,#-nn] */
-	  (inst & 0xffffc0f0) == 0xe14b00b0 ||	/* strh r(0123),[r11,#-nn] */
-	  (inst & 0xffffc000) == 0xe50b0000)	/* str  r(0123),[r11,#-nn] */
+      if ((inst & 0xffffc000) == 0xe54b0000	/* strb r(0123),[r11,#-nn] */
+	  || (inst & 0xffffc0f0) == 0xe14b00b0	/* strh r(0123),[r11,#-nn] */
+	  || (inst & 0xffffc000) == 0xe50b0000)	/* str  r(0123),[r11,#-nn] */
 	continue;
 
-      if ((inst & 0xffffc000) == 0xe5cd0000 ||	/* strb r(0123),[sp,#nn] */
-	  (inst & 0xffffc0f0) == 0xe1cd00b0 ||	/* strh r(0123),[sp,#nn] */
-	  (inst & 0xffffc000) == 0xe58d0000)	/* str  r(0123),[sp,#nn] */
+      if ((inst & 0xffffc000) == 0xe5cd0000	/* strb r(0123),[sp,#nn] */
+	  || (inst & 0xffffc0f0) == 0xe1cd00b0	/* strh r(0123),[sp,#nn] */
+	  || (inst & 0xffffc000) == 0xe58d0000)	/* str  r(0123),[sp,#nn] */
 	continue;
 
       /* Un-recognized instruction; stop scanning.  */
@@ -917,16 +917,16 @@ arm_scan_prologue (struct frame_info *this_frame,
 		pv_area_store (stack, regs[ARM_SP_REGNUM], 4, regs[regno]);
 	      }
 	}
-      else if ((insn & 0xffffc000) == 0xe54b0000 ||	/* strb rx,[r11,#-n] */
-	       (insn & 0xffffc0f0) == 0xe14b00b0 ||	/* strh rx,[r11,#-n] */
-	       (insn & 0xffffc000) == 0xe50b0000)	/* str  rx,[r11,#-n] */
+      else if ((insn & 0xffffc000) == 0xe54b0000	/* strb rx,[r11,#-n] */
+	       || (insn & 0xffffc0f0) == 0xe14b00b0	/* strh rx,[r11,#-n] */
+	       || (insn & 0xffffc000) == 0xe50b0000)	/* str  rx,[r11,#-n] */
 	{
 	  /* No need to add this to saved_regs -- it's just an arg reg.  */
 	  continue;
 	}
-      else if ((insn & 0xffffc000) == 0xe5cd0000 ||	/* strb rx,[sp,#n] */
-	       (insn & 0xffffc0f0) == 0xe1cd00b0 ||	/* strh rx,[sp,#n] */
-	       (insn & 0xffffc000) == 0xe58d0000)	/* str  rx,[sp,#n] */
+      else if ((insn & 0xffffc000) == 0xe5cd0000	/* strb rx,[sp,#n] */
+	       || (insn & 0xffffc0f0) == 0xe1cd00b0	/* strh rx,[sp,#n] */
+	       || (insn & 0xffffc000) == 0xe58d0000)	/* str  rx,[sp,#n] */
 	{
 	  /* No need to add this to saved_regs -- it's just an arg reg.  */
 	  continue;
@@ -1627,7 +1627,8 @@ arm_push_dummy_call (struct gdbarch *gdbarch, struct value *function,
 
   /* Set the return address.  For the ARM, the return breakpoint is
      always at BP_ADDR.  */
-  /* XXX Fix for Thumb.  */
+  if (arm_pc_is_thumb (bp_addr))
+    bp_addr |= 1;
   regcache_cooked_write_unsigned (regcache, ARM_LR_REGNUM, bp_addr);
 
   /* Walk through the list of args and determine how large a temporary
@@ -2172,11 +2173,13 @@ condition_true (unsigned long cond, unsigned long status_reg)
     case INST_LT:
       return (((status_reg & FLAG_N) == 0) != ((status_reg & FLAG_V) == 0));
     case INST_GT:
-      return (((status_reg & FLAG_Z) == 0) &&
-	      (((status_reg & FLAG_N) == 0) == ((status_reg & FLAG_V) == 0)));
+      return (((status_reg & FLAG_Z) == 0)
+	      && (((status_reg & FLAG_N) == 0)
+		  == ((status_reg & FLAG_V) == 0)));
     case INST_LE:
-      return (((status_reg & FLAG_Z) != 0) ||
-	      (((status_reg & FLAG_N) == 0) != ((status_reg & FLAG_V) == 0)));
+      return (((status_reg & FLAG_Z) != 0)
+	      || (((status_reg & FLAG_N) == 0)
+		  != ((status_reg & FLAG_V) == 0)));
     }
   return 1;
 }
@@ -2263,8 +2266,42 @@ thumb_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
   unsigned short inst1;
   CORE_ADDR nextpc = pc + 2;		/* default is next instruction */
   unsigned long offset;
+  ULONGEST status, it;
 
   inst1 = read_memory_unsigned_integer (pc, 2, byte_order_for_code);
+
+  /* Thumb-2 conditional execution support.  There are eight bits in
+     the CPSR which describe conditional execution state.  Once
+     reconstructed (they're in a funny order), the low five bits
+     describe the low bit of the condition for each instruction and
+     how many instructions remain.  The high three bits describe the
+     base condition.  One of the low four bits will be set if an IT
+     block is active.  These bits read as zero on earlier
+     processors.  */
+  status = get_frame_register_unsigned (frame, ARM_PS_REGNUM);
+  it = ((status >> 8) & 0xfc) | ((status >> 25) & 0x3);
+
+  /* On GNU/Linux, where this routine is used, we use an undefined
+     instruction as a breakpoint.  Unlike BKPT, IT can disable execution
+     of the undefined instruction.  So we might miss the breakpoint!  */
+  if (((inst1 & 0xff00) == 0xbf00 && (inst1 & 0x000f) != 0) || (it & 0x0f))
+    error (_("Stepping through Thumb-2 IT blocks is not yet supported"));
+
+  if (it & 0x0f)
+    {
+      /* We are in a conditional block.  Check the condition.  */
+      int cond = it >> 4;
+
+      if (! condition_true (cond, status))
+	{
+	  /* Advance to the next instruction.  All the 32-bit
+	     instructions share a common prefix.  */
+	  if ((inst1 & 0xe000) == 0xe000 && (inst1 & 0x1800) != 0)
+	    return pc + 4;
+	  else
+	    return pc + 2;
+	}
+    }
 
   if ((inst1 & 0xff00) == 0xbd00)	/* pop {rlist, pc} */
     {
@@ -2281,7 +2318,6 @@ thumb_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
     }
   else if ((inst1 & 0xf000) == 0xd000)	/* conditional branch */
     {
-      unsigned long status = get_frame_register_unsigned (frame, ARM_PS_REGNUM);
       unsigned long cond = bits (inst1, 8, 11);
       if (cond != 0x0f && condition_true (cond, status))    /* 0x0f = SWI */
 	nextpc = pc_val + (sbits (inst1, 0, 7) << 1);
@@ -2290,15 +2326,166 @@ thumb_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
     {
       nextpc = pc_val + (sbits (inst1, 0, 10) << 1);
     }
-  else if ((inst1 & 0xf800) == 0xf000)	/* long branch with link, and blx */
+  else if ((inst1 & 0xe000) == 0xe000) /* 32-bit instruction */
     {
       unsigned short inst2;
       inst2 = read_memory_unsigned_integer (pc + 2, 2, byte_order_for_code);
-      offset = (sbits (inst1, 0, 10) << 12) + (bits (inst2, 0, 10) << 1);
-      nextpc = pc_val + offset;
-      /* For BLX make sure to clear the low bits.  */
-      if (bits (inst2, 11, 12) == 1)
-	nextpc = nextpc & 0xfffffffc;
+
+      /* Default to the next instruction.  */
+      nextpc = pc + 4;
+
+      if ((inst1 & 0xf800) == 0xf000 && (inst2 & 0x8000) == 0x8000)
+	{
+	  /* Branches and miscellaneous control instructions.  */
+
+	  if ((inst2 & 0x1000) != 0 || (inst2 & 0xd001) == 0xc000)
+	    {
+	      /* B, BL, BLX.  */
+	      int j1, j2, imm1, imm2;
+
+	      imm1 = sbits (inst1, 0, 10);
+	      imm2 = bits (inst2, 0, 10);
+	      j1 = bit (inst2, 13);
+	      j2 = bit (inst2, 11);
+
+	      offset = ((imm1 << 12) + (imm2 << 1));
+	      offset ^= ((!j2) << 22) | ((!j1) << 23);
+
+	      nextpc = pc_val + offset;
+	      /* For BLX make sure to clear the low bits.  */
+	      if (bit (inst2, 12) == 0)
+		nextpc = nextpc & 0xfffffffc;
+	    }
+	  else if (inst1 == 0xf3de && (inst2 & 0xff00) == 0x3f00)
+	    {
+	      /* SUBS PC, LR, #imm8.  */
+	      nextpc = get_frame_register_unsigned (frame, ARM_LR_REGNUM);
+	      nextpc -= inst2 & 0x00ff;
+	    }
+	  else if ((inst2 & 0xd000) == 0xc000 && (inst1 & 0x0380) != 0x0380)
+	    {
+	      /* Conditional branch.  */
+	      if (condition_true (bits (inst1, 6, 9), status))
+		{
+		  int sign, j1, j2, imm1, imm2;
+
+		  sign = sbits (inst1, 10, 10);
+		  imm1 = bits (inst1, 0, 5);
+		  imm2 = bits (inst2, 0, 10);
+		  j1 = bit (inst2, 13);
+		  j2 = bit (inst2, 11);
+
+		  offset = (sign << 20) + (j2 << 19) + (j1 << 18);
+		  offset += (imm1 << 12) + (imm2 << 1);
+
+		  nextpc = pc_val + offset;
+		}
+	    }
+	}
+      else if ((inst1 & 0xfe50) == 0xe810)
+	{
+	  /* Load multiple or RFE.  */
+	  int rn, offset, load_pc = 1;
+
+	  rn = bits (inst1, 0, 3);
+	  if (bit (inst1, 7) && !bit (inst1, 8))
+	    {
+	      /* LDMIA or POP */
+	      if (!bit (inst2, 15))
+		load_pc = 0;
+	      offset = bitcount (inst2) * 4 - 4;
+	    }
+	  else if (!bit (inst1, 7) && bit (inst1, 8))
+	    {
+	      /* LDMDB */
+	      if (!bit (inst2, 15))
+		load_pc = 0;
+	      offset = -4;
+	    }
+	  else if (bit (inst1, 7) && bit (inst1, 8))
+	    {
+	      /* RFEIA */
+	      offset = 0;
+	    }
+	  else if (!bit (inst1, 7) && !bit (inst1, 8))
+	    {
+	      /* RFEDB */
+	      offset = -8;
+	    }
+	  else
+	    load_pc = 0;
+
+	  if (load_pc)
+	    {
+	      CORE_ADDR addr = get_frame_register_unsigned (frame, rn);
+	      nextpc = get_frame_memory_unsigned (frame, addr + offset, 4);
+	    }
+	}
+      else if ((inst1 & 0xffef) == 0xea4f && (inst2 & 0xfff0) == 0x0f00)
+	{
+	  /* MOV PC or MOVS PC.  */
+	  nextpc = get_frame_register_unsigned (frame, bits (inst2, 0, 3));
+	}
+      else if ((inst1 & 0xff70) == 0xf850 && (inst2 & 0xf000) == 0xf000)
+	{
+	  /* LDR PC.  */
+	  CORE_ADDR base;
+	  int rn, load_pc = 1;
+
+	  rn = bits (inst1, 0, 3);
+	  base = get_frame_register_unsigned (frame, rn);
+	  if (rn == 15)
+	    {
+	      base = (base + 4) & ~(CORE_ADDR) 0x3;
+	      if (bit (inst1, 7))
+		base += bits (inst2, 0, 11);
+	      else
+		base -= bits (inst2, 0, 11);
+	    }
+	  else if (bit (inst1, 7))
+	    base += bits (inst2, 0, 11);
+	  else if (bit (inst2, 11))
+	    {
+	      if (bit (inst2, 10))
+		{
+		  if (bit (inst2, 9))
+		    base += bits (inst2, 0, 7);
+		  else
+		    base -= bits (inst2, 0, 7);
+		}
+	    }
+	  else if ((inst2 & 0x0fc0) == 0x0000)
+	    {
+	      int shift = bits (inst2, 4, 5), rm = bits (inst2, 0, 3);
+	      base += get_frame_register_unsigned (frame, rm) << shift;
+	    }
+	  else
+	    /* Reserved.  */
+	    load_pc = 0;
+
+	  if (load_pc)
+	    nextpc = get_frame_memory_unsigned (frame, base, 4);
+	}
+      else if ((inst1 & 0xfff0) == 0xe8d0 && (inst2 & 0xfff0) == 0xf000)
+	{
+	  /* TBB.  */
+	  CORE_ADDR table, offset, length;
+
+	  table = get_frame_register_unsigned (frame, bits (inst1, 0, 3));
+	  offset = get_frame_register_unsigned (frame, bits (inst2, 0, 3));
+	  length = 2 * get_frame_memory_unsigned (frame, table + offset, 1);
+	  nextpc = pc_val + length;
+	}
+      else if ((inst1 & 0xfff0) == 0xe8d0 && (inst2 & 0xfff0) == 0xf000)
+	{
+	  /* TBH.  */
+	  CORE_ADDR table, offset, length;
+
+	  table = get_frame_register_unsigned (frame, bits (inst1, 0, 3));
+	  offset = 2 * get_frame_register_unsigned (frame, bits (inst2, 0, 3));
+	  length = 2 * get_frame_memory_unsigned (frame, table + offset, 2);
+	  nextpc = pc_val + length;
+	}
     }
   else if ((inst1 & 0xff00) == 0x4700)	/* bx REG, blx REG */
     {
@@ -2310,6 +2497,17 @@ thumb_get_next_pc (struct frame_info *frame, CORE_ADDR pc)
       nextpc = gdbarch_addr_bits_remove (gdbarch, nextpc);
       if (nextpc == pc)
 	error (_("Infinite loop detected"));
+    }
+  else if ((inst1 & 0xf500) == 0xb100)
+    {
+      /* CBNZ or CBZ.  */
+      int imm = (bit (inst1, 9) << 6) + (bits (inst1, 3, 7) << 1);
+      ULONGEST reg = get_frame_register_unsigned (frame, bits (inst1, 0, 2));
+
+      if (bit (inst1, 11) && reg != 0)
+	nextpc = pc_val + imm;
+      else if (!bit (inst1, 11) && reg == 0)
+	nextpc = pc_val + imm;
     }
 
   return nextpc;
@@ -2594,13 +2792,14 @@ int
 arm_software_single_step (struct frame_info *frame)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
+  struct address_space *aspace = get_frame_address_space (frame);
 
   /* NOTE: This may insert the wrong breakpoint instruction when
      single-stepping over a mode-changing instruction, if the
      CPSR heuristics are used.  */
 
   CORE_ADDR next_pc = arm_get_next_pc (frame, get_frame_pc (frame));
-  insert_single_step_breakpoint (gdbarch, next_pc);
+  insert_single_step_breakpoint (gdbarch, aspace, next_pc);
 
   return 1;
 }
@@ -4956,8 +5155,10 @@ arm_skip_stub (struct frame_info *frame, CORE_ADDR pc)
   /* If PC is in a Thumb call or return stub, return the address of the
      target PC, which is in a register.  The thunk functions are called
      _call_via_xx, where x is the register name.  The possible names
-     are r0-r9, sl, fp, ip, sp, and lr.  */
-  if (strncmp (name, "_call_via_", 10) == 0)
+     are r0-r9, sl, fp, ip, sp, and lr.  ARM RealView has similar
+     functions, named __ARM_call_via_r[0-7].  */
+  if (strncmp (name, "_call_via_", 10) == 0
+      || strncmp (name, "__ARM_call_via_", strlen ("__ARM_call_via_")) == 0)
     {
       /* Use the name suffix to determine which register contains the
          target PC.  */
@@ -5208,11 +5409,11 @@ set_disassembly_style (void)
 static int
 coff_sym_is_thumb (int val)
 {
-  return (val == C_THUMBEXT ||
-	  val == C_THUMBSTAT ||
-	  val == C_THUMBEXTFUNC ||
-	  val == C_THUMBSTATFUNC ||
-	  val == C_THUMBLABEL);
+  return (val == C_THUMBEXT
+	  || val == C_THUMBSTAT
+	  || val == C_THUMBEXTFUNC
+	  || val == C_THUMBSTATFUNC
+	  || val == C_THUMBLABEL);
 }
 
 /* arm_coff_make_msymbol_special()
@@ -5240,7 +5441,7 @@ arm_coff_make_msymbol_special(int val, struct minimal_symbol *msym)
 }
 
 static void
-arm_objfile_data_cleanup (struct objfile *objfile, void *arg)
+arm_objfile_data_free (struct objfile *objfile, void *arg)
 {
   struct arm_per_objfile *data = arg;
   unsigned int i;
@@ -6032,7 +6233,7 @@ _initialize_arm_tdep (void)
   gdbarch_register (bfd_arch_arm, arm_gdbarch_init, arm_dump_tdep);
 
   arm_objfile_data_key
-    = register_objfile_data_with_cleanup (arm_objfile_data_cleanup);
+    = register_objfile_data_with_cleanup (NULL, arm_objfile_data_free);
 
   /* Register an ELF OS ABI sniffer for ARM binaries.  */
   gdbarch_register_osabi_sniffer (bfd_arch_arm,

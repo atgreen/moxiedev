@@ -1,6 +1,5 @@
 # This shell script emits a C file. -*- C -*-
 # It does some substitutions.
-test -z "${ENTRY}" && ENTRY="_mainCRTStartup"
 if [ -z "$MACHINE" ]; then
   OUTPUT_ARCH=${ARCH}
 else
@@ -100,6 +99,12 @@ fragment <<EOF
 #define DLL_SUPPORT
 #endif
 
+#if defined(TARGET_IS_i386pe)
+#define DEFAULT_PSEUDO_RELOC_VERSION 2
+#else
+#define DEFAULT_PSEUDO_RELOC_VERSION 1
+#endif
+
 #if defined(TARGET_IS_i386pe) || ! defined(DLL_SUPPORT)
 #define	PE_DEF_SUBSYSTEM		3
 #else
@@ -122,6 +127,7 @@ fragment <<EOF
 
 static struct internal_extra_pe_aouthdr pe;
 static int dll;
+static int pe_subsystem = ${SUBSYSTEM};
 static flagword real_flags = 0;
 static int support_old_code = 0;
 static char * thumb_entry_symbol = NULL;
@@ -161,17 +167,8 @@ esac
 
 fragment <<EOF
   link_info.pei386_auto_import = ${default_auto_import};
-  link_info.pei386_runtime_pseudo_reloc = 1; /* Use by default version 1.  */
-
-#if (PE_DEF_SUBSYSTEM == 9) || (PE_DEF_SUBSYSTEM == 2)
-#if defined TARGET_IS_mipspe || defined TARGET_IS_armpe || defined TARGET_IS_arm_wince_pe
-  lang_default_entry ("WinMainCRTStartup");
-#else
-  lang_default_entry ("_WinMainCRTStartup");
-#endif
-#else
-  lang_default_entry ("${ENTRY}");
-#endif
+  /* Use by default version.  */
+  link_info.pei386_runtime_pseudo_reloc = DEFAULT_PSEUDO_RELOC_VERSION;
 #endif
 }
 
@@ -196,7 +193,8 @@ fragment <<EOF
 #define OPTION_OUT_DEF			(OPTION_SUPPORT_OLD_CODE + 1)
 #define OPTION_EXPORT_ALL		(OPTION_OUT_DEF + 1)
 #define OPTION_EXCLUDE_SYMBOLS		(OPTION_EXPORT_ALL + 1)
-#define OPTION_KILL_ATS			(OPTION_EXCLUDE_SYMBOLS + 1)
+#define OPTION_EXCLUDE_ALL_SYMBOLS	(OPTION_EXCLUDE_SYMBOLS + 1)
+#define OPTION_KILL_ATS			(OPTION_EXCLUDE_ALL_SYMBOLS + 1)
 #define OPTION_STDCALL_ALIASES		(OPTION_KILL_ATS + 1)
 #define OPTION_ENABLE_STDCALL_FIXUP	(OPTION_STDCALL_ALIASES + 1)
 #define OPTION_DISABLE_STDCALL_FIXUP	(OPTION_ENABLE_STDCALL_FIXUP + 1)
@@ -276,6 +274,7 @@ gld${EMULATION_NAME}_add_options
     {"output-def", required_argument, NULL, OPTION_OUT_DEF},
     {"export-all-symbols", no_argument, NULL, OPTION_EXPORT_ALL},
     {"exclude-symbols", required_argument, NULL, OPTION_EXCLUDE_SYMBOLS},
+    {"exclude-all-symbols", no_argument, NULL, OPTION_EXCLUDE_ALL_SYMBOLS},
     {"exclude-libs", required_argument, NULL, OPTION_EXCLUDE_LIBS},
     {"exclude-modules-for-implib", required_argument, NULL, OPTION_EXCLUDE_MODULES_FOR_IMPLIB},
     {"kill-at", no_argument, NULL, OPTION_KILL_ATS},
@@ -389,6 +388,7 @@ gld_${EMULATION_NAME}_list_options (FILE *file)
   fprintf (file, _("  --disable-stdcall-fixup            Don't link _sym to _sym@nn\n"));
   fprintf (file, _("  --enable-stdcall-fixup             Link _sym to _sym@nn without warnings\n"));
   fprintf (file, _("  --exclude-symbols sym,sym,...      Exclude symbols from automatic export\n"));
+  fprintf (file, _("  --exclude-all-symbols              Exclude all symbols from automatic export\n"));
   fprintf (file, _("  --exclude-libs lib,lib,...         Exclude libraries from automatic export\n"));
   fprintf (file, _("  --exclude-modules-for-implib mod,mod,...\n"));
   fprintf (file, _("                                     Exclude objects, archive members from auto\n"));
@@ -456,90 +456,53 @@ set_pe_name (char *name, long val)
   abort ();
 }
 
-
 static void
-set_pe_subsystem (void)
+set_entry_point (void)
 {
-  const char *sver;
   const char *entry;
   const char *initial_symbol_char;
-  char *end;
-  int len;
   int i;
-  int subsystem;
-  unsigned long temp_subsystem;
+
   static const struct
     {
-      const char *name;
       const int value;
       const char *entry;
     }
   v[] =
     {
-      { "native",  1, "NtProcessStartup" },
-      { "windows", 2, "WinMainCRTStartup" },
-      { "console", 3, "mainCRTStartup" },
-      { "posix",   7, "__PosixProcessStartup"},
-      { "wince",   9, "WinMainCRTStartup" },
-      { "xbox",   14, "mainCRTStartup" },
-      { NULL, 0, NULL }
+      { 1, "NtProcessStartup"  },
+      { 2, "WinMainCRTStartup" },
+      { 3, "mainCRTStartup"    },
+      { 7, "__PosixProcessStartup"},
+      { 9, "WinMainCRTStartup" },
+      {14, "mainCRTStartup"    },
+      { 0, NULL          }
     };
+
   /* Entry point name for arbitrary subsystem numbers.  */
   static const char default_entry[] = "mainCRTStartup";
 
-  /* Check for the presence of a version number.  */
-  sver = strchr (optarg, ':');
-  if (sver == NULL)
-    len = strlen (optarg);
+  if (link_info.shared || dll)
+    {
+#if defined (TARGET_IS_i386pe)
+      entry = "DllMainCRTStartup@12";
+#else
+      entry = "DllMainCRTStartup";
+#endif
+    }
   else
     {
-      len = sver - optarg;
-      set_pe_name ("__major_subsystem_version__",
-		   strtoul (sver + 1, &end, 0));
-      if (*end == '.')
-	set_pe_name ("__minor_subsystem_version__",
-		     strtoul (end + 1, &end, 0));
-      if (*end != '\0')
-	einfo (_("%P: warning: bad version number in -subsystem option\n"));
-    }
 
-  /* Check for numeric subsystem.  */
-  temp_subsystem = strtoul (optarg, & end, 0);
-  if ((*end == ':' || *end == '\0') && (temp_subsystem < 65536))
-    {
-      /* Search list for a numeric match to use its entry point.  */
-      for (i = 0; v[i].name; i++)
-	if (v[i].value == (int) temp_subsystem)
-	  break;
+      for (i = 0; v[i].entry; i++)
+        if (v[i].value == pe_subsystem)
+          break;
 
       /* If no match, use the default.  */
-      if (v[i].name != NULL)
-	entry = v[i].entry;
+      if (v[i].entry != NULL)
+        entry = v[i].entry;
       else
-	entry = default_entry;
-
-      /* Use this subsystem.  */
-      subsystem = (int) temp_subsystem;
+        entry = default_entry;
     }
-  else
-    {
-      /* Search for subsystem by name.  */
-      for (i = 0; v[i].name; i++)
-	if (strncmp (optarg, v[i].name, len) == 0
-	    && v[i].name[len] == '\0')
-	  break;
-
-      if (v[i].name == NULL)
-	{
-	  einfo (_("%P%F: invalid subsystem type %s\n"), optarg);
-	  return;
-	}
-
-      entry = v[i].entry;
-      subsystem = v[i].value;
-    }
-
-  set_pe_name ("__subsystem__", subsystem);
 
   initial_symbol_char = ${INITIAL_SYMBOL_CHAR};
   if (*initial_symbol_char != '\0')
@@ -557,6 +520,78 @@ set_pe_subsystem (void)
     }
 
   lang_default_entry (entry);
+}
+
+static void
+set_pe_subsystem (void)
+{
+  const char *sver;
+  char *end;
+  int len;
+  int i;
+  unsigned long temp_subsystem;
+  static const struct
+    {
+      const char *name;
+      const int value;
+    }
+  v[] =
+    {
+      { "native",  1},
+      { "windows", 2},
+      { "console", 3},
+      { "posix",   7},
+      { "wince",   9},
+      { "xbox",   14},
+      { NULL, 0 }
+    };
+
+  /* Check for the presence of a version number.  */
+  sver = strchr (optarg, ':');
+  if (sver == NULL)
+    len = strlen (optarg);
+  else
+    {
+      len = sver - optarg;
+      set_pe_name ("__major_subsystem_version__",
+		    strtoul (sver + 1, &end, 0));
+      if (*end == '.')
+	set_pe_name ("__minor_subsystem_version__",
+		      strtoul (end + 1, &end, 0));
+      if (*end != '\0')
+	einfo (_("%P: warning: bad version number in -subsystem option\n"));
+    }
+
+  /* Check for numeric subsystem.  */
+  temp_subsystem = strtoul (optarg, & end, 0);
+  if ((*end == ':' || *end == '\0') && (temp_subsystem < 65536))
+    {
+      /* Search list for a numeric match to use its entry point.  */
+      for (i = 0; v[i].name; i++)
+	if (v[i].value == (int) temp_subsystem)
+	  break;
+
+      /* Use this subsystem.  */
+      pe_subsystem = (int) temp_subsystem;
+    }
+  else
+    {
+      /* Search for subsystem by name.  */
+      for (i = 0; v[i].name; i++)
+	if (strncmp (optarg, v[i].name, len) == 0
+	    && v[i].name[len] == '\0')
+	  break;
+
+      if (v[i].name == NULL)
+	{
+	  einfo (_("%P%F: invalid subsystem type %s\n"), optarg);
+	  return;
+	}
+
+      pe_subsystem = v[i].value;
+    }
+
+  set_pe_name ("__subsystem__", pe_subsystem);
 
   return;
 }
@@ -669,6 +704,9 @@ gld${EMULATION_NAME}_handle_option (int optc)
     case OPTION_EXCLUDE_SYMBOLS:
       pe_dll_add_excludes (optarg, EXCLUDESYMS);
       break;
+    case OPTION_EXCLUDE_ALL_SYMBOLS:
+      pe_dll_exclude_all_symbols = 1;
+      break;
     case OPTION_EXCLUDE_LIBS:
       pe_dll_add_excludes (optarg, EXCLUDELIBS);
       break;
@@ -715,7 +753,8 @@ gld${EMULATION_NAME}_handle_option (int optc)
       link_info.pei386_auto_import = 0;
       break;
     case OPTION_DLL_ENABLE_RUNTIME_PSEUDO_RELOC:
-      link_info.pei386_runtime_pseudo_reloc = 1;
+      link_info.pei386_runtime_pseudo_reloc =
+	DEFAULT_PSEUDO_RELOC_VERSION;
       break;
     case OPTION_DLL_ENABLE_RUNTIME_PSEUDO_RELOC_V1:
       link_info.pei386_runtime_pseudo_reloc = 1;
@@ -883,6 +922,8 @@ gld_${EMULATION_NAME}_after_parse (void)
     einfo (_("%P: warning: --export-dynamic is not supported for PE "
       "targets, did you mean --export-all-symbols?\n"));
 
+  set_entry_point ();
+
   after_parse_default ();
 }
 
@@ -901,10 +942,13 @@ pe_undef_cdecl_match (struct bfd_link_hash_entry *h, void *inf)
 {
   int sl;
   char *string = inf;
+  const char *hs = h->root.string;
 
   sl = strlen (string);
   if (h->type == bfd_link_hash_defined
-      && strncmp (h->root.string, string, sl) == 0
+      && ((*hs == '@' && *string == '_'
+		   && strncmp (hs + 1, string + 1, sl - 1) == 0)
+		  || strncmp (hs, string, sl) == 0)
       && h->root.string[sl] == '@')
     {
       pe_undef_found_sym = h;
@@ -927,15 +971,20 @@ pe_fixup_stdcalls (void)
       {
 	char* at = strchr (undef->root.string, '@');
 	int lead_at = (*undef->root.string == '@');
-	/* For now, don't try to fixup fastcall symbols.  */
+	if (lead_at)
+	  at = strchr (undef->root.string + 1, '@');
 
-	if (at && !lead_at)
+	if (at || lead_at)
 	  {
 	    /* The symbol is a stdcall symbol, so let's look for a
 	       cdecl symbol with the same name and resolve to that.  */
-	    char *cname = xstrdup (undef->root.string /* + lead_at */);
+	    char *cname = xstrdup (undef->root.string);
+
+	    if (lead_at)
+	      *cname = '_';
 	    at = strchr (cname, '@');
-	    *at = 0;
+	    if (at)
+	      *at = 0;
 	    sym = bfd_link_hash_lookup (link_info.hash, cname, 0, 0, 1);
 
 	    if (sym && sym->type == bfd_link_hash_defined)
@@ -1170,6 +1219,11 @@ gld_${EMULATION_NAME}_after_open (void)
   pe_process_import_defs (link_info.output_bfd, &link_info);
 
   pe_find_data_imports ();
+
+  /* As possibly new symbols are added by imports, we rerun
+     stdcall/fastcall fixup here.  */
+  if (pe_enable_stdcall_fixup) /* -1=warn or 1=disable */
+    pe_fixup_stdcalls ();
 
 #if defined (TARGET_IS_i386pe) \
     || defined (TARGET_IS_armpe) \

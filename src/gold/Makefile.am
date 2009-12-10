@@ -34,11 +34,12 @@ AM_YFLAGS = -d
 am__skiplex =
 am__skipyacc =
 
-noinst_PROGRAMS = ld-new
+noinst_PROGRAMS = ld-new incremental-dump
 noinst_LIBRARIES = libgold.a
 
 CCFILES = \
 	archive.cc \
+	attributes.cc \
 	binary.cc \
 	common.cc \
 	compressed_output.cc \
@@ -58,6 +59,7 @@ CCFILES = \
 	gold-threads.cc \
 	icf.cc \
 	incremental.cc \
+	int_encoding.cc \
 	layout.cc \
 	mapfile.cc \
 	merge.cc \
@@ -82,6 +84,7 @@ CCFILES = \
 
 HFILES = \
 	archive.h \
+	attributes.h \
 	binary.h \
 	common.h \
 	compressed_output.h \
@@ -100,6 +103,7 @@ HFILES = \
 	gold.h \
 	gold-threads.h \
 	icf.h \
+	int_encoding.h \
 	layout.h \
 	mapfile.h \
 	merge.h \
@@ -150,6 +154,12 @@ ld_new_DEPENDENCIES = $(deps_var)
 ld_new_LDADD = $(ldadd_var)
 
 EXTRA_ld_new_SOURCES = $(TARGETSOURCES)
+
+incremental_dump_SOURCES = incremental-dump.cc
+incremental_dump_DEPENDENCIES = $(TARGETOBJS) libgold.a $(LIBIBERTY) \
+	 $(THREADSLIB) $(LIBDL)
+incremental_dump_LDADD = $(TARGETOBJS) libgold.a $(LIBIBERTY) \
+	 $(THREADSLIB) $(LIBDL)
 
 # Use an explicit dependency for the bison generated header file.
 expression.$(OBJEXT): yyscript.h

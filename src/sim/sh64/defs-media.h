@@ -2,22 +2,23 @@
 
 THIS FILE IS MACHINE GENERATED WITH CGEN.
 
-Copyright 1996-2005 Free Software Foundation, Inc.
+Copyright 1996-2009 Free Software Foundation, Inc.
 
 This file is part of the GNU simulators.
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 3 of the License, or
-(at your option) any later version.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3, or (at your option)
+   any later version.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+   It is distributed in the hope that it will be useful, but WITHOUT
+   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+   or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
+   License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License along
+   with this program; if not, write to the Free Software Foundation, Inc.,
+   51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.
 
 */
 
@@ -193,7 +194,7 @@ struct scache {
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
-  f_disp10 = EXTRACT_MSB0_INT (insn, 32, 12, 10); \
+  f_disp10 = EXTRACT_MSB0_SINT (insn, 32, 12, 10); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -210,7 +211,7 @@ struct scache {
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
   f_ext = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_disp6x32 = ((EXTRACT_MSB0_INT (insn, 32, 16, 6)) << (5)); \
+  f_disp6x32 = ((EXTRACT_MSB0_SINT (insn, 32, 16, 6)) << (5)); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -250,7 +251,7 @@ struct scache {
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
   f_ext = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_imm6 = EXTRACT_MSB0_INT (insn, 32, 16, 6); \
+  f_imm6 = EXTRACT_MSB0_SINT (insn, 32, 16, 6); \
   f_likely = EXTRACT_MSB0_UINT (insn, 32, 22, 1); \
   f_23_2 = EXTRACT_MSB0_UINT (insn, 32, 23, 2); \
   f_tra = EXTRACT_MSB0_UINT (insn, 32, 25, 3); \
@@ -498,7 +499,7 @@ struct scache {
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
-  f_disp10x8 = ((EXTRACT_MSB0_INT (insn, 32, 12, 10)) << (3)); \
+  f_disp10x8 = ((EXTRACT_MSB0_SINT (insn, 32, 12, 10)) << (3)); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -513,7 +514,7 @@ struct scache {
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
-  f_disp10x8 = ((EXTRACT_MSB0_INT (insn, 32, 12, 10)) << (3)); \
+  f_disp10x8 = ((EXTRACT_MSB0_SINT (insn, 32, 12, 10)) << (3)); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -528,7 +529,7 @@ struct scache {
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
-  f_disp10x4 = ((EXTRACT_MSB0_INT (insn, 32, 12, 10)) << (2)); \
+  f_disp10x4 = ((EXTRACT_MSB0_SINT (insn, 32, 12, 10)) << (2)); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -687,7 +688,7 @@ struct scache {
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
   f_ext = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_disp6 = EXTRACT_MSB0_INT (insn, 32, 16, 6); \
+  f_disp6 = EXTRACT_MSB0_SINT (insn, 32, 16, 6); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -719,7 +720,7 @@ struct scache {
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
-  f_disp10x4 = ((EXTRACT_MSB0_INT (insn, 32, 12, 10)) << (2)); \
+  f_disp10x4 = ((EXTRACT_MSB0_SINT (insn, 32, 12, 10)) << (2)); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -734,7 +735,7 @@ struct scache {
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
-  f_disp10x8 = ((EXTRACT_MSB0_INT (insn, 32, 12, 10)) << (3)); \
+  f_disp10x8 = ((EXTRACT_MSB0_SINT (insn, 32, 12, 10)) << (3)); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -764,7 +765,7 @@ struct scache {
 #define EXTRACT_IFMT_MOVI_CODE \
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
-  f_imm16 = EXTRACT_MSB0_INT (insn, 32, 6, 16); \
+  f_imm16 = EXTRACT_MSB0_SINT (insn, 32, 6, 16); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -779,7 +780,7 @@ struct scache {
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
-  f_imm10 = EXTRACT_MSB0_INT (insn, 32, 12, 10); \
+  f_imm10 = EXTRACT_MSB0_SINT (insn, 32, 12, 10); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -796,7 +797,7 @@ struct scache {
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
   f_ext = EXTRACT_MSB0_UINT (insn, 32, 12, 4); \
-  f_disp6x32 = ((EXTRACT_MSB0_INT (insn, 32, 16, 6)) << (5)); \
+  f_disp6x32 = ((EXTRACT_MSB0_SINT (insn, 32, 16, 6)) << (5)); \
   f_right = EXTRACT_MSB0_UINT (insn, 32, 16, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 
@@ -811,7 +812,7 @@ struct scache {
 #define EXTRACT_IFMT_PTA_CODE \
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
-  f_disp16 = ((((EXTRACT_MSB0_INT (insn, 32, 6, 16)) << (2))) + (pc)); \
+  f_disp16 = ((((EXTRACT_MSB0_SINT (insn, 32, 6, 16)) << (2))) + (pc)); \
   f_likely = EXTRACT_MSB0_UINT (insn, 32, 22, 1); \
   f_23_2 = EXTRACT_MSB0_UINT (insn, 32, 23, 2); \
   f_tra = EXTRACT_MSB0_UINT (insn, 32, 25, 3); \
@@ -896,7 +897,7 @@ struct scache {
   length = 4; \
   f_op = EXTRACT_MSB0_UINT (insn, 32, 0, 6); \
   f_left = EXTRACT_MSB0_UINT (insn, 32, 6, 6); \
-  f_disp10x2 = ((EXTRACT_MSB0_INT (insn, 32, 12, 10)) << (1)); \
+  f_disp10x2 = ((EXTRACT_MSB0_SINT (insn, 32, 12, 10)) << (1)); \
   f_dest = EXTRACT_MSB0_UINT (insn, 32, 22, 6); \
   f_rsvd = EXTRACT_MSB0_UINT (insn, 32, 28, 4); \
 

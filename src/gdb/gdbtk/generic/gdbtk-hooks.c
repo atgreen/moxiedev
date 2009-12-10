@@ -94,7 +94,8 @@ static void gdbtk_pre_add_symbol (const char *);
 static void gdbtk_print_frame_info (struct symtab *, int, int, int);
 static void gdbtk_post_add_symbol (void);
 static void gdbtk_register_changed (int regno);
-static void gdbtk_memory_changed (CORE_ADDR addr, int len);
+static void gdbtk_memory_changed (CORE_ADDR addr, int len,
+				  const bfd_byte *data);
 static void gdbtk_selected_frame_changed (int);
 static void gdbtk_context_change (int);
 static void gdbtk_error_begin (void);
@@ -129,6 +130,7 @@ gdbtk_add_hooks (void)
   observer_attach_tracepoint_modified (gdbtk_modify_tracepoint);
   observer_attach_tracepoint_deleted (gdbtk_delete_tracepoint);
   observer_attach_architecture_changed (gdbtk_architecture_changed);
+  observer_attach_memory_changed (gdbtk_memory_changed);
 
   /* Hooks */
   deprecated_call_command_hook = gdbtk_call_command;
@@ -158,7 +160,6 @@ gdbtk_add_hooks (void)
   deprecated_detach_hook            = gdbtk_detach;
 
   deprecated_register_changed_hook = gdbtk_register_changed;
-  deprecated_memory_changed_hook = gdbtk_memory_changed;
   deprecated_selected_frame_level_changed_hook = gdbtk_selected_frame_changed;
   deprecated_context_hook = gdbtk_context_change;
 
@@ -393,7 +394,7 @@ gdbtk_register_changed (int regno)
 }
 
 static void
-gdbtk_memory_changed (CORE_ADDR addr, int len)
+gdbtk_memory_changed (CORE_ADDR addr, int len, const bfd_byte *data)
 {
   if (Tcl_Eval (gdbtk_interp, "gdbtk_memory_changed") != TCL_OK)
     report_error ();

@@ -3705,7 +3705,8 @@ do_attach (ptid_t ptid)
   if ((fail = procfs_debug_inferior (pi)) != 0)
     dead_procinfo (pi, "do_attach: failed in procfs_debug_inferior", NOKILL);
 
-  inf = add_inferior (pi->pid);
+  inf = current_inferior ();
+  inferior_appeared (inf, pi->pid);
   /* Let GDB know that the inferior was attached.  */
   inf->attach_flag = 1;
 
@@ -5665,7 +5666,7 @@ insert_dbx_link_bpt_in_file (int fd, CORE_ADDR ignored)
     {
       /* Insert the breakpoint.  */
       dbx_link_bpt_addr = sym_addr;
-      dbx_link_bpt = deprecated_insert_raw_breakpoint (target_gdbarch,
+      dbx_link_bpt = deprecated_insert_raw_breakpoint (target_gdbarch, NULL,
 						       sym_addr);
       if (dbx_link_bpt == NULL)
         {
@@ -6059,8 +6060,18 @@ procfs_do_thread_registers (bfd *obfd, ptid_t ptid,
   gdb_gregset_t gregs;
   gdb_fpregset_t fpregs;
   unsigned long merged_pid;
+  struct cleanup *old_chain;
 
   merged_pid = TIDGET (ptid) << 16 | PIDGET (ptid);
+
+  /* This part is the old method for fetching registers.
+     It should be replaced by the newer one using regsets
+     once it is implemented in this platform:
+     gdbarch_regset_from_core_section() and regset->collect_regset(). */
+
+  old_chain = save_inferior_ptid ();
+  inferior_ptid = ptid;
+  target_fetch_registers (regcache, -1);
 
   fill_gregset (regcache, &gregs, -1);
 #if defined (UNIXWARE)
@@ -6084,6 +6095,9 @@ procfs_do_thread_registers (bfd *obfd, ptid_t ptid,
 					      note_size,
 					      &fpregs,
 					      sizeof (fpregs));
+
+  do_cleanups (old_chain);
+
   return note_data;
 }
 
@@ -6101,13 +6115,11 @@ procfs_corefile_thread_callback (procinfo *pi, procinfo *thread, void *data)
 
   if (pi != NULL)
     {
-      ptid_t saved_ptid = inferior_ptid;
-      inferior_ptid = MERGEPID (pi->pid, thread->tid);
-      args->note_data = procfs_do_thread_registers (args->obfd, inferior_ptid,
+      ptid_t ptid = MERGEPID (pi->pid, thread->tid);
+      args->note_data = procfs_do_thread_registers (args->obfd, ptid,
 						    args->note_data,
 						    args->note_size,
 						    args->stop_signal);
-      inferior_ptid = saved_ptid;
     }
   return 0;
 }
@@ -6126,6 +6138,7 @@ procfs_make_note_section (bfd *obfd, int *note_size)
   struct procfs_corefile_thread_data thread_args;
   gdb_byte *auxv;
   int auxv_len;
+  enum target_signal stop_signal;
 
   if (get_exec_file (0))
     {
@@ -6150,6 +6163,8 @@ procfs_make_note_section (bfd *obfd, int *note_size)
 					       fname,
 					       psargs);
 
+  stop_signal = find_stop_signal ();
+
 #ifdef UNIXWARE
   fill_gregset (get_current_regcache (), &gregs, -1);
   note_data = elfcore_write_pstatus (obfd, note_data, note_size,
@@ -6160,7 +6175,7 @@ procfs_make_note_section (bfd *obfd, int *note_size)
   thread_args.obfd = obfd;
   thread_args.note_data = note_data;
   thread_args.note_size = note_size;
-  thread_args.stop_signal = find_stop_signal ();
+  thread_args.stop_signal = stop_signal;
   proc_iterate_over_threads (pi, procfs_corefile_thread_callback, &thread_args);
 
   /* There should be always at least one thread.  */

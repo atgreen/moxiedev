@@ -137,8 +137,11 @@ struct i386_dr_low_type i386_dr_low;
 #define I386_DR_GET_RW_LEN(i) \
   ((dr_control_mirror >> (DR_CONTROL_SHIFT + DR_CONTROL_SIZE * (i))) & 0x0f)
 
+/* Mask that this I'th watchpoint has triggered.  */
+#define I386_DR_WATCH_MASK(i)	(1 << (i))
+
 /* Did the watchpoint whose address is in the I'th register break?  */
-#define I386_DR_WATCH_HIT(i)	(dr_status_mirror & (1 << (i)))
+#define I386_DR_WATCH_HIT(i)	(dr_status_mirror & I386_DR_WATCH_MASK (i))
 
 /* A macro to loop over all debug registers.  */
 #define ALL_DEBUG_REGISTERS(i)	for (i = 0; i < DR_NADDR; i++)
@@ -358,6 +361,10 @@ i386_insert_aligned_watchpoint (CORE_ADDR addr, unsigned len_rw_bits)
   i386_dr_low.set_addr (i, addr);
   i386_dr_low.set_control (dr_control_mirror);
 
+  /* Only a sanity check for leftover bits (set possibly only by inferior).  */
+  if (i386_dr_low.unset_status)
+    i386_dr_low.unset_status (I386_DR_WATCH_MASK (i));
+
   return 0;
 }
 
@@ -555,7 +562,10 @@ i386_stopped_data_address (struct target_ops *ops, CORE_ADDR *addr_p)
 	     that GDB doesn't call the target_stopped_data_address
 	     method except for data watchpoints.  In other words, I'm
 	     being paranoiac.  */
-	  && I386_DR_GET_RW_LEN (i) != 0)
+	  && I386_DR_GET_RW_LEN (i) != 0
+	  /* This third condition makes sure DRi is not vacant, this
+	     avoids false positives in windows-nat.c.  */
+	  && !I386_DR_VACANT (i))
 	{
 	  addr = dr_mirror[i];
 	  rc = 1;
@@ -576,27 +586,6 @@ i386_stopped_by_watchpoint (void)
 {
   CORE_ADDR addr = 0;
   return i386_stopped_data_address (&current_target, &addr);
-}
-
-/* Return non-zero if the inferior has some break/watchpoint that
-   triggered.  */
-
-static int
-i386_stopped_by_hwbp (void)
-{
-  int i;
-
-  dr_status_mirror = i386_dr_low.get_status ();
-  if (maint_show_dr)
-    i386_show_dr ("stopped_by_hwbp", 0, 0, hw_execute);
-
-  ALL_DEBUG_REGISTERS(i)
-    {
-      if (I386_DR_WATCH_HIT (i))
-	return 1;
-    }
-
-  return 0;
 }
 
 /* Insert a hardware-assisted breakpoint at BP_TGT->placed_address.

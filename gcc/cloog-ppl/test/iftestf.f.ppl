@@ -1,9 +1,0 @@
-! Generated from ./iftestf.cloog by CLooG 0.15 64 bits in 0.01s.
-DO i=1, n
-  IF (i <= 2*m) THEN
-    S1
-  END IF
-  IF (i >= MAX(2*m+1,m)) THEN
-    S1
-  END IF
-END DO

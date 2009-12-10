@@ -1,12 +1,12 @@
 D/machine////
-/Makefile.am/1.5/Mon Jul  6 10:46:48 2009/-ko/
-/Makefile.in/1.15/Mon Jul  6 10:46:48 2009/-ko/
-/aclocal.m4/1.22/Mon Jul  6 10:46:48 2009/-ko/
-/configure/1.27/Mon Jul  6 10:46:48 2009/-ko/
-/configure.in/1.2/Mon Jul  6 10:46:48 2009/-ko/
-/memcpy.c/1.1/Mon Jul  6 10:46:48 2009//
-/memset.c/1.1/Mon Jul  6 10:46:48 2009//
-/setjmp.S/1.4/Mon Jul  6 10:46:48 2009/-ko/
-/strcmp.c/1.1/Mon Jul  6 10:46:48 2009//
-/strlen.c/1.2/Mon Jul  6 10:46:48 2009//
-/strncpy.c/1.3/Mon Jul  6 10:46:48 2009//
+/Makefile.am/1.5/Wed Nov 18 20:13:20 2009/-ko/
+/Makefile.in/1.16/Wed Dec  9 22:25:18 2009/-ko/
+/aclocal.m4/1.23/Wed Dec  9 22:25:18 2009/-ko/
+/configure/1.28/Wed Dec  9 22:25:18 2009/-ko/
+/configure.in/1.2/Wed Nov 18 20:13:20 2009/-ko/
+/memcpy.c/1.1/Wed Nov 18 20:13:20 2009//
+/memset.c/1.1/Wed Nov 18 20:13:20 2009//
+/setjmp.S/1.4/Wed Nov 18 20:13:20 2009/-ko/
+/strcmp.c/1.1/Wed Nov 18 20:13:20 2009//
+/strlen.c/1.2/Wed Nov 18 20:13:20 2009//
+/strncpy.c/1.3/Wed Nov 18 20:13:20 2009//

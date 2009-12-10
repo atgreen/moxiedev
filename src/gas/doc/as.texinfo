@@ -379,7 +379,6 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
    [@b{-mips64}] [@b{-mips64r2}]
    [@b{-construct-floats}] [@b{-no-construct-floats}]
    [@b{-trap}] [@b{-no-break}] [@b{-break}] [@b{-no-trap}]
-   [@b{-mfix7000}] [@b{-mno-fix7000}]
    [@b{-mips16}] [@b{-no-mips16}]
    [@b{-msmartmips}] [@b{-mno-smartmips}]
    [@b{-mips3d}] [@b{-no-mips3d}]
@@ -387,6 +386,9 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
    [@b{-mdsp}] [@b{-mno-dsp}]
    [@b{-mdspr2}] [@b{-mno-dspr2}]
    [@b{-mmt}] [@b{-mno-mt}]
+   [@b{-mfix7000}] [@b{-mno-fix7000}]
+   [@b{-mfix-vr4120}] [@b{-mno-fix-vr4120}]
+   [@b{-mfix-vr4130}] [@b{-mno-fix-vr4130}]
    [@b{-mdebug}] [@b{-no-mdebug}]
    [@b{-mpdr}] [@b{-mno-pdr}]
 @end ifset
@@ -420,6 +422,13 @@ gcc(1), ld(1), and the Info entries for @file{binutils} and @file{ld}.
    [@b{-mrelocatable}|@b{-mrelocatable-lib}]
    [@b{-mlittle}|@b{-mlittle-endian}|@b{-mbig}|@b{-mbig-endian}]
    [@b{-msolaris}|@b{-mno-solaris}]
+@end ifset
+@ifset RX
+
+@emph{Target RX options:}
+   [@b{-mlittle-endian}|@b{-mbig-endian}]
+   [@b{-m32bit-ints}|@b{-m16bit-ints}]
+   [@b{-m32bit-doubles}|@b{-m64bit-doubles}]
 @end ifset
 @ifset S390
 
@@ -1180,6 +1189,10 @@ Assemble for a little endian target.
 
 @ifset MMIX
 See the info pages for documentation of the MMIX-specific options.
+@end ifset
+
+@ifset RX
+See the info pages for documentation of the RX-specific options.
 @end ifset
 
 @ifset S390
@@ -2272,6 +2285,9 @@ is considered a comment and is ignored.  The line comment character is
 @end ifset
 @ifset M68HC11
 @samp{#} on the 68HC11 and 68HC12;
+@end ifset
+@ifset RX
+@samp{#} on the RX;
 @end ifset
 @ifset VAX
 @samp{#} on the Vax;
@@ -4190,6 +4206,15 @@ undefined.
 Each expression is assembled into the next byte.
 
 @node CFI directives
+@section @code{.cfi_sections @var{section_list}}
+@cindex @code{cfi_sections} directive
+@code{.cfi_sections} may be used to specify whether CFI directives
+should emit @code{.eh_frame} section and/or @code{.debug_frame} section.
+If @var{section_list} is @code{.eh_frame}, @code{.eh_frame} is emitted,
+if @var{section_list} is @code{.debug_frame}, @code{.debug_frame} is emitted.
+To emit both use @code{.eh_frame, .debug_frame}.  The default if this
+directive is not used is @code{.cfi_sections .eh_frame}.
+
 @section @code{.cfi_startproc [simple]}
 @cindex @code{cfi_startproc} directive
 @code{.cfi_startproc} is used at the beginning of each function that
@@ -5902,11 +5927,6 @@ You may @code{.set} a symbol many times in the same assembly.
 If you @code{.set} a global symbol, the value stored in the object
 file is the last value stored into it.
 
-@ifset HPPA
-The syntax for @code{set} on the HPPA is
-@samp{@var{symbol} .set @var{expression}}.
-@end ifset
-
 @ifset Z80
 On Z80 @code{set} is a real instruction, use
 @samp{@var{symbol} defl @var{expression}} instead.
@@ -6799,6 +6819,9 @@ subject, see the hardware manufacturer's manual.
 @ifset PPC
 * PPC-Dependent::               PowerPC Dependent Features
 @end ifset
+@ifset RX
+* RX-Dependent::                RX Dependent Features
+@end ifset
 @ifset S390
 * S/390-Dependent::             IBM S/390 Dependent Features
 @end ifset
@@ -6975,6 +6998,10 @@ family.
 
 @ifset PPC
 @include c-ppc.texi
+@end ifset
+
+@ifset RX
+@include c-rx.texi
 @end ifset
 
 @ifset S390

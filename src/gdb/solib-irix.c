@@ -365,11 +365,17 @@ disable_break (void)
 static int
 enable_break (void)
 {
-  if (symfile_objfile != NULL)
+  if (symfile_objfile != NULL && has_stack_frames ())
     {
-      base_breakpoint
-	= deprecated_insert_raw_breakpoint (target_gdbarch,
-					    entry_point_address ());
+      struct frame_info *frame = get_current_frame ();
+      struct address_space *aspace = get_frame_address_space (frame);
+      CORE_ADDR entry_point;
+
+      if (!entry_point_address_query (&entry_point))
+	return 0;
+
+      base_breakpoint = deprecated_insert_raw_breakpoint (target_gdbarch,
+							  aspace, entry_point);
 
       if (base_breakpoint != NULL)
 	return 1;

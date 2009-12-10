@@ -415,6 +415,9 @@ extern bfd_boolean _bfd_generic_set_section_contents
   ((bfd_boolean (*) (bfd *, struct bfd_link_info *)) bfd_false)
 #define _bfd_nolink_bfd_link_just_syms \
   ((void (*) (asection *, struct bfd_link_info *)) bfd_void)
+#define _bfd_nolink_bfd_copy_link_hash_symbol_type \
+  ((void (*) (bfd *, struct bfd_link_hash_entry *, \
+	      struct bfd_link_hash_entry *)) bfd_void)
 #define _bfd_nolink_bfd_final_link \
   ((bfd_boolean (*) (bfd *, struct bfd_link_info *)) bfd_false)
 #define _bfd_nolink_bfd_link_split_section \
@@ -528,6 +531,10 @@ extern bfd_boolean _bfd_generic_link_add_one_symbol
 /* Generic routine to mark section as supplying symbols only.  */
 extern void _bfd_generic_link_just_syms
   (asection *, struct bfd_link_info *);
+
+/* Generic routine that does nothing.  */
+extern void _bfd_generic_copy_link_hash_symbol_type
+  (bfd *, struct bfd_link_hash_entry *, struct bfd_link_hash_entry *);
 
 /* Generic link routine.  */
 extern bfd_boolean _bfd_generic_final_link
@@ -1646,6 +1653,30 @@ static const char *const bfd_reloc_code_real_names[] = { "@@uninitialized@@",
   "BFD_RELOC_AVR_LDI",
   "BFD_RELOC_AVR_6",
   "BFD_RELOC_AVR_6_ADIW",
+  "BFD_RELOC_RX_NEG8",
+  "BFD_RELOC_RX_NEG16",
+  "BFD_RELOC_RX_NEG24",
+  "BFD_RELOC_RX_NEG32",
+  "BFD_RELOC_RX_16_OP",
+  "BFD_RELOC_RX_24_OP",
+  "BFD_RELOC_RX_32_OP",
+  "BFD_RELOC_RX_8U",
+  "BFD_RELOC_RX_16U",
+  "BFD_RELOC_RX_24U",
+  "BFD_RELOC_RX_DIR3U_PCREL",
+  "BFD_RELOC_RX_DIFF",
+  "BFD_RELOC_RX_GPRELB",
+  "BFD_RELOC_RX_GPRELW",
+  "BFD_RELOC_RX_GPRELL",
+  "BFD_RELOC_RX_SYM",
+  "BFD_RELOC_RX_OP_SUBTRACT",
+  "BFD_RELOC_RX_ABS8",
+  "BFD_RELOC_RX_ABS16",
+  "BFD_RELOC_RX_ABS32",
+  "BFD_RELOC_RX_ABS16U",
+  "BFD_RELOC_RX_ABS16UW",
+  "BFD_RELOC_RX_ABS16UL",
+  "BFD_RELOC_RX_RELAX",
   "BFD_RELOC_390_12",
   "BFD_RELOC_390_GOT12",
   "BFD_RELOC_390_PLT32",

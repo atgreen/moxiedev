@@ -2,8 +2,8 @@
 
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
-   Free Software Foundation, Inc.
+   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -232,6 +232,7 @@ struct gdbarch
   gdbarch_skip_permanent_breakpoint_ftype *skip_permanent_breakpoint;
   ULONGEST max_insn_length;
   gdbarch_displaced_step_copy_insn_ftype *displaced_step_copy_insn;
+  gdbarch_displaced_step_hw_singlestep_ftype *displaced_step_hw_singlestep;
   gdbarch_displaced_step_fixup_ftype *displaced_step_fixup;
   gdbarch_displaced_step_free_closure_ftype *displaced_step_free_closure;
   gdbarch_displaced_step_location_ftype *displaced_step_location;
@@ -240,12 +241,15 @@ struct gdbarch
   gdbarch_static_transform_name_ftype *static_transform_name;
   int sofun_address_maybe_missing;
   gdbarch_process_record_ftype *process_record;
+  gdbarch_process_record_signal_ftype *process_record_signal;
   gdbarch_target_signal_from_host_ftype *target_signal_from_host;
   gdbarch_target_signal_to_host_ftype *target_signal_to_host;
   gdbarch_get_siginfo_type_ftype *get_siginfo_type;
   gdbarch_record_special_symbol_ftype *record_special_symbol;
+  gdbarch_get_syscall_number_ftype *get_syscall_number;
   int has_global_solist;
   int has_global_breakpoints;
+  gdbarch_has_shared_address_space_ftype *has_shared_address_space;
 };
 
 
@@ -369,6 +373,7 @@ struct gdbarch startup_gdbarch =
   0,  /* skip_permanent_breakpoint */
   0,  /* max_insn_length */
   0,  /* displaced_step_copy_insn */
+  default_displaced_step_hw_singlestep,  /* displaced_step_hw_singlestep */
   0,  /* displaced_step_fixup */
   NULL,  /* displaced_step_free_closure */
   NULL,  /* displaced_step_location */
@@ -377,12 +382,15 @@ struct gdbarch startup_gdbarch =
   0,  /* static_transform_name */
   0,  /* sofun_address_maybe_missing */
   0,  /* process_record */
+  0,  /* process_record_signal */
   default_target_signal_from_host,  /* target_signal_from_host */
   default_target_signal_to_host,  /* target_signal_to_host */
   0,  /* get_siginfo_type */
   0,  /* record_special_symbol */
+  0,  /* get_syscall_number */
   0,  /* has_global_solist */
   0,  /* has_global_breakpoints */
+  default_has_shared_address_space,  /* has_shared_address_space */
   /* startup_gdbarch() */
 };
 
@@ -460,11 +468,13 @@ gdbarch_alloc (const struct gdbarch_info *info,
   gdbarch->elf_make_msymbol_special = default_elf_make_msymbol_special;
   gdbarch->coff_make_msymbol_special = default_coff_make_msymbol_special;
   gdbarch->register_reggroup_p = default_register_reggroup_p;
+  gdbarch->displaced_step_hw_singlestep = default_displaced_step_hw_singlestep;
   gdbarch->displaced_step_fixup = NULL;
   gdbarch->displaced_step_free_closure = NULL;
   gdbarch->displaced_step_location = NULL;
   gdbarch->target_signal_from_host = default_target_signal_from_host;
   gdbarch->target_signal_to_host = default_target_signal_to_host;
+  gdbarch->has_shared_address_space = default_has_shared_address_space;
   /* gdbarch_alloc() */
 
   return gdbarch;
@@ -623,6 +633,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of skip_permanent_breakpoint, has predicate */
   /* Skip verify of max_insn_length, has predicate */
   /* Skip verify of displaced_step_copy_insn, has predicate */
+  /* Skip verify of displaced_step_hw_singlestep, invalid_p == 0 */
   /* Skip verify of displaced_step_fixup, has predicate */
   if ((! gdbarch->displaced_step_free_closure) != (! gdbarch->displaced_step_copy_insn))
     fprintf_unfiltered (log, "\n\tdisplaced_step_free_closure");
@@ -633,12 +644,15 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of static_transform_name, has predicate */
   /* Skip verify of sofun_address_maybe_missing, invalid_p == 0 */
   /* Skip verify of process_record, has predicate */
+  /* Skip verify of process_record_signal, has predicate */
   /* Skip verify of target_signal_from_host, invalid_p == 0 */
   /* Skip verify of target_signal_to_host, invalid_p == 0 */
   /* Skip verify of get_siginfo_type, has predicate */
   /* Skip verify of record_special_symbol, has predicate */
+  /* Skip verify of get_syscall_number, has predicate */
   /* Skip verify of has_global_solist, invalid_p == 0 */
   /* Skip verify of has_global_breakpoints, invalid_p == 0 */
+  /* Skip verify of has_shared_address_space, invalid_p == 0 */
   buf = ui_file_xstrdup (log, &length);
   make_cleanup (xfree, buf);
   if (length > 0)
@@ -785,6 +799,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
                       "gdbarch_dump: displaced_step_free_closure = <%s>\n",
                       host_address_to_string (gdbarch->displaced_step_free_closure));
   fprintf_unfiltered (file,
+                      "gdbarch_dump: displaced_step_hw_singlestep = <%s>\n",
+                      host_address_to_string (gdbarch->displaced_step_hw_singlestep));
+  fprintf_unfiltered (file,
                       "gdbarch_dump: displaced_step_location = <%s>\n",
                       host_address_to_string (gdbarch->displaced_step_location));
   fprintf_unfiltered (file,
@@ -866,11 +883,20 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
                       "gdbarch_dump: get_siginfo_type = <%s>\n",
                       host_address_to_string (gdbarch->get_siginfo_type));
   fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_get_syscall_number_p() = %d\n",
+                      gdbarch_get_syscall_number_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: get_syscall_number = <%s>\n",
+                      host_address_to_string (gdbarch->get_syscall_number));
+  fprintf_unfiltered (file,
                       "gdbarch_dump: has_global_breakpoints = %s\n",
                       plongest (gdbarch->has_global_breakpoints));
   fprintf_unfiltered (file,
                       "gdbarch_dump: has_global_solist = %s\n",
                       plongest (gdbarch->has_global_solist));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: has_shared_address_space = <%s>\n",
+                      host_address_to_string (gdbarch->has_shared_address_space));
   fprintf_unfiltered (file,
                       "gdbarch_dump: have_nonsteppable_watchpoint = %s\n",
                       plongest (gdbarch->have_nonsteppable_watchpoint));
@@ -961,6 +987,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: process_record = <%s>\n",
                       host_address_to_string (gdbarch->process_record));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: gdbarch_process_record_signal_p() = %d\n",
+                      gdbarch_process_record_signal_p (gdbarch));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: process_record_signal = <%s>\n",
+                      host_address_to_string (gdbarch->process_record_signal));
   fprintf_unfiltered (file,
                       "gdbarch_dump: ps_regnum = %s\n",
                       plongest (gdbarch->ps_regnum));
@@ -3127,6 +3159,23 @@ set_gdbarch_displaced_step_copy_insn (struct gdbarch *gdbarch,
 }
 
 int
+gdbarch_displaced_step_hw_singlestep (struct gdbarch *gdbarch, struct displaced_step_closure *closure)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->displaced_step_hw_singlestep != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_displaced_step_hw_singlestep called\n");
+  return gdbarch->displaced_step_hw_singlestep (gdbarch, closure);
+}
+
+void
+set_gdbarch_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
+                                          gdbarch_displaced_step_hw_singlestep_ftype displaced_step_hw_singlestep)
+{
+  gdbarch->displaced_step_hw_singlestep = displaced_step_hw_singlestep;
+}
+
+int
 gdbarch_displaced_step_fixup_p (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -3298,6 +3347,30 @@ set_gdbarch_process_record (struct gdbarch *gdbarch,
   gdbarch->process_record = process_record;
 }
 
+int
+gdbarch_process_record_signal_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->process_record_signal != NULL;
+}
+
+int
+gdbarch_process_record_signal (struct gdbarch *gdbarch, struct regcache *regcache, enum target_signal signal)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->process_record_signal != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_process_record_signal called\n");
+  return gdbarch->process_record_signal (gdbarch, regcache, signal);
+}
+
+void
+set_gdbarch_process_record_signal (struct gdbarch *gdbarch,
+                                   gdbarch_process_record_signal_ftype process_record_signal)
+{
+  gdbarch->process_record_signal = process_record_signal;
+}
+
 enum target_signal
 gdbarch_target_signal_from_host (struct gdbarch *gdbarch, int signo)
 {
@@ -3381,6 +3454,30 @@ set_gdbarch_record_special_symbol (struct gdbarch *gdbarch,
 }
 
 int
+gdbarch_get_syscall_number_p (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  return gdbarch->get_syscall_number != NULL;
+}
+
+LONGEST
+gdbarch_get_syscall_number (struct gdbarch *gdbarch, ptid_t ptid)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->get_syscall_number != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_get_syscall_number called\n");
+  return gdbarch->get_syscall_number (gdbarch, ptid);
+}
+
+void
+set_gdbarch_get_syscall_number (struct gdbarch *gdbarch,
+                                gdbarch_get_syscall_number_ftype get_syscall_number)
+{
+  gdbarch->get_syscall_number = get_syscall_number;
+}
+
+int
 gdbarch_has_global_solist (struct gdbarch *gdbarch)
 {
   gdb_assert (gdbarch != NULL);
@@ -3412,6 +3509,23 @@ set_gdbarch_has_global_breakpoints (struct gdbarch *gdbarch,
                                     int has_global_breakpoints)
 {
   gdbarch->has_global_breakpoints = has_global_breakpoints;
+}
+
+int
+gdbarch_has_shared_address_space (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->has_shared_address_space != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_has_shared_address_space called\n");
+  return gdbarch->has_shared_address_space (gdbarch);
+}
+
+void
+set_gdbarch_has_shared_address_space (struct gdbarch *gdbarch,
+                                      gdbarch_has_shared_address_space_ftype has_shared_address_space)
+{
+  gdbarch->has_shared_address_space = has_shared_address_space;
 }
 
 

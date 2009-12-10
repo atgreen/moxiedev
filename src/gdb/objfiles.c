@@ -51,6 +51,7 @@
 #include "arch-utils.h"
 #include "exec.h"
 #include "observer.h"
+#include "complaints.h"
 
 /* Prototypes for local functions */
 
@@ -60,15 +61,52 @@ static void objfile_free_data (struct objfile *objfile);
 /* Externally visible variables that are owned by this module.
    See declarations in objfile.h for more info. */
 
-struct objfile *object_files;	/* Linked list of all objfiles */
 struct objfile *current_objfile;	/* For symbol file being read in */
-struct objfile *symfile_objfile;	/* Main symbol table loaded from */
 struct objfile *rt_common_objfile;	/* For runtime common symbols */
+
+struct objfile_pspace_info
+{
+  int objfiles_changed_p;
+  struct obj_section **sections;
+  int num_sections;
+};
+
+/* Per-program-space data key.  */
+static const struct program_space_data *objfiles_pspace_data;
+
+static void
+objfiles_pspace_data_cleanup (struct program_space *pspace, void *arg)
+{
+  struct objfile_pspace_info *info;
+
+  info = program_space_data (pspace, objfiles_pspace_data);
+  if (info != NULL)
+    {
+      xfree (info->sections);
+      xfree (info);
+    }
+}
+
+/* Get the current svr4 data.  If none is found yet, add it now.  This
+   function always returns a valid object.  */
+
+static struct objfile_pspace_info *
+get_objfile_pspace_data (struct program_space *pspace)
+{
+  struct objfile_pspace_info *info;
+
+  info = program_space_data (pspace, objfiles_pspace_data);
+  if (info == NULL)
+    {
+      info = XZALLOC (struct objfile_pspace_info);
+      set_program_space_data (pspace, objfiles_pspace_data, info);
+    }
+
+  return info;
+}
 
 /* Records whether any objfiles appeared or disappeared since we last updated
    address to obj section map.  */
-
-static int objfiles_changed_p;
 
 /* Locate all mappable sections of a BFD file. 
    objfile_p_char is a char * to get it through
@@ -156,24 +194,16 @@ build_objfile_section_table (struct objfile *objfile)
 struct objfile *
 allocate_objfile (bfd *abfd, int flags)
 {
-  struct objfile *objfile = NULL;
-  struct objfile *last_one = NULL;
+  struct objfile *objfile;
 
-  /* If we don't support mapped symbol files, didn't ask for the file to be
-     mapped, or failed to open the mapped file for some reason, then revert
-     back to an unmapped objfile. */
-
-  if (objfile == NULL)
-    {
-      objfile = (struct objfile *) xmalloc (sizeof (struct objfile));
-      memset (objfile, 0, sizeof (struct objfile));
-      objfile->psymbol_cache = bcache_xmalloc ();
-      objfile->macro_cache = bcache_xmalloc ();
-      /* We could use obstack_specify_allocation here instead, but
-	 gdb_obstack.h specifies the alloc/dealloc functions.  */
-      obstack_init (&objfile->objfile_obstack);
-      terminate_minimal_symbol_table (objfile);
-    }
+  objfile = (struct objfile *) xzalloc (sizeof (struct objfile));
+  objfile->psymbol_cache = bcache_xmalloc ();
+  objfile->macro_cache = bcache_xmalloc ();
+  objfile->filename_cache = bcache_xmalloc ();
+  /* We could use obstack_specify_allocation here instead, but
+     gdb_obstack.h specifies the alloc/dealloc functions.  */
+  obstack_init (&objfile->objfile_obstack);
+  terminate_minimal_symbol_table (objfile);
 
   objfile_alloc_data (objfile);
 
@@ -207,6 +237,8 @@ allocate_objfile (bfd *abfd, int flags)
       objfile->name = xstrdup ("<<anonymous objfile>>");
     }
 
+  objfile->pspace = current_program_space;
+
   /* Initialize the section indexes for this objfile, so that we can
      later detect if they are used w/o being properly assigned to. */
 
@@ -226,6 +258,8 @@ allocate_objfile (bfd *abfd, int flags)
     object_files = objfile;
   else
     {
+      struct objfile *last_one;
+
       for (last_one = object_files;
 	   last_one->next;
 	   last_one = last_one->next);
@@ -235,9 +269,10 @@ allocate_objfile (bfd *abfd, int flags)
   /* Save passed in flag bits. */
   objfile->flags |= flags;
 
-  objfiles_changed_p = 1;  /* Rebuild section map next time we need it.  */
+  /* Rebuild section map next time we need it.  */
+  get_objfile_pspace_data (objfile->pspace)->objfiles_changed_p = 1;
 
-  return (objfile);
+  return objfile;
 }
 
 /* Retrieve the gdbarch associated with OBJFILE.  */
@@ -260,29 +295,34 @@ init_entry_point_info (struct objfile *objfile)
       /* Executable file -- record its entry point so we'll recognize
          the startup file because it contains the entry point.  */
       objfile->ei.entry_point = bfd_get_start_address (objfile->obfd);
+      objfile->ei.entry_point_p = 1;
     }
   else if (bfd_get_file_flags (objfile->obfd) & DYNAMIC
 	   && bfd_get_start_address (objfile->obfd) != 0)
-    /* Some shared libraries may have entry points set and be
-       runnable.  There's no clear way to indicate this, so just check
-       for values other than zero.  */
-    objfile->ei.entry_point = bfd_get_start_address (objfile->obfd);    
+    {
+      /* Some shared libraries may have entry points set and be
+	 runnable.  There's no clear way to indicate this, so just check
+	 for values other than zero.  */
+      objfile->ei.entry_point = bfd_get_start_address (objfile->obfd);    
+      objfile->ei.entry_point_p = 1;
+    }
   else
     {
       /* Examination of non-executable.o files.  Short-circuit this stuff.  */
-      objfile->ei.entry_point = INVALID_ENTRY_POINT;
+      objfile->ei.entry_point_p = 0;
     }
 }
 
-/* Get current entry point address.  */
+/* If there is a valid and known entry point, function fills *ENTRY_P with it
+   and returns non-zero; otherwise it returns zero.  */
 
-CORE_ADDR
-entry_point_address (void)
+int
+entry_point_address_query (CORE_ADDR *entry_p)
 {
   struct gdbarch *gdbarch;
   CORE_ADDR entry_point;
 
-  if (symfile_objfile == NULL)
+  if (symfile_objfile == NULL || !symfile_objfile->ei.entry_point_p)
     return 0;
 
   gdbarch = get_objfile_arch (symfile_objfile);
@@ -298,7 +338,21 @@ entry_point_address (void)
      symbol table.  */
   entry_point = gdbarch_addr_bits_remove (gdbarch, entry_point);
 
-  return entry_point;
+  *entry_p = entry_point;
+  return 1;
+}
+
+/* Get current entry point address.  Call error if it is not known.  */
+
+CORE_ADDR
+entry_point_address (void)
+{
+  CORE_ADDR retval;
+
+  if (!entry_point_address_query (&retval))
+    error (_("Entry point address is not known."));
+
+  return retval;
 }
 
 /* Create the terminating entry of OBJFILE's minimal symbol table.
@@ -458,8 +512,8 @@ free_objfile (struct objfile *objfile)
 
   unlink_objfile (objfile);
 
-  /* If we are going to free the runtime common objfile, mark it
-     as unallocated.  */
+  if (objfile == symfile_objfile)
+    symfile_objfile = NULL;
 
   if (objfile == rt_common_objfile)
     rt_common_objfile = NULL;
@@ -508,12 +562,15 @@ free_objfile (struct objfile *objfile)
   /* Free the obstacks for non-reusable objfiles */
   bcache_xfree (objfile->psymbol_cache);
   bcache_xfree (objfile->macro_cache);
+  bcache_xfree (objfile->filename_cache);
   if (objfile->demangled_names_hash)
     htab_delete (objfile->demangled_names_hash);
   obstack_free (&objfile->objfile_obstack, 0);
+
+  /* Rebuild section map next time we need it.  */
+  get_objfile_pspace_data (objfile->pspace)->objfiles_changed_p = 1;
+
   xfree (objfile);
-  objfile = NULL;
-  objfiles_changed_p = 1;  /* Rebuild section map next time we need it.  */
 }
 
 static void
@@ -623,6 +680,10 @@ objfile_relocate (struct objfile *objfile, struct section_offsets *new_offsets)
     }
   }
 
+  if (objfile->psymtabs_addrmap)
+    addrmap_relocate (objfile->psymtabs_addrmap,
+		      ANOFFSET (delta, SECT_OFF_TEXT (objfile)));
+
   {
     struct partial_symtab *p;
 
@@ -666,7 +727,7 @@ objfile_relocate (struct objfile *objfile, struct section_offsets *new_offsets)
      to be out of order.  */
   msymbols_sort (objfile);
 
-  if (objfile->ei.entry_point != ~(CORE_ADDR) 0)
+  if (objfile->ei.entry_point_p)
     {
       /* Relocate ei.entry_point with its section offset, use SECT_OFF_TEXT
 	 only as a fallback.  */
@@ -685,7 +746,7 @@ objfile_relocate (struct objfile *objfile, struct section_offsets *new_offsets)
   }
 
   /* Rebuild section map next time we need it.  */
-  objfiles_changed_p = 1;
+  get_objfile_pspace_data (objfile->pspace)->objfiles_changed_p = 1;
 
   /* Update the table in exec_ops, used to read memory.  */
   ALL_OBJFILE_OSECTIONS (objfile, s)
@@ -715,6 +776,30 @@ objfile_has_full_symbols (struct objfile *objfile)
 {
   return objfile->symtabs != NULL;
 }
+
+/* Return non-zero if OBJFILE has full or partial symbols, either directly
+   or throught its separate debug file.  */
+
+int
+objfile_has_symbols (struct objfile *objfile)
+{
+  struct objfile *separate_objfile;
+
+  if (objfile_has_partial_symbols (objfile)
+      || objfile_has_full_symbols (objfile))
+    return 1;
+
+  separate_objfile = objfile->separate_debug_objfile;
+  if (separate_objfile == NULL)
+    return 0;
+
+  if (objfile_has_partial_symbols (separate_objfile)
+      || objfile_has_full_symbols (separate_objfile))
+    return 1;
+
+  return 0;
+}
+
 
 /* Many places in gdb want to test just to see if we have any partial
    symbols available.  This function returns zero if none are currently
@@ -802,16 +887,72 @@ qsort_cmp (const void *a, const void *b)
   const CORE_ADDR sect2_addr = obj_section_addr (sect2);
 
   if (sect1_addr < sect2_addr)
-    {
-      gdb_assert (obj_section_endaddr (sect1) <= sect2_addr);
-      return -1;
-    }
+    return -1;
   else if (sect1_addr > sect2_addr)
-    {
-      gdb_assert (sect1_addr >= obj_section_endaddr (sect2));
-      return 1;
-    }
+    return 1;
+  else
+   {
+     /* Sections are at the same address.  This could happen if
+	A) we have an objfile and a separate debuginfo.
+	B) we are confused, and have added sections without proper relocation,
+	or something like that. */
 
+     const struct objfile *const objfile1 = sect1->objfile;
+     const struct objfile *const objfile2 = sect2->objfile;
+
+     if (objfile1->separate_debug_objfile == objfile2
+	 || objfile2->separate_debug_objfile == objfile1)
+       {
+	 /* Case A.  The ordering doesn't matter: separate debuginfo files
+	    will be filtered out later.  */
+
+	 return 0;
+       }
+
+     /* Case B.  Maintain stable sort order, so bugs in GDB are easier to
+	triage.  This section could be slow (since we iterate over all
+	objfiles in each call to qsort_cmp), but this shouldn't happen
+	very often (GDB is already in a confused state; one hopes this
+	doesn't happen at all).  If you discover that significant time is
+	spent in the loops below, do 'set complaints 100' and examine the
+	resulting complaints.  */
+
+     if (objfile1 == objfile2)
+       {
+	 /* Both sections came from the same objfile.  We are really confused.
+	    Sort on sequence order of sections within the objfile.  */
+
+	 const struct obj_section *osect;
+
+	 ALL_OBJFILE_OSECTIONS (objfile1, osect)
+	   if (osect == sect1)
+	     return -1;
+	   else if (osect == sect2)
+	     return 1;
+
+	 /* We should have found one of the sections before getting here.  */
+	 gdb_assert (0);
+       }
+     else
+       {
+	 /* Sort on sequence number of the objfile in the chain.  */
+
+	 const struct objfile *objfile;
+
+	 ALL_OBJFILES (objfile)
+	   if (objfile == objfile1)
+	     return -1;
+	   else if (objfile == objfile2)
+	     return 1;
+
+	 /* We should have found one of the objfiles before getting here.  */
+	 gdb_assert (0);
+       }
+
+   }
+
+  /* Unreachable.  */
+  gdb_assert (0);
   return 0;
 }
 
@@ -835,69 +976,186 @@ preferred_obj_section (struct obj_section *a, struct obj_section *b)
   return b;
 }
 
-/* Update PMAP, PMAP_SIZE with non-TLS sections from all objfiles.  */
+/* Return 1 if SECTION should be inserted into the section map.
+   We want to insert only non-overlay and non-TLS section.  */
 
-static void
-update_section_map (struct obj_section ***pmap, int *pmap_size)
+static int
+insert_section_p (const struct bfd *abfd,
+		  const struct bfd_section *section)
 {
-  int map_size, i, j;
-  struct obj_section *s, **map;
-  struct objfile *objfile;
+  const bfd_vma lma = bfd_section_lma (abfd, section);
 
-  gdb_assert (objfiles_changed_p != 0);
+  if (lma != 0 && lma != bfd_section_vma (abfd, section)
+      && (bfd_get_file_flags (abfd) & BFD_IN_MEMORY) == 0)
+    /* This is an overlay section.  IN_MEMORY check is needed to avoid
+       discarding sections from the "system supplied DSO" (aka vdso)
+       on some Linux systems (e.g. Fedora 11).  */
+    return 0;
+  if ((bfd_get_section_flags (abfd, section) & SEC_THREAD_LOCAL) != 0)
+    /* This is a TLS section.  */
+    return 0;
 
-  map = *pmap;
-  xfree (map);
+  return 1;
+}
 
-#define insert_p(objf, sec) \
-  ((bfd_get_section_flags ((objf)->obfd, (sec)->the_bfd_section) \
-    & SEC_THREAD_LOCAL) == 0)
+/* Filter out overlapping sections where one section came from the real
+   objfile, and the other from a separate debuginfo file.
+   Return the size of table after redundant sections have been eliminated.  */
 
-  map_size = 0;
-  ALL_OBJSECTIONS (objfile, s)
-    if (insert_p (objfile, s))
-      map_size += 1;
+static int
+filter_debuginfo_sections (struct obj_section **map, int map_size)
+{
+  int i, j;
 
-  map = xmalloc (map_size * sizeof (*map));
-
-  i = 0;
-  ALL_OBJSECTIONS (objfile, s)
-    if (insert_p (objfile, s))
-      map[i++] = s;
-
-#undef insert_p
-
-  qsort (map, map_size, sizeof (*map), qsort_cmp);
-
-  /* With separate debuginfo files, we may have up to two (almost)
-     identical copies of some obj_sections in the map.
-     Filter out duplicates.  */
-  for (i = 0, j = 0; i < map_size; ++i)
+  for (i = 0, j = 0; i < map_size - 1; i++)
     {
-      struct obj_section *sect1 = map[i];
-      struct obj_section *sect2 = (i + 1 < map_size) ? map[i + 1] : NULL;
+      struct obj_section *const sect1 = map[i];
+      struct obj_section *const sect2 = map[i + 1];
+      const struct objfile *const objfile1 = sect1->objfile;
+      const struct objfile *const objfile2 = sect2->objfile;
+      const CORE_ADDR sect1_addr = obj_section_addr (sect1);
+      const CORE_ADDR sect2_addr = obj_section_addr (sect2);
 
-      if (sect2 == NULL
-	  || obj_section_addr (sect1) != obj_section_addr (sect2))
-	map[j++] = sect1;
-      else
+      if (sect1_addr == sect2_addr
+	  && (objfile1->separate_debug_objfile == objfile2
+	      || objfile2->separate_debug_objfile == objfile1))
 	{
 	  map[j++] = preferred_obj_section (sect1, sect2);
 	  ++i;
 	}
+      else
+	map[j++] = sect1;
     }
 
-  if (j < map_size)
+  if (i < map_size)
     {
-      /* Some duplicates were eliminated.
-	 The new size shouldn't be less than half of the original. */
-      gdb_assert (map_size / 2 <= j);
-      map_size = j;
-
-      map = xrealloc (map, map_size * sizeof (*map));  /* Trim excess space.  */
+      gdb_assert (i == map_size - 1);
+      map[j++] = map[i];
     }
+
+  /* The map should not have shrunk to less than half the original size.  */
+  gdb_assert (map_size / 2 <= j);
+
+  return j;
+}
+
+/* Filter out overlapping sections, issuing a warning if any are found.
+   Overlapping sections could really be overlay sections which we didn't
+   classify as such in insert_section_p, or we could be dealing with a
+   corrupt binary.  */
+
+static int
+filter_overlapping_sections (struct obj_section **map, int map_size)
+{
+  int i, j;
+
+  for (i = 0, j = 0; i < map_size - 1; )
+    {
+      int k;
+
+      map[j++] = map[i];
+      for (k = i + 1; k < map_size; k++)
+	{
+	  struct obj_section *const sect1 = map[i];
+	  struct obj_section *const sect2 = map[k];
+	  const CORE_ADDR sect1_addr = obj_section_addr (sect1);
+	  const CORE_ADDR sect2_addr = obj_section_addr (sect2);
+	  const CORE_ADDR sect1_endaddr = obj_section_endaddr (sect1);
+
+	  gdb_assert (sect1_addr <= sect2_addr);
+
+	  if (sect1_endaddr <= sect2_addr)
+	    break;
+	  else
+	    {
+	      /* We have an overlap.  Report it.  */
+
+	      struct objfile *const objf1 = sect1->objfile;
+	      struct objfile *const objf2 = sect2->objfile;
+
+	      const struct bfd *const abfd1 = objf1->obfd;
+	      const struct bfd *const abfd2 = objf2->obfd;
+
+	      const struct bfd_section *const bfds1 = sect1->the_bfd_section;
+	      const struct bfd_section *const bfds2 = sect2->the_bfd_section;
+
+	      const CORE_ADDR sect2_endaddr = obj_section_endaddr (sect2);
+
+	      struct gdbarch *const gdbarch = get_objfile_arch (objf1);
+
+	      complaint (&symfile_complaints,
+			 _("unexpected overlap between:\n"
+			   " (A) section `%s' from `%s' [%s, %s)\n"
+			   " (B) section `%s' from `%s' [%s, %s).\n"
+			   "Will ignore section B"),
+			 bfd_section_name (abfd1, bfds1), objf1->name,
+			 paddress (gdbarch, sect1_addr),
+			 paddress (gdbarch, sect1_endaddr),
+			 bfd_section_name (abfd2, bfds2), objf2->name,
+			 paddress (gdbarch, sect2_addr),
+			 paddress (gdbarch, sect2_endaddr));
+	    }
+	}
+      i = k;
+    }
+
+  if (i < map_size)
+    {
+      gdb_assert (i == map_size - 1);
+      map[j++] = map[i];
+    }
+
+  return j;
+}
+
+
+/* Update PMAP, PMAP_SIZE with sections from all objfiles, excluding any
+   TLS, overlay and overlapping sections.  */
+
+static void
+update_section_map (struct program_space *pspace,
+		    struct obj_section ***pmap, int *pmap_size)
+{
+  int alloc_size, map_size, i;
+  struct obj_section *s, **map;
+  struct objfile *objfile;
+
+  gdb_assert (get_objfile_pspace_data (pspace)->objfiles_changed_p != 0);
+
+  map = *pmap;
+  xfree (map);
+
+  alloc_size = 0;
+  ALL_PSPACE_OBJFILES (pspace, objfile)
+    ALL_OBJFILE_OSECTIONS (objfile, s)
+      if (insert_section_p (objfile->obfd, s->the_bfd_section))
+	alloc_size += 1;
+
+  /* This happens on detach/attach (e.g. in gdb.base/attach.exp).  */
+  if (alloc_size == 0)
+    {
+      *pmap = NULL;
+      *pmap_size = 0;
+      return;
+    }
+
+  map = xmalloc (alloc_size * sizeof (*map));
+
+  i = 0;
+  ALL_PSPACE_OBJFILES (pspace, objfile)
+    ALL_OBJFILE_OSECTIONS (objfile, s)
+      if (insert_section_p (objfile->obfd, s->the_bfd_section))
+	map[i++] = s;
+
+  qsort (map, alloc_size, sizeof (*map), qsort_cmp);
+  map_size = filter_debuginfo_sections(map, alloc_size);
+  map_size = filter_overlapping_sections(map, map_size);
+
+  if (map_size < alloc_size)
+    /* Some sections were eliminated.  Trim excess space.  */
+    map = xrealloc (map, map_size * sizeof (*map));
   else
-    gdb_assert (j == map_size);
+    gdb_assert (alloc_size == map_size);
 
   *pmap = map;
   *pmap_size = map_size;
@@ -923,9 +1181,7 @@ bsearch_cmp (const void *key, const void *elt)
 struct obj_section *
 find_pc_section (CORE_ADDR pc)
 {
-  static struct obj_section **sections;
-  static int num_sections;
-
+  struct objfile_pspace_info *pspace_info;
   struct obj_section *s, **sp;
 
   /* Check for mapped overlay section first.  */
@@ -933,17 +1189,31 @@ find_pc_section (CORE_ADDR pc)
   if (s)
     return s;
 
-  if (objfiles_changed_p != 0)
+  pspace_info = get_objfile_pspace_data (current_program_space);
+  if (pspace_info->objfiles_changed_p != 0)
     {
-      update_section_map (&sections, &num_sections);
+      update_section_map (current_program_space,
+			  &pspace_info->sections,
+			  &pspace_info->num_sections);
 
-      /* Don't need updates to section map until objfiles are added
-         or removed.  */
-      objfiles_changed_p = 0;
+      /* Don't need updates to section map until objfiles are added,
+         removed or relocated.  */
+      pspace_info->objfiles_changed_p = 0;
     }
 
-  sp = (struct obj_section **) bsearch (&pc, sections, num_sections,
-					sizeof (*sections), bsearch_cmp);
+  /* The C standard (ISO/IEC 9899:TC2) requires the BASE argument to
+     bsearch be non-NULL.  */
+  if (pspace_info->sections == NULL)
+    {
+      gdb_assert (pspace_info->num_sections == 0);
+      return NULL;
+    }
+
+  sp = (struct obj_section **) bsearch (&pc,
+					pspace_info->sections,
+					pspace_info->num_sections,
+					sizeof (*pspace_info->sections),
+					bsearch_cmp);
   if (sp != NULL)
     return *sp;
   return NULL;
@@ -975,7 +1245,8 @@ in_plt_section (CORE_ADDR pc, char *name)
 struct objfile_data
 {
   unsigned index;
-  void (*cleanup) (struct objfile *, void *);
+  void (*save) (struct objfile *, void *);
+  void (*free) (struct objfile *, void *);
 };
 
 struct objfile_data_registration
@@ -993,7 +1264,8 @@ struct objfile_data_registry
 static struct objfile_data_registry objfile_data_registry = { NULL, 0 };
 
 const struct objfile_data *
-register_objfile_data_with_cleanup (void (*cleanup) (struct objfile *, void *))
+register_objfile_data_with_cleanup (void (*save) (struct objfile *, void *),
+				    void (*free) (struct objfile *, void *))
 {
   struct objfile_data_registration **curr;
 
@@ -1005,7 +1277,8 @@ register_objfile_data_with_cleanup (void (*cleanup) (struct objfile *, void *))
   (*curr)->next = NULL;
   (*curr)->data = XMALLOC (struct objfile_data);
   (*curr)->data->index = objfile_data_registry.num_registrations++;
-  (*curr)->data->cleanup = cleanup;
+  (*curr)->data->save = save;
+  (*curr)->data->free = free;
 
   return (*curr)->data;
 }
@@ -1013,7 +1286,7 @@ register_objfile_data_with_cleanup (void (*cleanup) (struct objfile *, void *))
 const struct objfile_data *
 register_objfile_data (void)
 {
-  return register_objfile_data_with_cleanup (NULL);
+  return register_objfile_data_with_cleanup (NULL, NULL);
 }
 
 static void
@@ -1041,11 +1314,21 @@ clear_objfile_data (struct objfile *objfile)
 
   gdb_assert (objfile->data != NULL);
 
+  /* Process all the save handlers.  */
+
   for (registration = objfile_data_registry.registrations, i = 0;
        i < objfile->num_data;
        registration = registration->next, i++)
-    if (objfile->data[i] != NULL && registration->data->cleanup)
-      registration->data->cleanup (objfile, objfile->data[i]);
+    if (objfile->data[i] != NULL && registration->data->save != NULL)
+      registration->data->save (objfile, objfile->data[i]);
+
+  /* Now process all the free handlers.  */
+
+  for (registration = objfile_data_registry.registrations, i = 0;
+       i < objfile->num_data;
+       registration = registration->next, i++)
+    if (objfile->data[i] != NULL && registration->data->free != NULL)
+      registration->data->free (objfile, objfile->data[i]);
 
   memset (objfile->data, 0, objfile->num_data * sizeof (void *));
 }
@@ -1071,7 +1354,8 @@ objfile_data (struct objfile *objfile, const struct objfile_data *data)
 void
 objfiles_changed (void)
 {
-  objfiles_changed_p = 1;  /* Rebuild section map next time we need it.  */
+  /* Rebuild section map next time we need it.  */
+  get_objfile_pspace_data (current_program_space)->objfiles_changed_p = 1;
 }
 
 /* Add reference to ABFD.  Returns ABFD.  */
@@ -1121,4 +1405,14 @@ gdb_bfd_unref (struct bfd *abfd)
     warning (_("cannot close \"%s\": %s"),
 	     name, bfd_errmsg (bfd_get_error ()));
   xfree (name);
+}
+
+/* Provide a prototype to silence -Wmissing-prototypes.  */
+extern initialize_file_ftype _initialize_objfiles;
+
+void
+_initialize_objfiles (void)
+{
+  objfiles_pspace_data
+    = register_program_space_data_with_cleanup (objfiles_pspace_data_cleanup);
 }

@@ -38,7 +38,9 @@ int	_EXFUN(daemon, (int nochdir, int noclose));
 int     _EXFUN(dup, (int __fildes ));
 int     _EXFUN(dup2, (int __fildes, int __fildes2 ));
 #if defined(__CYGWIN__)
+int	_EXFUN(eaccess, (const char *__path, int __mode));
 void	_EXFUN(endusershell, (void));
+int	_EXFUN(euidaccess, (const char *__path, int __mode));
 #endif
 int     _EXFUN(execl, (const char *__path, const char *, ... ));
 int     _EXFUN(execle, (const char *__path, const char *, ... ));
@@ -47,6 +49,7 @@ int     _EXFUN(execv, (const char *__path, char * const __argv[] ));
 int     _EXFUN(execve, (const char *__path, char * const __argv[], char * const __envp[] ));
 int     _EXFUN(execvp, (const char *__file, char * const __argv[] ));
 #if defined(__CYGWIN__)
+int     _EXFUN(execvpe, (const char *__file, char * const __argv[], char * const __envp[] ));
 int	_EXFUN(faccessat, (int __dirfd, const char *__path, int __mode, int __flags));
 #endif
 #if defined(__CYGWIN__) || defined(__rtems__) || defined(__SPU__)
@@ -58,6 +61,7 @@ int     _EXFUN(fchown, (int __fildes, uid_t __owner, gid_t __group ));
 #endif
 #if defined(__CYGWIN__)
 int	_EXFUN(fchownat, (int __dirfd, const char *__path, uid_t __owner, gid_t __group, int __flags));
+int	_EXFUN(fexecve, (int __fd, char * const __argv[], char * const __envp[] ));
 #endif
 pid_t   _EXFUN(fork, (void ));
 long    _EXFUN(fpathconf, (int __fd, int __name ));
@@ -81,7 +85,7 @@ char    _EXFUN(*getlogin, (void ));
 int _EXFUN(getlogin_r, (char *name, size_t namesize) );
 #endif
 char 	_EXFUN(*getpass, (const char *__prompt));
-size_t  _EXFUN(getpagesize, (void));
+int	_EXFUN(getpagesize, (void));
 #if defined(__CYGWIN__)
 int    _EXFUN(getpeereid, (int, uid_t *, gid_t *));
 #endif
@@ -238,6 +242,10 @@ ssize_t _EXFUN(readlink, (const char *__path, char *__buf, size_t __buflen));
 ssize_t	_EXFUN(readlinkat, (int __dirfd1, const char *__path, char *__buf, size_t __buflen));
 #endif
 int     _EXFUN(symlink, (const char *__name1, const char *__name2));
+#if defined(__CYGWIN__)
+int	_EXFUN(symlinkat, (const char *, int, const char *));
+int	_EXFUN(unlinkat, (int, const char *, int));
+#endif
 
 #define	F_OK	0
 #define	R_OK	4
@@ -255,7 +263,7 @@ int     _EXFUN(symlink, (const char *__name1, const char *__name2));
 #define STDERR_FILENO   2       /* standard error file descriptor */
 
 /*
- *  sysconf values per IEEE Std 1003.1, 2004 Edition
+ *  sysconf values per IEEE Std 1003.1, 2008 Edition
  */
 
 #define _SC_ARG_MAX                       0
@@ -356,14 +364,18 @@ int     _EXFUN(symlink, (const char *__name1, const char *__name2));
 #define _SC_TRACE_SYS_MAX                89
 #define _SC_TRACE_USER_EVENT_MAX         90
 #define _SC_TYPED_MEMORY_OBJECTS         91
-#define _SC_V6_ILP32_OFF32               92
-#define _SC_XBS5_ILP32_OFF32             _SC_V6_ILP32_OFF32
-#define _SC_V6_ILP32_OFFBIG              93
-#define _SC_XBS5_ILP32_OFFBIG            _SC_V6_ILP32_OFFBIG
-#define _SC_V6_LP64_OFF64                94
-#define _SC_XBS5_LP64_OFF64              _SC_V6_LP64_OFF64
-#define _SC_V6_LPBIG_OFFBIG              95
-#define _SC_XBS5_LPBIG_OFFBIG            _SC_V6_LPBIG_OFFBIG
+#define _SC_V7_ILP32_OFF32               92
+#define _SC_V6_ILP32_OFF32               _SC_V7_ILP32_OFF32
+#define _SC_XBS5_ILP32_OFF32             _SC_V7_ILP32_OFF32
+#define _SC_V7_ILP32_OFFBIG              93
+#define _SC_V6_ILP32_OFFBIG              _SC_V7_ILP32_OFFBIG
+#define _SC_XBS5_ILP32_OFFBIG            _SC_V7_ILP32_OFFBIG
+#define _SC_V7_LP64_OFF64                94
+#define _SC_V6_LP64_OFF64                _SC_V7_LP64_OFF64
+#define _SC_XBS5_LP64_OFF64              _SC_V7_LP64_OFF64
+#define _SC_V7_LPBIG_OFFBIG              95
+#define _SC_V6_LPBIG_OFFBIG              _SC_V7_LPBIG_OFFBIG
+#define _SC_XBS5_LPBIG_OFFBIG            _SC_V7_LPBIG_OFFBIG
 #define _SC_XOPEN_CRYPT                  96
 #define _SC_XOPEN_ENH_I18N               97
 #define _SC_XOPEN_LEGACY                 98
@@ -390,9 +402,12 @@ int     _EXFUN(symlink, (const char *__name1, const char *__name2));
 #define _SC_2_SW_DEV                    119
 #define _SC_2_UPE                       120
 #define _SC_2_VERSION                   121
+#define _SC_THREAD_ROBUST_PRIO_INHERIT  122
+#define _SC_THREAD_ROBUST_PRIO_PROTECT  123
+#define _SC_XOPEN_UUCP                  124
 
 /*
- *  pathconf values per IEEE Std 1003.1, 2004 Edition
+ *  pathconf values per IEEE Std 1003.1, 2008 Edition
  */
 
 #define _PC_LINK_MAX                      0
@@ -410,6 +425,12 @@ int     _EXFUN(symlink, (const char *__name1, const char *__name2));
 #define _PC_FILESIZEBITS                 12
 #define _PC_2_SYMLINKS                   13
 #define _PC_SYMLINK_MAX                  14
+#define _PC_ALLOC_SIZE_MIN               15
+#define _PC_REC_INCR_XFER_SIZE           16
+#define _PC_REC_MAX_XFER_SIZE            17
+#define _PC_REC_MIN_XFER_SIZE            18
+#define _PC_REC_XFER_ALIGN               19
+#define _PC_TIMESTAMP_RESOLUTION         20
 #ifdef __CYGWIN__
 /* Ask for POSIX permission bits support. */
 #define _PC_POSIX_PERMISSIONS            90
@@ -423,35 +444,52 @@ int     _EXFUN(symlink, (const char *__name1, const char *__name2));
 
 #ifdef __CYGWIN__	/* Only defined on Cygwin for now. */
 #define _CS_PATH                               0
-#define _CS_POSIX_V6_ILP32_OFF32_CFLAGS        1
-#define _CS_XBS5_ILP32_OFF32_CFLAGS           _CS_POSIX_V6_ILP32_OFF32_CFLAGS
-#define _CS_POSIX_V6_ILP32_OFF32_LDFLAGS       2
-#define _CS_XBS5_ILP32_OFF32_LDFLAGS          _CS_POSIX_V6_ILP32_OFF32_LDFLAGS
-#define _CS_POSIX_V6_ILP32_OFF32_LIBS          3
-#define _CS_XBS5_ILP32_OFF32_LIBS             _CS_POSIX_V6_ILP32_OFF32_LIBS
+#define _CS_POSIX_V7_ILP32_OFF32_CFLAGS        1
+#define _CS_POSIX_V6_ILP32_OFF32_CFLAGS       _CS_POSIX_V7_ILP32_OFF32_CFLAGS
+#define _CS_XBS5_ILP32_OFF32_CFLAGS           _CS_POSIX_V7_ILP32_OFF32_CFLAGS
+#define _CS_POSIX_V7_ILP32_OFF32_LDFLAGS       2
+#define _CS_POSIX_V6_ILP32_OFF32_LDFLAGS      _CS_POSIX_V7_ILP32_OFF32_LDFLAGS
+#define _CS_XBS5_ILP32_OFF32_LDFLAGS          _CS_POSIX_V7_ILP32_OFF32_LDFLAGS
+#define _CS_POSIX_V7_ILP32_OFF32_LIBS          3
+#define _CS_POSIX_V6_ILP32_OFF32_LIBS         _CS_POSIX_V7_ILP32_OFF32_LIBS
+#define _CS_XBS5_ILP32_OFF32_LIBS             _CS_POSIX_V7_ILP32_OFF32_LIBS
 #define _CS_XBS5_ILP32_OFF32_LINTFLAGS         4
-#define _CS_POSIX_V6_ILP32_OFFBIG_CFLAGS       5
-#define _CS_XBS5_ILP32_OFFBIG_CFLAGS          _CS_POSIX_V6_ILP32_OFFBIG_CFLAGS
-#define _CS_POSIX_V6_ILP32_OFFBIG_LDFLAGS      6
-#define _CS_XBS5_ILP32_OFFBIG_LDFLAGS         _CS_POSIX_V6_ILP32_OFFBIG_LDFLAGS
-#define _CS_POSIX_V6_ILP32_OFFBIG_LIBS         7
-#define _CS_XBS5_ILP32_OFFBIG_LIBS            _CS_POSIX_V6_ILP32_OFFBIG_LIBS
+#define _CS_POSIX_V7_ILP32_OFFBIG_CFLAGS       5
+#define _CS_POSIX_V6_ILP32_OFFBIG_CFLAGS      _CS_POSIX_V7_ILP32_OFFBIG_CFLAGS
+#define _CS_XBS5_ILP32_OFFBIG_CFLAGS          _CS_POSIX_V7_ILP32_OFFBIG_CFLAGS
+#define _CS_POSIX_V7_ILP32_OFFBIG_LDFLAGS      6
+#define _CS_POSIX_V6_ILP32_OFFBIG_LDFLAGS     _CS_POSIX_V7_ILP32_OFFBIG_LDFLAGS
+#define _CS_XBS5_ILP32_OFFBIG_LDFLAGS         _CS_POSIX_V7_ILP32_OFFBIG_LDFLAGS
+#define _CS_POSIX_V7_ILP32_OFFBIG_LIBS         7
+#define _CS_POSIX_V6_ILP32_OFFBIG_LIBS        _CS_POSIX_V7_ILP32_OFFBIG_LIBS
+#define _CS_XBS5_ILP32_OFFBIG_LIBS            _CS_POSIX_V7_ILP32_OFFBIG_LIBS
 #define _CS_XBS5_ILP32_OFFBIG_LINTFLAGS        8
-#define _CS_POSIX_V6_LP64_OFF64_CFLAGS         9
-#define _CS_XBS5_LP64_OFF64_CFLAGS            _CS_POSIX_V6_LP64_OFF64_CFLAGS
-#define _CS_POSIX_V6_LP64_OFF64_LDFLAGS       10
-#define _CS_XBS5_LP64_OFF64_LDFLAGS           _CS_POSIX_V6_LP64_OFF64_LDFLAGS
-#define _CS_POSIX_V6_LP64_OFF64_LIBS          11
-#define _CS_XBS5_LP64_OFF64_LIBS              _CS_POSIX_V6_LP64_OFF64_LIBS
+#define _CS_POSIX_V7_LP64_OFF64_CFLAGS         9
+#define _CS_POSIX_V6_LP64_OFF64_CFLAGS        _CS_POSIX_V7_LP64_OFF64_CFLAGS
+#define _CS_XBS5_LP64_OFF64_CFLAGS            _CS_POSIX_V7_LP64_OFF64_CFLAGS
+#define _CS_POSIX_V7_LP64_OFF64_LDFLAGS       10
+#define _CS_POSIX_V6_LP64_OFF64_LDFLAGS       _CS_POSIX_V7_LP64_OFF64_LDFLAGS
+#define _CS_XBS5_LP64_OFF64_LDFLAGS           _CS_POSIX_V7_LP64_OFF64_LDFLAGS
+#define _CS_POSIX_V7_LP64_OFF64_LIBS          11
+#define _CS_POSIX_V6_LP64_OFF64_LIBS          _CS_POSIX_V7_LP64_OFF64_LIBS
+#define _CS_XBS5_LP64_OFF64_LIBS              _CS_POSIX_V7_LP64_OFF64_LIBS
 #define _CS_XBS5_LP64_OFF64_LINTFLAGS         12
-#define _CS_POSIX_V6_LPBIG_OFFBIG_CFLAGS      13
-#define _CS_XBS5_LPBIG_OFFBIG_CFLAGS          _CS_POSIX_V6_LPBIG_OFFBIG_CFLAGS
-#define _CS_POSIX_V6_LPBIG_OFFBIG_LDFLAGS     14
-#define _CS_XBS5_LPBIG_OFFBIG_LDFLAGS         _CS_POSIX_V6_LPBIG_OFFBIG_LDFLAGS
-#define _CS_POSIX_V6_LPBIG_OFFBIG_LIBS        15
-#define _CS_XBS5_LPBIG_OFFBIG_LIBS            _CS_POSIX_V6_LPBIG_OFFBIG_LIBS
+#define _CS_POSIX_V7_LPBIG_OFFBIG_CFLAGS      13
+#define _CS_POSIX_V6_LPBIG_OFFBIG_CFLAGS      _CS_POSIX_V7_LPBIG_OFFBIG_CFLAGS
+#define _CS_XBS5_LPBIG_OFFBIG_CFLAGS          _CS_POSIX_V7_LPBIG_OFFBIG_CFLAGS
+#define _CS_POSIX_V7_LPBIG_OFFBIG_LDFLAGS     14
+#define _CS_POSIX_V6_LPBIG_OFFBIG_LDFLAGS     _CS_POSIX_V7_LPBIG_OFFBIG_LDFLAGS
+#define _CS_XBS5_LPBIG_OFFBIG_LDFLAGS         _CS_POSIX_V7_LPBIG_OFFBIG_LDFLAGS
+#define _CS_POSIX_V7_LPBIG_OFFBIG_LIBS        15
+#define _CS_POSIX_V6_LPBIG_OFFBIG_LIBS        _CS_POSIX_V7_LPBIG_OFFBIG_LIBS
+#define _CS_XBS5_LPBIG_OFFBIG_LIBS            _CS_POSIX_V7_LPBIG_OFFBIG_LIBS
 #define _CS_XBS5_LPBIG_OFFBIG_LINTFLAGS       16
-#define _CS_POSIX_V6_WIDTH_RESTRICTED_ENVS    17
+#define _CS_POSIX_V7_WIDTH_RESTRICTED_ENVS    17
+#define _CS_POSIX_V6_WIDTH_RESTRICTED_ENVS    _CS_POSIX_V7_WIDTH_RESTRICTED_ENVS
+#define _CS_POSIX_V7_THREADS_CFLAGS           18
+#define _CS_POSIX_V7_THREADS_LDFLAGS          19
+#define _CS_V7_ENV                            20
+#define _CS_V6_ENV                           _CS_V6_ENV
 #endif
 
 #ifndef __CYGWIN__

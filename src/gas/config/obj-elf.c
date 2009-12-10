@@ -588,13 +588,13 @@ obj_elf_change_section (const char *name,
       else if (type != ssect->type)
 	{
 	  if (old_sec == NULL
-	      /* FIXME: gcc, as of 2002-10-22, will emit
+	      /* Some older versions of gcc will emit
 
 		 .section .init_array,"aw",@progbits
 
 		 for __attribute__ ((section (".init_array"))).
 		 "@progbits" is incorrect.  Also for x86-64 large bss
-		 sections, gcc, as of 2005-07-06, will emit
+		 sections, some older versions of gcc will emit
 
 		 .section .lbss,"aw",@progbits
 
@@ -2424,5 +2424,6 @@ const struct format_ops elf_format_ops =
   0,	/* ecoff_set_ext */
 #endif
   elf_obj_read_begin_hook,
-  elf_obj_symbol_new_hook
+  elf_obj_symbol_new_hook,
+  0
 };

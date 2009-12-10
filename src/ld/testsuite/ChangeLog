@@ -1,3 +1,166 @@
+2009-12-09  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* ld-arm/arm-elf.exp (armeabitests): Add farcall-data.
+	* ld-arm/farcall-data.d, ld-arm/farcall-data.s: New.
+	* lib/ld-lib.exp (run_ld_link_tests, run_cc_link_tests): Correct
+	regular expression for archives.
+
+2009-11-23  Paul Brook  <paul@codesourcery.com>
+
+	* ld-arm/script-type.sym: New test.
+	* ld-arm/script-type.s: New test.
+	* ld-arm/script-type.s: New test.
+
+2009-11-20  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* ld-arm/arm-dyn.ld: Adapt to main linker script changes.
+	* ld-arm/arm-lib.ld: Likewise.
+	* ld-arm/armthumb-lib.sym: : Adjust expected results.
+	* ld-arm/farcall-mixed-app-v5.d: Likewise.
+	* ld-arm/farcall-mixed-app.d: Likewise.
+	* ld-arm/farcall-mixed-app.sym: Likewise.
+	* ld-arm/farcall-mixed-lib.d: Likewise.
+	* ld-arm/mixed-app-v5.d: Likewise.
+	* ld-arm/mixed-app.d: Likewise.
+	* ld-arm/mixed-app.sym: Likewise.
+	* ld-arm/mixed-lib.sym: Likewise.
+	* ld-arm/preempt-app.sym: Likewise.
+	* ld-arm/tls-app.d: Likewise.
+
+2009-11-18  Nick Clifton  <nickc@redhat.com>
+
+	* ld-elf/extract-symbol-1sec.d: Expect to fail for the RX target.
+	* ld-scripts/overlay-size.d: Likewise.
+	* ld-scripts/rgn-at1.d: Likewise.
+	* ld-scripts/rgn-at2.d: Likewise.
+	* ld-scripts/rgn-at3.d: Likewise.
+	* ld-scripts/rgn-at4.d: Likewise.
+	* ld-scripts/rgn-over8-ok.d: Likewise.
+
+2009-11-15  Kai Tietz  <kai.tietz@onevision.com>
+
+	* ld-pe/direct2_client.c: New file.
+	* ld-pe/direct2_dll.c: Likewise.
+	* ld-pe/direct2_dll.def: Likewise.
+	* ld-pe/pe-run2.exp: Likewise.
+
+2009-11-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-x86-64/tlsbin.dd: Updated for prefix processing.
+	* ld-x86-64/tlsgdesc.dd: Likewise.
+	* ld-x86-64/tlsld1.dd: Likewise.
+	* ld-x86-64/tlspic.dd: Likewise.
+
+2009-11-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10911
+	* ld-ifunc/ifunc-4a-x86.d: New.
+
+2009-11-02  Paul Brook  <paul@codesourcery.com>
+
+	* ld-arm/arm-elf.exp: Add new attr-merge-vfp tests.
+	* ld-arm/attr-merge-vfp-1.d: New test.
+	* ld-arm/attr-merge-vfp-1r.d: New test.
+	* ld-arm/attr-merge-vfp-2.d: New test.
+	* ld-arm/attr-merge-vfp-2r.d: New test.
+	* ld-arm/attr-merge-vfp-3.d: New test.
+	* ld-arm/attr-merge-vfp-3r.d: New test.
+	* ld-arm/attr-merge-vfp-4.d: New test.
+	* ld-arm/attr-merge-vfp-4r.d: New test.
+	* ld-arm/attr-merge-vfp-5.d: New test.
+	* ld-arm/attr-merge-vfp-5r.d: New test.
+	* ld-arm/attr-merge-vfp-2.s: New test.
+	* ld-arm/attr-merge-vfp-3.s: New test.
+	* ld-arm/attr-merge-vfp-3-d16.s: New test.
+	* ld-arm/attr-merge-vfp-4.s: New test.
+	* ld-arm/attr-merge-vfp-4-d16.s: New test.
+
+2009-11-02  Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-scripts/phdrs3.exp (LDFLAGS): Add "--local-store 0:0" for SPU.
+
+2009-10-30  Mark Mitchell  <mark@codesourcery.com>
+
+	* ld-elfcomm/elfcomm.exp: Compile with -fcommon.
+
+2009-10-28  Johan Kristell  <johankri@axis.com>
+
+	* ld-cris/dso12-pltdis.d: New test.
+
+2009-10-19  Hans-Peter Nilsson  <hp@axis.com>
+
+	* ld-cris/tls-e-20.d, ld-cris/tls-e-20a.d, ld-cris/tls-e-22.d,
+	ld-cris/tls-e-80.d, ld-cris/tls-e-dtpoffd1.d,
+	ld-cris/tls-e-dtpoffd3.d, ld-cris/tls-ldgde-14.d,
+	ld-cris/tls-ldgde-15.d, ld-cris/tls-ldgdex-14.d,
+	ld-cris/tls-ldgdex-15.d: Adjust for change in non-shared
+	R_CRIS_32_DTPREL and R_CRIS_16_DTPREL relocations.
+
+2009-10-17  Arnold Metselaar  <arnold.metselaar@planet.nl>
+
+	* ld-scripts/align.exp: Remove xfails for z80-*-coff
+
+2009-10-16  Rafael Avila de Espindola  <espindola@google.com>
+
+	* bootstrap.exp: Detect if plugins are enabled. Skip the static
+	link test and add -ldl to the remaining tests if they are.
+
+2009-10-14  Joseph Myers  <joseph@codesourcery.com>
+
+	* ld-scripts/phdrs3.d: Allow colon in name of linker binary.
+
+2009-10-14  Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-elf/pr349-1.s, * ld-elf/pr349-2.s, * ld-elf/pr349.d: New.
+
+2009-10-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10749
+	* ld-elf/relocatable.d: New.
+	* ld-elf/relocatable.t: Likewise.
+	* ld-elf/simple.s: Likewise.
+
+2009-10-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10744
+	* ld-scripts/phdrs3.exp: Run phdrs3a.
+
+	* ld-scripts/phdrs3a.d: New.
+	* ld-scripts/phdrs3a.t: Likewise.
+
+2009-10-08  Alan Modra  <amodra@bigpond.net.au>
+
+	PR ld/10744
+	* ld-scripts/phdrs3.d: Update.
+
+2009-10-06  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* ld-scripts/phdrs3.d: New.
+	* ld-scripts/phdrs3.t: New.
+	* ld-scripts/phdrs3.exp: New.
+
+2009-10-03  Alan Modra  <amodra@bigpond.net.au>
+
+	* ld-powerpc/tlsexe.d: Update.
+	* ld-powerpc/tlsexe.r: Update.
+	* ld-powerpc/tlsexetoc.d: Update.
+	* ld-powerpc/tlsexetoc.r: Update.
+	* ld-powerpc/tlsso.d: Update.
+	* ld-powerpc/tlsso.r: Update.
+	* ld-powerpc/tlstocso.d: Update.
+	* ld-powerpc/tlstocso.r: Update.
+
+2009-10-02  Alan Modra  <amodra@bigpond.net.au>
+
+	* lib/ld-lib.exp (ld_simple_link_defsyms): New proc, adding
+	powerpc-*-rtems to code setting symbols, extracted from..
+	* ld-srec/srec.exp (run_srec_test): ..here.  Correct flags for sh64.
+	* ld-gc/gc.exp (test_gc): Use ld_simple_link_defsyms.
+
+2009-10-01  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* ld-spu/icache1.d: Update to new section layout.
+
 2009-09-24  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR ld/10630
@@ -301,7 +464,7 @@
 
 2009-09-08  M R Swami Reddy <MR.Swami.Reddy@nsc.com>
 
-        * ld-elf/merge.d: xfail cr16-*-*.
+	* ld-elf/merge.d: xfail cr16-*-*.
 
 2009-09-08  Alan Modra  <amodra@bigpond.net.au>
 

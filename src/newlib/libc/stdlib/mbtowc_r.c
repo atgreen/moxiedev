@@ -9,7 +9,11 @@
 
 int (*__mbtowc) (struct _reent *, wchar_t *, const char *, size_t,
 		 const char *, mbstate_t *)
+#ifdef __CYGWIN__
+   = __utf8_mbtowc;
+#else
    = __ascii_mbtowc;
+#endif
 
 int
 _DEFUN (_mbtowc_r, (r, pwc, s, n, state),
@@ -217,7 +221,7 @@ _DEFUN (__utf8_mbtowc, (r, pwc, s, n, charset, state),
       return 0; /* s points to the null character */
     }
 
-  if (ch >= 0x0 && ch <= 0x7f)
+  if (ch <= 0x7f)
     {
       /* single-byte sequence */
       state->__count = 0;
@@ -291,12 +295,6 @@ _DEFUN (__utf8_mbtowc, (r, pwc, s, n, charset, state),
       tmp = (wchar_t)((state->__value.__wchb[0] & 0x0f) << 12)
 	|    (wchar_t)((state->__value.__wchb[1] & 0x3f) << 6)
 	|     (wchar_t)(ch & 0x3f);
-      /* Check for invalid CESU-8 encoding of UTF-16 surrogate values. */
-      if (tmp >= 0xd800 && tmp <= 0xdfff)
-	{
-	  r->_errno = EILSEQ;
-	  return -1;
-	}
       *pwc = tmp;
       return i;
     }

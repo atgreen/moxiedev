@@ -1,3 +1,171 @@
+2009-12-08  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.texinfo (Types In Python): Describe range function.
+
+2009-12-03  Richard Ward  <richard.j.ward1@googlemail.com>
+
+	* gdb.texinfo (Types In Python): Describe "is_base_class".
+
+2009-12-03  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Basic Python): Document gdb.parse_and_eval.
+
+2009-12-02  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* observer.texi: New memory_changed observer.
+
+2009-12-01  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Reverse Execution): Fix typo.
+
+2009-11-24  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	PR gdb/8704
+
+	* gdb.texinfo (Thread-Specific Breakpoints): Thread specifiers
+	are allowed after the breakpoint condition.
+
+2009-11-23  Tom Tromey  <tromey@redhat.com>
+
+	PR python/10782:
+	* gdb.texinfo (Types In Python): Document Type.pointer.
+
+2009-11-23  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* gdb.texinfo (Machine Code): Adjust.
+	
+2009-11-11  Pedro Alves  <pedro@codesourcery.com>
+
+	* agentexpr.texi (Tracing On Symmetrix): Delete section.
+	(Using Agent Expressions): Delete cross reference.
+
+2009-11-07  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdbint.texinfo, stabs.texinfo: Move the @setchapternewpage
+	and @settitle directives up to help makeinfo find them.
+
+2009-11-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.texinfo (set debug-file-directory, show debug-file-directory)
+	(Auto-loading): Use plural and note one can use multiple components now.
+
+2009-11-01  Vladimir Prus  <vladimir@codesourcery.com>
+
+	* gdb.texinfo (GDB/MI Stack Manipulation): Make
+	-stack-list-arguments have the same documentation for parameter
+	as -stack-list-locals. Add comas.
+
+2009-10-27  Tom Tromey <tromey@redhat.com>
+	    Eli Zaretskii <eliz@gnu.org>
+
+        PR python/10781
+
+	* gdb.texinfo (Values From Inferior): Document cast method.
+
+2009-10-22  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* gdb.texinfo (Machine Code): Mention function name in disasssembly
+	and adjust example.
+	
+2009-10-22  Michael Snyder  <msnyder@vmware.com>
+
+	* gdb.texinfo (Process Record and Replay): Document new form of
+	info record command.  Also document the new save and restore 
+	commands.
+
+2009-10-21  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* gdb.texinfo (Machine Code): Mention current pc marker.
+	(Memory): Likewise.
+
+2009-10-19  Pedro Alves  <pedro@codesourcery.com>
+	    Stan Shebs  <stan@codesourcery.com>
+
+	* observer.texi (new_inferior): Rename to...
+	(inferior_appeared): ... this.
+
+	* gdb.texinfo (Inferiors): Rename node to ...
+	(Inferiors and Programs): ... this.  Mention running multiple
+	programs in the same debug session.
+	<info inferiors>: Mention the new 'Executable' column if "info
+	inferiors".  Update examples.  Document the "add-inferior",
+	"clone-inferior", "remove-inferior" and "maint info
+	program-spaces" commands.
+	(Process): Rename node to...
+	(Forks): ... this.  Document "set|show follow-exec-mode".
+
+2009-10-11  Michael Snyder  <msnyder@vmware.com>
+
+	* gdb.texinfo (ReverseStep): Show default as "unsupported".
+	(ReverseContinue): Ditto.
+
+2009-10-08  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* gdb.texinfo (Server): Document libthread-db-search-path.
+	
+2009-10-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdbint.texinfo (i386_stopped_by_hwbp): Remove.
+
+2009-10-06  Michael Eager  <eager@eagercon.com>
+
+	* gdb.texinfo (Contributors): Add self for Xilinx MicroBlaze.
+	(Embedded Processors): Add MicroBlaze.
+	(MicroBlaze): New.  Describe Xilinx MicroBlaze
+
+2009-10-04  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (Remote Protocol): Don't mention vCont;T.
+
+2009-09-26  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* gdb.texinfo (Cygwin Native): Mention support for Ctrl-BREAK.
+
+2009-09-23  Joel Brobecker  <brobecker@adacore.com>
+
+	* observer.texi (solib_unloaded): Document explicitly the fact that
+	this observer is called before the associated symbols are unloaded.
+
+2009-09-19  Vladimir Prus  <vladimir@codesourcery.com>
+
+	* gdb.texinfo (GDB/MI Stack Manipulation): Document
+	-stack-list-variables.
+
+2009-09-18  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (GDB/MI Variable Objects): -enable-pretty-printing
+	is experimental.
+
+2009-09-17  Paul Pluzhnikov  <ppluzhnikov@google.com>
+
+	* gdb.texinfo (convenince variables): Mention
+	$_siginfo could be empty.
+
+2009-09-15  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (GDB/MI Variable Objects): Document
+	-enable-pretty-printing, -var-set-update-range, dynamic varobjs.
+	Expand -var-update documentation.
+
+2009-09-14  Sergio Durigan Junior <sergiodj@linux.vnet.ibm.com>
+
+	* gdb.texinfo (Set Catchpoints): Documentation about the catch syscall
+	feature.
+
+2009-09-13  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdbint.texinfo (Unwinding the Frame ID): Reference outer_frame_id.
+
+2009-09-10  Michael Snyder  <msnyder@vmware.com>
+
+	* gdb.texinfo (qSupported): Mention new ReverseContinue and
+	ReverseStep replies to the qSupported query.
+
+2009-09-10  Joel Brobecker  <brobecker@adacore.com>
+
+	Add documentation for set/show interactive-mode.
+	* gdb.texinfo (Other Misc Settings): New node.
+
 2009-09-01  Doug Evans  <dje@google.com>
 
 	* gdb.texinfo (Caching Data of Remote Targets): Add note on

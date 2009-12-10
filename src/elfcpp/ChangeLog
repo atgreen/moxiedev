@@ -1,3 +1,43 @@
+2009-12-05  Doug Kwan  <dougkwan@google.com>
+
+	* arm.h: Define enums for Tag_CPU_arch EABI attribute.
+
+2009-11-24  Rafael Avila de Espindola  <espindola@google.com>
+
+	* elfcpp_file.h: Include elfcpp.h.
+
+2009-11-03  Ian Lance Taylor  <iant@google.com>
+
+	* elfcpp.h: Remove trailing commas from enum definitions.
+
+2009-10-30  Doug Kwan  <dougkwan@google.com>
+
+	* arm.h (EF_ARM_BE8, EF_ARM_EABIMASK, EF_ARM_EABI_UNKNOWN,
+	EF_ARM_EABI_VER1, EF_ARM_EABI_VER2, EF_ARM_EABI_VER3,
+	EF_ARM_EABI_VER4, EF_ARM_EABI_VER5): New enums for processor-specific
+	flags.
+	(arm_eabi_version): New inline function.
+	* elfcpp.h: Add a comment about DT_ENCODING.
+
+2009-10-16  Doug Kwan  <dougkwan@google.com>
+
+	* elfcpp/elfcpp.h (DT_PREINIT_ARRAY): Correct enum value.
+
+2009-10-09  Andrew Pinski  <andrew_pinski@playstation.sony.com>
+
+	* elfcpp/elfcpp_file.h (Elf_file::section_name): Change shstr_size
+	to Elf_WXword.
+
+2009-10-09  Mikolaj Zalewski  <mikolajz@google.com>
+
+	* elf_file.h: (class Elf_strtab): New class.
+
+2009-10-09  Mikolaj Zalewski  <mikolajz@google.com>
+
+	* elfcpp_file.h: Fix header guard.  Include <cstdio>.
+	(class Elf_recognizer): New class, code from gold/object.cc.
+	(Elf_file::find_section_by_type): New method.
+
 2009-07-23  Ulrich Drepper  <drepper@redhat.com>
 
 	* elfcpp.h (enum STB): Add STB_GNU_UNIQUE.

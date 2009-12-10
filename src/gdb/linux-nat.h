@@ -62,6 +62,18 @@ struct lwp_info
      be the address of a hardware watchpoint.  */
   struct siginfo siginfo;
 
+  /* STOPPED_BY_WATCHPOINT is non-zero if this LWP stopped with a data
+     watchpoint trap.  */
+  int stopped_by_watchpoint;
+
+  /* On architectures where it is possible to know the data address of
+     a triggered watchpoint, STOPPED_DATA_ADDRESS_P is non-zero, and
+     STOPPED_DATA_ADDRESS contains such data address.  Otherwise,
+     STOPPED_DATA_ADDRESS_P is false, and STOPPED_DATA_ADDRESS is
+     undefined.  Only valid if STOPPED_BY_WATCHPOINT is true.  */
+  int stopped_data_address_p;
+  CORE_ADDR stopped_data_address;
+
   /* Non-zero if we expect a duplicated SIGINT.  */
   int ignore_sigint;
 
@@ -69,6 +81,13 @@ struct lwp_info
      for this LWP's last event.  This may correspond to STATUS above,
      or to a local variable in lin_lwp_wait.  */
   struct target_waitstatus waitstatus;
+
+  /* Signal wether we are in a SYSCALL_ENTRY or
+     in a SYSCALL_RETURN event.
+     Values:
+     - TARGET_WAITKIND_SYSCALL_ENTRY
+     - TARGET_WAITKIND_SYSCALL_RETURN */
+  int syscall_state;
 
   /* Next LWP in list.  */
   struct lwp_info *next;

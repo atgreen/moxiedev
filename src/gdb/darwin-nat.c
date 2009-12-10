@@ -147,6 +147,34 @@ static struct inferior *darwin_inf_fake_stop;
 /* This controls output of inferior debugging.  */
 static int darwin_debug_flag = 0;
 
+/* Create a __TEXT __info_plist section in the executable so that gdb could
+   be signed.  This is required to get an authorization for task_for_pid.
+
+   Once gdb is built, you can either:
+   * make it setgid procmod
+   * or codesign it with any system-trusted signing authority.
+   See taskgated(8) for details.  */
+static const unsigned char info_plist[]
+__attribute__ ((section ("__TEXT,__info_plist"),used)) =
+  "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+  "<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\""
+  " \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n"
+  "<plist version=\"1.0\">\n"
+  "<dict>\n"
+  "  <key>CFBundleIdentifier</key>\n"
+  "  <string>org.gnu.gdb</string>\n"
+  "  <key>CFBundleName</key>\n"
+  "  <string>gdb</string>\n"
+  "  <key>CFBundleVersion</key>\n"
+  "  <string>1.0</string>\n"
+  "  <key>SecTaskAccess</key>\n"
+  "  <array>\n"
+  "    <string>allowed</string>\n"
+  "    <string>debug</string>\n"
+  "  </array>\n"
+  "</dict>\n"
+  "</plist>\n";
+
 static void
 inferior_debug (int level, const char *fmt, ...)
 {
@@ -967,7 +995,7 @@ cancel_breakpoint (ptid_t ptid)
   CORE_ADDR pc;
 
   pc = regcache_read_pc (regcache) - gdbarch_decr_pc_after_break (gdbarch);
-  if (breakpoint_inserted_here_p (pc))
+  if (breakpoint_inserted_here_p (get_regcache_aspace (regcache), pc))
     {
       inferior_debug (4, "cancel_breakpoint for thread %x\n",
 		      ptid_get_tid (ptid));
@@ -1323,7 +1351,7 @@ darwin_attach_pid (struct inferior *inf)
 	}
 
       error (_("Unable to find Mach task port for process-id %d: %s (0x%lx).\n"
-	       " (please check gdb is setgid procmod)"),
+	       " (please check gdb is codesigned - see taskgated(8))"),
              inf->pid, mach_error_string (kret), (unsigned long) kret);
     }
 
@@ -1515,8 +1543,10 @@ darwin_attach (struct target_ops *ops, char *args, int from_tty)
            pid, safe_strerror (errno), errno);
 
   inferior_ptid = pid_to_ptid (pid);
-  inf = add_inferior (pid);
+  inf = current_inferior ();
+  inferior_appeared (inf, pid);
   inf->attach_flag = 1;
+
   /* Always add a main thread.  */
   add_thread_silent (inferior_ptid);
 

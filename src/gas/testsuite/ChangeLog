@@ -1,3 +1,367 @@
+2009-12-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/11037
+	* gas/i386/intelpic.s: Add testcases.
+	* gas/i386/intelpic.d: Updated.
+
+2009-12-03  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/i386.exp: Run x86-64-fxsave and x86-64-fxsave-intel.
+
+	* gas/i386/rex.d: Updated for fxsave64.
+
+	* gas/i386/x86-64-fxsave-intel.d: New.
+	* gas/i386/x86-64-fxsave.d: Likewise.
+	* gas/i386/x86-64-fxsave.s: Likewise.
+
+2009-12-02  Nick Clifton  <nickc@redhat.com>
+	    Richard Earnshaw  <rearnsha@arm.com>
+
+	PR gas/11013
+	* gas/arm/arch7em.d: Update expected disassembly.
+	* gas/arm/thumb32.d: Likewise.
+	
+2009-11-17  Quentin Neill  <quentin.neill@amd.com>
+	    Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gas/i386/x86-64-fma4.d: Add new patterns.
+	* gas/i386/x86-64-fma4.s: Same.
+	* gas/i386/x86-64-xop.d: Adjusted.
+
+2009-11-19  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/lock-1.s: Add cmpxchg16b test.
+	* gas/i386/lock-1-intel.d: Updated.
+	* gas/i386/lock-1.d: Likewise.
+
+2009-11-19  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/10924
+	* gas/arm/arch4t-eabi.d: Restore previous expected dissambly of
+	instructions using Immediate Offset addressing with an offset of
+	zero.
+	* gas/arm/arch4t.d: Likewise.
+	* gas/arm/arm7t.d: Likewise.
+	* gas/arm/xscale.d: Likewise.
+	* gas/arm/wince-inst.d: Remove 'p' suffix from cmp, cmn, teq and
+	tst instructions.
+
+2009-11-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gas/i386/x86-64-xop.d: Update patterns.
+
+2009-11-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gas/i386/cvt16.d: Removed.
+	* gas/i386/cvt16.s: Removed.
+	* gas/i386/x86-64-cvt16.d: Removed.
+	* gas/i386/x86-64-cvt16.s: Removed.
+	* gas/i386/i386.exp: Remove cvt16 and x86-64-cvt16 tests.
+
+2009-11-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/rex.d: Remove suffix on fxsave.
+
+2009-11-17  Sebastian Pop  <sebastian.pop@amd.com>
+	    Quentin Neill  <quentin.neill@amd.com>
+
+	* gas/i386/i386.exp: Run xop and cvt16 in 32-bit mode.
+	Run x86-64-xop and x86-64-cvt16 in 64-bit mode.
+	* gas/i386/lwp.d: Update name of the testcase.
+	* gas/i386/x86-64-xop.d: New.
+	* gas/i386/x86-64-xop.s: New.
+	* gas/i386/xop.d: New.
+	* gas/i386/xop.s: New.
+	* gas/i386/cvt16.d: New.
+	* gas/i386/cvt16.s: New.
+
+2009-11-17  Paul Brook  <paul@codesourcery.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gas/arm/attr-march-armv7em.d: New test.
+	* gas/arm/arch7em-bad.d: New test.
+	* gas/arm/arch7em-bad.l: New test.
+	* gas/arm/arch7em.d: New test.
+	* gas/arm/arch7em.s: New test.
+
+2009-11-17  Nick Clifton  <nickc@redhat.com>
+
+	* gas/arm/vfma1.d: Only run on ELF based targets.
+
+2009-11-17  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/10924
+	* gas/arm/arch4t-eabi.d: Update expected disassembly.
+	* gas/arm/arch4t.d: Likewise.
+	* gas/arm/archv6t2.d: Likewise.
+	* gas/arm/arm7t.d: Likewise.
+	* gas/arm/inst.d: Likewise.
+	* gas/arm/xscale.d: Likewise.
+
+2009-11-17  Nick Clifton  <nickc@redhat.com>
+
+	* gas/rx/macros.inc (creg): Remove cpen.
+	* gas/rx/mvfc.d: Remove expected uses of cpen register.
+	* gas/rx/mvtc.d: Likewise.
+	* gas/rx/popc.d: Likewise.
+	* gas/rx/pushc.d: Likewise.
+
+2009-11-16  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* gas/arm/vfp1xD.s: Add vmrs and vmsr instructions.
+	* gas/arm/vfp1xD.d: Update expected disassembly.
+
+2009-11-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/lock-1-intel.d: Updated.
+	* gas/i386/lock-1.d: Likewise.
+	* gas/i386/lock-1.s: Likewise.
+	* gas/i386/lockbad-1.l: Likewise.
+	* gas/i386/lockbad-1.s: Likewise.
+	* gas/i386/x86-64-lock-1-intel.d: Likewise.
+	* gas/i386/x86-64-lock-1.d: Likewise.
+	* gas/i386/x86-64-lock-1.s: Likewise.
+	* gas/i386/x86-64-lockbad-1.l: Likewise.
+	* gas/i386/x86-64-lockbad-1.s: Likewise.
+
+2009-11-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/rex.s: Add a test for VEX insn.
+	* gas/i386/rex.d: Updated.
+
+2009-11-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/i386.exp: Run long-1, long-1-intel, x86-64-long-1,
+	and x86-64-long-1-intel.
+
+	* gas/i386/long-1-intel.d: New.
+	* gas/i386/long-1.d: Likewise.
+	* gas/i386/long-1.s: Likewise.
+	* gas/i386/x86-64-long-1-intel.d: Likewise.
+	* gas/i386/x86-64-long-1.d: Likewise.
+	* gas/i386/x86-64-long-1.s: Likewise.
+
+	* gas/i386/jump16.d: Updated for prefix processing.
+	* gas/i386/naked.d: Likewise.
+	* gas/i386/nops-1-core2.d: Likewise.
+	* gas/i386/nops-1-i686.d: Likewise.
+	* gas/i386/nops-3-i686.d: Likewise.
+	* gas/i386/nops-4-i686.d: Likewise.
+	* gas/i386/nops-5-i686.d: Likewise.
+	* gas/i386/nops-5.d: Likewise.
+	* gas/i386/prefix.d: Likewise.
+	* gas/i386/rep.d: Likewise.
+	* gas/i386/string-ok.d: Likewise.
+	* gas/i386/x86-64-addr32-intel.d: Likewise.
+	* gas/i386/x86-64-addr32.d: Likewise.
+	* gas/i386/x86-64-cbw-intel.d: Likewise.
+	* gas/i386/x86-64-cbw.d: Likewise.
+	* gas/i386/x86-64-io-intel.d: Likewise.
+	* gas/i386/x86-64-io-suffix.d: Likewise.
+	* gas/i386/x86-64-io.d: Likewise.
+	* gas/i386/x86-64-lwp.d: Likewise.
+	* gas/i386/x86-64-nops-1-core2.d: Likewise.
+	* gas/i386/x86-64-nops-1-nocona.d: Likewise.
+	* gas/i386/x86-64-nops-1.d: Likewise.
+	* gas/i386/x86-64-nops-2.d: Likewise.
+	* gas/i386/x86-64-nops-3.d: Likewise.
+	* gas/i386/x86-64-nops-4-core2.d: Likewise.
+	* gas/i386/x86-64-nops-4.d: Likewise.
+	* gas/i386/x86-64-nops-5-k8.d: Likewise.
+	* gas/i386/x86-64-nops-5.d: Likewise.
+	* gas/i386/x86-64-rep.d: Likewise.
+	* gas/i386/x86-64-stack-intel.d: Likewise.
+	* gas/i386/x86-64-stack-suffix.d: Likewise.
+	* gas/i386/x86-64-stack.d: Likewise.
+
+2009-11-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/i386.exp: Run lock-1, lock-1-intel, lockbad-1,
+	x86-64-lock-1, x86-64-lock-1-intel and x86-64-lockbad-1.
+
+	* gas/i386/lock-1-intel.d: New.
+	* gas/i386/lock-1.d: Likewise.
+	* gas/i386/lock-1.s: Likewise.
+	* gas/i386/lockbad-1.l: Likewise.
+	* gas/i386/lockbad-1.s: Likewise.
+	* gas/i386/x86-64-lock-1-intel.d: Likewise.
+	* gas/i386/x86-64-lock-1.d: Likewise.
+	* gas/i386/x86-64-lock-1.s: Likewise.
+	* gas/i386/x86-64-lockbad-1.l: Likewise.
+	* gas/i386/x86-64-lockbad-1.s: Likewise.
+
+2009-11-12  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gas/arm/copro.d, gas/arm/fp-save.d, gas/arm/float.d,
+	gas/arm/fpa-mem.d: Update for removed generic coprocessor instructions
+	and expanded PC-relative offsets.
+
+2009-11-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gas/i386/prefix.d: Swap order of ADDR and REP prefixes.
+	* gas/i386/rep.d: Likewise.
+	* gas/i386/x86-64-rep.d: Likewise.
+
+2009-11-06  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gas/i386/x86-64-lwp.s: Updated to also contain patterns
+	with r[8-15] registers.
+	* gas/i386/x86-64-lwp.d: Same.
+
+2009-11-05  Sebastian Pop  <sebastian.pop@amd.com>
+	    Quentin Neill  <quentin.neill@amd.com>
+
+	* gas/i386/i386.exp: Run x86-64-lwp in 64-bit mode,
+	run lwp in 32-bit mode.
+	* gas/i386/x86-64-lwp.d: New.
+	* gas/i386/x86-64-lwp.s: New.
+	* gas/i386/lwp.d: New.
+	* gas/i386/lwp.s: New.
+
+2009-11-05  Nick Clifton  <nickc@redhat.com>
+
+	* gas/i386/i386.exp (space1): Move test inside check for x86
+	target.
+
+2009-11-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/876
+	* gas/i386/i386.exp: Run space1.
+
+	* gas/i386/space1.l: New.
+	* gas/i386/space1.s: Likewise.
+
+2009-11-03  Paul Brook  <paul@codesourcery.com>
+
+	* gas/arm/vfp-neon-syntax.d: Update expected results.
+	* gas/arm/vfp-neon-syntax_t2.d: Update expected results.
+
+2009-11-02  Paul Brook  <paul@codesourcery.com>
+
+	* gas/arm/attr-mfpu-vfpv4.d: New test.
+	* gas/arm/attr-mfpu-vfpv4-d16.d: New test.
+	* gas/arm/neon-fma-cov.d: New test.
+	* gas/arm/neon-fma-cov.s: New test.
+	* gas/arm/vfp-fma-inc.s: New test.
+	* gas/arm/vfp-fma-arm.d: New test.
+	* gas/arm/vfp-fma-arm.s: New test.
+	* gas/arm/vfp-fma-thumb.d: New test.
+	* gas/arm/vfp-fma-thumb.s: New test.
+	* gas/arm/vfma1.d: New test.
+	* gas/arm/vfma1.s: New test.
+	* gas/arm/vfpv3xd.d: New test.
+	* gas/arm/vfpv3xd.s: New test.
+
+2009-10-29  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* gas/i386/fma4.d: Updated patterns.
+	* gas/i386/x86-64-fma4.d: Same.
+
+2009-10-29  Paul Brook  <paul@codesourcery.com>
+
+	* gas/arm/vfp-neon-syntax.d: Update expected results.
+	* gas/arm/vfp-neon-syntax_t2.d: Update expected results.
+
+2009-10-28  Alan Modra  <amodra@bigpond.net.au>
+
+	* gas/i386/intelpic.d: Correct.
+
+2009-10-25  Arnold Metselaar  <arnold.metselaar@planet.nl>
+
+	* gas/z80/equ.d, gas/z80/equ.s: Added test of parsing equ directives.
+	* gas/z80/z80.exp: Run it.
+
+	* gas/z80/redef.d: Expect little endian output only.	
+
+2009-10-20  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10775
+	* gas/i386/immed64.d: Updated.
+	* gas/i386/l1om.d: Likewise.
+	* gas/i386/x86-64-disp-intel.d: Likewise.
+	* gas/i386/x86-64-disp.d: Likewise.
+	* gas/i386/x86_64.d: Likewise.
+
+2009-10-19  Doug Evans  <dje@sebabeach.org>
+
+	* gas/xc16x/shlrol.s: Specify constant shift amount.
+	* gas/xc16x/xc16x.exp (do_xc16x_shlrol): Update expected output.
+
+2009-10-18  Vincent Rivière  <vincent.riviere@freesbee.fr>
+
+	* gas/all/weakref1u.d: Exclude more aout targets.
+	* gas/m68k/br-isaa.d: Likewise.
+	* gas/m68k/br-isab.d: Likewise.
+	* gas/m68k/br-isac.d: Likewise.
+
+2009-10-15  Alan Modra  <amodra@bigpond.net.au>
+
+	PR gas/1491
+	* gas/macros/dot.s: Don't start macro invocations is first column.
+	* gas/macros/dot.l: Update.
+	* gas/macros/macros.exp: Run dot test on more targets.
+
+2009-10-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10740
+	* gas/i386/jump.s: Add new tests.
+	* gas/i386/jump16.s: Likewise.
+
+	* gas/i386/jump.d: Updated.
+	* gas/i386/jump16.d: Likewise.
+
+2009-10-13  Vincent Riviere  <vincent.riviere@freesbee.fr>	
+
+	PR gas/3041
+	* gas/m68k/all.exp: Added "p3041data".
+	* gas/m68k/p3041.d, gas/m68k/p3041.s: Added tests of weak references
+	from text section to all possible sections.
+	* gas/m68k/p3041data.d, gas/m68k/p3041data.s: New test. Check weak
+	references from data section.
+
+2009-10-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10704
+	* gas/i386/intelok.s: Move 2 PIC tests to ...
+	* gas/i386/intelpic.s: Here.
+
+	* gas/i386/intelok.d: Updated.
+	* gas/i386/intelpic.d: Likewise.
+
+2009-10-07  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10704
+	* gas/i386/intelok.s: Add 2 new tests.
+	* gas/i386/intelok.d: Updated.
+
+2009-10-02  Peter Bergner  <bergner@vnet.ibm.com>
+
+	* gas/ppc/476.s: New test.
+	* gas/ppc/476.d: Likewise.
+	* gas/ppc/ppc.exp: Run the 476 test.
+
+2009-10-01  Peter Bergner  <bergner@vnet.ibm.com>
+
+	* gas/ppc/a2.d: Rename "ppca2" to "a2".
+
+2009-09-29  DJ Delorie  <dj@redhat.com>
+
+	* gas/rx: New directory.
+	* gas/rx/*: New set of test cases.
+	* gas/elf/section2.e-rx: New expected output file.
+	* gas/all/gas.exp: Add support for RX target.
+	* gas/elf/elf.exp: Likewise.
+	* gas/lns/lns.exp: Likewise.
+	* gas/macros/macros.exp: Likewise.
+
+2009-09-29  Peter Bergner  <bergner@vnet.ibm.com>
+
+	* gas/ppc/vsx.s ("lxsdux", "lxvd2ux", "lxvw4ux", "stxsdux", 
+	"stxvd2ux", "stxvw4ux"): Remove tests.
+	* gas/ppc/vsx.d: Likewise.
+	* gas/ppc/power7.s: Likewise.
+	* gas/ppc/power7.d: Likewise.
+
 2009-09-24  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR gas/10677

@@ -1,6 +1,6 @@
 // target-reloc.h -- target specific relocation support  -*- C++ -*-
 
-// Copyright 2006, 2007, 2008 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -25,6 +25,7 @@
 
 #include "elfcpp.h"
 #include "symtab.h"
+#include "object.h"
 #include "reloc.h"
 #include "reloc-types.h"
 
@@ -42,7 +43,6 @@ template<int size, bool big_endian, typename Target_type, int sh_type,
 	 typename Scan>
 inline void
 scan_relocs(
-    const General_options& options,
     Symbol_table* symtab,
     Layout* layout,
     Target_type* target,
@@ -103,7 +103,7 @@ scan_relocs(
 	      continue;
 	    }
 
-	  scan.local(options, symtab, layout, target, object, data_shndx,
+	  scan.local(symtab, layout, target, object, data_shndx,
 		     output_section, reloc, r_type, lsym);
 	}
       else
@@ -113,7 +113,7 @@ scan_relocs(
 	  if (gsym->is_forwarder())
 	    gsym = symtab->resolve_forwards(gsym);
 
-	  scan.global(options, symtab, layout, target, object, data_shndx,
+	  scan.global(symtab, layout, target, object, data_shndx,
 		      output_section, reloc, r_type, gsym);
 	}
     }
@@ -163,6 +163,12 @@ get_comdat_behavior(const char* name)
 // NEEDS_SPECIAL_OFFSET_HANDLING is true, in which case they refer to
 // the output section.
 
+// RELOC_SYMBOL_CHANGES is used for -fsplit-stack support.  If it is
+// not NULL, it is a vector indexed by relocation index.  If that
+// entry is not NULL, it points to a global symbol which used as the
+// symbol for the relocation, ignoring the symbol index in the
+// relocation.
+
 template<int size, bool big_endian, typename Target_type, int sh_type,
 	 typename Relocate>
 inline void
@@ -175,7 +181,8 @@ relocate_section(
     bool needs_special_offset_handling,
     unsigned char* view,
     typename elfcpp::Elf_types<size>::Elf_Addr view_address,
-    section_size_type view_size)
+    section_size_type view_size,
+    const Reloc_symbol_changes* reloc_symbol_changes)
 {
   typedef typename Reloc_types<sh_type, size, big_endian>::Reloc Reltype;
   const int reloc_size = Reloc_types<sh_type, size, big_endian>::reloc_size;
@@ -210,7 +217,9 @@ relocate_section(
 
       Symbol_value<size> symval;
       const Symbol_value<size> *psymval;
-      if (r_sym < local_count)
+      if (r_sym < local_count
+	  && (reloc_symbol_changes == NULL
+	      || (*reloc_symbol_changes)[i] == NULL))
 	{
 	  sym = NULL;
 	  psymval = object->local_symbol(r_sym);
@@ -246,7 +255,7 @@ relocate_section(
 	        {
 	          if (comdat_behavior == CB_WARNING)
                     gold_warning_at_location(relinfo, i, offset,
-                                             _("Relocation refers to discarded "
+                                             _("relocation refers to discarded "
                                                "comdat section"));
                   symval.set_output_value(0);
 	        }
@@ -256,10 +265,17 @@ relocate_section(
 	}
       else
 	{
-	  const Symbol* gsym = object->global_symbol(r_sym);
-	  gold_assert(gsym != NULL);
-	  if (gsym->is_forwarder())
-	    gsym = relinfo->symtab->resolve_forwards(gsym);
+	  const Symbol* gsym;
+	  if (reloc_symbol_changes != NULL
+	      && (*reloc_symbol_changes)[i] != NULL)
+	    gsym = (*reloc_symbol_changes)[i];
+	  else
+	    {
+	      gsym = object->global_symbol(r_sym);
+	      gold_assert(gsym != NULL);
+	      if (gsym->is_forwarder())
+		gsym = relinfo->symtab->resolve_forwards(gsym);
+	    }
 
 	  sym = static_cast<const Sized_symbol<size>*>(gsym);
 	  if (sym->has_symtab_index())
@@ -367,7 +383,6 @@ template<int size, bool big_endian, int sh_type,
 	 typename Scan_relocatable_reloc>
 void
 scan_relocatable_relocs(
-    const General_options&,
     Symbol_table*,
     Layout*,
     Sized_relobj<size, big_endian>* object,

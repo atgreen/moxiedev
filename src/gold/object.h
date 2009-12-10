@@ -195,7 +195,8 @@ class Object
   Object(const std::string& name, Input_file* input_file, bool is_dynamic,
 	 off_t offset = 0)
     : name_(name), input_file_(input_file), offset_(offset), shnum_(-1U),
-      is_dynamic_(is_dynamic), target_(NULL), xindex_(NULL), no_export_(false)
+      is_dynamic_(is_dynamic), is_needed_(false), uses_split_stack_(false),
+      has_no_split_stack_(false), no_export_(false), xindex_(NULL)
   { input_file->file().add_object(); }
 
   virtual ~Object()
@@ -216,16 +217,35 @@ class Object
   is_dynamic() const
   { return this->is_dynamic_; }
 
+  // Return whether this object is needed--true if it is a dynamic
+  // object which defines some symbol referenced by a regular object.
+  // We keep the flag here rather than in Dynobj for convenience when
+  // setting it.
+  bool
+  is_needed() const
+  { return this->is_needed_; }
+
+  // Record that this object is needed.
+  void
+  set_is_needed()
+  { this->is_needed_ = true; }
+
+  // Return whether this object was compiled with -fsplit-stack.
+  bool
+  uses_split_stack() const
+  { return this->uses_split_stack_; }
+
+  // Return whether this object contains any functions compiled with
+  // the no_split_stack attribute.
+  bool
+  has_no_split_stack() const
+  { return this->has_no_split_stack_; }
+
   // Returns NULL for Objects that are not plugin objects.  This method
   // is overridden in the Pluginobj class.
   Pluginobj*
   pluginobj()
   { return this->do_pluginobj(); }
-
-  // Return the target structure associated with this object.
-  Target*
-  target() const
-  { return this->target_; }
 
   // Get the file.  We pass on const-ness.
   Input_file*
@@ -265,13 +285,6 @@ class Object
   bool
   just_symbols() const
   { return this->input_file()->just_symbols(); }
-
-  // Return the sized target structure associated with this object.
-  // This is like the target method but it returns a pointer of
-  // appropriate checked type.
-  template<int size, bool big_endian>
-  Sized_target<size, big_endian>*
-  sized_target() const;
 
   // Get the number of sections.
   unsigned int
@@ -453,11 +466,6 @@ class Object
 			   size_t* used) const
   { this->do_get_global_symbol_counts(symtab, defined, used); }
 
-  // Set the target.
-  void
-  set_target(Target* target)
-  { this->target_ = target; }
-
   // Return whether this object was found in a system directory.
   bool
   is_in_system_directory() const
@@ -573,6 +581,12 @@ class Object
   handle_gnu_warning_section(const char* name, unsigned int shndx,
 			     Symbol_table*);
 
+  // If NAME is the name of the special section which indicates that
+  // this object was compiled with -fstack-split, mark it accordingly,
+  // and return true.  Otherwise return false.
+  bool
+  handle_split_stack_section(const char* name);
+
  private:
   // This class may not be copied.
   Object(const Object&);
@@ -588,27 +602,22 @@ class Object
   // Number of input sections.
   unsigned int shnum_;
   // Whether this is a dynamic object.
-  bool is_dynamic_;
-  // Target functions--may be NULL if the target is not known.
-  Target* target_;
-  // Many sections for objects with more than SHN_LORESERVE sections.
-  Xindex* xindex_;
+  bool is_dynamic_ : 1;
+  // Whether this object is needed.  This is only set for dynamic
+  // objects, and means that the object defined a symbol which was
+  // used by a reference from a regular object.
+  bool is_needed_ : 1;
+  // Whether this object was compiled with -fsplit-stack.
+  bool uses_split_stack_ : 1;
+  // Whether this object contains any functions compiled with the
+  // no_split_stack attribute.
+  bool has_no_split_stack_ : 1;
   // True if exclude this object from automatic symbol export.
   // This is used only for archive objects.
-  bool no_export_;
+  bool no_export_ : 1;
+  // Many sections for objects with more than SHN_LORESERVE sections.
+  Xindex* xindex_;
 };
-
-// Implement sized_target inline for efficiency.  This approach breaks
-// static type checking, but is made safe using asserts.
-
-template<int size, bool big_endian>
-inline Sized_target<size, big_endian>*
-Object::sized_target() const
-{
-  gold_assert(this->target_->get_size() == size);
-  gold_assert(this->target_->is_big_endian() ? big_endian : !big_endian);
-  return static_cast<Sized_target<size, big_endian>*>(this->target_);
-}
 
 // A regular object (ET_REL).  This is an abstract base class itself.
 // The implementation is the template class Sized_relobj.
@@ -667,15 +676,13 @@ class Relobj : public Object
 
   // Process the relocs, during garbage collection only.
   void
-  gc_process_relocs(const General_options& options, Symbol_table* symtab,
-	            Layout* layout, Read_relocs_data* rd)
-  { return this->do_gc_process_relocs(options, symtab, layout, rd); }
+  gc_process_relocs(Symbol_table* symtab, Layout* layout, Read_relocs_data* rd)
+  { return this->do_gc_process_relocs(symtab, layout, rd); }
 
   // Scan the relocs and adjust the symbol table.
   void
-  scan_relocs(const General_options& options, Symbol_table* symtab,
-	      Layout* layout, Read_relocs_data* rd)
-  { return this->do_scan_relocs(options, symtab, layout, rd); }
+  scan_relocs(Symbol_table* symtab, Layout* layout, Read_relocs_data* rd)
+  { return this->do_scan_relocs(symtab, layout, rd); }
 
   // The number of local symbols in the input symbol table.
   virtual unsigned int
@@ -709,9 +716,8 @@ class Relobj : public Object
 
   // Relocate the input sections and write out the local symbols.
   void
-  relocate(const General_options& options, const Symbol_table* symtab,
-	   const Layout* layout, Output_file* of)
-  { return this->do_relocate(options, symtab, layout, of); }
+  relocate(const Symbol_table* symtab, const Layout* layout, Output_file* of)
+  { return this->do_relocate(symtab, layout, of); }
 
   // Return whether an input section is being included in the link.
   bool
@@ -798,13 +804,11 @@ class Relobj : public Object
 
   // Process the relocs--implemented by child class.
   virtual void
-  do_gc_process_relocs(const General_options&, Symbol_table*, Layout*,
-		 Read_relocs_data*) = 0;
+  do_gc_process_relocs(Symbol_table*, Layout*, Read_relocs_data*) = 0;
 
   // Scan the relocs--implemented by child class.
   virtual void
-  do_scan_relocs(const General_options&, Symbol_table*, Layout*,
-		 Read_relocs_data*) = 0;
+  do_scan_relocs(Symbol_table*, Layout*, Read_relocs_data*) = 0;
 
   // Return the number of local symbols--implemented by child class.
   virtual unsigned int
@@ -832,8 +836,7 @@ class Relobj : public Object
   // Relocate the input sections and write out the local
   // symbols--implemented by child class.
   virtual void
-  do_relocate(const General_options& options, const Symbol_table* symtab,
-	      const Layout*, Output_file* of) = 0;
+  do_relocate(const Symbol_table* symtab, const Layout*, Output_file* of) = 0;
 
   // Get the offset of a section--implemented by child class.
   virtual uint64_t
@@ -1283,6 +1286,30 @@ class Got_offset_list
   Got_offset_list* got_next_;
 };
 
+// This type is used to modify relocations for -fsplit-stack.  It is
+// indexed by relocation index, and means that the relocation at that
+// index should use the symbol from the vector, rather than the one
+// indicated by the relocation.
+
+class Reloc_symbol_changes
+{
+ public:
+  Reloc_symbol_changes(size_t count)
+    : vec_(count, NULL)
+  { }
+
+  void
+  set(size_t i, Symbol* sym)
+  { this->vec_[i] = sym; }
+
+  const Symbol*
+  operator[](size_t i) const
+  { return this->vec_[i]; }
+
+ private:
+  std::vector<Symbol*> vec_;
+};
+
 // A regular object file.  This is size and endian specific.
 
 template<int size, bool big_endian>
@@ -1308,7 +1335,8 @@ class Sized_relobj : public Relobj
 
   // Set up the object file based on TARGET.
   void
-  setup(Target *target);
+  setup()
+  { this->do_setup(); }
 
   // Return the number of symbols.  This is only valid after
   // Object::add_symbols has been called.
@@ -1372,11 +1400,6 @@ class Sized_relobj : public Relobj
     gold_assert(sym < this->local_values_.size());
     return this->local_values_[sym].input_shndx(is_ordinary);
   }
-
-  // Return the appropriate Sized_target structure.
-  Sized_target<size, big_endian>*
-  sized_target()
-  { return this->Object::sized_target<size, big_endian>(); }
 
   // Record that local symbol SYM needs a dynamic symbol entry.
   void
@@ -1451,7 +1474,16 @@ class Sized_relobj : public Relobj
   Address
   map_to_kept_section(unsigned int shndx, bool* found) const;
 
+  // Make section offset invalid.  This is needed for relaxation.
+  void
+  invalidate_section_offset(unsigned int shndx)
+  { this->do_invalidate_section_offset(shndx); }
+
  protected:
+  // Set up.
+  virtual void
+  do_setup();
+
   // Read the symbols.
   void
   do_read_symbols(Read_symbols_data*);
@@ -1481,13 +1513,11 @@ class Sized_relobj : public Relobj
   // Process the relocs to find list of referenced sections. Used only
   // during garbage collection.
   void
-  do_gc_process_relocs(const General_options&, Symbol_table*, Layout*,
-		       Read_relocs_data*);
+  do_gc_process_relocs(Symbol_table*, Layout*, Read_relocs_data*);
 
   // Scan the relocs and adjust the symbol table.
   void
-  do_scan_relocs(const General_options&, Symbol_table*, Layout*,
-		 Read_relocs_data*);
+  do_scan_relocs(Symbol_table*, Layout*, Read_relocs_data*);
 
   // Count the local symbols.
   void
@@ -1508,8 +1538,7 @@ class Sized_relobj : public Relobj
 
   // Relocate the input sections and write out the local symbols.
   void
-  do_relocate(const General_options& options, const Symbol_table* symtab,
-	      const Layout*, Output_file* of);
+  do_relocate(const Symbol_table* symtab, const Layout*, Output_file* of);
 
   // Get the size of a section.
   uint64_t
@@ -1585,6 +1614,66 @@ class Sized_relobj : public Relobj
     this->section_offsets_[shndx] = convert_types<Address, uint64_t>(off);
   }
 
+  // Set the offset of a section to invalid_address.
+  virtual void
+  do_invalidate_section_offset(unsigned int shndx)
+  {
+    gold_assert(shndx < this->section_offsets_.size());
+    this->section_offsets_[shndx] = invalid_address;
+  }
+
+  // Adjust a section index if necessary.
+  unsigned int
+  adjust_shndx(unsigned int shndx)
+  {
+    if (shndx >= elfcpp::SHN_LORESERVE)
+      shndx += this->elf_file_.large_shndx_offset();
+    return shndx;
+  }
+
+  // Initialize input to output maps for section symbols in merged
+  // sections.
+  void
+  initialize_input_to_output_maps();
+
+  // Free the input to output maps for section symbols in merged
+  // sections.
+  void
+  free_input_to_output_maps();
+
+  // Return symbol table section index.
+  unsigned int
+  symtab_shndx() const
+  { return this->symtab_shndx_; }
+
+  // Allow a child class to access the ELF file.
+  elfcpp::Elf_file<size, big_endian, Object>*
+  elf_file()
+  { return &this->elf_file_; }
+  
+  // Allow a child class to access the local values.
+  Local_values*
+  local_values()
+  { return &this->local_values_; }
+
+  // Views and sizes when relocating.
+  struct View_size
+  {
+    unsigned char* view;
+    typename elfcpp::Elf_types<size>::Elf_Addr address;
+    off_t offset;
+    section_size_type view_size;
+    bool is_input_output_view;
+    bool is_postprocessing_view;
+  };
+
+  typedef std::vector<View_size> Views;
+
+  // This may be overriden by a child class.
+  virtual void
+  do_relocate_sections(const Symbol_table* symtab, const Layout* layout,
+		       const unsigned char* pshdrs, Views* pviews);
+
  private:
   // For convenience.
   typedef Sized_relobj<size, big_endian> This;
@@ -1606,15 +1695,6 @@ class Sized_relobj : public Relobj
   };
   typedef std::map<unsigned int, Kept_comdat_section>
       Kept_comdat_section_table;
-
-  // Adjust a section index if necessary.
-  unsigned int
-  adjust_shndx(unsigned int shndx)
-  {
-    if (shndx >= elfcpp::SHN_LORESERVE)
-      shndx += this->elf_file_.large_shndx_offset();
-    return shndx;
-  }
 
   // Find the SHT_SYMTAB section, given the section headers.
   void
@@ -1648,19 +1728,6 @@ class Sized_relobj : public Relobj
                  typename This::Shdr& shdr, unsigned int reloc_shndx,
                  unsigned int reloc_type);
 
-  // Views and sizes when relocating.
-  struct View_size
-  {
-    unsigned char* view;
-    typename elfcpp::Elf_types<size>::Elf_Addr address;
-    off_t offset;
-    section_size_type view_size;
-    bool is_input_output_view;
-    bool is_postprocessing_view;
-  };
-
-  typedef std::vector<View_size> Views;
-
   // Write section data to the output file.  Record the views and
   // sizes in VIEWS for use when relocating.
   void
@@ -1668,20 +1735,20 @@ class Sized_relobj : public Relobj
 
   // Relocate the sections in the output file.
   void
-  relocate_sections(const General_options& options, const Symbol_table*,
-		    const Layout*, const unsigned char* pshdrs, Views*);
+  relocate_sections(const Symbol_table* symtab, const Layout* layout,
+		    const unsigned char* pshdrs, Views* pviews)
+  { this->do_relocate_sections(symtab, layout, pshdrs, pviews); }
 
   // Scan the input relocations for --emit-relocs.
   void
-  emit_relocs_scan(const General_options&, Symbol_table*, Layout*,
-		   const unsigned char* plocal_syms,
+  emit_relocs_scan(Symbol_table*, Layout*, const unsigned char* plocal_syms,
 		   const Read_relocs_data::Relocs_list::iterator&);
 
   // Scan the input relocations for --emit-relocs, templatized on the
   // type of the relocation section.
   template<int sh_type>
   void
-  emit_relocs_scan_reltype(const General_options&, Symbol_table*, Layout*,
+  emit_relocs_scan_reltype(Symbol_table*, Layout*,
 			   const unsigned char* plocal_syms,
 			   const Read_relocs_data::Relocs_list::iterator&,
 			   Relocatable_relocs*);
@@ -1707,15 +1774,29 @@ class Sized_relobj : public Relobj
 		      unsigned char* reloc_view,
 		      section_size_type reloc_view_size);
 
-  // Initialize input to output maps for section symbols in merged
-  // sections.
-  void
-  initialize_input_to_output_maps();
+  // A type shared by split_stack_adjust_reltype and find_functions.
+  typedef std::map<section_offset_type, section_size_type> Function_offsets;
 
-  // Free the input to output maps for section symbols in merged
-  // sections.
+  // Check for -fsplit-stack routines calling non-split-stack routines.
   void
-  free_input_to_output_maps();
+  split_stack_adjust(const Symbol_table*, const unsigned char* pshdrs,
+		     unsigned int sh_type, unsigned int shndx,
+		     const unsigned char* prelocs, size_t reloc_count,
+		     unsigned char* view, section_size_type view_size,
+		     Reloc_symbol_changes** reloc_map);
+
+  template<int sh_type>
+  void
+  split_stack_adjust_reltype(const Symbol_table*, const unsigned char* pshdrs,
+			     unsigned int shndx, const unsigned char* prelocs,
+			     size_t reloc_count, unsigned char* view,
+			     section_size_type view_size,
+			     Reloc_symbol_changes** reloc_map);
+
+  // Find all functions in a section.
+  void
+  find_functions(const unsigned char* pshdrs, unsigned int shndx,
+		 Function_offsets*);
 
   // Write out the local symbols.
   void
@@ -1929,8 +2010,6 @@ class Input_objects
 template<int size, bool big_endian>
 struct Relocate_info
 {
-  // Command line options.
-  const General_options* options;
   // Symbol table.
   const Symbol_table* symtab;
   // Layout.
@@ -1939,8 +2018,12 @@ struct Relocate_info
   Sized_relobj<size, big_endian>* object;
   // Section index of relocation section.
   unsigned int reloc_shndx;
+  // Section header of relocation section.
+  const unsigned char* reloc_shdr;
   // Section index of section being relocated.
   unsigned int data_shndx;
+  // Section header of data section.
+  const unsigned char* data_shdr;
 
   // Return a string showing the location of a relocation.  This is
   // only used for error messages.

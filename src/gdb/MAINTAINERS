@@ -257,6 +257,7 @@ the native maintainer when resolving ABI issues.
 			Richard Earnshaw	rearnsha@arm.com
 
 	avr		--target=avr ,-Werror
+			Tristan Gingold		gingold@adacore.com
 
 	cris		--target=cris-elf ,-Werror ,
 			(sim does not build with -Werror)
@@ -270,6 +271,7 @@ the native maintainer when resolving ABI issues.
 
 	ia64		--target=ia64-linux-gnu ,-Werror
 			(--target=ia64-elf broken)
+			Jan Kratochvil		jan.kratochvil@redhat.com
 
 	lm32		--target=lm32-elf ,-Werror
 
@@ -289,6 +291,10 @@ the native maintainer when resolving ABI issues.
 
 	mep		--target=mep-elf ,-Werror
 			Kevin Buettner		kevinb@redhat.com
+
+	microblaze	--target=microblaze-xilinx-elf ,-Werror
+			--target=microblaze-linux-gnu ,-Werror
+			Michael Eager		eager@eagercon.com
 
 	mips		--target=mips-elf ,-Werror
 
@@ -312,7 +318,6 @@ the native maintainer when resolving ABI issues.
 
 	score	--target=score-elf
 			Qinwei		qinwei@sunnorth.com.cn
-			Don Lee		don.lee@sunplusct.com
 
 	sh		--target=sh-elf ,-Werror
 			--target=sh64-elf ,-Werror
@@ -353,7 +358,7 @@ The host maintainer ensures that gdb can be built as a cross debugger on
 their platform.
 
 AIX			Joel Brobecker		brobecker@adacore.com
-
+Darwin			Tristan Gingold		gingold@adacore.com
 djgpp native		Eli Zaretskii		eliz@gnu.org
 GNU Hurd		Alfred M. Szmidt	ams@gnu.org
 MS Windows (NT, '00, 9x, Me, XP) host & native
@@ -490,6 +495,7 @@ Dhananjay Deshpande				dhananjayd@kpitcummins.com
 Markus Deuling					deuling@de.ibm.com
 Klee Dienes					kdienes@apple.com
 Gabriel Dos Reis                                gdr@integrable-solutions.net
+Michael Eager					eager@eagercon.com
 Richard Earnshaw				rearnsha@arm.com
 Steve Ellcey					sje@cup.hp.com
 Frank Ch. Eigler				fche@redhat.com
@@ -531,6 +537,7 @@ Jan Kratochvil					jan.kratochvil@redhat.com
 Jonathan Larmour				jifl@ecoscentric.com
 Jeff Law					law@redhat.com
 David Lecomber					david@streamline-computing.com
+Don Lee						don.lee@sunplusct.com
 Robert Lipe					rjl@sco.com
 Sandra Loosemore				sandra@codesourcery.com
 H.J. Lu						hjl.tools@gmail.com
@@ -558,6 +565,7 @@ David O'Brien					obrien@freebsd.org
 Alexandre Oliva					aoliva@redhat.com
 Karen Osmond					karen.osmond@gmail.com
 Denis Pilat					denis.pilat@st.com
+Paul Pluzhnikov					ppluzhnikov@google.com
 Vladimir Prus                                   vladimir@codesourcery.com
 Qinwei						qinwei@sunnorth.com.cn
 Frederic Riss					frederic.riss@st.com
@@ -608,6 +616,7 @@ Bob Wilson					bob.wilson@acm.org
 Jim Wilson					wilson@tuliptree.org
 Elena Zannoni					elena.zannoni@oracle.com
 Eli Zaretskii					eliz@gnu.org
+Jie Zhang					jie.zhang@analog.com
 Wu Zhou						woodzltc@cn.ibm.com
 Yoshinori Sato					ysato@users.sourceforge.jp
 Hui Zhu						teawater@gmail.com

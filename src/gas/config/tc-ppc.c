@@ -1188,6 +1188,7 @@ PowerPC options:\n\
 -m405			generate code for PowerPC 405\n\
 -m440			generate code for PowerPC 440\n\
 -m464			generate code for PowerPC 464\n\
+-m476			generate code for PowerPC 476\n\
 -m7400, -m7410, -m7450, -m7455\n\
 			generate code for PowerPC 7400/7410/7450/7455\n\
 -m750cl			generate code for PowerPC 750cl\n"));
@@ -1195,7 +1196,7 @@ PowerPC options:\n\
 -mppc64, -m620		generate code for PowerPC 620/625/630\n\
 -mppc64bridge		generate code for PowerPC 64, including bridge insns\n\
 -mbooke			generate code for 32-bit PowerPC BookE\n\
--mppca2			generate code for A2 architecture\n\
+-ma2			generate code for A2 architecture\n\
 -mpower4		generate code for Power4 architecture\n\
 -mpower5		generate code for Power5 architecture\n\
 -mpower6		generate code for Power6 architecture\n\
@@ -2731,8 +2732,15 @@ md_assemble (char *str)
 		  break;
 
 		case BFD_RELOC_PPC_TLS:
-		  insn = ppc_insert_operand (insn, operand, ppc_obj64 ? 13 : 2,
-					     ppc_cpu, (char *) NULL, 0);
+		  if (!_bfd_elf_ppc_at_tls_transform (opcode->opcode, 0))
+		    as_bad (_("@tls may not be used with \"%s\" operands"),
+			    opcode->name);
+		  else if (operand->shift != 11)
+		    as_bad (_("@tls may only be used in last operand"));
+		  else
+		    insn = ppc_insert_operand (insn, operand,
+					       ppc_obj64 ? 13 : 2,
+					       ppc_cpu, (char *) NULL, 0);
 		  break;
 
 		  /* We'll only use the 32 (or 64) bit form of these relocations

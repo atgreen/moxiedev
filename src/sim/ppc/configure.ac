@@ -668,7 +668,7 @@ AC_ARG_PROGRAM
 
 # BFD conditionally uses zlib, so we must link it in if libbfd does, by
 # using the same condition.
-AC_SEARCH_LIBS(zlibVersion, z, [AC_CHECK_HEADERS(zlib.h)])
+AM_ZLIB
 
 . ${srcdir}/../../bfd/configure.host
 
@@ -846,6 +846,31 @@ else
   AC_MSG_RESULT(no)
   sim_fpu_cflags=
   sim_fpu=
+fi
+
+# Since we run commands on the build system, we have to create a
+# separate config header for the build system if build != host.
+if test x$host = x$build; then
+  AC_CONFIG_COMMANDS([build-config.h],[cp config.h build-config.h])
+else
+  tempdir=build.$$
+  rm -rf $tempdir
+  mkdir $tempdir
+  cd $tempdir
+  case ${srcdir} in
+  /* | [A-Za-z]:[\\/]* ) realsrcdir=${srcdir};;
+  *) realsrcdir=../${srcdir};;
+  esac
+  saved_CFLAGS="${CFLAGS}"
+  CC="${CC_FOR_BUILD}" CFLAGS="${CFLAGS_FOR_BUILD}" \
+  LDFLAGS="${LDFLAGS_FOR_BUILD}" \
+  ${realsrcdir}/configure \
+    --enable-languages=${enable_languages-all} \
+    --target=$target_alias --host=$build_alias --build=$build_alias
+  CFLAGS="${saved_CFLAGS}"
+  mv config.h ../build-config.h
+  cd ..
+  rm -rf $tempdir
 fi
 
 dnl Check for exe extension

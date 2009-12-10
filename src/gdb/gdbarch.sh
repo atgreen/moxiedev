@@ -654,6 +654,17 @@ V:ULONGEST:max_insn_length:::0:0
 # here.
 M:struct displaced_step_closure *:displaced_step_copy_insn:CORE_ADDR from, CORE_ADDR to, struct regcache *regs:from, to, regs
 
+# Return true if GDB should use hardware single-stepping to execute
+# the displaced instruction identified by CLOSURE.  If false,
+# GDB will simply restart execution at the displaced instruction
+# location, and it is up to the target to ensure GDB will receive
+# control again (e.g. by placing a software breakpoint instruction
+# into the displaced instruction buffer).
+#
+# The default implementation returns false on all targets that
+# provide a gdbarch_software_single_step routine, and true otherwise.
+m:int:displaced_step_hw_singlestep:struct displaced_step_closure *closure:closure::default_displaced_step_hw_singlestep::0
+
 # Fix up the state resulting from successfully single-stepping a
 # displaced instruction, to give the result we would have gotten from
 # stepping the instruction in its original location.
@@ -709,6 +720,10 @@ v:int:sofun_address_maybe_missing:::0:0::0
 # Return -1 if something goes wrong, 0 otherwise.
 M:int:process_record:struct regcache *regcache, CORE_ADDR addr:regcache, addr
 
+# Save process state after a signal.
+# Return -1 if something goes wrong, 0 otherwise.
+M:int:process_record_signal:struct regcache *regcache, enum target_signal signal:regcache, signal
+
 # Signal translation: translate inferior's signal (host's) number into
 # GDB's representation.
 m:enum target_signal:target_signal_from_host:int signo:signo::default_target_signal_from_host::0
@@ -724,6 +739,11 @@ M:struct type *:get_siginfo_type:void:
 # Record architecture-specific information from the symbol table.
 M:void:record_special_symbol:struct objfile *objfile, asymbol *sym:objfile, sym
 
+# Function for the 'catch syscall' feature.
+
+# Get architecture-specific system calls information from registers.
+M:LONGEST:get_syscall_number:ptid_t ptid:ptid
+
 # True if the list of shared libraries is one and only for all
 # processes, as opposed to a list of shared libraries per inferior.
 # This usually means that all processes, although may or may not share
@@ -736,6 +756,9 @@ v:int:has_global_solist:::0:0::0
 # visible to all address spaces automatically.  For such cases,
 # this property should be set to true.
 v:int:has_global_breakpoints:::0:0::0
+
+# True if inferiors share an address space (e.g., uClinux).
+m:int:has_shared_address_space:void:::default_has_shared_address_space::0
 EOF
 }
 
@@ -788,8 +811,8 @@ cat <<EOF
 
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007
-   Free Software Foundation, Inc.
+   Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006,
+   2007, 2008, 2009 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -848,6 +871,7 @@ struct bp_target_info;
 struct target_desc;
 struct displaced_step_closure;
 struct core_regset_section;
+struct syscall;
 
 /* The architecture associated with the connection to the target.
  
@@ -925,6 +949,9 @@ done
 
 # close it off
 cat <<EOF
+
+/* Definition for an unknown syscall, used basically in error-cases.  */
+#define UNKNOWN_SYSCALL (-1)
 
 extern struct gdbarch_tdep *gdbarch_tdep (struct gdbarch *gdbarch);
 

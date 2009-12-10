@@ -501,7 +501,7 @@ static bfd *symfile_bfd;
 /* Read a symbol file, after initialization by coff_symfile_init.  */
 
 static void
-coff_symfile_read (struct objfile *objfile, int mainline)
+coff_symfile_read (struct objfile *objfile, int symfile_flags)
 {
   struct coff_symfile_info *info;
   struct dbx_symfile_info *dbxinfo;
@@ -607,15 +607,6 @@ coff_symfile_read (struct objfile *objfile, int mainline)
   /* Free the installed minimal symbol data.  */
   do_cleanups (cleanup_minimal_symbols);
 
-  /* If we are reinitializing, or if we have not loaded syms yet,
-     empty the psymtab.  "mainline" is cleared so the *_read_psymtab
-     functions do not all re-initialize it.  */
-  if (mainline)
-    {
-      init_psymbol_list (objfile, 0);
-      mainline = 0;
-    }
-
   bfd_map_over_sections (abfd, coff_locate_sections, (void *) info);
 
   if (info->stabsects)
@@ -634,7 +625,6 @@ coff_symfile_read (struct objfile *objfile, int mainline)
       stabstrsize = bfd_section_size (abfd, info->stabstrsect);
 
       coffstab_build_psymtabs (objfile,
-			       mainline,
 			       info->textaddr, info->textsize,
 			       info->stabsects,
 			       info->stabstrsect->filepos, stabstrsize);
@@ -642,10 +632,25 @@ coff_symfile_read (struct objfile *objfile, int mainline)
   if (dwarf2_has_info (objfile))
     {
       /* DWARF2 sections.  */
-      dwarf2_build_psymtabs (objfile, mainline);
+      dwarf2_build_psymtabs (objfile);
     }
 
   dwarf2_build_frame_info (objfile);
+
+  /* Try to add separate debug file if no symbols table found.   */
+  if (!objfile_has_partial_symbols (objfile))
+    {
+      char *debugfile;
+
+      debugfile = find_separate_debug_file_by_debuglink (objfile);
+
+      if (debugfile)
+	{
+	  bfd *abfd = symfile_bfd_open (debugfile);
+	  symbol_file_add_separate (abfd, symfile_flags, objfile);
+	  xfree (debugfile);
+	}
+    }
 
   do_cleanups (back_to);
 }
@@ -1434,10 +1439,10 @@ patch_opaque_types (struct symtab *s)
          Remove syms from the chain when their types are stored,
          but search the whole chain, as there may be several syms
          from different files with the same name.  */
-      if (SYMBOL_CLASS (real_sym) == LOC_TYPEDEF &&
-	  SYMBOL_DOMAIN (real_sym) == VAR_DOMAIN &&
-	  TYPE_CODE (SYMBOL_TYPE (real_sym)) == TYPE_CODE_PTR &&
-	  TYPE_LENGTH (TYPE_TARGET_TYPE (SYMBOL_TYPE (real_sym))) != 0)
+      if (SYMBOL_CLASS (real_sym) == LOC_TYPEDEF
+	  && SYMBOL_DOMAIN (real_sym) == VAR_DOMAIN
+	  && TYPE_CODE (SYMBOL_TYPE (real_sym)) == TYPE_CODE_PTR
+	  && TYPE_LENGTH (TYPE_TARGET_TYPE (SYMBOL_TYPE (real_sym))) != 0)
 	{
 	  char *name = SYMBOL_LINKAGE_NAME (real_sym);
 	  int hash = hashname (name);
@@ -1446,8 +1451,8 @@ patch_opaque_types (struct symtab *s)
 	  prev = 0;
 	  for (sym = opaque_type_chain[hash]; sym;)
 	    {
-	      if (name[0] == SYMBOL_LINKAGE_NAME (sym)[0] &&
-		  strcmp (name + 1, SYMBOL_LINKAGE_NAME (sym) + 1) == 0)
+	      if (name[0] == SYMBOL_LINKAGE_NAME (sym)[0]
+		  && strcmp (name + 1, SYMBOL_LINKAGE_NAME (sym) + 1) == 0)
 		{
 		  if (prev)
 		    {
@@ -1503,7 +1508,7 @@ process_coff_symbol (struct coff_symbol *cs,
   name = cs->c_name;
   name = EXTERNAL_NAME (name, objfile->obfd);
   SYMBOL_LANGUAGE (sym) = current_subfile->language;
-  SYMBOL_SET_NAMES (sym, name, strlen (name), objfile);
+  SYMBOL_SET_NAMES (sym, name, strlen (name), 1, objfile);
 
   /* default assumptions */
   SYMBOL_VALUE (sym) = cs->c_value;
@@ -1632,10 +1637,10 @@ process_coff_symbol (struct coff_symbol *cs,
 	     simple forward reference (TYPE_CODE_UNDEF) is not an
 	     empty structured type, though; the forward references
 	     work themselves out via the magic of coff_lookup_type.  */
-	  if (TYPE_CODE (SYMBOL_TYPE (sym)) == TYPE_CODE_PTR &&
-	      TYPE_LENGTH (TYPE_TARGET_TYPE (SYMBOL_TYPE (sym))) == 0 &&
-	      TYPE_CODE (TYPE_TARGET_TYPE (SYMBOL_TYPE (sym))) !=
-	      TYPE_CODE_UNDEF)
+	  if (TYPE_CODE (SYMBOL_TYPE (sym)) == TYPE_CODE_PTR
+	      && TYPE_LENGTH (TYPE_TARGET_TYPE (SYMBOL_TYPE (sym))) == 0
+	      && TYPE_CODE (TYPE_TARGET_TYPE (SYMBOL_TYPE (sym)))
+	         != TYPE_CODE_UNDEF)
 	    {
 	      int i = hashname (SYMBOL_LINKAGE_NAME (sym));
 

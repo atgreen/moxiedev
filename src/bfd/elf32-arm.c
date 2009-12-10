@@ -2971,7 +2971,7 @@ using_thumb_only (struct elf32_arm_link_hash_table *globals)
 				       Tag_CPU_arch);
   int profile;
 
-  if (arch != TAG_CPU_ARCH_V7)
+  if (arch != TAG_CPU_ARCH_V7 && arch != TAG_CPU_ARCH_V7E_M)
     return FALSE;
 
   profile = bfd_elf_get_obj_attr_int (globals->obfd, OBJ_ATTR_PROC,
@@ -2999,7 +2999,8 @@ arch_has_arm_nop (struct elf32_arm_link_hash_table *globals)
 					     Tag_CPU_arch);
   return arch == TAG_CPU_ARCH_V6T2
 	 || arch == TAG_CPU_ARCH_V6K
-	 || arch == TAG_CPU_ARCH_V7;
+	 || arch == TAG_CPU_ARCH_V7
+	 || arch == TAG_CPU_ARCH_V7E_M;
 }
 
 static bfd_boolean
@@ -3007,7 +3008,8 @@ arch_has_thumb2_nop (struct elf32_arm_link_hash_table *globals)
 {
   const int arch = bfd_elf_get_obj_attr_int (globals->obfd, OBJ_ATTR_PROC,
 					     Tag_CPU_arch);
-  return arch == TAG_CPU_ARCH_V6T2 || arch == TAG_CPU_ARCH_V7;
+  return (arch == TAG_CPU_ARCH_V6T2 || arch == TAG_CPU_ARCH_V7
+	  || arch == TAG_CPU_ARCH_V7E_M);
 }
 
 static bfd_boolean
@@ -3783,7 +3785,7 @@ elf32_arm_next_input_section (struct bfd_link_info *info,
     {
       asection **list = htab->input_list + isec->output_section->index;
 
-      if (*list != bfd_abs_section_ptr)
+      if (*list != bfd_abs_section_ptr && (isec->flags & SEC_CODE) != 0)
 	{
 	  /* Steal the link_sec pointer for our list.  */
 #define PREV_SEC(sec) (htab->stub_group[(sec)->id].link_sec)
@@ -9637,6 +9639,23 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
       T(V6S_M),  /* V6_M.  */
       T(V6S_M)   /* V6S_M.  */
     };
+  const int v7e_m[] =
+    {
+      -1,        /* PRE_V4.  */
+      -1,        /* V4.  */
+      T(V7E_M),  /* V4T.  */
+      T(V7E_M),  /* V5T.  */
+      T(V7E_M),  /* V5TE.  */
+      T(V7E_M),  /* V5TEJ.  */
+      T(V7E_M),  /* V6.  */
+      T(V7E_M),  /* V6KZ.  */
+      T(V7E_M),  /* V6T2.  */
+      T(V7E_M),  /* V6K.  */
+      T(V7E_M),  /* V7.  */
+      T(V7E_M),  /* V6_M.  */
+      T(V7E_M),  /* V6S_M.  */
+      T(V7E_M)   /* V7E_M.  */
+    };
   const int v4t_plus_v6_m[] =
     {
       -1,		/* PRE_V4.  */
@@ -9652,6 +9671,7 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
       T(V7),		/* V7.  */
       T(V6_M),		/* V6_M.  */
       T(V6S_M),		/* V6S_M.  */
+      T(V7E_M),		/* V7E_M.  */
       T(V4T_PLUS_V6_M)	/* V4T plus V6_M.  */
     };
   const int *comb[] =
@@ -9661,13 +9681,14 @@ tag_cpu_arch_combine (bfd *ibfd, int oldtag, int *secondary_compat_out,
       v7,
       v6_m,
       v6s_m,
+      v7e_m,
       /* Pseudo-architecture.  */
       v4t_plus_v6_m
     };
 
   /* Check we've not got a higher architecture than we know about.  */
 
-  if (oldtag >= MAX_TAG_CPU_ARCH || newtag >= MAX_TAG_CPU_ARCH)
+  if (oldtag > MAX_TAG_CPU_ARCH || newtag > MAX_TAG_CPU_ARCH)
     {
       _bfd_error_handler (_("error: %B: Unknown CPU architecture"), ibfd);
       return -1;
@@ -9730,8 +9751,6 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
   /* Some tags have 0 = don't care, 1 = strong requirement,
      2 = weak requirement.  */
   static const int order_021[3] = {0, 2, 1};
-  /* For use with Tag_VFP_arch.  */
-  static const int order_01243[5] = {0, 1, 2, 4, 3};
   int i;
   bfd_boolean result = TRUE;
 
@@ -9923,12 +9942,50 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
 	    }
 	  break;
 	case Tag_VFP_arch:
-	  /* Use the "greatest" from the sequence 0, 1, 2, 4, 3, or the
-	     largest value if greater than 4 (for future-proofing).  */
-	  if ((in_attr[i].i > 4 && in_attr[i].i > out_attr[i].i)
-	      || (in_attr[i].i <= 4 && out_attr[i].i <= 4
-		  && order_01243[in_attr[i].i] > order_01243[out_attr[i].i]))
-	    out_attr[i].i = in_attr[i].i;
+	    {
+	      static const struct
+	      {
+		  int ver;
+		  int regs;
+	      } vfp_versions[7] =
+		{
+		  {0, 0},
+		  {1, 16},
+		  {2, 16},
+		  {3, 32},
+		  {3, 16},
+		  {4, 32},
+		  {4, 16}
+		};
+	      int ver;
+	      int regs;
+	      int newval;
+
+	      /* Values greater than 6 aren't defined, so just pick the
+	         biggest */
+	      if (in_attr[i].i > 6 && in_attr[i].i > out_attr[i].i)
+		{
+		  out_attr[i] = in_attr[i];
+		  break;
+		}
+	      /* The output uses the superset of input features
+		 (ISA version) and registers.  */
+	      ver = vfp_versions[in_attr[i].i].ver;
+	      if (ver < vfp_versions[out_attr[i].i].ver)
+		ver = vfp_versions[out_attr[i].i].ver;
+	      regs = vfp_versions[in_attr[i].i].regs;
+	      if (regs < vfp_versions[out_attr[i].i].regs)
+		regs = vfp_versions[out_attr[i].i].regs;
+	      /* This assumes all possible supersets are also a valid
+	         options.  */
+	      for (newval = 6; newval > 0; newval--)
+		{
+		  if (regs == vfp_versions[newval].regs
+		      && ver == vfp_versions[newval].ver)
+		    break;
+		}
+	      out_attr[i].i = newval;
+	    }
 	  break;
 	case Tag_PCS_config:
 	  if (out_attr[i].i == 0)

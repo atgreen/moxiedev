@@ -1,6 +1,438 @@
+2009-12-09  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* elf32-arm.c (elf32_arm_next_input_section): Skip sections without
+	SEC_CODE.
+
+2009-12-08  Alan Modra  <amodra@bigpond.net.au>
+
+	* elf.c (write_zeros): New function.
+	(assign_file_positions_for_load_sections): Allocate file space for
+	NOBITS sections that are followed by PROGBITS sections in a segment.
+
+2009-12-03  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_make_bfd_section): Force debug flags for
+	all sections of the __DWARF segment.
+
+2009-12-03  Alan Modra  <amodra@bigpond.net.au>
+
+	PR ld/11047
+	* elf32-ppc.c (ppc_elf_relocate_section): Delete __tls_get_addr
+	symbol reference from relocs belonging to calls that are
+	optimized away.
+	* elf64-ppc.c (ppc64_elf_relocate_section): Likewise.
+
+2009-12-02  Jerker Bäck  <jerker.back@gmail.com>
+
+	PR binutils/11017
+	* coff-i386.h (COFF_PAGE_SIZE): Definition moved to coff/i386.h
+
+2009-11-30  Joseph Myers  <joseph@codesourcery.com>
+
+	* configure: Regenerate.
+
+2009-11-26  Per Øyvind Karlsen <peroyvind@mandriva.org>
+
+	* plugin.c (bfd_plugin_bfd_copy_link_hash_symbol_type): Define.
+
+2009-11-24  Joel Brobecker  <brobecker@adacore.com>
+
+	* acinclude.m4: Add include of ../config/zlib.m4.
+	* configure.in: AM_ZLIB to check for zlib support.
+	* configure: Regenerate.
+
+2009-11-23  Paul Brook  <paul@codesourcery.com>
+
+	* libbfd-in.h (_bfd_generic_copy_link_hash_symbol_type): Add
+	prototype.
+	* elf-bfd.h (_bfd_elf_copy_link_hash_symbol_type): Add prototype.
+	* linker.c (_bfd_generic_copy_link_hash_symbol_type): New function.
+	* elflink.c (_bfd_elf_copy_link_hash_symbol_type): New function.
+	* targets.c (BFD_JUMP_TABLE_LINK, struct bfd_target): Add
+	_copy_link_hash_symbol_type.
+	* coff64-rs6000.c (rs6000coff64_vec, aix5coff64_vec): Add
+	_bfd_generic_copy_link_hash_symbol_type.
+	* coff-rs6000.c (rs6000coff_vec, pmac_xcoff_vec): Add
+	_bfd_generic_copy_link_hash_symbol_type.
+	* aout-adobe.c (aout_32_bfd_copy_link_hash_symbol_type): Define.
+	* aout-target.h (MY_bfd_copy_link_hash_symbol_type): Define.
+	* aout-tic30.c (MY_bfd_copy_link_hash_symbol_type): Define.
+	* binary.c (binary_bfd_copy_link_hash_symbol_type): Define.
+	* bout.c (b_out_bfd_copy_link_hash_symbol_type): Define.
+	* coffcode.h (coff_bfd_copy_link_hash_symbol_type): Define.
+	* elfxx-target.h (bfd_elfNN_bfd_copy_link_hash_symbol_type): Define.
+	* i386msdos.c (msdos_bfd_copy_link_hash_symbol_type): Define.
+	* i386os9k.c (os9k_bfd_copy_link_hash_symbol_type): Define.
+	* ieee.c (ieee_bfd_copy_link_hash_symbol_type): Define.
+	* ihex.c (ihex_bfd_copy_link_hash_symbol_type): Define.
+	* libecoff.h (_bfd_ecoff_bfd_copy_link_hash_symbol_type): Define.
+	* mach-o.c (bfd_mach_o_bfd_copy_link_hash_symbol_type): Define.
+	* mmo.c (mmo_bfd_copy_link_hash_symbol_type): Define.
+	* nlm-target.h (nlm_bfd_copy_link_hash_symbol_type): Define.
+	* oasys.c (oasys_bfd_copy_link_hash_symbol_type): Define.
+	* pef.c (bfd_pef_bfd_copy_link_hash_symbol_type): Define.
+	* ppcboot.c (ppcboot_bfd_copy_link_hash_symbol_type): Define.
+	* som.c (som_bfd_copy_link_hash_symbol_type): Define.
+	* srec.c (srec_bfd_copy_link_hash_symbol_type): Define.
+	* tekhex.c (tekhex_bfd_copy_link_hash_symbol_type): Define.
+	* versados.c (versados_bfd_copy_link_hash_symbol_type): Define.
+	* vms.c (vms_bfd_copy_link_hash_symbol_type): Define.
+	* xsym.c (bfd_sym_bfd_copy_link_hash_symbol_type): Define.
+	* bfd-in2.h: Regenerate.
+	* libbfd.h: Regenerate.
+
+2009-11-19  Tristan Gingold  <gingold@adacore.com>
+
+	* coff-rs6000.c (rs6000coff_vec): Use generic routines instead of
+	hard-coded casts.
+	(pmac_xcoff_vec): Ditto.
+	* coff64-rs6000.c (rs6000coff64_vec): Ditto.
+	(aix5coff64_vec): Ditto.
+
+2009-11-18  Alan Modra  <amodra@bigpond.net.au>
+
+	* bfd-in.h (_bfd_elf_ppc_at_tls_transform): Declare.
+	* bfd-in2.h: Regenerate.
+	* elf64-ppc.c (ppc64_elf_relocate_section): Move code for R_PPC64_TLS
+	insn optimisation to..
+	* elf32-ppc.c (_bfd_elf_ppc_at_tls_transform): ..here.  New function.
+	(ppc_elf_relocate_section): Use it.
+
+2009-11-18  Alan Modra  <amodra@bigpond.net.au>
+
+	* targets.c: Don't include alloca-conf.h.
+	(bfd_get_target_info): Don't use alloca.
+
+2009-11-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10955
+	* elfxx-ia64.c (elfNN_ia64_update_short_info): Also skip ABS
+	sections.
+
+2009-11-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10955
+	* elfxx-ia64.c (elfNN_ia64_link_hash_table): Update comments.
+	(elfNN_ia64_update_short_info): Remove "->output_section" from
+	ia64_info->max_short_sec and ia64_info->min_short_sec.
+	(elfNN_ia64_choose_gp): Likewise.
+	(elfNN_ia64_relax_section): Pass tsec->output_section to
+	elfNN_ia64_update_short_info.
+
+2009-11-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10955
+	* elfxx-ia64.c (elfNN_ia64_link_hash_table): Add max_short_sec,
+	max_short_offset, min_short_sec and min_short_offset.
+	(elfNN_ia64_update_short_info): New.
+	(elfNN_ia64_relax_section): Update max_short_sec,
+	max_short_offset, min_short_sec and min_short_offset.
+	(elfNN_ia64_choose_gp): Use min_short_sec/max_short_sec if
+	they are set.
+
+2009-11-17  Paul Brook  <paul@codesourcery.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* elf32-arm.c (using_thumb_only, arch_has_arm_nop,
+	arch_has_thumb2_nop): Handle TAG_CPU_ARCH_V7E_M.
+	(tag_cpu_arch_combine): Ditto. Correct MAX_TAG_CPU_ARCH test.
+
+2009-11-17  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* elf32-spu.c (struct spu_link_hash_table): Remove overlay_fixed,
+	reserved, and extra_stack_space members.
+	(spu_elf_auto_overlay): Use auto_overlay_fixed, auto_overlay_reserved,
+	and extra_stack_space members of htab->params instead.
+
+2009-11-17  Tristan Gingold  <gingold@adacore.com>
+
+	* targets.c: Include alloca-conf.h
+
+2009-11-16  Kai Tietz  <kai.tietz@onevision.com>
+
+	* targets.c (bfd_get_target_info): New function.
+	(_bfd_find_arch_match): New function.
+	* bfd-in2.h: Regenerated.
+
+2009-11-12  Nick Clifton  <nickc@redhat.com>
+
+	* po/ru.po: Updates Russian translation.
+
+2009-11-11  Nick Clifton  <nickc@redhat.com>
+
+	* po/id.po: Updated Indonesian translation.
+
+2009-11-11  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* configure.in: Call ACX_LARGEFILE.  Stop calling AC_PLUGINS,
+	AC_SYS_LARGEFILE and checking the Solaris largefile exception.
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+
+2009-11-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR ld/10911
+	* elflink.c (elf_link_output_extsym): Don't return on
+	STT_GNU_IFUNC symbol when stripping.
+
+2009-11-08  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	* elf32-hppa.c (elf32_hppa_final_link): Don't sort unwind information
+	in a relocatable link.
+	* elf64-hppa.c (elf_hppa_final_link): Likewise.
+
+2009-11-05  Nick Clifton  <nickc@redhat.com>
+
+	* elflink.c (elf_link_add_object_symbols): Improve error
+	message generated when a symbol is left unresolved because a
+	--no-add-needed command line option has prevented the
+	inclusion of the DSO defining it.
+
+2009-11-03  Alan Modra  <amodra@bigpond.net.au>
+	    Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* elf32-spu.c (mark_functions_via_relocs): Handle non-branch relocs
+	(jump tables or other references to code labels) as well.
+
+2009-11-02  Paul Brook  <paul@codesourcery.com>
+
+	* elf32-arm.c (elf32_arm_merge_eabi_attributes): Handle VFPv4
+	attributes.
+
+2009-11-02  Alan Modra  <amodra@bigpond.net.au>
+
+	* elflink.c (elf_link_add_object_symbols): Don't force debug
+	symbols local.
+
+2009-10-29  Johan Kristell  <johankri@axis.com>
+
+	* elf32-cris.c (cris_elf_plt_sym_val): New function.
+	(elf_backend_plt_sym_val): Define.
+
+2009-10-27  Kai Tietz  <kai.tietz@onevision.com>
+
+	* peXXigen.c (bfdver.h): Add include.
+	(LINKER_VERSION): Do calculation based on BFD_VERSION.
+
+2009-10-25  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_relocate_section): Correct assertion.
+
+2009-10-25  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_plt_entry): Fix formatting.
+
+2009-10-25  Maciej W. Rozycki  <macro@linux-mips.org>
+
+	* elf32-vax.c (elf_vax_relocate_section): Fix a typo.
+
+2009-10-23  Kai Tietz  <kai.tietz@onevision.com>
+
+	* coff-x86_64.c (coff_amd64_rtype_to_howto): Subtract offset
+	of R_AMD64_PCRLONG_<X> relocations from addend.
+
+2009-10-23  Alan Modra  <amodra@bigpond.net.au>
+
+	* plugin.c: Produce empty object if not BFD_SUPPORTS_PLUGINS.
+
+2009-10-20  Alan Modra  <amodra@bigpond.net.au>
+
+	PR binutils/10802
+	* opncls.c (_maybe_make_executable): Make DYNAMIC files executable.
+
+2009-10-19  Hans-Peter Nilsson  <hp@axis.com>
+
+	* elf32-cris.c (cris_elf_relocate_section) <case R_CRIS_32_DTPREL>:
+	Don't subtract the size of the TLS block for non-shared objects
+	from the relocation.
+
+2009-10-17  Arnold Metselaar  <arnold.metselaar@planet.nl>
+
+	* coff-z80.c (z80coff_vec): Allow sections to be of type
+	SEC_CODE or SEC_DATA
+
+2009-10-16  Alan Modra  <amodra@bigpond.net.au>
+
+	PR binutils/10785
+	* coff-alpha.c (alpha_ecoff_get_elt_at_filepos): Don't bfd_alloc
+	bim and bim->buffer.  bfd_malloc instead.
+	* peicode.h (pe_ILF_build_a_bfd): Similarly.
+	(ILF_DATA_SIZE): Don't include bim.
+	* opncls.c (bfd_close): Test bim->buffer non-NULL before freeing.
+
+2009-10-14  Alan Modra  <amodra@bigpond.net.au>
+
+	* aoutx.h (aout_link_check_ar_symbols): Typo fix.
+
+2009-10-13  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/10763
+	* elf32-i386.c (elf_i386_finish_dynamic_symbol): Declare plt
+	earlier.
+
+2009-10-13  Alan Modra  <amodra@bigpond.net.au>
+
+	* elflink.c (_bfd_elf_merge_symbol): Revert previous patch.
+
+2009-10-12  Roland McGrath  <roland@frob.com>
+
+	* elflink.c (elf_link_add_object_symbols, _bfd_elf_merge_symbol):
+	Fix %s that should be %B in several message formats.
+
+2009-10-10  Alan Modra  <amodra@bigpond.net.au>
+
+	* cofflink.c (_bfd_coff_link_input_bfd): Skip section symbols for
+	excluded output sections.
+
+2009-10-09  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_read_command): Handle BFD_MACH_O_LC_RPATH.
+	(bfd_mach_o_bfd_print_private_bfd_data): Ditto.
+
+2009-10-09  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_scan_read_symtab_symbols): Rename to
+	bfd_mach_o_read_symtab_symbols.
+	(bfd_mach_o_scan_write_thread): Rename to bfd_mach_o_write_thread.
+	(bfd_mach_o_scan_write_relocs): Rename to bfd_mach_o_write_relocs.
+	(bfd_mach_o_scan_write_section_32): Rename to
+	bfd_mach_o_write_section_32.
+	(bfd_mach_o_scan_write_section_64): Rename to
+	bfd_mach_o_write_section_64.
+	(bfd_mach_o_scan_write_segment_32): Rename to
+	bfd_mach_o_write_segment_32.
+	(bfd_mach_o_scan_write_segment_64): Rename to
+	bfd_mach_o_write_segment_64.
+	(bfd_mach_o_scan_write_symtab): Rename to bfd_mach_o_write_symtab.
+	(bfd_mach_o_scan_read_section_32): Rename to
+	bfd_mach_o_read_section_32.
+	(bfd_mach_o_scan_read_section_64): Rename to
+	bfd_mach_o_read_section_64.
+	(bfd_mach_o_scan_read_section): Rename to bfd_mach_o_read_section.
+	(bfd_mach_o_scan_read_symtab_strtab): Rename to
+	bfd_mach_o_read_symtab_strtab.
+	(bfd_mach_o_scan_read_symtab_symbol): Rename to
+	bfd_mach_o_read_symtab_symbol.
+	(bfd_mach_o_scan_read_dysymtab_symbol): Rename to
+	bfd_mach_o_read_dysymtab_symbol.
+	(bfd_mach_o_scan_read_dylinker): Rename to bfd_mach_o_read_dylinker.
+	(bfd_mach_o_scan_read_dylib): Rename to bfd_mach_o_read_dylib.
+	(bfd_mach_o_scan_read_prebound_dylib): Rename to
+	bfd_mach_o_read_prebound_dylib.
+	(bfd_mach_o_scan_read_thread): Rename to bfd_mach_o_read_thread.
+	(bfd_mach_o_scan_read_dysymtab): Rename to bfd_mach_o_read_dysymtab.
+	(bfd_mach_o_scan_read_symtab): Rename to bfd_mach_o_read_symtab.
+	(bfd_mach_o_scan_read_uuid): Rename to bfd_mach_o_read_uuid.
+	(bfd_mach_o_scan_read_linkedit): Rename to bfd_mach_o_read_linkedit.
+	(bfd_mach_o_scan_read_str): Rename to bfd_mach_o_read_str.
+	(bfd_mach_o_scan_read_dyld_info): Rename to bfd_mach_o_read_dyld_info.
+	(bfd_mach_o_scan_read_segment): Rename to bfd_mach_o_read_segment.
+	(bfd_mach_o_scan_read_segment_32): Rename to
+	bfd_mach_o_read_segment_32.
+	(bfd_mach_o_scan_read_segment_64): Rename to
+	bfd_mach_o_read_segment_64.
+	(bfd_mach_o_scan_read_command): Rename to bfd_mach_o_read_command.
+	* mach-o.h (bfd_mach_o_scan_read_dysymtab_symbol): Rename to
+	bfd_mach_o_read_dysymtab_symbol.
+
+2009-10-09  Tristan Gingold  <gingold@adacore.com>
+
+	* mach-o.c (bfd_mach_o_section_get_entry_size): Moved.
+	(bfd_mach_o_section_get_nbr_indirect): Ditto.
+	(bfd_mach_o_get_synthetic_symtab): New function.
+	(bfd_mach_o_print_private_header): Print the number of commands
+	in decimal.
+	* mach-o.h (bfd_mach_o_get_synthetic_symtab): Add prototype.
+	* mach-o-target.c: Do not defined bfd_mach_o_get_synthetic_symtab.
+
+2009-10-08  Tristan Gingold  <gingold@adacore.com>
+
+	* config.bfd: Add bfd_mach_o_i386_vec in x86_64-darwin targ_selvecs.
+
+2009-10-06  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* bfd-in2.h: Regenerated.
+
+2009-10-02  Alan Modra  <amodra@bigpond.net.au>
+
+	* aout-cris.c (N_SHARED_LIB): Don't define.
+	* hp300bsd.c (N_SHARED_LIB): Don't define.
+	* i386bsd.c (N_SHARED_LIB): Don't define.
+	* i386linux.c (N_SHARED_LIB): Don't define.
+	* i386lynx.c (N_SHARED_LIB): Don't define.
+	* m68klinux.c (N_SHARED_LIB): Don't define.
+	* m88kmach3.c (N_SHARED_LIB): Don't define.
+	* mipsbsd.c (N_SHARED_LIB): Don't define.
+	* newsos3.c (N_SHARED_LIB): Don't define.
+	* pc532-mach.c (N_SHARED_LIB): Don't define.
+	* pdp11.c (N_SHARED_LIB): Don't define.
+	* sparclinux.c (N_SHARED_LIB): Don't define.
+	* vaxbsd.c (N_SHARED_LIB): Don't define.
+
+2009-10-01  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* cofflink.c (_bfd_coff_generic_relocate_section): Look for the aux
+	symbol for a weak undef in the auxbfd, not the input bfd.
+
+2009-10-01  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* elf32-spu.c (spu_elf_auto_overlay): Insert icache linker script
+	after .toe instead of before .text section.  Set the LMA of all
+	overlay sections to their icache IA address.
+	(spu_elf_find_overlays): Determine icache set id without reference
+	to the LMA.
+
+2009-09-30  Tristan Gingold  <gingold@adacore.com>
+
+	* configure.com: Use hosts/alphavms.h on both alpha and ia64 VMS.
+
+2009-09-29  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* elf64-x86-64.c (elf64_x86_64_append_rela): New.
+	(elf64_x86_64_relocate_section): Use it.
+	(elf64_x86_64_finish_dynamic_symbol): Likewise.
+
+2009-09-29  DJ Delorie  <dj@redhat.com>
+
+	* Makefile.am (ALL_MACHINES): Add cpu-rx.lo.
+	(ALL_MACHINES_CFILES): Add cpu-rx.c.
+	(BFD32_BACKENDS): Add elf32-rx.lo.
+	(BFD32_BACKENDS_CFILES): Add elf32-rx.c.
+	* archures.c (bfd_architecture): Add bfd_arch_rx and bfd_mach_rx.
+	Export bfd_rx_arch.
+	(bfd_archures_list): Add bfd_rx_arch.
+	* config.bfd: Add entry for rx-*-elf.
+	* configure.in: Add entries for bfd_elf32_rx_le_vec and
+	bfd_elf32_rx_be_vec.
+	* reloc.c: Add RX relocations.
+	* targets.c: Add RX target vectors.
+	* Makefile.in: Regenerate.
+	* bfd-in2.h: Regenerate.
+	* configure: Regenerate.
+	* libbfd.h: Regenerate.
+	* cpu-rx.c: New file.
+	* elf32-rx.c: New file.
+
+2009-09-29 M R Swami Reddy <MR.Swami.Reddy@nsc.com>
+
+	* elf32-cr16.c (elf32_cr16_relocate_section): Removed
+	info->relocatable to fix the ld/testsuites/ld-elf/linkonce1 test case.
+
+2009-09-28  Nick Clifton  <nickc@redhat.com>
+
+	PR 10478: Accepting Solaris binaries.
+	* elf.c (bfd_section_from_shdr): Allow SHN_BEFORE and SHN_AFTER
+	section link values in x86 binaries.
+	* elfcode.h (elf_object_p): Likewise.
+
+2009-09-28  Philippe De Muyter  <phdm@macqel.be>
+
+	* elf32-m68k.c (elf_m68k_final_write_processing): New function.
+	(elf_backend_final_write_processing): Macro defined as above function.
+
 2009-09-25  Martin Thuresson  <martint@google.com>
 
-	Update soruces to make alpha and arm targets compile cleanly with
+	Update sources to make alpha and arm targets compile cleanly with
 	-Wc++-compat:
 	* ecoff.c: Add casts.
 	* ecofflink.c: Add casts.
@@ -191,7 +623,7 @@
 
 2009-09-09  Martin Thuresson  <martin@mtme.org>
 
-	Update soruces to compile cleanly with -Wc++-compat:
+	Update sources to compile cleanly with -Wc++-compat:
 	* aoutx.h: Add casts.
 	* archive.c: Add casts.
 	* archive64.c: Add casts.

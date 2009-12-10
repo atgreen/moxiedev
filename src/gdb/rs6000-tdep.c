@@ -1058,6 +1058,15 @@ ppc_displaced_step_fixup (struct gdbarch *gdbarch,
 				    from + offset);
 }
 
+/* Always use hardware single-stepping to execute the
+   displaced instruction.  */
+static int
+ppc_displaced_step_hw_singlestep (struct gdbarch *gdbarch,
+				  struct displaced_step_closure *closure)
+{
+  return 1;
+}
+
 /* Instruction masks used during single-stepping of atomic sequences.  */
 #define LWARX_MASK 0xfc0007fe
 #define LWARX_INSTRUCTION 0x7c000028
@@ -1075,6 +1084,7 @@ int
 ppc_deal_with_atomic_sequence (struct frame_info *frame)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
+  struct address_space *aspace = get_frame_address_space (frame);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   CORE_ADDR pc = get_frame_pc (frame);
   CORE_ADDR breaks[2] = {-1, -1};
@@ -1148,7 +1158,7 @@ ppc_deal_with_atomic_sequence (struct frame_info *frame)
 
   /* Effectively inserts the breakpoints.  */
   for (index = 0; index <= last_breakpoint; index++)
-    insert_single_step_breakpoint (gdbarch, breaks[index]);
+    insert_single_step_breakpoint (gdbarch, aspace, breaks[index]);
 
   return 1;
 }
@@ -2311,6 +2321,7 @@ rs6000_builtin_type_vec128 (struct gdbarch *gdbarch)
 
 	 type = union __ppc_builtin_type_vec128 {
 	     uint128_t uint128;
+	     double v2_double[2];
 	     float v4_float[4];
 	     int32_t v4_int32[4];
 	     int16_t v8_int16[8];
@@ -2323,6 +2334,8 @@ rs6000_builtin_type_vec128 (struct gdbarch *gdbarch)
       t = arch_composite_type (gdbarch,
 			       "__ppc_builtin_type_vec128", TYPE_CODE_UNION);
       append_composite_type_field (t, "uint128", bt->builtin_uint128);
+      append_composite_type_field (t, "v2_double",
+				   init_vector_type (bt->builtin_double, 2));
       append_composite_type_field (t, "v4_float",
 				   init_vector_type (bt->builtin_float, 4));
       append_composite_type_field (t, "v4_int32",
@@ -3895,6 +3908,8 @@ rs6000_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Setup displaced stepping.  */
   set_gdbarch_displaced_step_copy_insn (gdbarch,
 					simple_displaced_step_copy_insn);
+  set_gdbarch_displaced_step_hw_singlestep (gdbarch,
+					    ppc_displaced_step_hw_singlestep);
   set_gdbarch_displaced_step_fixup (gdbarch, ppc_displaced_step_fixup);
   set_gdbarch_displaced_step_free_closure (gdbarch,
 					   simple_displaced_step_free_closure);

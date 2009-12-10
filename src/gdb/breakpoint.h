@@ -33,7 +33,8 @@ struct block;
 
 #define	BREAKPOINT_MAX	16
 
-/* Type of breakpoint. */
+
+/* Type of breakpoint.  */
 /* FIXME In the future, we should fold all other breakpoint-like things into
    here.  This includes:
 
@@ -175,6 +176,9 @@ enum target_hw_bp_type
 
 struct bp_target_info
 {
+  /* Address space at which the breakpoint was placed.  */
+  struct address_space *placed_address_space;
+
   /* Address at which the breakpoint was placed.  This is normally the
      same as ADDRESS from the bp_location, except when adjustment
      happens in gdbarch_breakpoint_from_pc.  The most common form of
@@ -227,10 +231,6 @@ struct bp_location
      the same parent breakpoint.  */
   struct bp_location *next;
 
-  /* Pointer to the next breakpoint location, in a global
-     list of all breakpoint locations.  */
-  struct bp_location *global_next;
- 
   /* Type of this breakpoint location.  */
   enum bp_loc_type loc_type;
 
@@ -270,6 +270,14 @@ struct bp_location
   /* Architecture associated with this location's address.  May be
      different from the breakpoint architecture.  */
   struct gdbarch *gdbarch;
+
+  /* The program space associated with this breakpoint location
+     address.  Note that an address space may be represented in more
+     than one program space (e.g. each uClinux program will be given
+     its own program space, but there will only be one address space
+     for all of them), but we must not insert more than one location
+     at the same address in the same address space.  */
+  struct program_space *pspace;
 
   /* Note that zero is a perfectly valid code address on some platforms
      (for example, the mn10200 (OBSOLETE) and mn10300 simulators).  NULL
@@ -359,6 +367,9 @@ enum watchpoint_triggered
   watch_triggered_yes  
 };
 
+/* This is used to declare the VEC syscalls_to_be_caught.  */
+DEF_VEC_I(int);
+
 typedef struct bp_location *bp_location_p;
 DEF_VEC_P(bp_location_p);
 
@@ -405,6 +416,9 @@ struct breakpoint
        equals this.  */
     struct frame_id frame_id;
 
+    /* The program space used to set the breakpoint.  */
+    struct program_space *pspace;
+
     /* String we used to set the breakpoint (malloc'd).  */
     char *addr_string;
     /* Architecture we used to set the breakpoint.  */
@@ -443,6 +457,11 @@ struct breakpoint
        should be evaluated on the outermost frame.  */
     struct frame_id watchpoint_frame;
 
+    /* Holds the thread which identifies the frame this watchpoint
+       should be considered in scope for, or `null_ptid' if the
+       watchpoint should be evaluated in all threads.  */
+    ptid_t watchpoint_thread;
+
     /* For hardware watchpoints, the triggered status according to the
        hardware.  */
     enum watchpoint_triggered watchpoint_triggered;
@@ -468,6 +487,12 @@ struct breakpoint
        This field is only valid immediately after this catchpoint has
        triggered.  */
     char *exec_pathname;
+
+    /* Syscall numbers used for the 'catch syscall' feature.
+       If no syscall has been specified for filtering, its value is NULL.
+       Otherwise, it holds a list of all syscalls to be caught.
+       The list elements are allocated with xmalloc.  */
+    VEC(int) *syscalls_to_be_caught;
 
     /* Methods associated with this breakpoint.  */
     struct breakpoint_ops *ops;
@@ -510,7 +535,8 @@ extern void bpstat_clear (bpstat *);
    is part of the bpstat is copied as well.  */
 extern bpstat bpstat_copy (bpstat);
 
-extern bpstat bpstat_stop_status (CORE_ADDR pc, ptid_t ptid);
+extern bpstat bpstat_stop_status (struct address_space *aspace,
+				  CORE_ADDR pc, ptid_t ptid);
 
 /* This bpstat_what stuff tells wait_for_inferior what to do with a
    breakpoint (a challenging task).  */
@@ -608,6 +634,9 @@ extern struct breakpoint *bpstat_find_step_resume_breakpoint (bpstat);
    a watchpoint enabled.  */
 #define bpstat_explains_signal(bs) ((bs) != NULL)
 
+/* Nonzero is this bpstat causes a stop.  */
+extern int bpstat_causes_stop (bpstat);
+
 /* Nonzero if we should step constantly (e.g. watchpoints on machines
    without hardware support).  This isn't related to a specific bpstat,
    just to things like whether watchpoints are set.  */
@@ -697,17 +726,23 @@ enum breakpoint_here
 
 /* Prototypes for breakpoint-related functions.  */
 
-extern enum breakpoint_here breakpoint_here_p (CORE_ADDR);
+extern enum breakpoint_here breakpoint_here_p (struct address_space *, CORE_ADDR);
 
-extern int moribund_breakpoint_here_p (CORE_ADDR);
+extern int moribund_breakpoint_here_p (struct address_space *, CORE_ADDR);
 
-extern int breakpoint_inserted_here_p (CORE_ADDR);
+extern int breakpoint_inserted_here_p (struct address_space *, CORE_ADDR);
 
-extern int regular_breakpoint_inserted_here_p (CORE_ADDR);
+extern int regular_breakpoint_inserted_here_p (struct address_space *, CORE_ADDR);
 
-extern int software_breakpoint_inserted_here_p (CORE_ADDR);
+extern int software_breakpoint_inserted_here_p (struct address_space *, CORE_ADDR);
 
-extern int breakpoint_thread_match (CORE_ADDR, ptid_t);
+/* Returns true if there's a hardware watchpoint or access watchpoint
+   inserted in the range defined by ADDR and LEN.  */
+extern int hardware_watchpoint_inserted_in_range (struct address_space *,
+						  CORE_ADDR addr,
+						  ULONGEST len);
+
+extern int breakpoint_thread_match (struct address_space *, CORE_ADDR, ptid_t);
 
 extern void until_break_command (char *, int, int);
 
@@ -725,7 +760,8 @@ extern struct breakpoint *clone_momentary_breakpoint (struct breakpoint *bpkt);
 
 extern void set_ignore_count (int, int, int);
 
-extern void set_default_breakpoint (int, CORE_ADDR, struct symtab *, int);
+extern void set_default_breakpoint (int, struct program_space *,
+				    CORE_ADDR, struct symtab *, int);
 
 extern void breakpoint_init_inferior (enum inf_context);
 
@@ -755,6 +791,8 @@ extern void set_breakpoint (struct gdbarch *gdbarch,
 extern void insert_breakpoints (void);
 
 extern int remove_breakpoints (void);
+
+extern int remove_breakpoints_pid (int pid);
 
 /* This function can be used to physically insert eventpoints from the
    specified traced inferior process, without modifying the breakpoint
@@ -790,6 +828,11 @@ extern void update_breakpoints_after_exec (void);
    It is an error to use this function on the process whose id is
    inferior_ptid.  */
 extern int detach_breakpoints (int);
+
+/* This function is called when program space PSPACE is about to be
+   deleted.  It takes care of updating breakpoints to not reference
+   this PSPACE anymore.  */
+extern void breakpoint_program_space_exit (struct program_space *pspace);
 
 extern void set_longjmp_breakpoint (int thread);
 extern void delete_longjmp_breakpoint (int thread);
@@ -899,13 +942,15 @@ extern int remove_hw_watchpoints (void);
 
 /* Manage a software single step breakpoint (or two).  Insert may be called
    twice before remove is called.  */
-extern void insert_single_step_breakpoint (struct gdbarch *, CORE_ADDR);
+extern void insert_single_step_breakpoint (struct gdbarch *,
+					   struct address_space *, CORE_ADDR);
 extern void remove_single_step_breakpoints (void);
 
 /* Manage manual breakpoints, separate from the normal chain of
    breakpoints.  These functions are used in murky target-specific
    ways.  Please do not add more uses!  */
-extern void *deprecated_insert_raw_breakpoint (struct gdbarch *, CORE_ADDR);
+extern void *deprecated_insert_raw_breakpoint (struct gdbarch *,
+					       struct address_space *, CORE_ADDR);
 extern int deprecated_remove_raw_breakpoint (struct gdbarch *, void *);
 
 /* Check if any hardware watchpoints have triggered, according to the
@@ -923,6 +968,15 @@ extern int breakpoints_always_inserted_mode (void);
    Retires previously deleted breakpoint locations that
    in our opinion won't ever trigger.  */
 extern void breakpoint_retire_moribund (void);
+
+/* Checks if we are catching syscalls or not.
+   Returns 0 if not, greater than 0 if we are.  */
+extern int catch_syscall_enabled (void);
+
+/* Checks if we are catching syscalls with the specific
+   syscall_number.  Used for "filtering" the catchpoints.
+   Returns 0 if not, greater than 0 if we are.  */
+extern int catching_syscall_number (int syscall_number);
 
 /* Tell a breakpoint to be quiet.  */
 extern void make_breakpoint_silent (struct breakpoint *);

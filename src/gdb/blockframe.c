@@ -38,10 +38,6 @@
 #include "block.h"
 #include "inline-frame.h"
 
-/* Prototypes for exported functions. */
-
-void _initialize_blockframe (void);
-
 /* Return the innermost lexical block in execution
    in a specified stack frame.  The frame address is assumed valid.
 
@@ -253,9 +249,9 @@ find_pc_partial_function (CORE_ADDR pc, char **name, CORE_ADDR *address,
 	  psb = find_pc_sect_psymbol (pst, mapped_pc, section);
 
 	  if (psb
-	      && (msymbol == NULL ||
-		  (SYMBOL_VALUE_ADDRESS (psb)
-		   >= SYMBOL_VALUE_ADDRESS (msymbol))))
+	      && (msymbol == NULL
+		  || (SYMBOL_VALUE_ADDRESS (psb)
+		      >= SYMBOL_VALUE_ADDRESS (msymbol))))
 	    {
 	      /* This case isn't being cached currently. */
 	      if (address)
@@ -363,7 +359,6 @@ block_innermost_frame (struct block *block)
   struct frame_info *frame;
   CORE_ADDR start;
   CORE_ADDR end;
-  CORE_ADDR calling_pc;
 
   if (block == NULL)
     return NULL;

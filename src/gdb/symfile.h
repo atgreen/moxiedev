@@ -132,11 +132,10 @@ struct sym_fns
 
   void (*sym_init) (struct objfile *);
 
-  /* sym_read (objfile, mainline) Reads a symbol file into a psymtab
+  /* sym_read (objfile, symfile_flags) Reads a symbol file into a psymtab
      (or possibly a symtab).  OBJFILE is the objfile struct for the
-     file we are reading.  MAINLINE is 1 if this is the main symbol
-     table being read, and 0 if a secondary symbol file (e.g. shared
-     library or dynamically loaded file) is being read.  */
+     file we are reading.  SYMFILE_FLAGS are the flags passed to
+     symbol_file_add & co.  */
 
   void (*sym_read) (struct objfile *, int);
 
@@ -194,7 +193,7 @@ extern void extend_psymbol_list (struct psymbol_allocation_list *,
 /* #include "demangle.h" */
 
 extern const
-struct partial_symbol *add_psymbol_to_list (char *, int, domain_enum,
+struct partial_symbol *add_psymbol_to_list (char *, int, int, domain_enum,
 					    enum address_class,
 					    struct psymbol_allocation_list *,
 					    long, CORE_ADDR,
@@ -239,6 +238,13 @@ extern struct objfile *symbol_file_add_from_bfd (bfd *, int,
                                                  struct section_addr_info *,
                                                  int);
 
+extern void symbol_file_add_separate (bfd *bfd, int symfile_flags,
+				      struct objfile *objfile);
+
+extern char *find_separate_debug_file_by_buildid (struct objfile *objfile);
+
+extern char *find_separate_debug_file_by_debuglink (struct objfile *objfile);
+
 /* Create a new section_addr_info, with room for NUM_SECTIONS.  */
 
 extern struct section_addr_info *alloc_section_addr_info (size_t
@@ -266,7 +272,7 @@ extern void free_section_addr_info (struct section_addr_info *);
 
 extern struct partial_symtab *start_psymtab_common (struct objfile *,
 						    struct section_offsets *,
-						    char *, CORE_ADDR,
+						    const char *, CORE_ADDR,
 						    struct partial_symbol **,
 						    struct partial_symbol **);
 
@@ -309,7 +315,8 @@ extern int auto_solib_limit;
 
 extern void set_initial_language (void);
 
-extern struct partial_symtab *allocate_psymtab (char *, struct objfile *);
+extern struct partial_symtab *allocate_psymtab (const char *,
+						struct objfile *);
 
 extern void discard_psymtab (struct partial_symtab *);
 
@@ -379,7 +386,7 @@ void free_symfile_segment_data (struct symfile_segment_data *data);
 
 extern int dwarf2_has_info (struct objfile *);
 
-extern void dwarf2_build_psymtabs (struct objfile *, int);
+extern void dwarf2_build_psymtabs (struct objfile *);
 extern void dwarf2_build_frame_info (struct objfile *);
 
 void dwarf2_free_objfile (struct objfile *);

@@ -60,8 +60,8 @@ SIM_TEST	= sim-test
 SIM_INSTALL	= install-sim
 
 # Here is all of the development board stuff
-# BF531, BF532, BF533, BF537
 BOARD_SCRIPTS	= bfin-common-sc.ld  bfin-common-mc.ld \
+	bf512.ld bf514.ld bf516.ld bf518.ld \
 	bf522.ld bf523.ld bf524.ld bf525.ld bf526.ld bf527.ld \
 	bf531.ld bf532.ld bf533.ld \
 	bf534.ld bf536.ld bf537.ld \
@@ -99,17 +99,17 @@ ${SIM_BSP}: ${OBJS} ${SIM_OBJS}
 crt0.o: crt0.S
 
 basiccrt.o: basiccrt.S
-ifneq (,$(findstring mcpu=bf532-none,$(CFLAGS)))
-	$(CC) $(CFLAGS_FOR_TARGET) $(INCLUDES) $(CFLAGS) -o $@ -c $<
-else
+ifeq (,$(findstring mcpu=,$(CFLAGS)))
 	$(CC) $(CFLAGS_FOR_TARGET) $(INCLUDES) $(CFLAGS) -mcpu=bf532-any -o $@ -c $<
+else
+	$(CC) $(CFLAGS_FOR_TARGET) $(INCLUDES) $(CFLAGS) -o $@ -c $<
 endif
 
 basiccrts.o: basiccrt.S
-ifneq (,$(findstring mcpu=bf532-none,$(CFLAGS)))
-	$(CC) -D__BFIN_SDRAM $(CFLAGS_FOR_TARGET) $(INCLUDES) $(CFLAGS) -o $@ -c $<
-else
+ifeq (,$(findstring mcpu=,$(CFLAGS)))
 	$(CC) -D__BFIN_SDRAM $(CFLAGS_FOR_TARGET) $(INCLUDES) $(CFLAGS) -mcpu=bf532-any -o $@ -c $<
+else
+	$(CC) -D__BFIN_SDRAM $(CFLAGS_FOR_TARGET) $(INCLUDES) $(CFLAGS) -o $@ -c $<
 endif
 
 basiccrt561.o: basiccrt.S
@@ -125,7 +125,6 @@ ifneq (,$(findstring mcpu=bf532-none,$(CFLAGS)))
 else
 	$(CC) -D__BFIN_SDRAM $(CFLAGS_FOR_TARGET) $(INCLUDES) $(CFLAGS) -mcpu=bf561-any -o $@ -c $<
 endif
-
 
 basiccrt561b.o: basiccrt.S
 ifneq (,$(findstring mcpu=bf532-none,$(CFLAGS)))

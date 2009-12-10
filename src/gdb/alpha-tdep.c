@@ -1390,8 +1390,8 @@ alpha_next_pc (struct frame_info *frame, CORE_ADDR pc)
     {
       /* Branch format: target PC is:
 	 (new PC) + (4 * sext(displacement))  */
-      if (op == 0x30 ||		/* BR */
-	  op == 0x34)		/* BSR */
+      if (op == 0x30		/* BR */
+	  || op == 0x34)	/* BSR */
 	{
  branch_taken:
           offset = (insn & 0x001fffff);
@@ -1489,12 +1489,13 @@ int
 alpha_software_single_step (struct frame_info *frame)
 {
   struct gdbarch *gdbarch = get_frame_arch (frame);
+  struct address_space *aspace = get_frame_address_space (frame);
   CORE_ADDR pc, next_pc;
 
   pc = get_frame_pc (frame);
   next_pc = alpha_next_pc (frame, pc);
 
-  insert_single_step_breakpoint (gdbarch, next_pc);
+  insert_single_step_breakpoint (gdbarch, aspace, next_pc);
   return 1;
 }
 

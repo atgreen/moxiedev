@@ -427,6 +427,30 @@ symbol_init_language_specific (struct general_symbol_info *gsymbol,
 
 /* Functions to initialize a symbol's mangled name.  */
 
+/* Objects of this type are stored in the demangled name hash table.  */
+struct demangled_name_entry
+{
+  char *mangled;
+  char demangled[1];
+};
+
+/* Hash function for the demangled name hash.  */
+static hashval_t
+hash_demangled_name_entry (const void *data)
+{
+  const struct demangled_name_entry *e = data;
+  return htab_hash_string (e->mangled);
+}
+
+/* Equality function for the demangled name hash.  */
+static int
+eq_demangled_name_entry (const void *a, const void *b)
+{
+  const struct demangled_name_entry *da = a;
+  const struct demangled_name_entry *db = b;
+  return strcmp (da->mangled, db->mangled) == 0;
+}
+
 /* Create the hash table used for demangled names.  Each hash entry is
    a pair of strings; one for the mangled name and one for the demangled
    name.  The entry is hashed via just the mangled name.  */
@@ -440,7 +464,7 @@ create_demangled_names_hash (struct objfile *objfile)
      1% in symbol reading.  */
 
   objfile->demangled_names_hash = htab_create_alloc
-    (256, htab_hash_string, (int (*) (const void *, const void *)) streq,
+    (256, hash_demangled_name_entry, eq_demangled_name_entry,
      NULL, xcalloc, xfree);
 }
 
@@ -496,10 +520,15 @@ symbol_find_demangled_name (struct general_symbol_info *gsymbol,
 }
 
 /* Set both the mangled and demangled (if any) names for GSYMBOL based
-   on LINKAGE_NAME and LEN.  The hash table corresponding to OBJFILE
-   is used, and the memory comes from that objfile's objfile_obstack.
-   LINKAGE_NAME is copied, so the pointer can be discarded after
-   calling this function.  */
+   on LINKAGE_NAME and LEN.  Ordinarily, NAME is copied onto the
+   objfile's obstack; but if COPY_NAME is 0 and if NAME is
+   NUL-terminated, then this function assumes that NAME is already
+   correctly saved (either permanently or with a lifetime tied to the
+   objfile), and it will not be copied.
+
+   The hash table corresponding to OBJFILE is used, and the memory
+   comes from that objfile's objfile_obstack.  LINKAGE_NAME is copied,
+   so the pointer can be discarded after calling this function.  */
 
 /* We have to be careful when dealing with Java names: when we run
    into a Java minimal symbol, we don't know it's a Java symbol, so it
@@ -522,9 +551,10 @@ symbol_find_demangled_name (struct general_symbol_info *gsymbol,
 
 void
 symbol_set_names (struct general_symbol_info *gsymbol,
-		  const char *linkage_name, int len, struct objfile *objfile)
+		  const char *linkage_name, int len, int copy_name,
+		  struct objfile *objfile)
 {
-  char **slot;
+  struct demangled_name_entry **slot;
   /* A 0-terminated copy of the linkage name.  */
   const char *linkage_name_copy;
   /* A copy of the linkage name that might have a special Java prefix
@@ -532,9 +562,7 @@ symbol_set_names (struct general_symbol_info *gsymbol,
   const char *lookup_name;
   /* The length of lookup_name.  */
   int lookup_len;
-
-  if (objfile->demangled_names_hash == NULL)
-    create_demangled_names_hash (objfile);
+  struct demangled_name_entry entry;
 
   if (gsymbol->language == language_ada)
     {
@@ -546,13 +574,21 @@ symbol_set_names (struct general_symbol_info *gsymbol,
          been observed with Java.  Because we don't store the demangled
          name with the symbol, we don't need to use the same trick
          as Java.  */
-      gsymbol->name = obstack_alloc (&objfile->objfile_obstack, len + 1);
-      memcpy (gsymbol->name, linkage_name, len);
-      gsymbol->name[len] = '\0';
+      if (!copy_name)
+	gsymbol->name = (char *) linkage_name;
+      else
+	{
+	  gsymbol->name = obstack_alloc (&objfile->objfile_obstack, len + 1);
+	  memcpy (gsymbol->name, linkage_name, len);
+	  gsymbol->name[len] = '\0';
+	}
       gsymbol->language_specific.cplus_specific.demangled_name = NULL;
 
       return;
     }
+
+  if (objfile->demangled_names_hash == NULL)
+    create_demangled_names_hash (objfile);
 
   /* The stabs reader generally provides names that are not
      NUL-terminated; most of the other readers don't do this, so we
@@ -589,8 +625,10 @@ symbol_set_names (struct general_symbol_info *gsymbol,
       linkage_name_copy = linkage_name;
     }
 
-  slot = (char **) htab_find_slot (objfile->demangled_names_hash,
-				   lookup_name, INSERT);
+  entry.mangled = (char *) lookup_name;
+  slot = ((struct demangled_name_entry **)
+	  htab_find_slot (objfile->demangled_names_hash,
+			  &entry, INSERT));
 
   /* If this name is not in the hash table, add it.  */
   if (*slot == NULL)
@@ -599,25 +637,49 @@ symbol_set_names (struct general_symbol_info *gsymbol,
 							 linkage_name_copy);
       int demangled_len = demangled_name ? strlen (demangled_name) : 0;
 
-      /* If there is a demangled name, place it right after the mangled name.
-	 Otherwise, just place a second zero byte after the end of the mangled
-	 name.  */
-      *slot = obstack_alloc (&objfile->objfile_obstack,
-			     lookup_len + demangled_len + 2);
-      memcpy (*slot, lookup_name, lookup_len + 1);
+      /* Suppose we have demangled_name==NULL, copy_name==0, and
+	 lookup_name==linkage_name.  In this case, we already have the
+	 mangled name saved, and we don't have a demangled name.  So,
+	 you might think we could save a little space by not recording
+	 this in the hash table at all.
+	 
+	 It turns out that it is actually important to still save such
+	 an entry in the hash table, because storing this name gives
+	 us better backache hit rates for partial symbols.  */
+      if (!copy_name && lookup_name == linkage_name)
+	{
+	  *slot = obstack_alloc (&objfile->objfile_obstack,
+				 offsetof (struct demangled_name_entry,
+					   demangled)
+				 + demangled_len + 1);
+	  (*slot)->mangled = (char *) lookup_name;
+	}
+      else
+	{
+	  /* If we must copy the mangled name, put it directly after
+	     the demangled name so we can have a single
+	     allocation.  */
+	  *slot = obstack_alloc (&objfile->objfile_obstack,
+				 offsetof (struct demangled_name_entry,
+					   demangled)
+				 + lookup_len + demangled_len + 2);
+	  (*slot)->mangled = &((*slot)->demangled[demangled_len + 1]);
+	  strcpy ((*slot)->mangled, lookup_name);
+	}
+
       if (demangled_name != NULL)
 	{
-	  memcpy (*slot + lookup_len + 1, demangled_name, demangled_len + 1);
+	  strcpy ((*slot)->demangled, demangled_name);
 	  xfree (demangled_name);
 	}
       else
-	(*slot)[lookup_len + 1] = '\0';
+	(*slot)->demangled[0] = '\0';
     }
 
-  gsymbol->name = *slot + lookup_len - len;
-  if ((*slot)[lookup_len + 1] != '\0')
+  gsymbol->name = (*slot)->mangled + lookup_len - len;
+  if ((*slot)->demangled[0] != '\0')
     gsymbol->language_specific.cplus_specific.demangled_name
-      = &(*slot)[lookup_len + 1];
+      = (*slot)->demangled;
   else
     gsymbol->language_specific.cplus_specific.demangled_name = NULL;
 }
@@ -690,6 +752,7 @@ symbol_search_name (const struct general_symbol_info *gsymbol)
 void
 init_sal (struct symtab_and_line *sal)
 {
+  sal->pspace = NULL;
   sal->symtab = 0;
   sal->section = 0;
   sal->line = 0;
@@ -1994,8 +2057,11 @@ find_pc_sect_symtab (CORE_ADDR pc, struct obj_section *section)
   struct symtab *best_s = NULL;
   struct partial_symtab *ps;
   struct objfile *objfile;
+  struct program_space *pspace;
   CORE_ADDR distance = 0;
   struct minimal_symbol *msymbol;
+
+  pspace = current_program_space;
 
   /* If we know that this is not a text address, return failure.  This is
      necessary because we loop based on the block's high and low code
@@ -2151,6 +2217,8 @@ find_pc_sect_line (CORE_ADDR pc, struct obj_section *section, int notcurrent)
      Fudge the pc to make sure we get that.  */
 
   init_sal (&val);		/* initialize to zeroes */
+
+  val.pspace = current_program_space;
 
   /* It's tempting to assume that, if we can't find debugging info for
      any function enclosing PC, that we shouldn't search for line
@@ -2410,18 +2478,25 @@ find_line_symtab (struct symtab *symtab, int line, int *index, int *exact_match)
 
       ALL_PSYMTABS (objfile, p)
       {
-        if (strcmp (symtab->filename, p->filename) != 0)
+        if (FILENAME_CMP (symtab->filename, p->filename) != 0)
           continue;
         PSYMTAB_TO_SYMTAB (p);
       }
+
+      /* Get symbol full file name if possible.  */
+      symtab_to_fullname (symtab);
 
       ALL_SYMTABS (objfile, s)
       {
 	struct linetable *l;
 	int ind;
 
-	if (strcmp (symtab->filename, s->filename) != 0)
+	if (FILENAME_CMP (symtab->filename, s->filename) != 0)
 	  continue;
+	if (symtab->fullname != NULL
+	    && symtab_to_fullname (s) != NULL
+	    && FILENAME_CMP (symtab->fullname, s->fullname) != 0)
+	  continue;	
 	l = LINETABLE (s);
 	ind = find_line_common (l, line, &exact);
 	if (ind >= 0)
@@ -2656,6 +2731,11 @@ find_function_start_sal (struct symbol *sym, int funfirstline)
   struct symtab_and_line sal;
   struct block *b, *function_block;
 
+  struct cleanup *old_chain;
+
+  old_chain = save_current_space_and_thread ();
+  switch_to_program_space_and_thread (objfile->pspace);
+
   pc = BLOCK_START (block);
   fixup_symbol_section (sym, objfile);
   if (funfirstline)
@@ -2707,6 +2787,7 @@ find_function_start_sal (struct symbol *sym, int funfirstline)
     }
 
   sal.pc = pc;
+  sal.pspace = objfile->pspace;
 
   /* Check if we are now inside an inlined function.  If we can,
      use the call site of the function instead.  */
@@ -2727,6 +2808,7 @@ find_function_start_sal (struct symbol *sym, int funfirstline)
       sal.symtab = SYMBOL_SYMTAB (BLOCK_FUNCTION (function_block));
     }
 
+  do_cleanups (old_chain);
   return sal;
 }
 
@@ -4560,6 +4642,7 @@ symtab_observer_executable_changed (void)
    initializing it from SYMTAB, LINENO and PC.  */
 static void
 append_expanded_sal (struct symtabs_and_lines *sal,
+		     struct program_space *pspace,
 		     struct symtab *symtab,
 		     int lineno, CORE_ADDR pc)
 {
@@ -4567,6 +4650,7 @@ append_expanded_sal (struct symtabs_and_lines *sal,
 			sizeof (sal->sals[0])
 			* (sal->nelts + 1));
   init_sal (sal->sals + sal->nelts);
+  sal->sals[sal->nelts].pspace = pspace;
   sal->sals[sal->nelts].symtab = symtab;
   sal->sals[sal->nelts].section = NULL;
   sal->sals[sal->nelts].end = 0;
@@ -4576,29 +4660,37 @@ append_expanded_sal (struct symtabs_and_lines *sal,
 }
 
 /* Helper to expand_line_sal below.  Search in the symtabs for any
-   linetable entry that exactly matches FILENAME and LINENO and append
-   them to RET. If there is at least one match, return 1; otherwise,
-   return 0, and return the best choice in BEST_ITEM and BEST_SYMTAB.  */
+   linetable entry that exactly matches FULLNAME and LINENO and append
+   them to RET.  If FULLNAME is NULL or if a symtab has no full name,
+   use FILENAME and LINENO instead.  If there is at least one match,
+   return 1; otherwise, return 0, and return the best choice in BEST_ITEM
+   and BEST_SYMTAB.  */
 
 static int
-append_exact_match_to_sals (char *filename, int lineno,
+append_exact_match_to_sals (char *filename, char *fullname, int lineno,
 			    struct symtabs_and_lines *ret,
 			    struct linetable_entry **best_item,
 			    struct symtab **best_symtab)
 {
+  struct program_space *pspace;
   struct objfile *objfile;
   struct symtab *symtab;
   int exact = 0;
   int j;
   *best_item = 0;
   *best_symtab = 0;
-  
-  ALL_SYMTABS (objfile, symtab)
+
+  ALL_PSPACES (pspace)
+    ALL_PSPACE_SYMTABS (pspace, objfile, symtab)
     {
-      if (strcmp (filename, symtab->filename) == 0)
+      if (FILENAME_CMP (filename, symtab->filename) == 0)
 	{
 	  struct linetable *l;
 	  int len;
+	  if (fullname != NULL
+	      && symtab_to_fullname (symtab) != NULL
+    	      && FILENAME_CMP (fullname, symtab->fullname) != 0)
+    	    continue;		  
 	  l = LINETABLE (symtab);
 	  if (!l)
 	    continue;
@@ -4611,7 +4703,8 @@ append_exact_match_to_sals (char *filename, int lineno,
 	      if (item->line == lineno)
 		{
 		  exact = 1;
-		  append_expanded_sal (ret, symtab, lineno, item->pc);
+		  append_expanded_sal (ret, objfile->pspace,
+				       symtab, lineno, item->pc);
 		}
 	      else if (!exact && item->line > lineno
 		       && (*best_item == NULL
@@ -4626,11 +4719,10 @@ append_exact_match_to_sals (char *filename, int lineno,
   return exact;
 }
 
-/* Compute a set of all sals in
-   the entire program that correspond to same file
-   and line as SAL and return those.  If there
-   are several sals that belong to the same block,
-   only one sal for the block is included in results.  */
+/* Compute a set of all sals in all program spaces that correspond to
+   same file and line as SAL and return those.  If there are several
+   sals that belong to the same block, only one sal for the block is
+   included in results.  */
 
 struct symtabs_and_lines
 expand_line_sal (struct symtab_and_line sal)
@@ -4644,10 +4736,12 @@ expand_line_sal (struct symtab_and_line sal)
   int deleted = 0;
   struct block **blocks = NULL;
   int *filter;
+  struct cleanup *old_chain;
 
   ret.nelts = 0;
   ret.sals = NULL;
 
+  /* Only expand sals that represent file.c:line.  */
   if (sal.symtab == NULL || sal.line == 0 || sal.pc != 0)
     {
       ret.sals = xmalloc (sizeof (struct symtab_and_line));
@@ -4657,11 +4751,14 @@ expand_line_sal (struct symtab_and_line sal)
     }
   else
     {
+      struct program_space *pspace;
       struct linetable_entry *best_item = 0;
       struct symtab *best_symtab = 0;
       int exact = 0;
+      char *match_filename;
 
       lineno = sal.line;
+      match_filename = sal.symtab->filename;
 
       /* We need to find all symtabs for a file which name
 	 is described by sal.  We cannot just directly
@@ -4674,20 +4771,29 @@ expand_line_sal (struct symtab_and_line sal)
 	 the right name.  Then, we iterate over symtabs, knowing
 	 that all symtabs we're interested in are loaded.  */
 
-      ALL_PSYMTABS (objfile, psymtab)
+      old_chain = save_current_program_space ();
+      ALL_PSPACES (pspace)
+	ALL_PSPACE_PSYMTABS (pspace, objfile, psymtab)
 	{
-	  if (strcmp (sal.symtab->filename,
-		      psymtab->filename) == 0)
-	    PSYMTAB_TO_SYMTAB (psymtab);
+	  if (FILENAME_CMP (match_filename, psymtab->filename) == 0)
+	    {
+	      set_current_program_space (pspace);
+
+	      PSYMTAB_TO_SYMTAB (psymtab);
+	    }
 	}
+      do_cleanups (old_chain);
 
       /* Now search the symtab for exact matches and append them.  If
 	 none is found, append the best_item and all its exact
 	 matches.  */
-      exact = append_exact_match_to_sals (sal.symtab->filename, lineno,
+      symtab_to_fullname (sal.symtab);
+      exact = append_exact_match_to_sals (sal.symtab->filename,
+					  sal.symtab->fullname, lineno,
 					  &ret, &best_item, &best_symtab);
       if (!exact && best_item)
-	append_exact_match_to_sals (best_symtab->filename, best_item->line,
+	append_exact_match_to_sals (best_symtab->filename,
+				    best_symtab->fullname, best_item->line,
 				    &ret, &best_item, &best_symtab);
     }
 
@@ -4700,13 +4806,21 @@ expand_line_sal (struct symtab_and_line sal)
      blocks -- for each PC found above we see if there are other PCs
      that are in the same block.  If yes, the other PCs are filtered out.  */
 
+  old_chain = save_current_program_space ();
   filter = alloca (ret.nelts * sizeof (int));
   blocks = alloca (ret.nelts * sizeof (struct block *));
   for (i = 0; i < ret.nelts; ++i)
     {
+      struct blockvector *bl;
+      struct block *b;
+
+      set_current_program_space (ret.sals[i].pspace);
+
       filter[i] = 1;
-      blocks[i] = block_for_pc (ret.sals[i].pc);
+      blocks[i] = block_for_pc_sect (ret.sals[i].pc, ret.sals[i].section);
+
     }
+  do_cleanups (old_chain);
 
   for (i = 0; i < ret.nelts; ++i)
     if (blocks[i] != NULL)

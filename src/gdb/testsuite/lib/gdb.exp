@@ -104,13 +104,7 @@ proc default_gdb_version {} {
     global GDB
     global INTERNAL_GDBFLAGS GDBFLAGS
     global gdb_prompt
-    set fileid [open "gdb_cmd" w];
-    puts $fileid "q";
-    close $fileid;
-    set cmdfile [remote_download host "gdb_cmd"];
-    set output [remote_exec host "$GDB $INTERNAL_GDBFLAGS --command $cmdfile"]
-    remote_file build delete "gdb_cmd";
-    remote_file host delete "$cmdfile";
+    set output [remote_exec host "$GDB $INTERNAL_GDBFLAGS --version"]
     set tmp [lindex $output 1];
     set version ""
     regexp " \[0-9\]\[^ \t\n\r\]+" "$tmp" version
@@ -769,10 +763,16 @@ proc gdb_test_multiple { command message user_code } {
             fail "$message"
 	    set result -1
 	}
-	 -re "\\(y or n\\) " {
+	-re "\\((y or n|y or \\\[n\\\]|\\\[y\\\] or n)\\) " {
 	    send_gdb "n\n"
-	    perror "Got interactive prompt."
-            fail "$message"
+	    gdb_expect -re "$gdb_prompt $"
+	    fail "$message (got interactive prompt)"
+	    set result -1
+	}
+	-re "\\\[0\\\] cancel\r\n\\\[1\\\] all.*\r\n> $" {
+	    send_gdb "0\n"
+	    gdb_expect -re "$gdb_prompt $"
+	    fail "$message (got breakpoint menu)"
 	    set result -1
 	}
 	 eof {
@@ -1241,6 +1241,24 @@ proc default_gdb_start { } {
     return 0;
 }
 
+# Examine the output of compilation to determine whether compilation
+# failed or not.  If it failed determine whether it is due to missing
+# compiler or due to compiler error.  Report pass, fail or unsupported
+# as appropriate
+
+proc gdb_compile_test {src output} {
+    if { $output == "" } {
+	pass "compilation [file tail $src]"
+    } elseif { [regexp {^[a-zA-Z_0-9]+: Can't find [^ ]+\.$} $output] } {
+	unsupported "compilation [file tail $src]"
+    } elseif { [regexp {.*: command not found[\r|\n]*$} $output] } {
+	unsupported "compilation [file tail $src]"
+    } else {
+	verbose -log "compilation failed: $output" 2
+	fail "compilation [file tail $src]"
+    }
+}
+
 # Return a 1 for configurations for which we don't even want to try to
 # test C++.
 
@@ -1263,6 +1281,18 @@ proc skip_cplus_tests {} {
 # Return a 1 if I don't even want to try to test FORTRAN.
 
 proc skip_fortran_tests {} {
+    return 0
+}
+
+# Return a 1 if I don't even want to try to test ada.
+
+proc skip_ada_tests {} {
+    return 0
+}
+
+# Return a 1 if I don't even want to try to test java.
+
+proc skip_java_tests {} {
     return 0
 }
 
@@ -1669,12 +1699,24 @@ proc test_compiler_info { {compiler ""} } {
     return [string match $compiler $compiler_info]
 }
 
+proc current_target_name { } {
+    global target_info
+    if [info exists target_info(target,name)] {
+        set answer $target_info(target,name)
+    } else {
+        set answer ""
+    }
+    return $answer
+}
+
 set gdb_wrapper_initialized 0
+set gdb_wrapper_target ""
 
 proc gdb_wrapper_init { args } {
     global gdb_wrapper_initialized;
     global gdb_wrapper_file;
     global gdb_wrapper_flags;
+    global gdb_wrapper_target
 
     if { $gdb_wrapper_initialized == 1 } { return; }
 
@@ -1689,6 +1731,7 @@ proc gdb_wrapper_init { args } {
 	}
     }
     set gdb_wrapper_initialized 1
+    set gdb_wrapper_target [current_target_name]
 }
 
 # Some targets need to always link a special object in.  Save its path here.
@@ -1710,6 +1753,7 @@ proc gdb_compile {source dest type options} {
     # "shlib=librarypath" in OPTIONS.
     set new_options ""
     set shlib_found 0
+    set shlib_load 0
     foreach opt $options {
         if [regexp {^shlib=(.*)} $opt dummy_var shlib_name] {
             if [test_compiler_info "xlc-*"] {
@@ -1723,32 +1767,40 @@ proc gdb_compile {source dest type options} {
             } else {
                lappend source $shlib_name
             }
-            if {$shlib_found == 0} {
+            if { $shlib_found == 0 } {
                 set shlib_found 1
-                if { ([test_compiler_info "gcc-*"]
-                      &&  ([istarget "powerpc*-*-aix*"]
-                        || [istarget "rs6000*-*-aix*"] )) } {
-                    lappend options "additional_flags=-L${outdir}"
-                } elseif { [istarget "mips-sgi-irix*"] } {
-                    lappend options "additional_flags=-rpath ${outdir}"
-                }
+		if { ([istarget "*-*-mingw*"]
+		      || [istarget *-*-cygwin*]) } {
+		    lappend new_options "additional_flags=-Wl,--enable-auto-import"
+		}
             }
 	} elseif { $opt == "shlib_load" } {
-	    if { ([istarget "*-*-mingw*"]
-		  || [istarget *-*-cygwin*]
-		  || [istarget *-*-pe*]
-		  || [istarget arm*-*-symbianelf*]
-		  || [istarget hppa*-*-hpux*])} {
-		# Do not need anything.
-	    } elseif { [istarget *-*-openbsd*] } {
-		lappend new_options "additional_flags=-Wl,-rpath,${outdir}"
-	    } else {
-		lappend new_options "libs=-ldl"
-		lappend new_options "additional_flags=-Wl,-rpath,\\\$ORIGIN"
-	    }
+	    set shlib_load 1
         } else {
             lappend new_options $opt
         }
+    }
+
+    # We typically link to shared libraries using an absolute path, and
+    # that's how they are found at runtime.  If we are going to
+    # dynamically load one by basename, we must specify rpath.  If we
+    # are using a remote host, DejaGNU will link to the shared library
+    # using a relative path, so again we must specify an rpath.
+    if { $shlib_load || ($shlib_found && [is_remote host]) } {
+	if { ([istarget "*-*-mingw*"]
+	      || [istarget *-*-cygwin*]
+	      || [istarget *-*-pe*]
+	      || [istarget arm*-*-symbianelf*]
+	      || [istarget hppa*-*-hpux*])} {
+	    # Do not need anything.
+	} elseif { [istarget *-*-openbsd*] } {
+	    lappend new_options "additional_flags=-Wl,-rpath,${outdir}"
+	} else {
+	    if { $shlib_load } {
+		lappend new_options "libs=-ldl"
+	    }
+	    lappend new_options "additional_flags=-Wl,-rpath,\\\$ORIGIN"
+	}
     }
     set options $new_options
 
@@ -1824,7 +1876,11 @@ proc gdb_compile {source dest type options} {
 	    # reverse link order.  In that case, we can use ldflags to
 	    # avoid copying the object file to the host multiple
 	    # times.
-	    lappend options "ldflags=$gdb_saved_set_unbuffered_mode_obj"
+	    # This object can only be added if standard libraries are
+	    # used. Thus, we need to disable it if -nostdlib option is used
+	    if {[lsearch -regexp $options "-nostdlib"] < 0 } {
+		lappend options "ldflags=$gdb_saved_set_unbuffered_mode_obj"
+	    }
 	}
     }
 
@@ -1835,9 +1891,15 @@ proc gdb_compile {source dest type options} {
 
     regsub "\[\r\n\]*$" "$result" "" result;
     regsub "^\[\r\n\]*" "$result" "" result;
-
-    if { $result != "" && [lsearch $options quiet] == -1} {
-	clone_output "gdb compile failed, $result"
+    
+    if {[lsearch $options quiet] < 0} {
+	# We shall update this on a per language basis, to avoid
+	# changing the entire testsuite in one go.
+	if {[lsearch $options f77] >= 0} {
+	    gdb_compile_test $source $result
+	} elseif { $result != "" } {
+	    clone_output "gdb compile failed, $result"
+	}
     }
     return $result;
 }
@@ -2026,7 +2088,7 @@ proc gdb_expect { args } {
 
     if [info exists atimeout] {
 	if { ![info exists gtimeout] || $gtimeout < $atimeout } {
-	    set $gtimeout $atimeout;
+	    set gtimeout $atimeout;
 	}
     } else {
 	if ![info exists gtimeout] {
@@ -2312,6 +2374,7 @@ proc gdb_continue { function } {
 
 proc default_gdb_init { args } {
     global gdb_wrapper_initialized
+    global gdb_wrapper_target
     global cleanfiles
     
     set cleanfiles {}
@@ -2320,12 +2383,16 @@ proc default_gdb_init { args } {
 
     # Make sure that the wrapper is rebuilt
     # with the appropriate multilib option.
-    set gdb_wrapper_initialized 0
+    if { $gdb_wrapper_target != [current_target_name] } {
+	set gdb_wrapper_initialized 0
+    }
     
     # Unlike most tests, we have a small number of tests that generate
     # a very large amount of output.  We therefore increase the expect
     # buffer size to be able to contain the entire test output.
     match_max -d 30000
+    # Also set this value for the currently running GDB. 
+    match_max [match_max -d]
 
     # We want to add the name of the TCL testcase to the PASS/FAIL messages.
     if { [llength $args] > 0 } {

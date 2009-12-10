@@ -342,7 +342,7 @@ listing_newline (char *ps)
 	  int seen_quote = 0;
 	  int seen_slash = 0;
 
-	  for (copy = input_line_pointer - 1;
+	  for (copy = input_line_pointer;
 	       *copy && (seen_quote
 			 || is_end_of_line [(unsigned char) *copy] != 1);
 	       copy++)
@@ -353,13 +353,13 @@ listing_newline (char *ps)
 		seen_quote = ! seen_quote;
 	    }
 
-	  len = (copy - input_line_pointer) + 2;
+	  len = copy - input_line_pointer + 1;
 
 	  copy = (char *) xmalloc (len);
 
 	  if (copy != NULL)
 	    {
-	      char *src = input_line_pointer - 1;
+	      char *src = input_line_pointer;
 	      char *dest = copy;
 
 	      while (--len)
@@ -1409,14 +1409,6 @@ listing_eject (int ignore ATTRIBUTE_UNUSED)
     listing_tail->edict = EDICT_EJECT;
 }
 
-void
-listing_flags (int ignore ATTRIBUTE_UNUSED)
-{
-  while ((*input_line_pointer++) && (*input_line_pointer != '\n'))
-    input_line_pointer++;
-
-}
-
 /* Turn listing on or off.  An argument of 0 means to turn off
    listing.  An argument of 1 means to turn on listing.  An argument
    of 2 means to turn off listing, but as of the next line; that is,
@@ -1557,12 +1549,6 @@ listing_source_file (const char *file)
 #else
 
 /* Dummy functions for when compiled without listing enabled.  */
-
-void
-listing_flags (int ignore)
-{
-  s_ignore (0);
-}
 
 void
 listing_list (int on)

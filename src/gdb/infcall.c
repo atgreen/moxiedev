@@ -441,6 +441,7 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
   struct gdbarch *gdbarch;
   struct breakpoint *terminate_bp = NULL;
   struct minimal_symbol *tm;
+  struct cleanup *terminate_bp_cleanup = NULL;
   ptid_t call_thread_ptid;
   struct gdb_exception e;
   const char *name;
@@ -730,6 +731,7 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
     struct breakpoint *bpt;
     struct symtab_and_line sal;
     init_sal (&sal);		/* initialize to zeroes */
+    sal.pspace = current_program_space;
     sal.pc = bp_addr;
     sal.section = find_pc_overlay (sal.pc);
     /* Sanity.  The exact same SP value is returned by
@@ -772,7 +774,7 @@ call_function_by_hand (struct value *function, int nargs, struct value **args)
 
   /* Register a clean-up for unwind_on_terminating_exception_breakpoint.  */
   if (terminate_bp)
-    make_cleanup_delete_breakpoint (terminate_bp);
+    terminate_bp_cleanup = make_cleanup_delete_breakpoint (terminate_bp);
 
   /* - SNIP - SNIP - SNIP - SNIP - SNIP - SNIP - SNIP - SNIP - SNIP -
      If you're looking to implement asynchronous dummy-frames, then
@@ -939,7 +941,7 @@ When the function is done executing, GDB will silently stop."),
 		 user.  */
 
 	      if (terminate_bp != NULL
-		  && (inferior_thread()->stop_bpstat->breakpoint_at->address
+		  && (inferior_thread ()->stop_bpstat->breakpoint_at->address
 		      == terminate_bp->loc->address))
 		{
 		  /* We must get back to the frame we were before the
@@ -986,6 +988,11 @@ When the function is done executing, GDB will silently stop."),
       /* The above code errors out, so ...  */
       internal_error (__FILE__, __LINE__, _("... should not be here"));
     }
+
+  /* If we get here and the std::terminate() breakpoint has been set,
+     it has to be cleaned manually.  */
+  if (terminate_bp)
+    do_cleanups (terminate_bp_cleanup);
 
   /* If we get here the called FUNCTION ran to completion,
      and the dummy frame has already been popped.  */

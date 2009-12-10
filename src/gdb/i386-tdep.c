@@ -4043,7 +4043,7 @@ reswitch:
       if (ir.override >= 0)
         {
 	  warning (_("Process record ignores the memory change "
-                     "of instruction at address 0x%s because "
+                     "of instruction at address %s because "
                      "it can't get the value of the segment "
                      "register."),
                    paddress (gdbarch, ir.orig_addr));
@@ -4146,7 +4146,7 @@ reswitch:
 	return -1;
       if (ir.mod == 3)
 	{
-	  ir.rm != ir.rex_b;
+	  ir.rm |= ir.rex_b;
 	  if (ir.ot == OT_BYTE && !ir.regmap[X86_RECORD_R8_REGNUM])
 	    ir.rm &= 0x3;
 	  I386_RECORD_ARCH_LIST_ADD_REG (ir.rm);
@@ -4468,7 +4468,7 @@ reswitch:
             {
               /* addr += ((uint32_t) read_register (I386_ES_REGNUM)) << 4; */
               warning (_("Process record ignores the memory "
-                         "change of instruction at address 0x%s "
+                         "change of instruction at address %s "
                          "because it can't get the value of the "
                          "ES segment register."),
                        paddress (gdbarch, ir.orig_addr));
@@ -5172,6 +5172,19 @@ reswitch:
 	  break;
 	  /* lgdt */
 	case 2:
+	  if (ir.mod == 3)
+	    {
+	      /* xgetbv */
+	      if (ir.rm == 0)
+		{
+		  I386_RECORD_ARCH_LIST_ADD_REG (X86_RECORD_REAX_REGNUM);
+		  I386_RECORD_ARCH_LIST_ADD_REG (X86_RECORD_REDX_REGNUM);
+		  break;
+		}
+	      /* xsetbv */
+	      else if (ir.rm == 1)
+		break;
+	    }
 	  /* lidt */
 	case 3:
 	  if (ir.mod == 3)

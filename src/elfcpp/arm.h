@@ -199,6 +199,52 @@ enum
   // 160 - 255			Unallocated
 };
 
+// e_flags values used for ARM.  We only support flags defined in AAELF.
+
+enum
+{
+  EF_ARM_BE8 = 0x00800000,
+
+  // Mask to extract EABI version, not really a flag value.
+  EF_ARM_EABIMASK = 0xFF000000,
+
+  EF_ARM_EABI_UNKNOWN = 0x00000000,
+  EF_ARM_EABI_VER1 = 0x01000000,
+  EF_ARM_EABI_VER2 = 0x02000000,
+  EF_ARM_EABI_VER3 = 0x03000000,
+  EF_ARM_EABI_VER4 = 0x04000000,
+  EF_ARM_EABI_VER5 = 0x05000000,
+};
+
+// Extract EABI version from flags.
+
+inline Elf_Word
+arm_eabi_version(Elf_Word flags)
+{ return flags & EF_ARM_EABIMASK; }
+
+// Values for the Tag_CPU_arch EABI attribute.
+enum
+{
+  TAG_CPU_ARCH_PRE_V4,
+  TAG_CPU_ARCH_V4,
+  TAG_CPU_ARCH_V4T,
+  TAG_CPU_ARCH_V5T,
+  TAG_CPU_ARCH_V5TE,
+  TAG_CPU_ARCH_V5TEJ,
+  TAG_CPU_ARCH_V6,
+  TAG_CPU_ARCH_V6KZ,
+  TAG_CPU_ARCH_V6T2,
+  TAG_CPU_ARCH_V6K,
+  TAG_CPU_ARCH_V7,
+  TAG_CPU_ARCH_V6_M,
+  TAG_CPU_ARCH_V6S_M,
+  TAG_CPU_ARCH_V7E_M,
+  MAX_TAG_CPU_ARCH = TAG_CPU_ARCH_V7E_M,
+  // Pseudo-architecture to allow objects to be compatible with the subset of
+  // armv4t and armv6-m.  This value should never be stored in object files.
+  TAG_CPU_ARCH_V4T_PLUS_V6_M = (MAX_TAG_CPU_ARCH + 1)
+};
+
 } // End namespace elfcpp.
 
 #endif // !defined(ELFCPP_ARM_H)

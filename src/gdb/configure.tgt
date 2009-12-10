@@ -313,6 +313,19 @@ mep-*-*)
 	# No sim needed. Target uses SID.
 	;;
 
+microblaze*-linux-*)
+	# Target: Xilinx MicroBlaze running Linux
+	gdb_target_obs="microblaze-tdep.o microblaze-linux-tdep.o microblaze-rom.o \
+			monitor.o dsrec.o solib.o solib-svr4.o corelow.o \
+			symfile-mem.o"
+	gdb_sim=../sim/microblaze/libsim.a
+	;;
+microblaze*-xilinx-*)
+	# Target: Xilinx MicroBlaze running standalone
+	gdb_target_obs="microblaze-tdep.o microblaze-rom.o monitor.o dsrec.o"
+	gdb_sim=../sim/microblaze/libsim.a
+	;;
+
 mips*-sgi-irix5*)
 	# Target: MIPS SGI running Irix 5
 	gdb_target_obs="mips-tdep.o mips-irix-tdep.o solib.o solib-irix.o"
@@ -376,7 +389,7 @@ powerpc-*-linux* | powerpc64-*-linux*)
 	# Target: PowerPC running Linux
 	gdb_target_obs="rs6000-tdep.o ppc-linux-tdep.o ppc-sysv-tdep.o \
 			solib.o solib-svr4.o solib-spu.o spu-multiarch.o \
-			corelow.o symfile-mem.o"
+			corelow.o symfile-mem.o linux-tdep.o"
 	gdb_sim=../sim/ppc/libsim.a
 	build_gdbserver=yes
 	;;
@@ -391,8 +404,14 @@ powerpc*-*-*)
 
 s390*-*-*)
 	# Target: S390 running Linux
-	gdb_target_obs="s390-tdep.o solib.o solib-svr4.o"
+	gdb_target_obs="s390-tdep.o solib.o solib-svr4.o linux-tdep.o"
 	build_gdbserver=yes
+	;;
+
+rx-*-elf)
+	# Target: Renesas RX
+	gdb_target_obs="rx-tdep.o"
+	gdb_sim=../sim/rx/libsim.a
 	;;
 
 score-*-*)
@@ -407,7 +426,8 @@ score-*-*)
 sh*-*-linux*)
 	# Target: GNU/Linux Super-H
 	gdb_target_obs="sh-tdep.o sh64-tdep.o sh-linux-tdep.o monitor.o \
-			dsrec.o solib.o solib-svr4.o symfile-mem.o glibc-tdep.o"
+			dsrec.o solib.o solib-svr4.o symfile-mem.o \
+			glibc-tdep.o corelow.o"
 	gdb_sim=../sim/sh/libsim.a
 	build_gdbserver=yes
 	;;

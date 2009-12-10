@@ -1,3 +1,112 @@
+2009-11-25  DJ Delorie  <dj@redhat.com>
+
+	* rx/rx.ld: Place .sbss properly.
+	* rx/rx-sim.ld: Likewise.
+
+2009-10-26  DJ Delorie  <dj@redhat.com>
+
+	* configure.in: Add support for RX sub-directory.
+	* configure: Regenerate.
+	* rx: New directory.
+	* rx/*: New files to support RX architecture.
+
+2009-10-26  Nick Clifton  <nickc@redhat.com>
+
+	* arm/linux-syscalls0.S (SYSCALL0, SYSCALL3, SYSCALL6, SYSCALL4):
+	Delete Thumb definitions - the ARM versions work correctly in
+	Thumb mode.
+
+2009-10-08  Jie Zhang  <jie.zhang@analog.com>
+
+	* bfin/Makefile.in (basiccrt.o, basiccrts.o): Use
+	-mcpu=bf532-any for the default multilib.
+
+2009-09-28  Michael Eager <eager@eagercon.com>
+
+	* configure.in: Add microblaze-*-*.
+	* configure: Add microblaze-*-* (not regenerated.)
+	* microblaze: NEW microblaze target directory.
+	* microblaze/configure.in: NEW.
+	* microblaze/configure: Generate.
+	* microblaze/Makefile.in: NEW.
+	* microblaze/{crt0.S, crt1.S, crt2.S, crt3.S, crt4.S, crtinit.S}: NEW.
+	* microblaze/{pgcrtinit.S, _program_clean.S, _program_init.S,
+	sbrk.c, sim-crtinit.S, sim-pgcrtinit.S, timer.c, _exception_handler.S,
+	_hw_exception_handler.S, _interrupt_handler.S, xil_malloc.c,
+	nnxil_printf.c, xil_sbrk.c: NEW.
+	* microblaze/xilinx.ld: NEW.
+
+2009-09-21  Ken Werner  <ken.werner@de.ibm.com>
+
+        * spu/getpagesize.c: Align getpagesize implementation to POSIX
+
+2009-09-16  Mike Frysinger  <michael.frysinger@analog.com>
+
+	* bfin/include/cdefBF512.h, bfin/include/cdefBF514.h,
+	bfin/include/cdefBF516.h, bfin/include/cdefBF518.h,
+	bfin/include/cdefBF51x_base.h, bfin/include/cdefBF523.h,
+	bfin/include/cdefBF524.h, bfin/include/cdefBF526.h,
+	bfin/include/cdefBF542M.h, bfin/include/cdefBF544M.h,
+	bfin/include/cdefBF547M.h, bfin/include/cdefBF548M.h,
+	bfin/include/cdefBF549M.h, bfin/include/defBF512.h,
+	bfin/include/defBF514.h, bfin/include/defBF516.h,
+	bfin/include/defBF518.h, bfin/include/defBF51x_base.h,
+	bfin/include/defBF523.h, bfin/include/defBF524.h,
+	bfin/include/defBF526.h, bfin/include/defBF542M.h,
+	bfin/include/defBF544M.h, bfin/include/defBF547M.h,
+	bfin/include/defBF548M.h, bfin/include/defBF549M.h:
+	New file.
+	* bfin/include/ccblkfn.h, bfin/include/cdefBF525.h,
+	bfin/include/cdefBF527.h, bfin/include/cdefBF52x_base.h,
+	bfin/include/cdefBF532.h, bfin/include/cdefBF534.h,
+	bfin/include/cdefBF535.h, bfin/include/cdefBF538.h,
+	bfin/include/cdefBF539.h, bfin/include/cdefBF542.h,
+	bfin/include/cdefBF544.h, bfin/include/cdefBF547.h,
+	bfin/include/cdefBF548.h, bfin/include/cdefBF549.h,
+	bfin/include/cdefBF54x_base.h, bfin/include/cdefBF561.h,
+	bfin/include/cdefblackfin.h, bfin/include/cdef_LPBlackfin.h,
+	bfin/include/cplb.h, bfin/include/defBF527.h,
+	bfin/include/defBF52x_base.h, bfin/include/defBF532.h,
+	bfin/include/defBF534.h, bfin/include/defBF535.h,
+	bfin/include/defBF537.h, bfin/include/defBF538.h,
+	bfin/include/defBF539.h, bfin/include/defBF542.h,
+	bfin/include/defBF544.h, bfin/include/defBF547.h,
+	bfin/include/defBF548.h, bfin/include/defBF549.h,
+	bfin/include/defBF54x_base.h, bfin/include/defBF561.h,
+	bfin/include/defblackfin.h, bfin/include/def_LPBlackfin.h,
+	bfin/include/sys/_adi_platform.h,
+	bfin/include/sys/anomaly_macros_rtl.h,
+	bfin/include/sys/exception.h, bfin/include/sysreg.h:
+	Update to Visual DSP 5.0 Update 6.
+
+2009-09-16  Mike Frysinger  <michael.frysinger@analog.com>
+
+	* bfin/Makefile.in (BOARD_SCRIPTS): Add bf512.ld, bf514.ld,
+	and bf516.ld, bf518.ld.
+	* bfin/bf512.ld: New file.
+	* bfin/bf514.ld: Likewise.
+	* bfin/bf516.ld: Likewise.
+	* bfin/bf518.ld: Likewise
+
+2009-09-16  Jie Zhang  <jie.zhang@analog.com>
+
+	* bfin/*.ld: Fix typos in comments.
+
+2009-09-08  Bernd Schmidt  <bernd.schmidt@analog.com>
+
+	* bfin/include/ccblkfn.h: New file.
+
+2009-09-08  Mike Frysinger  <michael.frysinger@analog.com>
+
+	* bfin/include/sys/_adi_platform.h: Convert __ASSEMBLY__ to
+	__ASSEMBLER__.
+	* bfin/include/sys/pll.h: Likewise
+
+2009-09-08  Jie Zhang  <jie.zhang@analog.com>
+
+	* bfin/Makefile.in (basiccrt.o, basiccrts.o): Don't use
+	-mcpu=bf532-any for the default multilib.
+
 2009-07-28  DJ Delorie  <dj@redhat.com>
 
 	* mep/gmap_default.ld: Add linkonce sections for .vtext.

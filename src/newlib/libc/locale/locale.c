@@ -61,6 +61,11 @@ backward compatibility with older implementations using newlib:
 xxx in [437, 720, 737, 775, 850, 852, 855, 857, 858, 862, 866, 874, 1125,
 1250, 1251, 1252, 1253, 1254, 1255, 1256, 1257, 1258].
 
+Instead of <<"C-">>, you can specify also <<"C.">>.  Both variations allow
+to specify language neutral locales while using other charsets than ASCII,
+for instance <<"C.UTF-8">>, which keeps all settings as in the C locale,
+but uses the UTF-8 charset.
+
 Even when using POSIX locale strings, the only charsets allowed are
 <<"UTF-8">>, <<"JIS">>, <<"EUCJP">>, <<"SJIS">>, <<KOI8-R>>, <<KOI8-U>>,
 <<"ISO-8859-x">> with 1 <= x <= 15, or <<"CPxxx">> with xxx in
@@ -166,9 +171,6 @@ No supporting OS subroutines are required.
 #include <stdlib.h>
 #include <wchar.h>
 #include "../stdlib/local.h"
-#ifdef __CYGWIN__
-#include <windows.h>
-#endif
 
 #define _LC_LAST      7
 #define ENCODING_LEN 31
@@ -203,6 +205,18 @@ static char *categories[_LC_LAST] = {
 };
 
 /*
+ * Default locale per POSIX.  Can be overridden on a per-target base.
+ */
+#ifndef DEFAULT_LOCALE
+#define DEFAULT_LOCALE	"C"
+#endif
+/*
+ * This variable can be changed by any outside mechanism.  This allows,
+ * for instance, to load the default locale from a file.
+ */
+char __default_locale[ENCODING_LEN + 1] = DEFAULT_LOCALE;
+
+/*
  * Current locales for each category
  */
 static char current_categories[_LC_LAST][ENCODING_LEN + 1] = {
@@ -228,8 +242,13 @@ static const char *__get_locale_env(struct _reent *, int);
 
 #endif
 
+#ifdef __CYGWIN__
+static char lc_ctype_charset[ENCODING_LEN + 1] = "UTF-8";
+static char lc_message_charset[ENCODING_LEN + 1] = "UTF-8";
+#else
 static char lc_ctype_charset[ENCODING_LEN + 1] = "ASCII";
 static char lc_message_charset[ENCODING_LEN + 1] = "ASCII";
+#endif
 static int lc_ctype_cjk_lang = 0;
 
 char *
@@ -431,9 +450,19 @@ loadlocale(struct _reent *p, int category)
   if (!strcmp (locale, "POSIX"))
     strcpy (locale, "C");
   if (!strcmp (locale, "C"))				/* Default "C" locale */
+#ifdef __CYGWIN__
+    strcpy (charset, "UTF-8");
+#else
     strcpy (charset, "ASCII");
-  else if (locale[0] == 'C' && locale[1] == '-')	/* Old newlib style */
-	strcpy (charset, locale + 2);
+#endif
+  else if (locale[0] == 'C'
+	   && (locale[1] == '-'		/* Old newlib style */
+	       || locale[1] == '.'))	/* Extension for the C locale to allow
+					   specifying different charsets while
+					   sticking to the C locale in terms
+					   of sort order, etc.  Proposed in
+					   the Debian project. */
+    strcpy (charset, locale + 2);
   else							/* POSIX style */
     {
       char *c = locale;
@@ -468,7 +497,7 @@ loadlocale(struct _reent *p, int category)
       else if (c[0] == '\0' || c[0] == '@')
 	/* End of string or just a modifier */
 #ifdef __CYGWIN__
-	__set_charset_from_codepage (GetACP (), charset);
+	__set_charset_from_codepage (0, charset);
 #else
 	strcpy (charset, "ISO-8859-1");
 #endif
@@ -714,9 +743,9 @@ __get_locale_env(struct _reent *p, int category)
   if (env == NULL || !*env)
     env = _getenv_r (p, "LANG");
 
-  /* 4. if none is set, fall to "C" */
+  /* 4. if none is set, fall to default locale */
   if (env == NULL || !*env)
-    env = "C";
+    env = __default_locale;
 
   return env;
 }

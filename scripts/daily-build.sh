@@ -107,6 +107,8 @@ git clone http://jdl.com/software/dtc.git
  mkdir -p $PREFIX/bin; 
  cp dtc $PREFIX/bin)
 
+export PATH=$PREFIX/bin:$PATH
+
 # Build moxie-elf binutils and the simulator.
 mkdir binutils-moxie-elf
 (cd binutils-moxie-elf;
@@ -115,8 +117,6 @@ mkdir binutils-moxie-elf
  make install-binutils install-gas install-ld;
  make all-sim;
  make install-sim;)
-
-export PATH=$PREFIX/bin:$PATH
 
  Build initial gcc for newlib build.
 mkdir gcc-for-newlib-moxie-elf

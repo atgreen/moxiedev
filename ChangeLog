@@ -1,3 +1,7 @@
+2010-01-04  Anthony Green  <green@moxielogic.com>
+
+	* scripts/daily-build.sh: New file.
+
 2009-12-05  Anthony Green  <green@moxielogic.com>
 
 	* build.xml: Set path for make install of binutils so we pick up

@@ -12,6 +12,9 @@
 # 0101010101010101010101010101010101010101010101010101010101010101010101010101010
 # 1010101010101010101010101010101010101010101010101010101010101010101010101010101
 
+# Copyright (C) 2010  Anthony Green <green@moxielogic.com>
+# Distrubuted under the terms of the GPL v3 or later.
+
 # This script is intended to be used as the daily build cron job on
 # the FSF's GCC Compiler Farm.  It builds the latest GCC, binutils,
 # simulator, and device tree compiler from upstream sources, runs the
@@ -93,10 +96,12 @@ set_board_info gdb,timeout 60
 set_board_info gcc,stack_size  5000
 EOF
 
-# Check out the binutils and newlib sources.
+# Check out the binutils, newlib and simulator sources.
 cvs -z9 -d:pserver:anoncvs@sourceware.org:/cvs/src co binutils newlib sim
 # Check out the gcc sources.
 svn co svn://gcc.gnu.org/svn/gcc/trunk gcc
+# Run gcc_update in order to create the gcc/gcc/REVISION file.
+(cd gcc; ./contrib/gcc_update)
 # Check out the device tree compiler
 git clone http://jdl.com/software/dtc.git
 

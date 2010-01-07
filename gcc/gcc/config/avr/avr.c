@@ -105,7 +105,7 @@ static GTY(()) rtx zero_reg_rtx;
 static const char *const avr_regnames[] = REGISTER_NAMES;
 
 /* Preprocessor macros to define depending on MCU type.  */
-static const char *avr_extra_arch_macro;
+const char *avr_extra_arch_macro;
 
 /* Current architecture.  */
 const struct base_arch_s *avr_current_arch;
@@ -221,59 +221,6 @@ avr_override_options (void)
   zero_reg_rtx = gen_rtx_REG (QImode, ZERO_REGNO);
 
   init_machine_status = avr_init_machine_status;
-}
-
-/* Worker function for TARGET_CPU_CPP_BUILTINS.  */
-
-void
-avr_cpu_cpp_builtins (struct cpp_reader *pfile)
-{
-  builtin_define_std ("AVR");
-
-  if (avr_current_arch->macro)
-    cpp_define (pfile, avr_current_arch->macro);
-  if (avr_extra_arch_macro)
-    cpp_define (pfile, avr_extra_arch_macro);
-  if (avr_current_arch->have_elpm)
-    cpp_define (pfile, "__AVR_HAVE_RAMPZ__");
-  if (avr_current_arch->have_elpm)
-    cpp_define (pfile, "__AVR_HAVE_ELPM__");
-  if (avr_current_arch->have_elpmx)
-    cpp_define (pfile, "__AVR_HAVE_ELPMX__");
-  if (avr_current_arch->have_movw_lpmx)
-    {
-      cpp_define (pfile, "__AVR_HAVE_MOVW__");
-      cpp_define (pfile, "__AVR_HAVE_LPMX__");
-    }
-  if (avr_current_arch->asm_only)
-    cpp_define (pfile, "__AVR_ASM_ONLY__");
-  if (avr_current_arch->have_mul)
-    {
-      cpp_define (pfile, "__AVR_ENHANCED__");
-      cpp_define (pfile, "__AVR_HAVE_MUL__");
-    }
-  if (avr_current_arch->have_jmp_call)
-    {
-      cpp_define (pfile, "__AVR_MEGA__");
-      cpp_define (pfile, "__AVR_HAVE_JMP_CALL__");
-    }
-  if (avr_current_arch->have_eijmp_eicall)
-    {
-      cpp_define (pfile, "__AVR_HAVE_EIJMP_EICALL__");
-      cpp_define (pfile, "__AVR_3_BYTE_PC__");
-    }
-  else
-    {
-      cpp_define (pfile, "__AVR_2_BYTE_PC__");
-    }
-
-  if (avr_current_device->short_sp)
-    cpp_define (pfile, "__AVR_HAVE_8BIT_SP__");
-  else
-    cpp_define (pfile, "__AVR_HAVE_16BIT_SP__");
-
-  if (TARGET_NO_INTERRUPTS)
-    cpp_define (pfile, "__NO_INTERRUPTS__");
 }
 
 /*  return register class from register number.  */
@@ -1176,12 +1123,33 @@ print_operand_address (FILE *file, rtx addr)
 
     default:
       if (CONSTANT_ADDRESS_P (addr)
-	  && ((GET_CODE (addr) == SYMBOL_REF && SYMBOL_REF_FUNCTION_P (addr))
-	      || GET_CODE (addr) == LABEL_REF))
+	  && text_segment_operand (addr, VOIDmode))
 	{
-	  fprintf (file, "gs(");
-	  output_addr_const (file,addr);
-	  fprintf (file ,")");
+	  rtx x = XEXP (addr,0);
+	  if (GET_CODE (x) == PLUS && GET_CODE (XEXP (x,1)) == CONST_INT)
+	    {
+	      /* Assembler gs() will implant word address. Make offset 
+		 a byte offset inside gs() for assembler. This is 
+		 needed because the more logical (constant+gs(sym)) is not 
+		 accepted by gas. For 128K and lower devices this is ok. For
+		 large devices it will create a Trampoline to offset from symbol 
+		 which may not be what the user really wanted.  */
+	      fprintf (file, "gs(");
+	      output_addr_const (file, XEXP (x,0));
+	      fprintf (file,"+" HOST_WIDE_INT_PRINT_DEC ")", 2 * INTVAL (XEXP (x,1)));
+	      if (AVR_3_BYTE_PC)
+	        if (warning ( 0, "Pointer offset from symbol maybe incorrect."))
+		  {
+		    output_addr_const (stderr, addr);
+		    fprintf(stderr,"\n");
+		  }
+	    }
+	  else
+	    {
+	      fprintf (file, "gs(");
+	      output_addr_const (file, addr);
+	      fprintf (file, ")");
+	    }
 	}
       else
 	output_addr_const (file, addr);
@@ -1221,12 +1189,18 @@ print_operand (FILE *file, rtx x, int code)
   else if (GET_CODE (x) == MEM)
     {
       rtx addr = XEXP (x,0);
-
-      if (CONSTANT_P (addr) && abcd)
+      if (code == 'm')
 	{
-	  fputc ('(', file);
-	  output_address (addr);
-	  fprintf (file, ")+%d", abcd);
+	   if (!CONSTANT_P (addr))
+	    fatal_insn ("bad address, not a constant):", addr);
+	  /* Assembler template with m-code is data - not progmem section */
+	  if (text_segment_operand (addr, VOIDmode))
+	    if (warning ( 0, "accessing data memory with program memory address"))
+	      {
+		output_addr_const (stderr, addr);
+		fprintf(stderr,"\n");
+	      }
+	  output_addr_const (file, addr);
 	}
       else if (code == 'o')
 	{
@@ -1256,6 +1230,18 @@ print_operand (FILE *file, rtx x, int code)
 	}
       else
 	print_operand_address (file, addr);
+    }
+  else if (code == 'x')
+    {
+      /* Constant progmem address - like used in jmp or call */
+      if (0 == text_segment_operand (x, VOIDmode))
+	    if (warning ( 0, "accessing program  memory with data memory address"))
+	  {
+	    output_addr_const (stderr, x);
+	    fprintf(stderr,"\n");
+	  }
+      /* Use normal symbol for direct address no linker trampoline needed */
+      output_addr_const (file, x);
     }
   else if (GET_CODE (x) == CONST_DOUBLE)
     {
@@ -1874,10 +1860,10 @@ out_movqi_r_mr (rtx insn, rtx op[], int *l)
       if (optimize > 0 && io_address_operand (x, QImode))
 	{
 	  *l = 1;
-	  return AS2 (in,%0,%1-0x20);
+	  return AS2 (in,%0,%m1-0x20);
 	}
       *l = 2;
-      return AS2 (lds,%0,%1);
+      return AS2 (lds,%0,%m1);
     }
   /* memory access by reg+disp */
   else if (GET_CODE (x) == PLUS
@@ -2062,12 +2048,12 @@ out_movhi_r_mr (rtx insn, rtx op[], int *l)
       if (optimize > 0 && io_address_operand (base, HImode))
 	{
 	  *l = 2;
-	  return (AS2 (in,%A0,%A1-0x20) CR_TAB
-		  AS2 (in,%B0,%B1-0x20));
+	  return (AS2 (in,%A0,%m1-0x20) CR_TAB
+		  AS2 (in,%B0,%m1+1-0x20));
 	}
       *l = 4;
-      return (AS2 (lds,%A0,%A1) CR_TAB
-	      AS2 (lds,%B0,%B1));
+      return (AS2 (lds,%A0,%m1) CR_TAB
+	      AS2 (lds,%B0,%m1+1));
     }
   
   fatal_insn ("unknown move insn:",insn);
@@ -2226,10 +2212,10 @@ out_movsi_r_mr (rtx insn, rtx op[], int *l)
 		  AS2 (ld,%C0,%1) CR_TAB
 		  AS2 (ld,%D0,%1));
   else if (CONSTANT_ADDRESS_P (base))
-      return *l=8, (AS2 (lds,%A0,%A1) CR_TAB
-		    AS2 (lds,%B0,%B1) CR_TAB
-		    AS2 (lds,%C0,%C1) CR_TAB
-		    AS2 (lds,%D0,%D1));
+      return *l=8, (AS2 (lds,%A0,%m1) CR_TAB
+		    AS2 (lds,%B0,%m1+1) CR_TAB
+		    AS2 (lds,%C0,%m1+2) CR_TAB
+		    AS2 (lds,%D0,%m1+3));
     
   fatal_insn ("unknown move insn:",insn);
   return "";
@@ -2249,10 +2235,10 @@ out_movsi_mr_r (rtx insn, rtx op[], int *l)
     l = &tmp;
   
   if (CONSTANT_ADDRESS_P (base))
-    return *l=8,(AS2 (sts,%A0,%A1) CR_TAB
-		 AS2 (sts,%B0,%B1) CR_TAB
-		 AS2 (sts,%C0,%C1) CR_TAB
-		 AS2 (sts,%D0,%D1));
+    return *l=8,(AS2 (sts,%m0,%A1) CR_TAB
+		 AS2 (sts,%m0+1,%B1) CR_TAB
+		 AS2 (sts,%m0+2,%C1) CR_TAB
+		 AS2 (sts,%m0+3,%D1));
   if (reg_base > 0)                 /* (r) */
     {
       if (reg_base == REG_X)                /* (R26) */
@@ -2562,10 +2548,10 @@ out_movqi_mr_r (rtx insn, rtx op[], int *l)
       if (optimize > 0 && io_address_operand (x, QImode))
 	{
 	  *l = 1;
-	  return AS2 (out,%0-0x20,%1);
+	  return AS2 (out,%m0-0x20,%1);
 	}
       *l = 2;
-      return AS2 (sts,%0,%1);
+      return AS2 (sts,%m0,%1);
     }
   /* memory access by reg+disp */
   else if (GET_CODE (x) == PLUS	
@@ -2641,11 +2627,11 @@ out_movhi_mr_r (rtx insn, rtx op[], int *l)
       if (optimize > 0 && io_address_operand (base, HImode))
 	{
 	  *l = 2;
-	  return (AS2 (out,%B0-0x20,%B1) CR_TAB
-		  AS2 (out,%A0-0x20,%A1));
+	  return (AS2 (out,%m0+1-0x20,%B1) CR_TAB
+		  AS2 (out,%m0-0x20,%A1));
 	}
-      return *l = 4, (AS2 (sts,%B0,%B1) CR_TAB
-		      AS2 (sts,%A0,%A1));
+      return *l = 4, (AS2 (sts,%m0+1,%B1) CR_TAB
+		      AS2 (sts,%m0,%A1));
     }
   if (reg_base > 0)
     {
@@ -4502,8 +4488,7 @@ static bool
 avr_assemble_integer (rtx x, unsigned int size, int aligned_p)
 {
   if (size == POINTER_SIZE / BITS_PER_UNIT && aligned_p
-      && ((GET_CODE (x) == SYMBOL_REF && SYMBOL_REF_FUNCTION_P (x))
-	  || GET_CODE (x) == LABEL_REF))
+      && text_segment_operand (x, VOIDmode) )
     {
       fputs ("\t.word\tgs(", asm_out_file);
       output_addr_const (asm_out_file, x);
@@ -5944,13 +5929,13 @@ avr_out_sbxx_branch (rtx insn, rtx operands[])
       if (INTVAL (operands[1]) < 0x40)
 	{
 	  if (comp == EQ)
-	    output_asm_insn (AS2 (sbis,%1-0x20,%2), operands);
+	    output_asm_insn (AS2 (sbis,%m1-0x20,%2), operands);
 	  else
-	    output_asm_insn (AS2 (sbic,%1-0x20,%2), operands);
+	    output_asm_insn (AS2 (sbic,%m1-0x20,%2), operands);
 	}
       else
 	{
-	  output_asm_insn (AS2 (in,__tmp_reg__,%1-0x20), operands);
+	  output_asm_insn (AS2 (in,__tmp_reg__,%m1-0x20), operands);
 	  if (comp == EQ)
 	    output_asm_insn (AS2 (sbrs,__tmp_reg__,%2), operands);
 	  else
@@ -5979,9 +5964,9 @@ avr_out_sbxx_branch (rtx insn, rtx operands[])
 
   if (long_jump)
     return (AS1 (rjmp,.+4) CR_TAB
-	    AS1 (jmp,%3));
+	    AS1 (jmp,%x3));
   if (!reverse)
-    return AS1 (rjmp,%3);
+    return AS1 (rjmp,%x3);
   return "";
 }
 

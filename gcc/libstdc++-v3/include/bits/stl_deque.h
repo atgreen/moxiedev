@@ -72,11 +72,19 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
    *  This function started off as a compiler kludge from SGI, but seems to
    *  be a useful wrapper around a repeated constant expression.  The '512' is
    *  tunable (and no other code needs to change), but no investigation has
-   *  been done since inheriting the SGI code.
+   *  been done since inheriting the SGI code.  Touch _GLIBCXX_DEQUE_BUF_SIZE
+   *  only if you know what you are doing, however: changing it breaks the
+   *  binary compatibility!!
   */
+
+#ifndef _GLIBCXX_DEQUE_BUF_SIZE
+#define _GLIBCXX_DEQUE_BUF_SIZE 512
+#endif
+
   inline size_t
   __deque_buf_size(size_t __size)
-  { return __size < 512 ? size_t(512 / __size) : size_t(1); }
+  { return (__size < _GLIBCXX_DEQUE_BUF_SIZE
+	    ? size_t(_GLIBCXX_DEQUE_BUF_SIZE / __size) : size_t(1)); }
 
 
   /**
@@ -344,8 +352,74 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 
   template<typename _Tp>
     void
-    fill(const _Deque_iterator<_Tp, _Tp&, _Tp*>& __first,
-	 const _Deque_iterator<_Tp, _Tp&, _Tp*>& __last, const _Tp& __value);
+    fill(const _Deque_iterator<_Tp, _Tp&, _Tp*>&,
+	 const _Deque_iterator<_Tp, _Tp&, _Tp*>&, const _Tp&);
+
+  template<typename _Tp>
+    _Deque_iterator<_Tp, _Tp&, _Tp*>
+    copy(_Deque_iterator<_Tp, const _Tp&, const _Tp*>,
+	 _Deque_iterator<_Tp, const _Tp&, const _Tp*>,
+	 _Deque_iterator<_Tp, _Tp&, _Tp*>);
+
+  template<typename _Tp>
+    inline _Deque_iterator<_Tp, _Tp&, _Tp*>
+    copy(_Deque_iterator<_Tp, _Tp&, _Tp*> __first,
+	 _Deque_iterator<_Tp, _Tp&, _Tp*> __last,
+	 _Deque_iterator<_Tp, _Tp&, _Tp*> __result)
+    { return std::copy(_Deque_iterator<_Tp, const _Tp&, const _Tp*>(__first),
+		       _Deque_iterator<_Tp, const _Tp&, const _Tp*>(__last),
+		       __result); }
+
+  template<typename _Tp>
+    _Deque_iterator<_Tp, _Tp&, _Tp*>
+    copy_backward(_Deque_iterator<_Tp, const _Tp&, const _Tp*>,
+		  _Deque_iterator<_Tp, const _Tp&, const _Tp*>,
+		  _Deque_iterator<_Tp, _Tp&, _Tp*>);
+
+  template<typename _Tp>
+    inline _Deque_iterator<_Tp, _Tp&, _Tp*>
+    copy_backward(_Deque_iterator<_Tp, _Tp&, _Tp*> __first,
+		  _Deque_iterator<_Tp, _Tp&, _Tp*> __last,
+		  _Deque_iterator<_Tp, _Tp&, _Tp*> __result)
+    { return std::copy_backward(_Deque_iterator<_Tp,
+				const _Tp&, const _Tp*>(__first),
+				_Deque_iterator<_Tp,
+				const _Tp&, const _Tp*>(__last),
+				__result); }
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+  template<typename _Tp>
+    _Deque_iterator<_Tp, _Tp&, _Tp*>
+    move(_Deque_iterator<_Tp, const _Tp&, const _Tp*>,
+	 _Deque_iterator<_Tp, const _Tp&, const _Tp*>,
+	 _Deque_iterator<_Tp, _Tp&, _Tp*>);
+
+  template<typename _Tp>
+    inline _Deque_iterator<_Tp, _Tp&, _Tp*>
+    move(_Deque_iterator<_Tp, _Tp&, _Tp*> __first,
+	 _Deque_iterator<_Tp, _Tp&, _Tp*> __last,
+	 _Deque_iterator<_Tp, _Tp&, _Tp*> __result)
+    { return std::move(_Deque_iterator<_Tp, const _Tp&, const _Tp*>(__first),
+		       _Deque_iterator<_Tp, const _Tp&, const _Tp*>(__last),
+		       __result); }
+
+  template<typename _Tp>
+    _Deque_iterator<_Tp, _Tp&, _Tp*>
+    move_backward(_Deque_iterator<_Tp, const _Tp&, const _Tp*>,
+		  _Deque_iterator<_Tp, const _Tp&, const _Tp*>,
+		  _Deque_iterator<_Tp, _Tp&, _Tp*>);
+
+  template<typename _Tp>
+    inline _Deque_iterator<_Tp, _Tp&, _Tp*>
+    move_backward(_Deque_iterator<_Tp, _Tp&, _Tp*> __first,
+		  _Deque_iterator<_Tp, _Tp&, _Tp*> __last,
+		  _Deque_iterator<_Tp, _Tp&, _Tp*> __result)
+    { return std::move_backward(_Deque_iterator<_Tp,
+				const _Tp&, const _Tp*>(__first),
+				_Deque_iterator<_Tp,
+				const _Tp&, const _Tp*>(__last),
+				__result); }
+#endif
 
   /**
    *  Deque base class.  This class provides the unified face for %deque's
@@ -1797,6 +1871,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
     inline void
     swap(deque<_Tp,_Alloc>& __x, deque<_Tp,_Alloc>& __y)
     { __x.swap(__y); }
+
+#undef _GLIBCXX_DEQUE_BUF_SIZE
 
 _GLIBCXX_END_NESTED_NAMESPACE
 

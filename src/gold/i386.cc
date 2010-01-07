@@ -59,8 +59,8 @@ class Target_i386 : public Target_freebsd<32, false>
 
   Target_i386()
     : Target_freebsd<32, false>(&i386_info),
-      got_(NULL), plt_(NULL), got_plt_(NULL), rel_dyn_(NULL),
-      copy_relocs_(elfcpp::R_386_COPY), dynbss_(NULL),
+      got_(NULL), plt_(NULL), got_plt_(NULL), global_offset_table_(NULL),
+      rel_dyn_(NULL), copy_relocs_(elfcpp::R_386_COPY), dynbss_(NULL),
       got_mod_index_offset_(-1U), tls_base_symbol_defined_(false)
   { }
 
@@ -412,6 +412,8 @@ class Target_i386 : public Target_freebsd<32, false>
   Output_data_plt_i386* plt_;
   // The GOT PLT section.
   Output_data_space* got_plt_;
+  // The _GLOBAL_OFFSET_TABLE_ symbol.
+  Symbol* global_offset_table_;
   // The dynamic reloc section.
   Reloc_section* rel_dyn_;
   // Relocs saved to avoid a COPY reloc.
@@ -461,30 +463,31 @@ Target_i386::got_section(Symbol_table* symtab, Layout* layout)
       os = layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
 					   (elfcpp::SHF_ALLOC
 					    | elfcpp::SHF_WRITE),
-					   this->got_, false);
-      os->set_is_relro();
+					   this->got_, false, true, true,
+					   false);
 
-      // The old GNU linker creates a .got.plt section.  We just
-      // create another set of data in the .got section.  Note that we
-      // always create a PLT if we create a GOT, although the PLT
-      // might be empty.
       this->got_plt_ = new Output_data_space(4, "** GOT PLT");
-      os = layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
+      os = layout->add_output_section_data(".got.plt", elfcpp::SHT_PROGBITS,
 					   (elfcpp::SHF_ALLOC
 					    | elfcpp::SHF_WRITE),
-					   this->got_plt_, false);
-      os->set_is_relro();
+					   this->got_plt_, false, false, false,
+					   true);
 
       // The first three entries are reserved.
       this->got_plt_->set_current_data_size(3 * 4);
 
+      // Those bytes can go into the relro segment.
+      layout->increase_relro(3 * 4);
+
       // Define _GLOBAL_OFFSET_TABLE_ at the start of the PLT.
-      symtab->define_in_output_data("_GLOBAL_OFFSET_TABLE_", NULL,
-				    this->got_plt_,
-				    0, 0, elfcpp::STT_OBJECT,
-				    elfcpp::STB_LOCAL,
-				    elfcpp::STV_HIDDEN, 0,
-				    false, false);
+      this->global_offset_table_ =
+	symtab->define_in_output_data("_GLOBAL_OFFSET_TABLE_", NULL,
+				      Symbol_table::PREDEFINED,
+				      this->got_plt_,
+				      0, 0, elfcpp::STT_OBJECT,
+				      elfcpp::STB_LOCAL,
+				      elfcpp::STV_HIDDEN, 0,
+				      false, false);
     }
 
   return this->got_;
@@ -500,7 +503,8 @@ Target_i386::rel_dyn_section(Layout* layout)
       gold_assert(layout != NULL);
       this->rel_dyn_ = new Reloc_section(parameters->options().combreloc());
       layout->add_output_section_data(".rel.dyn", elfcpp::SHT_REL,
-				      elfcpp::SHF_ALLOC, this->rel_dyn_, true);
+				      elfcpp::SHF_ALLOC, this->rel_dyn_, true,
+				      false, false, false);
     }
   return this->rel_dyn_;
 }
@@ -575,7 +579,8 @@ Output_data_plt_i386::Output_data_plt_i386(Layout* layout,
 {
   this->rel_ = new Reloc_section(false);
   layout->add_output_section_data(".rel.plt", elfcpp::SHT_REL,
-				  elfcpp::SHF_ALLOC, this->rel_, true);
+				  elfcpp::SHF_ALLOC, this->rel_, true,
+				  false, false, false);
 }
 
 void
@@ -760,7 +765,7 @@ Target_i386::make_plt_entry(Symbol_table* symtab, Layout* layout, Symbol* gsym)
       layout->add_output_section_data(".plt", elfcpp::SHT_PROGBITS,
 				      (elfcpp::SHF_ALLOC
 				       | elfcpp::SHF_EXECINSTR),
-				      this->plt_, false);
+				      this->plt_, false, false, false, false);
     }
 
   this->plt_->add_entry(gsym);
@@ -779,6 +784,7 @@ Target_i386::define_tls_base_symbol(Symbol_table* symtab, Layout* layout)
     {
       bool is_exec = parameters->options().output_is_executable();
       symtab->define_in_output_segment("_TLS_MODULE_BASE_", NULL,
+				       Symbol_table::PREDEFINED,
 				       tls_segment, 0, 0,
 				       elfcpp::STT_TLS,
 				       elfcpp::STB_LOCAL,
@@ -1557,7 +1563,7 @@ void
 Target_i386::do_finalize_sections(
     Layout* layout,
     const Input_objects*,
-    Symbol_table*)
+    Symbol_table* symtab)
 {
   // Fill in some more dynamic tags.
   Output_data_dynamic* const odyn = layout->dynamic_data();
@@ -1598,6 +1604,15 @@ Target_i386::do_finalize_sections(
   // relocs.
   if (this->copy_relocs_.any_saved_relocs())
     this->copy_relocs_.emit(this->rel_dyn_section(layout));
+
+  // Set the size of the _GLOBAL_OFFSET_TABLE_ symbol to the size of
+  // the .got.plt section.
+  Symbol* sym = this->global_offset_table_;
+  if (sym != NULL)
+    {
+      uint32_t data_size = this->got_plt_->current_data_size();
+      symtab->get_sized_symbol<32>(sym)->set_symsize(data_size);
+    }
 }
 
 // Return whether a direct absolute static relocation needs to be applied.
@@ -2703,7 +2718,9 @@ Target_i386::do_calls_non_split(Relobj* object, unsigned int shndx,
       this->set_view_to_nop(view, view_size, fnoffset + 1, 6);
     }
   // lea NN(%esp),%ecx
-  else if (this->match_view(view, view_size, fnoffset, "\x8d\x8c\x24", 3)
+  // lea NN(%esp),%edx
+  else if ((this->match_view(view, view_size, fnoffset, "\x8d\x8c\x24", 3)
+	    || this->match_view(view, view_size, fnoffset, "\x8d\x94\x24", 3))
 	   && fnsize > 7)
     {
       // This is loading an offset from the stack pointer for a

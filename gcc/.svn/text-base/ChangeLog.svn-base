@@ -1,3 +1,22 @@
+2010-01-02  Richard Guenther  <rguenther@suse.de>
+
+	PR lto/41529
+	* configure.ac: Include config/elf.m4.  Disable LTO if not
+	builting for an elf target.
+	* configure: Regenerate.
+
+2009-12-27  Christopher Faylor  <me+cygwin@cgf.cx>
+
+	* MAINTAINERS: Change my email address.
+
+2009-12-18  Ben Elliston  <bje@au.ibm.com>
+
+	* config.sub, config.guess: Update from upstream sources.
+
+2009-12-07  Shujing Zhao  <pearly.zhao@oracle.com>
+
+	* MAINTAINERS (Write After Approval): Add myself.
+
 2009-12-06  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
 
 	PR middle-end/30447

@@ -7,11 +7,11 @@
 /hilo-hazard-3.s/1.1/Wed Nov 18 20:13:23 2009//
 /mdmx-ob-sb1.s/1.1/Wed Nov 18 20:13:23 2009//
 /mdmx-ob.s/1.2/Wed Nov 18 20:13:23 2009//
-/mips32-dsp.s/1.4/Wed Nov 18 20:13:23 2009//
 /mips32-dsp2.s/1.1/Wed Nov 18 20:13:23 2009//
 /sanity.s/1.1/Wed Nov 18 20:13:23 2009//
-/testutils.inc/1.6/Wed Nov 18 20:13:23 2009//
-/utils-dsp.inc/1.6/Wed Nov 18 20:13:23 2009//
-/utils-fpu.inc/1.6/Wed Nov 18 20:13:23 2009//
-/utils-mdmx.inc/1.6/Wed Nov 18 20:13:23 2009//
+/mips32-dsp.s/1.5/Wed Jan  6 04:54:36 2010//
+/testutils.inc/1.7/Wed Jan  6 04:54:36 2010//
+/utils-dsp.inc/1.7/Wed Jan  6 04:54:36 2010//
+/utils-fpu.inc/1.7/Wed Jan  6 04:54:36 2010//
+/utils-mdmx.inc/1.7/Wed Jan  6 04:54:36 2010//
 D

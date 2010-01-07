@@ -1,6 +1,6 @@
 /* Process declarations and variables for C compiler.
    Copyright (C) 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -4570,14 +4570,26 @@ check_bitfield_type_and_width (tree *type, tree *width, tree orig_name)
 
   /* Detect and ignore out of range field width and process valid
      field widths.  */
-  if (!INTEGRAL_TYPE_P (TREE_TYPE (*width))
-      || TREE_CODE (*width) != INTEGER_CST)
+  if (!INTEGRAL_TYPE_P (TREE_TYPE (*width)))
     {
       error ("bit-field %qs width not an integer constant", name);
       *width = integer_one_node;
     }
   else
     {
+      if (TREE_CODE (*width) != INTEGER_CST)
+	{
+	  *width = c_fully_fold (*width, false, NULL);
+	  if (TREE_CODE (*width) == INTEGER_CST)
+	    pedwarn (input_location, OPT_pedantic,
+		     "bit-field %qs width not an integer constant expression",
+		     name);
+	}
+      if (TREE_CODE (*width) != INTEGER_CST)
+	{
+	  error ("bit-field %qs width not an integer constant", name);
+	  *width = integer_one_node;
+	}
       constant_expression_warning (*width);
       if (tree_int_cst_sgn (*width) < 0)
 	{
@@ -5382,6 +5394,7 @@ grokdeclarator (const struct c_declarator *declarator,
 		    gcc_assert (itype);
 		    TYPE_SIZE (type) = bitsize_zero_node;
 		    TYPE_SIZE_UNIT (type) = size_zero_node;
+		    SET_TYPE_STRUCTURAL_EQUALITY (type);
 		  }
 		if (array_parm_vla_unspec_p)
 		  {
@@ -5389,6 +5402,7 @@ grokdeclarator (const struct c_declarator *declarator,
 		    /* The type is complete.  C99 6.7.5.2p4  */
 		    TYPE_SIZE (type) = bitsize_zero_node;
 		    TYPE_SIZE_UNIT (type) = size_zero_node;
+		    SET_TYPE_STRUCTURAL_EQUALITY (type);
 		  }
 	      }
 
@@ -8052,6 +8066,7 @@ finish_function (void)
     {
       if (!decl_function_context (fndecl))
 	{
+	  invoke_plugin_callbacks (PLUGIN_PRE_GENERICIZE, fndecl);
 	  c_genericize (fndecl);
 
 	  /* ??? Objc emits functions after finalizing the compilation unit.

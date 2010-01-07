@@ -1,5 +1,5 @@
 # Copyright (C) 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-# 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+# 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 # Free Software Foundation, Inc.
 
 # This file is part of GDB.
@@ -644,7 +644,8 @@ SFILES = ada-exp.y ada-lang.c ada-typeprint.c ada-valprint.c ada-tasks.c \
 	cp-name-parser.y \
 	dbxread.c demangle.c dictionary.c disasm.c doublest.c dummy-frame.c \
 	dwarf2expr.c dwarf2loc.c dwarf2read.c dwarf2-frame.c \
-	elfread.c environ.c eval.c event-loop.c event-top.c expprint.c \
+	elfread.c environ.c eval.c event-loop.c event-top.c \
+	exceptions.c expprint.c \
 	f-exp.y f-lang.c f-typeprint.c f-valprint.c findcmd.c findvar.c \
 	frame.c frame-base.c frame-unwind.c \
 	gdbarch.c arch-utils.c gdbtypes.c gnu-v2-abi.c gnu-v3-abi.c \

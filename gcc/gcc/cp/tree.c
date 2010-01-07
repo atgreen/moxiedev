@@ -1076,6 +1076,21 @@ typedef_variant_p (tree type)
   return is_typedef_decl (TYPE_NAME (type));
 }
 
+/* Setup a TYPE_DECL node as a typedef representation.
+   See comments of set_underlying_type in c-common.c.  */
+
+void
+cp_set_underlying_type (tree t)
+{
+  set_underlying_type (t);
+  /* If T is a template type parm, make it require structural equality.
+     This is useful when comparing two template type parms,
+     because it forces the comparison of the template parameters of their
+     decls.  */
+  if (TREE_CODE (TREE_TYPE (t)) == TEMPLATE_TYPE_PARM)
+    SET_TYPE_STRUCTURAL_EQUALITY (TREE_TYPE (t));
+}
+
 
 /* Makes a copy of BINFO and TYPE, which is to be inherited into a
    graph dominated by T.  If BINFO is NULL, TYPE is a dependent base,
@@ -2276,7 +2291,7 @@ tree
 build_dummy_object (tree type)
 {
   tree decl = build1 (NOP_EXPR, build_pointer_type (type), void_zero_node);
-  return cp_build_indirect_ref (decl, NULL, tf_warning_or_error);
+  return cp_build_indirect_ref (decl, RO_NULL, tf_warning_or_error);
 }
 
 /* We've gotten a reference to a member of TYPE.  Return *this if appropriate,
@@ -2940,7 +2955,7 @@ stabilize_expr (tree exp, tree* initp)
       exp = cp_build_unary_op (ADDR_EXPR, exp, 1, tf_warning_or_error);
       init_expr = get_target_expr (exp);
       exp = TARGET_EXPR_SLOT (init_expr);
-      exp = cp_build_indirect_ref (exp, 0, tf_warning_or_error);
+      exp = cp_build_indirect_ref (exp, RO_NULL, tf_warning_or_error);
     }
   *initp = init_expr;
 

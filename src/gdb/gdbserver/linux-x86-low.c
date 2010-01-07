@@ -1,6 +1,6 @@
 /* GNU/Linux/x86-64 specific low level interface, for the remote server
    for GDB.
-   Copyright (C) 2002, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2002, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -26,10 +26,6 @@
 #include "i386-low.h"
 
 #include "gdb_proc_service.h"
-
-/* NOTE: gdb_proc_service.h may include linux/elf.h.
-   We need Elf32_Phdr.  If we don't get linux/elf.h we could include
-   elf.h like linux-ppc-low.c does.  */
 
 /* Defined in auto-generated file reg-i386-linux.c.  */
 void init_registers_i386_linux (void);

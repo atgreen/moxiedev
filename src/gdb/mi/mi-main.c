@@ -1,6 +1,6 @@
 /* MI Command Set.
 
-   Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
+   Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    Contributed by Cygnus Solutions (a Red Hat company).
@@ -111,6 +111,7 @@ mi_cmd_gdb_exit (char *command, char **argv, int argc)
     fputs_unfiltered (current_token, raw_stdout);
   fputs_unfiltered ("^exit\n", raw_stdout);
   mi_out_put (uiout, raw_stdout);
+  gdb_flush (raw_stdout);
   /* FIXME: The function called is not yet a formal libgdb function.  */
   quit_force (NULL, FROM_TTY);
 }

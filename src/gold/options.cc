@@ -288,8 +288,11 @@ General_options::parse_help(const char*, const char*, Command_line*)
 void
 General_options::parse_version(const char* opt, const char*, Command_line*)
 {
-  gold::print_version(opt[0] == '-' && opt[1] == 'v');
-  ::exit(EXIT_SUCCESS);
+  bool print_short = (opt[0] == '-' && opt[1] == 'v');
+  gold::print_version(print_short);
+  this->printed_version_ = true;
+  if (!print_short)
+    ::exit(EXIT_SUCCESS);
 }
 
 void
@@ -1204,6 +1207,17 @@ Command_line::process(int argc, const char** argv)
 
   // Normalize the options and ensure they don't contradict each other.
   this->options_.finalize();
+}
+
+// Finalize the version script options and return them.
+
+const Version_script_info&
+Command_line::version_script()
+{
+  this->options_.finalize_dynamic_list();
+  Version_script_info* vsi = this->script_options_.version_script_info();
+  vsi->finalize();
+  return *vsi;
 }
 
 } // End namespace gold.

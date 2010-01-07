@@ -5292,7 +5292,7 @@
 )
 
 (define_insn "tls_load_dot_plus_eight"
-  [(set (match_operand:SI 0 "register_operand" "+r")
+  [(set (match_operand:SI 0 "register_operand" "=r")
 	(mem:SI (unspec:SI [(match_operand:SI 1 "register_operand" "r")
 			    (const_int 8)
 			    (match_operand 2 "" "")]
@@ -6073,7 +6073,7 @@
 (define_split
   [(set (match_operand:SF 0 "arm_general_register_operand" "")
 	(match_operand:SF 1 "immediate_operand" ""))]
-  "TARGET_32BIT
+  "TARGET_EITHER
    && reload_completed
    && GET_CODE (operands[1]) == CONST_DOUBLE"
   [(set (match_dup 2) (match_dup 3))]
@@ -8453,12 +8453,17 @@
    (set_attr "type" "call")]
 )
 
+
+;; Note: not used for armv5+ because the sequence used (ldr pc, ...) is not
+;; considered a function call by the branch predictor of some cores (PR40887).
+;; Falls back to blx rN (*call_reg_armv5).
+
 (define_insn "*call_mem"
   [(call (mem:SI (match_operand:SI 0 "call_memory_operand" "m"))
 	 (match_operand 1 "" ""))
    (use (match_operand 2 "" ""))
    (clobber (reg:SI LR_REGNUM))]
-  "TARGET_ARM"
+  "TARGET_ARM && !arm_arch5"
   "*
   return output_call_mem (operands);
   "
@@ -8560,13 +8565,15 @@
    (set_attr "type" "call")]
 )
 
+;; Note: see *call_mem
+
 (define_insn "*call_value_mem"
   [(set (match_operand 0 "" "")
 	(call (mem:SI (match_operand:SI 1 "call_memory_operand" "m"))
 	      (match_operand 2 "" "")))
    (use (match_operand 3 "" ""))
    (clobber (reg:SI LR_REGNUM))]
-  "TARGET_ARM && (!CONSTANT_ADDRESS_P (XEXP (operands[1], 0)))"
+  "TARGET_ARM && !arm_arch5 && (!CONSTANT_ADDRESS_P (XEXP (operands[1], 0)))"
   "*
   return output_call_mem (&operands[1]);
   "

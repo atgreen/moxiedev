@@ -1,14 +1,14 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-12-07T14:27:59.752377Z
-155036
+2010-01-05T20:05:20.632229Z
+155659
 paolo
 
 
@@ -26,10 +26,10 @@ paolo
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-25_algorithms
+27_io
 dir
 
-27_io
+25_algorithms
 dir
 
 19_diagnostics
@@ -78,16 +78,16 @@ dir
 18_support
 dir
 
-abi
-dir
-
 21_strings
 dir
 
-26_numerics
+abi
 dir
 
 30_threads
+dir
+
+26_numerics
 dir
 
 decimal

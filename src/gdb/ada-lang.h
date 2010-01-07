@@ -1,7 +1,7 @@
 /* Ada language support definitions for GDB, the GNU debugger.
 
    Copyright (C) 1992, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2007, 2008, 2009 Free Software Foundation, Inc.
+   2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -198,6 +198,10 @@ extern int ada_is_simple_array_type (struct type *);
 extern int ada_is_array_descriptor_type (struct type *);
 
 extern int ada_is_bogus_array_descriptor (struct type *);
+
+extern LONGEST ada_discrete_type_low_bound (struct type *);
+
+extern LONGEST ada_discrete_type_high_bound (struct type *);
 
 extern char *ada_decode_symbol (const struct general_symbol_info*);
 

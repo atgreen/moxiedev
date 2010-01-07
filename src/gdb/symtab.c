@@ -1,8 +1,8 @@
 /* Symbol table lookup for the GNU debugger, GDB.
 
    Copyright (C) 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995,
-   1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009
-   Free Software Foundation, Inc.
+   1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009,
+   2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -3296,7 +3296,9 @@ search_symbols (char *regexp, domain_enum kind, int nfiles, char *files[],
 		&& ((regexp == NULL
 		     || re_exec (SYMBOL_NATURAL_NAME (*psym)) != 0)
 		    && ((kind == VARIABLES_DOMAIN && SYMBOL_CLASS (*psym) != LOC_TYPEDEF
-			 && SYMBOL_CLASS (*psym) != LOC_BLOCK)
+			 && SYMBOL_CLASS (*psym) != LOC_UNRESOLVED
+			 && SYMBOL_CLASS (*psym) != LOC_BLOCK
+			 && SYMBOL_CLASS (*psym) != LOC_CONST)
 			|| (kind == FUNCTIONS_DOMAIN && SYMBOL_CLASS (*psym) == LOC_BLOCK)
 			|| (kind == TYPES_DOMAIN && SYMBOL_CLASS (*psym) == LOC_TYPEDEF))))
 	      {
@@ -3372,6 +3374,7 @@ search_symbols (char *regexp, domain_enum kind, int nfiles, char *files[],
 		  && ((regexp == NULL
 		       || re_exec (SYMBOL_NATURAL_NAME (sym)) != 0)
 		      && ((kind == VARIABLES_DOMAIN && SYMBOL_CLASS (sym) != LOC_TYPEDEF
+			   && SYMBOL_CLASS (sym) != LOC_UNRESOLVED
 			   && SYMBOL_CLASS (sym) != LOC_BLOCK
 			   && SYMBOL_CLASS (sym) != LOC_CONST)
 			  || (kind == FUNCTIONS_DOMAIN && SYMBOL_CLASS (sym) == LOC_BLOCK)

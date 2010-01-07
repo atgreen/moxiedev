@@ -1,3 +1,135 @@
+2009-12-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	Revert patch fixing PR middle-end/42221.
+
+2009-12-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42180
+	* graphite-sese-to-poly.c (follow_ssa_with_commutative_ops): Handle
+	GIMPLE_CALL.
+
+	* testsuite/gfortran.dg/graphite/pr42180.f90: Add compile flags.
+
+2009-12-18  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42180
+	* graphite-sese-to-poly.c (split_reduction_stmt): Do not split blocks
+	that contain only one statement.
+
+	* testsuite/gfortran.dg/graphite/pr42180.f90: New.
+
+2009-12-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42393
+	* testsuite/gfortran.dg/graphite/pr42393.f90: New.
+
+2009-12-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42186
+	* testsuite/gfortran.dg/graphite/pr42186.f90: New.
+
+2009-12-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42205
+	* graphite-sese-to-poly.c (translate_scalar_reduction_to_array_for_stmt):
+	Insert the reduction copy in the same block as the phi node.
+	(follow_ssa_with_commutative_ops): Handle GIMPLE_NOPs.
+
+	* testsuite/gcc.dg/graphite/pr42205-1.c: New.
+	* testsuite/gcc.dg/graphite/pr42205-2.c: New.
+
+2009-12-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42221
+	* sese.c (expand_scalar_variables_expr): Follow the SSA links into
+	the array indexing of ADDR_EXPRs.
+
+	* testsuite/gcc.dg/graphite/pr42221.c: New.
+
+2009-12-17  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42178
+	PR middle-end/42334
+	* graphite-interchange.c (lst_try_interchange): Do not modify OUTER
+	index.  Call lst_interchange_select_inner only once.
+	(lst_interchange_select_inner): Update use of lst_try_interchange.
+	(lst_interchange_select_outer): Update.
+
+2009-12-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42178
+	PR middle-end/42334
+	* graphite-interchange.c (lst_try_interchange): Do not increment the
+	the OUTER index when there is no AFTER kernel.  Do not increment the
+	OUTER index for after processing the AFTER kernel.
+	(lst_interchange_select_inner): Call lst_try_interchange only on loops.
+	(lst_interchange_select_outer): Do not pass in a pointer to the OUTER
+	index.  Do not pass to lst_interchange_select_inner the OUTER index.
+	(scop_do_interchange): Update use of lst_interchange_select_outer.
+
+	* testsuite/gfortran.dg/graphite/graphite.exp
+	(DEFAULT_FLAGS_GRAPHITE_IDENTITY): Remove -fdump-tree-graphite-all.
+	* testsuite/gfortran.dg/graphite/interchange-1.f: Add comment.  Clean
+	the graphite dump file.
+	* testsuite/gfortran.dg/graphite/interchange-2.f: Same.
+	* testsuite/gfortran.dg/graphite/pr42334-1.f: New.
+
+2009-12-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42178
+	PR middle-end/42334
+	* graphite-interchange.c (lst_perfect_nestify): Reset to NULL the LSTs
+	that are empty.
+	(lst_do_interchange_1): Renamed lst_interchange_select_inner.
+	(lst_try_interchange): Reimplemented.
+	(lst_interchange_select_inner): Same.
+	(lst_do_interchange): Renamed lst_interchange_select_outer.
+	Reimplemented.
+	(scop_do_interchange): Update use of lst_interchange_select_outer.
+
+	* testsuite/g++.dg/graphite/pr42130.C: Add -fgraphite-identity.
+	* testsuite/gcc.dg/graphite/block-0.c: Un-XFAILed.
+	* testsuite/gcc.dg/graphite/pr42211.c: New.
+	* testsuite/gfortran.dg/graphite/pr42334.f90: New.
+
+2009-12-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42181
+	* graphite-scop-detection.c (graphite_can_represent_scev): Handle more
+	carefully PLUS_EXPR, MINUS_EXPR, and MULT_EXPR.
+
+	* testsuite/gfortran.dg/graphite/pr42181.f90: New.
+
+2009-12-12  Sebastian Pop  <sebpop@gmail.com>
+
+	PR middle-end/42284
+	* graphite-sese-to-poly.c (rewrite_close_phi_out_of_ssa): Call
+	insert_out_of_ssa_copy_on_edge for anything else than SSA_NAMEs.
+	(detect_commutative_reduction_arg): Simplified.
+	(detect_commutative_reduction): Early return when the argument of
+	the close phi is not of an SSA_NAME.
+
+	* testsuite/gcc.dg/graphite/pr42284.c: New.
+
+2009-12-11  Alexander Monakov  <amonakov@ispras.ru>
+
+	* dbgcnt.def (graphite_scop): New counter.
+	* graphite.c: Include dbgcnt.h
+	(graphite_transform_loops): Use new counter to limit transformations.
+
+2009-12-08  Sebastian Pop  <sebpop@gmail.com>
+
+	PR middle-end/42285
+	* graphite-scop-detection.c (graphite_can_represent_init): Also
+	handle more complex MULT_EXPRs containing parameters by recursion
+	on the structure.
+
+	* testsuite/gfortran.dg/graphite/pr42285.f90: New.
+
+2009-12-01  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	* testsuite/g++.dg/graphite/pr42130.C: Fix type.
+
 2009-11-29  Alexander Monakov <amonakov@gcc.gnu.org>
 
 	* testsuite/g++.dg/graphite/pr42130.C: Correct testcase.

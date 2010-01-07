@@ -1,7 +1,7 @@
 /* Scalar Replacement of Aggregates (SRA) converts some structure
    references into scalar references, exposing them to the scalar
    optimizers.
-   Copyright (C) 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
    Contributed by Martin Jambor <mjambor@suse.cz>
 
 This file is part of GCC.
@@ -199,10 +199,6 @@ struct access
      BIT_FIELD_REF?  */
   unsigned grp_partial_lhs : 1;
 
-  /* Does this group contain accesses to different types? (I.e. through a union
-     or a similar mechanism).  */
-  unsigned grp_different_types : 1;
-
   /* Set when a scalar replacement should be created for this variable.  We do
      the decision and creation at different places because create_tmp_var
      cannot be called from within FOR_EACH_REFERENCED_VAR. */
@@ -343,14 +339,12 @@ dump_access (FILE *f, struct access *access, bool grp)
     fprintf (f, ", grp_write = %d, grp_read = %d, grp_hint = %d, "
 	     "grp_covered = %d, grp_unscalarizable_region = %d, "
 	     "grp_unscalarized_data = %d, grp_partial_lhs = %d, "
-	     "grp_different_types = %d, grp_to_be_replaced = %d, "
-	     "grp_maybe_modified = %d, "
+	     "grp_to_be_replaced = %d, grp_maybe_modified = %d, "
 	     "grp_not_necessarilly_dereferenced = %d\n",
 	     access->grp_write, access->grp_read, access->grp_hint,
 	     access->grp_covered, access->grp_unscalarizable_region,
 	     access->grp_unscalarized_data, access->grp_partial_lhs,
-	     access->grp_different_types, access->grp_to_be_replaced,
-	     access->grp_maybe_modified,
+	     access->grp_to_be_replaced, access->grp_maybe_modified,
 	     access->grp_not_necessarilly_dereferenced);
   else
     fprintf (f, ", write = %d, grp_partial_lhs = %d\n", access->write,
@@ -1434,7 +1428,6 @@ sort_and_splice_var_accesses (tree var)
       bool grp_read = !access->write;
       bool multiple_reads = false;
       bool grp_partial_lhs = access->grp_partial_lhs;
-      bool grp_different_types = false;
       bool first_scalar = is_gimple_reg_type (access->type);
       bool unscalarizable_region = access->grp_unscalarizable_region;
 
@@ -1466,7 +1459,6 @@ sort_and_splice_var_accesses (tree var)
 		grp_read = true;
 	    }
 	  grp_partial_lhs |= ac2->grp_partial_lhs;
-	  grp_different_types |= !types_compatible_p (access->type, ac2->type);
 	  unscalarizable_region |= ac2->grp_unscalarizable_region;
 	  relink_to_new_repr (access, ac2);
 
@@ -1485,7 +1477,6 @@ sort_and_splice_var_accesses (tree var)
       access->grp_read = grp_read;
       access->grp_hint = multiple_reads;
       access->grp_partial_lhs = grp_partial_lhs;
-      access->grp_different_types = grp_different_types;
       access->grp_unscalarizable_region = unscalarizable_region;
       if (access->first_link)
 	add_access_to_work_queue (access);
@@ -1885,45 +1876,50 @@ propagate_all_subaccesses (void)
 static bool
 analyze_all_variable_accesses (void)
 {
-  tree var;
-  referenced_var_iterator rvi;
   int res = 0;
+  bitmap tmp = BITMAP_ALLOC (NULL);
+  bitmap_iterator bi;
+  unsigned i;
 
-  FOR_EACH_REFERENCED_VAR (var, rvi)
-    if (bitmap_bit_p (candidate_bitmap, DECL_UID (var)))
-      {
-	struct access *access;
+  bitmap_copy (tmp, candidate_bitmap);
+  EXECUTE_IF_SET_IN_BITMAP (tmp, 0, i, bi)
+    {
+      tree var = referenced_var (i);
+      struct access *access;
 
-	access = sort_and_splice_var_accesses (var);
-	if (access)
-	  build_access_trees (access);
-	else
-	  disqualify_candidate (var,
-				"No or inhibitingly overlapping accesses.");
-      }
+      access = sort_and_splice_var_accesses (var);
+      if (access)
+	build_access_trees (access);
+      else
+	disqualify_candidate (var,
+			      "No or inhibitingly overlapping accesses.");
+    }
 
   propagate_all_subaccesses ();
 
-  FOR_EACH_REFERENCED_VAR (var, rvi)
-    if (bitmap_bit_p (candidate_bitmap, DECL_UID (var)))
-      {
-	struct access *access = get_first_repr_for_decl (var);
+  bitmap_copy (tmp, candidate_bitmap);
+  EXECUTE_IF_SET_IN_BITMAP (tmp, 0, i, bi)
+    {
+      tree var = referenced_var (i);
+      struct access *access = get_first_repr_for_decl (var);
 
-	if (analyze_access_trees (access))
-	  {
-	    res++;
-	    if (dump_file && (dump_flags & TDF_DETAILS))
-	      {
-		fprintf (dump_file, "\nAccess trees for ");
-		print_generic_expr (dump_file, var, 0);
-		fprintf (dump_file, " (UID: %u): \n", DECL_UID (var));
-		dump_access_tree (dump_file, access);
-		fprintf (dump_file, "\n");
-	      }
-	  }
-	else
-	  disqualify_candidate (var, "No scalar replacements to be created.");
-      }
+      if (analyze_access_trees (access))
+	{
+	  res++;
+	  if (dump_file && (dump_flags & TDF_DETAILS))
+	    {
+	      fprintf (dump_file, "\nAccess trees for ");
+	      print_generic_expr (dump_file, var, 0);
+	      fprintf (dump_file, " (UID: %u): \n", DECL_UID (var));
+	      dump_access_tree (dump_file, access);
+	      fprintf (dump_file, "\n");
+	    }
+	}
+      else
+	disqualify_candidate (var, "No scalar replacements to be created.");
+    }
+
+  BITMAP_FREE (tmp);
 
   if (res)
     {
@@ -2136,11 +2132,9 @@ sra_modify_expr (tree *expr, gimple_stmt_iterator *gsi, bool write,
 
          We also want to use this when accessing a complex or vector which can
          be accessed as a different type too, potentially creating a need for
-         type conversion  (see PR42196).  */
-      if (!is_gimple_reg_type (type)
-	  || (access->grp_different_types
-	      && (TREE_CODE (type) == COMPLEX_TYPE
-		  || TREE_CODE (type) == VECTOR_TYPE)))
+         type conversion (see PR42196) and when scalarized unions are involved
+         in assembler statements (see PR42398).  */
+      if (!useless_type_conversion_p (type, access->type))
 	{
 	  tree ref = access->base;
 	  bool ok;
@@ -2171,10 +2165,7 @@ sra_modify_expr (tree *expr, gimple_stmt_iterator *gsi, bool write,
 	    }
 	}
       else
-	{
-	  gcc_assert (useless_type_conversion_p (type, access->type));
-	  *expr = repl;
-	}
+	*expr = repl;
       sra_stats.exprs++;
     }
 
@@ -2441,7 +2432,8 @@ sra_modify_assign (gimple *stmt, gimple_stmt_iterator *gsi,
 	  if (!useless_type_conversion_p (TREE_TYPE (lhs), TREE_TYPE (rhs)))
 	    {
 	      rhs = fold_build1_loc (loc, VIEW_CONVERT_EXPR, TREE_TYPE (lhs), rhs);
-	      if (!is_gimple_reg (lhs))
+	      if (is_gimple_reg_type (TREE_TYPE (lhs))
+		  && TREE_CODE (lhs) != SSA_NAME)
 		force_gimple_rhs = true;
 	    }
 	}
@@ -3808,8 +3800,11 @@ convert_callers (struct cgraph_node *node, ipa_parm_adjustment_vec adjustments)
       for (gsi = gsi_start_bb (this_block); !gsi_end_p (gsi); gsi_next (&gsi))
         {
 	  gimple stmt = gsi_stmt (gsi);
-	  if (gimple_code (stmt) == GIMPLE_CALL
-	      && gimple_call_fndecl (stmt) == node->decl)
+	  tree call_fndecl;
+	  if (gimple_code (stmt) != GIMPLE_CALL)
+	    continue;
+	  call_fndecl = gimple_call_fndecl (stmt);
+	  if (call_fndecl && cgraph_get_node (call_fndecl) == node)
 	    {
 	      if (dump_file)
 		fprintf (dump_file, "Adjusting recursive call");
@@ -3827,6 +3822,11 @@ convert_callers (struct cgraph_node *node, ipa_parm_adjustment_vec adjustments)
 static void
 modify_function (struct cgraph_node *node, ipa_parm_adjustment_vec adjustments)
 {
+  struct cgraph_node *alias;
+  for (alias = node->same_body; alias; alias = alias->next)
+    ipa_modify_formal_parameters (alias->decl, adjustments, "ISRA");
+  /* current_function_decl must be handled last, after same_body aliases,
+     as following functions will use what it computed.  */
   ipa_modify_formal_parameters (current_function_decl, adjustments, "ISRA");
   scan_function (sra_ipa_modify_expr, sra_ipa_modify_assign,
 		 replace_removed_params_ssa_names, false, adjustments);

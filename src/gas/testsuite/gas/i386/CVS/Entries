@@ -94,8 +94,6 @@
 /fma-intel.d/1.1/Wed Nov 18 20:13:08 2009//
 /fma.d/1.1/Wed Nov 18 20:13:08 2009//
 /fma.s/1.1/Wed Nov 18 20:13:08 2009//
-/fma4.d/1.3/Wed Dec  9 22:24:54 2009//
-/fma4.s/1.1/Wed Nov 18 20:13:08 2009//
 /fp.d/1.1/Wed Nov 18 20:13:08 2009//
 /fp.s/1.1/Wed Nov 18 20:13:08 2009//
 /general.l/1.12/Wed Nov 18 20:13:08 2009//
@@ -349,8 +347,6 @@
 /x86-64-fma-intel.d/1.1/Wed Nov 18 20:13:11 2009//
 /x86-64-fma.d/1.1/Wed Nov 18 20:13:11 2009//
 /x86-64-fma.s/1.1/Wed Nov 18 20:13:11 2009//
-/x86-64-fma4.d/1.4/Wed Dec  9 22:24:54 2009//
-/x86-64-fma4.s/1.2/Wed Dec  9 22:24:54 2009//
 /x86-64-fxsave-intel.d/1.1/Fri Dec  4 07:51:40 2009//
 /x86-64-fxsave.d/1.1/Fri Dec  4 07:51:40 2009//
 /x86-64-fxsave.s/1.1/Fri Dec  4 07:51:40 2009//
@@ -478,4 +474,8 @@
 /xsave-intel.d/1.1/Wed Nov 18 20:13:11 2009//
 /xsave.d/1.1/Wed Nov 18 20:13:11 2009//
 /xsave.s/1.1/Wed Nov 18 20:13:11 2009//
+/fma4.d/1.4/Wed Jan  6 04:53:52 2010//
+/fma4.s/1.2/Wed Jan  6 04:53:52 2010//
+/x86-64-fma4.d/1.5/Wed Jan  6 04:53:52 2010//
+/x86-64-fma4.s/1.3/Wed Jan  6 04:53:52 2010//
 D

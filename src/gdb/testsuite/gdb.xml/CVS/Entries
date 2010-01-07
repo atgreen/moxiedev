@@ -7,11 +7,11 @@
 /includes.xml/1.1/Wed Nov 18 20:13:18 2009//
 /loop.xml/1.1/Wed Nov 18 20:13:18 2009//
 /single-reg.xml/1.1/Wed Nov 18 20:13:18 2009//
-/tdesc-arch.exp/1.6/Wed Nov 18 20:13:18 2009//
 /tdesc-bogus.xml/1.1/Wed Nov 18 20:13:18 2009//
-/tdesc-errors.exp/1.5/Wed Nov 18 20:13:18 2009//
-/tdesc-regs.exp/1.8/Wed Dec  9 22:25:06 2009//
 /tdesc-unknown.xml/1.1/Wed Nov 18 20:13:18 2009//
-/tdesc-xinclude.exp/1.5/Wed Nov 18 20:13:18 2009//
 /trivial.xml/1.1/Wed Nov 18 20:13:18 2009//
+/tdesc-arch.exp/1.7/Wed Jan  6 04:54:07 2010//
+/tdesc-errors.exp/1.6/Wed Jan  6 04:54:07 2010//
+/tdesc-regs.exp/1.10/Wed Jan  6 04:54:07 2010//
+/tdesc-xinclude.exp/1.6/Wed Jan  6 04:54:07 2010//
 D

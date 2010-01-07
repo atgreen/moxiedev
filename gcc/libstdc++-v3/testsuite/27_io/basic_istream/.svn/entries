@@ -1,7 +1,7 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_istream
 svn://gcc.gnu.org/svn/gcc
 
@@ -32,43 +32,43 @@ dir
 exceptions
 dir
 
-requirements
-dir
-
 ignore
 dir
 
-sentry
+requirements
 dir
 
 peek
 dir
 
-getline
+sentry
 dir
 
-putback
+getline
 dir
 
 ws
 dir
 
-seekg
+putback
 dir
 
-readsome
+seekg
 dir
 
 extractors_other
 dir
 
+readsome
+dir
+
 cons
 dir
 
-tellg
+extractors_arithmetic
 dir
 
-extractors_arithmetic
+tellg
 dir
 
 extractors_character

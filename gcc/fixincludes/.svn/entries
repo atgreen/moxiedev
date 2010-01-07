@@ -1,7 +1,7 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/fixincludes
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ has-props
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-configure
-file
-
-
-
-
-2009-12-07T15:33:33.558941Z
-eb414e5a2b7addacd742b0ced83a1782
-2009-12-05T17:18:53.298892Z
-155012
-rwild
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-188493
 
 mkfixinc.sh
 file
@@ -93,6 +59,40 @@ has-props
 
 
 727
+
+configure
+file
+
+
+
+
+2009-12-07T15:33:33.558941Z
+eb414e5a2b7addacd742b0ced83a1782
+2009-12-05T17:18:53.298892Z
+155012
+rwild
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+188493
 
 Makefile.in
 file
@@ -162,40 +162,6 @@ has-props
 
 13524
 
-ChangeLog
-file
-
-
-
-
-2009-12-07T15:33:33.559942Z
-849ed016012bf4319a19e7acf4b23127
-2009-12-05T17:18:53.298892Z
-155012
-rwild
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-31373
-
 server.c
 file
 
@@ -230,17 +196,17 @@ sandra
 
 8684
 
-fixincl.tpl
+ChangeLog
 file
 
 
 
 
-2009-04-24T17:42:47.000000Z
-33eafc45c2f2fff3597f318ca0dfb5a1
-2008-09-06T19:57:26.456340Z
-140071
-korbb
+2009-12-07T15:33:33.559942Z
+849ed016012bf4319a19e7acf4b23127
+2009-12-05T17:18:53.298892Z
+155012
+rwild
 
 
 
@@ -262,7 +228,7 @@ korbb
 
 
 
-6351
+31373
 
 fixtests.c
 file
@@ -297,6 +263,40 @@ jakub
 
 
 4182
+
+fixincl.tpl
+file
+
+
+
+
+2009-04-24T17:42:47.000000Z
+33eafc45c2f2fff3597f318ca0dfb5a1
+2008-09-06T19:57:26.456340Z
+140071
+korbb
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6351
 
 server.h
 file
@@ -434,9 +434,6 @@ rwild
 
 8422
 
-tests
-dir
-
 fixincl.x
 file
 
@@ -470,6 +467,9 @@ sje
 
 
 256384
+
+tests
+dir
 
 fixlib.h
 file

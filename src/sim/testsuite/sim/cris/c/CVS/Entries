@@ -3,7 +3,6 @@
 /badldso1.c/1.1/Wed Nov 18 20:13:23 2009//
 /badldso2.c/1.1/Wed Nov 18 20:13:23 2009//
 /badldso3.c/1.1/Wed Nov 18 20:13:23 2009//
-/c.exp/1.6/Wed Nov 18 20:13:23 2009//
 /clone1.c/1.1/Wed Nov 18 20:13:23 2009//
 /clone2.c/1.1/Wed Nov 18 20:13:23 2009//
 /clone3.c/1.1/Wed Nov 18 20:13:23 2009//
@@ -133,4 +132,5 @@
 /uname1.c/1.1/Wed Nov 18 20:13:23 2009//
 /writev1.c/1.1/Wed Nov 18 20:13:23 2009//
 /writev2.c/1.1/Wed Nov 18 20:13:23 2009//
+/c.exp/1.7/Wed Jan  6 04:54:36 2010//
 D

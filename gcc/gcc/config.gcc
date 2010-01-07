@@ -266,6 +266,11 @@ arm*-*-*)
 	c_target_objs="arm-c.o"
 	cxx_target_objs="arm-c.o"
 	;;
+avr-*-*)
+	cpu_type=avr
+	c_target_objs="avr-c.o"
+	cxx_target_objs="avr-c.o"
+	;;
 bfin*-*)
 	cpu_type=bfin
 	;;
@@ -288,7 +293,8 @@ i[34567]86-*-*)
 		       pmmintrin.h tmmintrin.h ammintrin.h smmintrin.h
 		       nmmintrin.h bmmintrin.h fma4intrin.h wmmintrin.h
 		       immintrin.h x86intrin.h avxintrin.h xopintrin.h
-		       ia32intrin.h cross-stdarg.h lwpintrin.h"
+		       ia32intrin.h cross-stdarg.h lwpintrin.h popcntintrin.h
+		       abmintrin.h"
 	;;
 x86_64-*-*)
 	cpu_type=i386
@@ -298,7 +304,8 @@ x86_64-*-*)
 		       pmmintrin.h tmmintrin.h ammintrin.h smmintrin.h
 		       nmmintrin.h bmmintrin.h fma4intrin.h wmmintrin.h
 		       immintrin.h x86intrin.h avxintrin.h xopintrin.h
-		       ia32intrin.h cross-stdarg.h lwpintrin.h"
+		       ia32intrin.h cross-stdarg.h lwpintrin.h popcntintrin.h
+		       abmintrin.h"
 	need_64bit_hwint=yes
 	;;
 ia64-*-*)

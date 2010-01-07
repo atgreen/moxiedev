@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/struct
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-17T11:35:38.400833Z
-151800
-jamborm
+2010-01-03T22:39:47.008104Z
+155595
+rguenth
 
 
 
@@ -25,40 +25,6 @@ jamborm
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-wo_prof_escape_arg_to_local.c
-file
-
-
-
-
-2009-09-27T03:30:01.000000Z
-6d154c81791d5944bed1995b0c92b972
-2009-09-17T11:35:38.400833Z
-151800
-jamborm
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-844
 
 w_prof_two_strs.c
 file
@@ -94,6 +60,40 @@ hutchinsonandy
 
 923
 
+wo_prof_escape_arg_to_local.c
+file
+
+
+
+
+2009-09-27T03:30:01.000000Z
+6d154c81791d5944bed1995b0c92b972
+2009-09-17T11:35:38.400833Z
+151800
+jamborm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+844
+
 wo_prof_global_var.c
 file
 
@@ -128,17 +128,17 @@ mkuvyrkov
 
 766
 
-w_prof_local_array.c
+wo_prof_single_str_pointer.c
 file
 
 
 
 
 2009-04-24T17:45:18.000000Z
-24423fc250d70e3ac1a59c559d9f0aa0
-2008-09-08T22:41:27.160780Z
-140126
-hutchinsonandy
+0ab9ffb8b47e4f121d1cb0d8873d1e6b
+2009-01-12T21:29:43.822763Z
+143309
+froydnj
 
 
 
@@ -160,7 +160,7 @@ hutchinsonandy
 
 
 
-615
+758
 
 wo_prof_malloc_size_var.c
 file
@@ -196,17 +196,17 @@ hutchinsonandy
 
 816
 
-wo_prof_single_str_pointer.c
+w_prof_local_array.c
 file
 
 
 
 
 2009-04-24T17:45:18.000000Z
-0ab9ffb8b47e4f121d1cb0d8873d1e6b
-2009-01-12T21:29:43.822763Z
-143309
-froydnj
+24423fc250d70e3ac1a59c559d9f0aa0
+2008-09-08T22:41:27.160780Z
+140126
+hutchinsonandy
 
 
 
@@ -228,7 +228,7 @@ froydnj
 
 
 
-758
+615
 
 w_prof_single_str_global.c
 file
@@ -304,11 +304,11 @@ file
 
 
 
-2009-04-24T17:45:18.000000Z
-89ea54a4c8608e47e1300ee163ca63a0
-2008-09-08T22:41:27.160780Z
-140126
-hutchinsonandy
+2010-01-06T00:59:19.122655Z
+8407ba114c50f886fee3cd559c988616
+2010-01-03T22:39:47.008104Z
+155595
+rguenth
 
 
 
@@ -330,41 +330,7 @@ hutchinsonandy
 
 
 
-719
-
-w_prof_global_array.c
-file
-
-
-
-
-2009-04-24T17:45:18.000000Z
-7eca9ac101fc481bf02519c59795d718
-2007-12-13T13:47:22.025698Z
-130893
-olga
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-483
+550
 
 struct-reorg.exp
 file
@@ -400,6 +366,40 @@ jakub
 
 2460
 
+w_prof_global_array.c
+file
+
+
+
+
+2009-04-24T17:45:18.000000Z
+7eca9ac101fc481bf02519c59795d718
+2007-12-13T13:47:22.025698Z
+130893
+olga
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+483
+
 wo_prof_array_field.c
 file
 
@@ -433,40 +433,6 @@ hutchinsonandy
 
 
 528
-
-w_prof_local_var.c
-file
-
-
-
-
-2009-04-24T17:45:18.000000Z
-f9ba3c70f84bc410875852c4283b2da9
-2008-09-08T22:41:27.160780Z
-140126
-hutchinsonandy
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-702
 
 wo_prof_single_str_local.c
 file
@@ -502,6 +468,40 @@ froydnj
 
 638
 
+w_prof_local_var.c
+file
+
+
+
+
+2009-04-24T17:45:18.000000Z
+f9ba3c70f84bc410875852c4283b2da9
+2008-09-08T22:41:27.160780Z
+140126
+hutchinsonandy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+702
+
 wo_prof_two_strs.c
 file
 
@@ -535,6 +535,40 @@ hutchinsonandy
 
 
 983
+
+wo_prof_empty_str.c
+file
+
+
+
+
+2010-01-06T00:59:19.122655Z
+04c55211a8acf65112cd37e850f32027
+2009-12-08T09:41:13.009900Z
+155084
+olga
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+776
 
 wo_prof_mult_field_peeling.c
 file

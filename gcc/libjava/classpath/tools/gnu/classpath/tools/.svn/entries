@@ -1,7 +1,7 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/tools/gnu/classpath/tools
 svn://gcc.gnu.org/svn/gcc
 
@@ -26,10 +26,13 @@ rguenth
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
+rmiregistry
+dir
+
 java2xhtml
 dir
 
-rmiregistry
+native2ascii
 dir
 
 FileSystemClassLoader.java
@@ -66,19 +69,16 @@ doko
 
 9075
 
-native2ascii
-dir
-
 jarsigner
 dir
 
-keytool
+orbd
 dir
 
 gjdoc
 dir
 
-orbd
+keytool
 dir
 
 common
@@ -91,6 +91,9 @@ rmic
 dir
 
 rmid
+dir
+
+serialver
 dir
 
 StringToolkit.java
@@ -126,9 +129,6 @@ doko
 
 
 2231
-
-serialver
-dir
 
 doclets
 dir

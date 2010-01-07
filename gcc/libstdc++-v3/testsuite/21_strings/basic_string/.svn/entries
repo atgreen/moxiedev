@@ -1,14 +1,14 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-12-03T14:20:56.214789Z
-154948
+2010-01-04T01:58:21.786085Z
+155603
 paolo
 
 
@@ -27,6 +27,9 @@ paolo
 138bc75d-0d04-0410-961f-82ee72b054a4
 
 find
+dir
+
+substr
 dir
 
 pthread18185.cc
@@ -63,13 +66,10 @@ bonzini
 
 1613
 
-substr
+operations
 dir
 
 requirements
-dir
-
-operations
 dir
 
 assign
@@ -93,10 +93,10 @@ file
 
 
 
-2009-05-16T13:52:28.000000Z
-84ca80b3108113a4e7da376377985236
-2009-05-15T23:31:59.445532Z
-147600
+2010-01-06T00:59:47.948651Z
+f375c6863a1b8c520ded5cfb67710d29
+2010-01-04T01:58:21.786085Z
+155603
 paolo
 
 
@@ -119,7 +119,7 @@ paolo
 
 
 
-881
+915
 
 pthread4.cc
 file
@@ -189,10 +189,10 @@ jakub
 
 1756
 
-rfind
+cons
 dir
 
-cons
+rfind
 dir
 
 types

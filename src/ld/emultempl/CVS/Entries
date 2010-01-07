@@ -9,7 +9,6 @@
 /cr16elf.em/1.7/Wed Dec  9 22:25:09 2009//
 /crxelf.em/1.8/Wed Dec  9 22:25:09 2009//
 /elf-generic.em/1.9/Wed Nov 18 20:13:18 2009//
-/elf32.em/1.206/Wed Dec  9 22:25:09 2009//
 /genelf.em/1.6/Wed Nov 18 20:13:18 2009//
 /generic.em/1.23/Wed Nov 18 20:13:18 2009//
 /gld960.em/1.23/Wed Nov 18 20:13:18 2009//
@@ -48,4 +47,5 @@
 /vxworks.em/1.8/Wed Nov 18 20:13:18 2009//
 /xtensaelf.em/1.24/Wed Dec  9 22:25:09 2009//
 /z80.em/1.5/Wed Nov 18 20:13:18 2009//
+/elf32.em/1.207/Wed Jan  6 04:54:10 2010//
 D

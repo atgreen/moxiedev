@@ -2,7 +2,7 @@
 
    Copyright (C) 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995,
    1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009 Free Software Foundation, Inc.
+   2008, 2009, 2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -231,6 +231,11 @@ value_cast_structs (struct type *type, struct value *v2)
   gdb_assert ((TYPE_CODE (t2) == TYPE_CODE_STRUCT
 	       || TYPE_CODE (t2) == TYPE_CODE_UNION)
 	      && !!"Precondition is that value is of STRUCT or UNION kind");
+
+  if (TYPE_NAME (t1) != NULL
+      && TYPE_NAME (t2) != NULL
+      && !strcmp (TYPE_NAME (t1), TYPE_NAME (t2)))
+    return NULL;
 
   /* Upcasting: look in the type of the source to see if it contains the
      type of the target as a superclass.  If so, we'll need to

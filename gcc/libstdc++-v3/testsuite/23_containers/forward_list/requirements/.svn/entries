@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/forward_list/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-11-13T22:41:49.656185Z
-154174
-paolo
+2010-01-01T03:38:58.904086Z
+155545
+bkoz
 
 
 
@@ -99,4 +99,7 @@ bkoz
 
 
 961
+
+exception
+dir
 

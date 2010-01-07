@@ -28,9 +28,11 @@
 ;;  D  Add 3.
 ;;  j  Branch condition.
 ;;  k  Reverse branch condition.
+;;..m..Constant Direct Data memory address.
 ;;  o  Displacement for (mem (plus (reg) (const_int))) operands.
 ;;  p  POST_INC or PRE_DEC address as a pointer (X, Y, Z)
 ;;  r  POST_INC or PRE_DEC address as a register (r26, r28, r30)
+;;..x..Constant Direct Program memory address.
 ;;  ~  Output 'r' if not AVR_HAVE_JMP_CALL.
 ;;  !  Output 'e' if AVR_HAVE_EIJMP_EICALL.
 
@@ -1052,17 +1054,30 @@
 ;;  - we know exactly which registers are clobbered (for QI and HI
 ;;    modes, some of the call-used registers are preserved)
 ;;  - we get both the quotient and the remainder at no extra cost
-
-(define_expand "divmodqi4"
-  [(set (reg:QI 24) (match_operand:QI 1 "register_operand" ""))
-   (set (reg:QI 22) (match_operand:QI 2 "register_operand" ""))
+;;  - we split the patterns only after the first CSE passes because
+;;    CSE has problems to operate on hard regs.
+;; 
+(define_insn_and_split "divmodqi4"
+  [(parallel [(set (match_operand:QI 0 "pseudo_register_operand" "") 
+                   (div:QI (match_operand:QI 1 "pseudo_register_operand" "") 
+                           (match_operand:QI 2 "pseudo_register_operand" "")))
+              (set (match_operand:QI 3 "pseudo_register_operand" "") 
+                   (mod:QI (match_dup 1) (match_dup 2)))
+              (clobber (reg:QI 22)) 
+              (clobber (reg:QI 23)) 
+              (clobber (reg:QI 24)) 
+              (clobber (reg:QI 25))])]
+  ""
+  "this divmodqi4 pattern should have been splitted;"
+  ""
+  [(set (reg:QI 24) (match_dup 1))
+   (set (reg:QI 22) (match_dup 2))
    (parallel [(set (reg:QI 24) (div:QI (reg:QI 24) (reg:QI 22)))
 	      (set (reg:QI 25) (mod:QI (reg:QI 24) (reg:QI 22)))
 	      (clobber (reg:QI 22))
 	      (clobber (reg:QI 23))])
-   (set (match_operand:QI 0 "register_operand" "") (reg:QI 24))
-   (set (match_operand:QI 3 "register_operand" "") (reg:QI 25))]
-  ""
+   (set (match_dup 0) (reg:QI 24))
+   (set (match_dup 3) (reg:QI 25))]
   "")
 
 (define_insn "*divmodqi4_call"
@@ -1075,15 +1090,26 @@
   [(set_attr "type" "xcall")
    (set_attr "cc" "clobber")])
 
-(define_expand "udivmodqi4"
-  [(set (reg:QI 24) (match_operand:QI 1 "register_operand" ""))
-   (set (reg:QI 22) (match_operand:QI 2 "register_operand" ""))
+(define_insn_and_split "udivmodqi4"
+ [(parallel [(set (match_operand:QI 0 "pseudo_register_operand" "") 
+                  (udiv:QI (match_operand:QI 1 "pseudo_register_operand" "") 
+                           (match_operand:QI 2 "pseudo_register_operand" "")))
+	     (set (match_operand:QI 3 "pseudo_register_operand" "") 
+                  (umod:QI (match_dup 1) (match_dup 2)))
+             (clobber (reg:QI 22))
+             (clobber (reg:QI 23))
+             (clobber (reg:QI 24))
+             (clobber (reg:QI 25))])]
+  ""
+  "this udivmodqi4 pattern should have been splitted;"
+  "" 
+  [(set (reg:QI 24) (match_dup 1))
+   (set (reg:QI 22) (match_dup 2))
    (parallel [(set (reg:QI 24) (udiv:QI (reg:QI 24) (reg:QI 22)))
 	      (set (reg:QI 25) (umod:QI (reg:QI 24) (reg:QI 22)))
 	      (clobber (reg:QI 23))])
-   (set (match_operand:QI 0 "register_operand" "") (reg:QI 24))
-   (set (match_operand:QI 3 "register_operand" "") (reg:QI 25))]
-  ""
+   (set (match_dup 0) (reg:QI 24))
+   (set (match_dup 3) (reg:QI 25))]
   "")
 
 (define_insn "*udivmodqi4_call"
@@ -1095,17 +1121,28 @@
   [(set_attr "type" "xcall")
    (set_attr "cc" "clobber")])
 
-(define_expand "divmodhi4"
-  [(set (reg:HI 24) (match_operand:HI 1 "register_operand" ""))
-   (set (reg:HI 22) (match_operand:HI 2 "register_operand" ""))
+(define_insn_and_split "divmodhi4"
+  [(parallel [(set (match_operand:HI 0 "pseudo_register_operand" "") 
+                   (div:HI (match_operand:HI 1 "pseudo_register_operand" "") 
+                           (match_operand:HI 2 "pseudo_register_operand" "")))
+              (set (match_operand:HI 3 "pseudo_register_operand" "") 
+                   (mod:HI (match_dup 1) (match_dup 2)))
+              (clobber (reg:QI 21))
+              (clobber (reg:HI 22))
+              (clobber (reg:HI 24))
+              (clobber (reg:HI 26))])]
+  ""
+  "this should have been splitted;"
+  ""
+  [(set (reg:HI 24) (match_dup 1))
+   (set (reg:HI 22) (match_dup 2))
    (parallel [(set (reg:HI 22) (div:HI (reg:HI 24) (reg:HI 22)))
 	      (set (reg:HI 24) (mod:HI (reg:HI 24) (reg:HI 22)))
 	      (clobber (reg:HI 26))
 	      (clobber (reg:QI 21))])
-   (set (match_operand:HI 0 "register_operand" "") (reg:HI 22))
-   (set (match_operand:HI 3 "register_operand" "") (reg:HI 24))]
-  ""
-  "")
+   (set (match_dup 0) (reg:HI 22))
+   (set (match_dup 3) (reg:HI 24))]
+  "") 
 
 (define_insn "*divmodhi4_call"
   [(set (reg:HI 22) (div:HI (reg:HI 24) (reg:HI 22)))
@@ -1117,16 +1154,27 @@
   [(set_attr "type" "xcall")
    (set_attr "cc" "clobber")])
 
-(define_expand "udivmodhi4"
-  [(set (reg:HI 24) (match_operand:HI 1 "register_operand" ""))
-   (set (reg:HI 22) (match_operand:HI 2 "register_operand" ""))
+(define_insn_and_split "udivmodhi4"
+  [(parallel [(set (match_operand:HI 0 "pseudo_register_operand" "") 
+                   (udiv:HI (match_operand:HI 1 "pseudo_register_operand" "")
+                            (match_operand:HI 2 "pseudo_register_operand" "")))
+	      (set (match_operand:HI 3 "pseudo_register_operand" "") 
+                   (umod:HI (match_dup 1) (match_dup 2)))
+              (clobber (reg:QI 21))
+              (clobber (reg:HI 22))
+              (clobber (reg:HI 24))
+              (clobber (reg:HI 26))])]
+  ""
+  "this udivmodhi4 pattern should have been splitted.;"
+  ""
+  [(set (reg:HI 24) (match_dup 1))
+   (set (reg:HI 22) (match_dup 2))
    (parallel [(set (reg:HI 22) (udiv:HI (reg:HI 24) (reg:HI 22)))
 	      (set (reg:HI 24) (umod:HI (reg:HI 24) (reg:HI 22)))
 	      (clobber (reg:HI 26))
 	      (clobber (reg:QI 21))])
-   (set (match_operand:HI 0 "register_operand" "") (reg:HI 22))
-   (set (match_operand:HI 3 "register_operand" "") (reg:HI 24))]
-  ""
+   (set (match_dup 0) (reg:HI 22))
+   (set (match_dup 3) (reg:HI 24))]
   "")
 
 (define_insn "*udivmodhi4_call"
@@ -1139,16 +1187,27 @@
   [(set_attr "type" "xcall")
    (set_attr "cc" "clobber")])
 
-(define_expand "divmodsi4"
-  [(set (reg:SI 22) (match_operand:SI 1 "register_operand" ""))
-   (set (reg:SI 18) (match_operand:SI 2 "register_operand" ""))
+(define_insn_and_split "divmodsi4"
+  [(parallel [(set (match_operand:SI 0 "pseudo_register_operand" "") 
+                   (div:SI (match_operand:SI 1 "pseudo_register_operand" "") 
+                           (match_operand:SI 2 "pseudo_register_operand" "")))
+              (set (match_operand:SI 3 "pseudo_register_operand" "") 
+                   (mod:SI (match_dup 1) (match_dup 2)))
+              (clobber (reg:SI 18))
+              (clobber (reg:SI 22))
+              (clobber (reg:HI 26))
+              (clobber (reg:HI 30))])]
+  ""
+  "this divmodsi4 pattern should have been splitted;" 
+  ""
+  [(set (reg:SI 22) (match_dup 1))
+   (set (reg:SI 18) (match_dup 2))
    (parallel [(set (reg:SI 18) (div:SI (reg:SI 22) (reg:SI 18)))
 	      (set (reg:SI 22) (mod:SI (reg:SI 22) (reg:SI 18)))
 	      (clobber (reg:HI 26))
 	      (clobber (reg:HI 30))])
-   (set (match_operand:SI 0 "register_operand" "") (reg:SI 18))
-   (set (match_operand:SI 3 "register_operand" "") (reg:SI 22))]
-  ""
+   (set (match_dup 0) (reg:SI 18))
+   (set (match_dup 3) (reg:SI 22))]
   "")
 
 (define_insn "*divmodsi4_call"
@@ -1161,16 +1220,27 @@
   [(set_attr "type" "xcall")
    (set_attr "cc" "clobber")])
 
-(define_expand "udivmodsi4"
-  [(set (reg:SI 22) (match_operand:SI 1 "register_operand" ""))
-   (set (reg:SI 18) (match_operand:SI 2 "register_operand" ""))
+(define_insn_and_split "udivmodsi4"
+  [(parallel [(set (match_operand:SI 0 "pseudo_register_operand" "") 
+                   (udiv:SI (match_operand:SI 1 "pseudo_register_operand" "") 
+                           (match_operand:SI 2 "pseudo_register_operand" "")))
+              (set (match_operand:SI 3 "pseudo_register_operand" "") 
+                   (umod:SI (match_dup 1) (match_dup 2)))
+              (clobber (reg:SI 18))
+              (clobber (reg:SI 22))
+              (clobber (reg:HI 26))
+              (clobber (reg:HI 30))])]
+  ""
+  "this udivmodsi4 pattern should have been splitted;"
+  ""
+  [(set (reg:SI 22) (match_dup 1))
+   (set (reg:SI 18) (match_dup 2))
    (parallel [(set (reg:SI 18) (udiv:SI (reg:SI 22) (reg:SI 18)))
 	      (set (reg:SI 22) (umod:SI (reg:SI 22) (reg:SI 18)))
 	      (clobber (reg:HI 26))
 	      (clobber (reg:HI 30))])
-   (set (match_operand:SI 0 "register_operand" "") (reg:SI 18))
-   (set (match_operand:SI 3 "register_operand" "") (reg:SI 22))]
-  ""
+   (set (match_dup 0) (reg:SI 18))
+   (set (match_dup 3) (reg:SI 22))]
   "")
 
 (define_insn "*udivmodsi4_call"
@@ -2664,8 +2734,8 @@
   ""
   "*{
   if (AVR_HAVE_JMP_CALL && get_attr_length (insn) != 1)
-    return AS1 (jmp,%0);
-  return AS1 (rjmp,%0);
+    return AS1 (jmp,%x0);
+  return AS1 (rjmp,%x0);
 }"
   [(set (attr "length")
 	(if_then_else (match_operand 0 "symbol_ref_operand" "")	
@@ -2717,7 +2787,7 @@
 		\"%!icall\");
     }
   else if (which_alternative==2)
-    return AS1(%~call,%c0);
+    return AS1(%~call,%x0);
   return (AS2 (ldi,r30,lo8(%0)) CR_TAB
           AS2 (ldi,r31,hi8(%0)) CR_TAB
           \"%!icall\");
@@ -2754,7 +2824,7 @@
 		\"%!icall\");
     }
   else if (which_alternative==2)
-    return AS1(%~call,%c1);
+    return AS1(%~call,%x1);
   return (AS2 (ldi, r30, lo8(%1)) CR_TAB
           AS2 (ldi, r31, hi8(%1)) CR_TAB
           \"%!icall\");
@@ -2778,7 +2848,27 @@
    (set_attr "length" "1")])
 
 ; indirect jump
-(define_insn "indirect_jump"
+
+(define_expand "indirect_jump"
+  [(set (pc) (match_operand:HI 0 "nonmemory_operand" ""))]
+  ""
+  " if ((!AVR_HAVE_JMP_CALL) && !register_operand(operand0, HImode))
+    {
+      operands[0] = copy_to_mode_reg(HImode, operand0);
+    }"
+)
+
+; indirect jump
+(define_insn "*jcindirect_jump"
+  [(set (pc) (match_operand:HI 0 "immediate_operand" "i"))]
+  ""
+  "@
+  	%~jmp %x0"
+  [(set_attr "length" "2")
+   (set_attr "cc" "none")])
+
+;;
+(define_insn "*njcindirect_jump"
   [(set (pc) (match_operand:HI 0 "register_operand" "!z,*r"))]
   "!AVR_HAVE_EIJMP_EICALL"
   "@
@@ -2816,7 +2906,7 @@
    (use (label_ref (match_operand 1 "" "")))
    (clobber (match_dup 0))]
   "AVR_HAVE_JMP_CALL && TARGET_CALL_PROLOGUES"
-  "jmp __tablejump2__"
+  "%~jmp __tablejump2__"
   [(set_attr "length" "2")
    (set_attr "cc" "clobber")])
 
@@ -2899,7 +2989,7 @@
   "(optimize > 0)"
 {
   operands[2] = GEN_INT (exact_log2 (~INTVAL (operands[1]) & 0xff));
-  return AS2 (cbi,%0-0x20,%2);
+  return AS2 (cbi,%m0-0x20,%2);
 }
   [(set_attr "length" "1")
    (set_attr "cc" "none")])
@@ -2911,7 +3001,7 @@
   "(optimize > 0)"
 {
   operands[2] = GEN_INT (exact_log2 (INTVAL (operands[1]) & 0xff));
-  return AS2 (sbi,%0-0x20,%2);
+  return AS2 (sbi,%m0-0x20,%2);
 }
   [(set_attr "length" "1")
    (set_attr "cc" "none")])

@@ -1,10 +1,10 @@
-# Copyright (C) 2007, 2008, 2009 Free Software Foundation, Inc.
+# Copyright (C) 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
 # This file is part of GDB.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
+# the Free Software Foundation; either version 3 of the License, or
 # (at your option) any later version.
 #
 # This program is distributed in the hope that it will be useful,
@@ -13,8 +13,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 # This file requires GNU make!
@@ -35,7 +34,8 @@ WHICH = arm-with-iwmmxt arm-with-vfpv2 arm-with-vfpv3 arm-with-neon \
 	mips-linux mips64-linux \
 	rs6000/powerpc-32l rs6000/powerpc-altivec32l rs6000/powerpc-e500l \
 	rs6000/powerpc-64l rs6000/powerpc-altivec64l rs6000/powerpc-vsx32l \
-	rs6000/powerpc-vsx64l rs6000/powerpc-cell32l rs6000/powerpc-cell64l
+	rs6000/powerpc-vsx64l rs6000/powerpc-cell32l rs6000/powerpc-cell64l \
+	s390-linux32 s390-linux64 s390x-linux64
 
 # Record which registers should be sent to GDB by default after stop.
 arm-expedite = r11,sp,pc
@@ -44,6 +44,9 @@ mips64-expedite = r29,pc
 powerpc-expedite = r1,pc
 rs6000/powerpc-cell32l-expedite = r1,pc,r0,orig_r3,r4
 rs6000/powerpc-cell64l-expedite = r1,pc,r0,orig_r3,r4
+s390-linux32-expedite = r14,r15,pswa
+s390-linux64-expedite = r14l,r15l,pswa
+s390x-linux64-expedite = r14,r15,pswa
 
 
 XSLTPROC = xsltproc

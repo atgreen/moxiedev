@@ -2351,6 +2351,35 @@ class Output_section : public Output_data
   set_is_relro_local()
   { this->is_relro_local_ = true; }
 
+  // True if this must be the last relro section.
+  bool
+  is_last_relro() const
+  { return this->is_last_relro_; }
+
+  // Record that this must be the last relro section.
+  void
+  set_is_last_relro()
+  {
+    gold_assert(this->is_relro_);
+    this->is_last_relro_ = true;
+  }
+
+  // True if this must be the first section following the relro sections.
+  bool
+  is_first_non_relro() const
+  {
+    gold_assert(!this->is_relro_);
+    return this->is_first_non_relro_;
+  }
+
+  // Record that this must be the first non-relro section.
+  void
+  set_is_first_non_relro()
+  {
+    gold_assert(!this->is_relro_);
+    this->is_first_non_relro_ = true;
+  }
+
   // True if this is a small section: a section which holds small
   // variables.
   bool
@@ -2599,7 +2628,7 @@ class Output_section : public Output_data
 
   // Find a relaxed input section to an input section in OBJECT
   // with index SHNDX.  Return NULL if none is found.
-  const Output_section_data*
+  const Output_relaxed_input_section*
   find_relaxed_input_section(const Relobj* object, unsigned int shndx) const;
   
   // Print merge statistics to stderr.
@@ -3190,6 +3219,12 @@ class Output_section : public Output_data
 			Input_section_specifier::equal_to>
     Output_section_data_by_input_section_map;
 
+  // Map that link Input_section_specifier to Output_relaxed_input_section.
+  typedef Unordered_map<Input_section_specifier, Output_relaxed_input_section*,
+			Input_section_specifier::hash,
+			Input_section_specifier::equal_to>
+    Output_relaxed_input_section_by_input_section_map;
+
   // Map used during relaxation of existing sections.  This map
   // an input section specifier to an input section list index.
   // We assume that Input_section_list is a vector.
@@ -3335,6 +3370,10 @@ class Output_section : public Output_data
   bool is_relro_ : 1;
   // True if this section holds relro local data.
   bool is_relro_local_ : 1;
+  // True if this must be the last relro section.
+  bool is_last_relro_ : 1;
+  // True if this must be the first section after the relro sections.
+  bool is_first_non_relro_ : 1;
   // True if this is a small section.
   bool is_small_section_ : 1;
   // True if this is a large section.
@@ -3346,6 +3385,8 @@ class Output_section : public Output_data
   bool is_dynamic_linker_section_ : 1;
   // Whether code-fills are generated at write.
   bool generate_code_fills_at_write_ : 1;
+  // Whether the entry size field should be zero.
+  bool is_entsize_zero_ : 1;
   // For SHT_TLS sections, the offset of this section relative to the base
   // of the TLS segment.
   uint64_t tls_offset_;
@@ -3358,7 +3399,8 @@ class Output_section : public Output_data
   // Map from input sections to relaxed input sections.  This is mutable
   // because it is updated lazily.  We may need to update it in a
   // const qualified method.
-  mutable Output_section_data_by_input_section_map relaxed_input_section_map_;
+  mutable Output_relaxed_input_section_by_input_section_map
+    relaxed_input_section_map_;
   // Whether relaxed_input_section_map_ is valid.
   mutable bool is_relaxed_input_section_map_valid_;
 };
@@ -3488,7 +3530,8 @@ class Output_segment
   // address of the immediately following segment.  Update *POFF and
   // *PSHNDX.  This should only be called for a PT_LOAD segment.
   uint64_t
-  set_section_addresses(const Layout*, bool reset, uint64_t addr, off_t* poff,
+  set_section_addresses(const Layout*, bool reset, uint64_t addr,
+			unsigned int increase_relro, off_t* poff,
 			unsigned int* pshndx);
 
   // Set the minimum alignment of this segment.  This may be adjusted
@@ -3500,7 +3543,7 @@ class Output_segment
   // Set the offset of this segment based on the section.  This should
   // only be called for a non-PT_LOAD segment.
   void
-  set_offset();
+  set_offset(unsigned int increase);
 
   // Set the TLS offsets of the sections contained in the PT_TLS segment.
   void
@@ -3546,7 +3589,7 @@ class Output_segment
   uint64_t
   set_section_list_addresses(const Layout*, bool reset, Output_data_list*,
                              uint64_t addr, off_t* poff, unsigned int* pshndx,
-                             bool* in_tls, bool* in_relro);
+                             bool* in_tls);
 
   // Return the number of Output_sections in an Output_data_list.
   unsigned int

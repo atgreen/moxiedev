@@ -94,7 +94,6 @@
 /jr.s/1.1/Wed Nov 18 20:13:19 2009//
 /mips-dyn.ld/1.1/Wed Nov 18 20:13:19 2009//
 /mips-elf-flags.exp/1.9/Wed Nov 18 20:13:19 2009//
-/mips-elf.exp/1.62/Wed Nov 18 20:13:19 2009//
 /mips-lib.ld/1.1/Wed Nov 18 20:13:19 2009//
 /mips16-1.d/1.2/Wed Nov 18 20:13:19 2009//
 /mips16-1a.s/1.1/Wed Nov 18 20:13:19 2009//
@@ -332,4 +331,7 @@
 /vxworks2-static.sd/1.1/Wed Nov 18 20:13:19 2009//
 /vxworks2.s/1.1/Wed Nov 18 20:13:19 2009//
 /vxworks2.sd/1.1/Wed Nov 18 20:13:19 2009//
+/mips-elf.exp/1.63/Wed Jan  6 04:54:13 2010//
+/undefined.d/1.1/Thu Dec 10 14:20:04 2009//
+/undefined.s/1.1/Thu Dec 10 14:20:04 2009//
 D

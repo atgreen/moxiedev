@@ -1,6 +1,6 @@
 /* Gimple IR support functions.
 
-   Copyright 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
    Contributed by Aldy Hernandez <aldyh@redhat.com>
 
 This file is part of GCC.
@@ -1297,7 +1297,7 @@ walk_gimple_asm (gimple stmt, walk_tree_fn callback_op,
    The return value is that returned by the last call to walk_tree, or
    NULL_TREE if no CALLBACK_OP is specified.  */
 
-inline tree
+tree
 walk_gimple_op (gimple stmt, walk_tree_fn callback_op,
 		struct walk_stmt_info *wi)
 {
@@ -3171,7 +3171,7 @@ compare_type_names_p (tree t1, tree t2, bool for_completion_p)
 
 /* Return true if the field decls F1 and F2 are at the same offset.  */
 
-static bool
+bool
 compare_field_offset (tree f1, tree f2)
 {
   if (DECL_OFFSET_ALIGN (f1) == DECL_OFFSET_ALIGN (f2))

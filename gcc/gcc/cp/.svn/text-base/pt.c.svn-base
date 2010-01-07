@@ -32,6 +32,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm.h"
 #include "obstack.h"
 #include "tree.h"
+#include "intl.h"
 #include "pointer-set.h"
 #include "flags.h"
 #include "c-common.h"
@@ -741,6 +742,12 @@ check_specialization_namespace (tree tmpl)
      function, member class or static data member of a class template
      shall be declared in the namespace of which the class template is
      a member.  */
+  if (current_scope() != DECL_CONTEXT (tmpl)
+      && !at_namespace_scope_p ())
+    {
+      error ("specialization of %qD must appear at namespace scope", tmpl);
+      return false;
+    }
   if (is_associated_namespace (current_namespace, tpl_ns))
     /* Same or super-using namespace.  */
     return true;
@@ -1456,6 +1463,11 @@ iterative_hash_template_arg (tree arg, hashval_t val)
   if (!TYPE_P (arg))
     STRIP_NOPS (arg);
 
+  if (TREE_CODE (arg) == ARGUMENT_PACK_SELECT)
+    /* We can get one of these when re-hashing a previous entry in the middle
+       of substituting into a pack expansion.  Just look through it.  */
+    arg = ARGUMENT_PACK_SELECT_FROM_PACK (arg);
+
   code = TREE_CODE (arg);
   tclass = TREE_CODE_CLASS (code);
 
@@ -1481,11 +1493,6 @@ iterative_hash_template_arg (tree arg, hashval_t val)
     case EXPR_PACK_EXPANSION:
       return iterative_hash_template_arg (PACK_EXPANSION_PATTERN (arg), val);
 
-    case ARGUMENT_PACK_SELECT:
-      /* We can get one of these when re-hashing a previous entry in the middle
-         of substituting into a pack expansion.  Just look through it...  */
-      arg = ARGUMENT_PACK_SELECT_FROM_PACK (arg);
-      /* ...and fall through.  */
     case TYPE_ARGUMENT_PACK:
     case NONTYPE_ARGUMENT_PACK:
       return iterative_hash_template_arg (ARGUMENT_PACK_ARGS (arg), val);
@@ -1545,6 +1552,13 @@ iterative_hash_template_arg (tree arg, hashval_t val)
       code = TREE_CODE (TREE_OPERAND (arg, 1));
       val = iterative_hash_object (code, val);
       return iterative_hash_template_arg (TREE_OPERAND (arg, 2), val);
+
+    case ARRAY_TYPE:
+      /* layout_type sets structural equality for arrays of
+	 incomplete type, so we can't rely on the canonical type
+	 for hashing.  */
+      val = iterative_hash_template_arg (TREE_TYPE (arg), val);
+      return iterative_hash_template_arg (TYPE_DOMAIN (arg), val);
 
     default:
       switch (tclass)
@@ -1646,19 +1660,52 @@ explicit_class_specialization_p (tree type)
   return !uses_template_parms (CLASSTYPE_TI_ARGS (type));
 }
 
-/* Print the list of overloaded FNS in an error message.   */
+/* Print the list of functions at FNS, going through all the overloads
+   for each element of the list.  Alternatively, FNS can not be a
+   TREE_LIST, in which case it will be printed together with all the
+   overloads.
+
+   MORE and *STR should respectively be FALSE and NULL when the function
+   is called from the outside.  They are used internally on recursive
+   calls.  print_candidates manages the two parameters and leaves NULL
+   in *STR when it ends.  */
 
 static void
-print_overloaded_functions (tree fns, const char **str)
+print_candidates_1 (tree fns, bool more, const char **str)
 {
-  tree fn;
+  tree fn, fn2;
+  char *spaces = NULL;
+
   for (fn = fns; fn; fn = OVL_NEXT (fn))
+    if (TREE_CODE (fn) == TREE_LIST)
+      {
+        gcc_assert (!OVL_NEXT (fn) && !is_overloaded_fn (fn));
+        for (fn2 = fn; fn2 != NULL_TREE; fn2 = TREE_CHAIN (fn2))
+          print_candidates_1 (TREE_VALUE (fn2),
+                              TREE_CHAIN (fn2) || more, str);
+      }
+    else
+      {
+        if (!*str)
+          {
+            /* Pick the prefix string.  */
+            if (!more && !OVL_NEXT (fns))
+              {
+                error ("candidate is: %+#D", OVL_CURRENT (fn));
+                continue;
+              }
+
+            *str = _("candidates are:");
+            spaces = get_spaces (*str);
+          }
+        error ("%s %+#D", *str, OVL_CURRENT (fn));
+        *str = spaces ? spaces : *str;
+      }
+
+  if (!more)
     {
-      if (TREE_CODE (fn) == TREE_LIST)
-	print_candidates (fn);
-      else
-	error ("%s %+#D", *str, OVL_CURRENT (fn));
-      *str = "               ";
+      free (spaces);
+      *str = NULL;
     }
 }
 
@@ -1667,16 +1714,9 @@ print_overloaded_functions (tree fns, const char **str)
 void
 print_candidates (tree fns)
 {
-  const char *str = "candidates are:";
-
-  if (is_overloaded_fn (fns))
-    print_overloaded_functions (fns, &str);
-  else
-    {
-      tree fn;
-      for (fn = fns; fn != NULL_TREE; fn = TREE_CHAIN (fn))
-	print_overloaded_functions (TREE_VALUE (fn), &str);
-    }
+  const char *str = NULL;
+  print_candidates_1 (fns, false, &str);
+  gcc_assert (str == NULL);
 }
 
 /* Returns the template (one of the functions given by TEMPLATE_ID)
@@ -2703,15 +2743,13 @@ get_function_template_decl (const_tree primary_func_tmpl_inst)
 bool
 function_parameter_expanded_from_pack_p (tree param_decl, tree pack)
 {
-    if (DECL_ARTIFICIAL (param_decl)
-	|| !function_parameter_pack_p (pack))
-      return false;
+  if (DECL_ARTIFICIAL (param_decl)
+      || !function_parameter_pack_p (pack))
+    return false;
 
-    gcc_assert (DECL_NAME (param_decl) && DECL_NAME (pack));
-
-    /* The parameter pack and its pack arguments have the same
-       DECL_PARM_INDEX.  */
-    return DECL_PARM_INDEX (pack) == DECL_PARM_INDEX (param_decl);
+  /* The parameter pack and its pack arguments have the same
+     DECL_PARM_INDEX.  */
+  return DECL_PARM_INDEX (pack) == DECL_PARM_INDEX (param_decl);
 }
 
 /* Determine whether ARGS describes a variadic template args list,
@@ -3325,7 +3363,8 @@ reduce_template_parm_level (tree index, tree type, int levels, tree args,
 {
   if (TEMPLATE_PARM_DESCENDANTS (index) == NULL_TREE
       || (TEMPLATE_PARM_LEVEL (TEMPLATE_PARM_DESCENDANTS (index))
-	  != TEMPLATE_PARM_LEVEL (index) - levels))
+	  != TEMPLATE_PARM_LEVEL (index) - levels)
+      || !same_type_p (type, TREE_TYPE (TEMPLATE_PARM_DESCENDANTS (index))))
     {
       tree orig_decl = TEMPLATE_PARM_DECL (index);
       tree decl, t;
@@ -4483,6 +4522,9 @@ template arguments to %qD do not match original template %qD",
 	  tree parm = TREE_VALUE (TREE_VEC_ELT (parms, i));
 	  if (TREE_CODE (parm) == TEMPLATE_DECL)
 	    DECL_CONTEXT (parm) = tmpl;
+
+	  if (TREE_CODE (TREE_TYPE (parm)) == TEMPLATE_TYPE_PARM)
+	    DECL_CONTEXT (TYPE_NAME (TREE_TYPE (parm))) = tmpl;
 	}
     }
 
@@ -5526,13 +5568,6 @@ convert_template_argument (tree parm,
       if (TYPE_P (val))
 	val = strip_typedefs (val);
     }
-  else if (TREE_CODE (orig_arg) == SCOPE_REF)
-    {
-      /* Strip typedefs from the SCOPE_REF.  */
-      tree type = strip_typedefs (TREE_TYPE (orig_arg));
-      tree scope = strip_typedefs (TREE_OPERAND (orig_arg, 0));
-      val = build2 (SCOPE_REF, type, scope, TREE_OPERAND (orig_arg, 1));
-    }
   else
     {
       tree t = tsubst (TREE_TYPE (parm), args, complain, in_decl);
@@ -5571,6 +5606,15 @@ convert_template_argument (tree parm,
 	val = error_mark_node;
       else if (val == error_mark_node && (complain & tf_error))
 	error ("could not convert template argument %qE to %qT",  orig_arg, t);
+
+      if (TREE_CODE (val) == SCOPE_REF)
+	{
+	  /* Strip typedefs from the SCOPE_REF.  */
+	  tree type = strip_typedefs (TREE_TYPE (val));
+	  tree scope = strip_typedefs (TREE_OPERAND (val, 0));
+	  val = build_qualified_name (type, scope, TREE_OPERAND (val, 1),
+				      QUALIFIED_NAME_IS_TEMPLATE (val));
+	}
     }
 
   return val;
@@ -9244,7 +9288,13 @@ tsubst_decl (tree t, tree args, tsubst_flags_t complain)
 	/* Create a new node for the specialization we need.  */
 	r = copy_decl (t);
 	if (type == NULL_TREE)
-	  type = tsubst (TREE_TYPE (t), args, complain, in_decl);
+	  {
+	    if (is_typedef_decl (t))
+	      type = DECL_ORIGINAL_TYPE (t);
+	    else
+	      type = TREE_TYPE (t);
+	    type = tsubst (type, args, complain, in_decl);
+	  }
 	if (TREE_CODE (r) == VAR_DECL)
 	  {
 	    /* Even if the original location is out of scope, the
@@ -9315,16 +9365,6 @@ tsubst_decl (tree t, tree args, tsubst_flags_t complain)
 	      }
 	    determine_visibility (r);
 	  }
-	/* Preserve a typedef that names a type.  */
-	else if (TREE_CODE (r) == TYPE_DECL
-		 && DECL_ORIGINAL_TYPE (t)
-		 && type != error_mark_node)
-	  {
-	    DECL_ORIGINAL_TYPE (r) = tsubst (DECL_ORIGINAL_TYPE (t),
-					     args, complain, in_decl);
-	    TREE_TYPE (r) = type = build_variant_type_copy (type);
-	    TYPE_NAME (type) = r;
-	  }
 
 	if (!local_p)
 	  {
@@ -9360,8 +9400,16 @@ tsubst_decl (tree t, tree args, tsubst_flags_t complain)
 	TREE_CHAIN (r) = NULL_TREE;
 
 	apply_late_template_attributes (&r, DECL_ATTRIBUTES (r),
-					(int) ATTR_FLAG_TYPE_IN_PLACE,
+					/*flags=*/0,
 					args, complain, in_decl);
+
+	/* Preserve a typedef that names a type.  */
+	if (is_typedef_decl (r))
+	  {
+	    DECL_ORIGINAL_TYPE (r) = NULL_TREE;
+	    set_underlying_type (r);
+	  }
+
 	layout_decl (r, 0);
       }
       break;
@@ -11827,7 +11875,7 @@ tsubst_copy_and_build (tree t,
 	      r = convert_from_reference (r);
 	  }
 	else
-	  r = build_x_indirect_ref (r, "unary *", complain);
+	  r = build_x_indirect_ref (r, RO_UNARY_STAR, complain);
 	return r;
       }
 
@@ -13999,6 +14047,9 @@ unify_pack_expansion (tree tparms, tree targs, tree packed_parms,
 
         if (!skip_arg_p)
           {
+	    /* For deduction from an init-list we need the actual list.  */
+	    if (arg_expr && BRACE_ENCLOSED_INITIALIZER_P (arg_expr))
+	      arg = arg_expr;
             if (unify (tparms, targs, parm, arg, arg_strict))
               return 1;
           }
@@ -15751,13 +15802,16 @@ most_specialized_class (tree type, tree tmpl)
 
   if (ambiguous_p)
     {
-      const char *str = "candidates are:";
+      const char *str;
+      char *spaces = NULL;
       error ("ambiguous class template instantiation for %q#T", type);
+      str = TREE_CHAIN (list) ? _("candidates are:") : _("candidate is:");
       for (t = list; t; t = TREE_CHAIN (t))
-	{
-	  error ("%s %+#T", str, TREE_TYPE (t));
-	  str = "               ";
-	}
+        {
+          error ("%s %+#T", spaces ? spaces : str, TREE_TYPE (t));
+          spaces = spaces ? spaces : get_spaces (str);
+        }
+      free (spaces);
       return error_mark_node;
     }
 

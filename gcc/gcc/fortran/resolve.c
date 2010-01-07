@@ -1830,6 +1830,21 @@ resolve_global_procedure (gfc_symbol *sym, locus *where,
 	gfc_error ("The reference to function '%s' at %L either needs an "
 		   "explicit INTERFACE or the rank is incorrect", sym->name,
 		   where);
+     
+      /* Non-assumed length character functions.  */
+      if (sym->attr.function && sym->ts.type == BT_CHARACTER
+	  && gsym->ns->proc_name->ts.u.cl->length != NULL)
+	{
+	  gfc_charlen *cl = sym->ts.u.cl;
+
+	  if (!sym->attr.entry_master && sym->attr.if_source == IFSRC_UNKNOWN
+              && cl && cl->length && cl->length->expr_type != EXPR_CONSTANT)
+	    {
+              gfc_error ("Nonconstant character-length function '%s' at %L "
+			 "must have an explicit interface", sym->name,
+			 &sym->declared_at);
+	    }
+	}
 
       if (gfc_option.flag_whole_file == 1
 	    || ((gfc_option.warn_std & GFC_STD_LEGACY)
@@ -3320,7 +3335,7 @@ resolve_operator (gfc_expr *e)
     case INTRINSIC_POWER:
       if (gfc_numeric_ts (&op1->ts) && gfc_numeric_ts (&op2->ts))
 	{
-	  gfc_type_convert_binary (e);
+	  gfc_type_convert_binary (e, 1);
 	  break;
 	}
 
@@ -3407,7 +3422,7 @@ resolve_operator (gfc_expr *e)
 
       if (gfc_numeric_ts (&op1->ts) && gfc_numeric_ts (&op2->ts))
 	{
-	  gfc_type_convert_binary (e);
+	  gfc_type_convert_binary (e, 1);
 
 	  e->ts.type = BT_LOGICAL;
 	  e->ts.kind = gfc_default_logical_kind;
@@ -4781,12 +4796,6 @@ update_compcall_arglist (gfc_expr* e)
   if (!po)
     return FAILURE;
 
-  if (po->rank > 0)
-    {
-      gfc_error ("Passed-object at %L must be scalar", &e->where);
-      return FAILURE;
-    }
-
   if (tbp->nopass || e->value.compcall.ignore_pass)
     {
       gfc_free_expr (po);
@@ -4886,6 +4895,22 @@ check_typebound_baseobject (gfc_expr* e)
     {
       gfc_error ("Base object for type-bound procedure call at %L is of"
 		 " ABSTRACT type '%s'", &e->where, base->ts.u.derived->name);
+      return FAILURE;
+    }
+
+  /* If the procedure called is NOPASS, the base object must be scalar.  */
+  if (e->value.compcall.tbp->nopass && base->rank > 0)
+    {
+      gfc_error ("Base object for NOPASS type-bound procedure call at %L must"
+		 " be scalar", &e->where);
+      return FAILURE;
+    }
+
+  /* FIXME: Remove once PR 41177 (this problem) is fixed completely.  */
+  if (base->rank > 0)
+    {
+      gfc_error ("Non-scalar base object at %L currently not implemented",
+		 &e->where);
       return FAILURE;
     }
 
@@ -9028,23 +9053,12 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
 	     && resolve_charlen (cl) == FAILURE)
 	return FAILURE;
 
-      if (!cl || !cl->length || cl->length->expr_type != EXPR_CONSTANT)
+      if ((!cl || !cl->length || cl->length->expr_type != EXPR_CONSTANT)
+	  && sym->attr.proc == PROC_ST_FUNCTION)
 	{
-	  if (sym->attr.proc == PROC_ST_FUNCTION)
-	    {
-	      gfc_error ("Character-valued statement function '%s' at %L must "
-			 "have constant length", sym->name, &sym->declared_at);
-	      return FAILURE;
-	    }
-
-	  if (sym->attr.external && sym->formal == NULL
-	      && cl && cl->length && cl->length->expr_type != EXPR_CONSTANT)
-	    {
-	      gfc_error ("Automatic character length function '%s' at %L must "
-			 "have an explicit interface", sym->name,
-			 &sym->declared_at);
-	      return FAILURE;
-	    }
+	  gfc_error ("Character-valued statement function '%s' at %L must "
+		     "have constant length", sym->name, &sym->declared_at);
+	  return FAILURE;
 	}
     }
 
@@ -10038,8 +10052,11 @@ resolve_typebound_procedure (gfc_symtree* stree)
 	  me_arg = proc->formal->sym;
 	}
 
-      /* Now check that the argument-type matches.  */
+      /* Now check that the argument-type matches and the passed-object
+	 dummy argument is generally fine.  */
+
       gcc_assert (me_arg);
+
       if (me_arg->ts.type != BT_CLASS)
 	{
 	  gfc_error ("Non-polymorphic passed-object dummy argument of '%s'"
@@ -10055,7 +10072,27 @@ resolve_typebound_procedure (gfc_symtree* stree)
 		     me_arg->name, &where, resolve_bindings_derived->name);
 	  goto error;
 	}
-
+  
+      gcc_assert (me_arg->ts.type == BT_CLASS);
+      if (me_arg->ts.u.derived->components->as
+	  && me_arg->ts.u.derived->components->as->rank > 0)
+	{
+	  gfc_error ("Passed-object dummy argument of '%s' at %L must be"
+		     " scalar", proc->name, &where);
+	  goto error;
+	}
+      if (me_arg->ts.u.derived->components->attr.allocatable)
+	{
+	  gfc_error ("Passed-object dummy argument of '%s' at %L must not"
+		     " be ALLOCATABLE", proc->name, &where);
+	  goto error;
+	}
+      if (me_arg->ts.u.derived->components->attr.class_pointer)
+	{
+	  gfc_error ("Passed-object dummy argument of '%s' at %L must not"
+		     " be POINTER", proc->name, &where);
+	  goto error;
+	}
     }
 
   /* If we are extending some type, check that we don't override a procedure

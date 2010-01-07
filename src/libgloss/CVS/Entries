@@ -34,14 +34,11 @@ D/xstormy16////
 D/lm32////
 D/moxie////
 D/ms1////
-/ChangeLog/1.290/Wed Dec  9 22:25:12 2009//
 /Makefile.in/1.6/Wed Nov 18 20:13:19 2009//
 /README/1.4/Wed Nov 18 20:13:19 2009//
 /acinclude.m4/1.1/Wed Nov 18 20:13:19 2009//
 /aclocal.m4/1.1/Wed Nov 18 20:13:19 2009//
 /close.c/1.1/Wed Nov 18 20:13:19 2009//
-/configure/1.28/Wed Dec  9 22:25:12 2009//
-/configure.in/1.27/Wed Dec  9 22:25:12 2009//
 /debug.c/1.1/Wed Nov 18 20:13:19 2009//
 /debug.h/1.2/Wed Nov 18 20:13:19 2009//
 /fstat.c/1.1/Wed Nov 18 20:13:19 2009//
@@ -59,3 +56,6 @@ D/ms1////
 /syscall.h/1.4/Wed Nov 18 20:13:19 2009//
 /unlink.c/1.1/Wed Nov 18 20:13:19 2009//
 /write.c/1.1/Wed Nov 18 20:13:19 2009//
+/ChangeLog/1.293/Wed Jan  6 04:54:15 2010//
+/configure/1.29/Wed Jan  6 04:54:15 2010//
+/configure.in/1.28/Wed Jan  6 04:54:15 2010//

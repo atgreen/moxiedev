@@ -1,5 +1,5 @@
 /* Basic IPA optimizations and utilities.
-   Copyright (C) 2003, 2004, 2005, 2007, 2008 Free Software Foundation,
+   Copyright (C) 2003, 2004, 2005, 2007, 2008, 2009 Free Software Foundation,
    Inc.
 
 This file is part of GCC.
@@ -179,11 +179,39 @@ cgraph_remove_unreachable_nodes (bool before_inlining_p, FILE *file)
 	          first = e->callee;
 	        }
 	    }
+
+      /* If any function in a comdat group is reachable, force
+	 all other functions in the same comdat group to be
+	 also reachable.  */
+      if (node->same_comdat_group
+	  && node->reachable
+	  && !node->global.inlined_to)
+	{
+	  for (next = node->same_comdat_group;
+	       next != node;
+	       next = next->same_comdat_group)
+	    if (!next->reachable)
+	      {
+		next->aux = first;
+		first = next;
+		next->reachable = true;
+	      }
+	}
+
+      /* We can freely remove inline clones even if they are cloned, however if
+	 function is clone of real clone, we must keep it around in order to
+	 make materialize_clones produce function body with the changes
+	 applied.  */
       while (node->clone_of && !node->clone_of->aux && !gimple_has_body_p (node->decl))
         {
+	  bool noninline = node->clone_of->decl != node->decl;
 	  node = node->clone_of;
-	  node->aux = first;
-	  first = node;
+	  if (noninline)
+	    {
+	      node->aux = first;
+	      first = node;
+	      break;
+	    }
 	}
     }
 
@@ -244,6 +272,9 @@ cgraph_remove_unreachable_nodes (bool before_inlining_p, FILE *file)
 		    node->clone_of->clones = node->next_sibling_clone;
 		  if (node->next_sibling_clone)
 		    node->next_sibling_clone->prev_sibling_clone = node->prev_sibling_clone;
+		  node->clone_of = NULL;
+		  node->next_sibling_clone = NULL;
+		  node->prev_sibling_clone = NULL;
 		}
 	      else
 		cgraph_remove_node (node);
@@ -289,8 +320,24 @@ cgraph_externally_visible_p (struct cgraph_node *node, bool whole_program)
   /* COMDAT functions must be shared only if they have address taken,
      otherwise we can produce our own private implementation with
      -fwhole-program.  */
-  if (DECL_COMDAT (node->decl) && (node->address_taken || !node->analyzed))
-    return true;
+  if (DECL_COMDAT (node->decl))
+    {
+      if (node->address_taken || !node->analyzed)
+	return true;
+      if (node->same_comdat_group)
+	{
+	  struct cgraph_node *next;
+
+	  /* If more than one function is in the same COMDAT group, it must
+	     be shared even if just one function in the comdat group has
+	     address taken.  */
+	  for (next = node->same_comdat_group;
+	       next != node;
+	       next = next->same_comdat_group)
+	    if (next->address_taken || !next->analyzed)
+	      return true;
+	}
+    }
   if (MAIN_NAME_P (DECL_NAME (node->decl)))
     return true;
   if (lookup_attribute ("externally_visible", DECL_ATTRIBUTES (node->decl)))
@@ -323,6 +370,23 @@ function_and_variable_visibility (bool whole_program)
 	 happy.  Clear the flag here to avoid confusion in middle-end.  */
       if (DECL_COMDAT (node->decl) && !TREE_PUBLIC (node->decl))
         DECL_COMDAT (node->decl) = 0;
+      /* For external decls stop tracking same_comdat_group, it doesn't matter
+	 what comdat group they are in when they won't be emitted in this TU,
+	 and simplifies later passes.  */
+      if (node->same_comdat_group && DECL_EXTERNAL (node->decl))
+	{
+	  struct cgraph_node *n = node, *next;
+	  do
+	    {
+	      /* If at least one of same comdat group functions is external,
+		 all of them have to be, otherwise it is a front-end bug.  */
+	      gcc_assert (DECL_EXTERNAL (n->decl));
+	      next = n->same_comdat_group;
+	      n->same_comdat_group = NULL;
+	      n = next;
+	    }
+	  while (n != node);
+	}
       gcc_assert ((!DECL_WEAK (node->decl) && !DECL_COMDAT (node->decl))
       	          || TREE_PUBLIC (node->decl) || DECL_EXTERNAL (node->decl));
       if (cgraph_externally_visible_p (node, whole_program))

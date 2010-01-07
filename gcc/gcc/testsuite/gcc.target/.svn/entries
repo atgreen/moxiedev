@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-12-07T15:27:32.223166Z
-155042
-dje
+2010-01-05T23:53:29.528836Z
+155666
+hjl
 
 
 
@@ -26,25 +26,25 @@ dje
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-arm
-dir
-
 powerpc
 dir
 
-alpha
+arm
 dir
 
 m68k
 dir
 
+alpha
+dir
+
 avr
 dir
 
-i386
+rx
 dir
 
-rx
+i386
 dir
 
 xstormy16
@@ -53,10 +53,10 @@ dir
 frv
 dir
 
-s390
+x86_64
 dir
 
-x86_64
+s390
 dir
 
 cris

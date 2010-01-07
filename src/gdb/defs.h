@@ -1,8 +1,8 @@
 /* *INDENT-OFF* */ /* ATTR_FORMAT confuses indent, avoid running it for now */
 /* Basic, host-specific, and target-specific definitions for GDB.
    Copyright (C) 1986, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996,
-   1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
-   Free Software Foundation, Inc.
+   1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009,
+   2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -596,10 +596,11 @@ extern int info_verbose;
 
 extern void set_next_address (struct gdbarch *, CORE_ADDR);
 
-extern void print_address_symbolic (CORE_ADDR, struct ui_file *, int,
-				    char *);
+extern void print_address_symbolic (struct gdbarch *, CORE_ADDR,
+				    struct ui_file *, int, char *);
 
-extern int build_address_symbolic (CORE_ADDR addr,
+extern int build_address_symbolic (struct gdbarch *,
+				   CORE_ADDR addr,
 				   int do_demangle, 
 				   char **name, 
 				   int *offset, 

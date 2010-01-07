@@ -1,14 +1,14 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms/copy
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-01T10:19:11.738758Z
-151264
+2009-12-23T18:45:41.551992Z
+155433
 paolo
 
 
@@ -25,6 +25,9 @@ paolo
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+deque_iterators
+dir
 
 move_iterators
 dir

@@ -1,7 +1,8 @@
 /* Multiple source language support for GDB.
 
    Copyright (C) 1991, 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2007, 2008, 2009 Free Software Foundation, Inc.
+   2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
 
    Contributed by the Department of Computer Science at the State University
    of New York at Buffalo.
@@ -696,6 +697,7 @@ float_type (struct type *type)
   CHECK_TYPEDEF (type);
   return TYPE_CODE (type) == TYPE_CODE_FLT;
 }
+#endif
 
 /* Returns non-zero if the value is a pointer type */
 int
@@ -705,6 +707,7 @@ pointer_type (struct type *type)
     TYPE_CODE (type) == TYPE_CODE_REF;
 }
 
+#if 0
 /* Returns non-zero if the value is a structured type */
 int
 structured_type (struct type *type)

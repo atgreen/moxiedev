@@ -653,7 +653,8 @@ gfc_build_conversion (gfc_expr *e)
 
 /* Given an expression node with some sort of numeric binary
    expression, insert type conversions required to make the operands
-   have the same type.
+   have the same type. Conversion warnings are disabled if wconversion
+   is set to 0.
 
    The exception is that the operands of an exponential don't have to
    have the same type.  If possible, the base is promoted to the type
@@ -661,7 +662,7 @@ gfc_build_conversion (gfc_expr *e)
    1.0**2 stays as it is.  */
 
 void
-gfc_type_convert_binary (gfc_expr *e)
+gfc_type_convert_binary (gfc_expr *e, int wconversion)
 {
   gfc_expr *op1, *op2;
 
@@ -685,9 +686,9 @@ gfc_type_convert_binary (gfc_expr *e)
 	}
 
       if (op1->ts.kind > op2->ts.kind)
-	gfc_convert_type (op2, &op1->ts, 2);
+	gfc_convert_type_warn (op2, &op1->ts, 2, wconversion);
       else
-	gfc_convert_type (op1, &op2->ts, 2);
+	gfc_convert_type_warn (op1, &op2->ts, 2, wconversion);
 
       e->ts = op1->ts;
       goto done;
@@ -702,14 +703,14 @@ gfc_type_convert_binary (gfc_expr *e)
       if (e->value.op.op == INTRINSIC_POWER)
 	goto done;
 
-      gfc_convert_type (e->value.op.op2, &e->ts, 2);
+      gfc_convert_type_warn (e->value.op.op2, &e->ts, 2, wconversion);
       goto done;
     }
 
   if (op1->ts.type == BT_INTEGER)
     {
       e->ts = op2->ts;
-      gfc_convert_type (e->value.op.op1, &e->ts, 2);
+      gfc_convert_type_warn (e->value.op.op1, &e->ts, 2, wconversion);
       goto done;
     }
 
@@ -720,9 +721,9 @@ gfc_type_convert_binary (gfc_expr *e)
   else
     e->ts.kind = op2->ts.kind;
   if (op1->ts.type != BT_COMPLEX || op1->ts.kind != e->ts.kind)
-    gfc_convert_type (e->value.op.op1, &e->ts, 2);
+    gfc_convert_type_warn (e->value.op.op1, &e->ts, 2, wconversion);
   if (op2->ts.type != BT_COMPLEX || op2->ts.kind != e->ts.kind)
-    gfc_convert_type (e->value.op.op2, &e->ts, 2);
+    gfc_convert_type_warn (e->value.op.op2, &e->ts, 2, wconversion);
 
 done:
   return;
@@ -2034,6 +2035,32 @@ not_numeric:
   return FAILURE;
 }
 
+/* F2003, 7.1.7 (3): In init expression, allocatable components
+   must not be data-initialized.  */
+static gfc_try
+check_alloc_comp_init (gfc_expr *e)
+{
+  gfc_component *c;
+  gfc_constructor *ctor;
+
+  gcc_assert (e->expr_type == EXPR_STRUCTURE);
+  gcc_assert (e->ts.type == BT_DERIVED);
+
+  for (c = e->ts.u.derived->components, ctor = e->value.constructor;
+       c; c = c->next, ctor = ctor->next)
+    {
+      if (c->attr.allocatable
+          && ctor->expr->expr_type != EXPR_NULL)
+        {
+	  gfc_error("Invalid initialization expression for ALLOCATABLE "
+	            "component '%s' in structure constructor at %L",
+	            c->name, &ctor->expr->where);
+	  return FAILURE;
+	}
+    }
+
+  return SUCCESS;
+}
 
 static match
 check_init_expr_arguments (gfc_expr *e)
@@ -2259,40 +2286,39 @@ check_init_expr (gfc_expr *e)
     case EXPR_FUNCTION:
       t = FAILURE;
 
-      if ((m = check_specification_function (e)) != MATCH_YES)
-	{
-	  gfc_intrinsic_sym* isym;
-          gfc_symbol* sym;
+      {
+	gfc_intrinsic_sym* isym;
+	gfc_symbol* sym;
 
-          sym = e->symtree->n.sym;
-	  if (!gfc_is_intrinsic (sym, 0, e->where)
-              || (m = gfc_intrinsic_func_interface (e, 0)) != MATCH_YES)
-	    {
-	      gfc_error ("Function '%s' in initialization expression at %L "
-			 "must be an intrinsic or a specification function",
-			 e->symtree->n.sym->name, &e->where);
-	      break;
-	    }
-
-	  if ((m = check_conversion (e)) == MATCH_NO
-	      && (m = check_inquiry (e, 1)) == MATCH_NO
-	      && (m = check_null (e)) == MATCH_NO
-	      && (m = check_transformational (e)) == MATCH_NO
-	      && (m = check_elemental (e)) == MATCH_NO)
-	    {
-	      gfc_error ("Intrinsic function '%s' at %L is not permitted "
-			 "in an initialization expression",
-			 e->symtree->n.sym->name, &e->where);
-	      m = MATCH_ERROR;
-	    }
-
-	  /* Try to scalarize an elemental intrinsic function that has an
-	     array argument.  */
-          isym = gfc_find_function (e->symtree->n.sym->name);
-	  if (isym && isym->elemental
-		&& (t = scalarize_intrinsic_call (e)) == SUCCESS)
+	sym = e->symtree->n.sym;
+	if (!gfc_is_intrinsic (sym, 0, e->where)
+	    || (m = gfc_intrinsic_func_interface (e, 0)) != MATCH_YES)
+	  {
+	    gfc_error ("Function '%s' in initialization expression at %L "
+		       "must be an intrinsic function",
+		       e->symtree->n.sym->name, &e->where);
 	    break;
-	}
+	  }
+
+	if ((m = check_conversion (e)) == MATCH_NO
+	    && (m = check_inquiry (e, 1)) == MATCH_NO
+	    && (m = check_null (e)) == MATCH_NO
+	    && (m = check_transformational (e)) == MATCH_NO
+	    && (m = check_elemental (e)) == MATCH_NO)
+	  {
+	    gfc_error ("Intrinsic function '%s' at %L is not permitted "
+		       "in an initialization expression",
+		       e->symtree->n.sym->name, &e->where);
+	    m = MATCH_ERROR;
+	  }
+
+	/* Try to scalarize an elemental intrinsic function that has an
+	   array argument.  */
+	isym = gfc_find_function (e->symtree->n.sym->name);
+	if (isym && isym->elemental
+	    && (t = scalarize_intrinsic_call (e)) == SUCCESS)
+	  break;
+      }
 
       if (m == MATCH_YES)
 	t = gfc_simplify_expr (e, 0);
@@ -2383,10 +2409,18 @@ check_init_expr (gfc_expr *e)
       break;
 
     case EXPR_STRUCTURE:
-      if (e->ts.is_iso_c)
-	t = SUCCESS;
-      else
-	t = gfc_check_constructor (e, check_init_expr);
+      t = e->ts.is_iso_c ? SUCCESS : FAILURE;
+      if (t == SUCCESS)
+	break;
+
+      t = check_alloc_comp_init (e);
+      if (t == FAILURE)
+	break;
+
+      t = gfc_check_constructor (e, check_init_expr);
+      if (t == FAILURE)
+	break;
+
       break;
 
     case EXPR_ARRAY:

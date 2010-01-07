@@ -1,7 +1,7 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/tr1/4_metaprogramming
 svn://gcc.gnu.org/svn/gcc
 
@@ -74,10 +74,10 @@ dir
 add_reference
 dir
 
-is_floating_point
+is_convertible
 dir
 
-is_convertible
+is_floating_point
 dir
 
 remove_reference
@@ -92,10 +92,10 @@ dir
 is_compound
 dir
 
-is_function
+add_cv
 dir
 
-add_cv
+is_function
 dir
 
 is_const
@@ -107,16 +107,16 @@ dir
 aligned_storage
 dir
 
-add_pointer
-dir
-
 is_member_object_pointer
 dir
 
-is_fundamental
+add_pointer
 dir
 
 is_base_of
+dir
+
+is_fundamental
 dir
 
 is_reference

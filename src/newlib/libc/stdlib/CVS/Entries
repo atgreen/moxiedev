@@ -10,7 +10,6 @@
 /abort.c/1.2/Wed Nov 18 20:13:20 2009/-ko/
 /abs.c/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
 /assert.c/1.4/Wed Dec  9 22:25:21 2009/-ko/
-/atexit.c/1.7/Wed Nov 18 20:13:20 2009/-ko/
 /atexit.h/1.2/Wed Nov 18 20:13:20 2009/-ko/
 /atof.c/1.3/Wed Nov 18 20:13:20 2009/-ko/
 /atoff.c/1.2/Wed Nov 18 20:13:20 2009/-ko/
@@ -74,7 +73,6 @@
 /mstats.c/1.6/Wed Nov 18 20:13:20 2009/-ko/
 /mtrim.c/1.2/Wed Nov 18 20:13:20 2009/-ko/
 /nrand48.c/1.1/Wed Nov 18 20:13:20 2009//
-/on_exit.c/1.4/Wed Nov 18 20:13:20 2009//
 /putenv.c/1.3/Wed Nov 18 20:13:20 2009/-ko/
 /putenv_r.c/1.4/Wed Nov 18 20:13:20 2009/-ko/
 /rand.c/1.6/Wed Nov 18 20:13:20 2009/-ko/
@@ -116,4 +114,6 @@
 /wctob.c/1.4/Wed Dec  9 22:25:21 2009//
 /wctomb.c/1.5/Wed Dec  9 22:25:21 2009/-ko/
 /wctomb_r.c/1.16/Wed Dec  9 22:25:21 2009/-ko/
+/atexit.c/1.8/Wed Jan  6 04:54:22 2010/-ko/
+/on_exit.c/1.5/Wed Jan  6 04:54:22 2010//
 D

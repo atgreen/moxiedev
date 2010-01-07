@@ -14,7 +14,6 @@
 /arm-call1.s/1.1/Wed Nov 18 20:13:18 2009//
 /arm-call2.s/1.1/Wed Nov 18 20:13:18 2009//
 /arm-dyn.ld/1.4/Wed Dec  9 22:25:09 2009//
-/arm-elf.exp/1.65/Wed Dec  9 22:25:09 2009//
 /arm-lib-plt32.d/1.7/Wed Nov 18 20:13:18 2009//
 /arm-lib-plt32.r/1.2/Wed Nov 18 20:13:18 2009//
 /arm-lib-plt32.s/1.1/Wed Nov 18 20:13:18 2009//
@@ -281,4 +280,7 @@
 /vxworks2-static.sd/1.1/Wed Nov 18 20:13:19 2009//
 /vxworks2.s/1.1/Wed Nov 18 20:13:19 2009//
 /vxworks2.sd/1.1/Wed Nov 18 20:13:19 2009//
+/arm-elf.exp/1.67/Wed Jan  6 04:54:11 2010//
+/reloc-boundaries.d/1.1/Mon Dec 28 18:55:16 2009//
+/reloc-boundaries.s/1.1/Mon Dec 28 18:55:16 2009//
 D

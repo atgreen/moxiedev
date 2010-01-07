@@ -1,6 +1,6 @@
 /* Low level interface to ptrace, for the remote server for GDB.
    Copyright (C) 1995, 1996, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005,
-   2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -19,9 +19,6 @@
 
 #include "server.h"
 #include "linux-low.h"
-#include "ansidecl.h" /* For ATTRIBUTE_PACKED, must be bug in external.h.  */
-#include "elf/common.h"
-#include "elf/external.h"
 
 #include <sys/wait.h>
 #include <stdio.h>
@@ -42,6 +39,13 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/vfs.h>
+#ifndef ELFMAG0
+/* Don't include <linux/elf.h> here.  If it got included by gdb_proc_service.h
+   then ELFMAG0 will have been defined.  If it didn't get included by
+   gdb_proc_service.h then including it will likely introduce a duplicate
+   definition of elf_fpregset_t.  */
+#include <elf.h>
+#endif
 
 #ifndef SPUFS_MAGIC
 #define SPUFS_MAGIC 0x23c9b64e
@@ -134,7 +138,6 @@ static void stop_all_lwps (void);
 static int linux_wait_for_event (ptid_t ptid, int *wstat, int options);
 static int check_removed_breakpoint (struct lwp_info *event_child);
 static void *add_lwp (ptid_t ptid);
-static int my_waitpid (int pid, int *status, int flags);
 static int linux_stopped_by_watchpoint (void);
 static void mark_lwp_dead (struct lwp_info *lwp, int wstat);
 
@@ -192,7 +195,7 @@ linux_child_pid_to_exec_file (int pid)
 /* Return non-zero if HEADER is a 64-bit ELF file.  */
 
 static int
-elf_64_header_p (const Elf64_External_Ehdr *header)
+elf_64_header_p (const Elf64_Ehdr *header)
 {
   return (header->e_ident[EI_MAG0] == ELFMAG0
           && header->e_ident[EI_MAG1] == ELFMAG1
@@ -208,7 +211,7 @@ elf_64_header_p (const Elf64_External_Ehdr *header)
 int
 elf_64_file_p (const char *file)
 {
-  Elf64_External_Ehdr header;
+  Elf64_Ehdr header;
   int fd;
 
   fd = open (file, O_RDONLY);
@@ -259,17 +262,88 @@ linux_add_process (int pid, int attached)
    also freeing all private data.  */
 
 static void
-linux_remove_process (struct process_info *process, int detaching)
+linux_remove_process (struct process_info *process)
 {
   struct process_info_private *priv = process->private;
-
-#ifdef USE_THREAD_DB
-  thread_db_free (process, detaching);
-#endif
 
   free (priv->arch_private);
   free (priv);
   remove_process (process);
+}
+
+/* Wrapper function for waitpid which handles EINTR, and emulates
+   __WALL for systems where that is not available.  */
+
+static int
+my_waitpid (int pid, int *status, int flags)
+{
+  int ret, out_errno;
+
+  if (debug_threads)
+    fprintf (stderr, "my_waitpid (%d, 0x%x)\n", pid, flags);
+
+  if (flags & __WALL)
+    {
+      sigset_t block_mask, org_mask, wake_mask;
+      int wnohang;
+
+      wnohang = (flags & WNOHANG) != 0;
+      flags &= ~(__WALL | __WCLONE);
+      flags |= WNOHANG;
+
+      /* Block all signals while here.  This avoids knowing about
+	 LinuxThread's signals.  */
+      sigfillset (&block_mask);
+      sigprocmask (SIG_BLOCK, &block_mask, &org_mask);
+
+      /* ... except during the sigsuspend below.  */
+      sigemptyset (&wake_mask);
+
+      while (1)
+	{
+	  /* Since all signals are blocked, there's no need to check
+	     for EINTR here.  */
+	  ret = waitpid (pid, status, flags);
+	  out_errno = errno;
+
+	  if (ret == -1 && out_errno != ECHILD)
+	    break;
+	  else if (ret > 0)
+	    break;
+
+	  if (flags & __WCLONE)
+	    {
+	      /* We've tried both flavors now.  If WNOHANG is set,
+		 there's nothing else to do, just bail out.  */
+	      if (wnohang)
+		break;
+
+	      if (debug_threads)
+		fprintf (stderr, "blocking\n");
+
+	      /* Block waiting for signals.  */
+	      sigsuspend (&wake_mask);
+	    }
+
+	  flags ^= __WCLONE;
+	}
+
+      sigprocmask (SIG_SETMASK, &org_mask, NULL);
+    }
+  else
+    {
+      do
+	ret = waitpid (pid, status, flags);
+      while (ret == -1 && errno == EINTR);
+      out_errno = errno;
+    }
+
+  if (debug_threads)
+    fprintf (stderr, "my_waitpid (%d, 0x%x): status(%x), %d\n",
+	     pid, flags, status ? *status : -1, ret);
+
+  errno = out_errno;
+  return ret;
 }
 
 /* Handle a GNU/Linux extended wait response.  If we see a clone
@@ -662,8 +736,11 @@ linux_kill (int pid)
       lwpid = linux_wait_for_event (lwp->head.id, &wstat, __WALL);
     } while (lwpid > 0 && WIFSTOPPED (wstat));
 
+#ifdef USE_THREAD_DB
+  thread_db_free (process, 0);
+#endif
   delete_lwp (lwp);
-  linux_remove_process (process, 0);
+  linux_remove_process (process);
   return 0;
 }
 
@@ -747,12 +824,16 @@ linux_detach (int pid)
   if (process == NULL)
     return -1;
 
+#ifdef USE_THREAD_DB
+  thread_db_free (process, 1);
+#endif
+
   current_inferior =
     (struct thread_info *) find_inferior (&all_threads, any_thread_of, &pid);
 
   delete_all_breakpoints ();
   find_inferior (&all_threads, linux_detach_one_lwp, &pid);
-  linux_remove_process (process, 1);
+  linux_remove_process (process);
   return 0;
 }
 
@@ -1377,8 +1458,11 @@ retry:
 	  int pid = pid_of (lwp);
 	  struct process_info *process = find_process_pid (pid);
 
+#ifdef USE_THREAD_DB
+	  thread_db_free (process, 0);
+#endif
 	  delete_lwp (lwp);
-	  linux_remove_process (process, 0);
+	  linux_remove_process (process);
 
 	  current_inferior = NULL;
 
@@ -1498,25 +1582,29 @@ linux_wait (ptid_t ptid,
   return event_ptid;
 }
 
-/* Send a signal to an LWP.  For LinuxThreads, kill is enough; however, if
-   thread groups are in use, we need to use tkill.  */
+/* Send a signal to an LWP.  */
 
 static int
 kill_lwp (unsigned long lwpid, int signo)
 {
-  static int tkill_failed;
+  /* Use tkill, if possible, in case we are using nptl threads.  If tkill
+     fails, then we are not using nptl threads and we should be using kill.  */
 
-  errno = 0;
+#ifdef __NR_tkill
+  {
+    static int tkill_failed;
 
-#ifdef SYS_tkill
-  if (!tkill_failed)
-    {
-      int ret = syscall (SYS_tkill, lwpid, signo);
-      if (errno != ENOSYS)
-	return ret;
-      errno = 0;
-      tkill_failed = 1;
-    }
+    if (!tkill_failed)
+      {
+	int ret;
+
+	errno = 0;
+	ret = syscall (__NR_tkill, lwpid, signo);
+	if (errno != ENOSYS)
+	  return ret;
+	tkill_failed = 1;
+      }
+  }
 #endif
 
   return kill (lwpid, signo);
@@ -2357,7 +2445,7 @@ linux_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
 #ifdef HAVE_PREAD64
       if (pread64 (fd, myaddr, len, memaddr) != len)
 #else
-      if (lseek (fd, memaddr, SEEK_SET) == -1 || read (fd, memaddr, len) != len)
+      if (lseek (fd, memaddr, SEEK_SET) == -1 || read (fd, myaddr, len) != len)
 #endif
 	{
 	  close (fd);
@@ -2473,81 +2561,6 @@ linux_tracefork_child (void *arg)
 	 CLONE_VM | SIGCHLD, NULL);
 #endif
   _exit (0);
-}
-
-/* Wrapper function for waitpid which handles EINTR, and emulates
-   __WALL for systems where that is not available.  */
-
-static int
-my_waitpid (int pid, int *status, int flags)
-{
-  int ret, out_errno;
-
-  if (debug_threads)
-    fprintf (stderr, "my_waitpid (%d, 0x%x)\n", pid, flags);
-
-  if (flags & __WALL)
-    {
-      sigset_t block_mask, org_mask, wake_mask;
-      int wnohang;
-
-      wnohang = (flags & WNOHANG) != 0;
-      flags &= ~(__WALL | __WCLONE);
-      flags |= WNOHANG;
-
-      /* Block all signals while here.  This avoids knowing about
-	 LinuxThread's signals.  */
-      sigfillset (&block_mask);
-      sigprocmask (SIG_BLOCK, &block_mask, &org_mask);
-
-      /* ... except during the sigsuspend below.  */
-      sigemptyset (&wake_mask);
-
-      while (1)
-	{
-	  /* Since all signals are blocked, there's no need to check
-	     for EINTR here.  */
-	  ret = waitpid (pid, status, flags);
-	  out_errno = errno;
-
-	  if (ret == -1 && out_errno != ECHILD)
-	    break;
-	  else if (ret > 0)
-	    break;
-
-	  if (flags & __WCLONE)
-	    {
-	      /* We've tried both flavors now.  If WNOHANG is set,
-		 there's nothing else to do, just bail out.  */
-	      if (wnohang)
-		break;
-
-	      if (debug_threads)
-		fprintf (stderr, "blocking\n");
-
-	      /* Block waiting for signals.  */
-	      sigsuspend (&wake_mask);
-	    }
-
-	  flags ^= __WCLONE;
-	}
-
-      sigprocmask (SIG_SETMASK, &org_mask, NULL);
-    }
-  else
-    {
-      do
-	ret = waitpid (pid, status, flags);
-      while (ret == -1 && errno == EINTR);
-      out_errno = errno;
-    }
-
-  if (debug_threads)
-    fprintf (stderr, "my_waitpid (%d, 0x%x): status(%x), %d\n",
-	     pid, flags, status ? *status : -1, ret);
-
-  errno = out_errno;
-  return ret;
 }
 
 /* Determine if PTRACE_O_TRACEFORK can be used to follow fork events.  Make

@@ -1,5 +1,5 @@
 /* Support for printing Pascal types for GDB, the GNU debugger.
-   Copyright (C) 2000, 2001, 2002, 2006, 2007, 2008, 2009
+   Copyright (C) 2000, 2001, 2002, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -267,10 +267,9 @@ pascal_type_print_varspec_prefix (struct type *type, struct ui_file *stream,
       fprintf_filtered (stream, "array ");
       if (TYPE_LENGTH (TYPE_TARGET_TYPE (type)) > 0
 	&& !TYPE_ARRAY_UPPER_BOUND_IS_UNDEFINED (type))
-	fprintf_filtered (stream, "[%d..%d] ",
-			  TYPE_ARRAY_LOWER_BOUND_VALUE (type),
-			  TYPE_ARRAY_UPPER_BOUND_VALUE (type)
-	  );
+	fprintf_filtered (stream, "[%s..%s] ",
+			  plongest (TYPE_ARRAY_LOWER_BOUND_VALUE (type)),
+			  plongest (TYPE_ARRAY_UPPER_BOUND_VALUE (type)));
       fprintf_filtered (stream, "of ");
       break;
 

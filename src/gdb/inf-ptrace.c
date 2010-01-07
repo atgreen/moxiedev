@@ -1,7 +1,7 @@
 /* Low-level child interface to ptrace.
 
    Copyright (C) 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998,
-   1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2009
+   1999, 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -67,8 +67,8 @@ inf_ptrace_follow_fork (struct target_ops *ops, int follow_child)
       child_inf = add_inferior (fpid);
       child_inf->attach_flag = parent_inf->attach_flag;
       copy_terminal_info (child_inf, parent_inf);
-      inf->pspace = parent_inf->pspace;
-      inf->pspace = parent_inf->aspace;
+      child_inf->pspace = parent_inf->pspace;
+      child_inf->aspace = parent_inf->aspace;
 
       /* Before detaching from the parent, remove all breakpoints from
 	 it.  */

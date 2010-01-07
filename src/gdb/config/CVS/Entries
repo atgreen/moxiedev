@@ -15,40 +15,5 @@ D/sh////
 D/sparc////
 D/vax////
 D/xtensa////
-D/a29k////
-D/arc////
-D/avr////
-D/convex////
-D/cris////
-D/d10v////
-D/d30v////
-D/fr30////
-D/frv////
-D/gould////
-D/h8300////
-D/h8500////
-D/i960////
-D/iq2000////
-D/m32c////
-D/m68hc11////
-D/mcore////
-D/mep////
-D/mn10200////
-D/mn10300////
-D/ms1////
-D/mt////
-D/none////
-D/ns32k////
-D/pyr////
-D/romp////
-D/score////
-D/sh64////
-D/spu////
-D/tahoe////
-D/tic80////
-D/v850////
-D/w65////
-D/xstormy16////
-D/z8k////
-/nm-linux.h/1.33/Wed Nov 18 20:13:13 2009/-ko/
-/nm-nto.h/1.5/Wed Nov 18 20:13:13 2009//
+/nm-linux.h/1.34/Wed Jan  6 04:54:03 2010/-ko/
+/nm-nto.h/1.6/Wed Jan  6 04:54:03 2010//

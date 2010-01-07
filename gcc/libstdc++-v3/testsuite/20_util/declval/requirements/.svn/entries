@@ -1,14 +1,14 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util/declval/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-11-13T02:25:12.741290Z
-154140
+2009-12-31T14:04:23.397841Z
+155536
 paolo
 
 
@@ -66,10 +66,10 @@ file
 
 
 
-2009-12-07T15:33:19.188950Z
-e125afe517eb379dcd61680c34bd1ace
-2009-11-13T02:25:12.741290Z
-154140
+2010-01-06T00:59:51.928644Z
+be09ff8b1ea984973f41b0fac3578f6e
+2009-12-31T14:04:23.397841Z
+155536
 paolo
 
 

@@ -1,7 +1,7 @@
 /* DWARF 2 debugging format support for GDB.
 
    Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-                 2004, 2005, 2006, 2007, 2008, 2009
+                 2004, 2005, 2006, 2007, 2008, 2009, 2010
                  Free Software Foundation, Inc.
 
    Adapted by Gary Funck (gary@intrepid.com), Intrepid Technology,
@@ -549,8 +549,8 @@ struct attribute
       {
 	char *str;
 	struct dwarf_block *blk;
-	unsigned long unsnd;
-	long int snd;
+	ULONGEST unsnd;
+	LONGEST snd;
 	CORE_ADDR addr;
 	struct signatured_type *signatured_type;
       }
@@ -1065,7 +1065,7 @@ static int is_ref_attr (struct attribute *);
 
 static unsigned int dwarf2_get_ref_die_offset (struct attribute *);
 
-static int dwarf2_get_attr_constant_value (struct attribute *, int);
+static LONGEST dwarf2_get_attr_constant_value (struct attribute *, int);
 
 static struct die_info *follow_die_ref_or_sig (struct die_info *,
 					       struct attribute *,
@@ -5879,6 +5879,11 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
      the default value DW_CC_normal.  */
   attr = dwarf2_attr (die, DW_AT_calling_convention, cu);
   TYPE_CALLING_CONVENTION (ftype) = attr ? DW_UNSND (attr) : DW_CC_normal;
+
+  /* We need to add the subroutine type to the die immediately so
+     we don't infinitely recurse when dealing with parameters
+     declared as the same subroutine type. */
+  set_die_type (die, ftype, cu);
   
   if (die->child != NULL)
     {
@@ -5926,7 +5931,7 @@ read_subroutine_type (struct die_info *die, struct dwarf2_cu *cu)
 	}
     }
 
-  return set_die_type (die, ftype, cu);
+  return ftype;
 }
 
 static struct type *
@@ -6041,9 +6046,10 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
   struct type *base_type;
   struct type *range_type;
   struct attribute *attr;
-  int low = 0;
-  int high = -1;
+  LONGEST low = 0;
+  LONGEST high = -1;
   char *name;
+  LONGEST negative_mask;
   
   base_type = die_type (die, cu);
   if (TYPE_CODE (base_type) == TYPE_CODE_VOID)
@@ -6089,6 +6095,13 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
       else
         high = dwarf2_get_attr_constant_value (attr, 1);
     }
+
+  negative_mask = 
+    (LONGEST) -1 << (TYPE_LENGTH (base_type) * TARGET_CHAR_BIT - 1);
+  if (!TYPE_UNSIGNED (base_type) && (low & negative_mask))
+    low |= negative_mask;
+  if (!TYPE_UNSIGNED (base_type) && (high & negative_mask))
+    high |= negative_mask;
 
   range_type = create_range_type (NULL, base_type, low, high);
 
@@ -7127,8 +7140,8 @@ read_attribute_value (struct attribute *attr, unsigned form,
     {
       complaint
         (&symfile_complaints,
-         _("Suspicious DW_AT_byte_size value treated as zero instead of 0x%lx"),
-         DW_UNSND (attr));
+         _("Suspicious DW_AT_byte_size value treated as zero instead of %s"),
+         hex_string (DW_UNSND (attr)));
       DW_UNSND (attr) = 0;
     }
 
@@ -8450,8 +8463,15 @@ new_symbol (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
 	      if (attr2 && (DW_UNSND (attr2) != 0)
 		  && dwarf2_attr (die, DW_AT_type, cu) != NULL)
 		{
+		  struct pending **list_to_add;
+
+		  /* A variable with DW_AT_external is never static, but it
+		     may be block-scoped.  */
+		  list_to_add = (cu->list_in_scope == &file_symbols
+				 ? &global_symbols : cu->list_in_scope);
+
 		  SYMBOL_CLASS (sym) = LOC_UNRESOLVED;
-		  add_symbol_to_list (sym, cu->list_in_scope);
+		  add_symbol_to_list (sym, list_to_add);
 		}
 	      else if (!die_is_declaration (die, cu))
 		{
@@ -10107,7 +10127,8 @@ dump_die_shallow (struct ui_file *f, int indent, struct die_info *die)
 	case DW_FORM_data8:
 	case DW_FORM_udata:
 	case DW_FORM_sdata:
-	  fprintf_unfiltered (f, "constant: %ld", DW_UNSND (&die->attrs[i]));
+	  fprintf_unfiltered (f, "constant: %s",
+			      pulongest (DW_UNSND (&die->attrs[i])));
 	  break;
 	case DW_FORM_sig8:
 	  if (DW_SIGNATURED_TYPE (&die->attrs[i]) != NULL)
@@ -10230,10 +10251,10 @@ dwarf2_get_ref_die_offset (struct attribute *attr)
   return 0;
 }
 
-/* Return the constant value held by the given attribute.  Return -1
-   if the value held by the attribute is not constant.  */
+/* Return the constant value held by ATTR.  Return DEFAULT_VALUE if
+ * the value held by the attribute is not constant.  */
 
-static int
+static LONGEST
 dwarf2_get_attr_constant_value (struct attribute *attr, int default_value)
 {
   if (attr->form == DW_FORM_sdata)

@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/29_atomics/atomic_integral/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2009-12-21T19:00:34.247142Z
+155377
+bkoz
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:50:33.000000Z
-cbd60b6d4540c6c1230ad2adef2a244a
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-01-06T00:59:49.401654Z
+8b7e5dab51eeb14864dda90cedba5231
+2009-12-21T19:00:34.247142Z
+155377
+bkoz
 
 
 
@@ -58,7 +58,7 @@ jakub
 
 
 
-1122
+1117
 
 trivial.cc
 file
@@ -66,11 +66,11 @@ file
 
 
 
-2009-04-24T17:50:33.000000Z
-2b5e6fb89e45fbd8e6aa5dc29d525e75
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-01-06T00:59:49.402645Z
+02971059d0fa0a63a2619066f57b54a4
+2009-12-21T19:00:34.247142Z
+155377
+bkoz
 
 
 
@@ -92,5 +92,5 @@ jakub
 
 
 
-1030
+1024
 

@@ -785,6 +785,14 @@ AC_SUBST(TARGET_SYSTEM_ROOT)
 AC_SUBST(TARGET_SYSTEM_ROOT_DEFINE)
 AC_SUBST(CROSS_SYSTEM_HEADER_DIR)
 
+AC_ARG_WITH(specs,
+  [AS_HELP_STRING([--with-specs=SPECS],
+                  [add SPECS to driver command-line processing])],
+  [CONFIGURE_SPECS=$withval],
+  [CONFIGURE_SPECS=]
+)
+AC_SUBST(CONFIGURE_SPECS)
+
 # Build with intermodule optimisations
 AC_ARG_ENABLE(intermodule,
 [  --enable-intermodule    build the compiler in one step],
@@ -2111,6 +2119,20 @@ gcc_GAS_CHECK_FEATURE([.hidden], gcc_cv_as_hidden,
 [	.hidden foobar
 foobar:])
 
+changequote(,)dnl
+if test $in_tree_ld != yes ; then
+  ld_ver=`$gcc_cv_ld --version 2>/dev/null | sed 1q`
+  if echo "$ld_ver" | grep GNU > /dev/null; then
+    ld_vers=`echo $ld_ver | sed -n \
+	-e 's,^.*[	 ]\([0-9][0-9]*\.[0-9][0-9]*.*\)$,\1,p'`
+    ld_date=`echo $ld_ver | sed -n 's,^.*\([2-9][0-9][0-9][0-9]\)[-]*\([01][0-9]\)[-]*\([0-3][0-9]\).*$,\1\2\3,p'`
+    ld_vers_major=`expr "$ld_vers" : '\([0-9]*\)'`
+    ld_vers_minor=`expr "$ld_vers" : '[0-9]*\.\([0-9]*\)'`
+    ld_vers_patch=`expr "$ld_vers" : '[0-9]*\.[0-9]*\.\([0-9]*\)'`
+  fi
+fi
+changequote([,])dnl
+
 AC_CACHE_CHECK(linker for .hidden support, gcc_cv_ld_hidden,
 [if test $in_tree_ld = yes ; then
   gcc_cv_ld_hidden=no
@@ -2121,14 +2143,7 @@ AC_CACHE_CHECK(linker for .hidden support, gcc_cv_ld_hidden,
 else
 changequote(,)dnl
   gcc_cv_ld_hidden=yes
-  ld_ver=`$gcc_cv_ld --version 2>/dev/null | sed 1q`
   if echo "$ld_ver" | grep GNU > /dev/null; then
-    ld_vers=`echo $ld_ver | sed -n \
-	-e 's,^.*[	 ]\([0-9][0-9]*\.[0-9][0-9]*.*\)$,\1,p'`
-    ld_date=`echo $ld_ver | sed -n 's,^.*\([2-9][0-9][0-9][0-9]\)[-]*\([01][0-9]\)[-]*\([0-3][0-9]\).*$,\1\2\3,p'`
-    ld_vers_major=`expr "$ld_vers" : '\([0-9]*\)'`
-    ld_vers_minor=`expr "$ld_vers" : '[0-9]*\.\([0-9]*\)'`
-    ld_vers_patch=`expr "$ld_vers" : '[0-9]*\.[0-9]*\.\([0-9]*\)'`
     if test 0"$ld_date" -lt 20020404; then
       if test -n "$ld_date"; then
 	# If there was date string, but was earlier than 2002-04-04, fail
@@ -4119,8 +4134,8 @@ done
 rm -f Make-hooks
 touch Make-hooks
 target_list="all.cross start.encap rest.encap tags \
-	install-common install-man install-info install-pdf dvi pdf \
-	html uninstall info man srcextra srcman srcinfo \
+	install-common install-man install-info install-pdf install-html dvi \
+	pdf html uninstall info man srcextra srcman srcinfo \
 	mostlyclean clean distclean maintainer-clean install-plugin"
 
 for t in $target_list
@@ -4258,10 +4273,6 @@ fi
 
 AC_ARG_VAR(GMPLIBS,[How to link GMP])
 AC_ARG_VAR(GMPINC,[How to find GMP include files])
-
-case "${GMPLIBS}" in
-  *-lmpc*) AC_DEFINE(HAVE_mpc, 1, [Define if mpc is in use.]) ;;
-esac
 
 AC_ARG_VAR(PPLLIBS,[How to link PPL])
 AC_ARG_VAR(PPLINC,[How to find PPL include files])

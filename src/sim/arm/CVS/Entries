@@ -1,6 +1,5 @@
 /COPYING/1.2/Wed Nov 18 20:13:22 2009/-ko/
 /ChangeLog/1.104/Wed Nov 18 20:13:22 2009/-ko/
-/Makefile.in/1.14/Wed Nov 18 20:13:22 2009/-ko/
 /README/1.1/Wed Nov 18 20:13:22 2009//
 /armcopro.c/1.14/Wed Nov 18 20:13:22 2009/-ko/
 /armdefs.h/1.14/Wed Nov 18 20:13:22 2009/-ko/
@@ -27,13 +26,14 @@
 /dbg_rdi.h/1.3/Wed Nov 18 20:13:22 2009/-ko/
 /gdbhost.c/1.2/Wed Nov 18 20:13:22 2009/-ko/
 /gdbhost.h/1.2/Wed Nov 18 20:13:22 2009/-ko/
-/iwmmxt.c/1.8/Wed Nov 18 20:13:22 2009//
-/iwmmxt.h/1.6/Wed Nov 18 20:13:22 2009//
 /kid.c/1.2/Wed Nov 18 20:13:22 2009/-ko/
 /main.c/1.2/Wed Nov 18 20:13:22 2009/-ko/
-/maverick.c/1.6/Wed Nov 18 20:13:22 2009//
 /parent.c/1.2/Wed Nov 18 20:13:22 2009/-ko/
 /tconfig.in/1.1.1.1/Wed Nov 18 20:13:22 2009/-ko/
 /thumbemu.c/1.7/Wed Nov 18 20:13:22 2009/-ko/
-/wrapper.c/1.37/Wed Nov 18 20:13:22 2009/-ko/
+/Makefile.in/1.15/Wed Jan  6 04:54:33 2010/-ko/
+/iwmmxt.c/1.9/Wed Jan  6 04:54:33 2010//
+/iwmmxt.h/1.7/Wed Jan  6 04:54:33 2010//
+/maverick.c/1.7/Wed Jan  6 04:54:33 2010//
+/wrapper.c/1.38/Wed Jan  6 04:54:33 2010/-ko/
 D

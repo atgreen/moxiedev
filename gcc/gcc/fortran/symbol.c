@@ -2476,7 +2476,7 @@ select_type_insert_tmp (gfc_symtree **st)
 {
   gfc_select_type_stack *stack = select_type_stack;
   for (; stack; stack = stack->prev)
-    if ((*st)->n.sym == stack->selector)
+    if ((*st)->n.sym == stack->selector && stack->tmp)
       *st = stack->tmp;
 }
 
@@ -4681,6 +4681,7 @@ gfc_build_class_symbol (gfc_typespec *ts, symbol_attribute *attr,
       c->ts.type = BT_DERIVED;
       c->attr.access = ACCESS_PRIVATE;
       c->ts.u.derived = ts->u.derived;
+      c->attr.class_pointer = attr->pointer;
       c->attr.pointer = attr->pointer || attr->dummy;
       c->attr.allocatable = attr->allocatable;
       c->attr.dimension = attr->dimension;
@@ -4747,6 +4748,7 @@ gfc_find_derived_vtab (gfc_symbol *derived)
 	  vtab->attr.target = 1;
 	  vtab->attr.save = SAVE_EXPLICIT;
 	  vtab->attr.vtab = 1;
+	  vtab->attr.access = ACCESS_PRIVATE;
 	  vtab->refs++;
 	  gfc_set_sym_referenced (vtab);
 	  sprintf (name, "vtype$%s", derived->name);
@@ -4763,6 +4765,7 @@ gfc_find_derived_vtab (gfc_symbol *derived)
 		return NULL;
 	      vtype->refs++;
 	      gfc_set_sym_referenced (vtype);
+	      vtype->attr.access = ACCESS_PRIVATE;
 
 	      /* Add component '$hash'.  */
 	      if (gfc_add_component (vtype, "$hash", &c) == FAILURE)

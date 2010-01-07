@@ -908,16 +908,24 @@ struct fileinfo
   unsigned int size;
 };
 
+struct line_sequence
+{
+  bfd_vma               low_pc;
+  struct line_sequence* prev_sequence;
+  struct line_info*     last_line;  /* Largest VMA.  */
+};
+
 struct line_info_table
 {
-  bfd* abfd;
-  unsigned int num_files;
-  unsigned int num_dirs;
-  char *comp_dir;
-  char **dirs;
-  struct fileinfo* files;
-  struct line_info* last_line;  /* largest VMA */
-  struct line_info* lcl_head;   /* local head; used in 'add_line_info' */
+  bfd*                  abfd;
+  unsigned int          num_files;
+  unsigned int          num_dirs;
+  unsigned int          num_sequences;
+  char *                comp_dir;
+  char **               dirs;
+  struct fileinfo*      files;
+  struct line_sequence* sequences;
+  struct line_info*     lcl_head;   /* Local head; used in 'add_line_info'.  */
 };
 
 /* Remember some information about each function.  If the function is
@@ -981,6 +989,7 @@ add_line_info (struct line_info_table *table,
 	       int end_sequence)
 {
   bfd_size_type amt = sizeof (struct line_info);
+  struct line_sequence* seq = table->sequences;
   struct line_info* info = (struct line_info *) bfd_alloc (table->abfd, amt);
 
   /* Set member data of 'info'.  */
@@ -1008,28 +1017,39 @@ add_line_info (struct line_info_table *table,
        p...z a...j  (where a < j < p < z)
 
      Note: table->lcl_head is used to head an *actual* or *possible*
-     sequence within the list (such as a...j) that is not directly
+     sub-sequence within the list (such as a...j) that is not directly
      headed by table->last_line
 
      Note: we may receive duplicate entries from 'decode_line_info'.  */
 
-  if (table->last_line
-      && table->last_line->address == address
-      && table->last_line->end_sequence == end_sequence)
+  if (seq
+      && seq->last_line->address == address
+      && seq->last_line->end_sequence == end_sequence)
     {
       /* We only keep the last entry with the same address and end
 	 sequence.  See PR ld/4986.  */
-      if (table->lcl_head == table->last_line)
+      if (table->lcl_head == seq->last_line)
 	table->lcl_head = info;
-      info->prev_line = table->last_line->prev_line;
-      table->last_line = info;
+      info->prev_line = seq->last_line->prev_line;
+      seq->last_line = info;
     }
-  else if (!table->last_line
-      || new_line_sorts_after (info, table->last_line))
+  else if (!seq || seq->last_line->end_sequence)
     {
-      /* Normal case: add 'info' to the beginning of the list */
-      info->prev_line = table->last_line;
-      table->last_line = info;
+      /* Start a new line sequence.  */
+      amt = sizeof (struct line_sequence);
+      seq = (struct line_sequence *) bfd_malloc (amt);
+      seq->low_pc = address;
+      seq->prev_sequence = table->sequences;
+      seq->last_line = info;
+      table->lcl_head = info;
+      table->sequences = seq;
+      table->num_sequences++;
+    }
+  else if (new_line_sorts_after (info, seq->last_line))
+    {
+      /* Normal case: add 'info' to the beginning of the current sequence.  */
+      info->prev_line = seq->last_line;
+      seq->last_line = info;
 
       /* lcl_head: initialize to head a *possible* sequence at the end.  */
       if (!table->lcl_head)
@@ -1045,9 +1065,9 @@ add_line_info (struct line_info_table *table,
     }
   else
     {
-      /* Abnormal and hard: Neither 'last_line' nor 'lcl_head' are valid
-	 heads for 'info'.  Reset 'lcl_head'.  */
-      struct line_info* li2 = table->last_line; /* always non-NULL */
+      /* Abnormal and hard: Neither 'last_line' nor 'lcl_head'
+	 are valid heads for 'info'.  Reset 'lcl_head'.  */
+      struct line_info* li2 = seq->last_line; /* Always non-NULL.  */
       struct line_info* li1 = li2->prev_line;
 
       while (li1)
@@ -1062,6 +1082,8 @@ add_line_info (struct line_info_table *table,
       table->lcl_head = li2;
       info->prev_line = table->lcl_head->prev_line;
       table->lcl_head->prev_line = info;
+      if (address < seq->low_pc)
+        seq->low_pc = address;
     }
 }
 
@@ -1087,40 +1109,40 @@ concat_filename (struct line_info_table *table, unsigned int file)
 
   if (!IS_ABSOLUTE_PATH (filename))
     {
-      char *dirname = NULL;
-      char *subdirname = NULL;
+      char *dir_name = NULL;
+      char *subdir_name = NULL;
       char *name;
       size_t len;
 
       if (table->files[file - 1].dir)
-	subdirname = table->dirs[table->files[file - 1].dir - 1];
+	subdir_name = table->dirs[table->files[file - 1].dir - 1];
 
-      if (!subdirname || !IS_ABSOLUTE_PATH (subdirname))
-	dirname = table->comp_dir;
+      if (!subdir_name || !IS_ABSOLUTE_PATH (subdir_name))
+	dir_name = table->comp_dir;
 
-      if (!dirname)
+      if (!dir_name)
 	{
-	  dirname = subdirname;
-	  subdirname = NULL;
+	  dir_name = subdir_name;
+	  subdir_name = NULL;
 	}
 
-      if (!dirname)
+      if (!dir_name)
 	return strdup (filename);
 
-      len = strlen (dirname) + strlen (filename) + 2;
+      len = strlen (dir_name) + strlen (filename) + 2;
 
-      if (subdirname)
+      if (subdir_name)
 	{
-	  len += strlen (subdirname) + 1;
+	  len += strlen (subdir_name) + 1;
 	  name = (char *) bfd_malloc (len);
 	  if (name)
-	    sprintf (name, "%s/%s/%s", dirname, subdirname, filename);
+	    sprintf (name, "%s/%s/%s", dir_name, subdir_name, filename);
 	}
       else
 	{
 	  name = (char *) bfd_malloc (len);
 	  if (name)
-	    sprintf (name, "%s/%s", dirname, filename);
+	    sprintf (name, "%s/%s", dir_name, filename);
 	}
 
       return name;
@@ -1169,6 +1191,95 @@ arange_add (bfd *abfd, struct arange *first_arange, bfd_vma low_pc, bfd_vma high
   first_arange->next = arange;
 }
 
+/* Compare function for line sequences.  */
+
+static int
+compare_sequences (const void* a, const void* b)
+{
+  const struct line_sequence* seq1 = a;
+  const struct line_sequence* seq2 = b;
+
+  /* Sort by low_pc as the primary key.  */
+  if (seq1->low_pc < seq2->low_pc)
+    return -1;
+  if (seq1->low_pc > seq2->low_pc)
+    return 1;
+
+  /* If low_pc values are equal, sort in reverse order of
+     high_pc, so that the largest region comes first.  */
+  if (seq1->last_line->address < seq2->last_line->address)
+    return 1;
+  if (seq1->last_line->address > seq2->last_line->address)
+    return -1;
+
+  return 0;
+}
+
+/* Sort the line sequences for quick lookup.  */
+
+static void
+sort_line_sequences (struct line_info_table* table)
+{
+  bfd_size_type amt;
+  struct line_sequence* sequences;
+  struct line_sequence* seq;
+  unsigned int n = 0;
+  unsigned int num_sequences = table->num_sequences;
+  bfd_vma last_high_pc;
+
+  if (num_sequences == 0)
+    return;
+
+  /* Allocate space for an array of sequences.  */
+  amt = sizeof (struct line_sequence) * num_sequences;
+  sequences = (struct line_sequence *) bfd_alloc (table->abfd, amt);
+
+  /* Copy the linked list into the array, freeing the original nodes.  */
+  seq = table->sequences;
+  for (n = 0; n < num_sequences; n++)
+    {
+      struct line_sequence* last_seq = seq;
+
+      BFD_ASSERT (seq);
+      sequences[n].low_pc = seq->low_pc;
+      sequences[n].prev_sequence = NULL;
+      sequences[n].last_line = seq->last_line;
+      seq = seq->prev_sequence;
+      free (last_seq);
+    }
+  BFD_ASSERT (seq == NULL);
+
+  qsort (sequences, n, sizeof (struct line_sequence), compare_sequences);
+
+  /* Make the list binary-searchable by trimming overlapping entries
+     and removing nested entries.  */
+  num_sequences = 1;
+  last_high_pc = sequences[0].last_line->address;
+  for (n = 1; n < table->num_sequences; n++)
+    {
+      if (sequences[n].low_pc < last_high_pc)
+        {
+	  if (sequences[n].last_line->address <= last_high_pc)
+	    /* Skip nested entries.  */
+	    continue;
+
+	  /* Trim overlapping entries.  */
+	  sequences[n].low_pc = last_high_pc;
+        }
+      last_high_pc = sequences[n].last_line->address;
+      if (n > num_sequences)
+        {
+          /* Close up the gap.  */
+          sequences[num_sequences].low_pc = sequences[n].low_pc;
+          sequences[num_sequences].last_line = sequences[n].last_line;
+        }
+      num_sequences++;
+    }
+
+  table->sequences = sequences;
+  table->num_sequences = num_sequences;
+}
+
 /* Decode the line number information for UNIT.  */
 
 static struct line_info_table*
@@ -1200,8 +1311,9 @@ decode_line_info (struct comp_unit *unit, struct dwarf2_debug *stash)
   table->num_dirs = 0;
   table->dirs = NULL;
 
-  table->files = NULL;
-  table->last_line = NULL;
+  table->num_sequences = 0;
+  table->sequences = NULL;
+
   table->lcl_head = NULL;
 
   line_ptr = stash->dwarf_line_buffer + unit->line_offset;
@@ -1468,22 +1580,21 @@ decode_line_info (struct comp_unit *unit, struct dwarf2_debug *stash)
 	      line_ptr += 2;
 	      break;
 	    default:
-	      {
-		int i;
-
-		/* Unknown standard opcode, ignore it.  */
-		for (i = 0; i < lh.standard_opcode_lengths[op_code]; i++)
-		  {
-		    (void) read_unsigned_leb128 (abfd, line_ptr, &bytes_read);
-		    line_ptr += bytes_read;
-		  }
-	      }
+	      /* Unknown standard opcode, ignore it.  */
+	      for (i = 0; i < lh.standard_opcode_lengths[op_code]; i++)
+		{
+		  (void) read_unsigned_leb128 (abfd, line_ptr, &bytes_read);
+		  line_ptr += bytes_read;
+		}
+	      break;
 	    }
 	}
 
       if (filename)
 	free (filename);
     }
+
+  sort_line_sequences (table);
 
   return table;
 }
@@ -1498,28 +1609,48 @@ lookup_address_in_line_info_table (struct line_info_table *table,
 				   const char **filename_ptr,
 				   unsigned int *linenumber_ptr)
 {
-  /* Note: table->last_line should be a descendingly sorted list. */
+  struct line_sequence *seq = NULL;
   struct line_info *each_line;
+  int low, high, mid;
 
-  for (each_line = table->last_line;
-       each_line;
-       each_line = each_line->prev_line)
-    if (addr >= each_line->address)
-      break;
-
-  if (each_line
-      && !(each_line->end_sequence || each_line == table->last_line))
+  /* Binary search the array of sequences.  */
+  low = 0;
+  high = table->num_sequences;
+  while (low < high)
     {
-      *filename_ptr = each_line->filename;
-      *linenumber_ptr = each_line->line;
-      return TRUE;
+      mid = (low + high) / 2;
+      seq = &table->sequences[mid];
+      if (addr < seq->low_pc)
+	high = mid;
+      else if (addr >= seq->last_line->address)
+	low = mid + 1;
+      else
+	break;
+    }
+
+  if (seq && addr >= seq->low_pc && addr < seq->last_line->address)
+    {
+      /* Note: seq->last_line should be a descendingly sorted list.  */
+      for (each_line = seq->last_line;
+           each_line;
+           each_line = each_line->prev_line)
+        if (addr >= each_line->address)
+          break;
+
+      if (each_line
+          && !(each_line->end_sequence || each_line == seq->last_line))
+        {
+          *filename_ptr = each_line->filename;
+          *linenumber_ptr = each_line->line;
+          return TRUE;
+        }
     }
 
   *filename_ptr = NULL;
   return FALSE;
 }
 
-/* Read in the .debug_ranges section for future reference */
+/* Read in the .debug_ranges section for future reference.  */
 
 static bfd_boolean
 read_debug_ranges (struct comp_unit *unit)
@@ -2469,7 +2600,6 @@ place_sections (bfd *abfd, struct dwarf2_debug *stash)
       asection *sect;
       bfd_vma last_vma = 0, last_dwarf = 0;
       bfd_size_type amt;
-      struct adjusted_section *p;
 
       i = 0;
       for (sect = abfd->sections; sect != NULL; sect = sect->next)

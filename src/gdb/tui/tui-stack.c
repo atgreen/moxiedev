@@ -1,7 +1,7 @@
 /* TUI display locator.
 
    Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2006, 2007, 2008,
-   2009 Free Software Foundation, Inc.
+   2009, 2010 Free Software Foundation, Inc.
 
    Contributed by Hewlett-Packard Company.
 
@@ -218,7 +218,8 @@ tui_get_function_from_frame (struct frame_info *fi)
   struct ui_file *stream = tui_sfileopen (256);
   char *p;
 
-  print_address_symbolic (get_frame_pc (fi), stream, demangle, "");
+  print_address_symbolic (get_frame_arch (fi), get_frame_pc (fi),
+			  stream, demangle, "");
   p = tui_file_get_strbuf (stream);
 
   /* Use simple heuristics to isolate the function name.  The symbol

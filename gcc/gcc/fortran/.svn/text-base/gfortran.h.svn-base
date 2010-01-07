@@ -654,6 +654,11 @@ typedef struct
     dummy:1, result:1, assign:1, threadprivate:1, not_always_present:1,
     implied_index:1, subref_array_pointer:1, proc_pointer:1;
 
+  /* For CLASS containers, the pointer attribute is sometimes set internally
+     even though it was not directly specified.  In this case, keep the
+     "real" (original) value here.  */
+  unsigned class_pointer:1;
+
   ENUM_BITFIELD (save_state) save:2;
 
   unsigned data:1,		/* Symbol is named in a DATA statement.  */
@@ -2098,6 +2103,7 @@ typedef struct
   int warn_ampersand;
   int warn_conversion;
   int warn_implicit_interface;
+  int warn_implicit_procedure;
   int warn_line_truncation;
   int warn_surprising;
   int warn_tabs;
@@ -2583,7 +2589,7 @@ bool is_subref_array (gfc_expr *);
 void gfc_add_component_ref (gfc_expr *, const char *);
 gfc_expr *gfc_build_conversion (gfc_expr *);
 void gfc_free_ref_list (gfc_ref *);
-void gfc_type_convert_binary (gfc_expr *);
+void gfc_type_convert_binary (gfc_expr *, int);
 int gfc_is_constant_expr (gfc_expr *);
 gfc_try gfc_simplify_expr (gfc_expr *, int);
 int gfc_has_vector_index (gfc_expr *);

@@ -247,6 +247,10 @@ cgraph_clone_inlined_nodes (struct cgraph_edge *e, bool duplicate,
 	 In that case just go ahead and re-use it.  */
       if (!e->callee->callers->next_caller
 	  && cgraph_can_remove_if_no_direct_calls_p (e->callee)
+	  /* Don't reuse if more than one function shares a comdat group.
+	     If the other function(s) are needed, we need to emit even
+	     this function out of line.  */
+	  && !e->callee->same_comdat_group
 	  && !cgraph_new_nodes)
 	{
 	  gcc_assert (!e->callee->global.inlined_to);
@@ -311,7 +315,8 @@ cgraph_mark_inline_edge (struct cgraph_edge *e, bool update_original,
   e->callee->global.inlined = true;
 
   if (e->callee->callers->next_caller
-      || !cgraph_can_remove_if_no_direct_calls_p (e->callee))
+      || !cgraph_can_remove_if_no_direct_calls_p (e->callee)
+      || e->callee->same_comdat_group)
     duplicate = true;
   cgraph_clone_inlined_nodes (e, true, update_original);
 
@@ -1854,10 +1859,10 @@ compute_inline_parameters (struct cgraph_node *node)
   node->global.stack_frame_offset = 0;
 
   /* Can this function be inlined at all?  */
-  node->local.inlinable = tree_inlinable_function_p (current_function_decl);
+  node->local.inlinable = tree_inlinable_function_p (node->decl);
   if (node->local.inlinable && !node->local.disregard_inline_limits)
     node->local.disregard_inline_limits
-      = DECL_DISREGARD_INLINE_LIMITS (current_function_decl);
+      = DECL_DISREGARD_INLINE_LIMITS (node->decl);
   estimate_function_body_sizes (node);
   /* Inlining characteristics are maintained by the cgraph_mark_inline.  */
   node->global.time = inline_summary (node)->self_time;

@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/30_threads/promise
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-11-03T00:47:48.995150Z
-153834
-bkoz
+2009-12-15T20:17:27.751618Z
+155269
+redi
 
 
 

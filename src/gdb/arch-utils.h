@@ -1,6 +1,6 @@
 /* Dynamic architecture support for GDB, the GNU debugger.
 
-   Copyright (C) 1998, 1999, 2000, 2002, 2003, 2004, 2007, 2008, 2009
+   Copyright (C) 1998, 1999, 2000, 2002, 2003, 2004, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -154,5 +154,9 @@ extern struct gdbarch *gdbarch_from_bfd (bfd *abfd);
 extern struct gdbarch *get_current_arch (void);
 
 extern int default_has_shared_address_space (struct gdbarch *);
+
+extern int default_fast_tracepoint_valid_at (struct gdbarch *gdbarch,
+					     CORE_ADDR addr,
+					     int *isize, char **msg);
 
 #endif

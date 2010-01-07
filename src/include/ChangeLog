@@ -1,3 +1,20 @@
+2010-01-05  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR bootstrap/41771
+	* ansidecl.h: Fix inline test for C99 and Sun Studio cc.
+
+2009-12-29  Joel Brobecker  <brobecker@adacore.com>
+
+	* dwarf2.h (enum dwarf_attribute): Add DW_AT_GNAT_descriptive_type.
+
+2009-12-14  Doug Kwan  <dougkwan@google.com>
+
+	* bfdlink.h (struct bfd_link_callbacks): Rename function parameters
+	to avoid shadowed variable warnings.
+	* dis-asm.h (struct disassemble_info): Ditto.
+	(disassemble_init_for_target): Ditto.
+	(init_disassemble_info): Ditto.
+
 2009-12-03  David Daney  <ddaney@caviumnetworks.com>
 	    Adam Nemet  <adambnemet@gmail.com>
 

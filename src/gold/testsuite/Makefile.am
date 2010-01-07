@@ -407,6 +407,20 @@ common_test_1_DEPENDENCIES = gcctestdir/ld
 common_test_1_LDFLAGS = -Bgcctestdir/
 common_test_1_LDADD =
 
+check_PROGRAMS += common_test_2
+common_test_2_SOURCES = common_test_1.c
+common_test_2_DEPENDENCIES = common_test_2.so common_test_3.so gcctestdir/ld
+common_test_2_LDFLAGS = -Bgcctestdir/ -Wl,-R,.
+common_test_2_LDADD = common_test_2.so common_test_3.so
+common_test_2_pic.o: common_test_2.c
+	$(COMPILE) -c -fpic -o $@ $<
+common_test_2.so: common_test_2_pic.o common_test_3.so gcctestdir/ld
+	$(LINK) -Bgcctestdir/ -shared common_test_2_pic.o common_test_3.so
+common_test_3_pic.o: common_test_3.c
+	$(COMPILE) -c -fpic -o $@ $<
+common_test_3.so: common_test_3_pic.o ver_test_2.script gcctestdir/ld
+	$(LINK) -Bgcctestdir/ -shared common_test_3_pic.o -Wl,--version-script,$(srcdir)/ver_test_2.script
+
 check_PROGRAMS += exception_test
 check_PROGRAMS += exception_static_test
 check_PROGRAMS += exception_shared_1_test
@@ -1004,7 +1018,7 @@ binary.txt: $(srcdir)/binary.in
 check_SCRIPTS += ver_matching_test.sh
 check_DATA += ver_matching_test.stdout
 MOSTLYCLEANFILES += ver_matching_test.stdout
-ver_matching_def.so: ver_matching_def.cc gcctestdir/ld
+ver_matching_def.so: ver_matching_def.cc $(srcdir)/version_script.map gcctestdir/ld
 	$(CXXLINK) -O0 -Bgcctestdir/ -shared $(srcdir)/ver_matching_def.cc -Wl,--version-script=$(srcdir)/version_script.map
 ver_matching_test.stdout: ver_matching_def.so
 	$(TEST_OBJDUMP) -T ver_matching_def.so | $(TEST_CXXFILT) > ver_matching_test.stdout

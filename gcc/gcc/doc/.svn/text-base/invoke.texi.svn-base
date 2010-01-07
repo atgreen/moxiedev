@@ -1,5 +1,5 @@
 @c Copyright (C) 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-@c 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+@c 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 @c Free Software Foundation, Inc.
 @c This is part of the GCC manual.
 @c For copying conditions, see the file gcc.texi.
@@ -11,7 +11,7 @@
 
 @c man begin COPYRIGHT
 Copyright @copyright{} 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
@@ -259,7 +259,7 @@ Objective-C and Objective-C++ Dialects}.
 -Wstrict-overflow -Wstrict-overflow=@var{n} @gol
 -Wswitch  -Wswitch-default  -Wswitch-enum -Wsync-nand @gol
 -Wsystem-headers  -Wtrigraphs  -Wtype-limits  -Wundef  -Wuninitialized @gol
--Wunknown-pragmas  -Wno-pragmas -Wunreachable-code @gol
+-Wunknown-pragmas  -Wno-pragmas @gol
 -Wunsuffixed-float-constants  -Wunused  -Wunused-function @gol
 -Wunused-label  -Wunused-parameter -Wno-unused-result -Wunused-value  -Wunused-variable @gol
 -Wvariadic-macros -Wvla @gol
@@ -4192,29 +4192,6 @@ cases where multiple declaration is valid and changes nothing.
 @opindex Wno-nested-externs
 Warn if an @code{extern} declaration is encountered within a function.
 
-@item -Wunreachable-code
-@opindex Wunreachable-code
-@opindex Wno-unreachable-code
-Warn if the compiler detects that code will never be executed.
-
-This option is intended to warn when the compiler detects that at
-least a whole line of source code will never be executed, because
-some condition is never satisfied or because it is after a
-procedure that never returns.
-
-It is possible for this option to produce a warning even though there
-are circumstances under which part of the affected line can be executed,
-so care should be taken when removing apparently-unreachable code.
-
-For instance, when a function is inlined, a warning may mean that the
-line is unreachable in only one inlined copy of the function.
-
-This option is not made part of @option{-Wall} because in a debugging
-version of a program there is often substantial code which checks
-correct functioning of the program and is, hopefully, unreachable
-because the program does work.  Another common use of unreachable
-code is to provide behavior which is selectable at compile-time.
-
 @item -Winline
 @opindex Winline
 @opindex Wno-inline
@@ -5666,8 +5643,9 @@ each of them.
 Not all optimizations are controlled directly by a flag.  Only
 optimizations that have a flag are listed in this section.
 
-Most of the optimizations are not enabled if a @option{-O} level is not set on
-the command line, even if individual optimization flags are specified.
+Most optimizations are only enabled if an @option{-O} level is set on
+the command line.  Otherwise they are disabled, even if individual             
+optimization flags are specified.
 
 Depending on the target and how GCC was configured, a slightly different
 set of optimizations may be enabled at each @option{-O} level than
@@ -7321,6 +7299,10 @@ types of hosts.  The bytecode files are versioned and there is a
 strict version check, so bytecode files generated in one version of
 GCC will not work with an older/newer version of GCC.
 
+Link time optimization does not play well with generating debugging
+information.  Combining @option{-flto} or @option{-fwhopr} with
+@option{-g} is experimental.
+
 This option is disabled by default.
 
 @item -fwhopr
@@ -7336,6 +7318,8 @@ that otherwise would not fit in memory.  This option enables
 @option{-fwpa} and @option{-fltrans} automatically.
 
 Disabled by default.
+
+This option is experimental.
 
 @item -fwpa
 @opindex fwpa
@@ -7891,7 +7875,7 @@ to the hottest structure frequency in the program is less than this
 parameter, then structure reorganization is not applied to this structure.
 The default is 10.
 
-@item predictable-branch-cost-outcome
+@item predictable-branch-outcome
 When branch is predicted to be taken with probability lower than this threshold
 (in percent), then it is considered well predictable. The default is 10.
 
@@ -15066,7 +15050,7 @@ stored, which means code that walks the stack frame across interrupts or
 signals may get corrupted data.
 
 @item -mavoid-indexed-addresses
-@item -mno-avoid-indexed-addresses
+@itemx -mno-avoid-indexed-addresses
 @opindex mavoid-indexed-addresses
 @opindex mno-avoid-indexed-addresses
 Generate code that tries to avoid (not avoid) the use of indexed load
@@ -15527,24 +15511,24 @@ held in @code{r13} are now pushed onto the stack.
 
 Note, common variables (variables which have not been initialised) and
 constants are not placed into the small data area as they are assigned
-to other sections in the output executeable.
+to other sections in the output executable.
 
 The default value is zero, which disables this feature.  Note, this
 feature is not enabled by default with higher optimization levels
-(@option{-O2} etc) because of the potentially deterimental effects of
+(@option{-O2} etc) because of the potentially detrimental effects of
 reserving register @code{r13}.  It is up to the programmer to
 experiment and discover whether this feature is of benefit to their
 program.
 
 @item -msim
-@item -mno-sim
+@itemx -mno-sim
 @opindex msim
 @opindex mno-sim
 Use the simulator runtime.  The default is to use the libgloss board
 specific runtime.
 
 @item -mas100-syntax
-@item -mno-as100-syntax
+@itemx -mno-as100-syntax
 @opindex mas100-syntax
 @opindex mno-as100-syntax
 When generating assembler output use a syntax that is compatible with
@@ -15556,7 +15540,7 @@ default option.
 @opindex mmax-constant-size
 Specifies the maxium size, in bytes, of a constant that can be used as
 an operand in a RX instruction.  Although the RX instruction set does
-allow consants of up to 4 bytes in length to be used in instructions,
+allow constants of up to 4 bytes in length to be used in instructions,
 a longer value equates to a longer instruction.  Thus in some
 circumstances it can be beneficial to restrict the size of constants
 that are used in instructions.  Constants that are too big are instead
@@ -16806,7 +16790,7 @@ that MinGW-specific thread support is to be used.
 @opindex municode
 This option is available for mingw-w64 targets.  It specifies
 that the UNICODE macro is getting pre-defined and that the
-unicode capable runtime startup code is choosen.
+unicode capable runtime startup code is chosen.
 
 @item -mwin32
 @opindex mwin32

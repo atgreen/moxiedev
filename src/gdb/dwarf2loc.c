@@ -1,6 +1,7 @@
 /* DWARF 2 location expression support for GDB.
 
-   Copyright (C) 2003, 2005, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2003, 2005, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
 
    Contributed by Daniel Jacobowitz, MontaVista Software, Inc.
 
@@ -40,6 +41,10 @@
 
 #include "gdb_string.h"
 #include "gdb_assert.h"
+
+static void
+dwarf_expr_frame_base_1 (struct symbol *framefunc, CORE_ADDR pc,
+			 gdb_byte **start, size_t *length);
 
 /* A helper function for dealing with location lists.  Given a
    symbol baton (BATON) and a pc value (PC), find the appropriate
@@ -166,16 +171,23 @@ dwarf_expr_frame_base (void *baton, gdb_byte **start, size_t * length)
      something has gone wrong.  */
   gdb_assert (framefunc != NULL);
 
+  dwarf_expr_frame_base_1 (framefunc,
+			   get_frame_address_in_block (debaton->frame),
+			   start, length);
+}
+
+static void
+dwarf_expr_frame_base_1 (struct symbol *framefunc, CORE_ADDR pc,
+			 gdb_byte **start, size_t *length)
+{
   if (SYMBOL_LOCATION_BATON (framefunc) == NULL)
     *start = NULL;
   else if (SYMBOL_COMPUTED_OPS (framefunc) == &dwarf2_loclist_funcs)
     {
       struct dwarf2_loclist_baton *symbaton;
-      struct frame_info *frame = debaton->frame;
 
       symbaton = SYMBOL_LOCATION_BATON (framefunc);
-      *start = find_location_expression (symbaton, length,
-					 get_frame_address_in_block (frame));
+      *start = find_location_expression (symbaton, length, pc);
     }
   else
     {
@@ -263,11 +275,17 @@ read_pieced_value (struct value *v)
 	case DWARF_VALUE_REGISTER:
 	  {
 	    struct gdbarch *arch = get_frame_arch (frame);
-	    bfd_byte regval[MAX_REGISTER_SIZE];
 	    int gdb_regnum = gdbarch_dwarf2_reg_to_regnum (arch,
 							   p->v.expr.value);
-	    get_frame_register (frame, gdb_regnum, regval);
-	    memcpy (contents + offset, regval, p->size);
+	    int reg_offset = 0;
+
+	    if (gdbarch_byte_order (arch) == BFD_ENDIAN_BIG
+		&& p->size < register_size (arch, gdb_regnum))
+	      /* Big-endian, and we want less than full size.  */
+	      reg_offset = register_size (arch, gdb_regnum) - p->size;
+
+	    get_frame_register_bytes (frame, gdb_regnum, reg_offset, p->size,
+				      contents + offset);
 	  }
 	  break;
 
@@ -334,7 +352,15 @@ write_pieced_value (struct value *to, struct value *from)
 	  {
 	    struct gdbarch *arch = get_frame_arch (frame);
 	    int gdb_regnum = gdbarch_dwarf2_reg_to_regnum (arch, p->v.expr.value);
-	    put_frame_register (frame, gdb_regnum, contents + offset);
+	    int reg_offset = 0;
+
+	    if (gdbarch_byte_order (arch) == BFD_ENDIAN_BIG
+		&& p->size < register_size (arch, gdb_regnum))
+	      /* Big-endian, and we want less than full size.  */
+	      reg_offset = register_size (arch, gdb_regnum) - p->size;
+
+	    put_frame_register_bytes (frame, gdb_regnum, reg_offset, p->size,
+				      contents + offset);
 	  }
 	  break;
 	case DWARF_VALUE_MEMORY:
@@ -617,21 +643,52 @@ dwarf2_tracepoint_var_ref (struct symbol *symbol, struct gdbarch *gdbarch,
     }
   else if (data[0] == DW_OP_fbreg)
     {
-      /* And this is worse than just minimal; we should honor the frame base
-	 as above.  */
-      int frame_reg;
+      struct block *b;
+      struct symbol *framefunc;
+      int frame_reg = 0;
       LONGEST frame_offset;
       gdb_byte *buf_end;
+      gdb_byte *base_data;
+      size_t base_size;
+      LONGEST base_offset = 0;
+
+      b = block_for_pc (ax->scope);
+
+      if (!b)
+	error (_("No block found for address"));
+
+      framefunc = block_linkage_function (b);
+
+      if (!framefunc)
+	error (_("No function found for block"));
+
+      dwarf_expr_frame_base_1 (framefunc, ax->scope,
+			       &base_data, &base_size);
+
+      if (base_data[0] >= DW_OP_breg0
+	   && base_data[0] <= DW_OP_breg31)
+	{
+	  frame_reg = base_data[0] - DW_OP_breg0;
+	  buf_end = read_sleb128 (base_data + 1, base_data + base_size, &base_offset);
+	  if (buf_end != base_data + base_size)
+	    error (_("Unexpected opcode after DW_OP_breg%u for symbol \"%s\"."),
+		   frame_reg, SYMBOL_PRINT_NAME (symbol));
+	}
+      else
+	{
+	  /* We don't know what to do with the frame base expression,
+	     so we can't trace this variable; give up.  */
+	  error (_("Cannot generate expression to collect symbol \"%s\"; DWARF 2 encoding not handled"),
+		 SYMBOL_PRINT_NAME (symbol));
+	}
 
       buf_end = read_sleb128 (data + 1, data + size, &frame_offset);
       if (buf_end != data + size)
 	error (_("Unexpected opcode after DW_OP_fbreg for symbol \"%s\"."),
 	       SYMBOL_PRINT_NAME (symbol));
 
-      gdbarch_virtual_frame_pointer (gdbarch,
-				     ax->scope, &frame_reg, &frame_offset);
       ax_reg (ax, frame_reg);
-      ax_const_l (ax, frame_offset);
+      ax_const_l (ax, base_offset + frame_offset);
       ax_simple (ax, aop_add);
 
       value->kind = axs_lvalue_memory;

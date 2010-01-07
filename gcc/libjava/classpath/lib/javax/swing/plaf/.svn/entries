@@ -1,7 +1,7 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/swing/plaf
 svn://gcc.gnu.org/svn/gcc
 
@@ -406,6 +406,40 @@ has-props
 
 314
 
+PanelUI.class
+file
+
+
+
+
+2009-04-24T17:48:17.000000Z
+b3b8646c9e8aa92265df30e1ef86c57b
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+296
+
 TreeUI.class
 file
 
@@ -474,73 +508,8 @@ has-props
 
 645
 
-PanelUI.class
-file
-
-
-
-
-2009-04-24T17:48:17.000000Z
-b3b8646c9e8aa92265df30e1ef86c57b
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-296
-
-SeparatorUI.class
-file
-
-
-
-
-2009-04-24T17:48:17.000000Z
-c91003c03944a3222c3a171e7bd50fff
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-308
+metal
+dir
 
 IconUIResource.class
 file
@@ -576,8 +545,39 @@ has-props
 
 1114
 
-metal
-dir
+SeparatorUI.class
+file
+
+
+
+
+2009-04-24T17:48:17.000000Z
+c91003c03944a3222c3a171e7bd50fff
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+308
 
 ColorChooserUI.class
 file
@@ -647,6 +647,9 @@ has-props
 
 302
 
+synth
+dir
+
 BorderUIResource$TitledBorderUIResource.class
 file
 
@@ -680,9 +683,6 @@ has-props
 
 
 1670
-
-synth
-dir
 
 BorderUIResource$LineBorderUIResource.class
 file
@@ -820,40 +820,6 @@ has-props
 
 314
 
-SpinnerUI.class
-file
-
-
-
-
-2009-04-24T17:48:17.000000Z
-c1c3065ed684d78a45f45262a43e7015
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-302
-
 FontUIResource.class
 file
 
@@ -887,6 +853,40 @@ has-props
 
 
 657
+
+SpinnerUI.class
+file
+
+
+
+
+2009-04-24T17:48:17.000000Z
+c1c3065ed684d78a45f45262a43e7015
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+302
 
 ViewportUI.class
 file

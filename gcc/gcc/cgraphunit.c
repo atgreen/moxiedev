@@ -1,5 +1,5 @@
 /* Callgraph based interprocedural optimizations.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Jan Hubicka
 
@@ -749,6 +749,7 @@ verify_cgraph_node (struct cgraph_node *node)
 			  {
 			    error ("edge points to same body alias:");
 			    debug_tree (e->callee->decl);
+			    error_found = true;
 			  }
 			else if (!clone_of_p (cgraph_node (decl), e->callee)
 			         && !e->callee->global.inlined_to)
@@ -757,6 +758,7 @@ verify_cgraph_node (struct cgraph_node *node)
 			    debug_tree (e->callee->decl);
 			    fprintf (stderr," Instead of:");
 			    debug_tree (decl);
+			    error_found = true;
 			  }
 			e->aux = (void *)1;
 		      }
@@ -980,6 +982,14 @@ cgraph_analyze_functions (void)
 	if (!edge->callee->reachable)
 	  cgraph_mark_reachable_node (edge->callee);
 
+      if (node->same_comdat_group)
+	{
+	  for (next = node->same_comdat_group;
+	       next != node;
+	       next = next->same_comdat_group)
+	    cgraph_mark_reachable_node (next);
+	}
+
       /* If decl is a clone of an abstract function, mark that abstract
 	 function so that we don't release its body. The DECL_INITIAL() of that
          abstract function declaration will be later needed to output debug info.  */
@@ -1092,13 +1102,21 @@ static void
 cgraph_mark_functions_to_output (void)
 {
   struct cgraph_node *node;
+#ifdef ENABLE_CHECKING
+  bool check_same_comdat_groups = false;
+
+  for (node = cgraph_nodes; node; node = node->next)
+    gcc_assert (!node->process);
+#endif
 
   for (node = cgraph_nodes; node; node = node->next)
     {
       tree decl = node->decl;
       struct cgraph_edge *e;
 
-      gcc_assert (!node->process);
+      gcc_assert (!node->process || node->same_comdat_group);
+      if (node->process)
+	continue;
 
       for (e = node->callers; e; e = e->next_caller)
 	if (e->inline_failed)
@@ -1113,7 +1131,23 @@ cgraph_mark_functions_to_output (void)
 	      || (e && node->reachable))
 	  && !TREE_ASM_WRITTEN (decl)
 	  && !DECL_EXTERNAL (decl))
-	node->process = 1;
+	{
+	  node->process = 1;
+	  if (node->same_comdat_group)
+	    {
+	      struct cgraph_node *next;
+	      for (next = node->same_comdat_group;
+		   next != node;
+		   next = next->same_comdat_group)
+		next->process = 1;
+	    }
+	}
+      else if (node->same_comdat_group)
+	{
+#ifdef ENABLE_CHECKING
+	  check_same_comdat_groups = true;
+#endif
+	}
       else
 	{
 	  /* We should've reclaimed all functions that are not needed.  */
@@ -1133,6 +1167,21 @@ cgraph_mark_functions_to_output (void)
 	}
 
     }
+#ifdef ENABLE_CHECKING
+  if (check_same_comdat_groups)
+    for (node = cgraph_nodes; node; node = node->next)
+      if (node->same_comdat_group && !node->process)
+	{
+	  tree decl = node->decl;
+	  if (!node->global.inlined_to
+	      && gimple_has_body_p (decl)
+	      && !DECL_EXTERNAL (decl))
+	    {
+	      dump_cgraph_node (stderr, node);
+	      internal_error ("failed to reclaim unneeded function");
+	    }
+	}
+#endif
 }
 
 /* DECL is FUNCTION_DECL.  Initialize datastructures so DECL is a function
@@ -2248,6 +2297,9 @@ cgraph_materialize_all_clones (void)
 	    }
 	}
     }
+  for (node = cgraph_nodes; node; node = node->next)
+    if (!node->analyzed && node->callees)
+      cgraph_node_remove_callees (node);
   if (cgraph_dump_file)
     fprintf (cgraph_dump_file, "Updating call sites\n");
   for (node = cgraph_nodes; node; node = node->next)
@@ -2271,20 +2323,9 @@ cgraph_materialize_all_clones (void)
 		gimple new_stmt;
 		gimple_stmt_iterator gsi;
 
-		if (e->callee->same_body)
-		  {
-		    struct cgraph_node *alias;
-
-		    for (alias = e->callee->same_body;
-			 alias;
-			 alias = alias->next)
-		      if (decl == alias->decl)
-			break;
-		    /* Don't update call from same body alias to the real
-		       function.  */
-		    if (alias)
-		      continue;
-		  }
+		if (cgraph_get_node (decl) == cgraph_get_node (e->callee->decl))
+		  /* Don't update call from same body alias to the real function.  */
+		  continue;
 
 		if (cgraph_dump_file)
 		  {

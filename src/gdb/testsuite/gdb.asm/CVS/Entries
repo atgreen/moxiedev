@@ -1,7 +1,6 @@
 /Makefile.in/1.3/Wed Nov 18 20:13:18 2009/-ko/
 /alpha.inc/1.3/Wed Nov 18 20:13:18 2009//
 /arm.inc/1.2/Wed Nov 18 20:13:18 2009//
-/asm-source.exp/1.76/Wed Dec  9 22:25:04 2009/-ko/
 /asmsrc1.s/1.9/Wed Nov 18 20:13:18 2009/-ko/
 /asmsrc2.s/1.6/Wed Nov 18 20:13:18 2009/-ko/
 /common.inc/1.4/Wed Nov 18 20:13:18 2009/-ko/
@@ -31,4 +30,5 @@
 /v850.inc/1.1/Wed Nov 18 20:13:18 2009//
 /x86_64.inc/1.2/Wed Nov 18 20:13:18 2009//
 /xstormy16.inc/1.1/Wed Nov 18 20:13:18 2009//
+/asm-source.exp/1.77/Wed Jan  6 04:54:05 2010/-ko/
 D

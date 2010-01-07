@@ -1,6 +1,6 @@
 /* Subroutines used for code generation on IA-32.
-   Copyright (C) 1988, 1992, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 1988, 1992, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -5346,7 +5346,7 @@ classify_argument (enum machine_mode mode, const_tree type,
     }
 
   /* for V1xx modes, just use the base mode */
-  if (VECTOR_MODE_P (mode) && mode != V1DImode
+  if (VECTOR_MODE_P (mode) && mode != V1DImode && mode != V1TImode
       && GET_MODE_SIZE (GET_MODE_INNER (mode)) == bytes)
     mode = GET_MODE_INNER (mode);
 
@@ -5470,6 +5470,7 @@ classify_argument (enum machine_mode mode, const_tree type,
       classes[0] = X86_64_SSE_CLASS;
       classes[1] = X86_64_SSEUP_CLASS;
       return 2;
+    case V1TImode:
     case V1DImode:
     case V2SFmode:
     case V2SImode:
@@ -5814,6 +5815,7 @@ function_arg_advance_32 (CUMULATIVE_ARGS *cum, enum machine_mode mode,
     case V4HImode:
     case V2SImode:
     case V2SFmode:
+    case V1TImode:
     case V1DImode:
       if (!type || !AGGREGATE_TYPE_P (type))
 	{
@@ -6001,6 +6003,7 @@ function_arg_32 (CUMULATIVE_ARGS *cum, enum machine_mode mode,
     case V4HImode:
     case V2SImode:
     case V2SFmode:
+    case V1TImode:
     case V1DImode:
       if (!type || !AGGREGATE_TYPE_P (type))
 	{
@@ -16186,116 +16189,110 @@ ix86_expand_int_vcond (rtx operands[])
   /* XOP supports all of the comparisons on all vector int types.  */
   if (!TARGET_XOP)
     {
-  /* Canonicalize the comparison to EQ, GT, GTU.  */
-  switch (code)
-    {
-    case EQ:
-    case GT:
-    case GTU:
-      break;
-
-    case NE:
-    case LE:
-    case LEU:
-      code = reverse_condition (code);
-      negate = true;
-      break;
-
-    case GE:
-    case GEU:
-      code = reverse_condition (code);
-      negate = true;
-      /* FALLTHRU */
-
-    case LT:
-    case LTU:
-      code = swap_condition (code);
-      x = cop0, cop0 = cop1, cop1 = x;
-      break;
-
-    default:
-      gcc_unreachable ();
-    }
-
-  /* Only SSE4.1/SSE4.2 supports V2DImode.  */
-  if (mode == V2DImode)
-    {
+      /* Canonicalize the comparison to EQ, GT, GTU.  */
       switch (code)
 	{
 	case EQ:
-	  /* SSE4.1 supports EQ.  */
-	  if (!TARGET_SSE4_1)
-	    return false;
-	  break;
-
 	case GT:
 	case GTU:
-	  /* SSE4.2 supports GT/GTU.  */
-	  if (!TARGET_SSE4_2)
-	    return false;
+	  break;
+
+	case NE:
+	case LE:
+	case LEU:
+	  code = reverse_condition (code);
+	  negate = true;
+	  break;
+
+	case GE:
+	case GEU:
+	  code = reverse_condition (code);
+	  negate = true;
+	  /* FALLTHRU */
+
+	case LT:
+	case LTU:
+	  code = swap_condition (code);
+	  x = cop0, cop0 = cop1, cop1 = x;
 	  break;
 
 	default:
 	  gcc_unreachable ();
 	}
-    }
 
-  /* Unsigned parallel compare is not supported by the hardware.  Play some
-     tricks to turn this into a signed comparison against 0.  */
-  if (code == GTU)
-    {
-      cop0 = force_reg (mode, cop0);
-
-      switch (mode)
+      /* Only SSE4.1/SSE4.2 supports V2DImode.  */
+      if (mode == V2DImode)
 	{
-	case V4SImode:
-	case V2DImode:
-	  {
-	    rtx t1, t2, mask;
+	  switch (code)
+	    {
+	    case EQ:
+	      /* SSE4.1 supports EQ.  */
+	      if (!TARGET_SSE4_1)
+		return false;
+	      break;
 
-	    /* Perform a parallel modulo subtraction.  */
-	    t1 = gen_reg_rtx (mode);
-	    emit_insn ((mode == V4SImode
-			? gen_subv4si3
-			: gen_subv2di3) (t1, cop0, cop1));
+	    case GT:
+	    case GTU:
+	      /* SSE4.2 supports GT/GTU.  */
+	      if (!TARGET_SSE4_2)
+		return false;
+	      break;
 
-	    /* Extract the original sign bit of op0.  */
-	    mask = ix86_build_signbit_mask (GET_MODE_INNER (mode),
-					    true, false);
-	    t2 = gen_reg_rtx (mode);
-	    emit_insn ((mode == V4SImode
-			? gen_andv4si3
-			: gen_andv2di3) (t2, cop0, mask));
-
-	    /* XOR it back into the result of the subtraction.  This results
-	       in the sign bit set iff we saw unsigned underflow.  */
-	    x = gen_reg_rtx (mode);
-	    emit_insn ((mode == V4SImode
-			? gen_xorv4si3
-			: gen_xorv2di3) (x, t1, t2));
-
-	    code = GT;
-	  }
-	  break;
-
-	case V16QImode:
-	case V8HImode:
-	  /* Perform a parallel unsigned saturating subtraction.  */
-	  x = gen_reg_rtx (mode);
-	  emit_insn (gen_rtx_SET (VOIDmode, x,
-				  gen_rtx_US_MINUS (mode, cop0, cop1)));
-
-	  code = EQ;
-	  negate = !negate;
-	  break;
-
-	default:
-	  gcc_unreachable ();
+	    default:
+	      gcc_unreachable ();
+	    }
 	}
 
-      cop0 = x;
-      cop1 = CONST0_RTX (mode);
-    }
+      /* Unsigned parallel compare is not supported by the hardware.
+	 Play some tricks to turn this into a signed comparison
+	 against 0.  */
+      if (code == GTU)
+	{
+	  cop0 = force_reg (mode, cop0);
+
+	  switch (mode)
+	    {
+	    case V4SImode:
+	    case V2DImode:
+		{
+		  rtx t1, t2, mask;
+		  rtx (*gen_sub3) (rtx, rtx, rtx);
+
+		  /* Subtract (-(INT MAX) - 1) from both operands to make
+		     them signed.  */
+		  mask = ix86_build_signbit_mask (GET_MODE_INNER (mode),
+						  true, false);
+		  gen_sub3 = (mode == V4SImode
+			      ? gen_subv4si3 : gen_subv2di3);
+		  t1 = gen_reg_rtx (mode);
+		  emit_insn (gen_sub3 (t1, cop0, mask));
+
+		  t2 = gen_reg_rtx (mode);
+		  emit_insn (gen_sub3 (t2, cop1, mask));
+
+		  cop0 = t1;
+		  cop1 = t2;
+		  code = GT;
+		}
+	      break;
+
+	    case V16QImode:
+	    case V8HImode:
+	      /* Perform a parallel unsigned saturating subtraction.  */
+	      x = gen_reg_rtx (mode);
+	      emit_insn (gen_rtx_SET (VOIDmode, x,
+				      gen_rtx_US_MINUS (mode, cop0, cop1)));
+
+	      cop0 = x;
+	      cop1 = CONST0_RTX (mode);
+	      code = EQ;
+	      negate = !negate;
+	      break;
+
+	    default:
+	      gcc_unreachable ();
+	    }
+	}
     }
 
   x = ix86_expand_sse_cmp (operands[0], code, cop0, cop1,
@@ -16391,9 +16388,9 @@ ix86_expand_sse4_unpack (rtx operands[2], bool unsigned_p, bool high_p)
     {
       /* Shift higher 8 bytes to lower 8 bytes.  */
       src = gen_reg_rtx (imode);
-      emit_insn (gen_sse2_lshrti3 (gen_lowpart (TImode, src),
-				   gen_lowpart (TImode, operands[1]),
-				   GEN_INT (64)));
+      emit_insn (gen_sse2_lshrv1ti3 (gen_lowpart (V1TImode, src),
+				     gen_lowpart (V1TImode, operands[1]),
+				     GEN_INT (64)));
     }
   else
     src = operands[1];
@@ -21251,16 +21248,10 @@ enum ix86_builtins
   IX86_BUILTIN_VPCOMTRUEQ,
 
   /* LWP instructions.  */
-  IX86_BUILTIN_LLWPCB16,
-  IX86_BUILTIN_LLWPCB32,
-  IX86_BUILTIN_LLWPCB64,
-  IX86_BUILTIN_SLWPCB16,
-  IX86_BUILTIN_SLWPCB32,
-  IX86_BUILTIN_SLWPCB64,
-  IX86_BUILTIN_LWPVAL16,
+  IX86_BUILTIN_LLWPCB,
+  IX86_BUILTIN_SLWPCB,
   IX86_BUILTIN_LWPVAL32,
   IX86_BUILTIN_LWPVAL64,
-  IX86_BUILTIN_LWPINS16,
   IX86_BUILTIN_LWPINS32,
   IX86_BUILTIN_LWPINS64,
 
@@ -21532,22 +21523,12 @@ static const struct builtin_description bdesc_special_args[] =
   { OPTION_MASK_ISA_AVX, CODE_FOR_avx_maskstorepd256, "__builtin_ia32_maskstorepd256", IX86_BUILTIN_MASKSTOREPD256, UNKNOWN, (int) VOID_FTYPE_PV4DF_V4DF_V4DF },
   { OPTION_MASK_ISA_AVX, CODE_FOR_avx_maskstoreps256, "__builtin_ia32_maskstoreps256", IX86_BUILTIN_MASKSTOREPS256, UNKNOWN, (int) VOID_FTYPE_PV8SF_V8SF_V8SF },
 
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_llwpcbhi1,   "__builtin_ia32_llwpcb16",   IX86_BUILTIN_LLWPCB16,    UNKNOWN,     (int) VOID_FTYPE_VOID },
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_llwpcbsi1,   "__builtin_ia32_llwpcb32",   IX86_BUILTIN_LLWPCB32,    UNKNOWN,     (int) VOID_FTYPE_VOID },
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_llwpcbdi1,   "__builtin_ia32_llwpcb64",   IX86_BUILTIN_LLWPCB64,    UNKNOWN,     (int) VOID_FTYPE_VOID },
-
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_slwpcbhi1,   "__builtin_ia32_slwpcb16",   IX86_BUILTIN_SLWPCB16,    UNKNOWN,     (int) VOID_FTYPE_VOID },
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_slwpcbsi1,   "__builtin_ia32_slwpcb32",   IX86_BUILTIN_SLWPCB32,    UNKNOWN,     (int) VOID_FTYPE_VOID },
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_slwpcbdi1,   "__builtin_ia32_slwpcb64",   IX86_BUILTIN_SLWPCB64,    UNKNOWN,     (int) VOID_FTYPE_VOID },
-
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpvalhi3,   "__builtin_ia32_lwpval16", IX86_BUILTIN_LWPVAL16,  UNKNOWN,     (int) VOID_FTYPE_USHORT_UINT_USHORT },
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpvalsi3,   "__builtin_ia32_lwpval32", IX86_BUILTIN_LWPVAL64,  UNKNOWN,     (int) VOID_FTYPE_UINT_UINT_UINT },
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpvaldi3,   "__builtin_ia32_lwpval64", IX86_BUILTIN_LWPVAL64,  UNKNOWN,     (int) VOID_FTYPE_UINT64_UINT_UINT },
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpinshi3,   "__builtin_ia32_lwpins16", IX86_BUILTIN_LWPINS16,  UNKNOWN,     (int) UCHAR_FTYPE_USHORT_UINT_USHORT },
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpinssi3,   "__builtin_ia32_lwpins32", IX86_BUILTIN_LWPINS64,  UNKNOWN,     (int) UCHAR_FTYPE_UINT_UINT_UINT },
-  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpinsdi3,   "__builtin_ia32_lwpins64", IX86_BUILTIN_LWPINS64,  UNKNOWN,     (int) UCHAR_FTYPE_UINT64_UINT_UINT },
-
-  { OPTION_MASK_ISA_ABM, CODE_FOR_clzhi2_abm,   "__builtin_clzs",   IX86_BUILTIN_CLZS,    UNKNOWN,     (int) UINT16_FTYPE_UINT16 },
+  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_llwpcb, "__builtin_ia32_llwpcb", IX86_BUILTIN_LLWPCB, UNKNOWN, (int) VOID_FTYPE_PVOID },
+  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_slwpcb, "__builtin_ia32_slwpcb", IX86_BUILTIN_SLWPCB, UNKNOWN, (int) PVOID_FTYPE_VOID },
+  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpvalsi3, "__builtin_ia32_lwpval32", IX86_BUILTIN_LWPVAL32, UNKNOWN, (int) VOID_FTYPE_UINT_UINT_UINT },
+  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpvaldi3, "__builtin_ia32_lwpval64", IX86_BUILTIN_LWPVAL64, UNKNOWN, (int) VOID_FTYPE_UINT64_UINT_UINT },
+  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpinssi3, "__builtin_ia32_lwpins32", IX86_BUILTIN_LWPINS32, UNKNOWN, (int) UCHAR_FTYPE_UINT_UINT_UINT },
+  { OPTION_MASK_ISA_LWP, CODE_FOR_lwp_lwpinsdi3, "__builtin_ia32_lwpins64", IX86_BUILTIN_LWPINS64, UNKNOWN, (int) UCHAR_FTYPE_UINT64_UINT_UINT },
 
 };
 
@@ -21902,7 +21883,7 @@ static const struct builtin_description bdesc_args[] =
   { OPTION_MASK_ISA_SSE2, CODE_FOR_sse2_cvtsd2ss, "__builtin_ia32_cvtsd2ss", IX86_BUILTIN_CVTSD2SS, UNKNOWN, (int) V4SF_FTYPE_V4SF_V2DF },
   { OPTION_MASK_ISA_SSE2, CODE_FOR_sse2_cvtss2sd, "__builtin_ia32_cvtss2sd", IX86_BUILTIN_CVTSS2SD, UNKNOWN, (int) V2DF_FTYPE_V2DF_V4SF },
 
-  { OPTION_MASK_ISA_SSE2, CODE_FOR_sse2_ashlti3, "__builtin_ia32_pslldqi128", IX86_BUILTIN_PSLLDQI128, UNKNOWN, (int) V2DI_FTYPE_V2DI_INT_CONVERT },
+  { OPTION_MASK_ISA_SSE2, CODE_FOR_sse2_ashlv1ti3, "__builtin_ia32_pslldqi128", IX86_BUILTIN_PSLLDQI128, UNKNOWN, (int) V2DI_FTYPE_V2DI_INT_CONVERT },
   { OPTION_MASK_ISA_SSE2, CODE_FOR_ashlv8hi3, "__builtin_ia32_psllwi128", IX86_BUILTIN_PSLLWI128, UNKNOWN, (int) V8HI_FTYPE_V8HI_SI_COUNT },
   { OPTION_MASK_ISA_SSE2, CODE_FOR_ashlv4si3, "__builtin_ia32_pslldi128", IX86_BUILTIN_PSLLDI128, UNKNOWN, (int) V4SI_FTYPE_V4SI_SI_COUNT },
   { OPTION_MASK_ISA_SSE2, CODE_FOR_ashlv2di3, "__builtin_ia32_psllqi128", IX86_BUILTIN_PSLLQI128, UNKNOWN, (int) V2DI_FTYPE_V2DI_SI_COUNT },
@@ -21910,7 +21891,7 @@ static const struct builtin_description bdesc_args[] =
   { OPTION_MASK_ISA_SSE2, CODE_FOR_ashlv4si3, "__builtin_ia32_pslld128", IX86_BUILTIN_PSLLD128, UNKNOWN, (int) V4SI_FTYPE_V4SI_V4SI_COUNT },
   { OPTION_MASK_ISA_SSE2, CODE_FOR_ashlv2di3, "__builtin_ia32_psllq128", IX86_BUILTIN_PSLLQ128, UNKNOWN, (int) V2DI_FTYPE_V2DI_V2DI_COUNT },
 
-  { OPTION_MASK_ISA_SSE2, CODE_FOR_sse2_lshrti3, "__builtin_ia32_psrldqi128", IX86_BUILTIN_PSRLDQI128, UNKNOWN, (int) V2DI_FTYPE_V2DI_INT_CONVERT },
+  { OPTION_MASK_ISA_SSE2, CODE_FOR_sse2_lshrv1ti3, "__builtin_ia32_psrldqi128", IX86_BUILTIN_PSRLDQI128, UNKNOWN, (int) V2DI_FTYPE_V2DI_INT_CONVERT },
   { OPTION_MASK_ISA_SSE2, CODE_FOR_lshrv8hi3, "__builtin_ia32_psrlwi128", IX86_BUILTIN_PSRLWI128, UNKNOWN, (int) V8HI_FTYPE_V8HI_SI_COUNT },
   { OPTION_MASK_ISA_SSE2, CODE_FOR_lshrv4si3, "__builtin_ia32_psrldi128", IX86_BUILTIN_PSRLDI128, UNKNOWN, (int) V4SI_FTYPE_V4SI_SI_COUNT },
   { OPTION_MASK_ISA_SSE2, CODE_FOR_lshrv2di3, "__builtin_ia32_psrlqi128", IX86_BUILTIN_PSRLQI128, UNKNOWN, (int) V2DI_FTYPE_V2DI_SI_COUNT },
@@ -22173,6 +22154,8 @@ static const struct builtin_description bdesc_args[] =
 
   { OPTION_MASK_ISA_AVX, CODE_FOR_avx_movmskpd256, "__builtin_ia32_movmskpd256", IX86_BUILTIN_MOVMSKPD256, UNKNOWN, (int) INT_FTYPE_V4DF  },
   { OPTION_MASK_ISA_AVX, CODE_FOR_avx_movmskps256, "__builtin_ia32_movmskps256", IX86_BUILTIN_MOVMSKPS256, UNKNOWN, (int) INT_FTYPE_V8SF },
+
+  { OPTION_MASK_ISA_ABM, CODE_FOR_clzhi2_abm,   "__builtin_clzs",   IX86_BUILTIN_CLZS,    UNKNOWN,     (int) UINT16_FTYPE_UINT16 },
 };
 
 /* FMA4 and XOP.  */
@@ -23506,7 +23489,7 @@ ix86_expand_args_builtin (const struct builtin_description *d,
       break;
     case V2DI_FTYPE_V2DI_INT_CONVERT:
       nargs = 2;
-      rmode = V2DImode;
+      rmode = V1TImode;
       nargs_constant = 1;
       break;
     case V8HI_FTYPE_V8HI_INT:
@@ -23734,7 +23717,7 @@ ix86_expand_special_args_builtin (const struct builtin_description *d,
     {
       rtx op;
       enum machine_mode mode;
-    } args[2];
+    } args[3];
   enum insn_code icode = d->icode;
   bool last_arg_constant = false;
   const struct insn_data *insn_p = &insn_data[icode];
@@ -23761,6 +23744,7 @@ ix86_expand_special_args_builtin (const struct builtin_description *d,
     case V4DF_FTYPE_PCV2DF:
     case V4DF_FTYPE_PCDOUBLE:
     case V2DF_FTYPE_PCDOUBLE:
+    case VOID_FTYPE_PVOID:
       nargs = 1;
       klass = load;
       memory = 0;
@@ -23804,15 +23788,14 @@ ix86_expand_special_args_builtin (const struct builtin_description *d,
       /* Reserve memory operand for target.  */
       memory = ARRAY_SIZE (args);
       break;
-    case VOID_FTYPE_USHORT_UINT_USHORT:
     case VOID_FTYPE_UINT_UINT_UINT:
     case VOID_FTYPE_UINT64_UINT_UINT:
-    case UCHAR_FTYPE_USHORT_UINT_USHORT:
     case UCHAR_FTYPE_UINT_UINT_UINT:
     case UCHAR_FTYPE_UINT64_UINT_UINT:
       nargs = 3;
-      klass = store;
-      memory = 0;
+      klass = load;
+      memory = ARRAY_SIZE (args);
+      last_arg_constant = true;
       break;
     default:
       gcc_unreachable ();
@@ -23850,12 +23833,16 @@ ix86_expand_special_args_builtin (const struct builtin_description *d,
       if (last_arg_constant && (i + 1) == nargs)
 	{
 	  if (!match)
-	    switch (icode)
-	      {
-	     default:
+	    {
+	      if (icode == CODE_FOR_lwp_lwpvalsi3
+		  || icode == CODE_FOR_lwp_lwpinssi3
+		  || icode == CODE_FOR_lwp_lwpvaldi3
+		  || icode == CODE_FOR_lwp_lwpinsdi3)
+		error ("the last argument must be a 32-bit immediate");
+	      else
 		error ("the last argument must be an 8-bit immediate");
-		return const0_rtx;
-	      }
+	      return const0_rtx;
+	    }
 	}
       else
 	{
@@ -23892,6 +23879,9 @@ ix86_expand_special_args_builtin (const struct builtin_description *d,
       break;
     case 2:
       pat = GEN_FCN (icode) (target, args[0].op, args[1].op);
+      break;
+    case 3:
+      pat = GEN_FCN (icode) (target, args[0].op, args[1].op, args[2].op);
       break;
     default:
       gcc_unreachable ();
@@ -24204,6 +24194,23 @@ ix86_expand_builtin (tree exp, rtx target, rtx subtarget ATTRIBUTE_UNUSED,
 	emit_move_insn (target, tmp);
 	return target;
       }
+
+    case IX86_BUILTIN_LLWPCB:
+      arg0 = CALL_EXPR_ARG (exp, 0);
+      op0 = expand_normal (arg0);
+      icode = CODE_FOR_lwp_llwpcb;
+      if (! (*insn_data[icode].operand[0].predicate) (op0, Pmode))
+	op0 = copy_to_mode_reg (Pmode, op0);
+      emit_insn (gen_lwp_llwpcb (op0));
+      return 0;
+
+    case IX86_BUILTIN_SLWPCB:
+      icode = CODE_FOR_lwp_slwpcb;
+      if (!target
+	  || ! (*insn_data[icode].operand[0].predicate) (target, Pmode))
+	target = gen_reg_rtx (Pmode);
+      emit_insn (gen_lwp_slwpcb (target));
+      return target;
 
     default:
       break;
@@ -28807,36 +28814,6 @@ ix86_expand_round (rtx operand0, rtx operand1)
   emit_move_insn (operand0, res);
 }
 
-
-/* Fixup an FMA4 or XOP instruction that has 2 memory input references
-   into a form the hardware will allow by using the destination
-   register to load one of the memory operations.  Presently this is
-   used by the multiply/add routines to allow 2 memory references.  */
-
-bool
-ix86_expand_fma4_multiple_memory (rtx operands[],
-				  enum machine_mode mode)
-{
-  rtx scratch = operands[0];
-
-  gcc_assert (register_operand (operands[0], mode));
-  gcc_assert (register_operand (operands[1], mode));
-  gcc_assert (MEM_P (operands[2]) && MEM_P (operands[3]));
-
-  if (reg_mentioned_p (scratch, operands[1]))
-    {
-      if (!can_create_pseudo_p ())
-	return false;
-      scratch = gen_reg_rtx (mode);
-    }
-
-  emit_move_insn (scratch, operands[3]);
-  if (rtx_equal_p (operands[2], operands[3]))
-    operands[2] = operands[3] = scratch;
-  else
-    operands[3] = scratch;
-  return true;
-}
 
 /* Table of valid machine attributes.  */
 static const struct attribute_spec ix86_attribute_table[] =

@@ -1180,9 +1180,10 @@ duplicate_decls (tree newdecl, tree olddecl, bool newdecl_is_friend)
 	     bad choice of name.  */
 	  if (! TREE_PUBLIC (newdecl))
 	    {
-	      warning (OPT_Wshadow, "shadowing %s function %q#D",
-		       DECL_BUILT_IN (olddecl) ? "built-in" : "library",
-		       olddecl);
+	      warning (OPT_Wshadow, 
+                       DECL_BUILT_IN (olddecl)
+                       ? G_("shadowing built-in function %q#D")
+                       : G_("shadowing library function %q#D"), olddecl);
 	      /* Discard the old built-in function.  */
 	      return NULL_TREE;
 	    }
@@ -1253,9 +1254,10 @@ duplicate_decls (tree newdecl, tree olddecl, bool newdecl_is_friend)
 			   olddecl);
 		}
 	      else
-		warning (OPT_Wshadow, "shadowing %s function %q#D",
-			 DECL_BUILT_IN (olddecl) ? "built-in" : "library",
-			 olddecl);
+		warning (OPT_Wshadow, 
+                         DECL_BUILT_IN (olddecl)
+                         ? G_("shadowing built-in function %q#D")
+                         : G_("shadowing library function %q#D"), olddecl);
 	    }
 	  else
 	    /* Discard the old built-in function.  */
@@ -7270,11 +7272,8 @@ compute_array_index_type (tree name, tree size)
 	 structural equality checks.  */
       itype = build_index_type (build_min (MINUS_EXPR, sizetype,
 					   size, integer_one_node));
-      if (!TREE_SIDE_EFFECTS (size))
-	{
-	  TYPE_DEPENDENT_P (itype) = 1;
-	  TYPE_DEPENDENT_P_VALID (itype) = 1;
-	}
+      TYPE_DEPENDENT_P (itype) = 1;
+      TYPE_DEPENDENT_P_VALID (itype) = 1;
       SET_TYPE_STRUCTURAL_EQUALITY (itype);
       return itype;
     }
@@ -8619,8 +8618,9 @@ grokdeclarator (const cp_declarator *declarator,
 
 	  if (TREE_CODE (type) == FUNCTION_TYPE
 	      && cp_type_quals (type) != TYPE_UNQUALIFIED)
-	    error ("cannot declare %s to qualified function type %qT",
-		   declarator->kind == cdk_reference ? "reference" : "pointer",
+            error (declarator->kind == cdk_reference
+                   ? G_("cannot declare reference to qualified function type %qT")
+                   : G_("cannot declare pointer to qualified function type %qT"),
 		   type);
 
 	  if (declarator->kind == cdk_reference)
@@ -11919,7 +11919,7 @@ start_preparsed_function (tree decl1, tree attrs, int flags)
       gcc_assert (TREE_CODE (TREE_TYPE (t)) == POINTER_TYPE);
 
       cp_function_chain->x_current_class_ref
-	= cp_build_indirect_ref (t, NULL, tf_warning_or_error);
+	= cp_build_indirect_ref (t, RO_NULL, tf_warning_or_error);
       cp_function_chain->x_current_class_ptr = t;
 
       /* Constructors and destructors need to know whether they're "in
@@ -12560,7 +12560,7 @@ finish_function (int flags)
   if (!processing_template_decl)
     {
       struct language_function *f = DECL_SAVED_FUNCTION_DATA (fndecl);
-      invoke_plugin_callbacks (PLUGIN_CXX_CP_PRE_GENERICIZE, fndecl);
+      invoke_plugin_callbacks (PLUGIN_PRE_GENERICIZE, fndecl);
       cp_genericize (fndecl);
       /* Clear out the bits we don't need.  */
       f->x_current_class_ptr = NULL;

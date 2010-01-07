@@ -1,6 +1,6 @@
 /* tc-ppc.c -- Assemble for the PowerPC or POWER (RS/6000)
    Copyright 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-   2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
    Written by Ian Lance Taylor, Cygnus Support.
 
    This file is part of GAS, the GNU Assembler.
@@ -877,7 +877,7 @@ static const struct pd_reg cr_names[] =
    expression.  */
 
 int
-ppc_parse_name (const char *name, expressionS *expr)
+ppc_parse_name (const char *name, expressionS *exp)
 {
   int val;
 
@@ -891,8 +891,8 @@ ppc_parse_name (const char *name, expressionS *expr)
   if (val < 0)
     return 0;
 
-  expr->X_op = O_constant;
-  expr->X_add_number = val;
+  exp->X_op = O_constant;
+  exp->X_add_number = val;
 
   return 1;
 }
@@ -1209,7 +1209,8 @@ PowerPC options:\n\
 -mvsx			generate code for Vector-Scalar (VSX) instructions\n\
 -me300			generate code for PowerPC e300 family\n\
 -me500, -me500x2	generate code for Motorola e500 core complex\n\
--me500mc,               generate code for Freescale e500mc core complex\n\
+-me500mc,		generate code for Freescale e500mc core complex\n\
+-me500mc64,		generate code for Freescale e500mc64 core complex\n\
 -mspe			generate code for Motorola SPE instructions\n\
 -mregnames		Allow symbolic names for registers\n\
 -mno-regnames		Do not allow symbolic names for registers\n"));
@@ -1624,7 +1625,7 @@ static unsigned long
 ppc_insert_operand (unsigned long insn,
 		    const struct powerpc_operand *operand,
 		    offsetT val,
-		    ppc_cpu_t ppc_cpu,
+		    ppc_cpu_t cpu,
 		    char *file,
 		    unsigned int line)
 {
@@ -1683,7 +1684,7 @@ ppc_insert_operand (unsigned long insn,
       const char *errmsg;
 
       errmsg = NULL;
-      insn = (*operand->insert) (insn, (long) val, ppc_cpu, &errmsg);
+      insn = (*operand->insert) (insn, (long) val, cpu, &errmsg);
       if (errmsg != (const char *) NULL)
 	as_bad_where (file, line, "%s", errmsg);
     }
@@ -2381,7 +2382,6 @@ md_assemble (char *str)
 	{
 	  unsigned int opcount;
 	  unsigned int num_operands_expected;
-	  unsigned int i;
 
 	  /* There is an optional operand.  Count the number of
 	     commas in the input line.  */
@@ -3779,16 +3779,16 @@ ppc_function (int ignore ATTRIBUTE_UNUSED)
 
   if (*input_line_pointer == ',')
     {
-      expressionS ignore;
+      expressionS exp;
 
       /* Ignore the third argument.  */
       ++input_line_pointer;
-      expression (&ignore);
+      expression (& exp);
       if (*input_line_pointer == ',')
 	{
 	  /* Ignore the fourth argument.  */
 	  ++input_line_pointer;
-	  expression (&ignore);
+	  expression (& exp);
 	  if (*input_line_pointer == ',')
 	    {
 	      /* The fifth argument is the function size.  */

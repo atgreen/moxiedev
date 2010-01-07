@@ -1,7 +1,7 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/zlib/contrib
 svn://gcc.gnu.org/svn/gcc
 
@@ -29,10 +29,10 @@ tromey
 minizip
 dir
 
-asm586
+iostream
 dir
 
-iostream
+asm586
 dir
 
 asm686
@@ -84,22 +84,22 @@ dir
 masmx64
 dir
 
-testzlib
+inflate86
 dir
 
 puff
 dir
 
-inflate86
+testzlib
 dir
 
 masm686
 dir
 
-pascal
+masmx86
 dir
 
-masmx86
+pascal
 dir
 
 iostream2

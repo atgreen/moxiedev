@@ -1,14 +1,14 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string/cons/char
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-12-03T14:20:56.214789Z
-154948
+2009-12-10T19:17:27.938448Z
+155137
 paolo
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2009-12-07T15:33:17.937960Z
+2010-01-06T00:59:47.946645Z
 a13349b08ae5441bc4867204d6fec4bf
-2009-12-03T14:20:56.214789Z
-154948
+2009-12-10T19:17:27.938448Z
+155137
 paolo
 
 

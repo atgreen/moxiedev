@@ -1,8 +1,8 @@
 /* Perform arithmetic and other operations on values, for GDB.
 
    Copyright (C) 1986, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996,
-   1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
-   Free Software Foundation, Inc.
+   1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009,
+   2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -1395,6 +1395,24 @@ value_equal (struct value *arg1, struct value *arg2)
       error (_("Invalid type combination in equality test."));
       return 0;			/* For lint -- never reached */
     }
+}
+
+/* Compare values based on their raw contents.  Useful for arrays since
+   value_equal coerces them to pointers, thus comparing just the address
+   of the array instead of its contents.  */
+
+int
+value_equal_contents (struct value *arg1, struct value *arg2)
+{
+  struct type *type1, *type2;
+
+  type1 = check_typedef (value_type (arg1));
+  type2 = check_typedef (value_type (arg2));
+
+  return (TYPE_CODE (type1) == TYPE_CODE (type2)
+	  && TYPE_LENGTH (type1) == TYPE_LENGTH (type2)
+	  && memcmp (value_contents (arg1), value_contents (arg2),
+		     TYPE_LENGTH (type1)) == 0);
 }
 
 /* Simulate the C operator < by returning 1

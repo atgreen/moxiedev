@@ -1,6 +1,6 @@
 // dynobj.cc -- dynamic object support for gold
 
-// Copyright 2006, 2007, 2008 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -323,6 +323,14 @@ Sized_dynobj<size, big_endian>::do_read_symbols(Read_symbols_data* sd)
   sd->external_symbols_offset = 0;
   sd->symbol_names = NULL;
   sd->symbol_names_size = 0;
+  sd->versym = NULL;
+  sd->versym_size = 0;
+  sd->verdef = NULL;
+  sd->verdef_size = 0;
+  sd->verdef_info = 0;
+  sd->verneed = NULL;
+  sd->verneed_size = 0;
+  sd->verneed_info = 0;
 
   if (this->dynsym_shndx_ != -1U)
     {
@@ -674,9 +682,10 @@ Sized_dynobj<size, big_endian>::do_add_symbols(Symbol_table* symtab,
   Version_map version_map;
   this->make_version_map(sd, &version_map);
 
-  // If printing symbol counts, we want to track symbols.
-  
-  if (parameters->options().user_set_print_symbol_counts())
+  // If printing symbol counts or a cross reference table, we want to
+  // track symbols.
+  if (parameters->options().user_set_print_symbol_counts()
+      || parameters->options().cref())
     {
       this->symbols_ = new Symbols();
       this->symbols_->resize(symcount);
@@ -951,9 +960,10 @@ Dynobj::create_gnu_hash_table(const std::vector<Symbol*>& dynsyms,
     {
       Symbol* sym = dynsyms[i];
 
-      // FIXME: Should put on unhashed_dynsyms if the symbol is
-      // hidden.
-      if (sym->is_undefined())
+      if (!sym->needs_dynsym_value()
+	  && (sym->is_undefined()
+	      || sym->is_from_dynobj()
+	      || sym->is_forced_local()))
 	unhashed_dynsyms.push_back(sym);
       else
 	{
@@ -1518,7 +1528,9 @@ Versions::finalize(Symbol_table* symtab, unsigned int dynsym_index,
       if (!(*p)->is_symbol_created())
 	{
 	  Symbol* vsym = symtab->define_as_constant((*p)->name(),
-						    (*p)->name(), 0, 0,
+						    (*p)->name(),
+						    Symbol_table::PREDEFINED,
+						    0, 0,
 						    elfcpp::STT_OBJECT,
 						    elfcpp::STB_GLOBAL,
 						    elfcpp::STV_DEFAULT, 0,

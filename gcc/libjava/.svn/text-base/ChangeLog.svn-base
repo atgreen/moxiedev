@@ -1,3 +1,46 @@
+2009-12-30  Robert Millan  <rmh.gcc@aybabtu.com>
+
+	PR other/42537
+	* classpath/java/rmi/activation/Activatable.java: Fix typos in comment.
+
+2009-12-14  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac: Remove code to un-precious-ize CC, CXX,
+	CXXFLAGS, CFLAGS, LDFLAGS.
+	* configure: Regenerate.
+
+2009-12-09  John David Anglin  <dave.anglin@nrc-cnrc.gc.ca>
+
+	* include/pa-signal.h: Do not include ucontext.h.
+	(SIGNAL_HANDLER): Add __attribute__ ((unused)) to signal handler
+	arguments.
+	(MAKE_THROW_FRAME): Do not adjust program counter.
+	* include/hppa-signal.h: Do not include sys/types.h, sys/syscall.h and
+	unistd.h.
+	(MAKE_THROW_FRAME): Do not adjust program counter.
+	(HANDLE_FPE): Define.
+	(INIT_SEGV, INIT_FPE): Revise indentation.
+
+2009-12-09  Bryce McKinlay  <bmckinlay@gmail.com>
+
+	PR java/41991
+	* configure.ac (SYSTEMSPEC): Pass -allow_stack_execute to Darwin
+	linker.
+	* Makefile.am (gij_LDFLAGS): Remove extra_gij_ldflags.
+	* configure: Regenerate.
+	* Makefile.in: Regenerate.
+
+2009-12-08  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* configure.host (sparc*-sun-solaris2.*): New case.
+	* include/dwarf2-signal.h (MAKE_THROW_FRAME, SPARC case): Make dummy.
+	* include/sparc-signal.h: Do not include ucontext.h.
+	(SIGNAL_HANDLER): Rename symbol.
+	(FLUSH_REGISTER_WINDOWS): Delete.
+	(MAKE_THROW_FRAME): Make dummy.
+	(INIT_SEGV): Adjust for above renaming.
+	(INIT_FPE): Likewise.
+
 2009-12-07  Eric Botcazou  <ebotcazou@adacore.com>
 
 	* configure.ac (net/if.h check): Include sys/socket.h if present.
@@ -224,7 +267,7 @@
 	(PrintStream(File, String)): Likewise.
 	(PrintStream(String)): Likewise.
 	(PrintStream(String, String)): Likewise.
-	
+
 2009-07-24  Kai Tietz  <kai.tietz@onevision.com>
 
 	* gnu/java/security/jce/prng/natVMSecureRandomWin32.cc: New Win32

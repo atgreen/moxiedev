@@ -1,5 +1,4 @@
-#   Copyright 2009
-#   Free Software Foundation, Inc.
+#   Copyright 2009, 2010 Free Software Foundation, Inc.
 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -262,7 +261,7 @@ gdb_test "continue" \
     "get signal TERM"
 gdb_test "continue" "Breakpoint.*handle_TERM.*" "send signal TERM"
 
-gdb_test "continue" "Program received .*" "continue to sigall exit" \
+gdb_test "continue" "\[process \[0-9\]+ .*" "continue to sigal exit" \
     "The next instruction is syscall exit_group.* program...y. or n. " \
     "yes"
 

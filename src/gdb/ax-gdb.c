@@ -1,6 +1,6 @@
 /* GDB-specific functions for operating on agent expressions.
 
-   Copyright (C) 1998, 1999, 2000, 2001, 2003, 2007, 2008, 2009
+   Copyright (C) 1998, 1999, 2000, 2001, 2003, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -22,6 +22,7 @@
 #include "symtab.h"
 #include "symfile.h"
 #include "gdbtypes.h"
+#include "language.h"
 #include "value.h"
 #include "expression.h"
 #include "command.h"
@@ -35,6 +36,8 @@
 #include "regcache.h"
 #include "user-regs.h"
 #include "language.h"
+#include "dictionary.h"
+#include "tracepoint.h"
 
 /* To make sense of this file, you should read doc/agentexpr.texi.
    Then look at the types and enums in ax-gdb.h.  For the code itself,
@@ -138,6 +141,12 @@ static void gen_sizeof (struct expression *exp, union exp_element **pc,
 			struct type *size_type);
 static void gen_expr (struct expression *exp, union exp_element **pc,
 		      struct agent_expr *ax, struct axs_value *value);
+static void gen_expr_binop_rest (struct expression *exp,
+				 enum exp_opcode op, union exp_element **pc,
+				 struct agent_expr *ax,
+				 struct axs_value *value,
+				 struct axs_value *value1,
+				 struct axs_value *value2);
 
 static void agent_command (char *exp, int from_tty);
 
@@ -393,6 +402,7 @@ gen_fetch (struct agent_expr *ax, struct type *type)
   switch (TYPE_CODE (type))
     {
     case TYPE_CODE_PTR:
+    case TYPE_CODE_REF:
     case TYPE_CODE_ENUM:
     case TYPE_CODE_INT:
     case TYPE_CODE_CHAR:
@@ -893,6 +903,7 @@ gen_cast (struct agent_expr *ax, struct axs_value *value, struct type *type)
   switch (TYPE_CODE (type))
     {
     case TYPE_CODE_PTR:
+    case TYPE_CODE_REF:
       /* It's implementation-defined, and I'll bet this is what GCC
          does.  */
       break;
@@ -953,7 +964,7 @@ static void
 gen_ptradd (struct agent_expr *ax, struct axs_value *value,
 	    struct axs_value *value1, struct axs_value *value2)
 {
-  gdb_assert (TYPE_CODE (value1->type) == TYPE_CODE_PTR);
+  gdb_assert (pointer_type (value1->type));
   gdb_assert (TYPE_CODE (value2->type) == TYPE_CODE_INT);
 
   gen_scale (ax, aop_mul, value1->type);
@@ -969,7 +980,7 @@ static void
 gen_ptrsub (struct agent_expr *ax, struct axs_value *value,
 	    struct axs_value *value1, struct axs_value *value2)
 {
-  gdb_assert (TYPE_CODE (value1->type) == TYPE_CODE_PTR);
+  gdb_assert (pointer_type (value1->type));
   gdb_assert (TYPE_CODE (value2->type) == TYPE_CODE_INT);
 
   gen_scale (ax, aop_mul, value1->type);
@@ -986,8 +997,8 @@ gen_ptrdiff (struct agent_expr *ax, struct axs_value *value,
 	     struct axs_value *value1, struct axs_value *value2,
 	     struct type *result_type)
 {
-  gdb_assert (TYPE_CODE (value1->type) == TYPE_CODE_PTR);
-  gdb_assert (TYPE_CODE (value2->type) == TYPE_CODE_PTR);
+  gdb_assert (pointer_type (value1->type));
+  gdb_assert (pointer_type (value2->type));
 
   if (TYPE_LENGTH (TYPE_TARGET_TYPE (value1->type))
       != TYPE_LENGTH (TYPE_TARGET_TYPE (value2->type)))
@@ -1060,7 +1071,7 @@ gen_deref (struct agent_expr *ax, struct axs_value *value)
 {
   /* The caller should check the type, because several operators use
      this, and we don't know what error message to generate.  */
-  if (TYPE_CODE (value->type) != TYPE_CODE_PTR)
+  if (!pointer_type (value->type))
     internal_error (__FILE__, __LINE__,
 		    _("gen_deref: expected a pointer"));
 
@@ -1319,7 +1330,7 @@ gen_struct_ref (struct expression *exp, struct agent_expr *ax,
   /* Follow pointers until we reach a non-pointer.  These aren't the C
      semantics, but they're what the normal GDB evaluator does, so we
      should at least be consistent.  */
-  while (TYPE_CODE (value->type) == TYPE_CODE_PTR)
+  while (pointer_type (value->type))
     {
       require_rvalue (ax, value);
       gen_deref (ax, value);
@@ -1439,8 +1450,9 @@ gen_expr (struct expression *exp, union exp_element **pc,
 	  struct agent_expr *ax, struct axs_value *value)
 {
   /* Used to hold the descriptions of operand expressions.  */
-  struct axs_value value1, value2;
-  enum exp_opcode op = (*pc)[0].opcode;
+  struct axs_value value1, value2, value3;
+  enum exp_opcode op = (*pc)[0].opcode, op2;
+  int if1, go1, if2, go2, end;
 
   /* If we're looking at a constant expression, just push its value.  */
   {
@@ -1477,119 +1489,128 @@ gen_expr (struct expression *exp, union exp_element **pc,
       (*pc)++;
       gen_expr (exp, pc, ax, &value1);
       gen_usual_unary (exp, ax, &value1);
+      gen_expr_binop_rest (exp, op, pc, ax, value, &value1, &value2);
+      break;
+
+    case BINOP_LOGICAL_AND:
+      (*pc)++;
+      /* Generate the obvious sequence of tests and jumps.  */
+      gen_expr (exp, pc, ax, &value1);
+      gen_usual_unary (exp, ax, &value1);
+      if1 = ax_goto (ax, aop_if_goto);
+      go1 = ax_goto (ax, aop_goto);
+      ax_label (ax, if1, ax->len);
       gen_expr (exp, pc, ax, &value2);
       gen_usual_unary (exp, ax, &value2);
-      gen_usual_arithmetic (exp, ax, &value1, &value2);
-      switch (op)
+      if2 = ax_goto (ax, aop_if_goto);
+      go2 = ax_goto (ax, aop_goto);
+      ax_label (ax, if2, ax->len);
+      ax_const_l (ax, 1);
+      end = ax_goto (ax, aop_goto);
+      ax_label (ax, go1, ax->len);
+      ax_label (ax, go2, ax->len);
+      ax_const_l (ax, 0);
+      ax_label (ax, end, ax->len);
+      value->kind = axs_rvalue;
+      value->type = language_bool_type (exp->language_defn, exp->gdbarch);
+      break;
+
+    case BINOP_LOGICAL_OR:
+      (*pc)++;
+      /* Generate the obvious sequence of tests and jumps.  */
+      gen_expr (exp, pc, ax, &value1);
+      gen_usual_unary (exp, ax, &value1);
+      if1 = ax_goto (ax, aop_if_goto);
+      gen_expr (exp, pc, ax, &value2);
+      gen_usual_unary (exp, ax, &value2);
+      if2 = ax_goto (ax, aop_if_goto);
+      ax_const_l (ax, 0);
+      end = ax_goto (ax, aop_goto);
+      ax_label (ax, if1, ax->len);
+      ax_label (ax, if2, ax->len);
+      ax_const_l (ax, 1);
+      ax_label (ax, end, ax->len);
+      value->kind = axs_rvalue;
+      value->type = language_bool_type (exp->language_defn, exp->gdbarch);
+      break;
+
+    case TERNOP_COND:
+      (*pc)++;
+      gen_expr (exp, pc, ax, &value1);
+      gen_usual_unary (exp, ax, &value1);
+      /* For (A ? B : C), it's easiest to generate subexpression
+	 bytecodes in order, but if_goto jumps on true, so we invert
+	 the sense of A.  Then we can do B by dropping through, and
+	 jump to do C.  */
+      gen_logical_not (ax, &value1,
+		       language_bool_type (exp->language_defn, exp->gdbarch));
+      if1 = ax_goto (ax, aop_if_goto);
+      gen_expr (exp, pc, ax, &value2);
+      gen_usual_unary (exp, ax, &value2);
+      end = ax_goto (ax, aop_goto);
+      ax_label (ax, if1, ax->len);
+      gen_expr (exp, pc, ax, &value3);
+      gen_usual_unary (exp, ax, &value3);
+      ax_label (ax, end, ax->len);
+      /* This is arbitary - what if B and C are incompatible types? */
+      value->type = value2.type;
+      value->kind = value2.kind;
+      break;
+
+    case BINOP_ASSIGN:
+      (*pc)++;
+      if ((*pc)[0].opcode == OP_INTERNALVAR)
 	{
-	case BINOP_ADD:
-	  if (TYPE_CODE (value1.type) == TYPE_CODE_INT
-	      && TYPE_CODE (value2.type) == TYPE_CODE_PTR)
+	  char *name = internalvar_name ((*pc)[1].internalvar);
+	  struct trace_state_variable *tsv;
+	  (*pc) += 3;
+	  gen_expr (exp, pc, ax, value);
+	  tsv = find_trace_state_variable (name);
+	  if (tsv)
 	    {
-	      /* Swap the values and proceed normally.  */
-	      ax_simple (ax, aop_swap);
-	      gen_ptradd (ax, value, &value2, &value1);
+	      ax_tsv (ax, aop_setv, tsv->number);
+	      if (trace_kludge)
+		ax_tsv (ax, aop_tracev, tsv->number);
 	    }
-	  else if (TYPE_CODE (value1.type) == TYPE_CODE_PTR
-		   && TYPE_CODE (value2.type) == TYPE_CODE_INT)
-	    gen_ptradd (ax, value, &value1, &value2);
 	  else
-	    gen_binop (ax, value, &value1, &value2,
-		       aop_add, aop_add, 1, "addition");
-	  break;
-	case BINOP_SUB:
-	  if (TYPE_CODE (value1.type) == TYPE_CODE_PTR
-	      && TYPE_CODE (value2.type) == TYPE_CODE_INT)
-	    gen_ptrsub (ax,value, &value1, &value2);
-	  else if (TYPE_CODE (value1.type) == TYPE_CODE_PTR
-		   && TYPE_CODE (value2.type) == TYPE_CODE_PTR)
-	    /* FIXME --- result type should be ptrdiff_t */
-	    gen_ptrdiff (ax, value, &value1, &value2,
-		         builtin_type (exp->gdbarch)->builtin_long);
-	  else
-	    gen_binop (ax, value, &value1, &value2,
-		       aop_sub, aop_sub, 1, "subtraction");
-	  break;
-	case BINOP_MUL:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_mul, aop_mul, 1, "multiplication");
-	  break;
-	case BINOP_DIV:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_div_signed, aop_div_unsigned, 1, "division");
-	  break;
-	case BINOP_REM:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_rem_signed, aop_rem_unsigned, 1, "remainder");
-	  break;
-	case BINOP_SUBSCRIPT:
-	  gen_ptradd (ax, value, &value1, &value2);
-	  if (TYPE_CODE (value->type) != TYPE_CODE_PTR)
-	    error (_("Invalid combination of types in array subscripting."));
-	  gen_deref (ax, value);
-	  break;
-	case BINOP_BITWISE_AND:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_bit_and, aop_bit_and, 0, "bitwise and");
-	  break;
-
-	case BINOP_BITWISE_IOR:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_bit_or, aop_bit_or, 0, "bitwise or");
-	  break;
-
-	case BINOP_BITWISE_XOR:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_bit_xor, aop_bit_xor, 0, "bitwise exclusive-or");
-	  break;
-
-	case BINOP_EQUAL:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_equal, aop_equal, 0, "equal");
-	  break;
-
-	case BINOP_NOTEQUAL:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_equal, aop_equal, 0, "equal");
-	  gen_logical_not (ax, value,
-			   language_bool_type (exp->language_defn,
-					       exp->gdbarch));
-	  break;
-
-	case BINOP_LESS:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_less_signed, aop_less_unsigned, 0, "less than");
-	  break;
-
-	case BINOP_GTR:
-	  ax_simple (ax, aop_swap);
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_less_signed, aop_less_unsigned, 0, "less than");
-	  break;
-
-	case BINOP_LEQ:
-	  ax_simple (ax, aop_swap);
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_less_signed, aop_less_unsigned, 0, "less than");
-	  gen_logical_not (ax, value,
-			   language_bool_type (exp->language_defn,
-					       exp->gdbarch));
-	  break;
-
-	case BINOP_GEQ:
-	  gen_binop (ax, value, &value1, &value2,
-		     aop_less_signed, aop_less_unsigned, 0, "less than");
-	  gen_logical_not (ax, value,
-			   language_bool_type (exp->language_defn,
-					       exp->gdbarch));
-	  break;
-
-	default:
-	  /* We should only list operators in the outer case statement
-	     that we actually handle in the inner case statement.  */
-	  internal_error (__FILE__, __LINE__,
-			  _("gen_expr: op case sets don't match"));
+	    error (_("$%s is not a trace state variable, may not assign to it"), name);
 	}
+      else
+	error (_("May only assign to trace state variables"));
+      break;
+
+    case BINOP_ASSIGN_MODIFY:
+      (*pc)++;
+      op2 = (*pc)[0].opcode;
+      (*pc)++;
+      (*pc)++;
+      if ((*pc)[0].opcode == OP_INTERNALVAR)
+	{
+	  char *name = internalvar_name ((*pc)[1].internalvar);
+	  struct trace_state_variable *tsv;
+	  (*pc) += 3;
+	  tsv = find_trace_state_variable (name);
+	  if (tsv)
+	    {
+	      /* The tsv will be the left half of the binary operation.  */
+	      ax_tsv (ax, aop_getv, tsv->number);
+	      if (trace_kludge)
+		ax_tsv (ax, aop_tracev, tsv->number);
+	      /* Trace state variables are always 64-bit integers.  */
+	      value1.kind = axs_rvalue;
+	      value1.type = builtin_type (exp->gdbarch)->builtin_long_long;
+	      /* Now do right half of expression.  */
+	      gen_expr_binop_rest (exp, op2, pc, ax, value, &value1, &value2);
+	      /* We have a result of the binary op, set the tsv.  */
+	      ax_tsv (ax, aop_setv, tsv->number);
+	      if (trace_kludge)
+		ax_tsv (ax, aop_tracev, tsv->number);
+	    }
+	  else
+	    error (_("$%s is not a trace state variable, may not assign to it"), name);
+	}
+      else
+	error (_("May only assign to trace state variables"));
       break;
 
       /* Note that we need to be a little subtle about generating code
@@ -1643,7 +1664,24 @@ gen_expr (struct expression *exp, union exp_element **pc,
       break;
 
     case OP_INTERNALVAR:
-      error (_("GDB agent expressions cannot use convenience variables."));
+      {
+	const char *name = internalvar_name ((*pc)[1].internalvar);
+	struct trace_state_variable *tsv;
+	(*pc) += 3;
+	tsv = find_trace_state_variable (name);
+	if (tsv)
+	  {
+	    ax_tsv (ax, aop_getv, tsv->number);
+	    if (trace_kludge)
+	      ax_tsv (ax, aop_tracev, tsv->number);
+	    /* Trace state variables are always 64-bit integers.  */
+	    value->kind = axs_rvalue;
+	    value->type = builtin_type (exp->gdbarch)->builtin_long_long;
+	  }
+	else
+	  error (_("$%s is not a trace state variable; GDB agent expressions cannot use convenience variables."), name);
+      }
+      break;
 
       /* Weirdo operator: see comments for gen_repeat for details.  */
     case BINOP_REPEAT:
@@ -1718,7 +1756,7 @@ gen_expr (struct expression *exp, union exp_element **pc,
       (*pc)++;
       gen_expr (exp, pc, ax, value);
       gen_usual_unary (exp, ax, value);
-      if (TYPE_CODE (value->type) != TYPE_CODE_PTR)
+      if (!pointer_type (value->type))
 	error (_("Argument of unary `*' is not a pointer."));
       gen_deref (ax, value);
       break;
@@ -1759,6 +1797,27 @@ gen_expr (struct expression *exp, union exp_element **pc,
       }
       break;
 
+    case OP_THIS:
+      {
+	char *this_name;
+	struct symbol *func, *sym;
+	struct block *b;
+
+	func = block_linkage_function (block_for_pc (ax->scope));
+	this_name = language_def (SYMBOL_LANGUAGE (func))->la_name_of_this;
+	b = SYMBOL_BLOCK_VALUE (func);
+
+	/* Calling lookup_block_symbol is necessary to get the LOC_REGISTER
+	   symbol instead of the LOC_ARG one (if both exist).  */
+	sym = lookup_block_symbol (b, this_name, NULL, VAR_DOMAIN);
+	if (!sym)
+	  error (_("no `%s' found"), this_name);
+
+	gen_var_ref (exp->gdbarch, ax, value, sym);
+	(*pc) += 2;
+      }
+      break;
+
     case OP_TYPE:
       error (_("Attempt to use a type name as an expression."));
 
@@ -1766,8 +1825,162 @@ gen_expr (struct expression *exp, union exp_element **pc,
       error (_("Unsupported operator in expression."));
     }
 }
+
+/* This handles the middle-to-right-side of code generation for binary
+   expressions, which is shared between regular binary operations and
+   assign-modify (+= and friends) expressions.  */
+
+static void
+gen_expr_binop_rest (struct expression *exp,
+		     enum exp_opcode op, union exp_element **pc,
+		     struct agent_expr *ax, struct axs_value *value,
+		     struct axs_value *value1, struct axs_value *value2)
+{
+  gen_expr (exp, pc, ax, value2);
+  gen_usual_unary (exp, ax, value2);
+  gen_usual_arithmetic (exp, ax, value1, value2);
+  switch (op)
+    {
+    case BINOP_ADD:
+      if (TYPE_CODE (value1->type) == TYPE_CODE_INT
+	  && pointer_type (value2->type))
+	{
+	  /* Swap the values and proceed normally.  */
+	  ax_simple (ax, aop_swap);
+	  gen_ptradd (ax, value, value2, value1);
+	}
+      else if (pointer_type (value1->type)
+	       && TYPE_CODE (value2->type) == TYPE_CODE_INT)
+	gen_ptradd (ax, value, value1, value2);
+      else
+	gen_binop (ax, value, value1, value2,
+		   aop_add, aop_add, 1, "addition");
+      break;
+    case BINOP_SUB:
+      if (pointer_type (value1->type)
+	  && TYPE_CODE (value2->type) == TYPE_CODE_INT)
+	gen_ptrsub (ax,value, value1, value2);
+      else if (pointer_type (value1->type)
+	       && pointer_type (value2->type))
+	/* FIXME --- result type should be ptrdiff_t */
+	gen_ptrdiff (ax, value, value1, value2,
+		     builtin_type (exp->gdbarch)->builtin_long);
+      else
+	gen_binop (ax, value, value1, value2,
+		   aop_sub, aop_sub, 1, "subtraction");
+      break;
+    case BINOP_MUL:
+      gen_binop (ax, value, value1, value2,
+		 aop_mul, aop_mul, 1, "multiplication");
+      break;
+    case BINOP_DIV:
+      gen_binop (ax, value, value1, value2,
+		 aop_div_signed, aop_div_unsigned, 1, "division");
+      break;
+    case BINOP_REM:
+      gen_binop (ax, value, value1, value2,
+		 aop_rem_signed, aop_rem_unsigned, 1, "remainder");
+      break;
+    case BINOP_SUBSCRIPT:
+      gen_ptradd (ax, value, value1, value2);
+      if (!pointer_type (value->type))
+	error (_("Invalid combination of types in array subscripting."));
+      gen_deref (ax, value);
+      break;
+    case BINOP_BITWISE_AND:
+      gen_binop (ax, value, value1, value2,
+		 aop_bit_and, aop_bit_and, 0, "bitwise and");
+      break;
+
+    case BINOP_BITWISE_IOR:
+      gen_binop (ax, value, value1, value2,
+		 aop_bit_or, aop_bit_or, 0, "bitwise or");
+      break;
+      
+    case BINOP_BITWISE_XOR:
+      gen_binop (ax, value, value1, value2,
+		 aop_bit_xor, aop_bit_xor, 0, "bitwise exclusive-or");
+      break;
+
+    case BINOP_EQUAL:
+      gen_binop (ax, value, value1, value2,
+		 aop_equal, aop_equal, 0, "equal");
+      break;
+
+    case BINOP_NOTEQUAL:
+      gen_binop (ax, value, value1, value2,
+		 aop_equal, aop_equal, 0, "equal");
+      gen_logical_not (ax, value,
+		       language_bool_type (exp->language_defn,
+					   exp->gdbarch));
+      break;
+
+    case BINOP_LESS:
+      gen_binop (ax, value, value1, value2,
+		 aop_less_signed, aop_less_unsigned, 0, "less than");
+      break;
+
+    case BINOP_GTR:
+      ax_simple (ax, aop_swap);
+      gen_binop (ax, value, value1, value2,
+		 aop_less_signed, aop_less_unsigned, 0, "less than");
+      break;
+
+    case BINOP_LEQ:
+      ax_simple (ax, aop_swap);
+      gen_binop (ax, value, value1, value2,
+		 aop_less_signed, aop_less_unsigned, 0, "less than");
+      gen_logical_not (ax, value,
+		       language_bool_type (exp->language_defn,
+					   exp->gdbarch));
+      break;
+
+    case BINOP_GEQ:
+      gen_binop (ax, value, value1, value2,
+		 aop_less_signed, aop_less_unsigned, 0, "less than");
+      gen_logical_not (ax, value,
+		       language_bool_type (exp->language_defn,
+					   exp->gdbarch));
+      break;
+
+    default:
+      /* We should only list operators in the outer case statement
+	 that we actually handle in the inner case statement.  */
+      internal_error (__FILE__, __LINE__,
+		      _("gen_expr: op case sets don't match"));
+    }
+}
 
 
+/* Given a single variable and a scope, generate bytecodes to trace
+   its value.  This is for use in situations where we have only a
+   variable's name, and no parsed expression; for instance, when the
+   name comes from a list of local variables of a function.  */
+
+struct agent_expr *
+gen_trace_for_var (CORE_ADDR scope, struct symbol *var)
+{
+  struct cleanup *old_chain = 0;
+  struct agent_expr *ax = new_agent_expr (scope);
+  struct axs_value value;
+
+  old_chain = make_cleanup_free_agent_expr (ax);
+
+  trace_kludge = 1;
+  gen_var_ref (NULL, ax, &value, var);
+
+  /* Make sure we record the final object, and get rid of it.  */
+  gen_traced_pop (ax, &value);
+
+  /* Oh, and terminate.  */
+  ax_simple (ax, aop_end);
+
+  /* We have successfully built the agent expr, so cancel the cleanup
+     request.  If we add more cleanups that we always want done, this
+     will have to get more complicated.  */
+  discard_cleanups (old_chain);
+  return ax;
+}
 
 /* Generating bytecode from GDB expressions: driver */
 

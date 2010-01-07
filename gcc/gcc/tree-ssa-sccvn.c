@@ -357,21 +357,23 @@ unsigned int
 get_or_alloc_constant_value_id (tree constant)
 {
   void **slot;
-  vn_constant_t vc = XNEW (struct vn_constant_s);
+  struct vn_constant_s vc;
+  vn_constant_t vcp;
 
-  vc->hashcode = vn_hash_constant_with_type (constant);
-  vc->constant = constant;
-  slot = htab_find_slot_with_hash (constant_to_value_id, vc,
-				   vc->hashcode, INSERT);
+  vc.hashcode = vn_hash_constant_with_type (constant);
+  vc.constant = constant;
+  slot = htab_find_slot_with_hash (constant_to_value_id, &vc,
+				   vc.hashcode, INSERT);
   if (*slot)
-    {
-      free (vc);
-      return ((vn_constant_t)*slot)->value_id;
-    }
-  vc->value_id = get_next_value_id ();
-  *slot = vc;
-  bitmap_set_bit (constant_value_ids, vc->value_id);
-  return vc->value_id;
+    return ((vn_constant_t)*slot)->value_id;
+
+  vcp = XNEW (struct vn_constant_s);
+  vcp->hashcode = vc.hashcode;
+  vcp->constant = constant;
+  vcp->value_id = get_next_value_id ();
+  *slot = (void *) vcp;
+  bitmap_set_bit (constant_value_ids, vcp->value_id);
+  return vcp->value_id;
 }
 
 /* Return true if V is a value id for a constant.  */
@@ -401,15 +403,15 @@ vn_reference_op_eq (const void *p1, const void *p2)
 /* Compute the hash for a reference operand VRO1.  */
 
 static hashval_t
-vn_reference_op_compute_hash (const vn_reference_op_t vro1)
+vn_reference_op_compute_hash (const vn_reference_op_t vro1, hashval_t result)
 {
-  hashval_t result = 0;
+  result = iterative_hash_hashval_t (vro1->opcode, result);
   if (vro1->op0)
-    result += iterative_hash_expr (vro1->op0, vro1->opcode);
+    result = iterative_hash_expr (vro1->op0, result);
   if (vro1->op1)
-    result += iterative_hash_expr (vro1->op1, vro1->opcode);
+    result = iterative_hash_expr (vro1->op1, result);
   if (vro1->op2)
-    result += iterative_hash_expr (vro1->op2, vro1->opcode);
+    result = iterative_hash_expr (vro1->op2, result);
   return result;
 }
 
@@ -427,13 +429,14 @@ vn_reference_hash (const void *p1)
 hashval_t
 vn_reference_compute_hash (const vn_reference_t vr1)
 {
-  hashval_t result;
+  hashval_t result = 0;
   int i;
   vn_reference_op_t vro;
 
-  result = iterative_hash_expr (vr1->vuse, 0);
   for (i = 0; VEC_iterate (vn_reference_op_s, vr1->operands, i, vro); i++)
-    result += vn_reference_op_compute_hash (vro);
+    result = vn_reference_op_compute_hash (vro, result);
+  if (vr1->vuse)
+    result += SSA_NAME_VERSION (vr1->vuse);
 
   return result;
 }
@@ -984,6 +987,8 @@ vn_reference_lookup_1 (vn_reference_t vr, vn_reference_t *vnresult)
   return NULL_TREE;
 }
 
+static tree *last_vuse_ptr;
+
 /* Callback for walk_non_aliased_vuses.  Adjusts the vn_reference_t VR_
    with the current VUSE and performs the expression lookup.  */
 
@@ -994,10 +999,15 @@ vn_reference_lookup_2 (ao_ref *op ATTRIBUTE_UNUSED, tree vuse, void *vr_)
   void **slot;
   hashval_t hash;
 
+  if (last_vuse_ptr)
+    *last_vuse_ptr = vuse;
+
   /* Fixup vuse and hash.  */
-  vr->hashcode = vr->hashcode - iterative_hash_expr (vr->vuse, 0);
+  if (vr->vuse)
+    vr->hashcode = vr->hashcode - SSA_NAME_VERSION (vr->vuse);
   vr->vuse = SSA_VAL (vuse);
-  vr->hashcode = vr->hashcode + iterative_hash_expr (vr->vuse, 0);
+  if (vr->vuse)
+    vr->hashcode = vr->hashcode + SSA_NAME_VERSION (vr->vuse);
 
   hash = vr->hashcode;
   slot = htab_find_slot_with_hash (current_info->references, vr,
@@ -1160,6 +1170,9 @@ vn_reference_lookup_3 (ao_ref *ref, tree vuse, void *vr_)
       if (ref->size != r.size)
 	return (void *)-1;
       *ref = r;
+
+      /* Do not update last seen VUSE after translating.  */
+      last_vuse_ptr = NULL;
 
       /* Keep looking for the adjusted *REF / VR pair.  */
       return NULL;
@@ -1352,7 +1365,7 @@ vn_reference_insert_pieces (tree vuse, alias_set_type set, tree type,
 hashval_t
 vn_nary_op_compute_hash (const vn_nary_op_t vno1)
 {
-  hashval_t hash = 0;
+  hashval_t hash;
   unsigned i;
 
   for (i = 0; i < vno1->length; ++i)
@@ -1368,8 +1381,9 @@ vn_nary_op_compute_hash (const vn_nary_op_t vno1)
       vno1->op[1] = temp;
     }
 
+  hash = iterative_hash_hashval_t (vno1->opcode, 0);
   for (i = 0; i < vno1->length; ++i)
-    hash += iterative_hash_expr (vno1->op[i], vno1->opcode);
+    hash = iterative_hash_expr (vno1->op[i], hash);
 
   return hash;
 }
@@ -1621,7 +1635,7 @@ vn_nary_op_insert_stmt (gimple stmt, tree result)
 static inline hashval_t
 vn_phi_compute_hash (vn_phi_t vp1)
 {
-  hashval_t result = 0;
+  hashval_t result;
   int i;
   tree phi1op;
   tree type;
@@ -1639,7 +1653,7 @@ vn_phi_compute_hash (vn_phi_t vp1)
     {
       if (phi1op == VN_TOP)
 	continue;
-      result += iterative_hash_expr (phi1op, result);
+      result = iterative_hash_expr (phi1op, result);
     }
 
   return result;
@@ -1961,7 +1975,13 @@ static bool
 visit_reference_op_load (tree lhs, tree op, gimple stmt)
 {
   bool changed = false;
-  tree result = vn_reference_lookup (op, gimple_vuse (stmt), true, NULL);
+  tree last_vuse;
+  tree result;
+
+  last_vuse = gimple_vuse (stmt);
+  last_vuse_ptr = &last_vuse;
+  result = vn_reference_lookup (op, gimple_vuse (stmt), true, NULL);
+  last_vuse_ptr = NULL;
 
   /* If we have a VCE, try looking up its operand as it might be stored in
      a different type.  */
@@ -2045,7 +2065,7 @@ visit_reference_op_load (tree lhs, tree op, gimple stmt)
   else
     {
       changed = set_ssa_val_to (lhs, lhs);
-      vn_reference_insert (op, lhs, gimple_vuse (stmt));
+      vn_reference_insert (op, lhs, last_vuse);
     }
 
   return changed;
@@ -2737,6 +2757,60 @@ sort_scc (VEC (tree, heap) *scc)
 	 compare_ops);
 }
 
+/* Insert the no longer used nary *ENTRY to the current hash.  */
+
+static int
+copy_nary (void **entry, void *data ATTRIBUTE_UNUSED)
+{
+  vn_nary_op_t onary = (vn_nary_op_t) *entry;
+  size_t size = (sizeof (struct vn_nary_op_s)
+		 - sizeof (tree) * (4 - onary->length));
+  vn_nary_op_t nary = (vn_nary_op_t) obstack_alloc (&current_info->nary_obstack,
+						    size);
+  void **slot;
+  memcpy (nary, onary, size);
+  slot = htab_find_slot_with_hash (current_info->nary, nary, nary->hashcode,
+				   INSERT);
+  gcc_assert (!*slot);
+  *slot = nary;
+  return 1;
+}
+
+/* Insert the no longer used phi *ENTRY to the current hash.  */
+
+static int
+copy_phis (void **entry, void *data ATTRIBUTE_UNUSED)
+{
+  vn_phi_t ophi = (vn_phi_t) *entry;
+  vn_phi_t phi = (vn_phi_t) pool_alloc (current_info->phis_pool);
+  void **slot;
+  memcpy (phi, ophi, sizeof (*phi));
+  ophi->phiargs = NULL;
+  slot = htab_find_slot_with_hash (current_info->phis, phi, phi->hashcode,
+				   INSERT);
+  *slot = phi;
+  return 1;
+}
+
+/* Insert the no longer used reference *ENTRY to the current hash.  */
+
+static int
+copy_references (void **entry, void *data ATTRIBUTE_UNUSED)
+{
+  vn_reference_t oref = (vn_reference_t) *entry;
+  vn_reference_t ref;
+  void **slot;
+  ref = (vn_reference_t) pool_alloc (current_info->references_pool);
+  memcpy (ref, oref, sizeof (*ref));
+  oref->operands = NULL;
+  slot = htab_find_slot_with_hash (current_info->references, ref, ref->hashcode,
+				   INSERT);
+  if (*slot)
+    free_reference (*slot);
+  *slot = ref;
+  return 1;
+}
+
 /* Process a strongly connected component in the SSA graph.  */
 
 static void
@@ -2782,10 +2856,12 @@ process_scc (VEC (tree, heap) *scc)
 
       statistics_histogram_event (cfun, "SCC iterations", iterations);
 
-      /* Finally, visit the SCC once using the valid table.  */
+      /* Finally, copy the contents of the no longer used optimistic
+	 table to the valid table.  */
       current_info = valid_info;
-      for (i = 0; VEC_iterate (tree, scc, i, var); i++)
-	visit_use (var);
+      htab_traverse (optimistic_info->nary, copy_nary, NULL);
+      htab_traverse (optimistic_info->phis, copy_phis, NULL);
+      htab_traverse (optimistic_info->references, copy_references, NULL);
     }
 }
 
@@ -3239,23 +3315,6 @@ expressions_equal_p (tree e1, tree e2)
   /* If only one of them is null, they cannot be equal.  */
   if (!e1 || !e2)
     return false;
-
-  /* Recurse on elements of lists.  */
-  if (TREE_CODE (e1) == TREE_LIST && TREE_CODE (e2) == TREE_LIST)
-    {
-      tree lop1 = e1;
-      tree lop2 = e2;
-      for (lop1 = e1, lop2 = e2;
-	   lop1 || lop2;
-	   lop1 = TREE_CHAIN (lop1), lop2 = TREE_CHAIN (lop2))
-	{
-	  if (!lop1 || !lop2)
-	    return false;
-	  if (!expressions_equal_p (TREE_VALUE (lop1), TREE_VALUE (lop2)))
-	    return false;
-	}
-      return true;
-    }
 
   /* Now perform the actual comparison.  */
   if (TREE_CODE (e1) == TREE_CODE (e2)

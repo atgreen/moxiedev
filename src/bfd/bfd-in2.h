@@ -971,17 +971,17 @@ bfd *bfd_fdopenr (const char *filename, const char *target, int fd);
 bfd *bfd_openstreamr (const char *, const char *, void *);
 
 bfd *bfd_openr_iovec (const char *filename, const char *target,
-    void *(*open) (struct bfd *nbfd,
+    void *(*open_func) (struct bfd *nbfd,
     void *open_closure),
     void *open_closure,
-    file_ptr (*pread) (struct bfd *nbfd,
+    file_ptr (*pread_func) (struct bfd *nbfd,
     void *stream,
     void *buf,
     file_ptr nbytes,
     file_ptr offset),
-    int (*close) (struct bfd *nbfd,
+    int (*close_func) (struct bfd *nbfd,
     void *stream),
-    int (*stat) (struct bfd *abfd,
+    int (*stat_func) (struct bfd *abfd,
     void *stream,
     struct stat *sb));
 
@@ -1901,6 +1901,7 @@ enum bfd_architecture
 #define bfd_mach_ppc_7400      7400
 #define bfd_mach_ppc_e500      500
 #define bfd_mach_ppc_e500mc    5001
+#define bfd_mach_ppc_e500mc64    5005
   bfd_arch_rs6000,    /* IBM RS/6000 */
 #define bfd_mach_rs6k          6000
 #define bfd_mach_rs6k_rs1      6001

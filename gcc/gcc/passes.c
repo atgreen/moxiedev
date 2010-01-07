@@ -337,6 +337,11 @@ struct rtl_opt_pass pass_postreload =
 struct opt_pass *all_passes, *all_small_ipa_passes, *all_lowering_passes,
   *all_regular_ipa_passes, *all_lto_gen_passes;
 
+/* This is used by plugins, and should also be used in register_pass.  */
+#define DEF_PASS_LIST(LIST) &LIST,
+struct opt_pass **gcc_pass_lists[] = { GCC_PASS_LISTS NULL };
+#undef DEF_PASS_LIST
+
 /* A map from static pass id to optimization pass.  */
 struct opt_pass **passes_by_id;
 int passes_by_id_size;
@@ -460,8 +465,21 @@ make_pass_instance (struct opt_pass *pass, bool track_duplicates)
     {
       struct opt_pass *new_pass;
 
-      new_pass = XNEW (struct opt_pass);
-      memcpy (new_pass, pass, sizeof (*new_pass));
+      if (pass->type == GIMPLE_PASS
+          || pass->type == RTL_PASS
+          || pass->type == SIMPLE_IPA_PASS)
+        {
+          new_pass = XNEW (struct opt_pass);
+          memcpy (new_pass, pass, sizeof (struct opt_pass));
+        }
+      else if (pass->type == IPA_PASS)
+        {
+          new_pass = (struct opt_pass *)XNEW (struct ipa_opt_pass_d);
+          memcpy (new_pass, pass, sizeof (struct ipa_opt_pass_d));
+        }
+      else
+        gcc_unreachable ();
+
       new_pass->next = NULL;
 
       new_pass->todo_flags_start &= ~TODO_mark_first_instance;

@@ -1,7 +1,5 @@
 D/machine////
 D/sys////
-/_ansi.h/1.8/Wed Nov 18 20:13:20 2009/-ko/
-/_syslist.h/1.3/Wed Nov 18 20:13:20 2009/-ko/
 /alloca.h/1.2/Wed Nov 18 20:13:20 2009//
 /ar.h/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
 /argz.h/1.2/Wed Nov 18 20:13:20 2009//
@@ -29,7 +27,6 @@ D/sys////
 /newlib.h/1.1/Wed Nov 18 20:13:20 2009//
 /paths.h/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
 /process.h/1.4/Wed Nov 18 20:13:20 2009/-ko/
-/pthread.h/1.7/Wed Nov 18 20:13:20 2009//
 /pwd.h/1.3/Wed Nov 18 20:13:20 2009/-ko/
 /reent.h/1.11/Wed Nov 18 20:13:20 2009/-ko/
 /regdef.h/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
@@ -40,7 +37,6 @@ D/sys////
 /signal.h/1.3/Wed Nov 18 20:13:20 2009/-ko/
 /stdint.h/1.15/Wed Nov 18 20:13:20 2009//
 /stdio.h/1.60/Wed Dec  9 22:25:14 2009/-ko/
-/stdlib.h/1.36/Wed Dec  9 22:25:14 2009/-ko/
 /string.h/1.22/Wed Nov 18 20:13:20 2009/-ko/
 /tar.h/1.1/Wed Nov 18 20:13:20 2009//
 /termios.h/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
@@ -52,3 +48,7 @@ D/sys////
 /wchar.h/1.28/Wed Dec  9 22:25:14 2009//
 /wctype.h/1.3/Wed Nov 18 20:13:20 2009//
 /wordexp.h/1.1/Wed Nov 18 20:13:20 2009//
+/_ansi.h/1.9/Wed Jan  6 04:54:17 2010/-ko/
+/_syslist.h/1.4/Wed Jan  6 04:54:17 2010/-ko/
+/pthread.h/1.8/Wed Jan  6 04:54:17 2010//
+/stdlib.h/1.38/Wed Jan  6 04:54:17 2010/-ko/

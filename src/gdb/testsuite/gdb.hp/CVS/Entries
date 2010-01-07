@@ -4,7 +4,6 @@ D/gdb.compat////
 D/gdb.defects////
 D/gdb.objdbg////
 D/tools////
-D/gdb.threads-hp////
 /Makefile.in/1.1.1.2/Wed Nov 18 20:13:18 2009/-ko/
 /configure/1.4/Wed Nov 18 20:13:18 2009/-ko/
 /configure.ac/1.1/Wed Nov 18 20:13:18 2009//

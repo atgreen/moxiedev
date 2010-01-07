@@ -1,14 +1,14 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/scripts
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-10-05T17:42:00.790262Z
-152457
+2009-12-21T21:26:45.946612Z
+155380
 bkoz
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2009-04-30T05:14:40.000000Z
-c295bb9357f2dcc5ec8253a4d73bdeaf
-2009-04-29T05:12:00.794423Z
-146923
+2010-01-06T00:59:40.973647Z
+a0ba488eb712c59e45e804c2eedfc273
+2009-12-21T21:26:45.946612Z
+155380
 bkoz
 
 
@@ -58,7 +58,7 @@ bkoz
 
 
 
-9704
+10037
 
 extract_symvers
 file

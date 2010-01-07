@@ -227,8 +227,20 @@ AM_CONDITIONAL(FN_PTRS_IN_SO_WITHOUT_PIC, [
     *) true;;
   esac])
 
+dnl Test for gcc 4.1 or later.  Full support for -mcmodel=medium is
+dnl only available in gcc 4.1.
+AC_CACHE_CHECK([for gcc >= 4.1], [gold_cv_prog_gcc41],
+[AC_COMPILE_IFELSE([
+#if !defined __GNUC__
+error
+#elif __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 1)
+error
+#endif
+], [gold_cv_prog_gcc41=yes], [gold_cv_prog_gcc41=no])])
+
 dnl Whether we can test -mcmodel=medium.
-AM_CONDITIONAL(MCMODEL_MEDIUM, [test "$target_cpu" = "x86_64"])
+AM_CONDITIONAL(MCMODEL_MEDIUM,
+[test "$target_cpu" = "x86_64" -a "$gold_cv_prog_gcc41" = "yes"])
 
 dnl Test for __thread support.
 AC_CACHE_CHECK([for thread support], [gold_cv_c_thread],
@@ -312,7 +324,7 @@ AC_SUBST(RANDOM_SEED_CFLAGS)
 
 AM_BINUTILS_WARNINGS
 
-WARN_CXXFLAGS=`echo ${WARN_CFLAGS} | sed -e 's/-Wstrict-prototypes//' -e 's/-Wmissing-prototypes//'`
+WARN_CXXFLAGS=`echo ${WARN_CFLAGS} | sed -e 's/-Wstrict-prototypes//' -e 's/-Wmissing-prototypes//' -e 's/-Wshadow//'`
 AC_SUBST(WARN_CXXFLAGS)
 
 dnl Force support for large files by default.  This may need to be
@@ -338,7 +350,7 @@ AC_LANG_PUSH(C++)
 AC_CHECK_HEADERS(tr1/unordered_set tr1/unordered_map)
 AC_CHECK_HEADERS(ext/hash_map ext/hash_set)
 AC_CHECK_HEADERS(byteswap.h)
-AC_CHECK_FUNCS(mallinfo posix_fallocate readv)
+AC_CHECK_FUNCS(mallinfo posix_fallocate readv sysconf times)
 AC_CHECK_DECLS([basename, ffs, asprintf, vasprintf, snprintf, vsnprintf, strverscmp, strndup, memmem])
 
 # Use of ::std::tr1::unordered_map::rehash causes undefined symbols

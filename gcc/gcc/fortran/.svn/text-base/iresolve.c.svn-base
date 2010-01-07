@@ -106,7 +106,7 @@ resolve_mask_arg (gfc_expr *mask)
 	{
 	  ts.type = BT_LOGICAL;
 	  ts.kind = 1;
-	  gfc_convert_type (mask, &ts, 2);
+	  gfc_convert_type_warn (mask, &ts, 2, 0);
 	}
     }
 }
@@ -702,7 +702,7 @@ gfc_resolve_dot_product (gfc_expr *f, gfc_expr *a, gfc_expr *b)
   temp.value.op.op = INTRINSIC_NONE;
   temp.value.op.op1 = a;
   temp.value.op.op2 = b;
-  gfc_type_convert_binary (&temp);
+  gfc_type_convert_binary (&temp, 1);
   f->ts = temp.ts;
   f->value.function.name
     = gfc_get_string (PREFIX ("dot_product_%c%d"),
@@ -1380,7 +1380,7 @@ gfc_resolve_matmul (gfc_expr *f, gfc_expr *a, gfc_expr *b)
       temp.value.op.op = INTRINSIC_NONE;
       temp.value.op.op1 = a;
       temp.value.op.op2 = b;
-      gfc_type_convert_binary (&temp);
+      gfc_type_convert_binary (&temp, 1);
       f->ts = temp.ts;
     }
 

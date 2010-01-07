@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-12-05T01:51:46.225235Z
-155007
-jason
+2010-01-05T19:42:32.607047Z
+155658
+jamborm
 
 
 
@@ -127,6 +127,9 @@ dir
 vect
 dir
 
+tls
+dir
+
 opt
 dir
 
@@ -164,13 +167,10 @@ kkojima
 
 7734
 
-tls
+tree-prof
 dir
 
 graphite
-dir
-
-tree-prof
 dir
 
 warn
@@ -179,10 +179,10 @@ dir
 lookup
 dir
 
-pch
+parse
 dir
 
-parse
+pch
 dir
 
 expr
@@ -201,6 +201,9 @@ cpp0x
 dir
 
 abi
+dir
+
+eh
 dir
 
 pubtypes.C
@@ -236,9 +239,6 @@ janis
 
 
 1239
-
-eh
-dir
 
 README
 file

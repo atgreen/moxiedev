@@ -306,6 +306,15 @@ lto_output_node (struct lto_simple_output_block *ob, struct cgraph_node *node,
   lto_output_sleb128_stream (ob->main_stream,
 			     node->global.estimated_growth);
   lto_output_uleb128_stream (ob->main_stream, node->global.inlined);
+  if (node->same_comdat_group)
+    {
+      ref = lto_cgraph_encoder_lookup (encoder, node->same_comdat_group);
+      gcc_assert (ref != LCC_NOT_FOUND);
+    }
+  else
+    ref = LCC_NOT_FOUND;
+  lto_output_sleb128_stream (ob->main_stream, ref);
+
   if (node->same_body)
     {
       struct cgraph_node *alias;
@@ -331,7 +340,11 @@ lto_output_node (struct lto_simple_output_block *ob, struct cgraph_node *node,
 					alias->thunk.alias);
 	    }
 	  else
-            lto_output_uleb128_stream (ob->main_stream, 0);
+	    {
+	      lto_output_uleb128_stream (ob->main_stream, 0);
+	      lto_output_fn_decl_index (ob->decl_state, ob->main_stream,
+					alias->thunk.alias);
+	    }
 	  alias = alias->previous;
 	}
       while (alias);
@@ -407,7 +420,29 @@ output_cgraph (cgraph_node_set set)
 	      /* We should have moved all the inlines.  */
 	      gcc_assert (!callee->global.inlined_to);
 	      lto_cgraph_encoder_encode (encoder, callee);
+	      /* Also with each included function include all other functions
+		 in the same comdat group.  */
+	      if (callee->same_comdat_group)
+		{
+		  struct cgraph_node *next;
+		  for (next = callee->same_comdat_group;
+		       next != callee;
+		       next = next->same_comdat_group)
+		    if (!cgraph_node_in_set_p (next, set))
+		      lto_cgraph_encoder_encode (encoder, next);
+		}
 	    }
+	}
+      /* Also with each included function include all other functions
+	 in the same comdat group.  */
+      if (node->same_comdat_group)
+	{
+	  struct cgraph_node *next;
+	  for (next = node->same_comdat_group;
+	       next != node;
+	       next = next->same_comdat_group)
+	    if (!cgraph_node_in_set_p (next, set))
+	      lto_cgraph_encoder_encode (encoder, next);
 	}
     }
 
@@ -519,7 +554,7 @@ input_node (struct lto_file_decl_data *file_data,
   bool clone_p;
   int estimated_stack_size = 0;
   int stack_frame_offset = 0;
-  int ref = LCC_NOT_FOUND;
+  int ref = LCC_NOT_FOUND, ref2 = LCC_NOT_FOUND;
   int estimated_growth = 0;
   int time = 0;
   int size = 0;
@@ -561,6 +596,7 @@ input_node (struct lto_file_decl_data *file_data,
   size = lto_input_sleb128 (ib);
   estimated_growth = lto_input_sleb128 (ib);
   inlined = lto_input_uleb128 (ib);
+  ref2 = lto_input_sleb128 (ib);
   same_body_count = lto_input_uleb128 (ib);
 
   /* Make sure that we have not read this node before.  Nodes that
@@ -587,6 +623,9 @@ input_node (struct lto_file_decl_data *file_data,
   node->global.estimated_growth = estimated_growth;
   node->global.inlined = inlined;
 
+  /* Store a reference for now, and fix up later to be a pointer.  */
+  node->same_comdat_group = (cgraph_node_ptr) (intptr_t) ref2;
+
   while (same_body_count-- > 0)
     {
       tree alias_decl;
@@ -595,7 +634,12 @@ input_node (struct lto_file_decl_data *file_data,
       alias_decl = lto_file_decl_data_get_fn_decl (file_data, decl_index);
       type = lto_input_uleb128 (ib);
       if (!type)
-        cgraph_same_body_alias (alias_decl, fn_decl);
+	{
+	  tree real_alias;
+	  decl_index = lto_input_uleb128 (ib);
+	  real_alias = lto_file_decl_data_get_fn_decl (file_data, decl_index);
+	  cgraph_same_body_alias (alias_decl, real_alias);
+	}
       else
         {
 	  HOST_WIDE_INT fixed_offset = lto_input_uleb128 (ib);
@@ -707,13 +751,21 @@ input_cgraph_1 (struct lto_file_decl_data *file_data,
 
   for (i = 0; VEC_iterate (cgraph_node_ptr, nodes, i, node); i++)
     {
-      const int ref = (int) (intptr_t) node->global.inlined_to;
+      int ref = (int) (intptr_t) node->global.inlined_to;
 
       /* Fixup inlined_to from reference to pointer.  */
       if (ref != LCC_NOT_FOUND)
 	node->global.inlined_to = VEC_index (cgraph_node_ptr, nodes, ref);
       else
 	node->global.inlined_to = NULL;
+
+      ref = (int) (intptr_t) node->same_comdat_group;
+
+      /* Fixup same_comdat_group from reference to pointer.  */
+      if (ref != LCC_NOT_FOUND)
+	node->same_comdat_group = VEC_index (cgraph_node_ptr, nodes, ref);
+      else
+	node->same_comdat_group = NULL;
     }
 
   VEC_free (cgraph_node_ptr, heap, nodes);

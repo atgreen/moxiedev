@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/set/operators
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2009-12-15T16:11:32.081859Z
+155258
+paolo
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:50:17.000000Z
-05f6da58c418754b8f39d7e99881783d
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-01-06T00:59:50.306644Z
+338af465e4e1479862b0dc834eeeccfb
+2009-12-15T16:11:32.081859Z
+155258
+paolo
 
 
 
@@ -58,5 +58,5 @@ jakub
 
 
 
-1488
+1484
 

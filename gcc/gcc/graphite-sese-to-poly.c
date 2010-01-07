@@ -2186,7 +2186,11 @@ rewrite_close_phi_out_of_ssa (gimple_stmt_iterator *psi)
   gimple stmt = gimple_build_assign (res, zero_dim_array);
   tree arg = gimple_phi_arg_def (phi, 0);
 
-  insert_out_of_ssa_copy (zero_dim_array, arg);
+  if (TREE_CODE (arg) == SSA_NAME)
+    insert_out_of_ssa_copy (zero_dim_array, arg);
+  else
+    insert_out_of_ssa_copy_on_edge (single_pred_edge (gimple_bb (phi)),
+				    zero_dim_array, arg);
 
   remove_phi_node (psi, false);
   gsi_insert_before (&gsi, stmt, GSI_NEW_STMT);
@@ -2241,7 +2245,7 @@ rewrite_phi_out_of_ssa (gimple_stmt_iterator *psi)
 	 |  end_2
 	 | end_1
 
-	 whereas inserting the copy on the incomming edge is correct
+	 whereas inserting the copy on the incoming edge is correct
 
 	 | a = ...
 	 | loop_1
@@ -2446,6 +2450,9 @@ split_reduction_stmt (gimple stmt)
 
   split_block (bb, stmt);
 
+  if (gsi_one_before_end_p (gsi_start_bb (bb)))
+    return bb;
+
   gsi = gsi_last_bb (bb);
   gsi_prev (&gsi);
   e = split_block (bb, gsi_stmt (gsi));
@@ -2458,9 +2465,14 @@ split_reduction_stmt (gimple stmt)
 static inline bool
 is_reduction_operation_p (gimple stmt)
 {
+  enum tree_code code;
+
+  gcc_assert (is_gimple_assign (stmt));
+  code = gimple_assign_rhs_code (stmt);
+
   return flag_associative_math
-    && commutative_tree_code (gimple_assign_rhs_code (stmt))
-    && associative_tree_code (gimple_assign_rhs_code (stmt));
+    && commutative_tree_code (code)
+    && associative_tree_code (code);
 }
 
 /* Returns true when PHI contains an argument ARG.  */
@@ -2489,12 +2501,19 @@ follow_ssa_with_commutative_ops (tree arg, tree lhs)
 
   stmt = SSA_NAME_DEF_STMT (arg);
 
+  if (gimple_code (stmt) == GIMPLE_NOP
+      || gimple_code (stmt) == GIMPLE_CALL)
+    return NULL;
+
   if (gimple_code (stmt) == GIMPLE_PHI)
     {
       if (phi_contains_arg (stmt, lhs))
 	return stmt;
       return NULL;
     }
+
+  if (!is_gimple_assign (stmt))
+    return NULL;
 
   if (gimple_num_ops (stmt) == 2)
     return follow_ssa_with_commutative_ops (gimple_assign_rhs1 (stmt), lhs);
@@ -2511,7 +2530,7 @@ follow_ssa_with_commutative_ops (tree arg, tree lhs)
 }
 
 /* Detect commutative and associative scalar reductions starting at
-   the STMT.  */
+   the STMT.  Return the phi node of the reduction cycle, or NULL.  */
 
 static gimple
 detect_commutative_reduction_arg (tree lhs, gimple stmt, tree arg,
@@ -2520,18 +2539,16 @@ detect_commutative_reduction_arg (tree lhs, gimple stmt, tree arg,
 {
   gimple phi = follow_ssa_with_commutative_ops (arg, lhs);
 
-  if (phi)
-    {
-      VEC_safe_push (gimple, heap, *in, stmt);
-      VEC_safe_push (gimple, heap, *out, stmt);
-      return phi;
-    }
+  if (!phi)
+    return NULL;
 
-  return NULL;
+  VEC_safe_push (gimple, heap, *in, stmt);
+  VEC_safe_push (gimple, heap, *out, stmt);
+  return phi;
 }
 
 /* Detect commutative and associative scalar reductions starting at
-   the STMT.  */
+   the STMT.  Return the phi node of the reduction cycle, or NULL.  */
 
 static gimple
 detect_commutative_reduction_assign (gimple stmt, VEC (gimple, heap) **in,
@@ -2619,7 +2636,8 @@ initial_value_for_loop_phi (gimple phi)
 }
 
 /* Detect commutative and associative scalar reductions starting at
-   the loop closed phi node CLOSE_PHI.  */
+   the loop closed phi node CLOSE_PHI.  Return the phi node of the
+   reduction cycle, or NULL.  */
 
 static gimple
 detect_commutative_reduction (gimple stmt, VEC (gimple, heap) **in,
@@ -2628,8 +2646,13 @@ detect_commutative_reduction (gimple stmt, VEC (gimple, heap) **in,
   if (scalar_close_phi_node_p (stmt))
     {
       tree arg = gimple_phi_arg_def (stmt, 0);
-      gimple def = SSA_NAME_DEF_STMT (arg);
-      gimple loop_phi = detect_commutative_reduction (def, in, out);
+      gimple def, loop_phi;
+
+      if (TREE_CODE (arg) != SSA_NAME)
+	return NULL;
+
+      def = SSA_NAME_DEF_STMT (arg);
+      loop_phi = detect_commutative_reduction (def, in, out);
 
       if (loop_phi)
 	{
@@ -2658,13 +2681,13 @@ static void
 translate_scalar_reduction_to_array_for_stmt (tree red, gimple stmt,
 					      gimple loop_phi)
 {
-  basic_block bb = gimple_bb (stmt);
-  gimple_stmt_iterator insert_gsi = gsi_after_labels (bb);
+  gimple_stmt_iterator insert_gsi = gsi_after_labels (gimple_bb (loop_phi));
   tree res = gimple_phi_result (loop_phi);
   gimple assign = gimple_build_assign (res, red);
 
   gsi_insert_before (&insert_gsi, assign, GSI_SAME_STMT);
 
+  insert_gsi = gsi_after_labels (gimple_bb (stmt));
   assign = gimple_build_assign (red, gimple_assign_lhs (stmt));
   insert_gsi = gsi_for_stmt (stmt);
   gsi_insert_after (&insert_gsi, assign, GSI_SAME_STMT);

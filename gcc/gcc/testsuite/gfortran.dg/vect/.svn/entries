@@ -1,7 +1,7 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gfortran.dg/vect
 svn://gcc.gnu.org/svn/gcc
 
@@ -230,40 +230,6 @@ irar
 
 701
 
-vect.exp
-file
-
-
-
-
-2009-09-27T03:30:03.000000Z
-57895b0d2e5c74383ae9e4d52eccbc8e
-2009-09-25T05:52:46.490420Z
-152157
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5637
-
 vect-1.f90
 file
 
@@ -297,6 +263,40 @@ billingd
 
 
 294
+
+vect.exp
+file
+
+
+
+
+2009-09-27T03:30:03.000000Z
+57895b0d2e5c74383ae9e4d52eccbc8e
+2009-09-25T05:52:46.490420Z
+152157
+revitale
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5637
 
 vect-2.f90
 file
@@ -366,40 +366,6 @@ revitale
 
 971
 
-vect-4.f90
-file
-
-
-
-
-2009-12-07T15:31:39.596199Z
-90031c00ffb38cee03cead379c6b3a19
-2009-10-27T11:46:07.328977Z
-153590
-revitale
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-905
-
 pr33301.f
 file
 
@@ -433,6 +399,40 @@ dorit
 
 
 495
+
+vect-4.f90
+file
+
+
+
+
+2009-12-07T15:31:39.596199Z
+90031c00ffb38cee03cead379c6b3a19
+2009-10-27T11:46:07.328977Z
+153590
+revitale
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+905
 
 vect-5.f90
 file

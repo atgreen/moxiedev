@@ -1,5 +1,6 @@
 /* <proc_service.h> replacement for systems that don't have it.
-   Copyright (C) 2000, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2000, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -54,7 +55,7 @@ typedef unsigned int lwpid_t;
 #endif
 
 #ifndef HAVE_PSADDR_T
-typedef unsigned long psaddr_t;
+typedef void *psaddr_t;
 #endif
 
 #ifndef HAVE_PRGREGSET_T

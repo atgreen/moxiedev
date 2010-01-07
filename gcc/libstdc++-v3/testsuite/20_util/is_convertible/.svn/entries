@@ -1,14 +1,14 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util/is_convertible
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-10-29T23:23:29.429571Z
-153728
+2009-12-30T23:22:58.623234Z
+155529
 paolo
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2009-12-07T15:33:19.126949Z
-e0a9c4224979d3b1969c36dd7e6ff96c
-2009-10-29T23:23:29.429571Z
-153728
+2010-01-06T00:59:51.876646Z
+0f1eddb15e0562b331ed99d01c574be9
+2009-12-30T23:22:58.623234Z
+155529
 paolo
 
 
@@ -58,7 +58,7 @@ paolo
 
 
 
-5041
+5276
 
 requirements
 dir

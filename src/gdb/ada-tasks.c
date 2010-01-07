@@ -1,5 +1,5 @@
 /* Copyright (C) 1992, 1993, 1994, 1997, 1998, 1999, 2000, 2003, 2004, 2005,
-   2007, 2008, 2009 Free Software Foundation, Inc.
+   2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -198,6 +198,7 @@ get_task_number_from_id (CORE_ADDR task_id)
 int
 valid_task_id (int task_num)
 {
+  ada_build_task_list (0);
   return (task_num > 0
           && task_num <= VEC_length (ada_task_info_s, task_list));
 }

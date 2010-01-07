@@ -1,6 +1,6 @@
 /* This test script is part of GDB, the GNU debugger.
 
-   Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -30,6 +30,10 @@ struct Foo {
 
 typedef Foo *FooHandle;
 
+extern "C" {
+  int foo(int);
+}
+
 int main()
 {
     Foo f;
@@ -37,5 +41,6 @@ int main()
     Foo* &rf = pf;
     FooHandle handle = pf;
     rf->func(); /* set breakpoint here */
+    foo(0);
     return func(0);
 }

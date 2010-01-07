@@ -1,5 +1,4 @@
 /ChangeLog/1.64/Wed Dec  9 22:25:32 2009/-ko/
-/Makefile.in/1.7/Wed Nov 18 20:13:22 2009/-ko/
 /compile.c/1.46/Wed Dec  9 22:25:32 2009/-ko/
 /config.in/1.4/Wed Nov 18 20:13:22 2009/-ko/
 /configure/1.16/Wed Dec  9 22:25:32 2009/-ko/
@@ -8,4 +7,5 @@
 /sim-main.h/1.4/Wed Nov 18 20:13:22 2009//
 /tconfig.in/1.1.1.1/Wed Nov 18 20:13:22 2009/-ko/
 /writecode.c/1.2/Wed Nov 18 20:13:22 2009/-ko/
+/Makefile.in/1.8/Wed Jan  6 04:54:35 2010/-ko/
 D

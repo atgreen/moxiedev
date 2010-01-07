@@ -1556,6 +1556,10 @@ select_class_proc (gfc_se *se, gfc_class_esym_list *elist,
       if (elist->derived == NULL)
 	goto free_elist;
 
+      /* Skip abstract base types.  */
+      if (elist->derived->attr.abstract)
+       goto free_elist;
+
       /* Run through the chain picking up all the cases that call the
 	 same procedure.  */
       tmp_elist = elist;
@@ -3347,6 +3351,12 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 	    {
 	      var = gfc_create_var (type, "pstr");
 
+	      if ((!comp && sym->attr.allocatable)
+		  || (comp && comp->attr.allocatable))
+		gfc_add_modify (&se->pre, var,
+				fold_convert (TREE_TYPE (var),
+					      null_pointer_node));
+
 	      /* Provide an address expression for the function arguments.  */
 	      var = gfc_build_addr_expr (NULL_TREE, var);
 	    }
@@ -3409,7 +3419,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
      something like
         x = f()
      where f is pointer valued, we have to dereference the result.  */
-  if (!se->want_pointer && !byref && sym->attr.pointer
+  if (!se->want_pointer && !byref
+      && (sym->attr.pointer || sym->attr.allocatable)
       && !gfc_is_proc_ptr_comp (expr, NULL))
     se->expr = build_fold_indirect_ref_loc (input_location,
 					se->expr);

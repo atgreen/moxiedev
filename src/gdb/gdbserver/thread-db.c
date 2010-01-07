@@ -1,5 +1,5 @@
 /* Thread management interface, for the remote server for GDB.
-   Copyright (C) 2002, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2002, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    Contributed by MontaVista Software.
@@ -71,8 +71,8 @@ struct thread_db
 				sigset_t *ti_sigmask_p,
 				unsigned int ti_user_flags);
   td_err_e (*td_thr_tls_get_addr_p) (const td_thrhandle_t *th,
-				     void *map_address,
-				     size_t offset, void **address);
+				     psaddr_t map_address,
+				     size_t offset, psaddr_t *address);
   const char ** (*td_symbol_list_p) (void);
 };
 
@@ -596,6 +596,8 @@ try_thread_db_load_1 (void *handle)
   return 1;
 }
 
+#ifdef HAVE_DLADDR
+
 /* Lookup a library in which given symbol resides.
    Note: this is looking in the GDBSERVER process, not in the inferior.
    Returns library name, or NULL.  */
@@ -609,6 +611,8 @@ dladdr_to_soname (const void *addr)
     return info.dli_fname;
   return NULL;
 }
+
+#endif
 
 static int
 try_thread_db_load (const char *library)
@@ -626,6 +630,7 @@ try_thread_db_load (const char *library)
       return 0;
     }
 
+#ifdef HAVE_DLADDR
   if (debug_threads && strchr (library, '/') == NULL)
     {
       void *td_init;
@@ -640,6 +645,7 @@ try_thread_db_load (const char *library)
 		     library, libpath);
 	}
     }
+#endif
 
   if (try_thread_db_load_1 (handle))
     return 1;
@@ -749,6 +755,17 @@ thread_db_init (int use_events)
   return 0;
 }
 
+static int
+any_thread_of (struct inferior_list_entry *entry, void *args)
+{
+  int *pid_p = args;
+
+  if (ptid_get_pid (entry->id) == *pid_p)
+    return 1;
+
+  return 0;
+}
+
 /* Disconnect from libthread_db and free resources.  */
 
 void
@@ -757,6 +774,8 @@ thread_db_free (struct process_info *proc, int detaching)
   struct thread_db *thread_db = proc->private->thread_db;
   if (thread_db)
     {
+      struct thread_info *saved_inferior;
+      int pid;
       td_err_e (*td_ta_delete_p) (td_thragent_t *);
       td_err_e (*td_ta_clear_event_p) (const td_thragent_t *ta,
 				       td_thr_events_t *event);
@@ -768,6 +787,12 @@ thread_db_free (struct process_info *proc, int detaching)
       td_ta_delete_p = &td_ta_delete;
       td_ta_clear_event_p = &td_ta_clear_event;
 #endif
+
+      pid = pid_of (proc);
+      saved_inferior = current_inferior;
+      current_inferior =
+	(struct thread_info *) find_inferior (&all_threads,
+					      any_thread_of, &pid);
 
       if (detaching && td_ta_clear_event_p != NULL)
 	{
@@ -788,6 +813,7 @@ thread_db_free (struct process_info *proc, int detaching)
 
       free (thread_db);
       proc->private->thread_db = NULL;
+      current_inferior = saved_inferior;
     }
 }
 

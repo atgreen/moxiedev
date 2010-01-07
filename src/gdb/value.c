@@ -2,7 +2,7 @@
 
    Copyright (C) 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995,
    1996, 1997, 1998, 1999, 2000, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009 Free Software Foundation, Inc.
+   2009, 2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -254,7 +254,14 @@ struct value *
 allocate_value_lazy (struct type *type)
 {
   struct value *val;
-  struct type *atype = check_typedef (type);
+
+  /* Call check_typedef on our type to make sure that, if TYPE
+     is a TYPE_CODE_TYPEDEF, its length is set to the length
+     of the target type instead of zero.  However, we do not
+     replace the typedef type by the target type, because we want
+     to keep the typedef in order to be able to set the VAL's type
+     description correctly.  */
+  check_typedef (type);
 
   val = (struct value *) xzalloc (sizeof (struct value));
   val->contents = NULL;
@@ -1873,6 +1880,14 @@ value_primitive_field (struct value *arg1, int offset,
 
   CHECK_TYPEDEF (arg_type);
   type = TYPE_FIELD_TYPE (arg_type, fieldno);
+
+  /* Call check_typedef on our type to make sure that, if TYPE
+     is a TYPE_CODE_TYPEDEF, its length is set to the length
+     of the target type instead of zero.  However, we do not
+     replace the typedef type by the target type, because we want
+     to keep the typedef in order to be able to print the type
+     description correctly.  */
+  check_typedef (type);
 
   /* Handle packed fields */
 

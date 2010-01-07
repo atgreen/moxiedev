@@ -1,7 +1,6 @@
 D/generic////
 D/library////
 D/plugins////
-/ChangeLog/1.440/Wed Dec  9 22:25:04 2009//
 /ChangeLog-2001/1.1/Wed Nov 18 20:13:17 2009//
 /ChangeLog-2002/1.1/Wed Nov 18 20:13:17 2009//
 /ChangeLog-2003/1.1/Wed Nov 18 20:13:17 2009//
@@ -19,3 +18,5 @@ D/plugins////
 /configure.ac/1.1/Wed Nov 18 20:13:17 2009//
 /gdb.rc/1.1.1.1/Wed Nov 18 20:13:17 2009/-ko/
 /gdbtool.ico/1.1.1.1/Wed Nov 18 20:13:17 2009/-ko/
+/ChangeLog/1.441/Wed Jan  6 04:54:04 2010//
+/ChangeLog-2009/1.1/Mon Jan  4 20:14:03 2010//

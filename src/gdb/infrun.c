@@ -3,7 +3,7 @@
 
    Copyright (C) 1986, 1987, 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995,
    1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009 Free Software Foundation, Inc.
+   2008, 2009, 2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -4176,7 +4176,7 @@ infrun: not switching back to stepped thread, it has vanished\n");
      "outermost" function.  This could be fixed by marking
      outermost frames as !stack_p,code_p,special_p.  Then the
      initial outermost frame, before sp was valid, would
-     have code_addr == &_start.  See the commend in frame_id_eq
+     have code_addr == &_start.  See the comment in frame_id_eq
      for more.  */
   if (!frame_id_eq (get_stack_frame_id (frame),
 		    ecs->event_thread->step_stack_frame_id)

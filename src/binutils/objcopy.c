@@ -1,6 +1,6 @@
 /* objcopy.c -- copy object file from input to output, optionally massaging it.
    Copyright 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
@@ -1232,7 +1232,7 @@ add_redefine_syms_file (const char *filename)
 	   filename, strerror (errno));
 
   bufsize = 100;
-  buf = (char *) xmalloc (bufsize);
+  buf = (char *) xmalloc (bufsize + 1 /* For the terminating NUL.  */);
 
   lineno = 1;
   c = getc (file);
@@ -1249,7 +1249,7 @@ add_redefine_syms_file (const char *filename)
 	  if (len >= bufsize)
 	    {
 	      bufsize *= 2;
-	      buf = (char *) xrealloc (buf, bufsize);
+	      buf = (char *) xrealloc (buf, bufsize + 1);
 	    }
 	  c = getc (file);
 	}
@@ -1275,7 +1275,7 @@ add_redefine_syms_file (const char *filename)
 	  if (len >= bufsize)
 	    {
 	      bufsize *= 2;
-	      buf = (char *) xrealloc (buf, bufsize);
+	      buf = (char *) xrealloc (buf, bufsize + 1);
 	    }
 	  c = getc (file);
 	}
@@ -1481,7 +1481,7 @@ copy_object (bfd *ibfd, bfd *obfd, const bfd_arch_info_type *input_arch)
 	non_fatal (_("Unable to recognise the format of the input file `%s'"),
 		   bfd_get_archive_filename (ibfd));
       else
-	non_fatal (_("Warning: Output file cannot represent architecture `%s'"),
+	non_fatal (_("Output file cannot represent architecture `%s'"),
 		   bfd_printable_arch_mach (bfd_get_arch (ibfd),
 					    bfd_get_mach (ibfd)));
       return FALSE;
@@ -2295,28 +2295,28 @@ static void
 add_section_rename (const char * old_name, const char * new_name,
 		    flagword flags)
 {
-  section_rename * rename;
+  section_rename * srename;
 
   /* Check for conflicts first.  */
-  for (rename = section_rename_list; rename != NULL; rename = rename->next)
-    if (strcmp (rename->old_name, old_name) == 0)
+  for (srename = section_rename_list; srename != NULL; srename = srename->next)
+    if (strcmp (srename->old_name, old_name) == 0)
       {
 	/* Silently ignore duplicate definitions.  */
-	if (strcmp (rename->new_name, new_name) == 0
-	    && rename->flags == flags)
+	if (strcmp (srename->new_name, new_name) == 0
+	    && srename->flags == flags)
 	  return;
 
 	fatal (_("Multiple renames of section %s"), old_name);
       }
 
-  rename = (section_rename *) xmalloc (sizeof (* rename));
+  srename = (section_rename *) xmalloc (sizeof (* srename));
 
-  rename->old_name = old_name;
-  rename->new_name = new_name;
-  rename->flags    = flags;
-  rename->next     = section_rename_list;
+  srename->old_name = old_name;
+  srename->new_name = new_name;
+  srename->flags    = flags;
+  srename->next     = section_rename_list;
 
-  section_rename_list = rename;
+  section_rename_list = srename;
 }
 
 /* Check the section rename list for a new name of the input section
@@ -2328,18 +2328,18 @@ find_section_rename (bfd * ibfd ATTRIBUTE_UNUSED, sec_ptr isection,
 		     flagword * returned_flags)
 {
   const char * old_name = bfd_section_name (ibfd, isection);
-  section_rename * rename;
+  section_rename * srename;
 
   /* Default to using the flags of the input section.  */
   * returned_flags = bfd_get_section_flags (ibfd, isection);
 
-  for (rename = section_rename_list; rename != NULL; rename = rename->next)
-    if (strcmp (rename->old_name, old_name) == 0)
+  for (srename = section_rename_list; srename != NULL; srename = srename->next)
+    if (strcmp (srename->old_name, old_name) == 0)
       {
-	if (rename->flags != (flagword) -1)
-	  * returned_flags = rename->flags;
+	if (srename->flags != (flagword) -1)
+	  * returned_flags = srename->flags;
 
-	return rename->new_name;
+	return srename->new_name;
       }
 
   return old_name;

@@ -1,7 +1,7 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/fixincludes/tests/base
 svn://gcc.gnu.org/svn/gcc
 
@@ -319,40 +319,6 @@ hp
 
 716
 
-tinfo.h
-file
-
-
-
-
-2009-04-24T17:42:48.000000Z
-7dc68f10756f3c5df014326605fe9efe
-2004-08-31T09:27:00.000000Z
-86824
-bonzini
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-335
-
 io-quotes-def-1.h
 file
 
@@ -386,6 +352,40 @@ bonzini
 
 
 343
+
+tinfo.h
+file
+
+
+
+
+2009-04-24T17:42:48.000000Z
+7dc68f10756f3c5df014326605fe9efe
+2004-08-31T09:27:00.000000Z
+86824
+bonzini
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+335
 
 netinet
 dir
@@ -424,39 +424,11 @@ sje
 
 1408
 
-stdio.h
-file
-
-
-
-
-2009-09-16T16:26:00.000000Z
-8040a4470db8f8120dabd0e13b3e5c2e
-2009-09-15T04:59:54.257891Z
-151708
-rwild
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2655
+bsd
+dir
+
+sparc
+dir
 
 c_asm.h
 file
@@ -492,13 +464,44 @@ bonzini
 
 399
 
-sparc
-dir
-
-bsd
-dir
+stdio.h
+file
+
+
+
+
+2009-09-16T16:26:00.000000Z
+8040a4470db8f8120dabd0e13b3e5c2e
+2009-09-15T04:59:54.257891Z
+151708
+rwild
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2655
 
 X11
+dir
+
+internal
 dir
 
 obstack.h
@@ -535,7 +538,7 @@ bonzini
 
 387
 
-internal
+arch
 dir
 
 pthread.h
@@ -572,8 +575,39 @@ jsm28
 
 6041
 
-arch
-dir
+math.h
+file
+
+
+
+
+2009-09-16T16:26:00.000000Z
+226936f2e9083074954ea2e7688625e4
+2009-09-15T04:59:54.257891Z
+151708
+rwild
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2181
 
 strings.h
 file
@@ -608,40 +642,6 @@ jsm28
 
 
 339
-
-math.h
-file
-
-
-
-
-2009-09-16T16:26:00.000000Z
-226936f2e9083074954ea2e7688625e4
-2009-09-15T04:59:54.257891Z
-151708
-rwild
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2181
 
 fixinc-test-limits.h
 file

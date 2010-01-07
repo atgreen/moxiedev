@@ -874,6 +874,9 @@ Symbol_assignment::add_to_table(Symbol_table* symtab)
   elfcpp::STV vis = this->hidden_ ? elfcpp::STV_HIDDEN : elfcpp::STV_DEFAULT;
   this->sym_ = symtab->define_as_constant(this->name_.c_str(),
 					  NULL, // version
+					  (this->is_defsym_
+					   ? Symbol_table::DEFSYM
+					   : Symbol_table::SCRIPT),
 					  0, // value
 					  0, // size
 					  elfcpp::STT_NOTYPE,
@@ -1051,18 +1054,21 @@ Script_options::Script_options()
 
 void
 Script_options::add_symbol_assignment(const char* name, size_t length,
-				      Expression* value, bool provide,
-				      bool hidden)
+				      bool is_defsym, Expression* value,
+				      bool provide, bool hidden)
 {
   if (length != 1 || name[0] != '.')
     {
       if (this->script_sections_.in_sections_clause())
-	this->script_sections_.add_symbol_assignment(name, length, value,
-						     provide, hidden);
+	{
+	  gold_assert(!is_defsym);
+	  this->script_sections_.add_symbol_assignment(name, length, value,
+						       provide, hidden);
+	}
       else
 	{
-	  Symbol_assignment* p = new Symbol_assignment(name, length, value,
-						       provide, hidden);
+	  Symbol_assignment* p = new Symbol_assignment(name, length, is_defsym,
+						       value, provide, hidden);
 	  this->symbol_assignments_.push_back(p);
 	}
     }
@@ -1162,13 +1168,14 @@ class Parser_closure
  public:
   Parser_closure(const char* filename,
 		 const Position_dependent_options& posdep_options,
-		 bool in_group, bool is_in_sysroot,
+		 bool parsing_defsym, bool in_group, bool is_in_sysroot,
                  Command_line* command_line,
 		 Script_options* script_options,
 		 Lex* lex,
 		 bool skip_on_incompatible_target)
     : filename_(filename), posdep_options_(posdep_options),
-      in_group_(in_group), is_in_sysroot_(is_in_sysroot),
+      parsing_defsym_(parsing_defsym), in_group_(in_group),
+      is_in_sysroot_(is_in_sysroot),
       skip_on_incompatible_target_(skip_on_incompatible_target),
       found_incompatible_target_(false),
       command_line_(command_line), script_options_(script_options),
@@ -1176,8 +1183,8 @@ class Parser_closure
       lex_(lex), lineno_(0), charpos_(0), lex_mode_stack_(), inputs_(NULL)
   {
     // We start out processing C symbols in the default lex mode.
-    language_stack_.push_back("");
-    lex_mode_stack_.push_back(lex->mode());
+    this->language_stack_.push_back(Version_script_info::LANGUAGE_C);
+    this->lex_mode_stack_.push_back(lex->mode());
   }
 
   // Return the file name.
@@ -1190,6 +1197,11 @@ class Parser_closure
   Position_dependent_options&
   position_dependent_options()
   { return this->posdep_options_; }
+
+  // Whether we are parsing a --defsym.
+  bool
+  parsing_defsym() const
+  { return this->parsing_defsym_; }
 
   // Return whether this script is being run in a group.
   bool
@@ -1302,16 +1314,18 @@ class Parser_closure
 
   // Return the current language being processed in a version script
   // (eg, "C++").  The empty string represents unmangled C names.
-  const std::string&
+  Version_script_info::Language
   get_current_language() const
   { return this->language_stack_.back(); }
 
   // Push a language onto the stack when entering an extern block.
-  void push_language(const std::string& lang)
+  void
+  push_language(Version_script_info::Language lang)
   { this->language_stack_.push_back(lang); }
 
   // Pop a language off of the stack when exiting an extern block.
-  void pop_language()
+  void
+  pop_language()
   {
     gold_assert(!this->language_stack_.empty());
     this->language_stack_.pop_back();
@@ -1322,6 +1336,8 @@ class Parser_closure
   const char* filename_;
   // The position dependent options.
   Position_dependent_options posdep_options_;
+  // True if we are parsing a --defsym.
+  bool parsing_defsym_;
   // Whether we are currently in a --start-group/--end-group.
   bool in_group_;
   // Whether the script was found in a sysrooted directory.
@@ -1348,7 +1364,7 @@ class Parser_closure
   std::vector<Lex::Mode> lex_mode_stack_;
   // A stack of which extern/language block we're inside. Can be C++,
   // java, or empty for C.
-  std::vector<std::string> language_stack_;
+  std::vector<Version_script_info::Language> language_stack_;
   // New input files found to add to the link.
   Input_arguments* inputs_;
 };
@@ -1374,12 +1390,16 @@ read_input_script(Workqueue* workqueue, Symbol_table* symtab, Layout* layout,
 
   Parser_closure closure(input_file->filename().c_str(),
 			 input_argument->file().options(),
+			 false,
 			 input_group != NULL,
 			 input_file->is_in_sysroot(),
                          NULL,
 			 layout->script_options(),
 			 &lex,
 			 input_file->will_search_for());
+
+  bool old_saw_sections_clause =
+    layout->script_options()->saw_sections_clause();
 
   if (yyparse(&closure) != 0)
     {
@@ -1393,6 +1413,12 @@ read_input_script(Workqueue* workqueue, Symbol_table* symtab, Layout* layout,
 	}
       return false;
     }
+
+  if (!old_saw_sections_clause
+      && layout->script_options()->saw_sections_clause()
+      && layout->have_added_input_section())
+    gold_error(_("%s: SECTIONS seen after other input files; try -T/--script"),
+	       input_file->filename().c_str());
 
   if (!closure.saw_inputs())
     return true;
@@ -1469,6 +1495,7 @@ read_script_file(const char* filename, Command_line* cmdline,
 
   Parser_closure closure(filename,
 			 cmdline->position_dependent_options(),
+			 first_token == Lex::DYNAMIC_LIST,
 			 false,
 			 input_file.is_in_sysroot(),
                          cmdline,
@@ -1532,8 +1559,8 @@ Script_options::define_symbol(const char* definition)
   // Dummy value.
   Position_dependent_options posdep_options;
 
-  Parser_closure closure("command line", posdep_options, false, false, NULL,
-			 this, &lex, false);
+  Parser_closure closure("command line", posdep_options, true,
+			 false, false, NULL, this, &lex, false);
 
   if (yyparse(&closure) != 0)
     return false;
@@ -1760,90 +1787,49 @@ Keyword_to_parsecode::keyword_to_parsecode(const char* keyword,
   return ktt->parsecode;
 }
 
-// Helper class that calls cplus_demangle when needed and takes care of freeing
-// the result.
-
-class Lazy_demangler
-{
- public:
-  Lazy_demangler(const char* symbol, int options)
-    : symbol_(symbol), options_(options), demangled_(NULL), did_demangle_(false)
-  { }
-
-  ~Lazy_demangler()
-  { free(this->demangled_); }
-
-  // Return the demangled name. The actual demangling happens on the first call,
-  // and the result is later cached.
-
-  inline char*
-  get();
-
- private:
-  // The symbol to demangle.
-  const char *symbol_;
-  // Option flags to pass to cplus_demagle.
-  const int options_;
-  // The cached demangled value, or NULL if demangling didn't happen yet or
-  // failed.
-  char *demangled_;
-  // Whether we already called cplus_demangle
-  bool did_demangle_;
-};
-
-// Return the demangled name. The actual demangling happens on the first call,
-// and the result is later cached. Returns NULL if the symbol cannot be
-// demangled.
-
-inline char*
-Lazy_demangler::get()
-{
-  if (!this->did_demangle_)
-    {
-      this->demangled_ = cplus_demangle(this->symbol_, this->options_);
-      this->did_demangle_ = true;
-    }
-  return this->demangled_;
-}
-
 // The following structs are used within the VersionInfo class as well
 // as in the bison helper functions.  They store the information
 // parsed from the version script.
 
 // A single version expression.
 // For example, pattern="std::map*" and language="C++".
-// pattern and language should be from the stringpool
-struct Version_expression {
-  Version_expression(const std::string& pattern,
-                     const std::string& language,
-                     bool exact_match)
-      : pattern(pattern), language(language), exact_match(exact_match) {}
+// PATTERN should be from the stringpool.
+struct
+Version_expression
+{
+  Version_expression(const std::string& a_pattern,
+		     Version_script_info::Language a_language,
+                     bool a_exact_match)
+    : pattern(a_pattern), language(a_language), exact_match(a_exact_match)
+  { }
 
   std::string pattern;
-  std::string language;
+  Version_script_info::Language language;
   // If false, we use glob() to match pattern.  If true, we use strcmp().
   bool exact_match;
 };
 
 
 // A list of expressions.
-struct Version_expression_list {
+struct Version_expression_list
+{
   std::vector<struct Version_expression> expressions;
 };
 
-
 // A list of which versions upon which another version depends.
 // Strings should be from the Stringpool.
-struct Version_dependency_list {
+struct Version_dependency_list
+{
   std::vector<std::string> dependencies;
 };
 
-
 // The total definition of a version.  It includes the tag for the
 // version, its global and local expressions, and any dependencies.
-struct Version_tree {
+struct Version_tree
+{
   Version_tree()
-      : tag(), global(NULL), local(NULL), dependencies(NULL) {}
+      : tag(), global(NULL), local(NULL), dependencies(NULL)
+  { }
 
   std::string tag;
   const struct Version_expression_list* global;
@@ -1851,50 +1837,132 @@ struct Version_tree {
   const struct Version_dependency_list* dependencies;
 };
 
+// Class Version_script_info.
+
+Version_script_info::Version_script_info()
+  : dependency_lists_(), expression_lists_(), version_trees_(),
+    is_finalized_(false)
+{
+  for (int i = 0; i < LANGUAGE_COUNT; ++i)
+    {
+      this->globals_[i] = NULL;
+      this->locals_[i] = NULL;
+    }
+}
+
 Version_script_info::~Version_script_info()
 {
-  this->clear();
 }
+
+// Forget all the known version script information.
 
 void
 Version_script_info::clear()
 {
-  for (size_t k = 0; k < dependency_lists_.size(); ++k)
-    delete dependency_lists_[k];
+  for (size_t k = 0; k < this->dependency_lists_.size(); ++k)
+    delete this->dependency_lists_[k];
   this->dependency_lists_.clear();
-  for (size_t k = 0; k < version_trees_.size(); ++k)
-    delete version_trees_[k];
+  for (size_t k = 0; k < this->version_trees_.size(); ++k)
+    delete this->version_trees_[k];
   this->version_trees_.clear();
-  for (size_t k = 0; k < expression_lists_.size(); ++k)
-    delete expression_lists_[k];
+  for (size_t k = 0; k < this->expression_lists_.size(); ++k)
+    delete this->expression_lists_[k];
   this->expression_lists_.clear();
 }
+
+// Finalize the version script information.
+
+void
+Version_script_info::finalize()
+{
+  if (!this->is_finalized_)
+    {
+      this->build_lookup_tables();
+      this->is_finalized_ = true;
+    }
+}
+
+// Return all the versions.
 
 std::vector<std::string>
 Version_script_info::get_versions() const
 {
   std::vector<std::string> ret;
-  for (size_t j = 0; j < version_trees_.size(); ++j)
+  for (size_t j = 0; j < this->version_trees_.size(); ++j)
     if (!this->version_trees_[j]->tag.empty())
       ret.push_back(this->version_trees_[j]->tag);
   return ret;
 }
 
+// Return the dependencies of VERSION.
+
 std::vector<std::string>
 Version_script_info::get_dependencies(const char* version) const
 {
   std::vector<std::string> ret;
-  for (size_t j = 0; j < version_trees_.size(); ++j)
-    if (version_trees_[j]->tag == version)
+  for (size_t j = 0; j < this->version_trees_.size(); ++j)
+    if (this->version_trees_[j]->tag == version)
       {
         const struct Version_dependency_list* deps =
-          version_trees_[j]->dependencies;
+          this->version_trees_[j]->dependencies;
         if (deps != NULL)
           for (size_t k = 0; k < deps->dependencies.size(); ++k)
             ret.push_back(deps->dependencies[k]);
         return ret;
       }
   return ret;
+}
+
+// Build a set of fast lookup tables for a version script.
+
+void
+Version_script_info::build_lookup_tables()
+{
+  size_t size = this->version_trees_.size();
+  for (size_t j = 0; j < size; ++j)
+    {
+      const Version_tree* v = this->version_trees_[j];
+      this->build_expression_list_lookup(v->global, v, &this->globals_[0]);
+      this->build_expression_list_lookup(v->local, v, &this->locals_[0]);
+    }
+}
+
+// Build fast lookup information for EXPLIST and store it in LOOKUP.
+
+void
+Version_script_info::build_expression_list_lookup(
+    const Version_expression_list* explist,
+    const Version_tree* v,
+    Lookup** lookup)
+{
+  if (explist == NULL)
+    return;
+  size_t size = explist->expressions.size();
+  for (size_t j = 0; j < size; ++j)
+    {
+      const Version_expression& exp(explist->expressions[j]);
+      Lookup **pp = &lookup[exp.language];
+      if (*pp == NULL)
+	*pp = new Lookup();
+      Lookup* p = *pp;
+
+      if (!exp.exact_match && strpbrk(exp.pattern.c_str(), "?*[") != NULL)
+	p->globs.push_back(Glob(exp.pattern.c_str(), v));
+      else
+	{
+	  std::pair<Exact::iterator, bool> ins =
+	    p->exact.insert(std::make_pair(exp.pattern, v));
+	  if (!ins.second)
+	    {
+	      const Version_tree* v1 = ins.first->second;
+	      if (v1->tag != v->tag)
+		gold_error(_("'%s' appears in version script with both "
+			     "versions '%s' and '%s'"),
+			   exp.pattern.c_str(), v1->tag.c_str(),
+			   v->tag.c_str());
+	    }
+	}
+    }
 }
 
 // Look up SYMBOL_NAME in the list of versions.  If CHECK_GLOBAL is
@@ -1908,47 +1976,70 @@ Version_script_info::get_symbol_version_helper(const char* symbol_name,
                                                bool check_global,
 					       std::string* pversion) const
 {
-  Lazy_demangler cpp_demangled_name(symbol_name, DMGL_ANSI | DMGL_PARAMS);
-  Lazy_demangler java_demangled_name(symbol_name,
-                                     DMGL_ANSI | DMGL_PARAMS | DMGL_JAVA);
-  for (size_t j = 0; j < version_trees_.size(); ++j)
+  gold_assert(this->is_finalized_);
+  const Lookup* const * pp = (check_global
+			      ? &this->globals_[0]
+			      : &this->locals_[0]);
+  for (int i = 0; i < LANGUAGE_COUNT; ++i)
     {
-      // Is it a global symbol for this version?
-      const Version_expression_list* explist =
-          check_global ? version_trees_[j]->global : version_trees_[j]->local;
-      if (explist != NULL)
-        for (size_t k = 0; k < explist->expressions.size(); ++k)
-          {
-            const char* name_to_match = symbol_name;
-            const struct Version_expression& exp = explist->expressions[k];
-            if (exp.language == "C++")
-              {
-                name_to_match = cpp_demangled_name.get();
-                // This isn't a C++ symbol.
-                if (name_to_match == NULL)
-                  continue;
-              }
-            else if (exp.language == "Java")
-              {
-                name_to_match = java_demangled_name.get();
-                // This isn't a Java symbol.
-                if (name_to_match == NULL)
-                  continue;
-              }
-            bool matched;
-            if (exp.exact_match)
-              matched = strcmp(exp.pattern.c_str(), name_to_match) == 0;
-            else
-              matched = fnmatch(exp.pattern.c_str(), name_to_match,
-                                FNM_NOESCAPE) == 0;
-            if (matched)
-	      {
-		if (pversion != NULL)
-		  *pversion = this->version_trees_[j]->tag;
-		return true;
-	      }
-          }
+      const Lookup* lookup = pp[i];
+      if (lookup == NULL)
+	continue;
+
+      const char* name_to_match;
+      char* allocated;
+      switch (i)
+	{
+	case LANGUAGE_C:
+	  allocated = NULL;
+	  name_to_match = symbol_name;
+	  break;
+	case LANGUAGE_CXX:
+	  allocated = cplus_demangle(symbol_name, DMGL_ANSI | DMGL_PARAMS);
+	  if (allocated == NULL)
+	    continue;
+	  name_to_match = allocated;
+	  break;
+	case LANGUAGE_JAVA:
+	  allocated = cplus_demangle(symbol_name,
+				     DMGL_ANSI | DMGL_PARAMS | DMGL_JAVA);
+	  if (allocated == NULL)
+	    continue;
+	  name_to_match = allocated;
+	default:
+	  gold_unreachable();
+	}
+
+      Exact::const_iterator pe = lookup->exact.find(name_to_match);
+      if (pe != lookup->exact.end())
+	{
+	  if (pversion != NULL)
+	    *pversion = pe->second->tag;
+	  if (allocated != NULL)
+	    free (allocated);
+	  return true;
+	}
+
+      for (std::vector<Glob>::const_iterator pg = lookup->globs.begin();
+	   pg != lookup->globs.end();
+	   ++pg)
+	{
+	  // Check for * specially since it is fairly common.
+	  if ((pg->pattern[0] == '*' && pg->pattern[1] == '\0')
+	      || fnmatch(pg->pattern, name_to_match, FNM_NOESCAPE) == 0)
+	    {
+	      if (pversion != NULL)
+		*pversion = pg->version->tag;
+	      if (allocated != NULL)
+		free (allocated);
+	      return true;
+	    }
+	}
+
+      if (allocated != NULL)
+	free (allocated);
     }
+
   return false;
 }
 
@@ -2026,21 +2117,33 @@ Version_script_info::print_expression_list(
     FILE* f,
     const Version_expression_list* vel) const
 {
-  std::string current_language;
+  Version_script_info::Language current_language = LANGUAGE_C;
   for (size_t i = 0; i < vel->expressions.size(); ++i)
     {
       const Version_expression& ve(vel->expressions[i]);
 
       if (ve.language != current_language)
 	{
-	  if (!current_language.empty())
+	  if (current_language != LANGUAGE_C)
 	    fprintf(f, "      }\n");
-	  fprintf(f, "      extern \"%s\" {\n", ve.language.c_str());
+	  switch (ve.language)
+	    {
+	    case LANGUAGE_C:
+	      break;
+	    case LANGUAGE_CXX:
+	      fprintf(f, "      extern \"C++\" {\n");
+	      break;
+	    case LANGUAGE_JAVA:
+	      fprintf(f, "      extern \"Java\" {\n");
+	      break;
+	    default:
+	      gold_unreachable();
+	    }
 	  current_language = ve.language;
 	}
 
       fprintf(f, "      ");
-      if (!current_language.empty())
+      if (current_language != LANGUAGE_C)
 	fprintf(f, "  ");
 
       if (ve.exact_match)
@@ -2052,7 +2155,7 @@ Version_script_info::print_expression_list(
       fprintf(f, "\n");
     }
 
-  if (!current_language.empty())
+  if (current_language != LANGUAGE_C)
     fprintf(f, "      }\n");
 }
 
@@ -2266,8 +2369,9 @@ script_set_symbol(void* closurev, const char* name, size_t length,
   Parser_closure* closure = static_cast<Parser_closure*>(closurev);
   const bool provide = providei != 0;
   const bool hidden = hiddeni != 0;
-  closure->script_options()->add_symbol_assignment(name, length, value,
-						   provide, hidden);
+  closure->script_options()->add_symbol_assignment(name, length,
+						   closure->parsing_defsym(),
+						   value, provide, hidden);
   closure->clear_skip_on_incompatible_target();
 }
 
@@ -2386,6 +2490,9 @@ extern "C" void
 script_push_lex_into_version_mode(void* closurev)
 {
   Parser_closure* closure = static_cast<Parser_closure*>(closurev);
+  if (closure->version_script()->is_finalized())
+    gold_error(_("%s:%d:%d: invalid use of VERSION in input file"),
+	       closure->filename(), closure->lineno(), closure->charpos());
   closure->push_lex_mode(Lex::VERSION_SCRIPT);
 }
 
@@ -2437,8 +2544,6 @@ script_add_vers_depend(void* closurev,
 }
 
 // Add a pattern expression to an existing list of expressions, if any.
-// TODO: In the old linker, the last argument used to be a bool, but I
-// don't know what it meant.
 
 extern "C" struct Version_expression_list *
 script_new_vers_pattern(void* closurev,
@@ -2490,7 +2595,25 @@ extern "C" void
 version_script_push_lang(void* closurev, const char* lang, int langlen)
 {
   Parser_closure* closure = static_cast<Parser_closure*>(closurev);
-  closure->push_language(std::string(lang, langlen));
+  std::string language(lang, langlen);
+  Version_script_info::Language code;
+  if (language.empty() || language == "C")
+    code = Version_script_info::LANGUAGE_C;
+  else if (language == "C++")
+    code = Version_script_info::LANGUAGE_CXX;
+  else if (language == "Java")
+    code = Version_script_info::LANGUAGE_JAVA;
+  else
+    {
+      char* buf = new char[langlen + 100];
+      snprintf(buf, langlen + 100,
+	       _("unrecognized version script language '%s'"),
+	       language.c_str());
+      yyerror(closurev, buf);
+      delete[] buf;
+      code = Version_script_info::LANGUAGE_C;
+    }
+  closure->push_language(code);
 }
 
 extern "C" void

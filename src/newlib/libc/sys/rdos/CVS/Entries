@@ -4,7 +4,6 @@
 /chown.c/1.1/Wed Nov 18 20:13:20 2009//
 /close.c/1.1/Wed Nov 18 20:13:20 2009//
 /config.h/1.1/Wed Nov 18 20:13:20 2009//
-/configure/1.9/Wed Dec  9 22:25:24 2009//
 /configure.in/1.2/Wed Nov 18 20:13:20 2009//
 /crt0.S/1.1/Wed Nov 18 20:13:20 2009//
 /execve.c/1.1/Wed Nov 18 20:13:20 2009//
@@ -31,4 +30,5 @@
 /user.def/1.1/Wed Nov 18 20:13:20 2009//
 /wait.c/1.1/Wed Nov 18 20:13:20 2009//
 /write.c/1.1/Wed Nov 18 20:13:20 2009//
+/configure/1.10/Wed Jan  6 04:54:26 2010//
 D

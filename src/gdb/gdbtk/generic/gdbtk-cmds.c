@@ -1,5 +1,5 @@
 /* Tcl/Tk command definitions for Insight.
-   Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2001, 2002, 2003, 2004, 2007, 2008
+   Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2001, 2002, 2003, 2004, 2007, 2008, 2010
    Free Software Foundation, Inc.
 
    Written by Stu Grossman <grossman@cygnus.com> of Cygnus Support.
@@ -1900,7 +1900,7 @@ gdbtk_load_asm (ClientData clientData, CORE_ADDR pc,
   gdb_flush (gdb_stdout);
 
   result_ptr->obj_ptr = client_data->result_obj[1];
-  print_address_symbolic (pc, gdb_stdout, 1, "\t");
+  print_address_symbolic (get_current_arch (), pc, gdb_stdout, 1, "\t");
   gdb_flush (gdb_stdout);
 
   result_ptr->obj_ptr = client_data->result_obj[2];

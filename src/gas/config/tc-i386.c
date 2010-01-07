@@ -128,8 +128,10 @@ sib_byte;
 typedef struct
 {
   const char *name;		/* arch name */
+  unsigned int len;		/* arch string length */
   enum processor_type type;	/* arch type */
   i386_cpu_flags flags;		/* cpu feature flags */
+  unsigned int skip;		/* show_arch should skip this. */
 }
 arch_entry;
 
@@ -536,140 +538,140 @@ const relax_typeS md_relax_table[] =
 
 static const arch_entry cpu_arch[] =
 {
-  { "generic32", PROCESSOR_GENERIC32,
-    CPU_GENERIC32_FLAGS },
-  { "generic64", PROCESSOR_GENERIC64,
-    CPU_GENERIC64_FLAGS },
-  { "i8086", PROCESSOR_UNKNOWN,
-    CPU_NONE_FLAGS },
-  { "i186", PROCESSOR_UNKNOWN,
-    CPU_I186_FLAGS },
-  { "i286", PROCESSOR_UNKNOWN,
-    CPU_I286_FLAGS },
-  { "i386", PROCESSOR_I386,
-    CPU_I386_FLAGS },
-  { "i486", PROCESSOR_I486,
-    CPU_I486_FLAGS },
-  { "i586", PROCESSOR_PENTIUM,
-    CPU_I586_FLAGS },
-  { "i686", PROCESSOR_PENTIUMPRO,
-    CPU_I686_FLAGS },
-  { "pentium", PROCESSOR_PENTIUM,
-    CPU_I586_FLAGS },
-  { "pentiumpro", PROCESSOR_PENTIUMPRO,
-    CPU_I686_FLAGS },
-  { "pentiumii", PROCESSOR_PENTIUMPRO,
-    CPU_P2_FLAGS },
-  { "pentiumiii",PROCESSOR_PENTIUMPRO,
-    CPU_P3_FLAGS },
-  { "pentium4", PROCESSOR_PENTIUM4,
-    CPU_P4_FLAGS },
-  { "prescott", PROCESSOR_NOCONA,
-    CPU_CORE_FLAGS },
-  { "nocona", PROCESSOR_NOCONA,
-    CPU_NOCONA_FLAGS },
-  { "yonah", PROCESSOR_CORE,
-    CPU_CORE_FLAGS },
-  { "core", PROCESSOR_CORE,
-    CPU_CORE_FLAGS },
-  { "merom", PROCESSOR_CORE2,
-    CPU_CORE2_FLAGS },
-  { "core2", PROCESSOR_CORE2,
-    CPU_CORE2_FLAGS },
-  { "corei7", PROCESSOR_COREI7,
-    CPU_COREI7_FLAGS },
-  { "l1om", PROCESSOR_L1OM,
-    CPU_L1OM_FLAGS },
-  { "k6", PROCESSOR_K6,
-    CPU_K6_FLAGS },
-  { "k6_2", PROCESSOR_K6,
-    CPU_K6_2_FLAGS },
-  { "athlon", PROCESSOR_ATHLON,
-    CPU_ATHLON_FLAGS },
-  { "sledgehammer", PROCESSOR_K8,
-    CPU_K8_FLAGS },
-  { "opteron", PROCESSOR_K8,
-    CPU_K8_FLAGS },
-  { "k8", PROCESSOR_K8,
-    CPU_K8_FLAGS },
-  { "amdfam10", PROCESSOR_AMDFAM10,
-    CPU_AMDFAM10_FLAGS },
-  { ".8087", PROCESSOR_UNKNOWN,
-    CPU_8087_FLAGS },
-  { ".287", PROCESSOR_UNKNOWN,
-    CPU_287_FLAGS },
-  { ".387", PROCESSOR_UNKNOWN,
-    CPU_387_FLAGS },
-  { ".no87", PROCESSOR_UNKNOWN,
-    CPU_ANY87_FLAGS },
-  { ".mmx", PROCESSOR_UNKNOWN,
-    CPU_MMX_FLAGS },
-  { ".nommx", PROCESSOR_UNKNOWN,
-    CPU_3DNOWA_FLAGS },
-  { ".sse", PROCESSOR_UNKNOWN,
-    CPU_SSE_FLAGS },
-  { ".sse2", PROCESSOR_UNKNOWN,
-    CPU_SSE2_FLAGS },
-  { ".sse3", PROCESSOR_UNKNOWN,
-    CPU_SSE3_FLAGS },
-  { ".ssse3", PROCESSOR_UNKNOWN,
-    CPU_SSSE3_FLAGS },
-  { ".sse4.1", PROCESSOR_UNKNOWN,
-    CPU_SSE4_1_FLAGS },
-  { ".sse4.2", PROCESSOR_UNKNOWN,
-    CPU_SSE4_2_FLAGS },
-  { ".sse4", PROCESSOR_UNKNOWN,
-    CPU_SSE4_2_FLAGS },
-  { ".nosse", PROCESSOR_UNKNOWN,
-    CPU_ANY_SSE_FLAGS },
-  { ".avx", PROCESSOR_UNKNOWN,
-    CPU_AVX_FLAGS },
-  { ".noavx", PROCESSOR_UNKNOWN,
-    CPU_ANY_AVX_FLAGS },
-  { ".vmx", PROCESSOR_UNKNOWN,
-    CPU_VMX_FLAGS },
-  { ".smx", PROCESSOR_UNKNOWN,
-    CPU_SMX_FLAGS },
-  { ".xsave", PROCESSOR_UNKNOWN,
-    CPU_XSAVE_FLAGS },
-  { ".aes", PROCESSOR_UNKNOWN,
-    CPU_AES_FLAGS },
-  { ".pclmul", PROCESSOR_UNKNOWN,
-    CPU_PCLMUL_FLAGS },
-  { ".clmul", PROCESSOR_UNKNOWN,
-    CPU_PCLMUL_FLAGS },
-  { ".fma", PROCESSOR_UNKNOWN,
-    CPU_FMA_FLAGS },
-  { ".fma4", PROCESSOR_UNKNOWN,
-    CPU_FMA4_FLAGS },
-  { ".xop", PROCESSOR_UNKNOWN,
-    CPU_XOP_FLAGS },
-  { ".lwp", PROCESSOR_UNKNOWN,
-    CPU_LWP_FLAGS },
-  { ".movbe", PROCESSOR_UNKNOWN,
-    CPU_MOVBE_FLAGS },
-  { ".ept", PROCESSOR_UNKNOWN,
-    CPU_EPT_FLAGS },
-  { ".clflush", PROCESSOR_UNKNOWN,
-    CPU_CLFLUSH_FLAGS },
-  { ".syscall", PROCESSOR_UNKNOWN,
-    CPU_SYSCALL_FLAGS },
-  { ".rdtscp", PROCESSOR_UNKNOWN,
-    CPU_RDTSCP_FLAGS },
-  { ".3dnow", PROCESSOR_UNKNOWN,
-    CPU_3DNOW_FLAGS },
-  { ".3dnowa", PROCESSOR_UNKNOWN,
-    CPU_3DNOWA_FLAGS },
-  { ".padlock", PROCESSOR_UNKNOWN,
-    CPU_PADLOCK_FLAGS },
-  { ".pacifica", PROCESSOR_UNKNOWN,
-    CPU_SVME_FLAGS },
-  { ".svme", PROCESSOR_UNKNOWN,
-    CPU_SVME_FLAGS },
-  { ".sse4a", PROCESSOR_UNKNOWN,
-    CPU_SSE4A_FLAGS },
-  { ".abm", PROCESSOR_UNKNOWN,
-    CPU_ABM_FLAGS },
+  { STRING_COMMA_LEN ("generic32"), PROCESSOR_GENERIC32,
+    CPU_GENERIC32_FLAGS, 0 },
+  { STRING_COMMA_LEN ("generic64"), PROCESSOR_GENERIC64,
+    CPU_GENERIC64_FLAGS, 0 },
+  { STRING_COMMA_LEN ("i8086"), PROCESSOR_UNKNOWN,
+    CPU_NONE_FLAGS, 0 },
+  { STRING_COMMA_LEN ("i186"), PROCESSOR_UNKNOWN,
+    CPU_I186_FLAGS, 0 },
+  { STRING_COMMA_LEN ("i286"), PROCESSOR_UNKNOWN,
+    CPU_I286_FLAGS, 0 },
+  { STRING_COMMA_LEN ("i386"), PROCESSOR_I386,
+    CPU_I386_FLAGS, 0 },
+  { STRING_COMMA_LEN ("i486"), PROCESSOR_I486,
+    CPU_I486_FLAGS, 0 },
+  { STRING_COMMA_LEN ("i586"), PROCESSOR_PENTIUM,
+    CPU_I586_FLAGS, 0 },
+  { STRING_COMMA_LEN ("i686"), PROCESSOR_PENTIUMPRO,
+    CPU_I686_FLAGS, 0 },
+  { STRING_COMMA_LEN ("pentium"), PROCESSOR_PENTIUM,
+    CPU_I586_FLAGS, 0 },
+  { STRING_COMMA_LEN ("pentiumpro"), PROCESSOR_PENTIUMPRO,
+    CPU_I686_FLAGS, 0 },
+  { STRING_COMMA_LEN ("pentiumii"), PROCESSOR_PENTIUMPRO,
+    CPU_P2_FLAGS, 0 },
+  { STRING_COMMA_LEN ("pentiumiii"),PROCESSOR_PENTIUMPRO,
+    CPU_P3_FLAGS, 0 },
+  { STRING_COMMA_LEN ("pentium4"), PROCESSOR_PENTIUM4,
+    CPU_P4_FLAGS, 0 },
+  { STRING_COMMA_LEN ("prescott"), PROCESSOR_NOCONA,
+    CPU_CORE_FLAGS, 0 },
+  { STRING_COMMA_LEN ("nocona"), PROCESSOR_NOCONA,
+    CPU_NOCONA_FLAGS, 0 },
+  { STRING_COMMA_LEN ("yonah"), PROCESSOR_CORE,
+    CPU_CORE_FLAGS, 1 },
+  { STRING_COMMA_LEN ("core"), PROCESSOR_CORE,
+    CPU_CORE_FLAGS, 0 },
+  { STRING_COMMA_LEN ("merom"), PROCESSOR_CORE2,
+    CPU_CORE2_FLAGS, 1 },
+  { STRING_COMMA_LEN ("core2"), PROCESSOR_CORE2,
+    CPU_CORE2_FLAGS, 0 },
+  { STRING_COMMA_LEN ("corei7"), PROCESSOR_COREI7,
+    CPU_COREI7_FLAGS, 0 },
+  { STRING_COMMA_LEN ("l1om"), PROCESSOR_L1OM,
+    CPU_L1OM_FLAGS, 0 },
+  { STRING_COMMA_LEN ("k6"), PROCESSOR_K6,
+    CPU_K6_FLAGS, 0 },
+  { STRING_COMMA_LEN ("k6_2"), PROCESSOR_K6,
+    CPU_K6_2_FLAGS, 0 },
+  { STRING_COMMA_LEN ("athlon"), PROCESSOR_ATHLON,
+    CPU_ATHLON_FLAGS, 0 },
+  { STRING_COMMA_LEN ("sledgehammer"), PROCESSOR_K8,
+    CPU_K8_FLAGS, 1 },
+  { STRING_COMMA_LEN ("opteron"), PROCESSOR_K8,
+    CPU_K8_FLAGS, 0 },
+  { STRING_COMMA_LEN ("k8"), PROCESSOR_K8,
+    CPU_K8_FLAGS, 0 },
+  { STRING_COMMA_LEN ("amdfam10"), PROCESSOR_AMDFAM10,
+    CPU_AMDFAM10_FLAGS, 0 },
+  { STRING_COMMA_LEN (".8087"), PROCESSOR_UNKNOWN,
+    CPU_8087_FLAGS, 0 },
+  { STRING_COMMA_LEN (".287"), PROCESSOR_UNKNOWN,
+    CPU_287_FLAGS, 0 },
+  { STRING_COMMA_LEN (".387"), PROCESSOR_UNKNOWN,
+    CPU_387_FLAGS, 0 },
+  { STRING_COMMA_LEN (".no87"), PROCESSOR_UNKNOWN,
+    CPU_ANY87_FLAGS, 0 },
+  { STRING_COMMA_LEN (".mmx"), PROCESSOR_UNKNOWN,
+    CPU_MMX_FLAGS, 0 },
+  { STRING_COMMA_LEN (".nommx"), PROCESSOR_UNKNOWN,
+    CPU_3DNOWA_FLAGS, 0 },
+  { STRING_COMMA_LEN (".sse"), PROCESSOR_UNKNOWN,
+    CPU_SSE_FLAGS, 0 },
+  { STRING_COMMA_LEN (".sse2"), PROCESSOR_UNKNOWN,
+    CPU_SSE2_FLAGS, 0 },
+  { STRING_COMMA_LEN (".sse3"), PROCESSOR_UNKNOWN,
+    CPU_SSE3_FLAGS, 0 },
+  { STRING_COMMA_LEN (".ssse3"), PROCESSOR_UNKNOWN,
+    CPU_SSSE3_FLAGS, 0 },
+  { STRING_COMMA_LEN (".sse4.1"), PROCESSOR_UNKNOWN,
+    CPU_SSE4_1_FLAGS, 0 },
+  { STRING_COMMA_LEN (".sse4.2"), PROCESSOR_UNKNOWN,
+    CPU_SSE4_2_FLAGS, 0 },
+  { STRING_COMMA_LEN (".sse4"), PROCESSOR_UNKNOWN,
+    CPU_SSE4_2_FLAGS, 0 },
+  { STRING_COMMA_LEN (".nosse"), PROCESSOR_UNKNOWN,
+    CPU_ANY_SSE_FLAGS, 0 },
+  { STRING_COMMA_LEN (".avx"), PROCESSOR_UNKNOWN,
+    CPU_AVX_FLAGS, 0 },
+  { STRING_COMMA_LEN (".noavx"), PROCESSOR_UNKNOWN,
+    CPU_ANY_AVX_FLAGS, 0 },
+  { STRING_COMMA_LEN (".vmx"), PROCESSOR_UNKNOWN,
+    CPU_VMX_FLAGS, 0 },
+  { STRING_COMMA_LEN (".smx"), PROCESSOR_UNKNOWN,
+    CPU_SMX_FLAGS, 0 },
+  { STRING_COMMA_LEN (".xsave"), PROCESSOR_UNKNOWN,
+    CPU_XSAVE_FLAGS, 0 },
+  { STRING_COMMA_LEN (".aes"), PROCESSOR_UNKNOWN,
+    CPU_AES_FLAGS, 0 },
+  { STRING_COMMA_LEN (".pclmul"), PROCESSOR_UNKNOWN,
+    CPU_PCLMUL_FLAGS, 0 },
+  { STRING_COMMA_LEN (".clmul"), PROCESSOR_UNKNOWN,
+    CPU_PCLMUL_FLAGS, 1 },
+  { STRING_COMMA_LEN (".fma"), PROCESSOR_UNKNOWN,
+    CPU_FMA_FLAGS, 0 },
+  { STRING_COMMA_LEN (".fma4"), PROCESSOR_UNKNOWN,
+    CPU_FMA4_FLAGS, 0 },
+  { STRING_COMMA_LEN (".xop"), PROCESSOR_UNKNOWN,
+    CPU_XOP_FLAGS, 0 },
+  { STRING_COMMA_LEN (".lwp"), PROCESSOR_UNKNOWN,
+    CPU_LWP_FLAGS, 0 },
+  { STRING_COMMA_LEN (".movbe"), PROCESSOR_UNKNOWN,
+    CPU_MOVBE_FLAGS, 0 },
+  { STRING_COMMA_LEN (".ept"), PROCESSOR_UNKNOWN,
+    CPU_EPT_FLAGS, 0 },
+  { STRING_COMMA_LEN (".clflush"), PROCESSOR_UNKNOWN,
+    CPU_CLFLUSH_FLAGS, 0 },
+  { STRING_COMMA_LEN (".syscall"), PROCESSOR_UNKNOWN,
+    CPU_SYSCALL_FLAGS, 0 },
+  { STRING_COMMA_LEN (".rdtscp"), PROCESSOR_UNKNOWN,
+    CPU_RDTSCP_FLAGS, 0 },
+  { STRING_COMMA_LEN (".3dnow"), PROCESSOR_UNKNOWN,
+    CPU_3DNOW_FLAGS, 0 },
+  { STRING_COMMA_LEN (".3dnowa"), PROCESSOR_UNKNOWN,
+    CPU_3DNOWA_FLAGS, 0 },
+  { STRING_COMMA_LEN (".padlock"), PROCESSOR_UNKNOWN,
+    CPU_PADLOCK_FLAGS, 0 },
+  { STRING_COMMA_LEN (".pacifica"), PROCESSOR_UNKNOWN,
+    CPU_SVME_FLAGS, 1 },
+  { STRING_COMMA_LEN (".svme"), PROCESSOR_UNKNOWN,
+    CPU_SVME_FLAGS, 0 },
+  { STRING_COMMA_LEN (".sse4a"), PROCESSOR_UNKNOWN,
+    CPU_SSE4A_FLAGS, 0 },
+  { STRING_COMMA_LEN (".abm"), PROCESSOR_UNKNOWN,
+    CPU_ABM_FLAGS, 0 },
 };
 
 #ifdef I386COFF
@@ -2021,20 +2023,20 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
     {
       char *string = input_line_pointer;
       int e = get_symbol_end ();
-      unsigned int i;
+      unsigned int j;
       i386_cpu_flags flags;
 
-      for (i = 0; i < ARRAY_SIZE (cpu_arch); i++)
+      for (j = 0; j < ARRAY_SIZE (cpu_arch); j++)
 	{
-	  if (strcmp (string, cpu_arch[i].name) == 0)
+	  if (strcmp (string, cpu_arch[j].name) == 0)
 	    {
-	      check_cpu_arch_compatible (string, cpu_arch[i].flags);
+	      check_cpu_arch_compatible (string, cpu_arch[j].flags);
 
 	      if (*string != '.')
 		{
-		  cpu_arch_name = cpu_arch[i].name;
+		  cpu_arch_name = cpu_arch[j].name;
 		  cpu_sub_arch_name = NULL;
-		  cpu_arch_flags = cpu_arch[i].flags;
+		  cpu_arch_flags = cpu_arch[j].flags;
 		  if (flag_code == CODE_64BIT)
 		    {
 		      cpu_arch_flags.bitfield.cpu64 = 1;
@@ -2045,8 +2047,8 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 		      cpu_arch_flags.bitfield.cpu64 = 0;
 		      cpu_arch_flags.bitfield.cpuno64 = 1;
 		    }
-		  cpu_arch_isa = cpu_arch[i].type;
-		  cpu_arch_isa_flags = cpu_arch[i].flags;
+		  cpu_arch_isa = cpu_arch[j].type;
+		  cpu_arch_isa_flags = cpu_arch[j].flags;
 		  if (!cpu_arch_tune_set)
 		    {
 		      cpu_arch_tune = cpu_arch_isa;
@@ -2057,22 +2059,22 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 
 	      if (strncmp (string + 1, "no", 2))
 		flags = cpu_flags_or (cpu_arch_flags,
-				      cpu_arch[i].flags);
+				      cpu_arch[j].flags);
 	      else
 		flags = cpu_flags_and_not (cpu_arch_flags,
-					   cpu_arch[i].flags);
+					   cpu_arch[j].flags);
 	      if (!cpu_flags_equal (&flags, &cpu_arch_flags))
 		{
 		  if (cpu_sub_arch_name)
 		    {
 		      char *name = cpu_sub_arch_name;
 		      cpu_sub_arch_name = concat (name,
-						  cpu_arch[i].name,
+						  cpu_arch[j].name,
 						  (const char *) NULL);
 		      free (name);
 		    }
 		  else
-		    cpu_sub_arch_name = xstrdup (cpu_arch[i].name);
+		    cpu_sub_arch_name = xstrdup (cpu_arch[j].name);
 		  cpu_arch_flags = flags;
 		}
 	      *input_line_pointer = e;
@@ -2080,7 +2082,7 @@ set_cpu_arch (int dummy ATTRIBUTE_UNUSED)
 	      return;
 	    }
 	}
-      if (i >= ARRAY_SIZE (cpu_arch))
+      if (j >= ARRAY_SIZE (cpu_arch))
 	as_bad (_("no such architecture: `%s'"), string);
 
       *input_line_pointer = e;
@@ -2452,7 +2454,7 @@ reloc (unsigned int size,
 {
   if (other != NO_RELOC)
     {
-      reloc_howto_type *reloc;
+      reloc_howto_type *rel;
 
       if (size == 8)
 	switch (other)
@@ -2483,18 +2485,18 @@ reloc (unsigned int size,
       if (size == 4 && flag_code != CODE_64BIT)
 	sign = -1;
 
-      reloc = bfd_reloc_type_lookup (stdoutput, other);
-      if (!reloc)
+      rel = bfd_reloc_type_lookup (stdoutput, other);
+      if (!rel)
 	as_bad (_("unknown relocation (%u)"), other);
-      else if (size != bfd_get_reloc_size (reloc))
+      else if (size != bfd_get_reloc_size (rel))
 	as_bad (_("%u-byte relocation cannot be applied to %u-byte field"),
-		bfd_get_reloc_size (reloc),
+		bfd_get_reloc_size (rel),
 		size);
-      else if (pcrel && !reloc->pc_relative)
+      else if (pcrel && !rel->pc_relative)
 	as_bad (_("non-pc-relative relocation for pc-relative field"));
-      else if ((reloc->complain_on_overflow == complain_overflow_signed
+      else if ((rel->complain_on_overflow == complain_overflow_signed
 		&& !sign)
-	       || (reloc->complain_on_overflow == complain_overflow_unsigned
+	       || (rel->complain_on_overflow == complain_overflow_unsigned
 		   && sign > 0))
 	as_bad (_("relocated field and relocation type differ in signedness"));
       else
@@ -2673,7 +2675,7 @@ build_vex_prefix (const insn_template *t)
      operand.  */
   if (!i.swap_operand
       && i.operands == i.reg_operands
-      && i.tm.opcode_modifier.vex0f
+      && i.tm.opcode_modifier.vexopcode == VEX0F
       && i.tm.opcode_modifier.s
       && i.rex == REX_B)
     {
@@ -2699,7 +2701,7 @@ build_vex_prefix (const insn_template *t)
       i.tm = t[1];
     }
 
-  vector_length = i.tm.opcode_modifier.vex == 2 ? 1 : 0;
+  vector_length = i.tm.opcode_modifier.vex == VEX256 ? 1 : 0;
 
   switch ((i.tm.base_opcode >> 8) & 0xff)
     {
@@ -2720,7 +2722,7 @@ build_vex_prefix (const insn_template *t)
     }
 
   /* Use 2-byte VEX prefix if possible.  */
-  if (i.tm.opcode_modifier.vex0f
+  if (i.tm.opcode_modifier.vexopcode == VEX0F
       && (i.rex & (REX_W | REX_X | REX_B)) == 0)
     {
       /* 2-byte VEX prefix.  */
@@ -2744,29 +2746,32 @@ build_vex_prefix (const insn_template *t)
       i.vex.length = 3;
       i.vex.bytes[0] = 0xc4;
 
-      if (i.tm.opcode_modifier.vex0f)
-	m = 0x1;
-      else if (i.tm.opcode_modifier.vex0f38)
-	m = 0x2;
-      else if (i.tm.opcode_modifier.vex0f3a)
-	m = 0x3;
-      else if (i.tm.opcode_modifier.xop08)
+      switch (i.tm.opcode_modifier.vexopcode)
 	{
+	case VEX0F:
+	  m = 0x1;
+	  break;
+	case VEX0F38:
+	  m = 0x2;
+	  break;
+	case VEX0F3A:
+	  m = 0x3;
+	  break;
+	case XOP08:
 	  m = 0x8;
 	  i.vex.bytes[0] = 0x8f;
-	}
-      else if (i.tm.opcode_modifier.xop09)
-	{
+	  break;
+	case XOP09:
 	  m = 0x9;
 	  i.vex.bytes[0] = 0x8f;
-	}
-      else if (i.tm.opcode_modifier.xop0a)
-	{
+	  break;
+	case XOP0A:
 	  m = 0xa;
 	  i.vex.bytes[0] = 0x8f;
+	  break;
+	default:
+	  abort ();
 	}
-      else
-	abort ();
 
       /* The high 3 bits of the second VEX byte are 1's compliment
 	 of RXB bits from REX.  */
@@ -2774,12 +2779,12 @@ build_vex_prefix (const insn_template *t)
 
       /* Check the REX.W bit.  */
       w = (i.rex & REX_W) ? 1 : 0;
-      if (i.tm.opcode_modifier.vexw0 || i.tm.opcode_modifier.vexw1)
+      if (i.tm.opcode_modifier.vexw)
 	{
 	  if (w)
 	    abort ();
 
-	  if (i.tm.opcode_modifier.vexw1)
+	  if (i.tm.opcode_modifier.vexw == VEXW1)
 	    w = 1;
 	}
 
@@ -3637,28 +3642,28 @@ optimize_disp (void)
       {
 	if (i.op[op].disps->X_op == O_constant)
 	  {
-	    offsetT disp = i.op[op].disps->X_add_number;
+	    offsetT op_disp = i.op[op].disps->X_add_number;
 
 	    if (i.types[op].bitfield.disp16
-		&& (disp & ~(offsetT) 0xffff) == 0)
+		&& (op_disp & ~(offsetT) 0xffff) == 0)
 	      {
 		/* If this operand is at most 16 bits, convert
 		   to a signed 16 bit number and don't use 64bit
 		   displacement.  */
-		disp = (((disp & 0xffff) ^ 0x8000) - 0x8000);
+		op_disp = (((op_disp & 0xffff) ^ 0x8000) - 0x8000);
 		i.types[op].bitfield.disp64 = 0;
 	      }
 	    if (i.types[op].bitfield.disp32
-		&& (disp & ~(((offsetT) 2 << 31) - 1)) == 0)
+		&& (op_disp & ~(((offsetT) 2 << 31) - 1)) == 0)
 	      {
 		/* If this operand is at most 32 bits, convert
 		   to a signed 32 bit number and don't use 64bit
 		   displacement.  */
-		disp &= (((offsetT) 2 << 31) - 1);
-		disp = (disp ^ ((offsetT) 1 << 31)) - ((addressT) 1 << 31);
+		op_disp &= (((offsetT) 2 << 31) - 1);
+		op_disp = (op_disp ^ ((offsetT) 1 << 31)) - ((addressT) 1 << 31);
 		i.types[op].bitfield.disp64 = 0;
 	      }
-	    if (!disp && i.types[op].bitfield.baseindex)
+	    if (!op_disp && i.types[op].bitfield.baseindex)
 	      {
 		i.types[op].bitfield.disp8 = 0;
 		i.types[op].bitfield.disp16 = 0;
@@ -3670,19 +3675,19 @@ optimize_disp (void)
 	      }
 	    else if (flag_code == CODE_64BIT)
 	      {
-		if (fits_in_signed_long (disp))
+		if (fits_in_signed_long (op_disp))
 		  {
 		    i.types[op].bitfield.disp64 = 0;
 		    i.types[op].bitfield.disp32s = 1;
 		  }
 		if (i.prefix[ADDR_PREFIX]
-		    && fits_in_unsigned_long (disp))
+		    && fits_in_unsigned_long (op_disp))
 		  i.types[op].bitfield.disp32 = 1;
 	      }
 	    if ((i.types[op].bitfield.disp32
 		 || i.types[op].bitfield.disp32s
 		 || i.types[op].bitfield.disp16)
-		&& fits_in_signed_byte (disp))
+		&& fits_in_signed_byte (op_disp))
 	      i.types[op].bitfield.disp8 = 1;
 	  }
 	else if (i.reloc[op] == BFD_RELOC_386_TLS_DESC_CALL
@@ -4173,12 +4178,20 @@ process_suffix (void)
 	}
       else if (i.suffix == BYTE_MNEM_SUFFIX)
 	{
-	  if (!check_byte_reg ())
+	  if (intel_syntax
+	      && i.tm.opcode_modifier.ignoresize
+	      && i.tm.opcode_modifier.no_bsuf)
+	    i.suffix = 0;
+	  else if (!check_byte_reg ())
 	    return 0;
 	}
       else if (i.suffix == LONG_MNEM_SUFFIX)
 	{
-	  if (!check_long_reg ())
+	  if (intel_syntax
+	      && i.tm.opcode_modifier.ignoresize
+	      && i.tm.opcode_modifier.no_lsuf)
+	    i.suffix = 0;
+	  else if (!check_long_reg ())
 	    return 0;
 	}
       else if (i.suffix == QWORD_MNEM_SUFFIX)
@@ -4192,7 +4205,11 @@ process_suffix (void)
 	}
       else if (i.suffix == WORD_MNEM_SUFFIX)
 	{
-	  if (!check_word_reg ())
+	  if (intel_syntax
+	      && i.tm.opcode_modifier.ignoresize
+	      && i.tm.opcode_modifier.no_wsuf)
+	    i.suffix = 0;
+	  else if (!check_word_reg ())
 	    return 0;
 	}
       else if (i.suffix == XMMWORD_MNEM_SUFFIX
@@ -4368,10 +4385,6 @@ check_byte_reg (void)
 	 32 bit version of an eight bit register, we will just use the
 	 low portion, and that's OK too.  */
       if (i.types[op].bitfield.reg8)
-	continue;
-
-      /* Don't generate this warning if not needed.  */
-      if (intel_syntax && i.tm.opcode_modifier.byteokintel)
 	continue;
 
       /* crc32 doesn't generate this warning.  */
@@ -4681,13 +4694,14 @@ finalize_imm (void)
 static int
 bad_implicit_operand (int xmm)
 {
-  const char *reg = xmm ? "xmm0" : "ymm0";
+  const char *ireg = xmm ? "xmm0" : "ymm0";
+
   if (intel_syntax)
     as_bad (_("the last operand of `%s' must be `%s%s'"),
-	    i.tm.name, register_prefix, reg);
+	    i.tm.name, register_prefix, ireg);
   else
     as_bad (_("the first operand of `%s' must be `%s%s'"),
-	    i.tm.name, register_prefix, reg);
+	    i.tm.name, register_prefix, ireg);
   return 0;
 }
 
@@ -4699,17 +4713,15 @@ process_operands (void)
      unnecessary segment overrides.  */
   const seg_entry *default_seg = 0;
 
-  if (i.tm.opcode_modifier.sse2avx
-      && (i.tm.opcode_modifier.vexnds
-	  || i.tm.opcode_modifier.vexndd))
+  if (i.tm.opcode_modifier.sse2avx && i.tm.opcode_modifier.vexvvvv)
     {
-      unsigned int dup = i.operands;
-      unsigned int dest = dup - 1;
+      unsigned int dupl = i.operands;
+      unsigned int dest = dupl - 1;
       unsigned int j;
 
       /* The destination must be an xmm register.  */
       gas_assert (i.reg_operands
-		  && MAX_OPERANDS > dup
+		  && MAX_OPERANDS > dupl
 		  && operand_type_equal (&i.types[dest], &regxmm));
 
       if (i.tm.opcode_modifier.firstxmm0)
@@ -4719,7 +4731,7 @@ process_operands (void)
 	  if (i.op[0].regs->reg_num != 0)
 	    return bad_implicit_operand (1);
 
-	  if (i.tm.opcode_modifier.vex3sources)
+	  if (i.tm.opcode_modifier.vexsources == VEX3SOURCES)
 	    {
 	      /* Keep xmm0 for instructions with VEX prefix and 3
 		 sources.  */
@@ -4740,8 +4752,9 @@ process_operands (void)
 	}
       else if (i.tm.opcode_modifier.implicit1stxmm0)
 	{
-	  gas_assert ((MAX_OPERANDS - 1) > dup
-		      && i.tm.opcode_modifier.vex3sources);
+	  gas_assert ((MAX_OPERANDS - 1) > dupl
+		      && (i.tm.opcode_modifier.vexsources
+			  == VEX3SOURCES));
 
 	  /* Add the implicit xmm0 for instructions with VEX prefix
 	     and 3 sources.  */
@@ -4760,11 +4773,11 @@ process_operands (void)
 	  i.reg_operands += 2;
 	  i.tm.operands += 2;
 
-	  dup++;
+	  dupl++;
 	  dest++;
-	  i.op[dup] = i.op[dest];
-	  i.types[dup] = i.types[dest];
-	  i.tm.operand_types[dup] = i.tm.operand_types[dest];
+	  i.op[dupl] = i.op[dest];
+	  i.types[dupl] = i.types[dest];
+	  i.tm.operand_types[dupl] = i.tm.operand_types[dest];
 	}
       else
 	{
@@ -4773,9 +4786,9 @@ duplicate:
 	  i.reg_operands++;
 	  i.tm.operands++;
 
-	  i.op[dup] = i.op[dest];
-	  i.types[dup] = i.types[dest];
-	  i.tm.operand_types[dup] = i.tm.operand_types[dest];
+	  i.op[dupl] = i.op[dest];
+	  i.types[dupl] = i.types[dest];
+	  i.tm.operand_types[dupl] = i.tm.operand_types[dest];
 	}
 
        if (i.tm.opcode_modifier.immext)
@@ -4919,15 +4932,14 @@ build_modrm_byte (void)
 {
   const seg_entry *default_seg = 0;
   unsigned int source, dest;
-  int vex_3_sources, vex_2_sources;
+  int vex_3_sources;
 
   /* The first operand of instructions with VEX prefix and 3 sources
      must be VEX_Imm4.  */
-  vex_3_sources = i.tm.opcode_modifier.vex3sources;
-  vex_2_sources = i.tm.opcode_modifier.vex2sources;
+  vex_3_sources = i.tm.opcode_modifier.vexsources == VEX3SOURCES;
   if (vex_3_sources)
     {
-      unsigned int nds, reg;
+      unsigned int nds, reg_slot;
       expressionS *exp;
 
       if (i.tm.opcode_modifier.veximmext
@@ -4937,7 +4949,7 @@ build_modrm_byte (void)
 	  gas_assert (dest == 3);
 	}
       else
-      dest = i.operands - 1;
+	dest = i.operands - 1;
       nds = dest - 1;
 
       /* This instruction must have 4 register operands
@@ -4945,7 +4957,7 @@ build_modrm_byte (void)
 	 It must have VexNDS and VexImmExt.  */
       gas_assert ((i.reg_operands == 4
 		      || (i.reg_operands == 3 && i.mem_operands == 1))
-		  && i.tm.opcode_modifier.vexnds
+		  && i.tm.opcode_modifier.vexvvvv == VEXXDS
 		  && i.tm.opcode_modifier.veximmext
 	    && (operand_type_equal (&i.tm.operand_types[dest], &regxmm)
 		|| operand_type_equal (&i.tm.operand_types[dest], &regymm)));
@@ -4958,26 +4970,26 @@ build_modrm_byte (void)
       i.operands++;
       /* If VexW1 is set, the first operand is the source and
 	 the second operand is encoded in the immediate operand.  */
-      if (i.tm.opcode_modifier.vexw1)
+      if (i.tm.opcode_modifier.vexw == VEXW1)
 	{
 	  source = 0;
-	  reg = 1;
+	  reg_slot = 1;
 	}
       else
 	{
 	  source = 1;
-	  reg = 0;
+	  reg_slot = 0;
 	}
-      gas_assert ((operand_type_equal (&i.tm.operand_types[reg], &regxmm)
-		   || operand_type_equal (&i.tm.operand_types[reg],
+      gas_assert ((operand_type_equal (&i.tm.operand_types[reg_slot], &regxmm)
+		   || operand_type_equal (&i.tm.operand_types[reg_slot],
 					  &regymm))
 		  && (operand_type_equal (&i.tm.operand_types[nds], &regxmm)
 		      || operand_type_equal (&i.tm.operand_types[nds],
 					     &regymm)));
       exp->X_op = O_constant;
       exp->X_add_number
-	= ((i.op[reg].regs->reg_num
-	    + ((i.op[reg].regs->reg_flags & RegRex) ? 8 : 0)) << 4);
+	= ((i.op[reg_slot].regs->reg_num
+	    + ((i.op[reg_slot].regs->reg_flags & RegRex) ? 8 : 0)) << 4);
       i.vex.register_specifier = i.op[nds].regs;
     }
   else
@@ -4991,10 +5003,9 @@ build_modrm_byte (void)
      a instruction with VEX prefix and 3 sources.  */
   if (i.mem_operands == 0
       && ((i.reg_operands == 2
-	   && !i.tm.opcode_modifier.vexndd
-	   && !i.tm.opcode_modifier.vexlwp)
+	   && i.tm.opcode_modifier.vexvvvv <= VEXXDS)
 	  || (i.reg_operands == 3
-	      && i.tm.opcode_modifier.vexnds)
+	      && i.tm.opcode_modifier.vexvvvv == VEXXDS)
 	  || (i.reg_operands == 4 && vex_3_sources)))
     {
       switch (i.operands)
@@ -5009,7 +5020,7 @@ build_modrm_byte (void)
 	     is an instruction with VexNDS. */
 	  gas_assert (i.imm_operands == 1
 		      || (i.imm_operands == 0
-			  && (i.tm.opcode_modifier.vexnds
+			  && (i.tm.opcode_modifier.vexvvvv == VEXXDS
 			      || i.types[0].bitfield.shiftcount)));
 	  if (operand_type_check (i.types[0], imm)
 	      || i.types[0].bitfield.shiftcount)
@@ -5028,11 +5039,11 @@ build_modrm_byte (void)
 	  gas_assert ((i.imm_operands == 2
 		       && i.types[0].bitfield.imm8
 		       && i.types[1].bitfield.imm8)
-		      || (i.tm.opcode_modifier.vexnds
+		      || (i.tm.opcode_modifier.vexvvvv == VEXXDS
 			  && i.imm_operands == 1
 			  && (i.types[0].bitfield.imm8
 			      || i.types[i.operands - 1].bitfield.imm8)));
-	  if (i.tm.opcode_modifier.vexnds)
+	  if (i.tm.opcode_modifier.vexvvvv == VEXXDS)
 	    {
 	      if (i.types[0].bitfield.imm8)
 		source = 1;
@@ -5052,7 +5063,7 @@ build_modrm_byte (void)
 	{
 	  dest = source + 1;
 
-	  if (i.tm.opcode_modifier.vexnds)
+	  if (i.tm.opcode_modifier.vexvvvv == VEXXDS)
 	    {
 	      /* For instructions with VexNDS, the register-only
 		 source operand must be XMM or YMM register. It is
@@ -5308,7 +5319,7 @@ build_modrm_byte (void)
       else
 	mem = ~0;
 
-      if (vex_2_sources)
+      if (i.tm.opcode_modifier.vexsources == XOP2SOURCES)
 	{
 	  if (operand_type_check (i.types[0], imm))
 	    i.vex.register_specifier = NULL;
@@ -5316,7 +5327,7 @@ build_modrm_byte (void)
 	    {
 	      /* VEX.vvvv encodes one of the sources when the first
 		 operand is not an immediate.  */
-	      if (i.tm.opcode_modifier.vexw0)
+	      if (i.tm.opcode_modifier.vexw == VEXW0)
 		i.vex.register_specifier = i.op[0].regs;
 	      else
 		i.vex.register_specifier = i.op[1].regs;
@@ -5333,7 +5344,7 @@ build_modrm_byte (void)
 	    {
 	      i.rm.mode = 3;
 
-	      if (i.tm.opcode_modifier.vexw0)
+	      if (i.tm.opcode_modifier.vexw == VEXW0)
 		i.rm.regmem = i.op[1].regs->reg_num;
 	      else
 		i.rm.regmem = i.op[0].regs->reg_num;
@@ -5342,7 +5353,7 @@ build_modrm_byte (void)
 		i.rex |= REX_B;
 	    }
 	}
-      else if (i.tm.opcode_modifier.vexlwp)
+      else if (i.tm.opcode_modifier.vexvvvv == VEXLWP)
 	{
 	  i.vex.register_specifier = i.op[2].regs;
 	  if (!i.mem_operands)
@@ -5379,7 +5390,7 @@ build_modrm_byte (void)
 
 	  if (vex_3_sources)
 	    op = dest;
-	  else if (i.tm.opcode_modifier.vexnds)
+	  else if (i.tm.opcode_modifier.vexvvvv == VEXXDS)
 	    {
 	      /* For instructions with VexNDS, the register-only
 		 source operand is encoded in VEX prefix. */
@@ -5396,7 +5407,7 @@ build_modrm_byte (void)
 		  gas_assert (vex_reg < i.operands);
 		}
 	    }
-	  else if (i.tm.opcode_modifier.vexndd)
+	  else if (i.tm.opcode_modifier.vexvvvv == VEXNDD)
 	    {
 	      /* For instructions with VexNDD, there should be
 		 no memory operand and the register destination
@@ -6108,7 +6119,7 @@ x86_cons_fix_new (fragS *frag, unsigned int off, unsigned int len,
    is non-null set it to the length of the string we removed from the
    input line.  Otherwise return NULL.  */
 static char *
-lex_got (enum bfd_reloc_code_real *reloc,
+lex_got (enum bfd_reloc_code_real *rel,
 	 int *adjust,
 	 i386_operand_type *types)
 {
@@ -6197,7 +6208,7 @@ lex_got (enum bfd_reloc_code_real *reloc,
 	      int first, second;
 	      char *tmpbuf, *past_reloc;
 
-	      *reloc = gotrel[j].rel[object_64bit];
+	      *rel = gotrel[j].rel[object_64bit];
 	      if (adjust)
 		*adjust = len;
 
@@ -7875,7 +7886,7 @@ size_t md_longopts_size = sizeof (md_longopts);
 int
 md_parse_option (int c, char *arg)
 {
-  unsigned int i;
+  unsigned int j;
   char *arch, *next;
 
   switch (c)
@@ -7961,16 +7972,16 @@ md_parse_option (int c, char *arg)
 	  next = strchr (arch, '+');
 	  if (next)
 	    *next++ = '\0';
-	  for (i = 0; i < ARRAY_SIZE (cpu_arch); i++)
+	  for (j = 0; j < ARRAY_SIZE (cpu_arch); j++)
 	    {
-	      if (strcmp (arch, cpu_arch [i].name) == 0)
+	      if (strcmp (arch, cpu_arch [j].name) == 0)
 		{
 		  /* Processor.  */
-		  cpu_arch_name = cpu_arch[i].name;
+		  cpu_arch_name = cpu_arch[j].name;
 		  cpu_sub_arch_name = NULL;
-		  cpu_arch_flags = cpu_arch[i].flags;
-		  cpu_arch_isa = cpu_arch[i].type;
-		  cpu_arch_isa_flags = cpu_arch[i].flags;
+		  cpu_arch_flags = cpu_arch[j].flags;
+		  cpu_arch_isa = cpu_arch[j].type;
+		  cpu_arch_isa_flags = cpu_arch[j].flags;
 		  if (!cpu_arch_tune_set)
 		    {
 		      cpu_arch_tune = cpu_arch_isa;
@@ -7978,37 +7989,37 @@ md_parse_option (int c, char *arg)
 		    }
 		  break;
 		}
-	      else if (*cpu_arch [i].name == '.'
-		       && strcmp (arch, cpu_arch [i].name + 1) == 0)
+	      else if (*cpu_arch [j].name == '.'
+		       && strcmp (arch, cpu_arch [j].name + 1) == 0)
 		{
 		  /* ISA entension.  */
 		  i386_cpu_flags flags;
 
 		  if (strncmp (arch, "no", 2))
 		    flags = cpu_flags_or (cpu_arch_flags,
-					  cpu_arch[i].flags);
+					  cpu_arch[j].flags);
 		  else
 		    flags = cpu_flags_and_not (cpu_arch_flags,
-					       cpu_arch[i].flags);
+					       cpu_arch[j].flags);
 		  if (!cpu_flags_equal (&flags, &cpu_arch_flags))
 		    {
 		      if (cpu_sub_arch_name)
 			{
 			  char *name = cpu_sub_arch_name;
 			  cpu_sub_arch_name = concat (name,
-						      cpu_arch[i].name,
+						      cpu_arch[j].name,
 						      (const char *) NULL);
 			  free (name);
 			}
 		      else
-			cpu_sub_arch_name = xstrdup (cpu_arch[i].name);
+			cpu_sub_arch_name = xstrdup (cpu_arch[j].name);
 		      cpu_arch_flags = flags;
 		    }
 		  break;
 		}
 	    }
 
-	  if (i >= ARRAY_SIZE (cpu_arch))
+	  if (j >= ARRAY_SIZE (cpu_arch))
 	    as_fatal (_("Invalid -march= option: `%s'"), arg);
 
 	  arch = next;
@@ -8019,17 +8030,17 @@ md_parse_option (int c, char *arg)
     case OPTION_MTUNE:
       if (*arg == '.')
 	as_fatal (_("Invalid -mtune= option: `%s'"), arg);
-      for (i = 0; i < ARRAY_SIZE (cpu_arch); i++)
+      for (j = 0; j < ARRAY_SIZE (cpu_arch); j++)
 	{
-	  if (strcmp (arg, cpu_arch [i].name) == 0)
+	  if (strcmp (arg, cpu_arch [j].name) == 0)
 	    {
 	      cpu_arch_tune_set = 1;
-	      cpu_arch_tune = cpu_arch [i].type;
-	      cpu_arch_tune_flags = cpu_arch[i].flags;
+	      cpu_arch_tune = cpu_arch [j].type;
+	      cpu_arch_tune_flags = cpu_arch[j].flags;
 	      break;
 	    }
 	}
-      if (i >= ARRAY_SIZE (cpu_arch))
+      if (j >= ARRAY_SIZE (cpu_arch))
 	as_fatal (_("Invalid -mtune= option: `%s'"), arg);
       break;
 
@@ -8084,9 +8095,82 @@ md_parse_option (int c, char *arg)
   return 1;
 }
 
+#define MESSAGE_TEMPLATE \
+"                                                                                "
+
+static void
+show_arch (FILE *stream, int ext)
+{
+  static char message[] = MESSAGE_TEMPLATE;
+  char *start = message + 27;
+  char *p;
+  int size = sizeof (MESSAGE_TEMPLATE);
+  int left;
+  const char *name;
+  int len;
+  unsigned int j;
+
+  p = start;
+  left = size - (start - message);
+  for (j = 0; j < ARRAY_SIZE (cpu_arch); j++)
+    {
+      /* Should it be skipped?  */
+      if (cpu_arch [j].skip)
+	continue;
+
+      name = cpu_arch [j].name;
+      len = cpu_arch [j].len;
+      if (*name == '.')
+	{
+	  /* It is an extension.  Skip if we aren't asked to show it.  */
+	  if (ext)
+	    {
+	      name++;
+	      len--;
+	    }
+	  else
+	    continue;
+	}
+      else if (ext)
+	{
+	  /* It is an processor.  Skip if we show only extension.  */
+	  continue;
+	}
+
+      /* Reserve 2 spaces for ", " or ",\0" */
+      left -= len + 2;
+
+      /* Check if there is any room.  */
+      if (left >= 0)
+	{
+	  if (p != start)
+	    {
+	      *p++ = ',';
+	      *p++ = ' ';
+	    }
+	  p = mempcpy (p, name, len);
+	}
+      else
+	{
+	  /* Output the current message now and start a new one.  */
+	  *p++ = ',';
+	  *p = '\0';
+	  fprintf (stream, "%s\n", message);
+	  p = start;
+	  left = size - (start - message) - len - 2;
+	  
+	  gas_assert (left >= 0);
+
+	  p = mempcpy (p, name, len);
+	}
+    }
+
+  *p = '\0';
+  fprintf (stream, "%s\n", message);
+}
+
 void
-md_show_usage (stream)
-     FILE *stream;
+md_show_usage (FILE *stream)
 {
 #if defined (OBJ_ELF) || defined (OBJ_MAYBE_ELF)
   fprintf (stream, _("\
@@ -8115,23 +8199,14 @@ md_show_usage (stream)
 #endif
   fprintf (stream, _("\
   -march=CPU[,+EXTENSION...]\n\
-                          generate code for CPU and EXTENSION, CPU is one of:\n\
-                           i8086, i186, i286, i386, i486, pentium, pentiumpro,\n\
-                           pentiumii, pentiumiii, pentium4, prescott, nocona,\n\
-                           core, core2, corei7, l1om, k6, k6_2, athlon, k8,\n\
-                           amdfam10, generic32, generic64\n\
-                          EXTENSION is combination of:\n\
-                           8087, 287, 387, no87, mmx, nommx, sse, sse2, sse3,\n\
-                           ssse3, sse4.1, sse4.2, sse4, nosse, avx, noavx,\n\
-                           vmx, smx, xsave, movbe, ept, aes, pclmul, fma,\n\
-                           clflush, syscall, rdtscp, 3dnow, 3dnowa, sse4a,\n\
-                           svme, abm, padlock, fma4, xop, lwp\n"));
+                          generate code for CPU and EXTENSION, CPU is one of:\n"));
+  show_arch (stream, 0);
   fprintf (stream, _("\
-  -mtune=CPU              optimize for CPU, CPU is one of:\n\
-                           i8086, i186, i286, i386, i486, pentium, pentiumpro,\n\
-                           pentiumii, pentiumiii, pentium4, prescott, nocona,\n\
-                           core, core2, corei7, l1om, k6, k6_2, athlon, k8,\n\
-                           amdfam10, generic32, generic64\n"));
+                          EXTENSION is combination of:\n"));
+  show_arch (stream, 1);
+  fprintf (stream, _("\
+  -mtune=CPU              optimize for CPU, CPU is one of:\n"));
+  show_arch (stream, 0);
   fprintf (stream, _("\
   -msse2avx               encode SSE instructions with VEX prefix\n"));
   fprintf (stream, _("\
@@ -8647,12 +8722,12 @@ i386_solaris_fix_up_eh_frame (segT sec)
 void
 tc_pe_dwarf2_emit_offset (symbolS *symbol, unsigned int size)
 {
-  expressionS expr;
+  expressionS exp;
 
-  expr.X_op = O_secrel;
-  expr.X_add_symbol = symbol;
-  expr.X_add_number = 0;
-  emit_expr (&expr, size);
+  exp.X_op = O_secrel;
+  exp.X_add_symbol = symbol;
+  exp.X_add_number = 0;
+  emit_expr (&exp, size);
 }
 #endif
 

@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/performance/25_algorithms
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2009-12-24T12:47:37.576930Z
+155455
+paolo
 
 
 
@@ -195,4 +195,72 @@ jakub
 
 
 1256
+
+copy_backward_deque_iterators.cc
+file
+
+
+
+
+2010-01-06T00:59:48.855647Z
+72edae078c3b13e2f3e1f5b46a8ce50f
+2009-12-24T12:47:37.576930Z
+155455
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1251
+
+copy_deque_iterators.cc
+file
+
+
+
+
+2010-01-06T00:59:48.886251Z
+64744a19aba8052d51b5306039b4cde4
+2009-12-23T17:14:15.054962Z
+155432
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1244
 

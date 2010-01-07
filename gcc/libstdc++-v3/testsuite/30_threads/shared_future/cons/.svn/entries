@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/30_threads/shared_future/cons
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-11-03T00:47:48.995150Z
-153834
-bkoz
+2009-12-15T20:17:27.751618Z
+155269
+redi
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-12-07T15:33:18.041941Z
-eeb1eaf6e2334e9ce905e73f84102bf3
-2009-11-03T00:47:48.995150Z
-153834
-bkoz
+2010-01-06T00:59:48.350647Z
+9c6bf3ad7c866f871ad6a8f0cd3634e1
+2009-12-15T20:17:27.751618Z
+155269
+redi
 
 
 

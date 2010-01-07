@@ -1,5 +1,5 @@
 /* Calculate (post)dominators in slightly super-linear time.
-   Copyright (C) 2000, 2003, 2004, 2005, 2006, 2007, 2008 Free
+   Copyright (C) 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Free
    Software Foundation, Inc.
    Contributed by Michael Matz (matz@ifh.de).
 
@@ -711,7 +711,7 @@ get_immediate_dominator (enum cdi_direction dir, basic_block bb)
 
 /* Set the immediate dominator of the block possibly removing
    existing edge.  NULL can be used to remove any edge.  */
-inline void
+void
 set_immediate_dominator (enum cdi_direction dir, basic_block bb,
 			 basic_block dominated_by)
 {

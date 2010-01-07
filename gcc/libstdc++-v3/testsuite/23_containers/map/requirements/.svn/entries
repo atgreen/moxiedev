@@ -1,14 +1,14 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/map/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-08-25T22:29:08.525821Z
-151106
+2010-01-01T03:38:58.904086Z
+155545
 bkoz
 
 
@@ -98,5 +98,8 @@ bkoz
 949
 
 partial_specialization
+dir
+
+exception
 dir
 

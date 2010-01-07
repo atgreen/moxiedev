@@ -1,6 +1,6 @@
 /* Write the GIMPLE representation to a file stream.
 
-   Copyright 2009 Free Software Foundation, Inc.
+   Copyright 2009, 2010 Free Software Foundation, Inc.
    Contributed by Kenneth Zadeck <zadeck@naturalbridge.com>
    Re-implemented by Diego Novillo <dnovillo@google.com>
 
@@ -342,7 +342,8 @@ pack_ts_base_value_fields (struct bitpack_d *bp, tree expr)
     bp_pack_value (bp, DECL_UNSIGNED (expr), 1);
   else if (TYPE_P (expr))
     bp_pack_value (bp, TYPE_UNSIGNED (expr), 1);
-  bp_pack_value (bp, TREE_ASM_WRITTEN (expr), 1);
+  /* We write debug info two times, do not confuse the second one.  */
+  bp_pack_value (bp, TYPE_P (expr) ? 0 : TREE_ASM_WRITTEN (expr), 1);
   bp_pack_value (bp, TREE_NO_WARNING (expr), 1);
   bp_pack_value (bp, TREE_USED (expr), 1);
   bp_pack_value (bp, TREE_NOTHROW (expr), 1);
@@ -637,7 +638,8 @@ tree_is_indexable (tree t)
 {
   if (TREE_CODE (t) == PARM_DECL)
     return false;
-  else if (TREE_CODE (t) == VAR_DECL && decl_function_context (t))
+  else if (TREE_CODE (t) == VAR_DECL && decl_function_context (t)
+	   && !TREE_STATIC (t))
     return false;
   else
     return (TYPE_P (t) || DECL_P (t) || TREE_CODE (t) == SSA_NAME);
@@ -693,7 +695,8 @@ lto_output_tree_ref (struct output_block *ob, tree expr)
 
     case VAR_DECL:
     case DEBUG_EXPR_DECL:
-      gcc_assert (decl_function_context (expr) == NULL);
+      gcc_assert (decl_function_context (expr) == NULL
+		  || TREE_STATIC (expr));
       output_record_start (ob, LTO_global_decl_ref);
       lto_output_var_decl_index (ob->decl_state, ob->main_stream, expr);
       break;
@@ -966,6 +969,7 @@ lto_output_ts_type_tree_pointers (struct output_block *ob, tree expr,
     lto_output_tree_or_ref (ob, TYPE_BINFO (expr), ref_p);
   lto_output_tree_or_ref (ob, TYPE_CONTEXT (expr), ref_p);
   lto_output_tree_or_ref (ob, TYPE_CANONICAL (expr), ref_p);
+  lto_output_tree_or_ref (ob, TYPE_STUB_DECL (expr), ref_p);
 }
 
 
@@ -1970,7 +1974,12 @@ output_unreferenced_globals (cgraph_node_set set)
       tree var = vnode->decl;
 
       if (TREE_CODE (var) == VAR_DECL && TREE_PUBLIC (var))
-	lto_output_tree_ref (ob, var);
+        {
+          /* Outputting just the reference will not output the object itself
+             or references it might have.*/
+          lto_output_tree (ob, var, true);
+          lto_output_tree_ref (ob, var);
+        }
     }
 
   output_zero (ob);
@@ -2147,35 +2156,20 @@ write_global_stream (struct output_block *ob,
     {
       t = lto_tree_ref_encoder_get_tree (encoder, index);
       if (!lto_streamer_cache_lookup (ob->writer_cache, t, NULL))
+	lto_output_tree (ob, t, false);
+
+      if (flag_wpa)
 	{
-	  if (flag_wpa)
-	    {
-	      /* In WPA we should not emit multiple definitions of the
-		 same symbol to all the files in the link set.  If
-		 T had already been emitted as the pervailing definition
-		 in one file, emit it as an external reference in the
-		 others.  */
-	      /* FIXME lto.  We should check if T belongs to the
-		 file we are writing to.  */
-	      if (TREE_CODE (t) == VAR_DECL
-		  && TREE_PUBLIC (t)
-		  && !DECL_EXTERNAL (t))
-		{
-		  /* FIXME lto.  Make DECLS_ALREADY_EMITTED an argument
-		     to this function so it can be freed up afterwards.
-		     Alternately, assign global symbols to cgraph
-		     node sets.  */
-		  static struct pointer_set_t *decls_already_emitted = NULL;
-
-		  if (decls_already_emitted == NULL)
-		    decls_already_emitted = pointer_set_create ();
-
-		  if (pointer_set_insert (decls_already_emitted, t))
-		    make_decl_one_only (t, DECL_ASSEMBLER_NAME (t));
-		}
-	    }
-
-	  lto_output_tree (ob, t, false);
+	  /* In WPA we should not emit multiple definitions of the
+	     same symbol to all the files in the link set.  If
+	     T had already been emitted as the pervailing definition
+	     in one file, do not emit it in the others.  */
+	  /* FIXME lto.  We should check if T belongs to the
+	     file we are writing to.  */
+	  if (TREE_CODE (t) == VAR_DECL
+	      && TREE_PUBLIC (t)
+	      && !DECL_EXTERNAL (t))
+	    TREE_ASM_WRITTEN (t) = 1;
 	}
     }
 }
@@ -2350,7 +2344,9 @@ write_symbol_vec (struct lto_streamer_cache_d *cache,
 	  break;
 	}
 
-      if (kind == GCCPK_COMMON && DECL_SIZE (t))
+      if (kind == GCCPK_COMMON
+	  && DECL_SIZE (t)
+	  && TREE_CODE (DECL_SIZE (t)) == INTEGER_CST)
 	size = (((uint64_t) TREE_INT_CST_HIGH (DECL_SIZE (t))) << 32)
 	  | TREE_INT_CST_LOW (DECL_SIZE (t));
       else

@@ -1,7 +1,7 @@
 /* Collect static initialization info into data structures that can be
    traversed by C++ initialization and finalization routines.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Chris Smith (csmith@convex.com).
    Heavily modified by Michael Meissner (meissner@cygnus.com),
@@ -1174,6 +1174,8 @@ main (int argc, char **argv)
   int num_c_args;
   char **old_argv;
 
+  bool use_verbose = false;
+
   old_argv = argv;
   expandargv (&argc, &argv);
   if (argv != old_argv)
@@ -1228,12 +1230,19 @@ main (int argc, char **argv)
 	if (! strcmp (argv[i], "-debug"))
 	  debug = 1;
         else if (! strcmp (argv[i], "-flto") && ! use_plugin)
-          lto_mode = LTO_MODE_LTO;
+	  {
+	    use_verbose = true;
+	    lto_mode = LTO_MODE_LTO;
+	  }
         else if (! strcmp (argv[i], "-fwhopr") && ! use_plugin)
-          lto_mode = LTO_MODE_WHOPR;
+	  {
+	    use_verbose = true;
+	    lto_mode = LTO_MODE_WHOPR;
+	  }
         else if (! strcmp (argv[i], "-plugin"))
 	  {
 	    use_plugin = true;
+	    use_verbose = true;
 	    lto_mode = LTO_MODE_NONE;
 	  }
 #ifdef COLLECT_EXPORT_LIST
@@ -1445,6 +1454,11 @@ main (int argc, char **argv)
 	      q = extract_string (&p);
 	      *c_ptr++ = xstrdup (q);
 	    }
+	}
+      if (use_verbose && *q == '-' && q[1] == 'v' && q[2] == 0)
+	{
+	  /* Turn on trace in collect2 if needed.  */
+	  vflag = 1;
 	}
     }
   obstack_free (&temporary_obstack, temporary_firstobj);
@@ -2634,8 +2648,8 @@ scan_prog_file (const char *prog_name, scanpass which_pass,
              the LTO objects list if found.  */
           for (p = buf; (ch = *p) != '\0' && ch != '\n'; p++)
             if (ch == ' '
-		&& (strncmp (p +1 , "gnu_lto_v1", 10) == 0)
-		&& ISSPACE( p[11]))
+		&& (strncmp (p + 1, "__gnu_lto_v1", 12) == 0)
+		&& ISSPACE (p[13]))
               {
                 add_lto_object (&lto_objects, prog_name);
 
@@ -2849,7 +2863,7 @@ scan_libraries (const char *prog_name)
   /* Now iterate through the library list adding their symbols to
      the list.  */
   for (list = libraries.first; list; list = list->next)
-    scan_prog_file (list->name, PASS_LIB);
+    scan_prog_file (list->name, PASS_LIB, SCAN_ALL);
 }
 
 #endif /* LDD_SUFFIX */

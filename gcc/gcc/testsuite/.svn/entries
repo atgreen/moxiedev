@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-12-07T15:36:46.895045Z
-155045
-ghazi
+2010-01-05T23:53:29.528836Z
+155666
+hjl
 
 
 
@@ -25,6 +25,9 @@ ghazi
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+gcc.c-torture
+dir
 
 README.compat
 file
@@ -60,8 +63,39 @@ jsm28
 
 4059
 
-gcc.c-torture
-dir
+ChangeLog-2009
+file
+
+
+
+
+2010-01-06T00:59:19.413645Z
+31f1e2e69afabe472403fa35f4718c35
+2010-01-01T17:08:32.733548Z
+155556
+hjl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+378405
 
 ChangeLog-1993-2007
 file
@@ -103,10 +137,10 @@ dir
 gnat.dg
 dir
 
-gcc.dg
+ada
 dir
 
-ada
+gcc.dg
 dir
 
 gcc.misc-tests
@@ -118,11 +152,11 @@ file
 
 
 
-2009-12-07T15:36:59.928949Z
-902b8afab414c770d5e367f7baa1c958
-2009-12-07T15:36:46.895045Z
-155045
-ghazi
+2010-01-06T00:59:23.986646Z
+73d13bedce4e6f43f3ca1e68cbaaa1ae
+2010-01-05T23:53:29.528836Z
+155666
+hjl
 
 
 
@@ -144,7 +178,7 @@ ghazi
 
 
 
-364749
+3852
 
 README.gcc
 file

@@ -1,7 +1,7 @@
 /* Core dump and executable file functions below target vector, for GDB.
 
    Copyright (C) 1986, 1987, 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
-   1998, 1999, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   1998, 1999, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -302,8 +302,6 @@ core_open (char *filename, int from_tty)
   bfd *temp_bfd;
   int scratch_chan;
   int flags;
-  int corelow_pid = CORELOW_PID;
-  struct inferior *inf;
 
   target_preopen (from_tty);
   if (!filename)
@@ -423,7 +421,7 @@ core_open (char *filename, int from_tty)
       struct thread_info *thread = first_thread_of_process (-1);
       if (thread == NULL)
 	{
-	  add_inferior_silent (CORELOW_PID);
+	  inferior_appeared (current_inferior (), CORELOW_PID);
 	  inferior_ptid = pid_to_ptid (CORELOW_PID);
 	  add_thread_silent (inferior_ptid);
 	}
@@ -510,9 +508,9 @@ deprecated_core_resize_section_table (int num_added)
 
 static void
 get_core_register_section (struct regcache *regcache,
-			   char *name,
+			   const char *name,
 			   int which,
-			   char *human_name,
+			   const char *human_name,
 			   int required)
 {
   static char *section_name = NULL;
@@ -593,6 +591,7 @@ static void
 get_core_registers (struct target_ops *ops,
 		    struct regcache *regcache, int regno)
 {
+  struct core_regset_section *sect_list;
   int i;
 
   if (!(core_gdbarch && gdbarch_regset_from_core_section_p (core_gdbarch))
@@ -603,16 +602,30 @@ get_core_registers (struct target_ops *ops,
       return;
     }
 
-  get_core_register_section (regcache,
-			     ".reg", 0, "general-purpose", 1);
-  get_core_register_section (regcache,
-			     ".reg2", 2, "floating-point", 0);
-  get_core_register_section (regcache,
-			     ".reg-xfp", 3, "extended floating-point", 0);
-  get_core_register_section (regcache,
-  			     ".reg-ppc-vmx", 3, "ppc Altivec", 0);
-  get_core_register_section (regcache,
-			     ".reg-ppc-vsx", 4, "POWER7 VSX", 0);
+  sect_list = gdbarch_core_regset_sections (get_regcache_arch (regcache));
+  if (sect_list)
+    while (sect_list->sect_name != NULL)
+      {
+        if (strcmp (sect_list->sect_name, ".reg") == 0)
+	  get_core_register_section (regcache, sect_list->sect_name,
+				     0, sect_list->human_name, 1);
+        else if (strcmp (sect_list->sect_name, ".reg2") == 0)
+	  get_core_register_section (regcache, sect_list->sect_name,
+				     2, sect_list->human_name, 0);
+	else
+	  get_core_register_section (regcache, sect_list->sect_name,
+				     3, sect_list->human_name, 0);
+
+	sect_list++;
+      }
+
+  else
+    {
+      get_core_register_section (regcache,
+				 ".reg", 0, "general-purpose", 1);
+      get_core_register_section (regcache,
+				 ".reg2", 2, "floating-point", 0);
+    }
 
   /* Supply dummy value for all registers not found in the core.  */
   for (i = 0; i < gdbarch_num_regs (get_regcache_arch (regcache)); i++)

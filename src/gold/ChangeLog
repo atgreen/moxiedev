@@ -1,3 +1,500 @@
+2010-01-05  Ian Lance Taylor  <iant@google.com>
+
+	* options.h (class General_options): Use DEFINE_bool_alias for
+	allow_multiple_definition.
+	* resolve.cc (Symbol_table::should_override): Don't test
+	allow_multiple_definition.
+
+	PR 10980
+	* options.h (class General_options): Add --cref.
+	* main.cc (main): Print cref table if --cref.  Don't close mapfile
+	until after printing cref table.
+	* cref.cc: Include "symtab.h".
+	(class Cref_inputs): Define Cref_table_compare and Cref_table.
+	(Cref_table_compare::operator()): New function.
+	(Cref_inputs::gather_cref): New function.
+	(filecol): New static const.
+	(Cref_inputs::print_cref): New function.
+	(Cref::print_cref): New function.
+	* cref.h: Include <cstdio>.
+	(class Cref): Update declarations.
+	* mapfile.h (Mapfile::file): New function.
+	* object.h (class Object): Define Symbols.  Declare virtual
+	do_get_global_symbols.
+	(Object::get_global_symbols): New function.
+	* object.cc (Input_objects::add_object): Pass object to cref_ if
+	--cref.
+	(Input_objects::archive_start): Likewise.
+	(Input_objects::archive_stop): Likewise.
+	(Input_objects::print_cref): New function.
+	* dynobj.h (Sized_dynobj::do_get_global_symbols): New function.
+	* dynobj.cc (big_endian>::do_add_symbols): Create symbols_ if
+	--cref.
+	* plugin.cc (Sized_pluginobj::do_get_global_symbols): New
+	function.
+	* plugin.h (class Sized_pluginobj): Update declarations.
+
+2010-01-05  Ian Lance Taylor  <iant@google.com>
+
+	* symtab.cc (Symbol_table::add_from_object): Rename def parameter
+	to is_default_version.  Rename insdef to insdefault.
+	(Symbol_table::add_from_relobj): Rename def to is_default_version
+	and local to is_forced_local.
+	(Symbol_table::add_from_pluginobj): Likewise.
+	(Symbol_table::add_from_dynobj): Likewise.
+	(Symbol_table::define_special_symbol): Rename insdef to
+	insdefault.
+
+2010-01-04  Ian Lance Taylor  <iant@google.com>
+
+	PR 10980
+	* options.h (class General_options): Add
+	--allow-multiple-definition and -z muldefs.
+	* resolve.cc (Symbol_table::should_override): Don't warn about a
+	multiple symbol definition if --allow-multiple-definition or -z
+	muldefs.
+
+	PR 10980
+	* options.h (class General_options): Add --add-needed and
+	--copy-dt-needed-entries.  Tweak --as-needed help entry.
+	* object.cc (Input_objects::check_dynamic_dependencies): Give an
+	error if --copy-dt-needed-entries aka --add-needed is used and
+	would cause a change in behaviour.
+
+	PR 10980
+	* options.h (class General_options): Add -G as a short version of
+	--shared.  Add no-op options -assert, -g, and -i.
+
+2010-01-04  Sriraman Tallam  <tmsriram@google.com>
+
+	* gc.h (gc_process_relocs): Call is_section_foldable_candidate to
+	check for .text or .gnu.linkonce.t sections.
+	* icf.cc (Icf::find_identical_sections): Ditto.
+	Change the detection for mangled function name within the section
+	name.
+	* icf.h (is_section_foldable_candidate): New function.
+
+2009-12-30  Ian Lance Taylor  <iant@google.com>
+
+	PR 10980
+	* options.h (class General_options): Permit two dashes with
+	--retain-symbols-file.
+
+2009-12-30  Ian Lance Taylor  <iant@google.com>
+
+	PR 10979
+	* layout.cc (Layout::relaxation_loop_body): If -Ttext was used,
+	don't put the file header and segment headers in the text
+	segment.
+
+	PR 10979
+	* common.cc (Sort_commons::operator()): Stabilize sort when both
+	entries are NULL.
+	(Symbol_table::do_allocate_commons_list): When allocating common
+	symbols, skip a symbol which is no longer common.
+	* symtab.h (Symbol::is_common): Test whether the symbol comes from
+	an object before checking its type.
+	* testsuite/common_test_2.c: New file.
+	* testsuite/common_test_3.c: New file.
+	* testsuite/Makefile.am (check_PROGRAMS): Add common_test_2.
+	(common_test_2_SOURCES, common_test_2_DEPENDENCIES): Define.
+	(common_test_2_LDFLAGS, common_test_2_LDADD): Define.
+	(common_test_2_pic.o, common_test_2.so): New targets.
+	(common_test_3_pic.o, common_test_3.so): New targets.
+	* testsuite/Makefile.in: Rebuild.
+
+	PR 10979
+	* script.cc (read_input_script): If we see a new SECTIONS clause,
+	and we have added an input section, give an error.
+	* layout.h (class Layout): Add have_added_input_section function.
+	Add have_added_input_section_ field.
+	* layout.cc (Layout::Layout): Initialize
+	have_added_input_section_.
+	(Layout::layout): Set have_added_input_section_.
+	(Layout::layout_eh_frame): Likewise.
+
+2009-12-30  Ian Lance Taylor  <iant@google.com>
+
+	PR 10931
+	* options.h (class General_options): Add --sort-common option.
+	* symtab.h (class Symbol_table): Define Sort_commons_order enum.
+	* common.cc (Sort_common): Add sort_order parameter to
+	constructor.  Add sort_order_ field.
+	(Sort_commons::operator): Check sort_order_.
+	(Symbol_table::allocate_commons): Determine the sort order.
+	(Symbol_table::do_allocate_commons): Add sort_order parameter.
+	Change all callers.
+	(Symbol_table::do_allocate_commons_list): Likewise.
+
+2009-12-30  Ian Lance Taylor  <iant@google.com>
+
+	PR 10916
+	* symtab.cc (Symbol_table::add_from_relobj): When not exporting
+	symbols from this object, don't change the visibility of an
+	undefined symbol.
+	* testsuite/exclude_libs_test_1.c (lib1_ref): New function.
+
+2009-12-30  Ian Lance Taylor  <iant@google.com>
+
+	PR 10861
+	* script.h (class Version_script_info): Define Language enum.
+	Update declarations.  Define Glob, Exact, and Lookup types.  Add
+	new fields globals_, locals_, and is_finalized_.
+	* script.cc: Various formatting fixes.
+	(class Parser_closure): Change language_stack_ from a vector of
+	std::string to one of Version_script_info::Language.  Adjust all
+	uses accordingly.
+	(class Lazy_demangler): Remove.
+	(struct Version_expression): Change language from std::string to
+	Version_script_info::Language.
+	(Version_script_info::Version_script_info): New function.
+	(Version_script_info::~Version_script_info): Don't call clear.
+	(Version_script_info::finalize): New function.
+	(Version_script_info::build_lookup_tables): New function.
+	(Version_script_info::build_expression_list_lookup): New
+	function.
+	(Version_script_info::get_symbol_version_helper): Rewrite to use
+	lookup tables.
+	(Version_script_info::print_expression_list): Adjust to use
+	Version_script_info::Language.
+	(script_push_lex_into_version_mode): Check that the version script
+	has not been finalized.
+	(version_script_push_lang): Change language string to
+	Version_script_info::Language.
+	* options.cc (Command_line::version_script): New function.
+	* options.h (class General_options): Add finalize_dynamic_list
+	function.  Change version_script from declaration to definition.
+	* testsuite/ver_test_4.script: Remove duplicate def of t2_2.
+	* testsuite/version_script.map: Remove duplicate def of foo.
+	* testsuite/Makefile.am (ver_matching_def.so): Depend upon
+	version_script.map.
+	* testsuite/Makefile.in: Rebuild.
+
+2009-12-30  Ian Lance Taylor  <iant@google.com>
+
+	PR 10843
+	* target-reloc.h (relocate_for_relocatable): When copying a reloc,
+	if the input symbol index is 0, make the output symbol index 0.
+
+2009-12-30  Ian Lance Taylor  <iant@google.com>
+
+	PR 10670
+	* options.h (class General_options): Add -x/--discard-all.
+	* object.cc (Sized_relobj::do_count_local_symbols): Handle
+	--discard-all.  If the local symbol needs a dynamic entry, check
+	that before handling --discard-locals.
+
+2009-12-30  Ian Lance Taylor  <iant@google.com>
+
+	PR 10450
+	* output.cc (Output_segment::Output_segment): If PT_TLS, set the
+	flags to PF_R.
+	(Output_segment::add_output_section): Don't change the flags if
+	the type is PT_TLS.
+
+	PR 10450
+	* dynobj.cc (Dynobj::create_gnu_hash_table): Add symbols to the
+	GNU hash table if they need a dynamic value.  Otherwise, don't add
+	them if they are defined in a dynamic object or are forced local.
+
+2009-12-29  Ian Lance Taylor  <iant@google.com>
+
+	PR 10450
+	* layout.cc (Layout::create_dynamic_symtab): Only set entsize of
+	.gnu.hash table for a 32-bit target.
+
+	PR 10450
+	* symtab.h (Symbol::needs_dynsym_entry): A symbol in both a
+	regular and a dynamic object only needs a dynamic symbol table
+	entry if it is externally visible.
+
+	PR 10450
+	* i386.cc (class Target_i386): Initialize global_offset_table_ in
+	constructor.  Add global_offset_table_ field.
+	(Target_i386::got_section): Set global_offset_table_.
+	(Target_i386::do_finalize_sections): Set global_offset_table_
+	size.
+	* x86_64.cc (class Target_x86_64): Initialize global_offset_table_
+	in constructor.  Add global_offset_table_ field.
+	(Target_x86_64::got_section): Set global_offset_table_.
+	(Target_x86_64::do_finalize_sections): Set global_offset_table_
+	size.
+
+	* layout.cc (Layout::Layout): Initialize increase_relro_.
+	(Layout::get_output_section): Add is_relro, is_last_relro, and
+	is_first_non_relro parameters.  Change all callers.
+	(Layout::choose_output_section): Likewise.
+	(Layout::add_output_section_data): Likewise.
+	(Layout::make_output_section): Likewise.
+	(Layout::set_segment_offsets): Clear increase_relro when using a
+	linker script.
+	* layout.h (class Layout): Add increase_relro method.  Add
+	increase_relro_ field.  Update declarations.
+	* output.cc (Output_section::Output_section): Initialize
+	is_last_relro_ and is_first_non_relro_.
+	(Output_segment::add_output_section): Group relro sections is
+	do_sort is true.  Handle is_last_relro and is_first_non_relro.
+	(Output_segment::maximum_alignment): Remove relro handling.
+	(Output_segment::set_section_addresses): Add increase_relro
+	parameter.  Change all callers.  Add initial alignment to align
+	relro sections on separate page.  Remove old relro handling.
+	(Output_segment::set_section_list_addresses): Remove in_relro
+	parameter.  Change all callers.
+	(Output_segment::set_offset): Add increase parameter.  Change all
+	callers.  Remove old relro handling.
+	* output.h (class Output_section): Add new methods: is_last_relro,
+	set_is_last_relro, is_first_non_relro, set_is_first_non_relro.
+	Add is_last_relro_ and is_first_non_relro_ fields.
+	* i386.cc (Target_i386::got_section): Don't call set_is_relro.
+	Create separate .got.plt section.  Call increase_relro.
+	* x86_64.cc (Target_x86_64::got_section): Likewise.
+	* testsuite/relro_script_test.t: Add .got.plt.
+
+	PR 10450
+	* layout.cc (Layout::Layout): Initialize dynamic_symbol_ field.
+	(Layout::create_initial_dynamic_sections): Set dynamic_symbol_.
+	(Layout::finalize): Call set_dynamic_symbol_size.
+	(Layout::set_dynamic_symbol_size): New function.
+	* layout.h (class Layout): Add dynamic_symbol_ field.  Declare
+	set_dynamic_symbol_size.
+
+	PR 10450
+	* output.h (class Output_section): Add is_entsize_zero_ field.
+	* output.cc (Output_section::Output_section): Initialize
+	is_entsize_zero_.
+	(Output_section::set_entsize): If two different entsizes are
+	requested, force it to zero.
+	(Output_section::add_input_section): Set flags for .debug_str
+	before updating section flags.  Set entsize.
+	(Output_section::update_flags_for_input_section): Set SHF_MERGE
+	and SHF_STRING if all input sections have those flags.
+
+2009-12-29   Rafael Espindola  <espindola@google.com>
+
+	* main.cc (main): Fix the sys time reporting.
+	* workqueue.cc (Workqueue::find_and_run_task): Fix the sys time
+	reporting.
+
+2009-12-29  Sriraman Tallam  <tmsriram@google.com>
+
+	* options.cc (General_options::parse_version): Allow -v to exit
+	without an error if there is nothing to link.
+
+2009-12-29  Ian Lance Taylor  <iant@google.com>
+
+	* configure.ac: Set the MCMODEL_MEDIUM conditional to false if
+	using a version of gcc before 4.1.
+	* configure: Rebuild.
+
+2009-12-28  Chris Demetriou  <cgd@google.com>
+
+	* attributes.cc (Output_attributes_section_data::do_write): Use
+	std::vector::front rather than std::vector::data.
+
+2009-12-28  Ian Lance Taylor  <iant@google.com>
+
+	* symtab.h (class Symbol_table): Add enum Defined.
+	* resolve.cc (Symbol_table::should_override): Add defined
+	parameter.  Change all callers.  Test whether object is NULL
+	before calling a method on it.
+	(Symbol_table::report_resolve_problem): Add defined parameter.
+	Change all callers.
+	(Symbol_table::should_override_with_special): Likewise.
+	* symtab.cc (Symbol_table::define_in_output_data): Add defined
+	parameter.  Change all callers.
+	(Symbol_table::do_define_in_output_data): Likewise.
+	(Symbol_table::define_in_output_segment): Likewise.
+	(Symbol_table::do_define_in_output_segment): Likewise.
+	(Symbol_table::define_as_constant): Likewise.
+	(Symbol_table::do_define_as_constant): Likewise.
+	* script.h (class Symbol_assignment): Add is_defsym parameter to
+	constructor; change all callers.
+	* script.cc (Script_options::add_symbol_assignment): Add is_defsym
+	parameter.  Change all callers.  Add is_defsym_ field.
+	(class Parser_closure): Add parsing_defsym parameter to
+	constructor; change all callers.  Add parsing_defsym accessor
+	function.  Add parsing_defsym_ field.
+
+2009-12-28  Ian Lance Taylor  <iant@google.com>
+
+	* gold.cc (queue_middle_tasks): Fix formatting.
+	* object.cc (Relobj::is_section_name_included): Likewise.
+
+2009-12-23  Ian Lance Taylor  <iant@google.com>
+
+	* i386.cc (Target_i386::do_calls_non_split): Recognize
+	-fsplit-stack prologue for a function with a static chain.
+	* x86_64.cc (Target_x86_64::do_calls_non_split): Recognize
+	-fsplit-stack prologue when using %r11.
+
+2009-12-21  Sriraman Tallam  <tmsriram@google.com>
+
+	* options.cc (General_options::parse_version): Make -v continue and do
+	the link like GNU ld does.
+
+2009-12-17  Rafael Avila de Espindola  <espindola@google.com>
+
+	* Makefile.am (CCFILES): Add timer.cc.
+	(HFILES): Add timer.h.
+	* configure.ac: Check for sysconf and times.
+	* main.cc: include timer.h.
+	(main): Use Timer instead of get_run_time.
+	* timer.cc: New.
+	* timer.h: New.
+	* workqueue.cc: include timer.h.
+	(Workqueue::find_and_run_task):
+	Report user, sys and wall time.
+	* Makefile.in: Regenerate.
+	* config.in: Regenerate.
+	* configure: Regenerate.
+
+2009-12-16  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::scan_sections_for_stubs): Exclude ICF-eliminated
+	sections.
+	* object.cc (Sized_relobj::do_finalize_local_symbols): Handle
+	relaxed input sections.
+	* output.cc (Output_section::find_relaxed_input_section): Change
+	return type to Output_relaxed_input_section pointer.  Adjust code
+	for new type of relaxed_input_section_map_.
+	* output.h (Output_section::find_relaxed_input_section): Change
+	return type to Output_relaxed_input_section pointer.
+	(Output_section::Output_relaxed_input_section_by_input_section_map):
+	New type.
+	(Output_section::relaxed_input_section_map_): Change type to
+	Output_section::Output_relaxed_input_section_by_input_section_map.
+	* symtab.cc (Symbol_table::compute_final_value): Handle relaxed
+	input section.
+
+2009-12-15  Ian Lance Taylor  <iant@google.com>
+
+	* layout.cc (Layout::create_shstrtab): Only write out after input
+	sections if we are compressing debug sections.
+
+2009-12-15  Ian Lance Taylor  <iant@google.com>
+
+	* archive.cc (Archive::add_symbols): Only look up a symbol without
+	a version if there is, in fact, a version.
+
+2009-12-14  Ian Lance Taylor  <iant@google.com>
+
+	Revert -Wshadow changes, all changes from:
+	2009-12-11  Doug Kwan  <dougkwan@google.com>
+	2009-12-11  Nick Clifton  <nickc@redhat.com>
+	* configure.ac: Remove -Wshadow when setting WARN_CXXFLAGS.
+
+2009-12-11  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::do_finalize_sections): Fix build breakage
+	due to -Wshadow.
+	* attributes.cc (Object_attribute::size): Ditto.
+	(Attributes_section_data::size): Ditto.
+	(Attributes_section_data::Attributes_section_data): Ditto.
+	(Output_attributes_section_data::do_write): Ditto.
+	* attributes.h (Object_attribute::set_type): Ditto.
+	* testsuite/tls_test_main.cc (safe_lock, safe_unlock): Ditto.
+
+2009-12-11  Nick Clifton  <nickc@redhat.com>
+
+	* archive.cc: Fix shadowed variable warnings.
+	* arm.cc: Likewise.
+	* compressed_output.cc: Likewise.
+	* compressed_output.h: Likewise.
+	* configure: Likewise.
+	* dwarf_reader.cc: Likewise.
+	* dynobj.cc: Likewise.
+	* dynobj.h: Likewise.
+	* ehframe.cc: Likewise.
+	* ehframe.h: Likewise.
+	* errors.cc: Likewise.
+	* expression.cc: Likewise.
+	* fileread.cc: Likewise.
+	* fileread.h: Likewise.
+	* freebsd.h: Likewise.
+	* i386.cc: Likewise.
+	* icf.cc: Likewise.
+	* incremental.h: Likewise.
+	* layout.cc: Likewise.
+	* layout.h: Likewise.
+	* mapfile.cc: Likewise.
+	* merge.cc: Likewise.
+	* merge.h: Likewise.
+	* object.cc: Likewise.
+	* object.h: Likewise.
+	* options.h: Likewise.
+	* output.cc: Likewise.
+	* output.h: Likewise.
+	* parameters.cc: Likewise.
+	* plugin.cc: Likewise.
+	* powerpc.cc: Likewise.
+	* reduced_debug_output.cc: Likewise.
+	* reduced_debug_output.h: Likewise.
+	* reloc.cc: Likewise.
+	* reloc.h: Likewise.
+	* resolve.cc: Likewise.
+	* script-sections.cc: Likewise.
+	* script.cc: Likewise.
+	* script.h: Likewise.
+	* sparc.cc: Likewise.
+	* symtab.cc: Likewise.
+	* symtab.h: Likewise.
+	* target-select.cc: Likewise.
+	* target-select.h: Likewise.
+	* token.h: Likewise.
+	* workqueue.cc: Likewise.
+	* workqueue.h: Likewise.
+	* x86_64.cc: Likewise.
+
+2009-12-10  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (attributes.h): New include.
+	(Arm_relobj::Arm_relobj): Initialize attributes_section_data_.
+	(Arm_relobj::~Arm_relobj): Delete object pointed by
+	attributes_section_data_.
+	(Arm_relobj::attributes_section_data): New method definition.
+	(Arm_relobj::attributes_section_data_): New data member declaration.
+	(Arm_dynobj::Arm_dynobj): Initialize attributes_section_data_.
+	(Arm_dynobj::~Arm_dynobj): Delete object pointed by
+	attributes_section_data_.
+	(Arm_dynobj::attributes_section_data): New method definition.
+	(Arm_dynobj::attributes_section_data_): New data member declaration.
+	(Target_arm::Target_arm): Initialize attributes_section_data_.  Change
+	initialization value of may_use_blx_ to false.
+   	(Target_arm::using_thumb2, Target_arm::using_thumb_only,
+	Target_arm::may_use_arm_nop, Target_arm::may_use_thumb2_nop): Use
+	object attributes to compute results instead of hard-coding.
+	(Target_arm::do_attribute_arg_type, Target_arm::do_attributes_order,
+	Target_arm::get_secondary_compatible_arch,
+	Target_arm::set_secondary_compatible_arch
+	Target_arm::tag_cpu_arch_combine, Target_arm::aeabi_enum_name,
+	Target_arm::tag_cpu_name_value, Target_arm::merge_object_attributes):
+	New method declarations.
+	(Target_arm::get_aeabi_object_attribute): New method definition.
+	(Target_arm::attributes_section_data_): New data member declaration.
+	(read_arm_attributes_section): New template definition.
+	(Arm_relobj::do_read_symbols): Read attributes section if it exists.
+	(Arm_dynobj::do_read_symbols): Ditto.
+	(Target_arm::do_finalize_sections): Merge attributes sections from
+	input.  Check for BLX use after attributes section merging.
+	Fix __exidx_start and __exidx_end visibility.  Create an
+	.ARM.attributes section if necessary.
+	(Target_arm::get_secondary_compatible_arch,
+	Target_arm::set_secondary_compatible_arch,
+	Target_arm::tag_cpu_arch_combine, Target_arm::aeabi_enum_name,
+	Target_arm::tag_cpu_name_value, Target_arm::merge_object_attributes,
+	Target_arm::do_attribute_arg_type, Target_arm::do_attributes_order): 
+	New method definitions.
+
+2009-12-09  Ian Lance Taylor  <iant@google.com>
+
+	* plugin.cc (Plugin::load): Don't cast from void* to a function
+	pointer.
+
+2009-12-09  Ian Lance Taylor  <iant@google.com>
+
+	* dynobj.cc (Sized_dynobj::do_read_symbols): Clear version
+	information fields.
+
 2009-12-09  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* testsuite/Makefile.am (two_file_shared_1_pic_2_test_DEPENDENCIES):
@@ -323,7 +820,7 @@
 	bit instead of a flag indicating that the thumb-bit is used.  Adjust
 	calls to methods in Arm_relocate_functions for this change.
 
-2009-11-08  Ian Lance Taylor  <ian@airs.com>
+2009-11-08  Ian Lance Taylor  <iant@google.com>
 
 	PR 10925
 	* reloc.cc: Instantiate

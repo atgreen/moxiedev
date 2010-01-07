@@ -1,5 +1,5 @@
 /* A pass for lowering trees to RTL.
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -1011,6 +1011,14 @@ expand_one_var (tree var, bool toplevel, bool really_expand)
       if (really_expand)
         expand_one_register_var (origvar);
     }
+  else if (!host_integerp (DECL_SIZE_UNIT (var), 1))
+    {
+      if (really_expand)
+	{
+	  error ("size of variable %q+D is too large", var);
+	  expand_one_error_var (var);
+	}
+    }
   else if (defer_stack_allocation (var, toplevel))
     add_stack_var (origvar);
   else
@@ -1606,13 +1614,35 @@ expand_gimple_cond (basic_block bb, gimple stmt)
       && bitmap_bit_p (SA.values, SSA_NAME_VERSION (op0)))
     {
       gimple second = SSA_NAME_DEF_STMT (op0);
-      if (gimple_code (second) == GIMPLE_ASSIGN
-	  && TREE_CODE_CLASS (gimple_assign_rhs_code (second))
-	     == tcc_comparison)
+      if (gimple_code (second) == GIMPLE_ASSIGN)
 	{
-	  code = gimple_assign_rhs_code (second);
-	  op0 = gimple_assign_rhs1 (second);
-	  op1 = gimple_assign_rhs2 (second);
+	  enum tree_code code2 = gimple_assign_rhs_code (second);
+	  if (TREE_CODE_CLASS (code2) == tcc_comparison)
+	    {
+	      code = code2;
+	      op0 = gimple_assign_rhs1 (second);
+	      op1 = gimple_assign_rhs2 (second);
+	    }
+	  /* If jumps are cheap turn some more codes into
+	     jumpy sequences.  */
+	  else if (BRANCH_COST (optimize_insn_for_speed_p (), false) < 4)
+	    {
+	      if ((code2 == BIT_AND_EXPR
+		   && TYPE_PRECISION (TREE_TYPE (op0)) == 1
+		   && TREE_CODE (gimple_assign_rhs2 (second)) != INTEGER_CST)
+		  || code2 == TRUTH_AND_EXPR)
+		{
+		  code = TRUTH_ANDIF_EXPR;
+		  op0 = gimple_assign_rhs1 (second);
+		  op1 = gimple_assign_rhs2 (second);
+		}
+	      else if (code2 == BIT_IOR_EXPR || code2 == TRUTH_OR_EXPR)
+		{
+		  code = TRUTH_ORIF_EXPR;
+		  op0 = gimple_assign_rhs1 (second);
+		  op1 = gimple_assign_rhs2 (second);
+		}
+	    }
 	}
     }
 
@@ -2186,7 +2216,6 @@ expand_debug_expr (tree exp)
   int unsignedp = TYPE_UNSIGNED (TREE_TYPE (exp));
   addr_space_t as;
   enum machine_mode address_mode;
-  enum machine_mode pointer_mode;
 
   switch (TREE_CODE_CLASS (TREE_CODE (exp)))
     {
@@ -2382,17 +2411,15 @@ expand_debug_expr (tree exp)
 	return NULL;
 
       if (POINTER_TYPE_P (TREE_TYPE (exp)))
-	as = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (exp)));
+	{
+	  as = TYPE_ADDR_SPACE (TREE_TYPE (TREE_TYPE (exp)));
+	  address_mode = targetm.addr_space.address_mode (as);
+	}
       else
-	as = ADDR_SPACE_GENERIC;
-
-      address_mode = targetm.addr_space.address_mode (as);
-      pointer_mode = targetm.addr_space.pointer_mode (as);
-
-      gcc_assert (GET_MODE (op0) == address_mode
-		  || GET_MODE (op0) == pointer_mode
-		  || GET_CODE (op0) == CONST_INT
-		  || GET_CODE (op0) == CONST_DOUBLE);
+	{
+	  as = ADDR_SPACE_GENERIC;
+	  address_mode = Pmode;
+	}
 
       if (TREE_CODE (exp) == ALIGN_INDIRECT_REF)
 	{
@@ -2412,19 +2439,11 @@ expand_debug_expr (tree exp)
 	return NULL;
 
       op0 = expand_debug_expr
-	(tree_mem_ref_addr (build_pointer_type (TREE_TYPE (exp)),
-			    exp));
+	    (tree_mem_ref_addr (build_pointer_type (TREE_TYPE (exp)), exp));
       if (!op0)
 	return NULL;
 
       as = TYPE_ADDR_SPACE (TREE_TYPE (exp));
-      address_mode = targetm.addr_space.address_mode (as);
-      pointer_mode = targetm.addr_space.pointer_mode (as);
-
-      gcc_assert (GET_MODE (op0) == address_mode
-		  || GET_MODE (op0) == pointer_mode
-		  || GET_CODE (op0) == CONST_INT
-		  || GET_CODE (op0) == CONST_DOUBLE);
 
       op0 = gen_rtx_MEM (mode, op0);
 

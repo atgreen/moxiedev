@@ -162,8 +162,6 @@
 /empty.s/1.1/Wed Nov 18 20:13:12 2009//
 /eret-1.d/1.3/Wed Nov 18 20:13:12 2009//
 /eret-1.s/1.3/Wed Nov 18 20:13:12 2009//
-/eret-2.d/1.3/Wed Nov 18 20:13:12 2009//
-/eret-2.s/1.3/Wed Nov 18 20:13:12 2009//
 /eret-3.d/1.3/Wed Nov 18 20:13:12 2009//
 /eret-3.s/1.2/Wed Nov 18 20:13:12 2009//
 /expr1.d/1.1/Wed Nov 18 20:13:12 2009//
@@ -301,7 +299,6 @@
 /mips-macro-ill-sfp.s/1.1/Wed Nov 18 20:13:12 2009//
 /mips-no-jalx.l/1.2/Wed Nov 18 20:13:12 2009//
 /mips-no-jalx.s/1.1/Wed Nov 18 20:13:12 2009//
-/mips.exp/1.153/Wed Nov 18 20:13:12 2009//
 /mips1-fp.d/1.2/Wed Nov 18 20:13:12 2009//
 /mips1-fp.l/1.1/Wed Nov 18 20:13:12 2009//
 /mips1-fp.s/1.1/Wed Nov 18 20:13:12 2009//
@@ -513,4 +510,9 @@
 /vxworks1.s/1.1/Wed Nov 18 20:13:12 2009//
 /xlr-ext.d/1.1/Wed Nov 18 20:13:12 2009//
 /xlr-ext.s/1.1/Wed Nov 18 20:13:12 2009//
+/aent.d/1.1/Sat Dec 19 00:21:29 2009//
+/aent.s/1.1/Sat Dec 19 00:21:29 2009//
+/eret-2.d/1.4/Wed Jan  6 04:53:54 2010//
+/eret-2.s/1.4/Wed Jan  6 04:53:54 2010//
+/mips.exp/1.154/Wed Jan  6 04:53:54 2010//
 D

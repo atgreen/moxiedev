@@ -1,6 +1,6 @@
 /* Expand builtin functions.
    Copyright (C) 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -58,9 +58,7 @@ along with GCC; see the file COPYING3.  If not see
 #ifndef PAD_VARARGS_DOWN
 #define PAD_VARARGS_DOWN BYTES_BIG_ENDIAN
 #endif
-#ifdef HAVE_mpc
 static tree do_mpc_arg1 (tree, tree, int (*)(mpc_ptr, mpc_srcptr, mpc_rnd_t));
-#endif
 
 /* Define the names of the builtin function types and codes.  */
 const char *const built_in_class_names[4]
@@ -325,7 +323,10 @@ get_object_alignment (tree exp, unsigned int align, unsigned int max_align)
 	  offset = next_offset;
 	}
     }
-  if (DECL_P (exp))
+  if (TREE_CODE (exp) == CONST_DECL)
+    exp = DECL_INITIAL (exp);
+  if (DECL_P (exp)
+      && TREE_CODE (exp) != LABEL_DECL)
     align = MIN (inner, DECL_ALIGN (exp));
 #ifdef CONSTANT_ALIGNMENT
   else if (CONSTANT_CLASS_P (exp))
@@ -7152,20 +7153,17 @@ fold_builtin_cosh (location_t loc, tree arg, tree type, tree fndecl)
    NULL_TREE if no simplification can be made.  */
 
 static tree
-fold_builtin_ccos (location_t loc,
-		   tree arg, tree type ATTRIBUTE_UNUSED, tree fndecl,
-		   bool hyper ATTRIBUTE_UNUSED)
+fold_builtin_ccos (location_t loc, tree arg, tree type, tree fndecl,
+		   bool hyper)
 {
   if (validate_arg (arg, COMPLEX_TYPE)
       && TREE_CODE (TREE_TYPE (TREE_TYPE (arg))) == REAL_TYPE)
     {
       tree tmp;
 
-#ifdef HAVE_mpc
       /* Calculate the result when the argument is a constant.  */
       if ((tmp = do_mpc_arg1 (arg, type, (hyper ? mpc_cosh : mpc_cos))))
 	return tmp;
-#endif
 
       /* Optimize fn(-x) into fn(x).  */
       if ((tmp = fold_strip_sign_ops (arg)))
@@ -7250,19 +7248,15 @@ fold_builtin_cexp (location_t loc, tree arg0, tree type)
 {
   tree rtype;
   tree realp, imagp, ifn;
-#ifdef HAVE_mpc
   tree res;
-#endif
 
   if (!validate_arg (arg0, COMPLEX_TYPE)
       || TREE_CODE (TREE_TYPE (TREE_TYPE (arg0))) != REAL_TYPE)
     return NULL_TREE;
 
-#ifdef HAVE_mpc
   /* Calculate the result when the argument is a constant.  */
   if ((res = do_mpc_arg1 (arg0, type, mpc_exp)))
     return res;
-#endif
 
   rtype = TREE_TYPE (TREE_TYPE (arg0));
 
@@ -9700,7 +9694,6 @@ fold_builtin_1 (location_t loc, tree fndecl, tree arg0, bool ignore)
     CASE_FLT_FN (BUILT_IN_CCOSH):
       return fold_builtin_ccos(loc, arg0, type, fndecl, /*hyper=*/ true);
 
-#ifdef HAVE_mpc
     CASE_FLT_FN (BUILT_IN_CSIN):
       if (validate_arg (arg0, COMPLEX_TYPE)
 	  && TREE_CODE (TREE_TYPE (TREE_TYPE (arg0))) == REAL_TYPE)
@@ -9737,7 +9730,6 @@ fold_builtin_1 (location_t loc, tree fndecl, tree arg0, bool ignore)
 	return do_mpc_arg1 (arg0, type, mpc_sqrt);
     break;
 
-#ifdef HAVE_mpc_arc
     CASE_FLT_FN (BUILT_IN_CASIN):
       if (validate_arg (arg0, COMPLEX_TYPE)
 	  && TREE_CODE (TREE_TYPE (TREE_TYPE (arg0))) == REAL_TYPE)
@@ -9773,8 +9765,6 @@ fold_builtin_1 (location_t loc, tree fndecl, tree arg0, bool ignore)
 	  && TREE_CODE (TREE_TYPE (TREE_TYPE (arg0))) == REAL_TYPE)
 	return do_mpc_arg1 (arg0, type, mpc_atanh);
     break;
-#endif /* HAVE_mpc_arc */
-#endif /* HAVE_mpc */
 
     CASE_FLT_FN (BUILT_IN_CABS):
       return fold_builtin_cabs (loc, arg0, type, fndecl);
@@ -10092,7 +10082,6 @@ fold_builtin_2 (location_t loc, tree fndecl, tree arg0, tree arg1, bool ignore)
     CASE_FLT_FN (BUILT_IN_HYPOT):
       return fold_builtin_hypot (loc, fndecl, arg0, arg1, type);
 
-#ifdef HAVE_mpc_pow
     CASE_FLT_FN (BUILT_IN_CPOW):
       if (validate_arg (arg0, COMPLEX_TYPE)
 	  && TREE_CODE (TREE_TYPE (TREE_TYPE (arg0))) == REAL_TYPE
@@ -10100,7 +10089,6 @@ fold_builtin_2 (location_t loc, tree fndecl, tree arg0, tree arg1, bool ignore)
 	  && TREE_CODE (TREE_TYPE (TREE_TYPE (arg1))) == REAL_TYPE)
 	return do_mpc_arg2 (arg0, arg1, type, /*do_nonfinite=*/ 0, mpc_pow);
     break;
-#endif
 
     CASE_FLT_FN (BUILT_IN_LDEXP):
       return fold_builtin_load_exponent (loc, arg0, arg1, type, /*ldexp=*/true);
@@ -12720,7 +12708,6 @@ do_mpfr_ckconv (mpfr_srcptr m, tree type, int inexact)
   return NULL_TREE;
 }
 
-#ifdef HAVE_mpc
 /* Helper function for do_mpc_arg*().  Ensure M is a normal complex
    number and no overflow/underflow occurred.  INEXACT is true if M
    was not exactly calculated.  TYPE is the tree type for the result.
@@ -12742,8 +12729,8 @@ do_mpc_ckconv (mpc_srcptr m, tree type, int inexact, int force_convert)
     {
       REAL_VALUE_TYPE re, im;
 
-      real_from_mpfr (&re, mpc_realref (m), type, GMP_RNDN);
-      real_from_mpfr (&im, mpc_imagref (m), type, GMP_RNDN);
+      real_from_mpfr (&re, mpc_realref (m), TREE_TYPE (type), GMP_RNDN);
+      real_from_mpfr (&im, mpc_imagref (m), TREE_TYPE (type), GMP_RNDN);
       /* Proceed iff GCC's REAL_VALUE_TYPE can hold the MPFR values,
 	 check for overflow/underflow.  If the REAL_VALUE_TYPE is zero
 	 but the mpft_t is not, then we underflowed in the
@@ -12767,7 +12754,6 @@ do_mpc_ckconv (mpc_srcptr m, tree type, int inexact, int force_convert)
     }
   return NULL_TREE;
 }
-#endif /* HAVE_mpc */
 
 /* If argument ARG is a REAL_CST, call the one-argument mpfr function
    FUNC on it and return the resulting value as a tree with type TYPE.
@@ -13165,7 +13151,6 @@ do_mpfr_lgamma_r (tree arg, tree arg_sg, tree type)
   return result;
 }
 
-#ifdef HAVE_mpc
 /* If argument ARG is a COMPLEX_CST, call the one-argument mpc
    function FUNC on it and return the resulting value as a tree with
    type TYPE.  The mpfr precision is set to the precision of TYPE.  We
@@ -13219,7 +13204,6 @@ do_mpc_arg1 (tree arg, tree type, int (*func)(mpc_ptr, mpc_srcptr, mpc_rnd_t))
    DO_NONFINITE is true, then fold expressions containing Inf or NaN
    in the arguments and/or results.  */
 
-#ifdef HAVE_mpc
 tree
 do_mpc_arg2 (tree arg0, tree arg1, tree type, int do_nonfinite,
 	     int (*func)(mpc_ptr, mpc_srcptr, mpc_srcptr, mpc_rnd_t))
@@ -13270,8 +13254,6 @@ do_mpc_arg2 (tree arg0, tree arg1, tree type, int do_nonfinite,
 
   return result;
 }
-# endif
-#endif /* HAVE_mpc */
 
 /* FIXME tuples.
    The functions below provide an alternate interface for folding

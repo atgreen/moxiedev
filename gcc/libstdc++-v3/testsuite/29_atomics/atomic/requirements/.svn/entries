@@ -1,15 +1,15 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/29_atomics/atomic/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2009-12-21T19:00:34.247142Z
+155377
+bkoz
 
 
 
@@ -35,11 +35,11 @@ file
 
 
 
-2009-04-24T17:50:33.000000Z
-b6e0e9328d100bfec49cf39e5bb06771
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-01-06T00:59:49.710644Z
+405ab1d71e297704f9b477464b69b1fe
+2009-12-21T19:00:34.247142Z
+155377
+bkoz
 
 
 
@@ -61,5 +61,5 @@ jakub
 
 
 
-1133
+1099
 

@@ -1,14 +1,14 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/cpp0x/lambda
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-10-27T21:58:09.977638Z
-153617
+2009-12-15T18:57:30.778341Z
+155266
 jason
 
 
@@ -406,10 +406,10 @@ file
 
 
 
-2009-12-07T15:31:24.707954Z
-32582c0f57ee321e86e571d8ee2f297a
-2009-10-27T21:58:09.977638Z
-153617
+2010-01-06T00:59:21.856646Z
+89fc5f71ac821cfc9961a7cec55cb015
+2009-12-15T18:57:30.778341Z
+155266
 jason
 
 
@@ -432,7 +432,7 @@ jason
 
 
 
-3419
+3451
 
 lambda-nested2.C
 file
@@ -502,40 +502,6 @@ jason
 
 69
 
-lambda-mixed.C
-file
-
-
-
-
-2009-10-08T17:29:59.000000Z
-5babfcba950d470d72ed8a0814f18e31
-2009-04-21T19:45:49.620131Z
-146536
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-206
-
 lambda-pass.C
 file
 
@@ -569,6 +535,40 @@ jason
 
 
 420
+
+lambda-mixed.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+5babfcba950d470d72ed8a0814f18e31
+2009-04-21T19:45:49.620131Z
+146536
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+206
 
 lambda-this.C
 file
@@ -774,40 +774,6 @@ jason
 
 308
 
-lambda-ctor-neg.C
-file
-
-
-
-
-2009-10-08T17:29:59.000000Z
-747b179a98c56f232c8af8689b4e4204
-2009-09-22T17:57:07.245739Z
-152035
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-595
-
 lambda-non-const.C
 file
 
@@ -842,16 +808,16 @@ jason
 
 249
 
-lambda-deduce-ext-neg2.C
+lambda-ctor-neg.C
 file
 
 
 
 
 2009-10-08T17:29:59.000000Z
-5af4cb82de3b09ee024863bdafeb3ca8
-2009-09-04T15:09:50.896793Z
-151425
+747b179a98c56f232c8af8689b4e4204
+2009-09-22T17:57:07.245739Z
+152035
 jason
 
 
@@ -874,7 +840,7 @@ jason
 
 
 
-417
+595
 
 lambda-in-class-neg.C
 file
@@ -910,6 +876,40 @@ jason
 
 734
 
+lambda-deduce-ext-neg2.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+5af4cb82de3b09ee024863bdafeb3ca8
+2009-09-04T15:09:50.896793Z
+151425
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+417
+
 lambda-const.C
 file
 
@@ -944,40 +944,6 @@ jason
 
 448
 
-lambda-deduce-ext.C
-file
-
-
-
-
-2009-10-08T17:29:59.000000Z
-385bcf6a13e8ad52b68b6b9a7b4ef2b6
-2009-09-04T15:09:50.896793Z
-151425
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-428
-
 lambda-ns-scope.C
 file
 
@@ -1011,6 +977,40 @@ jason
 
 
 229
+
+lambda-deduce-ext.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+385bcf6a13e8ad52b68b6b9a7b4ef2b6
+2009-09-04T15:09:50.896793Z
+151425
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+428
 
 lambda-defarg.C
 file

@@ -316,7 +316,7 @@ get_named_event_id (const char *name, enum insert_option insert)
       int i;
 
       event_tab = htab_create (150, htab_hash_string, htab_event_eq, NULL);
-      for (i = 0; i < PLUGIN_EVENT_FIRST_DYNAMIC; i++)
+      for (i = 0; i < event_last; i++)
 	{
 	  slot = htab_find_slot (event_tab, plugin_event_name[i], INSERT);
 	  gcc_assert (*slot == HTAB_EMPTY_ENTRY);
@@ -402,7 +402,7 @@ register_callback (const char *plugin_name,
       case PLUGIN_FINISH_TYPE:
       case PLUGIN_START_UNIT:
       case PLUGIN_FINISH_UNIT:
-      case PLUGIN_CXX_CP_PRE_GENERICIZE:
+      case PLUGIN_PRE_GENERICIZE:
       case PLUGIN_GGC_START:
       case PLUGIN_GGC_MARKING:
       case PLUGIN_GGC_END:
@@ -483,7 +483,7 @@ invoke_plugin_callbacks (int event, void *gcc_data)
       case PLUGIN_FINISH_TYPE:
       case PLUGIN_START_UNIT:
       case PLUGIN_FINISH_UNIT:
-      case PLUGIN_CXX_CP_PRE_GENERICIZE:
+      case PLUGIN_PRE_GENERICIZE:
       case PLUGIN_ATTRIBUTES:
       case PLUGIN_PRAGMAS:
       case PLUGIN_FINISH:

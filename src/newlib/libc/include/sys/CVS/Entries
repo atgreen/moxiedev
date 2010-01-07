@@ -1,10 +1,8 @@
 /_default_fcntl.h/1.4/Wed Dec  9 22:25:14 2009//
 /_types.h/1.12/Wed Nov 18 20:13:20 2009/-ko/
 /cdefs.h/1.1/Wed Nov 18 20:13:20 2009//
-/config.h/1.55/Wed Dec  9 22:25:14 2009/-ko/
 /custom_file.h/1.1/Wed Nov 18 20:13:20 2009//
 /dirent.h/1.2/Wed Nov 18 20:13:20 2009/-ko/
-/errno.h/1.16/Wed Nov 18 20:13:20 2009/-ko/
 /fcntl.h/1.7/Wed Nov 18 20:13:20 2009/-ko/
 /features.h/1.19/Wed Nov 18 20:13:20 2009//
 /file.h/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
@@ -12,11 +10,9 @@
 /lock.h/1.4/Wed Nov 18 20:13:20 2009//
 /param.h/1.5/Wed Nov 18 20:13:20 2009/-ko/
 /queue.h/1.1/Wed Nov 18 20:13:20 2009//
-/reent.h/1.47/Wed Dec  9 22:25:14 2009/-ko/
 /resource.h/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
 /sched.h/1.2/Wed Nov 18 20:13:20 2009//
 /signal.h/1.19/Wed Dec  9 22:25:14 2009/-ko/
-/stat.h/1.20/Wed Nov 18 20:13:20 2009/-ko/
 /stdio.h/1.5/Wed Nov 18 20:13:20 2009//
 /string.h/1.1/Wed Nov 18 20:13:20 2009//
 /syslimits.h/1.1/Wed Nov 18 20:13:20 2009//
@@ -24,7 +20,11 @@
 /timeb.h/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
 /times.h/1.2/Wed Nov 18 20:13:20 2009/-ko/
 /types.h/1.31/Wed Dec  9 22:25:14 2009/-ko/
-/unistd.h/1.73/Wed Dec  9 22:25:14 2009/-ko/
 /utime.h/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
 /wait.h/1.1.1.1/Wed Nov 18 20:13:20 2009/-ko/
+/config.h/1.56/Wed Jan  6 04:54:17 2010/-ko/
+/errno.h/1.17/Wed Jan  6 04:54:17 2010/-ko/
+/reent.h/1.48/Wed Jan  6 04:54:17 2010/-ko/
+/stat.h/1.21/Wed Jan  6 04:54:17 2010/-ko/
+/unistd.h/1.75/Wed Jan  6 04:54:17 2010/-ko/
 D

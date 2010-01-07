@@ -1,7 +1,7 @@
 10
 
 dir
-155045
+155669
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/performance/27_io
 svn://gcc.gnu.org/svn/gcc
 
@@ -196,40 +196,6 @@ jakub
 
 2453
 
-ofstream_insert_int.cc
-file
-
-
-
-
-2009-04-24T17:50:37.000000Z
-0402fef48c45e9860fa7aab2a7650ab2
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1280
-
 ifstream_extract_int.cc
 file
 
@@ -263,6 +229,40 @@ jakub
 
 
 1364
+
+ofstream_insert_int.cc
+file
+
+
+
+
+2009-04-24T17:50:37.000000Z
+0402fef48c45e9860fa7aab2a7650ab2
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1280
 
 ifstream_getline-2.cc
 file
@@ -434,40 +434,6 @@ jakub
 
 1426
 
-ofstream_insert_float.cc
-file
-
-
-
-
-2009-04-24T17:50:37.000000Z
-06914ecf8cb23f4103fe886bef942c94
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1588
-
 ifstream_extract_float.cc
 file
 
@@ -501,6 +467,40 @@ jakub
 
 
 1670
+
+ofstream_insert_float.cc
+file
+
+
+
+
+2009-04-24T17:50:37.000000Z
+06914ecf8cb23f4103fe886bef942c94
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1588
 
 filebuf_sputc.cc
 file

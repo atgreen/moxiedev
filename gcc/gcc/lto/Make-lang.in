@@ -44,6 +44,7 @@ lto.dvi:
 lto.pdf:
 lto.install-pdf:
 lto.html:
+lto.install-html:
 lto.uninstall:
 lto.info:
 lto.man:
@@ -71,7 +72,7 @@ lto.stagefeedback:
 lto-warn = $(STRICT_WARN)
 
 $(LTO_EXE): $(LTO_OBJS) $(BACKEND) $(LIBDEPS)
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $@ \
+	$(LINKER) $(ALL_LINKERFLAGS) $(LDFLAGS) -o $@ \
 		$(LTO_OBJS) $(BACKEND) $(BACKENDLIBS) $(LIBS) -lelf
 
 # Dependencies

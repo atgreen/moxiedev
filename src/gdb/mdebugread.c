@@ -1,7 +1,7 @@
 /* Read a symbol table in ECOFF format (Third-Eye).
 
    Copyright (C) 1986, 1987, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1996,
-   1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009
+   1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    Original version contributed by Alessandro Forin (af@cs.cmu.edu) at
@@ -1743,13 +1743,11 @@ parse_type (int fd, union aux_ext *ax, unsigned int aux_index, int *bs,
   /* Deal with range types */
   if (t->bt == btRange)
     {
-      TYPE_NFIELDS (tp) = 2;
-      TYPE_FIELDS (tp) = ((struct field *)
-			  TYPE_ALLOC (tp, 2 * sizeof (struct field)));
-      TYPE_FIELD_NAME (tp, 0) = "Low";
+      TYPE_NFIELDS (tp) = 0;
+      TYPE_RANGE_DATA (tp) = ((struct range_bounds *)
+			  TYPE_ZALLOC (tp, sizeof (struct range_bounds)));
       TYPE_LOW_BOUND (tp) = AUX_GET_DNLOW (bigend, ax);
       ax++;
-      TYPE_FIELD_NAME (tp, 1) = "High";
       TYPE_HIGH_BOUND (tp) = AUX_GET_DNHIGH (bigend, ax);
       ax++;
     }

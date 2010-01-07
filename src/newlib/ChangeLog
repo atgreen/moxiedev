@@ -1,3 +1,126 @@
+2009-12-22  Eric Blake  <ebb9@byu.net>
+
+	* libc/include/sys/unistd.h (suboptarg, getsubopt): Move...
+	* libc/include/stdlib.h: ...here, to match POSIX for getsubopt.
+
+2009-12-17  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* NEWS: Update with 1.18.0 info.
+	* README: Ditto.
+	* acinclude.m4: Change version number to 1.18.0.
+	* aclocal.m4: Regenerated.
+	* configure: Ditto.
+	* doc/aclocal.m4: Ditto.
+	* doc/configure: Ditto.
+	* libc/*/aclocal.m4: Ditto.
+	* libc/*/configure: Ditto.
+	* libc/libc.texinfo: Ditto.
+	* libm/*/aclocal.m4: Ditto.
+	* libm/*/configure: Ditto.
+	* libm/libm.texinfo: Ditto.
+	* libc/sys/linux/shared.ld: Add VERS_1.18
+
+2009-12-17  Jeff Johnston <jjohnstn@redhat.com>
+
+	* libc/include/_syslist.h: Add _mkdir transform.
+
+2009-12-17  Jerker Back  <jerker.back@gmail.com>
+
+	* libc/iconv/lib/local.h[!__GNUC__]: Add alternative version of
+	ICONV_ZERO_MB_STATE_T macro.
+	* libc/iconv/lib/ucsconv.c (ucs_based_conversion_get_state): Use
+	temporary local variable nullstate to hold empty mbstate_t.
+
+2009-12-17  Jerker Back  <jerker.back@gmail.com>
+
+	* libc/include/_ansi.h: Add new _EXFNPTR macro for using with
+	function pointer arguments.
+	* libc/iconv/lib/conv.h: Use _EXFNPTR rather than _EXPARM macro.
+	* libc/iconv/lib/ucsconv.h: Ditto.
+	* libc/include/stdlib.h: Use new _EXFNPTR macro for function pointers.
+	* libc/include/sys/reent.h: Ditto.
+	* libc/include/sys/unistd.h: Ditto.
+	* libc/search/bsearch.c: Ditto.
+	* libc/stdio/fseek.c: Ditto.
+	* libc/stdio64/fseeko64.c: Ditto.
+	* libc/stdlib/atexit.c: Ditto.
+	* libc/stdlib/on_exit.c: Ditto.
+
+2009-12-17  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+
+	* libc/include/machine/ieeefp.h: Rework __IEEE_*_ENDIAN handling.
+	* libc/machine/arm/machine/endian.h: Remove (Conflicts with
+	libc/include/machine/endian.h)
+
+2009-12-17  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+
+	* libc/include/machine/setjmp.h: Set up _JBLEN #ifdef __m68k__.
+
+2009-12-17  Ralf Corsepius <ralf.corsepius@rtems.org>
+
+	* libc/include/pthread.h: Add pthread_atfork, pthread_rwlock_unlock
+	* libc/include/sys/stat.h: Use struct timespec st_*tim,
+	blksize_t st_blksize, blkcnt_t st_blocks.
+	Add st_*time compatibility macros.
+
+2009-12-16  Joel Sherrill <joel.sherrill@oarcorp.com>
+
+	* libc/sys/rtems/machine/param.h: Only use sizeof(double) -1
+	for ALIGNBYTES on SPARC.
+
+2009-12-16  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/include/sys/errno.h: Move EHOSTDOWN, EPFNOSUPPORT,
+	and ETOOMANYREFS into general list as they are referenced
+	by OpenGroup and needed by RTEMS.
+
+2009-12-16  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+
+	* libc/search/hcreate.c: Don't include <sys/queue.h> (Unused).
+
+2009-12-16  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+
+	* libc/sys/rtems/machine/_types.h: New (Derived from
+	machine/_default_types.h).
+	* libc/sys/rtems/crt0.c: Rework. Introduce macro RTEMS_STUB.
+	* libc/sys/rtems/sys/param.h:
+	Update copyright notice from FreeBSD.
+	Remove HZ.
+	Add #include <sys/priority.h>
+	Remove priority handling (moved to sys/priority.h).
+	Remove CLBYTES (Unused, abandoned in BSD).
+	* libc/sys/rtems/sys/queue.h: Update copyright (from FreeBSD).
+	Remove CIRCLEQ_*.
+
+2009-12-15  Conny Marco Menebrocker  <c-m-m@gmx.de>
+
+	* libc/machine/xc16x/Makefile.am: Fix typo and refer
+	to puts.c instead of putc.c.
+	* libc/machine/xc16x/Makefile.in: Regenerated.
+
+2009-12-14  Maxim Kuvyrkov <maxim@codesourcery.com>
+
+	* libc/machine/m68k/memcpy.S: Patch to support
+	boards which do not support unaligned read/write.
+
+2009-12-10  Conny Marco Menebrocker  <c-m-m@gmx.de>
+
+	* configure.host: Add xc16x support.
+	* libc/include/machine/ieeefp.h: Ditto.
+	* libc/include/sys/config.h: Ditto.
+	* libc/machine/configure.in: Ditto.
+	* libc/machine/Makefile.in: Regenerated.
+	* libc/machine/aclocal.m4: Ditto.
+	* libc/machine/configure: Ditto.
+	* libc/machine/xc16x/Makefile.am: New file.
+	* libc/machine/xc16x/Makefile.in: Ditto.
+	* libc/machine/xc16x/aclocal.m4: Ditto.
+	* libc/machine/xc16x/configure: Ditto.
+	* libc/machine/xc16x/configure.in: Ditto.
+	* libc/machine/xc16x/putchar.c: Ditto.
+	* libc/machine/xc16x/puts.c: Ditto.
+	* libc/machine/xc16x/setjmp.S: Ditto.
+
 2009-12-08  Eric Blake  <ebb9@byu.net>
 
 	Fix some *at declarations.

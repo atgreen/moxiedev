@@ -1,7 +1,8 @@
 /* Support routines for manipulating internal types for GDB.
 
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
 
    Contributed by Cygnus Support, using pieces from other GDB modules.
 
@@ -711,7 +712,7 @@ allocate_stub_method (struct type *type)
 
 struct type *
 create_range_type (struct type *result_type, struct type *index_type,
-		   int low_bound, int high_bound)
+		   LONGEST low_bound, LONGEST high_bound)
 {
   if (result_type == NULL)
     result_type = alloc_type_copy (index_type);
@@ -721,10 +722,8 @@ create_range_type (struct type *result_type, struct type *index_type,
     TYPE_TARGET_STUB (result_type) = 1;
   else
     TYPE_LENGTH (result_type) = TYPE_LENGTH (check_typedef (index_type));
-  TYPE_NFIELDS (result_type) = 2;
-  TYPE_FIELDS (result_type) = TYPE_ZALLOC (result_type,
-					   TYPE_NFIELDS (result_type)
-					   * sizeof (struct field));
+  TYPE_RANGE_DATA (result_type) = (struct range_bounds *)
+    TYPE_ZALLOC (result_type, sizeof (struct range_bounds));
   TYPE_LOW_BOUND (result_type) = low_bound;
   TYPE_HIGH_BOUND (result_type) = high_bound;
 
@@ -1343,12 +1342,17 @@ stub_noname_complaint (void)
    symbols which contain a full definition for the type.
 
    This used to be coded as a macro, but I don't think it is called 
-   often enough to merit such treatment.  */
+   often enough to merit such treatment.
 
-/* Find the real type of TYPE.  This function returns the real type,
+   Find the real type of TYPE.  This function returns the real type,
    after removing all layers of typedefs and completing opaque or stub
    types.  Completion changes the TYPE argument, but stripping of
-   typedefs does not.  */
+   typedefs does not.
+
+   If TYPE is a TYPE_CODE_TYPEDEF, its length is (also) set to the length of
+   the target type instead of zero.  However, in the case of TYPE_CODE_TYPEDEF
+   check_typedef can still return different type than the original TYPE
+   pointer.  */
 
 struct type *
 check_typedef (struct type *type)
@@ -1475,17 +1479,34 @@ check_typedef (struct type *type)
 	  /* Now recompute the length of the array type, based on its
 	     number of elements and the target type's length.
 	     Watch out for Ada null Ada arrays where the high bound
-	     is smaller than the low bound.  */
-	  const int low_bound = TYPE_LOW_BOUND (range_type);
-	  const int high_bound = TYPE_HIGH_BOUND (range_type);
-	  int nb_elements;
-	
+	     is smaller than the low bound. */
+	  const LONGEST low_bound = TYPE_LOW_BOUND (range_type);
+	  const LONGEST high_bound = TYPE_HIGH_BOUND (range_type);
+	  ULONGEST len;
+
 	  if (high_bound < low_bound)
-	    nb_elements = 0;
-	  else
-	    nb_elements = high_bound - low_bound + 1;
-	
-	  TYPE_LENGTH (type) = nb_elements * TYPE_LENGTH (target_type);
+	    len = 0;
+	  else {
+	    /* For now, we conservatively take the array length to be 0
+	       if its length exceeds UINT_MAX.  The code below assumes
+	       that for x < 0, (ULONGEST) x == -x + ULONGEST_MAX + 1,
+	       which is technically not guaranteed by C, but is usually true
+	       (because it would be true if x were unsigned with its
+	       high-order bit on). It uses the fact that
+	       high_bound-low_bound is always representable in
+	       ULONGEST and that if high_bound-low_bound+1 overflows,
+	       it overflows to 0.  We must change these tests if we 
+	       decide to increase the representation of TYPE_LENGTH
+	       from unsigned int to ULONGEST. */
+	    ULONGEST ulow = low_bound, uhigh = high_bound;
+	    ULONGEST tlen = TYPE_LENGTH (target_type);
+
+	    len = tlen * (uhigh - ulow + 1);
+	    if (tlen == 0 || (len / tlen - 1 + ulow) != uhigh 
+		|| len > UINT_MAX)
+	      len = 0;
+	  }
+	  TYPE_LENGTH (type) = len;
 	  TYPE_TARGET_STUB (type) = 0;
 	}
       else if (TYPE_CODE (type) == TYPE_CODE_RANGE)
@@ -2737,6 +2758,14 @@ recursive_dump_type (struct type *type, int spaces)
 	  recursive_dump_type (TYPE_FIELD_TYPE (type, idx), spaces + 4);
 	}
     }
+  if (TYPE_CODE (type) == TYPE_CODE_RANGE)
+    {
+      printfi_filtered (spaces, "low %s%s  high %s%s\n",
+			plongest (TYPE_LOW_BOUND (type)), 
+			TYPE_LOW_BOUND_UNDEFINED (type) ? " (undefined)" : "",
+			plongest (TYPE_HIGH_BOUND (type)),
+			TYPE_HIGH_BOUND_UNDEFINED (type) ? " (undefined)" : "");
+    }
   printfi_filtered (spaces, "vptr_basetype ");
   gdb_print_host_address (TYPE_VPTR_BASETYPE (type), gdb_stdout);
   puts_filtered ("\n");
@@ -2923,6 +2952,13 @@ copy_type_recursive (struct objfile *objfile,
 			      TYPE_FIELD_LOC_KIND (type, i));
 	    }
 	}
+    }
+
+  /* For range types, copy the bounds information. */
+  if (TYPE_CODE (type) == TYPE_CODE_RANGE)
+    {
+      TYPE_RANGE_DATA (new_type) = xmalloc (sizeof (struct range_bounds));
+      *TYPE_RANGE_DATA (new_type) = *TYPE_RANGE_DATA (type);
     }
 
   /* Copy pointers to other types.  */

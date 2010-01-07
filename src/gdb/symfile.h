@@ -1,7 +1,7 @@
 /* Definitions for reading symbol files into GDB.
 
    Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009
+   2000, 2001, 2002, 2003, 2004, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GDB.
@@ -241,8 +241,6 @@ extern struct objfile *symbol_file_add_from_bfd (bfd *, int,
 extern void symbol_file_add_separate (bfd *bfd, int symfile_flags,
 				      struct objfile *objfile);
 
-extern char *find_separate_debug_file_by_buildid (struct objfile *objfile);
-
 extern char *find_separate_debug_file_by_debuglink (struct objfile *objfile);
 
 /* Create a new section_addr_info, with room for NUM_SECTIONS.  */
@@ -323,6 +321,8 @@ extern void discard_psymtab (struct partial_symtab *);
 extern void find_lowest_section (bfd *, asection *, void *);
 
 extern bfd *symfile_bfd_open (char *);
+
+extern bfd *bfd_open_maybe_remote (const char *);
 
 extern int get_section_index (struct objfile *, char *);
 

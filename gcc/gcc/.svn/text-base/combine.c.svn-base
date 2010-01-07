@@ -1343,7 +1343,7 @@ setup_incoming_promotions (rtx first)
   for (arg = DECL_ARGUMENTS (current_function_decl); arg;
        arg = TREE_CHAIN (arg))
     {
-      rtx reg = DECL_INCOMING_RTL (arg);
+      rtx x, reg = DECL_INCOMING_RTL (arg);
       int uns1, uns3;
       enum machine_mode mode1, mode2, mode3, mode4;
 
@@ -1375,30 +1375,38 @@ setup_incoming_promotions (rtx first)
       /* The mode of the register in which the argument is being passed.  */
       mode4 = GET_MODE (reg);
 
-      /* Eliminate sign extensions in the callee when possible.  Only
-         do this when:
-	 (a) a mode promotion has occurred;
-	 (b) the mode of the register is the same as the mode of
-	     the argument as it is passed; and
-	 (c) the signedness does not change across any of the promotions; and
-	 (d) when no language-level promotions (which we cannot guarantee
-	     will have been done by an external caller) are necessary,
-	     unless we know that this function is only ever called from
-	     the current compilation unit -- all of whose call sites will
-	     do the mode1 --> mode2 promotion.  */
-      if (mode1 != mode3
-          && mode3 == mode4
-          && uns1 == uns3
-	  && (mode1 == mode2 || strictly_local))
-        {
-	  /* Record that the value was promoted from mode1 to mode3,
-	     so that any sign extension at the head of the current
-	     function may be eliminated.  */
-	  rtx x;
-	  x = gen_rtx_CLOBBER (mode1, const0_rtx);
-	  x = gen_rtx_fmt_e ((uns3 ? ZERO_EXTEND : SIGN_EXTEND), mode3, x);
-	  record_value_for_reg (reg, first, x);
-	}
+      /* Eliminate sign extensions in the callee when:
+	 (a) A mode promotion has occurred;  */
+      if (mode1 == mode3)
+	continue;
+      /* (b) The mode of the register is the same as the mode of
+	     the argument as it is passed; */
+      if (mode3 != mode4)
+	continue;
+      /* (c) There's no language level extension;  */
+      if (mode1 == mode2)
+	;
+      /* (c.1) All callers are from the current compilation unit.  If that's
+	 the case we don't have to rely on an ABI, we only have to know
+	 what we're generating right now, and we know that we will do the
+	 mode1 to mode2 promotion with the given sign.  */
+      else if (!strictly_local)
+	continue;
+      /* (c.2) The combination of the two promotions is useful.  This is
+	 true when the signs match, or if the first promotion is unsigned.
+	 In the later case, (sign_extend (zero_extend x)) is the same as
+	 (zero_extend (zero_extend x)), so make sure to force UNS3 true.  */
+      else if (uns1)
+	uns3 = true;
+      else if (uns3)
+	continue;
+
+      /* Record that the value was promoted from mode1 to mode3,
+	 so that any sign extension at the head of the current
+	 function may be eliminated.  */
+      x = gen_rtx_CLOBBER (mode1, const0_rtx);
+      x = gen_rtx_fmt_e ((uns3 ? ZERO_EXTEND : SIGN_EXTEND), mode3, x);
+      record_value_for_reg (reg, first, x);
     }
 }
 
@@ -7298,15 +7306,14 @@ make_compound_operation (rtx x, enum rtx_code in_code)
       tem = make_compound_operation (SUBREG_REG (x), in_code);
 
       {
-	rtx simplified;
-	simplified = simplify_subreg (GET_MODE (x), tem, GET_MODE (tem),
-				      SUBREG_BYTE (x));
+	rtx simplified = simplify_subreg (mode, tem, GET_MODE (SUBREG_REG (x)),
+					  SUBREG_BYTE (x));
 
 	if (simplified)
 	  tem = simplified;
 
 	if (GET_CODE (tem) != GET_CODE (SUBREG_REG (x))
-	    && GET_MODE_SIZE (mode) < GET_MODE_SIZE (GET_MODE (tem))
+	    && GET_MODE_SIZE (mode) < GET_MODE_SIZE (GET_MODE (SUBREG_REG (x)))
 	    && subreg_lowpart_p (x))
 	  {
 	    rtx newer = force_to_mode (tem, mode, ~(HOST_WIDE_INT) 0,

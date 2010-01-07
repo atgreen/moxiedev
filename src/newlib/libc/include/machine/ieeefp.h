@@ -62,8 +62,12 @@
 #  define __IEEE_BIG_ENDIAN
 # endif
 #else
-# define __IEEE_BIG_ENDIAN
 # ifdef __ARMEL__
+#  define __IEEE_LITTLE_ENDIAN
+# else
+#  define __IEEE_BIG_ENDIAN
+# endif
+# ifdef __ARMWEL__
 #  define __IEEE_BYTES_LITTLE_ENDIAN
 # endif
 #endif
@@ -117,6 +121,13 @@
 #define _FLOAT_ARG float
 #define _DOUBLE_IS_32BITS
 #endif
+
+#if defined (__xc16x__) || defined (__xc16xL__) || defined (__xc16xS__)
+#define __IEEE_LITTLE_ENDIAN
+#define _FLOAT_ARG float
+#define _DOUBLE_IS_32BITS
+#endif
+
 
 #ifdef __sh__
 #ifdef __LITTLE_ENDIAN__

@@ -1,5 +1,4 @@
 /config.in/1.4/Wed Nov 18 20:13:23 2009//
-/configure/1.11/Wed Dec  9 22:25:32 2009//
 /configure.ac/1.1/Wed Nov 18 20:13:23 2009//
 /decode.h/1.1/Wed Nov 18 20:13:23 2009//
 /eng-compact.h/1.1/Wed Nov 18 20:13:23 2009//
@@ -8,7 +7,6 @@
 /mloop-media.c/1.1/Wed Nov 18 20:13:23 2009//
 /sim-main.h/1.1/Wed Nov 18 20:13:23 2009//
 /tconfig.in/1.1/Wed Nov 18 20:13:23 2009//
-/ChangeLog/1.21/Wed Jan  6 04:54:35 2010//
 /Makefile.in/1.7/Wed Jan  6 04:54:35 2010//
 /arch.c/1.5/Wed Jan  6 04:54:35 2010//
 /arch.h/1.5/Wed Jan  6 04:54:35 2010//
@@ -32,4 +30,6 @@
 /sh64-sim.h/1.6/Wed Jan  6 04:54:36 2010//
 /sh64.c/1.7/Wed Jan  6 04:54:36 2010//
 /sim-if.c/1.7/Wed Jan  6 04:54:36 2010//
+/ChangeLog/1.22/Wed Jan 13 14:14:10 2010//
+/configure/1.12/Wed Jan 13 14:14:10 2010//
 D

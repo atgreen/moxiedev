@@ -15,7 +15,6 @@
 /cap.c/1.1.1.1/Wed Nov 18 20:13:23 2009/-ko/
 /cap.h/1.1.1.1/Wed Nov 18 20:13:23 2009/-ko/
 /config.in/1.9/Wed Nov 18 20:13:23 2009/-ko/
-/configure/1.25/Wed Dec  9 22:25:32 2009/-ko/
 /configure.ac/1.14/Wed Dec  9 22:25:32 2009//
 /corefile-n.h/1.1.1.1/Wed Nov 18 20:13:23 2009/-ko/
 /corefile.c/1.1.1.1/Wed Nov 18 20:13:23 2009/-ko/
@@ -143,4 +142,5 @@
 /e500_registers.h/1.7/Wed Jan  6 04:54:35 2010//
 /gdb-sim.c/1.7/Wed Jan  6 04:54:35 2010//
 /psim.texinfo/1.2/Wed Jan  6 04:54:35 2010/-ko/
+/configure/1.26/Wed Jan 13 14:14:10 2010/-ko/
 D

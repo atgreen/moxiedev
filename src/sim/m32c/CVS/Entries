@@ -1,6 +1,4 @@
-/ChangeLog/1.16/Wed Nov 18 20:13:22 2009//
 /config.in/1.4/Wed Nov 18 20:13:22 2009//
-/configure/1.10/Wed Dec  9 22:25:32 2009//
 /syscall.h/1.1/Wed Nov 18 20:13:22 2009//
 /timer_a.h/1.2/Wed Nov 18 20:13:22 2009//
 /Makefile.in/1.7/Wed Jan  6 04:54:35 2010//
@@ -32,4 +30,6 @@
 /syscalls.h/1.6/Wed Jan  6 04:54:35 2010//
 /trace.c/1.7/Wed Jan  6 04:54:35 2010//
 /trace.h/1.7/Wed Jan  6 04:54:35 2010//
+/ChangeLog/1.17/Wed Jan 13 14:14:09 2010//
+/configure/1.11/Wed Jan 13 14:14:09 2010//
 D

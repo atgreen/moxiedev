@@ -1,0 +1,46 @@
+#!/bin/sh
+
+# 1010101010101010101010101010101010101010101010101010101010101010101010101010101
+# 0101010101010101010101010101010101010101010101010101010101010101010101010101010
+# 1   ___  ___          _     ______                                            1
+# 0   |  \/  |         (_)    |  _  \              Open Source Tools,           0
+# 1   | .  . | _____  ___  ___| | | |_____   __    Firmware, and HDL code for   1
+# 0   | |\/| |/ _ \ \/ / |/ _ \ | | / _ \ \ / /    the Moxie processor core.    0
+# 1   | |  | | (_) >  <| |  __/ |/ /  __/\ V /                                  1
+# 0   \_|  |_/\___/_/\_\_|\___|___/ \___| \_/      http://moxielogic.org/blog   0
+# 1                                                                             1
+# 0101010101010101010101010101010101010101010101010101010101010101010101010101010
+# 1010101010101010101010101010101010101010101010101010101010101010101010101010101
+
+# Copyright (C) 2010  Anthony Green <green@moxielogic.com>
+# Distrubuted under the terms of the GPL v3 or later.
+
+# Check to make sure that root/usr/bin is on the PATH.  Some distributions
+# of ANT are broken in this area.
+
+rm -f $1/build/FAIL
+
+TMPEXE=`mktemp --tmpdir=$1/root/usr/bin`
+
+cat > $TMPEXE <<EOF
+#!/bin/sh
+echo 555
+EOF
+chmod +x $TMPEXE
+
+TSTEXE=`basename $TMPEXE`
+
+OUTPUT=`$TSTEXE`
+
+rm $TMPEXE
+
+if ! test "5$OUTPUT" -eq "5555"; then 
+    echo   YOUR PATH IS BROKEN!
+    echo 
+    echo   Add $1/root/usr/bin to your PATH and try again.
+    echo 
+    touch $1/build/FAIL
+else
+    echo PATH is OK!
+fi
+

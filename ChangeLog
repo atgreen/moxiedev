@@ -1,7 +1,9 @@
 2010-01-29  Anthony Green  <green@moxielogic.com>
 
-	* build.xml: Run scripts/check-submodules before every build.
-	* scripts/check-submodules: New file.
+	* build.xml: Run scripts/precheck/check-submodules and
+	scripts/precheck/check-path before every build.
+	* scripts/precheck/check-path: New file.
+	* scripts/precheck/check-submodules: New file.
 
 2010-01-04  Anthony Green  <green@moxielogic.com>
 

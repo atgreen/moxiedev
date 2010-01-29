@@ -183,8 +183,20 @@
     <echo message="===================================================================="/>
     <exec executable="sh">
       <arg value="-c"/>
-      <arg value="./scripts/check-submodules"/>
+      <arg value="./scripts/precheck/check-submodules"/>
     </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Verify that PATH is sane ===================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="./scripts/precheck/check-path ${basedir}"/>
+    </exec>
+
+    <available file="build/FAIL" property="isFileAvail"/>
+    <fail if="isFileAvail" message="Sanity precheck test failed!"/>
 
     <echo message="===================================================================="/>
     <echo message="====== Running sanity check on build system ========================"/>

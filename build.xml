@@ -179,6 +179,14 @@
     <mkdir dir="build/src"/>
 
     <echo message="===================================================================="/>
+    <echo message="====== Verify that all submodules have been updated ================"/>
+    <echo message="===================================================================="/>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="./scripts/check-submodules"/>
+    </exec>
+
+    <echo message="===================================================================="/>
     <echo message="====== Running sanity check on build system ========================"/>
     <echo message="===================================================================="/>
     <exec executable="sh">

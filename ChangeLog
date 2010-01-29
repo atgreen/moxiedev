@@ -1,3 +1,8 @@
+2010-01-29  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Run scripts/check-submodules before every build.
+	* scripts/check-submodules: New file.
+
 2010-01-04  Anthony Green  <green@moxielogic.com>
 
 	* scripts/daily-build.sh: New file.

@@ -1,3 +1,10 @@
+2010-01-30  Anthony Green  <green@moxielogic.com>
+
+	* scripts/mkrpms.sh (TARGET): Build rpms using Fedora 12 mock environment.
+
+	* scripts/moxie-elf-gcc.spec.in: BuildRequire gmp-devel mpfr-devel
+	libmpc-devel.
+
 2010-01-29  Anthony Green  <green@moxielogic.com>
 
 	* build.xml: Run scripts/precheck/check-submodules and

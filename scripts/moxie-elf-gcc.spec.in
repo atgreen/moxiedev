@@ -1,4 +1,4 @@
-%define	with_newlib 0
+%define	with_newlib 1
 
 Name:		moxie-elf-gcc
 Version:	@VERSION@
@@ -12,7 +12,7 @@ Source0:	moxie-elf-gcc.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires:	moxie-elf-binutils flex bison texinfo gperf 
-BuildRequires:  gmp-devel mpfr-devel libmpc-devel
+BuildRequires:  gmp-devel mpfr-devel libmpc-devel zlib-devel
 Requires:	moxie-elf-binutils
 %if %{with_newlib} == 1
 BuildRequires:	moxie-elf-newlib

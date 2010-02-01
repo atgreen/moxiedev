@@ -1,9 +1,24 @@
+2010-02-01  Anthony Green  <green@moxielogic.com>
+
+	* scripts/moxie-elf-gdb.spec.in (%files): Install new files.
+
+2010-01-31  Anthony Green  <green@moxielogic.com>
+
+	* scripts/moxie-elf-qemu.spec.in (CFLAGS): Disable -Werror.
+
+	* scripts/moxie-elf-gdb.spec.in (BuildRequires): Add dtc.
+
+	* scripts/moxie-elf-newlib.spec.in: Remove BuildArch noarch
+	because rpmbuild is complaining about arch dependent files in a
+	noarch package.  Bug in rpmbuild?
+
 2010-01-30  Anthony Green  <green@moxielogic.com>
 
-	* scripts/mkrpms.sh (TARGET): Build rpms using Fedora 12 mock environment.
+	* scripts/mkrpms.sh (TARGET): Build rpms using Fedora 12 mock
+	environment.
 
 	* scripts/moxie-elf-gcc.spec.in: BuildRequire gmp-devel mpfr-devel
-	libmpc-devel.
+	libmpc-devel and zlib-devel.
 
 2010-01-29  Anthony Green  <green@moxielogic.com>
 

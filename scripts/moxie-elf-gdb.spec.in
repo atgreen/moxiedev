@@ -8,7 +8,7 @@ License:	GPL
 URL:		http://moxielogic.com/blog
 Source0:	moxie-elf-gdb.tar.gz
 BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
-BuildRequires:	texinfo ncurses-devel zlib-devel flex bison
+BuildRequires:	texinfo ncurses-devel zlib-devel flex bison dtc
 
 %description
 The GNU Debugger, GDB, for the moxie core.
@@ -61,11 +61,13 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/*
 %exclude %{_bindir}/moxie-elf-run
 %{_mandir}/man1/*
+%{_datadir}/gdb
 %doc COPYING*
 
 %files sim
 %defattr(-,root,root,-)
 %{_bindir}/moxie-elf-run
+%{_datadir}/gdb-*
 %doc COPYING*
 
 %changelog

@@ -19,6 +19,7 @@ This is a port of qemu to the moxie core.
 
 %build
 CFLAGS="%optflags" ./configure \
+		   --disable-werror \
 		   --prefix=%_prefix \
 		   --target-list=moxie-softmmu
 %__make tooldir=%_prefix all 

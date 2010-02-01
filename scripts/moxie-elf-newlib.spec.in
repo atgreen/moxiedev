@@ -13,7 +13,9 @@ BuildRoot:	%{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 Requires:       moxie-elf-gcc
 BuildRequires:  moxie-elf-gcc
 
-BuildArch:	noarch
+# This doesn't seem to be working anymore.  Is it complaining about
+# the moxie elf files?
+#BuildArch:	noarch
 
 %description
 Newlib is a C library intended for use on embedded systems. It is a

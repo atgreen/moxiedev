@@ -98,3 +98,26 @@ root/usr/bin directory to your path before building.  The build system
 will exit with an error message if this is required.
 
 
+
+Signing RPMS
+-------------
+
+The RPMS hosted in the Moxie Logic yum repository are signed with the
+official Moxie Logic signing key.  This is how it's done..
+
+Make sure you have the GPG signing key installed properly like so:
+$ gpg --list-keys
+
+Extract the public key from the key ring into a text file:
+$ gpg --export -a 'Moxie Logic' > RPM-GPG-KEY-MoxieLogic
+
+Import the public key into the RPM DB:
+$ sudo rpm --import RPM-GPG-KEY-MoxieLogic
+
+Configure your ~/.rpmmacros file to include the following:
+%_signature gpg
+%_gpg_name  Moxie Logic
+
+Now you're ready to sign the packages:
+$ find dist/MoxieLogic -name \*.rpm | xargs rpm --addsign 
+

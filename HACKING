@@ -19,6 +19,18 @@ development tools suitable for targeting the moxie architecture.
 Directories
 ------------
 
+  build
+
+  This directory is created at build time.  We place the gcc and src
+  build directories here.
+
+  busybox
+
+  This is managed as a git submodule using the busybox-moxie
+  repository hosted at http://github.com/atgreen/busybox-moxie.  The
+  ant build.xml script will initialize and pull the source
+  automatically when building.
+
   gcc
 
   This contains an anonymous svn checkout of the gcc tree from
@@ -26,6 +38,30 @@ Directories
   our mercurial repository.  However, since the repo contains .svn
   directories, we can still update the tree directly from the upstream
   gcc trunk with svn.
+
+  linux-2.6
+
+  This is managed as a git submodule using the linux-2.6-moxie
+  repository hosted at http://github.com/atgreen/linux-2.6-moxie.  The
+  ant build.xml script will initialize and pull the source
+  automatically when building.
+
+  moxielyzer
+
+  This is a moxie binary analysis tools, and is the original source
+  for this project.
+
+  qemu
+
+  This is managed as a git submodule using the qemu-moxie repository
+  hosted at http://github.com/atgreen/qemu-moxie.  The ant build.xml
+  script will initialize and pull the source automatically when
+  building.
+
+  root
+
+  This is the install directory for when we build and install for
+  local testing.
 
   src
 
@@ -36,14 +72,6 @@ Directories
   can still update the tree directly from the upstream src trunk with
   cvs.
 
-  qemu
-
-  This contains an anonymous git checkout of the trunk of the qemu tree.
-  Moxie patches are applied to this and maintined in our git
-  repository.  However, since the repo contains the .git directory, we
-  can still update the tree directly from the upstream qemu trunk with
-  git.
-
   u-boot
 
   This contains an anonymous git checkout of the trunk of the u-boot tree.
@@ -52,35 +80,21 @@ Directories
   can still update the tree directly from the upstream u-boot trunk with
   git.
 
-  doc
-
-  This directory contains documentation for the moxie core.
-
-  build
-
-  This directory is created at build time.  We place the gcc and src
-  build directories here.
-
-  root
-
-  This is the install directory for when we build and install for
-  local testing.
 
 
 Building
 ---------
 
-The top level directory contains two key files: moxiedev-setenv and
-build.xml.  You should configure and source moxiedev-setenv in order
-to set various environment variables required by the build system.
-This includes setting JAVA_HOME (required by ec2 scripts (to be
-committed)).
-
-Once you've set up your environment, use the ant build script to
-configure, build and install the tools like so:
+Use the ant build script to configure, build and install the tools
+like so:
 
 $ ant build
 
 The script contains several other options, which you can list by
 simply running "ant" with no options.
+
+Some ant installation will require that you add moxiedev's
+root/usr/bin directory to your path before building.  The build system
+will exit with an error message if this is required.
+
 

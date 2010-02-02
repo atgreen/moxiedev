@@ -1,3 +1,8 @@
+2010-02-02  Anthony Green  <green@moxielogic.com>
+
+	* HACKING: Update directory definitions and mention ant PATH
+	problem.
+
 2010-02-01  Anthony Green  <green@moxielogic.com>
 
 	* scripts/moxie-elf-gdb.spec.in (%files): Install new files.

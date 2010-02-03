@@ -1,3 +1,7 @@
+2010-02-03  Anthony Green  <green@moxielogic.com>
+
+	* README: Update copyright year.
+
 2010-02-02  Anthony Green  <green@moxielogic.com>
 
 	* HACKING: Update directory definitions and mention ant PATH
@@ -110,7 +114,7 @@
 	${user.home}/moxiedev.properties.
 
 2009-05-30  Anthony Green  <green@moxielogic.com>
-	
+
 	* HACKING: Added u-boot.  Corrections.
 	* README: New file.
 
@@ -118,7 +122,7 @@
 
 	* u-boot: Initial u-boot bits.
 	* build.xml: Add u-boot build machinery.
-	
+
 2009-05-23  Anthony Green  <green@moxielogic.com>
 
 	* test/Makefile (clean): Clean up more stuff.
@@ -199,7 +203,7 @@
 
 2009-03-05  Anthony Green  <green@moxielogic.com>
 
-	* build.xml: Add qemu.  
+	* build.xml: Add qemu.
 
 2009-02-20  Anthony Green  <green@moxielogic.com>
 
@@ -282,7 +286,7 @@
 	probably isn't installed at build time.
 
 2008-08-01  Anthony Green  <green@moxielogic.com>
-	
+
 	* scripts/precheck/configure.ac: New file.
 	* scripts/precheck/configure: Created.
 	* TODO: Remove prerequisite test item.

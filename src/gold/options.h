@@ -39,6 +39,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <list>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -243,12 +244,18 @@ struct Struct_special : public Struct_var
 // var() and set_var() as General_options methods.  Arguments as are
 // for the constructor for One_option.  param_type__ is the same as
 // type__ for built-in types, and "const type__ &" otherwise.
+//
+// When we define the linker command option "assert", the macro argument
+// varname__ of DEFINE_var below will be replaced by "assert".  On Mac OSX
+// assert.h is included implicitly by one of the library headers we use.  To
+// avoid unintended macro substitution of "assert()", we need to enclose
+// varname__ with parenthese.
 #define DEFINE_var(varname__, dashes__, shortname__, default_value__,        \
                    default_value_as_string__, helpstring__, helparg__,       \
                    optional_arg__, type__, param_type__, parse_fn__)	     \
  public:                                                                     \
   param_type__                                                               \
-  varname__() const                                                          \
+  (varname__)() const                                                        \
   { return this->varname__##_.value; }                                       \
                                                                              \
   bool                                                                       \
@@ -308,7 +315,10 @@ struct Struct_special : public Struct_var
     void                                                                 \
     parse_to_value(const char*, const char*,                             \
                    Command_line*, General_options* options)              \
-    { options->set_##varname__(false); }                                 \
+    {                                                                    \
+      options->set_##varname__(false);                                   \
+      options->set_user_set_##varname__();                               \
+    }                                                                    \
                                                                          \
     options::One_option option;                                          \
   };                                                                     \
@@ -712,6 +722,19 @@ class General_options
   DEFINE_string(fini, options::ONE_DASH, '\0', "_fini",
                 N_("Call SYMBOL at unload-time"), N_("SYMBOL"));
 
+  DEFINE_bool(fix_cortex_a8, options::TWO_DASHES, '\0', false,
+	      N_("(ARM only) Fix binaries for Cortex-A8 erratum."),
+	      N_("(ARM only) Do not fix binaries for Cortex-A8 erratum."));
+
+  DEFINE_special(fix_v4bx, options::TWO_DASHES, '\0',
+                 N_("(ARM only) Rewrite BX rn as MOV pc, rn for ARMv4"),
+                 NULL);
+
+  DEFINE_special(fix_v4bx_interworking, options::TWO_DASHES, '\0',
+                 N_("(ARM only) Rewrite BX rn branch to ARMv4 interworking "
+                    "veneer"),
+                 NULL);
+
   DEFINE_bool(g, options::EXACTLY_ONE_DASH, '\0', false,
 	      N_("Ignored"), NULL);
 
@@ -845,6 +868,9 @@ class General_options
                  N_("Add DIR to link time shared library search path"),
                  N_("DIR"));
 
+  DEFINE_special(section_start, options::TWO_DASHES, '\0',
+		 N_("Set address of section"), N_("SECTION=ADDRESS"));
+
   DEFINE_optional_string(sort_common, options::TWO_DASHES, '\0', NULL,
 			 N_("Sort common symbols by alignment"),
 			 N_("[={ascending,descending}]"));
@@ -957,9 +983,24 @@ class General_options
   DEFINE_bool(warn_constructors, options::TWO_DASHES, '\0', false,
 	      N_("Ignored"), N_("Ignored"));
 
+  DEFINE_bool(warn_multiple_gp, options::TWO_DASHES, '\0', false,
+	      N_("Ignored"), NULL);
+
   DEFINE_bool(warn_search_mismatch, options::TWO_DASHES, '\0', true,
 	      N_("Warn when skipping an incompatible library"),
 	      N_("Don't warn when skipping an incompatible library"));
+
+  DEFINE_bool(warn_shared_textrel, options::TWO_DASHES, '\0', false,
+	      N_("Warn if text segment is not shareable"),
+	      N_("Do not warn if text segment is not shareable (default)"));
+
+  DEFINE_bool(warn_unresolved_symbols, options::TWO_DASHES, '\0', false,
+	      N_("Report unresolved symbols as warnings"),
+	      NULL);
+  DEFINE_bool_alias(error_unresolved_symbols, warn_unresolved_symbols,
+		    options::TWO_DASHES, '\0',
+		    N_("Report unresolved symbols as errors"),
+		    NULL, true);
 
   DEFINE_bool(whole_archive, options::TWO_DASHES, '\0', false,
               N_("Include all archive contents"),
@@ -970,6 +1011,10 @@ class General_options
 
   DEFINE_set(trace_symbol, options::TWO_DASHES, 'y',
              N_("Trace references to symbol"), N_("SYMBOL"));
+
+  DEFINE_bool(undefined_version, options::TWO_DASHES, '\0', true,
+	      N_("Allow unused version in script (default)"),
+	      N_("Do not allow unused version in script"));
 
   DEFINE_string(Y, options::EXACTLY_ONE_DASH, 'Y', "",
 		N_("Default search path for Solaris compatibility"),
@@ -1037,6 +1082,12 @@ class General_options
   DEFINE_bool(relro, options::DASH_Z, '\0', false,
 	      N_("Where possible mark variables read-only after relocation"),
 	      N_("Don't mark variables read-only after relocation"));
+  DEFINE_bool(text, options::DASH_Z, '\0', false,
+	      N_("Do not permit relocations in read-only segments"),
+	      NULL);
+  DEFINE_bool_alias(textoff, text, options::DASH_Z, '\0',
+		    N_("Permit relocations in read-only segments (default)"),
+		    NULL, true);
 
  public:
   typedef options::Dir_list Dir_list;
@@ -1170,6 +1221,26 @@ class General_options
   bool
   check_excluded_libs (const std::string &s) const;
 
+  // If an explicit start address was given for section SECNAME with
+  // the --section-start option, return true and set *PADDR to the
+  // address.  Otherwise return false.
+  bool
+  section_start(const char* secname, uint64_t* paddr) const;
+
+  enum Fix_v4bx
+  {
+    // Leave original instruction.
+    FIX_V4BX_NONE,
+    // Replace instruction.
+    FIX_V4BX_REPLACE,
+    // Generate an interworking veneer.
+    FIX_V4BX_INTERWORKING
+  };
+
+  Fix_v4bx
+  fix_v4bx() const
+  { return (this->fix_v4bx_); }
+
  private:
   // Don't copy this structure.
   General_options(const General_options&);
@@ -1257,6 +1328,10 @@ class General_options
   Unordered_set<std::string> excluded_libs_;
   // List of symbol-names to keep, via -retain-symbol-info.
   Unordered_set<std::string> symbols_to_retain_;
+  // Map from section name to address from --section-start.
+  std::map<std::string, uint64_t> section_starts_;
+  // Whether to process armv4 bx instruction relocation.
+  Fix_v4bx fix_v4bx_;
 };
 
 // The position-dependent options.  We use this to store the state of

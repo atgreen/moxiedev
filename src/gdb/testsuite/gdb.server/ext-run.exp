@@ -31,12 +31,16 @@ if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {deb
     return -1
 }
 
+# Start with a fresh gdb, gdb_skip_xml_test must be called while gdb
+# is not running.
+
 gdb_exit
+set do_xml_test [expr ![gdb_skip_xml_test]]
 gdb_start
 gdb_load $binfile
 gdb_reinitialize_dir $srcdir/$subdir
 
-set target_exec [gdbserver_download]
+set target_exec [gdbserver_download_current_prog]
 gdbserver_start_extended
 
 gdb_test "set remote exec-file $target_exec" "" "set remote exec-file"
@@ -46,7 +50,10 @@ gdb_test "run" "Breakpoint.* main .*" "continue to main"
 
 if { [istarget *-*-linux*] } {
     # On Linux, gdbserver can also report the list of processes.
-    gdb_test "info os processes" ".*pid +user +command.*1 +root +\[/a-z\]*init.*" "get process list"
+    # But only if xml support is compiled in.
+    if { $do_xml_test } {
+	gdb_test "info os processes" ".*pid +user +command.*1 +root +\[/a-z\]*init.*" "get process list"
+    }
 }
 
 gdb_test "kill" "" "kill" "Kill the program being debugged.*" "y"

@@ -187,8 +187,6 @@ static void stopat_command (char *arg, int from_tty);
 
 static char *ep_parse_optional_if_clause (char **arg);
 
-static char *ep_parse_optional_filename (char **arg);
-
 static void catch_exception_command_1 (enum exception_event_kind ex_event, 
 				       char *arg, int tempflag, int from_tty);
 
@@ -3219,6 +3217,17 @@ watchpoint_check (void *p)
       struct gdbarch *frame_arch = get_frame_arch (frame);
       CORE_ADDR frame_pc = get_frame_pc (frame);
 
+      /* in_function_epilogue_p() returns a non-zero value if we're still
+	 in the function but the stack frame has already been invalidated.
+	 Since we can't rely on the values of local variables after the
+	 stack has been destroyed, we are treating the watchpoint in that
+	 state as `not changed' without further checking.  Don't mark
+	 watchpoints as changed if the current frame is in an epilogue -
+	 even if they are in some other frame, our view of the stack
+	 is likely to be wrong and frame_find_by_id could error out.  */
+      if (gdbarch_in_function_epilogue_p (frame_arch, frame_pc))
+	return WP_VALUE_NOT_CHANGED;
+
       fr = frame_find_by_id (b->watchpoint_frame);
       within_current_scope = (fr != NULL);
 
@@ -3234,17 +3243,6 @@ watchpoint_check (void *p)
 				SYMBOL_BLOCK_VALUE (function)))
 	    within_current_scope = 0;
 	}
-
-      /* in_function_epilogue_p() returns a non-zero value if we're still
-	 in the function but the stack frame has already been invalidated.
-	 Since we can't rely on the values of local variables after the
-	 stack has been destroyed, we are treating the watchpoint in that
-	 state as `not changed' without further checking.  Don't mark
-	 watchpoints as changed if the current frame is in an epilogue -
-	 even if they are in some other frame, our view of the stack
-	 is likely to be wrong.  */
-      if (gdbarch_in_function_epilogue_p (frame_arch, frame_pc))
-	return WP_VALUE_NOT_CHANGED;
 
       if (within_current_scope)
 	/* If we end up stopping, the current frame will get selected
@@ -3670,7 +3668,6 @@ bpstat_stop_status (struct address_space *aspace,
     }
 
   bs->next = NULL;		/* Terminate the chain */
-  bs = root_bs->next;		/* Re-grab the head of the chain */
 
   /* If we aren't stopping, the value of some hardware watchpoint may
      not have changed, but the intermediate memory locations we are
@@ -7651,42 +7648,6 @@ ep_parse_optional_if_clause (char **arg)
   return cond_string;
 }
 
-/* This function attempts to parse an optional filename from the arg
-   string.  If one is not found, it returns NULL.
-
-   Else, it returns a pointer to the parsed filename.  (This function
-   makes no attempt to verify that a file of that name exists, or is
-   accessible.)  And, it updates arg to point to the first character
-   following the parsed filename in the arg string.
-
-   Note that clients needing to preserve the returned filename for
-   future access should copy it to their own buffers. */
-static char *
-ep_parse_optional_filename (char **arg)
-{
-  static char filename[1024];
-  char *arg_p = *arg;
-  int i;
-  char c;
-
-  if ((*arg_p == '\0') || isspace (*arg_p))
-    return NULL;
-
-  for (i = 0;; i++)
-    {
-      c = *arg_p;
-      if (isspace (c))
-	c = '\0';
-      filename[i] = c;
-      if (c == '\0')
-	break;
-      arg_p++;
-    }
-  *arg = arg_p;
-
-  return filename;
-}
-
 /* Commands to deal with catching events, such as signals, exceptions,
    process start/exit, etc.  */
 
@@ -9847,6 +9808,61 @@ ftrace_command (char *arg, int from_tty)
   set_tracepoint_count (breakpoint_count);
 }
 
+/* Given information about a tracepoint as recorded on a target (which
+   can be either a live system or a trace file), attempt to create an
+   equivalent GDB tracepoint.  This is not a reliable process, since
+   the target does not necessarily have all the information used when
+   the tracepoint was originally defined.  */
+  
+struct breakpoint *
+create_tracepoint_from_upload (struct uploaded_tp *utp)
+{
+  char buf[100];
+  struct breakpoint *tp;
+  
+  /* In the absence of a source location, fall back to raw address.  */
+  sprintf (buf, "*%s", paddress (get_current_arch(), utp->addr));
+
+  break_command_really (get_current_arch (),
+			buf, 
+			NULL, 0, 1 /* parse arg */,
+			0 /* tempflag */,
+			(utp->type == bp_fast_tracepoint) /* hardwareflag */,
+			1 /* traceflag */,
+			0 /* Ignore count */,
+			pending_break_support, 
+			NULL,
+			0 /* from_tty */,
+			utp->enabled /* enabled */);
+  set_tracepoint_count (breakpoint_count);
+  
+    tp = get_tracepoint (tracepoint_count);
+
+  if (utp->pass > 0)
+    {
+      sprintf (buf, "%d %d", utp->pass, tp->number);
+
+      trace_pass_command (buf, 0);
+    }
+
+  if (utp->cond)
+    {
+      printf_filtered ("Want to restore a condition\n");
+    }
+
+  if (utp->numactions > 0)
+    {
+      printf_filtered ("Want to restore action list\n");
+    }
+
+  if (utp->num_step_actions > 0)
+    {
+      printf_filtered ("Want to restore action list\n");
+    }
+
+  return tp;
+  }
+  
 /* Print information on tracepoint number TPNUM_EXP, or all if
    omitted.  */
 
@@ -9992,6 +10008,22 @@ get_tracepoint (int num)
 
   ALL_TRACEPOINTS (t)
     if (t->number == num)
+      return t;
+
+  return NULL;
+}
+
+/* Find the tracepoint with the given target-side number (which may be
+   different from the tracepoint number after disconnecting and
+   reconnecting).  */
+
+struct breakpoint *
+get_tracepoint_by_number_on_target (int num)
+{
+  struct breakpoint *t;
+
+  ALL_TRACEPOINTS (t)
+    if (t->number_on_target == num)
       return t;
 
   return NULL;

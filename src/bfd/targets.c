@@ -328,6 +328,7 @@ BFD_JUMP_TABLE macros.
 .  NAME##_truncate_arname, \
 .  NAME##_write_armap, \
 .  NAME##_read_ar_hdr, \
+.  NAME##_write_ar_hdr, \
 .  NAME##_openr_next_archived_file, \
 .  NAME##_get_elt_at_index, \
 .  NAME##_generic_stat_arch_elt, \
@@ -341,6 +342,7 @@ BFD_JUMP_TABLE macros.
 .  bfd_boolean (*write_armap)
 .    (bfd *, unsigned int, struct orl *, unsigned int, int);
 .  void *      (*_bfd_read_ar_hdr_fn) (bfd *);
+.  bfd_boolean (*_bfd_write_ar_hdr_fn) (bfd *, bfd *);
 .  bfd *       (*openr_next_archived_file) (bfd *, bfd *);
 .#define bfd_get_elt_at_index(b,i) BFD_SEND (b, _bfd_get_elt_at_index, (b,i))
 .  bfd *       (*_bfd_get_elt_at_index) (bfd *, symindex);
@@ -760,6 +762,7 @@ extern const bfd_target mach_o_be_vec;
 extern const bfd_target mach_o_le_vec;
 extern const bfd_target mach_o_fat_vec;
 extern const bfd_target mach_o_i386_vec;
+extern const bfd_target mach_o_x86_64_vec;
 extern const bfd_target maxqcoff_vec;
 extern const bfd_target mcore_pe_big_vec;
 extern const bfd_target mcore_pe_little_vec;
@@ -1134,6 +1137,9 @@ static const bfd_target * const _bfd_target_vector[] =
 	&mach_o_le_vec,
 	&mach_o_fat_vec,
 	&mach_o_i386_vec,
+#ifdef BFD64
+	&mach_o_x86_64_vec,
+#endif
 	&maxqcoff_vec,
 	&mcore_pe_big_vec,
 	&mcore_pe_little_vec,

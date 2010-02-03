@@ -1,6 +1,6 @@
 /* ELF linking support for BFD.
    Copyright 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-   2005, 2006, 2007, 2008, 2009
+   2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -3999,6 +3999,20 @@ error_free_dyn:
 	  unsigned int vernum = 0;
 	  bfd_boolean skip;
 
+	  /* If this is a definition of a symbol which was previously
+	     referenced in a non-weak manner then make a note of the bfd
+	     that contained the reference.  This is used if we need to
+	     refer to the source of the reference later on.  */
+	  if (! bfd_is_und_section (sec))
+	    {
+	      h = elf_link_hash_lookup (elf_hash_table (info), name, FALSE, FALSE, FALSE);
+
+	      if (h != NULL
+		  && h->root.type == bfd_link_hash_undefined
+		  && h->root.u.undef.abfd)
+		undef_bfd = h->root.u.undef.abfd;
+	    }
+	  
 	  if (ever == NULL)
 	    {
 	      if (info->default_imported_symver)
@@ -4106,16 +4120,15 @@ error_free_dyn:
 	      name = newname;
 	    }
 
-	  /* If this is a definition of a previously undefined symbol
-	     make a note of the bfd that contained the reference in
-	     case we need to refer to it later on in error messages.  */
-	  if (! bfd_is_und_section (sec))
+	  /* If necessary, make a second attempt to locate the bfd
+	     containing an unresolved, non-weak reference to the
+	     current symbol.  */
+	  if (! bfd_is_und_section (sec) && undef_bfd == NULL)
 	    {
 	      h = elf_link_hash_lookup (elf_hash_table (info), name, FALSE, FALSE, FALSE);
 
 	      if (h != NULL
-		  && (h->root.type == bfd_link_hash_undefined
-		      || h->root.type == bfd_link_hash_undefweak)
+		  && h->root.type == bfd_link_hash_undefined
 		  && h->root.u.undef.abfd)
 		undef_bfd = h->root.u.undef.abfd;
 	    }
@@ -4455,12 +4468,14 @@ error_free_dyn:
 	      /* A symbol from a library loaded via DT_NEEDED of some
 		 other library is referenced by a regular object.
 		 Add a DT_NEEDED entry for it.  Issue an error if
-		 --no-add-needed is used.  */
-	      if ((elf_dyn_lib_class (abfd) & DYN_NO_NEEDED) != 0)
+		 --no-add-needed is used and the reference was not
+		 a weak one.  */
+	      if (undef_bfd != NULL
+		  && (elf_dyn_lib_class (abfd) & DYN_NO_NEEDED) != 0)
 		{
 		  (*_bfd_error_handler)
 		    (_("%B: undefined reference to symbol '%s'"),
-		     undef_bfd == NULL ? info->output_bfd : undef_bfd, name);
+		     undef_bfd, name);
 		  (*_bfd_error_handler)
 		    (_("note: '%s' is defined in DSO %B so try adding it to the linker command line"),
 		     abfd, name);
@@ -8492,10 +8507,14 @@ elf_link_check_versioned_symbol (struct bfd_link_info *info,
 
 	  _bfd_elf_swap_versym_in (input, ever, &iver);
 
-	  if ((iver.vs_vers & VERSYM_HIDDEN) == 0)
+	  if ((iver.vs_vers & VERSYM_HIDDEN) == 0
+	      && !(h->def_regular
+		   && h->forced_local))
 	    {
 	      /* If we have a non-hidden versioned sym, then it should
-		 have provided a definition for the undefined sym.  */
+		 have provided a definition for the undefined sym unless
+		 it is defined in a non-shared object and forced local.
+	       */
 	      abort ();
 	    }
 
@@ -8560,7 +8579,9 @@ elf_link_output_extsym (struct elf_link_hash_entry *h, void *data)
     {
       /* If we have an undefined symbol reference here then it must have
 	 come from a shared library that is being linked in.  (Undefined
-	 references in regular files have already been handled).  */
+	 references in regular files have already been handled unless
+	 they are in unreferenced sections which are removed by garbage
+	 collection).  */
       bfd_boolean ignore_undef = FALSE;
 
       /* Some symbols may be special in that the fact that they're
@@ -8571,12 +8592,13 @@ elf_link_output_extsym (struct elf_link_hash_entry *h, void *data)
       /* If we are reporting errors for this situation then do so now.  */
       if (ignore_undef == FALSE
 	  && h->ref_dynamic
-	  && ! h->ref_regular
+	  && (!h->ref_regular || finfo->info->gc_sections)
 	  && ! elf_link_check_versioned_symbol (finfo->info, bed, h)
 	  && finfo->info->unresolved_syms_in_shared_libs != RM_IGNORE)
 	{
 	  if (! (finfo->info->callbacks->undefined_symbol
-		 (finfo->info, h->root.root.string, h->root.u.undef.abfd,
+		 (finfo->info, h->root.root.string,
+		  h->ref_regular ? NULL : h->root.u.undef.abfd,
 		  NULL, 0, finfo->info->unresolved_syms_in_shared_libs == RM_GENERATE_ERROR)))
 	    {
 	      eoinfo->failed = TRUE;
@@ -11331,6 +11353,8 @@ _bfd_elf_gc_mark_hook (asection *sec,
 		       struct elf_link_hash_entry *h,
 		       Elf_Internal_Sym *sym)
 {
+  const char *sec_name;
+
   if (h != NULL)
     {
       switch (h->root.type)
@@ -11341,6 +11365,33 @@ _bfd_elf_gc_mark_hook (asection *sec,
 
 	case bfd_link_hash_common:
 	  return h->root.u.c.p->section;
+
+	case bfd_link_hash_undefined:
+	case bfd_link_hash_undefweak:
+	  /* To work around a glibc bug, keep all XXX input sections
+	     when there is an as yet undefined reference to __start_XXX
+	     or __stop_XXX symbols.  The linker will later define such
+	     symbols for orphan input sections that have a name
+	     representable as a C identifier.  */
+	  if (strncmp (h->root.root.string, "__start_", 8) == 0)
+	    sec_name = h->root.root.string + 8;
+	  else if (strncmp (h->root.root.string, "__stop_", 7) == 0)
+	    sec_name = h->root.root.string + 7;
+	  else
+	    sec_name = NULL;
+
+	  if (sec_name && *sec_name != '\0')
+	    {
+	      bfd *i;
+	      
+	      for (i = info->input_bfds; i; i = i->link_next)
+		{
+		  sec = bfd_get_section_by_name (i, sec_name);
+		  if (sec)
+		    sec->flags |= SEC_KEEP;
+		}
+	    }
+	  break;
 
 	default:
 	  break;
@@ -11527,9 +11578,10 @@ elf_gc_sweep (bfd *abfd, struct bfd_link_info *info)
 	      o->gc_mark = first->gc_mark;
 	    }
 	  else if ((o->flags & (SEC_DEBUGGING | SEC_LINKER_CREATED)) != 0
-		   || (o->flags & (SEC_ALLOC | SEC_LOAD | SEC_RELOC)) == 0)
+		   || (o->flags & (SEC_ALLOC | SEC_LOAD | SEC_RELOC)) == 0
+		   || elf_section_data (o)->this_hdr.sh_type == SHT_NOTE)
 	    {
-	      /* Keep debug and special sections.  */
+	      /* Keep debug, special and SHT_NOTE sections.  */
 	      o->gc_mark = 1;
 	    }
 

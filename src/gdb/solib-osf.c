@@ -306,7 +306,7 @@ osf_clear_solib (void)
    Also, what if child has exit()ed?  Must exit loop somehow.  */
 
 static void
-osf_solib_create_inferior_hook (void)
+osf_solib_create_inferior_hook (int from_tty)
 {
   struct inferior *inf;
   struct thread_info *tp;
@@ -536,7 +536,7 @@ close_map (struct read_map_ctxt *ctxt)
 static struct so_list *
 osf_current_sos (void)
 {
-  struct so_list *head = NULL, *tail, *newtail, so;
+  struct so_list *head = NULL, *tail = NULL, *newtail, so;
   struct read_map_ctxt ctxt;
   int skipped_main;
 

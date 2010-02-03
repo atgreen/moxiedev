@@ -191,14 +191,15 @@ c_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 			&& temp_len < options->print_max
 			&& extract_unsigned_integer (valaddr + embedded_offset
 						     + temp_len * eltlen,
-						     eltlen, byte_order) == 0);
+						     eltlen, byte_order) != 0);
 		       ++temp_len)
 		    ;
 		  len = temp_len;
 		}
 
 	      LA_PRINT_STRING (stream, unresolved_elttype,
-			       valaddr + embedded_offset, len, 0, options);
+			       valaddr + embedded_offset, len,
+			       NULL, 0, options);
 	      i = len;
 	    }
 	  else
@@ -388,8 +389,9 @@ c_val_print (struct type *type, const gdb_byte *valaddr, int embedded_offset,
 					  options->addressprint);
 	}
       else
-	cp_print_value_fields (type, type, valaddr, embedded_offset, address, stream,
-			       recurse, options, NULL, 0);
+	cp_print_value_fields_rtti (type, valaddr,
+				    embedded_offset, address, stream,
+				    recurse, options, NULL, 0);
       break;
 
     case TYPE_CODE_ENUM:

@@ -394,6 +394,8 @@
 @V@/gdb/testsuite/gdb.base/solib-symbol-main.c @V@/gdb/testsuite/gdb.base/so-symmain.c
 @V@/gdb/testsuite/gdb.base/solib-overlap-lib.c @V@/gdb/testsuite/gdb.base/so-ovrlib.c
 @V@/gdb/testsuite/gdb.base/solib-overlap-main.c @V@/gdb/testsuite/gdb.base/so-ovrmain.c
+@V@/gdb/testsuite/gdb.base/gdb.base/symbol-without-target_section.exp @V@/gdb/testsuite/gdb.base/symnosec.exp
+@V@/gdb/testsuite/gdb.base/gdb.base/symbol-without-target_section.c @V@/gdb/testsuite/gdb.base/symnosec.c
 @V@/gdb/testsuite/gdb.base/type-opaque-lib.c @V@/gdb/testsuite/gdb.base/ty-opqlib.c
 @V@/gdb/testsuite/gdb.base/type-opaque-main.c @V@/gdb/testsuite/gdb.base/ty-opqmain.c
 @V@/gdb/testsuite/gdb.base/watchpoint-hw.c @V@/gdb/testsuite/gdb.base/wp-hw.c
@@ -401,6 +403,9 @@
 @V@/gdb/testsuite/gdb.base/watchpoint-solib.c @V@/gdb/testsuite/gdb.base/wp-solib.c
 @V@/gdb/testsuite/gdb.base/watchpoint-hw.exp @V@/gdb/testsuite/gdb.base/wp-hw.exp
 @V@/gdb/testsuite/gdb.base/watchpoint-solib.exp @V@/gdb/testsuite/gdb.base/wp-solib.exp
+@V@/gdb/testsuite/gdb.base/watchpoint-cond-gone.exp @V@/gdb/testsuite/gdb.base/wpcondg.exp
+@V@/gdb/testsuite/gdb.base/watchpoint-cond-gone.c @V@/gdb/testsuite/gdb.base/wpcondg.c
+@V@/gdb/testsuite/gdb.base/watchpoint-cond-gone-stripped.c @V@/gdb/testsuite/gdb.base/wpcondgs.c
 @V@/gdb/testsuite/gdb.cell/coremaker-spu.c @V@/gdb/testsuite/gdb.cell/core-spu.c
 @V@/gdb/testsuite/gdb.cell/ea-cache-spu.c @V@/gdb/testsuite/gdb.cell/ea-spu.c
 @V@/gdb/testsuite/gdb.cell/mem-access-spu.c @V@/gdb/testsuite/gdb.cell/mem-spu.c

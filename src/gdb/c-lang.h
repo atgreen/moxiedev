@@ -81,7 +81,7 @@ extern void c_printchar (int, struct type *, struct ui_file *);
 
 extern void c_printstr (struct ui_file * stream, struct type *elttype,
 			const gdb_byte *string, unsigned int length,
-			int force_ellipses,
+			const char *user_encoding, int force_ellipses,
 			const struct value_print_options *options);
 
 extern void c_language_arch_info (struct gdbarch *gdbarch,
@@ -101,6 +101,12 @@ extern void cp_print_value_fields (struct type *, struct type *,
 				   struct ui_file *, int,
 				   const struct value_print_options *,
 				   struct type **, int);
+
+extern void cp_print_value_fields_rtti (struct type *,
+					const gdb_byte *, int, CORE_ADDR,
+					struct ui_file *, int,
+					const struct value_print_options *,
+					struct type **, int);
 
 extern int cp_is_vtbl_ptr_type (struct type *);
 

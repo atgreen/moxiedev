@@ -106,7 +106,7 @@ s390_cannot_store_register (int regno)
 }
 
 static void
-s390_collect_ptrace_register (int regno, char *buf)
+s390_collect_ptrace_register (struct regcache *regcache, int regno, char *buf)
 {
   int size = register_size (regno);
   if (size < sizeof (long))
@@ -118,14 +118,15 @@ s390_collect_ptrace_register (int regno, char *buf)
       if ((regno ^ 1) < the_low_target.num_regs
 	  && the_low_target.regmap[regno ^ 1] == regaddr)
 	{
-	  collect_register (regno & ~1, buf);
-	  collect_register ((regno & ~1) + 1, buf + sizeof (long) - size);
+	  collect_register (regcache, regno & ~1, buf);
+	  collect_register (regcache, (regno & ~1) + 1,
+			    buf + sizeof (long) - size);
 	}
       else if (regaddr == PT_PSWADDR
 	       || (regaddr >= PT_GPR0 && regaddr <= PT_GPR15))
-	collect_register (regno, buf + sizeof (long) - size);
+	collect_register (regcache, regno, buf + sizeof (long) - size);
       else
-	collect_register (regno, buf);
+	collect_register (regcache, regno, buf);
 
       /* When debugging a 32-bit inferior on a 64-bit host, make sure
 	 the 31-bit addressing mode bit is set in the PSW mask.  */
@@ -133,11 +134,11 @@ s390_collect_ptrace_register (int regno, char *buf)
 	buf[size] |= 0x80;
     }
   else
-    collect_register (regno, buf);
+    collect_register (regcache, regno, buf);
 }
 
 static void
-s390_supply_ptrace_register (int regno, const char *buf)
+s390_supply_ptrace_register (struct regcache *regcache, int regno, const char *buf)
 {
   int size = register_size (regno);
   if (size < sizeof (long))
@@ -147,23 +148,24 @@ s390_supply_ptrace_register (int regno, const char *buf)
       if ((regno ^ 1) < the_low_target.num_regs
 	  && the_low_target.regmap[regno ^ 1] == regaddr)
 	{
-	  supply_register (regno & ~1, buf);
-	  supply_register ((regno & ~1) + 1, buf + sizeof (long) - size);
+	  supply_register (regcache, regno & ~1, buf);
+	  supply_register (regcache, (regno & ~1) + 1,
+			   buf + sizeof (long) - size);
 	}
       else if (regaddr == PT_PSWADDR
 	       || (regaddr >= PT_GPR0 && regaddr <= PT_GPR15))
-	supply_register (regno, buf + sizeof (long) - size);
+	supply_register (regcache, regno, buf + sizeof (long) - size);
       else
-	supply_register (regno, buf);
+	supply_register (regcache, regno, buf);
     }
   else
-    supply_register (regno, buf);
+    supply_register (regcache, regno, buf);
 }
 
 /* Provide only a fill function for the general register set.  ps_lgetregs
    will use this for NPTL support.  */
 
-static void s390_fill_gregset (void *buf)
+static void s390_fill_gregset (struct regcache *regcache, void *buf)
 {
   int i;
 
@@ -173,7 +175,7 @@ static void s390_fill_gregset (void *buf)
 	  || the_low_target.regmap[i] > PT_ACR15)
 	continue;
 
-      s390_collect_ptrace_register (i, (char *) buf
+      s390_collect_ptrace_register (regcache, i, (char *) buf
 				       + the_low_target.regmap[i]);
     }
 }
@@ -188,12 +190,12 @@ static const unsigned char s390_breakpoint[] = { 0, 1 };
 #define s390_breakpoint_len 2
 
 static CORE_ADDR
-s390_get_pc ()
+s390_get_pc (struct regcache *regcache)
 {
   if (register_size (0) == 4)
     {
       unsigned int pc;
-      collect_register_by_name ("pswa", &pc);
+      collect_register_by_name (regcache, "pswa", &pc);
 #ifndef __s390x__
       pc &= 0x7fffffff;
 #endif
@@ -202,13 +204,13 @@ s390_get_pc ()
   else
     {
       unsigned long pc;
-      collect_register_by_name ("pswa", &pc);
+      collect_register_by_name (regcache, "pswa", &pc);
       return pc;
     }
 }
 
 static void
-s390_set_pc (CORE_ADDR newpc)
+s390_set_pc (struct regcache *regcache, CORE_ADDR newpc)
 {
   if (register_size (0) == 4)
     {
@@ -216,12 +218,12 @@ s390_set_pc (CORE_ADDR newpc)
 #ifndef __s390x__
       pc |= 0x80000000;
 #endif
-      supply_register_by_name ("pswa", &pc);
+      supply_register_by_name (regcache, "pswa", &pc);
     }
   else
     {
       unsigned long pc = newpc;
-      supply_register_by_name ("pswa", &pc);
+      supply_register_by_name (regcache, "pswa", &pc);
     }
 }
 
@@ -268,7 +270,8 @@ s390_arch_setup (void)
 #ifdef __s390x__
   {
     unsigned int pswm;
-    collect_register_by_name ("pswm", &pswm);
+    struct regcache *regcache = get_thread_regcache (current_inferior, 1);
+    collect_register_by_name (regcache, "pswm", &pswm);
     if (pswm & 1)
       init_registers_s390x_linux64 ();
 

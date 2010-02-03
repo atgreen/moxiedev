@@ -769,7 +769,7 @@ holding the child stopped.  Try \"set detach-on-fork\" or \
 		 breakpoint.  If a "cloned-VM" event was propagated
 		 better throughout the core, this wouldn't be
 		 required.  */
-	      solib_create_inferior_hook ();
+	      solib_create_inferior_hook (0);
 	    }
 
 	  /* Let the thread_db layer learn about this new process.  */
@@ -952,7 +952,7 @@ Attaching after process %d fork to child process %d.\n"),
 	     shared libraries, and install the solib event breakpoint.
 	     If a "cloned-VM" event was propagated better throughout
 	     the core, this wouldn't be required.  */
-	  solib_create_inferior_hook ();
+	  solib_create_inferior_hook (0);
 	}
 
       /* Let the thread_db layer learn about this new process.  */
@@ -1105,25 +1105,6 @@ status_to_str (int status)
   return buf;
 }
 
-/* Initialize the list of LWPs.  Note that this module, contrary to
-   what GDB's generic threads layer does for its thread list,
-   re-initializes the LWP lists whenever we mourn or detach (which
-   doesn't involve mourning) the inferior.  */
-
-static void
-init_lwp_list (void)
-{
-  struct lwp_info *lp, *lpnext;
-
-  for (lp = lwp_list; lp; lp = lpnext)
-    {
-      lpnext = lp->next;
-      xfree (lp);
-    }
-
-  lwp_list = NULL;
-}
-
 /* Remove all LWPs belong to PID from the lwp list.  */
 
 static void
@@ -1184,6 +1165,7 @@ add_lwp (ptid_t ptid)
   lp->waitstatus.kind = TARGET_WAITKIND_IGNORE;
 
   lp->ptid = ptid;
+  lp->core = -1;
 
   lp->next = lwp_list;
   lwp_list = lp;
@@ -3642,6 +3624,7 @@ retry:
     fprintf_unfiltered (gdb_stdlog, "LLW: exit\n");
 
   restore_child_signals_mask (&prev_mask);
+  lp->core = linux_nat_core_of_thread_1 (lp->ptid);
   return lp->ptid;
 }
 
@@ -5007,7 +4990,7 @@ linux_xfer_partial (struct target_ops *ops, enum target_object object,
   LONGEST xfer;
 
   if (object == TARGET_OBJECT_AUXV)
-    return procfs_xfer_auxv (ops, object, annex, readbuf, writebuf,
+    return memory_xfer_auxv (ops, object, annex, readbuf, writebuf,
 			     offset, len);
 
   if (object == TARGET_OBJECT_OSDATA)
@@ -5423,6 +5406,75 @@ linux_nat_thread_address_space (struct target_ops *t, ptid_t ptid)
   return inf->aspace;
 }
 
+int
+linux_nat_core_of_thread_1 (ptid_t ptid)
+{
+  struct cleanup *back_to;
+  char *filename;
+  FILE *f;
+  char *content = NULL;
+  char *p;
+  char *ts = 0;
+  int content_read = 0;
+  int i;
+  int core;
+
+  filename = xstrprintf ("/proc/%d/task/%ld/stat",
+			 GET_PID (ptid), GET_LWP (ptid));
+  back_to = make_cleanup (xfree, filename);
+
+  f = fopen (filename, "r");
+  if (!f)
+    {
+      do_cleanups (back_to);
+      return -1;
+    }
+
+  make_cleanup_fclose (f);
+
+  for (;;)
+    {
+      int n;
+      content = xrealloc (content, content_read + 1024);
+      n = fread (content + content_read, 1, 1024, f);
+      content_read += n;
+      if (n < 1024)
+	{
+	  content[content_read] = '\0';
+	  break;
+	}
+    }
+
+  make_cleanup (xfree, content);
+
+  p = strchr (content, '(');
+  p = strchr (p, ')') + 2; /* skip ")" and a whitespace. */
+
+  /* If the first field after program name has index 0, then core number is
+     the field with index 36.  There's no constant for that anywhere.  */
+  p = strtok_r (p, " ", &ts);
+  for (i = 0; i != 36; ++i)
+    p = strtok_r (NULL, " ", &ts);
+
+  if (sscanf (p, "%d", &core) == 0)
+    core = -1;
+
+  do_cleanups (back_to);
+
+  return core;
+}
+
+/* Return the cached value of the processor core for thread PTID.  */
+
+int
+linux_nat_core_of_thread (struct target_ops *ops, ptid_t ptid)
+{
+  struct lwp_info *info = find_lwp_pid (ptid);
+  if (info)
+    return info->core;
+  return -1;
+}
+
 void
 linux_nat_add_target (struct target_ops *t)
 {
@@ -5462,6 +5514,8 @@ linux_nat_add_target (struct target_ops *t)
   t->to_stop = linux_nat_stop;
 
   t->to_supports_multi_process = linux_nat_supports_multi_process;
+
+  t->to_core_of_thread = linux_nat_core_of_thread;
 
   /* We don't change the stratum; this target will sit at
      process_stratum and thread_db will set at thread_stratum.  This

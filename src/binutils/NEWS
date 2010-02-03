@@ -1,5 +1,10 @@
 -*- text -*-
 
+* Add --dyn-syms to readelf to dump dynamic symbol table.
+
+* A new tool - elfedit - has been added to directly manipulate ELF format
+  binaries.
+
 * Add to dlltool .def file feature of aliasing PE internal symbol name by
   '== <ID>' option.
 

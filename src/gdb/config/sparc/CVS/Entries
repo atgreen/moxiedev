@@ -1,9 +1,9 @@
-/fbsd.mh/1.10/Wed Dec  9 22:25:03 2009//
-/linux.mh/1.20/Wed Dec  9 22:25:03 2009/-ko/
-/linux64.mh/1.11/Wed Dec  9 22:25:03 2009//
-/nbsd64.mh/1.5/Wed Nov 18 20:13:13 2009//
-/nbsdaout.mh/1.6/Wed Nov 18 20:13:13 2009//
-/nbsdelf.mh/1.14/Wed Nov 18 20:13:13 2009/-ko/
-/sol2.mh/1.4/Wed Dec  9 22:25:03 2009//
-/nm-sol2.h/1.10/Wed Jan  6 04:54:04 2010//
+/fbsd.mh/1.10/Thu Jan 28 00:24:30 2010//
+/linux.mh/1.20/Thu Jan 28 00:24:30 2010/-ko/
+/linux64.mh/1.11/Thu Jan 28 00:24:30 2010//
+/nbsd64.mh/1.5/Thu Jan 28 00:24:30 2010//
+/nbsdaout.mh/1.6/Thu Jan 28 00:24:30 2010//
+/nbsdelf.mh/1.14/Thu Jan 28 00:24:30 2010/-ko/
+/nm-sol2.h/1.10/Thu Jan 28 00:24:30 2010//
+/sol2.mh/1.4/Thu Jan 28 00:24:30 2010//
 D

@@ -1,6 +1,6 @@
 /* DWARF 2 support.
    Copyright 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
-   2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   2004, 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
    Adapted from gdb/dwarf2read.c by Gavin Koch of Cygnus Solutions
    (gavin@cygnus.com).
@@ -215,6 +215,9 @@ struct comp_unit
   /* Pointer to the current comp_unit so that we can find a given entry
      by its reference.  */
   bfd_byte *info_ptr_unit;
+
+  /* Pointer to the start of the debug section, for DW_FORM_ref_addr.  */
+  bfd_byte *sec_info_ptr;
 
   /* The offset into .debug_line of the line number table.  */
   unsigned long line_offset;
@@ -852,6 +855,10 @@ read_attribute_value (struct attribute *attr,
       info_ptr += 4;
       break;
     case DW_FORM_ref8:
+      attr->u.val = read_8_bytes (abfd, info_ptr);
+      info_ptr += 8;
+      break;
+    case DW_FORM_ref_sig8:
       attr->u.val = read_8_bytes (abfd, info_ptr);
       info_ptr += 8;
       break;
@@ -1811,7 +1818,7 @@ find_abstract_instance_name (struct comp_unit *unit,
       if (!die_ref)
 	abort ();
 
-      info_ptr = unit->stash->sec_info_ptr + die_ref;
+      info_ptr = unit->sec_info_ptr + die_ref;
     }
   else 
     info_ptr = unit->info_ptr_unit + die_ref;
@@ -2219,6 +2226,7 @@ parse_comp_unit (struct dwarf2_debug *stash,
   unit->end_ptr = end_ptr;
   unit->stash = stash;
   unit->info_ptr_unit = info_ptr_unit;
+  unit->sec_info_ptr = stash->sec_info_ptr;
 
   for (i = 0; i < abbrev->num_attrs; ++i)
     {

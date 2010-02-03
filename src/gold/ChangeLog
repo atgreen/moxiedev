@@ -1,4 +1,764 @@
+2010-02-02  Doug Kwan  <dougkwan@google.com>
+
+	* Makefile.am (HFILES): Add arm-reloc-property.h.
+	(DEFFILES): New.
+ 	(TARGETSOURCES): Add arm-reloc-property.cc
+ 	(ALL_TARGETOBJS): Add arm-reloc-property.$(OBJEXT)
+	(libgold_a_SOURCES): $(DEFFILES)
+	* Makefile.in: Regenerate.
+	* arm-reloc-property.cc: New file.
+	* arm-reloc-property.h: New file.
+	* arm-reloc.def: New file.
+	* arm.cc: Update comments.
+	(arm-reloc-property.h): New included header.
+	(arm_reloc_property_table): New global variable.
+	(Target_arm::do_select_as_default_target): New method definition.
+	* configure.tgt (armeb*-*-*,armbe*-*-*,arm*-*-*): Add
+	arm-reloc-property to targ_extra_obj.
+	* parameters.cc (set_parameters_target): Call
+	Target::select_as_default_target().
+	* target.h (Target::select_as_default_target): New method definition.
+	(Target::do_select_as_default_target): Same.
+
+2010-02-01  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_exidx_fixup::Arm_exidx_fixup): Initialize
+	first_output_text_section_.
+	(Arm_exidx_fixup::first_output_text_section): New method definition.
+	(Arm_exidx_fixup::first_output_text_section_): New data member.
+	(Arm_exidx_fixup::process_exidx_section): Record the first text
+	output section seen.
+	(Arm_output_section::fix_exidx_coverage): Set correct linked section
+	and entsize in output section header.
+
+2010-01-29  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* gold/arm.cc: Added support for the ARM relocations: R_ARM_THM_PC8,
+	R_ARM_THM_PC12, R_ARM_THM_ALU_PREL_11_0.
+	(Arm_relocate_functions::thm_alu11): New Method.
+	(Arm_relocate_functions::thm_pc8): New Method.
+	(Arm_relocate_functions::thm_pc12): New Method.
+	(Target_arm::Scan::local): Handle the relocations.
+	(Target_arm::Scan::global): Likewise.
+	(Target_arm::Relocate::relocate): Likewise.
+	(Target_arm:Relocatable_size_for_reloc::get_size_for_reloc): Likewise.
+
+2010-01-29  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::Scan::global): General PLTs for the same set
+	of relocation types as ld.
+
+2010-01-29  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relocate_functions::arm_branch_common) Change visibility
+	to public.
+	(Arm_relocate_functions::thumb_branch_common): Ditto.
+	(Arm_relocate_functions::thm_call, Arm_relocate_functions::thm_jump24,
+	Arm_relocate_functions::thm_xpc22, Arm_relocate_functions::plt32,
+	Arm_relocate_functions::xpc25, Arm_relocate_functions::call,
+	Arm_relocate_functions::jump24): Remove.
+	(Target_arm::Relocate::relocate): Adjust code to call
+	Arm_relocation_functions::arm_branch_common and
+	Arm_relocation_functions::thumb_branch_common instead of their removed
+	wrappers.  Merge switch-cases together to reduce source code size.  
+
+2010-01-29  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::Arm_relobj): Initialize new data member
+	output_local_symbol_count_needs_update_.
+	(Arm_relobj::output_local_symbol_count_needs_update,
+	 Arm_relobj::set_output_local_symbol_count_needs_update,
+	 Arm_relobj::update_output_local_symbol_count): New methods.
+	(Arm_relobj::output_local_symbol_count_needs_update_): New data
+	member.
+	(Arm_exidx_cantunwind::do_fixed_endian_write): Write address
+	of pointed function as in a R_ARM_PREL31 relocation.
+	(Arm_output_section<big_endian>::fix_exidx_coverage): Mark objects
+	for output local symbol count updating.
+	(Target_arm::do_relax): Update output local symbol counts in objects
+	if necessary.
+	* object.h (Sized_relobj::set_output_local_symbol_count): New method.
+
+2010-01-29  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* arm.cc: Added support for the ARM relocations:
+	R_ARM_MOVW_BREL_NC, R_ARM_MOVT_BREL, R_ARM_MOVW_BREL,
+	R_ARM_THM_MOVW_BREL_NC, R_ARM_THM_MOVT_BREL, R_ARM_THM_MOVW_BREL.
+	(Arm_relocate_functions::movw_rel_nc): Renamed (was
+	movw_prel_nc).
+	(Arm_relocate_functions::movw_rel): New method.
+	(Arm_relocate_functions::movt_rel): Renamed (was movt_prel).
+	(Arm_relocate_functions::thm_movw_rel_nc): Renamed (was
+	thm_movw_prel_nc).
+	(Arm_relocate_functions::thm_movw_rel): New method.
+	(Arm_relocate_functions::thm_movt_rel): Renamed (was
+	thm_movt_prel).
+	(Target_arm::Scan::local): Handle MOVW_BREL/MOVT_BREL
+	relocations.
+	(Target_arm::Scan::global): Likewise.
+	(Target_arm::Relocate::relocate): Likewise.
+	(Target_arm::Relocatable_size_for_reloc::get_size_for_reloc):
+	Likewise.
+
+2010-01-27  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* arm.cc: Added support for ARM group relocations.
+	(Target_arm::reloc_needs_sym_origin): New method.
+	(Arm_relocate_functions::calc_grp_kn): New method.
+	(Arm_relocate_functions::calc_grp_residual): New method.
+	(Arm_relocate_functions::calc_grp_gn): New method.
+	(Arm_relocate_functions::arm_grp_alu): New Method.
+	(Arm_relocate_functions::arm_grp_ldr): New Method.
+	(Arm_relocate_functions::arm_grp_ldrs): New Method.
+	(Arm_relocate_functions::arm_grp_ldc): New Method.
+	(Target_arm::Scan::local): Handle the ARM group relocations.
+	(Target_arm::Scan::global): Likewise.
+	(Target_arm::Relocate::relocate): Likewise.
+	(Target_arm::Relocatable_size_for_reloc::get_size_for_reloc):
+	Likewise.
+
+2010-01-26  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (set): Include.
+	(class Arm_exidx_fixup): Change type of last_input_section_ to const
+	pointer type.
+ 	(Arm_output_section::Text_section_list): New type.
+	(Arm_output_section::append_text_sections_to_list): New method.
+	(Arm_output_section::fix_exidx_coverage): Ditto.
+	(Arm_relobj::Arm_relobj): Initialize exidx_section_map_.
+   	(Arm_relobj::convert_input_section_to_relaxed_section): Use
+	Relobj::set_section_offset() instead of
+	Sized_relobj::invalidate_section_offset().
+   	(Arm_relobj::section_needs_reloc_stub_scanning): Add an extra
+	parameter for section headers. Ignore relocation sections for
+	unallocated sections and EXIDX sections.
+	(Target_arm::fix_exidx_coverage): New method.
+	(Target_arm::output_section_address_less_than): New type.
+	(Arm_exidx_fixup::add_exidx_cantunwind_as_needed): Use index of the
+	linked text section instead of the EXIDX section.
+	(Arm_output_section::create_stub_group): Add an assertion to check
+	that this is not an EXIDX output section.
+	(Arm_output_section::append_text_sections_to_list): New method.
+	(Arm_output_section::fix_exidx_coverage): Ditto.
+	(Arm_relobj::scan_sections_for_stubs): Adjust call to
+   	Arm_relobj::section_needs_reloc_stub_scanning.
+	(Target_arm::do_relax): Fix EXIDX output section coverage in the
+	first pass.
+	(Target_arm::fix_exidx_coverage): New method.
+	* object.h (Relobj::set_output_section): New method.
+	(Sized_relobj::invalidate_section_offset): Remove method.
+	(Sized_relobj::do_invalidate_section_offset): Remove method.
+	(Sized_relobj::do_set_section_offset): Handle offset value -1.
+
+2010-01-25  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_exidx_merged_section::do_output_offset):
+	Fix warning due to signed and unsigned comparison on a 32-bit host.
+
+2010-01-22  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::do_relax): Record an output section for section
+	offset adjustment it contains any stub table that has changed.
+	* layout.cc (Layout::clean_up_after_relaxation): Adjust section
+	offsets in an output section if necessary.
+	* output.cc (Output_section::Output_section): Initialize
+	section_offsets_need_adjustments_.
+	(Output_section::add_input_section_for_script): Renamed to
+	Output_section::add_simple_input_section.
+	(Output_section::save_states): Add a comment.
+	(Output_section::discard_states): New method defintion.
+	(Output_section::adjust_section_offsets): Same.
+	* output.h (Output_section::add_input_section_for_script): Renamed to
+	Output_section::add_simple_input_section.
+	(Output_section::discard_states): New method declaration.
+	(Output_section::adjust_section_offsets): Same.
+	(Output_section::section_offsets_need_adjustment,
+	Output_section::set_section_offsets_need_adjustment): New method
+	definitions.
+	(Output_section::section_offsets_need_adjustment_): New data member.
+	* script-sections.cc
+	(Output_section_element_input::set_section_address): Adjust code for
+	renaming of Output_section::add_input_section_for_script.
+	(Orphan_output_section::set_section_address): Same.
+
+2010-01-22  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* gold/arm.cc (Target_arm): Updated fix_v4bx method and usage of
+	Fix_v4bx enum values .
+	* gold/options.h (General_options): New option definitions.
+	(General_options::fix_v4bx): New method.
+	(General_options::Fix_v4bx): New enum.
+	* gold/options.cc (General_options::parse_fix_v4bx): New method.
+	(General_options::parse_fix_v4bx_interworking): New method.
+
+2010-01-22  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_exidx_fixup): New class.
+
+2010-01-21  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_exidx_cantunwind, Arm_exidx_merged_section): New
+	classes.
+	(Arm_exidx_section_offset_map): New type.
+
+2010-01-21  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_exidx_input_section): New class.
+	(Arm_relobj::exidx_input_section_by_link,
+	Arm_relobj::exidx_input_section_by_shndx,
+	Arm_relobj::make_exidx_input_section): New methods.
+	(read_arm_attributes_section): Remove.
+	(Arm_relobj::do_read_symbols): Look for ARM.exidx sections and record
+	information about them.
+	(Arm_dynobj::do_read_symbols): Move code in read_arm_attributes_section
+	to here.
+
+2010-01-20  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::Arm_input_section_map): Change key type from
+	Input_section_specifier to Section_id.
+	(Target_arm::new_arm_input_section: Adjust code for change of key
+	type.
+	(Target_arm::find_arm_input_section): Ditto.
+	* gc.h (object.h): Include for Section_id nand Section_id_hash.
+	(Section_id): Remove.
+	(Garbage_collection::Section_id_hash): Remove.
+	* icf.h (object.h): Include for Section_id nand Section_id_hash.
+	(Section_id): Remove.
+	(Icf::Section_id_hash): Remove.
+	* object.h (Section_id, Const_section_id, Section_id_hash,
+	Const_section_id_hash): New type definitions.
+	* output.cc (Output_section::add_relaxed_input_section): Change to
+	use Const_section_id instead of Input_section_specifier as key type.
+	(Output_section::add_merge_input_section): Ditto.
+	(Output_section::build_relaxation_map): Change to use Section_id
+	instead of Input_section_specifier as key type.
+ 	(Output_section::convert_input_sections_in_list_to_relaxed_sections):
+	Ditto.
+	(Output_section::convert_input_sections_to_relaxed_sections): Change
+	to use Const_section_id instead of Input_section_specifier as key type.
+ 	(Output_section::find_merge_section): Ditto.
+	(Output_section::find_relaxed_input_section): Ditto.
+	* output.h (Input_section_specifier): Remove class.
+	(Output_section::Output_section_data_by_input_section_map): Change
+	key type to Const_section_id.
+	(Output_section::Output_relaxed_input_section_by_input_section_map):
+	Ditto.
+	(Output_section::Relaxation_map): Change key type to Section_id.
+
+2010-01-20  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* gold/arm.cc: Added support for R_ARM_V4BX relocation
+	(class Arm_v4bx_stub): New class.
+	(DEF_STUBS): Updated definition to support v4_veneer_bx.
+	(Stub_factory::make_arm_v4bx_stub): New method.
+	(Stub_factory::elf32_arm_stub_v4_veneer_bx): New veneer template.
+	(Stub_table::empty): Handle v4bx stubs.
+	(Stub_table::add_arm_v4bx_stub): New method.
+	(Stub_table::find_arm_v4bx_stub): New method.
+	(Arm_relocate_functions::v4bx): New method.
+	(Target_arm::fix_v4bx): New method.
+	(Target_arm::Target_arm): Handle R_ARM_V4BX.
+	(Stub_table::relocate_stubs): Likewise.
+	(Stub_table::do_write): Likewise.
+	(Stub_table::update_data_size_and_addralign): Likewise.
+	(Stub_table::finalize_stubs):  Likewise.
+	(Target_arm::Scan::local): Likewise.
+	(Target_arm::Scan::global): Likewise.
+	(Target_arm::do_finalize_sections): Likewise.
+	(Target_arm::Relocate::relocate): Likewise.
+	(Target_arm::Relocatable_size_for_reloc::get_size_for_reloc):
+	Likewise.
+	(Target_arm::scan_reloc_for_stub): Likewise.
+	(Target_arm::scan_reloc_section_for_stubs): Likewise.
+
+2010-01-19  Ian Lance Taylor  <iant@google.com>
+
+	* output.cc (Output_section_headers::do_sized_write): Write large
+	segment count to sh_info field.
+	(Output_file_header::do_sized_write): For large segment count,
+	write PN_XNUM to e_phnum field.
+
+2010-01-15  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* arm.cc (Arm_relocate_functions::thm_jump6): New function.
+	(Arm_relocate_functions::thm_jump8): New function.
+	(Arm_relocate_functions::thm_jump11): New function.
+	(Target_arm::Scan::local): Handle R_ARM_THM_JUMP6, R_ARM_THM_JUMP8,
+	R_ARM_THM_JUMP11.
+	(Target_arm::Scan::global): Likewise.
+	(Target_arm::Relocate::relocate): Likewise.
+	(Target_arm::Relocatable_size_for_reloc::get_size_for_reloc):
+	Likewise.
+
+2010-01-14  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (map, utility): Include headers.
+	(Target_arm::apply_cortex_a8_workaround): New method.
+	(Arm_relobj::do_relocate_sections): Apply any Cortex-A8 workaround.
+	(Target_arm::Scan::local): Handle R_ARM_THM_JUMP24, R_ARM_THM_JUMP19.
+	(Target_arm::Scan::global): R_ARM_THM_JUMP19.
+	(Target_arm::do_finalize_sections): Set fix_cortex_a8_ according to
+	the --[no-]fix-cortex-a8 command line options.
+	(Target_arm::Relocate::relocate): Handle R_ARM_JUMP19.
+	(Target_arm::relocate_stub): Use addend in instruction template.
+	* options.h (DEFINE_bool): Set the user-set flag.
+	(General_options): Add --[no-]-fix-cortex options.
+	* output.cc (Output_section::convert_input_sections_to_relaxed_sections)
+	: Update fast look-up map after conversion. 
+
+2010-01-14  Sriraman Tallam  <tmsriram@google.com>
+
+	* object.cc (Sized_relobj::do_layout): Change to call layout_gnu_stack
+	in the first pass of do_layout.
+
+2010-01-13  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::section_needs_reloc_stub_scanning,
+	Arm_relobj::scan_sections_for_stubs): Rearrange code to avoid an
+	apparent compiler problem of not folding static constant integral
+	data members of elfcpp::Elf_sizes<32>.
+
+2010-01-13  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::section_needs_reloc_stub_scanning,
+	Arm_relobj::section_needs_cortex_a8_stub_scanning,
+	Arm_relobj::scan_section_for_cortex_a8_erratum,
+	Arm_relobj::scan_span_for_cortex_a8_erratum): New methods.
+	(Arm_relobj::scan_sections_for_stubs): Move code deciding what
+	sections to scan for relocation stubs into a new method
+	Arm_relobj::section_needs_reloc_stub_scanning.  Handle both
+	relocation and Cortex-A8 stub scanning.
+	(Target_arm::do_relax): Force stubs to be after stubbed sections
+	if fixing the Cortex-A8 erratum.  Remove all Cortex-A8 stubs at
+	the beginning of a new relaxation pass.  Update a comment. 
+	(Target_arm::scan_span_for_cortex_a8_erratum): New method definition.
+
+2010-01-12  Ian Lance Taylor  <iant@google.com>
+
+	* target-reloc.h (visibility_error): New inline function.
+	(relocate_section): Call visibility_error.
+	* testsuite/Makefile.am (check_DATA): Add protected_3.err.
+	(MOSTLYCLEANFILES): Likewise.
+	(protected_4_pic.o, protected_3.err): New targets.
+	* testsuite/protected_4.cc: New file.
+
+2010-01-12  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Cortex_a8_reloc): New class.
+	(Target_arm::Target_arm): Initialize new data members fix_cortex_a8_
+	and cortex_a8_relocs_info_.
+	(Target_arm::fix_cortex_a8): New method definition.
+	(Target_arm::Cortex_a8_relocs_info): New type.
+	(Target_arm::fix_cortex_a8_, Target_arm::cortex_a8_relocs_info_):
+	New data member declarations.
+	(Target_arm::scan_reloc_for_stub): Record information about
+	relocations for THUMB branches that might be exempted from the
+	Cortex-A8 workaround.
+	(Target_arm::do_relax): Clear all Cortex-A8 relocation information
+	at the beginning of a relaxation pass.
+
+2010-01-12  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::mapping_symbols_info_): New data member.
+	(Arm_relobj::Mapping_symbol_position,
+	 Arm_reloj::Mapping_symbol_position_less,
+	 Arm_relobj::Mapping_symbols_info): New types.
+	(Target_arm::is_mapping_symbol_name): New method definition.
+	(Arm_relobj::do_count_local_symbols): Save information about mapping
+	symbols.
+
+2010-01-11  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relocate_functions::thumb32_branch_offset,
+	Arm_relocate_functions::thumb32_branch_upper,
+	Arm_relocate_functions::thumb32_branch_lower,
+	Arm_relocate_functions::thumb32_cond_branch_offset,
+	Arm_relocate_functions::thumb32_cond_branch_upper,
+	Arm_relocate_functions::thumb32_cond_branch_lower,
+	Arm_relocate_functions::thm_jump19): New methods to handle THUMB
+	branch offset encoding.
+	(Arm_relocate_functions::thumb_branch_common): Use new branch
+	offset encoding methods to avoid code duplication.
+	(Stub_template::Stub_template) Handle THUMB16_SPECIAL_TYPE.
+	(Stub_addend_reader::operator()): Use new branch encoding method
+	to avoid code duplication.
+
+2010-01-11  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::do_gc_process_relocs): New method.
+	(Target_arm::do_finalize_sections): Define special EXIDX section
+	symbols only if referenced.
+	* gc.h (Garbage_collection::add_reference): New method.
+	(gc_process_relocs): Use Garbage_collection::add_reference to avoid
+	code duplication.
+
+2010-01-11  Ian Lance Taylor  <iant@google.com>
+
+	* script.cc (Version_script_info::build_expression_list_lookup):
+	Change complaing about duplicate wildcard match from error to
+	warning.
+
+	* script.cc (class Lazy_demangler): Recreate--revert part of patch
+	of 2009-12-30.
+	(Version_script_info::Version_script_info): Initialize globs_,
+	default_version_, default_is_global_, and exact_.  Don't
+	initialize globals_ or locals_.
+	(Version_script_info::build_lookup_tables): Build local symbols
+	first.
+	(Version_script_info::unquote): New function.
+	(Version_script_info::add_exact_match): New function.
+	(Version_script_info::build_expression_list_lookup): Remove lookup
+	parameter.  Add is_global parameter.  Change all callers.  Handle
+	wildcard pattern specially.  Unquote pattern.  Call
+	add_exact_match.
+	(Version_script_info::get_name_to_match): New function.
+	(Version_script_info::get_symbol_version): New function.
+	(Version_script_info::get_symbol_version_helper): Remove.
+	(Version_script_info::check_unmatched_names): Call unquote.
+	* script.h (class Version_script_info): Change get_symbol_version
+	to be non-inline and add is_global parameter; change all callers.
+	Rewrite symbol_is_local.  Update declarations.  Define struct
+	Version_tree_match, Exact, Globs.  Don't define struct Lookup.
+	Remove globals_ and locals_ members.  Add exact_, globs_,
+	default_version_, is_global_.
+	(Version_script_info::Glob): Remove pattern, add expression and
+	is_global.  Update constructor.  Change all callers.
+	* dynobj.cc (Versions::finalize): Mark the version symbol as the
+	default version.
+	(Versions::symbol_section_contents): If a symbol is undefined, or
+	defined in a dynamic object, set the version index to
+	VER_NDX_LOCAL.
+	* symtab.cc (Symbol_table::add_from_relobj): Don't call
+	symbol_is_local.
+	(Symbol_table::add_from_pluginobj): Likewise.
+	* testsuite/ver_matching_test.sh: blaza1 and blaza go into V2.
+
+2010-01-11  Doug Kwan  <dougkwan@google.com>
+
+	* Makefile.am (incremental_dump_DEPENDENCIES): Add libintl dependency.
+	(incremental_dump_LDADD): Add linking option for libintl.
+	* Makefile.in: Regenerate.
+
+2010-01-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gold/11144
+	* testsuite/Makefile.am (dynamic_list.stdout): Use --dyn-syms
+	instead of -Ds.
+	* testsuite/Makefile.in: Regenerated.
+
+2010-01-10  Doug Kwan  <dougkwan@google.com>
+
+	* options.h (DEFINE_var): Use parentheses around argument varname__
+	in macro body to avoid any unintended subsequent substitutions.
+
+2010-01-10  Ian Lance Taylor  <iant@google.com>
+
+	* resolve.cc (Symbol_table::resolve): Add symbols to list of ODR
+	candidates before doing symbol resolution.
+
+	* resolve.cc (Symbol_table::resolve): Add symbols to the list of
+	ODR candidates if only one is weak.
+
+2010-01-08  Ian Lance Taylor  <iant@google.com>
+
+	* script.cc (Version_script_info::build_expression_list_lookup):
+	Don't warn about ambiguous version, just record the ambiguity.
+	(Version_script_info::get_symbol_version_helper): Give error if
+	version is ambiguous.
+
+2010-01-08  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Stub_table::Stub_table): Initalize cortex_a8_stubs_,
+	  prev_data_size_ and prev_addralign_.  Remove initializer for
+	  deleted data member has_been_changed_.
+	  (Stub_table::empty): Look at both reloc_stubs_ and cortex_a8_stubs_
+	  to determine if the table is empty.
+	  (Stub_table::has_been_changed, Stub_table_set_has_been_changed):
+	  Remove.
+	  (Stub_table::add_reloc_stub): Define method in class definition
+	  instead of just declaring it there.
+	  (Stub_table::add_cortex_a8_stub): New method definition.
+	  (Stub_table::update_data_size_and_addralign): Ditto.
+	  (Stub_table::finalize_stubs): Ditto.
+	  (Stub_table::apply_cortex_a8_workaround_to_address_range): Ditto.
+	  (Stub_table::do_addralign_): Return address alignment in the
+	  (Stub_table::do_reset_address_and_file_offset): Define method in
+	  class definition instead of declaring it there.  Set current data
+	  size to be the data size of the previous pass.
+	  (Stub_table::set_final_data_size): Use current data size as the
+	  final data size.
+	  (Stub_table::relocate_stub): Change parameter type of stub from
+	  Reloc_stub pointer to Stub pointer.
+	  (Stub_table::addralign_, Stub_table::has_been_changed_): Remove.
+	  (Stub_table::Cortex_a8_stub_list): New typedef.
+	  (Stub_table::cortex_a8_stubs_, Stub_table::prev_data_size_,
+	   Stub_table::prev_addralign_): New data member.
+	  (Arm_relobj::Arm_relobj): Initialize data member
+	  section_has_cortex_a8_workaround_.
+	  (Arm_relobj::section_has_cortex_a8_workaround,
+	   Arm_relobj::mark_section_for_cortex_a8_workaround): New method
+	   definitions.
+	  (Arm_relobj::section_has_cortex_a8_workaround_): New data member
+	  declarations.
+	  (Target_arm::relocate_stub): Change parameter type of stub from
+	  Reloc_stub pointer to Stub pointer.
+	  (Insn_template::size, Insn_template::alignment): Handle
+	  THUMB16_SPECIAL_TYPE.
+	  (Stub_table::remove_all_cortex_a8_stubs, Stub_table::finalize_stubs,
+	   Stub_table::update_data_size_and_addralign,
+	   Stub_table::apply_cortex_a8_workaround_to_address_range): New method
+	  definitions.
+ 	  (Stub_table::relocate_stubs): Handle Cortex-A8 stubs.
+	  (Stub_table::do_write): Ditto.
+	  (Target_arm::do_relax): Adjust code for changes in Stub_table.
+
+2010-01-08  Ian Lance Taylor  <iant@google.com>
+
+	PR 11108
+	* symtab.h (class Symbol): Remove fields is_target_special_ and
+	has_plt_offset_.  Add field is_defined_in_discarded_section_.
+	(Symbol::is_defined_in_discarded_section): New function.
+	(Symbol::set_is_defined_in_discarded_section): New function.
+	(Symbol::has_plt_offset): Rewrite.
+	(Symbol::set_plt_offset): Verify that new offset is not -1U.
+	* symtab.cc (Symbol::init_fields): Initialize plt_offset_ to -1U.
+	Don't initialize is_target_special_ or has_plt_offset_.
+	Initialize is_defined_in_discarded_section_.
+	(Symbol_table::add_from_relobj): If appropriate, set
+	is_defined_in_discarded_section.
+	* resolve.cc (Symbol::override_base_with_special): Don't test
+	is_target_special_.  Change has_plt_offset_ to has_plt_offset().
+	* target-reloc.h (relocate_section): Do special handling for
+	symbols defined in discarded sections for global symbols as well
+	as local symbols.
+
+2010-01-08  Ian Lance Taylor  <iant@google.com>
+
+	* dynobj.cc (big_endian>::find_dynsym_sections): Set pi to NULL in
+	the SHT_SYMTAB case.
+
+2010-01-08  Ian Lance Taylor  <iant@google.com>
+
+	* object.cc (Sized_relobj::do_layout): Don't get confused if
+	layout_eh_frame returns NULL.
+
+2010-01-08  Ian Lance Taylor  <iant@google.com>
+
+	PR 11084
+	* dynobj.cc (Sized_dynobj::find_dynsym_sections): If there is no
+	dynamic symbol table, use the normal symbol table.
+	(Sized_dynobj::do_read_symbols): Remove assertion about type of
+	symbol table.
+
+2010-01-08  Ian Lance Taylor  <iant@google.com>
+
+	PR 11072
+	* layout.cc (Layout::include_section): Remove .gnu_debuglink
+	sections.
+
+2010-01-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* version.cc (print_version): Change to "Copyright 2010".
+
+2010-01-08  Ian Lance Taylor  <iant@google.com>
+
+	PR 10287
+	PR 11063
+	* i386.cc (class Target_i386): Change return type of plt_section
+	to be non-const.
+	(class Output_data_plt_i386): Add tls_desc_rel_ field.
+	(Output_data_plt_i386::Output_data_plt_i386): Initialize
+	tls_desc_rel_ field.
+	(Output_data_plt_i386::rel_tls_desc): New function.
+	(Target_i386::rel_tls_desc_section): New function.
+	(Target_i386::Scan::local): Rewrite R_386_TLS_GOTDESC handling.
+	(Target_i386::Scan::global): For R_386_TLS_GOTDESC put
+	R_386_TLS_DESC reloc in rel_tls_desc_section.
+	* x86_64.cc (class Target_x86_64): Add tlsdesc_reloc_info_ field.
+	Define struct Tlsdesc_info.
+	(Target_x86_64::Target_x86_64): Initialize tlsdesc_reloc_info_.
+	(Target_x86_64::do_reloc_symbol_index): New function.
+	(Target_x86_64::add_tlsdesc_info): New function.
+	(class Output_data_plt_x86_64): Add tlsdesc_rel_ field.
+	(Output_data_plt_x86_64::Output_data_plt_x86_64): Initialize
+	tlsdesc_rel_ field.
+	(Output_data_plt_x86_64::rela_plt): Rename from rel_plt.  Change
+	all callers.
+	(Output_data_plt_x86_64::rela_tlsdesc): New function.
+	(Target_x86_64::rela_tlsdesc_section): New function.
+	(Target_x86_64::Scan::local): Rewrite R_X86_64_GOTPC32_TLSDESC
+	handling.
+	(Target_x86_64::Scan::global): For R_X86_64_GOTPC32_TLSDESC put
+	(Target_x86_64::do_reloc_addend): New function.
+	R_X86_64_TLSDESC reloc in rela_tlsdesc_section.
+	* output.h (class Output_reloc) [SHT_REL]: Add new constructor
+	declarations.  Define TARGET_CODE.  Add arg field to u1_ union.
+	(Output_reloc::type): New function.
+	(Output_reloc::is_local_section_symbol): Check for TARGET_CODE.
+	(Output_reloc::is_target_specific): New function.
+	(Output_reloc::target_arg): New function.
+	(class Output_reloc) [SHT_RELA]: Add four new constructors for
+	absolute relocs and target specific relocs.
+	(class Output_data_reloc) [SHT_REL]: Add add_absolute and
+	add_target_specific.
+	(class Output_data_reloc) [SHT_RELA]: Likewise.
+	* output.cc (Output_reloc::Output_reloc): Add four new versions
+	for absolute relocs and target specific relocs.
+	(Output_reloc::set_needs_dynsym_index): Add TARGET_CODE case.
+	(Output_reloc::get_symbol_index): Likewise.
+	(Output_reloc::local_section_offset): Check that local_sym_index_
+	is not TARGET_CODE or 0.
+	(Output_reloc::symbol_value): Likewise.
+	(Output_reloc::write) [SHT_RELA]: Call target for target specific
+	reloc.
+	* target.h (class Target): Add reloc_symbol_index and reloc_addend
+	functions.  Add do_reloc_symbol_index and do_reloc_addend virtual
+	functions.
+	* layout.cc (add_target_dynamic_tags): Use output section for
+	DT_PLTRELSZ and DT_JMPREL.
+
+2010-01-07  Ian Lance Taylor  <iant@google.com>
+
+	PR 11061
+	* output.h (class Output_reloc) [SHT_RELA]: Add is_relative
+	function.
+	(class Output_data_reloc_generic): Define.
+	(class Output_data_reloc_base): Change base class to
+	Output_data_reloc_generic.  Change add() method to call
+	bump_relative_reloc_count for a relative reloc.  Remove
+	sort_relocs_ field.
+	* output.cc (Output_data_reloc_base::do_write): Change sort_reloc_
+	to sort_relocs().
+	* layout.cc (Layout::add_target_dynamic_tags): Change dyn_rel to
+	Output_data_reloc_generic*.  Add DT_RELCOUNT/DT_RELACOUNT tag if
+	appropriate.
+	* layout.h (class Layout): Update declaration.
+
+2010-01-07  Ian Lance Taylor  <iant@google.com>
+
+	* output.h (class Output_data): Add const version of
+	output_section and do_output_section.
+	(class Output_section_data): Add const version of
+	do_output_section.
+	(class Output_section): Likewise.
+	* layout.cc (Layout::add_target_dynamic_tags): New function.
+	* layout.h (class Layout): Update declarations.
+	* arm.cc (Target_arm::do_finalize_sections): Use
+	add_target_dynamic_tags.
+	* i386.cc (Target_i386::do_finalize_sections): Likewise.
+	* powerpc.cc (Target_powerpc::do_finalize_sections): Likewise.
+	* sparc.cc (Target_sparc::do_finalize_sections): Likewise.
+	* x86_64.cc (Target_x86_64::do_finalize_sections): Likewise.
+
+2010-01-07  Ian Lance Taylor  <iant@google.com>
+
+	PR 11042
+	* copy-relocs.cc (Copy_relocs::emit_copy_reloc): Mark the dynamic
+	object as needed.
+
+2010-01-07  Dmitry Gorbachev  <d.g.gorbachev@gmail.com>
+	    Ian Lance Taylor  <iant@google.com>
+
+	PR 11019
+	* object.cc: Instantiate Xindex::initialize_symtab_xindex and
+	Xindex::read_symtab_xindex.
+
+2010-01-07  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Insn_template::Type): New enum value THUMB16_SPECIAL_TYPE.
+	(Insn_template::thumb16_bcond_insn): New method declaration.
+	(Insn_template): Fix spelling.
+	(Stub::thumb16_special): New method declaration.
+	(Stub::do_write): Define virtual method which was previously pure
+	virtual.
+	(Stub::do_thumb16_special): New method declaration.
+	(Stub::do_fixed_endian_write): New template member.
+	(Reloc_stub::do_write): Remove.
+	(Reloc_stub::do_fixed_endian_write): Remove.
+	(Cortex_a8_stub): New class definition.
+	(Stub_factory::make_cortex_a8_stub): New method definition.
+	(Stub_factory::Stub_factory): Add missing static storage class
+	qualifier for elf32_arm_stub_a8_veneer_blx.
+
+2010-01-07  Ian Lance Taylor  <iant@google.com>
+
+	PR 10980
+	* options.h (class General_options): Add --warn-unresolved-symbols
+	and --error-unresolved-symbols.
+	* errors.cc (Errors::undefined_symbol): Implement
+	--warn-unresolved-symbols.
+
+	* options.h (class General_options): Add -z text and -z textoff.
+	* layout.cc (Layout::finish_dynamic_section): Implement -z text.
+
+2010-01-06  Sriraman Tallam  <tmsriram@google.com>
+
+	* gc.h (Garbage_collection::Cident_section_map): New typedef.
+	(Garbage_collection::cident_sections): New function.
+	(Garbage_collection::add_cident_section): New function.
+	(Garbage_collection::cident_sections_): New member.
+	(gc_process_relocs): Add references to sections whose names are C
+	identifiers.
+	* gold.h (cident_section_start_prefix): New constant.
+	(cident_section_stop_prefix): New constant.
+	(is_cident): New function.
+	* layout.cc (Layout::define_section_symbols): Replace string constants
+	with the newly defined constants.
+	* object.cc (Sized_relobj::do_layout): Track sections whose names are
+	C identifiers.
+	* testsuite/Makefile.am: Add gc_orphan_section_test.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/gc_orphan_section_test.cc: New file.
+	* testsuite/gc_orphan_section_test.sh: New file.
+
+2010-01-06  Ian Lance Taylor  <iant@google.com>
+
+	PR 10980
+	* options.h (class General_options): Add --warn-shared-textrel.
+	* layout.cc (Layout::finish_dynamic_section): Implement
+	--warn-shared-textrel.
+
+	PR 10980
+	* options.h (class General_options): Add --warn-multiple-gp.
+
+2010-01-06  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* Makefile.am (incremental_dump_DEPENDENCIES): Remove
+	$(THREADSLIB) and $(LIBDL).
+	* Makefile.in: Rebuild.
+
+2010-01-06  Ian Lance Taylor  <iant@google.com>
+
+	PR 10980
+	* options.cc (General_options::parse_section_start): New function.
+	(General_options::section_start): New function.
+	(General_options::General_options): Initialize all members.
+	* options.h: Include <map>
+	(class General_options): Add --section-start.  Add section_starts_
+	member.
+	* layout.cc (Layout::attach_allocated_section_to_segment): If
+	--section-start was used, set the address of the segment.  Remove
+	local sort_sections.
+	(Layout::relaxation_loop_body): If the address of the load segment
+	has been set by --section-start, don't use it.
+	* output.h (Output_segment::update_flags_for_output_section): New
+	function.
+	* output.cc (Output_segment::add_output_section): Call
+	update_flags_for_output_section.
+
 2010-01-05  Ian Lance Taylor  <iant@google.com>
+
+	PR 10980
+	* options.h (class General_options): Add --undefined-version.
+	* script.cc (struct Version_expression): Add was_matched_by_symbol
+	field.
+	(Version_script_info::matched_symbol): New function.
+	(Version_script_info::get_symbol_version_helper): Call
+	matched_symbol.
+	(Version_script_info::check_unmatched_names): New function.
+	* script.h (class Version_script_info): Update declarations.
+	* gold.cc (queue_middle_tasks): Handle --no-undefined-version.
 
 	* options.h (class General_options): Use DEFINE_bool_alias for
 	allow_multiple_definition.

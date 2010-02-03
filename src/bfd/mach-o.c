@@ -29,7 +29,7 @@
 
 #define bfd_mach_o_object_p bfd_mach_o_gen_object_p
 #define bfd_mach_o_core_p bfd_mach_o_gen_core_p
-#define bfd_mach_o_mkobject bfd_false
+#define bfd_mach_o_mkobject bfd_mach_o_gen_mkobject
 
 #define FILE_ALIGN(off, algn) \
   (((off) + ((file_ptr) 1 << (algn)) - 1) & ((file_ptr) -1 << (algn)))
@@ -2672,6 +2672,23 @@ bfd_mach_o_scan_start_address (bfd *abfd)
   return 0;
 }
 
+bfd_boolean
+bfd_mach_o_set_arch_mach (bfd *abfd,
+                          enum bfd_architecture arch,
+                          unsigned long machine)
+{
+  bfd_mach_o_backend_data *bed = bfd_mach_o_get_backend_data (abfd);
+
+  /* If this isn't the right architecture for this backend, and this
+     isn't the generic backend, fail.  */
+  if (arch != bed->arch
+      && arch != bfd_arch_unknown
+      && bed->arch != bfd_arch_unknown)
+    return FALSE;
+
+  return bfd_default_set_arch_mach (abfd, arch, machine);
+}
+
 int
 bfd_mach_o_scan (bfd *abfd,
 		 bfd_mach_o_header *header,
@@ -2767,6 +2784,24 @@ bfd_mach_o_mkobject_init (bfd *abfd)
   mdata->commands = NULL;
   mdata->nsects = 0;
   mdata->sections = NULL;
+
+  return TRUE;
+}
+
+static bfd_boolean
+bfd_mach_o_gen_mkobject (bfd *abfd)
+{
+  bfd_mach_o_data_struct *mdata;
+
+  if (!bfd_mach_o_mkobject_init (abfd))
+    return FALSE;
+
+  mdata = bfd_mach_o_get_data (abfd);
+  mdata->header.magic = BFD_MACH_O_MH_MAGIC;
+  mdata->header.cputype = 0;
+  mdata->header.cpusubtype = 0;
+  mdata->header.byteorder = abfd->xvec->byteorder;
+  mdata->header.version = 1;
 
   return TRUE;
 }
@@ -3960,17 +3995,20 @@ bfd_mach_o_core_file_failing_signal (bfd *abfd ATTRIBUTE_UNUSED)
 
 #define TARGET_NAME 		mach_o_be_vec
 #define TARGET_STRING     	"mach-o-be"
+#define TARGET_ARCHITECTURE	bfd_arch_unknown
 #define TARGET_BIG_ENDIAN 	1
 #define TARGET_ARCHIVE 		0
 #include "mach-o-target.c"
 
 #undef TARGET_NAME
 #undef TARGET_STRING
+#undef TARGET_ARCHITECTURE
 #undef TARGET_BIG_ENDIAN
 #undef TARGET_ARCHIVE
 
 #define TARGET_NAME 		mach_o_le_vec
 #define TARGET_STRING 		"mach-o-le"
+#define TARGET_ARCHITECTURE	bfd_arch_unknown
 #define TARGET_BIG_ENDIAN 	0
 #define TARGET_ARCHIVE 		0
 
@@ -3978,11 +4016,28 @@ bfd_mach_o_core_file_failing_signal (bfd *abfd ATTRIBUTE_UNUSED)
 
 #undef TARGET_NAME
 #undef TARGET_STRING
+#undef TARGET_ARCHITECTURE
 #undef TARGET_BIG_ENDIAN
 #undef TARGET_ARCHIVE
 
+/* Not yet handled: creating an archive.  */
+#define bfd_mach_o_mkarchive                      _bfd_noarchive_mkarchive
+
+/* Not used.  */
+#define bfd_mach_o_read_ar_hdr                    _bfd_noarchive_read_ar_hdr
+#define bfd_mach_o_write_ar_hdr                   _bfd_noarchive_write_ar_hdr
+#define bfd_mach_o_slurp_armap                    _bfd_noarchive_slurp_armap
+#define bfd_mach_o_slurp_extended_name_table      _bfd_noarchive_slurp_extended_name_table
+#define bfd_mach_o_construct_extended_name_table  _bfd_noarchive_construct_extended_name_table
+#define bfd_mach_o_truncate_arname                _bfd_noarchive_truncate_arname
+#define bfd_mach_o_write_armap                    _bfd_noarchive_write_armap
+#define bfd_mach_o_get_elt_at_index               _bfd_noarchive_get_elt_at_index
+#define bfd_mach_o_generic_stat_arch_elt          _bfd_noarchive_generic_stat_arch_elt
+#define bfd_mach_o_update_armap_timestamp         _bfd_noarchive_update_armap_timestamp
+
 #define TARGET_NAME 		mach_o_fat_vec
 #define TARGET_STRING 		"mach-o-fat"
+#define TARGET_ARCHITECTURE	bfd_arch_unknown
 #define TARGET_BIG_ENDIAN 	1
 #define TARGET_ARCHIVE 		1
 
@@ -3990,5 +4045,6 @@ bfd_mach_o_core_file_failing_signal (bfd *abfd ATTRIBUTE_UNUSED)
 
 #undef TARGET_NAME
 #undef TARGET_STRING
+#undef TARGET_ARCHITECTURE
 #undef TARGET_BIG_ENDIAN
 #undef TARGET_ARCHIVE

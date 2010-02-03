@@ -50,25 +50,19 @@
 static void
 spu_relocate_main_executable (int spufs_fd)
 {
-  struct objfile *objfile;
-  struct cleanup *old_chain;
   struct section_offsets *new_offsets;
   int i;
 
-  for (objfile = symfile_objfile;
-       objfile;
-       objfile = objfile->separate_debug_objfile)
-    {
-      new_offsets = xcalloc (objfile->num_sections,
-			     sizeof (struct section_offsets));
-      old_chain = make_cleanup (xfree, new_offsets);
+  if (symfile_objfile == NULL)
+    return;
 
-      for (i = 0; i < objfile->num_sections; i++)
-        new_offsets->offsets[i] = SPUADDR (spufs_fd, 0);
+  new_offsets = alloca (symfile_objfile->num_sections
+			* sizeof (struct section_offsets));
 
-      objfile_relocate (objfile, new_offsets);
-      do_cleanups (old_chain);
-    }
+  for (i = 0; i < symfile_objfile->num_sections; i++)
+    new_offsets->offsets[i] = SPUADDR (spufs_fd, 0);
+
+  objfile_relocate (symfile_objfile, new_offsets);
 }
 
 /* When running a stand-alone SPE executable, we may need to skip one more
@@ -371,7 +365,7 @@ spu_enable_break (struct objfile *objfile)
 
 /* Create inferior hook.  */
 static void
-spu_solib_create_inferior_hook (void)
+spu_solib_create_inferior_hook (int from_tty)
 {
   /* Remove all previously installed solib breakpoints.  Both the SVR4
      code and us will re-install all required breakpoints.  */
@@ -402,7 +396,7 @@ spu_solib_create_inferior_hook (void)
     }
 
   /* Call SVR4 hook -- this will re-insert the SVR4 solib breakpoints.  */
-  svr4_so_ops.solib_create_inferior_hook ();
+  svr4_so_ops.solib_create_inferior_hook (from_tty);
 
   /* If the inferior is statically linked against libspe, we need to install
      our own solib breakpoint right now.  Otherwise, it will be installed by

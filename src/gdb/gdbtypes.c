@@ -673,10 +673,7 @@ lookup_methodptr_type (struct type *to_type)
   struct type *mtype;
 
   mtype = alloc_type_copy (to_type);
-  TYPE_TARGET_TYPE (mtype) = to_type;
-  TYPE_DOMAIN_TYPE (mtype) = TYPE_DOMAIN_TYPE (to_type);
-  TYPE_LENGTH (mtype) = cplus_method_ptr_size (to_type);
-  TYPE_CODE (mtype) = TYPE_CODE_METHODPTR;
+  smash_to_methodptr_type (mtype, to_type);
   return mtype;
 }
 
@@ -981,6 +978,22 @@ smash_to_memberptr_type (struct type *type, struct type *domain,
   TYPE_CODE (type) = TYPE_CODE_MEMBERPTR;
 }
 
+/* Smash TYPE to be a type of pointer to methods type TO_TYPE.
+
+   When "smashing" the type, we preserve the objfile that the old type
+   pointed to, since we aren't changing where the type is actually
+   allocated.  */
+
+void
+smash_to_methodptr_type (struct type *type, struct type *to_type)
+{
+  smash_type (type);
+  TYPE_TARGET_TYPE (type) = to_type;
+  TYPE_DOMAIN_TYPE (type) = TYPE_DOMAIN_TYPE (to_type);
+  TYPE_LENGTH (type) = cplus_method_ptr_size (to_type);
+  TYPE_CODE (type) = TYPE_CODE_METHODPTR;
+}
+
 /* Smash TYPE to be a type of method of DOMAIN with type TO_TYPE.
    METHOD just means `function that gets an extra "this" argument'.
 
@@ -1118,13 +1131,6 @@ lookup_union (char *name, struct block *block)
 
   if (TYPE_CODE (t) == TYPE_CODE_UNION)
     return t;
-
-  /* C++ unions may come out with TYPE_CODE_CLASS, but we look at
-   * a further "declared_type" field to discover it is really a union.
-   */
-  if (HAVE_CPLUS_STRUCT (t))
-    if (TYPE_DECLARED_TYPE (t) == DECLARED_TYPE_UNION)
-      return t;
 
   /* If we get here, it's not a union.  */
   error (_("This context has class, struct or enum %s, not a union."), 
@@ -1717,13 +1723,31 @@ const struct cplus_struct_type cplus_struct_default;
 void
 allocate_cplus_struct_type (struct type *type)
 {
-  if (!HAVE_CPLUS_STRUCT (type))
-    {
-      TYPE_CPLUS_SPECIFIC (type) = (struct cplus_struct_type *)
-	TYPE_ALLOC (type, sizeof (struct cplus_struct_type));
-      *(TYPE_CPLUS_SPECIFIC (type)) = cplus_struct_default;
-    }
+  if (HAVE_CPLUS_STRUCT (type))
+    /* Structure was already allocated.  Nothing more to do.  */
+    return;
+
+  TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_CPLUS_STUFF;
+  TYPE_RAW_CPLUS_SPECIFIC (type) = (struct cplus_struct_type *)
+    TYPE_ALLOC (type, sizeof (struct cplus_struct_type));
+  *(TYPE_RAW_CPLUS_SPECIFIC (type)) = cplus_struct_default;
 }
+
+const struct gnat_aux_type gnat_aux_default =
+  { NULL };
+
+/* Set the TYPE's type-specific kind to TYPE_SPECIFIC_GNAT_STUFF,
+   and allocate the associated gnat-specific data.  The gnat-specific
+   data is also initialized to gnat_aux_default.  */
+void
+allocate_gnat_aux_type (struct type *type)
+{
+  TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_GNAT_STUFF;
+  TYPE_GNAT_SPECIFIC (type) = (struct gnat_aux_type *)
+    TYPE_ALLOC (type, sizeof (struct gnat_aux_type));
+  *(TYPE_GNAT_SPECIFIC (type)) = gnat_aux_default;
+}
+
 
 /* Helper function to initialize the standard scalar types.
 
@@ -1777,10 +1801,19 @@ init_type (enum type_code code, int length, int flags,
   if (name && strcmp (name, "char") == 0)
     TYPE_NOSIGN (type) = 1;
 
-  if (code == TYPE_CODE_STRUCT || code == TYPE_CODE_UNION
-      || code == TYPE_CODE_NAMESPACE)
+  switch (code)
     {
-      INIT_CPLUS_SPECIFIC (type);
+      case TYPE_CODE_STRUCT:
+      case TYPE_CODE_UNION:
+      case TYPE_CODE_NAMESPACE:
+        INIT_CPLUS_SPECIFIC (type);
+        break;
+      case TYPE_CODE_FLT:
+        TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_FLOATFORMAT;
+        break;
+      case TYPE_CODE_FUNC:
+        TYPE_SPECIFIC_FIELD (type) = TYPE_SPECIFIC_CALLING_CONVENTION;
+        break;
     }
   return type;
 }
@@ -1811,6 +1844,18 @@ is_integral_type (struct type *t)
 	 || (TYPE_CODE (t) == TYPE_CODE_BOOL)));
 }
 
+/* A helper function which returns true if types A and B represent the
+   "same" class type.  This is true if the types have the same main
+   type, or the same name.  */
+
+int
+class_types_same_p (const struct type *a, const struct type *b)
+{
+  return (TYPE_MAIN_TYPE (a) == TYPE_MAIN_TYPE (b)
+	  || (TYPE_NAME (a) && TYPE_NAME (b)
+	      && !strcmp (TYPE_NAME (a), TYPE_NAME (b))));
+}
+
 /* Check whether BASE is an ancestor or base class or DCLASS 
    Return 1 if so, and 0 if not.
    Note: callers may want to check for identity of the types before
@@ -1825,18 +1870,103 @@ is_ancestor (struct type *base, struct type *dclass)
   CHECK_TYPEDEF (base);
   CHECK_TYPEDEF (dclass);
 
-  if (base == dclass)
-    return 1;
-  if (TYPE_NAME (base) && TYPE_NAME (dclass) 
-      && !strcmp (TYPE_NAME (base), TYPE_NAME (dclass)))
+  if (class_types_same_p (base, dclass))
     return 1;
 
   for (i = 0; i < TYPE_N_BASECLASSES (dclass); i++)
-    if (is_ancestor (base, TYPE_BASECLASS (dclass, i)))
-      return 1;
+    {
+      if (is_ancestor (base, TYPE_BASECLASS (dclass, i)))
+	return 1;
+    }
 
   return 0;
 }
+
+/* Like is_ancestor, but only returns true when BASE is a public
+   ancestor of DCLASS.  */
+
+int
+is_public_ancestor (struct type *base, struct type *dclass)
+{
+  int i;
+
+  CHECK_TYPEDEF (base);
+  CHECK_TYPEDEF (dclass);
+
+  if (class_types_same_p (base, dclass))
+    return 1;
+
+  for (i = 0; i < TYPE_N_BASECLASSES (dclass); ++i)
+    {
+      if (! BASETYPE_VIA_PUBLIC (dclass, i))
+	continue;
+      if (is_public_ancestor (base, TYPE_BASECLASS (dclass, i)))
+	return 1;
+    }
+
+  return 0;
+}
+
+/* A helper function for is_unique_ancestor.  */
+
+static int
+is_unique_ancestor_worker (struct type *base, struct type *dclass,
+			   int *offset,
+			   const bfd_byte *contents, CORE_ADDR address)
+{
+  int i, count = 0;
+
+  CHECK_TYPEDEF (base);
+  CHECK_TYPEDEF (dclass);
+
+  for (i = 0; i < TYPE_N_BASECLASSES (dclass) && count < 2; ++i)
+    {
+      struct type *iter = check_typedef (TYPE_BASECLASS (dclass, i));
+      int this_offset = baseclass_offset (dclass, i, contents, address);
+
+      if (this_offset == -1)
+	error (_("virtual baseclass botch"));
+
+      if (class_types_same_p (base, iter))
+	{
+	  /* If this is the first subclass, set *OFFSET and set count
+	     to 1.  Otherwise, if this is at the same offset as
+	     previous instances, do nothing.  Otherwise, increment
+	     count.  */
+	  if (*offset == -1)
+	    {
+	      *offset = this_offset;
+	      count = 1;
+	    }
+	  else if (this_offset == *offset)
+	    {
+	      /* Nothing.  */
+	    }
+	  else
+	    ++count;
+	}
+      else
+	count += is_unique_ancestor_worker (base, iter, offset,
+					    contents + this_offset,
+					    address + this_offset);
+    }
+
+  return count;
+}
+
+/* Like is_ancestor, but only returns true if BASE is a unique base
+   class of the type of VAL.  */
+
+int
+is_unique_ancestor (struct type *base, struct value *val)
+{
+  int offset = -1;
+
+  return is_unique_ancestor_worker (base, value_type (val), &offset,
+				    value_contents (val),
+				    value_address (val)) == 1;
+}
+
 
 
 
@@ -2495,6 +2625,17 @@ print_cplus_stuff (struct type *type, int spaces)
     }
 }
 
+/* Print the contents of the TYPE's type_specific union, assuming that
+   its type-specific kind is TYPE_SPECIFIC_GNAT_STUFF.  */
+
+static void
+print_gnat_stuff (struct type *type, int spaces)
+{
+  struct type *descriptive_type = TYPE_DESCRIPTIVE_TYPE (type);
+
+  recursive_dump_type (descriptive_type, spaces + 2);
+}
+
 static struct obstack dont_print_type_obstack;
 
 void
@@ -2506,7 +2647,7 @@ recursive_dump_type (struct type *type, int spaces)
     obstack_begin (&dont_print_type_obstack, 0);
 
   if (TYPE_NFIELDS (type) > 0
-      || (TYPE_CPLUS_SPECIFIC (type) && TYPE_NFN_FIELDS (type) > 0))
+      || (HAVE_CPLUS_STRUCT (type) && TYPE_NFN_FIELDS (type) > 0))
     {
       struct type **first_dont_print
 	= (struct type **) obstack_base (&dont_print_type_obstack);
@@ -2775,55 +2916,55 @@ recursive_dump_type (struct type *type, int spaces)
     }
   printfi_filtered (spaces, "vptr_fieldno %d\n", 
 		    TYPE_VPTR_FIELDNO (type));
-  switch (TYPE_CODE (type))
+
+  switch (TYPE_SPECIFIC_FIELD (type))
     {
-    case TYPE_CODE_STRUCT:
-      printfi_filtered (spaces, "cplus_stuff ");
-      gdb_print_host_address (TYPE_CPLUS_SPECIFIC (type), 
-			      gdb_stdout);
-      puts_filtered ("\n");
-      print_cplus_stuff (type, spaces);
-      break;
+      case TYPE_SPECIFIC_CPLUS_STUFF:
+	printfi_filtered (spaces, "cplus_stuff ");
+	gdb_print_host_address (TYPE_CPLUS_SPECIFIC (type), 
+				gdb_stdout);
+	puts_filtered ("\n");
+	print_cplus_stuff (type, spaces);
+	break;
 
-    case TYPE_CODE_FLT:
-      printfi_filtered (spaces, "floatformat ");
-      if (TYPE_FLOATFORMAT (type) == NULL)
-	puts_filtered ("(null)");
-      else
-	{
-	  puts_filtered ("{ ");
-	  if (TYPE_FLOATFORMAT (type)[0] == NULL
-	      || TYPE_FLOATFORMAT (type)[0]->name == NULL)
-	    puts_filtered ("(null)");
-	  else
-	    puts_filtered (TYPE_FLOATFORMAT (type)[0]->name);
+      case TYPE_SPECIFIC_GNAT_STUFF:
+	printfi_filtered (spaces, "gnat_stuff ");
+	gdb_print_host_address (TYPE_GNAT_SPECIFIC (type), gdb_stdout);
+	puts_filtered ("\n");
+	print_gnat_stuff (type, spaces);
+	break;
 
-	  puts_filtered (", ");
-	  if (TYPE_FLOATFORMAT (type)[1] == NULL
-	      || TYPE_FLOATFORMAT (type)[1]->name == NULL)
-	    puts_filtered ("(null)");
-	  else
-	    puts_filtered (TYPE_FLOATFORMAT (type)[1]->name);
+      case TYPE_SPECIFIC_FLOATFORMAT:
+	printfi_filtered (spaces, "floatformat ");
+	if (TYPE_FLOATFORMAT (type) == NULL)
+	  puts_filtered ("(null)");
+	else
+	  {
+	    puts_filtered ("{ ");
+	    if (TYPE_FLOATFORMAT (type)[0] == NULL
+		|| TYPE_FLOATFORMAT (type)[0]->name == NULL)
+	      puts_filtered ("(null)");
+	    else
+	      puts_filtered (TYPE_FLOATFORMAT (type)[0]->name);
 
-	  puts_filtered (" }");
-	}
-      puts_filtered ("\n");
-      break;
+	    puts_filtered (", ");
+	    if (TYPE_FLOATFORMAT (type)[1] == NULL
+		|| TYPE_FLOATFORMAT (type)[1]->name == NULL)
+	      puts_filtered ("(null)");
+	    else
+	      puts_filtered (TYPE_FLOATFORMAT (type)[1]->name);
 
-    default:
-      /* We have to pick one of the union types to be able print and
-         test the value.  Pick cplus_struct_type, even though we know
-         it isn't any particular one.  */
-      printfi_filtered (spaces, "type_specific ");
-      gdb_print_host_address (TYPE_CPLUS_SPECIFIC (type), gdb_stdout);
-      if (TYPE_CPLUS_SPECIFIC (type) != NULL)
-	{
-	  printf_filtered (_(" (unknown data form)"));
-	}
-      printf_filtered ("\n");
-      break;
+	    puts_filtered (" }");
+	  }
+	puts_filtered ("\n");
+	break;
 
+      case TYPE_SPECIFIC_CALLING_CONVENTION:
+	printfi_filtered (spaces, "calling_convention %d\n",
+                          TYPE_CALLING_CONVENTION (type));
+	break;
     }
+
   if (spaces == 0)
     obstack_free (&dont_print_type_obstack, NULL);
 }
@@ -3119,7 +3260,7 @@ arch_complex_type (struct gdbarch *gdbarch,
 }
 
 /* Allocate a TYPE_CODE_FLAGS type structure associated with GDBARCH.
-   NAME is the type name.  LENGTH is the number of flag bits.  */
+   NAME is the type name.  LENGTH is the size of the flag word in bytes.  */
 struct type *
 arch_flags_type (struct gdbarch *gdbarch, char *name, int length)
 {

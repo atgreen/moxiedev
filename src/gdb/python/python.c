@@ -27,6 +27,7 @@
 #include "observer.h"
 #include "value.h"
 #include "language.h"
+#include "exceptions.h"
 
 #include <ctype.h>
 
@@ -45,7 +46,6 @@ static int gdbpy_auto_load = 1;
 #include "cli/cli-decode.h"
 #include "charset.h"
 #include "top.h"
-#include "exceptions.h"
 #include "python-internal.h"
 #include "version.h"
 #include "target.h"
@@ -343,6 +343,22 @@ gdbpy_parse_and_eval (PyObject *self, PyObject *args)
   return value_to_value_object (result);
 }
 
+/* Read a file as Python code.  STREAM is the input file; FILE is the
+   name of the file.  */
+
+void
+source_python_script (FILE *stream, char *file)
+{
+  PyGILState_STATE state;
+
+  state = PyGILState_Ensure ();
+
+  PyRun_SimpleFile (stream, file);
+
+  fclose (stream);
+  PyGILState_Release (state);
+}
+
 
 
 /* Printing.  */
@@ -525,6 +541,14 @@ eval_python_from_control_command (struct command_line *cmd)
   error (_("Python scripting is not supported in this copy of GDB."));
 }
 
+void
+source_python_script (FILE *stream, char *file)
+{
+  fclose (stream);
+  throw_error (UNSUPPORTED_ERROR,
+	       _("Python scripting is not supported in this copy of GDB."));
+}
+
 #endif /* HAVE_PYTHON */
 
 
@@ -623,6 +647,7 @@ Enables or disables auto-loading of Python code when an object is opened."),
   gdbpy_initialize_functions ();
   gdbpy_initialize_types ();
   gdbpy_initialize_objfile ();
+  gdbpy_initialize_lazy_string ();
 
   PyRun_SimpleString ("import gdb");
   PyRun_SimpleString ("gdb.pretty_printers = []");

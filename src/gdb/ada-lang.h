@@ -174,7 +174,7 @@ extern void ada_emit_char (int, struct type *, struct ui_file *, int, int);
 extern void ada_printchar (int, struct type *, struct ui_file *);
 
 extern void ada_printstr (struct ui_file *, struct type *, const gdb_byte *,
-			  unsigned int, int,
+			  unsigned int, const char *, int,
 			  const struct value_print_options *);
 
 struct value *ada_convert_actual (struct value *actual,
@@ -304,12 +304,6 @@ extern DOUBLEST ada_delta (struct type *);
 extern DOUBLEST ada_fixed_to_float (struct type *, LONGEST);
 
 extern LONGEST ada_float_to_fixed (struct type *, DOUBLEST);
-
-extern int ada_is_vax_floating_type (struct type *);
-
-extern int ada_vax_float_type_suffix (struct type *);
-
-extern struct value *ada_vax_float_print_function (struct type *);
 
 extern struct type *ada_system_address_type (void);
 

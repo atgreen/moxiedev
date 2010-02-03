@@ -43,10 +43,6 @@
 #define O_NOCTTY 0
 #endif
 
-#if defined (SIGIO) && defined (FASYNC) && defined (FD_SET) && defined (F_SETOWN)
-static void handle_sigio (int);
-#endif
-
 extern void _initialize_inflow (void);
 
 static void pass_signal (int);
@@ -637,7 +633,7 @@ new_tty_prefork (const char *ttyname)
   inferior_thisrun_terminal = ttyname;
 }
 
-
+#if !defined(__GO32__) && !defined(_WIN32)
 /* If RESULT, assumed to be the return value from a system call, is
    negative, print the error message indicated by errno and exit.
    MSG should identify the operation that failed.  */
@@ -650,6 +646,7 @@ check_syscall (const char *msg, int result)
       _exit (1);
     }
 }
+#endif
 
 void
 new_tty (void)

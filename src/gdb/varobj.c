@@ -293,8 +293,12 @@ static int varobj_value_is_changeable_p (struct varobj *var);
 
 static int is_root_p (struct varobj *var);
 
+#if HAVE_PYTHON
+
 static struct varobj *
 varobj_add_child (struct varobj *var, const char *name, struct value *value);
+
+#endif /* HAVE_PYTHON */
 
 /* C implementation */
 
@@ -759,12 +763,13 @@ varobj_delete (struct varobj *var, char ***dellist, int only_children)
   return delcount;
 }
 
+#if HAVE_PYTHON
+
 /* Convenience function for varobj_set_visualizer.  Instantiate a
    pretty-printer for a given value.  */
 static PyObject *
 instantiate_pretty_printer (PyObject *constructor, struct value *value)
 {
-#if HAVE_PYTHON
   PyObject *val_obj = NULL; 
   PyObject *printer;
 
@@ -775,9 +780,10 @@ instantiate_pretty_printer (PyObject *constructor, struct value *value)
   printer = PyObject_CallFunctionObjArgs (constructor, val_obj, NULL);
   Py_DECREF (val_obj);
   return printer;
-#endif
   return NULL;
 }
+
+#endif
 
 /* Set/Get variable object display format */
 
@@ -899,6 +905,8 @@ restrict_range (VEC (varobj_p) *children, int *from, int *to)
     }
 }
 
+#if HAVE_PYTHON
+
 /* A helper for update_dynamic_varobj_children that installs a new
    child when needed.  */
 
@@ -934,8 +942,6 @@ install_dynamic_child (struct varobj *var,
 	VEC_safe_push (varobj_p, *unchanged, existing);
     }
 }
-
-#if HAVE_PYTHON
 
 static int
 dynamic_varobj_has_child_method (struct varobj *var)
@@ -1158,6 +1164,8 @@ varobj_list_children (struct varobj *var, int *from, int *to)
   return var->children;
 }
 
+#if HAVE_PYTHON
+
 static struct varobj *
 varobj_add_child (struct varobj *var, const char *name, struct value *value)
 {
@@ -1167,6 +1175,8 @@ varobj_add_child (struct varobj *var, const char *name, struct value *value)
   VEC_safe_push (varobj_p, var->children, v);
   return v;
 }
+
+#endif /* HAVE_PYTHON */
 
 /* Obtain the type of an object Variable as a string similar to the one gdb
    prints on the console */
@@ -2453,11 +2463,15 @@ value_get_print_value (struct value *value, enum varobj_display_formats format,
   struct cleanup *old_chain;
   gdb_byte *thevalue = NULL;
   struct value_print_options opts;
-  int len = 0;
+  struct type *type = NULL;
+  long len = 0;
+  char *encoding = NULL;
+  struct gdbarch *gdbarch = NULL;
 
   if (value == NULL)
     return NULL;
 
+  gdbarch = get_type_arch (value_type (value));
 #if HAVE_PYTHON
   {
     struct cleanup *back_to = varobj_ensure_python_env (var);
@@ -2489,20 +2503,31 @@ value_get_print_value (struct value *value, enum varobj_display_formats format,
 						  &replacement);
 	    if (output)
 	      {
-		PyObject *py_str
-		  = python_string_to_target_python_string (output);
-		if (py_str)
+		if (gdbpy_is_lazy_string (output))
 		  {
-		    char *s = PyString_AsString (py_str);
-		    len = PyString_Size (py_str);
-		    thevalue = xmemdup (s, len + 1, len + 1);
-		    Py_DECREF (py_str);
+		    thevalue = gdbpy_extract_lazy_string (output, &type,
+							  &len, &encoding);
+		    string_print = 1;
+		  }
+		else
+		  {
+		    PyObject *py_str
+		      = python_string_to_target_python_string (output);
+		    if (py_str)
+		      {
+			char *s = PyString_AsString (py_str);
+			len = PyString_Size (py_str);
+			thevalue = xmemdup (s, len + 1, len + 1);
+			type = builtin_type (gdbarch)->builtin_char;
+			Py_DECREF (py_str);
+		      }
 		  }
 		Py_DECREF (output);
 	      }
 	    if (thevalue && !string_print)
 	      {
 		do_cleanups (back_to);
+		xfree (encoding);
 		return thevalue;
 	      }
 	    if (replacement)
@@ -2521,10 +2546,9 @@ value_get_print_value (struct value *value, enum varobj_display_formats format,
   opts.raw = 1;
   if (thevalue)
     {
-      struct gdbarch *gdbarch = get_type_arch (value_type (value));
       make_cleanup (xfree, thevalue);
-      LA_PRINT_STRING (stb, builtin_type (gdbarch)->builtin_char,
-		       thevalue, len, 0, &opts);
+      make_cleanup (xfree, encoding);
+      LA_PRINT_STRING (stb, type, thevalue, len, encoding, 0, &opts);
     }
   else
     common_val_print (value, stb, 0, &opts, current_language);

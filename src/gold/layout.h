@@ -51,6 +51,7 @@ class Output_segment_headers;
 class Output_file_header;
 class Output_segment;
 class Output_data;
+class Output_data_reloc_generic;
 class Output_data_dynamic;
 class Output_symtab_xindex;
 class Output_reduced_debug_abbrev_section;
@@ -555,6 +556,14 @@ class Layout
   Incremental_inputs*
   incremental_inputs()
   { return this->incremental_inputs_; }
+
+  // For the target-specific code to add dynamic tags which are common
+  // to most targets.
+  void
+  add_target_dynamic_tags(bool use_rel, const Output_data* plt_got,
+			  const Output_data* plt_rel,
+			  const Output_data_reloc_generic* dyn_rel,
+			  bool add_debug);
 
   // Compute and write out the build ID if needed.
   void

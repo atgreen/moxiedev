@@ -392,7 +392,7 @@ enable_break (void)
 
    SYNOPSIS
 
-   void solib_create_inferior_hook ()
+   void solib_create_inferior_hook (int from_tty)
 
    DESCRIPTION
 
@@ -437,10 +437,22 @@ enable_break (void)
  */
 
 static void
-irix_solib_create_inferior_hook (void)
+irix_solib_create_inferior_hook (int from_tty)
 {
   struct inferior *inf;
   struct thread_info *tp;
+
+  inf = current_inferior ();
+
+  /* If we are attaching to the inferior, the shared libraries
+     have already been mapped, so nothing more to do.  */
+  if (inf->attach_flag)
+    return;
+
+  /* Likewise when debugging from a core file, the shared libraries
+     have already been mapped, so nothing more to do.  */
+  if (!target_can_run (&current_target))
+    return;
 
   if (!enable_break ())
     {
@@ -453,7 +465,6 @@ irix_solib_create_inferior_hook (void)
      can go groveling around in the dynamic linker structures to find
      out what we need to know about them. */
 
-  inf = current_inferior ();
   tp = inferior_thread ();
 
   clear_proceed_status ();

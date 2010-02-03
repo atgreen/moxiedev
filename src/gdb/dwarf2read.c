@@ -926,6 +926,13 @@ static void dwarf2_const_value_data (struct attribute *attr,
 
 static struct type *die_type (struct die_info *, struct dwarf2_cu *);
 
+static int need_gnat_info (struct dwarf2_cu *);
+
+static struct type *die_descriptive_type (struct die_info *, struct dwarf2_cu *);
+
+static void set_descriptive_type (struct type *, struct die_info *,
+				  struct dwarf2_cu *);
+
 static struct type *die_containing_type (struct die_info *,
 					 struct dwarf2_cu *);
 
@@ -2009,12 +2016,6 @@ process_psymtab_comp_unit (struct objfile *objfile,
     (objfile->static_psymbols.list + pst->statics_offset);
   sort_pst_symbols (pst);
 
-  /* If there is already a psymtab or symtab for a file of this
-     name, remove it. (If there is a symtab, more drastic things
-     also happen.) This happens in VxWorks.  */
-  if (! this_cu->from_debug_types)
-    free_named_symtabs (pst->filename);
-
   info_ptr = (beg_of_comp_unit + cu.header.length
 	      + cu.header.initial_length_size);
 
@@ -2385,7 +2386,8 @@ partial_die_parent_scope (struct partial_die_info *pdi,
       || parent->tag == DW_TAG_structure_type
       || parent->tag == DW_TAG_class_type
       || parent->tag == DW_TAG_interface_type
-      || parent->tag == DW_TAG_union_type)
+      || parent->tag == DW_TAG_union_type
+      || parent->tag == DW_TAG_enumeration_type)
     {
       if (grandparent_scope == NULL)
 	parent->scope = parent->name;
@@ -2393,7 +2395,7 @@ partial_die_parent_scope (struct partial_die_info *pdi,
 	parent->scope = typename_concat (&cu->comp_unit_obstack, grandparent_scope,
 					 parent->name, cu);
     }
-  else if (parent->tag == DW_TAG_enumeration_type)
+  else if (parent->tag == DW_TAG_enumerator)
     /* Enumerators should not get the name of the enumeration as a prefix.  */
     parent->scope = grandparent_scope;
   else
@@ -3950,7 +3952,7 @@ read_lexical_block_scope (struct die_info *die, struct dwarf2_cu *cu)
     }
   new = pop_context ();
 
-  if (local_symbols != NULL)
+  if (local_symbols != NULL || using_directives != NULL)
     {
       struct block *block
         = finish_block (0, &local_symbols, new->old_blocks, new->start_addr,
@@ -4564,7 +4566,7 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
     TYPE_ALLOC (type, sizeof (struct field) * nfields);
   memset (TYPE_FIELDS (type), 0, sizeof (struct field) * nfields);
 
-  if (fip->non_public_fields)
+  if (fip->non_public_fields && cu->language != language_ada)
     {
       ALLOCATE_CPLUS_STRUCT_TYPE (type);
 
@@ -4583,7 +4585,7 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
 
   /* If the type has baseclasses, allocate and clear a bit vector for
      TYPE_FIELD_VIRTUAL_BITS.  */
-  if (fip->nbaseclasses)
+  if (fip->nbaseclasses && cu->language != language_ada)
     {
       int num_bytes = B_BYTES (fip->nbaseclasses);
       unsigned char *pointer;
@@ -4617,11 +4619,13 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
       switch (fieldp->accessibility)
 	{
 	case DW_ACCESS_private:
-	  SET_TYPE_FIELD_PRIVATE (type, nfields);
+	  if (cu->language != language_ada)
+	    SET_TYPE_FIELD_PRIVATE (type, nfields);
 	  break;
 
 	case DW_ACCESS_protected:
-	  SET_TYPE_FIELD_PROTECTED (type, nfields);
+	  if (cu->language != language_ada)
+	    SET_TYPE_FIELD_PROTECTED (type, nfields);
 	  break;
 
 	case DW_ACCESS_public:
@@ -4641,6 +4645,8 @@ dwarf2_attach_fields_to_type (struct field_info *fip, struct type *type,
 	    {
 	    case DW_VIRTUALITY_virtual:
 	    case DW_VIRTUALITY_pure_virtual:
+	      if (cu->language == language_ada)
+		error ("unexpected virtuality in component of Ada type");
 	      SET_TYPE_FIELD_VIRTUAL (type, nfields);
 	      break;
 	    }
@@ -4663,6 +4669,9 @@ dwarf2_add_member_fn (struct field_info *fip, struct die_info *die,
   char *physname;
   struct nextfnfield *new_fnfield;
   struct type *this_type;
+
+  if (cu->language == language_ada)
+    error ("unexpected member function in Ada type");
 
   /* Get name of member function.  */
   fieldname = dwarf2_name (die, cu);
@@ -4837,6 +4846,9 @@ dwarf2_attach_fn_fields_to_type (struct field_info *fip, struct type *type,
   int total_length = 0;
   int i;
 
+  if (cu->language == language_ada)
+    error ("unexpected member functions in Ada type");
+
   ALLOCATE_CPLUS_STRUCT_TYPE (type);
   TYPE_FN_FIELDLISTS (type) = (struct fn_fieldlist *)
     TYPE_ALLOC (type, sizeof (struct fn_fieldlist) * fip->nfnfields);
@@ -4880,68 +4892,48 @@ is_vtable_name (const char *name, struct dwarf2_cu *cu)
 }
 
 /* GCC outputs unnamed structures that are really pointers to member
-   functions, with the ABI-specified layout.  If DIE (from CU) describes
-   such a structure, set its type, and return nonzero.  Otherwise return
-   zero.
+   functions, with the ABI-specified layout.  If TYPE describes
+   such a structure, smash it into a member function type.
 
    GCC shouldn't do this; it should just output pointer to member DIEs.
    This is GCC PR debug/28767.  */
 
-static struct type *
-quirk_gcc_member_function_pointer (struct die_info *die, struct dwarf2_cu *cu)
+static void
+quirk_gcc_member_function_pointer (struct type *type, struct objfile *objfile)
 {
-  struct objfile *objfile = cu->objfile;
-  struct type *type;
-  struct die_info *pfn_die, *delta_die;
-  struct attribute *pfn_name, *delta_name;
-  struct type *pfn_type, *domain_type;
+  struct type *pfn_type, *domain_type, *new_type;
 
   /* Check for a structure with no name and two children.  */
-  if (die->tag != DW_TAG_structure_type
-      || dwarf2_attr (die, DW_AT_name, cu) != NULL
-      || die->child == NULL
-      || die->child->sibling == NULL
-      || (die->child->sibling->sibling != NULL
-	  && die->child->sibling->sibling->tag != DW_TAG_padding))
-    return NULL;
+  if (TYPE_CODE (type) != TYPE_CODE_STRUCT || TYPE_NFIELDS (type) != 2)
+    return;
 
   /* Check for __pfn and __delta members.  */
-  pfn_die = die->child;
-  pfn_name = dwarf2_attr (pfn_die, DW_AT_name, cu);
-  if (pfn_die->tag != DW_TAG_member
-      || pfn_name == NULL
-      || DW_STRING (pfn_name) == NULL
-      || strcmp ("__pfn", DW_STRING (pfn_name)) != 0)
-    return NULL;
-
-  delta_die = pfn_die->sibling;
-  delta_name = dwarf2_attr (delta_die, DW_AT_name, cu);
-  if (delta_die->tag != DW_TAG_member
-      || delta_name == NULL
-      || DW_STRING (delta_name) == NULL
-      || strcmp ("__delta", DW_STRING (delta_name)) != 0)
-    return NULL;
+  if (TYPE_FIELD_NAME (type, 0) == NULL
+      || strcmp (TYPE_FIELD_NAME (type, 0), "__pfn") != 0
+      || TYPE_FIELD_NAME (type, 1) == NULL
+      || strcmp (TYPE_FIELD_NAME (type, 1), "__delta") != 0)
+    return;
 
   /* Find the type of the method.  */
-  pfn_type = die_type (pfn_die, cu);
+  pfn_type = TYPE_FIELD_TYPE (type, 0);
   if (pfn_type == NULL
       || TYPE_CODE (pfn_type) != TYPE_CODE_PTR
       || TYPE_CODE (TYPE_TARGET_TYPE (pfn_type)) != TYPE_CODE_FUNC)
-    return NULL;
+    return;
 
   /* Look for the "this" argument.  */
   pfn_type = TYPE_TARGET_TYPE (pfn_type);
   if (TYPE_NFIELDS (pfn_type) == 0
+      /* || TYPE_FIELD_TYPE (pfn_type, 0) == NULL */
       || TYPE_CODE (TYPE_FIELD_TYPE (pfn_type, 0)) != TYPE_CODE_PTR)
-    return NULL;
+    return;
 
   domain_type = TYPE_TARGET_TYPE (TYPE_FIELD_TYPE (pfn_type, 0));
-  type = alloc_type (objfile);
-  smash_to_method_type (type, domain_type, TYPE_TARGET_TYPE (pfn_type),
+  new_type = alloc_type (objfile);
+  smash_to_method_type (new_type, domain_type, TYPE_TARGET_TYPE (pfn_type),
 			TYPE_FIELDS (pfn_type), TYPE_NFIELDS (pfn_type),
 			TYPE_VARARGS (pfn_type));
-  type = lookup_methodptr_type (type);
-  return set_die_type (die, type, cu);
+  smash_to_methodptr_type (type, new_type);
 }
 
 /* Called when we find the DIE that starts a structure or union scope
@@ -4968,10 +4960,6 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   struct attribute *attr;
   char *name;
   struct cleanup *back_to = make_cleanup (null_cleanup, 0);
-
-  type = quirk_gcc_member_function_pointer (die, cu);
-  if (type)
-    return type;
 
   /* If the definition of this type lives in .debug_types, read that type.
      Don't follow DW_AT_specification though, that will take us back up
@@ -5019,10 +5007,11 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
     }
   else
     {
-      /* FIXME: TYPE_CODE_CLASS is currently defined to TYPE_CODE_STRUCT
-         in gdbtypes.h.  */
       TYPE_CODE (type) = TYPE_CODE_CLASS;
     }
+
+  if (cu->language == language_cplus && die->tag == DW_TAG_class_type)
+    TYPE_DECLARED_CLASS (type) = 1;
 
   attr = dwarf2_attr (die, DW_AT_byte_size, cu);
   if (attr)
@@ -5037,6 +5026,8 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
   TYPE_STUB_SUPPORTED (type) = 1;
   if (die_is_declaration (die, cu))
     TYPE_STUB (type) = 1;
+
+  set_descriptive_type (type, die, cu);
 
   /* We need to add the type field to the die immediately so we don't
      infinitely recurse when dealing with pointers to the structure
@@ -5148,6 +5139,8 @@ read_structure_type (struct die_info *die, struct dwarf2_cu *cu)
 	    }
 	}
     }
+
+  quirk_gcc_member_function_pointer (type, cu->objfile);
 
   do_cleanups (back_to);
   return type;
@@ -5451,6 +5444,8 @@ read_array_type (struct die_info *die, struct dwarf2_cu *cu)
   if (name)
     TYPE_NAME (type) = name;
   
+  set_descriptive_type (type, die, cu);
+
   do_cleanups (back_to);
 
   /* Install the type in the die. */
@@ -6113,6 +6108,8 @@ read_subrange_type (struct die_info *die, struct dwarf2_cu *cu)
   if (attr)
     TYPE_LENGTH (range_type) = DW_UNSND (attr);
 
+  set_descriptive_type (range_type, die, cu);
+
   return set_die_type (die, range_type, cu);
 }
   
@@ -6763,7 +6760,7 @@ read_partial_die (struct partial_die_info *part_die,
 	    default:
 	      part_die->name
 		= dwarf2_canonicalize_name (DW_STRING (&attr), cu,
-					    &cu->comp_unit_obstack);
+					    &cu->objfile->objfile_obstack);
 	      break;
 	    }
 	  break;
@@ -8766,6 +8763,67 @@ die_type (struct die_info *die, struct dwarf2_cu *cu)
 		      cu->objfile->name);
     }
   return type;
+}
+
+/* True iff CU's producer generates GNAT Ada auxiliary information
+   that allows to find parallel types through that information instead
+   of having to do expensive parallel lookups by type name.  */
+
+static int
+need_gnat_info (struct dwarf2_cu *cu)
+{
+  /* FIXME: brobecker/2010-10-12: As of now, only the AdaCore version
+     of GNAT produces this auxiliary information, without any indication
+     that it is produced.  Part of enhancing the FSF version of GNAT
+     to produce that information will be to put in place an indicator
+     that we can use in order to determine whether the descriptive type
+     info is available or not.  One suggestion that has been made is
+     to use a new attribute, attached to the CU die.  For now, assume
+     that the descriptive type info is not available.  */
+  return 0;
+}
+
+
+/* Return the auxiliary type of the die in question using its
+   DW_AT_GNAT_descriptive_type attribute.  Returns NULL if the
+   attribute is not present.  */
+
+static struct type *
+die_descriptive_type (struct die_info *die, struct dwarf2_cu *cu)
+{
+  struct type *type;
+  struct attribute *type_attr;
+  struct die_info *type_die;
+
+  type_attr = dwarf2_attr (die, DW_AT_GNAT_descriptive_type, cu);
+  if (!type_attr)
+    return NULL;
+
+  type_die = follow_die_ref (die, type_attr, &cu);
+  type = tag_type_to_type (type_die, cu);
+  if (!type)
+    {
+      dump_die_for_error (type_die);
+      error (_("Dwarf Error: Problem turning type die at offset into gdb type [in module %s]"),
+		      cu->objfile->name);
+    }
+  return type;
+}
+
+/* If DIE has a descriptive_type attribute, then set the TYPE's
+   descriptive type accordingly.  */
+
+static void
+set_descriptive_type (struct type *type, struct die_info *die,
+		      struct dwarf2_cu *cu)
+{
+  struct type *descriptive_type = die_descriptive_type (die, cu);
+
+  if (descriptive_type)
+    {
+      ALLOCATE_GNAT_AUX_TYPE (type);
+      TYPE_DESCRIPTIVE_TYPE (type) = descriptive_type;
+    }
 }
 
 /* Return the containing type of the die in question using its
@@ -11723,6 +11781,19 @@ static struct type *
 set_die_type (struct die_info *die, struct type *type, struct dwarf2_cu *cu)
 {
   struct dwarf2_offset_and_type **slot, ofs;
+
+  /* For Ada types, make sure that the gnat-specific data is always
+     initialized (if not already set).  There are a few types where
+     we should not be doing so, because the type-specific area is
+     already used to hold some other piece of info (eg: TYPE_CODE_FLT
+     where the type-specific area is used to store the floatformat).
+     But this is not a problem, because the gnat-specific information
+     is actually not needed for these types.  */
+  if (need_gnat_info (cu)
+      && TYPE_CODE (type) != TYPE_CODE_FUNC
+      && TYPE_CODE (type) != TYPE_CODE_FLT
+      && !HAVE_GNAT_AUX_INFO (type))
+    INIT_GNAT_SPECIFIC (type);
 
   if (cu->type_hash == NULL)
     {

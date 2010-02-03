@@ -84,6 +84,7 @@ CCFILES = \
 	workqueue-threads.cc
 
 HFILES = \
+	arm-reloc-property.h \
 	archive.h \
 	attributes.h \
 	binary.h \
@@ -134,16 +135,18 @@ HFILES = \
 YFILES = \
 	yyscript.y
 
+DEFFILES = arm-reloc.def
+
 EXTRA_DIST = yyscript.c yyscript.h
 
 TARGETSOURCES = \
-	i386.cc x86_64.cc sparc.cc powerpc.cc arm.cc
+	i386.cc x86_64.cc sparc.cc powerpc.cc arm.cc arm-reloc-property.cc
 
 ALL_TARGETOBJS = \
 	i386.$(OBJEXT) x86_64.$(OBJEXT) sparc.$(OBJEXT) powerpc.$(OBJEXT) \
-	arm.$(OBJEXT)
+	arm.$(OBJEXT) arm-reloc-property.$(OBJEXT)
 
-libgold_a_SOURCES = $(CCFILES) $(HFILES) $(YFILES)
+libgold_a_SOURCES = $(CCFILES) $(HFILES) $(YFILES) $(DEFFILES)
 libgold_a_LIBADD = $(LIBOBJS)
 
 sources_var = main.cc
@@ -159,8 +162,8 @@ EXTRA_ld_new_SOURCES = $(TARGETSOURCES)
 
 incremental_dump_SOURCES = incremental-dump.cc
 incremental_dump_DEPENDENCIES = $(TARGETOBJS) libgold.a $(LIBIBERTY) \
-	 $(THREADSLIB) $(LIBDL)
-incremental_dump_LDADD = $(TARGETOBJS) libgold.a $(LIBIBERTY) \
+	$(LIBINTL_DEP)
+incremental_dump_LDADD = $(TARGETOBJS) libgold.a $(LIBIBERTY) $(LIBINTL) \
 	 $(THREADSLIB) $(LIBDL)
 
 # Use an explicit dependency for the bison generated header file.

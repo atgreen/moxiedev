@@ -46,8 +46,6 @@
 
 static void target_info (char *, int);
 
-static void kill_or_be_killed (int);
-
 static void default_terminal_info (char *, int);
 
 static int default_watchpoint_addr_within_range (struct target_ops *,
@@ -72,8 +70,6 @@ void target_ignore (void);
 static void target_command (char *, int);
 
 static struct target_ops *find_default_run_target (char *);
-
-static void nosupport_runtime (void);
 
 static LONGEST default_xfer_partial (struct target_ops *ops,
 				     enum target_object object,
@@ -520,46 +516,9 @@ nosymbol (char *name, CORE_ADDR *addrp)
 }
 
 static void
-nosupport_runtime (void)
-{
-  if (ptid_equal (inferior_ptid, null_ptid))
-    noprocess ();
-  else
-    error (_("No run-time support for this"));
-}
-
-
-static void
 default_terminal_info (char *args, int from_tty)
 {
   printf_unfiltered (_("No saved terminal information.\n"));
-}
-
-/* This is the default target_create_inferior and target_attach function.
-   If the current target is executing, it asks whether to kill it off.
-   If this function returns without calling error(), it has killed off
-   the target, and the operation should be attempted.  */
-
-static void
-kill_or_be_killed (int from_tty)
-{
-  if (target_has_execution)
-    {
-      printf_unfiltered (_("You are already running a program:\n"));
-      target_files_info ();
-      if (query (_("Kill it? ")))
-	{
-	  target_kill ();
-	  if (target_has_execution)
-	    error (_("Killing the program did not help."));
-	  return;
-	}
-      else
-	{
-	  error (_("Program not killed."));
-	}
-    }
-  tcomplain ();
 }
 
 /* A default implementation for the to_get_ada_task_ptid target method.
@@ -685,6 +644,20 @@ update_current_target (void)
       INHERIT (to_get_ada_task_ptid, t);
       /* Do not inherit to_search_memory.  */
       INHERIT (to_supports_multi_process, t);
+      INHERIT (to_trace_init, t);
+      INHERIT (to_download_tracepoint, t);
+      INHERIT (to_download_trace_state_variable, t);
+      INHERIT (to_trace_set_readonly_regions, t);
+      INHERIT (to_trace_start, t);
+      INHERIT (to_get_trace_status, t);
+      INHERIT (to_trace_stop, t);
+      INHERIT (to_trace_find, t);
+      INHERIT (to_get_trace_state_variable_value, t);
+      INHERIT (to_save_trace_data, t);
+      INHERIT (to_upload_tracepoints, t);
+      INHERIT (to_upload_trace_state_variables, t);
+      INHERIT (to_get_raw_trace_data, t);
+      INHERIT (to_set_disconnected_tracing, t);
       INHERIT (to_magic, t);
       /* Do not inherit to_memory_map.  */
       /* Do not inherit to_flash_erase.  */
@@ -833,6 +806,48 @@ update_current_target (void)
   de_fault (to_supports_multi_process,
 	    (int (*) (void))
 	    return_zero);
+  de_fault (to_trace_init,
+	    (void (*) (void))
+	    tcomplain);
+  de_fault (to_download_tracepoint,
+	    (void (*) (struct breakpoint *))
+	    tcomplain);
+  de_fault (to_download_trace_state_variable,
+	    (void (*) (struct trace_state_variable *))
+	    tcomplain);
+  de_fault (to_trace_set_readonly_regions,
+	    (void (*) (void))
+	    tcomplain);
+  de_fault (to_trace_start,
+	    (void (*) (void))
+	    tcomplain);
+  de_fault (to_get_trace_status,
+	    (int (*) (struct trace_status *))
+	    return_minus_one);
+  de_fault (to_trace_stop,
+	    (void (*) (void))
+	    tcomplain);
+  de_fault (to_trace_find,
+	    (int (*) (enum trace_find_type, int, ULONGEST, ULONGEST, int *))
+	    return_zero);
+  de_fault (to_get_trace_state_variable_value,
+	    (int (*) (int, LONGEST *))
+	    return_zero);
+  de_fault (to_save_trace_data,
+	    (int (*) (char *))
+	    tcomplain);
+  de_fault (to_upload_tracepoints,
+	    (int (*) (struct uploaded_tp **))
+	    return_zero);
+  de_fault (to_upload_trace_state_variables,
+	    (int (*) (struct uploaded_tsv **))
+	    return_zero);
+  de_fault (to_get_raw_trace_data,
+	    (LONGEST (*) (gdb_byte *, ULONGEST, LONGEST))
+	    tcomplain);
+  de_fault (to_set_disconnected_tracing,
+	    (void (*) (int))
+	    tcomplain);
 #undef de_fault
 
   /* Finally, position the target-stack beneath the squashed
@@ -3022,6 +3037,26 @@ target_store_registers (struct regcache *regcache, int regno)
     }
 
   noprocess ();
+}
+
+int
+target_core_of_thread (ptid_t ptid)
+{
+  struct target_ops *t;
+
+  for (t = current_target.beneath; t != NULL; t = t->beneath)
+    {
+      if (t->to_core_of_thread != NULL)
+	{
+	  int retval = t->to_core_of_thread (t, ptid);
+	  if (targetdebug)
+	    fprintf_unfiltered (gdb_stdlog, "target_core_of_thread (%d) = %d\n",
+				PIDGET (ptid), retval);
+	  return retval;
+	}
+    }
+
+  return -1;
 }
 
 static void

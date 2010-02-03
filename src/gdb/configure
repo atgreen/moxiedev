@@ -8328,6 +8328,7 @@ else
     am_cv_func_iconv="no, consider installing GNU libiconv"
     am_cv_lib_iconv=no
     am_cv_use_build_libiconv=no
+    am_cv_build_libiconv_path=
 
     # If libiconv is part of the build tree, then try using it over
     # any system iconv.
@@ -8353,6 +8354,7 @@ iconv_t cd = iconv_open("","");
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
   am_cv_use_build_libiconv=yes
+          am_cv_build_libiconv_path=$lib_dir/libiconv.a
           am_cv_lib_iconv=yes
           am_cv_func_iconv=yes
 fi
@@ -8361,7 +8363,6 @@ rm -f core conftest.err conftest.$ac_objext \
         LIBS="$am_save_LIBS"
         CPPFLAGS="$am_save_CPPFLAGS"
         if test "$am_cv_use_build_libiconv" = "yes"; then
-          BUILD_LIBICONV_LIBDIR=$lib_dir
           break
         fi
       done
@@ -8438,7 +8439,7 @@ $as_echo "$am_cv_func_iconv" >&6; }
     LIBICONV_INCLUDE=
   fi
   if test "$am_cv_use_build_libiconv" = yes; then
-    LIBICONV="$BUILD_LIBICONV_LIBDIR/libiconv.a"
+    LIBICONV="$am_cv_build_libiconv_path"
     LIBICONV_LIBDIR=""
     LIBICONV_INCLUDE="$BUILD_LIBICONV_INCLUDE"
   fi
@@ -8517,11 +8518,11 @@ _ACEOF
 # broken on alpha-osf.
 
 case $host_os in
-  alpha*-*-osf* )
-    if "$enable_tui" = "yes"; then
+  osf* )
+    if test x"$enable_tui" = xyes; then
       as_fn_error "Building GDB with TUI mode is not supported on this host" "$LINENO" 5
     fi
-    if "$enable_tui" = "auto"; then
+    if test x"$enable_tui" = xauto; then
       enable_tui=no
     fi
     ;;
@@ -11232,7 +11233,8 @@ fi
 for ac_func in canonicalize_file_name realpath getrusage getuid \
 		getgid pipe poll pread64 sbrk setpgid setpgrp setsid \
 		sigaction sigprocmask sigsetmask socketpair syscall \
-		ttrace wborder setlocale iconvlist libiconvlist btowc
+		ttrace wborder setlocale iconvlist libiconvlist btowc \
+		setrlimit getrlimit
 do :
   as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
 ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
@@ -11896,6 +11898,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -11931,6 +11935,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -11966,6 +11972,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12001,6 +12009,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12036,6 +12046,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12071,6 +12083,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12106,6 +12120,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12141,6 +12157,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12176,6 +12194,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12211,6 +12231,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12246,6 +12268,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12281,6 +12305,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12316,6 +12342,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -12351,6 +12379,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -13405,7 +13435,8 @@ fi
 # gdb/doc/gdbint.texinfo.
 build_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith \
 -Wformat-nonliteral -Wno-pointer-sign \
--Wno-unused -Wunused-value -Wno-switch -Wno-char-subscripts"
+-Wno-unused -Wunused-value -Wunused-function \
+-Wno-switch -Wno-char-subscripts"
 
 # Enable -Wno-format by default when using gcc on mingw since many
 # GCC versions complain about %I64.

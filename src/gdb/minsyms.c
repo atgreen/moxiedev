@@ -216,7 +216,7 @@ lookup_minimal_symbol (const char *name, const char *sfile,
        objfile = objfile->next)
     {
       if (objf == NULL || objf == objfile
-	  || objf->separate_debug_objfile == objfile)
+	  || objf == objfile->separate_debug_objfile_backlink)
 	{
 	  /* Do two passes: the first over the ordinary hash table,
 	     and the second over the demangled hash table.  */
@@ -324,7 +324,7 @@ lookup_minimal_symbol_text (const char *name, struct objfile *objf)
        objfile = objfile->next)
     {
       if (objf == NULL || objf == objfile
-	  || objf->separate_debug_objfile == objfile)
+	  || objf == objfile->separate_debug_objfile_backlink)
 	{
 	  for (msymbol = objfile->msymbol_hash[hash];
 	       msymbol != NULL && found_symbol == NULL;
@@ -377,7 +377,7 @@ lookup_minimal_symbol_by_pc_name (CORE_ADDR pc, const char *name,
        objfile = objfile->next)
     {
       if (objf == NULL || objf == objfile
-	  || objf->separate_debug_objfile == objfile)
+	  || objf == objfile->separate_debug_objfile_backlink)
 	{
 	  for (msymbol = objfile->msymbol_hash[hash];
 	       msymbol != NULL;
@@ -416,7 +416,7 @@ lookup_minimal_symbol_solib_trampoline (const char *name,
        objfile = objfile->next)
     {
       if (objf == NULL || objf == objfile
-	  || objf->separate_debug_objfile == objfile)
+	  || objf == objfile->separate_debug_objfile_backlink)
 	{
 	  for (msymbol = objfile->msymbol_hash[hash];
 	       msymbol != NULL && found_symbol == NULL;
@@ -473,11 +473,10 @@ lookup_minimal_symbol_by_pc_section_1 (CORE_ADDR pc,
      no telling which one will have the minimal symbols.  */
 
   gdb_assert (section != NULL);
-  objfile = section->objfile;
-  if (objfile->separate_debug_objfile)
-    objfile = objfile->separate_debug_objfile;
 
-  for (; objfile != NULL; objfile = objfile->separate_debug_objfile_backlink)
+  for (objfile = section->objfile;
+       objfile != NULL;
+       objfile = objfile_separate_debug_iterate (section->objfile, objfile))
     {
       /* If this objfile has a minimal symbol table, go search it using
          a binary search.  Note that a minimal symbol table always consists
@@ -693,6 +692,37 @@ struct minimal_symbol *
 lookup_minimal_symbol_by_pc (CORE_ADDR pc)
 {
   return lookup_minimal_symbol_by_pc_section (pc, NULL);
+}
+
+/* Find the minimal symbol named NAME, and return both the minsym
+   struct and its objfile.  This only checks the linkage name.  Sets
+   *OBJFILE_P and returns the minimal symbol, if it is found.  If it
+   is not found, returns NULL.  */
+
+struct minimal_symbol *
+lookup_minimal_symbol_and_objfile (const char *name,
+				   struct objfile **objfile_p)
+{
+  struct objfile *objfile;
+  unsigned int hash = msymbol_hash (name) % MINIMAL_SYMBOL_HASH_SIZE;
+
+  ALL_OBJFILES (objfile)
+    {
+      struct minimal_symbol *msym;
+
+      for (msym = objfile->msymbol_hash[hash];
+	   msym != NULL;
+	   msym = msym->hash_next)
+	{
+	  if (strcmp (SYMBOL_LINKAGE_NAME (msym), name) == 0)
+	    {
+	      *objfile_p = objfile;
+	      return msym;
+	    }
+	}
+    }
+
+  return 0;
 }
 
 

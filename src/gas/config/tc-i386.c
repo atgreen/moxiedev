@@ -448,6 +448,13 @@ static unsigned int no_cond_jump_promotion = 0;
 /* Encode SSE instructions with VEX prefix.  */
 static unsigned int sse2avx;
 
+/* Encode scalar AVX instructions with specific vector length.  */
+static enum
+  {
+    vex128 = 0,
+    vex256
+  } avxscalar;
+
 /* Pre-defined "_GLOBAL_OFFSET_TABLE_".  */
 static symbolS *GOT_symbol;
 
@@ -596,6 +603,8 @@ static const arch_entry cpu_arch[] =
     CPU_K8_FLAGS, 0 },
   { STRING_COMMA_LEN ("amdfam10"), PROCESSOR_AMDFAM10,
     CPU_AMDFAM10_FLAGS, 0 },
+  { STRING_COMMA_LEN ("amdfam15"), PROCESSOR_AMDFAM15,
+    CPU_AMDFAM15_FLAGS, 0 },
   { STRING_COMMA_LEN (".8087"), PROCESSOR_UNKNOWN,
     CPU_8087_FLAGS, 0 },
   { STRING_COMMA_LEN (".287"), PROCESSOR_UNKNOWN,
@@ -957,7 +966,8 @@ i386_align_code (fragS *fragP, int count)
      PROCESSOR_CORE, PROCESSOR_CORE2, PROCESSOR_COREI7, and
      PROCESSOR_GENERIC64, alt_long_patt will be used.
      3. For PROCESSOR_ATHLON, PROCESSOR_K6, PROCESSOR_K8 and
-     PROCESSOR_AMDFAM10, alt_short_patt will be used.
+     PROCESSOR_AMDFAM10, and PROCESSOR_AMDFAM15, alt_short_patt
+     will be used.
 
      When -mtune= isn't used, alt_long_patt will be used if
      cpu_arch_isa_flags has Cpu686. Otherwise, f32_patt will
@@ -1010,6 +1020,7 @@ i386_align_code (fragS *fragP, int count)
 	    case PROCESSOR_ATHLON:
 	    case PROCESSOR_K8:
 	    case PROCESSOR_AMDFAM10:
+	    case PROCESSOR_AMDFAM15:
 	      patt = alt_short_patt;
 	      break;
 	    case PROCESSOR_I386:
@@ -1037,6 +1048,7 @@ i386_align_code (fragS *fragP, int count)
 	    case PROCESSOR_ATHLON:
 	    case PROCESSOR_K8:
 	    case PROCESSOR_AMDFAM10:
+	    case PROCESSOR_AMDFAM15:
 	    case PROCESSOR_GENERIC32:
 	      /* We use cpu_arch_isa_flags to check if we CAN optimize
 		 for Cpu686.  */
@@ -2701,7 +2713,10 @@ build_vex_prefix (const insn_template *t)
       i.tm = t[1];
     }
 
-  vector_length = i.tm.opcode_modifier.vex == VEX256 ? 1 : 0;
+  if (i.tm.opcode_modifier.vex == VEXScalar)
+    vector_length = avxscalar;
+  else
+    vector_length = i.tm.opcode_modifier.vex == VEX256 ? 1 : 0;
 
   switch ((i.tm.base_opcode >> 8) & 0xff)
     {
@@ -2744,18 +2759,20 @@ build_vex_prefix (const insn_template *t)
       unsigned int m, w;
 
       i.vex.length = 3;
-      i.vex.bytes[0] = 0xc4;
 
       switch (i.tm.opcode_modifier.vexopcode)
 	{
 	case VEX0F:
 	  m = 0x1;
+	  i.vex.bytes[0] = 0xc4;
 	  break;
 	case VEX0F38:
 	  m = 0x2;
+	  i.vex.bytes[0] = 0xc4;
 	  break;
 	case VEX0F3A:
 	  m = 0x3;
+	  i.vex.bytes[0] = 0xc4;
 	  break;
 	case XOP08:
 	  m = 0x8;
@@ -3013,8 +3030,8 @@ md_assemble (char *line)
      instructions may define INT_OPCODE as well, so avoid this corner
      case for those instructions that use MODRM.  */
   if (i.tm.base_opcode == INT_OPCODE
-      && i.op[0].imms->X_add_number == 3
-      && !i.tm.opcode_modifier.modrm)
+      && !i.tm.opcode_modifier.modrm
+      && i.op[0].imms->X_add_number == 3)
     {
       i.tm.base_opcode = INT3_OPCODE;
       i.imm_operands = 0;
@@ -7861,6 +7878,7 @@ const char *md_shortopts = "qn";
 #define OPTION_MOLD_GCC (OPTION_MD_BASE + 9)
 #define OPTION_MSSE2AVX (OPTION_MD_BASE + 10)
 #define OPTION_MSSE_CHECK (OPTION_MD_BASE + 11)
+#define OPTION_MAVXSCALAR (OPTION_MSSE_CHECK + 11)
 
 struct option md_longopts[] =
 {
@@ -7879,6 +7897,7 @@ struct option md_longopts[] =
   {"mold-gcc", no_argument, NULL, OPTION_MOLD_GCC},
   {"msse2avx", no_argument, NULL, OPTION_MSSE2AVX},
   {"msse-check", required_argument, NULL, OPTION_MSSE_CHECK},
+  {"mavxscalar", required_argument, NULL, OPTION_MAVXSCALAR},
   {NULL, no_argument, NULL, 0}
 };
 size_t md_longopts_size = sizeof (md_longopts);
@@ -8089,6 +8108,15 @@ md_parse_option (int c, char *arg)
 	as_fatal (_("Invalid -msse-check= option: `%s'"), arg);
       break;
 
+    case OPTION_MAVXSCALAR:
+      if (strcasecmp (arg, "128") == 0)
+	avxscalar = vex128;
+      else if (strcasecmp (arg, "256") == 0)
+	avxscalar = vex256;
+      else
+	as_fatal (_("Invalid -mavxscalar= option: `%s'"), arg);
+      break;
+
     default:
       return 0;
     }
@@ -8212,6 +8240,9 @@ md_show_usage (FILE *stream)
   fprintf (stream, _("\
   -msse-check=[none|error|warning]\n\
                           check SSE instructions\n"));
+  fprintf (stream, _("\
+  -mavxscalar=[128|256]   encode scalar AVX instructions with specific vector\n\
+                           length\n"));
   fprintf (stream, _("\
   -mmnemonic=[att|intel]  use AT&T/Intel mnemonic\n"));
   fprintf (stream, _("\

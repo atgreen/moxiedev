@@ -174,6 +174,16 @@ struct sym_fns
 
 };
 
+extern struct section_addr_info *
+	   build_section_addr_info_from_objfile (const struct objfile *objfile);
+
+extern void relative_addr_info_to_section_offsets
+  (struct section_offsets *section_offsets, int num_sections,
+   struct section_addr_info *addrs);
+
+extern void addr_info_make_relative (struct section_addr_info *addrs,
+				     bfd *abfd);
+
 /* The default version of sym_fns.sym_offsets for readers that don't
    do anything special.  */
 
@@ -204,8 +214,6 @@ extern void init_psymbol_list (struct objfile *, int);
 extern void sort_pst_symbols (struct partial_symtab *);
 
 extern struct symtab *allocate_symtab (char *, struct objfile *);
-
-extern int free_named_symtabs (char *);
 
 extern void add_symtab_fns (struct sym_fns *);
 
@@ -238,20 +246,14 @@ extern struct objfile *symbol_file_add_from_bfd (bfd *, int,
                                                  struct section_addr_info *,
                                                  int);
 
-extern void symbol_file_add_separate (bfd *bfd, int symfile_flags,
-				      struct objfile *objfile);
+extern void symbol_file_add_separate (bfd *, int, struct objfile *);
 
-extern char *find_separate_debug_file_by_debuglink (struct objfile *objfile);
+extern char *find_separate_debug_file_by_debuglink (struct objfile *);
 
 /* Create a new section_addr_info, with room for NUM_SECTIONS.  */
 
 extern struct section_addr_info *alloc_section_addr_info (size_t
 							  num_sections);
-
-/* Return a freshly allocated copy of ADDRS.  The section names, if
-   any, are also freshly allocated copies of those in ADDRS.  */
-extern struct section_addr_info *(copy_section_addr_info 
-                                  (struct section_addr_info *addrs));
 
 /* Build (allocate and populate) a section_addr_info struct from an
    existing section table.  */

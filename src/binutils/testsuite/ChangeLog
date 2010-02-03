@@ -1,3 +1,44 @@
+2010-02-01  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* binutils-all/note-1.d: New.
+	* binutils-all/objcopy.exp: Add it.
+
+2010-01-30  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* binutils-all/windres/html.rc: Don't xfail x86_64-*-mingw*.
+	* binutils-all/windres/lang.rc: Likewise.
+	* binutils-all/windres/messagetable.rc: Likewise.
+	* binutils-all/windres/strtab1.rc: Likewise.
+	* binutils-all/windres/strtab2.rc: Likewise.
+	* binutils-all/windres/version.rc: Likewise.
+	* binutils-all/windres/version_cat.rc: Likewise.
+
+2010-01-19  Ian Lance Taylor  <iant@google.com>
+
+	* lib/utils-lib.exp (run_dump_test): Permit option values to use
+	$srcdir to refer to the source directory.
+	* binutils-all/add-section.d: New test.
+	* binutils-all/add-empty-section.d: New test.
+	* binutils-all/empty-file: New test input file.
+	* binutils-all/objcopy.exp: Run new tests.
+
+2010-01-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* binutils-all/elfedit-2.d: New.
+
+	* binutils-all/elfedit.exp: Run elfedit-2.
+
+2010-01-06  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR binutils/11131
+	* binutils-all/elfedit-1.d: New.
+	* binutils-all/elfedit.exp: Likewise.
+
+	* config/default.exp (ELFEDIT): New. Set if it doesn't exist.
+	(ELFEDITFLAGS): Likewise.
+
+	* lib/utils-lib.exp (run_dump_test): Support elfedit.
+
 2009-10-28  Kai Tietz <kai.tietz@onevision.com>
 
 	* binutils-all/dlltool.exp: Add tests for --no-leading-underscore

@@ -447,11 +447,11 @@ AM_ICONV
 # broken on alpha-osf.
 
 case $host_os in
-  alpha*-*-osf* )
-    if "$enable_tui" = "yes"; then
+  osf* )
+    if test x"$enable_tui" = xyes; then
       AC_MSG_ERROR([Building GDB with TUI mode is not supported on this host])
     fi
-    if "$enable_tui" = "auto"; then
+    if test x"$enable_tui" = xauto; then
       enable_tui=no
     fi
     ;;
@@ -801,7 +801,8 @@ AC_FUNC_VFORK
 AC_CHECK_FUNCS([canonicalize_file_name realpath getrusage getuid \
 		getgid pipe poll pread64 sbrk setpgid setpgrp setsid \
 		sigaction sigprocmask sigsetmask socketpair syscall \
-		ttrace wborder setlocale iconvlist libiconvlist btowc])
+		ttrace wborder setlocale iconvlist libiconvlist btowc \
+		setrlimit getrlimit])
 AM_LANGINFO_CODESET
 
 # Check the return and argument types of ptrace.  No canned test for
@@ -1543,7 +1544,8 @@ fi
 # gdb/doc/gdbint.texinfo.
 build_warnings="-Wall -Wdeclaration-after-statement -Wpointer-arith \
 -Wformat-nonliteral -Wno-pointer-sign \
--Wno-unused -Wunused-value -Wno-switch -Wno-char-subscripts"
+-Wno-unused -Wunused-value -Wunused-function \
+-Wno-switch -Wno-char-subscripts"
 
 # Enable -Wno-format by default when using gcc on mingw since many
 # GCC versions complain about %I64.

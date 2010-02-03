@@ -68,8 +68,6 @@ static int hook_stop_stub (void *);
 
 static int restore_selected_frame (void *);
 
-static void build_infrun (void);
-
 static int follow_fork (void);
 
 static void set_schedlock_func (char *args, int from_tty,
@@ -764,7 +762,7 @@ follow_exec (ptid_t pid, char *execd_pathname)
 #ifdef SOLIB_CREATE_INFERIOR_HOOK
   SOLIB_CREATE_INFERIOR_HOOK (PIDGET (inferior_ptid));
 #else
-  solib_create_inferior_hook ();
+  solib_create_inferior_hook (0);
 #endif
 
   jit_inferior_created_hook ();
@@ -1642,7 +1640,10 @@ prepare_to_proceed (int step)
 
   /* Make sure we were stopped at a breakpoint.  */
   if (wait_status.kind != TARGET_WAITKIND_STOPPED
-      || wait_status.value.sig != TARGET_SIGNAL_TRAP)
+      || (wait_status.value.sig != TARGET_SIGNAL_TRAP
+	  && wait_status.value.sig != TARGET_SIGNAL_ILL
+	  && wait_status.value.sig != TARGET_SIGNAL_SEGV
+	  && wait_status.value.sig != TARGET_SIGNAL_EMT))
     {
       return 0;
     }
@@ -1856,13 +1857,14 @@ proceed (CORE_ADDR addr, enum target_signal siggnal, int step)
      or a return command, we often end up a few instructions forward, still 
      within the original line we started.
 
-     An attempt was made to have init_execution_control_state () refresh
-     the prev_pc value before calculating the line number.  This approach
-     did not work because on platforms that use ptrace, the pc register
-     cannot be read unless the inferior is stopped.  At that point, we
-     are not guaranteed the inferior is stopped and so the regcache_read_pc ()
-     call can fail.  Setting the prev_pc value here ensures the value is 
-     updated correctly when the inferior is stopped.  */
+     An attempt was made to refresh the prev_pc at the same time the
+     execution_control_state is initialized (for instance, just before
+     waiting for an inferior event).  But this approach did not work
+     because of platforms that use ptrace, where the pc register cannot
+     be read unless the inferior is stopped.  At that point, we are not
+     guaranteed the inferior is stopped and so the regcache_read_pc() call
+     can fail.  Setting the prev_pc value here ensures the value is updated
+     correctly when the inferior is stopped.  */
   tp->prev_pc = regcache_read_pc (get_current_regcache ());
 
   /* Fill in with reasonable starting values.  */
@@ -1998,8 +2000,6 @@ struct execution_control_state
   int new_thread_event;
   int wait_some_more;
 };
-
-static void init_execution_control_state (struct execution_control_state *ecs);
 
 static void handle_inferior_event (struct execution_control_state *ecs);
 
@@ -2403,15 +2403,6 @@ set_step_info (struct frame_info *frame, struct symtab_and_line sal)
   tp->current_line = sal.line;
 }
 
-/* Prepare an execution control state for looping through a
-   wait_for_inferior-type loop.  */
-
-static void
-init_execution_control_state (struct execution_control_state *ecs)
-{
-  ecs->random_signal = 0;
-}
-
 /* Clear context switchable stepping state.  */
 
 void
@@ -2673,6 +2664,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 {
   struct frame_info *frame;
   struct gdbarch *gdbarch;
+  struct regcache *regcache;
   int sw_single_step_trap_p = 0;
   int stopped_by_watchpoint;
   int stepped_after_stopped_by_watchpoint = 0;
@@ -2732,6 +2724,30 @@ handle_inferior_event (struct execution_control_state *ecs)
   reinit_frame_cache ();
 
   breakpoint_retire_moribund ();
+
+  /* First, distinguish signals caused by the debugger from signals
+     that have to do with the program's own actions.  Note that
+     breakpoint insns may cause SIGTRAP or SIGILL or SIGEMT, depending
+     on the operating system version.  Here we detect when a SIGILL or
+     SIGEMT is really a breakpoint and change it to SIGTRAP.  We do
+     something similar for SIGSEGV, since a SIGSEGV will be generated
+     when we're trying to execute a breakpoint instruction on a
+     non-executable stack.  This happens for call dummy breakpoints
+     for architectures like SPARC that place call dummies on the
+     stack.  */
+  regcache = get_thread_regcache (ecs->ptid);
+  if (ecs->ws.kind == TARGET_WAITKIND_STOPPED
+      && (ecs->ws.value.sig == TARGET_SIGNAL_ILL
+	  || ecs->ws.value.sig == TARGET_SIGNAL_SEGV
+	  || ecs->ws.value.sig == TARGET_SIGNAL_EMT)
+      && breakpoint_inserted_here_p (get_regcache_aspace (regcache),
+				     regcache_read_pc (regcache)))
+    {
+      if (debug_infrun)
+	fprintf_unfiltered (gdb_stdlog,
+			    "infrun: Treating signal as SIGTRAP\n");
+      ecs->ws.value.sig = TARGET_SIGNAL_TRAP;
+    }
 
   /* Mark the non-executing threads accordingly.  In all-stop, all
      threads of all processes are stopped when we get any event
@@ -3232,7 +3248,8 @@ targets should add new threads to the thread list themselves in non-stop mode.")
   if (ecs->event_thread->stop_signal == TARGET_SIGNAL_TRAP)
     {
       int thread_hop_needed = 0;
-      struct address_space *aspace = get_regcache_aspace (get_current_regcache ());
+      struct address_space *aspace = 
+	get_regcache_aspace (get_thread_regcache (ecs->ptid));
 
       /* Check if a regular breakpoint has been hit before checking
          for a potential single step breakpoint. Otherwise, GDB will
@@ -3511,27 +3528,7 @@ targets should add new threads to the thread list themselves in non-stop mode.")
      3) set ecs->random_signal to 1, and the decision between 1 and 2
      will be made according to the signal handling tables.  */
 
-  /* First, distinguish signals caused by the debugger from signals
-     that have to do with the program's own actions.  Note that
-     breakpoint insns may cause SIGTRAP or SIGILL or SIGEMT, depending
-     on the operating system version.  Here we detect when a SIGILL or
-     SIGEMT is really a breakpoint and change it to SIGTRAP.  We do
-     something similar for SIGSEGV, since a SIGSEGV will be generated
-     when we're trying to execute a breakpoint instruction on a
-     non-executable stack.  This happens for call dummy breakpoints
-     for architectures like SPARC that place call dummies on the
-     stack.
-
-     If we're doing a displaced step past a breakpoint, then the
-     breakpoint is always inserted at the original instruction;
-     non-standard signals can't be explained by the breakpoint.  */
   if (ecs->event_thread->stop_signal == TARGET_SIGNAL_TRAP
-      || (! ecs->event_thread->trap_expected
-          && breakpoint_inserted_here_p (get_regcache_aspace (get_current_regcache ()),
-					 stop_pc)
-	  && (ecs->event_thread->stop_signal == TARGET_SIGNAL_ILL
-	      || ecs->event_thread->stop_signal == TARGET_SIGNAL_SEGV
-	      || ecs->event_thread->stop_signal == TARGET_SIGNAL_EMT))
       || stop_soon == STOP_QUIETLY || stop_soon == STOP_QUIETLY_NO_SIGSTOP
       || stop_soon == STOP_QUIETLY_REMOTE)
     {
@@ -4064,6 +4061,11 @@ infrun: not switching back to stepped thread, it has vanished\n");
       keep_going (ecs);
       return;
     }
+
+  /* Re-fetch current thread's frame in case the code above caused
+     the frame cache to be re-initialized, making our FRAME variable
+     a dangling pointer.  */
+  frame = get_current_frame ();
 
   /* If stepping through a line, keep going if still within it.
 

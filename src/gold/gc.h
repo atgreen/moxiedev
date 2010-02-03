@@ -28,6 +28,7 @@
 
 #include "elfcpp.h"
 #include "symtab.h"
+#include "object.h"
 #include "icf.h"
 
 namespace gold
@@ -45,21 +46,17 @@ class Output_section;
 class General_options;
 class Layout;
 
-typedef std::pair<Object *, unsigned int> Section_id;
-
 class Garbage_collection
 {
-  struct Section_id_hash
-  {
-    size_t operator()(const Section_id& loc) const
-    { return reinterpret_cast<uintptr_t>(loc.first) ^ loc.second; }
-  };
-
  public:
 
   typedef Unordered_set<Section_id, Section_id_hash> Sections_reachable;
   typedef std::map<Section_id, Sections_reachable> Section_ref;
   typedef std::queue<Section_id> Worklist_type;
+  // This maps the name of the section which can be represented as a C
+  // identifier (cident) to the list of sections that have that name.
+  // Different object files can have cident sections with the same name.
+  typedef std::map<std::string, Sections_reachable> Cident_section_map;
 
   Garbage_collection()
   : is_worklist_ready_(false)
@@ -94,12 +91,38 @@ class Garbage_collection
   is_section_garbage(Object* obj, unsigned int shndx)
   { return (this->referenced_list().find(Section_id(obj, shndx))
             == this->referenced_list().end()); }
+
+  Cident_section_map*
+  cident_sections()
+  { return &cident_sections_; }
+
+  void
+  add_cident_section(std::string section_name,
+		     Section_id secn)
+  { this->cident_sections_[section_name].insert(secn); }
+
+  // Add a reference from the SRC_SHNDX-th section of SRC_OBJECT to
+  // DST_SHNDX-th section of DST_OBJECT.
+  void
+  add_reference(Object* src_object, unsigned int src_shndx,
+		Object* dst_object, unsigned int dst_shndx)
+  {
+    Section_id src_id(src_object, src_shndx);
+    Section_id dst_id(dst_object, dst_shndx);
+    Section_ref::iterator p = this->section_reloc_map_.find(src_id);
+    if (p == this->section_reloc_map_.end())
+      this->section_reloc_map_[src_id].insert(dst_id);
+    else
+      p->second.insert(dst_id);
+  }
+
  private:
 
   Worklist_type work_list_;
   bool is_worklist_ready_;
   Section_ref section_reloc_map_;
   Sections_reachable referenced_list_;
+  Cident_section_map cident_sections_;
 };
 
 // Data to pass between successive invocations of do_layout
@@ -161,6 +184,7 @@ gc_process_relocs(
   std::vector<Symbol*>* symvec = NULL;
   std::vector<std::pair<long long, long long> >* addendvec = NULL;
   bool is_icf_tracked = false;
+  const char* cident_section_name = NULL;
 
   if (parameters->options().icf_enabled()
       && is_section_foldable_candidate(src_obj->section_name(src_indx).c_str()))
@@ -218,6 +242,19 @@ gc_process_relocs(
           if (!is_ordinary)
             continue;
           Section_id dst_id(dst_obj, dst_indx);
+          // If the symbol name matches '__start_XXX' then the section with
+          // the C identifier like name 'XXX' should not be garbage collected.
+          // A similar treatment to symbols with the name '__stop_XXX'.
+          if (is_prefix_of(cident_section_start_prefix, gsym->name()))
+            {
+              cident_section_name = (gsym->name() 
+                                     + strlen(cident_section_start_prefix));
+            }
+          else if (is_prefix_of(cident_section_stop_prefix, gsym->name()))
+            {
+              cident_section_name = (gsym->name() 
+                                     + strlen(cident_section_stop_prefix));
+            }
           if (is_icf_tracked)
             {
               (*secvec).push_back(dst_id);
@@ -232,18 +269,24 @@ gc_process_relocs(
         }
       if (parameters->options().gc_sections())
         {
-          Section_id src_id(src_obj, src_indx);
-          Section_id dst_id(dst_obj, dst_indx);
-          Garbage_collection::Section_ref::iterator map_it;
-          map_it = symtab->gc()->section_reloc_map().find(src_id);
-          if (map_it == symtab->gc()->section_reloc_map().end())
+	  symtab->gc()->add_reference(src_obj, src_indx, dst_obj, dst_indx);
+          if (cident_section_name != NULL)
             {
-              symtab->gc()->section_reloc_map()[src_id].insert(dst_id);
-            }
-          else
-            {
-              Garbage_collection::Sections_reachable& v(map_it->second);
-              v.insert(dst_id);
+              Garbage_collection::Cident_section_map::iterator ele =
+                symtab->gc()->cident_sections()->find(std::string(cident_section_name));
+              if (ele == symtab->gc()->cident_sections()->end())
+                continue;
+	      Section_id src_id(src_obj, src_indx);
+              Garbage_collection::Sections_reachable&
+                v(symtab->gc()->section_reloc_map()[src_id]);
+              Garbage_collection::Sections_reachable& cident_secn(ele->second);
+              for (Garbage_collection::Sections_reachable::iterator it_v
+                     = cident_secn.begin();
+                   it_v != cident_secn.end();
+                   ++it_v)
+                {
+                  v.insert(*it_v);
+                }
             }
         }
     }

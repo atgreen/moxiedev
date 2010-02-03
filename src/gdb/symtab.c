@@ -1367,13 +1367,14 @@ lookup_symbol_aux (const char *name, const char *linkage_name,
       && block != NULL)
     {
       struct symbol *sym = NULL;
+      const struct block *function_block = block;
       /* 'this' is only defined in the function's block, so find the
 	 enclosing function block.  */
-      for (; block && !BLOCK_FUNCTION (block);
-	   block = BLOCK_SUPERBLOCK (block));
+      for (; function_block && !BLOCK_FUNCTION (function_block);
+	   function_block = BLOCK_SUPERBLOCK (function_block));
 
-      if (block && !dict_empty (BLOCK_DICT (block)))
-	sym = lookup_block_symbol (block, langdef->la_name_of_this,
+      if (function_block && !dict_empty (BLOCK_DICT (function_block)))
+	sym = lookup_block_symbol (function_block, langdef->la_name_of_this,
 				   NULL, VAR_DOMAIN);
       if (sym)
 	{
@@ -1470,7 +1471,12 @@ lookup_objfile_from_block (const struct block *block)
   /* Go through SYMTABS.  */
   ALL_SYMTABS (obj, s)
     if (block == BLOCKVECTOR_BLOCK (BLOCKVECTOR (s), GLOBAL_BLOCK))
-      return obj;
+      {
+	if (obj->separate_debug_objfile_backlink)
+	  obj = obj->separate_debug_objfile_backlink;
+
+	return obj;
+      }
 
   return NULL;
 }
@@ -1499,48 +1505,50 @@ lookup_symbol_aux_block (const char *name, const char *linkage_name,
    psymtabs.  */
 
 struct symbol *
-lookup_global_symbol_from_objfile (const struct objfile *objfile,
+lookup_global_symbol_from_objfile (const struct objfile *main_objfile,
 				   const char *name,
 				   const char *linkage_name,
 				   const domain_enum domain)
 {
+  const struct objfile *objfile;
   struct symbol *sym;
   struct blockvector *bv;
   const struct block *block;
   struct symtab *s;
   struct partial_symtab *ps;
 
-  /* Go through symtabs.  */
-  ALL_OBJFILE_SYMTABS (objfile, s)
-  {
-    bv = BLOCKVECTOR (s);
-    block = BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
-    sym = lookup_block_symbol (block, name, linkage_name, domain);
-    if (sym)
-      {
-	block_found = block;
-	return fixup_symbol_section (sym, (struct objfile *)objfile);
-      }
-  }
+  for (objfile = main_objfile;
+       objfile;
+       objfile = objfile_separate_debug_iterate (main_objfile, objfile))
+    {
+      /* Go through symtabs.  */
+      ALL_OBJFILE_SYMTABS (objfile, s)
+        {
+          bv = BLOCKVECTOR (s);
+          block = BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
+          sym = lookup_block_symbol (block, name, linkage_name, domain);
+          if (sym)
+            {
+              block_found = block;
+              return fixup_symbol_section (sym, (struct objfile *)objfile);
+            }
+        }
 
-  /* Now go through psymtabs.  */
-  ALL_OBJFILE_PSYMTABS (objfile, ps)
-  {
-    if (!ps->readin
-	&& lookup_partial_symbol (ps, name, linkage_name,
-				  1, domain))
-      {
-	s = PSYMTAB_TO_SYMTAB (ps);
-	bv = BLOCKVECTOR (s);
-	block = BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
-	sym = lookup_block_symbol (block, name, linkage_name, domain);
-	return fixup_symbol_section (sym, (struct objfile *)objfile);
-      }
-  }
-
-  if (objfile->separate_debug_objfile)
-    return lookup_global_symbol_from_objfile (objfile->separate_debug_objfile,
-					      name, linkage_name, domain);
+      /* Now go through psymtabs.  */
+      ALL_OBJFILE_PSYMTABS (objfile, ps)
+        {
+          if (!ps->readin
+              && lookup_partial_symbol (ps, name, linkage_name,
+                                        1, domain))
+            {
+              s = PSYMTAB_TO_SYMTAB (ps);
+              bv = BLOCKVECTOR (s);
+              block = BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK);
+              sym = lookup_block_symbol (block, name, linkage_name, domain);
+              return fixup_symbol_section (sym, (struct objfile *)objfile);
+            }
+        }
+    }
 
   return NULL;
 }

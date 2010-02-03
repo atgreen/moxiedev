@@ -106,6 +106,7 @@ Sized_dynobj<size, big_endian>::find_dynsym_sections(
   *pverneed_shndx = -1U;
   *pdynamic_shndx = -1U;
 
+  unsigned int symtab_shndx = 0;
   unsigned int xindex_shndx = 0;
   unsigned int xindex_link = 0;
   const unsigned int shnum = this->shnum();
@@ -126,6 +127,10 @@ Sized_dynobj<size, big_endian>::find_dynsym_sections(
 							   pshdrs);
 	      this->set_xindex(xindex);
 	    }
+	  pi = NULL;
+	  break;
+	case elfcpp::SHT_SYMTAB:
+	  symtab_shndx = i;
 	  pi = NULL;
 	  break;
 	case elfcpp::SHT_GNU_versym:
@@ -165,6 +170,25 @@ Sized_dynobj<size, big_endian>::find_dynsym_sections(
 		    shdr.get_sh_type(), *pi, i);
 
       *pi = i;
+    }
+
+  // If there is no dynamic symbol table, use the normal symbol table.
+  // On some SVR4 systems, a shared library is stored in an archive.
+  // The version stored in the archive only has a normal symbol table.
+  // It has an SONAME entry which points to another copy in the file
+  // system which has a dynamic symbol table as usual.  This is way of
+  // addressing the issues which glibc addresses using GROUP with
+  // libc_nonshared.a.
+  if (this->dynsym_shndx_ == -1U && symtab_shndx != 0)
+    {
+      this->dynsym_shndx_ = symtab_shndx;
+      if (xindex_shndx > 0 && xindex_link == symtab_shndx)
+	{
+	  Xindex* xindex = new Xindex(this->elf_file_.large_shndx_offset());
+	  xindex->read_symtab_xindex<size, big_endian>(this, xindex_shndx,
+						       pshdrs);
+	  this->set_xindex(xindex);
+	}
     }
 }
 
@@ -337,7 +361,6 @@ Sized_dynobj<size, big_endian>::do_read_symbols(Read_symbols_data* sd)
       // Get the dynamic symbols.
       typename This::Shdr dynsymshdr(pshdrs
 				     + this->dynsym_shndx_ * This::shdr_size);
-      gold_assert(dynsymshdr.get_sh_type() == elfcpp::SHT_DYNSYM);
 
       sd->symbols = this->get_lasting_view(dynsymshdr.get_sh_offset(),
 					   dynsymshdr.get_sh_size(), true,
@@ -1537,6 +1560,7 @@ Versions::finalize(Symbol_table* symtab, unsigned int dynsym_index,
 						    false, false);
 	  vsym->set_needs_dynsym_entry();
           vsym->set_dynsym_index(dynsym_index);
+	  vsym->set_is_default();
 	  ++dynsym_index;
 	  syms->push_back(vsym);
 	  // The name is already in the dynamic pool.
@@ -1626,10 +1650,15 @@ Versions::symbol_section_contents(const Symbol_table* symtab,
     {
       unsigned int version_index;
       const char* version = (*p)->version();
-      if (version == NULL)
-	version_index = elfcpp::VER_NDX_GLOBAL;
-      else        
+      if (version != NULL)
 	version_index = this->version_index(symtab, dynpool, *p);
+      else
+	{
+	  if ((*p)->is_defined() && !(*p)->is_from_dynobj())
+	    version_index = elfcpp::VER_NDX_GLOBAL;
+	  else
+	    version_index = elfcpp::VER_NDX_LOCAL;
+	}
       // If the symbol was defined as foo@V1 instead of foo@@V1, add
       // the hidden bit.
       if ((*p)->version() != NULL && !(*p)->is_default())

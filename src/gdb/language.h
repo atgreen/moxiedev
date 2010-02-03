@@ -190,7 +190,7 @@ struct language_defn
 
     void (*la_printstr) (struct ui_file * stream, struct type *elttype,
 			 const gdb_byte *string, unsigned int length,
-			 int force_ellipses,
+			 const char *encoding, int force_ellipses,
 			 const struct value_print_options *);
 
     void (*la_emitchar) (int ch, struct type *chtype,
@@ -208,11 +208,32 @@ struct language_defn
     void (*la_print_typedef) (struct type *type, struct symbol *new_symbol,
 			      struct ui_file *stream);
 
-    /* Print a value using syntax appropriate for this language. */
+    /* Print a value using syntax appropriate for this language.
+       
+       TYPE is the type of the sub-object to be printed.
 
-    int (*la_val_print) (struct type *, const gdb_byte *, int, CORE_ADDR,
-			 struct ui_file *, int,
-			 const struct value_print_options *);
+       CONTENTS holds the bits of the value.  This holds the entire
+       enclosing object.
+
+       EMBEDDED_OFFSET is the offset into the outermost object of the
+       sub-object represented by TYPE.  This is the object which this
+       call should print.  Note that the enclosing type is not
+       available.
+
+       ADDRESS is the address in the inferior of the enclosing object.
+
+       STREAM is the stream on which the value is to be printed.
+
+       RECURSE is the recursion depth.  It is zero-based.
+
+       OPTIONS are the formatting options to be used when
+       printing.  */
+
+    int (*la_val_print) (struct type *type,
+			 const gdb_byte *contents,
+			 int embedded_offset, CORE_ADDR address,
+			 struct ui_file *stream, int recurse,
+			 const struct value_print_options *options);
 
     /* Print a top-level value using syntax appropriate for this language. */
 
@@ -389,9 +410,9 @@ extern enum language set_language (enum language);
 
 #define LA_PRINT_CHAR(ch, type, stream) \
   (current_language->la_printchar(ch, type, stream))
-#define LA_PRINT_STRING(stream, elttype, string, length, force_ellipses,options) \
+#define LA_PRINT_STRING(stream, elttype, string, length, encoding, force_ellipses,options) \
   (current_language->la_printstr(stream, elttype, string, length, \
-				 force_ellipses,options))
+				 encoding, force_ellipses,options))
 #define LA_EMIT_CHAR(ch, type, stream, quoter) \
   (current_language->la_emitchar(ch, type, stream, quoter))
 #define LA_GET_STRING(value, buffer, length, chartype, encoding) \

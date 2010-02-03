@@ -747,6 +747,16 @@ class Relobj : public Object
     return this->output_sections_[shndx];
   }
 
+  // The the output section of the input section with index SHNDX.
+  // This is only used currently to remove a section from the link in
+  // relaxation.
+  void
+  set_output_section(unsigned int shndx, Output_section* os)
+  {
+    gold_assert(shndx < this->output_sections_.size());
+    this->output_sections_[shndx] = os;
+  }
+  
   // Given a section index, return the offset in the Output_section.
   // The return value will be -1U if the section is specially mapped,
   // such as a merge section.
@@ -1484,11 +1494,6 @@ class Sized_relobj : public Relobj
   Address
   map_to_kept_section(unsigned int shndx, bool* found) const;
 
-  // Make section offset invalid.  This is needed for relaxation.
-  void
-  invalidate_section_offset(unsigned int shndx)
-  { this->do_invalidate_section_offset(shndx); }
-
  protected:
   // Set up.
   virtual void
@@ -1626,15 +1631,10 @@ class Sized_relobj : public Relobj
   do_set_section_offset(unsigned int shndx, uint64_t off)
   {
     gold_assert(shndx < this->section_offsets_.size());
-    this->section_offsets_[shndx] = convert_types<Address, uint64_t>(off);
-  }
-
-  // Set the offset of a section to invalid_address.
-  virtual void
-  do_invalidate_section_offset(unsigned int shndx)
-  {
-    gold_assert(shndx < this->section_offsets_.size());
-    this->section_offsets_[shndx] = invalid_address;
+    this->section_offsets_[shndx] =
+      (off == static_cast<uint64_t>(-1)
+       ? invalid_address
+       : convert_types<Address, uint64_t>(off));
   }
 
   // Adjust a section index if necessary.
@@ -1689,6 +1689,11 @@ class Sized_relobj : public Relobj
   do_relocate_sections(const Symbol_table* symtab, const Layout* layout,
 		       const unsigned char* pshdrs, Views* pviews);
 
+  // Allow a child to set output local symbol count.
+  void
+  set_output_local_symbol_count(unsigned int value)
+  { this->output_local_symbol_count_ = value; }
+   
  private:
   // For convenience.
   typedef Sized_relobj<size, big_endian> This;
@@ -2048,6 +2053,31 @@ struct Relocate_info
   // only used for error messages.
   std::string
   location(size_t relnum, off_t reloffset) const;
+};
+
+// This is used to represent a section in an object and is used as the
+// key type for various section maps.
+typedef std::pair<Object*, unsigned int> Section_id;
+
+// This is similar to Section_id but is used when the section
+// pointers are const.
+typedef std::pair<const Object*, unsigned int> Const_section_id;
+
+// The hash value is based on the address of an object in memory during
+// linking.  It is okay to use this for looking up sections but never use
+// this in an unordered container that we want to traverse in a repeatable
+// manner.
+
+struct Section_id_hash
+{
+  size_t operator()(const Section_id& loc) const
+  { return reinterpret_cast<uintptr_t>(loc.first) ^ loc.second; }
+};
+
+struct Const_section_id_hash
+{
+  size_t operator()(const Const_section_id& loc) const
+  { return reinterpret_cast<uintptr_t>(loc.first) ^ loc.second; }
 };
 
 // Return whether INPUT_FILE contains an ELF object start at file

@@ -19,8 +19,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
-#include <ctype.h>
 #include "defs.h"
+#include <ctype.h>
 #include "gdb_string.h"
 #include "symtab.h"
 #include "gdbtypes.h"
@@ -332,7 +332,7 @@ ada_print_floating (const gdb_byte *valaddr, struct type *type,
   len = strlen (result);
 
   /* Modify for Ada rules.  */
-  
+
   s = strstr (result, "inf");
   if (s == NULL)
     s = strstr (result, "Inf");
@@ -556,7 +556,7 @@ printstr (struct ui_file *stream, struct type *elttype, const gdb_byte *string,
 
 void
 ada_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
-	      unsigned int length, int force_ellipses,
+	      unsigned int length, const char *encoding, int force_ellipses,
 	      const struct value_print_options *options)
 {
   printstr (stream, type, string, length, force_ellipses, TYPE_LENGTH (type),
@@ -743,22 +743,6 @@ ada_val_print_1 (struct type *type, const gdb_byte *valaddr0,
 	  fprintf_filtered (stream, len < 4 ? "%.11g" : "%.17g",
 			    (double) ada_fixed_to_float (type, v));
 	  return 0;
-	}
-      else if (ada_is_vax_floating_type (type))
-	{
-	  struct value *val =
-	    value_from_contents_and_address (type, valaddr, address);
-	  struct value *func = ada_vax_float_print_function (type);
-	  if (func != 0)
-	    {
-	      struct gdbarch *gdbarch = get_type_arch (type);
-	      CORE_ADDR addr;
-	      addr = value_as_address (call_function_by_hand (func, 1, &val));
-	      val_print_string (builtin_type (gdbarch)->builtin_true_char,
-				addr, -1, stream, options);
-	      return 0;
-	    }
-	  /* No special printing function.  Do as best we can.  */
 	}
       else if (TYPE_CODE (type) == TYPE_CODE_RANGE)
 	{
@@ -1093,8 +1077,7 @@ print_field_values (struct type *type, const gdb_byte *valaddr,
 
 	  /* Bitfields require special handling, especially due to byte
 	     order problems.  */
-	  if (TYPE_CPLUS_SPECIFIC (type) != NULL
-	      && TYPE_FIELD_IGNORE (type, i))
+	  if (HAVE_CPLUS_STRUCT (type) && TYPE_FIELD_IGNORE (type, i))
 	    {
 	      fputs_filtered (_("<optimized out or zero length>"), stream);
 	    }

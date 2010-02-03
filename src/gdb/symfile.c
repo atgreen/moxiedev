@@ -97,8 +97,6 @@ static void symbol_file_add_main_1 (char *args, int from_tty, int flags);
 
 static void add_symbol_file_command (char *, int);
 
-static void cashier_psymtab (struct partial_symtab *);
-
 bfd *symfile_bfd_open (char *);
 
 int get_section_index (struct objfile *, char *);
@@ -328,32 +326,6 @@ alloc_section_addr_info (size_t num_sections)
   return sap;
 }
 
-
-/* Return a freshly allocated copy of ADDRS.  The section names, if
-   any, are also freshly allocated copies of those in ADDRS.  */
-struct section_addr_info *
-copy_section_addr_info (struct section_addr_info *addrs)
-{
-  struct section_addr_info *copy
-    = alloc_section_addr_info (addrs->num_sections);
-  int i;
-
-  copy->num_sections = addrs->num_sections;
-  for (i = 0; i < addrs->num_sections; i++)
-    {
-      copy->other[i].addr = addrs->other[i].addr;
-      if (addrs->other[i].name)
-        copy->other[i].name = xstrdup (addrs->other[i].name);
-      else
-        copy->other[i].name = NULL;
-      copy->other[i].sectindex = addrs->other[i].sectindex;
-    }
-
-  return copy;
-}
-
-
-
 /* Build (allocate and populate) a section_addr_info struct from
    an existing section table. */
 
@@ -381,6 +353,34 @@ build_section_addr_info_from_section_table (const struct target_section *start,
 	}
     }
 
+  return sap;
+}
+
+/* Create a section_addr_info from section offsets in OBJFILE.  */
+
+struct section_addr_info *
+build_section_addr_info_from_objfile (const struct objfile *objfile)
+{
+  struct section_addr_info *sap;
+  int i;
+  struct bfd_section *sec;
+  int addr_bit = gdbarch_addr_bit (objfile->gdbarch);
+  CORE_ADDR mask = CORE_ADDR_MAX;
+
+  if (addr_bit < (sizeof (CORE_ADDR) * HOST_CHAR_BIT))
+    mask = ((CORE_ADDR) 1 << addr_bit) - 1;
+
+  sap = alloc_section_addr_info (objfile->num_sections);
+  for (i = 0, sec = objfile->obfd->sections;
+       i < objfile->num_sections;
+       i++, sec = sec->next)
+    {
+      gdb_assert (sec != NULL);
+      sap->other[i].addr = (bfd_get_section_vma (objfile->obfd, sec)
+                            + objfile->section_offsets->offsets[i]) & mask;
+      sap->other[i].name = xstrdup (bfd_get_section_name (objfile->obfd, sec));
+      sap->other[i].sectindex = sec->index;
+    }
   return sap;
 }
 
@@ -532,6 +532,95 @@ place_section (bfd *abfd, asection *sect, void *obj)
   arg->lowest = start_addr + bfd_get_section_size (sect);
 }
 
+/* Store struct section_addr_info as prepared (made relative and with SECTINDEX
+   filled-in) by addr_info_make_relative into SECTION_OFFSETS of NUM_SECTIONS
+   entries.  */
+
+void
+relative_addr_info_to_section_offsets (struct section_offsets *section_offsets,
+				       int num_sections,
+				       struct section_addr_info *addrs)
+{
+  int i;
+
+  memset (section_offsets, 0, SIZEOF_N_SECTION_OFFSETS (num_sections));
+
+  /* Now calculate offsets for section that were specified by the caller. */
+  for (i = 0; i < addrs->num_sections && addrs->other[i].name; i++)
+    {
+      struct other_sections *osp;
+
+      osp = &addrs->other[i];
+      if (osp->addr == 0)
+  	continue;
+
+      /* Record all sections in offsets */
+      /* The section_offsets in the objfile are here filled in using
+         the BFD index. */
+      section_offsets->offsets[osp->sectindex] = osp->addr;
+    }
+}
+
+/* Relativize absolute addresses in ADDRS into offsets based on ABFD.  Fill-in
+   also SECTINDEXes there.  */
+
+void
+addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
+{
+  asection *lower_sect;
+  asection *sect;
+  CORE_ADDR lower_offset;
+  int i;
+
+  /* Find lowest loadable section to be used as starting point for
+     continguous sections. FIXME!! won't work without call to find
+     .text first, but this assumes text is lowest section. */
+  lower_sect = bfd_get_section_by_name (abfd, ".text");
+  if (lower_sect == NULL)
+    bfd_map_over_sections (abfd, find_lowest_section, &lower_sect);
+  if (lower_sect == NULL)
+    {
+      warning (_("no loadable sections found in added symbol-file %s"),
+	       bfd_get_filename (abfd));
+      lower_offset = 0;
+    }
+  else
+    lower_offset = bfd_section_vma (bfd_get_filename (abfd), lower_sect);
+
+  /* Calculate offsets for the loadable sections.
+     FIXME! Sections must be in order of increasing loadable section
+     so that contiguous sections can use the lower-offset!!!
+
+     Adjust offsets if the segments are not contiguous.
+     If the section is contiguous, its offset should be set to
+     the offset of the highest loadable section lower than it
+     (the loadable section directly below it in memory).
+     this_offset = lower_offset = lower_addr - lower_orig_addr */
+
+  for (i = 0; i < addrs->num_sections && addrs->other[i].name; i++)
+    {
+      if (addrs->other[i].addr != 0)
+	{
+	  sect = bfd_get_section_by_name (abfd, addrs->other[i].name);
+	  if (sect)
+	    {
+	      addrs->other[i].addr -= bfd_section_vma (abfd, sect);
+	      lower_offset = addrs->other[i].addr;
+	      /* This is the index used by BFD. */
+	      addrs->other[i].sectindex = sect->index;
+	    }
+	  else
+	    {
+	      warning (_("section %s not found in %s"), addrs->other[i].name,
+		       bfd_get_filename (abfd));
+	      addrs->other[i].addr = 0;
+	    }
+	}
+      else
+	addrs->other[i].addr = lower_offset;
+    }
+}
+
 /* Parse the user's idea of an offset for dynamic linking, into our idea
    of how to represent it for fast symbol reading.  This is the default
    version of the sym_fns.sym_offsets function for symbol readers that
@@ -542,30 +631,12 @@ void
 default_symfile_offsets (struct objfile *objfile,
 			 struct section_addr_info *addrs)
 {
-  int i;
-
   objfile->num_sections = bfd_count_sections (objfile->obfd);
   objfile->section_offsets = (struct section_offsets *)
     obstack_alloc (&objfile->objfile_obstack,
 		   SIZEOF_N_SECTION_OFFSETS (objfile->num_sections));
-  memset (objfile->section_offsets, 0,
-	  SIZEOF_N_SECTION_OFFSETS (objfile->num_sections));
-
-  /* Now calculate offsets for section that were specified by the
-     caller. */
-  for (i = 0; i < addrs->num_sections && addrs->other[i].name; i++)
-    {
-      struct other_sections *osp ;
-
-      osp = &addrs->other[i] ;
-      if (osp->addr == 0)
-  	continue;
-
-      /* Record all sections in offsets */
-      /* The section_offsets in the objfile are here filled in using
-         the BFD index. */
-      (objfile->section_offsets)->offsets[osp->sectindex] = osp->addr;
-    }
+  relative_addr_info_to_section_offsets (objfile->section_offsets,
+					 objfile->num_sections, addrs);
 
   /* For relocatable files, all loadable sections will start at zero.
      The zero is meaningless, so try to pick arbitrary addresses such
@@ -800,64 +871,7 @@ syms_from_objfile (struct objfile *objfile,
      We no longer warn if the lowest section is not a text segment (as
      happens for the PA64 port.  */
   if (addrs && addrs->other[0].name)
-    {
-      asection *lower_sect;
-      asection *sect;
-      CORE_ADDR lower_offset;
-      int i;
-
-      /* Find lowest loadable section to be used as starting point for
-         continguous sections. FIXME!! won't work without call to find
-	 .text first, but this assumes text is lowest section. */
-      lower_sect = bfd_get_section_by_name (objfile->obfd, ".text");
-      if (lower_sect == NULL)
-	bfd_map_over_sections (objfile->obfd, find_lowest_section,
-			       &lower_sect);
-      if (lower_sect == NULL)
-	{
-	  warning (_("no loadable sections found in added symbol-file %s"),
-		   objfile->name);
-	  lower_offset = 0;
-	}
-      else
-	lower_offset = bfd_section_vma (objfile->obfd, lower_sect);
-
-      /* Calculate offsets for the loadable sections.
- 	 FIXME! Sections must be in order of increasing loadable section
- 	 so that contiguous sections can use the lower-offset!!!
-
-         Adjust offsets if the segments are not contiguous.
-         If the section is contiguous, its offset should be set to
- 	 the offset of the highest loadable section lower than it
- 	 (the loadable section directly below it in memory).
- 	 this_offset = lower_offset = lower_addr - lower_orig_addr */
-
-        for (i = 0; i < addrs->num_sections && addrs->other[i].name; i++)
-          {
-            if (addrs->other[i].addr != 0)
-              {
-                sect = bfd_get_section_by_name (objfile->obfd,
-                                                addrs->other[i].name);
-                if (sect)
-                  {
-                    addrs->other[i].addr
-                      -= bfd_section_vma (objfile->obfd, sect);
-                    lower_offset = addrs->other[i].addr;
-                    /* This is the index used by BFD. */
-                    addrs->other[i].sectindex = sect->index ;
-                  }
-                else
-                  {
-                    warning (_("section %s not found in %s"),
-                             addrs->other[i].name,
-                             objfile->name);
-                    addrs->other[i].addr = 0;
-                  }
-              }
-            else
-              addrs->other[i].addr = lower_offset;
-          }
-    }
+    addr_info_make_relative (addrs, objfile->obfd);
 
   /* Initialize symbol reading routines for this objfile, allow complaints to
      appear for this new file, and record how verbose to be, then do the
@@ -1042,22 +1056,25 @@ symbol_file_add_with_addrs_or_offsets (bfd *abfd,
 void
 symbol_file_add_separate (bfd *bfd, int symfile_flags, struct objfile *objfile)
 {
-  /* Currently only one separate debug objfile is supported.  */
-  gdb_assert (objfile && objfile->separate_debug_objfile == NULL);
+  struct objfile *new_objfile;
+  struct section_addr_info *sap;
+  struct cleanup *my_cleanup;
 
-  objfile->separate_debug_objfile =
-    symbol_file_add_with_addrs_or_offsets
+  /* Create section_addr_info.  We can't directly use offsets from OBJFILE
+     because sections of BFD may not match sections of OBJFILE and because
+     vma may have been modified by tools such as prelink.  */
+  sap = build_section_addr_info_from_objfile (objfile);
+  my_cleanup = make_cleanup_free_section_addr_info (sap);
+
+  new_objfile = symbol_file_add_with_addrs_or_offsets
     (bfd, symfile_flags,
-     0, /* No addr table.  */
-     objfile->section_offsets, objfile->num_sections,
+     sap, NULL, 0,
      objfile->flags & (OBJF_REORDERED | OBJF_SHARED | OBJF_READNOW
 		       | OBJF_USERLOADED));
-  objfile->separate_debug_objfile->separate_debug_objfile_backlink
-    = objfile;
 
-  /* Put the separate debug object before the normal one, this is so that
-     usage of the ALL_OBJFILES_SAFE macro will stay safe. */
-  put_objfile_before (objfile->separate_debug_objfile, objfile);
+  do_cleanups (my_cleanup);
+
+  add_separate_debug_objfile (new_objfile, objfile);
 }
 
 /* Process the symbol file ABFD, as either the main file or as a
@@ -2272,14 +2289,9 @@ reread_symbols (void)
 
 	  clear_objfile_data (objfile);
 
-	  /* Free the separate debug objfile if there is one.  It will be
+	  /* Free the separate debug objfiles.  It will be
 	     automatically recreated by sym_read.  */
-	  if (objfile->separate_debug_objfile)
-	    {
-	      /* Note: no need to clear separate_debug_objfile field as it is
-		 done by free_objfile.  */
-	      free_objfile (objfile->separate_debug_objfile);
-	    }
+          free_objfile_separate_debug (objfile);
 
 	  /* FIXME: Do we have to free a whole linked list, or is this
 	     enough?  */
@@ -2563,7 +2575,6 @@ deduce_language_from_filename (char *filename)
    symtab->dirname
    symtab->free_code
    symtab->free_ptr
-   possibly free_named_symtabs (symtab->filename);
  */
 
 struct symtab *
@@ -2691,210 +2702,6 @@ static void
 clear_symtab_users_cleanup (void *ignore)
 {
   clear_symtab_users ();
-}
-
-/* clear_symtab_users_once:
-
-   This function is run after symbol reading, or from a cleanup.
-   If an old symbol table was obsoleted, the old symbol table
-   has been blown away, but the other GDB data structures that may
-   reference it have not yet been cleared or re-directed.  (The old
-   symtab was zapped, and the cleanup queued, in free_named_symtab()
-   below.)
-
-   This function can be queued N times as a cleanup, or called
-   directly; it will do all the work the first time, and then will be a
-   no-op until the next time it is queued.  This works by bumping a
-   counter at queueing time.  Much later when the cleanup is run, or at
-   the end of symbol processing (in case the cleanup is discarded), if
-   the queued count is greater than the "done-count", we do the work
-   and set the done-count to the queued count.  If the queued count is
-   less than or equal to the done-count, we just ignore the call.  This
-   is needed because reading a single .o file will often replace many
-   symtabs (one per .h file, for example), and we don't want to reset
-   the breakpoints N times in the user's face.
-
-   The reason we both queue a cleanup, and call it directly after symbol
-   reading, is because the cleanup protects us in case of errors, but is
-   discarded if symbol reading is successful.  */
-
-#if 0
-/* FIXME:  As free_named_symtabs is currently a big noop this function
-   is no longer needed.  */
-static void clear_symtab_users_once (void);
-
-static int clear_symtab_users_queued;
-static int clear_symtab_users_done;
-
-static void
-clear_symtab_users_once (void)
-{
-  /* Enforce once-per-`do_cleanups'-semantics */
-  if (clear_symtab_users_queued <= clear_symtab_users_done)
-    return;
-  clear_symtab_users_done = clear_symtab_users_queued;
-
-  clear_symtab_users ();
-}
-#endif
-
-/* Delete the specified psymtab, and any others that reference it.  */
-
-static void
-cashier_psymtab (struct partial_symtab *pst)
-{
-  struct partial_symtab *ps, *pprev = NULL;
-  int i;
-
-  /* Find its previous psymtab in the chain */
-  for (ps = pst->objfile->psymtabs; ps; ps = ps->next)
-    {
-      if (ps == pst)
-	break;
-      pprev = ps;
-    }
-
-  if (ps)
-    {
-      /* Unhook it from the chain.  */
-      if (ps == pst->objfile->psymtabs)
-	pst->objfile->psymtabs = ps->next;
-      else
-	pprev->next = ps->next;
-
-      /* FIXME, we can't conveniently deallocate the entries in the
-         partial_symbol lists (global_psymbols/static_psymbols) that
-         this psymtab points to.  These just take up space until all
-         the psymtabs are reclaimed.  Ditto the dependencies list and
-         filename, which are all in the objfile_obstack.  */
-
-      /* We need to cashier any psymtab that has this one as a dependency... */
-    again:
-      for (ps = pst->objfile->psymtabs; ps; ps = ps->next)
-	{
-	  for (i = 0; i < ps->number_of_dependencies; i++)
-	    {
-	      if (ps->dependencies[i] == pst)
-		{
-		  cashier_psymtab (ps);
-		  goto again;	/* Must restart, chain has been munged. */
-		}
-	    }
-	}
-    }
-}
-
-/* If a symtab or psymtab for filename NAME is found, free it along
-   with any dependent breakpoints, displays, etc.
-   Used when loading new versions of object modules with the "add-file"
-   command.  This is only called on the top-level symtab or psymtab's name;
-   it is not called for subsidiary files such as .h files.
-
-   Return value is 1 if we blew away the environment, 0 if not.
-   FIXME.  The return value appears to never be used.
-
-   FIXME.  I think this is not the best way to do this.  We should
-   work on being gentler to the environment while still cleaning up
-   all stray pointers into the freed symtab.  */
-
-int
-free_named_symtabs (char *name)
-{
-#if 0
-  /* FIXME:  With the new method of each objfile having it's own
-     psymtab list, this function needs serious rethinking.  In particular,
-     why was it ever necessary to toss psymtabs with specific compilation
-     unit filenames, as opposed to all psymtabs from a particular symbol
-     file?  -- fnf
-     Well, the answer is that some systems permit reloading of particular
-     compilation units.  We want to blow away any old info about these
-     compilation units, regardless of which objfiles they arrived in. --gnu.  */
-
-  struct symtab *s;
-  struct symtab *prev;
-  struct partial_symtab *ps;
-  struct blockvector *bv;
-  int blewit = 0;
-
-  /* We only wack things if the symbol-reload switch is set.  */
-  if (!symbol_reloading)
-    return 0;
-
-  /* Some symbol formats have trouble providing file names... */
-  if (name == 0 || *name == '\0')
-    return 0;
-
-  /* Look for a psymtab with the specified name.  */
-
-again2:
-  for (ps = partial_symtab_list; ps; ps = ps->next)
-    {
-      if (strcmp (name, ps->filename) == 0)
-	{
-	  cashier_psymtab (ps);	/* Blow it away...and its little dog, too.  */
-	  goto again2;		/* Must restart, chain has been munged */
-	}
-    }
-
-  /* Look for a symtab with the specified name.  */
-
-  for (s = symtab_list; s; s = s->next)
-    {
-      if (strcmp (name, s->filename) == 0)
-	break;
-      prev = s;
-    }
-
-  if (s)
-    {
-      if (s == symtab_list)
-	symtab_list = s->next;
-      else
-	prev->next = s->next;
-
-      /* For now, queue a delete for all breakpoints, displays, etc., whether
-         or not they depend on the symtab being freed.  This should be
-         changed so that only those data structures affected are deleted.  */
-
-      /* But don't delete anything if the symtab is empty.
-         This test is necessary due to a bug in "dbxread.c" that
-         causes empty symtabs to be created for N_SO symbols that
-         contain the pathname of the object file.  (This problem
-         has been fixed in GDB 3.9x).  */
-
-      bv = BLOCKVECTOR (s);
-      if (BLOCKVECTOR_NBLOCKS (bv) > 2
-	  || BLOCK_NSYMS (BLOCKVECTOR_BLOCK (bv, GLOBAL_BLOCK))
-	  || BLOCK_NSYMS (BLOCKVECTOR_BLOCK (bv, STATIC_BLOCK)))
-	{
-	  complaint (&symfile_complaints, _("Replacing old symbols for `%s'"),
-		     name);
-	  clear_symtab_users_queued++;
-	  make_cleanup (clear_symtab_users_once, 0);
-	  blewit = 1;
-	}
-      else
-	complaint (&symfile_complaints, _("Empty symbol table found for `%s'"),
-		   name);
-
-      free_symtab (s);
-    }
-  else
-    {
-      /* It is still possible that some breakpoints will be affected
-         even though no symtab was found, since the file might have
-         been compiled without debugging, and hence not be associated
-         with a symtab.  In order to handle this correctly, we would need
-         to keep a list of text address ranges for undebuggable files.
-         For now, we do nothing, since this is a fairly obscure case.  */
-      ;
-    }
-
-  /* FIXME, what about the minimal symbol table? */
-  return blewit;
-#else
-  return (0);
-#endif
 }
 
 /* Allocate and partially fill a partial symtab.  It will be

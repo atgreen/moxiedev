@@ -270,6 +270,7 @@ SUBDIR_PYTHON_OBS = \
 	py-cmd.o \
 	py-frame.o \
 	py-function.o \
+	py-lazy-string.o \
 	py-objfile.o \
 	py-prettyprint.o \
 	py-type.o \
@@ -280,6 +281,7 @@ SUBDIR_PYTHON_SRCS = \
 	python/py-cmd.c \
 	python/py-frame.c \
 	python/py-function.c \
+	python/py-lazy-string.c \
 	python/py-objfile.c \
 	python/py-prettyprint.c \
 	python/py-type.c \
@@ -444,7 +446,8 @@ RUNTESTFLAGS=
 
 # XML files to build in to GDB.
 XMLFILES = $(srcdir)/features/gdb-target.dtd $(srcdir)/features/xinclude.dtd \
-	$(srcdir)/features/library-list.dtd $(srcdir)/features/osdata.dtd
+	$(srcdir)/features/library-list.dtd $(srcdir)/features/osdata.dtd \
+	$(srcdir)/features/threads.dtd
 
 # This is ser-unix.o for any system which supports a v7/BSD/SYSV/POSIX
 # interface to the serial port.  Hopefully if get ported to OS/2, VMS,
@@ -703,7 +706,7 @@ osf-share/cma_errors.h osf-share/cma_tcb_defs.h osf-share/cma_attr.h \
 osf-share/cma_stack_int.h osf-share/cma_init.h \
 osf-share/cma_deb_core.h osf-share/AT386/cma_thread_io.h \
 osf-share/cma_sched.h proc-utils.h arm-tdep.h ax-gdb.h ppcnbsd-tdep.h \
-cli-out.h gdb_expat.h breakpoint.h infcall.h obsd-tdep.h gnu-v2-abi.h \
+cli-out.h gdb_expat.h breakpoint.h infcall.h obsd-tdep.h \
 exec.h m32r-tdep.h osabi.h gdbcore.h solib-som.h \
 i386bsd-nat.h xml-support.h xml-tdesc.h alphabsd-tdep.h gdb_obstack.h \
 ia64-tdep.h ada-lang.h varobj.h frv-tdep.h nto-tdep.h serial.h \
@@ -1977,6 +1980,10 @@ py-frame.o: $(srcdir)/python/py-frame.c
 
 py-function.o: $(srcdir)/python/py-function.c
 	$(COMPILE) $(PYTHON_CFLAGS) $(srcdir)/python/py-function.c
+	$(POSTCOMPILE)
+
+py-lazy-string.o: $(srcdir)/python/py-lazy-string.c
+	$(COMPILE) $(PYTHON_CFLAGS) $(srcdir)/python/py-lazy-string.c
 	$(POSTCOMPILE)
 
 py-objfile.o: $(srcdir)/python/py-objfile.c

@@ -33,9 +33,6 @@
 #include "frame.h"
 #include "buildsym.h"
 
-static struct using_direct *cp_copy_usings (struct using_direct *using,
-					    struct obstack *obstack);
-
 static struct symbol *lookup_namespace_scope (const char *name,
 					      const char *linkage_name,
 					      const struct block *block,
@@ -218,38 +215,9 @@ cp_add_using (const char *dest,
   retval->import_src = savestring (src, strlen(src));
   retval->import_dest = savestring (dest, strlen(dest));
   retval->next = next;
+  retval->searched = 0;
 
   return retval;
-}
-
-/* Make a copy of the using directives in the list pointed to by
-   USING, using OBSTACK to allocate memory.  Free all memory pointed
-   to by USING via xfree.  */
-
-static struct using_direct *
-cp_copy_usings (struct using_direct *using,
-		struct obstack *obstack)
-{
-  if (using == NULL)
-    {
-      return NULL;
-    }
-  else
-    {
-      struct using_direct *retval
-	= obstack_alloc (obstack, sizeof (struct using_direct));
-      retval->import_src = obsavestring (using->import_src, strlen (using->import_src),
-				    obstack);
-      retval->import_dest = obsavestring (using->import_dest, strlen (using->import_dest),
-				    obstack);
-      retval->next = cp_copy_usings (using->next, obstack);
-
-      xfree (using->import_src);
-      xfree (using->import_dest);
-      xfree (using);
-
-      return retval;
-    }
 }
 
 /* The C++-specific version of name lookup for static and global
@@ -266,8 +234,161 @@ cp_lookup_symbol_nonlocal (const char *name,
 			   const struct block *block,
 			   const domain_enum domain)
 {
-  return lookup_namespace_scope (name, linkage_name, block, domain,
-				 block_scope (block), 0);
+  struct symbol *sym;
+  const char *scope = block_scope (block);
+
+  sym = lookup_namespace_scope (name, linkage_name, block, domain, scope, 0);
+  if (sym != NULL)
+    return sym;
+
+  return cp_lookup_symbol_namespace (scope, name, linkage_name, block, domain,
+                                     1);
+}
+
+/* Look up NAME in the C++ namespace NAMESPACE. Other arguments are as in
+   cp_lookup_symbol_nonlocal.  */
+
+static struct symbol *
+cp_lookup_symbol_in_namespace (const char *namespace,
+                               const char *name,
+                               const char *linkage_name,
+                               const struct block *block,
+                               const domain_enum domain)
+{
+  if (namespace[0] == '\0')
+    {
+      return lookup_symbol_file (name, linkage_name, block,
+                                 domain, 0);
+    }
+  else
+    {
+      char *concatenated_name = alloca (strlen (namespace) + 2 +
+                                        strlen (name+ 1));
+      strcpy (concatenated_name, namespace);
+      strcat (concatenated_name, "::");
+      strcat (concatenated_name, name);
+      return lookup_symbol_file (concatenated_name, linkage_name,
+                                 block, domain,cp_is_anonymous (namespace));
+    }
+}
+
+/* Used for cleanups to reset the "searched" flag incase
+   of an error.  */
+
+static void
+reset_directive_searched (void *data)
+{
+  struct using_direct *direct = data;
+  direct->searched = 0;
+}
+
+/* Search for NAME by applying all import statements belonging
+   to BLOCK which are applicable in SCOPE.
+   If SEARCH_PARENTS the search will include imports which are applicable in
+   parents of SCOPE.
+   Example:
+
+     namespace A{
+       using namespace X;
+       namespace B{
+         using namespace Y;
+       }
+     }
+
+   If SCOPE is "A::B" and SEARCH_PARENTS is true the imports of namespaces X
+   and Y will be considered. If SEARCH_PARENTS is false only the import of Y
+   is considered.  */
+
+static struct symbol *
+cp_lookup_symbol_imports (const char *scope,
+                          const char *name,
+                          const char *linkage_name,
+                          const struct block *block,
+                          const domain_enum domain,
+                          const int search_parents)
+{
+  struct using_direct *current;
+  struct symbol *sym;
+  int len;
+  int directive_match;
+  struct cleanup *searched_cleanup;
+
+  /* First, try to find the symbol in the given namespace.  */
+  sym = cp_lookup_symbol_in_namespace (scope, name, linkage_name, block,
+                                       domain);
+  if (sym != NULL)
+    return sym;
+
+  /* Go through the using directives.  If any of them add new
+     names to the namespace we're searching in, see if we can find a
+     match by applying them.  */
+
+  for (current = block_using (block);
+       current != NULL;
+       current = current->next)
+    {
+      len = strlen (current->import_dest);
+      directive_match = (search_parents
+                         ? (strncmp (scope, current->import_dest,
+                                     strlen (current->import_dest)) == 0
+                            && (len == 0
+                                || scope[len] == ':' || scope[len] == '\0'))
+                         : strcmp (scope, current->import_dest) == 0);
+
+      /* If the import destination is the current scope or one of its ancestors then
+         it is applicable.  */
+      if (directive_match && !current->searched)
+	{
+	/* Mark this import as searched so that the recursive call does not
+           search it again.  */
+	current->searched = 1;
+	searched_cleanup = make_cleanup (reset_directive_searched, current);
+
+	sym = cp_lookup_symbol_namespace (current->import_src,
+	                                  name,
+	                                  linkage_name,
+	                                  block,
+	                                  domain,
+	                                  0);
+
+	current->searched = 0;
+	discard_cleanups (searched_cleanup);
+
+	if (sym != NULL)
+	  return sym;
+	}
+    }
+
+  return NULL;
+}
+
+ /* Searches for NAME in the current namespace, and by applying relevant import
+    statements belonging to BLOCK and its parents. SCOPE is the namespace scope
+    of the context in which the search is being evaluated.  */
+
+struct symbol*
+cp_lookup_symbol_namespace (const char *scope,
+                            const char *name,
+                            const char *linkage_name,
+                            const struct block *block,
+                            const domain_enum domain,
+                            const int search_parents)
+{
+  struct symbol *sym;
+
+  /* Search for name in namespaces imported to this and parent blocks.  */
+  while (block != NULL)
+    {
+      sym = cp_lookup_symbol_imports (scope, name, linkage_name, block, domain,
+                                      search_parents);
+
+      if (sym)
+	return sym;
+
+      block = BLOCK_SUPERBLOCK (block);
+    }
+
+  return NULL;
 }
 
 /* Lookup NAME at namespace scope (or, in C terms, in static and
@@ -321,65 +442,8 @@ lookup_namespace_scope (const char *name,
   namespace = alloca (scope_len + 1);
   strncpy (namespace, scope, scope_len);
   namespace[scope_len] = '\0';
-  return cp_lookup_symbol_namespace (namespace, name, linkage_name,
-				     block, domain);
-}
-
-/* Look up NAME in the C++ namespace NAMESPACE, applying the using
-   directives that are active in BLOCK.  Other arguments are as in
-   cp_lookup_symbol_nonlocal.  */
-
-struct symbol *
-cp_lookup_symbol_namespace (const char *namespace,
-			    const char *name,
-			    const char *linkage_name,
-			    const struct block *block,
-			    const domain_enum domain)
-{
-  const struct using_direct *current;
-  struct symbol *sym;
-
-  /* First, go through the using directives.  If any of them add new
-     names to the namespace we're searching in, see if we can find a
-     match by applying them.  */
-
-  for (current = block_using (block);
-       current != NULL;
-       current = current->next)
-    {
-      if (strcmp (namespace, current->import_dest) == 0)
-	{
-	  sym = cp_lookup_symbol_namespace (current->import_src,
-					    name,
-					    linkage_name,
-					    block,
-					    domain);
-	  if (sym != NULL)
-	    return sym;
-	}
-    }
-
-  /* We didn't find anything by applying any of the using directives
-     that are still applicable; so let's see if we've got a match
-     using the current namespace.  */
-  
-  if (namespace[0] == '\0')
-    {
-      return lookup_symbol_file (name, linkage_name, block,
-				 domain, 0);
-    }
-  else
-    {
-      char *concatenated_name
-	= alloca (strlen (namespace) + 2 + strlen (name) + 1);
-      strcpy (concatenated_name, namespace);
-      strcat (concatenated_name, "::");
-      strcat (concatenated_name, name);
-      sym = lookup_symbol_file (concatenated_name, linkage_name,
-				block, domain, 
-				cp_is_anonymous (namespace));
-      return sym;
-    }
+  return cp_lookup_symbol_in_namespace (namespace, name, linkage_name,
+                                        block, domain);
 }
 
 /* Look up NAME in BLOCK's static block and in global blocks.  If
@@ -462,11 +526,11 @@ cp_lookup_nested_type (struct type *parent_type,
 	   lookup_symbol_namespace works when looking them up.  */
 
 	const char *parent_name = TYPE_TAG_NAME (parent_type);
-	struct symbol *sym = cp_lookup_symbol_namespace (parent_name,
-							 nested_name,
-							 NULL,
-							 block,
-							 VAR_DOMAIN);
+	struct symbol *sym = cp_lookup_symbol_in_namespace (parent_name,
+	                                                    nested_name,
+	                                                    NULL,
+	                                                    block,
+	                                                    VAR_DOMAIN);
 	if (sym == NULL || SYMBOL_CLASS (sym) != LOC_TYPEDEF)
 	  return NULL;
 	else

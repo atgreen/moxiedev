@@ -55,6 +55,8 @@
 #include "valprint.h"
 #include "inline-frame.h"
 
+extern void disconnect_or_stop_tracing (int from_tty);
+
 /* Functions exported for general use, in inferior.h: */
 
 void all_registers_info (char *, int);
@@ -124,20 +126,17 @@ void _initialize_infcmd (void);
 #define ERROR_NO_INFERIOR \
    if (!target_has_execution) error (_("The program is not being run."));
 
-/* String containing arguments to give to the program, separated by spaces.
-   Empty string (pointer to '\0') means no args.  */
+/* Scratch area where string containing arguments to give to the program will be
+   stored by 'set args'.  As soon as anything is stored, notice_args_set will
+   move it into per-inferior storage.  Arguments are separated by spaces. Empty
+   string (pointer to '\0') means no args.  */
 
-static char *inferior_args;
+static char *inferior_args_scratch;
 
-/* The inferior arguments as a vector.  If INFERIOR_ARGC is nonzero,
-   then we must compute INFERIOR_ARGS from this (via the target).  */
+/* Scratch area where 'set inferior-tty' will store user-provided value.
+   We'll immediate copy it into per-inferior storage.  */
 
-static int inferior_argc;
-static char **inferior_argv;
-
-/* File name for default use for standard in/out in the inferior.  */
-
-static char *inferior_io_terminal;
+static char *inferior_io_terminal_scratch;
 
 /* Pid of our debugged inferior, or 0 if no inferior now.
    Since various parts of infrun.c test this to see whether there is a program
@@ -164,80 +163,97 @@ int stop_stack_dummy;
 
 int stopped_by_random_signal;
 
-/* Environment to use for running inferior,
-   in format described in environ.h.  */
-
-struct gdb_environ *inferior_environ;
 
 /* Accessor routines. */
+
+/* Set the io terminal for the current inferior.  Ownership of
+   TERMINAL_NAME is not transferred.  */
 
 void 
 set_inferior_io_terminal (const char *terminal_name)
 {
-  if (inferior_io_terminal)
-    xfree (inferior_io_terminal);
-
-  if (!terminal_name)
-    inferior_io_terminal = NULL;
-  else
-    inferior_io_terminal = xstrdup (terminal_name);
+  xfree (current_inferior ()->terminal);
+  current_inferior ()->terminal = terminal_name ? xstrdup (terminal_name) : 0;
 }
 
 const char *
 get_inferior_io_terminal (void)
 {
-  return inferior_io_terminal;
+  return current_inferior ()->terminal;
+}
+
+static void
+set_inferior_tty_command (char *args, int from_tty,
+			  struct cmd_list_element *c)
+{
+  /* CLI has assigned the user-provided value to inferior_io_terminal_scratch.
+     Now route it to current inferior.  */
+  set_inferior_io_terminal (inferior_io_terminal_scratch);
+}
+
+static void
+show_inferior_tty_command (struct ui_file *file, int from_tty,
+			   struct cmd_list_element *c, const char *value)
+{
+  /* Note that we ignore the passed-in value in favor of computing it
+     directly.  */
+  fprintf_filtered (gdb_stdout,
+		    _("argument list to give program being debugged when "
+		      "it is started is %s"),
+		    get_inferior_io_terminal ());
 }
 
 char *
 get_inferior_args (void)
 {
-  if (inferior_argc != 0)
+  if (current_inferior ()->argc != 0)
     {
-      char *n, *old;
+      char *n;
 
-      n = construct_inferior_arguments (inferior_argc, inferior_argv);
-      old = set_inferior_args (n);
-      xfree (old);
+      n = construct_inferior_arguments (current_inferior ()->argc,
+					current_inferior ()->argv);
+      set_inferior_args (n);
+      xfree (n);
     }
 
-  if (inferior_args == NULL)
-    inferior_args = xstrdup ("");
+  if (current_inferior ()->args == NULL)
+    current_inferior ()->args = xstrdup ("");
 
-  return inferior_args;
+  return current_inferior ()->args;
 }
 
-char *
+/* Set the arguments for the current inferior.  Ownership of
+   NEWARGS is not transferred.  */
+
+void
 set_inferior_args (char *newargs)
 {
-  char *saved_args = inferior_args;
-
-  inferior_args = newargs;
-  inferior_argc = 0;
-  inferior_argv = 0;
-
-  return saved_args;
+  xfree (current_inferior ()->args);
+  current_inferior ()->args = newargs ? xstrdup (newargs) : NULL;
+  current_inferior ()->argc = 0;
+  current_inferior ()->argv = 0;
 }
 
 void
 set_inferior_args_vector (int argc, char **argv)
 {
-  inferior_argc = argc;
-  inferior_argv = argv;
+  current_inferior ()->argc = argc;
+  current_inferior ()->argv = argv;
 }
 
 /* Notice when `set args' is run.  */
 static void
-notice_args_set (char *args, int from_tty, struct cmd_list_element *c)
+set_args_command (char *args, int from_tty, struct cmd_list_element *c)
 {
-  inferior_argc = 0;
-  inferior_argv = 0;
+  /* CLI has assigned the user-provided value to inferior_args_scratch.
+     Now route it to current inferior.  */
+  set_inferior_args (inferior_args_scratch);
 }
 
 /* Notice when `show args' is run.  */
 static void
-notice_args_read (struct ui_file *file, int from_tty,
-		  struct cmd_list_element *c, const char *value)
+show_args_command (struct ui_file *file, int from_tty,
+		   struct cmd_list_element *c, const char *value)
 {
   /* Note that we ignore the passed-in value in favor of computing it
      directly.  */
@@ -367,15 +383,6 @@ strip_bg_char (char **args)
   return 0;
 }
 
-void
-tty_command (char *file, int from_tty)
-{
-  if (file == 0)
-    error_no_arg (_("terminal name for running target process"));
-
-  set_inferior_io_terminal (file);
-}
-
 /* Common actions to take after creating any sort of inferior, by any
    means (running, attaching, connecting, et cetera).  The target
    should be stopped.  */
@@ -395,22 +402,6 @@ post_create_inferior (struct target_ops *target, int from_tty)
   /* Now that we know the register layout, retrieve current PC.  */
   stop_pc = regcache_read_pc (get_current_regcache ());
 
-  /* If the solist is global across processes, there's no need to
-     refetch it here.  */
-  if (exec_bfd && !gdbarch_has_global_solist (target_gdbarch))
-    {
-      /* Sometimes the platform-specific hook loads initial shared
-	 libraries, and sometimes it doesn't.  Try to do so first, so
-	 that we can add them with the correct value for FROM_TTY.
-	 If we made all the inferior hook methods consistent,
-	 this call could be removed.  */
-#ifdef SOLIB_ADD
-      SOLIB_ADD (NULL, from_tty, target, auto_solib_add);
-#else
-      solib_add (NULL, from_tty, target, auto_solib_add);
-#endif
-    }
-
   if (exec_bfd)
     {
       /* Create the hooks to handle shared library load and unload
@@ -418,7 +409,25 @@ post_create_inferior (struct target_ops *target, int from_tty)
 #ifdef SOLIB_CREATE_INFERIOR_HOOK
       SOLIB_CREATE_INFERIOR_HOOK (PIDGET (inferior_ptid));
 #else
-      solib_create_inferior_hook ();
+      solib_create_inferior_hook (from_tty);
+#endif
+    }
+
+  /* If the solist is global across processes, there's no need to
+     refetch it here.  */
+  if (exec_bfd && !gdbarch_has_global_solist (target_gdbarch))
+    {
+      /* Sometimes the platform-specific hook loads initial shared
+	 libraries, and sometimes it doesn't.  If it doesn't FROM_TTY will be
+	 incorrectly 0 but such solib targets should be fixed anyway.  If we
+	 made all the inferior hook methods consistent, this call could be
+	 removed.  Call it only after the solib target has been initialized by
+	 solib_create_inferior_hook.  */
+
+#ifdef SOLIB_ADD
+      SOLIB_ADD (NULL, 0, target, auto_solib_add);
+#else
+      solib_add (NULL, 0, target, auto_solib_add);
 #endif
     }
 
@@ -532,10 +541,7 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
 
       /* If there were other args, beside '&', process them. */
       if (args)
-	{
-          char *old_args = set_inferior_args (xstrdup (args));
-          xfree (old_args);
-	}
+	set_inferior_args (args);
     }
 
   if (from_tty)
@@ -555,7 +561,7 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
   /* We call get_inferior_args() because we might need to compute
      the value now.  */
   target_create_inferior (exec_file, get_inferior_args (),
-			  environ_vector (inferior_environ), from_tty);
+			  environ_vector (current_inferior ()->environment), from_tty);
 
   /* We're starting off a new process.  When we get out of here, in
      non-stop mode, finish the state of all threads of that process,
@@ -590,8 +596,7 @@ run_command (char *args, int from_tty)
 static void
 run_no_args_command (char *args, int from_tty)
 {
-  char *old_args = set_inferior_args (xstrdup (""));
-  xfree (old_args);
+  set_inferior_args ("");
 }
 
 
@@ -1695,7 +1700,7 @@ environment_info (char *var, int from_tty)
 {
   if (var)
     {
-      char *val = get_in_environ (inferior_environ, var);
+      char *val = get_in_environ (current_inferior ()->environment, var);
       if (val)
 	{
 	  puts_filtered (var);
@@ -1712,7 +1717,7 @@ environment_info (char *var, int from_tty)
     }
   else
     {
-      char **vector = environ_vector (inferior_environ);
+      char **vector = environ_vector (current_inferior ()->environment);
       while (*vector)
 	{
 	  puts_filtered (*vector++);
@@ -1777,10 +1782,10 @@ set_environment_command (char *arg, int from_tty)
       printf_filtered (_("\
 Setting environment variable \"%s\" to null value.\n"),
 		       var);
-      set_in_environ (inferior_environ, var, "");
+      set_in_environ (current_inferior ()->environment, var, "");
     }
   else
-    set_in_environ (inferior_environ, var, val);
+    set_in_environ (current_inferior ()->environment, var, val);
   xfree (var);
 }
 
@@ -1793,12 +1798,12 @@ unset_environment_command (char *var, int from_tty)
          Ask for confirmation if reading from the terminal.  */
       if (!from_tty || query (_("Delete all environment variables? ")))
 	{
-	  free_environ (inferior_environ);
-	  inferior_environ = make_environ ();
+	  free_environ (current_inferior ()->environment);
+	  current_inferior ()->environment = make_environ ();
 	}
     }
   else
-    unset_in_environ (inferior_environ, var);
+    unset_in_environ (current_inferior ()->environment, var);
 }
 
 /* Handle the execution path (PATH variable) */
@@ -1809,7 +1814,7 @@ static void
 path_info (char *args, int from_tty)
 {
   puts_filtered ("Executable and object file path: ");
-  puts_filtered (get_in_environ (inferior_environ, path_var_name));
+  puts_filtered (get_in_environ (current_inferior ()->environment, path_var_name));
   puts_filtered ("\n");
 }
 
@@ -1821,13 +1826,13 @@ path_command (char *dirname, int from_tty)
   char *exec_path;
   char *env;
   dont_repeat ();
-  env = get_in_environ (inferior_environ, path_var_name);
+  env = get_in_environ (current_inferior ()->environment, path_var_name);
   /* Can be null if path is not set */
   if (!env)
     env = "";
   exec_path = xstrdup (env);
   mod_path (dirname, &exec_path);
-  set_in_environ (inferior_environ, path_var_name, exec_path);
+  set_in_environ (current_inferior ()->environment, path_var_name, exec_path);
   xfree (exec_path);
   if (from_tty)
     path_info ((char *) NULL, from_tty);
@@ -2505,6 +2510,8 @@ detach_command (char *args, int from_tty)
   if (ptid_equal (inferior_ptid, null_ptid))
     error (_("The program is not being run."));
 
+  disconnect_or_stop_tracing (from_tty);
+
   target_detach (args, from_tty);
 
   /* If the solist is global across inferiors, don't clear it when we
@@ -2640,19 +2647,22 @@ _initialize_infcmd (void)
 
   /* add the filename of the terminal connected to inferior I/O */
   add_setshow_filename_cmd ("inferior-tty", class_run,
-			    &inferior_io_terminal, _("\
+			    &inferior_io_terminal_scratch, _("\
 Set terminal for future runs of program being debugged."), _("\
 Show terminal for future runs of program being debugged."), _("\
-Usage: set inferior-tty /dev/pts/1"), NULL, NULL, &setlist, &showlist);
+Usage: set inferior-tty /dev/pts/1"),
+			    set_inferior_tty_command,
+			    show_inferior_tty_command,
+			    &setlist, &showlist);
   add_com_alias ("tty", "set inferior-tty", class_alias, 0);
 
   add_setshow_optional_filename_cmd ("args", class_run,
-				     &inferior_args, _("\
+				     &inferior_args_scratch, _("\
 Set argument list to give program being debugged when it is started."), _("\
 Show argument list to give program being debugged when it is started."), _("\
 Follow this command with any number of args, to be passed to the program."),
-				     notice_args_set,
-				     notice_args_read,
+				     set_args_command,
+				     show_args_command,
 				     &setlist, &showlist);
 
   c = add_cmd ("environment", no_class, environment_info, _("\
@@ -2849,7 +2859,4 @@ Register name as argument means describe only that register."));
 
   add_info ("vector", vector_info,
 	    _("Print the status of the vector unit\n"));
-
-  inferior_environ = make_environ ();
-  init_environ (inferior_environ);
 }

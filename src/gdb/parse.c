@@ -31,9 +31,8 @@
    during the process of parsing; the lower levels of the tree always
    come first in the result.  */
 
-#include <ctype.h>
-
 #include "defs.h"
+#include <ctype.h>
 #include "arch-utils.h"
 #include "gdb_string.h"
 #include "symtab.h"
@@ -854,6 +853,8 @@ operator_length_standard (struct expression *expr, int endpos,
 
     case BINOP_VAL:
     case UNOP_CAST:
+    case UNOP_DYNAMIC_CAST:
+    case UNOP_REINTERPRET_CAST:
     case UNOP_MEMVAL:
       oplen = 3;
       args = 1;

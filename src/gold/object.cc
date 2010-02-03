@@ -1180,6 +1180,14 @@ Sized_relobj<size, big_endian>::do_layout(Symbol_table* symtab,
             {
               symtab->gc()->worklist().push(Section_id(this, i)); 
             }
+          // If the section name XXX can be represented as a C identifier
+          // it cannot be discarded if there are references to
+          // __start_XXX and __stop_XXX symbols.  These need to be
+          // specially handled.
+          if (is_cident(name))
+            {
+              symtab->gc()->add_cident_section(name, Section_id(this, i));
+            }
         }
 
       // When doing a relocatable link we are going to copy input
@@ -1313,7 +1321,7 @@ Sized_relobj<size, big_endian>::do_layout(Symbol_table* symtab,
         }
     }
 
-  if (!is_gc_pass_one)
+  if (!is_gc_pass_two)
     layout->layout_gnu_stack(seen_gnu_stack, gnu_stack_flags);
 
   // When doing a relocatable link handle the reloc sections at the
@@ -1382,7 +1390,7 @@ Sized_relobj<size, big_endian>::do_layout(Symbol_table* symtab,
 						   reloc_type[i],
 						   &offset);
       out_sections[i] = os;
-      if (offset == -1)
+      if (os == NULL || offset == -1)
 	{
 	  // An object can contain at most one section holding exception
 	  // frame information.
@@ -1396,7 +1404,7 @@ Sized_relobj<size, big_endian>::do_layout(Symbol_table* symtab,
       // If this section requires special handling, and if there are
       // relocs that apply to it, then we must do the special handling
       // before we apply the relocs.
-      if (offset == -1 && reloc_shndx[i] != 0)
+      if (os != NULL && offset == -1 && reloc_shndx[i] != 0)
 	this->set_relocs_must_follow_section_writes();
     }
 
@@ -2514,6 +2522,50 @@ struct Relocate_info<64, false>;
 #ifdef HAVE_TARGET_64_BIG
 template
 struct Relocate_info<64, true>;
+#endif
+
+#ifdef HAVE_TARGET_32_LITTLE
+template
+void
+Xindex::initialize_symtab_xindex<32, false>(Object*, unsigned int);
+
+template
+void
+Xindex::read_symtab_xindex<32, false>(Object*, unsigned int,
+				      const unsigned char*);
+#endif
+
+#ifdef HAVE_TARGET_32_BIG
+template
+void
+Xindex::initialize_symtab_xindex<32, true>(Object*, unsigned int);
+
+template
+void
+Xindex::read_symtab_xindex<32, true>(Object*, unsigned int,
+				     const unsigned char*);
+#endif
+
+#ifdef HAVE_TARGET_64_LITTLE
+template
+void
+Xindex::initialize_symtab_xindex<64, false>(Object*, unsigned int);
+
+template
+void
+Xindex::read_symtab_xindex<64, false>(Object*, unsigned int,
+				      const unsigned char*);
+#endif
+
+#ifdef HAVE_TARGET_64_BIG
+template
+void
+Xindex::initialize_symtab_xindex<64, true>(Object*, unsigned int);
+
+template
+void
+Xindex::read_symtab_xindex<64, true>(Object*, unsigned int,
+				     const unsigned char*);
 #endif
 
 } // End namespace gold.

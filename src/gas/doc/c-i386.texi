@@ -109,6 +109,7 @@ processor names are recognized:
 @code{opteron},
 @code{k8},
 @code{amdfam10},
+@code{amdfam15},
 @code{generic32} and
 @code{generic64}.
 
@@ -187,6 +188,16 @@ instructions,  which is the default.  @option{-msse-check=@var{warning}}
 will make the assembler issue a warning for any SSE intruction.
 @option{-msse-check=@var{error}} will make the assembler issue an error
 for any SSE intruction.
+
+@cindex @samp{-mavxscalar=} option, i386
+@cindex @samp{-mavxscalar=} option, x86-64
+@item -mavxscalar=@var{128}
+@item -mavxscalar=@var{256}
+This options control how the assembler should encode scalar AVX
+instructions.  @option{-mavxscalar=@var{128}} will encode scalar
+AVX instructions with 128bit vector length, which is the default.
+@option{-mavxscalar=@var{256}} will encode scalar AVX instructions
+with 256bit vector length.
 
 @cindex @samp{-mmnemonic=} option, i386
 @cindex @samp{-mmnemonic=} option, x86-64
@@ -915,7 +926,7 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{prescott} @tab @samp{nocona} @tab @samp{core} @tab @samp{core2}
 @item @samp{corei7} @tab @samp{l1om}
 @item @samp{k6} @tab @samp{k6_2} @tab @samp{athlon} @tab @samp{k8}
-@item @samp{amdfam10}
+@item @samp{amdfam10} @tab @samp{amdfam15}
 @item @samp{generic32} @tab @samp{generic64}
 @item @samp{.mmx} @tab @samp{.sse} @tab @samp{.sse2} @tab @samp{.sse3}
 @item @samp{.ssse3} @tab @samp{.sse4.1} @tab @samp{.sse4.2} @tab @samp{.sse4}

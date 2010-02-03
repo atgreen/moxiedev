@@ -3379,7 +3379,7 @@ mips_n32n64_return_value (struct gdbarch *gdbarch, struct type *func_type,
      (and $f2 if necessary).  This is a generalization of the Fortran COMPLEX
      case.
 
-     * Any other struct or union results of at most 128 bits are returned in
+     * Any other composite results of at most 128 bits are returned in
      $2 (first 64 bits) and $3 (remainder, if necessary).
 
      * Larger composite results are handled by converting the function to a
@@ -3390,8 +3390,7 @@ mips_n32n64_return_value (struct gdbarch *gdbarch, struct type *func_type,
      specific exception to return COMPLEX results in the floating point
      registers.]  */
 
-  if (TYPE_CODE (type) == TYPE_CODE_ARRAY
-      || TYPE_LENGTH (type) > 2 * MIPS64_REGSIZE)
+  if (TYPE_LENGTH (type) > 2 * MIPS64_REGSIZE)
     return RETURN_VALUE_STRUCT_CONVENTION;
   else if (TYPE_CODE (type) == TYPE_CODE_FLT
 	   && TYPE_LENGTH (type) == 16
@@ -3481,9 +3480,10 @@ mips_n32n64_return_value (struct gdbarch *gdbarch, struct type *func_type,
       return RETURN_VALUE_REGISTER_CONVENTION;
     }
   else if (TYPE_CODE (type) == TYPE_CODE_STRUCT
-	   || TYPE_CODE (type) == TYPE_CODE_UNION)
+	   || TYPE_CODE (type) == TYPE_CODE_UNION
+	   || TYPE_CODE (type) == TYPE_CODE_ARRAY)
     {
-      /* A structure or union.  Extract the left justified value,
+      /* A composite type.  Extract the left justified value,
          regardless of the byte order.  I.e. DO NOT USE
          mips_xfer_lower.  */
       int offset;
@@ -5045,6 +5045,9 @@ mips_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr, int *lenptr)
 	  static gdb_byte big_breakpoint[] = { 0, 0x5, 0, 0xd };
 	  static gdb_byte pmon_big_breakpoint[] = { 0, 0, 0, 0xd };
 	  static gdb_byte idt_big_breakpoint[] = { 0, 0, 0x0a, 0xd };
+	  /* Likewise, IRIX appears to expect a different breakpoint,
+	     although this is not apparent until you try to use pthreads. */
+	  static gdb_byte irix_big_breakpoint[] = { 0, 0, 0, 0xd };
 
 	  *lenptr = sizeof (big_breakpoint);
 
@@ -5054,6 +5057,8 @@ mips_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR *pcptr, int *lenptr)
 		   || strcmp (target_shortname, "pmon") == 0
 		   || strcmp (target_shortname, "lsi") == 0)
 	    return pmon_big_breakpoint;
+	  else if (gdbarch_osabi (gdbarch) == GDB_OSABI_IRIX)
+	    return irix_big_breakpoint;
 	  else
 	    return big_breakpoint;
 	}

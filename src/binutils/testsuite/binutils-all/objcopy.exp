@@ -835,6 +835,7 @@ if [is_elf_format] {
     objcopy_test_readelf "ELF group" group-3.s
     objcopy_test_readelf "ELF group" group-4.s
     run_dump_test "copy-1"
+    run_dump_test "note-1"
 }
 
 run_dump_test "copy-2"
@@ -875,5 +876,8 @@ if [is_elf_format] {
     run_dump_test "localize-hidden-1"
     run_dump_test "testranges"
     run_dump_test "testranges-ia64"
+
+    run_dump_test "add-section"
+    run_dump_test "add-empty-section"
 }
 run_dump_test "localize-hidden-2"

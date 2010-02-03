@@ -230,6 +230,16 @@ class Target
   is_local_label_name(const char* name) const
   { return this->do_is_local_label_name(name); }
 
+  // Get the symbol index to use for a target specific reloc.
+  unsigned int
+  reloc_symbol_index(void* arg, unsigned int type) const
+  { return this->do_reloc_symbol_index(arg, type); }
+
+  // Get the addend to use for a target specific reloc.
+  uint64_t
+  reloc_addend(void* arg, unsigned int type, uint64_t addend) const
+  { return this->do_reloc_addend(arg, type, addend); }
+
   // A function starts at OFFSET in section SHNDX in OBJECT.  That
   // function was compiled with -fsplit-stack, but it refers to a
   // function which was compiled without -fsplit-stack.  VIEW is a
@@ -314,6 +324,12 @@ class Target
   int
   attributes_order(int num) const
   { return this->do_attributes_order(num); }
+
+  // When a target is selected as the default target, we call this method,
+  // which may be used for expensive, target-specific initialization.
+  void
+  select_as_default_target()
+  { this->do_select_as_default_target(); } 
 
  protected:
   // This struct holds the constant information for a child class.  We
@@ -405,6 +421,18 @@ class Target
   virtual bool
   do_is_local_label_name(const char*) const;
 
+  // Virtual function that must be overridden by a target which uses
+  // target specific relocations.
+  virtual unsigned int
+  do_reloc_symbol_index(void*, unsigned int) const
+  { gold_unreachable(); }
+
+  // Virtual function that must be overidden by a target which uses
+  // target specific relocations.
+  virtual uint64_t
+  do_reloc_addend(void*, unsigned int, uint64_t) const
+  { gold_unreachable(); }
+
   // Virtual function which may be overridden by the child class.
   virtual void
   do_calls_non_split(Relobj* object, unsigned int, section_offset_type,
@@ -487,6 +515,11 @@ class Target
   virtual int
   do_attributes_order(int num) const
   { return num; }
+
+  // This may be overridden by the child class.
+  virtual void
+  do_select_as_default_target()
+  { }
 
  private:
   // The implementations of the four do_make_elf_object virtual functions are

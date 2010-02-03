@@ -178,6 +178,7 @@ static Elf_Internal_Shdr * symtab_shndx_hdr;
 static int show_name;
 static int do_dynamic;
 static int do_syms;
+static int do_dyn_syms;
 static int do_reloc;
 static int do_sections;
 static int do_section_groups;
@@ -2507,6 +2508,10 @@ get_machine_flags (unsigned e_flags, unsigned e_machine)
 	    strcat (buf, ", 64-bit doubles");
 	  if (e_flags & E_FLAG_RX_DSP)
 	    strcat (buf, ", dsp");	  
+
+	case EM_S390:
+	  if (e_flags & EF_S390_HIGH_GPRS)
+	    strcat (buf, ", highgprs");
 	}
     }
 
@@ -2923,6 +2928,7 @@ get_section_type_name (unsigned int sh_type)
 }
 
 #define OPTION_DEBUG_DUMP	512
+#define OPTION_DYN_SYMS		513
 
 static struct option options[] =
 {
@@ -2939,6 +2945,7 @@ static struct option options[] =
   {"full-section-name",no_argument, 0, 'N'},
   {"symbols",	       no_argument, 0, 's'},
   {"syms",	       no_argument, 0, 's'},
+  {"dyn-syms",	       no_argument, 0, OPTION_DYN_SYMS},
   {"relocs",	       no_argument, 0, 'r'},
   {"notes",	       no_argument, 0, 'n'},
   {"dynamic",	       no_argument, 0, 'd'},
@@ -2977,7 +2984,8 @@ usage (FILE * stream)
   -t --section-details   Display the section details\n\
   -e --headers           Equivalent to: -h -l -S\n\
   -s --syms              Display the symbol table\n\
-      --symbols          An alias for --syms\n\
+     --symbols           An alias for --syms\n\
+  --dyn-syms             Display the dynamic symbol table\n\
   -n --notes             Display the core notes (if present)\n\
   -r --relocs            Display the relocations (if present)\n\
   -u --unwind            Display the unwind info (if present)\n\
@@ -3202,6 +3210,9 @@ parse_args (int argc, char ** argv)
 	      dwarf_select_sections_by_names (optarg);
 	    }
 	  break;
+	case OPTION_DYN_SYMS:
+	  do_dyn_syms++;
+	  break;
 #ifdef SUPPORT_DISASSEMBLY
 	case 'i':
 	  request_dump (DISASS_DUMP);
@@ -3228,7 +3239,8 @@ parse_args (int argc, char ** argv)
   if (!do_dynamic && !do_syms && !do_reloc && !do_unwind && !do_sections
       && !do_segments && !do_header && !do_dump && !do_version
       && !do_histogram && !do_debugging && !do_arch && !do_notes
-      && !do_section_groups && !do_archive_index)
+      && !do_section_groups && !do_archive_index
+      && !do_dyn_syms)
     usage (stderr);
   else if (argc < 3)
     {
@@ -3332,8 +3344,13 @@ process_file_header (void)
 	      (long) elf_header.e_ehsize);
       printf (_("  Size of program headers:           %ld (bytes)\n"),
 	      (long) elf_header.e_phentsize);
-      printf (_("  Number of program headers:         %ld\n"),
+      printf (_("  Number of program headers:         %ld"),
 	      (long) elf_header.e_phnum);
+      if (section_headers != NULL
+	  && elf_header.e_phnum == PN_XNUM
+	  && section_headers[0].sh_info != 0)
+	printf (_(" (%ld)"), (long) section_headers[0].sh_info);
+      putc ('\n', stdout);
       printf (_("  Size of section headers:           %ld (bytes)\n"),
 	      (long) elf_header.e_shentsize);
       printf (_("  Number of section headers:         %ld"),
@@ -3354,6 +3371,9 @@ process_file_header (void)
 
   if (section_headers != NULL)
     {
+      if (elf_header.e_phnum == PN_XNUM
+	  && section_headers[0].sh_info != 0)
+	elf_header.e_phnum = section_headers[0].sh_info;
       if (elf_header.e_shnum == SHN_UNDEF)
 	elf_header.e_shnum = section_headers[0].sh_size;
       if (elf_header.e_shstrndx == (SHN_XINDEX & 0xffff))
@@ -7343,12 +7363,14 @@ process_symbol_table (FILE * file)
   bfd_vma * gnuchains = NULL;
   bfd_vma gnusymidx = 0;
 
-  if (! do_syms && !do_histogram)
+  if (!do_syms && !do_dyn_syms && !do_histogram)
     return 1;
 
   if (dynamic_info[DT_HASH]
       && (do_histogram
-	  || (do_using_dynamic && dynamic_strings != NULL)))
+	  || (do_using_dynamic
+	      && !do_dyn_syms
+	      && dynamic_strings != NULL)))
     {
       unsigned char nb[8];
       unsigned char nc[8];
@@ -7404,7 +7426,9 @@ process_symbol_table (FILE * file)
 
   if (dynamic_info_DT_GNU_HASH
       && (do_histogram
-	  || (do_using_dynamic && dynamic_strings != NULL)))
+	  || (do_using_dynamic
+	      && !do_dyn_syms
+	      && dynamic_strings != NULL)))
     {
       unsigned char nb[16];
       bfd_vma i, maxchain = 0xffffffff, bitmaskwords;
@@ -7561,7 +7585,7 @@ process_symbol_table (FILE * file)
 	      }
 	}
     }
-  else if (do_syms && !do_using_dynamic)
+  else if (do_dyn_syms || (do_syms && !do_using_dynamic))
     {
       unsigned int i;
 
@@ -7575,8 +7599,10 @@ process_symbol_table (FILE * file)
 	  Elf_Internal_Sym * symtab;
 	  Elf_Internal_Sym * psym;
 
-	  if (   section->sh_type != SHT_SYMTAB
-	      && section->sh_type != SHT_DYNSYM)
+	  if ((section->sh_type != SHT_SYMTAB
+	       && section->sh_type != SHT_DYNSYM)
+	      || (!do_syms
+		  && section->sh_type == SHT_SYMTAB))
 	    continue;
 
 	  printf (_("\nSymbol table '%s' contains %lu entries:\n"),
@@ -10389,6 +10415,8 @@ get_note_type (unsigned e_type)
 	return _("NT_PPC_VMX (ppc Altivec registers)");
       case NT_PPC_VSX:
 	return _("NT_PPC_VSX (ppc VSX registers)");
+      case NT_X86_XSTATE:
+	return _("NT_X86_XSTATE (x86 XSAVE extended state)");
       case NT_S390_HIGH_GPRS:
 	return _("NT_S390_HIGH_GPRS (s390 upper register halves)");
       case NT_PSTATUS:
@@ -10859,7 +10887,7 @@ process_object (char * file_name, FILE * file)
       do_unwind = do_version = do_dump = do_arch = 0;
 
       if (! do_using_dynamic)
-	do_syms = do_reloc = 0;
+	do_syms = do_dyn_syms = do_reloc = 0;
     }
 
   if (! process_section_groups (file))
@@ -11463,7 +11491,7 @@ process_archive (char * file_name, FILE * file, bfd_boolean is_thin_archive)
       if (!do_dynamic && !do_syms && !do_reloc && !do_unwind && !do_sections
 	  && !do_segments && !do_header && !do_dump && !do_version
 	  && !do_histogram && !do_debugging && !do_arch && !do_notes
-	  && !do_section_groups)
+	  && !do_section_groups && !do_dyn_syms)
 	{
 	  ret = 0; /* Archive index only.  */
 	  goto out;

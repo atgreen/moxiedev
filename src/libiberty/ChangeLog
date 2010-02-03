@@ -1,3 +1,21 @@
+2010-01-20  Jason Merrill  <jason@redhat.com>
+
+	PR c++/42338
+	* cp-demangle.c (d_print_comp): Fix array index printing.
+
+2010-01-11  Tristan Gingold  <gingold@adacore.com>
+
+	* cplus-dem.c (ada_demangle): Remove prototype.
+	(grow_vect): Removed.
+	(ada_demangle): Rewritten.
+	(cplus_demangle): Fix indentation.
+	* testsuite/demangle-expected: Add tests for Ada.
+
+2010-01-09  Ian Lance Taylor  <iant@google.com>
+
+	PR other/42230
+	* cp-demangle.c (d_demangle): Return dgs.alc on success.
+
 2010-01-04  Nobuhiro Iwamatsu <iwamatsu@nigauri.org>
 
 	PR target/42316

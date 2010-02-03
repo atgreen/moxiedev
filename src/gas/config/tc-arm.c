@@ -10623,7 +10623,7 @@ do_t_nop (void)
 	{
 	  /* PR9722: Check for Thumb2 availability before
 	     generating a thumb2 nop instruction.  */
-	  if (ARM_CPU_HAS_FEATURE (cpu_variant, arm_arch_t2))
+	  if (ARM_CPU_HAS_FEATURE (selected_cpu, arm_ext_v6t2))
 	    {
 	      inst.instruction = THUMB_OP16 (inst.instruction);
 	      inst.instruction |= inst.operands[0].imm << 4;
@@ -12043,8 +12043,17 @@ neon_check_type (unsigned els, enum neon_shape ns, ...)
             {
               if ((thisarg & N_VFP) != 0)
                 {
-                  enum neon_shape_el regshape = neon_shape_tab[ns].el[i];
-                  unsigned regwidth = neon_shape_el_size[regshape], match;
+                  enum neon_shape_el regshape;
+                  unsigned regwidth, match;
+
+		  /* PR 11136: Catch the case where we are passed a shape of NS_NULL.  */
+		  if (ns == NS_NULL)
+		    {
+		      first_error (_("invalid instruction shape"));
+		      return badtype;
+		    }
+                  regshape = neon_shape_tab[ns].el[i];
+                  regwidth = neon_shape_el_size[regshape];
 
                   /* In VFP mode, operands must match register widths. If we
                      have a key operand, use its width, else use the width of
@@ -12193,9 +12202,8 @@ try_vfp_nsyn (int args, void (*pfn) (enum neon_shape))
       pfn (rs);
       return SUCCESS;
     }
-  else
-    inst.error = NULL;
 
+  inst.error = NULL;
   return FAIL;
 }
 
@@ -13666,11 +13674,21 @@ do_vfp_nsyn_cvtz (void)
 }
 
 static void
-do_neon_cvt (void)
+do_neon_cvt_1 (bfd_boolean round_to_zero ATTRIBUTE_UNUSED)
 {
   enum neon_shape rs = neon_select_shape (NS_DDI, NS_QQI, NS_FFI, NS_DD, NS_QQ,
     NS_FD, NS_DF, NS_FF, NS_QD, NS_DQ, NS_NULL);
   int flavour = neon_cvt_flavour (rs);
+
+  /* PR11109: Handle round-to-zero for VCVT conversions.  */
+  if (round_to_zero
+      && ARM_CPU_HAS_FEATURE (cpu_variant, fpu_arch_vfp_v2)
+      && (flavour == 0 || flavour == 1 || flavour == 8 || flavour == 9)
+      && (rs == NS_FD || rs == NS_FF))
+    {
+      do_vfp_nsyn_cvtz ();
+      return;
+    }
 
   /* VFP rather than Neon conversions.  */
   if (flavour >= 6)
@@ -13769,6 +13787,18 @@ do_neon_cvt (void)
       /* Some VFP conversions go here (s32 <-> f32, u32 <-> f32).  */
       do_vfp_nsyn_cvt (rs, flavour);
     }
+}
+
+static void
+do_neon_cvtr (void)
+{
+  do_neon_cvt_1 (FALSE);
+}
+
+static void
+do_neon_cvt (void)
+{
+  do_neon_cvt_1 (TRUE);
 }
 
 static void
@@ -17416,7 +17446,8 @@ static const struct asm_opcode insns[] =
  NCE(vldr,      d100b00, 2, (RVSD, ADDRGLDC), neon_ldr_str),
  NCE(vstr,      d000b00, 2, (RVSD, ADDRGLDC), neon_ldr_str),
 
- nCEF(vcvt,     _vcvt,    3, (RNSDQ, RNSDQ, oI32b), neon_cvt),
+ nCEF(vcvt,     _vcvt,   3, (RNSDQ, RNSDQ, oI32b), neon_cvt),
+ nCEF(vcvtr,    _vcvt,   2, (RNSDQ, RNSDQ), neon_cvtr),
  nCEF(vcvtb,	_vcvt,	 2, (RVS, RVS), neon_cvtb),
  nCEF(vcvtt,	_vcvt,	 2, (RVS, RVS), neon_cvtt),
 

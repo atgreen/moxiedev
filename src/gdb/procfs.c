@@ -51,6 +51,7 @@
 #include "inflow.h"
 #include "auxv.h"
 #include "procfs.h"
+#include "observer.h"
 
 /*
  * PROCFS.C
@@ -270,6 +271,15 @@ typedef pr_siginfo64_t gdb_siginfo_t;
 typedef struct siginfo gdb_siginfo_t;
 #endif
 
+/* On mips-irix, praddset and prdelset are defined in such a way that
+   they return a value, which causes GCC to emit a -Wunused error
+   because the returned value is not used.  Prevent this warning
+   by casting the return value to void.  On sparc-solaris, this issue
+   does not exist because the definition of these macros already include
+   that cast to void.  */
+#define gdb_praddset(sp, flag) ((void) praddset (sp, flag))
+#define gdb_prdelset(sp, flag) ((void) prdelset (sp, flag))
+
 /* gdb_premptysysset */
 #ifdef premptysysset
 #define gdb_premptysysset premptysysset
@@ -281,14 +291,14 @@ typedef struct siginfo gdb_siginfo_t;
 #ifdef praddsysset
 #define gdb_praddsysset praddsysset
 #else
-#define gdb_praddsysset praddset
+#define gdb_praddsysset gdb_praddset
 #endif
 
 /* prdelsysset */
 #ifdef prdelsysset
 #define gdb_prdelsysset prdelsysset
 #else
-#define gdb_prdelsysset prdelset
+#define gdb_prdelsysset gdb_prdelset
 #endif
 
 /* prissyssetmember */
@@ -2219,7 +2229,7 @@ proc_trace_signal (procinfo *pi, int signo)
     {
       if (proc_get_traced_signals (pi, &temp))
 	{
-	  praddset (&temp, signo);
+	  gdb_praddset (&temp, signo);
 	  return proc_set_traced_signals (pi, &temp);
 	}
     }
@@ -2253,7 +2263,7 @@ proc_ignore_signal (procinfo *pi, int signo)
     {
       if (proc_get_traced_signals (pi, &temp))
 	{
-	  prdelset (&temp, signo);
+	  gdb_prdelset (&temp, signo);
 	  return proc_set_traced_signals (pi, &temp);
 	}
     }
@@ -3453,8 +3463,6 @@ static void do_detach (int signo);
 static int register_gdb_signals (procinfo *, gdb_sigset_t *);
 static void proc_trace_syscalls_1 (procinfo *pi, int syscallnum,
                                    int entry_or_exit, int mode, int from_tty);
-static int insert_dbx_link_breakpoint (procinfo *pi);
-static void remove_dbx_link_breakpoint (void);
 
 /* On mips-irix, we need to insert a breakpoint at __dbx_link during
    the startup phase.  The following two variables are used to record
@@ -3491,7 +3499,7 @@ procfs_debug_inferior (procinfo *pi)
 #else
   /* Register to trace hardware faults in the child. */
   prfillset (&traced_faults);		/* trace all faults... */
-  prdelset  (&traced_faults, FLTPAGE);	/* except page fault.  */
+  gdb_prdelset  (&traced_faults, FLTPAGE);	/* except page fault.  */
 #endif
   if (!proc_set_traced_faults  (pi, &traced_faults))
     return __LINE__;
@@ -3938,6 +3946,135 @@ syscall_is_lwp_create (procinfo *pi, int scall)
   return 0;
 }
 
+/* Remove the breakpoint that we inserted in __dbx_link().
+   Does nothing if the breakpoint hasn't been inserted or has already
+   been removed.  */
+
+static void
+remove_dbx_link_breakpoint (void)
+{
+  if (dbx_link_bpt_addr == 0)
+    return;
+
+  if (deprecated_remove_raw_breakpoint (target_gdbarch, dbx_link_bpt) != 0)
+    warning (_("Unable to remove __dbx_link breakpoint."));
+
+  dbx_link_bpt_addr = 0;
+  dbx_link_bpt = NULL;
+}
+
+#ifdef SYS_syssgi
+/* Return the address of the __dbx_link() function in the file
+   refernced by ABFD by scanning its symbol table.  Return 0 if
+   the symbol was not found.  */
+
+static CORE_ADDR
+dbx_link_addr (bfd *abfd)
+{
+  long storage_needed;
+  asymbol **symbol_table;
+  long number_of_symbols;
+  long i;
+
+  storage_needed = bfd_get_symtab_upper_bound (abfd);
+  if (storage_needed <= 0)
+    return 0;
+
+  symbol_table = (asymbol **) xmalloc (storage_needed);
+  make_cleanup (xfree, symbol_table);
+
+  number_of_symbols = bfd_canonicalize_symtab (abfd, symbol_table);
+
+  for (i = 0; i < number_of_symbols; i++)
+    {
+      asymbol *sym = symbol_table[i];
+
+      if ((sym->flags & BSF_GLOBAL)
+          && sym->name != NULL && strcmp (sym->name, "__dbx_link") == 0)
+        return (sym->value + sym->section->vma);
+    }
+
+  /* Symbol not found, return NULL.  */
+  return 0;
+}
+
+/* Search the symbol table of the file referenced by FD for a symbol
+   named __dbx_link(). If found, then insert a breakpoint at this location,
+   and return nonzero.  Return zero otherwise.  */
+
+static int
+insert_dbx_link_bpt_in_file (int fd, CORE_ADDR ignored)
+{
+  bfd *abfd;
+  long storage_needed;
+  CORE_ADDR sym_addr;
+
+  abfd = bfd_fdopenr ("unamed", 0, fd);
+  if (abfd == NULL)
+    {
+      warning (_("Failed to create a bfd: %s."), bfd_errmsg (bfd_get_error ()));
+      return 0;
+    }
+
+  if (!bfd_check_format (abfd, bfd_object))
+    {
+      /* Not the correct format, so we can not possibly find the dbx_link
+         symbol in it.  */
+      bfd_close (abfd);
+      return 0;
+    }
+
+  sym_addr = dbx_link_addr (abfd);
+  if (sym_addr != 0)
+    {
+      /* Insert the breakpoint.  */
+      dbx_link_bpt_addr = sym_addr;
+      dbx_link_bpt = deprecated_insert_raw_breakpoint (target_gdbarch, NULL,
+						       sym_addr);
+      if (dbx_link_bpt == NULL)
+        {
+          warning (_("Failed to insert dbx_link breakpoint."));
+          bfd_close (abfd);
+          return 0;
+        }
+      bfd_close (abfd);
+      return 1;
+    }
+
+  bfd_close (abfd);
+  return 0;
+}
+
+/* If the given memory region MAP contains a symbol named __dbx_link,
+   insert a breakpoint at this location and return nonzero.  Return
+   zero otherwise.  */
+
+static int
+insert_dbx_link_bpt_in_region (struct prmap *map,
+                               int (*child_func) (),
+                               void *data)
+{
+  procinfo *pi = (procinfo *) data;
+
+  /* We know the symbol we're looking for is in a text region, so
+     only look for it if the region is a text one.  */
+  if (map->pr_mflags & MA_EXEC)
+    return solib_mappings_callback (map, insert_dbx_link_bpt_in_file, pi);
+
+  return 0;
+}
+
+/* Search all memory regions for a symbol named __dbx_link.  If found,
+   insert a breakpoint at its location, and return nonzero.  Return zero
+   otherwise.  */
+
+static int
+insert_dbx_link_breakpoint (procinfo *pi)
+{
+  return iterate_over_mappings (pi, NULL, pi, insert_dbx_link_bpt_in_region);
+}
+#endif
+
 /*
  * Function: target_wait
  *
@@ -4377,7 +4514,7 @@ procfs_xfer_partial (struct target_ops *ops, enum target_object object,
 
 #ifdef NEW_PROC_API
     case TARGET_OBJECT_AUXV:
-      return procfs_xfer_auxv (ops, object, annex, readbuf, writebuf,
+      return memory_xfer_auxv (ops, object, annex, readbuf, writebuf,
 			       offset, len);
 #endif
 
@@ -4642,9 +4779,9 @@ register_gdb_signals (procinfo *pi, gdb_sigset_t *signals)
     if (signal_stop_state  (target_signal_from_host (signo)) == 0 &&
 	signal_print_state (target_signal_from_host (signo)) == 0 &&
 	signal_pass_state  (target_signal_from_host (signo)) == 1)
-      prdelset (signals, signo);
+      gdb_prdelset (signals, signo);
     else
-      praddset (signals, signo);
+      gdb_praddset (signals, signo);
 
   return proc_set_traced_signals (pi, signals);
 }
@@ -5137,13 +5274,27 @@ procfs_create_inferior (struct target_ops *ops, char *exec_file,
 		       NULL, NULL, shell_file);
 
   procfs_init_inferior (ops, pid);
+}
 
+/* An observer for the "inferior_created" event.  */
+
+static void
+procfs_inferior_created (struct target_ops *ops, int from_tty)
+{
 #ifdef SYS_syssgi
   /* Make sure to cancel the syssgi() syscall-exit notifications.  
      They should normally have been removed by now, but they may still
      be activated if the inferior doesn't use shared libraries, or if
      we didn't locate __dbx_link, or if we never stopped in __dbx_link.
-     See procfs_init_inferior() for more details.  */
+     See procfs_init_inferior() for more details.
+
+     Since these notifications are only ever enabled when we spawned
+     the inferior ourselves, there is nothing to do when the inferior
+     was created by attaching to an already running process, or when
+     debugging a core file.  */
+  if (current_inferior ()->attach_flag || !target_can_run (&current_target))
+    return;
+
   proc_trace_syscalls_1 (find_procinfo_or_die (PIDGET (inferior_ptid), 0),
                          SYS_syssgi, PR_SYSEXIT, FLAG_RESET, 0);
 #endif
@@ -5584,133 +5735,6 @@ proc_find_memory_regions (int (*func) (CORE_ADDR,
 				find_memory_regions_callback);
 }
 
-/* Remove the breakpoint that we inserted in __dbx_link().
-   Does nothing if the breakpoint hasn't been inserted or has already
-   been removed.  */
-
-static void
-remove_dbx_link_breakpoint (void)
-{
-  if (dbx_link_bpt_addr == 0)
-    return;
-
-  if (deprecated_remove_raw_breakpoint (target_gdbarch, dbx_link_bpt) != 0)
-    warning (_("Unable to remove __dbx_link breakpoint."));
-
-  dbx_link_bpt_addr = 0;
-  dbx_link_bpt = NULL;
-}
-
-/* Return the address of the __dbx_link() function in the file
-   refernced by ABFD by scanning its symbol table.  Return 0 if
-   the symbol was not found.  */
-
-static CORE_ADDR
-dbx_link_addr (bfd *abfd)
-{
-  long storage_needed;
-  asymbol **symbol_table;
-  long number_of_symbols;
-  long i;
-
-  storage_needed = bfd_get_symtab_upper_bound (abfd);
-  if (storage_needed <= 0)
-    return 0;
-
-  symbol_table = (asymbol **) xmalloc (storage_needed);
-  make_cleanup (xfree, symbol_table);
-
-  number_of_symbols = bfd_canonicalize_symtab (abfd, symbol_table);
-
-  for (i = 0; i < number_of_symbols; i++)
-    {
-      asymbol *sym = symbol_table[i];
-
-      if ((sym->flags & BSF_GLOBAL)
-          && sym->name != NULL && strcmp (sym->name, "__dbx_link") == 0)
-        return (sym->value + sym->section->vma);
-    }
-
-  /* Symbol not found, return NULL.  */
-  return 0;
-}
-
-/* Search the symbol table of the file referenced by FD for a symbol
-   named __dbx_link(). If found, then insert a breakpoint at this location,
-   and return nonzero.  Return zero otherwise.  */
-
-static int
-insert_dbx_link_bpt_in_file (int fd, CORE_ADDR ignored)
-{
-  bfd *abfd;
-  long storage_needed;
-  CORE_ADDR sym_addr;
-
-  abfd = bfd_fdopenr ("unamed", 0, fd);
-  if (abfd == NULL)
-    {
-      warning (_("Failed to create a bfd: %s."), bfd_errmsg (bfd_get_error ()));
-      return 0;
-    }
-
-  if (!bfd_check_format (abfd, bfd_object))
-    {
-      /* Not the correct format, so we can not possibly find the dbx_link
-         symbol in it.  */
-      bfd_close (abfd);
-      return 0;
-    }
-
-  sym_addr = dbx_link_addr (abfd);
-  if (sym_addr != 0)
-    {
-      /* Insert the breakpoint.  */
-      dbx_link_bpt_addr = sym_addr;
-      dbx_link_bpt = deprecated_insert_raw_breakpoint (target_gdbarch, NULL,
-						       sym_addr);
-      if (dbx_link_bpt == NULL)
-        {
-          warning (_("Failed to insert dbx_link breakpoint."));
-          bfd_close (abfd);
-          return 0;
-        }
-      bfd_close (abfd);
-      return 1;
-    }
-
-  bfd_close (abfd);
-  return 0;
-} 
-
-/* If the given memory region MAP contains a symbol named __dbx_link,
-   insert a breakpoint at this location and return nonzero.  Return
-   zero otherwise.  */
-
-static int
-insert_dbx_link_bpt_in_region (struct prmap *map,
-                               int (*child_func) (),
-                               void *data)
-{     
-  procinfo *pi = (procinfo *) data;
-        
-  /* We know the symbol we're looking for is in a text region, so
-     only look for it if the region is a text one.  */
-  if (map->pr_mflags & MA_EXEC)
-    return solib_mappings_callback (map, insert_dbx_link_bpt_in_file, pi);
- 
-  return 0;
-}           
-
-/* Search all memory regions for a symbol named __dbx_link.  If found,
-   insert a breakpoint at its location, and return nonzero.  Return zero
-   otherwise.  */
-
-static int
-insert_dbx_link_breakpoint (procinfo *pi)
-{
-  return iterate_over_mappings (pi, NULL, pi, insert_dbx_link_bpt_in_region);
-}
-
 /*
  * Function: mappingflags
  *
@@ -5991,6 +6015,8 @@ proc_untrace_sysexit_cmd (char *args, int from_tty)
 void
 _initialize_procfs (void)
 {
+  observer_attach_inferior_created (procfs_inferior_created);
+
   add_info ("proc", info_proc_cmd, _("\
 Show /proc process information about any running process.\n\
 Specify process id, or use the program being debugged by default.\n\
@@ -6074,7 +6100,7 @@ procfs_do_thread_registers (bfd *obfd, ptid_t ptid,
   target_fetch_registers (regcache, -1);
 
   fill_gregset (regcache, &gregs, -1);
-#if defined (UNIXWARE)
+#if defined (NEW_PROC_API)
   note_data = (char *) elfcore_write_lwpstatus (obfd,
 						note_data,
 						note_size,

@@ -1,3 +1,125 @@
+2010-01-29  Nick Clifton  <nickc@redhat.com>
+
+	PR 11136
+	* config/tc-arm.c (neon_check_type): Handle a neon_shape value of
+	NS_NULL.
+
+2010-01-27  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* NEWS: Mention new feature.
+	* config/obj-coff.c (obj_coff_section): Accept digits and use
+	to override default section alignment power if specified.
+	* doc/as.texinfo (.section directive): Update documentation.
+
+2010-01-27  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (avxscalar): New.
+	(OPTION_MAVXSCALAR): Likewise.
+	(build_vex_prefix): Select vector_length for scalar instructions
+	based on avxscalar.
+	(md_longopts): Add OPTION_MAVXSCALAR.
+	(md_parse_option): Handle OPTION_MAVXSCALAR.
+	(md_show_usage): Add -mavxscalar=.
+
+	* doc/c-i386.texi: Document -mavxscalar=.
+
+2010-01-24  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (build_vex_prefix): Set i.vex.bytes[0] to
+	0xc4 individually.
+
+2010-01-23  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* write.h (fix_at_start): Declare.
+	* write.c (fix_new_internal): Add at_beginning parameter.
+	Use it instead of REVERSE_SORT_RELOCS.  Fix the handling of
+	seg_fix_tailP for the at_beginning/REVERSE_SORT_RELOCS case.
+	(fix_new, fix_new_exp): Update accordingly.
+	(fix_at_start): New function.
+	* config/tc-ppc.c (md_pseudo_table): Add .ref to the OBJ_XCOFF section.
+	(ppc_ref): New function, for OBJ_XCOFF.
+	(md_apply_fix): Handle BFD_RELOC_NONE for OBJ_XCOFF.
+	* config/te-i386aix.h (REVERSE_SORT_RELOCS): Remove #undef.
+
+2010-01-21  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* config/te-solaris.h (DWARF2_EH_FRAME_READ_ONLY): Make read-only
+	on 64-bit Solaris/x86.
+	Include obj-format.h earlier.
+
+2010-01-21  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+
+	* config/tc-s390.c (s390_elf_final_processing): New function.
+	* config/tc-s390.h (elf_tc_final_processing): New macro definition.
+	(s390_elf_final_processing): Added prototype.
+
+
+2010-01-20  Nick Clifton  <nickc@redhat.com>
+
+	PR 11109
+	* config/tc-arm.c (do_neon_cvt): Rename to do_neon_cvt_1.  Add
+	code to handle round-to-zero for VCVT conversions.
+	(do_neon_cvt): New.  Call do_neon_cvt_1.
+	(do_neon_cvtr): New.  Call do_neon_cvt_1.
+	(insns): Use do_neon_cvt for VCVT insn and do_neon_cvtr for VCVTR
+	insn.
+
+2010-01-18  Tristan Gingold  <gingold@adacore.com>
+
+	* config/tc-ia64.c (ia64_vms_note): Generate 24 bytes note headers.
+
+2010-01-15  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* config/tc-i386.c (md_assemble): Before accessing the IMM field
+	check that it's not an XOP insn.
+
+2010-01-14  Jie Zhang  <jie.zhang@analog.com>
+
+	* config/bfin-aux.h: Remove argument names in function
+	declarations.
+	* config/bfin-lex.l (parse_int): Fix shadowed variable name
+	warning.
+	* config/bfin-parse.y (value_match): Remove argument names
+	in declaration.
+	(notethat): Likewise.
+	(yyerror): Likewise.
+
+2010-01-13  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* config/tc-arm.c (do_t_nop): Correct check for Thumb-2 NOP.
+
+2010-01-13  Nick Clifton  <nickc@redhat.com>
+
+	* config/tc-h8300.c (h8300_elf_section): New function - issue a
+	warning message if a new section is created without setting any
+	attributes for it.
+	(md_pseudo_table): Intercept section creation pseudos.
+	(md_pcrel_from): Replace abort with an error message.
+	* config/obj-elf.c (obj_elf_section_name): Export this function.
+	* config/obj-elf.h (obj_elf_section_name): Prototype.
+
+2010-01-12  Alan Modra  <amodra@gmail.com>
+
+	PR 11122
+	* listing.c (print_source): Add one to line number.
+
+2010-01-09  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.in: Regenerate.
+	* configure: Regenerate.
+	* doc/Makefile.in: Regenerate.
+
+2010-01-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* version.c (parse_args): Change to "Copyright 2010".
+
+2010-01-06  Quentin Neill  <quentin.neill@amd.com>
+
+	* config/tc-i386.c (cpu_arch): Add amdfam15.
+	(i386_align_code): Add PROCESSOR_AMDFAM15 cases.
+	* config/tc-i386.h (processor_type): Add PROCESSOR_AMDFAM15.
+	* doc/c-i386.texi: Add amdfam15.
+
 2010-01-04  Daniel Gutson  <dgutson@codesourcery.com>
 
 	* config/tc-arm.c (do_neon_logic): Accept imm value

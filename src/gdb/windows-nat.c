@@ -123,6 +123,8 @@ enum
 static uintptr_t dr[8];
 static int debug_registers_changed;
 static int debug_registers_used;
+
+static int windows_initialization_done;
 #define DR6_CLEAR_VALUE 0xffff0ff0
 
 /* The string sent by cygwin when it processes a signal.
@@ -1128,7 +1130,7 @@ windows_continue (DWORD continue_status, int id)
   thread_info *th;
   BOOL res;
 
-  DEBUG_EVENTS (("ContinueDebugEvent (cpid=%ld, ctid=%ld, %s);\n",
+  DEBUG_EVENTS (("ContinueDebugEvent (cpid=%ld, ctid=%lx, %s);\n",
 		  current_event.dwProcessId, current_event.dwThreadId,
 		  continue_status == DBG_CONTINUE ?
 		  "DBG_CONTINUE" : "DBG_EXCEPTION_NOT_HANDLED"));
@@ -1361,7 +1363,7 @@ get_windows_debug_event (struct target_ops *ops,
       break;
 
     case EXIT_THREAD_DEBUG_EVENT:
-      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%d code=%s)\n",
+      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%x code=%s)\n",
 		     (unsigned) current_event.dwProcessId,
 		     (unsigned) current_event.dwThreadId,
 		     "EXIT_THREAD_DEBUG_EVENT"));
@@ -1374,7 +1376,7 @@ get_windows_debug_event (struct target_ops *ops,
       break;
 
     case CREATE_PROCESS_DEBUG_EVENT:
-      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%d code=%s)\n",
+      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%x code=%s)\n",
 		     (unsigned) current_event.dwProcessId,
 		     (unsigned) current_event.dwThreadId,
 		     "CREATE_PROCESS_DEBUG_EVENT"));
@@ -1395,19 +1397,27 @@ get_windows_debug_event (struct target_ops *ops,
       break;
 
     case EXIT_PROCESS_DEBUG_EVENT:
-      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%d code=%s)\n",
+      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%x code=%s)\n",
 		     (unsigned) current_event.dwProcessId,
 		     (unsigned) current_event.dwThreadId,
 		     "EXIT_PROCESS_DEBUG_EVENT"));
-      if (saw_create != 1)
-	break;
-      ourstatus->kind = TARGET_WAITKIND_EXITED;
-      ourstatus->value.integer = current_event.u.ExitProcess.dwExitCode;
-      retval = main_thread_id;
+      if (!windows_initialization_done)
+	{
+	  target_terminal_ours ();
+	  target_mourn_inferior ();
+	  error (_("During startup program exited with code 0x%x."),
+		 (unsigned int) current_event.u.ExitProcess.dwExitCode);
+	}
+      else if (saw_create == 1)
+	{
+	  ourstatus->kind = TARGET_WAITKIND_EXITED;
+	  ourstatus->value.integer = current_event.u.ExitProcess.dwExitCode;
+	  retval = main_thread_id;
+	}
       break;
 
     case LOAD_DLL_DEBUG_EVENT:
-      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%d code=%s)\n",
+      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%x code=%s)\n",
 		     (unsigned) current_event.dwProcessId,
 		     (unsigned) current_event.dwThreadId,
 		     "LOAD_DLL_DEBUG_EVENT"));
@@ -1421,7 +1431,7 @@ get_windows_debug_event (struct target_ops *ops,
       break;
 
     case UNLOAD_DLL_DEBUG_EVENT:
-      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%d code=%s)\n",
+      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%x code=%s)\n",
 		     (unsigned) current_event.dwProcessId,
 		     (unsigned) current_event.dwThreadId,
 		     "UNLOAD_DLL_DEBUG_EVENT"));
@@ -1434,7 +1444,7 @@ get_windows_debug_event (struct target_ops *ops,
       break;
 
     case EXCEPTION_DEBUG_EVENT:
-      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%d code=%s)\n",
+      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%x code=%s)\n",
 		     (unsigned) current_event.dwProcessId,
 		     (unsigned) current_event.dwThreadId,
 		     "EXCEPTION_DEBUG_EVENT"));
@@ -1456,7 +1466,7 @@ get_windows_debug_event (struct target_ops *ops,
       break;
 
     case OUTPUT_DEBUG_STRING_EVENT:	/* message from the kernel */
-      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%d code=%s)\n",
+      DEBUG_EVENTS (("gdb: kernel event for pid=%d tid=%x code=%s)\n",
 		     (unsigned) current_event.dwProcessId,
 		     (unsigned) current_event.dwThreadId,
 		     "OUTPUT_DEBUG_STRING_EVENT"));
@@ -1598,6 +1608,7 @@ do_initial_windows_stuff (struct target_ops *ops, DWORD pid, int attaching)
   terminal_init_inferior_with_pgrp (pid);
   target_terminal_inferior ();
 
+  windows_initialization_done = 0;
   inf->stop_soon = STOP_QUIETLY;
   while (1)
     {
@@ -1610,6 +1621,7 @@ do_initial_windows_stuff (struct target_ops *ops, DWORD pid, int attaching)
 	break;
     }
 
+  windows_initialization_done = 1;
   inf->stop_soon = NO_STOP_QUIETLY;
   stop_after_trap = 0;
   return;

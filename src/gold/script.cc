@@ -1,6 +1,6 @@
 // script.cc -- handle linker scripts for gold.
 
-// Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -1793,22 +1793,24 @@ Keyword_to_parsecode::keyword_to_parsecode(const char* keyword,
 
 // A single version expression.
 // For example, pattern="std::map*" and language="C++".
-// PATTERN should be from the stringpool.
-struct
-Version_expression
+struct Version_expression
 {
   Version_expression(const std::string& a_pattern,
 		     Version_script_info::Language a_language,
                      bool a_exact_match)
-    : pattern(a_pattern), language(a_language), exact_match(a_exact_match)
+    : pattern(a_pattern), language(a_language), exact_match(a_exact_match),
+      was_matched_by_symbol(false)
   { }
 
   std::string pattern;
   Version_script_info::Language language;
   // If false, we use glob() to match pattern.  If true, we use strcmp().
   bool exact_match;
+  // True if --no-undefined-version is in effect and we found this
+  // version in get_symbol_version.  We use mutable because this
+  // struct is generally not modifiable after it has been created.
+  mutable bool was_matched_by_symbol;
 };
-
 
 // A list of expressions.
 struct Version_expression_list
@@ -1837,17 +1839,59 @@ struct Version_tree
   const struct Version_dependency_list* dependencies;
 };
 
+// Helper class that calls cplus_demangle when needed and takes care of freeing
+// the result.
+
+class Lazy_demangler
+{
+ public:
+  Lazy_demangler(const char* symbol, int options)
+    : symbol_(symbol), options_(options), demangled_(NULL), did_demangle_(false)
+  { }
+
+  ~Lazy_demangler()
+  { free(this->demangled_); }
+
+  // Return the demangled name. The actual demangling happens on the first call,
+  // and the result is later cached.
+  inline char*
+  get();
+
+ private:
+  // The symbol to demangle.
+  const char *symbol_;
+  // Option flags to pass to cplus_demagle.
+  const int options_;
+  // The cached demangled value, or NULL if demangling didn't happen yet or
+  // failed.
+  char *demangled_;
+  // Whether we already called cplus_demangle
+  bool did_demangle_;
+};
+
+// Return the demangled name. The actual demangling happens on the first call,
+// and the result is later cached. Returns NULL if the symbol cannot be
+// demangled.
+
+inline char*
+Lazy_demangler::get()
+{
+  if (!this->did_demangle_)
+    {
+      this->demangled_ = cplus_demangle(this->symbol_, this->options_);
+      this->did_demangle_ = true;
+    }
+  return this->demangled_;
+}
+
 // Class Version_script_info.
 
 Version_script_info::Version_script_info()
-  : dependency_lists_(), expression_lists_(), version_trees_(),
-    is_finalized_(false)
+  : dependency_lists_(), expression_lists_(), version_trees_(), globs_(),
+    default_version_(NULL), default_is_global_(false), is_finalized_(false)
 {
   for (int i = 0; i < LANGUAGE_COUNT; ++i)
-    {
-      this->globals_[i] = NULL;
-      this->locals_[i] = NULL;
-    }
+    this->exact_[i] = NULL;
 }
 
 Version_script_info::~Version_script_info()
@@ -1913,6 +1957,84 @@ Version_script_info::get_dependencies(const char* version) const
   return ret;
 }
 
+// A version script essentially maps a symbol name to a version tag
+// and an indication of whether symbol is global or local within that
+// version tag.  Each symbol maps to at most one version tag.
+// Unfortunately, in practice, version scripts are ambiguous, and list
+// symbols multiple times.  Thus, we have to document the matching
+// process.
+
+// This is a description of what the GNU linker does as of 2010-01-11.
+// It walks through the version tags in the order in which they appear
+// in the version script.  For each tag, it first walks through the
+// global patterns for that tag, then the local patterns.  When
+// looking at a single pattern, it first applies any language specific
+// demangling as specified for the pattern, and then matches the
+// resulting symbol name to the pattern.  If it finds an exact match
+// for a literal pattern (a pattern enclosed in quotes or with no
+// wildcard characters), then that is the match that it uses.  If
+// finds a match with a wildcard pattern, then it saves it and
+// continues searching.  Wildcard patterns that are exactly "*" are
+// saved separately.
+
+// If no exact match with a literal pattern is ever found, then if a
+// wildcard match with a global pattern was found it is used,
+// otherwise if a wildcard match with a local pattern was found it is
+// used.
+
+// This is the result:
+//   * If there is an exact match, then we use the first tag in the
+//     version script where it matches.
+//     + If the exact match in that tag is global, it is used.
+//     + Otherwise the exact match in that tag is local, and is used.
+//   * Otherwise, if there is any match with a global wildcard pattern:
+//     + If there is any match with a wildcard pattern which is not
+//       "*", then we use the tag in which the *last* such pattern
+//       appears.
+//     + Otherwise, we matched "*".  If there is no match with a local
+//       wildcard pattern which is not "*", then we use the *last*
+//       match with a global "*".  Otherwise, continue.
+//   * Otherwise, if there is any match with a local wildcard pattern:
+//     + If there is any match with a wildcard pattern which is not
+//       "*", then we use the tag in which the *last* such pattern
+//       appears.
+//     + Otherwise, we matched "*", and we use the tag in which the
+//       *last* such match occurred.
+
+// There is an additional wrinkle.  When the GNU linker finds a symbol
+// with a version defined in an object file due to a .symver
+// directive, it looks up that symbol name in that version tag.  If it
+// finds it, it matches the symbol name against the patterns for that
+// version.  If there is no match with a global pattern, but there is
+// a match with a local pattern, then the GNU linker marks the symbol
+// as local.
+
+// We want gold to be generally compatible, but we also want gold to
+// be fast.  These are the rules that gold implements:
+//   * If there is an exact match for the mangled name, we use it.
+//     + If there is more than one exact match, we give a warning, and
+//       we use the first tag in the script which matches.
+//     + If a symbol has an exact match as both global and local for
+//       the same version tag, we give an error.
+//   * Otherwise, we look for an extern C++ or an extern Java exact
+//     match.  If we find an exact match, we use it.
+//     + If there is more than one exact match, we give a warning, and
+//       we use the first tag in the script which matches.
+//     + If a symbol has an exact match as both global and local for
+//       the same version tag, we give an error.
+//   * Otherwise, we look through the wildcard patterns, ignoring "*"
+//     patterns.  We look through the version tags in reverse order.
+//     For each version tag, we look through the global patterns and
+//     then the local patterns.  We use the first match we find (i.e.,
+//     the last matching version tag in the file).
+//   * Otherwise, we use the "*" pattern if there is one.  We give an
+//     error if there are multiple "*" patterns.
+
+// At least for now, gold does not look up the version tag for a
+// symbol version found in an object file to see if it should be
+// forced local.  There are other ways to force a symbol to be local,
+// and I don't understand why this one is useful.
+
 // Build a set of fast lookup tables for a version script.
 
 void
@@ -1922,125 +2044,300 @@ Version_script_info::build_lookup_tables()
   for (size_t j = 0; j < size; ++j)
     {
       const Version_tree* v = this->version_trees_[j];
-      this->build_expression_list_lookup(v->global, v, &this->globals_[0]);
-      this->build_expression_list_lookup(v->local, v, &this->locals_[0]);
+      this->build_expression_list_lookup(v->local, v, false);
+      this->build_expression_list_lookup(v->global, v, true);
+    }
+}
+
+// If a pattern has backlashes but no unquoted wildcard characters,
+// then we apply backslash unquoting and look for an exact match.
+// Otherwise we treat it as a wildcard pattern.  This function returns
+// true for a wildcard pattern.  Otherwise, it does backslash
+// unquoting on *PATTERN and returns false.  If this returns true,
+// *PATTERN may have been partially unquoted.
+
+bool
+Version_script_info::unquote(std::string* pattern) const
+{
+  bool saw_backslash = false;
+  size_t len = pattern->length();
+  size_t j = 0;
+  for (size_t i = 0; i < len; ++i)
+    {
+      if (saw_backslash)
+	saw_backslash = false;
+      else
+	{
+	  switch ((*pattern)[i])
+	    {
+	    case '?': case '[': case '*':
+	      return true;
+	    case '\\':
+	      saw_backslash = true;
+	      continue;
+	    default:
+	      break;
+	    }
+	}
+
+      if (i != j)
+	(*pattern)[j] = (*pattern)[i];
+      ++j;
+    }
+  return false;
+}
+
+// Add an exact match for MATCH to *PE.  The result of the match is
+// V/IS_GLOBAL.
+
+void
+Version_script_info::add_exact_match(const std::string& match,
+				     const Version_tree* v, bool is_global,
+				     const Version_expression* ve,
+				     Exact *pe)
+{
+  std::pair<Exact::iterator, bool> ins =
+    pe->insert(std::make_pair(match, Version_tree_match(v, is_global, ve)));
+  if (ins.second)
+    {
+      // This is the first time we have seen this match.
+      return;
+    }
+
+  Version_tree_match& vtm(ins.first->second);
+  if (vtm.real->tag != v->tag)
+    {
+      // This is an ambiguous match.  We still return the
+      // first version that we found in the script, but we
+      // record the new version to issue a warning if we
+      // wind up looking up this symbol.
+      if (vtm.ambiguous == NULL)
+	vtm.ambiguous = v;
+    }
+  else if (is_global != vtm.is_global)
+    {
+      // We have a match for both the global and local entries for a
+      // version tag.  That's got to be wrong.
+      gold_error(_("'%s' appears as both a global and a local symbol "
+		   "for version '%s' in script"),
+		 match.c_str(), v->tag.c_str());
     }
 }
 
 // Build fast lookup information for EXPLIST and store it in LOOKUP.
+// All matches go to V, and IS_GLOBAL is true if they are global
+// matches.
 
 void
 Version_script_info::build_expression_list_lookup(
     const Version_expression_list* explist,
     const Version_tree* v,
-    Lookup** lookup)
+    bool is_global)
 {
   if (explist == NULL)
     return;
   size_t size = explist->expressions.size();
-  for (size_t j = 0; j < size; ++j)
+  for (size_t i = 0; i < size; ++i)
     {
-      const Version_expression& exp(explist->expressions[j]);
-      Lookup **pp = &lookup[exp.language];
-      if (*pp == NULL)
-	*pp = new Lookup();
-      Lookup* p = *pp;
+      const Version_expression& exp(explist->expressions[i]);
 
-      if (!exp.exact_match && strpbrk(exp.pattern.c_str(), "?*[") != NULL)
-	p->globs.push_back(Glob(exp.pattern.c_str(), v));
-      else
+      if (exp.pattern.length() == 1 && exp.pattern[0] == '*')
 	{
-	  std::pair<Exact::iterator, bool> ins =
-	    p->exact.insert(std::make_pair(exp.pattern, v));
-	  if (!ins.second)
+	  if (this->default_version_ != NULL
+	      && this->default_version_->tag != v->tag)
+	    gold_warning(_("wildcard match appears in both version '%s' "
+			   "and '%s' in script"),
+			 this->default_version_->tag.c_str(), v->tag.c_str());
+	  else if (this->default_version_ != NULL
+		   && this->default_is_global_ != is_global)
+	    gold_error(_("wildcard match appears as both global and local "
+			 "in version '%s' in script"),
+		       v->tag.c_str());
+	  this->default_version_ = v;
+	  this->default_is_global_ = is_global;
+	  continue;
+	}
+
+      std::string pattern = exp.pattern;
+      if (!exp.exact_match)
+	{
+	  if (this->unquote(&pattern))
 	    {
-	      const Version_tree* v1 = ins.first->second;
-	      if (v1->tag != v->tag)
-		gold_error(_("'%s' appears in version script with both "
-			     "versions '%s' and '%s'"),
-			   exp.pattern.c_str(), v1->tag.c_str(),
-			   v->tag.c_str());
+	      this->globs_.push_back(Glob(&exp, v, is_global));
+	      continue;
 	    }
 	}
+
+      if (this->exact_[exp.language] == NULL)
+	this->exact_[exp.language] = new Exact();
+      this->add_exact_match(pattern, v, is_global, &exp,
+			    this->exact_[exp.language]);
     }
 }
 
-// Look up SYMBOL_NAME in the list of versions.  If CHECK_GLOBAL is
-// true look at the globally visible symbols, otherwise look at the
-// symbols listed as "local:".  Return true if the symbol is found,
-// false otherwise.  If the symbol is found, then if PVERSION is not
-// NULL, set *PVERSION to the version.
+// Return the name to match given a name, a language code, and two
+// lazy demanglers.
+
+const char*
+Version_script_info::get_name_to_match(const char* name,
+				       int language,
+				       Lazy_demangler* cpp_demangler,
+				       Lazy_demangler* java_demangler) const
+{
+  switch (language)
+    {
+    case LANGUAGE_C:
+      return name;
+    case LANGUAGE_CXX:
+      return cpp_demangler->get();
+    case LANGUAGE_JAVA:
+      return java_demangler->get();
+    default:
+      gold_unreachable();
+    }
+}
+
+// Look up SYMBOL_NAME in the list of versions.  Return true if the
+// symbol is found, false if not.  If the symbol is found, then if
+// PVERSION is not NULL, set *PVERSION to the version tag, and if
+// P_IS_GLOBAL is not NULL, set *P_IS_GLOBAL according to whether the
+// symbol is global or not.
 
 bool
-Version_script_info::get_symbol_version_helper(const char* symbol_name,
-                                               bool check_global,
-					       std::string* pversion) const
+Version_script_info::get_symbol_version(const char* symbol_name,
+					std::string* pversion,
+					bool* p_is_global) const
 {
+  Lazy_demangler cpp_demangled_name(symbol_name, DMGL_ANSI | DMGL_PARAMS);
+  Lazy_demangler java_demangled_name(symbol_name,
+				     DMGL_ANSI | DMGL_PARAMS | DMGL_JAVA);
+
   gold_assert(this->is_finalized_);
-  const Lookup* const * pp = (check_global
-			      ? &this->globals_[0]
-			      : &this->locals_[0]);
   for (int i = 0; i < LANGUAGE_COUNT; ++i)
     {
-      const Lookup* lookup = pp[i];
-      if (lookup == NULL)
+      Exact* exact = this->exact_[i];
+      if (exact == NULL)
 	continue;
 
-      const char* name_to_match;
-      char* allocated;
-      switch (i)
+      const char* name_to_match = this->get_name_to_match(symbol_name, i,
+							  &cpp_demangled_name,
+							  &java_demangled_name);
+      if (name_to_match == NULL)
 	{
-	case LANGUAGE_C:
-	  allocated = NULL;
-	  name_to_match = symbol_name;
-	  break;
-	case LANGUAGE_CXX:
-	  allocated = cplus_demangle(symbol_name, DMGL_ANSI | DMGL_PARAMS);
-	  if (allocated == NULL)
-	    continue;
-	  name_to_match = allocated;
-	  break;
-	case LANGUAGE_JAVA:
-	  allocated = cplus_demangle(symbol_name,
-				     DMGL_ANSI | DMGL_PARAMS | DMGL_JAVA);
-	  if (allocated == NULL)
-	    continue;
-	  name_to_match = allocated;
-	default:
-	  gold_unreachable();
+	  // If the name can not be demangled, the GNU linker goes
+	  // ahead and tries to match it anyhow.  That does not
+	  // make sense to me and I have not implemented it.
+	  continue;
 	}
 
-      Exact::const_iterator pe = lookup->exact.find(name_to_match);
-      if (pe != lookup->exact.end())
+      Exact::const_iterator pe = exact->find(name_to_match);
+      if (pe != exact->end())
 	{
+	  const Version_tree_match& vtm(pe->second);
+	  if (vtm.ambiguous != NULL)
+	    gold_warning(_("using '%s' as version for '%s' which is also "
+			   "named in version '%s' in script"),
+			 vtm.real->tag.c_str(), name_to_match,
+			 vtm.ambiguous->tag.c_str());
+
 	  if (pversion != NULL)
-	    *pversion = pe->second->tag;
-	  if (allocated != NULL)
-	    free (allocated);
+	    *pversion = vtm.real->tag;
+	  if (p_is_global != NULL)
+	    *p_is_global = vtm.is_global;
+
+	  // If we are using --no-undefined-version, and this is a
+	  // global symbol, we have to record that we have found this
+	  // symbol, so that we don't warn about it.  We have to do
+	  // this now, because otherwise we have no way to get from a
+	  // non-C language back to the demangled name that we
+	  // matched.
+	  if (p_is_global != NULL && vtm.is_global)
+	    vtm.expression->was_matched_by_symbol = true;
+
 	  return true;
 	}
+    }
 
-      for (std::vector<Glob>::const_iterator pg = lookup->globs.begin();
-	   pg != lookup->globs.end();
-	   ++pg)
+  // Look through the glob patterns in reverse order.
+
+  for (Globs::const_reverse_iterator p = this->globs_.rbegin();
+       p != this->globs_.rend();
+       ++p)
+    {
+      int language = p->expression->language;
+      const char* name_to_match = this->get_name_to_match(symbol_name,
+							  language,
+							  &cpp_demangled_name,
+							  &java_demangled_name);
+      if (name_to_match == NULL)
+	continue;
+
+      if (fnmatch(p->expression->pattern.c_str(), name_to_match,
+		  FNM_NOESCAPE) == 0)
 	{
-	  // Check for * specially since it is fairly common.
-	  if ((pg->pattern[0] == '*' && pg->pattern[1] == '\0')
-	      || fnmatch(pg->pattern, name_to_match, FNM_NOESCAPE) == 0)
-	    {
-	      if (pversion != NULL)
-		*pversion = pg->version->tag;
-	      if (allocated != NULL)
-		free (allocated);
-	      return true;
-	    }
+	  if (pversion != NULL)
+	    *pversion = p->version->tag;
+	  if (p_is_global != NULL)
+	    *p_is_global = p->is_global;
+	  return true;
 	}
+    }
 
-      if (allocated != NULL)
-	free (allocated);
+  // Finally, there may be a wildcard.
+  if (this->default_version_ != NULL)
+    {
+      if (pversion != NULL)
+	*pversion = this->default_version_->tag;
+      if (p_is_global != NULL)
+	*p_is_global = this->default_is_global_;
+      return true;
     }
 
   return false;
+}
+
+// Give an error if any exact symbol names (not wildcards) appear in a
+// version script, but there is no such symbol.
+
+void
+Version_script_info::check_unmatched_names(const Symbol_table* symtab) const
+{
+  for (size_t i = 0; i < this->version_trees_.size(); ++i)
+    {
+      const Version_tree* vt = this->version_trees_[i];
+      if (vt->global == NULL)
+	continue;
+      for (size_t j = 0; j < vt->global->expressions.size(); ++j)
+	{
+	  const Version_expression& expression(vt->global->expressions[j]);
+
+	  // Ignore cases where we used the version because we saw a
+	  // symbol that we looked up.  Note that
+	  // WAS_MATCHED_BY_SYMBOL will be true even if the symbol was
+	  // not a definition.  That's OK as in that case we most
+	  // likely gave an undefined symbol error anyhow.
+	  if (expression.was_matched_by_symbol)
+	    continue;
+
+	  // Just ignore names which are in languages other than C.
+	  // We have no way to look them up in the symbol table.
+	  if (expression.language != LANGUAGE_C)
+	    continue;
+
+	  // Remove backslash quoting, and ignore wildcard patterns.
+	  std::string pattern = expression.pattern;
+	  if (!expression.exact_match)
+	    {
+	      if (this->unquote(&pattern))
+		continue;
+	    }
+
+	  if (symtab->lookup(pattern.c_str(), vt->tag.c_str()) == NULL)
+	    gold_error(_("version script assignment of %s to symbol %s "
+			 "failed: symbol not defined"),
+		       vt->tag.c_str(), pattern.c_str());
+	}
+    }
 }
 
 struct Version_dependency_list*

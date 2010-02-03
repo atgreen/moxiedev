@@ -227,14 +227,16 @@ solib_find (char *in_pathname, int *fd)
 
   /* If not found, next search the inferior's $PATH environment variable. */
   if (found_file < 0 && gdb_sysroot_is_empty)
-    found_file = openp (get_in_environ (inferior_environ, "PATH"),
+    found_file = openp (get_in_environ (current_inferior ()->environment,
+					"PATH"),
 			OPF_TRY_CWD_FIRST, in_pathname, O_RDONLY | O_BINARY,
 			&temp_pathname);
 
   /* If not found, next search the inferior's $LD_LIBRARY_PATH 
      environment variable. */
   if (found_file < 0 && gdb_sysroot_is_empty)
-    found_file = openp (get_in_environ (inferior_environ, "LD_LIBRARY_PATH"),
+    found_file = openp (get_in_environ (current_inferior ()->environment,
+					"LD_LIBRARY_PATH"),
 			OPF_TRY_CWD_FIRST, in_pathname, O_RDONLY | O_BINARY,
 			&temp_pathname);
 
@@ -863,8 +865,7 @@ info_sharedlibrary_command (char *pattern, int from_tty)
 
       if (! ui_out_is_mi_like_p (interp_ui_out (top_level_interpreter ()))
 	  && so->symbols_loaded
-	  && !objfile_has_partial_symbols (so->objfile)
-	  && !objfile_has_full_symbols (so->objfile))
+	  && !objfile_has_symbols (so->objfile))
 	{
 	  so_missing_debug_info = 1;
 	  ui_out_field_string (uiout, "syms-read", "Yes (*)");
@@ -1015,7 +1016,7 @@ clear_solib (void)
 
    SYNOPSIS
 
-   void solib_create_inferior_hook ()
+   void solib_create_inferior_hook (int from_tty)
 
    DESCRIPTION
 
@@ -1025,10 +1026,10 @@ clear_solib (void)
    SOLIB_CREATE_INFERIOR_HOOK.  */
 
 void
-solib_create_inferior_hook (void)
+solib_create_inferior_hook (int from_tty)
 {
   struct target_so_ops *ops = solib_ops (target_gdbarch);
-  ops->solib_create_inferior_hook();
+  ops->solib_create_inferior_hook (from_tty);
 }
 
 /* GLOBAL FUNCTION
@@ -1104,7 +1105,6 @@ reload_shared_libraries (char *ignored, int from_tty,
 			 struct cmd_list_element *e)
 {
   no_shared_libraries (NULL, from_tty);
-  solib_add (NULL, from_tty, NULL, auto_solib_add);
   /* Creating inferior hooks here has two purposes. First, if we reload 
      shared libraries then the address of solib breakpoint we've computed
      previously might be no longer valid.  For example, if we forgot to set
@@ -1119,9 +1119,19 @@ reload_shared_libraries (char *ignored, int from_tty,
 #ifdef SOLIB_CREATE_INFERIOR_HOOK
       SOLIB_CREATE_INFERIOR_HOOK (PIDGET (inferior_ptid));
 #else
-      solib_create_inferior_hook ();
+      solib_create_inferior_hook (from_tty);
 #endif
     }
+
+  /* Sometimes the platform-specific hook loads initial shared
+     libraries, and sometimes it doesn't.  If it doesn't FROM_TTY will be
+     incorrectly 0 but such solib targets should be fixed anyway.  If we
+     made all the inferior hook methods consistent, this call could be
+     removed.  Call it only after the solib target has been initialized by
+     solib_create_inferior_hook.  */
+
+  solib_add (NULL, 0, NULL, auto_solib_add);
+
   /* We have unloaded and then reloaded debug info for all shared libraries.
      However, frames may still reference them, for example a frame's 
      unwinder might still point of DWARF FDE structures that are now freed.

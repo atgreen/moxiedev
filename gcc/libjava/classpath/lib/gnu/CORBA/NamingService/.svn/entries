@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/CORBA/NamingService
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
+2010-01-06T17:46:48.717189Z
+155678
 doko
 
 
@@ -338,11 +338,11 @@ file
 
 
 
-2009-04-24T17:47:27.000000Z
-5bcebb2c96d9e1956d5cad259ee31bef
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2010-02-03T11:42:25.650463Z
+fab7e0dbb755884ca028ec60e960d631
+2010-01-06T17:46:48.717189Z
+155678
+doko
 has-props
 
 

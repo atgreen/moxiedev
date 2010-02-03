@@ -1,15 +1,15 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/array/requirements
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-01T03:38:58.904086Z
-155545
-bkoz
+2010-01-31T22:52:25.555925Z
+156419
+paolo
 
 
 
@@ -130,7 +130,4 @@ jakub
 
 
 1294
-
-exception
-dir
 

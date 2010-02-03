@@ -99,6 +99,9 @@
 /* Define if ETXTBSY exists. */
 #undef HAVE_ETXTBSY
 
+/* Define to 1 if you have the <execinfo.h> header file. */
+#undef HAVE_EXECINFO_H
+
 /* Define to 1 if you have the `expf' function. */
 #undef HAVE_EXPF
 

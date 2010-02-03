@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms/partial_sort
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-01T10:19:11.738758Z
-151264
+2010-01-12T17:16:25.493050Z
+155841
 paolo
 
 
@@ -137,10 +137,10 @@ file
 
 
 
-2009-09-08T13:01:58.000000Z
-919bb5a71ee8693de4c09fc4c5154103
-2009-09-01T10:19:11.738758Z
-151264
+2010-02-03T11:41:57.106577Z
+efbef45fd07793388db3fc8ca5a0fbe2
+2010-01-12T17:16:25.493050Z
+155841
 paolo
 
 
@@ -163,5 +163,5 @@ paolo
 
 
 
-2540
+2706
 

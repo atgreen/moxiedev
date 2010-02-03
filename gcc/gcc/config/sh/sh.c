@@ -7254,13 +7254,13 @@ sh_expand_epilogue (bool sibcall_p)
 	  pop (PR_REG);
 	}
 
-      /* Banked registers are poped first to avoid being scheduled in the
+      /* Banked registers are popped first to avoid being scheduled in the
 	 delay slot. RTE switches banks before the ds instruction.  */
       if (current_function_interrupt)
 	{
-	  for (i = FIRST_BANKED_REG; i <= LAST_BANKED_REG; i++)
-	    if (TEST_HARD_REG_BIT (live_regs_mask, i)) 
-	      pop (LAST_BANKED_REG - i);
+	  for (i = LAST_BANKED_REG; i >= FIRST_BANKED_REG; i--)
+	    if (TEST_HARD_REG_BIT (live_regs_mask, i))
+	      pop (i);
 
 	  last_reg = FIRST_PSEUDO_REGISTER - LAST_BANKED_REG - 1;
 	}
@@ -9271,9 +9271,7 @@ sh_insn_length_adjustment (rtx insn)
 	&& GET_CODE (PATTERN (insn)) != USE
 	&& GET_CODE (PATTERN (insn)) != CLOBBER)
        || CALL_P (insn)
-       || (JUMP_P (insn)
-	   && GET_CODE (PATTERN (insn)) != ADDR_DIFF_VEC
-	   && GET_CODE (PATTERN (insn)) != ADDR_VEC))
+       || (JUMP_P (insn) && !JUMP_TABLE_DATA_P (insn)))
       && GET_CODE (PATTERN (NEXT_INSN (PREV_INSN (insn)))) != SEQUENCE
       && get_attr_needs_delay_slot (insn) == NEEDS_DELAY_SLOT_YES)
     return 2;
@@ -9281,9 +9279,7 @@ sh_insn_length_adjustment (rtx insn)
   /* SH2e has a bug that prevents the use of annulled branches, so if
      the delay slot is not filled, we'll have to put a NOP in it.  */
   if (sh_cpu_attr == CPU_SH2E
-      && JUMP_P (insn)
-      && GET_CODE (PATTERN (insn)) != ADDR_DIFF_VEC
-      && GET_CODE (PATTERN (insn)) != ADDR_VEC
+      && JUMP_P (insn) && !JUMP_TABLE_DATA_P (insn)
       && get_attr_type (insn) == TYPE_CBRANCH
       && GET_CODE (PATTERN (NEXT_INSN (PREV_INSN (insn)))) != SEQUENCE)
     return 2;

@@ -5013,7 +5013,7 @@ convert_like_real (conversion *convs, tree expr, tree fn, int argnum,
   switch (convs->kind)
     {
     case ck_rvalue:
-      expr = convert_bitfield_to_declared_type (expr);
+      expr = decay_conversion (expr);
       if (! MAYBE_CLASS_TYPE_P (totype))
 	return expr;
       /* Else fall through.  */
@@ -6256,11 +6256,10 @@ build_new_method_call (tree instance, tree fns, VEC(tree,gc) **args,
       permerror (input_location,
 		 "cannot call constructor %<%T::%D%> directly",
 		 basetype, name);
-      inform (input_location, "for a function-style cast, remove the "
-	      "redundant %<::%D%>", name);
+      permerror (input_location, "  for a function-style cast, remove the "
+		 "redundant %<::%D%>", name);
       call = build_functional_cast (basetype, build_tree_list_vec (user_args),
 				    complain);
-      release_tree_vector (user_args);
       return call;
     }
 

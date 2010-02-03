@@ -1,5 +1,5 @@
 /* Perform type resolution on the various structures.
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Andy Vaught
 
@@ -842,12 +842,19 @@ resolve_structure_cons (gfc_expr *expr)
   /* See if the user is trying to invoke a structure constructor for one of
      the iso_c_binding derived types.  */
   if (expr->ts.type == BT_DERIVED && expr->ts.u.derived
-      && expr->ts.u.derived->ts.is_iso_c && cons && cons->expr != NULL)
+      && expr->ts.u.derived->ts.is_iso_c && cons
+      && (cons->expr == NULL || cons->expr->expr_type != EXPR_NULL))
     {
       gfc_error ("Components of structure constructor '%s' at %L are PRIVATE",
 		 expr->ts.u.derived->name, &(expr->where));
       return FAILURE;
     }
+
+  /* Return if structure constructor is c_null_(fun)prt.  */
+  if (expr->ts.type == BT_DERIVED && expr->ts.u.derived
+      && expr->ts.u.derived->ts.is_iso_c && cons
+      && cons->expr && cons->expr->expr_type == EXPR_NULL)
+    return SUCCESS;
 
   for (; comp; comp = comp->next, cons = cons->next)
     {
@@ -937,7 +944,8 @@ was_declared (gfc_symbol *sym)
 
   if (a.allocatable || a.dimension || a.dummy || a.external || a.intrinsic
       || a.optional || a.pointer || a.save || a.target || a.volatile_
-      || a.value || a.access != ACCESS_UNKNOWN || a.intent != INTENT_UNKNOWN)
+      || a.value || a.access != ACCESS_UNKNOWN || a.intent != INTENT_UNKNOWN
+      || a.asynchronous)
     return 1;
 
   return 0;
@@ -4769,6 +4777,7 @@ extract_compcall_passed_object (gfc_expr* e)
       po->expr_type = EXPR_VARIABLE;
       po->symtree = e->symtree;
       po->ref = gfc_copy_ref (e->ref);
+      po->where = e->where;
     }
 
   if (gfc_resolve_expr (po) == FAILURE)
@@ -4823,11 +4832,12 @@ extract_ppc_passed_object (gfc_expr *e)
   po->expr_type = EXPR_VARIABLE;
   po->symtree = e->symtree;
   po->ref = gfc_copy_ref (e->ref);
+  po->where = e->where;
 
   /* Remove PPC reference.  */
   ref = &po->ref;
   while ((*ref)->next)
-    (*ref) = (*ref)->next;
+    ref = &(*ref)->next;
   gfc_free_ref_list (*ref);
   *ref = NULL;
 
@@ -5508,6 +5518,32 @@ resolve_expr_ppc (gfc_expr* e)
 }
 
 
+static bool
+gfc_is_expandable_expr (gfc_expr *e)
+{
+  gfc_constructor *con;
+
+  if (e->expr_type == EXPR_ARRAY)
+    {
+      /* Traverse the constructor looking for variables that are flavor
+	 parameter.  Parameters must be expanded since they are fully used at
+	 compile time.  */
+      for (con = e->value.constructor; con; con = con->next)
+	{
+	  if (con->expr->expr_type == EXPR_VARIABLE
+	  && con->expr->symtree
+	  && (con->expr->symtree->n.sym->attr.flavor == FL_PARAMETER
+	      || con->expr->symtree->n.sym->attr.flavor == FL_VARIABLE))
+	    return true;
+	  if (con->expr->expr_type == EXPR_ARRAY
+	    && gfc_is_expandable_expr (con->expr))
+	    return true;
+	}
+    }
+
+  return false;
+}
+
 /* Resolve an expression.  That is, make sure that types of operands agree
    with their operators, intrinsic operators are converted to function calls
    for overloaded types and unresolved function references are resolved.  */
@@ -5574,14 +5610,20 @@ gfc_resolve_expr (gfc_expr *e)
       if (t == SUCCESS)
 	{
 	  expression_rank (e);
-	  gfc_expand_constructor (e);
+	  if (gfc_is_constant_expr (e) || gfc_is_expandable_expr (e))
+	    gfc_expand_constructor (e);
 	}
 
       /* This provides the opportunity for the length of constructors with
 	 character valued function elements to propagate the string length
 	 to the expression.  */
       if (t == SUCCESS && e->ts.type == BT_CHARACTER)
-	t = gfc_resolve_character_array_constructor (e);
+        {
+	  /* For efficiency, we call gfc_expand_constructor for BT_CHARACTER
+	     here rather then add a duplicate test for it above.  */ 
+	  gfc_expand_constructor (e);
+	  t = gfc_resolve_character_array_constructor (e);
+	}
 
       break;
 
@@ -6057,6 +6099,7 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
   gfc_symbol *sym;
   gfc_alloc *a;
   gfc_component *c;
+  gfc_expr *init_e;
 
   /* Check INTENT(IN), unless the object is a sub-component of a pointer.  */
   check_intent_in = 1;
@@ -6180,6 +6223,36 @@ resolve_allocate_expr (gfc_expr *e, gfc_code *code)
       gfc_error ("Cannot allocate INTENT(IN) variable '%s' at %L",
 		 sym->name, &e->where);
       return FAILURE;
+    }
+    
+  if (!code->expr3)
+    {
+      /* Add default initializer for those derived types that need them.  */
+      if (e->ts.type == BT_DERIVED
+	  && (init_e = gfc_default_initializer (&e->ts)))
+	{
+	  gfc_code *init_st = gfc_get_code ();
+	  init_st->loc = code->loc;
+	  init_st->op = EXEC_INIT_ASSIGN;
+	  init_st->expr1 = gfc_expr_to_initialize (e);
+	  init_st->expr2 = init_e;
+	  init_st->next = code->next;
+	  code->next = init_st;
+	}
+      else if (e->ts.type == BT_CLASS
+	       && ((code->ext.alloc.ts.type == BT_UNKNOWN
+		    && (init_e = gfc_default_initializer (&e->ts.u.derived->components->ts)))
+		   || (code->ext.alloc.ts.type == BT_DERIVED
+		       && (init_e = gfc_default_initializer (&code->ext.alloc.ts)))))
+	{
+	  gfc_code *init_st = gfc_get_code ();
+	  init_st->loc = code->loc;
+	  init_st->op = EXEC_INIT_ASSIGN;
+	  init_st->expr1 = gfc_expr_to_initialize (e);
+	  init_st->expr2 = init_e;
+	  init_st->next = code->next;
+	  code->next = init_st;
+	}
     }
 
   if (pointer || dimension == 0)
@@ -9037,10 +9110,6 @@ resolve_fl_procedure (gfc_symbol *sym, int mp_flag)
 {
   gfc_formal_arglist *arg;
 
-  if (sym->attr.ambiguous_interfaces && !sym->attr.referenced)
-    gfc_warning ("Although not referenced, '%s' at %L has ambiguous "
-		 "interfaces", sym->name, &sym->declared_at);
-
   if (sym->attr.function
       && resolve_fl_var_and_proc (sym, mp_flag) == FAILURE)
     return FAILURE;
@@ -9672,7 +9741,7 @@ check_generic_tbp_ambiguity (gfc_tbp_generic* t1, gfc_tbp_generic* t2,
     }
 
   /* Compare the interfaces.  */
-  if (gfc_compare_interfaces (sym1, sym2, NULL, 1, 0, NULL, 0))
+  if (gfc_compare_interfaces (sym1, sym2, sym2->name, 1, 0, NULL, 0))
     {
       gfc_error ("'%s' and '%s' for GENERIC '%s' at %L are ambiguous",
 		 sym1->name, sym2->name, generic_name, &where);
@@ -10458,6 +10527,12 @@ resolve_fl_derived (gfc_symbol *sym)
 	  && resolve_typespec_used (&c->ts, &c->loc, c->name) == FAILURE)
 	return FAILURE;
 
+      /* If this type is an extension, set the accessibility of the parent
+	 component.  */
+      if (super_type && c == sym->components
+	  && strcmp (super_type->name, c->name) == 0)
+	c->attr.access = super_type->attr.access;
+      
       /* If this type is an extension, see if this component has the same name
 	 as an inherited type-bound procedure.  */
       if (super_type

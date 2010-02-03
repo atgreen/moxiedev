@@ -1,15 +1,15 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/deque/capacity
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-10-03T02:17:41.543007Z
-152431
-rus
+2010-01-08T13:01:24.450539Z
+155733
+paolo
 
 
 
@@ -93,6 +93,40 @@ jakub
 
 
 1063
+
+shrink_to_fit.cc
+file
+
+
+
+
+2010-02-03T11:42:02.040612Z
+8275c0a675220ffed91ec4c79616841a
+2010-01-08T13:01:24.450539Z
+155733
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1186
 
 moveable.cc
 file

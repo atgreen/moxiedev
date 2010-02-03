@@ -229,6 +229,7 @@ extern ifsese create_if_region_on_edge (edge, tree);
 extern ifsese move_sese_in_condition (sese);
 extern edge get_true_edge_from_guard_bb (basic_block);
 extern edge get_false_edge_from_guard_bb (basic_block);
+extern void set_ifsese_condition (ifsese, tree);
 
 static inline edge
 if_region_entry (ifsese if_region)
@@ -262,6 +263,7 @@ extern void debug_rename_map (htab_t);
 extern hashval_t rename_map_elt_info (const void *);
 extern int eq_rename_map_elts (const void *, const void *);
 extern void set_rename (htab_t, tree, tree);
+extern void rename_nb_iterations (htab_t);
 
 /* Constructs a new SCEV_INFO_STR structure for VAR and INSTANTIATED_BELOW.  */
 

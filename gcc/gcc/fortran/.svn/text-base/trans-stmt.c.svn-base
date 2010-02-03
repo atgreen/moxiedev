@@ -196,6 +196,7 @@ gfc_conv_elemental_dependencies (gfc_se * se, gfc_se * loopse,
   gfc_ss *ss;
   gfc_ss_info *info;
   gfc_symbol *fsym;
+  gfc_ref *ref;
   int n;
   tree data;
   tree offset;
@@ -251,6 +252,34 @@ gfc_conv_elemental_dependencies (gfc_se * se, gfc_se * loopse,
 	  /* Obtain the argument descriptor for unpacking.  */
 	  gfc_init_se (&parmse, NULL);
 	  parmse.want_pointer = 1;
+
+	  /* The scalarizer introduces some specific peculiarities when
+	     handling elemental subroutines; the stride can be needed up to
+	     the dim_array - 1, rather than dim_loop - 1 to calculate
+	     offsets outside the loop.  For this reason, we make sure that
+	     the descriptor has the dimensionality of the array by converting
+	     trailing elements into ranges with end = start.  */
+	  for (ref = e->ref; ref; ref = ref->next)
+	    if (ref->type == REF_ARRAY && ref->u.ar.type == AR_SECTION)
+	      break;
+
+	  if (ref)
+	    {
+	      bool seen_range = false;
+	      for (n = 0; n < ref->u.ar.dimen; n++)
+		{
+		  if (ref->u.ar.dimen_type[n] == DIMEN_RANGE)
+		    seen_range = true;
+
+		  if (!seen_range
+			|| ref->u.ar.dimen_type[n] != DIMEN_ELEMENT)
+		    continue;
+
+		  ref->u.ar.end[n] = gfc_copy_expr (ref->u.ar.start[n]);
+		  ref->u.ar.dimen_type[n] = DIMEN_RANGE;
+		}
+	    }
+
 	  gfc_conv_expr_descriptor (&parmse, e, gfc_walk_expr (e));
 	  gfc_add_block_to_block (&se->pre, &parmse.pre);
 
@@ -3989,7 +4018,7 @@ tree
 gfc_trans_allocate (gfc_code * code)
 {
   gfc_alloc *al;
-  gfc_expr *expr, *init_e;
+  gfc_expr *expr;
   gfc_se se;
   tree tmp;
   tree parm;
@@ -4131,28 +4160,6 @@ gfc_trans_allocate (gfc_code * code)
 	    tmp = gfc_trans_assignment (gfc_expr_to_initialize (expr),
 					rhs, false);
 	  gfc_free_expr (rhs);
-	  gfc_add_expr_to_block (&block, tmp);
-	}
-      /* Default initializer for CLASS variables.  */
-      else if (al->expr->ts.type == BT_CLASS
-	       && code->ext.alloc.ts.type == BT_DERIVED
-	       && (init_e = gfc_default_initializer (&code->ext.alloc.ts)))
-	{
-	  gfc_se dst,src;
-	  gfc_init_se (&dst, NULL);
-	  gfc_init_se (&src, NULL);
-	  gfc_conv_expr (&dst, expr);
-	  gfc_conv_expr (&src, init_e);
-	  gfc_add_block_to_block (&block, &src.pre);
-	  tmp = gfc_build_memcpy_call (dst.expr, src.expr, memsz);
-	  gfc_add_expr_to_block (&block, tmp);
-	}
-      /* Add default initializer for those derived types that need them.  */
-      else if (expr->ts.type == BT_DERIVED
-	       && (init_e = gfc_default_initializer (&expr->ts)))
-	{
-	  tmp = gfc_trans_assignment (gfc_expr_to_initialize (expr),
-				      init_e, true);
 	  gfc_add_expr_to_block (&block, tmp);
 	}
 

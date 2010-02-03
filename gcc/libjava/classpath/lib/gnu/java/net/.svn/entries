@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/net
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
+2010-01-06T17:46:48.717189Z
+155678
 doko
 
 
@@ -25,6 +25,40 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+IndexListParser.class
+file
+
+
+
+
+2010-02-03T11:42:23.464492Z
+ffa80cbb144e202232c5ced9a8983943
+2010-01-06T17:46:48.717189Z
+155678
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2845
 
 ImageHandler.class
 file
@@ -59,40 +93,6 @@ has-props
 
 
 626
-
-IndexListParser.class
-file
-
-
-
-
-2009-04-24T17:47:34.000000Z
-a56abc03ad41802793c4f4316ca26bf6
-2007-06-03T23:18:43.019099Z
-125302
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2845
 
 EmptyX509TrustManager.class
 file
@@ -162,40 +162,6 @@ has-props
 
 1605
 
-CRLFOutputStream.class
-file
-
-
-
-
-2009-04-24T17:47:34.000000Z
-fd3ed08d07f35e6389a2c5c559f78d74
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1880
-
 LineInputStream.class
 file
 
@@ -230,6 +196,43 @@ has-props
 
 2236
 
+CRLFOutputStream.class
+file
+
+
+
+
+2009-04-24T17:47:34.000000Z
+fd3ed08d07f35e6389a2c5c559f78d74
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1880
+
+local
+dir
+
 GetLocalHostAction.class
 file
 
@@ -263,9 +266,6 @@ has-props
 
 
 722
-
-local
-dir
 
 DefaultProxySelector.class
 file
@@ -415,10 +415,10 @@ file
 
 
 
-2009-04-24T17:47:34.000000Z
-8982fe47b81a61c03311b43e3a58cc22
-2007-06-03T23:18:43.019099Z
-125302
+2010-02-03T11:42:23.464492Z
+71b3e1ae5b990d4011c9df9342f5f77c
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 
@@ -441,7 +441,7 @@ has-props
 
 
 
-1415
+1386
 
 URLParseError.class
 file

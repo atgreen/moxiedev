@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string/cons/wchar_t
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-12-10T19:17:27.938448Z
-155137
+2010-01-10T13:38:47.499553Z
+155788
 paolo
 
 
@@ -263,4 +263,38 @@ jakub
 
 
 1434
+
+moveable.cc
+file
+
+
+
+
+2010-02-03T11:41:57.531648Z
+634cc4513da3b6a17f571ae1abed89c8
+2010-01-10T13:38:47.499553Z
+155788
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1393
 

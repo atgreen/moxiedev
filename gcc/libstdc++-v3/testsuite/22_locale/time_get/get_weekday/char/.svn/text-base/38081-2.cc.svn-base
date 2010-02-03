@@ -1,3 +1,5 @@
+// { dg-require-namedlocale "" }
+
 // 2010-01-05  Paolo Carlini  <paolo.carlini@oracle.com>
 
 // Copyright (C) 2010 Free Software Foundation
@@ -56,7 +58,7 @@ void test01()
 			    "\u041F\u0442\u043D",
 			    "\u0421\u0431\u0442" };
 
-  for (unsigned i = 0; i < 7; ++i)
+  for (int i = 0; i < 7; ++i)
     {
       iss.str(awdays[i]);
       iterator_type is_it01(iss);
@@ -78,7 +80,7 @@ void test01()
 			   "\u041F\u044F\u0442\u043D\u0438\u0446\u0430",
 			   "\u0421\u0443\u0431\u0431\u043E\u0442\u0430" };
 
-  for (unsigned i = 0; i < 7; ++i)
+  for (int i = 0; i < 7; ++i)
     {
       iss.str(wdays[i]);
       iterator_type is_it01(iss);

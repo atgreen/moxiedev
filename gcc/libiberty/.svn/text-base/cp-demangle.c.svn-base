@@ -1,5 +1,5 @@
 /* Demangler for g++ V3 ABI.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Written by Ian Lance Taylor <ian@wasabisystems.com>.
 
@@ -2193,6 +2193,8 @@ cplus_demangle_type (struct d_info *di)
 	    /* For demangling we don't care about the bits.  */
 	    d_number (di);
 	  ret->u.s_fixed.length = cplus_demangle_type (di);
+	  if (ret->u.s_fixed.length == NULL)
+	    return NULL;
 	  d_number (di);
 	  peek = d_next_char (di);
 	  ret->u.s_fixed.sat = (peek == 's');
@@ -4037,9 +4039,18 @@ d_print_comp (struct d_print_info *dpi,
 	d_append_char (dpi, '(');
 
       d_print_subexpr (dpi, d_left (d_right (dc)));
-      if (strcmp (d_left (dc)->u.s_operator.op->code, "cl") != 0)
-	d_print_expr_op (dpi, d_left (dc));
-      d_print_subexpr (dpi, d_right (d_right (dc)));
+      if (strcmp (d_left (dc)->u.s_operator.op->code, "ix") == 0)
+	{
+	  d_append_char (dpi, '[');
+	  d_print_comp (dpi, d_right (d_right (dc)));
+	  d_append_char (dpi, ']');
+	}
+      else
+	{
+	  if (strcmp (d_left (dc)->u.s_operator.op->code, "cl") != 0)
+	    d_print_expr_op (dpi, d_left (dc));
+	  d_print_subexpr (dpi, d_right (d_right (dc)));
+	}
 
       if (d_left (dc)->type == DEMANGLE_COMPONENT_OPERATOR
 	  && d_left (dc)->u.s_operator.op->len == 1
@@ -4777,7 +4788,7 @@ d_demangle (const char *mangled, int options, size_t *palc)
       return NULL;
     }
 
-  *palc = dgs.allocation_failure ? 1 : 0;
+  *palc = dgs.allocation_failure ? 1 : dgs.alc;
   return dgs.buf;
 }
 

@@ -6953,10 +6953,10 @@ finish_struct (location_t loc, tree t, tree fieldlist, tree attributes,
   /* If this was supposed to be a transparent union, but we can't
      make it one, warn and turn off the flag.  */
   if (TREE_CODE (t) == UNION_TYPE
-      && TYPE_TRANSPARENT_UNION (t)
+      && TYPE_TRANSPARENT_AGGR (t)
       && (!TYPE_FIELDS (t) || TYPE_MODE (t) != DECL_MODE (TYPE_FIELDS (t))))
     {
-      TYPE_TRANSPARENT_UNION (t) = 0;
+      TYPE_TRANSPARENT_AGGR (t) = 0;
       warning_at (loc, 0, "union cannot be made transparent");
     }
 
@@ -8032,6 +8032,8 @@ finish_function (void)
       && !current_function_returns_value && !current_function_returns_null
       /* Don't complain if we are no-return.  */
       && !current_function_returns_abnormally
+      /* Don't complain if we are declared noreturn.  */
+      && !TREE_THIS_VOLATILE (fndecl)
       /* Don't warn for main().  */
       && !MAIN_NAME_P (DECL_NAME (fndecl))
       /* Or if they didn't actually specify a return type.  */

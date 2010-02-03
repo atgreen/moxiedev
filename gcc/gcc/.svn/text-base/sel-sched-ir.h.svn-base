@@ -1,6 +1,6 @@
 /* Instruction scheduling pass.  This file contains definitions used
    internally in the scheduler.
-   Copyright (C) 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -296,6 +296,9 @@ struct _fence
   /* Insn, which has been scheduled last on this fence.  */
   rtx last_scheduled_insn;
 
+  /* The last value of can_issue_more variable on this fence.  */
+  int issue_more;
+
   /* If non-NULL force the next scheduled insn to be SCHED_NEXT.  */
   rtx sched_next;
 
@@ -325,6 +328,7 @@ typedef struct _fence *fence_t;
 #define FENCE_DC(F) ((F)->dc)
 #define FENCE_TC(F) ((F)->tc)
 #define FENCE_LAST_SCHEDULED_INSN(F) ((F)->last_scheduled_insn)
+#define FENCE_ISSUE_MORE(F) ((F)->issue_more)
 #define FENCE_EXECUTING_INSNS(F) ((F)->executing_insns)
 #define FENCE_READY_TICKS(F) ((F)->ready_ticks)
 #define FENCE_READY_TICKS_SIZE(F) ((F)->ready_ticks_size)
@@ -715,7 +719,8 @@ struct _sel_insn_data
   bitmap found_deps;
 
   /* An INSN_UID bit is set when this is a bookkeeping insn generated from
-     a parent with this uid.  */
+     a parent with this uid.  If a parent is a bookkeeping copy, all its
+     originators are transitively included in this set.  */
   bitmap originators;
 
   /* A hashtable caching the result of insn transformations through this one.  */
@@ -1142,7 +1147,8 @@ get_all_loop_exits (basic_block bb)
 
       /* Traverse all loop headers.  */
       for (i = 0; VEC_iterate (edge, exits, i, e); i++)
-	if (in_current_region_p (e->dest))
+	if (in_current_region_p (e->dest)
+	    || inner_loop_header_p (e->dest))
 	  {
 	    VEC(edge, heap) *next_exits = get_all_loop_exits (e->dest);
 
@@ -1613,11 +1619,11 @@ extern bool tidy_control_flow (basic_block, bool);
 extern void free_bb_note_pool (void);
 
 extern void sel_remove_empty_bb (basic_block, bool, bool);
-extern bool maybe_tidy_empty_bb (basic_block bb);
+extern void purge_empty_blocks (void);
 extern basic_block sel_split_edge (edge);
 extern basic_block sel_create_recovery_block (insn_t);
 extern void sel_merge_blocks (basic_block, basic_block);
-extern void sel_redirect_edge_and_branch (edge, basic_block);
+extern bool sel_redirect_edge_and_branch (edge, basic_block);
 extern void sel_redirect_edge_and_branch_force (edge, basic_block);
 extern void sel_init_pipelining (void);
 extern void sel_finish_pipelining (void);

@@ -46,6 +46,7 @@ arm port		Richard Earnshaw	richard.earnshaw@arm.com
 arm port		Paul Brook		paul@codesourcery.com
 avr port		Denis Chertykov		chertykov@gmail.com
 avr port		Anatoly Sokolov		aesok@post.ru
+avr port		Eric Weddington		eric.weddington@atmel.com
 bfin port		Bernd Schmidt		bernd.schmidt@analog.com
 cris port		Hans-Peter Nilsson	hp@axis.com
 crx port		Pompapathi V Gadad 	Pompapathi.V.Gadad@nsc.com
@@ -122,6 +123,7 @@ VxWorks ports		Nathan Sidwell		nathan@codesourcery.com
 windows, cygwin, mingw	Christopher Faylor	cgf@gcc.gnu.org
 windows, cygwin, mingw	Danny Smith		dannysmith@users.sourceforge.net
 windows, cygwin, mingw	Kai Tietz		kai.tietz@onevision.com
+windows, cygwin, mingw	Dave Korn		dave.korn.cygwin@gmail.com
 
 			Language Front Ends Maintainers
 
@@ -134,6 +136,7 @@ Fortran			Paul Brook		paul@codesourcery.com
 c++			Jason Merrill		jason@redhat.com
 c++			Mark Mitchell		mark@codesourcery.com
 c++			Nathan Sidwell		nathan@codesourcery.com
+go			Ian Lance Taylor	ian@airs.com
 java			Per Bothner		per@bothner.com
 java			Andrew Haley		aph@redhat.com
 java			Tom Tromey		tromey@redhat.com
@@ -378,13 +381,13 @@ Brendan Kehoe					brendan@zen.org
 Matthias Klose					doko@debian.org
 Jeff Knaggs					jknaggs@redhat.com
 Michael Koch					konqueror@gmx.de
-Dave Korn					dave.korn.cygwin@gmail.com
 Matt Kraai					kraai@ftbfs.org
 Jan Kratochvil					jan.kratochvil@redhat.com
 Maxim Kuvyrkov					maxim@codesourcery.com
 Doug Kwan					dougkwan@google.com
 Scott Robert Ladd				scott.ladd@coyotegulch.com
 Razya Ladelsky					razya@gcc.gnu.org
+Thierry Lafage					thierry.lafage@inria.fr
 Aaron W. LaFramboise				aaronavay62@aaronwl.com
 Rask Ingemann Lambertsen			ccc94453@vip.cybercity.dk
 Asher Langton					langton2@llnl.gov
@@ -441,6 +444,7 @@ Ramana Radhakrishnan				ramana.r@gmail.com
 Rolf Rasmussen					rolfwr@gcc.gnu.org
 Volker Reichelt					v.reichelt@netcologne.de
 Joern Rennecke					amylaar@spamcop.net
+Joern Rennecke					joern.rennecke@embecosm.com
 Bernhard Reutner-Fischer			rep.dot.nop@gmail.com
 Tom Rix						trix@redhat.com
 Craig Rodrigues					rodrigc@gcc.gnu.org
@@ -472,6 +476,7 @@ Gabriele Svelto					gabriele.svelto@st.com
 Samuel Tardieu					sam@rfc1149.net
 Kresten Krab Thorup				krab@gcc.gnu.org
 Caroline Tice					ctice@apple.com
+Konrad Trifunovic				konrad.trifunovic@inria.fr
 David Ung					davidu@mips.com
 Neil Vachharajani				nvachhar@gmail.com
 Kris Van Hees					kris.van.hees@oracle.com
@@ -493,10 +498,6 @@ Shujing Zhao					pearly.zhao@oracle.com
 Jon Ziegler					jonz@apple.com
 Roman Zippel					zippel@linux-m68k.org
 Josef Zlomek					josef.zlomek@email.cz
-
-Waiting for paperwork:
-
-Joern Rennecke					joern.rennecke@embecosm.com
 
 Bug database only accounts
 

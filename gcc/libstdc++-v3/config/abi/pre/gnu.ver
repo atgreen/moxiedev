@@ -461,8 +461,9 @@ GLIBCXX_3.4 {
 
     # std::time_get
     _ZNSt8time_get*;
-    _ZNKSt8time_getI[cw]St19istreambuf_iteratorI[cw]St11char_traitsI[cw]EEE[0-9]*;
-    _ZNKSt8time_getI[cw]St19istreambuf_iteratorI[cw]St11char_traitsI[cw]EEE1[0-9]*;
+    _ZNKSt8time_getI[cw]St19istreambuf_iteratorI[cw]St11char_traitsI[cw]EEE1*;
+    _ZNKSt8time_getI[cw]St19istreambuf_iteratorI[cw]St11char_traitsI[cw]EEE8*;
+    _ZNKSt8time_getI[cw]St19istreambuf_iteratorI[cw]St11char_traitsI[cw]EEE21*;
 
     # std::time_get_byname
     _ZNSt15time_get_byname*;
@@ -1094,10 +1095,27 @@ GLIBCXX_3.4.14 {
     _ZNSs18_S_construct_aux_2*;
     _ZNSbIwSt11char_traitsIwESaIwEE18_S_construct_aux_2*;
 
+    # string|wstring shrink_to_fit member function
+    _ZNSs13shrink_to_fitEv;
+    _ZNSbIwSt11char_traitsIwESaIwEE13shrink_to_fitEv;
+
+    # string|wstring move contructor, move assignment operator and
+    # move assign.
+    _ZNSsC1EOSs;
+    _ZNSbIwSt11char_traitsIwESaIwEEC1EOS2_;
+    _ZNSsaSEOSs;
+    _ZNSbIwSt11char_traitsIwESaIwEEC1EOS2_;
+    _ZNSs6assignEOSs;
+    _ZNSbIwSt11char_traitsIwESaIwEE6assignEOS2_;
+
     _ZSt25__throw_bad_function_callv;
 
     # std::time_get::_M_extract_wday_or_month
     _ZNKSt8time_getI[cw]St19istreambuf_iteratorI[cw]St11char_traitsI[cw]EEE24_M_extract_wday_or_month*;
+
+    # condition_variable_any::notify_*
+    _ZNSt22condition_variable_any10notify_allEv;
+    _ZNSt22condition_variable_any10notify_oneEv;    
 
 } GLIBCXX_3.4.13;
 

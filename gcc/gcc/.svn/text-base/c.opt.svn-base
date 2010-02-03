@@ -769,7 +769,7 @@ C ObjC C++ ObjC++
 When \"signed\" or \"unsigned\" is not given make the bitfield signed
 
 fsigned-char
-C ObjC C++ ObjC++
+C ObjC C++ ObjC++ LTO
 Make \"char\" signed by default
 
 fsquangle
@@ -802,7 +802,7 @@ C ObjC C++ ObjC++
 When \"signed\" or \"unsigned\" is not given make the bitfield unsigned
 
 funsigned-char
-C ObjC C++ ObjC++
+C ObjC C++ ObjC++ LTO
 Make \"char\" unsigned by default
 
 fuse-cxa-atexit
@@ -875,7 +875,7 @@ C ObjC C++ ObjC++ Joined Separate
 
 imultilib
 C ObjC C++ ObjC++ Joined Separate
--imultilib <dir> Set <dir> to be the multilib include subdirectory
+-imultilib <dir>	Set <dir> to be the multilib include subdirectory
 
 include
 C ObjC C++ ObjC++ Joined Separate

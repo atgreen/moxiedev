@@ -98,6 +98,9 @@ AM_PROG_LIBTOOL
 AC_SUBST(enable_shared)
 AC_SUBST(enable_static)
 
+# Eliminate -lstdc++ addition to postdeps for cross compiles.
+postdeps_CXX=`echo " $postdeps_CXX " | sed 's, -lstdc++ ,,g'`
+
 # Possibly disable most of the library.
 ## TODO: Consider skipping unncessary tests altogether in this case, rather
 ## than just ignoring the results.  Faster /and/ more correct, win win.
@@ -165,8 +168,8 @@ GLIBCXX_CHECK_GTHREADS
 AC_LC_MESSAGES
 
 # Check for available headers.
-AC_CHECK_HEADERS([endian.h float.h fp.h ieeefp.h inttypes.h locale.h \
-machine/endian.h machine/param.h nan.h stdint.h stdlib.h string.h \
+AC_CHECK_HEADERS([endian.h execinfo.h float.h fp.h ieeefp.h inttypes.h \
+locale.h machine/endian.h machine/param.h nan.h stdint.h stdlib.h string.h \
 strings.h sys/ipc.h sys/isa_defs.h sys/machine.h sys/param.h \
 sys/resource.h sys/sem.h sys/stat.h sys/time.h sys/types.h unistd.h \
 wchar.h wctype.h])

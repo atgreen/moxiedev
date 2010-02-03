@@ -1732,6 +1732,12 @@ write_type (tree type)
   if (find_substitution (type))
     return;
 
+  /* According to the C++ ABI, some library classes are passed the
+     same as the scalar type of their single member and use the same
+     mangling.  */
+  if (TREE_CODE (type) == RECORD_TYPE && TYPE_TRANSPARENT_AGGR (type))
+    type = TREE_TYPE (first_field (type));
+
   if (write_CV_qualifiers_for_type (type) > 0)
     /* If TYPE was CV-qualified, we just wrote the qualifiers; now
        mangle the unqualified type.  The recursive call is needed here
@@ -2481,7 +2487,7 @@ write_expression (tree expr)
     }
   else
     {
-      int i;
+      int i, len;
       const char *name;
 
       /* When we bind a variable or function to a non-type template
@@ -2582,7 +2588,27 @@ write_expression (tree expr)
 	  break;
 
 	default:
-	  for (i = 0; i < TREE_OPERAND_LENGTH (expr); ++i)
+	  /* In the middle-end, some expressions have more operands than
+	     they do in templates (and mangling).  */
+	  switch (code)
+	    {
+	    case PREINCREMENT_EXPR:
+	    case PREDECREMENT_EXPR:
+	    case POSTINCREMENT_EXPR:
+	    case POSTDECREMENT_EXPR:
+	      len = 1;
+	      break;
+
+	    case ARRAY_REF:
+	      len = 2;
+	      break;
+
+	    default:
+	      len = TREE_OPERAND_LENGTH (expr);
+	      break;
+	    }
+
+	  for (i = 0; i < len; ++i)
 	    {
 	      tree operand = TREE_OPERAND (expr, i);
 	      /* As a GNU extension, the middle operand of a

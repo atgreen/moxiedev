@@ -111,7 +111,7 @@ decode_specification_statement (void)
   match ("import", gfc_match_import, ST_IMPORT);
   match ("use", gfc_match_use, ST_USE);
 
-  if (gfc_current_block ()->ts.type != BT_DERIVED)
+  if (gfc_current_block ()->result->ts.type != BT_DERIVED)
     goto end_of_block;
 
   match (NULL, gfc_match_st_function, ST_STATEMENT_FUNCTION);
@@ -129,6 +129,8 @@ decode_specification_statement (void)
     case 'a':
       match ("abstract% interface", gfc_match_abstract_interface,
 	     ST_INTERFACE);
+      match ("allocatable", gfc_match_asynchronous, ST_ATTR_DECL);
+      match ("asynchronous", gfc_match_asynchronous, ST_ATTR_DECL);
       break;
 
     case 'b':
@@ -328,6 +330,7 @@ decode_statement (void)
       match ("allocate", gfc_match_allocate, ST_ALLOCATE);
       match ("allocatable", gfc_match_allocatable, ST_ATTR_DECL);
       match ("assign", gfc_match_assign, ST_LABEL_ASSIGNMENT);
+      match ("asynchronous", gfc_match_asynchronous, ST_ATTR_DECL);
       break;
 
     case 'b':

@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/ext/vstring
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-01T11:27:50.227942Z
-155547
+2010-01-10T13:38:47.499553Z
+155788
 paolo
 
 
@@ -60,10 +60,16 @@ jsm28
 
 1809
 
+cons
+dir
+
 requirements
 dir
 
 types
+dir
+
+assign
 dir
 
 element_access
@@ -74,38 +80,4 @@ dir
 
 capacity
 dir
-
-moveable.cc
-file
-
-
-
-
-2009-07-14T13:03:51.000000Z
-8e747e523f5a90e529711846f80945d3
-2009-07-05T17:59:29.888123Z
-149260
-jsm28
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1741
 

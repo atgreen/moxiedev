@@ -236,6 +236,7 @@ DEF_VEC_P (pre_expr);
 DEF_VEC_ALLOC_P (pre_expr, heap);
 static VEC(pre_expr, heap) *expressions;
 static htab_t expression_to_id;
+static VEC(unsigned, heap) *name_to_id;
 
 /* Allocate an expression id for EXPR.  */
 
@@ -247,9 +248,23 @@ alloc_expression_id (pre_expr expr)
   gcc_assert (next_expression_id + 1 > next_expression_id);
   expr->id = next_expression_id++;
   VEC_safe_push (pre_expr, heap, expressions, expr);
-  slot = htab_find_slot (expression_to_id, expr, INSERT);
-  gcc_assert (!*slot);
-  *slot = expr;
+  if (expr->kind == NAME)
+    {
+      unsigned version = SSA_NAME_VERSION (PRE_EXPR_NAME (expr));
+      /* VEC_safe_grow_cleared allocates no headroom.  Avoid frequent
+	 re-allocations by using VEC_reserve upfront.  There is no
+	 VEC_quick_grow_cleared unfortunately.  */
+      VEC_reserve (unsigned, heap, name_to_id, num_ssa_names);
+      VEC_safe_grow_cleared (unsigned, heap, name_to_id, num_ssa_names);
+      gcc_assert (VEC_index (unsigned, name_to_id, version) == 0);
+      VEC_replace (unsigned, name_to_id, version, expr->id);
+    }
+  else
+    {
+      slot = htab_find_slot (expression_to_id, expr, INSERT);
+      gcc_assert (!*slot);
+      *slot = expr;
+    }
   return next_expression_id - 1;
 }
 
@@ -266,10 +281,20 @@ lookup_expression_id (const pre_expr expr)
 {
   void **slot;
 
-  slot = htab_find_slot (expression_to_id, expr, NO_INSERT);
-  if (!slot)
-    return 0;
-  return ((pre_expr)*slot)->id;
+  if (expr->kind == NAME)
+    {
+      unsigned version = SSA_NAME_VERSION (PRE_EXPR_NAME (expr));
+      if (VEC_length (unsigned, name_to_id) <= version)
+	return 0;
+      return VEC_index (unsigned, name_to_id, version);
+    }
+  else
+    {
+      slot = htab_find_slot (expression_to_id, expr, NO_INSERT);
+      if (!slot)
+	return 0;
+      return ((pre_expr)*slot)->id;
+    }
 }
 
 /* Return the existing expression id for EXPR, or create one if one
@@ -1798,7 +1823,7 @@ phi_translate_set (bitmap_set_t dest, bitmap_set_t set, basic_block pred,
   pre_expr expr;
   int i;
 
-  if (!phi_nodes (phiblock))
+  if (gimple_seq_empty_p (phi_nodes (phiblock)))
     {
       bitmap_set_copy (dest, set);
       return;
@@ -1811,10 +1836,18 @@ phi_translate_set (bitmap_set_t dest, bitmap_set_t set, basic_block pred,
       translated = phi_translate (expr, set, NULL, pred, phiblock);
 
       /* Don't add empty translations to the cache  */
-      if (translated)
-	phi_trans_add (expr, translated, pred);
+      if (!translated)
+	continue;
 
-      if (translated != NULL)
+      phi_trans_add (expr, translated, pred);
+
+      /* We might end up with multiple expressions from SET being
+	 translated to the same value.  In this case we do not want
+	 to retain the NARY or REFERENCE expression but prefer a NAME
+	 which would be the leader.  */
+      if (translated->kind == NAME)
+	bitmap_value_replace_in_set (dest, translated);
+      else
 	bitmap_value_insert_into_set (dest, translated);
     }
   VEC_free (pre_expr, heap, exprs);
@@ -2244,14 +2277,14 @@ compute_antic_aux (basic_block block, bool block_has_abnormal_pred_edge)
 	  goto maybe_dump_sets;
 	}
 
-      if (phi_nodes (first))
+      if (!gimple_seq_empty_p (phi_nodes (first)))
 	phi_translate_set (ANTIC_OUT, ANTIC_IN (first), block, first);
       else
 	bitmap_set_copy (ANTIC_OUT, ANTIC_IN (first));
 
       for (i = 0; VEC_iterate (basic_block, worklist, i, bprime); i++)
 	{
-	  if (phi_nodes (bprime))
+	  if (!gimple_seq_empty_p (phi_nodes (bprime)))
 	    {
 	      bitmap_set_t tmp = bitmap_set_new ();
 	      phi_translate_set (tmp, ANTIC_IN (bprime), block, bprime);
@@ -2401,7 +2434,7 @@ compute_partial_antic_aux (basic_block block,
 	      FOR_EACH_EXPR_ID_IN_SET (ANTIC_IN (bprime), i, bi)
 		bitmap_value_insert_into_set (PA_OUT,
 					      expression_for_id (i));
-	      if (phi_nodes (bprime))
+	      if (!gimple_seq_empty_p (phi_nodes (bprime)))
 		{
 		  bitmap_set_t pa_in = bitmap_set_new ();
 		  phi_translate_set (pa_in, PA_IN (bprime), block, bprime);
@@ -4483,6 +4516,7 @@ init_pre (bool do_fre)
   value_expressions = VEC_alloc (bitmap_set_t, heap, get_max_value_id () + 1);
   VEC_safe_grow_cleared (bitmap_set_t, heap, value_expressions,
 			 get_max_value_id() + 1);
+  name_to_id = NULL;
 
   in_fre = do_fre;
 
@@ -4544,6 +4578,7 @@ fini_pre (bool do_fre)
   free_alloc_pool (pre_expr_pool);
   htab_delete (phi_translate_table);
   htab_delete (expression_to_id);
+  VEC_free (unsigned, heap, name_to_id);
 
   FOR_ALL_BB (bb)
     {

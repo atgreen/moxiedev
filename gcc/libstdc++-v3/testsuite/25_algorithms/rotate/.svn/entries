@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms/rotate
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-10-07T09:58:44.803870Z
-152524
+2010-01-12T17:16:25.493050Z
+155841
 paolo
 
 
@@ -171,11 +171,11 @@ file
 
 
 
-2009-04-24T17:50:22.000000Z
-e220d53fb37fa2aefdbdc2794d21f2fe
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-02-03T11:41:56.958552Z
+6562dcbd9fc93f13262dad34b22aa34d
+2010-01-12T17:16:25.493050Z
+155841
+paolo
 
 
 
@@ -197,5 +197,5 @@ jakub
 
 
 
-2430
+2608
 

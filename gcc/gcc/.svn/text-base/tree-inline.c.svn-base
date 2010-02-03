@@ -1,5 +1,5 @@
 /* Tree inlining.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Alexandre Oliva <aoliva@redhat.com>
 
@@ -171,6 +171,12 @@ insert_debug_decl_map (copy_body_data *id, tree key, tree value)
   *pointer_map_insert (id->debug_map, key) = value;
 }
 
+/* If nonzero, we're remapping the contents of inlined debug
+   statements.  If negative, an error has occurred, such as a
+   reference to a variable that isn't available in the inlined
+   context.  */
+static int processing_debug_stmt = 0;
+
 /* Construct new SSA name for old NAME. ID is the inline context.  */
 
 static tree
@@ -184,6 +190,12 @@ remap_ssa_name (tree name, copy_body_data *id)
   n = (tree *) pointer_map_contains (id->decl_map, name);
   if (n)
     return unshare_expr (*n);
+
+  if (processing_debug_stmt)
+    {
+      processing_debug_stmt = -1;
+      return name;
+    }
 
   /* Do not set DEF_STMT yet as statement is not copied yet. We do that
      in copy_bb.  */
@@ -244,12 +256,6 @@ remap_ssa_name (tree name, copy_body_data *id)
   return new_tree;
 }
 
-/* If nonzero, we're remapping the contents of inlined debug
-   statements.  If negative, an error has occurred, such as a
-   reference to a variable that isn't available in the inlined
-   context.  */
-int processing_debug_stmt = 0;
-
 /* Remap DECL during the copying of the BLOCK tree for the function.  */
 
 tree
@@ -305,17 +311,7 @@ remap_decl (tree decl, copy_body_data *id)
 	  && (TREE_CODE (t) == VAR_DECL
 	      || TREE_CODE (t) == RESULT_DECL || TREE_CODE (t) == PARM_DECL))
 	{
-          tree def = gimple_default_def (id->src_cfun, decl);
 	  get_var_ann (t);
-	  if (TREE_CODE (decl) != PARM_DECL && def)
-	    {
-	      tree map = remap_ssa_name (def, id);
-	      /* Watch out RESULT_DECLs whose SSA names map directly
-		 to them.  */
-	      if (TREE_CODE (map) == SSA_NAME
-		  && gimple_nop_p (SSA_NAME_DEF_STMT (map)))
-	        set_default_def (t, map);
-	    }
 	  add_referenced_var (t);
 	}
       return t;
@@ -2154,6 +2150,12 @@ copy_debug_stmt (gimple stmt, copy_body_data *id)
       gcc_assert (TREE_CODE (*n) == VAR_DECL);
       t = *n;
     }
+  else if (TREE_CODE (t) == VAR_DECL
+	   && !TREE_STATIC (t)
+	   && gimple_in_ssa_p (cfun)
+	   && !pointer_map_contains (id->decl_map, t)
+	   && !var_ann (t))
+    /* T is a non-localized variable.  */;
   else
     walk_tree (&t, remap_gimple_op_r, &wi, NULL);
 
@@ -2718,39 +2720,6 @@ has_label_address_in_static_1 (tree *nodep, int *walk_subtrees, void *fnp)
   return NULL_TREE;
 }
 
-/* Callback through walk_tree.  Determine if we've got an aggregate
-   type that we can't support; return non-null if so.  */
-
-static tree
-cannot_copy_type_1 (tree *nodep, int *walk_subtrees ATTRIBUTE_UNUSED,
-                    void *data ATTRIBUTE_UNUSED)
-{
-  tree t, node = *nodep;
-
-  if (TREE_CODE (node) == RECORD_TYPE || TREE_CODE (node) == UNION_TYPE)
-    {
-      /* We cannot inline a function of the form
-
-	   void F (int i) { struct S { int ar[i]; } s; }
-
-	 Attempting to do so produces a catch-22.
-	 If walk_tree examines the TYPE_FIELDS chain of RECORD_TYPE/
-	 UNION_TYPE nodes, then it goes into infinite recursion on a
-	 structure containing a pointer to its own type.  If it doesn't,
-	 then the type node for S doesn't get adjusted properly when
-	 F is inlined.
-
-	 ??? This is likely no longer true, but it's too late in the 4.0
-	 cycle to try to find out.  This should be checked for 4.1.  */
-      for (t = TYPE_FIELDS (node); t; t = TREE_CHAIN (t))
-	if (variably_modified_type_p (TREE_TYPE (t), NULL))
-	  return node;
-    }
-
-  return NULL_TREE;
-}
-
-
 /* Determine if the function can be copied.  If so return NULL.  If
    not return a string describng the reason for failure.  */
 
@@ -2791,16 +2760,6 @@ copy_forbidden (struct function *fun, tree fndecl)
 	{
 	  reason = G_("function %q+F can never be copied because it saves "
 		      "address of local label in a static variable");
-	  goto fail;
-	}
-
-      if (!TREE_STATIC (decl) && !DECL_EXTERNAL (decl)
-	  && variably_modified_type_p (TREE_TYPE (decl), NULL)
-	  && walk_tree_without_duplicates (&TREE_TYPE (decl),
-					   cannot_copy_type_1, NULL))
-	{
-	  reason = G_("function %q+F can never be copied "
-		      "because it uses variable sized variables");
 	  goto fail;
 	}
     }
@@ -3297,6 +3256,12 @@ estimate_num_insns (gimple stmt, eni_weights *weights)
 	    case BUILT_IN_PREFETCH:
 	      cost = weights->target_builtin_call_cost;
 	      break;
+
+	    /* Exception state returns or moves registers around.  */
+	    case BUILT_IN_EH_FILTER:
+	    case BUILT_IN_EH_POINTER:
+	    case BUILT_IN_EH_COPY_VALUES:
+	      return 0;
 
 	    default:
 	      break;

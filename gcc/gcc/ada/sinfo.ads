@@ -576,15 +576,9 @@ package Sinfo is
    --    issues. Used to inhibit multiple redundant messages.
 
    --  Aggregate_Bounds (Node3-Sem)
-   --    Present in array N_Aggregate nodes. If the aggregate contains
-   --    component associations this field points to an N_Range node whose
-   --    bounds give the lowest and highest discrete choice values. If the
-   --    named aggregate contains a dynamic or null choice this field is empty.
-   --    If the aggregate contains positional elements this field points to an
-   --    N_Integer_Literal node giving the number of positional elements. Note
-   --    that if the aggregate contains positional elements and an other choice
-   --    the N_Integer_Literal only accounts for the number of positional
-   --    elements.
+   --    Present in array N_Aggregate nodes. If the bounds of the aggregate are
+   --    known at compile time, this field points to an N_Range node with those
+   --    bounds. Otherwise Empty.
 
    --  All_Others (Flag11-Sem)
    --    Present in an N_Others_Choice node. This flag is set for an others
@@ -1532,10 +1526,11 @@ package Sinfo is
    --    package specification. This field is Empty for library bodies (the
    --    parent spec in this case can be found from the corresponding spec).
 
-   --  PPC_Enabled (Flag5-Sem)
-   --    Present in N_Pragma nodes. This flag is relevant only for precondition
-   --    and postcondition nodes. It is true if the check corresponding to the
-   --    pragma type is enabled at the point where the pragma appears.
+   --  Pragma_Enabled (Flag5-Sem)
+   --    Present in N_Pragma nodes. This flag is relevant only for pragmas
+   --    Assert, Check, Precondition, and Postcondition. It is true if the
+   --    check corresponding to the pragma type is enabled at the point where
+   --    the pragma appears.
 
    --  Present_Expr (Uint3-Sem)
    --    Present in an N_Variant node. This has a meaningful value only after
@@ -1985,7 +1980,7 @@ package Sinfo is
       --  Debug_Statement (Node3) (set to Empty if not Debug, Assert)
       --  Pragma_Identifier (Node4)
       --  Next_Rep_Item (Node5-Sem)
-      --  PPC_Enabled (Flag5-Sem)
+      --  Pragma_Enabled (Flag5-Sem)
 
       --  Note: we should have a section on what pragmas are passed on to
       --  the back end to be processed. This section should note that pragma
@@ -3302,10 +3297,10 @@ package Sinfo is
       --  are not met, then the front end must translate the aggregate into
       --  an appropriate set of assignments into a temporary.
 
-      --  Note: for the record aggregate case, gigi/gcc can handle all cases
-      --  of record aggregates, including those for packed, and rep-claused
+      --  Note: for the record aggregate case, gigi/gcc can handle all cases of
+      --  record aggregates, including those for packed, and rep-claused
       --  records, and also variant records, providing that there are no
-      --  variable length fields whose size is not known at runtime, and
+      --  variable length fields whose size is not known at compile time, and
       --  providing that the aggregate is presented in fully named form.
 
       ----------------------------------------------
@@ -8317,14 +8312,14 @@ package Sinfo is
    function Parent_Spec
      (N : Node_Id) return Node_Id;    -- Node4
 
-   function PPC_Enabled
-     (N : Node_Id) return Boolean;    -- Flag5
-
    function Position
      (N : Node_Id) return Node_Id;    -- Node2
 
    function Pragma_Argument_Associations
      (N : Node_Id) return List_Id;    -- List2
+
+   function Pragma_Enabled
+     (N : Node_Id) return Boolean;    -- Flag5
 
    function Pragma_Identifier
      (N : Node_Id) return Node_Id;    -- Node4
@@ -9235,14 +9230,14 @@ package Sinfo is
    procedure Set_Parent_Spec
      (N : Node_Id; Val : Node_Id);            -- Node4
 
-   procedure Set_PPC_Enabled
-     (N : Node_Id; Val : Boolean := True);    -- Flag5
-
    procedure Set_Position
      (N : Node_Id; Val : Node_Id);            -- Node2
 
    procedure Set_Pragma_Argument_Associations
      (N : Node_Id; Val : List_Id);            -- List2
+
+   procedure Set_Pragma_Enabled
+     (N : Node_Id; Val : Boolean := True);    -- Flag5
 
    procedure Set_Pragma_Identifier
      (N : Node_Id; Val : Node_Id);            -- Node4
@@ -11376,9 +11371,9 @@ package Sinfo is
    pragma Inline (Parameter_List_Truncated);
    pragma Inline (Parameter_Type);
    pragma Inline (Parent_Spec);
-   pragma Inline (PPC_Enabled);
    pragma Inline (Position);
    pragma Inline (Pragma_Argument_Associations);
+   pragma Inline (Pragma_Enabled);
    pragma Inline (Pragma_Identifier);
    pragma Inline (Pragmas_After);
    pragma Inline (Pragmas_Before);
@@ -11679,9 +11674,9 @@ package Sinfo is
    pragma Inline (Set_Parameter_List_Truncated);
    pragma Inline (Set_Parameter_Type);
    pragma Inline (Set_Parent_Spec);
-   pragma Inline (Set_PPC_Enabled);
    pragma Inline (Set_Position);
    pragma Inline (Set_Pragma_Argument_Associations);
+   pragma Inline (Set_Pragma_Enabled);
    pragma Inline (Set_Pragma_Identifier);
    pragma Inline (Set_Pragmas_After);
    pragma Inline (Set_Pragmas_Before);

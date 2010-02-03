@@ -1,37 +1,0 @@
-10
-
-dir
-155669
-svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/30_threads/unique_future
-svn://gcc.gnu.org/svn/gcc
-
-
-
-2009-12-15T20:17:27.751618Z
-155269
-redi
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-138bc75d-0d04-0410-961f-82ee72b054a4
-
-cons
-dir
-
-requirements
-dir
-
-members
-dir
-

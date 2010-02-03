@@ -1291,6 +1291,9 @@ input_function (tree fn_decl, struct data_in *data_in,
   fn->va_list_gpr_size = bp_unpack_value (bp, 8);
   bitpack_delete (bp);
 
+  /* Input the current IL state of the function.  */
+  fn->curr_properties = lto_input_uleb128 (ib);
+
   /* Read the static chain and non-local goto save area.  */
   fn->static_chain_decl = lto_input_tree (ib, data_in);
   fn->nonlocal_goto_save_area = lto_input_tree (ib, data_in);
@@ -1465,14 +1468,6 @@ lto_read_body (struct lto_file_decl_data *file_data, tree fn_decl,
 
       /* We should now be in SSA.  */
       cfun->gimple_df->in_ssa_p = true;
-
-      /* Fill in properties we know hold for the rebuilt CFG.  */
-      cfun->curr_properties = PROP_ssa
-			      | PROP_cfg
-			      | PROP_gimple_any
-			      | PROP_gimple_lcf
-			      | PROP_gimple_leh
-			      | PROP_referenced_vars;
 
       /* Restore decl state */
       file_data->current_decl_state = file_data->global_decl_state;
@@ -1747,8 +1742,8 @@ unpack_ts_type_value_fields (struct bitpack_d *bp, tree expr)
   TYPE_STRING_FLAG (expr) = (unsigned) bp_unpack_value (bp, 1);
   TYPE_NO_FORCE_BLK (expr) = (unsigned) bp_unpack_value (bp, 1);
   TYPE_NEEDS_CONSTRUCTING(expr) = (unsigned) bp_unpack_value (bp, 1);
-  if (TREE_CODE (expr) == UNION_TYPE)
-    TYPE_TRANSPARENT_UNION (expr) = (unsigned) bp_unpack_value (bp, 1);
+  if (TREE_CODE (expr) == UNION_TYPE || TREE_CODE (expr) == RECORD_TYPE)
+    TYPE_TRANSPARENT_AGGR (expr) = (unsigned) bp_unpack_value (bp, 1);
   TYPE_PACKED (expr) = (unsigned) bp_unpack_value (bp, 1);
   TYPE_RESTRICT (expr) = (unsigned) bp_unpack_value (bp, 1);
   TYPE_CONTAINS_PLACEHOLDER_INTERNAL (expr)

@@ -1,7 +1,7 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/transaction
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ has-props
 
 661
 
-NotSupportedException.class
-file
-
-
-
-
-2009-04-24T17:48:25.000000Z
-6d20fd9f17748f5adf4a3a3787b2d1e5
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-468
-
 Transaction.class
 file
 
@@ -230,14 +196,14 @@ has-props
 
 771
 
-HeuristicCommitException.class
+NotSupportedException.class
 file
 
 
 
 
 2009-04-24T17:48:25.000000Z
-52d4ce8299047e2e992e80920d709c63
+6d20fd9f17748f5adf4a3a3787b2d1e5
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -262,7 +228,7 @@ has-props
 
 
 
-477
+468
 
 TransactionRolledbackException.class
 file
@@ -297,6 +263,40 @@ has-props
 
 
 500
+
+HeuristicCommitException.class
+file
+
+
+
+
+2009-04-24T17:48:25.000000Z
+52d4ce8299047e2e992e80920d709c63
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+477
 
 HeuristicRollbackException.class
 file
@@ -403,40 +403,6 @@ has-props
 xa
 dir
 
-HeuristicMixedException.class
-file
-
-
-
-
-2009-04-24T17:48:25.000000Z
-18d81cff3665687b8f42cf8dc64de425
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-474
-
 TransactionRequiredException.class
 file
 
@@ -470,6 +436,40 @@ has-props
 
 
 494
+
+HeuristicMixedException.class
+file
+
+
+
+
+2009-04-24T17:48:25.000000Z
+18d81cff3665687b8f42cf8dc64de425
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+474
 
 RollbackException.class
 file

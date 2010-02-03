@@ -1,15 +1,15 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/forward_list
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-01T03:38:58.904086Z
-155545
-bkoz
+2010-02-01T13:10:12.119118Z
+156426
+paolo
 
 
 
@@ -77,38 +77,4 @@ jakub
 
 capacity
 dir
-
-moveable.cc
-file
-
-
-
-
-2009-04-24T17:50:16.000000Z
-3784608326cbeb10be5908b63f4b42ff
-2009-04-09T15:00:19.611803Z
-145841
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1390
 

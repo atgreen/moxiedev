@@ -1,7 +1,7 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/java/lang/management
 svn://gcc.gnu.org/svn/gcc
 
@@ -94,17 +94,17 @@ tromey
 
 1232
 
-MemoryUsage.h
+ManagementFactory$ManagementInvocationHandler.h
 file
 
 
 
 
 2009-04-24T17:49:16.000000Z
-f70937cc65c83b8c67cc0c40a26ee488
-2007-01-09T19:58:05.773323Z
-120621
-tromey
+0bc931f8a6bf82f943ca328d15bee646
+2007-06-03T23:18:43.019099Z
+125302
+doko
 
 
 
@@ -126,7 +126,7 @@ tromey
 
 
 
-977
+1211
 
 MemoryPoolMXBean.h
 file
@@ -162,48 +162,14 @@ tromey
 
 1443
 
-ManagementFactory$ManagementInvocationHandler.h
+MemoryUsage.h
 file
 
 
 
 
 2009-04-24T17:49:16.000000Z
-0bc931f8a6bf82f943ca328d15bee646
-2007-06-03T23:18:43.019099Z
-125302
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1211
-
-MemoryManagerMXBean.h
-file
-
-
-
-
-2009-04-24T17:49:16.000000Z
-5523b91a1183e1f3a0b298b55b25288b
+f70937cc65c83b8c67cc0c40a26ee488
 2007-01-09T19:58:05.773323Z
 120621
 tromey
@@ -228,7 +194,7 @@ tromey
 
 
 
-619
+977
 
 ClassLoadingMXBean.h
 file
@@ -263,6 +229,40 @@ tromey
 
 
 650
+
+MemoryManagerMXBean.h
+file
+
+
+
+
+2009-04-24T17:49:16.000000Z
+5523b91a1183e1f3a0b298b55b25288b
+2007-01-09T19:58:05.773323Z
+120621
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+619
 
 VMManagementFactory.java
 file
@@ -332,40 +332,6 @@ doko
 
 2106
 
-MonitorInfo.h
-file
-
-
-
-
-2009-04-24T17:49:16.000000Z
-4d44374b1d5dc62c34462d5e46d83284
-2007-06-03T23:18:43.019099Z
-125302
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1012
-
 MemoryMXBean.h
 file
 
@@ -400,14 +366,14 @@ tromey
 
 727
 
-ManagementFactory.h
+MonitorInfo.h
 file
 
 
 
 
 2009-04-24T17:49:16.000000Z
-9b6be78d3467dfa4a176c44e15cc3daa
+4d44374b1d5dc62c34462d5e46d83284
 2007-06-03T23:18:43.019099Z
 125302
 doko
@@ -432,7 +398,7 @@ doko
 
 
 
-2429
+1012
 
 LockInfo.h
 file
@@ -467,6 +433,40 @@ doko
 
 
 678
+
+ManagementFactory.h
+file
+
+
+
+
+2009-04-24T17:49:16.000000Z
+9b6be78d3467dfa4a176c44e15cc3daa
+2007-06-03T23:18:43.019099Z
+125302
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2429
 
 VMManagementFactory.h
 file

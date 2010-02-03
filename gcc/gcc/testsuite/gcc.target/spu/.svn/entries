@@ -1,7 +1,7 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/spu
 svn://gcc.gnu.org/svn/gcc
 
@@ -128,9 +128,6 @@ bje
 
 796
 
-ea
-dir
-
 dfcmgt.c
 file
 
@@ -164,6 +161,9 @@ uweigand
 
 
 206
+
+ea
+dir
 
 tag_manager.c
 file

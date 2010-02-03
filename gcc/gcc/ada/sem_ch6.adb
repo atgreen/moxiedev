@@ -8218,7 +8218,7 @@ package body Sem_Ch6 is
          Prag := Spec_PPC_List (Spec_Id);
          while Present (Prag) loop
             if Pragma_Name (Prag) = Name_Precondition
-              and then PPC_Enabled (Prag)
+              and then Pragma_Enabled (Prag)
             then
                --  Add pragma Check at the start of the declarations of N.
                --  Note that this processing reverses the order of the list,
@@ -8297,7 +8297,7 @@ package body Sem_Ch6 is
          Prag := Spec_PPC_List (Spec_Id);
          while Present (Prag) loop
             if Pragma_Name (Prag) = Name_Postcondition
-              and then PPC_Enabled (Prag)
+              and then Pragma_Enabled (Prag)
             then
                if Plist = No_List then
                   Plist := Empty_List;
@@ -8352,10 +8352,15 @@ package body Sem_Ch6 is
                   Make_Handled_Sequence_Of_Statements (Loc,
                     Statements => Plist)));
 
-            --  If this is a procedure, set the Postcondition_Proc attribute
+            --  If this is a procedure, set the Postcondition_Proc attribute on
+            --  the proper defining entity for the subprogram.
 
             if Etype (Subp) = Standard_Void_Type then
-               Set_Postcondition_Proc (Spec_Id, Post_Proc);
+               if Present (Spec_Id) then
+                  Set_Postcondition_Proc (Spec_Id, Post_Proc);
+               else
+                  Set_Postcondition_Proc (Body_Id, Post_Proc);
+               end if;
             end if;
          end;
 

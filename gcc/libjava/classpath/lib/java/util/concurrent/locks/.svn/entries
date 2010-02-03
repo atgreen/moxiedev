@@ -1,7 +1,7 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/java/util/concurrent/locks
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ has-props
 
 4685
 
-ReentrantLock$Sync.class
-file
-
-
-
-
-2009-04-24T17:48:07.000000Z
-ec4bd256770223e7f3d2679754fa58ea
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2415
-
 AbstractQueuedLongSynchronizer$ConditionObject.class
 file
 
@@ -127,6 +93,40 @@ has-props
 
 
 6833
+
+ReentrantLock$Sync.class
+file
+
+
+
+
+2009-04-24T17:48:07.000000Z
+ec4bd256770223e7f3d2679754fa58ea
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2415
 
 ReentrantLock$FairSync.class
 file
@@ -264,40 +264,6 @@ has-props
 
 1553
 
-ReentrantReadWriteLock$FairSync.class
-file
-
-
-
-
-2009-04-24T17:48:07.000000Z
-f519a1a4e68735ec4aa6ac5b7cd54e31
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-852
-
 LockSupport.class
 file
 
@@ -331,6 +297,40 @@ has-props
 
 
 2227
+
+ReentrantReadWriteLock$FairSync.class
+file
+
+
+
+
+2009-04-24T17:48:07.000000Z
+f519a1a4e68735ec4aa6ac5b7cd54e31
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+852
 
 Condition.class
 file
@@ -400,40 +400,6 @@ has-props
 
 387
 
-ReentrantLock$NonfairSync.class
-file
-
-
-
-
-2009-04-24T17:48:07.000000Z
-350ef0304cc13bccbf7693a0f20a5bb1
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-975
-
 AbstractOwnableSynchronizer.class
 file
 
@@ -467,6 +433,40 @@ has-props
 
 
 754
+
+ReentrantLock$NonfairSync.class
+file
+
+
+
+
+2009-04-24T17:48:07.000000Z
+350ef0304cc13bccbf7693a0f20a5bb1
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+975
 
 AbstractQueuedSynchronizer.class
 file

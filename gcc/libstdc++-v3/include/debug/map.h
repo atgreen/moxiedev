@@ -115,7 +115,8 @@ namespace __debug
       map&
       operator=(map&& __x)
       {
-        // NB: DR 675.
+	// NB: DR 1204.
+	// NB: DR 675.
 	clear();
 	swap(__x);
 	return *this;

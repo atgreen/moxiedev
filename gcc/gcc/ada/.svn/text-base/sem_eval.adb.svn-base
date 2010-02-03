@@ -1911,11 +1911,11 @@ package body Sem_Eval is
                Atyp := Designated_Type (Atyp);
             end if;
 
-            --  If we have an array type (we should have but perhaps there
-            --  are error cases where this is not the case), then see if we
-            --  can do a constant evaluation of the array reference.
+            --  If we have an array type (we should have but perhaps there are
+            --  error cases where this is not the case), then see if we can do
+            --  a constant evaluation of the array reference.
 
-            if Is_Array_Type (Atyp) then
+            if Is_Array_Type (Atyp) and then Atyp /= Any_Composite then
                if Ekind (Atyp) = E_String_Literal_Subtype then
                   Lbd := String_Literal_Low_Bound (Atyp);
                else
@@ -1983,8 +1983,8 @@ package body Sem_Eval is
    --  Numeric literals are static (RM 4.9(1)), and have already been marked
    --  as static by the analyzer. The reason we did it that early is to allow
    --  the possibility of turning off the Is_Static_Expression flag after
-   --  analysis, but before resolution, when integer literals are generated
-   --  in the expander that do not correspond to static expressions.
+   --  analysis, but before resolution, when integer literals are generated in
+   --  the expander that do not correspond to static expressions.
 
    procedure Eval_Integer_Literal (N : Node_Id) is
       T : constant Entity_Id := Etype (N);

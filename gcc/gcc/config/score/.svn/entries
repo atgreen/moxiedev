@@ -1,7 +1,7 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/score
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ rth
 
 52754
 
-t-score-elf
-file
-
-
-
-
-2009-05-28T13:02:27.000000Z
-9fb1a1a901bfda8fa75757b0ea8fee82
-2009-05-26T14:02:04.105108Z
-147873
-ian
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2399
-
 crti.asm
 file
 
@@ -127,6 +93,40 @@ jakub
 
 
 3345
+
+t-score-elf
+file
+
+
+
+
+2009-05-28T13:02:27.000000Z
+9fb1a1a901bfda8fa75757b0ea8fee82
+2009-05-26T14:02:04.105108Z
+147873
+ian
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2399
 
 predicates.md
 file
@@ -196,40 +196,6 @@ rth
 
 50739
 
-score-generic.md
-file
-
-
-
-
-2009-04-24T17:43:27.000000Z
-7a1f3dcfd6dd42a718b018798f0aed77
-2007-10-18T06:53:22.874884Z
-129431
-liqin
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1482
-
 score3.h
 file
 
@@ -264,17 +230,17 @@ rth
 
 7238
 
-crtn.asm
+score-generic.md
 file
 
 
 
 
 2009-04-24T17:43:27.000000Z
-582b38eecfe66acda21ec7a0761e08fd
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+7a1f3dcfd6dd42a718b018798f0aed77
+2007-10-18T06:53:22.874884Z
+129431
+liqin
 
 
 
@@ -296,7 +262,7 @@ jakub
 
 
 
-1567
+1482
 
 score-protos.h
 file
@@ -332,6 +298,40 @@ rth
 
 4606
 
+crtn.asm
+file
+
+
+
+
+2009-04-24T17:43:27.000000Z
+582b38eecfe66acda21ec7a0761e08fd
+2009-04-09T15:00:19.611803Z
+145841
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1567
+
 score7.h
 file
 
@@ -366,40 +366,6 @@ rth
 
 7207
 
-elf.h
-file
-
-
-
-
-2009-04-24T17:43:27.000000Z
-c4c4675b2fc1810c6f5c116a7b7ce97b
-2007-10-18T06:53:22.874884Z
-129431
-liqin
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3820
-
 score.c
 file
 
@@ -433,6 +399,40 @@ rth
 
 
 35388
+
+elf.h
+file
+
+
+
+
+2009-04-24T17:43:27.000000Z
+c4c4675b2fc1810c6f5c116a7b7ce97b
+2007-10-18T06:53:22.874884Z
+129431
+liqin
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3820
 
 score.h
 file

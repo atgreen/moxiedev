@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/java/util/logging
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
+2010-01-06T17:46:48.717189Z
+155678
 doko
 
 
@@ -32,44 +32,10 @@ file
 
 
 
-2009-04-24T17:48:07.000000Z
-934f5bea9c8371102e76c4a19df68f75
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-13528
-
-SimpleFormatter.class
-file
-
-
-
-
-2009-04-24T17:48:07.000000Z
-eaadefe1ae06e5d125805c6e6d0cf241
-2008-10-21T17:55:01.166395Z
-141271
+2010-02-03T11:42:19.570482Z
+da5151720859712f00494f78c972e739
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 
@@ -92,41 +58,7 @@ has-props
 
 
 
-2032
-
-FileHandler.class
-file
-
-
-
-
-2009-04-24T17:48:07.000000Z
-9a38fcd785cfbbbf774ebc2b41bac97b
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6273
+13525
 
 Handler.class
 file
@@ -161,6 +93,74 @@ has-props
 
 
 2968
+
+FileHandler.class
+file
+
+
+
+
+2010-02-03T11:42:19.572697Z
+a039eb17eeff97a0b2cbf1dbf5085d78
+2010-01-06T17:46:48.717189Z
+155678
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6273
+
+SimpleFormatter.class
+file
+
+
+
+
+2009-04-24T17:48:07.000000Z
+eaadefe1ae06e5d125805c6e6d0cf241
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2032
 
 Logger.class
 file
@@ -264,40 +264,6 @@ has-props
 
 395
 
-XMLFormatter.class
-file
-
-
-
-
-2009-04-24T17:48:07.000000Z
-390d435b8af614df21e0d06acef4c487
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4531
-
 ErrorManager.class
 file
 
@@ -331,6 +297,40 @@ has-props
 
 
 1654
+
+XMLFormatter.class
+file
+
+
+
+
+2009-04-24T17:48:07.000000Z
+390d435b8af614df21e0d06acef4c487
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4531
 
 Filter.class
 file
@@ -400,40 +400,6 @@ has-props
 
 1932
 
-StreamHandler.class
-file
-
-
-
-
-2009-04-24T17:48:07.000000Z
-e1f797c94df909abf307109d2aa518ba
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-5354
-
 FileHandler$ostr.class
 file
 
@@ -467,6 +433,40 @@ has-props
 
 
 1249
+
+StreamHandler.class
+file
+
+
+
+
+2010-02-03T11:42:19.579639Z
+6a1338d05ae1e37185746c2115ec50f1
+2010-01-06T17:46:48.717189Z
+155678
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+5354
 
 LoggingPermission.class
 file
@@ -542,11 +542,11 @@ file
 
 
 
-2009-04-24T17:48:07.000000Z
-79212096b8fe059ebdc0732ced3546d7
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2010-02-03T11:42:19.580660Z
+1b73a4cf9f28387b0c08ee0dd80e5bf4
+2010-01-06T17:46:48.717189Z
+155678
+doko
 has-props
 
 
@@ -568,7 +568,7 @@ has-props
 
 
 
-2265
+2242
 
 Formatter.class
 file
@@ -610,11 +610,11 @@ file
 
 
 
-2009-04-24T17:48:07.000000Z
-5516ff87b0b2191a4968304046fa8f15
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2010-02-03T11:42:19.590585Z
+55180034fc6713ae4b26b2a3ceb27ab8
+2010-01-06T17:46:48.717189Z
+155678
+doko
 has-props
 
 

@@ -13387,16 +13387,6 @@ ix86_fixup_binary_operands (enum rtx_code code, enum machine_mode mode,
   if (MEM_P (src1) && !rtx_equal_p (dst, src1))
     src1 = force_reg (mode, src1);
 
-  /* In order for the multiply-add patterns to get matched, we need
-     to aid combine by forcing all operands into registers to start.  */
-  if (optimize && TARGET_FMA4)
-    {
-      if (MEM_P (src2))
-	src2 = force_reg (GET_MODE (src2), src2);
-      else if (MEM_P (src1))
-	src1 = force_reg (GET_MODE (src1), src1);
-    }
-
   operands[1] = src1;
   operands[2] = src2;
   return dst;
@@ -15391,7 +15381,7 @@ ix86_expand_int_movcc (rtx operands[])
   enum rtx_code code = GET_CODE (operands[1]), compare_code;
   rtx compare_seq, compare_op;
   enum machine_mode mode = GET_MODE (operands[0]);
-  bool sign_bit_compare_p = false;;
+  bool sign_bit_compare_p = false;
 
   start_sequence ();
   ix86_compare_op0 = XEXP (operands[1], 0);
@@ -15432,7 +15422,6 @@ ix86_expand_int_movcc (rtx operands[])
           if (!sign_bit_compare_p)
 	    {
 	      rtx flags;
-	      rtx (*insn)(rtx, rtx, rtx);
 	      bool fpcmp = false;
 
 	      compare_code = GET_CODE (compare_op);
@@ -15473,11 +15462,10 @@ ix86_expand_int_movcc (rtx operands[])
 		tmp = gen_reg_rtx (mode);
 
 	      if (mode == DImode)
-		insn = gen_x86_movdicc_0_m1;
+		emit_insn (gen_x86_movdicc_0_m1 (tmp, flags, compare_op));
 	      else
-		insn = gen_x86_movsicc_0_m1;
-
-	      emit_insn (insn (tmp, flags, compare_op));
+		emit_insn (gen_x86_movsicc_0_m1	(gen_lowpart (SImode, tmp),
+						 flags, compare_op));
 	    }
 	  else
 	    {
@@ -26654,8 +26642,16 @@ ix86_expand_vector_init_duplicate (bool mmx_ok, enum machine_mode mode,
 	insn = emit_insn (gen_rtx_SET (VOIDmode, target, dup));
 	if (recog_memoized (insn) < 0)
 	  {
+	    rtx seq;
 	    /* If that fails, force VAL into a register.  */
+
+	    start_sequence ();
 	    XEXP (dup, 0) = force_reg (GET_MODE_INNER (mode), val);
+	    seq = get_insns ();
+	    end_sequence ();
+	    if (seq)
+	      emit_insn_before (seq, insn);
+
 	    ok = recog_memoized (insn) >= 0;
 	    gcc_assert (ok);
 	  }
@@ -28886,7 +28882,7 @@ ix86_vectorize_builtin_vec_perm (tree vec_type, tree *mask_type)
   tree itype = TREE_TYPE (vec_type);
   bool u = TYPE_UNSIGNED (itype);
   enum machine_mode vmode = TYPE_MODE (vec_type);
-  enum ix86_builtins fcode;
+  enum ix86_builtins fcode = fcode; /* Silence bogus warning.  */
   bool ok = TARGET_SSE2;
 
   switch (vmode)

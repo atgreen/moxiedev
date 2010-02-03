@@ -1,3 +1,305 @@
+2010-01-28  Pascal Obry  <obry@adacore.com>
+
+	* s-win32.ads: Add some missing constants.
+
+2010-01-28  Vincent Celier  <celier@adacore.com>
+
+	* prj-attr-pm.adb (Add_Attribute): Do nothing if To_Package is
+	Unknown_Package.
+
+2010-01-28  Robert Dewar  <dewar@adacore.com>
+
+	* gnat_rm.texi: Minor correction
+
+2010-01-27  Pascal Obry  <obry@adacore.com>
+
+	* g-awk.adb: ensure that an AWK session is reusable.
+
+2010-01-27  Vasiliy Fofanov  <fofanov@adacore.com>
+
+	* g-regist.adb (For_Every_Key): Fix previous change.
+	Minor reformatting.
+
+2010-01-27  Thomas Quinot  <quinot@adacore.com>
+
+	* lib-writ.ads: Current version of spec for new N (note) ALI lines
+
+2010-01-27  Yannick Moy  <moy@adacore.com>
+
+	* a-cdlili.adb (Insert): Correct exception message when cursor
+	designates wrong list.
+
+2010-01-27  Vincent Celier  <celier@adacore.com>
+
+	* gnatcmd.adb: When there is only one main specified, the package
+	support Switches (<main>) and attribute Switches is specified for the
+	main, use these switches, instead of Default_Switches ("Ada").
+
+2010-01-27  Robert Dewar  <dewar@adacore.com>
+
+	* sem_prag.adb, par-prag.adb, snames.ads-tmpl: pragma Dimension initial
+	implementation.
+	* exp_disp.adb: Minor reformatting
+
+2010-01-27  Tristan Gingold  <gingold@adacore.com>
+
+	* seh_init.c: Use __ImageBase instead of _ImageBase.
+
+2010-01-27  Javier Miranda  <miranda@adacore.com>
+
+	* exp_disp.ads, exp_disp.adb (Expand_Interface_Thunk): Modify the
+	profile of interface thunks. The type of the controlling formal is now
+	the covered interface type (instead of the target tagged type).
+
+2010-01-27  Sergey Rybin  <rybin@adacore.com>
+
+	* gnat_rm.texi, gnat_ugn.texi: Update gnatcheck doc.
+
+2010-01-27  Robert Dewar  <dewar@adacore.com>
+
+	* sinput.ads, sinput.adb (Sloc_Range): Applies to all nodes, formal
+	changed from Expr to N.
+
+2010-01-26  Thomas Quinot  <quinot@adacore.com>
+
+	* gnat_ugn.texi: Adjust documentation of -gnatz switches.
+	* usage.adb: Replace line for -gnatz with two lines for -gnatzc and
+	-gnatzr.
+
+2010-01-26  Vincent Celier  <celier@adacore.com>
+
+	* prj-attr.adb: Add new attribute Library_Install_Name_Option
+	Replace attribute Run_Path_Origin_Supported with Run_Path_Origin
+	* prj-nmsc.adb (Process_Project_Level_Simple_Attributes): Process
+	attributes Run_Path_Option and Library_Install_Name_Option.
+	* prj.ads (Project_Configuration): Replace component
+	Run_Path_Origin_Supported with component Run_Path_Origin. Add new
+	component Library_Install_Name_Option.
+	* snames.ads-tmpl: Add new standard name Library_Install_Name_Option
+	Replace Run_Path_Origin_Supported with Run_Path_Origin
+
+2010-01-26  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_ch8.adb (Use_One_Package): Within an instance, an actual package
+	is not hidden by a homograph declared in another actual package.
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* par_sco.adb (Traverse_Declarations_Or_Statements): Only generate
+	decisions for pragmas Assert, Check, Precondition, Postcondition if
+	-gnata set.
+	* scos.ads: Update comments.
+	* get_scos.adb, put_scos.adb: Minor fix to code reading statement SCOs.
+	Also remove obsolete code for CT (exit point) SCOs.
+
+2010-01-26  Thomas Quinot  <quinot@adacore.com>
+
+	* switch-c.adb: Fix handling of -gnatz*
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* par_sco.adb (Traverse_Declarations_Or_Statements): Separate F/W
+	qualifiers for FOR/WHILE loops
+	* scos.ads: Use separate type letters F/W for for/while loops
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* get_scos.adb (Get_SCOs): Implement new form of CS entries (multiple
+	entries per line, one for each statement in the sequence).
+	* par_sco.adb (Traverse_Declarations_Or_Statements): Increase array
+	size from 100 to 10_000 for SC_Array to avoid any real possibility of
+	overflow. Output decisions in for loops.
+	Exclude labels from CS lines.
+	* scos.ads: Clarify that label is not included in the entry point
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* par_sco.adb (Traverse_Declarations_Or_Statments): Implement new
+	format of statement sequence SCO entries (one location/statement).
+	* put_scos.adb (Put_SCOs): Implement new format of CS lines
+	* scos.ads: Update comments.
+	* sem_eval.adb: Minor reformatting.
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* par_sco.ads, par_sco.adb (Set_Statement_Entry): New handling of exits
+	(Extend_Statement_Sequence): New procedures
+	(Traverse_Declarations_Or_Statements): New handling for exits.
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* par_sco.adb (Traverse_Declarations_Or_Statements): Add processing for
+	Case.
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* par_sco.adb (Is_Logical_Operator): Exclude AND/OR/XOR
+	* scos.ads: Clarify handling of logical operators
+
+2010-01-26  Arnaud Charlet  <charlet@adacore.com>
+
+	* s-tpoben.adb: Update comments.
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* freeze.adb (Set_Small_Size): Don't set size if alignment clause
+	present.
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* scos.ads: Clean up documentation, remove obsolete XOR references
+2010-01-26  Vincent Celier  <celier@adacore.com>
+
+	* gnat_ugn.texi: Complete documentation on the restrictions for
+	combined options in -gnatxxx switches.
+	Fix typo.
+
+2010-01-26  Arnaud Charlet  <charlet@adacore.com>
+
+	* s-tpoben.adb (Initialize_Protection_Entries): If a PO is created from
+	a controlled operation, abort is already deferred at this point, so we
+	need to use Defer_Abort_Nestable.
+
+2010-01-26  Vincent Celier  <celier@adacore.com>
+
+	* prj-conf.adb (Get_Config_Switches): Check for a default language for
+	a project extending a project with no languages.
+
+2010-01-26  Vincent Celier  <celier@adacore.com>
+
+	* switch-c.adb (Scan_Front_End_Switches): Take into account options
+	that follow -gnatef.
+	Allow -gnateG to be followed by other options.
+
+2010-01-26  Robert Dewar  <dewar@adacore.com>
+
+	* s-commun.ads, s-osprim-mingw.adb, s-stchop-vxworks.adb, sem_aggr.adb,
+	s-vxwext.adb, sem_ch10.adb, sem_eval.adb, sem_prag.adb: Minor
+	reformatting.
+
+2010-01-26  Vasiliy Fofanov  <fofanov@adacore.com>
+
+	* g-regist.adb, g-regist.ads (For_Every_Key): New generic procedure
+	that allows to iterate over all subkeys of a key.
+
+2010-01-26  Ed Falis  <falis@adacore.com>
+
+	* sysdep.c: enable NFS for VxWorks MILS
+	* env.c: enable __gnat_environ for VxWorks MILS
+	* gcc-interface/Makefile.in: Add VxWorks MILS target pairs.
+
+2010-01-25  Bob Duff  <duff@adacore.com>
+
+	* sem_aggr.adb (Resolve_Array_Aggregate): Check for the case where this
+	is an internally-generated positional aggregate, and the bounds are
+	already correctly set. We don't want to overwrite those bounds with
+	bounds determined by context.
+
+2010-01-25  Robert Dewar  <dewar@adacore.com>
+
+	* g-sercom.ads, gnatcmd.adb, gnatlink.adb, a-ststio.adb, exp_ch6.adb,
+	exp_ch9.adb, g-sechas.ads: Minor reformatting.
+
+2010-01-25  Thomas Quinot  <quinot@adacore.com>
+
+	* s-commun.adb (Last_Index): Count must be converted to SEO (a signed
+	integer type) before subtracting 1, otherwise the computation may wrap
+	(because size_t is modular) and cause the conversion to fail.
+
+2010-01-25  Ed Falis  <falis@adacore.com>
+
+	* sysdep.c, init.c: Adapt to support full run-time on VxWorks MILS.
+
+2010-01-25  Vincent Celier  <celier@adacore.com>
+
+	* prj-attr.adb: New attribute Run_Path_Origin_Required
+	* prj-nmsc.adb (Process_Project_Level_Simple_Attributes): Process new
+	attribute Run_Path_Origin_Required.
+	* prj.ads (Project_Configuration): New component
+	Run_Path_Origin_Supported.
+	* snames.ads-tmpl: New standard name Run_Path_Origin_Required
+
+2010-01-25  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_aggr.adb (Resolve_Array_Aggregate): If the bounds in a choice
+	have errors, do not continue resolution of the aggregate.
+	* sem_eval.adb (Eval_Indexed_Component): Do not attempt to evaluate if
+	the array type indicates an error.
+
+2010-01-25  Bob Duff  <duff@adacore.com>
+
+	* sinfo.ads: Minor comment fixes.
+
+2010-01-25  Bob Duff  <duff@adacore.com>
+
+	* exp_ch4.adb, exp_aggr.adb: Minor comment fixes and code clean up.
+
+2010-01-25  Arnaud Charlet  <charlet@adacore.com>
+
+	* gnatvsn.ads (Current_Year): Update.
+
+2010-01-25  Florian Villoing  <villoing@adacore.com>
+
+	* gnat_ugn.texi: Fix typo.
+
+2010-01-25  Thomas Quinot  <quinot@adacore.com>
+
+	* scos.ads: Update specification.
+
+2010-01-25  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_ch6.adb (Process_PPCs): If a postcondition is present and the
+	enclosing subprogram has no previous spec, attach postcondition
+	procedure to the defining entity for the body.
+
+2010-01-25  Ed Schonberg  <schonberg@adacore.com>
+
+	* exp_aggr.adb (Build_Record_Aggr_Code); Do not generate call to
+	initialization procedure of the ancestor part of an extension aggregate
+	if it is an interface type.
+
+2010-01-25  Vincent Celier  <celier@adacore.com>
+
+	* gnatlink.adb (Process_Binder_File): The directory for the shared
+	version of libgcc in the run path options is found in the subdirectory
+	indicated by __gnat_default_libgcc_subdir.
+	* link.c: Declare new const char * __gnat_default_libgcc_subdir for
+	each platform.
+
+2010-01-25  Ed Schonberg  <schonberg@adacore.com>
+
+	* sem_prag.adb: More flexible pragma Annotate.
+
+2010-01-22  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* system-linux-armel.ads (Stack_Check_Probes): Set to True.
+	* system-linux-armeb.ads (Stack_Check_Probes): Likewise.
+
+2010-01-18  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gcc-interface/utils.c (create_var_decl_1): Fix formatting nits.
+
+2010-01-18  Jan Hubicka  <jh@suse.cz>
+
+	PR middle-end/42068
+	* gcc-interface/utils.c (create_var_decl_1): Do not set COMMON flag for
+	unit local variables.
+
+2010-01-17  Laurent GUERBY  <laurent@guerby.net>
+
+	* gcc-interface/Makefile.in: Fix typo in arm*-*-linux-gnueabi.
+
+2010-01-11  Mikael Pettersson  <mikpe@it.uu.se>
+
+	* gcc-interface/Makefile.in: Add arm*-*-linux-gnueabi.
+	* system-linux-armeb.ads, system-linux-armel.ads: New files.
+
+2010-01-09  Simon Wright  <simon@pushface.org>
+
+	PR ada/42626
+	* gcc-interface/Makefile.in (gnatlib-shared-darwin): Add missing
+	end-quote.
+
 
 
 Copyright (C) 2010 Free Software Foundation, Inc.

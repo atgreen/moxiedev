@@ -176,6 +176,7 @@ EXTRA_BUILD_FLAGS = \
 
 # This is the list of directories to built for the host system.
 SUBDIRS = @configdirs@
+TARGET_CONFIGDIRS = @target_configdirs@
 # This is set by the configure script to the arguments to use when configuring
 # directories built for the host system.
 HOST_CONFIGARGS = @host_configargs@
@@ -262,7 +263,7 @@ TARGET_SUBDIR = @target_subdir@
 # directories built for the target.
 TARGET_CONFIGARGS = @target_configargs@ --with-target-subdir="$(TARGET_SUBDIR)"
 # This is the list of variables to export in the environment when
-# configuring subdirectories for the host system.
+# configuring subdirectories for the target system.
 BASE_TARGET_EXPORTS = \
 	$(BASE_EXPORTS) \
 	AR="$(AR_FOR_TARGET)"; export AR; \
@@ -284,7 +285,11 @@ BASE_TARGET_EXPORTS = \
 	STRIP="$(STRIP_FOR_TARGET)"; export STRIP; \
 	WINDRES="$(WINDRES_FOR_TARGET)"; export WINDRES; \
 	WINDMC="$(WINDMC_FOR_TARGET)"; export WINDMC; \
-	$(RPATH_ENVVAR)=`echo "$(HOST_LIB_PATH)$(TARGET_LIB_PATH)$$$(RPATH_ENVVAR)" | sed 's,::*,:,g;s,^:*,,;s,:*$$,,'`; export $(RPATH_ENVVAR);
+@if gcc-bootstrap
+	$(RPATH_ENVVAR)=`echo "$(TARGET_LIB_PATH)$$$(RPATH_ENVVAR)" | sed 's,::*,:,g;s,^:*,,;s,:*$$,,'`; export $(RPATH_ENVVAR); \
+@endif gcc-bootstrap
+	$(RPATH_ENVVAR)=`echo "$(HOST_LIB_PATH)$$$(RPATH_ENVVAR)" | sed 's,::*,:,g;s,^:*,,;s,:*$$,,'`; export $(RPATH_ENVVAR); \
+	TARGET_CONFIGDIRS="$(TARGET_CONFIGDIRS)"; export TARGET_CONFIGDIRS;
 
 RAW_CXX_TARGET_EXPORTS = \
 	$(BASE_TARGET_EXPORTS) \

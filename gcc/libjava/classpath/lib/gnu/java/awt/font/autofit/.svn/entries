@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/awt/font/autofit
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
+2010-01-06T17:46:48.717189Z
+155678
 doko
 
 
@@ -60,40 +60,6 @@ has-props
 
 402
 
-Width.class
-file
-
-
-
-
-2009-04-24T17:47:31.000000Z
-3d5b786d8a2b093d50ea441dddc476c9
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-847
-
 LatinBlue.class
 file
 
@@ -127,6 +93,40 @@ has-props
 
 
 1023
+
+Width.class
+file
+
+
+
+
+2009-04-24T17:47:31.000000Z
+3d5b786d8a2b093d50ea441dddc476c9
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+847
 
 AutoHinter.class
 file
@@ -168,10 +168,10 @@ file
 
 
 
-2009-04-24T17:47:31.000000Z
-bad75e7310029f93e221788a85415237
-2007-06-03T23:18:43.019099Z
-125302
+2010-02-03T11:42:24.760566Z
+f4e8c1a515f037bf879697e625eb9d24
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 
@@ -230,40 +230,6 @@ has-props
 
 504
 
-LatinAxis.class
-file
-
-
-
-
-2009-04-24T17:47:31.000000Z
-f35001ccbf3bc42da6e44acc7816e0f1
-2007-06-03T23:18:43.019099Z
-125302
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-689
-
 HintScaler.class
 file
 
@@ -297,6 +263,40 @@ has-props
 
 
 459
+
+LatinAxis.class
+file
+
+
+
+
+2009-04-24T17:47:31.000000Z
+f35001ccbf3bc42da6e44acc7816e0f1
+2007-06-03T23:18:43.019099Z
+125302
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+689
 
 LatinMetrics.class
 file
@@ -400,40 +400,6 @@ has-props
 
 1962
 
-Script.class
-file
-
-
-
-
-2009-04-24T17:47:31.000000Z
-cd515f17212622c9e223b240429f5d84
-2007-06-03T23:18:43.019099Z
-125302
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-659
-
 Edge.class
 file
 
@@ -467,6 +433,40 @@ has-props
 
 
 1799
+
+Script.class
+file
+
+
+
+
+2009-04-24T17:47:31.000000Z
+cd515f17212622c9e223b240429f5d84
+2007-06-03T23:18:43.019099Z
+125302
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+659
 
 Latin.class
 file

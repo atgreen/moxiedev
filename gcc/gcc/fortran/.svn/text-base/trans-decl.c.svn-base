@@ -1349,7 +1349,9 @@ get_proc_pointer_decl (gfc_symbol *sym)
     {
       /* Add static initializer.  */
       DECL_INITIAL (decl) = gfc_conv_initializer (sym->value, &sym->ts,
-	  TREE_TYPE (decl), sym->attr.dimension, sym->attr.proc_pointer);
+	  TREE_TYPE (decl),
+	  sym->attr.proc_pointer ? false : sym->attr.dimension,
+	  sym->attr.proc_pointer);
     }
 
   attributes = add_attributes_to_decl (sym->attr, NULL_TREE);
@@ -3188,31 +3190,38 @@ gfc_trans_deferred_vars (gfc_symbol * proc_sym, tree fnbody)
 	       || (sym->ts.type == BT_CLASS
 		   && sym->ts.u.derived->components->attr.allocatable))
 	{
-	  /* Nullify and automatic deallocation of allocatable scalars.  */
-	  tree tmp;
-	  gfc_expr *e;
-	  gfc_se se;
-	  stmtblock_t block;
+	  if (!sym->attr.save)
+	    {
+	      /* Nullify and automatic deallocation of allocatable
+		 scalars.  */
+	      tree tmp;
+	      gfc_expr *e;
+	      gfc_se se;
+	      stmtblock_t block;
 
-	  e = gfc_lval_expr_from_sym (sym);
-	  if (sym->ts.type == BT_CLASS)
-	    gfc_add_component_ref (e, "$data");
+	      e = gfc_lval_expr_from_sym (sym);
+	      if (sym->ts.type == BT_CLASS)
+		gfc_add_component_ref (e, "$data");
 
-	  gfc_init_se (&se, NULL);
-	  se.want_pointer = 1;
-	  gfc_conv_expr (&se, e);
-	  gfc_free_expr (e);
+	      gfc_init_se (&se, NULL);
+	      se.want_pointer = 1;
+	      gfc_conv_expr (&se, e);
+	      gfc_free_expr (e);
 
-	  /* Nullify when entering the scope.  */
-	  gfc_start_block (&block);
-	  gfc_add_modify (&block, se.expr, fold_convert (TREE_TYPE (se.expr),
-							 null_pointer_node));
-	  gfc_add_expr_to_block (&block, fnbody);
+	      /* Nullify when entering the scope.  */
+	      gfc_start_block (&block);
+	      gfc_add_modify (&block, se.expr,
+			      fold_convert (TREE_TYPE (se.expr),
+					    null_pointer_node));
+	      gfc_add_expr_to_block (&block, fnbody);
 
-	  /* Deallocate when leaving the scope. Nullifying is not needed.  */
-	  tmp = gfc_deallocate_with_status (se.expr, NULL_TREE, true, NULL);
-	  gfc_add_expr_to_block (&block, tmp);
-	  fnbody = gfc_finish_block (&block);
+	      /* Deallocate when leaving the scope. Nullifying is not
+		 needed.  */
+	      tmp = gfc_deallocate_with_status (se.expr, NULL_TREE, true,
+						NULL);
+	      gfc_add_expr_to_block (&block, tmp);
+	      fnbody = gfc_finish_block (&block);
+	    }
 	}
       else if (sym->ts.type == BT_CHARACTER)
 	{
@@ -3990,8 +3999,9 @@ add_argument_checking (stmtblock_t *block, gfc_symbol *sym)
 				       cl->passed_length,
 				       fold_convert (gfc_charlen_type_node,
 						     integer_zero_node));
-	    not_absent = fold_build2 (NE_EXPR, boolean_type_node,
-				      fsym->backend_decl, null_pointer_node);
+	    /* The symbol needs to be referenced for gfc_get_symbol_decl.  */
+	    fsym->attr.referenced = 1;
+	    not_absent = gfc_conv_expr_present (fsym);
 
 	    absent_failed = fold_build2 (TRUTH_OR_EXPR, boolean_type_node,
 					 not_0length, not_absent);
@@ -4247,7 +4257,7 @@ gfc_generate_function_code (gfc_namespace * ns)
   stmtblock_t block;
   stmtblock_t body;
   tree result;
-  tree recurcheckvar = NULL;
+  tree recurcheckvar = NULL_TREE;
   gfc_symbol *sym;
   int rank;
   bool is_recursive;
@@ -4321,8 +4331,9 @@ gfc_generate_function_code (gfc_namespace * ns)
    is_recursive = sym->attr.recursive
 		  || (sym->attr.entry_master
 		      && sym->ns->entries->sym->attr.recursive);
-   if ((gfc_option.rtcheck & GFC_RTCHECK_RECURSION) && !is_recursive
-       && !gfc_option.flag_recursive)
+   if ((gfc_option.rtcheck & GFC_RTCHECK_RECURSION)
+	  && !is_recursive
+	  && !gfc_option.flag_recursive)
      {
        char * msg;
 
@@ -4339,7 +4350,7 @@ gfc_generate_function_code (gfc_namespace * ns)
     }
 
   if (TREE_TYPE (DECL_RESULT (fndecl)) != void_type_node
-      && sym->attr.subroutine)
+        && sym->attr.subroutine)
     {
       tree alternate_return;
       alternate_return = gfc_get_fake_result_decl (sym, 0);
@@ -4386,8 +4397,9 @@ gfc_generate_function_code (gfc_namespace * ns)
       else
 	result = sym->result->backend_decl;
 
-      if (result != NULL_TREE && sym->attr.function
-	  && !sym->attr.pointer)
+      if (result != NULL_TREE
+	    && sym->attr.function
+	    && !sym->attr.pointer)
 	{
 	  if (sym->ts.type == BT_DERIVED
 	      && sym->ts.u.derived->attr.alloc_comp)
@@ -4404,8 +4416,10 @@ gfc_generate_function_code (gfc_namespace * ns)
       gfc_add_expr_to_block (&block, tmp);
 
       /* Reset recursion-check variable.  */
-      if ((gfc_option.rtcheck & GFC_RTCHECK_RECURSION) && !is_recursive
-	  && !gfc_option.flag_openmp)
+      if ((gfc_option.rtcheck & GFC_RTCHECK_RECURSION)
+	     && !is_recursive
+	     && !gfc_option.flag_openmp
+	     && recurcheckvar != NULL_TREE)
 	{
 	  gfc_add_modify (&block, recurcheckvar, boolean_false_node);
 	  recurcheckvar = NULL;
@@ -4436,12 +4450,14 @@ gfc_generate_function_code (gfc_namespace * ns)
     {
       gfc_add_expr_to_block (&block, tmp);
       /* Reset recursion-check variable.  */
-      if ((gfc_option.rtcheck & GFC_RTCHECK_RECURSION) && !is_recursive
-	  && !gfc_option.flag_openmp)
-      {
-	gfc_add_modify (&block, recurcheckvar, boolean_false_node);
-	recurcheckvar = NULL;
-      }
+      if ((gfc_option.rtcheck & GFC_RTCHECK_RECURSION)
+	     && !is_recursive
+	     && !gfc_option.flag_openmp
+	     && recurcheckvar != NULL_TREE)
+	{
+	  gfc_add_modify (&block, recurcheckvar, boolean_false_node);
+	  recurcheckvar = NULL_TREE;
+	}
     }
 
 

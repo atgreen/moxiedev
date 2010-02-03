@@ -1059,6 +1059,7 @@ static rtx rs6000_legitimize_address (rtx, rtx, enum machine_mode);
 static rtx rs6000_debug_legitimize_address (rtx, rtx, enum machine_mode);
 static rtx rs6000_legitimize_tls_address (rtx, enum tls_model);
 static void rs6000_output_dwarf_dtprel (FILE *, int, rtx) ATTRIBUTE_UNUSED;
+static rtx rs6000_delegitimize_address (rtx);
 static rtx rs6000_tls_get_addr (void);
 static rtx rs6000_got_sym (void);
 static int rs6000_tls_symbol_ref_1 (rtx *, void *);
@@ -1325,6 +1326,9 @@ static const struct attribute_spec rs6000_attribute_table[] =
 
 #undef TARGET_CANNOT_FORCE_CONST_MEM
 #define TARGET_CANNOT_FORCE_CONST_MEM rs6000_tls_referenced_p
+
+#undef TARGET_DELEGITIMIZE_ADDRESS
+#define TARGET_DELEGITIMIZE_ADDRESS rs6000_delegitimize_address
 
 #undef TARGET_ASM_FUNCTION_PROLOGUE
 #define TARGET_ASM_FUNCTION_PROLOGUE rs6000_output_function_prologue
@@ -2407,8 +2411,7 @@ rs6000_override_options (const char *default_cpu)
 	}
     }
 
-  /* Add some warnings for VSX.  Enable -maltivec unless the user explicitly
-     used -mno-altivec  */
+  /* Add some warnings for VSX.  */
   if (TARGET_VSX)
     {
       const char *msg = NULL;
@@ -2429,14 +2432,20 @@ rs6000_override_options (const char *default_cpu)
 	msg = N_("-mvsx used with little endian code");
       else if (TARGET_AVOID_XFORM > 0)
 	msg = N_("-mvsx needs indexed addressing");
+      else if (!TARGET_ALTIVEC && (target_flags_explicit & MASK_ALTIVEC))
+        {
+	  if (target_flags_explicit & MASK_VSX)
+	    msg = N_("-mvsx and -mno-altivec are incompatible");
+	  else
+	    msg = N_("-mno-altivec disables vsx");
+        }
 
       if (msg)
 	{
 	  warning (0, msg);
 	  target_flags &= ~ MASK_VSX;
 	}
-      else if (TARGET_VSX && !TARGET_ALTIVEC
-	       && (target_flags_explicit & MASK_ALTIVEC) == 0)
+      else if (TARGET_VSX && !TARGET_ALTIVEC)
 	target_flags |= MASK_ALTIVEC;
     }
 
@@ -3794,6 +3803,8 @@ num_insns_constant_wide (HOST_WIDE_INT value)
 
       if (low == 0)
 	return num_insns_constant_wide (high) + 1;
+      else if (high == 0)
+	return num_insns_constant_wide (low) + 1;
       else
 	return (num_insns_constant_wide (high)
 		+ num_insns_constant_wide (low) + 1);
@@ -5255,6 +5266,41 @@ rs6000_output_dwarf_dtprel (FILE *file, int size, rtx x)
   fputs ("@dtprel+0x8000", file);
 }
 
+/* In the name of slightly smaller debug output, and to cater to
+   general assembler lossage, recognize various UNSPEC sequences
+   and turn them back into a direct symbol reference.  */
+
+static rtx
+rs6000_delegitimize_address (rtx orig_x)
+{
+  rtx x, y;
+
+  orig_x = delegitimize_mem_from_attrs (orig_x);
+  x = orig_x;
+  if (MEM_P (x))
+    x = XEXP (x, 0);
+
+  if (GET_CODE (x) == PLUS
+      && GET_CODE (XEXP (x, 1)) == CONST
+      && GET_CODE (XEXP (x, 0)) == REG
+      && REGNO (XEXP (x, 0)) == TOC_REGISTER)
+    {
+      y = XEXP (XEXP (x, 1), 0);
+      if (GET_CODE (y) == UNSPEC
+          && XINT (y, 1) == UNSPEC_TOCREL)
+	{
+	  y = XVECEXP (y, 0, 0);
+	  if (!MEM_P (orig_x))
+	    return y;
+	  else
+	    return replace_equiv_address_nv (orig_x, y);
+	}
+      return orig_x;
+    }
+
+  return orig_x;
+}
+
 /* Construct the SYMBOL_REF for the tls_get_addr function.  */
 
 static GTY(()) rtx rs6000_tls_symbol;
@@ -6142,6 +6188,20 @@ rs6000_emit_set_long_const (rtx dest, HOST_WIDE_INT c1, HOST_WIDE_INT c2)
 	    emit_move_insn (copy_rtx (dest),
 			    gen_rtx_IOR (DImode, copy_rtx (dest),
 					 GEN_INT (ud1)));
+	}
+      else if (ud3 == 0 && ud4 == 0)
+	{
+	  gcc_assert (ud2 & 0x8000);
+	  emit_move_insn (dest, GEN_INT (((ud2 << 16) ^ 0x80000000)
+					 - 0x80000000));
+	  if (ud1 != 0)
+	    emit_move_insn (copy_rtx (dest),
+			    gen_rtx_IOR (DImode, copy_rtx (dest),
+					 GEN_INT (ud1)));
+	  emit_move_insn (copy_rtx (dest),
+			  gen_rtx_ZERO_EXTEND (DImode,
+					       gen_lowpart (SImode,
+							    copy_rtx (dest))));
 	}
       else if ((ud4 == 0xffff && (ud3 & 0x8000))
 	       || (ud4 == 0 && ! (ud3 & 0x8000)))
@@ -21332,9 +21392,7 @@ static int load_store_pendulum;
    instructions to issue in this cycle.  */
 
 static int
-rs6000_variable_issue (FILE *stream ATTRIBUTE_UNUSED,
-		       int verbose ATTRIBUTE_UNUSED,
-		       rtx insn, int more)
+rs6000_variable_issue_1 (rtx insn, int more)
 {
   last_scheduled_insn = insn;
   if (GET_CODE (PATTERN (insn)) == USE
@@ -21371,6 +21429,15 @@ rs6000_variable_issue (FILE *stream ATTRIBUTE_UNUSED,
 
   cached_can_issue_more = more - 1;
   return cached_can_issue_more;
+}
+
+static int
+rs6000_variable_issue (FILE *stream, int verbose, rtx insn, int more)
+{
+  int r = rs6000_variable_issue_1 (insn, more);
+  if (verbose)
+    fprintf (stream, "// rs6000_variable_issue (more = %d) = %d\n", more, r);
+  return r;
 }
 
 /* Adjust the cost of a scheduling dependency.  Return the new cost of

@@ -1,3 +1,169 @@
+2010-02-02  Jason Merrill  <jason@redhat.com>
+
+	PR c++/41090
+	* decl.c (cp_finish_decl): Add local statics to cfun->local_decls.
+	* optimize.c (clone_body): Remap their initializers when making base
+	variants.
+	(maybe_clone_body): Complain if multiple clones aren't safe.
+
+2010-01-29  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/42758
+	PR c++/42634
+	PR c++/42336
+	PR c++/42797
+	PR c++/42880
+	* cp-tree.h (NON_DEFAULT_TEMPLATE_ARGS_COUNT,
+	SET_NON_DEFAULT_TEMPLATE_ARGS_COUNT,
+	GET_NON_DEFAULT_TEMPLATE_ARGS_COUNT): New accessor macros.
+	* pt.c (coerce_template_parms, type_unification_real,
+	expand_template_argument_pack, coerce_template_parameter_pack):
+	Set the non default template args count.
+	(current_template_args): Always set non defaulted
+	template args count when compiled with --enable-checking
+	(tsubst_template_args, type_unification_real): Propagate the non
+	defaulted template args count.
+	* error.c (get_non_default_template_args_count): Renamed
+	count_non_default_template_args into this. Don't calculate the
+	non default template argument count anymore. Use the new
+	accessor macros above to get it.
+	(dump_template_argument_list, dump_type, dump_decl,
+	dump_template_parms): Adjust.
+	* parser.c (cp_parser_template_argument_list): Always set defaulted
+	template args count when compiled with --enable-checking.
+
+2010-01-29  Shujing Zhao  <pearly.zhao@oracle.com>
+
+	* decl.c (redeclaration_error_message): Wrap the return messages into
+	G_() for easy translation.
+
+2010-01-28  Jason Merrill  <jason@redhat.com>
+
+	PR c++/42880
+	* semantics.c (begin_class_definition): Don't use type_as_string.
+
+2010-01-28  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/42713
+	PR c++/42820
+	* typeck.c (get_template_parms_of_dependent_type): Factorized
+	this out of incompatible_template_type_parms_p
+	(incompatible_dependent_types_p): Renamed
+	incompatible_template_type_parms_p into this. Make it detect
+	two incompatible dependent typedefs too.
+	(structural_comptypes): Use incompatible_dependent_types_p.
+	* pt.c (get_template_info):
+	Handle BOUND_TEMPLATE_TEMPLATE_PARAM.
+
+2010-01-20  Janis Johnson  <janis187@us.ibm.com>
+	    Jason Merrill  <jason@redhat.com>
+
+	* mangle.c (write_type): Mangle transparent record as member type.
+	* semantics.c (begin_class_definition): Recognize decimal classes
+	and set TYPE_TRANSPARENT_AGGR.
+
+2010-01-20  Jason Merrill  <jason@redhat.com>
+
+	PR c++/42338
+	* mangle.c (write_expression): Handle tree codes that have extra
+	arguments in the middle-end.
+
+2010-01-20  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR c++/42038
+	* except.c (expand_start_catch_block): Deal correctly with
+	do_begin_catch returning error_mark_node.
+
+2010-01-20  Jason Merrill  <jason@redhat.com>
+
+	PR c++/41788
+	* class.c (layout_class_type): Set packed_maybe_necessary for packed
+	non-PODs.
+
+	PR c++/41920
+	* semantics.c (build_lambda_object): Call mark_used on captured
+	variables.
+
+	PR c++/40750
+	* decl.c (grokdeclarator): Clear type_quals for a member function
+	declared using a typedef.  Don't complain about adding cv-quals
+	to a function typedef in C++0x mode.
+
+2010-01-20  Jakub Jelinek  <jakub@redhat.com>
+
+	* decl.c (create_array_type_for_decl): Remove set but not used
+	variable error_msg.  Remove break stmts after return stmts.
+
+2010-01-19  Dodji Seketeli  <dodji@redhat.com>
+
+	* error.c (dump_template_parms, count_non_default_template_args):
+	Revert fix of PR c++/42634.
+
+2010-01-18  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/42634
+	* error.c (dump_template_parms): Use innermost template
+	arguments before calling count_non_default_template_args.
+	(count_non_default_template_args): We are being called with
+	template innermost arguments now. There is no need to ensure
+	that again.
+
+2010-01-18  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/42766
+	* cvt.c (build_expr_type_conversion): Look through OVERLOAD.
+
+2010-01-17  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/42697
+	*pt.c (tsubst_decl):  Revert commit for PR c++/42697.
+
+2010-01-17  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/42697
+	*pt.c (tsubst_decl): Get the arguments of a specialization from
+	the specialization template, not from the most general template.
+
+2010-01-16  Jason Merrill  <jason@redhat.com>
+
+	PR c++/42761
+	* semantics.c (finish_decltype_type): Within a template, treat
+	unresolved CALL_EXPR as dependent.
+
+2010-01-15  Dodji Seketeli  <dodji@redhat.com>
+
+	* error.c (dump_template_parms,count_non_default_template_args):
+	Revert changes of PR c++/42634.
+
+2010-01-14  Jakub Jelinek  <jakub@redhat.com>
+
+	PR middle-end/42674
+	* decl.c (finish_function): Don't emit -Wreturn-type warnings in
+	functions with noreturn attribute.
+
+2010-01-14  Jason Merrill  <jason@redhat.com>
+
+	PR c++/42701
+	* call.c (build_new_method_call): Don't free the vec here.
+
+	PR c++/42655
+	* call.c (convert_like_real): Do full decay_conversion for ck_rvalue.
+
+2010-01-13  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/42634
+	* error.c (dump_template_parms): Use innermost template
+	arguments before calling count_non_default_template_args.
+	(count_non_default_template_args): We are being called with
+	template innermost arguments now. There is no need to ensure
+	that again.
+
+2010-01-07  Dodji Seketeli  <dodji@redhat.com>
+
+	c++/40155
+	* pt.c (unify_pack_expansion): In non-deduced contexts, re-use template
+	arguments that were previously deduced.
+
 2010-01-05  Jason Merrill  <jason@redhat.com>
 
 	* pt.c (unify_pack_expansion): Handle deduction from init-list.

@@ -1,7 +1,7 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target/mips/mips-nonpic
 svn://gcc.gnu.org/svn/gcc
 
@@ -196,40 +196,6 @@ clm
 
 295
 
-pic-receive-fn-addr.c
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-db73e6293c57fdd854ceb5c40cb007fd
-2008-12-05T20:53:26.683824Z
-142492
-clm
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-103
-
 main-12.c
 file
 
@@ -263,6 +229,40 @@ clm
 
 
 285
+
+pic-receive-fn-addr.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+db73e6293c57fdd854ceb5c40cb007fd
+2008-12-05T20:53:26.683824Z
+142492
+clm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+103
 
 main-13.c
 file
@@ -298,40 +298,6 @@ clm
 
 266
 
-mips-nonpic.exp
-file
-
-
-
-
-2009-04-24T17:45:48.000000Z
-e492332e104d3e85972bb7e1b863aba5
-2008-12-05T20:53:26.683824Z
-142492
-clm
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1722
-
 main-14.c
 file
 
@@ -366,14 +332,14 @@ clm
 
 321
 
-nonpic-addr-call.c
+mips-nonpic.exp
 file
 
 
 
 
 2009-04-24T17:45:48.000000Z
-1e01424d10b7a1e8927d5a1f53724f45
+e492332e104d3e85972bb7e1b863aba5
 2008-12-05T20:53:26.683824Z
 142492
 clm
@@ -398,7 +364,7 @@ clm
 
 
 
-152
+1722
 
 main-15.c
 file
@@ -433,6 +399,40 @@ clm
 
 
 310
+
+nonpic-addr-call.c
+file
+
+
+
+
+2009-04-24T17:45:48.000000Z
+1e01424d10b7a1e8927d5a1f53724f45
+2008-12-05T20:53:26.683824Z
+142492
+clm
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+152
 
 main-16.c
 file

@@ -1,15 +1,15 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string/assign/char
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-01-10T13:38:47.499553Z
+155788
+paolo
 
 
 
@@ -127,4 +127,38 @@ jakub
 
 
 1543
+
+move_assign.cc
+file
+
+
+
+
+2010-02-03T11:41:57.440664Z
+e1fb053616910a3e0cab7129460f0269
+2010-01-10T13:38:47.499553Z
+155788
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1293
 

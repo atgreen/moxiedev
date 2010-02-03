@@ -1,6 +1,6 @@
 // Vector implementation -*- C++ -*-
 
-// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -335,9 +335,10 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
       vector&
       operator=(vector&& __x)
       {
+	// NB: DR 1204.
 	// NB: DR 675.
 	this->clear();
-	this->swap(__x); 
+	this->swap(__x);
 	return *this;
       }
 
@@ -556,6 +557,13 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	else
 	  insert(end(), __new_size - size(), __x);
       }
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+      /**  A non-binding request to reduce capacity() to size().  */
+      void
+      shrink_to_fit()
+      { std::__shrink_to_fit<vector>::_S_do_it(*this); }
+#endif
 
       /**
        *  Returns the total number of elements that the %vector can

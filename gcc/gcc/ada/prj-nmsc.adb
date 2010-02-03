@@ -2093,6 +2093,22 @@ package body Prj.Nmsc is
                           In_Tree   => Data.Tree);
                   end if;
 
+               elsif Attribute.Name = Name_Run_Path_Origin then
+                  Get_Name_String (Attribute.Value.Value);
+
+                  if Name_Len = 0 then
+                     Error_Msg
+                       (Data.Flags,
+                        "run path origin cannot be empty",
+                        Attribute.Value.Location, Project);
+                  end if;
+
+                  Project.Config.Run_Path_Origin := Attribute.Value.Value;
+
+               elsif Attribute.Name = Name_Library_Install_Name_Option then
+                  Project.Config.Library_Install_Name_Option :=
+                    Attribute.Value.Value;
+
                elsif Attribute.Name = Name_Separate_Run_Path_Options then
                   declare
                      pragma Unsuppress (All_Checks);

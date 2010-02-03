@@ -1,7 +1,7 @@
 /* Form lists of pseudo register references for autoinc optimization
    for GNU compiler.  This is part of flow optimization.
-   Copyright (C) 1999, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008, 2009
-   Free Software Foundation, Inc.
+   Copyright (C) 1999, 2000, 2001, 2003, 2004, 2005, 2006, 2007, 2008,
+   2009, 2010  Free Software Foundation, Inc.
    Originally contributed by Michael P. Hayes
              (m.hayes@elec.canterbury.ac.nz, mhayes@redhat.com)
    Major rewrite contributed by Danny Berlin (dberlin@dberlin.org)
@@ -912,6 +912,7 @@ extern void df_simple_dataflow (enum df_flow_dir, df_init_function,
 extern void df_mark_solutions_dirty (void);
 extern bool df_get_bb_dirty (basic_block);
 extern void df_set_bb_dirty (basic_block);
+extern void df_set_bb_dirty_nonlr (basic_block);
 extern void df_compact_blocks (void);
 extern void df_bb_replace (int, basic_block);
 extern void df_bb_delete (int);
@@ -1115,8 +1116,8 @@ struct web_entry
 
 extern struct web_entry *unionfind_root (struct web_entry *);
 extern bool unionfind_union (struct web_entry *, struct web_entry *);
-extern void union_defs (df_ref,
-                        struct web_entry *, struct web_entry *,
+extern void union_defs (df_ref, struct web_entry *,
+			unsigned int *used, struct web_entry *,
 			bool (*fun) (struct web_entry *, struct web_entry *));
 
 #endif /* GCC_DF_H */

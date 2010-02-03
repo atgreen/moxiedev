@@ -1,3 +1,17 @@
+2010-01-20  Joern Rennecke  <amylaar@spamcop.net>
+
+	* lang.c (java_post_options): Constify variable "dot".
+
+	* jcf-parse.c (set_source_filename): Constify variable "dot".
+	(load_class): Constify variable "separator".
+	Use get_identifier_with_length.
+
+	* jvspec.c (lang_specific_driver): Constify two variables named "p".
+
+2010-01-09  Jakub Jelinek  <jakub@redhat.com>
+
+	* jcf-dump.c (version): Update copyright notice dates.
+
 2009-11-28  Jakub Jelinek  <jakub@redhat.com>
 
 	* jvspec.c (lang_specific_driver): Remove unused

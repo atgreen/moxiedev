@@ -1,5 +1,5 @@
 /* Array things
-   Copyright (C) 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008
+   Copyright (C) 2000, 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Andy Vaught
 
@@ -1237,7 +1237,6 @@ count_elements (gfc_expr *e)
 static gfc_try
 extract_element (gfc_expr *e)
 {
-
   if (e->rank != 0)
     {				/* Something unextractable */
       gfc_free_expr (e);
@@ -1250,6 +1249,7 @@ extract_element (gfc_expr *e)
     gfc_free_expr (e);
 
   current_expand.extract_count++;
+  
   return SUCCESS;
 }
 
@@ -1495,7 +1495,7 @@ done:
    FAILURE if not so.  */
 
 static gfc_try
-constant_element (gfc_expr *e)
+is_constant_element (gfc_expr *e)
 {
   int rv;
 
@@ -1517,14 +1517,38 @@ gfc_constant_ac (gfc_expr *e)
 {
   expand_info expand_save;
   gfc_try rc;
+  gfc_constructor * con;
+  
+  rc = SUCCESS;
 
-  iter_stack = NULL;
-  expand_save = current_expand;
-  current_expand.expand_work_function = constant_element;
+  if (e->value.constructor
+      && e->value.constructor->expr->expr_type == EXPR_ARRAY 
+      && !e->value.constructor->iterator)
+    {
+      /* Expand the constructor.  */
+      iter_stack = NULL;
+      expand_save = current_expand;
+      current_expand.expand_work_function = is_constant_element;
 
-  rc = expand_constructor (e->value.constructor);
+      rc = expand_constructor (e->value.constructor);
 
-  current_expand = expand_save;
+      current_expand = expand_save;
+    }
+  else
+    {
+      /* No need to expand this further.  */
+      for (con = e->value.constructor; con; con = con->next)
+	{
+	  if (con->expr->expr_type == EXPR_CONSTANT)
+	    continue;
+	  else
+	    {
+	      if (!gfc_is_constant_expr (con->expr))
+		rc = FAILURE;
+	    }
+	}
+    }
+
   if (rc == FAILURE)
     return 0;
 
@@ -2029,7 +2053,15 @@ gfc_array_dimen_size (gfc_expr *array, int dimen, mpz_t *result)
 	  return SUCCESS;
 	}
 
-      if (spec_dimen_size (array->symtree->n.sym->as, dimen, result) == FAILURE)
+      if (array->symtree->n.sym->attr.generic
+	  && array->value.function.esym != NULL)
+	{
+	  if (spec_dimen_size (array->value.function.esym->as, dimen, result)
+	      == FAILURE)
+	    return FAILURE;
+	}
+      else if (spec_dimen_size (array->symtree->n.sym->as, dimen, result)
+	       == FAILURE)
 	return FAILURE;
 
       break;

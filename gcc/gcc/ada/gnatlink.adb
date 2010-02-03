@@ -733,6 +733,11 @@ procedure Gnatlink is
       --  specifies the path where the dynamic loader should find shared
       --  libraries. Equal to null string if this system doesn't support it.
 
+      Libgcc_Subdir_Ptr : Interfaces.C.Strings.chars_ptr;
+      pragma Import (C, Libgcc_Subdir_Ptr, "__gnat_default_libgcc_subdir");
+      --  Pointer to string indicating the installation subdirectory where
+      --  a default shared libgcc might be found.
+
       Object_Library_Ext_Ptr : Interfaces.C.Strings.chars_ptr;
       pragma Import
         (C, Object_Library_Ext_Ptr, "__gnat_object_library_extension");
@@ -1161,8 +1166,11 @@ procedure Gnatlink is
                      Last := Nlast;
                   end if;
 
-                  --  Given a Gnat standard library, search the
-                  --  library path to find the library location
+                  --  Given a Gnat standard library, search the library path to
+                  --  find the library location.
+
+                  --  Shouldn't we abstract a proc here, we are getting awfully
+                  --  heavily nested ???
 
                   declare
                      File_Path : String_Access;
@@ -1199,154 +1207,183 @@ procedure Gnatlink is
 
                         elsif GNAT_Shared then
                            if Opt.Run_Path_Option then
+
                               --  If shared gnatlib desired, add the
                               --  appropriate system specific switch
                               --  so that it can be located at runtime.
 
                               if Run_Path_Opt'Length /= 0 then
+
                                  --  Output the system specific linker command
                                  --  that allows the image activator to find
-                                 --  the shared library at runtime.
-                                 --  Also add path to find libgcc_s.so, if
-                                 --  relevant.
+                                 --  the shared library at runtime. Also add
+                                 --  path to find libgcc_s.so, if relevant.
+
+                                 declare
+                                    Path : String (1 .. File_Path'Length + 15);
+                                    Path_Last : constant Natural :=
+                                                  File_Path'Length;
+
+                                 begin
+                                    Path (1 .. File_Path'Length) :=
+                                      File_Path.all;
 
                                  --  To find the location of the shared version
                                  --  of libgcc, we look for "gcc-lib" in the
                                  --  path of the library. However, this
                                  --  subdirectory is no longer present in
-                                 --  in recent version of GCC. So, we look for
+                                 --  recent versions of GCC. So, we look for
                                  --  the last subdirectory "lib" in the path.
 
-                                 GCC_Index :=
-                                   Index (File_Path.all, "gcc-lib");
-
-                                 if GCC_Index /= 0 then
-                                    --  The shared version of libgcc is
-                                    --  located in the parent directory.
-
-                                    GCC_Index := GCC_Index - 1;
-
-                                 else
                                     GCC_Index :=
-                                      Index (File_Path.all, "/lib/");
-
-                                    if GCC_Index = 0 then
-                                       GCC_Index :=
-                                         Index (File_Path.all,
-                                                Directory_Separator &
-                                                "lib" &
-                                                Directory_Separator);
-                                    end if;
-
-                                    --  We have found a subdirectory "lib",
-                                    --  this is where the shared version of
-                                    --  libgcc should be located.
+                                      Index (Path (1 .. Path_Last), "gcc-lib");
 
                                     if GCC_Index /= 0 then
-                                       GCC_Index := GCC_Index + 3;
+
+                                       --  The shared version of libgcc is
+                                       --  located in the parent directory.
+
+                                       GCC_Index := GCC_Index - 1;
+
+                                    else
+                                       GCC_Index :=
+                                         Index
+                                           (Path (1 .. Path_Last),
+                                            "/lib/");
+
+                                       if GCC_Index = 0 then
+                                          GCC_Index :=
+                                            Index (Path (1 .. Path_Last),
+                                                   Directory_Separator &
+                                                   "lib" &
+                                                   Directory_Separator);
+                                       end if;
+
+                                       --  If we have found a "lib" subdir in
+                                       --  the path to libgnat, the possible
+                                       --  shared libgcc of interest by default
+                                       --  is in libgcc_subdir at the same
+                                       --  level.
+
+                                       if GCC_Index /= 0 then
+                                          declare
+                                             Subdir : constant String :=
+                                               Value (Libgcc_Subdir_Ptr);
+                                          begin
+                                             Path
+                                               (GCC_Index + 1 ..
+                                                GCC_Index + Subdir'Length) :=
+                                               Subdir;
+                                             GCC_Index :=
+                                               GCC_Index + Subdir'Length;
+                                          end;
+                                       end if;
                                     end if;
-                                 end if;
 
                                  --  Look for an eventual run_path_option in
                                  --  the linker switches.
 
-                                 if Separate_Run_Path_Options then
-                                    Linker_Options.Increment_Last;
-                                    Linker_Options.Table
-                                      (Linker_Options.Last) :=
-                                      new String'
-                                        (Run_Path_Opt
-                                         & File_Path
-                                           (1 .. File_Path'Length
-                                            - File_Name'Length));
-
-                                    if GCC_Index /= 0 then
+                                    if Separate_Run_Path_Options then
                                        Linker_Options.Increment_Last;
                                        Linker_Options.Table
                                          (Linker_Options.Last) :=
-                                         new String'
-                                           (Run_Path_Opt
-                                            & File_Path (1 .. GCC_Index));
-                                    end if;
-                                 else
-                                    for J in reverse
-                                      1 .. Linker_Options.Last
-                                    loop
-                                       if Linker_Options.Table (J) /= null
-                                         and then
-                                           Linker_Options.Table (J)'Length
-                                           > Run_Path_Opt'Length
-                                         and then
-                                           Linker_Options.Table (J)
-                                           (1 .. Run_Path_Opt'Length) =
-                                           Run_Path_Opt
-                                       then
-                                          --  We have found a already specified
-                                          --  run_path_option: we will add to
-                                          --  this switch, because only one
-                                          --  run_path_option should be
-                                          --  specified.
+                                           new String'
+                                             (Run_Path_Opt
+                                              & File_Path
+                                                (1 .. File_Path'Length
+                                                 - File_Name'Length));
 
-                                          Run_Path_Opt_Index := J;
-                                          exit;
-                                       end if;
-                                    end loop;
-
-                                    --  If there is no run_path_option, we need
-                                    --  to add one.
-
-                                    if Run_Path_Opt_Index = 0 then
-                                       Linker_Options.Increment_Last;
-                                    end if;
-
-                                    if GCC_Index = 0 then
-                                       if Run_Path_Opt_Index = 0 then
+                                       if GCC_Index /= 0 then
+                                          Linker_Options.Increment_Last;
                                           Linker_Options.Table
                                             (Linker_Options.Last) :=
                                             new String'
                                               (Run_Path_Opt
-                                               & File_Path
-                                                 (1 .. File_Path'Length
-                                                  - File_Name'Length));
-
-                                       else
-                                          Linker_Options.Table
-                                            (Run_Path_Opt_Index) :=
-                                            new String'
-                                              (Linker_Options.Table
-                                                   (Run_Path_Opt_Index).all
-                                               & Path_Separator
-                                               & File_Path
-                                                 (1 .. File_Path'Length
-                                                  - File_Name'Length));
+                                               & Path (1 .. GCC_Index));
                                        end if;
 
                                     else
+                                       for J in reverse
+                                         1 .. Linker_Options.Last
+                                       loop
+                                          if Linker_Options.Table (J) /= null
+                                            and then
+                                              Linker_Options.Table (J)'Length
+                                                        > Run_Path_Opt'Length
+                                            and then
+                                              Linker_Options.Table (J)
+                                                (1 .. Run_Path_Opt'Length) =
+                                                                 Run_Path_Opt
+                                          then
+                                             --  We have found an already
+                                             --  specified run_path_option: we
+                                             --  will add to this switch,
+                                             --  because only one
+                                             --  run_path_option should be
+                                             --  specified.
+
+                                             Run_Path_Opt_Index := J;
+                                             exit;
+                                          end if;
+                                       end loop;
+
+                                       --  If there is no run_path_option, we
+                                       --  need to add one.
+
                                        if Run_Path_Opt_Index = 0 then
-                                          Linker_Options.Table
-                                            (Linker_Options.Last) :=
-                                            new String'(Run_Path_Opt
-                                              & File_Path
-                                                (1 .. File_Path'Length
-                                                 - File_Name'Length)
-                                              & Path_Separator
-                                              & File_Path (1 .. GCC_Index));
+                                          Linker_Options.Increment_Last;
+                                       end if;
+
+                                       if GCC_Index = 0 then
+                                          if Run_Path_Opt_Index = 0 then
+                                             Linker_Options.Table
+                                               (Linker_Options.Last) :=
+                                                 new String'
+                                                   (Run_Path_Opt
+                                                    & File_Path
+                                                      (1 .. File_Path'Length
+                                                       - File_Name'Length));
+
+                                          else
+                                             Linker_Options.Table
+                                               (Run_Path_Opt_Index) :=
+                                                 new String'
+                                                   (Linker_Options.Table
+                                                     (Run_Path_Opt_Index).all
+                                                    & Path_Separator
+                                                    & File_Path
+                                                      (1 .. File_Path'Length
+                                                       - File_Name'Length));
+                                          end if;
 
                                        else
-                                          Linker_Options.Table
-                                            (Run_Path_Opt_Index) :=
-                                            new String'
-                                              (Linker_Options.Table
-                                                   (Run_Path_Opt_Index).all
-                                               & Path_Separator
-                                               & File_Path
-                                                 (1 .. File_Path'Length
-                                                  - File_Name'Length)
-                                               & Path_Separator
-                                               & File_Path (1 .. GCC_Index));
+                                          if Run_Path_Opt_Index = 0 then
+                                             Linker_Options.Table
+                                               (Linker_Options.Last) :=
+                                                 new String'
+                                                   (Run_Path_Opt
+                                                    & File_Path
+                                                      (1 .. File_Path'Length
+                                                       - File_Name'Length)
+                                                    & Path_Separator
+                                                    & Path (1 .. GCC_Index));
+
+                                          else
+                                             Linker_Options.Table
+                                               (Run_Path_Opt_Index) :=
+                                                 new String'
+                                                   (Linker_Options.Table
+                                                     (Run_Path_Opt_Index).all
+                                                    & Path_Separator
+                                                    & File_Path
+                                                      (1 .. File_Path'Length
+                                                       - File_Name'Length)
+                                                    & Path_Separator
+                                                    & Path (1 .. GCC_Index));
+                                          end if;
                                        end if;
                                     end if;
-                                 end if;
+                                 end;
                               end if;
                            end if;
 
@@ -1460,10 +1497,9 @@ procedure Gnatlink is
 --  Start of processing for Gnatlink
 
 begin
-   --  Add the directory where gnatlink is invoked in front of the
-   --  path, if gnatlink is invoked with directory information.
-   --  Only do this if the platform is not VMS, where the notion of path
-   --  does not really exist.
+   --  Add the directory where gnatlink is invoked in front of the path, if
+   --  gnatlink is invoked with directory information. Only do this if the
+   --  platform is not VMS, where the notion of path does not really exist.
 
    if not Hostparm.OpenVMS then
       declare
@@ -1477,10 +1513,10 @@ begin
                                    Normalize_Pathname
                                      (Command (Command'First .. Index));
 
-                  PATH         : constant String :=
-                                   Absolute_Dir &
-                  Path_Separator &
-                  Getenv ("PATH").all;
+                  PATH : constant String :=
+                           Absolute_Dir &
+                           Path_Separator &
+                           Getenv ("PATH").all;
 
                begin
                   Setenv ("PATH", PATH);
@@ -1495,8 +1531,7 @@ begin
    Process_Args;
 
    if Argument_Count = 0
-     or else
-     (Verbose_Mode and then Argument_Count = 1)
+     or else (Verbose_Mode and then Argument_Count = 1)
    then
       Write_Usage;
       Exit_Program (E_Fatal);
@@ -1522,10 +1557,10 @@ begin
       Exit_With_Error (Ali_File_Name.all & " not found");
    end if;
 
-   --  Read the ALI file of the main subprogram if the binder generated
-   --  file needs to be compiled and no --GCC= switch has been specified.
-   --  Fetch the back end switches from this ALI file and use these switches
-   --  to compile the binder generated file
+   --  Read the ALI file of the main subprogram if the binder generated file
+   --  needs to be compiled and no --GCC= switch has been specified. Fetch the
+   --  back end switches from this ALI file and use these switches to compile
+   --  the binder generated file
 
    if Compile_Bind_File and then Standard_Gcc then
 
@@ -1584,8 +1619,8 @@ begin
                             := String_Access (Arg);
                      end if;
 
-                     --  Set the RTS_*_Path_Name variables, so that the
-                     --  correct directories will be set when
+                     --  Set the RTS_*_Path_Name variables, so that
+                     --  the correct directories will be set when
                      --  Osint.Add_Default_Search_Dirs will be called later.
 
                      Opt.RTS_Src_Path_Name :=

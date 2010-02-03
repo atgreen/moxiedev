@@ -3606,12 +3606,6 @@ process_command (int argc, const char **argv)
 		     CONST_CAST2 (const char *const **, const char ***,
 				  &argv));
 
-  /* Do language-specific adjustment/addition of flags.  */
-  lang_specific_driver (&argc,
-			CONST_CAST2 (const char *const **, const char ***,
-				     &argv),
-			&added_libraries);
-
   /* Handle any -no-canonical-prefixes flag early, to assign the function
      that builds relative prefixes.  This function creates default search
      paths that are needed later in normal option handling.  */
@@ -3666,6 +3660,12 @@ process_command (int argc, const char **argv)
   /* From this point onward, gcc_exec_prefix is non-null if the toolchain
      is relocated. The toolchain was either relocated using GCC_EXEC_PREFIX
      or an automatically created GCC_EXEC_PREFIX from argv[0].  */
+
+  /* Do language-specific adjustment/addition of flags.  */
+  lang_specific_driver (&argc,
+			CONST_CAST2 (const char *const **, const char ***,
+				     &argv),
+			&added_libraries);
 
   if (gcc_exec_prefix)
     {
@@ -5248,7 +5248,7 @@ do_spec_1 (const char *spec, int inswitch, const char *soft_matched_part)
 	      buf = (char *) alloca (p - q + 1);
 	      strncpy (buf, q, p - q);
 	      buf[p - q] = 0;
-	      error ("%s", buf);
+	      error ("%s", _(buf));
 	      return -1;
 	    }
 	    break;
@@ -5262,7 +5262,7 @@ do_spec_1 (const char *spec, int inswitch, const char *soft_matched_part)
 	      buf = (char *) alloca (p - q + 1);
 	      strncpy (buf, q, p - q);
 	      buf[p - q] = 0;
-	      notice ("%s\n", buf);
+	      notice ("%s\n", _(buf));
 	      if (*p)
 		p++;
 	    }
@@ -7234,7 +7234,7 @@ main (int argc, char **argv)
     {
       printf (_("%s %s%s\n"), programname, pkgversion_string,
 	      version_string);
-      printf ("Copyright %s 2009 Free Software Foundation, Inc.\n",
+      printf ("Copyright %s 2010 Free Software Foundation, Inc.\n",
 	      _("(C)"));
       fputs (_("This is free software; see the source for copying conditions.  There is NO\n\
 warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n\n"),

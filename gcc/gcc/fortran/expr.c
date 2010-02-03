@@ -1154,8 +1154,13 @@ remove_subobject_ref (gfc_expr *p, gfc_constructor *cons)
 {
   gfc_expr *e;
 
-  e = cons->expr;
-  cons->expr = NULL;
+  if (cons)
+    {
+      e = cons->expr;
+      cons->expr = NULL;
+    }
+  else
+    e = gfc_copy_expr (p);
   e->ref = p->ref->next;
   p->ref->next =  NULL;
   gfc_replace_expr (p, e);
@@ -1464,6 +1469,7 @@ simplify_const_ref (gfc_expr *p)
 {
   gfc_constructor *cons;
   gfc_expr *newp;
+  gfc_ref *last_ref;
 
   while (p->ref)
     {
@@ -1473,6 +1479,13 @@ simplify_const_ref (gfc_expr *p)
 	  switch (p->ref->u.ar.type)
 	    {
 	    case AR_ELEMENT:
+	      /* <type/kind spec>, parameter :: x(<int>) = scalar_expr
+		 will generate this.  */
+	      if (p->expr_type != EXPR_ARRAY)
+		{
+		  remove_subobject_ref (p, NULL);
+		  break;
+		}
 	      if (find_array_element (p->value.constructor, &p->ref->u.ar,
 				      &cons) == FAILURE)
 		return FAILURE;
@@ -1502,18 +1515,25 @@ simplify_const_ref (gfc_expr *p)
 			return FAILURE;
 		    }
 
-		  /* If this is a CHARACTER array and we possibly took a
-		     substring out of it, update the type-spec's character
-		     length according to the first element (as all should have
-		     the same length).  */
-		  if (p->ts.type == BT_CHARACTER)
+		  if (p->ts.type == BT_DERIVED
+			&& p->ref->next
+			&& p->value.constructor)
 		    {
+		      /* There may have been component references.  */
+		      p->ts = p->value.constructor->expr->ts;
+		    }
+
+		  last_ref = p->ref;
+		  for (; last_ref->next; last_ref = last_ref->next) {};
+
+		  if (p->ts.type == BT_CHARACTER
+			&& last_ref->type == REF_SUBSTRING)
+		    {
+		      /* If this is a CHARACTER array and we possibly took
+			 a substring out of it, update the type-spec's
+			 character length according to the first element
+			 (as all should have the same length).  */
 		      int string_len;
-
-		      gcc_assert (p->ref->next);
-		      gcc_assert (!p->ref->next->next);
-		      gcc_assert (p->ref->next->type == REF_SUBSTRING);
-
 		      if (p->value.constructor)
 			{
 			  const gfc_expr* first = p->value.constructor->expr;
@@ -2460,18 +2480,12 @@ gfc_reduce_init_expr (gfc_expr *expr)
   if (t == FAILURE)
     return FAILURE;
 
-  if (expr->expr_type == EXPR_ARRAY
-      && (gfc_check_constructor_type (expr) == FAILURE
-      || gfc_expand_constructor (expr) == FAILURE))
-    return FAILURE;
-
-  /* Not all inquiry functions are simplified to constant expressions
-     so it is necessary to call check_inquiry again.  */ 
-  if (!gfc_is_constant_expr (expr) && check_inquiry (expr, 1) != MATCH_YES
-      && !gfc_in_match_data ())
+  if (expr->expr_type == EXPR_ARRAY)
     {
-      gfc_error ("Initialization expression didn't reduce %C");
-      return FAILURE;
+      if (gfc_check_constructor_type (expr) == FAILURE)
+	return FAILURE;
+      if (gfc_expand_constructor (expr) == FAILURE)
+	return FAILURE;
     }
 
   return SUCCESS;
@@ -3472,6 +3486,58 @@ gfc_get_variable_expr (gfc_symtree *var)
     }
 
   return e;
+}
+
+
+/* Returns the array_spec of a full array expression.  A NULL is
+   returned otherwise.  */
+gfc_array_spec *
+gfc_get_full_arrayspec_from_expr (gfc_expr *expr)
+{
+  gfc_array_spec *as;
+  gfc_ref *ref;
+
+  if (expr->rank == 0)
+    return NULL;
+
+  /* Follow any component references.  */
+  if (expr->expr_type == EXPR_VARIABLE
+      || expr->expr_type == EXPR_CONSTANT)
+    {
+      as = expr->symtree->n.sym->as;
+      for (ref = expr->ref; ref; ref = ref->next)
+	{
+	  switch (ref->type)
+	    {
+	    case REF_COMPONENT:
+	      as = ref->u.c.component->as;
+	      continue;
+
+	    case REF_SUBSTRING:
+	      continue;
+
+	    case REF_ARRAY:
+	      {
+		switch (ref->u.ar.type)
+		  {
+		  case AR_ELEMENT:
+		  case AR_SECTION:
+		  case AR_UNKNOWN:
+		    as = NULL;
+		    continue;
+
+		  case AR_FULL:
+		    break;
+		  }
+		break;
+	      }
+	    }
+	}
+    }
+  else
+    as = NULL;
+
+  return as;
 }
 
 

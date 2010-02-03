@@ -146,7 +146,12 @@ case `echo $GFORTRAN` in
   -* | no* )
     FC=no ;;
   *)
-    FC="$GFORTRAN" ;;
+    set dummy $GFORTRAN; ac_word=$2
+    if test -x "$ac_word"; then
+      FC="$GFORTRAN"
+    else
+      FC=no
+    fi ;;
 esac
 AC_PROG_FC(gfortran)
 FCFLAGS="$FCFLAGS -Wall"

@@ -1,6 +1,7 @@
 /* Definitions of target machine for GNU compiler.  Generic IRIX version.
    Copyright (C) 1993, 1995, 1996, 1998, 2000,
-   2001, 2002, 2003, 2004, 2007, 2008 Free Software Foundation, Inc.
+   2001, 2002, 2003, 2004, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -77,6 +78,42 @@ along with GCC; see the file COPYING3.  If not see
 #undef WINT_TYPE_SIZE
 #define WINT_TYPE_SIZE 32
 
+/* C99 stdint.h types.  */
+#define INT8_TYPE "signed char"
+#define INT16_TYPE "short int"
+#define INT32_TYPE "int"
+#define INT64_TYPE "long long int"
+#define UINT8_TYPE "unsigned char"
+#define UINT16_TYPE "short unsigned int"
+#define UINT32_TYPE "unsigned int"
+#define UINT64_TYPE "long long unsigned int"
+
+#define INT_LEAST8_TYPE "signed char"
+#define INT_LEAST16_TYPE "short int"
+#define INT_LEAST32_TYPE "int"
+#define INT_LEAST64_TYPE "long long int"
+#define UINT_LEAST8_TYPE "unsigned char"
+#define UINT_LEAST16_TYPE "short unsigned int"
+#define UINT_LEAST32_TYPE "unsigned int"
+#define UINT_LEAST64_TYPE "long long unsigned int"
+
+#define INT_FAST8_TYPE "signed char"
+#define INT_FAST16_TYPE "short int"
+#define INT_FAST32_TYPE "int"
+#define INT_FAST64_TYPE "long long int"
+#define UINT_FAST8_TYPE "unsigned char"
+#define UINT_FAST16_TYPE "short unsigned int"
+#define UINT_FAST32_TYPE "unsigned int"
+#define UINT_FAST64_TYPE "long long unsigned int"
+
+#define INTMAX_TYPE "long long int"
+#define UINTMAX_TYPE "long long unsigned int"
+
+#define INTPTR_TYPE "long int"
+#define UINTPTR_TYPE "long unsigned int"
+
+#define SIG_ATOMIC_TYPE "int"
+
 /* Plain char is unsigned in the SGI compiler.  */
 #undef DEFAULT_SIGNED_CHAR
 #define DEFAULT_SIGNED_CHAR 0
@@ -144,6 +181,14 @@ along with GCC; see the file COPYING3.  If not see
 #define IRIX_NO_UNRESOLVED ""
 #else
 #define IRIX_NO_UNRESOLVED "-no_unresolved"
+#endif
+
+#ifdef IRIX_USING_GNU_LD
+#define SUBTARGET_DONT_WARN_UNUSED_SPEC ""
+#define SUBTARGET_WARN_UNUSED_SPEC ""
+#else
+#define SUBTARGET_DONT_WARN_UNUSED_SPEC "-dont_warn_unused"
+#define SUBTARGET_WARN_UNUSED_SPEC "-warn_unused"
 #endif
 
 /* Generic part of the LINK_SPEC.  */

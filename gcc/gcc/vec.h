@@ -1,5 +1,6 @@
 /* Vector API for GNU compiler.
-   Copyright (C) 2004, 2005, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2004, 2005, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
    Contributed by Nathan Sidwell <nathan@codesourcery.com>
 
 This file is part of GCC.
@@ -1262,7 +1263,7 @@ struct vec_swallow_trailing_semi
 static inline VEC(T,stack) *VEC_OP (T,stack,alloc1)			  \
      (int alloc_, VEC(T,stack)* space)					  \
 {									  \
-  return ((VEC(T,stack) *) vec_stack_p_reserve_exact_1 (alloc_, space);	  \
+  return (VEC(T,stack) *) vec_stack_p_reserve_exact_1 (alloc_, space);	  \
 }
 
 #define DEF_VEC_ALLOC_I_STACK(T)					  \
@@ -1275,7 +1276,7 @@ struct vec_swallow_trailing_semi
 static inline VEC(T,stack) *VEC_OP (T,stack,alloc1)			  \
      (int alloc_, VEC(T,stack)* space)					  \
 {									  \
-  return ((VEC(T,stack) *) vec_stack_p_reserve_exact_1 (alloc_, space);   \
+  return (VEC(T,stack) *) vec_stack_p_reserve_exact_1 (alloc_, space);   \
 }
 
 #endif /* GCC_VEC_H */

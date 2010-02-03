@@ -1,7 +1,7 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/gcj/xlib
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ has-props
 
 1977
 
-XAnyEvent.class
-file
-
-
-
-
-2009-04-24T17:47:30.000000Z
-914d06268b9845cf6a6ef42469d1e0d5
-2007-01-11T00:15:27.668888Z
-120655
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2954
-
 Drawable.class
 file
 
@@ -230,14 +196,14 @@ has-props
 
 2130
 
-WMSizeHints.class
+XAnyEvent.class
 file
 
 
 
 
 2009-04-24T17:47:30.000000Z
-48fee7d952984fb1ec18ccdfc006280b
+914d06268b9845cf6a6ef42469d1e0d5
 2007-01-11T00:15:27.668888Z
 120655
 tromey
@@ -262,7 +228,7 @@ has-props
 
 
 
-802
+2954
 
 XID.class
 file
@@ -297,6 +263,40 @@ has-props
 
 
 1578
+
+WMSizeHints.class
+file
+
+
+
+
+2009-04-24T17:47:30.000000Z
+48fee7d952984fb1ec18ccdfc006280b
+2007-01-11T00:15:27.668888Z
+120655
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+802
 
 XException.class
 file

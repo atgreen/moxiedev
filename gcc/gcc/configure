@@ -23630,6 +23630,50 @@ if test $gcc_cv_as_powerpc_tls_markers = yes; then
 $as_echo "#define HAVE_AS_TLS_MARKERS 1" >>confdefs.h
 
 fi
+
+    case $target in
+      *-*-aix*)
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for .ref support" >&5
+$as_echo_n "checking assembler for .ref support... " >&6; }
+if test "${gcc_cv_as_aix_ref+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  gcc_cv_as_aix_ref=no
+    if test $in_tree_gas = yes; then
+    if test $gcc_cv_gas_vers -ge `expr \( \( 2.21.0 \* 1000 \) + gcc_cv_as_aix_ref=yes \) \* 1000 + `
+  then :
+fi
+  elif test x$gcc_cv_as != x; then
+    echo '	.csect stuff[rw]
+	     stuff:
+		.long 1
+		.extern sym
+		.ref sym
+	  ' > conftest.s
+    if { ac_try='$gcc_cv_as $gcc_cv_as_flags  -o conftest.o conftest.s >&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+    then
+	gcc_cv_as_aix_ref=yes
+    else
+      echo "configure: failed program was" >&5
+      cat conftest.s >&5
+    fi
+    rm -f conftest.o conftest.s
+  fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_as_aix_ref" >&5
+$as_echo "$gcc_cv_as_aix_ref" >&6; }
+if test $gcc_cv_as_aix_ref = yes; then
+
+$as_echo "#define HAVE_AS_REF 1" >>confdefs.h
+
+fi
+	;;
+    esac
     ;;
 
   mips*-*-*)
@@ -24176,9 +24220,9 @@ $as_echo "$gcc_cv_as_gnu_unique_object" >&6; }
 if test $gcc_cv_as_gnu_unique_object = yes; then
   # Also check for ld.so support, i.e. glibc 2.11 or higher.
    if test x$host = x$build -a x$host = x$target &&
-       glibcver=`ldd --version 2>/dev/null`; then
-      glibcmajor=`expr "$glibcver" : "ldd (GNU libc) \([0-9]*\)"`
-      glibcminor=`expr "$glibcver" : "ldd (GNU libc) [0-9]*\.\([0-9]*\)"`
+       glibcver=`ldd --version 2>/dev/null | sed 's/.* //;q'`; then
+      glibcmajor=`expr "$glibcver" : "\(0-9*\)"`
+      glibcminor=`expr "$glibcver" : "2-9*\.\(0-9*\)"`
       glibcnum=`expr $glibcmajor \* 1000 + $glibcminor`
       if test "$glibcnum" -ge 2011 ; then
         enable_gnu_unique_object=yes
@@ -24526,7 +24570,9 @@ else
     case "$target" in
        *-*-linux* | *-*-kfreebsd*-gnu | *-*-knetbsd*-gnu)
       if test x$host != x$target || test "x$TARGET_SYSTEM_ROOT" != x; then
-	if test "x$with_sysroot" = x; then
+	if test "x$with_headers" != x; then
+	  glibc_header_dir=$with_headers
+	elif test "x$with_sysroot" = x; then
 	  glibc_header_dir="${exec_prefix}/${target_noncanonical}/sys-include"
 	elif test "x$with_build_sysroot" != "x"; then
 	  glibc_header_dir="${with_build_sysroot}/usr/include"
@@ -25017,42 +25063,26 @@ fi
 
 pluginlibs=
 if test x"$enable_plugin" = x"yes"; then
-  # Check that the host supports -rdynamic and -ldl
-  have_rdynamic=no
-  have_dl=no
-  saved_LDFLAGS="$LDFLAGS"
-  saved_LIBS="$LIBS"
-  LIBS=
 
-  # Check -rdynamic
-  LDFLAGS="$LDFLAGS -rdynamic"
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for -rdynamic" >&5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for exported symbols" >&5
+$as_echo_n "checking for exported symbols... " >&6; }
+  echo "int main() {return 0;} int foobar() {return 0;}" > conftest.c
+  ${CC} ${CFLAGS} ${LDFLAGS} conftest.c -o conftest > /dev/null 2>&1
+  if $gcc_cv_objdump -T conftest | grep foobar > /dev/null; then
+    : # No need to use a flag
+  else
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for -rdynamic" >&5
 $as_echo_n "checking for -rdynamic... " >&6; }
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-int
-main ()
-{
-return 0;
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }; have_rdynamic=yes
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-  if test x"$have_rdynamic" = x"yes" ; then
-    pluginlibs="-rdynamic"
+    ${CC} ${CFLAGS} ${LDFLAGS} -rdynamic conftest.c -o conftest > /dev/null 2>&1
+    if $gcc_cv_objdump -T conftest | grep foobar > /dev/null; then
+      pluginlibs="-rdynamic"
+    else
+      enable_plugin=no
+    fi
   fi
 
   # Check -ldl
+  saved_LIBS="$LIBS"
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing dlopen" >&5
 $as_echo_n "checking for library containing dlopen... " >&6; }
 if test "${ac_cv_search_dlopen+set}" = set; then :
@@ -25112,8 +25142,10 @@ fi
   if test x"$ac_cv_search_dlopen" = x"-ldl"; then
     pluginlibs="$pluginlibs -ldl"
   fi
+  LIBS="$saved_LIBS"
 
   # Check that we can build shared objects with -fPIC -shared
+  saved_LDFLAGS="$LDFLAGS"
   LDFLAGS="$LDFLAGS -fPIC -shared"
   { $as_echo "$as_me:${as_lineno-$LINENO}: checking for -fPIC -shared" >&5
 $as_echo_n "checking for -fPIC -shared... " >&6; }
@@ -25141,6 +25173,7 @@ rm -f core conftest.err conftest.$ac_objext \
     pluginlibs=
     enable_plugin=no
   fi
+  LDFLAGS="$saved_LDFLAGS"
 
   # If plugin support had been requested but not available, fail.
   if test x"$enable_plugin" = x"no" ; then
@@ -25150,9 +25183,6 @@ Building GCC with plugin support requires a host that supports
 -fPIC, -shared, -ldl and -rdynamic." "$LINENO" 5
     fi
   fi
-
-  LDFLAGS="$saved_LDFLAGS"
-  LIBS="$saved_LIBS"
 fi
 
 

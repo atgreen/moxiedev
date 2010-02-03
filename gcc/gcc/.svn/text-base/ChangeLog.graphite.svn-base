@@ -1,3 +1,139 @@
+2010-01-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42681
+	* graphite-clast-to-gimple.c (gloog_error): New static variable.
+	(clast_to_gcc_expression): Do not build MULT_EXPR of POINTER_TYPE_P.
+	Set gloog_error when such an expression failed to be built.
+	(translate_clast): Early return when gloog_error is set.
+	(gloog): Clear gloog_error.  When gloog_error is set, call
+	set_ifsese_condition to enable the original code.  Return the status
+	of the code generation based on gloog_error.
+	* sese.c (set_ifsese_condition): New.
+	* sese.h (set_ifsese_condition): Declared.
+
+	* testsuite/g++.dg/graphite/pr42681.C: New.
+
+2010-01-14  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42732
+	* graphite-clast-to-gimple.c (gloog): Call scev_reset_htab and
+	rename_nb_iterations.
+	* sese.c (rename_variables_in_operand): New.
+	(rename_variables_in_expr): New.
+	(rename_nb_iterations): New.
+	(sese_adjust_liveout_phis): Update the rename_map.
+	* sese.h (rename_nb_iterations): Declared.
+	* tree-scalar-evolution.c (scev_reset_htab): New.
+	(scev_reset): Call scev_reset_htab.
+	* tree-scalar-evolution.h (scev_reset_htab): Declared.
+
+	* testsuite/gfortran.dg/graphite/pr42732.f: New.
+
+2010-01-08  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42393
+	* graphite-clast-to-gimple.c: Fix formatting.
+	* sese.c (defined_in_loop_p): Renamed name_defined_in_loop_p.
+	(expr_defined_in_loop_p): New.
+	(add_loop_exit_phis): Also handle full expressions: remove from
+	the rename_map the expressions defined in the loop that we're closing.
+
+	* testsuite/gfortran.dg/graphite/pr42393-1.f90: New.
+	* testsuite/gfortran.dg/graphite/pr42393.f90: Add new flags
+	-fno-loop-block -fno-loop-interchange -fno-loop-strip-mine to also
+	make this testcase useful in the Graphite branch.
+
+2010-01-08  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-scop-detection.c (exclude_component_ref): Removed.
+	(is_simple_operand): Removed.
+	(stmt_simple_for_scop_p): Remove use of is_simple_operand.
+
+2010-01-07  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42221
+	* sese.c (expand_scalar_variables_expr): Follow the SSA links into
+	the array indexing of ADDR_EXPRs.
+
+	* testsuite/gcc.dg/graphite/pr42221.c: New.
+
+2010-01-07  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42521
+	* graphite.c (graphite_finalize): Call scev_reset.
+	(graphite_transform_loops): Do not call scev_reset between the code
+	generation of scops.
+
+	* testsuite/gcc.dg/graphite/pr42521.c: New.
+
+2010-01-07  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (memory_stride_in_loop): Renamed
+	pdr_stride_in_loop.
+	(memory_strides_in_loop): Renamed memory_strides_in_loop_1.
+	(memory_strides_in_loop): Memoize the memory strides per loop.
+	(lst_interchange_profitable_p): Do not initialize to zero the memory
+	strides.
+	* graphite-poly.h (struct lst): Add a field memory_strides.
+	(LST_LOOP_MEMORY_STRIDES): New.
+	(new_lst_loop): Initialize LST_LOOP_MEMORY_STRIDES to -1.
+	(free_lst): Clear LST_LOOP_MEMORY_STRIDES.
+
+2010-01-07  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-interchange.c (memory_strides_in_loop_depth): Renamed
+	memory_strides_in_loop.  Gather memory strides on a whole loop.
+	(pbb_interchange_profitable_p): Renamed lst_interchange_profitable_p.
+	(lst_interchange_profitable_p): Removed.
+	(lst_try_interchange_loops): Call lst_interchange_profitable_p.
+
+2010-01-07  Sebastian Pop  <sebastian.pop@amd.com>
+
+	Revert patch 2009-11-23  Tobias Grosser  <grosser@fim.uni-passau.de>
+	* graphite-clast-to-gimple.c (try_mark_loop_parallel): New.
+	(translate_clast_for, translate_clast_guard, translate_clast, gloog):
+	Remove context_loop and level.
+
+2010-01-07  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/42641
+	* sese.c (rename_map_elt_info): Use the SSA name version, do
+	not hash pointers.
+
+2010-01-06  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-blocking.c (scop_do_block): Print "SCoP will be loop
+	blocked" only when both the strip mine and the interchange have
+	been applied.
+
+	* testsuite/gcc.dg/graphite/block-2.c: Removed.
+	* testsuite/gcc.dg/graphite/block-3.c: Add scan pattern.
+	* testsuite/gcc.dg/graphite/block-4.c: Same.
+	* testsuite/gcc.dg/graphite/block-5.c: Same.
+	* testsuite/gcc.dg/graphite/block-6.c: Same.
+
+2010-01-06  Sebastian Pop  <sebastian.pop@amd.com>
+
+	* graphite-clast-to-gimple.c (save_clast_name_index): Free slot
+	before allocating a new one.
+	(copy_renames): Check that slot is not NULL.
+	(mark_bb_with_pbb): Same.
+	(compute_cloog_iv_types_1): Same.
+	* graphite-interchange.c (lst_perfect_nestify): Free the before,
+	nest, and after LSTs.
+	(lst_try_interchange_loops): Same.
+
+2010-01-05  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42178
+	* graphite-interchange.c (lst_try_interchange_loops): Do not return
+	the before, nest, and after LSTs.
+	(lst_try_interchange): Removed.
+	(lst_interchange_select_inner): Do not iterate over the LSTs if they
+	were modified.
+	(lst_interchange_select_outer): Apply interchange on the outer loop
+	until there are no more changes in the inner loops.
+
 2009-12-18  Sebastian Pop  <sebastian.pop@amd.com>
 
 	Revert patch fixing PR middle-end/42221.

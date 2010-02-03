@@ -1,15 +1,15 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/swing/colorchooser
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2010-01-06T17:46:48.717189Z
+155678
+doko
 
 
 
@@ -25,40 +25,6 @@ tromey
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-ColorChooserComponentFactory.class
-file
-
-
-
-
-2009-04-24T17:48:16.000000Z
-8090ab5ca8187812473feaf8312883f9
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1014
 
 DefaultSwatchChooserPanel$MouseHandler.class
 file
@@ -93,6 +59,40 @@ has-props
 
 
 1670
+
+ColorChooserComponentFactory.class
+file
+
+
+
+
+2009-04-24T17:48:16.000000Z
+8090ab5ca8187812473feaf8312883f9
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1014
 
 DefaultHSBChooserPanel$RadioStateListener.class
 file
@@ -134,11 +134,11 @@ file
 
 
 
-2009-04-24T17:48:16.000000Z
-c4d6a7dc1de1deef1c549492e3a0787a
-2006-12-12T18:41:51.528840Z
-119793
-tromey
+2010-02-03T11:42:34.382848Z
+aa22df4e7dbaf21ee7db8b15cca92c3f
+2010-01-06T17:46:48.717189Z
+155678
+doko
 has-props
 
 
@@ -230,40 +230,6 @@ has-props
 
 1517
 
-DefaultHSBChooserPanel.class
-file
-
-
-
-
-2009-04-24T17:48:16.000000Z
-2a12e22e8e7fa05149d994a6efbd3f58
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-9940
-
 DefaultSwatchChooserPanel$RecentPanelLayout.class
 file
 
@@ -297,6 +263,40 @@ has-props
 
 
 2178
+
+DefaultHSBChooserPanel.class
+file
+
+
+
+
+2010-02-03T11:42:34.383649Z
+1a29d48e945a5ef6b5ac4df2b4451474
+2010-01-06T17:46:48.717189Z
+155678
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+9964
 
 DefaultRGBChooserPanel$SliderHandler.class
 file
@@ -678,11 +678,11 @@ file
 
 
 
-2009-04-24T17:48:16.000000Z
-c051197e807b3778304c0028d8d772c7
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2010-02-03T11:42:34.390603Z
+2d544f76c748deb0c2c5013f7fcde0ba
+2010-01-06T17:46:48.717189Z
+155678
+doko
 has-props
 
 
@@ -746,11 +746,11 @@ file
 
 
 
-2009-04-24T17:48:16.000000Z
-1dd22fc35fe73bf0d0ae28aa3f6fcc29
-2007-07-27T21:14:19.002073Z
-126998
-tromey
+2010-02-03T11:42:34.391616Z
+5dcc63214e26021e3fe93c4917a3572c
+2010-01-06T17:46:48.717189Z
+155678
+doko
 has-props
 
 

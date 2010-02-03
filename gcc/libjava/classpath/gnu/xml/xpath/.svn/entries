@@ -1,7 +1,7 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/xml/xpath
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ doko
 
 5166
 
-StartsWithFunction.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-9f11f28463241fe0d6f7e4d4a0ed68c4
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2972
-
 NamespaceUriFunction.java
 file
 
@@ -603,6 +569,40 @@ doko
 
 
 3388
+
+StartsWithFunction.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+9f11f28463241fe0d6f7e4d4a0ed68c4
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2972
 
 Root.java
 file
@@ -944,40 +944,6 @@ tromey
 
 2612
 
-AndExpr.java
-file
-
-
-
-
-2009-04-24T17:47:03.000000Z
-3a1fb5c3d995e3070f21851db4709532
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2670
-
 NegativeExpr.java
 file
 
@@ -1012,17 +978,17 @@ tromey
 
 2448
 
-IdFunction.java
+AndExpr.java
 file
 
 
 
 
 2009-04-24T17:47:03.000000Z
-955b06486f6675d08725084e6e37f902
-2008-10-21T17:55:01.166395Z
-141271
-doko
+3a1fb5c3d995e3070f21851db4709532
+2005-09-23T17:31:48.000000Z
+104575
+tromey
 
 
 
@@ -1044,7 +1010,7 @@ doko
 
 
 
-3339
+2670
 
 DocumentOrderComparator.java
 file
@@ -1079,6 +1045,40 @@ doko
 
 
 2101
+
+IdFunction.java
+file
+
+
+
+
+2009-04-24T17:47:03.000000Z
+955b06486f6675d08725084e6e37f902
+2008-10-21T17:55:01.166395Z
+141271
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3339
 
 TranslateFunction.java
 file

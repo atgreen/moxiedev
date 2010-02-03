@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/xml/validation/datatype
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
+2010-01-06T17:46:48.717189Z
+155678
 doko
 
 
@@ -32,10 +32,10 @@ file
 
 
 
-2009-04-24T17:47:50.000000Z
-c281dd57b273e6e402620b386905adc6
-2008-06-28T13:29:13.958049Z
-137223
+2010-02-03T11:42:22.881437Z
+031642b2a3702de4b6d8a4b7fb3e5279
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 
@@ -58,7 +58,41 @@ has-props
 
 
 
-2285
+2256
+
+BooleanType.class
+file
+
+
+
+
+2010-02-03T11:42:22.884602Z
+21971bad28493c5127cc2e0b1578699e
+2010-01-06T17:46:48.717189Z
+155678
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2000
 
 Type.class
 file
@@ -94,17 +128,17 @@ has-props
 
 551
 
-BooleanType.class
+NegativeIntegerType.class
 file
 
 
 
 
 2009-04-24T17:47:50.000000Z
-27ad6865f7a178f320ba0c57d5fef68f
-2008-06-28T13:29:13.958049Z
-137223
-doko
+c05af49ba11449ae64453134b71b13a6
+2006-12-12T18:41:51.528840Z
+119793
+tromey
 has-props
 
 
@@ -126,7 +160,7 @@ has-props
 
 
 
-2029
+1988
 
 Facet.class
 file
@@ -161,40 +195,6 @@ has-props
 
 
 925
-
-NegativeIntegerType.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-c05af49ba11449ae64453134b71b13a6
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1988
 
 TypeBuilder.class
 file
@@ -264,40 +264,6 @@ has-props
 
 845
 
-UnsignedLongType.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-f0ca9448e21605793fb240cfac236137
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2235
-
 GMonthType.class
 file
 
@@ -331,6 +297,40 @@ has-props
 
 
 2343
+
+UnsignedLongType.class
+file
+
+
+
+
+2009-04-24T17:47:50.000000Z
+f0ca9448e21605793fb240cfac236137
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2235
 
 IntegerType.class
 file
@@ -366,40 +366,6 @@ has-props
 
 1940
 
-LongType.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-9f605cf6843cce7af33543a4e53d9e14
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2358
-
 ShortType.class
 file
 
@@ -433,6 +399,40 @@ has-props
 
 
 2332
+
+LongType.class
+file
+
+
+
+
+2009-04-24T17:47:50.000000Z
+9f605cf6843cce7af33543a4e53d9e14
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2358
 
 UnsignedByteType.class
 file
@@ -1386,40 +1386,6 @@ has-props
 
 1330
 
-GYearMonthType.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-36c2b6088cf720a60162f8aa7de8ff83
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2559
-
 DateType.class
 file
 
@@ -1453,6 +1419,40 @@ has-props
 
 
 3469
+
+GYearMonthType.class
+file
+
+
+
+
+2009-04-24T17:47:50.000000Z
+36c2b6088cf720a60162f8aa7de8ff83
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2559
 
 PatternFacet.class
 file
@@ -1624,40 +1624,6 @@ has-props
 
 1327
 
-NonPositiveIntegerType.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-14a1619e6f5777048648f9508b25a0b1
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2080
-
 NormalizedStringType.class
 file
 
@@ -1691,6 +1657,40 @@ has-props
 
 
 1577
+
+NonPositiveIntegerType.class
+file
+
+
+
+
+2009-04-24T17:47:50.000000Z
+14a1619e6f5777048648f9508b25a0b1
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2080
 
 TypeLibraryFactory.class
 file
@@ -1726,40 +1726,6 @@ has-props
 
 753
 
-WhiteSpaceFacet.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-9204ce374f86ebca727c0edebf5060f7
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-953
-
 GDayType$GDay.class
 file
 
@@ -1793,6 +1759,40 @@ has-props
 
 
 873
+
+WhiteSpaceFacet.class
+file
+
+
+
+
+2009-04-24T17:47:50.000000Z
+9204ce374f86ebca727c0edebf5060f7
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+953
 
 DecimalType.class
 file
@@ -1902,10 +1902,10 @@ file
 
 
 
-2009-04-24T17:47:50.000000Z
-dac8f8bf04010e07a86f8429d82905a3
-2008-06-28T13:29:13.958049Z
-137223
+2010-02-03T11:42:22.885685Z
+eb6a0ed810767e4d2be6862932686ce9
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 
@@ -1928,7 +1928,7 @@ has-props
 
 
 
-2278
+2249
 
 StringType.class
 file
@@ -1998,40 +1998,6 @@ has-props
 
 889
 
-NameType.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-169d5fae45d1f919e43e82ec43837013
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1914
-
 PositiveIntegerType.class
 file
 
@@ -2065,6 +2031,40 @@ has-props
 
 
 1975
+
+NameType.class
+file
+
+
+
+
+2009-04-24T17:47:50.000000Z
+169d5fae45d1f919e43e82ec43837013
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1914
 
 GDayType.class
 file
@@ -2100,40 +2100,6 @@ has-props
 
 2407
 
-DurationType.class
-file
-
-
-
-
-2009-04-24T17:47:50.000000Z
-02046114649393bf1de791ad82fa27e8
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3020
-
 ListSimpleType.class
 file
 
@@ -2167,6 +2133,40 @@ has-props
 
 
 1633
+
+DurationType.class
+file
+
+
+
+
+2009-04-24T17:47:50.000000Z
+02046114649393bf1de791ad82fa27e8
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3020
 
 MaxLengthFacet.class
 file

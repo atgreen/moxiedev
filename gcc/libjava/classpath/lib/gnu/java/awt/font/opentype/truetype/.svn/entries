@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/awt/font/opentype/truetype
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2008-10-21T17:55:01.166395Z
-141271
+2010-01-06T17:46:48.717189Z
+155678
 doko
 
 
@@ -134,10 +134,10 @@ file
 
 
 
-2009-04-24T17:47:31.000000Z
-a131c753eb6bbd95429bab3989731ce0
-2007-06-03T23:18:43.019099Z
-125302
+2010-02-03T11:42:24.652490Z
+0092feb3e584fdda12f90703d1ebcd68
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 

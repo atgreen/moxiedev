@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/tools/classes/gnu/classpath/tools/doclets
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-06-16T13:36:37.169163Z
-148532
+2010-01-06T17:46:48.717189Z
+155678
 doko
 
 
@@ -28,40 +28,6 @@ doko
 
 debugdoclet
 dir
-
-AbstractDoclet$InterfaceRelation.class
-file
-
-
-
-
-2009-04-24T17:48:45.000000Z
-269cd316eaed8ac30b02db29f1c7d440
-2008-08-15T20:31:42.599946Z
-139136
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-663
 
 DocletConfigurationException.class
 file
@@ -96,6 +62,40 @@ has-props
 
 
 432
+
+AbstractDoclet$InterfaceRelation.class
+file
+
+
+
+
+2009-04-24T17:48:45.000000Z
+269cd316eaed8ac30b02db29f1c7d440
+2008-08-15T20:31:42.599946Z
+139136
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+663
 
 AbstractDoclet$DocletOptionTag.class
 file
@@ -165,39 +165,8 @@ has-props
 
 187
 
-AbstractDoclet$DocletOptionTaglet.class
-file
-
-
-
-
-2009-04-24T17:48:45.000000Z
-d2830eeadffe80a9da2ce3a6a9d86856
-2008-08-15T20:31:42.599946Z
-139136
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4359
+xmldoclet
+dir
 
 DocletOptionColonSeparated.class
 file
@@ -233,17 +202,14 @@ has-props
 
 1139
 
-xmldoclet
-dir
-
-AbstractDoclet$UsageType.class
+AbstractDoclet$DocletOptionTaglet.class
 file
 
 
 
 
 2009-04-24T17:48:45.000000Z
-87ca70a8cc746d907e5c0f1ba7096f14
+d2830eeadffe80a9da2ce3a6a9d86856
 2008-08-15T20:31:42.599946Z
 139136
 doko
@@ -268,7 +234,7 @@ has-props
 
 
 
-1848
+4359
 
 DocletOptionPackageWildcard.class
 file
@@ -304,6 +270,40 @@ has-props
 
 2108
 
+AbstractDoclet$UsageType.class
+file
+
+
+
+
+2009-04-24T17:48:45.000000Z
+87ca70a8cc746d907e5c0f1ba7096f14
+2008-08-15T20:31:42.599946Z
+139136
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1848
+
 DocletOptionString.class
 file
 
@@ -338,6 +338,9 @@ has-props
 
 776
 
+htmldoclet
+dir
+
 InvalidPackageWildcardException.class
 file
 
@@ -371,9 +374,6 @@ has-props
 
 
 437
-
-htmldoclet
-dir
 
 DocletOptionFlag.class
 file
@@ -415,10 +415,10 @@ file
 
 
 
-2009-04-24T17:48:45.000000Z
-e5332aecb9f48434f47c9d7890caeff3
-2008-08-15T20:31:42.599946Z
-139136
+2010-02-03T11:42:13.120634Z
+d19caa9c1988853e427546aea074c125
+2010-01-06T17:46:48.717189Z
+155678
 doko
 has-props
 
@@ -441,7 +441,7 @@ has-props
 
 
 
-27211
+27182
 
 PackageMatcher.class
 file

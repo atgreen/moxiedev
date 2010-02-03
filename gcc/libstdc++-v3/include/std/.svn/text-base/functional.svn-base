@@ -1,6 +1,6 @@
 // <functional> -*- C++ -*-
 
-// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2009
+// Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 // Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
@@ -56,7 +56,6 @@
 #include <tuple>
 #include <type_traits>
 #include <bits/functional_hash.h>
-#include <ext/type_traits.h>
 
 namespace std
 {
@@ -112,8 +111,7 @@ namespace std
   template<typename _Functor>
     struct _Weak_result_type_impl
     : _Maybe_get_result_type<_Has_result_type<_Functor>::value, _Functor>
-    {
-    };
+    { };
 
   /// Retrieve the result type for a function type.
   template<typename _Res, typename... _ArgTypes> 
@@ -171,67 +169,17 @@ namespace std
   template<typename _Functor>
     struct _Weak_result_type
     : _Weak_result_type_impl<typename remove_cv<_Functor>::type>
-    {
-    };
+    { };
 
   template<typename _Signature>
     class result_of;
 
-  /**
-   *  Actual implementation of result_of. When _Has_result_type is
-   *  true, gets its result from _Weak_result_type. Otherwise, uses
-   *  the function object's member template result to extract the
-   *  result type.
-  */
-  template<bool _Has_result_type, typename _Signature>
-    struct _Result_of_impl;
-
-  // Handle member data pointers using _Mem_fn's logic
-  template<typename _Res, typename _Class, typename _T1>
-    struct _Result_of_impl<false, _Res _Class::*(_T1)>
-    {
-      typedef typename _Mem_fn<_Res _Class::*>
-                ::template _Result_type<_T1>::type type;
-    };
-
-  /**
-   * Determine whether we can determine a result type from @c Functor 
-   * alone.
-   */ 
   template<typename _Functor, typename... _ArgTypes>
-    class result_of<_Functor(_ArgTypes...)>
-    : public _Result_of_impl<
-               _Has_result_type<_Weak_result_type<_Functor> >::value,
-               _Functor(_ArgTypes...)>
+    struct result_of<_Functor(_ArgTypes...)>
     {
-    };
-
-  /// We already know the result type for @c Functor; use it.
-  template<typename _Functor, typename... _ArgTypes>
-    struct _Result_of_impl<true, _Functor(_ArgTypes...)>
-    {
-      typedef typename _Weak_result_type<_Functor>::result_type type;
-    };
-
-  /**
-   * We need to compute the result type for this invocation the hard 
-   * way.
-   */
-  template<typename _Functor, typename... _ArgTypes>
-    struct _Result_of_impl<false, _Functor(_ArgTypes...)>
-    {
-      typedef typename _Functor
-                ::template result<_Functor(_ArgTypes...)>::type type;
-    };
-
-  /**
-   * It is unsafe to access ::result when there are zero arguments, so we 
-   * return @c void instead.
-   */
-  template<typename _Functor>
-    struct _Result_of_impl<false, _Functor()>
-    {
-      typedef void type;
+      typedef
+        decltype( std::declval<_Functor>()(std::declval<_ArgTypes>()...) )
+        type;
     };
 
   /// Determines if the type _Tp derives from unary_function.
@@ -285,41 +233,28 @@ namespace std
    */
   template<typename _Functor, typename... _Args>
     inline
-    typename __gnu_cxx::__enable_if<
+    typename enable_if<
              (!is_member_pointer<_Functor>::value
               && !is_function<_Functor>::value
               && !is_function<typename remove_pointer<_Functor>::type>::value),
              typename result_of<_Functor(_Args...)>::type
-           >::__type
-    __invoke(_Functor& __f, _Args&... __args)
+           >::type
+    __invoke(_Functor& __f, _Args&&... __args)
     {
-      return __f(__args...);
-    }
-
-  template<typename _Functor, typename... _Args>
-    inline
-    typename __gnu_cxx::__enable_if<
-             (is_member_pointer<_Functor>::value
-              && !is_function<_Functor>::value
-              && !is_function<typename remove_pointer<_Functor>::type>::value),
-             typename result_of<_Functor(_Args...)>::type
-           >::__type
-    __invoke(_Functor& __f, _Args&... __args)
-    {
-      return mem_fn(__f)(__args...);
+      return __f(std::forward<_Args>(__args)...);
     }
 
   // To pick up function references (that will become function pointers)
   template<typename _Functor, typename... _Args>
     inline
-    typename __gnu_cxx::__enable_if<
+    typename enable_if<
              (is_pointer<_Functor>::value
               && is_function<typename remove_pointer<_Functor>::type>::value),
              typename result_of<_Functor(_Args...)>::type
-           >::__type
-    __invoke(_Functor __f, _Args&... __args)
+           >::type
+    __invoke(_Functor __f, _Args&&... __args)
     {
-      return __f(__args...);
+      return __f(std::forward<_Args>(__args)...);
     }
 
   /**
@@ -464,9 +399,10 @@ namespace std
     public:
       typedef _Tp type;
 
-      explicit
       reference_wrapper(_Tp& __indata): _M_data(&__indata)
       { }
+
+      reference_wrapper(_Tp&&) = delete;
 
       reference_wrapper(const reference_wrapper<_Tp>& __inref):
       _M_data(__inref._M_data)
@@ -488,9 +424,9 @@ namespace std
 
       template<typename... _Args>
         typename result_of<_M_func_type(_Args...)>::type
-        operator()(_Args&... __args) const
+        operator()(_Args&&... __args) const
         {
-	  return __invoke(get(), __args...);
+	  return __invoke(get(), std::forward<_Args>(__args)...);
 	}
     };
 
@@ -832,10 +768,7 @@ namespace std
    */
   template<typename _Tp>
     struct is_bind_expression
-    { static const bool value = false; };
-
-  template<typename _Tp>
-    const bool is_bind_expression<_Tp>::value;
+    : public false_type { };
 
   /**
    *  @brief Determines if the given type _Tp is a placeholder in a
@@ -843,10 +776,8 @@ namespace std
    */
   template<typename _Tp>
     struct is_placeholder
-    { static const int value = 0; };
-
-  template<typename _Tp>
-    const int is_placeholder<_Tp>::value;
+    : public integral_constant<int, 0>
+    { };
 
   /// The type of placeholder objects defined by libstdc++.
   template<int _Num> struct _Placeholder { };
@@ -900,33 +831,30 @@ namespace std
    */
   template<int _Num>
     struct is_placeholder<_Placeholder<_Num> >
-    { static const int value = _Num; };
-
-  template<int _Num>
-    const int is_placeholder<_Placeholder<_Num> >::value;
+    : public integral_constant<int, _Num>
+    { };
 
   /**
    * Stores a tuple of indices. Used by bind() to extract the elements
    * in a tuple. 
    */
   template<int... _Indexes>
-    struct _Index_tuple { };
-
-  /// Builds an _Index_tuple<0, 1, 2, ..., _Num-1>.
-  template<std::size_t _Num, typename _Tuple = _Index_tuple<> >
-    struct _Build_index_tuple;
- 
-  template<std::size_t _Num, int... _Indexes> 
-    struct _Build_index_tuple<_Num, _Index_tuple<_Indexes...> >
-    : _Build_index_tuple<_Num - 1, 
-                         _Index_tuple<_Indexes..., sizeof...(_Indexes)> >
+    struct _Index_tuple
     {
+      typedef _Index_tuple<_Indexes..., sizeof...(_Indexes)> __next;
     };
 
-  template<int... _Indexes>
-    struct _Build_index_tuple<0, _Index_tuple<_Indexes...> >
+  /// Builds an _Index_tuple<0, 1, 2, ..., _Num-1>.
+  template<std::size_t _Num>
+    struct _Build_index_tuple
     {
-      typedef _Index_tuple<_Indexes...> __type;
+      typedef typename _Build_index_tuple<_Num-1>::__type::__next __type;
+    };
+
+  template<>
+    struct _Build_index_tuple<0>
+    {
+      typedef _Index_tuple<> __type;
     };
 
   /** 
@@ -963,8 +891,7 @@ namespace std
    struct _Safe_tuple_element
    : _Safe_tuple_element_impl<__i, _Tuple, 
                               (__i >= 0 && __i < tuple_size<_Tuple>::value)>
-   {
-   };
+   { };
 
   /**
    *  Maps an argument to bind() into an actual argument to the bound
@@ -998,7 +925,7 @@ namespace std
        */
       template<typename _CVRef, typename _Tuple>
         result_type
-        operator()(_CVRef& __arg, const _Tuple&) const volatile
+        operator()(_CVRef& __arg, _Tuple&&) const volatile
         { return __arg.get(); }
     };
 
@@ -1023,12 +950,12 @@ namespace std
       template<typename _CVArg, typename... _Args>
         typename result_of<_CVArg(_Args...)>::type
         operator()(_CVArg& __arg,
-		   const tuple<_Args...>& __tuple) const volatile
+		   tuple<_Args...>&& __tuple) const volatile
         {
 	  // Construct an index tuple and forward to __call
 	  typedef typename _Build_index_tuple<sizeof...(_Args)>::__type
 	    _Indexes;
-	  return this->__call(__arg, __tuple, _Indexes());
+	  return this->__call(__arg, std::move(__tuple), _Indexes());
 	}
 
     private:
@@ -1036,10 +963,10 @@ namespace std
       // of the arguments in the tuple. 
       template<typename _CVArg, typename... _Args, int... _Indexes>
         typename result_of<_CVArg(_Args...)>::type
-        __call(_CVArg& __arg, const tuple<_Args...>& __tuple,
+        __call(_CVArg& __arg, tuple<_Args...>&& __tuple,
 	       const _Index_tuple<_Indexes...>&) const volatile
         {
-	  return __arg(get<_Indexes>(__tuple)...);
+	  return __arg(std::forward<_Args>(get<_Indexes>(__tuple))...);
 	}
     };
 
@@ -1065,14 +992,15 @@ namespace std
 	    __base_type;
 
 	public:
-	  typedef typename add_lvalue_reference<__base_type>::type type;
+	  typedef typename add_rvalue_reference<__base_type>::type type;
 	};
 
       template<typename _Tuple>
         typename result<_Mu(_Arg, _Tuple)>::type
-        operator()(const volatile _Arg&, const _Tuple& __tuple) const volatile
+        operator()(const volatile _Arg&, _Tuple&& __tuple) const volatile
         {
-	  return ::std::get<(is_placeholder<_Arg>::value - 1)>(__tuple);
+	  return std::forward<typename result<_Mu(_Arg, _Tuple)>::type>(
+              ::std::get<(is_placeholder<_Arg>::value - 1)>(__tuple));
 	}
     };
 
@@ -1095,9 +1023,9 @@ namespace std
 
       // Pick up the cv-qualifiers of the argument
       template<typename _CVArg, typename _Tuple>
-        _CVArg&
-        operator()(_CVArg& __arg, const _Tuple&) const volatile
-        { return __arg; }
+        _CVArg&&
+        operator()(_CVArg&& __arg, _Tuple&&) const volatile
+        { return std::forward<_CVArg>(__arg); }
     };
 
   /**
@@ -1156,106 +1084,104 @@ namespace std
       tuple<_Bound_args...> _M_bound_args;
 
       // Call unqualified
-      template<typename... _Args, int... _Indexes>
-        typename result_of<
-                   _Functor(typename result_of<_Mu<_Bound_args> 
-                            (_Bound_args, tuple<_Args...>)>::type...)
-                 >::type
-        __call(const tuple<_Args...>& __args, _Index_tuple<_Indexes...>)
+      template<typename _Result, typename... _Args, int... _Indexes>
+        _Result
+        __call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>)
         {
           return _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+                      (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
       // Call as const
-      template<typename... _Args, int... _Indexes>
-        typename result_of<
-                   const _Functor(typename result_of<_Mu<_Bound_args> 
-                                    (const _Bound_args, tuple<_Args...>)
-                                  >::type...)>::type
-        __call(const tuple<_Args...>& __args, _Index_tuple<_Indexes...>) const
+      template<typename _Result, typename... _Args, int... _Indexes>
+        _Result
+        __call_c(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>) const
         {
           return _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+                      (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
+#if 0
       // Call as volatile
-      template<typename... _Args, int... _Indexes>
-        typename result_of<
-                   volatile _Functor(typename result_of<_Mu<_Bound_args> 
-                                    (volatile _Bound_args, tuple<_Args...>)
-                                  >::type...)>::type
-        __call(const tuple<_Args...>& __args, 
-               _Index_tuple<_Indexes...>) volatile
+      template<typename _Result, typename... _Args, int... _Indexes>
+        _Result
+        __call_v(tuple<_Args...>&& __args, 
+		 _Index_tuple<_Indexes...>) volatile
         {
           return _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+                      (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
       // Call as const volatile
-      template<typename... _Args, int... _Indexes>
-        typename result_of<
-                   const volatile _Functor(typename result_of<_Mu<_Bound_args> 
-                                    (const volatile _Bound_args, 
-                                     tuple<_Args...>)
-                                  >::type...)>::type
-        __call(const tuple<_Args...>& __args, 
-               _Index_tuple<_Indexes...>) const volatile
+      template<typename _Result, typename... _Args, int... _Indexes>
+        _Result
+        __call_c_v(tuple<_Args...>&& __args, 
+		   _Index_tuple<_Indexes...>) const volatile
         {
           return _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+                      (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
+#endif
 
      public:
       explicit _Bind(_Functor __f, _Bound_args... __bound_args)
-        : _M_f(__f), _M_bound_args(__bound_args...) { }
+      : _M_f(std::forward<_Functor>(__f)),
+	_M_bound_args(std::forward<_Bound_args>(__bound_args)...)
+      { }
 
       // Call unqualified
-      template<typename... _Args>
-        typename result_of<
-                   _Functor(typename result_of<_Mu<_Bound_args> 
-                            (_Bound_args, tuple<_Args...>)>::type...)
-                 >::type
-        operator()(_Args&... __args)
+      template<typename... _Args, typename _Result
+        = decltype( std::declval<_Functor>()(
+              _Mu<_Bound_args>()( std::declval<_Bound_args&>(),
+				  std::declval<tuple<_Args...>&&>() )... ) )>
+        _Result
+        operator()(_Args&&... __args)
         {
-          return this->__call(tie(__args...), _Bound_indexes());
+          return this->__call<_Result>(tuple<_Args...>
+				       (std::forward<_Args>(__args)...),
+                                       _Bound_indexes());
         }
 
       // Call as const
-      template<typename... _Args>
-        typename result_of<
-                   const _Functor(typename result_of<_Mu<_Bound_args> 
-                            (const _Bound_args, tuple<_Args...>)>::type...)
-                 >::type
-        operator()(_Args&... __args) const
+      template<typename... _Args, typename _Result
+        = decltype( std::declval<const _Functor>()(
+	      _Mu<_Bound_args>()( std::declval<const _Bound_args&>(),
+				  std::declval<tuple<_Args...>&&>() )... ) )>
+        _Result
+        operator()(_Args&&... __args) const
         {
-          return this->__call(tie(__args...), _Bound_indexes());
+          return this->__call_c<_Result>(tuple<_Args...>
+                                         (std::forward<_Args>(__args)...),
+                                         _Bound_indexes());
         }
 
-
+#if 0
       // Call as volatile
-      template<typename... _Args>
-        typename result_of<
-                   volatile _Functor(typename result_of<_Mu<_Bound_args> 
-                            (volatile _Bound_args, tuple<_Args...>)>::type...)
-                 >::type
-        operator()(_Args&... __args) volatile
+      template<typename... _Args, typename _Result
+        = decltype( std::declval<volatile _Functor>()(
+              _Mu<_Bound_args>()( std::declval<volatile _Bound_args&>(),
+                                  std::declval<tuple<_Args...>&&>() )... ) )>
+        _Result
+        operator()(_Args&&... __args) volatile
         {
-          return this->__call(tie(__args...), _Bound_indexes());
+          return this->__call_v<_Result>(tuple<_Args...>
+                                         (std::forward<_Args>(__args)...),
+                                         _Bound_indexes());
         }
-
 
       // Call as const volatile
-      template<typename... _Args>
-        typename result_of<
-                   const volatile _Functor(typename result_of<_Mu<_Bound_args> 
-                            (const volatile _Bound_args, 
-                             tuple<_Args...>)>::type...)
-                 >::type
-        operator()(_Args&... __args) const volatile
+      template<typename... _Args, typename _Result
+        = decltype( std::declval<const volatile _Functor>()(
+              _Mu<_Bound_args>()( std::declval<const volatile _Bound_args&>(),
+                                  std::declval<tuple<_Args...>&&>() )... ) )>
+        _Result
+        operator()(_Args&&... __args) const volatile
         {
-          return this->__call(tie(__args...), _Bound_indexes());
+          return this->__call_c_v<_Result>(tuple<_Args...>
+                                           (std::forward<_Args>(__args)...),
+                                           _Bound_indexes());
         }
+#endif
     };
 
   /// Type of the function object returned from bind<R>().
@@ -1281,82 +1207,82 @@ namespace std
       // Call unqualified
       template<typename _Res, typename... _Args, int... _Indexes>
         _Result
-        __call(const tuple<_Args...>& __args, _Index_tuple<_Indexes...>,
+        __call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>,
             typename __disable_if_void<_Res>::type = 0)
         {
           return _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+                      (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
       // Call unqualified, return void
       template<typename _Res, typename... _Args, int... _Indexes>
         void
-        __call(const tuple<_Args...>& __args, _Index_tuple<_Indexes...>,
+        __call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>,
             typename __enable_if_void<_Res>::type = 0)
         {
           _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+	       (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
       // Call as const
       template<typename _Res, typename... _Args, int... _Indexes>
         _Result
-        __call(const tuple<_Args...>& __args, _Index_tuple<_Indexes...>,
+        __call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>,
             typename __disable_if_void<_Res>::type = 0) const
         {
           return _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+                      (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
       // Call as const, return void
       template<typename _Res, typename... _Args, int... _Indexes>
         void
-        __call(const tuple<_Args...>& __args, _Index_tuple<_Indexes...>,
+        __call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>,
             typename __enable_if_void<_Res>::type = 0) const
         {
           _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+	       (get<_Indexes>(_M_bound_args),  std::move(__args))...);
         }
 
       // Call as volatile
       template<typename _Res, typename... _Args, int... _Indexes>
         _Result
-        __call(const tuple<_Args...>& __args, _Index_tuple<_Indexes...>,
+        __call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>,
             typename __disable_if_void<_Res>::type = 0) volatile
         {
           return _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+                      (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
       // Call as volatile, return void
       template<typename _Res, typename... _Args, int... _Indexes>
         void
-        __call(const tuple<_Args...>& __args, _Index_tuple<_Indexes...>,
+        __call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>,
             typename __enable_if_void<_Res>::type = 0) volatile
         {
           _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+	       (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
       // Call as const volatile
       template<typename _Res, typename... _Args, int... _Indexes>
         _Result
-        __call(const tuple<_Args...>& __args, _Index_tuple<_Indexes...>,
+        __call(tuple<_Args...>&& __args, _Index_tuple<_Indexes...>,
             typename __disable_if_void<_Res>::type = 0) const volatile
         {
           return _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+                      (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
       // Call as const volatile, return void
       template<typename _Res, typename... _Args, int... _Indexes>
         void
-        __call(const tuple<_Args...>& __args, 
+        __call(tuple<_Args...>&& __args, 
                _Index_tuple<_Indexes...>,
             typename __enable_if_void<_Res>::type = 0) const volatile
         {
           _M_f(_Mu<_Bound_args>()
-                      (get<_Indexes>(_M_bound_args), __args)...);
+	       (get<_Indexes>(_M_bound_args), std::move(__args))...);
         }
 
     public:
@@ -1364,56 +1290,60 @@ namespace std
 
       explicit
       _Bind_result(_Functor __f, _Bound_args... __bound_args)
-      : _M_f(__f), _M_bound_args(__bound_args...) { }
+      : _M_f(std::forward<_Functor>(__f)),
+	_M_bound_args(std::forward<_Bound_args>(__bound_args)...)
+      { }
 
       // Call unqualified
       template<typename... _Args>
         result_type
-        operator()(_Args&... __args)
+        operator()(_Args&&... __args)
         {
-          return this->__call<_Result>(tie(__args...), _Bound_indexes());
+          return this->__call<_Result>(
+              tuple<_Args...>(std::forward<_Args...>(__args)...),
+              _Bound_indexes());
         }
 
       // Call as const
       template<typename... _Args>
         result_type
-        operator()(_Args&... __args) const
+        operator()(_Args&&... __args) const
         {
-          return this->__call<_Result>(tie(__args...), _Bound_indexes());
+          return this->__call<_Result>(
+              tuple<_Args...>(std::forward<_Args...>(__args)...),
+              _Bound_indexes());
         }
 
       // Call as volatile
       template<typename... _Args>
         result_type
-        operator()(_Args&... __args) volatile
+        operator()(_Args&&... __args) volatile
         {
-          return this->__call<_Result>(tie(__args...), _Bound_indexes());
+          return this->__call<_Result>(
+              tuple<_Args...>(std::forward<_Args...>(__args)...),
+              _Bound_indexes());
         }
 
       // Call as const volatile
       template<typename... _Args>
         result_type
-        operator()(_Args&... __args) const volatile
+        operator()(_Args&&... __args) const volatile
         {
-          return this->__call<_Result>(tie(__args...), _Bound_indexes());
+          return this->__call<_Result>(
+              tuple<_Args...>(std::forward<_Args...>(__args)...),
+              _Bound_indexes());
         }
     };
 
   /// Class template _Bind is always a bind expression.
   template<typename _Signature>
     struct is_bind_expression<_Bind<_Signature> >
-    { static const bool value = true; };
-
-  template<typename _Signature>
-    const bool is_bind_expression<_Bind<_Signature> >::value;
+    : public true_type { };
 
   /// Class template _Bind_result is always a bind expression.
   template<typename _Result, typename _Signature>
     struct is_bind_expression<_Bind_result<_Result, _Signature> >
-    { static const bool value = true; };
-
-  template<typename _Result, typename _Signature>
-    const bool is_bind_expression<_Bind_result<_Result, _Signature> >::value;
+    : public true_type { };
 
   /// bind
   template<typename _Functor, typename... _ArgTypes>
@@ -1424,7 +1354,8 @@ namespace std
       typedef _Maybe_wrap_member_pointer<_Functor> __maybe_type;
       typedef typename __maybe_type::type __functor_type;
       typedef _Bind<__functor_type(_ArgTypes...)> __result_type;
-      return __result_type(__maybe_type::__do_wrap(__f), __args...);
+      return __result_type(__maybe_type::__do_wrap(__f),
+                           std::forward<_ArgTypes>(__args)...);
     } 
 
   template<typename _Result, typename _Functor, typename... _ArgTypes>
@@ -1438,7 +1369,8 @@ namespace std
       typedef typename __maybe_type::type __functor_type;
       typedef _Bind_result<_Result, __functor_type(_ArgTypes...)>
 	__result_type;
-      return __result_type(__maybe_type::__do_wrap(__f), __args...);
+      return __result_type(__maybe_type::__do_wrap(__f),
+                           std::forward<_ArgTypes>(__args)...);
     }
 
   /**
@@ -1462,11 +1394,9 @@ namespace std
    */
   template<typename _Tp>
     struct __is_location_invariant
-    : integral_constant<bool,
-                        (is_pointer<_Tp>::value
-                         || is_member_pointer<_Tp>::value)>
-    {
-    };
+    : integral_constant<bool, (is_pointer<_Tp>::value
+			       || is_member_pointer<_Tp>::value)>
+    { };
 
   class _Undefined_class;
 
@@ -1518,8 +1448,7 @@ namespace std
   template<typename _Tp>
     struct __is_location_invariant<_Simple_type_wrapper<_Tp> >
     : __is_location_invariant<_Tp>
-    {
-    };
+    { };
 
   // Converts a reference to a function object into a callable
   // function object.
@@ -1907,8 +1836,8 @@ namespace std
        */
       template<typename _Functor>
         function(_Functor __f,
-                 typename __gnu_cxx::__enable_if<
-                           !is_integral<_Functor>::value, _Useless>::__type
+                 typename enable_if<
+                           !is_integral<_Functor>::value, _Useless>::type
                    = _Useless());
 
       /**
@@ -1984,8 +1913,7 @@ namespace std
        *  reference_wrapper<F>, this function will not throw.
        */
       template<typename _Functor>
-        typename __gnu_cxx::__enable_if<!is_integral<_Functor>::value,
-	                                function&>::__type
+        typename enable_if<!is_integral<_Functor>::value, function&>::type
 	operator=(_Functor&& __f)
 	{
 	  function(std::forward<_Functor>(__f)).swap(*this);
@@ -1994,8 +1922,7 @@ namespace std
 
       /// @overload
       template<typename _Functor>
-        typename __gnu_cxx::__enable_if<!is_integral<_Functor>::value,
-	                                function&>::__type
+        typename enable_if<!is_integral<_Functor>::value, function&>::type
 	operator=(reference_wrapper<_Functor> __f)
 	{
 	  function(__f).swap(*this);
@@ -2013,9 +1940,16 @@ namespace std
        */
       void swap(function& __x)
       {
-	_Any_data __old_functor = _M_functor;
-	_M_functor = __x._M_functor;
-	__x._M_functor = __old_functor;
+	/* We cannot perform direct assignments of the _M_functor
+	   parts as they are of type _Any_data and have a different
+	   dynamic type.  Doing so would violate type-based aliasing
+	   rules and lead to spurious miscompilations.
+	   Instead perform a bytewise exchange of the memory of
+	   both POD objects.
+	   ???  A wordwise exchange honoring alignment of _M_functor
+	   would be more efficient.  See PR42845.  */
+	for (unsigned i = 0; i < sizeof (_M_functor._M_pod_data); ++i)
+	  std::swap (_M_functor._M_pod_data[i], __x._M_functor._M_pod_data[i]);
 	_Manager_type __old_manager = _M_manager;
 	_M_manager = __x._M_manager;
 	__x._M_manager = __old_manager;
@@ -2116,8 +2050,8 @@ namespace std
     template<typename _Functor>
       function<_Res(_ArgTypes...)>::
       function(_Functor __f,
-	       typename __gnu_cxx::__enable_if<
-                       !is_integral<_Functor>::value, _Useless>::__type)
+	       typename enable_if<
+	                !is_integral<_Functor>::value, _Useless>::type)
       : _Function_base()
       {
 	typedef _Function_handler<_Signature_type, _Functor> _My_handler;

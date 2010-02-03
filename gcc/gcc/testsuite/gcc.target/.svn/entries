@@ -1,14 +1,14 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.target
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-05T23:53:29.528836Z
-155666
+2010-01-28T21:35:16.585366Z
+156333
 hjl
 
 
@@ -26,25 +26,25 @@ hjl
 
 138bc75d-0d04-0410-961f-82ee72b054a4
 
-powerpc
-dir
-
 arm
 dir
 
-m68k
+powerpc
 dir
 
 alpha
 dir
 
+m68k
+dir
+
 avr
 dir
 
-rx
+i386
 dir
 
-i386
+rx
 dir
 
 xstormy16
@@ -53,10 +53,10 @@ dir
 frv
 dir
 
-x86_64
+s390
 dir
 
-s390
+x86_64
 dir
 
 cris

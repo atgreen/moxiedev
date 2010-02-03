@@ -1,6 +1,6 @@
 # GCC target-specific configuration file.
 # Copyright 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-# 2008, 2009 Free Software Foundation, Inc.
+# 2008, 2009, 2010 Free Software Foundation, Inc.
 
 #This file is part of GCC.
 
@@ -205,16 +205,21 @@ xm_file=
 md_file=
 
 # Obsolete configurations.
-#case ${target} in
-# )
-#    if test "x$enable_obsolete" != xyes; then
-#      echo "*** Configuration ${target} is obsolete." >&2
-#      echo "*** Specify --enable-obsolete to build it anyway." >&2
-#      echo "*** Support will be REMOVED in the next major release of GCC," >&2
-#      echo "*** unless a maintainer comes forward." >&2
-#      exit 1
-#    fi;;
-#esac
+case ${target} in
+   alpha*-dec-osf4*			\
+ | alpha*-dec-osf5.0*			\
+ | mips-sgi-irix5*			\
+ | mips-sgi-irix6.[0-4]5*		\
+ | *-*-solaris2.7*			\
+ )
+    if test "x$enable_obsolete" != xyes; then
+      echo "*** Configuration ${target} is obsolete." >&2
+      echo "*** Specify --enable-obsolete to build it anyway." >&2
+      echo "*** Support will be REMOVED in the next major release of GCC," >&2
+      echo "*** unless a maintainer comes forward." >&2
+      exit 1
+    fi;;
+esac
 
 # Unsupported targets list.  Do not put an entry in this list unless
 # it would otherwise be caught by a more permissive pattern.  The list
@@ -1144,7 +1149,7 @@ i[34567]86-*-linux* | i[34567]86-*-kfreebsd*-gnu | i[34567]86-*-knetbsd*-gnu | i
 			tmake_file="${tmake_file} i386/t-linux64"
 			need_64bit_hwint=yes
 			case X"${with_cpu}" in
-			Xgeneric|Xatom|Xcore2|Xnocona|Xx86-64|Xamdfam10|Xbarcelona|Xk8|Xopteron|Xathlon64|Xathlon-fx)
+			Xgeneric|Xatom|Xcore2|Xnocona|Xx86-64|Xamdfam10|Xbarcelona|Xk8|Xopteron|Xathlon64|Xathlon-fx|Xathlon64-sse3|Xk8-sse3|Xopteron-sse3)
 				;;
 			X)
 				if test x$with_cpu_64 = x; then
@@ -1153,7 +1158,7 @@ i[34567]86-*-linux* | i[34567]86-*-kfreebsd*-gnu | i[34567]86-*-knetbsd*-gnu | i
 				;;
 			*)
 				echo "Unsupported CPU used in --with-cpu=$with_cpu, supported values:" 1>&2
-				echo "generic atom core2 nocona x86-64 amdfam10 barcelona k8 opteron athlon64 athlon-fx" 1>&2
+				echo "generic atom core2 nocona x86-64 amdfam10 barcelona k8 opteron athlon64 athlon-fx athlon64-sse3 k8-sse3 opteron-sse3" 1>&2
 				exit 1
 				;;
 			esac
@@ -1260,7 +1265,7 @@ i[34567]86-*-solaris2*)
 		need_64bit_hwint=yes
 		use_gcc_stdint=wrap
 		case X"${with_cpu}" in
-		Xgeneric|Xatom|Xcore2|Xnocona|Xx86-64|Xamdfam10|Xbarcelona|Xk8|Xopteron|Xathlon64|Xathlon-fx)
+		Xgeneric|Xatom|Xcore2|Xnocona|Xx86-64|Xamdfam10|Xbarcelona|Xk8|Xopteron|Xathlon64|Xathlon-fx|Xathlon64-sse3|Xk8-sse3|Xopteron-sse3)
 			;;
 		X)
 			if test x$with_cpu_64 = x; then
@@ -1269,7 +1274,7 @@ i[34567]86-*-solaris2*)
 			;;
 		*)
 			echo "Unsupported CPU used in --with-cpu=$with_cpu, supported values:" 1>&2
-			echo "generic atom core2 nocona x86-64 amdfam10 barcelona k8 opteron athlon64 athlon-fx" 1>&2
+			echo "generic atom core2 nocona x86-64 amdfam10 barcelona k8 opteron athlon64 athlon-fx athlon64-sse3 k8-sse3 opteron-sse3" 1>&2
 			exit 1
 			;;
 		esac
@@ -1335,11 +1340,10 @@ i[34567]86-*-mingw* | x86_64-*-mingw*)
 	case ${target} in
 		*-w64-*)
 			tm_file="${tm_file} i386/mingw-w64.h"
-			tmake_file="${tmake_file} i386/t-mingw-w64"
 			if test x$enable_targets = xall; then
 				tm_defines="${tm_defines} TARGET_BI_ARCH=1"
 				case X"${with_cpu}" in
-				Xgeneric|Xatom|Xcore2|Xnocona|Xx86-64|Xamdfam10|Xbarcelona|Xk8|Xopteron|Xathlon64|Xathlon-fx)
+				Xgeneric|Xatom|Xcore2|Xnocona|Xx86-64|Xamdfam10|Xbarcelona|Xk8|Xopteron|Xathlon64|Xathlon-fx|Xathlon64-sse3|Xk8-sse3|Xopteron-sse3)
 					;;
 				X)
 					if test x$with_cpu_64 = x; then
@@ -1348,14 +1352,13 @@ i[34567]86-*-mingw* | x86_64-*-mingw*)
 					;;
 				*)
 					echo "Unsupported CPU used in --with-cpu=$with_cpu, supported values:" 1>&2
-					echo "generic atom core2 nocona x86-64 amdfam10 barcelona k8 opteron athlon64 athlon-fx" 1>&2
+					echo "generic atom core2 nocona x86-64 amdfam10 barcelona k8 opteron athlon64 athlon-fx athlon64-sse3 k8-sse3 opteron-sse3" 1>&2
 					exit 1
 					;;
 				esac
 			fi
 			;;
 		*)
-			tmake_file="${tmake_file} i386/t-mingw32"
 			;;
 	esac
 	tm_file="${tm_file} i386/mingw-stdint.h"
@@ -1366,6 +1369,14 @@ i[34567]86-*-mingw* | x86_64-*-mingw*)
 		tmake_eh_file="i386/t-sjlj-eh"
 	fi
 	tmake_file="${tmake_file} ${tmake_eh_file} i386/t-cygming"
+        case ${target} in
+               *-w64-*)
+               		tmake_file="${tmake_file} i386/t-mingw-w64"
+			;;
+               *)
+               		tmake_file="${tmake_file} i386/t-mingw32"
+                     	;;
+	esac
 	target_gtfiles="\$(srcdir)/config/i386/winnt.c"
 	extra_options="${extra_options} i386/cygming.opt i386/mingw.opt"
 	case ${target} in
@@ -1655,12 +1666,23 @@ mips-sgi-irix[56]*)
 	case ${target} in
 	*-*-irix5*)
 		tm_file="${tm_file} mips/iris5.h"
+		use_gcc_stdint=provide
 		;;
 
 	*-*-irix6*)
 		tm_file="${tm_file} mips/iris6.h"
 		tmake_file="${tmake_file} mips/t-iris6"
 		tm_defines="${tm_defines} MIPS_ISA_DEFAULT=3 MIPS_ABI_DEFAULT=ABI_N32"
+		case ${target} in
+		*-*-irix6.[0-4]*)
+			use_gcc_stdint=provide
+			;;
+		*-*-irix6.5*)
+			# Only IRIX Development Foundation 1.3 for IRIX 6.5
+			# provides stdint.h.
+			use_gcc_stdint=wrap
+			;;
+		esac
 		;;
 	esac
 	if test "x$stabs" = xyes
@@ -2629,8 +2651,11 @@ if test x$with_cpu = x ; then
       case ${target_noncanonical} in
         amdfam10-*|barcelona-*)
           with_cpu=amdfam10
+          ;; 
+        k8_sse3-*|opteron_sse3-*|athlon64_sse3-*)
+          with_cpu=k8-sse3
           ;;
-        k8-*|opteron-*|athlon_64-*)
+        k8-*|opteron-*|athlon64-*|athlon_fx-*)
           with_cpu=k8
           ;;
         athlon_xp-*|athlon_mp-*|athlon_4-*)
@@ -2676,7 +2701,10 @@ if test x$with_cpu = x ; then
         amdfam10-*|barcelona-*)
           with_cpu=amdfam10
           ;;
-        k8-*|opteron-*|athlon_64-*)
+        k8_sse3-*|opteron_sse3-*|athlon64_sse3-*)
+          with_cpu=k8-sse3
+          ;;
+        k8-*|opteron-*|athlon64-*|athlon_fx-*)
           with_cpu=k8
           ;;
         nocona-*)
@@ -2970,7 +2998,7 @@ case "${target}" in
 				esac
 				# OK
 				;;
-			"" | amdfam10 | barcelona | k8 | opteron | athlon64 | athlon-fx | nocona | core2 | atom | generic)
+			"" | amdfam10 | barcelona | k8-sse3 | opteron-sse3 | athlon64-sse3 | k8 | opteron | athlon64 | athlon-fx | nocona | core2 | atom | generic)
 				# OK
 				;;
 			*)

@@ -1,7 +1,7 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/javax/print/ipp/attribute/supported
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ has-props
 
 2459
 
-PrinterResolutionSupported.class
-file
-
-
-
-
-2009-04-24T17:47:45.000000Z
-39d6fa27ec63e514f5a35ffa32fe821e
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1820
-
 SidesSupported.class
 file
 
@@ -127,6 +93,40 @@ has-props
 
 
 1511
+
+PrinterResolutionSupported.class
+file
+
+
+
+
+2009-04-24T17:47:45.000000Z
+39d6fa27ec63e514f5a35ffa32fe821e
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1820
 
 MultipleDocumentJobsSupported.class
 file
@@ -366,40 +366,6 @@ has-props
 
 2290
 
-DocumentFormatSupported.class
-file
-
-
-
-
-2009-04-24T17:47:45.000000Z
-80e5a5455bbd430be0291a90ff603d54
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-783
-
 UriSecuritySupported.class
 file
 
@@ -434,14 +400,14 @@ has-props
 
 1372
 
-GeneratedNaturalLanguageSupported.class
+DocumentFormatSupported.class
 file
 
 
 
 
 2009-04-24T17:47:45.000000Z
-d4330ad1a53f8c48f08c452c4690f3ae
+80e5a5455bbd430be0291a90ff603d54
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -466,7 +432,7 @@ has-props
 
 
 
-784
+783
 
 CharsetSupported.class
 file
@@ -501,6 +467,40 @@ has-props
 
 
 706
+
+GeneratedNaturalLanguageSupported.class
+file
+
+
+
+
+2009-04-24T17:47:45.000000Z
+d4330ad1a53f8c48f08c452c4690f3ae
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+784
 
 JobHoldUntilSupported.class
 file

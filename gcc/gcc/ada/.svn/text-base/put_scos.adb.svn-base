@@ -90,15 +90,32 @@ begin
 
                case T.C1 is
 
-                  --  Statements, exit
+                  --  Statements
 
-                  when 'S' | 'T' =>
-                     Write_Info_Char (' ');
-                     Output_Range (T);
+                  when 'S' =>
+                     loop
+                        Write_Info_Char (' ');
 
-                     --  Decision
+                        if SCO_Table.Table (Start).C2 /= ' ' then
+                           Write_Info_Char (SCO_Table.Table (Start).C2);
+                        end if;
 
-                  when 'I' | 'E' | 'W' | 'X' =>
+                        Output_Range (SCO_Table.Table (Start));
+                        exit when SCO_Table.Table (Start).Last;
+
+                        Start := Start + 1;
+                        pragma Assert (SCO_Table.Table (Start).C1 = 's');
+                     end loop;
+
+                  --  Statement continuations should not occur since they
+                  --  are supposed to have been handled in the loop above.
+
+                  when 's' =>
+                     raise Program_Error;
+
+                  --  Decision
+
+                  when 'I' | 'E' | 'P' | 'W' | 'X' =>
                      if T.C2 = ' ' then
                         Start := Start + 1;
                      end if;

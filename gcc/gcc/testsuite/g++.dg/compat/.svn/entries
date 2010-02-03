@@ -1,15 +1,15 @@
 10
 
 dir
-155669
+156465
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/compat
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-07-11T06:10:49.813211Z
-149508
-rsandifo
+2010-01-21T05:49:35.498523Z
+156106
+jason
 
 
 
@@ -309,4 +309,7 @@ rsandifo
 
 
 4059
+
+decimal
+dir
 

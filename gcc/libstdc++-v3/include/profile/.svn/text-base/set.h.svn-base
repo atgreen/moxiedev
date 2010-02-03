@@ -104,7 +104,8 @@ namespace __profile
       set&
       operator=(set&& __x)
       {
-        // NB: DR 675.
+	// NB: DR 1204.
+	// NB: DR 675.
 	this->clear();
 	this->swap(__x);
 	return *this;

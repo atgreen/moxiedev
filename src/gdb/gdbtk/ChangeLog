@@ -1,3 +1,12 @@
+2010-01-25  Keith Seitz  <keiths@redhat.com>
+
+	* generic/gdbtk-cmds.c (gdb_set_inferior_args): set_inferior_args
+	now works as expected. Do not strdup/free the argument string.
+
+2010-01-15  Stan Shebs  <stan@codesourcery.com>
+
+	* generic/gdbtk-bp.c (gdb_trace_status): Use current_trace_status.
+
 2010-01-04  Keith Seitz  <keiths@redhat.com>
 
 	* generic/gdbtk-cmds.c (gdbtk_load_asm): print_address_symbolic

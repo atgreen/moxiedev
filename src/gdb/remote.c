@@ -3475,10 +3475,24 @@ remote_query_supported (void)
   rs->buf[0] = 0;
   if (remote_protocol_packets[PACKET_qSupported].support != PACKET_DISABLE)
     {
-      if (rs->extended)
-	putpkt ("qSupported:multiprocess+");
+      const char *qsupported = gdbarch_qsupported (target_gdbarch);
+      if (qsupported)
+	{
+	  char *q;
+	  if (rs->extended)
+	    q = concat ("qSupported:multiprocess+;", qsupported, NULL);
+	  else
+	    q = concat ("qSupported:", qsupported, NULL);
+	  putpkt (q);
+	  xfree (q);
+	}
       else
-	putpkt ("qSupported");
+	{
+	  if (rs->extended)
+	    putpkt ("qSupported:multiprocess+");
+	  else
+	    putpkt ("qSupported");
+	}
 
       getpkt (&rs->buf, &rs->buf_size, 0);
 

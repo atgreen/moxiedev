@@ -819,7 +819,7 @@ gdb_trace_status (ClientData clientData,
 {
   int result = 0;
 
-  if (trace_running_p)
+  if (current_trace_status ()->running)
     result = 1;
 
   Tcl_SetIntObj (result_ptr->obj_ptr, result);

@@ -1,3 +1,89 @@
+2010-02-04  Anthony Green  <green@moxielogic.com>
+
+	* moxie-tdep.c (moxie_analyze_prologue): Fail protocol analysis
+	gracefully.
+
+2010-02-04  Tom Tromey  <tromey@redhat.com>
+
+	* valops.c (search_struct_field): Account for
+	value_embedded_offset.  Fix check for virtual base past the end of
+	the object.  Use value_copy when making a slice of the value.
+
+2010-02-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR tui/9622
+	* tui/tui-interp.c (tui_init): Call tui_initialize_readline
+	only if gdb_stdout is a tty.
+
+2010-02-04  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* target-descriptions.c: Include "osabi.h".
+	(maint_print_c_tdesc_cmd): Generate set_tdesc_osabi for valid
+	OSABI.
+
+2010-02-04  Tristan Gingold  <gingold@adacore.com>
+
+	* machoread.c (macho_add_oso): Renamed to macho_register_oso.
+	(macho_symtab_read): Adjust calls to macho_add_oso.
+	(macho_oso_symfile): Renamed to macho_symfile_read_all_oso.
+	(macho_symfile_read): Adjust call to macho_oso_symfile.
+	(macho_new_init): Move this function after declarations.
+	(macho_symfile_init): Ditto.
+	* darwin-nat-info.c (darwin_lib_gdb_ports): Remove.
+	* darwin-nat.c (darwin_lookup_task): Remove unused prototype.
+
+2010-02-04  Vladimir Prus  <vladimir@codesourcery.com>
+
+	Include MI command in remotelog.
+
+	* mi/mi-main.c (mi_execute_command): Call target_log_command.
+
+2010-02-03  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* remote.c (remote_state): Remove gdbarch.
+	(init_remote_state): Don't set gdbarch.
+	(remote_query_supported): Pass target_gdbarch instead of
+	rs->gdbarch to gdbarch_qsupported.
+
+2010-02-03  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gdbarch.sh: Add qsupported.
+
+	* gdbarch.c: Regenerated.
+	* gdbarch.h: Likewise.
+
+	* remote.c (remote_state): Add gdbarch.
+	(init_remote_state): Set gdbarch.
+	(remote_query_supported): Support gdbarch_qsupported.
+
+2010-02-03  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* amd64fbsd-nat.c (amd64fbsd_supply_pcb): Also check for
+	__FreeBSD_kernel_version.
+
+2010-02-03  Tristan Gingold  <gingold@adacore.com>
+
+	* symfile.h (struct sym_fns): Add sym_relocate field.
+	(default_symfile_relocate): New prototype.
+	(symfile_relocate_debug_section): First argument is now an objfile.
+	* symfile.c (default_symfile_relocate): Rename from
+	symfile_relocate_debug_section, first argument is now an objfile.
+	(symfile_relocate_debug_section): New function.
+	* coffread.c (coff_sym_fns): Set sym_relocate field.
+	* somread.c (som_sym_fns): Ditto.
+	* mipsread.c (ecoff_sym_fns): Ditto.
+	* machoread.c (macho_sym_fns): Ditto.
+	* elfread.c (elf_sym_fns): Ditto.
+	* dwarf2read.c (dwarf2_read_section): Ditto.
+	* xcoffread.c (xcoff_sym_fns): Ditto.
+	* dbxread.c (aout_sym_fns): Ditto.
+	(dbx_psymtab_to_symtab): Adjust call to symfile_relocate_debug_section.
+	(elfstab_build_psymtabs): Ditto.
+
+2010-02-03  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* defs.h (MAX_REGISTER_SIZE): Increase to 32.
+
 2010-02-02  Tom Tromey  <tromey@redhat.com>
 
 	* valops.c (value_cast_structs): Try downcasting using the RTTI

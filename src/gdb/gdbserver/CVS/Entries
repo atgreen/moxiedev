@@ -1,4 +1,3 @@
-/ChangeLog/1.329/Wed Feb  3 12:30:43 2010//
 /Makefile.in/1.81/Thu Jan 28 00:24:31 2010/-ko/
 /README/1.4/Thu Jan 28 00:24:31 2010/-ko/
 /acinclude.m4/1.8/Thu Jan 28 00:24:31 2010//
@@ -39,7 +38,6 @@
 /nto-low.h/1.2/Thu Jan 28 00:24:31 2010//
 /nto-x86-low.c/1.2/Thu Jan 28 00:24:31 2010//
 /proc-service.c/1.17/Wed Feb  3 12:30:43 2010//
-/regcache.c/1.22/Wed Feb  3 12:30:43 2010//
 /regcache.h/1.14/Wed Feb  3 12:30:43 2010//
 /remote-utils.c/1.71/Wed Feb  3 12:30:43 2010/-ko/
 /server.c/1.108/Wed Feb  3 12:30:43 2010/-ko/
@@ -57,4 +55,6 @@
 /wincecompat.c/1.5/Thu Jan 28 00:24:31 2010//
 /wincecompat.h/1.5/Thu Jan 28 00:24:31 2010//
 /xtensa-xtregs.c/1.6/Thu Jan 28 00:24:31 2010//
+/ChangeLog/1.330/Thu Feb  4 22:41:55 2010//
+/regcache.c/1.23/Thu Feb  4 22:41:55 2010//
 D

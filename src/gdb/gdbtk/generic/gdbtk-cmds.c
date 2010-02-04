@@ -859,13 +859,7 @@ gdb_set_inferior_args (ClientData clientData, Tcl_Interp *interp,
     }
 
   args = Tcl_GetStringFromObj (objv[1], NULL);
-
-  /* The xstrdup/xfree stuff is so that we maintain a coherent picture
-     for gdb.  I would expect the accessors to do this, but they
-     don't.  */
-  args = xstrdup (args);
-  args = set_inferior_args (args);
-  xfree (args);
+  set_inferior_args (args);
 
   return TCL_OK;
 }

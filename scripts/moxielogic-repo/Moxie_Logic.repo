@@ -1,0 +1,13 @@
+[moxielogic]
+name=Moxie Logic - $basearch
+baseurl=http://moxielogic.org/yum/MoxieLogic/i686
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-MoxieLogic
+
+[moxielogic-source]
+name=Moxie Logic - Source
+baseurl=http://moxielogic.org/yum/MoxieLogic/SRPMS/
+enabled=0
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-MoxieLogic

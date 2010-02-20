@@ -1,3 +1,9 @@
+2010-02-20  Anthony Green  <green@moxielogic.com>
+
+	* scripts/moxielogic-repo/RPM-GPG-KEY-MoxieLogic: New file.
+	* scripts/moxielogic-repo/moxielogic-repo.spec: New file.
+	* scripts/moxielogic-repo/Moxie_Logic.repo: New file.
+
 2010-02-03  Anthony Green  <green@moxielogic.com>
 
 	* README: Update copyright year.

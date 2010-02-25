@@ -69,7 +69,7 @@ if { ![is_elf_format] || ![istarget "arm*-*-*"] } {
 
 set armelftests {
     {"Group relocations" "-Ttext 0x8000 --section-start zero=0x0 --section-start alpha=0xeef0 --section-start beta=0xffeef0" "" {group-relocs.s}
-     {{objdump -Dr group-relocs.d}}
+     {{objdump -dr group-relocs.d}}
      "group-relocs"}
     {"Thumb-1 BL" "-Ttext 0x1000 --section-start .foo=0x401000" "" {thumb1-bl.s}
      {{objdump -dr thumb1-bl.d}}
@@ -241,6 +241,9 @@ set armelftests {
     {"Relocation boundaries" "-defsym x=0 -defsym y=0 -defsym _start=0" "" {reloc-boundaries.s}
      {{objdump -s reloc-boundaries.d}}
      "reloc-boundaries"}
+    {"Data only mapping symbols" "-T data-only-map.ld -Map map" "" {data-only-map.s}
+     {{objdump -dr data-only-map.d}}
+     "data-only-map"}
 }
 
 run_ld_link_tests $armelftests
@@ -293,6 +296,15 @@ set armeabitests {
      {"EABI attribute merging 5" "-r" "" {attr-merge-5.s attr-merge-5.s}
       {{readelf -A attr-merge-5.attr}}
       "attr-merge-5"}
+     {"EABI attribute merging 6" "-r" "" {attr-merge-6a.s attr-merge-6b.s}
+      {{readelf -A attr-merge-6.attr}}
+      "attr-merge-6"}
+     {"EABI attribute merging 6 reversed" "-r" "" {attr-merge-6b.s attr-merge-6a.s}
+      {{readelf -A attr-merge-6.attr}}
+      "attr-merge-6r"}
+     {"EABI attribute merging 7" "-r" "" {attr-merge-7a.s attr-merge-7b.s}
+      {{readelf -A attr-merge-7.attr}}
+      "attr-merge-7"}
      {"EABI attribute arch merging 1" "-r" "" {arch-v6k.s arch-v6t2.s}
       {{readelf -A attr-merge-arch-1.attr}}
       "attr-merge-arch-1"}

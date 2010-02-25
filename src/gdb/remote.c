@@ -3857,17 +3857,12 @@ extended_remote_attach_1 (struct target_ops *target, char *args, int from_tty)
 {
   struct remote_state *rs = get_remote_state ();
   int pid;
-  char *dummy;
   char *wait_status = NULL;
 
-  if (!args)
-    error_no_arg (_("process-id to attach"));
+  pid = parse_pid_to_attach (args);
 
-  dummy = args;
-  pid = strtol (args, &dummy, 0);
-  /* Some targets don't set errno on errors, grrr!  */
-  if (pid == 0 && args == dummy)
-    error (_("Illegal process-id: %s."), args);
+  /* Remote PID can be freely equal to getpid, do not check it here the same
+     way as in other targets.  */
 
   if (remote_protocol_packets[PACKET_vAttach].support == PACKET_DISABLE)
     error (_("This target does not support attaching to a process"));
@@ -4642,26 +4637,23 @@ do_stop_reply_xfree (void *arg)
 static struct stop_reply *
 queued_stop_reply (ptid_t ptid)
 {
-  struct stop_reply *it, *prev;
-  struct stop_reply head;
+  struct stop_reply *it;
+  struct stop_reply **it_link;
 
-  head.next = stop_reply_queue;
-  prev = &head;
-
-  it = head.next;
-
-  if (!ptid_equal (ptid, minus_one_ptid))
-    for (; it; prev = it, it = it->next)
-      if (ptid_equal (ptid, it->ptid))
-	break;
-
-  if (it)
+  it = stop_reply_queue;
+  it_link = &stop_reply_queue;
+  while (it)
     {
-      prev->next = it->next;
-      it->next = NULL;
-    }
+      if (ptid_match (it->ptid, ptid))
+	{
+	  *it_link = it->next;
+	  it->next = NULL;
+	  break;
+	}
 
-  stop_reply_queue = head.next;
+      it_link = &it->next;
+      it = *it_link;
+    }
 
   if (stop_reply_queue)
     /* There's still at least an event left.  */
@@ -6174,10 +6166,13 @@ handle_notification (char *buf, size_t length)
   if (strncmp (buf, "Stop:", 5) == 0)
     {
       if (pending_stop_reply)
-	/* We've already parsed the in-flight stop-reply, but the stub
-	   for some reason thought we didn't, possibly due to timeout
-	   on its side.  Just ignore it.  */
-	;
+	{
+	  /* We've already parsed the in-flight stop-reply, but the
+	     stub for some reason thought we didn't, possibly due to
+	     timeout on its side.  Just ignore it.  */
+	  if (remote_debug)
+	    fprintf_unfiltered (gdb_stdlog, "ignoring resent notification\n");
+	}
       else
 	{
 	  struct cleanup *old_chain;
@@ -6195,6 +6190,9 @@ handle_notification (char *buf, size_t length)
 	  /* Notify the event loop there's a stop reply to acknowledge
 	     and that there may be more events to fetch.  */
 	  mark_async_event_handler (remote_async_get_pending_events_token);
+
+	  if (remote_debug)
+	    fprintf_unfiltered (gdb_stdlog, "stop notification captured\n");
 	}
     }
   else
@@ -7346,7 +7344,7 @@ remote_insert_watchpoint (CORE_ADDR addr, int len, int type)
   enum Z_packet_type packet = watchpoint_to_Z_packet (type);
 
   if (remote_protocol_packets[PACKET_Z0 + packet].support == PACKET_DISABLE)
-    return -1;
+    return 1;
 
   sprintf (rs->buf, "Z%x,", packet);
   p = strchr (rs->buf, '\0');
@@ -7360,8 +7358,9 @@ remote_insert_watchpoint (CORE_ADDR addr, int len, int type)
   switch (packet_ok (rs->buf, &remote_protocol_packets[PACKET_Z0 + packet]))
     {
     case PACKET_ERROR:
-    case PACKET_UNKNOWN:
       return -1;
+    case PACKET_UNKNOWN:
+      return 1;
     case PACKET_OK:
       return 0;
     }

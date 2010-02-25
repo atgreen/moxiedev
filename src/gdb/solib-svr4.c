@@ -176,7 +176,7 @@ LM_ADDR_CHECK (struct so_list *so, bfd *abfd)
   if (so->lm_info->l_addr == (CORE_ADDR)-1)
     {
       struct bfd_section *dyninfo_sect;
-      CORE_ADDR l_addr, l_dynaddr, dynaddr, align = 0x1000;
+      CORE_ADDR l_addr, l_dynaddr, dynaddr;
 
       l_addr = LM_ADDR_FROM_LINK_MAP (so);
 
@@ -193,6 +193,9 @@ LM_ADDR_CHECK (struct so_list *so, bfd *abfd)
 
       if (dynaddr + l_addr != l_dynaddr)
 	{
+	  CORE_ADDR align = 0x1000;
+	  CORE_ADDR minpagesize = align;
+
 	  if (bfd_get_flavour (abfd) == bfd_target_elf_flavour)
 	    {
 	      Elf_Internal_Ehdr *ehdr = elf_tdata (abfd)->elf_header;
@@ -204,6 +207,8 @@ LM_ADDR_CHECK (struct so_list *so, bfd *abfd)
 	      for (i = 0; i < ehdr->e_phnum; i++)
 		if (phdr[i].p_type == PT_LOAD && phdr[i].p_align > align)
 		  align = phdr[i].p_align;
+
+	      minpagesize = get_elf_backend_data (abfd)->minpagesize;
 	    }
 
 	  /* Turn it into a mask.  */
@@ -217,15 +222,33 @@ LM_ADDR_CHECK (struct so_list *so, bfd *abfd)
 	     location, or anything, really.  To avoid regressions,
 	     don't adjust the base offset in the latter case, although
 	     odds are that, if things really changed, debugging won't
-	     quite work.  */
-	  if ((l_addr & align) == ((l_dynaddr - dynaddr) & align))
+	     quite work.
+
+	     One could expect more the condition
+	       ((l_addr & align) == 0 && ((l_dynaddr - dynaddr) & align) == 0)
+	     but the one below is relaxed for PPC.  The PPC kernel supports
+	     either 4k or 64k page sizes.  To be prepared for 64k pages,
+	     PPC ELF files are built using an alignment requirement of 64k.
+	     However, when running on a kernel supporting 4k pages, the memory
+	     mapping of the library may not actually happen on a 64k boundary!
+
+	     (In the usual case where (l_addr & align) == 0, this check is
+	     equivalent to the possibly expected check above.)
+
+	     Even on PPC it must be zero-aligned at least for MINPAGESIZE.  */
+
+	  if ((l_addr & (minpagesize - 1)) == 0
+	      && (l_addr & align) == ((l_dynaddr - dynaddr) & align))
 	    {
 	      l_addr = l_dynaddr - dynaddr;
 
-	      warning (_(".dynamic section for \"%s\" "
-		     "is not at the expected address"), so->so_name);
-	      warning (_("difference appears to be caused by prelink, "
-			 "adjusting expectations"));
+	      if (info_verbose)
+		{
+		  warning (_(".dynamic section for \"%s\" "
+			     "is not at the expected address"), so->so_name);
+		  warning (_("difference appears to be caused by prelink, "
+			     "adjusting expectations"));
+		}
 	    }
 	  else
 	    warning (_(".dynamic section for \"%s\" "
@@ -1292,10 +1315,6 @@ enable_break (struct svr4_info *info, int from_tty)
   gdb_byte *interp_name;
   CORE_ADDR sym_addr;
 
-  /* First, remove all the solib event breakpoints.  Their addresses
-     may have changed since the last time we ran the program.  */
-  remove_solib_event_breakpoints ();
-
   info->interp_text_sect_low = info->interp_text_sect_high = 0;
   info->interp_plt_sect_low = info->interp_plt_sect_high = 0;
 
@@ -1317,6 +1336,25 @@ enable_break (struct svr4_info *info, int from_tty)
 	(target_gdbarch, gdbarch_convert_from_func_ptr_addr (target_gdbarch,
 							      sym_addr,
 							      &current_target));
+
+      /* On at least some versions of Solaris there's a dynamic relocation
+	 on _r_debug.r_brk and SYM_ADDR may not be relocated yet, e.g., if
+	 we get control before the dynamic linker has self-relocated.
+	 Check if SYM_ADDR is in a known section, if it is assume we can
+	 trust its value.  This is just a heuristic though, it could go away
+	 or be replaced if it's getting in the way.
+
+	 On ARM we need to know whether the ISA of rtld_db_dlactivity (or
+	 however it's spelled in your particular system) is ARM or Thumb.
+	 That knowledge is encoded in the address, if it's Thumb the low bit
+	 is 1.  However, we've stripped that info above and it's not clear
+	 what all the consequences are of passing a non-addr_bits_remove'd
+	 address to create_solib_event_breakpoint.  The call to
+	 find_pc_section verifies we know about the address and have some
+	 hope of computing the right kind of breakpoint to use (via
+	 symbol info).  It does mean that GDB needs to be pointed at a
+	 non-stripped version of the dynamic linker in order to obtain
+	 information it already knows about.  Sigh.  */
 
       os = find_pc_section (sym_addr);
       if (os != NULL)
@@ -1409,7 +1447,32 @@ enable_break (struct svr4_info *info, int from_tty)
          from our so_list, then try using the AT_BASE auxilliary entry.  */
       if (!load_addr_found)
         if (target_auxv_search (&current_target, AT_BASE, &load_addr) > 0)
-          load_addr_found = 1;
+	  {
+	    int addr_bit = gdbarch_addr_bit (target_gdbarch);
+
+	    /* Ensure LOAD_ADDR has proper sign in its possible upper bits so
+	       that `+ load_addr' will overflow CORE_ADDR width not creating
+	       invalid addresses like 0x101234567 for 32bit inferiors on 64bit
+	       GDB.  */
+
+	    if (addr_bit < (sizeof (CORE_ADDR) * HOST_CHAR_BIT))
+	      {
+		CORE_ADDR space_size = (CORE_ADDR) 1 << addr_bit;
+		CORE_ADDR tmp_entry_point = exec_entry_point (tmp_bfd,
+							      tmp_bfd_target);
+
+		gdb_assert (load_addr < space_size);
+
+		/* TMP_ENTRY_POINT exceeding SPACE_SIZE would be for prelinked
+		   64bit ld.so with 32bit executable, it should not happen.  */
+
+		if (tmp_entry_point < space_size
+		    && tmp_entry_point + load_addr >= space_size)
+		  load_addr -= space_size;
+	      }
+
+	    load_addr_found = 1;
+	  }
 
       /* Otherwise we find the dynamic linker's base address by examining
 	 the current pc (which should point at the entry point for the

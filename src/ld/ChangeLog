@@ -1,3 +1,89 @@
+2010-02-25  Alan Modra  <amodra@gmail.com>
+
+	PR ld/11304
+	* ldlang.c (init_os): Remove isec param.  Don't check for
+	bfd_section already set or call bfd_init_private_section_data
+	here.
+	(exp_init_os): Update init_os call.
+	(lang_add_section): Tidy.  Really don't set SEC_LINK_ONCE
+	flags.  Call bfd_init_private_section_data here.
+	(map_input_to_output_sections): Tidy.  Update init_os calls.
+	Use os->sectype to select sec flags for lang_data_statement.
+
+2010-02-23  Alan Modra  <amodra@gmail.com>
+
+	PR ld/11304
+	* ldlang.c: Revert last patch.
+
+2010-02-23  Nick Clifton  <nickc@redhat.com>
+
+	* po/bg.po: Updated Bulgarian translation.
+
+2010-02-22  Alan Modra  <amodra@gmail.com>
+
+	PR ld/11304
+	* ldlang.c (exp_init_os): Delete forward declaration.
+	(init_os): Don't check for bfd_section already created and don't
+	init addr_tree and load_base expressions here.
+	(map_input_to_output_sections): Only map input to output sections
+	and set constraints here, and as an exception, create output
+	sections which have their address set.  Move all the other code to..
+	(create_other_output_sections): ..here.  New function.  Handle init
+	of addr_tree and load_base here too.
+	(lang_process): Call create_other_output_sections.
+
+2010-02-19  Alan Modra  <amodra@gmail.com>
+
+	* Makefile.am (eelf32_i960.c): Depend on ELF_GEN_DEPS, not ELF_DEPS.
+	* Makefile.in: Regenerate.
+
+2010-02-19  Alan Modra  <amodra@gmail.com>
+
+	* ldlang.c (unique_section_p): Add os param.  Allow group
+	sections to match /DISCARD/.  Update all callers.
+	* emultempl/genelf.em (gld${EMULATION_NAME}_before_allocation): New.
+	(LDEMUL_BEFORE_ALLOCATION): Define.
+
+2010-02-15  Nick Clifton  <nickc@redhat.com>
+
+	* po/vi.po: Updated Vietnamese translation.
+
+2010-02-10  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* Makefile.am (CFILES): Add ldlex-wrapper.c.
+	(OFILES): Replace ldlex.c with ldlex-wrapper.c.
+	(ldlex.o): Replace with...
+	(ldlex-wrapper.o): ...this new rule.
+	(EXTRA_ld_new_SOURCES): Add ldlex.l.
+	(ld_new_SOURCES): Replace ldlex.l with ldlex-wrapper.c.
+	* Makefile.in: Regenerate.
+	* ldlex.l (sysdep.h): Don't include here.
+	* ldlex-wrapper.c: New file.
+
+2010-02-09  Alan Modra  <amodra@gmail.com>
+
+	* emultempl/ppc64elf.em (ppc_before_allocation): Update for changed
+	function parameters.
+
+2010-02-05  Nick Clifton  <nickc@redhat.com>
+
+	* configure.in (ALL_LIBGUAS): Add bg.
+	* configure: Regenerate.
+	* po/bg.po: New Bulgarian translation.
+
+2010-02-05  Ryan Mansfield  <rmansfield@qnx.com>
+
+	* emultempl/armelf.em (PARSE_AND_LIST_OPTIONS): Fix help for
+	--target1-abs and --target1-rel options.
+
+2010-02-03  Nick Clifton  <nickc@redhat.com>
+
+	* emultempl/alphaelf.em: Update value expected from elf_object_id.
+	* emultempl/hppaelf.em: Likewise.
+	* emultempl/mipself.em: Likewise.
+	* emultempl/ppc32elf.em: Likewise.
+	* emultempl/ppc64elf.em: Likewise.
+
 2010-02-03  Alan Modra  <amodra@gmail.com>
 
 	* emultempl/ppc64elf.em (build_toc_list): Report errors from

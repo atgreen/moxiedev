@@ -202,6 +202,26 @@ class Target_i386 : public Target_freebsd<32, false>
 	   const elfcpp::Rel<32, false>& reloc, unsigned int r_type,
 	   Symbol* gsym);
 
+    inline bool
+    local_reloc_may_be_function_pointer(Symbol_table* , Layout* , Target_i386* ,
+		  			Sized_relobj<32, false>* ,
+		  			unsigned int ,
+		  			Output_section* ,
+		  			const elfcpp::Rel<32, false>& ,
+	 				unsigned int ,
+		  			const elfcpp::Sym<32, false>&)
+    { return false; }
+
+    inline bool
+    global_reloc_may_be_function_pointer(Symbol_table* , Layout* ,
+					 Target_i386* ,
+		   			 Sized_relobj<32, false>* ,
+		   			 unsigned int ,
+		   			 Output_section* ,
+		   			 const elfcpp::Rel<32, false>& ,
+					 unsigned int , Symbol*)
+    { return false; }
+
     static void
     unsupported_reloc_local(Sized_relobj<32, false>*, unsigned int r_type);
 
@@ -1609,7 +1629,7 @@ Target_i386::do_finalize_sections(
 				  ? NULL
 				  : this->plt_->rel_plt());
   layout->add_target_dynamic_tags(true, this->got_plt_, rel_plt,
-				  this->rel_dyn_, true);
+				  this->rel_dyn_, true, false);
 
   // Emit any relocs we saved in an attempt to avoid generating COPY
   // relocs.
@@ -1897,10 +1917,9 @@ Target_i386::Relocate::relocate_tls(const Relocate_info<32, false>* relinfo,
 
   elfcpp::Elf_types<32>::Elf_Addr value = psymval->value(object, 0);
 
-  const bool is_final =
-    (gsym == NULL
-     ? !parameters->options().output_is_position_independent()
-     : gsym->final_value_is_known());
+  const bool is_final = (gsym == NULL
+			 ? !parameters->options().shared()
+			 : gsym->final_value_is_known());
   const tls::Tls_optimization optimized_type
       = Target_i386::optimize_tls_reloc(is_final, r_type);
   switch (r_type)

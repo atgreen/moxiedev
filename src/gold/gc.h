@@ -163,44 +163,60 @@ inline void
 gc_process_relocs(
     Symbol_table* symtab,
     Layout*,
-    Target_type* ,
+    Target_type* target,
     Sized_relobj<size, big_endian>* src_obj,
     unsigned int src_indx,
     const unsigned char* prelocs,
     size_t reloc_count,
     Output_section*,
-    bool ,
+    bool,
     size_t local_count,
     const unsigned char* plocal_syms)
 {
   Object *dst_obj;
   unsigned int dst_indx;
+  Scan scan;
 
   typedef typename Reloc_types<sh_type, size, big_endian>::Reloc Reltype;
   const int reloc_size = Reloc_types<sh_type, size, big_endian>::reloc_size;
   const int sym_size = elfcpp::Elf_sizes<size>::sym_size;
 
-  std::vector<Section_id>* secvec = NULL;
-  std::vector<Symbol*>* symvec = NULL;
-  std::vector<std::pair<long long, long long> >* addendvec = NULL;
+  Icf::Sections_reachable_info* secvec = NULL;
+  Icf::Symbol_info* symvec = NULL;
+  Icf::Addend_info* addendvec = NULL;
+  Icf::Offset_info* offsetvec = NULL;
   bool is_icf_tracked = false;
   const char* cident_section_name = NULL;
 
+  std::string src_section_name = (parameters->options().icf_enabled()
+                                  ? src_obj->section_name(src_indx)
+                                  : "");
+
+  bool check_section_for_function_pointers = false;
+
   if (parameters->options().icf_enabled()
-      && is_section_foldable_candidate(src_obj->section_name(src_indx).c_str()))
+      && is_section_foldable_candidate(src_section_name.c_str()))
     {
       is_icf_tracked = true;
       Section_id src_id(src_obj, src_indx);
-      secvec = &symtab->icf()->section_reloc_list()[src_id];
-      symvec = &symtab->icf()->symbol_reloc_list()[src_id];
-      addendvec = &symtab->icf()->addend_reloc_list()[src_id];
+      Icf::Reloc_info* reloc_info =
+        &symtab->icf()->reloc_info_list()[src_id];
+      secvec = &reloc_info->section_info;
+      symvec = &reloc_info->symbol_info;
+      addendvec = &reloc_info->addend_info;
+      offsetvec = &reloc_info->offset_info;
     }
+
+  check_section_for_function_pointers =
+    symtab->icf()->check_section_for_function_pointers(src_section_name,
+                                                       target);
 
   for (size_t i = 0; i < reloc_count; ++i, prelocs += reloc_size)
     {
       Reltype reloc(prelocs);
       typename elfcpp::Elf_types<size>::Elf_WXword r_info = reloc.get_r_info();
       unsigned int r_sym = elfcpp::elf_r_sym<size>(r_info);
+      unsigned int r_type = elfcpp::elf_r_type<size>(r_info);
       typename elfcpp::Elf_types<size>::Elf_Swxword addend =
       Reloc_types<sh_type, size, big_endian>::get_reloc_addend_noerror(&reloc);
 
@@ -224,7 +240,22 @@ gc_process_relocs(
               long long symvalue = static_cast<long long>(lsym.get_st_value());
               (*addendvec).push_back(std::make_pair(symvalue,
                                               static_cast<long long>(addend)));
+              uint64_t reloc_offset =
+                convert_to_section_size_type(reloc.get_r_offset());
+	      (*offsetvec).push_back(reloc_offset);
             }
+
+	  // When doing safe folding, check to see if this relocation is that
+	  // of a function pointer being taken.
+	  if (check_section_for_function_pointers
+              && lsym.get_st_type() != elfcpp::STT_OBJECT
+ 	      && scan.local_reloc_may_be_function_pointer(symtab, NULL, NULL,
+							  src_obj, src_indx,
+			                       		  NULL, reloc, r_type,
+							  lsym))
+            symtab->icf()->set_section_has_function_pointers(
+              src_obj, lsym.get_st_shndx());
+
           if (shndx == src_indx)
             continue;
         }
@@ -239,9 +270,21 @@ gc_process_relocs(
           bool is_ordinary;
           dst_obj = gsym->object();
           dst_indx = gsym->shndx(&is_ordinary);
+          Section_id dst_id(dst_obj, dst_indx);
+
+	  // When doing safe folding, check to see if this relocation is that
+	  // of a function pointer being taken.
+	  if (check_section_for_function_pointers
+              && gsym->type() != elfcpp::STT_OBJECT
+              && (!is_ordinary
+                  || scan.global_reloc_may_be_function_pointer(
+                       symtab, NULL, NULL, src_obj, src_indx, NULL, reloc,
+                       r_type, gsym)))
+            symtab->icf()->set_section_has_function_pointers(dst_obj, dst_indx);
+
           if (!is_ordinary)
             continue;
-          Section_id dst_id(dst_obj, dst_indx);
+
           // If the symbol name matches '__start_XXX' then the section with
           // the C identifier like name 'XXX' should not be garbage collected.
           // A similar treatment to symbols with the name '__stop_XXX'.
@@ -265,7 +308,10 @@ gc_process_relocs(
                         static_cast<long long>(sized_gsym->value());
               (*addendvec).push_back(std::make_pair(symvalue,
                                         static_cast<long long>(addend)));
-            }
+              uint64_t reloc_offset =
+                convert_to_section_size_type(reloc.get_r_offset());
+	      (*offsetvec).push_back(reloc_offset);
+	    }
         }
       if (parameters->options().gc_sections())
         {

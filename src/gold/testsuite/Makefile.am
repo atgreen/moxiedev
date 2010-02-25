@@ -170,14 +170,28 @@ icf_keep_unique_test.stdout: icf_keep_unique_test
 	$(TEST_NM) -C icf_keep_unique_test > icf_keep_unique_test.stdout
 
 check_SCRIPTS += icf_safe_test.sh
-check_DATA += icf_safe_test.stdout
+check_DATA += icf_safe_test_1.stdout icf_safe_test_2.stdout
 MOSTLYCLEANFILES += icf_safe_test
-icf_safe_test.o: icf_safe_test.cc 
+icf_safe_test.o: icf_safe_test.cc
 	$(CXXCOMPILE) -O0 -c -ffunction-sections -g -o $@ $<
 icf_safe_test: icf_safe_test.o gcctestdir/ld
 	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=safe icf_safe_test.o
-icf_safe_test.stdout: icf_safe_test
-	$(TEST_NM) icf_safe_test > icf_safe_test.stdout
+icf_safe_test_1.stdout: icf_safe_test
+	$(TEST_NM) icf_safe_test > icf_safe_test_1.stdout
+icf_safe_test_2.stdout: icf_safe_test
+	$(TEST_READELF) -h icf_safe_test > icf_safe_test_2.stdout
+
+check_SCRIPTS += icf_safe_so_test.sh
+check_DATA += icf_safe_so_test_1.stdout icf_safe_so_test_2.stdout
+MOSTLYCLEANFILES += icf_safe_so_test
+icf_safe_so_test.o: icf_safe_so_test.cc
+	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
+icf_safe_so_test: icf_safe_so_test.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=safe icf_safe_so_test.o -fPIC -shared
+icf_safe_so_test_1.stdout: icf_safe_so_test
+	$(TEST_NM) icf_safe_so_test > icf_safe_so_test_1.stdout
+icf_safe_so_test_2.stdout: icf_safe_so_test
+	$(TEST_READELF) -h icf_safe_so_test > icf_safe_so_test_2.stdout
 
 check_PROGRAMS += basic_test
 check_PROGRAMS += basic_static_test
@@ -588,6 +602,8 @@ if TLS
 
 check_PROGRAMS += tls_test
 check_PROGRAMS += tls_pic_test
+check_PROGRAMS += tls_pie_test
+check_PROGRAMS += tls_pie_pic_test
 check_PROGRAMS += tls_shared_test
 check_PROGRAMS += tls_shared_ie_test
 check_PROGRAMS += tls_shared_gd_to_ie_test
@@ -624,6 +640,22 @@ tls_pic_test_DEPENDENCIES = gcctestdir/ld tls_test_pic.o tls_test_file2_pic.o \
 tls_pic_test_LDFLAGS = -Bgcctestdir/
 tls_pic_test_LDADD = tls_test_pic.o tls_test_file2_pic.o tls_test_c_pic.o \
 	-lpthread
+
+tls_test_main_pie.o: tls_test_main.cc tls_test.h
+	$(CXXCOMPILE) -c -fpie -o $@ $<
+tls_test_pie.o: tls_test.cc tls_test.h
+	$(CXXCOMPILE) -c -fpie -o $@ $<
+tls_test_file2_pie.o: tls_test_file2.cc tls_test.h
+	$(CXXCOMPILE) -c -fpie -o $@ $<
+tls_test_c_pie.o: tls_test_c.c
+	$(COMPILE) -c -fpic $(TLS_TEST_C_CFLAGS) -o $@ $<
+tls_pie_test: tls_test_main_pie.o tls_test_pie.o tls_test_file2_pie.o \
+		tls_test_c_pie.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -pie tls_test_main_pie.o tls_test_pie.o tls_test_file2_pie.o tls_test_c_pie.o -lpthread
+
+tls_pie_pic_test: tls_test_main_pie.o tls_test_pic.o tls_test_file2_pic.o \
+		tls_test_c_pic.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -pie tls_test_main_pie.o tls_test_pic.o tls_test_file2_pic.o tls_test_c_pic.o -lpthread
 
 tls_shared_test_SOURCES = tls_test_main.cc
 tls_shared_test_DEPENDENCIES = gcctestdir/ld tls_test_shared.so
@@ -1417,3 +1449,84 @@ MOSTLYCLEANFILES += split_x86_64_1 split_x86_64_2 split_x86_64_3 \
 	split_x86_64_4 split_x86_64_r
 
 endif DEFAULT_TARGET_X86_64
+
+if DEFAULT_TARGET_ARM
+
+check_SCRIPTS += arm_abs_global.sh
+check_DATA += arm_abs_global.stdout
+arm_abs_lib.o: arm_abs_lib.s
+	$(TEST_AS) -march=armv7-a -o $@ $<
+libarm_abs.so: arm_abs_lib.o
+	../ld-new -shared -o $@ arm_abs_lib.o
+arm_abs_global.o: arm_abs_global.s
+	$(TEST_AS) -march=armv7-a -o $@ $<
+arm_abs_global: arm_abs_global.o libarm_abs.so
+	../ld-new -o $@ arm_abs_global.o -L. -larm_abs
+arm_abs_global.stdout: arm_abs_global
+	$(TEST_READELF) -r $< > $@
+
+MOSTLYCLEANFILES += arm_abs_global
+
+check_SCRIPTS += arm_branch_in_range.sh
+check_DATA += arm_bl_in_range.stdout arm_bl_out_of_range.stdout \
+	thumb_bl_in_range.stdout thumb_bl_out_of_range.stdout \
+	thumb2_bl_in_range.stdout thumb2_bl_out_of_range.stdout
+
+arm_bl_in_range.stdout: arm_bl_in_range
+	$(TEST_OBJDUMP) -D $< > $@
+
+arm_bl_in_range: arm_bl_in_range.o
+	../ld-new -T $(srcdir)/arm_branch_range.t -o $@ $<
+
+arm_bl_in_range.o: arm_bl_in_range.s
+	$(TEST_AS) -o $@ $<
+
+arm_bl_out_of_range.stdout: arm_bl_out_of_range
+	$(TEST_OBJDUMP) -S $< > $@
+
+arm_bl_out_of_range: arm_bl_out_of_range.o
+	../ld-new -T $(srcdir)/arm_branch_range.t -o $@ $<
+
+arm_bl_out_of_range.o: arm_bl_out_of_range.s
+	$(TEST_AS) -o $@ $<
+
+thumb_bl_in_range.stdout: thumb_bl_in_range
+	$(TEST_OBJDUMP) -D $< > $@
+
+thumb_bl_in_range: thumb_bl_in_range.o
+	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+
+thumb_bl_in_range.o: thumb_bl_in_range.s
+	$(TEST_AS) -o $@ -march=armv5te $<
+
+thumb_bl_out_of_range.stdout: thumb_bl_out_of_range
+	$(TEST_OBJDUMP) -D $< > $@
+
+thumb_bl_out_of_range: thumb_bl_in_range.o
+	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+
+thumb_bl_out_of_range.o: thumb_bl_in_range.s
+	$(TEST_AS) -o $@ -march=armv5te $<
+
+thumb2_bl_in_range.stdout: thumb2_bl_in_range
+	$(TEST_OBJDUMP) -D $< > $@
+
+thumb2_bl_in_range: thumb2_bl_in_range.o
+	../ld-new -T $(srcdir)/thumb2_branch_range.t -o $@ $<
+
+thumb2_bl_in_range.o: thumb_bl_in_range.s
+	$(TEST_AS) -o $@ -march=armv7-a $<
+
+thumb2_bl_out_of_range.stdout: thumb2_bl_out_of_range
+	$(TEST_OBJDUMP) -D $< > $@
+
+thumb2_bl_out_of_range: thumb2_bl_in_range.o
+	../ld-new -T $(srcdir)/thumb2_branch_range.t -o $@ $<
+
+thumb2_bl_out_of_range.o: thumb_bl_in_range.s
+	$(TEST_AS) -o $@ -march=armv7-a $<
+
+MOSTLYCLEANFILES += arm_bl_in_range arm_bl_out_of_range thumb_bl_in_range \
+	thumb_bl_out_of_range thumb2_bl_in_range thumb2_bl_out_of_range
+
+endif DEFAULT_TARGET_ARM

@@ -1,3 +1,189 @@
+2010-02-24  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* Makefile.in: Add py-block and py-symbol.
+	* gdb.python/py-symbol.exp: New File.
+	* gdb.python/py-symtab.exp: New File.
+	* gdb.python/py-block.exp: New File.
+	* gdb.python/py-symbol.c: New File.
+	* gdb.python/py-block.c: New File.
+
+2010-02-24  Phil Muldoon  <pmuldoon@redhat.com>
+
+	PR python/11314
+	* lib/gdb.exp (skip_python_tests): New function.
+	* gdb.python/py-cmd.exp: Use skip_python_tests.
+	* gdb.python/py-frame.exp: Likewise.
+	* gdb.python/py-function.exp: Likewise.
+	* gdb.python/py-prettyprint.exp: Likewise.
+	* gdb.python/py-template.exp: Likewise.
+	* gdb.python/py-type.exp: Likewise.
+	* gdb.python/py-value.exp: Likewise.
+
+2010-02-22  Pedro Alves  <pedro@codesourcery.com>
+
+	PR9605
+
+	* gdb.base/watch-read.c, gdb.base/watch-read.exp: New files.
+
+2010-02-19  Tom Tromey  <tromey@redhat.com>
+
+	PR c++/8693, PR c++/9496:
+	* gdb.cp/namespace.exp: Remove some setup_kfail calls.  Added
+	regression tests.
+
+2010-02-19  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Fix compatibility with m68k as.
+	* gdb.dwarf2/member-ptr-forwardref.S: Use .data section.  Use .2byte.
+	Use only /* comments */.
+
+2010-02-18  Ulrich Weigand  <Ulrich.Weigand@de.ibm.com>
+
+	* configure.ac: Add gdb.multi/Makefile to AC_OUTPUT.
+	* configure: Regenerate.
+
+2010-02-18  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.python/py-type.exp: Check for Python support.
+
+2010-02-17  Pedro Alves  <pedro@codesourcery.com>
+
+	* lib/gdb.exp (build_id_debug_filename_get): Don't assume new
+	`regsub' syntax available.
+
+2010-02-17  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.base/shmain.c (main): Remove printf call.
+	* gdb.base/sizeof.c (main): Cast return of sizeof to int.
+	* gdb.base/unload.c (main): Make format of fprintf a string
+	literal.  Add missing endlines to prints to stderr.
+	* gdb.base/watchpoint-solib.c (open_shlib): Ditto.
+
+2010-02-17  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.java/jprint.java (jprint.props): New field.
+	* gdb.java/jprint.exp (set_lang_java): Add regression test.
+
+2010-02-17  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.base/charset.exp: Don't assume new `regsub' syntax
+	available.
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.xml/tdesc-arch.exp, gdb.xml/tdesc-regs.exp: Rewrite file
+	creation to support remote host testing.
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.base/valgrind-db-attach.exp: Use unsupported instead of xfail.
+	Recognize "command not found".
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.arch/thumb2-it.exp (test_it_break): Handle hardware
+	single-stepping.
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.python/py-value.exp (test_value_in_inferior): Skip arg0 test
+	if arguments are not supported.
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.cp/overload.exp: Allow foo::overload1arg's "this" pointer to
+	be const or non-const.
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.mi/mi-break.exp (test_breakpoint_commands): Use
+	mi_send_resuming_command to send -exec-continue.
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.base/list.exp (test_list_filename_and_function): Add test
+	with single quotes.
+	* gdb.cp/overload.cc (intToChar): Rewrite onto one line for easy
+	matching.
+	* gdb.cp/overload.exp: Add tests with filename, function, and quotes.
+	Add KFAIL'd tests for PR gdb/11289.
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.cp/cpcompletion.exp: Specify source file name explicitly.
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.base/comp-dir/subdir/dummy.txt: New file.
+	* gdb.base/completion.exp: Use comp-dir/subdir instead of creating
+	a temporary directory.
+
+2010-02-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.base/charset.exp: Use a single regular expression to match
+	show host-charset and show target-charset output.
+
+2010-02-15  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/attach.exp (attach to nonsense is prohibited): Make the
+	"Illegal process-id" expect string more exact.
+	(attach to digits-starting nonsense is prohibited): New.
+
+2010-02-13  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/prelink.exp (set verbose on): New.
+
+2010-02-12  Tomas Holmberg <th@virtutech.com>
+
+	* mi-reverse.exp: New file. Test for reverse option to the
+	following MI commands: exec-continue, exec-finish, exec-next,
+	exec-step, exec-next-instruction, exec-step-instruction.
+	
+2010-02-09  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.ada/ptype_tagged_param: New testcase.
+
+2010-02-08  Tom Tromey  <tromey@redhat.com>
+
+	PR c++/8017:
+	* gdb.cp/overload.exp: Add tests.
+	* gdb.cp/overload.cc (struct K): New.
+	(namespace N): New.
+	(main): Call new functions.
+	(K::staticoverload): Define.
+
+Mon Feb  8 13:18:22 2010  Chris Moller  <moller@mollerware.com>
+
+	PR gdb/10728
+	* gdb.cp/pr10728-x.h: New file.
+	* gdb.cp/pr10728-x.cc: New file.
+	* gdb.cp/pr10728-y.cc: New file.
+	* gdb.cp/pr10728.exp: New file.
+	* gdb.cp/Makefile.in (EXECUTABLES): Add pr10728
+
+Mon Feb  8 12:54:54 2010  Chris Moller  <moller@mollerware.com>
+
+	PR gdb/9067
+	* gdb.cp/pr9067.exp:  New
+	* gdb.cp/pr9067.cc:   New
+	* gdb.cp/Makefile.in (EXECUTABLES): Add pr9067
+
+2010-02-08  Joel Brobecker  <brobecker@adacore.com>
+
+	* lib/gdb.exp (gdb_test_timeout): New global variable.
+	Set it to timeout if not already set.
+	(gdb_init): Reset the value of timeout to gdb_test_timeout.
+
+2010-02-05  Doug Evans  <dje@google.com>
+
+	* lib/gdb.exp (INTERNAL_GDBFLAGS): Don't override value provided by
+	user.
+
+2010-02-05  Sami Wagiaalla  <swagiaal@redhat.com>
+
+	PR c++/7935:
+	* gdb.cp/namespace-using.exp: Removed kfail; bug has been fixed.
+
 2010-02-04  Tom Tromey  <tromey@redhat.com>
 
 	* gdb.cp/virtbase.exp: Make test case names unique.

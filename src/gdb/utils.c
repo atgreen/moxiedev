@@ -3608,6 +3608,66 @@ compare_positive_ints (const void *ap, const void *bp)
   return * (int *) ap - * (int *) bp;
 }
 
+#define AMBIGUOUS_MESS1	".\nMatching formats:"
+#define AMBIGUOUS_MESS2	".\nUse \"set gnutarget format-name\" to specify the format."
+
+const char *
+gdb_bfd_errmsg (bfd_error_type error_tag, char **matching)
+{
+  char *ret, *retp;
+  int ret_len;
+  char **p;
+
+  /* Check if errmsg just need simple return.  */
+  if (error_tag != bfd_error_file_ambiguously_recognized || matching == NULL)
+    return bfd_errmsg (error_tag);
+
+  ret_len = strlen (bfd_errmsg (error_tag)) + strlen (AMBIGUOUS_MESS1)
+            + strlen (AMBIGUOUS_MESS2);
+  for (p = matching; *p; p++)
+    ret_len += strlen (*p) + 1;
+  ret = xmalloc (ret_len + 1);
+  retp = ret;
+  make_cleanup (xfree, ret);
+
+  strcpy (retp, bfd_errmsg (error_tag));
+  retp += strlen (retp);
+
+  strcpy (retp, AMBIGUOUS_MESS1);
+  retp += strlen (retp);
+
+  for (p = matching; *p; p++)
+    {
+      sprintf (retp, " %s", *p);
+      retp += strlen (retp);
+    }
+  xfree (matching);
+
+  strcpy (retp, AMBIGUOUS_MESS2);
+
+  return ret;
+}
+
+/* Return ARGS parsed as a valid pid, or throw an error.  */
+
+int
+parse_pid_to_attach (char *args)
+{
+  unsigned long pid;
+  char *dummy;
+
+  if (!args)
+    error_no_arg (_("process-id to attach"));
+
+  dummy = args;
+  pid = strtoul (args, &dummy, 0);
+  /* Some targets don't set errno on errors, grrr!  */
+  if ((pid == 0 && dummy == args) || dummy != &args[strlen (args)])
+    error (_("Illegal process-id: %s."), args);
+
+  return pid;
+}
+
 /* Provide a prototype to silence -Wmissing-prototypes.  */
 extern initialize_file_ftype _initialize_utils;
 

@@ -392,17 +392,20 @@ objfile_separate_debug_iterate (const struct objfile *parent,
 {
   struct objfile *res;
 
+  /* If any, return the first child.  */
   res = objfile->separate_debug_objfile;
-  if (res)
-    return res;
-
-  res = objfile->separate_debug_objfile_link;
   if (res)
     return res;
 
   /* Common case where there is no separate debug objfile.  */
   if (objfile == parent)
     return NULL;
+
+  /* Return the brother if any.  Note that we don't iterate on brothers of
+     the parents.  */
+  res = objfile->separate_debug_objfile_link;
+  if (res)
+    return res;
 
   for (res = objfile->separate_debug_objfile_backlink;
        res != parent;
@@ -1501,7 +1504,12 @@ objfiles_changed (void)
 struct bfd *
 gdb_bfd_ref (struct bfd *abfd)
 {
-  int *p_refcount = bfd_usrdata (abfd);
+  int *p_refcount;
+
+  if (abfd == NULL)
+    return NULL;
+
+  p_refcount = bfd_usrdata (abfd);
 
   if (p_refcount != NULL)
     {

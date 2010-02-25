@@ -22,7 +22,8 @@
 
 # The goal of this program is to verify if --icf=safe  works as expected.
 # File icf_safe_test.cc is in this test. This program checks if only
-# ctors and dtors are folded.
+# ctors and dtors are folded, except for x86-64, which uses relocation
+# types to detect if function pointers are taken.
 
 check_nofold()
 {
@@ -46,5 +47,19 @@ check_fold()
     fi
 }
 
-check_nofold icf_safe_test.stdout "kept_func_1" "kept_func_2"
-check_fold   icf_safe_test.stdout "_ZN1AD1Ev" "_ZN1AC1Ev"
+arch_specific_safe_fold()
+{
+    grep_x86_64=`grep -q "Advanced Micro Devices X86-64" $2`
+    if [ $? == 0 ];
+    then
+      check_fold $1 $3 $4
+    else
+      check_nofold $1 $3 $4
+    fi
+}
+
+arch_specific_safe_fold icf_safe_test_1.stdout icf_safe_test_2.stdout \
+ "kept_func_1" "kept_func_2"
+check_fold   icf_safe_test_1.stdout "_ZN1AD1Ev" "_ZN1AC1Ev"
+check_nofold icf_safe_test_1.stdout "kept_func_3" "kept_func_1"
+check_nofold icf_safe_test_1.stdout "kept_func_3" "kept_func_2"

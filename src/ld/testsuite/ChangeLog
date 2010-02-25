@@ -1,10 +1,90 @@
+2010-02-24  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* ld-arm/group-relocs.s: Mark code sections as executable.
+	* ld-arm/arm-elf.exp (armelftests): Only dump executable sections in
+	group-relocs test.
+	* ld-arm/reloc-boundaries.d: Fix test to work on Linux targets.
+
+2010-02-23  Nick Clifton  <nickc@redhat.com>
+
+	* ld-elf/orphan4.d: Allow for other sections to be present in the
+	output.
+
+2010-02-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* ld-ifunc/ifunc.exp: Expect System V OSABI in dynamic
+	ifunc-using executable.
+
+2010-02-19  Alan Modra  <amodra@gmail.com>
+
+	* ld-elf/group.ld: Discard .dropme sections.
+	* ld-elf/group10.d, * ld-elf/group10.s: New test.
+
+2010-02-18  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* ld-arm/attr-merge-6.attr: Add new test.  Missed off last commit.
+
+2010-02-18  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* ld-arm/attr-merge-3.attr: Fix test for new attribute values.
+	* ld-arm/attr-merge-3b.s: Likewise.
+	* ld-arm/attr-merge-unknown-1.d: Fix test now that 42 is a recognised
+	attribute ID.
+	* ld-arm/attr-merge-unknown-1.s: Likewise.
+	* ld-arm/attr-merge-6.attr: New test.
+	* ld-arm/attr-merge-6a.s: Likewise.
+	* ld-arm/attr-merge-6b.s: Likewise.
+	* ld-arm/attr-merge-7.attr: Likewise.
+	* ld-arm/attr-merge-7a.s: Likewise.
+	* ld-arm/attr-merge-7b.s: Likewise.
+	* ld-arm/arm-elf.exp: Run the new tests.
+
+2010-02-15  Matthew Gretton-Dann <matthew.gretton-dann@arm.com>
+
+	* ld-arm/jump-reloc-veneers-long.d: Correct testcase for
+	  arm-none-eabi target.
+	* ld-arm/jump-reloc-veneers-short1.d: Likewise
+	* ld-arm/jump-reloc-veneers-short2.d: Likewise
+
+2010-02-12  Daniel Gutson  <dgutson@codesourcery.com>
+
+	* ld-arm/arm-elf.exp (armelftests): New test case added.
+	* ld-arm/data-only-map.s: New file.
+	* ld-arm/data-only-map.d: New file.
+	* ld-arm/data-only-map.ld: New file.
+
+2010-02-11  David S. Miller  <davem@davemloft.net>
+
+	* ld-sparc/gotop32.s: Add local symbol case.
+	* ld-sparc/gotop64.s: Likewise.
+	* ld-sparc/gotop32.rd: Adjust expected results.
+	* ld-sparc/gotop32.td: Likewise.
+	* ld-sparc/gotop64.dd: Likewise.
+	* ld-sparc/gotop64.rd: Likewise.
+	* ld-sparc/gotop64.td: Likewise.
+
+2010-02-09  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* ld-elfvsb/elfvsb.exp: Fix tests for arm*-*-linux*.
+	* ld-shared/shared.exp: Likewise.
+
+2010-02-08  David S. Miller  <davem@davemloft.net>
+
+	* ld-ifunc/ifunc.exp: Run for sparc.
+
+2010-02-08  Nathan Sidwell  <nathan@codesourcery.com>
+
+	* ld-powerpc/apuinfo-nul.s: New.
+	* ld-powerpc/apuinfo.rd: Add it.
+	* ld-powerpc/powerpc.exp: Likewise.
+
 2010-02-01  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
 
-        * ld-arm/jump-reloc-veneers-long.d: New test.
-        * ld-arm/jump-reloc-veneers-short1.d: Likewise.
-        * ld-arm/jump-reloc-veneers-short2.d: Likewise.
-        * ld-arm/jump-reloc-veneers.s: Likewise.
-        * ld-arm/arm-elf.exp (armelftests): Run them.
+	* ld-arm/jump-reloc-veneers-long.d: New test.
+	* ld-arm/jump-reloc-veneers-short1.d: Likewise.
+	* ld-arm/jump-reloc-veneers-short2.d: Likewise.
+	* ld-arm/jump-reloc-veneers.s: Likewise.
+	* ld-arm/arm-elf.exp (armelftests): Run them.
 
 2010-01-28  Nick Clifton  <nickc@redhat.com>
 

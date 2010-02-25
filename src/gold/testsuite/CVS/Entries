@@ -1,5 +1,3 @@
-/Makefile.am/1.118/Wed Feb  3 12:14:03 2010//
-/Makefile.in/1.124/Wed Feb  3 12:14:04 2010//
 /basic_test.cc/1.3/Thu Jan 28 00:24:33 2010//
 /binary.in/1.1/Thu Jan 28 00:24:33 2010//
 /binary_test.cc/1.1/Thu Jan 28 00:24:33 2010//
@@ -38,8 +36,6 @@
 /hidden_test_main.c/1.1/Thu Jan 28 00:24:33 2010//
 /icf_keep_unique_test.cc/1.1/Thu Jan 28 00:24:33 2010//
 /icf_keep_unique_test.sh/1.1/Thu Jan 28 00:24:33 2010//
-/icf_safe_test.cc/1.1/Thu Jan 28 00:24:33 2010//
-/icf_safe_test.sh/1.1/Thu Jan 28 00:24:33 2010//
 /icf_test.cc/1.1/Thu Jan 28 00:24:33 2010//
 /icf_test.sh/1.1/Thu Jan 28 00:24:33 2010//
 /incremental_test.sh/1.1/Thu Jan 28 00:24:33 2010//
@@ -83,7 +79,6 @@
 /script_test_4.sh/1.2/Thu Jan 28 00:24:33 2010//
 /script_test_4.t/1.1/Thu Jan 28 00:24:33 2010//
 /script_test_5.cc/1.1/Thu Jan 28 00:24:33 2010//
-/script_test_5.sh/1.1/Thu Jan 28 00:24:33 2010//
 /script_test_5.t/1.1/Thu Jan 28 00:24:33 2010//
 /script_test_6.sh/1.1/Thu Jan 28 00:24:33 2010//
 /script_test_6.t/1.1/Thu Jan 28 00:24:33 2010//
@@ -166,4 +161,22 @@
 /weak_undef_file1.cc/1.2/Thu Jan 28 00:24:33 2010//
 /weak_undef_file2.cc/1.2/Thu Jan 28 00:24:33 2010//
 /weak_undef_test.cc/1.2/Thu Jan 28 00:24:33 2010//
+/Makefile.am/1.123/Thu Feb 25 20:31:28 2010//
+/Makefile.in/1.129/Thu Feb 25 20:31:28 2010//
+/arm_abs_global.s/1.1/Fri Feb 12 05:51:32 2010//
+/arm_abs_global.sh/1.1/Fri Feb 12 05:51:32 2010//
+/arm_abs_lib.s/1.1/Fri Feb 12 05:51:32 2010//
+/arm_bl_in_range.s/1.1/Mon Feb 22 06:26:07 2010//
+/arm_bl_out_of_range.s/1.1/Mon Feb 22 06:26:07 2010//
+/arm_branch_in_range.sh/1.1/Mon Feb 22 06:26:07 2010//
+/arm_branch_range.t/1.1/Mon Feb 22 06:26:07 2010//
+/icf_safe_so_test.cc/1.1/Sat Feb 13 02:04:21 2010//
+/icf_safe_so_test.sh/1.1/Sat Feb 13 02:04:21 2010//
+/icf_safe_test.cc/1.2/Thu Feb 25 20:31:28 2010//
+/icf_safe_test.sh/1.2/Thu Feb 25 20:31:28 2010//
+/script_test_5.sh/1.2/Thu Feb 25 20:31:28 2010//
+/thumb2_branch_range.t/1.1/Mon Feb 22 06:26:07 2010//
+/thumb_bl_in_range.s/1.1/Mon Feb 22 06:26:07 2010//
+/thumb_bl_out_of_range.s/1.1/Mon Feb 22 06:26:07 2010//
+/thumb_branch_range.t/1.1/Mon Feb 22 06:26:07 2010//
 D

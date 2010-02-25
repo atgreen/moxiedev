@@ -127,6 +127,9 @@ static int breakpoint_address_match (struct address_space *aspace1,
 				     struct address_space *aspace2,
 				     CORE_ADDR addr2);
 
+static int watchpoint_locations_match (struct bp_location *loc1,
+				       struct bp_location *loc2);
+
 static void breakpoints_info (char *, int);
 
 static void breakpoint_1 (int, int);
@@ -1485,10 +1488,43 @@ Note: automatically using hardware breakpoints for read-only addresses.\n"));
 	      watchpoints.  It's not clear that it's necessary... */
 	   && bpt->owner->disposition != disp_del_at_next_stop)
     {
-      val = target_insert_watchpoint (bpt->address, 
+      val = target_insert_watchpoint (bpt->address,
 				      bpt->length,
 				      bpt->watchpoint_type);
-      bpt->inserted = (val != -1);
+
+      /* If trying to set a read-watchpoint, and it turns out it's not
+	 supported, try emulating one with an access watchpoint.  */
+      if (val == 1 && bpt->watchpoint_type == hw_read)
+	{
+	  struct bp_location *loc, **loc_temp;
+
+	  /* But don't try to insert it, if there's already another
+	     hw_access location that would be considered a duplicate
+	     of this one.  */
+	  ALL_BP_LOCATIONS (loc, loc_temp)
+	    if (loc != bpt
+		&& loc->watchpoint_type == hw_access
+		&& watchpoint_locations_match (bpt, loc))
+	      {
+		bpt->duplicate = 1;
+		bpt->inserted = 1;
+		bpt->target_info = loc->target_info;
+		bpt->watchpoint_type = hw_access;
+		val = 0;
+		break;
+	      }
+
+	  if (val == 1)
+	    {
+	      val = target_insert_watchpoint (bpt->address,
+					      bpt->length,
+					      hw_access);
+	      if (val == 0)
+		bpt->watchpoint_type = hw_access;
+	    }
+	}
+
+      bpt->inserted = (val == 0);
     }
 
   else if (bpt->owner->type == bp_catchpoint)
@@ -2212,13 +2248,31 @@ breakpoint_init_inferior (enum inf_context context)
     switch (b->type)
       {
       case bp_call_dummy:
-      case bp_watchpoint_scope:
 
 	/* If the call dummy breakpoint is at the entry point it will
-	   cause problems when the inferior is rerun, so we better
-	   get rid of it. 
+	   cause problems when the inferior is rerun, so we better get
+	   rid of it.  */
 
-	   Also get rid of scope breakpoints.  */
+      case bp_watchpoint_scope:
+
+	/* Also get rid of scope breakpoints.  */
+
+      case bp_shlib_event:
+
+	/* Also remove solib event breakpoints.  Their addresses may
+	   have changed since the last time we ran the program.
+	   Actually we may now be debugging against different target;
+	   and so the solib backend that installed this breakpoint may
+	   not be used in by the target.  E.g.,
+
+	   (gdb) file prog-linux
+	   (gdb) run               # native linux target
+	   ...
+	   (gdb) kill
+	   (gdb) file prog-win.exe
+	   (gdb) tar rem :9999     # remote Windows gdbserver.
+	*/
+
 	delete_breakpoint (b);
 	break;
 
@@ -3434,11 +3488,67 @@ bpstat_check_watchpoint (bpstat bs)
 	    case WP_VALUE_CHANGED:
 	      if (b->type == bp_read_watchpoint)
 		{
-		  /* Don't stop: read watchpoints shouldn't fire if
-		     the value has changed.  This is for targets
-		     which cannot set read-only watchpoints.  */
-		  bs->print_it = print_it_noop;
-		  bs->stop = 0;
+		  /* There are two cases to consider here:
+
+		     1. we're watching the triggered memory for reads.
+		     In that case, trust the target, and always report
+		     the watchpoint hit to the user.  Even though
+		     reads don't cause value changes, the value may
+		     have changed since the last time it was read, and
+		     since we're not trapping writes, we will not see
+		     those, and as such we should ignore our notion of
+		     old value.
+
+		     2. we're watching the triggered memory for both
+		     reads and writes.  There are two ways this may
+		     happen:
+
+		     2.1. this is a target that can't break on data
+		     reads only, but can break on accesses (reads or
+		     writes), such as e.g., x86.  We detect this case
+		     at the time we try to insert read watchpoints.
+
+		     2.2. otherwise, the target supports read
+		     watchpoints, but, the user set an access or write
+		     watchpoint watching the same memory as this read
+		     watchpoint.
+
+		     If we're watching memory writes as well as reads,
+		     ignore watchpoint hits when we find that the
+		     value hasn't changed, as reads don't cause
+		     changes.  This still gives false positives when
+		     the program writes the same value to memory as
+		     what there was already in memory (we will confuse
+		     it for a read), but it's much better than
+		     nothing.  */
+
+		  int other_write_watchpoint = 0;
+
+		  if (bl->watchpoint_type == hw_read)
+		    {
+		      struct breakpoint *other_b;
+
+		      ALL_BREAKPOINTS (other_b)
+			if ((other_b->type == bp_hardware_watchpoint
+			     || other_b->type == bp_access_watchpoint)
+			    && (other_b->watchpoint_triggered
+				== watch_triggered_yes))
+			  {
+			    other_write_watchpoint = 1;
+			    break;
+			  }
+		    }
+
+		  if (other_write_watchpoint
+		      || bl->watchpoint_type == hw_access)
+		    {
+		      /* We're watching the same memory for writes,
+			 and the value changed since the last time we
+			 updated it, so this trap must be for a write.
+			 Ignore it.  */
+		      bs->print_it = print_it_noop;
+		      bs->stop = 0;
+		    }
 		}
 	      break;
 	    case WP_VALUE_NOT_CHANGED:
@@ -4697,6 +4807,12 @@ breakpoint_address_is_meaningful (struct breakpoint *bpt)
 static int
 watchpoint_locations_match (struct bp_location *loc1, struct bp_location *loc2)
 {
+  /* Note that this checks the owner's type, not the location's.  In
+     case the target does not support read watchpoints, but does
+     support access watchpoints, we'll have bp_read_watchpoint
+     watchpoints with hw_access locations.  Those should be considered
+     duplicates of hw_read locations.  The hw_read locations will
+     become hw_access locations later.  */
   return (loc1->owner->type == loc2->owner->type
 	  && loc1->pspace->aspace == loc2->pspace->aspace
 	  && loc1->address == loc2->address
@@ -4812,8 +4928,6 @@ allocate_bp_location (struct breakpoint *bpt)
   switch (bpt->type)
     {
     case bp_breakpoint:
-    case bp_tracepoint:
-    case bp_fast_tracepoint:
     case bp_until:
     case bp_finish:
     case bp_longjmp:
@@ -4838,6 +4952,8 @@ allocate_bp_location (struct breakpoint *bpt)
       break;
     case bp_watchpoint:
     case bp_catchpoint:
+    case bp_tracepoint:
+    case bp_fast_tracepoint:
       loc->loc_type = bp_loc_other;
       break;
     default:
@@ -6722,17 +6838,16 @@ find_condition_and_thread (char *tok, CORE_ADDR pc,
     }
 }
 
-/* Set a breakpoint.  This function is shared between
-   CLI and MI functions for setting a breakpoint.
-   This function has two major modes of operations,
-   selected by the PARSE_CONDITION_AND_THREAD parameter.
-   If non-zero, the function will parse arg, extracting
-   breakpoint location, address and thread. Otherwise,
-   ARG is just the location of breakpoint, with condition
-   and thread specified by the COND_STRING and THREAD
-   parameters.  */
+/* Set a breakpoint.  This function is shared between CLI and MI
+   functions for setting a breakpoint.  This function has two major
+   modes of operations, selected by the PARSE_CONDITION_AND_THREAD
+   parameter.  If non-zero, the function will parse arg, extracting
+   breakpoint location, address and thread. Otherwise, ARG is just the
+   location of breakpoint, with condition and thread specified by the
+   COND_STRING and THREAD parameters.  Returns true if any breakpoint
+   was created; false otherwise.  */
 
-static void
+static int
 break_command_really (struct gdbarch *gdbarch,
 		      char *arg, char *cond_string, int thread,
 		      int parse_condition_and_thread,
@@ -6793,7 +6908,7 @@ break_command_really (struct gdbarch *gdbarch,
 	     selects no, then simply return the error code.  */
 	  if (pending_break_support == AUTO_BOOLEAN_AUTO
 	      && !nquery ("Make breakpoint pending on future shared library load? "))
-	    return;
+	    return 0;
 
 	  /* At this point, either the user was queried about setting
 	     a pending breakpoint and selected yes, or pending
@@ -6811,7 +6926,7 @@ break_command_really (struct gdbarch *gdbarch,
 	}
     default:
       if (!sals.nelts)
-	return;
+	return 0;
     }
 
   /* Create a chain of things that always need to be cleaned up. */
@@ -6923,6 +7038,8 @@ break_command_really (struct gdbarch *gdbarch,
 
   /* error call may happen here - have BKPT_CHAIN already discarded.  */
   update_global_location_list (1);
+
+  return 1;
 }
 
 /* Set a breakpoint. 
@@ -8458,6 +8575,16 @@ update_global_location_list (int should_insert)
 			  /* For the sake of should_be_inserted.
 			     Duplicates check below will fix up this later.  */
 			  loc2->duplicate = 0;
+
+			  /* Read watchpoint locations are switched to
+			     access watchpoints, if the former are not
+			     supported, but the latter are.  */
+			  if (is_hardware_watchpoint (old_loc->owner))
+			    {
+			      gdb_assert (is_hardware_watchpoint (loc2->owner));
+			      loc2->watchpoint_type = old_loc->watchpoint_type;
+			    }
+
 			  if (loc2 != old_loc && should_be_inserted (loc2))
 			    {
 			      loc2->inserted = 1;
@@ -8574,7 +8701,8 @@ update_global_location_list (int should_insert)
 	  || b->enable_state == bp_startup_disabled
 	  || !loc->enabled
 	  || loc->shlib_disabled
-	  || !breakpoint_address_is_meaningful (b))
+	  || !breakpoint_address_is_meaningful (b)
+	  || tracepoint_type (b))
 	continue;
 
       /* Permanent breakpoint should always be inserted.  */
@@ -8690,6 +8818,16 @@ delete_breakpoint (struct breakpoint *bpt)
      references were extent.  A cheaper bandaid was chosen.  */
   if (bpt->type == bp_none)
     return;
+
+  /* At least avoid this stale reference until the reference counting of
+     breakpoints gets resolved.  */
+  if (bpt->related_breakpoint != NULL)
+    {
+      gdb_assert (bpt->related_breakpoint->related_breakpoint == bpt);
+      bpt->related_breakpoint->disposition = disp_del_at_next_stop;
+      bpt->related_breakpoint->related_breakpoint = NULL;
+      bpt->related_breakpoint = NULL;
+    }
 
   observer_notify_breakpoint_deleted (bpt->number);
 
@@ -9779,33 +9917,33 @@ set_tracepoint_count (int num)
 void
 trace_command (char *arg, int from_tty)
 {
-  break_command_really (get_current_arch (),
-			arg,
-			NULL, 0, 1 /* parse arg */,
-			0 /* tempflag */, 0 /* hardwareflag */,
-			1 /* traceflag */,
-			0 /* Ignore count */,
-			pending_break_support, 
-			NULL,
-			from_tty,
-			1 /* enabled */);
-  set_tracepoint_count (breakpoint_count);
+  if (break_command_really (get_current_arch (),
+			    arg,
+			    NULL, 0, 1 /* parse arg */,
+			    0 /* tempflag */, 0 /* hardwareflag */,
+			    1 /* traceflag */,
+			    0 /* Ignore count */,
+			    pending_break_support,
+			    NULL,
+			    from_tty,
+			    1 /* enabled */))
+    set_tracepoint_count (breakpoint_count);
 }
 
 void
 ftrace_command (char *arg, int from_tty)
 {
-  break_command_really (get_current_arch (),
-			arg, 
-			NULL, 0, 1 /* parse arg */,
-			0 /* tempflag */, 1 /* hardwareflag */,
-			1 /* traceflag */,
-			0 /* Ignore count */,
-			pending_break_support, 
-			NULL,
-			from_tty,
-			1 /* enabled */);
-  set_tracepoint_count (breakpoint_count);
+  if (break_command_really (get_current_arch (),
+			    arg,
+			    NULL, 0, 1 /* parse arg */,
+			    0 /* tempflag */, 1 /* hardwareflag */,
+			    1 /* traceflag */,
+			    0 /* Ignore count */,
+			    pending_break_support,
+			    NULL,
+			    from_tty,
+			    1 /* enabled */))
+    set_tracepoint_count (breakpoint_count);
 }
 
 /* Given information about a tracepoint as recorded on a target (which
@@ -9819,24 +9957,27 @@ create_tracepoint_from_upload (struct uploaded_tp *utp)
 {
   char buf[100];
   struct breakpoint *tp;
-  
+
   /* In the absence of a source location, fall back to raw address.  */
   sprintf (buf, "*%s", paddress (get_current_arch(), utp->addr));
 
-  break_command_really (get_current_arch (),
-			buf, 
-			NULL, 0, 1 /* parse arg */,
-			0 /* tempflag */,
-			(utp->type == bp_fast_tracepoint) /* hardwareflag */,
-			1 /* traceflag */,
-			0 /* Ignore count */,
-			pending_break_support, 
-			NULL,
-			0 /* from_tty */,
-			utp->enabled /* enabled */);
+  if (!break_command_really (get_current_arch (),
+			     buf,
+			     NULL, 0, 1 /* parse arg */,
+			     0 /* tempflag */,
+			     (utp->type == bp_fast_tracepoint) /* hardwareflag */,
+			     1 /* traceflag */,
+			     0 /* Ignore count */,
+			     pending_break_support,
+			     NULL,
+			     0 /* from_tty */,
+			     utp->enabled /* enabled */))
+    return NULL;
+
   set_tracepoint_count (breakpoint_count);
   
-    tp = get_tracepoint (tracepoint_count);
+  tp = get_tracepoint (tracepoint_count);
+  gdb_assert (tp != NULL);
 
   if (utp->pass > 0)
     {
@@ -10225,10 +10366,8 @@ add_catch_command (char *name, char *docstring,
 }
 
 static void
-clear_syscall_counts (int pid)
+clear_syscall_counts (struct inferior *inf)
 {
-  struct inferior *inf = find_inferior_pid (pid);
-
   inf->total_syscalls_count = 0;
   inf->any_syscall_count = 0;
   VEC_free (int, inf->syscalls_counts);

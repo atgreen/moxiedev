@@ -419,6 +419,15 @@ char **gdb_buildargv (const char *);
 
 int compare_positive_ints (const void *ap, const void *bp);
 
+/* A wrapper for bfd_errmsg to produce a more helpful error message
+   in the case of bfd_error_file_ambiguously recognized.
+   MATCHING, if non-NULL, is the corresponding argument to
+   bfd_check_format_matches, and will be freed.  */
+
+extern const char *gdb_bfd_errmsg (bfd_error_type error_tag, char **matching);
+
+extern int parse_pid_to_attach (char *args);
+
 /* From demangle.c */
 
 extern void set_demangling_style (char *);
@@ -960,13 +969,12 @@ enum gdb_osabi
   GDB_OSABI_INTERIX,
   GDB_OSABI_HPUX_ELF,
   GDB_OSABI_HPUX_SOM,
-
   GDB_OSABI_QNXNTO,
-
   GDB_OSABI_CYGWIN,
   GDB_OSABI_AIX,
   GDB_OSABI_DICOS,
   GDB_OSABI_DARWIN,
+  GDB_OSABI_SYMBIAN,
 
   GDB_OSABI_INVALID		/* keep this last */
 };

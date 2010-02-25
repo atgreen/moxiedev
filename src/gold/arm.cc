@@ -81,6 +81,12 @@ template<bool big_endian>
 class Arm_relobj;
 
 template<bool big_endian>
+class Arm_relocate_functions;
+
+template<bool big_endian>
+class Arm_output_data_got;
+
+template<bool big_endian>
 class Target_arm;
 
 // For convenience.
@@ -93,6 +99,9 @@ const int32_t THM_MAX_FWD_BRANCH_OFFSET = ((1 << 22) -2 + 4);
 const int32_t THM_MAX_BWD_BRANCH_OFFSET = (-(1 << 22) + 4);
 const int32_t THM2_MAX_FWD_BRANCH_OFFSET = (((1 << 24) - 2) + 4);
 const int32_t THM2_MAX_BWD_BRANCH_OFFSET = (-(1 << 24) + 4);
+
+// Thread Control Block size.
+const size_t ARM_TCB_SIZE = 8;
 
 // The arm target class.
 //
@@ -1315,7 +1324,8 @@ class Arm_output_section : public Output_section
   // is a list of text input sections sorted in ascending order of their
   // output addresses.
   void
-  fix_exidx_coverage(const Text_section_list& sorted_text_section,
+  fix_exidx_coverage(Layout* layout,
+		     const Text_section_list& sorted_text_section,
 		     Symbol_table* symtab);
 
  private:
@@ -1580,6 +1590,11 @@ class Arm_relobj : public Sized_relobj<32, big_endian>
 				    const Relobj::Output_sections&,
 				    const Symbol_table *, const unsigned char*);
 
+  // Whether a section is a scannable text section.
+  bool
+  section_is_scannable(const elfcpp::Shdr<32, big_endian>&, unsigned int,
+		       const Output_section*, const Symbol_table *);
+
   // Whether a section needs to be scanned for the Cortex-A8 erratum.
   bool
   section_needs_cortex_a8_stub_scanning(const elfcpp::Shdr<32, big_endian>&,
@@ -1592,11 +1607,28 @@ class Arm_relobj : public Sized_relobj<32, big_endian>
 				     unsigned int, Output_section*,
 				     Target_arm<big_endian>*);
 
+  // Find the linked text section of an EXIDX section by looking at the
+  // first reloction of the EXIDX section.  PSHDR points to the section
+  // headers of a relocation section and PSYMS points to the local symbols.
+  // PSHNDX points to a location storing the text section index if found.
+  // Return whether we can find the linked section.
+  bool
+  find_linked_text_section(const unsigned char* pshdr,
+			   const unsigned char* psyms, unsigned int* pshndx);
+
+  //
   // Make a new Arm_exidx_input_section object for EXIDX section with
-  // index SHNDX and section header SHDR.
+  // index SHNDX and section header SHDR.  TEXT_SHNDX is the section
+  // index of the linked text section.
   void
   make_exidx_input_section(unsigned int shndx,
-			   const elfcpp::Shdr<32, big_endian>& shdr);
+			   const elfcpp::Shdr<32, big_endian>& shdr,
+			   unsigned int text_shndx);
+
+  // Return the output address of either a plain input section or a
+  // relaxed input section.  SHNDX is the section index.
+  Arm_address
+  simple_input_section_output_address(unsigned int, Output_section*);
 
   typedef std::vector<Stub_table<big_endian>*> Stub_table_list;
   typedef Unordered_map<unsigned int, const Arm_exidx_input_section*>
@@ -1753,6 +1785,144 @@ class Cortex_a8_reloc
   Arm_address destination_;
 };
 
+// Arm_output_data_got class.  We derive this from Output_data_got to add
+// extra methods to handle TLS relocations in a static link.
+
+template<bool big_endian>
+class Arm_output_data_got : public Output_data_got<32, big_endian>
+{
+ public:
+  Arm_output_data_got(Symbol_table* symtab, Layout* layout)
+    : Output_data_got<32, big_endian>(), symbol_table_(symtab), layout_(layout)
+  { }
+
+  // Add a static entry for the GOT entry at OFFSET.  GSYM is a global
+  // symbol and R_TYPE is the code of a dynamic relocation that needs to be
+  // applied in a static link.
+  void
+  add_static_reloc(unsigned int got_offset, unsigned int r_type, Symbol* gsym)
+  { this->static_relocs_.push_back(Static_reloc(got_offset, r_type, gsym)); }
+
+  // Add a static reloc for the GOT entry at OFFSET.  RELOBJ is an object
+  // defining a local symbol with INDEX.  R_TYPE is the code of a dynamic
+  // relocation that needs to be applied in a static link.
+  void
+  add_static_reloc(unsigned int got_offset, unsigned int r_type,
+		   Sized_relobj<32, big_endian>* relobj, unsigned int index)
+  {
+    this->static_relocs_.push_back(Static_reloc(got_offset, r_type, relobj,
+						index));
+  }
+
+  // Add a GOT pair for R_ARM_TLS_GD32.  The creates a pair of GOT entries.
+  // The first one is initialized to be 1, which is the module index for
+  // the main executable and the second one 0.  A reloc of the type
+  // R_ARM_TLS_DTPOFF32 will be created for the second GOT entry and will
+  // be applied by gold.  GSYM is a global symbol.
+  void
+  add_tls_gd32_with_static_reloc(unsigned int got_type, Symbol* gsym);
+
+  // Same as the above but for a local symbol in OBJECT with INDEX.
+  void
+  add_tls_gd32_with_static_reloc(unsigned int got_type,
+				 Sized_relobj<32, big_endian>* object,
+				 unsigned int index);
+
+ protected:
+  // Write out the GOT table.
+  void
+  do_write(Output_file*);
+
+ private:
+  // This class represent dynamic relocations that need to be applied by
+  // gold because we are using TLS relocations in a static link.
+  class Static_reloc
+  {
+   public:
+    Static_reloc(unsigned int got_offset, unsigned int r_type, Symbol* gsym)
+      : got_offset_(got_offset), r_type_(r_type), symbol_is_global_(true)
+    { this->u_.global.symbol = gsym; }
+
+    Static_reloc(unsigned int got_offset, unsigned int r_type,
+	  Sized_relobj<32, big_endian>* relobj, unsigned int index)
+      : got_offset_(got_offset), r_type_(r_type), symbol_is_global_(false)
+    {
+      this->u_.local.relobj = relobj;
+      this->u_.local.index = index;
+    }
+
+    // Return the GOT offset.
+    unsigned int
+    got_offset() const
+    { return this->got_offset_; }
+
+    // Relocation type.
+    unsigned int
+    r_type() const
+    { return this->r_type_; }
+
+    // Whether the symbol is global or not.
+    bool
+    symbol_is_global() const
+    { return this->symbol_is_global_; }
+
+    // For a relocation against a global symbol, the global symbol.
+    Symbol*
+    symbol() const
+    {
+      gold_assert(this->symbol_is_global_);
+      return this->u_.global.symbol;
+    }
+
+    // For a relocation against a local symbol, the defining object.
+    Sized_relobj<32, big_endian>*
+    relobj() const
+    {
+      gold_assert(!this->symbol_is_global_);
+      return this->u_.local.relobj;
+    }
+
+    // For a relocation against a local symbol, the local symbol index.
+    unsigned int
+    index() const
+    {
+      gold_assert(!this->symbol_is_global_);
+      return this->u_.local.index;
+    }
+
+   private:
+    // GOT offset of the entry to which this relocation is applied.
+    unsigned int got_offset_;
+    // Type of relocation.
+    unsigned int r_type_;
+    // Whether this relocation is against a global symbol.
+    bool symbol_is_global_;
+    // A global or local symbol.
+    union
+    {
+      struct
+      {
+	// For a global symbol, the symbol itself.
+	Symbol* symbol;
+      } global;
+      struct
+      {
+	// For a local symbol, the object defining object.
+	Sized_relobj<32, big_endian>* relobj;
+	// For a local symbol, the symbol index.
+	unsigned int index;
+      } local;
+    } u_;
+  };
+
+  // Symbol table of the output object.
+  Symbol_table* symbol_table_;
+  // Layout of the output object.
+  Layout* layout_;
+  // Static relocs to be applied to the GOT.
+  std::vector<Static_reloc> static_relocs_;
+};
+
 // Utilities for manipulating integers of up to 32-bits
 
 namespace utils
@@ -1825,11 +1995,12 @@ class Target_arm : public Sized_target<32, big_endian>
   Target_arm()
     : Sized_target<32, big_endian>(&arm_info),
       got_(NULL), plt_(NULL), got_plt_(NULL), rel_dyn_(NULL),
-      copy_relocs_(elfcpp::R_ARM_COPY), dynbss_(NULL), stub_tables_(),
-      stub_factory_(Stub_factory::get_instance()), may_use_blx_(false),
-      should_force_pic_veneer_(false), arm_input_section_map_(),
-      attributes_section_data_(NULL), fix_cortex_a8_(false),
-      cortex_a8_relocs_info_()
+      copy_relocs_(elfcpp::R_ARM_COPY), dynbss_(NULL), 
+      got_mod_index_offset_(-1U), tls_base_symbol_defined_(false),
+      stub_tables_(), stub_factory_(Stub_factory::get_instance()),
+      may_use_blx_(false), should_force_pic_veneer_(false),
+      arm_input_section_map_(), attributes_section_data_(NULL),
+      fix_cortex_a8_(false), cortex_a8_relocs_info_()
   { }
 
   // Whether we can use BLX.
@@ -1986,6 +2157,11 @@ class Target_arm : public Sized_target<32, big_endian>
   do_is_defined_by_abi(Symbol* sym) const
   { return strcmp(sym->name(), "__tls_get_addr") == 0; }
 
+  // Return whether there is a GOT section.
+  bool
+  has_got_section() const
+  { return this->got_ != NULL; }
+
   // Return the size of the GOT section.
   section_size_type
   got_size()
@@ -2042,10 +2218,6 @@ class Target_arm : public Sized_target<32, big_endian>
     return static_cast<Target_arm<big_endian>*>(
 	     parameters->sized_target<32, big_endian>());
   }
-
-  // Whether relocation type uses LSB to distinguish THUMB addresses.
-  static bool
-  reloc_uses_thumb_bit(unsigned int r_type);
 
   // Whether NAME belongs to a mapping symbol.
   static bool
@@ -2165,6 +2337,25 @@ class Target_arm : public Sized_target<32, big_endian>
 	   const elfcpp::Rel<32, big_endian>& reloc, unsigned int r_type,
 	   Symbol* gsym);
 
+    inline bool
+    local_reloc_may_be_function_pointer(Symbol_table* , Layout* , Target_arm* ,
+  	          			Sized_relobj<32, big_endian>* ,
+        	  			unsigned int ,
+  	          			Output_section* ,
+	          			const elfcpp::Rel<32, big_endian>& ,
+					unsigned int ,
+ 	          			const elfcpp::Sym<32, big_endian>&)
+    { return false; }
+
+    inline bool
+    global_reloc_may_be_function_pointer(Symbol_table* , Layout* , Target_arm* ,
+  	           			 Sized_relobj<32, big_endian>* ,
+	           			 unsigned int ,
+	           			 Output_section* ,
+	           			 const elfcpp::Rel<32, big_endian>& ,
+					 unsigned int , Symbol*)
+    { return false; }
+
    private:
     static void
     unsupported_reloc_local(Sized_relobj<32, big_endian>*,
@@ -2260,46 +2451,15 @@ class Target_arm : public Sized_target<32, big_endian>
 	}
     }
 
-    // Return whether we need to calculate the addressing origin of
-    // the output segment defining the symbol - B(S).
-    static bool
-    reloc_needs_sym_origin(unsigned int r_type)
-    {
-      switch (r_type)
-	{
-	case elfcpp::R_ARM_SBREL32:
-	case elfcpp::R_ARM_BASE_PREL:
-	case elfcpp::R_ARM_BASE_ABS:
-	case elfcpp::R_ARM_LDR_SBREL_11_0_NC:
-	case elfcpp::R_ARM_ALU_SBREL_19_12_NC:
-	case elfcpp::R_ARM_ALU_SBREL_27_20_CK:
-	case elfcpp::R_ARM_SBREL31:
-	case elfcpp::R_ARM_ALU_SB_G0_NC:
-	case elfcpp::R_ARM_ALU_SB_G0:
-	case elfcpp::R_ARM_ALU_SB_G1_NC:
-	case elfcpp::R_ARM_ALU_SB_G1:
-	case elfcpp::R_ARM_ALU_SB_G2:
-	case elfcpp::R_ARM_LDR_SB_G0:
-	case elfcpp::R_ARM_LDR_SB_G1:
-	case elfcpp::R_ARM_LDR_SB_G2:
-	case elfcpp::R_ARM_LDRS_SB_G0:
-	case elfcpp::R_ARM_LDRS_SB_G1:
-	case elfcpp::R_ARM_LDRS_SB_G2:
-	case elfcpp::R_ARM_LDC_SB_G0:
-	case elfcpp::R_ARM_LDC_SB_G1:
-	case elfcpp::R_ARM_LDC_SB_G2:
-	case elfcpp::R_ARM_MOVW_BREL_NC:
-	case elfcpp::R_ARM_MOVT_BREL:
-	case elfcpp::R_ARM_MOVW_BREL:
-	case elfcpp::R_ARM_THM_MOVW_BREL_NC:
-	case elfcpp::R_ARM_THM_MOVT_BREL:
-	case elfcpp::R_ARM_THM_MOVW_BREL:
-	  return true;
+   private:
+    // Do a TLS relocation.
+    inline typename Arm_relocate_functions<big_endian>::Status
+    relocate_tls(const Relocate_info<32, big_endian>*, Target_arm<big_endian>*,
+                 size_t, const elfcpp::Rel<32, big_endian>&, unsigned int,
+		 const Sized_symbol<32>*, const Symbol_value<32>*,
+		 unsigned char*, elfcpp::Elf_types<32>::Elf_Addr,
+		 section_size_type);
 
-	default:
-	  return false;
-	}
-    }
   };
 
   // A class which returns the size required for a relocation type,
@@ -2311,8 +2471,13 @@ class Target_arm : public Sized_target<32, big_endian>
     get_size_for_reloc(unsigned int, Relobj*);
   };
 
+  // Adjust TLS relocation type based on the options and whether this
+  // is a local symbol.
+  static tls::Tls_optimization
+  optimize_tls_reloc(bool is_final, int r_type);
+
   // Get the GOT section, creating it if necessary.
-  Output_data_got<32, big_endian>*
+  Arm_output_data_got<big_endian>*
   got_section(Symbol_table*, Layout*);
 
   // Get the GOT PLT section.
@@ -2327,6 +2492,15 @@ class Target_arm : public Sized_target<32, big_endian>
   void
   make_plt_entry(Symbol_table*, Layout*, Symbol*);
 
+  // Define the _TLS_MODULE_BASE_ symbol in the TLS segment.
+  void
+  define_tls_base_symbol(Symbol_table*, Layout*);
+
+  // Create a GOT entry for the TLS module index.
+  unsigned int
+  got_mod_index_entry(Symbol_table* symtab, Layout* layout,
+		      Sized_relobj<32, big_endian>* object);
+
   // Get the PLT section.
   const Output_data_plt_arm<big_endian>*
   plt_section() const
@@ -2338,6 +2512,10 @@ class Target_arm : public Sized_target<32, big_endian>
   // Get the dynamic reloc section, creating it if necessary.
   Reloc_section*
   rel_dyn_section(Layout*);
+
+  // Get the section to use for TLS_DESC relocations.
+  Reloc_section*
+  rel_tls_desc_section(Layout*) const;
 
   // Return true if the symbol may need a COPY relocation.
   // References from an executable object to non-function symbols
@@ -2453,7 +2631,11 @@ class Target_arm : public Sized_target<32, big_endian>
   // The types of GOT entries needed for this platform.
   enum Got_type
   {
-    GOT_TYPE_STANDARD = 0	// GOT entry for a regular symbol
+    GOT_TYPE_STANDARD = 0,      // GOT entry for a regular symbol
+    GOT_TYPE_TLS_NOFFSET = 1,   // GOT entry for negative TLS offset
+    GOT_TYPE_TLS_OFFSET = 2,    // GOT entry for positive TLS offset
+    GOT_TYPE_TLS_PAIR = 3,      // GOT entry for TLS module/offset pair
+    GOT_TYPE_TLS_DESC = 4       // GOT entry for TLS_DESC pair
   };
 
   typedef typename std::vector<Stub_table<big_endian>*> Stub_table_list;
@@ -2469,7 +2651,7 @@ class Target_arm : public Sized_target<32, big_endian>
 	  Cortex_a8_relocs_info;
 
   // The GOT section.
-  Output_data_got<32, big_endian>* got_;
+  Arm_output_data_got<big_endian>* got_;
   // The PLT section.
   Output_data_plt_arm<big_endian>* plt_;
   // The GOT PLT section.
@@ -2480,6 +2662,10 @@ class Target_arm : public Sized_target<32, big_endian>
   Copy_relocs<elfcpp::SHT_REL, 32, big_endian> copy_relocs_;
   // Space for variables copied with a COPY reloc.
   Output_data_space* dynbss_;
+  // Offset of the GOT entry for the TLS module index.
+  unsigned int got_mod_index_offset_;
+  // True if the _TLS_MODULE_BASE_ symbol has been defined.
+  bool tls_base_symbol_defined_;
   // Vector of Stub_tables created.
   Stub_table_list stub_tables_;
   // Stub factory.
@@ -2999,142 +3185,62 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	    This::STATUS_OVERFLOW : This::STATUS_OKAY);
   }
 
-  // R_ARM_MOVW_ABS_NC: (S + A) | T
-  static inline typename This::Status 
-  movw_abs_nc(unsigned char *view,
-	      const Sized_relobj<32, big_endian>* object,
-	      const Symbol_value<32>* psymval,
-	      Arm_address thumb_bit)
-  {
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Valtype val = elfcpp::Swap<32, big_endian>::readval(wv);
-    Valtype addend =  This::extract_arm_movw_movt_addend(val);
-    Valtype x = psymval->value(object, addend) | thumb_bit;
-    val = This::insert_val_arm_movw_movt(val, x);
-    elfcpp::Swap<32, big_endian>::writeval(wv, val);
-    return This::STATUS_OKAY;
-  }
-
-  // R_ARM_MOVT_ABS: S + A
-  static inline typename This::Status
-  movt_abs(unsigned char *view,
-	   const Sized_relobj<32, big_endian>* object,
-           const Symbol_value<32>* psymval)
-  {
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Valtype val = elfcpp::Swap<32, big_endian>::readval(wv);
-    Valtype addend = This::extract_arm_movw_movt_addend(val);
-    Valtype x = psymval->value(object, addend) >> 16;
-    val = This::insert_val_arm_movw_movt(val, x);
-    elfcpp::Swap<32, big_endian>::writeval(wv, val);
-    return This::STATUS_OKAY;
-  }
-
-  //  R_ARM_THM_MOVW_ABS_NC: S + A | T
-  static inline typename This::Status 
-  thm_movw_abs_nc(unsigned char *view,
-	          const Sized_relobj<32, big_endian>* object,
-	          const Symbol_value<32>* psymval,
-	          Arm_address thumb_bit)
-  {
-    typedef typename elfcpp::Swap<16, big_endian>::Valtype Valtype;
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Reltype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Reltype val = ((elfcpp::Swap<16, big_endian>::readval(wv) << 16)
-		   | elfcpp::Swap<16, big_endian>::readval(wv + 1));
-    Reltype addend = extract_thumb_movw_movt_addend(val);
-    Reltype x = psymval->value(object, addend) | thumb_bit;
-    val = This::insert_val_thumb_movw_movt(val, x);
-    elfcpp::Swap<16, big_endian>::writeval(wv, val >> 16);
-    elfcpp::Swap<16, big_endian>::writeval(wv + 1, val & 0xffff);
-    return This::STATUS_OKAY;
-  }
-
-  //  R_ARM_THM_MOVT_ABS: S + A
-  static inline typename This::Status 
-  thm_movt_abs(unsigned char *view,
-	       const Sized_relobj<32, big_endian>* object,
-	       const Symbol_value<32>* psymval)
-  {
-    typedef typename elfcpp::Swap<16, big_endian>::Valtype Valtype;
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Reltype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Reltype val = ((elfcpp::Swap<16, big_endian>::readval(wv) << 16)
-		   | elfcpp::Swap<16, big_endian>::readval(wv + 1));
-    Reltype addend = This::extract_thumb_movw_movt_addend(val);
-    Reltype x = psymval->value(object, addend) >> 16;
-    val = This::insert_val_thumb_movw_movt(val, x);
-    elfcpp::Swap<16, big_endian>::writeval(wv, val >> 16);
-    elfcpp::Swap<16, big_endian>::writeval(wv + 1, val & 0xffff);
-    return This::STATUS_OKAY;
-  }
-
+  // R_ARM_MOVW_ABS_NC: (S + A) | T	(relative address base is )
   // R_ARM_MOVW_PREL_NC: (S + A) | T - P
-  // R_ARM_MOVW_BREL_NC: ((S + A) | T) – B(S)
+  // R_ARM_MOVW_BREL_NC: ((S + A) | T) - B(S)
+  // R_ARM_MOVW_BREL: ((S + A) | T) - B(S)
   static inline typename This::Status
-  movw_rel_nc(unsigned char* view,
-	      const Sized_relobj<32, big_endian>* object,
-	      const Symbol_value<32>* psymval,
-	      Arm_address address,
-	      Arm_address thumb_bit)
+  movw(unsigned char* view,
+       const Sized_relobj<32, big_endian>* object,
+       const Symbol_value<32>* psymval,
+       Arm_address relative_address_base,
+       Arm_address thumb_bit,
+       bool check_overflow)
   {
     typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
     Valtype val = elfcpp::Swap<32, big_endian>::readval(wv);
     Valtype addend = This::extract_arm_movw_movt_addend(val);
-    Valtype x = (psymval->value(object, addend) | thumb_bit) - address;
+    Valtype x = ((psymval->value(object, addend) | thumb_bit)
+		 - relative_address_base);
     val = This::insert_val_arm_movw_movt(val, x);
     elfcpp::Swap<32, big_endian>::writeval(wv, val);
-    return This::STATUS_OKAY;
+    return ((check_overflow && utils::has_overflow<16>(x))
+	    ? This::STATUS_OVERFLOW
+	    : This::STATUS_OKAY);
   }
 
-  // R_ARM_MOVW_BREL: ((S + A) | T) – B(S)
-  static inline typename This::Status
-  movw_rel(unsigned char* view,
-	   const Sized_relobj<32, big_endian>* object,
-	   const Symbol_value<32>* psymval,
-	   Arm_address address,
-	   Arm_address thumb_bit)
-  {
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Valtype val = elfcpp::Swap<32, big_endian>::readval(wv);
-    Valtype addend = This::extract_arm_movw_movt_addend(val);
-    Valtype x = (psymval->value(object, addend) | thumb_bit) - address;
-    val = This::insert_val_arm_movw_movt(val, x);
-    elfcpp::Swap<32, big_endian>::writeval(wv, val);
-    return ((x >= 0x10000) ?
-    	    This::STATUS_OVERFLOW : This::STATUS_OKAY);
-  }
-
+  // R_ARM_MOVT_ABS: S + A	(relative address base is 0)
   // R_ARM_MOVT_PREL: S + A - P
-  // R_ARM_MOVT_BREL: S + A – B(S)
+  // R_ARM_MOVT_BREL: S + A - B(S)
   static inline typename This::Status
-  movt_rel(unsigned char* view,
-	   const Sized_relobj<32, big_endian>* object,
-	   const Symbol_value<32>* psymval,
-           Arm_address address)
+  movt(unsigned char* view,
+       const Sized_relobj<32, big_endian>* object,
+       const Symbol_value<32>* psymval,
+       Arm_address relative_address_base)
   {
     typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
     Valtype val = elfcpp::Swap<32, big_endian>::readval(wv);
     Valtype addend = This::extract_arm_movw_movt_addend(val);
-    Valtype x = (psymval->value(object, addend) - address) >> 16;
+    Valtype x = (psymval->value(object, addend) - relative_address_base) >> 16;
     val = This::insert_val_arm_movw_movt(val, x);
     elfcpp::Swap<32, big_endian>::writeval(wv, val);
+    // FIXME: IHI0044D says that we should check for overflow.
     return This::STATUS_OKAY;
   }
 
+  // R_ARM_THM_MOVW_ABS_NC: S + A | T		(relative_address_base is 0)
   // R_ARM_THM_MOVW_PREL_NC: (S + A) | T - P
-  // R_ARM_THM_MOVW_BREL_NC: ((S + A) | T) – B(S)
+  // R_ARM_THM_MOVW_BREL_NC: ((S + A) | T) - B(S)
+  // R_ARM_THM_MOVW_BREL: ((S + A) | T) - B(S)
   static inline typename This::Status
-  thm_movw_rel_nc(unsigned char *view,
-	          const Sized_relobj<32, big_endian>* object,
-	          const Symbol_value<32>* psymval,
-	          Arm_address address,
-	          Arm_address thumb_bit)
+  thm_movw(unsigned char *view,
+	   const Sized_relobj<32, big_endian>* object,
+	   const Symbol_value<32>* psymval,
+	   Arm_address relative_address_base,
+	   Arm_address thumb_bit,
+	   bool check_overflow)
   {
     typedef typename elfcpp::Swap<16, big_endian>::Valtype Valtype;
     typedef typename elfcpp::Swap<32, big_endian>::Valtype Reltype;
@@ -3142,42 +3248,24 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
     Reltype val = (elfcpp::Swap<16, big_endian>::readval(wv) << 16)
 		  | elfcpp::Swap<16, big_endian>::readval(wv + 1);
     Reltype addend = This::extract_thumb_movw_movt_addend(val);
-    Reltype x = (psymval->value(object, addend) | thumb_bit) - address;
+    Reltype x =
+      (psymval->value(object, addend) | thumb_bit) - relative_address_base;
     val = This::insert_val_thumb_movw_movt(val, x);
     elfcpp::Swap<16, big_endian>::writeval(wv, val >> 16);
     elfcpp::Swap<16, big_endian>::writeval(wv + 1, val & 0xffff);
-    return This::STATUS_OKAY;
+    return ((check_overflow && utils::has_overflow<16>(x))
+    	    ? This::STATUS_OVERFLOW
+	    : This::STATUS_OKAY);
   }
 
-  // R_ARM_THM_MOVW_BREL: ((S + A) | T) – B(S)
-  static inline typename This::Status
-  thm_movw_rel(unsigned char *view,
-	       const Sized_relobj<32, big_endian>* object,
-	       const Symbol_value<32>* psymval,
-	       Arm_address address,
-	       Arm_address thumb_bit)
-  {
-    typedef typename elfcpp::Swap<16, big_endian>::Valtype Valtype;
-    typedef typename elfcpp::Swap<32, big_endian>::Valtype Reltype;
-    Valtype* wv = reinterpret_cast<Valtype*>(view);
-    Reltype val = (elfcpp::Swap<16, big_endian>::readval(wv) << 16)
-		  | elfcpp::Swap<16, big_endian>::readval(wv + 1);
-    Reltype addend = This::extract_thumb_movw_movt_addend(val);
-    Reltype x = (psymval->value(object, addend) | thumb_bit) - address;
-    val = This::insert_val_thumb_movw_movt(val, x);
-    elfcpp::Swap<16, big_endian>::writeval(wv, val >> 16);
-    elfcpp::Swap<16, big_endian>::writeval(wv + 1, val & 0xffff);
-    return ((x >= 0x10000) ?
-    	    This::STATUS_OVERFLOW : This::STATUS_OKAY);
-  }
-
+  // R_ARM_THM_MOVT_ABS: S + A		(relative address base is 0)
   // R_ARM_THM_MOVT_PREL: S + A - P
-  // R_ARM_THM_MOVT_BREL: S + A – B(S)
+  // R_ARM_THM_MOVT_BREL: S + A - B(S)
   static inline typename This::Status
-  thm_movt_rel(unsigned char* view,
-	       const Sized_relobj<32, big_endian>* object,
-	       const Symbol_value<32>* psymval,
-	       Arm_address address)
+  thm_movt(unsigned char* view,
+	   const Sized_relobj<32, big_endian>* object,
+	   const Symbol_value<32>* psymval,
+	   Arm_address relative_address_base)
   {
     typedef typename elfcpp::Swap<16, big_endian>::Valtype Valtype;
     typedef typename elfcpp::Swap<32, big_endian>::Valtype Reltype;
@@ -3185,7 +3273,7 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
     Reltype val = (elfcpp::Swap<16, big_endian>::readval(wv) << 16)
 		  | elfcpp::Swap<16, big_endian>::readval(wv + 1);
     Reltype addend = This::extract_thumb_movw_movt_addend(val);
-    Reltype x = (psymval->value(object, addend) - address) >> 16;
+    Reltype x = (psymval->value(object, addend) - relative_address_base) >> 16;
     val = This::insert_val_thumb_movw_movt(val, x);
     elfcpp::Swap<16, big_endian>::writeval(wv, val >> 16);
     elfcpp::Swap<16, big_endian>::writeval(wv + 1, val & 0xffff);
@@ -3363,6 +3451,7 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	Arm_address thumb_bit,
 	bool check_overflow)
   {
+    gold_assert(group >= 0 && group < 3);
     typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
     Valtype insn = elfcpp::Swap<32, big_endian>::readval(wv);
@@ -3417,6 +3506,7 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	const int group,
 	Arm_address address)
   {
+    gold_assert(group >= 0 && group < 3);
     typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
     Valtype insn = elfcpp::Swap<32, big_endian>::readval(wv);
@@ -3454,6 +3544,7 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
 	const int group,
 	Arm_address address)
   {
+    gold_assert(group >= 0 && group < 3);
     typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
     Valtype insn = elfcpp::Swap<32, big_endian>::readval(wv);
@@ -3491,6 +3582,7 @@ class Arm_relocate_functions : public Relocate_functions<32, big_endian>
       const int group,
       Arm_address address)
   {
+    gold_assert(group >= 0 && group < 3);
     typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
     Valtype* wv = reinterpret_cast<Valtype*>(view);
     Valtype insn = elfcpp::Swap<32, big_endian>::readval(wv);
@@ -3600,12 +3692,14 @@ Arm_relocate_functions<big_endian>::arm_branch_common(
   // to switch mode.
   bool may_use_blx = arm_target->may_use_blx();
   Reloc_stub* stub = NULL;
-  if ((branch_offset > ARM_MAX_FWD_BRANCH_OFFSET)
-      || (branch_offset < ARM_MAX_BWD_BRANCH_OFFSET)
+  if (utils::has_overflow<26>(branch_offset)
       || ((thumb_bit != 0) && !(may_use_blx && r_type == elfcpp::R_ARM_CALL)))
     {
+      Valtype unadjusted_branch_target = psymval->value(object, 0);
+
       Stub_type stub_type =
-	Reloc_stub::stub_type_for_reloc(r_type, address, branch_target,
+	Reloc_stub::stub_type_for_reloc(r_type, address,
+					unadjusted_branch_target,
 					(thumb_bit != 0));
       if (stub_type != arm_stub_none)
 	{
@@ -3619,8 +3713,7 @@ Arm_relocate_functions<big_endian>::arm_branch_common(
 	  thumb_bit = stub->stub_template()->entry_in_thumb_mode() ? 1 : 0;
 	  branch_target = stub_table->address() + stub->offset() + addend;
 	  branch_offset = branch_target - address;
-	  gold_assert((branch_offset <= ARM_MAX_FWD_BRANCH_OFFSET)
-		      && (branch_offset >= ARM_MAX_BWD_BRANCH_OFFSET));
+	  gold_assert(!utils::has_overflow<26>(branch_offset));
 	}
     }
 
@@ -3728,19 +3821,19 @@ Arm_relocate_functions<big_endian>::thumb_branch_common(
   // to switch mode.
   bool may_use_blx = arm_target->may_use_blx();
   bool thumb2 = arm_target->using_thumb2();
-  if ((!thumb2
-       && (branch_offset > THM_MAX_FWD_BRANCH_OFFSET
-	   || (branch_offset < THM_MAX_BWD_BRANCH_OFFSET)))
-      || (thumb2
-	  && (branch_offset > THM2_MAX_FWD_BRANCH_OFFSET
-	      || (branch_offset < THM2_MAX_BWD_BRANCH_OFFSET)))
+  if ((!thumb2 && utils::has_overflow<23>(branch_offset))
+      || (thumb2 && utils::has_overflow<25>(branch_offset))
       || ((thumb_bit == 0)
           && (((r_type == elfcpp::R_ARM_THM_CALL) && !may_use_blx)
 	      || r_type == elfcpp::R_ARM_THM_JUMP24)))
     {
+      Arm_address unadjusted_branch_target = psymval->value(object, 0);
+
       Stub_type stub_type =
-	Reloc_stub::stub_type_for_reloc(r_type, address, branch_target,
+	Reloc_stub::stub_type_for_reloc(r_type, address,
+					unadjusted_branch_target,
 					(thumb_bit != 0));
+
       if (stub_type != arm_stub_none)
 	{
 	  Stub_table<big_endian>* stub_table =
@@ -3843,22 +3936,21 @@ Arm_relocate_functions<big_endian>::thm_jump19(
 // Get the GOT section, creating it if necessary.
 
 template<bool big_endian>
-Output_data_got<32, big_endian>*
+Arm_output_data_got<big_endian>*
 Target_arm<big_endian>::got_section(Symbol_table* symtab, Layout* layout)
 {
   if (this->got_ == NULL)
     {
       gold_assert(symtab != NULL && layout != NULL);
 
-      this->got_ = new Output_data_got<32, big_endian>();
+      this->got_ = new Arm_output_data_got<big_endian>(symtab, layout);
 
       Output_section* os;
       os = layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
 					   (elfcpp::SHF_ALLOC
 					    | elfcpp::SHF_WRITE),
-					   this->got_, false, true, true,
-					   false);
-
+					   this->got_, false, false, false,
+					   true);
       // The old GNU linker creates a .got.plt section.  We just
       // create another set of data in the .got section.  Note that we
       // always create a PLT if we create a GOT, although the PLT
@@ -3868,7 +3960,7 @@ Target_arm<big_endian>::got_section(Symbol_table* symtab, Layout* layout)
 					   (elfcpp::SHF_ALLOC
 					    | elfcpp::SHF_WRITE),
 					   this->got_plt_, false, false,
-					   false, true);
+					   false, false);
 
       // The first three entries are reserved.
       this->got_plt_->set_current_data_size(3 * 4);
@@ -5434,6 +5526,7 @@ Arm_output_section<big_endian>::append_text_sections_to_list(
 template<bool big_endian>
 void
 Arm_output_section<big_endian>::fix_exidx_coverage(
+    Layout* layout,
     const Text_section_list& sorted_text_sections,
     Symbol_table* symtab)
 {
@@ -5497,9 +5590,18 @@ Arm_output_section<big_endian>::fix_exidx_coverage(
       if (known_input_sections.find(sid) == known_input_sections.end())
 	{
 	  // This is odd.  We have not seen this EXIDX input section before.
-	  // We cannot do fix-up.
-	  gold_error(_("EXIDX section %u of %s is not in EXIDX output section"),
-		     exidx_shndx, exidx_relobj->name().c_str());
+	  // We cannot do fix-up.  If we saw a SECTIONS clause in a script,
+	  // issue a warning instead.  We assume the user knows what he
+	  // or she is doing.  Otherwise, this is an error.
+	  if (layout->script_options()->saw_sections_clause())
+	    gold_warning(_("unwinding may not work because EXIDX input section"
+			   " %u of %s is not in EXIDX output section"),
+			 exidx_shndx, exidx_relobj->name().c_str());
+	  else
+	    gold_error(_("unwinding may not work because EXIDX input section"
+			 " %u of %s is not in EXIDX output section"),
+		       exidx_shndx, exidx_relobj->name().c_str());
+
 	  exidx_fixup.add_exidx_cantunwind_as_needed();
 	  continue;
 	}
@@ -5586,6 +5688,44 @@ Arm_output_section<big_endian>::fix_exidx_coverage(
 
 // Arm_relobj methods.
 
+// Determine if an input section is scannable for stub processing.  SHDR is
+// the header of the section and SHNDX is the section index.  OS is the output
+// section for the input section and SYMTAB is the global symbol table used to
+// look up ICF information.
+
+template<bool big_endian>
+bool
+Arm_relobj<big_endian>::section_is_scannable(
+    const elfcpp::Shdr<32, big_endian>& shdr,
+    unsigned int shndx,
+    const Output_section* os,
+    const Symbol_table *symtab)
+{
+  // Skip any empty sections, unallocated sections or sections whose
+  // type are not SHT_PROGBITS.
+  if (shdr.get_sh_size() == 0
+      || (shdr.get_sh_flags() & elfcpp::SHF_ALLOC) == 0
+      || shdr.get_sh_type() != elfcpp::SHT_PROGBITS)
+    return false;
+
+  // Skip any discarded or ICF'ed sections.
+  if (os == NULL || symtab->is_section_folded(this, shndx))
+    return false;
+
+  // If this requires special offset handling, check to see if it is
+  // a relaxed section.  If this is not, then it is a merged section that
+  // we cannot handle.
+  if (this->is_output_section_offset_invalid(shndx))
+    {
+      const Output_relaxed_input_section* poris =
+	os->find_relaxed_input_section(this, shndx);
+      if (poris == NULL)
+	return false;
+    }
+
+  return true;
+}
+
 // Determine if we want to scan the SHNDX-th section for relocation stubs.
 // This is a helper for Arm_relobj::scan_sections_for_stubs() below.
 
@@ -5606,26 +5746,6 @@ Arm_relobj<big_endian>::section_needs_reloc_stub_scanning(
   if (sh_size == 0)
     return false;
 
-  // Ignore reloc section with bad info.  This error will be
-  // reported in the final link.
-  unsigned int index = this->adjust_shndx(shdr.get_sh_info());
-  if (index >= this->shnum())
-    return false;
-
-  // This relocation section is against a section which we
-  // discarded or if the section is folded into another
-  // section due to ICF.
-  if (out_sections[index] == NULL || symtab->is_section_folded(this, index))
-    return false;
-
-  // Check the section to which relocations are applied.  Ignore relocations
-  // to unallocated sections or EXIDX sections.
-  const unsigned int shdr_size = elfcpp::Elf_sizes<32>::shdr_size;
-  const elfcpp::Shdr<32, big_endian> data_shdr(pshdrs + index * shdr_size);
-  if ((data_shdr.get_sh_flags() & elfcpp::SHF_ALLOC) == 0
-      || data_shdr.get_sh_type() == elfcpp::SHT_ARM_EXIDX)
-    return false;
-
   // Ignore reloc section with unexpected symbol table.  The
   // error will be reported in the final link.
   if (this->adjust_shndx(shdr.get_sh_link()) != this->symtab_shndx())
@@ -5642,7 +5762,39 @@ Arm_relobj<big_endian>::section_needs_reloc_stub_scanning(
   if (reloc_size != shdr.get_sh_entsize() || sh_size % reloc_size != 0)
     return false;
 
-  return true;
+  // Ignore reloc section with bad info.  This error will be
+  // reported in the final link.
+  unsigned int index = this->adjust_shndx(shdr.get_sh_info());
+  if (index >= this->shnum())
+    return false;
+
+  const unsigned int shdr_size = elfcpp::Elf_sizes<32>::shdr_size;
+  const elfcpp::Shdr<32, big_endian> text_shdr(pshdrs + index * shdr_size);
+  return this->section_is_scannable(text_shdr, index,
+				   out_sections[index], symtab);
+}
+
+// Return the output address of either a plain input section or a relaxed
+// input section.  SHNDX is the section index.  We define and use this
+// instead of calling Output_section::output_address because that is slow
+// for large output.
+
+template<bool big_endian>
+Arm_address
+Arm_relobj<big_endian>::simple_input_section_output_address(
+    unsigned int shndx,
+    Output_section* os)
+{
+  if (this->is_output_section_offset_invalid(shndx))
+    {
+      const Output_relaxed_input_section* poris =
+	os->find_relaxed_input_section(this, shndx);
+      // We do not handle merged sections here.
+      gold_assert(poris != NULL);
+      return poris->address();
+    }
+  else
+    return os->address() + this->get_output_section_offset(shndx);
 }
 
 // Determine if we want to scan the SHNDX-th section for non-relocation stubs.
@@ -5656,20 +5808,12 @@ Arm_relobj<big_endian>::section_needs_cortex_a8_stub_scanning(
     Output_section* os,
     const Symbol_table* symtab)
 {
-  // We only scan non-empty code sections.
-  if ((shdr.get_sh_flags() & elfcpp::SHF_EXECINSTR) == 0
-      || shdr.get_sh_size() == 0)
+  if (!this->section_is_scannable(shdr, shndx, os, symtab))
     return false;
-
-  // Ignore discarded or ICF'ed sections.
-  if (os == NULL || symtab->is_section_folded(this, shndx))
-    return false;
-  
-  // Find output address of section.
-  Arm_address address = os->output_address(this, shndx, 0);
 
   // If the section does not cross any 4K-boundaries, it does not need to
   // be scanned.
+  Arm_address address = this->simple_input_section_output_address(shndx, os);
   if ((address & ~0xfffU) == ((address + shdr.get_sh_size() - 1) & ~0xfffU))
     return false;
 
@@ -5686,7 +5830,19 @@ Arm_relobj<big_endian>::scan_section_for_cortex_a8_erratum(
     Output_section* os,
     Target_arm<big_endian>* arm_target)
 {
-  Arm_address output_address = os->output_address(this, shndx, 0);
+  // Look for the first mapping symbol in this section.  It should be
+  // at (shndx, 0).
+  Mapping_symbol_position section_start(shndx, 0);
+  typename Mapping_symbols_info::const_iterator p =
+    this->mapping_symbols_info_.lower_bound(section_start);
+
+  // There are no mapping symbols for this section.  Treat it as a data-only
+  // section.
+  if (p == this->mapping_symbols_info_.end() || p->first.first != shndx)
+    return;
+
+  Arm_address output_address =
+    this->simple_input_section_output_address(shndx, os);
 
   // Get the section contents.
   section_size_type input_view_size = 0;
@@ -5698,21 +5854,6 @@ Arm_relobj<big_endian>::scan_section_for_cortex_a8_erratum(
   // THUMB code only.  Second, we only want to look at the 4K-page boundary
   // to speed up the scanning.
   
-  // Look for the first mapping symbol in this section.  It should be
-  // at (shndx, 0).
-  Mapping_symbol_position section_start(shndx, 0);
-  typename Mapping_symbols_info::const_iterator p =
-    this->mapping_symbols_info_.lower_bound(section_start);
-
-  if (p == this->mapping_symbols_info_.end()
-      || p->first != section_start)
-    {
-      gold_warning(_("Cortex-A8 erratum scanning failed because there "
-		     "is no mapping symbols for section %u of %s"),
-		   shndx, this->name().c_str());
-      return;
-    }
- 
   while (p != this->mapping_symbols_info_.end()
 	&& p->first.first == shndx)
     {
@@ -6025,7 +6166,8 @@ Arm_relobj<big_endian>::do_relocate_sections(
 	  // Adjust view to cover section.
 	  Output_section* os = this->output_section(i);
 	  gold_assert(os != NULL);
-	  Arm_address section_address = os->output_address(this, i, 0);
+	  Arm_address section_address =
+	    this->simple_input_section_output_address(i, os);
 	  uint64_t section_size = this->section_size(i);
 
 	  gold_assert(section_address >= view_address
@@ -6045,27 +6187,95 @@ Arm_relobj<big_endian>::do_relocate_sections(
     }
 }
 
-// Create a new EXIDX input section object for EXIDX section SHNDX with
-// header SHDR.
+// Find the linked text section of an EXIDX section by looking the the first
+// relocation.  4.4.1 of the EHABI specifications says that an EXIDX section
+// must be linked to to its associated code section via the sh_link field of
+// its section header.  However, some tools are broken and the link is not
+// always set.  LD just drops such an EXIDX section silently, causing the
+// associated code not unwindabled.   Here we try a little bit harder to
+// discover the linked code section.
+//
+// PSHDR points to the section header of a relocation section of an EXIDX
+// section.  If we can find a linked text section, return true and
+// store the text section index in the location PSHNDX.  Otherwise
+// return false.
+
+template<bool big_endian>
+bool
+Arm_relobj<big_endian>::find_linked_text_section(
+    const unsigned char* pshdr,
+    const unsigned char* psyms,
+    unsigned int* pshndx)
+{
+  elfcpp::Shdr<32, big_endian> shdr(pshdr);
+  
+  // If there is no relocation, we cannot find the linked text section.
+  size_t reloc_size;
+  if (shdr.get_sh_type() == elfcpp::SHT_REL)
+      reloc_size = elfcpp::Elf_sizes<32>::rel_size;
+  else
+      reloc_size = elfcpp::Elf_sizes<32>::rela_size;
+  size_t reloc_count = shdr.get_sh_size() / reloc_size;
+ 
+  // Get the relocations.
+  const unsigned char* prelocs =
+      this->get_view(shdr.get_sh_offset(), shdr.get_sh_size(), true, false); 
+
+  // Find the REL31 relocation for the first word of the first EXIDX entry.
+  for (size_t i = 0; i < reloc_count; ++i, prelocs += reloc_size)
+    {
+      Arm_address r_offset;
+      typename elfcpp::Elf_types<32>::Elf_WXword r_info;
+      if (shdr.get_sh_type() == elfcpp::SHT_REL)
+	{
+	  typename elfcpp::Rel<32, big_endian> reloc(prelocs);
+	  r_info = reloc.get_r_info();
+	  r_offset = reloc.get_r_offset();
+	}
+      else
+	{
+	  typename elfcpp::Rela<32, big_endian> reloc(prelocs);
+	  r_info = reloc.get_r_info();
+	  r_offset = reloc.get_r_offset();
+	}
+
+      unsigned int r_type = elfcpp::elf_r_type<32>(r_info);
+      if (r_type != elfcpp::R_ARM_PREL31 && r_type != elfcpp::R_ARM_SBREL31)
+	continue;
+
+      unsigned int r_sym = elfcpp::elf_r_sym<32>(r_info);
+      if (r_sym == 0
+	  || r_sym >= this->local_symbol_count()
+	  || r_offset != 0)
+	continue;
+
+      // This is the relocation for the first word of the first EXIDX entry.
+      // We expect to see a local section symbol.
+      const int sym_size = elfcpp::Elf_sizes<32>::sym_size;
+      elfcpp::Sym<32, big_endian> sym(psyms + r_sym * sym_size);
+      if (sym.get_st_type() == elfcpp::STT_SECTION)
+	{
+	  *pshndx = this->adjust_shndx(sym.get_st_shndx());
+	  return true;
+	}
+      else
+	return false;
+    }
+
+  return false;
+}
+
+// Make an EXIDX input section object for an EXIDX section whose index is
+// SHNDX.  SHDR is the section header of the EXIDX section and TEXT_SHNDX
+// is the section index of the linked text section.
 
 template<bool big_endian>
 void
 Arm_relobj<big_endian>::make_exidx_input_section(
     unsigned int shndx,
-    const elfcpp::Shdr<32, big_endian>& shdr)
+    const elfcpp::Shdr<32, big_endian>& shdr,
+    unsigned int text_shndx)
 {
-  // Link .text section to its .ARM.exidx section in the same object.
-  unsigned int text_shndx = this->adjust_shndx(shdr.get_sh_link());
-
-  // Issue an error and ignore this EXIDX section if it does not point
-  // to any text section.
-  if (text_shndx == elfcpp::SHN_UNDEF)
-    {
-      gold_error(_("EXIDX section %u in %s has no linked text section"),
-		 shndx, this->name().c_str());
-      return;
-    }
-  
   // Issue an error and ignore this EXIDX section if it points to a text
   // section already has an EXIDX section.
   if (this->exidx_section_map_[text_shndx] != NULL)
@@ -6106,9 +6316,10 @@ Arm_relobj<big_endian>::do_read_symbols(Read_symbols_data* sd)
 
   // Go over the section headers and look for .ARM.attributes and .ARM.exidx
   // sections.
+  std::vector<unsigned int> deferred_exidx_sections;
   const size_t shdr_size = elfcpp::Elf_sizes<32>::shdr_size;
-  const unsigned char *ps =
-    sd->section_headers->data() + shdr_size;
+  const unsigned char* pshdrs = sd->section_headers->data();
+  const unsigned char *ps = pshdrs + shdr_size;
   for (unsigned int i = 1; i < this->shnum(); ++i, ps += shdr_size)
     {
       elfcpp::Shdr<32, big_endian> shdr(ps);
@@ -6124,7 +6335,79 @@ Arm_relobj<big_endian>::do_read_symbols(Read_symbols_data* sd)
 	    new Attributes_section_data(view->data(), section_size);
 	}
       else if (shdr.get_sh_type() == elfcpp::SHT_ARM_EXIDX)
-	this->make_exidx_input_section(i, shdr);
+	{
+	  unsigned int text_shndx = this->adjust_shndx(shdr.get_sh_link());
+	  if (text_shndx >= this->shnum())
+	    gold_error(_("EXIDX section %u linked to invalid section %u"),
+		       i, text_shndx);
+	  else if (text_shndx == elfcpp::SHN_UNDEF)
+	    deferred_exidx_sections.push_back(i);
+	  else
+	    this->make_exidx_input_section(i, shdr, text_shndx);
+	}
+    }
+
+  // Some tools are broken and they do not set the link of EXIDX sections. 
+  // We look at the first relocation to figure out the linked sections.
+  if (!deferred_exidx_sections.empty())
+    {
+      // We need to go over the section headers again to find the mapping
+      // from sections being relocated to their relocation sections.  This is
+      // a bit inefficient as we could do that in the loop above.  However,
+      // we do not expect any deferred EXIDX sections normally.  So we do not
+      // want to slow down the most common path.
+      typedef Unordered_map<unsigned int, unsigned int> Reloc_map;
+      Reloc_map reloc_map;
+      ps = pshdrs + shdr_size;
+      for (unsigned int i = 1; i < this->shnum(); ++i, ps += shdr_size)
+	{
+	  elfcpp::Shdr<32, big_endian> shdr(ps);
+	  elfcpp::Elf_Word sh_type = shdr.get_sh_type();
+	  if (sh_type == elfcpp::SHT_REL || sh_type == elfcpp::SHT_RELA)
+	    {
+	      unsigned int info_shndx = this->adjust_shndx(shdr.get_sh_info());
+	      if (info_shndx >= this->shnum())
+		gold_error(_("relocation section %u has invalid info %u"),
+			   i, info_shndx);
+	      Reloc_map::value_type value(info_shndx, i);
+	      std::pair<Reloc_map::iterator, bool> result =
+		reloc_map.insert(value);
+	      if (!result.second)
+		gold_error(_("section %u has multiple relocation sections "
+			     "%u and %u"),
+			   info_shndx, i, reloc_map[info_shndx]);
+	    }
+	}
+
+      // Read the symbol table section header.
+      const unsigned int symtab_shndx = this->symtab_shndx();
+      elfcpp::Shdr<32, big_endian>
+	  symtabshdr(this, this->elf_file()->section_header(symtab_shndx));
+      gold_assert(symtabshdr.get_sh_type() == elfcpp::SHT_SYMTAB);
+
+      // Read the local symbols.
+      const int sym_size =elfcpp::Elf_sizes<32>::sym_size;
+      const unsigned int loccount = this->local_symbol_count();
+      gold_assert(loccount == symtabshdr.get_sh_info());
+      off_t locsize = loccount * sym_size;
+      const unsigned char* psyms = this->get_view(symtabshdr.get_sh_offset(),
+						  locsize, true, true);
+
+      // Process the deferred EXIDX sections. 
+      for(unsigned int i = 0; i < deferred_exidx_sections.size(); ++i)
+	{
+	  unsigned int shndx = deferred_exidx_sections[i];
+	  elfcpp::Shdr<32, big_endian> shdr(pshdrs + shndx * shdr_size);
+	  unsigned int text_shndx;
+	  Reloc_map::const_iterator it = reloc_map.find(shndx);
+	  if (it != reloc_map.end()
+	      && find_linked_text_section(pshdrs + it->second * shdr_size,
+					  psyms, &text_shndx))
+	    this->make_exidx_input_section(shndx, shdr, text_shndx);
+	  else
+	    gold_error(_("EXIDX section %u has no linked text section."),
+		       shndx);
+	}
     }
 }
 
@@ -6144,6 +6427,11 @@ Arm_relobj<big_endian>::do_gc_process_relocs(Symbol_table* symtab,
   // First, call base class method to process relocations in this object.
   Sized_relobj<32, big_endian>::do_gc_process_relocs(symtab, layout, rd);
 
+  // If --gc-sections is not specified, there is nothing more to do.
+  // This happens when --icf is used but --gc-sections is not.
+  if (!parameters->options().gc_sections())
+    return;
+  
   unsigned int shnum = this->shnum();
   const unsigned int shdr_size = elfcpp::Elf_sizes<32>::shdr_size;
   const unsigned char* pshdrs = this->get_view(this->elf_file()->shoff(),
@@ -6348,6 +6636,162 @@ Stub_addend_reader<elfcpp::SHT_REL, big_endian>::operator()(
     default:
       gold_unreachable();
     }
+}
+
+// Arm_output_data_got methods.
+
+// Add a GOT pair for R_ARM_TLS_GD32.  The creates a pair of GOT entries.
+// The first one is initialized to be 1, which is the module index for
+// the main executable and the second one 0.  A reloc of the type
+// R_ARM_TLS_DTPOFF32 will be created for the second GOT entry and will
+// be applied by gold.  GSYM is a global symbol.
+//
+template<bool big_endian>
+void
+Arm_output_data_got<big_endian>::add_tls_gd32_with_static_reloc(
+    unsigned int got_type,
+    Symbol* gsym)
+{
+  if (gsym->has_got_offset(got_type))
+    return;
+
+  // We are doing a static link.  Just mark it as belong to module 1,
+  // the executable.
+  unsigned int got_offset = this->add_constant(1);
+  gsym->set_got_offset(got_type, got_offset); 
+  got_offset = this->add_constant(0);
+  this->static_relocs_.push_back(Static_reloc(got_offset,
+					      elfcpp::R_ARM_TLS_DTPOFF32,
+					      gsym));
+}
+
+// Same as the above but for a local symbol.
+
+template<bool big_endian>
+void
+Arm_output_data_got<big_endian>::add_tls_gd32_with_static_reloc(
+  unsigned int got_type,
+  Sized_relobj<32, big_endian>* object,
+  unsigned int index)
+{
+  if (object->local_has_got_offset(index, got_type))
+    return;
+
+  // We are doing a static link.  Just mark it as belong to module 1,
+  // the executable.
+  unsigned int got_offset = this->add_constant(1);
+  object->set_local_got_offset(index, got_type, got_offset);
+  got_offset = this->add_constant(0);
+  this->static_relocs_.push_back(Static_reloc(got_offset, 
+					      elfcpp::R_ARM_TLS_DTPOFF32, 
+					      object, index));
+}
+
+template<bool big_endian>
+void
+Arm_output_data_got<big_endian>::do_write(Output_file* of)
+{
+  // Call parent to write out GOT.
+  Output_data_got<32, big_endian>::do_write(of);
+
+  // We are done if there is no fix up.
+  if (this->static_relocs_.empty())
+    return;
+
+  gold_assert(parameters->doing_static_link());
+
+  const off_t offset = this->offset();
+  const section_size_type oview_size =
+    convert_to_section_size_type(this->data_size());
+  unsigned char* const oview = of->get_output_view(offset, oview_size);
+
+  Output_segment* tls_segment = this->layout_->tls_segment();
+  gold_assert(tls_segment != NULL);
+  
+  // The thread pointer $tp points to the TCB, which is followed by the
+  // TLS.  So we need to adjust $tp relative addressing by this amount.
+  Arm_address aligned_tcb_size =
+    align_address(ARM_TCB_SIZE, tls_segment->maximum_alignment());
+
+  for (size_t i = 0; i < this->static_relocs_.size(); ++i)
+    {
+      Static_reloc& reloc(this->static_relocs_[i]);
+      
+      Arm_address value;
+      if (!reloc.symbol_is_global())
+	{
+	  Sized_relobj<32, big_endian>* object = reloc.relobj();
+	  const Symbol_value<32>* psymval =
+	    reloc.relobj()->local_symbol(reloc.index());
+
+	  // We are doing static linking.  Issue an error and skip this
+	  // relocation if the symbol is undefined or in a discarded_section.
+	  bool is_ordinary;
+	  unsigned int shndx = psymval->input_shndx(&is_ordinary);
+	  if ((shndx == elfcpp::SHN_UNDEF)
+	      || (is_ordinary
+		  && shndx != elfcpp::SHN_UNDEF
+		  && !object->is_section_included(shndx)
+		  && !this->symbol_table_->is_section_folded(object, shndx)))
+	    {
+	      gold_error(_("undefined or discarded local symbol %u from "
+			   " object %s in GOT"),
+			 reloc.index(), reloc.relobj()->name().c_str());
+	      continue;
+	    }
+	  
+	  value = psymval->value(object, 0);
+	}
+      else
+	{
+	  const Symbol* gsym = reloc.symbol();
+	  gold_assert(gsym != NULL);
+	  if (gsym->is_forwarder())
+	    gsym = this->symbol_table_->resolve_forwards(gsym);
+
+	  // We are doing static linking.  Issue an error and skip this
+	  // relocation if the symbol is undefined or in a discarded_section
+	  // unless it is a weakly_undefined symbol.
+	  if ((gsym->is_defined_in_discarded_section()
+	       || gsym->is_undefined())
+	      && !gsym->is_weak_undefined())
+	    {
+	      gold_error(_("undefined or discarded symbol %s in GOT"),
+			 gsym->name());
+	      continue;
+	    }
+
+	  if (!gsym->is_weak_undefined())
+	    {
+	      const Sized_symbol<32>* sym =
+		static_cast<const Sized_symbol<32>*>(gsym);
+	      value = sym->value();
+	    }
+	  else
+	      value = 0;
+	}
+
+      unsigned got_offset = reloc.got_offset();
+      gold_assert(got_offset < oview_size);
+
+      typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
+      Valtype* wv = reinterpret_cast<Valtype*>(oview + got_offset);
+      Valtype x;
+      switch (reloc.r_type())
+	{
+	case elfcpp::R_ARM_TLS_DTPOFF32:
+	  x = value;
+	  break;
+	case elfcpp::R_ARM_TLS_TPOFF32:
+	  x = value + aligned_tcb_size;
+	  break;
+	default:
+	  gold_unreachable();
+	}
+      elfcpp::Swap<32, big_endian>::writeval(wv, x);
+    }
+
+  of->write_output_view(offset, oview_size, oview);
 }
 
 // A class to handle the PLT data.
@@ -6585,6 +7029,90 @@ Target_arm<big_endian>::make_plt_entry(Symbol_table* symtab, Layout* layout,
   this->plt_->add_entry(gsym);
 }
 
+// Get the section to use for TLS_DESC relocations.
+
+template<bool big_endian>
+typename Target_arm<big_endian>::Reloc_section*
+Target_arm<big_endian>::rel_tls_desc_section(Layout* layout) const
+{
+  return this->plt_section()->rel_tls_desc(layout);
+}
+
+// Define the _TLS_MODULE_BASE_ symbol in the TLS segment.
+
+template<bool big_endian>
+void
+Target_arm<big_endian>::define_tls_base_symbol(
+    Symbol_table* symtab,
+    Layout* layout)
+{
+  if (this->tls_base_symbol_defined_)
+    return;
+
+  Output_segment* tls_segment = layout->tls_segment();
+  if (tls_segment != NULL)
+    {
+      bool is_exec = parameters->options().output_is_executable();
+      symtab->define_in_output_segment("_TLS_MODULE_BASE_", NULL,
+				       Symbol_table::PREDEFINED,
+				       tls_segment, 0, 0,
+				       elfcpp::STT_TLS,
+				       elfcpp::STB_LOCAL,
+				       elfcpp::STV_HIDDEN, 0,
+				       (is_exec
+					? Symbol::SEGMENT_END
+					: Symbol::SEGMENT_START),
+				       true);
+    }
+  this->tls_base_symbol_defined_ = true;
+}
+
+// Create a GOT entry for the TLS module index.
+
+template<bool big_endian>
+unsigned int
+Target_arm<big_endian>::got_mod_index_entry(
+    Symbol_table* symtab,
+    Layout* layout,
+    Sized_relobj<32, big_endian>* object)
+{
+  if (this->got_mod_index_offset_ == -1U)
+    {
+      gold_assert(symtab != NULL && layout != NULL && object != NULL);
+      Arm_output_data_got<big_endian>* got = this->got_section(symtab, layout);
+      unsigned int got_offset;
+      if (!parameters->doing_static_link())
+	{
+	  got_offset = got->add_constant(0);
+	  Reloc_section* rel_dyn = this->rel_dyn_section(layout);
+	  rel_dyn->add_local(object, 0, elfcpp::R_ARM_TLS_DTPMOD32, got,
+			     got_offset);
+	}
+      else
+	{
+	  // We are doing a static link.  Just mark it as belong to module 1,
+	  // the executable.
+	  got_offset = got->add_constant(1);
+	}
+
+      got->add_constant(0);
+      this->got_mod_index_offset_ = got_offset;
+    }
+  return this->got_mod_index_offset_;
+}
+
+// Optimize the TLS relocation type based on what we know about the
+// symbol.  IS_FINAL is true if the final address of this symbol is
+// known at link time.
+
+template<bool big_endian>
+tls::Tls_optimization
+Target_arm<big_endian>::optimize_tls_reloc(bool, int)
+{
+  // FIXME: Currently we do not do any TLS optimization.
+  return tls::TLSOPT_NONE;
+}
+
 // Report an unsupported relocation against a local symbol.
 
 template<bool big_endian>
@@ -6628,15 +7156,21 @@ Target_arm<big_endian>::Scan::check_non_pic(Relobj* object,
       return;
 
     default:
-      // This prevents us from issuing more than one error per reloc
-      // section.  But we can still wind up issuing more than one
-      // error per object file.
-      if (this->issued_non_pic_error_)
+      {
+	// This prevents us from issuing more than one error per reloc
+	// section.  But we can still wind up issuing more than one
+	// error per object file.
+	if (this->issued_non_pic_error_)
+	  return;
+	const Arm_reloc_property* reloc_property =
+	  arm_reloc_property_table->get_reloc_property(r_type);
+	gold_assert(reloc_property != NULL);
+	object->error(_("requires unsupported dynamic reloc %s; "
+		      "recompile with -fPIC"),
+		      reloc_property->name().c_str());
+	this->issued_non_pic_error_ = true;
 	return;
-      object->error(_("requires unsupported dynamic reloc; "
-		      "recompile with -fPIC"));
-      this->issued_non_pic_error_ = true;
-      return;
+      }
 
     case elfcpp::R_ARM_NONE:
       gold_unreachable();
@@ -6657,12 +7191,15 @@ Target_arm<big_endian>::Scan::local(Symbol_table* symtab,
 				    Output_section* output_section,
 				    const elfcpp::Rel<32, big_endian>& reloc,
 				    unsigned int r_type,
-				    const elfcpp::Sym<32, big_endian>&)
+				    const elfcpp::Sym<32, big_endian>& lsym)
 {
   r_type = get_real_reloc_type(r_type);
   switch (r_type)
     {
     case elfcpp::R_ARM_NONE:
+    case elfcpp::R_ARM_V4BX:
+    case elfcpp::R_ARM_GNU_VTENTRY:
+    case elfcpp::R_ARM_GNU_VTINHERIT:
       break;
 
     case elfcpp::R_ARM_ABS32:
@@ -6685,84 +7222,121 @@ Target_arm<big_endian>::Scan::local(Symbol_table* symtab,
 	}
       break;
 
-    case elfcpp::R_ARM_REL32:
-    case elfcpp::R_ARM_THM_CALL:
-    case elfcpp::R_ARM_CALL:
-    case elfcpp::R_ARM_PREL31:
-    case elfcpp::R_ARM_JUMP24:
-    case elfcpp::R_ARM_THM_JUMP24:
-    case elfcpp::R_ARM_THM_JUMP19:
-    case elfcpp::R_ARM_PLT32:
+    case elfcpp::R_ARM_ABS16:
+    case elfcpp::R_ARM_ABS12:
     case elfcpp::R_ARM_THM_ABS5:
     case elfcpp::R_ARM_ABS8:
-    case elfcpp::R_ARM_ABS12:
-    case elfcpp::R_ARM_ABS16:
     case elfcpp::R_ARM_BASE_ABS:
     case elfcpp::R_ARM_MOVW_ABS_NC:
     case elfcpp::R_ARM_MOVT_ABS:
     case elfcpp::R_ARM_THM_MOVW_ABS_NC:
     case elfcpp::R_ARM_THM_MOVT_ABS:
+      // If building a shared library (or a position-independent
+      // executable), we need to create a dynamic relocation for
+      // this location. Because the addend needs to remain in the
+      // data section, we need to be careful not to apply this
+      // relocation statically.
+      if (parameters->options().output_is_position_independent())
+        {
+	  check_non_pic(object, r_type);
+          Reloc_section* rel_dyn = target->rel_dyn_section(layout);
+	  unsigned int r_sym = elfcpp::elf_r_sym<32>(reloc.get_r_info());
+          if (lsym.get_st_type() != elfcpp::STT_SECTION)
+	    rel_dyn->add_local(object, r_sym, r_type, output_section,
+			       data_shndx, reloc.get_r_offset());
+          else
+            {
+              gold_assert(lsym.get_st_value() == 0);
+	      unsigned int shndx = lsym.get_st_shndx();
+	      bool is_ordinary;
+	      shndx = object->adjust_sym_shndx(r_sym, shndx,
+					       &is_ordinary);
+	      if (!is_ordinary)
+		object->error(_("section symbol %u has bad shndx %u"),
+			      r_sym, shndx);
+	      else
+		rel_dyn->add_local_section(object, shndx,
+					   r_type, output_section,
+					   data_shndx, reloc.get_r_offset());
+            }
+        }
+      break;
+
+    case elfcpp::R_ARM_PC24:
+    case elfcpp::R_ARM_REL32:
+    case elfcpp::R_ARM_LDR_PC_G0:
+    case elfcpp::R_ARM_SBREL32:
+    case elfcpp::R_ARM_THM_CALL:
+    case elfcpp::R_ARM_THM_PC8:
+    case elfcpp::R_ARM_BASE_PREL:
+    case elfcpp::R_ARM_PLT32:
+    case elfcpp::R_ARM_CALL:
+    case elfcpp::R_ARM_JUMP24:
+    case elfcpp::R_ARM_THM_JUMP24:
+    case elfcpp::R_ARM_LDR_SBREL_11_0_NC:
+    case elfcpp::R_ARM_ALU_SBREL_19_12_NC:
+    case elfcpp::R_ARM_ALU_SBREL_27_20_CK:
+    case elfcpp::R_ARM_SBREL31:
+    case elfcpp::R_ARM_PREL31:
     case elfcpp::R_ARM_MOVW_PREL_NC:
     case elfcpp::R_ARM_MOVT_PREL:
     case elfcpp::R_ARM_THM_MOVW_PREL_NC:
     case elfcpp::R_ARM_THM_MOVT_PREL:
+    case elfcpp::R_ARM_THM_JUMP19:
+    case elfcpp::R_ARM_THM_JUMP6:
+    case elfcpp::R_ARM_THM_ALU_PREL_11_0:
+    case elfcpp::R_ARM_THM_PC12:
+    case elfcpp::R_ARM_REL32_NOI:
+    case elfcpp::R_ARM_ALU_PC_G0_NC:
+    case elfcpp::R_ARM_ALU_PC_G0:
+    case elfcpp::R_ARM_ALU_PC_G1_NC:
+    case elfcpp::R_ARM_ALU_PC_G1:
+    case elfcpp::R_ARM_ALU_PC_G2:
+    case elfcpp::R_ARM_LDR_PC_G1:
+    case elfcpp::R_ARM_LDR_PC_G2:
+    case elfcpp::R_ARM_LDRS_PC_G0:
+    case elfcpp::R_ARM_LDRS_PC_G1:
+    case elfcpp::R_ARM_LDRS_PC_G2:
+    case elfcpp::R_ARM_LDC_PC_G0:
+    case elfcpp::R_ARM_LDC_PC_G1:
+    case elfcpp::R_ARM_LDC_PC_G2:
+    case elfcpp::R_ARM_ALU_SB_G0_NC:
+    case elfcpp::R_ARM_ALU_SB_G0:
+    case elfcpp::R_ARM_ALU_SB_G1_NC:
+    case elfcpp::R_ARM_ALU_SB_G1:
+    case elfcpp::R_ARM_ALU_SB_G2:
+    case elfcpp::R_ARM_LDR_SB_G0:
+    case elfcpp::R_ARM_LDR_SB_G1:
+    case elfcpp::R_ARM_LDR_SB_G2:
+    case elfcpp::R_ARM_LDRS_SB_G0:
+    case elfcpp::R_ARM_LDRS_SB_G1:
+    case elfcpp::R_ARM_LDRS_SB_G2:
+    case elfcpp::R_ARM_LDC_SB_G0:
+    case elfcpp::R_ARM_LDC_SB_G1:
+    case elfcpp::R_ARM_LDC_SB_G2:
     case elfcpp::R_ARM_MOVW_BREL_NC:
     case elfcpp::R_ARM_MOVT_BREL:
     case elfcpp::R_ARM_MOVW_BREL:
     case elfcpp::R_ARM_THM_MOVW_BREL_NC:
     case elfcpp::R_ARM_THM_MOVT_BREL:
     case elfcpp::R_ARM_THM_MOVW_BREL:
-    case elfcpp::R_ARM_THM_JUMP6:
-    case elfcpp::R_ARM_THM_JUMP8:
     case elfcpp::R_ARM_THM_JUMP11:
-    case elfcpp::R_ARM_V4BX:
-    case elfcpp::R_ARM_THM_PC8:
-    case elfcpp::R_ARM_THM_PC12:
-    case elfcpp::R_ARM_THM_ALU_PREL_11_0:
-    case elfcpp::R_ARM_ALU_PC_G0_NC:
-    case elfcpp::R_ARM_ALU_PC_G0:
-    case elfcpp::R_ARM_ALU_PC_G1_NC:
-    case elfcpp::R_ARM_ALU_PC_G1:
-    case elfcpp::R_ARM_ALU_PC_G2:
-    case elfcpp::R_ARM_ALU_SB_G0_NC:
-    case elfcpp::R_ARM_ALU_SB_G0:
-    case elfcpp::R_ARM_ALU_SB_G1_NC:
-    case elfcpp::R_ARM_ALU_SB_G1:
-    case elfcpp::R_ARM_ALU_SB_G2:
-    case elfcpp::R_ARM_LDR_PC_G0:
-    case elfcpp::R_ARM_LDR_PC_G1:
-    case elfcpp::R_ARM_LDR_PC_G2:
-    case elfcpp::R_ARM_LDR_SB_G0:
-    case elfcpp::R_ARM_LDR_SB_G1:
-    case elfcpp::R_ARM_LDR_SB_G2:
-    case elfcpp::R_ARM_LDRS_PC_G0:
-    case elfcpp::R_ARM_LDRS_PC_G1:
-    case elfcpp::R_ARM_LDRS_PC_G2:
-    case elfcpp::R_ARM_LDRS_SB_G0:
-    case elfcpp::R_ARM_LDRS_SB_G1:
-    case elfcpp::R_ARM_LDRS_SB_G2:
-    case elfcpp::R_ARM_LDC_PC_G0:
-    case elfcpp::R_ARM_LDC_PC_G1:
-    case elfcpp::R_ARM_LDC_PC_G2:
-    case elfcpp::R_ARM_LDC_SB_G0:
-    case elfcpp::R_ARM_LDC_SB_G1:
-    case elfcpp::R_ARM_LDC_SB_G2:
+    case elfcpp::R_ARM_THM_JUMP8:
+      // We don't need to do anything for a relative addressing relocation
+      // against a local symbol if it does not reference the GOT.
       break;
 
     case elfcpp::R_ARM_GOTOFF32:
+    case elfcpp::R_ARM_GOTOFF12:
       // We need a GOT section:
       target->got_section(symtab, layout);
-      break;
-
-    case elfcpp::R_ARM_BASE_PREL:
-      // FIXME: What about this?
       break;
 
     case elfcpp::R_ARM_GOT_BREL:
     case elfcpp::R_ARM_GOT_PREL:
       {
 	// The symbol requires a GOT entry.
-	Output_data_got<32, big_endian>* got =
+	Arm_output_data_got<big_endian>* got =
 	  target->got_section(symtab, layout);
 	unsigned int r_sym = elfcpp::elf_r_sym<32>(reloc.get_r_info());
 	if (got->add_local(object, r_sym, GOT_TYPE_STANDARD))
@@ -6782,6 +7356,7 @@ Target_arm<big_endian>::Scan::local(Symbol_table* symtab,
       break;
 
     case elfcpp::R_ARM_TARGET1:
+    case elfcpp::R_ARM_TARGET2:
       // This should have been mapped to another type already.
       // Fall through.
     case elfcpp::R_ARM_COPY:
@@ -6792,6 +7367,116 @@ Target_arm<big_endian>::Scan::local(Symbol_table* symtab,
       // dynamic linker, and should never be seen here.
       gold_error(_("%s: unexpected reloc %u in object file"),
 		 object->name().c_str(), r_type);
+      break;
+
+
+      // These are initial TLS relocs, which are expected when
+      // linking.
+    case elfcpp::R_ARM_TLS_GD32:	// Global-dynamic
+    case elfcpp::R_ARM_TLS_LDM32:	// Local-dynamic
+    case elfcpp::R_ARM_TLS_LDO32:	// Alternate local-dynamic
+    case elfcpp::R_ARM_TLS_IE32:	// Initial-exec
+    case elfcpp::R_ARM_TLS_LE32:	// Local-exec
+      {
+	bool output_is_shared = parameters->options().shared();
+	const tls::Tls_optimization optimized_type
+            = Target_arm<big_endian>::optimize_tls_reloc(!output_is_shared,
+							 r_type);
+	switch (r_type)
+	  {
+	  case elfcpp::R_ARM_TLS_GD32:		// Global-dynamic
+	    if (optimized_type == tls::TLSOPT_NONE)
+	      {
+	        // Create a pair of GOT entries for the module index and
+	        // dtv-relative offset.
+                Arm_output_data_got<big_endian>* got
+                    = target->got_section(symtab, layout);
+                unsigned int r_sym = elfcpp::elf_r_sym<32>(reloc.get_r_info());
+		unsigned int shndx = lsym.get_st_shndx();
+		bool is_ordinary;
+		shndx = object->adjust_sym_shndx(r_sym, shndx, &is_ordinary);
+		if (!is_ordinary)
+		  {
+		    object->error(_("local symbol %u has bad shndx %u"),
+				  r_sym, shndx);
+		    break;
+		  }
+
+		if (!parameters->doing_static_link())
+		  got->add_local_pair_with_rel(object, r_sym, shndx,
+					       GOT_TYPE_TLS_PAIR,
+					       target->rel_dyn_section(layout),
+					       elfcpp::R_ARM_TLS_DTPMOD32, 0);
+		else
+		  got->add_tls_gd32_with_static_reloc(GOT_TYPE_TLS_PAIR,
+						      object, r_sym);
+	      }
+	    else
+	      // FIXME: TLS optimization not supported yet.
+	      gold_unreachable();
+	    break;
+
+	  case elfcpp::R_ARM_TLS_LDM32:		// Local-dynamic
+	    if (optimized_type == tls::TLSOPT_NONE)
+	      {
+	        // Create a GOT entry for the module index.
+	        target->got_mod_index_entry(symtab, layout, object);
+	      }
+	    else
+	      // FIXME: TLS optimization not supported yet.
+	      gold_unreachable();
+	    break;
+
+	  case elfcpp::R_ARM_TLS_LDO32:		// Alternate local-dynamic
+	    break;
+
+	  case elfcpp::R_ARM_TLS_IE32:		// Initial-exec
+	    layout->set_has_static_tls();
+	    if (optimized_type == tls::TLSOPT_NONE)
+	      {
+		// Create a GOT entry for the tp-relative offset.
+		Arm_output_data_got<big_endian>* got
+		  = target->got_section(symtab, layout);
+		unsigned int r_sym =
+		   elfcpp::elf_r_sym<32>(reloc.get_r_info());
+		if (!parameters->doing_static_link())
+		    got->add_local_with_rel(object, r_sym, GOT_TYPE_TLS_OFFSET,
+					    target->rel_dyn_section(layout),
+					    elfcpp::R_ARM_TLS_TPOFF32);
+		else if (!object->local_has_got_offset(r_sym,
+						       GOT_TYPE_TLS_OFFSET))
+		  {
+		    got->add_local(object, r_sym, GOT_TYPE_TLS_OFFSET);
+		    unsigned int got_offset =
+		      object->local_got_offset(r_sym, GOT_TYPE_TLS_OFFSET);
+		    got->add_static_reloc(got_offset,
+					  elfcpp::R_ARM_TLS_TPOFF32, object,
+					  r_sym);
+		  }
+	      }
+	    else
+	      // FIXME: TLS optimization not supported yet.
+	      gold_unreachable();
+	    break;
+
+	  case elfcpp::R_ARM_TLS_LE32:		// Local-exec
+	    layout->set_has_static_tls();
+	    if (output_is_shared)
+	      {
+	        // We need to create a dynamic relocation.
+                gold_assert(lsym.get_st_type() != elfcpp::STT_SECTION);
+                unsigned int r_sym = elfcpp::elf_r_sym<32>(reloc.get_r_info());
+		Reloc_section* rel_dyn = target->rel_dyn_section(layout);
+		rel_dyn->add_local(object, r_sym, elfcpp::R_ARM_TLS_TPOFF32,
+				   output_section, data_shndx,
+				   reloc.get_r_offset());
+	      }
+	    break;
+
+	  default:
+	    gold_unreachable();
+	  }
+      }
       break;
 
     default:
@@ -6814,8 +7499,6 @@ Target_arm<big_endian>::Scan::unsupported_reloc_global(
 }
 
 // Scan a relocation for a global symbol.
-// FIXME: This only handles a subset of relocation types used by Android
-// on ARM v5te devices.
 
 template<bool big_endian>
 inline void
@@ -6829,113 +7512,129 @@ Target_arm<big_endian>::Scan::global(Symbol_table* symtab,
 				     unsigned int r_type,
 				     Symbol* gsym)
 {
+  // A reference to _GLOBAL_OFFSET_TABLE_ implies that we need a got
+  // section.  We check here to avoid creating a dynamic reloc against
+  // _GLOBAL_OFFSET_TABLE_.
+  if (!target->has_got_section()
+      && strcmp(gsym->name(), "_GLOBAL_OFFSET_TABLE_") == 0)
+    target->got_section(symtab, layout);
+
   r_type = get_real_reloc_type(r_type);
   switch (r_type)
     {
     case elfcpp::R_ARM_NONE:
+    case elfcpp::R_ARM_V4BX:
+    case elfcpp::R_ARM_GNU_VTENTRY:
+    case elfcpp::R_ARM_GNU_VTINHERIT:
       break;
 
     case elfcpp::R_ARM_ABS32:
-    case elfcpp::R_ARM_ABS32_NOI:
-      {
-	// Make a dynamic relocation if necessary.
-	if (gsym->needs_dynamic_reloc(Symbol::ABSOLUTE_REF))
-	  {
-	    if (target->may_need_copy_reloc(gsym))
-	      {
-		target->copy_reloc(symtab, layout, object,
-				   data_shndx, output_section, gsym, reloc);
-	      }
-	    else if (gsym->can_use_relative_reloc(false))
-	      {
-   		// If we are to add more other reloc types than R_ARM_ABS32,
-   		// we need to add check_non_pic(object, r_type) here.
-		Reloc_section* rel_dyn = target->rel_dyn_section(layout);
-		rel_dyn->add_global_relative(gsym, elfcpp::R_ARM_RELATIVE,
-					     output_section, object,
-					     data_shndx, reloc.get_r_offset());
-	      }
-	    else
-	      {
-   		// If we are to add more other reloc types than R_ARM_ABS32,
-   		// we need to add check_non_pic(object, r_type) here.
-		Reloc_section* rel_dyn = target->rel_dyn_section(layout);
-		rel_dyn->add_global(gsym, r_type, output_section, object,
-				    data_shndx, reloc.get_r_offset());
-	      }
-	  }
-      }
-      break;
-
+    case elfcpp::R_ARM_ABS16:
+    case elfcpp::R_ARM_ABS12:
+    case elfcpp::R_ARM_THM_ABS5:
+    case elfcpp::R_ARM_ABS8:
+    case elfcpp::R_ARM_BASE_ABS:
     case elfcpp::R_ARM_MOVW_ABS_NC:
     case elfcpp::R_ARM_MOVT_ABS:
     case elfcpp::R_ARM_THM_MOVW_ABS_NC:
     case elfcpp::R_ARM_THM_MOVT_ABS:
+    case elfcpp::R_ARM_ABS32_NOI:
+      // Absolute addressing relocations.
+      {
+        // Make a PLT entry if necessary.
+        if (this->symbol_needs_plt_entry(gsym))
+          {
+            target->make_plt_entry(symtab, layout, gsym);
+            // Since this is not a PC-relative relocation, we may be
+            // taking the address of a function. In that case we need to
+            // set the entry in the dynamic symbol table to the address of
+            // the PLT entry.
+            if (gsym->is_from_dynobj() && !parameters->options().shared())
+              gsym->set_needs_dynsym_value();
+          }
+        // Make a dynamic relocation if necessary.
+        if (gsym->needs_dynamic_reloc(Symbol::ABSOLUTE_REF))
+          {
+            if (gsym->may_need_copy_reloc())
+              {
+	        target->copy_reloc(symtab, layout, object,
+	                           data_shndx, output_section, gsym, reloc);
+              }
+            else if ((r_type == elfcpp::R_ARM_ABS32
+		      || r_type == elfcpp::R_ARM_ABS32_NOI)
+                     && gsym->can_use_relative_reloc(false))
+              {
+                Reloc_section* rel_dyn = target->rel_dyn_section(layout);
+                rel_dyn->add_global_relative(gsym, elfcpp::R_ARM_RELATIVE,
+                                             output_section, object,
+                                             data_shndx, reloc.get_r_offset());
+              }
+            else
+              {
+		check_non_pic(object, r_type);
+                Reloc_section* rel_dyn = target->rel_dyn_section(layout);
+                rel_dyn->add_global(gsym, r_type, output_section, object,
+                                    data_shndx, reloc.get_r_offset());
+              }
+          }
+      }
+      break;
+
+    case elfcpp::R_ARM_GOTOFF32:
+    case elfcpp::R_ARM_GOTOFF12:
+      // We need a GOT section.
+      target->got_section(symtab, layout);
+      break;
+      
+    case elfcpp::R_ARM_REL32:
+    case elfcpp::R_ARM_LDR_PC_G0:
+    case elfcpp::R_ARM_SBREL32:
+    case elfcpp::R_ARM_THM_PC8:
+    case elfcpp::R_ARM_BASE_PREL:
+    case elfcpp::R_ARM_LDR_SBREL_11_0_NC:
+    case elfcpp::R_ARM_ALU_SBREL_19_12_NC:
+    case elfcpp::R_ARM_ALU_SBREL_27_20_CK:
     case elfcpp::R_ARM_MOVW_PREL_NC:
     case elfcpp::R_ARM_MOVT_PREL:
     case elfcpp::R_ARM_THM_MOVW_PREL_NC:
     case elfcpp::R_ARM_THM_MOVT_PREL:
+    case elfcpp::R_ARM_THM_ALU_PREL_11_0:
+    case elfcpp::R_ARM_THM_PC12:
+    case elfcpp::R_ARM_REL32_NOI:
+    case elfcpp::R_ARM_ALU_PC_G0_NC:
+    case elfcpp::R_ARM_ALU_PC_G0:
+    case elfcpp::R_ARM_ALU_PC_G1_NC:
+    case elfcpp::R_ARM_ALU_PC_G1:
+    case elfcpp::R_ARM_ALU_PC_G2:
+    case elfcpp::R_ARM_LDR_PC_G1:
+    case elfcpp::R_ARM_LDR_PC_G2:
+    case elfcpp::R_ARM_LDRS_PC_G0:
+    case elfcpp::R_ARM_LDRS_PC_G1:
+    case elfcpp::R_ARM_LDRS_PC_G2:
+    case elfcpp::R_ARM_LDC_PC_G0:
+    case elfcpp::R_ARM_LDC_PC_G1:
+    case elfcpp::R_ARM_LDC_PC_G2:
+    case elfcpp::R_ARM_ALU_SB_G0_NC:
+    case elfcpp::R_ARM_ALU_SB_G0:
+    case elfcpp::R_ARM_ALU_SB_G1_NC:
+    case elfcpp::R_ARM_ALU_SB_G1:
+    case elfcpp::R_ARM_ALU_SB_G2:
+    case elfcpp::R_ARM_LDR_SB_G0:
+    case elfcpp::R_ARM_LDR_SB_G1:
+    case elfcpp::R_ARM_LDR_SB_G2:
+    case elfcpp::R_ARM_LDRS_SB_G0:
+    case elfcpp::R_ARM_LDRS_SB_G1:
+    case elfcpp::R_ARM_LDRS_SB_G2:
+    case elfcpp::R_ARM_LDC_SB_G0:
+    case elfcpp::R_ARM_LDC_SB_G1:
+    case elfcpp::R_ARM_LDC_SB_G2:
     case elfcpp::R_ARM_MOVW_BREL_NC:
     case elfcpp::R_ARM_MOVT_BREL:
     case elfcpp::R_ARM_MOVW_BREL:
     case elfcpp::R_ARM_THM_MOVW_BREL_NC:
     case elfcpp::R_ARM_THM_MOVT_BREL:
     case elfcpp::R_ARM_THM_MOVW_BREL:
-    case elfcpp::R_ARM_THM_JUMP6:
-    case elfcpp::R_ARM_THM_JUMP8:
-    case elfcpp::R_ARM_THM_JUMP11:
-    case elfcpp::R_ARM_V4BX:
-    case elfcpp::R_ARM_THM_PC8:
-    case elfcpp::R_ARM_THM_PC12:
-    case elfcpp::R_ARM_THM_ALU_PREL_11_0:
-    case elfcpp::R_ARM_ALU_PC_G0_NC:
-    case elfcpp::R_ARM_ALU_PC_G0:
-    case elfcpp::R_ARM_ALU_PC_G1_NC:
-    case elfcpp::R_ARM_ALU_PC_G1:
-    case elfcpp::R_ARM_ALU_PC_G2:
-    case elfcpp::R_ARM_ALU_SB_G0_NC:
-    case elfcpp::R_ARM_ALU_SB_G0:
-    case elfcpp::R_ARM_ALU_SB_G1_NC:
-    case elfcpp::R_ARM_ALU_SB_G1:
-    case elfcpp::R_ARM_ALU_SB_G2:
-    case elfcpp::R_ARM_LDR_PC_G0:
-    case elfcpp::R_ARM_LDR_PC_G1:
-    case elfcpp::R_ARM_LDR_PC_G2:
-    case elfcpp::R_ARM_LDR_SB_G0:
-    case elfcpp::R_ARM_LDR_SB_G1:
-    case elfcpp::R_ARM_LDR_SB_G2:
-    case elfcpp::R_ARM_LDRS_PC_G0:
-    case elfcpp::R_ARM_LDRS_PC_G1:
-    case elfcpp::R_ARM_LDRS_PC_G2:
-    case elfcpp::R_ARM_LDRS_SB_G0:
-    case elfcpp::R_ARM_LDRS_SB_G1:
-    case elfcpp::R_ARM_LDRS_SB_G2:
-    case elfcpp::R_ARM_LDC_PC_G0:
-    case elfcpp::R_ARM_LDC_PC_G1:
-    case elfcpp::R_ARM_LDC_PC_G2:
-    case elfcpp::R_ARM_LDC_SB_G0:
-    case elfcpp::R_ARM_LDC_SB_G1:
-    case elfcpp::R_ARM_LDC_SB_G2:
-      break;
-
-    case elfcpp::R_ARM_THM_ABS5:
-    case elfcpp::R_ARM_ABS8:
-    case elfcpp::R_ARM_ABS12:
-    case elfcpp::R_ARM_ABS16:
-    case elfcpp::R_ARM_BASE_ABS:
-      {
-	// No dynamic relocs of this kinds.
-	// Report the error in case of PIC.
-	int flags = Symbol::NON_PIC_REF;
-	if (gsym->type() == elfcpp::STT_FUNC
-	    || gsym->type() == elfcpp::STT_ARM_TFUNC)
-	  flags |= Symbol::FUNCTION_CALL;
-	if (gsym->needs_dynamic_reloc(flags))
-	  check_non_pic(object, r_type);
-      }
-      break;
-
-    case elfcpp::R_ARM_REL32:
+      // Relative addressing relocations.
       {
 	// Make a dynamic relocation if necessary.
 	int flags = Symbol::NON_PIC_REF;
@@ -6957,14 +7656,27 @@ Target_arm<big_endian>::Scan::global(Symbol_table* symtab,
       }
       break;
 
-    case elfcpp::R_ARM_JUMP24:
-    case elfcpp::R_ARM_THM_JUMP24:
-    case elfcpp::R_ARM_THM_JUMP19:
-    case elfcpp::R_ARM_CALL:
+    case elfcpp::R_ARM_PC24:
     case elfcpp::R_ARM_THM_CALL:
     case elfcpp::R_ARM_PLT32:
+    case elfcpp::R_ARM_CALL:
+    case elfcpp::R_ARM_JUMP24:
+    case elfcpp::R_ARM_THM_JUMP24:
+    case elfcpp::R_ARM_SBREL31:
     case elfcpp::R_ARM_PREL31:
-    case elfcpp::R_ARM_PC24:
+    case elfcpp::R_ARM_THM_JUMP19:
+    case elfcpp::R_ARM_THM_JUMP6:
+    case elfcpp::R_ARM_THM_JUMP11:
+    case elfcpp::R_ARM_THM_JUMP8:
+      // All the relocation above are branches except for the PREL31 ones.
+      // A PREL31 relocation can point to a personality function in a shared
+      // library.  In that case we want to use a PLT because we want to
+      // call the personality routine and the dyanmic linkers we care about
+      // do not support dynamic PREL31 relocations. An REL31 relocation may
+      // point to a function whose unwinding behaviour is being described but
+      // we will not mistakenly generate a PLT for that because we should use
+      // a local section symbol.
+
       // If the symbol is fully resolved, this is just a relative
       // local reloc.  Otherwise we need a PLT entry.
       if (gsym->final_value_is_known())
@@ -6979,20 +7691,12 @@ Target_arm<big_endian>::Scan::global(Symbol_table* symtab,
       target->make_plt_entry(symtab, layout, gsym);
       break;
 
-    case elfcpp::R_ARM_GOTOFF32:
-      // We need a GOT section.
-      target->got_section(symtab, layout);
-      break;
-
-    case elfcpp::R_ARM_BASE_PREL:
-      // FIXME: What about this?
-      break;
-      
     case elfcpp::R_ARM_GOT_BREL:
+    case elfcpp::R_ARM_GOT_ABS:
     case elfcpp::R_ARM_GOT_PREL:
       {
 	// The symbol requires a GOT entry.
-	Output_data_got<32, big_endian>* got =
+	Arm_output_data_got<big_endian>* got =
 	  target->got_section(symtab, layout);
 	if (gsym->final_value_is_known())
 	  got->add_global(gsym, GOT_TYPE_STANDARD);
@@ -7018,7 +7722,8 @@ Target_arm<big_endian>::Scan::global(Symbol_table* symtab,
       break;
 
     case elfcpp::R_ARM_TARGET1:
-      // This should have been mapped to another type already.
+    case elfcpp::R_ARM_TARGET2:
+      // These should have been mapped to other types already.
       // Fall through.
     case elfcpp::R_ARM_COPY:
     case elfcpp::R_ARM_GLOB_DAT:
@@ -7028,6 +7733,96 @@ Target_arm<big_endian>::Scan::global(Symbol_table* symtab,
       // dynamic linker, and should never be seen here.
       gold_error(_("%s: unexpected reloc %u in object file"),
 		 object->name().c_str(), r_type);
+      break;
+
+      // These are initial tls relocs, which are expected when
+      // linking.
+    case elfcpp::R_ARM_TLS_GD32:	// Global-dynamic
+    case elfcpp::R_ARM_TLS_LDM32:	// Local-dynamic
+    case elfcpp::R_ARM_TLS_LDO32:	// Alternate local-dynamic
+    case elfcpp::R_ARM_TLS_IE32:	// Initial-exec
+    case elfcpp::R_ARM_TLS_LE32:	// Local-exec
+      {
+	const bool is_final = gsym->final_value_is_known();
+	const tls::Tls_optimization optimized_type
+            = Target_arm<big_endian>::optimize_tls_reloc(is_final, r_type);
+	switch (r_type)
+	  {
+	  case elfcpp::R_ARM_TLS_GD32:		// Global-dynamic
+	    if (optimized_type == tls::TLSOPT_NONE)
+	      {
+	        // Create a pair of GOT entries for the module index and
+	        // dtv-relative offset.
+                Arm_output_data_got<big_endian>* got
+                    = target->got_section(symtab, layout);
+		if (!parameters->doing_static_link())
+		  got->add_global_pair_with_rel(gsym, GOT_TYPE_TLS_PAIR,
+						target->rel_dyn_section(layout),
+						elfcpp::R_ARM_TLS_DTPMOD32,
+						elfcpp::R_ARM_TLS_DTPOFF32);
+		else
+		  got->add_tls_gd32_with_static_reloc(GOT_TYPE_TLS_PAIR, gsym);
+	      }
+	    else
+	      // FIXME: TLS optimization not supported yet.
+	      gold_unreachable();
+	    break;
+
+	  case elfcpp::R_ARM_TLS_LDM32:		// Local-dynamic
+	    if (optimized_type == tls::TLSOPT_NONE)
+	      {
+	        // Create a GOT entry for the module index.
+	        target->got_mod_index_entry(symtab, layout, object);
+	      }
+	    else
+	      // FIXME: TLS optimization not supported yet.
+	      gold_unreachable();
+	    break;
+
+	  case elfcpp::R_ARM_TLS_LDO32:		// Alternate local-dynamic
+	    break;
+
+	  case elfcpp::R_ARM_TLS_IE32:		// Initial-exec
+	    layout->set_has_static_tls();
+	    if (optimized_type == tls::TLSOPT_NONE)
+	      {
+		// Create a GOT entry for the tp-relative offset.
+		Arm_output_data_got<big_endian>* got
+		  = target->got_section(symtab, layout);
+		if (!parameters->doing_static_link())
+		  got->add_global_with_rel(gsym, GOT_TYPE_TLS_OFFSET,
+					   target->rel_dyn_section(layout),
+					   elfcpp::R_ARM_TLS_TPOFF32);
+		else if (!gsym->has_got_offset(GOT_TYPE_TLS_OFFSET))
+		  {
+		    got->add_global(gsym, GOT_TYPE_TLS_OFFSET);
+		    unsigned int got_offset =
+		       gsym->got_offset(GOT_TYPE_TLS_OFFSET);
+		    got->add_static_reloc(got_offset,
+					  elfcpp::R_ARM_TLS_TPOFF32, gsym);
+		  }
+	      }
+	    else
+	      // FIXME: TLS optimization not supported yet.
+	      gold_unreachable();
+	    break;
+
+	  case elfcpp::R_ARM_TLS_LE32:	// Local-exec
+	    layout->set_has_static_tls();
+	    if (parameters->options().shared())
+	      {
+	        // We need to create a dynamic relocation.
+                Reloc_section* rel_dyn = target->rel_dyn_section(layout);
+                rel_dyn->add_global(gsym, elfcpp::R_ARM_TLS_TPOFF32,
+				    output_section, object,
+                                    data_shndx, reloc.get_r_offset());
+	      }
+	    break;
+
+	  default:
+	    gold_unreachable();
+	  }
+      }
       break;
 
     default:
@@ -7116,11 +7911,25 @@ Target_arm<big_endian>::do_finalize_sections(
     const Input_objects* input_objects,
     Symbol_table* symtab)
 {
+  // Create an empty uninitialized attribute section if we still don't have it
+  // at this moment.
+  if (this->attributes_section_data_ == NULL)
+    this->attributes_section_data_ = new Attributes_section_data(NULL, 0);
+
   // Merge processor-specific flags.
   for (Input_objects::Relobj_iterator p = input_objects->relobj_begin();
        p != input_objects->relobj_end();
        ++p)
     {
+      // If this input file is a binary file, it has no processor
+      // specific flags and attributes section.
+      Input_file::Format format = (*p)->input_file()->format();
+      if (format != Input_file::FORMAT_ELF)
+	{
+	  gold_assert(format == Input_file::FORMAT_BINARY);
+	  continue;
+	}
+
       Arm_relobj<big_endian>* arm_relobj =
 	Arm_relobj<big_endian>::as_arm_relobj(*p);
       this->merge_processor_specific_flags(
@@ -7179,7 +7988,7 @@ Target_arm<big_endian>::do_finalize_sections(
 				  ? NULL
 				  : this->plt_->rel_plt());
   layout->add_target_dynamic_tags(true, this->got_plt_, rel_plt,
-				  this->rel_dyn_, true);
+				  this->rel_dyn_, true, false);
 
   // Emit any relocs we saved in an attempt to avoid generating COPY
   // relocs.
@@ -7281,11 +8090,22 @@ Target_arm<big_endian>::Relocate::relocate(
     const Symbol_value<32>* psymval,
     unsigned char* view,
     Arm_address address,
-    section_size_type /* view_size */ )
+    section_size_type view_size)
 {
   typedef Arm_relocate_functions<big_endian> Arm_relocate_functions;
 
   r_type = get_real_reloc_type(r_type);
+  const Arm_reloc_property* reloc_property =
+    arm_reloc_property_table->get_implemented_static_reloc_property(r_type);
+  if (reloc_property == NULL)
+    {
+      std::string reloc_name =
+	arm_reloc_property_table->reloc_name_in_error_message(r_type);
+      gold_error_at_location(relinfo, relnum, rel.get_r_offset(),
+			     _("cannot relocate %s in object file"),
+			     reloc_name.c_str());
+      return true;
+    }
 
   const Arm_relobj<big_endian>* object =
     Arm_relobj<big_endian>::as_arm_relobj(relinfo->object);
@@ -7348,7 +8168,7 @@ Target_arm<big_endian>::Relocate::relocate(
 
   // Strip LSB if this points to a THUMB target.
   if (thumb_bit != 0
-      && Target_arm<big_endian>::reloc_uses_thumb_bit(r_type) 
+      && reloc_property->uses_thumb_bit() 
       && ((psymval->value(object, 0) & 1) != 0))
     {
       Arm_address stripped_value =
@@ -7394,7 +8214,7 @@ Target_arm<big_endian>::Relocate::relocate(
   // Get the addressing origin of the output segment defining the
   // symbol gsym if needed (AAELF 4.6.1.2 Relocation types).
   Arm_address sym_origin = 0;
-  if (Relocate::reloc_needs_sym_origin(r_type))
+  if (reloc_property->uses_symbol_base())
     {
       if (r_type == elfcpp::R_ARM_BASE_ABS && gsym == NULL)
 	// R_ARM_BASE_ABS with the NULL symbol will give the
@@ -7413,8 +8233,35 @@ Target_arm<big_endian>::Relocate::relocate(
       // will be implemented.  This is consistent with GNU ld.
     }
 
+  // For relative addressing relocation, find out the relative address base.
+  Arm_address relative_address_base = 0;
+  switch(reloc_property->relative_address_base())
+    {
+    case Arm_reloc_property::RAB_NONE:
+    // Relocations with relative address bases RAB_TLS and RAB_tp are
+    // handled by relocate_tls.  So we do not need to do anything here.
+    case Arm_reloc_property::RAB_TLS:
+    case Arm_reloc_property::RAB_tp:
+      break;
+    case Arm_reloc_property::RAB_B_S:
+      relative_address_base = sym_origin;
+      break;
+    case Arm_reloc_property::RAB_GOT_ORG:
+      relative_address_base = target->got_plt_section()->address();
+      break;
+    case Arm_reloc_property::RAB_P:
+      relative_address_base = address;
+      break;
+    case Arm_reloc_property::RAB_Pa:
+      relative_address_base = address & 0xfffffffcU;
+      break;
+    default:
+      gold_unreachable(); 
+    }
+    
   typename Arm_relocate_functions::Status reloc_status =
 	Arm_relocate_functions::STATUS_OKAY;
+  bool check_overflow = reloc_property->checks_overflow();
   switch (r_type)
     {
     case elfcpp::R_ARM_NONE:
@@ -7454,103 +8301,65 @@ Target_arm<big_endian>::Relocate::relocate(
       break;
 
     case elfcpp::R_ARM_MOVW_ABS_NC:
-      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, true,
+      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, false,
 				    output_section))
-	reloc_status = Arm_relocate_functions::movw_abs_nc(view, object,
-							   psymval,
-       						           thumb_bit);
-      else
-	gold_error(_("relocation R_ARM_MOVW_ABS_NC cannot be used when making"
-		     "a shared object; recompile with -fPIC"));
+	reloc_status = Arm_relocate_functions::movw(view, object, psymval,
+						    0, thumb_bit,
+						    check_overflow);
       break;
 
     case elfcpp::R_ARM_MOVT_ABS:
-      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, true,
+      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, false,
 				    output_section))
-	reloc_status = Arm_relocate_functions::movt_abs(view, object, psymval);
-      else
-	gold_error(_("relocation R_ARM_MOVT_ABS cannot be used when making"
-		     "a shared object; recompile with -fPIC"));
+	reloc_status = Arm_relocate_functions::movt(view, object, psymval, 0);
       break;
 
     case elfcpp::R_ARM_THM_MOVW_ABS_NC:
-      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, true,
+      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, false,
 				    output_section))
-	reloc_status = Arm_relocate_functions::thm_movw_abs_nc(view, object,
-							       psymval,
-       						               thumb_bit);
-      else
-	gold_error(_("relocation R_ARM_THM_MOVW_ABS_NC cannot be used when"
-		     "making a shared object; recompile with -fPIC"));
+	reloc_status = Arm_relocate_functions::thm_movw(view, object, psymval,
+       						        0, thumb_bit, false);
       break;
 
     case elfcpp::R_ARM_THM_MOVT_ABS:
-      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, true,
+      if (should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, false,
 				    output_section))
-	reloc_status = Arm_relocate_functions::thm_movt_abs(view, object,
-							    psymval);
-      else
-	gold_error(_("relocation R_ARM_THM_MOVT_ABS cannot be used when"
-		     "making a shared object; recompile with -fPIC"));
+	reloc_status = Arm_relocate_functions::thm_movt(view, object,
+							psymval, 0);
       break;
 
     case elfcpp::R_ARM_MOVW_PREL_NC:
-      reloc_status = Arm_relocate_functions::movw_rel_nc(view, object,
-							 psymval, address,
-							 thumb_bit);
-      break;
-
     case elfcpp::R_ARM_MOVW_BREL_NC:
-      reloc_status = Arm_relocate_functions::movw_rel_nc(view, object,
-							 psymval, sym_origin,
-							 thumb_bit);
-      break;
-
     case elfcpp::R_ARM_MOVW_BREL:
-      reloc_status = Arm_relocate_functions::movw_rel(view, object,
-						      psymval, sym_origin,
-						      thumb_bit);
+      reloc_status =
+	Arm_relocate_functions::movw(view, object, psymval,
+				     relative_address_base, thumb_bit,
+				     check_overflow);
       break;
 
     case elfcpp::R_ARM_MOVT_PREL:
-      reloc_status = Arm_relocate_functions::movt_rel(view, object,
-                                                      psymval, address);
-      break;
-
     case elfcpp::R_ARM_MOVT_BREL:
-      reloc_status = Arm_relocate_functions::movt_rel(view, object,
-                                                      psymval, sym_origin);
+      reloc_status =
+	Arm_relocate_functions::movt(view, object, psymval,
+				     relative_address_base);
       break;
 
     case elfcpp::R_ARM_THM_MOVW_PREL_NC:
-      reloc_status = Arm_relocate_functions::thm_movw_rel_nc(view, object,
-							     psymval, address,
-							     thumb_bit);
-      break;
-
     case elfcpp::R_ARM_THM_MOVW_BREL_NC:
-      reloc_status = Arm_relocate_functions::thm_movw_rel_nc(view, object,
-							     psymval,
-							     sym_origin,
-							     thumb_bit);
-      break;
-
     case elfcpp::R_ARM_THM_MOVW_BREL:
-      reloc_status = Arm_relocate_functions::thm_movw_rel(view, object,
-							  psymval, sym_origin,
-							  thumb_bit);
+      reloc_status =
+	Arm_relocate_functions::thm_movw(view, object, psymval,
+					 relative_address_base,
+					 thumb_bit, check_overflow);
       break;
 
     case elfcpp::R_ARM_THM_MOVT_PREL:
-      reloc_status = Arm_relocate_functions::thm_movt_rel(view, object,
-							  psymval, address);
+    case elfcpp::R_ARM_THM_MOVT_BREL:
+      reloc_status =
+	Arm_relocate_functions::thm_movt(view, object, psymval,
+					 relative_address_base);
       break;
 	
-    case elfcpp::R_ARM_THM_MOVT_BREL:
-      reloc_status = Arm_relocate_functions::thm_movt_rel(view, object,
-							  psymval, sym_origin);
-      break;
-
     case elfcpp::R_ARM_REL32:
       reloc_status = Arm_relocate_functions::rel32(view, object, psymval,
 						   address, thumb_bit);
@@ -7589,7 +8398,7 @@ Target_arm<big_endian>::Relocate::relocate(
 
     case elfcpp::R_ARM_BASE_ABS:
       {
-	if (!should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, true,
+	if (!should_apply_static_reloc(gsym, Symbol::ABSOLUTE_REF, false,
 				      output_section))
 	  break;
 
@@ -7684,192 +8493,72 @@ Target_arm<big_endian>::Relocate::relocate(
       break;
 
     case elfcpp::R_ARM_ALU_PC_G0_NC:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 0,
-					      address, thumb_bit, false);
-      break;
-
     case elfcpp::R_ARM_ALU_PC_G0:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 0,
-					      address, thumb_bit, true);
-      break;
-
     case elfcpp::R_ARM_ALU_PC_G1_NC:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 1,
-					      address, thumb_bit, false);
-      break;
-
     case elfcpp::R_ARM_ALU_PC_G1:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 1,
-					      address, thumb_bit, true);
-      break;
-
     case elfcpp::R_ARM_ALU_PC_G2:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 2,
-					      address, thumb_bit, true);
-      break;
-
     case elfcpp::R_ARM_ALU_SB_G0_NC:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 0,
-					      sym_origin, thumb_bit, false);
-      break;
-
     case elfcpp::R_ARM_ALU_SB_G0:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 0,
-					      sym_origin, thumb_bit, true);
-      break;
-
     case elfcpp::R_ARM_ALU_SB_G1_NC:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 1,
-					      sym_origin, thumb_bit, false);
-      break;
-
     case elfcpp::R_ARM_ALU_SB_G1:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 1,
-					      sym_origin, thumb_bit, true);
-      break;
-
     case elfcpp::R_ARM_ALU_SB_G2:
       reloc_status =
-	  Arm_relocate_functions::arm_grp_alu(view, object, psymval, 2,
-					      sym_origin, thumb_bit, true);
+	Arm_relocate_functions::arm_grp_alu(view, object, psymval,
+					    reloc_property->group_index(),
+					    relative_address_base,
+					    thumb_bit, check_overflow);
       break;
 
     case elfcpp::R_ARM_LDR_PC_G0:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldr(view, object, psymval, 0,
-					      address);
-      break;
-
     case elfcpp::R_ARM_LDR_PC_G1:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldr(view, object, psymval, 1,
-					      address);
-      break;
-
     case elfcpp::R_ARM_LDR_PC_G2:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldr(view, object, psymval, 2,
-					      address);
-      break;
-
     case elfcpp::R_ARM_LDR_SB_G0:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldr(view, object, psymval, 0,
-					      sym_origin);
-      break;
-
     case elfcpp::R_ARM_LDR_SB_G1:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldr(view, object, psymval, 1,
-					      sym_origin);
-      break;
-
     case elfcpp::R_ARM_LDR_SB_G2:
       reloc_status =
-	  Arm_relocate_functions::arm_grp_ldr(view, object, psymval, 2,
-					      sym_origin);
+	  Arm_relocate_functions::arm_grp_ldr(view, object, psymval,
+					      reloc_property->group_index(),
+					      relative_address_base);
       break;
 
     case elfcpp::R_ARM_LDRS_PC_G0:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldrs(view, object, psymval, 0,
-					       address);
-      break;
-
     case elfcpp::R_ARM_LDRS_PC_G1:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldrs(view, object, psymval, 1,
-					       address);
-      break;
-
     case elfcpp::R_ARM_LDRS_PC_G2:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldrs(view, object, psymval, 2,
-					       address);
-      break;
-
     case elfcpp::R_ARM_LDRS_SB_G0:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldrs(view, object, psymval, 0,
-					       sym_origin);
-      break;
-
     case elfcpp::R_ARM_LDRS_SB_G1:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldrs(view, object, psymval, 1,
-					       sym_origin);
-      break;
-
     case elfcpp::R_ARM_LDRS_SB_G2:
       reloc_status =
-	  Arm_relocate_functions::arm_grp_ldrs(view, object, psymval, 2,
-					       sym_origin);
+	  Arm_relocate_functions::arm_grp_ldrs(view, object, psymval,
+					       reloc_property->group_index(),
+					       relative_address_base);
       break;
 
     case elfcpp::R_ARM_LDC_PC_G0:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldc(view, object, psymval, 0,
-					      address);
-      break;
-
     case elfcpp::R_ARM_LDC_PC_G1:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldc(view, object, psymval, 1,
-					      address);
-      break;
-
     case elfcpp::R_ARM_LDC_PC_G2:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldc(view, object, psymval, 2,
-					      address);
-      break;
-
     case elfcpp::R_ARM_LDC_SB_G0:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldc(view, object, psymval, 0,
-					      sym_origin);
-      break;
-
     case elfcpp::R_ARM_LDC_SB_G1:
-      reloc_status =
-	  Arm_relocate_functions::arm_grp_ldc(view, object, psymval, 1,
-					      sym_origin);
-      break;
-
     case elfcpp::R_ARM_LDC_SB_G2:
       reloc_status =
-	  Arm_relocate_functions::arm_grp_ldc(view, object, psymval, 2,
-					      sym_origin);
+	  Arm_relocate_functions::arm_grp_ldc(view, object, psymval,
+					      reloc_property->group_index(),
+					      relative_address_base);
       break;
 
-    case elfcpp::R_ARM_TARGET1:
-      // This should have been mapped to another type already.
-      // Fall through.
-    case elfcpp::R_ARM_COPY:
-    case elfcpp::R_ARM_GLOB_DAT:
-    case elfcpp::R_ARM_JUMP_SLOT:
-    case elfcpp::R_ARM_RELATIVE:
-      // These are relocations which should only be seen by the
-      // dynamic linker, and should never be seen here.
-      gold_error_at_location(relinfo, relnum, rel.get_r_offset(),
-			     _("unexpected reloc %u in object file"),
-			     r_type);
+      // These are initial tls relocs, which are expected when
+      // linking.
+    case elfcpp::R_ARM_TLS_GD32:	// Global-dynamic
+    case elfcpp::R_ARM_TLS_LDM32:	// Local-dynamic
+    case elfcpp::R_ARM_TLS_LDO32:	// Alternate local-dynamic
+    case elfcpp::R_ARM_TLS_IE32:	// Initial-exec
+    case elfcpp::R_ARM_TLS_LE32:	// Local-exec
+      reloc_status =
+	this->relocate_tls(relinfo, target, relnum, rel, r_type, gsym, psymval,
+			   view, address, view_size);
       break;
 
     default:
-      gold_error_at_location(relinfo, relnum, rel.get_r_offset(),
-			     _("unsupported reloc %u"),
-			     r_type);
-      break;
+      gold_unreachable();
     }
 
   // Report any errors.
@@ -7897,6 +8586,145 @@ Target_arm<big_endian>::Relocate::relocate(
   return true;
 }
 
+// Perform a TLS relocation.
+
+template<bool big_endian>
+inline typename Arm_relocate_functions<big_endian>::Status
+Target_arm<big_endian>::Relocate::relocate_tls(
+    const Relocate_info<32, big_endian>* relinfo,
+    Target_arm<big_endian>* target,
+    size_t relnum,
+    const elfcpp::Rel<32, big_endian>& rel,
+    unsigned int r_type,
+    const Sized_symbol<32>* gsym,
+    const Symbol_value<32>* psymval,
+    unsigned char* view,
+    elfcpp::Elf_types<32>::Elf_Addr address,
+    section_size_type /*view_size*/ )
+{
+  typedef Arm_relocate_functions<big_endian> ArmRelocFuncs;
+  typedef Relocate_functions<32, big_endian> RelocFuncs;
+  Output_segment* tls_segment = relinfo->layout->tls_segment();
+
+  const Sized_relobj<32, big_endian>* object = relinfo->object;
+
+  elfcpp::Elf_types<32>::Elf_Addr value = psymval->value(object, 0);
+
+  const bool is_final = (gsym == NULL
+			 ? !parameters->options().shared()
+			 : gsym->final_value_is_known());
+  const tls::Tls_optimization optimized_type
+      = Target_arm<big_endian>::optimize_tls_reloc(is_final, r_type);
+  switch (r_type)
+    {
+    case elfcpp::R_ARM_TLS_GD32:	// Global-dynamic
+        {
+          unsigned int got_type = GOT_TYPE_TLS_PAIR;
+          unsigned int got_offset;
+          if (gsym != NULL)
+            {
+              gold_assert(gsym->has_got_offset(got_type));
+              got_offset = gsym->got_offset(got_type) - target->got_size();
+            }
+          else
+            {
+              unsigned int r_sym = elfcpp::elf_r_sym<32>(rel.get_r_info());
+              gold_assert(object->local_has_got_offset(r_sym, got_type));
+              got_offset = (object->local_got_offset(r_sym, got_type)
+			    - target->got_size());
+            }
+          if (optimized_type == tls::TLSOPT_NONE)
+            {
+	      Arm_address got_entry =
+		target->got_plt_section()->address() + got_offset;
+	      
+              // Relocate the field with the PC relative offset of the pair of
+              // GOT entries.
+	      RelocFuncs::pcrel32(view, got_entry, address);
+              return ArmRelocFuncs::STATUS_OKAY;
+            }
+        }
+      break;
+
+    case elfcpp::R_ARM_TLS_LDM32:	// Local-dynamic
+      if (optimized_type == tls::TLSOPT_NONE)
+        {
+          // Relocate the field with the offset of the GOT entry for
+          // the module index.
+          unsigned int got_offset;
+          got_offset = (target->got_mod_index_entry(NULL, NULL, NULL)
+			- target->got_size());
+	  Arm_address got_entry =
+	    target->got_plt_section()->address() + got_offset;
+
+          // Relocate the field with the PC relative offset of the pair of
+          // GOT entries.
+          RelocFuncs::pcrel32(view, got_entry, address);
+	  return ArmRelocFuncs::STATUS_OKAY;
+        }
+      break;
+
+    case elfcpp::R_ARM_TLS_LDO32:	// Alternate local-dynamic
+      RelocFuncs::rel32(view, value);
+      return ArmRelocFuncs::STATUS_OKAY;
+
+    case elfcpp::R_ARM_TLS_IE32:	// Initial-exec
+      if (optimized_type == tls::TLSOPT_NONE)
+        {
+          // Relocate the field with the offset of the GOT entry for
+          // the tp-relative offset of the symbol.
+	  unsigned int got_type = GOT_TYPE_TLS_OFFSET;
+          unsigned int got_offset;
+          if (gsym != NULL)
+            {
+              gold_assert(gsym->has_got_offset(got_type));
+              got_offset = gsym->got_offset(got_type);
+            }
+          else
+            {
+              unsigned int r_sym = elfcpp::elf_r_sym<32>(rel.get_r_info());
+              gold_assert(object->local_has_got_offset(r_sym, got_type));
+              got_offset = object->local_got_offset(r_sym, got_type);
+            }
+
+          // All GOT offsets are relative to the end of the GOT.
+          got_offset -= target->got_size();
+
+	  Arm_address got_entry =
+	    target->got_plt_section()->address() + got_offset;
+
+          // Relocate the field with the PC relative offset of the GOT entry.
+	  RelocFuncs::pcrel32(view, got_entry, address);
+	  return ArmRelocFuncs::STATUS_OKAY;
+        }
+      break;
+
+    case elfcpp::R_ARM_TLS_LE32:	// Local-exec
+      // If we're creating a shared library, a dynamic relocation will
+      // have been created for this location, so do not apply it now.
+      if (!parameters->options().shared())
+        {
+          gold_assert(tls_segment != NULL);
+
+	  // $tp points to the TCB, which is followed by the TLS, so we
+	  // need to add TCB size to the offset.
+	  Arm_address aligned_tcb_size =
+	    align_address(ARM_TCB_SIZE, tls_segment->maximum_alignment());
+          RelocFuncs::rel32(view, value + aligned_tcb_size);
+
+        }
+      return ArmRelocFuncs::STATUS_OKAY;
+    
+    default:
+      gold_unreachable();
+    }
+
+  gold_error_at_location(relinfo, relnum, rel.get_r_offset(),
+			 _("unsupported reloc %u"),
+			 r_type);
+  return ArmRelocFuncs::STATUS_BAD_RELOC;
+}
+
 // Relocate section data.
 
 template<bool big_endian>
@@ -7916,26 +8744,27 @@ Target_arm<big_endian>::relocate_section(
   typedef typename Target_arm<big_endian>::Relocate Arm_relocate;
   gold_assert(sh_type == elfcpp::SHT_REL);
 
-  Arm_input_section<big_endian>* arm_input_section =
-    this->find_arm_input_section(relinfo->object, relinfo->data_shndx);
-
-  // This is an ARM input section and the view covers the whole output
-  // section.
-  if (arm_input_section != NULL)
+  // See if we are relocating a relaxed input section.  If so, the view
+  // covers the whole output section and we need to adjust accordingly.
+  if (needs_special_offset_handling)
     {
-      gold_assert(needs_special_offset_handling);
-      Arm_address section_address = arm_input_section->address();
-      section_size_type section_size = arm_input_section->data_size();
+      const Output_relaxed_input_section* poris =
+	output_section->find_relaxed_input_section(relinfo->object,
+						   relinfo->data_shndx);
+      if (poris != NULL)
+	{
+	  Arm_address section_address = poris->address();
+	  section_size_type section_size = poris->data_size();
 
-      gold_assert((arm_input_section->address() >= address)
-		  && ((arm_input_section->address()
-		       + arm_input_section->data_size())
-		      <= (address + view_size)));
+	  gold_assert((section_address >= address)
+		      && ((section_address + section_size)
+			  <= (address + view_size)));
 
-      off_t offset = section_address - address;
-      view += offset;
-      address += offset;
-      view_size = section_size;
+	  off_t offset = section_address - address;
+	  view += offset;
+	  address += offset;
+	  view_size = section_size;
+	}
     }
 
   gold::relocate_section<32, big_endian, Target_arm, elfcpp::SHT_REL,
@@ -7962,98 +8791,16 @@ Target_arm<big_endian>::Relocatable_size_for_reloc::get_size_for_reloc(
     Relobj* object)
 {
   r_type = get_real_reloc_type(r_type);
-  switch (r_type)
+  const Arm_reloc_property* arp =
+      arm_reloc_property_table->get_implemented_static_reloc_property(r_type);
+  if (arp != NULL)
+    return arp->size();
+  else
     {
-    case elfcpp::R_ARM_NONE:
-      return 0;
-
-    case elfcpp::R_ARM_ABS8:
-      return 1;
-
-    case elfcpp::R_ARM_ABS16:
-    case elfcpp::R_ARM_THM_ABS5:
-    case elfcpp::R_ARM_THM_JUMP6:
-    case elfcpp::R_ARM_THM_JUMP8:
-    case elfcpp::R_ARM_THM_JUMP11:
-    case elfcpp::R_ARM_THM_PC8:
-      return 2;
-
-    case elfcpp::R_ARM_ABS32:
-    case elfcpp::R_ARM_ABS32_NOI:
-    case elfcpp::R_ARM_ABS12:
-    case elfcpp::R_ARM_BASE_ABS:
-    case elfcpp::R_ARM_REL32:
-    case elfcpp::R_ARM_THM_CALL:
-    case elfcpp::R_ARM_GOTOFF32:
-    case elfcpp::R_ARM_BASE_PREL:
-    case elfcpp::R_ARM_GOT_BREL:
-    case elfcpp::R_ARM_GOT_PREL:
-    case elfcpp::R_ARM_PLT32:
-    case elfcpp::R_ARM_CALL:
-    case elfcpp::R_ARM_JUMP24:
-    case elfcpp::R_ARM_PREL31:
-    case elfcpp::R_ARM_MOVW_ABS_NC:
-    case elfcpp::R_ARM_MOVT_ABS:
-    case elfcpp::R_ARM_THM_MOVW_ABS_NC:
-    case elfcpp::R_ARM_THM_MOVT_ABS:
-    case elfcpp::R_ARM_MOVW_PREL_NC:
-    case elfcpp::R_ARM_MOVT_PREL:
-    case elfcpp::R_ARM_THM_MOVW_PREL_NC:
-    case elfcpp::R_ARM_THM_MOVT_PREL:
-    case elfcpp::R_ARM_MOVW_BREL_NC:
-    case elfcpp::R_ARM_MOVT_BREL:
-    case elfcpp::R_ARM_MOVW_BREL:
-    case elfcpp::R_ARM_THM_MOVW_BREL_NC:
-    case elfcpp::R_ARM_THM_MOVT_BREL:
-    case elfcpp::R_ARM_THM_MOVW_BREL:
-    case elfcpp::R_ARM_V4BX:
-    case elfcpp::R_ARM_THM_PC12:
-    case elfcpp::R_ARM_THM_ALU_PREL_11_0:
-    case elfcpp::R_ARM_ALU_PC_G0_NC:
-    case elfcpp::R_ARM_ALU_PC_G0:
-    case elfcpp::R_ARM_ALU_PC_G1_NC:
-    case elfcpp::R_ARM_ALU_PC_G1:
-    case elfcpp::R_ARM_ALU_PC_G2:
-    case elfcpp::R_ARM_ALU_SB_G0_NC:
-    case elfcpp::R_ARM_ALU_SB_G0:
-    case elfcpp::R_ARM_ALU_SB_G1_NC:
-    case elfcpp::R_ARM_ALU_SB_G1:
-    case elfcpp::R_ARM_ALU_SB_G2:
-    case elfcpp::R_ARM_LDR_PC_G0:
-    case elfcpp::R_ARM_LDR_PC_G1:
-    case elfcpp::R_ARM_LDR_PC_G2:
-    case elfcpp::R_ARM_LDR_SB_G0:
-    case elfcpp::R_ARM_LDR_SB_G1:
-    case elfcpp::R_ARM_LDR_SB_G2:
-    case elfcpp::R_ARM_LDRS_PC_G0:
-    case elfcpp::R_ARM_LDRS_PC_G1:
-    case elfcpp::R_ARM_LDRS_PC_G2:
-    case elfcpp::R_ARM_LDRS_SB_G0:
-    case elfcpp::R_ARM_LDRS_SB_G1:
-    case elfcpp::R_ARM_LDRS_SB_G2:
-    case elfcpp::R_ARM_LDC_PC_G0:
-    case elfcpp::R_ARM_LDC_PC_G1:
-    case elfcpp::R_ARM_LDC_PC_G2:
-    case elfcpp::R_ARM_LDC_SB_G0:
-    case elfcpp::R_ARM_LDC_SB_G1:
-    case elfcpp::R_ARM_LDC_SB_G2:
-      return 4;
-
-    case elfcpp::R_ARM_TARGET1:
-      // This should have been mapped to another type already.
-      // Fall through.
-    case elfcpp::R_ARM_COPY:
-    case elfcpp::R_ARM_GLOB_DAT:
-    case elfcpp::R_ARM_JUMP_SLOT:
-    case elfcpp::R_ARM_RELATIVE:
-      // These are relocations which should only be seen by the
-      // dynamic linker, and should never be seen here.
-      gold_error(_("%s: unexpected reloc %u in object file"),
-		 object->name().c_str(), r_type);
-      return 0;
-
-    default:
-      object->error(_("unsupported reloc %u in object file"), r_type);
+      std::string reloc_name =
+	arm_reloc_property_table->reloc_name_in_error_message(r_type);
+      gold_error(_("%s: unexpected %s in object file"),
+		 object->name().c_str(), reloc_name.c_str());
       return 0;
     }
 }
@@ -9056,54 +9803,6 @@ Target_arm<big_endian>::merge_object_attributes(
     }
 }
 
-// Return whether a relocation type used the LSB to distinguish THUMB
-// addresses.
-template<bool big_endian>
-bool
-Target_arm<big_endian>::reloc_uses_thumb_bit(unsigned int r_type)
-{
-  switch (r_type)
-    {
-    case elfcpp::R_ARM_PC24:
-    case elfcpp::R_ARM_ABS32:
-    case elfcpp::R_ARM_REL32:
-    case elfcpp::R_ARM_SBREL32:
-    case elfcpp::R_ARM_THM_CALL:
-    case elfcpp::R_ARM_GLOB_DAT:
-    case elfcpp::R_ARM_JUMP_SLOT:
-    case elfcpp::R_ARM_GOTOFF32:
-    case elfcpp::R_ARM_PLT32:
-    case elfcpp::R_ARM_CALL:
-    case elfcpp::R_ARM_JUMP24:
-    case elfcpp::R_ARM_THM_JUMP24:
-    case elfcpp::R_ARM_SBREL31:
-    case elfcpp::R_ARM_PREL31:
-    case elfcpp::R_ARM_MOVW_ABS_NC:
-    case elfcpp::R_ARM_MOVW_PREL_NC:
-    case elfcpp::R_ARM_THM_MOVW_ABS_NC:
-    case elfcpp::R_ARM_THM_MOVW_PREL_NC:
-    case elfcpp::R_ARM_THM_JUMP19:
-    case elfcpp::R_ARM_THM_ALU_PREL_11_0:
-    case elfcpp::R_ARM_ALU_PC_G0_NC:
-    case elfcpp::R_ARM_ALU_PC_G0:
-    case elfcpp::R_ARM_ALU_PC_G1_NC:
-    case elfcpp::R_ARM_ALU_PC_G1:
-    case elfcpp::R_ARM_ALU_PC_G2:
-    case elfcpp::R_ARM_ALU_SB_G0_NC:
-    case elfcpp::R_ARM_ALU_SB_G0:
-    case elfcpp::R_ARM_ALU_SB_G1_NC:
-    case elfcpp::R_ARM_ALU_SB_G1:
-    case elfcpp::R_ARM_ALU_SB_G2:
-    case elfcpp::R_ARM_MOVW_BREL_NC:
-    case elfcpp::R_ARM_MOVW_BREL:
-    case elfcpp::R_ARM_THM_MOVW_BREL_NC:
-    case elfcpp::R_ARM_THM_MOVW_BREL:
-      return true;
-    default:
-      return false;
-    }
-}
-
 // Stub-generation methods for Target_arm.
 
 // Make a new Arm_input_section object.
@@ -9238,8 +9937,11 @@ Target_arm<big_endian>::scan_reloc_for_stub(
     }
 
   // Strip LSB if this points to a THUMB target.
+  const Arm_reloc_property* reloc_property =
+    arm_reloc_property_table->get_implemented_static_reloc_property(r_type);
+  gold_assert(reloc_property != NULL);
   if (target_is_thumb
-      && Target_arm<big_endian>::reloc_uses_thumb_bit(r_type)
+      && reloc_property->uses_thumb_bit()
       && ((psymval->value(arm_relobj, 0) & 1) != 0))
     {
       Arm_address stripped_value =
@@ -10097,7 +10799,7 @@ Target_arm<big_endian>::fix_exidx_coverage(
       arm_output_section->append_text_sections_to_list(&sorted_text_sections);
     } 
 
-  exidx_section->fix_exidx_coverage(sorted_text_sections, symtab);
+  exidx_section->fix_exidx_coverage(layout, sorted_text_sections, symtab);
 }
 
 Target_selector_arm<false> target_selector_arm;

@@ -5481,6 +5481,20 @@ compute_bucket_count (struct bfd_link_info *info,
   return best_size;
 }
 
+/* Size any SHT_GROUP section for ld -r.  */
+
+bfd_boolean
+_bfd_elf_size_group_sections (struct bfd_link_info *info)
+{
+  bfd *ibfd;
+
+  for (ibfd = info->input_bfds; ibfd != NULL; ibfd = ibfd->link_next)
+    if (bfd_get_flavour (ibfd) == bfd_target_elf_flavour
+	&& !_bfd_elf_fixup_group_sections (ibfd, bfd_abs_section_ptr))
+      return FALSE;
+  return TRUE;
+}
+
 /* Set up the sizes and contents of the ELF dynamic sections.  This is
    called by the ELF linker emulation before_allocation routine.  We
    must set the sizes of the sections before the linker sets the
@@ -5554,6 +5568,10 @@ bfd_elf_size_dynamic_sections (bfd *output_bfd,
     = elf_hash_table (info)->init_got_offset;
   elf_hash_table (info)->init_plt_refcount
     = elf_hash_table (info)->init_plt_offset;
+
+  if (info->relocatable
+      && !_bfd_elf_size_group_sections (info))
+    return FALSE;
 
   /* The backend may have to create some sections regardless of whether
      we're dynamic or not.  */
@@ -6782,7 +6800,8 @@ _bfd_elf_link_hash_table_init
    struct bfd_hash_entry *(*newfunc) (struct bfd_hash_entry *,
 				      struct bfd_hash_table *,
 				      const char *),
-   unsigned int entsize)
+   unsigned int entsize,
+   enum elf_target_id target_id)
 {
   bfd_boolean ret;
   int can_refcount = get_elf_backend_data (abfd)->can_refcount;
@@ -6796,7 +6815,9 @@ _bfd_elf_link_hash_table_init
   table->dynsymcount = 1;
 
   ret = _bfd_link_hash_table_init (&table->root, abfd, newfunc, entsize);
+
   table->root.type = bfd_link_elf_hash_table;
+  table->hash_table_id = target_id;
 
   return ret;
 }
@@ -6814,7 +6835,8 @@ _bfd_elf_link_hash_table_create (bfd *abfd)
     return NULL;
 
   if (! _bfd_elf_link_hash_table_init (ret, abfd, _bfd_elf_link_hash_newfunc,
-				       sizeof (struct elf_link_hash_entry)))
+				       sizeof (struct elf_link_hash_entry),
+				       GENERIC_ELF_DATA))
     {
       free (ret);
       return NULL;

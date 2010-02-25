@@ -5366,7 +5366,7 @@ line of a function back to its return to its caller
 Like @code{nexti}, @code{reverse-nexti} executes a single instruction
 in reverse, except that called functions are ``un-executed'' atomically.
 That is, if the previously executed instruction was a return from
-another instruction, @code{reverse-nexti} will continue to execute
+another function, @code{reverse-nexti} will continue to execute
 in reverse until the call to that function (from the current stack
 frame) is reached.
 
@@ -9900,11 +9900,11 @@ snapshot with the same value of PC as the current snapshot.
 
 @item tfind outside @var{addr1}, @var{addr2}
 Find the next snapshot whose PC is outside the given range of
-addresses.
+addresses (exclusive).
 
 @item tfind range @var{addr1}, @var{addr2}
 Find the next snapshot whose PC is between @var{addr1} and
-@var{addr2}.  @c FIXME: Is the range inclusive or exclusive?
+@var{addr2} (inclusive).
 
 @item tfind line @r{[}@var{file}:@r{]}@var{n}
 Find the next snapshot associated with the source line @var{n}.  If
@@ -16429,7 +16429,7 @@ inside the Cygwin DLL itself.
 @item set new-console @var{mode}
 If @var{mode} is @code{on} the debuggee will
 be started in a new console on next start.
-If @var{mode} is @code{off}i, the debuggee will
+If @var{mode} is @code{off}, the debuggee will
 be started in the same console as the debugger.
 
 @kindex show new-console
@@ -18848,6 +18848,15 @@ is off.
 @item show debug overload
 Displays the current state of displaying @value{GDBN} C@t{++} overload
 debugging info.
+@cindex expression parser, debugging info
+@cindex debug expression parser
+@item set debug parser
+Turns on or off the display of expression parser debugging output.
+Internally, this sets the @code{yydebug} variable in the expression
+parser.  @xref{Tracing, , Tracing Your Parser, bison, Bison}, for
+details.  The default is off.
+@item show debug parser
+Show the current state of expression parser debugging.
 @cindex packets, reporting on stdout
 @cindex serial connections, debugging
 @cindex debug remote protocol
@@ -19538,7 +19547,10 @@ situation, a Python @code{KeyboardInterrupt} exception is thrown.
 * Commands In Python::          Implementing new commands in Python.
 * Functions In Python::         Writing new convenience functions.
 * Objfiles In Python::          Object files.
-* Frames In Python::            Acessing inferior stack frames from Python.
+* Frames In Python::            Accessing inferior stack frames from Python.
+* Blocks In Python::            Accessing frame blocks from Python.
+* Symbols In Python::           Python representation of symbols.
+* Symbol Tables In Python::     Python representation of symbol tables.
 * Lazy Strings In Python::      Python representation of lazy strings.
 @end menu
 
@@ -20698,7 +20710,7 @@ information.
 @end defivar
 
 @node Frames In Python
-@subsubsection Acessing inferior stack frames from Python.
+@subsubsection Accessing inferior stack frames from Python.
 
 @cindex frames in python
 When the debugged program stops, @value{GDBN} is able to analyze its call
@@ -20761,6 +20773,15 @@ function to a string.
 Returns the frame's resume address.
 @end defmethod
 
+@defmethod Frame block
+Return the frame's code block.  @xref{Blocks In Python}.
+@end defmethod
+
+@defmethod Frame function
+Return the symbol for the function corresponding to this frame.
+@xref{Symbols In Python}.
+@end defmethod
+
 @defmethod Frame older
 Return the frame that called this frame.
 @end defmethod
@@ -20769,9 +20790,307 @@ Return the frame that called this frame.
 Return the frame called by this frame.
 @end defmethod
 
+@defmethod Frame find_sal
+Return the frame's symtab and line object.
+@xref{Symbol Tables In Python}.
+@end defmethod
+
 @defmethod Frame read_var variable
 Return the value of the given variable in this frame.  @var{variable} must
 be a string.
+@end defmethod
+
+@defmethod Frame select
+Set this frame to be the selected frame.  @xref{Stack, ,Examining the
+Stack}.
+@end defmethod
+@end table
+
+@node Blocks In Python
+@subsubsection Accessing frame blocks from Python.
+
+@cindex blocks in python
+@tindex gdb.Block
+
+Within each frame, @value{GDBN} maintains information on each block
+stored in that frame.  These blocks are organized hierarchically, and
+are represented individually in Python as a @code{gdb.Block}.
+Please see @ref{Frames In Python}, for a more in-depth discussion on
+frames.  Furthermore, see @ref{Stack, ,Examining the Stack}, for more
+detailed technical information on @value{GDBN}'s book-keeping of the
+stack.
+
+The following block-related functions are available in the @code{gdb}
+module:
+
+@findex gdb.block_for_pc
+@defun block_for_pc pc
+Return the @code{gdb.Block} containing the given @var{pc} value.  If the
+block cannot be found for the @var{pc} value specified, the function
+will return @code{None}.
+@end defun
+
+A @code{gdb.Block} object has the following attributes:
+
+@table @code
+@defivar Block start
+The start address of the block.  This attribute is not writable.
+@end defivar
+
+@defivar Block end
+The end address of the block.  This attribute is not writable.
+@end defivar
+
+@defivar Block function
+The name of the block represented as a @code{gdb.Symbol}.  If the
+block is not named, then this attribute holds @code{None}.  This
+attribute is not writable.
+@end defivar
+
+@defivar Block superblock
+The block containing this block.  If this parent block does not exist,
+this attribute holds @code{None}.  This attribute is not writable.
+@end defivar
+@end table
+
+@node Symbols In Python
+@subsubsection Python representation of Symbols.
+
+@cindex symbols in python
+@tindex gdb.Symbol
+
+@value{GDBN} represents every variable, function and type as an
+entry in a symbol table.  @xref{Symbols, ,Examining the Symbol Table}.
+Similarly, Python represents these symbols in @value{GDBN} with the
+@code{gdb.Symbol} object.
+
+The following symbol-related functions are available in the @code{gdb}
+module:
+
+@findex gdb.lookup_symbol
+@defun lookup_symbol name [block] [domain]
+This function searches for a symbol by name.  The search scope can be
+restricted to the parameters defined in the optional domain and block
+arguments.
+
+@var{name} is the name of the symbol.  It must be a string.  The
+optional @var{block} argument restricts the search to symbols visible
+in that @var{block}.  The @var{block} argument must be a
+@code{gdb.Block} object.  The optional @var{domain} argument restricts
+the search to the domain type.  The @var{domain} argument must be a
+domain constant defined in the @code{gdb} module and described later
+in this chapter.
+@end defun
+
+A @code{gdb.Symbol} object has the following attributes:
+
+@table @code
+@defivar Symbol symtab
+The symbol table in which the symbol appears.  This attribute is
+represented as a @code{gdb.Symtab} object.  @xref{Symbol Tables In
+Python}.  This attribute is not writable.
+@end defivar
+
+@defivar Symbol name
+The name of the symbol as a string.  This attribute is not writable.
+@end defivar
+
+@defivar Symbol linkage_name
+The name of the symbol, as used by the linker (i.e., may be mangled).
+This attribute is not writable.
+@end defivar
+
+@defivar Symbol print_name
+The name of the symbol in a form suitable for output.  This is either
+@code{name} or @code{linkage_name}, depending on whether the user
+asked @value{GDBN} to display demangled or mangled names.
+@end defivar
+
+@defivar Symbol addr_class
+The address class of the symbol.  This classifies how to find the value
+of a symbol.  Each address class is a constant defined in the
+@code{gdb} module and described later in this chapter.
+@end defivar
+
+@defivar Symbol is_argument
+@code{True} if the symbol is an argument of a function.
+@end defivar
+
+@defivar Symbol is_constant
+@code{True} if the symbol is a constant.
+@end defivar
+
+@defivar Symbol is_function
+@code{True} if the symbol is a function or a method.
+@end defivar
+
+@defivar Symbol is_variable
+@code{True} if the symbol is a variable.
+@end defivar
+@end table
+
+The available domain categories in @code{gdb.Symbol} are represented
+as constants in the @code{gdb} module:
+
+@table @code
+@findex SYMBOL_UNDEF_DOMAIN
+@findex gdb.SYMBOL_UNDEF_DOMAIN
+@item SYMBOL_UNDEF_DOMAIN
+This is used when a domain has not been discovered or none of the
+following domains apply.  This usually indicates an error either
+in the symbol information or in @value{GDBN}'s handling of symbols.
+@findex SYMBOL_VAR_DOMAIN
+@findex gdb.SYMBOL_VAR_DOMAIN
+@item SYMBOL_VAR_DOMAIN
+This domain contains variables, function names, typedef names and enum
+type values.
+@findex SYMBOL_STRUCT_DOMAIN
+@findex gdb.SYMBOL_STRUCT_DOMAIN
+@item SYMBOL_STRUCT_DOMAIN
+This domain holds struct, union and enum type names.
+@findex SYMBOL_LABEL_DOMAIN
+@findex gdb.SYMBOL_LABEL_DOMAIN
+@item SYMBOL_LABEL_DOMAIN
+This domain contains names of labels (for gotos).
+@findex SYMBOL_VARIABLES_DOMAIN
+@findex gdb.SYMBOL_VARIABLES_DOMAIN
+@item SYMBOL_VARIABLES_DOMAIN
+This domain holds a subset of the @code{SYMBOLS_VAR_DOMAIN}; it
+contains everything minus functions and types.
+@findex SYMBOL_FUNCTIONS_DOMAIN
+@findex gdb.SYMBOL_FUNCTIONS_DOMAIN
+@item SYMBOL_FUNCTION_DOMAIN
+This domain contains all functions.
+@findex SYMBOL_TYPES_DOMAIN
+@findex gdb.SYMBOL_TYPES_DOMAIN
+@item SYMBOL_TYPES_DOMAIN
+This domain contains all types.
+@end table
+
+The available address class categories in @code{gdb.Symbol} are represented
+as constants in the @code{gdb} module:
+
+@table @code
+@findex SYMBOL_LOC_UNDEF
+@findex gdb.SYMBOL_LOC_UNDEF
+@item SYMBOL_LOC_UNDEF
+If this is returned by address class, it indicates an error either in
+the symbol information or in @value{GDBN}'s handling of symbols.
+@findex SYMBOL_LOC_CONST
+@findex gdb.SYMBOL_LOC_CONST
+@item SYMBOL_LOC_CONST
+Value is constant int.
+@findex SYMBOL_LOC_STATIC
+@findex gdb.SYMBOL_LOC_STATIC
+@item SYMBOL_LOC_STATIC
+Value is at a fixed address.
+@findex SYMBOL_LOC_REGISTER
+@findex gdb.SYMBOL_LOC_REGISTER
+@item SYMBOL_LOC_REGISTER
+Value is in a register.
+@findex SYMBOL_LOC_ARG
+@findex gdb.SYMBOL_LOC_ARG
+@item SYMBOL_LOC_ARG
+Value is an argument.  This value is at the offset stored within the
+symbol inside the frame's argument list.
+@findex SYMBOL_LOC_REF_ARG
+@findex gdb.SYMBOL_LOC_REF_ARG
+@item SYMBOL_LOC_REF_ARG
+Value address is stored in the frame's argument list.  Just like
+@code{LOC_ARG} except that the value's address is stored at the
+offset, not the value itself.
+@findex SYMBOL_LOC_REGPARM_ADDR
+@findex gdb.SYMBOL_LOC_REGPARM_ADDR
+@item SYMBOL_LOC_REGPARM_ADDR
+Value is a specified register.  Just like @code{LOC_REGISTER} except
+the register holds the address of the argument instead of the argument
+itself.
+@findex SYMBOL_LOC_LOCAL
+@findex gdb.SYMBOL_LOC_LOCAL
+@item SYMBOL_LOC_LOCAL
+Value is a local variable.
+@findex SYMBOL_LOC_TYPEDEF
+@findex gdb.SYMBOL_LOC_TYPEDEF
+@item SYMBOL_LOC_TYPEDEF
+Value not used.  Symbols in the domain @code{SYMBOL_STRUCT_DOMAIN} all
+have this class.
+@findex SYMBOL_LOC_BLOCK
+@findex gdb.SYMBOL_LOC_BLOCK
+@item SYMBOL_LOC_BLOCK
+Value is a block.
+@findex SYMBOL_LOC_CONST_BYTES
+@findex gdb.SYMBOL_LOC_CONST_BYTES
+@item SYMBOL_LOC_CONST_BYTES
+Value is a byte-sequence.
+@findex SYMBOL_LOC_UNRESOLVED
+@findex gdb.SYMBOL_LOC_UNRESOLVED
+@item SYMBOL_LOC_UNRESOLVED
+Value is at a fixed address, but the address of the variable has to be
+determined from the minimal symbol table whenever the variable is
+referenced.
+@findex SYMBOL_LOC_OPTIMIZED_OUT
+@findex gdb.SYMBOL_LOC_OPTIMIZED_OUT
+@item SYMBOL_LOC_OPTIMIZED_OUT
+The value does not actually exist in the program.
+@findex SYMBOL_LOC_COMPUTED
+@findex gdb.SYMBOL_LOC_COMPUTED
+@item SYMBOL_LOC_COMPUTED
+The value's address is a computed location.
+@end table
+
+@node Symbol Tables In Python
+@subsubsection Symbol table representation in Python.
+
+@cindex symbol tables in python
+@tindex gdb.Symtab
+@tindex gdb.Symtab_and_line
+
+Access to symbol table data maintained by @value{GDBN} on the inferior
+is exposed to Python via two objects: @code{gdb.Symtab_and_line} and
+@code{gdb.Symtab}.  Symbol table and line data for a frame is returned
+from the @code{find_sal} method in @code{gdb.Frame} object.
+@xref{Frames In Python}.
+
+For more information on @value{GDBN}'s symbol table management, see
+@ref{Symbols, ,Examining the Symbol Table}, for more information.
+
+A @code{gdb.Symtab_and_line} object has the following attributes:
+
+@table @code
+@defivar Symtab_and_line symtab
+The symbol table object (@code{gdb.Symtab}) for this frame.
+This attribute is not writable.
+@end defivar
+
+@defivar Symtab_and_line pc
+Indicates the current program counter address.  This attribute is not
+writable.
+@end defivar
+
+@defivar Symtab_and_line line
+Indicates the current line number for this object.  This
+attribute is not writable.
+@end defivar
+@end table
+
+A @code{gdb.Symtab} object has the following attributes:
+
+@table @code
+@defivar Symtab filename
+The symbol table's source filename.  This attribute is not writable.
+@end defivar
+
+@defivar Symtab objfile
+The symbol table's backing object file.  @xref{Objfiles In Python}.
+This attribute is not writable.
+@end defivar
+@end table
+
+The following methods are provided:
+
+@table @code
+@defmethod Symtab fullname
+Return the symbol table's source absolute file name.
 @end defmethod
 @end table
 
@@ -21727,6 +22046,11 @@ groups can be obtained using @samp{-list-thread-groups --available}.
 In general, the content of a thread group may be only retrieved only
 after attaching to that thread group.
 
+Thread groups are related to inferiors (@pxref{Inferiors and
+Programs}).  Each inferior corresponds to a thread group of a special
+type @samp{process}, and some additional operations are permitted on
+such thread groups.
+
 @c %%%%%%%%%%%%%%%%%%%%%%%%%%%% SECTION %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 @node GDB/MI Command Syntax
 @section @sc{gdb/mi} Command Syntax
@@ -22050,9 +22374,12 @@ values.
 
 @item "^running"
 @findex ^running
-@c Is this one correct?  Should it be an out-of-band notification?
-The asynchronous operation was successfully started.  The target is
-running.
+This result record is equivalent to @samp{^done}.  Historically, it
+was output instead of @samp{^done} if the command has resumed the
+target.  This behaviour is maintained for backward compatibility, but
+all frontends should treat @samp{^done} and @samp{^running}
+identically and rely on the @samp{*running} output record to determine
+which threads are resumed.
 
 @item "^connected"
 @findex ^connected
@@ -22168,9 +22495,24 @@ several threads in the list.  The @var{core} field reports the
 processor core on which the stop event has happened.  This field may be absent
 if such information is not available.
 
-@item =thread-group-created,id="@var{id}"
+@item =thread-group-added,id="@var{id}"
+@itemx =thread-group-removed,id="@var{id}"
+A thread group was either added or removed.  The @var{id} field
+contains the @value{GDBN} identifier of the thread group.  When a thread
+group is added, it generally might not be associated with a running
+process.  When a thread group is removed, its id becomes invalid and
+cannot be used in any way.
+
+@item =thread-group-started,id="@var{id}",pid="@var{pid}"
+A thread group became associated with a running program,
+either because the program was just started or the thread group
+was attached to a program.  The @var{id} field contains the
+@value{GDBN} identifier of the thread group.  The @var{pid} field
+contains process identifier, specific to the operating system.
+
 @itemx =thread-group-exited,id="@var{id}"
-A thread thread group either was attached to, or has exited/detached
+A thread group is no longer associated with a running program,
+either because the program has exited, or because it was detached
 from.  The @var{id} field contains the @value{GDBN} identifier of the
 thread group.
 
@@ -22201,12 +22543,19 @@ opaque identifier of the library.  For remote debugging case,
 library file on the target, and on the host respectively.  For native
 debugging, both those fields have the same value.  The
 @var{symbols-loaded} field reports if the debug symbols for this
-library are loaded.
+library are loaded.  The @var{thread-group} field, if present,
+specifies the id of the thread group in whose context the library was loaded.
+If the field is absent, it means the library was loaded in the context
+of all present thread groups.
 
 @item =library-unloaded,...
 Reports that a library was unloaded by the program.  This notification
 has 3 fields---@var{id}, @var{target-name} and @var{host-name} with
-the same meaning as for the @code{=library-loaded} notification
+the same meaning as for the @code{=library-loaded} notification.
+The @var{thread-group} field, if present, specifies the id of the
+thread group in whose context the library was unloaded.  If the field is
+absent, it means the library was unloaded in the context of all present
+thread groups.
 
 @end table
 
@@ -23305,20 +23654,29 @@ other cases.
 @subsubheading Synopsis
 
 @smallexample
- -exec-continue [--all|--thread-group N]
+ -exec-continue [--reverse] [--all|--thread-group N]
 @end smallexample
 
-Resumes the execution of the inferior program until a breakpoint is
-encountered, or until the inferior exits.  In all-stop mode
-(@pxref{All-Stop Mode}), may resume only one thread, or all threads,
-depending on the value of the @samp{scheduler-locking} variable.  In
-non-stop mode (@pxref{Non-Stop Mode}), if the @samp{--all} is not
-specified, only the thread specified with the @samp{--thread} option
-(or current thread, if no @samp{--thread} is provided) is resumed.  If
-@samp{--all} is specified, all threads will be resumed.  The
-@samp{--all} option is ignored in all-stop mode.  If the
-@samp{--thread-group} options is specified, then all threads in that
-thread group are resumed.
+Resumes the execution of the inferior program, which will continue
+to execute until it reaches a debugger stop event.  If the 
+@samp{--reverse} option is specified, execution resumes in reverse until 
+it reaches a stop event.  Stop events may include
+@itemize @bullet
+@item
+breakpoints or watchpoints
+@item
+signals or exceptions
+@item
+the end of the process (or its beginning under @samp{--reverse})
+@item
+the end or beginning of a replay log if one is being used.
+@end itemize
+In all-stop mode (@pxref{All-Stop
+Mode}), may resume only one thread, or all threads, depending on the
+value of the @samp{scheduler-locking} variable.  If @samp{--all} is
+specified, all threads (in all inferiors) will be resumed.  The @samp{--all} option is
+ignored in all-stop mode.  If the @samp{--thread-group} options is
+specified, then all threads in that thread group are resumed.
 
 @subsubheading @value{GDBN} Command
 
@@ -23344,11 +23702,14 @@ line="13"@}
 @subsubheading Synopsis
 
 @smallexample
- -exec-finish
+ -exec-finish [--reverse]
 @end smallexample
 
 Resumes the execution of the inferior program until the current
 function is exited.  Displays the results returned by the function.
+If the @samp{--reverse} option is specified, resumes the reverse
+execution of the inferior program until the point where current
+function was called.
 
 @subsubheading @value{GDBN} Command
 
@@ -23405,9 +23766,9 @@ asynchronous just like other execution commands.  That is, first the
 reported after that using the @samp{*stopped} notification.
 
 In non-stop mode, only the context thread is interrupted by default.
-All threads will be interrupted if the @samp{--all} option is
-specified.  If the @samp{--thread-group} option is specified, all
-threads in that group will be interrupted.
+All threads (in all inferiors) will be interrupted if the
+@samp{--all}  option is specified.  If the @samp{--thread-group}
+option is specified, all threads in that group will be interrupted.
 
 @subsubheading @value{GDBN} Command
 
@@ -23467,11 +23828,18 @@ The corresponding @value{GDBN} command is @samp{jump}.
 @subsubheading Synopsis
 
 @smallexample
- -exec-next
+ -exec-next [--reverse]
 @end smallexample
 
 Resumes execution of the inferior program, stopping when the beginning
 of the next source line is reached.
+
+If the @samp{--reverse} option is specified, resumes reverse execution
+of the inferior program, stopping at the beginning of the previous
+source line.  If you issue this command on the first line of a
+function, it will take you back to the caller of that function, to the
+source line where the function was called.
+
 
 @subsubheading @value{GDBN} Command
 
@@ -23494,13 +23862,19 @@ The corresponding @value{GDBN} command is @samp{next}.
 @subsubheading Synopsis
 
 @smallexample
- -exec-next-instruction
+ -exec-next-instruction [--reverse]
 @end smallexample
 
 Executes one machine instruction.  If the instruction is a function
 call, continues until the function returns.  If the program stops at an
 instruction in the middle of a source line, the address will be
 printed as well.
+
+If the @samp{--reverse} option is specified, resumes reverse execution
+of the inferior program, stopping at the previous instruction.  If the
+previously executed instruction was a return from another function,
+it will continue to execute in reverse until the call to that function
+(from the current stack frame) is reached.
 
 @subsubheading @value{GDBN} Command
 
@@ -23571,13 +23945,18 @@ fullname="/home/foo/bar/devo/gdb/testsuite/gdb.mi/basics.c",line="18"@}
 @subsubheading Synopsis
 
 @smallexample
- -exec-run
+ -exec-run [--all | --thread-group N]
 @end smallexample
 
 Starts execution of the inferior from the beginning.  The inferior
 executes until either a breakpoint is encountered or the program
 exits.  In the latter case the output will include an exit code, if
 the program has exited exceptionally.
+
+When no option is specified, the current inferior is started.  If the
+@samp{--thread-group} option is specified, it should refer to a thread
+group of type @samp{process}, and that thread group will be started.
+If the @samp{--all} option is specified, then all inferiors will be started.
 
 @subsubheading @value{GDBN} Command
 
@@ -23644,13 +24023,15 @@ signal-meaning="Interrupt"
 @subsubheading Synopsis
 
 @smallexample
- -exec-step
+ -exec-step [--reverse]
 @end smallexample
 
 Resumes execution of the inferior program, stopping when the beginning
 of the next source line is reached, if the next source line is not a
 function call.  If it is, stop at the first instruction of the called
-function.
+function.  If the @samp{--reverse} option is specified, resumes reverse
+execution of the inferior program, stopping at the beginning of the
+previously executed source line.
 
 @subsubheading @value{GDBN} Command
 
@@ -23688,14 +24069,16 @@ Regular stepping:
 @subsubheading Synopsis
 
 @smallexample
- -exec-step-instruction
+ -exec-step-instruction [--reverse]
 @end smallexample
 
-Resumes the inferior which executes one machine instruction.  The
-output, once @value{GDBN} has stopped, will vary depending on whether
-we have stopped in the middle of a source line or not.  In the former
-case, the address at which the program stopped will be printed as
-well.
+Resumes the inferior which executes one machine instruction.  If the
+@samp{--reverse} option is specified, resumes reverse execution of the
+inferior program, stopping at the previously executed instruction.
+The output, once @value{GDBN} has stopped, will vary depending on
+whether we have stopped in the middle of a source line or not.  In the
+former case, the address at which the program stopped will be printed
+as well.
 
 @subsubheading @value{GDBN} Command
 
@@ -26637,6 +27020,8 @@ have the following fields:
 @table @code
 @item id
 Identifier of the thread group.  This field is always present.
+The identifier is an opaque string; frontends should not try to
+convert it to an integer, even though it might look like one.
 
 @item type
 The type of the thread group.  At present, only @samp{process} is a
@@ -26644,7 +27029,7 @@ valid type.
 
 @item pid
 The target-specific process identifier.  This field is only present
-for thread groups of type @samp{process}.
+for thread groups of type @samp{process} and only if the process exists.
 
 @item num_children
 The number of children this thread group has.  This field may be
@@ -26659,6 +27044,11 @@ specified, and it's actually possible to obtain the threads.
 This field is a list of integers, each identifying a core that one
 thread of the group is running on.  This field may be absent if
 such information is not available.
+
+@item executable
+The name of the executable file that corresponds to this thread group.
+The field is only present for thread groups of type @samp{process},
+and only if there is a corresponding executable file.
 
 @end table
 
@@ -26684,6 +27074,31 @@ such information is not available.
 ^done,groups=[@{id="17", types="process",pid="yyy",num_children="2",cores=[1,2],
                threads=[@{id="1",target-id="Thread 0xb7e14b90",cores=[1]@},
                         @{id="2",target-id="Thread 0xb7e14b90",cores=[2]@}]@},...]
+@end smallexample
+
+
+@subheading The @code{-add-inferior} Command
+@findex -add-inferior
+
+@subheading Synopsis
+
+@smallexample
+-add-inferior
+@end smallexample
+
+Creates a new inferior (@pxref{Inferiors and Programs}).  The created
+inferior is not associated with any executable.  Such association may
+be established with the @samp{-file-exec-and-symbols} command
+(@pxref{GDB/MI File Commands}).  The command response has a single
+field, @samp{thread-group}, whose value is the identifier of the
+thread group corresponding to the new inferior.
+
+@subheading Example
+
+@smallexample
+@value{GDBP}
+-add-inferior
+^done,thread-group="i3"
 @end smallexample
 
 @subheading The @code{-interpreter-exec} Command
@@ -30537,12 +30952,12 @@ is a hexadecimal number.
 @item QTFrame:range:@var{start}:@var{end}
 Like @samp{QTFrame:@var{n}}, but select the first tracepoint frame after the
 currently selected frame whose PC is between @var{start} (inclusive)
-and @var{end} (exclusive); @var{start} and @var{end} are hexadecimal
+and @var{end} (inclusive); @var{start} and @var{end} are hexadecimal
 numbers.
 
 @item QTFrame:outside:@var{start}:@var{end}
 Like @samp{QTFrame:range:@var{start}:@var{end}}, but select the first
-frame @emph{outside} the given range of addresses.
+frame @emph{outside} the given range of addresses (exclusive).
 
 @item QTStart
 Begin the tracepoint experiment.  Begin collecting data from tracepoint
@@ -32749,6 +33164,15 @@ Double precision IEEE floating point.
 @item arm_fpa_ext
 The 12-byte extended precision format used by ARM FPA registers.
 
+@item i387_ext
+The 10-byte extended precision format used by x87 registers.
+
+@item i386_eflags
+32bit @sc{eflags} register used by x86.
+
+@item i386_mxcsr
+32bit @sc{mxcsr} register used by x86.
+
 @end table
 
 @node Standard Target Features
@@ -32787,6 +33211,7 @@ registers using the capitalization used in the description.
 
 @menu
 * ARM Features::
+* i386 Features::
 * MIPS Features::
 * M68K Features::
 * PowerPC Features::
@@ -32821,6 +33246,45 @@ VFP double-precision registers as vectors and to synthesize the
 quad-precision registers from pairs of double-precision registers.
 If this feature is present, @samp{org.gnu.gdb.arm.vfp} must also
 be present and include 32 double-precision registers.
+
+@node i386 Features
+@subsection i386 Features
+@cindex target descriptions, i386 features
+
+The @samp{org.gnu.gdb.i386.core} feature is required for i386/amd64
+targets.  It should describe the following registers:
+
+@itemize @minus
+@item
+@samp{eax} through @samp{edi} plus @samp{eip} for i386
+@item
+@samp{rax} through @samp{r15} plus @samp{rip} for amd64
+@item
+@samp{eflags}, @samp{cs}, @samp{ss}, @samp{ds}, @samp{es},
+@samp{fs}, @samp{gs}
+@item 
+@samp{st0} through @samp{st7}
+@item 
+@samp{fctrl}, @samp{fstat}, @samp{ftag}, @samp{fiseg}, @samp{fioff},
+@samp{foseg}, @samp{fooff} and @samp{fop}
+@end itemize
+
+The register sets may be different, depending on the target.
+
+The @samp{org.gnu.gdb.i386.sse} feature is required.  It should
+describe registers:
+
+@itemize @minus
+@item
+@samp{xmm0} through @samp{xmm7} for i386
+@item
+@samp{xmm0} through @samp{xmm15} for amd64
+@item 
+@samp{mxcsr}
+@end itemize
+
+The @samp{org.gnu.gdb.i386.linux} feature is optional.  It should
+describe a single register, @samp{orig_eax}.
 
 @node MIPS Features
 @subsection MIPS Features

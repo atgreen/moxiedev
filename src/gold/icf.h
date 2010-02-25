@@ -39,23 +39,34 @@ class Symbol_table;
 class Icf
 {
  public:
-  typedef std::vector<Section_id> Sections_reachable_list;
+  typedef std::vector<Section_id> Sections_reachable_info;
   typedef std::vector<Symbol*> Symbol_info;
   typedef std::vector<std::pair<long long, long long> > Addend_info;
-  typedef Unordered_map<Section_id,
-                        Sections_reachable_list,
-                        Section_id_hash> Section_list;
-  typedef Unordered_map<Section_id, Symbol_info, Section_id_hash> Symbol_list;
-  typedef Unordered_map<Section_id, Addend_info, Section_id_hash> Addend_list;
+  typedef std::vector<uint64_t> Offset_info;
   typedef Unordered_map<Section_id,
                         unsigned int,
                         Section_id_hash> Uniq_secn_id_map;
+  typedef Unordered_set<Section_id, Section_id_hash> Secn_fptr_taken_set;
+
+  typedef struct
+  {
+    // This stores the section corresponding to the reloc.
+    Sections_reachable_info section_info;
+    // This stores the symbol corresponding to the reloc.
+    Symbol_info symbol_info;
+    // This stores the symbol value and the addend for a reloc.
+    Addend_info addend_info;
+    Offset_info offset_info;
+  } Reloc_info;
+
+  typedef Unordered_map<Section_id, Reloc_info,
+                        Section_id_hash> Reloc_info_list;
 
   Icf()
   : id_section_(), section_id_(), kept_section_id_(),
+    fptr_section_id_(),
     num_tracked_relocs(NULL), icf_ready_(false),
-    section_reloc_list_(), symbol_reloc_list_(),
-    addend_reloc_list_()
+    reloc_info_list_()
   { }
 
   // Returns the kept folded identical section corresponding to
@@ -88,24 +99,41 @@ class Icf
   // given section.
   bool
   is_section_folded(Object* obj, unsigned int shndx);
-    
-  // Returns a map of a section to a list of all sections referenced
-  // by its relocations.
-  Section_list&
-  section_reloc_list()
-  { return this->section_reloc_list_; }
 
-  // Returns a map of  a section to a list of all symbols referenced
-  // by its relocations.
-  Symbol_list&
-  symbol_reloc_list()
-  { return this->symbol_reloc_list_; }
+  // Given an object and a section index, this returns true if the
+  // pointer of the function defined in this section is taken.
+  bool
+  section_has_function_pointers(Object *obj, unsigned int shndx)
+  {
+    return (this->fptr_section_id_.find(Section_id(obj, shndx))
+            != this->fptr_section_id_.end());
+  }
 
-  // Returns a maps of a section to a list of symbol values and addends
-  // of its relocations.
-  Addend_list&
-  addend_reloc_list()
-  { return this->addend_reloc_list_; }
+  // Records that a pointer of the function defined in this section
+  // is taken.
+  void
+  set_section_has_function_pointers(Object *obj, unsigned int shndx)
+  {
+    this->fptr_section_id_.insert(Section_id(obj, shndx));
+  }
+
+  // Checks if the section_name should be searched for relocs
+  // corresponding to taken function pointers.  Ignores eh_frame
+  // and vtable sections.
+  inline bool
+  check_section_for_function_pointers(std::string section_name,
+                                      Target* target)
+  {
+    return (parameters->options().icf_safe_folding()
+	    && target->can_check_for_function_pointers()
+            && !is_prefix_of(".rodata._ZTV", section_name.c_str())
+            && !is_prefix_of(".eh_frame", section_name.c_str()));
+  }
+
+  // Returns a map of a section to info (Reloc_info) about its relocations.
+  Reloc_info_list&
+  reloc_info_list()
+  { return this->reloc_info_list_; }
   
   // Returns a mapping of each section to a unique integer.
   Uniq_secn_id_map&
@@ -122,14 +150,15 @@ class Icf
   // section.  If the id's are the same then this section is
   // not folded.
   std::vector<unsigned int> kept_section_id_;
+  // Given a section id, this says if the pointer to this
+  // function is taken in which case it is dangerous to fold
+  // this function.
+  Secn_fptr_taken_set fptr_section_id_;
   unsigned int* num_tracked_relocs;
   // Flag to indicate if ICF has been run.
   bool icf_ready_;
-
-  // These lists are populated by gc_process_relocs in gc.h.
-  Section_list section_reloc_list_;
-  Symbol_list symbol_reloc_list_;
-  Addend_list addend_reloc_list_;
+  // This list is populated by gc_process_relocs in gc.h.
+  Reloc_info_list reloc_info_list_;
 };
 
 // This function returns true if this section corresponds to a function that

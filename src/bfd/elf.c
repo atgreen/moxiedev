@@ -1,7 +1,7 @@
 /* ELF executable support for BFD.
 
    Copyright 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -232,7 +232,7 @@ bfd_elf_gnu_hash (const char *namearg)
 bfd_boolean
 bfd_elf_allocate_object (bfd *abfd,
 			 size_t object_size,
-			 enum elf_object_id object_id)
+			 enum elf_target_id object_id)
 {
   BFD_ASSERT (object_size >= sizeof (struct elf_obj_tdata));
   abfd->tdata.any = bfd_zalloc (abfd, object_size);
@@ -249,7 +249,7 @@ bfd_boolean
 bfd_elf_make_generic_object (bfd *abfd)
 {
   return bfd_elf_allocate_object (abfd, sizeof (struct elf_obj_tdata),
-				  GENERIC_ELF_TDATA);
+				  GENERIC_ELF_DATA);
 }
 
 bfd_boolean
@@ -2743,17 +2743,16 @@ bfd_elf_set_group_contents (bfd *abfd, asection *sec, void *failedptrarg)
   while (elt != NULL)
     {
       asection *s;
-      unsigned int idx;
 
       s = elt;
-      if (! elf_discarded_section (s))
+      if (!gas)
+	s = s->output_section;
+      if (s != NULL
+	  && !bfd_is_abs_section (s))
 	{
+	  unsigned int idx = elf_section_data (s)->this_idx;
+
 	  loc -= 4;
-	  if (!gas)
-	    s = s->output_section;
-	  idx = 0;
-	  if (s != NULL)
-	    idx = elf_section_data (s)->this_idx;
 	  H_PUT_32 (abfd, idx, loc);
 	}
       elt = elf_next_in_group (elt);
@@ -4462,6 +4461,22 @@ assign_file_positions_for_load_sections (bfd *abfd,
 		}
 	      p->p_memsz += adjust;
 
+	      if (p->p_paddr + p->p_memsz != sec->lma)
+		{
+		  /* This behavior is a compromise--ld has long
+		     silently changed the lma of sections when
+		     lma - vma is not equal for every section in a
+		     pheader--but only in the internal elf structures.
+		     Silently changing the lma is probably a bug, but
+		     changing it would have subtle and unknown
+		     consequences for existing scripts.
+
+		     Instead modify the bfd data structure to reflect
+		     what happened.  This at least fixes the values
+		     for the lma in the mapfile.  */
+		  sec->lma = p->p_paddr + p->p_memsz;
+		}
+
 	      if (this_hdr->sh_type != SHT_NOBITS)
 		{
 		  if (p->p_filesz + adjust < p->p_memsz)
@@ -6041,18 +6056,21 @@ _bfd_elf_init_private_section_data (bfd *ibfd,
 
 {
   Elf_Internal_Shdr *ihdr, *ohdr;
-  bfd_boolean need_group = link_info == NULL || link_info->relocatable;
+  bfd_boolean final_link = link_info != NULL && !link_info->relocatable;
 
   if (ibfd->xvec->flavour != bfd_target_elf_flavour
       || obfd->xvec->flavour != bfd_target_elf_flavour)
     return TRUE;
 
-  /* Don't copy the output ELF section type from input if the
-     output BFD section flags have been set to something different.
-     elf_fake_sections will set ELF section type based on BFD
-     section flags.  */
+  /* For objcopy and relocatable link, don't copy the output ELF
+     section type from input if the output BFD section flags have been
+     set to something different.  For a final link allow some flags
+     that the linker clears to differ.  */
   if (elf_section_type (osec) == SHT_NULL
-      && (osec->flags == isec->flags || !osec->flags))
+      && (osec->flags == isec->flags
+	  || (final_link
+	      && ((osec->flags ^ isec->flags)
+		  & ~ (SEC_LINK_ONCE | SEC_LINK_DUPLICATES)) == 0)))
     elf_section_type (osec) = elf_section_type (isec);
 
   /* FIXME: Is this correct for all OS/PROC specific flags?  */
@@ -6063,7 +6081,7 @@ _bfd_elf_init_private_section_data (bfd *ibfd,
      SHT_GROUP section will have its elf_next_in_group pointing back
      to the input group members.  Ignore linker created group section.
      See elfNN_ia64_object_p in elfxx-ia64.c.  */
-  if (need_group)
+  if (!final_link)
     {
       if (elf_sec_group (isec) == NULL
 	  || (elf_sec_group (isec)->flags & SEC_LINKER_CREATED) == 0)
@@ -6122,13 +6140,74 @@ _bfd_elf_copy_private_section_data (bfd *ibfd,
 					     NULL);
 }
 
+/* Look at all the SHT_GROUP sections in IBFD, making any adjustments
+   necessary if we are removing either the SHT_GROUP section or any of
+   the group member sections.  DISCARDED is the value that a section's
+   output_section has if the section will be discarded, NULL when this
+   function is called from objcopy, bfd_abs_section_ptr when called
+   from the linker.  */
+
+bfd_boolean
+_bfd_elf_fixup_group_sections (bfd *ibfd, asection *discarded)
+{
+  asection *isec;
+
+  for (isec = ibfd->sections; isec != NULL; isec = isec->next)
+    if (elf_section_type (isec) == SHT_GROUP)
+      {
+	asection *first = elf_next_in_group (isec);
+	asection *s = first;
+	bfd_size_type removed = 0;
+
+	while (s != NULL)
+	  {
+	    /* If this member section is being output but the
+	       SHT_GROUP section is not, then clear the group info
+	       set up by _bfd_elf_copy_private_section_data.  */
+	    if (s->output_section != discarded
+		&& isec->output_section == discarded)
+	      {
+		elf_section_flags (s->output_section) &= ~SHF_GROUP;
+		elf_group_name (s->output_section) = NULL;
+	      }
+	    /* Conversely, if the member section is not being output
+	       but the SHT_GROUP section is, then adjust its size.  */
+	    else if (s->output_section == discarded
+		     && isec->output_section != discarded)
+	      removed += 4;
+	    s = elf_next_in_group (s);
+	    if (s == first)
+	      break;
+	  }
+	if (removed != 0)
+	  {
+	    if (discarded != NULL)
+	      {
+		/* If we've been called for ld -r, then we need to
+		   adjust the input section size.  This function may
+		   be called multiple times, so save the original
+		   size.  */
+		if (isec->rawsize == 0)
+		  isec->rawsize = isec->size;
+		isec->size = isec->rawsize - removed;
+	      }
+	    else
+	      {
+		/* Adjust the output section size when called from
+		   objcopy. */
+		isec->output_section->size -= removed;
+	      }
+	  }
+      }
+
+  return TRUE;
+}
+
 /* Copy private header information.  */
 
 bfd_boolean
 _bfd_elf_copy_private_header_data (bfd *ibfd, bfd *obfd)
 {
-  asection *isec;
-
   if (bfd_get_flavour (ibfd) != bfd_target_elf_flavour
       || bfd_get_flavour (obfd) != bfd_target_elf_flavour)
     return TRUE;
@@ -6144,28 +6223,7 @@ _bfd_elf_copy_private_header_data (bfd *ibfd, bfd *obfd)
 	return FALSE;
     }
 
-  /* _bfd_elf_copy_private_section_data copied over the SHF_GROUP flag
-     but this might be wrong if we deleted the group section.  */
-  for (isec = ibfd->sections; isec != NULL; isec = isec->next)
-    if (elf_section_type (isec) == SHT_GROUP
-	&& isec->output_section == NULL)
-      {
-	asection *first = elf_next_in_group (isec);
-	asection *s = first;
-	while (s != NULL)
-	  {
-	    if (s->output_section != NULL)
-	      {
-		elf_section_flags (s->output_section) &= ~SHF_GROUP;
-		elf_group_name (s->output_section) = NULL;
-	      }
-	    s = elf_next_in_group (s);
-	    if (s == first)
-	      break;
-	  }
-      }
-
-  return TRUE;
+  return _bfd_elf_fixup_group_sections (ibfd, NULL);
 }
 
 /* Copy private symbol information.  If this symbol is in a section
@@ -7656,6 +7714,36 @@ elfcore_grok_s390_high_gprs (bfd *abfd, Elf_Internal_Note *note)
   return elfcore_make_note_pseudosection (abfd, ".reg-s390-high-gprs", note);
 }
 
+static bfd_boolean
+elfcore_grok_s390_timer (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-s390-timer", note);
+}
+
+static bfd_boolean
+elfcore_grok_s390_todcmp (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-s390-todcmp", note);
+}
+
+static bfd_boolean
+elfcore_grok_s390_todpreg (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-s390-todpreg", note);
+}
+
+static bfd_boolean
+elfcore_grok_s390_ctrs (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-s390-ctrs", note);
+}
+
+static bfd_boolean
+elfcore_grok_s390_prefix (bfd *abfd, Elf_Internal_Note *note)
+{
+  return elfcore_make_note_pseudosection (abfd, ".reg-s390-prefix", note);
+}
+
 #if defined (HAVE_PRPSINFO_T)
 typedef prpsinfo_t   elfcore_psinfo_t;
 #if defined (HAVE_PRPSINFO32_T)		/* Sparc64 cross Sparc32 */
@@ -8031,6 +8119,41 @@ elfcore_grok_note (bfd *abfd, Elf_Internal_Note *note)
       if (note->namesz == 6
           && strcmp (note->namedata, "LINUX") == 0)
         return elfcore_grok_s390_high_gprs (abfd, note);
+      else
+        return TRUE;
+
+    case NT_S390_TIMER:
+      if (note->namesz == 6
+          && strcmp (note->namedata, "LINUX") == 0)
+        return elfcore_grok_s390_timer (abfd, note);
+      else
+        return TRUE;
+
+    case NT_S390_TODCMP:
+      if (note->namesz == 6
+          && strcmp (note->namedata, "LINUX") == 0)
+        return elfcore_grok_s390_todcmp (abfd, note);
+      else
+        return TRUE;
+
+    case NT_S390_TODPREG:
+      if (note->namesz == 6
+          && strcmp (note->namedata, "LINUX") == 0)
+        return elfcore_grok_s390_todpreg (abfd, note);
+      else
+        return TRUE;
+
+    case NT_S390_CTRS:
+      if (note->namesz == 6
+          && strcmp (note->namedata, "LINUX") == 0)
+        return elfcore_grok_s390_ctrs (abfd, note);
+      else
+        return TRUE;
+
+    case NT_S390_PREFIX:
+      if (note->namesz == 6
+          && strcmp (note->namedata, "LINUX") == 0)
+        return elfcore_grok_s390_prefix (abfd, note);
       else
         return TRUE;
 
@@ -8699,6 +8822,66 @@ elfcore_write_s390_high_gprs (bfd *abfd,
 }
 
 char *
+elfcore_write_s390_timer (bfd *abfd,
+                          char *buf,
+                          int *bufsiz,
+                          const void *s390_timer,
+                          int size)
+{
+  char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz,
+                             note_name, NT_S390_TIMER, s390_timer, size);
+}
+
+char *
+elfcore_write_s390_todcmp (bfd *abfd,
+                           char *buf,
+                           int *bufsiz,
+                           const void *s390_todcmp,
+                           int size)
+{
+  char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz,
+                             note_name, NT_S390_TODCMP, s390_todcmp, size);
+}
+
+char *
+elfcore_write_s390_todpreg (bfd *abfd,
+                            char *buf,
+                            int *bufsiz,
+                            const void *s390_todpreg,
+                            int size)
+{
+  char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz,
+                             note_name, NT_S390_TODPREG, s390_todpreg, size);
+}
+
+char *
+elfcore_write_s390_ctrs (bfd *abfd,
+                         char *buf,
+                         int *bufsiz,
+                         const void *s390_ctrs,
+                         int size)
+{
+  char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz,
+                             note_name, NT_S390_CTRS, s390_ctrs, size);
+}
+
+char *
+elfcore_write_s390_prefix (bfd *abfd,
+                           char *buf,
+                           int *bufsiz,
+                           const void *s390_prefix,
+                           int size)
+{
+  char *note_name = "LINUX";
+  return elfcore_write_note (abfd, buf, bufsiz,
+                             note_name, NT_S390_PREFIX, s390_prefix, size);
+}
+
+char *
 elfcore_write_register_note (bfd *abfd,
 			     char *buf,
 			     int *bufsiz,
@@ -8718,6 +8901,16 @@ elfcore_write_register_note (bfd *abfd,
     return elfcore_write_ppc_vsx (abfd, buf, bufsiz, data, size);
   if (strcmp (section, ".reg-s390-high-gprs") == 0)
     return elfcore_write_s390_high_gprs (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-s390-timer") == 0)
+    return elfcore_write_s390_timer (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-s390-todcmp") == 0)
+    return elfcore_write_s390_todcmp (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-s390-todpreg") == 0)
+    return elfcore_write_s390_todpreg (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-s390-ctrs") == 0)
+    return elfcore_write_s390_ctrs (abfd, buf, bufsiz, data, size);
+  if (strcmp (section, ".reg-s390-prefix") == 0)
+    return elfcore_write_s390_prefix (abfd, buf, bufsiz, data, size);
   return NULL;
 }
 

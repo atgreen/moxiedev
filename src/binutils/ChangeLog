@@ -1,3 +1,42 @@
+2010-02-23  Peter Breitenlohner  <peb@mppmu.mpg.de>
+
+	PR binutils/11298
+	* doc/binutils.texi (windmc): Fix synopsis and description of
+	ASCII options.
+
+2010-02-19  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (get_group_flags): Return empty string when flags zero.
+	Add space in other returned values.
+	(process_section_groups): Adjust format string.
+
+2010-02-18  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* readelf.c (arm_attr_tag_Advanced_SIMD_arch): Add description of
+	newly permitted attribute values.
+	(arm_attr_tag_Virtualization_use): Likewise.
+	(arm_attr_tag_DIV_use): Add description of new attribute.
+	(arm_attr_tag_MPextension_use_legacy): Likewise.
+
+2010-02-15  Nick Clifton  <nickc@redhat.com>
+
+	* po/vi.po: Updated Vietnamese translation.
+
+2010-02-09  Michael Holzheu  <holzheu@de.ibm.com>
+
+	* readelf.c (get_note_type): Handle NT_S390_TIMER, NT_S390_TODCMP,
+	NT_S390_TODPREG, NT_S390_CTRS and NT_S390_PREFIX.
+
+2010-02-08  Jim Blandy  <jimb@red-bean.com>
+
+	* dwarf.c (display_debug_frames): Skip the 'S' character in CFI
+	'z' augmentation strings.
+
+2010-02-08  Christophe Lyon  <christophe.lyon@st.com>
+
+	* objdump.c (disassemble_bytes): Clear aux->reloc before printing
+	a new address, so as not to reuse a previous, non-related reloc.
+
 2010-02-02  H.J. Lu  <hongjiu.lu@intel.com>
 
 	* readelf.c (get_note_type): Handle NT_X86_XSTATE.

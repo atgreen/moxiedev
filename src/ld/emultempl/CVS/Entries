@@ -1,8 +1,6 @@
 /README/1.1.1.1/Thu Jan 28 00:24:33 2010//
 /aix.em/1.53/Thu Jan 28 00:24:33 2010//
-/alphaelf.em/1.16/Thu Jan 28 00:24:33 2010//
 /armcoff.em/1.31/Thu Jan 28 00:24:33 2010//
-/armelf.em/1.77/Thu Jan 28 00:24:33 2010//
 /astring.sed/1.1/Thu Jan 28 00:24:33 2010//
 /avrelf.em/1.10/Thu Jan 28 00:24:33 2010//
 /beos.em/1.44/Thu Jan 28 00:24:33 2010//
@@ -10,11 +8,9 @@
 /crxelf.em/1.8/Thu Jan 28 00:24:33 2010//
 /elf-generic.em/1.9/Thu Jan 28 00:24:33 2010//
 /elf32.em/1.208/Wed Feb  3 12:13:42 2010//
-/genelf.em/1.6/Thu Jan 28 00:24:33 2010//
 /generic.em/1.23/Thu Jan 28 00:24:33 2010//
 /gld960.em/1.23/Thu Jan 28 00:24:33 2010//
 /gld960c.em/1.24/Thu Jan 28 00:24:33 2010//
-/hppaelf.em/1.55/Thu Jan 28 00:24:33 2010//
 /ia64elf.em/1.10/Thu Jan 28 00:24:33 2010//
 /irix.em/1.8/Thu Jan 28 00:24:33 2010//
 /linux.em/1.24/Thu Jan 28 00:24:33 2010//
@@ -23,7 +19,6 @@
 /m68kcoff.em/1.20/Thu Jan 28 00:24:33 2010//
 /m68kelf.em/1.14/Thu Jan 28 00:24:33 2010//
 /mipsecoff.em/1.20/Thu Jan 28 00:24:33 2010//
-/mipself.em/1.11/Thu Jan 28 00:24:33 2010//
 /mmix-elfnmmo.em/1.18/Thu Jan 28 00:24:33 2010//
 /mmixelf.em/1.8/Thu Jan 28 00:24:33 2010//
 /mmo.em/1.26/Thu Jan 28 00:24:33 2010//
@@ -32,8 +27,6 @@
 /ostring.sed/1.1/Thu Jan 28 00:24:33 2010//
 /pe.em/1.156/Wed Feb  3 12:13:42 2010//
 /pep.em/1.33/Wed Feb  3 12:13:42 2010//
-/ppc32elf.em/1.24/Thu Jan 28 00:24:33 2010//
-/ppc64elf.em/1.66/Wed Feb  3 12:13:42 2010//
 /rxelf.em/1.1/Thu Jan 28 00:24:33 2010//
 /scoreelf.em/1.6/Thu Jan 28 00:24:33 2010//
 /sh64elf.em/1.17/Thu Jan 28 00:24:33 2010//
@@ -48,4 +41,11 @@
 /vxworks.em/1.9/Wed Feb  3 12:13:42 2010//
 /xtensaelf.em/1.24/Thu Jan 28 00:24:33 2010//
 /z80.em/1.5/Thu Jan 28 00:24:33 2010//
+/alphaelf.em/1.17/Thu Feb 25 20:31:22 2010//
+/armelf.em/1.78/Thu Feb 25 20:31:22 2010//
+/genelf.em/1.7/Thu Feb 25 20:31:22 2010//
+/hppaelf.em/1.56/Thu Feb 25 20:31:22 2010//
+/mipself.em/1.12/Thu Feb 25 20:31:22 2010//
+/ppc32elf.em/1.25/Thu Feb 25 20:31:22 2010//
+/ppc64elf.em/1.68/Thu Feb 25 20:31:22 2010//
 D

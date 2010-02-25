@@ -303,7 +303,6 @@
 /mips-macro-ill-sfp.s/1.1/Thu Jan 28 00:24:29 2010//
 /mips-no-jalx.l/1.2/Thu Jan 28 00:24:29 2010//
 /mips-no-jalx.s/1.1/Thu Jan 28 00:24:29 2010//
-/mips.exp/1.154/Thu Jan 28 00:24:29 2010//
 /mips1-fp.d/1.2/Thu Jan 28 00:24:29 2010//
 /mips1-fp.l/1.1/Thu Jan 28 00:24:29 2010//
 /mips1-fp.s/1.1/Thu Jan 28 00:24:29 2010//
@@ -515,4 +514,9 @@
 /vxworks1.s/1.1/Thu Jan 28 00:24:29 2010//
 /xlr-ext.d/1.1/Thu Jan 28 00:24:29 2010//
 /xlr-ext.s/1.1/Thu Jan 28 00:24:29 2010//
+/loongson-2f-2.d/1.1/Thu Feb 25 11:15:48 2010//
+/loongson-2f-2.s/1.1/Thu Feb 25 11:15:48 2010//
+/loongson-2f-3.d/1.1/Thu Feb 25 11:15:48 2010//
+/loongson-2f-3.s/1.1/Thu Feb 25 11:15:48 2010//
+/mips.exp/1.155/Thu Feb 25 20:31:18 2010//
 D

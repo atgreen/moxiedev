@@ -2538,6 +2538,67 @@ get_traceframe_number (void)
   return traceframe_number;
 }
 
+/* Make the traceframe NUM be the current trace frame.  Does nothing
+   if NUM is already current.  */
+
+void
+set_traceframe_number (int num)
+{
+  int newnum;
+
+  if (traceframe_number == num)
+    {
+      /* Nothing to do.  */
+      return;
+    }
+
+  newnum = target_trace_find (tfind_number, num, 0, 0, NULL);
+
+  if (newnum != num)
+    warning (_("could not change traceframe"));
+
+  traceframe_number = newnum;
+
+  /* Changing the traceframe changes our view of registers and of the
+     frame chain.  */
+  registers_changed ();
+}
+
+/* A cleanup used when switching away and back from tfind mode.  */
+
+struct current_traceframe_cleanup
+{
+  /* The traceframe we were inspecting.  */
+  int traceframe_number;
+};
+
+static void
+do_restore_current_traceframe_cleanup (void *arg)
+{
+  struct current_traceframe_cleanup *old = arg;
+
+  set_traceframe_number (old->traceframe_number);
+}
+
+static void
+restore_current_traceframe_cleanup_dtor (void *arg)
+{
+  struct current_traceframe_cleanup *old = arg;
+
+  xfree (old);
+}
+
+struct cleanup *
+make_cleanup_restore_current_traceframe (void)
+{
+  struct current_traceframe_cleanup *old;
+
+  old = xmalloc (sizeof (struct current_traceframe_cleanup));
+  old->traceframe_number = traceframe_number;
+
+  return make_cleanup_dtor (do_restore_current_traceframe_cleanup, old,
+			    restore_current_traceframe_cleanup_dtor);
+}
 
 /* Given a number and address, return an uploaded tracepoint with that
    number, creating if necessary.  */
@@ -2824,7 +2885,6 @@ tfile_open (char *filename, int from_tty)
   unpush_target (&tfile_ops);
 
   push_target (&tfile_ops);
-  discard_cleanups (old_chain);
 
   trace_filename = xstrdup (filename);
   trace_fd = scratch_chan;
@@ -2881,9 +2941,11 @@ tfile_open (char *filename, int from_tty)
 
   /* Add the file's tracepoints and variables into the current mix.  */
 
-  merge_uploaded_tracepoints (&uploaded_tps);
-
+  /* Get trace state variables first, they may be checked when parsing
+     uploaded commands.  */
   merge_uploaded_trace_state_variables (&uploaded_tsvs);
+
+  merge_uploaded_tracepoints (&uploaded_tps);
 
   /* Record the starting offset of the binary trace data.  */
   trace_frames_offset = bytes;
@@ -3609,12 +3671,12 @@ No argument means forward by one frame; '-' means backward by one frame."),
 		  &tfindlist, "tfind ", 1, &cmdlist);
 
   add_cmd ("outside", class_trace, trace_find_outside_command, _("\
-Select a trace frame whose PC is outside the given range.\n\
+Select a trace frame whose PC is outside the given range (exclusive).\n\
 Usage: tfind outside addr1, addr2"),
 	   &tfindlist);
 
   add_cmd ("range", class_trace, trace_find_range_command, _("\
-Select a trace frame whose PC is in the given range.\n\
+Select a trace frame whose PC is in the given range (inclusive).\n\
 Usage: tfind range addr1,addr2"),
 	   &tfindlist);
 

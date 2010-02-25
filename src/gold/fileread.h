@@ -1,6 +1,6 @@
 // fileread.h -- read files for gold   -*- C++ -*-
 
-// Copyright 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+// Copyright 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 // Written by Ian Lance Taylor <iant@google.com>.
 
 // This file is part of gold.
@@ -218,16 +218,15 @@ class File_read
   File_read(const File_read&);
   File_read& operator=(const File_read&);
 
-  // Total bytes mapped into memory during the link.  This variable
-  // may not be accurate when running multi-threaded.
+  // Total bytes mapped into memory during the link if --stats.
   static unsigned long long total_mapped_bytes;
 
-  // Current number of bytes mapped into memory during the link.  This
-  // variable may not be accurate when running multi-threaded.
+  // Current number of bytes mapped into memory during the link if
+  // --stats.
   static unsigned long long current_mapped_bytes;
 
-  // High water mark of bytes mapped into memory during the link.
-  // This variable may not be accurate when running multi-threaded.
+  // High water mark of bytes mapped into memory during the link if
+  // --stats.
   static unsigned long long maximum_mapped_bytes;
 
   // A view into the file.
@@ -465,9 +464,16 @@ class File_view
 class Input_file
 {
  public:
+  enum Format
+  {
+    FORMAT_NONE,
+    FORMAT_ELF,
+    FORMAT_BINARY
+  };
+
   Input_file(const Input_file_argument* input_argument)
     : input_argument_(input_argument), found_name_(), file_(),
-      is_in_sysroot_(false)
+      is_in_sysroot_(false), format_(FORMAT_NONE)
   { }
 
   // Create an input file with the contents already provided.  This is
@@ -537,6 +543,11 @@ class Input_file
   bool
   just_symbols() const;
 
+  // Return the format of the unconverted input file.
+  Format
+  format() const
+  { return this->format_; }
+
  private:
   Input_file(const Input_file&);
   Input_file& operator=(const Input_file&);
@@ -556,6 +567,8 @@ class Input_file
   File_read file_;
   // Whether we found the file in a directory in the system root.
   bool is_in_sysroot_;
+  // Format of unconverted input file.
+  Format format_;
 };
 
 } // end namespace gold

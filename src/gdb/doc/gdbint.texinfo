@@ -7599,6 +7599,14 @@ will give a result of ``UNRESOLVED'', like this:
 UNRESOLVED: gdb.base/example.exp: This test script does not work on a remote host.
 @end smallexample
 
+@section Testsuite Parameters
+
+Several variables exist to modify the behavior of the testsuite.
+
+@itemize @bullet
+
+@item @code{TRANSCRIPT}
+
 Sometimes it is convenient to get a transcript of the commands which
 the testsuite sends to @value{GDBN}.  For example, if @value{GDBN}
 crashes during testing, a transcript can be used to more easily
@@ -7619,6 +7627,103 @@ make check RUNTESTFLAGS=TRANSCRIPT=y
 
 Note that the transcript is not always complete.  In particular, tests
 of completion can yield partial command lines.
+
+@item @code{GDB}
+
+Sometimes one wishes to test a different @value{GDBN} than the one in the build
+directory.  For example, one may wish to run the testsuite on
+@file{/usr/bin/gdb}.
+
+@smallexample
+make check RUNTESTFLAGS=GDB=/usr/bin/gdb
+@end smallexample
+
+@item @code{GDBSERVER}
+
+When testing a different @value{GDBN}, it is often useful to also test a
+different gdbserver.
+
+@smallexample
+make check RUNTESTFLAGS="GDB=/usr/bin/gdb GDBSERVER=/usr/bin/gdbserver"
+@end smallexample
+
+@item @code{INTERNAL_GDBFLAGS}
+
+When running the testsuite normally one doesn't want whatever is in
+@file{~/.gdbinit} to interfere with the tests, therefore the test harness
+passes @option{-nx} to @value{GDBN}.  One also doesn't want any windowed
+version of @value{GDBN}, e.g., @command{gdbtui}, to run.
+This is achieved via @code{INTERNAL_GDBFLAGS}.  
+
+@smallexample
+set INTERNAL_GDBFLAGS "-nw -nx"
+@end smallexample
+
+This is all well and good, except when testing an installed @value{GDBN}
+that has been configured with @option{--with-system-gdbinit}.  Here one
+does not want @file{~/.gdbinit} loaded but one may want the system
+@file{.gdbinit} file loaded.  This can be achieved by pointing @code{$HOME}
+at a directory without a @file{.gdbinit} and by overriding
+@code{INTERNAL_GDBFLAGS} and removing @option{-nx}.
+
+@smallexample
+cd testsuite
+HOME=`pwd` runtest \
+  GDB=/usr/bin/gdb \
+  GDBSERVER=/usr/bin/gdbserver \
+  INTERNAL_GDBFLAGS=-nw
+@end smallexample
+
+@end itemize
+
+There are two ways to run the testsuite and pass additional parameters
+to DejaGnu.  The first is with @kbd{make check} and specifying the
+makefile variable @samp{RUNTESTFLAGS}.
+
+@smallexample
+make check RUNTESTFLAGS=TRANSCRIPT=y
+@end smallexample
+
+The second is to cd to the @file{testsuite} directory and invoke the DejaGnu
+@command{runtest} command directly.
+
+@smallexample
+cd testsuite
+make site.exp
+runtest TRANSCRIPT=y
+@end smallexample
+
+@section Testsuite Configuration
+@cindex Testsuite Configuration
+
+It is possible to adjust the behavior of the testsuite by defining
+the global variables listed below, either in a @file{site.exp} file,
+or in a board file.
+
+@itemize @bullet
+
+@item @code{gdb_test_timeout}
+
+Defining this variable changes the default timeout duration used during
+communication with @value{GDBN}.  More specifically, the global variable
+used during testing is @code{timeout}, but this variable gets reset to
+@code{gdb_test_timeout} at the beginning of each testcase, making sure
+that any local change to @code{timeout} in a testcase does not affect
+subsequent testcases.
+
+This global variable comes in handy when the debugger is slower than
+normal due to the testing environment, triggering unexpected @code{TIMEOUT}
+test failures.  Examples include when testing on a remote machine, or
+against a system where communications are slow.
+
+If not specifically defined, this variable gets automatically defined
+to the same value as @code{timeout} during the testsuite initialization.
+The default value of the timeout is defined in the file
+@file{gdb/testsuite/config/unix.exp} that is part of the @value{GDBN}
+test suite@footnote{If you are using a board file, it could override
+the test-suite default; search the board file for "timeout".}.
+
+@end itemize
 
 @section Testsuite Organization
 
@@ -7715,7 +7820,7 @@ appear anywhere else in the directory.
 * Debugging GDB::		Debugging @value{GDBN} with itself
 @end menu
 
-@node Getting Started,,, Hints
+@node Getting Started
 
 @section Getting Started
 
@@ -7798,7 +7903,7 @@ wondering if anyone could give me some tips about understanding
 @value{GDBN}''---if we had some magic secret we would put it in this manual.
 Suggestions for improving the manual are always welcome, of course.
 
-@node Debugging GDB,,,Hints
+@node Debugging GDB
 
 @section Debugging @value{GDBN} with itself
 @cindex debugging @value{GDBN}

@@ -1,6 +1,6 @@
 /* tc-i386.c -- Assemble code for the Intel 80386
    Copyright 1989, 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -260,6 +260,9 @@ struct _i386_insn
 
     /* Swap operand in encoding.  */
     unsigned int swap_operand;
+
+    /* Error message.  */
+    const char *err_msg;
   };
 
 typedef struct _i386_insn i386_insn;
@@ -603,8 +606,8 @@ static const arch_entry cpu_arch[] =
     CPU_K8_FLAGS, 0 },
   { STRING_COMMA_LEN ("amdfam10"), PROCESSOR_AMDFAM10,
     CPU_AMDFAM10_FLAGS, 0 },
-  { STRING_COMMA_LEN ("amdfam15"), PROCESSOR_AMDFAM15,
-    CPU_AMDFAM15_FLAGS, 0 },
+  { STRING_COMMA_LEN ("bdver1"), PROCESSOR_BDVER1,
+    CPU_BDVER1_FLAGS, 0 },
   { STRING_COMMA_LEN (".8087"), PROCESSOR_UNKNOWN,
     CPU_8087_FLAGS, 0 },
   { STRING_COMMA_LEN (".287"), PROCESSOR_UNKNOWN,
@@ -966,7 +969,7 @@ i386_align_code (fragS *fragP, int count)
      PROCESSOR_CORE, PROCESSOR_CORE2, PROCESSOR_COREI7, and
      PROCESSOR_GENERIC64, alt_long_patt will be used.
      3. For PROCESSOR_ATHLON, PROCESSOR_K6, PROCESSOR_K8 and
-     PROCESSOR_AMDFAM10, and PROCESSOR_AMDFAM15, alt_short_patt
+     PROCESSOR_AMDFAM10, and PROCESSOR_BDVER1, alt_short_patt
      will be used.
 
      When -mtune= isn't used, alt_long_patt will be used if
@@ -1020,7 +1023,7 @@ i386_align_code (fragS *fragP, int count)
 	    case PROCESSOR_ATHLON:
 	    case PROCESSOR_K8:
 	    case PROCESSOR_AMDFAM10:
-	    case PROCESSOR_AMDFAM15:
+	    case PROCESSOR_BDVER1:
 	      patt = alt_short_patt;
 	      break;
 	    case PROCESSOR_I386:
@@ -1048,7 +1051,7 @@ i386_align_code (fragS *fragP, int count)
 	    case PROCESSOR_ATHLON:
 	    case PROCESSOR_K8:
 	    case PROCESSOR_AMDFAM10:
-	    case PROCESSOR_AMDFAM15:
+	    case PROCESSOR_BDVER1:
 	    case PROCESSOR_GENERIC32:
 	      /* We use cpu_arch_isa_flags to check if we CAN optimize
 		 for Cpu686.  */
@@ -1436,6 +1439,7 @@ static const i386_operand_type imm64 = OPERAND_TYPE_IMM64;
 static const i386_operand_type imm16_32 = OPERAND_TYPE_IMM16_32;
 static const i386_operand_type imm16_32s = OPERAND_TYPE_IMM16_32S;
 static const i386_operand_type imm16_32_32s = OPERAND_TYPE_IMM16_32_32S;
+static const i386_operand_type vec_imm4 = OPERAND_TYPE_VEC_IMM4;
 
 enum operand_type
 {
@@ -1556,9 +1560,14 @@ operand_size_match (const insn_template *t)
 	}
     }
 
-  if (match
-      || (!t->opcode_modifier.d && !t->opcode_modifier.floatd))
+  if (match)
     return match;
+  else if (!t->opcode_modifier.d && !t->opcode_modifier.floatd)
+    {
+mismatch:
+      i.err_msg = _("operand size mismatch");
+      return 0;
+    }
 
   /* Check reverse.  */
   gas_assert (i.operands == 2);
@@ -1568,17 +1577,11 @@ operand_size_match (const insn_template *t)
     {
       if (t->operand_types[j].bitfield.acc
 	  && !match_reg_size (t, j ? 0 : 1))
-	{
-	  match = 0;
-	  break;
-	}
+	goto mismatch;
 
       if (i.types[j].bitfield.mem
 	  && !match_mem_size (t, j ? 0 : 1))
-	{
-	  match = 0;
-	  break;
-	}
+	goto mismatch;
     }
 
   return match;
@@ -1601,10 +1604,15 @@ operand_type_match (i386_operand_type overlap,
   temp.bitfield.xmmword = 0;
   temp.bitfield.ymmword = 0;
   if (operand_type_all_zero (&temp))
-    return 0;
+    goto mismatch;
 
-  return (given.bitfield.baseindex == overlap.bitfield.baseindex
-	  && given.bitfield.jumpabsolute == overlap.bitfield.jumpabsolute);
+  if (given.bitfield.baseindex == overlap.bitfield.baseindex
+      && given.bitfield.jumpabsolute == overlap.bitfield.jumpabsolute)
+    return 1;
+
+mismatch:
+  i.err_msg = _("operand type mismatch");
+  return 0;
 }
 
 /* If given types g0 and g1 are registers they must be of the same type
@@ -1647,10 +1655,15 @@ operand_type_register_match (i386_operand_type m0,
       t1.bitfield.reg64 = 1;
     }
 
-  return (!(t0.bitfield.reg8 & t1.bitfield.reg8)
-	  && !(t0.bitfield.reg16 & t1.bitfield.reg16)
-	  && !(t0.bitfield.reg32 & t1.bitfield.reg32)
-	  && !(t0.bitfield.reg64 & t1.bitfield.reg64));
+  if (!(t0.bitfield.reg8 & t1.bitfield.reg8)
+      && !(t0.bitfield.reg16 & t1.bitfield.reg16)
+      && !(t0.bitfield.reg32 & t1.bitfield.reg32)
+      && !(t0.bitfield.reg64 & t1.bitfield.reg64))
+    return 1;
+
+  i.err_msg = _("register type mismatch");
+
+  return 0;
 }
 
 static INLINE unsigned int
@@ -1710,6 +1723,12 @@ fits_in_unsigned_long (offsetT num ATTRIBUTE_UNUSED)
   return (num & (((offsetT) 2 << 31) - 1)) == num;
 #endif
 }				/* fits_in_unsigned_long() */
+
+static INLINE int
+fits_in_imm4 (offsetT num)
+{
+  return (num & 0xf) == num;
+}
 
 static i386_operand_type
 smallest_imm_type (offsetT num)
@@ -3724,6 +3743,32 @@ optimize_disp (void)
       }
 }
 
+/* Check if operands are valid for the instrucrtion.  Update VEX
+   operand types.  */
+
+static int
+VEX_check_operands (const insn_template *t)
+{
+  if (!t->opcode_modifier.vex)
+    return 0;
+
+  /* Only check VEX_Imm4, which must be the first operand.  */
+  if (t->operand_types[0].bitfield.vec_imm4)
+    {
+      if (i.op[0].imms->X_op != O_constant
+	  || !fits_in_imm4 (i.op[0].imms->X_add_number))
+	{
+	  i.err_msg = _("Imm4 isn't the first operand");
+	  return 1;
+	}
+
+      /* Turn off Imm8 so that update_imm won't complain.  */
+      i.types[0] = vec_imm4;
+    }
+
+  return 0;
+}
+
 static const insn_template *
 match_template (void)
 {
@@ -3765,29 +3810,35 @@ match_template (void)
       addr_prefix_disp = -1;
 
       /* Must have right number of operands.  */
+      i.err_msg = _("number of operands mismatch");
       if (i.operands != t->operands)
 	continue;
 
       /* Check processor support.  */
+      i.err_msg = _("instruction not supported");
       found_cpu_match = (cpu_flags_match (t)
 			 == CPU_FLAGS_PERFECT_MATCH);
       if (!found_cpu_match)
 	continue;
 
       /* Check old gcc support. */
+      i.err_msg = _("only supported with old gcc");
       if (!old_gcc && t->opcode_modifier.oldgcc)
 	continue;
 
       /* Check AT&T mnemonic.   */
+      i.err_msg = _("not supported with Intel mnemonic");
       if (intel_mnemonic && t->opcode_modifier.attmnemonic)
 	continue;
 
-      /* Check AT&T syntax Intel syntax.   */
+      /* Check AT&T/Intel syntax.   */
+      i.err_msg = _("unsupported syntax");
       if ((intel_syntax && t->opcode_modifier.attsyntax)
 	  || (!intel_syntax && t->opcode_modifier.intelsyntax))
 	continue;
 
       /* Check the suffix, except for some instructions in intel mode.  */
+      i.err_msg = _("invalid instruction suffix");
       if ((!intel_syntax || !t->opcode_modifier.ignoresize)
 	  && ((t->opcode_modifier.no_bsuf && suffix_check.no_bsuf)
 	      || (t->opcode_modifier.no_wsuf && suffix_check.no_wsuf)
@@ -4028,6 +4079,10 @@ check_reverse:
 	  continue;
 	}
 
+      /* Check if VEX operands are valid.  */
+      if (VEX_check_operands (t))
+	continue;
+
       /* We've found a match; break out of loop.  */
       break;
     }
@@ -4035,12 +4090,8 @@ check_reverse:
   if (t == current_templates->end)
     {
       /* We found no match.  */
-      if (intel_syntax)
-	as_bad (_("ambiguous operand size or operands invalid for `%s'"),
-		current_templates->start->name);
-      else
-	as_bad (_("suffix or operands invalid for `%s'"),
-		current_templates->start->name);
+      as_bad (_("%s for `%s'"), i.err_msg,
+	      current_templates->start->name);
       return NULL;
     }
 
@@ -4960,53 +5011,123 @@ build_modrm_byte (void)
       expressionS *exp;
 
       if (i.tm.opcode_modifier.veximmext
-	  && i.tm.opcode_modifier.immext)
-	{
-	  dest = i.operands - 2;
-	  gas_assert (dest == 3);
-	}
+          && i.tm.opcode_modifier.immext)
+        {
+          dest = i.operands - 2;
+          gas_assert (dest == 3);
+        }
       else
-	dest = i.operands - 1;
+        dest = i.operands - 1;
       nds = dest - 1;
 
-      /* This instruction must have 4 register operands
-	 or 3 register operands plus 1 memory operand.
-	 It must have VexNDS and VexImmExt.  */
+      /* There are 2 kinds of instructions:
+         1. 5 operands: 4 register operands or 3 register operands
+         plus 1 memory operand plus one Vec_Imm4 operand, VexXDS, and
+         VexW0 or VexW1.  The destination must be either XMM or YMM
+         register.
+         2. 4 operands: 4 register operands or 3 register operands
+         plus 1 memory operand, VexXDS, and VexImmExt  */
       gas_assert ((i.reg_operands == 4
-		      || (i.reg_operands == 3 && i.mem_operands == 1))
-		  && i.tm.opcode_modifier.vexvvvv == VEXXDS
-		  && i.tm.opcode_modifier.veximmext
-	    && (operand_type_equal (&i.tm.operand_types[dest], &regxmm)
-		|| operand_type_equal (&i.tm.operand_types[dest], &regymm)));
+                   || (i.reg_operands == 3 && i.mem_operands == 1))
+                  && i.tm.opcode_modifier.vexvvvv == VEXXDS
+                  && (i.tm.opcode_modifier.veximmext
+                      || (i.imm_operands == 1
+                          && i.types[0].bitfield.vec_imm4
+                          && (i.tm.opcode_modifier.vexw == VEXW0
+                              || i.tm.opcode_modifier.vexw == VEXW1)
+                          && (operand_type_equal (&i.tm.operand_types[dest], &regxmm)
+                              || operand_type_equal (&i.tm.operand_types[dest], &regymm)))));
 
-      /* Generate an 8bit immediate operand to encode the register
-	 operand.  */
-      exp = &im_expressions[i.imm_operands++];
-      i.op[i.operands].imms = exp;
-      i.types[i.operands] = imm8;
-      i.operands++;
-      /* If VexW1 is set, the first operand is the source and
-	 the second operand is encoded in the immediate operand.  */
-      if (i.tm.opcode_modifier.vexw == VEXW1)
-	{
-	  source = 0;
-	  reg_slot = 1;
-	}
+      if (i.imm_operands == 0)
+        {
+          /* When there is no immediate operand, generate an 8bit
+             immediate operand to encode the first operand.  */
+          exp = &im_expressions[i.imm_operands++];
+          i.op[i.operands].imms = exp;
+          i.types[i.operands] = imm8;
+          i.operands++;
+          /* If VexW1 is set, the first operand is the source and
+             the second operand is encoded in the immediate operand.  */
+          if (i.tm.opcode_modifier.vexw == VEXW1)
+            {
+              source = 0;
+              reg_slot = 1;
+            }
+          else
+            {
+              source = 1;
+              reg_slot = 0;
+            }
+
+          /* FMA swaps REG and NDS.  */
+          if (i.tm.cpu_flags.bitfield.cpufma)
+            {
+              unsigned int tmp;
+              tmp = reg_slot;
+              reg_slot = nds;
+              nds = tmp;
+            }
+
+          gas_assert (operand_type_equal (&i.tm.operand_types[reg_slot],
+					  &regxmm)
+                      || operand_type_equal (&i.tm.operand_types[reg_slot],
+                                             &regymm));
+          exp->X_op = O_constant;
+          exp->X_add_number
+              = ((i.op[reg_slot].regs->reg_num
+                  + ((i.op[reg_slot].regs->reg_flags & RegRex) ? 8 : 0))
+		 << 4);
+        }
       else
-	{
-	  source = 1;
-	  reg_slot = 0;
-	}
-      gas_assert ((operand_type_equal (&i.tm.operand_types[reg_slot], &regxmm)
-		   || operand_type_equal (&i.tm.operand_types[reg_slot],
-					  &regymm))
-		  && (operand_type_equal (&i.tm.operand_types[nds], &regxmm)
-		      || operand_type_equal (&i.tm.operand_types[nds],
-					     &regymm)));
-      exp->X_op = O_constant;
-      exp->X_add_number
-	= ((i.op[reg_slot].regs->reg_num
-	    + ((i.op[reg_slot].regs->reg_flags & RegRex) ? 8 : 0)) << 4);
+        {
+          unsigned int imm_slot;
+
+          if (i.tm.opcode_modifier.vexw == VEXW0)
+            {
+              /* If VexW0 is set, the third operand is the source and
+                 the second operand is encoded in the immediate
+                 operand.  */
+              source = 2;
+              reg_slot = 1;
+            }
+          else
+            {
+              /* VexW1 is set, the second operand is the source and
+                 the third operand is encoded in the immediate
+                 operand.  */
+              source = 1;
+              reg_slot = 2;
+            }
+
+          if (i.tm.opcode_modifier.immext)
+            {
+              /* When ImmExt is set, the immdiate byte is the last
+                 operand.  */
+              imm_slot = i.operands - 1;
+              source--;
+              reg_slot--;
+            }
+          else
+            {
+              imm_slot = 0;
+
+              /* Turn on Imm8 so that output_imm will generate it.  */
+              i.types[imm_slot].bitfield.imm8 = 1;
+            }
+
+          gas_assert (operand_type_equal (&i.tm.operand_types[reg_slot],
+					  &regxmm)
+		      || operand_type_equal (&i.tm.operand_types[reg_slot],
+					     &regymm));
+          i.op[imm_slot].imms->X_add_number
+              |= ((i.op[reg_slot].regs->reg_num
+                   + ((i.op[reg_slot].regs->reg_flags & RegRex) ? 8 : 0))
+		  << 4);
+        }
+
+      gas_assert (operand_type_equal (&i.tm.operand_types[nds], &regxmm)
+                  || operand_type_equal (&i.tm.operand_types[nds],
+                                         &regymm));
       i.vex.register_specifier = i.op[nds].regs;
     }
   else

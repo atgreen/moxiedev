@@ -1,3 +1,458 @@
+2010-02-24  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::got_section): Make the .got section the first
+	non RELRO section in the data segment.
+	* testsuite/script_test_5.sh: Fix match patterns to avoid matching
+	suffixes of section names.
+
+2010-02-24  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::do_finalize_sections): Skip processor specific
+	flags and attributes merging if an input file is a binary file.
+	* fileread.cc (Input_file::open): Record format of original file.
+	* fileread.h (Input_file::Format): New enum type.
+   	(Input_file::Input_file): Initialize data member format_.
+	(Input_file::format): New method definition.
+	(Input_file::format_):: New data member.
+
+2010-02-24  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_output_data_got): New class.
+	(ARM_TCB_SIZE): New constant
+	(Target_arm): Use Arm_output_data_got instead of Output_data_got.
+	(Arm_output_section::fix_exidx_coverage): Add a parameter for layout.
+	If user uses a script with a SECTIONS clause, issue only a warning
+	for a misplaced EXIDX input section.  Otherwise, issue an error.
+ 	(Arm_relobj::do_gc_process_relocs): Exit early if we are not doing
+	garbage collection.
+	(Target_arm::got_mode_index_entry): Handle static linking.
+	(Target_arm::Scan::local): Ditto.
+	(Target_arm::Scan::global): Ditto.
+	(Target_arm::Relocate::relocate_tls): Handle static linking.  Fix
+	all incorrectly implemented relocations.
+	(Target_arm::fix_exidx_coverage): Pass layout to 
+	Arm_output_section::fix_exidx_coverage.
+	* layout.cc (Layout::section_name_mapping): Remove trailing dots
+	from ".ARM.exidx." and ".ARM.extab.".
+
+2010-02-23  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* arm.cc (Target_arm::do_finalize_sections): Create attribute
+	section if it does not already exist.
+	* attributes.cc	(Attributes_section_data::Attributes_section_data):
+	Don't crash if size is zero.
+
+2010-02-23  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+	    Ian Lance Taylor  <iant@google.com>
+
+	* gold.cc (queue_middle_tasks): If no input files were opened,
+	exit.
+	* workqueue.h (Task_function::Task_function): Assert that there is
+	a blocker.
+
+2010-02-22  Doug Kwan  <dougkwan@google.com>
+
+	* gold-threads.h (Once::~Once): Explicitly define virtual destructor.
+	* icf.cc (get_section_contents): Cast snprintf arguments to long long
+	types to avoid warnings due to different uint64_t implementations
+	on different hosts.
+
+2010-02-21  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relocate_functions::arm_branch_common): Fix bug in
+	handling of the maximum backward branch offset.
+     	(Arm_relocate_functions::thumb_branch_common): Ditto.
+	* testsuite/Makefile.am (check_SCRIPTS): Add arm_branch_in_range.sh.
+	(check_DATA): Add arm_bl_in_range.stdout, arm_bl_out_of_range.stdout
+	thumb_bl_in_range.stdout, thumb_bl_out_of_range.stdout, 
+	thumb2_bl_in_range.stdout and thumb2_bl_out_of_range.stdout.
+	(arm_bl_in_range.stdout, arm_bl_in_range, arm_bl_in_range.o,
+	arm_bl_out_of_range.stdout, arm_bl_out_of_range,
+	arm_bl_out_of_range.o, thumb_bl_in_range.stdout, thumb_bl_in_range,
+	thumb_bl_in_range.o, thumb_bl_out_of_range.stdout,
+	thumb_bl_out_of_range thumb_bl_out_of_range.o,
+	thumb2_bl_in_range.stdout, thumb2_bl_in_range, thumb2_bl_in_range.o
+	thumb2_bl_out_of_range.stdout, thumb2_bl_out_of_range,
+	thumb2_bl_out_of_range.o): New rules.
+	(MOSTLYCLEANFILES): Add arm_bl_in_range, arm_bl_out_of_range,
+	thumb_bl_in_range, thumb_bl_out_of_range, thumb2_bl_in_range and
+	thumb2_bl_out_of_range
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/arm_bl_in_range.s: New file.
+	* testsuite/arm_bl_out_of_range.s: Ditto.
+	* testsuite/arm_branch_in_range.sh: Ditto.
+	* testsuite/arm_branch_range.t: Ditto.
+	* testsuite/thumb2_branch_range.t: Ditto.
+	* testsuite/thumb_bl_in_range.s: Ditto.
+	* testsuite/thumb_bl_out_of_range.s: Ditto.
+	* testsuite/thumb_branch_range.t: Ditto.
+
+2010-02-20  Sriraman Tallam  <tmsriram@google.com>
+
+	* gc.h (gc_process_relocs): Change vectors to point to the new list.
+	Add reloc offset information.
+	* icf.cc (get_section_contents): Change iterators to point to the new
+	vectors. Add reloc offset information to the contents.
+	* icf.h (Icf::Sections_reachable_info): New typedef.
+	(Icf::Sections_reachable_list): New typedef.
+	(Icf::Offset_info): New typedef.
+	(Icf::Reloc_info): New struct typedef.
+	(Icf::Reloc_info_list): New typedef.
+	(Icf::symbol_reloc_list): Delete method.
+	(Icf::addend_reloc_list): Delete method.
+	(Icf::section_reloc_list): Delete method.
+	(Icf::reloc_info_list): New method.
+	(Icf::reloc_info_list_): New member.
+
+2010-02-19  Doug Kwan  <dougkwan@google.com>
+
+	* arm-reloc.def: Mark R_ARM_TLS_GD32, R_ARM_TLS_LDM32,
+	R_ARM_TLS_LDO32, R_ARM_TLS_IE32 and R_ARM_TLS_LE32 are implemented.
+	* arm.cc (Arm_relocation_functions): New forward declaration.
+	(Target_arm::Target_arm): Initialize new data members
+	got_mod_index_offset_ and tls_base_symbol_defined_.
+	(Target_arm::Relocate::relocate_tls): New method.
+	(Target_arm::optimize_tls_reloc, Target_arm::define_tls_base_symbol,
+	 Target_arm::got_mod_index_entry, Target_arm::rel_tls_desc_section):
+	New methods.
+   	(Target_arm::Got_type): Add GOT_TYPE_TLS_NOFFSET, GOT_TYPE_OFFSET,
+	GOT_TYPE_TLS_PAIR and GOT_TYPE_TLS_DESC.
+	(Target_arm::got_mod_index_offset_,
+	Target_arm::tls_base_symbol_defined_): New data members.
+	(Target_arm::Scan::local, Target::Scan::global,
+	Target_arm::Relocate::relocate): Handle 32-bit initial TLS
+	relocations.
+
+2010-02-18  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::find_linked_text_section): New method.
+	(Arm_relobj::make_exidx_input_section): Pass section index of linked
+	text section as a parameter becuase some broken tools may not set
+	the link in section header.
+	(Target_arm::has_got_section): New method.
+	(Target_arm::scan_section_for_cortex_a8_stubs): Treat an input section
+	without any mapping symbol as data only.  Remove warning.
+	(Arm_relobj::do_read_synbols): If an EXIDX input section has no
+	link in its section header, try to discover the link by inspecting the
+	REL31 relocation at the beginning of the section.
+	(Target_arm::Scan::check_non_pic): Report name of offending relocation
+	in error message.
+	(Target_arm::Scan::global): Treat any reference to the symbol
+	_GLOBAL_OFFSET_TABLE_ as a GOT access.
+
+2010-02-12  Sriraman Tallam  <tmsriram@google.com>
+
+	* arm.cc (Scan::local_reloc_may_be_function_pointer): New function.
+	(Scan::global_reloc_may_be_function_pointer): New function.
+	* sparc.cc (Scan::local_reloc_may_be_function_pointer): New function.
+	(Scan::global_reloc_may_be_function_pointer): New function.
+	* powerpc.cc (Scan::local_reloc_may_be_function_pointer): New function.
+	(Scan::global_reloc_may_be_function_pointer): New function.
+	* i386.cc (Scan::local_reloc_may_be_function_pointer): New function.
+	(Scan::global_reloc_may_be_function_pointer): New function.
+	* x86_64.cc (Scan::local_reloc_may_be_function_pointer): New function.
+	(Scan::global_reloc_may_be_function_pointer): New function.
+	(Scan::possible_function_pointer_reloc): New function.
+	(Target_x86_64::can_check_for_function_pointers): New function.
+	* gc.h (gc_process_relocs): Scan relocation types to determine if
+	function pointers were taken for targets that support it.
+	* icf.cc (Icf::find_identical_sections): Include functions for
+	folding in safe ICF whose pointer is not taken.
+	* icf.h (Secn_fptr_taken_set): New typedef.
+	(fptr_section_id_): New member.
+	(section_has_function_pointers): New function.
+	(set_section_has_function_pointers): New function.
+	(check_section_for_function_pointers): New function.
+	* options.h: Fix comment for safe ICF option.
+	* target.h (can_check_for_function_pointers): New function.
+	* testsuite/Makefile.am: Add icf_safe_so_test test case.
+	Modify icf_safe_test for X86-64.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/icf_safe_so_test.cc: New file.
+	* testsuite/icf_safe_so_test.sh: New file.
+	* testsuite/icf_safe_test.cc (kept_func_3): New function.
+	(main): Change to take pointer to function kept_func_3.
+	* testsuite/icf_safe_test.sh (arch_specific_safe_fold): Check if safe
+	folding is done correctly for X86-64.
+
+2010-02-12  David S. Miller  <davem@davemloft.net>
+
+	* output.h (Output_reloc<SHT_REL>::Output_reloc): Add
+	is_symbolless parameter.
+	(Output_reloc<SHT_REL>::is_symbolless): New.
+	(Output_reloc<SHT_REL>::is_symbolless_): New.
+	(Output_reloc<SHT_REL>::type_): Decrease to 29 bits.
+	(Output_reloc<SHT_RELA>::Output_reloc): Add is_symbolless parameter.
+	(Output_reloc<SHT_RELA>::is_symbolless): New.
+	(Output_data_reloc::add_global): Handle is_symbolless.
+	(Output_data_reloc::add_global_relative): Likewise.
+	(Output_data_reloc::add_local): Likewise.
+	(Output_data_reloc::add_local_relative): Likewise.
+	(Output_data_reloc::add_symbolless_global_addend): New.
+	(Output_data_reloc::add_symbolless_local_addend): New.
+	* output.cc (Output_reloc<SHT_REL>::Output_reloc): Handle
+	is_symbolless.
+	(Output_reloc::set_needs_dynsym_index): Test ->is_symbolless_
+	instead of ->is_relative_
+	(Output_reloc::write): Likewise.
+	(Output_reloc::get_symbol_index): Return 0 when ->is_symbolless_
+	(Output_reloc::write_rel): Simplify.
+
+	* sparc.cc (Target_sparc::Scan::local): Use
+	->add_symbolless_local_addend as needed.
+	(Target_sparc::Scan::global): Use ->add_symbolless_global_addend as
+	needed.  Also, emit appropriate unaligned vs. aligned dynamic reloc
+	based upon relocation offset.
+
+2010-02-11  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::Scan::local): Fix bugs in relocation handling.
+	(Target_arm::Scan::global): Ditto.  Also remove a comment before the
+	beginning of function.
+	(Target_arm::Relocate::relocate): Remove error messages for MOVW_ABS
+	and MOVT_ABS relocations.  Those are non issued in scanning.  Fix
+	parameter is_32bit in calls to should_apply_static_reloc.
+	* testsuite/Makefile.am (check_SCRIPTS): Add arm_abs_global.sh.
+	(check_DATA): Add arm_abs_global.stdout.
+	(arm_abs_lib.o, libarm_abs.so, arm_abs_global.o, arm_abs_global,
+	arm_abs_global.stdout): New rules.
+	(MOSTLLYCLEANFILES): Add arm_abs_global
+	* Makefile.in: Regenerate.
+	* testsuite/arm_abs_global.s: New file.
+	* testsuite/arm_abs_global.sh: Ditto.
+	* testsuite/arm_abs_lib.s: Ditto.
+
+2010-02-11  Ian Lance Taylor  <iant@google.com>
+
+	* gold.cc (queue_middle_gc_tasks): Use a separate blocker for each
+	Read_relocs task.
+	(queue_middle_tasks): Likewise, and also for Scan_relocs.  Run
+	Allocate_commons_task first.
+	* reloc.cc (Read_relocs::run): Pass next_blocker_ down to next
+	task, rather than symtab_lock_.
+	(Gc_process_relocs::~Gc_process_relocs): New function.
+	(Gc_process_relocs::is_runnable): Check this_blocker_.
+	(Gc_process_relocs::locks): Use next_blocker_ rather than
+	blocker_.
+	(Scan_relocs::~Scan_relocs): New function.
+	(Scan_relocs::is_runnable): Check this_blocker_ rather than
+	symtab_lock_.
+	(Scan_relocs::locks): Drop symtab_lock_ and blocker_.  Add
+	next_blocker_.
+	* reloc.h (class Read_relocs): Drop symtab_lock_ and blocker_
+	fields.  Add this_blocker_ and next_blocker_ fields.  Adjust
+	constructor accordingly.
+	(class Gc_process_relocs): Likewise.
+	(class Scan_relocs): Likewise.
+	* common.h (class Allocate_commons_task): Remove symtab_lock_
+	field, and corresponding constructor parameter.
+	* common.cc (Allocate_commons_tasK::is_runnable): Remove use of
+	symtab_lock_.
+	(Allocate_commons_task::locks): Likewise.
+
+2010-02-11  Ian Lance Taylor  <iant@google.com>
+
+	* gold-threads.h (class Once): Define.
+	(class Initialize_lock): Rewrite as child of Once.
+	* gold-threads.cc (class Once_initialize): Define.
+	(once_pointer_control): New static variable.
+	(once_pointer, once_arg): New static variables.
+	(c_run_once): New static function.
+	(Once::Once, Once::run_once, Once::internal_run): New functions.
+	(class Initialize_lock_once): Remove.
+	(initialize_lock_control): Remove.
+	(initialize_lock_pointer): Remove.
+	(initialize_lock_once): Remove.
+	(Initialize_lock::Initialize_lock): Move to gold-threads.h.
+	(Initialize_lock::initialize): Rewrite.
+	(Initialize_lock::do_run_once): New function.
+	* archive.cc (Archive::interpret_header): Only clear name if it is
+	not already empty.
+	* fileread.cc: Include "gold-threads.h"
+	(file_counts_lock): New static variable.
+	(file_counts_initialize_lock): Likewise.
+	(File_read::release): Only increment counts when using --stats.
+	Use a lock around the increment.
+	* parameters.cc (class Set_parameters_target_once): Define.
+	(set_parameters_target_once): New static variable.
+	(Parameters::Parameters): Move here from parameters.h.
+	(Parameters::set_target): Rewrite.
+	(Parameters::set_target_once): New function.
+	(Parameters::clear_target): Move here and rewrite.
+	* parameters.h (class Parameters): Update declarations.  Add
+	set_parameters_target_once_ field.
+	(Parameters::Parameters): Move to parameters.cc.
+	(Parameters::clear_target): Likewise.
+	* readsyms.cc (Read_symbols::do_group): Create a Start_group
+	task.
+	(Start_group::~Start_group): New function.
+	(Start_group::is_runnable): New function.
+	(Start_group::locks, Start_group::run): New functions.
+	(Finish_group::run): Change saw_undefined to size_t.
+	* readsyms.h (class Start_group): Define.
+	(class Finish_group): Change saw_undefined_ field to size_t.
+	(Finish_group::Finish_group): Remove saw_undefined and
+	this_blocker parameters.  Change all callers.
+	(Finish_group::set_saw_undefined): New function.
+	(Finish_group::set_blocker): New function.
+	* symtab.h (class Symbol_table): Change saw_undefined to return
+	size_t.  Change saw_undefined_ field to size_t.
+	* target-select.cc (Set_target_once::do_run_once): New function.
+	(Target_selector::Target_selector): Initialize set_target_once_
+	field.  Don't initialize lock_ and initialize_lock_ fields.
+	(Target_selector::instantiate_target): Rewrite.
+	(Target_selector::set_target): New function.
+	* target-select.h (class Set_target_once): Define.
+	(class Target_selector): Update declarations.  Make
+	Set_target_once a friend.  Remove lock_ and initialize_lock_
+	fields.  Add set_target_once_ field.
+
+2010-02-10  Ian Lance Taylor  <iant@google.com>
+
+	* dirsearch.cc (Dirsearch::initialize): Add all blockers before
+	queueing any tasks.
+	* gold.cc (queue_middle_gc_tasks): Likewise.  Fix final blocker.
+	(queue_middle_tasks): Add all blockers before queueing any tasks.
+	(queue_final_tasks): Likewise.
+	* token.h (Task_token::add_blockers): New function.
+	* object.h (Input_objects::number_of_relobjs): New function.
+
+2010-02-10  Ian Lance Taylor  <iant@google.com>
+
+	* i386.cc (Relocate::relocate_tls): A local symbol is final if not
+	shared, not if not position independent.
+	* x86_64.cc (Relocate::relocate_tls): Likewise.
+	* testsuite/Makefile.am (check_PROGRAMS): Add tls_pie_pic_test.
+	(tls_pie_pic_test): New target.
+	* testsuite/Makefile.in: Rebuild.
+
+	* testsuite/Makefile.am (check_PROGRAMS): Add tls_pie_test.
+	(tls_test_main_pie.o, tls_test_pie.o): New targets.
+	(tls_test_file2_pie.o, tls_test_c_pie.o, tls_pie_test): Likewise.
+	* testsuite/Makefile.in: Rebuild.
+
+2010-02-09  David S. Miller  <davem@davemloft.net>
+
+	* sparc.cc (Target_sparc::Scan::local): Do not emit relocs other than
+	R_SPARC_RELATIVE using ->add_local_relative().
+	(Target_sparc::Scan::global): Likewise for ->add_global_relative().
+
+	* output.h (Output_data_dynamic::add_section_size): New method
+	that takes two Output_data objects.
+	(Output_data_dynamic::Dynamic_entry): Create storage for secondary
+	entry param.  Handle it in initializers.
+	* output.cc (Output_data_dynamic::Dynamic_entry::write): For
+	DYNAMIC_SECTION_SIZE, add in second object size if non-NULL.
+	* layout.h (Layout::add_target_dynamic_tags): Add dynrel_includes_plt
+	arg.
+	* layout.cc (Layout::add_target_dynamic_tags): If dynrel_includes_plt,
+	and .rela.plt exists, set DT_REL{,A}SZ to sum of .rela.dyn and .rela.plt
+	* arm.cc (Target_arm::do_finalize_sections): Update to pass false
+	for dynrel_includes_plt.
+	* i386.cc (Target_i386::do_finalize_sections): Likewise.
+	* x86_64.cc (Target_x86_64::do_finalize_sections): Likewise.
+	* sparc.cc (Target_sparc::make_plt_entry): Force .rela.dyn to be output
+	before .rela.plt
+	(Target_sparc::do_finalize_sections): Update to pass true for
+	dynrel_includes_plt.
+	* powerpc.cc (Target_powerpc::make_plt_entry): Force .rela.dyn to be
+	output before .rela.plt
+	(Target_powerpc::do_finalize_sections): Update to pass true for
+	dynrel_includes_plt when 32-bit.
+
+2010-02-08  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::simple_input_section_output_address): New
+	method.
+	(Arm_relobj::section_needs_cortex_a8_stub_scanning,
+	Arm_relobj::scan_section_for_cortex_a8_stubs,
+	Arm_relobj::do_relocation_section): Instead of calling
+	Output_section::output_address, use faster
+	Arm_relobj::simple_input_section_output_address.
+
+2010-02-08  David S. Miller  <davem@davemloft.net>
+
+	* sparc.cc (Target_sparc::Relocate::relocate): If relocation offset is
+	unaligned for R_SPARC_16, R_SPARC_32, or R_SPARC_64, use the unaligned
+	relocation helper function.
+
+	* sparc.cc (Target_sparc::Scan::local): Handle R_SPARC_GOTDATA_OP*
+	just like R_SPARC_GOT{10,13,22}.
+	(Target_sparc::Scan::local): Likewise.
+	(Target_sparc::Relocate:relocate): Likewise.
+
+2010-02-06  Ian Lance Taylor  <iant@google.com>
+
+	* configure.ac: Rewrite targetobjs duplicate removal code to use
+	only shell constructs.
+	* configure: Rebuild.
+
+2010-02-05  Doug Kwan  <dougkwan@google.com>
+
+	PR 11247
+	* arm.cc (Arm_relobj::section_is_scannable): New method.
+	(Arm_relobj::section_needs_reloc_stub_scanning): Use it.
+	(Arm_relobj::section_needs_cortex_a8_stub_scanning): Same.
+
+2010-02-04  Doug Kwan  <dougkwan@google.com>
+
+	PR 11247
+	* arm-reloc-property.cc (cstdio): Include.
+	* configure.ac (targetobjs): Remove duplicates.
+	* configure: Regenerate.
+	* resolve.cc (Symbol_table::resolve): Explicit instantiate both
+	big and little endian version for a given address size.
+
+2010-02-03  Doug Kwan  <dougkwan@google.com>
+
+	* arm-reloc-property.cc
+	(Arm_reloc_property_table::reloc_name_in_error_message): New method
+	definition.
+	* arm-reloc-property.h
+	(Arm_reloc_property_table::get_implemented_static_reloc_property):
+	New method definition.
+	(Arm_reloc_property_table::reloc_name_in_error_message): New method
+	declaration.
+	* arm-reloc.def (THM_MOVT_ABS, THM_MOVT_PREL, THM_MOVT_BREL): Change
+	overflow to N.
+	(GOT_PREL): Change implemented to Y.
+	* arm.cc (Target_arm::reloc_uses_thumb_bit): Remove method.
+	(Target_arm::Relocate::reloc_needs_sym_origin): Remove method.
+	(Arm_relocate_functions::movw_abs_nc): Remove method.
+	(Arm_relocate_functions::movt_abs): Ditto.
+	(Arm_relocate_functions::thm_movw_abs_nc): Ditto.
+	(Arm_relocate_functions::thm_movt_abs): Ditto.
+	(Arm_relocate_functions::movw_rel_nc): Ditto.
+	(Arm_relocate_functions::movw_rel): Ditto.
+	(Arm_relocate_functions::movt_rel): Ditto.
+	(Arm_relocate_functions:thm_movw_rel_nc): Ditto.
+	(Arm_relocate_functions:thm_movw_rel): Ditto.
+	(Arm_relocate_functions:thm_movt_rel): Ditto.
+	(Arm_relocate_functions::movw, Arm_relocate_functions::movt,
+	(Arm_relocate_functions::thm_movw, Arm_relocate_functions::thm_movt):
+	New method definitions.
+	(Arm_relocation_functions::arm_grp_alu): Add assertion for group index.
+	(Arm_relocation_functions::arm_grp_ldr): Ditto.
+	(Arm_relocation_functions::arm_grp_ldrs): Ditto.
+	(Arm_relocation_functions::arm_grp_ldc): Ditto.
+	(Target_arm::Relocate::relocate): Check for non-static or
+	unimplemented relocation code and exit early.  Change calls to
+	Target_arm::reloc_uses_thumb_bit and
+	Target_arm::Reloc::reloc_needs_sym_origin to use relocation property
+	instead.  Refactor code to handle similar relocations to increase
+	code sharing.  Remove check for unsupported relocation code in switch
+	statement.
+	(Target_arm::Relocatable_size_for_reloc::get_size_for_reloc): Use
+	relocation property table to find out size.  Change error message to
+	print out the name of a relocation code instead of the numeric value.
+	(Target_arm::scan_reloc_for_stub): Use relocation property table
+	instead of calling Target_arm::reloc_uses_thumb_bit().
+
+2010-02-02  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::relocate_section): Do view adjustment for all
+	types of relaxed input section.
+
 2010-02-02  Doug Kwan  <dougkwan@google.com>
 
 	* Makefile.am (HFILES): Add arm-reloc-property.h.

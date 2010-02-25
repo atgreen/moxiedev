@@ -227,7 +227,9 @@ proc test_value_in_inferior {} {
   gdb_py_test_silent_cmd "python arg0 = argv.dereference ()" "dereference value" 1
 
   # Check that the dereferenced value is sane
-  gdb_test "python print arg0" "0x.*$testfile\"" "verify dereferenced value"
+  if { ! [target_info exists noargs] } {
+    gdb_test "python print arg0" "0x.*$testfile\"" "verify dereferenced value"
+  }
 
   # Smoke-test is_optimized_out attribute
   gdb_test "python print 'result =', arg0.is_optimized_out" "= False" "Test is_optimized_out attribute"
@@ -392,13 +394,8 @@ gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
 
-gdb_test_multiple "python print 'hello, world!'" "verify python support" {
-    -re "not supported.*$gdb_prompt $"	{
-      unsupported "python support is disabled"
-      return -1
-    }
-    -re "$gdb_prompt $"	{}
-}
+# Skip all tests if Python scripting is not enabled.
+if { [skip_python_tests] } { continue }
 
 test_value_creation
 test_value_numeric_ops

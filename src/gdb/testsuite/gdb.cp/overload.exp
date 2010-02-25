@@ -293,11 +293,36 @@ gdb_test "list \"foo::overloadfnarg(int, int (*)(int))\"" \
    "int foo::overloadfnarg.*\\(int arg, int \\(\\*foo\\) \\(int\\)\\).*" \
    "list overloaded function with function ptr args - quotes around argument"
 
+# Test list with filename.
+
+gdb_test "list ${srcfile}:intToChar" "int intToChar.*"
+gdb_test "list ${srcfile}:intToChar(char)" "int intToChar.*"
+gdb_test "list ${srcfile}:'intToChar(char)'" "int intToChar.*"
+gdb_test "list '${srcfile}:intToChar(char)'" "int intToChar.*"
+
+# And with filename and namespace... which does not work.
+
+setup_kfail *-*-* gdb/11289
+gdb_test "list ${srcfile}:foo::overloadfnarg(int)" "int foo::overloadfnarg"
+
+setup_kfail *-*-* gdb/11289
+gdb_test "list ${srcfile}:'foo::overloadfnarg(int)'" "int foo::overloadfnarg"
+
 # Now some tests to see how overloading and namespaces interact.
 
 gdb_test "print overloadNamespace(1)" ".\[0-9\]* = 1"
 gdb_test "print overloadNamespace('a')" ".\[0-9\]* = 1"
 gdb_test "print overloadNamespace(dummyInstance)" ".\[0-9\]* = 2"
+
+# Static methods.
+gdb_test "print K::staticoverload ()" " = 1"
+gdb_test "print K::staticoverload (2)" " = 2"
+gdb_test "print K::staticoverload (2, 3)" " = 5"
+
+# Namespace-qualified functions.
+gdb_test "print N::nsoverload ()" " = 1"
+gdb_test "print N::nsoverload (2)" " = 2"
+gdb_test "print N::nsoverload (2, 3)" " = 5"
 
 if ![runto 'XXX::marker2'] then {
     perror "couldn't run to XXX::marker2"
@@ -323,13 +348,13 @@ gdb_test "print foo::overload1arg(char***)" \
     "print foo::overload1arg(char***)"
 
 gdb_test "print foo::overload1arg(void)" \
-    "\\$$decimal = {int \\(foo \\* const\\)} $hex <foo::overload1arg\\(\\)>" \
+    "\\$$decimal = {int \\(foo \\*( const|)\\)} $hex <foo::overload1arg\\(\\)>" \
     "print foo::overload1arg(void)"
 
 foreach t [list char "signed char" "unsigned char" "short" \
 	       "unsigned short" int "unsigned int" long "unsigned long" \
 	       float double] {
     gdb_test "print foo::overload1arg($t)" \
-	"\\$$decimal = {int \\(foo \\* const, $t\\)} $hex <foo::overload1arg\\($t\\)>" \
+	"\\$$decimal = {int \\(foo \\*( const|), $t\\)} $hex <foo::overload1arg\\($t\\)>" \
 	"print foo::overload1arg($t)"
 }

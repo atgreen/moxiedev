@@ -23,11 +23,12 @@
 # Written by Nick Clifton <nickc@redhat.com>
 
 
-# IFUNC support has only been implemented for the ix86, x86_64 and powerpc
-# so far.
+# IFUNC support has only been implemented for the ix86, x86_64, powerpc,
+# and sparc so far.
 if {!(([istarget "i?86-*-*"]
        || [istarget "x86_64-*-*"]
-       || [istarget "powerpc*-*-*"])
+       || [istarget "powerpc*-*-*"]
+       || [istarget "sparc*-*-*"])
       && ([istarget "*-*-elf*"]
 	  || ([istarget "*-*-linux*"]
 	      && ![istarget "*-*-*aout*"]
@@ -257,8 +258,8 @@ if {! [check_osabi tmpdir/static_prog {UNIX - Linux}]} {
     fail "Static ifunc-using executable does not have an OS/ABI field of LINUX"
     set fails [expr $fails + 1]
 }
-if {! [check_osabi tmpdir/dynamic_prog {UNIX - Linux}]} {
-    fail "Dynamic ifunc-using executable does not have an OS/ABI field of LINUX"
+if {! [check_osabi tmpdir/dynamic_prog {UNIX - System V}]} {
+    fail "Dynamic ifunc-using executable does not have an OS/ABI field of System V"
     set fails [expr $fails + 1]
 }
 if {! [check_osabi tmpdir/static_nonifunc_prog {UNIX - System V}]} {

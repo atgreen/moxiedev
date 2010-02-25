@@ -1,3 +1,84 @@
+2010-02-24  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Cygwin Native): Fix typo.
+
+2010-02-24  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.texinfo (Frames In Python): Add block, find_sal, function
+	and select method descriptions.
+	(Python API): Add Blocks In Python, Symbols in Python and Symbol
+	Tables in Python to menu.
+	(Blocks In Python): New node.
+	(Symbols In Python): New node.
+	(Symbol Tables in Python): New node.
+
+2010-02-24  Vladimir Prus  <vladimir@codesourcery.com>
+
+	Multiexec MI
+
+	gdb/
+	* breakpoint.c (clear_syscall_counts): Take struct inferior*.
+
+	gdb/doc/
+	* gdb.texinfo (GDB/MI Command Syntax): Document notification
+	changes.
+	(GDB/MI Program Execution): Document current behaviour of
+	--all and --thread-group.
+	(GDB/MI Miscellaneous Commands): Document -add-inferior and
+	-remove-inferior.
+	* observer.texi (inferior_added, inferior_removed): New
+	observers.
+
+2010-02-19  Tom Tromey  <tromey@redhat.com>
+
+	* gdbint.texinfo (Getting Started): Fix @node.
+	(Debugging GDB): Likewise.
+
+2010-02-13  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdbint.texinfo (Testsuite): New section "Testsuite Configuration",
+	documenting the gdb_test_timeout variable.
+
+2010-02-12  Jakob Engblom  <jakob@virtutech.com>
+
+	* gdb.texinfo (MI commands): Added documentation of --reverse
+	option to a set of MI commands. Restructured documentation of MI
+	commands --exec-continue to reflect the complexity of reverse
+	execution.
+
+2010-02-12  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (Using the Collected Data): Specify that the address
+	range of `tfind outsize' is exclusive, and that the address range
+	of `tfind range' is inclusive.
+	(Tracepoint Packets): Specify that the address range of
+	`QTFrame:range' is inclusive, and that the address range of
+	`QTFrame:outside' is exclusive
+
+2010-02-12  Vladimir Prus  <vladimir@codesourcery.com>
+
+	* gdb.texinfo (GDB/MI Result Records): Clarify ^running.
+
+2010-02-10  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Debugging Output): Document set debug parser and
+	show debug parser.
+
+2010-02-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gdb.texinfo (Predefined Target Types): Add i387_ext,
+	i386_eflags and i386_mxcsr.
+
+2010-02-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gdb.texinfo: Document i386 target features.
+
+2010-02-05  Doug Evans  <dje@google.com>
+
+	* gdbint.texinfo (Testsuite): Add a new section to document the
+	various DejaGnu variables that may be overridden.
+	Document INTERNAL_GDBFLAGS.
+
 2010-02-04  Tom Tromey  <tromey@redhat.com>
 
 	PR cli/8830:

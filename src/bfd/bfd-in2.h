@@ -1367,20 +1367,12 @@ typedef struct bfd_section
   /* Bits used by various backends.  The generic code doesn't touch
      these fields.  */
 
-  /* Nonzero if this section has TLS related relocations.  */
-  unsigned int has_tls_reloc:1;
-
-  /* Nonzero if this section has a call to __tls_get_addr.  */
-  unsigned int has_tls_get_addr_call:1;
-
-  /* Nonzero if this section has a gp reloc.  */
-  unsigned int has_gp_reloc:1;
-
-  /* Nonzero if this section needs the relax finalize pass.  */
-  unsigned int need_finalize_relax:1;
-
-  /* Whether relocations have been processed.  */
-  unsigned int reloc_done : 1;
+  unsigned int sec_flg0:1;
+  unsigned int sec_flg1:1;
+  unsigned int sec_flg2:1;
+  unsigned int sec_flg3:1;
+  unsigned int sec_flg4:1;
+  unsigned int sec_flg5:1;
 
   /* End of internal packed boolean fields.  */
 
@@ -1645,17 +1637,17 @@ extern asection bfd_ind_section;
   /* name, id,  index, next, prev, flags, user_set_vma,            */  \
   { NAME,  IDX, 0,     NULL, NULL, FLAGS, 0,                           \
                                                                        \
-  /* linker_mark, linker_has_input, gc_mark,                       */  \
-     0,           0,                1,                                 \
+  /* linker_mark, linker_has_input, gc_mark, segment_mark,         */  \
+     0,           0,                1,       0,                        \
                                                                        \
-  /* segment_mark, sec_info_type, use_rela_p, has_tls_reloc,       */  \
-     0,            0,             0,          0,                       \
+  /* sec_info_type, use_rela_p,                                    */  \
+     0,             0,                                                 \
                                                                        \
-  /* has_tls_get_addr_call, has_gp_reloc, need_finalize_relax,     */  \
-     0,                     0,            0,                           \
+  /* sec_flg0, sec_flg1, sec_flg2, sec_flg3, sec_flg4, sec_flg5,   */  \
+     0,        0,        0,        0,        0,        0,              \
                                                                        \
-  /* reloc_done, vma, lma, size, rawsize, relax, relax_count,      */  \
-     0,          0,   0,   0,    0,       0,     0,                    \
+  /* vma, lma, size, rawsize, relax, relax_count,                  */  \
+     0,   0,   0,    0,       0,     0,                                \
                                                                        \
   /* output_offset, output_section,              alignment_power,  */  \
      0,             (struct bfd_section *) &SEC, 0,                    \
@@ -1904,7 +1896,8 @@ enum bfd_architecture
 #define bfd_mach_ppc_7400      7400
 #define bfd_mach_ppc_e500      500
 #define bfd_mach_ppc_e500mc    5001
-#define bfd_mach_ppc_e500mc64    5005
+#define bfd_mach_ppc_e500mc64  5005
+#define bfd_mach_ppc_titan     83
   bfd_arch_rs6000,    /* IBM RS/6000 */
 #define bfd_mach_rs6k          6000
 #define bfd_mach_rs6k_rs1      6001
@@ -2503,6 +2496,8 @@ relocation types already defined.  */
   BFD_RELOC_SPARC_GOTDATA_OP_HIX22,
   BFD_RELOC_SPARC_GOTDATA_OP_LOX10,
   BFD_RELOC_SPARC_GOTDATA_OP,
+  BFD_RELOC_SPARC_JMP_IREL,
+  BFD_RELOC_SPARC_IRELATIVE,
 
 /* I think these are specific to SPARC a.out (e.g., Sun 4).  */
   BFD_RELOC_SPARC_BASE13,

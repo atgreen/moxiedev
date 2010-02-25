@@ -297,7 +297,7 @@ find_lowest_section (bfd *abfd, asection *sect, void *obj)
 {
   asection **lowest = (asection **) obj;
 
-  if (0 == (bfd_get_section_flags (abfd, sect) & SEC_LOAD))
+  if (0 == (bfd_get_section_flags (abfd, sect) & (SEC_ALLOC | SEC_LOAD)))
     return;
   if (!*lowest)
     *lowest = sect;		/* First loadable section */
@@ -371,16 +371,16 @@ build_section_addr_info_from_objfile (const struct objfile *objfile)
     mask = ((CORE_ADDR) 1 << addr_bit) - 1;
 
   sap = alloc_section_addr_info (objfile->num_sections);
-  for (i = 0, sec = objfile->obfd->sections;
-       i < objfile->num_sections;
-       i++, sec = sec->next)
-    {
-      gdb_assert (sec != NULL);
-      sap->other[i].addr = (bfd_get_section_vma (objfile->obfd, sec)
-                            + objfile->section_offsets->offsets[i]) & mask;
-      sap->other[i].name = xstrdup (bfd_get_section_name (objfile->obfd, sec));
-      sap->other[i].sectindex = sec->index;
-    }
+  for (i = 0, sec = objfile->obfd->sections; sec != NULL; sec = sec->next)
+    if (bfd_get_section_flags (objfile->obfd, sec) & (SEC_ALLOC | SEC_LOAD))
+      {
+	sap->other[i].addr = (bfd_get_section_vma (objfile->obfd, sec)
+			      + objfile->section_offsets->offsets[i]) & mask;
+	sap->other[i].name = xstrdup (bfd_get_section_name (objfile->obfd,
+							    sec));
+	sap->other[i].sectindex = sec->index;
+	i++;
+      }
   return sap;
 }
 
@@ -562,22 +562,20 @@ relative_addr_info_to_section_offsets (struct section_offsets *section_offsets,
 }
 
 /* Relativize absolute addresses in ADDRS into offsets based on ABFD.  Fill-in
-   also SECTINDEXes there.  */
+   also SECTINDEXes specific to ABFD there.  This function can be used to
+   rebase ADDRS to start referencing different BFD than before.  */
 
 void
 addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
 {
   asection *lower_sect;
-  asection *sect;
   CORE_ADDR lower_offset;
   int i;
 
   /* Find lowest loadable section to be used as starting point for
-     continguous sections. FIXME!! won't work without call to find
-     .text first, but this assumes text is lowest section. */
-  lower_sect = bfd_get_section_by_name (abfd, ".text");
-  if (lower_sect == NULL)
-    bfd_map_over_sections (abfd, find_lowest_section, &lower_sect);
+     continguous sections.  */
+  lower_sect = NULL;
+  bfd_map_over_sections (abfd, find_lowest_section, &lower_sect);
   if (lower_sect == NULL)
     {
       warning (_("no loadable sections found in added symbol-file %s"),
@@ -599,25 +597,29 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
 
   for (i = 0; i < addrs->num_sections && addrs->other[i].name; i++)
     {
-      if (addrs->other[i].addr != 0)
+      asection *sect = bfd_get_section_by_name (abfd, addrs->other[i].name);
+
+      if (sect)
 	{
-	  sect = bfd_get_section_by_name (abfd, addrs->other[i].name);
-	  if (sect)
+	  /* This is the index used by BFD. */
+	  addrs->other[i].sectindex = sect->index;
+
+	  if (addrs->other[i].addr != 0)
 	    {
 	      addrs->other[i].addr -= bfd_section_vma (abfd, sect);
 	      lower_offset = addrs->other[i].addr;
-	      /* This is the index used by BFD. */
-	      addrs->other[i].sectindex = sect->index;
 	    }
 	  else
-	    {
-	      warning (_("section %s not found in %s"), addrs->other[i].name,
-		       bfd_get_filename (abfd));
-	      addrs->other[i].addr = 0;
-	    }
+	    addrs->other[i].addr = lower_offset;
 	}
       else
-	addrs->other[i].addr = lower_offset;
+	{
+	  warning (_("section %s not found in %s"), addrs->other[i].name,
+		   bfd_get_filename (abfd));
+	  addrs->other[i].addr = 0;
+
+	  /* SECTINDEX is invalid if ADDR is zero.  */
+	}
     }
 }
 
@@ -3717,7 +3719,7 @@ symfile_map_offsets_to_segments (bfd *abfd, struct symfile_segment_data *data,
 
   /* It doesn't make sense to call this function unless you have some
      segment base addresses.  */
-  gdb_assert (segment_bases > 0);
+  gdb_assert (num_segment_bases > 0);
 
   /* If we do not have segment mappings for the object file, we
      can not relocate it by segments.  */

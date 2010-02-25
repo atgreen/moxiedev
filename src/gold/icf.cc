@@ -101,6 +101,36 @@
 // when folding takes place.  This could lead to unexpected run-time
 // behaviour.
 //
+// Safe Folding :
+// ------------
+//
+// ICF in safe mode folds only ctors and dtors if their function pointers can
+// never be taken.  Also, for X86-64, safe folding uses the relocation
+// type to determine if a function's pointer is taken or not and only folds
+// functions whose pointers are definitely not taken.
+//
+// Caveat with safe folding :
+// ------------------------
+//
+// This applies only to x86_64.
+//
+// Position independent executables are created from PIC objects (compiled
+// with -fPIC) and/or PIE objects (compiled with -fPIE).  For PIE objects, the
+// relocation types for function pointer taken and a call are the same.
+// Now, it is not always possible to tell if an object used in the link of
+// a pie executable is a PIC object or a PIE object.  Hence, for pie
+// executables, using relocation types to disambiguate function pointers is
+// currently disabled.
+//
+// Further, it is not correct to use safe folding to build non-pie
+// executables using PIC/PIE objects.  PIC/PIE objects have different
+// relocation types for function pointers than non-PIC objects, and the
+// current implementation of safe folding does not handle those relocation
+// types.  Hence, if used, functions whose pointers are taken could still be
+// folded causing unpredictable run-time behaviour if the pointers were used
+// in comparisons.
+//
+//
 //
 // How to run  : --icf=[safe|all|none]
 // Optional parameters : --icf-iterations <num> --print-icf-sections
@@ -218,39 +248,43 @@ get_section_contents(bool first_iteration,
   if (num_tracked_relocs)
     *num_tracked_relocs = 0;
 
-  Icf::Section_list& seclist = symtab->icf()->section_reloc_list();
-  Icf::Symbol_list& symlist = symtab->icf()->symbol_reloc_list();
-  Icf::Addend_list& addendlist = symtab->icf()->addend_reloc_list();
+  Icf::Reloc_info_list& reloc_info_list = 
+    symtab->icf()->reloc_info_list();
 
-  Icf::Section_list::iterator it_seclist = seclist.find(secn);
-  Icf::Symbol_list::iterator it_symlist = symlist.find(secn);
-  Icf::Addend_list::iterator it_addendlist = addendlist.find(secn);
+  Icf::Reloc_info_list::iterator it_reloc_info_list =
+    reloc_info_list.find(secn);
 
   buffer.clear();
   icf_reloc_buffer.clear();
 
   // Process relocs and put them into the buffer.
 
-  if (it_seclist != seclist.end())
+  if (it_reloc_info_list != reloc_info_list.end())
     {
-      gold_assert(it_symlist != symlist.end());
-      gold_assert(it_addendlist != addendlist.end());
-      Icf::Sections_reachable_list v = it_seclist->second;
-      Icf::Symbol_info s = it_symlist->second;
-      Icf::Addend_info a = it_addendlist->second;
-      Icf::Sections_reachable_list::iterator it_v = v.begin();
+      Icf::Sections_reachable_info v =
+        (it_reloc_info_list->second).section_info;
+      Icf::Symbol_info s = (it_reloc_info_list->second).symbol_info;
+      Icf::Addend_info a = (it_reloc_info_list->second).addend_info;
+      Icf::Offset_info o = (it_reloc_info_list->second).offset_info;
+      Icf::Sections_reachable_info::iterator it_v = v.begin();
       Icf::Symbol_info::iterator it_s = s.begin();
       Icf::Addend_info::iterator it_a = a.begin();
+      Icf::Offset_info::iterator it_o = o.begin();
 
-      for (; it_v != v.end(); ++it_v, ++it_s, ++it_a)
+      for (; it_v != v.end(); ++it_v, ++it_s, ++it_a, ++it_o)
         {
-          // ADDEND_STR stores the symbol value and addend, each
-          // atmost 16 hex digits long.  it_v points to a pair
+          // ADDEND_STR stores the symbol value and addend and offset,
+          // each atmost 16 hex digits long.  it_a points to a pair
           // where first is the symbol value and second is the
           // addend.
-          char addend_str[34];
-          snprintf(addend_str, sizeof(addend_str), "%llx %llx",
-                   (*it_a).first, (*it_a).second);
+          char addend_str[50];
+
+	  // It would be nice if we could use format macros in inttypes.h
+	  // here but there are not in ISO/IEC C++ 1998.
+          snprintf(addend_str, sizeof(addend_str), "%llx %llx %llux",
+                   static_cast<long long>((*it_a).first),
+		   static_cast<long long>((*it_a).second),
+		   static_cast<unsigned long long>(*it_o));
           Section_id reloc_secn(it_v->first, it_v->second);
 
           // If this reloc turns back and points to the same section,
@@ -560,6 +594,7 @@ Icf::find_identical_sections(const Input_objects* input_objects,
   std::vector<unsigned int> num_tracked_relocs;
   std::vector<bool> is_secn_or_group_unique;
   std::vector<std::string> section_contents;
+  const Target& target = parameters->target();
 
   // Decide which sections are possible candidates first.
 
@@ -577,14 +612,18 @@ Icf::find_identical_sections(const Input_objects* input_objects,
           if (parameters->options().gc_sections()
               && symtab->gc()->is_section_garbage(*p, i))
               continue;
+	  const char* mangled_func_name = strrchr(section_name, '.');
+	  gold_assert(mangled_func_name != NULL);
 	  // With --icf=safe, check if the mangled function name is a ctor
 	  // or a dtor.  The mangled function name can be obtained from the
 	  // section name by stripping the section prefix.
-	  const char* mangled_func_name = strrchr(section_name, '.');
-	  gold_assert(mangled_func_name != NULL);
 	  if (parameters->options().icf_safe_folding()
-	      && !is_function_ctor_or_dtor(mangled_func_name + 1))
-	    continue;
+              && !is_function_ctor_or_dtor(mangled_func_name + 1)
+	      && (!target.can_check_for_function_pointers()
+                  || section_has_function_pointers(*p, i)))
+            {
+	      continue;
+            }
           this->id_section_.push_back(Section_id(*p, i));
           this->section_id_[Section_id(*p, i)] = section_num;
           this->kept_section_id_.push_back(section_num);

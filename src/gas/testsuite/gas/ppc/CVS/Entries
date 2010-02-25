@@ -43,7 +43,6 @@
 /power6.s/1.5/Thu Jan 28 00:24:29 2010//
 /power7.d/1.4/Thu Jan 28 00:24:29 2010//
 /power7.s/1.4/Thu Jan 28 00:24:29 2010//
-/ppc.exp/1.26/Thu Jan 28 00:24:29 2010//
 /ppc750ps.d/1.1/Thu Jan 28 00:24:29 2010//
 /ppc750ps.s/1.1/Thu Jan 28 00:24:29 2010//
 /range.l/1.1/Thu Jan 28 00:24:29 2010//
@@ -74,4 +73,7 @@
 /xcoff-branch-1.s/1.1/Thu Jan 28 00:24:29 2010//
 /xcoff-ref-1.l/1.1/Sat Jan 23 12:05:33 2010//
 /xcoff-ref-1.s/1.1/Sat Jan 23 12:05:33 2010//
+/ppc.exp/1.27/Thu Feb 25 20:31:19 2010//
+/titan.d/1.1/Mon Feb  8 01:59:38 2010//
+/titan.s/1.1/Mon Feb  8 01:59:38 2010//
 D

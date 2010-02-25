@@ -1796,7 +1796,7 @@ struct ppc_elf_obj_tdata
 
 #define is_ppc_elf(bfd) \
   (bfd_get_flavour (bfd) == bfd_target_elf_flavour \
-   && elf_object_id (bfd) == PPC32_ELF_TDATA)
+   && elf_object_id (bfd) == PPC32_ELF_DATA)
 
 /* Override the generic function because we store some extras.  */
 
@@ -1804,7 +1804,7 @@ static bfd_boolean
 ppc_elf_mkobject (bfd *abfd)
 {
   return bfd_elf_allocate_object (abfd, sizeof (struct ppc_elf_obj_tdata),
-				  PPC32_ELF_TDATA);
+				  PPC32_ELF_DATA);
 }
 
 /* Fix bad default arch selected for a 32 bit input bfd when the
@@ -2159,123 +2159,92 @@ ppc_elf_begin_write_processing (bfd *abfd, struct bfd_link_info *link_info)
 {
   bfd *ibfd;
   asection *asec;
-  char *buffer;
-  unsigned num_input_sections;
-  bfd_size_type	output_section_size;
+  char *buffer = NULL;
+  bfd_size_type largest_input_size = 0;
   unsigned i;
   unsigned num_entries;
-  unsigned long	offset;
   unsigned long length;
   const char *error_message = NULL;
 
   if (link_info == NULL)
     return;
 
-  /* Scan the input bfds, looking for apuinfo sections.  */
-  num_input_sections = 0;
-  output_section_size = 0;
-
-  for (ibfd = link_info->input_bfds; ibfd; ibfd = ibfd->link_next)
-    {
-      asec = bfd_get_section_by_name (ibfd, APUINFO_SECTION_NAME);
-      if (asec)
-	{
-	  ++ num_input_sections;
-	  output_section_size += asec->size;
-	}
-    }
-
-  /* We need at least one input sections
-     in order to make merging worthwhile.  */
-  if (num_input_sections < 1)
-    return;
-
-  /* Just make sure that the output section exists as well.  */
-  asec = bfd_get_section_by_name (abfd, APUINFO_SECTION_NAME);
-  if (asec == NULL)
-    return;
-
-  /* Allocate a buffer for the contents of the input sections.  */
-  buffer = bfd_malloc (output_section_size);
-  if (buffer == NULL)
-    return;
-
-  offset = 0;
   apuinfo_list_init ();
 
   /* Read in the input sections contents.  */
   for (ibfd = link_info->input_bfds; ibfd; ibfd = ibfd->link_next)
     {
       unsigned long datum;
-      char *ptr;
 
       asec = bfd_get_section_by_name (ibfd, APUINFO_SECTION_NAME);
       if (asec == NULL)
 	continue;
 
+      error_message = _("corrupt %s section in %B");
       length = asec->size;
-      if (length < 24)
-	{
-	  error_message = _("corrupt or empty %s section in %B");
-	  goto fail;
-	}
+      if (length < 20)
+	goto fail;
 
+      if (largest_input_size < asec->size)
+	{
+	  if (buffer)
+	    free (buffer);
+	  largest_input_size = asec->size;
+	  buffer = bfd_malloc (largest_input_size);
+	  if (!buffer)
+	    return;
+	}
+      
       if (bfd_seek (ibfd, asec->filepos, SEEK_SET) != 0
-	  || (bfd_bread (buffer + offset, length, ibfd) != length))
+	  || (bfd_bread (buffer, length, ibfd) != length))
 	{
 	  error_message = _("unable to read in %s section from %B");
 	  goto fail;
 	}
 
-      /* Process the contents of the section.  */
-      ptr = buffer + offset;
-      error_message = _("corrupt %s section in %B");
-
       /* Verify the contents of the header.  Note - we have to
 	 extract the values this way in order to allow for a
 	 host whose endian-ness is different from the target.  */
-      datum = bfd_get_32 (ibfd, ptr);
+      datum = bfd_get_32 (ibfd, buffer);
       if (datum != sizeof APUINFO_LABEL)
 	goto fail;
 
-      datum = bfd_get_32 (ibfd, ptr + 8);
+      datum = bfd_get_32 (ibfd, buffer + 8);
       if (datum != 0x2)
 	goto fail;
 
-      if (strcmp (ptr + 12, APUINFO_LABEL) != 0)
+      if (strcmp (buffer + 12, APUINFO_LABEL) != 0)
 	goto fail;
 
       /* Get the number of bytes used for apuinfo entries.  */
-      datum = bfd_get_32 (ibfd, ptr + 4);
+      datum = bfd_get_32 (ibfd, buffer + 4);
       if (datum + 20 != length)
-	goto fail;
-
-      /* Make sure that we do not run off the end of the section.  */
-      if (offset + length > output_section_size)
 	goto fail;
 
       /* Scan the apuinfo section, building a list of apuinfo numbers.  */
       for (i = 0; i < datum; i += 4)
-	apuinfo_list_add (bfd_get_32 (ibfd, ptr + 20 + i));
-
-      /* Update the offset.  */
-      offset += length;
+	apuinfo_list_add (bfd_get_32 (ibfd, buffer + 20 + i));
     }
 
   error_message = NULL;
 
   /* Compute the size of the output section.  */
   num_entries = apuinfo_list_length ();
-  output_section_size = 20 + num_entries * 4;
 
-  asec = bfd_get_section_by_name (abfd, APUINFO_SECTION_NAME);
-
-  if (! bfd_set_section_size (abfd, asec, output_section_size))
-    ibfd = abfd,
-      error_message = _("warning: unable to set size of %s section in %B");
+  if (num_entries)
+    {
+      /* Set the output section size, if it exists.  */
+      asec = bfd_get_section_by_name (abfd, APUINFO_SECTION_NAME);
+      if (asec && ! bfd_set_section_size (abfd, asec, 20 + num_entries * 4))
+	{
+	  ibfd = abfd;
+	  error_message = _("warning: unable to set size of %s section in %B");
+	}
+    }
 
  fail:
-  free (buffer);
+  if (buffer)
+    free (buffer);
 
   if (error_message)
     (*_bfd_error_handler) (error_message, ibfd, APUINFO_SECTION_NAME);
@@ -2779,10 +2748,20 @@ struct ppc_elf_link_hash_table
   struct sym_cache sym_cache;
 };
 
+/* Rename some of the generic section flags to better document how they
+   are used here.  */
+
+/* Nonzero if this section has TLS related relocations.  */
+#define has_tls_reloc sec_flg0
+
+/* Nonzero if this section has a call to __tls_get_addr.  */
+#define has_tls_get_addr_call sec_flg1
+
 /* Get the PPC ELF linker hash table from a link_info structure.  */
 
 #define ppc_elf_hash_table(p) \
-  ((struct ppc_elf_link_hash_table *) (p)->hash)
+  (elf_hash_table_id ((struct elf_link_hash_table *) ((p)->hash)) \
+  == PPC32_ELF_DATA ? ((struct ppc_elf_link_hash_table *) ((p)->hash)) : NULL)
 
 /* Create an entry in a PPC ELF linker hash table.  */
 
@@ -2826,7 +2805,8 @@ ppc_elf_link_hash_table_create (bfd *abfd)
 
   if (!_bfd_elf_link_hash_table_init (&ret->elf, abfd,
 				      ppc_elf_link_hash_newfunc,
-				      sizeof (struct ppc_elf_link_hash_entry)))
+				      sizeof (struct ppc_elf_link_hash_entry),
+				      PPC32_ELF_DATA))
     {
       free (ret);
       return NULL;
@@ -3133,7 +3113,8 @@ ppc_elf_add_symbol_hook (bfd *abfd,
       *valp = sym->st_size;
     }
 
-  if (ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC)
+  if ((abfd->flags & DYNAMIC) == 0
+      && ELF_ST_TYPE (sym->st_info) == STT_GNU_IFUNC)
     elf_tdata (info->output_bfd)->has_ifunc_symbols = TRUE;
 
   return TRUE;
@@ -3445,7 +3426,6 @@ ppc_elf_check_relocs (bfd *abfd,
       enum elf_ppc_reloc_type r_type;
       struct elf_link_hash_entry *h;
       int tls_type;
-      struct plt_entry **ifunc;
 
       r_symndx = ELF32_R_SYM (rel->r_info);
       if (r_symndx < symtab_hdr->sh_info)
@@ -3473,46 +3453,38 @@ ppc_elf_check_relocs (bfd *abfd,
 	}
 
       tls_type = 0;
-      ifunc = NULL;
       r_type = ELF32_R_TYPE (rel->r_info);
-      if (!htab->is_vxworks)
+      if (h == NULL && !htab->is_vxworks)
 	{
-	  if (h != NULL)
+	  Elf_Internal_Sym *isym = bfd_sym_from_r_symndx (&htab->sym_cache,
+							  abfd, r_symndx);
+	  if (isym == NULL)
+	    return FALSE;
+
+	  if (ELF_ST_TYPE (isym->st_info) == STT_GNU_IFUNC
+	      && (!info->shared
+		  || is_branch_reloc (r_type)))
 	    {
-	      if (h->type == STT_GNU_IFUNC)
-		ifunc = &h->plt.plist;
-	    }
-	  else
-	    {
-	      Elf_Internal_Sym *isym = bfd_sym_from_r_symndx (&htab->sym_cache,
-							      abfd, r_symndx);
-	      if (isym == NULL)
+	      struct plt_entry **ifunc;
+	      bfd_vma addend;
+
+	      ifunc = update_local_sym_info (abfd, symtab_hdr, r_symndx,
+					     PLT_IFUNC);
+	      if (ifunc == NULL)
 		return FALSE;
 
-	      if (ELF_ST_TYPE (isym->st_info) == STT_GNU_IFUNC
-		  && (!info->shared
-		      || is_branch_reloc (r_type)))
+	      /* STT_GNU_IFUNC symbols must have a PLT entry;
+		 In a non-pie executable even when there are
+		 no plt calls.  */
+	      addend = 0;
+	      if (r_type == R_PPC_PLTREL24)
 		{
-		  bfd_vma addend;
-
-		  ifunc = update_local_sym_info (abfd, symtab_hdr, r_symndx,
-						 PLT_IFUNC);
-		  if (ifunc == NULL)
-		    return FALSE;
-
-		  /* STT_GNU_IFUNC symbols must have a PLT entry;
-		     In a non-pie executable even when there are
-		     no plt calls.  */
-		  addend = 0;
-		  if (r_type == R_PPC_PLTREL24)
-		    {
-		      ppc_elf_tdata (abfd)->makes_plt_call = 1;
-		      if (info->shared)
-			addend = rel->r_addend;
-		    }
-		  if (!update_plt_info (abfd, ifunc, got2, addend))
-		    return FALSE;
+		  ppc_elf_tdata (abfd)->makes_plt_call = 1;
+		  if (info->shared)
+		    addend = rel->r_addend;
 		}
+	      if (!update_plt_info (abfd, ifunc, got2, addend))
+		return FALSE;
 	    }
 	}
 

@@ -4633,11 +4633,14 @@ get_group_flags (unsigned int flags)
   static char buff[32];
   switch (flags)
     {
+    case 0:
+      return "";
+
     case GRP_COMDAT:
-      return "COMDAT";
+      return "COMDAT ";
 
    default:
-      snprintf (buff, sizeof (buff), _("[<unknown>: 0x%x]"), flags);
+      snprintf (buff, sizeof (buff), _("[<unknown>: 0x%x] "), flags);
       break;
     }
   return buff;
@@ -4797,7 +4800,7 @@ process_section_groups (FILE * file)
 
 	  if (do_section_groups)
 	    {
-	      printf ("\n%s group section [%5u] `%s' [%s] contains %u sections:\n",
+	      printf ("\n%sgroup section [%5u] `%s' [%s] contains %u sections:\n",
 		      get_group_flags (entry), i, name, group_name, size);
 
 	      printf (_("   [Index]    Name\n"));
@@ -9071,7 +9074,8 @@ static const char * arm_attr_tag_THUMB_ISA_use[] =
 static const char * arm_attr_tag_VFP_arch[] =
   {"No", "VFPv1", "VFPv2", "VFPv3", "VFPv3-D16", "VFPv4", "VFPv4-D16"};
 static const char * arm_attr_tag_WMMX_arch[] = {"No", "WMMXv1", "WMMXv2"};
-static const char * arm_attr_tag_Advanced_SIMD_arch[] = {"No", "NEONv1"};
+static const char * arm_attr_tag_Advanced_SIMD_arch[] = 
+  {"No", "NEONv1", "NEONv1 with Fused-MAC"};
 static const char * arm_attr_tag_PCS_config[] =
   {"None", "Bare platform", "Linux application", "Linux DSO", "PalmOS 2004",
    "PalmOS (reserved)", "SymbianOS 2004", "SymbianOS (reserved)"};
@@ -9114,10 +9118,17 @@ static const char * arm_attr_tag_VFP_HP_extension[] =
   {"Not Allowed", "Allowed"};
 static const char * arm_attr_tag_ABI_FP_16bit_format[] =
   {"None", "IEEE 754", "Alternative Format"};
+static const char * arm_attr_tag_MPextension_use[] = 
+  {"Not Allowed", "Allowed"};
+static const char * arm_attr_tag_DIV_use[] =
+  {"Allowed in Thumb-ISA, v7-R or v7-M", "Not allowed", 
+    "Allowed in v7-A with integer division extension"};
 static const char * arm_attr_tag_T2EE_use[] = {"Not Allowed", "Allowed"};
 static const char * arm_attr_tag_Virtualization_use[] =
+  {"Not Allowed", "TrustZone", "Virtualization Extensions", 
+    "TrustZone and Virtualization Extensions"};
+static const char * arm_attr_tag_MPextension_use_legacy[] = 
   {"Not Allowed", "Allowed"};
-static const char * arm_attr_tag_MPextension_use[] = {"Not Allowed", "Allowed"};
 
 #define LOOKUP(id, name) \
   {id, #name, 0x80 | ARRAY_SIZE(arm_attr_tag_##name), arm_attr_tag_##name}
@@ -9155,12 +9166,14 @@ static arm_attr_public_tag arm_attr_public_tags[] =
   LOOKUP(34, CPU_unaligned_access),
   LOOKUP(36, VFP_HP_extension),
   LOOKUP(38, ABI_FP_16bit_format),
+  LOOKUP(42, MPextension_use),
+  LOOKUP(44, DIV_use),
   {64, "nodefaults", 0, NULL},
   {65, "also_compatible_with", 0, NULL},
   LOOKUP(66, T2EE_use),
   {67, "conformance", 1, NULL},
   LOOKUP(68, Virtualization_use),
-  LOOKUP(70, MPextension_use)
+  LOOKUP(70, MPextension_use_legacy)
 };
 #undef LOOKUP
 
@@ -10419,6 +10432,16 @@ get_note_type (unsigned e_type)
 	return _("NT_X86_XSTATE (x86 XSAVE extended state)");
       case NT_S390_HIGH_GPRS:
 	return _("NT_S390_HIGH_GPRS (s390 upper register halves)");
+      case NT_S390_TIMER:
+	return _("NT_S390_TIMER (s390 timer register)");
+      case NT_S390_TODCMP:
+	return _("NT_S390_TODCMP (s390 TOD comparator register)");
+      case NT_S390_TODPREG:
+	return _("NT_S390_TODPREG (s390 TOD programmable register)");
+      case NT_S390_CTRS:
+	return _("NT_S390_CTRS (s390 control registers)");
+      case NT_S390_PREFIX:
+	return _("NT_S390_PREFIX (s390 prefix register)");
       case NT_PSTATUS:
 	return _("NT_PSTATUS (pstatus structure)");
       case NT_FPREGS:

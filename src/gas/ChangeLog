@@ -1,3 +1,176 @@
+2010-02-25  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (_i386_insn): Add err_msg.
+	(operand_size_match): Set err_msg on failure.
+	(operand_type_match): Likewise.
+	(operand_type_register_match): Likewise.
+	(VEX_check_operands): Likewise.
+	(match_template): Likewise.  Use i.err_msg with as_bad.
+
+2010-02-25  Wu Zhangjin <wuzhangjin@gmail.com>
+
+	* config/tc-mips.c (mips_fix_loongson2f, mips_fix_loongson2f_nop,
+	mips_fix_loongson2f_jump): New variables.
+	(md_longopts): Add New options -mfix-loongson2f-nop/jump,
+	-mno-fix-loongson2f-nop/jump.
+	(md_parse_option): Initialize variables via above options.
+	(options): New enums for the above options.
+	(md_begin): Initialize nop_insn from LOONGSON2F_NOP_INSN.
+	(fix_loongson2f, fix_loongson2f_nop, fix_loongson2f_jump):
+	New functions.
+	(append_insn): call fix_loongson2f().
+	(mips_handle_align): Replace the implicit nops.
+	* config/tc-mips.h (MAX_MEM_FOR_RS_ALIGN_CODE): Modified
+	for the new mips_handle_align().
+	* doc/c-mips.texi: Document the new options.
+
+2010-02-23  Daniel Gutson  <dgutson@codesourcery.com>
+
+	* config/tc-arm.c (do_rd_rm_rn): Added warning
+	for obsolete insns.
+
+2010-02-23  Andrew Zabolotny  <anpaza@mail.ru>
+
+	PR binutils/11297
+	* config/tc-avr.c (md_apply_fix): Handle BFD_RELOC_8.
+	(avr_cons_fix_new): Handle fixups of a single byte.
+
+2010-02-22  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	PR 9861
+	* config/tc-arm.c (CPU_DEFAULT): Do not define based upon build
+	compiler's predefines.
+
+2010-02-19  Alan Modra  <amodra@gmail.com>
+
+	* configure.tgt: Whiltespace.  Sort moxie entry.
+
+2010-02-18  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* config/tc-arm.c (arm_convert_symbolic_attribute): Add Tag_DIV_use.
+	* doc/c-arm.texi: Likewise.
+
+2010-02-12  Daniel Gutson <dgutson@codesourcery.com>
+
+	* config/tc-arm.c (asm_opcode): operands type
+	change.
+	(BAD_PC_ADDRESSING): New macro message.
+	(BAD_PC_WRITEBACK): Likewise.
+	(MIX_ARM_THUMB_OPERANDS): New macro.
+	(operand_parse_code): Added enum values.
+	(parse_operands): Added thumb/arm distinction,
+	plus new enum values handling.
+	(encode_arm_addr_mode_2): Validations enhanced.
+	(encode_arm_addr_mode_3): Likewise.
+	(do_rm_rd_rn): Likewise.
+	(encode_thumb32_addr_mode): Likewise.
+	(do_t_ldrex): Likewise.
+	(do_t_ldst): Likewise.
+	(do_t_strex): Likewise.
+	(md_assemble): Call parse_operands with
+	a new parameter.
+	(OPS_1): New macro.
+	(OPS_2): Likewise.
+	(OPS_3): Likewise.
+	(OPS_4): Likewise.
+	(OPS_5): Likewise.
+	(OPS_6): Likewise.
+	(insns): Updated insns operands.
+
+2010-02-12  Tristan Gingold  <gingold@adacore.com>
+	    Douglas B Rupp  <rupp@gnat.com>
+
+	* config/tc-ia64.c (enum reloc_func): Add FUNC_SLOTCOUNT_RELOC.
+	(DUMMY_RELOC_IA64_SLOTCOUNT): Added.
+	(pseudo_func): Add an entry for slotcount.
+	(md_begin): Initialize slotcount pseudo symbol.
+	(ia64_parse_name): Handle @slotcount parameter.
+	(ia64_gen_real_reloc_type): Handle slotcount.
+	(md_apply_fix): Ditto.
+	* doc/c-ia64.texi (IA-64-Relocs): Document @slotcount.
+
+2010-02-11  Sterling Augustine  <sterling@jaw.hq.tensilica.com>
+
+	* config/tc-xtensa.c (istack_init): Don't call memset.
+
+2010-02-11  Sterling Augustine  <sterling@tensilica.com>
+
+	* config/tc-xtensa.c (cache_literal_section): Handle prefixes as
+	well as suffixes.
+
+2010-02-11  Sterling Augustine  <sterling@tensilica.com>
+
+	* config/tc-xtensa.c (xtensa_find_unaligned_loops): Rewrite.
+
+2010-02-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c (build_modrm_byte): Reformat.
+
+2010-02-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/tc-i386.c: Update copyright.
+
+2010-02-10  Quentin Neill  <quentin.neill@amd.com>
+	    Sebastian Pop  <sebastian.pop@amd.com>
+
+	* config/tc-i386.c (vec_imm4) New operand type.
+	(fits_in_imm4): New.
+	(VEX_check_operands): New.
+	(check_reverse): Call VEX_check_operands.
+	(build_modrm_byte): Reintroduce code for 5
+	operand insns.  Fix whitespace.
+
+2010-02-10  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* config/tc-ppc.c (md_show_usage): Add -mpwr4, -mpwr5, -mpwr5x,
+	-mpwr6 and -mpwr7.
+
+2010-02-09  Sterling Augustine  <sterling@tensilica.com>
+
+	* config/tc-xtensa.c (RELAXED_LOOP_INSN_BYTES): New.
+	(next_frag_pre_opcode_bytes): Use RELAXED_LOOP_INSN_BYTES.
+	(xtensa_mark_zcl_first_insns): Rewrite to handle corner case.
+
+2010-02-08  Christophe Lyon  <christophe.lyon@st.com>
+
+	* config/tc-arm.c (md_pcrel_from_section): Keep base to zero for
+	non-local branches (BFD_RELOC_THUMB_PCREL_BRANCH23,
+	BFD_RELOC_THUMB_PCREL_BLX, BFD_RELOC_ARM_PCREL_BLX,
+	BFD_RELOC_ARM_PCREL_CALL)
+
+2010-02-08  Sterling Augustine  <sterling@tensilica.com>
+
+	* config/tc-xtensa.c (frag_format_size): Generalize logic to
+	handle more instruction	sizes and fetch widths.
+	(branch_align_power): Likewise.
+	(text_align_power): Likewise.
+	(bytes_to_stretch): Likewise.
+
+2010-02-08  Philipp Tomsich  <philipp.tomsich@theobroma-systems.com>
+
+	* config/tc-ppc.c (md_show_usage): Mention -mtitan.  Don't use tabs.
+	(ppc_mach): Handle titan.
+	* doc/c-ppc.texi: Mention -mtitan.
+
+2010-02-05  Sterling Augustine  <sterling@tensilica.com>
+
+	* config/tc-xtensa.c (UNREACHABLE_MAX_WIDTH): Delete and
+	replace with...
+	(xtensa_fetch_width) ...this.
+
+2010-02-05  Joseph Myers  <joseph@codesourcery.com>
+
+	* Makefile.am (CPU_TYPES, OBJ_FORMATS, CPU_OBJ_VALID,
+	MULTI_CPU_TYPES, MULTI_CPU_OBJ_VALID): Remove.
+	* Makefile.in: Regenerate.
+
+2010-02-03  Quentin Neill  <quentin.neill@amd.com>
+
+	* config/tc-i386.c (cpu_arch): Change amdfam15 to bdver1.
+	(i386_align_code): Rename  PROCESSOR_AMDFAM15 to PROCESSOR_BDVER1.
+	* config/tc-i386.h (processor_type): Same.
+	* doc/c-i386.texi: Change amdfam15 to bdver1.
+
 2010-01-29  Nick Clifton  <nickc@redhat.com>
 
 	PR 11136

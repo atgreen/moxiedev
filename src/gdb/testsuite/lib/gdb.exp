@@ -54,7 +54,10 @@ if ![info exists GDBFLAGS] {
 verbose "using GDBFLAGS = $GDBFLAGS" 2
 
 # INTERNAL_GDBFLAGS contains flags that the testsuite requires.
-set INTERNAL_GDBFLAGS "-nw -nx"
+global INTERNAL_GDBFLAGS
+if ![info exists INTERNAL_GDBFLAGS] {
+    set INTERNAL_GDBFLAGS "-nw -nx"
+}
 
 # The variable gdb_prompt is a regexp which matches the gdb prompt.
 # Set it if it is not already set.
@@ -1296,6 +1299,21 @@ proc skip_java_tests {} {
     return 0
 }
 
+# Return a 1 for configurations that do not support Python scripting.
+
+proc skip_python_tests {} {
+    global gdb_prompt
+    gdb_test_multiple "python print 'test'" "verify python support" {
+	-re "not supported.*$gdb_prompt $"	{
+	    unsupported "Python support is disabled."
+	    return 1
+	}
+	-re "$gdb_prompt $"	{}
+    }
+
+    return 0
+}
+
 # Return a 1 if we should skip shared library tests.
 
 proc skip_shlib_tests {} {
@@ -2410,7 +2428,22 @@ proc default_gdb_init { args } {
     }
 }
 
+# The default timeout used when testing GDB commands.  We want to use
+# the same timeout as the default dejagnu timeout, unless the user has
+# already provided a specific value (probably through a site.exp file).
+global gdb_test_timeout
+if ![info exists gdb_test_timeout] {
+    set gdb_test_timeout $timeout
+}
+
 proc gdb_init { args } {
+    # Reset the timeout value to the default.  This way, any testcase
+    # that changes the timeout value without resetting it cannot affect
+    # the timeout used in subsequent testcases.
+    global gdb_test_timeout
+    global timeout
+    set timeout $gdb_test_timeout
+
     return [eval default_gdb_init $args];
 }
 
@@ -2812,7 +2845,7 @@ proc build_id_debug_filename_get { exec } {
     }
     # Convert it to hex.
     binary scan $data H* data
-    set data [regsub {^..} $data {\0/}]
+    regsub {^..} $data {\0/} data
     return ".build-id/${data}.debug";
 }
 

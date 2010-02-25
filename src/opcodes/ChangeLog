@@ -1,3 +1,94 @@
+2010-02-25  Edmar Wienskoski  <edmar@freescale.com>
+
+	* ppc-dis.c (ppc_opts): Add PPC_OPCODE_E500MC for "e500mc64".
+
+2010-02-24  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/6773
+	* arm-dis.c (arm_opcodes): Replace <prefix>addsubx with
+	<prefix>asx.  Replace <prefix>subaddx with <prefix>sax.
+	(thumb32_opcodes): Likewise.
+
+2010-02-15  Nick Clifton  <nickc@redhat.com>
+
+	* po/vi.po: Updated Vietnamese translation.
+
+2010-02-12  Doug Evans  <dje@sebabeach.org>
+
+	* lm32-opinst.c: Regenerate.
+
+2010-02-11  Doug Evans  <dje@sebabeach.org>
+
+	* cgen-dis.in (print_normal): Delete CGEN_PRINT_NORMAL.
+	(print_address): Delete CGEN_PRINT_ADDRESS.
+	* fr30-dis.c, * frv-dis.c, * ip2k-dis.c, * iq2000-dis.c,
+	* lm32-dis.c, * m32c-dis.c, * m32r-desc.c, * m32r-desc.h,
+	* m32r-dis.c, * mep-dis.c, * mt-dis.c, * openrisc-dis.c,
+	* xc16x-dis.c, * xstormy16-dis.c: Regenerate.
+
+	* fr30-desc.c, * fr30-desc.h, * fr30-opc.c,
+	* frv-desc.c, * frv-desc.h, * frv-opc.c,
+	* ip2k-desc.c, * ip2k-desc.h, * ip2k-opc.c,
+	* iq2000-desc.c, * iq2000-desc.h, * iq2000-opc.c,
+	* lm32-desc.c, * lm32-desc.h, * lm32-opc.c, * lm32-opinst.c,
+	* m32c-desc.c, * m32c-desc.h, * m32c-opc.c,
+	* m32r-desc.c, * m32r-desc.h, * m32r-opc.c, * m32r-opinst.c,
+	* mep-desc.c, * mep-desc.h, * mep-opc.c,
+	* mt-desc.c, * mt-desc.h, * mt-opc.c,
+	* openrisc-desc.c, * openrisc-desc.h, * openrisc-opc.c,
+	* xc16x-desc.c, * xc16x-desc.h, * xc16x-opc.c,
+	* xstormy16-desc.c, * xstormy16-desc.h, * xstormy16-opc.c: Regenerate.
+
+2010-02-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* i386-dis.c: Update copyright.
+	* i386-gen.c: Likewise.
+	* i386-opc.h: Likewise.
+	* i386-opc.tbl: Likewise.
+
+2010-02-10  Quentin Neill  <quentin.neill@amd.com>
+	    Sebastian Pop  <sebastian.pop@amd.com>
+
+	* i386-dis.c (OP_EX_VexImmW): Reintroduced
+	function to handle 5th imm8 operand.
+	(PREFIX_VEX_3A48): Added.
+	(PREFIX_VEX_3A49): Added.
+	(VEX_W_3A48_P_2): Added.
+	(VEX_W_3A49_P_2): Added.
+	(prefix table): Added entries for PREFIX_VEX_3A48
+	and PREFIX_VEX_3A49.
+	(vex table): Added entries for VEX_W_3A48_P_2 and
+	and VEX_W_3A49_P_2.
+	* i386-gen.c (operand_type_init): Added OPERAND_TYPE_VEC_IMM4
+	for Vec_Imm4 operands.
+	* i386-opc.h (enum): Added Vec_Imm4.
+	(i386_operand_type): Added vec_imm4.
+	* i386-opc.tbl: Add entries for vpermilp[ds].
+	* i386-init.h: Regenerated.
+	* i386-tbl.h: Regenerated.
+
+2010-02-10  Richard Sandiford  <r.sandiford@uk.ibm.com>
+
+	* ppc-dis.c (ppc_opts): Add "pwr4", "pwr5", "pwr5x", "pwr6"
+	and "pwr7".  Move "a2" into alphabetical order.
+
+2010-02-08  Philipp Tomsich  <philipp.tomsich@theobroma-systems.com>
+
+	* ppc-dis.c (ppc_opts): Add titan entry.
+	* ppc-opc.c (TITAN, MULHW): Define.
+	(powerpc_opcodes): Support AppliedMicro Titan core (APM83xxx).
+
+2010-02-03  Quentin Neill  <quentin.neill@amd.com>
+
+	* i386-gen.c (cpu_flag_init): Rename CPU_AMDFAM15_FLAGS
+	to CPU_BDVER1_FLAGS
+	* i386-init.h: Regenerated.
+
+2010-02-03  Anthony Green  <green@moxielogic.com>
+
+	* moxie-opc.c (moxie_form1_opc_info): Move "nop" from 0x00 to
+	0x0f, and make 0x00 an illegal instruction.
+
 2010-01-29  Daniel Jacobowitz  <dan@codesourcery.com>
 
 	* opcodes/arm-dis.c (struct arm_private_data): New.

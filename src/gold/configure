@@ -3410,6 +3410,16 @@ fi
   fi
 done
 
+# Remove any duplicates.
+to=""
+for t in $targetobjs; do
+  case " $to " in
+  *" $t "*) ;;
+  *) to="$to $t" ;;
+  esac
+done
+targetobjs=$to
+
 if test -n "$targ_32_little"; then
 
 $as_echo "#define HAVE_TARGET_32_LITTLE 1" >>confdefs.h

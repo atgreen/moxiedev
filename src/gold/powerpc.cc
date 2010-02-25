@@ -183,6 +183,28 @@ class Target_powerpc : public Sized_target<size, big_endian>
 	   const elfcpp::Rela<size, big_endian>& reloc, unsigned int r_type,
 	   Symbol* gsym);
 
+    inline bool
+    local_reloc_may_be_function_pointer(Symbol_table* , Layout* ,
+					Target_powerpc* ,
+	          			Sized_relobj<size, big_endian>* ,
+			                unsigned int ,
+	          			Output_section* ,
+	          			const elfcpp::Rela<size, big_endian>& ,
+					unsigned int ,
+	          			const elfcpp::Sym<size, big_endian>&)
+    { return false; }
+
+    inline bool
+    global_reloc_may_be_function_pointer(Symbol_table* , Layout* ,
+					 Target_powerpc* ,
+		   			 Sized_relobj<size, big_endian>* ,
+		   			 unsigned int ,
+		   			 Output_section* ,
+		   			 const elfcpp::Rela<size,
+							    big_endian>& ,
+					 unsigned int , Symbol*)
+    { return false; }
+
   private:
     static void
     unsupported_reloc_local(Sized_relobj<size, big_endian>*,
@@ -948,6 +970,11 @@ Target_powerpc<size, big_endian>::make_plt_entry(Symbol_table* symtab,
       // Create the GOT section first.
       this->got_section(symtab, layout);
 
+      // Ensure that .rela.dyn always appears before .rela.plt  This is
+      // necessary due to how, on PowerPC and some other targets, .rela.dyn
+      // needs to include .rela.plt in it's range.
+      this->rela_dyn_section(layout);
+
       this->plt_ = new Output_data_plt_powerpc<size, big_endian>(layout);
       layout->add_output_section_data(".plt", elfcpp::SHT_PROGBITS,
 				      (elfcpp::SHF_ALLOC
@@ -1556,7 +1583,7 @@ Target_powerpc<size, big_endian>::do_finalize_sections(
 				  ? NULL
 				  : this->plt_->rel_plt());
   layout->add_target_dynamic_tags(false, this->plt_, rel_plt,
-				  this->rela_dyn_, true);
+				  this->rela_dyn_, true, size == 32);
 
   // Emit any relocs we saved in an attempt to avoid generating COPY
   // relocs.

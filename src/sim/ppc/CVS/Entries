@@ -2,7 +2,6 @@
 /BUGS/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
 /COPYING/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
 /COPYING.LIB/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
-/ChangeLog/1.97/Thu Jan 28 00:24:39 2010/-ko/
 /ChangeLog.00/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
 /INSTALL/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
 /Makefile.in/1.28/Thu Jan 28 00:24:39 2010/-ko/
@@ -120,7 +119,6 @@
 /os_emul.c/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
 /os_emul.h/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
 /pk_disklabel.c/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
-/ppc-instructions/1.11/Thu Jan 28 00:24:39 2010/-ko/
 /ppc-spr-table/1.4/Thu Jan 28 00:24:39 2010/-ko/
 /ppc.mt/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
 /psim.c/1.8/Thu Jan 28 00:24:39 2010/-ko/
@@ -143,4 +141,6 @@
 /vm.h/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
 /vm_n.h/1.1.1.1/Thu Jan 28 00:24:39 2010/-ko/
 /words.h/1.4/Thu Jan 28 00:24:39 2010/-ko/
+/ChangeLog/1.99/Thu Feb 25 20:33:47 2010/-ko/
+/ppc-instructions/1.13/Thu Feb 25 20:33:47 2010/-ko/
 D

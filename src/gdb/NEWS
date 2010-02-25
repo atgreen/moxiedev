@@ -1,7 +1,35 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
-*** Changes since GDB 7.0
+*** Changes since GDB 7.1
+
+* Python scripting
+
+The GDB Python API now has access to symbols, symbol tables, and
+frame's code blocks.
+
+*** Changes in GDB 7.1
+
+* C++ Improvements
+
+  ** Namespace Support
+
+  GDB now supports importing of namespaces in C++.  This enables the
+  user to inspect variables from imported namespaces.  Support for
+  namepace aliasing has also been added.  So, if a namespace is 
+  aliased in the current scope (e.g. namepace C=A; ) the user can 
+  print variables using the alias (e.g. (gdb) print C::x).
+
+  ** Bug Fixes
+
+  All known bugs relating to the printing of virtual base class were
+  fixed.  It is now possible to call overloaded static methods using a
+  qualified name.
+
+  ** Cast Operators
+
+  The C++ cast operators static_cast<>, dynamic_cast<>, const_cast<>,
+  and reinterpret_cast<> are now handled by the C++ expression parser.
 
 * New targets
 
@@ -189,6 +217,20 @@ show ada trust-PAD-over-XVS
    off, but this introduces a slight performance penalty.  The default
    is on.
 
+* Python API Improvements
+
+  ** GDB provides the new class gdb.LazyString.  This is useful in
+     some pretty-printing cases.  The new method gdb.Value.lazy_string
+     provides a simple way to create objects of this type.
+
+  ** The fields returned by gdb.Type.fields now have an
+     `is_base_class' attribute.
+
+  ** The new method gdb.Type.range returns the range of an array type.
+
+  ** The new method gdb.parse_and_eval can be used to parse and
+     evaluate an expression.
+
 * New remote packets
 
 QTDV
@@ -245,7 +287,7 @@ the target for evaluation using the same bytecode format as is used
 for tracepoint actions.
 
 * "disassemble" command with a /r modifier, print the raw instructions
-in hex as well as in symbolic form."
+in hex as well as in symbolic form.
 
 * Process record and replay
 

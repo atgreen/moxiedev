@@ -1,3 +1,8 @@
+2010-02-25  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Create root/usr/bin prior to running build system
+	sanity checks.
+
 2010-02-20  Anthony Green  <green@moxielogic.com>
 
 	* scripts/moxielogic-repo/RPM-GPG-KEY-MoxieLogic: New file.

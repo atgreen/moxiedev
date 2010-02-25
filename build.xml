@@ -175,6 +175,7 @@
 
   <target name="build">
 
+    <mkdir dir="root/usr/bin"/>
     <mkdir dir="root/usr/moxie-uclinux"/>
     <mkdir dir="build/src"/>
 

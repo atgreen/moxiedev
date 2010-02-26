@@ -1015,9 +1015,6 @@ const_or_frame_p (rtx x)
 {
   switch (GET_CODE (x))
     {
-    case MEM:
-      return MEM_READONLY_P (x);
-
     case CONST:
     case CONST_INT:
     case CONST_DOUBLE:
@@ -1199,8 +1196,8 @@ canon_address (rtx mem,
       return false;
     }
   if (dump_file)
-    fprintf (dump_file, "  varying cselib base=%d offset = %d\n",
-	     (*base)->value, (int)*offset);
+    fprintf (dump_file, "  varying cselib base=%u:%u offset = %d\n",
+	     (*base)->uid, (*base)->hash, (int)*offset);
   return true;
 }
 

@@ -4804,17 +4804,19 @@ conversion_null_warnings (tree totype, tree expr, tree fn, int argnum)
   if (expr == null_node && TREE_CODE (t) != BOOLEAN_TYPE && ARITHMETIC_TYPE_P (t))
     {
       if (fn)
-	warning (OPT_Wconversion, "passing NULL to non-pointer argument %P of %qD",
-		 argnum, fn);
+	warning_at (input_location, OPT_Wconversion_null,
+		    "passing NULL to non-pointer argument %P of %qD",
+		    argnum, fn);
       else
-	warning (OPT_Wconversion, "converting to non-pointer type %qT from NULL", t);
+	warning_at (input_location, OPT_Wconversion_null,
+		    "converting to non-pointer type %qT from NULL", t);
     }
 
   /* Issue warnings if "false" is converted to a NULL pointer */
   else if (expr == boolean_false_node && fn && POINTER_TYPE_P (t))
-    warning (OPT_Wconversion,
-	     "converting %<false%> to pointer type for argument %P of %qD",
-	     argnum, fn);
+    warning_at (input_location, OPT_Wconversion_null,
+		"converting %<false%> to pointer type for argument %P of %qD",
+		argnum, fn);
 }
 
 /* Perform the conversions in CONVS on the expression EXPR.  FN and
@@ -5782,8 +5784,20 @@ build_over_call (struct z_candidate *cand, int flags, tsubst_flags_t complain)
 	{
 	  tree to = stabilize_reference (cp_build_indirect_ref (fa, RO_NULL,
 								complain));
+	  tree type = TREE_TYPE (to);
 
-	  val = build2 (INIT_EXPR, DECL_CONTEXT (fn), to, arg);
+	  if (TREE_CODE (arg) != TARGET_EXPR
+	      && TREE_CODE (arg) != AGGR_INIT_EXPR
+	      && is_really_empty_class (type))
+	    {
+	      /* Avoid copying empty classes.  */
+	      val = build2 (COMPOUND_EXPR, void_type_node, to, arg);
+	      TREE_NO_WARNING (val) = 1;
+	      val = build2 (COMPOUND_EXPR, type, val, to);
+	      TREE_NO_WARNING (val) = 1;
+	    }
+	  else
+	    val = build2 (INIT_EXPR, DECL_CONTEXT (fn), to, arg);
 	  return val;
 	}
     }
@@ -5797,7 +5811,15 @@ build_over_call (struct z_candidate *cand, int flags, tsubst_flags_t complain)
       tree as_base = CLASSTYPE_AS_BASE (type);
       tree arg = argarray[1];
 
-      if (tree_int_cst_equal (TYPE_SIZE (type), TYPE_SIZE (as_base)))
+      if (is_really_empty_class (type))
+	{
+	  /* Avoid copying empty classes.  */
+	  val = build2 (COMPOUND_EXPR, void_type_node, to, arg);
+	  TREE_NO_WARNING (val) = 1;
+	  val = build2 (COMPOUND_EXPR, type, val, to);
+	  TREE_NO_WARNING (val) = 1;
+	}
+      else if (tree_int_cst_equal (TYPE_SIZE (type), TYPE_SIZE (as_base)))
 	{
 	  arg = cp_build_indirect_ref (arg, RO_NULL, complain);
 	  val = build2 (MODIFY_EXPR, TREE_TYPE (to), to, arg);

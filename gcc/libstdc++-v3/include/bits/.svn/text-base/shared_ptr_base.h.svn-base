@@ -1,6 +1,6 @@
 // shared_ptr and weak_ptr implementation details -*- C++ -*-
 
-// Copyright (C) 2007, 2008, 2009 Free Software Foundation, Inc.
+// Copyright (C) 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -606,9 +606,6 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	  _M_ptr = __r._M_ptr;
 	}
 
-      template<typename _Tp1, typename _Del>
-	explicit __shared_ptr(const std::unique_ptr<_Tp1, _Del>&) = delete;
-
       // If an exception is thrown this constructor has no effect.
       template<typename _Tp1, typename _Del>
 	explicit __shared_ptr(std::unique_ptr<_Tp1, _Del>&& __r)
@@ -667,10 +664,6 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	  __shared_ptr(std::move(__r)).swap(*this);
 	  return *this;
 	}
-
-      template<typename _Tp1, typename _Del>
-	__shared_ptr&
-	operator=(const std::unique_ptr<_Tp1, _Del>& __r) = delete;
 
       template<typename _Tp1, typename _Del>
 	__shared_ptr&
@@ -1028,19 +1021,6 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	std::swap(_M_ptr, __s._M_ptr);
 	_M_refcount._M_swap(__s._M_refcount);
       }
-
-      // Comparisons
-      template<typename _Tp1>
-	bool operator<(const __weak_ptr<_Tp1, _Lp>&) const = delete;
-
-      template<typename _Tp1>
-	bool operator<=(const __weak_ptr<_Tp1, _Lp>&) const = delete;
-
-      template<typename _Tp1>
-	bool operator>(const __weak_ptr<_Tp1, _Lp>&) const = delete;
-
-      template<typename _Tp1>
-	bool operator>=(const __weak_ptr<_Tp1, _Lp>&) const = delete;
 
     private:
       // Used by __enable_shared_from_this.

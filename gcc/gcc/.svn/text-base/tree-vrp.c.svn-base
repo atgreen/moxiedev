@@ -1898,9 +1898,9 @@ vrp_int_const_binop (enum tree_code code, tree val1, tree val2)
 
   res = int_const_binop (code, val1, val2, 0);
 
-  /* If we are not using wrapping arithmetic, operate symbolically
-     on -INF and +INF.  */
-  if (TYPE_OVERFLOW_WRAPS (TREE_TYPE (val1)))
+  /* If we are using unsigned arithmetic, operate symbolically
+     on -INF and +INF as int_const_binop only handles signed overflow.  */
+  if (TYPE_UNSIGNED (TREE_TYPE (val1)))
     {
       int checkz = compare_values (res, val1);
       bool overflow = false;
@@ -1937,6 +1937,10 @@ vrp_int_const_binop (enum tree_code code, tree val1, tree val2)
 	}
 
     }
+  else if (TYPE_OVERFLOW_WRAPS (TREE_TYPE (val1)))
+    /* If the singed operation wraps then int_const_binop has done
+       everything we want.  */
+    ;
   else if ((TREE_OVERFLOW (res)
 	    && !TREE_OVERFLOW (val1)
 	    && !TREE_OVERFLOW (val2))
@@ -3276,7 +3280,8 @@ vrp_var_may_overflow (tree var, gimple stmt)
     return true;
 
   l = loop_containing_stmt (stmt);
-  if (l == NULL)
+  if (l == NULL
+      || !loop_outer (l))
     return true;
 
   chrec = instantiate_parameters (l, analyze_scalar_evolution (l, var));
@@ -5338,19 +5343,12 @@ vrp_visit_assignment_or_call (gimple stmt, tree *output_p)
 	   && TYPE_MAX_VALUE (TREE_TYPE (lhs)))
 	  || POINTER_TYPE_P (TREE_TYPE (lhs))))
     {
-      struct loop *l;
       value_range_t new_vr = { VR_UNDEFINED, NULL_TREE, NULL_TREE, NULL };
 
       if (code == GIMPLE_CALL)
 	extract_range_basic (&new_vr, stmt);
       else
 	extract_range_from_assignment (&new_vr, stmt);
-
-      /* If STMT is inside a loop, we may be able to know something
-	 else about the range of LHS by examining scalar evolution
-	 information.  */
-      if (current_loops && (l = loop_containing_stmt (stmt)))
-	adjust_range_with_scev (&new_vr, l, stmt, lhs);
 
       if (update_value_range (lhs, &new_vr))
 	{
@@ -6255,6 +6253,7 @@ vrp_visit_phi_node (gimple phi)
   value_range_t *lhs_vr = get_value_range (lhs);
   value_range_t vr_result = { VR_UNDEFINED, NULL_TREE, NULL_TREE, NULL };
   int edges, old_edges;
+  struct loop *l;
 
   copy_value_range (&vr_result, lhs_vr);
 
@@ -6317,6 +6316,13 @@ vrp_visit_phi_node (gimple phi)
 	    break;
 	}
     }
+
+  /* If this is a loop PHI node SCEV may known more about its
+     value-range.  */
+  if (current_loops
+      && (l = loop_containing_stmt (phi))
+      && l->header == gimple_bb (phi))
+    adjust_range_with_scev (&vr_result, l, phi, lhs);
 
   if (vr_result.type == VR_VARYING)
     goto varying;

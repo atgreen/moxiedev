@@ -1524,6 +1524,9 @@ finish_var_decl (tree var, tree initializer)
   mark_decl_referenced (var);
   /* Mark the decl to avoid "defined but not used" warning.  */
   TREE_USED (var) = 1;
+  /* We reserve the right for the runtime to use/modify these variables
+     in ways that are opaque to us.  */
+  DECL_PRESERVE_P (var) = 1;
 }
 
 /* Find the decl for the constant string class reference.  This is only

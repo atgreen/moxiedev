@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/tools/gnu/classpath/tools/doclets
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,8 +60,39 @@ doko
 
 3990
 
-debugdoclet
-dir
+InlineTagRenderer.java
+file
+
+
+
+
+2009-04-24T17:48:51.000000Z
+59679c20b9aaf2a2a5f40a2a348ba2d6
+2008-08-15T20:31:42.599946Z
+139136
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1057
 
 StandardTaglet.java
 file
@@ -97,73 +128,8 @@ doko
 
 1886
 
-InlineTagRenderer.java
-file
-
-
-
-
-2009-04-24T17:48:51.000000Z
-59679c20b9aaf2a2a5f40a2a348ba2d6
-2008-08-15T20:31:42.599946Z
-139136
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1057
-
-DocletOptionFile.java
-file
-
-
-
-
-2009-04-24T17:48:51.000000Z
-9f76bbd911524e01e629d74f064f78d3
-2008-08-15T20:31:42.599946Z
-139136
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1541
+debugdoclet
+dir
 
 DocletOption.java
 file
@@ -198,6 +164,40 @@ doko
 
 
 1182
+
+DocletOptionFile.java
+file
+
+
+
+
+2009-04-24T17:48:51.000000Z
+9f76bbd911524e01e629d74f064f78d3
+2008-08-15T20:31:42.599946Z
+139136
+doko
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1541
 
 PackageGroup.java
 file

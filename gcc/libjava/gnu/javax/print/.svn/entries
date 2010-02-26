@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/gnu/javax/print
 svn://gcc.gnu.org/svn/gcc
 
@@ -230,6 +230,9 @@ tromey
 
 1134
 
+ipp
+dir
+
 CupsPrintServiceLookup.h
 file
 
@@ -263,9 +266,6 @@ tromey
 
 
 1774
-
-ipp
-dir
 
 PrinterDialog.h
 file
@@ -437,40 +437,6 @@ tromey
 
 1352
 
-PrinterDialog$AppearancePanel$Color.h
-file
-
-
-
-
-2009-04-24T17:49:08.000000Z
-4fef818f5e5bfd4b3550d425ddb8d56c
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1392
-
 PrinterDialog$GeneralPanel$PrintServices.h
 file
 
@@ -504,6 +470,40 @@ tromey
 
 
 1785
+
+PrinterDialog$AppearancePanel$Color.h
+file
+
+
+
+
+2009-04-24T17:49:08.000000Z
+4fef818f5e5bfd4b3550d425ddb8d56c
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1392
 
 PrinterDialog$AppearancePanel$JobAttributes.h
 file

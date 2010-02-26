@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/xml/libxmlj/dom
 svn://gcc.gnu.org/svn/gcc
 
@@ -25,40 +25,6 @@ doko
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
-
-GnomeNode.class
-file
-
-
-
-
-2009-04-24T17:47:48.000000Z
-4d58a9456dce2b6a9503c25bc6a13173
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-9239
 
 GnomeDocumentBuilder.class
 file
@@ -94,14 +60,14 @@ has-props
 
 5993
 
-GnomeCharacterData.class
+GnomeNode.class
 file
 
 
 
 
 2009-04-24T17:47:48.000000Z
-c4ce242f296862910462f348758003ed
+4d58a9456dce2b6a9503c25bc6a13173
 2008-10-21T17:55:01.166395Z
 141271
 doko
@@ -126,7 +92,7 @@ has-props
 
 
 
-2388
+9239
 
 GnomeXPathNodeList.class
 file
@@ -161,6 +127,40 @@ has-props
 
 
 609
+
+GnomeCharacterData.class
+file
+
+
+
+
+2009-04-24T17:47:48.000000Z
+c4ce242f296862910462f348758003ed
+2008-10-21T17:55:01.166395Z
+141271
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2388
 
 GnomeNamedNodeMap.class
 file
@@ -230,40 +230,6 @@ has-props
 
 3383
 
-GnomeEntityReference.class
-file
-
-
-
-
-2009-04-24T17:47:48.000000Z
-7eb66aa6c20d0e19da5c3b40ecad9eff
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-432
-
 GnomeNotation.class
 file
 
@@ -297,6 +263,40 @@ has-props
 
 
 1081
+
+GnomeEntityReference.class
+file
+
+
+
+
+2009-04-24T17:47:48.000000Z
+7eb66aa6c20d0e19da5c3b40ecad9eff
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+432
 
 GnomeTypeInfo.class
 file
@@ -400,14 +400,14 @@ has-props
 
 420
 
-GnomeDocumentFragment.class
+GnomeComment.class
 file
 
 
 
 
 2009-04-24T17:47:48.000000Z
-b9955a6b16dde6571b407a44a99e95f6
+246e84fc49281cc6f14a74041da17df0
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -432,7 +432,7 @@ has-props
 
 
 
-436
+409
 
 GnomeDOMStringList.class
 file
@@ -468,14 +468,14 @@ has-props
 
 913
 
-GnomeComment.class
+GnomeDocumentFragment.class
 file
 
 
 
 
 2009-04-24T17:47:48.000000Z
-246e84fc49281cc6f14a74041da17df0
+b9955a6b16dde6571b407a44a99e95f6
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -500,7 +500,7 @@ has-props
 
 
 
-409
+436
 
 GnomeXPathExpression.class
 file

@@ -209,7 +209,7 @@ case ${target} in
    alpha*-dec-osf4*			\
  | alpha*-dec-osf5.0*			\
  | mips-sgi-irix5*			\
- | mips-sgi-irix6.[0-4]5*		\
+ | mips-sgi-irix6.[0-4]*		\
  | *-*-solaris2.7*			\
  )
     if test "x$enable_obsolete" != xyes; then
@@ -1239,6 +1239,9 @@ i[34567]86-*-solaris2*)
 		;;
 	esac
 	tm_file="${tm_file} i386/sol2.h"
+	if test x$gas = xyes; then
+		tm_file="${tm_file} i386/sol2-gas.h"
+	fi
 	tmake_file="${tmake_file} t-sol2 t-svr4"
 	c_target_objs="${c_target_objs} sol2-c.o"
 	cxx_target_objs="${cxx_target_objs} sol2-c.o"
@@ -2354,7 +2357,7 @@ sparc-*-elf*)
 	extra_parts="crti.o crtn.o crtbegin.o crtend.o"
 	;;
 sparc-*-linux*)		# SPARC's running GNU/Linux, libc6
-	tm_file="${tm_file} dbxelf.h elfos.h svr4.h sparc/sysv4.h linux.h glibc-stdint.h"
+	tm_file="${tm_file} dbxelf.h elfos.h svr4.h sparc/sysv4.h sparc/gas.h linux.h glibc-stdint.h"
 	extra_options="${extra_options} sparc/long-double-switch.opt"
 	tmake_file="${tmake_file} sparc/t-linux"
 	if test x$enable_targets = xall; then
@@ -2474,7 +2477,7 @@ sparc64-*-freebsd*|ultrasparc-*-freebsd*)
 	esac
 	;;
 sparc64-*-linux*)		# 64-bit SPARC's running GNU/Linux
-	tm_file="sparc/biarch64.h ${tm_file} dbxelf.h elfos.h svr4.h sparc/sysv4.h linux.h glibc-stdint.h sparc/linux64.h"
+	tm_file="sparc/biarch64.h ${tm_file} dbxelf.h elfos.h svr4.h sparc/sysv4.h sparc/gas.h linux.h glibc-stdint.h sparc/linux64.h"
 	extra_options="${extra_options} sparc/long-double-switch.opt"
 	tmake_file="${tmake_file} sparc/t-linux sparc/t-linux64 sparc/t-crtfm"
 	;;

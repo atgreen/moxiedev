@@ -1,3 +1,44 @@
+2010-02-24  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR libfortran/43155
+	* io/transfer.c (require_type): Subtract one from item_count for output
+	of error message.  Add comment before formatted_transfer function
+	explaining why the item_count is off by one.
+
+2010-02-24  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* io/write_float.def (WRITE_FLOAT): Use __builtin_signbit.
+
+2010-02-22  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	* io/list_read.c (list_formatted_read_scalar): Remove duplicate code.
+
+2010-02-09  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/42996
+	* intrinsics/args.c (get_command_argument_i4): Always return
+	commandline-argument length for length parameter.
+
+2010-02-06  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR libfortran/42742
+	* io/format.c (reset_fnode_counters): Use the correct pointer to the
+	head of the fnode list. (parse_format): Remove previous hack that set
+	limit on size of format string for caching.
+
+2010-02-06  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR libfortran
+	* io/transfer.c (read_sf): Handle EOR and EOF conditions for
+	ADVANCE="no" with PAD="yes" or PAD="no".
+
+2010-02-03  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR libfortran/42901
+	* io/list_read.c (nml_get_obj_data): Add new qualifier flag, clean up
+	code, and adjust logic to set namelist info pointer correctly for array
+	qualifiers of derived type components.
+
 2010-01-15  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
 
 	PR libfortran/42742

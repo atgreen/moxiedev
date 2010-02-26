@@ -885,7 +885,7 @@ process_function_and_variable_attributes (struct cgraph_node *first,
   for (node = cgraph_nodes; node != first; node = node->next)
     {
       tree decl = node->decl;
-      if (lookup_attribute ("used", DECL_ATTRIBUTES (decl)))
+      if (DECL_PRESERVE_P (decl))
 	{
 	  mark_decl_referenced (decl);
 	  if (node->local.finalized)
@@ -904,7 +904,7 @@ process_function_and_variable_attributes (struct cgraph_node *first,
   for (vnode = varpool_nodes; vnode != first_var; vnode = vnode->next)
     {
       tree decl = vnode->decl;
-      if (lookup_attribute ("used", DECL_ATTRIBUTES (decl)))
+      if (DECL_PRESERVE_P (decl))
 	{
 	  mark_decl_referenced (decl);
 	  vnode->force_output = true;
@@ -1230,7 +1230,8 @@ thunk_adjust (gimple_stmt_iterator * bsi,
   gimple stmt;
   tree ret;
 
-  if (this_adjusting)
+  if (this_adjusting
+      && fixed_offset != 0)
     {
       stmt = gimple_build_assign (ptr,
 				  fold_build2_loc (input_location,
@@ -1315,7 +1316,8 @@ thunk_adjust (gimple_stmt_iterator * bsi,
 			     offsettmp);
     }
 
-  if (!this_adjusting)
+  if (!this_adjusting
+      && fixed_offset != 0)
     /* Adjust the pointer by the constant.  */
     {
       tree ptrtmp;
@@ -2108,11 +2110,7 @@ cgraph_function_versioning (struct cgraph_node *old_version_node,
      that is not weak also.
      ??? We cannot use COMDAT linkage because there is no
      ABI support for this.  */
-  DECL_EXTERNAL (new_version_node->decl) = 0;
-  DECL_COMDAT_GROUP (new_version_node->decl) = NULL_TREE;
-  TREE_PUBLIC (new_version_node->decl) = 0;
-  DECL_COMDAT (new_version_node->decl) = 0;
-  DECL_WEAK (new_version_node->decl) = 0;
+  cgraph_make_decl_local (new_version_node->decl);
   DECL_VIRTUAL_P (new_version_node->decl) = 0;
   new_version_node->local.externally_visible = 0;
   new_version_node->local.local = 1;

@@ -225,6 +225,7 @@ graphite_can_represent_scev (tree scev, int outermost_loop)
 	&& !CONVERT_EXPR_CODE_P (TREE_CODE (TREE_OPERAND (scev, 1)))
 	&& !(chrec_contains_symbols (TREE_OPERAND (scev, 0))
 	     && chrec_contains_symbols (TREE_OPERAND (scev, 1)))
+	&& graphite_can_represent_init (scev)
 	&& graphite_can_represent_scev (TREE_OPERAND (scev, 0), outermost_loop)
 	&& graphite_can_represent_scev (TREE_OPERAND (scev, 1), outermost_loop);
 
@@ -934,9 +935,6 @@ create_single_exit_edge (sd_region *region)
   edge forwarder = NULL;
   basic_block exit;
 
-  if (find_single_exit_edge (region))
-    return;
-
   /* We create a forwarder bb (5) for all edges leaving this region
      (3->5, 4->5).  All other edges leading to the same bb, are moved
      to a new bb (6).  If these edges where part of another region (2->5)
@@ -1030,7 +1028,10 @@ create_sese_edges (VEC (sd_region, heap) *regions)
   mark_exit_edges (regions);
 
   for (i = 0; VEC_iterate (sd_region, regions, i, s); i++)
-    create_single_exit_edge (s);
+    /* Don't handle multiple edges exiting the function.  */
+    if (!find_single_exit_edge (s)
+	&& s->exit != EXIT_BLOCK_PTR)
+      create_single_exit_edge (s);
 
   unmark_exit_edges (regions);
 
@@ -1056,7 +1057,12 @@ build_graphite_scops (VEC (sd_region, heap) *regions,
     {
       edge entry = find_single_entry_edge (s);
       edge exit = find_single_exit_edge (s);
-      scop_p scop = new_scop (new_sese (entry, exit));
+      scop_p scop;
+
+      if (!exit)
+	continue;
+
+      scop = new_scop (new_sese (entry, exit));
       VEC_safe_push (scop_p, heap, *scops, scop);
 
       /* Are there overlapping SCoPs?  */
@@ -1322,7 +1328,7 @@ build_scops (VEC (scop_p, heap) **scops)
 
   canonicalize_loop_closed_ssa_form ();
   build_scops_1 (single_succ (ENTRY_BLOCK_PTR), ENTRY_BLOCK_PTR->loop_father,
-			      &regions, loop);
+		 &regions, loop);
   create_sese_edges (regions);
   build_graphite_scops (regions, scops);
 
@@ -1497,7 +1503,7 @@ dot_all_scops (VEC (scop_p, heap) *scops)
   dot_all_scops_1 (stream, scops);
   fclose (stream);
 
-  x = system ("dotty /tmp/allscops.dot");
+  x = system ("dotty /tmp/allscops.dot &");
 #else
   dot_all_scops_1 (stderr, scops);
 #endif
@@ -1523,7 +1529,7 @@ dot_scop (scop_p scop)
 
     dot_all_scops_1 (stream, scops);
     fclose (stream);
-    x = system ("dotty /tmp/allscops.dot");
+    x = system ("dotty /tmp/allscops.dot &");
   }
 #else
   dot_all_scops_1 (stderr, scops);

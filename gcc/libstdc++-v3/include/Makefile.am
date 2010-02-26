@@ -1,6 +1,6 @@
 #o# Makefile for the include subdirectory of the GNU C++ Standard library.
 ##
-## Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+## Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
 ## Free Software Foundation, Inc.
 ##
 ## This file is part of the libstdc++ version 3 distribution.
@@ -31,7 +31,6 @@ std_headers = \
 	${std_srcdir}/array \
 	${std_srcdir}/atomic \
 	${std_srcdir}/bitset \
-	${std_srcdir}/c++0x_warning.h \
 	${std_srcdir}/chrono \
 	${std_srcdir}/complex \
 	${std_srcdir}/condition_variable \
@@ -89,6 +88,7 @@ bits_headers = \
 	${bits_srcdir}/basic_string.h \
 	${bits_srcdir}/basic_string.tcc \
 	${bits_srcdir}/boost_concept_check.h \
+	${bits_srcdir}/c++0x_warning.h \
 	${bits_srcdir}/char_traits.h \
 	${bits_srcdir}/codecvt.h \
 	${bits_srcdir}/concept_check.h \
@@ -102,6 +102,7 @@ bits_headers = \
 	${bits_srcdir}/gslice.h \
 	${bits_srcdir}/gslice_array.h \
 	${bits_srcdir}/hashtable.h \
+	${bits_srcdir}/hashtable_policy.h \
 	${bits_srcdir}/indirect_array.h \
 	${bits_srcdir}/ios_base.h \
 	${bits_srcdir}/istream.tcc \
@@ -154,6 +155,8 @@ bits_headers = \
 	${bits_srcdir}/streambuf.tcc \
 	${bits_srcdir}/stringfwd.h \
 	${bits_srcdir}/unique_ptr.h \
+	${bits_srcdir}/unordered_map.h \
+	${bits_srcdir}/unordered_set.h \
 	${bits_srcdir}/valarray_array.h \
 	${bits_srcdir}/valarray_array.tcc \
 	${bits_srcdir}/valarray_before.h \
@@ -566,6 +569,7 @@ tr1_headers = \
 	${tr1_srcdir}/gamma.tcc \
 	${tr1_srcdir}/hypergeometric.tcc \
 	${tr1_srcdir}/hashtable.h \
+	${tr1_srcdir}/hashtable_policy.h \
 	${tr1_srcdir}/inttypes.h \
 	${tr1_srcdir}/limits.h \
 	${tr1_srcdir}/math.h \
@@ -589,8 +593,10 @@ tr1_headers = \
 	${tr1_srcdir}/tgmath.h \
 	${tr1_srcdir}/tuple \
 	${tr1_srcdir}/type_traits \
-	${tr1_srcdir}/unordered_set \
 	${tr1_srcdir}/unordered_map \
+	${tr1_srcdir}/unordered_map.h \
+	${tr1_srcdir}/unordered_set \
+	${tr1_srcdir}/unordered_set.h \
 	${tr1_srcdir}/utility \
 	${tr1_srcdir}/wchar.h \
 	${tr1_srcdir}/wctype.h
@@ -611,12 +617,8 @@ tr1_impl_headers = \
 	${tr1_impl_srcdir}/cstdlib \
 	${tr1_impl_srcdir}/cwchar \
 	${tr1_impl_srcdir}/cwctype \
-	${tr1_impl_srcdir}/hashtable \
-	${tr1_impl_srcdir}/hashtable_policy.h \
 	${tr1_impl_srcdir}/regex \
 	${tr1_impl_srcdir}/type_traits \
-	${tr1_impl_srcdir}/unordered_map \
-	${tr1_impl_srcdir}/unordered_set \
 	${tr1_impl_srcdir}/utility
 
 decimal_srcdir = ${glibcxx_srcdir}/include/decimal

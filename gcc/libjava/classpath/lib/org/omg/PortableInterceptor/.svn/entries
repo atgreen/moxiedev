@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/org/omg/PortableInterceptor
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,6 +536,9 @@ has-props
 
 1808
 
+ORBInitInfoPackage
+dir
+
 ObjectReferenceTemplateSeqHelper.class
 file
 
@@ -569,9 +572,6 @@ has-props
 
 
 3255
-
-ORBInitInfoPackage
-dir
 
 PolicyFactoryOperations.class
 file
@@ -607,40 +607,6 @@ has-props
 
 280
 
-USER_EXCEPTION.class
-file
-
-
-
-
-2009-04-24T17:48:29.000000Z
-e999e3b8abd049b4f0975e8159c2d0cd
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-186
-
 LOCATION_FORWARD.class
 file
 
@@ -674,6 +640,40 @@ has-props
 
 
 190
+
+USER_EXCEPTION.class
+file
+
+
+
+
+2009-04-24T17:48:29.000000Z
+e999e3b8abd049b4f0975e8159c2d0cd
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+186
 
 Interceptor.class
 file
@@ -709,40 +709,6 @@ has-props
 
 256
 
-ServerRequestInfoOperations.class
-file
-
-
-
-
-2009-04-24T17:48:29.000000Z
-dbc16ced307b573cc2eef1e6066ebec7
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-793
-
 ORBIdHelper.class
 file
 
@@ -777,14 +743,14 @@ has-props
 
 1753
 
-ServerRequestInterceptorOperations.class
+ServerRequestInfoOperations.class
 file
 
 
 
 
 2009-04-24T17:48:29.000000Z
-b0eb4a389a7ce6dc332210370c1c4586
+dbc16ced307b573cc2eef1e6066ebec7
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -809,7 +775,7 @@ has-props
 
 
 
-524
+793
 
 SYSTEM_EXCEPTION.class
 file
@@ -844,6 +810,40 @@ has-props
 
 
 190
+
+ServerRequestInterceptorOperations.class
+file
+
+
+
+
+2009-04-24T17:48:29.000000Z
+b0eb4a389a7ce6dc332210370c1c4586
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+524
 
 ClientRequestInfo.class
 file

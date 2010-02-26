@@ -125,6 +125,7 @@ gfc_init_options (unsigned int argc, const char **argv)
   gfc_option.flag_init_character = GFC_INIT_CHARACTER_OFF;
   gfc_option.flag_init_character_value = (char)0;
   gfc_option.flag_align_commons = 1;
+  gfc_option.flag_protect_parens = 1;
   
   gfc_option.fpe = 0;
   gfc_option.rtcheck = 0;
@@ -482,11 +483,12 @@ gfc_handle_runtime_check_option (const char *arg)
 {
   int result, pos = 0, n;
   static const char * const optname[] = { "all", "bounds", "array-temps",
-					  "recursion", "do", "pointer", NULL };
+					  "recursion", "do", "pointer",
+					  "mem", NULL };
   static const int optmask[] = { GFC_RTCHECK_ALL, GFC_RTCHECK_BOUNDS,
 				 GFC_RTCHECK_ARRAY_TEMPS,
 				 GFC_RTCHECK_RECURSION, GFC_RTCHECK_DO,
-				 GFC_RTCHECK_POINTER,
+				 GFC_RTCHECK_POINTER, GFC_RTCHECK_MEM,
 				 0 };
  
   while (*arg)
@@ -918,6 +920,10 @@ gfc_handle_option (size_t scode, const char *arg, int value)
 
     case OPT_falign_commons:
       gfc_option.flag_align_commons = value;
+      break;
+
+    case OPT_fprotect_parens:
+      gfc_option.flag_protect_parens = value;
       break;
 
     case OPT_fcheck_:

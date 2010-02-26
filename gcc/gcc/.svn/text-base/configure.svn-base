@@ -21421,7 +21421,7 @@ else
     echo '	.text
 	.cfi_startproc
 	.cfi_adjust_cfa_offset 64
-	.skip 512, 0
+	.skip 75031, 0
 	.cfi_adjust_cfa_offset 128
 	.cfi_endproc' > conftest.s
     if { ac_try='$gcc_cv_as $gcc_cv_as_flags  -o conftest.o conftest.s >&5'
@@ -21433,7 +21433,7 @@ else
     then
 
 if $gcc_cv_readelf -wf conftest.o 2>/dev/null \
-    | grep 'DW_CFA_advance_loc[12]:[ 	][ 	]*512[ 	]' >/dev/null; then
+    | grep 'DW_CFA_advance_loc[124]:[ 	][ 	]*75031[ 	]' >/dev/null; then
    gcc_cv_as_cfi_advance_working=yes
 fi
 
@@ -22488,6 +22488,51 @@ $as_echo "$gcc_cv_as_sparc_relax" >&6; }
 if test $gcc_cv_as_sparc_relax = yes; then
 
 $as_echo "#define HAVE_AS_RELAX_OPTION 1" >>confdefs.h
+
+fi
+
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking assembler for GOTDATA_OP relocs" >&5
+$as_echo_n "checking assembler for GOTDATA_OP relocs... " >&6; }
+if test "${gcc_cv_as_sparc_gotdata_op+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  gcc_cv_as_sparc_gotdata_op=no
+  if test x$gcc_cv_as != x; then
+    echo '.text
+foo:
+	nop
+bar:
+	sethi %gdop_hix22(foo), %g1
+	xor    %g1, %gdop_lox10(foo), %g1
+	ld    [%l7 + %g1], %g2, %gdop(foo)' > conftest.s
+    if { ac_try='$gcc_cv_as $gcc_cv_as_flags -K PIC -o conftest.o conftest.s >&5'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }
+    then
+	if test x$gcc_cv_ld != x \
+       && $gcc_cv_ld -o conftest conftest.o -G > /dev/null 2>&1 \
+       && (test x$gnu_ld_flag = xno \
+           || (test x$gcc_cv_objdump != x \
+               && $gcc_cv_objdump -s -j .text conftest.o 2> /dev/null \
+                  | grep ' 03000004 82186004 c405c001'> /dev/null 2>&1)); then
+	 gcc_cv_as_sparc_gotdata_op=yes
+       fi
+       rm -f conftest
+    else
+      echo "configure: failed program was" >&5
+      cat conftest.s >&5
+    fi
+    rm -f conftest.o conftest.s
+  fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gcc_cv_as_sparc_gotdata_op" >&5
+$as_echo "$gcc_cv_as_sparc_gotdata_op" >&6; }
+if test $gcc_cv_as_sparc_gotdata_op = yes; then
+
+$as_echo "#define HAVE_AS_SPARC_GOTDATA_OP 1" >>confdefs.h
 
 fi
 
@@ -24221,8 +24266,8 @@ if test $gcc_cv_as_gnu_unique_object = yes; then
   # Also check for ld.so support, i.e. glibc 2.11 or higher.
    if test x$host = x$build -a x$host = x$target &&
        glibcver=`ldd --version 2>/dev/null | sed 's/.* //;q'`; then
-      glibcmajor=`expr "$glibcver" : "\(0-9*\)"`
-      glibcminor=`expr "$glibcver" : "2-9*\.\(0-9*\)"`
+      glibcmajor=`expr "$glibcver" : "\([0-9]*\)"`
+      glibcminor=`expr "$glibcver" : "[2-9]*\.\([0-9]*\)"`
       glibcnum=`expr $glibcmajor \* 1000 + $glibcminor`
       if test "$glibcnum" -ge 2011 ; then
         enable_gnu_unique_object=yes

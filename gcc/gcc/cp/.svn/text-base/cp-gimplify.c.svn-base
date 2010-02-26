@@ -552,6 +552,24 @@ cp_gimplify_expr (tree *expr_p, gimple_seq *pre_p, gimple_seq *post_p)
 	 25979.  */
     case INIT_EXPR:
       cp_gimplify_init_expr (expr_p, pre_p, post_p);
+      if (TREE_CODE (*expr_p) != INIT_EXPR)
+	return GS_OK;
+      /* Otherwise fall through.  */
+    case MODIFY_EXPR:
+      {
+	/* If the back end isn't clever enough to know that the lhs and rhs
+	   types are the same, add an explicit conversion.  */
+	tree op0 = TREE_OPERAND (*expr_p, 0);
+	tree op1 = TREE_OPERAND (*expr_p, 1);
+
+	if (!error_operand_p (op0)
+	    && !error_operand_p (op1)
+	    && (TYPE_STRUCTURAL_EQUALITY_P (TREE_TYPE (op0))
+		|| TYPE_STRUCTURAL_EQUALITY_P (TREE_TYPE (op1)))
+	    && !useless_type_conversion_p (TREE_TYPE (op1), TREE_TYPE (op0)))
+	  TREE_OPERAND (*expr_p, 1) = build1 (VIEW_CONVERT_EXPR,
+					      TREE_TYPE (op0), op1);
+      }
       ret = GS_OK;
       break;
 
@@ -864,15 +882,6 @@ cp_genericize_r (tree *stmt_p, int *walk_subtrees, void *data)
       /* Using decls inside DECL_EXPRs are just dropped on the floor.  */
       *stmt_p = build1 (NOP_EXPR, void_type_node, integer_zero_node);
       *walk_subtrees = 0;
-    }
-
-  else if (TREE_CODE (stmt) == MODIFY_EXPR
-	   && (integer_zerop (cp_expr_size (TREE_OPERAND (stmt, 0)))
-	       || integer_zerop (cp_expr_size (TREE_OPERAND (stmt, 1)))))
-    {
-      *stmt_p = build2 (COMPOUND_EXPR, TREE_TYPE (stmt),
-			TREE_OPERAND (stmt, 0),
-			TREE_OPERAND (stmt, 1));
     }
 
   pointer_set_insert (p_set, *stmt_p);

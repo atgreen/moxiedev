@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/ada/acats/tests/cxf
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ charlet
 
 16061
 
-cxf3a01.a
-file
-
-
-
-
-2009-04-24T17:44:01.000000Z
-1aee0d4b0a06b7063d6235fc8d34096a
-2003-10-27T11:29:00.000000Z
-72977
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6601
-
 cxf2a02.a
 file
 
@@ -127,6 +93,40 @@ charlet
 
 
 12922
+
+cxf3a01.a
+file
+
+
+
+
+2009-04-24T17:44:01.000000Z
+1aee0d4b0a06b7063d6235fc8d34096a
+2003-10-27T11:29:00.000000Z
+72977
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6601
 
 cxf3a02.a
 file
@@ -434,40 +434,6 @@ charlet
 
 29035
 
-cxf3001.a
-file
-
-
-
-
-2009-04-24T17:44:01.000000Z
-2ffc00ccfb476a6822050bacce9f38f0
-2003-10-27T11:29:00.000000Z
-72977
-charlet
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-7153
-
 cxf2002.a
 file
 
@@ -501,6 +467,40 @@ charlet
 
 
 11722
+
+cxf3001.a
+file
+
+
+
+
+2009-04-24T17:44:01.000000Z
+2ffc00ccfb476a6822050bacce9f38f0
+2003-10-27T11:29:00.000000Z
+72977
+charlet
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7153
 
 cxf3002.a
 file

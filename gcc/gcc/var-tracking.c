@@ -109,6 +109,8 @@
 #include "tree-flow.h"
 #include "cselib.h"
 #include "target.h"
+#include "toplev.h"
+#include "params.h"
 
 /* var-tracking.c assumes that tree code with the same value as VALUE rtx code
    has no chance to appear in REG_EXPR/MEM_EXPRs and isn't a decl.
@@ -345,9 +347,6 @@ typedef struct value_chain_def
 } *value_chain;
 typedef const struct value_chain_def *const_value_chain;
 
-/* Hash function for DECL for VARIABLE_HTAB.  */
-#define VARIABLE_HASH_VAL(decl) (DECL_UID (decl))
-
 /* Pointer to the BB's information specific to variable tracking pass.  */
 #define VTI(BB) ((variable_tracking_info) (BB)->aux)
 
@@ -451,7 +450,7 @@ static int add_uses (rtx *, void *);
 static void add_uses_1 (rtx *, void *);
 static void add_stores (rtx, const_rtx, void *);
 static bool compute_bb_dataflow (basic_block);
-static void vt_find_locations (void);
+static bool vt_find_locations (void);
 
 static void dump_attrs_list (attrs);
 static int dump_var_slot (void **, void *);
@@ -820,13 +819,33 @@ dv_from_value (rtx value)
   return dv;
 }
 
+typedef unsigned int dvuid;
+
+/* Return the uid of DV.  */
+
+static inline dvuid
+dv_uid (decl_or_value dv)
+{
+  if (dv_is_value_p (dv))
+    return CSELIB_VAL_PTR (dv_as_value (dv))->uid;
+  else
+    return DECL_UID (dv_as_decl (dv));
+}
+
+/* Compute the hash from the uid.  */
+
+static inline hashval_t
+dv_uid2hash (dvuid uid)
+{
+  return uid;
+}
+
+/* The hash function for a mask table in a shared_htab chain.  */
+
 static inline hashval_t
 dv_htab_hash (decl_or_value dv)
 {
-  if (dv_is_value_p (dv))
-    return -(hashval_t)(CSELIB_VAL_PTR (dv_as_value (dv))->value);
-  else
-    return (VARIABLE_HASH_VAL (dv_as_decl (dv)));
+  return dv_uid2hash (dv_uid (dv));
 }
 
 /* The hash function for variable_htab, computes the hash value
@@ -848,29 +867,7 @@ variable_htab_eq (const void *x, const void *y)
   const_variable const v = (const_variable) x;
   decl_or_value dv = CONST_CAST2 (decl_or_value, const void *, y);
 
-  if (dv_as_opaque (v->dv) == dv_as_opaque (dv))
-    return true;
-
-#if ENABLE_CHECKING
-  {
-    bool visv, dvisv;
-
-    visv = dv_is_value_p (v->dv);
-    dvisv = dv_is_value_p (dv);
-
-    if (visv != dvisv)
-      return false;
-
-    if (visv)
-      gcc_assert (CSELIB_VAL_PTR (dv_as_value (v->dv))
-		  != CSELIB_VAL_PTR (dv_as_value (dv)));
-    else
-      gcc_assert (VARIABLE_HASH_VAL (dv_as_decl (v->dv))
-		  != VARIABLE_HASH_VAL (dv_as_decl (dv)));
-  }
-#endif
-
-  return false;
+  return (dv_as_opaque (v->dv) == dv_as_opaque (dv));
 }
 
 /* Free the element of VARIABLE_HTAB (its type is struct variable_def).  */
@@ -1151,23 +1148,6 @@ shared_hash_find (shared_hash vars, decl_or_value dv)
   return shared_hash_find_1 (vars, dv, dv_htab_hash (dv));
 }
 
-/* Determine a total order between two distinct pointers.  Compare the
-   pointers as integral types if size_t is wide enough, otherwise
-   resort to bitwise memory compare.  The actual order does not
-   matter, we just need to be consistent, so endianness is
-   irrelevant.  */
-
-static int
-tie_break_pointers (const void *p1, const void *p2)
-{
-  gcc_assert (p1 != p2);
-
-  if (sizeof (size_t) >= sizeof (void*))
-    return (size_t)p1 < (size_t)p2 ? -1 : 1;
-  else
-    return memcmp (&p1, &p2, sizeof (p1));
-}
-
 /* Return true if TVAL is better than CVAL as a canonival value.  We
    choose lowest-numbered VALUEs, using the RTX address as a
    tie-breaker.  The idea is to arrange them into a star topology,
@@ -1181,9 +1161,7 @@ static inline bool
 canon_value_cmp (rtx tval, rtx cval)
 {
   return !cval
-    || CSELIB_VAL_PTR (tval)->value < CSELIB_VAL_PTR (cval)->value
-    || (CSELIB_VAL_PTR (tval)->value == CSELIB_VAL_PTR (cval)->value
-	&& tie_break_pointers (tval, cval) < 0);
+    || CSELIB_VAL_PTR (tval)->uid < CSELIB_VAL_PTR (cval)->uid;
 }
 
 static bool dst_can_be_shared;
@@ -3563,8 +3541,8 @@ variable_post_merge_new_vals (void **slot, void *info)
 		      cdv = dv_from_value (cval);
 		      if (dump_file)
 			fprintf (dump_file,
-				 "Created new value %i for reg %i\n",
-				 v->value, REGNO (node->loc));
+				 "Created new value %u:%u for reg %i\n",
+				 v->uid, v->hash, REGNO (node->loc));
 		    }
 
 		  var_reg_decl_set (*dfpm->permp, node->loc,
@@ -4172,7 +4150,7 @@ track_expr_p (tree expr, bool need_rtl)
     return 0;
 
   /* It also must have a name...  */
-  if (!DECL_NAME (expr))
+  if (!DECL_NAME (expr) && need_rtl)
     return 0;
 
   /* ... and a RTL assigned to it.  */
@@ -5534,7 +5512,7 @@ compute_bb_dataflow (basic_block bb)
 
 /* Find the locations of variables in the whole function.  */
 
-static void
+static bool
 vt_find_locations (void)
 {
   fibheap_t worklist, pending, fibheap_swap;
@@ -5545,6 +5523,8 @@ vt_find_locations (void)
   int *rc_order;
   int i;
   int htabsz = 0;
+  int htabmax = PARAM_VALUE (PARAM_MAX_VARTRACK_SIZE);
+  bool success = true;
 
   /* Compute reverse completion order of depth first search of the CFG
      so that the data-flow runs faster.  */
@@ -5566,7 +5546,7 @@ vt_find_locations (void)
     fibheap_insert (pending, bb_order[bb->index], bb);
   sbitmap_ones (in_pending);
 
-  while (!fibheap_empty (pending))
+  while (success && !fibheap_empty (pending))
     {
       fibheap_swap = pending;
       pending = worklist;
@@ -5589,11 +5569,11 @@ vt_find_locations (void)
 
 	      SET_BIT (visited, bb->index);
 
-	      if (dump_file && VTI (bb)->in.vars)
+	      if (VTI (bb)->in.vars)
 		{
 		  htabsz
-		    -= htab_size (shared_hash_htab (VTI (bb)->in.vars))
-		       + htab_size (shared_hash_htab (VTI (bb)->out.vars));
+		    -= (htab_size (shared_hash_htab (VTI (bb)->in.vars))
+			+ htab_size (shared_hash_htab (VTI (bb)->out.vars)));
 		  oldinsz
 		    = htab_elements (shared_hash_htab (VTI (bb)->in.vars));
 		  oldoutsz
@@ -5657,9 +5637,21 @@ vt_find_locations (void)
 		}
 
 	      changed = compute_bb_dataflow (bb);
-	      if (dump_file)
-		htabsz += htab_size (shared_hash_htab (VTI (bb)->in.vars))
-			  + htab_size (shared_hash_htab (VTI (bb)->out.vars));
+	      htabsz += (htab_size (shared_hash_htab (VTI (bb)->in.vars))
+			 + htab_size (shared_hash_htab (VTI (bb)->out.vars)));
+
+	      if (htabmax && htabsz > htabmax)
+		{
+		  if (MAY_HAVE_DEBUG_INSNS)
+		    inform (DECL_SOURCE_LOCATION (cfun->decl),
+			    "variable tracking size limit exceeded with "
+			    "-fvar-tracking-assignments, retrying without");
+		  else
+		    inform (DECL_SOURCE_LOCATION (cfun->decl),
+			    "variable tracking size limit exceeded");
+		  success = false;
+		  break;
+		}
 
 	      if (changed)
 		{
@@ -5710,7 +5702,7 @@ vt_find_locations (void)
 	}
     }
 
-  if (MAY_HAVE_DEBUG_INSNS)
+  if (success && MAY_HAVE_DEBUG_INSNS)
     FOR_EACH_BB (bb)
       gcc_assert (VTI (bb)->flooded);
 
@@ -5721,6 +5713,8 @@ vt_find_locations (void)
   sbitmap_free (visited);
   sbitmap_free (in_worklist);
   sbitmap_free (in_pending);
+
+  return success;
 }
 
 /* Print the content of the LIST to dump file.  */
@@ -7336,7 +7330,7 @@ vt_add_function_parameters (void)
   if (MAY_HAVE_DEBUG_INSNS)
     {
       cselib_preserve_only_values (true);
-      cselib_reset_table_with_next_value (cselib_get_next_unknown_value ());
+      cselib_reset_table (cselib_get_next_uid ());
     }
 
 }
@@ -7369,15 +7363,15 @@ vt_initialize (void)
       rtx insn;
       HOST_WIDE_INT pre, post = 0;
       int count;
-      unsigned int next_value_before = cselib_get_next_unknown_value ();
-      unsigned int next_value_after = next_value_before;
+      unsigned int next_uid_before = cselib_get_next_uid ();
+      unsigned int next_uid_after = next_uid_before;
 
       if (MAY_HAVE_DEBUG_INSNS)
 	{
 	  cselib_record_sets_hook = count_with_sets;
 	  if (dump_file && (dump_flags & TDF_DETAILS))
 	    fprintf (dump_file, "first value: %i\n",
-		     cselib_get_next_unknown_value ());
+		     cselib_get_next_uid ());
 	}
 
       /* Count the number of micro operations.  */
@@ -7432,12 +7426,12 @@ vt_initialize (void)
       if (MAY_HAVE_DEBUG_INSNS)
 	{
 	  cselib_preserve_only_values (false);
-	  next_value_after = cselib_get_next_unknown_value ();
-	  cselib_reset_table_with_next_value (next_value_before);
+	  next_uid_after = cselib_get_next_uid ();
+	  cselib_reset_table (next_uid_before);
 	  cselib_record_sets_hook = add_with_sets;
 	  if (dump_file && (dump_flags & TDF_DETAILS))
 	    fprintf (dump_file, "first value: %i\n",
-		     cselib_get_next_unknown_value ());
+		     cselib_get_next_uid ());
 	}
 
       /* Add the micro-operations to the array.  */
@@ -7496,8 +7490,8 @@ vt_initialize (void)
       if (MAY_HAVE_DEBUG_INSNS)
 	{
 	  cselib_preserve_only_values (true);
-	  gcc_assert (next_value_after == cselib_get_next_unknown_value ());
-	  cselib_reset_table_with_next_value (next_value_after);
+	  gcc_assert (next_uid_after == cselib_get_next_uid ());
+	  cselib_reset_table (next_uid_after);
 	  cselib_record_sets_hook = NULL;
 	}
     }
@@ -7623,9 +7617,11 @@ vt_finalize (void)
 
 /* The entry point to variable tracking pass.  */
 
-unsigned int
-variable_tracking_main (void)
+static inline unsigned int
+variable_tracking_main_1 (void)
 {
+  bool success;
+
   if (flag_var_tracking_assignments < 0)
     {
       delete_debug_insns ();
@@ -7650,7 +7646,31 @@ variable_tracking_main (void)
 	}
     }
 
-  vt_find_locations ();
+  success = vt_find_locations ();
+
+  if (!success && flag_var_tracking_assignments > 0)
+    {
+      vt_finalize ();
+
+      delete_debug_insns ();
+
+      /* This is later restored by our caller.  */
+      flag_var_tracking_assignments = 0;
+
+      vt_initialize ();
+
+      if (!frame_pointer_needed && !vt_stack_adjustments ())
+	gcc_unreachable ();
+
+      success = vt_find_locations ();
+    }
+
+  if (!success)
+    {
+      vt_finalize ();
+      vt_debug_insns_local (false);
+      return 0;
+    }
 
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
@@ -7663,6 +7683,19 @@ variable_tracking_main (void)
   vt_finalize ();
   vt_debug_insns_local (false);
   return 0;
+}
+
+unsigned int
+variable_tracking_main (void)
+{
+  unsigned int ret;
+  int save = flag_var_tracking_assignments;
+
+  ret = variable_tracking_main_1 ();
+
+  flag_var_tracking_assignments = save;
+
+  return ret;
 }
 
 static bool

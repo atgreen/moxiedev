@@ -546,10 +546,8 @@ finish_goto_stmt (tree destination)
     TREE_USED (destination) = 1;
   else
     {
-      /* The DESTINATION is being used as an rvalue.  */
       if (!processing_template_decl)
 	{
-	  destination = decay_conversion (destination);
 	  destination = cp_convert (ptr_type_node, destination);
 	  if (error_operand_p (destination))
 	    return NULL_TREE;
@@ -2257,6 +2255,7 @@ finish_compound_literal (tree type, tree compound_literal)
       tree decl = create_temporary_var (type);
       DECL_INITIAL (decl) = compound_literal;
       TREE_STATIC (decl) = 1;
+      cp_apply_type_quals_to_decl (cp_type_quals (type), decl);
       decl = pushdecl_top_level (decl);
       DECL_NAME (decl) = make_anon_name ();
       SET_DECL_ASSEMBLER_NAME (decl, DECL_NAME (decl));
@@ -2377,6 +2376,7 @@ begin_class_definition (tree t, tree attributes)
       tree ns = TYPE_CONTEXT (t);
       if (ns && TREE_CODE (ns) == NAMESPACE_DECL
 	  && DECL_CONTEXT (ns) == std_node
+	  && DECL_NAME (ns)
 	  && !strcmp (IDENTIFIER_POINTER (DECL_NAME (ns)), "decimal"))
 	{
 	  const char *n = TYPE_NAME_STRING (t);
@@ -5584,7 +5584,7 @@ apply_lambda_return_type (tree lambda, tree return_type)
 
   /* TREE_TYPE (FUNCTION_DECL) == METHOD_TYPE
      TREE_TYPE (METHOD_TYPE)   == return-type  */
-  TREE_TYPE (TREE_TYPE (fco)) = return_type;
+  TREE_TYPE (fco) = change_return_type (return_type, TREE_TYPE (fco));
 
   result = DECL_RESULT (fco);
   if (result == NULL_TREE)
@@ -5689,8 +5689,9 @@ add_capture (tree lambda, tree id, tree initializer, bool by_reference_p,
        always visible.  */
     DECL_NORMAL_CAPTURE_P (member) = true;
 
-  /* Add it to the appropriate closure class.  */
-  finish_member_declaration (member);
+  /* Add it to the appropriate closure class if we've started it.  */
+  if (current_class_type && current_class_type == TREE_TYPE (lambda))
+    finish_member_declaration (member);
 
   LAMBDA_EXPR_CAPTURE_LIST (lambda)
     = tree_cons (member, initializer, LAMBDA_EXPR_CAPTURE_LIST (lambda));
@@ -5703,6 +5704,18 @@ add_capture (tree lambda, tree id, tree initializer, bool by_reference_p,
     }
 
   return member;
+}
+
+/* Register all the capture members on the list CAPTURES, which is the
+   LAMBDA_EXPR_CAPTURE_LIST for the lambda after the introducer.  */
+
+void register_capture_members (tree captures)
+{
+  if (captures)
+    {
+      register_capture_members (TREE_CHAIN (captures));
+      finish_member_declaration (TREE_PURPOSE (captures));
+    }
 }
 
 /* Given a FIELD_DECL decl belonging to a closure type, return a
@@ -5871,6 +5884,8 @@ maybe_add_lambda_conv_op (tree type)
   DECL_NOT_REALLY_EXTERN (fn) = 1;
   DECL_DECLARED_INLINE_P (fn) = 1;
   DECL_STATIC_FUNCTION_P (fn) = 1;
+  if (nested)
+    DECL_INTERFACE_KNOWN (fn) = 1;
 
   add_method (type, fn, NULL_TREE);
 

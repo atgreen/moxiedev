@@ -898,7 +898,7 @@ decode_options (unsigned int argc, const char **argv)
   flag_tree_vrp = opt2;
   flag_tree_builtin_call_dce = opt2;
   flag_tree_pre = opt2;
-  flag_tree_switch_conversion = 1;
+  flag_tree_switch_conversion = opt2;
   flag_ipa_cp = opt2;
   flag_ipa_sra = opt2;
 
@@ -2126,6 +2126,7 @@ common_handle_option (size_t scode, const char *arg, int value,
     case OPT_fcse_skip_blocks:
     case OPT_floop_optimize:
     case OPT_frerun_loop_opt:
+    case OPT_fsched2_use_traces:
     case OPT_fstrength_reduce:
     case OPT_ftree_store_copy_prop:
     case OPT_fforce_addr:

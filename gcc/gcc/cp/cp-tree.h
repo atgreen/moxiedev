@@ -4167,8 +4167,8 @@ enum overload_flags { NO_SPECIAL = 0, DTOR_FLAG, TYPENAME_FLAG };
 #define WANT_ENUM	4 /* enumerated types */
 #define WANT_POINTER	8 /* pointer types */
 #define WANT_NULL      16 /* null pointer constant */
-#define WANT_VECTOR    32 /* vector types */
-#define WANT_ARITH	(WANT_INT | WANT_FLOAT | WANT_VECTOR)
+#define WANT_VECTOR_OR_COMPLEX 32 /* vector or complex types */
+#define WANT_ARITH	(WANT_INT | WANT_FLOAT | WANT_VECTOR_OR_COMPLEX)
 
 /* Used with comptypes, and related functions, to guide type
    comparison.  */
@@ -4732,6 +4732,7 @@ extern tree cxx_maybe_build_cleanup		(tree);
 /* in decl2.c */
 extern bool check_java_method			(tree);
 extern tree build_memfn_type			(tree, tree, cp_cv_quals);
+extern tree change_return_type			(tree, tree);
 extern void maybe_retrofit_in_chrg		(tree);
 extern void maybe_make_one_only			(tree);
 extern bool vague_linkage_fn_p			(tree);
@@ -4895,6 +4896,7 @@ extern tree process_template_parm		(tree, location_t, tree,
 						 bool, bool);
 extern tree end_template_parm_list		(tree);
 extern void end_template_decl			(void);
+extern tree maybe_update_decl_type		(tree, tree);
 extern bool check_default_tmpl_args             (tree, tree, int, int, int);
 extern tree push_template_decl			(tree);
 extern tree push_template_decl_real		(tree, bool);
@@ -5192,6 +5194,7 @@ extern tree lambda_function			(tree);
 extern void apply_lambda_return_type            (tree, tree);
 extern tree add_capture                         (tree, tree, tree, bool, bool);
 extern tree add_default_capture                 (tree, tree, tree);
+extern void register_capture_members		(tree);
 extern tree lambda_expr_this_capture            (tree);
 extern void maybe_add_lambda_conv_op            (tree);
 
@@ -5443,7 +5446,6 @@ extern bool cp_dump_tree			(void *, tree);
 
 extern alias_set_type cxx_get_alias_set		(tree);
 extern bool cxx_warn_unused_global_decl		(const_tree);
-extern tree cp_expr_size			(const_tree);
 extern size_t cp_tree_size			(enum tree_code);
 extern bool cp_var_mod_type_p			(tree, tree);
 extern void cxx_initialize_diagnostics		(struct diagnostic_context *);

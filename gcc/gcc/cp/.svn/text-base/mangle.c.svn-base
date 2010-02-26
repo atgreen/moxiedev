@@ -1117,9 +1117,54 @@ write_template_prefix (const tree node)
     <local-source-name>	::= L <source-name> <discriminator> */
 
 static void
+write_unqualified_id (tree identifier)
+{
+  if (IDENTIFIER_TYPENAME_P (identifier))
+    write_conversion_operator_name (TREE_TYPE (identifier));
+  else if (IDENTIFIER_OPNAME_P (identifier))
+    {
+      int i;
+      const char *mangled_name = NULL;
+
+      /* Unfortunately, there is no easy way to go from the
+	 name of the operator back to the corresponding tree
+	 code.  */
+      for (i = 0; i < MAX_TREE_CODES; ++i)
+	if (operator_name_info[i].identifier == identifier)
+	  {
+	    /* The ABI says that we prefer binary operator
+	       names to unary operator names.  */
+	    if (operator_name_info[i].arity == 2)
+	      {
+		mangled_name = operator_name_info[i].mangled_name;
+		break;
+	      }
+	    else if (!mangled_name)
+	      mangled_name = operator_name_info[i].mangled_name;
+	  }
+	else if (assignment_operator_name_info[i].identifier
+		 == identifier)
+	  {
+	    mangled_name
+	      = assignment_operator_name_info[i].mangled_name;
+	    break;
+	  }
+      write_string (mangled_name);
+    }
+  else
+    write_source_name (identifier);
+}
+
+static void
 write_unqualified_name (const tree decl)
 {
   MANGLE_TRACE_TREE ("unqualified-name", decl);
+
+  if (TREE_CODE (decl) == IDENTIFIER_NODE)
+    {
+      write_unqualified_id (decl);
+      return;
+    }
 
   if (DECL_NAME (decl) == NULL_TREE)
     {
@@ -1850,7 +1895,19 @@ write_type (tree type)
 	      break;
 
 	    case VECTOR_TYPE:
-	      write_string ("U8__vector");
+	      if (abi_version_at_least (4))
+		{
+		  write_string ("Dv");
+		  /* Non-constant vector size would be encoded with
+		     _ expression, but we don't support that yet.  */
+		  write_unsigned_number (TYPE_VECTOR_SUBPARTS (type));
+		  write_char ('_');
+		}
+	      else
+		{
+		  G.need_abi_warning = 1;
+		  write_string ("U8__vector");
+		}
 	      write_type (TREE_TYPE (type));
 	      break;
 
@@ -2303,7 +2360,7 @@ static void
 write_member_name (tree member)
 {
   if (TREE_CODE (member) == IDENTIFIER_NODE)
-    write_source_name (member);
+    write_unqualified_id (member);
   else if (DECL_P (member))
     write_unqualified_name (member);
   else if (TREE_CODE (member) == TEMPLATE_ID_EXPR)
@@ -2426,57 +2483,9 @@ write_expression (tree expr)
 	write_expression (member);
       else
 	{
-	  tree template_args;
-
 	  write_string ("sr");
 	  write_type (scope);
-	  /* If MEMBER is a template-id, separate the template
-	     from the arguments.  */
-	  if (TREE_CODE (member) == TEMPLATE_ID_EXPR)
-	    {
-	      template_args = TREE_OPERAND (member, 1);
-	      member = TREE_OPERAND (member, 0);
-	    }
-	  else
-	    template_args = NULL_TREE;
-	  /* Write out the name of the MEMBER.  */
-	  if (IDENTIFIER_TYPENAME_P (member))
-	    write_conversion_operator_name (TREE_TYPE (member));
-	  else if (IDENTIFIER_OPNAME_P (member))
-	    {
-	      int i;
-	      const char *mangled_name = NULL;
-
-	      /* Unfortunately, there is no easy way to go from the
-		 name of the operator back to the corresponding tree
-		 code.  */
-	      for (i = 0; i < MAX_TREE_CODES; ++i)
-		if (operator_name_info[i].identifier == member)
-		  {
-		    /* The ABI says that we prefer binary operator
-		       names to unary operator names.  */
-		    if (operator_name_info[i].arity == 2)
-		      {
-			mangled_name = operator_name_info[i].mangled_name;
-			break;
-		      }
-		    else if (!mangled_name)
-		      mangled_name = operator_name_info[i].mangled_name;
-		  }
-		else if (assignment_operator_name_info[i].identifier
-			 == member)
-		  {
-		    mangled_name
-		      = assignment_operator_name_info[i].mangled_name;
-		    break;
-		  }
-	      write_string (mangled_name);
-	    }
-	  else
-	    write_source_name (member);
-	  /* Write out the template arguments.  */
-	  if (template_args)
-	    write_template_args (template_args);
+	  write_member_name (member);
 	}
     }
   else if (TREE_CODE (expr) == INDIRECT_REF
@@ -2484,6 +2493,25 @@ write_expression (tree expr)
 	   && TREE_CODE (TREE_TYPE (TREE_OPERAND (expr, 0))) == REFERENCE_TYPE)
     {
       write_expression (TREE_OPERAND (expr, 0));
+    }
+  else if (TREE_CODE (expr) == IDENTIFIER_NODE)
+    {
+      /* An operator name appearing as a dependent name needs to be
+	 specially marked to disambiguate between a use of the operator
+	 name and a use of the operator in an expression.  */
+      if (IDENTIFIER_OPNAME_P (expr))
+	write_string ("on");
+      write_unqualified_id (expr);
+    }
+  else if (TREE_CODE (expr) == TEMPLATE_ID_EXPR)
+    {
+      tree fn = TREE_OPERAND (expr, 0);
+      if (is_overloaded_fn (fn))
+	fn = DECL_NAME (get_first_fn (fn));
+      if (IDENTIFIER_OPNAME_P (fn))
+	write_string ("on");
+      write_unqualified_id (fn);
+      write_template_args (TREE_OPERAND (expr, 1));
     }
   else
     {
@@ -2551,10 +2579,7 @@ write_expression (tree expr)
 		&& type_dependent_expression_p_push (expr))
 	      fn = DECL_NAME (get_first_fn (fn));
 
-	    if (TREE_CODE (fn) == IDENTIFIER_NODE)
-	      write_source_name (fn);
-	    else
-	      write_expression (fn);
+	    write_expression (fn);
 	  }
 
 	  for (i = 0; i < call_expr_nargs (expr); ++i)

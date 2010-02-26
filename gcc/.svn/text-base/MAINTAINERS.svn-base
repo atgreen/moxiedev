@@ -48,6 +48,7 @@ avr port		Denis Chertykov		chertykov@gmail.com
 avr port		Anatoly Sokolov		aesok@post.ru
 avr port		Eric Weddington		eric.weddington@atmel.com
 bfin port		Bernd Schmidt		bernd.schmidt@analog.com
+bfin port		Jie Zhang		jie.zhang@analog.com
 cris port		Hans-Peter Nilsson	hp@axis.com
 crx port		Pompapathi V Gadad 	Pompapathi.V.Gadad@nsc.com
 fr30 port		Nick Clifton		nickc@redhat.com
@@ -94,7 +95,7 @@ sparc port		David S. Miller		davem@redhat.com
 sparc port		Jakub Jelinek		jakub@redhat.com
 sparc port		Eric Botcazou		ebotcazou@libertysurf.fr
 spu port		Trevor Smigiel		trevor_smigiel@playstation.sony.com
-spu port		Andrew Pinski		andrew_pinski@playstation.sony.com
+spu port		Andrew Pinski		pinskia@gmail.com
 spu port		David Edelsohn		edelsohn@gnu.org
 v850 port		Nick Clifton		nickc@redhat.com
 vax port		Matt Thomas		matt@3am-software.com
@@ -105,7 +106,7 @@ xtensa port		Bob Wilson		bob.wilson@acm.org
 			OS Port Maintainers	(OS alphabetical order)
 
 darwin port		Dale Johannesen		dalej@apple.com
-darwin port		Mike Stump		mrs@apple.com
+darwin port		Mike Stump		mikestump@comcast.net
 darwin port		Eric Christopher	echristo@apple.com
 darwin port		Stan Shebs		stanshebs@earthlink.net
 DJGPP			DJ Delorie		dj@delorie.com
@@ -140,7 +141,7 @@ go			Ian Lance Taylor	ian@airs.com
 java			Per Bothner		per@bothner.com
 java			Andrew Haley		aph@redhat.com
 java			Tom Tromey		tromey@redhat.com
-objective-c/c++		Mike Stump		mrs@apple.com
+objective-c/c++		Mike Stump		mikestump@comcast.net
 objective-c/c++		Stan Shebs		stanshebs@earthlink.net
 
 			Various Maintainers
@@ -148,7 +149,7 @@ objective-c/c++		Stan Shebs		stanshebs@earthlink.net
 libcpp			Per Bothner		per@bothner.com
 libcpp			All C and C++ front end maintainers
 fp-bit			Ian Lance Taylor	ian@airs.com
-libdecnumber		Ben Elliston		bje@au.ibm.com
+libdecnumber		Ben Elliston		bje@gnu.org
 libgcc			Ian Lance Taylor	ian@airs.com
 libgcj			Tom Tromey		tromey@redhat.com
 libgcj			Bryce McKinlay		mckinlay@redhat.com
@@ -223,7 +224,7 @@ type-safe vectors	Nathan Sidwell		nathan@codesourcery.com
 alias analysis		Daniel Berlin		dberlin@dberlin.org
 reload			Ulrich Weigand		uweigand@de.ibm.com
 reload			Bernd Schmidt		bernd.schmidt@analog.com
-dfp.c, related		Ben Elliston		bje@au.ibm.com
+dfp.c, related		Ben Elliston		bje@gnu.org
 RTL optimizers		Eric Botcazou		ebotcazou@libertysurf.fr
 auto-vectorizer		Richard Guenther	rguenther@suse.de
 auto-vectorizer		Zdenek Dvorak		ook@ucw.cz
@@ -267,15 +268,12 @@ Fortran			Janus Weil		janus@gcc.gnu.org
 Graphite		Daniel Berlin		dberlin@dberlin.org
 Graphite 		Tobias Grosser		grosser@fim.uni-passau.de
 Graphite		Sebastian Pop		sebastian.pop@amd.com
-Plugin			Rafael Espíndola	espindola@google.com
 register allocation	Peter Bergner		bergner@vnet.ibm.com
 register allocation	Vladimir Makarov	vmakarov@redhat.com
 register allocation	Kenneth Zadeck		zadeck@naturalbridge.com
 register allocation	Seongbae Park		seongbae.park@gmail.com
 LTO			Diego Novillo		dnovillo@google.com
 LTO			Richard Guenther	rguenther@suse.de
-LTO			Rafael Espíndola	espindola@google.com
-LTO plugin		Rafael Espíndola	espindola@google.com
 LTO plugin		Cary Coutant		ccoutant@google.com
 
 Note that while reviewers can approve changes to parts of the compiler
@@ -332,7 +330,7 @@ Phil Edwards					pme@gcc.gnu.org
 Mohan Embar					gnustuff@thisiscool.com
 Revital Eres					eres@il.ibm.com
 Marc Espie					espie@cvs.openbsd.org
-Rafael Ávila de Espíndola			rafael.espindola@gmail.com
+Rafael Ávila de Espíndola			espindola@google.com
 Ansgar Esztermann				ansgar@thphy.uni-duesseldorf.de
 Doug Evans					dje@google.com
 Chris Fairles					cfairles@gcc.gnu.org
@@ -470,7 +468,7 @@ Basile Starynkevitch				basile@starynkevitch.net
 Jakub Staszak					kuba@et.pl
 Graham Stott					graham.stott@btinternet.com
 Andrew Stubbs					ams@codesourcery.com
-Mike Stump					mrs@apple.com
+Mike Stump					mikestump@comcast.net
 Jeff Sturm					jsturm@gcc.gnu.org
 Gabriele Svelto					gabriele.svelto@st.com
 Samuel Tardieu					sam@rfc1149.net
@@ -493,7 +491,6 @@ Le-Chun Wu					lcwu@google.com
 Canqun Yang					canqun@nudt.edu.cn
 Joey Ye						joey.ye@intel.com
 Kenneth Zadeck					zadeck@naturalbridge.com
-Jie Zhang					jie.zhang@analog.com
 Shujing Zhao					pearly.zhao@oracle.com
 Jon Ziegler					jonz@apple.com
 Roman Zippel					zippel@linux-m68k.org

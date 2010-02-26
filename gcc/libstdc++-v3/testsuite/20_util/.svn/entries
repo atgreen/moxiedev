@@ -1,14 +1,14 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-25T18:02:41.541397Z
-156219
+2010-02-22T18:07:07.172615Z
+156971
 paolo
 
 
@@ -102,25 +102,28 @@ dir
 is_lvalue_reference
 dir
 
-enable_if
-dir
-
 has_nothrow_default_constructor
 dir
 
-move
+enable_if
+dir
+
+is_trivial
 dir
 
 make_signed
 dir
 
-time_point
+move
+dir
+
+is_convertible
 dir
 
 is_rvalue_reference
 dir
 
-is_convertible
+time_point
 dir
 
 make_unsigned
@@ -138,16 +141,19 @@ dir
 is_explicitly_convertible
 dir
 
-ratio
+is_pod
 dir
 
-clocks
+has_trivial_default_constructor
 dir
 
 add_lvalue_reference
 dir
 
-has_trivial_default_constructor
+clocks
+dir
+
+ratio
 dir
 
 allocator
@@ -163,6 +169,9 @@ bad_function_call
 dir
 
 aligned_storage
+dir
+
+is_standard_layout
 dir
 
 common_type

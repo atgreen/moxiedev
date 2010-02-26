@@ -1,3 +1,170 @@
+2010-02-25  Jakub Jelinek  <jakub@redhat.com>
+
+	PR debug/43166
+	* trans-common.c (build_common_decl): Also update DECL_MODE,
+	and DECL_SIZE when encountering a larger common block and call
+	layout_decl.
+
+2010-02-24  Tobias Burnus  <burnus@net-b.de>              
+
+	PR fortran/43042
+	* trans-expr.c (gfc_conv_initializer): Call directly
+	gfc_conv_constant for C_NULL_(FUN)PTR.              
+
+2010-02-22  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/43072
+	* dependency.c (gfc_full_array_ref_p): Check for contiguous by
+	checking the rest of the dimensions for elements.
+
+2010-02-21  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/35259
+	* gfortran.h (gfc_option_t): New flag -fprotect-parens.
+	* lang.opt: Ditto.
+	* option.c (gfc_init_options,gfc_handle_option): Ditto.
+	* trans-expr.c (gfc_conv_expr_op): Use the flag.
+	* invoke.texi: Document new -fno-protect-parens flag.
+
+2010-02-20  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/36932
+	PR fortran/36933
+	PR fortran/43072
+	PR fortran/43111
+	* dependency.c (gfc_check_argument_var_dependency): Use enum
+	value instead of arithmetic vaue for 'elemental'.
+	(check_data_pointer_types): New function.
+	(gfc_check_dependency): Call check_data_pointer_types.
+	* trans-array.h : Change fourth argument of
+	gfc_conv_array_parameter to boolean.
+	* trans-array.c (gfc_conv_array_parameter): A contiguous array
+	can be a dummy but it must not be assumed shape or deferred.
+	Change fourth argument to boolean. Array constructor exprs will
+	always be contiguous and do not need packing and unpacking.
+	* trans-expr.c (gfc_conv_procedure_call): Clean up some white
+	space and change fourth argument of gfc_conv_array_parameter
+	to boolean.
+	(gfc_trans_arrayfunc_assign): Change fourth argument of
+	gfc_conv_array_parameter to boolean.
+	* trans-io.c (gfc_convert_array_to_string): The same.
+	* trans-intrinsic.c (gfc_conv_intrinsic_loc): The same.
+
+2010-02-20  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/42958
+	* libgfortran.h: Add GFC_RTCHECK_MEM.
+	* invoke.texi (-fcheck=): Document -fcheck=mem.
+	* tranc.c (gfc_call_malloc): Remove negative-size run-time error
+	and enable malloc-success check only with -fcheck=mem.
+	* option.c (gfc_handle_runtime_check_option): Add -fcheck=mem.
+
+2010-02-16  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/43040
+	* gfortran.h (gfc_isym_id): Rename GFS_ISYM_GAMMA to GFS_ISYM_TGAMMA.
+	* intrinsic.c (add_functions): Ditto.
+	* iresolve.c (gfc_resolve_gamma): Call tgamma instead of gamma.
+	* mathbuiltins.def: Use TGAMMA instead of GAMMA with "tgamma".
+
+2010-02-14  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/32382
+	* trans-stmt.h: Add prototype for gfc_trans_code_cond. Add tree cond to
+	gfc_trans_do prototype.
+	* trans-stmt.c (gfc_trans_simple_do): Add optional argument to pass in
+	a loop exit condition.  If exit condition is given, build the loop exit
+	code, checking IO results of implied do loops in READ and WRITE.
+	(gfc_trans_do): Likewise.
+	* trans.c (trans_code): New static work function, previously
+	gfc_trans_code. Passes exit condition to gfc_trans_do.
+	(gfc_trans_code): Calls trans_code with NULL_TREE condition.
+	(gfc_trans_code_cond): Calls trans_code with loop exit condition.
+	* trans-io.c (build_dt): Build an exit condition to allow checking IO
+	result status bits in the dtparm structure. Use this condition in call
+	to gfc_trans_code_cond.
+
+2010-02-13  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/41113
+	PR fortran/41117
+	* trans-array.c (gfc_conv_array_parameter): Use
+	gfc_full_array_ref_p to detect full and contiguous variable
+	arrays. Full array components and contiguous arrays do not need
+	internal_pack and internal_unpack.
+
+2010-02-11  Jakub Jelinek  <jakub@redhat.com>
+
+	PR fortran/43030
+	* resolve.c (gfc_resolve_dim_arg): Call gfc_clear_ts.
+
+	PR fortran/43029
+	* decl.c (enumerator_decl): Don't call gfc_free_enum_history
+	here.
+	(gfc_match_enumerator_def): But here whenever enumerator_decl returns
+	MATCH_ERROR.
+
+2010-02-10  Joost VandeVondele <jv244@cam.ac.uk>
+	    Tobias Burnus <burnus@net-b.de>
+
+	PR fortran/40823
+	* decl.c (gfc_match_subroutine): Explicitly set sym->declared_at.
+
+2010-02-10  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/43015
+	* trans-decl.c (gfc_generate_function_code): Only check
+	actual-vs.-dummy character bounds if not bind(C).
+
+2010-02-10  Jakub Jelinek  <jakub@redhat.com>
+
+	PR fortran/42309
+	* trans-expr.c (gfc_conv_subref_array_arg): Avoid accessing
+	info->dimen after info has been freed.
+
+2010-02-09  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR fortran/42999
+	* array.c (gfc_constant_ac): Do not prevent expansion of constructors
+	with iterators.
+
+2010-02-09  Jakub Jelinek  <jakub@redhat.com>
+
+	* module.c (fix_mio_expr): Declare sym.
+
+2010-02-09  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/41869
+	* module.c (fix_mio_expr): Fix for private generic procedures.
+
+2010-02-09  Daniel Kraft  <d@domob.eu>
+
+	PR fortran/39171
+	* resolve.c (resolve_charlen): Change warning about negative CHARACTER
+	length to be correct and issue only with -Wsurprising.
+	* invoke.texi (Wsurprising): Mention this new warning that is
+	turned on by -Wsurprising.
+
+2010-02-09  Daniel Kraft  <d@domob.eu>
+
+	PR fortran/41507
+	* intrinsic.texi (MAXVAL): Remove wrong claim that array argument
+	can be CHARACTER type.
+	(MINVAL), (MAXLOC), (MINLOC): Ditto.
+
+2010-02-05  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/42309
+	* trans-expr.c (gfc_conv_subref_array_arg): Add new argument
+	'formal_ptr'. If this is true, give returned descriptor unity
+	lbounds, in all dimensions, and the appropriate offset.
+	(gfc_conv_procedure_call); If formal is a pointer, set the last
+	argument of gfc_conv_subref_array_arg to true.
+	* trans.h : Add last argument for gfc_conv_subref_array_arg.
+	* trans-io.c (set_internal_unit, gfc_trans_transfer): Set the
+	new arg of gfc_conv_subref_array_arg to false.
+	* trans-stmt.c (forall_make_variable_temp): The same.
+
 2010-02-03  Tobias Burnus  <burnus@net-b.de>
 
 	PR fortran/42936

@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util/function
 svn://gcc.gnu.org/svn/gcc
 
@@ -30,6 +30,9 @@ cmp
 dir
 
 requirements
+dir
+
+assign
 dir
 
 1.cc
@@ -65,9 +68,6 @@ paolo
 
 
 2216
-
-assign
-dir
 
 2.cc
 file
@@ -273,6 +273,9 @@ paolo
 
 2360
 
+invoke
+dir
+
 8.cc
 file
 
@@ -306,9 +309,6 @@ paolo
 
 
 4947
-
-invoke
-dir
 
 9.cc
 file

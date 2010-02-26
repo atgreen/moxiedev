@@ -1,6 +1,6 @@
 // shared_ptr and weak_ptr implementation -*- C++ -*-
 
-// Copyright (C) 2007, 2008, 2009 Free Software Foundation, Inc.
+// Copyright (C) 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -49,10 +49,6 @@
 #ifndef _SHARED_PTR_H
 #define _SHARED_PTR_H 1
 
-#ifndef __GXX_EXPERIMENTAL_CXX0X__
-# include <c++0x_warning.h>
-#endif
-
 #include <bits/shared_ptr_base.h>
 
 _GLIBCXX_BEGIN_NAMESPACE(std)
@@ -64,7 +60,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
   /// 2.2.3.7 shared_ptr I/O
   template<typename _Ch, typename _Tr, typename _Tp, _Lock_policy _Lp>
-    std::basic_ostream<_Ch, _Tr>&
+    inline std::basic_ostream<_Ch, _Tr>&
     operator<<(std::basic_ostream<_Ch, _Tr>& __os,
 	       const __shared_ptr<_Tp, _Lp>& __p)
     {
@@ -123,7 +119,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *
        *  __shared_ptr will release __p by calling __d(__p)
        */
-	template<typename _Tp1, typename _Deleter>
+      template<typename _Tp1, typename _Deleter>
 	shared_ptr(_Tp1* __p, _Deleter __d) : __shared_ptr<_Tp>(__p, __d) { }
 
       /**
@@ -214,9 +210,6 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 #endif
 
       template<typename _Tp1, typename _Del>
-	explicit shared_ptr(const std::unique_ptr<_Tp1, _Del>&) = delete;
-
-      template<typename _Tp1, typename _Del>
 	explicit shared_ptr(std::unique_ptr<_Tp1, _Del>&& __r)
 	: __shared_ptr<_Tp>(std::move(__r)) { }
 
@@ -252,10 +245,6 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	  this->__shared_ptr<_Tp>::operator=(std::move(__r));
 	  return *this;
 	}
-
-      template<typename _Tp1, typename _Del>
-	shared_ptr&
-	operator=(const std::unique_ptr<_Tp1, _Del>& __r) = delete;
 
       template<typename _Tp1, typename _Del>
 	shared_ptr&
@@ -378,16 +367,6 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 	return this->expired() ? shared_ptr<_Tp>() : shared_ptr<_Tp>(*this);
 #endif
       }
-
-      // Comparisons
-      template<typename _Tp1>
-	bool operator<(const weak_ptr<_Tp1>&) const = delete;
-      template<typename _Tp1>
-	bool operator<=(const weak_ptr<_Tp1>&) const = delete;
-      template<typename _Tp1>
-	bool operator>(const weak_ptr<_Tp1>&) const = delete;
-      template<typename _Tp1>
-	bool operator>=(const weak_ptr<_Tp1>&) const = delete;
     };
 
   // 20.8.13.3.7 weak_ptr specialized algorithms.

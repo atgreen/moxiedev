@@ -1,7 +1,7 @@
 ## Makefile for the src subdirectory of the GNU C++ Standard library.
 ##
 ## Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-## 2006, 2007, 2008, 2009
+## 2006, 2007, 2008, 2009, 2010
 ## Free Software Foundation, Inc.
 ##
 ## This file is part of the libstdc++ version 3 distribution.
@@ -121,7 +121,8 @@ basic_file.cc: ${glibcxx_srcdir}/$(BASIC_FILE_CC)
 	$(LN_S) ${glibcxx_srcdir}/$(BASIC_FILE_CC) ./$@ || true
 
 if ENABLE_PARALLEL
-parallel_sources = parallel_list.cc parallel_settings.cc
+parallel_sources = parallel_list.cc parallel_settings.cc \
+	           compatibility-parallel_list.cc
 else
 parallel_sources =
 endif
@@ -141,20 +142,22 @@ sources = \
 	codecvt.cc \
 	compatibility.cc \
 	compatibility-c++0x.cc \
+	compatibility-debug_list.cc \
+	compatibility-list.cc \
 	complex_io.cc \
 	ctype.cc \
 	debug.cc \
 	functexcept.cc \
-	hash_tr1.cc \
 	globals_io.cc \
-	hashtable_tr1.cc \
+	hash_c++0x.cc \
+	hash_tr1.cc \
 	hashtable_c++0x.cc \
+	hashtable_tr1.cc \
 	ios.cc \
 	ios_failure.cc \
 	ios_init.cc \
 	ios_locale.cc \
 	limits.cc \
-	limits_c++0x.cc \
 	list.cc \
 	debug_list.cc \
 	locale.cc \
@@ -239,6 +242,11 @@ parallel_settings.lo: parallel_settings.cc
 parallel_settings.o: parallel_settings.cc
 	$(CXXCOMPILE) $(PARALLEL_FLAGS) -c $<
 
+compatibility-parallel_list.lo: compatibility-parallel_list.cc
+	$(LTCXXCOMPILE) $(PARALLEL_FLAGS) -c $<
+compatibility-parallel_list.o: compatibility-parallel_list.cc
+	$(CXXCOMPILE) $(PARALLEL_FLAGS) -c $<
+
 # Use special rules for the C++0x sources so that the proper flags are passed.
 functexcept.lo: functexcept.cc
 	$(LTCXXCOMPILE) -std=gnu++0x -c $<
@@ -265,14 +273,19 @@ compatibility-c++0x.lo: compatibility-c++0x.cc
 compatibility-c++0x.o: compatibility-c++0x.cc
 	$(CXXCOMPILE) -std=gnu++0x -c $<
 
+hash_c++0x.lo: hash_c++0x.cc
+	$(LTCXXCOMPILE) -std=gnu++0x -c $<
+hash_c++0x.o: hash_c++0x.cc
+	$(CXXCOMPILE) -std=gnu++0x -c $<
+
 hashtable_c++0x.lo: hashtable_c++0x.cc
 	$(LTCXXCOMPILE) -std=gnu++0x -c $<
 hashtable_c++0x.o: hashtable_c++0x.cc
 	$(CXXCOMPILE) -std=gnu++0x -c $<
 
-limits_c++0x.lo: limits_c++0x.cc
+limits.lo: limits.cc
 	$(LTCXXCOMPILE) -std=gnu++0x -c $<
-limits_c++0x.o: limits_c++0x.cc
+limits.o: limits.cc
 	$(CXXCOMPILE) -std=gnu++0x -c $<
 
 atomic.lo: atomic.cc

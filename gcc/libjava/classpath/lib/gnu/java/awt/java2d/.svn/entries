@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/gnu/java/awt/java2d
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ has-props
 
 189
 
-QuadSegment.class
-file
-
-
-
-
-2009-04-24T17:47:31.000000Z
-1d98d7590fc8d5f4a232e01ab99cb913
-2007-07-27T21:14:19.002073Z
-126998
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-4683
-
 AlphaCompositeContext.class
 file
 
@@ -127,6 +93,40 @@ has-props
 
 
 3745
+
+QuadSegment.class
+file
+
+
+
+
+2009-04-24T17:47:31.000000Z
+1d98d7590fc8d5f4a232e01ab99cb913
+2007-07-27T21:14:19.002073Z
+126998
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4683
 
 ImagePaint.class
 file
@@ -162,40 +162,6 @@ has-props
 
 1292
 
-TextCacheKey.class
-file
-
-
-
-
-2009-04-24T17:47:31.000000Z
-c58ce59610ff18a36a55826597063b47
-2008-06-28T13:29:13.958049Z
-137223
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1560
-
 RasterGraphics.class
 file
 
@@ -229,6 +195,40 @@ has-props
 
 
 1388
+
+TextCacheKey.class
+file
+
+
+
+
+2009-04-24T17:47:31.000000Z
+c58ce59610ff18a36a55826597063b47
+2008-06-28T13:29:13.958049Z
+137223
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1560
 
 ActiveEdges.class
 file
@@ -264,40 +264,6 @@ has-props
 
 2575
 
-ScanlineConverter.class
-file
-
-
-
-
-2009-04-24T17:47:31.000000Z
-0e640887e5b61caa6946f0301d93147d
-2008-10-21T17:55:01.166395Z
-141271
-doko
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6616
-
 ShapeCache.class
 file
 
@@ -332,16 +298,16 @@ has-props
 
 600
 
-ScanlineCoverage$Iterator.class
+ScanlineConverter.class
 file
 
 
 
 
 2009-04-24T17:47:31.000000Z
-9461939e8ea6595b08e8b0f7445feb7c
-2007-08-04T10:53:49.941399Z
-127204
+0e640887e5b61caa6946f0301d93147d
+2008-10-21T17:55:01.166395Z
+141271
 doko
 has-props
 
@@ -364,7 +330,7 @@ has-props
 
 
 
-1853
+6616
 
 ImagePaint$ImagePaintContext.class
 file
@@ -399,6 +365,40 @@ has-props
 
 
 2514
+
+ScanlineCoverage$Iterator.class
+file
+
+
+
+
+2009-04-24T17:47:31.000000Z
+9461939e8ea6595b08e8b0f7445feb7c
+2007-08-04T10:53:49.941399Z
+127204
+doko
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1853
 
 ScanlineCoverage$Coverage.class
 file

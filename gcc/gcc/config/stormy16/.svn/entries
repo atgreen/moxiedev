@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/config/stormy16
 svn://gcc.gnu.org/svn/gcc
 
@@ -162,40 +162,6 @@ nickc
 
 55
 
-stormy16-lib2-ashrsi3.c
-file
-
-
-
-
-2009-12-07T15:32:56.665939Z
-3e9d07bec5b5658acdec6a30d0890368
-2009-11-27T18:56:10.950392Z
-154713
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-53
-
 stormy16.c
 file
 
@@ -229,6 +195,40 @@ rth
 
 
 78413
+
+stormy16-lib2-ashrsi3.c
+file
+
+
+
+
+2009-12-07T15:32:56.665939Z
+3e9d07bec5b5658acdec6a30d0890368
+2009-11-27T18:56:10.950392Z
+154713
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+53
 
 stormy-abi
 file
@@ -264,40 +264,6 @@ jsm28
 
 5573
 
-stormy16-lib2-ffshi2.c
-file
-
-
-
-
-2009-12-07T15:32:56.666939Z
-27f3f6cf5ccc96a364c173472091d2f3
-2009-11-27T18:56:10.950392Z
-154713
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-52
-
 stormy16.h
 file
 
@@ -331,6 +297,40 @@ nickc
 
 
 23716
+
+stormy16-lib2-ffshi2.c
+file
+
+
+
+
+2009-12-07T15:32:56.666939Z
+27f3f6cf5ccc96a364c173472091d2f3
+2009-11-27T18:56:10.950392Z
+154713
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+52
 
 stormy16-lib2-umodsi3.c
 file
@@ -400,40 +400,6 @@ nickc
 
 53
 
-stormy16-lib2-lshrsi3.c
-file
-
-
-
-
-2009-12-07T15:32:56.666939Z
-c668fc56a4ad5ca96dd1a06e444f268b
-2009-11-27T18:56:10.950392Z
-154713
-nickc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-53
-
 stormy16-lib2-udivmodsi4.c
 file
 
@@ -467,6 +433,40 @@ nickc
 
 
 56
+
+stormy16-lib2-lshrsi3.c
+file
+
+
+
+
+2009-12-07T15:32:56.666939Z
+c668fc56a4ad5ca96dd1a06e444f268b
+2009-11-27T18:56:10.950392Z
+154713
+nickc
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+53
 
 stormy16.md
 file

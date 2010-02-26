@@ -1222,8 +1222,9 @@ gfc_conv_expr_op (gfc_se * se, gfc_expr * expr)
   switch (expr->value.op.op)
     {
     case INTRINSIC_PARENTHESES:
-      if (expr->ts.type == BT_REAL
-	  || expr->ts.type == BT_COMPLEX)
+      if ((expr->ts.type == BT_REAL
+	   || expr->ts.type == BT_COMPLEX)
+	  && gfc_option.flag_protect_parens)
 	{
 	  gfc_conv_unary_op (PAREN_EXPR, se, expr);
 	  gcc_assert (FLOAT_TYPE_P (TREE_TYPE (se->expr)));
@@ -2294,8 +2295,8 @@ gfc_apply_interface_mapping (gfc_interface_mapping * mapping,
    an actual argument derived type array is copied and then returned
    after the function call.  */
 void
-gfc_conv_subref_array_arg (gfc_se * parmse, gfc_expr * expr,
-			   int g77, sym_intent intent)
+gfc_conv_subref_array_arg (gfc_se * parmse, gfc_expr * expr, int g77,
+			   sym_intent intent, bool formal_ptr)
 {
   gfc_se lse;
   gfc_se rse;
@@ -2308,8 +2309,10 @@ gfc_conv_subref_array_arg (gfc_se * parmse, gfc_expr * expr,
   tree tmp_index;
   tree tmp;
   tree base_type;
+  tree size;
   stmtblock_t body;
   int n;
+  int dimen;
 
   gcc_assert (expr->expr_type == EXPR_VARIABLE);
 
@@ -2438,9 +2441,10 @@ gfc_conv_subref_array_arg (gfc_se * parmse, gfc_expr * expr,
      outside the innermost loop, so the overall transfer could be
      optimized further.  */
   info = &rse.ss->data.info;
+  dimen = info->dimen;
 
   tmp_index = gfc_index_zero_node;
-  for (n = info->dimen - 1; n > 0; n--)
+  for (n = dimen - 1; n > 0; n--)
     {
       tree tmp_str;
       tmp = rse.loop->loopvar[n];
@@ -2500,6 +2504,42 @@ gfc_conv_subref_array_arg (gfc_se * parmse, gfc_expr * expr,
   /* Pass the string length to the argument expression.  */
   if (expr->ts.type == BT_CHARACTER)
     parmse->string_length = expr->ts.u.cl->backend_decl;
+
+  /* Determine the offset for pointer formal arguments and set the
+     lbounds to one.  */
+  if (formal_ptr)
+    {
+      size = gfc_index_one_node;
+      offset = gfc_index_zero_node;  
+      for (n = 0; n < dimen; n++)
+	{
+	  tmp = gfc_conv_descriptor_ubound_get (parmse->expr,
+						gfc_rank_cst[n]);
+	  tmp = fold_build2 (PLUS_EXPR, gfc_array_index_type,
+			     tmp, gfc_index_one_node);
+	  gfc_conv_descriptor_ubound_set (&parmse->pre,
+					  parmse->expr,
+					  gfc_rank_cst[n],
+					  tmp);
+	  gfc_conv_descriptor_lbound_set (&parmse->pre,
+					  parmse->expr,
+					  gfc_rank_cst[n],
+					  gfc_index_one_node);
+	  size = gfc_evaluate_now (size, &parmse->pre);
+	  offset = fold_build2 (MINUS_EXPR, gfc_array_index_type,
+				offset, size);
+	  offset = gfc_evaluate_now (offset, &parmse->pre);
+	  tmp = fold_build2 (MINUS_EXPR, gfc_array_index_type,
+			     rse.loop->to[n], rse.loop->from[n]);
+	  tmp = fold_build2 (PLUS_EXPR, gfc_array_index_type,
+			     tmp, gfc_index_one_node);
+	  size = fold_build2 (MULT_EXPR, gfc_array_index_type,
+			      size, tmp);
+	}
+
+      gfc_conv_descriptor_offset_set (&parmse->pre, parmse->expr,
+				      offset);
+    }
 
   /* We want either the address for the data or the address of the descriptor,
      depending on the mode of passing array arguments.  */
@@ -2788,18 +2828,18 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
       if (!sym->attr.elemental)
 	{
 	  gcc_assert (se->ss->type == GFC_SS_FUNCTION);
-          if (se->ss->useflags)
-            {
+	  if (se->ss->useflags)
+	    {
 	      gcc_assert ((!comp && gfc_return_by_reference (sym)
 			   && sym->result->attr.dimension)
 			  || (comp && comp->attr.dimension));
-              gcc_assert (se->loop != NULL);
+	      gcc_assert (se->loop != NULL);
 
-              /* Access the previously obtained result.  */
-              gfc_conv_tmp_array_ref (se);
-              gfc_advance_se_ss_chain (se);
-              return 0;
-            }
+	      /* Access the previously obtained result.  */
+	      gfc_conv_tmp_array_ref (se);
+	      gfc_advance_se_ss_chain (se);
+	      return 0;
+	    }
 	}
       info = &se->ss->data.info;
     }
@@ -2833,9 +2873,9 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
       e = arg->expr;
       fsym = formal ? formal->sym : NULL;
       parm_kind = MISSING;
+
       if (e == NULL)
 	{
-
 	  if (se->ignore_optional)
 	    {
 	      /* Some intrinsics have already been resolved to the correct
@@ -2844,15 +2884,15 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 	    }
 	  else if (arg->label)
 	    {
-              has_alternate_specifier = 1;
-              continue;
+	      has_alternate_specifier = 1;
+	      continue;
 	    }
 	  else
 	    {
 	      /* Pass a NULL pointer for an absent arg.  */
 	      gfc_init_se (&parmse, NULL);
 	      parmse.expr = null_pointer_node;
-              if (arg->missing_arg_type == BT_CHARACTER)
+	      if (arg->missing_arg_type == BT_CHARACTER)
 		parmse.string_length = build_int_cst (gfc_charlen_type_node, 0);
 	    }
 	}
@@ -2867,8 +2907,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
       else if (se->ss && se->ss->useflags)
 	{
 	  /* An elemental function inside a scalarized loop.  */
-          gfc_init_se (&parmse, se);
-          gfc_conv_expr_reference (&parmse, e);
+	  gfc_init_se (&parmse, se);
+	  gfc_conv_expr_reference (&parmse, e);
 	  parm_kind = ELEMENTAL;
 	}
       else
@@ -2878,7 +2918,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 	  argss = gfc_walk_expr (e);
 
 	  if (argss == gfc_ss_terminator)
-            {
+	    {
 	      if (e->expr_type == EXPR_VARIABLE
 		    && e->symtree->n.sym->attr.cray_pointee
 		    && fsym && fsym->attr.flavor == FL_PROCEDURE)
@@ -2989,7 +3029,7 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
                  ALLOCATABLE or assumed shape, we do not use g77's calling
                  convention, and pass the address of the array descriptor
                  instead. Otherwise we use g77's calling convention.  */
-	      int f;
+	      bool f;
 	      f = (fsym != NULL)
 		  && !(fsym->attr.pointer || fsym->attr.allocatable)
 		  && fsym->as->type != AS_ASSUMED_SHAPE;
@@ -3005,7 +3045,8 @@ gfc_conv_procedure_call (gfc_se * se, gfc_symbol * sym,
 		   is converted to a temporary, which is passed and then
 		   written back after the procedure call.  */
 		gfc_conv_subref_array_arg (&parmse, e, f,
-			fsym ? fsym->attr.intent : INTENT_INOUT);
+				fsym ? fsym->attr.intent : INTENT_INOUT,
+				fsym && fsym->attr.pointer);
 	      else
 	        gfc_conv_array_parameter (&parmse, e, argss, f, fsym,
 					  sym->name, NULL);
@@ -3908,6 +3949,10 @@ gfc_conv_initializer (gfc_expr * expr, gfc_typespec * ts, tree type,
 	 its kind.  */
       expr->ts.f90_type = derived->ts.f90_type;
       expr->ts.kind = derived->ts.kind;
+
+      gfc_init_se (&se, NULL);
+      gfc_conv_constant (&se, expr);
+      return se.expr;
     }
   
   if (array)
@@ -4996,7 +5041,7 @@ gfc_trans_arrayfunc_assign (gfc_expr * expr1, gfc_expr * expr2)
   gfc_start_block (&se.pre);
   se.want_pointer = 1;
 
-  gfc_conv_array_parameter (&se, expr1, ss, 0, NULL, NULL, NULL);
+  gfc_conv_array_parameter (&se, expr1, ss, false, NULL, NULL, NULL);
 
   if (expr1->ts.type == BT_DERIVED
 	&& expr1->ts.u.derived->attr.alloc_comp)

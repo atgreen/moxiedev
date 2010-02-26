@@ -1,5 +1,5 @@
 /* Definitions for C++ name lookup routines.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Gabriel Dos Reis <gdr@integrable-solutions.net>
 
@@ -853,8 +853,8 @@ pushdecl_maybe_friend (tree x, bool is_friend)
 	    add_decl_to_level (x, NAMESPACE_LEVEL (CP_DECL_CONTEXT (t)));
 	}
 
-      if (TREE_CODE (x) == FUNCTION_DECL || DECL_FUNCTION_TEMPLATE_P (x))
-	check_default_args (x);
+      if (TREE_CODE (t) == FUNCTION_DECL || DECL_FUNCTION_TEMPLATE_P (t))
+	check_default_args (t);
 
       if (t != x || DECL_FUNCTION_TEMPLATE_P (t))
 	POP_TIMEVAR_AND_RETURN (TV_NAME_LOOKUP, t);
@@ -3102,7 +3102,8 @@ set_decl_namespace (tree decl, tree scope, bool friendp)
   if (!is_overloaded_fn (decl))
     {
       /* We might have found OLD in an inline namespace inside SCOPE.  */
-      DECL_CONTEXT (decl) = DECL_CONTEXT (old);
+      if (TREE_CODE (decl) == TREE_CODE (old))
+	DECL_CONTEXT (decl) = DECL_CONTEXT (old);
       /* Don't compare non-function decls with decls_match here, since
 	 it can't check for the correct constness at this
 	 point. pushdecl will find those errors later.  */

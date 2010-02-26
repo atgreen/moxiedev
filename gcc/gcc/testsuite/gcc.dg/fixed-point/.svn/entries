@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/fixed-point
 svn://gcc.gnu.org/svn/gcc
 
@@ -502,40 +502,6 @@ chaoyingfu
 
 19283
 
-func-vararg-mixed.c
-file
-
-
-
-
-2009-04-24T17:45:13.000000Z
-2ed35ff51b0b2070db69efabd8e20152
-2007-09-22T00:27:56.331135Z
-128661
-chaoyingfu
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3130
-
 bit-complement.c
 file
 
@@ -569,6 +535,40 @@ chaoyingfu
 
 
 3147
+
+func-vararg-mixed.c
+file
+
+
+
+
+2009-04-24T17:45:13.000000Z
+2ed35ff51b0b2070db69efabd8e20152
+2007-09-22T00:27:56.331135Z
+128661
+chaoyingfu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3130
 
 binary.c
 file
@@ -672,40 +672,6 @@ janis
 
 1830
 
-constant.c
-file
-
-
-
-
-2009-04-24T17:45:13.000000Z
-e2cfc02a19e958287f50ec8124bc07a8
-2007-09-22T00:27:56.331135Z
-128661
-chaoyingfu
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-575
-
 union-init.c
 file
 
@@ -739,6 +705,40 @@ chaoyingfu
 
 
 853
+
+constant.c
+file
+
+
+
+
+2009-04-24T17:45:13.000000Z
+e2cfc02a19e958287f50ec8124bc07a8
+2007-09-22T00:27:56.331135Z
+128661
+chaoyingfu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+575
 
 struct-layout-1.c
 file
@@ -808,40 +808,6 @@ chaoyingfu
 
 8769
 
-func-mixed.c
-file
-
-
-
-
-2009-04-24T17:45:13.000000Z
-c71cd62369fd73371bd64d9e9c2653fe
-2007-09-22T00:27:56.331135Z
-128661
-chaoyingfu
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3480
-
 operator-bitwise.c
 file
 
@@ -875,6 +841,40 @@ chaoyingfu
 
 
 8934
+
+func-mixed.c
+file
+
+
+
+
+2009-04-24T17:45:13.000000Z
+c71cd62369fd73371bd64d9e9c2653fe
+2007-09-22T00:27:56.331135Z
+128661
+chaoyingfu
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3480
 
 fixed-point.exp
 file

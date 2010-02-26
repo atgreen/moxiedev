@@ -1,14 +1,14 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/cpp0x/lambda
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-20T21:30:28.576702Z
-156085
+2010-02-10T22:45:07.138280Z
+156673
 jason
 
 
@@ -298,6 +298,40 @@ jfreeman
 
 435
 
+lambda-warn2.C
+file
+
+
+
+
+2010-02-25T22:33:03.378293Z
+49f17d3507d303e9e38d917825416b02
+2010-02-09T20:05:51.799180Z
+156634
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+128
+
 lambda-copy-default.C
 file
 
@@ -508,10 +542,10 @@ file
 
 
 
-2009-12-07T15:31:24.707954Z
-c121b1341edcdce398d30cec854eaa4d
-2009-10-27T21:58:09.977638Z
-153617
+2010-02-25T22:33:03.378293Z
+f72325a01c29b9a26f90b2be9af39afd
+2010-02-10T21:48:25.797080Z
+156671
 jason
 
 
@@ -534,18 +568,18 @@ jason
 
 
 
-69
+388
 
-lambda-mixed.C
+lambda-nested3.C
 file
 
 
 
 
-2009-10-08T17:29:59.000000Z
-5babfcba950d470d72ed8a0814f18e31
-2009-04-21T19:45:49.620131Z
-146536
+2010-02-25T22:33:03.378293Z
+fc8b20e80b7a3acae5bba366690c4d56
+2010-02-10T22:45:07.138280Z
+156673
 jason
 
 
@@ -568,7 +602,7 @@ jason
 
 
 
-206
+127
 
 lambda-pass.C
 file
@@ -603,6 +637,40 @@ jason
 
 
 420
+
+lambda-mixed.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+5babfcba950d470d72ed8a0814f18e31
+2009-04-21T19:45:49.620131Z
+146536
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+206
 
 lambda-this.C
 file
@@ -648,6 +716,40 @@ file
 414981bc7d01f6877362173a78b37d06
 2009-04-21T19:45:49.620131Z
 146536
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+280
+
+lambda-errloc2.C
+file
+
+
+
+
+2010-02-25T22:33:03.393083Z
+3a51723a734390b26b5ff13cf1827877
+2010-02-09T22:06:23.124091Z
+156635
 jason
 
 
@@ -808,40 +910,6 @@ jason
 
 308
 
-lambda-ctor-neg.C
-file
-
-
-
-
-2009-10-08T17:29:59.000000Z
-747b179a98c56f232c8af8689b4e4204
-2009-09-22T17:57:07.245739Z
-152035
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-595
-
 lambda-non-const.C
 file
 
@@ -876,16 +944,16 @@ jason
 
 249
 
-lambda-deduce-ext-neg2.C
+lambda-ctor-neg.C
 file
 
 
 
 
 2009-10-08T17:29:59.000000Z
-5af4cb82de3b09ee024863bdafeb3ca8
-2009-09-04T15:09:50.896793Z
-151425
+747b179a98c56f232c8af8689b4e4204
+2009-09-22T17:57:07.245739Z
+152035
 jason
 
 
@@ -908,7 +976,7 @@ jason
 
 
 
-417
+595
 
 lambda-in-class-neg.C
 file
@@ -944,6 +1012,40 @@ jason
 
 734
 
+lambda-deduce-ext-neg2.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+5af4cb82de3b09ee024863bdafeb3ca8
+2009-09-04T15:09:50.896793Z
+151425
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+417
+
 lambda-const.C
 file
 
@@ -978,40 +1080,6 @@ jason
 
 448
 
-lambda-deduce-ext.C
-file
-
-
-
-
-2009-10-08T17:29:59.000000Z
-385bcf6a13e8ad52b68b6b9a7b4ef2b6
-2009-09-04T15:09:50.896793Z
-151425
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-428
-
 lambda-ns-scope.C
 file
 
@@ -1045,6 +1113,40 @@ jason
 
 
 229
+
+lambda-deduce-ext.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+385bcf6a13e8ad52b68b6b9a7b4ef2b6
+2009-09-04T15:09:50.896793Z
+151425
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+428
 
 lambda-defarg.C
 file

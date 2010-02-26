@@ -3672,6 +3672,55 @@ current_template_args (void)
   return args;
 }
 
+/* Update the declared TYPE by doing any lookups which were thought to be
+   dependent, but are not now that we know the SCOPE of the declarator.  */
+
+tree
+maybe_update_decl_type (tree orig_type, tree scope)
+{
+  tree type = orig_type;
+
+  if (type == NULL_TREE)
+    return type;
+
+  if (TREE_CODE (orig_type) == TYPE_DECL)
+    type = TREE_TYPE (type);
+
+  if (scope && TYPE_P (scope) && dependent_type_p (scope)
+      && dependent_type_p (type)
+      /* Don't bother building up the args in this case.  */
+      && TREE_CODE (type) != TEMPLATE_TYPE_PARM)
+    {
+      /* tsubst in the args corresponding to the template parameters,
+	 including auto if present.  Most things will be unchanged, but
+	 make_typename_type and tsubst_qualified_id will resolve
+	 TYPENAME_TYPEs and SCOPE_REFs that were previously dependent.  */
+      tree args = current_template_args ();
+      tree auto_node = type_uses_auto (type);
+      if (auto_node)
+	{
+	  tree auto_vec = make_tree_vec (1);
+	  TREE_VEC_ELT (auto_vec, 0) = auto_node;
+	  args = add_to_template_args (args, auto_vec);
+	}
+      push_scope (scope);
+      type = tsubst (type, args, tf_warning_or_error, NULL_TREE);
+      pop_scope (scope);
+    }
+
+  if (type == error_mark_node)
+    return orig_type;
+
+  if (TREE_CODE (orig_type) == TYPE_DECL)
+    {
+      if (same_type_p (type, TREE_TYPE (orig_type)))
+	type = orig_type;
+      else
+	type = TYPE_NAME (type);
+    }
+  return type;
+}
+
 /* Return a TEMPLATE_DECL corresponding to DECL, using the indicated
    template PARMS.  If MEMBER_TEMPLATE_P is true, the new template is
    a member template.  Used by push_template_decl below.  */
@@ -4112,16 +4161,19 @@ check_default_tmpl_args (tree decl, tree parms, int is_primary,
 
   /* Figure out what error message to issue.  */
   if (is_friend_decl == 2)
-    msg = "default template arguments may not be used in function template friend re-declaration";
+    msg = G_("default template arguments may not be used in function template "
+	     "friend re-declaration");
   else if (is_friend_decl)
-    msg = "default template arguments may not be used in function template friend declarations";
+    msg = G_("default template arguments may not be used in function template "
+	     "friend declarations");
   else if (TREE_CODE (decl) == FUNCTION_DECL && (cxx_dialect == cxx98))
-    msg = ("default template arguments may not be used in function templates "
-	   "without -std=c++0x or -std=gnu++0x");
+    msg = G_("default template arguments may not be used in function templates "
+	     "without -std=c++0x or -std=gnu++0x");
   else if (is_partial)
-    msg = "default template arguments may not be used in partial specializations";
+    msg = G_("default template arguments may not be used in "
+	     "partial specializations");
   else
-    msg = "default argument for template parameter for class enclosing %qD";
+    msg = G_("default argument for template parameter for class enclosing %qD");
 
   if (current_class_type && TYPE_BEING_DEFINED (current_class_type))
     /* If we're inside a class definition, there's no need to
@@ -4172,7 +4224,8 @@ check_default_tmpl_args (tree decl, tree parms, int is_primary,
       /* At this point, if we're still interested in issuing messages,
 	 they must apply to classes surrounding the object declared.  */
       if (msg)
-	msg = "default argument for template parameter for class enclosing %qD";
+	msg = G_("default argument for template parameter for class "
+		 "enclosing %qD");
     }
 
   return no_errors;
@@ -5124,12 +5177,13 @@ convert_nontype_argument (tree type, tree expr)
 	 provide a superior diagnostic.  */
       if (!same_type_p (TREE_TYPE (expr), type))
 	{
-	  /* Make sure we are just one standard conversion off.  */
-	  gcc_assert (can_convert (type, TREE_TYPE (expr)));
 	  error ("%qE is not a valid template argument for type %qT "
 		 "because it is of type %qT", expr, type,
 		 TREE_TYPE (expr));
-	  inform (input_location, "standard conversions are not allowed in this context");
+	  /* If we are just one standard conversion off, explain.  */
+	  if (can_convert (type, TREE_TYPE (expr)))
+	    inform (input_location,
+		    "standard conversions are not allowed in this context");
 	  return NULL_TREE;
 	}
     }
@@ -6325,7 +6379,8 @@ lookup_template_class (tree d1,
       tree found = NULL_TREE;
       int arg_depth;
       int parm_depth;
-      int is_partial_instantiation;
+      int is_dependent_type;
+      int use_partial_inst_tmpl = false;
 
       gen_tmpl = most_general_template (templ);
       parmlist = DECL_TEMPLATE_PARMS (gen_tmpl);
@@ -6441,21 +6496,17 @@ lookup_template_class (tree d1,
       if (entry)
 	POP_TIMEVAR_AND_RETURN (TV_NAME_LOOKUP, entry->spec);
 
-      /* This type is a "partial instantiation" if any of the template
-	 arguments still involve template parameters.  Note that we set
-	 IS_PARTIAL_INSTANTIATION for partial specializations as
-	 well.  */
-      is_partial_instantiation = uses_template_parms (arglist);
+      is_dependent_type = uses_template_parms (arglist);
 
       /* If the deduced arguments are invalid, then the binding
 	 failed.  */
-      if (!is_partial_instantiation
+      if (!is_dependent_type
 	  && check_instantiated_args (gen_tmpl,
 				      INNERMOST_TEMPLATE_ARGS (arglist),
 				      complain))
 	POP_TIMEVAR_AND_RETURN (TV_NAME_LOOKUP, error_mark_node);
 
-      if (!is_partial_instantiation
+      if (!is_dependent_type
 	  && !PRIMARY_TEMPLATE_P (gen_tmpl)
 	  && !LAMBDA_TYPE_P (TREE_TYPE (gen_tmpl))
 	  && TREE_CODE (CP_DECL_CONTEXT (gen_tmpl)) == NAMESPACE_DECL)
@@ -6474,7 +6525,7 @@ lookup_template_class (tree d1,
       /* Create the type.  */
       if (TREE_CODE (template_type) == ENUMERAL_TYPE)
 	{
-	  if (!is_partial_instantiation)
+	  if (!is_dependent_type)
 	    {
 	      set_current_access_from_decl (TYPE_NAME (template_type));
 	      t = start_enum (TYPE_IDENTIFIER (template_type),
@@ -6540,11 +6591,71 @@ lookup_template_class (tree d1,
 	  DECL_VISIBILITY (type_decl) = CLASSTYPE_VISIBILITY (template_type);
 	}
 
-      /* Set up the template information.  We have to figure out which
-	 template is the immediate parent if this is a full
-	 instantiation.  */
-      if (parm_depth == 1 || is_partial_instantiation
-	  || !PRIMARY_TEMPLATE_P (gen_tmpl))
+      /* Let's consider the explicit specialization of a member
+         of a class template specialization that is implicitely instantiated,
+	 e.g.:
+	     template<class T>
+	     struct S
+	     {
+	       template<class U> struct M {}; //#0
+	     };
+
+	     template<>
+	     template<>
+	     struct S<int>::M<char> //#1
+	     {
+	       int i;
+	     };
+	[temp.expl.spec]/4 says this is valid.
+
+	In this case, when we write:
+	S<int>::M<char> m;
+
+	M is instantiated from the CLASSTYPE_TI_TEMPLATE of #1, not from
+	the one of #0.
+
+	When we encounter #1, we want to store the partial instantiation
+	of M (template<class T> S<int>::M<T>) in it's CLASSTYPE_TI_TEMPLATE.
+
+	For all cases other than this "explicit specialization of member of a
+	class template", we just want to store the most general template into
+	the CLASSTYPE_TI_TEMPLATE of M.
+
+	This case of "explicit specialization of member of a class template"
+	only happens when:
+	1/ the enclosing class is an instantiation of, and therefore not
+	the same as, the context of the most general template, and
+	2/ we aren't looking at the partial instantiation itself, i.e.
+	the innermost arguments are not the same as the innermost parms of
+	the most general template.
+
+	So it's only when 1/ and 2/ happens that we want to use the partial
+	instantiation of the member template in lieu of its most general
+	template.  */
+
+      if (PRIMARY_TEMPLATE_P (gen_tmpl)
+	  && TMPL_ARGS_HAVE_MULTIPLE_LEVELS (arglist)
+	  /* the enclosing class must be an instantiation...  */
+	  && CLASS_TYPE_P (context)
+	  && !same_type_p (context, DECL_CONTEXT (gen_tmpl)))
+	{
+	  tree partial_inst_args;
+	  TREE_VEC_LENGTH (arglist)--;
+	  ++processing_template_decl;
+	  partial_inst_args =
+	    tsubst (INNERMOST_TEMPLATE_ARGS
+			(CLASSTYPE_TI_ARGS (TREE_TYPE (gen_tmpl))),
+		    arglist, complain, NULL_TREE);
+	  --processing_template_decl;
+	  TREE_VEC_LENGTH (arglist)++;
+	  use_partial_inst_tmpl =
+	    /*...and we must not be looking at the partial instantiation
+	     itself. */
+	    !comp_template_args (INNERMOST_TEMPLATE_ARGS (arglist),
+				 partial_inst_args);
+	}
+
+      if (!use_partial_inst_tmpl)
 	/* This case is easy; there are no member templates involved.  */
 	found = gen_tmpl;
       else
@@ -6574,8 +6685,7 @@ lookup_template_class (tree d1,
 	= tree_cons (arglist, t,
 		     DECL_TEMPLATE_INSTANTIATIONS (templ));
 
-      if (TREE_CODE (t) == ENUMERAL_TYPE
-	  && !is_partial_instantiation)
+      if (TREE_CODE (t) == ENUMERAL_TYPE && !is_dependent_type)
 	/* Now that the type has been registered on the instantiations
 	   list, we set up the enumerators.  Because the enumeration
 	   constants may involve the enumeration type itself, we make
@@ -6585,7 +6695,7 @@ lookup_template_class (tree d1,
 	   the instantiation and exit above.  */
 	tsubst_enum (template_type, t, arglist);
 
-      if (is_partial_instantiation)
+      if (is_dependent_type)
 	/* If the type makes use of template parameters, the
 	   code that generates debugging information will crash.  */
 	DECL_IGNORED_P (TYPE_STUB_DECL (t)) = 1;
@@ -6916,7 +7026,7 @@ push_tinst_level (tree d)
 
       last_template_error_tick = tinst_level_tick;
       error ("template instantiation depth exceeds maximum of %d (use "
-	     "-ftemplate-depth-NN to increase the maximum) instantiating %qD",
+	     "-ftemplate-depth= to increase the maximum) instantiating %qD",
 	     max_tinst_depth, d);
 
       print_instantiation_context ();
@@ -10604,14 +10714,9 @@ tsubst_qualified_id (tree qualified_id, tree args,
   else
     expr = name;
 
-  if (dependent_type_p (scope))
-    {
-      tree type = NULL_TREE;
-      if (DECL_P (expr) && !dependent_scope_p (scope))
-	type = TREE_TYPE (expr);
-      return build_qualified_name (type, scope, expr,
-				   QUALIFIED_NAME_IS_TEMPLATE (qualified_id));
-    }
+  if (dependent_scope_p (scope))
+    return build_qualified_name (NULL_TREE, scope, expr,
+				 QUALIFIED_NAME_IS_TEMPLATE (qualified_id));
 
   if (!BASELINK_P (name) && !DECL_P (expr))
     {
@@ -12674,6 +12779,8 @@ tsubst_copy_and_build (tree t,
 	TREE_TYPE (r) = type;
 	CLASSTYPE_LAMBDA_EXPR (type) = r;
 
+	LAMBDA_EXPR_LOCATION (r)
+	  = LAMBDA_EXPR_LOCATION (t);
 	LAMBDA_EXPR_DEFAULT_CAPTURE_MODE (r)
 	  = LAMBDA_EXPR_DEFAULT_CAPTURE_MODE (t);
 	LAMBDA_EXPR_MUTABLE_P (r) = LAMBDA_EXPR_MUTABLE_P (t);
@@ -16753,7 +16860,7 @@ instantiate_pending_templates (int retries)
 
       error ("template instantiation depth exceeds maximum of %d"
 	     " instantiating %q+D, possibly from virtual table generation"
-	     " (use -ftemplate-depth-NN to increase the maximum)",
+	     " (use -ftemplate-depth= to increase the maximum)",
 	     max_tinst_depth, decl);
       if (TREE_CODE (decl) == FUNCTION_DECL)
 	/* Pretend that we defined it.  */

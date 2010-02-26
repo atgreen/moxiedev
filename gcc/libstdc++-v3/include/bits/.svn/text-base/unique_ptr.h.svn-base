@@ -1,6 +1,6 @@
 // unique_ptr implementation -*- C++ -*-
 
-// Copyright (C) 2008, 2009 Free Software Foundation, Inc.
+// Copyright (C) 2008, 2009, 2010 Free Software Foundation, Inc.
 //
 // This file is part of the GNU ISO C++ Library.  This library is free
 // software; you can redistribute it and/or modify it under the
@@ -29,10 +29,6 @@
 
 #ifndef _UNIQUE_PTR_H
 #define _UNIQUE_PTR_H 1
-
-#ifndef __GXX_EXPERIMENTAL_CXX0X__
-# include <c++0x_warning.h>
-#endif
 
 #include <bits/c++config.h>
 #include <debug/debug.h>
@@ -153,7 +149,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       }
 
       // Observers.
-      typename std::add_lvalue_reference<element_type>::type operator*() const
+      typename std::add_lvalue_reference<element_type>::type
+      operator*() const
       {
 	_GLIBCXX_DEBUG_ASSERT(get() != 0);
 	return *get();
@@ -211,14 +208,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
       // Disable copy from lvalue.
       unique_ptr(const unique_ptr&) = delete;
-
-      template<typename _Up, typename _Up_Deleter> 
-        unique_ptr(const unique_ptr<_Up, _Up_Deleter>&) = delete;
-
       unique_ptr& operator=(const unique_ptr&) = delete;
-
-      template<typename _Up, typename _Up_Deleter> 
-        unique_ptr& operator=(const unique_ptr<_Up, _Up_Deleter>&) = delete;
 
     private:
       __tuple_type _M_t;

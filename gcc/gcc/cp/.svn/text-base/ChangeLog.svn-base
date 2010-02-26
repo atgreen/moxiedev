@@ -1,3 +1,207 @@
+2010-02-24  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	* pt.c (push_tinst_level): Replace -ftemplate-depth- with 
+	-ftemplate-depth=.
+
+2010-02-24  Jason Merrill  <jason@redhat.com>
+
+	PR c++/12909
+	* mangle.c (write_type): Give -Wabi warning for old vector mangling.
+
+	* class.c (layout_class_type): Don't give -Wabi warning for a bug
+	in a previous ABI version.
+
+2010-02-23  Jason Merrill  <jason@redhat.com>
+
+	PR c++/43143
+	* typeck2.c (digest_init_r): Accept value init of array.
+
+2010-02-22  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR c++/43126
+	* typeck.c (convert_arguments): Update error message.
+
+2010-02-22  Mike Stump  <mikestump@comcast.net>
+
+	PR c++/43125
+	* decl.c (duplicate_decls): Merge DECL_PRESERVE_P.
+
+2010-02-21  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR c++/23510
+	* error.c (print_instantiation_partial_context_line): New.
+	(print_instantiation_partial_context): Print at most 12 contexts,
+	skip the rest with a message.
+
+2010-02-21  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/42824
+	* pt.c (lookup_template_class): Better support of specialization
+	of member of class template implicit instantiation.
+
+2010-02-20  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR c++/35669
+	* call.c (conversion_null_warnings): Replace -Wconversion with
+	-Wconversion-null.
+	* cvt.c (build_expr_type_conversion): Likewise.
+
+2010-02-18  Jason Merrill  <jason@redhat.com>
+
+	PR c++/42837
+	* class.c (create_vtable_ptr): Set DECL_PACKED if type is packed.
+
+	PR c++/43108
+	* typeck.c (cp_build_binary_op): Adapt mixed complex/non handling from
+	C build_binary_op.
+	* cp-tree.h (WANT_VECTOR_OR_COMPLEX): Rename from WANT_VECTOR.
+	* cvt.c (build_expr_type_conversion): Allow COMPLEX_TYPE.
+
+	PR c++/43070
+	* semantics.c (finish_goto_stmt): Don't call decay_conversion.
+
+	PR c++/26261
+	PR c++/43101
+	* pt.c (tsubst_qualified_id): Do normal lookup in non-dependent scope.
+	(maybe_update_decl_type): New fn.
+	* parser.c (cp_parser_init_declarator): Use it.
+
+	PR c++/43109
+	* semantics.c (begin_class_definition): Don't crash on unnamed ns.
+
+2010-02-17  Jason Merrill  <jason@redhat.com>
+
+	PR c++/43075
+	* call.c (build_over_call): Don't create zero-sized assignments.
+	* cp-gimplify.c (cp_genericize_r): Don't remove them here.
+	* cp-objcp-common.c (cp_expr_size): Remove.
+	* cp-tree.h: Remove prototype.
+
+	PR c++/43069
+	* name-lookup.c (set_decl_namespace): Don't copy DECL_CONTEXT if the
+	decl we looked up doesn't match.
+
+	PR c++/43093
+	* cp-gimplify.c (cp_gimplify_expr) [INIT_EXPR]: Return if we don't
+	have an INIT_EXPR anymore.
+
+	PR c++/43079
+	* pt.c (convert_nontype_argument): Change assert to test.
+
+2010-02-16  Jason Merrill  <jason@redhat.com>
+
+	* cp-gimplify.c (cp_gimplify_expr): Fix error recovery.
+
+	PR c++/43031
+	* cp-gimplify.c (cp_gimplify_expr) [MODIFY_EXPR]: Use
+	VIEW_CONVERT_EXPR for conversions between structural equality types
+	that the back end can't tell are the same.
+
+	PR c++/43036
+	* tree.c (build_cplus_array_type): Set TYPE_MAIN_VARIANT to strip
+	cv-quals from element here.
+	(cp_build_qualified_type_real): Not here.  Preserve typedef name.
+
+2010-02-14  Jason Merrill  <jason@redhat.com>
+
+	PR c++/41997
+	* semantics.c (finish_compound_literal): Use
+	cp_apply_type_quals_to_decl when creating a static variable.
+
+2010-02-12  Jason Merrill  <jason@redhat.com>
+
+	PR c++/43024
+	* name-lookup.h (current_binding_level): Check for null
+	cp_function_chain.
+
+2010-02-12  Jason Merrill  <jason@redhat.com>
+
+	PR c++/43054
+	* tree.c (cp_tree_equal): Correct CALL_EXPR logic.
+
+2010-02-12  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c++/43033
+	* name-lookup.c (pushdecl_maybe_friend): Check default args of t
+	instead of x.
+
+2010-02-10  Jason Merrill  <jason@redhat.com>
+
+	PR c++/41896
+	* semantics.c (outer_lambda_capture_p): Revert.
+	(add_capture): Only finish_member_declaration if
+	we're in the lambda class.
+	(register_capture_members): New.
+	* cp-tree.h: Declare it.
+	* parser.c (cp_parser_lambda_expression): Call it.
+
+2010-02-10  Jason Merrill  <jason@redhat.com>
+
+	PR c++/41896
+	* semantics.c (outer_lambda_capture_p): Use current_function_decl
+	instead of current_class_type.
+
+2010-02-10  Jason Merrill  <jason@redhat.com>
+
+	PR c++/42983, core issue 906
+	* method.c (defaultable_fn_check): Check virtualness.
+
+2010-02-10  Jason Merrill  <jason@redhat.com>
+
+	PR c++/43016
+	* semantics.c (maybe_add_lambda_conv_op): Set DECL_INTERFACE_KNOWN.
+
+2010-02-10  Shujing Zhao  <pearly.zhao@oracle.com>
+
+	* Make-lang.in (cp/cvt.o, cp/parser.o, cp/search.o): Depend on intl.h.
+	* cvt.c (warn_ref_binding): Wrap the messages into G_() for easy
+	translation.
+	* parser.c (cp_parser_postfix_expression, cp_parser_new_type_id)
+	(cp_parser_cast_expression, cp_parser_condition, cp_parser_decltype)
+	(cp_parser_parameter_declaration)
+	(cp_parser_exception_specification_opt)
+	(cp_parser_exception_declaration): Likewise.
+	* pt.c (check_default_tmpl_args): Likewise.
+	* search.c (lookup_field_r): Likewise.
+
+2010-02-09  Jason Merrill  <jason@redhat.com>
+
+	PR c++/42399
+	* pt.c (tsubst_copy_and_build): Propagate LAMBDA_EXPR_LOCATION.
+
+2010-02-09  Jason Merrill  <jason@redhat.com>
+
+	PR c++/42370
+	* decl2.c (change_return_type): New fn.
+	* semantics.c (apply_lambda_return_type): Use it.
+	* cp-tree.h: Declare it.
+
+2010-02-05  Richard Guenther  <rguenther@suse.de>
+
+	* Make-lang.in (cp/cp-lang.o): Depend on gt-cp-cp-lang.h.
+	* cp-lang.c: Include gt-cp-cp-lang.h.
+	* config-lang.in (gtfiles): Add cp/cp-lang.c.
+
+2010-02-05  Dodji Seketeli  <dodji@redhat.com>
+
+	PR c++/42915
+	* typeck.c (get_template_parms_of_dependent_type): Try getting
+	the template parameters fromt the type itself first.
+
+2010-02-03  Jason Merrill  <jason@redhat.com>
+
+	PR c++/4926
+	PR c++/38600
+	* mangle.c (write_unqualified_id): Split out from write_expression.
+	(write_unqualified_name): Call it.
+	(write_member_name): Likewise.
+	(write_expression): Support TEMPLATE_ID_EXPR.
+	Disambiguate operator names.
+
+	PR c++/12909
+	* mangle.c (write_type) [VECTOR_TYPE]: Change mangling with
+	-fabi-version=4.
+
 2010-02-02  Jason Merrill  <jason@redhat.com>
 
 	PR c++/41090

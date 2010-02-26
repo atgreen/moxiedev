@@ -1,6 +1,6 @@
 /* Subroutines used for code generation on IBM RS/6000.
    Copyright (C) 1991, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Richard Kenner (kenner@vlsi1.ultra.nyu.edu)
 
@@ -2382,10 +2382,10 @@ rs6000_override_options (const char *default_cpu)
     rs6000_gen_cell_microcode = !(rs6000_cpu == PROCESSOR_CELL
                                   && !optimize_size);
 
-  /* If we are optimizing big endian systems for space, use the load/store
-     multiple and string instructions unless we are not generating
-     Cell microcode.  */
-  if (BYTES_BIG_ENDIAN && optimize_size && !rs6000_gen_cell_microcode)
+  /* If we are optimizing big endian systems for space and it's OK to
+     use instructions that would be microcoded on the Cell, use the
+     load/store multiple and string instructions.  */
+  if (BYTES_BIG_ENDIAN && optimize_size && rs6000_gen_cell_microcode)
     target_flags |= ~target_flags_explicit & (MASK_MULTIPLE | MASK_STRING);
 
   /* Don't allow -mmultiple or -mstring on little endian systems
@@ -8950,6 +8950,10 @@ static struct builtin_description bdesc_2arg[] =
   { MASK_VSX, CODE_FOR_vsx_xxmrghw_v4si, "__builtin_vsx_xxmrghw_4si", VSX_BUILTIN_XXMRGHW_4SI },
   { MASK_VSX, CODE_FOR_vsx_xxmrglw_v4sf, "__builtin_vsx_xxmrglw", VSX_BUILTIN_XXMRGLW_4SF },
   { MASK_VSX, CODE_FOR_vsx_xxmrglw_v4si, "__builtin_vsx_xxmrglw_4si", VSX_BUILTIN_XXMRGLW_4SI },
+  { MASK_VSX, CODE_FOR_vec_interleave_lowv2df, "__builtin_vsx_mergel_2df", VSX_BUILTIN_VEC_MERGEL_V2DF },
+  { MASK_VSX, CODE_FOR_vec_interleave_lowv2di, "__builtin_vsx_mergel_2di", VSX_BUILTIN_VEC_MERGEL_V2DI },
+  { MASK_VSX, CODE_FOR_vec_interleave_highv2df, "__builtin_vsx_mergeh_2df", VSX_BUILTIN_VEC_MERGEH_V2DF },
+  { MASK_VSX, CODE_FOR_vec_interleave_highv2di, "__builtin_vsx_mergeh_2di", VSX_BUILTIN_VEC_MERGEH_V2DI },
 
   { MASK_ALTIVEC|MASK_VSX, CODE_FOR_nothing, "__builtin_vec_add", ALTIVEC_BUILTIN_VEC_ADD },
   { MASK_ALTIVEC|MASK_VSX, CODE_FOR_nothing, "__builtin_vec_vaddfp", ALTIVEC_BUILTIN_VEC_VADDFP },
@@ -17954,7 +17958,7 @@ rs6000_aix_emit_builtin_unwind_init (void)
 
   do_compare_rtx_and_jump (opcode, tocompare, EQ, 1,
 			   SImode, NULL_RTX, NULL_RTX,
-			   no_toc_save_needed);
+			   no_toc_save_needed, -1);
 
   mem = gen_frame_mem (Pmode,
 		       gen_rtx_PLUS (Pmode, stack_top,

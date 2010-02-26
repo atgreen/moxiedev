@@ -1,6 +1,7 @@
 /* Output routines for GCC for Renesas / SuperH SH.
    Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-   2003, 2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
    Contributed by Steve Chamberlain (sac@cygnus.com).
    Improved by Jim Wilson (wilson@cygnus.com).
 
@@ -4392,6 +4393,7 @@ find_barrier (int num_mova, rtx mova, rtx from)
   int si_limit;
   int hi_limit;
   rtx orig = from;
+  rtx last_got = NULL_RTX;
 
   /* For HImode: range is 510, add 4 because pc counts from address of
      second instruction after this one, subtract 2 for the jump instruction
@@ -4482,6 +4484,16 @@ find_barrier (int num_mova, rtx mova, rtx from)
 	  dst = SET_DEST (pat);
 	  mode = GET_MODE (dst);
 
+	  /* GOT pcrelat setting comes in pair of
+	     mova	.L8,r0
+	     mov.l	.L8,r12
+	     instructions.  (plus add r0,r12).
+	     Remember if we see one without the other.  */
+          if (GET_CODE (src) == UNSPEC && PIC_ADDR_P (XVECEXP (src, 0, 0)))
+            last_got = last_got ? NULL_RTX : from;
+          else if (PIC_ADDR_P (src))
+            last_got = last_got ? NULL_RTX : from;
+
 	  /* We must explicitly check the mode, because sometimes the
 	     front end will generate code to load unsigned constants into
 	     HImode targets without properly sign extending them.  */
@@ -4567,6 +4579,13 @@ find_barrier (int num_mova, rtx mova, rtx from)
 	       && ! TARGET_SMALLCODE)
 	new_align = 4;
 
+      /* There is a possibility that a bf is transformed into a bf/s by the
+	 delay slot scheduler.  */
+      if (JUMP_P (from) && !JUMP_TABLE_DATA_P (from) 
+	  && get_attr_type (from) == TYPE_CBRANCH
+	  && GET_CODE (PATTERN (NEXT_INSN (PREV_INSN (from)))) != SEQUENCE)
+	inc += 2;
+
       if (found_si)
 	{
 	  count_si += inc;
@@ -4626,6 +4645,20 @@ find_barrier (int num_mova, rtx mova, rtx from)
 	  && (count_hi > hi_limit || count_si > si_limit))
 	from = PREV_INSN (PREV_INSN (from));
       else
+	from = PREV_INSN (from);
+
+      /* Don't emit a constant table int the middle of global pointer setting,
+	 since that that would move the addressing base GOT into another table. 
+	 We need the first mov instruction before the _GLOBAL_OFFSET_TABLE_
+	 in the pool anyway, so just move up the whole constant pool.  */
+      if (last_got)
+        from = PREV_INSN (last_got);
+
+      /* Don't insert the constant pool table at the position which
+	 may be the landing pad.  */
+      if (flag_exceptions
+	  && CALL_P (from)
+	  && find_reg_note (from, REG_EH_REGION, NULL_RTX))
 	from = PREV_INSN (from);
 
       /* Walk back to be just before any jump or label.

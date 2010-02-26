@@ -1686,7 +1686,11 @@ find_interesting_uses_address (struct ivopts_data *data, gimple stmt, tree *op_p
 	  while (handled_component_p (*ref))
 	    ref = &TREE_OPERAND (*ref, 0);
 	  if (TREE_CODE (*ref) == INDIRECT_REF)
-	    *ref = fold_indirect_ref (*ref);
+	    {
+	      tree tem = gimple_fold_indirect_ref (TREE_OPERAND (*ref, 0));
+	      if (tem)
+		*ref = tem;
+	    }
 	}
     }
 
@@ -4085,6 +4089,7 @@ determine_use_iv_cost_condition (struct ivopts_data *data,
   bitmap depends_on_elim = NULL, depends_on_express = NULL, depends_on;
   comp_cost elim_cost, express_cost, cost;
   bool ok;
+  tree *control_var, *bound_cst;
 
   /* Only consider real candidates.  */
   if (!cand->iv)
@@ -4106,8 +4111,20 @@ determine_use_iv_cost_condition (struct ivopts_data *data,
 
   /* Try expressing the original giv.  If it is compared with an invariant,
      note that we cannot get rid of it.  */
-  ok = extract_cond_operands (data, use->stmt, NULL, NULL, NULL, &cmp_iv);
+  ok = extract_cond_operands (data, use->stmt, &control_var, &bound_cst,
+			      NULL, &cmp_iv);
   gcc_assert (ok);
+
+  /* When the condition is a comparison of the candidate IV against
+     zero, prefer this IV.
+
+     TODO: The constant that we're substracting from the cost should
+     be target-dependent.  This information should be added to the
+     target costs for each backend.  */
+  if (integer_zerop (*bound_cst)
+      && (operand_equal_p (*control_var, cand->var_after, 0)
+	  || operand_equal_p (*control_var, cand->var_before, 0)))
+    elim_cost.cost -= 1;
 
   express_cost = get_computation_cost (data, use, cand, false,
 				       &depends_on_express, NULL);

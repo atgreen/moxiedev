@@ -1,7 +1,7 @@
 10
 
 dir
-156465
+157074
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/javax/swing/colorchooser
 svn://gcc.gnu.org/svn/gcc
 
@@ -196,40 +196,6 @@ tromey
 
 2470
 
-AbstractColorChooserPanel.h
-file
-
-
-
-
-2009-04-24T17:49:31.000000Z
-699420d42338a695067588447896f1bf
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1743
-
 ColorSelectionModel.h
 file
 
@@ -263,6 +229,40 @@ tromey
 
 
 1037
+
+AbstractColorChooserPanel.h
+file
+
+
+
+
+2009-04-24T17:49:31.000000Z
+699420d42338a695067588447896f1bf
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1743
 
 DefaultPreviewPanel.h
 file
@@ -366,14 +366,14 @@ tromey
 
 1134
 
-DefaultColorSelectionModel.h
+DefaultPreviewPanel$PreviewBorder.h
 file
 
 
 
 
 2009-04-24T17:49:31.000000Z
-fb923dd26f065707d7093e3d45868306
+a1d525c3b8542f058dd6e28d04e9202c
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -398,7 +398,7 @@ tromey
 
 
 
-1665
+1423
 
 DefaultHSBChooserPanel$2.h
 file
@@ -434,14 +434,14 @@ tromey
 
 1134
 
-DefaultPreviewPanel$PreviewBorder.h
+DefaultColorSelectionModel.h
 file
 
 
 
 
 2009-04-24T17:49:31.000000Z
-a1d525c3b8542f058dd6e28d04e9202c
+fb923dd26f065707d7093e3d45868306
 2006-10-13T22:10:15.089349Z
 117714
 tromey
@@ -466,41 +466,7 @@ tromey
 
 
 
-1423
-
-DefaultSwatchChooserPanel$MouseHandler.h
-file
-
-
-
-
-2009-04-24T17:49:31.000000Z
-7230020f55655b53c228482e276191ce
-2006-10-13T22:10:15.089349Z
-117714
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1250
+1665
 
 ColorChooserComponentFactory.h
 file
@@ -535,6 +501,40 @@ tromey
 
 
 918
+
+DefaultSwatchChooserPanel$MouseHandler.h
+file
+
+
+
+
+2009-04-24T17:49:31.000000Z
+7230020f55655b53c228482e276191ce
+2006-10-13T22:10:15.089349Z
+117714
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1250
 
 DefaultHSBChooserPanel$RadioStateListener.h
 file

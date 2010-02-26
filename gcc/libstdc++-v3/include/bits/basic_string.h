@@ -79,7 +79,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
    *  This approach has the enormous advantage that a string object
    *  requires only one allocation.  All the ugliness is confined
    *  within a single pair of inline functions, which each compile to
-   *  a single "add" instruction: _Rep::_M_data(), and
+   *  a single @a add instruction: _Rep::_M_data(), and
    *  string::_M_rep(); and the allocation function which gets a
    *  block of raw bytes and with room enough and constructs a _Rep
    *  object at the front.
@@ -91,7 +91,7 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
    *  string length.)
    *
    *  Note that the _Rep object is a POD so that you can have a
-   *  static "empty string" _Rep object already "constructed" before
+   *  static <em>empty string</em> _Rep object already @a constructed before
    *  static constructors have run.  The reference-count encoding is
    *  chosen so that a 0 indicates one reference, so you never try to
    *  destroy the empty-string _Rep object.
@@ -462,8 +462,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  @param  n  Number of characters to copy.
        *  @param  a  Allocator to use (default is default allocator).
        *
-       *  NB: @a s must have at least @a n characters, '\\0' has no special
-       *  meaning.
+       *  NB: @a s must have at least @a n characters, &apos;\\0&apos;
+       *  has no special meaning.
        */
       basic_string(const _CharT* __s, size_type __n,
 		   const _Alloc& __a = _Alloc());
@@ -786,7 +786,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
       { _M_mutate(0, this->size(), 0); }
 
       /**
-       *  Returns true if the %string is empty.  Equivalent to *this == "".
+       *  Returns true if the %string is empty.  Equivalent to 
+       *  <code>*this == ""</code>.
        */
       bool
       empty() const
@@ -2241,8 +2242,8 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
        *  result of the comparison is nonzero returns it, otherwise the shorter
        *  one is ordered first.
        *
-       *  NB: s must have at least n2 characters, '\\0' has no special
-       *  meaning.
+       *  NB: s must have at least n2 characters, &apos;\\0&apos; has
+       *  no special meaning.
       */
       int
       compare(size_type __pos, size_type __n1, const _CharT* __s,
@@ -2627,11 +2628,12 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
    *  @param str  Buffer to store into.
    *  @return  Reference to the input stream.
    *
-   *  Stores characters from is into @a str until '\n' is found, the end of
-   *  the stream is encountered, or str.max_size() is reached.  If is.width()
-   *  is non-zero, that is the limit on the number of characters stored into
-   *  @a str.  Any previous contents of @a str are erased.  If end of line was
-   *  encountered, it is extracted but not stored into @a str.
+   *  Stores characters from is into @a str until &apos;\n&apos; is
+   *  found, the end of the stream is encountered, or str.max_size()
+   *  is reached.  If is.width() is non-zero, that is the limit on the
+   *  number of characters stored into @a str.  Any previous contents
+   *  of @a str are erased.  If end of line was encountered, it is
+   *  extracted but not stored into @a str.
    */
   template<typename _CharT, typename _Traits, typename _Alloc>
     inline basic_istream<_CharT, _Traits>&
@@ -2867,6 +2869,73 @@ _GLIBCXX_BEGIN_NAMESPACE(std)
 
 _GLIBCXX_END_NAMESPACE
 
+#endif /* __GXX_EXPERIMENTAL_CXX0X__ && _GLIBCXX_USE_C99 ... */
+
+#ifdef __GXX_EXPERIMENTAL_CXX0X__
+
+#include <bits/functional_hash.h>
+
+_GLIBCXX_BEGIN_NAMESPACE(std)
+
+  // DR 1182.
+
+#ifndef _GLIBCXX_COMPATIBILITY_CXX0X
+  /// std::hash specialization for string.
+  template<>
+    struct hash<string>
+    : public std::unary_function<string, size_t>
+    {
+      size_t
+      operator()(const string& __s) const
+      { return std::_Fnv_hash::hash(__s.data(), __s.length()); }
+    };
+
+#ifdef _GLIBCXX_USE_WCHAR_T
+  /// std::hash specialization for wstring.
+  template<>
+    struct hash<wstring>
+    : public std::unary_function<wstring, size_t>
+    {
+      size_t
+      operator()(const wstring& __s) const
+      {
+	const char* __p = reinterpret_cast<const char*>(__s.data());
+	return std::_Fnv_hash::hash(__p, __s.length() * sizeof(wchar_t));
+      }
+    };
 #endif
+#endif /* _GLIBCXX_COMPATIBILITY_CXX0X */
+
+#ifdef _GLIBCXX_USE_C99_STDINT_TR1
+  /// std::hash specialization for u16string.
+  template<>
+    struct hash<u16string>
+    : public std::unary_function<u16string, size_t>
+    {
+      size_t
+      operator()(const u16string& __s) const
+      {
+	const char* __p = reinterpret_cast<const char*>(__s.data());
+	return std::_Fnv_hash::hash(__p, __s.length() * sizeof(char16_t));
+      }
+    };
+
+  /// std::hash specialization for u32string.
+  template<>
+    struct hash<u32string>
+    : public std::unary_function<u32string, size_t>
+    {
+      size_t
+      operator()(const u32string& __s) const
+      {
+	const char* __p = reinterpret_cast<const char*>(__s.data());
+	return std::_Fnv_hash::hash(__p, __s.length() * sizeof(char32_t));
+      }
+    };
+#endif
+
+_GLIBCXX_END_NAMESPACE
+
+#endif /* __GXX_EXPERIMENTAL_CXX0X__ */
 
 #endif /* _BASIC_STRING_H */

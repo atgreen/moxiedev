@@ -377,7 +377,7 @@ enum gfc_isym_id
   GFC_ISYM_FSEEK,
   GFC_ISYM_FSTAT,
   GFC_ISYM_FTELL,
-  GFC_ISYM_GAMMA,
+  GFC_ISYM_TGAMMA,
   GFC_ISYM_GERROR,
   GFC_ISYM_GETARG,
   GFC_ISYM_GET_COMMAND,
@@ -2150,6 +2150,7 @@ typedef struct
   char flag_init_character_value;
   int flag_align_commons;
   int flag_whole_file;
+  int flag_protect_parens;
 
   int fpe;
   int rtcheck;

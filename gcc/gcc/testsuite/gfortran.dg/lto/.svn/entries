@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gfortran.dg/lto
 svn://gcc.gnu.org/svn/gcc
 
@@ -230,40 +230,6 @@ rguenth
 
 473
 
-lto.exp
-file
-
-
-
-
-2009-12-07T15:31:39.010194Z
-a2ccd36bedd11122729ea73e2cffd76c
-2009-11-13T09:05:18.780593Z
-154145
-uros
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1775
-
 pr40725_0.f03
 file
 
@@ -298,17 +264,17 @@ bje
 
 387
 
-pr41764_0.f
+lto.exp
 file
 
 
 
 
 2009-12-07T15:31:39.010194Z
-bfa9a267882a7026883895af0a0932ce
-2009-10-29T12:58:54.353273Z
-153700
-espindola
+a2ccd36bedd11122729ea73e2cffd76c
+2009-11-13T09:05:18.780593Z
+154145
+uros
 
 
 
@@ -330,7 +296,7 @@ espindola
 
 
 
-470
+1775
 
 pr41521_0.f90
 file
@@ -365,6 +331,40 @@ rguenth
 
 
 158
+
+pr41764_0.f
+file
+
+
+
+
+2009-12-07T15:31:39.010194Z
+bfa9a267882a7026883895af0a0932ce
+2009-10-29T12:58:54.353273Z
+153700
+espindola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+470
 
 pr41521_1.f90
 file

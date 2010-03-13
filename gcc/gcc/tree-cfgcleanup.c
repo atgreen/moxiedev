@@ -90,9 +90,47 @@ cleanup_control_expr_graph (basic_block bb, gimple_stmt_iterator gsi)
       edge e;
       edge_iterator ei;
       bool warned;
+      location_t loc;
 
       fold_defer_overflow_warnings ();
-      val = gimple_fold (stmt);
+      loc = gimple_location (stmt);
+      switch (gimple_code (stmt))
+	{
+	case GIMPLE_COND:
+	  {
+	    tree lhs = gimple_cond_lhs (stmt);
+	    tree rhs = gimple_cond_rhs (stmt);
+	    /* For conditions try harder and lookup single-argument
+	       PHI nodes.  Only do so from the same basic-block though
+	       as other basic-blocks may be dead already.  */
+	    if (TREE_CODE (lhs) == SSA_NAME)
+	      {
+		gimple def_stmt = SSA_NAME_DEF_STMT (lhs);
+		if (gimple_code (def_stmt) == GIMPLE_PHI
+		    && gimple_phi_num_args (def_stmt) == 1
+		    && gimple_bb (def_stmt) == gimple_bb (stmt))
+		  lhs = PHI_ARG_DEF (def_stmt, 0);
+	      }
+	    if (TREE_CODE (rhs) == SSA_NAME)
+	      {
+		gimple def_stmt = SSA_NAME_DEF_STMT (rhs);
+		if (gimple_code (def_stmt) == GIMPLE_PHI
+		    && gimple_phi_num_args (def_stmt) == 1
+		    && gimple_bb (def_stmt) == gimple_bb (stmt))
+		  rhs = PHI_ARG_DEF (def_stmt, 0);
+	      }
+	    val = fold_binary_loc (loc, gimple_cond_code (stmt),
+				   boolean_type_node, lhs, rhs);
+	    break;
+	  }
+
+	case GIMPLE_SWITCH:
+	  val = gimple_switch_index (stmt);
+	  break;
+
+	default:
+	  val = NULL_TREE;
+	}
       taken_edge = find_taken_edge (bb, val);
       if (!taken_edge)
 	{
@@ -338,6 +376,7 @@ remove_forwarder_block (basic_block bb)
   gimple label;
   edge_iterator ei;
   gimple_stmt_iterator gsi, gsi_to;
+  bool can_move_debug_stmts;
 
   /* We check for infinite loops already in tree_forwarder_block_p.
      However it may happen that the infinite loop is created
@@ -385,6 +424,8 @@ remove_forwarder_block (basic_block bb)
 	    return false;
 	}
     }
+
+  can_move_debug_stmts = single_pred_p (dest);
 
   /* Redirect the edges.  */
   for (ei = ei_start (bb->preds); (e = ei_safe_edge (ei)); )
@@ -442,15 +483,16 @@ remove_forwarder_block (basic_block bb)
 
   /* Move debug statements if the destination has just a single
      predecessor.  */
-  if (single_pred_p (dest))
+  if (can_move_debug_stmts)
     {
       gsi_to = gsi_after_labels (dest);
       for (gsi = gsi_after_labels (bb); !gsi_end_p (gsi); )
 	{
-	  if (!is_gimple_debug (gsi_stmt (gsi)))
+	  gimple debug = gsi_stmt (gsi);
+	  if (!is_gimple_debug (debug))
 	    break;
 	  gsi_remove (&gsi, false);
-	  gsi_insert_before (&gsi_to, label, GSI_SAME_STMT);
+	  gsi_insert_before (&gsi_to, debug, GSI_SAME_STMT);
 	}
     }
 

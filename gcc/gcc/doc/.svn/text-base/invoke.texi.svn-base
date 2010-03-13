@@ -312,7 +312,7 @@ Objective-C and Objective-C++ Dialects}.
 -frandom-seed=@var{string} -fsched-verbose=@var{n} @gol
 -fsel-sched-verbose -fsel-sched-dump-cfg -fsel-sched-pipelining-verbose @gol
 -ftest-coverage  -ftime-report -fvar-tracking @gol
--fvar-tracking-assigments  -fvar-tracking-assignments-toggle @gol
+-fvar-tracking-assignments  -fvar-tracking-assignments-toggle @gol
 -g  -g@var{level}  -gtoggle  -gcoff  -gdwarf-@var{version} @gol
 -ggdb  -gstabs  -gstabs+  -gstrict-dwarf  -gno-strict-dwarf @gol
 -gvms  -gxcoff  -gxcoff+ @gol
@@ -1425,7 +1425,7 @@ accepts:
 @cindex ISO support
 @item -ansi
 @opindex ansi
-In C mode, this is equivalent to @samp{-std=c89}. In C++ mode, it is
+In C mode, this is equivalent to @samp{-std=c90}. In C++ mode, it is
 equivalent to @samp{-std=c++98}.
 
 This turns off certain features of GCC that are incompatible with ISO
@@ -1467,12 +1467,12 @@ Determine the language standard. @xref{Standards,,Language Standards
 Supported by GCC}, for details of these standard versions.  This option
 is currently only supported when compiling C or C++.
 
-The compiler can accept several base standards, such as @samp{c89} or
+The compiler can accept several base standards, such as @samp{c90} or
 @samp{c++98}, and GNU dialects of those standards, such as
-@samp{gnu89} or @samp{gnu++98}.  By specifying a base standard, the
+@samp{gnu90} or @samp{gnu++98}.  By specifying a base standard, the
 compiler will accept all programs following that standard and those
 using GNU extensions that do not contradict it.  For example,
-@samp{-std=c89} turns off certain features of GCC that are
+@samp{-std=c90} turns off certain features of GCC that are
 incompatible with ISO C90, such as the @code{asm} and @code{typeof}
 keywords, but not other GNU extensions that do not have a meaning in
 ISO C90, such as omitting the middle term of a @code{?:}
@@ -1482,13 +1482,14 @@ those features change the meaning of the base standard and some
 strict-conforming programs may be rejected.  The particular standard
 is used by @option{-pedantic} to identify which features are GNU
 extensions given that version of the standard. For example
-@samp{-std=gnu89 -pedantic} would warn about C++ style @samp{//}
+@samp{-std=gnu90 -pedantic} would warn about C++ style @samp{//}
 comments, while @samp{-std=gnu99 -pedantic} would not.
 
 A value for this option must be provided; possible values are
 
 @table @samp
-@item c89
+@item c90
+@itemx c89
 @itemx iso9899:1990
 Support all ISO C90 programs (certain GNU extensions that conflict
 with ISO C90 are disabled). Same as @option{-ansi} for C code.
@@ -1504,7 +1505,8 @@ ISO C99.  Note that this standard is not yet fully supported; see
 @w{@uref{http://gcc.gnu.org/c99status.html}} for more information.  The
 names @samp{c9x} and @samp{iso9899:199x} are deprecated.
 
-@item gnu89
+@item gnu90
+@itemx gnu89
 GNU dialect of ISO C90 (including some C99 features). This
 is the default for C code.
 
@@ -1547,7 +1549,8 @@ C99 mode.  Using this option is roughly equivalent to adding the
 The option @option{-fno-gnu89-inline} explicitly tells GCC to use the
 C99 semantics for @code{inline} when in C99 or gnu99 mode (i.e., it
 specifies the default behavior).  This option was first supported in
-GCC 4.3.  This option is not supported in C89 or gnu89 mode.
+GCC 4.3.  This option is not supported in @option{-std=c90} or
+@option{-std=gnu90} mode.
 
 The preprocessor macros @code{__GNUC_GNU_INLINE__} and
 @code{__GNUC_STDC_INLINE__} may be used to check which semantics are
@@ -2842,7 +2845,7 @@ be quite different from @option{-pedantic}.  We don't have plans to
 support such a feature in the near future.
 
 Where the standard specified with @option{-std} represents a GNU
-extended dialect of C, such as @samp{gnu89} or @samp{gnu99}, there is a
+extended dialect of C, such as @samp{gnu90} or @samp{gnu99}, there is a
 corresponding @dfn{base standard}, the version of ISO C on which the GNU
 extended dialect is based.  Warnings from @option{-pedantic} are given
 where they are required by the base standard.  (It would not make sense
@@ -3511,7 +3514,7 @@ incomplete types.  Runs in the frontend only.
 Level 3 (default for @option{-Wstrict-aliasing}):
 Should have very few false positives and few false
 negatives.  Slightly slower than levels 1 or 2 when optimization is enabled.
-Takes care of the common punn+dereference pattern in the frontend:
+Takes care of the common pun+dereference pattern in the frontend:
 @code{*(int*)&some_float}.
 If optimization is enabled, it also runs in the backend, where it deals
 with multiple statement cases using flow-sensitive points-to information.
@@ -3874,7 +3877,7 @@ reference to them. Warnings about conversions between signed and
 unsigned integers are disabled by default in C++ unless
 @option{-Wsign-conversion} is explicitly enabled.
 
-@item -Wno-conversion-null @r{(C++)}
+@item -Wno-conversion-null @r{(C++ and Objective-C++ only)}
 @opindex Wconversion-null
 @opindex Wno-conversion-null
 Do not warn for conversions between @code{NULL} and non-pointer
@@ -4342,7 +4345,7 @@ standard's minimum limit, but very portable programs should avoid
 using longer strings.
 
 The limit applies @emph{after} string constant concatenation, and does
-not count the trailing NUL@.  In C89, the limit was 509 characters; in
+not count the trailing NUL@.  In C90, the limit was 509 characters; in
 C99, it was raised to 4095.  C++98 does not specify a normative
 minimum maximum, so we do not diagnose overlength strings in C++@.
 
@@ -5955,7 +5958,7 @@ release to an another.
 In C, emit @code{static} functions that are declared @code{inline}
 into the object file, even if the function has been inlined into all
 of its callers.  This switch does not affect functions using the
-@code{extern inline} extension in GNU C89@.  In C++, emit any and all
+@code{extern inline} extension in GNU C90@.  In C++, emit any and all
 inline functions into the object file.
 
 @item -fkeep-static-consts
@@ -8090,6 +8093,9 @@ The maximum number of insns of a completely peeled loop.
 
 @item max-completely-peel-times
 The maximum number of iterations of a loop to be suitable for complete peeling.
+
+@item max-completely-peel-loop-nest-depth
+The maximum depth of a loop nest suitable for complete peeling.
 
 @item max-unswitch-insns
 The maximum number of insns of an unswitched loop.
@@ -11709,36 +11715,36 @@ instruction set support.
 @item k6
 AMD K6 CPU with MMX instruction set support.
 @item k6-2, k6-3
-Improved versions of AMD K6 CPU with MMX and 3dNOW!@: instruction set support.
+Improved versions of AMD K6 CPU with MMX and 3DNow!@: instruction set support.
 @item athlon, athlon-tbird
-AMD Athlon CPU with MMX, 3dNOW!, enhanced 3dNOW!@: and SSE prefetch instructions
+AMD Athlon CPU with MMX, 3dNOW!, enhanced 3DNow!@: and SSE prefetch instructions
 support.
 @item athlon-4, athlon-xp, athlon-mp
-Improved AMD Athlon CPU with MMX, 3dNOW!, enhanced 3dNOW!@: and full SSE
+Improved AMD Athlon CPU with MMX, 3DNow!, enhanced 3DNow!@: and full SSE
 instruction set support.
 @item k8, opteron, athlon64, athlon-fx
 AMD K8 core based CPUs with x86-64 instruction set support.  (This supersets
-MMX, SSE, SSE2, 3dNOW!, enhanced 3dNOW!@: and 64-bit instruction set extensions.)
+MMX, SSE, SSE2, 3DNow!, enhanced 3DNow!@: and 64-bit instruction set extensions.)
 @item k8-sse3, opteron-sse3, athlon64-sse3
 Improved versions of k8, opteron and athlon64 with SSE3 instruction set support.
 @item amdfam10, barcelona
 AMD Family 10h core based CPUs with x86-64 instruction set support.  (This
-supersets MMX, SSE, SSE2, SSE3, SSE4A, 3dNOW!, enhanced 3dNOW!, ABM and 64-bit
+supersets MMX, SSE, SSE2, SSE3, SSE4A, 3DNow!, enhanced 3DNow!, ABM and 64-bit
 instruction set extensions.)
 @item winchip-c6
 IDT Winchip C6 CPU, dealt in same way as i486 with additional MMX instruction
 set support.
 @item winchip2
-IDT Winchip2 CPU, dealt in same way as i486 with additional MMX and 3dNOW!@:
+IDT Winchip2 CPU, dealt in same way as i486 with additional MMX and 3DNow!@:
 instruction set support.
 @item c3
-Via C3 CPU with MMX and 3dNOW!@: instruction set support.  (No scheduling is
+Via C3 CPU with MMX and 3DNow!@: instruction set support.  (No scheduling is
 implemented for this chip.)
 @item c3-2
 Via C3-2 CPU with MMX and SSE instruction set support.  (No scheduling is
 implemented for this chip.)
 @item geode
-Embedded AMD CPU with MMX and 3dNOW! instruction set support.
+Embedded AMD CPU with MMX and 3DNow!@: instruction set support.
 @end table
 
 While picking a specific @var{cpu-type} will schedule things appropriately
@@ -15578,7 +15584,7 @@ default option.
 
 @item -mmax-constant-size=@var{N}
 @opindex mmax-constant-size
-Specifies the maxium size, in bytes, of a constant that can be used as
+Specifies the maximum size, in bytes, of a constant that can be used as
 an operand in a RX instruction.  Although the RX instruction set does
 allow constants of up to 4 bytes in length to be used in instructions,
 a longer value equates to a longer instruction.  Thus in some
@@ -15599,7 +15605,7 @@ versions of various instructions.  Disabled by default.
 @opindex mint-register
 Specify the number of registers to reserve for fast interrupt handler
 functions.  The value @var{N} can be between 0 and 4.  A value of 1
-means that register @code{r13} will be reserved for ther exclusive use
+means that register @code{r13} will be reserved for the exclusive use
 of fast interrupt handlers.  A value of 2 reserves @code{r13} and
 @code{r12}.  A value of 3 reserves @code{r13}, @code{r12} and
 @code{r11}, and a value of 4 reserves @code{r13} through @code{r10}.

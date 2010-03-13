@@ -11275,8 +11275,7 @@ do_t_strexd (void)
 
   constraint (inst.operands[0].reg == inst.operands[1].reg
 	      || inst.operands[0].reg == inst.operands[2].reg
-	      || inst.operands[0].reg == inst.operands[3].reg
-	      || inst.operands[1].reg == inst.operands[2].reg,
+	      || inst.operands[0].reg == inst.operands[3].reg,
 	      BAD_OVERLAP);
 
   inst.instruction |= inst.operands[0].reg;
@@ -11790,6 +11789,8 @@ neon_select_shape (enum neon_shape shape, ...)
             case SE_L:
               break;
             }
+	  if (!matches)
+	    break;
         }
       if (matches)
         break;
@@ -14662,12 +14663,13 @@ do_neon_ld_st_interleave (void)
       {
       case 64: alignbits = 1; break;
       case 128:
-        if (NEON_REGLIST_LENGTH (inst.operands[0].imm) == 3)
+        if (NEON_REGLIST_LENGTH (inst.operands[0].imm) != 2
+	    && NEON_REGLIST_LENGTH (inst.operands[0].imm) != 4)
           goto bad_alignment;
         alignbits = 2;
         break;
       case 256:
-        if (NEON_REGLIST_LENGTH (inst.operands[0].imm) == 3)
+        if (NEON_REGLIST_LENGTH (inst.operands[0].imm) != 4)
           goto bad_alignment;
         alignbits = 3;
         break;
@@ -22177,6 +22179,7 @@ static const struct arm_cpu_option_table arm_cpus[] =
                                                           NULL},
   {"cortex-r4",		ARM_ARCH_V7R,	 FPU_NONE,	  NULL},
   {"cortex-r4f",	ARM_ARCH_V7R,	 FPU_ARCH_VFP_V3D16,	  NULL},
+  {"cortex-m4",		ARM_ARCH_V7EM,	 FPU_NONE,	  NULL},
   {"cortex-m3",		ARM_ARCH_V7M,	 FPU_NONE,	  NULL},
   {"cortex-m1",		ARM_ARCH_V6M,	 FPU_NONE,	  NULL},
   {"cortex-m0",		ARM_ARCH_V6M,	 FPU_NONE,	  NULL},

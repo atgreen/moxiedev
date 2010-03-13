@@ -179,9 +179,9 @@ void
 Scan_relocs::run(Workqueue*)
 {
   this->object_->scan_relocs(this->symtab_, this->layout_, this->rd_);
-  this->object_->release();
   delete this->rd_;
   this->rd_ = NULL;
+  this->object_->release();
 }
 
 // Return a debugging name for the task.
@@ -1106,14 +1106,17 @@ Sized_relobj<size, big_endian>::split_stack_adjust_reltype(
       // cases we will ask for a large stack unnecessarily, but this
       // is not fatal.  FIXME: Some targets have symbols which are
       // functions but are not type STT_FUNC, e.g., STT_ARM_TFUNC.
-      if (gsym->type() == elfcpp::STT_FUNC
-	  && !gsym->is_undefined()
+      if (!gsym->is_undefined()
 	  && gsym->source() == Symbol::FROM_OBJECT
 	  && !gsym->object()->uses_split_stack())
 	{
-	  section_offset_type offset =
-	    convert_to_section_size_type(reloc.get_r_offset());
-	  non_split_refs.push_back(offset);
+	  unsigned int r_type = elfcpp::elf_r_type<size>(reloc.get_r_info());
+	  if (parameters->target().is_call_to_non_split(gsym, r_type))
+	    {
+	      section_offset_type offset =
+		convert_to_section_size_type(reloc.get_r_offset());
+	      non_split_refs.push_back(offset);
+	    }
 	}
     }
 

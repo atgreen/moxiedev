@@ -1,14 +1,14 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/bitset
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-04T01:58:21.786085Z
-155603
+2010-03-02T21:11:19.803908Z
+157176
 paolo
 
 
@@ -48,6 +48,9 @@ operations
 dir
 
 requirements
+dir
+
+hash
 dir
 
 to_ulong

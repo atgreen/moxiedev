@@ -1,3 +1,428 @@
+2010-03-12  David S. Miller  <davem@davemloft.net>
+
+	* gcc.dg/lto/20090313_0.c: Add -mcpu=v9 to dg-lto-options on
+	sparc.
+
+2010-03-12  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
+
+	* gcc.target/arm/sibcall-1.c: Allow PLT to appear with pic code.
+
+2010-03-12  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/43291
+	PR fortran/43326
+	* gfortran.dg/dynamic_dispatch_7.f03: New test.
+
+2010-03-12  Kai Tietz  <kai.tietz@onevision.com>
+
+	* gfortran.dg/default_format_denormal_1.f90: Don't assume
+	fail for *-*-mingw* targets.
+
+2010-03-12  Jakub Jelinek  <jakub@redhat.com>
+
+	PR debug/43329
+	* gcc.dg/guality/pr43329-1.c: New test.
+
+2010-03-11  Martin Jambor  <mjambor@suse.cz>
+
+	PR tree-optimization/43257
+	* g++.dg/torture/pr43257.C: New test.
+
+2010-03-11  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/43228
+	* gfortran.dg/namelist_61.f90: New test.
+
+2010-03-11  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/43255
+	* gcc.c-torture/compile/pr43255.c: New testcase.
+
+2010-03-11  Andreas Krebbel  <Andreas.Krebbel@de.ibm.com>
+
+	* gcc.dg/optimize-bswapdi-1.c: Add OpenSSL bswap variant.
+	* gcc.dg/pr43280.c: New testcase.
+
+2010-03-11  Richard Guenther  <rguenther@suse.de>
+
+	PR lto/43200
+	* gcc.dg/lto/20100227-1_0.c: New testcase.
+	* gcc.dg/lto/20100227-1_1.c: Likewise.
+
+2010-03-10  Jerry DeLisle  <jvdelisle@gcc.gnu.org>
+
+	PR libfortran/43320
+	PR libfortran/43265
+	* gfortran.dg/read_eof_6.f: New test
+	* gfortran.dg/read_x_eof.f90: New test.
+	* gfortran.dg/read_x_past.f: Update test.
+
+2010-03-10  Jan Hubicka   <jh@suse.cz>
+
+	* gcc.dg/compile/pr43288.c: New test.
+
+2010-03-10  Kaveh R. Ghazi  <ghazi@caip.rutgers.edu>
+
+	* g++.old-deja/g++.pt/asm1.C: Don't detect pic via looking for the
+	-fpic/-fPIC flags.
+	* g++.old-deja/g++.pt/asm2.C: Likewise.
+	* gcc.c-torture/compile/20000804-1.c: Likewise.
+	* gcc.target/i386/clobbers.c: Likewise.
+
+2010-03-10  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/43303
+	* gfortran.dg/c_assoc_3.f90: New test.
+
+2010-03-10  Jakub Jelinek  <jakub@redhat.com>
+
+	PR debug/36728
+	* gcc.dg/guality/pr36728-1.c: New test.
+	* gcc.dg/guality/pr36728-2.c: New test.
+
+2010-03-10  Kaushik Phatak  <kaushik.phatak@kpitcummins.com>
+
+	* gcc.dg/h8300-div-delay-slot.c: New test.
+
+2010-03-10  Alexander Monakov  <amonakov@ispras.ru>
+
+	PR tree-optimization/43236
+	* gcc.c-torture/execute/pr43236.c: New test.
+
+2010-03-10  Andrey Belevantsev  <abel@ispras.ru>
+
+	PR middle-end/42859
+	* g++.dg/eh/pr42859.C: New test.
+
+2010-03-09  Jakub Jelinek  <jakub@redhat.com>
+
+	PR debug/43299
+	* gcc.dg/pr43299.c: New test.
+
+	PR debug/43290
+	* g++.dg/eh/unwind2.C: New test.
+
+2010-03-05  Sebastian Pop  <sebastian.pop@amd.com>
+	    Reza Yazdani  <reza.yazdani@amd.com>
+
+	PR middle-end/43065
+	* gcc.dg/graphite/run-id-4.c: New.
+
+2010-03-08  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/43065
+	* gcc.dg/graphite/run-id-3.c: New.
+
+2010-03-08  Tobias Grosser  <grosser@fim.uni-passau.de>
+
+	PR middle-end/42644
+	PR middle-end/42130
+	* gcc.dg/graphite/id-18.c: New.
+	* gcc.dg/graphite/run-id-pr42644.c: New.
+
+2010-03-08  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42326
+	* gcc.dg/graphite/pr42326.c: New.
+
+2010-03-08  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/43269
+	* gcc.c-torture/execute/pr43269.c: New testcase.
+
+2010-03-08  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/43256
+	* gfortran.dg/typebound_call_13.f03: New.
+
+2010-03-05  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* lib/plugin-support.exp (plugin-test-execute): Use PLUGINCC in lieu
+	of HOSTCC and PLUGINCFLAGS in lieu of HOSTCFLAGS.
+
+2010-03-05  Jason Merrill  <jason@redhat.com>
+
+	* g++.dg/abi/mangle40.C: Require weak and alias.
+
+2010-03-05  Sebastian Pop  <sebastian.pop@amd.com>
+
+	PR middle-end/42326
+	* gfortran.dg/graphite/pr42326.f90: New.
+	* gfortran.dg/graphite/pr42326-1.f90: New.
+
+2010-03-05  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* lib/gnat.exp (gnat_init): Remove GNAT_UNDER_TEST_ORIG.
+	(gnat_target_compile): Likewise.
+	Reinitialize GNAT_UNDER_TEST if target changes.
+	Set ADA_INCLUDE_PATH, ADA_OBJECTS_PATH in environment.
+	(local_find_gnatmake): Pass full --GCC to gnatlink.
+	Remove --LINK.
+
+2010-03-04  Andrew Pinski  <andrew_pinski@caviumnetworks.com>
+
+	PR c/43248
+	* gcc.dg/compound-literal-1.c: New testcase.
+
+2010-03-04  Martin Jambor  <mjambor@suse.cz>
+
+	PR tree-optimization/43164
+	PR tree-optimization/43191
+	* gcc.c-torture/compile/pr43164.c: New test.
+	* gcc.c-torture/compile/pr43191.c: Likewise.
+
+2010-03-04  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/43244
+	* gfortran.dg/finalize_9.f90: New.
+
+2010-03-04  Tobias Burnus  <burnus@net-b.de>
+	    Ken Werner <ken@linux.vnet.ibm.com>
+
+	* gfortran.dg/reassoc_4.f: Add --param max-completely-peel-times
+	to dg-options for spu.
+	* gfortran.dg/vect/vect-7.f90: Add vect_intfloat_cvt to the
+	dump-scan target to exclude spu.
+
+2010-03-04  Changpeng Fang  <changpeng.fang@amd.com>
+
+	PR middle-end/43209
+	* gcc.dg/tree-ssa/ivopts-4.c: New.
+
+2010-03-03  Janis Johnson  <janis187@us.ibm.com>
+
+	* lib/target-supports-dg.exp (check-flags): Provide defaults for
+	include-opts and exclude-opts; skip checking the flags if arguments
+	are the same as the defaults.
+	(dg-xfail-if): Verify the number of arguments, supply defaults
+	for unspecified optional arguments.
+	(dg-skip-if, dg-xfail-run-if): Verify the number of arguments.
+
+2010-03-03  Jason Merrill  <jason@redhat.com>
+
+	* g++.dg/abi/mangle19-1.C: Adjust for default -Wabi.
+	* g++.dg/abi/mangle23.C: Likewise.
+	* g++.dg/eh/simd-2.C: Likewise.
+	* g++.dg/ext/attribute-test-2.C: Likewise.
+	* g++.dg/ext/vector14.C: Likewise.
+	* g++.dg/other/pr34435.C: Likewise.
+	* g++.dg/template/conv8.C: Likewise.
+	* g++.dg/template/nontype9.C: Likewise.
+	* g++.dg/template/qualttp17.C: Likewise.
+	* g++.dg/template/ref1.C: Likewise.
+	* g++.old-deja/g++.pt/crash68.C: Likewise.
+	* g++.old-deja/g++.pt/ref1.C: Likewise.
+	* g++.old-deja/g++.pt/ref3.C: Likewise.
+	* g++.old-deja/g++.pt/ref4.C: Likewise.
+
+	PR c++/12909
+	* g++.dg/abi/mangle40.C: New.
+	* g++.dg/abi/mangle41.C: New.
+	* g++.dg/lto/20100302_0.C: New.
+	* g++.dg/lto/20100302_1.C: New.
+	* g++.dg/lto/20100302.h: New.
+
+2010-03-03  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/43243
+	* gfortran.dg/internal_pack_12.f90: New test.
+
+2010-03-03  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gcc.dg/pr36997.c: Adjust error message.
+
+2010-03-03  Mike Stump  <mikestump@comcast.net>
+
+	* gcc.target/i386/builtin-unreachable.c: Don't expect stack
+	adjustments to not be present on machines that align the stack to
+	more than 4 bytes and don't have a red zone yet as that is an
+	unimplemented optimization.
+
+2010-03-03  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/43169
+	* gfortran.dg/impure_assignment_3.f90: New.
+
+2010-03-03  Jakub Jelinek  <jakub@redhat.com>
+
+	PR debug/43229
+	* gfortran.dg/pr43229.f90: New test.
+
+	PR debug/43237
+	* gcc.dg/debug/dwarf2/pr43237.c: New test.
+
+	PR debug/43177
+	* gcc.dg/guality/pr43177.c: New test.
+
+2010-03-02  Jason Merrill  <jason@redhat.com>
+
+	* g++.dg/ext/vector9.C: Adjust error message.
+	* g++.dg/conversion/simd3.C: Likewise.
+	* g++.dg/other/error23.C: Likewise.
+
+2010-03-02  Mike Stump  <mikestump@comcast.net>
+
+	PR c++/41090
+	* g++.dg/ext/label13.C (C::C): xfail for darwin for now.
+
+2010-03-02  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/43180
+	* gfortran.dg/internal_pack_10.f90: New test.
+
+	PR fortran/43173
+	* gfortran.dg/internal_pack_11.f90: New test.
+
+2010-03-02  Reza Yazdani  <reza.yazdani@amd.com>
+
+	PR middle-end/42640
+	* gcc.dg/tree-ssa/pr42640.c: New.
+
+2010-03-01  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/43220
+	* gcc.c-torture/execute/pr43220.c: New testcase.
+
+2010-03-01  Richard Guenther  <rguenther@suse.de>
+
+	PR middle-end/43213
+	* gcc.dg/pr43213.c: New testcase.
+
+2010-03-01  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR pch/14940
+	* gcc.dg/pch/pch.exp: Don't XFAIL largefile.c on i?86-*-solaris2.10.
+
+2010-03-01  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* lib/target-supports.exp (check_effective_target_ucn_nocache):
+	New function.
+	(check_effective_target_ucn): Likewise.
+
+	* g++.dg/other/ucnid-1.C: Don't XFAIL on *-*-solaris2.*, but skip
+	if !ucn.
+	* gcc.dg/ucnid-2.c: Likewise.
+	* gcc.dg/ucnid-3.c: Likewise.
+	* gcc.dg/ucnid-4.c: Likewise.
+	* gcc.dg/ucnid-11.c: Likewise.
+	* gcc.dg/ucnid-12.c: Likewise.
+	* gcc.dg/ucnid-6.c: Skip if !ucn.
+	* gcc.dg/ucnid-9.c: Likewise.
+
+2010-03-01  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* gcc.target/i386/pr32000-2.c: Add missing include and exclude
+	lists to dg-skip-if.
+	* gcc.target/i386/stackalign/return-3.c: Likewise.
+
+2010-03-01  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* gcc.target/i386/clearcap.map: New file.
+	* gcc.target/i386/i386.exp: Check for linker -M mapfile support.
+	Pass clearcap.map by default if supported.
+
+2010-03-01  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR fortran/42900
+	* gfortran.dg/stat_1.f90: Accept 'testfile' gid == parent dir gid.
+	Explain this.
+	* gfortran.dg/stat_2.f90: Likewise.
+
+2010-03-01  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/43199
+	* gfortran.dg/module_read_2.f90: New test.
+
+2010-02-27  Mark Mitchell  <mark@codesourcery.com>
+
+	PR c++/42748
+	* g++.dg/abi/mangle11.C: Adjust mangling warning locations.
+	* g++.dg/abi/mangle12.C: Likewise.
+	* g++.dg/abi/mangle20-2.C: Likewise.
+	* g++.dg/abi/mangle17.C: Likewise.
+	* g++.dg/template/cond2.C: Likewise.
+	* g++.dg/template/pr35240.C: Likewise.
+
+2010-02-27  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/43186
+	* gcc.c-torture/compile/pr43186.c: Adjust testcase.
+
+2010-02-27  Kaz Kojima  <kkojima@gcc.gnu.org>
+
+	* g++.dg/abi/packed1.C: Expect warning on the SH.
+
+2010-02-27  Simon Martin  <simartin@users.sourceforge.net>
+
+	PR c++/42054:
+	* g++.dg/parse/error37.C: New test.
+
+2010-02-27  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR c/24577
+	PR c/43192
+	* gcc.dg/pr8927-1.c: Match new note.
+	* gcc.dg/990506-0.c: Likewise.
+	* gcc.dg/gomp/flush-2.c: Likewise.
+	* gcc.dg/gomp/atomic-5.c: Likewise.
+	* gcc.dg/gomp/pr34607.c: Likewise.
+	* gcc.dg/pr35746.c: Likewise.
+	* gcc.dg/cpp/pragma-1.c: Likewise.
+	* gcc.dg/cpp/pragma-2.c: Likewise.
+	* gcc.dg/pr41842.c: Likewise.
+	* gcc.dg/noncompile/20040629-1.c: Likewise.
+	* objc.dg/private-1.m: Likewise.
+
+2010-02-27  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/43185
+	* gfortran.dg/default_initialization_1.f90: Add -std=f2003.
+	* gfortran.dg/default_initialization_4.f90: New test.
+
+2010-02-27  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* gnat.dg/thin_pointer.ad[sb]: Rename into...
+	* gnat.dg/thin_pointer1.ad[sb]: ...this.
+	* gnat.dg/thin_pointer2.adb: New test.
+	* gnat.dg/thin_pointer2_pkg.ad[sb]: New helper.
+
+2010-02-26  Manuel López-Ibáñez  <manu@gcc.gnu.org>
+
+	PR c/20631
+	* gcc.dg/cpp/c90-pedantic.c: New.
+	* gcc.dg/cpp/c90.c: New.
+	* gcc.dg/gnu90-const-expr-1.c: New.
+	* gcc.dg/Woverlength-strings-pedantic-c90.c: New.
+
+2010-02-26  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/43186
+	* gcc.c-torture/compile/pr43186.c: New testcase.
+
+2010-02-26  Jakub Jelinek  <jakub@redhat.com>
+
+	PR debug/43190
+	* c-c++-common/dwarf2/pr43190.c: New test.
+
+2010-02-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR testsuite/37074:
+	* gcc.dg/torture/stackalign/stackalign.exp: Add -mno-mmx to x86.
+
+2010-02-26  Richard Guenther  <rguenther@suse.de>
+
+	PR tree-optimization/43188
+	* gcc.c-torture/compile/pr43188.c: New testcase.
+
+2010-02-26  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR target/43175
+	* gcc.target/i386/vperm-v4si-2-sse4.c: New.
+
+2010-02-25  Eric Botcazou  <ebotcazou@adacore.com>
+
+	* g++.dg/abi/packed1.C: Expect warning on the SPARC.
+
 2010-02-25  Michael Meissner  <meissner@linux.vnet.ibm.com>
 
 	PR target/43154

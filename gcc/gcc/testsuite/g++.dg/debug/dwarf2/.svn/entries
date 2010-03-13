@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/debug/dwarf2
 svn://gcc.gnu.org/svn/gcc
 
@@ -570,40 +570,6 @@ jakub
 
 2324
 
-localclass2.C
-file
-
-
-
-
-2009-04-24T17:44:06.000000Z
-e630666f783fe49a55b1e7fca6a3fa9d
-2008-11-13T21:04:32.110809Z
-141829
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2328
-
 fesd-sys.h
 file
 
@@ -637,6 +603,40 @@ ebotcazou
 
 
 2242
+
+localclass2.C
+file
+
+
+
+
+2009-04-24T17:44:06.000000Z
+e630666f783fe49a55b1e7fca6a3fa9d
+2008-11-13T21:04:32.110809Z
+141829
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2328
 
 imported-module-2.C
 file
@@ -672,40 +672,6 @@ jakub
 
 280
 
-imported-module-3.C
-file
-
-
-
-
-2009-09-27T03:30:02.000000Z
-00073dddfb84caf2285834b264334fb6
-2009-09-22T13:22:15.299385Z
-151978
-jakub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-232
-
 imported-module.C
 file
 
@@ -740,14 +706,14 @@ dodji
 
 411
 
-imported-module-4.C
+imported-module-3.C
 file
 
 
 
 
 2009-09-27T03:30:02.000000Z
-f328f5fd374ff3e1abef9c5c385bb657
+00073dddfb84caf2285834b264334fb6
 2009-09-22T13:22:15.299385Z
 151978
 jakub
@@ -772,7 +738,7 @@ jakub
 
 
 
-261
+232
 
 const1.C
 file
@@ -807,6 +773,40 @@ jakub
 
 
 419
+
+imported-module-4.C
+file
+
+
+
+
+2009-09-27T03:30:02.000000Z
+f328f5fd374ff3e1abef9c5c385bb657
+2009-09-22T13:22:15.299385Z
+151978
+jakub
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+261
 
 const2.C
 file

@@ -1,3 +1,197 @@
+2010-03-12  Tom Tromey  <tromey@redhat.com>
+
+	PR c++/9708:
+	* gdb.cp/m-static.exp: Add regression test.
+	* gdb.cp/m-static.cc (method): New method.
+	(main): Call it.
+
+2010-03-12  Sami Wagiaalla  <swagiaal@redhat.com>
+
+	* gdb.cp/gdb2384-base.h: Created 'namespace B'.
+	* gdb.cp/gdb2384-base.cc: Use 'namespace B'.
+
+2010-03-12  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* lib/gdb.exp (gdb_test_multiple): Handle -timeout.
+
+2010-03-12  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* lib/gdb.exp (skip_stl_tests): New.
+	(gdb_compile): Symbian needs -ldl.
+	(shlib_target_file): New.
+	(shlib_symbol_file): New.
+	(gdb_load_shlibs): Use shlib_target_file.
+	* lib/mi-support.exp (mi_load_shlibs): Use shlib_target_file.
+	* gdb.cp/exception.exp: Use skip_stl_tests.
+	* gdb.cp/bs15503.exp: Use skip_stl_tests.  Use untested.
+	* gdb.cp/try_catch.exp: Use skip_stl_tests.
+	* gdb.cp/mb-templates.exp: Ditto.
+	* gdb.base/commands.exp: Relax regexes.
+	* gdb.base/watchpoint-solib.exp: Don't skip on symbian.  Use
+	shlib_target_file and shlib_symbol_file.
+	* gdb.base/maint.exp: Allow lowercase t.  Allow .rodata in
+	sections.
+	* gdb.base/ending-run.exp: Accept E32Main for symbian.
+	* gdb.base/solib-disc.exp: Use
+	shlib_target_file and shlib_symbol_file.
+	* gdb.base/unload.exp: Don't skip on symbian.  Use
+	shlib_target_file and shlib_symbol_file.
+	* gdb.base/list.exp: Check use_gdb_stub instead of is_remote.
+
+2010-03-12  Pedro Alves  <pedro@codesourcery.com>
+ 
+	* gdb.trace/backtrace.exp: Adjust for x86 and x86_64.
+	* gdb.trace/report.exp: Adjust for x86 and x86_64.
+	Issue a tfind end before looking for a tracepoint frame.
+	* gdb.trace/tfind.exp: Adjust tstatus output.
+	Adjust disassembly output.
+	* gdb.trace/while-dyn.exp: Adjust for x86 and x86_64.
+
+2010-03-11  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.base/break-interp.exp: Create new displacement parameter value
+	for the test_ld calls.
+	(reach): New parameter displacement, verify its content.  New push of
+	pf_prefix "reach-$func:".  Import global expect_out.
+	(test_core): New parameter displacement, verify its content.  New push
+	of pf_prefix "core:".  New command "set verbose on".  Import global
+	expect_out.
+	(test_attach): New parameter displacement, verify its content.  New
+	push of pf_prefix "attach:".  New command "set verbose on".  Import
+	global expect_out.
+	(test_ld): New parameter displacement, pass it to the reach, test_core
+	and test_attach calls and verify its content in the "ld.so exit" test.
+	* gdb.base/prelink.exp: Remove gdb_exit and final return.
+	(prelink): Update expected text, use gdb_test.
+
+2010-03-10  Doug Evans  <dje@google.com>
+
+	* gdb.base/checkpoint.exp: Fix comment.
+	Lengthen timeout while doing >600 checkpoints test.
+	Rename duplicate "kill all one" test to keep test names unique.
+
+2010-03-10  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.base/watch-cond.c, gdb.base/watch-cond.exp: New.
+
+2010-03-08  Keith Seitz  <keiths@redhat.com>
+
+        * gdb.cp/cp-relocate.exp: Remove single-quoting of C++ methods.
+        * gdb.cp/cplusfuncs.cc (dm_type_short): New function.
+        (dm_type_long): New function.
+        (dm_type_unsigned_short): New function.
+        (dm_type_unsigned_long): New function.
+        (myint): New typedef.
+        * gdb.cp/cplusfuncs.exp (probe_demangler): Add tests for short,
+        long, unsigned shor and long, operator char*, and typedef.
+        (test_lookup_operator_functions): Add operator char* test.
+        (test_paddr_operator_functions): Likewise.
+        (test_paddr_overloaded_functions): Use probe values for
+        short, long, and unsigned short and long.
+        (test_paddr_hairy_functions): If the demangler probe detected
+        gdb type printers, "expect" them. Otherwise "expect" the v2 or v3
+        demangler.
+        * gdb.cp/expand-sals.exp: Backtrace may contain class names.
+        * gdb.cp/member-ptr.exp: Refine expected result for "print pmf"
+        and "print null_pmf".
+        Add test "ptype a.*pmf".
+        * gdb.cp/overload.exp: Allow optional "int" to appear with
+        "short" and "long".
+        * gdb.cp/ovldbreak.exp: Use append to construct super-duper
+        long expect value for men_overload1arg.
+        Allow "int" to appear with "short" and "long".
+        When testing "info break", add argument for main (void).
+        Also allow "int" to appear with "short" and "long".
+        Ditto with "unsigned" and "long long".
+	* gdb.java/jmain.exp: Do not enclose methods names in single
+	quotes.
+	* gdb.java/jmisc.exp: Likewise.
+	* gdb.java/jprint.exp: Likewise.
+	* gdb.python/py-symbol.exp: Update expected "linkage_name" value.
+
+	From Jan Kratochvil  <jan.kratochvil@redhat.com>:
+	* gdb.cp/exception.exp (backtrace after first throw)
+	(backtrace after second throw): Allow a namespace before __cxa_throw.
+	(backtrace after first catch, backtrace after second catch): Allow
+	a namespace before __cxa_begin_catch.
+
+	* gdb.cp/cpexprs.exp: New file.
+	* gdb.cp/cpexprs.cc: New file.
+
+	From Daniel Jacobowitz  <dan@codesourcery.com>
+	* gdb.cp/cpexprs.exp (escape): Delete.  Change all callers
+	to use string_to_regexp.
+	(ctor, dtor): New functions.  Use them to match constructor
+	and destructor function types.
+	(Top level): Use runto_main.
+
+2010-03-05  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.python/py-prettyprint.py (pp_nullstr.to_string): Use
+	gdb.target_charset.
+	(pp_ns.to_string): Likewise.
+
+2010-03-04  Keith Seitz  <keiths@redhat.com>
+
+	* gdb.cp/overload.exp: Test that the filename portion of a linespec
+	can be quoted.  Test that both the filename and function/line
+	portions can be quoted at the same time.
+
+2010-03-04  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.base/watch-non-mem.c, gdb.base/watch-non-mem.exp: New.
+
+2010-03-03  Doug Evans  <dje@google.com>
+
+	* lib/gdb.exp (gdb_compile_pthreads): Handle case where
+	libc contains libpthread.
+
+	* gdb.threads/linux-dp.c (shared_random): Call rand instead of rand_r.
+	* gdb.threads/linux-dp.exp: Compile with gdb_compile_pthreads instead
+	of gdb_compile.  Add another pattern to match android backtrace.
+
+2010-03-03  Tom Tromey  <tromey@redhat.com>
+
+	PR gdb/11345:
+	* gdb.base/printcmds.exp (test_printf): Add test.
+
+2010-03-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gdb.arch/amd64-byte.exp: New.
+	* gdb.arch/amd64-dword.exp: Likewise.
+	* gdb.arch/amd64-pseudo.c: Likewise.
+	* gdb.arch/amd64-word.exp: Likewise.
+	* gdb.arch/i386-byte.exp: Likewise.
+	* gdb.arch/i386-pseudo.c: Likewise.
+	* gdb.arch/i386-word.exp: Likewise.
+
+2010-03-01  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.xml/extra-regs.xml: Add struct1, struct2, and flags
+	types.  Add structreg, bitfields, and flags registers.
+	* gdb.xml/tdesc-regs.exp: Test structreg and bitfields
+	registers.
+
+2010-03-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gdb.xml/tdesc-regs.exp (architecture): New.  Set it for x86.
+	(load_description): Set architecture if defined.
+
+2010-02-28  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.python/py-frame.exp: Add read_var block tests.
+	* gdb.python/py-frame.c (block): New function.
+
+2010-02-28  Jan Kratochvil  <jan.kratochvil@redhat.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.base/callfuncs.exp: New tests for $spval 0 and -1.  Remove return.
+
+2010-02-25  David S. Miller  <davem@davemloft.net>
+
+	* gdb.base/catch-syscall.exp: Allow to run on sparc*-*-linux and
+	fix logic for setting all_syscalls_numbers.
+
 2010-02-24  Phil Muldoon  <pmuldoon@redhat.com>
 
 	* Makefile.in: Add py-block and py-symbol.

@@ -11,7 +11,7 @@
 
 /*
  * from: @(#)fdlibm.h 5.1 93/09/24
- * $Id: math_private.h,v 1.3 2003/07/09 17:52:31 aoliva Exp $
+ * $Id: math_private.h,v 1.4 2010/03/05 08:55:16 corinna Exp $
  */
 
 #ifndef _MATH_PRIVATE_H_
@@ -22,15 +22,11 @@
 #include <machine/weakalias.h>
 #include <machine/huge_val.h>
 
-#define INFINITY HUGE_VALF
-
 #define __nan nan
 #define __isnan isnan
 #define __isinf isinf
 #define __copysignf copysignf
 #define __copysign copysign
-#define __isnanf isnanf
-#define __isinff isinff
 #define __nanf nanf
 #define feraiseexcept(x) /* nothing */
 #define __sincos sincos

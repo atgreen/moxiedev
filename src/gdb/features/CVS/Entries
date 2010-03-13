@@ -12,7 +12,6 @@ D/rs6000////
 /arm-with-vfpv3.c/1.1/Thu Jan 28 00:24:31 2010//
 /arm-with-vfpv3.xml/1.2/Thu Jan 28 00:24:31 2010//
 /feature_to_c.sh/1.7/Thu Jan 28 00:24:31 2010//
-/gdb-target.dtd/1.10/Thu Jan 28 00:24:31 2010//
 /gdbserver-regs.xsl/1.1/Thu Jan 28 00:24:31 2010//
 /library-list.dtd/1.5/Thu Jan 28 00:24:31 2010//
 /m68k-core.xml/1.1/Thu Jan 28 00:24:31 2010//
@@ -45,3 +44,4 @@ D/rs6000////
 /xscale-iwmmxt.xml/1.5/Thu Jan 28 00:24:31 2010//
 /Makefile/1.17/Thu Feb 25 20:33:22 2010//
 D/i386////
+/gdb-target.dtd/1.11/Sat Mar 13 04:42:49 2010//

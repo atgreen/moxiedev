@@ -1,3 +1,206 @@
+2010-03-12  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* scripts/run_doxygen: Adjust.
+	* doc/doxygen/user.cfg.in: Adjust latex, xml prefs.
+	* doc/xml/api.xml: Update.
+	* doc/Makefile.am: Re-do stamp rules.
+	* doc/Makefile.in: Regenerate.
+
+2010-03-10  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/hashtable_policy.h (_Rehash_base<_Prime_rehash_policy,
+	_Hashtable>::reserve): Add, per DR 1189.
+	* include/bits/hashtable.h (_Hashtable<>::size_type,
+	_Hashtable<>::difference_type): Do not typedef from _Allocator.
+	* testsuite/23_containers/unordered_map/dr1189.cc: New.
+	* testsuite/23_containers/unordered_set/dr1189.cc: Likewise.
+	* testsuite/23_containers/unordered_multimap/dr1189.cc: Likewise.
+	* testsuite/23_containers/unordered_multiset/dr1189.cc: Likewise.
+
+2010-03-08  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	Revert:
+	2010-02-11  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	PR libstdc++/41975, DR 579
+	* include/bits/hashtable.h (_Hashtable<>::_M_erase_node): Remove.
+	(erase(const_iterator), erase(const_iterator, const_iterator)):
+	Change return type to void.
+	* include/debug/unordered_map: Adjust.
+	* include/debug/unordered_set: Likewise.
+	* testsuite/util/exception/safety.h: Likewise.
+	* testsuite/23_containers/unordered_map/erase/1.cc: Likewise.
+	* testsuite/23_containers/unordered_map/erase/24061-map.cc: Likewise.
+	* testsuite/23_containers/unordered_set/erase/1.cc:  Likewise.
+	* testsuite/23_containers/unordered_set/erase/24061-map.cc: Likewise.
+	* testsuite/23_containers/unordered_multimap/erase/1.cc:  Likewise.
+	* testsuite/23_containers/unordered_multimap/erase/24061-map.cc:
+	Likewise.
+	* testsuite/23_containers/unordered_multiset/erase/1.cc:  Likewise.
+	* testsuite/23_containers/unordered_multiset/erase/24061-map.cc:
+	Likewise.
+
+2010-03-04  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* testsuite/util/testsuite_container_traits.h (traits_base): Add
+	has_throwing_erase trait.
+	(traits<vector>, traits<deque>): Typedef the latter to true_type.
+	* testsuite/util/exception/safety.h (generation_prohibited):
+	Do not test vector::erase and deque::erase: can throw if
+	either copy constructor or assignment operator of value_type
+	throws.
+	* testsuite/23_containers/vector/requirements/exception/
+	generation_prohibited.cc: Remove xfail.
+	* testsuite/23_containers/deque/requirements/exception/
+	generation_prohibited.cc: Likewise.
+
+	* include/ext/throw_allocator.h (hash<__gnu_cxx::throw_value_limit>::
+	operator(), hash<__gnu_cxx::throw_value_random>::operator()): Pass
+	argument by const ref.
+
+	* testsuite/util/testsuite_container_traits.h (traits<map>,
+	traits<multimap>, traits<set>, traits<multiset>,
+	traits<unordered_map>, traits<unordered_multimap>,
+	traits<unordered_set>, traits<unordered_multiset>): Typedef
+	consistently has_erase and has_insert as true_type.
+
+	* testsuite/util/testsuite_container_traits.h
+	(traits<unordered_map>, traits<unordered_multimap>,
+	traits<unordered_set>, traits<unordered_multiset>): Do not wrongly
+	typedef has_size_type_constructor as true_type: the constructor
+	accepting a size_type actually gets the initial number of
+	buckets.
+
+2010-03-03  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* doc/Makefile.am: Re-organize xml sources.
+	(doc-latex-doxygen): New.
+	(doc-pdf-doxygen): New.
+	(stamp-xml-doxygen, stamp-latex-doxygen): New.
+	* doc/Makefile.in: Regenerate.
+	* doc/doxygen/user.cfg.in: Add support here.
+	* doc/xml/manual/appendix_contributing.xml: Add specifics.
+
+	* doc/xml/manual/concurrency.xml: New.
+	* doc/xml/manual/atomics.xml: New.
+	* doc/xml/manual/spine.xml: Adjust.
+	* doc/xml/manual/diagnostics.xml: Adjust.
+
+2010-03-03  Paolo Carlini  <paolo.carlini@oracle.com>
+	    Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* include/bits/unique_ptr.h (unique_ptr<>::get_deleter): Simplify
+	return type.
+	* testsuite/20_util/unique_ptr/modifiers/reset_neg.cc: Adjust
+	dg-error line number.
+	* testsuite/20_util/unique_ptr/assign/assign_neg.cc: Likewise.
+
+2010-03-02  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/debug/bitset (hash): Minor tweaks.
+	* include/debug/vector (hash): Likewise.
+	* include/profile/bitset (hash): Likewise.
+	* include/profile/vector (hash): Likewise.
+
+2010-03-02  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/functional_hash.h (_Fnv_hash_base<>::hash): Change
+	to template.
+	* include/tr1/functional_hash.h (_Fnv_hash_base<>::hash): Likewise.
+	* include/bits/vector.tcc (hash): Adjust.
+	* include/bits/basic_string.h (hash): Likewise.
+	* include/std/bitset (hash): Likewise.
+	* src/hash-string-aux.cc (hash): Likewise.
+
+2010-03-02  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	* include/std/mutex (lock_guard::lock_guard): Do not lock mutex when
+	adopt_lock_t constructor is used.
+	* testsuite/30_threads/lock_guard/cons/1.cc: New.
+
+2010-03-02  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/stl_bvector.h (hash<vector<bool, _Alloc>>::
+	operator()(const vector<bool, _Alloc>&)): Move definition...
+	* include/bits/vector.tcc: ... here.
+
+2010-03-02  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* testsuite/Makefile.am (check-DEJAGNU): Include de* in normal0
+	dirs.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-03-02  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/bits/stl_bvector.h (hash<vector<bool, _Alloc>>): Add.
+	* include/debug/vector (hash<__debug::vector<bool, _Alloc>>):
+	Likewise.
+	* include/profile/vector (hash<__profile::vector<bool, _Alloc>>):
+	Likewise.
+	* testsuite/23_containers/vector/bool/hash/1.cc: New.
+
+	* include/std/bitset (hash<bitset<_Nb>>): Small tweaks.
+	(hash<bitset<0>>): Add.
+	* include/debug/bitset (hash<__debug::bitset<_Nb>>): Forward to
+	hash<bitset<_Nb>>.
+	* include/profile/bitset (hash<__profile::bitset<_Nb>>): Likewise.
+	* testsuite/23_containers/bitset/hash/1.cc: Improve.
+
+2010-03-02  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	PR libstdc++/43230
+	* testsuite/30_threads/promise/members/set_value3.cc
+	(tester::~tester): Remove.
+
+2010-03-02  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/std/bitset (_Base_bitset<>::_M_getdata()): Add.
+	(hash<bitset<_Nb>>): Add, use the latter.
+	* include/debug/bitset (hash<__debug::bitset<_Nb>>): Add.
+	* include/profile/bitset (hash<__profile::bitset<_Nb>>): Likewise.
+	* testsuite/23_containers/bitset/hash/1.cc: New.
+
+2010-03-02  Jonathan Wakely  <jwakely.gcc@gmail.com>
+
+	PR libstdc++/43183
+	* include/bits/unique_ptr.h (reset): Fix as per working paper.
+	(operator*, operator->, operator[], operator bool, release): Use
+	pointer's null value instead of 0.
+	* testsuite/20_util/unique_ptr/assign/assign_neg.cc: Adjust.
+	* testsuite/20_util/unique_ptr/modifiers/reset_neg.cc: Adjust.
+	* testsuite/20_util/unique_ptr/modifiers/43183.cc: New.
+
+2010-03-01  Paolo Carlini  <paolo.carlini@oracle.com>
+
+	* include/std/iomanip (get_money, put_money): Add in C++0x mode; tidy.
+	* testsuite/27_io/manipulators/extended/get_money/char/1.cc: New.
+	* testsuite/27_io/manipulators/extended/get_money/wchar_t/1.cc:
+	Likewise.
+	* testsuite/27_io/manipulators/extended/put_money/char/1.cc: Likewise.
+	* testsuite/27_io/manipulators/extended/put_money/wchar_t/1.cc:
+	Likewise.
+
+2010-03-01  Benjamin Kosnik  <bkoz@redhat.com>
+
+	* include/bits/atomicfwd_cxx.h: Add typedefs to group.
+
+2010-03-01  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR libstdc++/32499
+	* testsuite/Makefile.am (check-DEJAGNU
+	$(check_DEJAGNU_normal_targets)): Export AR, RANLIB.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-02-28  Gerald Pfeifer  <gerald@pfeifer.com>
+
+	* doc/html/ext/pb_ds/references.html: Adjust link to SGI's STL
+	site.
+
+2010-02-28  Paolo Carlini  <paolo.carlini@oracle.com>
+
+       * src/hash-long-double-aux.cc (hash<long double>::
+       operator()(long double)): Hash both -0 and +0 to 0.
+
 2010-02-25  Ed Smith-Rowland  <3dw4rd@verizon.net>
 
 	* include/bits/random.tcc (operator<<): Use max_digits10.

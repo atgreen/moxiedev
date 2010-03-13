@@ -2372,7 +2372,7 @@ printf_command (char *arg, int from_tty)
 	      obstack_init (&output);
 	      inner_cleanup = make_cleanup_obstack_free (&output);
 
-	      convert_between_encodings (target_wide_charset (byte_order),
+	      convert_between_encodings (target_wide_charset (gdbarch),
 					 host_charset (),
 					 str, j, wcwidth,
 					 &output, translit_char);
@@ -2404,7 +2404,7 @@ printf_command (char *arg, int from_tty)
 	      obstack_init (&output);
 	      inner_cleanup = make_cleanup_obstack_free (&output);
 
-	      convert_between_encodings (target_wide_charset (byte_order),
+	      convert_between_encodings (target_wide_charset (gdbarch),
 					 host_charset (),
 					 bytes, TYPE_LENGTH (valtype),
 					 TYPE_LENGTH (valtype),
@@ -2642,8 +2642,13 @@ printf_command (char *arg, int from_tty)
 	/* Skip to the next substring.  */
 	current_substring += strlen (current_substring) + 1;
       }
-    /* Print the portion of the format string after the last argument.  */
-    puts_filtered (last_arg);
+    /* Print the portion of the format string after the last argument.
+       Note that this will not include any ordinary %-specs, but it
+       might include "%%".  That is why we use printf_filtered and not
+       puts_filtered here.  Also, we pass a dummy argument because
+       some platforms have modified GCC to include -Wformat-security
+       by default, which will warn here if there is no argument.  */
+    printf_filtered (last_arg, 0);
   }
   do_cleanups (old_cleanups);
 }

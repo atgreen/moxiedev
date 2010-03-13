@@ -1,5 +1,5 @@
 /* LTO routines for ELF object files.
-   Copyright 2009 Free Software Foundation, Inc.
+   Copyright 2009, 2010 Free Software Foundation, Inc.
    Contributed by CodeSourcery, Inc.
 
 This file is part of GCC.
@@ -29,9 +29,18 @@ along with GCC; see the file COPYING3.  If not see
 #include "ggc.h"
 #include "lto-streamer.h"
 
+/* Cater to hosts with half-backed <elf.h> file like HP-UX.  */
+#ifndef EM_SPARC
+# define EM_SPARC 2
+#endif
+
+#ifndef EM_SPARC32PLUS
+# define EM_SPARC32PLUS 18
+#endif
+
+
 /* Handle opening elf files on hosts, such as Windows, that may use 
    text file handling that will break binary access.  */
-
 #ifndef O_BINARY
 # define O_BINARY 0
 #endif
@@ -374,6 +383,41 @@ lto_elf_end_section (void)
 }
 
 
+/* Return true if ELF_MACHINE is compatible with the cached value of the
+   architecture and possibly update the latter.  Return false otherwise.
+
+   Note: if you want to add more EM_* cases, you'll need to provide the
+   corresponding definitions at the beginning of the file.  */
+
+static bool
+is_compatible_architecture (Elf64_Half elf_machine)
+{
+  if (cached_file_attrs.elf_machine == elf_machine)
+    return true;
+
+  switch (cached_file_attrs.elf_machine)
+    {
+    case EM_SPARC:
+      if (elf_machine == EM_SPARC32PLUS)
+	{
+	  cached_file_attrs.elf_machine = elf_machine;
+	  return true;
+	}
+      break;
+
+    case EM_SPARC32PLUS:
+      if (elf_machine == EM_SPARC)
+	return true;
+      break;
+
+    default:
+      break;
+    }
+
+  return false;
+}
+
+
 /* Validate's ELF_FILE's executable header and, if cached_file_attrs is
    uninitialized, caches the architecture.  */
 
@@ -398,8 +442,7 @@ validate_ehdr##BITS (lto_elf_file *elf_file)			\
 								\
   if (!cached_file_attrs.initialized)				\
     cached_file_attrs.elf_machine = elf_header->e_machine;	\
-								\
-  if (cached_file_attrs.elf_machine != elf_header->e_machine)	\
+  else if (!is_compatible_architecture (elf_header->e_machine))	\
     {								\
       error ("inconsistent file architecture detected");	\
       return false;						\

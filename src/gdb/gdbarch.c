@@ -77,6 +77,14 @@ pformat (const struct floatformat **format)
     return format[0]->name;
 }
 
+static const char *
+pstring (const char *string)
+{
+  if (string == NULL)
+    return "(null)";
+  return string;
+}
+
 
 /* Maintain the struct gdbarch object */
 
@@ -253,6 +261,9 @@ struct gdbarch
   gdbarch_has_shared_address_space_ftype *has_shared_address_space;
   gdbarch_fast_tracepoint_valid_at_ftype *fast_tracepoint_valid_at;
   const char * qsupported;
+  gdbarch_auto_charset_ftype *auto_charset;
+  gdbarch_auto_wide_charset_ftype *auto_wide_charset;
+  const char * solib_symbols_extension;
 };
 
 
@@ -397,6 +408,9 @@ struct gdbarch startup_gdbarch =
   default_has_shared_address_space,  /* has_shared_address_space */
   default_fast_tracepoint_valid_at,  /* fast_tracepoint_valid_at */
   0,  /* qsupported */
+  default_auto_charset,  /* auto_charset */
+  default_auto_wide_charset,  /* auto_wide_charset */
+  0,  /* solib_symbols_extension */
   /* startup_gdbarch() */
 };
 
@@ -483,6 +497,8 @@ gdbarch_alloc (const struct gdbarch_info *info,
   gdbarch->target_signal_to_host = default_target_signal_to_host;
   gdbarch->has_shared_address_space = default_has_shared_address_space;
   gdbarch->fast_tracepoint_valid_at = default_fast_tracepoint_valid_at;
+  gdbarch->auto_charset = default_auto_charset;
+  gdbarch->auto_wide_charset = default_auto_wide_charset;
   /* gdbarch_alloc() */
 
   return gdbarch;
@@ -664,6 +680,8 @@ verify_gdbarch (struct gdbarch *gdbarch)
   /* Skip verify of has_shared_address_space, invalid_p == 0 */
   /* Skip verify of fast_tracepoint_valid_at, invalid_p == 0 */
   /* Skip verify of qsupported, invalid_p == 0 */
+  /* Skip verify of auto_charset, invalid_p == 0 */
+  /* Skip verify of auto_wide_charset, invalid_p == 0 */
   buf = ui_file_xstrdup (log, &length);
   make_cleanup (xfree, buf);
   if (length > 0)
@@ -719,6 +737,12 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: adjust_breakpoint_address = <%s>\n",
                       host_address_to_string (gdbarch->adjust_breakpoint_address));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: auto_charset = <%s>\n",
+                      host_address_to_string (gdbarch->auto_charset));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: auto_wide_charset = <%s>\n",
+                      host_address_to_string (gdbarch->auto_wide_charset));
   fprintf_unfiltered (file,
                       "gdbarch_dump: believe_pcc_promotion = %s\n",
                       plongest (gdbarch->believe_pcc_promotion));
@@ -1133,6 +1157,9 @@ gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
   fprintf_unfiltered (file,
                       "gdbarch_dump: sofun_address_maybe_missing = %s\n",
                       plongest (gdbarch->sofun_address_maybe_missing));
+  fprintf_unfiltered (file,
+                      "gdbarch_dump: solib_symbols_extension = %s\n",
+                      pstring (gdbarch->solib_symbols_extension));
   fprintf_unfiltered (file,
                       "gdbarch_dump: sp_regnum = %s\n",
                       plongest (gdbarch->sp_regnum));
@@ -3597,6 +3624,56 @@ set_gdbarch_qsupported (struct gdbarch *gdbarch,
                         const char * qsupported)
 {
   gdbarch->qsupported = qsupported;
+}
+
+const char *
+gdbarch_auto_charset (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->auto_charset != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_auto_charset called\n");
+  return gdbarch->auto_charset ();
+}
+
+void
+set_gdbarch_auto_charset (struct gdbarch *gdbarch,
+                          gdbarch_auto_charset_ftype auto_charset)
+{
+  gdbarch->auto_charset = auto_charset;
+}
+
+const char *
+gdbarch_auto_wide_charset (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  gdb_assert (gdbarch->auto_wide_charset != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_auto_wide_charset called\n");
+  return gdbarch->auto_wide_charset ();
+}
+
+void
+set_gdbarch_auto_wide_charset (struct gdbarch *gdbarch,
+                               gdbarch_auto_wide_charset_ftype auto_wide_charset)
+{
+  gdbarch->auto_wide_charset = auto_wide_charset;
+}
+
+const char *
+gdbarch_solib_symbols_extension (struct gdbarch *gdbarch)
+{
+  gdb_assert (gdbarch != NULL);
+  if (gdbarch_debug >= 2)
+    fprintf_unfiltered (gdb_stdlog, "gdbarch_solib_symbols_extension called\n");
+  return gdbarch->solib_symbols_extension;
+}
+
+void
+set_gdbarch_solib_symbols_extension (struct gdbarch *gdbarch,
+                                     const char * solib_symbols_extension)
+{
+  gdbarch->solib_symbols_extension = solib_symbols_extension;
 }
 
 

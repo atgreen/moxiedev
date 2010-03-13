@@ -17,8 +17,8 @@
 /stack_frame.png/1.1/Thu Jan 28 00:24:31 2010/-kb/
 /stack_frame.svg/1.1/Thu Jan 28 00:24:31 2010//
 /stack_frame.txt/1.1/Thu Jan 28 00:24:31 2010//
-/ChangeLog/1.1014/Thu Feb 25 20:33:21 2010/-ko/
-/gdb.texinfo/1.673/Thu Feb 25 20:33:21 2010/-ko/
-/gdbint.texinfo/1.320/Thu Feb 25 20:33:22 2010/-ko/
 /observer.texi/1.31/Thu Feb 25 20:33:22 2010//
+/ChangeLog/1.1022/Sat Mar 13 04:42:48 2010/-ko/
+/gdb.texinfo/1.680/Sat Mar 13 04:42:49 2010/-ko/
+/gdbint.texinfo/1.321/Sat Mar 13 04:42:49 2010/-ko/
 D

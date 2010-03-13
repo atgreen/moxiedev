@@ -1,3 +1,475 @@
+2010-03-09  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/posix/telldir.c (dd_loccnt): Change start index to be 1 
+	instead of 0.
+	(_seekdir): A loc of 0 now means rewind dir.
+
+2010-03-08  Craig Howland <howland@LGSInnovations.com>
+
+	* libm/common/s_rint.c:  Fix error when integral part had 18 bits and
+	fraction had bits set beyond first radix bit.  Also, make 2-part
+	adjustment consistent with 1-part adjustment when adjusting fractional
+	bits.
+	* libm/common/sf_rint.c:  Make fractional-bit adjustment consistent
+	with s_rint.c by setting 0b.01 instead of 0b.001.
+
+2010-03-05  Craig Howland <howland@LGSInnovations.com>
+
+	* libm/math/ef_sqrt.c: Delete unused variable sign.
+	* libc/stdlib/getenv.c: Delete "char *_findenv_r ();", as is not a
+	proper prototype, and is properly prototyped in stdlib.h, anyway.
+	* libc/stdlib/getenv_r.c: Ditto.
+	* libc/search/hash.c: Add _DEFUN to __hash_open() declaration; add
+	#define __DBINTERFACE_PRIVATE to activate prototypes from db_local.h.
+	* libc/search/db_local.h: Correct __hash_open() prototype.
+	* libc/sys/linux/cmath/math_private.h:  Eliminate compiler warnings:
+	Remove #define INFINITY (redefines from math.h); remove #define __isnanf
+	and #define __isinff isinff.
+
+2010-03-02  Craig Howland <howland@LGSInnovations.com>
+
+	* libc/include/sys/features.h:  Add POSIX.1-permitted definition of
+	_POSIX_C_SOURCE if not already defined and _XOPEN_SOURCE has an
+	appropriate value.  Specifically, check for POSIX.1-2008 & 2001 values.
+	* libc/include/sys/config.h:  Add #include <sys/features.h> so that all
+	includes get the new check added to it.
+
+2010-03-02  Charles Wilson  <cygwin@cwilson.fastmail.fm>
+
+	* libc/xdr/README: Correct grammatical errors.
+	* libc/include/rpc/types.h: Add public types used
+	by RPC implementations.
+	* libc/include/rpc/xdr.h: Add defines used by RPC
+	implementations.
+	* libc/xdr/Makefile.am: Eliminate automake warning.
+	* libc/xdr/Makefile.in: Regenerate.
+
+2010-03-02  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/xdr/Makefile.in: Regenerate.
+
+2010-03-02  Charles Wilson  <cygwin@cwilson.fastmail.fm>
+
+	Add eXtensible Data Record (XDR) support
+	* configure.host: Build libc/xdr only on cygwin.
+	* Makefile.am: Install xdr headers.
+	* libc/configure.in: Support new libc/xdr subdirectory.
+	* libc/Makefile.am: Support new libc/xdr subdirectory.
+	* libc/include/rpc/types.h: New.
+	* libc/include/rpc/xdr.h: New.
+	* libc/xdr/README: New.
+	* libc/xdr/Makefile.am: New.
+	* libc/xdr/dummy.c: New.
+	* libc/xdr/xdr.c: New.
+	* libc/xdr/xdr_array.c: New.
+	* libc/xdr/xdr_float.c: New.
+	* libc/xdr/xdr_float_vax.c: New.
+	* libc/xdr/xdr_mem.c: New.
+	* libc/xdr/xdr_private.c: New.
+	* libc/xdr/xdr_private.h: New.
+	* libc/xdr/xdr_rec.c: New.
+	* libc/xdr/xdr_reference.c: New.
+	* libc/xdr/xdr_sizeof.c: New.
+	* libc/xdr/xdr_stdio.c: New.
+
+	Regenerate using ac-2.63 and am-1.11.1
+	* libc/xdr/Makefile.in: New.
+	* Makefile.in: Regenerate.
+	* libc/configure: Regenerate.
+	* libc/Makefile.in: Regenerate.
+	* libc/argz/Makefile.in: Regenerate.
+	* libc/ctype/Makefile.in: Regenerate.
+	* libc/errno/Makefile.in: Regenerate.
+	* libc/iconv/ccs/binary/Makefile.in: Regenerate.
+	* libc/iconv/ccs/Makefile.in: Regenerate.
+	* libc/iconv/ces/Makefile.in: Regenerate.
+	* libc/iconv/lib/Makefile.in: Regenerate.
+	* libc/iconv/Makefile.in: Regenerate.
+	* libc/locale/Makefile.in: Regenerate.
+	* libc/misc/Makefile.in: Regenerate.
+	* libc/posix/Makefile.in: Regenerate.
+	* libc/reent/Makefile.in: Regenerate.
+	* libc/search/Makefile.in: Regenerate.
+	* libc/signal/Makefile.in: Regenerate.
+	* libc/stdio/Makefile.in: Regenerate.
+	* libc/stdio64/Makefile.in: Regenerate.
+	* libc/stdlib/Makefile.in: Regenerate.
+	* libc/string/Makefile.in: Regenerate.
+	* libc/syscalls/Makefile.in: Regenerate.
+	* libc/time/Makefile.in: Regenerate.
+	* libc/unix/Makefile.in: Regenerate.
+
+2010-02-26  Craig Howland <howland@LGSInnovations.com>
+
+	* libm/common/s_ilogb.c:  Fix typo in comments that causes doc
+	generation to fail.
+
+2010-02-26  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/time/strftime.c: Add support for era and alt_digits data from
+	LC_TIME locale category.  Conditionalize using _WANT_C99_TIME_FORMATS
+	flag.
+	(STRTOUL): Define differently for building strftime or wcsftime.
+	(STRCPY): Ditto.
+	(STRCHR): Ditto.
+	(STRLEN): Ditto.
+	(CHECK_LENGTH): Define to simplify code.
+	(era_info_t): New type to store era info.
+	(get_era_info): New function to fetch era info matching incoming
+	struct tm.
+	(free_era_info): New function to free era info.
+	(alt_digits_t): New type to store alternative digits.
+	(get_alt_digits): New function to convert alt_digits string into
+	alt_digits_t structure.
+	(free_alt_digits): New function to free alt_digits info.
+	(conv_to_alt_digits): New function to convert unsigned value into
+	alternative digits.
+	(strftime): Conditionalize on _WANT_C99_TIME_FORMATS.  If
+	_WANT_C99_TIME_FORMATS is defined, define as just a wrapper function
+	providing era_info and alt_digits pointers and call ...
+	(__strftime): Rename from strftime and make static if
+	_WANT_C99_TIME_FORMATS is defined.  Add parameters for era_info and
+	alt_digits pointers.  Handle conversion modifiers according to
+	POSIX-1.2008.  Redefine %F and %Y according to POSIX.  Add default case
+	to allow to bail out on invalid conversion specifiers.
+	* libc/include/sys/config.h: Move Cygwin build flags to Cygwin's
+	config.h.
+
+	* libc/include/stdio.h: Remove __CYGWIN_USE_BIG_TYPES__ condition.
+
+2010-02-25  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Fix typo in comment.
+
+2010-02-25  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c: Throughout, extensively comment on the
+	reason for using __CYGWIN__.
+	(lconv): Remove _CONST entirely.
+	(loadlocale): Guard calls to function loading locale-specific
+	category data with __HAVE_LOCALE_INFO__ rather than __CYGWIN__.
+	* libc/sys/config.h (__HAVE_LOCALE_INFO__): Define for Cygwin.
+
+2010-02-24  Charles Wilson  <...>
+
+        Work around issues with new libtool files in ..
+	* configure.in: Unconditionally call _LT_PROG_ECHO_BACKSLASH.
+	* iconvdata/configure.in: Ditto.
+	* libc/configure.in: Ditto.
+	* libc/machine/configure.in: Ditto.
+	* libc/machine/i386/configure.in: Ditto.
+	* libc/sys/configure.in: Ditto.
+	* libc/sys/linux/configure.in: Ditto.
+	* libc/sys/linux/linuxthreads/configure.in: Ditto.
+	* libc/sys/linux/linuxthreads/machine/configure.in: Ditto.
+	* libc/sys/linux/linuxthreads/machine/i386/configure.in: Ditto.
+	* libc/sys/linux/machine/configure.in: Ditto.
+	* libc/sys/linux/machine/i386/configure.in: Ditto.
+	* libm/configure.in: Ditto.
+	* libm/machine/configure.in: Ditto.
+	* libm/machine/i386/configure.in: Ditto.
+	* libc/machine/sh/configure.in: Ditto.  Also, call
+	AC_NO_EXECUTABLES before NEWLIB_CONFIGURE.
+        * aclocal.m4: Regenerated.
+        * configure: Ditto.
+	* Makefile.in: Ditto.
+        * doc/aclocal.m4: Ditto.
+	* doc/Makefile.in: Ditto.
+        * libc/*/aclocal.m4: Ditto.
+        * libc/*/Makefile.in: Ditto.
+        * libc/*/configure: Ditto.
+        * libm/*/aclocal.m4: Ditto.
+	* libm/*/Makefile.in: Ditto.
+        * libm/*/configure: Ditto.
+
+2010-02-24  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/stdlib/__call_exit.c: Add include of sys/lock.h.
+
+2010-02-23  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/include/sys/types.h: Fix __XMK__ sectioning and remove
+	redundant code section for __XMK__.
+
+2010-02-22  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/include/langinfo.h (_NL_TIME_DATE_FMT): Define new nl_item
+	value for LC_TIME entry date_fmt.
+	(_DATE_FMT): Define "official" GNU name same as _NL_TIME_DATE_FMT.
+	* libc/locale/nl_langinfo.c (nl_langinfo): Add case for _DATE_FMT.
+
+2010-02-18  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/ctype/iswalpha.c (iswalpha): Update to Unicode 5.2.
+	* libc/ctype/iswprint.c (iswprint): Ditto.
+	* libc/ctype/iswpunct.c (iswpunct): Drop standalone implementation.
+	Define in terms of other wctype functions instead.
+	* libc/ctype/towlower.c (towlower): Update to Unicode 5.2.  Add comment
+	to explain how to fetch the data from the Unicode database.
+	* libc/ctype/towupper.c (towupper): Ditto.
+	* libc/ctype/utf8alpha.h: Ditto.
+	* libc/ctype/utf8print.h: Ditto.
+	* libc/ctype/utf8punct.h: Remove.
+	* libc/ctype/iswcntrl.c (iswcntrl): Add comment to explain how to
+	fetch the data from the Unicode database.
+
+2010-02-18  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/timelocal.h (struct lc_time_T): Add missing ERA-related
+	members.
+	* libc/locale/timelocal.c (_C_time_local): Set new members to empty
+	strings.
+	* libc/locale/nl_langinfo.c (nl_langinfo): Return values from
+	__get_current_time_locale() for ERA related requests.
+
+2010-02-16  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/ctype/iswblank.c (iswblank): Remove Unicode characters
+	U+00A0 and U+200B.  Add Unicode character U+180E.  Add comment
+	to explain how to generate from Unicode data file.
+	* libc/ctype/iswspace.c (iswspace): Ditto.
+
+2010-02-15  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdio/vfwprintf.c (_VFWPRINTF_R): Apply previous patch here
+	as well.
+
+2010-02-15  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdio/vfprintf.c (_VFPRINTF_R): Drop printing a redundant
+	decimal point in case the float argument is an integral value.
+
+2010-02-11  Craig Howland <howland@LGSInnovations.com>
+       
+	* libc/include/machine/ieeefp.h:  isfinite macro modified to run faster
+	by only calling fpclassify once instead of possibly twice.
+
+2010-02-11  Craig Howland <howland@LGSInnovations.com>
+
+	* libm/common/s_ilogb.c:  Adjust documentation to reflect new returns
+	(see next items) and that ilogb() and ilogbf() are C99/POSIX.
+	* libm/common/s_ilogb.c (ilogb):  Use C99/POSIX FP_ILOGB0 and
+	FP_ILOGBNAN returns for 0 and NAN arguments, respectively, instead of
+	the prior -INT_MAX and INT_MAX.  The FP_ILOGBx defines in math.h
+	presently match the prior hard-codes, so no functional change is
+	actually introduced.  (Not at this time, nor planned, but the values
+	are permitted to be different, so subsequent edits of math.h could
+	possibly cause a functional change.)
+	* libm/common/sf_ilogb.c (ilogbf):  Ditto.
+
+2010-02-09  Daniel Gutson  <dgutson@codesourcery.com>
+
+	* libc/machine/arm/arm_asm.h (_ISA_THUMB_2): __ARM_ARCH_7EM__
+	added to the preprocessor condition.
+
+2010-02-09  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/lmessages.c (__messages_load_locale): Take additional
+	parameters for wide char to multibyte conversion.  Call
+	__set_lc_messages_from_win on Cygwin.
+	* libc/locale/lmessages.h: Make C++-safe.
+	(__messages_load_locale): Change declaration.
+	* libc/locale/lmonetary.c (__monetary_load_locale): Use
+	_monetary_locale_buf as buffer pointer.
+	* libc/locale/lnumeric.c (__numeric_load_locale): Use
+	_numeric_locale_buf as buffer pointer.
+	* libc/locale/timelocal.c (__time_load_locale): Use time_locale_buf
+	as buffer pointer.
+	* libc/locale/locale.c (loadlocale): Enable loading LC_MESSAGES data
+	on Cygwin.
+
+2010-02-08  Josef Wolf  <jw@raven.inka.de>
+
+	* libc/machine/m68k/memcpy.S: MISALIGEND_OK should not be set for
+	__mcpu32__.
+
+2010-02-07  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c: Add Cygwin's /usr/share/locale/locale.alias
+	support to documentation.
+	(__set_locale_from_locale_alias): Declare when build for Cygwin.
+	(loadlocale): On Cygwin, if locale can't be recognized, call
+	__set_locale_from_locale_alias to check for locale alias.
+	Define FAIL macro to replace `return NULL' statements.  Replace
+	throughout.
+
+2010-02-07  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c: Fix typo in documentation.  Remove useless
+	_MB_CAPABLE guards within other _MB_CAPABLE guards.  Add comment
+	to remaining #endif's.
+
+2010-02-06  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/ctype/ctype_cp.h (_CTYPE_GEORGIAN_PS_128_254): Define.
+	(_CTYPE_GEORGIAN_PS_255): Define.
+	(_CTYPE_PT154_128_254): Define.
+	(_CTYPE_PT154_255): Define.
+	(__ctype_cp): Add array members for above ctype definitions.
+	* libc/locale/locale.c (loadlocale): Make TIS-620 charset name
+	available for all targets.  Add guards for setting the conversion
+	function pointers.  Add support for GEORGIAN-PS and PT154 charsets.
+	Change documentation to reflect current behaviour more closely.
+	* libc/locale/nl_langinfo.c (nl_langinfo): On Cygwin, translate
+	"CP101" to "GEORGIAN-PS" and "CP102" to "PT154".
+	* libc/stdlib/sb_charsets.c (__cp_conv): Add conversion arrays
+	for GEORGIAN-PS and PT154.
+	(__cp_index): Map invalid Windows codepage number 101 to
+	GEORGIAN-PS conversion array, 102 to PT154 conversion array.
+
+2010-02-06  Ralf Corsepius  <ralf.corsepius@rtems.org>
+
+	* libc/posix/telldir.c: Remove bogus nested prototype of lseek().
+
+2010-02-05  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Handle ISO-8859 and KOI8 charsets
+	so that the dashes are optional.  Align documentation.
+
+2010-02-05  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdio/vfprintf.c: Include locale.h also if _WANT_IO_C99_FORMATS
+	is defined.  Raise conversion buffer size to make sure it has enough
+	room for numbers plus grouping character.  Define GROUPING flag.
+	(_VFPRINTF_R): Add PRINTANDPAD macro.  Handle grouping flag character.
+	Handle grouping for decimal integer and float values.
+	* libc/stdio/vfwprintf.c: Ditto.
+
+2010-02-01  Christopher Faylor  <me+cygwin@cgf.cx>
+
+	* libc/stdlib/__atexit.c (__atexit_lock): Define a global lock for
+	atexit functions.
+	(__register_exitproc): Use __atexit_lock rather than a local static
+	lock.
+	* libc/stdlib/__call_atexit.c: Ditto.
+
+2010-01-29  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/search/Makefile.am: Create .def files for bsearch and qsort.
+	* libc/search/Makefile.in: Regenerated.
+	* libc/stdlib/stdlib.tex: Add bsearch and qsort.
+
+2010-01-24  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/nl_langinfo.c (nl_langinfo): Return "CP932" when using
+	SJIS on Cygwin.  Explain why.
+
+2010-01-23  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Allow CP932 as alias for SJIS.
+	Add to documentation.  Add a few comments to #endif's for Cygwin.  
+
+2010-01-23  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Disable JIS entirely on Cygwin.
+	Allow TIS620 and TIS-620 as aliases for CP874 on Cygwin.
+
+2010-01-22  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/lmonetary.c (__monetary_load_locale): Take additional
+	parameters for wide char to multibyte conversion.  Call
+	__set_lc_monetary_from_win on Cygwin.
+	* libc/locale/lmonetary.h: Make C++-safe.
+	(__monetary_load_locale): Change declaration.
+	* libc/locale/lnumeric.c (__numeric_load_locale): Take additional
+	parameters for wide char to multibyte conversion.  Call
+	__set_lc_numeric_from_win on Cygwin.
+	* libc/locale/lnumeric.h: Make C++-safe.
+	(__numeric_load_locale): Change declaration.
+	* libc/locale/locale.c (lconv): De-constify for Cygwin.
+	(__set_charset_from_locale): Rename from
+	__set_charset_from_codepage.  Take locale as parameter instead of
+	a codepage.
+	(loadlocale): Allow "EUC-JP" for "EUCJP" and "EUC-KR" for "EUCKR".
+	Change documnetation accordingly.  Enable LC_COLLATE, LC_MONETARY,
+	LC_NUMERIC, and LC_TIME handling on Cygwin.
+	(_localeconv_r): On Cygwin, copy values from monetary and numeric
+	domain if change has been noted.
+	* libc/locale/nl_langinfo.c (nl_langinfo): Accommodate change of
+	am/pm layout in struct lc_time_T.
+	* libc/locale/timelocal.c (_C_time_locale): Accommodate
+	redefinition of am/pm members.
+	(__time_load_locale): Take additional parameters for wide char
+	to multibyte conversion.  Call __set_lc_time_from_win on Cygwin.
+	* libc/locale/timelocal.h: Make C++-safe.
+	(struct lc_time_T): Convert am and pm to a am_pm array for easier
+	consumption by strftime and strptime.
+	(__time_load_locale): Change declaration.
+	* libc/time/strftime.c: Change documentation to reflect changes to
+	strftime.  Remove locale constant strings in favor of access to
+	locale-specifc data.
+	(_ctloc): Define access method for locale-specifc data.
+	(TOLOWER): Define for tolower conversion.
+	(strftime): Throughout, convert locale-specific formats to use
+	locale-specific data.  Add GNU-specific "%P" format.
+	* libc/time/strptime.c: Remove locale constant strings in favor of
+	access to locale-specifc data.
+	(_ctloc): Define access method for locale-specifc data.
+	(strptime): Throughout, convert locale-specific formats to use
+	locale-specific data.
+
+2010-01-20  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/nl_langinfo.c (nl_langinfo): On Cygwin, translate
+	often-used charsets into Linux compatible codesets.
+
+2010-01-19  Andy Koppe  <andy.koppe@gmail.com>
+
+	* libc/stdio/vfscanf.c (__SVFSCANF_R): Fix handling of non-ASCII
+	characters and allow invalid bytes in format string.
+
+2010-01-19  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdlib/wcstombs_r.c (_wcstombs_r): Handle invalid characters
+	correctly also in the s==NULL case.
+
+2010-01-17  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Change comments to refer to
+	ISO 639-3 rather than 639-2.
+
+2010-01-17  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Allow three character
+	language codes to accommodate ISO 639-2 codes.
+
+2010-01-17  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (lc_ctype_charset): Disable defaulting to
+	"UTF-8" on Cygwin.
+	(lc_message_charset): Ditto.
+	(loadlocale): Disable setting charset of the "C" locale to "UTF-8" on
+	Cygwin.
+	* libc/stdlib/mbtowc_r.c (__mbtowc): Add Cygwin-specific comment.
+	* libc/stdlib/wctomb_r.c (__wctomb): Ditto.
+
+2010-01-14  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/include/sys/_default_fcntl.h (O_CLOEXEC): Define as _FNOINHERIT.
+	(F_DUPFD_CLOEXEC): Define for Cygwin.
+	* libc/include/sys/unistd.h (dup3): Define for Cygwin.
+	(pipe2): Ditto.
+
+2010-01-14  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdio/vfprintf.c (_VFPRINTF_R): Just wave bytes invalid in
+	the current charset through.
+
+2010-01-11  Sebastian Huber <sebastian.huber@embedded-brains.de>
+
+	* libc/posix/telldir.c (_cleanupdir): Fixed usage of freed memory.
+
+2010-01-11  Yaakov Selkowitz  <yselkowitz@users.sourceforge.net>
+
+	* libc/include/math.h (log2, log2f): Disable macro versions for C++,
+	as they are incompatible with OpenMP/C++ headers.
+
+2010-01-10  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdlib/mbtowc_r.c (__ascii_mbtowc): Disallow conversion of
+	non-ASCII chars on Cygwin.
+	* libc/stdlib/wctomb_r.c (__ascii_wctomb): Ditto.
+
 2009-12-22  Eric Blake  <ebb9@byu.net>
 
 	* libc/include/sys/unistd.h (suboptarg, getsubopt): Move...
@@ -46,13 +518,13 @@
 	* libc/stdlib/atexit.c: Ditto.
 	* libc/stdlib/on_exit.c: Ditto.
 
-2009-12-17  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+2009-12-17  Ralf CorsÃÂ©pius <ralf.corsepius@rtems.org>
 
 	* libc/include/machine/ieeefp.h: Rework __IEEE_*_ENDIAN handling.
 	* libc/machine/arm/machine/endian.h: Remove (Conflicts with
 	libc/include/machine/endian.h)
 
-2009-12-17  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+2009-12-17  Ralf CorsÃÂ©pius <ralf.corsepius@rtems.org>
 
 	* libc/include/machine/setjmp.h: Set up _JBLEN #ifdef __m68k__.
 
@@ -74,11 +546,11 @@
 	and ETOOMANYREFS into general list as they are referenced
 	by OpenGroup and needed by RTEMS.
 
-2009-12-16  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+2009-12-16  Ralf CorsÃÂ©pius <ralf.corsepius@rtems.org>
 
 	* libc/search/hcreate.c: Don't include <sys/queue.h> (Unused).
 
-2009-12-16  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
+2009-12-16  Ralf CorsÃÂ©pius <ralf.corsepius@rtems.org>
 
 	* libc/sys/rtems/machine/_types.h: New (Derived from
 	machine/_default_types.h).
@@ -366,16 +838,16 @@
 	* libc/locale/locale.c: Drop Cygwin-specific windows.h include.
 	(loadlocale): Call __set_charset_from_codepage with 0 codepage.
 
-2009-09-22  Ralf Corsépius <ralf.corsepius@rtems.org>
+2009-09-22  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
 
 	* libc/include/stdlib.h: Add posix_memalign.
 
-2009-09-22  Ralf Corsépius <ralf.corsepius@rtems.org>
+2009-09-22  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
 
 	* configure.host (*-rtems*): Remove -DMISSING_SYSCALL_NAMES.
 	Add -DHAVE_BLKSIZE, -D_NO_WORDEXP -D_NO_POPEN.
 
-2009-09-22  Ralf Corsépius <ralf.corsepius@rtems.org>
+2009-09-22  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
 
 	* configure.host (m32c): Move setting -DABORT_PROVIDED to second
 	"case $host".
@@ -5453,7 +5925,7 @@
 	* libc/include/sys/unistd.h: Define all _SC_xxx values as
 	required by SUSv3.  Unify formatting.
 
-2007-02-02  Ralf Corsépius <ralf.corsepius@rtems.org>
+2007-02-02  Ralf CorsÃ©pius <ralf.corsepius@rtems.org>
 
 	* libc/include/sys/errno.h: Add ECANCELED.
 

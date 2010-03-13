@@ -1,3 +1,14 @@
+2010-03-12  Tom Tromey  <tromey@redhat.com>
+
+	* generic/gdbtk-cmds.c: Include psymtab.h, not psympriv.h.
+	(struct listfiles_info): New.
+	(do_listfiles): New function.
+	(gdb_listfiles): Use it.
+
+2010-03-12  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* generic/gdbtk-cmds.c: Include psympriv.h.
+	
 2010-01-25  Keith Seitz  <keiths@redhat.com>
 
 	* generic/gdbtk-cmds.c (gdb_set_inferior_args): set_inferior_args

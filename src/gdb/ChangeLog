@@ -1,3 +1,1041 @@
+2010-03-12  Tom Tromey  <tromey@redhat.com>
+
+	PR c++/9708:
+	* dwarf2read.c (die_needs_namespace) <DW_TAG_variable>: A variable
+	in a lexical block does not need a namespace.
+	(new_symbol) <DW_TAG_variable>: Put extern variables on
+	list_in_scope in all cases.
+
+2010-03-12 Stan Shebs  <stan@codesourcery.com>
+
+	* ax-gdb.c (gen_expr): Add shift expressions.
+	(gen_expr_binop_rest): Ditto.
+
+2010-03-12  Sami Wagiaalla  <swagiaal@redhat.com>
+
+	* buildsym.c (finish_block): Reset using_directives pointer
+	after block initialization.
+
+2010-03-12  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* amd64-tdep.c (amd64_word_names): Replace "sp" with "".
+	* i386-tdep.c (i386_word_names): Likewise.
+
+2010-03-12  Pedro Alves  <pedro@codesourcery.com>
+
+	* target.c (memory_xfer_partial): Don't use the stack cache if
+	inspecting trace frames.
+	* tracepoint.c (finish_tfind_command): Invalidate the target
+	dcache.
+
+2010-03-11  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* solib-svr4.c (LM_ADDR_CHECK) <info_verbose>: Use printf_unfiltered
+	for the PIC displacement, print also the displacement value.
+	(svr4_exec_displacement):  Print DISPLACEMENT if INFO_VERBOSE.
+
+2010-03-10  Kevin Buettner  <kevinb@redhat.com>
+
+	* remote-mips.c (close_ports, mips_initialize_cleanups)
+	(mips_exit_cleanups, mips_send_command, mips_open, pmon_open)
+	(ddb_open, lsi_open, mips_remove_breakpoint, mips_remove_watchpoint)
+	(mips_stopped_by_watchpoint, send_srec, pmon_checkset)
+	(pmon_make_fastrec, pmon_check_ack, mips_expect_download)
+	(pmon_check_entry_address, pmon_check_total, pmon_end_download)
+	(pmon_download, pmon_load_fast, _initialize_remote_mips): Add
+	comments describing each of these functions.
+	(mips_enter_debug, mips_exit_debug, common_open)
+	(mips_signal_from_protocol, pmon_makeb64, pmon_zeroset): Add
+	blank line after the comment describing the function.
+
+2010-03-10  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* solib-svr4.c (svr4_exec_displacement): Return now success, new
+	parameter displacementp.  Update comment.
+	(svr4_relocate_main_executable): Return if non-zero SECTION_OFFSETS
+	element exists.  Return if svr4_exec_displacement was not successful.
+	Update comment.
+
+2010-03-10  Jan Kratochvil  <jan.kratochvil@redhat.com>
+	    Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* solib-svr4.c (read_program_header): Support type == -1 to read
+	all program headers.
+	(read_program_headers_from_bfd): New function.
+	(svr4_static_exec_displacement): Remove and move the comment ...
+	(svr4_exec_displacement): ... here.  Remove variable found.  New
+	variable displacement.  Check also DYNAMIC.  Verify DISPLACEMENT
+	alignment for ELF targets.  Compare target vs. exec_bfd PHDRs for ELF
+	targets using read_program_headers_from_bfd.  Remove the call of
+	svr4_static_exec_displacement.
+
+2010-03-10  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf2read.c (struct pubnames_header): Remove.
+	(_PUBNAMES_HEADER): Remove.
+	(_ACTUAL_PUBNAMES_HEADER_SIZE): Remove.
+	(struct aranges_header): Remove.
+	(_ARANGES_HEADER, _ACTUAL_ARANGES_HEADER_SIZE): Remove.
+	(struct dwarf2_per_objfile) <pubnames, aranges>: Remove.
+	(PUBNAMES_SECTION): Remove.
+	(ARANGES_SECTION): Remove.
+	(dwarf2_locate_sections): Don't handle pubnames or aranges.
+	(dwarf2_build_psymtabs): Remove dead code.
+	(dwarf2_build_psymtabs_easy): Remove.
+
+2010-03-10  Tom Tromey  <tromey@redhat.com>
+
+	* elfread.c (elf_symfile_read): Don't call
+	dwarf2_build_frame_info.
+	* dwarf2read.c (struct dwarf2_section_info) <readin>: New field.
+	(struct dwarf2_per_objfile) <objfile>: New field.
+	(dwarf2_has_info): Now idempotent.  Set objfile field.
+	(dwarf2_read_section): Check and set readin field.  Call
+	posix_madvise.
+	(dwarf2_build_psymtabs): Don't read all sections.
+	(read_type_comp_unit_head): Read types section.
+	(create_debug_types_hash_table): Likewise.
+	(init_cu_die_reader): Add asserts.
+	(process_type_comp_unit): Add assert.
+	(dwarf2_build_psymtabs_hard): Read info section.
+	(load_partial_comp_unit): Add assert.
+	(create_all_comp_units): Read info section.
+	(load_full_comp_unit): Likewise.
+	(dwarf2_ranges_read): Read ranges section.
+	(dwarf2_record_block_ranges): Add assert.
+	(dwarf2_read_abbrevs): Read abbrev section.
+	(read_indirect_string): Read str section.
+	(dwarf_decode_line_header): Read line section.
+	(read_signatured_type_at_offset): Read types section.
+	(dwarf_decode_macros): Read macinfo section.
+	(dwarf2_symbol_mark_computed): Read loc section.
+	* dwarf2-frame.c (dwarf2_frame_find_fde): Call
+	dwarf2_build_frame_info.
+	(dwarf2_build_frame_info): Unconditionally set
+	dwarf2_frame_objfile_data on the objfile.
+	* configure.ac: Check for posix_madvise.
+	* config.in, configure: Rebuild.
+
+2010-03-10  Tom Tromey  <tromey@redhat.com>
+
+	* xcoffread.c (xcoff_start_psymtab): Update.
+	(xcoff_end_psymtab): Update.
+	* psymtab.c (allocate_psymtab): Remove dead code.
+	* psympriv.h (struct partial_symtab) <read_symtab_private>: Now
+	void*.
+	* mdebugread.c (parse_partial_symbols): Update.
+	(new_psymtab): Likewise.
+	* dwarf2read.c (process_psymtab_comp_unit): Update.
+	(psymtab_to_symtab_1): Update.
+	* dbxread.c (start_psymtab): Update.
+	(end_psymtab): Likewise.
+
+2010-03-10  Tom Tromey  <tromey@redhat.com>
+
+	* xcoffread.c: Include psymtab.h.
+	(xcoff_sym_fns): Update.
+	* symtab.h (struct partial_symbol): Remove.
+	(PSYMBOL_DOMAIN, PSYMBOL_CLASS): Remove.
+	(struct partial_symtab): Remove.
+	(PSYMTAB_TO_SYMTAB): Remove.
+	(lookup_partial_symbol, lookup_partial_symtab, find_pc_psymtab)
+	(find_pc_sect_psymtab): Remove.
+	(find_pc_sect_symtab_via_partial): Declare.
+	(find_pc_psymtab, find_pc_sect_psymbol, psymtab_to_symtab)
+	(find_main_psymtab): Remove.
+	(find_main_filename): Declare.
+	(fixup_psymbol_section): Remove.
+	(fixup_section): Declare.
+	* symtab.c: Include psymtab.h.
+	(lookup_symtab): Use lookup_symtab method.
+	(lookup_partial_symtab): Remove.
+	(find_pc_sect_psymtab_closer): Remove.
+	(find_pc_sect_psymtab): Remove.
+	(find_pc_sect_symtab_via_partial): New function.
+	(find_pc_psymtab, find_pc_sect_psymbol, find_pc_psymbol): Remove.
+	(fixup_section): No longer static.
+	(fixup_psymbol_section): Remove.
+	(lookup_symbol_aux): Use lookup_symbol_aux_quick.
+	(lookup_global_symbol_from_objfile): Likewise.
+	(lookup_symbol_aux_psymtabs): Remove.
+	(lookup_symbol_aux_quick): New function.
+	(lookup_symbol_global): Use lookup_symbol_aux_quick.
+	(lookup_partial_symbol): Remove.
+	(basic_lookup_transparent_type_quick): New function.
+	(basic_lookup_transparent_type): Use it.
+	(find_main_psymtab): Remove.
+	(find_main_filename): New function.
+	(find_pc_sect_symtab): Use find_pc_sect_symtab method.
+	(find_line_symtab): Use expand_symtabs_with_filename method.
+	(output_partial_symbol_filename): New function.
+	(sources_info): Use map_partial_symbol_filenames.
+	(struct search_symbols_data): New type.
+	(search_symbols_file_matches): New function.
+	(search_symbols_name_matches): Likewise.
+	(search_symbols): Use expand_symtabs_matching method.
+	(struct add_name_data): Rename from add_macro_name_data.
+	(add_macro_name): Update.
+	(add_partial_symbol_name): New function.
+	(default_make_symbol_completion_list): Use
+	map_partial_symbol_names.
+	(struct add_partial_symbol_name): New type.
+	(maybe_add_partial_symtab_filename): New function.
+	(make_source_files_completion_list): Use
+	map_partial_symbol_filenames.
+	(expand_line_sal): Use expand_symtabs_with_filename method.
+	* symmisc.c: Include psymtab.h.
+	(print_objfile_statistics): Use print_stats method.
+	(dump_objfile): Use dump method.
+	(dump_psymtab, maintenance_print_psymbols)
+	(maintenance_info_psymtabs, maintenance_check_symtabs)
+	(extend_psymbol_list): Remove.
+	* symfile.h (struct quick_symbol_functions): New struct.
+	(struct sym_fns) <qf>: New field.
+	(sort_pst_symbols): Remove.
+	(increment_reading_symtab): Declare.
+	* symfile.c: Include psymtab.h.
+	(compare_psymbols, sort_pst_symbols): Remove.
+	(psymtab_to_symtab): Remove.
+	(increment_reading_symtab): New function.
+	(symbol_file_add_with_addrs_or_offsets): Use expand_all_symtabs
+	method.
+	(set_initial_language): Use find_main_filename.
+	(allocate_psymtab, discard_psymtab, cashier_psymtab): Remove.
+	(free_named_symtabs): Remove unused code.
+	(start_psymtab_common, add_psymbol_to_bcache)
+	(append_psymbol_to_list, add_psymbol_to_list, init_psymbol_list):
+	Remove.
+	* stack.c: Include psymtab.h, symfile.h.
+	(backtrace_command_1): Use find_pc_sect_symtab_via_partial.
+	* source.h (psymtab_to_fullname): Don't declare.
+	* source.c: Include psymtab.h.
+	(select_source_symtab): Use find_last_source_symtab method.
+	(forget_cached_source_info): Use forget_cached_source_info
+	method.
+	(find_and_open_source): No longer static.
+	(psymtab_to_fullname): Remove.
+	* somread.c: Include psymtab.h.
+	(som_sym_fns): Update.
+	* psympriv.h: New file.
+	* psymtab.h: New file.
+	* psymtab.c: New file.
+	* objfiles.h: (ALL_OBJFILE_PSYMTABS): Remove.
+	(ALL_PSYMTABS, ALL_PSPACE_PSYMTABS): Likewise.
+	* objfiles.c: Include psymtab.h.
+	(objfile_relocate1): Use relocate method.
+	(objfile_has_partial_symbols): Use has_symbols method.
+	* mipsread.c: Include psymtab.h.
+	(ecoff_sym_fns): Update.
+	* mi/mi-cmd-file.c: Include psymtab.h.
+	(print_partial_file_name): New function.
+	(mi_cmd_file_list_exec_source_files): Use
+	map_partial_symbol_filenames.
+	* mdebugread.c: Include psympriv.h.
+	* machoread.c: Include psympriv.h.
+	(macho_sym_fns): Update.
+	* m2-exp.y (yylex): Use lookup_symtab.
+	* elfread.c: Include psympriv.h.
+	(elf_sym_fns): Update.
+	* dwarf2read.c: Include psympriv.h.
+	* dbxread.c: Include psympriv.h.
+	(aout_sym_fns): Update.
+	* cp-support.c: Include psymtab.h.
+	(read_in_psymtabs): Remove.
+	(make_symbol_overload_list_qualified): Use
+	expand_symtabs_for_function method.
+	* coffread.c: Include psympriv.h.
+	(coff_sym_fns): Update.
+	* blockframe.c: Include psymtab.h.
+	(find_pc_partial_function): Use find_pc_sect_symtab method.
+	* ada-lang.h (ada_update_initial_language): Update.
+	* ada-lang.c: Include psymtab.h.
+	(ada_update_initial_language): Remove 'main_pst' argument.
+	(ada_lookup_partial_symbol): Remove.
+	(struct ada_psym_data): New type.
+	(ada_add_psyms): New function.
+	(ada_add_non_local_symbols): Use map_ada_symtabs method.
+	(struct add_partial_datum): New type.
+	(ada_add_partial_symbol_completions): New function.
+	(ada_make_symbol_completion_list): Use map_partial_symbol_names.
+	(ada_exception_support_info_sniffer): Update.
+	* Makefile.in (SFILES): Add psymtab.c.
+	(COMMON_OBS): Add psymtab.o.
+	(HFILES_NO_SRCDIR): Add psymtab.h, psympriv.h.
+
+2010-03-10  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* remote-fileio.c (cygwin_conv_path): Define macro for old cygwin API.
+
+2010-03-10  Sami Wagiaalla  <swagiaal@redhat.com>
+
+	PR C++/11236:
+	* cp-namespace.c (cp_add_using): Deleted.
+	(cp_add_using_directive): Use obstack allocations.
+	Merged the function cp_add_using into this one.
+	Added 'struct obstack *' argument.
+	(cp_scan_for_anonymous_namespaces): Updated.
+	* cp-support.h: Updated.
+	* dwarf2read.c (read_import_statement): Updated.
+	(read_namespace): Updated.
+
+2010-03-10  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* windows-nat.c (cygwin_conv_path): Remove old macro.
+
+2010-03-10  Pedro Alves  <pedro@codesourcery.com>
+
+	* breakpoint.c (condition_command): Handle watchpoint conditions.
+	(is_hardware_watchpoint): Add comment.
+	(is_watchpoint): New.
+	(update_watchpoint): Don't reparse the watchpoint's condition
+	unless necessary.
+	(WP_IGNORE): New.
+	(watchpoint_check): Use it.
+	(bpstat_check_watchpoint): Handle it.
+	(bpstat_check_breakpoint_conditions): Evaluate watchpoint local
+	conditions in a frame where it makes sense.
+	(watch_command_1): Store the innermost block of the condition
+	expression.
+	(delete_breakpoint): Delete the watchpoint condition expression.
+	* breakpoint.h (struct bp_location) <cond>: Update comment.
+	(struct breakpoint): New field `cond_exp_valid_block'.
+
+2010-03-09  Joel Brobecker  <brobecker@adacore.com>
+
+	Adjust handling of Ada DIEs after dwarf2_physname patch.
+	* dwarf2read.c (dwarf2_compute_name): Add handling of Ada DIEs.
+
+2010-03-09  Christopher Faylor  <me+cygwin@cgf.cx>
+	    Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* windows-nat.c (cygwin_conv_path): Redefine to properly convert
+	from/to posix/win32.
+	(windows_make_so): Use non-Cygwin 1.7 specific function.
+	(windows_create_inferior): Make sure that cygallargs points to
+	original args in non Cygwin 1.7. case.
+
+2010-03-09  Michael Snyder  <msnyder@vmware.com>
+
+	* i386-tdep.c (i386_record_lea_modrm_addr): Use extract_signed_int
+	after target_read_memory to get host byte order.
+	(i386_process_record): Ditto.
+
+2010-03-09  Keith Seitz  <keiths@redhat.com>
+
+	Based on work from Daniel Jacobowitz  <dan@codesourcery.com>
+	* c-typeprint.c (cp_type_print_method_args): For non-static methods,
+	print out const or volatile qualifiers, too.
+	(c_type_print_args): Add parameters show_artificial and language.
+	Skip artificial parameters when requested.
+	Use the appropriate language printer.
+	(c_type_print_varspec): Tell c_type_print_args to skip artificial
+	parameters and pass language_c.
+	* dwarf2read.c (die_list): New file global.
+	(struct partial_die_info): Update comments for name field.
+	(pdi_needs_namespace): Renamed to ...
+	(die_needs_namespace): ... this. Rewrite.
+	(dwarf2_linkage_name): Remove.
+	(add_partial_symbol): Do not predicate the call to
+	partial_die_full_name based on pdi_needs_namespace.
+	Remove call to cp_check_possible_namespace_symbols and associated
+	outdated comments.
+	(guess_structure_name): Do not inspect child subprogram DIEs.
+	(dwarf2_fullname): Update comments.
+	Use die_needs_namespace to assist in computing the name.
+	(read_func_scope): Use dwarf2_name to get the DIE's name.
+	Use dwarf2_physname to get the "linkage name" of the DIE.
+	(dwarf2_add_member_field): Use dwarf2_physname instead of
+	dwarf2_linkage_name.
+	(read_structure_type): For structs and classes, set TYPE_NAME, too.
+	(determine_class): Remove.
+	(read_partial_die): Ignore DW_AT_MIPS_linkage_name for all languages
+	except Ada.
+	(new_symbol): Unconditionally call dwarf2_name.
+	Compute the "linkage name" using dwarf2_physname.
+	Use dwarf2_name instead of dwarf2_full_name for enumerator DIEs.
+	When determining to scan for anonymous C++ namespaces, ignore
+	the linkage name.
+	(dwarf2_physname): New function.
+	(dwarf2_full_name): Move content to new function and call
+	that.
+	(dwarf2_compute_name): "New" function.
+	(_initialize_dwarf2_read): Initialize die_list.
+	* gnu-v3-eabi.c (gnu_v3_find_method_in): Remove unused variable
+	physname.
+	(gnu_v3_print_method_ptr): Use the physname for virtual methods
+	without a demangled name.
+	Print out type information for non-virtual methods.
+        * linespec.c (decode_line_1): Force ANY string using "::" (or
+	"." for java) to use decode_compound, and clean up any stray quoting.
+        If we found a file symtab, re-evaluate whether the remainder is_quoted.
+        (decode_compound): Stop consuming at an open parenthesis.
+        Keep template parameters.
+        Keep any overload information.
+        Keep keywords like "const".
+        Remove paren_pointer.
+        Move is_quoted check from set_flags to here.
+        Remove #if 0 code from 2000. Ten years is long enough.
+        (find_method): Before comparing symbol names, canonicalize the string
+        from the user.
+        If a specific overload is requested, find it. Otherwise throw an error.
+	(find_method_overload_end): New function.
+	(set_flags): Remove.
+        (decode_compound): Assume that parentheses are matched.
+        It's a lot easier.
+	* symtab.c (symbol_find_demangled_name): Add DMGL_VERBOSE flag
+	to cplus_demangle.
+	* linespec.c (decode_line_1): Keep important keywords like
+	"const" and "volatile".
+	* symtab.h (SYMBOL_CPLUS_DEMANGLED_NAME): Remove.
+	* typeprint.h (c_type_print_args): Add declaration.
+	* ui-file.c (do_ui_file_obsavestring): New function.
+	(ui_file_obsavestring): New function.
+	* ui-file.h (ui_file_obsavestring): Add declaration.
+	* valops.c (find_overload_match): Resolve the object to
+	a non-pointer type.
+	If the object is a data member, search the object for the member
+	and return with staticp set.
+	Use SYMBOL_NATURAL_NAME instead of SYMBOL_CPLUS_DEMANGLED_NAME.
+	Do not attempt to extract a function name from non-function types.
+	If the extracted function name and the original name are the same,
+	we don't have a C++ method.
+
+	From Jan Kratochvil  <jan.kratochvil@redhat.com>:    
+    	* dwarf2read.c (new_symbol <DW_TAG_enumerator>): Call dwarf2_full_name.
+
+	* ada-lang.c (ada_lookup_symbol): Remove linkage_name parameters
+	and arguments from symbol lookups.
+	* ax-gdb.c (gen_expr): Likewise.
+	* cp-namespace.c (cp_lookup_symbol_nonlocal, lookup_namespace_scope,
+	cp_lookup_symbol_namespace, lookup_symbol_file, lookup_nested_type,
+	lookup_possible_namespace_symbol): Likewise.
+	* cp-support.c (read_in_psymtabs): Likewise.
+	* cp-support.h (cp_lookup_symbol_nonlocal): Likewise.
+	* language.h (la_lookup_symbol_nonlocal): Likewise.
+	* scm-valprint.c (scm_inferior_print): Likewise.
+	* solib-darwin.c (darwin_relocate_section_addresses): Likewise.
+	* solib-svr.c (elf_lookup_lib): Likewise.
+	* solib.c (show_auto_solib_add): Likewise.
+	* solist.h (lookup_lib_global, solib_global_lookup): Likewise.
+	* symmisc.c (maintenance_check_symtabs): Likewise.
+	* symtab.c (lookup_symbol_in_language, lookup_symbol_aux,
+	lookup_symbol_aux_local, lookup_symbol_aux_block,
+	lookup_symbol_from_objfile, lookup_symbol_aux_symtabs,
+	lookup_symbol_aux_psymtabs,basic_lookup_symbol_nonlocal,
+	lookup_symbol_static, lookup_symbol_global, symbol_matches_domain,
+	basic_lookup_transparent_type, find_main_psymtab,
+	lookup_block_symbol): Likewise.
+	* symtab.h (basic_lookp_symbol_nonlocal, lookup_symbol_static,
+	lookup_symbol_global, lookup_symbol_aux_block,
+	lookup_symbol_partial_symbol, lookup_block_symbol,
+	lookup_global_symbol, value_maybe_namespace_elt): Likewise.
+
+2010-03-09  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* python/python-internal.h: Include symtab.h.
+
+2010-03-09  Joel Brobecker  <brobecker@adacore.com>
+	    Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* p-lang.c (is_pascal_string_type): Remove unneeded parentheses.
+	* p-valprint.c (pascal_val_print): Remove undeed block and fix
+	indentation.
+
+2010-03-08  Tom Tromey  <tromey@redhat.com>
+
+	* breakpoint.c (breakpoint_1): Add "QUIT".
+
+2010-03-08  Daniel Jacobowitz  <dan@codesourcery.com>
+	    Pedro Alves  <pedro@codesourcery.com>
+
+	* solib.c (solib_find): Replace extension if
+	solib_symbols_extension is set in the target gdbarch.
+	* arm-symbian-tdep.c (arm_symbian_init_abi): Set
+	solib_symbols_extension to "sym".
+	* gdbarch.sh (solib_symbols_extension): New variable.
+	(pstring): New function.
+	* gdbarch.h, gdbarch.c: Regenerate.
+
+2010-03-08  Tom Tromey  <tromey@redhat.com>
+
+	PR cli/9591:
+	* NEWS: Update.
+	* utils.c: Include main.h.
+	(fputs_maybe_filtered): Don't paginate if `batch_flag'.
+	(defaulted_query): Use default answer if `batch_flag'.
+	* main.h (batch_flag): Declare.
+	* main.c (batch_flag): New global.
+	(captured_main): Remove 'batch'.  Update.
+
+2010-03-08  Kevin Buettner  <kevinb@redhat.com>
+
+	From Richard Sandiford, Martin M. Hunt, Corinna Vinschen,
+	and Kevin Buettner:
+
+	* remote-mips.c (rockhopper_ops): New target_ops struct.
+	(MON_ROCKHOPPER): New mips_monitor_type.
+	(read_hex_value): New function.
+	(mips_request): Send 8-byte values with a 'T' packet.  Read the
+	packet argument as a string and use read_hex_value to parse it.  
+	(mips_exit_debug): Wait for response when using MON_ROCKHOPPER.
+	(rockhopper_open): New function.
+	(mips_wait): Read the PC, FP and SP fields as strings.  Use
+	read_hex_value to parse them and mips_set_register to commit them.
+	(mips_set_register): New function.
+	(mips_fetch_registers): Do not cast register value to "unsigned"
+	when reading a MON_ROCKHOPPER 't' packet.  Use mips_set_register.
+	(mips_store_registers): Use a 'T' packet to set registers when
+	using MON_ROCKHOPPER.
+	(pmon_end_download): Don't run initEther if using MON_ROCKHOPPER
+	and expect the total to be printed before the entry address.
+	(_initialize_remote_mips): Initialize and add rockhopper_ops.
+
+2010-03-08  Kevin Buettner  <kevinb@redhat.com>
+
+	* remote-mips.c (mips_fetch_word): Add new parameter, `valp'.
+	Change return value to int.  Store value fetched in location
+	addressed by `val'.  Use function's return value as success
+	or failure indicator.  Adjust all callers.
+
+2010-03-08  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* p-lang.c (is_pascal_string_type): Check that TYPE arg is non NULL.
+
+2010-03-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+	    Hui Zhu  <teawater@gmail.com>
+
+	* record.c (record_open_1): Check tmp_to_stopped_by_watchpoint and
+	tmp_to_stopped_data_address.
+	(record_open): Reset tmp_to_stopped_by_watchpoint and
+	tmp_to_stopped_data_address.
+	* target.c (init_dummy_target): Add to_stopped_by_watchpoint and
+	to_stopped_data_address.
+
+2010-03-08  Hui Zhu  <teawater@gmail.com>
+
+	* i386-tdep.c (i386_process_record): Initialize regnum.
+
+2010-03-08  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* symfile.c (addr_info_make_relative): New variable sect_name, use it.
+	Do not warn on ".gnu.liblist" and ".gnu.conflict".
+
+2010-03-08  Joel Brobecker  <brobecker@adacore.com>
+
+	Memory error when reading wrong core file.
+	* solib-svr4.c (solib_svr4_r_map): catch and print all exception
+	errors while reading the inferior memory, and return zero if
+	an exception was raised.
+
+2010-03-07  Michael Snyder  <msnyder@vmware.com>
+
+	* record.c (record_restore): Rename tmpu8 to rectype.
+
+	* i386-tdep.c (i386_record_lea_modrm_addr): Rename local variables
+	tmpu8, tmpi16, tmpi32, tmpulongest to addr8, addr16, addr32, addr64.
+
+	(i386_record_push): Rename local tmpulongest to addr.
+
+	(i386_process_record): Rename local tmpulongest to addr.
+
+	Rename local variables tmpu16, tmpu32, tmpu64 to addr16, addr32,
+	addr64.
+
+	Rename local variable tmpu8 to opcode8 and regnum.
+
+2010-03-07  Joel Brobecker  <brobecker@adacore.com>
+
+	* remote.c (remote_get_ada_task_ptid): New function.
+        (init_remote_ops): Set remote_ops.to_get_ada_task_ptid.
+
+2010-03-06  Christopher Faylor  <me+cygwin@cgf.cx>
+
+	* windows-nat.c: Reorganize #ifdef __CYGWIN__ considerations into one
+	block.  Define helper macros to reduce ifdefs in code.
+	(get_module_name): Use cygwin_buf_t for buffer and __PMAX for buffer
+	size.  Call unadorned GetModuleFileNameEx rather than
+	GetModuleFileNameEx*.
+	(windows_make_so): Use __PMAX to denote maximum buffer size and
+	cygwin_buf_t for buffer type.  Use GetSystemDirectory{W,A} as
+	appropriate.
+	(get_image_name): Use __PMAX to denote maximum buffer size.
+	(handle_load_dll): Likewise.
+	(windows_pid_to_exec_file): Likewise.
+	(windows_create_inferior): Add many accommodations for older Cygwin and
+	non-Cygwin.
+	(bad_GetModuleFileNameExW): Control inclusion of this function based on
+	__USEWIDE conditional.
+	(bad_GetModuleFileNameExA): Likewise.
+	(_initialize_loadable): Just use real function names without the dyn_
+	part since they are defined earlier.
+
+2010-03-05  Corinna Vinschen  <vinschen@redhat.com>
+	    Tom Tromey  <tromey@redhat.com>
+
+	* utils.c (host_char_to_target): Add 'gdbarch' argument.
+	(parse_escape): Likewise.
+	* python/py-utils.c (unicode_to_target_string): Update.
+	(unicode_to_target_python_string): Update.
+	(target_string_to_unicode): Update.
+	* printcmd.c (printf_command): Update.
+	* p-exp.y (yylex): Update.
+	* objc-exp.y (yylex): Update.
+	* mi/mi-parse.c: Include charset.h.
+	(mi_parse_escape): New function.
+	(mi_parse_argv): Use it.
+	* jv-exp.y (yylex): Update.
+	* i386-cygwin-tdep.c (i386_cygwin_auto_wide_charset): New
+	function.
+	(i386_cygwin_init_abi): Call set_gdbarch_auto_wide_charset.
+	* gdbarch.sh (auto_charset, auto_wide_charset): New.
+	* gdbarch.c: Rebuild.
+	* gdbarch.h: Rebuild.
+	* defs.h (parse_escape): Update.
+	* cli/cli-setshow.c: Include arch-utils.h.
+	(do_setshow_command): Update.
+	* cli/cli-cmds.c (echo_command): Update.
+	* charset.h (target_charset, target_wide_charset): Update.
+	* charset.c: Include arch-utils.h.
+	(target_charset_name): Default to "auto".
+	(target_wide_charset_name): Likewise.
+	(show_target_charset_name): Handle "auto".
+	(show_target_wide_charset_name): Likewise.
+	(be_le_arch): New global.
+	(set_be_le_names): Add 'gdbarch' argument.
+	(validate): Likewise.  Don't call set_be_le_names.
+	(set_charset_sfunc, set_host_charset_sfunc)
+	(set_target_charset_sfunc, set_target_wide_charset_sfunc):
+	Update.
+	(target_charset): Add 'gdbarch' argument.
+	(target_wide_charset): Likewise.  Remove 'byte_order' argument.
+	(auto_target_charset_name): New global.
+	(default_auto_charset, default_auto_wide_charset): New functions.
+	(_initialize_charset): Set auto_target_charset_name.  Allow "auto"
+	for target charsets.  Copy result of nl_langinfo.  Use GetACP if
+	USE_WIN32API.
+	* c-lang.c (charset_for_string_type): Add 'gdbarch' argument,
+	remove 'byte_order' argument.  Update.
+	(classify_type): Likewise.
+	(c_emit_char): Update.
+	(c_printchar): Update.
+	(c_printstr): Update.
+	(c_get_string): Update.
+	(evaluate_subexp_c): Update.
+	* arch-utils.h (default_auto_charset, default_auto_wide_charset):
+	Declare.
+	* python/python.c (gdbpy_target_charset): New function.
+	(gdbpy_target_wide_charset): Likewise.
+	(GdbMethods): Update.
+	* NEWS: Update.
+
+2010-03-05  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* symfile.c (build_section_addr_info_from_objfile): Do not mask
+	off high address bits.
+
+2010-03-05  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* python/py-lazy-string.c (gdbpy_extract_lazy_string): Extract
+	address as UnsignedLongLong, not LongLong.
+
+2010-03-05  Kevin Buettner  <kevinb@redhat.com>
+            Pedro Alves  <pedro@codesourcery.com>
+
+	* remote-mips.c (gdbthread.h): Include.
+	(remote_mips_ptid): Declare.
+	(mips_error): Only mourn the inferior when inferior_ptid is non-null.
+	(common_open): Set inferior_ptid, add it as an inferior, and
+	as a thread too.  Delete FIXME comment regarding start_remote().
+	(mips_close): Invoke generic_mourn_inferior().
+	(mips_kill): Make sure that target_mourn_inferior is invoked.
+	(mips_mourn_inferior): Don't invoke generic_mourn_inferior, as
+	it's now invoked from mips_close().
+	(mips_load): Don't null out inferior_ptid.  Don't call
+	clear_symtab_users().
+	(mips_thread_alive, mips_pid_to_str): New functions.
+	(_initialize_remote_mips): Initialize remote_mips_ptid.  Initialize
+	to_thread_alive and to_pid_to_str operations.
+
+2010-03-04  Tom Tromey  <tromey@redhat.com>
+
+	* dwarf2read.c (skip_one_die) <DW_FORM_ref_addr>: Use offset size
+	in DWARF 3 and later.
+	(read_attribute_value) <DW_FORM_ref_addr>: Likewise.
+
+2010-03-04  Keith Seitz  <keiths@redhat.com>
+
+	* linespec.c (decode_line_1): Update comments for is_quote_enclosed.
+	If the filename portion of the linespec was quoted, recheck the
+	remainder for additional quoting.
+	(locate_first_half): Skip over completer chars, too.
+
+2010-03-04  Tom Tromey  <tromey@redhat.com>
+
+	* printcmd.c (printf_command): Pass dummy argument to
+	printf_filtered.
+
+2010-03-04  Doug Evans  <dje@google.com>
+
+	* arm-tdep.c (arm_make_stub_cache): Delete unused locals reg,
+	unwound_fp.
+
+	* arm-tdep.c (arm_stub_unwind_sniffer): Add comment.
+
+2010-03-04  Pedro Alves  <pedro@codesourcery.com>
+
+	* breakpoint.c (update_watchpoint): Create a sentinel location if
+	the software watchpoint isn't watching any memory.
+	(breakpoint_address_bits): Skip dummy software watchpoint locations.
+
+2010-03-04  Pedro Alves  <pedro@codesourcery.com>
+
+	* utils.c (fputs_maybe_filtered): Check if there's already a top
+	level interpreter before dereferencing it.  If there isn't one,
+	don't paginate either.
+
+2010-03-04  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* arm-tdep.c (arm_pc_is_thumb): Add heuristic that tries to get
+	the state right when single stepping.
+	(arm_get_next_pc_raw, thumb_get_next_pc_raw): New functions.
+	Get the next PC along with the instruction state.
+	(thumb_get_next_pc): Remove.
+	(arm_get_next_pc): Modified to use arm_get_next_pc_raw.
+
+2010-03-04  Hui Zhu  <teawater@gmail.com>
+
+	* i386-tdep.c (i386_process_record): Change "addr" to "tmpu64".
+
+2010-03-03  Pedro Alves  <pedro@codesourcery.com>
+
+	* utils.c (fputs_maybe_filtered): Always disable pagination if the
+	top level interpreter is MI.
+
+2010-03-03 Stan Shebs  <stan@codesourcery.com>
+
+	* remote.c (remote_download_tracepoint): Iterate over locations.
+	* tracepoint.c (validate_actionline): Ditto.
+	(encode_actions): Add location argument.
+	(trace_dump_command): Check all locations to see if stepping
+	frame.
+
+2010-03-03  H.J. Lu  <hongjiu.lu@intel.com>
+	    Eli Zaretskii  <eliz@gnu.org>
+
+	* NEWS: Add X86 general purpose registers section.
+
+2010-03-03  Tom Tromey  <tromey@redhat.com>
+
+	PR mi/11098:
+	* varobj.c (install_new_value): Handle case where new print_value
+	is NULL.
+
+2010-03-03  Dainis Jonitis  <jonitis@gmail.com>
+
+	PR gdb/11345:
+	* printcmd.c (printf_command): Print end of format string using
+	printf_filtered.
+
+2010-03-02  Tom Tromey  <tromey@redhat.com>
+
+	* mi/mi-cmd-break.c (mi_read_next_line): Add missing 'void'.
+	* defs.h (read_command_lines_1): Add missing 'void'.
+	* cli/cli-script.c (recurse_read_control_structure): Add missing
+	'void'.
+	(read_next_line): Likewise.
+	(read_command_lines_1): Likewise.
+
+2010-03-02  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* spu-tdep.c (spu_analyze_prologue): Track instruction to
+	store backchain as part of prologue.
+
+2010-03-02  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* progspace.c (update_address_spaces): Update inferior address spaces
+	also.
+
+2010-03-02  Doug Evans  <dje@google.com>
+
+	* dwarf2read.c (add_partial_subprogram): Add missing baseaddr to
+	lowpc,highpc args to addrmap_set_empty.
+
+2010-03-02  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* amd64-tdep.c (amd64_byte_names): New.
+	(amd64_word_names): Likewise.
+	(amd64_dword_names): Likewise.
+	(amd64_pseudo_register_name): Likewise.
+	(amd64_pseudo_register_read): Likewise.
+	(amd64_pseudo_register_write): Likewise.
+	(amd64_init_abi): Set num_byte_regs, num_word_regs, num_dword_regs
+	and num_mmx_regs.  Call set_gdbarch_pseudo_register_read,
+	set_gdbarch_pseudo_register_write and
+	set_tdesc_pseudo_register_name.  Don't call
+	set_gdbarch_num_pseudo_regs.  Don't set mm0_regnum.
+
+	* i386-tdep.c (i386_num_mmx_regs): Removed.
+	(i386_num_pseudo_regs): Likewise.
+	(i386_byte_names): New.
+	(i386_word_names): Likewise.
+	(i386_byte_regnum_p): Likewise.
+	(i386_word_regnum_p): Likewise.
+	(i386_mmx_regnum_p): Updated.
+	(i386_pseudo_register_name): Make it global.  Handle byte and
+	word pseudo-registers.
+	(i386_pseudo_register_read): Likewise.
+	(i386_pseudo_register_write): Likewise.
+	(i386_pseudo_register_type): Handle byte, word and dword
+	pseudo-registers
+	(i386_register_reggroup_p): Don't include pseudo
+	registers, except for MXX, in any register groups.  Don't
+	include pseudo byte, word, dword registers in general_reggroup.
+	(i386_gdbarch_init): Set num_byte_regs, num_word_regs,
+	num_dword_regs, al_regnum, ax_regnum and eax_regnum.  Put MMX
+	pseudo-registers after word pseudo-registers.  Call
+	set_gdbarch_num_pseudo_regs after calling gdbarch_init_osabi.
+
+	* i386-tdep.h (gdbarch_tdep): Add num_mmx_regs, num_byte_regs,
+	al_regnum, num_word_regs, ax_regnum, num_dword_regs and
+	eax_regnum.
+	(i386_byte_regnum_p): New.
+	(i386_word_regnum_p): Likewise.
+	(i386_dword_regnum_p): Likewise.
+	(i386_pseudo_register_name): Likewise.
+	(i386_pseudo_register_read): Likewise.
+	(i386_pseudo_register_write): Likewise.
+
+2010-03-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* target-descriptions.c (tdesc_type): Remove
+	TDESC_TYPE_I386_EFLAGS and TDESC_TYPE_I386_MXCSR.
+	(tdesc_predefined_types): Likewise.
+	(tdesc_gdb_type): Likewise.  Pass NULL to append_flags_type_flag
+	if flag name is empty.
+	(maint_print_c_tdesc_cmd): Handle TDESC_TYPE_FLAGS.
+
+	* features/i386/32bit-core.xml: Define i386_eflags.
+	* features/i386/64bit-core.xml: Likewise.
+
+	* features/i386/32bit-sse.xml: Define i386_mxcsr.
+	* features/i386/64bit-sse.xml: Likewise.
+
+	* features/i386/amd64-linux.c: Regenerated.
+	* features/i386/amd64.c: Likewise.
+	* features/i386/i386-linux.c: Likewise.
+	* features/i386/i386.c: Likewise.
+
+2010-03-01  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdbtypes.c (append_composite_type_field_raw): New.
+	(append_composite_type_field_aligned): Use the new function.
+	* gdbtypes.h (append_composite_type_field_raw): Declare.
+	* target-descriptions.c (struct tdesc_type_field): Add start and end.
+	(struct tdesc_type_flag): New type.
+	(struct tdesc_type): Add TDESC_TYPE_STRUCT and TDESC_TYPE_FLAGS to
+	kind.  Add size to u.u.  Add u.f for flags.
+	(tdesc_gdb_type): Handle TDESC_TYPE_STRUCT and TDESC_TYPE_FLAGS.
+	(tdesc_free_type): Likewise.
+	(tdesc_create_struct, tdesc_set_struct_size, tdesc_create_flags): New.
+	(tdesc_add_field): Handle TDESC_TYPE_STRUCT.
+	(tdesc_add_bitfield, tdesc_add_flag): New.
+	* target-descriptions.h (tdesc_create_struct, tdesc_set_struct_size)
+	(tdesc_create_flags, tdesc_add_bitfield, tdesc_add_flag): Declare.
+	* xml-tdesc.c (struct tdesc_parsing_data): Rename current_union to
+	current_type.  Add current_type_size and current_type_is_flags.
+	(tdesc_start_union): Clear the new fields.
+	(tdesc_start_struct, tdesc_start_flags): New.
+	(tdesc_start_field): Handle struct fields, including bitfields.
+	(field_attributes): Make type optional.  Add start and end.
+	(union_children): Rename to struct_union_children.
+	(union_attributes): Rename to struct_union_attributes.  Add optional
+	size.
+	(flags_attributes): New.
+	(feature_children): Add struct and flags.
+	* features/gdb-target.dtd: Add flags and struct to features.
+	Make field type optional.  Add field start and end.
+
+2010-03-01  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* amd64-linux-nat.c (AMD64_LINUX_USER64_CS): New.
+	(amd64_linux_read_description): Likewise.
+	(_initialize_amd64_linux_nat): Set to_read_description to
+	amd64_linux_read_description.
+
+	* amd64-linux-tdep.c: Include "features/i386/amd64-linux.c".
+	(amd64_linux_register_name): Removed.
+	(amd64_linux_register_type): Likewise.
+	(amd64_linux_core_read_description): New.
+	(amd64_linux_init_abi): Set target description to
+	tdesc_amd64_linux if needed.  Support orig_rax in target
+	description.  Don't call set_gdbarch_register_name nor
+	set_gdbarch_register_type.  Call
+	set_gdbarch_core_read_description.
+	(_initialize_amd64_linux_tdep): Call
+	initialize_tdesc_amd64_linux.
+
+	* amd64-linux-tdep.h (tdesc_amd64_linux): New.
+
+	* amd64-tdep.c:  Include "features/i386/amd64.c".
+	(amd64_register_names): Removed.
+	(amd64_register_name): Likewise.
+	(amd64_register_type): Likewise.
+	(amd64_init_abi):  Set num_core_regs and register_names.  Set
+	target description to tdesc_amd64 if needed.  Don't call 
+	set_gdbarch_register_name nor set_gdbarch_register_type.
+	(_initialize_amd64_tdep): New.
+
+	* i386-linux-nat.c (i386_linux_read_description): New.
+	(_initialize_i386_linux_nat): Set to_read_description to
+	i386_linux_read_description.
+
+	* i386-linux-tdep.c: Include "features/i386/i386-linux.c".
+	(i386_linux_register_name): Removed.
+	(i386_linux_core_read_description): New.
+	(i386_linux_read_description): Likewise.
+	(i386_linux_init_abi): Don't call set_gdbarch_register_name.
+	Set target description to tdesc_i386_linux if needed.  Support
+	orig_eax.  Set register_reggroup_p.  Call
+	set_gdbarch_core_read_description.
+	(_initialize_i386_linux_tdep): Call initialize_tdesc_i386_linux.
+
+	* i386-linux-tdep.h (tdesc_i386_linux): New.
+
+	* i386-nto-tdep.c (i386nto_regset_id): Replace I386_NUM_FREGS
+	with I387_NUM_REGS.
+
+	* i386-tdep.c: Include "features/i386/i386.c".
+	(i386_register_names): Make it const.
+	(i386_mmx_names): Likewise.
+	(i386_num_register_names): Removed.
+	(i386_register_name): Likewise.
+	(i386_eflags_type): Likewise.
+	(i386_mxcsr_type): Likewise.
+	(i386_sse_type): Likewise.
+	(i386_register_type): Likewise.
+	(i387_ext_type): Call tdesc_find_type instead of arch_float_type.
+	(i386_pseudo_register_name): New.
+	(i386_pseudo_register_type): Likewise.
+	(i386_mmx_type): Make it static.
+	(i386_gdbarch_init): Check arch.  Replace I386_NUM_FREGS with
+	I387_NUM_REGS.  Set num_core_regs and register_names.  Don't
+	call set_gdbarch_register_name nor set_gdbarch_register_type.
+	Set register_reggroup_p.  Set target description to tdesc_i386
+	if needed.  Call set_tdesc_pseudo_register_type,
+	set_tdesc_pseudo_register_name and tdesc_use_registers.
+	(_initialize_i386_tdep): Call initialize_tdesc_i386.
+	initialize_tdesc_x86_64.
+
+	* i386-tdep.h (gdbarch_tdep): Remove i386_eflags_type,
+	i386_mxcsr_type and i386_sse_type.  Add num_core_regs,
+	register_names, tdesc and register_reggroup_p.
+	(I386_NUM_FREGS): Removed.
+	(i386_eflags_type): Likewise.
+	(i386_mxcsr_type): Likewise.
+	(i386_mmx_type): Likewise.
+	(i386_sse_type): Likewise.
+	(i386_register_name): Likewise.
+	(i386_regnum): Add I386_MXCSR_REGNUM.
+	(I386_SSE_NUM_REGS): Defined with I386_MXCSR_REGNUM.
+
+	* i387-tdep.h (I387_NUM_REGS): New.
+
+	* regformats/i386/i386-linux.dat: Generated.
+	* regformats/i386/i386.dat: Likewise.
+	* regformats/i386/amd64-linux.dat: Likewise.
+	* regformats/i386/amd64.dat: Likewise.
+
+	* regformats/reg-i386-linux.dat: Removed.
+	* regformats/reg-i386.dat: Likewise.
+	* regformats/reg-x86-64-linux.dat: Likewise.
+	* regformats/reg-x86-64.dat: Likewise.
+
+2010-03-01  Corinna Vinschen  <vinschen@redhat.com>
+
+	* remote-fileio.c (remote_fileio_func_rename): Use Cygwin 1.7
+	cygwin_conv_path API rather than the deprecated
+	cygwin_conv_to_full_posix_path.
+	* windows-nat.c:
+	(GetModuleFileNameExA): Undefine for Cygwin.
+	(GetModuleFileNameExW): Define for Cygwin.
+	(get_module_name): Change size of pathbuf to PATH_MAX for Cygwin.
+	Call GetModuleFileNameExW and convert path to POSIX using
+	cygwin_conv_path.
+	(windows_make_so): Always define p.  Drop unused variable m.
+	Don't use Win32 functions to check file existance, rather use
+	access on Cygwin.  Fetch system directory using GetSystemDirectoryW.
+	Use canonicalize_file_name to get full path.
+	(get_image_name): Use wcstombs, rather than WideCharToMultiByte
+	to convert Unicode pathname to multibyte on Cygwin.  Otherwise,
+	use correct target buffer size in call to WideCharToMultiByte.
+	(handle_load_dll): Change size of dll_buf to PATH_MAX for Cygwin.
+	(windows_pid_to_exec_file): Change size of path to PATH_MAX for Cygwin.
+	(windows_create_inferior): Convert all paths and arguments to wchar_t
+	and use CreateProcessW on Cygwin.
+	(_initialize_windows_nat): Disable DOS-style path warning on Cygwin.
+	(bad_GetModuleFileNameExA): Undefine for Cygwin.
+	(bad_GetModuleFileNameExW): Define for Cygwin.
+	(_initialize_loadable): Load GetModuleFileNameExW into
+	dyn_GetModuleFileNameExW on Cygwin.  Don't load ANSI function on Cygwin.
+
+2010-02-28  Phil Muldoon  <pmuldoon@redhat.com>
+
+	PR python/11036
+	* python/py-frame.c (frapy_read_var): Add block argument and logic
+	to cope with user provided blocks.
+
+2010-02-28  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* infcall.c (call_function_by_hand): Remove gdb_assert on sp and old_sp.
+	New comment.
+
+2010-02-28  Corinna Vinschen  <vinschen@redhat.com>
+
+	* Makefile.in (SUBDIR_MI_OBS): Move mi-common.o from here...
+	(COMMON_OBS): ... to here since it's used unconditionally.
+	(SUBDIR_MI_SRCS): Move mi/mi-common.c from here...
+	(SFILES): To here.
+
+2010-02-26  David Daney  <ddaney@caviumnetworks.com>
+
+	* mips-linux-tdep.c: Update struct sigframe comments.
+	(SIGFRAME_CODE_OFFSET): Delete macro.
+	(mips_linux_o32_sigframe_init): Calculate sigcontext_base using
+	this_frame's sp.
+	(mips_linux_n32n64_sigframe_init): Same.
+
+2010-02-26  Kevin Buettner  <kevinb@redhat.com>
+
+	* remote-mips.c (mips_load): Don't use pseudo-register when
+	invalidating regcache.
+
+2010-02-26  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* arm-tdep.c (thumb_get_next_pc): Correct conditional branch opcode.
+
+2010-02-26  Pedro Alves  <pedro@codesourcery.com>
+
+	* NEWS: Add "New targets" section, and mention ARM Symbian
+	support.
+
+2010-02-26  Ulrich Weigand  <uweigand@de.ibm.com>
+
+	* dwarf2loc.c (struct piece_closure): Remove ARCH member,
+	add ADDR_SIZE member.
+	(allocate_piece_closure): Update.
+	(copy_pieced_value_closure): Likewise.
+	(dwarf2_evaluate_loc_desc): Likewise.
+	(read_pieced_value): Use DWARF address size instead of
+	GDB's gdbarch_addr_bit as size of values on the DWARF stack.
+
+2010-02-26  Phil Muldoon  <pmuldoon@redhat.com>
+            Tom Tromey  <tromey@redhat.com>
+
+	* python/py-type.c (typy_lookup_typename): Add in block argument.
+	If provided restrict lookup to specified blocks.
+	(gdbpy_lookup_type): Likewise.
+	(typy_lookup_type): Likewise.
+
 2010-02-25  Daniel Jacobowitz  <dan@codesourcery.com>
  
 	Symbian config

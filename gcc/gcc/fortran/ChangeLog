@@ -1,3 +1,85 @@
+2010-03-12  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/43291
+	PR fortran/43326
+	* resolve.c (resolve_compcall): Add new boolean dummy argument
+	'class_members'. Only resolve expression at end if false.
+	Remove redundant, static variable 'class_object'.
+	(check_class_members): Add extra argument to call of
+	resolve_compcall.
+	(resolve_typebound_function): Renamed resolve_class_compcall.
+	Do all the detection of class references here. Correct calls to
+	resolve_compcall for extra argument.
+	(resolve_typebound_subroutine): resolve_class_typebound_call
+	renamed. Otherwise same as resolve_typebound_function.
+	(gfc_resolve_expr): Call resolve_typebound_function.
+	(resolve_code): Call resolve_typebound_subroutine.
+
+2010-03-10  Tobias Burnus  <burnus@net-b.de
+
+	PR fortran/43303
+	* symbol.c (get_iso_c_sym): Set sym->result.
+
+2010-03-08  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/43256
+	* resolve.c (resolve_compcall): Don't set 'value.function.name' here
+	for TBPs, otherwise they will not be resolved properly.
+	(resolve_function): Use 'value.function.esym' instead of
+	'value.function.name' to check if we're dealing with a TBP.
+	(check_class_members): Set correct type of passed object for all TBPs,
+	not only generic ones, except if the type is abstract.
+
+2010-03-04  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/43244
+	* decl.c (gfc_match_final_decl): Make sure variable names starting with
+	'final...' are not misinterpreted as FINAL statements.
+
+2010-03-03  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/43243
+	* trans-array.c (gfc_conv_array_parameter): Contiguous refs to
+	allocatable ultimate components do not need temporaries, whilst
+	ultimate pointer components do.
+
+2010-03-03  Janus Weil  <janus@gcc.gnu.org>
+
+	PR fortran/43169
+	* resolve.c (resolve_code): Correctly set gfc_current_ns for
+	EXEC_SELECT_TYPE.
+	(gfc_impure_variable): Make it work with sub-namespaces (BLOCK etc).
+	(gfc_pure): Ditto.
+
+2010-03-02  Paul Thomas  <pault@gcc.gnu.org>
+
+	PR fortran/43180
+	* trans-array.c (gfc_conv_array_parameter): A full array of
+	derived type need not be restricted to a symbol without an
+	array spec to use the call to gfc_conv_expr_descriptor.
+
+	PR fortran/43173
+	* trans-array.c (gfc_conv_array_parameter): Contiguous refs to
+	allocatable arrays do not need temporaries.
+
+2010-03-01  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/43199
+	* resolve.c (find_array_spec): Handle REF_COMPONENT with
+	CLASS components.
+
+2010-02-28  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/43205
+	* trans-expr.c (is_zero_initializer_p): Move up in the file.
+	(gfc_conv_initializer): Handle zero initializer as special case.
+
+2010-02-27  Tobias Burnus  <burnus@net-b.de>
+
+	PR fortran/43185
+	* resolve.c (resolve_fl_variable_derived): Imply SAVE
+	for module variables for Fortran 2008.
+
 2010-02-25  Jakub Jelinek  <jakub@redhat.com>
 
 	PR debug/43166

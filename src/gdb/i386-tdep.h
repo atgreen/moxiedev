@@ -114,12 +114,46 @@ struct gdbarch_tdep
      absence of an FPU.  */
   int st0_regnum;
 
+  /* Number of MMX registers.  */
+  int num_mmx_regs;
+
   /* Register number for %mm0.  Set this to -1 to indicate the absence
      of MMX support.  */
   int mm0_regnum;
 
+  /* Number of byte registers.  */
+  int num_byte_regs;
+
+  /* Register pseudo number for %al.  */
+  int al_regnum;
+
+  /* Number of pseudo word registers.  */
+  int num_word_regs;
+
+  /* Register number for %ax.  */
+  int ax_regnum;
+
+  /* Number of pseudo dword registers.  */
+  int num_dword_regs;
+
+  /* Register number for %eax.  Set this to -1 to indicate the absence
+     of pseudo dword register support.  */
+  int eax_regnum;
+
+  /* Number of core registers.  */
+  int num_core_regs;
+
   /* Number of SSE registers.  */
   int num_xmm_regs;
+
+  /* Register names.  */
+  const char **register_names;
+
+  /* Target description.  */
+  const struct target_desc *tdesc;
+
+  /* Register group function.  */
+  const void *register_reggroup_p;
 
   /* Offset of saved PC in jmp_buf.  */
   int jb_pc_offset;
@@ -147,10 +181,7 @@ struct gdbarch_tdep
   int sc_sp_offset;
 
   /* ISA-specific data types.  */
-  struct type *i386_eflags_type;
-  struct type *i386_mxcsr_type;
   struct type *i386_mmx_type;
-  struct type *i386_sse_type;
   struct type *i387_ext_type;
 
   /* Process record/replay target.  */
@@ -196,7 +227,8 @@ enum i386_regnum
   I386_ES_REGNUM,		/* %es */
   I386_FS_REGNUM,		/* %fs */
   I386_GS_REGNUM,		/* %gs */
-  I386_ST0_REGNUM		/* %st(0) */
+  I386_ST0_REGNUM,		/* %st(0) */
+  I386_MXCSR_REGNUM = 40	/* %mxcsr */ 
 };
 
 /* Register numbers of RECORD_REGMAP.  */
@@ -230,21 +262,30 @@ enum record_i386_regnum
 };
 
 #define I386_NUM_GREGS	16
-#define I386_NUM_FREGS	16
 #define I386_NUM_XREGS  9
 
-#define I386_SSE_NUM_REGS	(I386_NUM_GREGS + I386_NUM_FREGS \
-				 + I386_NUM_XREGS)
+#define I386_SSE_NUM_REGS	(I386_MXCSR_REGNUM + 1)
 
 /* Size of the largest register.  */
 #define I386_MAX_REGISTER_SIZE	16
 
 /* Types for i386-specific registers.  */
-extern struct type *i386_eflags_type (struct gdbarch *gdbarch);
-extern struct type *i386_mxcsr_type (struct gdbarch *gdbarch);
-extern struct type *i386_mmx_type (struct gdbarch *gdbarch);
-extern struct type *i386_sse_type (struct gdbarch *gdbarch);
 extern struct type *i387_ext_type (struct gdbarch *gdbarch);
+
+/* Checks of different pseudo-registers.  */
+extern int i386_byte_regnum_p (struct gdbarch *gdbarch, int regnum);
+extern int i386_word_regnum_p (struct gdbarch *gdbarch, int regnum);
+extern int i386_dword_regnum_p (struct gdbarch *gdbarch, int regnum);
+
+extern const char *i386_pseudo_register_name (struct gdbarch *gdbarch,
+					      int regnum);
+
+extern void i386_pseudo_register_read (struct gdbarch *gdbarch,
+				       struct regcache *regcache,
+				       int regnum, gdb_byte *buf);
+extern void i386_pseudo_register_write (struct gdbarch *gdbarch,
+					struct regcache *regcache,
+					int regnum, const gdb_byte *buf);
 
 /* Segment selectors.  */
 #define I386_SEL_RPL	0x0003  /* Requester's Privilege Level mask.  */
@@ -262,9 +303,6 @@ extern CORE_ADDR i386_skip_main_prologue (struct gdbarch *gdbarch, CORE_ADDR pc)
 
 /* Return whether the THIS_FRAME corresponds to a sigtramp routine.  */
 extern int i386_sigtramp_p (struct frame_info *this_frame);
-
-/* Return the name of register REGNUM.  */
-extern char const *i386_register_name (struct gdbarch * gdbarch, int regnum);
 
 /* Return non-zero if REGNUM is a member of the specified group.  */
 extern int i386_register_reggroup_p (struct gdbarch *gdbarch, int regnum,

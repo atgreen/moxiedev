@@ -35,6 +35,7 @@
 #include "regcache.h"
 #include <ctype.h>
 #include "mips-tdep.h"
+#include "gdbthread.h"
 
 
 /* Breakpoint types.  Values 0, 1, and 2 must agree with the watch
@@ -88,9 +89,11 @@ static void mips_detach (struct target_ops *ops, char *args, int from_tty);
 
 static int mips_map_regno (struct gdbarch *, int);
 
+static void mips_set_register (int regno, ULONGEST value);
+
 static void mips_prepare_to_store (struct regcache *regcache);
 
-static unsigned int mips_fetch_word (CORE_ADDR addr);
+static int mips_fetch_word (CORE_ADDR addr, unsigned int *valp);
 
 static int mips_store_word (CORE_ADDR addr, unsigned int value,
 			    int *old_contents);
@@ -142,6 +145,7 @@ static int mips_common_breakpoint (int set, CORE_ADDR addr, int len,
 extern struct target_ops mips_ops;
 extern struct target_ops pmon_ops;
 extern struct target_ops ddb_ops;
+extern struct target_ops rockhopper_ops;
 /* *INDENT-OFF* */
 /* The MIPS remote debugging interface is built on top of a simple
    packet protocol.  Each packet is organized as follows:
@@ -287,7 +291,7 @@ extern struct target_ops ddb_ops;
    These are initialized with code in _initialize_remote_mips instead
    of static initializers, to make it easier to extend the target_ops
    vector later.  */
-struct target_ops mips_ops, pmon_ops, ddb_ops, lsi_ops;
+struct target_ops mips_ops, pmon_ops, ddb_ops, rockhopper_ops, lsi_ops;
 
 enum mips_monitor_type
   {
@@ -297,6 +301,7 @@ enum mips_monitor_type
     MON_PMON,			/* 3.0.83 [COGENT,EB,FP,NET] Algorithmics Ltd. Nov  9 1995 17:19:50 */
     MON_DDB,			/* 2.7.473 [DDBVR4300,EL,FP,NET] Risq Modular Systems,  Thu Jun 6 09:28:40 PDT 1996 */
     MON_LSI,			/* 4.3.12 [EB,FP], LSI LOGIC Corp. Tue Feb 25 13:22:14 1997 */
+    MON_ROCKHOPPER,
     /* Last and unused value, for sizing vectors, etc. */
     MON_LAST
   };
@@ -440,6 +445,14 @@ struct lsi_error lsi_error_table[] =
    of warnings returned by PMON when hardware breakpoints are used.  */
 static int monitor_warnings;
 
+/* This is the ptid we use while we're connected to the remote.  Its
+   value is arbitrary, as the remote-mips target doesn't have a notion of
+   processes or threads, but we need something non-null to place in
+   inferior_ptid.  */
+static ptid_t remote_mips_ptid;
+
+/* Close any ports which might be open.  Reset certain globals indicating
+   the state of those ports.  */
 
 static void
 close_ports (void)
@@ -483,7 +496,8 @@ mips_error (char *string,...)
   close_ports ();
 
   printf_unfiltered ("Ending remote MIPS debugging.\n");
-  target_mourn_inferior ();
+  if (!ptid_equal (inferior_ptid, null_ptid))
+    target_mourn_inferior ();
 
   deprecated_throw_reason (RETURN_ERROR);
 }
@@ -517,6 +531,33 @@ fputs_readable (const char *string, struct ui_file *file)
 
   while ((c = *string++) != '\0')
     fputc_readable (c, file);
+}
+
+
+/* Read P as a hex value.  Return true if every character made sense,
+   storing the result in *RESULT.  Leave *RESULT unchanged otherwise.  */
+
+static int
+read_hex_value (const char *p, ULONGEST *result)
+{
+  ULONGEST retval;
+
+  retval = 0;
+  while (*p != 0)
+    {
+      retval <<= 4;
+      if (*p >= '0' && *p <= '9')
+	retval |= *p - '0';
+      else if (*p >= 'A' && *p <= 'F')
+	retval |= *p - 'A' + 10;
+      else if (*p >= 'a' && *p <= 'f')
+	retval |= *p - 'a' + 10;
+      else
+	return 0;
+      p++;
+    }
+  *result = retval;
+  return 1;
 }
 
 
@@ -1189,11 +1230,12 @@ mips_request (int cmd,
 {
   int addr_size = gdbarch_addr_bit (target_gdbarch) / 8;
   char myBuff[DATA_MAXLEN + 1];
+  char response_string[17];
   int len;
   int rpid;
   char rcmd;
   int rerrflg;
-  unsigned long rresponse;
+  ULONGEST rresponse;
 
   if (buff == (char *) NULL)
     buff = myBuff;
@@ -1203,8 +1245,15 @@ mips_request (int cmd,
       if (mips_need_reply)
 	internal_error (__FILE__, __LINE__,
 			_("mips_request: Trying to send command before reply"));
-      sprintf (buff, "0x0 %c 0x%s 0x%s", cmd,
-	       phex_nz (addr, addr_size), phex_nz (data, addr_size));
+      /* 'T' sets a register to a 64-bit value, so make sure we use
+	 the right conversion function.  */
+      if (cmd == 'T')
+	sprintf (buff, "0x0 %c 0x%s 0x%s", cmd,
+		 phex_nz (addr, addr_size), phex_nz (data, 8));
+      else
+	sprintf (buff, "0x0 %c 0x%s 0x%s", cmd,
+	         phex_nz (addr, addr_size), phex_nz (data, addr_size));
+
       mips_send_packet (buff, 1);
       mips_need_reply = 1;
     }
@@ -1221,8 +1270,9 @@ mips_request (int cmd,
   len = mips_receive_packet (buff, 1, timeout);
   buff[len] = '\0';
 
-  if (sscanf (buff, "0x%x %c 0x%x 0x%lx",
-	      &rpid, &rcmd, &rerrflg, &rresponse) != 4
+  if (sscanf (buff, "0x%x %c 0x%x 0x%16s",
+	      &rpid, &rcmd, &rerrflg, response_string) != 4
+      || !read_hex_value (response_string, &rresponse)
       || (cmd != '\0' && rcmd != cmd))
     mips_error ("Bad response from remote board");
 
@@ -1243,17 +1293,24 @@ mips_request (int cmd,
   return rresponse;
 }
 
+/* Cleanup associated with mips_initialize().  */
+
 static void
 mips_initialize_cleanups (void *arg)
 {
   mips_initializing = 0;
 }
 
+/* Cleanup associated with mips_exit_debug().  */
+
 static void
 mips_exit_cleanups (void *arg)
 {
   mips_exiting = 0;
 }
+
+/* Send a command and wait for that command to be echoed back.  Wait,
+   too, for the following prompt.  */
 
 static void
 mips_send_command (const char *cmd, int prompt)
@@ -1266,6 +1323,7 @@ mips_send_command (const char *cmd, int prompt)
 }
 
 /* Enter remote (dbx) debug mode: */
+
 static void
 mips_enter_debug (void)
 {
@@ -1296,6 +1354,7 @@ mips_enter_debug (void)
 }
 
 /* Exit remote (dbx) debug mode, returning to the monitor prompt: */
+
 static int
 mips_exit_debug (void)
 {
@@ -1304,7 +1363,7 @@ mips_exit_debug (void)
 
   mips_exiting = 1;
 
-  if (mips_monitor != MON_IDT)
+  if (mips_monitor != MON_IDT && mips_monitor != MON_ROCKHOPPER)
     {
       /* The DDB (NEC) and MiniRISC (LSI) versions of PMON exit immediately,
          so we do not get a reply to this command: */
@@ -1458,6 +1517,7 @@ mips_initialize (void)
 }
 
 /* Open a connection to the remote board.  */
+
 static void
 common_open (struct target_ops *ops, char *name, int from_tty,
 	     enum mips_monitor_type new_monitor,
@@ -1563,7 +1623,9 @@ device is attached to the target board (e.g., /dev/ttya).\n"
   /* Switch to using remote target now.  */
   push_target (ops);
 
-  /* FIXME: Should we call start_remote here?  */
+  inferior_ptid = remote_mips_ptid;
+  inferior_appeared (current_inferior (), ptid_get_pid (inferior_ptid));
+  add_thread_silent (inferior_ptid);
 
   /* Try to figure out the processor model if possible.  */
   deprecated_mips_set_processor_regs_hack ();
@@ -1579,6 +1641,8 @@ device is attached to the target board (e.g., /dev/ttya).\n"
   print_stack_frame (get_selected_frame (NULL), 0, SRC_AND_LOC);
   xfree (serial_port_name);
 }
+
+/* Open a connection to an IDT board.  */
 
 static void
 mips_open (char *name, int from_tty)
@@ -1603,17 +1667,31 @@ mips_open (char *name, int from_tty)
   common_open (&mips_ops, name, from_tty, MON_IDT, monitor_prompt);
 }
 
+/* Open a connection to a PMON board.  */
+
 static void
 pmon_open (char *name, int from_tty)
 {
   common_open (&pmon_ops, name, from_tty, MON_PMON, "PMON> ");
 }
 
+/* Open a connection to a DDB board.  */
+
 static void
 ddb_open (char *name, int from_tty)
 {
   common_open (&ddb_ops, name, from_tty, MON_DDB, "NEC010>");
 }
+
+/* Open a connection to a rockhopper board.  */
+
+static void
+rockhopper_open (char *name, int from_tty)
+{
+  common_open (&rockhopper_ops, name, from_tty, MON_ROCKHOPPER, "NEC01>");
+}
+
+/* Open a connection to an LSI board.  */
 
 static void
 lsi_open (char *name, int from_tty)
@@ -1639,6 +1717,8 @@ mips_close (int quitting)
 
       close_ports ();
     }
+
+  generic_mourn_inferior ();
 }
 
 /* Detach from the remote board.  */
@@ -1676,6 +1756,7 @@ mips_resume (struct target_ops *ops,
 
 /* Return the signal corresponding to SIG, where SIG is the number which
    the MIPS protocol uses for the signal.  */
+
 static enum target_signal
 mips_signal_from_protocol (int sig)
 {
@@ -1693,6 +1774,34 @@ mips_signal_from_protocol (int sig)
   return (enum target_signal) sig;
 }
 
+/* Set the register designated by REGNO to the value designated by VALUE.  */
+
+static void
+mips_set_register (int regno, ULONGEST value)
+{
+  char buf[MAX_REGISTER_SIZE];
+  struct regcache *regcache = get_current_regcache ();
+  struct gdbarch *gdbarch = get_regcache_arch (regcache);
+  enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
+
+  /* We got the number the register holds, but gdb expects to see a
+     value in the target byte ordering.  */
+
+  if (mips_monitor != MON_ROCKHOPPER
+      && (regno == mips_regnum (gdbarch)->pc || regno < 32))
+    /* Some 64-bit boards have monitors that only send the bottom 32 bits.
+       In such cases we can only really debug 32-bit code properly so,
+       when reading a GPR or the PC, assume that the full 64-bit
+       value is the sign extension of the lower 32 bits.  */
+    store_signed_integer (buf, register_size (gdbarch, regno), byte_order,
+                          value);
+  else
+    store_unsigned_integer (buf, register_size (gdbarch, regno), byte_order,
+                            value);
+
+  regcache_raw_supply (regcache, regno, buf);
+}
+
 /* Wait until the remote stops, and return a wait status.  */
 
 static ptid_t
@@ -1702,8 +1811,8 @@ mips_wait (struct target_ops *ops,
   int rstatus;
   int err;
   char buff[DATA_MAXLEN];
-  int rpc, rfp, rsp;
-  char flags[20];
+  ULONGEST rpc, rfp, rsp;
+  char pc_string[17], fp_string[17], sp_string[17], flags[20];
   int nfields;
   int i;
 
@@ -1743,35 +1852,19 @@ mips_wait (struct target_ops *ops,
 
   /* See if we got back extended status.  If so, pick out the pc, fp, sp, etc... */
 
-  nfields = sscanf (buff, "0x%*x %*c 0x%*x 0x%*x 0x%x 0x%x 0x%x 0x%*x %s",
-		    &rpc, &rfp, &rsp, flags);
-  if (nfields >= 3)
+  nfields = sscanf (buff, "0x%*x %*c 0x%*x 0x%*x 0x%16s 0x%16s 0x%16s 0x%*x %s",
+		    pc_string, fp_string, sp_string, flags);
+  if (nfields >= 3
+      && read_hex_value (pc_string, &rpc)
+      && read_hex_value (fp_string, &rfp)
+      && read_hex_value (sp_string, &rsp))
     {
       struct regcache *regcache = get_current_regcache ();
       struct gdbarch *gdbarch = get_regcache_arch (regcache);
-      enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-      char buf[MAX_REGISTER_SIZE];
 
-      store_unsigned_integer
-	(buf, register_size (gdbarch, gdbarch_pc_regnum (gdbarch)),
-	 byte_order, rpc);
-      regcache_raw_supply (regcache, gdbarch_pc_regnum (gdbarch), buf);
-
-      store_unsigned_integer
-	(buf, register_size (gdbarch, gdbarch_pc_regnum (gdbarch)),
-	 byte_order, rfp);
-      regcache_raw_supply (regcache, 30, buf);	/* This register they are avoiding and so it is unnamed */
-
-      store_unsigned_integer
-	(buf, register_size (gdbarch, gdbarch_sp_regnum (gdbarch)),
-	 byte_order, rsp);
-      regcache_raw_supply (regcache, gdbarch_sp_regnum (gdbarch), buf);
-
-      store_unsigned_integer
-	(buf, register_size (gdbarch, gdbarch_deprecated_fp_regnum (gdbarch)),
-	 byte_order, 0);
-      regcache_raw_supply (regcache,
-			   gdbarch_deprecated_fp_regnum (gdbarch), buf);
+      mips_set_register (gdbarch_pc_regnum (gdbarch), rpc);
+      mips_set_register (30, rfp);
+      mips_set_register (gdbarch_sp_regnum (gdbarch), rsp);
 
       if (nfields == 9)
 	{
@@ -1901,7 +1994,7 @@ mips_fetch_registers (struct target_ops *ops,
 {
   struct gdbarch *gdbarch = get_regcache_arch (regcache);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
-  unsigned LONGEST val;
+  ULONGEST val;
   int err;
 
   if (regno == -1)
@@ -1928,9 +2021,9 @@ mips_fetch_registers (struct target_ops *ops,
 	  /* Unfortunately the PMON version in the Vr4300 board has been
 	     compiled without the 64bit register access commands. This
 	     means we cannot get hold of the full register width. */
-	  if (mips_monitor == MON_DDB)
-	    val = (unsigned) mips_request ('t', pmon_reg, 0,
-					   &err, mips_receive_wait, NULL);
+	  if (mips_monitor == MON_DDB || mips_monitor == MON_ROCKHOPPER)
+	    val = mips_request ('t', pmon_reg, 0,
+				&err, mips_receive_wait, NULL);
 	  else
 	    val = mips_request ('r', pmon_reg, 0,
 				&err, mips_receive_wait, NULL);
@@ -1940,15 +2033,7 @@ mips_fetch_registers (struct target_ops *ops,
 	}
     }
 
-  {
-    char buf[MAX_REGISTER_SIZE];
-
-    /* We got the number the register holds, but gdb expects to see a
-       value in the target byte ordering.  */
-    store_unsigned_integer (buf, register_size (gdbarch, regno),
-			    byte_order, val);
-    regcache_raw_supply (regcache, regno, buf);
-  }
+  mips_set_register (regno, val);
 }
 
 /* Prepare to store registers.  The MIPS protocol can store individual
@@ -1977,31 +2062,31 @@ mips_store_registers (struct target_ops *ops,
     }
 
   regcache_cooked_read_unsigned (regcache, regno, &val);
-  mips_request ('R', mips_map_regno (gdbarch, regno), val,
+  mips_request (mips_monitor == MON_ROCKHOPPER ? 'T' : 'R',
+  		mips_map_regno (gdbarch, regno),
+		val,
 		&err, mips_receive_wait, NULL);
   if (err)
     mips_error ("Can't write register %d: %s", regno, safe_strerror (errno));
 }
 
-/* Fetch a word from the target board.  */
+/* Fetch a word from the target board.  Return word fetched in location
+   addressed by VALP.  Return 0 when successful; return positive error
+   code when not.  */
 
-static unsigned int
-mips_fetch_word (CORE_ADDR addr)
+static int
+mips_fetch_word (CORE_ADDR addr, unsigned int *valp)
 {
-  unsigned int val;
   int err;
 
-  val = mips_request ('d', addr, 0, &err, mips_receive_wait, NULL);
+  *valp = mips_request ('d', addr, 0, &err, mips_receive_wait, NULL);
   if (err)
     {
       /* Data space failed; try instruction space.  */
-      val = mips_request ('i', addr, 0, &err,
-			  mips_receive_wait, NULL);
-      if (err)
-	mips_error ("Can't read address %s: %s",
-		    paddress (target_gdbarch, addr), safe_strerror (errno));
+      *valp = mips_request ('i', addr, 0, &err,
+			    mips_receive_wait, NULL);
     }
-  return val;
+  return err;
 }
 
 /* Store a word to the target board.  Returns errno code or zero for
@@ -2067,17 +2152,25 @@ mips_xfer_memory (CORE_ADDR memaddr, gdb_byte *myaddr, int len, int write,
       /* Fill start and end extra bytes of buffer with existing data.  */
       if (addr != memaddr || len < 4)
 	{
+	  unsigned int val;
+
+	  if (mips_fetch_word (addr, &val))
+	    return 0;
+
 	  /* Need part of initial word -- fetch it.  */
-	  store_unsigned_integer (&buffer[0], 4, byte_order,
-				  mips_fetch_word (addr));
+	  store_unsigned_integer (&buffer[0], 4, byte_order, val);
 	}
 
       if (count > 1)
 	{
+	  unsigned int val;
+
 	  /* Need part of last word -- fetch it.  FIXME: we do this even
 	     if we don't need it.  */
-	  store_unsigned_integer (&buffer[(count - 1) * 4], 4, byte_order,
-				  mips_fetch_word (addr + (count - 1) * 4));
+	  if (mips_fetch_word (addr + (count - 1) * 4, &val))
+	    return 0;
+
+	  store_unsigned_integer (&buffer[(count - 1) * 4], 4, byte_order, val);
 	}
 
       /* Copy data to be written over corresponding part of buffer */
@@ -2112,8 +2205,12 @@ mips_xfer_memory (CORE_ADDR memaddr, gdb_byte *myaddr, int len, int write,
       /* Read all the longwords */
       for (i = 0; i < count; i++, addr += 4)
 	{
-	  store_unsigned_integer (&buffer[i * 4], 4, byte_order,
-				  mips_fetch_word (addr));
+	  unsigned int val;
+
+	  if (mips_fetch_word (addr, &val))
+	    return 0;
+
+	  store_unsigned_integer (&buffer[i * 4], 4, byte_order, val);
 	  QUIT;
 	}
 
@@ -2140,7 +2237,10 @@ static void
 mips_kill (struct target_ops *ops)
 {
   if (!mips_wait_flag)
-    return;
+    {
+      target_mourn_inferior ();
+      return;
+    }
 
   interrupt_count++;
 
@@ -2172,6 +2272,8 @@ Give up (and stop debugging it)? ")))
     printf_unfiltered ("Sending break\n");
 
   serial_send_break (mips_desc);
+
+  target_mourn_inferior ();
 
 #if 0
   if (mips_is_open)
@@ -2210,19 +2312,17 @@ Can't pass arguments to remote MIPS board; arguments ignored.");
 
   init_wait_for_inferior ();
 
-  /* FIXME: Should we set inferior_ptid here?  */
-
   regcache_write_pc (get_current_regcache (), entry_pt);
 }
 
-/* Clean up after a process.  Actually nothing to do.  */
+/* Clean up after a process. The bulk of the work is done in mips_close(),
+   which is called when unpushing the target.  */
 
 static void
 mips_mourn_inferior (struct target_ops *ops)
 {
   if (current_ops != NULL)
     unpush_target (current_ops);
-  generic_mourn_inferior ();
 }
 
 /* We can write a breakpoint and read the shadow contents in one
@@ -2245,6 +2345,8 @@ mips_insert_breakpoint (struct gdbarch *gdbarch,
   else
     return memory_insert_breakpoint (gdbarch, bp_tgt);
 }
+
+/* Remove a breakpoint.  */
 
 static int
 mips_remove_breakpoint (struct gdbarch *gdbarch,
@@ -2304,6 +2406,8 @@ mips_insert_watchpoint (CORE_ADDR addr, int len, int type)
   return 0;
 }
 
+/* Remove a watchpoint.  */
+
 int
 mips_remove_watchpoint (CORE_ADDR addr, int len, int type)
 {
@@ -2312,6 +2416,9 @@ mips_remove_watchpoint (CORE_ADDR addr, int len, int type)
 
   return 0;
 }
+
+/* Test to see if a watchpoint has been hit.  Return 1 if so; return 0,
+   if not.  */
 
 int
 mips_stopped_by_watchpoint (void)
@@ -2349,7 +2456,7 @@ static int
 mips_check_lsi_error (CORE_ADDR addr, int rerrflg)
 {
   struct lsi_error *err;
-  char *saddr = paddress (target_gdbarch, addr);
+  const char *saddr = paddress (target_gdbarch, addr);
 
   if (rerrflg == 0)		/* no error */
     return 0;
@@ -2607,6 +2714,11 @@ mips_common_breakpoint (%s):  Got error: 0x%x\n",
   return 0;
 }
 
+/* Send one S record as specified by SREC of length LEN, starting
+   at ADDR.  Note, however, that ADDR is not used except to provide
+   a useful message to the user in the event that a NACK is received
+   from the board.  */
+
 static void
 send_srec (char *srec, int len, CORE_ADDR addr)
 {
@@ -2827,6 +2939,7 @@ static char encoding[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01
    at a time (range 0..63).  Keep a checksum if required (passed
    pointer non-NULL). The function returns the number of encoded
    characters written into the buffer. */
+
 static int
 pmon_makeb64 (unsigned long v, char *p, int n, int *chksum)
 {
@@ -2871,6 +2984,7 @@ pmon_makeb64 (unsigned long v, char *p, int n, int *chksum)
 
 /* Shorthand function (that could be in-lined) to output the zero-fill
    escape sequence into the data stream. */
+
 static int
 pmon_zeroset (int recsize, char **buff, int *amount, unsigned int *chksum)
 {
@@ -2882,6 +2996,20 @@ pmon_zeroset (int recsize, char **buff, int *amount, unsigned int *chksum)
   *amount = 0;
   return (recsize + count + 2);
 }
+
+/* Add the checksum specified by *VALUE to end of the record under
+   construction.  *BUF specifies the location at which to begin
+   writing characters comprising the checksum information.  RECSIZE
+   specifies the size of the record constructed thus far.  (A trailing
+   NUL character may be present in the buffer holding the record, but
+   the record size does not include this character.)
+
+   Return the total size of the record after adding the checksum escape,
+   the checksum itself, and the trailing newline.
+   
+   The checksum specified by *VALUE is zeroed out prior to returning. 
+   Additionally, *BUF is updated to refer to the location just beyond
+   the record elements added by this call.  */
 
 static int
 pmon_checkset (int recsize, char **buff, int *value)
@@ -2912,6 +3040,32 @@ pmon_checkset (int recsize, char **buff, int *value)
 #define MAXRECSIZE (550)
 /* NOTE: This constant depends on the monitor being used. This value
    is for PMON 5.x on the Cogent Vr4300 board. */
+
+/* Create a FastLoad format record.
+
+   *OUTBUF is the buffer into which a FastLoad formatted record is
+   written.  On return, the pointer position represented by *OUTBUF
+   is updated to point at the end of the data, i.e. the next position
+   in the buffer that may be written.  No attempt is made to NUL-
+   terminate this portion of the record written to the buffer.
+   
+   INBUF contains the binary input data from which the FastLoad
+   formatted record will be built.  *INPTR is an index into this
+   buffer.  *INPTR is updated as the input is consumed.  Thus, on
+   return, the caller has access to the position of the next input
+   byte yet to be processed.  INAMOUNT is the size, in bytes, of the
+   input data.
+
+   *RECSIZE will be written with the size of the record written to the
+   output buffer prior to returning.  This size does not include a
+   NUL-termination byte as none is written to the output buffer.
+
+   *CSUM is the output buffer checksum.  It is updated as data is
+   written to the output buffer.
+   
+   *ZEROFILL is the current number of 3-byte zero sequences that have
+   been encountered.  It is both an input and an output to this
+   function.  */
 
 static void
 pmon_make_fastrec (char **outbuf, unsigned char *inbuf, int *inptr,
@@ -2970,6 +3124,10 @@ pmon_make_fastrec (char **outbuf, unsigned char *inbuf, int *inptr,
   return;
 }
 
+/* Attempt to read an ACK.  If an ACK is not read in a timely manner,
+   output the message specified by MESG.  Return -1 for failure, 0
+   for success.  */
+
 static int
 pmon_check_ack (char *mesg)
 {
@@ -3012,6 +3170,12 @@ pmon_start_download (void)
     }
 }
 
+/* Look for the string specified by STRING sent from the target board
+   during a download operation.  If the string in question is not
+   seen, output an error message, remove the temporary file, if
+   appropriate, and return 0.  Otherwise, return 1 to indicate
+   success.  */
+
 static int
 mips_expect_download (char *string)
 {
@@ -3026,6 +3190,15 @@ mips_expect_download (char *string)
     return 1;
 }
 
+/* Look for messages from the target board associated with the entry
+   address.
+
+   NOTE: This function doesn't indicate success or failure, so we
+   have no way to determine whether or not the output from the board
+   was correctly seen.  However, given that other items are checked
+   after this, it seems unlikely that those checks will pass if this
+   check doesn't first (silently) pass.  */
+
 static void
 pmon_check_entry_address (char *entry_address, int final)
 {
@@ -3035,6 +3208,10 @@ pmon_check_entry_address (char *entry_address, int final)
   mips_expect (hexnumber);
   mips_expect ("\r\n");
 }
+
+/* Look for messages from the target board showing the total number of
+   bytes downloaded to the board.  Output 1 for success if the tail
+   end of the message was read correctly, 0 otherwise.  */
 
 static int
 pmon_check_total (int bintotal)
@@ -3046,6 +3223,13 @@ pmon_check_total (int bintotal)
   return mips_expect_download (" bytes\r\n");
 }
 
+/* Look for the termination messages associated with the end of
+   a download to the board.
+
+   Also, when `tftp_in_use' is set, issue the load command to the
+   board causing the file to be transferred.  (This is done prior
+   to looking for the above mentioned termination messages.)  */
+   
 static void
 pmon_end_download (int final, int bintotal)
 {
@@ -3066,7 +3250,8 @@ pmon_end_download (int final, int bintotal)
 	chmod (tftp_localname, stbuf.st_mode | S_IROTH);
 
       /* Must reinitialize the board to prevent PMON from crashing.  */
-      mips_send_command ("initEther\r", -1);
+      if (mips_monitor != MON_ROCKHOPPER)
+	mips_send_command ("initEther\r", -1);
 
       /* Send the load command.  */
       cmd = xmalloc (strlen (load_cmd_prefix) + strlen (tftp_name) + 2);
@@ -3094,6 +3279,11 @@ pmon_end_download (int final, int bintotal)
       if (!pmon_check_total (bintotal))
 	return;
       break;
+    case MON_ROCKHOPPER:
+      if (!pmon_check_total (bintotal))
+	return;
+      pmon_check_entry_address ("Entry Address  = ", final);
+      break;
     default:
       pmon_check_entry_address ("Entry Address  = ", final);
       pmon_check_ack ("termination");
@@ -3106,6 +3296,10 @@ pmon_end_download (int final, int bintotal)
     remove (tftp_localname);	/* Remove temporary file */
 }
 
+/* Write the buffer specified by BUFFER of length LENGTH to either
+   the board or the temporary file that'll eventually be transferred
+   to the board.  */
+
 static void
 pmon_download (char *buffer, int length)
 {
@@ -3114,6 +3308,9 @@ pmon_download (char *buffer, int length)
   else
     serial_write (udp_in_use ? udp_desc : mips_desc, buffer, length);
 }
+
+/* Open object or executable file, FILE, and send it to the board
+   using the FastLoad format.  */
 
 static void
 pmon_load_fast (char *file)
@@ -3292,22 +3489,40 @@ mips_load (char *file, int from_tty)
          to a different value than GDB thinks it has. The following ensures
          that the regcache_write_pc() WILL update the PC value: */
       regcache_invalidate (regcache,
-			   gdbarch_pc_regnum (get_regcache_arch (regcache)));
+			   mips_regnum (get_regcache_arch (regcache))->pc);
     }
   if (exec_bfd)
     regcache_write_pc (regcache, bfd_get_start_address (exec_bfd));
-
-  inferior_ptid = null_ptid;	/* No process now */
-
-/* This is necessary because many things were based on the PC at the time that
-   we attached to the monitor, which is no longer valid now that we have loaded
-   new code (and just changed the PC).  Another way to do this might be to call
-   normal_stop, except that the stack may not be valid, and things would get
-   horribly confused... */
-
-  clear_symtab_users ();
 }
 
+/* Check to see if a thread is still alive.  */
+ 
+static int
+mips_thread_alive (struct target_ops *ops, ptid_t ptid)
+{
+  if (ptid_equal (ptid, remote_mips_ptid))
+    /* The monitor's task is always alive.  */
+    return 1;
+
+  return 0;
+}
+
+/* Convert a thread ID to a string.  Returns the string in a static
+   buffer.  */
+
+static char *
+mips_pid_to_str (struct target_ops *ops, ptid_t ptid)
+{
+  static char buf[64];
+
+  if (ptid_equal (ptid, remote_mips_ptid))
+    {
+      xsnprintf (buf, sizeof buf, "Thread <main>");
+      return buf;
+    }
+
+  return normal_pid_to_str (ptid);
+}
 
 /* Pass the command argument as a packet to PMON verbatim.  */
 
@@ -3327,6 +3542,10 @@ pmon_command (char *args, int from_tty)
 }
 
 extern initialize_file_ftype _initialize_remote_mips; /* -Wmissing-prototypes */
+
+/* Initialize mips_ops, lsi_ops, ddb_ops, pmon_ops, and rockhopper_ops.
+   Create target specific commands and perform other initializations
+   specific to this file.  */
 
 void
 _initialize_remote_mips (void)
@@ -3351,6 +3570,8 @@ _initialize_remote_mips (void)
   mips_ops.to_load = mips_load;
   mips_ops.to_create_inferior = mips_create_inferior;
   mips_ops.to_mourn_inferior = mips_mourn_inferior;
+  mips_ops.to_thread_alive = mips_thread_alive;
+  mips_ops.to_pid_to_str = mips_pid_to_str;
   mips_ops.to_log_command = serial_log_command;
   mips_ops.to_stratum = process_stratum;
   mips_ops.to_has_all_memory = default_child_has_all_memory;
@@ -3361,7 +3582,7 @@ _initialize_remote_mips (void)
   mips_ops.to_magic = OPS_MAGIC;
 
   /* Copy the common fields to all four target vectors.  */
-  pmon_ops = ddb_ops = lsi_ops = mips_ops;
+  rockhopper_ops = pmon_ops = ddb_ops = lsi_ops = mips_ops;
 
   /* Initialize target-specific fields in the target vectors.  */
   mips_ops.to_shortname = "mips";
@@ -3391,6 +3612,11 @@ of the TFTP temporary file, if it differs from the filename seen by the board.";
   ddb_ops.to_open = ddb_open;
   ddb_ops.to_wait = mips_wait;
 
+  rockhopper_ops.to_shortname = "rockhopper";
+  rockhopper_ops.to_doc = ddb_ops.to_doc;
+  rockhopper_ops.to_open = rockhopper_open;
+  rockhopper_ops.to_wait = mips_wait;
+
   lsi_ops.to_shortname = "lsi";
   lsi_ops.to_doc = pmon_ops.to_doc;
   lsi_ops.to_open = lsi_open;
@@ -3401,6 +3627,7 @@ of the TFTP temporary file, if it differs from the filename seen by the board.";
   add_target (&pmon_ops);
   add_target (&ddb_ops);
   add_target (&lsi_ops);
+  add_target (&rockhopper_ops);
 
   add_setshow_zinteger_cmd ("timeout", no_class, &mips_receive_wait, _("\
 Set timeout in seconds for remote MIPS serial I/O."), _("\
@@ -3458,4 +3685,5 @@ Use \"on\" to enable the masking and \"off\" to disable it."),
 			   NULL,
 			   NULL, /* FIXME: i18n: */
 			   &setlist, &showlist);
+  remote_mips_ptid = ptid_build (42000, 0, 42000);
 }

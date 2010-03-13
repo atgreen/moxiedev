@@ -119,8 +119,6 @@ static int try_one_overload (tree, tree, tree, tree, tree,
 			     unification_kind_t, int, bool);
 static int unify (tree, tree, tree, tree, int);
 static void add_pending_template (tree);
-static int push_tinst_level (tree);
-static void pop_tinst_level (void);
 static tree reopen_tinst_level (struct tinst_level *);
 static tree tsubst_initializer_list (tree, tree);
 static tree get_class_bindings (tree, tree, tree);
@@ -3989,16 +3987,19 @@ process_partial_specialization (tree decl)
                          If they are fully specialized in the
                          specialization, that's OK.  */
                       int j;
+                      int count = 0;
                       for (j = 0; j < nargs; ++j)
                         if (tpd2.parms[j] != 0
                             && tpd.arg_uses_template_parms [j])
-                          {
-                            error ("type %qT of template argument %qE depends "
-                                   "on template parameter(s)", 
-                                   type,
-                                   arg);
-                            break;
-                          }
+                          ++count;
+                      if (count != 0)
+                        error_n (input_location, count,
+                                 "type %qT of template argument %qE depends "
+                                 "on a template parameter",
+                                 "type %qT of template argument %qE depends "
+                                 "on template parameters",
+                                 type,
+                                 arg);
                     }
                 }
             }
@@ -4663,10 +4664,14 @@ redeclare_class_template (tree type, tree parms)
 
   if (TREE_VEC_LENGTH (parms) != TREE_VEC_LENGTH (tmpl_parms))
     {
-      error ("redeclared with %d template parameter(s)", 
-             TREE_VEC_LENGTH (parms));
-      inform (input_location, "previous declaration %q+D used %d template parameter(s)", 
-             tmpl, TREE_VEC_LENGTH (tmpl_parms));
+      error_n (input_location, TREE_VEC_LENGTH (parms),
+               "redeclared with %d template parameter",
+               "redeclared with %d template parameters",
+               TREE_VEC_LENGTH (parms));
+      inform_n (input_location, TREE_VEC_LENGTH (tmpl_parms),
+                "previous declaration %q+D used %d template parameter",
+                "previous declaration %q+D used %d template parameters",
+                tmpl, TREE_VEC_LENGTH (tmpl_parms));
       return false;
     }
 
@@ -4682,22 +4687,24 @@ redeclare_class_template (tree type, tree parms)
         continue;
 
       tmpl_parm = TREE_VALUE (TREE_VEC_ELT (tmpl_parms, i));
+      if (tmpl_parm == error_mark_node)
+	return false;
+
       parm = TREE_VALUE (TREE_VEC_ELT (parms, i));
       tmpl_default = TREE_PURPOSE (TREE_VEC_ELT (tmpl_parms, i));
       parm_default = TREE_PURPOSE (TREE_VEC_ELT (parms, i));
 
       /* TMPL_PARM and PARM can be either TYPE_DECL, PARM_DECL, or
 	 TEMPLATE_DECL.  */
-      if (tmpl_parm != error_mark_node
-	  && (TREE_CODE (tmpl_parm) != TREE_CODE (parm)
-	      || (TREE_CODE (tmpl_parm) != TYPE_DECL
-		  && !same_type_p (TREE_TYPE (tmpl_parm), TREE_TYPE (parm)))
-	      || (TREE_CODE (tmpl_parm) != PARM_DECL
-		  && (TEMPLATE_TYPE_PARAMETER_PACK (TREE_TYPE (tmpl_parm))
-		      != TEMPLATE_TYPE_PARAMETER_PACK (TREE_TYPE (parm))))
-	      || (TREE_CODE (tmpl_parm) == PARM_DECL
-		  && (TEMPLATE_PARM_PARAMETER_PACK (DECL_INITIAL (tmpl_parm))
-		      != TEMPLATE_PARM_PARAMETER_PACK (DECL_INITIAL (parm))))))
+      if (TREE_CODE (tmpl_parm) != TREE_CODE (parm)
+	  || (TREE_CODE (tmpl_parm) != TYPE_DECL
+	      && !same_type_p (TREE_TYPE (tmpl_parm), TREE_TYPE (parm)))
+	  || (TREE_CODE (tmpl_parm) != PARM_DECL
+	      && (TEMPLATE_TYPE_PARAMETER_PACK (TREE_TYPE (tmpl_parm))
+		  != TEMPLATE_TYPE_PARAMETER_PACK (TREE_TYPE (parm))))
+	  || (TREE_CODE (tmpl_parm) == PARM_DECL
+	      && (TEMPLATE_PARM_PARAMETER_PACK (DECL_INITIAL (tmpl_parm))
+		  != TEMPLATE_PARM_PARAMETER_PACK (DECL_INITIAL (parm)))))
 	{
 	  error ("template parameter %q+#D", tmpl_parm);
 	  error ("redeclared here as %q#D", parm);
@@ -7011,7 +7018,7 @@ static int last_template_error_tick;
 /* We're starting to instantiate D; record the template instantiation context
    for diagnostics and to restore it later.  */
 
-static int
+int
 push_tinst_level (tree d)
 {
   struct tinst_level *new_level;
@@ -7054,7 +7061,7 @@ push_tinst_level (tree d)
 /* We're done instantiating this template; return to the instantiation
    context.  */
 
-static void
+void
 pop_tinst_level (void)
 {
   /* Restore the filename and line number stashed away when we started

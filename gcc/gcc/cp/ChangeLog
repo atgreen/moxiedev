@@ -1,3 +1,47 @@
+2010-03-05  Jason Merrill  <jason@redhat.com>
+
+	* mangle.c (mangle_decl): Give name collision error even without
+	ASM_OUTPUT_DEF.
+
+2010-03-04  Marco Poletti  <poletti.marco@gmail.com>
+
+	* pt.c (process_partial_specialization): Use error_n instead of
+	error.
+
+2010-03-03  Jason Merrill  <jason@redhat.com>
+
+	PR c++/12909
+	* mangle.c: Include cgraph.h.
+	(mangle_decl): If the mangled name will change in a later
+	ABI version, make the later mangled name an alias.
+	* method.c (make_alias_for): Copy DECL_ARGUMENTS.
+	* Make-lang.in (mangle.o): Depend on cgraph.h.
+	* method.c (make_alias_for): Handle VAR_DECL, too.
+	* decl2.c (vague_linkage_p): Rename from vague_linkage_fn_p.
+	* tree.c (no_linkage_check): Adjust.
+	* decl.c (maybe_commonize_var): Adjust.
+	* cp-tree.h: Adjust.
+
+2010-03-01  Marco Poletti  <poletti.marco@gmail.com>
+
+	* pt.c (redeclare_class_template): Use error_n and inform_n.
+
+2010-02-27  Mark Mitchell  <mark@codesourcery.com>
+
+	PR c++/42748
+	* cp-tree.h (push_tinst_level): Declare.
+	(pop_tinst_level): Likewise.
+	* pt.c (push_tinst_level): Give it external linkage.
+	(pop_tinst_level): Likewise.
+	* mangle.c (mangle_decl_string): Set the source location to that
+	of the decl while mangling.
+
+2010-02-27  Simon Martin  <simartin@users.sourceforge.net>
+
+	PR c++/42054
+	* pt.c (redeclare_class_template): Return false if there are erroneous
+	template parameters.
+
 2010-02-24  Manuel López-Ibáñez  <manu@gcc.gnu.org>
 
 	* pt.c (push_tinst_level): Replace -ftemplate-depth- with 

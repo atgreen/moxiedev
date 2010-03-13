@@ -2,6 +2,7 @@
 #define __SYS_CONFIG_H__
 
 #include <machine/ieeefp.h>  /* floating point macros */
+#include <sys/features.h>	/* POSIX defs */
 
 /* exceptions first */
 #if defined(__H8500__) || defined(__W65__)
@@ -188,8 +189,6 @@
 
 #if defined(__CYGWIN__)
 #include <cygwin/config.h>
-#define __LINUX_ERRNO_EXTENSIONS__ 1
-#define _MB_EXTENDED_CHARSETS_ALL 1
 #if !defined (__STRICT_ANSI__) || (__STDC_VERSION__ >= 199901L)
 #define __USE_XOPEN2K 1
 #endif

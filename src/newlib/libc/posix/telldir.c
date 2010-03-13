@@ -67,7 +67,7 @@ struct ddloc {
 #define	NDIRHASH	32	/* Num of hash lists, must be a power of 2 */
 #define	LOCHASH(i)	((i)&(NDIRHASH-1))
 
-static long	dd_loccnt;	/* Index of entry for sequential readdir's */
+static long	dd_loccnt = 1;	/* Index of entry for sequential readdir's */
 static struct	ddloc *dd_hash[NDIRHASH];   /* Hash list heads for ddlocs */
 __LOCK_INIT(static, dd_hash_lock);
 
@@ -119,40 +119,46 @@ _DEFUN(_seekdir, (dirp, loc),
 	register struct ddloc *lp;
 	register struct ddloc **prevlp;
 	struct dirent *dp;
-	extern long lseek();
 
 #ifdef HAVE_DD_LOCK
 	__lock_acquire(dd_hash_lock);
 #endif
-	prevlp = &dd_hash[LOCHASH(loc)];
-	lp = *prevlp;
-	while (lp != NULL) {
-		if (lp->loc_index == loc)
-			break;
-		prevlp = &lp->loc_next;
-		lp = lp->loc_next;
-	}
-	if (lp == NULL) {
+	if (loc != 0) {
+		prevlp = &dd_hash[LOCHASH(loc)];
+		lp = *prevlp;
+		while (lp != NULL) {
+			if (lp->loc_index == loc)
+				break;
+			prevlp = &lp->loc_next;
+			lp = lp->loc_next;
+		}
+		if (lp == NULL) {
 #ifdef HAVE_DD_LOCK
-		__lock_release(dd_hash_lock);
+			__lock_release(dd_hash_lock);
 #endif
-		return;
-	}
-	if (lp->loc_loc == dirp->dd_loc && lp->loc_seek == dirp->dd_seek)
-		goto found;
-	(void) lseek(dirp->dd_fd, lp->loc_seek, 0);
-	dirp->dd_seek = lp->loc_seek;
-	dirp->dd_loc = 0;
-	while (dirp->dd_loc < lp->loc_loc) {
-		dp = readdir(dirp);
-		if (dp == NULL)
-			break;
-	}
+			return;
+		}
+		if (lp->loc_loc == dirp->dd_loc && lp->loc_seek == dirp->dd_seek)
+			goto found;
+		(void) lseek(dirp->dd_fd, lp->loc_seek, 0);
+		dirp->dd_seek = lp->loc_seek;
+		dirp->dd_loc = 0;
+		while (dirp->dd_loc < lp->loc_loc) {
+			dp = readdir(dirp);
+			if (dp == NULL)
+				break;
+		}
 found:
 #ifdef SINGLEUSE
-	*prevlp = lp->loc_next;
-	free((caddr_t)lp);
+		*prevlp = lp->loc_next;
+		free((caddr_t)lp);
 #endif
+	} else {
+		// loc 0 means rewinding
+		(void) lseek(dirp->dd_fd, 0, 0);
+		dirp->dd_seek = 0;
+		dirp->dd_loc = 0;
+	}
 #ifdef HAVE_DD_LOCK
 	__lock_release(dd_hash_lock);
 #endif
@@ -169,26 +175,26 @@ _DEFUN(_cleanupdir, (dirp),
 	__lock_acquire(dd_hash_lock);
 #endif
 	for (i = 0; i < NDIRHASH; ++i) {
+		struct ddloc head;
 		register struct ddloc *lp;
 		register struct ddloc *prevlp;
+
 		lp = dd_hash[i];
-		while (lp != NULL && lp->loc_dirp == dirp) {
-			dd_hash[i] = lp->loc_next;
-			prevlp = lp;
-			free((caddr_t)lp);
-			lp = prevlp->loc_next;
-		}
-		prevlp = lp;
+		head.loc_next = lp;
+		prevlp = &head;
 		while (lp != NULL) {
-			lp = lp->loc_next;
-			if (lp != NULL && lp->loc_dirp == dirp) {
-				prevlp->loc_next = lp->loc_next;
+			struct ddloc *nextlp;
+
+			nextlp = lp->loc_next;
+			if (lp->loc_dirp == dirp) {
+				prevlp->loc_next = nextlp;
 				free((caddr_t)lp);
-				lp = prevlp;
 			}
 			else
 				prevlp = lp;
+			lp = nextlp;
 		}
+		dd_hash[i] = head.loc_next;
 	}
 #ifdef HAVE_DD_LOCK
 	__lock_release(dd_hash_lock);

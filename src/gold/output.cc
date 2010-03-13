@@ -1622,9 +1622,13 @@ Output_data_dynamic::set_final_data_size()
 {
   // Add the terminating entry if it hasn't been added.
   // Because of relaxation, we can run this multiple times.
-  if (this->entries_.empty()
-      || this->entries_.rbegin()->tag() != elfcpp::DT_NULL)
-    this->add_constant(elfcpp::DT_NULL, 0);
+  if (this->entries_.empty() || this->entries_.back().tag() != elfcpp::DT_NULL)
+    {
+      int extra = parameters->options().spare_dynamic_tags();
+      for (int i = 0; i < extra; ++i)
+	this->add_constant(elfcpp::DT_NULL, 0);
+      this->add_constant(elfcpp::DT_NULL, 0);
+    }
 
   int dyn_size;
   if (parameters->target().get_size() == 32)
@@ -2695,7 +2699,7 @@ class Output_section::Input_section_sort_entry
   has_priority() const
   {
     gold_assert(this->section_has_name_);
-    return this->section_name_.find('.', 1);
+    return this->section_name_.find('.', 1) != std::string::npos;
   }
 
   // Return true if this an input file whose base name matches
@@ -2773,14 +2777,48 @@ Output_section::Input_section_sort_compare::operator()(
     }
 
   // A section with a priority follows a section without a priority.
-  // The GNU linker does this for all but .init_array sections; until
-  // further notice we'll assume that that is an mistake.
   bool s1_has_priority = s1.has_priority();
   bool s2_has_priority = s2.has_priority();
   if (s1_has_priority && !s2_has_priority)
     return false;
   if (!s1_has_priority && s2_has_priority)
     return true;
+
+  // Otherwise we sort by name.
+  int compare = s1.section_name().compare(s2.section_name());
+  if (compare != 0)
+    return compare < 0;
+
+  // Otherwise we keep the input order.
+  return s1.index() < s2.index();
+}
+
+// Return true if S1 should come before S2 in an .init_array or .fini_array
+// output section.
+
+bool
+Output_section::Input_section_sort_init_fini_compare::operator()(
+    const Output_section::Input_section_sort_entry& s1,
+    const Output_section::Input_section_sort_entry& s2) const
+{
+  // We sort all the sections with no names to the end.
+  if (!s1.section_has_name() || !s2.section_has_name())
+    {
+      if (s1.section_has_name())
+	return true;
+      if (s2.section_has_name())
+	return false;
+      return s1.index() < s2.index();
+    }
+
+  // A section without a priority follows a section with a priority.
+  // This is the reverse of .ctors and .dtors sections.
+  bool s1_has_priority = s1.has_priority();
+  bool s2_has_priority = s2.has_priority();
+  if (s1_has_priority && !s2_has_priority)
+    return true;
+  if (!s1_has_priority && s2_has_priority)
+    return false;
 
   // Otherwise we sort by name.
   int compare = s1.section_name().compare(s2.section_name());
@@ -2819,7 +2857,14 @@ Output_section::sort_attached_input_sections()
     sort_list.push_back(Input_section_sort_entry(*p, i));
 
   // Sort the input sections.
-  std::sort(sort_list.begin(), sort_list.end(), Input_section_sort_compare());
+  if (this->type() == elfcpp::SHT_PREINIT_ARRAY
+      || this->type() == elfcpp::SHT_INIT_ARRAY
+      || this->type() == elfcpp::SHT_FINI_ARRAY)
+    std::sort(sort_list.begin(), sort_list.end(),
+	      Input_section_sort_init_fini_compare());
+  else
+    std::sort(sort_list.begin(), sort_list.end(),
+	      Input_section_sort_compare());
 
   // Copy the sorted input sections back to our list.
   this->input_sections_.clear();

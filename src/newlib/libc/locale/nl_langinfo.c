@@ -60,12 +60,43 @@ _DEFUN(nl_langinfo, (item),
 	case CODESET:
 #ifdef __CYGWIN__
 		ret = __locale_charset ();
-		/* Temporary exception for KOI8 charsets which are
-		   incorrectly treated by calling applications otherwise. */
-		if (strcmp (ret, "CP20866") == 0)
-		  ret = "KOI8-R";
-		else if (strcmp (ret, "CP21866") == 0)
-		  ret = "KOI8-U";
+		/* Convert charset to Linux compatible codeset string. */
+		if (ret[0] == 'A'/*SCII*/)
+		  ret = "ANSI_X3.4-1968";
+		else if (ret[0] == 'E')
+		  {
+		    if (strcmp (ret, "EUCJP") == 0)
+		      ret = "EUC-JP";
+		    else if (strcmp (ret, "EUCKR") == 0)
+		      ret = "EUC-KR";
+		  }
+		else if (ret[0] == 'C'/*Pxxxx*/)
+		  {
+		    if (strcmp (ret + 2, "874") == 0)
+		      ret = "TIS-620";
+		    else if (strcmp (ret + 2, "20866") == 0)
+		      ret = "KOI8-R";
+		    else if (strcmp (ret + 2, "21866") == 0)
+		      ret = "KOI8-U";
+		    else if (strcmp (ret + 2, "101") == 0)
+		      ret = "GEORGIAN-PS";
+		    else if (strcmp (ret + 2, "102") == 0)
+		      ret = "PT154";
+		  }
+		else if (ret[0] == 'S'/*JIS*/)
+		  {
+		    /* Cygwin uses MSFT's implementation of SJIS, which differs
+		       in some codepoints from the real thing, especially
+		       0x5c: yen sign instead of backslash,
+		       0x7e: overline instead of tilde.
+		       We can't use the real SJIS since otherwise Win32
+		       pathnames would become invalid.  OTOH, if we return
+		       "SJIS" here, then libiconv will do mb<->wc conversion
+		       differently to our internal functions.  Therefore we
+		       return what we really implement, CP932.  This is handled
+		       fine by libiconv. */
+		    ret = "CP932";
+		  }
 #else
 		ret = "";
 		if ((s = setlocale(LC_CTYPE, NULL)) != NULL) {
@@ -120,10 +151,10 @@ _DEFUN(nl_langinfo, (item),
 		ret = (char *) __get_current_time_locale()->ampm_fmt;
 		break;
 	case AM_STR:
-		ret = (char *) __get_current_time_locale()->am;
+		ret = (char *) __get_current_time_locale()->am_pm[0];
 		break;
 	case PM_STR:
-		ret = (char *) __get_current_time_locale()->pm;
+		ret = (char *) __get_current_time_locale()->am_pm[1];
 		break;
 	case DAY_1: case DAY_2: case DAY_3:
 	case DAY_4: case DAY_5: case DAY_6: case DAY_7:
@@ -144,24 +175,22 @@ _DEFUN(nl_langinfo, (item),
 		ret = (char*) __get_current_time_locale()->mon[_REL(ABMON_1)];
 		break;
 	case ERA:
-		/* XXX: need to be implemented  */
-		ret = "";
+		ret = (char*) __get_current_time_locale()->era;
 		break;
 	case ERA_D_FMT:
-		/* XXX: need to be implemented  */
-		ret = "";
+		ret = (char*) __get_current_time_locale()->era_d_fmt;
 		break;
 	case ERA_D_T_FMT:
-		/* XXX: need to be implemented  */
-		ret = "";
+		ret = (char*) __get_current_time_locale()->era_d_t_fmt;
 		break;
 	case ERA_T_FMT:
-		/* XXX: need to be implemented  */
-		ret = "";
+		ret = (char*) __get_current_time_locale()->era_t_fmt;
 		break;
 	case ALT_DIGITS:
-		/* XXX: need to be implemented  */
-		ret = "";
+		ret = (char*) __get_current_time_locale()->alt_digits;
+		break;
+	case _DATE_FMT:	/* GNU extension */
+		ret = (char*) __get_current_time_locale()->date_fmt;
 		break;
 	case RADIXCHAR:
 		ret = (char*) __get_current_numeric_locale()->decimal_point;

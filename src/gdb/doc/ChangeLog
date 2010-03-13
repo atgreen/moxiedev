@@ -1,3 +1,47 @@
+2010-03-12  Stan Shebs  <stan@codesourcery.com>
+	    Nathan Sidwell  <nathan@codesourcery.com>
+
+	* gdb.texinfo (Tracepoint Actions): Clarify that while-stepping is
+	doing instruction stepping.
+	(Tracepoint Restrictions): New node.
+
+2010-03-10  Tom Tromey  <tromey@redhat.com>
+
+	* gdbint.texinfo (Symbol Handling): Update.
+
+2010-03-08  Tom Tromey  <tromey@redhat.com>
+
+	PR cli/9591:
+	* gdb.texinfo (Mode Options): Mention lack of pagination and
+	confirmation with --batch.
+	(Screen Size): Mention --batch.
+	(Messages/Warnings): Likewise.
+
+2010-03-05  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Basic Python): Document target_charset and
+	target_wide_charset.
+
+2010-03-05  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Data): Link to pretty-printing.
+	(Output Formats): Likewise.  Correct text.
+
+2010-03-01  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* gdb.texinfo (Types): Describe <struct> and <flags>.
+
+2010-02-28  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.texinfo (Frames In Python): Add block parameter and
+	description to read_var text.
+
+2010-02-26  Phil Muldoon  <pmuldoon@redhat.com>
+            Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Types In Python): Describe block argument in
+	template_argument and gdb.lookup_type.
+
 2010-02-24  Tom Tromey  <tromey@redhat.com>
 
 	* gdb.texinfo (Cygwin Native): Fix typo.

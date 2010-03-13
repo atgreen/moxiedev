@@ -282,14 +282,24 @@ clast_to_gcc_expression (tree type, struct clast_expr *e,
 	      {
 		tree name = clast_name_to_gcc (t->var, region, newivs,
 					       newivs_index, params_index);
-		return fold_convert (type, name);
+
+		if (POINTER_TYPE_P (TREE_TYPE (name)) != POINTER_TYPE_P (type))
+		  name = fold_convert (sizetype, name);
+
+		name = fold_convert (type, name);
+		return name;
 	      }
 
 	    else if (value_mone_p (t->val))
 	      {
 		tree name = clast_name_to_gcc (t->var, region, newivs,
 					       newivs_index, params_index);
+
+		if (POINTER_TYPE_P (TREE_TYPE (name)) != POINTER_TYPE_P (type))
+		  name = fold_convert (sizetype, name);
+
 		name = fold_convert (type, name);
+
 		return fold_build1 (NEGATE_EXPR, type, name);
 	      }
 	    else
@@ -297,7 +307,12 @@ clast_to_gcc_expression (tree type, struct clast_expr *e,
 		tree name = clast_name_to_gcc (t->var, region, newivs,
 					       newivs_index, params_index);
 		tree cst = gmp_cst_to_tree (type, t->val);
+
+		if (POINTER_TYPE_P (TREE_TYPE (name)) != POINTER_TYPE_P (type))
+		  name = fold_convert (sizetype, name);
+
 		name = fold_convert (type, name);
+
 		if (!POINTER_TYPE_P (type))
 		  return fold_build2 (MULT_EXPR, type, cst, name);
 
@@ -532,9 +547,16 @@ clast_get_body_of_loop (struct clast_stmt *stmt)
   gcc_unreachable ();
 }
 
-/* Given a CLOOG_IV, returns the type that it should have in GCC land.
-   If the information is not available, i.e. in the case one of the
-   transforms created the loop, just return integer_type_node.  */
+/* Given a CLOOG_IV, return the type that CLOOG_IV should have in GCC
+   land.  The selected type is big enough to include the original loop
+   iteration variable, but signed to work with the subtractions CLooG
+   may have introduced.  If such a type is not available, we fail.
+
+   TODO: Do not always return long_long, but the smallest possible
+   type, that still holds the original type.
+
+   TODO: Get the types using CLooG instead.  This enables further
+   optimizations, but needs CLooG support.  */
 
 static tree
 gcc_type_for_cloog_iv (const char *cloog_iv, gimple_bb_p gbb)
@@ -546,9 +568,40 @@ gcc_type_for_cloog_iv (const char *cloog_iv, gimple_bb_p gbb)
   slot = htab_find_slot (GBB_CLOOG_IV_TYPES (gbb), &tmp, NO_INSERT);
 
   if (slot && *slot)
-    return ((ivtype_map_elt) *slot)->type;
+    {
+      tree type = ((ivtype_map_elt) *slot)->type;
+      int type_precision = TYPE_PRECISION (type);
 
-  return integer_type_node;
+      /* Find the smallest signed type possible.  */
+      if (!TYPE_UNSIGNED (type))
+	{
+	  if (type_precision <= TYPE_PRECISION (integer_type_node))
+	    return integer_type_node;
+
+	  if (type_precision <= TYPE_PRECISION (long_integer_type_node))
+	    return long_integer_type_node;
+
+	  if (type_precision <= TYPE_PRECISION (long_long_integer_type_node))
+	    return long_long_integer_type_node;
+
+	  gcc_unreachable ();
+	}
+
+      if (type_precision < TYPE_PRECISION (integer_type_node))
+	return integer_type_node;
+
+      if (type_precision < TYPE_PRECISION (long_integer_type_node))
+	return long_integer_type_node;
+
+      if (type_precision < TYPE_PRECISION (long_long_integer_type_node))
+	return long_long_integer_type_node;
+
+      /* There is no signed type available, that is large enough to hold the
+	 original value.  */
+      gcc_unreachable ();
+    }
+
+  return long_long_integer_type_node;
 }
 
 /* Returns the induction variable for the loop that gets translated to
@@ -952,7 +1005,7 @@ translate_clast (sese region, loop_p context_loop, struct clast_stmt *stmt,
 		 htab_t newivs_index, htab_t bb_pbb_mapping, int level,
 		 htab_t params_index)
 {
-  if (!stmt || gloog_error)
+  if (!stmt)
     return next_e;
 
   if (CLAST_STMT_IS_A (stmt, stmt_root))
@@ -997,34 +1050,30 @@ static const char *
 find_cloog_iv_in_expr (struct clast_expr *expr)
 {
   struct clast_term *term = (struct clast_term *) expr;
-
-  if (expr->type == expr_term
-      && !term->var)
-    return NULL;
+  struct clast_reduction *red;
+  int i;
 
   if (expr->type == expr_term)
     return term->var;
 
-  if (expr->type == expr_red)
+  if (expr->type != expr_red)
+    return NULL;
+
+  red = (struct clast_reduction *) expr;
+  for (i = 0; i < red->n; i++)
     {
-      int i;
-      struct clast_reduction *red = (struct clast_reduction *) expr;
+      const char *res = find_cloog_iv_in_expr (red->elts[i]);
 
-      for (i = 0; i < red->n; i++)
-	{
-	  const char *res = find_cloog_iv_in_expr ((red)->elts[i]);
-
-	  if (res)
-	    return res;
-	}
+      if (res)
+	return res;
     }
 
   return NULL;
 }
 
-/* Build for a clast_user_stmt USER_STMT a map between the CLAST
-   induction variables and the corresponding GCC old induction
-   variables.  This information is stored on each GRAPHITE_BB.  */
+/* Build for USER_STMT a map between the CLAST induction variables and
+   the corresponding GCC old induction variables.  This information is
+   stored on each GRAPHITE_BB.  */
 
 static void
 compute_cloog_iv_types_1 (poly_bb_p pbb, struct clast_user_stmt *user_stmt)
@@ -1050,7 +1099,7 @@ compute_cloog_iv_types_1 (poly_bb_p pbb, struct clast_user_stmt *user_stmt)
       if (slot && !*slot)
 	{
 	  tree oldiv = pbb_to_depth_to_oldiv (pbb, index);
-	  tree type = oldiv ? TREE_TYPE (oldiv) : integer_type_node;
+	  tree type = TREE_TYPE (oldiv);
 	  *slot = new_ivtype_map_elt (tmp.cloog_iv, type);
 	}
     }

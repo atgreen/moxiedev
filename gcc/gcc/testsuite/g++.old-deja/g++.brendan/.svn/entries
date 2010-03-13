@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja/g++.brendan
 svn://gcc.gnu.org/svn/gcc
 
@@ -298,14 +298,14 @@ mmitchel
 
 105
 
-nest16.C
+warnings8.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-674367aa6e84abc2f89bb825235a4e33
+93cc067d918fc872a51c4f9a4b3e5d3d
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -330,41 +330,7 @@ mmitchel
 
 
 
-550
-
-template23.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-a99b2cfa96092ee5eda03d6704610cff
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-438
+129
 
 visibility9.C
 file
@@ -400,14 +366,14 @@ mmitchel
 
 279
 
-warnings8.C
+template23.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-93cc067d918fc872a51c4f9a4b3e5d3d
+a99b2cfa96092ee5eda03d6704610cff
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -432,16 +398,16 @@ mmitchel
 
 
 
-129
+438
 
-redecl3.C
+nest16.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-1c6e3ab3c0ac7f1ecdf1f598fbf9174d
+674367aa6e84abc2f89bb825235a4e33
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -466,7 +432,7 @@ mmitchel
 
 
 
-249
+550
 
 typedef1.C
 file
@@ -501,6 +467,40 @@ mmitchel
 
 
 310
+
+redecl3.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+1c6e3ab3c0ac7f1ecdf1f598fbf9174d
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+249
 
 misc8.C
 file
@@ -1352,40 +1352,6 @@ janis
 
 501
 
-recurse.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-964a895f23ebbce94a2c5bfe6e3845b5
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2369
-
 crash26.C
 file
 
@@ -1420,14 +1386,14 @@ mmitchel
 
 129
 
-def-args1.C
+recurse.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-54f8d1fdf6f6cf1c18071d286afe93f1
+964a895f23ebbce94a2c5bfe6e3845b5
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -1452,41 +1418,7 @@ mmitchel
 
 
 
-173
-
-visibility2.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-4a3287008d0b6d55ec4166fc9076757e
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-212
+2369
 
 warnings1.C
 file
@@ -1522,6 +1454,74 @@ janis
 
 214
 
+visibility2.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+4a3287008d0b6d55ec4166fc9076757e
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+212
+
+def-args1.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+54f8d1fdf6f6cf1c18071d286afe93f1
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+173
+
 union2.C
 file
 
@@ -1556,40 +1556,6 @@ mmitchel
 
 161
 
-new3.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-1c0d9a54b1da2e9f826a97b8b7a722b6
-2008-04-09T09:13:23.835902Z
-134134
-nathan
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-871
-
 misc1.C
 file
 
@@ -1623,6 +1589,40 @@ mmitchel
 
 
 186
+
+new3.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+1c0d9a54b1da2e9f826a97b8b7a722b6
+2008-04-09T09:13:23.835902Z
+134134
+nathan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+871
 
 cvt1.C
 file
@@ -1692,14 +1692,14 @@ mmitchel
 
 496
 
-nest17.C
+warnings9.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-6bc8badb7ef6d461cfae233116e71163
+ba46cd513c748cfd9b7ff43dc0003a78
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -1724,7 +1724,7 @@ mmitchel
 
 
 
-159
+108
 
 template24.C
 file
@@ -1760,14 +1760,14 @@ mmitchel
 
 308
 
-warnings9.C
+nest17.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-ba46cd513c748cfd9b7ff43dc0003a78
+6bc8badb7ef6d461cfae233116e71163
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -1792,7 +1792,7 @@ mmitchel
 
 
 
-108
+159
 
 misc9.C
 file
@@ -1964,40 +1964,6 @@ mmitchel
 
 275
 
-sorry1.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-5e2033584074585a4562c059d4224b61
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-355
-
 copy5.C
 file
 
@@ -2032,14 +1998,14 @@ mueller
 
 1495
 
-operators2.C
+sorry1.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-4ac6cb421f470728cde116dd27d0a9b5
+5e2033584074585a4562c059d4224b61
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -2064,7 +2030,7 @@ mmitchel
 
 
 
-144
+355
 
 arm1.C
 file
@@ -2100,14 +2066,14 @@ mmitchel
 
 198
 
-label2.C
+operators2.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-0499329a576a28129c8caa17805883f3
+4ac6cb421f470728cde116dd27d0a9b5
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -2132,7 +2098,7 @@ mmitchel
 
 
 
-147
+144
 
 crash10.C
 file
@@ -2167,6 +2133,40 @@ mmitchel
 
 
 400
+
+label2.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+0499329a576a28129c8caa17805883f3
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+147
 
 template6.C
 file
@@ -4276,6 +4276,40 @@ mmitchel
 
 247
 
+visibility4.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+715aa94186b2b202e2e9a4997d26444f
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+257
+
 warnings3.C
 file
 
@@ -4343,40 +4377,6 @@ mmitchel
 
 
 223
-
-visibility4.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-715aa94186b2b202e2e9a4997d26444f
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-257
 
 dtors1.C
 file
@@ -4514,40 +4514,6 @@ bonzini
 
 1183
 
-nest19.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-45f38e149ffb5039ba9a88a9ef169674
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1154
-
 template26.C
 file
 
@@ -4581,6 +4547,40 @@ mmitchel
 
 
 472
+
+nest19.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+45f38e149ffb5039ba9a88a9ef169674
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1154
 
 init5.C
 file
@@ -4752,40 +4752,6 @@ mueller
 
 430
 
-operators4.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-0078afa77e0c042f64e4960401e2f54d
-2008-09-17T00:06:57.961095Z
-140405
-janis
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2210
-
 arm3.C
 file
 
@@ -4820,17 +4786,17 @@ mmitchel
 
 308
 
-crash12.C
+operators4.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-c487c2f1d306c4b5ffd996ab598aac07
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
+0078afa77e0c042f64e4960401e2f54d
+2008-09-17T00:06:57.961095Z
+140405
+janis
 
 
 
@@ -4852,7 +4818,7 @@ mmitchel
 
 
 
-145
+2210
 
 template8.C
 file
@@ -4888,14 +4854,14 @@ mmitchel
 
 331
 
-new-array.C
+crash12.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-ce18ed55b4cb7e1075e495fefce8d00f
+c487c2f1d306c4b5ffd996ab598aac07
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -4920,7 +4886,7 @@ mmitchel
 
 
 
-271
+145
 
 init11.C
 file
@@ -4955,6 +4921,40 @@ mmitchel
 
 
 169
+
+new-array.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+ce18ed55b4cb7e1075e495fefce8d00f
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+271
 
 crash54.C
 file
@@ -5194,40 +5194,6 @@ mmitchel
 
 237
 
-groff1.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-c42688562e8873f0b3d710da92fd0eea
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-593
-
 template18.C
 file
 
@@ -5261,6 +5227,40 @@ mmitchel
 
 
 166
+
+groff1.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+c42688562e8873f0b3d710da92fd0eea
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+593
 
 crash5.C
 file
@@ -5466,40 +5466,6 @@ jason
 
 271
 
-static3.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-799e766f244bfd9990ec820259a0c51a
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-270
-
 crash46.C
 file
 
@@ -5534,17 +5500,17 @@ mmitchel
 
 389
 
-ptolemy2.C
+static3.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-cd6b194c7bc5cf94285bc6cd0a157e70
-2006-02-05T09:21:29.140038Z
-110608
-gdr
+799e766f244bfd9990ec820259a0c51a
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
 
 
 
@@ -5566,7 +5532,7 @@ gdr
 
 
 
-1346
+270
 
 crash29.C
 file
@@ -5602,14 +5568,48 @@ janis
 
 361
 
-nest12.C
+ptolemy2.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-5253d8a4d833c5ccc220537fa9f1708a
+cd6b194c7bc5cf94285bc6cd0a157e70
+2006-02-05T09:21:29.140038Z
+110608
+gdr
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1346
+
+warnings4.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+f1b0a8eb7deb033354851bba84b370b8
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -5634,7 +5634,7 @@ mmitchel
 
 
 
-272
+156
 
 visibility5.C
 file
@@ -5670,14 +5670,14 @@ mmitchel
 
 265
 
-warnings4.C
+nest12.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-f1b0a8eb7deb033354851bba84b370b8
+5253d8a4d833c5ccc220537fa9f1708a
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -5702,7 +5702,7 @@ mmitchel
 
 
 
-156
+272
 
 dtors2.C
 file
@@ -5806,40 +5806,6 @@ mmitchel
 
 380
 
-abstract1.C
-file
-
-
-
-
-2009-04-24T17:44:25.000000Z
-ae92d366fb4b1fb345a39cf07442d5f1
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-250
-
 template27.C
 file
 
@@ -5873,6 +5839,40 @@ mmitchel
 
 
 417
+
+abstract1.C
+file
+
+
+
+
+2009-04-24T17:44:25.000000Z
+ae92d366fb4b1fb345a39cf07442d5f1
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+250
 
 init6.C
 file
@@ -6112,40 +6112,6 @@ mmitchel
 
 1614
 
-operators5.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-a33203c9057b3652878436db19fd035d
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-777
-
 crash30.C
 file
 
@@ -6179,6 +6145,40 @@ mmitchel
 
 
 121
+
+operators5.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+a33203c9057b3652878436db19fd035d
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+777
 
 crash13.C
 file
@@ -6350,40 +6350,6 @@ mueller
 
 911
 
-nest21.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-693ba8ff2344c35725152e19ccf93570
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-2032
-
 bool1.C
 file
 
@@ -6417,6 +6383,40 @@ mmitchel
 
 
 169
+
+nest21.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+693ba8ff2344c35725152e19ccf93570
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2032
 
 template11.C
 file
@@ -6894,14 +6894,14 @@ mmitchel
 
 1841
 
-nest13.C
+warnings5.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-1abeb376cbfaad85af7d961d1957a048
+c1f2cde32459383a9969f37c5fa9339e
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -6926,41 +6926,7 @@ mmitchel
 
 
 
-503
-
-template20.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-897a7136619011f1e3d19d16dd2a78d3
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-256
+176
 
 visibility6.C
 file
@@ -6996,14 +6962,14 @@ mmitchel
 
 258
 
-warnings5.C
+template20.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-c1f2cde32459383a9969f37c5fa9339e
+897a7136619011f1e3d19d16dd2a78d3
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -7028,7 +6994,41 @@ mmitchel
 
 
 
-176
+256
+
+nest13.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+1abeb376cbfaad85af7d961d1957a048
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+503
 
 dtors3.C
 file
@@ -7472,40 +7472,6 @@ mmitchel
 
 709
 
-operators6.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-52b3628faa7d652f30e4e4cf72e3bae4
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-155
-
 crash31.C
 file
 
@@ -7539,6 +7505,40 @@ mmitchel
 
 
 269
+
+operators6.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+52b3628faa7d652f30e4e4cf72e3bae4
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+155
 
 crash14.C
 file
@@ -8152,14 +8152,14 @@ janis
 
 392
 
-template21.C
+warnings6.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-f78d5b5e19be653b3f6b40aa6e8df5a0
+e1559a268a2d660793c81efda0d06780
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -8184,7 +8184,7 @@ mmitchel
 
 
 
-447
+247
 
 visibility7.C
 file
@@ -8220,14 +8220,14 @@ mmitchel
 
 214
 
-warnings6.C
+template21.C
 file
 
 
 
 
 2009-04-24T17:44:26.000000Z
-e1559a268a2d660793c81efda0d06780
+f78d5b5e19be653b3f6b40aa6e8df5a0
 2003-05-01T02:02:59.000000Z
 66317
 mmitchel
@@ -8252,7 +8252,7 @@ mmitchel
 
 
 
-247
+447
 
 redecl1.C
 file
@@ -8628,40 +8628,6 @@ mmitchel
 
 592
 
-operators7.C
-file
-
-
-
-
-2009-04-24T17:44:26.000000Z
-fd824291529aa1c6337a009c9f68b953
-2003-05-01T02:02:59.000000Z
-66317
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-173
-
 crash32.C
 file
 
@@ -8695,6 +8661,40 @@ mmitchel
 
 
 140
+
+operators7.C
+file
+
+
+
+
+2009-04-24T17:44:26.000000Z
+fd824291529aa1c6337a009c9f68b953
+2003-05-01T02:02:59.000000Z
+66317
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+173
 
 crash15.C
 file

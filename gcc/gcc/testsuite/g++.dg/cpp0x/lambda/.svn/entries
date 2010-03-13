@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/cpp0x/lambda
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ jason
 
 844
 
-lambda-conv.C
-file
-
-
-
-
-2010-02-25T22:33:03.378293Z
-f72325a01c29b9a26f90b2be9af39afd
-2010-02-10T21:48:25.797080Z
-156671
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-388
-
 lambda-nested3.C
 file
 
@@ -604,16 +570,16 @@ jason
 
 127
 
-lambda-pass.C
+lambda-conv.C
 file
 
 
 
 
-2009-10-08T17:29:59.000000Z
-a8a57aa106a371019b345ef8d1cfbbf1
-2009-04-21T19:45:49.620131Z
-146536
+2010-02-25T22:33:03.378293Z
+f72325a01c29b9a26f90b2be9af39afd
+2010-02-10T21:48:25.797080Z
+156671
 jason
 
 
@@ -636,7 +602,7 @@ jason
 
 
 
-420
+388
 
 lambda-mixed.C
 file
@@ -672,6 +638,40 @@ jason
 
 206
 
+lambda-pass.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+a8a57aa106a371019b345ef8d1cfbbf1
+2009-04-21T19:45:49.620131Z
+146536
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+420
+
 lambda-this.C
 file
 
@@ -706,16 +706,16 @@ jason
 
 236
 
-lambda-capture-const-ref-neg.C
+lambda-errloc2.C
 file
 
 
 
 
-2009-10-08T17:29:59.000000Z
-414981bc7d01f6877362173a78b37d06
-2009-04-21T19:45:49.620131Z
-146536
+2010-02-25T22:33:03.393083Z
+3a51723a734390b26b5ff13cf1827877
+2010-02-09T22:06:23.124091Z
+156635
 jason
 
 
@@ -740,16 +740,16 @@ jason
 
 280
 
-lambda-errloc2.C
+lambda-capture-const-ref-neg.C
 file
 
 
 
 
-2010-02-25T22:33:03.393083Z
-3a51723a734390b26b5ff13cf1827877
-2010-02-09T22:06:23.124091Z
-156635
+2009-10-08T17:29:59.000000Z
+414981bc7d01f6877362173a78b37d06
+2009-04-21T19:45:49.620131Z
+146536
 jason
 
 
@@ -910,40 +910,6 @@ jason
 
 308
 
-lambda-non-const.C
-file
-
-
-
-
-2009-12-07T15:31:24.707954Z
-04a2f3b89231ba67d917347482e362bb
-2009-10-27T21:58:09.977638Z
-153617
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-249
-
 lambda-ctor-neg.C
 file
 
@@ -978,16 +944,16 @@ jason
 
 595
 
-lambda-in-class-neg.C
+lambda-non-const.C
 file
 
 
 
 
-2009-10-08T17:29:59.000000Z
-51d8d60d3e651fc7642bb895c57a224f
-2009-04-21T19:45:49.620131Z
-146536
+2009-12-07T15:31:24.707954Z
+04a2f3b89231ba67d917347482e362bb
+2009-10-27T21:58:09.977638Z
+153617
 jason
 
 
@@ -1010,7 +976,7 @@ jason
 
 
 
-734
+249
 
 lambda-deduce-ext-neg2.C
 file
@@ -1045,6 +1011,40 @@ jason
 
 
 417
+
+lambda-in-class-neg.C
+file
+
+
+
+
+2009-10-08T17:29:59.000000Z
+51d8d60d3e651fc7642bb895c57a224f
+2009-04-21T19:45:49.620131Z
+146536
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+734
 
 lambda-const.C
 file

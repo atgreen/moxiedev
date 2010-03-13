@@ -81,7 +81,9 @@ extern int references_value_p (const_rtx, int);
 extern rtx cselib_expand_value_rtx (rtx, bitmap, int);
 typedef rtx (*cselib_expand_callback)(rtx, bitmap, int, void *);
 extern rtx cselib_expand_value_rtx_cb (rtx, bitmap, int,
-				       cselib_expand_callback, void*);
+				       cselib_expand_callback, void *);
+extern bool cselib_dummy_expand_value_rtx_cb (rtx, bitmap, int,
+					      cselib_expand_callback, void *);
 extern rtx cselib_subst_to_values (rtx);
 extern void cselib_invalidate_rtx (rtx);
 
@@ -89,6 +91,6 @@ extern void cselib_reset_table (unsigned int);
 extern unsigned int cselib_get_next_uid (void);
 extern void cselib_preserve_value (cselib_val *);
 extern bool cselib_preserved_value_p (cselib_val *);
-extern void cselib_preserve_only_values (bool);
+extern void cselib_preserve_only_values (void);
 
 extern void dump_cselib_table (FILE *);

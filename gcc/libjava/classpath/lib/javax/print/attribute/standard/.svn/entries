@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/lib/javax/print/attribute/standard
 svn://gcc.gnu.org/svn/gcc
 
@@ -60,40 +60,6 @@ has-props
 
 1667
 
-DocumentName.class
-file
-
-
-
-
-2009-04-24T17:48:12.000000Z
-54b940b86eb6751ec1288610d1b20aa7
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1016
-
 Media.class
 file
 
@@ -127,6 +93,40 @@ has-props
 
 
 1073
+
+DocumentName.class
+file
+
+
+
+
+2009-04-24T17:48:12.000000Z
+54b940b86eb6751ec1288610d1b20aa7
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1016
 
 MediaSize$Other.class
 file
@@ -162,14 +162,14 @@ has-props
 
 1602
 
-PrinterMoreInfo.class
+JobPrioritySupported.class
 file
 
 
 
 
 2009-04-24T17:48:12.000000Z
-7845ea013ca7acd52aa902d81cad79d0
+432cb9bc779c238fddd7e9f2c1d1ad8c
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -194,7 +194,7 @@ has-props
 
 
 
-961
+1091
 
 Copies.class
 file
@@ -230,14 +230,14 @@ has-props
 
 1081
 
-JobPrioritySupported.class
+PrinterMoreInfo.class
 file
 
 
 
 
 2009-04-24T17:48:12.000000Z
-432cb9bc779c238fddd7e9f2c1d1ad8c
+7845ea013ca7acd52aa902d81cad79d0
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -262,7 +262,7 @@ has-props
 
 
 
-1091
+961
 
 PrinterName.class
 file
@@ -332,40 +332,6 @@ has-props
 
 1449
 
-JobSheets.class
-file
-
-
-
-
-2009-04-24T17:48:12.000000Z
-f9fc52ee4b59e0c6b0a1fc4355cb1c8a
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1400
-
 RequestingUserName.class
 file
 
@@ -399,6 +365,40 @@ has-props
 
 
 1046
+
+JobSheets.class
+file
+
+
+
+
+2009-04-24T17:48:12.000000Z
+f9fc52ee4b59e0c6b0a1fc4355cb1c8a
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1400
 
 PagesPerMinuteColor.class
 file
@@ -1080,40 +1080,6 @@ has-props
 
 1486
 
-JobImpressions.class
-file
-
-
-
-
-2009-04-24T17:48:12.000000Z
-061d0008716355c69eac57d3fdc05ab9
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1113
-
 DateTimeAtCreation.class
 file
 
@@ -1147,6 +1113,40 @@ has-props
 
 
 981
+
+JobImpressions.class
+file
+
+
+
+
+2009-04-24T17:48:12.000000Z
+061d0008716355c69eac57d3fdc05ab9
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1113
 
 MediaPrintableArea.class
 file
@@ -1182,40 +1182,6 @@ has-props
 
 3086
 
-JobName.class
-file
-
-
-
-
-2009-04-24T17:48:12.000000Z
-8444d45262fb13e26a7bdb58d2e06a6a
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1047
-
 JobState.class
 file
 
@@ -1250,14 +1216,14 @@ has-props
 
 1864
 
-PresentationDirection.class
+JobName.class
 file
 
 
 
 
 2009-04-24T17:48:12.000000Z
-4907c8cdad82ccd81fb68fa6927b2b7b
+8444d45262fb13e26a7bdb58d2e06a6a
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -1282,7 +1248,7 @@ has-props
 
 
 
-2046
+1047
 
 SheetCollate.class
 file
@@ -1317,6 +1283,40 @@ has-props
 
 
 1481
+
+PresentationDirection.class
+file
+
+
+
+
+2009-04-24T17:48:12.000000Z
+4907c8cdad82ccd81fb68fa6927b2b7b
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2046
 
 MediaTray.class
 file
@@ -1556,40 +1556,6 @@ has-props
 
 1052
 
-PrinterInfo.class
-file
-
-
-
-
-2009-04-24T17:48:12.000000Z
-dab01c5385b6899d579ccf308961ff05
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1020
-
 MultipleDocumentHandling.class
 file
 
@@ -1623,6 +1589,40 @@ has-props
 
 
 1826
+
+PrinterInfo.class
+file
+
+
+
+
+2009-04-24T17:48:12.000000Z
+dab01c5385b6899d579ccf308961ff05
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1020
 
 JobImpressionsCompleted.class
 file
@@ -1692,40 +1692,6 @@ has-props
 
 1100
 
-PrintQuality.class
-file
-
-
-
-
-2009-04-24T17:48:12.000000Z
-49d2c00e5bf8b25a8a7622101191d033
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1592
-
 JobOriginatingUserName.class
 file
 
@@ -1759,6 +1725,40 @@ has-props
 
 
 1059
+
+PrintQuality.class
+file
+
+
+
+
+2009-04-24T17:48:12.000000Z
+49d2c00e5bf8b25a8a7622101191d033
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1592
 
 JobKOctets.class
 file
@@ -1828,40 +1828,6 @@ has-props
 
 1400
 
-PrinterIsAcceptingJobs.class
-file
-
-
-
-
-2009-04-24T17:48:12.000000Z
-65e0db83777f07ca8d41e8526569d3f9
-2006-12-12T18:41:51.528840Z
-119793
-tromey
-has-props
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-1484
-
 MediaSizeName.class
 file
 
@@ -1896,14 +1862,14 @@ has-props
 
 6466
 
-PrinterLocation.class
+PrinterIsAcceptingJobs.class
 file
 
 
 
 
 2009-04-24T17:48:12.000000Z
-2a992a44976d4d972ab305060ce88051
+65e0db83777f07ca8d41e8526569d3f9
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -1928,7 +1894,7 @@ has-props
 
 
 
-1040
+1484
 
 JobPriority.class
 file
@@ -1964,14 +1930,14 @@ has-props
 
 1098
 
-OrientationRequested.class
+PrinterLocation.class
 file
 
 
 
 
 2009-04-24T17:48:12.000000Z
-3a5aa36ddcfb90d1efb5a26e5c00c836
+2a992a44976d4d972ab305060ce88051
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -1996,7 +1962,7 @@ has-props
 
 
 
-1800
+1040
 
 JobKOctetsSupported.class
 file
@@ -2032,14 +1998,14 @@ has-props
 
 1132
 
-DateTimeAtProcessing.class
+OrientationRequested.class
 file
 
 
 
 
 2009-04-24T17:48:12.000000Z
-8d5113fd8d732e40dde9c61e4ca8b331
+3a5aa36ddcfb90d1efb5a26e5c00c836
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -2064,7 +2030,7 @@ has-props
 
 
 
-989
+1800
 
 DateTimeAtCompleted.class
 file
@@ -2100,14 +2066,14 @@ has-props
 
 985
 
-JobKOctetsProcessed.class
+DateTimeAtProcessing.class
 file
 
 
 
 
 2009-04-24T17:48:12.000000Z
-42d1daf7960708300559e426ef56757f
+8d5113fd8d732e40dde9c61e4ca8b331
 2006-12-12T18:41:51.528840Z
 119793
 tromey
@@ -2132,7 +2098,7 @@ has-props
 
 
 
-1084
+989
 
 PrinterStateReasons.class
 file
@@ -2167,6 +2133,40 @@ has-props
 
 
 3581
+
+JobKOctetsProcessed.class
+file
+
+
+
+
+2009-04-24T17:48:12.000000Z
+42d1daf7960708300559e426ef56757f
+2006-12-12T18:41:51.528840Z
+119793
+tromey
+has-props
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1084
 
 MediaName.class
 file

@@ -3,10 +3,26 @@
 
 *** Changes since GDB 7.1
 
+* The --batch flag now disables pagination and queries.
+
+* X86 general purpose registers
+
+  GDB now supports reading/writing byte, word and double-word x86
+  general purpose registers directly.  This means you can use, say,
+  $ah or $ax to refer, respectively, to the byte register AH and
+  16-bit word register AX that are actually portions of the 32-bit
+  register EAX or 64-bit register RAX.
+
 * Python scripting
 
-The GDB Python API now has access to symbols, symbol tables, and
-frame's code blocks.
+** The GDB Python API now has access to symbols, symbol tables, and
+   frame's code blocks.
+
+** New methods gdb.target_charset and gdb.target_wide_charset.
+
+* New targets
+
+ARM Symbian			arm*-*-symbianelf*
 
 *** Changes in GDB 7.1
 

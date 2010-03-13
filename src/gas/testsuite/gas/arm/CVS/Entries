@@ -395,8 +395,6 @@
 /thumb2_pool.s/1.2/Thu Jan 28 00:24:28 2010//
 /thumb2_relax.d/1.6/Thu Jan 28 00:24:28 2010//
 /thumb2_relax.s/1.1/Thu Jan 28 00:24:28 2010//
-/thumb32.l/1.2/Thu Jan 28 00:24:28 2010//
-/thumb32.s/1.17/Thu Jan 28 00:24:28 2010//
 /thumbrel.d/1.2/Thu Jan 28 00:24:28 2010//
 /thumbrel.s/1.1/Thu Jan 28 00:24:28 2010//
 /thumbv6.d/1.6/Thu Jan 28 00:24:28 2010//
@@ -486,8 +484,13 @@
 /thumb-w-good.d/1.2/Thu Feb 25 20:31:16 2010//
 /thumb2_bcond.d/1.6/Thu Feb 25 20:31:16 2010//
 /thumb2_bcond.s/1.2/Thu Feb 25 20:31:16 2010//
-/thumb32.d/1.35/Thu Feb 25 20:31:16 2010//
 /unpredictable.d/1.3/Thu Feb 25 20:31:16 2010//
 /unpredictable.s/1.3/Thu Feb 25 20:31:16 2010//
 /wince.d/1.3/Thu Feb 25 20:31:16 2010//
+/neon-ldst-align-bad.d/1.1/Fri Feb 26 15:49:07 2010//
+/neon-ldst-align-bad.l/1.1/Fri Feb 26 15:49:07 2010//
+/neon-ldst-align-bad.s/1.1/Fri Feb 26 15:49:07 2010//
+/thumb32.d/1.36/Sat Mar 13 04:44:13 2010//
+/thumb32.l/1.3/Sat Mar 13 04:44:13 2010//
+/thumb32.s/1.18/Sat Mar 13 04:44:13 2010//
 D

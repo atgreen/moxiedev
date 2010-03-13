@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/libjava/classpath/gnu/java/net/protocol/http
 svn://gcc.gnu.org/svn/gcc
 
@@ -264,40 +264,6 @@ doko
 
 11426
 
-ChunkedInputStream.java
-file
-
-
-
-
-2009-04-24T17:46:53.000000Z
-df05b59871170f7abbe84c57ccd2cbb0
-2008-10-21T17:55:01.166395Z
-141271
-doko
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-6151
-
 Handler.java
 file
 
@@ -332,17 +298,17 @@ tromey
 
 2333
 
-package.html
+ChunkedInputStream.java
 file
 
 
 
 
 2009-04-24T17:46:53.000000Z
-70af22ea1664d0d947e80926215f3ffe
-2005-09-23T17:31:48.000000Z
-104575
-tromey
+df05b59871170f7abbe84c57ccd2cbb0
+2008-10-21T17:55:01.166395Z
+141271
+doko
 
 
 
@@ -364,7 +330,7 @@ tromey
 
 
 
-3118
+6151
 
 SimpleCookieManager.java
 file
@@ -399,6 +365,40 @@ doko
 
 
 4375
+
+package.html
+file
+
+
+
+
+2009-04-24T17:46:53.000000Z
+70af22ea1664d0d947e80926215f3ffe
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3118
 
 HTTPURLConnection.java
 file
@@ -468,40 +468,6 @@ doko
 
 5350
 
-ByteArrayRequestBodyWriter.java
-file
-
-
-
-
-2009-04-24T17:46:53.000000Z
-3497c21a0211035519f73088c0fc0d9b
-2005-09-23T17:31:48.000000Z
-104575
-tromey
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-3078
-
 HTTPDateFormat.java
 file
 
@@ -535,6 +501,40 @@ tromey
 
 
 14007
+
+ByteArrayRequestBodyWriter.java
+file
+
+
+
+
+2009-04-24T17:46:53.000000Z
+3497c21a0211035519f73088c0fc0d9b
+2005-09-23T17:31:48.000000Z
+104575
+tromey
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+3078
 
 Request.java
 file

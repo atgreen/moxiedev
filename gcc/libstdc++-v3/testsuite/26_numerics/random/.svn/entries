@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/26_numerics/random
 svn://gcc.gnu.org/svn/gcc
 
@@ -192,6 +192,9 @@ dir
 weibull_distribution
 dir
 
+independent_bits_engine
+dir
+
 ranlux48_base.cc
 file
 
@@ -225,9 +228,6 @@ paolo
 
 
 1221
-
-independent_bits_engine
-dir
 
 minstd_rand0.cc
 file
@@ -269,10 +269,10 @@ dir
 discard_block_engine
 dir
 
-negative_binomial_distribution
+cauchy_distribution
 dir
 
-cauchy_distribution
+negative_binomial_distribution
 dir
 
 gamma_distribution
@@ -287,10 +287,10 @@ dir
 exponential_distribution
 dir
 
-lognormal_distribution
+binomial_distribution
 dir
 
-binomial_distribution
+lognormal_distribution
 dir
 
 mt19937_64.cc

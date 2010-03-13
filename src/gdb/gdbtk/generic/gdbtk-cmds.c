@@ -46,6 +46,7 @@
 #include "valprint.h"
 #include "regcache.h"
 #include "arch-utils.h"
+#include "psymtab.h"
 
 /* tcl header files includes varargs.h unless HAS_STDARG is defined,
    but gdb uses stdarg.h, so make sure HAS_STDARG is defined.  */
@@ -1103,6 +1104,42 @@ gdb_find_file_command (ClientData clientData, Tcl_Interp *interp,
   return TCL_OK;
 }
 
+/* An object of this type is passed to do_listfiles.  */
+
+struct listfiles_info
+{
+  int *numfilesp;
+  int *files_sizep;
+  const char ***filesp;
+  int len;
+  const char *pathname;
+};
+
+/* This is a helper function for gdb_listfiles that is used via
+   map_partial_symbol_filenames.  */
+
+static void
+do_listfiles (const char *filename, const char *fullname, void *data)
+{
+  struct listfiles_info *info = data;
+
+  if (*info->numfilesp == *info->files_sizep)
+    {
+      *info->files_sizep *= 2;
+      *info->filesp = xrealloc (*info->filesp,
+				*info->files_sizep * sizeof (char *));
+    }
+
+  if (filename)
+    {
+      if (!info->len || !strncmp (info->pathname, filename, info->len)
+	  || !strcmp (filename, lbasename (filename)))
+	{
+	  (*info->filesp)[(*info->numfilesp)++] = lbasename (filename);
+	}
+    }
+}
+
 /* This implements the tcl command "gdb_listfiles"
 
 * This lists all the files in the current executible.
@@ -1133,6 +1170,7 @@ gdb_listfiles (ClientData clientData, Tcl_Interp *interp,
   const char **files;
   int files_size;
   int i, numfiles = 0, len = 0;
+  struct listfiles_info info;
 
   files_size = 1000;
   files = (const char **) xmalloc (sizeof (char *) * files_size);
@@ -1145,22 +1183,12 @@ gdb_listfiles (ClientData clientData, Tcl_Interp *interp,
   else if (objc == 2)
     pathname = Tcl_GetStringFromObj (objv[1], &len);
 
-  ALL_PSYMTABS (objfile, psymtab)
-    {
-      if (numfiles == files_size)
-	{
-	  files_size = files_size * 2;
-	  files = (const char **) xrealloc (files, sizeof (char *) * files_size);
-	}
-      if (psymtab->filename)
-	{
-	  if (!len || !strncmp (pathname, psymtab->filename, len)
-	      || !strcmp (psymtab->filename, lbasename (psymtab->filename)))
-	    {
-	      files[numfiles++] = lbasename (psymtab->filename);
-	    }
-	}
-    }
+  info.numfilesp = &numfiles;
+  info.files_sizep = &files_size;
+  info.filesp = &files;
+  info.len = len;
+  info.pathname = pathname;
+  map_partial_symbol_filenames (do_listfiles, &info);
 
   ALL_SYMTABS (objfile, symtab)
     {

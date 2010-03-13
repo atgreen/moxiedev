@@ -58,6 +58,7 @@
 #include "gdb_obstack.h"
 #include "gdbcore.h"
 #include "top.h"
+#include "main.h"
 
 #include "inferior.h"		/* for signed_pointer_to_address */
 
@@ -71,6 +72,7 @@
 #include <time.h>
 
 #include "gdb_usleep.h"
+#include "interps.h"
 
 #if !HAVE_DECL_MALLOC
 extern PTR malloc ();		/* ARI: PTR */
@@ -1495,7 +1497,7 @@ defaulted_query (const char *ctlstr, const char defchar, va_list args)
      question we're asking, and then answer the default automatically.  This
      way, important error messages don't get lost when talking to GDB
      over a pipe.  */
-  if (! input_from_terminal_p ())
+  if (batch_flag || ! input_from_terminal_p ())
     {
       wrap_here ("");
       vfprintf_filtered (gdb_stdout, ctlstr, args);
@@ -1652,7 +1654,7 @@ query (const char *ctlstr, ...)
    function returns 1.  Otherwise, the function returns 0.  */
 
 static int
-host_char_to_target (int c, int *target_c)
+host_char_to_target (struct gdbarch *gdbarch, int c, int *target_c)
 {
   struct obstack host_data;
   char the_char = c;
@@ -1662,7 +1664,7 @@ host_char_to_target (int c, int *target_c)
   obstack_init (&host_data);
   cleanups = make_cleanup_obstack_free (&host_data);
 
-  convert_between_encodings (target_charset (), host_charset (),
+  convert_between_encodings (target_charset (gdbarch), host_charset (),
 			     &the_char, 1, 1, &host_data, translit_none);
 
   if (obstack_object_size (&host_data) == 1)
@@ -1691,7 +1693,7 @@ host_char_to_target (int c, int *target_c)
    after the zeros.  A value of 0 does not mean end of string.  */
 
 int
-parse_escape (char **string_ptr)
+parse_escape (struct gdbarch *gdbarch, char **string_ptr)
 {
   int target_char = -2;	/* initialize to avoid GCC warnings */
   int c = *(*string_ptr)++;
@@ -1757,11 +1759,11 @@ parse_escape (char **string_ptr)
       break;
     }
 
-  if (!host_char_to_target (c, &target_char))
+  if (!host_char_to_target (gdbarch, c, &target_char))
     error
       ("The escape sequence `\%c' is equivalent to plain `%c', which"
        " has no equivalent\n" "in the `%s' character set.", c, c,
-       target_charset ());
+       target_charset (gdbarch));
   return target_char;
 }
 
@@ -2209,8 +2211,11 @@ fputs_maybe_filtered (const char *linebuffer, struct ui_file *stream,
     return;
 
   /* Don't do any filtering if it is disabled.  */
-  if ((stream != gdb_stdout) || !pagination_enabled
-      || (lines_per_page == UINT_MAX && chars_per_line == UINT_MAX))
+  if (stream != gdb_stdout
+      || !pagination_enabled
+      || (lines_per_page == UINT_MAX && chars_per_line == UINT_MAX)
+      || top_level_interpreter () == NULL
+      || ui_out_is_mi_like_p (interp_ui_out (top_level_interpreter ())))
     {
       fputs_unfiltered (linebuffer, stream);
       return;

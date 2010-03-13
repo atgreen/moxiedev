@@ -35,6 +35,15 @@
 #include <sys/time.h>
 #ifdef __CYGWIN__
 #include <sys/cygwin.h>		/* For cygwin_conv_to_full_posix_path.  */
+#include <cygwin/version.h>
+#if CYGWIN_VERSION_DLL_MAKE_COMBINED(CYGWIN_VERSION_API_MAJOR,CYGWIN_VERSION_API_MINOR) < 181
+# define CCP_POSIX_TO_WIN_A 0
+# define CCP_WIN_A_TO_POSIX 2
+# define cygwin_conv_path(op, from, to, size)  \
+         (op == CCP_WIN_A_TO_POSIX) ? \
+         cygwin_conv_to_full_posix_path (from, to) : \
+         cygwin_conv_to_win32_path (from, to)
+#endif
 #endif
 #include <signal.h>
 
@@ -1021,12 +1030,14 @@ remote_fileio_func_rename (char *buf)
 		errno = EISDIR;
 	      else
 		{
-		  char oldfullpath[PATH_MAX + 1];
-		  char newfullpath[PATH_MAX + 1];
+		  char oldfullpath[PATH_MAX];
+		  char newfullpath[PATH_MAX];
 		  int len;
 
-		  cygwin_conv_to_full_posix_path (oldpath, oldfullpath);
-		  cygwin_conv_to_full_posix_path (newpath, newfullpath);
+		  cygwin_conv_path (CCP_WIN_A_TO_POSIX, oldpath, oldfullpath,
+				    PATH_MAX);
+		  cygwin_conv_path (CCP_WIN_A_TO_POSIX, newpath, newfullpath,
+				    PATH_MAX);
 		  len = strlen (oldfullpath);
 		  if (newfullpath[len] == '/'
 		      && !strncmp (oldfullpath, newfullpath, len))

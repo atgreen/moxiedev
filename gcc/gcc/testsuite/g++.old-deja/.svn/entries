@@ -1,15 +1,15 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.old-deja
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-02-22T22:30:45.294178Z
-156979
-manu
+2010-03-10T19:29:50.357571Z
+157365
+ghazi
 
 
 
@@ -29,16 +29,16 @@ manu
 g++.warn
 dir
 
-g++.brendan
-dir
-
 g++.robertl
 dir
 
-g++.oliva
+g++.brendan
 dir
 
 g++.jason
+dir
+
+g++.oliva
 dir
 
 g++.rfg
@@ -47,19 +47,19 @@ dir
 g++.ns
 dir
 
-g++.other
-dir
-
 g++.niklas
 dir
 
-g++.law
+g++.other
+dir
+
+g++.pt
 dir
 
 g++.benjamin
 dir
 
-g++.pt
+g++.law
 dir
 
 g++.mike

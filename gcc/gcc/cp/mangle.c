@@ -58,6 +58,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "varray.h"
 #include "flags.h"
 #include "target.h"
+#include "cgraph.h"
 
 /* Debugging support.  */
 
@@ -3008,6 +3009,22 @@ static tree
 mangle_decl_string (const tree decl)
 {
   tree result;
+  location_t saved_loc = input_location;
+  tree saved_fn = NULL_TREE;
+  bool template_p = false;
+
+  if (DECL_LANG_SPECIFIC (decl) && DECL_USE_TEMPLATE (decl))
+    {
+      struct tinst_level *tl = current_instantiation ();
+      if (!tl || tl->decl != decl)
+	{
+	  template_p = true;
+	  saved_fn = current_function_decl;
+	  push_tinst_level (decl);
+	  current_function_decl = NULL_TREE;
+	}
+    }
+  input_location = DECL_SOURCE_LOCATION (decl);
 
   start_mangling (decl);
 
@@ -3020,6 +3037,14 @@ mangle_decl_string (const tree decl)
   if (DEBUG_MANGLE)
     fprintf (stderr, "mangle_decl_string = '%s'\n\n",
 	     IDENTIFIER_POINTER (result));
+
+  if (template_p)
+    {
+      pop_tinst_level ();
+      current_function_decl = saved_fn;
+    }
+  input_location = saved_loc;
+
   return result;
 }
 
@@ -3031,6 +3056,40 @@ mangle_decl (const tree decl)
   tree id = mangle_decl_string (decl);
   id = targetm.mangle_decl_assembler_name (decl, id);
   SET_DECL_ASSEMBLER_NAME (decl, id);
+
+  if (G.need_abi_warning)
+    {
+#ifdef ASM_OUTPUT_DEF
+      /* If the mangling will change in the future, emit an alias with the
+	 future mangled name for forward-compatibility.  */
+      int save_ver;
+      tree id2, alias;
+#endif
+
+      SET_IDENTIFIER_GLOBAL_VALUE (id, decl);
+      if (IDENTIFIER_GLOBAL_VALUE (id) != decl)
+	inform (DECL_SOURCE_LOCATION (decl), "-fabi-version=4 (or =0) "
+		"avoids this error with a change in vector mangling");
+
+#ifdef ASM_OUTPUT_DEF
+      save_ver = flag_abi_version;
+      flag_abi_version = 0;
+      id2 = mangle_decl_string (decl);
+      id2 = targetm.mangle_decl_assembler_name (decl, id2);
+      flag_abi_version = save_ver;
+
+      alias = make_alias_for (decl, id2);
+      DECL_IGNORED_P (alias) = 1;
+      TREE_PUBLIC (alias) = TREE_PUBLIC (decl);
+      DECL_VISIBILITY (alias) = DECL_VISIBILITY (decl);
+      if (vague_linkage_p (decl))
+	DECL_WEAK (alias) = 1;
+      if (TREE_CODE (decl) == FUNCTION_DECL)
+	cgraph_same_body_alias (alias, decl);
+      else
+	varpool_extra_name_alias (alias, decl);
+#endif
+    }
 }
 
 /* Generate the mangled representation of TYPE.  */

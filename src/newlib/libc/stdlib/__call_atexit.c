@@ -5,10 +5,15 @@
 
 #include <stdlib.h>
 #include <reent.h>
+#include <sys/lock.h>
 #include "atexit.h"
 
 /* Make this a weak reference to avoid pulling in free.  */
 void free(void *) _ATTRIBUTE((__weak__));
+
+#ifndef __SINGLE_THREAD__
+extern _LOCK_T __atexit_lock;
+#endif
 
 /*
  * Call registered exit handlers.  If D is null then all handlers are called,
@@ -25,6 +30,11 @@ _DEFUN (__call_exitprocs, (code, d),
   register int n;
   int i;
   void (*fn) (void);
+
+
+#ifndef __SINGLE_THREAD__
+  __lock_acquire(__atexit_lock);
+#endif
 
  restart:
 
@@ -104,4 +114,8 @@ _DEFUN (__call_exitprocs, (code, d),
 	}
 #endif
     }
+#ifndef __SINGLE_THREAD__
+  __lock_release(__atexit_lock);
+#endif
+
 }

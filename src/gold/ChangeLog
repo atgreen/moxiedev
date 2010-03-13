@@ -1,3 +1,181 @@
+2010-03-10  Ian Lance Taylor  <iant@google.com>
+
+	* reloc.cc (Sized_relobj::split_stack_adjust_reltype): Call the
+	target to ask whether a reference to a symbol requires a stack
+	split.
+	* target.h (Target::is_call_to_non_split): New function.
+	(Target::do_is_call_to_non_split): Declare virtual function.
+	* target.cc: Include "symtab.h".
+	(Target::do_is_call_to_non_split): New function.
+	* i386.cc (Target_i386::do_is_call_to_non_split): New function.
+
+2010-03-10  Cary Coutant  <ccoutant@google.com>
+
+	* fileread.cc (File_read::~File_read): Don't delete whole_file_view_.
+	(File_read::open[1]): Remove initial mapping of whole_file_view_.
+	(File_read::open[2]): Add whole_file_view_ to list of views.
+	(File_read::make_view): Remove test of whole_file_view_.
+	(File_read::find_or_make_view): Create whole_file_view_ if
+	necessary.
+	(File_read::clear_views): Replace bool parameter with enum;
+	adjust all callers.  Don't delete views with permanent data;
+	do delete cached views and views from archives if
+	--no-keep-files-mapped is set.  Set whole_file_view_ to NULL
+	if clearing the corresponding view.
+	* fileread.h (File_read::Clear_views_mode): New enum.
+	(File_read::View::is_permanent_view): New method.
+	(File_read::clear_views): Replace bool parameter
+	with enum; adjust all callers.
+	* options.h (General_options): Change keep_files_mapped option;
+	add map_whole_files.
+	* readsyms.cc (Add_symbols::run): Delete sd_ object before
+	releasing the file.
+	* reloc.cc (Scan_relocs::run): Delete rd_ object before releasing
+	the file.
+
+2010-03-10  David S. Miller  <davem@davemloft.net>
+
+	* sparc.cc (Target_sparc::Scan::local): Accept R_SPARC_WPLT30.
+
+2010-03-09  Sriraman Tallam  <tmsriram@google.com>
+
+	* icf.cc (get_section_contents): Add '@' marker after processing the
+	merge reloc.
+
+2010-03-08  Doug Kwan  <dougkwan@google.com>
+
+	* gold/arm.cc (Arm_exidx_fixup::update_offset_map): Fix build breakage
+	due to a conversion warning.
+	(Arm_relobj::update_output_local_symbol_count): Check for local
+	symbol with unset output index.
+
+2010-03-05  Ian Lance Taylor  <iant@google.com>
+
+	* options.h (class General_options): Add --spare-dynamic-tags.
+	* output.cc (Output_data_dynamic::set_final_data_size): Implement
+	--spare-dynamic-tags.
+
+2010-03-05  Ian Lance Taylor  <iant@google.com>
+
+	* incremental.cc: Include "libiberty.h".
+
+2010-03-05  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* dynobj.h (Verdef::Verdef): Add is_info arg, is_info member
+	function, is_info_ member.
+	* dynobj.cc (Verdef::write): Set VER_FLG_INFO if this->is_info_.
+	(Versions::Versions): Update caller.
+	(Versions::define_base_version): Likewise.
+	(Versions::add_def): Likewise.
+
+2010-03-03  Sriraman Tallam  <tmsriram@google.com>
+
+	* i386.cc (Target_i386::can_check_for_function_pointers): New function.
+	(Scan::possible_function_pointer_reloc): New function.
+	(Scan::local_reloc_may_be_function_pointer): Change to call
+	possible_function_pointer_reloc.
+	(Scan::global_reloc_may_be_function_pointer): Ditto.
+	* icf.h (Icf::check_section_for_function_pointers): Change to reject
+	relocations in ".data.rel.ro._ZTV" section.
+	* testsuite/icf_safe_so_test.sh: Change to pass i386.
+	* testsuite/icf_safe_so_test.cc: Ditto.
+	* testsuite/icf_safe_test.cc: Ditto.
+	* testsuite/icf_safe_test.sh: Ditto.
+
+2010-03-03  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+	    Ian Lance Taylor  <iant@google.com>
+
+	* target-reloc.h (relocate_section): Check the symbol table index
+	for -1U before setting the local symbol index.
+	(scan_relocatable_relocs): If copying the relocation, record that
+	the local symbol is required.
+	* object.h (Symbol_value::is_output_symtab_index_set): New
+	function.
+	(Symbol_value::may_be_discarded_from_output_symtab): New
+	function.
+	(Symbol_value::has_output_symtab_entry): New function.
+	(Symbol_value::needs_output_symtab_entry): Remove.
+	(Symbol_value::output_symtab_index): Make sure the symbol index is
+	set.
+	(Symbol_value::set_output_symtab_index): Make sure the symbol
+	index is not set.  Make sure the new index is valid.
+	(Symbol_value::set_must_have_output_symtab_entry): New function.
+	(Symbol_value::has_output_dynsym_entry): New function.
+	(Symbol_value::set_output_dynsym_index): Make sure the new index
+	is valid.
+	(Sized_relobj::set_must_have_output_symtab_entry): New function.
+	* object.cc (Sized_relobj::do_count_local_symbols): Only discard a
+	local symbol if permitted.
+	(Sized_relobj::do_finalize_local_symbols): Call
+	is_output_symtab_index_set rather than needs_output_symtab_entry.
+	(Sized_relobj::write_local_symbols): Call has_output_symtab_entry
+	rather than needs_output_symtab_entry.  Call
+	has_output_dynsym_entry rather than needs_output_dynsym_entry.
+	* arm.cc (Arm_relobj::update_output_local_symbol_count): Call
+	is_output_symtab_index_set rather than needs_output_symtab_entry.
+	* testsuite/discard_locals_relocatable_test.c: New file.
+	* testsuite/discard_locals_test.sh: Test -r.
+	* testsuite/Makefile.am (check_DATA): Add
+	discard_locals_relocatable_test1.syms,
+	discard_local_relocatable_test2.syms.
+	(MOSTLYCLEANFILES): Likewise.  Also add
+	discard_locals_relocatable_test1.lout and
+	discard_locals_relocatable_test2.out.
+	(discard_locals_relocatable_test1.syms): New target.
+	(discard_locals_relocatable_test.o): New target.
+	(discard_locals_relocatable_test1.out): New target.
+	(discard_locals_relocatable_test2.syms): New target.
+	(discard_locals_relocatable_test2.out): New target.
+	(various): Add missing ../ld-new dependencies.
+	* testsuite/Makefile.in: Rebuild.
+
+2010-03-03  Nick Clifton  <nickc@redhat.com>
+
+	* po/fi.po: New Finnish translation.
+
+2010-03-01  Doug Kwan  <dougkwan@google.com>
+
+	* layout.cc (Layout::Layout): Force section types of .init_array*,
+	.preinit_array* and .fini_array* sections.
+	* output.cc (Output_section::Input_section_sort_entry::has_priority):
+	Fix check of return value of std::string::find.().
+	(Output_section::Input_section_sort_compare::operator()): Remove
+	comment about .init_array.
+	(Output_section::Input_section_sort_init_fini_compare::operator()):
+	New method.
+	(Output_section::sort_attached_input_sections): Handle .init_array
+	and .fini_array specially.
+	* output.h (Output_section::Inut_section_sort_compare): Update
+	comment.
+	(Output_section::Input_section_sort_init_fini_compare): New struct.
+
+2010-02-26  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::Relocate::reloc_is_non_pic): Treat
+	R_ARM_PREL31 and R_ARM_SBREL31 as position independent.
+	* testsuite/debug_msg.sh: Avoid matching source line number for
+	use of global variable undef_int.
+
+2010-02-26  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::scan_reloc_for_stub): Move code handling
+	R_ARM_V4BX to Target_arm::scan_reloc_section_for_stubs.
+	(Target_arm::scan_reloc_section_for_stubs): Instead of calling
+	scan_reloc_for_stub, do all processing of R_ARM_V4BX here.
+	* options.cc (General_options::General_options): Initialize member
+	fix_v4bx_.
+	* testsuite/Makefile.am (check_SCRIPTS): Add arm_fix_v4bx.sh
+	(check_DATA): Add arm_fix_v4bx.stdout, arm_fix_v4bx_interworking.stdout
+	and rm_no_fix_v4bx.stdout
+	(arm_fix_v4bx.stdout, arm_fix_v4bx, arm_fix_v4bx.o,
+	arm_fix_v4bx_interworking.stdout, arm_fix_v4bx_interworking,
+	arm_no_fix_v4bx.stdout, arm_no_fix_v4bx): New make rules.
+	(MOSTLYCLEANFILES): Add arm_fix_v4bx, arm_fix_v4bx_interworking
+	and arm_no_fix_v4bx.
+	* Makefile.in: Regenerate.
+	* testsuite/arm_fix_v4bx.s: New file.
+	* testsuite/arm_fix_v4bx.sh: Ditto.
+
 2010-02-24  Doug Kwan  <dougkwan@google.com>
 
 	* arm.cc (Target_arm::got_section): Make the .got section the first

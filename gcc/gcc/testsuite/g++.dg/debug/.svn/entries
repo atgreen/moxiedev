@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/debug
 svn://gcc.gnu.org/svn/gcc
 
@@ -536,40 +536,6 @@ mmitchel
 
 242
 
-debug8.C
-file
-
-
-
-
-2009-04-24T17:44:05.000000Z
-f3e5e740f9e7210ccece705c6d548267
-2003-07-15T16:56:49.000000Z
-69414
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-35
-
 namespace2.C
 file
 
@@ -603,6 +569,40 @@ jakub
 
 
 86
+
+debug8.C
+file
+
+
+
+
+2009-04-24T17:44:05.000000Z
+f3e5e740f9e7210ccece705c6d548267
+2003-07-15T16:56:49.000000Z
+69414
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+35
 
 debug9.C
 file
@@ -706,40 +706,6 @@ mmitchel
 
 116
 
-typedef3.C
-file
-
-
-
-
-2009-04-24T17:44:06.000000Z
-de7626032b99ed0b36b4dc7fb3f18f9d
-2005-01-18T21:33:21.000000Z
-93852
-ebotcazou
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-158
-
 dwarf2-1.C
 file
 
@@ -773,6 +739,40 @@ nathan
 
 
 335
+
+typedef3.C
+file
+
+
+
+
+2009-04-24T17:44:06.000000Z
+de7626032b99ed0b36b4dc7fb3f18f9d
+2005-01-18T21:33:21.000000Z
+93852
+ebotcazou
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+158
 
 dwarf2-2.C
 file
@@ -808,40 +808,6 @@ jakub
 
 174
 
-template1.C
-file
-
-
-
-
-2009-04-24T17:44:06.000000Z
-7e13d86d33b17cfb7cdf61b7b8cca961
-2002-04-04T00:39:22.000000Z
-51830
-jason
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-150
-
 pr27657.C
 file
 
@@ -875,6 +841,40 @@ rguenth
 
 
 96
+
+template1.C
+file
+
+
+
+
+2009-04-24T17:44:06.000000Z
+7e13d86d33b17cfb7cdf61b7b8cca961
+2002-04-04T00:39:22.000000Z
+51830
+jason
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+150
 
 vartrack1.C
 file

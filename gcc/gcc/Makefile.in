@@ -325,7 +325,13 @@ LIBELFINC = @LIBELFINC@
 # Set to 'yes' if the LTO front end is enabled.
 enable_lto = @enable_lto@
 
-# Libs and linker option needed for plugin support
+# Compiler needed for plugin support
+PLUGINCC = @CC@
+
+# Flags needed for plugin support
+PLUGINCFLAGS = @CFLAGS@
+
+# Libs and linker options needed for plugin support
 PLUGINLIBS = @pluginlibs@
 
 enable_plugin = @enable_plugin@
@@ -489,6 +495,7 @@ lang_checks_parallelized=check-gcc
 check_gcc_parallelize=execute.exp=execute/2* \
 		      execute.exp=execute/\[013-9a-zA-Z\]* \
 		      compile.exp dg.exp \
+		      dg-torture.exp,builtins.exp \
 		      struct-layout-1.exp,unsorted.exp,stackalign.exp,i386.exp
 lang_opt_files=@lang_opt_files@ $(srcdir)/c.opt $(srcdir)/common.opt
 lang_specs_files=@lang_specs_files@
@@ -3025,7 +3032,7 @@ var-tracking.o : var-tracking.c $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) \
    $(RTL_H) $(TREE_H) hard-reg-set.h insn-config.h reload.h $(FLAGS_H) \
    $(BASIC_BLOCK_H) output.h sbitmap.h alloc-pool.h $(FIBHEAP_H) $(HASHTAB_H) \
    $(REGS_H) $(EXPR_H) $(TIMEVAR_H) $(TREE_PASS_H) $(TREE_FLOW_H) \
-   cselib.h $(TARGET_H) $(TOPLEV_H) $(PARAMS_H)
+   cselib.h $(TARGET_H) $(TOPLEV_H) $(PARAMS_H) $(DIAGNOSTIC_H) pointer-set.h
 profile.o : profile.c $(CONFIG_H) $(SYSTEM_H) coretypes.h $(TM_H) $(RTL_H) \
    $(TREE_H) $(FLAGS_H) output.h $(REGS_H) $(EXPR_H) $(FUNCTION_H) \
    $(TOPLEV_H) $(COVERAGE_H) $(TREE_FLOW_H) value-prof.h cfghooks.h \
@@ -3828,14 +3835,17 @@ stmp-int-hdrs: $(STMP_FIXINC) $(USER_H) $(UNWIND_H) fixinc_list
 	done
 	rm -f include/unwind.h
 	cp $(UNWIND_H) include/unwind.h
+	chmod a+r include/unwind.h
 	rm -f include/stdint.h
 	if [ $(USE_GCC_STDINT) = wrap ]; then \
 	  rm -f include/stdint-gcc.h; \
 	  cp $(srcdir)/ginclude/stdint-gcc.h include/stdint-gcc.h; \
+	  chmod a+r include/stdint-gcc.h; \
 	  cp $(srcdir)/ginclude/stdint-wrap.h include/stdint.h; \
 	elif [ $(USE_GCC_STDINT) = provide ]; then \
 	  cp $(srcdir)/ginclude/stdint-gcc.h include/stdint.h; \
 	fi
+	chmod a+r include/stdint.h
 	set -e; for ml in `cat fixinc_list`; do \
 	  sysroot_headers_suffix=`echo $${ml} | sed -e 's/;.*$$//'`; \
 	  multi_dir=`echo $${ml} | sed -e 's/^[^;]*;//'`; \
@@ -3974,7 +3984,7 @@ TEXI_GCC_FILES = gcc.texi gcc-common.texi gcc-vers.texi frontends.texi	\
 
 TEXI_GCCINT_FILES = gccint.texi gcc-common.texi gcc-vers.texi		\
 	 contribute.texi makefile.texi configterms.texi options.texi	\
-	 portability.texi interface.texi passes.texi c-tree.texi	\
+	 portability.texi interface.texi passes.texi	\
 	 rtl.texi md.texi tm.texi hostconfig.texi fragments.texi	\
 	 configfiles.texi collect2.texi headerdirs.texi funding.texi	\
 	 gnu.texi gpl_v3.texi fdl.texi contrib.texi languages.texi	\
@@ -4598,6 +4608,8 @@ site.exp: ./config.status Makefile
 	@echo "set HAVE_LIBSTDCXX_V3 1" >> ./tmp0
 	@if test "@enable_plugin@" = "yes" ; then \
 	  echo "set ENABLE_PLUGIN 1" >> ./tmp0; \
+	  echo "set PLUGINCC \"$(PLUGINCC)\"" >> ./tmp0; \
+	  echo "set PLUGINCFLAGS \"$(PLUGINCFLAGS)\"" >> ./tmp0; \
 	  echo "set GMPINC \"$(GMPINC)\"" >> ./tmp0; \
 	fi
 	@if test "@enable_lto@" = "yes" ; then \
@@ -4872,7 +4884,7 @@ TAGS: lang.tags
 	    incs="$$incs --include $$dir/TAGS.sub";	\
 	  fi;						\
 	done;						\
-	etags -o TAGS.sub *.y *.h *.c; \
+	etags -o TAGS.sub *.h *.c; \
 	etags --include TAGS.sub $$incs)
 
 # -----------------------------------------------------

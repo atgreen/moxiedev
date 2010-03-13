@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/g++.dg/cpp
 svn://gcc.gnu.org/svn/gcc
 
@@ -400,40 +400,6 @@ jason
 
 440
 
-weak.C
-file
-
-
-
-
-2009-04-24T17:44:04.000000Z
-388f26d66093d4cf51084fa41b5fbe6e
-2005-05-01T20:30:40.000000Z
-99080
-mmitchel
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-107
-
 _Pragma1.C
 file
 
@@ -467,6 +433,40 @@ nathan
 
 
 371
+
+weak.C
+file
+
+
+
+
+2009-04-24T17:44:04.000000Z
+388f26d66093d4cf51084fa41b5fbe6e
+2005-05-01T20:30:40.000000Z
+99080
+mmitchel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+107
 
 c++98.C
 file

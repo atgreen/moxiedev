@@ -2556,8 +2556,8 @@ resolve_function (gfc_expr *expr)
     }
 
   /* If this ia a deferred TBP with an abstract interface (which may
-     of course be referenced), expr->value.function.name will be set.  */
-  if (sym && sym->attr.abstract && !expr->value.function.name)
+     of course be referenced), expr->value.function.esym will be set.  */
+  if (sym && sym->attr.abstract && !expr->value.function.esym)
     {
       gfc_error ("ABSTRACT INTERFACE '%s' must not be referenced at %L",
 		 sym->name, &expr->where);
@@ -4007,6 +4007,9 @@ find_array_spec (gfc_expr *e)
 	if (derived == NULL)
 	  derived = e->symtree->n.sym->ts.u.derived;
 
+	if (derived->attr.is_class)
+	  derived = derived->components->ts.u.derived;
+
 	c = derived->components;
 
 	for (; c; c = c->next)
@@ -5079,7 +5082,7 @@ resolve_typebound_call (gfc_code* c)
    resolving subroutine class methods, since we do not have to add a
    gfc_code each time. */
 static gfc_try
-resolve_compcall (gfc_expr* e, bool fcn)
+resolve_compcall (gfc_expr* e, bool fcn, bool class_members)
 {
   gfc_actual_arglist* newactual;
   gfc_symtree* target;
@@ -5121,7 +5124,7 @@ resolve_compcall (gfc_expr* e, bool fcn)
     return FAILURE;
 
   e->value.function.actual = newactual;
-  e->value.function.name = e->value.compcall.name;
+  e->value.function.name = NULL;
   e->value.function.esym = target->n.sym;
   e->value.function.class_esym = NULL;
   e->value.function.isym = NULL;
@@ -5129,10 +5132,10 @@ resolve_compcall (gfc_expr* e, bool fcn)
   e->ts = target->n.sym->ts;
   e->expr_type = EXPR_FUNCTION;
 
-  /* Resolution is not necessary if this is a class subroutine; this
-     function only has to identify the specific proc. Resolution of
-     the call will be done next in resolve_typebound_call.  */
-  return fcn ? gfc_resolve_expr (e) : SUCCESS;
+  /* Resolution is not necessary when constructing component calls
+     for class members, since this must only be done for the
+     declared type, which is done afterwards.  */
+  return !class_members ? gfc_resolve_expr (e) : SUCCESS;
 }
 
 
@@ -5144,7 +5147,6 @@ static gfc_expr *list_e;
 static void check_class_members (gfc_symbol *);
 static gfc_try class_try;
 static bool fcn_flag;
-static gfc_symbol *class_object;
 
 
 static void
@@ -5175,18 +5177,17 @@ check_class_members (gfc_symbol *derived)
       return;
     }
 
-  if (tbp->n.tb->is_generic)
+  /* If we have to match a passed class member, force the actual
+      expression to have the correct type.  */
+  if (!tbp->n.tb->nopass)
     {
-      /* If we have to match a passed class member, force the actual
-	 expression to have the correct type.  */
-      if (!tbp->n.tb->nopass)
-	{
-	  if (e->value.compcall.base_object == NULL)
-	    e->value.compcall.base_object =
-			extract_compcall_passed_object (e);
+      if (e->value.compcall.base_object == NULL)
+	e->value.compcall.base_object = extract_compcall_passed_object (e);
 
-          e->value.compcall.base_object->ts.type = BT_DERIVED;
-          e->value.compcall.base_object->ts.u.derived = derived;
+      if (!derived->attr.abstract)
+	{
+	  e->value.compcall.base_object->ts.type = BT_DERIVED;
+	  e->value.compcall.base_object->ts.u.derived = derived;
 	}
     }
 
@@ -5200,7 +5201,7 @@ check_class_members (gfc_symbol *derived)
 
   /* Do the renaming, PASSing, generic => specific and other
      good things for each class member.  */
-  class_try = (resolve_compcall (e, fcn_flag) == SUCCESS)
+  class_try = (resolve_compcall (e, fcn_flag, true) == SUCCESS)
 				? class_try : FAILURE;
 
   /* Now transfer the found symbol to the esym list.  */
@@ -5335,9 +5336,13 @@ resolve_arg_exprs (gfc_actual_arglist *arg)
 }
 
 
-/* Resolve a CLASS typebound function, or 'method'.  */
+/* Resolve a typebound function, or 'method'.  First separate all
+   the non-CLASS references by calling resolve_compcall directly.
+   Then treat the CLASS references by resolving for each of the class
+   members in turn.  */
+
 static gfc_try
-resolve_class_compcall (gfc_expr* e)
+resolve_typebound_function (gfc_expr* e)
 {
   gfc_symbol *derived, *declared;
   gfc_ref *new_ref;
@@ -5345,16 +5350,18 @@ resolve_class_compcall (gfc_expr* e)
   gfc_symtree *st;
 
   st = e->symtree;
-  class_object = st->n.sym;
+  if (st == NULL)
+    return resolve_compcall (e, true, false);
 
   /* Get the CLASS declared type.  */
   declared = get_declared_from_expr (&class_ref, &new_ref, e);
 
   /* Weed out cases of the ultimate component being a derived type.  */
-  if (class_ref && class_ref->u.c.component->ts.type == BT_DERIVED)
+  if ((class_ref && class_ref->u.c.component->ts.type == BT_DERIVED)
+	|| (!class_ref && st->n.sym->ts.type != BT_CLASS))
     {
       gfc_free_ref_list (new_ref);
-      return resolve_compcall (e, true);
+      return resolve_compcall (e, true, false);
     }
 
   /* Resolve the argument expressions,  */
@@ -5369,7 +5376,7 @@ resolve_class_compcall (gfc_expr* e)
   list_e = gfc_copy_expr (e);
   check_class_members (derived);
 
-  class_try = (resolve_compcall (e, true) == SUCCESS)
+  class_try = (resolve_compcall (e, true, false) == SUCCESS)
 		 ? class_try : FAILURE;
 
   /* Transfer the class list to the original expression.  Note that
@@ -5390,9 +5397,13 @@ resolve_class_compcall (gfc_expr* e)
   return class_try;
 }
 
-/* Resolve a CLASS typebound subroutine, or 'method'.  */
+/* Resolve a typebound subroutine, or 'method'.  First separate all
+   the non-CLASS references by calling resolve_typebound_call directly.
+   Then treat the CLASS references by resolving for each of the class
+   members in turn.  */
+
 static gfc_try
-resolve_class_typebound_call (gfc_code *code)
+resolve_typebound_subroutine (gfc_code *code)
 {
   gfc_symbol *derived, *declared;
   gfc_ref *new_ref;
@@ -5400,13 +5411,15 @@ resolve_class_typebound_call (gfc_code *code)
   gfc_symtree *st;
 
   st = code->expr1->symtree;
-  class_object = st->n.sym;
+  if (st == NULL)
+    return resolve_typebound_call (code);
 
   /* Get the CLASS declared type.  */
   declared = get_declared_from_expr (&class_ref, &new_ref, code->expr1);
 
   /* Weed out cases of the ultimate component being a derived type.  */
-  if (class_ref && class_ref->u.c.component->ts.type == BT_DERIVED)
+  if ((class_ref && class_ref->u.c.component->ts.type == BT_DERIVED)
+	|| (!class_ref && st->n.sym->ts.type != BT_CLASS))
     {
       gfc_free_ref_list (new_ref);
       return resolve_typebound_call (code);
@@ -5582,10 +5595,7 @@ gfc_resolve_expr (gfc_expr *e)
       break;
 
     case EXPR_COMPCALL:
-      if (e->symtree && e->symtree->n.sym->ts.type == BT_CLASS)
-	t = resolve_class_compcall (e);
-      else
-	t = resolve_compcall (e, true);
+      t = resolve_typebound_function (e);
       break;
 
     case EXPR_SUBSTRING:
@@ -8009,6 +8019,11 @@ resolve_code (gfc_code *code, gfc_namespace *ns)
 	    case EXEC_OMP_DO:
 	      gfc_resolve_omp_do_blocks (code, ns);
 	      break;
+	    case EXEC_SELECT_TYPE:
+	      gfc_current_ns = code->ext.ns;
+	      gfc_resolve_blocks (code->block, gfc_current_ns);
+	      gfc_current_ns = ns;
+	      break;
 	    case EXEC_OMP_WORKSHARE:
 	      omp_workshare_save = omp_workshare_flag;
 	      omp_workshare_flag = 1;
@@ -8143,11 +8158,7 @@ resolve_code (gfc_code *code, gfc_namespace *ns)
 
 	case EXEC_COMPCALL:
 	compcall:
-	  if (code->expr1->symtree
-		&& code->expr1->symtree->n.sym->ts.type == BT_CLASS)
-	    resolve_class_typebound_call (code);
-	  else
-	    resolve_typebound_call (code);
+	  resolve_typebound_subroutine (code);
 	  break;
 
 	case EXEC_CALL_PPC:
@@ -8937,13 +8948,12 @@ resolve_fl_variable_derived (gfc_symbol *sym, int no_init_flag)
       && sym->ns->proc_name->attr.flavor == FL_MODULE
       && !sym->ns->save_all && !sym->attr.save
       && !sym->attr.pointer && !sym->attr.allocatable
-      && has_default_initializer (sym->ts.u.derived))
-    {
-      gfc_error("Object '%s' at %L must have the SAVE attribute for "
-		"default initialization of a component",
-		sym->name, &sym->declared_at);
-      return FAILURE;
-    }
+      && has_default_initializer (sym->ts.u.derived)
+      && gfc_notify_std (GFC_STD_F2008, "Fortran 2008: Implied SAVE for "
+			 "module variable '%s' at %L, needed due to "
+			 "the default initialization", sym->name,
+			 &sym->declared_at) == FAILURE)
+    return FAILURE;
 
   if (sym->ts.type == BT_CLASS)
     {
@@ -11668,12 +11678,19 @@ int
 gfc_impure_variable (gfc_symbol *sym)
 {
   gfc_symbol *proc;
+  gfc_namespace *ns;
 
   if (sym->attr.use_assoc || sym->attr.in_common)
     return 1;
 
-  if (sym->ns != gfc_current_ns)
-    return !sym->attr.function;
+  /* Check if the symbol's ns is inside the pure procedure.  */
+  for (ns = gfc_current_ns; ns; ns = ns->parent)
+    {
+      if (ns == sym->ns)
+	break;
+      if (ns->proc_name->attr.flavor == FL_PROCEDURE && !sym->attr.function)
+	return 1;
+    }
 
   proc = sym->ns->proc_name;
   if (sym->attr.dummy && gfc_pure (proc)
@@ -11689,18 +11706,30 @@ gfc_impure_variable (gfc_symbol *sym)
 }
 
 
-/* Test whether a symbol is pure or not.  For a NULL pointer, checks the
-   symbol of the current procedure.  */
+/* Test whether a symbol is pure or not.  For a NULL pointer, checks if the
+   current namespace is inside a pure procedure.  */
 
 int
 gfc_pure (gfc_symbol *sym)
 {
   symbol_attribute attr;
+  gfc_namespace *ns;
 
   if (sym == NULL)
-    sym = gfc_current_ns->proc_name;
-  if (sym == NULL)
-    return 0;
+    {
+      /* Check if the current namespace or one of its parents
+	belongs to a pure procedure.  */
+      for (ns = gfc_current_ns; ns; ns = ns->parent)
+	{
+	  sym = ns->proc_name;
+	  if (sym == NULL)
+	    return 0;
+	  attr = sym->attr;
+	  if (attr.flavor == FL_PROCEDURE && (attr.pure || attr.elemental))
+	    return 1;
+	}
+      return 0;
+    }
 
   attr = sym->attr;
 

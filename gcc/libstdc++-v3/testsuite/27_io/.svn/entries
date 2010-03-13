@@ -1,15 +1,15 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-02-10T05:45:24.804422Z
-156644
-bkoz
+2010-03-01T19:12:39.086894Z
+157153
+paolo
 
 
 
@@ -66,16 +66,16 @@ dir
 basic_stringstream
 dir
 
-basic_iostream
-dir
-
 ios_base
 dir
 
-objects
+basic_iostream
 dir
 
 basic_streambuf
+dir
+
+objects
 dir
 
 basic_ios
@@ -84,16 +84,16 @@ dir
 basic_istringstream
 dir
 
-basic_fstream
-dir
-
 basic_ostringstream
 dir
 
-types
+basic_fstream
 dir
 
 basic_stringbuf
+dir
+
+types
 dir
 
 basic_istream

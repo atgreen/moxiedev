@@ -57,6 +57,7 @@
 #include "mdebugread.h"
 #include "gdb_stat.h"
 #include "gdb_string.h"
+#include "psympriv.h"
 
 #include "bfd.h"
 
@@ -2659,9 +2660,8 @@ parse_partial_symbols (struct objfile *objfile)
 				  textlow,
 				  objfile->global_psymbols.next,
 				  objfile->static_psymbols.next);
-      pst->read_symtab_private = ((char *)
-				  obstack_alloc (&objfile->objfile_obstack,
-						 sizeof (struct symloc)));
+      pst->read_symtab_private = obstack_alloc (&objfile->objfile_obstack,
+						sizeof (struct symloc));
       memset (pst->read_symtab_private, 0, sizeof (struct symloc));
 
       save_pst = pst;
@@ -4693,9 +4693,8 @@ new_psymtab (char *name, struct objfile *objfile)
 
   /* Keep a backpointer to the file's symbols */
 
-  psymtab->read_symtab_private = ((char *)
-				  obstack_alloc (&objfile->objfile_obstack,
-						 sizeof (struct symloc)));
+  psymtab->read_symtab_private = obstack_alloc (&objfile->objfile_obstack,
+						sizeof (struct symloc));
   memset (psymtab->read_symtab_private, 0, sizeof (struct symloc));
   CUR_BFD (psymtab) = cur_bfd;
   DEBUG_SWAP (psymtab) = debug_swap;

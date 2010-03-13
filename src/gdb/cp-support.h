@@ -90,12 +90,8 @@ extern int cp_is_anonymous (const char *namespace);
 
 extern void cp_add_using_directive (const char *dest,
                                     const char *src,
-                                    const char *alias);
-
-extern struct using_direct *cp_add_using (const char *dest,
-                                          const char *src,
-                                          const char *alias,
-					  struct using_direct *next);
+                                    const char *alias,
+                                    struct obstack *obstack);
 
 extern void cp_initialize_namespace (void);
 
@@ -111,13 +107,11 @@ extern void cp_set_block_scope (const struct symbol *symbol,
 extern void cp_scan_for_anonymous_namespaces (const struct symbol *symbol);
 
 extern struct symbol *cp_lookup_symbol_nonlocal (const char *name,
-						 const char *linkage_name,
 						 const struct block *block,
 						 const domain_enum domain);
 
 extern struct symbol *cp_lookup_symbol_namespace (const char *namespace,
 						  const char *name,
-						  const char *linkage_name,
 						  const struct block *block,
 						  const domain_enum domain,
 						  const int search_parents);

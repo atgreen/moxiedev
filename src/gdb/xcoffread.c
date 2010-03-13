@@ -50,6 +50,7 @@
 #include "stabsread.h"
 #include "expression.h"
 #include "complaints.h"
+#include "psympriv.h"
 
 #include "gdb-stabs.h"
 
@@ -1958,8 +1959,8 @@ xcoff_start_psymtab (struct objfile *objfile, char *filename, int first_symnum,
 			0,
 			global_syms, static_syms);
 
-  result->read_symtab_private = (char *)
-    obstack_alloc (&objfile->objfile_obstack, sizeof (struct symloc));
+  result->read_symtab_private = obstack_alloc (&objfile->objfile_obstack,
+					       sizeof (struct symloc));
   ((struct symloc *) result->read_symtab_private)->first_symnum = first_symnum;
   result->read_symtab = xcoff_psymtab_to_symtab;
 
@@ -2020,9 +2021,8 @@ xcoff_end_psymtab (struct partial_symtab *pst, char **include_list,
       allocate_psymtab (include_list[i], objfile);
 
       subpst->section_offsets = pst->section_offsets;
-      subpst->read_symtab_private =
-	(char *) obstack_alloc (&objfile->objfile_obstack,
-				sizeof (struct symloc));
+      subpst->read_symtab_private = obstack_alloc (&objfile->objfile_obstack,
+						   sizeof (struct symloc));
       ((struct symloc *) subpst->read_symtab_private)->first_symnum = 0;
       ((struct symloc *) subpst->read_symtab_private)->numsyms = 0;
       subpst->textlow = 0;
@@ -3036,6 +3036,7 @@ static struct sym_fns xcoff_sym_fns =
 				   a file.  */
   aix_process_linenos,          /* sym_read_linetable */
   default_symfile_relocate,	/* sym_relocate: Relocate a debug section.  */
+  &psym_functions,
   NULL				/* next: pointer to next struct sym_fns */
 };
 

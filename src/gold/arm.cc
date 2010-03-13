@@ -2444,6 +2444,8 @@ class Target_arm : public Sized_target<32, big_endian>
 	case elfcpp::R_ARM_THM_JUMP19:
 	case elfcpp::R_ARM_PLT32:
 	case elfcpp::R_ARM_THM_XPC22:
+	case elfcpp::R_ARM_PREL31:
+	case elfcpp::R_ARM_SBREL31:
 	  return false;
 
 	default:
@@ -5192,9 +5194,10 @@ Arm_exidx_fixup::update_offset_map(
 {
   if (this->section_offset_map_ == NULL)
     this->section_offset_map_ = new Arm_exidx_section_offset_map();
-  section_offset_type output_offset = (delete_entry
-				       ? -1
-				       : input_offset - deleted_bytes);
+  section_offset_type output_offset =
+    (delete_entry
+     ? Arm_exidx_input_section::invalid_offset
+     : input_offset - deleted_bytes);
   (*this->section_offset_map_)[input_offset] = output_offset;
 }
 
@@ -6504,7 +6507,7 @@ Arm_relobj<big_endian>::update_output_local_symbol_count()
       Symbol_value<32>& lv((*this->local_values())[i]);
 
       // This local symbol was already discarded by do_count_local_symbols.
-      if (!lv.needs_output_symtab_entry())
+      if (lv.is_output_symtab_index_set() && !lv.has_output_symtab_entry())
 	continue;
 
       bool is_ordinary;
@@ -9880,30 +9883,6 @@ Target_arm<big_endian>::scan_reloc_for_stub(
   const Arm_relobj<big_endian>* arm_relobj =
     Arm_relobj<big_endian>::as_arm_relobj(relinfo->object);
 
-  if (r_type == elfcpp::R_ARM_V4BX)
-    {
-      const uint32_t reg = (addend & 0xf);
-      if (this->fix_v4bx() == General_options::FIX_V4BX_INTERWORKING
-	  && reg < 0xf)
-	{
-	  // Try looking up an existing stub from a stub table.
-	  Stub_table<big_endian>* stub_table =
-	    arm_relobj->stub_table(relinfo->data_shndx);
-	  gold_assert(stub_table != NULL);
-
-	  if (stub_table->find_arm_v4bx_stub(reg) == NULL)
-	    {
-	      // create a new stub and add it to stub table.
-	      Arm_v4bx_stub* stub =
-		this->stub_factory().make_arm_v4bx_stub(reg);
-	      gold_assert(stub != NULL);
-	      stub_table->add_arm_v4bx_stub(stub);
-	    }
-	}
-
-      return;
-    }
-
   bool target_is_thumb;
   Symbol_value<32> symval;
   if (gsym != NULL)
@@ -10094,15 +10073,36 @@ Target_arm<big_endian>::scan_reloc_section_for_stubs(
 	    continue;
 	}
 
+      // Create a v4bx stub if --fix-v4bx-interworking is used.
       if (r_type == elfcpp::R_ARM_V4BX)
 	{
-	  // Get the BX instruction.
-	  typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
-	  const Valtype* wv = reinterpret_cast<const Valtype*>(view + offset);
-	  elfcpp::Elf_types<32>::Elf_Swxword insn =
-	      elfcpp::Swap<32, big_endian>::readval(wv);
-	  this->scan_reloc_for_stub(relinfo, r_type, NULL, 0, NULL,
-				    insn, NULL);
+	  if (this->fix_v4bx() == General_options::FIX_V4BX_INTERWORKING)
+	    {
+	      // Get the BX instruction.
+	      typedef typename elfcpp::Swap<32, big_endian>::Valtype Valtype;
+	      const Valtype* wv =
+		reinterpret_cast<const Valtype*>(view + offset);
+	      elfcpp::Elf_types<32>::Elf_Swxword insn =
+		elfcpp::Swap<32, big_endian>::readval(wv);
+	      const uint32_t reg = (insn & 0xf);
+
+	      if (reg < 0xf)
+		{
+		  // Try looking up an existing stub from a stub table.
+		  Stub_table<big_endian>* stub_table =
+		    arm_object->stub_table(relinfo->data_shndx);
+		  gold_assert(stub_table != NULL);
+
+		  if (stub_table->find_arm_v4bx_stub(reg) == NULL)
+		    {
+		      // create a new stub and add it to stub table.
+		      Arm_v4bx_stub* stub =
+		        this->stub_factory().make_arm_v4bx_stub(reg);
+		      gold_assert(stub != NULL);
+		      stub_table->add_arm_v4bx_stub(stub);
+		    }
+		}
+	    }
 	  continue;
 	}
 

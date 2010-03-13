@@ -70,11 +70,8 @@ static const struct lc_time_T	_C_time_locale = {
 	 */
 	"%a %b %e %H:%M:%S %Y",
 
-	/* am */
-	"AM",
-
-	/* pm */
-	"PM",
+	/* am pm */
+	{ "AM", "PM" },
 
 	/* date_fmt */
 	"%a %b %e %H:%M:%S %Z %Y",
@@ -95,7 +92,33 @@ static const struct lc_time_T	_C_time_locale = {
 	/* ampm_fmt
 	 * To determine 12-hour clock format time (empty, if N/A)
 	 */
-	"%I:%M:%S %p"
+	"%I:%M:%S %p",
+
+	/* era
+	 * Era.  This and the following entries are used if the alternative
+	 * date format is specified in strftime
+	 */
+	"",
+
+	/* era_d_fmt
+	 * Era date format used with the %Ex
+	 */
+	"",
+
+	/* era_d_t_fmt
+	 * Era date/time format (%Ec)
+	 */
+	"",
+
+	/* era_t_fmt
+	 * Era time format (%EX)
+	 */
+	"",
+
+	/* alt_digits
+	 * Alternate digits used if %O format prefix is specified
+	 */
+	""
 };
 
 struct lc_time_T *
@@ -106,14 +129,30 @@ __get_current_time_locale(void) {
 }
 
 int
-__time_load_locale(const char *name) {
+__time_load_locale(const char *name, void *f_wctomb, const char *charset) {
 
 	int	ret;
 
+#ifdef __CYGWIN__
+	extern int __set_lc_time_from_win (const char *, struct lc_time_T *,
+					   char **, void *, const char *);
+	int old_time_using_locale = _time_using_locale;
+	_time_using_locale = 0;
+	ret = __set_lc_time_from_win (name, &_time_locale, &time_locale_buf,
+				      f_wctomb, charset);
+	/* ret == -1: error, ret == 0: C/POSIX, ret > 0: valid */
+	if (ret < 0)
+	  _time_using_locale = old_time_using_locale;
+	else
+	  {
+	    _time_using_locale = ret;
+	    ret = 0;
+	  }
+#else
 	ret = __part_load_locale(name, &_time_using_locale,
 			time_locale_buf, "LC_TIME",
 			LCTIME_SIZE, LCTIME_SIZE,
 			(const char **)&_time_locale);
-
+#endif
 	return (ret);
 }

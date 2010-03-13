@@ -1,15 +1,15 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/30_threads/lock_guard
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-03-02T23:00:21.927326Z
+157180
+redi
 
 
 
@@ -25,6 +25,9 @@ jakub
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+cons
+dir
 
 requirements
 dir

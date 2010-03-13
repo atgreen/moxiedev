@@ -1,7 +1,7 @@
 10
 
 dir
-157074
+157419
 svn://gcc.gnu.org/svn/gcc/trunk/libgcc/config
 svn://gcc.gnu.org/svn/gcc
 
@@ -29,16 +29,16 @@ hp
 moxie
 dir
 
-libbid
+alpha
 dir
 
-alpha
+libbid
 dir
 
 avr
 dir
 
-rx
+i386
 dir
 
 t-slibgcc-darwin
@@ -75,7 +75,7 @@ andreast
 
 4848
 
-i386
+rx
 dir
 
 rs6000
@@ -118,6 +118,9 @@ bje
 
 581
 
+ia64
+dir
+
 t-tls
 file
 
@@ -152,16 +155,13 @@ hjl
 
 56
 
-ia64
-dir
-
 sparc
 dir
 
-sh
+mmix
 dir
 
-mmix
+sh
 dir
 
 lm32

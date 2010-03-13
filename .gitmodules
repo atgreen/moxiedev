@@ -1,9 +1,9 @@
 [submodule "busybox"]
 	path = busybox
-	url = git@github.com:/atgreen/busybox-moxie
+	url = git://github.com/atgreen/busybox-moxie
 [submodule "linux-2.6"]
 	path = linux-2.6
-	url = git@github.com:/atgreen/linux-2.6-moxie
+	url = git://github.com/atgreen/linux-2.6-moxie
 [submodule "qemu"]
 	path = qemu
-	url = git@github.com:/atgreen/qemu-moxie
+	url = git://github.com/atgreen/qemu-moxie

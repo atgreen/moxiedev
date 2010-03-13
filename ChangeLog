@@ -1,3 +1,7 @@
+2010-03-12  Anthony Green  <green@moxielogic.com>
+
+	* .gitmodules: Use read-only submodules for anonymous checkouts.
+
 2010-02-25  Anthony Green  <green@moxielogic.com>
 
 	* build.xml: Create root/usr/bin prior to running build system

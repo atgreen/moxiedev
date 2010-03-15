@@ -1,3 +1,14 @@
+2010-03-15  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: rename gcccheck and gdbcheck to check.gcc and
+	check.gdb.  Make them depend on new config.dejagnu task.
+	Remove post-results task.
+	Add check.binutils and check.
+	* scripts/dejagnu/site.exp.in: Copy from site.exp.  Use
+	@DEJAGNUDIR@, which is set by config.dejagnu.
+	* scripts/dejagnu/site.exp: Delete.
+	* .gitignore: Ignore site.exp.
+
 2010-03-12  Anthony Green  <green@moxielogic.com>
 
 	* .gitmodules: Use read-only submodules for anonymous checkouts.

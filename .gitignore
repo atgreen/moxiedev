@@ -11,3 +11,5 @@ build.log
 initfs/uclinux/initramfs.txt
 initfs/uclinux/src/init
 initfs/uclinux/src/init.gdb
+scripts/dejagnu/site.exp
+

@@ -1,6 +1,6 @@
-# Copyright (C) 2008  Anthony Green
+# Copyright (C) 2008, 2010  Anthony Green
 #
-# This file is part of ggxdev.
+# This file is part of moxiedev.
 #
 # ggxdev is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by
@@ -21,8 +21,7 @@ if ![info exists boards_dir] {
     set boards_dir {}
 }
 
-lappend boards_dir [pwd]/../../../../../scripts/dejagnu
-lappend boards_dir [pwd]/../../../../scripts/dejagnu
+lappend boards_dir @DEJAGNUDIR@
 
 verbose "Global Config File: target_triplet is $target_triplet" 2
 global target_list

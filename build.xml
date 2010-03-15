@@ -15,20 +15,29 @@
     <echo message=" available targets are:"/>
     <echo message=""/>
     
-    <echo message=" benchmark    --> run selected MiBench benchmarks"/>
-    <echo message=" build        --> builds and installs in root dir"/>
-    <echo message=" arm-build    --> builds and installs an arm-eabi toolchain in arm-root"/>
-    <echo message=" clean        --> cleans tree of all generated files"/>
-    <echo message=" gcccheck     --> runs gcc testsuite on the moxie simulator"/>
-    <echo message=" gdbcheck     --> runs gdb testsuite on the moxie simulator"/>
-    <echo message=" post-results --> post the last gcccheck results to the moxiedev-testresults list"/>
-    <echo message=" srpm         --> create source RPM files for the tools"/>
-    <echo message=" usage        --> provides help on using the build tool (default)"/>
+    <echo message=" benchmark       --> run selected MiBench benchmarks"/>
+    <echo message=" build           --> builds and installs in root dir"/>
+    <echo message=" arm-build       --> builds and installs an arm-eabi toolchain in arm-root"/>
+    <echo message=" clean           --> cleans tree of all generated files"/>
+    <echo message=" check           --> runs all testsuites for moxie-elf tools"/>
+    <echo message=" check.binutils  --> runs binutils/gas/ld testsuites for moxie-elf"/>
+    <echo message=" check.gcc       --> runs gcc testsuite on the moxie simulator"/>
+    <echo message=" check.gdb       --> runs gdb testsuite on the moxie simulator"/>
+    <echo message=" srpm            --> create source RPM files for the tools"/>
+    <echo message=" usage           --> provides help on using the build tool (default)"/>
     <echo message=""/>
     <echo message=" See comments inside the build.xml file for more details."/>
     <echo message="-------------------------------------------------------------"/>
     <echo message=""/>
     <echo message=""/>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Update dejagnu config file                                          -->
+  <!-- =================================================================== -->
+  <target name="config.dejagnu">
+    <copy file="${basedir}/scripts/dejagnu/site.exp.in" tofile="${basedir}/scripts/dejagnu/site.exp" />
+    <replace file="${basedir}/scripts/dejagnu/site.exp" token="@DEJAGNUDIR@" value="${basedir}/scripts/dejagnu" />
   </target>
 
   <!-- =================================================================== -->
@@ -527,7 +536,7 @@
   <!-- Run the gcc testsuite on the moxie simulator                      -->
   <!-- =================================================================== -->
 
-  <target name="gcccheck">
+  <target name="check.gcc" depends="config.dejagnu">
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <env key="DEJAGNU" path="${basedir}/scripts/dejagnu/site.exp"/>
@@ -541,8 +550,7 @@
   <!-- Run the gdb testsuite on the moxie simulator                        -->
   <!-- =================================================================== -->
 
-  <target name="gdbcheck">
-    <echo message=" basedir = ${basedir}" />
+  <target name="check.gdb" depends="config.dejagnu">
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <env key="DEJAGNU" path="${basedir}/scripts/dejagnu/site.exp"/>
@@ -551,6 +559,39 @@
       <arg value="RUNTESTFLAGS=--target_board moxie-sim ${expfile}"/>
     </exec>
   </target>
+
+  <!-- =================================================================== -->
+  <!-- Run the binutils/gas/ld testsuite on the moxie simulator            -->
+  <!-- =================================================================== -->
+
+  <target name="check.binutils" depends="config.dejagnu">
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <env key="DEJAGNU" path="${basedir}/scripts/dejagnu/site.exp"/>
+      <arg value="--directory=build/src/binutils"/>
+      <arg value="check"/>
+      <arg value="RUNTESTFLAGS=--target_board moxie-sim ${expfile}"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <env key="DEJAGNU" path="${basedir}/scripts/dejagnu/site.exp"/>
+      <arg value="--directory=build/src/gas"/>
+      <arg value="check"/>
+      <arg value="RUNTESTFLAGS=--target_board moxie-sim ${expfile}"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <env key="DEJAGNU" path="${basedir}/scripts/dejagnu/site.exp"/>
+      <arg value="--directory=build/src/ld"/>
+      <arg value="check"/>
+      <arg value="RUNTESTFLAGS=--target_board moxie-sim ${expfile}"/>
+    </exec>
+  </target>
+
+  <!-- =================================================================== -->
+  <!-- Run all moxie-elf tools testsuites                                  -->
+  <!-- =================================================================== -->
+  <target name="check" depends="check.binutils,check.gcc,check.gdb"/>
 
   <!-- =================================================================== -->
   <!-- Run selected MiBench benchmarks                                     -->
@@ -606,20 +647,6 @@
       <arg value="-c"/>
       <arg value="./scripts/mksrpm.sh"/>
     </exec>
-  </target>
-
-  <target name="post-results">
-    <mail 
-       user="XXXXXXXXXXXX"
-       password="XXXXXXXXXXXXXX"
-       mailport="587"
-       encoding="mime"
-       ssl="yes"
-       from="XXXXXXXXXXXXXXXXXx"
-       mailhost="smtp.gmail.com"
-       tolist="moxiedev-testresults@googlegroups.com"
-       subject="XXXXXXXXXXXXXXXXX"
-       messagefile="XXXXXXXXXXXX"/>
   </target>
 
 </project>

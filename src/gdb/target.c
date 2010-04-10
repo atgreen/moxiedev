@@ -2843,13 +2843,9 @@ init_dummy_target (void)
   dummy_target.to_has_stack = (int (*) (struct target_ops *)) return_zero;
   dummy_target.to_has_registers = (int (*) (struct target_ops *)) return_zero;
   dummy_target.to_has_execution = (int (*) (struct target_ops *)) return_zero;
-<<<<<<< target.c
-  dummy_target.to_stopped_by_watchpoint = return_zero;
-=======
   dummy_target.to_stopped_by_watchpoint = return_zero;
   dummy_target.to_stopped_data_address =
     (int (*) (struct target_ops *, CORE_ADDR *)) return_zero;
->>>>>>> 1.242
   dummy_target.to_magic = OPS_MAGIC;
 }
 

@@ -1,3 +1,9 @@
+2010-03-17  Anthony Green  <green@moxielogic.com>
+
+	* readelf.c (is_32bit_abs_reloc): Identify 32-bit absolute
+	relocation for moxie.
+	(dump_relocations): Handle moxie relocs.
+
 2010-03-05  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 
 	* readelf.c (get_ver_flags): Handle VER_FLG_INFO.

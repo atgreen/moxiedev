@@ -1,6 +1,7 @@
 2010-03-17  Anthony Green  <green@moxielogic.com>
 
-	* readelf.c (is_32bit_abs_reloc): Identify 32-bit absolute
+	* readelf.c: Include moxie.h
+	(is_32bit_abs_reloc): Identify 32-bit absolute
 	relocation for moxie.
 	(dump_relocations): Handle moxie relocs.
 

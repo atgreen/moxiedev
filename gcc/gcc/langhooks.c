@@ -1,5 +1,5 @@
 /* Default language-specific hooks.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Alexandre Oliva  <aoliva@redhat.com>
 
@@ -37,6 +37,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "langhooks-def.h"
 #include "ggc.h"
 #include "diagnostic.h"
+#include "tree-diagnostic.h"
 #include "cgraph.h"
 #include "output.h"
 
@@ -319,7 +320,7 @@ write_global_declarations (void)
   /* Process the decls in reverse order--earliest first.
      Put them into VEC from back to front, then take out from front.  */
 
-  for (i = 0, decl = globals; i < len; i++, decl = TREE_CHAIN (decl))
+  for (i = 0, decl = globals; i < len; i++, decl = DECL_CHAIN (decl))
     vec[len - i - 1] = decl;
 
   wrapup_global_declarations (vec, len);
@@ -336,6 +337,30 @@ lhd_initialize_diagnostics (struct diagnostic_context *ctx ATTRIBUTE_UNUSED)
 {
 }
 
+/* Called to perform language-specific options initialization.  */
+void
+lhd_init_options (unsigned int decoded_options_count ATTRIBUTE_UNUSED,
+		  struct cl_decoded_option *decoded_options ATTRIBUTE_UNUSED)
+{
+}
+
+/* By default, always complain about options for the wrong language.  */
+bool
+lhd_complain_wrong_lang_p (const struct cl_option *option ATTRIBUTE_UNUSED)
+{
+  return true;
+}
+
+/* By default, no language-specific options are valid.  */
+bool
+lhd_handle_option (size_t code ATTRIBUTE_UNUSED,
+		   const char *arg ATTRIBUTE_UNUSED,
+		   int value ATTRIBUTE_UNUSED, int kind ATTRIBUTE_UNUSED,
+		   const struct cl_option_handlers *handlers ATTRIBUTE_UNUSED)
+{
+  return false;
+}
+
 /* The default function to print out name of current function that caused
    an error.  */
 void
@@ -345,7 +370,7 @@ lhd_print_error_function (diagnostic_context *context, const char *file,
   if (diagnostic_last_function_changed (context, diagnostic))
     {
       const char *old_prefix = context->printer->prefix;
-      tree abstract_origin = diagnostic->abstract_origin;
+      tree abstract_origin = diagnostic_abstract_origin (diagnostic);
       char *new_prefix = (file && abstract_origin == NULL)
 			 ? file_name_as_prefix (file) : NULL;
 
@@ -425,7 +450,7 @@ lhd_print_error_function (diagnostic_context *context, const char *file,
 		  pp_newline (context->printer);
 		  if (s.file != NULL)
 		    {
-		      if (flag_show_column)
+		      if (context->show_column)
 			pp_printf (context->printer,
 				   _("    inlined from %qs at %s:%d:%d"),
 				   identifier_to_locale (lang_hooks.decl_printable_name (fndecl, 2)),

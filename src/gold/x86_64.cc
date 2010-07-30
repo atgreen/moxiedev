@@ -547,19 +547,17 @@ Target_x86_64::got_section(Symbol_table* symtab, Layout* layout)
 
       this->got_ = new Output_data_got<64, false>();
 
-      Output_section* os;
-      os = layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
-					   (elfcpp::SHF_ALLOC
-					    | elfcpp::SHF_WRITE),
-					   this->got_, false, true, true,
-					   false);
+      layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
+				      (elfcpp::SHF_ALLOC
+				       | elfcpp::SHF_WRITE),
+				      this->got_, false, true, true, false);
 
       this->got_plt_ = new Output_data_space(8, "** GOT PLT");
-      os = layout->add_output_section_data(".got.plt", elfcpp::SHT_PROGBITS,
-					   (elfcpp::SHF_ALLOC
-					    | elfcpp::SHF_WRITE),
-					   this->got_plt_, false, false,
-					   false, true);
+      layout->add_output_section_data(".got.plt", elfcpp::SHT_PROGBITS,
+				      (elfcpp::SHF_ALLOC
+				       | elfcpp::SHF_WRITE),
+				      this->got_plt_, false, false, false,
+				      true);
 
       // The first three entries are reserved.
       this->got_plt_->set_current_data_size(3 * 8);
@@ -1398,14 +1396,10 @@ Target_x86_64::Scan::unsupported_reloc_global(Sized_relobj<64, false>* object,
 	     object->name().c_str(), r_type, gsym->demangled_name().c_str());
 }
 
-// Returns true if this relocation type could be that of a function pointer
-// only if the target is not position-independent code.
+// Returns true if this relocation type could be that of a function pointer.
 inline bool
 Target_x86_64::Scan::possible_function_pointer_reloc(unsigned int r_type)
 {
-  if (parameters->options().shared())
-    return false;
-
   switch (r_type)
     {
     case elfcpp::R_X86_64_64:
@@ -1413,6 +1407,11 @@ Target_x86_64::Scan::possible_function_pointer_reloc(unsigned int r_type)
     case elfcpp::R_X86_64_32S:
     case elfcpp::R_X86_64_16:
     case elfcpp::R_X86_64_8:
+    case elfcpp::R_X86_64_GOT64:
+    case elfcpp::R_X86_64_GOT32:
+    case elfcpp::R_X86_64_GOTPCREL64:
+    case elfcpp::R_X86_64_GOTPCREL:
+    case elfcpp::R_X86_64_GOTPLT64:
       {
         return true;
       }
@@ -1782,7 +1781,8 @@ Target_x86_64::gc_process_relocs(Symbol_table* symtab,
     }
 
    gold::gc_process_relocs<64, false, Target_x86_64, elfcpp::SHT_RELA,
-                           Target_x86_64::Scan>(
+                           Target_x86_64::Scan,
+			   Target_x86_64::Relocatable_size_for_reloc>(
     symtab,
     layout,
     this,

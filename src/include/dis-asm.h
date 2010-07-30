@@ -1,11 +1,11 @@
 /* Interface between the opcode library and its callers.
 
-   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2009
+   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2009, 2010
    Free Software Foundation, Inc.
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2, or (at your option)
+   the Free Software Foundation; either version 3, or (at your option)
    any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -261,8 +261,6 @@ extern int print_insn_m68hc11		(bfd_vma, disassemble_info *);
 extern int print_insn_m68hc12		(bfd_vma, disassemble_info *);
 extern int print_insn_m68k		(bfd_vma, disassemble_info *);
 extern int print_insn_m88k		(bfd_vma, disassemble_info *);
-extern int print_insn_maxq_big		(bfd_vma, disassemble_info *);
-extern int print_insn_maxq_little	(bfd_vma, disassemble_info *);
 extern int print_insn_mcore		(bfd_vma, disassemble_info *);
 extern int print_insn_mep		(bfd_vma, disassemble_info *);
 extern int print_insn_microblaze	(bfd_vma, disassemble_info *);
@@ -286,6 +284,7 @@ extern int print_insn_spu		(bfd_vma, disassemble_info *);
 extern int print_insn_tic30		(bfd_vma, disassemble_info *);
 extern int print_insn_tic4x		(bfd_vma, disassemble_info *);
 extern int print_insn_tic54x		(bfd_vma, disassemble_info *);
+extern int print_insn_tic6x		(bfd_vma, disassemble_info *);
 extern int print_insn_tic80		(bfd_vma, disassemble_info *);
 extern int print_insn_v850		(bfd_vma, disassemble_info *);
 extern int print_insn_vax		(bfd_vma, disassemble_info *);

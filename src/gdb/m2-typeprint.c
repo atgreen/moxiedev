@@ -67,11 +67,10 @@ int m2_is_unbounded_array (struct type *type);
 
 
 void
-m2_print_type (struct type *type, char *varstring, struct ui_file *stream,
+m2_print_type (struct type *type, const char *varstring, struct ui_file *stream,
 	       int show, int level)
 {
   enum type_code code;
-  int demangled_args;
 
   CHECK_TYPEDEF (type);
 
@@ -424,8 +423,6 @@ m2_is_long_set_of_type (struct type *type, struct type **of_type)
 static int
 m2_long_set (struct type *type, struct ui_file *stream, int show, int level)
 {
-  struct type *index_type;
-  struct type *range_type;
   struct type *of_type;
   int i;
   int len = TYPE_NFIELDS (type);

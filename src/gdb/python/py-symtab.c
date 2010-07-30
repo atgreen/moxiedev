@@ -321,10 +321,9 @@ symtab_and_line_to_sal_object (struct symtab_and_line sal)
 
 {
   sal_object *sal_obj;
-  symtab_object *symtab_obj;
   int success = 0;
-  sal_obj = PyObject_New (sal_object, &sal_object_type);
 
+  sal_obj = PyObject_New (sal_object, &sal_object_type);
   if (sal_obj)
     {
       success = set_sal (sal_obj, sal);
@@ -366,6 +365,7 @@ static void
 del_objfile_symtab (struct objfile *objfile, void *datum)
 {
   symtab_object *obj = datum;
+
   while (obj)
     {
       symtab_object *next = obj->next;
@@ -386,6 +386,7 @@ static void
 del_objfile_sal (struct objfile *objfile, void *datum)
 {
   sal_object *obj = datum;
+
   while (obj)
     {
       sal_object *next = obj->next;

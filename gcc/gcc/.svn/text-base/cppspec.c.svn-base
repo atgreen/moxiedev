@@ -1,5 +1,5 @@
 /* Specific flags and argument handling of the C preprocessor.
-   Copyright (C) 1999, 2007 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2007, 2010 Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -29,14 +29,6 @@ along with GCC; see the file COPYING3.  If not see
    extensions, unless -x options appear in argv, in which case we
    assume the user knows what they're doing.  If no explicit input is
    mentioned, it will read stdin.  */
-
-#ifndef SWITCH_TAKES_ARG
-#define SWITCH_TAKES_ARG(CHAR) DEFAULT_SWITCH_TAKES_ARG(CHAR)
-#endif
-
-#ifndef WORD_SWITCH_TAKES_ARG
-#define WORD_SWITCH_TAKES_ARG(STR) DEFAULT_WORD_SWITCH_TAKES_ARG (STR)
-#endif
 
 /* Suffixes for known sorts of input files.  Note that we do not list
    files which are normally considered to have been preprocessed already,
@@ -103,8 +95,8 @@ lang_specific_driver (int *in_argc, const char *const **in_argv,
 		need_E = 0;
 	      else if (argv[i][1] == 'S' || argv[i][1] == 'c')
 		{
-		  fatal ("\"%s\" is not a valid option to the preprocessor",
-			 argv[i]);
+		  fatal_error ("%qs is not a valid option to the "
+			       "preprocessor", argv[i]);
 		  return;
 		}
 	      else if (argv[i][1] == 'x')
@@ -125,7 +117,7 @@ lang_specific_driver (int *in_argc, const char *const **in_argv,
 	  seen_input++;
 	  if (seen_input == 3)
 	    {
-	      fatal ("too many input files");
+	      fatal_error ("too many input files");
 	      return;
 	    }
 	  else if (seen_input == 2)

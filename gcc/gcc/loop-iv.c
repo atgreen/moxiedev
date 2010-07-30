@@ -60,6 +60,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "expr.h"
 #include "intl.h"
 #include "output.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "df.h"
 #include "hashtab.h"
@@ -304,7 +305,7 @@ latch_dominating_def (rtx reg, df_ref *def)
   for (adef = DF_REG_DEF_CHAIN (regno); adef; adef = DF_REF_NEXT_REG (adef))
     {
       if (!bitmap_bit_p (df->blocks_to_analyze, DF_REF_BBNO (adef))
-	  || !bitmap_bit_p (bb_info->out, DF_REF_ID (adef)))
+	  || !bitmap_bit_p (&bb_info->out, DF_REF_ID (adef)))
 	continue;
 
       /* More than one reaching definition.  */

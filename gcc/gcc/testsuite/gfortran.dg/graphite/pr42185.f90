@@ -1,4 +1,4 @@
-! { dg-compile }
+! { dg-do compile }
 ! { dg-options "-fgraphite -O -ffast-math" }
 
 MODULE powell
@@ -25,3 +25,4 @@ CONTAINS
     END DO mainloop
   END SUBROUTINE trsapp
 END MODULE powell
+! { dg-final { cleanup-modules "powell" } }

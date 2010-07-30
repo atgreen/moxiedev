@@ -1,5 +1,6 @@
 /* Generic SSA value propagation engine.
-   Copyright (C) 2004, 2005, 2006, 2007, 2008 Free Software Foundation, Inc.
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
    Contributed by Diego Novillo <dnovillo@redhat.com>
 
    This file is part of GCC.
@@ -24,21 +25,17 @@
 #include "tm.h"
 #include "tree.h"
 #include "flags.h"
-#include "rtl.h"
 #include "tm_p.h"
-#include "ggc.h"
 #include "basic-block.h"
 #include "output.h"
-#include "expr.h"
 #include "function.h"
-#include "diagnostic.h"
+#include "gimple-pretty-print.h"
 #include "timevar.h"
 #include "tree-dump.h"
 #include "tree-flow.h"
 #include "tree-pass.h"
 #include "tree-ssa-propagate.h"
 #include "langhooks.h"
-#include "varray.h"
 #include "vec.h"
 #include "value-prof.h"
 #include "gimple.h"
@@ -642,7 +639,7 @@ valid_gimple_rhs_p (tree expr)
    as a single GIMPLE_CALL statement.  If the arguments require
    further gimplification, return false.  */
 
-bool
+static bool
 valid_gimple_call_p (tree expr)
 {
   unsigned i, nargs;
@@ -652,8 +649,17 @@ valid_gimple_call_p (tree expr)
 
   nargs = call_expr_nargs (expr);
   for (i = 0; i < nargs; i++)
-    if (! is_gimple_operand (CALL_EXPR_ARG (expr, i)))
-      return false;
+    {
+      tree arg = CALL_EXPR_ARG (expr, i);
+      if (is_gimple_reg_type (arg))
+	{
+	  if (!is_gimple_val (arg))
+	    return false;
+	}
+      else
+	if (!is_gimple_lvalue (arg))
+	  return false;
+    }
 
   return true;
 }
@@ -967,10 +973,13 @@ replace_phi_args_in (gimple phi, prop_value_t *prop_value)
    If FOLD_FN is non-NULL the function will be invoked on all statements
    before propagating values for pass specific simplification.
 
+   DO_DCE is true if trivially dead stmts can be removed.
+
    Return TRUE when something changed.  */
 
 bool
-substitute_and_fold (prop_value_t *prop_value, ssa_prop_fold_stmt_fn fold_fn)
+substitute_and_fold (prop_value_t *prop_value, ssa_prop_fold_stmt_fn fold_fn,
+		     bool do_dce)
 {
   basic_block bb;
   bool something_changed = false;
@@ -1015,8 +1024,12 @@ substitute_and_fold (prop_value_t *prop_value, ssa_prop_fold_stmt_fn fold_fn)
 	    continue;
 
 	  /* No point propagating into a stmt whose result is not used,
-	     but instead we might be able to remove a trivially dead stmt.  */
-	  if (gimple_get_lhs (stmt)
+	     but instead we might be able to remove a trivially dead stmt.
+	     Don't do this when called from VRP, since the SSA_NAME which
+	     is going to be released could be still referenced in VRP
+	     ranges.  */
+	  if (do_dce
+	      && gimple_get_lhs (stmt)
 	      && TREE_CODE (gimple_get_lhs (stmt)) == SSA_NAME
 	      && has_zero_uses (gimple_get_lhs (stmt))
 	      && !stmt_could_throw_p (stmt)

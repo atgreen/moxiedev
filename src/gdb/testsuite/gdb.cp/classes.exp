@@ -403,7 +403,7 @@ proc test_enums {} {
 
     # advance one line
 
-    gdb_test "next" ""
+    gdb_test "next" ".*"
 
     # print the object again
 
@@ -522,13 +522,13 @@ proc test_static_members {} {
     global hex
 
     gdb_test "print Foo::st" "\\$\[0-9\]+ = 100"
-    gdb_test "set foo.st = 200" "" ""
+    gdb_test_no_output "set foo.st = 200" ""
     gdb_test "print bar.st" "\\$\[0-9\]+ = 200"
     gdb_test "print &foo.st" "\\$\[0-9\]+ = \\(int ?\\*\\) $hex"
     gdb_test "print &Bar::st" "\\$\[0-9\]+ = \\(int ?\\*\\) $hex"
     gdb_test "print *\$" "\\$\[0-9\]+ = 200"
 
-    gdb_test "set print static-members off" ""
+    gdb_test_no_output "set print static-members off"
     gdb_test "print csi" \
 	"{x = 10, y = 20}" \
 	"print csi without static members"
@@ -536,7 +536,7 @@ proc test_static_members {} {
 	"{x = 30, y = 40}" \
 	"print cnsi without static members"
 
-    gdb_test "set print static-members on" ""
+    gdb_test_no_output "set print static-members on"
     gdb_test "print csi" \
 	"{x = 10, y = 20, static null = {x = 0, y = 0, static null = <same as static member of an already seen type>}}" \
 	"print csi with static members"
@@ -546,8 +546,6 @@ proc test_static_members {} {
 }
 
 proc do_tests {} {
-    global prms_id
-    global bug_id
     global subdir
     global objdir
     global srcdir
@@ -555,8 +553,6 @@ proc do_tests {} {
     global gdb_prompt
     global nl
 
-    set prms_id 0
-    set bug_id 0
 
     # Start with a fresh gdb.
 
@@ -565,8 +561,8 @@ proc do_tests {} {
     gdb_reinitialize_dir $srcdir/$subdir
     gdb_load $binfile
 
-    gdb_test "set language c++" "" ""
-    gdb_test "set width 0" "" ""
+    gdb_test_no_output "set language c++" ""
+    gdb_test_no_output "set width 0" ""
 
     if ![runto_main ] then {
 	perror "couldn't run to breakpoint"
@@ -588,13 +584,13 @@ proc do_tests {} {
     # are any more instructions to finish the function call.
     gdb_test_multiple "finish" "" {
 	-re "enums2 \\(\\);.*$gdb_prompt $" {
-	    gdb_test "next" "" ""
+	    gdb_test "next" ".*" ""
 	}
 	-re "$gdb_prompt $" { }
     }
     test_enums
 
-    gdb_test "finish" "" ""
+    gdb_test "finish" ".*" ""
     test_pointers_to_class_members
     test_static_members
 

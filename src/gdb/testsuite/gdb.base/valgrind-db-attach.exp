@@ -51,6 +51,10 @@ gdb_test_multiple "" $test {
 	unsupported $test
 	return -1
     }
+    -re "valgrind: wrong ELF executable class" {
+	unsupported $test
+	return -1
+    }
     -re "command not found" {
 	# The spawn succeeded, but then valgrind was not found - e.g. if
 	# we spawned SSH to a remote system.
@@ -71,10 +75,10 @@ gdb_test_multiple "" $test {
     }
 }
 
-gdb_test "" "" "eat first prompt"
+gdb_test "" ".*" "eat first prompt"
 
 # Initialization from default_gdb_start.
-gdb_test "set height 0"
-gdb_test "set width 0"
+gdb_test_no_output "set height 0"
+gdb_test_no_output "set width 0"
 
 gdb_test "bt" "in main \\(.*\\) at .*${srcfile}:$double_free"

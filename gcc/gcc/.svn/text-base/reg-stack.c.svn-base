@@ -156,19 +156,17 @@
 #include "coretypes.h"
 #include "tm.h"
 #include "tree.h"
-#include "rtl.h"
+#include "rtl-error.h"
 #include "tm_p.h"
 #include "function.h"
 #include "insn-config.h"
 #include "regs.h"
 #include "hard-reg-set.h"
 #include "flags.h"
-#include "toplev.h"
 #include "recog.h"
 #include "output.h"
 #include "basic-block.h"
 #include "cfglayout.h"
-#include "varray.h"
 #include "reload.h"
 #include "ggc.h"
 #include "timevar.h"
@@ -176,6 +174,7 @@
 #include "target.h"
 #include "df.h"
 #include "vecprim.h"
+#include "emit-rtl.h"  /* FIXME: Can go away once crtl is moved to rtl.h.  */
 
 #ifdef STACK_REGS
 

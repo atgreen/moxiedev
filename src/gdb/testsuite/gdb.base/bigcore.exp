@@ -21,8 +21,6 @@ if $tracelevel then {
 	strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 # Are we on a target board?  As of 2004-02-12, GDB didn't have a
 # mechanism that would let it efficiently access a remote corefile.
@@ -69,10 +67,9 @@ gdb_exit
 gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
-gdb_test "set print sevenbit-strings" "" \
-	"set print sevenbit-strings; ${testfile}"
-gdb_test "set width 0" "" \
-	"set width 0; ${testfile}"
+gdb_test_no_output "set print sevenbit-strings"
+gdb_test_no_output "set width 0"
+
 if { ![runto_main] } then {
     gdb_suppress_tests;
 }
@@ -118,7 +115,7 @@ set prev_heap [extract_heap prev]
 
 # Save the total allocated size within GDB so that we can check
 # the core size later.
-gdb_test "set \$bytes_allocated = bytes_allocated" "" "save heap size"
+gdb_test_no_output "set \$bytes_allocated = bytes_allocated" "save heap size"
 
 # Now create a core dump
 

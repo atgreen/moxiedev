@@ -1,5 +1,5 @@
 /* Data dependence analysis for Graphite.
-   Copyright (C) 2009 Free Software Foundation, Inc.
+   Copyright (C) 2009, 2010 Free Software Foundation, Inc.
    Contributed by Sebastian Pop <sebastian.pop@amd.com> and
    Konrad Trifunovic <konrad.trifunovic@inria.fr>.
 
@@ -184,10 +184,10 @@ print_pddr (FILE *file, poly_ddr_p pddr)
     fprintf (file, "has_dependence");
 
   fprintf (file, "\n  source ");
-  print_pdr (file, PDDR_SOURCE (pddr));
+  print_pdr (file, PDDR_SOURCE (pddr), 2);
 
   fprintf (file, "\n  sink ");
-  print_pdr (file, PDDR_SINK (pddr));
+  print_pdr (file, PDDR_SINK (pddr), 2);
 
   if (PDDR_KIND (pddr) == has_dependence)
     {
@@ -202,7 +202,7 @@ print_pddr (FILE *file, poly_ddr_p pddr)
 
 /* Prints to STDERR the poly_ddr_p PDDR.  */
 
-void
+DEBUG_FUNCTION void
 debug_pddr (poly_ddr_p pddr)
 {
   print_pddr (stderr, pddr);

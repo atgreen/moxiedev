@@ -1,5 +1,5 @@
 /* Code sinking for trees
-   Copyright (C) 2001, 2002, 2003, 2004, 2007, 2008, 2009
+   Copyright (C) 2001, 2002, 2003, 2004, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Daniel Berlin <dan@dberlin.org>
 
@@ -23,10 +23,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
-#include "ggc.h"
 #include "tree.h"
 #include "basic-block.h"
-#include "diagnostic.h"
+#include "gimple-pretty-print.h"
 #include "tree-inline.h"
 #include "tree-flow.h"
 #include "gimple.h"
@@ -35,7 +34,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "fibheap.h"
 #include "hashtab.h"
 #include "tree-iterator.h"
-#include "real.h"
 #include "alloc-pool.h"
 #include "tree-pass.h"
 #include "flags.h"
@@ -192,8 +190,11 @@ is_hidden_global_store (gimple stmt)
 	    return true;
 
 	}
-      else if (INDIRECT_REF_P (lhs))
+      else if (INDIRECT_REF_P (lhs)
+	       || TREE_CODE (lhs) == MEM_REF)
 	return ptr_deref_may_alias_global_p (TREE_OPERAND (lhs, 0));
+      else if (CONSTANT_CLASS_P (lhs))
+	return true;
       else
 	gcc_unreachable ();
     }

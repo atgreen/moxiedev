@@ -1161,6 +1161,7 @@ static const struct opcode32 arm_opcodes[] =
    %x			print warning if conditional an not at end of IT block"
    %X			print "\t; unpredictable <IT:code>" if conditional
    %I			print IT instruction suffix and operands
+   %W			print Thumb Writeback indicator for LDMIA
    %<bitfield>r		print bitfield as an ARM register
    %<bitfield>d		print bitfield as a decimal
    %<bitfield>H         print (bitfield * 2) as a decimal
@@ -1248,6 +1249,7 @@ static const struct opcode16 thumb_opcodes[] =
   {ARM_EXT_V4T, 0x5000, 0xFA00, "str%10'b%c\t%0-2r, [%3-5r, %6-8r]"},
   {ARM_EXT_V4T, 0x5800, 0xFA00, "ldr%10'b%c\t%0-2r, [%3-5r, %6-8r]"},
   /* format 1 */
+  {ARM_EXT_V4T, 0x0000, 0xFFC0, "mov%C\t%0-2r, %3-5r"},
   {ARM_EXT_V4T, 0x0000, 0xF800, "lsl%C\t%0-2r, %3-5r, #%6-10d"},
   {ARM_EXT_V4T, 0x0800, 0xF800, "lsr%C\t%0-2r, %3-5r, %s"},
   {ARM_EXT_V4T, 0x1000, 0xF800, "asr%C\t%0-2r, %3-5r, %s"},
@@ -1274,7 +1276,7 @@ static const struct opcode16 thumb_opcodes[] =
   {ARM_EXT_V4T, 0xA800, 0xF800, "add%c\t%8-10r, sp, #%0-7W"},
   /* format 15 */
   {ARM_EXT_V4T, 0xC000, 0xF800, "stmia%c\t%8-10r!, %M"},
-  {ARM_EXT_V4T, 0xC800, 0xF800, "ldmia%c\t%8-10r!, %M"},
+  {ARM_EXT_V4T, 0xC800, 0xF800, "ldmia%c\t%8-10r%W, %M"},
   /* format 17 */
   {ARM_EXT_V4T, 0xDF00, 0xFF00, "svc%c\t%0-7d"},
   /* format 16 */
@@ -2468,7 +2470,7 @@ print_insn_neon (struct disassemble_info *info, long given, bfd_boolean thumb)
 			  func (stream, "d%d-d%d", rd, rd + n - 1);
 			func (stream, "}, [%s", arm_regnames[rn]);
 			if (align)
-			  func (stream, ", :%d", 32 << align);
+			  func (stream, " :%d", 32 << align);
 			func (stream, "]");
 			if (rm == 0xd)
 			  func (stream, "!");
@@ -2543,7 +2545,7 @@ print_insn_neon (struct disassemble_info *info, long given, bfd_boolean thumb)
                             rd + i * stride, idx);
                         func (stream, "}, [%s", arm_regnames[rn]);
 			if (align)
-			  func (stream, ", :%d", align);
+			  func (stream, " :%d", align);
 			func (stream, "]");
 			if (rm == 0xd)
 			  func (stream, "!");
@@ -2584,9 +2586,9 @@ print_insn_neon (struct disassemble_info *info, long given, bfd_boolean thumb)
                             if (type == 3)
                               align = (size > 1) ? align >> 1 : align;
 			    if (type == 2 || (type == 0 && !size))
-			      func (stream, ", :<bad align %d>", align);
+			      func (stream, " :<bad align %d>", align);
 			    else
-			      func (stream, ", :%d", align);
+			      func (stream, " :%d", align);
 			  }
 			func (stream, "]");
 			if (rm == 0xd)
@@ -2719,7 +2721,8 @@ print_insn_neon (struct disassemble_info *info, long given, bfd_boolean thumb)
                               }
                             else
                               func (stream, "#%ld\t; 0x%.8lx",
-				    (long) (NEGATIVE_BIT_SET ? value | ~0xffffffffL : value),
+				    (long) (((value & 0x80000000L) != 0) 
+					    ? value | ~0xffffffffL : value),
 				    value);
                             break;
 
@@ -3152,15 +3155,32 @@ print_insn_arm (bfd_vma pc, struct disassemble_info *info, long given)
 		      break;
 
 		    case 'U':
-		      switch (given & 0xf)
+		      if ((given & 0xf0) == 0x60) 
 			{
-			case 0xf: func (stream, "sy"); break;
-			case 0x7: func (stream, "un"); break;
-			case 0xe: func (stream, "st"); break;
-			case 0x6: func (stream, "unst"); break;
-			default:
-			  func (stream, "#%d", (int) given & 0xf);
-			  break;
+			  switch (given & 0xf)
+			    {
+			    case 0xf: func (stream, "sy"); break;
+			    default:
+			      func (stream, "#%d", (int) given & 0xf);
+			      break;
+			    }
+			} 
+		      else 
+			{
+			  switch (given & 0xf)
+			    {
+			    case 0xf: func (stream, "sy"); break;
+			    case 0x7: func (stream, "un"); break;
+			    case 0xe: func (stream, "st"); break;
+			    case 0x6: func (stream, "unst"); break;
+			    case 0xb: func (stream, "ish"); break;
+			    case 0xa: func (stream, "ishst"); break;
+			    case 0x3: func (stream, "osh"); break;
+			    case 0x2: func (stream, "oshst"); break;
+			    default:
+			      func (stream, "#%d", (int) given & 0xf);
+			      break;
+			    }
 			}
 		      break;
 
@@ -3437,6 +3457,14 @@ print_insn_thumb16 (bfd_vma pc, struct disassemble_info *info, long given)
 		  func (stream, "}");
 		}
 		break;
+
+	      case 'W':
+		/* Print writeback indicator for a LDMIA.  We are doing a
+		   writeback if the base register is not in the register
+		   mask.  */
+		if ((given & (1 << ((given & 0x0700) >> 8))) == 0)
+		  func (stream, "!");
+	      	break;
 
 	      case 'b':
 		/* Print ARM V6T2 CZB address: pc+4+6 bits.  */
@@ -3987,16 +4015,33 @@ print_insn_thumb32 (bfd_vma pc, struct disassemble_info *info, long given)
 		break;
 
 	      case 'U':
-		switch (given & 0xf)
+		if ((given & 0xf0) == 0x60) 
 		  {
-		  case 0xf: func (stream, "sy"); break;
-		  case 0x7: func (stream, "un"); break;
-		  case 0xe: func (stream, "st"); break;
-		  case 0x6: func (stream, "unst"); break;
-		  default:
-		    func (stream, "#%d", (int) given & 0xf);
-		    break;
+		    switch (given & 0xf)
+		      {
+			case 0xf: func (stream, "sy"); break;
+			default:
+			  func (stream, "#%d", (int) given & 0xf);
+			      break;
+		      }
 		  }
+		else 
+		  {
+		    switch (given & 0xf)
+		      {
+			case 0xf: func (stream, "sy"); break;
+			case 0x7: func (stream, "un"); break;
+			case 0xe: func (stream, "st"); break;
+			case 0x6: func (stream, "unst"); break;
+			case 0xb: func (stream, "ish"); break;
+			case 0xa: func (stream, "ishst"); break;
+			case 0x3: func (stream, "osh"); break;
+			case 0x2: func (stream, "oshst"); break;
+			default:
+			  func (stream, "#%d", (int) given & 0xf);
+			  break;
+		      }
+		   }
 		break;
 
 	      case 'C':

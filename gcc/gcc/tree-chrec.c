@@ -1,5 +1,5 @@
 /* Chains of recurrences.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Sebastian Pop <pop@cri.ensmp.fr>
 
@@ -30,8 +30,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm.h"
 #include "ggc.h"
 #include "tree.h"
-#include "real.h"
-#include "diagnostic.h"
+#include "tree-pretty-print.h"
 #include "cfgloop.h"
 #include "tree-flow.h"
 #include "tree-chrec.h"
@@ -1231,13 +1230,15 @@ convert_affine_scev (struct loop *loop, tree type,
 }
 
 
-/* Convert CHREC for the right hand side of a CREC.
+/* Convert CHREC for the right hand side of a CHREC.
    The increment for a pointer type is always sizetype.  */
+
 tree
 chrec_convert_rhs (tree type, tree chrec, gimple at_stmt)
 {
   if (POINTER_TYPE_P (type))
-   type = sizetype;
+    type = sizetype;
+
   return chrec_convert (type, chrec, at_stmt);
 }
 
@@ -1529,14 +1530,12 @@ evolution_function_right_is_integer_cst (const_tree chrec)
       return true;
 
     case POLYNOMIAL_CHREC:
-      if (!evolution_function_right_is_integer_cst (CHREC_RIGHT (chrec)))
-	return false;
+      return TREE_CODE (CHREC_RIGHT (chrec)) == INTEGER_CST
+	&& (TREE_CODE (CHREC_LEFT (chrec)) != POLYNOMIAL_CHREC
+	    || evolution_function_right_is_integer_cst (CHREC_LEFT (chrec)));
 
-      if (TREE_CODE (CHREC_LEFT (chrec)) == POLYNOMIAL_CHREC
-	&& !evolution_function_right_is_integer_cst (CHREC_LEFT (chrec)))
-	return false;
-
-      return true;
+    CASE_CONVERT:
+      return evolution_function_right_is_integer_cst (TREE_OPERAND (chrec, 0));
 
     default:
       return false;

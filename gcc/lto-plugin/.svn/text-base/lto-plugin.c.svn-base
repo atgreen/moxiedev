@@ -55,11 +55,18 @@ along with this program; see the file COPYING3.  If not see
    must keep SYMS until all_symbols_read is called to give the linker time to
    copy the symbol information. */
 
+struct sym_aux
+{
+  uint32_t slot;
+  unsigned id;
+};
+
 struct plugin_symtab
 {
   int nsyms;
-  uint32_t *slots;
+  struct sym_aux *aux;
   struct ld_plugin_symbol *syms;
+  unsigned id;
 };
 
 /* All that we have to remember about a file. */
@@ -120,7 +127,8 @@ check (bool gate, enum ld_plugin_level level, const char *text)
    Returns the address of the next entry. */
 
 static char *
-parse_table_entry (char *p, struct ld_plugin_symbol *entry, uint32_t *slot)
+parse_table_entry (char *p, struct ld_plugin_symbol *entry, 
+		   struct sym_aux *aux)
 {
   unsigned char t;
   enum ld_plugin_symbol_kind translate_kind[] =
@@ -140,7 +148,7 @@ parse_table_entry (char *p, struct ld_plugin_symbol *entry, uint32_t *slot)
       LDPV_HIDDEN
     };
 
-  entry->name = strdup (p);
+  entry->name = xstrdup (p);
   while (*p)
     p++;
   p++;
@@ -155,7 +163,7 @@ parse_table_entry (char *p, struct ld_plugin_symbol *entry, uint32_t *slot)
   if (strlen (entry->comdat_key) == 0)
     entry->comdat_key = NULL;
   else
-    entry->comdat_key = strdup (entry->comdat_key);
+    entry->comdat_key = xstrdup (entry->comdat_key);
 
   t = *p;
   check (t <= 4, LDPL_FATAL, "invalid symbol kind found");
@@ -170,7 +178,7 @@ parse_table_entry (char *p, struct ld_plugin_symbol *entry, uint32_t *slot)
   entry->size = *(uint64_t *) p;
   p += 8;
 
-  *slot = *(uint32_t *) p;
+  aux->slot = *(uint32_t *) p;
   p += 4;
 
   entry->resolution = LDPR_UNKNOWN;
@@ -178,16 +186,50 @@ parse_table_entry (char *p, struct ld_plugin_symbol *entry, uint32_t *slot)
   return p;
 }
 
-/* Return the section in ELF that is named NAME. */
+#define LTO_SECTION_PREFIX ".gnu.lto_.symtab"
 
-static Elf_Scn *
-get_section (Elf *elf, const char *name)
+/* Translate the IL symbol table SYMTAB. Append the slots and symbols to OUT. */
+
+static void
+translate (Elf_Data *symtab, struct plugin_symtab *out)
 {
+  struct sym_aux *aux;
+  char *data = symtab->d_buf;
+  char *end = data + symtab->d_size;
+  struct ld_plugin_symbol *syms = NULL;
+  int n, len;
+
+  /* This overestimates the output buffer sizes, but at least 
+     the algorithm is O(1) now. */
+
+  len = (end - data)/8 + out->nsyms + 1;
+  syms = xrealloc (out->syms, len * sizeof (struct ld_plugin_symbol));
+  aux = xrealloc (out->aux, len * sizeof (struct sym_aux));
+  
+  for (n = out->nsyms; data < end; n++) 
+    { 
+      aux[n].id = out->id; 
+      data = parse_table_entry (data, &syms[n], &aux[n]);
+    }
+
+  assert(n < len);
+
+  out->nsyms = n;
+  out->syms = syms;
+  out->aux = aux;
+}
+
+/* Process all lto symtabs of file ELF. */
+
+static int
+process_symtab (Elf *elf, struct plugin_symtab *out)
+{
+  int found = 0;
   Elf_Scn *section = 0;
   GElf_Ehdr header;
   GElf_Ehdr *t = gelf_getehdr (elf, &header);
   if (t == NULL)
-    return NULL;
+    return 0;
   assert (t == &header);
 
   while ((section = elf_nextscn(elf, section)) != 0)
@@ -198,51 +240,16 @@ get_section (Elf *elf, const char *name)
       assert (tshdr == &shdr);
       t = elf_strptr (elf, header.e_shstrndx, shdr.sh_name);
       assert (t != NULL);
-      if (strcmp (t, name) == 0)
-	return section;
+      if (strncmp (t, LTO_SECTION_PREFIX, strlen (LTO_SECTION_PREFIX)) == 0) 
+	{
+	  char *s = strrchr (t, '.');
+	  if (s)
+	      sscanf (s, ".%x", &out->id);
+	  translate (elf_getdata (section, NULL), out);
+	  found = 1;
+	}
     }
-  return NULL;
-}
-
-/* Returns the IL symbol table of file ELF. */
-
-static Elf_Data *
-get_symtab (Elf *elf)
-{
-  Elf_Data *data = 0;
-  Elf_Scn *section = get_section (elf, ".gnu.lto_.symtab");
-  if (!section)
-    return NULL;
-
-  data = elf_getdata (section, data);
-  assert (data);
-  return data;
-}
-
-/* Translate the IL symbol table SYMTAB. Write the slots and symbols in OUT. */
-
-static void
-translate (Elf_Data *symtab, struct plugin_symtab *out)
-{
-  uint32_t *slots = NULL;
-  char *data = symtab->d_buf;
-  char *end = data + symtab->d_size;
-  struct ld_plugin_symbol *syms = NULL;
-  int n = 0;
-
-  while (data < end)
-    {
-      n++;
-      syms = realloc (syms, n * sizeof (struct ld_plugin_symbol));
-      check (syms, LDPL_FATAL, "could not allocate memory");
-      slots = realloc (slots, n * sizeof (uint32_t));
-      check (slots, LDPL_FATAL, "could not allocate memory");
-      data = parse_table_entry (data, &syms[n - 1], &slots[n - 1]);
-    }
-
-  out->nsyms = n;
-  out->syms = syms;
-  out->slots = slots;
+  return found;
 }
 
 /* Free all memory that is no longer needed after writing the symbol
@@ -279,7 +286,7 @@ free_2 (void)
     {
       struct plugin_file_info *info = &claimed_files[i];
       struct plugin_symtab *symtab = &info->symtab;
-      free (symtab->slots);
+      free (symtab->aux);
       free (info->name);
     }
 
@@ -294,12 +301,6 @@ free_2 (void)
   if (arguments_file_name)
     free (arguments_file_name);
   arguments_file_name = NULL;
-
-  if (resolution_file)
-    {
-      free (resolution_file);
-      resolution_file = NULL;
-    }
 }
 
 /*  Writes the relocations to disk. */
@@ -310,6 +311,7 @@ write_resolution (void)
   unsigned int i;
   FILE *f;
 
+  check (resolution_file, LDPL_FATAL, "resolution file not specified");
   f = fopen (resolution_file, "w");
   check (f, LDPL_FATAL, "could not open file");
 
@@ -322,16 +324,16 @@ write_resolution (void)
       struct ld_plugin_symbol *syms = symtab->syms;
       unsigned j;
 
-      assert (syms);
       get_symbols (info->handle, symtab->nsyms, syms);
 
       fprintf (f, "%s %d\n", info->name, info->symtab.nsyms);
 
       for (j = 0; j < info->symtab.nsyms; j++)
 	{
-	  uint32_t slot = symtab->slots[j];
+	  uint32_t slot = symtab->aux[j].slot;
 	  unsigned int resolution = syms[j].resolution;
-	  fprintf (f, "%d %s %s\n", slot, lto_resolution_str[resolution], syms[j].name);
+	  fprintf (f, "%d %x %s %s\n", slot, symtab->aux[j].id,
+		   lto_resolution_str[resolution], syms[j].name);
 	}
     }
   fclose (f);
@@ -343,22 +345,29 @@ write_resolution (void)
 static void
 add_output_files (FILE *f)
 {
-  char fname[1000]; /* FIXME: Remove this restriction. */
-
   for (;;)
     {
+      const unsigned piece = 32;
+      char *buf, *s = xmalloc (piece);
       size_t len;
-      char *s = fgets (fname, sizeof (fname), f);
-      if (!s)
-	break;
 
+      buf = s;
+cont:
+      if (!fgets (buf, piece, f))
+	break;
       len = strlen (s);
-      check (s[len - 1] == '\n', LDPL_FATAL, "file name too long");
+      if (s[len - 1] != '\n')
+	{
+	  s = xrealloc (s, len + piece);
+	  buf = s + len;
+	  goto cont;
+	}
       s[len - 1] = '\0';
 
       num_output_files++;
-      output_files = realloc (output_files, num_output_files * sizeof (char *));
-      output_files[num_output_files - 1] = strdup (s);
+      output_files
+	= xrealloc (output_files, num_output_files * sizeof (char *));
+      output_files[num_output_files - 1] = s;
       add_input_file (output_files[num_output_files - 1]);
     }
 }
@@ -460,7 +469,7 @@ static enum ld_plugin_status
 all_symbols_read_handler (void)
 {
   unsigned i;
-  unsigned num_lto_args = num_claimed_files + lto_wrapper_num_args + 2 + 1;
+  unsigned num_lto_args = num_claimed_files + lto_wrapper_num_args + 1;
   char **lto_argv;
   const char **lto_arg_ptr;
   if (num_claimed_files == 0)
@@ -472,11 +481,9 @@ all_symbols_read_handler (void)
       return LDPS_OK;
     }
 
-  lto_argv = (char **) calloc (sizeof (char *), num_lto_args);
+  lto_argv = (char **) xcalloc (sizeof (char *), num_lto_args);
   lto_arg_ptr = (const char **) lto_argv;
   assert (lto_wrapper_argv);
-
-  resolution_file = make_temp_file ("");
 
   write_resolution ();
 
@@ -484,9 +491,6 @@ all_symbols_read_handler (void)
 
   for (i = 0; i < lto_wrapper_num_args; i++)
     *lto_arg_ptr++ = lto_wrapper_argv[i];
-
-  *lto_arg_ptr++ = "-fresolution";
-  *lto_arg_ptr++ = resolution_file;
 
   for (i = 0; i < num_claimed_files; i++)
     {
@@ -524,6 +528,7 @@ all_symbols_read_handler (void)
 static enum ld_plugin_status
 cleanup_handler (void)
 {
+  unsigned int i;
   int t;
 
   if (debug)
@@ -535,10 +540,10 @@ cleanup_handler (void)
       check (t == 0, LDPL_FATAL, "could not unlink arguments file");
     }
 
-  if (resolution_file)
+  for (i = 0; i < num_output_files; i++)
     {
-      t = unlink (resolution_file);
-      check (t == 0, LDPL_FATAL, "could not unlink resolution file");
+      t = unlink (output_files[i]);
+      check (t == 0, LDPL_FATAL, "could not unlink output file");
     }
 
   free_2 ();
@@ -554,7 +559,8 @@ claim_file_handler (const struct ld_plugin_input_file *file, int *claimed)
   enum ld_plugin_status status;
   Elf *elf;
   struct plugin_file_info lto_file;
-  Elf_Data *symtab;
+
+  memset (&lto_file, 0, sizeof (struct plugin_file_info));
 
   if (file->offset != 0)
     {
@@ -584,21 +590,15 @@ claim_file_handler (const struct ld_plugin_input_file *file, int *claimed)
     }
   else
     {
-      lto_file.name = strdup (file->name);
+      lto_file.name = xstrdup (file->name);
       elf = elf_begin (file->fd, ELF_C_READ, NULL);
     }
   lto_file.handle = file->handle;
 
   *claimed = 0;
 
-  if (!elf)
+  if (!elf || !process_symtab (elf, &lto_file.symtab))
     goto err;
-
-  symtab = get_symtab (elf);
-  if (!symtab)
-    goto err;
-
-  translate (symtab, &lto_file.symtab);
 
   status = add_symbols (file->handle, lto_file.symtab.nsyms,
 			lto_file.symtab.syms);
@@ -607,8 +607,8 @@ claim_file_handler (const struct ld_plugin_input_file *file, int *claimed)
   *claimed = 1;
   num_claimed_files++;
   claimed_files =
-    realloc (claimed_files,
-	     num_claimed_files * sizeof (struct plugin_file_info));
+    xrealloc (claimed_files,
+	      num_claimed_files * sizeof (struct plugin_file_info));
   claimed_files[num_claimed_files - 1] = lto_file;
 
   goto cleanup;
@@ -635,18 +635,21 @@ process_option (const char *option)
   else if (!strncmp (option, "-pass-through=", strlen("-pass-through=")))
     {
       num_pass_through_items++;
-      pass_through_items = realloc (pass_through_items,
-                                    num_pass_through_items * sizeof (char *));
+      pass_through_items = xrealloc (pass_through_items,
+				     num_pass_through_items * sizeof (char *));
       pass_through_items[num_pass_through_items - 1] =
-          strdup (option + strlen ("-pass-through="));
+          xstrdup (option + strlen ("-pass-through="));
     }
   else
     {
       int size;
+      char *opt = xstrdup (option);
       lto_wrapper_num_args += 1;
       size = lto_wrapper_num_args * sizeof (char *);
-      lto_wrapper_argv = (char **) realloc (lto_wrapper_argv, size);
-      lto_wrapper_argv[lto_wrapper_num_args - 1] = strdup(option);
+      lto_wrapper_argv = (char **) xrealloc (lto_wrapper_argv, size);
+      lto_wrapper_argv[lto_wrapper_num_args - 1] = opt;
+      if (strncmp (option, "-fresolution=", sizeof ("-fresolution=") - 1) == 0)
+	resolution_file = opt + sizeof ("-fresolution=") - 1;
     }
 }
 

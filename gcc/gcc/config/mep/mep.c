@@ -1,5 +1,5 @@
 /* Definitions for Toshiba Media Processor
-   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Red Hat, Inc.
 
@@ -27,7 +27,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "regs.h"
 #include "hard-reg-set.h"
-#include "real.h"
 #include "insn-config.h"
 #include "conditions.h"
 #include "insn-flags.h"
@@ -44,6 +43,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "reload.h"
 #include "tm_p.h"
 #include "ggc.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "integrate.h"
 #include "target.h"
@@ -2370,11 +2370,7 @@ mep_register_move_cost (enum machine_mode mode, enum reg_class from, enum reg_cl
 static struct machine_function *
 mep_init_machine_status (void)
 {
-  struct machine_function *f;
-
-  f = (struct machine_function *) ggc_alloc_cleared (sizeof (struct machine_function));
-
-  return f;
+  return ggc_alloc_cleared_machine_function ();
 }
 
 static rtx
@@ -3615,9 +3611,9 @@ mep_build_builtin_va_list (void)
   DECL_FIELD_CONTEXT (f_next_stack) = record;
 
   TYPE_FIELDS (record) = f_next_gp;
-  TREE_CHAIN (f_next_gp) = f_next_gp_limit;
-  TREE_CHAIN (f_next_gp_limit) = f_next_cop;
-  TREE_CHAIN (f_next_cop) = f_next_stack;
+  DECL_CHAIN (f_next_gp) = f_next_gp_limit;
+  DECL_CHAIN (f_next_gp_limit) = f_next_cop;
+  DECL_CHAIN (f_next_cop) = f_next_stack;
 
   layout_type (record);
 
@@ -3635,9 +3631,9 @@ mep_expand_va_start (tree valist, rtx nextarg)
   ns = cfun->machine->arg_regs_to_save;
 
   f_next_gp = TYPE_FIELDS (va_list_type_node);
-  f_next_gp_limit = TREE_CHAIN (f_next_gp);
-  f_next_cop = TREE_CHAIN (f_next_gp_limit);
-  f_next_stack = TREE_CHAIN (f_next_cop);
+  f_next_gp_limit = DECL_CHAIN (f_next_gp);
+  f_next_cop = DECL_CHAIN (f_next_gp_limit);
+  f_next_stack = DECL_CHAIN (f_next_cop);
 
   next_gp = build3 (COMPONENT_REF, TREE_TYPE (f_next_gp), valist, f_next_gp,
 		    NULL_TREE);
@@ -3701,9 +3697,9 @@ mep_gimplify_va_arg_expr (tree valist, tree type,
   rsize = (size + UNITS_PER_WORD - 1) & -UNITS_PER_WORD;
 
   f_next_gp = TYPE_FIELDS (va_list_type_node);
-  f_next_gp_limit = TREE_CHAIN (f_next_gp);
-  f_next_cop = TREE_CHAIN (f_next_gp_limit);
-  f_next_stack = TREE_CHAIN (f_next_cop);
+  f_next_gp_limit = DECL_CHAIN (f_next_gp);
+  f_next_cop = DECL_CHAIN (f_next_gp_limit);
+  f_next_stack = DECL_CHAIN (f_next_cop);
 
   next_gp = build3 (COMPONENT_REF, TREE_TYPE (f_next_gp), valist, f_next_gp,
 		    NULL_TREE);
@@ -4235,7 +4231,7 @@ mep_note_pragma_flag (const char *funcname, int flag)
 
   if (!*slot)
     {
-      *slot = GGC_NEW (pragma_entry);
+      *slot = ggc_alloc_pragma_entry ();
       (*slot)->flag = 0;
       (*slot)->used = 0;
       (*slot)->funcname = ggc_strdup (funcname);
@@ -6334,7 +6330,7 @@ mep_expand_builtin (tree exp, rtx target ATTRIBUTE_UNUSED,
   unsigned int n_args;
   tree fnname;
   const struct cgen_insn *cgen_insn;
-  const struct insn_data *idata;
+  const struct insn_data_d *idata;
   unsigned int first_arg = 0;
   tree return_type = void_type_node;
   unsigned int builtin_n_args;
@@ -7214,7 +7210,7 @@ bool
 mep_emit_intrinsic (int intrinsic, const rtx *operands)
 {
   const struct cgen_insn *cgen_insn;
-  const struct insn_data *idata;
+  const struct insn_data_d *idata;
   rtx newop[10];
   int i;
 

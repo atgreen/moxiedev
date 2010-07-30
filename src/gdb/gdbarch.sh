@@ -363,12 +363,14 @@ v:int:long_bit:::8 * sizeof (long):4*TARGET_CHAR_BIT::0
 # machine.
 v:int:long_long_bit:::8 * sizeof (LONGEST):2*gdbarch->long_bit::0
 
-# The ABI default bit-size and format for "float", "double", and "long
-# double".  These bit/format pairs should eventually be combined into
-# a single object.  For the moment, just initialize them as a pair.
+# The ABI default bit-size and format for "half", "float", "double", and
+# "long double".  These bit/format pairs should eventually be combined
+# into a single object.  For the moment, just initialize them as a pair.
 # Each format describes both the big and little endian layouts (if
 # useful).
 
+v:int:half_bit:::16:2*TARGET_CHAR_BIT::0
+v:const struct floatformat **:half_format:::::floatformats_ieee_half::pformat (gdbarch->half_format)
 v:int:float_bit:::8 * sizeof (float):4*TARGET_CHAR_BIT::0
 v:const struct floatformat **:float_format:::::floatformats_ieee_single::pformat (gdbarch->float_format)
 v:int:double_bit:::8 * sizeof (double):8*TARGET_CHAR_BIT::0
@@ -708,6 +710,19 @@ m:void:displaced_step_free_closure:struct displaced_step_closure *closure:closur
 # see the comments in infrun.c.
 m:CORE_ADDR:displaced_step_location:void:::NULL::(! gdbarch->displaced_step_location) != (! gdbarch->displaced_step_copy_insn)
 
+# Relocate an instruction to execute at a different address.  OLDLOC
+# is the address in the inferior memory where the instruction to
+# relocate is currently at.  On input, TO points to the destination
+# where we want the instruction to be copied (and possibly adjusted)
+# to.  On output, it points to one past the end of the resulting
+# instruction(s).  The effect of executing the instruction at TO shall
+# be the same as if executing it at FROM.  For example, call
+# instructions that implicitly push the return address on the stack
+# should be adjusted to return to the instruction after OLDLOC;
+# relative branches, and other PC-relative instructions need the
+# offset adjusted; etc.
+M:void:relocate_instruction:CORE_ADDR *to, CORE_ADDR from:to, from::NULL
+
 # Refresh overlay mapped state for section OSECT.
 F:void:overlay_update:struct obj_section *osect:osect
 
@@ -767,9 +782,6 @@ m:int:has_shared_address_space:void:::default_has_shared_address_space::0
 # True if a fast tracepoint can be set at an address.
 m:int:fast_tracepoint_valid_at:CORE_ADDR addr, int *isize, char **msg:addr, isize, msg::default_fast_tracepoint_valid_at::0
 
-# Not NULL if a target has additonal field for qSupported.
-v:const char *:qsupported:::0:0::0:gdbarch->qsupported
-
 # Return the "auto" target charset.
 f:const char *:auto_charset:void::default_auto_charset:default_auto_charset::0
 # Return the "auto" target wide charset.
@@ -782,6 +794,11 @@ f:const char *:auto_wide_charset:void::default_auto_wide_charset:default_auto_wi
 # where the names of the files run on the target differ in extension
 # compared to the names of the files GDB should load for debug info.
 v:const char *:solib_symbols_extension:::::::pstring (gdbarch->solib_symbols_extension)
+
+# If true, the target OS has DOS-based file system semantics.  That
+# is, absolute paths include a drive name, and the backslash is
+# considered a directory separator.
+v:int:has_dos_based_file_system:::0:0::0
 EOF
 }
 
@@ -1441,6 +1458,7 @@ void *
 gdbarch_obstack_zalloc (struct gdbarch *arch, long size)
 {
   void *data = obstack_alloc (arch->obstack, size);
+
   memset (data, 0, size);
   return data;
 }
@@ -1456,6 +1474,7 @@ void
 gdbarch_free (struct gdbarch *arch)
 {
   struct obstack *obstack;
+
   gdb_assert (arch != NULL);
   gdb_assert (!arch->initialized_p);
   obstack = arch->obstack;
@@ -1477,6 +1496,7 @@ verify_gdbarch (struct gdbarch *gdbarch)
   struct cleanup *cleanups;
   long length;
   char *buf;
+
   log = mem_fileopen ();
   cleanups = make_cleanup_ui_file_delete (log);
   /* fundamental */
@@ -1541,6 +1561,7 @@ void
 gdbarch_dump (struct gdbarch *gdbarch, struct ui_file *file)
 {
   const char *gdb_nm_file = "<not-defined>";
+
 #if defined (GDB_NM_FILE)
   gdb_nm_file = GDB_NM_FILE;
 #endif
@@ -1745,7 +1766,8 @@ gdbarch_data_register (gdbarch_data_pre_init_ftype *pre_init,
 		       gdbarch_data_post_init_ftype *post_init)
 {
   struct gdbarch_data_registration **curr;
-  /* Append the new registraration.  */
+
+  /* Append the new registration.  */
   for (curr = &gdbarch_data_registry.registrations;
        (*curr) != NULL;
        curr = &(*curr)->next);
@@ -1861,10 +1883,10 @@ gdbarch_printable_names (void)
 {
   /* Accumulate a list of names based on the registed list of
      architectures. */
-  enum bfd_architecture a;
   int nr_arches = 0;
   const char **arches = NULL;
   struct gdbarch_registration *rego;
+
   for (rego = gdbarch_registry;
        rego != NULL;
        rego = rego->next)
@@ -1893,6 +1915,7 @@ gdbarch_register (enum bfd_architecture bfd_architecture,
 {
   struct gdbarch_registration **curr;
   const struct bfd_arch_info *bfd_arch_info;
+
   /* Check that BFD recognizes this architecture */
   bfd_arch_info = bfd_lookup_arch (bfd_architecture, 0);
   if (bfd_arch_info == NULL)
@@ -2096,8 +2119,6 @@ extern void _initialize_gdbarch (void);
 void
 _initialize_gdbarch (void)
 {
-  struct cmd_list_element *c;
-
   add_setshow_zinteger_cmd ("arch", class_maintenance, &gdbarch_debug, _("\\
 Set architecture debugging."), _("\\
 Show architecture debugging."), _("\\

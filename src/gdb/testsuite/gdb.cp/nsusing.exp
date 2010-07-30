@@ -17,8 +17,6 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile nsusing
 set srcfile ${testfile}.cc
@@ -154,7 +152,7 @@ if ![runto marker4] then {
     perror "couldn't run to breakpoint marker4"
     continue
 }
-setup_kfail "gdb/7936" "*-*-*"
+
 gdb_test "print dx" "= 4"
 
 ############################################
@@ -205,6 +203,11 @@ if ![runto_main] then {
 
 gdb_breakpoint [gdb_get_line_number "marker10 stop"]
 gdb_continue_to_breakpoint "marker10 stop"
+
+if { [test_compiler_info {gcc-[0-3]-*}] ||
+     [test_compiler_info {gcc-4-[0-3]-*}]} {
+    setup_xfail *-*-* 
+}
 
 # Assert that M::x is printed and not N::x
 gdb_test "print x" "= 911" "print x (from M::x)"

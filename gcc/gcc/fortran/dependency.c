@@ -1,5 +1,5 @@
 /* Dependency analysis
-   Copyright (C) 2000, 2001, 2002, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2000, 2001, 2002, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Paul Brook <paul@nowt.org>
 
@@ -25,8 +25,10 @@ along with GCC; see the file COPYING3.  If not see
    if dependencies.  Ideally these would probably be merged.  */
    
 #include "config.h"
+#include "system.h"
 #include "gfortran.h"
 #include "dependency.h"
+#include "constructor.h"
 
 /* static declarations */
 /* Enums  */
@@ -37,7 +39,8 @@ typedef enum
 {
   GFC_DEP_ERROR,
   GFC_DEP_EQUAL,	/* Identical Ranges.  */
-  GFC_DEP_FORWARD,	/* e.g., a(1:3), a(2:4).  */
+  GFC_DEP_FORWARD,	/* e.g., a(1:3) = a(2:4).  */
+  GFC_DEP_BACKWARD,	/* e.g. a(2:4) = a(1:3).  */
   GFC_DEP_OVERLAP,	/* May overlap in some other way.  */
   GFC_DEP_NODEP		/* Distinct ranges.  */
 }
@@ -422,7 +425,7 @@ gfc_ref_needs_temporary_p (gfc_ref *ref)
 }
 
 
-int
+static int
 gfc_is_data_pointer (gfc_expr *e)
 {
   gfc_ref *ref;
@@ -805,6 +808,19 @@ gfc_check_dependency (gfc_expr *expr1, gfc_expr *expr2, bool identical)
 
 	      return 1;
 	    }
+	  else
+	    {
+	      gfc_symbol *sym1 = expr1->symtree->n.sym;
+	      gfc_symbol *sym2 = expr2->symtree->n.sym;
+	      if (sym1->attr.target && sym2->attr.target
+		  && ((sym1->attr.dummy && !sym1->attr.contiguous
+		       && (!sym1->attr.dimension
+		           || sym2->as->type == AS_ASSUMED_SHAPE))
+		      || (sym2->attr.dummy && !sym2->attr.contiguous
+			  && (!sym2->attr.dimension
+			      || sym2->as->type == AS_ASSUMED_SHAPE))))
+		return 1;
+	    }
 
 	  /* Otherwise distinct symbols have no dependencies.  */
 	  return 0;
@@ -816,7 +832,7 @@ gfc_check_dependency (gfc_expr *expr1, gfc_expr *expr2, bool identical)
       /* Identical and disjoint ranges return 0,
 	 overlapping ranges return 1.  */
       if (expr1->ref && expr2->ref)
-	return gfc_dep_resolver (expr1->ref, expr2->ref);
+	return gfc_dep_resolver (expr1->ref, expr2->ref, NULL);
 
       return 1;
 
@@ -843,7 +859,8 @@ gfc_check_dependency (gfc_expr *expr1, gfc_expr *expr2, bool identical)
 
     case EXPR_ARRAY:
       /* Loop through the array constructor's elements.  */
-      for (c = expr2->value.constructor; c; c = c->next)
+      for (c = gfc_constructor_first (expr2->value.constructor);
+	   c; c = gfc_constructor_next (c))
 	{
 	  /* If this is an iterator, assume the worst.  */
 	  if (c->iterator)
@@ -996,6 +1013,42 @@ gfc_check_section_vs_section (gfc_ref *lref, gfc_ref *rref, int n)
 	return GFC_DEP_EQUAL;
     }
 
+  /* Handle cases like x:y:2 vs. x+1:z:4 as GFC_DEP_NODEP.
+     There is no dependency if the remainder of
+     (l_start - r_start) / gcd(l_stride, r_stride) is
+     nonzero.
+     TODO:
+       - Handle cases where x is an expression.
+       - Cases like a(1:4:2) = a(2:3) are still not handled.
+  */
+
+#define IS_CONSTANT_INTEGER(a) ((a) && ((a)->expr_type == EXPR_CONSTANT) \
+			      && (a)->ts.type == BT_INTEGER)
+
+  if (IS_CONSTANT_INTEGER(l_start) && IS_CONSTANT_INTEGER(r_start)
+      && IS_CONSTANT_INTEGER(l_stride) && IS_CONSTANT_INTEGER(r_stride))
+    {
+      mpz_t gcd, tmp;
+      int result;
+
+      mpz_init (gcd);
+      mpz_init (tmp);
+
+      mpz_gcd (gcd, l_stride->value.integer, r_stride->value.integer);
+      mpz_sub (tmp, l_start->value.integer, r_start->value.integer);
+
+      mpz_fdiv_r (tmp, tmp, gcd);
+      result = mpz_cmp_si (tmp, 0L);
+
+      mpz_clear (gcd);
+      mpz_clear (tmp);
+
+      if (result != 0)
+	return GFC_DEP_NODEP;
+    }
+
+#undef IS_CONSTANT_INTEGER
+
   /* Check for forward dependencies x:y vs. x+1:z.  */
   if (l_dir == 1 && r_dir == 1
       && l_start && r_start && gfc_dep_compare_expr (l_start, r_start) == -1
@@ -1020,6 +1073,30 @@ gfc_check_section_vs_section (gfc_ref *lref, gfc_ref *rref, int n)
       if (l_stride && r_stride
 	  && gfc_dep_compare_expr (l_stride, r_stride) == 0)
 	return GFC_DEP_FORWARD;
+    }
+
+  /* Check for backward dependencies:
+     Are the strides the same?.  */
+  if ((!l_stride && !r_stride)
+	||
+      (l_stride && r_stride
+	&& gfc_dep_compare_expr (l_stride, r_stride) == 0))
+    {
+      /* x:y vs. x+1:z.  */
+      if (l_dir == 1 && r_dir == 1
+	    && l_start && r_start
+	    && gfc_dep_compare_expr (l_start, r_start) == 1
+	    && l_end && r_end
+	    && gfc_dep_compare_expr (l_end, r_end) == 1)
+	return GFC_DEP_BACKWARD;
+
+      /* x:y:-1 vs. x-1:z:-1.  */
+      if (l_dir == -1 && r_dir == -1
+	    && l_start && r_start
+	    && gfc_dep_compare_expr (l_start, r_start) == -1
+	    && l_end && r_end
+	    && gfc_dep_compare_expr (l_end, r_end) == -1)
+	return GFC_DEP_BACKWARD;
     }
 
   return GFC_DEP_OVERLAP;
@@ -1190,7 +1267,8 @@ contains_forall_index_p (gfc_expr *expr)
 
     case EXPR_STRUCTURE:
     case EXPR_ARRAY:
-      for (c = expr->value.constructor; c; c = c->next)
+      for (c = gfc_constructor_first (expr->value.constructor);
+	   c; gfc_constructor_next (c))
 	if (contains_forall_index_p (c->expr))
 	  return true;
       break;
@@ -1428,16 +1506,19 @@ ref_same_as_full_array (gfc_ref *full_ref, gfc_ref *ref)
 
 /* Finds if two array references are overlapping or not.
    Return value
+   	2 : array references are overlapping but reversal of one or
+	    more dimensions will clear the dependency.
    	1 : array references are overlapping.
    	0 : array references are identical or not overlapping.  */
 
 int
-gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref)
+gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref, gfc_reverse *reverse)
 {
   int n;
   gfc_dependency fin_dep;
   gfc_dependency this_dep;
 
+  this_dep = GFC_DEP_ERROR;
   fin_dep = GFC_DEP_ERROR;
   /* Dependencies due to pointers should already have been identified.
      We only need to check for overlapping array references.  */
@@ -1490,6 +1571,7 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref)
 	      if (lref->u.ar.dimen_type[n] == DIMEN_VECTOR
 		  || rref->u.ar.dimen_type[n] == DIMEN_VECTOR)
 		return 1;
+
 	      if (lref->u.ar.dimen_type[n] == DIMEN_RANGE
 		  && rref->u.ar.dimen_type[n] == DIMEN_RANGE)
 		this_dep = gfc_check_section_vs_section (lref, rref, n);
@@ -1510,6 +1592,38 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref)
 	      if (this_dep == GFC_DEP_NODEP)
 		return 0;
 
+	      /* Now deal with the loop reversal logic:  This only works on
+		 ranges and is activated by setting
+				reverse[n] == GFC_CAN_REVERSE
+		 The ability to reverse or not is set by previous conditions
+		 in this dimension.  If reversal is not activated, the
+		 value GFC_DEP_BACKWARD is reset to GFC_DEP_OVERLAP.  */
+	      if (rref->u.ar.dimen_type[n] == DIMEN_RANGE
+		    && lref->u.ar.dimen_type[n] == DIMEN_RANGE)
+		{
+		  /* Set reverse if backward dependence and not inhibited.  */
+		  if (reverse && reverse[n] != GFC_CANNOT_REVERSE)
+		    reverse[n] = (this_dep == GFC_DEP_BACKWARD) ?
+			         GFC_REVERSE_SET : reverse[n];
+
+		  /* Inhibit loop reversal if dependence not compatible.  */
+		  if (reverse && reverse[n] != GFC_REVERSE_NOT_SET
+		        && this_dep != GFC_DEP_EQUAL
+		        && this_dep != GFC_DEP_BACKWARD
+		        && this_dep != GFC_DEP_NODEP)
+		    {
+	              reverse[n] = GFC_CANNOT_REVERSE;
+		      if (this_dep != GFC_DEP_FORWARD)
+			this_dep = GFC_DEP_OVERLAP;
+		    }
+
+		  /* If no intention of reversing or reversing is explicitly
+		     inhibited, convert backward dependence to overlap.  */
+		  if ((reverse == NULL && this_dep == GFC_DEP_BACKWARD)
+			|| (reverse && reverse[n] == GFC_CANNOT_REVERSE))
+		    this_dep = GFC_DEP_OVERLAP;
+		}
+
 	      /* Overlap codes are in order of priority.  We only need to
 		 know the worst one.*/
 	      if (this_dep > fin_dep)
@@ -1525,7 +1639,7 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref)
 
 	  /* Exactly matching and forward overlapping ranges don't cause a
 	     dependency.  */
-	  if (fin_dep < GFC_DEP_OVERLAP)
+	  if (fin_dep < GFC_DEP_BACKWARD)
 	    return 0;
 
 	  /* Keep checking.  We only have a dependency if
@@ -1548,4 +1662,3 @@ gfc_dep_resolver (gfc_ref *lref, gfc_ref *rref)
 
   return fin_dep == GFC_DEP_OVERLAP;
 }
-

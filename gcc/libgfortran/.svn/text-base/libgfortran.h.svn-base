@@ -1,10 +1,10 @@
 /* Common declarations for all of libgfortran.
-   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Paul Brook <paul@nowt.org>, and
    Andy Vaught <andy@xena.eas.asu.edu>
 
-This file is part of the GNU Fortran 95 runtime library (libgfortran).
+This file is part of the GNU Fortran runtime library (libgfortran).
 
 Libgfortran is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -767,9 +767,6 @@ internal_proto(set_fpu);
 extern void *get_mem (size_t) __attribute__ ((malloc));
 internal_proto(get_mem);
 
-extern void free_mem (void *);
-internal_proto(free_mem);
-
 extern void *internal_malloc_size (size_t) __attribute__ ((malloc));
 internal_proto(internal_malloc_size);
 
@@ -830,8 +827,9 @@ internal_proto(filename_from_unit);
 
 /* stop.c */
 
-extern void stop_numeric (GFC_INTEGER_4) __attribute__ ((noreturn));
-iexport_proto(stop_numeric);
+extern void stop_string (const char *, GFC_INTEGER_4)
+  __attribute__ ((noreturn));
+export_proto(stop_string);
 
 /* reshape_packed.c */
 

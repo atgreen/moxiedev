@@ -31,7 +31,6 @@ targ_underscore=no
 
 # Catch obsolete configurations.
 case $targ in
- maxq-*-coff | \
  null)
     if test "x$enable_obsolete" != xyes; then
       echo "*** Configuration $targ is obsolete." >&2
@@ -47,6 +46,7 @@ case $targ in
  m68*-apollo-* | \
  m68*-bull-sysv* | \
  m68*-*-rtemscoff* | \
+ maxq-*-coff | \
  i960-*-rtems* | \
  or32-*-rtems* | \
  m68*-*-lynxos* | \
@@ -90,7 +90,6 @@ m6811*|m68hc11*) targ_archs="bfd_m68hc11_arch bfd_m68hc12_arch" ;;
 m6812*|m68hc12*) targ_archs="bfd_m68hc12_arch bfd_m68hc11_arch" ;;
 m68*)		 targ_archs=bfd_m68k_arch ;;
 m88*)		 targ_archs=bfd_m88k_arch ;;
-maxq*)		 targ_archs=bfd_maxq_arch ;;
 microblaze*)	 targ_archs=bfd_microblaze_arch ;;
 mips*)		 targ_archs=bfd_mips_arch ;;
 or32*)		 targ_archs=bfd_or32_arch ;;
@@ -419,7 +418,7 @@ case "${targ}" in
     targ_selvecs=bfd_elf32_frv_vec
     ;;
 
-  moxie-*-elf | moxie-*-uclinux)
+  moxie-*-elf | moxie-*-rtems | moxie-*-uclinux)
     targ_defvec=bfd_elf32_moxie_vec
     ;;
 
@@ -470,7 +469,6 @@ case "${targ}" in
     targ_selvecs=bfd_elf32_hppa_linux_vec
     ;;
 
-#if defined (HOST_HPPAHPUX) || defined (HOST_HPPABSD) || defined (HOST_HPPAOSF) || defined (HOST_HPPAMPEIX)
   hppa*-*-bsd*)
     targ_defvec=som_vec
     targ_selvecs=bfd_elf32_hppa_vec
@@ -482,7 +480,6 @@ case "${targ}" in
     targ_defvec=som_vec
     targ_selvecs=bfd_elf32_hppa_vec
     ;;
-#endif /* defined (HOST_HPPAHPUX) || defined (HOST_HPPABSD) || defined (HOST_HPPAOSF) */
 
   i370-*-*)
     targ_defvec=bfd_elf32_i370_vec
@@ -639,7 +636,7 @@ case "${targ}" in
     targ_defvec=x86_64pe_vec
     targ_selvecs="x86_64pe_vec x86_64pei_vec bfd_elf64_x86_64_vec bfd_elf64_l1om_vec"
     want64=true
-    targ_underscore=yes
+    targ_underscore=no
     ;;
 #endif
   i[3-7]86-*-lynxos*)
@@ -880,10 +877,6 @@ case "${targ}" in
   m88*-*-*)
     targ_defvec=m88kbcs_vec
     targ_underscore=yes
-    ;;
-
-  maxq-*-coff)
-    targ_defvec=maxqcoff_vec
     ;;
 
   mcore-*-elf)
@@ -1257,7 +1250,7 @@ case "${targ}" in
 
   sh-*-uclinux* | sh[12]-*-uclinux*)
     targ_defvec=bfd_elf32_sh_vec
-    targ_selvecs="bfd_elf32_shblin_vec bfd_elf32_shlin_vec"
+    targ_selvecs="bfd_elf32_shl_vec bfd_elf32_shblin_vec bfd_elf32_shlin_vec bfd_elf32_shfd_vec bfd_elf32_shbfd_vec"
 #ifdef BFD64
     targ_selvecs="${targ_selvecs} bfd_elf32_sh64lin_vec bfd_elf32_sh64blin_vec bfd_elf64_sh64lin_vec bfd_elf64_sh64blin_vec"
 #endif
@@ -1465,18 +1458,17 @@ case "${targ}" in
     ;;
 #endif
 
+  tic6x-*-elf)
+    targ_defvec=bfd_elf32_tic6x_le_vec
+    targ_selvecs=bfd_elf32_tic6x_be_vec
+    ;;
+
   tic80*-*-*)
     targ_defvec=tic80coff_vec
     targ_underscore=yes
     ;;
 
-  v850-*-*)
-    targ_defvec=bfd_elf32_v850_vec
-    ;;
-  v850e-*-*)
-    targ_defvec=bfd_elf32_v850_vec
-    ;;
-  v850ea-*-*)
+  v850*-*-*)
     targ_defvec=bfd_elf32_v850_vec
     ;;
 
@@ -1503,10 +1495,6 @@ case "${targ}" in
 
   vax-*-linux-*)
     targ_defvec=bfd_elf32_vax_vec
-    ;;
-
-  vax*-*-*vms*)
-    targ_defvec=vms_vax_vec
     ;;
 
   we32k-*-*)

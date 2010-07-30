@@ -116,16 +116,16 @@ proc test_value_numeric_ops {} {
 
   # Conversion test.
   gdb_test "print evalue" " = TWO"
-  gdb_test "python evalue = gdb.history (0)" ""
+  gdb_test_no_output "python evalue = gdb.history (0)"
   gdb_test "python print int (evalue)" "2"
 
   # Test pointer arithmethic
 
   # First, obtain the pointers
-  gdb_test "print (void *) 2" "" ""
-  gdb_test "python a = gdb.history (0)" "" ""
-  gdb_test "print (void *) 5" "" ""
-  gdb_test "python b = gdb.history (0)" "" ""
+  gdb_test "print (void *) 2" ".*" ""
+  gdb_test_no_output "python a = gdb.history (0)" ""
+  gdb_test "print (void *) 5" ".*" ""
+  gdb_test_no_output "python b = gdb.history (0)" ""
 
   gdb_test "python print 'result = ' + str(a+5)" " = 0x7" "add pointer value with python integer"
   gdb_test "python print 'result = ' + str(b-2)" " = 0x3" "subtract python integer from pointer value"
@@ -267,6 +267,12 @@ proc test_lazy_strings {} {
   gdb_py_test_silent_cmd "python lstr = sptr.lazy_string()" "Aquire lazy string" 1
   gdb_test "python print lstr.type" "const char \*." "Test type name equality"
   gdb_test "python print sptr.type" "const char \*." "Test type name equality"
+  gdb_test "print sn" "0x0"
+  gdb_py_test_silent_cmd "python snptr = gdb.history (0)" "Get value from history" 1
+  gdb_test "python snstr = snptr.lazy_string(length=5)" ".*Cannot create a lazy string with address.*" "Test lazy string"
+  gdb_py_test_silent_cmd "python snstr = snptr.lazy_string(length=0)" "Succesfully create a lazy string" 1
+  gdb_test "python print snstr.length" "0" "Test lazy string length"
+  gdb_test "python print snstr.address" "0" "Test lazy string address"
 }
 
 
@@ -387,6 +393,22 @@ proc test_parse_and_eval {} {
     "parse_and_eval type test"
 }
 
+# Test that values are hashable.
+proc test_value_hash {} {
+  gdb_py_test_multiple "Simple Python value dictionary" \
+    "python" "" \
+    "one = gdb.Value(1)" "" \
+    "two = gdb.Value(2)" "" \
+    "three = gdb.Value(3)" "" \
+    "vdict = {one:\"one str\",two:\"two str\",three:\"three str\"}" "" \
+    "end"
+    gdb_test "python print vdict\[one\]" "one str" "Test dictionary hash"
+    gdb_test "python print vdict\[two\]" "two str" "Test dictionary hash"
+    gdb_test "python print vdict\[three\]" "three str" "Test dictionary hash"
+    gdb_test "python print one.__hash__() == hash(one)" "True" "Test inbuilt hash"
+}
+
+
 # Start with a fresh gdb.
 
 gdb_exit
@@ -403,6 +425,7 @@ test_value_boolean
 test_value_compare
 test_objfiles
 test_parse_and_eval
+test_value_hash
 
 # The following tests require execution.
 

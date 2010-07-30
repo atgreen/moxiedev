@@ -22,12 +22,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "tree.h"
-#include "rtl.h"
 #include "tm_p.h"
-#include "hard-reg-set.h"
 #include "basic-block.h"
 #include "output.h"
-#include "diagnostic.h"
 #include "tree-flow.h"
 #include "tree-dump.h"
 #include "tree-pass.h"
@@ -36,6 +33,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "flags.h"
 #include "tree-inline.h"
 #include "tree-scalar-evolution.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "tree-vectorizer.h"
 
@@ -97,7 +95,7 @@ struct gimple_opt_pass pass_tree_loop_init =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops	/* todo_flags_finish */
+  TODO_dump_func			/* todo_flags_finish */
  }
 };
 
@@ -109,8 +107,7 @@ tree_ssa_loop_im (void)
   if (number_of_loops () <= 1)
     return 0;
 
-  tree_ssa_lim ();
-  return 0;
+  return tree_ssa_lim ();
 }
 
 static bool
@@ -134,7 +131,7 @@ struct gimple_opt_pass pass_lim =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops	/* todo_flags_finish */
+  TODO_dump_func			/* todo_flags_finish */
  }
 };
 
@@ -170,8 +167,7 @@ struct gimple_opt_pass pass_tree_unswitch =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_ggc_collect | TODO_dump_func
-    | TODO_verify_loops		 	/* todo_flags_finish */
+  TODO_ggc_collect | TODO_dump_func 	/* todo_flags_finish */
  }
 };
 
@@ -208,7 +204,7 @@ struct gimple_opt_pass pass_predcom =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops
+  TODO_dump_func
     | TODO_update_ssa_only_virtuals	/* todo_flags_finish */
  }
 };
@@ -244,7 +240,7 @@ struct gimple_opt_pass pass_vectorize =
   PROP_cfg | PROP_ssa,                  /* properties_required */
   0,                                    /* properties_provided */
   0,                                    /* properties_destroyed */
-  TODO_verify_loops,			/* todo_flags_start */
+  0,					/* todo_flags_start */
   TODO_dump_func | TODO_update_ssa
     | TODO_ggc_collect			/* todo_flags_finish */
  }
@@ -283,7 +279,7 @@ struct gimple_opt_pass pass_linear_transform =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops
+  TODO_dump_func
     | TODO_update_ssa_only_virtuals
     | TODO_ggc_collect			/* todo_flags_finish */
  }
@@ -329,7 +325,7 @@ struct gimple_opt_pass pass_graphite_transforms =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_verify_loops			/* todo_flags_finish */
+  0					/* todo_flags_finish */
  }
 };
 
@@ -402,7 +398,7 @@ struct gimple_opt_pass pass_iv_canon =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops	/* todo_flags_finish */
+  TODO_dump_func			/* todo_flags_finish */
  }
 };
 
@@ -501,7 +497,7 @@ struct gimple_opt_pass pass_complete_unroll =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops
+  TODO_dump_func
     | TODO_ggc_collect			/* todo_flags_finish */
  }
 };
@@ -548,7 +544,7 @@ struct gimple_opt_pass pass_complete_unrolli =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops
+  TODO_dump_func
     | TODO_ggc_collect 			/* todo_flags_finish */
  }
 };
@@ -587,7 +583,7 @@ struct gimple_opt_pass pass_parallelize_loops =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops	/* todo_flags_finish */
+  TODO_dump_func			/* todo_flags_finish */
  }
 };
 
@@ -605,7 +601,7 @@ tree_ssa_loop_prefetch (void)
 static bool
 gate_tree_ssa_loop_prefetch (void)
 {
-  return flag_prefetch_loop_arrays != 0;
+  return flag_prefetch_loop_arrays > 0;
 }
 
 struct gimple_opt_pass pass_loop_prefetch =
@@ -623,7 +619,7 @@ struct gimple_opt_pass pass_loop_prefetch =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops	/* todo_flags_finish */
+  TODO_dump_func			/* todo_flags_finish */
  }
 };
 
@@ -660,8 +656,7 @@ struct gimple_opt_pass pass_iv_optimize =
   0,					/* properties_provided */
   0,					/* properties_destroyed */
   0,					/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops
-  | TODO_update_ssa | TODO_ggc_collect	/* todo_flags_finish */
+  TODO_dump_func | TODO_update_ssa | TODO_ggc_collect	/* todo_flags_finish */
  }
 };
 

@@ -52,6 +52,7 @@ static PyObject *
 stpy_get_address (PyObject *self, void *closure)
 {
   lazy_string_object *self_string = (lazy_string_object *) self;
+
   return PyLong_FromUnsignedLongLong (self_string->address);
 }
 
@@ -78,6 +79,7 @@ static PyObject *
 stpy_get_length (PyObject *self, void *closure)
 {
   lazy_string_object *self_string = (lazy_string_object *) self;
+
   return PyLong_FromLong (self_string->length);
 }
 
@@ -85,6 +87,7 @@ PyObject *
 stpy_get_type (PyObject *self, void *closure)
 {
   lazy_string_object *str_obj = (lazy_string_object *) self;
+
   return type_to_type_object (str_obj->type);
 }
 
@@ -94,6 +97,13 @@ stpy_convert_to_value  (PyObject *self, PyObject *args)
   lazy_string_object *self_string = (lazy_string_object *) self;
   struct value *val;
 
+  if (self_string->address == 0)
+    {
+      PyErr_SetString (PyExc_MemoryError,
+		       _("Cannot create a value from NULL."));
+      return NULL;
+    }
+
   val = value_at_lazy (self_string->type, self_string->address);
   return value_to_value_object (val);
 }
@@ -102,6 +112,7 @@ static void
 stpy_dealloc (PyObject *self)
 {
   lazy_string_object *self_string = (lazy_string_object *) self;
+
   xfree (self_string->encoding);
 }
 
@@ -111,17 +122,18 @@ gdbpy_create_lazy_string_object (CORE_ADDR address, long length,
 {
   lazy_string_object *str_obj = NULL;
 
-  if (address == 0)
+  if (address == 0 && length != 0)
     {
       PyErr_SetString (PyExc_MemoryError,
-		       "Cannot create a lazy string from a GDB-side string.");
+		       _("Cannot create a lazy string with address 0x0, " \
+			 "and a non-zero length."));
       return NULL;
     }
 
   if (!type)
     {
       PyErr_SetString (PyExc_RuntimeError,
-		       "A lazy string's type cannot be NULL.");
+		       _("A lazy string's type cannot be NULL."));
       return NULL;
     }
 

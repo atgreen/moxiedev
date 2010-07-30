@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_ostringstream
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-15T07:14:45.850392Z
-147561
-bonzini
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -44,11 +44,11 @@ file
 
 
 
-
-fd5d5f7409c57fbc0b6efcd246ad751f
-2009-05-15T07:14:45.850392Z
-147561
-bonzini
+2010-07-08T15:19:26.441096Z
+2269effeaffb92c1d281604c9545a2c8
+2010-06-03T19:15:56.538099Z
+160231
+paolo
 
 
 

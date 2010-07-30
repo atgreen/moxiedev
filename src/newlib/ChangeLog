@@ -1,3 +1,280 @@
+2010-07-30  Anthony Green  <green@moxielogic.com>
+
+	* libc/sys/rtems/machine/_types.h: Add moxie support.
+
+2010-07-23  Naveen.H.S  <naveenh1@kpitcummins.com>
+            Gina Verlekar <gina.verlekar@kpitcummins.com>
+
+        * configure.host: Compact v850* support and add
+	check for newlib_may_supply_syscalls.
+        * libc/sys/sysnecv850/Makefile.am: Add support for
+        '--disable-newlib-supplied-syscalls' option.
+        * libc/sys/sysnecv850/Makefile.in: Regenerated.
+
+2010-07-20  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* libm/common/fdlibm.h (SAFE_LEFT_SHIFT): New macro definition.
+	(SAFE_RIGHT_SHIFT): Likewise.
+	* libm/common/s_llround.c (llround): Annotate shift operations with
+	possible shift amount ranges, and use SAFE_RIGHT_SHIFT to avoid
+	undefined behaviour.
+	* libm/common/s_lround.c (lround): Likewise.
+
+2010-07-19  Eric Blake  <eblake@redhat.com>
+
+	* libc/stdio/mktemp.c (_gettemp): Add parameter, all callers
+	changed.
+	(mkostemp, _mkostemp_r, mkostemps, _mkostemps_r): New interfaces,
+	for ELIX level 4.
+	* libc/include/stdlib.h (mktemp): Avoid namespace issues.
+	(mkostemp, mkostemps): Declare.
+
+2010-07-13  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/include/signal.h (sighandler_t): Only define if _POSIX_SOURCE
+	is undefined.
+
+2010-07-06  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/posix/rewinddir.c (rewinddir): Remove incorrect cast to off_t.
+	* libc/sys/rtems/sys/dirent.h (_seekdir): Add prototype.
+	* libc/sys/linux/sys/dirent.h (_seekdir): Fix prototype to use long
+	rather than off_t.
+
+2010-07-01  Yaakov Selkowitz  <yselkowitz@users.sourceforge.net>
+
+	* libc/include/signal.h (sighandler_t): Add typedef.
+
+2010-06-29  Antony King  <antony.king@st.com>
+
+	* libc/ctype/ctype_.c (__ctype_ptr): Reinstate definition (guarded by
+	_NEED_OLD_CTYPE_PTR_DEFINITION) for backwards compatibility with newlib
+	1.16.0 and earlier.
+
+2010-06-28  Yaakov Selkowitz  <yselkowitz@users.sourceforge.net>
+
+	* libc/include/sys/stat.h: Add ACCESSPERMS, ALLPERMS, and DEFFILEMODE.
+
+2010-06-18  Pavel Pisa <ppisa4lists@pikron.com>
+
+	* libc/include/machine/ieeefp.h[__arm__][!__VFP_FP__]: Set to
+	__IEEE_BIG_ENDIAN and set __IEEE_BYTES_LITTLE_ENDIAN appropriately
+	based on __ARMEL flag.
+	* libc/include/machine/endian.h: To set byte order to LITTLE_ENDIAN,
+	check for __IEEE_LITTLE_ENDIAN or __IEEE_BYTES_LITTLE_ENDIAN.
+
+2010-06-09  Paul Brook  <paul@codesourcery.com>
+
+	* libc/include/sys/reent.h (_reent): Adjust _REENT_SMALL to be
+	binary compatible with normal layout.
+	(_REENT_INIT): Adjust to match struct layout.
+
+2010-06-08  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/include/wordexp.h: Add __cplusplus wrapper.
+
+2010-06-08  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* configure.in: Add test for enable-newlib-register-fini
+	to set the _WANT_REGISTER_FINI flag.
+	* configure: Regenerated.
+	* Makefile.in: Ditto.
+	* newlib.hin: Add _WANT_REGISTER_FINI flag.
+	* libc/stdlib/__call_atexit.c: Add test for
+	_WANT_REGISTER_FINI to enable the register_fini function.
+
+2010-06-04  Mark Mitchell  <mark@codesourcery.com>
+
+	* libc/stdlib/__call_atexit.c (__libc_fini): Declare.
+	(register_fini): New function.
+	* libc/misc/init.c (_fini): Remove.
+	(__libc_fini_array): Likewise.
+	* libc/misc/fini.c: New file.
+	* libc/misc/Makefile.am (LIB_SOURCES): Add fini.c.
+	* libc/misc/Makefile.in: Regenerate.
+
+2010-05-31  Kazu Hirata  <kazu@codesourcery.com>
+
+	* libc/stdlib/mallocr.c (malloc_extend_top): Backport the
+	difference between versions 2.6.4 and 2.6.5.
+
+2010-05-18  Christopher Faylor  <me+cygwin@cgf.cx>
+
+	* libc/string/strsignal.c (strsignal): Avoid duplicate case statement
+	where SIGPWR == SIGLOST.
+
+2010-05-11  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/stdlib/__call_atexit.c: Fix lock to be of type
+	_LOCK_RECURSIVE_T as recursive usage is needed.
+
+2010-05-11  Jeff Johnston  <jjohnstn@redhat.com>
+
+	* libc/locale/locale.c (loadlocale): Fix dangling
+	switch statement caused by __HAVE_LOCALE_INFO__ not being
+	defined.
+
+2010-05-11  Joel Sherrill <joel.sherrill@oarcorp.com>
+
+	* libc/string/strsignal.c: New file.
+	* libc/string/Makefile.am: Add support for strsignal.
+	* libc/string/strings.tex: Ditto.
+	* libc/string/Makefile.in: Regenerated.
+
+2010-05-05  DJ Delorie  <dj@redhat.com>
+
+	* libc/Makefile.am (stmp-sigset, stmp-iconvset, stmp-extra,
+	stmp-stdio64, stmp-posix,stmp-targetdep): Use unique temporary
+	file names to allow for parallel installs.
+	(CLEANFILES): Add new temporary file names.
+	* libc/Makefile.in: Regenerate.
+
+2010-05-03  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/lctype.c: Include <string.h> and "setlocale.h".
+	(_C_ctype_locale): Add braces to initializer.
+	(__ctype_load_locale): Fix compiler warnings in non-Cygwin case.
+	* libc/locale/nl_langinfo.c (nl_langinfo): Expose _NL_CTYPE_MB_CUR_MAX
+	case only if __HAVE_LOCALE_INFO__ is defined.
+
+2010-05-02  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdlib/wctob.c (wctob): Reorganize and fix WEOF check.  Rename
+	pwc to pmb and convert to array to avoid buffer overflow.  Rename c to
+	wc.  Check wc for WEOF instead of for EOF.  Return first byte of pmb if
+	__wctomb conversion returned exactly one byte, EOF otherwise.
+
+2010-04-30  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/include/langinfo.h: Fix #endif positioning.
+
+2010-04-28  Corinna Vinschen  <corinna@vinschen.de>
+
+	Extend locale support to maintain wide char values of native strings
+	if __HAVE_LOCALE_INFO_EXTENDED__ is defined.
+	* libc/include/langinfo.h (enum __nl_item): New type.  Define all
+	native values accessible through nl_langinfo.  Define previously
+	existing POSIX-compatible values as macros as well.
+	* libc/include/stdlib.h (__mb_cur_max): Drop declaration.
+	(__locale_mb_cur_max): Declare.
+	(MB_CUR_MAX): Re-define calling __locale_mb_cur_max.
+	* libc/locale/Makefile.am (ELIX_SOURCES): Add lctype.c.
+	* libc/locale/Makefile.in: Regenerate.
+	* libc/locale/lctype.c: New file to define and load LC_CTYPE category.
+	* libc/locale/lctype.h: New file, matching header.
+	* libc/locale/lmessages.c (_C_messages_locale): Add default values for
+	wide char members.
+	(__messages_load_locale): Add _C_messages_locale in call to 
+	__set_lc_messages_from_win.
+	* libc/locale/lmessages.h (struct lc_messages_T): Add wide char members.
+	* libc/locale/lmonetary.c (_C_monetary_locale):  Add default values for
+	wide char members.
+	(__monetary_load_locale): Add _C_monetary_locale in call to
+	__set_lc_monetary_from_win.
+	* libc/locale/lmonetary.h (struct lc_monetary_T): Add wide char members.
+	Add numerical values for international currency formatting per
+	POSIX-1.2008, if __HAVE_LOCALE_INFO_EXTENDED__ is defined.
+	* libc/locale/lnumeric.c (_C_numeric_locale): Add default values for
+	wide char members.
+	(__numeric_load_locale): Add _C_numeric_locale in call to
+	__set_lc_numeric_from_win.
+	* libc/locale/lnumeric.h (struct lc_numeric_T): Add wide char members.
+	* libc/locale/locale.c (loadlocale): Return doing nothing if category
+	locale didn't change.  Convert category if chain to switch statement.
+	Call __ctype_load_locale in LC_CTYPE case.
+	(__locale_charset): Add (but disable for now) returning codeset from
+	__get_current_ctype_locale.
+	(__locale_mb_cur_max): Add (but disable for now) returning mb_cur_max
+	from __get_current_ctype_locale.
+	(__locale_msgcharset): Add returning codeset from
+	__get_current_messages_locale.
+	(_localeconv_r): Accommodate int_XXX values.
+	* libc/locale/nl_langinfo.c (nl_ext): New array to define what is to
+	be returned for non-POSIX values.
+	(nl_Langinfo): Return correct codeset for each locale category.  Return
+	extended values if __HAVE_LOCALE_INFO_EXTENDED__ is defined.
+	* libc/locale/timelocal.c (_C_time_locale): Add default values for
+	wide char members.
+	(__time_load_locale): Add _C_time_locale in call to
+	__set_lc_time_from_win.
+	* libc/locale/timelocal.h (struct lc_time_T): Add wide char members.
+	* libc/stdio/vfwprintf.c (_VFWPRINTF_R): Use wide char decimal point
+	and thousands_sep if __HAVE_LOCALE_INFO_EXTENDED__ is defined.
+	* libc/time/strftime.c: Rework to accommodate availability of wide char
+	strings in LC_TIME category if __HAVE_LOCALE_INFO_EXTENDED__ is defined.
+
+2010-04-22  DJ Delorie  <dj@redhat.com>
+
+	* libc/Makefile.am (SUBDEFS): Add LIBC_POSIX_DEF.
+	(libc.info): Add posix.texi.
+	(libc.dvi): Likewise.
+	(stmp-posix): New.
+	(posix.texi): New.
+	(libc_TEXINFOS): Add posix.texi.
+	* libc/configure.in (LIBC_POSIX_LIB, LIBC_POSIX_DEF): Add
+	tests.
+	* libc/libc.texinfo: Include posix.texi
+	* libc/locale/locale.c: Fix texinfo typo.
+	* libc/time/strftime.c: Fix texinfo typo.
+
+	* libc/configure: Regenerate.
+	* libc/Makefile.in: Regenerate.
+	* libc/argz/Makefile.in: Regenerate.
+	* libc/ctype/Makefile.in: Regenerate.
+	* libc/errno/Makefile.in: Regenerate.
+	* libc/iconv/Makefile.in: Regenerate.
+	* libc/iconv/ccs/Makefile.in: Regenerate.
+	* libc/iconv/ccs/binary/Makefile.in: Regenerate.
+	* libc/iconv/ces/Makefile.in: Regenerate.
+	* libc/iconv/lib/Makefile.in: Regenerate.
+	* libc/locale/Makefile.in: Regenerate.
+	* libc/misc/Makefile.in: Regenerate.
+	* libc/posix/Makefile.in: Regenerate.
+	* libc/reent/Makefile.in: Regenerate.
+	* libc/search/Makefile.in: Regenerate.
+	* libc/signal/Makefile.in: Regenerate.
+	* libc/stdio/Makefile.in: Regenerate.
+	* libc/stdio64/Makefile.in: Regenerate.
+	* libc/stdlib/Makefile.in: Regenerate.
+	* libc/string/Makefile.in: Regenerate.
+	* libc/syscalls/Makefile.in: Regenerate.
+	* libc/time/Makefile.in: Regenerate.
+	* libc/unix/Makefile.in: Regenerate.
+	* libc/xdr/Makefile.in: Regenerate.
+
+2010-04-06  Dave Korn  <dave.korn.cygwin@googlemail.com>
+
+	* libc/stdlib/__atexit.c (__atexit_lock): Initialise as recursive
+	rather than non-recursive lock type.
+	(__register_exitproc): Use recursive locking APIs on it.
+	* libc/stdlib/__call_atexit.c (__call_exitprocs): Likewise.
+
+2010-04-06  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/stdlib/btowc.c (btowc): Reorganize EOF check.  Fix incorrect
+	return value if input byte is ASCII NUL.
+
+2010-04-01  Joel Sherrill <joel.sherrill@oarcorp.com>
+
+	* libc/include/sched.h: Include prototypes for
+	sched_* methods.
+	* libc/include/sys/sched.h: Update to POSIX
+	1003.1b-2008.  Rework constants to allow sharing
+	between RTEMS and Cygwin.
+
+2010-03-27  Corinna Vinschen  <corinna@vinschen.de>
+
+	* libc/locale/locale.c (loadlocale): Optimize "EUC" charset check.
+	Cygwin only: Allow GB2312 and EUC-CN as alternative codeset names
+	for GBK.  Add to documentation.
+	* libc/locale/nl_langinfo.c (nl_langinfo): On Cygwin, translate EUCCN
+	to GB2312.
+
+2010-03-17  Craig Howland <howland@LGSInnovations.com>
+
+	* libc/include/sys/features.h:  Allow for _XOPEN_SOURCE to have an
+	empty definition.  Also add support for values of 500 or less.
+
 2010-03-09  Jeff Johnston  <jjohnstn@redhat.com>
 
 	* libc/posix/telldir.c (dd_loccnt): Change start index to be 1 

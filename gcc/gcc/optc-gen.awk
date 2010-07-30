@@ -1,4 +1,5 @@
-#  Copyright (C) 2003, 2004, 2007, 2008, 2009 Free Software Foundation, Inc.
+#  Copyright (C) 2003, 2004, 2007, 2008, 2009, 2010
+#  Free Software Foundation, Inc.
 #  Contributed by Kelley Cook, June 2004.
 #  Original code from Neil Booth, May 2003.
 #
@@ -72,6 +73,7 @@ print "#include " quote "intl.h" quote
 print ""
 print "#ifdef GCC_DRIVER"
 print "int target_flags;"
+print "int target_flags_explicit;"
 print "#else"
 print "#include " quote "flags.h" quote
 print "#include " quote "target.h" quote
@@ -169,11 +171,7 @@ for (i = 0; i < n_opts; i++) {
 	}
 
 	len = length (opts[i]);
-	enum = "OPT_" opts[i]
-	if (opts[i] == "finline-limit=" || opts[i] == "Wlarger-than=" \
-	    || opts[i] == "ftemplate-depth=")
-		enum = enum "eq"
-	gsub ("[^A-Za-z0-9]", "_", enum)
+	enum = opt_enum(opts[i])
 
 	# If this switch takes joined arguments, back-chain all
 	# subsequent switches to it for which it is a prefix.  If
@@ -197,6 +195,12 @@ for (i = 0; i < n_opts; i++) {
 	else
 		hlp = quote help[i] quote;
 
+	missing_arg_error = opt_args("MissingArgError", flags[i])
+	if (missing_arg_error == "")
+		missing_arg_error = "0"
+	else
+		missing_arg_error = quote missing_arg_error quote
+
 	neg = opt_args("Negative", flags[i]);
 	if (neg != "")
 		idx = indices[neg]
@@ -212,8 +216,9 @@ for (i = 0; i < n_opts; i++) {
 	}
 	# Split the printf after %u to work around an ia64-hp-hpux11.23
 	# awk bug.
-	printf("  { %c-%s%c,\n    %s,\n    %s, %u,",
-	       quote, opts[i], quote, hlp, back_chain[i], len)
+	printf("  { %c-%s%c,\n    %s,\n    %s,\n    %s, %u,",
+	       quote, opts[i], quote, hlp, missing_arg_error,
+	       back_chain[i], len)
 	printf(" %d,\n", idx)
 	condition = opt_args("Condition", flags[i])
 	cl_flags = switch_flags(flags[i])
@@ -342,7 +347,7 @@ print "{";
 print "  fputs (\"\\n\", file);";
 for (i = 0; i < n_opt_other; i++) {
 	print "  if (ptr->" var_opt_other[i] ")";
-	print "    fprintf (file, \"%*s%s (0x%lx)\\n\",";
+	print "    fprintf (file, \"%*s%s (%#lx)\\n\",";
 	print "             indent_to, \"\",";
 	print "             \"" var_opt_other[i] "\",";
 	print "             (unsigned long)ptr->" var_opt_other[i] ");";
@@ -351,7 +356,7 @@ for (i = 0; i < n_opt_other; i++) {
 
 for (i = 0; i < n_opt_int; i++) {
 	print "  if (ptr->" var_opt_int[i] ")";
-	print "    fprintf (file, \"%*s%s (0x%x)\\n\",";
+	print "    fprintf (file, \"%*s%s (%#x)\\n\",";
 	print "             indent_to, \"\",";
 	print "             \"" var_opt_int[i] "\",";
 	print "             ptr->" var_opt_int[i] ");";
@@ -360,7 +365,7 @@ for (i = 0; i < n_opt_int; i++) {
 
 for (i = 0; i < n_opt_short; i++) {
 	print "  if (ptr->" var_opt_short[i] ")";
-	print "    fprintf (file, \"%*s%s (0x%x)\\n\",";
+	print "    fprintf (file, \"%*s%s (%#x)\\n\",";
 	print "             indent_to, \"\",";
 	print "             \"" var_opt_short[i] "\",";
 	print "             ptr->" var_opt_short[i] ");";
@@ -369,7 +374,7 @@ for (i = 0; i < n_opt_short; i++) {
 
 for (i = 0; i < n_opt_char; i++) {
 	print "  if (ptr->" var_opt_char[i] ")";
-	print "    fprintf (file, \"%*s%s (0x%x)\\n\",";
+	print "    fprintf (file, \"%*s%s (%#x)\\n\",";
 	print "             indent_to, \"\",";
 	print "             \"" var_opt_char[i] "\",";
 	print "             ptr->" var_opt_char[i] ");";
@@ -497,7 +502,7 @@ print "{";
 print "  fputs (\"\\n\", file);";
 for (i = 0; i < n_target_other; i++) {
 	print "  if (ptr->" var_target_other[i] ")";
-	print "    fprintf (file, \"%*s%s (0x%lx)\\n\",";
+	print "    fprintf (file, \"%*s%s (%#lx)\\n\",";
 	print "             indent, \"\",";
 	print "             \"" var_target_other[i] "\",";
 	print "             (unsigned long)ptr->" var_target_other[i] ");";
@@ -506,7 +511,7 @@ for (i = 0; i < n_target_other; i++) {
 
 for (i = 0; i < n_target_int; i++) {
 	print "  if (ptr->" var_target_int[i] ")";
-	print "    fprintf (file, \"%*s%s (0x%x)\\n\",";
+	print "    fprintf (file, \"%*s%s (%#x)\\n\",";
 	print "             indent, \"\",";
 	print "             \"" var_target_int[i] "\",";
 	print "             ptr->" var_target_int[i] ");";
@@ -515,7 +520,7 @@ for (i = 0; i < n_target_int; i++) {
 
 for (i = 0; i < n_target_short; i++) {
 	print "  if (ptr->" var_target_short[i] ")";
-	print "    fprintf (file, \"%*s%s (0x%x)\\n\",";
+	print "    fprintf (file, \"%*s%s (%#x)\\n\",";
 	print "             indent, \"\",";
 	print "             \"" var_target_short[i] "\",";
 	print "             ptr->" var_target_short[i] ");";
@@ -524,7 +529,7 @@ for (i = 0; i < n_target_short; i++) {
 
 for (i = 0; i < n_target_char; i++) {
 	print "  if (ptr->" var_target_char[i] ")";
-	print "    fprintf (file, \"%*s%s (0x%x)\\n\",";
+	print "    fprintf (file, \"%*s%s (%#x)\\n\",";
 	print "             indent, \"\",";
 	print "             \"" var_target_char[i] "\",";
 	print "             ptr->" var_target_char[i] ");";

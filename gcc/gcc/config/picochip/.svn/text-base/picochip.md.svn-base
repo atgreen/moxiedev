@@ -590,6 +590,23 @@
    (set_attr "length" "2,2,4")
    ])
 
+;; This pattern was added to match the previous pattern. When doing if-convert
+;; the pattern generated using movhicc does not have a eq:CC but only a eq for
+;; operator. If this pattern were not to be there, Gcc decides not to use
+;; movhicc at all. Whereas, in Gcc 4.4, it seems to be cleverer.
+(define_insn "*supported_compare1"
+  [(set (reg:CC CC_REGNUM)
+        (match_operator 0 "picochip_supported_comparison_operator"
+                        [(match_operand:HI 1 "register_operand" "r,r,r")
+                         (match_operand:HI 2 "picochip_comparison_operand" "r,J,i")]))]
+  ""
+  "* return picochip_output_compare(operands);"
+  [; Must be picoAlu because it sets the condition flags.
+   (set_attr "type" "picoAlu,picoAlu,picoAlu")
+   (set_attr "longConstant" "false,false,true")
+   (set_attr "length" "2,2,4")
+   ])
+
 (define_insn "*compare"
   [(set (reg:CC CC_REGNUM)
         (match_operator:CC 0 "comparison_operator"
@@ -876,7 +893,7 @@
 (define_split
   [(set (match_operand:SI 0 "register_operand" "")
         (match_operand:SI 1 "const_int_operand" ""))]
-  ""
+  "reload_completed"
   [(set (match_dup 2) (match_dup 3))
    (set (match_dup 4) (match_dup 5))]
   "{
@@ -2355,7 +2372,7 @@
 		   UNSPEC_TESTPORT))
    (clobber (reg:CC CC_REGNUM))]
   ""
-  "// %0 := TestPort(%1)\;TSTPORT %1\;COPYSW.0 %0\;AND.0 %0,8,%0"
+  "// %0 := TestPort(%1)\;COPY.1 0,%0 \\\ TSTPORT %1\;COPYEQ 1,%0"
   [(set_attr "length" "9")])
 
 ; Entry point for array tstport (the actual port index is computed as the

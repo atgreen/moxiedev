@@ -79,10 +79,6 @@ static char *gdb_completer_file_name_break_characters = " \t\n*|\"';?><@";
 static char *gdb_completer_file_name_break_characters = " \t\n*|\"';:?><";
 #endif
 
-/* These are used when completing on locations, which can mix file
-   names and symbol names separated by a colon.  */
-static char *gdb_completer_loc_break_characters = " \t\n*|\"';:?><,";
-
 /* Characters that can be used to quote completion strings.  Note that we
    can't include '"' because the gdb C parser treats such quoted sequences
    as strings.  */
@@ -130,6 +126,7 @@ filename_completer (struct cmd_list_element *ignore, char *text, char *word)
   while (1)
     {
       char *p, *q;
+
       p = rl_filename_completion_function (text, subsequent_name);
       if (return_val_used >= return_val_alloced)
 	{
@@ -393,6 +390,7 @@ add_struct_fields (struct type *type, int *nextp, char **output,
   for (i = TYPE_NFN_FIELDS (type) - 1; i >= 0; --i)
     {
       char *name = TYPE_FN_FIELDLIST_NAME (type, i);
+
       if (name && ! strncmp (name, fieldname, namelen))
 	{
 	  if (!computed_type_name)
@@ -401,7 +399,7 @@ add_struct_fields (struct type *type, int *nextp, char **output,
 	      computed_type_name = 1;
 	    }
 	  /* Omit constructors from the completion list.  */
-	  if (type_name && strcmp (type_name, name))
+	  if (!type_name || strcmp (type_name, name))
 	    {
 	      output[*nextp] = xstrdup (name);
 	      ++*nextp;
@@ -787,7 +785,8 @@ command_completer (struct cmd_list_element *ignore, char *text, char *word)
 char *
 gdb_completion_word_break_characters (void)
 {
-  char ** list;
+  char **list;
+
   list = complete_line_internal (rl_line_buffer, rl_line_buffer, rl_point,
 				 handle_brkchars);
   gdb_assert (list == NULL);

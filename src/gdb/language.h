@@ -198,7 +198,7 @@ struct language_defn
 
     /* Print a type using syntax appropriate for this language. */
 
-    void (*la_print_type) (struct type *, char *, struct ui_file *, int,
+    void (*la_print_type) (struct type *, const char *, struct ui_file *, int,
 			   int);
 
     /* Print a typedef using syntax appropriate for this language.
@@ -233,6 +233,7 @@ struct language_defn
 			 const gdb_byte *contents,
 			 int embedded_offset, CORE_ADDR address,
 			 struct ui_file *stream, int recurse,
+			 const struct value *val,
 			 const struct value_print_options *options);
 
     /* Print a top-level value using syntax appropriate for this language. */
@@ -381,9 +382,9 @@ struct type *language_lookup_primitive_type_by_name (const struct language_defn 
 
 /* "cast" really means conversion */
 /* FIXME -- should be a setting in language_defn */
-#define CAST_IS_CONVERSION (current_language->la_language == language_c  || \
-			    current_language->la_language == language_cplus || \
-			    current_language->la_language == language_objc)
+#define CAST_IS_CONVERSION(LANG) ((LANG)->la_language == language_c  || \
+				  (LANG)->la_language == language_cplus || \
+				  (LANG)->la_language == language_objc)
 
 extern void language_info (int);
 
@@ -401,9 +402,9 @@ extern enum language set_language (enum language);
 #define LA_PRINT_TYPEDEF(type,new_symbol,stream) \
   (current_language->la_print_typedef(type,new_symbol,stream))
 
-#define LA_VAL_PRINT(type,valaddr,offset,addr,stream,recurse,options) \
+#define LA_VAL_PRINT(type,valaddr,offset,addr,stream,val,recurse,options) \
   (current_language->la_val_print(type,valaddr,offset,addr,stream, \
-				  recurse,options))
+				  val,recurse,options))
 #define LA_VALUE_PRINT(val,stream,options) \
   (current_language->la_value_print(val,stream,options))
 
@@ -461,9 +462,9 @@ extern void binop_type_check (struct value *, struct value *, int);
 
 /* Error messages */
 
-extern void type_error (const char *, ...) ATTR_FORMAT (printf, 1, 2);
+extern void type_error (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
 
-extern void range_error (const char *, ...) ATTR_FORMAT (printf, 1, 2);
+extern void range_error (const char *, ...) ATTRIBUTE_PRINTF (1, 2);
 
 /* Data:  Does this value represent "truth" to the current language?  */
 

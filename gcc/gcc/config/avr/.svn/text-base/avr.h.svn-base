@@ -232,7 +232,7 @@ extern GTY(()) section *progmem_section;
     32,33,34,35					\
     }
 
-#define ORDER_REGS_FOR_LOCAL_ALLOC order_regs_for_local_alloc ()
+#define ADJUST_REG_ALLOC_ORDER order_regs_for_local_alloc ()
 
 
 #define HARD_REGNO_NREGS(REGNO, MODE) ((GET_MODE_SIZE (MODE) + UNITS_PER_WORD - 1) / UNITS_PER_WORD)
@@ -333,7 +333,7 @@ enum reg_class {
 
 #define PREFERRED_RELOAD_CLASS(X, CLASS) preferred_reload_class(X,CLASS)
 
-#define SMALL_REGISTER_CLASSES 1
+#define TARGET_SMALL_REGISTER_CLASSES_FOR_MODE_P hook_bool_mode_true
 
 #define CLASS_LIKELY_SPILLED_P(c) class_likely_spilled_p(c)
 
@@ -375,8 +375,6 @@ enum reg_class {
 /* Don't use Push rounding. expr.c: emit_single_push_insn is broken 
    for POST_DEC targets (PR27386).  */
 /*#define PUSH_ROUNDING(NPUSHED) (NPUSHED)*/
-
-#define RETURN_POPS_ARGS(FUNDECL, FUNTYPE, STACK_SIZE) 0
 
 #define FUNCTION_ARG(CUM, MODE, TYPE, NAMED) (function_arg (&(CUM), MODE, TYPE, NAMED))
 

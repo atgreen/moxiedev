@@ -43,6 +43,7 @@ struct mi_cmd mi_cmds[] =
   { "break-info", { "info break", 1 }, NULL },
   { "break-insert", { NULL, 0 }, mi_cmd_break_insert},
   { "break-list", { "info break", }, NULL },
+  { "break-passcount", { NULL, 0 }, mi_cmd_break_passcount},
   { "break-watch", { NULL, 0 }, mi_cmd_break_watch},
   { "data-disassemble", { NULL, 0 }, mi_cmd_disassemble},
   { "data-evaluate-expression", { NULL, 0 }, mi_cmd_data_evaluate_expression},
@@ -105,6 +106,13 @@ struct mi_cmd mi_cmds[] =
   { "thread-info", { NULL, 0 }, mi_cmd_thread_info },
   { "thread-list-ids", { NULL, 0 }, mi_cmd_thread_list_ids},
   { "thread-select", { NULL, 0 }, mi_cmd_thread_select},
+  { "trace-define-variable", { NULL, 0 }, mi_cmd_trace_define_variable },
+  { "trace-find", { NULL, 0 }, mi_cmd_trace_find },
+  { "trace-list-variables", { NULL, 0 }, mi_cmd_trace_list_variables },
+  { "trace-save", { NULL, 0 }, mi_cmd_trace_save },
+  { "trace-start", { NULL, 0 }, mi_cmd_trace_start },
+  { "trace-status", { NULL, 0 }, mi_cmd_trace_status },
+  { "trace-stop", { NULL, 0 }, mi_cmd_trace_stop },
   { "var-assign", { NULL, 0 }, mi_cmd_var_assign},
   { "var-create", { NULL, 0 }, mi_cmd_var_create},
   { "var-delete", { NULL, 0 }, mi_cmd_var_delete},
@@ -156,6 +164,7 @@ lookup_table (const char *command)
 {
   const char *chp;
   unsigned int index = 0;
+
   /* compute our hash */
   for (chp = command; *chp; chp++)
     {
@@ -195,6 +204,7 @@ build_table (struct mi_cmd *commands)
   for (command = commands; command->name != 0; command++)
     {
       struct mi_cmd **entry = lookup_table (command->name);
+
       if (*entry)
 	internal_error (__FILE__, __LINE__,
 			_("command `%s' appears to be duplicated"),

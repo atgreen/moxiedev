@@ -1,6 +1,6 @@
 /* Process declarations and variables for C++ compiler.
    Copyright (C) 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Hacked by Michael Tiemann (tiemann@cygnus.com)
 
@@ -33,26 +33,26 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "tree.h"
-#include "rtl.h"
-#include "expr.h"
 #include "flags.h"
 #include "cp-tree.h"
 #include "decl.h"
 #include "output.h"
-#include "except.h"
 #include "toplev.h"
 #include "timevar.h"
 #include "cpplib.h"
 #include "target.h"
-#include "c-common.h"
+#include "c-family/c-common.h"
 #include "tree-mudflap.h"
 #include "cgraph.h"
 #include "tree-inline.h"
-#include "c-pragma.h"
+#include "c-family/c-pragma.h"
 #include "tree-dump.h"
 #include "intl.h"
 #include "gimple.h"
 #include "pointer-set.h"
+#include "splay-tree.h"
+#include "langhooks.h"
+#include "c-family/c-ada-spec.h"
 
 extern cpp_reader *parse_in;
 
@@ -154,10 +154,14 @@ change_return_type (tree new_ret, tree fntype)
     return fntype;
 
   if (TREE_CODE (fntype) == FUNCTION_TYPE)
-    newtype = build_function_type (new_ret, args);
+    {
+      newtype = build_function_type (new_ret, args);
+      newtype = apply_memfn_quals (newtype, type_memfn_quals (fntype));
+    }
   else
-    newtype = build_method_type_directly (TYPE_METHOD_BASETYPE (fntype),
-					  new_ret, TREE_CHAIN (args));
+    newtype = build_method_type_directly
+      (TREE_TYPE (TREE_VALUE (TYPE_ARG_TYPES (fntype))),
+       new_ret, TREE_CHAIN (args));
   if (raises)
     newtype = build_exception_variant (newtype, raises);
   if (attrs)
@@ -238,7 +242,7 @@ maybe_retrofit_in_chrg (tree fn)
   basetype = TREE_TYPE (TREE_VALUE (arg_types));
   arg_types = TREE_CHAIN (arg_types);
 
-  parms = TREE_CHAIN (DECL_ARGUMENTS (fn));
+  parms = DECL_CHAIN (DECL_ARGUMENTS (fn));
 
   /* If this is a subobject constructor or destructor, our caller will
      pass us a pointer to our VTT.  */
@@ -247,7 +251,7 @@ maybe_retrofit_in_chrg (tree fn)
       parm = build_artificial_parm (vtt_parm_identifier, vtt_parm_type);
 
       /* First add it to DECL_ARGUMENTS between 'this' and the real args...  */
-      TREE_CHAIN (parm) = parms;
+      DECL_CHAIN (parm) = parms;
       parms = parm;
 
       /* ...and then to TYPE_ARG_TYPES.  */
@@ -258,12 +262,12 @@ maybe_retrofit_in_chrg (tree fn)
 
   /* Then add the in-charge parm (before the VTT parm).  */
   parm = build_artificial_parm (in_charge_identifier, integer_type_node);
-  TREE_CHAIN (parm) = parms;
+  DECL_CHAIN (parm) = parms;
   parms = parm;
   arg_types = hash_tree_chain (integer_type_node, arg_types);
 
   /* Insert our new parameter(s) into the list.  */
-  TREE_CHAIN (DECL_ARGUMENTS (fn)) = parms;
+  DECL_CHAIN (DECL_ARGUMENTS (fn)) = parms;
 
   /* And rebuild the function type.  */
   fntype = build_method_type_directly (basetype, TREE_TYPE (TREE_TYPE (fn)),
@@ -784,6 +788,10 @@ finish_static_data_member_decl (tree decl,
   DECL_INITIAL (decl) = init;
   DECL_IN_AGGR_P (decl) = 1;
 
+  if (TREE_CODE (TREE_TYPE (decl)) == ARRAY_TYPE
+      && TYPE_DOMAIN (TREE_TYPE (decl)) == NULL_TREE)
+    SET_VAR_HAD_UNKNOWN_BOUND (decl);
+
   cp_finish_decl (decl, init, init_const_expr_p, asmspec_tree, flags);
 }
 
@@ -908,8 +916,13 @@ grokfield (const cp_declarator *declarator,
 	    }
 	  else if (TREE_CODE (TREE_TYPE (value)) == METHOD_TYPE)
 	    {
-	      gcc_assert (error_operand_p (init) || integer_zerop (init));
-	      DECL_PURE_VIRTUAL_P (value) = 1;
+	      if (integer_zerop (init))
+		DECL_PURE_VIRTUAL_P (value) = 1;
+	      else if (error_operand_p (init))
+		; /* An error has already been reported.  */
+	      else
+		error ("invalid initializer for member function %qD",
+		       value);
 	    }
 	  else
 	    {
@@ -1236,6 +1249,7 @@ cp_reconstruct_complex_type (tree type, tree bottom)
     {
       inner = cp_reconstruct_complex_type (TREE_TYPE (type), bottom);
       outer = build_function_type (inner, TYPE_ARG_TYPES (type));
+      outer = apply_memfn_quals (outer, type_memfn_quals (type));
     }
   else if (TREE_CODE (type) == METHOD_TYPE)
     {
@@ -1258,7 +1272,7 @@ cp_reconstruct_complex_type (tree type, tree bottom)
 
   if (TYPE_ATTRIBUTES (type))
     outer = cp_build_type_attribute_variant (outer, TYPE_ATTRIBUTES (type));
-  return cp_build_qualified_type (outer, TYPE_QUALS (type));
+  return cp_build_qualified_type (outer, cp_type_quals (type));
 }
 
 /* Like decl_attributes, but handle C++ complexity.  */
@@ -1307,7 +1321,7 @@ build_anon_union_vars (tree type, tree object)
 
   for (field = TYPE_FIELDS (type);
        field != NULL_TREE;
-       field = TREE_CHAIN (field))
+       field = DECL_CHAIN (field))
     {
       tree decl;
       tree ref;
@@ -1655,7 +1669,8 @@ vague_linkage_p (tree decl)
   return (DECL_COMDAT (decl)
 	  || (((TREE_CODE (decl) == FUNCTION_DECL
 		&& DECL_DECLARED_INLINE_P (decl))
-	       || DECL_TEMPLATE_INSTANTIATION (decl))
+	       || (DECL_LANG_SPECIFIC (decl)
+		   && DECL_TEMPLATE_INSTANTIATION (decl)))
 	      && TREE_PUBLIC (decl)));
 }
 
@@ -1793,6 +1808,7 @@ maybe_emit_vtables (tree ctype)
   tree vtbl;
   tree primary_vtbl;
   int needed = 0;
+  struct varpool_node *current = NULL, *last = NULL, *first = NULL;
 
   /* If the vtables for this class have already been emitted there is
      nothing more to do.  */
@@ -1810,7 +1826,7 @@ maybe_emit_vtables (tree ctype)
     determine_key_method (ctype);
 
   /* See if any of the vtables are needed.  */
-  for (vtbl = CLASSTYPE_VTABLES (ctype); vtbl; vtbl = TREE_CHAIN (vtbl))
+  for (vtbl = CLASSTYPE_VTABLES (ctype); vtbl; vtbl = DECL_CHAIN (vtbl))
     {
       import_export_decl (vtbl);
       if (DECL_NOT_REALLY_EXTERN (vtbl) && decl_needed_p (vtbl))
@@ -1829,7 +1845,7 @@ maybe_emit_vtables (tree ctype)
 
   /* The ABI requires that we emit all of the vtables if we emit any
      of them.  */
-  for (vtbl = CLASSTYPE_VTABLES (ctype); vtbl; vtbl = TREE_CHAIN (vtbl))
+  for (vtbl = CLASSTYPE_VTABLES (ctype); vtbl; vtbl = DECL_CHAIN (vtbl))
     {
       /* Mark entities references from the virtual table as used.  */
       mark_vtable_entries (vtbl);
@@ -1850,7 +1866,19 @@ maybe_emit_vtables (tree ctype)
 	 actually marking the variable as written.  */
       if (flag_syntax_only)
 	TREE_ASM_WRITTEN (vtbl) = 1;
+      else if (DECL_COMDAT (vtbl))
+	{
+	  current = varpool_node (vtbl);
+	  if (last)
+	    last->same_comdat_group = current;
+	  last = current;
+	  if (!first)
+	    first = current;
+	}
     }
+
+  if (first != last)
+    last->same_comdat_group = first;
 
   /* Since we're writing out the vtable here, also write the debug
      info.  */
@@ -2214,7 +2242,7 @@ constrain_class_visibility (tree type)
   if (CLASSTYPE_VISIBILITY_SPECIFIED (type))
     vis = VISIBILITY_INTERNAL;
 
-  for (t = TYPE_FIELDS (type); t; t = TREE_CHAIN (t))
+  for (t = TYPE_FIELDS (type); t; t = DECL_CHAIN (t))
     if (TREE_CODE (t) == FIELD_DECL && TREE_TYPE (t) != error_mark_node)
       {
 	tree ftype = strip_pointer_or_array_types (TREE_TYPE (t));
@@ -2696,8 +2724,8 @@ start_objects (int method_type, int initp)
 
   fndecl = build_lang_decl (FUNCTION_DECL,
 			    get_file_function_name (type),
-			    build_function_type (void_type_node,
-						 void_list_node));
+			    build_function_type_list (void_type_node,
+						      NULL_TREE));
   start_preparsed_function (fndecl, /*attrs=*/NULL_TREE, SF_PRE_PARSED);
 
   TREE_PUBLIC (current_function_decl) = 0;
@@ -2789,7 +2817,6 @@ static splay_tree priority_info_map;
 static tree
 start_static_storage_duration_function (unsigned count)
 {
-  tree parm_types;
   tree type;
   tree body;
   char id[sizeof (SSDF_IDENTIFIER) + 1 /* '\0' */ + 32];
@@ -2798,11 +2825,9 @@ start_static_storage_duration_function (unsigned count)
      SSDF_IDENTIFIER_<number>.  */
   sprintf (id, "%s_%u", SSDF_IDENTIFIER, count);
 
-  /* Create the parameters.  */
-  parm_types = void_list_node;
-  parm_types = tree_cons (NULL_TREE, integer_type_node, parm_types);
-  parm_types = tree_cons (NULL_TREE, integer_type_node, parm_types);
-  type = build_function_type (void_type_node, parm_types);
+  type = build_function_type_list (void_type_node,
+				   integer_type_node, integer_type_node,
+				   NULL_TREE);
 
   /* Create the FUNCTION_DECL itself.  */
   ssdf_decl = build_lang_decl (FUNCTION_DECL,
@@ -2843,7 +2868,7 @@ start_static_storage_duration_function (unsigned count)
   DECL_CONTEXT (priority_decl) = ssdf_decl;
   TREE_USED (priority_decl) = 1;
 
-  TREE_CHAIN (initialize_p_decl) = priority_decl;
+  DECL_CHAIN (initialize_p_decl) = priority_decl;
   DECL_ARGUMENTS (ssdf_decl) = initialize_p_decl;
 
   /* Put the function in the global scope.  */
@@ -2941,7 +2966,7 @@ fix_temporary_vars_context_r (tree *node,
     {
       tree var;
 
-      for (var = BIND_EXPR_VARS (*node); var; var = TREE_CHAIN (var))
+      for (var = BIND_EXPR_VARS (*node); var; var = DECL_CHAIN (var))
 	if (TREE_CODE (var) == VAR_DECL
 	  && !DECL_NAME (var)
 	  && DECL_ARTIFICIAL (var)
@@ -3248,7 +3273,6 @@ generate_ctor_or_dtor_function (bool constructor_p, int priority,
 				location_t *locus)
 {
   char function_key;
-  tree arguments;
   tree fndecl;
   tree body;
   size_t i;
@@ -3281,17 +3305,18 @@ generate_ctor_or_dtor_function (bool constructor_p, int priority,
       /* Calls to pure or const functions will expand to nothing.  */
       if (! (flags_from_decl_or_type (fndecl) & (ECF_CONST | ECF_PURE)))
 	{
+	  tree call;
+
 	  if (! body)
 	    body = start_objects (function_key, priority);
 
-	  arguments = tree_cons (NULL_TREE,
-				 build_int_cst (NULL_TREE, priority),
-				 NULL_TREE);
-	  arguments = tree_cons (NULL_TREE,
-				 build_int_cst (NULL_TREE, constructor_p),
-				 arguments);
-	  finish_expr_stmt (cp_build_function_call (fndecl, arguments,
-						    tf_warning_or_error));
+	  call = cp_build_function_call_nary (fndecl, tf_warning_or_error,
+					      build_int_cst (NULL_TREE,
+							     constructor_p),
+					      build_int_cst (NULL_TREE,
+							     priority),
+					      NULL_TREE);
+	  finish_expr_stmt (call);
 	}
     }
 
@@ -3343,19 +3368,9 @@ cxx_callgraph_analyze_expr (tree *tp, int *walk_subtrees ATTRIBUTE_UNUSED)
 	cgraph_mark_address_taken_node (cgraph_node (BASELINK_FUNCTIONS (t)));
       break;
     case VAR_DECL:
-      if (DECL_VTABLE_OR_VTT_P (t))
-	{
-	  /* The ABI requires that all virtual tables be emitted
-	     whenever one of them is.  */
-	  tree vtbl;
-	  for (vtbl = CLASSTYPE_VTABLES (DECL_CONTEXT (t));
-	       vtbl;
-	       vtbl = TREE_CHAIN (vtbl))
-	    mark_decl_referenced (vtbl);
-	}
-      else if (DECL_CONTEXT (t)
-	       && flag_use_repository
-	       && TREE_CODE (DECL_CONTEXT (t)) == FUNCTION_DECL)
+      if (DECL_CONTEXT (t)
+	  && flag_use_repository
+	  && TREE_CODE (DECL_CONTEXT (t)) == FUNCTION_DECL)
 	/* If we need a static variable in a function, then we
 	   need the containing function.  */
 	mark_decl_referenced (DECL_CONTEXT (t));
@@ -3444,6 +3459,69 @@ build_java_method_aliases (struct pointer_set_t *candidates)
     }
 }
 
+/* Return C++ property of T, based on given operation OP.  */
+
+static int
+cpp_check (tree t, cpp_operation op)
+{
+  switch (op)
+    {
+      case IS_ABSTRACT:
+	return DECL_PURE_VIRTUAL_P (t);
+      case IS_CONSTRUCTOR:
+	return DECL_CONSTRUCTOR_P (t);
+      case IS_DESTRUCTOR:
+	return DECL_DESTRUCTOR_P (t);
+      case IS_COPY_CONSTRUCTOR:
+	return DECL_COPY_CONSTRUCTOR_P (t);
+      case IS_TEMPLATE:
+	return TREE_CODE (t) == TEMPLATE_DECL;
+      default:
+        return 0;
+    }
+}
+
+/* Collect source file references recursively, starting from NAMESPC.  */
+
+static void 
+collect_source_refs (tree namespc) 
+{
+  tree t;
+
+  if (!namespc) 
+    return;
+
+  /* Iterate over names in this name space.  */
+  for (t = NAMESPACE_LEVEL (namespc)->names; t; t = TREE_CHAIN (t))
+    if (!DECL_IS_BUILTIN (t) )
+      collect_source_ref (DECL_SOURCE_FILE (t));
+  
+  /* Dump siblings, if any */
+  collect_source_refs (TREE_CHAIN (namespc));
+
+  /* Dump children, if any */
+  collect_source_refs (NAMESPACE_LEVEL (namespc)->namespaces);
+}
+
+/* Collect decls relevant to SOURCE_FILE from all namespaces recursively,
+   starting from NAMESPC.  */
+
+static void
+collect_ada_namespace (tree namespc, const char *source_file)
+{
+  if (!namespc)
+    return;
+
+  /* Collect decls from this namespace */
+  collect_ada_nodes (NAMESPACE_LEVEL (namespc)->names, source_file);
+
+  /* Collect siblings, if any */
+  collect_ada_namespace (TREE_CHAIN (namespc), source_file);
+
+  /* Collect children, if any */
+  collect_ada_namespace (NAMESPACE_LEVEL (namespc)->namespaces, source_file);
+}
+
 /* Returns true iff there is a definition available for variable or
    function DECL.  */
 
@@ -3478,6 +3556,14 @@ no_linkage_error (tree decl)
 	       "is used but never defined", decl, t);
 }
 
+/* Collect declarations from all namespaces relevant to SOURCE_FILE.  */
+
+static void
+collect_all_refs (const char *source_file)
+{
+  collect_ada_namespace (global_namespace, source_file);
+}
+
 /* This routine is called at the end of compilation.
    Its job is to create all the code needed to initialize and
    destroy the global aggregates.  We do the destruction
@@ -3499,11 +3585,23 @@ cp_write_global_declarations (void)
   at_eof = 1;
 
   /* Bad parse errors.  Just forget about it.  */
-  if (! global_bindings_p () || current_class_type || decl_namespace_list)
+  if (! global_bindings_p () || current_class_type
+      || !VEC_empty (tree,decl_namespace_list))
     return;
 
   if (pch_file)
     c_common_write_pch ();
+
+  /* Handle -fdump-ada-spec[-slim] */
+  if (dump_enabled_p (TDI_ada))
+    {
+      if (get_dump_file_info (TDI_ada)->flags & TDF_SLIM)
+	collect_source_ref (main_input_filename);
+      else
+	collect_source_refs (global_namespace);
+
+      dump_ada_specs (collect_all_refs, cpp_check);
+    }
 
   /* FIXME - huh?  was  input_line -= 1;*/
 
@@ -4000,8 +4098,21 @@ mark_used (tree decl)
   if (TREE_CODE (decl) == FUNCTION_DECL
       && DECL_DELETED_FN (decl))
     {
-      error ("deleted function %q+D", decl);
-      error ("used here");
+      if (DECL_ARTIFICIAL (decl))
+	{
+	  if (DECL_OVERLOADED_OPERATOR_P (decl) == TYPE_EXPR
+	      && LAMBDA_TYPE_P (DECL_CONTEXT (decl)))
+	    {
+	      /* We mark a lambda conversion op as deleted if we can't
+		 generate it properly; see maybe_add_lambda_conv_op.  */
+	      sorry ("converting lambda which uses %<...%> to "
+		     "function pointer");
+	      return;
+	    }
+	}
+      error ("use of deleted function %qD", decl);
+      if (!maybe_explain_implicit_delete (decl))
+	error_at (DECL_SOURCE_LOCATION (decl), "declared here");
       return;
     }
   /* If we don't need a value, then we don't need to synthesize DECL.  */

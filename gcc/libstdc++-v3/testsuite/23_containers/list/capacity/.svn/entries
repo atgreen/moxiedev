@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/23_containers/list/capacity
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-10-03T02:17:41.543007Z
-152431
-rus
+2010-06-18T18:07:45.307398Z
+161009
+paolo
 
 
 
@@ -25,6 +25,40 @@ rus
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+resize_size.cc
+file
+
+
+
+
+2010-07-08T15:19:34.545102Z
+c0da912556d2f40ae1f0eec5c9c2f044
+2010-06-18T18:07:45.307398Z
+161009
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1275
 
 1.cc
 file

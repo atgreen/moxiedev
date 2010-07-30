@@ -725,6 +725,7 @@ mep
 moxie
 microblaze
 mt
+v850
 xc16x
 xstormy16
 m32c
@@ -2530,6 +2531,10 @@ case "${target}" in
         subdirs="$subdirs mt"
 
 	;;
+  v850*-*-*)
+        subdirs="$subdirs v850"
+
+        ;;
   xc16x-*-*)
 	subdirs="$subdirs xc16x"
 

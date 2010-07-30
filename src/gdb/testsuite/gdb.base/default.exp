@@ -40,22 +40,19 @@ gdb_test "append binary memory" "Missing filename\."
 gdb_test "append binary value"  "Missing filename\." 
 
 setup_xfail "mips-idt-*"
-send_gdb "attach\n"
-gdb_expect {
+gdb_test_multiple "attach" "attach" {
     -re "Argument required .(process-id|program) to attach.*$gdb_prompt $"\
-			{ pass "attach" }
+	{ pass "attach" }
     -re "You can't do that when your target is `None'.*$gdb_prompt $"\
-			{ pass "attach" }
+	{ pass "attach" }
     -re "You can't do that without a process to debug.*$gdb_prompt $"\
-			{ pass "attach" }
+	{ pass "attach" }
     -re "Don't know how to attach.  Try \"help target\"..*$gdb_prompt $"\
-			{ pass "attach" }
+	{ pass "attach" }
     -re "Kill it. .y or n." {
 	send_gdb "y\n"
 	exp_continue
     }
-    -re "$gdb_prompt $" { fail "attach" }
-    timeout { fail "(timeout) attach" }
 }
 
 if ![target_info exists use_gdb_stub] {
@@ -100,7 +97,7 @@ gdb_test "cd" "Argument required .new working directory.*" "cd"
 gdb_test "clear" "No source file specified..*" "clear"
 
 #test commands
-gdb_test "commands" "No breakpoint number 0..*" "commands"
+gdb_test "commands" "Argument required .one or more breakpoint numbers...*" "commands"
 
 #test condition
 gdb_test "condition" "Argument required .breakpoint number.*" "condition"
@@ -108,30 +105,25 @@ gdb_test "condition" "Argument required .breakpoint number.*" "condition"
 #test core-file
 gdb_test "core-file" "No core file now.|GDB can't read core files on this machine." "core-file"
 #test delete "d" abbreviation
-gdb_test "d" "" "delete \"d\" abbreviation"
+gdb_test_no_output "d" "delete \"d\" abbreviation"
 #test delete
-gdb_test "delete" "" "delete"
+gdb_test_no_output "delete" "delete"
 #test define
 gdb_test "define" "Argument required \[(\]name of command to define\[)\]." "define"
 #test delete breakpoints
-gdb_test "delete breakpoints" "" "delete breakpoints"
+gdb_test_no_output "delete breakpoints" "delete breakpoints"
 #test delete display
 # FIXME -- need to dump full output to detailed log
-send_gdb "delete display\n"
-gdb_expect {
-    -re "Delete all auto-display expressions.*y or n. $" {
-	send_gdb "y\n"
-	gdb_expect {
-	    -re "$gdb_prompt $"     { pass "delete display prompt" }
-	    timeout		{ fail "(timeout) delete display prompt" }
-	}
-    }
-    timeout		{ fail "(timeout) delete display prompt" }
 
-}
+gdb_test "delete display" \
+    "" \
+    "delete display prompt" \
+    "Delete all auto-display expressions.*y or n. $" \
+    "y"
+
 
 #test detach
-gdb_test "detach" "" "detach"
+gdb_test "detach" ".*" "detach"
 
 if [istarget "h8300-*-hms"] then {
     gdb_exit
@@ -141,32 +133,26 @@ if [istarget "h8300-*-hms"] then {
 #test directory
 # FIXME -- need to dump full output to detailed log
 
-send_gdb "directory\n"
-gdb_expect {
-    -re "Reinitialize source path to empty.*y or n. $"  {
-	send_gdb "y\n"
-	gdb_expect {
-	    -re "Source directories searched: .cdir\[:;\].cwd.*$gdb_prompt $"\
-		    { pass "directory prompt" }
-	    timeout		{ fail "(timeout) directory prompt" }
-	}
-    }
-}
+gdb_test "directory" \
+    "Source directories searched: .cdir\[:;\].cwd.*" \
+    "directory prompt" \
+    "Reinitialize source path to empty.*y or n. $" \
+    "y"
 
 #test disable "dis" abbreviation
-gdb_test "dis" "" "disable \"dis\" abbreviation"
+gdb_test_no_output "dis" "disable \"dis\" abbreviation"
 #test disable "disa" abbreviation
-gdb_test "disa" "" "disable \"disa\" abbreviation"
+gdb_test_no_output "disa" "disable \"disa\" abbreviation"
 #test disable
-gdb_test "disable" "" "disable"
+gdb_test_no_output "disable" "disable"
 #test disable breakpoints
-gdb_test "disable breakpoints" "" "disable breakpoints"
+gdb_test_no_output "disable breakpoints" "disable breakpoints"
 #test disable display
-gdb_test "disable display" "" "disable display"
+gdb_test_no_output "disable display" "disable display"
 #test disassemble
 gdb_test "disassemble" "No frame selected." "disassemble"
 #test display
-gdb_test "display" "" "display"
+gdb_test_no_output "display" "display"
 #test do
 gdb_test "do" "No stack." "do"
 #test document
@@ -192,21 +178,21 @@ gdb_test "dump srec value"  "Missing filename\."
 gdb_test "dump tekhex memory" "Missing filename\." 
 gdb_test "dump tekhex value"  "Missing filename\." 
 #test echo
-gdb_test "echo" "" "echo"
+gdb_test_no_output "echo" "echo"
 #test enable breakpoints delete
 gdb_test "enable breakpoints delete" "Argument required .one or more breakpoint numbers.*" "enable breakpoints delete"
 #test enable breakpoints once
 gdb_test "enable breakpoints once" "Argument required .one or more breakpoint numbers.*" "enable breakpoints once"
 #test enable breakpoints
-gdb_test "enable breakpoints" "" "enable breakpoints"
+gdb_test_no_output "enable breakpoints" "enable breakpoints"
 #test enable delete
 gdb_test "enable delete" "Argument required .one or more breakpoint numbers.*" "enable delete"
 #test enable display
-gdb_test "enable display" "" "enable display"
+gdb_test_no_output "enable display" "enable display"
 #test enable once
 gdb_test "enable once" "Argument required .one or more breakpoint numbers.*" "enable once"
 #test enable
-gdb_test "enable" "" "enable"
+gdb_test_no_output "enable" "enable"
 #test exec-file
 send_gdb "exec-file\n"
 gdb_expect {
@@ -250,32 +236,31 @@ gdb_expect {
 }
 
 #test finish
-gdb_test "finish" "The program is not running." "finish"
+gdb_test "finish" "The program is not being run." "finish"
 #test forward-search
 # The message here comes from the regexp library, not gdb, and so can
 # vary on different systems.
 gdb_test "forward-search" "No previous regular expression.*|There is no previous regular expression.*" "forward-search"
 #test gcore
-send_gdb "gcore\n"
-gdb_expect {
+
+gdb_test_multiple "gcore" "gcore" {
     -re "You can\'t do that without a process to debug.*$gdb_prompt $" {
 	pass "gcore"
     }
     -re "Undefined command: .*$gdb_prompt $" {
 	pass "gcore"
     }
-    default { fail "gcore" }
 }
-send_gdb "generate-core-file\n"
-gdb_expect {
+
+gdb_test_multiple "generate-core-file" "generate-core-file" {
     -re "You can\'t do that without a process to debug.*$gdb_prompt $" {
 	pass "generate-core-file"
     }
     -re "Undefined command: .*$gdb_prompt $" {
 	pass "generate-core-file"
     }
-    default { fail "generate-core-file" }
 }
+
 #test help "h" abbreviation
 gdb_test "h" "List of classes of commands:(\[^\r\n\]*\[\r\n\])+aliases -- Aliases of other commands(\[^\r\n\]*\[\r\n\])+breakpoints -- Making program stop at certain points(\[^\r\n\]*\[\r\n\])+data -- Examining data(\[^\r\n\]*\[\r\n\])+files -- Specifying and examining files(\[^\r\n\]*\[\r\n\])+obscure -- Obscure features(\[^\r\n\]*\[\r\n\])+running -- Running the program(\[^\r\n\]*\[\r\n\])+stack -- Examining the stack(\[^\r\n\]*\[\r\n\])+status -- Status inquiries(\[^\r\n\]*\[\r\n\])+support -- Support facilities(\[^\r\n\]*\[\r\n\])+user-defined -- User-defined commands(\[^\r\n\]*\[\r\n\])+Type \"help\" followed by a class name for a list of commands in that class.(\[^\r\n\]*\[\r\n\])+Type \"help\" followed by command name for full documentation.(\[^\r\n\]*\[\r\n\])+Command name abbreviations are allowed if unambiguous." "help \"h\" abbreviation"
 #test help
@@ -315,7 +300,7 @@ gdb_test "info f" "No stack.*|No selected frame.*" "info frame \"f\" abbreviatio
 #test info frame
 gdb_test "info frame" "No stack.|No selected frame." "info frame"
 #test info files
-gdb_test "info files" "" "info files"
+gdb_test_no_output "info files" "info files"
 #test info float
 gdb_test "info float" "The program has no registers now." "info float"
 #test info functions
@@ -341,7 +326,7 @@ gdb_test  "info source" "No current source file..*" "info source"
 #test info sources
 gdb_test "info sources" "No symbol table is loaded.  Use the \"file\" command.*" "info sources"
 #test info target
-gdb_test "info target" "" "info target"
+gdb_test_no_output "info target" "info target"
 #test info terminal
 gdb_test "info terminal" "No saved terminal information." "info terminal"
 #test info types
@@ -353,7 +338,7 @@ gdb_test "info vector" "The program has no registers now." "info vector"
 #test info warranty
 gdb_test "info warranty" "15. *Disclaimer of Warranty.*" "info warranty"
 #test info watchpoints
-gdb_test "info watchpoints" "No breakpoints or watchpoints." "info watchpoints"
+gdb_test "info watchpoints" "No watchpoints." "info watchpoints"
 #test inspect
 gdb_test "inspect" "The history is empty." "inspect"
 #test jump
@@ -384,13 +369,13 @@ gdb_test "output" "Argument required .expression to compute.*" "output"
 gdb_test "overlay" "\"overlay\" must be followed by the name of .*"
 #test a non-existant overlay subcommand
 gdb_test "overlay on"     "Undefined overlay command.* Try \"help overlay\"."
-gdb_test "overlay manual" "" "overlay manual #1"
-gdb_test "overlay auto"   ""
-gdb_test "overlay off"    ""
+gdb_test_no_output "overlay manual" "overlay manual #1"
+gdb_test_no_output "overlay auto"
+gdb_test_no_output "overlay off"
 gdb_test "overlay list"   "No sections are mapped."
 gdb_test "overlay map"    "Overlay debugging not enabled.*" "overlay map #1"
 gdb_test "overlay unmap"  "Overlay debugging not enabled.*" "overlay unmap #1"
-gdb_test "overlay manual" "" "overlay manual #2"
+gdb_test_no_output "overlay manual" "overlay manual #2"
 gdb_test "overlay map"    "Argument required: name of an overlay section." "overlay map #2"
 gdb_test "overlay unmap"  "Argument required: name of an overlay section." "overlay unmap #2"
 
@@ -407,73 +392,57 @@ gdb_test "pwd" "Working directory .*" "pwd"
 
 #test run "r" abbreviation
 if [istarget "*-*-vxworks*"] then {
-    gdb_test "set args" "" "" 
+    gdb_test "set args" ".*" "" 
 
     gdb_test "r" "Starting program: .*
 You must specify a function name to run, and arguments if any"\
 		"run \"r\" abbreviation"
-    gdb_test "set args main" "" "" 
+    gdb_test "set args main" ".*" "" 
 
 } else {
-    send_gdb "r\n"
-    gdb_expect {
-	    -re "Starting program:  .*
-You can't do that when your target is `None'.*$gdb_prompt $"\
-			{ pass "run \"r\" abbreviation" }
-	    -re "Starting program:  .*
-No executable file specified.*
-Use the \"file\" or \"exec-file\" command.*$gdb_prompt $"\
-			{ pass "run \"r\" abbreviation" }
-	    -re "Starting program:  .*
-No executable specified, use .target exec.\\..*$gdb_prompt $"\
-			{ pass "run \"r\" abbreviation" }
-	    -re "Starting program:  .*
-No image loaded into target.*$gdb_prompt $"\
-			{ pass "run \"r\" abbreviation" }
-	    -re "Starting program:  .*
-No program loaded.*$gdb_prompt $"\
-			{ pass "run \"r\" abbreviation" }
-	    -re "Don't know how to run.  Try \"help target\"..*$gdb_prompt $"\
-			{ pass "run \"r\" abbreviation" }
-	    -re ".*$gdb_prompt $"	{ fail "run \"r\" abbreviation" }
-	    timeout		{ fail "(timeout) run \"r\" abbreviation" }
-	}
+    gdb_test_multiple "r" "run \"r\" abbreviation" {
+	-re "Starting program:  .*You can't do that when your target is `None'.*$gdb_prompt $"\
+	    { pass "run \"r\" abbreviation" }
+	-re "Starting program:  .*No executable file specified.*Use the \"file\" or \"exec-file\" command.*$gdb_prompt $"\
+	    { pass "run \"r\" abbreviation" }
+	-re "Starting program:  .*No executable specified, use .target exec.\\..*$gdb_prompt $"\
+	    { pass "run \"r\" abbreviation" }
+	-re "Starting program:  .*No image loaded into target.*$gdb_prompt $"\
+	    { pass "run \"r\" abbreviation" }
+	-re "Starting program:  .*No program loaded.*$gdb_prompt $"\
+	    { pass "run \"r\" abbreviation" }
+	-re "Don't know how to run.  Try \"help target\"..*$gdb_prompt $"\
+	    { pass "run \"r\" abbreviation" }
+    }
 }
 
 #test run
 if [istarget "*-*-vxworks*"] then {
-    gdb_test "set args" "" "" 
+    gdb_test "set args" ".*" "" 
 
     gdb_test "run" "Starting program: .*
 You must specify a function name to run, and arguments if any"
-    gdb_test "set args main" "" "" 
+    gdb_test "set args main" ".*" "" 
 
 } else {
-    send_gdb "run\n"
-    gdb_expect {
-	    -re "Starting program:.*You can't do that when your target is `None'.*$gdb_prompt $" { pass "run" }
-	    -re "Starting program:  .*
-No executable file specified.*
-Use the \"file\" or \"exec-file\" command.*$gdb_prompt $"\
-			{ pass "run" }
-	    -re "Starting program:  .*
-No executable specified, use .target exec.\\..*$gdb_prompt $"\
-			{ pass "run" }
-	    -re "Starting program:  .*
-No image loaded into target.*$gdb_prompt $"\
-			{ pass "run" }
-	    -re "Starting program:  .*
-No program loaded.*$gdb_prompt $"\
-			{ pass "run \"r\" abbreviation" }
-	    -re "Don't know how to run.  Try \"help target\"..*$gdb_prompt $"\
-			{ pass "run" }
-	    -re ".*$gdb_prompt $"	{ fail "run" }
-	    timeout		{ fail "(timeout) run" }
-	}
+    gdb_test_multiple "run" "run" {
+	-re "Starting program:.*You can't do that when your target is `None'.*$gdb_prompt $"\
+	    { pass "run" }
+	-re "Starting program:  .*No executable file specified.*Use the \"file\" or \"exec-file\" command.*$gdb_prompt $"\
+	    { pass "run" }
+	-re "Starting program:  .*No executable specified, use .target exec.\\..*$gdb_prompt $"\
+	    { pass "run" }
+	-re "Starting program:  .*No image loaded into target.*$gdb_prompt $"\
+	    { pass "run" }
+	-re "Starting program:  .*No program loaded.*$gdb_prompt $"\
+	    { pass "run" }
+	-re "Don't know how to run.  Try \"help target\"..*$gdb_prompt $"\
+	    { pass "run" }
+    }
 }
 
 #test rbreak
-gdb_test "rbreak" "" "rbreak"
+gdb_test "rbreak" "rbreak"
 
 # test restore
 gdb_test "restore" "You can't do that without a process to debug\."
@@ -497,7 +466,7 @@ gdb_test "section" "Must specify section name and its virtual address.*" "sectio
 #test set annotate
 gdb_test "set annotate" "Argument required .integer to set it to.*" "set annotate"
 #test set args
-gdb_test "set args" "" "set args"
+gdb_test_no_output "set args" "set args"
 #test set check "c" abbreviation
 gdb_test "set c" "\"set check\" must be followed by the name of a check subcommand.(\[^\r\n\]*\[\r\n\])+List of set check subcommands:(\[^\r\n\]*\[\r\n\])+set check range -- Set range checking(\[^\r\n\]*\[\r\n\])+set check type -- Set type checking(\[^\r\n\]*\[\r\n\])+Type \"help set check\" followed by set check subcommand name for full documentation.(\[^\r\n\]*\[\r\n\])+Command name abbreviations are allowed if unambiguous." "set check \"c\" abbreviation"
 #test set check "ch" abbreviation
@@ -505,13 +474,13 @@ gdb_test "set ch" "\"set check\" must be followed by the name of a check subcomm
 #test set check
 gdb_test "set check" "\"set check\" must be followed by the name of a check subcommand.(\[^\r\n\]*\[\r\n\])+List of set check subcommands:(\[^\r\n\]*\[\r\n\])+set check range -- Set range checking(\[^\r\n\]*\[\r\n\])+set check type -- Set type checking(\[^\r\n\]*\[\r\n\])+Type \"help set check\" followed by set check subcommand name for full documentation.(\[^\r\n\]*\[\r\n\])+Command name abbreviations are allowed if unambiguous." "set check"
 #test set check range
-gdb_test "set check range" "" "set check range"
+gdb_test "set check range" ".*" "set check range"
 #test set check type
-gdb_test "set check type" "" "set check type"
+gdb_test "set check type" ".*" "set check type"
 #test set complaints
 gdb_test "set complaints" "Argument required .integer to set it to.*" "set complaints"
 #test set confirm
-gdb_test "set confirm" "" "set confirm"
+gdb_test_no_output "set confirm" "set confirm"
 # Don't test set editing. What if we're talking to a gdb that
 # won't do editing correctly while we're talking to it?
 # gdb_test "set editing" "" "set editing"
@@ -521,17 +490,17 @@ gdb_test "set environment" "Argument required .environment variable and value.*"
 #test set height
 gdb_test "set height" "Argument required .integer to set it to.*" "set height"
 #test set history expansion
-gdb_test "set history expansion" "" "set history expansion"
+gdb_test_no_output "set history expansion" "set history expansion"
 #test set history filename
 gdb_test "set history filename" "Argument required .filename to set it to.*" "set history filename"
 #test set history save
-gdb_test "set history save" "" "set history save"
+gdb_test_no_output "set history save" "set history save"
 #test set history size
 gdb_test "set history size" "Argument required .integer to set it to.*" "set history size"
 #test set history
 gdb_test "set history" "\"set history\" must be followed by the name of a history subcommand.(\[^\r\n\]*\[\r\n\])+List of set history subcommands:(\[^\r\n\]*\[\r\n\])+set history expansion -- Set history expansion on command input(\[^\r\n\]*\[\r\n\])+set history filename -- Set the filename in which to record the command history(\[^\r\n\]*\[\r\n\])+set history save -- Set saving of the history record on exit(\[^\r\n\]*\[\r\n\])+set history size -- Set the size of the command history(\[^\r\n\]*\[\r\n\])+Type \"help set history\" followed by set history subcommand name for full documentation.(\[^\r\n\]*\[\r\n\])+Command name abbreviations are allowed if unambiguous." "set history"
 #test set language
-gdb_test "set language" "Requires an argument. Valid arguments are auto, local, unknown, ada, c, c.., asm, minimal, fortran, objective-c, java, modula-2, pascal, scheme." "set language"
+gdb_test "set language" "Requires an argument. Valid arguments are auto, local, unknown, ada, c, c.., asm, minimal, d, fortran, objective-c, java, modula-2, pascal, scheme." "set language"
 #test set listsize
 gdb_test "set listsize" "Argument required .integer to set it to.*" "set listsize"
 #test set print "p" abbreviation
@@ -541,39 +510,39 @@ gdb_test "set pr" "\"set print\" must be followed by the name of a print subcomm
 #test set print
 gdb_test "set print" "\"set print\" must be followed by the name of a print subcommand.(\[^\r\n\]*\[\r\n\])+List of set print subcommands:(\[^\r\n\]*\[\r\n\])+Type \"help set print\" followed by set print subcommand name for full documentation.(\[^\r\n\]*\[\r\n\])+Command name abbreviations are allowed if unambiguous." "set print"
 #test set print address
-gdb_test "set print address" "" "set print address"
+gdb_test_no_output "set print address" "set print address"
 #test set print array
-gdb_test "set print array" "" "set print array"
+gdb_test_no_output "set print array" "set print array"
 #test set print asm-demangle
-gdb_test "set print asm-demangle" "" "set print asm-demangle"
+gdb_test_no_output "set print asm-demangle" "set print asm-demangle"
 #test set print demangle
-gdb_test "set print demangle" "" "set print demangle"
+gdb_test_no_output "set print demangle" "set print demangle"
 #test set print elements
 gdb_test "set print elements" "Argument required .integer to set it to.*" "set print elements"
 #test set print object
-gdb_test "set print object" "" "set print object"
+gdb_test_no_output "set print object" "set print object"
 #test set print pretty
-gdb_test "set print pretty" "" "set print pretty"
+gdb_test_no_output "set print pretty" "set print pretty"
 #test set print sevenbit-strings
-gdb_test "set print sevenbit-strings" "" "set print sevenbit-strings"
+gdb_test_no_output "set print sevenbit-strings" "set print sevenbit-strings"
 #test set print union
-gdb_test "set print union" "" "set print union"
+gdb_test_no_output "set print union" "set print union"
 #test set print vtbl
-gdb_test "set print vtbl" "" "set print vtbl"
+gdb_test_no_output "set print vtbl" "set print vtbl"
 # FIXME -- need a test for "set prompt"
 #test set radix
 gdb_test "set radix" "Input and output radices now set to decimal 10, hex a, octal 12.*" "set radix"
 #test set symbol-reloading
-gdb_test "set symbol-reloading" "" "set symbol-reloading"
+gdb_test_no_output "set symbol-reloading" "set symbol-reloading"
 #test set variable
 gdb_test "set variable" "Argument required .expression to compute.*" "set variable"
 #test set verbose
-gdb_test "set verbose" "" "set verbose"
+gdb_test_no_output "set verbose" "set verbose"
 #test set width
 gdb_test "set width" "Argument required .integer to set it to.*" "set width"
 #test set write
 # This is only supported on targets which use exec.o.
-gdb_test "set write" "" "set write"
+gdb_test_no_output "set write" "set write"
 #test set
 gdb_test "set" "Argument required .expression to compute.*" "set"
 #test shell echo Hi dad!
@@ -593,13 +562,24 @@ gdb_test "show check range" "Range checking is \"auto; currently off\"." "show c
 #test show check type
 gdb_test "show check type" "Type checking is \"auto; currently off\"." "show check type"
 #test show commands
-gdb_test "show commands" "" "show commands"
+gdb_test "show commands" ".*" "show commands"
 #test show complaints
 gdb_test "show complaints" "Max number of complaints about incorrect symbols is 0." "show complaints"
 #test show confirm
 gdb_test "show confirm" "Whether to confirm potentially dangerous operations is o\[a-z\]*." "show confirm"
+
 #test show convenience
-gdb_test "show convenience" "\\\$_siginfo = void" "show convenience"
+# This is tricker as there are multiple internal convenience vars and we
+# can't assume any particular order.
+gdb_test_list_exact "show convenience" "show convenience" \
+    {[^\r\n]+[\r\n]+} \
+    {[^\r\n]+} \
+    { \
+	{$_sdata = void} \
+	{$_siginfo = void} \
+	{$_thread = 0} \
+    }
+
 #test show directories
 gdb_test "show directories" "Source directories searched: .cdir\[:;\].cwd" "show directories"
 #test show editing
@@ -625,7 +605,7 @@ gdb_test "show p" ".*" "show p"
 #test show print "pr" abbreviation
 gdb_test "show pr" ".*" "show pr"
 #test show print
-gdb_test "show print" "" "show print"
+gdb_test "show print" ".*" "show print"
 #test show paths
 gdb_test "show paths" "Executable and object file path:.*" "show paths"
 #test show print address
@@ -658,9 +638,9 @@ gdb_test "show radix" "Input and output radices set to decimal 10, hex a, octal 
 #test show symbol-reloading
 gdb_test "show symbol-reloading" "Dynamic symbol table reloading multiple times in one run is on." "show symbol-reloading"
 #test show user
-gdb_test "show user" "" "show user"
+gdb_test_no_output "show user" "show user"
 #test show values
-gdb_test "show values" "" "show values"
+gdb_test_no_output "show values" "show values"
 #test show verbose
 gdb_test "show verbose" "Verbose printing of informational messages is o.*|Verbosity is off.*" "show verbose"
 #test show version
@@ -685,7 +665,7 @@ gdb_test "s" "The program is not being run." "step \"s\" abbreviation #2"
 #test step
 gdb_test "step" "The program is not being run." "step #2"
 #test symbol-file
-gdb_test "symbol-file" "" "symbol-file"
+gdb_test "symbol-file" ".*" "symbol-file"
 
 #test target child
 gdb_test "target child" "Use the \"run\" command to start a Unix child process.*|Undefined target command: \"child\".  *Try \"help target\".*" "target child"
@@ -753,39 +733,25 @@ gdb_test "tbreak" "No default breakpoint address now." "tbreak"
 #test tty
 gdb_test "tty" "Argument required .filename to set it to\..*" "tty"
 #test until "u" abbreviation
-gdb_test "u" "The program is not running." "until \"u\" abbreviation"
+gdb_test "u" "The program is not being run." "until \"u\" abbreviation"
 #test until
-gdb_test "until" "The program is not running." "until"
+gdb_test "until" "The program is not being run." "until"
 #test undisplay
 # FIXME -- need to dump full output to detailed log
-send_gdb "undisplay\n"
-gdb_expect {
-    -re "Delete all auto-display expressions.*y or n. $" {
-	send_gdb "y\n"
-	gdb_expect {
-	    -re "$gdb_prompt $" { pass "undisplay prompt" }
-	    timeout { fail "(timeout) (timeout) undisplay prompt"    }
-	}
-    }
-    timeout		{ fail "(timeout) (timeout) undisplay prompt" }
-}
+
+gdb_test "undisplay" \
+    "" \
+    "undisplay prompt" \
+    "Delete all auto-display expressions.*y or n. $" \
+    "y"
 
 #test unset environment
-send_gdb "unset environment\n"
-gdb_expect {
-    -re "Delete all environment variables?.*y or n. $" { 
-	send_gdb "y\n"
-	gdb_expect {
-	    -re "$gdb_prompt $" { pass "unset environmentprompt" }
-	    timeout {
-		fail "(timeout) (timeout) unset environment prompt"
-	    }
-	}
-    }
-    timeout { 
-	fail "(timeout) (timeout) unset environment prompt"
-    }
-}
+
+gdb_test "unset environment" \
+    "" \
+    "unset environment prompt" \
+    "Delete all environment variables?.*y or n. $" \
+    "y"
 
 #test unset
 gdb_test "unset" "\"unset\" must be followed by the name of an unset subcommand.(\[^\r\n\]*\[\r\n\])+List of unset subcommands:(\[^\r\n\]*\[\r\n\])+unset environment -- Cancel environment variable VAR for the program(\[^\r\n\]*\[\r\n\])+Type \"help unset\" followed by unset subcommand name for full documentation.(\[^\r\n\]*\[\r\n\])+Command name abbreviations are allowed if unambiguous." "unset"

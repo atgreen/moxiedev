@@ -1,6 +1,6 @@
 /* Code translation -- generate GCC trees from gfc_code.
-   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Free
-   Software Foundation, Inc.
+   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
    Contributed by Paul Brook
 
 This file is part of GCC.
@@ -23,12 +23,10 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tree.h"
-#include "gimple.h"
+#include "gimple.h"	/* For create_tmp_var_raw.  */
 #include "tree-iterator.h"
-#include "ggc.h"
-#include "toplev.h"
+#include "diagnostic-core.h"  /* For internal_error.  */
 #include "defaults.h"
-#include "real.h"
 #include "flags.h"
 #include "gfortran.h"
 #include "trans.h"
@@ -47,7 +45,6 @@ along with GCC; see the file COPYING3.  If not see
 
 static gfc_file *gfc_current_backend_file;
 
-const char gfc_msg_bounds[] = N_("Array bound mismatch");
 const char gfc_msg_fault[] = N_("Array reference out of bounds");
 const char gfc_msg_wrong_return[] = N_("Incorrect function return value");
 
@@ -60,7 +57,7 @@ gfc_advance_chain (tree t, int n)
   for (; n > 0; n--)
     {
       gcc_assert (t != NULL_TREE);
-      t = TREE_CHAIN (t);
+      t = DECL_CHAIN (t);
     }
   return t;
 }
@@ -221,8 +218,8 @@ gfc_merge_block_scope (stmtblock_t * block)
   /* Add them to the parent scope.  */
   while (decl != NULL_TREE)
     {
-      next = TREE_CHAIN (decl);
-      TREE_CHAIN (decl) = NULL_TREE;
+      next = DECL_CHAIN (decl);
+      DECL_CHAIN (decl) = NULL_TREE;
 
       pushdecl (decl);
       decl = next;
@@ -705,7 +702,7 @@ gfc_allocate_with_status (stmtblock_t * block, tree size, tree status)
 	  return mem;
 	}
 	else
-	  runtime_error ("Attempting to allocate already allocated array");
+	  runtime_error ("Attempting to allocate already allocated variable");
       }
     }
     
@@ -744,13 +741,13 @@ gfc_allocate_array_with_status (stmtblock_t * block, tree mem, tree size,
 
       error = gfc_trans_runtime_error (true, &expr->where,
 				       "Attempting to allocate already"
-				       " allocated array '%s'",
+				       " allocated variable '%s'",
 				       varname);
     }
   else
     error = gfc_trans_runtime_error (true, NULL,
 				     "Attempting to allocate already allocated"
-				     "array");
+				     "variable");
 
   if (status != NULL_TREE && !integer_zerop (status))
     {
@@ -980,31 +977,47 @@ gfc_call_realloc (stmtblock_t * block, tree mem, tree size)
   return res;
 }
 
+
+/* Add an expression to another one, either at the front or the back.  */
+
+static void
+add_expr_to_chain (tree* chain, tree expr, bool front)
+{
+  if (expr == NULL_TREE || IS_EMPTY_STMT (expr))
+    return;
+
+  if (*chain)
+    {
+      if (TREE_CODE (*chain) != STATEMENT_LIST)
+	{
+	  tree tmp;
+
+	  tmp = *chain;
+	  *chain = NULL_TREE;
+	  append_to_statement_list (tmp, chain);
+	}
+
+      if (front)
+	{
+	  tree_stmt_iterator i;
+
+	  i = tsi_start (*chain);
+	  tsi_link_before (&i, expr, TSI_CONTINUE_LINKING);
+	}
+      else
+	append_to_statement_list (expr, chain);
+    }
+  else
+    *chain = expr;
+}
+
 /* Add a statement to a block.  */
 
 void
 gfc_add_expr_to_block (stmtblock_t * block, tree expr)
 {
   gcc_assert (block);
-
-  if (expr == NULL_TREE || IS_EMPTY_STMT (expr))
-    return;
-
-  if (block->head)
-    {
-      if (TREE_CODE (block->head) != STATEMENT_LIST)
-	{
-	  tree tmp;
-
-	  tmp = block->head;
-	  block->head = NULL_TREE;
-	  append_to_statement_list (tmp, &block->head);
-	}
-      append_to_statement_list (expr, &block->head);
-    }
-  else
-    /* Don't bother creating a list if we only have a single statement.  */
-    block->head = expr;
+  add_expr_to_chain (&block->head, expr, false);
 }
 
 
@@ -1068,6 +1081,8 @@ trans_code (gfc_code * code, tree cond)
 	  gfc_add_expr_to_block (&block, res);
 	}
 
+      gfc_set_backend_locus (&code->loc);
+
       switch (code->op)
 	{
 	case EXEC_NOP:
@@ -1078,7 +1093,7 @@ trans_code (gfc_code * code, tree cond)
 
 	case EXEC_ASSIGN:
 	  if (code->expr1->ts.type == BT_CLASS)
-	    res = gfc_trans_class_assign (code);
+	    res = gfc_trans_class_assign (code->expr1, code->expr2, code->op);
 	  else
 	    res = gfc_trans_assign (code);
 	  break;
@@ -1089,20 +1104,24 @@ trans_code (gfc_code * code, tree cond)
 
 	case EXEC_POINTER_ASSIGN:
 	  if (code->expr1->ts.type == BT_CLASS)
-	    res = gfc_trans_class_assign (code);
+	    res = gfc_trans_class_assign (code->expr1, code->expr2, code->op);
 	  else
 	    res = gfc_trans_pointer_assign (code);
 	  break;
 
 	case EXEC_INIT_ASSIGN:
 	  if (code->expr1->ts.type == BT_CLASS)
-	    res = gfc_trans_class_assign (code);
+	    res = gfc_trans_class_init_assign (code);
 	  else
 	    res = gfc_trans_init_assign (code);
 	  break;
 
 	case EXEC_CONTINUE:
 	  res = NULL_TREE;
+	  break;
+
+	case EXEC_CRITICAL:
+	  res = gfc_trans_critical (code);
 	  break;
 
 	case EXEC_CYCLE:
@@ -1126,7 +1145,8 @@ trans_code (gfc_code * code, tree cond)
 	  break;
 
 	case EXEC_STOP:
-	  res = gfc_trans_stop (code);
+	case EXEC_ERROR_STOP:
+	  res = gfc_trans_stop (code, code->op == EXEC_ERROR_STOP);
 	  break;
 
 	case EXEC_CALL:
@@ -1137,8 +1157,12 @@ trans_code (gfc_code * code, tree cond)
 	    if (code->resolved_isym
 		&& code->resolved_isym->id == GFC_ISYM_MVBITS)
 	      is_mvbits = true;
-	    res = gfc_trans_call (code, is_mvbits, NULL_TREE,
-				  NULL_TREE, false);
+	    if (code->resolved_isym
+		&& code->resolved_isym->id == GFC_ISYM_MOVE_ALLOC)
+	      res = gfc_conv_intrinsic_move_alloc (code);
+	    else
+	      res = gfc_trans_call (code, is_mvbits, NULL_TREE,
+				    NULL_TREE, false);
 	  }
 	  break;
 
@@ -1189,6 +1213,12 @@ trans_code (gfc_code * code, tree cond)
 
 	case EXEC_FLUSH:
 	  res = gfc_trans_flush (code);
+	  break;
+
+	case EXEC_SYNC_ALL:
+	case EXEC_SYNC_IMAGES:
+	case EXEC_SYNC_MEMORY:
+	  res = gfc_trans_sync (code, code->op);
 	  break;
 
 	case EXEC_FORALL:
@@ -1362,7 +1392,7 @@ gfc_generate_module_code (gfc_namespace * ns)
       if (!n->proc_name)
         continue;
 
-      gfc_create_function_decl (n);
+      gfc_create_function_decl (n, false);
       gcc_assert (DECL_CONTEXT (n->proc_name->backend_decl) == NULL_TREE);
       DECL_CONTEXT (n->proc_name->backend_decl) = ns->proc_name->backend_decl;
       gfc_module_add_decl (entry, n->proc_name->backend_decl);
@@ -1383,3 +1413,55 @@ gfc_generate_module_code (gfc_namespace * ns)
     }
 }
 
+
+/* Initialize an init/cleanup block with existing code.  */
+
+void
+gfc_start_wrapped_block (gfc_wrapped_block* block, tree code)
+{
+  gcc_assert (block);
+
+  block->init = NULL_TREE;
+  block->code = code;
+  block->cleanup = NULL_TREE;
+}
+
+
+/* Add a new pair of initializers/clean-up code.  */
+
+void
+gfc_add_init_cleanup (gfc_wrapped_block* block, tree init, tree cleanup)
+{
+  gcc_assert (block);
+
+  /* The new pair of init/cleanup should be "wrapped around" the existing
+     block of code, thus the initialization is added to the front and the
+     cleanup to the back.  */
+  add_expr_to_chain (&block->init, init, true);
+  add_expr_to_chain (&block->cleanup, cleanup, false);
+}
+
+
+/* Finish up a wrapped block by building a corresponding try-finally expr.  */
+
+tree
+gfc_finish_wrapped_block (gfc_wrapped_block* block)
+{
+  tree result;
+
+  gcc_assert (block);
+
+  /* Build the final expression.  For this, just add init and body together,
+     and put clean-up with that into a TRY_FINALLY_EXPR.  */
+  result = block->init;
+  add_expr_to_chain (&result, block->code, false);
+  if (block->cleanup)
+    result = build2 (TRY_FINALLY_EXPR, void_type_node, result, block->cleanup);
+  
+  /* Clear the block.  */
+  block->init = NULL_TREE;
+  block->code = NULL_TREE;
+  block->cleanup = NULL_TREE;
+
+  return result;
+}

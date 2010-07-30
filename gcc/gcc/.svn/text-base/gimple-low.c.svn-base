@@ -24,21 +24,13 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "tree.h"
-#include "rtl.h"
-#include "varray.h"
 #include "gimple.h"
 #include "tree-iterator.h"
 #include "tree-inline.h"
-#include "diagnostic.h"
-#include "langhooks.h"
-#include "langhooks-def.h"
 #include "tree-flow.h"
-#include "timevar.h"
-#include "except.h"
-#include "hashtab.h"
 #include "flags.h"
 #include "function.h"
-#include "expr.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "tree-pass.h"
 
@@ -249,7 +241,7 @@ gimple_check_call_args (gimple stmt)
     {
       for (i = 0, p = DECL_ARGUMENTS (fndecl);
 	   i < nargs;
-	   i++, p = TREE_CHAIN (p))
+	   i++, p = DECL_CHAIN (p))
 	{
 	  /* We cannot distinguish a varargs function from the case
 	     of excess parameters, still deferring the inlining decision
@@ -902,7 +894,7 @@ record_vars_into (tree vars, tree fn)
   if (fn != current_function_decl)
     push_cfun (DECL_STRUCT_FUNCTION (fn));
 
-  for (; vars; vars = TREE_CHAIN (vars))
+  for (; vars; vars = DECL_CHAIN (vars))
     {
       tree var = vars;
 
@@ -916,8 +908,7 @@ record_vars_into (tree vars, tree fn)
 	continue;
 
       /* Record the variable.  */
-      cfun->local_decls = tree_cons (NULL_TREE, var,
-					     cfun->local_decls);
+      add_local_decl (cfun, var);
     }
 
   if (fn != current_function_decl)

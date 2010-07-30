@@ -205,6 +205,7 @@ obsavestring (const char *ptr, int size, struct obstack *obstackp)
     const char *p1 = ptr;
     char *p2 = p;
     const char *end = ptr + size;
+
     while (p1 != end)
       *p2++ = *p1++;
   }
@@ -212,19 +213,29 @@ obsavestring (const char *ptr, int size, struct obstack *obstackp)
   return p;
 }
 
-/* Concatenate strings S1, S2 and S3; return the new string.  Space is found
-   in the obstack pointed to by OBSTACKP.  */
+/* Concatenate NULL terminated variable argument list of `const char *' strings;
+   return the new string.  Space is found in the OBSTACKP.  Argument list must
+   be terminated by a sentinel expression `(char *) NULL'.  */
 
 char *
-obconcat (struct obstack *obstackp, const char *s1, const char *s2,
-	  const char *s3)
+obconcat (struct obstack *obstackp, ...)
 {
-  int len = strlen (s1) + strlen (s2) + strlen (s3) + 1;
-  char *val = (char *) obstack_alloc (obstackp, len);
-  strcpy (val, s1);
-  strcat (val, s2);
-  strcat (val, s3);
-  return val;
+  va_list ap;
+
+  va_start (ap, obstackp);
+  for (;;)
+    {
+      const char *s = va_arg (ap, const char *);
+
+      if (s == NULL)
+	break;
+
+      obstack_grow_str (obstackp, s);
+    }
+  va_end (ap);
+  obstack_1grow (obstackp, 0);
+
+  return obstack_finish (obstackp);
 }
 
 /* True if we are reading a symbol table. */
@@ -319,6 +330,27 @@ build_section_addr_info_from_section_table (const struct target_section *start,
   return sap;
 }
 
+/* Create a section_addr_info from section offsets in ABFD.  */
+
+static struct section_addr_info *
+build_section_addr_info_from_bfd (bfd *abfd)
+{
+  struct section_addr_info *sap;
+  int i;
+  struct bfd_section *sec;
+
+  sap = alloc_section_addr_info (bfd_count_sections (abfd));
+  for (i = 0, sec = abfd->sections; sec != NULL; sec = sec->next)
+    if (bfd_get_section_flags (abfd, sec) & (SEC_ALLOC | SEC_LOAD))
+      {
+	sap->other[i].addr = bfd_get_section_vma (abfd, sec);
+	sap->other[i].name = xstrdup (bfd_get_section_name (abfd, sec));
+	sap->other[i].sectindex = sec->index;
+	i++;
+      }
+  return sap;
+}
+
 /* Create a section_addr_info from section offsets in OBJFILE.  */
 
 struct section_addr_info *
@@ -326,22 +358,19 @@ build_section_addr_info_from_objfile (const struct objfile *objfile)
 {
   struct section_addr_info *sap;
   int i;
-  struct bfd_section *sec;
 
-  sap = alloc_section_addr_info (objfile->num_sections);
-  for (i = 0, sec = objfile->obfd->sections; sec != NULL; sec = sec->next)
-    if (bfd_get_section_flags (objfile->obfd, sec) & (SEC_ALLOC | SEC_LOAD))
-      {
-	sap->other[i].addr = (bfd_get_section_vma (objfile->obfd, sec)
-			      + objfile->section_offsets->offsets[i]);
-	sap->other[i].name = xstrdup (bfd_get_section_name (objfile->obfd,
-							    sec));
-	sap->other[i].sectindex = sec->index;
-	i++;
-      }
+  /* Before reread_symbols gets rewritten it is not safe to call:
+     gdb_assert (objfile->num_sections == bfd_count_sections (objfile->obfd));
+     */
+  sap = build_section_addr_info_from_bfd (objfile->obfd);
+  for (i = 0; i < sap->num_sections && sap->other[i].name; i++)
+    {
+      int sectindex = sap->other[i].sectindex;
+
+      sap->other[i].addr += objfile->section_offsets->offsets[sectindex];
+    }
   return sap;
 }
-
 
 /* Free all memory allocated by build_section_addr_info_from_section_table. */
 
@@ -455,7 +484,6 @@ place_section (bfd *abfd, asection *sect, void *obj)
     for (cur_sec = abfd->sections; cur_sec != NULL; cur_sec = cur_sec->next)
       {
 	int indx = cur_sec->index;
-	CORE_ADDR cur_offset;
 
 	/* We don't need to compare against ourself.  */
 	if (cur_sec == sect)
@@ -519,6 +547,46 @@ relative_addr_info_to_section_offsets (struct section_offsets *section_offsets,
     }
 }
 
+/* qsort comparator for addrs_section_sort.  Sort entries in ascending order by
+   their (name, sectindex) pair.  sectindex makes the sort by name stable.  */
+
+static int
+addrs_section_compar (const void *ap, const void *bp)
+{
+  const struct other_sections *a = *((struct other_sections **) ap);
+  const struct other_sections *b = *((struct other_sections **) bp);
+  int retval, a_idx, b_idx;
+
+  retval = strcmp (a->name, b->name);
+  if (retval)
+    return retval;
+
+  /* SECTINDEX is undefined iff ADDR is zero.  */
+  a_idx = a->addr == 0 ? 0 : a->sectindex;
+  b_idx = b->addr == 0 ? 0 : b->sectindex;
+  return a_idx - b_idx;
+}
+
+/* Provide sorted array of pointers to sections of ADDRS.  The array is
+   terminated by NULL.  Caller is responsible to call xfree for it.  */
+
+static struct other_sections **
+addrs_section_sort (struct section_addr_info *addrs)
+{
+  struct other_sections **array;
+  int i;
+
+  /* `+ 1' for the NULL terminator.  */
+  array = xmalloc (sizeof (*array) * (addrs->num_sections + 1));
+  for (i = 0; i < addrs->num_sections && addrs->other[i].name; i++)
+    array[i] = &addrs->other[i];
+  array[i] = NULL;
+
+  qsort (array, i, sizeof (*array), addrs_section_compar);
+
+  return array;
+}
+
 /* Relativize absolute addresses in ADDRS into offsets based on ABFD.  Fill-in
    also SECTINDEXes specific to ABFD there.  This function can be used to
    rebase ADDRS to start referencing different BFD than before.  */
@@ -529,6 +597,10 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
   asection *lower_sect;
   CORE_ADDR lower_offset;
   int i;
+  struct cleanup *my_cleanup;
+  struct section_addr_info *abfd_addrs;
+  struct other_sections **addrs_sorted, **abfd_addrs_sorted;
+  struct other_sections **addrs_to_abfd_addrs;
 
   /* Find lowest loadable section to be used as starting point for
      continguous sections.  */
@@ -543,6 +615,55 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
   else
     lower_offset = bfd_section_vma (bfd_get_filename (abfd), lower_sect);
 
+  /* Create ADDRS_TO_ABFD_ADDRS array to map the sections in ADDRS to sections
+     in ABFD.  Section names are not unique - there can be multiple sections of
+     the same name.  Also the sections of the same name do not have to be
+     adjacent to each other.  Some sections may be present only in one of the
+     files.  Even sections present in both files do not have to be in the same
+     order.
+
+     Use stable sort by name for the sections in both files.  Then linearly
+     scan both lists matching as most of the entries as possible.  */
+
+  addrs_sorted = addrs_section_sort (addrs);
+  my_cleanup = make_cleanup (xfree, addrs_sorted);
+
+  abfd_addrs = build_section_addr_info_from_bfd (abfd);
+  make_cleanup_free_section_addr_info (abfd_addrs);
+  abfd_addrs_sorted = addrs_section_sort (abfd_addrs);
+  make_cleanup (xfree, abfd_addrs_sorted);
+
+  /* Now create ADDRS_TO_ABFD_ADDRS from ADDRS_SORTED and ABFD_ADDRS_SORTED.  */
+
+  addrs_to_abfd_addrs = xzalloc (sizeof (*addrs_to_abfd_addrs)
+				 * addrs->num_sections);
+  make_cleanup (xfree, addrs_to_abfd_addrs);
+
+  while (*addrs_sorted)
+    {
+      const char *sect_name = (*addrs_sorted)->name;
+
+      while (*abfd_addrs_sorted
+	     && strcmp ((*abfd_addrs_sorted)->name, sect_name) < 0)
+	abfd_addrs_sorted++;
+
+      if (*abfd_addrs_sorted
+	  && strcmp ((*abfd_addrs_sorted)->name, sect_name) == 0)
+	{
+	  int index_in_addrs;
+
+	  /* Make the found item directly addressable from ADDRS.  */
+	  index_in_addrs = *addrs_sorted - addrs->other;
+	  gdb_assert (addrs_to_abfd_addrs[index_in_addrs] == NULL);
+	  addrs_to_abfd_addrs[index_in_addrs] = *abfd_addrs_sorted;
+
+	  /* Never use the same ABFD entry twice.  */
+	  abfd_addrs_sorted++;
+	}
+
+      addrs_sorted++;
+    }
+
   /* Calculate offsets for the loadable sections.
      FIXME! Sections must be in order of increasing loadable section
      so that contiguous sections can use the lower-offset!!!
@@ -556,16 +677,16 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
   for (i = 0; i < addrs->num_sections && addrs->other[i].name; i++)
     {
       const char *sect_name = addrs->other[i].name;
-      asection *sect = bfd_get_section_by_name (abfd, sect_name);
+      struct other_sections *sect = addrs_to_abfd_addrs[i];
 
       if (sect)
 	{
 	  /* This is the index used by BFD. */
-	  addrs->other[i].sectindex = sect->index;
+	  addrs->other[i].sectindex = sect->sectindex;
 
 	  if (addrs->other[i].addr != 0)
 	    {
-	      addrs->other[i].addr -= bfd_section_vma (abfd, sect);
+	      addrs->other[i].addr -= sect->addr;
 	      lower_offset = addrs->other[i].addr;
 	    }
 	  else
@@ -576,16 +697,19 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
 	  /* This section does not exist in ABFD, which is normally
 	     unexpected and we want to issue a warning.
 
-	     However, the ELF prelinker does create a couple of sections
-	     (".gnu.liblist" and ".gnu.conflict") which are marked in the main
-	     executable as loadable (they are loaded in memory from the
-	     DYNAMIC segment) and yet are not present in separate debug info
-	     files.  This is fine, and should not cause a warning.  Shared
-	     libraries contain just the section ".gnu.liblist" but it is not
-	     marked as loadable there.  */
+	     However, the ELF prelinker does create a few sections which are
+	     marked in the main executable as loadable (they are loaded in
+	     memory from the DYNAMIC segment) and yet are not present in
+	     separate debug info files.  This is fine, and should not cause
+	     a warning.  Shared libraries contain just the section
+	     ".gnu.liblist" but it is not marked as loadable there.  There is
+	     no other way to identify them than by their name as the sections
+	     created by prelink have no special flags.  */
 
 	  if (!(strcmp (sect_name, ".gnu.liblist") == 0
-		|| strcmp (sect_name, ".gnu.conflict") == 0))
+		|| strcmp (sect_name, ".gnu.conflict") == 0
+		|| strcmp (sect_name, ".dynbss") == 0
+		|| strcmp (sect_name, ".sdynbss") == 0))
 	    warning (_("section %s not found in %s"), sect_name,
 		     bfd_get_filename (abfd));
 
@@ -594,6 +718,8 @@ addr_info_make_relative (struct section_addr_info *addrs, bfd *abfd)
 	  /* SECTINDEX is invalid if ADDR is zero.  */
 	}
     }
+
+  do_cleanups (my_cleanup);
 }
 
 /* Parse the user's idea of an offset for dynamic linking, into our idea
@@ -623,7 +749,6 @@ default_symfile_offsets (struct objfile *objfile,
       struct place_section_arg arg;
       bfd *abfd = objfile->obfd;
       asection *cur_sec;
-      CORE_ADDR lowest = 0;
 
       for (cur_sec = abfd->sections; cur_sec != NULL; cur_sec = cur_sec->next)
 	/* We do not expect this to happen; just skip this step if the
@@ -886,7 +1011,6 @@ syms_from_objfile (struct objfile *objfile,
 void
 new_symfile_objfile (struct objfile *objfile, int add_flags)
 {
-
   /* If this is the main symbol file we have to clean up all users of the
      old main symbol file. Otherwise it is sufficient to fixup all the
      breakpoints that may have been redefined by this symbol file.  */
@@ -1112,12 +1236,11 @@ symbol_file_clear (int from_tty)
 	  : !query (_("Discard symbol table? "))))
     error (_("Not confirmed."));
 
-  free_all_objfiles ();
-
-  /* solib descriptors may have handles to objfiles.  Since their
-     storage has just been released, we'd better wipe the solib
-     descriptors as well.  */
+  /* solib descriptors may have handles to objfiles.  Wipe them before their
+     objfiles get stale by free_all_objfiles.  */
   no_shared_libraries (NULL, from_tty);
+
+  free_all_objfiles ();
 
   gdb_assert (symfile_objfile == NULL);
   if (from_tty)
@@ -1132,7 +1255,6 @@ get_debug_link_info (struct objfile *objfile, unsigned long *crc32_out)
   unsigned long crc32;
   char *contents;
   int crc_offset;
-  unsigned char *p;
 
   sect = bfd_get_section_by_name (objfile->obfd, ".gnu_debuglink");
 
@@ -1232,12 +1354,10 @@ The directory where separate debug symbols are searched for is \"%s\".\n"),
 char *
 find_separate_debug_file_by_debuglink (struct objfile *objfile)
 {
-  asection *sect;
-  char *basename, *name_copy, *debugdir;
+  char *basename, *debugdir;
   char *dir = NULL;
   char *debugfile = NULL;
   char *canon_name = NULL;
-  bfd_size_type debuglink_size;
   unsigned long crc32;
   int i;
 
@@ -1488,6 +1608,7 @@ symfile_bfd_open (char *name)
   if (desc < 0)
     {
       char *exename = alloca (strlen (name) + 5);
+
       strcat (strcpy (exename, name), ".exe");
       desc = openp (getenv ("PATH"), OPF_TRY_CWD_FIRST, exename,
 		    O_RDONLY | O_BINARY, &absolute_name);
@@ -1890,6 +2011,16 @@ generic_load (char *args, int from_tty)
      for other targets too.  */
   regcache_write_pc (get_current_regcache (), entry);
 
+  /* Reset breakpoints, now that we have changed the load image.  For
+     instance, breakpoints may have been set (or reset, by
+     post_create_inferior) while connected to the target but before we
+     loaded the program.  In that case, the prologue analyzer could
+     have read instructions from the target to find the right
+     breakpoint locations.  Loading has changed the contents of that
+     memory.  */
+
+  breakpoint_re_set ();
+
   /* FIXME: are we supposed to call symbol_file_add or not?  According
      to a comment from remote-mips.c (where a call to symbol_file_add
      was commented out), making the call confuses GDB if more than one
@@ -1988,7 +2119,6 @@ add_symbol_file_command (char *args, int from_tty)
   char *filename = NULL;
   int flags = OBJF_USERLOADED;
   char *arg;
-  int expecting_option = 0;
   int section_index = 0;
   int argcnt = 0;
   int sec_num = 0;
@@ -2165,14 +2295,13 @@ reread_symbols (void)
       if (objfile->separate_debug_objfile_backlink)
 	continue;
 
-#ifdef DEPRECATED_IBM6000_TARGET
-      /* If this object is from a shared library, then you should
-	 stat on the library name, not member name. */
-
+      /* If this object is from an archive (what you usually create with
+	 `ar', often called a `static library' on most systems, though
+	 a `shared library' on AIX is also an archive), then you should
+	 stat on the archive name, not member name.  */
       if (objfile->obfd->my_archive)
 	res = stat (objfile->obfd->my_archive->filename, &new_statbuf);
       else
-#endif
 	res = stat (objfile->name, &new_statbuf);
       if (res != 0)
 	{
@@ -2492,6 +2621,7 @@ init_filename_language_table (void)
       filename_language_table =
 	xmalloc (fl_table_size * sizeof (*filename_language_table));
       add_filename_language (".c", language_c);
+      add_filename_language (".d", language_d);
       add_filename_language (".C", language_cplus);
       add_filename_language (".cc", language_cplus);
       add_filename_language (".cp", language_cplus);
@@ -2503,6 +2633,20 @@ init_filename_language_table (void)
       add_filename_language (".m", language_objc);
       add_filename_language (".f", language_fortran);
       add_filename_language (".F", language_fortran);
+      add_filename_language (".for", language_fortran);
+      add_filename_language (".FOR", language_fortran);
+      add_filename_language (".ftn", language_fortran);
+      add_filename_language (".FTN", language_fortran);
+      add_filename_language (".fpp", language_fortran);
+      add_filename_language (".FPP", language_fortran);
+      add_filename_language (".f90", language_fortran);
+      add_filename_language (".F90", language_fortran);
+      add_filename_language (".f95", language_fortran);
+      add_filename_language (".F95", language_fortran);
+      add_filename_language (".f03", language_fortran);
+      add_filename_language (".F03", language_fortran);
+      add_filename_language (".f08", language_fortran);
+      add_filename_language (".F08", language_fortran);
       add_filename_language (".s", language_asm);
       add_filename_language (".sx", language_asm);
       add_filename_language (".S", language_asm);
@@ -2513,6 +2657,7 @@ init_filename_language_table (void)
       add_filename_language (".ads", language_ada);
       add_filename_language (".a", language_ada);
       add_filename_language (".ada", language_ada);
+      add_filename_language (".dg", language_ada);
     }
 }
 
@@ -3504,7 +3649,6 @@ symfile_find_segment_sections (struct objfile *objfile)
 
   for (i = 0, sect = abfd->sections; sect != NULL; i++, sect = sect->next)
     {
-      CORE_ADDR vma;
       int which = data->segment_info[i];
 
       if (which == 1)

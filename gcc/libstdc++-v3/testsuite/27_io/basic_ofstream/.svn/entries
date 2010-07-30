@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_ofstream
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-05-15T07:14:45.850392Z
-147561
-bonzini
+2010-06-03T19:15:56.538099Z
+160231
+paolo
 
 
 
@@ -44,11 +44,11 @@ file
 
 
 
-
-04af99685824c788a05e90b33618f37d
-2009-05-15T07:14:45.850392Z
-147561
-bonzini
+2010-07-08T15:19:25.617093Z
+541cef386229aab354e6cb1581878aa4
+2010-06-03T19:15:56.538099Z
+160231
+paolo
 
 
 

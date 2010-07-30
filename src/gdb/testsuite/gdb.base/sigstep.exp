@@ -31,8 +31,6 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile sigstep
 set srcfile ${testfile}.c
@@ -80,7 +78,7 @@ proc advance { i } {
     set test "$prefix; leave handler"
     gdb_test_multiple "$i" "${test}" {
 	-re "Could not insert single-step breakpoint.*$gdb_prompt $" {
-	    setup_kfail "sparc*-*-openbsd*" gdb/1736
+	    setup_kfail gdb/1736 "sparc*-*-openbsd*"
 	    fail "$test (could not insert single-step breakpoint)"
 	}
 	-re "done = 1;.*${gdb_prompt} $" {
@@ -92,7 +90,7 @@ proc advance { i } {
 	    exp_continue -continue_timer
 	}
 	-re "Program exited normally.*${gdb_prompt} $" {
-	    setup_kfail powerpc-*-*bsd* gdb/1639
+	    setup_kfail gdb/1639 powerpc-*-*bsd*
 	    fail "$test (program exited)"
 	}
 	-re "(while ..done|done = 0).*${gdb_prompt} $" {
@@ -121,13 +119,13 @@ proc advancei { i } {
             # Some platforms use a special read-only page for signal
             # trampolines.  We can't set a breakpoint there, and we
             # don't gracefully fall back to single-stepping.
-            setup_kfail "i?86-*-linux*" gdb/1736
-	    setup_kfail "*-*-openbsd*" gdb/1736
+            setup_kfail gdb/1736 "i?86-*-linux*"
+	    setup_kfail gdb/1736 "*-*-openbsd*"
             fail "$test (could not set breakpoint)"
 	    return
         }
 	-re "Could not insert single-step breakpoint.*$gdb_prompt $" {
-	    setup_kfail "sparc*-*-openbsd*" gdb/1736
+	    setup_kfail gdb/1736 "sparc*-*-openbsd*"
 	    fail "$test (could not insert single-step breakpoint)"
 	}
 	-re "Breakpoint \[0-9\]*, handler .*${gdb_prompt} $" {
@@ -198,7 +196,7 @@ advancei nexti
 
 advancei finish
 advancei return
-gdb_test "set done = 1" "" "Set done as return will have skipped it"
+gdb_test_no_output "set done = 1" "Set done as return will have skipped it"
 
 
 # Check that we can step/next our way into / over a signal handler.
@@ -211,7 +209,7 @@ gdb_test "set done = 1" "" "Set done as return will have skipped it"
 
 delete_breakpoints
 set infinite_loop [gdb_get_line_number {while (!done)}]
-gdb_test "set itimer = itimer_real"
+gdb_test_no_output "set itimer = itimer_real"
 gdb_test "break [gdb_get_line_number {done = 0}]"
 
 # Try stepping when there's a signal pending, and a breakpoint at the
@@ -232,15 +230,15 @@ proc skip_to_handler { i } {
     }
     
     # Advance to the infinite loop
-    gdb_test "advance $infinite_loop" "" "$prefix; advance to infinite loop"
+    gdb_test "advance $infinite_loop" ".*" "$prefix; advance to infinite loop"
 
     # Make the signal pending
     sleep 1
     
     # Insert / remove the handler breakpoint.
-    gdb_test "break handler" "" "$prefix; break handler"
+    gdb_test "break handler" ".*" "$prefix; break handler"
     gdb_test "$i" " handler .*" "$prefix; performing $i"
-    gdb_test "clear handler" "" "$prefix; clear handler"
+    gdb_test "clear handler" ".*" "$prefix; clear handler"
 }
 
 skip_to_handler step
@@ -273,15 +271,15 @@ proc skip_to_handler_entry { i } {
     }
     
     # Advance to the infinite loop
-    gdb_test "advance $infinite_loop" "" "$prefix; advance to infinite loop"
+    gdb_test "advance $infinite_loop" ".*" "$prefix; advance to infinite loop"
 
     # Make the signal pending
     sleep 1
     
     # Insert / remove the handler breakpoint.
-    gdb_test "break *handler" "" "$prefix; break handler"
+    gdb_test "break *handler" ".*" "$prefix; break handler"
     gdb_test "$i" " handler .*" "$prefix; performing $i"
-    gdb_test "clear *handler" "" "$prefix; clear handler"
+    gdb_test "clear *handler" ".*" "$prefix; clear handler"
 }
 
 skip_to_handler_entry step
@@ -306,7 +304,7 @@ proc skip_over_handler { i } {
     }
     
     # Advance to the infinite loop
-    gdb_test "advance $infinite_loop" "" "$prefix; advance to infinite loop"
+    gdb_test "advance $infinite_loop" ".*" "$prefix; advance to infinite loop"
 
     # Make the signal pending
     sleep 1
@@ -336,8 +334,8 @@ proc breakpoint_to_handler { i } {
 	}
     }
     
-    gdb_test "break $infinite_loop" "" "$prefix; break infinite loop"
-    gdb_test "break handler" "" "$prefix; break handler"
+    gdb_test "break $infinite_loop" ".*" "$prefix; break infinite loop"
+    gdb_test "break handler" ".*" "$prefix; break handler"
 
     # Continue to the infinite loop
     gdb_test "continue" "while ..done.*" "$prefix; continue to infinite loop"
@@ -346,8 +344,8 @@ proc breakpoint_to_handler { i } {
     sleep 1
     
     gdb_test "$i" " handler .*" "$prefix; performing $i"
-    gdb_test "clear $infinite_loop" "" "$prefix; clear infinite loop"
-    gdb_test "clear handler" "" "$prefix; clear handler"
+    gdb_test "clear $infinite_loop" ".*" "$prefix; clear infinite loop"
+    gdb_test "clear handler" ".*" "$prefix; clear handler"
 }
 
 breakpoint_to_handler step
@@ -380,8 +378,8 @@ proc breakpoint_to_handler_entry { i } {
 	}
     }
     
-    gdb_test "break $infinite_loop" "" "$prefix; break infinite loop"
-    gdb_test "break *handler" "" "$prefix; break handler"
+    gdb_test "break $infinite_loop" ".*" "$prefix; break infinite loop"
+    gdb_test "break *handler" ".*" "$prefix; break handler"
 
     # Continue to the infinite loop
     gdb_test "continue" "while ..done.*" "$prefix; continue to infinite loop"
@@ -390,8 +388,8 @@ proc breakpoint_to_handler_entry { i } {
     sleep 1
     
     gdb_test "$i" " handler .*" "$prefix; performing $i"
-    gdb_test "clear $infinite_loop" "" "$prefix; clear infinite loop"
-    gdb_test "clear *handler" "" "$prefix; clear handler"
+    gdb_test "clear $infinite_loop" ".*" "$prefix; clear infinite loop"
+    gdb_test "clear *handler" ".*" "$prefix; clear handler"
 }
 
 breakpoint_to_handler_entry step
@@ -416,7 +414,7 @@ proc breakpoint_over_handler { i } {
 	}
     }
     
-    gdb_test "break $infinite_loop" "" "$prefix; break infinite loop"
+    gdb_test "break $infinite_loop" ".*" "$prefix; break infinite loop"
 
     # Continue to the infinite loop
     gdb_test "continue" "while ..done.*" "$prefix; continue to infinite loop"
@@ -425,7 +423,7 @@ proc breakpoint_over_handler { i } {
     sleep 1
     
     gdb_test "$i" "done = 0.*" "$prefix; performing $i"
-    gdb_test "clear $infinite_loop" "" "$prefix; clear infinite loop"
+    gdb_test "clear $infinite_loop" ".*" "$prefix; clear infinite loop"
 }
 
 breakpoint_over_handler step

@@ -45,6 +45,54 @@ AC_CHECK_HEADERS(sgtty.h termio.h termios.h sys/reg.h string.h dnl
 AC_CHECK_FUNCS(pread pwrite pread64)
 AC_REPLACE_FUNCS(memmem)
 
+# Check for UST
+ustlibs=""
+ustinc=""
+
+AC_ARG_WITH(ust, [  --with-ust=PATH       Specify prefix directory for the installed UST package
+                          Equivalent to --with-ust-include=PATH/include
+                          plus --with-ust-lib=PATH/lib])
+AC_ARG_WITH(ust_include, [  --with-ust-include=PATH Specify directory for installed UST include files])
+AC_ARG_WITH(ust_lib, [  --with-ust-lib=PATH   Specify the directory for the installed UST library])
+
+case $with_ust in
+  no)
+    ustlibs=
+    ustinc=
+    ;;
+  "" | yes)
+    ustlibs=" -lust "
+    ustinc=""
+    ;;
+  *)
+    ustlibs="-L$with_ust/lib -lust"
+    ustinc="-I$with_ust/include "
+    ;;
+esac
+if test "x$with_ust_include" != x; then
+  ustinc="-I$with_ust_include "
+fi
+if test "x$with_ust_lib" != x; then
+  ustlibs="-L$with_ust_lib -lust"
+fi
+
+if test "x$with_ust" != "xno"; then
+  saved_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS $ustinc"
+  AC_MSG_CHECKING([for ust])
+  AC_TRY_COMPILE([
+#define CONFIG_UST_GDB_INTEGRATION
+#include <ust/ust.h>
+  ],[],
+  [AC_MSG_RESULT([yes]); AC_DEFINE(HAVE_UST, 1, [Define if UST is available])],
+  [AC_MSG_RESULT([no]); ustlibs= ; ustinc= ])
+  CFLAGS="$saved_CFLAGS"
+fi
+
+# Flags needed for UST
+AC_SUBST(ustlibs)
+AC_SUBST(ustinc)
+
 dnl dladdr is glibc-specific.  It is used by thread-db.c but only for
 dnl debugging messages.  It lives in -ldl which is handled below so we don't
 dnl use AC_CHECK_LIB (or AC_SEARCH_LIBS) here.  Instead we just temporarily
@@ -118,7 +166,7 @@ esac
 if test "${srv_mingwce}" = "yes"; then
   LIBS="$LIBS -lws2"
 elif test "${srv_mingw}" = "yes"; then
-  LIBS="$LIBS -lwsock32"
+  LIBS="$LIBS -lws2_32"
 elif test "${srv_qnx}" = "yes"; then
   LIBS="$LIBS -lsocket"
 fi
@@ -188,11 +236,24 @@ USE_THREAD_DB=
 if test "$srv_linux_thread_db" = "yes"; then
   if test "$ac_cv_lib_dl_dlopen" = "yes"; then
     srv_libs="-ldl"
+    AC_MSG_CHECKING(for the dynamic export flag)
     old_LDFLAGS="$LDFLAGS"
-    LDFLAGS="$LDFLAGS -rdynamic"
-    AC_TRY_LINK([], [], [RDYNAMIC=-rdynamic], [RDYNAMIC=])
+    # Older GNU ld supports --export-dynamic but --dynamic-list may not be
+    # supported there.
+    RDYNAMIC="-Wl,--dynamic-list=${srcdir}/proc-service.list"
+    LDFLAGS="$LDFLAGS $RDYNAMIC"
+    AC_TRY_LINK([], [],
+		[found="-Wl,--dynamic-list"
+		 RDYNAMIC='-Wl,--dynamic-list=$(srcdir)/proc-service.list'],
+		[RDYNAMIC="-rdynamic"
+		 LDFLAGS="$old_LDFLAGS $RDYNAMIC"
+		 AC_TRY_LINK([], [],
+			     [found="-rdynamic"],
+			     [found="no"
+			      RDYNAMIC=""])])
     AC_SUBST(RDYNAMIC)
     LDFLAGS="$old_LDFLAGS"
+    AC_MSG_RESULT($found)
   else
     srv_libs="-lthread_db"
   fi
@@ -232,11 +293,43 @@ fi
 GDBSERVER_DEPFILES="$srv_regobj $srv_tgtobj $srv_hostio_err_objs $srv_thread_depfiles"
 GDBSERVER_LIBS="$srv_libs"
 
+dnl Check whether the target supports __sync_*_compare_and_swap.
+AC_CACHE_CHECK([whether the target supports __sync_*_compare_and_swap],
+		gdbsrv_cv_have_sync_builtins, [
+AC_TRY_LINK([], [int foo, bar; bar = __sync_val_compare_and_swap(&foo, 0, 1);],
+		gdbsrv_cv_have_sync_builtins=yes,
+		gdbsrv_cv_have_sync_builtins=no)])
+if test $gdbsrv_cv_have_sync_builtins = yes; then
+  AC_DEFINE(HAVE_SYNC_BUILTINS, 1,
+    [Define to 1 if the target supports __sync_*_compare_and_swap])
+fi
+
+dnl Check for -fvisibility=hidden support in the compiler.
+saved_cflags="$CFLAGS"
+CFLAGS="$CFLAGS -fvisibility=hidden"
+AC_COMPILE_IFELSE(AC_LANG_PROGRAM([]),
+		        [gdbsrv_cv_have_visibility_hidden=yes],
+	        	[gdbsrv_cv_have_visibility_hidden=no])
+CFLAGS="$saved_cflags"
+
+IPA_DEPFILES=""
+
+# Rather than allowing to build a broken IPA, we simply disable it if
+# we don't find a compiler supporting all the features we need.
+if test "$ipa_obj" != "" \
+   -a "$gdbsrv_cv_have_sync_builtins" = yes \
+   -a "$gdbsrv_cv_have_visibility_hidden" = yes; then
+   IPA_DEPFILES="$ipa_obj"
+   extra_libraries="libinproctrace.so"
+fi
+
 AC_SUBST(GDBSERVER_DEPFILES)
 AC_SUBST(GDBSERVER_LIBS)
 AC_SUBST(USE_THREAD_DB)
 AC_SUBST(srv_xmlbuiltin)
 AC_SUBST(srv_xmlfiles)
+AC_SUBST(IPA_DEPFILES)
+AC_SUBST(extra_libraries)
 
 AC_OUTPUT(Makefile,
 [case x$CONFIG_HEADERS in

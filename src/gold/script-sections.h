@@ -52,6 +52,20 @@ class Script_sections
   typedef std::list<Sections_element*> Sections_elements;
 
  public:
+
+  // Logical script section types.  We map section types returned by the
+  // parser into these since some section types have the same semantics.
+  enum Section_type
+  {
+    // No section type specified.
+    ST_NONE,
+    // Section is NOLOAD.  We allocate space in the output but section
+    // is not loaded in runtime.
+    ST_NOLOAD,
+    // No space is allocated to section.
+    ST_NOALLOC
+  };
+
   Script_sections();
 
   // Start a SECTIONS clause.
@@ -147,9 +161,13 @@ class Script_sections
   // 3) If the input section is not mapped by the SECTIONS clause,
   //    this returns SECTION_NAME, and sets *OUTPUT_SECTION_SLOT to
   //    NULL.
+  // PSCRIPT_SECTION_TYPE points to a location for returning the section
+  // type specified in script.  This can be SCRIPT_SECTION_TYPE_NONE if
+  // no type is specified.
   const char*
   output_section_name(const char* file_name, const char* section_name,
-		      Output_section*** output_section_slot);
+		      Output_section*** output_section_slot,
+		      Section_type* pscript_section_type);
 
   // Place a marker for an orphan output section into the SECTIONS
   // clause.
@@ -214,7 +232,7 @@ class Script_sections
 
   // Create segments.
   Output_segment*
-  create_segments(Layout*);
+  create_segments(Layout*, uint64_t);
 
   // Create PT_NOTE and PT_TLS segments.
   void
@@ -235,7 +253,7 @@ class Script_sections
 
   // Create the segments from a PHDRS clause.
   Output_segment*
-  create_segments_from_phdrs_clause(Layout* layout);
+  create_segments_from_phdrs_clause(Layout* layout, uint64_t);
 
   // Attach sections to segments from a PHDRS clause.
   void
@@ -243,7 +261,7 @@ class Script_sections
 
   // Set addresses of segments from a PHDRS clause.
   Output_segment*
-  set_phdrs_clause_addresses(Layout*);
+  set_phdrs_clause_addresses(Layout*, uint64_t);
 
   // True if we ever saw a SECTIONS clause.
   bool saw_sections_clause_;

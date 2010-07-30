@@ -26,7 +26,6 @@
 #include "rtl.h"
 #include "regs.h"
 #include "hard-reg-set.h"
-#include "real.h"
 #include "insn-config.h"
 #include "conditions.h"
 #include "insn-flags.h"
@@ -34,6 +33,7 @@
 #include "insn-attr.h"
 #include "flags.h"
 #include "recog.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "obstack.h"
 #include "tree.h"
@@ -1317,7 +1317,7 @@ xstormy16_build_builtin_va_list (void)
   TREE_CHAIN (record) = type_decl;
   TYPE_NAME (record) = type_decl;
   TYPE_FIELDS (record) = f_1;
-  TREE_CHAIN (f_1) = f_2;
+  DECL_CHAIN (f_1) = f_2;
 
   layout_type (record);
 
@@ -1340,7 +1340,7 @@ xstormy16_expand_builtin_va_start (tree valist, rtx nextarg ATTRIBUTE_UNUSED)
     error ("cannot use va_start in interrupt function");
 
   f_base = TYPE_FIELDS (va_list_type_node);
-  f_count = TREE_CHAIN (f_base);
+  f_count = DECL_CHAIN (f_base);
 
   base = build3 (COMPONENT_REF, TREE_TYPE (f_base), valist, f_base, NULL_TREE);
   count = build3 (COMPONENT_REF, TREE_TYPE (f_count), valist, f_count,
@@ -1377,7 +1377,7 @@ xstormy16_gimplify_va_arg_expr (tree valist, tree type, gimple_seq *pre_p,
   tree size_tree;
 
   f_base = TYPE_FIELDS (va_list_type_node);
-  f_count = TREE_CHAIN (f_base);
+  f_count = DECL_CHAIN (f_base);
 
   base = build3 (COMPONENT_REF, TREE_TYPE (f_base), valist, f_base, NULL_TREE);
   count = build3 (COMPONENT_REF, TREE_TYPE (f_count), valist, f_count,
@@ -1561,7 +1561,7 @@ xstormy16_asm_output_aligned_common (FILE *stream,
 				     int align,
 				     int global)
 {
-  rtx mem = DECL_RTL (decl);
+  rtx mem = decl == NULL_TREE ? NULL_RTX : DECL_RTL (decl);
   rtx symbol;
 
   if (mem != NULL_RTX

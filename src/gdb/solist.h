@@ -63,8 +63,12 @@ struct so_list
 
     bfd *abfd;
     char symbols_loaded;	/* flag: symbols read in yet? */
-    char from_tty;		/* flag: print msgs? */
-    struct objfile *objfile;	/* objfile for loaded lib */
+
+    /* objfile with symbols for a loaded library.  Target memory is read from
+       ABFD.  OBJFILE may be NULL either before symbols have been loaded, if
+       the file cannot be found or after the command "nosharedlibrary".  */
+    struct objfile *objfile;
+
     struct target_section *sections;
     struct target_section *sections_end;
 

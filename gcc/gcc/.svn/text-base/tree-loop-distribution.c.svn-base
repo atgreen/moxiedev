@@ -1,5 +1,6 @@
 /* Loop distribution.
-   Copyright (C) 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
    Contributed by Georges-Andre Silber <Georges-Andre.Silber@ensmp.fr>
    and Sebastian Pop <sebastian.pop@amd.com>.
 
@@ -45,19 +46,12 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
-#include "ggc.h"
 #include "tree.h"
-#include "target.h"
-
-#include "rtl.h"
 #include "basic-block.h"
-#include "diagnostic.h"
 #include "tree-flow.h"
 #include "tree-dump.h"
 #include "timevar.h"
 #include "cfgloop.h"
-#include "expr.h"
-#include "optabs.h"
 #include "tree-chrec.h"
 #include "tree-data-ref.h"
 #include "tree-scalar-evolution.h"
@@ -201,18 +195,28 @@ generate_loops_for_partition (struct loop *loop, bitmap partition, bool copy_p)
 
       for (bsi = gsi_start_phis (bb); !gsi_end_p (bsi);)
 	if (!bitmap_bit_p (partition, x++))
-	  remove_phi_node (&bsi, true);
+	  {
+	    gimple phi = gsi_stmt (bsi);
+	    if (!is_gimple_reg (gimple_phi_result (phi)))
+	      mark_virtual_phi_result_for_renaming (phi);
+	    remove_phi_node (&bsi, true);
+	  }
 	else
 	  gsi_next (&bsi);
 
       for (bsi = gsi_start_bb (bb); !gsi_end_p (bsi);)
-	if (gimple_code (gsi_stmt (bsi)) != GIMPLE_LABEL
-	    && !bitmap_bit_p (partition, x++))
-	  gsi_remove (&bsi, false);
-	else
-	  gsi_next (&bsi);
-
-	mark_virtual_ops_in_bb (bb);
+	{
+	  gimple stmt = gsi_stmt (bsi);
+	  if (gimple_code (gsi_stmt (bsi)) != GIMPLE_LABEL
+	      && !bitmap_bit_p (partition, x++))
+	    {
+	      unlink_stmt_vdef (stmt);
+	      gsi_remove (&bsi, true);
+	      release_defs (stmt);
+	    }
+	  else
+	    gsi_next (&bsi);
+	}
     }
 
   free (bbs);
@@ -226,12 +230,9 @@ build_size_arg_loc (location_t loc, tree nb_iter, tree op,
 		    gimple_seq *stmt_list)
 {
   gimple_seq stmts;
-  tree x;
-
-  x = fold_build2_loc (loc, MULT_EXPR, size_type_node,
-		       fold_convert_loc (loc, size_type_node, nb_iter),
-		       fold_convert_loc (loc, size_type_node,
-					 TYPE_SIZE_UNIT (TREE_TYPE (op))));
+  tree x = size_binop_loc (loc, MULT_EXPR,
+  			   fold_convert_loc (loc, sizetype, nb_iter),
+			   TYPE_SIZE_UNIT (TREE_TYPE (op)));
   x = force_gimple_operand (x, &stmts, true, NULL);
   gimple_seq_add_seq (stmt_list, stmts);
 
@@ -249,7 +250,6 @@ generate_memset_zero (gimple stmt, tree op0, tree nb_iter,
   gimple_seq stmt_list = NULL, stmts;
   gimple fn_call;
   tree mem, fn;
-  gimple_stmt_iterator i;
   struct data_reference *dr = XCNEW (struct data_reference);
   location_t loc = gimple_location (stmt);
 
@@ -300,13 +300,6 @@ generate_memset_zero (gimple stmt, tree op0, tree nb_iter,
   fn = build_fold_addr_expr (implicit_built_in_decls [BUILT_IN_MEMSET]);
   fn_call = gimple_build_call (fn, 3, mem, integer_zero_node, nb_bytes);
   gimple_seq_add_stmt (&stmt_list, fn_call);
-
-  for (i = gsi_start (stmt_list); !gsi_end_p (i); gsi_next (&i))
-    {
-      gimple s = gsi_stmt (i);
-      update_stmt_if_modified (s);
-    }
-
   gsi_insert_seq_after (&bsi, stmt_list, GSI_CONTINUE_LINKING);
   res = true;
 
@@ -404,7 +397,7 @@ generate_builtin (struct loop *loop, bitmap partition, bool copy_p)
   op1 = gimple_assign_rhs1 (write);
 
   if (!(TREE_CODE (op0) == ARRAY_REF
-	|| TREE_CODE (op0) == INDIRECT_REF))
+	|| TREE_CODE (op0) == MEM_REF))
     goto end;
 
   /* The new statements will be placed before LOOP.  */
@@ -976,7 +969,7 @@ dump_rdg_partitions (FILE *file, VEC (bitmap, heap) *partitions)
 /* Debug PARTITIONS.  */
 extern void debug_rdg_partitions (VEC (bitmap, heap) *);
 
-void
+DEBUG_FUNCTION void
 debug_rdg_partitions (VEC (bitmap, heap) *partitions)
 {
   dump_rdg_partitions (stderr, partitions);
@@ -1242,6 +1235,6 @@ struct gimple_opt_pass pass_loop_distribution =
   0,				/* properties_provided */
   0,				/* properties_destroyed */
   0,				/* todo_flags_start */
-  TODO_dump_func | TODO_verify_loops            /* todo_flags_finish */
+  TODO_dump_func                /* todo_flags_finish */
  }
 };

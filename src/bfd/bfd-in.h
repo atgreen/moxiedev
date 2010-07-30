@@ -294,7 +294,7 @@ typedef struct bfd_section *sec_ptr;
   (((sec)->rawsize ? (sec)->rawsize : (sec)->size) \
    / bfd_octets_per_byte (bfd))
 
-/* Return TRUE if section has been discarded.  */
+/* Return TRUE if input section SEC has been discarded.  */
 #define elf_discarded_section(sec)				\
   (!bfd_is_abs_section (sec)					\
    && bfd_is_abs_section ((sec)->output_section)		\
@@ -906,7 +906,7 @@ extern bfd_boolean elf32_arm_build_stubs
 
 /* ARM unwind section editing support.  */
 extern bfd_boolean elf32_arm_fix_exidx_coverage
-  (struct bfd_section **, unsigned int, struct bfd_link_info *);
+(struct bfd_section **, unsigned int, struct bfd_link_info *, bfd_boolean);
 
 /* PowerPC @tls opcode transform/validate.  */
 extern unsigned int _bfd_elf_ppc_at_tls_transform

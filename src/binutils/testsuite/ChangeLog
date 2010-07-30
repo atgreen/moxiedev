@@ -1,3 +1,77 @@
+2010-07-19  Andreas Schwab  <schwab@redhat.com>
+
+	* binutils-all/readelf.s: Ignore "Key to Flags" contents.
+	* binutils-all/readelf.s-64: Likewise.
+	* binutils-all/i386/compressed-1b.d: Likewise.
+	* binutils-all/i386/compressed-1c.d: Likewise.
+	* binutils-all/x86-64/compressed-1b.d: Likewise.
+	* binutils-all/x86-64/compressed-1c.d: Likewise.
+
+2010-07-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* binutils-all/i386/compressed-1a.d: Fix a typo.
+	* binutils-all/i386/compressed-1b.d: Likewise.
+	* binutils-all/i386/compressed-1c.d: Likewise.
+	* binutils-all/x86-64/compressed-1a.d: Likewise.
+	* binutils-all/x86-64/compressed-1b.d: Likewise.
+	* binutils-all/x86-64/compressed-1c.d: Likewise.
+
+2010-07-14  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* config/default.exp (binutils_assemble): Use
+	default_binutils_assemble_flags.
+	(binutils_assemble_flags): New.
+
+	* lib/utils-lib.exp (default_binutils_assemble): Renamed to ...
+	(default_binutils_assemble_flags): This.  Add asflags and
+	pass it to target_assemble.
+	(run_dump_test): Support assembler flags.
+
+	* binutils-all/i386/compressed-1.s: New.
+	* binutils-all/i386/compressed-1a.d: Likewise.
+	* binutils-all/i386/compressed-1b.d: Likewise.
+	* binutils-all/i386/compressed-1c.d: Likewise.
+	* binutils-all/i386/i386.exp: Likewise.
+	* binutils-all/x86-64/compressed-1.s: Likewise.
+	* binutils-all/x86-64/compressed-1a.d: Likewise.
+	* binutils-all/x86-64/compressed-1b.d: Likewise.
+	* binutils-all/x86-64/compressed-1c.d: Likewise.
+	* binutils-all/x86-64/x86-64.exp: Likewise.
+
+2010-07-05  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/10531
+	PR gas/11789
+	* binutils-all/objdump.W: Remove bogus line debug info.
+
+2010-05-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/11600
+	* binutils-all/objcopy.exp: Run exclude-1a and exclude-1b for
+	ELF targets.
+
+	* binutils-all/exclude-1.s: New.
+	* binutils-all/exclude-1a.d: Likewise.
+	* binutils-all/exclude-1b.d: Likewise.
+
+2010-04-30  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* binutils-all/dlltool.exp: Add a missing `"'.
+
+2010-04-27  Kai Tietz  <kai.tietz@onevision.com>
+
+	* binutils-all/dlltool.exp: Allow test for
+	arm-wince-pe target.
+
+2010-03-30  Kai TIetz  <kai.tietz@onevision.com>
+
+	* binutils-all/objcopy.exp: Mark simple copy executable
+	as failing for all *-*-mingw32* targets.
+
+2010-03-26  Matt Rice  <ratmice@gmail.com>
+
+	* binutils-all/ar.exp (unique_symbol): New test.
+
 2010-02-18  Alan Modra  <amodra@gmail.com>
 
 	* binutils-all/group-5.s, * binutils-all/group-5.d: New test.
@@ -275,9 +349,9 @@
 	empty for testing an installed toolchain.
 
 2008-02-04  Bob Wilson  <bob.wilson@acm.org>
-	
+
 	* binutils-all/objdump.exp (cpus_expected): Add xtensa.
-	
+
 2007-10-26  Alan Modra  <amodra@bigpond.net.au>
 
 	* binutils-all/windres/windres.exp: Don't xfail.
@@ -288,14 +362,14 @@
 	* binutils-all/readelf.ss-64: Likewise.
 	* binutils-all/readelf.ss-mips: Likewise.
 	* binutils-all/readelf.ss-tmips: Likewise.
-	
+
 2007-08-30  Nick Clifton  <nickc@redhat.com>
 
 	* binutils-all/dumptest.s: New test file.
 	* binutils-all/readelf.exp: Add test of readelf's -p switch.
 
 2007-08-28  Mark Shinwell  <shinwell@codesourcery.com>
-            Joseph Myers  <joseph@codesourcery.com>
+	    Joseph Myers  <joseph@codesourcery.com>
 
 	* binutils-all/ar.exp (long_filenames): Delete temporary files on
 	the host.
@@ -447,8 +521,8 @@
 	* lib/utils-lib.exp (run_dump_test): Support strip.
 
 2006-08-15  Thiemo Seufer  <ths@mips.com>
-            Nigel Stephens  <nigel@mips.com>
-            David Ung  <davidu@mips.com>
+	    Nigel Stephens  <nigel@mips.com>
+	    David Ung  <davidu@mips.com>
 
 	* binutils-all/readelf.exp (readelf_test): Handle mips*-sde-elf*.
 
@@ -600,7 +674,7 @@
 
 2005-03-08  Ben Elliston  <bje@au.ibm.com>
 
-       * config/default.exp: Remove send_user call for stray output.
+	* config/default.exp: Remove send_user call for stray output.
 
 2005-01-04  Martin Koegler  <mkoegler@auto.tuwien.ac.at>
 

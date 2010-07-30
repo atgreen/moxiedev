@@ -37,14 +37,44 @@ struct type;
 struct demangle_component;
 
 /* This struct is designed to store data from using directives.  It
-   says that names from namespace IMPORT_SRC should be visible within
-   namespace IMPORT_DEST.  These form a linked list; NEXT is the next element
-   of the list.  If the imported namespace has been aliased, ALIAS is set to a
-   string representing the alias.  Otherwise, ALIAS is NULL.
-   Eg:
-       namespace C = A::B;
-   ALIAS = "C"
-*/
+   says that names from namespace IMPORT_SRC should be visible within namespace
+   IMPORT_DEST.  These form a linked list; NEXT is the next element of the
+   list.  If the imported namespace or declaration has been aliased within the
+   IMPORT_DEST namespace, ALIAS is set to a string representing the alias.
+   Otherwise, ALIAS is NULL.  DECLARATION is the name of the imported
+   declaration, if this import statement represents one.  Otherwise DECLARATION
+   is NULL and this import statement represents a namespace.
+
+   C++:      using namespace A;
+   Fortran:  use A
+   import_src = "A"
+   import_dest = local scope of the import statement even such as ""
+   alias = NULL
+   declaration = NULL
+
+   C++:      using A::x;
+   Fortran:  use A, only: x
+   import_src = "A"
+   import_dest = local scope of the import statement even such as ""
+   alias = NULL
+   declaration = "x"
+   The declaration will get imported as import_dest::x.
+
+   C++:      namespace LOCALNS = A;
+   Fortran has no way to address non-local namespace/module.
+   import_src = "A"
+   import_dest = local scope of the import statement even such as ""
+   alias = "LOCALNS"
+   declaration = NULL
+   The namespace will get imported as the import_dest::LOCALNS namespace.
+
+   C++ cannot express it, it would be something like:  using localname = A::x;
+   Fortran:  use A, only localname => x
+   import_src = "A"
+   import_dest = local scope of the import statement even such as ""
+   alias = "localname"
+   declaration = "x"
+   The declaration will get imported as localname or `import_dest`localname.  */
 
 struct using_direct
 {
@@ -52,6 +82,7 @@ struct using_direct
   char *import_dest;
 
   char *alias;
+  char *declaration;
 
   struct using_direct *next;
 
@@ -79,6 +110,10 @@ extern char *cp_remove_params (const char *demangled_name);
 extern struct symbol **make_symbol_overload_list (const char *,
 						  const char *);
 
+extern struct symbol **make_symbol_overload_list_adl (struct type **arg_types,
+                                                      int nargs,
+                                                      const char *func_name);
+
 extern struct type *cp_lookup_rtti_type (const char *name,
 					 struct block *block);
 
@@ -91,6 +126,7 @@ extern int cp_is_anonymous (const char *namespace);
 extern void cp_add_using_directive (const char *dest,
                                     const char *src,
                                     const char *alias,
+				    const char *declaration,
                                     struct obstack *obstack);
 
 extern void cp_initialize_namespace (void);
@@ -113,8 +149,14 @@ extern struct symbol *cp_lookup_symbol_nonlocal (const char *name,
 extern struct symbol *cp_lookup_symbol_namespace (const char *namespace,
 						  const char *name,
 						  const struct block *block,
-						  const domain_enum domain,
-						  const int search_parents);
+						  const domain_enum domain);
+
+extern struct symbol *cp_lookup_symbol_imports (const char *scope,
+                                                const char *name,
+                                                const struct block *block,
+                                                const domain_enum domain,
+                                                const int declaration_only,
+                                                const int search_parents);
 
 extern struct type *cp_lookup_nested_type (struct type *parent_type,
 					   const char *nested_name,

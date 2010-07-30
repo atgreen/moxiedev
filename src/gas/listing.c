@@ -1075,17 +1075,22 @@ print_source (file_info_type *  current_file,
 static int
 debugging_pseudo (list_info_type *list, const char *line)
 {
+#ifdef OBJ_ELF
   static int in_debug;
   int was_debug;
+#endif
 
   if (list->debugging)
     {
+#ifdef OBJ_ELF
       in_debug = 1;
+#endif
       return 1;
     }
-
+#ifdef OBJ_ELF
   was_debug = in_debug;
   in_debug = 0;
+#endif
 
   while (ISSPACE (*line))
     line++;
@@ -1146,7 +1151,6 @@ listing_listing (char *name ATTRIBUTE_UNUSED)
 {
   list_info_type *list = head;
   file_info_type *current_hll_file = (file_info_type *) NULL;
-  char *message;
   char *buffer;
   char *p;
   int show_listing = 1;
@@ -1211,8 +1215,6 @@ listing_listing (char *name ATTRIBUTE_UNUSED)
 	{
 	  /* Scan down the list and print all the stuff which can be done
 	     with this line (or lines).  */
-	  message = 0;
-
 	  if (list->hll_file)
 	    current_hll_file = list->hll_file;
 

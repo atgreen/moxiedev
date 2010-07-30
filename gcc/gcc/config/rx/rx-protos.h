@@ -31,6 +31,7 @@ extern int		rx_initial_elimination_offset (int, int);
 extern void		rx_set_optimization_options (void);
 
 #ifdef RTX_CODE
+extern bool		rx_compare_redundant (rtx);
 extern void             rx_emit_stack_popm (rtx *, bool);
 extern void             rx_emit_stack_pushm (rtx *);
 extern void		rx_expand_epilogue (bool);
@@ -41,8 +42,6 @@ extern bool		rx_is_legitimate_constant (rtx);
 extern bool 		rx_is_mode_dependent_addr (rtx);
 extern bool		rx_is_restricted_memory_address (rtx, Mmode);
 extern void		rx_notice_update_cc (rtx body, rtx insn);
-extern void		rx_print_operand (FILE *, rtx, int);
-extern void		rx_print_operand_address (FILE *, rtx);
 #endif
 
 #ifdef TREE_CODE

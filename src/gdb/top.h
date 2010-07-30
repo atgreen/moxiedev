@@ -35,8 +35,6 @@ extern char gdbinit[];
 
 extern void print_gdb_version (struct ui_file *);
 
-extern void source_script (char *, int);
-extern void cd_command (char *, int);
 extern void read_command_file (FILE *);
 extern void init_history (void);
 extern void command_loop (void);
@@ -70,7 +68,7 @@ extern void gdb_init (char *);
 /* For use by event-top.c */
 /* Variables from top.c. */
 extern int source_line_number;
-extern char *source_file_name;
+extern const char *source_file_name;
 extern int history_expansion_p;
 extern int server_command;
 extern char *lim_at_start;

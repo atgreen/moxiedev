@@ -22,8 +22,11 @@ if [target_info exists gdb,noinferiorio] {
     continue
 }
 
-set prms_id 0
-set bug_id 0
+if [target_info exists gdb,nosignals] {
+    verbose "Skipping unwindonsignal.exp because of nosignals."
+    continue
+}
+
 
 set testfile "unwindonsignal"
 set srcfile ${testfile}.c
@@ -59,9 +62,9 @@ gdb_test "continue" "Continuing.*Breakpoint \[0-9\]*, stop_here.*" \
     "continue to breakpoint at stop_here"
 
 # Turn on unwindonsignal.
-gdb_test "set unwindonsignal on" \
-	"" \
+gdb_test_no_output "set unwindonsignal on" \
 	"setting unwindonsignal"
+
 gdb_test "show unwindonsignal" \
 	"Unwinding of stack .* is on." \
 	"showing unwindonsignal"

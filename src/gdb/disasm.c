@@ -64,6 +64,7 @@ static void
 dis_asm_print_address (bfd_vma addr, struct disassemble_info *info)
 {
   struct gdbarch *gdbarch = info->application_data;
+
   print_address (gdbarch, addr, info->stream);
 }
 
@@ -142,6 +143,7 @@ dump_insns (struct gdbarch *gdbarch, struct ui_out *uiout,
           CORE_ADDR old_pc = pc;
           bfd_byte data;
           int status;
+
           pc += gdbarch_print_insn (gdbarch, pc, di);
           for (;old_pc < pc; old_pc++)
             {
@@ -180,7 +182,6 @@ do_mixed_source_and_assembly (struct gdbarch *gdbarch, struct ui_out *uiout,
   int i;
   int out_of_order = 0;
   int next_line = 0;
-  CORE_ADDR pc;
   int num_displayed = 0;
   struct cleanup *ui_out_chain;
   struct cleanup *ui_out_tuple_chain = make_cleanup (null_cleanup, 0);
@@ -335,10 +336,11 @@ do_assembly_only (struct gdbarch *gdbarch, struct ui_out *uiout,
 /* Initialize the disassemble info struct ready for the specified
    stream.  */
 
-static int ATTR_FORMAT (printf, 2, 3)
+static int ATTRIBUTE_PRINTF (2, 3)
 fprintf_disasm (void *stream, const char *format, ...)
 {
   va_list args;
+
   va_start (args, format);
   vfprintf_filtered (stream, format, args);
   va_end (args);
@@ -350,6 +352,7 @@ static struct disassemble_info
 gdb_disassemble_info (struct gdbarch *gdbarch, struct ui_file *file)
 {
   struct disassemble_info di;
+
   init_disassemble_info (&di, file, fprintf_disasm);
   di.flavour = bfd_target_unknown_flavour;
   di.memory_error_func = dis_asm_memory_error;
@@ -428,4 +431,77 @@ gdb_print_insn (struct gdbarch *gdbarch, CORE_ADDR memaddr,
 	*branch_delay_insns = 0;
     }
   return length;
+}
+
+static void
+do_ui_file_delete (void *arg)
+{
+  ui_file_delete (arg);
+}
+
+/* Return the length in bytes of the instruction at address MEMADDR in
+   debugged memory.  */
+
+int
+gdb_insn_length (struct gdbarch *gdbarch, CORE_ADDR addr)
+{
+  static struct ui_file *null_stream = NULL;
+
+  /* Dummy file descriptor for the disassembler.  */
+  if (!null_stream)
+    {
+      null_stream = ui_file_new ();
+      make_final_cleanup (do_ui_file_delete, null_stream);
+    }
+
+  return gdb_print_insn (gdbarch, addr, null_stream, NULL);
+}
+
+/* fprintf-function for gdb_buffered_insn_length.  This function is a
+   nop, we don't want to print anything, we just want to compute the
+   length of the insn.  */
+
+static int ATTRIBUTE_PRINTF (2, 3)
+gdb_buffered_insn_length_fprintf (void *stream, const char *format, ...)
+{
+  return 0;
+}
+
+/* Initialize a struct disassemble_info for gdb_buffered_insn_length.  */
+
+static void
+gdb_buffered_insn_length_init_dis (struct gdbarch *gdbarch,
+				   struct disassemble_info *di,
+				   const gdb_byte *insn, int max_len,
+				   CORE_ADDR addr)
+{
+  init_disassemble_info (di, NULL, gdb_buffered_insn_length_fprintf);
+
+  /* init_disassemble_info installs buffer_read_memory, etc.
+     so we don't need to do that here.
+     The cast is necessary until disassemble_info is const-ified.  */
+  di->buffer = (gdb_byte *) insn;
+  di->buffer_length = max_len;
+  di->buffer_vma = addr;
+
+  di->arch = gdbarch_bfd_arch_info (gdbarch)->arch;
+  di->mach = gdbarch_bfd_arch_info (gdbarch)->mach;
+  di->endian = gdbarch_byte_order (gdbarch);
+  di->endian_code = gdbarch_byte_order_for_code (gdbarch);
+
+  disassemble_init_for_target (di);
+}
+
+/* Return the length in bytes of INSN.  MAX_LEN is the size of the
+   buffer containing INSN.  */
+
+int
+gdb_buffered_insn_length (struct gdbarch *gdbarch,
+			  const gdb_byte *insn, int max_len, CORE_ADDR addr)
+{
+  struct disassemble_info di;
+
+  gdb_buffered_insn_length_init_dis (gdbarch, &di, insn, max_len, addr);
+
+  return gdbarch_print_insn (gdbarch, addr, &di);
 }

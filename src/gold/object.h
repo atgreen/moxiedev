@@ -30,6 +30,7 @@
 #include "elfcpp_file.h"
 #include "fileread.h"
 #include "target.h"
+#include "archive.h"
 
 namespace gold
 {
@@ -37,7 +38,6 @@ namespace gold
 class General_options;
 class Task;
 class Cref;
-class Archive;
 class Layout;
 class Output_section;
 class Output_file;
@@ -55,6 +55,13 @@ class Stringpool_template;
 
 struct Read_symbols_data
 {
+  Read_symbols_data()
+    : section_headers(NULL), section_names(NULL), symbols(NULL),
+      symbol_names(NULL), versym(NULL), verdef(NULL), verneed(NULL)
+  { }
+
+  ~Read_symbols_data();
+
   // Section headers.
   File_view* section_headers;
   // Section names.
@@ -102,6 +109,13 @@ struct Symbol_location_info
 
 struct Section_relocs
 {
+  Section_relocs()
+    : contents(NULL)
+  { }
+
+  ~Section_relocs()
+  { delete this->contents; }
+
   // Index of reloc section.
   unsigned int reloc_shndx;
   // Index of section that relocs apply to.
@@ -125,6 +139,13 @@ struct Section_relocs
 
 struct Read_relocs_data
 {
+  Read_relocs_data()
+    : local_symbols(NULL)
+  { }
+
+  ~Read_relocs_data()
+  { delete this->local_symbols; }
+
   typedef std::vector<Section_relocs> Relocs_list;
   // The relocations.
   Relocs_list relocs;
@@ -382,6 +403,12 @@ class Object
   add_symbols(Symbol_table* symtab, Read_symbols_data* sd, Layout *layout)
   { this->do_add_symbols(symtab, sd, layout); }
 
+  // Add symbol information to the global symbol table.
+  Archive::Should_include
+  should_include_member(Symbol_table* symtab, Read_symbols_data* sd,
+                        std::string* why)
+  { return this->do_should_include_member(symtab, sd, why); }
+
   // Functions and types for the elfcpp::Elf_file interface.  This
   // permit us to use Object as the File template parameter for
   // elfcpp::Elf_file.
@@ -491,6 +518,13 @@ class Object
   set_no_export(bool value)
   { this->no_export_ = value; }
 
+  // Return TRUE if the section is a compressed debug section, and set
+  // *UNCOMPRESSED_SIZE to the size of the uncompressed data.
+  bool
+  section_is_compressed(unsigned int shndx,
+			section_size_type* uncompressed_size) const
+  { return this->do_section_is_compressed(shndx, uncompressed_size); }
+
  protected:
   // Returns NULL for Objects that are not plugin objects.  This method
   // is overridden in the Pluginobj class.
@@ -510,6 +544,10 @@ class Object
   // child class.
   virtual void
   do_add_symbols(Symbol_table*, Read_symbols_data*, Layout*) = 0;
+
+  virtual Archive::Should_include
+  do_should_include_member(Symbol_table* symtab, Read_symbols_data*,
+                           std::string* why) = 0;
 
   // Return the location of the contents of a section.  Implemented by
   // child class.
@@ -596,6 +634,12 @@ class Object
   // and return true.  Otherwise return false.
   bool
   handle_split_stack_section(const char* name);
+
+  // Return TRUE if the section is a compressed debug section, and set
+  // *UNCOMPRESSED_SIZE to the size of the uncompressed data.
+  virtual bool
+  do_section_is_compressed(unsigned int, section_size_type*) const
+  { return false; }
 
  private:
   // This class may not be copied.
@@ -1375,6 +1419,10 @@ class Reloc_symbol_changes
   std::vector<Symbol*> vec_;
 };
 
+// Type for mapping section index to uncompressed size.
+
+typedef std::map<unsigned int, section_size_type> Compressed_section_map;
+
 // A regular object file.  This is size and endian specific.
 
 template<int size, bool big_endian>
@@ -1574,6 +1622,10 @@ class Sized_relobj : public Relobj
   void
   do_add_symbols(Symbol_table*, Read_symbols_data*, Layout*);
 
+  Archive::Should_include
+  do_should_include_member(Symbol_table* symtab, Read_symbols_data*,
+                           std::string* why);
+
   // Read the relocs.
   void
   do_read_relocs(Read_relocs_data*);
@@ -1746,7 +1798,26 @@ class Sized_relobj : public Relobj
   void
   set_output_local_symbol_count(unsigned int value)
   { this->output_local_symbol_count_ = value; }
-   
+
+  // Return TRUE if the section is a compressed debug section, and set
+  // *UNCOMPRESSED_SIZE to the size of the uncompressed data.
+  bool
+  do_section_is_compressed(unsigned int shndx,
+			   section_size_type* uncompressed_size) const
+  {
+    if (this->compressed_sections_ == NULL)
+      return false;
+    Compressed_section_map::const_iterator p =
+        this->compressed_sections_->find(shndx);
+    if (p != this->compressed_sections_->end())
+      {
+	if (uncompressed_size != NULL)
+	  *uncompressed_size = p->second;
+	return true;
+      }
+    return false;
+  }
+
  private:
   // For convenience.
   typedef Sized_relobj<size, big_endian> This;
@@ -1987,6 +2058,10 @@ class Sized_relobj : public Relobj
   unsigned int discarded_eh_frame_shndx_;
   // The list of sections whose layout was deferred.
   std::vector<Deferred_layout> deferred_layout_;
+  // The list of relocation sections whose layout was deferred.
+  std::vector<Deferred_layout> deferred_layout_relocs_;
+  // For compressed debug sections, map section index to uncompressed size.
+  Compressed_section_map* compressed_sections_;
 };
 
 // A class to manage the list of all objects.

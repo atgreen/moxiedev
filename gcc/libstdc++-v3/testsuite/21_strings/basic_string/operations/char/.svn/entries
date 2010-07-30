@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/21_strings/basic_string/operations/char
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-06-03T19:15:56.538099Z
+160231
+paolo
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:50:09.000000Z
-beac7a9e22c9970254097c9c468eea93
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-07-08T15:19:29.058092Z
+d0ca94c4e223d8ded93fe03e460f0d41
+2010-06-03T19:15:56.538099Z
+160231
+paolo
 
 
 
@@ -58,5 +58,5 @@ jakub
 
 
 
-1128
+1126
 

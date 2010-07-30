@@ -136,8 +136,12 @@ accept various extension mnemonics.  For example,
 @code{vmx},
 @code{smx},
 @code{xsave},
+@code{xsaveopt},
 @code{aes},
 @code{pclmul},
+@code{fsgsbase},
+@code{rdrnd},
+@code{f16c},
 @code{fma},
 @code{movbe},
 @code{ept},
@@ -180,8 +184,8 @@ with VEX prefix.
 @cindex @samp{-msse-check=} option, i386
 @cindex @samp{-msse-check=} option, x86-64
 @item -msse-check=@var{none}
-@item -msse-check=@var{warning}
-@item -msse-check=@var{error}
+@itemx -msse-check=@var{warning}
+@itemx -msse-check=@var{error}
 These options control if the assembler should check SSE intructions.
 @option{-msse-check=@var{none}} will make the assembler not to check SSE
 instructions,  which is the default.  @option{-msse-check=@var{warning}}
@@ -192,7 +196,7 @@ for any SSE intruction.
 @cindex @samp{-mavxscalar=} option, i386
 @cindex @samp{-mavxscalar=} option, x86-64
 @item -mavxscalar=@var{128}
-@item -mavxscalar=@var{256}
+@itemx -mavxscalar=@var{256}
 This options control how the assembler should encode scalar AVX
 instructions.  @option{-mavxscalar=@var{128}} will encode scalar
 AVX instructions with 128bit vector length, which is the default.
@@ -202,7 +206,7 @@ with 256bit vector length.
 @cindex @samp{-mmnemonic=} option, i386
 @cindex @samp{-mmnemonic=} option, x86-64
 @item -mmnemonic=@var{att}
-@item -mmnemonic=@var{intel}
+@itemx -mmnemonic=@var{intel}
 This option specifies instruction mnemonic for matching instructions. 
 The @code{.att_mnemonic} and @code{.intel_mnemonic} directives will
 take precedent.
@@ -210,7 +214,7 @@ take precedent.
 @cindex @samp{-msyntax=} option, i386
 @cindex @samp{-msyntax=} option, x86-64
 @item -msyntax=@var{att}
-@item -msyntax=@var{intel}
+@itemx -msyntax=@var{intel}
 This option specifies instruction syntax when processing instructions. 
 The @code{.att_syntax} and @code{.intel_syntax} directives will
 take precedent.
@@ -930,9 +934,10 @@ supported on the CPU specified.  The choices for @var{cpu_type} are:
 @item @samp{generic32} @tab @samp{generic64}
 @item @samp{.mmx} @tab @samp{.sse} @tab @samp{.sse2} @tab @samp{.sse3}
 @item @samp{.ssse3} @tab @samp{.sse4.1} @tab @samp{.sse4.2} @tab @samp{.sse4}
-@item @samp{.avx} @tab @samp{.vmx} @tab @samp{.smx} @tab @samp{.xsave}
-@item @samp{.aes} @tab @samp{.pclmul} @tab @samp{.fma} @tab @samp{.movbe}
-@item @samp{.ept} @tab @samp{.clflush}
+@item @samp{.avx} @tab @samp{.vmx} @tab @samp{.smx} @tab @samp{.ept}
+@item @samp{.clflush} @tab @samp{.movbe} @tab @samp{.xsave} @tab @samp{.xsaveopt}
+@item @samp{.aes} @tab @samp{.pclmul} @tab @samp{.fma} @tab @samp{.fsgsbase}
+@item @samp{.rdrnd} @tab @samp{.f16c}
 @item @samp{.3dnow} @tab @samp{.3dnowa} @tab @samp{.sse4a} @tab @samp{.sse5}
 @item @samp{.syscall} @tab @samp{.rdtscp} @tab @samp{.svme} @tab @samp{.abm}
 @item @samp{.lwp} @tab @samp{.fma4} @tab @samp{.xop}

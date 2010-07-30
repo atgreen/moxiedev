@@ -1,5 +1,5 @@
 /* Subroutines for insn-output.c for Tensilica's Xtensa architecture.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Bob Wilson (bwilson@tensilica.com) at Tensilica.
 
@@ -27,7 +27,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "regs.h"
 #include "hard-reg-set.h"
 #include "basic-block.h"
-#include "real.h"
 #include "insn-config.h"
 #include "conditions.h"
 #include "insn-flags.h"
@@ -41,6 +40,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "reload.h"
 #include "tm_p.h"
 #include "function.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "optabs.h"
 #include "libfuncs.h"
@@ -142,7 +142,7 @@ static tree xtensa_gimplify_va_arg_expr (tree, tree, gimple_seq *,
 					 gimple_seq *);
 static rtx xtensa_function_value (const_tree, const_tree, bool);
 static void xtensa_init_builtins (void);
-static tree xtensa_fold_builtin (tree, tree, bool);
+static tree xtensa_fold_builtin (tree, int, tree *, bool);
 static rtx xtensa_expand_builtin (tree, rtx, rtx, enum machine_mode, int);
 static void xtensa_va_start (tree, rtx);
 static bool xtensa_frame_pointer_required (void);
@@ -1282,7 +1282,7 @@ xtensa_expand_nonlocal_goto (rtx *operands)
 static struct machine_function *
 xtensa_init_machine_status (void)
 {
-  return GGC_CNEW (struct machine_function);
+  return ggc_alloc_cleared_machine_function ();
 }
 
 
@@ -2110,6 +2110,8 @@ override_options (void)
   if (flag_pic && TARGET_CONST16)
     error ("-f%s is not supported with CONST16 instructions",
 	   (flag_pic > 1 ? "PIC" : "pic"));
+  else if (TARGET_FORCE_NO_PIC)
+    flag_pic = 0;
   else if (XTENSA_ALWAYS_PIC)
     {
       if (TARGET_CONST16)
@@ -2683,8 +2685,8 @@ xtensa_build_builtin_va_list (void)
   TREE_CHAIN (record) = type_decl;
   TYPE_NAME (record) = type_decl;
   TYPE_FIELDS (record) = f_stk;
-  TREE_CHAIN (f_stk) = f_reg;
-  TREE_CHAIN (f_reg) = f_ndx;
+  DECL_CHAIN (f_stk) = f_reg;
+  DECL_CHAIN (f_reg) = f_ndx;
 
   layout_type (record);
   return record;
@@ -2738,8 +2740,8 @@ xtensa_va_start (tree valist, rtx nextarg ATTRIBUTE_UNUSED)
   arg_words = crtl->args.info.arg_words;
 
   f_stk = TYPE_FIELDS (va_list_type_node);
-  f_reg = TREE_CHAIN (f_stk);
-  f_ndx = TREE_CHAIN (f_reg);
+  f_reg = DECL_CHAIN (f_stk);
+  f_ndx = DECL_CHAIN (f_reg);
 
   stk = build3 (COMPONENT_REF, TREE_TYPE (f_stk), valist, f_stk, NULL_TREE);
   reg = build3 (COMPONENT_REF, TREE_TYPE (f_reg), unshare_expr (valist),
@@ -2808,8 +2810,8 @@ xtensa_gimplify_va_arg_expr (tree valist, tree type, gimple_seq *pre_p,
     }
 
   f_stk = TYPE_FIELDS (va_list_type_node);
-  f_reg = TREE_CHAIN (f_stk);
-  f_ndx = TREE_CHAIN (f_reg);
+  f_reg = DECL_CHAIN (f_stk);
+  f_ndx = DECL_CHAIN (f_reg);
 
   stk = build3 (COMPONENT_REF, TREE_TYPE (f_stk), valist,
 		f_stk, NULL_TREE);
@@ -3000,7 +3002,8 @@ xtensa_init_builtins (void)
 
 
 static tree
-xtensa_fold_builtin (tree fndecl, tree arglist, bool ignore ATTRIBUTE_UNUSED)
+xtensa_fold_builtin (tree fndecl, int n_args ATTRIBUTE_UNUSED, tree *args,
+		     bool ignore ATTRIBUTE_UNUSED)
 {
   unsigned int fcode = DECL_FUNCTION_CODE (fndecl);
   tree arg0, arg1;
@@ -3008,8 +3011,8 @@ xtensa_fold_builtin (tree fndecl, tree arglist, bool ignore ATTRIBUTE_UNUSED)
   switch (fcode)
     {
     case XTENSA_BUILTIN_UMULSIDI3:
-      arg0 = TREE_VALUE (arglist);
-      arg1 = TREE_VALUE (TREE_CHAIN (arglist));
+      arg0 = args[0];
+      arg1 = args[1];
       if ((TREE_CODE (arg0) == INTEGER_CST && TREE_CODE (arg1) == INTEGER_CST)
 	  || TARGET_MUL32_HIGH)
 	return fold_build2 (MULT_EXPR, unsigned_intDI_type_node,
@@ -3087,8 +3090,8 @@ xtensa_preferred_reload_class (rtx x, enum reg_class rclass, int isoutput)
 }
 
 
-enum reg_class
-xtensa_secondary_reload (bool in_p, rtx x, enum reg_class rclass,
+reg_class_t
+xtensa_secondary_reload (bool in_p, rtx x, reg_class_t rclass,
 			 enum machine_mode mode, secondary_reload_info *sri)
 {
   int regno;

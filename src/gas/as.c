@@ -98,6 +98,9 @@ int debug_memory = 0;
 /* Enable verbose mode.  */
 int verbose = 0;
 
+/* Keep the output file.  */
+int keep_it = 0;
+
 segT reg_section;
 segT expr_section;
 segT text_section;
@@ -243,9 +246,16 @@ Options:\n\
   fprintf (stream, _("\
   --alternate             initially turn on alternate macro syntax\n"));
   fprintf (stream, _("\
+  --compress-debug-sections\n\
+                          compress DWARF debug sections using zlib\n"));
+  fprintf (stream, _("\
+  --nocompress-debug-sections\n\
+                          don't compress DWARF debug sections\n"));
+  fprintf (stream, _("\
   -D                      produce assembler debugging messages\n"));
   fprintf (stream, _("\
-  --debug-prefix-map OLD=NEW  Map OLD to NEW in debug information\n"));
+  --debug-prefix-map OLD=NEW\n\
+                          map OLD to NEW in debug information\n"));
   fprintf (stream, _("\
   --defsym SYM=VAL        define symbol SYM to given value\n"));
 #ifdef USE_EMULATIONS
@@ -434,7 +444,9 @@ parse_args (int * pargc, char *** pargv)
       OPTION_AL,
       OPTION_HASH_TABLE_SIZE,
       OPTION_REDUCE_MEMORY_OVERHEADS,
-      OPTION_WARN_FATAL
+      OPTION_WARN_FATAL,
+      OPTION_COMPRESS_DEBUG,
+      OPTION_NOCOMPRESS_DEBUG
     /* When you add options here, check that they do
        not collide with OPTION_MD_BASE.  See as.h.  */
     };
@@ -452,6 +464,8 @@ parse_args (int * pargc, char *** pargv)
     ,{"a", optional_argument, NULL, 'a'}
     /* Handle -al=<FILE>.  */
     ,{"al", optional_argument, NULL, OPTION_AL}
+    ,{"compress-debug-sections", no_argument, NULL, OPTION_COMPRESS_DEBUG}
+    ,{"nocompress-debug-sections", no_argument, NULL, OPTION_NOCOMPRESS_DEBUG}
     ,{"debug-prefix-map", required_argument, NULL, OPTION_DEBUG_PREFIX_MAP}
     ,{"defsym", required_argument, NULL, OPTION_DEFSYM}
     ,{"dump-config", no_argument, NULL, OPTION_DUMPCONFIG}
@@ -630,6 +644,14 @@ This program has absolutely no warranty.\n"));
 	  fprintf (stderr, _("bfd-target = %s\n"), TARGET_FORMAT);
 #endif
 	  exit (EXIT_SUCCESS);
+
+	case OPTION_COMPRESS_DEBUG:
+	  flag_compress_debug = 1;
+	  break;
+
+	case OPTION_NOCOMPRESS_DEBUG:
+	  flag_compress_debug = 0;
+	  break;
 
 	case OPTION_DEBUG_PREFIX_MAP:
 	  add_debug_prefix_map (optarg);
@@ -953,6 +975,8 @@ static void
 close_output_file (void)
 {
   output_file_close (out_file_name);
+  if (!keep_it)
+    unlink_if_ordinary (out_file_name);
 }
 
 /* The interface between the macro code and gas expression handling.  */
@@ -1055,7 +1079,6 @@ create_obj_attrs_section (void)
 {
   segT s;
   char *p;
-  addressT addr;
   offsetT size;
   const char *name;
 
@@ -1069,7 +1092,7 @@ create_obj_attrs_section (void)
       elf_section_type (s)
 	= get_elf_backend_data (stdoutput)->obj_attrs_section_type;
       bfd_set_section_flags (stdoutput, s, SEC_READONLY | SEC_DATA);
-      addr = frag_now_fix ();
+      frag_now_fix ();
       p = frag_more (size);
       bfd_elf_set_obj_attr_contents (stdoutput, (bfd_byte *)p, size);
     }
@@ -1083,7 +1106,6 @@ main (int argc, char ** argv)
   char ** argv_orig = argv;
 
   int macro_strip_at;
-  int keep_it;
 
   start_time = get_run_time ();
 
@@ -1245,9 +1267,6 @@ main (int argc, char ** argv)
 
   if (had_errors () > 0 && ! flag_always_generate_output)
     keep_it = 0;
-
-  if (!keep_it)
-    unlink_if_ordinary (out_file_name);
 
   input_scrub_end ();
 

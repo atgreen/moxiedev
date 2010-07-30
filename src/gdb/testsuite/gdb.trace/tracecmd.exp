@@ -21,8 +21,6 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 gdb_exit
 gdb_start
@@ -82,7 +80,7 @@ gdb_test "info trace" "No tracepoints.*" \
 
 # 1.3 trace line in invalid source file
 gdb_delete_tracepoints
-gdb_test "set breakpoint pending off" ""
+gdb_test_no_output "set breakpoint pending off"
 gdb_test "trace NoSuChFiLe.c:1" "No source file named NoSuChFiLe.c." \
 	"1.3a: trace invalid source file"
 gdb_test "info trace" "No tracepoints.*" \
@@ -105,12 +103,10 @@ gdb_test "info trace" "No tracepoints.*" \
 
 # 1.6 trace at a specific address
 #     Collect the address of "gdb_asm_test", and use that.
-send_gdb "print gdb_asm_test\n"
-gdb_expect {
+gdb_test_multiple "print gdb_asm_test" "" {
     -re "\[$\]\[0-9\].*0x(\[0-9a-fA-F\]+).*$gdb_prompt $" {
 	set asm_test_addr $expect_out(1,string)
     }
-    timeout { }
 }
 
 gdb_delete_tracepoints
@@ -122,12 +118,10 @@ gdb_test "info trace" "$asm_test_addr.*gdb_asm_test.*" \
 
 # 1.7 trace at function's exact address
 #     Collect the address of the function for comparison
-send_gdb "print gdb_recursion_test\n"
-gdb_expect {
+gdb_test_multiple "print gdb_recursion_test" "" {
     -re "\[$\]\[0-9\].*0x(\[0-9a-fA-F\]+).*$gdb_prompt $" {
 	set c_test_addr $expect_out(1,string)
     }
-    timeout { }
 }
 
 gdb_delete_tracepoints
@@ -144,8 +138,7 @@ gdb_test "info trace" "$c_test_addr.*in gdb_recursion_test.*:$baseline" \
 gdb_test "trace" "No default breakpoint address now." \
 	"1.9: trace <no arguments>"
 
-# 1.10 set large number of tracepoints
-# deferred to limits test module
+# 1.10 there's no 1.10.
 
 # 1.11 tracepoint conditions
 gdb_delete_tracepoints
@@ -168,12 +161,12 @@ gdb_test "help trace" "Set a tracepoint at .*" "1.14: help trace"
 
 gdb_delete_tracepoints
 
-send_gdb "ftrace gdb_recursion_test\n"
 # Acceptance vs rejection of a location are target-specific, so allow both.
-gdb_expect {
-    -re "Fast tracepoint $decimal at $hex: file.*$srcfile, line $testline1.*$gdb_prompt $"
-    { pass "Set a fast tracepoint" }
-    -re ".*May not have a fast tracepoint at $hex.*$gdb_prompt $"
-    { pass "Declined to set a fast tracepoint" }
-    timeout { fail "Timeout while setting fast tracepoint" }
+gdb_test_multiple "ftrace gdb_recursion_test" "Set a fast tracepoint" {
+    -re "Fast tracepoint $decimal at $hex: file.*$srcfile, line $testline1.*$gdb_prompt $" {
+	pass "Set a fast tracepoint"
+    }
+    -re ".*May not have a fast tracepoint at $hex.*$gdb_prompt $" {
+	pass "Declined to set a fast tracepoint"
+    }
 }

@@ -305,10 +305,7 @@ CODE_FRAGMENT
 .      when doing overflow checking.  *}
 .  unsigned int bitsize;
 .
-.  {*  Notes that the relocation is relative to the location in the
-.      data section of the addend.  The relocation function will
-.      subtract from the relocation value the address of the location
-.      being relocated.  *}
+.  {*  The relocation is relative to the field being relocated.  *}
 .  bfd_boolean pc_relative;
 .
 .  {*  The bit position of the reloc value in the destination.
@@ -2025,10 +2022,6 @@ ENUMX
   BFD_RELOC_SPU_PPU64
 ENUMX
   BFD_RELOC_SPU_ADD_PIC
-ENUMX
-  BFD_RELOC_SPU_PIC18
-ENUMX
-  BFD_RELOC_SPU_STUB
 ENUMDOC
   SPU Relocations.
 
@@ -2940,6 +2933,8 @@ ENUMX
   BFD_RELOC_ARM_GOTOFF
 ENUMX
   BFD_RELOC_ARM_GOTPC
+ENUMX
+  BFD_RELOC_ARM_GOT_PREL
 ENUMDOC
   Relocations for setting up GOTs and PLTs for shared libraries.
 
@@ -3260,6 +3255,20 @@ ENUMX
   BFD_RELOC_SH_TLS_DTPOFF32
 ENUMX
   BFD_RELOC_SH_TLS_TPOFF32
+ENUMX
+  BFD_RELOC_SH_GOT20
+ENUMX
+  BFD_RELOC_SH_GOTOFF20
+ENUMX
+  BFD_RELOC_SH_GOTFUNCDESC
+ENUMX
+  BFD_RELOC_SH_GOTFUNCDESC20
+ENUMX
+  BFD_RELOC_SH_GOTOFFFUNCDESC
+ENUMX
+  BFD_RELOC_SH_GOTOFFFUNCDESC20
+ENUMX
+  BFD_RELOC_SH_FUNCDESC
 ENUMDOC
   Renesas / SuperH SH relocs.  Not all of these appear in object files.
 
@@ -3714,6 +3723,94 @@ ENUMDOC
   This is a variation of BFD_RELOC_LO16 that can be used in v850e ld.bu
   instructions.
 ENUM
+  BFD_RELOC_V850_16_PCREL
+ENUMDOC
+  This is a 16-bit reloc.
+ENUM     
+  BFD_RELOC_V850_17_PCREL
+ENUMDOC
+  This is a 17-bit reloc.
+ENUM     
+  BFD_RELOC_V850_23
+ENUMDOC
+  This is a 23-bit reloc.
+ENUM     
+  BFD_RELOC_V850_32_PCREL
+ENUMDOC
+  This is a 32-bit reloc.
+ENUM     
+  BFD_RELOC_V850_32_ABS
+ENUMDOC
+  This is a 32-bit reloc.
+ENUM     
+  BFD_RELOC_V850_16_SPLIT_OFFSET
+ENUMDOC
+  This is a 16-bit reloc.
+ENUM     
+  BFD_RELOC_V850_16_S1
+ENUMDOC
+  This is a 16-bit reloc.
+ENUM     
+  BFD_RELOC_V850_LO16_S1
+ENUMDOC
+  Low 16 bits. 16 bit shifted by 1.
+ENUM     
+  BFD_RELOC_V850_CALLT_15_16_OFFSET
+ENUMDOC
+  This is a 16 bit offset from the call table base pointer.
+ENUM     
+  BFD_RELOC_V850_32_GOTPCREL
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_16_GOT
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_32_GOT
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_22_PLT_PCREL
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_32_PLT_PCREL
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_COPY
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_GLOB_DAT
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_JMP_SLOT
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_RELATIVE
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_16_GOTOFF
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_32_GOTOFF
+ENUMDOC
+  DSO relocations.
+ENUM     
+  BFD_RELOC_V850_CODE
+ENUMDOC
+  start code.
+ENUM     
+  BFD_RELOC_V850_DATA
+ENUMDOC
+  start data in text.
+ENUM
   BFD_RELOC_MN10300_32_PCREL
 ENUMDOC
   This is a 32bit pcrel reloc for the mn10300, offset by two bytes in the
@@ -3763,6 +3860,61 @@ ENUMDOC
   This is a reloc for the tms320c54x, where the most
   significant 7 bits of a 23-bit extended address are placed into
   the opcode.
+
+ENUM
+  BFD_RELOC_C6000_PCR_S21
+ENUMX
+  BFD_RELOC_C6000_PCR_S12
+ENUMX
+  BFD_RELOC_C6000_PCR_S10
+ENUMX
+  BFD_RELOC_C6000_PCR_S7
+ENUMX
+  BFD_RELOC_C6000_ABS_S16
+ENUMX
+  BFD_RELOC_C6000_ABS_L16
+ENUMX
+  BFD_RELOC_C6000_ABS_H16
+ENUMX
+  BFD_RELOC_C6000_SBR_U15_B
+ENUMX
+  BFD_RELOC_C6000_SBR_U15_H
+ENUMX
+  BFD_RELOC_C6000_SBR_U15_W
+ENUMX
+  BFD_RELOC_C6000_SBR_S16
+ENUMX
+  BFD_RELOC_C6000_SBR_L16_B
+ENUMX
+  BFD_RELOC_C6000_SBR_L16_H
+ENUMX
+  BFD_RELOC_C6000_SBR_L16_W
+ENUMX
+  BFD_RELOC_C6000_SBR_H16_B
+ENUMX
+  BFD_RELOC_C6000_SBR_H16_H
+ENUMX
+  BFD_RELOC_C6000_SBR_H16_W
+ENUMX
+  BFD_RELOC_C6000_SBR_GOT_U15_W
+ENUMX
+  BFD_RELOC_C6000_SBR_GOT_L16_W
+ENUMX
+  BFD_RELOC_C6000_SBR_GOT_H16_W
+ENUMX
+  BFD_RELOC_C6000_DSBT_INDEX
+ENUMX
+  BFD_RELOC_C6000_PREL31
+ENUMX
+  BFD_RELOC_C6000_COPY
+ENUMX
+  BFD_RELOC_C6000_ALIGN
+ENUMX
+  BFD_RELOC_C6000_FPHEAD
+ENUMX
+  BFD_RELOC_C6000_NOCMP
+ENUMDOC
+  TMS320C6000 relocations.
 
 ENUM
   BFD_RELOC_FR30_48

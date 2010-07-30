@@ -39,39 +39,17 @@ proc deduce_language_of_main {} {
 
     # See what language gdb thinks main() is, prior to reading full symbols.
     # I think this fails for COFF targets.
-    send_gdb "show language\n"
-    gdb_expect {
-	-re ".* source language is \"auto; currently c\[+\]+\".*$gdb_prompt $" {
-	    pass "deduced language is C++, before full symbols"
-	}
-	-re ".*$gdb_prompt $" {
-	    fail "source language not correct for C++ (psymtabs only)"
-	    return
-	}
-	timeout {
-	    fail "can't show language (timeout)"
-	    return
-	}
-    }
+    gdb_test "show language" \
+	"source language is \"auto; currently c\[+\]+\".*" \
+	"deduced language is C++, before full symbols"
 
     runto_main
 
     # See if our idea of the language has changed.
 
-    send_gdb "show language\n"
-    gdb_expect {
-	-re ".* source language is \"auto; currently c\[+\]+\".*$gdb_prompt $" {
-	    pass "deduced language is C++, after full symbols"
-	}
-	-re ".*$gdb_prompt $" {
-	    fail "source language not correct for C++ (full symbols)"
-	    return
-	}
-	timeout {
-	    fail "can't show language (timeout)"
-	    return
-	}
-    }
+    gdb_test "show language" \
+	"source language is \"auto; currently c\[+\]+\".*" \
+	"deduced language is C++, after full symbols"
 }
 
 proc test_expr { args } {
@@ -80,7 +58,7 @@ proc test_expr { args } {
     }
     set last_ent [expr [llength $args] - 1];
     set testname [lindex $args $last_ent];
-    if [gdb_test [lindex $args 0] "" "$testname (setup)"] {
+    if [gdb_test_no_output [lindex $args 0] "$testname (setup)"] {
 	gdb_suppress_tests;
     }
     for {set x 1} {$x < $last_ent} {set x [expr $x + 2]} {
@@ -92,16 +70,12 @@ proc test_expr { args } {
 }
 
 proc do_tests {} {
-    global prms_id
-    global bug_id
     global subdir
     global objdir
     global srcdir
     global binfile
     global gdb_prompt
 
-    set prms_id 0
-    set bug_id 0
 
     # Start with a fresh gdb.
 

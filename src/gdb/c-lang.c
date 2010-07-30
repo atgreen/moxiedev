@@ -76,7 +76,6 @@ static enum c_string_type
 classify_type (struct type *elttype, struct gdbarch *gdbarch,
 	       const char **encoding)
 {
-  struct type *saved_type;
   enum c_string_type result;
 
   /* We loop because ELTTYPE may be a typedef, and we want to
@@ -180,6 +179,7 @@ print_wchar (gdb_wint_t w, const gdb_byte *orig, int orig_len,
 	     int quoter, int *need_escapep)
 {
   int need_escape = *need_escapep;
+
   *need_escapep = 0;
   if (gdb_iswprint (w) && (!need_escape || (!gdb_iswdigit (w)
 					    && w != LCST ('8')
@@ -224,6 +224,7 @@ print_wchar (gdb_wint_t w, const gdb_byte *orig, int orig_len,
 	      {
 		char octal[30];
 		ULONGEST value;
+
 		value = extract_unsigned_integer (&orig[i], width, byte_order);
 		/* If the value fits in 3 octal digits, print it that
 		   way.  Otherwise, print it as a hex escape.  */
@@ -237,6 +238,7 @@ print_wchar (gdb_wint_t w, const gdb_byte *orig, int orig_len,
 	    while (i < orig_len)
 	      {
 		char octal[5];
+
 		sprintf (octal, "\\%.3o", orig[i] & 0xff);
 		append_string_as_wide (octal, output);
 		++i;
@@ -253,8 +255,9 @@ print_wchar (gdb_wint_t w, const gdb_byte *orig, int orig_len,
    string whose delimiter is QUOTER.  Note that that format for printing
    characters and strings is language specific. */
 
-static void
-c_emit_char (int c, struct type *type, struct ui_file *stream, int quoter)
+void
+c_emit_char (int c, struct type *type,
+	     struct ui_file *stream, int quoter)
 {
   enum bfd_endian byte_order = gdbarch_byte_order (get_type_arch (type));
   struct obstack wchar_buf, output;
@@ -387,6 +390,19 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
   int finished = 0;
   int need_escape = 0;
 
+  if (length == -1)
+    {
+      unsigned long current_char = 1;
+
+      for (i = 0; current_char; ++i)
+	{
+	  QUIT;
+	  current_char = extract_unsigned_integer (string + i * width,
+						   width, byte_order);
+	}
+      length = i;
+    }
+
   /* If the string was not truncated due to `set print elements', and
      the last byte of it is a null, we don't print that, in traditional C
      style.  */
@@ -419,18 +435,6 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
     {
       fputs_filtered ("\"\"", stream);
       return;
-    }
-
-  if (length == -1)
-    {
-      unsigned long current_char = 1;
-      for (i = 0; current_char; ++i)
-	{
-	  QUIT;
-	  current_char = extract_unsigned_integer (string + i * width,
-						   width, byte_order);
-	}
-      length = i;
     }
 
   /* Arrange to iterate over the characters, in wchar_t form.  */
@@ -504,6 +508,7 @@ c_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
 		/* Painful gyrations.  */
 		int j;
 		char *s = xstrprintf (_(" <repeats %u times>"), reps);
+
 		for (j = 0; s[j]; ++j)
 		  {
 		    gdb_wchar_t w = gdb_btowc (s[j]);
@@ -881,6 +886,7 @@ convert_escape (struct type *type, const char *dest_charset,
     case 'U':
       {
 	int length = *p == 'u' ? 4 : 8;
+
 	ADVANCE;
 	if (!isxdigit (*p))
 	  error (_("\\u used with no following hex digits"));
@@ -908,6 +914,7 @@ parse_one_string (struct obstack *output, char *data, int len,
   while (data < limit)
     {
       char *p = data;
+
       /* Look for next escape, or the end of the input.  */
       while (p < limit && *p != '\\')
 	++p;
@@ -1021,6 +1028,7 @@ evaluate_subexp_c (struct type *expect_type, struct expression *exp,
 	else
 	  {
 	    int i;
+
 	    /* Write the terminating character.  */
 	    for (i = 0; i < TYPE_LENGTH (type); ++i)
 	      obstack_1grow (&output, 0);
@@ -1107,6 +1115,7 @@ c_language_arch_info (struct gdbarch *gdbarch,
 		      struct language_arch_info *lai)
 {
   const struct builtin_type *builtin = builtin_type (gdbarch);
+
   lai->string_char_type = builtin->builtin_char;
   lai->primitive_type_vector
     = GDBARCH_OBSTACK_CALLOC (gdbarch, nr_c_primitive_types + 1,
@@ -1135,10 +1144,11 @@ c_language_arch_info (struct gdbarch *gdbarch,
   lai->bool_type_default = builtin->builtin_int;
 }
 
-static const struct exp_descriptor exp_descriptor_c = 
+const struct exp_descriptor exp_descriptor_c = 
 {
   print_subexp_standard,
   operator_length_standard,
+  operator_check_standard,
   op_name_standard,
   dump_subexp_body_standard,
   evaluate_subexp_c
@@ -1212,6 +1222,7 @@ cplus_language_arch_info (struct gdbarch *gdbarch,
 			  struct language_arch_info *lai)
 {
   const struct builtin_type *builtin = builtin_type (gdbarch);
+
   lai->string_char_type = builtin->builtin_char;
   lai->primitive_type_vector
     = GDBARCH_OBSTACK_CALLOC (gdbarch, nr_cplus_primitive_types + 1,

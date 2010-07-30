@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/28_regex
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-07-27T17:27:06.727889Z
+162578
+paolo
 
 
 
@@ -25,6 +25,21 @@ jakub
 
 
 138bc75d-0d04-0410-961f-82ee72b054a4
+
+05_constants
+dir
+
+08_basic_regex
+dir
+
+03_requirements
+dir
+
+04_header
+dir
+
+13_ecmascript
+dir
 
 init-list.cc
 file
@@ -60,6 +75,61 @@ jakub
 
 1257
 
+range_access.cc
+file
+
+
+
+
+2010-07-30T08:37:54.062087Z
+1130f553eafe1cb8f09969675dbb6a8c
+2010-07-27T17:27:06.727889Z
+162578
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+944
+
+06_exception_type
+dir
+
+11_algorithms
+dir
+
 headers
+dir
+
+07_traits
+dir
+
+02_definitions
+dir
+
+10_match_results
+dir
+
+09_sub_match
+dir
+
+12_iterators
 dir
 

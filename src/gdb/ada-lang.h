@@ -156,11 +156,15 @@ extern int ada_parse (void);    /* Defined in ada-exp.y */
 extern void ada_error (char *); /* Defined in ada-exp.y */
 
                         /* Defined in ada-typeprint.c */
-extern void ada_print_type (struct type *, char *, struct ui_file *, int,
+extern void ada_print_type (struct type *, const char *, struct ui_file *, int,
                             int);
+
+extern void ada_print_typedef (struct type *type, struct symbol *new_symbol,
+			       struct ui_file *stream);
 
 extern int ada_val_print (struct type *, const gdb_byte *, int, CORE_ADDR,
                           struct ui_file *, int,
+			  const struct value *,
 			  const struct value_print_options *);
 
 extern int ada_value_print (struct value *, struct ui_file *,
@@ -183,6 +187,8 @@ struct value *ada_convert_actual (struct value *actual,
 
 extern struct value *ada_value_subscript (struct value *, int,
                                           struct value **);
+
+extern void ada_fixup_array_indexes_type (struct type *index_desc_type);
 
 extern struct type *ada_array_element_type (struct type *, int);
 
@@ -311,6 +317,8 @@ extern int ada_which_variant_applies (struct type *, struct type *,
 extern struct type *ada_to_fixed_type (struct type *, const gdb_byte *,
 				       CORE_ADDR, struct value *,
                                        int check_tag);
+
+extern struct value *ada_to_fixed_value (struct value *val);
 
 extern struct type *ada_template_to_fixed_record_type_1 (struct type *type,
 							 const gdb_byte *valaddr,

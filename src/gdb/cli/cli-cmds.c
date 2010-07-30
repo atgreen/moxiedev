@@ -38,7 +38,7 @@
 #include "objfiles.h"
 #include "source.h"
 #include "disasm.h"
-extern void disconnect_or_stop_tracing (int from_tty);
+#include "tracepoint.h"
 
 #include "ui-out.h"
 
@@ -247,6 +247,7 @@ compare_strings (const void *arg1, const void *arg2)
 {
   const char **s1 = (const char **) arg1;
   const char **s2 = (const char **) arg2;
+
   return strcmp (*s1, *s2);
 }
 
@@ -255,7 +256,6 @@ compare_strings (const void *arg1, const void *arg2)
 static void
 complete_command (char *arg, int from_tty)
 {
-  int i;
   int argpoint;
   char **completions, *point, *arg_prefix;
 
@@ -297,6 +297,7 @@ complete_command (char *arg, int from_tty)
       while (item < size)
 	{
 	  int next_item;
+
 	  printf_unfiltered ("%s%s\n", arg_prefix, completions[item]);
 	  next_item = item + 1;
 	  while (next_item < size
@@ -337,7 +338,7 @@ quit_command (char *args, int from_tty)
   if (!quit_confirm ())
     error (_("Not confirmed."));
 
-  disconnect_or_stop_tracing (from_tty);
+  disconnect_tracing (from_tty);
 
   quit_force (args, from_tty);
 }
@@ -428,6 +429,7 @@ cd_command (char *dir, int from_tty)
 	      /* Search backwards for the directory just before the "/.."
 	         and obliterate it and the "/..".  */
 	      char *q = p;
+
 	      while (q != current_directory && !IS_DIR_SEPARATOR (q[-1]))
 		--q;
 
@@ -470,62 +472,59 @@ Script filename extension recognition is \"%s\".\n"),
 		    value);
 }
 
-static int
-find_and_open_script (int from_tty, char **filep, FILE **streamp,
-		      struct cleanup **cleanupp)
+/* Try to open SCRIPT_FILE.
+   If successful, the full path name is stored in *FULL_PATHP,
+   the stream is stored in *STREAMP, and return 1.
+   The caller is responsible for freeing *FULL_PATHP.
+   If not successful, return 0; errno is set for the last file
+   we tried to open.
+
+   If SEARCH_PATH is non-zero, and the file isn't found in cwd,
+   search for it in the source search path.
+
+   NOTE: This calls openp which uses xfullpath to compute the full path
+   instead of gdb_realpath.  Symbolic links are not resolved.  */
+
+int
+find_and_open_script (const char *script_file, int search_path,
+		      FILE **streamp, char **full_pathp)
 {
-  char *file = *filep;
-  char *full_pathname = NULL;
+  char *file;
   int fd;
   struct cleanup *old_cleanups;
+  int search_flags = OPF_TRY_CWD_FIRST;
 
-  file = tilde_expand (file);
+  file = tilde_expand (script_file);
   old_cleanups = make_cleanup (xfree, file);
 
-  /* Search for and open 'file' on the search path used for source
-     files.  Put the full location in 'full_pathname'.  */
-  fd = openp (source_path, OPF_TRY_CWD_FIRST,
-	      file, O_RDONLY, &full_pathname);
-  make_cleanup (xfree, full_pathname);
+  if (search_path)
+    search_flags |= OPF_SEARCH_IN_PATH;
 
-  /* Use the full path name, if it is found.  */
-  if (full_pathname != NULL && fd != -1)
-    {
-      file = full_pathname;
-    }
+  /* Search for and open 'file' on the search path used for source
+     files.  Put the full location in *FULL_PATHP.  */
+  fd = openp (source_path, search_flags,
+	      file, O_RDONLY, full_pathp);
 
   if (fd == -1)
     {
-      if (from_tty)
-	perror_with_name (file);
-      else
-	{
-	  do_cleanups (old_cleanups);
-	  return 0;
-	}
+      int save_errno = errno;
+      do_cleanups (old_cleanups);
+      errno = save_errno;
+      return 0;
     }
 
-  *streamp = fdopen (fd, FOPEN_RT);
-  *filep = file;
-  *cleanupp = old_cleanups;
+  do_cleanups (old_cleanups);
 
+  *streamp = fdopen (fd, FOPEN_RT);
   return 1;
 }
 
-void
-source_script (char *file, int from_tty)
+/* Load script FILE, which has already been opened as STREAM.
+   STREAM is closed before we return.  */
+
+static void
+source_script_from_stream (FILE *stream, const char *file)
 {
-  FILE *stream;
-  struct cleanup *old_cleanups;
-
-  if (file == NULL || *file == 0)
-    {
-      error (_("source command requires file name of file to source."));
-    }
-
-  if (!find_and_open_script (from_tty, &file, &stream, &old_cleanups))
-    return;
-
   if (script_ext_mode != script_ext_off
       && strlen (file) > 3 && !strcmp (&file[strlen (file) - 3], ".py"))
     {
@@ -541,20 +540,62 @@ source_script (char *file, int from_tty)
 	  if (script_ext_mode == script_ext_soft
 	      && e.reason == RETURN_ERROR && e.error == UNSUPPORTED_ERROR)
 	    {
-	      if (!find_and_open_script (from_tty, &file, &stream, &old_cleanups))
-		return;
-
-	      script_from_file (stream, file);
+	      fseek (stream, 0, SEEK_SET);
+	      script_from_file (stream, (char*) file);
 	    }
 	  else
-	    /* Nope, just punt.  */
-	    throw_exception (e);
+	    {
+	      /* Nope, just punt.  */
+	      fclose (stream);
+	      throw_exception (e);
+	    }
 	}
+      else
+	fclose (stream);
     }
   else
     script_from_file (stream, file);
+}
 
+/* Worker to perform the "source" command.
+   Load script FILE.
+   If SEARCH_PATH is non-zero, and the file isn't found in cwd,
+   search for it in the source search path.  */
+
+static void
+source_script_with_search (const char *file, int from_tty, int search_path)
+{
+  FILE *stream;
+  char *full_path;
+  struct cleanup *old_cleanups;
+
+  if (file == NULL || *file == 0)
+    error (_("source command requires file name of file to source."));
+
+  if (!find_and_open_script (file, search_path, &stream, &full_path))
+    {
+      /* The script wasn't found, or was otherwise inaccessible.
+	 If the source command was invoked interactively, throw an error.
+	 Otherwise (e.g. if it was invoked by a script), silently ignore
+	 the error.  */
+      if (from_tty)
+	perror_with_name (file);
+      else
+	return;
+    }
+
+  old_cleanups = make_cleanup (xfree, full_path);
+  source_script_from_stream (stream, file);
   do_cleanups (old_cleanups);
+}
+
+/* Wrapper around source_script_with_search to export it to main.c
+   for use in loading .gdbinit scripts.  */
+
+void
+source_script (char *file, int from_tty)
+{
+  source_script_with_search (file, from_tty, 0);
 }
 
 /* Return the source_verbose global variable to its previous state
@@ -572,33 +613,54 @@ source_command (char *args, int from_tty)
   struct cleanup *old_cleanups;
   char *file = args;
   int *old_source_verbose = xmalloc (sizeof(int));
+  int search_path = 0;
 
   *old_source_verbose = source_verbose;
   old_cleanups = make_cleanup (source_verbose_cleanup, old_source_verbose);
 
   /* -v causes the source command to run in verbose mode.
+     -s causes the file to be searched in the source search path,
+     even if the file name contains a '/'.
      We still have to be able to handle filenames with spaces in a
      backward compatible way, so buildargv is not appropriate.  */
 
   if (args)
     {
-      /* Make sure leading white space does not break the comparisons.  */
-      while (isspace(args[0]))
-	args++;
-
-      /* Is -v the first thing in the string?  */
-      if (args[0] == '-' && args[1] == 'v' && isspace (args[2]))
+      while (args[0] != '\0')
 	{
-	  source_verbose = 1;
+	  /* Make sure leading white space does not break the comparisons.  */
+	  while (isspace(args[0]))
+	    args++;
 
-	  /* Trim -v and whitespace from the filename.  */
-	  file = &args[3];
-	  while (isspace (file[0]))
-	    file++;
+	  if (args[0] != '-')
+	    break;
+
+	  if (args[1] == 'v' && isspace (args[2]))
+	    {
+	      source_verbose = 1;
+
+	      /* Skip passed -v.  */
+	      args = &args[3];
+	    }
+	  else if (args[1] == 's' && isspace (args[2]))
+	    {
+	      search_path = 1;
+
+	      /* Skip passed -s.  */
+	      args = &args[3];
+	    }
+	  else
+	    break;
 	}
+
+      while (isspace (args[0]))
+	args++;
+      file = args;
     }
 
-  source_script (file, from_tty);
+  source_script_with_search (file, from_tty, search_path);
+
+  do_cleanups (old_cleanups);
 }
 
 
@@ -721,7 +783,6 @@ edit_command (char *arg, int from_tty)
     }
   else
     {
-
       /* Now should only be one argument -- decode it in SAL.  */
 
       arg1 = arg;
@@ -752,6 +813,7 @@ edit_command (char *arg, int from_tty)
       if (*arg == '*')
         {
 	  struct gdbarch *gdbarch;
+
           if (sal.symtab == 0)
 	    /* FIXME-32x64--assumes sal.pc fits in long.  */
 	    error (_("No source file for address %s."),
@@ -917,6 +979,7 @@ list_command (char *arg, int from_tty)
   if (*arg == '*')
     {
       struct gdbarch *gdbarch;
+
       if (sal.symtab == 0)
 	/* FIXME-32x64--assumes sal.pc fits in long.  */
 	error (_("No source file for address %s."),
@@ -1057,7 +1120,7 @@ disassemble_command (char *arg, int from_tty)
   struct gdbarch *gdbarch = get_current_arch ();
   CORE_ADDR low, high;
   char *name;
-  CORE_ADDR pc, pc_masked;
+  CORE_ADDR pc;
   int flags;
 
   name = NULL;
@@ -1150,6 +1213,7 @@ show_user (char *args, int from_tty)
   if (args)
     {
       char *comname = args;
+
       c = lookup_cmd (&comname, cmdlist, "", 0, 1);
       if (c->class != class_user)
 	error (_("Not a user command."));
@@ -1175,6 +1239,7 @@ apropos_command (char *searchstr, int from_tty)
   regex_t pattern;
   char *pattern_fastmap;
   char errorbuffer[512];
+
   pattern_fastmap = xcalloc (256, sizeof (char));
   if (searchstr == NULL)
       error (_("REGEXP string is empty"));
@@ -1377,8 +1442,12 @@ Commands defined in this way may have up to ten arguments."));
 
   source_help_text = xstrprintf (_("\
 Read commands from a file named FILE.\n\
-Optional -v switch (before the filename) causes each command in\n\
-FILE to be echoed as it is executed.\n\
+\n\
+Usage: source [-s] [-v] FILE\n\
+-s: search for the script in the source search path,\n\
+    even if FILE contains directories.\n\
+-v: each command in FILE is echoed as it is executed.\n\
+\n\
 Note that the file \"%s\" is read automatically in this way\n\
 when GDB is started."), gdbinit);
   c = add_cmd ("source", class_support, source_command,

@@ -1,5 +1,6 @@
 /* The Blackfin code generation auxiliary output file.
-   Copyright (C) 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
    Contributed by Analog Devices.
 
    This file is part of GCC.
@@ -25,7 +26,6 @@
 #include "rtl.h"
 #include "regs.h"
 #include "hard-reg-set.h"
-#include "real.h"
 #include "insn-config.h"
 #include "insn-codes.h"
 #include "conditions.h"
@@ -40,6 +40,7 @@
 #include "target.h"
 #include "target-def.h"
 #include "expr.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "recog.h"
 #include "optabs.h"
@@ -2458,8 +2459,8 @@ bfin_memory_move_cost (enum machine_mode mode ATTRIBUTE_UNUSED,
    RCLASS requires an extra scratch register.  Return the class needed for the
    scratch register.  */
 
-static enum reg_class
-bfin_secondary_reload (bool in_p, rtx x, enum reg_class rclass,
+static reg_class_t
+bfin_secondary_reload (bool in_p, rtx x, reg_class_t rclass_i,
 		       enum machine_mode mode, secondary_reload_info *sri)
 {
   /* If we have HImode or QImode, we can only use DREGS as secondary registers;
@@ -2467,6 +2468,7 @@ bfin_secondary_reload (bool in_p, rtx x, enum reg_class rclass,
   enum reg_class default_class = GET_MODE_SIZE (mode) >= 4 ? DPREGS : DREGS;
   enum reg_class x_class = NO_REGS;
   enum rtx_code code = GET_CODE (x);
+  enum reg_class rclass = (enum reg_class) rclass_i;
 
   if (code == SUBREG)
     x = SUBREG_REG (x), code = GET_CODE (x);
@@ -2634,11 +2636,7 @@ bfin_handle_option (size_t code, const char *arg, int value)
 static struct machine_function *
 bfin_init_machine_status (void)
 {
-  struct machine_function *f;
-
-  f = GGC_CNEW (struct machine_function);
-
-  return f;
+  return ggc_alloc_cleared_machine_function ();
 }
 
 /* Implement the macro OVERRIDE_OPTIONS.  */

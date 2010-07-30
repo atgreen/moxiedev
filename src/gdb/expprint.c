@@ -42,6 +42,7 @@ void
 print_expression (struct expression *exp, struct ui_file *stream)
 {
   int pc = 0;
+
   print_subexp (exp, &pc, stream, PREC_NULL);
 }
 
@@ -96,6 +97,7 @@ print_subexp_standard (struct expression *exp, int *pos,
     case OP_LONG:
       {
 	struct value_print_options opts;
+
 	get_raw_print_options (&opts);
 	(*pos) += 3;
 	value_print (value_from_longest (exp->elts[pc + 1].type,
@@ -107,6 +109,7 @@ print_subexp_standard (struct expression *exp, int *pos,
     case OP_DOUBLE:
       {
 	struct value_print_options opts;
+
 	get_raw_print_options (&opts);
 	(*pos) += 3;
 	value_print (value_from_double (exp->elts[pc + 1].type,
@@ -118,6 +121,7 @@ print_subexp_standard (struct expression *exp, int *pos,
     case OP_VAR_VALUE:
       {
 	struct block *b;
+
 	(*pos) += 3;
 	b = exp->elts[pc + 1].block;
 	if (b != NULL
@@ -140,6 +144,7 @@ print_subexp_standard (struct expression *exp, int *pos,
     case OP_REGISTER:
       {
 	const char *name = &exp->elts[pc + 2].string;
+
 	(*pos) += 3 + BYTES_TO_EXP_ELEM (exp->elts[pc + 1].longconst + 1);
 	fprintf_filtered (stream, "$%s", name);
 	return;
@@ -181,6 +186,7 @@ print_subexp_standard (struct expression *exp, int *pos,
     case OP_STRING:
       {
 	struct value_print_options opts;
+
 	nargs = longest_to_int (exp->elts[pc + 1].longconst);
 	(*pos) += 3 + BYTES_TO_EXP_ELEM (nargs + 1);
 	/* LA_PRINT_STRING will print using the current repeat count threshold.
@@ -202,6 +208,7 @@ print_subexp_standard (struct expression *exp, int *pos,
     case OP_OBJC_NSSTRING:	/* Objective-C Foundation Class NSString constant.  */
       {
 	struct value_print_options opts;
+
 	nargs = longest_to_int (exp->elts[pc + 1].longconst);
 	(*pos) += 3 + BYTES_TO_EXP_ELEM (nargs + 1);
 	fputs_filtered ("@\"", stream);
@@ -215,6 +222,7 @@ print_subexp_standard (struct expression *exp, int *pos,
     case OP_OBJC_MSGCALL:
       {			/* Objective C message (method) call.  */
 	char *selector;
+
 	(*pos) += 3;
 	nargs = longest_to_int (exp->elts[pc + 2].longconst);
 	fprintf_unfiltered (stream, "[");
@@ -228,6 +236,7 @@ print_subexp_standard (struct expression *exp, int *pos,
 	if (nargs)
 	  {
 	    char *s, *nextS;
+
 	    s = alloca (strlen (selector) + 1);
 	    strcpy (s, selector);
 	    for (tem = 0; tem < nargs; tem++)
@@ -291,6 +300,7 @@ print_subexp_standard (struct expression *exp, int *pos,
       if (tem > 0)
 	{
 	  struct value_print_options opts;
+
 	  get_user_print_options (&opts);
 	  LA_PRINT_STRING (stream, builtin_type (exp->gdbarch)->builtin_char,
 			   tempstr, nargs - 1, NULL, 0, &opts);
@@ -522,10 +532,6 @@ print_subexp_standard (struct expression *exp, int *pos,
       fprintf_unfiltered (stream, ")");
       return;
 
-    case BINOP_INCL:
-    case BINOP_EXCL:
-      error (_("print_subexp:  Not implemented."));
-
       /* Default ops */
 
     default:
@@ -704,10 +710,6 @@ op_name_standard (enum exp_opcode opcode)
       return "BINOP_ASSIGN_MODIFY";
     case BINOP_VAL:
       return "BINOP_VAL";
-    case BINOP_INCL:
-      return "BINOP_INCL";
-    case BINOP_EXCL:
-      return "BINOP_EXCL";
     case BINOP_CONCAT:
       return "BINOP_CONCAT";
     case BINOP_RANGE:
@@ -770,12 +772,6 @@ op_name_standard (enum exp_opcode opcode)
       return "UNOP_POSTDECREMENT";
     case UNOP_SIZEOF:
       return "UNOP_SIZEOF";
-    case UNOP_LOWER:
-      return "UNOP_LOWER";
-    case UNOP_UPPER:
-      return "UNOP_UPPER";
-    case UNOP_LENGTH:
-      return "UNOP_LENGTH";
     case UNOP_PLUS:
       return "UNOP_PLUS";
     case UNOP_CAP:
@@ -816,6 +812,8 @@ op_name_standard (enum exp_opcode opcode)
       return "OP_TYPE";
     case OP_LABELED:
       return "OP_LABELED";
+    case OP_ADL_FUNC:
+      return "OP_ADL_FUNC";
     }
 }
 
@@ -940,8 +938,6 @@ dump_subexp_body_standard (struct expression *exp,
     case BINOP_INTDIV:
     case BINOP_ASSIGN_MODIFY:
     case BINOP_VAL:
-    case BINOP_INCL:
-    case BINOP_EXCL:
     case BINOP_CONCAT:
     case BINOP_IN:
     case BINOP_RANGE:
@@ -970,12 +966,6 @@ dump_subexp_body_standard (struct expression *exp,
     case UNOP_MIN:
     case UNOP_ODD:
     case UNOP_TRUNC:
-    case UNOP_LOWER:
-    case UNOP_UPPER:
-    case UNOP_LENGTH:
-    case UNOP_CARD:
-    case UNOP_CHMAX:
-    case UNOP_CHMIN:
       elt = dump_subexp (exp, stream, elt);
       break;
     case OP_LONG:

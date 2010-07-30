@@ -590,6 +590,8 @@ ac_includes_default="\
 #endif"
 
 ac_subst_vars='LTLIBOBJS
+extra_libraries
+IPA_DEPFILES
 srv_xmlfiles
 srv_xmlbuiltin
 USE_THREAD_DB
@@ -599,6 +601,8 @@ RDYNAMIC
 REPORT_BUGS_TEXI
 REPORT_BUGS_TO
 PKGVERSION
+ustinc
+ustlibs
 LIBOBJS
 INSTALL_DATA
 INSTALL_SCRIPT
@@ -666,6 +670,9 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+with_ust
+with_ust_include
+with_ust_lib
 with_pkgversion
 with_bugurl
 with_libthread_db
@@ -1296,6 +1303,11 @@ if test -n "$ac_init_help"; then
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-ust=PATH       Specify prefix directory for the installed UST package
+                          Equivalent to --with-ust-include=PATH/include
+                          plus --with-ust-lib=PATH/lib
+  --with-ust-include=PATH Specify directory for installed UST include files
+  --with-ust-lib=PATH   Specify the directory for the installed UST library
   --with-pkgversion=PKG   Use PKG in the version string in place of "GDB"
   --with-bugurl=URL       Direct users to URL to report a bug
   --with-libthread-db=PATH
@@ -1745,8 +1757,10 @@ $as_echo "$ac_res" >&6; }
 ac_fn_c_check_decl ()
 {
   as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $2 is declared" >&5
-$as_echo_n "checking whether $2 is declared... " >&6; }
+  as_decl_name=`echo $2|sed 's/ *(.*//'`
+  as_decl_use=`echo $2|sed -e 's/(/((/' -e 's/)/) 0&/' -e 's/,/) 0& (/g'`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $as_decl_name is declared" >&5
+$as_echo_n "checking whether $as_decl_name is declared... " >&6; }
 if { as_var=$3; eval "test \"\${$as_var+set}\" = set"; }; then :
   $as_echo_n "(cached) " >&6
 else
@@ -1756,8 +1770,12 @@ $4
 int
 main ()
 {
-#ifndef $2
-  (void) $2;
+#ifndef $as_decl_name
+#ifdef __cplusplus
+  (void) $as_decl_use;
+#else
+  (void) $as_decl_name;
+#endif
 #endif
 
   ;
@@ -3816,6 +3834,86 @@ done
 
 
 
+# Check for UST
+ustlibs=""
+ustinc=""
+
+
+# Check whether --with-ust was given.
+if test "${with_ust+set}" = set; then :
+  withval=$with_ust;
+fi
+
+
+# Check whether --with-ust_include was given.
+if test "${with_ust_include+set}" = set; then :
+  withval=$with_ust_include;
+fi
+
+
+# Check whether --with-ust_lib was given.
+if test "${with_ust_lib+set}" = set; then :
+  withval=$with_ust_lib;
+fi
+
+
+case $with_ust in
+  no)
+    ustlibs=
+    ustinc=
+    ;;
+  "" | yes)
+    ustlibs=" -lust "
+    ustinc=""
+    ;;
+  *)
+    ustlibs="-L$with_ust/lib -lust"
+    ustinc="-I$with_ust/include "
+    ;;
+esac
+if test "x$with_ust_include" != x; then
+  ustinc="-I$with_ust_include "
+fi
+if test "x$with_ust_lib" != x; then
+  ustlibs="-L$with_ust_lib -lust"
+fi
+
+if test "x$with_ust" != "xno"; then
+  saved_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS $ustinc"
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for ust" >&5
+$as_echo_n "checking for ust... " >&6; }
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+#define CONFIG_UST_GDB_INTEGRATION
+#include <ust/ust.h>
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; };
+$as_echo "#define HAVE_UST 1" >>confdefs.h
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }; ustlibs= ; ustinc=
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+  CFLAGS="$saved_CFLAGS"
+fi
+
+# Flags needed for UST
+
+
+
 old_LIBS="$LIBS"
 LIBS="$LIBS -ldl"
 for ac_func in dladdr
@@ -4056,7 +4154,7 @@ esac
 if test "${srv_mingwce}" = "yes"; then
   LIBS="$LIBS -lws2"
 elif test "${srv_mingw}" = "yes"; then
-  LIBS="$LIBS -lwsock32"
+  LIBS="$LIBS -lws2_32"
 elif test "${srv_qnx}" = "yes"; then
   LIBS="$LIBS -lsocket"
 fi
@@ -4153,6 +4251,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -4188,6 +4288,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -4223,6 +4325,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -4258,6 +4362,8 @@ else
 /* end confdefs.h.  */
 
 #define _SYSCALL32
+/* Needed for new procfs interface on sparc-solaris.  */
+#define _STRUCTURED_PROC 1
 #include <sys/procfs.h>
 int
 main ()
@@ -4341,8 +4447,13 @@ USE_THREAD_DB=
 if test "$srv_linux_thread_db" = "yes"; then
   if test "$ac_cv_lib_dl_dlopen" = "yes"; then
     srv_libs="-ldl"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for the dynamic export flag" >&5
+$as_echo_n "checking for the dynamic export flag... " >&6; }
     old_LDFLAGS="$LDFLAGS"
-    LDFLAGS="$LDFLAGS -rdynamic"
+    # Older GNU ld supports --export-dynamic but --dynamic-list may not be
+    # supported there.
+    RDYNAMIC="-Wl,--dynamic-list=${srcdir}/proc-service.list"
+    LDFLAGS="$LDFLAGS $RDYNAMIC"
     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -4355,14 +4466,37 @@ main ()
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  RDYNAMIC=-rdynamic
+  found="-Wl,--dynamic-list"
+		 RDYNAMIC='-Wl,--dynamic-list=$(srcdir)/proc-service.list'
 else
-  RDYNAMIC=
+  RDYNAMIC="-rdynamic"
+		 LDFLAGS="$old_LDFLAGS $RDYNAMIC"
+		 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  found="-rdynamic"
+else
+  found="no"
+			      RDYNAMIC=""
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 
     LDFLAGS="$old_LDFLAGS"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: result: $found" >&5
+$as_echo "$found" >&6; }
   else
     srv_libs="-lthread_db"
   fi
@@ -4431,6 +4565,73 @@ fi
 
 GDBSERVER_DEPFILES="$srv_regobj $srv_tgtobj $srv_hostio_err_objs $srv_thread_depfiles"
 GDBSERVER_LIBS="$srv_libs"
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the target supports __sync_*_compare_and_swap" >&5
+$as_echo_n "checking whether the target supports __sync_*_compare_and_swap... " >&6; }
+if test "${gdbsrv_cv_have_sync_builtins+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+int foo, bar; bar = __sync_val_compare_and_swap(&foo, 0, 1);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  gdbsrv_cv_have_sync_builtins=yes
+else
+  gdbsrv_cv_have_sync_builtins=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $gdbsrv_cv_have_sync_builtins" >&5
+$as_echo "$gdbsrv_cv_have_sync_builtins" >&6; }
+if test $gdbsrv_cv_have_sync_builtins = yes; then
+
+$as_echo "#define HAVE_SYNC_BUILTINS 1" >>confdefs.h
+
+fi
+
+saved_cflags="$CFLAGS"
+CFLAGS="$CFLAGS -fvisibility=hidden"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  gdbsrv_cv_have_visibility_hidden=yes
+else
+  gdbsrv_cv_have_visibility_hidden=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+CFLAGS="$saved_cflags"
+
+IPA_DEPFILES=""
+
+# Rather than allowing to build a broken IPA, we simply disable it if
+# we don't find a compiler supporting all the features we need.
+if test "$ipa_obj" != "" \
+   -a "$gdbsrv_cv_have_sync_builtins" = yes \
+   -a "$gdbsrv_cv_have_visibility_hidden" = yes; then
+   IPA_DEPFILES="$ipa_obj"
+   extra_libraries="libinproctrace.so"
+fi
+
+
 
 
 

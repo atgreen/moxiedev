@@ -73,6 +73,21 @@
 	      || REGNO_REG_CLASS (REGNO (op)) == FPA_REGS));
 })
 
+(define_predicate "vfp_register_operand"
+  (match_code "reg,subreg")
+{
+  if (GET_CODE (op) == SUBREG)
+    op = SUBREG_REG (op);
+
+  /* We don't consider registers whose class is NO_REGS
+     to be a register operand.  */
+  return (GET_CODE (op) == REG
+	  && (REGNO (op) >= FIRST_PSEUDO_REGISTER
+	      || REGNO_REG_CLASS (REGNO (op)) == VFP_LO_REGS
+	      || (TARGET_VFPD32
+		  && REGNO_REG_CLASS (REGNO (op)) == VFP_REGS)));
+})
+
 (define_special_predicate "subreg_lowpart_operator"
   (and (match_code "subreg")
        (match_test "subreg_lowpart_p (op)")))
@@ -86,6 +101,12 @@
   (and (match_code "const_int")
        (match_test "const_ok_for_arm (INTVAL (op))")))
 
+;; A constant value which fits into two instructions, each taking
+;; an arithmetic constant operand for one of the words.
+(define_predicate "arm_immediate_di_operand"
+  (and (match_code "const_int,const_double")
+       (match_test "arm_const_double_by_immediates (op)")))
+
 (define_predicate "arm_neg_immediate_operand"
   (and (match_code "const_int")
        (match_test "const_ok_for_arm (-INTVAL (op))")))
@@ -93,6 +114,10 @@
 (define_predicate "arm_not_immediate_operand"
   (and (match_code "const_int")
        (match_test "const_ok_for_arm (~INTVAL (op))")))
+
+(define_predicate "const0_operand"
+  (and (match_code "const_int")
+       (match_test "INTVAL (op) == 0")))
 
 ;; Something valid on the RHS of an ARM data-processing instruction
 (define_predicate "arm_rhs_operand"
@@ -114,6 +139,10 @@
 (define_predicate "arm_not_operand"
   (ior (match_operand 0 "arm_rhs_operand")
        (match_operand 0 "arm_not_immediate_operand")))
+
+(define_predicate "arm_di_operand"
+  (ior (match_operand 0 "s_register_operand")
+       (match_operand 0 "arm_immediate_di_operand")))
 
 ;; True if the operand is a memory reference which contains an
 ;; offsettable address.
@@ -202,6 +231,9 @@
        (and (match_test "TARGET_32BIT && TARGET_HARD_FLOAT
 			 && (TARGET_FPA || TARGET_VFP)")
             (match_code "unordered,ordered,unlt,unle,unge,ungt"))))
+
+(define_special_predicate "lt_ge_comparison_operator"
+  (match_code "lt,ge"))
 
 (define_special_predicate "minmax_operator"
   (and (match_code "smin,smax,umin,umax")
@@ -499,13 +531,15 @@
 (define_predicate "imm_for_neon_logic_operand"
   (match_code "const_vector")
 {
-  return neon_immediate_valid_for_logic (op, mode, 0, NULL, NULL);
+  return (TARGET_NEON
+          && neon_immediate_valid_for_logic (op, mode, 0, NULL, NULL));
 })
 
 (define_predicate "imm_for_neon_inv_logic_operand"
   (match_code "const_vector")
 {
-  return neon_immediate_valid_for_logic (op, mode, 1, NULL, NULL);
+  return (TARGET_NEON
+          && neon_immediate_valid_for_logic (op, mode, 1, NULL, NULL));
 })
 
 (define_predicate "neon_logic_op2"
@@ -520,4 +554,12 @@
 (define_predicate "neon_lane_number"
   (and (match_code "const_int")
        (match_test "INTVAL (op) >= 0 && INTVAL (op) <= 7")))
+;; Predicates for named expanders that overlap multiple ISAs.
+
+(define_predicate "cmpdi_operand"
+  (if_then_else (match_test "TARGET_HARD_FLOAT && TARGET_MAVERICK")
+		(and (match_test "TARGET_ARM")
+		     (match_operand 0 "cirrus_fp_register"))
+		(and (match_test "TARGET_32BIT")
+		     (match_operand 0 "arm_di_operand"))))
 

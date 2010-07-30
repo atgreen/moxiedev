@@ -52,5 +52,7 @@ struct vms_eihvn_subversion
 #define EIHVN__VOLATILE_BIT		15
 #define EIHVN__SHELL_BIT		16
 #define EIHVN__POSIX_BIT		17
+#define EIHVN__MULTI_PROCESSING_BIT	18
+#define EIHVN__GALAXY_BIT		19
 
 #endif /* _VMS_EIHVN_H */

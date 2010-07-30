@@ -21,20 +21,20 @@ AM_CFLAGS = $(WARN_CFLAGS)
 
 TARG_CPU = @target_cpu_type@
 TARG_CPU_C = $(srcdir)/config/tc-@target_cpu_type@.c
-TARG_CPU_O = tc-@target_cpu_type@.o
+TARG_CPU_O = tc-@target_cpu_type@.@OBJEXT@
 TARG_CPU_H = $(srcdir)/config/tc-@target_cpu_type@.h
 OBJ_FORMAT_C = $(srcdir)/config/obj-@obj_format@.c
-OBJ_FORMAT_O = obj-@obj_format@.o
+OBJ_FORMAT_O = obj-@obj_format@.@OBJEXT@
 OBJ_FORMAT_H = $(srcdir)/config/obj-@obj_format@.h
 TARG_ENV_H = $(srcdir)/config/te-@te_file@.h
 ATOF_TARG_C = $(srcdir)/config/atof-@atof@.c
-ATOF_TARG_O = atof-@atof@.o
+ATOF_TARG_O = atof-@atof@.@OBJEXT@
 
 # use @target_cpu_type@ for refering to configured target name
 IT_HDRS=itbl-parse.h $(srcdir)/itbl-ops.h
 IT_SRCS=itbl-parse.c itbl-lex.c $(srcdir)/itbl-ops.c
 IT_DEPS=$(srcdir)/itbl-parse.y $(srcdir)/itbl-lex.l $(srcdir)/config/itbl-@target_cpu_type@.h
-IT_OBJS=itbl-parse.o itbl-lex.o itbl-ops.o
+IT_OBJS=itbl-parse.@OBJEXT@ itbl-lex.@OBJEXT@ itbl-ops.@OBJEXT@
 
 
 # Regular source files.
@@ -43,6 +43,7 @@ GAS_CFILES = \
 	app.c \
 	as.c \
 	atof-generic.c \
+	compress-debug.c \
 	cond.c \
 	depend.c \
 	dwarf2dbg.c \
@@ -78,6 +79,7 @@ HFILES = \
 	bignum.h \
 	bit_fix.h \
 	cgen.h \
+	compress-debug.h \
 	dwarf2dbg.h \
 	dw2gencfi.h \
 	ecoff.h \
@@ -132,7 +134,6 @@ TARGET_CPU_CFILES = \
 	config/tc-m32r.c \
 	config/tc-m68hc11.c \
 	config/tc-m68k.c \
-	config/tc-maxq.c \
 	config/tc-mcore.c \
 	config/tc-mep.c \
 	config/tc-microblaze.c \
@@ -159,6 +160,7 @@ TARGET_CPU_CFILES = \
 	config/tc-tic30.c \
 	config/tc-tic4x.c \
 	config/tc-tic54x.c \
+	config/tc-tic6x.c \
 	config/tc-vax.c \
 	config/tc-v850.c \
 	config/tc-xstormy16.c \
@@ -196,7 +198,6 @@ TARGET_CPU_HFILES = \
 	config/tc-m32r.h \
 	config/tc-m68hc11.h \
 	config/tc-m68k.h \
-	config/tc-maxq.h \
 	config/tc-mcore.h \
 	config/tc-mep.h \
 	config/tc-microblaze.h \
@@ -222,6 +223,7 @@ TARGET_CPU_HFILES = \
 	config/tc-tic30.h \
 	config/tc-tic4x.h \
 	config/tc-tic54x.h \
+	config/tc-tic6x.h \
 	config/tc-vax.h \
 	config/tc-v850.h \
 	config/tc-xstormy16.h \
@@ -308,48 +310,9 @@ MULTI_CFILES = \
 	config/e-mipsecoff.c \
 	config/e-mipself.c
 
-CONFIG_OBJS = \
-	$(TARG_CPU_O) \
-	$(OBJ_FORMAT_O) \
-	$(ATOF_TARG_O) \
-	$(extra_objects)
-
-GENERIC_OBJS = \
-	app.o \
-	as.o \
-	atof-generic.o \
-	cond.o \
-	depend.o \
-	dwarf2dbg.o \
-	dw2gencfi.o \
-	ehopt.o \
-	expr.o \
-	flonum-konst.o \
-	flonum-copy.o \
-	flonum-mult.o \
-	frags.o \
-	hash.o \
-	input-file.o \
-	input-scrub.o \
-	literal.o \
-	messages.o \
-	output-file.o \
-	read.o \
-	remap.o \
-	subsegs.o \
-	symbols.o \
-	write.o \
-	listing.o \
-	ecoff.o \
-	stabs.o \
-	sb.o \
-	macro.o
-
 CONFIG_ATOF_CFILES = \
 	config/atof-ieee.c \
 	config/atof-vax.c
-
-OBJS = $(CONFIG_OBJS) $(GENERIC_OBJS)
 
 POTFILES = $(MULTI_CFILES) $(CONFIG_ATOF_CFILES) \
 	$(TARG_ENV_HFILES) $(TARG_ENV_CFILES) $(OBJ_FORMAT_HFILES) \
@@ -394,7 +357,7 @@ AM_CPPFLAGS = -I. -I$(srcdir) -I../bfd -I$(srcdir)/config \
 GASLIBS = @OPCODES_LIB@ ../bfd/libbfd.la ../libiberty/libiberty.a
 
 # Files to be copied away after each stage in building.
-STAGESTUFF = *.o $(noinst_PROGRAMS)
+STAGESTUFF = *.@OBJEXT@ $(noinst_PROGRAMS)
 
 as_new_SOURCES = $(GAS_CFILES)
 as_new_LDADD = $(TARG_CPU_O) $(OBJ_FORMAT_O) $(ATOF_TARG_O) \
@@ -456,7 +419,7 @@ m68k-parse.c: $(srcdir)/config/m68k-parse.y
 	else true; fi
 # Disable -Werror, if it has been enabled, since old versions of bison/
 # yacc will produce working code which contain compile time warnings.
-m68k-parse.o: m68k-parse.c
+m68k-parse.@OBJEXT@: m68k-parse.c
 if am__fastdepCC
 	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `test -f m68k-parse.c || echo $(srcdir)/`m68k-parse.c $(NO_WERROR)
 	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
@@ -475,7 +438,7 @@ $(srcdir)/config/m68k-parse.h: ; @true
 bfin-parse.c: $(srcdir)/config/bfin-parse.y
 	$(SHELL) $(YLWRAP) $(srcdir)/config/bfin-parse.y y.tab.c bfin-parse.c y.tab.h bfin-parse.h -- $(YACCCOMPILE) -d ;
 bfin-parse.h: bfin-parse.c
-bfin-parse.o: bfin-parse.c \
+bfin-parse.@OBJEXT@: bfin-parse.c \
  $(srcdir)/config/bfin-aux.h $(srcdir)/config/bfin-defs.h \
  $(INCDIR)/elf/common.h $(INCDIR)/elf/bfin.h $(BFDDIR)/libbfd.h
 
@@ -484,7 +447,7 @@ $(srcdir)/config/bfin-parse.h: ; @true
 
 bfin-lex.c: $(srcdir)/config/bfin-lex.l
 	$(SHELL) $(YLWRAP) $(srcdir)/config/bfin-lex.l lex.yy.c bfin-lex.c -- $(LEXCOMPILE)
-bfin-lex.o: bfin-lex.c bfin-parse.h $(srcdir)/config/bfin-defs.h
+bfin-lex.@OBJEXT@: bfin-lex.c bfin-parse.h $(srcdir)/config/bfin-defs.h
 if am__fastdepCC
 	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `test -f bfin-lex.c || echo $(srcdir)/`bfin-lex.c $(NO_WERROR)
 	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
@@ -499,7 +462,7 @@ endif
 rx-parse.c: $(srcdir)/config/rx-parse.y
 	$(SHELL) $(YLWRAP) $(srcdir)/config/rx-parse.y y.tab.c rx-parse.c y.tab.h rx-parse.h -- $(YACCCOMPILE) -d ;
 rx-parse.h: rx-parse.c
-rx-parse.o: rx-parse.c rx-parse.h $(srcdir)/config/rx-defs.h \
+rx-parse.@OBJEXT@: rx-parse.c rx-parse.h $(srcdir)/config/rx-defs.h \
  $(INCDIR)/elf/common.h $(INCDIR)/elf/rx.h $(BFDDIR)/libbfd.h
 
 rx-defs.h: ; @true
@@ -509,7 +472,7 @@ $(srcdir)/config/rx-defs.h: ; @true
 
 # Disable -Werror, if it has been enabled, since old versions of bison/
 # yacc will produce working code which contain compile time warnings.
-itbl-lex.o: itbl-lex.c itbl-parse.h
+itbl-lex.@OBJEXT@: itbl-lex.c itbl-parse.h
 if am__fastdepCC
 	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `test -f itbl-lex.c || echo $(srcdir)/`itbl-lex.c $(NO_WERROR)
 	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
@@ -523,7 +486,7 @@ endif
 
 # Disable -Werror, if it has been enabled, since old versions of bison/
 # yacc will produce working code which contain compile time warnings.
-itbl-parse.o: itbl-parse.c
+itbl-parse.@OBJEXT@: itbl-parse.c
 if am__fastdepCC
 	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `test -f itbl-parse.c || echo $(srcdir)/`itbl-parse.c $(NO_WERROR)
 	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
@@ -540,15 +503,15 @@ itbl-parse.c: $(srcdir)/itbl-parse.y
 
 itbl-parse.h: itbl-parse.c ; @true
 
-itbl-ops.o: itbl-parse.h
+itbl-ops.@OBJEXT@: itbl-parse.h
 
 # stand-alone itbl assembler & disassembler
 
 EXTRA_PROGRAMS = itbl-test
 itbl_test_SOURCES = itbl-parse.y itbl-lex.l
-itbl_test_LDADD = itbl-tops.o itbl-test.o $(GASLIBS) @LEXLIB@
+itbl_test_LDADD = itbl-tops.@OBJEXT@ itbl-test.@OBJEXT@ $(GASLIBS) @LEXLIB@
 
-itbl-tops.o: itbl-ops.c itbl-parse.h
+itbl-tops.@OBJEXT@: itbl-ops.c itbl-parse.h
 if am__fastdepCC
 	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -o $@ -c -DSTAND_ALONE $(srcdir)/itbl-ops.c
 	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
@@ -560,7 +523,7 @@ endif
 	$(COMPILE) -o $@ -DSTAND_ALONE -c $(srcdir)/itbl-ops.c
 endif
 
-itbl-test.o: $(srcdir)/testsuite/gas/all/itbl-test.c
+itbl-test.@OBJEXT@: $(srcdir)/testsuite/gas/all/itbl-test.c
 if am__fastdepCC
 	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ -DSTAND_ALONE $(srcdir)/testsuite/gas/all/itbl-test.c
 	mv -f $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
@@ -576,7 +539,7 @@ endif
 
 CGEN_CPU_PREFIX = @cgen_cpu_prefix@
 
-cgen.o: cgen.c cgen.h cgen-desc.h subsegs.h \
+cgen.@OBJEXT@: cgen.c cgen.h cgen-desc.h subsegs.h \
 	$(INCDIR)/obstack.h $(INCDIR)/opcode/cgen.h \
 	$(srcdir)/../opcodes/$(CGEN_CPU_PREFIX)-desc.h \
 	$(srcdir)/../opcodes/$(CGEN_CPU_PREFIX)-opc.h
@@ -584,7 +547,7 @@ cgen.o: cgen.c cgen.h cgen-desc.h subsegs.h \
 # Remake the info files.
 
 MOSTLYCLEANFILES = $(STAGESTUFF) core \
-	testsuite/*.o testsuite/*.out testsuite/gas.log testsuite/gas.sum \
+	testsuite/*.@OBJEXT@ testsuite/*.out testsuite/gas.log testsuite/gas.sum \
 	testsuite/site.exp site.bak site.exp stage stage1 stage2
 
 .PHONY: install-exec-local install-data-local
@@ -661,7 +624,7 @@ against=stage2
 # temporary assembly file names.
 comparison:
 	x=0 ; \
-	for file in *.o ; do \
+	for file in *.@OBJEXT@ ; do \
 	  tail +16c ./$$file > tmp-foo1; \
 	  if tail +16c ${against}/$$file > tmp-foo2 2>/dev/null ; then \
 	    if cmp tmp-foo1 tmp-foo2 ; then \

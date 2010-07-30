@@ -20,8 +20,6 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile "watchpoint"
 set srcfile ${testfile}.c
@@ -63,7 +61,7 @@ proc initialize {} {
 
     # Disable hardware watchpoints if necessary.
     if [target_info exists gdb,no_hardware_watchpoints] {
-	gdb_test "set can-use-hw-watchpoints 0" "" ""
+	gdb_test_no_output "set can-use-hw-watchpoints 0" ""
     }
 
     if [gdb_test "break marker1" "Breakpoint 1 at $hex: file .*$srcfile, line $decimal.*" "set breakpoint at marker1" ] { 
@@ -102,9 +100,7 @@ proc initialize {} {
         }
     }
 
-    # "info watch" is the same as "info break"
-
-    if [gdb_test "info watch" "1\[ \]*breakpoint.*marker1.*\r\n2\[ \]*breakpoint.*marker2.*\r\n3\[ \]*.*watchpoint.*ival3" "watchpoint found in watchpoint/breakpoint table" ] { 
+    if [gdb_test "info watch" "3\[ \]*.*watchpoint.*ival3" "watchpoint found in watchpoint/breakpoint table" ] { 
       return 0; 
     }
 
@@ -165,42 +161,21 @@ proc test_simple_watchpoint {} {
 	# watches without a running inferior.  The following testpoints used
 	# to be in [initialize].
 	#
-	send_gdb "watch ival3\n"
-	gdb_expect {
-	    -re ".*\[Ww\]atchpoint 3: ival3\r\n$gdb_prompt $" { 
-	        pass "set watchpoint on ival3"
-	    }
-	    -re ".*$gdb_prompt $" { fail "set watchpoint on ival3"  }
-	    timeout { fail "set watchpoint on ival3 (timeout)"  }
-	}
+	gdb_test "watch ival3" \
+	    "\[Ww\]atchpoint 3: ival3" \
+	    "set watchpoint on ival3"
 
         set wp_set 1
 
-	# "info watch" is the same as "info break"
-
-	send_gdb "info watch\n"
-	gdb_expect {
-	    -re "1\[ \]*breakpoint.*marker1.*\r\n2\[ \]*breakpoint.*marker2.*\r\n3\[ \]*.*watchpoint.*ival3\r\n$gdb_prompt $" {
-	        pass "watchpoint found in watchpoint/breakpoint table"
-	    }
-	    -re ".*$gdb_prompt $" {
-	        fail "watchpoint found in watchpoint/breakpoint table"
-	    }
-	    timeout {
-	       fail "watchpoint found in watchpoint/breakpoint table"
-	    }
-	}
+	gdb_test "info watch" \
+	    "3\[ \]*.*watchpoint.*ival3" \
+	    "watchpoint found in watchpoint/breakpoint table"
 
 	# After installing the watchpoint, we disable it until we are ready
 	# to use it.  This allows the test program to run at full speed until
 	# we get to the first marker function.
 
-	send_gdb "disable 3\n"
-	gdb_expect {
-	    -re "disable 3\[\r\n\]+$gdb_prompt $" { pass "disable watchpoint" }
-	    -re ".*$gdb_prompt $" { fail "disable watchpoint"  }
-	    timeout { fail "disable watchpoint (timeout)"  }
-	}
+	gdb_test "disable 3" "disable 3" "disable watchpoint"
     }
 
     # After reaching the marker function, enable the watchpoint.
@@ -211,7 +186,7 @@ proc test_simple_watchpoint {} {
 
 
     gdb_test "break func1" "Breakpoint.*at.*"
-    gdb_test "set \$func1_breakpoint_number = \$bpnum" ""
+    gdb_test_no_output "set \$func1_breakpoint_number = \$bpnum"
 
     gdb_test "continue" "Continuing.*Breakpoint \[0-9\]*, func1.*" \
 	"continue to breakpoint at func1"
@@ -226,7 +201,7 @@ proc test_simple_watchpoint {} {
 	-re "Continuing.*Breakpoint.*func1.*$gdb_prompt $" {
 	    setup_xfail "m68*-*-*" 2597
 	    fail "thought it hit breakpoint at func1 twice"
-	    gdb_test "delete \$func1_breakpoint_number" ""
+	    gdb_test_no_output "delete \$func1_breakpoint_number"
 	    gdb_test "continue" "\
 Continuing.*\[Ww\]atchpoint.*ival3.*Old value = -1.*New value = 0.*ival3 = count;" \
 		"watchpoint hit, first time"
@@ -239,7 +214,7 @@ Continuing.*\[Ww\]atchpoint.*ival3.*Old value = -1.*New value = 0.*ival3 = count
     # Check that the hit count is reported correctly
     gdb_test "info break" ".*watchpoint\[ \t\]+keep\[ \t\]+y\[ \t\]+ival3\r\n\[ \t]+breakpoint already hit 1 time.*" "Watchpoint hit count is 1"
 
-    gdb_test "delete \$func1_breakpoint_number" ""
+    gdb_test_no_output "delete \$func1_breakpoint_number"
 
     # Continue until the next change, from 0 to 1.
     gdb_test "cont" "Continuing.*\[Ww\]atchpoint.*ival3.*Old value = 0.*New value = 1.*ival3 = count; ival4 = count;.*" "watchpoint hit, second time"
@@ -297,7 +272,7 @@ proc test_disabling_watchpoints {} {
     global hex
 
     # "info watch" is the same as "info break"
-    gdb_test "info watch" "\[0-9\]+\[ \]*breakpoint.*marker1.*\r\n\[0-9\]+\[ \]*breakpoint.*marker2.*\r\n\[0-9]+\[ \]*.*watchpoint.*ival3\r\n\.*\[0-9\]+ times.*" "watchpoints found in watchpoint/breakpoint table"
+    gdb_test "info watch" "\[0-9]+\[ \]*.*watchpoint.*ival3\r\n\.*\[0-9\]+ times.*" "watchpoints found in watchpoint/breakpoint table"
 
     # Ensure that the watchpoint is disabled when we startup.
 
@@ -456,11 +431,12 @@ proc test_watchpoint_triggered_in_syscall {} {
 	gdb_test "watch buf\[4\]" ".*\[Ww\]atchpoint \[0-9\]*: buf\\\[4\\\]"
 	gdb_test "break marker4" ".*Breakpoint.*"
 
-	gdb_test "set doread = 1" ""
+	gdb_test_no_output "set doread = 1"
 
 	# If we send_gdb "123\n" before gdb has switched the tty, then it goes
 	# to gdb, not the inferior, and we lose.  So that is why we have
 	# watchpoint.c prompt us, so we can wait for that prompt.
+
 	send_gdb "continue\n";
 	gdb_expect {
 	    -re "Continuing\\.\r\ntype stuff for buf now:" {
@@ -522,7 +498,7 @@ proc test_watchpoint_triggered_in_syscall {} {
 	    "continue to marker4"
 
 	# Disable everything so we can finish the program at full speed
-	gdb_test "disable" "" "disable in test_watchpoint_triggered_in_syscall"
+	gdb_test_no_output "disable" "disable in test_watchpoint_triggered_in_syscall"
 
 	if [target_info exists gdb,noresults] { return }
 
@@ -552,7 +528,7 @@ proc test_complex_watchpoint {} {
         # In particular, test that a watch of stack-based things
         # is deleted when the stack-based things go out of scope.
         #
-	gdb_test "disable" "" "disable in test_complex_watchpoint"
+	gdb_test_no_output "disable" "disable in test_complex_watchpoint"
         gdb_test "break marker6" ".*Breakpoint.*"
         gdb_test "cont" "Continuing.*Breakpoint.*marker6 \\(\\).*" \
             "continue to marker6"
@@ -613,7 +589,7 @@ proc test_complex_watchpoint {} {
                  "self-delete local watch in recursive call"
 
 	# Disable everything so we can finish the program at full speed
-	gdb_test "disable" "" "disable in test_complex_watchpoint"
+	gdb_test_no_output "disable" "disable in test_complex_watchpoint"
 
 	if [target_info exists gdb,noresults] { return }
 
@@ -641,7 +617,17 @@ proc test_watchpoint_and_breakpoint {} {
 	}
     }
 }
-    
+
+proc test_constant_watchpoint {} {
+    gdb_test "watch 5" "Cannot watch constant value `5'." "number is constant"
+    gdb_test "watch marker1" "Cannot watch constant value `marker1'." \
+    "marker1 is constant"
+    gdb_test "watch count + 6" ".*atchpoint \[0-9\]+: count \\+ 6"
+    gdb_test_no_output "delete \$bpnum" "delete watchpoint `count + 6'"
+    gdb_test "watch 7 + count" ".*atchpoint \[0-9\]+: 7 \\+ count"
+    gdb_test_no_output "delete \$bpnum" "delete watchpoint `7 + count'"
+}
+
 proc test_inaccessible_watchpoint {} {
     global gdb_prompt
 
@@ -662,7 +648,8 @@ proc test_inaccessible_watchpoint {} {
 	}
 
 	gdb_test "watch *global_ptr" ".*atchpoint \[0-9\]+: \\*global_ptr"
-	gdb_test "next" ".*global_ptr = buf.*"
+	gdb_test "set \$global_ptr_breakpoint_number = \$bpnum" ""
+	gdb_test "next" ".*global_ptr = buf.*" "global_ptr next"
 	gdb_test_multiple "next" "next over ptr init" {
 	    -re ".*atchpoint \[0-9\]+: \\*global_ptr\r\n\r\nOld value = .*\r\nNew value = 3 .*\r\n.*$gdb_prompt $" {
 		# We can not test for <unknown> here because NULL may be readable.
@@ -675,6 +662,14 @@ proc test_inaccessible_watchpoint {} {
 		pass "next over buffer set"
 	    }
 	}
+	gdb_test "delete \$global_ptr_breakpoint_number" ""
+	gdb_test "watch **global_ptr_ptr" ".*atchpoint \[0-9\]+: \\*\\*global_ptr_ptr"
+	gdb_test "set \$global_ptr_ptr_breakpoint_number = \$bpnum" ""
+	gdb_test "next" ".*global_ptr_ptr = &global_ptr.*" "gloabl_ptr_ptr next"
+	gdb_test "next" ".*atchpoint \[0-9\]+: \\*\\*global_ptr_ptr\[\r\n\]+Old value = .*\r\nNew value = 7 .*" "next over global_ptr_ptr init"
+	gdb_test "next" ".*atchpoint \[0-9\]+: \\*\\*global_ptr_ptr\[\r\n\]+Old value = 7 .*\r\nNew value = 9 .*" "next over global_ptr_ptr buffer set"
+	gdb_test "next" ".*atchpoint \[0-9\]+: \\*\\*global_ptr_ptr\[\r\n\]+Old value = 9 .*\r\nNew value = 5 .*" "next over global_ptr_ptr pointer advance"
+	gdb_test_no_output "delete \$global_ptr_ptr_breakpoint_number"
     }
 }
     
@@ -851,6 +846,13 @@ if [initialize] then {
     test_watchpoint_and_breakpoint
 
     test_watchpoint_in_big_blob
+
+    # See above.
+    if [istarget "mips-idt-*"] then {
+	clean_restart
+    }
+
+    test_constant_watchpoint
 }
 
 # Restore old timeout

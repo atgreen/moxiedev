@@ -305,11 +305,14 @@ DESCRIPTION
 .#define bfd_mach_tic3x         30
 .#define bfd_mach_tic4x         40
 .  bfd_arch_tic54x,    {* Texas Instruments TMS320C54X *}
+.  bfd_arch_tic6x,     {* Texas Instruments TMS320C6X *}
 .  bfd_arch_tic80,     {* TI TMS320c80 (MVP) *}
 .  bfd_arch_v850,      {* NEC V850 *}
 .#define bfd_mach_v850          1
 .#define bfd_mach_v850e 	'E'
-.#define bfd_mach_v850e1	'1'
+.#define bfd_mach_v850e1        '1'
+.#define bfd_mach_v850e2        0x4532
+.#define bfd_mach_v850e2v3      0x45325633
 .  bfd_arch_arc,       {* ARC Cores *}
 .#define bfd_mach_arc_5         5
 .#define bfd_mach_arc_6         6
@@ -416,9 +419,6 @@ DESCRIPTION
 .#define bfd_mach_xc16xs         3
 .  bfd_arch_xtensa,    {* Tensilica's Xtensa cores.  *}
 .#define bfd_mach_xtensa	1
-.   bfd_arch_maxq,     {* Dallas MAXQ 10/20 *}
-.#define bfd_mach_maxq10    10
-.#define bfd_mach_maxq20    20
 .  bfd_arch_z80,
 .#define bfd_mach_z80strict      1 {* No undocumented opcodes.  *}
 .#define bfd_mach_z80            3 {* With ixl, ixh, iyl, and iyh.  *}
@@ -497,7 +497,6 @@ extern const bfd_arch_info_type bfd_m68hc11_arch;
 extern const bfd_arch_info_type bfd_m68hc12_arch;
 extern const bfd_arch_info_type bfd_m68k_arch;
 extern const bfd_arch_info_type bfd_m88k_arch;
-extern const bfd_arch_info_type bfd_maxq_arch;
 extern const bfd_arch_info_type bfd_mcore_arch;
 extern const bfd_arch_info_type bfd_mep_arch;
 extern const bfd_arch_info_type bfd_mips_arch;
@@ -526,6 +525,7 @@ extern const bfd_arch_info_type bfd_spu_arch;
 extern const bfd_arch_info_type bfd_tic30_arch;
 extern const bfd_arch_info_type bfd_tic4x_arch;
 extern const bfd_arch_info_type bfd_tic54x_arch;
+extern const bfd_arch_info_type bfd_tic6x_arch;
 extern const bfd_arch_info_type bfd_tic80_arch;
 extern const bfd_arch_info_type bfd_v850_arch;
 extern const bfd_arch_info_type bfd_vax_arch;
@@ -574,7 +574,6 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_m68hc12_arch,
     &bfd_m68k_arch,
     &bfd_m88k_arch,
-    &bfd_maxq_arch,
     &bfd_mcore_arch,
     &bfd_mep_arch,
     &bfd_microblaze_arch,
@@ -600,6 +599,7 @@ static const bfd_arch_info_type * const bfd_archures_list[] =
     &bfd_tic30_arch,
     &bfd_tic4x_arch,
     &bfd_tic54x_arch,
+    &bfd_tic6x_arch,
     &bfd_tic80_arch,
     &bfd_v850_arch,
     &bfd_vax_arch,

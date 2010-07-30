@@ -1,6 +1,6 @@
 /* Definitions of target machine GNU compiler.  IA-64 version.
    Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
-   2009 Free Software Foundation, Inc.
+   2009, 2010 Free Software Foundation, Inc.
    Contributed by James E. Wilson <wilson@cygnus.com> and
    		  David Mosberger <davidm@hpl.hp.com>.
 
@@ -115,13 +115,6 @@ enum processor_type
 };
 
 extern enum processor_type ia64_tune;
-
-/* Sometimes certain combinations of command options do not make sense on a
-   particular target machine.  You can define a macro `OVERRIDE_OPTIONS' to
-   take account of this.  This macro, if defined, is executed once just after
-   all the command options have been parsed.  */
-
-#define OVERRIDE_OPTIONS ia64_override_options ()
 
 /* Some machines may desire to change what optimizations are performed for
    various optimization levels.  This macro, if defined, is executed once just
@@ -416,7 +409,7 @@ while (0)
   /* Branch registers.  */				\
   0, 0, 0, 0, 0, 0, 0, 0,				\
   /*FP CCV UNAT PFS LC EC */				\
-     1,  1,   1,  1, 0, 1				\
+     1,  1,   1,  1, 1, 1				\
  }
 
 /* Like `FIXED_REGISTERS' but has 1 for each register that is clobbered
@@ -451,7 +444,7 @@ while (0)
   /* Branch registers.  */				\
   1, 0, 0, 0, 0, 0, 1, 1,				\
   /*FP CCV UNAT PFS LC EC */				\
-     1,  1,   1,  1, 0, 1				\
+     1,  1,   1,  1, 1, 1				\
 }
 
 /* Like `CALL_USED_REGISTERS' but used to overcome a historical
@@ -1042,12 +1035,6 @@ enum reg_class
 
 #define ACCUMULATE_OUTGOING_ARGS 1
 
-/* A C expression that should indicate the number of bytes of its own arguments
-   that a function pops on returning, or 0 if the function pops no arguments
-   and the caller must therefore pop them all after the function returns.  */
-
-#define RETURN_POPS_ARGS(FUNDECL, FUNTYPE, STACK_SIZE) 0
-
 
 /* Function Arguments in Registers */
 
@@ -1146,31 +1133,6 @@ do {									\
 #define FUNCTION_ARG_REGNO_P(REGNO) \
 (((REGNO) >= AR_ARG_FIRST && (REGNO) < (AR_ARG_FIRST + MAX_ARGUMENT_SLOTS)) \
  || ((REGNO) >= FR_ARG_FIRST && (REGNO) < (FR_ARG_FIRST + MAX_ARGUMENT_SLOTS)))
-
-/* How Scalar Function Values are Returned */
-
-/* A C expression to create an RTX representing the place where a function
-   returns a value of data type VALTYPE.  */
-
-#define FUNCTION_VALUE(VALTYPE, FUNC) \
-  ia64_function_value (VALTYPE, FUNC)
-
-/* A C expression to create an RTX representing the place where a library
-   function returns a value of mode MODE.  */
-
-#define LIBCALL_VALUE(MODE) \
-  gen_rtx_REG (MODE,							\
-	       (((GET_MODE_CLASS (MODE) == MODE_FLOAT			\
-		 || GET_MODE_CLASS (MODE) == MODE_COMPLEX_FLOAT) &&	\
-		      (MODE) != TFmode)	\
-		? FR_RET_FIRST : GR_RET_FIRST))
-
-/* A C expression that is nonzero if REGNO is the number of a hard register in
-   which the values of called function may come back.  */
-
-#define FUNCTION_VALUE_REGNO_P(REGNO)				\
-  (((REGNO) >= GR_RET_FIRST && (REGNO) <= GR_RET_LAST)		\
-   || ((REGNO) >= FR_RET_FIRST && (REGNO) <= FR_RET_LAST))
 
 
 /* How Large Values are Returned */
@@ -1334,17 +1296,6 @@ do {									\
 
 
 /* Describing Relative Costs of Operations */
-
-/* A C expression for the cost of moving data from a register in class FROM to
-   one in class TO, using MODE.  */
-
-#define REGISTER_MOVE_COST  ia64_register_move_cost
-
-/* A C expression for the cost of moving data of mode M between a
-   register and memory.  */
-#define MEMORY_MOVE_COST(MODE,CLASS,IN) \
-  ((CLASS) == GENERAL_REGS || (CLASS) == FR_REGS || (CLASS) == FP_REGS \
-   || (CLASS) == GR_AND_FR_REGS ? 4 : 10)
 
 /* A C expression for the cost of a branch instruction.  A value of 1 is the
    default; other values are interpreted relative to that.  Used by the

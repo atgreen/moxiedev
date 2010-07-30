@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gfortran.dg/lto
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-02-22T15:53:27.776751Z
-156966
-rguenth
+2010-04-25T21:29:37.247979Z
+158708
+kargl
 
 
 
@@ -236,11 +236,11 @@ file
 
 
 
-2009-10-08T17:30:03.000000Z
-a9cc7e6b4cf03208245dbc4420bd5166
-2009-07-15T00:20:11.894557Z
-149654
-bje
+2010-07-08T15:18:30.632214Z
+32a83aa65e10b3deb2b722d572bd20cd
+2010-04-25T21:29:37.247979Z
+158708
+kargl
 
 
 
@@ -262,7 +262,7 @@ bje
 
 
 
-387
+437
 
 lto.exp
 file

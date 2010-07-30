@@ -78,9 +78,8 @@ static struct symtabs_and_lines find_method (int funfirstline,
 					     struct symbol *sym_class,
 					     int *not_found_ptr);
 
-static NORETURN void cplusplus_error (const char *name,
-				      const char *fmt, ...)
-     ATTR_NORETURN ATTR_FORMAT (printf, 2, 3);
+static void cplusplus_error (const char *name, const char *fmt, ...)
+     ATTRIBUTE_NORETURN ATTRIBUTE_PRINTF (2, 3);
 
 static int total_number_of_methods (struct type *type);
 
@@ -146,16 +145,18 @@ symtabs_and_lines minsym_found (int funfirstline,
    single quoted demangled C++ symbols as part of the completion
    error.  */
 
-static NORETURN void
+static void
 cplusplus_error (const char *name, const char *fmt, ...)
 {
   struct ui_file *tmp_stream;
   char *message;
+
   tmp_stream = mem_fileopen ();
   make_cleanup_ui_file_delete (tmp_stream);
 
   {
     va_list args;
+
     va_start (args, fmt);
     vfprintf_unfiltered (tmp_stream, fmt, args);
     va_end (args);
@@ -768,6 +769,7 @@ decode_line_1 (char **argptr, int funfirstline, struct symtab *default_symtab,
 
   {
     struct symtabs_and_lines values;
+
     values = decode_objc (argptr, funfirstline, NULL,
 			  canonical, saved_arg);
     if (values.sals != NULL)
@@ -1035,6 +1037,7 @@ locate_first_half (char **argptr, int *is_quote_enclosed)
       if (p[0] == '<')
 	{
 	  char *temp_end = find_template_name_end (p);
+
 	  if (!temp_end)
 	    error (_("malformed template specification in command"));
 	  p = temp_end;
@@ -1075,6 +1078,7 @@ locate_first_half (char **argptr, int *is_quote_enclosed)
   if (*is_quote_enclosed)
     {
       char *closing_quote = strchr (p - 1, '"');
+
       if (closing_quote && closing_quote[1] == '\0')
 	*closing_quote = '\0';
     }
@@ -1210,7 +1214,6 @@ decode_compound (char **argptr, int funfirstline, char ***canonical,
   struct symbol *sym;
   char *copy;
   struct symbol *sym_class;
-  struct symbol **sym_arr;
   struct type *t;
   char *saved_java_argptr = NULL;
 
@@ -1341,6 +1344,7 @@ decode_compound (char **argptr, int funfirstline, char ***canonical,
 	{
 	  /* At this point argptr->"fun".  */
 	  char *a;
+
 	  p = *argptr;
 	  while (*p && *p != ' ' && *p != '\t' && *p != ',' && *p != ':'
 		 && *p != '(')
@@ -1374,6 +1378,7 @@ decode_compound (char **argptr, int funfirstline, char ***canonical,
 	  if (*p && current_language->la_language == language_java)
 	    {
 	      struct type *type;
+
 	      p2 = p;
 	      while (*p2)
 		++p2;
@@ -1510,9 +1515,11 @@ lookup_prefix_sym (char **argptr, char *p)
 	 using VAR_DOMAIN (where typedefs live) and double-check that we
 	 found a struct/class type.  */
       struct symbol *s = lookup_symbol (copy, 0, VAR_DOMAIN, 0);
+
       if (s != NULL)
 	{
 	  struct type *t = SYMBOL_TYPE (s);
+
 	  CHECK_TYPEDEF (t);
 	  if (TYPE_CODE (t) == TYPE_CODE_STRUCT)
 	    return s;
@@ -1568,10 +1575,12 @@ find_method (int funfirstline, char ***canonical, char *saved_arg,
       if (strchr (saved_arg, '(') != NULL)
 	{
 	  int i;
+
 	  for (i = 0; i < i1; ++i)
 	    {
 	      char *name = saved_arg;
 	      char *canon = cp_canonicalize_string (name);
+
 	      if (canon != NULL)
 		name = canon;
 
@@ -1778,6 +1787,7 @@ decode_dollar (char *copy, int funfirstline, struct symtab *default_symtab,
     {
       /* We have a value history reference.  */
       struct value *val_history;
+
       sscanf ((copy[1] == '$') ? copy + 2 : copy + 1, "%d", &index);
       val_history = access_value_history ((copy[1] == '$') ? -index : index);
       if (TYPE_CODE (value_type (val_history)) != TYPE_CODE_INT)
@@ -1838,7 +1848,6 @@ decode_variable (char *copy, int funfirstline, char ***canonical,
 		 struct symtab *file_symtab, int *not_found_ptr)
 {
   struct symbol *sym;
-
   struct minimal_symbol *msymbol;
 
   sym = lookup_symbol (copy,
@@ -1900,6 +1909,7 @@ symbol_found (int funfirstline, char ***canonical, char *copy,
 	{
 	  struct blockvector *bv = BLOCKVECTOR (SYMBOL_SYMTAB (sym));
 	  struct block *b = BLOCKVECTOR_BLOCK (bv, STATIC_BLOCK);
+
 	  if (lookup_block_symbol (b, copy, VAR_DOMAIN) != NULL)
 	    build_canonical_line_spec (values.sals, copy, canonical);
 	}
@@ -1956,26 +1966,7 @@ minsym_found (int funfirstline, struct minimal_symbol *msymbol)
     values.sals[0] = find_pc_sect_line (pc, NULL, 0);
 
   if (funfirstline)
-    {
-      struct symtab_and_line sal;
-
-      values.sals[0].pc = find_function_start_pc (gdbarch,
-						  values.sals[0].pc,
-						  values.sals[0].section);
-
-      sal = find_pc_sect_line (values.sals[0].pc, values.sals[0].section, 0);
-
-      /* Check if SKIP_PROLOGUE left us in mid-line, and the next
-	 line is still part of the same function.  If there is no
-	 line information here, sal.pc will be the passed in PC.  */
-      if (sal.pc != values.sals[0].pc
-	  && (lookup_minimal_symbol_by_pc_section (values.sals[0].pc,
-						   values.sals[0].section)
-	      == lookup_minimal_symbol_by_pc_section (sal.end,
-						      values.sals[0].section)))
-	/* Recalculate the line number (might not be N+1).  */
-	values.sals[0] = find_pc_sect_line (sal.end, values.sals[0].section, 0);
-    }
+    skip_prologue_sal (&values.sals[0]);
 
   values.nelts = 1;
   return values;

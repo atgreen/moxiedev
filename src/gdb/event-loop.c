@@ -38,6 +38,13 @@
 #include "gdb_assert.h"
 #include "gdb_select.h"
 
+/* Tell create_file_handler what events we are interested in. 
+   This is used by the select version of the event loop. */
+
+#define GDB_READABLE	(1<<1)
+#define GDB_WRITABLE	(1<<2)
+#define GDB_EXCEPTION	(1<<3)
+
 /* Data point to pass to the event handler.  */
 typedef union event_data
 {
@@ -218,8 +225,7 @@ struct gdb_timer
     struct gdb_timer *next;
     timer_handler_func *proc;	/* Function to call to do the work */
     gdb_client_data client_data;	/* Argument to async_handler_func */
-  }
-gdb_timer;
+  };
 
 /* List of currently active timers. It is sorted in order of
    increasing timers. */
@@ -859,8 +865,8 @@ gdb_wait_for_event (int block)
   else
     {
       struct timeval select_timeout;
-
       struct timeval *timeout_p;
+
       if (block)
 	timeout_p = gdb_notifier.timeout_valid
 	  ? &gdb_notifier.select_timeout : NULL;
@@ -1188,7 +1194,7 @@ create_timer (int milliseconds, timer_handler_func * proc, gdb_client_data clien
 
   gettimeofday (&time_now, NULL);
 
-  timer_ptr = (struct gdb_timer *) xmalloc (sizeof (gdb_timer));
+  timer_ptr = (struct gdb_timer *) xmalloc (sizeof (*timer_ptr));
   timer_ptr->when.tv_sec = time_now.tv_sec + delta.tv_sec;
   timer_ptr->when.tv_usec = time_now.tv_usec + delta.tv_usec;
   /* carry? */

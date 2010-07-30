@@ -1,14 +1,14 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/20_util
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-03-03T11:06:59.362936Z
-157193
+2010-07-27T17:27:06.727889Z
+162578
 paolo
 
 
@@ -90,6 +90,9 @@ dir
 unique_ptr
 dir
 
+is_nothrow_constructible
+dir
+
 function_objects
 dir
 
@@ -144,10 +147,10 @@ dir
 is_explicitly_convertible
 dir
 
-add_lvalue_reference
+has_trivial_default_constructor
 dir
 
-has_trivial_default_constructor
+add_lvalue_reference
 dir
 
 clocks
@@ -181,6 +184,9 @@ identity
 dir
 
 is_reference
+dir
+
+has_nothrow_copy_assign
 dir
 
 has_nothrow_copy_constructor
@@ -229,6 +235,9 @@ jakub
 conditional
 dir
 
+has_trivial_copy_assign
+dir
+
 is_signed
 dir
 
@@ -239,6 +248,9 @@ forward
 dir
 
 is_unsigned
+dir
+
+addressof
 dir
 
 headers

@@ -71,6 +71,20 @@ class Target
   can_check_for_function_pointers() const
   { return false; }
 
+  // Whether a section called SECTION_NAME may have function pointers to
+  // sections not eligible for safe ICF folding.
+  virtual bool
+  section_may_have_icf_unsafe_pointers(const char* section_name) const
+  {
+    // We recognize sections for normal vtables, construction vtables and
+    // EH frames.
+    return (!is_prefix_of(".rodata._ZTV", section_name)
+	    && !is_prefix_of(".data.rel.ro._ZTV", section_name)
+	    && !is_prefix_of(".rodata._ZTC", section_name)
+	    && !is_prefix_of(".data.rel.ro._ZTC", section_name)
+	    && !is_prefix_of(".eh_frame", section_name));
+  }
+
   // Return the bit size that this target implements.  This should
   // return 32 or 64.
   int
@@ -461,7 +475,7 @@ class Target
 		     std::string*, std::string*) const;
 
   // make_elf_object hooks.  There are four versions of these for
-  // different address sizes and endianities.
+  // different address sizes and endianness.
 
   // Set processor specific flags.
   void
@@ -544,7 +558,7 @@ class Target
 
  private:
   // The implementations of the four do_make_elf_object virtual functions are
-  // almost identical except for their sizes and endianity.  We use a template.
+  // almost identical except for their sizes and endianness.  We use a template.
   // for their implementations.
   template<int size, bool big_endian>
   inline Object*
@@ -687,7 +701,37 @@ class Sized_target : public Target
 			   section_size_type view_size,
 			   unsigned char* reloc_view,
 			   section_size_type reloc_view_size) = 0;
+ 
+  // Perform target-specific processing in a relocatable link.  This is
+  // only used if we use the relocation strategy RELOC_SPECIAL.
+  // RELINFO points to a Relocation_info structure. SH_TYPE is the relocation
+  // section type. PRELOC_IN points to the original relocation.  RELNUM is
+  // the index number of the relocation in the relocation section.
+  // OUTPUT_SECTION is the output section to which the relocation is applied.
+  // OFFSET_IN_OUTPUT_SECTION is the offset of the relocation input section
+  // within the output section.  VIEW points to the output view of the
+  // output section.  VIEW_ADDRESS is output address of the view.  VIEW_SIZE
+  // is the size of the output view and PRELOC_OUT points to the new
+  // relocation in the output object.
+  //
+  // A target only needs to override this if the generic code in
+  // target-reloc.h cannot handle some relocation types.
 
+  virtual void
+  relocate_special_relocatable(const Relocate_info<size, big_endian>*
+				/*relinfo */,
+			       unsigned int /* sh_type */,
+			       const unsigned char* /* preloc_in */,
+			       size_t /* relnum */,
+			       Output_section* /* output_section */,
+			       off_t /* offset_in_output_section */,
+			       unsigned char* /* view */,
+			       typename elfcpp::Elf_types<size>::Elf_Addr
+				 /* view_address */,
+			       section_size_type /* view_size */,
+			       unsigned char* /* preloc_out*/)
+  { gold_unreachable(); }
+ 
  protected:
   Sized_target(const Target::Target_info* pti)
     : Target(pti)

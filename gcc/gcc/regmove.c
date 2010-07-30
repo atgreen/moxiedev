@@ -27,10 +27,11 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
-#include "rtl.h" /* stdio.h must precede rtl.h for FFS.  */
+#include "rtl.h"
 #include "tm_p.h"
 #include "insn-config.h"
 #include "recog.h"
+#include "target.h"
 #include "output.h"
 #include "regs.h"
 #include "hard-reg-set.h"
@@ -39,6 +40,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "expr.h"
 #include "basic-block.h"
 #include "except.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "reload.h"
 #include "timevar.h"
@@ -239,7 +241,7 @@ optimize_reg_copy_1 (rtx insn, rtx dest, rtx src)
 
   /* We don't want to mess with hard regs if register classes are small.  */
   if (sregno == dregno
-      || (SMALL_REGISTER_CLASSES
+      || (targetm.small_register_classes_for_mode_p (GET_MODE (src))
 	  && (sregno < FIRST_PSEUDO_REGISTER
 	      || dregno < FIRST_PSEUDO_REGISTER))
       /* We don't see all updates to SP if they are in an auto-inc memory

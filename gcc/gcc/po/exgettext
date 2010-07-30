@@ -1,6 +1,6 @@
 #! /bin/sh
 # Wrapper around gettext for programs using the msgid convention.
-# Copyright 1998, 2001, 2002, 2003, 2009 Free Software Foundation, Inc.
+# Copyright 1998, 2001, 2002, 2003, 2009, 2010 Free Software Foundation, Inc.
 
 # Written by Paul Eggert <eggert@twinsun.com>.
 # Revised by Zack Weinberg <zackw@stanford.edu> for no-POTFILES operation.
@@ -84,7 +84,7 @@ echo "scanning for keywords, %e and %n strings..." >&2
 
 ( cd $srcdir
   lang_subdirs=`echo */config-lang.in */*/config-lang.in | sed -e 's|config-lang\.in||g'`
-  { for dir in "" config/ config/*/ $lang_subdirs
+  { for dir in "" c-family/ config/ config/*/ $lang_subdirs
     do  for glob in '*.c' '*.h' '*.def'
         do  eval echo $dir$glob
         done
@@ -223,6 +223,13 @@ echo "scanning option files..." >&2
 	if (/^[ \t]*(;|$)/ || !/^[^ \t]/) {
 	    field = 0
 	} else {
+	    if ((field == 1) && /MissingArgError/) {
+		line = $0
+		sub(".*MissingArgError\\(", "", line)
+		sub("\\).*", "", line)
+		printf("#line %d \"%s\"\n", lineno, file)
+		printf("_(\"%s\")\n", line)
+	    }
 	    if (field == 2) {
 		line = $0
 		printf("#line %d \"%s\"\n", lineno, file)

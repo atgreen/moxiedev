@@ -75,10 +75,13 @@ static enum ld_plugin_status
 get_symbols(const void *handle, int nsyms, struct ld_plugin_symbol *syms);
 
 static enum ld_plugin_status
-add_input_file(char *pathname);
+add_input_file(const char *pathname);
 
 static enum ld_plugin_status
-add_input_library(char *pathname);
+add_input_library(const char *pathname);
+
+static enum ld_plugin_status
+set_extra_library_path(const char *path);
 
 static enum ld_plugin_status
 message(int level, const char *format, ...);
@@ -103,8 +106,8 @@ Plugin::load()
   this->handle_ = dlopen(this->filename_.c_str(), RTLD_NOW);
   if (this->handle_ == NULL)
     {
-      gold_error(_("%s: could not load plugin library"),
-                 this->filename_.c_str());
+      gold_error(_("%s: could not load plugin library: %s"),
+                 this->filename_.c_str(), dlerror());
       return;
     }
 
@@ -127,7 +130,7 @@ Plugin::load()
   sscanf(ver, "%d.%d", &major, &minor);
 
   // Allocate and populate a transfer vector.
-  const int tv_fixed_size = 14;
+  const int tv_fixed_size = 16;
   int tv_size = this->args_.size() + tv_fixed_size;
   ld_plugin_tv *tv = new ld_plugin_tv[tv_size];
 
@@ -153,6 +156,10 @@ Plugin::load()
     tv[i].tv_u.tv_val = LDPO_DYN;
   else
     tv[i].tv_u.tv_val = LDPO_EXEC;
+
+  ++i;
+  tv[i].tv_tag = LDPT_OUTPUT_NAME;
+  tv[i].tv_u.tv_string = parameters->options().output();
 
   for (unsigned int j = 0; j < this->args_.size(); ++j)
     {
@@ -196,6 +203,10 @@ Plugin::load()
   ++i;
   tv[i].tv_tag = LDPT_ADD_INPUT_LIBRARY;
   tv[i].tv_u.tv_add_input_library = add_input_library;
+
+  ++i;
+  tv[i].tv_tag = LDPT_SET_EXTRA_LIBRARY_PATH;
+  tv[i].tv_u.tv_set_extra_library_path = set_extra_library_path;
 
   ++i;
   tv[i].tv_tag = LDPT_NULL;
@@ -414,16 +425,29 @@ Plugin_manager::release_input_file(unsigned int handle)
   return LDPS_OK;
 }
 
+// Add a new library path.
+
+ld_plugin_status
+Plugin_manager::set_extra_library_path(const char *path)
+{
+  this->extra_search_path_ = std::string(path);
+  return LDPS_OK;
+}
+
 // Add a new input file.
 
 ld_plugin_status
-Plugin_manager::add_input_file(char *pathname, bool is_lib)
+Plugin_manager::add_input_file(const char *pathname, bool is_lib)
 {
   Input_file_argument file(pathname,
                            (is_lib
                             ? Input_file_argument::INPUT_FILE_TYPE_LIBRARY
                             : Input_file_argument::INPUT_FILE_TYPE_FILE),
-                           "", false, this->options_);
+                           (is_lib
+                            ? this->extra_search_path_.c_str()
+                            : ""),
+                           false,
+                           this->options_);
   Input_argument* input_argument = new Input_argument(file);
   Task_token* next_blocker = new Task_token(true);
   next_blocker->add_blocker();
@@ -437,6 +461,7 @@ Plugin_manager::add_input_file(char *pathname, bool is_lib)
 						0,
                                                 this->mapfile_,
                                                 input_argument,
+                                                NULL,
                                                 NULL,
                                                 this->this_blocker_,
                                                 next_blocker));
@@ -475,6 +500,17 @@ Pluginobj::get_symbol_resolution_info(int nsyms, ld_plugin_symbol* syms) const
 {
   if (nsyms > this->nsyms_)
     return LDPS_NO_SYMS;
+
+  if (static_cast<size_t>(nsyms) > this->symbols_.size())
+    {
+      // We never decided to include this object. We mark all symbols as
+      // preempted.
+      gold_assert (this->symbols_.size() == 0);
+      for (int i = 0; i < nsyms; i++)
+        syms[i].resolution = LDPR_PREEMPTED_REG;
+      return LDPS_OK;
+    }
+
   for (int i = 0; i < nsyms; i++)
     {
       ld_plugin_symbol* isym = &syms[i];
@@ -491,6 +527,10 @@ Pluginobj::get_symbol_resolution_info(int nsyms, ld_plugin_symbol* syms) const
           // The original symbol was undefined or common.
           if (lsym->source() != Symbol::FROM_OBJECT)
             res = LDPR_RESOLVED_EXEC;
+          else if (lsym->object()->pluginobj() == this)
+            res = (is_visible_from_outside(lsym)
+                   ? LDPR_PREVAILING_DEF
+                   : LDPR_PREVAILING_DEF_IRONLY);
           else if (lsym->object()->pluginobj() != NULL)
             res = LDPR_RESOLVED_IR;
           else if (lsym->object()->is_dynamic())
@@ -631,13 +671,13 @@ Sized_pluginobj<size, big_endian>::do_add_symbols(Symbol_table* symtab,
       switch (isym->visibility)
         {
         case LDPV_PROTECTED:
-          vis = elfcpp::STV_DEFAULT;
+          vis = elfcpp::STV_PROTECTED;
           break;
         case LDPV_INTERNAL:
-          vis = elfcpp::STV_DEFAULT;
+          vis = elfcpp::STV_INTERNAL;
           break;
         case LDPV_HIDDEN:
-          vis = elfcpp::STV_DEFAULT;
+          vis = elfcpp::STV_HIDDEN;
           break;
         case LDPV_DEFAULT:
         default:
@@ -660,6 +700,34 @@ Sized_pluginobj<size, big_endian>::do_add_symbols(Symbol_table* symtab,
       this->symbols_[i] =
         symtab->add_from_pluginobj<size, big_endian>(this, name, ver, &sym);
     }
+}
+
+template<int size, bool big_endian>
+Archive::Should_include
+Sized_pluginobj<size, big_endian>::do_should_include_member(
+    Symbol_table* symtab, Read_symbols_data*, std::string* why)
+{
+  char* tmpbuf = NULL;
+  size_t tmpbuflen = 0;
+
+  for (int i = 0; i < this->nsyms_; ++i) {
+    const struct ld_plugin_symbol& sym = this->syms_[i];
+    const char* name = sym.name;
+    Symbol* symbol;
+    Archive::Should_include t = Archive::should_include_member(symtab, name,
+                                                               &symbol, why,
+                                                               &tmpbuf,
+                                                               &tmpbuflen);
+      if (t == Archive::SHOULD_INCLUDE_YES)
+	{
+	  if (tmpbuf != NULL)
+	    free(tmpbuf);
+	  return t;
+	}
+  }
+  if (tmpbuf != NULL)
+    free(tmpbuf);
+  return Archive::SHOULD_INCLUDE_UNKNOWN;
 }
 
 // Get the size of a section.  Not used for plugin objects.
@@ -794,7 +862,10 @@ Sized_pluginobj<size, big_endian>::do_get_global_symbols() const
 }
 
 // Class Plugin_finish.  This task runs after all replacement files have
-// been added.  It calls each plugin's cleanup handler.
+// been added.  For now, it's a placeholder for a possible plugin API
+// to allow the plugin to release most of its resources.  The cleanup
+// handlers must be called later, because they can remove the temporary
+// object files that are needed until the end of the link.
 
 class Plugin_finish : public Task
 {
@@ -824,9 +895,7 @@ class Plugin_finish : public Task
   void
   run(Workqueue*)
   {
-    Plugin_manager* plugins = parameters->options().plugins();
-    gold_assert(plugins != NULL);
-    plugins->cleanup();
+    // We could call early cleanup handlers here.
   }
 
   std::string
@@ -868,6 +937,14 @@ void
 Plugin_hook::run(Workqueue* workqueue)
 {
   gold_assert(this->options_.has_plugins());
+  Symbol* start_sym;
+  if (parameters->options().entry())
+    start_sym = this->symtab_->lookup(parameters->options().entry());
+  else
+    start_sym = this->symtab_->lookup("_start");
+  if (start_sym != NULL)
+    start_sym->set_in_real_elf();
+
   this->options_.plugins()->all_symbols_read(workqueue,
                                              this,
                                              this->input_objects_,
@@ -967,7 +1044,7 @@ get_symbols(const void * handle, int nsyms, ld_plugin_symbol* syms)
 // Add a new (real) input file generated by a plugin.
 
 static enum ld_plugin_status
-add_input_file(char *pathname)
+add_input_file(const char *pathname)
 {
   gold_assert(parameters->options().has_plugins());
   return parameters->options().plugins()->add_input_file(pathname, false);
@@ -976,10 +1053,20 @@ add_input_file(char *pathname)
 // Add a new (real) library required by a plugin.
 
 static enum ld_plugin_status
-add_input_library(char *pathname)
+add_input_library(const char *pathname)
 {
   gold_assert(parameters->options().has_plugins());
   return parameters->options().plugins()->add_input_file(pathname, true);
+}
+
+// Set the extra library path to be used by libraries added via
+// add_input_library
+
+static enum ld_plugin_status
+set_extra_library_path(const char *path)
+{
+  gold_assert(parameters->options().has_plugins());
+  return parameters->options().plugins()->set_extra_library_path(path);
 }
 
 // Issue a diagnostic message from a plugin.

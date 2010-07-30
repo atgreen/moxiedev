@@ -195,8 +195,16 @@ Target Report Var(TARGET_XL_COMPAT)
 Conform more closely to IBM XLC semantics
 
 mrecip
-Target Report Var(TARGET_RECIP)
-Generate software reciprocal sqrt for better throughput
+Target Report
+Generate software reciprocal divide and square root for better throughput.
+
+mrecip=
+Target Report RejectNegative Joined
+Generate software reciprocal divide and square root for better throughput.
+
+mrecip-precision
+Target Report Mask(RECIP_PRECISION)
+Assume that the reciprocal estimate instructions provide more accuracy.
 
 mno-fp-in-toc
 Target Report RejectNegative Var(TARGET_NO_FP_IN_TOC)
@@ -236,6 +244,10 @@ Generate VRSAVE instructions when generating AltiVec code
 mvrsave=
 Target RejectNegative Joined
 -mvrsave=yes/no	Deprecated option.  Use -mvrsave/-mno-vrsave instead
+
+mblock-move-inline-limit=
+Target Report Var(rs6000_block_move_inline_limit) Init(0) RejectNegative Joined UInteger
+Specify how many bytes should be moved inline before calling out to memcpy/memmove
 
 misel
 Target Report Mask(ISEL)

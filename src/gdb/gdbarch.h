@@ -118,11 +118,17 @@ extern void set_gdbarch_long_bit (struct gdbarch *gdbarch, int long_bit);
 extern int gdbarch_long_long_bit (struct gdbarch *gdbarch);
 extern void set_gdbarch_long_long_bit (struct gdbarch *gdbarch, int long_long_bit);
 
-/* The ABI default bit-size and format for "float", "double", and "long
-   double".  These bit/format pairs should eventually be combined into
-   a single object.  For the moment, just initialize them as a pair.
+/* The ABI default bit-size and format for "half", "float", "double", and
+   "long double".  These bit/format pairs should eventually be combined
+   into a single object.  For the moment, just initialize them as a pair.
    Each format describes both the big and little endian layouts (if
    useful). */
+
+extern int gdbarch_half_bit (struct gdbarch *gdbarch);
+extern void set_gdbarch_half_bit (struct gdbarch *gdbarch, int half_bit);
+
+extern const struct floatformat ** gdbarch_half_format (struct gdbarch *gdbarch);
+extern void set_gdbarch_half_format (struct gdbarch *gdbarch, const struct floatformat ** half_format);
 
 extern int gdbarch_float_bit (struct gdbarch *gdbarch);
 extern void set_gdbarch_float_bit (struct gdbarch *gdbarch, int float_bit);
@@ -806,6 +812,24 @@ typedef CORE_ADDR (gdbarch_displaced_step_location_ftype) (struct gdbarch *gdbar
 extern CORE_ADDR gdbarch_displaced_step_location (struct gdbarch *gdbarch);
 extern void set_gdbarch_displaced_step_location (struct gdbarch *gdbarch, gdbarch_displaced_step_location_ftype *displaced_step_location);
 
+/* Relocate an instruction to execute at a different address.  OLDLOC
+   is the address in the inferior memory where the instruction to
+   relocate is currently at.  On input, TO points to the destination
+   where we want the instruction to be copied (and possibly adjusted)
+   to.  On output, it points to one past the end of the resulting
+   instruction(s).  The effect of executing the instruction at TO shall
+   be the same as if executing it at FROM.  For example, call
+   instructions that implicitly push the return address on the stack
+   should be adjusted to return to the instruction after OLDLOC;
+   relative branches, and other PC-relative instructions need the
+   offset adjusted; etc. */
+
+extern int gdbarch_relocate_instruction_p (struct gdbarch *gdbarch);
+
+typedef void (gdbarch_relocate_instruction_ftype) (struct gdbarch *gdbarch, CORE_ADDR *to, CORE_ADDR from);
+extern void gdbarch_relocate_instruction (struct gdbarch *gdbarch, CORE_ADDR *to, CORE_ADDR from);
+extern void set_gdbarch_relocate_instruction (struct gdbarch *gdbarch, gdbarch_relocate_instruction_ftype *relocate_instruction);
+
 /* Refresh overlay mapped state for section OSECT. */
 
 extern int gdbarch_overlay_update_p (struct gdbarch *gdbarch);
@@ -923,11 +947,6 @@ typedef int (gdbarch_fast_tracepoint_valid_at_ftype) (struct gdbarch *gdbarch, C
 extern int gdbarch_fast_tracepoint_valid_at (struct gdbarch *gdbarch, CORE_ADDR addr, int *isize, char **msg);
 extern void set_gdbarch_fast_tracepoint_valid_at (struct gdbarch *gdbarch, gdbarch_fast_tracepoint_valid_at_ftype *fast_tracepoint_valid_at);
 
-/* Not NULL if a target has additonal field for qSupported. */
-
-extern const char * gdbarch_qsupported (struct gdbarch *gdbarch);
-extern void set_gdbarch_qsupported (struct gdbarch *gdbarch, const char * qsupported);
-
 /* Return the "auto" target charset. */
 
 typedef const char * (gdbarch_auto_charset_ftype) (void);
@@ -949,6 +968,13 @@ extern void set_gdbarch_auto_wide_charset (struct gdbarch *gdbarch, gdbarch_auto
 
 extern const char * gdbarch_solib_symbols_extension (struct gdbarch *gdbarch);
 extern void set_gdbarch_solib_symbols_extension (struct gdbarch *gdbarch, const char * solib_symbols_extension);
+
+/* If true, the target OS has DOS-based file system semantics.  That
+   is, absolute paths include a drive name, and the backslash is
+   considered a directory separator. */
+
+extern int gdbarch_has_dos_based_file_system (struct gdbarch *gdbarch);
+extern void set_gdbarch_has_dos_based_file_system (struct gdbarch *gdbarch, int has_dos_based_file_system);
 
 /* Definition for an unknown syscall, used basically in error-cases.  */
 #define UNKNOWN_SYSCALL (-1)

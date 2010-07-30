@@ -53,6 +53,7 @@ class Command_line;
 class General_options;
 class Search_directory;
 class Input_file_group;
+class Input_file_lib;
 class Position_dependent_options;
 class Target;
 class Plugin_manager;
@@ -712,8 +713,14 @@ class General_options
               N_("Export all dynamic symbols"),
 	      N_("Do not export all dynamic symbols (default)"));
 
+  DEFINE_special(EB, options::ONE_DASH, '\0',
+		 N_("Link big-endian objects."), NULL);
+
   DEFINE_bool(eh_frame_hdr, options::TWO_DASHES, '\0', false,
               N_("Create exception frame header"), NULL);
+
+  DEFINE_special(EL, options::ONE_DASH, '\0',
+		 N_("Link little-endian objects."), NULL);
 
   DEFINE_bool(fatal_warnings, options::TWO_DASHES, '\0', false,
 	      N_("Treat warnings as errors"),
@@ -725,6 +732,10 @@ class General_options
   DEFINE_bool(fix_cortex_a8, options::TWO_DASHES, '\0', false,
 	      N_("(ARM only) Fix binaries for Cortex-A8 erratum."),
 	      N_("(ARM only) Do not fix binaries for Cortex-A8 erratum."));
+
+  DEFINE_bool(merge_exidx_entries, options::TWO_DASHES, '\0', true,
+	      N_("(ARM only) Merge exidx entries in debuginfo."),
+	      N_("(ARM only) Do not merge exidx entries in debuginfo."));
 
   DEFINE_special(fix_v4bx, options::TWO_DASHES, '\0',
                  N_("(ARM only) Rewrite BX rn as MOV pc, rn for ARMv4"),
@@ -789,6 +800,10 @@ class General_options
   DEFINE_dirlist(library_path, options::TWO_DASHES, 'L',
                  N_("Add directory to search path"), N_("DIR"));
 
+  DEFINE_bool(nostdlib, options::ONE_DASH, '\0', false,
+              N_(" Only search directories specified on the command line."),
+              NULL);
+
   DEFINE_string(m, options::EXACTLY_ONE_DASH, 'm', "",
                 N_("Ignored for compatibility"), N_("EMULATION"));
 
@@ -823,11 +838,17 @@ class General_options
   DEFINE_string(oformat, options::EXACTLY_TWO_DASHES, '\0', "elf",
 		N_("Set output format"), N_("[binary]"));
 
+  DEFINE_bool(p, options::ONE_DASH, '\0', false,
+	      N_("(ARM only) Ignore for backward compatibility"), NULL);
+
   DEFINE_bool(pie, options::ONE_DASH, '\0', false,
 	      N_("Create a position independent executable"), NULL);
   DEFINE_bool_alias(pic_executable, pie, options::TWO_DASHES, '\0',
 		    N_("Create a position independent executable"), NULL,
 		    false);
+
+  DEFINE_bool(pipeline_knowledge, options::ONE_DASH, '\0', false,
+	      NULL, N_("(ARM only) Ignore for backward compatibility"));
 
 #ifdef ENABLE_PLUGINS
   DEFINE_special(plugin, options::TWO_DASHES, '\0',
@@ -870,6 +891,10 @@ class General_options
   DEFINE_dirlist(rpath_link, options::TWO_DASHES, '\0',
                  N_("Add DIR to link time shared library search path"),
                  N_("DIR"));
+
+  DEFINE_string(section_ordering_file, options::TWO_DASHES, '\0', NULL,
+		N_("Layout sections in the order specified."),
+		N_("FILENAME"));
 
   DEFINE_special(section_start, options::TWO_DASHES, '\0',
 		 N_("Set address of section"), N_("SECTION=ADDRESS"));
@@ -991,6 +1016,9 @@ class General_options
   DEFINE_bool(warn_constructors, options::TWO_DASHES, '\0', false,
 	      N_("Ignored"), N_("Ignored"));
 
+  DEFINE_bool(warn_mismatch, options::TWO_DASHES, '\0', true,
+	      NULL, N_("Don't warn about mismatched input files"));
+
   DEFINE_bool(warn_multiple_gp, options::TWO_DASHES, '\0', false,
 	      N_("Ignored"), NULL);
 
@@ -1032,6 +1060,12 @@ class General_options
                  N_("Start a library search group"), NULL);
   DEFINE_special(end_group, options::TWO_DASHES, ')',
                  N_("End a library search group"), NULL);
+
+
+  DEFINE_special(start_lib, options::TWO_DASHES, '\0',
+                 N_("Start a library"), NULL);
+  DEFINE_special(end_lib, options::TWO_DASHES, '\0',
+                 N_("End a library "), NULL);
 
   // The -z options.
 
@@ -1249,6 +1283,17 @@ class General_options
   fix_v4bx() const
   { return (this->fix_v4bx_); }
 
+  enum Endianness
+  {
+    ENDIANNESS_NOT_SET,
+    ENDIANNESS_BIG,
+    ENDIANNESS_LITTLE
+  };
+
+  Endianness
+  endianness() const
+  { return this->endianness_; }
+
  private:
   // Don't copy this structure.
   General_options(const General_options&);
@@ -1340,6 +1385,8 @@ class General_options
   std::map<std::string, uint64_t> section_starts_;
   // Whether to process armv4 bx instruction relocation.
   Fix_v4bx fix_v4bx_;
+  // Endianness.
+  Endianness endianness_;
 };
 
 // The position-dependent options.  We use this to store the state of
@@ -1500,12 +1547,17 @@ class Input_argument
  public:
   // Create a file or library argument.
   explicit Input_argument(Input_file_argument file)
-    : is_file_(true), file_(file), group_(NULL)
+    : is_file_(true), file_(file), group_(NULL), lib_(NULL)
   { }
 
   // Create a group argument.
   explicit Input_argument(Input_file_group* group)
-    : is_file_(false), group_(group)
+    : is_file_(false), group_(group), lib_(NULL)
+  { }
+
+  // Create a lib argument.
+  explicit Input_argument(Input_file_lib* lib)
+    : is_file_(false), group_(NULL), lib_(lib)
   { }
 
   // Return whether this is a file.
@@ -1516,7 +1568,12 @@ class Input_argument
   // Return whether this is a group.
   bool
   is_group() const
-  { return !this->is_file_; }
+  { return !this->is_file_ && this->lib_ == NULL; }
+
+  // Return whether this is a lib.
+  bool
+  is_lib() const
+  { return this->lib_ != NULL; }
 
   // Return the information about the file.
   const Input_file_argument&
@@ -1541,10 +1598,28 @@ class Input_argument
     return this->group_;
   }
 
+  // Return the information about the lib.
+  const Input_file_lib*
+  lib() const
+  {
+    gold_assert(!this->is_file_);
+    gold_assert(this->lib_);
+    return this->lib_;
+  }
+
+  Input_file_lib*
+  lib()
+  {
+    gold_assert(!this->is_file_);
+    gold_assert(this->lib_);
+    return this->lib_;
+  }
+
  private:
   bool is_file_;
   Input_file_argument file_;
   Input_file_group* group_;
+  Input_file_lib* lib_;
 };
 
 typedef std::vector<Input_argument> Input_argument_list;
@@ -1580,6 +1655,46 @@ class Input_file_group
   Input_argument_list files_;
 };
 
+// A lib from the command line.  This is a set of arguments within
+// --start-lib ... --end-lib.
+
+class Input_file_lib
+{
+ public:
+  typedef Input_argument_list::const_iterator const_iterator;
+
+  Input_file_lib(const Position_dependent_options& options)
+    : files_(), options_(options)
+  { }
+
+  // Add a file to the end of the lib.
+  void
+  add_file(const Input_file_argument& arg)
+  { this->files_.push_back(Input_argument(arg)); }
+
+  const Position_dependent_options&
+  options() const
+  { return this->options_; }
+
+  // Iterators to iterate over the lib contents.
+
+  const_iterator
+  begin() const
+  { return this->files_.begin(); }
+
+  const_iterator
+  end() const
+  { return this->files_.end(); }
+
+  size_t
+  size() const
+  { return this->files_.size(); }
+
+ private:
+  Input_argument_list files_;
+  Position_dependent_options options_;
+};
+
 // A list of files from the command line or a script.
 
 class Input_arguments
@@ -1588,7 +1703,7 @@ class Input_arguments
   typedef Input_argument_list::const_iterator const_iterator;
 
   Input_arguments()
-    : input_argument_list_(), in_group_(false)
+    : input_argument_list_(), in_group_(false), in_lib_(false)
   { }
 
   // Add a file.
@@ -1603,10 +1718,23 @@ class Input_arguments
   void
   end_group();
 
+  // Start a lib (the --start-lib option).
+  void
+  start_lib(const Position_dependent_options&);
+
+  // End a lib (the --end-lib option).
+  void
+  end_lib();
+
   // Return whether we are currently in a group.
   bool
   in_group() const
   { return this->in_group_; }
+
+  // Return whether we are currently in a lib.
+  bool
+  in_lib() const
+  { return this->in_lib_; }
 
   // The number of entries in the list.
   int
@@ -1631,6 +1759,7 @@ class Input_arguments
  private:
   Input_argument_list input_argument_list_;
   bool in_group_;
+  bool in_lib_;
 };
 
 

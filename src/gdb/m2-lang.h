@@ -23,7 +23,7 @@ extern int m2_parse (void);	/* Defined in m2-exp.y */
 extern void m2_error (char *);	/* Defined in m2-exp.y */
 
 /* Defined in m2-typeprint.c */
-extern void m2_print_type (struct type *, char *, struct ui_file *, int,
+extern void m2_print_type (struct type *, const char *, struct ui_file *, int,
 			   int);
 
 extern void m2_print_typedef (struct type *, struct symbol *,
@@ -34,6 +34,7 @@ extern int m2_is_unbounded_array (struct type *type);
 
 extern int m2_val_print (struct type *, const gdb_byte *, int, CORE_ADDR,
 			 struct ui_file *, int,
+			 const struct value *,
 			 const struct value_print_options *);
 
 extern int get_long_set_bounds (struct type *type, LONGEST *low,

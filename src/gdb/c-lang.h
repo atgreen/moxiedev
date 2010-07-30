@@ -63,13 +63,14 @@ extern void c_error (char *);
 extern int c_parse_escape (char **, struct obstack *);
 
 /* Defined in c-typeprint.c */
-extern void c_print_type (struct type *, char *, struct ui_file *, int,
+extern void c_print_type (struct type *, const char *, struct ui_file *, int,
 			  int);
 
 extern void c_print_typedef (struct type *, struct symbol *, struct ui_file *);
 
 extern int c_val_print (struct type *, const gdb_byte *, int, CORE_ADDR,
 			struct ui_file *, int,
+			const struct value *,
 			const struct value_print_options *);
 
 extern int c_value_print (struct value *, struct ui_file *,
@@ -87,6 +88,11 @@ extern void c_printstr (struct ui_file * stream, struct type *elttype,
 extern void c_language_arch_info (struct gdbarch *gdbarch,
 				  struct language_arch_info *lai);
 
+extern const struct exp_descriptor exp_descriptor_c;
+
+extern void c_emit_char (int c, struct type *type,
+			 struct ui_file *stream, int quoter);
+
 /* These are in c-typeprint.c: */
 
 extern void c_type_print_base (struct type *, struct ui_file *, int, int);
@@ -99,12 +105,14 @@ extern void cp_print_class_member (const gdb_byte *, struct type *,
 extern void cp_print_value_fields (struct type *, struct type *,
 				   const gdb_byte *, int, CORE_ADDR,
 				   struct ui_file *, int,
+				   const struct value *,
 				   const struct value_print_options *,
 				   struct type **, int);
 
 extern void cp_print_value_fields_rtti (struct type *,
 					const gdb_byte *, int, CORE_ADDR,
 					struct ui_file *, int,
+					const struct value *,
 					const struct value_print_options *,
 					struct type **, int);
 

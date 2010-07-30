@@ -1,5 +1,6 @@
 /* RTL dead store elimination.
-   Copyright (C) 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
 
    Contributed by Richard Sandiford <rsandifor@codesourcery.com>
    and Kenneth Zadeck <zadeck@naturalbridge.com>
@@ -2325,7 +2326,8 @@ get_call_args (rtx call_insn, tree fn, rtx *args, int nargs)
        arg = TREE_CHAIN (arg), idx++)
     {
       enum machine_mode mode = TYPE_MODE (TREE_VALUE (arg));
-      rtx reg = FUNCTION_ARG (args_so_far, mode, NULL_TREE, 1), link, tmp;
+      rtx reg, link, tmp;
+      reg = targetm.calls.function_arg (&args_so_far, mode, NULL_TREE, true);
       if (!reg || !REG_P (reg) || GET_MODE (reg) != mode
 	  || GET_MODE_CLASS (mode) != MODE_INT)
 	return false;
@@ -2359,7 +2361,7 @@ get_call_args (rtx call_insn, tree fn, rtx *args, int nargs)
       if (tmp)
 	args[idx] = tmp;
 
-      FUNCTION_ARG_ADVANCE (args_so_far, mode, NULL_TREE, 1);
+      targetm.calls.function_arg_advance (&args_so_far, mode, NULL_TREE, true);
     }
   if (arg != void_list_node || idx != nargs)
     return false;
@@ -2616,7 +2618,7 @@ dse_step1 (void)
   basic_block bb;
   bitmap regs_live = BITMAP_ALLOC (NULL);
 
-  cselib_init (false);
+  cselib_init (0);
   all_blocks = BITMAP_ALLOC (NULL);
   bitmap_set_bit (all_blocks, ENTRY_BLOCK);
   bitmap_set_bit (all_blocks, EXIT_BLOCK);
@@ -3395,7 +3397,7 @@ dse_confluence_0 (basic_block bb)
    out set of the src of E.  If the various in or out sets are not
    there, that means they are all ones.  */
 
-static void
+static bool
 dse_confluence_n (edge e)
 {
   bb_info_t src_info = bb_table[e->src->index];
@@ -3411,6 +3413,7 @@ dse_confluence_n (edge e)
 	  bitmap_copy (src_info->out, dest_info->in);
 	}
     }
+  return true;
 }
 
 

@@ -27,8 +27,6 @@ if $tracelevel then {
 # test running programs
 #
 
-set prms_id 0
-set bug_id 0
 
 if { [skip_cplus_tests] } { continue }
 
@@ -64,7 +62,7 @@ gdb_load ${binfile}
 # Disable the prompt for whether to set pending breakpoints.
 # We don't want a breakpoint, we just want to verify the symbol
 # isn't found.
-gdb_test "set breakpoint pending off" "" "psymtab pending setup"
+gdb_test_no_output "set breakpoint pending off" "psymtab pending setup"
 
 # This test is looking for a bug that manifested itself when GDB was
 # looking for a partial symbol such that there wasn't such a partial

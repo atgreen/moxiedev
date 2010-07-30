@@ -29,6 +29,8 @@ bfd_boolean ppc64_elf_tls_optimize
   (struct bfd_link_info *);
 bfd_boolean ppc64_elf_edit_toc
   (struct bfd_link_info *);
+bfd_boolean ppc64_elf_has_small_toc_reloc
+  (asection *);
 bfd_vma ppc64_elf_toc
   (bfd *);
 int ppc64_elf_setup_section_lists
@@ -41,6 +43,8 @@ bfd_boolean ppc64_elf_next_toc_section
 bfd_boolean ppc64_elf_layout_multitoc
   (struct bfd_link_info *);
 void ppc64_elf_finish_multitoc_partition
+  (struct bfd_link_info *);
+bfd_boolean ppc64_elf_check_init_fini
   (struct bfd_link_info *);
 bfd_boolean ppc64_elf_next_input_section
   (struct bfd_link_info *, asection *);

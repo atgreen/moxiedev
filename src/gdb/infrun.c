@@ -119,7 +119,7 @@ show_debug_displaced (struct ui_file *file, int from_tty,
   fprintf_filtered (file, _("Displace stepping debugging is %s.\n"), value);
 }
 
-static int debug_infrun = 0;
+int debug_infrun = 0;
 static void
 show_debug_infrun (struct ui_file *file, int from_tty,
 		   struct cmd_list_element *c, const char *value)
@@ -178,16 +178,85 @@ show_debug_infrun (struct ui_file *file, int from_tty,
 #define SOLIB_IN_DYNAMIC_LINKER(pid,pc) 0
 #endif
 
+/* "Observer mode" is somewhat like a more extreme version of
+   non-stop, in which all GDB operations that might affect the
+   target's execution have been disabled.  */
 
-/* Convert the #defines into values.  This is temporary until wfi control
-   flow is completely sorted out.  */
+static int non_stop_1 = 0;
 
-#ifndef CANNOT_STEP_HW_WATCHPOINTS
-#define CANNOT_STEP_HW_WATCHPOINTS 0
-#else
-#undef  CANNOT_STEP_HW_WATCHPOINTS
-#define CANNOT_STEP_HW_WATCHPOINTS 1
-#endif
+int observer_mode = 0;
+static int observer_mode_1 = 0;
+
+static void
+set_observer_mode (char *args, int from_tty,
+		   struct cmd_list_element *c)
+{
+  extern int pagination_enabled;
+
+  if (target_has_execution)
+    {
+      observer_mode_1 = observer_mode;
+      error (_("Cannot change this setting while the inferior is running."));
+    }
+
+  observer_mode = observer_mode_1;
+
+  may_write_registers = !observer_mode;
+  may_write_memory = !observer_mode;
+  may_insert_breakpoints = !observer_mode;
+  may_insert_tracepoints = !observer_mode;
+  /* We can insert fast tracepoints in or out of observer mode,
+     but enable them if we're going into this mode.  */
+  if (observer_mode)
+    may_insert_fast_tracepoints = 1;
+  may_stop = !observer_mode;
+  update_target_permissions ();
+
+  /* Going *into* observer mode we must force non-stop, then
+     going out we leave it that way.  */
+  if (observer_mode)
+    {
+      target_async_permitted = 1;
+      pagination_enabled = 0;
+      non_stop = non_stop_1 = 1;
+    }
+
+  if (from_tty)
+    printf_filtered (_("Observer mode is now %s.\n"),
+		     (observer_mode ? "on" : "off"));
+}
+
+static void
+show_observer_mode (struct ui_file *file, int from_tty,
+		    struct cmd_list_element *c, const char *value)
+{
+  fprintf_filtered (file, _("Observer mode is %s.\n"), value);
+}
+
+/* This updates the value of observer mode based on changes in
+   permissions.  Note that we are deliberately ignoring the values of
+   may-write-registers and may-write-memory, since the user may have
+   reason to enable these during a session, for instance to turn on a
+   debugging-related global.  */
+
+void
+update_observer_mode (void)
+{
+  int newval;
+
+  newval = (!may_insert_breakpoints
+	    && !may_insert_tracepoints
+	    && may_insert_fast_tracepoints
+	    && !may_stop
+	    && non_stop);
+
+  /* Let the user know if things change.  */
+  if (newval != observer_mode)
+    printf_filtered (_("Observer mode is now %s.\n"),
+		     (newval ? "on" : "off"));
+
+  observer_mode = observer_mode_1 = newval;
+}
 
 /* Tables of how to react to signals; the user sets them.  */
 
@@ -225,7 +294,7 @@ static struct symbol *step_start_function;
 
 /* Nonzero if we want to give control to the user when we're notified
    of shared library events by the dynamic linker.  */
-static int stop_on_solib_events;
+int stop_on_solib_events;
 static void
 show_stop_on_solib_events (struct ui_file *file, int from_tty,
 			   struct cmd_list_element *c, const char *value)
@@ -660,7 +729,6 @@ show_follow_exec_mode_string (struct ui_file *file, int from_tty,
 static void
 follow_exec (ptid_t pid, char *execd_pathname)
 {
-  struct target_ops *tgt;
   struct thread_info *th = inferior_thread ();
   struct inferior *inf = current_inferior ();
 
@@ -720,6 +788,7 @@ follow_exec (ptid_t pid, char *execd_pathname)
       char *name = alloca (strlen (gdb_sysroot)
 			    + strlen (execd_pathname)
 			    + 1);
+
       strcpy (name, gdb_sysroot);
       strcat (name, execd_pathname);
       execd_pathname = name;
@@ -736,7 +805,6 @@ follow_exec (ptid_t pid, char *execd_pathname)
   if (follow_exec_mode_string == follow_exec_mode_new)
     {
       struct program_space *pspace;
-      struct inferior *new_inf;
 
       /* The user wants to keep the old inferior and program spaces
 	 around.  Create a new fresh one, and switch to it.  */
@@ -1222,6 +1290,7 @@ static void
 write_memory_ptid (ptid_t ptid, CORE_ADDR memaddr, const gdb_byte *myaddr, int len)
 {
   struct cleanup *ptid_cleanup = save_inferior_ptid ();
+
   inferior_ptid = ptid;
   write_memory (memaddr, myaddr, len);
   do_cleanups (ptid_cleanup);
@@ -1248,6 +1317,7 @@ displaced_step_fixup (ptid_t event_ptid, enum target_signal signal)
   /* Restore the contents of the copy area.  */
   {
     ULONGEST len = gdbarch_max_insn_length (displaced->step_gdbarch);
+
     write_memory_ptid (displaced->step_ptid, displaced->step_copy,
 		       displaced->step_saved_copy, len);
     if (debug_displaced)
@@ -1272,6 +1342,7 @@ displaced_step_fixup (ptid_t event_ptid, enum target_signal signal)
          relocate the PC.  */
       struct regcache *regcache = get_thread_regcache (event_ptid);
       CORE_ADDR pc = regcache_read_pc (regcache);
+
       pc = displaced->step_original + (pc - displaced->step_copy);
       regcache_write_pc (regcache, pc);
     }
@@ -1483,18 +1554,6 @@ resume (int step, enum target_signal sig)
                         "infrun: resume (step=%d, signal=%d), "
 			"trap_expected=%d\n",
  			step, sig, tp->trap_expected);
-
-  /* Some targets (e.g. Solaris x86) have a kernel bug when stepping
-     over an instruction that causes a page fault without triggering
-     a hardware watchpoint. The kernel properly notices that it shouldn't
-     stop, because the hardware watchpoint is not triggered, but it forgets
-     the step request and continues the program normally.
-     Work around the problem by removing hardware watchpoints if a step is
-     requested, GDB will check for a hardware watchpoint trigger after the
-     step anyway.  */
-  if (CANNOT_STEP_HW_WATCHPOINTS && step)
-    remove_hw_watchpoints ();
-
 
   /* Normally, by the time we reach `resume', the breakpoints are either
      removed or inserted, as appropriate.  The exception is if we're sitting
@@ -2014,8 +2073,8 @@ void
 start_remote (int from_tty)
 {
   struct inferior *inferior;
-  init_wait_for_inferior ();
 
+  init_wait_for_inferior ();
   inferior = current_inferior ();
   inferior->stop_soon = STOP_QUIETLY_REMOTE;
 
@@ -2276,6 +2335,7 @@ delete_step_thread_step_resume_breakpoint (void)
 	 longjmp-resume breakpoint of the thread that just stopped
 	 stepping.  */
       struct thread_info *tp = inferior_thread ();
+
       delete_step_resume_breakpoint (tp);
     }
   else
@@ -2389,6 +2449,14 @@ prepare_for_detach (void)
 	 knowledge of the executing state to the frontend/user running
 	 state.  */
       old_chain_2 = make_cleanup (finish_thread_state_cleanup, &minus_one_ptid);
+
+      /* In non-stop mode, each thread is handled individually.
+	 Switch early, so the global state is set correctly for this
+	 thread.  */
+      if (non_stop
+	  && ecs->ws.kind != TARGET_WAITKIND_EXITED
+	  && ecs->ws.kind != TARGET_WAITKIND_SIGNALLED)
+	context_switch (ecs->ptid);
 
       /* Now figure out what to do with the result of the result.  */
       handle_inferior_event (ecs);
@@ -2740,6 +2808,7 @@ adjust_pc_after_break (struct execution_control_state *ecs)
       || (non_stop && moribund_breakpoint_here_p (aspace, breakpoint_pc)))
     {
       struct cleanup *old_cleanups = NULL;
+
       if (RECORD_IS_USED)
 	old_cleanups = record_gdb_operation_disable_set ();
 
@@ -2893,6 +2962,7 @@ handle_inferior_event (struct execution_control_state *ecs)
       && ecs->ws.kind != TARGET_WAITKIND_SIGNALLED)
     {
       struct inferior *inf = find_inferior_pid (ptid_get_pid (ecs->ptid));
+
       gdb_assert (inf);
       stop_soon = inf->stop_soon;
     }
@@ -2904,7 +2974,7 @@ handle_inferior_event (struct execution_control_state *ecs)
   target_last_waitstatus = ecs->ws;
 
   /* Always clear state belonging to the previous time we stopped.  */
-  stop_stack_dummy = 0;
+  stop_stack_dummy = STOP_NONE;
 
   /* If it's a new process, add it to the thread database */
 
@@ -3095,6 +3165,7 @@ handle_inferior_event (struct execution_control_state *ecs)
       gdb_flush (gdb_stdout);
       target_mourn_inferior ();
       singlestep_breakpoints_inserted_p = 0;
+      cancel_single_step_breakpoints ();
       stop_print_frame = 0;
       stop_stepping (ecs);
       return;
@@ -3118,6 +3189,7 @@ handle_inferior_event (struct execution_control_state *ecs)
 
       print_stop_reason (SIGNAL_EXITED, ecs->ws.value.sig);
       singlestep_breakpoints_inserted_p = 0;
+      cancel_single_step_breakpoints ();
       stop_stepping (ecs);
       return;
 
@@ -3153,6 +3225,13 @@ handle_inferior_event (struct execution_control_state *ecs)
 	  /* This won't actually modify the breakpoint list, but will
 	     physically remove the breakpoints from the child.  */
 	  detach_breakpoints (child_pid);
+	}
+
+      if (singlestep_breakpoints_inserted_p)
+	{
+	  /* Pull the single step breakpoints out of the target. */
+	  remove_single_step_breakpoints ();
+	  singlestep_breakpoints_inserted_p = 0;
 	}
 
       /* In case the event is caught by a catchpoint, remember that
@@ -3243,6 +3322,9 @@ handle_inferior_event (struct execution_control_state *ecs)
 	  context_switch (ecs->ptid);
 	  reinit_frame_cache ();
 	}
+
+      singlestep_breakpoints_inserted_p = 0;
+      cancel_single_step_breakpoints ();
 
       stop_pc = regcache_read_pc (get_thread_regcache (ecs->ptid));
 
@@ -3364,6 +3446,7 @@ targets should add new threads to the thread list themselves in non-stop mode.")
       if (target_stopped_by_watchpoint ())
 	{
           CORE_ADDR addr;
+
 	  fprintf_unfiltered (gdb_stdlog, "infrun: stopped by watchpoint\n");
 
           if (target_stopped_data_address (&current_target, &addr))
@@ -3702,6 +3785,7 @@ targets should add new threads to the thread list themselves in non-stop mode.")
 	 the instruction and once for the delay slot.  */
       int step_through_delay
 	= gdbarch_single_step_through_delay (gdbarch, frame);
+
       if (debug_infrun && step_through_delay)
 	fprintf_unfiltered (gdb_stdlog, "infrun: step through delay\n");
       if (ecs->event_thread->step_range_end == 0 && step_through_delay)
@@ -3970,8 +4054,14 @@ process_event_stop_test:
 
     if (what.call_dummy)
       {
-	stop_stack_dummy = 1;
+	stop_stack_dummy = what.call_dummy;
       }
+
+    /* If we hit an internal event that triggers symbol changes, the
+       current frame will be invalidated within bpstat_what (e.g., if
+       we hit an internal solib event).  Re-fetch it.  */
+    frame = get_current_frame ();
+    gdbarch = get_frame_arch (frame);
 
     switch (what.main_action)
       {
@@ -4077,66 +4167,6 @@ infrun: BPSTAT_WHAT_SET_LONGJMP_RESUME (!gdbarch_get_longjmp_target)\n");
 	  }
 	break;
 
-      case BPSTAT_WHAT_CHECK_SHLIBS:
-	{
-          if (debug_infrun)
-	    fprintf_unfiltered (gdb_stdlog, "infrun: BPSTAT_WHAT_CHECK_SHLIBS\n");
-
-	  /* Check for any newly added shared libraries if we're
-	     supposed to be adding them automatically.  Switch
-	     terminal for any messages produced by
-	     breakpoint_re_set.  */
-	  target_terminal_ours_for_output ();
-	  /* NOTE: cagney/2003-11-25: Make certain that the target
-	     stack's section table is kept up-to-date.  Architectures,
-	     (e.g., PPC64), use the section table to perform
-	     operations such as address => section name and hence
-	     require the table to contain all sections (including
-	     those found in shared libraries).  */
-#ifdef SOLIB_ADD
-	  SOLIB_ADD (NULL, 0, &current_target, auto_solib_add);
-#else
-	  solib_add (NULL, 0, &current_target, auto_solib_add);
-#endif
-	  target_terminal_inferior ();
-
-	  /* If requested, stop when the dynamic linker notifies
-	     gdb of events.  This allows the user to get control
-	     and place breakpoints in initializer routines for
-	     dynamically loaded objects (among other things).  */
-	  if (stop_on_solib_events || stop_stack_dummy)
-	    {
-	      stop_stepping (ecs);
-	      return;
-	    }
-	  else
-	    {
-	      /* We want to step over this breakpoint, then keep going.  */
-	      ecs->event_thread->stepping_over_breakpoint = 1;
-	      break;
-	    }
-	}
-	break;
-
-      case BPSTAT_WHAT_CHECK_JIT:
-        if (debug_infrun)
-          fprintf_unfiltered (gdb_stdlog, "infrun: BPSTAT_WHAT_CHECK_JIT\n");
-
-        /* Switch terminal for any messages produced by breakpoint_re_set.  */
-        target_terminal_ours_for_output ();
-
-        jit_event_handler (gdbarch);
-
-        target_terminal_inferior ();
-
-        /* We want to step over this breakpoint, then keep going.  */
-        ecs->event_thread->stepping_over_breakpoint = 1;
-
-        break;
-
-      case BPSTAT_WHAT_LAST:
-	/* Not a real code, but listed here to shut up gcc -Wall.  */
-
       case BPSTAT_WHAT_KEEP_CHECKING:
 	break;
       }
@@ -4153,6 +4183,7 @@ infrun: BPSTAT_WHAT_SET_LONGJMP_RESUME (!gdbarch_get_longjmp_target)\n");
   if (!non_stop)
     {
       struct thread_info *tp;
+
       tp = iterate_over_threads (currently_stepping_or_nexting_callback,
 				 ecs->event_thread);
       if (tp)
@@ -4272,6 +4303,7 @@ infrun: not switching back to stepped thread, it has vanished\n");
      the frame cache to be re-initialized, making our FRAME variable
      a dangling pointer.  */
   frame = get_current_frame ();
+  gdbarch = get_frame_arch (frame);
 
   /* If stepping through a line, keep going if still within it.
 
@@ -4341,6 +4373,7 @@ infrun: not switching back to stepped thread, it has vanished\n");
 	  /* Set up a step-resume breakpoint at the address
 	     indicated by SKIP_SOLIB_RESOLVER.  */
 	  struct symtab_and_line sr_sal;
+
 	  init_sal (&sr_sal);
 	  sr_sal.pc = pc_after_resolver;
 	  sr_sal.pspace = get_frame_program_space (frame);
@@ -4479,6 +4512,7 @@ infrun: not switching back to stepped thread, it has vanished\n");
       if (real_stop_pc != 0 && in_solib_dynsym_resolve_code (real_stop_pc))
 	{
 	  struct symtab_and_line sr_sal;
+
 	  init_sal (&sr_sal);
 	  sr_sal.pc = ecs->stop_func_start;
 	  sr_sal.pspace = get_frame_program_space (frame);
@@ -4527,6 +4561,7 @@ infrun: not switching back to stepped thread, it has vanished\n");
 	  /* Set a breakpoint at callee's start address.
 	     From there we can step once and be back in the caller.  */
 	  struct symtab_and_line sr_sal;
+
 	  init_sal (&sr_sal);
 	  sr_sal.pc = ecs->stop_func_start;
 	  sr_sal.pspace = get_frame_program_space (frame);
@@ -4565,6 +4600,7 @@ infrun: not switching back to stepped thread, it has vanished\n");
 	     Set a breakpoint at its start and continue, then
 	     one more step will take us out.  */
 	  struct symtab_and_line sr_sal;
+
 	  init_sal (&sr_sal);
 	  sr_sal.pc = ecs->stop_func_start;
 	  sr_sal.pspace = get_frame_program_space (frame);
@@ -4582,6 +4618,7 @@ infrun: not switching back to stepped thread, it has vanished\n");
     {
       /* Determine where this trampoline returns.  */
       CORE_ADDR real_stop_pc;
+
       real_stop_pc = gdbarch_skip_trampoline_code (gdbarch, frame, stop_pc);
 
       if (debug_infrun)
@@ -4898,7 +4935,7 @@ handle_step_into_function_backward (struct gdbarch *gdbarch,
 				    struct execution_control_state *ecs)
 {
   struct symtab *s;
-  struct symtab_and_line stop_func_sal, sr_sal;
+  struct symtab_and_line stop_func_sal;
 
   s = find_pc_symtab (stop_pc);
   if (s && s->language != language_asm)
@@ -5090,6 +5127,7 @@ keep_going (struct execution_control_state *ecs)
       if (ecs->event_thread->stepping_over_breakpoint)
 	{
 	  struct regcache *thread_regcache = get_thread_regcache (ecs->ptid);
+
 	  if (!use_displaced_stepping (get_regcache_arch (thread_regcache)))
 	    /* Since we can't do a displaced step, we have to remove
 	       the breakpoint while we step it.  To keep things
@@ -5099,6 +5137,7 @@ keep_going (struct execution_control_state *ecs)
       else
 	{
 	  struct gdb_exception e;
+
 	  /* Stop stepping when inserting breakpoints
 	     has failed.  */
 	  TRY_CATCH (e, RETURN_MASK_ERROR)
@@ -5460,12 +5499,13 @@ Further execution is probably impossible.\n"));
       stop_registers = regcache_dup (get_current_regcache ());
     }
 
-  if (stop_stack_dummy)
+  if (stop_stack_dummy == STOP_STACK_DUMMY)
     {
       /* Pop the empty frame that contains the stack dummy.
 	 This also restores inferior state prior to the call
 	 (struct inferior_thread_state).  */
       struct frame_info *frame = get_current_frame ();
+
       gdb_assert (get_frame_type (frame) == DUMMY_FRAME);
       frame_pop (frame);
       /* frame_pop() calls reinit_frame_cache as the last thing it does
@@ -5553,6 +5593,7 @@ int
 signal_stop_update (int signo, int state)
 {
   int ret = signal_stop[signo];
+
   signal_stop[signo] = state;
   return ret;
 }
@@ -5561,6 +5602,7 @@ int
 signal_print_update (int signo, int state)
 {
   int ret = signal_print[signo];
+
   signal_print[signo] = state;
   return ret;
 }
@@ -5569,6 +5611,7 @@ int
 signal_pass_update (int signo, int state)
 {
   int ret = signal_program[signo];
+
   signal_program[signo] = state;
   return ret;
 }
@@ -5852,6 +5895,7 @@ static void
 signals_info (char *signum_exp, int from_tty)
 {
   enum target_signal oursig;
+
   sig_print_header ();
 
   if (signum_exp)
@@ -5950,6 +5994,7 @@ siginfo_make_value (struct gdbarch *gdbarch, struct internalvar *var)
       && gdbarch_get_siginfo_type_p (gdbarch))
     {
       struct type *type = gdbarch_get_siginfo_type (gdbarch);
+
       return allocate_computed_value (type, &siginfo_value_funcs, NULL);
     }
 
@@ -6038,7 +6083,7 @@ struct inferior_status
 {
   bpstat stop_bpstat;
   int stop_step;
-  int stop_stack_dummy;
+  enum stop_stack_kind stop_stack_dummy;
   int stopped_by_random_signal;
   int stepping_over_breakpoint;
   CORE_ADDR step_range_start;
@@ -6325,8 +6370,7 @@ ptid_match (ptid_t ptid, ptid_t filter)
   /* Since both parameters have the same type, prevent easy mistakes
      from happening.  */
   gdb_assert (!ptid_equal (ptid, minus_one_ptid)
-	      && !ptid_equal (ptid, null_ptid)
-	      && !ptid_is_pid (ptid));
+	      && !ptid_equal (ptid, null_ptid));
 
   if (ptid_equal (filter, minus_one_ptid))
     return 1;
@@ -6347,6 +6391,7 @@ static void
 restore_inferior_ptid (void *arg)
 {
   ptid_t *saved_ptid_ptr = arg;
+
   inferior_ptid = *saved_ptid_ptr;
   xfree (arg);
 }
@@ -6416,7 +6461,6 @@ show_exec_direction_func (struct ui_file *out, int from_tty,
 /* User interface for non-stop mode.  */
 
 int non_stop = 0;
-static int non_stop_1 = 0;
 
 static void
 set_non_stop (char *args, int from_tty,
@@ -6453,7 +6497,6 @@ _initialize_infrun (void)
 {
   int i;
   int numsigs;
-  struct cmd_list_element *c;
 
   add_info ("signals", signals_info, _("\
 What debugger does when program gets various signals.\n\
@@ -6488,7 +6531,7 @@ from 1-15 are allowed for compatibility with old versions of GDB.\n\
 Numeric ranges may be specified with the form LOW-HIGH (e.g. 1-5).\n\
 The special arg \"all\" is recognized to mean all signals except those\n\
 used by the debugger, typically SIGTRAP and SIGINT.\n\
-Recognized actions include \"s\" (toggles between stop and nostop), \n\
+Recognized actions include \"s\" (toggles between stop and nostop),\n\
 \"r\" (toggles between print and noprint), \"i\" (toggles between pass and \
 nopass), \"Q\" (noprint)\n\
 Stop means reenter debugger if this signal happens (implies print).\n\
@@ -6622,7 +6665,7 @@ An exec call replaces the program image of a process.\n\
 \n\
 follow-exec-mode can be:\n\
 \n\
-  new - the debugger creates a new inferior and rebinds the process \n\
+  new - the debugger creates a new inferior and rebinds the process\n\
 to this new inferior.  The program the process was running before\n\
 the exec call can be restarted afterwards by restarting the original\n\
 inferior.\n\
@@ -6719,4 +6762,17 @@ Tells gdb whether to detach the child of a fork."),
      isn't initialized yet.  At this point, we're quite sure there
      isn't another convenience variable of the same name.  */
   create_internalvar_type_lazy ("_siginfo", siginfo_make_value);
+
+  add_setshow_boolean_cmd ("observer", no_class,
+			   &observer_mode_1, _("\
+Set whether gdb controls the inferior in observer mode."), _("\
+Show whether gdb controls the inferior in observer mode."), _("\
+In observer mode, GDB can get data from the inferior, but not\n\
+affect its execution.  Registers and memory may not be changed,\n\
+breakpoints may not be set, and the program cannot be interrupted\n\
+or signalled."),
+			   set_observer_mode,
+			   show_observer_mode,
+			   &setlist,
+			   &showlist);
 }

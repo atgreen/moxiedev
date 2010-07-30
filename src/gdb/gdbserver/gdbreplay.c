@@ -59,7 +59,7 @@
 #endif
 
 #if USE_WIN32API
-#include <winsock.h>
+#include <winsock2.h>
 #endif
 
 #ifndef HAVE_SOCKLEN_T
@@ -210,7 +210,7 @@ remote_open (char *name)
 #endif
 
       tmp_desc = socket (PF_INET, SOCK_STREAM, 0);
-      if (tmp_desc < 0)
+      if (tmp_desc == -1)
 	perror_with_name ("Can't open socket");
 
       /* Allow rapid reuse of this port. */

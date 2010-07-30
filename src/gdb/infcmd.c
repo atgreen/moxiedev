@@ -54,8 +54,7 @@
 #include "gdbthread.h"
 #include "valprint.h"
 #include "inline-frame.h"
-
-extern void disconnect_or_stop_tracing (int from_tty);
+#include "tracepoint.h"
 
 /* Functions exported for general use, in inferior.h: */
 
@@ -156,7 +155,7 @@ int breakpoint_proceeded;
 
 /* Nonzero if stopped due to completion of a stack dummy routine.  */
 
-int stop_stack_dummy;
+enum stop_stack_kind stop_stack_dummy;
 
 /* Nonzero if stopped due to a random (unexpected) signal in inferior
    process.  */
@@ -198,6 +197,7 @@ show_inferior_tty_command (struct ui_file *file, int from_tty,
   /* Note that we ignore the passed-in value in favor of computing it
      directly.  */
   const char *inferior_io_terminal = get_inferior_io_terminal ();
+
   if (inferior_io_terminal == NULL)
     inferior_io_terminal = "";
   fprintf_filtered (gdb_stdout,
@@ -581,8 +581,9 @@ run_command_1 (char *args, int from_tty, int tbreak_at_main)
      has done its thing; now we are setting up the running program.  */
   post_create_inferior (&current_target, 0);
 
-  /* Start the target running.  */
-  proceed ((CORE_ADDR) -1, TARGET_SIGNAL_0, 0);
+  /* Start the target running.  Do not use -1 continuation as it would skip
+     breakpoint right at the entry point.  */
+  proceed (regcache_read_pc (get_current_regcache ()), TARGET_SIGNAL_0, 0);
 
   /* Since there was no error, there's no need to finish the thread
      states here.  */
@@ -648,15 +649,28 @@ ensure_valid_thread (void)
 Cannot execute this command without a live selected thread."));
 }
 
+/* If the user is looking at trace frames, any resumption of execution
+   is likely to mix up recorded and live target data. So simply
+   disallow those commands.  */
+
+void
+ensure_not_tfind_mode (void)
+{
+  if (get_traceframe_number () >= 0)
+    error (_("\
+Cannot execute this command while looking at trace frames."));
+}
+
 void
 continue_1 (int all_threads)
 {
   ERROR_NO_INFERIOR;
+  ensure_not_tfind_mode ();
 
   if (non_stop && all_threads)
     {
       /* Don't error out if the current thread is running, because
-        there may be other stopped threads.  */
+	 there may be other stopped threads.  */
       struct cleanup *old_chain;
 
       /* Backup current thread and selected frame.  */
@@ -819,12 +833,12 @@ static void
 step_1 (int skip_subroutines, int single_inst, char *count_string)
 {
   int count = 1;
-  struct frame_info *frame;
   struct cleanup *cleanups = make_cleanup (null_cleanup, NULL);
   int async_exec = 0;
   int thread = -1;
 
   ERROR_NO_INFERIOR;
+  ensure_not_tfind_mode ();
   ensure_valid_thread ();
   ensure_not_running ();
 
@@ -862,6 +876,7 @@ step_1 (int skip_subroutines, int single_inst, char *count_string)
       for (; count > 0; count--)
 	{
 	  struct thread_info *tp;
+
 	  step_once (skip_subroutines, single_inst, count, thread);
 
 	  if (target_has_execution
@@ -955,6 +970,7 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 	 INFERIOR_PTID thread instead, which is the same thread when
 	 THREAD is set.  */
       struct thread_info *tp = inferior_thread ();
+
       clear_proceed_status ();
       set_step_frame ();
 
@@ -985,6 +1001,7 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 	  else if (tp->step_range_end == 0)
 	    {
 	      char *name;
+
 	      if (find_pc_partial_function (pc, &name,
 					    &tp->step_range_start,
 					    &tp->step_range_end) == 0)
@@ -992,7 +1009,7 @@ step_once (int skip_subroutines, int single_inst, int count, int thread)
 
 	      target_terminal_ours ();
 	      printf_filtered (_("\
-Single stepping until exit from function %s, \n\
+Single stepping until exit from function %s,\n\
 which has no line number information.\n"), name);
 	    }
 	}
@@ -1046,6 +1063,7 @@ jump_command (char *arg, int from_tty)
   int async_exec = 0;
 
   ERROR_NO_INFERIOR;
+  ensure_not_tfind_mode ();
   ensure_valid_thread ();
   ensure_not_running ();
 
@@ -1148,6 +1166,7 @@ signal_command (char *signum_exp, int from_tty)
 
   dont_repeat ();		/* Too dangerous.  */
   ERROR_NO_INFERIOR;
+  ensure_not_tfind_mode ();
   ensure_valid_thread ();
   ensure_not_running ();
 
@@ -1259,8 +1278,10 @@ until_command (char *arg, int from_tty)
 {
   int async_exec = 0;
 
-  if (!target_has_execution)
-    error (_("The program is not running."));
+  ERROR_NO_INFERIOR;
+  ensure_not_tfind_mode ();
+  ensure_valid_thread ();
+  ensure_not_running ();
 
   /* Find out whether we must run in the background. */
   if (arg != NULL)
@@ -1290,8 +1311,10 @@ advance_command (char *arg, int from_tty)
 {
   int async_exec = 0;
 
-  if (!target_has_execution)
-    error (_("The program is not running."));
+  ERROR_NO_INFERIOR;
+  ensure_not_tfind_mode ();
+  ensure_valid_thread ();
+  ensure_not_running ();
 
   if (arg == NULL)
     error_no_arg (_("a location"));
@@ -1420,7 +1443,19 @@ finish_command_continuation (void *arg)
 			_("finish_command: function has no target type"));
 
       if (TYPE_CODE (value_type) != TYPE_CODE_VOID)
-	print_return_value (SYMBOL_TYPE (a->function), value_type);
+	{
+	  volatile struct gdb_exception ex;
+
+	  TRY_CATCH (ex, RETURN_MASK_ALL)
+	    {
+	      /* print_return_value can throw an exception in some
+		 circumstances.  We need to catch this so that we still
+		 delete the breakpoint.  */
+	      print_return_value (SYMBOL_TYPE (a->function), value_type);
+	    }
+	  if (ex.reason < 0)
+	    exception_print (gdb_stdout, ex);
+	}
     }
 
   /* We suppress normal call of normal_stop observer and do it here so
@@ -1546,6 +1581,11 @@ finish_command (char *arg, int from_tty)
 
   int async_exec = 0;
 
+  ERROR_NO_INFERIOR;
+  ensure_not_tfind_mode ();
+  ensure_valid_thread ();
+  ensure_not_running ();
+
   /* Find out whether we must run in the background.  */
   if (arg != NULL)
     async_exec = strip_bg_char (&arg);
@@ -1569,8 +1609,6 @@ finish_command (char *arg, int from_tty)
 
   if (arg)
     error (_("The \"finish\" command does not take any arguments."));
-  if (!target_has_execution)
-    error (_("The program is not running."));
 
   frame = get_prev_frame (get_selected_frame (_("No selected frame.")));
   if (frame == 0)
@@ -1591,6 +1629,7 @@ finish_command (char *arg, int from_tty)
 	 and not step over the rest of this inlined function call.  */
       struct thread_info *tp = inferior_thread ();
       struct symtab_and_line empty_sal;
+
       init_sal (&empty_sal);
       set_step_info (frame, empty_sal);
       tp->step_range_start = tp->step_range_end = get_frame_pc (frame);
@@ -1650,6 +1689,7 @@ program_info (char *args, int from_tty)
   else
     {
       struct target_waitstatus ws;
+
       get_last_target_status (&ptid, &ws);
     }
 
@@ -1703,6 +1743,7 @@ environment_info (char *var, int from_tty)
   if (var)
     {
       char *val = get_in_environ (current_inferior ()->environment, var);
+
       if (val)
 	{
 	  puts_filtered (var);
@@ -1720,6 +1761,7 @@ environment_info (char *var, int from_tty)
   else
     {
       char **vector = environ_vector (current_inferior ()->environment);
+
       while (*vector)
 	{
 	  puts_filtered (*vector++);
@@ -1827,6 +1869,7 @@ path_command (char *dirname, int from_tty)
 {
   char *exec_path;
   char *env;
+
   dont_repeat ();
   env = get_in_environ (current_inferior ()->environment, path_var_name);
   /* Can be null if path is not set */
@@ -1914,12 +1957,13 @@ default_print_registers_info (struct gdbarch *gdbarch,
 	  get_user_print_options (&opts);
 	  opts.deref_ref = 1;
 	  val_print (register_type (gdbarch, i), buffer, 0, 0,
-		     file, 0, &opts, current_language);
+		     file, 0, NULL, &opts, current_language);
 
 	  fprintf_filtered (file, "\t(raw 0x");
 	  for (j = 0; j < register_size (gdbarch, i); j++)
 	    {
 	      int idx;
+
 	      if (gdbarch_byte_order (gdbarch) == BFD_ENDIAN_BIG)
 		idx = j;
 	      else
@@ -1936,8 +1980,7 @@ default_print_registers_info (struct gdbarch *gdbarch,
 	  get_formatted_print_options (&opts, 'x');
 	  opts.deref_ref = 1;
 	  val_print (register_type (gdbarch, i), buffer, 0, 0,
-		     file, 0, &opts,
-		     current_language);
+		     file, 0, NULL, &opts, current_language);
           /* If not a vector register, print it also according to its
              natural format.  */
 	  if (TYPE_VECTOR (register_type (gdbarch, i)) == 0)
@@ -1946,7 +1989,7 @@ default_print_registers_info (struct gdbarch *gdbarch,
 	      opts.deref_ref = 1;
 	      fprintf_filtered (file, "\t");
 	      val_print (register_type (gdbarch, i), buffer, 0, 0,
-			 file, 0, &opts, current_language);
+			 file, 0, NULL, &opts, current_language);
 	    }
 	}
 
@@ -1959,8 +2002,6 @@ registers_info (char *addr_exp, int fpregs)
 {
   struct frame_info *frame;
   struct gdbarch *gdbarch;
-  int regnum, numregs;
-  char *end;
 
   if (!target_has_registers)
     error (_("The program has no registers now."));
@@ -2004,6 +2045,7 @@ registers_info (char *addr_exp, int fpregs)
       /* A register name?  */
       {
 	int regnum = user_reg_map_name_to_regnum (gdbarch, start, end - start);
+
 	if (regnum >= 0)
 	  {
 	    /* User registers lie completely outside of the range of
@@ -2032,6 +2074,7 @@ registers_info (char *addr_exp, int fpregs)
       /* A register group?  */
       {
 	struct reggroup *group;
+
 	for (group = reggroup_next (gdbarch, NULL);
 	     group != NULL;
 	     group = reggroup_next (gdbarch, group))
@@ -2045,6 +2088,7 @@ registers_info (char *addr_exp, int fpregs)
 	if (group != NULL)
 	  {
 	    int regnum;
+
 	    for (regnum = 0;
 		 regnum < gdbarch_num_regs (gdbarch)
 			  + gdbarch_num_pseudo_regs (gdbarch);
@@ -2307,6 +2351,7 @@ static void
 attach_command_continuation (void *args)
 {
   struct attach_command_continuation_args *a = args;
+
   attach_command_post_wait (a->args, a->from_tty, a->async_exec);
 }
 
@@ -2314,6 +2359,7 @@ static void
 attach_command_continuation_free_args (void *args)
 {
   struct attach_command_continuation_args *a = args;
+
   xfree (a->args);
   xfree (a);
 }
@@ -2321,8 +2367,6 @@ attach_command_continuation_free_args (void *args)
 void
 attach_command (char *args, int from_tty)
 {
-  char *exec_file;
-  char *full_exec_path = NULL;
   int async_exec = 0;
   struct cleanup *back_to = make_cleanup (null_cleanup, NULL);
 
@@ -2512,7 +2556,7 @@ detach_command (char *args, int from_tty)
   if (ptid_equal (inferior_ptid, null_ptid))
     error (_("The program is not being run."));
 
-  disconnect_or_stop_tracing (from_tty);
+  disconnect_tracing (from_tty);
 
   target_detach (args, from_tty);
 
@@ -2553,6 +2597,7 @@ void
 interrupt_target_1 (int all_threads)
 {
   ptid_t ptid;
+
   if (all_threads)
     ptid = minus_one_ptid;
   else

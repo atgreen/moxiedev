@@ -73,9 +73,9 @@ extern int picochip_symbol_offset (rtx operand);
 
 extern int picochip_get_function_arg_boundary (enum machine_mode mode);
 
-extern enum reg_class picochip_secondary_reload(bool in_p,
+extern reg_class_t picochip_secondary_reload(bool in_p,
                                  rtx x,
-                                 enum reg_class cla,
+                                 reg_class_t cla,
                                  enum machine_mode mode,
                                  secondary_reload_info *sri);
 
@@ -98,6 +98,10 @@ extern rtx picochip_struct_value_rtx(tree fntype ATTRIBUTE_UNUSED,
                               int incoming ATTRIBUTE_UNUSED);
 
 #endif /* RTX_CODE inside TREE_CODE */
+
+extern int picochip_legitimize_reload_address (rtx *x, enum machine_mode mode,
+                                        int opnum, int type, int ind_levels);
+
 
 void picochip_output_ascii (FILE * file, const char *str, int length);
 

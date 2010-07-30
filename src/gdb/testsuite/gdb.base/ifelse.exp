@@ -84,7 +84,7 @@ gdb_test_multiple "if 0\nelse\nend" $message {
     }
 }
 
-gdb_test "set confirm off" "" ""
+gdb_test_no_output "set confirm off" ""
 
 # Test that a define with an empty else can be replaced.
 # If there is memory corruption then free will fail.
@@ -93,7 +93,7 @@ gdb_test "if 1\necho true\\n\nelse\necho false\\n\nend" "true" ""
 # create
 gdb_test "define abc\nif 1\nelse\nend\nend" "" "create define with empty else"
 # call (note that condition is 1 so should pass)
-gdb_test "abc" "" "call original define"
+gdb_test_no_output "abc" "call original define"
 # replace
 set message "replace define with if .. else with empty body"
 gdb_test_multiple "define abc\necho got here\\n\nend" $message {

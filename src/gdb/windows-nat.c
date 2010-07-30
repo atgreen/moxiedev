@@ -75,6 +75,8 @@
 #define GetModuleInformation		dyn_GetModuleInformation
 #define LookupPrivilegeValueA		dyn_LookupPrivilegeValueA
 #define OpenProcessToken		dyn_OpenProcessToken
+#define GetConsoleFontSize		dyn_GetConsoleFontSize
+#define GetCurrentConsoleFont		dyn_GetCurrentConsoleFont
 
 static BOOL WINAPI (*AdjustTokenPrivileges)(HANDLE, BOOL, PTOKEN_PRIVILEGES,
 					    DWORD, PTOKEN_PRIVILEGES, PDWORD);
@@ -87,6 +89,8 @@ static BOOL WINAPI (*GetModuleInformation) (HANDLE, HMODULE, LPMODULEINFO,
 					    DWORD);
 static BOOL WINAPI (*LookupPrivilegeValueA)(LPCSTR, LPCSTR, PLUID);
 static BOOL WINAPI (*OpenProcessToken)(HANDLE, DWORD, PHANDLE);
+static BOOL WINAPI (*GetCurrentConsoleFont) (HANDLE, BOOL, CONSOLE_FONT_INFO *);
+static COORD WINAPI (*GetConsoleFontSize) (HANDLE, DWORD);
 
 static struct target_ops windows_ops;
 
@@ -191,6 +195,7 @@ typedef struct thread_info_struct
     struct thread_info_struct *next;
     DWORD id;
     HANDLE h;
+    CORE_ADDR thread_local_base;
     char *name;
     int suspended;
     int reload_context;
@@ -320,7 +325,7 @@ thread_rec (DWORD id, int get_context)
 
 /* Add a thread to the thread list.  */
 static thread_info *
-windows_add_thread (ptid_t ptid, HANDLE h)
+windows_add_thread (ptid_t ptid, HANDLE h, void *tlb)
 {
   thread_info *th;
   DWORD id;
@@ -335,6 +340,7 @@ windows_add_thread (ptid_t ptid, HANDLE h)
   th = XZALLOC (thread_info);
   th->id = id;
   th->h = h;
+  th->thread_local_base = (CORE_ADDR) (uintptr_t) tlb;
   th->next = thread_head.next;
   thread_head.next = th;
   add_thread (ptid);
@@ -1030,7 +1036,11 @@ display_selector (HANDLE thread, DWORD sel)
     }
   else
     {
-      printf_filtered ("Invalid selector 0x%lx.\n",sel);
+      DWORD err = GetLastError ();
+      if (err == ERROR_NOT_SUPPORTED)
+	printf_filtered ("Function not supported\n");
+      else
+	printf_filtered ("Invalid selector 0x%lx.\n",sel);
       return 0;
     }
 }
@@ -1073,15 +1083,6 @@ display_selectors (char * args, int from_tty)
       display_selector (current_thread->h, sel);
     }
 }
-
-static struct cmd_list_element *info_w32_cmdlist = NULL;
-
-static void
-info_w32_command (char *args, int from_tty)
-{
-  help_list (info_w32_cmdlist, "info w32 ", class_info, gdb_stdout);
-}
-
 
 #define DEBUG_EXCEPTION_SIMPLE(x)       if (debug_exceptions) \
   printf_unfiltered ("gdb: Target exception %s at %s\n", x, \
@@ -1271,9 +1272,11 @@ fake_create_process (void)
       /*  We can not debug anything in that case.  */
     }
   main_thread_id = current_event.dwThreadId;
-  current_thread = windows_add_thread (ptid_build (current_event.dwProcessId, 0,
-						   current_event.dwThreadId),
-				       current_event.u.CreateThread.hThread);
+  current_thread = windows_add_thread (
+		     ptid_build (current_event.dwProcessId, 0,
+				 current_event.dwThreadId),
+		     current_event.u.CreateThread.hThread,
+		     current_event.u.CreateThread.lpThreadLocalBase);
   return main_thread_id;
 }
 
@@ -1447,7 +1450,9 @@ get_windows_debug_event (struct target_ops *ops,
       retval = current_event.dwThreadId;
       th = windows_add_thread (ptid_build (current_event.dwProcessId, 0,
 					 current_event.dwThreadId),
-			     current_event.u.CreateThread.hThread);
+			     current_event.u.CreateThread.hThread,
+			     current_event.u.CreateThread.lpThreadLocalBase);
+
       break;
 
     case EXIT_THREAD_DEBUG_EVENT:
@@ -1481,7 +1486,8 @@ get_windows_debug_event (struct target_ops *ops,
       /* Add the main thread */
       th = windows_add_thread (ptid_build (current_event.dwProcessId, 0,
 					   current_event.dwThreadId),
-			       current_event.u.CreateProcessInfo.hThread);
+	     current_event.u.CreateProcessInfo.hThread,
+	     current_event.u.CreateProcessInfo.lpThreadLocalBase);
       retval = current_event.dwThreadId;
       break;
 
@@ -1893,6 +1899,51 @@ windows_open (char *arg, int from_tty)
   error (_("Use the \"run\" command to start a Unix child process."));
 }
 
+/* Modify CreateProcess parameters for use of a new separate console.
+   Parameters are:
+   *FLAGS: DWORD parameter for general process creation flags.
+   *SI: STARTUPINFO structure, for which the console window size and
+   console buffer size is filled in if GDB is running in a console.
+   to create the new console.
+   The size of the used font is not available on all versions of
+   Windows OS.  Furthermore, the current font might not be the default
+   font, but this is still better than before.
+   If the windows and buffer sizes are computed,
+   SI->DWFLAGS is changed so that this information is used
+   by CreateProcess function.  */
+
+static void
+windows_set_console_info (STARTUPINFO *si, DWORD *flags)
+{
+  HANDLE hconsole = CreateFile ("CONOUT$", GENERIC_READ | GENERIC_WRITE,
+				FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, 0);
+
+  if (hconsole != INVALID_HANDLE_VALUE)
+    {
+      CONSOLE_SCREEN_BUFFER_INFO sbinfo;
+      COORD font_size;
+      CONSOLE_FONT_INFO cfi;
+
+      GetCurrentConsoleFont (hconsole, FALSE, &cfi);
+      font_size = GetConsoleFontSize (hconsole, cfi.nFont);
+      GetConsoleScreenBufferInfo(hconsole, &sbinfo);
+      si->dwXSize = sbinfo.srWindow.Right - sbinfo.srWindow.Left + 1;
+      si->dwYSize = sbinfo.srWindow.Bottom - sbinfo.srWindow.Top + 1;
+      if (font_size.X)
+	si->dwXSize *= font_size.X;
+      else
+	si->dwXSize *= 8;
+      if (font_size.Y)
+	si->dwYSize *= font_size.Y;
+      else
+	si->dwYSize *= 12;
+      si->dwXCountChars = sbinfo.dwSize.X;
+      si->dwYCountChars = sbinfo.dwSize.Y;
+      si->dwFlags |= STARTF_USESIZE | STARTF_USECOUNTCHARS;
+    }
+  *flags |= CREATE_NEW_CONSOLE;
+}
+
 /* Start an inferior windows child process and sets inferior_ptid to its pid.
    EXEC_FILE is the file to run.
    ALLARGS is a string containing the arguments to the program.
@@ -1935,7 +1986,7 @@ windows_create_inferior (struct target_ops *ops, char *exec_file,
     flags |= CREATE_NEW_PROCESS_GROUP;
 
   if (new_console)
-    flags |= CREATE_NEW_CONSOLE;
+    windows_set_console_info (&si, &flags);
 
 #ifdef __CYGWIN__
   if (!useshell)
@@ -2266,6 +2317,24 @@ windows_xfer_partial (struct target_ops *ops, enum target_object object,
     }
 }
 
+/* Provide thread local base, i.e. Thread Information Block address.
+   Returns 1 if ptid is found and sets *ADDR to thread_local_base.  */
+
+static int
+windows_get_tib_address (ptid_t ptid, CORE_ADDR *addr)
+{
+  thread_info *th;
+
+  th = thread_rec (ptid_get_tid (ptid), 0);
+  if (th == NULL)
+    return 0;
+
+  if (addr != NULL)
+    *addr = th->thread_local_base;
+
+  return 1;
+}
+
 static ptid_t
 windows_get_ada_task_ptid (long lwp, long thread)
 {
@@ -2314,6 +2383,7 @@ init_windows_ops (void)
   windows_ops.to_has_execution = default_child_has_execution;
   windows_ops.to_pid_to_exec_file = windows_pid_to_exec_file;
   windows_ops.to_get_ada_task_ptid = windows_get_ada_task_ptid;
+  windows_ops.to_get_tib_address = windows_get_tib_address;
 
   i386_use_watchpoints (&windows_ops);
 
@@ -2415,9 +2485,7 @@ Show whether to display kernel exceptions in child process."), NULL,
 			   NULL, /* FIXME: i18n: */
 			   &setlist, &showlist);
 
-  add_prefix_cmd ("w32", class_info, info_w32_command,
-		  _("Print information specific to Win32 debugging."),
-		  &info_w32_cmdlist, "info w32 ", 0, &infolist);
+  init_w32_command_list ();
 
   add_cmd ("selector", class_info, display_selectors,
 	   _("Display selectors infos."),
@@ -2555,6 +2623,21 @@ bad_OpenProcessToken (HANDLE w, DWORD x, PHANDLE y)
   return FALSE;
 }
 
+static BOOL WINAPI
+bad_GetCurrentConsoleFont (HANDLE w, BOOL bMaxWindow, CONSOLE_FONT_INFO *f)
+{
+  f->nFont = 0;
+  return 1;
+}
+static COORD WINAPI
+bad_GetConsoleFontSize (HANDLE w, DWORD nFont)
+{
+  COORD size;
+  size.X = 8;
+  size.Y = 12;
+  return size;
+}
+ 
 /* Load any functions which may not be available in ancient versions
    of Windows. */
 void
@@ -2571,6 +2654,10 @@ _initialize_loadable (void)
 	GetProcAddress (hm, "DebugBreakProcess");
       DebugSetProcessKillOnExit = (void *)
 	GetProcAddress (hm, "DebugSetProcessKillOnExit");
+      GetConsoleFontSize = (void *) 
+	GetProcAddress (hm, "GetConsoleFontSize");
+      GetCurrentConsoleFont = (void *) 
+	GetProcAddress (hm, "GetCurrentConsoleFont");
     }
 
   /* Set variables to dummy versions of these processes if the function
@@ -2582,6 +2669,10 @@ _initialize_loadable (void)
       DebugActiveProcessStop = bad_DebugActiveProcessStop;
       DebugSetProcessKillOnExit = bad_DebugSetProcessKillOnExit;
     }
+  if (!GetConsoleFontSize)
+    GetConsoleFontSize = bad_GetConsoleFontSize;
+  if (!GetCurrentConsoleFont)
+    GetCurrentConsoleFont = bad_GetCurrentConsoleFont;
 
   /* Load optional functions used for retrieving filename information
      associated with the currently debugged process or its dlls. */

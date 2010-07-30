@@ -183,6 +183,12 @@ int ppc_cie_data_alignment;
 /* The type of processor we are assembling for.  This is one or more
    of the PPC_OPCODE flags defined in opcode/ppc.h.  */
 ppc_cpu_t ppc_cpu = 0;
+
+/* Flags set on encountering toc relocs.  */
+enum {
+  has_large_toc_reloc = 1,
+  has_small_toc_reloc = 2
+} toc_reloc_types;
 
 /* The target specific pseudo-ops which we support.  */
 
@@ -1242,19 +1248,19 @@ ppc_set_cpu (void)
   const char *default_os  = TARGET_OS;
   const char *default_cpu = TARGET_CPU;
 
-  if ((ppc_cpu & ~PPC_OPCODE_ANY) == 0)
+  if ((ppc_cpu & ~(ppc_cpu_t) PPC_OPCODE_ANY) == 0)
     {
       if (ppc_obj64)
-	ppc_cpu |= PPC_OPCODE_PPC | PPC_OPCODE_CLASSIC | PPC_OPCODE_64;
+	ppc_cpu |= PPC_OPCODE_PPC | PPC_OPCODE_64;
       else if (strncmp (default_os, "aix", 3) == 0
 	       && default_os[3] >= '4' && default_os[3] <= '9')
-	ppc_cpu |= PPC_OPCODE_COMMON | PPC_OPCODE_32;
+	ppc_cpu |= PPC_OPCODE_COMMON;
       else if (strncmp (default_os, "aix3", 4) == 0)
-	ppc_cpu |= PPC_OPCODE_POWER | PPC_OPCODE_32;
+	ppc_cpu |= PPC_OPCODE_POWER;
       else if (strcmp (default_cpu, "rs6000") == 0)
-	ppc_cpu |= PPC_OPCODE_POWER | PPC_OPCODE_32;
+	ppc_cpu |= PPC_OPCODE_POWER;
       else if (strncmp (default_cpu, "powerpc", 7) == 0)
-	ppc_cpu |= PPC_OPCODE_PPC | PPC_OPCODE_CLASSIC | PPC_OPCODE_32;
+	ppc_cpu |= PPC_OPCODE_PPC;
       else
 	as_fatal (_("Unknown default cpu = %s, os = %s"),
 		  default_cpu, default_os);
@@ -1467,11 +1473,7 @@ ppc_setup_opcodes (void)
 	      }
 	}
 
-      if ((op->flags & ppc_cpu & ~(PPC_OPCODE_32 | PPC_OPCODE_64)) != 0
-	  && ((op->flags & (PPC_OPCODE_32 | PPC_OPCODE_64)) == 0
-	      || ((op->flags & (PPC_OPCODE_32 | PPC_OPCODE_64))
-		  == (ppc_cpu & (PPC_OPCODE_32 | PPC_OPCODE_64)))
-	      || (ppc_cpu & PPC_OPCODE_64_BRIDGE) != 0)
+      if ((ppc_cpu & op->flags) != 0
 	  && !(ppc_cpu & op->deprecated))
 	{
 	  const char *retval;
@@ -1479,11 +1481,6 @@ ppc_setup_opcodes (void)
 	  retval = hash_insert (ppc_hash, op->name, (void *) op);
 	  if (retval != NULL)
 	    {
-	      /* Ignore Power duplicates for -m601.  */
-	      if ((ppc_cpu & PPC_OPCODE_601) != 0
-		  && (op->flags & PPC_OPCODE_POWER) != 0)
-		continue;
-
 	      as_bad (_("duplicate instruction %s"),
 		      op->name);
 	      bad_insn = TRUE;
@@ -1501,7 +1498,7 @@ ppc_setup_opcodes (void)
   macro_end = powerpc_macros + powerpc_num_macros;
   for (macro = powerpc_macros; macro < macro_end; macro++)
     {
-      if ((macro->flags & ppc_cpu) != 0)
+      if ((macro->flags & ppc_cpu) != 0 || (ppc_cpu & PPC_OPCODE_ANY) != 0)
 	{
 	  const char *retval;
 
@@ -1943,6 +1940,7 @@ ppc_elf_cons (int nbytes /* 1=.byte, 2=.word, 4=.long, 8=.llong */)
 	      int offset;
 
 	      p = frag_more (nbytes);
+	      memset (p, 0, nbytes);
 	      offset = 0;
 	      if (target_big_endian)
 		offset = nbytes - size;
@@ -2167,6 +2165,7 @@ ppc_frob_file_before_adjust (void)
 
   toc = bfd_get_section_by_name (stdoutput, ".toc");
   if (toc != NULL
+      && toc_reloc_types != has_large_toc_reloc
       && bfd_section_size (stdoutput, toc) > 0x10000)
     as_warn (_("TOC section size exceeds 64k"));
 
@@ -2782,6 +2781,20 @@ md_assemble (char *str)
 		    }
 		}
 
+	      switch (reloc)
+		{
+		case BFD_RELOC_PPC_TOC16:
+		  toc_reloc_types |= has_small_toc_reloc;
+		  break;
+		case BFD_RELOC_PPC64_TOC16_LO:
+		case BFD_RELOC_PPC64_TOC16_HI:
+		case BFD_RELOC_PPC64_TOC16_HA:
+		  toc_reloc_types |= has_large_toc_reloc;
+		  break;
+		default:
+		  break;
+		}
+
 	      if (ppc_obj64
 		  && (operand->flags & (PPC_OPERAND_DS | PPC_OPERAND_DQ)) != 0)
 		{
@@ -2891,7 +2904,10 @@ md_assemble (char *str)
       if (*str != endc
 	  && (endc != ',' || *str != '\0'))
 	{
-	  as_bad (_("syntax error; found `%c' but expected `%c'"), *str, endc);
+	  if (*str == '\0')
+	    as_bad (_("syntax error; end of line, expected `%c'"), endc);
+	  else
+	    as_bad (_("syntax error; found `%c', expected `%c'"), *str, endc);
 	  break;
 	}
 
@@ -2907,7 +2923,7 @@ md_assemble (char *str)
 
 #ifdef OBJ_ELF
   /* Do we need/want a APUinfo section? */
-  if ((ppc_cpu & PPC_OPCODE_E500MC) != 0)
+  if ((ppc_cpu & (PPC_OPCODE_E500 | PPC_OPCODE_E500MC)) != 0)
     {
       /* These are all version "1".  */
       if (opcode->flags & PPC_OPCODE_SPE)
@@ -3088,26 +3104,7 @@ ppc_macro (char *str, const struct powerpc_macro *macro)
 }
 
 #ifdef OBJ_ELF
-/* For ELF, add support for SHF_EXCLUDE and SHT_ORDERED.  */
-
-bfd_vma
-ppc_section_letter (int letter, char **ptr_msg)
-{
-  if (letter == 'e')
-    return SHF_EXCLUDE;
-
-  *ptr_msg = _("Bad .section directive: want a,e,w,x,M,S,G,T in string");
-  return -1;
-}
-
-bfd_vma
-ppc_section_word (char *str, size_t len)
-{
-  if (len == 7 && strncmp (str, "exclude", 7) == 0)
-    return SHF_EXCLUDE;
-
-  return -1;
-}
+/* For ELF, add support for SHT_ORDERED.  */
 
 int
 ppc_section_type (char *str, size_t len)
@@ -3119,13 +3116,10 @@ ppc_section_type (char *str, size_t len)
 }
 
 int
-ppc_section_flags (flagword flags, bfd_vma attr, int type)
+ppc_section_flags (flagword flags, bfd_vma attr ATTRIBUTE_UNUSED, int type)
 {
   if (type == SHT_ORDERED)
     flags |= SEC_ALLOC | SEC_LOAD | SEC_SORT_ENTRIES;
-
-  if (attr & SHF_EXCLUDE)
-    flags |= SEC_EXCLUDE;
 
   return flags;
 }
@@ -5730,6 +5724,8 @@ ppc_fix_adjustable (fixS *fix)
 	  && fix->fx_r_type != BFD_RELOC_LO16_GOTOFF
 	  && fix->fx_r_type != BFD_RELOC_HI16_GOTOFF
 	  && fix->fx_r_type != BFD_RELOC_HI16_S_GOTOFF
+	  && fix->fx_r_type != BFD_RELOC_PPC64_GOT16_DS
+	  && fix->fx_r_type != BFD_RELOC_PPC64_GOT16_LO_DS
 	  && fix->fx_r_type != BFD_RELOC_GPREL16
 	  && fix->fx_r_type != BFD_RELOC_VTABLE_INHERIT
 	  && fix->fx_r_type != BFD_RELOC_VTABLE_ENTRY

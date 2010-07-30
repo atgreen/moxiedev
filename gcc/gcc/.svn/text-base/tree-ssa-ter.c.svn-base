@@ -1,6 +1,6 @@
 /* Routines for performing Temporary Expression Replacement (TER) in SSA trees.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008 Free Software Foundation,
-   Inc.
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
    Contributed by Andrew MacLeod  <amacleod@redhat.com>
 
 This file is part of GCC.
@@ -25,7 +25,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "tree.h"
-#include "diagnostic.h"
+#include "tree-pretty-print.h"
+#include "gimple-pretty-print.h"
 #include "bitmap.h"
 #include "tree-flow.h"
 #include "tree-dump.h"
@@ -615,6 +616,24 @@ find_replaceable_in_bb (temp_expr_table_p tab, basic_block bb)
 		      }
 		  }
 
+	      /* If the stmt does a memory store and the replacement
+	         is a load aliasing it avoid creating overlapping
+		 assignments which we cannot expand correctly.  */
+	      if (gimple_vdef (stmt)
+		  && gimple_assign_single_p (stmt))
+		{
+		  gimple def_stmt = SSA_NAME_DEF_STMT (use);
+		  while (is_gimple_assign (def_stmt)
+			 && gimple_assign_rhs_code (def_stmt) == SSA_NAME)
+		    def_stmt
+		      = SSA_NAME_DEF_STMT (gimple_assign_rhs1 (def_stmt));
+		  if (gimple_vuse (def_stmt)
+		      && gimple_assign_single_p (def_stmt)
+		      && refs_may_alias_p (gimple_assign_lhs (stmt),
+					   gimple_assign_rhs1 (def_stmt)))
+		    same_root_var = true;
+		}
+
 	      /* Mark expression as replaceable unless stmt is volatile or the
 		 def variable has the same root variable as something in the
 		 substitution list.  */
@@ -703,7 +722,7 @@ dump_replaceable_exprs (FILE *f, bitmap expr)
    exclusively to debug TER.  F is the place to send debug info and T is the
    table being debugged.  */
 
-void
+DEBUG_FUNCTION void
 debug_ter (FILE *f, temp_expr_table_p t)
 {
   unsigned x, y;

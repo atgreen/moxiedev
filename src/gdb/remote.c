@@ -173,8 +173,6 @@ static CORE_ADDR remote_address_masked (CORE_ADDR);
 
 static void print_packet (char *);
 
-static unsigned long crc32 (unsigned char *, int, unsigned int);
-
 static void compare_sections_command (char *, int);
 
 static void packet_command (char *, int);
@@ -214,6 +212,8 @@ static void show_remote_protocol_packet_cmd (struct ui_file *file,
 static char *write_ptid (char *buf, const char *endbuf, ptid_t ptid);
 static ptid_t read_ptid (char *buf, char **obuf);
 
+static void remote_set_permissions (void);
+
 struct remote_state;
 static int remote_get_trace_status (struct trace_status *ts);
 
@@ -243,6 +243,8 @@ static void remote_async_get_pending_events_handler (gdb_client_data);
 static void remote_terminal_ours (void);
 
 static int remote_read_description_p (struct target_ops *target);
+
+static void remote_console_output (char *msg);
 
 /* The non-stop remote protocol provisions for one pending stop reply.
    This is where we keep it until it is acknowledged.  */
@@ -319,6 +321,9 @@ struct remote_state
 
   /* True if the stub reports support for fast tracepoints.  */
   int fast_tracepoints;
+
+  /* True if the stub reports support for static tracepoints.  */
+  int static_tracepoints;
 
   /* True if the stub can continue running a trace while GDB is
      disconnected.  */
@@ -429,15 +434,62 @@ remote_get_noisy_reply (char **buf_p,
   do				/* Loop on reply from remote stub.  */
     {
       char *buf;
+
       QUIT;			/* allow user to bail out with ^C */
       getpkt (buf_p, sizeof_buf, 0);
       buf = *buf_p;
-      if (buf[0] == 0)
-	error (_("Target does not support this command."));
-      else if (buf[0] == 'E')
+      if (buf[0] == 'E')
 	trace_error (buf);
-      else if (buf[0] == 'O' &&
-	       buf[1] != 'K')
+      else if (strncmp (buf, "qRelocInsn:", strlen ("qRelocInsn:")) == 0)
+	{
+	  ULONGEST ul;
+	  CORE_ADDR from, to, org_to;
+	  char *p, *pp;
+	  int adjusted_size = 0;
+	  volatile struct gdb_exception ex;
+
+	  p = buf + strlen ("qRelocInsn:");
+	  pp = unpack_varlen_hex (p, &ul);
+	  if (*pp != ';')
+	    error (_("invalid qRelocInsn packet: %s"), buf);
+	  from = ul;
+
+	  p = pp + 1;
+	  pp = unpack_varlen_hex (p, &ul);
+	  to = ul;
+
+	  org_to = to;
+
+	  TRY_CATCH (ex, RETURN_MASK_ALL)
+	    {
+	      gdbarch_relocate_instruction (target_gdbarch, &to, from);
+	    }
+	  if (ex.reason >= 0)
+	    {
+	      adjusted_size = to - org_to;
+
+	      sprintf (buf, "qRelocInsn:%x", adjusted_size);
+	      putpkt (buf);
+	    }
+	  else if (ex.reason < 0 && ex.error == MEMORY_ERROR)
+	    {
+	      /* Propagate memory errors silently back to the target.
+		 The stub may have limited the range of addresses we
+		 can write to, for example.  */
+	      putpkt ("E01");
+	    }
+	  else
+	    {
+	      /* Something unexpectedly bad happened.  Be verbose so
+		 we can tell what, and propagate the error back to the
+		 stub, so it doesn't get stuck waiting for a
+		 response.  */
+	      exception_fprintf (gdb_stderr, ex,
+				 _("warning: relocating instruction: "));
+	      putpkt ("E01");
+	    }
+	}
+      else if (buf[0] == 'O' && buf[1] != 'K')
 	remote_console_output (buf + 1);	/* 'O' message from stub */
       else
 	return buf;		/* here's the actual reply */
@@ -592,6 +644,7 @@ packet_reg_from_regnum (struct remote_arch_state *rsa, long regnum)
   else
     {
       struct packet_reg *r = &rsa->regs[regnum];
+
       gdb_assert (r->regnum == regnum);
       return r;
     }
@@ -601,9 +654,11 @@ static struct packet_reg *
 packet_reg_from_pnum (struct remote_arch_state *rsa, LONGEST pnum)
 {
   int i;
+
   for (i = 0; i < gdbarch_num_regs (target_gdbarch); i++)
     {
       struct packet_reg *r = &rsa->regs[i];
+
       if (r->pnum == pnum)
 	return r;
     }
@@ -817,6 +872,7 @@ set_memory_packet_size (char *args, struct memory_packet_config *config)
 {
   int fixed_p = config->fixed_p;
   long size = config->size;
+
   if (args == NULL)
     error (_("Argument required (integer, `fixed' or `limited')."));
   else if (strcmp (args, "hard") == 0
@@ -828,6 +884,7 @@ set_memory_packet_size (char *args, struct memory_packet_config *config)
   else
     {
       char *end;
+
       size = strtoul (args, &end, 0);
       if (args == end)
 	error (_("Invalid %s (bad syntax)."), config->name);
@@ -909,6 +966,7 @@ static long
 get_memory_read_packet_size (void)
 {
   long size = get_memory_packet_size (&memory_read_packet_config);
+
   /* FIXME: cagney/1999-11-07: Functions like getpkt() need to get an
      extra buffer size argument before the memory read size can be
      increased beyond this.  */
@@ -968,6 +1026,7 @@ static void
 show_packet_config_cmd (struct packet_config *config)
 {
   char *support = "internal-error";
+
   switch (config->support)
     {
     case PACKET_ENABLE:
@@ -1024,6 +1083,7 @@ add_packet_config_cmd (struct packet_config *config, const char *name,
   if (legacy)
     {
       char *legacy_name;
+
       legacy_name = xstrprintf ("%s-packet", name);
       add_alias_cmd (legacy_name, cmd_name, class_obscure, 0,
 		     &remote_set_cmdlist);
@@ -1141,6 +1201,8 @@ enum {
   PACKET_qXfer_spu_write,
   PACKET_qXfer_osdata,
   PACKET_qXfer_threads,
+  PACKET_qXfer_statictrace_read,
+  PACKET_qGetTIBAddr,
   PACKET_qGetTLSAddr,
   PACKET_qSupported,
   PACKET_QPassSignals,
@@ -1154,8 +1216,11 @@ enum {
   PACKET_qAttached,
   PACKET_ConditionalTracepoints,
   PACKET_FastTracepoints,
+  PACKET_StaticTracepoints,
   PACKET_bc,
   PACKET_bs,
+  PACKET_TracepointSource,
+  PACKET_QAllow,
   PACKET_MAX
 };
 
@@ -1224,6 +1289,7 @@ set_remote_protocol_Z_packet_cmd (char *args, int from_tty,
 				  struct cmd_list_element *c)
 {
   int i;
+
   for (i = 0; i < NR_Z_PACKET_TYPES; i++)
     {
       remote_protocol_packets[PACKET_Z0 + i].detect = remote_Z_packet_detect;
@@ -1237,6 +1303,7 @@ show_remote_protocol_Z_packet_cmd (struct ui_file *file, int from_tty,
 				   const char *value)
 {
   int i;
+
   for (i = 0; i < NR_Z_PACKET_TYPES; i++)
     {
       show_packet_config_cmd (&remote_protocol_packets[PACKET_Z0 + i]);
@@ -1536,6 +1603,14 @@ remote_pass_signals (void)
       else
 	xfree (pass_packet);
     }
+}
+
+static void
+remote_notice_signals (ptid_t ptid)
+{
+  /* Update the remote on signals to silently pass, if they've
+     changed.  */
+  remote_pass_signals ();
 }
 
 /* If PTID is MAGIC_NULL_PTID, don't set any thread.  If PTID is
@@ -2451,7 +2526,7 @@ end_thread (struct gdb_xml_parser *parser,
   struct threads_parsing_context *data = user_data;
 
   if (body_text && *body_text)
-    VEC_last (thread_item_t, data->items)->extra = strdup (body_text);
+    VEC_last (thread_item_t, data->items)->extra = xstrdup (body_text);
 }
 
 const struct gdb_xml_attribute thread_attributes[] = {
@@ -2476,6 +2551,21 @@ const struct gdb_xml_element threads_elements[] = {
     GDB_XML_EF_NONE, NULL, NULL },
   { NULL, NULL, NULL, GDB_XML_EF_NONE, NULL, NULL }
 };
+
+/* Discard the contents of the constructed thread info context.  */
+
+static void
+clear_threads_parsing_context (void *p)
+{
+  struct threads_parsing_context *context = p;
+  int i;
+  struct thread_item *item;
+
+  for (i = 0; VEC_iterate (thread_item_t, context->items, i, item); ++i)
+    xfree (item->extra);
+
+  VEC_free (thread_item_t, context->items);
+}
 
 #endif
 
@@ -2507,14 +2597,19 @@ remote_threads_info (struct target_ops *ops)
 	{
 	  struct gdb_xml_parser *parser;
 	  struct threads_parsing_context context;
-	  struct cleanup *back_to = make_cleanup (null_cleanup, NULL);
+	  struct cleanup *clear_parsing_context;
 
 	  context.items = 0;
+	  /* Note: this parser cleanup is already guarded by BACK_TO
+	     above.  */
 	  parser = gdb_xml_create_parser_and_cleanup (_("threads"),
 						      threads_elements,
 						      &context);
 
 	  gdb_xml_use_dtd (parser, "threads.dtd");
+
+	  clear_parsing_context
+	    = make_cleanup (clear_threads_parsing_context, &context);
 
 	  if (gdb_xml_parse (parser, xml) == 0)
 	    {
@@ -2537,13 +2632,12 @@ remote_threads_info (struct target_ops *ops)
 		      info = demand_private_info (item->ptid);
 		      info->core = item->core;
 		      info->extra = item->extra;
-		      item->extra = 0;
+		      item->extra = NULL;
 		    }
-		  xfree (item->extra);
 		}
 	    }
 
-	  VEC_free (thread_item_t, context.items);
+	  do_cleanups (clear_parsing_context);
 	}
 
       do_cleanups (back_to);
@@ -2626,6 +2720,7 @@ remote_threads_extra_info (struct thread_info *tp)
   if (remote_protocol_packets[PACKET_qXfer_threads].support == PACKET_ENABLE)
     {
       struct thread_info *info = find_thread_ptid (tp->ptid);
+
       if (info && info->private)
 	return info->private->extra;
       else
@@ -2682,6 +2777,98 @@ remote_threads_extra_info (struct thread_info *tp)
 }
 
 
+static int
+remote_static_tracepoint_marker_at (CORE_ADDR addr,
+				    struct static_tracepoint_marker *marker)
+{
+  struct remote_state *rs = get_remote_state ();
+  char *p = rs->buf;
+
+  sprintf (p, "qTSTMat:");
+  p += strlen (p);
+  p += hexnumstr (p, addr);
+  putpkt (rs->buf);
+  getpkt (&rs->buf, &rs->buf_size, 0);
+  p = rs->buf;
+
+  if (*p == 'E')
+    error (_("Remote failure reply: %s"), p);
+
+  if (*p++ == 'm')
+    {
+      parse_static_tracepoint_marker_definition (p, &p, marker);
+      return 1;
+    }
+
+  return 0;
+}
+
+static void
+free_current_marker (void *arg)
+{
+  struct static_tracepoint_marker **marker_p = arg;
+
+  if (*marker_p != NULL)
+    {
+      release_static_tracepoint_marker (*marker_p);
+      xfree (*marker_p);
+    }
+  else
+    *marker_p = NULL;
+}
+
+static VEC(static_tracepoint_marker_p) *
+remote_static_tracepoint_markers_by_strid (const char *strid)
+{
+  struct remote_state *rs = get_remote_state ();
+  VEC(static_tracepoint_marker_p) *markers = NULL;
+  struct static_tracepoint_marker *marker = NULL;
+  struct cleanup *old_chain;
+  char *p;
+
+  /* Ask for a first packet of static tracepoint marker
+     definition.  */
+  putpkt ("qTfSTM");
+  getpkt (&rs->buf, &rs->buf_size, 0);
+  p = rs->buf;
+  if (*p == 'E')
+    error (_("Remote failure reply: %s"), p);
+
+  old_chain = make_cleanup (free_current_marker, &marker);
+
+  while (*p++ == 'm')
+    {
+      if (marker == NULL)
+	marker = XCNEW (struct static_tracepoint_marker);
+
+      do
+	{
+	  parse_static_tracepoint_marker_definition (p, &p, marker);
+
+	  if (strid == NULL || strcmp (strid, marker->str_id) == 0)
+	    {
+	      VEC_safe_push (static_tracepoint_marker_p,
+			     markers, marker);
+	      marker = NULL;
+	    }
+	  else
+	    {
+	      release_static_tracepoint_marker (marker);
+	      memset (marker, 0, sizeof (*marker));
+	    }
+	}
+      while (*p++ == ',');	/* comma-separated list */
+      /* Ask for another packet of static tracepoint definition.  */
+      putpkt ("qTsSTM");
+      getpkt (&rs->buf, &rs->buf_size, 0);
+      p = rs->buf;
+    }
+
+  do_cleanups (old_chain);
+  return markers;
+}
+
+
 /* Implement the to_get_ada_task_ptid function for the remote targets.  */
 
 static ptid_t
@@ -2724,6 +2911,7 @@ remote_close (int quitting)
   /* We don't have a connection to the remote stub anymore.  Get rid
      of all the inferiors and their threads we were controlling.  */
   discard_all_inferiors ();
+  inferior_ptid = null_ptid;
 
   /* We're no longer interested in any of these events.  */
   discard_pending_stop_replies (-1);
@@ -2959,6 +3147,10 @@ remote_start_remote (struct ui_out *uiout, void *opaque)
      which later probes to skip.  */
   remote_query_supported ();
 
+  /* If the stub wants to get a QAllow, compose one and send it.  */
+  if (remote_protocol_packets[PACKET_QAllow].support != PACKET_DISABLE)
+    remote_set_permissions ();
+
   /* Next, we possibly activate noack mode.
 
      If the QStartNoAckMode packet configuration is set to AUTO,
@@ -3158,6 +3350,11 @@ remote_start_remote (struct ui_out *uiout, void *opaque)
       /* In non-stop mode, any cached wait status will be stored in
 	 the stop reply queue.  */
       gdb_assert (wait_status == NULL);
+
+      /* Update the remote on signals to silently pass, or more
+	 importantly, which to not ignore, in case a previous session
+	 had set some different set of signals to be ignored.  */
+      remote_pass_signals ();
     }
 
   /* If we connected to a live target, do some additional setup.  */
@@ -3169,12 +3366,11 @@ remote_start_remote (struct ui_out *uiout, void *opaque)
 
   /* Possibly the target has been engaged in a trace run started
      previously; find out where things are at.  */
-  if (rs->disconnected_tracing)
+  if (remote_get_trace_status (current_trace_status ()) != -1)
     {
       struct uploaded_tp *uploaded_tps = NULL;
       struct uploaded_tsv *uploaded_tsvs = NULL;
 
-      remote_get_trace_status (current_trace_status ());
       if (current_trace_status ()->running)
 	printf_filtered (_("Trace is already running on the target.\n"));
 
@@ -3220,6 +3416,7 @@ static void
 init_all_packet_configs (void)
 {
   int i;
+
   for (i = 0; i < PACKET_MAX; i++)
     update_packet_config (&remote_protocol_packets[i]);
 }
@@ -3298,6 +3495,36 @@ Some events may be lost, rendering further debugging impossible."));
     }
 
   return serial_open (name);
+}
+
+/* Inform the target of our permission settings.  The permission flags
+   work without this, but if the target knows the settings, it can do
+   a couple things.  First, it can add its own check, to catch cases
+   that somehow manage to get by the permissions checks in target
+   methods.  Second, if the target is wired to disallow particular
+   settings (for instance, a system in the field that is not set up to
+   be able to stop at a breakpoint), it can object to any unavailable
+   permissions.  */
+
+void
+remote_set_permissions (void)
+{
+  struct remote_state *rs = get_remote_state ();
+
+  sprintf (rs->buf, "QAllow:"
+	   "WriteReg:%x;WriteMem:%x;"
+	   "InsertBreak:%x;InsertTrace:%x;"
+	   "InsertFastTrace:%x;Stop:%x",
+	   may_write_registers, may_write_memory,
+	   may_insert_breakpoints, may_insert_tracepoints,
+	   may_insert_fast_tracepoints, may_stop);
+  putpkt (rs->buf);
+  getpkt (&rs->buf, &rs->buf_size, 0);
+
+  /* If the target didn't like the packet, warn the user.  Do not try
+     to undo the user's settings, that would just be maddening.  */
+  if (strcmp (rs->buf, "OK") != 0)
+    warning ("Remote refused setting permissions with: %s", rs->buf);
 }
 
 /* This type describes each known response to the qSupported
@@ -3388,6 +3615,7 @@ remote_multi_process_feature (const struct protocol_feature *feature,
 			      enum packet_support support, const char *value)
 {
   struct remote_state *rs = get_remote_state ();
+
   rs->multi_process_aware = (support == PACKET_ENABLE);
 }
 
@@ -3396,6 +3624,7 @@ remote_non_stop_feature (const struct protocol_feature *feature,
 			      enum packet_support support, const char *value)
 {
   struct remote_state *rs = get_remote_state ();
+
   rs->non_stop_aware = (support == PACKET_ENABLE);
 }
 
@@ -3405,6 +3634,7 @@ remote_cond_tracepoint_feature (const struct protocol_feature *feature,
 				       const char *value)
 {
   struct remote_state *rs = get_remote_state ();
+
   rs->cond_tracepoints = (support == PACKET_ENABLE);
 }
 
@@ -3414,7 +3644,18 @@ remote_fast_tracepoint_feature (const struct protocol_feature *feature,
 				const char *value)
 {
   struct remote_state *rs = get_remote_state ();
+
   rs->fast_tracepoints = (support == PACKET_ENABLE);
+}
+
+static void
+remote_static_tracepoint_feature (const struct protocol_feature *feature,
+				  enum packet_support support,
+				  const char *value)
+{
+  struct remote_state *rs = get_remote_state ();
+
+  rs->static_tracepoints = (support == PACKET_ENABLE);
 }
 
 static void
@@ -3423,6 +3664,7 @@ remote_disconnected_tracing_feature (const struct protocol_feature *feature,
 				     const char *value)
 {
   struct remote_state *rs = get_remote_state ();
+
   rs->disconnected_tracing = (support == PACKET_ENABLE);
 }
 
@@ -3458,13 +3700,62 @@ static struct protocol_feature remote_protocol_features[] = {
     PACKET_ConditionalTracepoints },
   { "FastTracepoints", PACKET_DISABLE, remote_fast_tracepoint_feature,
     PACKET_FastTracepoints },
+  { "StaticTracepoints", PACKET_DISABLE, remote_static_tracepoint_feature,
+    PACKET_StaticTracepoints },
   { "DisconnectedTracing", PACKET_DISABLE, remote_disconnected_tracing_feature,
     -1 },
   { "ReverseContinue", PACKET_DISABLE, remote_supported_packet,
     PACKET_bc },
   { "ReverseStep", PACKET_DISABLE, remote_supported_packet,
     PACKET_bs },
+  { "TracepointSource", PACKET_DISABLE, remote_supported_packet,
+    PACKET_TracepointSource },
+  { "QAllow", PACKET_DISABLE, remote_supported_packet,
+    PACKET_QAllow },
 };
+
+static char *remote_support_xml;
+
+/* Register string appended to "xmlRegisters=" in qSupported query.  */
+
+void
+register_remote_support_xml (const char *xml)
+{
+#if defined(HAVE_LIBEXPAT)
+  if (remote_support_xml == NULL)
+    remote_support_xml = concat ("xmlRegisters=", xml, (char *) NULL);
+  else
+    {
+      char *copy = xstrdup (remote_support_xml + 13);
+      char *p = strtok (copy, ",");
+
+      do
+	{
+	  if (strcmp (p, xml) == 0)
+	    {
+	      /* already there */
+	      xfree (copy);
+	      return;
+	    }
+	}
+      while ((p = strtok (NULL, ",")) != NULL);
+      xfree (copy);
+
+      remote_support_xml = reconcat (remote_support_xml,
+				     remote_support_xml, ",", xml,
+				     (char *) NULL);
+    }
+#endif
+}
+
+static char *
+remote_query_supported_append (char *msg, const char *append)
+{
+  if (msg)
+    return reconcat (msg, msg, ";", append, (char *) NULL);
+  else
+    return xstrdup (append);
+}
 
 static void
 remote_query_supported (void)
@@ -3484,24 +3775,21 @@ remote_query_supported (void)
   rs->buf[0] = 0;
   if (remote_protocol_packets[PACKET_qSupported].support != PACKET_DISABLE)
     {
-      const char *qsupported = gdbarch_qsupported (target_gdbarch);
-      if (qsupported)
-	{
-	  char *q;
-	  if (rs->extended)
-	    q = concat ("qSupported:multiprocess+;", qsupported, NULL);
-	  else
-	    q = concat ("qSupported:", qsupported, NULL);
-	  putpkt (q);
-	  xfree (q);
-	}
-      else
-	{
-	  if (rs->extended)
-	    putpkt ("qSupported:multiprocess+");
-	  else
-	    putpkt ("qSupported");
-	}
+      char *q = NULL;
+      struct cleanup *old_chain = make_cleanup (free_current_contents, &q);
+
+      if (rs->extended)
+	q = remote_query_supported_append (q, "multiprocess+");
+
+      if (remote_support_xml)
+	q = remote_query_supported_append (q, remote_support_xml);
+
+      q = remote_query_supported_append (q, "qRelocInsn+");
+
+      q = reconcat (q, "qSupported:", q, (char *) NULL);
+      putpkt (q);
+
+      do_cleanups (old_chain);
 
       getpkt (&rs->buf, &rs->buf_size, 0);
 
@@ -4020,6 +4308,7 @@ int
 bin2hex (const gdb_byte *bin, char *hex, int count)
 {
   int i;
+
   /* May use a length, or a nul-terminated string as input.  */
   if (count == 0)
     count = strlen ((char *) bin);
@@ -4528,7 +4817,7 @@ remote_terminal_ours (void)
   remote_async_terminal_ours_p = 1;
 }
 
-void
+static void
 remote_console_output (char *msg)
 {
   char *p;
@@ -4537,6 +4826,7 @@ remote_console_output (char *msg)
     {
       char tb[2];
       char c = fromhex (p[0]) * 16 + fromhex (p[1]);
+
       tb[0] = c;
       tb[1] = 0;
       fputs_unfiltered (tb, gdb_stdtarg);
@@ -4578,6 +4868,7 @@ static struct stop_reply *
 stop_reply_xmalloc (void)
 {
   struct stop_reply *r = XMALLOC (struct stop_reply);
+
   r->next = NULL;
   return r;
 }
@@ -4635,6 +4926,7 @@ static void
 do_stop_reply_xfree (void *arg)
 {
   struct stop_reply *r = arg;
+
   stop_reply_xfree (r);
 }
 
@@ -4806,6 +5098,7 @@ Packet: '%s'\n"),
 	      else if (strncmp (p, "core", p1 - p) == 0)
 		{
 		  ULONGEST c;
+
 		  p = unpack_varlen_hex (++p1, &c);
 		  event->core = c;
 		}
@@ -4833,7 +5126,7 @@ Packet: '%s'\n"),
 	      if (reg == NULL)
 		error (_("Remote sent bad register number %s: %s\n\
 Packet: '%s'\n"),
-		       phex_nz (pnum, 0), p, buf);
+		       hex_string (pnum), p, buf);
 
 	      cached_reg.num = reg->regnum;
 
@@ -4905,6 +5198,7 @@ Packet: '%s'\n"),
 			      "process:", sizeof ("process:") - 1) == 0)
 	      {
 		ULONGEST upid;
+
 		p += sizeof ("process:") - 1;
 		unpack_varlen_hex (p, &upid);
 		pid = upid;
@@ -5018,7 +5312,6 @@ process_stop_reply (struct stop_reply *stop_reply,
 		    struct target_waitstatus *status)
 {
   ptid_t ptid;
-  struct thread_info *info;
 
   *status = stop_reply->ws;
   ptid = stop_reply->ptid;
@@ -5443,30 +5736,28 @@ process_g_packet (struct regcache *regcache)
       p += 2;
     }
 
-  {
-    int i;
-    for (i = 0; i < gdbarch_num_regs (gdbarch); i++)
-      {
-	struct packet_reg *r = &rsa->regs[i];
-	if (r->in_g_packet)
-	  {
-	    if (r->offset * 2 >= strlen (rs->buf))
-	      /* This shouldn't happen - we adjusted in_g_packet above.  */
-	      internal_error (__FILE__, __LINE__,
-			      "unexpected end of 'g' packet reply");
-	    else if (rs->buf[r->offset * 2] == 'x')
-	      {
-		gdb_assert (r->offset * 2 < strlen (rs->buf));
-		/* The register isn't available, mark it as such (at
-                   the same time setting the value to zero).  */
-		regcache_raw_supply (regcache, r->regnum, NULL);
-	      }
-	    else
-	      regcache_raw_supply (regcache, r->regnum,
-				   regs + r->offset);
-	  }
-      }
-  }
+  for (i = 0; i < gdbarch_num_regs (gdbarch); i++)
+    {
+      struct packet_reg *r = &rsa->regs[i];
+
+      if (r->in_g_packet)
+	{
+	  if (r->offset * 2 >= strlen (rs->buf))
+	    /* This shouldn't happen - we adjusted in_g_packet above.  */
+	    internal_error (__FILE__, __LINE__,
+			    "unexpected end of 'g' packet reply");
+	  else if (rs->buf[r->offset * 2] == 'x')
+	    {
+	      gdb_assert (r->offset * 2 < strlen (rs->buf));
+	      /* The register isn't available, mark it as such (at
+		 the same time setting the value to zero).  */
+	      regcache_raw_supply (regcache, r->regnum, NULL);
+	    }
+	  else
+	    regcache_raw_supply (regcache, r->regnum,
+				 regs + r->offset);
+	}
+    }
 }
 
 static void
@@ -5488,6 +5779,7 @@ remote_fetch_registers (struct target_ops *ops,
   if (regnum >= 0)
     {
       struct packet_reg *reg = packet_reg_from_regnum (rsa, regnum);
+
       gdb_assert (reg != NULL);
 
       /* If this register might be in the 'g' packet, try that first -
@@ -5603,11 +5895,13 @@ store_registers_using_G (const struct regcache *regcache)
      local buffer.  */
   {
     int i;
+
     regs = alloca (rsa->sizeof_g_packet);
     memset (regs, 0, rsa->sizeof_g_packet);
     for (i = 0; i < gdbarch_num_regs (get_regcache_arch (regcache)); i++)
       {
 	struct packet_reg *r = &rsa->regs[i];
+
 	if (r->in_g_packet)
 	  regcache_raw_collect (regcache, r->regnum, regs + r->offset);
       }
@@ -5642,6 +5936,7 @@ remote_store_registers (struct target_ops *ops,
   if (regnum >= 0)
     {
       struct packet_reg *reg = packet_reg_from_regnum (rsa, regnum);
+
       gdb_assert (reg != NULL);
 
       /* Always prefer to store registers using the 'P' packet if
@@ -5691,6 +5986,7 @@ static int
 hexnumstr (char *buf, ULONGEST num)
 {
   int len = hexnumlen (num);
+
   return hexnumnstr (buf, num, len);
 }
 
@@ -5719,6 +6015,7 @@ static CORE_ADDR
 remote_address_masked (CORE_ADDR addr)
 {
   int address_size = remote_address_size;
+
   /* If "remoteaddresssize" was not set, default to target address size.  */
   if (!address_size)
     address_size = gdbarch_addr_bit (target_gdbarch);
@@ -5729,6 +6026,7 @@ remote_address_masked (CORE_ADDR addr)
       /* Only create a mask when that mask can safely be constructed
          in a ULONGEST variable.  */
       ULONGEST mask = 1;
+
       mask = (mask << address_size) - 1;
       addr &= mask;
     }
@@ -6186,6 +6484,7 @@ handle_notification (char *buf, size_t length)
 	{
 	  struct cleanup *old_chain;
 	  struct stop_reply *reply = stop_reply_xmalloc ();
+
 	  old_chain = make_cleanup (do_stop_reply_xfree, reply);
 
 	  remote_parse_stop_reply (buf + 5, reply);
@@ -6242,8 +6541,8 @@ remote_send_printf (const char *format, ...)
 {
   struct remote_state *rs = get_remote_state ();
   int max_size = get_remote_packet_size ();
-
   va_list ap;
+
   va_start (ap, format);
 
   rs->buf[0] = '\0';
@@ -6263,6 +6562,7 @@ static void
 restore_remote_timeout (void *p)
 {
   int value = *(int *)p;
+
   remote_timeout = value;
 }
 
@@ -6278,9 +6578,9 @@ remote_flash_erase (struct target_ops *ops,
   int addr_size = gdbarch_addr_bit (target_gdbarch) / 8;
   int saved_remote_timeout = remote_timeout;
   enum packet_result ret;
-
   struct cleanup *back_to = make_cleanup (restore_remote_timeout,
                                           &saved_remote_timeout);
+
   remote_timeout = remote_flash_timeout;
 
   ret = remote_send_printf ("vFlashErase:%s,%s",
@@ -6756,8 +7056,8 @@ Bad checksum, sentsum=0x%x, csum=0x%x, buf=%s\n",
 	case '*':		/* Run length encoding.  */
           {
 	    int repeat;
- 	    csum += c;
 
+ 	    csum += c;
 	    c = readchar (remote_timeout);
 	    csum += c;
 	    repeat = c - ' ' + 3;	/* Compute repeat count.  */
@@ -7346,7 +7646,8 @@ watchpoint_to_Z_packet (int type)
 }
 
 static int
-remote_insert_watchpoint (CORE_ADDR addr, int len, int type)
+remote_insert_watchpoint (CORE_ADDR addr, int len, int type,
+			  struct expression *cond)
 {
   struct remote_state *rs = get_remote_state ();
   char *p;
@@ -7379,7 +7680,8 @@ remote_insert_watchpoint (CORE_ADDR addr, int len, int type)
 
 
 static int
-remote_remove_watchpoint (CORE_ADDR addr, int len, int type)
+remote_remove_watchpoint (CORE_ADDR addr, int len, int type,
+			  struct expression *cond)
 {
   struct remote_state *rs = get_remote_state ();
   char *p;
@@ -7448,6 +7750,7 @@ static int
 remote_stopped_data_address (struct target_ops *target, CORE_ADDR *addr_p)
 {
   int rc = 0;
+
   if (remote_stopped_by_watchpoint ())
     {
       *addr_p = remote_watch_data_address;
@@ -7542,7 +7845,7 @@ static unsigned long crc32_table[256] =
 {0, 0};
 
 static unsigned long
-crc32 (unsigned char *buf, int len, unsigned int crc)
+crc32 (const unsigned char *buf, int len, unsigned int crc)
 {
   if (!crc32_table[1])
     {
@@ -7566,38 +7869,59 @@ crc32 (unsigned char *buf, int len, unsigned int crc)
   return crc;
 }
 
+/* Verify memory using the "qCRC:" request.  */
+
+static int
+remote_verify_memory (struct target_ops *ops,
+		      const gdb_byte *data, CORE_ADDR lma, ULONGEST size)
+{
+  struct remote_state *rs = get_remote_state ();
+  unsigned long host_crc, target_crc;
+  char *tmp;
+
+  /* FIXME: assumes lma can fit into long.  */
+  xsnprintf (rs->buf, get_remote_packet_size (), "qCRC:%lx,%lx",
+	     (long) lma, (long) size);
+  putpkt (rs->buf);
+
+  /* Be clever; compute the host_crc before waiting for target
+     reply.  */
+  host_crc = crc32 (data, size, 0xffffffff);
+
+  getpkt (&rs->buf, &rs->buf_size, 0);
+  if (rs->buf[0] == 'E')
+    return -1;
+
+  if (rs->buf[0] != 'C')
+    error (_("remote target does not support this operation"));
+
+  for (target_crc = 0, tmp = &rs->buf[1]; *tmp; tmp++)
+    target_crc = target_crc * 16 + fromhex (*tmp);
+
+  return (host_crc == target_crc);
+}
+
 /* compare-sections command
 
    With no arguments, compares each loadable section in the exec bfd
    with the same memory range on the target, and reports mismatches.
-   Useful for verifying the image on the target against the exec file.
-   Depends on the target understanding the new "qCRC:" request.  */
-
-/* FIXME: cagney/1999-10-26: This command should be broken down into a
-   target method (target verify memory) and generic version of the
-   actual command.  This will allow other high-level code (especially
-   generic_load()) to make use of this target functionality.  */
+   Useful for verifying the image on the target against the exec file.  */
 
 static void
 compare_sections_command (char *args, int from_tty)
 {
-  struct remote_state *rs = get_remote_state ();
   asection *s;
-  unsigned long host_crc, target_crc;
   struct cleanup *old_chain;
-  char *tmp;
   char *sectdata;
   const char *sectname;
   bfd_size_type size;
   bfd_vma lma;
   int matched = 0;
   int mismatched = 0;
+  int res;
 
   if (!exec_bfd)
     error (_("command cannot be used without an exec file"));
-  if (!current_target.to_shortname ||
-      strcmp (current_target.to_shortname, "remote") != 0)
-    error (_("command can only be used with remote target"));
 
   for (s = exec_bfd->sections; s; s = s->next)
     {
@@ -7614,33 +7938,22 @@ compare_sections_command (char *args, int from_tty)
 
       matched = 1;		/* do this section */
       lma = s->lma;
-      /* FIXME: assumes lma can fit into long.  */
-      xsnprintf (rs->buf, get_remote_packet_size (), "qCRC:%lx,%lx",
-		 (long) lma, (long) size);
-      putpkt (rs->buf);
 
-      /* Be clever; compute the host_crc before waiting for target
-	 reply.  */
       sectdata = xmalloc (size);
       old_chain = make_cleanup (xfree, sectdata);
       bfd_get_section_contents (exec_bfd, s, sectdata, 0, size);
-      host_crc = crc32 ((unsigned char *) sectdata, size, 0xffffffff);
 
-      getpkt (&rs->buf, &rs->buf_size, 0);
-      if (rs->buf[0] == 'E')
+      res = target_verify_memory (sectdata, lma, size);
+
+      if (res == -1)
 	error (_("target memory fault, section %s, range %s -- %s"), sectname,
 	       paddress (target_gdbarch, lma),
 	       paddress (target_gdbarch, lma + size));
-      if (rs->buf[0] != 'C')
-	error (_("remote target does not support this operation"));
-
-      for (target_crc = 0, tmp = &rs->buf[1]; *tmp; tmp++)
-	target_crc = target_crc * 16 + fromhex (*tmp);
 
       printf_filtered ("Section %s, range %s -- %s: ", sectname,
 		       paddress (target_gdbarch, lma),
 		       paddress (target_gdbarch, lma + size));
-      if (host_crc == target_crc)
+      if (res)
 	printf_filtered ("matched.\n");
       else
 	{
@@ -7796,6 +8109,7 @@ remote_xfer_partial (struct target_ops *ops, enum target_object object,
   if (object == TARGET_OBJECT_MEMORY)
     {
       int xfered;
+
       errno = 0;
 
       /* If the remote target is connected but not running, we should
@@ -7841,6 +8155,16 @@ remote_xfer_partial (struct target_ops *ops, enum target_object object,
 	return remote_write_qxfer (ops, "siginfo", annex, writebuf, offset, len,
 				   &remote_protocol_packets
 				   [PACKET_qXfer_siginfo_write]);
+    }
+
+  if (object == TARGET_OBJECT_STATIC_TRACE_DATA)
+    {
+      if (readbuf)
+	return remote_read_qxfer (ops, "statictrace", annex, readbuf, offset, len,
+				  &remote_protocol_packets
+				  [PACKET_qXfer_statictrace_read]);
+      else
+	return -1;
     }
 
   /* Only handle flash writes.  */
@@ -8097,6 +8421,7 @@ remote_rcmd (char *command,
       for (p = buf; p[0] != '\0' && p[1] != '\0'; p += 2)
 	{
 	  char c = (fromhex (p[0]) << 4) + fromhex (p[1]);
+
 	  fputc_unfiltered (c, outbuf);
 	}
       break;
@@ -8113,6 +8438,7 @@ remote_memory_map (struct target_ops *ops)
   if (text)
     {
       struct cleanup *back_to = make_cleanup (xfree, text);
+
       result = parse_memory_map (text);
       do_cleanups (back_to);
     }
@@ -8376,6 +8702,48 @@ remote_get_thread_local_address (struct target_ops *ops,
   else
     throw_error (TLS_GENERIC_ERROR,
 		 _("TLS not supported or disabled on this target"));
+  /* Not reached.  */
+  return 0;
+}
+
+/* Provide thread local base, i.e. Thread Information Block address.
+   Returns 1 if ptid is found and thread_local_base is non zero.  */
+
+int
+remote_get_tib_address (ptid_t ptid, CORE_ADDR *addr)
+{
+  if (remote_protocol_packets[PACKET_qGetTIBAddr].support != PACKET_DISABLE)
+    {
+      struct remote_state *rs = get_remote_state ();
+      char *p = rs->buf;
+      char *endp = rs->buf + get_remote_packet_size ();
+      enum packet_result result;
+
+      strcpy (p, "qGetTIBAddr:");
+      p += strlen (p);
+      p = write_ptid (p, endp, ptid);
+      *p++ = '\0';
+
+      putpkt (rs->buf);
+      getpkt (&rs->buf, &rs->buf_size, 0);
+      result = packet_ok (rs->buf,
+			  &remote_protocol_packets[PACKET_qGetTIBAddr]);
+      if (result == PACKET_OK)
+	{
+	  ULONGEST result;
+
+	  unpack_varlen_hex (rs->buf, &result);
+	  if (addr)
+	    *addr = (CORE_ADDR) result;
+	  return 1;
+	}
+      else if (result == PACKET_UNKNOWN)
+	error (_("Remote target doesn't support qGetTIBAddr packet"));
+      else
+	error (_("Remote target failed to process qGetTIBAddr request"));
+    }
+  else
+    error (_("qGetTIBAddr not supported or disabled on this target"));
   /* Not reached.  */
   return 0;
 }
@@ -9211,6 +9579,7 @@ static int
 remote_supports_multi_process (void)
 {
   struct remote_state *rs = get_remote_state ();
+
   return remote_multi_process_p (rs);
 }
 
@@ -9218,6 +9587,7 @@ int
 remote_supports_cond_tracepoints (void)
 {
   struct remote_state *rs = get_remote_state ();
+
   return rs->cond_tracepoints;
 }
 
@@ -9225,15 +9595,24 @@ int
 remote_supports_fast_tracepoints (void)
 {
   struct remote_state *rs = get_remote_state ();
+
   return rs->fast_tracepoints;
 }
 
+static int
+remote_supports_static_tracepoints (void)
+{
+  struct remote_state *rs = get_remote_state ();
+
+  return rs->static_tracepoints;
+}
+
 static void
-remote_trace_init ()
+remote_trace_init (void)
 {
   putpkt ("QTinit");
   remote_get_noisy_reply (&target_buf, &target_buf_size);
-  if (strcmp (target_buf, "OK"))
+  if (strcmp (target_buf, "OK") != 0)
     error (_("Target does not support this command."));
 }
 
@@ -9259,12 +9638,52 @@ free_actions_list (char **actions_list)
   xfree (actions_list);
 }
 
+/* Recursive routine to walk through command list including loops, and
+   download packets for each command.  */
+
+static void
+remote_download_command_source (int num, ULONGEST addr,
+				struct command_line *cmds)
+{
+  struct remote_state *rs = get_remote_state ();
+  struct command_line *cmd;
+
+  for (cmd = cmds; cmd; cmd = cmd->next)
+    {
+      QUIT;	/* allow user to bail out with ^C */
+      strcpy (rs->buf, "QTDPsrc:");
+      encode_source_string (num, addr, "cmd", cmd->line,
+			    rs->buf + strlen (rs->buf),
+			    rs->buf_size - strlen (rs->buf));
+      putpkt (rs->buf);
+      remote_get_noisy_reply (&target_buf, &target_buf_size);
+      if (strcmp (target_buf, "OK"))
+	warning (_("Target does not support source download."));
+
+      if (cmd->control_type == while_control
+	  || cmd->control_type == while_stepping_control)
+	{
+	  remote_download_command_source (num, addr, *cmd->body_list);
+
+	  QUIT;	/* allow user to bail out with ^C */
+	  strcpy (rs->buf, "QTDPsrc:");
+	  encode_source_string (num, addr, "cmd", "end",
+				rs->buf + strlen (rs->buf),
+				rs->buf_size - strlen (rs->buf));
+	  putpkt (rs->buf);
+	  remote_get_noisy_reply (&target_buf, &target_buf_size);
+	  if (strcmp (target_buf, "OK"))
+	    warning (_("Target does not support source download."));
+	}
+    }
+}
+
 static void
 remote_download_tracepoint (struct breakpoint *t)
 {
   struct bp_location *loc;
   CORE_ADDR tpaddr;
-  char tmp[40];
+  char addrbuf[40];
   char buf[2048];
   char **tdp_actions;
   char **stepping_actions;
@@ -9285,9 +9704,9 @@ remote_download_tracepoint (struct breakpoint *t)
       (void) make_cleanup (free_actions_list_cleanup_wrapper, stepping_actions);
 
       tpaddr = loc->address;
-      sprintf_vma (tmp, (loc ? tpaddr : 0));
+      sprintf_vma (addrbuf, tpaddr);
       sprintf (buf, "QTDP:%x:%s:%c:%lx:%x", t->number, 
-	       tmp, /* address */
+	       addrbuf, /* address */
 	       (t->enable_state == bp_enabled ? 'E' : 'D'),
 	       t->step_count, t->pass_count);
       /* Fast tracepoints are mostly handled by the target, but we can
@@ -9316,6 +9735,25 @@ remote_download_tracepoint (struct breakpoint *t)
 	       give up on the trace run.  */
 	    warning (_("Target does not support fast tracepoints, downloading %d as regular tracepoint"), t->number);
 	}
+      else if (t->type == bp_static_tracepoint)
+	{
+	  /* Only test for support at download time; we may not know
+	     target capabilities at definition time.  */
+	  if (remote_supports_static_tracepoints ())
+	    {
+	      struct static_tracepoint_marker marker;
+
+	      if (target_static_tracepoint_marker_at (tpaddr, &marker))
+		strcat (buf, ":S");
+	      else
+		error ("Static tracepoint not valid during download");
+	    }
+	  else
+	    /* Fast tracepoints are functionally identical to regular
+	       tracepoints, so don't take lack of support as a reason
+	       to give up on the trace run.  */
+	    error (_("Target does not support static tracepoints"));
+	}
       /* If the tracepoint has a conditional, make it into an agent
 	 expression and append to the definition.  */
       if (loc->cond)
@@ -9337,15 +9775,12 @@ remote_download_tracepoint (struct breakpoint *t)
 	    warning (_("Target does not support conditional tracepoints, ignoring tp %d cond"), t->number);
 	}
 
-      if (t->actions || *default_collect)
+  if (t->commands || *default_collect)
 	strcat (buf, "-");
       putpkt (buf);
       remote_get_noisy_reply (&target_buf, &target_buf_size);
       if (strcmp (target_buf, "OK"))
 	error (_("Target does not support tracepoints."));
-
-      if (!t->actions && !*default_collect)
-	continue;
 
       /* do_single_steps (t); */
       if (tdp_actions)
@@ -9354,7 +9789,7 @@ remote_download_tracepoint (struct breakpoint *t)
 	    {
 	      QUIT;	/* allow user to bail out with ^C */
 	      sprintf (buf, "QTDP:-%x:%s:%s%c",
-		       t->number, tmp, /* address */
+		       t->number, addrbuf, /* address */
 		       tdp_actions[ndx],
 		       ((tdp_actions[ndx + 1] || stepping_actions)
 			? '-' : 0));
@@ -9371,7 +9806,7 @@ remote_download_tracepoint (struct breakpoint *t)
 	    {
 	      QUIT;	/* allow user to bail out with ^C */
 	      sprintf (buf, "QTDP:-%x:%s:%s%s%s",
-		       t->number, tmp, /* address */
+		       t->number, addrbuf, /* address */
 		       ((ndx == 0) ? "S" : ""),
 		       stepping_actions[ndx],
 		       (stepping_actions[ndx + 1] ? "-" : ""));
@@ -9382,6 +9817,36 @@ remote_download_tracepoint (struct breakpoint *t)
 		error (_("Error on target while setting tracepoints."));
 	    }
 	}
+
+      if (remote_protocol_packets[PACKET_TracepointSource].support == PACKET_ENABLE)
+	{
+	  if (t->addr_string)
+	    {
+	      strcpy (buf, "QTDPsrc:");
+	      encode_source_string (t->number, loc->address,
+				    "at", t->addr_string, buf + strlen (buf),
+				    2048 - strlen (buf));
+
+	      putpkt (buf);
+	      remote_get_noisy_reply (&target_buf, &target_buf_size);
+	      if (strcmp (target_buf, "OK"))
+		warning (_("Target does not support source download."));
+	    }
+	  if (t->cond_string)
+	    {
+	      strcpy (buf, "QTDPsrc:");
+	      encode_source_string (t->number, loc->address,
+				    "cond", t->cond_string, buf + strlen (buf),
+				    2048 - strlen (buf));
+	      putpkt (buf);
+	      remote_get_noisy_reply (&target_buf, &target_buf_size);
+	      if (strcmp (target_buf, "OK"))
+		warning (_("Target does not support source download."));
+	    }
+	  remote_download_command_source (t->number, loc->address,
+					  breakpoint_commands (t));
+	}
+
       do_cleanups (old_chain);
     }
 }
@@ -9401,10 +9866,14 @@ remote_download_trace_state_variable (struct trace_state_variable *tsv)
   *p++ = '\0';
   putpkt (rs->buf);
   remote_get_noisy_reply (&target_buf, &target_buf_size);
+  if (*target_buf == '\0')
+    error (_("Target does not support this command."));
+  if (strcmp (target_buf, "OK") != 0)
+    error (_("Error on target while downloading trace state variable."));
 }
 
 static void
-remote_trace_set_readonly_regions ()
+remote_trace_set_readonly_regions (void)
 {
   asection *s;
   bfd_size_type size;
@@ -9440,28 +9909,27 @@ remote_trace_set_readonly_regions ()
 }
 
 static void
-remote_trace_start ()
+remote_trace_start (void)
 {
   putpkt ("QTStart");
   remote_get_noisy_reply (&target_buf, &target_buf_size);
-  if (strcmp (target_buf, "OK"))
+  if (*target_buf == '\0')
+    error (_("Target does not support this command."));
+  if (strcmp (target_buf, "OK") != 0)
     error (_("Bogus reply from target: %s"), target_buf);
 }
 
 static int
 remote_get_trace_status (struct trace_status *ts)
 {
-  char *p, *p1, *p_temp;
-  ULONGEST val;
+  char *p;
   /* FIXME we need to get register block size some other way */
   extern int trace_regblock_size;
+
   trace_regblock_size = get_remote_arch_state ()->sizeof_g_packet;
 
   putpkt ("qTStatus");
-  getpkt (&target_buf, &target_buf_size, 0);
-  /* FIXME should handle more variety of replies */
-
-  p = target_buf;
+  p = remote_get_noisy_reply (&target_buf, &target_buf_size);
 
   /* If the remote target doesn't do tracing, flag it.  */
   if (*p == '\0')
@@ -9485,11 +9953,13 @@ remote_get_trace_status (struct trace_status *ts)
 }
 
 static void
-remote_trace_stop ()
+remote_trace_stop (void)
 {
   putpkt ("QTStop");
   remote_get_noisy_reply (&target_buf, &target_buf_size);
-  if (strcmp (target_buf, "OK"))
+  if (*target_buf == '\0')
+    error (_("Target does not support this command."));
+  if (strcmp (target_buf, "OK") != 0)
     error (_("Bogus reply from target: %s"), target_buf);
 }
 
@@ -9528,17 +9998,25 @@ remote_trace_find (enum trace_find_type type, int num,
 
   putpkt (rs->buf);
   reply = remote_get_noisy_reply (&(rs->buf), &sizeof_pkt);
+  if (*reply == '\0')
+    error (_("Target does not support this command."));
 
   while (reply && *reply)
     switch (*reply)
       {
       case 'F':
-	if ((target_frameno = (int) strtol (++reply, &reply, 16)) == -1)
-	  error (_("Target failed to find requested trace frame."));
+	p = ++reply;
+	target_frameno = (int) strtol (p, &reply, 16);
+	if (reply == p)
+	  error (_("Unable to parse trace frame number"));
+	if (target_frameno == -1)
+	  return -1;
 	break;
       case 'T':
-	if ((target_tracept = (int) strtol (++reply, &reply, 16)) == -1)
-	  error (_("Target failed to find requested trace frame."));
+	p = ++reply;
+	target_tracept = (int) strtol (p, &reply, 16);
+	if (reply == p)
+	  error (_("Unable to parse tracepoint number"));
 	break;
       case 'O':		/* "OK"? */
 	if (reply[1] == 'K' && reply[2] == '\0')
@@ -9577,7 +10055,7 @@ remote_get_trace_state_variable_value (int tsvnum, LONGEST *val)
 }
 
 static int
-remote_save_trace_data (char *filename)
+remote_save_trace_data (const char *filename)
 {
   struct remote_state *rs = get_remote_state ();
   char *p, *reply;
@@ -9590,7 +10068,11 @@ remote_save_trace_data (char *filename)
   p += 2 * bin2hex ((gdb_byte *) filename, p, 0);
   *p++ = '\0';
   putpkt (rs->buf);
-  remote_get_noisy_reply (&target_buf, &target_buf_size);
+  reply = remote_get_noisy_reply (&target_buf, &target_buf_size);
+  if (*reply != '\0')
+    error (_("Target does not support this command."));
+  if (strcmp (reply, "OK") != 0)
+    error (_("Bogus reply from target: %s"), reply);
   return 0;
 }
 
@@ -9642,20 +10124,45 @@ remote_set_disconnected_tracing (int val)
 {
   struct remote_state *rs = get_remote_state ();
 
-  sprintf (rs->buf, "QTDisconnected:%x", val);
-  putpkt (rs->buf);
-  remote_get_noisy_reply (&target_buf, &target_buf_size);
-  if (strcmp (target_buf, "OK"))
-    error (_("Target does not support this command."));
+  if (rs->disconnected_tracing)
+    {
+      char *reply;
+
+      sprintf (rs->buf, "QTDisconnected:%x", val);
+      putpkt (rs->buf);
+      reply = remote_get_noisy_reply (&target_buf, &target_buf_size);
+      if (*reply == '\0')
+	error (_("Target does not support this command."));
+      if (strcmp (reply, "OK") != 0)
+        error (_("Bogus reply from target: %s"), reply);
+    }
+  else if (val)
+    warning (_("Target does not support disconnected tracing."));
 }
 
 static int
 remote_core_of_thread (struct target_ops *ops, ptid_t ptid)
 {
   struct thread_info *info = find_thread_ptid (ptid);
+
   if (info && info->private)
     return info->private->core;
   return -1;
+}
+
+static void
+remote_set_circular_trace_buffer (int val)
+{
+  struct remote_state *rs = get_remote_state ();
+  char *reply;
+
+  sprintf (rs->buf, "QTBuffer:circular:%x", val);
+  putpkt (rs->buf);
+  reply = remote_get_noisy_reply (&target_buf, &target_buf_size);
+  if (*reply == '\0')
+    error (_("Target does not support this command."));
+  if (strcmp (reply, "OK") != 0)
+    error (_("Bogus reply from target: %s"), reply);
 }
 
 static void
@@ -9690,6 +10197,7 @@ Specify the serial device it is connected to\n\
   remote_ops.to_kill = remote_kill;
   remote_ops.to_load = generic_load;
   remote_ops.to_mourn_inferior = remote_mourn;
+  remote_ops.to_notice_signals = remote_notice_signals;
   remote_ops.to_thread_alive = remote_thread_alive;
   remote_ops.to_find_new_threads = remote_threads_info;
   remote_ops.to_pid_to_str = remote_pid_to_str;
@@ -9736,7 +10244,15 @@ Specify the serial device it is connected to\n\
   remote_ops.to_upload_trace_state_variables = remote_upload_trace_state_variables;
   remote_ops.to_get_raw_trace_data = remote_get_raw_trace_data;
   remote_ops.to_set_disconnected_tracing = remote_set_disconnected_tracing;
+  remote_ops.to_set_circular_trace_buffer = remote_set_circular_trace_buffer;
   remote_ops.to_core_of_thread = remote_core_of_thread;
+  remote_ops.to_verify_memory = remote_verify_memory;
+  remote_ops.to_get_tib_address = remote_get_tib_address;
+  remote_ops.to_set_permissions = remote_set_permissions;
+  remote_ops.to_static_tracepoint_marker_at
+    = remote_static_tracepoint_marker_at;
+  remote_ops.to_static_tracepoint_markers_by_strid
+    = remote_static_tracepoint_markers_by_strid;
 }
 
 /* Set up the extended remote vector by making a copy of the standard
@@ -9834,6 +10350,7 @@ static int
 remote_async_mask (int new_mask)
 {
   int curr_mask = remote_async_mask_value;
+
   remote_async_mask_value = new_mask;
   return curr_mask;
 }
@@ -9864,6 +10381,7 @@ show_remote_cmd (char *args, int from_tty)
       {
 	struct cleanup *option_chain
 	  = make_cleanup_ui_out_tuple_begin_end (uiout, "option");
+
 	ui_out_field_string (uiout, "name", list->name);
 	ui_out_text (uiout, ":  ");
 	if (list->type == show_cmd)
@@ -10156,6 +10674,10 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 			 "qGetTLSAddr", "get-thread-local-storage-address",
 			 0);
 
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_qGetTIBAddr],
+			 "qGetTIBAddr", "get-thread-information-block-address",
+			 0);
+
   add_packet_config_cmd (&remote_protocol_packets[PACKET_bc],
 			 "bc", "reverse-continue", 0);
 
@@ -10202,6 +10724,18 @@ Show the maximum size of the address (in bits) in a memory packet."), NULL,
 			 "ConditionalTracepoints", "conditional-tracepoints", 0);
   add_packet_config_cmd (&remote_protocol_packets[PACKET_FastTracepoints],
 			 "FastTracepoints", "fast-tracepoints", 0);
+
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_TracepointSource],
+			 "TracepointSource", "TracepointSource", 0);
+
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_QAllow],
+			 "QAllow", "allow", 0);
+
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_StaticTracepoints],
+			 "StaticTracepoints", "static-tracepoints", 0);
+
+  add_packet_config_cmd (&remote_protocol_packets[PACKET_qXfer_statictrace_read],
+                         "qXfer:statictrace:read", "read-sdata-object", 0);
 
   /* Keep the old ``set remote Z-packet ...'' working.  Each individual
      Z sub-packet has its own set and show commands, but users may

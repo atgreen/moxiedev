@@ -186,6 +186,7 @@ static struct stoken operator_stoken (const char *);
 %token <tsval> STRING
 %token <tsval> CHAR
 %token <ssym> NAME /* BLOCKNAME defined below to give it higher precedence. */
+%token <ssym> UNKNOWN_CPP_NAME
 %token <voidval> COMPLETE
 %token <tsym> TYPENAME
 %type <sval> name
@@ -389,6 +390,29 @@ exp	:	exp '('
 			{ write_exp_elt_opcode (OP_FUNCALL);
 			  write_exp_elt_longcst ((LONGEST) end_arglist ());
 			  write_exp_elt_opcode (OP_FUNCALL); }
+	;
+
+exp	:	UNKNOWN_CPP_NAME '('
+			{
+			  /* This could potentially be a an argument defined
+			     lookup function (Koenig).  */
+			  write_exp_elt_opcode (OP_ADL_FUNC);
+			  write_exp_elt_block (expression_context_block);
+			  write_exp_elt_sym (NULL); /* Placeholder.  */
+			  write_exp_string ($1.stoken);
+			  write_exp_elt_opcode (OP_ADL_FUNC);
+
+			/* This is to save the value of arglist_len
+			   being accumulated by an outer function call.  */
+
+			  start_arglist ();
+			}
+		arglist ')'	%prec ARROW
+			{
+			  write_exp_elt_opcode (OP_FUNCALL);
+			  write_exp_elt_longcst ((LONGEST) end_arglist ());
+			  write_exp_elt_opcode (OP_FUNCALL);
+			}
 	;
 
 lcurly	:	'{'
@@ -1224,6 +1248,7 @@ name	:	NAME { $$ = $1.stoken; }
 	|	BLOCKNAME { $$ = $1.stoken; }
 	|	TYPENAME { $$ = $1.stoken; }
 	|	NAME_OR_INT  { $$ = $1.stoken; }
+	|	UNKNOWN_CPP_NAME  { $$ = $1.stoken; }
 	|	operator { $$ = $1; }
 	;
 
@@ -1236,6 +1261,15 @@ name_not_typename :	NAME
    context where only a name could occur, this might be useful.
   	|	NAME_OR_INT
  */
+	|	operator
+			{
+			  $$.stoken = $1;
+			  $$.sym = lookup_symbol ($1.ptr,
+						  expression_context_block,
+						  VAR_DOMAIN,
+						  &$$.is_a_field_of_this);
+			}
+	|	UNKNOWN_CPP_NAME
 	;
 
 %%
@@ -1700,7 +1734,7 @@ static int
 parse_string_or_char (char *tokptr, char **outptr, struct typed_stoken *value,
 		      int *host_chars)
 {
-  int quote, i;
+  int quote;
   enum c_string_type type;
 
   /* Build the gdb internal form of the input string in tempbuf.  Note
@@ -2379,6 +2413,12 @@ classify_name (struct block *block)
   /* Any other kind of symbol */
   yylval.ssym.sym = sym;
   yylval.ssym.is_a_field_of_this = is_a_field_of_this;
+
+  if (sym == NULL
+      && parse_language->la_language == language_cplus
+      && !lookup_minimal_symbol (copy, NULL, NULL))
+    return UNKNOWN_CPP_NAME;
+
   return NAME;
 }
 
@@ -2429,7 +2469,6 @@ static int
 yylex (void)
 {
   token_and_value current;
-  char *name;
   int first_was_coloncolon, last_was_coloncolon, first_iter;
 
   if (popping && !VEC_empty (token_and_value, token_fifo))
@@ -2514,7 +2553,7 @@ yylex (void)
     {
       token_and_value cc;
       memset (&cc, 0, sizeof (token_and_value));
-      if (first_was_coloncolon)
+      if (first_was_coloncolon && first_iter)
 	{
 	  yylval = cc.value;
 	  return COLONCOLON;

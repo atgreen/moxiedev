@@ -247,7 +247,6 @@ struct serial *
 serial_for_fd (int fd)
 {
   struct serial *scb;
-  struct serial_ops *ops;
 
   for (scb = scb_base; scb; scb = scb->next)
     if (scb->fd == fd)
@@ -408,6 +407,18 @@ serial_write (struct serial *scb, const char *str, int len)
          in case we are getting ready to dump core or something. */
       gdb_flush (serial_logfp);
     }
+  if (serial_debug_p (scb))
+    {
+      int count;
+
+      for (count = 0; count < len; count++)
+	{
+	  fprintf_unfiltered (gdb_stdlog, "[");
+	  serial_logchar (gdb_stdlog, 'w', str[count] & 0xff, 0);
+	  fprintf_unfiltered (gdb_stdlog, "]");
+	}
+      gdb_flush (gdb_stdlog);
+    }
 
   return (scb->ops->write (scb, str, len));
 }
@@ -517,6 +528,7 @@ serial_async (struct serial *scb,
 	      void *context)
 {
   int changed = ((scb->async_handler == NULL) != (handler == NULL));
+
   scb->async_handler = handler;
   scb->async_context = context;
   /* Only change mode if there is a need.  */

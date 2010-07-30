@@ -53,6 +53,33 @@ class ContainerPrinter:
     def children(self):
         return self._iterator(self.val['elements'], self.val['len'])
 
+# Test a printer where to_string is None
+class NoStringContainerPrinter:
+    class _iterator:
+        def __init__ (self, pointer, len):
+            self.start = pointer
+            self.pointer = pointer
+            self.end = pointer + len
+
+        def __iter__(self):
+            return self
+
+        def next(self):
+            if self.pointer == self.end:
+                raise StopIteration
+            result = self.pointer
+            self.pointer = self.pointer + 1
+            return ('[%d]' % int (result - self.start), result.dereference())
+
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        return None
+
+    def children(self):
+        return self._iterator(self.val['elements'], self.val['len'])
+
 class pp_s:
     def __init__(self, val):
         self.val = val
@@ -167,6 +194,11 @@ def lookup_function (val):
 
     return None
 
+def disable_lookup_function ():
+    lookup_function.enabled = False
+
+def enable_lookup_function ():
+    lookup_function.enabled = True
 
 def register_pretty_printers ():
     pretty_printers_dict[re.compile ('^struct s$')]   = pp_s
@@ -190,8 +222,10 @@ def register_pretty_printers ():
     # both the C and C++ cases.
     pretty_printers_dict[re.compile ('^struct string_repr$')] = string_print
     pretty_printers_dict[re.compile ('^struct container$')] = ContainerPrinter
+    pretty_printers_dict[re.compile ('^struct justchildren$')] = NoStringContainerPrinter
     pretty_printers_dict[re.compile ('^string_repr$')] = string_print
     pretty_printers_dict[re.compile ('^container$')] = ContainerPrinter
+    pretty_printers_dict[re.compile ('^justchildren$')] = NoStringContainerPrinter
     
     pretty_printers_dict[re.compile ('^struct ns$')]  = pp_ns
     pretty_printers_dict[re.compile ('^ns$')]  = pp_ns

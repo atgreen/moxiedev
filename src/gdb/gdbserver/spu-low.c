@@ -355,6 +355,12 @@ spu_detach (int pid)
 }
 
 static void
+spu_mourn (struct process_info *process)
+{
+  remove_process (process);
+}
+
+static void
 spu_join (int pid)
 {
   int status, ret;
@@ -448,7 +454,6 @@ spu_wait (ptid_t ptid, struct target_waitstatus *ourstatus, int options)
       ourstatus->kind =  TARGET_WAITKIND_EXITED;
       ourstatus->value.integer = WEXITSTATUS (w);
       clear_inferiors ();
-      remove_process (find_process_pid (ret));
       return pid_to_ptid (ret);
     }
   else if (!WIFSTOPPED (w))
@@ -457,7 +462,6 @@ spu_wait (ptid_t ptid, struct target_waitstatus *ourstatus, int options)
       ourstatus->kind = TARGET_WAITKIND_SIGNALLED;
       ourstatus->value.sig = target_signal_from_host (WTERMSIG (w));
       clear_inferiors ();
-      remove_process (find_process_pid (ret));
       return pid_to_ptid (ret);
     }
 
@@ -557,7 +561,8 @@ spu_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
 {
   int fd, ret;
   CORE_ADDR addr;
-  char annex[32];
+  char annex[32], lslr_annex[32], buf[32];
+  CORE_ADDR lslr;
 
   /* We must be stopped on a spu_run system call.  */
   if (!parse_spufs_run (&fd, &addr))
@@ -566,6 +571,22 @@ spu_read_memory (CORE_ADDR memaddr, unsigned char *myaddr, int len)
   /* Use the "mem" spufs file to access SPU local store.  */
   sprintf (annex, "%d/mem", fd);
   ret = spu_proc_xfer_spu (annex, myaddr, NULL, memaddr, len);
+  if (ret > 0)
+    return ret == len ? 0 : EIO;
+
+  /* SPU local store access wraps the address around at the
+     local store limit.  We emulate this here.  To avoid needing
+     an extra access to retrieve the LSLR, we only do that after
+     trying the original address first, and getting end-of-file.  */
+  sprintf (lslr_annex, "%d/lslr", fd);
+  memset (buf, 0, sizeof buf);
+  if (spu_proc_xfer_spu (lslr_annex, (unsigned char *)buf, NULL,
+			 0, sizeof buf) <= 0)
+    return ret;
+
+  lslr = strtoul (buf, NULL, 16);
+  ret = spu_proc_xfer_spu (annex, myaddr, NULL, memaddr & lslr, len);
+
   return ret == len ? 0 : EIO;
 }
 
@@ -578,7 +599,8 @@ spu_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
 {
   int fd, ret;
   CORE_ADDR addr;
-  char annex[32];
+  char annex[32], lslr_annex[32], buf[32];
+  CORE_ADDR lslr;
 
   /* We must be stopped on a spu_run system call.  */
   if (!parse_spufs_run (&fd, &addr))
@@ -587,6 +609,22 @@ spu_write_memory (CORE_ADDR memaddr, const unsigned char *myaddr, int len)
   /* Use the "mem" spufs file to access SPU local store.  */
   sprintf (annex, "%d/mem", fd);
   ret = spu_proc_xfer_spu (annex, NULL, myaddr, memaddr, len);
+  if (ret > 0)
+    return ret == len ? 0 : EIO;
+
+  /* SPU local store access wraps the address around at the
+     local store limit.  We emulate this here.  To avoid needing
+     an extra access to retrieve the LSLR, we only do that after
+     trying the original address first, and getting end-of-file.  */
+  sprintf (lslr_annex, "%d/lslr", fd);
+  memset (buf, 0, sizeof buf);
+  if (spu_proc_xfer_spu (lslr_annex, (unsigned char *)buf, NULL,
+			 0, sizeof buf) <= 0)
+    return ret;
+
+  lslr = strtoul (buf, NULL, 16);
+  ret = spu_proc_xfer_spu (annex, NULL, myaddr, memaddr & lslr, len);
+
   return ret == len ? 0 : EIO;
 }
 
@@ -608,6 +646,7 @@ static struct target_ops spu_target_ops = {
   spu_attach,
   spu_kill,
   spu_detach,
+  spu_mourn,
   spu_join,
   spu_thread_alive,
   spu_resume,

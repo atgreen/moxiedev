@@ -23,14 +23,6 @@
 
 #include "server.h"
 
-struct thread_info
-{
-  struct inferior_list_entry entry;
-  void *target_data;
-  void *regcache_data;
-  unsigned int gdb_id;
-};
-
 struct inferior_list all_processes;
 struct inferior_list all_threads;
 struct inferior_list all_dlls;
@@ -179,6 +171,8 @@ add_thread (ptid_t thread_id, void *target_data)
   memset (new_thread, 0, sizeof (*new_thread));
 
   new_thread->entry.id = thread_id;
+  new_thread->last_resume_kind = resume_continue;
+  new_thread->last_status.kind = TARGET_WAITKIND_IGNORE;
 
   add_inferior_to_list (&all_threads, & new_thread->entry);
 

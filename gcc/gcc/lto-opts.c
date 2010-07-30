@@ -31,6 +31,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "opts.h"
 #include "options.h"
 #include "target.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "lto-streamer.h"
 
@@ -293,7 +294,7 @@ output_options (struct lto_output_stream *stream)
 void
 lto_write_options (void)
 {
-  char *const section_name = lto_get_section_name (LTO_section_opts, NULL);
+  char *const section_name = lto_get_section_name (LTO_section_opts, NULL, NULL);
   struct lto_output_stream stream;
   struct lto_simple_header header;
   struct lto_output_stream *header_stream;
@@ -348,21 +349,39 @@ input_options (struct lto_input_block *ib)
 void
 lto_read_file_options (struct lto_file_decl_data *file_data)
 {
-  size_t len;
-  const char *data;
+  size_t len, l, skip;
+  const char *data, *p;
   const struct lto_simple_header *header;
   int32_t opts_offset;
   struct lto_input_block ib;
 
   data = lto_get_section_data (file_data, LTO_section_opts, NULL, &len);
-  header = (const struct lto_simple_header *) data;
-  opts_offset = sizeof (*header);
+  if (!data)
+	  return;
 
-  lto_check_version (header->lto_header.major_version,
-		     header->lto_header.minor_version);
+  /* Option could be multiple sections merged (through ld -r) 
+     Keep reading all options.  This is ok right now because
+     the options just get mashed together anyways.
+     This will have to be done differently once lto-opts knows
+     how to associate options with different files. */
+  l = len;
+  p = data;
+  do 
+    { 
+      header = (const struct lto_simple_header *) p;
+      opts_offset = sizeof (*header);
 
-  LTO_INIT_INPUT_BLOCK (ib, data + opts_offset, 0, header->main_size);
-  input_options (&ib);
+      lto_check_version (header->lto_header.major_version,
+			 header->lto_header.minor_version);
+      
+      LTO_INIT_INPUT_BLOCK (ib, p + opts_offset, 0, header->main_size);
+      input_options (&ib);
+      
+      skip = header->main_size + opts_offset;
+      l -= skip;
+      p += skip;
+    } 
+  while (l > 0);
 
   lto_free_section_data (file_data, LTO_section_opts, 0, data, len);
 }
@@ -383,7 +402,7 @@ lto_reissue_options (void)
       const struct cl_option *option = &cl_options[o->code];
 
       if (option->flag_var)
-	set_option (option, o->value, o->arg);
+	set_option (o->code, o->value, o->arg, 0 /*DK_UNSPECIFIED*/);
 
       if (o->type == CL_TARGET)
 	targetm.handle_option (o->code, o->arg, o->value);

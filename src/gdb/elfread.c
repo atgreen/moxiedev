@@ -223,7 +223,6 @@ elf_symtab_read (struct objfile *objfile, int type,
 		 int copy_names)
 {
   struct gdbarch *gdbarch = get_objfile_arch (objfile);
-  long storage_needed;
   asymbol *sym;
   long i;
   CORE_ADDR symaddr;
@@ -426,6 +425,7 @@ elf_symtab_read (struct objfile *objfile, int type,
 		  /* Named Local variable in a Data section.
 		     Check its name for stabs-in-elf.  */
 		  int special_local_sect;
+
 		  if (strcmp ("Bbss.bss", sym->name) == 0)
 		    special_local_sect = SECT_OFF_BSS (objfile);
 		  else if (strcmp ("Ddata.data", sym->name) == 0)
@@ -618,9 +618,7 @@ build_id_verify (const char *filename, struct build_id *check)
   else
     retval = 1;
 
-  if (!bfd_close (abfd))
-    warning (_("cannot close \"%s\": %s"), filename,
-	     bfd_errmsg (bfd_get_error ()));
+  gdb_bfd_close_or_warn (abfd);
 
   xfree (found);
 
@@ -690,14 +688,6 @@ build_id_to_debug_filename (struct build_id *build_id)
 static char *
 find_separate_debug_file_by_buildid (struct objfile *objfile)
 {
-  asection *sect;
-  char *basename, *name_copy, *debugdir;
-  char *dir = NULL;
-  char *debugfile = NULL;
-  char *canon_name = NULL;
-  bfd_size_type debuglink_size;
-  unsigned long crc32;
-  int i;
   struct build_id *build_id;
 
   build_id = build_id_bfd_get (objfile->obfd);
@@ -754,7 +744,6 @@ elf_symfile_read (struct objfile *objfile, int symfile_flags)
   bfd *abfd = objfile->obfd;
   struct elfinfo ei;
   struct cleanup *back_to;
-  CORE_ADDR offset;
   long symcount = 0, dynsymcount = 0, synthcount, storage_needed;
   asymbol **symbol_table = NULL, **dyn_symbol_table = NULL;
   asymbol *synthsyms;
@@ -901,6 +890,7 @@ elf_symfile_read (struct objfile *objfile, int symfile_flags)
       if (debugfile)
 	{
 	  bfd *abfd = symfile_bfd_open (debugfile);
+
 	  symbol_file_add_separate (abfd, symfile_flags, objfile);
 	  xfree (debugfile);
 	}

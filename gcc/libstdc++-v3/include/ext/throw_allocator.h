@@ -110,7 +110,7 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
     void
     insert(void* p, size_t size)
     {
-      if (p == NULL)
+      if (!p)
 	{
 	  std::string error("annotate_base::insert null insert!\n");
 	  log_to_string(error, make_entry(p, size));
@@ -618,6 +618,12 @@ _GLIBCXX_BEGIN_NAMESPACE(__gnu_cxx)
       size_type
       max_size() const throw()
       { return _M_allocator.max_size(); }
+
+      pointer
+      address(reference __x) const { return std::__addressof(__x); }
+
+      const_pointer
+      address(const_reference __x) const { return std::__addressof(__x); }
 
       pointer
       allocate(size_type __n, std::allocator<void>::const_pointer hint = 0)

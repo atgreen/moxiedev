@@ -1,9 +1,312 @@
-2010-03-17  Anthony Green  <green@moxielogic.com>
+2010-07-23  Naveen.H.S  <naveen.S@kpitcummins.com>
+	    Ina Pandit  <ina.pandit@kpitcummins.com>
 
-	* readelf.c: Include moxie.h
-	(is_32bit_abs_reloc): Identify 32-bit absolute
-	relocation for moxie.
-	(dump_relocations): Handle moxie relocs.
+	* binutils/readelf.c: Add support for V850E2 and V850E2V3.
+
+2010-07-22  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c: Add Moxie support.
+
+2010-07-20  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (process_program_headers): Don't ignore all zero size
+	sections.
+
+2010-07-19  Andreas Schwab  <schwab@redhat.com>
+
+	* readelf.c (process_section_headers): Update key to flags.
+
+2010-07-17  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	* objcopy.c (copy_usage): Tweak previous typofix.
+
+2010-07-17  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* objcopy.c (copy_usage): Fix a typo.
+
+2010-07-15  Kai Tietz <kai.tietz@onevision.com>
+
+	* dllwrap.c (main): Make sure is_leading_underscore
+	gets initialized with correct default.
+
+2010-07-05  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (uncompress_section_contents): Avoid gcc-4.6 warning.
+
+2010-07-03  Cary Coutant  <ccoutant@google.com>
+
+	* objdump.c (load_specific_debug_section): Decompress section contents
+	before applying relocations.
+	* readelf.c (load_specific_debug_section): Update section size after
+	decompression.
+
+2010-06-29  Alan Modra  <amodra@gmail.com>
+
+   	PR binutils/3166
+	* objcopy.c (is_strip_section): Revert 2006-09-05.
+	(setup_section): Make SHT_GROUP section nobits.
+
+2010-06-29  Alan Modra  <amodra@gmail.com>
+
+	* configure: Regenerate.
+	* po/POTFILES.in: Regenerate.
+
+2010-06-27  Alan Modra  <amodra@gmail.com>
+
+	* resbin.c (res_to_bin_accelerator): Delete set but unused variables.
+
+2010-06-17  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/11711
+	* windres.c (enum option_values): New enum.
+	(long_options): Use separate option number for --include-dir
+	option.
+	(main): Separate backwards compatibility check from code to
+	implement --include-dir.  Check to see if directory exists and do
+	not complain if it does.
+
+2010-06-15  Joseph Myers  <joseph@codesourcery.com>
+
+	* readelf.c (display_tic6x_attribute, process_tic6x_specific):
+	New.
+	(process_arch_specific): Call process_tic6x_specific for
+	EM_TI_C6000.
+
+2010-06-11  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* readelf.c (dump_ia64_vms_dynamic_fixups): Cast to unsigned long
+	for 0x%lx.
+
+2010-06-11  Tristan Gingold  <gingold@adacore.com>
+	    Doug Rupp <rupp@gnat.com>
+
+	* readelf.c (is_ia64_vms): New function.
+	(dump_relocations): Use it.
+	(get_machine_flags): Display IA-64 OpenVMS flags.
+	(process_program_headers): No error on OpenVMS if no .dynamic section.
+	(struct ia64_vms_dynfixup, struct ia64_vms_dynimgrela): New
+	declarations.
+	(dump_ia64_vms_dynamic_fixups): New function.
+	(dump_ia64_vms_dynamic_relocs): Ditto.
+	(process_ia64_vms_dynamic_relocs): Ditto.
+	(process_relocs): Handle IA-64 OpenVMS relocs.
+	(VMS_EPOCH_OFFSET, VMS_GRANULARITY_FACTOR): New macros.
+	(print_vms_time): New function.
+	(dynamic_section_ia64_val): Handle DT_IA_64_VMS_LINKTIME and
+	DT_IA_64_VMS_LNKFLAGS.
+	(get_ia64_symbol_other): New function.
+	(get_symbol_other): Handle EM_IA_64.
+
+2010-06-11  Tristan Gingold  <gingold@adacore.com>
+
+	* unwind-ia64.c (unw_print_abreg): Add const to special_reg.
+	(UNW_DEC_ABI): Ditto for abiname.
+	(unw_decode_table): Make it const.
+
+2010-06-10  Tristan Gingold  <gingold@adacore.com>
+
+	* readelf.c (slurp_ia64_unwind_table): IA64 rela relocations are
+	not inplace.
+
+2010-05-25  Daniel Jacobowitz  <dan@codesourcery.com>
+	    Joseph Myers  <joseph@codesourcery.com>
+	    Andrew Stubbs  <ams@codesourcery.com>
+
+	* readelf.c (get_machine_flags): Handle EF_SH_PIC and EF_SH_FDPIC.
+
+2010-05-25  Jay Krell  <jay.krell@cornell.edu>
+
+	PR ld/11621
+	* Makefile.am: Replace all occurences of .o with .@OBJEXT@
+	* Makefile.in: Regenerate.
+
+2010-05-24  Tristan Gingold  <gingold@adacore.com>
+
+	* readelf.c (usage): Add new trace sections for --debug-dump.
+	(process_section_headers): Handle dump of trace sections.
+	* objdump.c (usage): Add new trace sections for --dwarf.
+	* dwarf.h (do_trace_info, do_trace_abbrevs): New variables.
+	(do_trace_aranges): Ditto.
+	(enum dwarf_section_display_enum): Add trace_info, trace_abbrev
+	and trace_aranges literals.
+	* dwarf.c (do_trace_info, do_trace_abbrevs): New variables.
+	(do_trace_aranges): Ditto.
+	(process_debug_info): Add abbrev_sec argument and replace
+	abbrev with abbrev_sec.
+	(load_debug_info): Adjust call of process_debug_info.
+	(display_debug_info): Ditto.
+	(display_trace_info): New function.
+	(dwarf_select_sections_by_names): Add trace_info, trace_abbrevs
+	and trace_aranges sections name.
+	(dwarf_select_sections_all): Also select trace sections.
+	(debug_displays): Reindent.  Add entries for the trace sections.
+	* doc/binutils.texi (readelf): Document new --dwarf parameters.
+	(objdump): Ditto.
+
+2010-05-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	PR gas/11600
+	* readelf.c (get_elf_section_flags): Treat SHF_EXCLUDE as a
+	generic flag.
+
+2010-05-07  Tristan Gingold  <gingold@adacore.com>
+
+	* Makefile.in: Regenerate with automake 1.11.1.
+	* aclocal.m4: Ditto.
+	* doc/Makefile.in: Ditto.
+
+2010-05-06  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* dwarf.c (init_dwarf_regnames): Handle EM_L1OM.
+	* readelf.c (get_elf_section_flags): Likewise.
+	(process_section_headers): Likewise.
+
+2010-05-05  Nick Clifton  <nickc@redhat.com>
+
+	* po/es.po: Updated Spanish translation.
+
+2010-04-27  Kai Tietz  <kai.tietz@onevision.com>
+
+	* dlltool.c (main): Query for bfd's underscoring default for
+	default target case.
+
+2010-04-27  Nick Clifton  <nickc@redhat.com>
+
+	* po/ru.po: Updated Russian translation.
+
+2010-04-23  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (process_program_headers): Replace use of
+	ELF_IS_SECTION_IN_SEGMENT_MEMORY with ELF_SECTION_IN_SEGMENT.
+
+2010-04-22  Nick Clifton  <nickc@redhat.com>
+
+	* po/binutils.pot: Updated by the Translation project.
+	* po/fi.po: Updated Finnish translation.
+	* po/vi.po: Updated Vietnamese translation.
+	* po/bg.po: New Bulgarian translation.
+	* configure.in (ALL_LINGUAS): Add bg.
+	* configure: Regenerate.
+
+2010-04-20  Nick Clifton  <nickc@redhat.com>
+
+	* po/fr.po: Updated french translation.
+
+2010-04-20  Nick Clifton  <nickc@redhat.com>
+
+	* readelf.c: Add _() macros to constant strings that are
+	translatable.
+
+2010-04-15  Matthew Gretton-Dann  <matthew.gretton-dann@arm.com>
+
+	* readelf.c (arm_attr_tag_FP_arch): Rename from arm_attr_tag_VFP_arch.
+	(arm_attr_tag_ABI_align8_needed): Remove.
+	(arm_attr_tag_ABI_align8_preserved): Remove.
+	(arm_attr_tag_ABI_HardFP_use): Update text strings.
+	(arm_attr_public_tags): Add strings for ABI v2.08 attribute tags.
+	(display_arm_attribute): Add decoding of ABI v2.08 attributes.
+
+2010-04-13  Nick Clifton  <nickc@redhat.com>
+
+	PR binutils/11419
+	* dwarf.c (process_debug_info): Initialise the signature array.
+
+2010-04-09  Nick Clifton  <nickc@redhat.com>
+
+	* dwarf.c (process_debug_info): Remove unused variable
+	cu_abbrev_offset_ptr.
+	(display_debug_lines_decoded): Remove unused variable prev_line.
+	* elfedit.c (process_archive): Remove unused variable
+	file_name_size.
+	* ieee.c (ieee_start_compilation_unit): Remove unused variable
+	nindx.
+	(ieee_set_type): Remove unused variables info, targetindx and
+	baseindx.
+	* objdump.c (disassmble_byte): Remove unused variable done_dot.
+	* rddbg.c (read_section_stabs_debugging_info): Remove unused
+	variable other.
+	* readelf.c (dump_section_as_strings): Remove unused variable
+	addr.
+	(process_archive): Remove unused variable file_name_size.
+	* stabs.c (parse_stab_string): Mark desc parameter as unused.
+	Remove unused variable lineno.
+	(parse_stab_struct_type): Remove unused variable orig.
+	(stab_demangle_type): Remove unused variables constp, volatilep
+	and hold.
+
+2010-04-07  Alan Modra  <amodra@gmail.com>
+
+	* configure: Regenerate.
+
+2010-04-06  Nick Clifton  <nickc@redhat.com>
+
+	* po/vi.po: Updated Vietnamese translation.
+
+2010-04-05  Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf.c (struct Frame_Chunk): Add ptr_size and segment_size
+	fields.
+	(display_debug_frames): Handle CIE version 4.
+
+	* dwarf.c (struct State_Machine_Registers): Add op_index field,
+	change end_sequence type to unsigned char.
+	(reset_state_machine): Clear op_index.
+	(process_extended_line_op): For DW_LNE_set_address clear op_index.
+	(display_debug_lines_raw): Initialize li_max_ops_per_insn.
+	Track op_index state machine register and print it if
+	li_max_ops_per_insn is != 1.
+	(display_debug_lines_decoded): Likewise.
+
+2010-04-01  Jakub Jelinek  <jakub@redhat.com>
+
+	* dwarf.c (read_and_display_attr_value): Don't reject
+	dwarf_version == 4.  Handle DW_FORM_sec_offset, DW_FORM_flag_present
+	and DW_FORM_exprloc.
+	(process_debug_info): Handle cu_version == 4.
+	(display_debug_lines_raw, display_debug_lines_decoded): Handle
+	li_version == 4.
+
+2010-03-30  Andreas Schwab  <schwab@linux-m68k.org>
+
+	* Makefile.am (CONFIG_STATUS_DEPENDENCIES): Define.
+	* Makefile.in: Regenerate.
+
+2010-03-25  Joseph Myers  <joseph@codesourcery.com>
+
+	* MAINTAINERS: Add self as TI C6X maintainer.
+	* NEWS: Add news entry for TI C6X support.
+	* readelf.c: Include elf/tic6x.h.
+	(guess_is_rela): Handle EM_TI_C6000.
+	(dump_relocations): Likewise.
+	(get_tic6x_dynamic_type): New.
+	(get_dynamic_type): Call it.
+	(get_machine_flags): Handle EF_C6000_REL.
+	(get_osabi_name): Handle machine-specific values only for relevant
+	machines.  Handle C6X values.
+	(get_tic6x_segment_type): New.
+	(get_segment_type): Call it.
+	(get_tic6x_section_type_name): New.
+	(get_section_type_name): Call it.
+	(is_32bit_abs_reloc, is_16bit_abs_reloc, is_none_reloc): Handle
+	EM_TI_C6000.
+
+2010-03-25  Thomas Schwinge  <thomas@codesourcery.com>
+
+	* doc/binutils.texi (readelf) <unwind information>: Mention support for
+	ARM unwind tables.
+
+2010-03-18  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* readelf.c (decode_arm_unwind): Increase buf size to 9 byte.
+
+2010-03-17  Alan Modra  <amodra@gmail.com>
+
+	* readelf.c (dump_arm_unwind): Warning fix.
+
+2010-03-16  Daniel Jacobowitz  <dan@codesourcery.com>
+
+	* MAINTAINERS: Update my email address.  List Tristan Gingold
+	as the release branch maintainer.
 
 2010-03-05  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 

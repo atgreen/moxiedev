@@ -152,6 +152,10 @@ struct record_entry
 /* This is the debug switch for process record.  */
 int record_debug = 0;
 
+/* If true, query if PREC cannot record memory
+   change of next instruction.  */
+int record_memory_query = 0;
+
 struct record_core_buf_entry
 {
   struct record_core_buf_entry *prev;
@@ -544,6 +548,7 @@ record_check_insn_num (int set_terminal)
 	  if (record_stop_at_limit)
 	    {
 	      int q;
+
 	      if (set_terminal)
 		target_terminal_ours ();
 	      q = yquery (_("Do you want to auto delete previous execution "
@@ -838,8 +843,6 @@ record_core_open_1 (char *name, int from_tty)
 static void
 record_open_1 (char *name, int from_tty)
 {
-  struct target_ops *t;
-
   if (record_debug)
     fprintf_unfiltered (gdb_stdlog, "Process record: record_open\n");
 
@@ -1070,6 +1073,9 @@ record_wait (struct target_ops *ops,
 			"record_resume_step = %d\n",
 			record_resume_step);
 
+  record_get_sig = 0;
+  signal (SIGINT, record_sig_handler);
+
   if (!RECORD_IS_REPLAY && ops != &record_core_ops)
     {
       if (record_resume_step)
@@ -1088,6 +1094,9 @@ record_wait (struct target_ops *ops,
 	    {
 	      ret = record_beneath_to_wait (record_beneath_to_wait_ops,
 					    ptid, status, options);
+
+	      if (record_resume_step)
+	        return ret;
 
 	      /* Is this a SIGTRAP?  */
 	      if (status->kind == TARGET_WAITKIND_STOPPED
@@ -1184,8 +1193,6 @@ record_wait (struct target_ops *ops,
 	    }
 	}
 
-      record_get_sig = 0;
-      signal (SIGINT, record_sig_handler);
       /* If GDB is in terminal_inferior mode, it will not get the signal.
          And in GDB replay mode, GDB doesn't need to be in terminal_inferior
          mode, because inferior will not executed.
@@ -1299,8 +1306,6 @@ Process record: hit hw watchpoint.\n");
 	}
       while (continue_flag);
 
-      signal (SIGINT, handle_sigint);
-
 replay_out:
       if (record_get_sig)
 	status->value.sig = TARGET_SIGNAL_INT;
@@ -1312,6 +1317,8 @@ replay_out:
 
       discard_cleanups (old_cleanups);
     }
+
+  signal (SIGINT, handle_sigint);
 
   do_cleanups (set_cleanups);
   return inferior_ptid;
@@ -1398,6 +1405,7 @@ record_registers_change (struct regcache *regcache, int regnum)
   if (regnum < 0)
     {
       int i;
+
       for (i = 0; i < gdbarch_num_regs (get_regcache_arch (regcache)); i++)
 	{
 	  if (record_arch_list_add_reg (regcache, i))
@@ -1464,6 +1472,7 @@ record_store_registers (struct target_ops *ops, struct regcache *regcache,
 	      if (regno < 0)
 		{
 		  int i;
+
 		  for (i = 0;
 		       i < gdbarch_num_regs (get_regcache_arch (regcache));
 		       i++)
@@ -1749,85 +1758,84 @@ record_core_xfer_partial (struct target_ops *ops, enum target_object object,
 		          const gdb_byte *writebuf, ULONGEST offset,
                           LONGEST len)
 {
-   if (object == TARGET_OBJECT_MEMORY)
-     {
-       if (record_gdb_operation_disable || !writebuf)
-         {
-           struct target_section *p;
-           for (p = record_core_start; p < record_core_end; p++)
-             {
-               if (offset >= p->addr)
-                 {
-                   struct record_core_buf_entry *entry;
-		   ULONGEST sec_offset;
+  if (object == TARGET_OBJECT_MEMORY)
+    {
+      if (record_gdb_operation_disable || !writebuf)
+	{
+	  struct target_section *p;
 
-                   if (offset >= p->endaddr)
-                     continue;
+	  for (p = record_core_start; p < record_core_end; p++)
+	    {
+	      if (offset >= p->addr)
+		{
+		  struct record_core_buf_entry *entry;
+		  ULONGEST sec_offset;
 
-                   if (offset + len > p->endaddr)
-                     len = p->endaddr - offset;
+		  if (offset >= p->endaddr)
+		    continue;
 
-                   sec_offset = offset - p->addr;
+		  if (offset + len > p->endaddr)
+		    len = p->endaddr - offset;
 
-                   /* Read readbuf or write writebuf p, offset, len.  */
-                   /* Check flags.  */
-                   if (p->the_bfd_section->flags & SEC_CONSTRUCTOR
-                       || (p->the_bfd_section->flags & SEC_HAS_CONTENTS) == 0)
-                     {
-                       if (readbuf)
-                         memset (readbuf, 0, len);
-                       return len;
-                     }
-                   /* Get record_core_buf_entry.  */
-                   for (entry = record_core_buf_list; entry;
-                        entry = entry->prev)
-                     if (entry->p == p)
-                       break;
-                   if (writebuf)
-                     {
-                       if (!entry)
-                         {
-                           /* Add a new entry.  */
-                           entry
-                             = (struct record_core_buf_entry *)
-                                 xmalloc
-                                   (sizeof (struct record_core_buf_entry));
-                           entry->p = p;
-                           if (!bfd_malloc_and_get_section (p->bfd,
-                                                            p->the_bfd_section,
-                                                            &entry->buf))
-                             {
-                               xfree (entry);
-                               return 0;
-                             }
-                           entry->prev = record_core_buf_list;
-                           record_core_buf_list = entry;
-                         }
+		  sec_offset = offset - p->addr;
 
-                        memcpy (entry->buf + sec_offset, writebuf,
-				(size_t) len);
-                     }
-                   else
-                     {
-                       if (!entry)
-                         return record_beneath_to_xfer_partial
-                                  (record_beneath_to_xfer_partial_ops,
-                                   object, annex, readbuf, writebuf,
-                                   offset, len);
+		  /* Read readbuf or write writebuf p, offset, len.  */
+		  /* Check flags.  */
+		  if (p->the_bfd_section->flags & SEC_CONSTRUCTOR
+		      || (p->the_bfd_section->flags & SEC_HAS_CONTENTS) == 0)
+		    {
+		      if (readbuf)
+			memset (readbuf, 0, len);
+		      return len;
+		    }
+		  /* Get record_core_buf_entry.  */
+		  for (entry = record_core_buf_list; entry;
+		       entry = entry->prev)
+		    if (entry->p == p)
+		      break;
+		  if (writebuf)
+		    {
+		      if (!entry)
+			{
+			  /* Add a new entry.  */
+			  entry = (struct record_core_buf_entry *)
+			    xmalloc (sizeof (struct record_core_buf_entry));
+			  entry->p = p;
+			  if (!bfd_malloc_and_get_section (p->bfd,
+							   p->the_bfd_section,
+							   &entry->buf))
+			    {
+			      xfree (entry);
+			      return 0;
+			    }
+			  entry->prev = record_core_buf_list;
+			  record_core_buf_list = entry;
+			}
 
-                       memcpy (readbuf, entry->buf + sec_offset,
-			       (size_t) len);
-                     }
+		      memcpy (entry->buf + sec_offset, writebuf,
+			      (size_t) len);
+		    }
+		  else
+		    {
+		      if (!entry)
+			return record_beneath_to_xfer_partial
+			  (record_beneath_to_xfer_partial_ops,
+			   object, annex, readbuf, writebuf,
+			   offset, len);
 
-                   return len;
-                 }
-             }
+		      memcpy (readbuf, entry->buf + sec_offset,
+			      (size_t) len);
+		    }
 
-           return -1;
-         }
-       else
-         error (_("You can't do that without a process to debug."));
-     }
+		  return len;
+		}
+	    }
+
+	  return -1;
+	}
+      else
+	error (_("You can't do that without a process to debug."));
+    }
 
   return record_beneath_to_xfer_partial (record_beneath_to_xfer_partial_ops,
                                          object, annex, readbuf, writebuf,
@@ -1863,7 +1871,7 @@ record_core_has_execution (struct target_ops *ops)
 static void
 init_record_core_ops (void)
 {
-  record_core_ops.to_shortname = "record_core";
+  record_core_ops.to_shortname = "record-core";
   record_core_ops.to_longname = "Process record and replay target";
   record_core_ops.to_doc =
     "Log program while executing and replay execution from log.";
@@ -2174,7 +2182,6 @@ record_restore (void)
 
   while (1)
     {
-      int ret;
       uint8_t rectype;
       uint32_t regnum, len, signal, count;
       uint64_t addr;
@@ -2321,6 +2328,7 @@ record_save_cleanups (void *data)
 {
   bfd *obfd = data;
   char *pathname = xstrdup (bfd_get_filename (obfd));
+
   bfd_close (obfd);
   unlink (pathname);
   xfree (pathname);
@@ -2333,7 +2341,6 @@ static void
 cmd_record_save (char *args, int from_tty)
 {
   char *recfilename, recfilename_buffer[40];
-  int recfd;
   struct record_entry *cur_record_list;
   uint32_t magic;
   struct regcache *regcache;
@@ -2542,6 +2549,555 @@ cmd_record_save (char *args, int from_tty)
 		   recfilename);
 }
 
+/* For "record pic" command.  */
+
+static struct cmd_list_element *set_record_pic_cmdlist,
+                               *show_record_pic_cmdlist;
+
+static void
+set_record_pic_command (char *args, int from_tty)
+{
+  printf_unfiltered (_("\
+\"set record pic\" must be followed by an apporpriate subcommand.\n"));
+  help_list (set_record_cmdlist, "set record pic ", all_commands, gdb_stdout);
+}
+
+static void
+show_record_pic_command (char *args, int from_tty)
+{
+  cmd_show_list (show_record_pic_cmdlist, from_tty, "");
+}
+
+static const char record_pic_function[] = "function";
+static const char record_pic_line[] = "line";
+static const char *record_pic_enum[] =
+{
+  record_pic_function,
+  record_pic_line,
+  NULL,
+};
+static const char *set_record_pic_type = record_pic_line;
+
+static int record_pic_hide_nofunction = 1;
+static int record_pic_hide_nosource = 1;
+static int  record_pic_hide_same = 1;
+
+static void
+record_pic_fputs (FILE *fp, const char *buf)
+{
+  if (fputs (buf, fp) == EOF)
+    error (_("Write to file error."));
+}
+
+struct function_list
+{
+  struct function_list *next;
+  CORE_ADDR addr;
+  int fid;
+};
+struct node_list
+{
+  struct node_list *next;
+  int count;
+  CORE_ADDR addr;
+  int showall;
+  struct symtab *symtab;
+  int line;
+  struct minimal_symbol *function;
+  int fid;
+};
+struct edge_list
+{
+  struct edge_list *next;
+  int count;
+  struct node_list *s;
+  struct node_list *t;
+  int frame_diff;
+  int is_return;
+};
+struct function_list *function_list = NULL;
+struct node_list *node_list = NULL;
+struct edge_list *edge_list = NULL;
+
+static void
+record_pic_cleanups (void *data)
+{
+  FILE *fp = data;
+  struct function_list *fl, *fl2;
+  struct node_list *nl, *nl2;
+  struct edge_list *el, *el2;
+
+  fl = function_list;
+  while (fl)
+    {
+      fl2 = fl;
+      fl = fl->next;
+      xfree (fl2);
+    }
+  function_list = NULL;
+
+  nl = node_list;
+  while (nl)
+    {
+      nl2 = nl;
+      nl = nl->next;
+      xfree (nl2);
+    }
+  node_list = NULL;
+
+  el = edge_list;
+  while (el)
+    {
+      el2 = el;
+      el = el->next;
+      xfree (el2);
+    }
+  edge_list = NULL;
+
+  fclose (fp);
+}
+
+static void
+record_pic_node (char *buf, int buf_max, struct gdbarch *gdbarch,
+                 const char *type, struct node_list *nlp)
+{
+  if (type == record_pic_function)
+    {
+      snprintf (buf, buf_max, "%s %s %s",
+		(nlp->symtab) ? nlp->symtab->filename : "",
+                (nlp->function) ? SYMBOL_LINKAGE_NAME (nlp->function) : "",
+                (!nlp->function) ? paddress (gdbarch, nlp->addr) : "");
+    }
+  else
+    {
+      if (nlp->showall)
+        {
+	  snprintf (buf, buf_max, "%s:%d %s %s", nlp->symtab->filename,
+                    nlp->line,
+                    (nlp->function) ? SYMBOL_LINKAGE_NAME (nlp->function) : "",
+                    paddress (gdbarch, nlp->addr));
+        }
+      else
+        {
+          if (nlp->symtab)
+	    snprintf (buf, buf_max, "%s %d %s",
+                      (nlp->function) ? SYMBOL_LINKAGE_NAME (nlp->function) : "",
+                      nlp->line, paddress (gdbarch, nlp->addr));
+          else
+            snprintf (buf, buf_max, "%s %s",
+                      (nlp->function) ? SYMBOL_LINKAGE_NAME (nlp->function) : "",
+                      paddress (gdbarch, nlp->addr));
+        }
+    }
+}
+
+static void
+record_pic_edge (char *buf, int buf_max, struct edge_list *elp,
+		 char *node, char *prev_node)
+{
+  if (elp->frame_diff)
+    {
+      if (elp->is_return)
+        snprintf (buf, buf_max, "edge: {color:blue sourcename: \"%s\" "
+                                "targetname: \"%s\"",
+		  prev_node, node);
+      else
+        snprintf (buf, buf_max, "edge: {color:red sourcename: \"%s\" "
+                                "targetname: \"%s\"",
+		  prev_node, node);
+    }
+  else
+    snprintf (buf, buf_max,
+              "edge: {sourcename: \"%s\" targetname: \"%s\"",
+              prev_node, node);
+}
+
+/* Save the execution log to a vcg file.  */
+
+static void
+cmd_record_pic (char *args, int from_tty)
+{
+  char *recfilename, recfilename_buffer[40];
+  FILE *fp;
+  struct cleanup *old_cleanups, *set_cleanups;
+  struct regcache *regcache;
+  struct gdbarch *gdbarch;
+  struct record_entry *cur_record_list;
+  char prev_node[256], line[256];
+  CORE_ADDR prev_addr;
+  struct frame_id fi, caller_fi, prev_fi, prev_caller_fi;
+  struct function_list *function_list_tail, *function_list_prev;
+  struct edge_list *edge_list_tail = NULL;
+  struct node_list *node_list_tail = NULL;
+  struct symtab_and_line sal, prev_sal;
+  struct node_list *prev_nlp;
+  struct node_list prev_nlp_real;
+  int fid_count = 1;
+
+  /* Check if record target is running.  */
+  if (current_target.to_stratum != record_stratum)
+    error (_("This command can only be used with target 'record' \
+or target 'record-core'."));
+
+  if (args && *args)
+    recfilename = args;
+  else
+    {
+      /* Default recfile name is "gdb_record_PID.vcg".  */
+      snprintf (recfilename_buffer, sizeof (recfilename_buffer),
+                "gdb_record_%d.vcg", PIDGET (inferior_ptid));
+      recfilename = recfilename_buffer;
+    }
+
+  /* Open the output file.  */
+  fp = fopen (recfilename, "wb");
+  if (!fp)
+    error (_("Unable to open file '%s'"), recfilename);
+
+  old_cleanups = make_cleanup (record_pic_cleanups, fp);
+
+  /* Save the current record entry to "cur_record_list".  */
+  cur_record_list = record_list;
+
+  /* Get the values of regcache and gdbarch.  */
+  regcache = get_current_regcache ();
+  gdbarch = get_regcache_arch (regcache);
+
+  /* Disable the GDB operation record.  */
+  set_cleanups = record_gdb_operation_disable_set ();
+
+  /* Reverse execute to the begin of record list.  */
+  while (1)
+    {
+      /* Check for beginning and end of log.  */
+      if (record_list == &record_first)
+        break;
+
+      record_exec_insn (regcache, gdbarch, record_list);
+
+      if (record_list->prev)
+        record_list = record_list->prev;
+    }
+
+  /* Write out the record log.  */
+  /* Write the head.  */
+  record_pic_fputs (fp, "graph: {title: \"GDB process record\"\n");
+
+  /* Write the first node.  */
+  record_pic_fputs (fp, "node: {title: \"[BEGIN]\" vertical_order:0}\n");
+
+  /* Initialization.  */
+  snprintf (prev_node, 256, "[BEGIN]");
+  prev_fi = null_frame_id;
+  prev_caller_fi = null_frame_id;
+  prev_addr = 0;
+  prev_sal.symtab = NULL;
+  prev_sal.pc = 0;
+  prev_sal.end = 0;
+  prev_nlp_real.addr = 0;
+  prev_nlp = &prev_nlp_real;
+
+  /* Create first entry for function_list.  */
+  function_list = xmalloc (sizeof (struct function_list));
+  function_list->next = NULL;
+  function_list->addr = 0;
+  function_list->fid = -1;
+  function_list_tail = function_list;
+  function_list_prev = function_list;
+
+  /* Save the entries to fp and forward execute to the end of
+     record list.  */
+  record_list = &record_first;
+  while (1)
+    {
+      if (record_list->type == record_end)
+        {
+          int frame_diff = 0;
+          CORE_ADDR addr = regcache_read_pc (regcache);
+
+          /* Check if the ADDR is stil in the same line with the
+             prev cycle.  */
+          if (prev_sal.symtab
+              && addr >= prev_sal.pc && addr < prev_sal.end)
+            goto exec;
+          sal = find_pc_line (addr, 0);
+
+          if (record_pic_hide_nosource && !sal.symtab)
+            goto exec;
+
+          /* Check if the inferior is in same frame with prev cycle.
+             Check both the current fi and caller fi because the last
+             addr of function is different with current function.  */
+          reinit_frame_cache ();
+          fi = get_frame_id (get_current_frame ());
+          caller_fi = frame_unwind_caller_id (get_current_frame ());
+          if (!frame_id_eq (prev_fi, fi)
+              && !frame_id_eq (prev_caller_fi, caller_fi))
+            frame_diff = 1;
+
+          if (set_record_pic_type == record_pic_line || frame_diff)
+            {
+              int is_return = 0;
+              struct node_list *nlp = NULL;
+              struct edge_list *elp = NULL;
+              char node[256];
+              struct minimal_symbol *function;
+
+	      /* Get the node addr.  */
+              if (set_record_pic_type == record_pic_function)
+                {
+                  /* Get the start addr of function.  */
+                  addr = get_pc_function_start (addr);
+                  if (addr == 0)
+                    {
+                      if (record_pic_hide_nofunction)
+                        goto exec;
+                      addr = regcache_read_pc (regcache);
+                    }
+                }
+              else
+                {
+                  /* Get the start addr of line.  */
+                  if (sal.symtab)
+                    addr = sal.pc;
+                }
+
+              function = lookup_minimal_symbol_by_pc (addr);
+              if (!function && record_pic_hide_nofunction)
+                goto exec;
+
+              if (frame_id_eq (fi, prev_caller_fi))
+                is_return = 1;
+
+              if (record_pic_hide_same)
+                {
+                  /* Check if addr in node_list.  */
+                  for (nlp = node_list; nlp; nlp = nlp->next)
+                    {
+                      if (nlp->addr == addr)
+                        {
+			  if (!is_return
+			      || set_record_pic_type != record_pic_function)
+                            nlp->count ++;
+                          break;
+                        }
+                    }
+
+                  /* Check if prev_addr and addr in edge_list.  */
+	          if (nlp)
+	            {
+                      for (elp = edge_list; elp; elp = elp->next)
+                        {
+                          if (elp->s->addr == prev_addr && elp->t->addr == addr)
+                            {
+                              elp->count ++;
+                              break;
+                            }
+                        }
+		    }
+                }
+
+              if (!nlp)
+                {
+                  struct node_list nl;
+                  CORE_ADDR function_addr;
+                  struct function_list *flp;
+
+                  nl.addr = addr;
+                  if (frame_diff && sal.symtab)
+                    nl.showall = 1;
+                  else
+                    nl.showall = 0;
+                  nl.symtab = sal.symtab;
+                  nl.line = sal.line;
+                  nl.function = function;
+
+                  /* Get the fid of the nl.  */
+                  if (set_record_pic_type != record_pic_function)
+                    function_addr = get_pc_function_start (addr);
+                  else
+                    function_addr = addr;
+                  if (function_list_prev->addr == function_addr)
+                    nl.fid = function_list_prev->fid;
+                  else
+                    {
+                      for (flp = function_list; flp; flp = flp->next)
+                        {
+                          if (flp->addr == function_addr)
+                            {
+                              nl.fid = flp->fid;
+                              break;
+                            }
+                        }
+                      if (flp == NULL)
+                        {
+                          /* Creat a new entry to function_list.  */
+                          nl.fid = fid_count ++;
+                          flp = xmalloc (sizeof (struct function_list));
+                          flp->addr = function_addr;
+                          flp->fid = nl.fid;
+                          flp->next = NULL;
+		          function_list_tail->next = flp;
+                          function_list_tail = flp;
+                        }
+                      function_list_prev = flp;
+                    }
+
+                  if (record_pic_hide_same)
+                    {
+                      nlp = xmalloc (sizeof (struct node_list));
+                      *nlp = nl;
+                      nlp->count = 1;
+
+                      /* Add node to node_list.  */
+                      nlp->next = NULL;
+		      if (node_list_tail)
+                        node_list_tail->next = nlp;
+		      if (node_list == NULL)
+		        node_list = nlp;
+                      node_list_tail = nlp;
+                    }
+                  else
+                    {
+                      /* Draw the node.  */
+                      record_pic_node (node, 256, gdbarch,
+                                       set_record_pic_type, &nl);
+		      snprintf (line, 256, "%s i:%s", node,
+		                pulongest (record_list->u.end.insn_num));
+		      strcpy (node, line);
+                      snprintf (line, 256, "node: {title: \"%s\" "
+                                           "vertical_order: %d}\n",
+                                node, nl.fid);
+                      record_pic_fputs (fp, line);
+                    }
+                }
+
+              if (!elp)
+                {
+                  struct edge_list el;
+
+                  el.is_return = is_return;
+                  el.frame_diff = frame_diff;
+
+                  if (record_pic_hide_same)
+                    {
+                      elp = xmalloc (sizeof (struct edge_list));
+                      *elp = el;
+		      elp->s = prev_nlp;
+                      elp->t = nlp;
+                      elp->count = 1;
+
+                      /* Add edge to edge_list.  */
+                      elp->next = NULL;
+		      if (edge_list_tail)
+                        edge_list_tail->next = elp;
+		      if (edge_list == NULL)
+		        edge_list = elp;
+                      edge_list_tail = elp;
+                    }
+                  else
+                    {
+                      /* Draw the edge.  */
+                      record_pic_edge (line, 256, &el, node, prev_node);
+                      record_pic_fputs (fp, line);
+		      record_pic_fputs (fp, " }\n");
+                    }
+                }
+
+              if (record_pic_hide_same)
+                prev_nlp = nlp;
+              else
+                snprintf (prev_node, 256, "%s", node);
+              prev_addr = addr;
+            }
+
+          prev_sal = sal;
+          prev_fi = fi;
+          prev_caller_fi = caller_fi;
+        }
+
+exec:
+      /* Execute entry.  */
+      record_exec_insn (regcache, gdbarch, record_list);
+
+      if (record_list->next)
+        record_list = record_list->next;
+      else
+        break;
+    }
+
+  if (record_pic_hide_same)
+    {
+      struct node_list *nlp = NULL;
+      struct edge_list *elp = NULL;
+      char node[256];
+
+      for (nlp = node_list; nlp; nlp = nlp->next)
+        {
+          /* Draw the node.  */
+          record_pic_node (node, 256, gdbarch, set_record_pic_type, nlp);
+          snprintf (line, 256, "node: {title: \"%s c:%d\" "
+                               "vertical_order: %d}\n", node,
+		    nlp->count, nlp->fid);
+          record_pic_fputs (fp, line);
+	}
+
+      record_pic_node (node, 256, gdbarch, set_record_pic_type, edge_list->t);
+      snprintf (line, 256,
+	        "edge: {color:red sourcename: \"[BEGIN]\" targetname: \"%s c:%d\"}\n",
+	        node, edge_list->count);
+      record_pic_fputs (fp, line);
+      for (elp = edge_list->next; elp; elp = elp->next)
+        {
+          /* Draw the edge.  */
+	  record_pic_node (prev_node, 256, gdbarch, set_record_pic_type,
+			   elp->s);
+	  snprintf (line, 256, "%s c:%d", prev_node, elp->s->count);
+	  strcpy (prev_node, line);
+	  record_pic_node (node, 256, gdbarch, set_record_pic_type,
+			   elp->t);
+	  snprintf (line, 256, "%s c:%d", node, elp->t->count);
+	  strcpy (node, line);
+          record_pic_edge (line, 256, elp, node, prev_node);
+          record_pic_fputs (fp, line);
+          snprintf (line, 256, " label: \"c:%d\"}\n", elp->count);
+	  record_pic_fputs (fp, line);
+        }
+    }
+
+  /* Write the last node.  */
+  snprintf (line, 256, "node: {title: \"[END]\" vertical_order: %d}\n",
+            fid_count);
+  record_pic_fputs (fp, line);
+  snprintf (line, 256,
+	    "edge: {color:red sourcename: \"%s\" targetname: \"[END]\" }\n",
+	    prev_node);
+  record_pic_fputs (fp, line);
+
+  /* Write the tail.  */
+  record_pic_fputs (fp, "}\n");
+
+  /* Reverse execute to cur_record_list.  */
+  while (1)
+    {
+      /* Check for beginning and end of log.  */
+      if (record_list == cur_record_list)
+        break;
+
+      record_exec_insn (regcache, gdbarch, record_list);
+
+      if (record_list->prev)
+        record_list = record_list->prev;
+    }
+
+  do_cleanups (set_cleanups);
+  do_cleanups (old_cleanups);
+
+  /* Succeeded.  */
+  printf_filtered (_("Saved file %s with execution log.\n"),
+		   recfilename);
+}
+
 /* record_goto_insn -- rewind the record log (forward or backward,
    depending on DIR) to the given entry, changing the program state
    correspondingly.  */
@@ -2727,4 +3283,76 @@ record/replay buffer.  Zero means unlimited.  Default is 200000."),
 Restore the program to its state at instruction number N.\n\
 Argument is instruction number, as shown by 'info record'."),
 	   &record_cmdlist);
+
+  add_setshow_boolean_cmd ("memory-query", no_class,
+			   &record_memory_query, _("\
+Set whether query if PREC cannot record memory change of next instruction."),
+                           _("\
+Show whether query if PREC cannot record memory change of next instruction."),
+                           _("\
+Default is OFF.\n\
+When ON, query if PREC cannot record memory change of next instruction."),
+			   NULL, NULL,
+			   &set_record_cmdlist, &show_record_cmdlist);
+
+  /* For "record pic" command.  */
+  c = add_cmd ("pic", class_obscure, cmd_record_pic,
+	       _("Save the execution log to a vcg file.\n\
+Argument is optional filename.\n\
+Default filename is 'gdb_record_<process_id>.vcg'."),
+	       &record_cmdlist);
+  set_cmd_completer (c, filename_completer);
+  add_prefix_cmd ("pic", class_support, set_record_pic_command,
+		  _("Set record pic options"), &set_record_pic_cmdlist,
+		  "set record pic ", 0, &set_record_cmdlist);
+  add_prefix_cmd ("pic", class_support, show_record_pic_command,
+		  _("Show record pic options"), &show_record_pic_cmdlist,
+		  "show record pic ", 0, &show_record_cmdlist);
+  add_setshow_enum_cmd ("type", no_class,
+			record_pic_enum, &set_record_pic_type, _("\
+Set the type of the nodes that record pic command saved."), _("\
+Show the type of the nodes that record pic command saved."), _("\
+When LINE, each node of vcg file that command record pic saved\n\
+will be a line of the inferior.\n\
+When FUNCTION, each node of vcg file that command record pic saved\n\
+will be a function of the inferior."),
+			NULL, NULL,
+			&set_record_pic_cmdlist, &show_record_pic_cmdlist);
+  add_setshow_boolean_cmd ("hide-nofunction", no_class,
+			   &record_pic_hide_nofunction, _("\
+Set whether record pic command hide the nodes that don't have the function name."), _("\
+Show whether record pic command hide the nodes that don't have the function name."), _("\
+Default is ON.\n\
+When ON, record pic command will hide the nodes that don't have\n\
+the function name.\n\
+When OFF, record pic command will show the nodes that don't have\n\
+the function name."),
+			   NULL, NULL,
+			   &set_record_pic_cmdlist, &show_record_pic_cmdlist);
+  add_setshow_boolean_cmd ("hide-nosource", no_class,
+			   &record_pic_hide_nosource, _("\
+Set whether record pic command hide the nodes that don't have the source message."), _("\
+Show whether record pic command hide the nodes that don't have the source message."), _("\
+Default is ON.\n\
+When ON, record pic command will hide the nodes that don't have\n\
+the source message.\n\
+When OFF, record pic command will show the nodes that don't have\n\
+the source message."),
+			   NULL, NULL,
+			   &set_record_pic_cmdlist, &show_record_pic_cmdlist);
+  add_setshow_boolean_cmd ("hide-sameaddr", no_class,
+			   &record_pic_hide_same, _("\
+Set whether record pic command hide the nodes that have the same address node in vcg file."), _("\
+Show whether record pic command hide the nodes that have the same address node in vcg file."), _("\
+Default is ON.\n\
+When ON, record pic command will hide the nodes that have\n\
+the same address node in vcg file.\n\
+And record pic will show the execute count number of this line\n\
+in format \"c:number\".\n\
+When OFF, record pic command will show the nodes that have\n\
+the same address node in vcg file.\n\
+And record pic show the instruction number in format \"i:number\"\n\
+that \"record goto\" support."),
+			   NULL, NULL,
+			   &set_record_pic_cmdlist, &show_record_pic_cmdlist);
 }

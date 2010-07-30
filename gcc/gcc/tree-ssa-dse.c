@@ -1,5 +1,5 @@
 /* Dead store elimination
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -24,11 +24,10 @@ along with GCC; see the file COPYING3.  If not see
 #include "tm.h"
 #include "ggc.h"
 #include "tree.h"
-#include "rtl.h"
 #include "tm_p.h"
 #include "basic-block.h"
 #include "timevar.h"
-#include "diagnostic.h"
+#include "gimple-pretty-print.h"
 #include "tree-flow.h"
 #include "tree-pass.h"
 #include "tree-dump.h"

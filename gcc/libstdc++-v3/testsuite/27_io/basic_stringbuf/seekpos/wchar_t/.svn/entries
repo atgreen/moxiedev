@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_stringbuf/seekpos/wchar_t
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:50:31.000000Z
-c8c743ce79288d05b8b24ecb6183988c
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-07-08T15:19:26.952092Z
+7a71ba066b578db1cbf9c27a2acfb2e6
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -58,7 +58,7 @@ jakub
 
 
 
-2553
+2534
 
 2.cc
 file

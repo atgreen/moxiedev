@@ -76,6 +76,8 @@ Symbol::init_fields(const char* name, const char* version,
   this->is_ordinary_shndx_ = false;
   this->in_real_elf_ = false;
   this->is_defined_in_discarded_section_ = false;
+  this->undef_binding_set_ = false;
+  this->undef_binding_weak_ = false;
 }
 
 // Return the demangled version of the symbol's name, but only
@@ -306,7 +308,7 @@ Sized_symbol<size>::allocate_common(Output_data* od, Value_type value)
 // table.
 
 inline bool
-Symbol::should_add_dynsym_entry() const
+Symbol::should_add_dynsym_entry(Symbol_table* symtab) const
 {
   // If the symbol is used by a dynamic relocation, we need to add it.
   if (this->needs_dynsym_entry())
@@ -324,7 +326,8 @@ Symbol::should_add_dynsym_entry() const
       bool is_ordinary;
       unsigned int shndx = this->shndx(&is_ordinary);
       if (is_ordinary && shndx != elfcpp::SHN_UNDEF
-          && !relobj->is_section_included(shndx))
+          && !relobj->is_section_included(shndx)
+          && !symtab->is_section_folded(relobj, shndx))
         return false;
     }
 
@@ -1072,7 +1075,8 @@ Symbol_table::add_from_relobj(
       bool is_defined_in_discarded_section = false;
       if (st_shndx != elfcpp::SHN_UNDEF
 	  && is_ordinary
-	  && !relobj->is_section_included(st_shndx))
+	  && !relobj->is_section_included(st_shndx)
+          && !this->is_section_folded(relobj, st_shndx))
 	{
 	  st_shndx = elfcpp::SHN_UNDEF;
 	  is_defined_in_discarded_section = true;
@@ -2253,7 +2257,7 @@ Symbol_table::set_dynsym_indexes(unsigned int index,
       // some symbols appear more than once in the symbol table, with
       // and without a version.
 
-      if (!sym->should_add_dynsym_entry())
+      if (!sym->should_add_dynsym_entry(this))
 	sym->set_dynsym_index(-1U);
       else if (!sym->has_dynsym_index())
 	{
@@ -2695,6 +2699,7 @@ Symbol_table::sized_write_globals(const Stringpool* sympool,
       unsigned int shndx;
       typename elfcpp::Elf_types<size>::Elf_Addr sym_value = sym->value();
       typename elfcpp::Elf_types<size>::Elf_Addr dynsym_value = sym_value;
+      elfcpp::STB binding = sym->binding();
       switch (sym->source())
 	{
 	case Symbol::FROM_OBJECT:
@@ -2718,6 +2723,8 @@ Symbol_table::sized_write_globals(const Stringpool* sympool,
 		    if (sym->needs_dynsym_value())
 		      dynsym_value = target.dynsym_value(sym);
 		    shndx = elfcpp::SHN_UNDEF;
+		    if (sym->is_undef_binding_weak())
+		      binding = elfcpp::STB_WEAK;
 		  }
 		else if (symobj->pluginobj() != NULL)
 		  shndx = elfcpp::SHN_UNDEF;
@@ -2798,7 +2805,7 @@ Symbol_table::sized_write_globals(const Stringpool* sympool,
 	  gold_assert(sym_index < output_count);
 	  unsigned char* ps = psyms + (sym_index * sym_size);
 	  this->sized_write_symbol<size, big_endian>(sym, sym_value, shndx,
-						     sympool, ps);
+						     binding, sympool, ps);
 	}
 
       if (dynsym_index != -1U)
@@ -2807,7 +2814,7 @@ Symbol_table::sized_write_globals(const Stringpool* sympool,
 	  gold_assert(dynsym_index < dynamic_count);
 	  unsigned char* pd = dynamic_view + (dynsym_index * sym_size);
 	  this->sized_write_symbol<size, big_endian>(sym, dynsym_value, shndx,
-						     dynpool, pd);
+						     binding, dynpool, pd);
 	}
     }
 
@@ -2825,6 +2832,7 @@ Symbol_table::sized_write_symbol(
     Sized_symbol<size>* sym,
     typename elfcpp::Elf_types<size>::Elf_Addr value,
     unsigned int shndx,
+    elfcpp::STB binding,
     const Stringpool* pool,
     unsigned char* p) const
 {
@@ -2845,7 +2853,7 @@ Symbol_table::sized_write_symbol(
   if (sym->is_forced_local())
     osym.put_st_info(elfcpp::elf_st_info(elfcpp::STB_LOCAL, type));
   else
-    osym.put_st_info(elfcpp::elf_st_info(sym->binding(), type));
+    osym.put_st_info(elfcpp::elf_st_info(binding, type));
   osym.put_st_other(elfcpp::elf_st_other(sym->visibility(), sym->nonvis()));
   osym.put_st_shndx(shndx);
 }
@@ -3012,8 +3020,11 @@ Symbol_table::detect_odr_violations(const Task* task,
        ++it)
     {
       const char* symbol_name = it->first;
-      // We use a sorted set so the output is deterministic.
-      std::set<std::string, Odr_violation_compare> line_nums;
+      // Maps from symbol location to a sample object file we found
+      // that location in.  We use a sorted map so the location order
+      // is deterministic, but we only store an arbitrary object file
+      // to avoid copying lots of names.
+      std::map<std::string, std::string, Odr_violation_compare> line_nums;
 
       for (Unordered_set<Symbol_location, Symbol_location_hash>::const_iterator
                locs = it->second.begin();
@@ -3032,7 +3043,11 @@ Symbol_table::detect_odr_violations(const Task* task,
           std::string lineno = Dwarf_line_info::one_addr2line(
               locs->object, locs->shndx, locs->offset, 16);
           if (!lineno.empty())
-            line_nums.insert(lineno);
+            {
+              std::string& sample_object = line_nums[lineno];
+              if (sample_object.empty())
+                sample_object = locs->object->name();
+            }
         }
 
       if (line_nums.size() > 1)
@@ -3040,10 +3055,12 @@ Symbol_table::detect_odr_violations(const Task* task,
           gold_warning(_("while linking %s: symbol '%s' defined in multiple "
                          "places (possible ODR violation):"),
                        output_file_name, demangle(symbol_name).c_str());
-          for (std::set<std::string>::const_iterator it2 = line_nums.begin();
-               it2 != line_nums.end();
-               ++it2)
-            fprintf(stderr, "  %s\n", it2->c_str());
+          for (std::map<std::string, std::string>::const_iterator it2 =
+		 line_nums.begin();
+	       it2 != line_nums.end();
+	       ++it2)
+            fprintf(stderr, _("  %s from %s\n"),
+                    it2->first.c_str(), it2->second.c_str());
         }
     }
   // We only call one_addr2line() in this function, so we can clear its cache.

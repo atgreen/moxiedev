@@ -27,8 +27,6 @@ if $tracelevel {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 if ![istarget "i?86-*linux*"] then {
     verbose "Skipping i386 reverse tests."
@@ -64,8 +62,7 @@ runto main
 
 if [target_info exists gdb,use_precord] {
     # Activate process record/replay
-    gdb_test "record" "" "Turn on process record"
-    # FIXME: command ought to acknowledge, so we can test if it succeeded.
+    gdb_test_no_output "record" "Turn on process record"
 }
 
 global hex

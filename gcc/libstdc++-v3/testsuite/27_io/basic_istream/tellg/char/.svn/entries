@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_istream/tellg/char
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -168,11 +168,11 @@ file
 
 
 
-2009-04-24T17:50:29.000000Z
-65f9bb112c6da0c273d08f94a3ea2ef2
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-07-08T15:19:27.464097Z
+aaea00b33b7bb442b2f0103a3bcac732
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -194,7 +194,7 @@ jakub
 
 
 
-1930
+1886
 
 exceptions_badbit_throw.cc
 file

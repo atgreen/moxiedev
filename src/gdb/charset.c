@@ -33,6 +33,9 @@
 #include "gdb_string.h"
 #include <ctype.h>
 
+#ifdef USE_WIN32API
+#include <windows.h>
+#endif
 
 /* How GDB's character set support works
 
@@ -164,6 +167,7 @@ iconv (iconv_t utf_flag, const char **inbuf, size_t *inbytesleft,
       /* In all other cases we simply copy input bytes to the
 	 output.  */
       size_t amt = *inbytesleft;
+
       if (amt > *outbytesleft)
 	amt = *outbytesleft;
       memcpy (*outbuf, *inbuf, amt);
@@ -309,6 +313,7 @@ validate (struct gdbarch *gdbarch)
   const char *host_cset = host_charset ();
   const char *target_cset = target_charset (gdbarch);
   const char *target_wide_cset = target_wide_charset_name;
+
   if (!strcmp (target_wide_cset, "auto"))
     target_wide_cset = gdbarch_auto_wide_charset (gdbarch);
 
@@ -631,11 +636,10 @@ wchar_iterate (struct wchar_iterator *iter,
       size_t orig_in = iter->bytes;
       size_t out_avail = out_request * sizeof (gdb_wchar_t);
       size_t num;
-      gdb_wchar_t result;
-
       size_t r = iconv (iter->desc,
 			(ICONV_CONST char **) &iter->input, &iter->bytes,
 			&outptr, &out_avail);
+
       if (r == (size_t) -1)
 	{
 	  switch (errno)
@@ -699,7 +703,6 @@ wchar_iterate (struct wchar_iterator *iter,
 
 extern initialize_file_ftype _initialize_charset; /* -Wmissing-prototype */
 
-typedef char *char_ptr;
 DEF_VEC_P (char_ptr);
 
 static VEC (char_ptr) *charsets;
@@ -791,7 +794,7 @@ find_charset_names (void)
   set_in_environ (iconv_env, "LANGUAGE", "C");
   set_in_environ (iconv_env, "LC_ALL", "C");
 
-  child = pex_init (0, "iconv", NULL);
+  child = pex_init (PEX_USE_PIPES, "iconv", NULL);
 
   args[0] = "iconv";
   args[1] = "-l";
@@ -812,7 +815,7 @@ find_charset_names (void)
 	  /* The size of buf is chosen arbitrarily.  */
 	  char buf[1024];
 	  char *start, *r;
-	  int len, keep_going;
+	  int len;
 
 	  r = fgets (buf, sizeof (buf), in);
 	  if (!r)
@@ -907,8 +910,6 @@ default_auto_wide_charset (void)
 void
 _initialize_charset (void)
 {
-  struct cmd_list_element *new_cmd;
-
   /* The first element is always "auto".  */
   VEC_safe_push (char_ptr, charsets, xstrdup ("auto"));
   find_charset_names ();
@@ -932,7 +933,7 @@ _initialize_charset (void)
   auto_target_charset_name = auto_host_charset_name;
 #elif defined (USE_WIN32API)
   {
-    static w32_host_default_charset[16]; /* "CP" + x<=5 digits + paranoia. */
+    static char w32_host_default_charset[16]; /* "CP" + x<=5 digits + paranoia. */
 
     snprintf (w32_host_default_charset, sizeof w32_host_default_charset,
 	      "CP%d", GetACP());

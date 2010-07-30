@@ -25,8 +25,6 @@ if $tracelevel {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 # This test verifies that a watchpoint is detected in the proper thread
 # so the test is only meaningful on a system with hardware watchpoints.
@@ -46,7 +44,7 @@ gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
 
-gdb_test "set can-use-hw-watchpoints 1" "" ""
+gdb_test_no_output "set can-use-hw-watchpoints 1" ""
 
 #
 # Run to `main' where we begin our tests.
@@ -89,10 +87,10 @@ if { $nr_started == $NR_THREADS } {
 gdb_test "watch x" "Hardware watchpoint 3: x"
 
 # Now that the watchpoint is set, we can let the threads increment X.
-gdb_test "set var test_ready = 1" ""
+gdb_test_no_output "set var test_ready = 1"
 
 # While debugging.
-#gdb_test "set debug infrun 1" ""
+#gdb_test_no_output "set debug infrun 1"
 
 set x_inc_line [gdb_get_line_number "X increment"]
 set x_thread_loc "thread_function \\\(arg=.*\\\) at .*watchthreads.c:$x_inc_line"

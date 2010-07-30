@@ -45,12 +45,12 @@ extern void arm_output_fn_unwind (FILE *, bool);
 
 #ifdef RTX_CODE
 extern bool arm_vector_mode_supported_p (enum machine_mode);
+extern bool arm_small_register_classes_for_mode_p (enum machine_mode);
 extern int arm_hard_regno_mode_ok (unsigned int, enum machine_mode);
 extern int const_ok_for_arm (HOST_WIDE_INT);
 extern int arm_split_constant (RTX_CODE, enum machine_mode, rtx,
 			       HOST_WIDE_INT, rtx, rtx, int);
-extern RTX_CODE arm_canonicalize_comparison (RTX_CODE, enum machine_mode,
-					     rtx *);
+extern RTX_CODE arm_canonicalize_comparison (RTX_CODE, rtx *, rtx *);
 extern int legitimate_pic_operand_p (rtx);
 extern rtx legitimize_pic_address (rtx, enum machine_mode, rtx);
 extern rtx legitimize_tls_address (rtx, rtx);
@@ -116,6 +116,7 @@ extern void arm_reload_in_hi (rtx *);
 extern void arm_reload_out_hi (rtx *);
 extern int arm_const_double_inline_cost (rtx);
 extern bool arm_const_double_by_parts (rtx);
+extern bool arm_const_double_by_immediates (rtx);
 extern const char *fp_immediate_constant (rtx);
 extern void arm_emit_call_insn (rtx, rtx);
 extern const char *output_call (rtx *);
@@ -130,13 +131,12 @@ extern const char *output_move_double (rtx *);
 extern const char *output_move_quad (rtx *);
 extern const char *output_move_vfp (rtx *operands);
 extern const char *output_move_neon (rtx *operands);
+extern int arm_attr_length_move_neon (rtx);
 extern const char *output_add_immediate (rtx *);
 extern const char *arithmetic_instr (rtx, int);
 extern void output_ascii_pseudo_op (FILE *, const unsigned char *, int);
 extern const char *output_return_instruction (rtx, int, int);
 extern void arm_poke_function_name (FILE *, const char *);
-extern void arm_print_operand (FILE *, rtx, int);
-extern void arm_print_operand_address (FILE *, rtx);
 extern void arm_final_prescan_insn (rtx);
 extern int arm_debugger_arg_offset (int, rtx);
 extern bool arm_is_long_call_p (tree);
@@ -212,5 +212,17 @@ extern void arm_lang_object_attributes_init(void);
 extern const char *arm_mangle_type (const_tree);
 
 extern void arm_order_regs_for_local_alloc (void);
+
+#ifdef RTX_CODE
+/* This needs to be here because we need RTX_CODE and similar.  */
+
+struct tune_params
+{
+  bool (*rtx_costs) (rtx, RTX_CODE, RTX_CODE, int *, bool);
+  int constant_limit;
+};
+
+extern const struct tune_params *current_tune;
+#endif /* RTX_CODE */
 
 #endif /* ! GCC_ARM_PROTOS_H */

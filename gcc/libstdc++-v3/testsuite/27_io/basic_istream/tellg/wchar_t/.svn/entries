@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_istream/tellg/wchar_t
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -168,11 +168,11 @@ file
 
 
 
-2009-04-24T17:50:29.000000Z
-75f628172d88ad10c013bb9fe6c6d1eb
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-07-08T15:19:27.450097Z
+6e7f525124e9b7c12fe1c85e745d4d2c
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -194,7 +194,7 @@ jakub
 
 
 
-1891
+1839
 
 exceptions_badbit_throw.cc
 file

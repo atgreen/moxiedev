@@ -152,7 +152,6 @@ TARGET_LIBOPCODES_CFILES = \
 	m68k-dis.c \
 	m68k-opc.c \
 	m88k-dis.c \
-	maxq-dis.c \
 	mcore-dis.c \
 	mep-asm.c \
 	mep-desc.c \
@@ -204,6 +203,7 @@ TARGET_LIBOPCODES_CFILES = \
 	tic4x-dis.c \
 	tic54x-dis.c \
 	tic54x-opc.c \
+	tic6x-dis.c \
 	tic80-dis.c \
 	tic80-opc.c \
 	v850-dis.c \

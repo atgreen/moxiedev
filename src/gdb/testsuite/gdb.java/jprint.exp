@@ -41,18 +41,12 @@ proc set_lang_java {} {
     verbose "loading file '$binfile'"
     gdb_load $binfile
 
-    send_gdb "set language java\n"
-    gdb_expect {
-	-re ".*$gdb_prompt $" {}
-	timeout { fail "set language java (timeout)" ; return 0 }
-    }
+    gdb_test_no_output "set language java"
 
     return [gdb_test "show language" ".* source language is \"java\".*" \
 	"set language to \"java\""]
 }
 
-set prms_id 0
-set bug_id 0
 
 # Start with a fresh gdb.
 
@@ -86,5 +80,8 @@ if ![set_lang_java] then {
     gdb_test "call x.addk(44)" "adding k gives 121\r\n.*= 121.*" "inherited virtual fn call"
 
     # Regression test for a crasher.
+    # GCC does not output location information for static class members,
+    # so GDB will report these as "optimized out". See gcc/43260.
+    setup_xfail *-*-* gcc/43260
     gdb_test "print *jprint.props" " = .*" "print a java.util.Properties"
 }

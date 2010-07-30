@@ -36,6 +36,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "toplev.h"
 #include "params.h"
 #include "diagnostic.h"
+#include "opts-diagnostic.h"
 #include "tm_p.h"		/* For OPTIMIZATION_OPTIONS.  */
 #include "insn-attr.h"		/* For INSN_SCHEDULING.  */
 #include "target.h"
@@ -63,7 +64,7 @@ bool warn_larger_than;
 HOST_WIDE_INT larger_than_size;
 
 /* True to warn about any function whose frame size is larger
- * than N bytes. */
+   than N bytes. */
 bool warn_frame_larger_than;
 HOST_WIDE_INT frame_larger_than_size;
 
@@ -371,32 +372,15 @@ bool flag_warn_unused_result = false;
 const char **in_fnames;
 unsigned num_in_fnames;
 
-static int common_handle_option (size_t scode, const char *arg, int value,
-				 unsigned int lang_mask);
+static bool common_handle_option (size_t scode, const char *arg, int value,
+				  unsigned int lang_mask, int kind,
+				  const struct cl_option_handlers *handlers);
 static void handle_param (const char *);
-static unsigned int handle_option (const char **argv, unsigned int lang_mask);
 static char *write_langs (unsigned int lang_mask);
 static void complain_wrong_lang (const char *, const struct cl_option *,
 				 unsigned int lang_mask);
-static void handle_options (unsigned int, const char **, unsigned int);
 static void set_debug_level (enum debug_info_type type, int extended,
 			     const char *arg);
-
-/* If ARG is a non-negative integer made up solely of digits, return its
-   value, otherwise return -1.  */
-static int
-integral_argument (const char *arg)
-{
-  const char *p = arg;
-
-  while (*p && ISDIGIT (*p))
-    p++;
-
-  if (*p == '\0')
-    return atoi (arg);
-
-  return -1;
-}
 
 /* Return a malloced slash-separated list of languages in MASK.  */
 static char *
@@ -433,15 +417,7 @@ complain_wrong_lang (const char *text, const struct cl_option *option,
 {
   char *ok_langs, *bad_lang;
 
-  /* The LTO front end inherits all the options from the first front
-     end that was used.  However, not all the original front end
-     options make sense in LTO.
-
-     A real solution would be to filter this in collect2, but collect2
-     does not have access to all the option attributes to know what to
-     filter.  So, in lto1 we silently accept inherited flags and do
-     nothing about it.  */
-  if (lang_mask & CL_LTO)
+  if (!lang_hooks.complain_wrong_lang_p (option))
     return;
 
   ok_langs = write_langs (option->flags);
@@ -485,161 +461,58 @@ void print_ignored_options (void)
   input_location = saved_loc;
 }
 
-/* Handle the switch beginning at ARGV for the language indicated by
-   LANG_MASK.  Returns the number of switches consumed.  */
-static unsigned int
-handle_option (const char **argv, unsigned int lang_mask)
+/* Handle an unknown option ARG, returning true if an error should be
+   given.  */
+
+static bool
+unknown_option_callback (const char *opt)
 {
-  size_t opt_index;
-  const char *opt, *arg = 0;
-  char *dup = 0;
-  int value = 1;
-  unsigned int result = 0;
-  const struct cl_option *option;
-
-  opt = argv[0];
-
-  opt_index = find_opt (opt + 1, lang_mask | CL_COMMON | CL_TARGET);
-  if (opt_index == cl_options_count
-      && (opt[1] == 'W' || opt[1] == 'f' || opt[1] == 'm')
-      && opt[2] == 'n' && opt[3] == 'o' && opt[4] == '-')
+  if (opt[1] == 'W' && opt[2] == 'n' && opt[3] == 'o' && opt[4] == '-')
     {
-      /* Drop the "no-" from negative switches.  */
-      size_t len = strlen (opt) - 3;
-
-      dup = XNEWVEC (char, len + 1);
-      dup[0] = '-';
-      dup[1] = opt[1];
-      memcpy (dup + 2, opt + 5, len - 2 + 1);
-      opt = dup;
-      value = 0;
-      opt_index = find_opt (opt + 1, lang_mask | CL_COMMON | CL_TARGET);
-      if (opt_index == cl_options_count && opt[1] == 'W')
-	{
-	  /* We don't generate warnings for unknown -Wno-* options
-             unless we issue diagnostics.  */
-	  postpone_unknown_option_warning (argv[0]);
-	  result = 1;
-	  goto done;
-	}
+      /* We don't generate warnings for unknown -Wno-* options unless
+	 we issue diagnostics.  */
+      postpone_unknown_option_warning (opt);
+      return false;
     }
+  else
+    return true;
+}
 
-  if (opt_index == cl_options_count)
-    goto done;
+/* Note that an option (index OPT_INDEX, argument ARG, value VALUE)
+   has been successfully handled with a handler for mask MASK.  */
 
-  option = &cl_options[opt_index];
+static void
+post_handling_callback (size_t opt_index ATTRIBUTE_UNUSED,
+			const char *arg ATTRIBUTE_UNUSED,
+			int value ATTRIBUTE_UNUSED,
+			unsigned int mask ATTRIBUTE_UNUSED)
+{
+#ifdef ENABLE_LTO
+  lto_register_user_option (opt_index, arg, value, mask);
+#endif
+}
 
-  /* Reject negative form of switches that don't take negatives as
-     unrecognized.  */
-  if (!value && (option->flags & CL_REJECT_NEGATIVE))
-    goto done;
+/* Handle a front-end option; arguments and return value as for
+   handle_option.  */
 
-  /* We've recognized this switch.  */
-  result = 1;
+static bool
+lang_handle_option (size_t opt_index, const char *arg, int value,
+		    unsigned int lang_mask ATTRIBUTE_UNUSED, int kind,
+		    const struct cl_option_handlers *handlers)
+{
+  return lang_hooks.handle_option (opt_index, arg, value, kind, handlers);
+}
 
-  /* Check to see if the option is disabled for this configuration.  */
-  if (option->flags & CL_DISABLED)
-    {
-      error ("command line option %qs"
-	     " is not supported by this configuration", opt);
-      goto done;
-    }
+/* Handle a back-end option; arguments and return value as for
+   handle_option.  */
 
-  /* Sort out any argument the switch takes.  */
-  if (option->flags & CL_JOINED)
-    {
-      /* Have arg point to the original switch.  This is because
-	 some code, such as disable_builtin_function, expects its
-	 argument to be persistent until the program exits.  */
-      arg = argv[0] + cl_options[opt_index].opt_len + 1;
-      if (!value)
-	arg += strlen ("no-");
-
-      if (*arg == '\0' && !(option->flags & CL_MISSING_OK))
-	{
-	  if (option->flags & CL_SEPARATE)
-	    {
-	      arg = argv[1];
-	      result = 2;
-	    }
-	  else
-	    /* Missing argument.  */
-	    arg = NULL;
-	}
-    }
-  else if (option->flags & CL_SEPARATE)
-    {
-      arg = argv[1];
-      result = 2;
-    }
-
-  /* Now we've swallowed any potential argument, complain if this
-     is a switch for a different front end.  */
-  if (!(option->flags & (lang_mask | CL_COMMON | CL_TARGET)))
-    {
-      complain_wrong_lang (argv[0], option, lang_mask);
-      goto done;
-    }
-  else if ((option->flags & CL_TARGET)
-	   && (option->flags & CL_LANG_ALL)
-	   && !(option->flags & lang_mask))
-    {
-      /* Complain for target flag language mismatches if any languages
-	 are specified.  */
-      complain_wrong_lang (argv[0], option, lang_mask);
-      goto done;
-    }
-
-  if (arg == NULL && (option->flags & (CL_JOINED | CL_SEPARATE)))
-    {
-      if (!lang_hooks.missing_argument (opt, opt_index))
-	error ("missing argument to \"%s\"", opt);
-      goto done;
-    }
-
-  /* If the switch takes an integer, convert it.  */
-  if (arg && (option->flags & CL_UINTEGER))
-    {
-      value = integral_argument (arg);
-      if (value == -1)
-	{
-	  error ("argument to \"%s\" should be a non-negative integer",
-		 option->opt_text);
-	  goto done;
-	}
-    }
-
-  if (option->flag_var)
-    set_option (option, value, arg);
-
-  if (option->flags & lang_mask)
-    {
-      if (lang_hooks.handle_option (opt_index, arg, value) == 0)
-	result = 0;
-      else
-	lto_register_user_option (opt_index, arg, value, lang_mask);
-    }
-
-  if (result && (option->flags & CL_COMMON))
-    {
-      if (common_handle_option (opt_index, arg, value, lang_mask) == 0)
-	result = 0;
-      else
-	lto_register_user_option (opt_index, arg, value, CL_COMMON);
-    }
-
-  if (result && (option->flags & CL_TARGET))
-    {
-      if (!targetm.handle_option (opt_index, arg, value))
-	result = 0;
-      else
-	lto_register_user_option (opt_index, arg, value, CL_TARGET);
-    }
-
- done:
-  if (dup)
-    free (dup);
-  return result;
+static bool
+target_handle_option (size_t opt_index, const char *arg, int value,
+		    unsigned int lang_mask ATTRIBUTE_UNUSED, int kind,
+		    const struct cl_option_handlers *handlers ATTRIBUTE_UNUSED)
+{
+  gcc_assert (kind == DK_UNSPECIFIED);
+  return targetm.handle_option (opt_index, arg, value);
 }
 
 /* Handle FILENAME from the command line.  */
@@ -731,63 +604,61 @@ flag_instrument_functions_exclude_p (tree fndecl)
 }
 
 
-/* Decode and handle the vector of command line options.  LANG_MASK
+/* Handle the vector of command line options.  LANG_MASK
    contains has a single bit set representing the current
-   language.  */
+   language.  HANDLERS describes what functions to call for the options.  */
 static void
-handle_options (unsigned int argc, const char **argv, unsigned int lang_mask)
+read_cmdline_options (struct cl_decoded_option *decoded_options,
+		      unsigned int decoded_options_count,
+		      unsigned int lang_mask,
+		      const struct cl_option_handlers *handlers)
 {
-  unsigned int n, i;
+  unsigned int i;
 
-  for (i = 1; i < argc; i += n)
+  for (i = 1; i < decoded_options_count; i++)
     {
-      const char *opt = argv[i];
-
-      /* Interpret "-" or a non-switch as a file name.  */
-      if (opt[0] != '-' || opt[1] == '\0')
+      if (decoded_options[i].opt_index == OPT_SPECIAL_input_file)
 	{
 	  if (main_input_filename == NULL)
 	    {
-	      main_input_filename = opt;
+	      main_input_filename = decoded_options[i].arg;
 	      main_input_baselength
 		= base_of_path (main_input_filename, &main_input_basename);
 	    }
-	  add_input_filename (opt);
-	  n = 1;
+	  add_input_filename (decoded_options[i].arg);
 	  continue;
 	}
 
-      n = handle_option (argv + i, lang_mask);
-
-      if (!n)
-	{
-	  n = 1;
-	  error ("unrecognized command line option \"%s\"", opt);
-	}
+      read_cmdline_option (decoded_options + i, lang_mask, handlers);
     }
 }
 
 /* Parse command line options and set default flag values.  Do minimal
-   options processing.  */
+   options processing.  The decoded options are placed in *DECODED_OPTIONS
+   and *DECODED_OPTIONS_COUNT.  */
 void
-decode_options (unsigned int argc, const char **argv)
+decode_options (unsigned int argc, const char **argv,
+		struct cl_decoded_option **decoded_options,
+		unsigned int *decoded_options_count)
 {
   static bool first_time_p = true;
   static int initial_min_crossjump_insns;
   static int initial_max_fields_for_field_sensitive;
   static int initial_loop_invariant_max_bbs_in_loop;
   static unsigned int initial_lang_mask;
+  struct cl_option_handlers handlers;
 
   unsigned int i, lang_mask;
   int opt1;
   int opt2;
   int opt3;
   int opt1_max;
+  int ofast = 0;
 
   if (first_time_p)
     {
       /* Perform language-specific options initialization.  */
-      initial_lang_mask = lang_mask = lang_hooks.init_options (argc, argv);
+      initial_lang_mask = lang_mask = lang_hooks.option_lang_mask ();
 
       lang_hooks.initialize_diagnostics (global_dc);
 
@@ -802,38 +673,72 @@ decode_options (unsigned int argc, const char **argv)
   else
     lang_mask = initial_lang_mask;
 
+  decode_cmdline_options_to_array (argc, argv, lang_mask,
+				   decoded_options, decoded_options_count);
+  if (first_time_p)
+    /* Perform language-specific options initialization.  */
+    lang_hooks.init_options (*decoded_options_count, *decoded_options);
+
+  handlers.unknown_option_callback = unknown_option_callback;
+  handlers.wrong_lang_callback = complain_wrong_lang;
+  handlers.post_handling_callback = post_handling_callback;
+  handlers.num_handlers = 3;
+  handlers.handlers[0].handler = lang_handle_option;
+  handlers.handlers[0].mask = lang_mask;
+  handlers.handlers[1].handler = common_handle_option;
+  handlers.handlers[1].mask = CL_COMMON;
+  handlers.handlers[2].handler = target_handle_option;
+  handlers.handlers[2].mask = CL_TARGET;
+
   /* Scan to see what optimization level has been specified.  That will
      determine the default value of many flags.  */
-  for (i = 1; i < argc; i++)
+  for (i = 1; i < *decoded_options_count; i++)
     {
-      if (!strcmp (argv[i], "-O"))
+      struct cl_decoded_option *opt = &(*decoded_options)[i];
+      switch (opt->opt_index)
 	{
-	  optimize = 1;
-	  optimize_size = 0;
-	}
-      else if (argv[i][0] == '-' && argv[i][1] == 'O')
-	{
-	  /* Handle -Os, -O2, -O3, -O69, ...  */
-	  const char *p = &argv[i][2];
-
-	  if ((p[0] == 's') && (p[1] == 0))
+	case OPT_O:
+	  if (*opt->arg == '\0')
 	    {
-	      optimize_size = 1;
-
-	      /* Optimizing for size forces optimize to be 2.  */
-	      optimize = 2;
+	      optimize = 1;
+	      optimize_size = 0;
+	      ofast = 0;
 	    }
 	  else
 	    {
-	      const int optimize_val = read_integral_parameter (p, p - 2, -1);
-	      if (optimize_val != -1)
+	      const int optimize_val = integral_argument (opt->arg);
+	      if (optimize_val == -1)
+		error ("argument to %qs should be a non-negative integer",
+		       "-O");
+	      else
 		{
 		  optimize = optimize_val;
 		  if ((unsigned int) optimize > 255)
 		    optimize = 255;
 		  optimize_size = 0;
+		  ofast = 0;
 		}
 	    }
+	  break;
+
+	case OPT_Os:
+	  optimize_size = 1;
+
+	  /* Optimizing for size forces optimize to be 2.  */
+	  optimize = 2;
+	  ofast = 0;
+	  break;
+
+	case OPT_Ofast:
+	  /* -Ofast only adds flags to -O3.  */
+	  optimize_size = 0;
+	  optimize = 3;
+	  ofast = 1;
+	  break;
+
+	default:
+	  /* Ignore other options in this prescan.  */
+	  break;
 	}
     }
 
@@ -858,6 +763,7 @@ decode_options (unsigned int argc, const char **argv)
   flag_if_conversion2 = opt1;
   flag_ipa_pure_const = opt1;
   flag_ipa_reference = opt1;
+  flag_ipa_profile = opt1;
   flag_merge_constants = opt1;
   flag_split_wide_types = opt1;
   flag_tree_ccp = opt1;
@@ -876,6 +782,7 @@ decode_options (unsigned int argc, const char **argv)
   opt2 = (optimize >= 2);
   flag_inline_small_functions = opt2;
   flag_indirect_inlining = opt2;
+  flag_partial_inlining = opt2;
   flag_thread_jumps = opt2;
   flag_crossjumping = opt2;
   flag_optimize_sibling_calls = opt2;
@@ -945,6 +852,20 @@ decode_options (unsigned int argc, const char **argv)
   else
     set_param_value ("min-crossjump-insns", initial_min_crossjump_insns);
 
+  /* -Ofast adds optimizations to -O3.  */
+  if (ofast)
+    {
+      /* Which is -ffast-math for now.  */
+      set_fast_math_flags (1);
+      /* Allow targets to enable extra options with -Ofast
+	 before general options processing so disabling them
+	 again afterwards works.  */
+      targetm.handle_ofast ();
+    }
+
+  /* Enable -Werror=coverage-mismatch by default */
+  enable_warning_as_error ("coverage-mismatch", 1, lang_mask, &handlers);
+
   if (first_time_p)
     {
       /* Initialize whether `char' is signed.  */
@@ -961,15 +882,18 @@ decode_options (unsigned int argc, const char **argv)
       flag_unwind_tables = targetm.unwind_tables_default;
     }
 
+#ifdef ENABLE_LTO
   /* Clear any options currently held for LTO.  */
   lto_clear_user_options ();
+#endif
 
 #ifdef OPTIMIZATION_OPTIONS
   /* Allow default optimizations to be specified on a per-machine basis.  */
   OPTIMIZATION_OPTIONS (optimize, optimize_size);
 #endif
 
-  handle_options (argc, argv, lang_mask);
+  read_cmdline_options (*decoded_options, *decoded_options_count, lang_mask,
+			&handlers);
 
   if (dump_base_name && ! IS_ABSOLUTE_PATH (dump_base_name))
     {
@@ -1012,6 +936,11 @@ decode_options (unsigned int argc, const char **argv)
 	       "is disabled.");
       flag_toplevel_reorder = 0;
     }
+
+  /* -Wmissing-noreturn is alias for -Wsuggest-attribute=noreturn.  */
+  if (warn_missing_noreturn)
+    warn_suggest_attribute_noreturn = true;
+    
   /* Unless the user has asked for section anchors, we disable toplevel
      reordering at -O0 to disable transformations that might be surprising
      to end users and to get -fno-toplevel-reorder tested.  */
@@ -1034,6 +963,7 @@ decode_options (unsigned int argc, const char **argv)
 	flag_pic = flag_pie;
       if (flag_pic && !flag_pie)
 	flag_shlib = 1;
+      first_time_p = false;
     }
 
   if (optimize == 0)
@@ -1112,19 +1042,18 @@ decode_options (unsigned int argc, const char **argv)
       flag_ira_algorithm = IRA_ALGORITHM_PRIORITY;
     }
 
-  /* Save the current optimization options if this is the first call.  */
-  if (first_time_p)
-    {
-      optimization_default_node = build_optimization_node ();
-      optimization_current_node = optimization_default_node;
-      first_time_p = false;
-    }
   if (flag_conserve_stack)
     {
       if (!PARAM_SET_P (PARAM_LARGE_STACK_FRAME))
         PARAM_VALUE (PARAM_LARGE_STACK_FRAME) = 100;
       if (!PARAM_SET_P (PARAM_STACK_FRAME_GROWTH))
         PARAM_VALUE (PARAM_STACK_FRAME_GROWTH) = 40;
+    }
+  if (flag_wpa || flag_ltrans)
+    {
+      /* These passes are not WHOPR compatible yet.  */
+      flag_ipa_pta = 0;
+      flag_ipa_struct_reorg = 0;
     }
 
   if (flag_lto || flag_whopr)
@@ -1458,9 +1387,10 @@ print_specific_help (unsigned int include_flags,
    extra handling need to be listed here; if you simply want
    VALUE assigned to a variable, it happens automatically.  */
 
-static int
+static bool
 common_handle_option (size_t scode, const char *arg, int value,
-		      unsigned int lang_mask)
+		      unsigned int lang_mask, int kind ATTRIBUTE_UNUSED,
+		      const struct cl_option_handlers *handlers)
 {
   static bool verbose = false;
   enum opt_code code = (enum opt_code) scode;
@@ -1502,8 +1432,8 @@ common_handle_option (size_t scode, const char *arg, int value,
       exit_after_options = true;
 
       /* Allow the target a chance to give the user some additional information.  */
-      if (targetm.target_help)
-	targetm.target_help ();
+      if (targetm.help)
+	targetm.help ();
       break;
 
     case OPT_fhelp_:
@@ -1637,11 +1567,12 @@ common_handle_option (size_t scode, const char *arg, int value,
 
     case OPT_O:
     case OPT_Os:
+    case OPT_Ofast:
       /* Currently handled in a prescan.  */
       break;
 
     case OPT_Werror_:
-      enable_warning_as_error (arg, value, lang_mask);
+      enable_warning_as_error (arg, value, lang_mask, handlers);
       break;
 
     case OPT_Wlarger_than_:
@@ -1652,6 +1583,10 @@ common_handle_option (size_t scode, const char *arg, int value,
     case OPT_Wlarger_than_eq:
       larger_than_size = value;
       warn_larger_than = value != -1;
+      break;
+
+    case OPT_Wfatal_errors:
+      global_dc->fatal_errors = value;
       break;
 
     case OPT_Wframe_larger_than_:
@@ -1675,6 +1610,10 @@ common_handle_option (size_t scode, const char *arg, int value,
 
     case OPT_Wstrict_overflow_:
       warn_strict_overflow = value;
+      break;
+
+    case OPT_Wsystem_headers:
+      global_dc->warn_system_headers = value;
       break;
 
     case OPT_Wunused:
@@ -1759,16 +1698,16 @@ common_handle_option (size_t scode, const char *arg, int value,
 	diagnostic_prefixing_rule (global_dc)
 	  = DIAGNOSTICS_SHOW_PREFIX_EVERY_LINE;
       else
-	return 0;
+	return false;
       break;
 
     case OPT_fdiagnostics_show_option:
-      global_dc->show_option_requested = true;
+      global_dc->show_option_requested = value;
       break;
 
     case OPT_fdump_:
       if (!dump_switch_p (arg))
-	return 0;
+	return false;
       break;
 
     case OPT_fexcess_precision_:
@@ -1906,6 +1845,10 @@ common_handle_option (size_t scode, const char *arg, int value,
       flag_profile_values_set = true;
       break;
 
+    case OPT_fshow_column:
+      global_dc->show_column = value;
+      break;
+
     case OPT_fvisibility_:
       {
         if (!strcmp(arg, "default"))
@@ -1928,7 +1871,7 @@ common_handle_option (size_t scode, const char *arg, int value,
     case OPT_frandom_seed:
       /* The real switch is -fno-random-seed.  */
       if (value)
-	return 0;
+	return false;
       set_random_seed (NULL);
       break;
 
@@ -1946,7 +1889,7 @@ common_handle_option (size_t scode, const char *arg, int value,
       fix_sched_param ("verbose", arg);
       break;
 #else
-      return 0;
+      return false;
 #endif
 
     case OPT_fsched_stalled_insns_:
@@ -1993,7 +1936,7 @@ common_handle_option (size_t scode, const char *arg, int value,
     case OPT_fstack_limit:
       /* The real switch is -fno-stack-limit.  */
       if (value)
-	return 0;
+	return false;
       stack_limit_rtx = NULL_RTX;
       break;
 
@@ -2120,6 +2063,15 @@ common_handle_option (size_t scode, const char *arg, int value,
 
     case OPT_pedantic_errors:
       flag_pedantic_errors = pedantic = 1;
+      global_dc->pedantic_errors = 1;
+      break;
+
+    case OPT_fwhopr:
+      flag_whopr = value;
+      break;
+
+    case OPT_w:
+      global_dc->inhibit_warnings = true;
       break;
 
     case OPT_fsee:
@@ -2133,6 +2085,10 @@ common_handle_option (size_t scode, const char *arg, int value,
     case OPT_ftree_salias:
     case OPT_ftree_store_ccp:
     case OPT_Wunreachable_code:
+    case OPT_fargument_alias:
+    case OPT_fargument_noalias:
+    case OPT_fargument_noalias_anything:
+    case OPT_fargument_noalias_global:
       /* These are no-ops, preserved for backward compatibility.  */
       break;
 
@@ -2147,7 +2103,7 @@ common_handle_option (size_t scode, const char *arg, int value,
       break;
     }
 
-  return 1;
+  return true;
 }
 
 /* Handle --param NAME=VALUE.  */
@@ -2362,47 +2318,25 @@ get_option_state (int option, struct cl_option_state *state)
   return true;
 }
 
-/* Set *OPTION according to VALUE and ARG.  */
+/* Callback function, called when -Werror= enables a warning.  */
+
+static void (*warning_as_error_callback) (int) = NULL;
+
+/* Register a callback for enable_warning_as_error calls.  */
 
 void
-set_option (const struct cl_option *option, int value, const char *arg)
+register_warning_as_error_callback (void (*callback) (int))
 {
-  if (!option->flag_var)
-    return;
-
-  switch (option->var_type)
-    {
-    case CLVC_BOOLEAN:
-	*(int *) option->flag_var = value;
-	break;
-
-    case CLVC_EQUAL:
-	*(int *) option->flag_var = (value
-				     ? option->var_value
-				     : !option->var_value);
-	break;
-
-    case CLVC_BIT_CLEAR:
-    case CLVC_BIT_SET:
-	if ((value != 0) == (option->var_type == CLVC_BIT_SET))
-	  *(int *) option->flag_var |= option->var_value;
-	else
-	  *(int *) option->flag_var &= ~option->var_value;
-	if (option->flag_var == &target_flags)
-	  target_flags_explicit |= option->var_value;
-	break;
-
-    case CLVC_STRING:
-	*(const char **) option->flag_var = arg;
-	break;
-    }
+  gcc_assert (warning_as_error_callback == NULL || callback == NULL);
+  warning_as_error_callback = callback;
 }
 
 /* Enable a warning option as an error.  This is used by -Werror= and
    also by legacy Werror-implicit-function-declaration.  */
 
 void
-enable_warning_as_error (const char *arg, int value, unsigned int lang_mask)
+enable_warning_as_error (const char *arg, int value, unsigned int lang_mask,
+			 const struct cl_option_handlers *handlers)
 {
   char *new_option;
   int option_index;
@@ -2411,20 +2345,63 @@ enable_warning_as_error (const char *arg, int value, unsigned int lang_mask)
   new_option[0] = 'W';
   strcpy (new_option + 1, arg);
   option_index = find_opt (new_option, lang_mask);
-  if (option_index == N_OPTS)
+  if (option_index == OPT_SPECIAL_unknown)
     {
       error ("-Werror=%s: No option -%s", arg, new_option);
     }
   else
     {
-      diagnostic_t kind = value ? DK_ERROR : DK_WARNING;
-      diagnostic_classify_diagnostic (global_dc, option_index, kind);
+      const diagnostic_t kind = value ? DK_ERROR : DK_WARNING;
 
-      /* -Werror=foo implies -Wfoo.  */
-      if (cl_options[option_index].var_type == CLVC_BOOLEAN
-	  && cl_options[option_index].flag_var
-	  && kind == DK_ERROR)
-	*(int *) cl_options[option_index].flag_var = 1;
+      diagnostic_classify_diagnostic (global_dc, option_index, kind,
+				      UNKNOWN_LOCATION);
+      if (kind == DK_ERROR)
+	{
+	  const struct cl_option * const option = cl_options + option_index;
+
+	  /* -Werror=foo implies -Wfoo.  */
+	  if (option->var_type == CLVC_BOOLEAN)
+	    handle_option (option_index, arg, value, lang_mask, (int)kind,
+			   handlers);
+
+	  if (warning_as_error_callback)
+	    warning_as_error_callback (option_index);
+	}
     }
   free (new_option);
+}
+
+/* Return malloced memory for the name of the option OPTION_INDEX
+   which enabled a diagnostic (context CONTEXT), originally of type
+   ORIG_DIAG_KIND but possibly converted to DIAG_KIND by options such
+   as -Werror.  */
+
+char *
+option_name (diagnostic_context *context, int option_index,
+	     diagnostic_t orig_diag_kind, diagnostic_t diag_kind)
+{
+  if (option_index)
+    {
+      /* A warning classified as an error.  */
+      if ((orig_diag_kind == DK_WARNING || orig_diag_kind == DK_PEDWARN)
+	  && diag_kind == DK_ERROR)
+	return concat (cl_options[OPT_Werror_].opt_text,
+		       /* Skip over "-W".  */
+		       cl_options[option_index].opt_text + 2,
+		       NULL);
+      /* A warning with option.  */
+      else
+	return xstrdup (cl_options[option_index].opt_text);
+    }
+  /* A warning without option classified as an error.  */
+  else if (orig_diag_kind == DK_WARNING || orig_diag_kind == DK_PEDWARN
+	   || diag_kind == DK_WARNING)
+    {
+      if (context->warning_as_error_requested)
+	return xstrdup (cl_options[OPT_Werror].opt_text);
+      else
+	return xstrdup (_("enabled by default"));
+    }
+  else
+    return NULL;
 }

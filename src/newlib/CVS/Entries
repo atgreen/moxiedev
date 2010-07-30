@@ -3,20 +3,20 @@ D/iconvdata////
 D/libc////
 D/libm////
 D/testsuite////
-/ChangeLog/1.1496/Sat Mar 13 04:47:00 2010/-ko/
-/HOWTO/1.1/Thu Jan 28 00:24:35 2010//
-/MAINTAINERS/1.10/Thu Jan 28 00:24:35 2010//
-/Makefile.am/1.45/Sat Mar 13 04:47:01 2010/-ko/
-/Makefile.in/1.59/Sat Mar 13 04:47:01 2010/-ko/
-/Makefile.shared/1.1/Thu Jan 28 00:24:35 2010//
-/NEWS/1.14/Thu Jan 28 00:24:35 2010/-ko/
-/README/1.19/Thu Jan 28 00:24:35 2010/-ko/
-/acconfig.h/1.5/Thu Jan 28 00:24:35 2010//
-/acinclude.m4/1.31/Thu Jan 28 00:24:35 2010/-ko/
-/aclocal.m4/1.33/Sat Mar 13 04:47:01 2010/-ko/
-/configure/1.66/Sat Mar 13 04:47:01 2010/-ko/
-/configure.host/1.114/Sat Mar 13 04:47:01 2010/-ko/
-/configure.in/1.44/Sat Mar 13 04:47:01 2010/-ko/
-/confsubdir.m4/1.1/Thu Jan 28 00:24:35 2010//
-/newlib.hin/1.20/Thu Jan 28 00:24:38 2010//
-/stamp-h.in/1.2/Thu Jan 28 00:24:38 2010//
+/HOWTO/1.1/Thu Jul  8 13:29:59 2010//
+/MAINTAINERS/1.10/Thu Jul  8 13:29:59 2010//
+/Makefile.am/1.45/Thu Jul  8 13:29:59 2010/-ko/
+/Makefile.in/1.59/Thu Jul  8 13:29:59 2010/-ko/
+/Makefile.shared/1.1/Thu Jul  8 13:29:59 2010//
+/NEWS/1.14/Thu Jul  8 13:29:59 2010/-ko/
+/README/1.19/Thu Jul  8 13:29:59 2010/-ko/
+/acconfig.h/1.5/Thu Jul  8 13:29:59 2010//
+/acinclude.m4/1.31/Thu Jul  8 13:29:59 2010/-ko/
+/aclocal.m4/1.33/Thu Jul  8 13:29:59 2010/-ko/
+/configure/1.67/Tue Jul 27 14:04:06 2010/-ko/
+/configure.host/1.115/Tue Jul 27 14:04:06 2010/-ko/
+/configure.in/1.45/Tue Jul 27 14:04:06 2010/-ko/
+/confsubdir.m4/1.1/Thu Jul  8 13:29:59 2010//
+/newlib.hin/1.21/Tue Jul 27 14:04:06 2010//
+/stamp-h.in/1.2/Thu Jul  8 13:30:00 2010//
+/ChangeLog/1.1526/Fri Jul 30 08:45:06 2010/-ko/

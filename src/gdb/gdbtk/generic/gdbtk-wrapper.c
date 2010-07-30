@@ -218,7 +218,7 @@ wrap_val_print (char *a)
   recurse = (*args)->args[6].integer;
   opts.pretty = (enum val_prettyprint) (*args)->args[7].integer;
 
-  val_print (type, valaddr, 0, address, stream, recurse, &opts,
+  val_print (type, valaddr, 0, address, stream, recurse, NULL, &opts,
              current_language);
   return 1;
 }

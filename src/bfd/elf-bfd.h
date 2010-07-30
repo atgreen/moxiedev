@@ -426,6 +426,7 @@ enum elf_target_id
   SH_ELF_DATA,
   SPARC_ELF_DATA,
   SPU_ELF_DATA,
+  TIC6X_ELF_DATA,
   X86_64_ELF_DATA,
   XTENSA_ELF_DATA,
   GENERIC_ELF_DATA
@@ -1244,10 +1245,11 @@ struct elf_backend_data
   /* The section type to use for an attributes section.  */
   unsigned int obj_attrs_section_type;
 
-  /* This function determines the order in which any attributes are written.
-     It must be defined for input in the range 4..NUM_KNOWN_OBJ_ATTRIBUTES-1
-     (this range is used in order to make unity easy).  The returned value is
-     the actual tag number to place in the input position.  */
+  /* This function determines the order in which any attributes are
+     written.  It must be defined for input in the range
+     LEAST_KNOWN_OBJ_ATTRIBUTE..NUM_KNOWN_OBJ_ATTRIBUTES-1 (this range
+     is used in order to make unity easy).  The returned value is the
+     actual tag number to place in the input position.  */
   int (*obj_attrs_order) (int);
 
   /* This is TRUE if the linker should act like collect and gather
@@ -1410,6 +1412,12 @@ struct bfd_elf_section_data
 
 #define get_elf_backend_data(abfd) \
    xvec_get_elf_backend_data ((abfd)->xvec)
+
+/* The least object attributes (within an attributes subsection) known
+   for any target.  Some code assumes that the value 0 is not used and
+   the field for that attribute can instead be used as a marker to
+   indicate that attributes have been initialized.  */
+#define LEAST_KNOWN_OBJ_ATTRIBUTE 2
 
 /* The maximum number of known object attributes for any target.  */
 #define NUM_KNOWN_OBJ_ATTRIBUTES 71
@@ -2324,12 +2332,57 @@ extern asection _bfd_elf_large_com_section;
 	    return FALSE;						\
 	  warned = TRUE;						\
 	}								\
+      (void) unresolved_reloc;						\
+      (void) warned;							\
     }									\
   while (0)
 
+/* This macro is to avoid lots of duplicated code in the body of the
+   loop over relocations in xxx_relocate_section() in the various
+   elfxx-xxxx.c files.
+   
+   Handle relocations against symbols from removed linkonce sections,
+   or sections discarded by a linker script.  When doing a relocatable
+   link, we remove such relocations.  Otherwise, we just want the
+   section contents zeroed and avoid any special processing.  */
+#define RELOC_AGAINST_DISCARDED_SECTION(info, input_bfd, input_section,	\
+					rel, relend, howto, contents)	\
+  {									\
+    if (info->relocatable						\
+	&& (input_section->flags & SEC_DEBUGGING))			\
+      {									\
+	/* Only remove relocations in debug sections since other	\
+	   sections may require relocations.  */			\
+	Elf_Internal_Shdr *rel_hdr;					\
+									\
+	rel_hdr = &elf_section_data (input_section->output_section)->rel_hdr; \
+									\
+	/* Avoid empty output section.  */				\
+	if (rel_hdr->sh_size > rel_hdr->sh_entsize)			\
+	  {								\
+	    rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
+	    rel_hdr = &elf_section_data (input_section)->rel_hdr;	\
+	    rel_hdr->sh_size -= rel_hdr->sh_entsize;			\
+									\
+	    memmove (rel, rel + 1, (relend - rel) * sizeof (*rel));	\
+									\
+	    input_section->reloc_count--;				\
+	    relend--;							\
+	    rel--;							\
+	    continue;							\
+	  }								\
+      }									\
+									\
+    _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);	\
+    rel->r_info = 0;							\
+    rel->r_addend = 0;							\
+    continue;								\
+  }
+
 /* Will a symbol be bound to the the definition within the shared
-   library, if any.  */
+   library, if any.  A unique symbol can never be bound locally.  */
 #define SYMBOLIC_BIND(INFO, H) \
-    ((INFO)->symbolic || ((INFO)->dynamic && !(H)->dynamic))
+    (!(H)->unique_global \
+     && ((INFO)->symbolic || ((INFO)->dynamic && !(H)->dynamic)))
 
 #endif /* _LIBELF_H_ */

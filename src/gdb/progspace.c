@@ -186,7 +186,6 @@ remove_program_space (struct program_space *pspace)
 struct program_space *
 clone_program_space (struct program_space *dest, struct program_space *src)
 {
-  struct program_space *new_pspace;
   struct cleanup *old_chain;
 
   old_chain = save_current_program_space ();
@@ -228,6 +227,7 @@ static void
 restore_program_space (void *arg)
 {
   struct program_space *saved_pspace = arg;
+
   set_current_program_space (saved_pspace);
 }
 
@@ -240,6 +240,7 @@ save_current_program_space (void)
 {
   struct cleanup *old_chain = make_cleanup (restore_program_space,
 					    current_program_space);
+
   return old_chain;
 }
 
@@ -248,8 +249,6 @@ save_current_program_space (void)
 static int
 pspace_empty_p (struct program_space *pspace)
 {
-  struct inferior *inf;
-
   if (find_inferior_for_program_space (pspace) != NULL)
       return 0;
 
@@ -438,6 +437,7 @@ update_address_spaces (void)
   if (shared_aspace)
     {
       struct address_space *aspace = new_address_space ();
+
       free_address_space (current_program_space->aspace);
       ALL_PSPACES (pspace)
 	pspace->aspace = aspace;

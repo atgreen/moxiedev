@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/gcc/testsuite/gcc.dg/vect/costmodel/x86_64
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-11-04T10:22:22.048543Z
-153892
-revitale
+2010-07-05T10:41:25.078884Z
+161827
+irar
 
 
 
@@ -100,11 +100,11 @@ file
 
 
 
-2009-12-07T15:31:10.124950Z
-85dc391fd6e31bce82d1ed3680acd1eb
-2009-11-04T10:22:22.048543Z
-153892
-revitale
+2010-07-08T15:18:10.504102Z
+550458980d6f7463eb6da832fb6203aa
+2010-07-05T10:41:25.078884Z
+161827
+irar
 
 
 
@@ -126,7 +126,7 @@ revitale
 
 
 
-742
+743
 
 costmodel-vect-reduc-1char.c
 file

@@ -24,6 +24,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "rtl.h"
 #include "tm_p.h"
@@ -48,6 +49,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "timevar.h"
 #include "tree-pass.h"
 #include "dbgcnt.h"
+#include "df.h"
 
 #ifdef INSN_SCHEDULING
 

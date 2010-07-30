@@ -1,5 +1,5 @@
 # Variable tree implementation for Insight.
-# Copyright (C) 2002, 2009 Red Hat, Inc.
+# Copyright (C) 2002, 2009, 2010 Red Hat, Inc.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License (GPL) as published by
@@ -286,6 +286,14 @@ itcl::body  VarTree::changeValue {j} {
     unedit $j
     return
   }
+
+  # NOTE: Varobj requires decimal input radix. So either
+  # we must assume that all input is decimal (unless prefixed by
+  # "0x"), or we assume that the input radix is the same as the
+  # variable's display radix.
+  #
+  # I think that consistency wins out over convenience here. We will
+  # require users to prefix non-decimal expressions.
   if {[catch {$entryobj value $new} errTxt]} {
     # gdbtk-varobj doesn't actually return meaningful error messages
     # so use a generic one.

@@ -1,7 +1,7 @@
 /* corefile.c
 
-   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009
-   Free Software Foundation, Inc.
+   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2007, 2008, 2009,
+   2010  Free Software Foundation, Inc.
 
    This file is part of GNU Binutils.
 
@@ -385,12 +385,20 @@ core_sym_class (asymbol *sym)
       if (*name == '$')
         return 0;
 
-      /* Do not discard nested subprograms (those
-	 which end with .NNN, where N are digits).  */
       if (*name == '.')
-	for (name++; *name; name++)
-	  if (! ISDIGIT (*name))
-	    return 0;
+	{
+	  /* Allow GCC cloned functions.  */
+	  if (strlen (name) > 7 && strncmp (name, ".clone.", 7) == 0)
+	    name += 6;
+
+	  /* Do not discard nested subprograms (those
+	     which end with .NNN, where N are digits).  */
+	  for (name++; *name; name++)
+	    if (! ISDIGIT (*name))
+	      return 0;
+
+	  break;
+	}
     }
 
   /* On systems where the C compiler adds an underscore to all
@@ -517,7 +525,7 @@ core_create_syms_from (const char * sym_table_file)
       done (1);
     }
 
-  while (!feof (f) && fgets (buf, sizeof (buf), f))
+  while (!feof (f) && fgets (buf, BUFSIZE - 1, f))
     {
       if (sscanf (buf, "%s %c %s", address, &type, name) == 3)
         if (type != 't' && type != 'T')

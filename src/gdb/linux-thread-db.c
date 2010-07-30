@@ -172,7 +172,6 @@ static void thread_db_find_new_threads_2 (ptid_t ptid, int until_no_new);
 static struct thread_db_info *
 add_thread_db_info (void *handle)
 {
-  int pid;
   struct thread_db_info *info;
 
   info = xcalloc (1, sizeof (*info));
@@ -325,6 +324,7 @@ static int
 have_threads_callback (struct thread_info *thread, void *args)
 {
   int pid = * (int *) args;
+
   if (ptid_get_pid (thread->ptid) != pid)
     return 0;
 
@@ -402,7 +402,6 @@ thread_from_lwp (ptid_t ptid)
 {
   td_thrhandle_t th;
   td_err_e err;
-  ptid_t thread_ptid;
   struct thread_db_info *info;
   struct thread_get_info_inout io = {0};
 
@@ -527,7 +526,6 @@ static void
 enable_thread_event_reporting (void)
 {
   td_thr_events_t events;
-  td_notify_t notify;
   td_err_e err;
 #ifdef HAVE_GNU_LIBC_VERSION_H
   const char *libc_version;
@@ -604,10 +602,10 @@ thread_db_find_new_threads_silently (ptid_t ptid)
     }
 
   if (except.reason < 0 && info_verbose)
-  {
-    exception_fprintf (gdb_stderr, except,
-                       "Warning: thread_db_find_new_threads_silently: ");
-  }
+    {
+      exception_fprintf (gdb_stderr, except,
+			 "Warning: thread_db_find_new_threads_silently: ");
+    }
 }
 
 /* Lookup a library in which given symbol resides.
@@ -797,12 +795,15 @@ thread_db_load_search (void)
   while (*search_path)
     {
       const char *end = strchr (search_path, ':');
+
       if (end)
 	{
 	  size_t len = end - search_path;
+
           if (len + 1 + strlen (LIBTHREAD_DB_SO) + 1 > sizeof (path))
             {
               char *cp = xmalloc (len + 1);
+
               memcpy (cp, search_path, len);
               cp[len] = '\0';
               warning (_("libthread_db_search_path component too long,"
@@ -927,13 +928,12 @@ disable_thread_event_reporting (struct thread_db_info *info)
 static void
 check_thread_signals (void)
 {
-#ifdef GET_THREAD_SIGNALS
   if (!thread_signals)
     {
       sigset_t mask;
       int i;
 
-      GET_THREAD_SIGNALS (&mask);
+      lin_thread_get_thread_signals (&mask);
       sigemptyset (&thread_stop_set);
       sigemptyset (&thread_print_set);
 
@@ -949,7 +949,6 @@ check_thread_signals (void)
 	    }
 	}
     }
-#endif
 }
 
 /* Check whether thread_db is usable.  This function is called when
@@ -959,9 +958,6 @@ check_thread_signals (void)
 void
 check_for_thread_db (void)
 {
-  td_err_e err;
-  static void *last_loaded;
-
   /* Do nothing if we couldn't load libthread_db.so.1.  */
   if (!thread_db_load ())
     return;
@@ -1335,6 +1331,7 @@ find_new_threads_callback (const td_thrhandle_t *th_p, void *data)
   if (info->need_stale_parent_threads_check)
     {
       int tgid = linux_proc_get_tgid (ti.ti_lid);
+
       if (tgid != -1 && tgid != info->pid)
 	return 0;
     }
@@ -1440,8 +1437,6 @@ thread_db_find_new_threads_2 (ptid_t ptid, int until_no_new)
     }
   else
     {
-      td_err_e err;
-
       find_new_threads_once (info, 0, &err);
       if (err != TD_OK)
 	error (_("Cannot find new threads: %s"), thread_db_err_str (err));

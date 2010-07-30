@@ -22,6 +22,8 @@ along with GCC; see the file COPYING3.  If not see
 #ifndef GCC_VEC_H
 #define GCC_VEC_H
 
+#include "statistics.h"		/* For MEM_STAT_DECL.  */
+
 /* The macros here implement a set of templated vector types and
    associated interfaces.  These templates are implemented with
    macros, as we're not in C++ land.  The interface functions are
@@ -188,6 +190,13 @@ along with GCC; see the file COPYING3.  If not see
 
 #define VEC_iterate(T,V,I,P)	(VEC_OP(T,base,iterate)(VEC_BASE(V),I,&(P)))
 
+/* Convenience macro for reverse iteration.  */
+
+#define FOR_EACH_VEC_ELT_REVERSE(T,V,I,P) \
+  for (I = VEC_length (T, (V)) - 1;           \
+       VEC_iterate (T, (V), (I), (P));	  \
+       (I)--)
+
 /* Allocate new vector.
    VEC(T,A) *VEC_T_A_alloc(int reserve);
 
@@ -257,6 +266,32 @@ along with GCC; see the file COPYING3.  If not see
 #define VEC_reserve_exact(T,A,V,R)	\
 	(VEC_OP(T,A,reserve_exact)(&(V),R VEC_CHECK_INFO MEM_STAT_INFO))
 
+/* Copy elements with no reallocation
+   void VEC_T_splice (VEC(T) *dst, VEC(T) *src); // Integer
+   void VEC_T_splice (VEC(T) *dst, VEC(T) *src); // Pointer
+   void VEC_T_splice (VEC(T) *dst, VEC(T) *src); // Object
+
+   Copy the elements in SRC to the end of DST as if by memcpy.  DST and
+   SRC need not be allocated with the same mechanism, although they most
+   often will be.  DST is assumed to have sufficient headroom
+   available.  */
+
+#define VEC_splice(T,DST,SRC)			\
+  (VEC_OP(T,base,splice)(VEC_BASE(DST), VEC_BASE(SRC) VEC_CHECK_INFO))
+
+/* Copy elements with reallocation
+   void VEC_T_safe_splice (VEC(T,A) *&dst, VEC(T) *src); // Integer
+   void VEC_T_safe_splice (VEC(T,A) *&dst, VEC(T) *src); // Pointer
+   void VEC_T_safe_splice (VEC(T,A) *&dst, VEC(T) *src); // Object
+
+   Copy the elements in SRC to the end of DST as if by memcpy.  DST and
+   SRC need not be allocated with the same mechanism, although they most
+   often will be.  DST need not have sufficient headroom and will be
+   reallocated if needed.  */
+
+#define VEC_safe_splice(T,A,DST,SRC)					\
+  (VEC_OP(T,A,safe_splice)(&(DST), VEC_BASE(SRC) VEC_CHECK_INFO MEM_STAT_INFO))
+  
 /* Push object with no reallocation
    T *VEC_T_quick_push (VEC(T) *v, T obj); // Integer
    T *VEC_T_quick_push (VEC(T) *v, T obj); // Pointer
@@ -389,7 +424,7 @@ along with GCC; see the file COPYING3.  If not see
    void VEC_T_block_remove (VEC(T) *v, unsigned ix, unsigned len);
 
    Remove LEN elements starting at the IXth.  Ordering is retained.
-   This is an O(1) operation.  */
+   This is an O(N) operation due to memmove.  */
 
 #define VEC_block_remove(T,V,I,L)	\
 	(VEC_OP(T,base,block_remove)(VEC_BASE(V),I,L VEC_CHECK_INFO))
@@ -434,7 +469,8 @@ extern void dump_vec_loc_statistics (void);
 #ifdef GATHER_STATISTICS
 void vec_heap_free (void *);
 #else
-#define vec_heap_free(V) free (V)
+/* Avoid problems with frontends that #define free(x).  */
+#define vec_heap_free(V) (free) (V)
 #endif
 
 #if ENABLE_CHECKING
@@ -584,6 +620,19 @@ static inline int VEC_OP (T,base,space)	       				  \
 {									  \
   VEC_ASSERT (alloc_ >= 0, "space", T, base);				  \
   return vec_ ? vec_->alloc - vec_->num >= (unsigned)alloc_ : !alloc_;	  \
+}									  \
+									  \
+static inline void VEC_OP(T,base,splice)				  \
+     (VEC(T,base) *dst_, VEC(T,base) *src_ VEC_CHECK_DECL)		  \
+{									  \
+  if (src_)								  \
+    {									  \
+      unsigned len_ = src_->num;					  \
+      VEC_ASSERT (dst_->num + len_ <= dst_->alloc, "splice", T, base);	  \
+									  \
+      memcpy (&dst_->vec[dst_->num], &src_->vec[0], len_ * sizeof (T));	  \
+      dst_->num += len_;						  \
+    }									  \
 }									  \
 									  \
 static inline T *VEC_OP (T,base,quick_push)				  \
@@ -793,6 +842,19 @@ static inline void VEC_OP (T,A,safe_grow_cleared)			  \
 	  sizeof (T) * (size_ - oldsize));				  \
 }									  \
 									  \
+static inline void VEC_OP(T,A,safe_splice)				  \
+     (VEC(T,A) **dst_, VEC(T,base) *src_ VEC_CHECK_DECL MEM_STAT_DECL)	  \
+{									  \
+  if (src_)								  \
+    {									  \
+      VEC_OP (T,A,reserve_exact) (dst_, src_->num			  \
+				  VEC_CHECK_PASS MEM_STAT_INFO);	  \
+									  \
+      VEC_OP (T,base,splice) (VEC_BASE (*dst_), src_			  \
+			      VEC_CHECK_PASS);				  \
+    }									  \
+}									  \
+									  \
 static inline T *VEC_OP (T,A,safe_push)					  \
      (VEC(T,A) **vec_, T obj_ VEC_CHECK_DECL MEM_STAT_DECL)       	  \
 {									  \
@@ -876,6 +938,19 @@ static inline int VEC_OP (T,base,space)	       				  \
 {									  \
   VEC_ASSERT (alloc_ >= 0, "space", T, base);				  \
   return vec_ ? vec_->alloc - vec_->num >= (unsigned)alloc_ : !alloc_;	  \
+}									  \
+									  \
+static inline void VEC_OP(T,base,splice)				  \
+     (VEC(T,base) *dst_, VEC(T,base) *src_ VEC_CHECK_DECL)		  \
+{									  \
+  if (src_)								  \
+    {									  \
+      unsigned len_ = src_->num;					  \
+      VEC_ASSERT (dst_->num + len_ <= dst_->alloc, "splice", T, base);	  \
+									  \
+      memcpy (&dst_->vec[dst_->num], &src_->vec[0], len_ * sizeof (T));	  \
+      dst_->num += len_;						  \
+    }									  \
 }									  \
 									  \
 static inline T *VEC_OP (T,base,quick_push)				  \
@@ -1081,6 +1156,19 @@ static inline void VEC_OP (T,A,safe_grow_cleared)			  \
 	  sizeof (T) * (size_ - oldsize));				  \
 }									  \
 									  \
+static inline void VEC_OP(T,A,safe_splice)				  \
+     (VEC(T,A) **dst_, VEC(T,base) *src_ VEC_CHECK_DECL MEM_STAT_DECL)	  \
+{									  \
+  if (src_)								  \
+    {									  \
+      VEC_OP (T,A,reserve_exact) (dst_, src_->num			  \
+				  VEC_CHECK_PASS MEM_STAT_INFO);	  \
+									  \
+      VEC_OP (T,base,splice) (VEC_BASE (*dst_), src_			  \
+			      VEC_CHECK_PASS);				  \
+    }									  \
+}									  \
+									  \
 static inline T *VEC_OP (T,A,safe_push)					  \
      (VEC(T,A) **vec_, const T *obj_ VEC_CHECK_DECL MEM_STAT_DECL)	  \
 {									  \
@@ -1183,6 +1271,19 @@ static inline void VEC_OP (T,A,safe_grow_cleared)			  \
   VEC_OP (T,A,safe_grow) (vec_, size_ VEC_CHECK_PASS PASS_MEM_STAT);	  \
   memset (&(VEC_OP (T,base,address) VEC_BASE(*vec_))[oldsize], 0,	  \
 	  sizeof (T) * (size_ - oldsize));				  \
+}									  \
+									  \
+static inline void VEC_OP(T,A,safe_splice)				  \
+     (VEC(T,A) **dst_, VEC(T,base) *src_ VEC_CHECK_DECL MEM_STAT_DECL)	  \
+{									  \
+  if (src_)								  \
+    {									  \
+      VEC_OP (T,A,reserve_exact) (dst_, src_->num			  \
+				  VEC_CHECK_PASS MEM_STAT_INFO);	  \
+									  \
+      VEC_OP (T,base,splice) (VEC_BASE (*dst_), src_			  \
+			      VEC_CHECK_PASS);				  \
+    }									  \
 }									  \
 									  \
 static inline T *VEC_OP (T,A,safe_push)					  \

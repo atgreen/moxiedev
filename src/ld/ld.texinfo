@@ -54,7 +54,7 @@ This file documents the @sc{gnu} linker LD
 @end ifset
 version @value{VERSION}.
 
-Copyright @copyright{} 1991, 92, 93, 94, 95, 96, 97, 98, 99, 2000,
+Copyright @copyright{} 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
@@ -92,8 +92,9 @@ section entitled ``GNU Free Documentation License''.
 
 @vskip 0pt plus 1filll
 @c man begin COPYRIGHT
-Copyright @copyright{} 1991, 92, 93, 94, 95, 96, 97, 98, 99, 2000, 2001,
-2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+Copyright @copyright{} 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
+1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Free
+Software Foundation, Inc.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3
@@ -2217,6 +2218,14 @@ feature is fully enabled and warnings are not printed.  If you specify
 @option{--disable-stdcall-fixup}, this feature is disabled and such
 mismatches are considered to be errors.
 [This option is specific to the i386 PE targeted port of the linker]
+
+@kindex --leading-underscore
+@kindex --no-leading-underscore
+@item --leading-underscore
+@itemx --no-leading-underscore
+For most targets default symbol-prefix is an underscore and is defined
+in target's description. By this option it is possible to
+disable/enable the default underscore symbol-prefix.
 
 @cindex DLLs, creating
 @kindex --export-all-symbols
@@ -4901,8 +4910,8 @@ VERS_2.0 @{
 		 bar1; bar2;
 	 extern "C++" @{
 		 ns::*;
-		 "int f(int, double)";
-         @}
+		 "f(int, double)";
+	 @};
 @} VERS_1.2;
 @end smallexample
 
@@ -5027,7 +5036,8 @@ VERSION extern "lang" @{ version-script-commands @}
 The supported @samp{lang}s are @samp{C}, @samp{C++}, and @samp{Java}.
 The linker will iterate over the list of symbols at the link time and
 demangle them according to @samp{lang} before matching them to the
-patterns specified in @samp{version-script-commands}.
+patterns specified in @samp{version-script-commands}.  The default
+@samp{lang} is @samp{C}.
 
 Demangled names may contains spaces and other special characters.  As
 described above, you can use a glob pattern to match demangled names,
@@ -5930,6 +5940,10 @@ not itself call any subroutines).
 The @samp{--fix-cortex-a8} switch enables a link-time workaround for an erratum in certain Cortex-A8 processors.  The workaround is enabled by default if you are targeting the ARM v7-A architecture profile.  It can be enabled otherwise by specifying @samp{--fix-cortex-a8}, or disabled unconditionally by specifying @samp{--no-fix-cortex-a8}.
 
 The erratum only affects Thumb-2 code.  Please contact ARM for further details.
+
+@kindex --merge-exidx-entries
+@kindex --no-merge-exidx-entries
+The @samp{--no-merge-exidx-entries} switch disables the merging of adjacent exidx entries in debuginfo.
 
 @ifclear GENERIC
 @lowersections

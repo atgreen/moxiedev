@@ -25,6 +25,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "rtl.h"
 #include "tm_p.h"
@@ -463,7 +464,7 @@ static basic_block
 schedule_ebb (rtx head, rtx tail)
 {
   basic_block first_bb, target_bb;
-  struct deps tmp_deps;
+  struct deps_desc tmp_deps;
 
   first_bb = BLOCK_FOR_INSN (head);
   last_bb = BLOCK_FOR_INSN (tail);

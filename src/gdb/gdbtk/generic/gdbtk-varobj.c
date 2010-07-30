@@ -1,5 +1,6 @@
 /* Variable user interface layer for GDB, the GNU debugger.
-   Copyright (C) 1999, 2000, 2001, 2002, 2008 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2000, 2001, 2002, 2008, 2010
+   Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -22,6 +23,7 @@
 #include "value.h"
 #include "gdb_string.h"
 #include "varobj.h"
+#include "exceptions.h"
 
 #include <tcl.h>
 #include "gdbtk.h"
@@ -574,9 +576,16 @@ variable_value (Tcl_Interp *interp, int objc,
       if (varobj_get_attributes (var) & 0x00000001 /* Editable? */ )
 	{
 	  char *s;
+	  int ok = 0;
+	  struct gdb_exception e;
 
 	  s = Tcl_GetStringFromObj (objv[2], NULL);
-	  if (!varobj_set_value (var, s))
+	  TRY_CATCH (e, RETURN_MASK_ERROR)
+	    {
+	      ok = varobj_set_value (var, s);
+	    }
+
+	  if (e.reason < 0 || !ok)
             {
 	      gdbtk_set_result (interp, "Could not assign expression to variable object");
 	      return TCL_ERROR;

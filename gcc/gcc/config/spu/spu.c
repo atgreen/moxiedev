@@ -1,4 +1,4 @@
-/* Copyright (C) 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+/* Copyright (C) 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
    This file is free software; you can redistribute it and/or modify it under
    the terms of the GNU General Public License as published by the Free
@@ -21,7 +21,6 @@
 #include "rtl.h"
 #include "regs.h"
 #include "hard-reg-set.h"
-#include "real.h"
 #include "insn-config.h"
 #include "conditions.h"
 #include "insn-attr.h"
@@ -36,6 +35,7 @@
 #include "output.h"
 #include "basic-block.h"
 #include "integrate.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "ggc.h"
 #include "hashtab.h"
@@ -151,8 +151,8 @@ char regs_ever_allocated[FIRST_PSEUDO_REGISTER];
 /*  Prototypes and external defs.  */
 static void spu_init_builtins (void);
 static tree spu_builtin_decl (unsigned, bool);
-static unsigned char spu_scalar_mode_supported_p (enum machine_mode mode);
-static unsigned char spu_vector_mode_supported_p (enum machine_mode mode);
+static bool spu_scalar_mode_supported_p (enum machine_mode mode);
+static bool spu_vector_mode_supported_p (enum machine_mode mode);
 static bool spu_legitimate_address_p (enum machine_mode, rtx, bool);
 static bool spu_addr_space_legitimate_address_p (enum machine_mode, rtx,
 						 bool, addr_space_t);
@@ -181,13 +181,13 @@ static void spu_sched_init (FILE *, int, int);
 static int spu_sched_reorder (FILE *, int, rtx *, int *, int);
 static tree spu_handle_fndecl_attribute (tree * node, tree name, tree args,
 					 int flags,
-					 unsigned char *no_add_attrs);
+					 bool *no_add_attrs);
 static tree spu_handle_vector_attribute (tree * node, tree name, tree args,
 					 int flags,
-					 unsigned char *no_add_attrs);
+					 bool *no_add_attrs);
 static int spu_naked_function_p (tree func);
-static unsigned char spu_pass_by_reference (CUMULATIVE_ARGS *cum, enum machine_mode mode,
-					    const_tree type, unsigned char named);
+static bool spu_pass_by_reference (CUMULATIVE_ARGS *cum, enum machine_mode mode,
+				   const_tree type, bool named);
 static tree spu_build_builtin_va_list (void);
 static void spu_va_start (tree, rtx);
 static tree spu_gimplify_va_arg_expr (tree valist, tree type,
@@ -197,9 +197,9 @@ static int mem_is_padded_component_ref (rtx x);
 static int reg_aligned_for_addr (rtx x);
 static bool spu_assemble_integer (rtx x, unsigned int size, int aligned_p);
 static void spu_asm_globalize_label (FILE * file, const char *name);
-static unsigned char spu_rtx_costs (rtx x, int code, int outer_code,
-				    int *total, bool speed);
-static unsigned char spu_function_ok_for_sibcall (tree decl, tree exp);
+static bool spu_rtx_costs (rtx x, int code, int outer_code,
+			   int *total, bool speed);
+static bool spu_function_ok_for_sibcall (tree decl, tree exp);
 static void spu_init_libfuncs (void);
 static bool spu_return_in_memory (const_tree type, const_tree fntype);
 static void fix_range (const char *);
@@ -210,7 +210,7 @@ static rtx spu_addr_space_legitimize_address (rtx, rtx, enum machine_mode,
 static tree spu_builtin_mul_widen_even (tree);
 static tree spu_builtin_mul_widen_odd (tree);
 static tree spu_builtin_mask_for_load (void);
-static int spu_builtin_vectorization_cost (bool);
+static int spu_builtin_vectorization_cost (enum vect_cost_for_stmt, tree, int);
 static bool spu_vector_alignment_reachable (const_tree, bool);
 static tree spu_builtin_vec_perm (tree, tree *);
 static enum machine_mode spu_addr_space_pointer_mode (addr_space_t);
@@ -224,8 +224,6 @@ static section *spu_select_section (tree, int, unsigned HOST_WIDE_INT);
 static void spu_unique_section (tree, int);
 static rtx spu_expand_load (rtx, rtx, rtx, int);
 static void spu_trampoline_init (rtx, tree, rtx);
-
-extern const char *reg_names[];
 
 /* Which instruction set architecture to use.  */
 int spu_arch;
@@ -433,8 +431,8 @@ static const struct attribute_spec spu_attribute_table[] =
 #undef TARGET_VECTORIZE_BUILTIN_VECTORIZATION_COST
 #define TARGET_VECTORIZE_BUILTIN_VECTORIZATION_COST spu_builtin_vectorization_cost
 
-#undef TARGET_VECTOR_ALIGNMENT_REACHABLE
-#define TARGET_VECTOR_ALIGNMENT_REACHABLE spu_vector_alignment_reachable
+#undef TARGET_VECTORIZE_VECTOR_ALIGNMENT_REACHABLE
+#define TARGET_VECTORIZE_VECTOR_ALIGNMENT_REACHABLE spu_vector_alignment_reachable
 
 #undef TARGET_VECTORIZE_BUILTIN_VEC_PERM
 #define TARGET_VECTORIZE_BUILTIN_VEC_PERM spu_builtin_vec_perm
@@ -1140,7 +1138,7 @@ spu_emit_branch_or_set (int is_set, rtx cmp, rtx operands[])
           if (eq_rtx == 0)
 	    abort ();
           emit_insn (eq_rtx);
-          ior_code = ior_optab->handlers[(int)comp_mode].insn_code;
+          ior_code = optab_handler (ior_optab, comp_mode);
           gcc_assert (ior_code != CODE_FOR_nothing);
           emit_insn (GEN_FCN (ior_code)
 		     (compare_result, compare_result, eq_result));
@@ -1697,8 +1695,6 @@ print_operand (FILE * file, rtx x, int code)
   gcc_unreachable ();
 }
 
-extern char call_used_regs[];
-
 /* For PIC mode we've reserved PIC_OFFSET_TABLE_REGNUM, which is a
    caller saved register.  For leaf functions it is more efficient to
    use a volatile register because we won't need to save and restore the
@@ -1957,10 +1953,6 @@ spu_expand_prologue (void)
   rtx scratch_reg_0, scratch_reg_1;
   rtx insn, real;
 
-  /* A NOTE_INSN_DELETED is supposed to be at the start and end of
-     the "toplevel" insn chain.  */
-  emit_note (NOTE_INSN_DELETED);
-
   if (flag_pic && optimize == 0)
     crtl->uses_pic_offset_table = 1;
 
@@ -2066,7 +2058,6 @@ spu_expand_prologue (void)
 	}
     }
 
-  emit_note (NOTE_INSN_DELETED);
 }
 
 void
@@ -2076,10 +2067,6 @@ spu_expand_epilogue (bool sibcall_p)
   HOST_WIDE_INT saved_regs_size, total_size;
   rtx sp_reg = gen_rtx_REG (Pmode, STACK_POINTER_REGNUM);
   rtx jump, scratch_reg_0;
-
-  /* A NOTE_INSN_DELETED is supposed to be at the start and end of
-     the "toplevel" insn chain.  */
-  emit_note (NOTE_INSN_DELETED);
 
   if (spu_naked_function_p (current_function_decl))
     return;
@@ -2125,7 +2112,6 @@ spu_expand_epilogue (bool sibcall_p)
       emit_barrier_after (jump);
     }
 
-  emit_note (NOTE_INSN_DELETED);
 }
 
 rtx
@@ -4090,7 +4076,7 @@ spu_build_builtin_va_list (void)
   TREE_CHAIN (record) = type_decl;
   TYPE_NAME (record) = type_decl;
   TYPE_FIELDS (record) = f_args;
-  TREE_CHAIN (f_args) = f_skip;
+  DECL_CHAIN (f_args) = f_skip;
 
   /* We know this is being padded and we want it too.  It is an internal
      type so hide the warnings from the user. */
@@ -4125,7 +4111,7 @@ spu_va_start (tree valist, rtx nextarg)
   tree args, skip, t;
 
   f_args = TYPE_FIELDS (TREE_TYPE (va_list_type_node));
-  f_skip = TREE_CHAIN (f_args);
+  f_skip = DECL_CHAIN (f_args);
 
   valist = build_va_arg_indirect_ref (valist);
   args =
@@ -4180,9 +4166,9 @@ spu_gimplify_va_arg_expr (tree valist, tree type, gimple_seq * pre_p,
   bool pass_by_reference_p;
 
   f_args = TYPE_FIELDS (TREE_TYPE (va_list_type_node));
-  f_skip = TREE_CHAIN (f_args);
+  f_skip = DECL_CHAIN (f_args);
 
-  valist = build1 (INDIRECT_REF, TREE_TYPE (TREE_TYPE (valist)), valist);
+  valist = build_simple_mem_ref (valist);
   args =
     build3 (COMPONENT_REF, TREE_TYPE (f_args), valist, f_args, NULL_TREE);
   skip =
@@ -4499,8 +4485,7 @@ ea_load_store_inline (rtx mem, bool is_store, rtx ea_addr, rtx data_addr)
 							    hit_ref, pc_rtx)));
   /* Say that this branch is very likely to happen.  */
   v = REG_BR_PROB_BASE - REG_BR_PROB_BASE / 100 - 1;
-  REG_NOTES (insn)
-    = gen_rtx_EXPR_LIST (REG_BR_PROB, GEN_INT (v), REG_NOTES (insn));
+  add_reg_note (insn, REG_BR_PROB, GEN_INT (v));
 
   ea_load_store (mem, is_store, ea_addr, data_addr);
   cont_label = gen_label_rtx ();
@@ -4600,7 +4585,8 @@ spu_expand_mov (rtx * ops, enum machine_mode mode)
 
       if (GET_MODE_SIZE (mode) < GET_MODE_SIZE (imode))
 	{
-	  enum insn_code icode = convert_optab_handler (trunc_optab, mode, imode)->insn_code;
+	  enum insn_code icode = convert_optab_handler (trunc_optab,
+							mode, imode);
 	  emit_insn (GEN_FCN (icode) (ops[0], from));
 	}
       else
@@ -5628,12 +5614,14 @@ extern GTY(()) struct spu_builtin_description spu_builtins[NUM_SPU_BUILTINS];
 
 struct spu_builtin_description spu_builtins[] = {
 #define DEF_BUILTIN(fcode, icode, name, type, params) \
-  {fcode, icode, name, type, params, NULL_TREE},
+  {fcode, icode, name, type, params},
 #include "spu-builtins.def"
 #undef DEF_BUILTIN
 };
 
-/* Returns the rs6000 builtin decl for CODE.  */
+static GTY(()) tree spu_builtin_decls[NUM_SPU_BUILTINS];
+
+/* Returns the spu builtin decl for CODE.  */
 
 static tree
 spu_builtin_decl (unsigned code, bool initialize_p ATTRIBUTE_UNUSED)
@@ -5641,7 +5629,7 @@ spu_builtin_decl (unsigned code, bool initialize_p ATTRIBUTE_UNUSED)
   if (code >= NUM_SPU_BUILTINS)
     return error_mark_node;
           
-  return spu_builtins[code].fndecl;
+  return spu_builtin_decls[code];
 }
 
 
@@ -5719,14 +5707,14 @@ spu_init_builtins (void)
       p = build_function_type (spu_builtin_types[d->parm[0]], p);
 
       sprintf (name, "__builtin_%s", d->name);
-      d->fndecl =
+      spu_builtin_decls[i] =
 	add_builtin_function (name, p, END_BUILTINS + i, BUILT_IN_MD,
 			      NULL, NULL_TREE);
       if (d->fcode == SPU_MASK_FOR_LOAD)
-	TREE_READONLY (d->fndecl) = 1;	
+	TREE_READONLY (spu_builtin_decls[i]) = 1;	
 
       /* These builtins don't throw.  */
-      TREE_NOTHROW (d->fndecl) = 1;
+      TREE_NOTHROW (spu_builtin_decls[i]) = 1;
     }
 }
 
@@ -6263,7 +6251,7 @@ spu_emit_vector_compare (enum rtx_code rcode,
           {
             enum insn_code nor_code;
             rtx eq_rtx = spu_emit_vector_compare (EQ, op0, op1, dest_mode);
-            nor_code = optab_handler (one_cmpl_optab, (int)dest_mode)->insn_code;
+            nor_code = optab_handler (one_cmpl_optab, dest_mode);
             gcc_assert (nor_code != CODE_FOR_nothing);
             emit_insn (GEN_FCN (nor_code) (mask, eq_rtx));
             if (dmode != dest_mode)
@@ -6298,7 +6286,7 @@ spu_emit_vector_compare (enum rtx_code rcode,
             c_rtx = spu_emit_vector_compare (new_code, op0, op1, dest_mode);
             eq_rtx = spu_emit_vector_compare (EQ, op0, op1, dest_mode);
 
-            ior_code = optab_handler (ior_optab, (int)dest_mode)->insn_code;
+            ior_code = optab_handler (ior_optab, dest_mode);
             gcc_assert (ior_code != CODE_FOR_nothing);
             emit_insn (GEN_FCN (ior_code) (mask, c_rtx, eq_rtx));
             if (dmode != dest_mode)
@@ -6526,7 +6514,7 @@ spu_expand_builtin_1 (struct spu_builtin_description *d,
 
       /* get addr */
       arg = CALL_EXPR_ARG (exp, 0);
-      gcc_assert (TREE_CODE (TREE_TYPE (arg)) == POINTER_TYPE);
+      gcc_assert (POINTER_TYPE_P (TREE_TYPE (arg)));
       op = expand_expr (arg, NULL_RTX, Pmode, EXPAND_NORMAL);
       addr = memory_address (mode, op);
 
@@ -6669,9 +6657,9 @@ spu_builtin_mul_widen_even (tree type)
     {
     case V8HImode:
       if (TYPE_UNSIGNED (type))
-	return spu_builtins[SPU_MULE_0].fndecl;
+	return spu_builtin_decls[SPU_MULE_0];
       else
-	return spu_builtins[SPU_MULE_1].fndecl;
+	return spu_builtin_decls[SPU_MULE_1];
       break;
     default:
       return NULL_TREE;
@@ -6686,9 +6674,9 @@ spu_builtin_mul_widen_odd (tree type)
     {
     case V8HImode:
       if (TYPE_UNSIGNED (type))
-	return spu_builtins[SPU_MULO_1].fndecl;
+	return spu_builtin_decls[SPU_MULO_1];
       else
-	return spu_builtins[SPU_MULO_0].fndecl; 
+	return spu_builtin_decls[SPU_MULO_0]; 
       break;
     default:
       return NULL_TREE;
@@ -6699,24 +6687,43 @@ spu_builtin_mul_widen_odd (tree type)
 static tree
 spu_builtin_mask_for_load (void)
 {
-  struct spu_builtin_description *d = &spu_builtins[SPU_MASK_FOR_LOAD];
-  gcc_assert (d);
-  return d->fndecl;
+  return spu_builtin_decls[SPU_MASK_FOR_LOAD];
 }
 
 /* Implement targetm.vectorize.builtin_vectorization_cost.  */
 static int 
-spu_builtin_vectorization_cost (bool runtime_test)
+spu_builtin_vectorization_cost (enum vect_cost_for_stmt type_of_cost,
+                                tree vectype ATTRIBUTE_UNUSED,
+                                int misalign ATTRIBUTE_UNUSED)
 {
-  /* If the branch of the runtime test is taken - i.e. - the vectorized
-     version is skipped - this incurs a misprediction cost (because the
-     vectorized version is expected to be the fall-through).  So we subtract
-     the latency of a mispredicted branch from the costs that are incurred
-     when the vectorized version is executed.  */
-  if (runtime_test)
-    return -19;
-  else
-    return 0;
+  switch (type_of_cost)
+    {
+      case scalar_stmt:
+      case vector_stmt:
+      case vector_load:
+      case vector_store:
+      case vec_to_scalar:
+      case scalar_to_vec:
+      case cond_branch_not_taken:
+      case vec_perm:
+        return 1;
+
+      case scalar_store:
+        return 10;
+
+      case scalar_load:
+        /* Load + rotate.  */
+        return 2;
+
+      case unaligned_load:
+        return 2;
+
+      case cond_branch_taken:
+        return 6;
+
+      default:
+        gcc_unreachable ();
+    }
 }
 
 /* Return true iff, data reference of TYPE can reach vector alignment (16)
@@ -6737,54 +6744,43 @@ spu_vector_alignment_reachable (const_tree type ATTRIBUTE_UNUSED, bool is_packed
 tree
 spu_builtin_vec_perm (tree type, tree *mask_element_type)
 {
-  struct spu_builtin_description *d;
-
   *mask_element_type = unsigned_char_type_node;
 
   switch (TYPE_MODE (type))
     {
     case V16QImode:
       if (TYPE_UNSIGNED (type))
-        d = &spu_builtins[SPU_SHUFFLE_0];
+        return spu_builtin_decls[SPU_SHUFFLE_0];
       else
-        d = &spu_builtins[SPU_SHUFFLE_1];
-      break;
+        return spu_builtin_decls[SPU_SHUFFLE_1];
 
     case V8HImode:
       if (TYPE_UNSIGNED (type))
-        d = &spu_builtins[SPU_SHUFFLE_2];
+        return spu_builtin_decls[SPU_SHUFFLE_2];
       else
-        d = &spu_builtins[SPU_SHUFFLE_3];
-      break;
+        return spu_builtin_decls[SPU_SHUFFLE_3];
 
     case V4SImode:
       if (TYPE_UNSIGNED (type))
-        d = &spu_builtins[SPU_SHUFFLE_4];
+        return spu_builtin_decls[SPU_SHUFFLE_4];
       else
-        d = &spu_builtins[SPU_SHUFFLE_5];
-      break;
+        return spu_builtin_decls[SPU_SHUFFLE_5];
 
     case V2DImode:
       if (TYPE_UNSIGNED (type))
-        d = &spu_builtins[SPU_SHUFFLE_6];
+        return spu_builtin_decls[SPU_SHUFFLE_6];
       else
-        d = &spu_builtins[SPU_SHUFFLE_7];
-      break;
+        return spu_builtin_decls[SPU_SHUFFLE_7];
 
     case V4SFmode:
-      d = &spu_builtins[SPU_SHUFFLE_8];
-      break;
+      return spu_builtin_decls[SPU_SHUFFLE_8];
 
     case V2DFmode:
-      d = &spu_builtins[SPU_SHUFFLE_9];
-      break;
+      return spu_builtin_decls[SPU_SHUFFLE_9];
 
     default:
       return NULL_TREE;
     }
-
-  gcc_assert (d);
-  return d->fndecl;
 }
 
 /* Return the appropriate mode for a named address pointer.  */

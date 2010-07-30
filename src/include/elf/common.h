@@ -11,7 +11,7 @@
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
-   the Free Software Foundation; either version 2 of the License, or
+   the Free Software Foundation; either version 3 of the License, or
    (at your option) any later version.
 
    This program is distributed in the hope that it will be useful,
@@ -21,8 +21,8 @@
 
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.  */
-
+   Foundation, Inc., 51 Franklin Street - Fifth Floor, Boston,
+   MA 02110-1301, USA.  */
 
 /* This file is part of ELF support for BFD, and contains the portions
    that are common to both the internal and external representations.
@@ -75,6 +75,8 @@
 #define ELFOSABI_NSK	     14	/* Hewlett-Packard Non-Stop Kernel */
 #define ELFOSABI_AROS	     15	/* AROS */
 #define ELFOSABI_FENIXOS     16 /* FenixOS */
+#define ELFOSABI_C6000_ELFABI 64 /* Bare-metal TMS320C6000 */
+#define ELFOSABI_C6000_LINUX 65 /* Linux TMS320C6000 */
 #define ELFOSABI_ARM	     97	/* ARM */
 #define ELFOSABI_STANDALONE 255	/* Standalone (embedded) application */
 
@@ -499,6 +501,15 @@
 /* #define SHF_MASKOS	0x0F000000    *//* OS-specific semantics */
 #define SHF_MASKOS	0x0FF00000	/* New value, Oct 4, 1999 Draft */
 #define SHF_MASKPROC	0xF0000000	/* Processor-specific semantics */
+
+/* This used to be implemented as a processor specific section flag.
+   We just make it generic.  */
+#define SHF_EXCLUDE	0x80000000	/* Link editor is to exclude
+					   this section from executable
+					   and shared library that it
+					   builds when those objects
+					   are not to be further
+					   relocated.  */
 
 /* Values of note segment descriptor types for core files.  */
 

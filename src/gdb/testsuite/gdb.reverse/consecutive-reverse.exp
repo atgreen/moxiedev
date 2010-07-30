@@ -31,8 +31,7 @@ runto main
 
 if [target_info exists gdb,use_precord] {
     # Activate process record/replay
-    gdb_test "record" "" "Turn on process record"
-    # FIXME: command ought to acknowledge, so we can test if it succeeded.
+    gdb_test_no_output "record" "Turn on process record"
 }
 
 gdb_breakpoint foo
@@ -43,8 +42,7 @@ set foo1_addr 0
 set foo2_addr 0
 set stop_addr 0
 
-send_gdb "x /2i \$pc\n"
-gdb_expect {
+gdb_test_multiple "x /2i \$pc" "get breakpoint address for foo" {
     global hex
     global foo1_addr
     global foo2_addr
@@ -54,14 +52,6 @@ gdb_expect {
 	set foo1_addr $expect_out(1,string)
 	set foo2_addr $expect_out(2,string)
 	pass "get breakpoint address for foo"
-    }
-    -re ".*$gdb_prompt $" {
-	fail "get breakpoint address for foo"
-	return 0;
-    }
-    timeout {
-	fail "get breakpoint address for foo (timeout)"
-	return 0;
     }
 }
 
@@ -85,9 +75,8 @@ gdb_test_multiple "step" $testmsg {
 ###
 
 # Set reverse execution direction
-# FIXME: command needs to acknowledge, so we can test if it succeeded.
 
-gdb_test "set exec-dir reverse" "" "set reverse execution"
+gdb_test_no_output "set exec-dir reverse" "set reverse execution"
 
 # Now step backward and hope to hit the first breakpoint.
 
@@ -102,17 +91,8 @@ gdb_test_multiple "step" "$test_msg" {
 	}
     }
     -re "Breakpoint $decimal, foo.*$gdb_prompt $" {
-	send_gdb "print \$pc == $foo1_addr\n"
-	gdb_expect {
-	    -re "$decimal = 1\[\r\n\]+$gdb_prompt $" {
-		pass "$test_msg"
-	    }
-	    -re "$decimal = 0\[\r\n\]+$gdb_prompt $" {
-		fail "$test_msg (wrong address)"
-	    }
-	}
-    }
-    -re ".*$gdb_prompt $" {
-	fail "$test_msg"
+	gdb_test "print \$pc == $foo1_addr" \
+	    "$decimal = 1" \
+	    "$test_msg"
     }
 }

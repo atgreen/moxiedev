@@ -1330,27 +1330,27 @@ sh64_show_media_regs (struct frame_info *frame)
   int i;
 
   printf_filtered
-    ("PC=%s SR=%016llx \n",
+    ("PC=%s SR=%s\n",
      phex (get_frame_register_unsigned (frame,
 					gdbarch_pc_regnum (gdbarch)), 8),
-     (long long) get_frame_register_unsigned (frame, SR_REGNUM));
+     phex (get_frame_register_unsigned (frame, SR_REGNUM), 8));
 
   printf_filtered
-    ("SSR=%016llx SPC=%016llx \n",
-     (long long) get_frame_register_unsigned (frame, SSR_REGNUM),
-     (long long) get_frame_register_unsigned (frame, SPC_REGNUM));
+    ("SSR=%s SPC=%s\n",
+     phex (get_frame_register_unsigned (frame, SSR_REGNUM), 8),
+     phex (get_frame_register_unsigned (frame, SPC_REGNUM), 8));
   printf_filtered
-    ("FPSCR=%016lx\n ",
-     (long) get_frame_register_unsigned (frame, FPSCR_REGNUM));
+    ("FPSCR=%s\n ",
+     phex (get_frame_register_unsigned (frame, FPSCR_REGNUM), 8));
 
   for (i = 0; i < 64; i = i + 4)
     printf_filtered
-      ("\nR%d-R%d  %016llx %016llx %016llx %016llx\n",
+      ("\nR%d-R%d  %s %s %s %s\n",
        i, i + 3,
-      (long long) get_frame_register_unsigned (frame, i + 0),
-      (long long) get_frame_register_unsigned (frame, i + 1),
-      (long long) get_frame_register_unsigned (frame, i + 2),
-      (long long) get_frame_register_unsigned (frame, i + 3));
+      phex (get_frame_register_unsigned (frame, i + 0), 8),
+      phex (get_frame_register_unsigned (frame, i + 1), 8),
+      phex (get_frame_register_unsigned (frame, i + 2), 8),
+      phex (get_frame_register_unsigned (frame, i + 3), 8));
 
   printf_filtered ("\n");
   
@@ -1383,7 +1383,7 @@ sh64_show_compact_regs (struct frame_info *frame)
   int i;
 
   printf_filtered
-    ("PC=%s \n",
+    ("PC=%s\n",
      phex (get_frame_register_unsigned (frame, PC_C_REGNUM), 8));
 
   printf_filtered
@@ -2121,12 +2121,12 @@ sh64_do_register (struct gdbarch *gdbarch, struct ui_file *file,
   get_formatted_print_options (&opts, 'x');
   opts.deref_ref = 1;
   val_print (register_type (gdbarch, regnum), raw_buffer, 0, 0,
-	     file, 0, &opts, current_language);
+	     file, 0, NULL, &opts, current_language);
   fprintf_filtered (file, "\t");
   get_formatted_print_options (&opts, 0);
   opts.deref_ref = 1;
   val_print (register_type (gdbarch, regnum), raw_buffer, 0, 0,
-	     file, 0, &opts, current_language);
+	     file, 0, NULL, &opts, current_language);
   fprintf_filtered (file, "\n");
 }
 

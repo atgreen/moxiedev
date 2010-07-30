@@ -1,6 +1,7 @@
 /* BFD back-end for IBM RS/6000 "XCOFF" files.
    Copyright 1990-1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007,
-   2008, 2009  Free Software Foundation, Inc.
+   2008, 2009, 2010
+   Free Software Foundation, Inc.
    Written by Metin G. Ozisik, Mimi Phuong-Thao Vo, and John Gilmore.
    Archive support from Damon A. Permezel.
    Contributed by IBM Corporation and Cygnus Support.
@@ -3070,7 +3071,7 @@ xcoff_complain_overflow_bitfield_func (input_bfd, val, relocation, howto)
      bfd_vma relocation;
      struct reloc_howto_struct *howto;
 {
-  bfd_vma addrmask, fieldmask, signmask, ss;
+  bfd_vma fieldmask, signmask, ss;
   bfd_vma a, b, sum;
 
   /* Get the values to be added together.  For signed and unsigned
@@ -3078,7 +3079,6 @@ xcoff_complain_overflow_bitfield_func (input_bfd, val, relocation, howto)
      the size of an address.  For bitfields, all the bits matter.
      See also bfd_check_overflow.  */
   fieldmask = N_ONES (howto->bitsize);
-  addrmask = N_ONES (bfd_arch_bits_per_address (input_bfd)) | fieldmask;
   a = relocation;
   b = val & howto->src_mask;
 

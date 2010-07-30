@@ -111,7 +111,6 @@ m2_printstr (struct ui_file *stream, struct type *type, const gdb_byte *string,
   unsigned int things_printed = 0;
   int in_quotes = 0;
   int need_comma = 0;
-  int width = TYPE_LENGTH (type);
 
   if (length == 0)
     {
@@ -195,6 +194,7 @@ evaluate_subexp_modula2 (struct type *expect_type, struct expression *exp,
   struct value *arg1;
   struct value *arg2;
   struct type *type;
+
   switch (op)
     {
     case UNOP_HIGH:
@@ -211,6 +211,7 @@ evaluate_subexp_modula2 (struct type *expect_type, struct expression *exp,
 	  if (m2_is_unbounded_array (type))
 	    {
 	      struct value *temp = arg1;
+
 	      type = TYPE_FIELD_TYPE (type, 1);
 	      /* i18n: Do not translate the "_m2_high" part!  */
 	      arg1 = value_struct_elt (&temp, NULL, "_m2_high", NULL,
@@ -240,10 +241,11 @@ evaluate_subexp_modula2 (struct type *expect_type, struct expression *exp,
 	{
 	  struct value *temp = arg1;
 	  type = TYPE_FIELD_TYPE (type, 0);
-	  if (type == NULL || (TYPE_CODE (type) != TYPE_CODE_PTR)) {
-	    warning (_("internal error: unbounded array structure is unknown"));
-	    return evaluate_subexp_standard (expect_type, exp, pos, noside);
-	  }
+	  if (type == NULL || (TYPE_CODE (type) != TYPE_CODE_PTR))
+	    {
+	      warning (_("internal error: unbounded array structure is unknown"));
+	      return evaluate_subexp_standard (expect_type, exp, pos, noside);
+	    }
 	  /* i18n: Do not translate the "_m2_contents" part!  */
 	  arg1 = value_struct_elt (&temp, NULL, "_m2_contents", NULL,
 				   _("unbounded structure "
@@ -356,6 +358,7 @@ const struct exp_descriptor exp_descriptor_modula2 =
 {
   print_subexp_standard,
   operator_length_standard,
+  operator_check_standard,
   op_name_standard,
   dump_subexp_body_standard,
   evaluate_subexp_modula2

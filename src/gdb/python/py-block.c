@@ -248,7 +248,7 @@ blpy_block_syms_iternext (PyObject *self)
 
   if (sym == NULL)
     {
-      PyErr_SetString (PyExc_StopIteration, "Symbol is null.");
+      PyErr_SetString (PyExc_StopIteration, _("Symbol is null."));
       return NULL;
     }
 
@@ -259,6 +259,7 @@ static void
 blpy_block_syms_dealloc (PyObject *obj)
 {
   block_syms_iterator_object *iter_obj = (block_syms_iterator_object *) obj;
+
   Py_XDECREF (iter_obj->source);
 }
 
@@ -271,7 +272,6 @@ gdbpy_block_for_pc (PyObject *self, PyObject *args)
   struct block *block;
   struct obj_section *section;
   struct symtab *symtab;
-  PyObject *sym_obj;
 
   if (!PyArg_ParseTuple (args, "K", &pc))
     return NULL;
@@ -281,7 +281,7 @@ gdbpy_block_for_pc (PyObject *self, PyObject *args)
   if (!symtab || symtab->objfile == NULL)
     {
       PyErr_SetString (PyExc_RuntimeError,
-		       "Cannot locate object file for block.");
+		       _("Cannot locate object file for block."));
       return NULL;
     }
 
@@ -301,6 +301,7 @@ static void
 del_objfile_blocks (struct objfile *objfile, void *datum)
 {
   block_object *obj = datum;
+
   while (obj)
     {
       block_object *next = obj->next;

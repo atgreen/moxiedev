@@ -23,12 +23,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tree.h"
 #include "tm.h"
-#include "rtl.h"
-#include "expr.h"
-#include "insn-codes.h"
-#include "diagnostic.h"
-#include "optabs.h"
-#include "machmode.h"
 #include "langhooks.h"
 #include "tree-flow.h"
 #include "gimple.h"
@@ -37,6 +31,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "flags.h"
 #include "ggc.h"
 
+/* Need to include rtl.h, expr.h, etc. for optabs.  */
+#include "expr.h"
+#include "optabs.h"
 
 /* Build a constant of type TYPE, made of VALUE's bits replicated
    every TYPE_SIZE (INNER_TYPE) bits to fit TYPE's precision.  */
@@ -371,7 +368,7 @@ type_for_widest_vector_mode (enum machine_mode inner_mode, optab op, int satp)
   for (; mode != VOIDmode; mode = GET_MODE_WIDER_MODE (mode))
     if (GET_MODE_INNER (mode) == inner_mode
         && GET_MODE_NUNITS (mode) > best_nunits
-	&& optab_handler (op, mode)->insn_code != CODE_FOR_nothing)
+	&& optab_handler (op, mode) != CODE_FOR_nothing)
       best_mode = mode, best_nunits = GET_MODE_NUNITS (mode);
 
   if (best_mode == VOIDmode)
@@ -446,8 +443,7 @@ expand_vector_operations_1 (gimple_stmt_iterator *gsi)
 	     have a vector/vector shift */
 	  op = optab_for_tree_code (code, type, optab_scalar);
 	  if (!op
-	      || (op->handlers[(int) TYPE_MODE (type)].insn_code
-		  == CODE_FOR_nothing))
+	      || optab_handler (op, TYPE_MODE (type)) == CODE_FOR_nothing)
 	    op = optab_for_tree_code (code, type, optab_vector);
 	}
     }
@@ -501,7 +497,7 @@ expand_vector_operations_1 (gimple_stmt_iterator *gsi)
 	   || GET_MODE_CLASS (compute_mode) == MODE_VECTOR_ACCUM
 	   || GET_MODE_CLASS (compute_mode) == MODE_VECTOR_UACCUM)
           && op != NULL
-	  && optab_handler (op, compute_mode)->insn_code != CODE_FOR_nothing)
+	  && optab_handler (op, compute_mode) != CODE_FOR_nothing)
 	return;
       else
 	/* There is no operation in hardware, so fall back to scalars.  */

@@ -40,6 +40,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "target.h"
 #include "cgraph.h"
 #include "diagnostic.h"
+#include "tree-pretty-print.h"
+#include "gimple-pretty-print.h"
 #include "timevar.h"
 #include "params.h"
 #include "fibheap.h"
@@ -419,6 +421,10 @@ decompose_indirect_ref_acc (tree str_decl, struct field_access_site *acc)
   if (!is_result_of_mult (before_cast, &acc->num, struct_size))
     return false;
 
+  /* ???  Add TREE_OPERAND (acc->ref, 1) to acc->offset.  */
+  if (!integer_zerop (TREE_OPERAND (acc->ref, 1)))
+    return false;
+
   return true;
 }
 
@@ -432,7 +438,7 @@ decompose_access (tree str_decl, struct field_access_site *acc)
 {
   gcc_assert (acc->ref);
 
-  if (TREE_CODE (acc->ref) == INDIRECT_REF)
+  if (TREE_CODE (acc->ref) == MEM_REF)
     return decompose_indirect_ref_acc (str_decl, acc);
   else if (TREE_CODE (acc->ref) == ARRAY_REF)
     return true;
@@ -967,12 +973,12 @@ replace_field_acc (struct field_access_site *acc, tree new_type)
   type_wrapper_t *wr_p = NULL;
   struct ref_pos r_pos;
 
-  while (TREE_CODE (ref_var) == INDIRECT_REF
+  while (TREE_CODE (ref_var) == MEM_REF
 	 || TREE_CODE (ref_var) == ARRAY_REF)
     {
       type_wrapper_t wr;
 
-      if ( TREE_CODE (ref_var) == INDIRECT_REF)
+      if (TREE_CODE (ref_var) == MEM_REF)
 	{
 	  wr.wrap = 0;
 	  wr.domain = 0;
@@ -999,7 +1005,7 @@ replace_field_acc (struct field_access_site *acc, tree new_type)
 	new_ref = build4 (ARRAY_REF, type, new_ref,
 			  wr_p->domain, NULL_TREE, NULL_TREE);
       else /* Pointer.  */
-	new_ref = build1 (INDIRECT_REF, type, new_ref);
+	new_ref = build_simple_mem_ref (new_ref);
       VEC_pop (type_wrapper_t, wrapper);
     }
 
@@ -1039,7 +1045,7 @@ static void
 replace_field_access_stmt (struct field_access_site *acc, tree new_type)
 {
 
-  if (TREE_CODE (acc->ref) == INDIRECT_REF
+  if (TREE_CODE (acc->ref) == MEM_REF
       ||TREE_CODE (acc->ref) == ARRAY_REF
       ||TREE_CODE (acc->ref) == VAR_DECL)
     replace_field_acc (acc, new_type);
@@ -1275,13 +1281,11 @@ insert_new_var_in_stmt (gimple stmt, tree var, tree new_var)
   pos = find_pos_in_stmt (stmt, var, &r_pos);
   gcc_assert (pos);
 
-  while (r_pos.container && (TREE_CODE(r_pos.container) == INDIRECT_REF
+  while (r_pos.container && (TREE_CODE(r_pos.container) == MEM_REF
 			     || TREE_CODE(r_pos.container) == ADDR_EXPR))
     {
-      tree type = TREE_TYPE (TREE_TYPE (new_var));
-
-      if (TREE_CODE(r_pos.container) == INDIRECT_REF)
-	new_var = build1 (INDIRECT_REF, type, new_var);
+      if (TREE_CODE(r_pos.container) == MEM_REF)
+	new_var = build_simple_mem_ref (new_var);
       else
 	new_var = build_fold_addr_expr (new_var);
       pos = find_pos_in_stmt (stmt, r_pos.container, &r_pos);
@@ -1389,6 +1393,7 @@ create_new_general_access (struct access_site *acc, d_str str)
 	 for now just reset all debug stmts referencing objects that have
 	 been peeled.  */
       gimple_debug_bind_reset_value (stmt);
+      update_stmt (stmt);
       break;
 
     default:
@@ -2527,7 +2532,7 @@ get_stmt_accesses (tree *tp, int *walk_subtrees, void *data)
 	tree field_decl = TREE_OPERAND (t, 1);
 
 
-	if ((TREE_CODE (ref) == INDIRECT_REF
+	if ((TREE_CODE (ref) == MEM_REF
 	     || TREE_CODE (ref) == ARRAY_REF
 	     || TREE_CODE (ref) == VAR_DECL)
 	    && TREE_CODE (field_decl) == FIELD_DECL)
@@ -2920,7 +2925,7 @@ exclude_types_passed_to_local_func (VEC (tree, heap) **unsuitable_types)
 	tree fn = c_node->decl;
 	tree arg;
 
-	for (arg = DECL_ARGUMENTS (fn); arg; arg = TREE_CHAIN (arg))
+	for (arg = DECL_ARGUMENTS (fn); arg; arg = DECL_CHAIN (arg))
 	  {
 	    tree type = TREE_TYPE (arg);
 
@@ -3240,6 +3245,7 @@ do_reorg_for_func (struct cgraph_node *node)
   create_new_accesses_for_func ();
   update_ssa (TODO_update_ssa);
   cleanup_tree_cfg ();
+  cgraph_rebuild_references ();
 
   /* Free auxiliary data representing local variables.  */
   free_new_vars_htab (new_local_vars);
@@ -3412,7 +3418,6 @@ static void
 build_data_structure (VEC (tree, heap) **unsuitable_types)
 {
   tree var, type;
-  tree var_list;
   struct varpool_node *current_varpool;
   struct cgraph_node *c_node;
 
@@ -3435,6 +3440,7 @@ build_data_structure (VEC (tree, heap) **unsuitable_types)
       if (avail == AVAIL_LOCAL || avail == AVAIL_AVAILABLE)
 	{
 	  struct function *fn = DECL_STRUCT_FUNCTION (c_node->decl);
+	  unsigned ix;
 
 	  for (var = DECL_ARGUMENTS (c_node->decl); var;
 	       var = TREE_CHAIN (var))
@@ -3450,14 +3456,9 @@ build_data_structure (VEC (tree, heap) **unsuitable_types)
 	    }
 
 	  /* Check function local variables.  */
-	  for (var_list = fn->local_decls; var_list;
-	       var_list = TREE_CHAIN (var_list))
-	    {
-	      var = TREE_VALUE (var_list);
-
-	      if (is_candidate (var, &type, unsuitable_types))
-		add_structure (type);
-	    }
+	  FOR_EACH_LOCAL_DECL (fn, ix, var)
+	    if (is_candidate (var, &type, unsuitable_types))
+	      add_structure (type);
 	}
     }
 }
@@ -4027,7 +4028,10 @@ reorg_structs (void)
 static unsigned int
 reorg_structs_drive (void)
 {
-  reorg_structs ();
+  /* IPA struct-reorg is completely broken - its analysis phase is
+     non-conservative (which is not the only reason it is broken).  */
+  if (0)
+    reorg_structs ();
   return 0;
 }
 

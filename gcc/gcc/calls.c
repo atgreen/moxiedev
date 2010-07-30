@@ -1,6 +1,6 @@
 /* Convert function calls to rtl insns, for GNU C compiler.
    Copyright (C) 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -32,7 +32,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "libfuncs.h"
 #include "function.h"
 #include "regs.h"
-#include "toplev.h"
+#include "diagnostic-core.h"
 #include "output.h"
 #include "tm_p.h"
 #include "timevar.h"
@@ -175,7 +175,8 @@ prepare_call_address (tree fndecl, rtx funexp, rtx static_chain_value,
   if (GET_CODE (funexp) != SYMBOL_REF)
     /* If we are using registers for parameters, force the
        function address into a register now.  */
-    funexp = ((SMALL_REGISTER_CLASSES && reg_parm_seen)
+    funexp = ((reg_parm_seen
+	       && targetm.small_register_classes_for_mode_p (FUNCTION_MODE))
 	      ? force_not_mem (memory_address (FUNCTION_MODE, funexp))
 	      : memory_address (FUNCTION_MODE, funexp));
   else if (! sibcallp)
@@ -207,13 +208,15 @@ prepare_call_address (tree fndecl, rtx funexp, rtx static_chain_value,
    The CALL_INSN is the first insn generated.
 
    FNDECL is the declaration node of the function.  This is given to the
-   macro RETURN_POPS_ARGS to determine whether this function pops its own args.
+   hook TARGET_RETURN_POPS_ARGS to determine whether this function pops
+   its own args.
 
-   FUNTYPE is the data type of the function.  This is given to the macro
-   RETURN_POPS_ARGS to determine whether this function pops its own args.
-   We used to allow an identifier for library functions, but that doesn't
-   work when the return type is an aggregate type and the calling convention
-   says that the pointer to this aggregate is to be popped by the callee.
+   FUNTYPE is the data type of the function.  This is given to the hook
+   TARGET_RETURN_POPS_ARGS to determine whether this function pops its
+   own args.  We used to allow an identifier for library functions, but
+   that doesn't work when the return type is an aggregate type and the
+   calling convention says that the pointer to this aggregate is to be
+   popped by the callee.
 
    STACK_SIZE is the number of bytes of arguments on the stack,
    ROUNDED_STACK_SIZE is that number rounded up to
@@ -225,7 +228,7 @@ prepare_call_address (tree fndecl, rtx funexp, rtx static_chain_value,
    It is zero if this call doesn't want a structure value.
 
    NEXT_ARG_REG is the rtx that results from executing
-     FUNCTION_ARG (args_so_far, VOIDmode, void_type_node, 1)
+     targetm.calls.function_arg (&args_so_far, VOIDmode, void_type_node, true)
    just after all the args have had their registers assigned.
    This could be whatever you like, but normally it is the first
    arg-register beyond those used for args in this call,
@@ -255,7 +258,8 @@ emit_call_1 (rtx funexp, tree fntree ATTRIBUTE_UNUSED, tree fndecl ATTRIBUTE_UNU
   rtx rounded_stack_size_rtx = GEN_INT (rounded_stack_size);
   rtx call_insn;
   int already_popped = 0;
-  HOST_WIDE_INT n_popped = RETURN_POPS_ARGS (fndecl, funtype, stack_size);
+  HOST_WIDE_INT n_popped
+    = targetm.calls.return_pops_args (fndecl, funtype, stack_size);
 
 #ifdef CALL_POPS_ARGS
   n_popped += CALL_POPS_ARGS (* args_so_far);
@@ -711,7 +715,8 @@ precompute_register_parameters (int num_actuals, struct arg_data *args,
 		 && args[i].mode != BLKmode
 		 && rtx_cost (args[i].value, SET, optimize_insn_for_speed_p ())
 		    > COSTS_N_INSNS (1)
-		 && ((SMALL_REGISTER_CLASSES && *reg_parm_seen)
+		 && ((*reg_parm_seen
+		      && targetm.small_register_classes_for_mode_p (args[i].mode))
 		     || optimize))
 	  args[i].value = copy_to_mode_reg (args[i].mode, args[i].value);
       }
@@ -1122,17 +1127,18 @@ initialize_argument_information (int num_actuals ATTRIBUTE_UNUSED,
       args[i].unsignedp = unsignedp;
       args[i].mode = mode;
 
-      args[i].reg = FUNCTION_ARG (*args_so_far, mode, type,
-				  argpos < n_named_args);
-#ifdef FUNCTION_INCOMING_ARG
+      args[i].reg = targetm.calls.function_arg (args_so_far, mode, type,
+						argpos < n_named_args);
+
       /* If this is a sibling call and the machine has register windows, the
 	 register window has to be unwinded before calling the routine, so
 	 arguments have to go into the incoming registers.  */
-      args[i].tail_call_reg = FUNCTION_INCOMING_ARG (*args_so_far, mode, type,
-						     argpos < n_named_args);
-#else
-      args[i].tail_call_reg = args[i].reg;
-#endif
+      if (targetm.calls.function_incoming_arg != targetm.calls.function_arg)
+	args[i].tail_call_reg
+	  = targetm.calls.function_incoming_arg (args_so_far, mode, type,
+						 argpos < n_named_args);
+      else
+	args[i].tail_call_reg = args[i].reg;
 
       if (args[i].reg)
 	args[i].partial
@@ -1187,8 +1193,8 @@ initialize_argument_information (int num_actuals ATTRIBUTE_UNUSED,
       /* Increment ARGS_SO_FAR, which has info about which arg-registers
 	 have been used, etc.  */
 
-      FUNCTION_ARG_ADVANCE (*args_so_far, TYPE_MODE (type), type,
-			    argpos < n_named_args);
+      targetm.calls.function_arg_advance (args_so_far, TYPE_MODE (type),
+					  type, argpos < n_named_args);
     }
 }
 
@@ -1666,10 +1672,12 @@ load_register_parameters (struct arg_data *args, int num_actuals,
 	    {
 	      rtx mem = validize_mem (args[i].value);
 
-	      /* Check for overlap with already clobbered argument area.  */
+	      /* Check for overlap with already clobbered argument area,
+	         providing that this has non-zero size.  */
 	      if (is_sibcall
-		  && mem_overlaps_already_clobbered_arg_p (XEXP (args[i].value, 0),
-							   size))
+		  && (size == 0
+		      || mem_overlaps_already_clobbered_arg_p 
+					   (XEXP (args[i].value, 0), size)))
 		*sibcall_failure = 1;
 
 	      /* Handle a BLKmode that needs shifting.  */
@@ -2089,7 +2097,7 @@ expand_call (tree exp, rtx target, int ignore)
   /* Set up a place to return a structure.  */
 
   /* Cater to broken compilers.  */
-  if (aggregate_value_p (exp, (!fndecl ? fntype : fndecl)))
+  if (aggregate_value_p (exp, fntype))
     {
       /* This call returns a big structure.  */
       flags &= ~(ECF_CONST | ECF_PURE | ECF_LOOPING_CONST_OR_PURE);
@@ -2321,10 +2329,10 @@ expand_call (tree exp, rtx target, int ignore)
 			       - crtl->args.pretend_args_size)
       /* If the callee pops its own arguments, then it must pop exactly
 	 the same number of arguments as the current function.  */
-      || (RETURN_POPS_ARGS (fndecl, funtype, args_size.constant)
-	  != RETURN_POPS_ARGS (current_function_decl,
-			       TREE_TYPE (current_function_decl),
-			       crtl->args.size))
+      || (targetm.calls.return_pops_args (fndecl, funtype, args_size.constant)
+	  != targetm.calls.return_pops_args (current_function_decl,
+					     TREE_TYPE (current_function_decl),
+					     crtl->args.size))
       || !lang_hooks.decls.ok_for_sibcall (fndecl))
     try_tail_call = 0;
 
@@ -2823,14 +2831,15 @@ expand_call (tree exp, rtx target, int ignore)
 
       /* Set up next argument register.  For sibling calls on machines
 	 with register windows this should be the incoming register.  */
-#ifdef FUNCTION_INCOMING_ARG
       if (pass == 0)
-	next_arg_reg = FUNCTION_INCOMING_ARG (args_so_far, VOIDmode,
-					      void_type_node, 1);
+	next_arg_reg = targetm.calls.function_incoming_arg (&args_so_far,
+							    VOIDmode,
+							    void_type_node,
+							    true);
       else
-#endif
-	next_arg_reg = FUNCTION_ARG (args_so_far, VOIDmode,
-				     void_type_node, 1);
+	next_arg_reg = targetm.calls.function_arg (&args_so_far,
+						   VOIDmode, void_type_node,
+						   true);
 
       /* All arguments and registers used for the call must be set up by
 	 now!  */
@@ -3417,7 +3426,8 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
       argvec[count].mode = Pmode;
       argvec[count].partial = 0;
 
-      argvec[count].reg = FUNCTION_ARG (args_so_far, Pmode, NULL_TREE, 1);
+      argvec[count].reg = targetm.calls.function_arg (&args_so_far,
+						      Pmode, NULL_TREE, true);
       gcc_assert (targetm.calls.arg_partial_bytes (&args_so_far, Pmode,
 						   NULL_TREE, 1) == 0);
 
@@ -3433,7 +3443,7 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
 	  || reg_parm_stack_space > 0)
 	args_size.constant += argvec[count].locate.size.constant;
 
-      FUNCTION_ARG_ADVANCE (args_so_far, Pmode, (tree) 0, 1);
+      targetm.calls.function_arg_advance (&args_so_far, Pmode, (tree) 0, true);
 
       count++;
     }
@@ -3492,7 +3502,8 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
       argvec[count].value = val;
       argvec[count].mode = mode;
 
-      argvec[count].reg = FUNCTION_ARG (args_so_far, mode, NULL_TREE, 1);
+      argvec[count].reg = targetm.calls.function_arg (&args_so_far, mode,
+						      NULL_TREE, true);
 
       argvec[count].partial
 	= targetm.calls.arg_partial_bytes (&args_so_far, mode, NULL_TREE, 1);
@@ -3512,7 +3523,7 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
 	  || reg_parm_stack_space > 0)
 	args_size.constant += argvec[count].locate.size.constant;
 
-      FUNCTION_ARG_ADVANCE (args_so_far, mode, (tree) 0, 1);
+      targetm.calls.function_arg_advance (&args_so_far, mode, (tree) 0, true);
     }
 
   /* If this machine requires an external definition for library
@@ -3821,7 +3832,8 @@ emit_library_call_value_1 (int retval, rtx orgfun, rtx value,
 	       build_function_type (tfom, NULL_TREE),
 	       original_args_size.constant, args_size.constant,
 	       struct_value_size,
-	       FUNCTION_ARG (args_so_far, VOIDmode, void_type_node, 1),
+	       targetm.calls.function_arg (&args_so_far,
+					   VOIDmode, void_type_node, true),
 	       valreg,
 	       old_inhibit_defer_pop + 1, call_fusage, flags, & args_so_far);
 

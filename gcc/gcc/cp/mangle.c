@@ -52,10 +52,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "tm_p.h"
 #include "cp-tree.h"
-#include "real.h"
 #include "obstack.h"
 #include "toplev.h"
-#include "varray.h"
 #include "flags.h"
 #include "target.h"
 #include "cgraph.h"
@@ -150,7 +148,9 @@ integer_type_codes[itk_none] =
   'l',  /* itk_long */
   'm',  /* itk_unsigned_long */
   'x',  /* itk_long_long */
-  'y'   /* itk_unsigned_long_long */
+  'y',  /* itk_unsigned_long_long */
+  'n',  /* itk_int128 */
+  'o',  /* itk_unsigned_int128  */
 };
 
 static int decl_is_template_id (const tree, tree* const);
@@ -346,11 +346,19 @@ canonicalize_for_substitution (tree node)
   if (TYPE_P (node)
       && TYPE_CANONICAL (node) != node
       && TYPE_MAIN_VARIANT (node) != node)
+    {
       /* Here we want to strip the topmost typedef only.
          We need to do that so is_std_substitution can do proper
          name matching.  */
-    node = cp_build_qualified_type (TYPE_MAIN_VARIANT (node),
-                                    cp_type_quals (node));
+      if (TREE_CODE (node) == FUNCTION_TYPE)
+	/* Use build_qualified_type and TYPE_QUALS here to preserve
+	   the old buggy mangling of attribute noreturn with abi<5.  */
+	node = build_qualified_type (TYPE_MAIN_VARIANT (node),
+				     TYPE_QUALS (node));
+      else
+	node = cp_build_qualified_type (TYPE_MAIN_VARIANT (node),
+					cp_type_quals (node));
+    }
   return node;
 }
 
@@ -1281,7 +1289,7 @@ nested_anon_class_index (tree type)
 {
   int index = 0;
   tree member = TYPE_FIELDS (TYPE_CONTEXT (type));
-  for (; member; member = TREE_CHAIN (member))
+  for (; member; member = DECL_CHAIN (member))
     if (DECL_IMPLICIT_TYPEDEF_P (member))
       {
 	tree memtype = TREE_TYPE (member);
@@ -1331,7 +1339,7 @@ write_closure_type_name (const tree type)
   MANGLE_TRACE_TREE ("closure-type-name", type);
 
   write_string ("Ul");
-  write_method_parms (parms, DECL_NONSTATIC_MEMBER_FUNCTION_P (fn), fn);
+  write_method_parms (parms, /*method_p=*/1, fn);
   write_char ('E');
   write_compact_number (LAMBDA_EXPR_DISCRIMINATOR (lambda));
 }
@@ -1711,7 +1719,7 @@ write_local_name (tree function, const tree local_entity,
     {
       tree t;
       int i = 0;
-      for (t = DECL_ARGUMENTS (function); t; t = TREE_CHAIN (t))
+      for (t = DECL_ARGUMENTS (function); t; t = DECL_CHAIN (t))
 	{
 	  if (t == parm)
 	    i = 1;
@@ -1760,6 +1768,7 @@ write_local_name (tree function, const tree local_entity,
      <type> ::= Dt <expression> # decltype of an id-expression or 
                                 # class member access
      <type> ::= DT <expression> # decltype of an expression
+     <type> ::= Dn              # decltype of nullptr
 
    TYPE is a type node.  */
 
@@ -1775,6 +1784,7 @@ write_type (tree type)
   if (type == error_mark_node)
     return;
 
+  type = canonicalize_for_substitution (type);
   if (find_substitution (type))
     return;
 
@@ -1937,6 +1947,14 @@ write_type (tree type)
 	      sorry ("mangling typeof, use decltype instead");
 	      break;
 
+	    case LANG_TYPE:
+	      if (NULLPTR_TYPE_P (type))
+		{
+		  write_string ("Dn");
+		  break;
+		}
+	      /* else fall through.  */
+
 	    default:
 	      gcc_unreachable ();
 	    }
@@ -1967,18 +1985,25 @@ write_CV_qualifiers_for_type (const tree type)
      Note that we do not use cp_type_quals below; given "const
      int[3]", the "const" is emitted with the "int", not with the
      array.  */
+  cp_cv_quals quals = TYPE_QUALS (type);
 
-  if (TYPE_QUALS (type) & TYPE_QUAL_RESTRICT)
+  /* Attribute const/noreturn are not reflected in mangling.  */
+  if (abi_version_at_least (5)
+      && (TREE_CODE (type) == FUNCTION_TYPE
+	  || TREE_CODE (type) == METHOD_TYPE))
+    return 0;
+
+  if (quals & TYPE_QUAL_RESTRICT)
     {
       write_char ('r');
       ++num_qualifiers;
     }
-  if (TYPE_QUALS (type) & TYPE_QUAL_VOLATILE)
+  if (quals & TYPE_QUAL_VOLATILE)
     {
       write_char ('V');
       ++num_qualifiers;
     }
-  if (TYPE_QUALS (type) & TYPE_QUAL_CONST)
+  if (quals & TYPE_QUAL_CONST)
     {
       write_char ('K');
       ++num_qualifiers;
@@ -2045,7 +2070,8 @@ write_builtin_type (tree type)
 	     it in the array of these nodes.  */
 	iagain:
 	  for (itk = 0; itk < itk_none; ++itk)
-	    if (type == integer_types[itk])
+	    if (integer_types[itk] != NULL_TREE
+		&& type == integer_types[itk])
 	      {
 		/* Print the corresponding single-letter code.  */
 		write_char (integer_type_codes[itk]);
@@ -2277,12 +2303,12 @@ write_method_parms (tree parm_types, const int method_p, const tree decl)
   if (method_p)
     {
       parm_types = TREE_CHAIN (parm_types);
-      parm_decl = parm_decl ? TREE_CHAIN (parm_decl) : NULL_TREE;
+      parm_decl = parm_decl ? DECL_CHAIN (parm_decl) : NULL_TREE;
 
       while (parm_decl && DECL_ARTIFICIAL (parm_decl))
 	{
 	  parm_types = TREE_CHAIN (parm_types);
-	  parm_decl = TREE_CHAIN (parm_decl);
+	  parm_decl = DECL_CHAIN (parm_decl);
 	}
     }
 

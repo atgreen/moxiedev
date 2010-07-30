@@ -1,14 +1,14 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-02-19T17:38:18.423313Z
-156900
+2010-06-08T00:45:02.718875Z
+160416
 paolo
 
 
@@ -243,6 +243,9 @@ pop_heap
 dir
 
 is_sorted
+dir
+
+shuffle
 dir
 
 set_symmetric_difference

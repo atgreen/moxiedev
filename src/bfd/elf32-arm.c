@@ -1721,6 +1721,7 @@ static const struct elf32_arm_reloc_map elf32_arm_reloc_map[] =
     {BFD_RELOC_ARM_RELATIVE,         R_ARM_RELATIVE},
     {BFD_RELOC_ARM_GOTOFF,           R_ARM_GOTOFF32},
     {BFD_RELOC_ARM_GOTPC,            R_ARM_GOTPC},
+    {BFD_RELOC_ARM_GOT_PREL,         R_ARM_GOT_PREL},
     {BFD_RELOC_ARM_GOT32,            R_ARM_GOT32},
     {BFD_RELOC_ARM_PLT32,            R_ARM_PLT32},
     {BFD_RELOC_ARM_TARGET1,	     R_ARM_TARGET1},
@@ -2408,9 +2409,10 @@ struct a8_erratum_fix {
 struct a8_erratum_reloc {
   bfd_vma from;
   bfd_vma destination;
+  struct elf32_arm_link_hash_entry *hash;
+  const char *sym_name;
   unsigned int r_type;
   unsigned char st_type;
-  const char *sym_name;
   bfd_boolean non_a8_stub;
 };
 
@@ -2984,6 +2986,9 @@ using_thumb_only (struct elf32_arm_link_hash_table *globals)
 				       Tag_CPU_arch);
   int profile;
 
+  if (arch == TAG_CPU_ARCH_V6_M || arch == TAG_CPU_ARCH_V6S_M)
+    return TRUE;
+
   if (arch != TAG_CPU_ARCH_V7 && arch != TAG_CPU_ARCH_V7E_M)
     return FALSE;
 
@@ -3480,7 +3485,6 @@ arm_build_one_stub (struct bfd_hash_entry *gen_entry,
   struct bfd_link_info *info;
   asection *stub_sec;
   bfd *stub_bfd;
-  bfd_vma stub_addr;
   bfd_byte *loc;
   bfd_vma sym_value;
   int template_size;
@@ -3512,10 +3516,6 @@ arm_build_one_stub (struct bfd_hash_entry *gen_entry,
   loc = stub_sec->contents + stub_entry->stub_offset;
 
   stub_bfd = stub_sec->owner;
-
-  /* This is the address of the start of the stub.  */
-  stub_addr = stub_sec->output_section->vma + stub_sec->output_offset
-    + stub_entry->stub_offset;
 
   /* This is the address of the stub destination.  */
   sym_value = (stub_entry->target_value
@@ -3714,16 +3714,14 @@ find_stub_size_and_template (enum elf32_arm_stub_type stub_type,
 
 static bfd_boolean
 arm_size_one_stub (struct bfd_hash_entry *gen_entry,
-		   void * in_arg)
+		   void *in_arg ATTRIBUTE_UNUSED)
 {
   struct elf32_arm_stub_hash_entry *stub_entry;
-  struct elf32_arm_link_hash_table *htab;
   const insn_sequence *template_sequence;
   int template_size, size;
 
   /* Massage our args to the form they really have.  */
   stub_entry = (struct elf32_arm_stub_hash_entry *) gen_entry;
-  htab = (struct elf32_arm_link_hash_table *) in_arg;
 
   BFD_ASSERT((stub_entry->stub_type > arm_stub_none)
 	     && stub_entry->stub_type < ARRAY_SIZE(stub_definitions));
@@ -4080,7 +4078,7 @@ cortex_a8_erratum_scan (bfd *input_bfd,
 		  && last_was_32bit
 		  && ! last_was_branch)
                 {
-                  bfd_signed_vma offset;
+                  bfd_signed_vma offset = 0;
                   bfd_boolean force_target_arm = FALSE;
 		  bfd_boolean force_target_thumb = FALSE;
                   bfd_vma target;
@@ -4097,6 +4095,7 @@ cortex_a8_erratum_scan (bfd *input_bfd,
 		    {
 		      char *error_message = NULL;
 		      struct elf_link_hash_entry *entry;
+		      bfd_boolean use_plt = FALSE;
 
 		      /* We don't care about the error returned from this
 		         function, only if there is glue or not.  */
@@ -4106,12 +4105,18 @@ cortex_a8_erratum_scan (bfd *input_bfd,
 		      if (entry)
 			found->non_a8_stub = TRUE;
 
-		      if (found->r_type == R_ARM_THM_CALL
-			  && found->st_type != STT_ARM_TFUNC)
-			force_target_arm = TRUE;
-		      else if (found->r_type == R_ARM_THM_CALL
-			       && found->st_type == STT_ARM_TFUNC)
-			force_target_thumb = TRUE;
+		      /* Keep a simpler condition, for the sake of clarity.  */
+		      if (htab->splt != NULL && found->hash != NULL
+			  && found->hash->root.plt.offset != (bfd_vma) -1)
+			use_plt = TRUE;
+
+		      if (found->r_type == R_ARM_THM_CALL)
+			{
+			  if (found->st_type != STT_ARM_TFUNC || use_plt)
+			    force_target_arm = TRUE;
+			  else
+			    force_target_thumb = TRUE;
+			}
 		    }
 
                   /* Check if we have an offending branch instruction.  */
@@ -4678,6 +4683,7 @@ elf32_arm_size_stubs (bfd *output_bfd,
                           a8_relocs[num_a8_relocs].st_type = st_type;
                           a8_relocs[num_a8_relocs].sym_name = sym_name;
                           a8_relocs[num_a8_relocs].non_a8_stub = created_stub;
+                          a8_relocs[num_a8_relocs].hash = hash;
 
                           num_a8_relocs++;
                         }
@@ -5231,7 +5237,6 @@ record_vfp11_erratum_veneer (struct bfd_link_info *link_info,
   struct bfd_link_hash_entry *bh;
   bfd_vma val;
   struct _arm_elf_section_data *sec_data;
-  int errcount;
   elf32_vfp11_erratum_list *newerr;
 
   hash_table = elf32_arm_hash_table (link_info);
@@ -5269,7 +5274,7 @@ record_vfp11_erratum_veneer (struct bfd_link_info *link_info,
   myh->forced_local = 1;
 
   /* Link veneer back to calling location.  */
-  errcount = ++(sec_data->erratumcount);
+  sec_data->erratumcount += 1;
   newerr = (elf32_vfp11_erratum_list *)
       bfd_zmalloc (sizeof (elf32_vfp11_erratum_list));
 
@@ -6125,9 +6130,8 @@ bfd_elf32_arm_vfp11_erratum_scan (bfd *abfd, struct bfd_link_info *link_info)
                 {
                   elf32_vfp11_erratum_list *newerr =(elf32_vfp11_erratum_list *)
                       bfd_zmalloc (sizeof (elf32_vfp11_erratum_list));
-                  int errcount;
 
-                  errcount = ++(elf32_arm_section_data (sec)->erratumcount);
+                  elf32_arm_section_data (sec)->erratumcount += 1;
 
                   newerr->u.b.vfp_insn = veneer_of_insn;
 
@@ -6839,8 +6843,6 @@ elf32_arm_final_link_relocate (reloc_howto_type *           howto,
   unsigned long                 r_symndx;
   bfd_byte *                    hit_data = contents + rel->r_offset;
   bfd *                         dynobj = NULL;
-  Elf_Internal_Shdr *           symtab_hdr;
-  struct elf_link_hash_entry ** sym_hashes;
   bfd_vma *                     local_got_offsets;
   asection *                    sgot = NULL;
   asection *                    splt = NULL;
@@ -6879,8 +6881,6 @@ elf32_arm_final_link_relocate (reloc_howto_type *           howto,
       sgot = bfd_get_section_by_name (dynobj, ".got");
       splt = bfd_get_section_by_name (dynobj, ".plt");
     }
-  symtab_hdr = & elf_symtab_hdr (input_bfd);
-  sym_hashes = elf_sym_hashes (input_bfd);
   local_got_offsets = elf_local_got_offsets (input_bfd);
   r_symndx = ELF32_R_SYM (rel->r_info);
 
@@ -9211,6 +9211,8 @@ insert_cantunwind_after(asection *text_sec, asection *exidx_sec)
      2. Duplicate entries are merged together (EXIDX_CANTUNWIND, or unwind
         codes which have been inlined into the index).
 
+   If MERGE_EXIDX_ENTRIES is false, duplicate entries are not merged.
+
    The edits are applied when the tables are written
    (in elf32_arm_write_section).
 */
@@ -9218,7 +9220,8 @@ insert_cantunwind_after(asection *text_sec, asection *exidx_sec)
 bfd_boolean
 elf32_arm_fix_exidx_coverage (asection **text_section_order,
 			      unsigned int num_text_sections,
-			      struct bfd_link_info *info)
+			      struct bfd_link_info *info,
+			      bfd_boolean merge_exidx_entries)
 {
   bfd *inp;
   unsigned int last_second_word = 0, i;
@@ -9330,7 +9333,8 @@ elf32_arm_fix_exidx_coverage (asection **text_section_order,
 	  /* Inlined unwinding data.  Merge if equal to previous.  */
 	  else if ((second_word & 0x80000000) != 0)
 	    {
-	      if (last_second_word == second_word && last_unwind_type == 1)
+	      if (merge_exidx_entries
+		   && last_second_word == second_word && last_unwind_type == 1)
 		elide = 1;
 	      unwind_type = 1;
 	      last_second_word = second_word;
@@ -9607,9 +9611,9 @@ elf32_arm_obj_attrs_arg_type (int tag)
 static int
 elf32_arm_obj_attrs_order (int num)
 {
-  if (num == 4)
+  if (num == LEAST_KNOWN_OBJ_ATTRIBUTE)
     return Tag_conformance;
-  if (num == 5)
+  if (num == LEAST_KNOWN_OBJ_ATTRIBUTE + 1)
     return Tag_nodefaults;
   if ((num - 2) < Tag_nodefaults)
     return num - 2;
@@ -9915,7 +9919,7 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
 	}
     }
 
-  for (i = 4; i < NUM_KNOWN_OBJ_ATTRIBUTES; i++)
+  for (i = LEAST_KNOWN_OBJ_ATTRIBUTE; i < NUM_KNOWN_OBJ_ATTRIBUTES; i++)
     {
       /* Merge this attribute with existing attributes.  */
       switch (i)
@@ -9999,27 +10003,26 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
 	case Tag_ABI_FP_exceptions:
 	case Tag_ABI_FP_user_exceptions:
 	case Tag_ABI_FP_number_model:
-	case Tag_VFP_HP_extension:
+	case Tag_FP_HP_extension:
 	case Tag_CPU_unaligned_access:
 	case Tag_T2EE_use:
-	case Tag_Virtualization_use:
 	case Tag_MPextension_use:
 	  /* Use the largest value specified.  */
 	  if (in_attr[i].i > out_attr[i].i)
 	    out_attr[i].i = in_attr[i].i;
 	  break;
 
-	case Tag_ABI_align8_preserved:
+	case Tag_ABI_align_preserved:
 	case Tag_ABI_PCS_RO_data:
 	  /* Use the smallest value specified.  */
 	  if (in_attr[i].i < out_attr[i].i)
 	    out_attr[i].i = in_attr[i].i;
 	  break;
 
-	case Tag_ABI_align8_needed:
+	case Tag_ABI_align_needed:
 	  if ((in_attr[i].i > 0 || out_attr[i].i > 0)
-	      && (in_attr[Tag_ABI_align8_preserved].i == 0
-		  || out_attr[Tag_ABI_align8_preserved].i == 0))
+	      && (in_attr[Tag_ABI_align_preserved].i == 0
+		  || out_attr[Tag_ABI_align_preserved].i == 0))
 	    {
 	      /* This error message should be enabled once all non-conformant
 		 binaries in the toolchain have had the attributes set
@@ -10040,6 +10043,27 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
 	    out_attr[i].i = in_attr[i].i;
 	  break;
 
+	case Tag_Virtualization_use:
+	  /* The virtualization tag effectively stores two bits of
+	     information: the intended use of TrustZone (in bit 0), and the
+	     intended use of Virtualization (in bit 1).  */
+	  if (out_attr[i].i == 0)
+	    out_attr[i].i = in_attr[i].i;
+	  else if (in_attr[i].i != 0
+		   && in_attr[i].i != out_attr[i].i)
+	    {
+	      if (in_attr[i].i <= 3 && out_attr[i].i <= 3)
+		out_attr[i].i = 3;
+	      else
+		{
+		  _bfd_error_handler
+		    (_("error: %B: unable to merge virtualization attributes "
+		       "with %B"),
+		     obfd, ibfd);
+		  result = FALSE;
+		}
+	    }
+	  break;
 
 	case Tag_CPU_arch_profile:
 	  if (out_attr[i].i != in_attr[i].i)
@@ -10067,8 +10091,13 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
 		}
 	    }
 	  break;
-	case Tag_VFP_arch:
+	case Tag_FP_arch:
 	    {
+	      /* Tag_ABI_HardFP_use is handled along with Tag_FP_arch since
+		 the meaning of Tag_ABI_HardFP_use depends on Tag_FP_arch
+		 when it's 0.  It might mean absence of FP hardware if
+		 Tag_FP_arch is zero, otherwise it is effectively SP + DP.  */
+
 	      static const struct
 	      {
 		  int ver;
@@ -10086,6 +10115,40 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
 	      int ver;
 	      int regs;
 	      int newval;
+
+	      /* If the output has no requirement about FP hardware,
+		 follow the requirement of the input.  */
+	      if (out_attr[i].i == 0)
+		{
+		  BFD_ASSERT (out_attr[Tag_ABI_HardFP_use].i == 0);
+		  out_attr[i].i = in_attr[i].i;
+		  out_attr[Tag_ABI_HardFP_use].i
+		    = in_attr[Tag_ABI_HardFP_use].i;
+		  break;
+		}
+	      /* If the input has no requirement about FP hardware, do
+		 nothing.  */
+	      else if (in_attr[i].i == 0)
+		{
+		  BFD_ASSERT (in_attr[Tag_ABI_HardFP_use].i == 0);
+		  break;
+		}
+
+	      /* Both the input and the output have nonzero Tag_FP_arch.
+		 So Tag_ABI_HardFP_use is (SP & DP) when it's zero.  */
+
+	      /* If both the input and the output have zero Tag_ABI_HardFP_use,
+		 do nothing.  */
+	      if (in_attr[Tag_ABI_HardFP_use].i == 0
+		  && out_attr[Tag_ABI_HardFP_use].i == 0)
+		;
+	      /* If the input and the output have different Tag_ABI_HardFP_use,
+		 the combination of them is 3 (SP & DP).  */
+	      else if (in_attr[Tag_ABI_HardFP_use].i
+		       != out_attr[Tag_ABI_HardFP_use].i)
+		out_attr[Tag_ABI_HardFP_use].i = 3;
+
+	      /* Now we can handle Tag_FP_arch.  */
 
 	      /* Values greater than 6 aren't defined, so just pick the
 	         biggest */
@@ -10207,12 +10270,7 @@ elf32_arm_merge_eabi_attributes (bfd *ibfd, bfd *obfd)
 	  /* Merged in target-independent code.  */
 	  break;
 	case Tag_ABI_HardFP_use:
-	  /* 1 (SP) and 2 (DP) conflict, so combine to 3 (SP & DP).  */
-	  if ((in_attr[i].i == 1 && out_attr[i].i == 2)
-	      || (in_attr[i].i == 2 && out_attr[i].i == 1))
-	    out_attr[i].i = 3;
-	  else if (in_attr[i].i > out_attr[i].i)
-	    out_attr[i].i = in_attr[i].i;
+	  /* This is handled along with Tag_FP_arch.  */
 	  break;
 	case Tag_ABI_FP_16bit_format:
 	  if (in_attr[i].i != 0 && out_attr[i].i != 0)
@@ -10767,7 +10825,6 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
   const Elf_Internal_Rela *rel_end;
   bfd *dynobj;
   asection *sreloc;
-  bfd_vma *local_got_offsets;
   struct elf32_arm_link_hash_table *htab;
   bfd_boolean needs_plt;
   unsigned long nsyms;
@@ -10793,8 +10850,6 @@ elf32_arm_check_relocs (bfd *abfd, struct bfd_link_info *info,
     }
 
   dynobj = elf_hash_table (info)->dynobj;
-  local_got_offsets = elf_local_got_offsets (abfd);
-
   symtab_hdr = & elf_symtab_hdr (abfd);
   sym_hashes = elf_sym_hashes (abfd);
   nsyms = NUM_SHDR_ENTRIES (symtab_hdr);
@@ -12786,107 +12841,14 @@ elf32_arm_section_from_shdr (bfd *abfd,
   return TRUE;
 }
 
-/* A structure used to record a list of sections, independently
-   of the next and prev fields in the asection structure.  */
-typedef struct section_list
-{
-  asection * sec;
-  struct section_list * next;
-  struct section_list * prev;
-}
-section_list;
-
-/* Unfortunately we need to keep a list of sections for which
-   an _arm_elf_section_data structure has been allocated.  This
-   is because it is possible for functions like elf32_arm_write_section
-   to be called on a section which has had an elf_data_structure
-   allocated for it (and so the used_by_bfd field is valid) but
-   for which the ARM extended version of this structure - the
-   _arm_elf_section_data structure - has not been allocated.  */
-static section_list * sections_with_arm_elf_section_data = NULL;
-
-static void
-record_section_with_arm_elf_section_data (asection * sec)
-{
-  struct section_list * entry;
-
-  entry = (struct section_list *) bfd_malloc (sizeof (* entry));
-  if (entry == NULL)
-    return;
-  entry->sec = sec;
-  entry->next = sections_with_arm_elf_section_data;
-  entry->prev = NULL;
-  if (entry->next != NULL)
-    entry->next->prev = entry;
-  sections_with_arm_elf_section_data = entry;
-}
-
-static struct section_list *
-find_arm_elf_section_entry (asection * sec)
-{
-  struct section_list * entry;
-  static struct section_list * last_entry = NULL;
-
-  /* This is a short cut for the typical case where the sections are added
-     to the sections_with_arm_elf_section_data list in forward order and
-     then looked up here in backwards order.  This makes a real difference
-     to the ld-srec/sec64k.exp linker test.  */
-  entry = sections_with_arm_elf_section_data;
-  if (last_entry != NULL)
-    {
-      if (last_entry->sec == sec)
-	entry = last_entry;
-      else if (last_entry->next != NULL
-	       && last_entry->next->sec == sec)
-	entry = last_entry->next;
-    }
-
-  for (; entry; entry = entry->next)
-    if (entry->sec == sec)
-      break;
-
-  if (entry)
-    /* Record the entry prior to this one - it is the entry we are most
-       likely to want to locate next time.  Also this way if we have been
-       called from unrecord_section_with_arm_elf_section_data() we will not
-       be caching a pointer that is about to be freed.  */
-    last_entry = entry->prev;
-
-  return entry;
-}
-
 static _arm_elf_section_data *
 get_arm_elf_section_data (asection * sec)
 {
-  struct section_list * entry;
-
-  entry = find_arm_elf_section_entry (sec);
-
-  if (entry)
-    return elf32_arm_section_data (entry->sec);
+  if (sec && sec->owner && is_arm_elf (sec->owner))
+    return elf32_arm_section_data (sec);
   else
     return NULL;
 }
-
-static void
-unrecord_section_with_arm_elf_section_data (asection * sec)
-{
-  struct section_list * entry;
-
-  entry = find_arm_elf_section_entry (sec);
-
-  if (entry)
-    {
-      if (entry->prev != NULL)
-	entry->prev->next = entry->next;
-      if (entry->next != NULL)
-	entry->next->prev = entry->prev;
-      if (entry == sections_with_arm_elf_section_data)
-	sections_with_arm_elf_section_data = entry->next;
-      free (entry);
-    }
-}
-
 
 typedef struct
 {
@@ -13030,7 +12992,6 @@ arm_map_one_stub (struct bfd_hash_entry * gen_entry,
 		  void * in_arg)
 {
   struct elf32_arm_stub_hash_entry *stub_entry;
-  struct bfd_link_info *info;
   asection *stub_sec;
   bfd_vma addr;
   char *stub_name;
@@ -13044,8 +13005,6 @@ arm_map_one_stub (struct bfd_hash_entry * gen_entry,
   /* Massage our args to the form they really have.  */
   stub_entry = (struct elf32_arm_stub_hash_entry *) gen_entry;
   osi = (output_arch_syminfo *) in_arg;
-
-  info = osi->info;
 
   stub_sec = stub_entry->stub_sec;
 
@@ -13311,8 +13270,6 @@ elf32_arm_new_section_hook (bfd *abfd, asection *sec)
 	return FALSE;
       sec->used_by_bfd = sdata;
     }
-
-  record_section_with_arm_elf_section_data (sec);
 
   return _bfd_elf_new_section_hook (abfd, sec);
 }
@@ -13744,42 +13701,11 @@ elf32_arm_write_section (bfd *output_bfd,
     }
 
   free (map);
-  arm_data->mapcount = 0;
+  arm_data->mapcount = -1;
   arm_data->mapsize = 0;
   arm_data->map = NULL;
-  unrecord_section_with_arm_elf_section_data (sec);
 
   return FALSE;
-}
-
-static void
-unrecord_section_via_map_over_sections (bfd * abfd ATTRIBUTE_UNUSED,
-					asection * sec,
-					void * ignore ATTRIBUTE_UNUSED)
-{
-  unrecord_section_with_arm_elf_section_data (sec);
-}
-
-static bfd_boolean
-elf32_arm_close_and_cleanup (bfd * abfd)
-{
-  if (abfd->sections)
-    bfd_map_over_sections (abfd,
-			   unrecord_section_via_map_over_sections,
-			   NULL);
-
-  return _bfd_elf_close_and_cleanup (abfd);
-}
-
-static bfd_boolean
-elf32_arm_bfd_free_cached_info (bfd * abfd)
-{
-  if (abfd->sections)
-    bfd_map_over_sections (abfd,
-			   unrecord_section_via_map_over_sections,
-			   NULL);
-
-  return _bfd_free_cached_info (abfd);
 }
 
 /* Display STT_ARM_TFUNC symbols as functions.  */
@@ -13968,8 +13894,6 @@ const struct elf_size_info elf32_arm_size_info =
 #define bfd_elf32_find_inliner_info	        elf32_arm_find_inliner_info
 #define bfd_elf32_new_section_hook		elf32_arm_new_section_hook
 #define bfd_elf32_bfd_is_target_special_symbol	elf32_arm_is_target_special_symbol
-#define bfd_elf32_close_and_cleanup             elf32_arm_close_and_cleanup
-#define bfd_elf32_bfd_free_cached_info          elf32_arm_bfd_free_cached_info
 #define bfd_elf32_bfd_final_link		elf32_arm_final_link
 
 #define elf_backend_get_symbol_type             elf32_arm_get_symbol_type

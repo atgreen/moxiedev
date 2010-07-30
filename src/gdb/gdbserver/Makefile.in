@@ -70,6 +70,10 @@ CC-LD=${CC}
 INCLUDE_DIR =  ${srcdir}/../../include
 INCLUDE_DEP = $$(INCLUDE_DIR)
 
+# Where is ust?  These will be empty if ust was not available.
+ustlibs = @ustlibs@
+ustinc = @ustinc@
+
 # All the includes used for CFLAGS and for lint.
 # -I. for config files.
 # -I${srcdir} for our headers.
@@ -100,7 +104,8 @@ INTERNAL_LDFLAGS = $(LDFLAGS) @RDYNAMIC@
 # All source files that go into linking GDB remote server.
 
 SFILES=	$(srcdir)/gdbreplay.c $(srcdir)/inferiors.c \
-	$(srcdir)/mem-break.c $(srcdir)/proc-service.c $(srcdir)/regcache.c \
+	$(srcdir)/mem-break.c $(srcdir)/proc-service.c \
+	$(srcdir)/proc-service.list $(srcdir)/regcache.c \
 	$(srcdir)/remote-utils.c $(srcdir)/server.c $(srcdir)/target.c \
 	$(srcdir)/thread-db.c $(srcdir)/utils.c \
 	$(srcdir)/linux-arm-low.c $(srcdir)/linux-cris-low.c \
@@ -127,24 +132,28 @@ TAGFILES = $(SOURCES) ${HFILES} ${ALLPARAM} ${POSSLIBS}
 
 OBS = inferiors.o regcache.o remote-utils.o server.o signals.o target.o \
 	utils.o version.o \
-	mem-break.o hostio.o event-loop.o \
+	mem-break.o hostio.o event-loop.o tracepoint.o \
 	$(XML_BUILTIN) \
 	$(DEPFILES) $(LIBOBJS)
 GDBREPLAY_OBS = gdbreplay.o version.o
 GDBSERVER_LIBS = @GDBSERVER_LIBS@
 XM_CLIBS = @LIBS@
+CDEPS = $(srcdir)/proc-service.list
 
 # XML files to compile in to gdbserver, if any.
 XML_DIR = $(srcdir)/../features
 XML_FILES = @srv_xmlfiles@
 XML_BUILTIN = @srv_xmlbuiltin@
 
+IPA_DEPFILES = @IPA_DEPFILES@
+extra_libraries = @extra_libraries@
+
 # Prevent Sun make from putting in the machine type.  Setting
 # TARGET_ARCH to nothing works for SunOS 3, 4.0, but not for 4.1.
 .c.o:
 	${CC} -c ${INTERNAL_CFLAGS} $<
 
-all: gdbserver$(EXEEXT) gdbreplay$(EXEEXT)
+all: gdbserver$(EXEEXT) gdbreplay$(EXEEXT) $(extra_libraries)
 
 # Traditionally "install" depends on "all".  But it may be useful
 # not to; for example, if the user has made some trivial change to a
@@ -155,6 +164,10 @@ install: all install-only
 install-only:
 	n=`echo gdbserver | sed '$(program_transform_name)'`; \
 	if [ x$$n = x ]; then n=gdbserver; else true; fi; \
+	if [ x$IPA_DEPFILES != x ]; then \
+		$(SHELL) $(srcdir)/../../mkinstalldirs $(DESTDIR)$(libdir); \
+		$(INSTALL_PROGRAM) $(IPA_LIB) $(DESTDIR)$(libdir)/$(IPA_LIB); \
+	fi; \
 	$(SHELL) $(srcdir)/../../mkinstalldirs $(DESTDIR)$(bindir); \
 	$(INSTALL_PROGRAM) gdbserver$(EXEEXT) $(DESTDIR)$(bindir)/$$n$(EXEEXT); \
 	$(SHELL) $(srcdir)/../../mkinstalldirs $(DESTDIR)$(man1dir); \
@@ -184,6 +197,15 @@ gdbreplay$(EXEEXT): $(GDBREPLAY_OBS)
 	${CC-LD} $(INTERNAL_CFLAGS) $(INTERNAL_LDFLAGS) -o gdbreplay$(EXEEXT) $(GDBREPLAY_OBS) \
 	  $(XM_CLIBS)
 
+IPA_OBJS=tracepoint-ipa.o utils-ipa.o regcache-ipa.o remote-utils-ipa.o ${IPA_DEPFILES}
+
+IPA_LIB=libinproctrace.so
+
+$(IPA_LIB): $(IPA_OBJS) ${ADD_DEPS} ${CDEPS}
+	rm -f $(IPA_LIB)
+	${CC-LD} -shared -fPIC -Wl,--no-undefined $(INTERNAL_CFLAGS) \
+	$(INTERNAL_LDFLAGS) -o $(IPA_LIB) ${IPA_OBJS} -ldl -pthread
+
 # Put the proper machine-specific files first, so M-. on a machine
 # specific routine gets the one for the correct machine.
 # The xyzzy stuff below deals with empty DEPFILES
@@ -203,6 +225,7 @@ clean:
 	rm -f *.o ${ADD_FILES} *~
 	rm -f version.c
 	rm -f gdbserver$(EXEEXT) gdbreplay$(EXEEXT) core make.log
+	rm -f $(IPA_LIB)
 	rm -f reg-arm.c i386.c reg-ia64.c reg-m32r.c reg-m68k.c
 	rm -f reg-sh.c reg-sparc.c reg-spu.c amd64.c i386-linux.c
 	rm -f reg-cris.c reg-crisv32.c amd64-linux.c reg-xtensa.c
@@ -217,6 +240,9 @@ clean:
 	rm -f powerpc-isa205-vsx64l.c
 	rm -f s390-linux32.c s390-linux64.c s390x-linux64.c
 	rm -f xml-builtin.c stamp-xml
+	rm -f i386-avx.c i386-avx-linux.c
+	rm -f amd64-avx.c amd64-avx-linux.c
+	rm -f i386-mmx.c i386-mmx-linux.c
 
 maintainer-clean realclean distclean: clean
 	rm -f nm.h tm.h xm.h config.status config.h stamp-h config.log
@@ -271,6 +297,34 @@ server_h = $(srcdir)/server.h $(regcache_h) config.h $(srcdir)/target.h \
 
 linux_low_h = $(srcdir)/linux-low.h
 
+nto_low_h = $(srcdir)/nto-low.h
+
+UST_CFLAGS = $(ustinc) -DCONFIG_UST_GDB_INTEGRATION
+
+# Note, we only build the IPA if -fvisibility=hidden is supported in
+# the first place.
+IPAGENT_CFLAGS = $(CPPFLAGS) $(INTERNAL_CFLAGS) $(UST_CFLAGS) \
+	-fPIC -DGDBSERVER -DIN_PROCESS_AGENT \
+	-fvisibility=hidden
+
+# In-process agent object rules
+tracepoint-ipa.o: tracepoint.c $(server_h)
+	$(CC) -c $(IPAGENT_CFLAGS) $< -o tracepoint-ipa.o
+utils-ipa.o: utils.c $(server_h)
+	$(CC) -c $(IPAGENT_CFLAGS) $< -o utils-ipa.o
+remote-utils-ipa.o: remote-utils.c $(server_h)
+	$(CC) -c $(IPAGENT_CFLAGS) $< -o remote-utils-ipa.o
+regcache-ipa.o: regcache.c $(server_h)
+	$(CC) -c $(IPAGENT_CFLAGS) $< -o regcache-ipa.o
+i386-linux-ipa.o : i386-linux.c $(regdef_h)
+	$(CC) -c $(IPAGENT_CFLAGS) $< -o i386-linux-ipa.o
+linux-i386-ipa.o: linux-i386-ipa.c $(server_h)
+	$(CC) -c $(IPAGENT_CFLAGS) $< -o linux-i386-ipa.o
+linux-amd64-ipa.o: linux-amd64-ipa.c $(server_h)
+	$(CC) -c $(IPAGENT_CFLAGS) $< -o linux-amd64-ipa.o
+amd64-linux-ipa.o : amd64-linux.c $(regdef_h)
+	$(CC) -c $(IPAGENT_CFLAGS) $< -o amd64-linux-ipa.o
+
 event-loop.o: event-loop.c $(server_h)
 hostio.o: hostio.c $(server_h)
 hostio-errno.o: hostio-errno.c $(server_h)
@@ -282,6 +336,7 @@ remote-utils.o: remote-utils.c terminal.h $(server_h)
 server.o: server.c $(server_h)
 target.o: target.c $(server_h)
 thread-db.o: thread-db.c $(server_h) $(linux_low_h) $(gdb_proc_service_h)
+tracepoint.o: tracepoint.c $(server_h)
 utils.o: utils.c $(server_h)
 gdbreplay.o: gdbreplay.c config.h
 
@@ -314,6 +369,9 @@ linux-sh-low.o: linux-sh-low.c $(linux_low_h) $(server_h)
 linux-x86-low.o: linux-x86-low.c $(linux_low_h) $(server_h) \
 	$(gdb_proc_service_h) $(i386_low_h)
 linux-xtensa-low.o: linux-xtensa-low.c xtensa-xtregs.c $(linux_low_h) $(server_h)
+
+nto-low.o: nto-low.c $(server_h) $(nto_low_h)
+nto-x86-low.o: nto-x86-low.c $(server_h) $(nto_low_h) $(regdef_h) $(regcache_h)
 
 win32_low_h = $(srcdir)/win32-low.h
 
@@ -351,6 +409,18 @@ i386.c : $(srcdir)/../regformats/i386/i386.dat $(regdat_sh)
 i386-linux.o : i386-linux.c $(regdef_h)
 i386-linux.c : $(srcdir)/../regformats/i386/i386-linux.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/i386-linux.dat i386-linux.c
+i386-avx.o : i386-avx.c $(regdef_h)
+i386-avx.c : $(srcdir)/../regformats/i386/i386-avx.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/i386-avx.dat i386-avx.c
+i386-avx-linux.o : i386-avx-linux.c $(regdef_h)
+i386-avx-linux.c : $(srcdir)/../regformats/i386/i386-avx-linux.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/i386-avx-linux.dat i386-avx-linux.c
+i386-mmx.o : i386-mmx.c $(regdef_h)
+i386-mmx.c : $(srcdir)/../regformats/i386/i386-mmx.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/i386-mmx.dat i386-mmx.c
+i386-mmx-linux.o : i386-mmx-linux.c $(regdef_h)
+i386-mmx-linux.c : $(srcdir)/../regformats/i386/i386-mmx-linux.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/i386-mmx-linux.dat i386-mmx-linux.c
 reg-ia64.o : reg-ia64.c $(regdef_h)
 reg-ia64.c : $(srcdir)/../regformats/reg-ia64.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/reg-ia64.dat reg-ia64.c
@@ -438,6 +508,12 @@ amd64.c : $(srcdir)/../regformats/i386/amd64.dat $(regdat_sh)
 amd64-linux.o : amd64-linux.c $(regdef_h)
 amd64-linux.c : $(srcdir)/../regformats/i386/amd64-linux.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/amd64-linux.dat amd64-linux.c
+amd64-avx.o : amd64-avx.c $(regdef_h)
+amd64-avx.c : $(srcdir)/../regformats/i386/amd64-avx.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/amd64-avx.dat amd64-avx.c
+amd64-avx-linux.o : amd64-avx-linux.c $(regdef_h)
+amd64-avx-linux.c : $(srcdir)/../regformats/i386/amd64-avx-linux.dat $(regdat_sh)
+	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/i386/amd64-avx-linux.dat amd64-avx-linux.c
 reg-xtensa.o : reg-xtensa.c $(regdef_h)
 reg-xtensa.c : $(srcdir)/../regformats/reg-xtensa.dat $(regdat_sh)
 	$(SHELL) $(regdat_sh) $(srcdir)/../regformats/reg-xtensa.dat reg-xtensa.c

@@ -1,5 +1,5 @@
 /* tc-i386.c -- Assemble Intel syntax code for ix86/x86-64
-   Copyright 2009
+   Copyright 2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of GAS, the GNU Assembler.
@@ -23,6 +23,7 @@ static struct
   {
     operatorT op_modifier;	/* Operand modifier.  */
     int is_mem;			/* 1 if operand is memory reference.  */
+    int is_indirect;		/* 1 if operand is indirect reference.  */
     int has_offset;		/* 1 if operand has offset.  */
     unsigned int in_offset;	/* >=1 if processing operand of offset.  */
     unsigned int in_bracket;	/* >=1 if processing operand in brackets.  */
@@ -190,6 +191,12 @@ static int i386_intel_parse_name (const char *name, expressionS *e)
 {
   unsigned int j;
 
+  if (! strcmp (name, "$"))
+    {
+      current_location (e);
+      return 1;
+    }
+
   for (j = 0; i386_types[j].name; ++j)
     if (strcasecmp(i386_types[j].name, name) == 0)
       {
@@ -207,8 +214,10 @@ static INLINE int i386_intel_check (const reg_entry *rreg,
 				    const reg_entry *base,
 				    const reg_entry *iindex)
 {
-  if ((this_operand >= 0 && rreg != i.op[this_operand].regs)
-      || base != intel_state.base || iindex != intel_state.index)
+  if ((this_operand >= 0
+       && rreg != i.op[this_operand].regs)
+      || base != intel_state.base
+      || iindex != intel_state.index)
     {
       as_bad (_("invalid use of register"));
       return 0;
@@ -233,6 +242,49 @@ static INLINE void i386_intel_fold (expressionS *e, symbolS *sym)
     }
 }
 
+static int
+i386_intel_simplify_register (expressionS *e)
+{
+  int reg_num;
+
+  if (this_operand < 0 || intel_state.in_offset)
+    {
+      as_bad (_("invalid use of register"));
+      return 0;
+    }
+
+  if (e->X_op == O_register)
+    reg_num = e->X_add_number;
+  else
+    reg_num = e->X_md - 1;
+
+  if (!intel_state.in_bracket)
+    {
+      if (i.op[this_operand].regs)
+	{
+	  as_bad (_("invalid use of register"));
+	  return 0;
+	}
+      if (i386_regtab[reg_num].reg_type.bitfield.sreg3
+	  && i386_regtab[reg_num].reg_num == RegFlat)
+	{
+	  as_bad (_("invalid use of pseudo-register"));
+	  return 0;
+	}
+      i.op[this_operand].regs = i386_regtab + reg_num;
+    }
+  else if (!intel_state.base && !intel_state.in_scale)
+    intel_state.base = i386_regtab + reg_num;
+  else if (!intel_state.index)
+    intel_state.index = i386_regtab + reg_num;
+  else
+    {
+      /* esp is invalid as index */
+      intel_state.index = i386_regtab + REGNAM_EAX + 4;
+    }
+  return 2;
+}
+
 static int i386_intel_simplify (expressionS *);
 
 static INLINE int i386_intel_simplify_symbol(symbolS *sym)
@@ -249,7 +301,8 @@ static INLINE int i386_intel_simplify_symbol(symbolS *sym)
 
 static int i386_intel_simplify (expressionS *e)
 {
-  const reg_entry *the_reg = this_operand >= 0 ? i.op[this_operand].regs : NULL;
+  const reg_entry *the_reg = (this_operand >= 0
+			      ? i.op[this_operand].regs : NULL);
   const reg_entry *base = intel_state.base;
   const reg_entry *state_index = intel_state.index;
   int ret;
@@ -263,7 +316,8 @@ static int i386_intel_simplify (expressionS *e)
       if (e->X_add_symbol)
 	{
 	  if (!i386_intel_simplify_symbol (e->X_add_symbol)
-	      || !i386_intel_check(the_reg, intel_state.base, intel_state.index))
+	      || !i386_intel_check(the_reg, intel_state.base,
+				   intel_state.index))
 	    return 0;;
 	}
       if (!intel_state.in_offset)
@@ -304,7 +358,8 @@ static int i386_intel_simplify (expressionS *e)
 	intel_state.op_modifier = e->X_op;
       /* FALLTHROUGH */
     case O_short:
-      if (symbol_get_value_expression (e->X_add_symbol)->X_op == O_register)
+      if (symbol_get_value_expression (e->X_add_symbol)->X_op
+	  == O_register)
 	{
 	  as_bad (_("invalid use of register"));
 	  return 0;
@@ -315,52 +370,20 @@ static int i386_intel_simplify (expressionS *e)
       break;
 
     case O_full_ptr:
-      if (symbol_get_value_expression (e->X_op_symbol)->X_op == O_register)
+      if (symbol_get_value_expression (e->X_op_symbol)->X_op
+	  == O_register)
 	{
 	  as_bad (_("invalid use of register"));
 	  return 0;
 	}
       if (!i386_intel_simplify_symbol (e->X_op_symbol)
-	  || !i386_intel_check(the_reg, intel_state.base, intel_state.index))
+	  || !i386_intel_check(the_reg, intel_state.base,
+			       intel_state.index))
 	return 0;
       if (!intel_state.in_offset)
 	intel_state.seg = e->X_add_symbol;
       i386_intel_fold (e, e->X_op_symbol);
       break;
-
-    case O_register:
-      if (this_operand < 0 || intel_state.in_offset)
-	{
-	  as_bad (_("invalid use of register"));
-	  return 0;
-	}
-      if (!intel_state.in_bracket)
-	{
-	  if (i.op[this_operand].regs)
-	    {
-	      as_bad (_("invalid use of register"));
-	      return 0;
-	    }
-	  if (i386_regtab[e->X_add_number].reg_type.bitfield.sreg3
-	      && i386_regtab[e->X_add_number].reg_num == RegFlat)
-	    {
-	      as_bad (_("invalid use of pseudo-register"));
-	      return 0;
-	    }
-	  i.op[this_operand].regs = i386_regtab + e->X_add_number;
-	}
-      else if (!intel_state.base && !intel_state.in_scale)
-	intel_state.base = i386_regtab + e->X_add_number;
-      else if (!intel_state.index)
-	intel_state.index = i386_regtab + e->X_add_number;
-      else
-	{
-	  /* esp is invalid as index */
-	  intel_state.index = i386_regtab + REGNAM_EAX + 4;
-	}
-      e->X_op = O_constant;
-      e->X_add_number = 0;
-      return 2;
 
     case O_multiply:
       if (this_operand >= 0 && intel_state.in_bracket)
@@ -418,9 +441,28 @@ static int i386_intel_simplify (expressionS *e)
 
 	  break;
 	}
+      goto fallthrough;
+
+    case O_register:
+      ret = i386_intel_simplify_register (e);
+      if (ret == 2)
+	{
+	  gas_assert (e->X_add_number < (unsigned short) -1);
+	  e->X_md = (unsigned short) e->X_add_number + 1;
+	  e->X_op = O_constant;
+	  e->X_add_number = 0;
+	}
+      return ret;
+
+    case O_constant:
+      if (e->X_md)
+	return i386_intel_simplify_register (e);
+
       /* FALLTHROUGH */
     default:
-      if (e->X_add_symbol && !i386_intel_simplify_symbol (e->X_add_symbol))
+fallthrough:
+      if (e->X_add_symbol
+	  && !i386_intel_simplify_symbol (e->X_add_symbol))
 	return 0;
       if (e->X_op == O_add || e->X_op == O_subtract)
 	{
@@ -428,15 +470,20 @@ static int i386_intel_simplify (expressionS *e)
 	  state_index = intel_state.index;
 	}
       if (!i386_intel_check (the_reg, base, state_index)
-	  || (e->X_op_symbol && !i386_intel_simplify_symbol (e->X_op_symbol))
+	  || (e->X_op_symbol
+	      && !i386_intel_simplify_symbol (e->X_op_symbol))
 	  || !i386_intel_check (the_reg,
-				e->X_op != O_add ? base : intel_state.base,
-				e->X_op != O_add ? state_index : intel_state.index))
+				(e->X_op != O_add
+				 ? base : intel_state.base),
+				(e->X_op != O_add
+				 ? state_index : intel_state.index)))
 	return 0;
       break;
     }
 
-  if (this_operand >= 0 && e->X_op == O_symbol && !intel_state.in_offset)
+  if (this_operand >= 0
+      && e->X_op == O_symbol
+      && !intel_state.in_offset)
     {
       segT seg = S_GET_SEGMENT (e->X_add_symbol);
 
@@ -466,6 +513,7 @@ i386_intel_operand (char *operand_string, int got_a_float)
   /* Initialize state structure.  */
   intel_state.op_modifier = O_absent;
   intel_state.is_mem = 0;
+  intel_state.is_indirect = 0;
   intel_state.has_offset = 0;
   intel_state.base = NULL;
   intel_state.index = NULL;
@@ -477,11 +525,6 @@ i386_intel_operand (char *operand_string, int got_a_float)
 
   saved_input_line_pointer = input_line_pointer;
   input_line_pointer = buf = xstrdup (operand_string);
-
-  /* A '$' followed by an identifier char is an identifier.  Otherwise,
-     it's operator '.' followed by an expression.  */
-  if (*buf == '$' && !is_identifier_char (buf[1]))
-    *buf = '.';
 
   intel_syntax = -1;
   memset (&exp, 0, sizeof(exp));
@@ -503,7 +546,10 @@ i386_intel_operand (char *operand_string, int got_a_float)
   else if (!intel_state.has_offset
 	   && input_line_pointer > buf
 	   && *(input_line_pointer - 1) == ']')
-    intel_state.is_mem |= 1;
+    {
+      intel_state.is_mem |= 1;
+      intel_state.is_indirect = 1;
+    }
 
   input_line_pointer = saved_input_line_pointer;
   free (buf);
@@ -631,7 +677,9 @@ i386_intel_operand (char *operand_string, int got_a_float)
       || current_templates->start->opcode_modifier.jumpdword
       || current_templates->start->opcode_modifier.jumpintersegment)
     {
-      if (i.op[this_operand].regs || intel_state.base || intel_state.index
+      if (i.op[this_operand].regs
+	  || intel_state.base
+	  || intel_state.index
 	  || intel_state.is_mem > 1)
 	i.types[this_operand].bitfield.jumpabsolute = 1;
       else
@@ -649,7 +697,11 @@ i386_intel_operand (char *operand_string, int got_a_float)
 	      {
 		intel_state.is_mem = 1;
 		if (intel_state.op_modifier == O_absent)
-		  break;
+		  {
+		    if (intel_state.is_indirect == 1)
+		      i.types[this_operand].bitfield.jumpabsolute = 1;
+		    break;
+		  }
 		as_bad (_("cannot infer the segment part of the operand"));
 		return 0;
 	      }
@@ -710,11 +762,14 @@ i386_intel_operand (char *operand_string, int got_a_float)
 
       temp = i.op[this_operand].regs->reg_type;
       temp.bitfield.baseindex = 0;
-      i.types[this_operand] = operand_type_or (i.types[this_operand], temp);
+      i.types[this_operand] = operand_type_or (i.types[this_operand],
+					       temp);
       i.types[this_operand].bitfield.unspecified = 0;
       ++i.reg_operands;
     }
-  else if (intel_state.base || intel_state.index || intel_state.seg
+  else if (intel_state.base
+	   || intel_state.index
+	   || intel_state.seg
 	   || intel_state.is_mem)
     {
       /* Memory operand.  */
@@ -775,8 +830,10 @@ i386_intel_operand (char *operand_string, int got_a_float)
       memcpy (expP, &exp, sizeof(exp));
       resolve_expression (expP);
 
-      if (expP->X_op != O_constant || expP->X_add_number
-	  || (!intel_state.base && !intel_state.index))
+      if (expP->X_op != O_constant
+	  || expP->X_add_number
+	  || (!intel_state.base
+	      && !intel_state.index))
 	{
 	  i.op[this_operand].disps = expP;
 	  i.disp_operands++;

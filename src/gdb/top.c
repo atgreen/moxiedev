@@ -298,7 +298,7 @@ quit_cover (void *s)
 /* NOTE 1999-04-29: This variable will be static again, once we modify
    gdb to use the event loop as the default command loop and we merge
    event-top.c into this file, top.c */
-/* static */ char *source_file_name;
+/* static */ const char *source_file_name;
 
 /* Clean up on error during a "source" command (or execution of a
    user-defined command).  */
@@ -356,25 +356,6 @@ execute_command (char *p, int from_tty)
   enum language flang;
   static int warned = 0;
   char *line;
-  long time_at_cmd_start = 0;
-#ifdef HAVE_SBRK
-  long space_at_cmd_start = 0;
-#endif
-  extern int display_time;
-  extern int display_space;
-
-  if (target_can_async_p ())
-    {
-      time_at_cmd_start = get_run_time ();
-
-      if (display_space)
-	{
-#ifdef HAVE_SBRK
-	  char *lim = (char *) sbrk (0);
-	  space_at_cmd_start = lim - lim_at_start;
-#endif
-	}
-    }
 
   prepare_execute_command ();
 
@@ -486,12 +467,6 @@ command_loop (void)
   struct cleanup *old_chain;
   char *command;
   int stdin_is_tty = ISATTY (stdin);
-  long time_at_cmd_start;
-#ifdef HAVE_SBRK
-  long space_at_cmd_start = 0;
-#endif
-  extern int display_time;
-  extern int display_space;
 
   while (instream && !feof (instream))
     {
@@ -510,15 +485,7 @@ command_loop (void)
       if (command == 0)
 	return;
 
-      time_at_cmd_start = get_run_time ();
-
-      if (display_space)
-	{
-#ifdef HAVE_SBRK
-	  char *lim = (char *) sbrk (0);
-	  space_at_cmd_start = lim - lim_at_start;
-#endif
-	}
+      make_command_stats_cleanup (1);
 
       execute_command (command, instream == stdin);
 
@@ -526,28 +493,6 @@ command_loop (void)
       bpstat_do_actions ();
 
       do_cleanups (old_chain);
-
-      if (display_time)
-	{
-	  long cmd_time = get_run_time () - time_at_cmd_start;
-
-	  printf_unfiltered (_("Command execution time: %ld.%06ld\n"),
-			     cmd_time / 1000000, cmd_time % 1000000);
-	}
-
-      if (display_space)
-	{
-#ifdef HAVE_SBRK
-	  char *lim = (char *) sbrk (0);
-	  long space_now = lim - lim_at_start;
-	  long space_diff = space_now - space_at_cmd_start;
-
-	  printf_unfiltered (_("Space used: %ld (%s%ld for this command)\n"),
-			     space_now,
-			     (space_diff >= 0 ? "+" : ""),
-			     space_diff);
-#endif
-	}
     }
 }
 
@@ -786,6 +731,7 @@ static void
 gdb_rl_operate_and_get_next_completion (void)
 {
   int delta = where_history () - operate_saved_history;
+
   /* The `key' argument to rl_get_previous_history is ignored.  */
   rl_get_previous_history (delta, 0);
   operate_saved_history = -1;
@@ -1516,8 +1462,6 @@ Notification of completion for asynchronous execution commands is %s.\n"),
 static void
 init_main (void)
 {
-  struct cmd_list_element *c;
-
   /* initialize the prompt stack to a simple "(gdb) " prompt or to
      whatever the DEFAULT_PROMPT is.  */
   the_prompts.top = 0;

@@ -31,8 +31,6 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 gdb_exit
 gdb_start
@@ -47,19 +45,20 @@ if { [gdb_compile "$srcdir/$subdir/$srcfile" $binfile \
 gdb_reinitialize_dir $srcdir/$subdir
 
 # Make sure we are starting fresh.
-remote_exec build {sh -xc rm\ -f\ basic.tf}
+remote_file host delete basic.tf
+remote_file host delete error.tf
 
 gdb_load $binfile
 
 runto_main
 
-gdb_test "break done_making_trace_files" "" ""
+gdb_test "break done_making_trace_files" ".*" ""
 
-gdb_test "continue" "" ""
+gdb_test "continue" ".*" ""
 
 # tsave command would be tested here...
 
-gdb_test "continue" "" ""
+gdb_test "continue" ".*" ""
 
 # Program has presumably exited, now target a trace file it created.
 
@@ -68,9 +67,19 @@ gdb_test "target tfile basic.tf" "Created tracepoint.*" "target tfile"
 gdb_test "info trace" ".*tracepoint.*in write_basic_trace_file.*" \
     "info tracepoints on trace file"
 
-gdb_test "tfind 0" "Found traceframe 0.*" "tfind 0 on trace file"
+gdb_test "tfind 0" \
+    "Found trace frame 0, tracepoint \[0-9\]+.
+\#0  write_basic_trace_file ().*" \
+    "tfind 0 on trace file"
+
+# Note that there is no tracepoint collecting these globals, we
+# just happen to know they are covered by the trace frame.
 
 gdb_test "print testglob" " = 31415" "print testglob on trace file"
+
+gdb_test "print testglob2" " = 271828" "print testglob2 on trace file"
+
+gdb_test "print constglob" " = 10000" "print constglob on trace file"
 
 gdb_test "tfind" "Target failed to find requested trace frame." \
     "tfind does not find a second frame in trace file"
@@ -78,12 +87,24 @@ gdb_test "tfind" "Target failed to find requested trace frame." \
 gdb_test "tstatus" \
     "Using a trace file.*
 Trace stopped by a tstop command.*
-Collected 1 trace frames.*
-Trace buffer has 256 bytes free.*
+Collected 1 trace frame.*
+Trace buffer has 256 bytes of 4096 bytes free \\(93% full\\).*
 Looking at trace frame 0, tracepoint .*" \
     "tstatus on trace file"
 
+# Now start afresh, using only a trace file.
 
+gdb_exit
+gdb_start
 
+gdb_load $binfile
 
+gdb_test "target tfile error.tf" "Created tracepoint.*" "target tfile"
 
+gdb_test "tstatus" \
+    "Using a trace file.*
+Trace stopped by an error \\(made-up error, tracepoint 1\\).*
+Collected 0 trace frame.*
+Trace buffer has 256 bytes of 4096 bytes free \\(93% full\\).*
+Not looking at any trace frame.*" \
+    "tstatus on error trace file"

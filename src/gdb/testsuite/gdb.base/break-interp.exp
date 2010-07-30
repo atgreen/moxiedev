@@ -18,6 +18,8 @@ if { ![isnative] || [is_remote host] || ![istarget *-linux*] || [skip_shlib_test
     continue
 }
 
+load_lib prelink-support.exp
+
 set test "break-interp"
 set binprefix ${objdir}/${subdir}/${test}
 # Only to get the $interp_system name.
@@ -31,8 +33,7 @@ if [get_compiler_info ${binfile_lib}] {
     return -1
 }
 
-# Use -soname so that it is listed with " => " by ldd and this testcase makes
-# a copy of ${binfile_lib} for each prelink variant.
+# Use -soname so that the new library gets copied by build_executable_own_libs.
 
 if {[gdb_compile_shlib ${srcdir}/${subdir}/${srcfile_lib} ${binfile_lib} [list debug additional_flags=-Wl,-soname,${test}.so]] != ""} {
     return -1
@@ -40,38 +41,6 @@ if {[gdb_compile_shlib ${srcdir}/${subdir}/${srcfile_lib} ${binfile_lib} [list d
 
 if {[build_executable ${test}.exp $binfile_test ${srcfile_test} {}] == -1} {
     return -1
-}
-
-# Return the interpreter filename string.
-# Return "" if no interpreter was found.
-proc section_get {exec section} {
-    global objdir
-    global subdir
-    set tmp "${objdir}/${subdir}/break-interp.interp"
-    set objcopy_program [transform objcopy]
-
-    set command "exec $objcopy_program -O binary --set-section-flags $section=A --change-section-address $section=0 -j $section $exec $tmp"
-    verbose -log "command is $command"
-    set result [catch $command output]
-    verbose -log "result is $result"
-    verbose -log "output is $output"
-    if {$result == 1} {
-	return ""
-    }
-    set fi [open $tmp]
-    fconfigure $fi -translation binary
-    set data [read $fi]
-    close $fi
-    #file delete $tmp
-    # .interp has size $len + 1 but .gnu_debuglink contains garbage after \000.
-    set len [string first \000 $data]
-    if {$len < 0} {
-	verbose -log "section $section not found"
-	return ""
-    }
-    set retval [string range $data 0 [expr $len - 1]]
-    verbose -log "section $section is <$retval>"
-    return $retval
 }
 
 # Note: The separate debug info file content build-id/crc32 are not verified
@@ -117,93 +86,12 @@ set interp_system [section_get ${objdir}/${subdir}/$binfile_test .interp]
 set interp_system_debug [system_debug_get $interp_system]
 verbose -log "$interp_system has debug $interp_system_debug"
 
-proc prelinkNO_run {arg} {
-    set command "exec /usr/sbin/prelink -uN $arg"
-    verbose -log "command is $command"
-    set result [catch $command output]
-    verbose -log "result is $result"
-    verbose -log "output is $output"
-    return [list $result $output]
-}
-
-proc prelinkNO {arg {name {}}} {
-    if {$name == ""} {
-	set name [file tail $arg]
-    }
-    set test "unprelink $name"
-    set run [prelinkNO_run $arg]
-    set result [lindex $run 0]
-    set output [lindex $run 1]
-    if {$result == 0 && $output == ""} {
-	verbose -log "$name has been now unprelinked"
-	set run [prelinkNO_run $arg]
-	set result [lindex $run 0]
-	set output [lindex $run 1]
-    }
-    # Last line does miss the trailing \n.
-    if {$result == 1 && [regexp {^(/usr/sbin/prelink: [^ ]* does not have .gnu.prelink_undo section\n?)*$} $output]} {
-	pass $test
-	return 1
-    } else {
-	fail $test
-	return 0
-    }
+proc prelinkNO {arg {name ""}} {
+    return [prelink_no $arg $name]
 }
 
 proc prelinkYES {arg {name ""}} {
-    if {$name == ""} {
-	set name [file tail $arg]
-    }
-    set test "prelink $name"
-    set command "exec /usr/sbin/prelink -qNR --no-exec-shield $arg"
-    verbose -log "command is $command"
-    set result [catch $command output]
-    verbose -log "result is $result"
-    verbose -log "output is $output"
-    if {$result == 0 && $output == ""} {
-	pass $test
-	return 1
-    } else {
-	fail $test
-	return 0
-    }
-}
-
-# Resolve symlinks.
-proc symlink_resolve {file} {
-    set loop 0
-    while {[file type $file] == "link"} {
-	set target [file readlink $file]
-	if {[file pathtype $target] == "relative"} {
-	    set src2 [file dirname $file]/$target
-	} else {
-	    set src2 $target
-	}
-	verbose -log "Resolved symlink $file targetting $target as $src2"
-	set file $src2
-
-	set loop [expr $loop + 1]
-	if {$loop > 30} {
-	    fail "Looping symlink resolution for $file"
-	    return ""
-	}
-    }
-    return $file
-}
-
-proc copy {src dest} {
-    set src [symlink_resolve $src]
-    # Test name would contain build-id hash for symlink-unresolved $src.
-    set test "copy [file tail $src] to [file tail $dest]"
-    set command "file copy -force $src $dest"
-    verbose -log "command is $command"
-    if [catch $command] {
-	fail $test
-	return 0
-    } else {
-    	pass $test
-	return 1
-    }
+    return [prelink_yes $arg $name]
 }
 
 proc strip_debug {dest} {
@@ -242,9 +130,8 @@ proc reach {func command displacement} {
 		}
 		if {$displacement == $case} {
 		    pass $test_displacement
-		    # Permit multiple such messages.
 		    set displacement "FOUND-$displacement"
-		} elseif {$displacement != "FOUND-$case"} {
+		} else {
 		    fail $test_displacement
 		}
 		exp_continue
@@ -252,7 +139,7 @@ proc reach {func command displacement} {
 	    -re "Breakpoint \[0-9\]+, $func \\(.*\\) at .*:\[0-9\]+\r\n.*$gdb_prompt $" {
 		pass $test
 	    }
-	    -re "Breakpoint \[0-9\]+, \[0-9xa-f\]+ in $func \\(\\)( from .*)?\r\n$gdb_prompt $" {
+	    -re "Breakpoint \[0-9\]+, \[0-9xa-f\]+ in $func \\(\\).*\r\n$gdb_prompt $" {
 		pass $test
 	    }
 	}
@@ -279,15 +166,16 @@ proc test_core {file displacement} {
     gdb_exit
     gdb_start
     # Clear it to never find any separate debug infos in $debug_root.
-    gdb_test "set debug-file-directory" "" "set debug-file-directory for core"
+    gdb_test_no_output "set debug-file-directory" \
+	"set debug-file-directory for core"
     gdb_reinitialize_dir $srcdir/$subdir
     gdb_load $file
 
     # Print the "PIE (Position Independent Executable) displacement" message.
-    gdb_test "set verbose on"
+    gdb_test_no_output "set verbose on"
 
     set test "core loaded"
-    set test_displacement "seen displacement message"
+    set test_displacement "seen displacement message as $displacement"
     gdb_test_multiple "core-file $corefile" $test {
 	-re "Using PIE \\(Position Independent Executable\\) displacement (0x\[0-9a-f\]+) " {
 	    # Missing "$gdb_prompt $" is intentional.
@@ -298,9 +186,8 @@ proc test_core {file displacement} {
 	    }
 	    if {$displacement == $case} {
 		pass $test_displacement
-		# Permit multiple such messages.
 		set displacement "FOUND-$displacement"
-	    } elseif {$displacement != "FOUND-$case"} {
+	    } else {
 		fail $test_displacement
 	    }
 	    exp_continue
@@ -319,8 +206,65 @@ proc test_core {file displacement} {
     set pf_prefix $old_ldprefix
 }
 
-proc test_attach {file displacement} {
-    global board_info gdb_prompt expect_out
+proc test_attach_gdb {file pid displacement prefix} {
+    global gdb_prompt expect_out
+
+    global pf_prefix
+    set old_ldprefix $pf_prefix
+    lappend pf_prefix "$prefix:"
+
+    gdb_exit
+    gdb_start
+
+    # Print the "PIE (Position Independent Executable) displacement" message.
+    gdb_test_no_output "set verbose on"
+
+    if {$file != ""} {
+	gdb_test "file $file" "Reading symbols from .*done\\." "file"
+    }
+
+    set test "attach"
+    gdb_test_multiple "attach $pid" $test {
+	-re "Attaching to (program: .*, )?process $pid\r\n" {
+	    # Missing "$gdb_prompt $" is intentional.
+	    pass $test
+	}
+    }
+
+    set test "attach final prompt"
+    set test_displacement "seen displacement message as $displacement"
+    gdb_test_multiple "" $test {
+	-re "Using PIE \\(Position Independent Executable\\) displacement (0x\[0-9a-f\]+) " {
+	    # Missing "$gdb_prompt $" is intentional.
+	    if {$expect_out(1,string) == "0x0"} {
+		set case "ZERO"
+	    } else {
+		set case "NONZERO"
+	    }
+	    if {$displacement == $case} {
+		pass $test_displacement
+		set displacement "FOUND-$displacement"
+	    } else {
+		fail $test_displacement
+	    }
+	    exp_continue
+	}
+	-re "$gdb_prompt $" {
+	    pass $test
+	}
+    }
+    if ![regexp {^(NONE|FOUND-.*)$} $displacement] {
+	fail $test_displacement
+    }
+
+    gdb_test "bt" "#\[0-9\]+ +\[^\r\n\]*\\mlibfunc\\M\[^\r\n\]*\r\n#\[0-9\]+ +\[^\r\n\]*\\mmain\\M.*" "attach main bt"
+    gdb_exit
+
+    set pf_prefix $old_ldprefix
+}
+
+proc test_attach {file displacement {relink_args ""}} {
+    global board_info
 
     gdb_exit
 
@@ -348,57 +292,34 @@ proc test_attach {file displacement} {
 	}
     }
 
-    global pf_prefix
-    set old_ldprefix $pf_prefix
-    lappend pf_prefix "attach:"
+    if {$relink_args == ""} {
+	test_attach_gdb "" $pid $displacement "attach"
+    } else {
+	# These could be rather passed as arguments.
+	global exec interp_saved interp
 
-    gdb_exit
-    gdb_start
+	foreach relink {YES NO} {
+	    # Formerly this test was testing only prelinking of $EXEC.  As the
+	    # prelink command automatically prelinks all of $EXEC's libraries,
+	    # even $INTERP got prelinked.  Therefore, we formerly had to
+	    # `[file_copy $interp_saved $interp]' to make $INTERP not affected
+	    # by this prelinking of $EXEC.
+	    #
+	    # But now we need to test even prelinking of $INTERP.  We could
+	    # create a separate test to test just the $INTERP prelinking.  For
+	    # test simplicity, we merged this test and the test above by not
+	    # restoring $INTERP after $EXEC prelink.  $INTERP gets restored
+	    # later below.
 
-    # Print the "PIE (Position Independent Executable) displacement" message.
-    gdb_test "set verbose on"
-
-    set test "attach"
-    gdb_test_multiple "attach $pid" $test {
-	-re "Attaching to process $pid\r\n" {
-	    # Missing "$gdb_prompt $" is intentional.
-	    pass $test
-	}
-    }
-
-    set test "attach final prompt"
-    set test_displacement "seen displacement message"
-    gdb_test_multiple "" $test {
-	-re "Using PIE \\(Position Independent Executable\\) displacement (0x\[0-9a-f\]+) " {
-	    # Missing "$gdb_prompt $" is intentional.
-	    if {$expect_out(1,string) == "0x0"} {
-		set case "ZERO"
-	    } else {
-		set case "NONZERO"
+	    if [prelink$relink $relink_args [file tail $exec]] {
+		# /proc/PID/exe cannot be loaded as it is "EXECNAME (deleted)".
+		test_attach_gdb $exec $pid $displacement "attach-relink$relink"
 	    }
-	    if {$displacement == $case} {
-		pass $test_displacement
-		# Permit multiple such messages.
-		set displacement "FOUND-$displacement"
-	    } elseif {$displacement != "FOUND-$case"} {
-		fail $test_displacement
-	    }
-	    exp_continue
 	}
-	-re "$gdb_prompt $" {
-	    pass $test
-	}
+	file_copy $interp_saved $interp
     }
-    if ![regexp {^(NONE|FOUND-.*)$} $displacement] {
-	fail $test_displacement
-    }
-
-    gdb_test "bt" "#\[0-9\]+ +\[^\r\n\]*\\mlibfunc\\M\[^\r\n\]*\r\n#\[0-9\]+ +\[^\r\n\]*\\mmain\\M.*" "attach main bt"
-    gdb_exit
 
     remote_exec host "kill -9 $pid"
-
-    set pf_prefix $old_ldprefix
 }
 
 proc test_ld {file ifmain trynosym displacement} {
@@ -409,32 +330,35 @@ proc test_ld {file ifmain trynosym displacement} {
     gdb_exit
     gdb_start
     # Clear it to never find any separate debug infos in $debug_root.
-    gdb_test "set debug-file-directory"
+    gdb_test_no_output "set debug-file-directory"
     gdb_reinitialize_dir $srcdir/$subdir
     gdb_load $file
 
     # Print the "PIE (Position Independent Executable) displacement" message.
-    gdb_test "set verbose on"
+    gdb_test_no_output "set verbose on"
+
+    # We want to test the re-run of a PIE in the case where the executable
+    # is loaded with a different displacement, but disable-randomization
+    # prevents that from happening.  So turn it off.
+    gdb_test "set disable-randomization off"
 
     reach "dl_main" "run segv" $displacement
 
     gdb_test "bt" "#0 +\[^\r\n\]*\\mdl_main\\M.*" "dl bt"
 
     if $ifmain {
-	# Displacement message will be printed the second time on initializing
-	# the linker from svr4_special_symbol_handling.  If any ANOFFSET has
-	# been already set as non-zero the detection will no longer be run.
-	if {$displacement == "NONZERO"} {
-	    set displacement_main "NONE"
-	} else {
-	    set displacement_main $displacement
-	}
-	reach "main" continue $displacement_main
+	reach "main" continue "NONE"
 
 	reach "libfunc" continue "NONE"
 
 	gdb_test "bt" "#0 +\[^\r\n\]*\\mlibfunc\\M\[^\r\n\]*\r\n#1 +\[^\r\n\]*\\mmain\\M.*" "main bt"
+    }
 
+    # Try re-run if the new PIE displacement takes effect.
+    gdb_test "kill" "" "kill" {Kill the program being debugged\? \(y or n\) } "y"
+    reach "dl_main" "run segv" $displacement
+
+    if $ifmain {
 	test_core $file $displacement
 
 	test_attach $file $displacement
@@ -454,11 +378,11 @@ proc test_ld {file ifmain trynosym displacement} {
     gdb_exit
     gdb_start
     # Clear it to never find any separate debug infos in $debug_root.
-    gdb_test "set debug-file-directory"
+    gdb_test_no_output "set debug-file-directory"
     gdb_reinitialize_dir $srcdir/$subdir
 
     # Print the "PIE (Position Independent Executable) displacement" message.
-    gdb_test "set verbose on"
+    gdb_test_no_output "set verbose on"
 
     # Test no (error) message has been printed by `exec-file'.
     set escapedfile [string_to_regexp $file]
@@ -484,7 +408,7 @@ proc test_ld {file ifmain trynosym displacement} {
 	# error code.
 
 	set test "ld.so exit"
-	set test_displacement "seen displacement message"
+	set test_displacement "seen displacement message as $displacement"
 	gdb_test_multiple "run" $test {
 	    -re "Using PIE \\(Position Independent Executable\\) displacement (0x\[0-9a-f\]+) " {
 		# Missing "$gdb_prompt $" is intentional.
@@ -495,9 +419,8 @@ proc test_ld {file ifmain trynosym displacement} {
 		}
 		if {$displacement == $case} {
 		    pass $test_displacement
-		    # Permit multiple such messages.
 		    set displacement "FOUND-$displacement"
-		} elseif {$displacement != "FOUND-$case"} {
+		} else {
 		    fail $test_displacement
 		}
 		exp_continue
@@ -547,7 +470,7 @@ foreach ldprelink {NO YES} {
 	lappend pf_prefix "$ldname:"
 
 	if {$ldsepdebug == "NO"} {
-	    copy $interp_system $interp
+	    file_copy $interp_system $interp
 	    # Never call strip-debug before unprelink:
 	    # prelink: ...: Section .note.gnu.build-id created after prelinking
 	    if ![prelinkNO $interp] {
@@ -555,10 +478,10 @@ foreach ldprelink {NO YES} {
 	    }
 	    strip_debug $interp
 	} elseif {$ldsepdebug == "IN" && $interp_system_debug == ""} {
-	    copy $interp_system $interp
+	    file_copy $interp_system $interp
 	} elseif {$ldsepdebug == "IN" && $interp_system_debug != ""} {
-	    copy $interp_system $interp
-	    copy $interp_system_debug "${interp}.debug"
+	    file_copy $interp_system $interp
+	    file_copy $interp_system_debug "${interp}.debug"
 	    # eu-unstrip: DWARF data in '...' not adjusted for prelinking bias; consider prelink -u
 	    if {![prelinkNO $interp] || ![prelinkNO "${interp}.debug"]} {
 		continue
@@ -574,15 +497,15 @@ foreach ldprelink {NO YES} {
 		pass $test
 	    }
 	} elseif {$ldsepdebug == "SEP" && $interp_system_debug == ""} {
-	    copy $interp_system $interp
+	    file_copy $interp_system $interp
 	    # eu-unstrip: DWARF data in '...' not adjusted for prelinking bias; consider prelink -u
 	    if ![prelinkNO $interp] {
 		continue
 	    }
 	    gdb_gnu_strip_debug $interp
 	} elseif {$ldsepdebug == "SEP" && $interp_system_debug != ""} {
-	    copy $interp_system $interp
-	    copy $interp_system_debug "${interp}.debug"
+	    file_copy $interp_system $interp
+	    file_copy $interp_system_debug "${interp}.debug"
 	}
 
 	if {$ldsepdebug == "SEP"} {
@@ -603,13 +526,16 @@ foreach ldprelink {NO YES} {
 	}
 	test_ld $interp 0 [expr {$ldsepdebug == "NO"}] $displacement
 
-	if ![copy $interp $interp_saved] {
+	if ![file_copy $interp $interp_saved] {
 	    continue
 	}
 	set old_binprefix $pf_prefix
 	foreach binprelink {NO YES} {
 	    foreach binsepdebug {NO IN SEP} {
-		foreach binpie {NO YES} {
+		# "ATTACH" is like "YES" but it is modified during run.
+		# It cannot be used for problem reproducibility after the
+		# testcase ends.
+		foreach binpie {NO YES ATTACH} {
 		    # This combination is not possible, non-PIE (fixed address)
 		    # binary cannot be prelinked to any (other) address.
 		    if {$binprelink == "YES" && $binpie == "NO"} {
@@ -618,78 +544,69 @@ foreach ldprelink {NO YES} {
 
 		    set binname "BINprelink${binprelink}debug${binsepdebug}pie${binpie}"
 		    set exec $binprefix-$binname
-		    set dir ${exec}.d
 
 		    set pf_prefix $old_binprefix
 		    lappend pf_prefix "$binname:"
 
-		    set opts "additional_flags=-Wl,--dynamic-linker,$interp,-rpath,$dir"
-		    lappend opts "additional_flags=-Wl,$binfile_lib,-rpath,[file dirname $binfile_lib]"
+		    set opts "additional_flags=-Wl,$binfile_lib,-rpath,[file dirname $binfile_lib]"
 		    if {$binsepdebug != "NO"} {
 			lappend opts {debug}
 		    }
-		    if {$binpie == "YES"} {
+		    if {$binpie != "NO"} {
 			lappend opts {additional_flags=-fPIE -pie}
 		    }
-		    if {[build_executable ${test}.exp [file tail $exec] $srcfile $opts] == -1} {
+
+		    set dir ${exec}.d
+		    set relink_args [build_executable_own_libs ${test}.exp [file tail $exec] $srcfile $opts $interp $dir]
+		    if {$relink_args == ""} {
 			continue;
 		    }
+
 		    if {$binsepdebug == "SEP"} {
 			gdb_gnu_strip_debug $exec
-			# Just a sanity check.  As gdb_gnu_strip_debug uses the
-			# "[file dirname $exec]/.debug/[file tail $exec].debug"
-			# variant delete the higher-priority exec.debug file.
-			file delete "$exec.debug"
 		    }
 
-		    # Supply a self-sufficent directory $dir with the required
-		    # libraries.  To make an executable properly prelinked all
-		    # its dependencies on libraries must be also prelinked.  If
-		    # some of the system libraries is currently not prelinked
-		    # we have no right to prelink (modify it) at its current
-		    # system place.
-
-		    file delete -force $dir
-		    file mkdir $dir
-
-		    set command "ldd $exec"
-		    set test "ldd [file tail $exec]"
-		    set result [catch "exec $command" output]
-		    verbose -log "result of $command is $result"
-		    verbose -log "output of $command is $output"
-		    if {$result != 0 || $output == ""} {
-			fail $test
+		    if {$binpie == "NO"} {
+			set displacement "NONE"
+		    } elseif {$binprelink == "NO"} {
+			set displacement "NONZERO"
 		    } else {
-			pass $test
+			set displacement "ZERO"
 		    }
 
-		    # gdb testsuite will put there also needless -lm.
-		    set test "$test output contains libc"
-		    set libc [regexp -all -inline -line {^.* => (/[^ ]+).*$} $output]
-		    if {[llength $libc] == 0} {
-			fail $test
-		    } else {
-			pass $test
-		    }
-
-		    set dests {}
-		    for {set i 1} {$i < [llength $libc]} {incr i 2} {
-			set abspath [lindex $libc $i]
-			set dest "$dir/[file tail $abspath]"
-			copy $abspath $dest
-			lappend dests $dest
-		    }
-
-		    if {[prelink$binprelink "--dynamic-linker=$interp --ld-library-path=$dir $exec $interp [concat $dests]" [file tail $exec]]
-		        && [copy $interp_saved $interp]} {
-			if {$binpie == "NO"} {
-			    set displacement "NONE"
-			} elseif {$binprelink == "NO"} {
-			    set displacement "NONZERO"
+		    if {[prelink$binprelink $relink_args [file tail $exec]]
+		        && [file_copy $interp_saved $interp]} {
+			if {$binpie != "ATTACH"} {
+			    test_ld $exec 1 [expr {$binsepdebug == "NO"}] $displacement
 			} else {
-			    set displacement "ZERO"
+			    # If the file has been randomly prelinked it must
+			    # be "NONZERO".  We could see "ZERO" only if it was
+			    # unprelinked and it is now running at the same
+			    # address - which is 0 but executable can never run
+			    # at address 0.
+
+			    set displacement "NONZERO"
+			    test_attach $exec $displacement $relink_args
+
+			    # ATTACH means that executables and libraries have
+			    # been modified after they have been run.  They
+			    # cannot be reused for problem reproducibility after
+			    # the testcase ends in the ATTACH case.  Therefore
+			    # they are rather deleted not to confuse after the
+			    # run finishes.
+			    set exec_debug [system_debug_get $exec]
+			    if {$exec_debug != ""} {
+				# `file delete [glob "${exec_debug}*"]' does not work.
+				foreach f [glob "${exec_debug}*"] {
+				    file delete $f
+				}
+			    }
+			    file delete -force $dir
+			    # `file delete [glob "${exec}*"]' does not work.
+			    foreach f [glob "${exec}*"] {
+				file delete $f
+			    }
 			}
-			test_ld $exec 1 [expr {$binsepdebug == "NO"}] $displacement
 		    }
 		}
 	    }

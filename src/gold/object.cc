@@ -39,9 +39,32 @@
 #include "object.h"
 #include "dynobj.h"
 #include "plugin.h"
+#include "compressed_output.h"
 
 namespace gold
 {
+
+// Struct Read_symbols_data.
+
+// Destroy any remaining File_view objects.
+
+Read_symbols_data::~Read_symbols_data()
+{
+  if (this->section_headers != NULL)
+    delete this->section_headers;
+  if (this->section_names != NULL)
+    delete this->section_names;
+  if (this->symbols != NULL)
+    delete this->symbols;
+  if (this->symbol_names != NULL)
+    delete this->symbol_names;
+  if (this->versym != NULL)
+    delete this->versym;
+  if (this->verdef != NULL)
+    delete this->verdef;
+  if (this->verneed != NULL)
+    delete this->verneed;
+}
 
 // Class Xindex.
 
@@ -345,7 +368,10 @@ Sized_relobj<size, big_endian>::Sized_relobj(
     local_got_offsets_(),
     kept_comdat_sections_(),
     has_eh_frame_(false),
-    discarded_eh_frame_shndx_(-1U)
+    discarded_eh_frame_shndx_(-1U),
+    deferred_layout_(),
+    deferred_layout_relocs_(),
+    compressed_sections_()
 {
 }
 
@@ -473,6 +499,50 @@ Sized_relobj<size, big_endian>::find_eh_frame(
   return false;
 }
 
+// Build a table for any compressed debug sections, mapping each section index
+// to the uncompressed size.
+
+template<int size, bool big_endian>
+Compressed_section_map*
+build_compressed_section_map(
+    const unsigned char* pshdrs,
+    unsigned int shnum,
+    const char* names,
+    section_size_type names_size,
+    Sized_relobj<size, big_endian>* obj)
+{
+  Compressed_section_map* uncompressed_sizes = new Compressed_section_map();
+  const unsigned int shdr_size = elfcpp::Elf_sizes<size>::shdr_size;
+  const unsigned char* p = pshdrs + shdr_size;
+  for (unsigned int i = 1; i < shnum; ++i, p += shdr_size)
+    {
+      typename elfcpp::Shdr<size, big_endian> shdr(p);
+      if (shdr.get_sh_type() == elfcpp::SHT_PROGBITS
+	  && (shdr.get_sh_flags() & elfcpp::SHF_ALLOC) == 0)
+	{
+	  if (shdr.get_sh_name() >= names_size)
+	    {
+	      obj->error(_("bad section name offset for section %u: %lu"),
+			 i, static_cast<unsigned long>(shdr.get_sh_name()));
+	      continue;
+	    }
+
+	  const char* name = names + shdr.get_sh_name();
+	  if (is_compressed_debug_section(name))
+	    {
+	      section_size_type len;
+	      const unsigned char* contents =
+		  obj->section_contents(i, &len, false);
+	      uint64_t uncompressed_size = get_uncompressed_size(contents, len);
+	      if (uncompressed_size != -1ULL)
+		(*uncompressed_sizes)[i] =
+		    convert_to_section_size_type(uncompressed_size);
+	    }
+	}
+    }
+  return uncompressed_sizes;
+}
+
 // Read the sections and symbols from an object file.
 
 template<int size, bool big_endian>
@@ -492,6 +562,10 @@ Sized_relobj<size, big_endian>::do_read_symbols(Read_symbols_data* sd)
       if (this->find_eh_frame(pshdrs, names, sd->section_names_size))
         this->has_eh_frame_ = true;
     }
+  if (memmem(names, sd->section_names_size, ".zdebug_", 8) != NULL)
+    this->compressed_sections_ =
+        build_compressed_section_map(pshdrs, this->shnum(), names,
+				     sd->section_names_size, this);
 
   sd->symbols = NULL;
   sd->symbols_size = 0;
@@ -1349,6 +1423,17 @@ Sized_relobj<size, big_endian>::do_layout(Symbol_table* symtab,
 	}
 
       Output_section* data_section = out_sections[data_shndx];
+      if (data_section == reinterpret_cast<Output_section*>(2))
+        {
+          // The layout for the data section was deferred, so we need
+          // to defer the relocation section, too.
+	  const char* name = pnames + shdr.get_sh_name();
+          this->deferred_layout_relocs_.push_back(
+              Deferred_layout(i, name, pshdr, 0, elfcpp::SHT_NULL));
+	  out_sections[i] = reinterpret_cast<Output_section*>(2);
+          out_section_offsets[i] = invalid_address;
+          continue;
+        }
       if (data_section == NULL)
 	{
 	  out_sections[i] = NULL;
@@ -1439,11 +1524,46 @@ Sized_relobj<size, big_endian>::do_layout_deferred_sections(Layout* layout)
        ++deferred)
     {
       typename This::Shdr shdr(deferred->shdr_data_);
+      // If the section is not included, it is because the garbage collector
+      // decided it is not needed.  Avoid reverting that decision.
+      if (!this->is_section_included(deferred->shndx_))
+        continue;
+
       this->layout_section(layout, deferred->shndx_, deferred->name_.c_str(),
                            shdr, deferred->reloc_shndx_, deferred->reloc_type_);
     }
 
   this->deferred_layout_.clear();
+
+  // Now handle the deferred relocation sections.
+
+  Output_sections& out_sections(this->output_sections());
+  std::vector<Address>& out_section_offsets(this->section_offsets_);
+
+  for (deferred = this->deferred_layout_relocs_.begin();
+       deferred != this->deferred_layout_relocs_.end();
+       ++deferred)
+    {
+      unsigned int shndx = deferred->shndx_;
+      typename This::Shdr shdr(deferred->shdr_data_);
+      unsigned int data_shndx = this->adjust_shndx(shdr.get_sh_info());
+
+      Output_section* data_section = out_sections[data_shndx];
+      if (data_section == NULL)
+	{
+	  out_sections[shndx] = NULL;
+          out_section_offsets[shndx] = invalid_address;
+	  continue;
+	}
+
+      Relocatable_relocs* rr = new Relocatable_relocs();
+      this->set_relocatable_relocs(shndx, rr);
+
+      Output_section* os = layout->layout_reloc(this, shndx, shdr,
+						data_section, rr);
+      out_sections[shndx] = os;
+      out_section_offsets[shndx] = invalid_address;
+    }
 }
 
 // Add the symbols to the symbol table.
@@ -1484,6 +1604,55 @@ Sized_relobj<size, big_endian>::do_add_symbols(Symbol_table* symtab,
   sd->symbols = NULL;
   delete sd->symbol_names;
   sd->symbol_names = NULL;
+}
+
+// Find out if this object, that is a member of a lib group, should be included
+// in the link. We check every symbol defined by this object. If the symbol
+// table has a strong undefined reference to that symbol, we have to include
+// the object.
+
+template<int size, bool big_endian>
+Archive::Should_include
+Sized_relobj<size, big_endian>::do_should_include_member(Symbol_table* symtab,
+                                                         Read_symbols_data* sd,
+                                                         std::string* why)
+{
+  char* tmpbuf = NULL;
+  size_t tmpbuflen = 0;
+  const char* sym_names =
+      reinterpret_cast<const char*>(sd->symbol_names->data());
+  const unsigned char* syms =
+      sd->symbols->data() + sd->external_symbols_offset;
+  const int sym_size = elfcpp::Elf_sizes<size>::sym_size;
+  size_t symcount = ((sd->symbols_size - sd->external_symbols_offset)
+                         / sym_size);
+
+  const unsigned char* p = syms;
+
+  for (size_t i = 0; i < symcount; ++i, p += sym_size)
+    {
+      elfcpp::Sym<size, big_endian> sym(p);
+      unsigned int st_shndx = sym.get_st_shndx();
+      if (st_shndx == elfcpp::SHN_UNDEF)
+	continue;
+
+      unsigned int st_name = sym.get_st_name();
+      const char* name = sym_names + st_name;
+      Symbol* symbol;
+      Archive::Should_include t = Archive::should_include_member(symtab, name,
+								 &symbol, why,
+								 &tmpbuf,
+								 &tmpbuflen);
+      if (t == Archive::SHOULD_INCLUDE_YES)
+	{
+	  if (tmpbuf != NULL)
+	    free(tmpbuf);
+	  return t;
+	}
+    }
+  if (tmpbuf != NULL)
+    free(tmpbuf);
+  return Archive::SHOULD_INCLUDE_UNKNOWN;
 }
 
 // First pass over the local symbols.  Here we add their names to
@@ -1751,7 +1920,12 @@ Sized_relobj<size, big_endian>::do_finalize_local_symbols(unsigned int index,
 		  const Output_section_data* posd =
 		    os->find_relaxed_input_section(this, shndx);
 		  if (posd != NULL)
-		    lv.set_output_value(posd->address());
+		    {
+		      Address relocatable_link_adjustment =
+			relocatable ? os->address() : 0;
+		      lv.set_output_value(posd->address()
+					  - relocatable_link_adjustment);
+		    }
 		  else
 		    lv.set_output_value(os->address());
 		}
@@ -1759,9 +1933,14 @@ Sized_relobj<size, big_endian>::do_finalize_local_symbols(unsigned int index,
 		{
 		  // We have to consider the addend to determine the
 		  // value to use in a relocation.  START is the start
-		  // of this input section.
+		  // of this input section.  If we are doing a relocatable
+		  // link, use offset from start output section instead of
+		  // address.
+		  Address adjusted_start =
+		    relocatable ? start - os->address() : start;
 		  Merged_symbol_value<size>* msv =
-		    new Merged_symbol_value<size>(lv.input_value(), start);
+		    new Merged_symbol_value<size>(lv.input_value(),
+						  adjusted_start);
 		  lv.set_merged_symbol_value(msv);
 		}
 	    }

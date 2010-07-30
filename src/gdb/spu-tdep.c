@@ -364,23 +364,6 @@ spu_gdbarch_id (struct gdbarch *gdbarch)
   return id;
 }
 
-static ULONGEST
-spu_lslr (int id)
-{
-  gdb_byte buf[32];
-  char annex[32];
-
-  if (id == -1)
-    return SPU_LS_SIZE - 1;
-
-  xsnprintf (annex, sizeof annex, "%d/lslr", id);
-  memset (buf, 0, sizeof buf);
-  target_read (&current_target, TARGET_OBJECT_SPU, annex,
-	       buf, 0, sizeof buf);
-
-  return strtoulst (buf, NULL, 16);
-}
-
 static int
 spu_address_class_type_flags (int byte_size, int dwarf2_addr_class)
 {
@@ -426,7 +409,6 @@ spu_pointer_to_address (struct gdbarch *gdbarch,
 			struct type *type, const gdb_byte *buf)
 {
   int id = spu_gdbarch_id (gdbarch);
-  ULONGEST lslr = spu_lslr (id);
   enum bfd_endian byte_order = gdbarch_byte_order (gdbarch);
   ULONGEST addr
     = extract_unsigned_integer (buf, TYPE_LENGTH (type), byte_order);
@@ -435,7 +417,7 @@ spu_pointer_to_address (struct gdbarch *gdbarch,
   if (TYPE_ADDRESS_CLASS_1 (type))
     return addr;
 
-  return addr? SPUADDR (id, addr & lslr) : 0;
+  return addr? SPUADDR (id, addr) : 0;
 }
 
 static CORE_ADDR
@@ -443,10 +425,9 @@ spu_integer_to_address (struct gdbarch *gdbarch,
 			struct type *type, const gdb_byte *buf)
 {
   int id = spu_gdbarch_id (gdbarch);
-  ULONGEST lslr = spu_lslr (id);
   ULONGEST addr = unpack_long (type, buf);
 
-  return SPUADDR (id, addr & lslr);
+  return SPUADDR (id, addr);
 }
 
 
@@ -1006,7 +987,13 @@ spu_frame_unwind_cache (struct frame_info *this_frame,
     {
       CORE_ADDR reg;
       LONGEST backchain;
+      ULONGEST lslr;
       int status;
+
+      /* Get local store limit.  */
+      lslr = get_frame_register_unsigned (this_frame, SPU_LSLR_REGNUM);
+      if (!lslr)
+	lslr = (ULONGEST) -1;
 
       /* Get the backchain.  */
       reg = get_frame_register_unsigned (this_frame, SPU_SP_REGNUM);
@@ -1015,10 +1002,10 @@ spu_frame_unwind_cache (struct frame_info *this_frame,
 
       /* A zero backchain terminates the frame chain.  Also, sanity
          check against the local store size limit.  */
-      if (status && backchain > 0 && backchain < SPU_LS_SIZE)
+      if (status && backchain > 0 && backchain <= lslr)
 	{
 	  /* Assume the link register is saved into its slot.  */
-	  if (backchain + 16 < SPU_LS_SIZE)
+	  if (backchain + 16 <= lslr)
 	    info->saved_regs[SPU_LR_REGNUM].addr = SPUADDR (id, backchain + 16);
 
           /* Frame bases.  */
@@ -1507,6 +1494,39 @@ spu_breakpoint_from_pc (struct gdbarch *gdbarch, CORE_ADDR * pcptr, int *lenptr)
   return breakpoint;
 }
 
+static int
+spu_memory_remove_breakpoint (struct gdbarch *gdbarch,
+			      struct bp_target_info *bp_tgt)
+{
+  /* We work around a problem in combined Cell/B.E. debugging here.  Consider
+     that in a combined application, we have some breakpoints inserted in SPU
+     code, and now the application forks (on the PPU side).  GDB common code
+     will assume that the fork system call copied all breakpoints into the new
+     process' address space, and that all those copies now need to be removed
+     (see breakpoint.c:detach_breakpoints).
+
+     While this is certainly true for PPU side breakpoints, it is not true
+     for SPU side breakpoints.  fork will clone the SPU context file
+     descriptors, so that all the existing SPU contexts are in accessible
+     in the new process.  However, the contents of the SPU contexts themselves
+     are *not* cloned.  Therefore the effect of detach_breakpoints is to
+     remove SPU breakpoints from the *original* SPU context's local store
+     -- this is not the correct behaviour.
+
+     The workaround is to check whether the PID we are asked to remove this
+     breakpoint from (i.e. ptid_get_pid (inferior_ptid)) is different from the
+     PID of the current inferior (i.e. current_inferior ()->pid).  This is only
+     true in the context of detach_breakpoints.  If so, we simply do nothing.
+     [ Note that for the fork child process, it does not matter if breakpoints
+     remain inserted, because those SPU contexts are not runnable anyway --
+     the Linux kernel allows only the original process to invoke spu_run.  */
+
+  if (ptid_get_pid (inferior_ptid) != current_inferior ()->pid) 
+    return 0;
+
+  return default_memory_remove_breakpoint (gdbarch, bp_tgt);
+}
+
 
 /* Software single-stepping support.  */
 
@@ -1520,6 +1540,7 @@ spu_software_single_step (struct frame_info *frame)
   unsigned int insn;
   int offset, reg;
   gdb_byte buf[4];
+  ULONGEST lslr;
 
   pc = get_frame_pc (frame);
 
@@ -1527,13 +1548,18 @@ spu_software_single_step (struct frame_info *frame)
     return 1;
   insn = extract_unsigned_integer (buf, 4, byte_order);
 
+  /* Get local store limit.  */
+  lslr = get_frame_register_unsigned (frame, SPU_LSLR_REGNUM);
+  if (!lslr)
+    lslr = (ULONGEST) -1;
+
   /* Next sequential instruction is at PC + 4, except if the current
      instruction is a PPE-assisted call, in which case it is at PC + 8.
      Wrap around LS limit to be on the safe side.  */
   if ((insn & 0xffffff00) == 0x00002100)
-    next_pc = (SPUADDR_ADDR (pc) + 8) & (SPU_LS_SIZE - 1);
+    next_pc = (SPUADDR_ADDR (pc) + 8) & lslr;
   else
-    next_pc = (SPUADDR_ADDR (pc) + 4) & (SPU_LS_SIZE - 1);
+    next_pc = (SPUADDR_ADDR (pc) + 4) & lslr;
 
   insert_single_step_breakpoint (gdbarch,
 				 aspace, SPUADDR (SPUADDR_SPU (pc), next_pc));
@@ -1550,7 +1576,7 @@ spu_software_single_step (struct frame_info *frame)
 	  target += extract_unsigned_integer (buf, 4, byte_order) & -4;
 	}
 
-      target = target & (SPU_LS_SIZE - 1);
+      target = target & lslr;
       if (target != next_pc)
 	insert_single_step_breakpoint (gdbarch, aspace,
 				       SPUADDR (SPUADDR_SPU (pc), target));
@@ -1777,7 +1803,7 @@ spu_overlay_update (struct obj_section *osect)
 /* Whenever a new objfile is loaded, read the target's _ovly_table.
    If there is one, go through all sections and make sure for non-
    overlay sections LMA equals VMA, while for overlay sections LMA
-   is larger than local store size.  */
+   is larger than SPU_OVERLAY_LMA.  */
 static void
 spu_overlay_new_objfile (struct objfile *objfile)
 {
@@ -1807,7 +1833,7 @@ spu_overlay_new_objfile (struct objfile *objfile)
       if (ovly_table[ndx].mapped_ptr == 0)
 	bfd_section_lma (obfd, bsect) = bfd_section_vma (obfd, bsect);
       else
-	bfd_section_lma (obfd, bsect) = bsect->filepos + SPU_LS_SIZE;
+	bfd_section_lma (obfd, bsect) = SPU_OVERLAY_LMA + bsect->filepos;
     }
 }
 
@@ -1863,11 +1889,13 @@ spu_catch_start (struct objfile *objfile)
   /* Use a numerical address for the set_breakpoint command to avoid having
      the breakpoint re-set incorrectly.  */
   xsnprintf (buf, sizeof buf, "*%s", core_addr_to_string (pc));
-  set_breakpoint (get_objfile_arch (objfile),
-		  buf, NULL /* condition */,
-		  0 /* hardwareflag */, 1 /* tempflag */,
-		  -1 /* thread */, 0 /* ignore_count */,
-		  0 /* pending */, 1 /* enabled */);
+  create_breakpoint (get_objfile_arch (objfile), buf /* arg */,
+		     NULL /* cond_string */, -1 /* thread */,
+		     0 /* parse_condition_and_thread */, 1 /* tempflag */,
+		     bp_breakpoint /* type_wanted */,
+		     0 /* ignore_count */,
+		     AUTO_BOOLEAN_FALSE /* pending_break_support */,
+		     NULL /* ops */, 0 /* from_tty */, 1 /* enabled */);
 }
 
 
@@ -2643,6 +2671,7 @@ spu_gdbarch_init (struct gdbarch_info info, struct gdbarch_list *arches)
   /* Breakpoints.  */
   set_gdbarch_decr_pc_after_break (gdbarch, 4);
   set_gdbarch_breakpoint_from_pc (gdbarch, spu_breakpoint_from_pc);
+  set_gdbarch_memory_remove_breakpoint (gdbarch, spu_memory_remove_breakpoint);
   set_gdbarch_cannot_step_breakpoint (gdbarch, 1);
   set_gdbarch_software_single_step (gdbarch, spu_software_single_step);
   set_gdbarch_get_longjmp_target (gdbarch, spu_get_longjmp_target);

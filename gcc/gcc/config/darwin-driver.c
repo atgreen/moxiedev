@@ -1,5 +1,5 @@
 /* Additional functions for the GCC driver on Darwin native.
-   Copyright (C) 2006, 2007, 2008 Free Software Foundation, Inc.
+   Copyright (C) 2006, 2007, 2008, 2010 Free Software Foundation, Inc.
    Contributed by Apple Computer Inc.
 
 This file is part of GCC.
@@ -26,14 +26,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "gcc.h"
 #include <sys/sysctl.h>
 #include "xregex.h"
-
-#ifndef SWITCH_TAKES_ARG
-#define SWITCH_TAKES_ARG(CHAR) DEFAULT_SWITCH_TAKES_ARG(CHAR)
-#endif
-
-#ifndef WORD_SWITCH_TAKES_ARG
-#define WORD_SWITCH_TAKES_ARG(STR) DEFAULT_WORD_SWITCH_TAKES_ARG (STR)
-#endif
 
 /* When running on a Darwin system and using that system's headers and
    libraries, default the -mmacosx-version-min flag to be the version
@@ -107,8 +99,7 @@ darwin_default_min_version (int * argc_p, char *** argv_p)
   if (sysctl (osversion_name, ARRAY_SIZE (osversion_name), osversion,
 	      &osversion_len, NULL, 0) == -1)
     {
-      fprintf (stderr, "sysctl for kern.osversion failed: %s\n",
-	       xstrerror (errno));
+      warning (0, "sysctl for kern.osversion failed: %m");
       return;
     }
 
@@ -151,7 +142,7 @@ darwin_default_min_version (int * argc_p, char *** argv_p)
   return;
   
  parse_failed:
-  fprintf (stderr, "couldn't understand kern.osversion `%.*s'\n",
+  warning (0, "couldn't understand kern.osversion %q.*s",
 	   (int) osversion_len, osversion);
   return;
 }

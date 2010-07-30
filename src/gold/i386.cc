@@ -494,19 +494,17 @@ Target_i386::got_section(Symbol_table* symtab, Layout* layout)
 
       this->got_ = new Output_data_got<32, false>();
 
-      Output_section* os;
-      os = layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
-					   (elfcpp::SHF_ALLOC
-					    | elfcpp::SHF_WRITE),
-					   this->got_, false, true, true,
-					   false);
+      layout->add_output_section_data(".got", elfcpp::SHT_PROGBITS,
+				      (elfcpp::SHF_ALLOC
+				       | elfcpp::SHF_WRITE),
+				      this->got_, false, true, true, false);
 
       this->got_plt_ = new Output_data_space(4, "** GOT PLT");
-      os = layout->add_output_section_data(".got.plt", elfcpp::SHT_PROGBITS,
-					   (elfcpp::SHF_ALLOC
-					    | elfcpp::SHF_WRITE),
-					   this->got_plt_, false, false, false,
-					   true);
+      layout->add_output_section_data(".got.plt", elfcpp::SHT_PROGBITS,
+				      (elfcpp::SHF_ALLOC
+				       | elfcpp::SHF_WRITE),
+				      this->got_plt_, false, false, false,
+				      true);
 
       // The first three entries are reserved.
       this->got_plt_->set_current_data_size(3 * 4);
@@ -1626,7 +1624,8 @@ Target_i386::gc_process_relocs(Symbol_table* symtab,
                                const unsigned char* plocal_symbols)
 {
   gold::gc_process_relocs<32, false, Target_i386, elfcpp::SHT_REL,
-		          Target_i386::Scan>(
+		          Target_i386::Scan,
+                          Target_i386::Relocatable_size_for_reloc>(
     symtab,
     layout,
     this,

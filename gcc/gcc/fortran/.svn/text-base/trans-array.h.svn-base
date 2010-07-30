@@ -1,5 +1,5 @@
 /* Header for array handling functions
-   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Paul Brook
 
@@ -37,11 +37,11 @@ tree gfc_trans_create_temp_array (stmtblock_t *, stmtblock_t *, gfc_loopinfo *,
 
 /* Generate function entry code for allocation of compiler allocated array
    variables.  */
-tree gfc_trans_auto_array_allocation (tree, gfc_symbol *, tree);
+void gfc_trans_auto_array_allocation (tree, gfc_symbol *, gfc_wrapped_block *);
 /* Generate entry and exit code for dummy array parameters.  */
-tree gfc_trans_dummy_array_bias (gfc_symbol *, tree, tree);
+void gfc_trans_dummy_array_bias (gfc_symbol *, tree, gfc_wrapped_block *);
 /* Generate entry and exit code for g77 calling convention arrays.  */
-tree gfc_trans_g77_array (gfc_symbol *, tree);
+void gfc_trans_g77_array (gfc_symbol *, gfc_wrapped_block *);
 /* Generate code to deallocate an array, if it is allocated.  */
 tree gfc_trans_dealloc_allocated (tree);
 
@@ -58,7 +58,7 @@ tree gfc_copy_alloc_comp (gfc_symbol *, tree, tree, int);
 tree gfc_copy_only_alloc_comp (gfc_symbol *, tree, tree, int);
 
 /* Add initialization for deferred arrays.  */
-tree gfc_trans_deferred_array (gfc_symbol *, tree);
+void gfc_trans_deferred_array (gfc_symbol *, gfc_wrapped_block *);
 /* Generate an initializer for a static pointer or allocatable array.  */
 void gfc_trans_static_array_pointer (gfc_symbol *);
 
@@ -144,7 +144,7 @@ void gfc_conv_descriptor_ubound_set (stmtblock_t *, tree, tree, tree);
 void gfc_add_intrinsic_ss_code (gfc_loopinfo *, gfc_ss *);
 
 /* Functions for constant array constructor processing.  */
-unsigned HOST_WIDE_INT gfc_constant_array_constructor_p (gfc_constructor *);
+unsigned HOST_WIDE_INT gfc_constant_array_constructor_p (gfc_constructor_base);
 tree gfc_build_constant_array_constructor (gfc_expr *, tree);
 
 /* Copy a string from src to dest.  */

@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/25_algorithms/generate_n
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-05-21T16:57:17.220256Z
+159677
+paolo
 
 
 
@@ -28,4 +28,38 @@ jakub
 
 requirements
 dir
+
+25306.cc
+file
+
+
+
+
+2010-07-08T15:19:25.546343Z
+5eab7a510e8a075538ea73090ecc4f2f
+2010-05-21T16:57:17.220256Z
+159677
+paolo
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+959
 

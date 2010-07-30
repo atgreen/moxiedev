@@ -232,6 +232,10 @@ extern char *construct_inferior_arguments (int, char **);
 
 /* From infrun.c */
 
+extern int debug_infrun;
+
+extern int stop_on_solib_events;
+
 extern void start_remote (int from_tty);
 
 extern void normal_stop (void);
@@ -297,7 +301,7 @@ extern CORE_ADDR stop_pc;
 
 /* Nonzero if stopped due to completion of a stack dummy routine.  */
 
-extern int stop_stack_dummy;
+extern enum stop_stack_kind stop_stack_dummy;
 
 /* Nonzero if program stopped due to a random (unexpected) signal in
    inferior process.  */
@@ -627,5 +631,7 @@ extern void prune_inferiors (void);
 extern int number_of_inferiors (void);
 
 extern struct inferior *add_inferior_with_spaces (void);
+
+extern void update_observer_mode (void);
 
 #endif /* !defined (INFERIOR_H) */

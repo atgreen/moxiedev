@@ -185,6 +185,7 @@
   <target name="build">
 
     <mkdir dir="root/usr/bin"/>
+    <mkdir dir="root/usr/moxie-rtems"/>
     <mkdir dir="root/usr/moxie-uclinux"/>
     <mkdir dir="build/src"/>
 
@@ -424,6 +425,31 @@
     </exec>
 
     <echo message="===================================================================="/>
+    <echo message="====== Building binutils for rtems ================================="/>
+    <echo message="===================================================================="/>
+    <mkdir dir="build/src-rtems"/>
+    <exec executable="sh">
+      <arg value="-c"/>
+      <arg value="(cd build/src-rtems; ../../src/configure --target=moxie-rtems --disable-gdbtk --prefix=`(cd ../../root/usr; pwd)` --with-sysroot=`(cd ../../root/usr/moxie-rtems; pwd)`)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/src-rtems"/>
+      <arg value="-j1"/>
+      <arg value="all-binutils"/>
+      <arg value="all-gas"/>
+      <arg value="all-ld"/>
+      <arg value="all-sim"/>
+    </exec>
+    <exec executable="make">
+      <arg value="--directory=build/src-rtems"/>
+      <arg value="install-binutils"/>
+      <arg value="install-gas"/>
+      <arg value="install-ld"/>
+      <arg value="install-sim"/>
+    </exec>
+
+    <echo message="===================================================================="/>
     <echo message="====== Building binutils for uClinux ==============================="/>
     <echo message="===================================================================="/>
     <mkdir dir="build/src-uclinux"/>
@@ -464,6 +490,44 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="--directory=build/elf2flt"/>
+      <arg value="install"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building newlib for rtems ==================================="/>
+    <echo message="===================================================================="/>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/src-rtems"/>
+      <arg value="all-target-newlib"/>
+      <arg value="install-target-newlib"/>
+      <arg value="CC_FOR_TARGET=${basedir}/scripts/moxie-rtems-gcc-wrapper"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/src-rtems"/>
+      <arg value="all-target-libgloss"/>
+      <arg value="install-target-libgloss"/>
+      <arg value="CC_FOR_TARGET=${basedir}/scripts/moxie-rtems-gcc-wrapper"/>
+    </exec>
+
+    <echo message="===================================================================="/>
+    <echo message="====== Building full rtems gcc ====================================="/>
+    <echo message="===================================================================="/>
+    <mkdir dir="build/gcc-rtems"/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd build/gcc-rtems; ../../gcc/configure  --target=moxie-rtems --enable-threads=rtems --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-gnu-as --with-gnu-ld --with-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/gcc-rtems"/>
+      <arg value="-j1"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/gcc-rtems"/>
       <arg value="install"/>
     </exec>
 

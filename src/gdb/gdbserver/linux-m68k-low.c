@@ -112,14 +112,14 @@ m68k_store_fpregset (struct regcache *regcache, const void *buf)
 
 struct regset_info target_regsets[] = {
 #ifdef HAVE_PTRACE_GETREGS
-  { PTRACE_GETREGS, PTRACE_SETREGS, sizeof (elf_gregset_t),
+  { PTRACE_GETREGS, PTRACE_SETREGS, 0, sizeof (elf_gregset_t),
     GENERAL_REGS,
     m68k_fill_gregset, m68k_store_gregset },
-  { PTRACE_GETFPREGS, PTRACE_SETFPREGS, sizeof (elf_fpregset_t),
+  { PTRACE_GETFPREGS, PTRACE_SETFPREGS, 0, sizeof (elf_fpregset_t),
     FP_REGS,
     m68k_fill_fpregset, m68k_store_fpregset },
 #endif /* HAVE_PTRACE_GETREGS */
-  { 0, 0, -1, -1, NULL, NULL }
+  { 0, 0, 0, -1, -1, NULL, NULL }
 };
 
 static const unsigned char m68k_breakpoint[] = { 0x4E, 0x4F };
@@ -153,6 +153,27 @@ m68k_breakpoint_at (CORE_ADDR pc)
 
   return 0;
 }
+
+#include <asm/ptrace.h>
+
+#ifdef PTRACE_GET_THREAD_AREA
+/* Fetch the thread-local storage pointer for libthread_db.  */
+
+ps_err_e
+ps_get_thread_area (const struct ps_prochandle *ph,
+		    lwpid_t lwpid, int idx, void **base)
+{
+  if (ptrace (PTRACE_GET_THREAD_AREA, lwpid, NULL, base) != 0)
+    return PS_ERR;
+
+  /* IDX is the bias from the thread pointer to the beginning of the
+     thread descriptor.  It has to be subtracted due to implementation
+     quirks in libthread_db.  */
+  *base = (void *) ((char *)*base - idx);
+
+  return PS_OK;
+}
+#endif /* PTRACE_GET_THREAD_AREA */
 
 struct linux_target_ops the_low_target = {
   init_registers_m68k,

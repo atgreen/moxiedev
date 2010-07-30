@@ -1,6 +1,6 @@
 /* Calculate (post)dominators in slightly super-linear time.
-   Copyright (C) 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2009 Free
-   Software Foundation, Inc.
+   Copyright (C) 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
    Contributed by Michael Matz (matz@ifh.de).
 
    This file is part of GCC.
@@ -41,12 +41,14 @@
 #include "hard-reg-set.h"
 #include "obstack.h"
 #include "basic-block.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "et-forest.h"
 #include "timevar.h"
 #include "vecprim.h"
 #include "pointer-set.h"
 #include "graphds.h"
+#include "bitmap.h"
 
 /* We name our nodes with integers, beginning with 1.  Zero is reserved for
    'undefined' or 'end of list'.  The name of each node is given by the dfs
@@ -782,16 +784,20 @@ get_dominated_by_region (enum cdi_direction dir, basic_block *region,
 }
 
 /* Returns the list of basic blocks including BB dominated by BB, in the
-   direction DIR.  The vector will be sorted in preorder.  */
+   direction DIR up to DEPTH in the dominator tree.  The DEPTH of zero will
+   produce a vector containing all dominated blocks.  The vector will be sorted
+   in preorder.  */
 
 VEC (basic_block, heap) *
-get_all_dominated_blocks (enum cdi_direction dir, basic_block bb)
+get_dominated_to_depth (enum cdi_direction dir, basic_block bb, int depth)
 {
   VEC(basic_block, heap) *bbs = NULL;
   unsigned i;
+  unsigned next_level_start;
 
   i = 0;
   VEC_safe_push (basic_block, heap, bbs, bb);
+  next_level_start = 1; /* = VEC_length (basic_block, bbs); */
 
   do
     {
@@ -802,10 +808,22 @@ get_all_dominated_blocks (enum cdi_direction dir, basic_block bb)
 	   son;
 	   son = next_dom_son (dir, son))
 	VEC_safe_push (basic_block, heap, bbs, son);
+
+      if (i == next_level_start && --depth)
+	next_level_start = VEC_length (basic_block, bbs);
     }
-  while (i < VEC_length (basic_block, bbs));
+  while (i < next_level_start);
 
   return bbs;
+}
+
+/* Returns the list of basic blocks including BB dominated by BB, in the
+   direction DIR.  The vector will be sorted in preorder.  */
+
+VEC (basic_block, heap) *
+get_all_dominated_blocks (enum cdi_direction dir, basic_block bb)
+{
+  return get_dominated_to_depth (dir, bb, 0);
 }
 
 /* Redirect all edges pointing to BB to TO.  */
@@ -988,7 +1006,7 @@ bb_dom_dfs_out (enum cdi_direction dir, basic_block bb)
 }
 
 /* Verify invariants of dominator structure.  */
-void
+DEBUG_FUNCTION void
 verify_dominators (enum cdi_direction dir)
 {
   int err = 0;
@@ -1465,7 +1483,7 @@ dom_info_available_p (enum cdi_direction dir)
   return dom_computed[dir_index] != DOM_NONE;
 }
 
-void
+DEBUG_FUNCTION void
 debug_dominance_info (enum cdi_direction dir)
 {
   basic_block bb, bb2;
@@ -1506,7 +1524,7 @@ debug_dominance_tree_1 (enum cdi_direction dir, basic_block root,
 /* Prints to stderr representation of the dominance tree (for direction DIR)
    rooted in ROOT.  */
 
-void
+DEBUG_FUNCTION void
 debug_dominance_tree (enum cdi_direction dir, basic_block root)
 {
   debug_dominance_tree_1 (dir, root, 0, false);

@@ -1,6 +1,6 @@
 /* Subroutines used for code generation on the DEC Alpha.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Richard Kenner (kenner@vlsi1.ultra.nyu.edu)
 
@@ -29,7 +29,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "regs.h"
 #include "hard-reg-set.h"
-#include "real.h"
 #include "insn-config.h"
 #include "conditions.h"
 #include "output.h"
@@ -42,6 +41,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "obstack.h"
 #include "except.h"
 #include "function.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "ggc.h"
 #include "integrate.h"
@@ -1570,10 +1570,12 @@ alpha_preferred_reload_class(rtx x, enum reg_class rclass)
    RCLASS requires an extra scratch or immediate register.  Return the class
    needed for the immediate register.  */
 
-static enum reg_class
-alpha_secondary_reload (bool in_p, rtx x, enum reg_class rclass,
+static reg_class_t
+alpha_secondary_reload (bool in_p, rtx x, reg_class_t rclass_i,
 			enum machine_mode mode, secondary_reload_info *sri)
 {
+  enum reg_class rclass = (enum reg_class) rclass_i;
+
   /* Loading and storing HImode or QImode values to and from memory
      usually requires a scratch register.  */
   if (!TARGET_BWX && (mode == QImode || mode == HImode || mode == CQImode))
@@ -1583,10 +1585,10 @@ alpha_secondary_reload (bool in_p, rtx x, enum reg_class rclass,
 	  if (in_p)
 	    {
 	      if (!aligned_memory_operand (x, mode))
-		sri->icode = reload_in_optab[mode];
+		sri->icode = direct_optab_handler (reload_in_optab, mode);
 	    }
 	  else
-	    sri->icode = reload_out_optab[mode];
+	    sri->icode = direct_optab_handler (reload_out_optab, mode);
 	  return NO_REGS;
 	}
     }
@@ -4732,7 +4734,7 @@ alpha_split_lock_test_and_set_12 (enum machine_mode mode, rtx dest, rtx addr,
 static int
 alpha_adjust_cost (rtx insn, rtx link, rtx dep_insn, int cost)
 {
-  enum attr_type insn_type, dep_insn_type;
+  enum attr_type dep_insn_type;
 
   /* If the dependence is an anti-dependence, there is no cost.  For an
      output dependence, there is sometimes a cost, but it doesn't seem
@@ -4744,7 +4746,6 @@ alpha_adjust_cost (rtx insn, rtx link, rtx dep_insn, int cost)
   if (recog_memoized (insn) < 0 || recog_memoized (dep_insn) < 0)
     return cost;
 
-  insn_type = get_attr_type (insn);
   dep_insn_type = get_attr_type (dep_insn);
 
   /* Bring in the user-defined memory latency.  */
@@ -4808,8 +4809,7 @@ struct GTY(()) machine_function
 static struct machine_function *
 alpha_init_machine_status (void)
 {
-  return ((struct machine_function *)
-		ggc_alloc_cleared (sizeof (struct machine_function)));
+  return ggc_alloc_cleared_machine_function ();
 }
 
 /* Support for frame based VMS condition handlers.  */
@@ -5855,7 +5855,7 @@ rtx
 function_value (const_tree valtype, const_tree func ATTRIBUTE_UNUSED,
 		enum machine_mode mode)
 {
-  unsigned int regnum, dummy;
+  unsigned int regnum, dummy ATTRIBUTE_UNUSED;
   enum mode_class mclass;
 
   gcc_assert (!valtype || !alpha_return_in_memory (valtype, func));
@@ -5944,13 +5944,13 @@ alpha_build_builtin_va_list (void)
 		    FIELD_DECL, get_identifier ("__offset"),
 		    integer_type_node);
   DECL_FIELD_CONTEXT (ofs) = record;
-  TREE_CHAIN (ofs) = space;
+  DECL_CHAIN (ofs) = space;
 
   base = build_decl (BUILTINS_LOCATION,
 		     FIELD_DECL, get_identifier ("__base"),
 		     ptr_type_node);
   DECL_FIELD_CONTEXT (base) = record;
-  TREE_CHAIN (base) = ofs;
+  DECL_CHAIN (base) = ofs;
 
   TYPE_FIELDS (record) = base;
   layout_type (record);
@@ -6026,7 +6026,7 @@ alpha_stdarg_optimize_hook (struct stdarg_info *si, const_gimple stmt)
   rhs = gimple_assign_rhs1 (stmt);
   while (handled_component_p (rhs))
     rhs = TREE_OPERAND (rhs, 0);
-  if (TREE_CODE (rhs) != INDIRECT_REF
+  if (TREE_CODE (rhs) != MEM_REF
       || TREE_CODE (TREE_OPERAND (rhs, 0)) != SSA_NAME)
     return false;
 
@@ -6304,7 +6304,7 @@ alpha_va_start (tree valist, rtx nextarg ATTRIBUTE_UNUSED)
   else
     {
       base_field = TYPE_FIELDS (TREE_TYPE (valist));
-      offset_field = TREE_CHAIN (base_field);
+      offset_field = DECL_CHAIN (base_field);
 
       base_field = build3 (COMPONENT_REF, TREE_TYPE (base_field),
 			   valist, base_field, NULL_TREE);
@@ -6408,7 +6408,7 @@ alpha_gimplify_va_arg (tree valist, tree type, gimple_seq *pre_p,
     return std_gimplify_va_arg_expr (valist, type, pre_p, post_p);
 
   base_field = TYPE_FIELDS (va_list_type_node);
-  offset_field = TREE_CHAIN (base_field);
+  offset_field = DECL_CHAIN (base_field);
   base_field = build3 (COMPONENT_REF, TREE_TYPE (base_field),
 		       valist, base_field, NULL_TREE);
   offset_field = build3 (COMPONENT_REF, TREE_TYPE (offset_field),
@@ -7139,26 +7139,27 @@ alpha_fold_builtin_ctpop (unsigned HOST_WIDE_INT opint[], long op_const)
 /* Fold one of our builtin functions.  */
 
 static tree
-alpha_fold_builtin (tree fndecl, tree arglist, bool ignore ATTRIBUTE_UNUSED)
+alpha_fold_builtin (tree fndecl, int n_args, tree *op,
+		    bool ignore ATTRIBUTE_UNUSED)
 {
-  tree op[MAX_ARGS], t;
   unsigned HOST_WIDE_INT opint[MAX_ARGS];
-  long op_const = 0, arity = 0;
+  long op_const = 0;
+  int i;
 
-  for (t = arglist; t ; t = TREE_CHAIN (t), ++arity)
+  if (n_args >= MAX_ARGS)
+    return NULL;
+
+  for (i = 0; i < n_args; i++)
     {
-      tree arg = TREE_VALUE (t);
+      tree arg = op[i];
       if (arg == error_mark_node)
 	return NULL;
-      if (arity >= MAX_ARGS)
-	return NULL;
 
-      op[arity] = arg;
-      opint[arity] = 0;
+      opint[i] = 0;
       if (TREE_CODE (arg) == INTEGER_CST)
 	{
-          op_const |= 1L << arity;
-	  opint[arity] = int_cst_value (arg);
+          op_const |= 1L << i;
+	  opint[i] = int_cst_value (arg);
 	}
     }
 
@@ -9744,7 +9745,7 @@ alpha_file_start (void)
   /* If emitting dwarf2 debug information, we cannot generate a .file
      directive to start the file, as it will conflict with dwarf2out
      file numbers.  So it's only useful when emitting mdebug output.  */
-  targetm.file_start_file_directive = (write_symbols == DBX_DEBUG);
+  targetm.asm_file_start_file_directive = (write_symbols == DBX_DEBUG);
 #endif
 
   default_file_start ();
@@ -9902,10 +9903,13 @@ alpha_need_linkage (const char *name, int is_local)
       struct alpha_funcs *cfaf;
 
       if (!alpha_funcs_tree)
-        alpha_funcs_tree = splay_tree_new_ggc ((splay_tree_compare_fn)
-					       splay_tree_compare_pointers);
+        alpha_funcs_tree = splay_tree_new_ggc
+	 (splay_tree_compare_pointers,
+	  ggc_alloc_splay_tree_tree_node_tree_node_splay_tree_s,
+	  ggc_alloc_splay_tree_tree_node_tree_node_splay_tree_node_s);
 
-      cfaf = (struct alpha_funcs *) ggc_alloc (sizeof (struct alpha_funcs));
+
+      cfaf = ggc_alloc_alpha_funcs ();
 
       cfaf->links = 0;
       cfaf->num = ++alpha_funcs_num;
@@ -9939,9 +9943,12 @@ alpha_need_linkage (const char *name, int is_local)
 	}
     }
   else
-    alpha_links_tree = splay_tree_new_ggc ((splay_tree_compare_fn) strcmp);
+    alpha_links_tree = splay_tree_new_ggc
+	 ((splay_tree_compare_fn) strcmp,
+	  ggc_alloc_splay_tree_str_alpha_links_splay_tree_s,
+	  ggc_alloc_splay_tree_str_alpha_links_splay_tree_node_s);
 
-  al = (struct alpha_links *) ggc_alloc (sizeof (struct alpha_links));
+  al = ggc_alloc_alpha_links ();
   name = ggc_strdup (name);
 
   /* Assume external if no definition.  */
@@ -9997,7 +10004,10 @@ alpha_use_linkage (rtx func, tree cfundecl, int lflag, int rflag)
 	al = (struct alpha_links *) lnode->value;
     }
   else
-    cfaf->links = splay_tree_new_ggc ((splay_tree_compare_fn) strcmp);
+    cfaf->links = splay_tree_new_ggc
+      ((splay_tree_compare_fn) strcmp,
+       ggc_alloc_splay_tree_str_alpha_links_splay_tree_s,
+       ggc_alloc_splay_tree_str_alpha_links_splay_tree_node_s);
 
   if (!al)
     {
@@ -10013,7 +10023,7 @@ alpha_use_linkage (rtx func, tree cfundecl, int lflag, int rflag)
       name_len = strlen (name);
       linksym = (char *) alloca (name_len + 50);
 
-      al = (struct alpha_links *) ggc_alloc (sizeof (struct alpha_links));
+      al = ggc_alloc_alpha_links ();
       al->num = cfaf->num;
 
       node = splay_tree_lookup (alpha_links_tree, (splay_tree_key) name);

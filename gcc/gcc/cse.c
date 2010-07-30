@@ -20,7 +20,6 @@ along with GCC; see the file COPYING3.  If not see
 <http://www.gnu.org/licenses/>.  */
 
 #include "config.h"
-/* stdio.h must precede rtl.h for FFS.  */
 #include "system.h"
 #include "coretypes.h"
 #include "tm.h"
@@ -30,11 +29,11 @@ along with GCC; see the file COPYING3.  If not see
 #include "regs.h"
 #include "basic-block.h"
 #include "flags.h"
-#include "real.h"
 #include "insn-config.h"
 #include "recog.h"
 #include "function.h"
 #include "expr.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "output.h"
 #include "ggc.h"
@@ -686,7 +685,7 @@ approx_reg_cost_1 (rtx *xp, void *data)
 	{
 	  if (regno < FIRST_PSEUDO_REGISTER)
 	    {
-	      if (SMALL_REGISTER_CLASSES)
+	      if (targetm.small_register_classes_for_mode_p (GET_MODE (x)))
 		return 1;
 	      *cost_p += 2;
 	    }
@@ -2304,7 +2303,7 @@ hash_rtx_cb (const_rtx x, enum machine_mode mode,
 	      record = true;
 	    else if (GET_MODE_CLASS (GET_MODE (x)) == MODE_CC)
 	      record = true;
-	    else if (SMALL_REGISTER_CLASSES)
+	    else if (targetm.small_register_classes_for_mode_p (GET_MODE (x)))
 	      record = false;
 	    else if (CLASS_LIKELY_SPILLED_P (REGNO_REG_CLASS (regno)))
 	      record = false;
@@ -2671,25 +2670,15 @@ exp_equiv_p (const_rtx x, const_rtx y, int validate, bool for_gcse)
     case MEM:
       if (for_gcse)
 	{
+	  /* Can't merge two expressions in different alias sets, since we
+	     can decide that the expression is transparent in a block when
+	     it isn't, due to it being set with the different alias set.  */
+	  if (MEM_ALIAS_SET (x) != MEM_ALIAS_SET (y))
+	    return 0;
+
 	  /* A volatile mem should not be considered equivalent to any
 	     other.  */
 	  if (MEM_VOLATILE_P (x) || MEM_VOLATILE_P (y))
-	    return 0;
-
-	  /* Can't merge two expressions in different alias sets, since we
-	     can decide that the expression is transparent in a block when
-	     it isn't, due to it being set with the different alias set.
-
-	     Also, can't merge two expressions with different MEM_ATTRS.
-	     They could e.g. be two different entities allocated into the
-	     same space on the stack (see e.g. PR25130).  In that case, the
-	     MEM addresses can be the same, even though the two MEMs are
-	     absolutely not equivalent.
-
-	     But because really all MEM attributes should be the same for
-	     equivalent MEMs, we just use the invariant that MEMs that have
-	     the same attributes share the same mem_attrs data structure.  */
-	  if (MEM_ATTRS (x) != MEM_ATTRS (y))
 	    return 0;
 	}
       break;
@@ -6317,9 +6306,9 @@ cse_extended_basic_block (struct cse_basic_block_data *ebb_data)
 	    }
 	}
 
+      optimize_this_for_speed_p = optimize_bb_for_speed_p (bb);
       FOR_BB_INSNS (bb, insn)
 	{
-	  optimize_this_for_speed_p = optimize_bb_for_speed_p (bb);
 	  /* If we have processed 1,000 insns, flush the hash table to
 	     avoid extreme quadratic behavior.  We must not include NOTEs
 	     in the count since there may be more of them when generating
@@ -6390,7 +6379,7 @@ cse_extended_basic_block (struct cse_basic_block_data *ebb_data)
       /* With non-call exceptions, we are not always able to update
 	 the CFG properly inside cse_insn.  So clean up possibly
 	 redundant EH edges here.  */
-      if (flag_non_call_exceptions && have_eh_succ_edges (bb))
+      if (cfun->can_throw_non_call_exceptions && have_eh_succ_edges (bb))
 	cse_cfg_altered |= purge_dead_edges (bb);
 
       /* If we changed a conditional jump, we may have terminated

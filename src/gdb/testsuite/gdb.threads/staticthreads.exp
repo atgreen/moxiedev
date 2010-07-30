@@ -22,8 +22,6 @@ if $tracelevel then {
 	strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile "staticthreads"
 set srcfile ${testfile}.c
@@ -40,7 +38,7 @@ if {[gdb_compile_pthreads "${srcdir}/${subdir}/${srcfile}" "${binfile}" \
 gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
-gdb_test "set print sevenbit-strings" ""
+gdb_test_no_output "set print sevenbit-strings"
 
 
 # See if the static multi-threaded program runs.

@@ -37,7 +37,7 @@ gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
 
-gdb_test "set can-use-hw-watchpoints 1" "" ""
+gdb_test_no_output "set can-use-hw-watchpoints 1" ""
 
 if ![runto_main] then {
     fail "Can't run to main"
@@ -93,7 +93,7 @@ gdb_test "continue" \
     "the other thread stopped on breakpoint"
 
 # Delete the new breakpoint, we don't need it anymore.
-gdb_test "delete 5" "" ""
+gdb_test_no_output "delete 5" ""
 
 # Check if the local watchpoint hasn't been deleted (is still listed).
 # This is simpler to check than expecting 'the program has left ...',
@@ -103,7 +103,7 @@ gdb_test "info breakpoints" \
     "local watchpoint is still in breakpoint list"
 
 # Make the watchpoint condition eval true.
-gdb_test "set trigger=1" "" "let local watchpoint trigger"
+gdb_test_no_output "set trigger=1" "let local watchpoint trigger"
 
 gdb_test "continue" \
     "Hardware watchpoint.*Old value.*New value.*thread_function0.*" \
@@ -111,7 +111,7 @@ gdb_test "continue" \
 
 # Confirm that the local watchpoint is indeed deleted when
 # thread_function0 returns.
-gdb_test "set *myp=0" "" "let thread_function0 return"
+gdb_test_no_output "set *myp=0" "let thread_function0 return"
 
 gdb_test "break ${srcfile}:${bkpt_here}" \
     "Breakpoint 6 at .*: file .*${srcfile}, line .*" \

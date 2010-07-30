@@ -195,7 +195,7 @@
    (UNSPEC_VSX_MSUB		511)
    (UNSPEC_VSX_NMADD		512)
    (UNSPEC_VSX_NMSUB		513)
-   (UNSPEC_VSX_RSQRTE		514)
+   ;; 514 deleted
    (UNSPEC_VSX_TDIV		515)
    (UNSPEC_VSX_TSQRT		516)
    (UNSPEC_VSX_XXPERMDI		517)
@@ -446,10 +446,10 @@
   [(set_attr "type" "<VStype_sqrt>")
    (set_attr "fp_type" "<VSfptype_sqrt>")])
 
-(define_insn "vsx_rsqrte<mode>2"
+(define_insn "*vsx_rsqrte<mode>2"
   [(set (match_operand:VSX_B 0 "vsx_register_operand" "=<VSr>,?wa")
 	(unspec:VSX_B [(match_operand:VSX_B 1 "vsx_register_operand" "<VSr>,wa")]
-		      UNSPEC_VSX_RSQRTE))]
+		      UNSPEC_RSQRT))]
   "VECTOR_UNIT_VSX_P (<MODE>mode)"
   "x<VSv>rsqrte<VSs> %x0,%x1"
   [(set_attr "type" "<VStype_simple>")
@@ -852,11 +852,10 @@
 ;; Copy sign
 (define_insn "vsx_copysign<mode>3"
   [(set (match_operand:VSX_B 0 "vsx_register_operand" "=<VSr>,?wa")
-	(if_then_else:VSX_B
-	 (ge:VSX_B (match_operand:VSX_B 2 "vsx_register_operand" "<VSr>,wa")
-		   (match_operand:VSX_B 3 "zero_constant" "j,j"))
-	 (abs:VSX_B (match_operand:VSX_B 1 "vsx_register_operand" "<VSr>,wa"))
-	 (neg:VSX_B (abs:VSX_B (match_dup 1)))))]
+	(unspec:VSX_B
+	 [(match_operand:VSX_B 1 "vsx_register_operand" "<VSr>,wa")
+	  (match_operand:VSX_B 2 "vsx_register_operand" "<VSr>,wa")]
+	 UNSPEC_COPYSIGN))]
   "VECTOR_UNIT_VSX_P (<MODE>mode)"
   "x<VSv>cpsgn<VSs> %x0,%x2,%x1"
   [(set_attr "type" "<VStype_simple>")

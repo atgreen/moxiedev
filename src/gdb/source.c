@@ -176,8 +176,6 @@ get_current_source_symtab_and_line (void)
 void
 set_default_source_symtab_and_line (void)
 {
-  struct symtab_and_line cursal;
-
   if (!have_full_symbols () && !have_partial_symbols ())
     error (_("No symbol table is loaded.  Use the \"file\" command."));
 
@@ -269,6 +267,7 @@ select_source_symtab (struct symtab *s)
 	{
 	  const char *name = s->filename;
 	  int len = strlen (name);
+
 	  if (!(len > 2 && (strcmp (&name[len - 2], ".h") == 0
 	      || strcmp (name, "<<C++-namespaces>>") == 0)))
 	    {
@@ -521,6 +520,7 @@ add_path (char *dirname, char **which_path, int parse_separators)
 	  if (stat (name, &st) < 0)
 	    {
 	      int save_errno = errno;
+
 	      fprintf_unfiltered (gdb_stderr, "Warning: ");
 	      print_sys_errmsg (name, save_errno);
 	    }
@@ -724,6 +724,10 @@ openp (const char *path, int opts, const char *string,
 	    goto done;
     }
 
+  /* For dos paths, d:/foo -> /foo, and d:foo -> foo.  */
+  if (HAS_DRIVE_SPEC (string))
+    string = STRIP_DRIVE_SPEC (string);
+
   /* /foo => foo, to avoid multiple slashes that Emacs doesn't like. */
   while (IS_DIR_SEPARATOR(string[0]))
     string++;
@@ -764,6 +768,16 @@ openp (const char *path, int opts, const char *string,
 	  /* Normal file name in path -- just use it.  */
 	  strncpy (filename, p, len);
 	  filename[len] = 0;
+
+	  /* Don't search $cdir.  It's also a magic path like $cwd, but we
+	     don't have enough information to expand it.  The user *could*
+	     have an actual directory named '$cdir' but handling that would
+	     be confusing, it would mean different things in different
+	     contexts.  If the user really has '$cdir' one can use './$cdir'.
+	     We can get $cdir when loading scripts.  When loading source files
+	     $cdir must have already been expanded to the correct value.  */
+	  if (strcmp (filename, "$cdir") == 0)
+	    continue;
 	}
 
       /* Remove trailing slashes */
@@ -801,6 +815,7 @@ done:
 			    IS_DIR_SEPARATOR (current_directory[strlen (current_directory) - 1])
 			    ? "" : SLASH_STRING,
 			    filename, (char *)NULL);
+
 	  *filename_opened = xfullpath (f);
 	  xfree (f);
 	}
@@ -1278,6 +1293,7 @@ print_source_lines_base (struct symtab *s, int line, int stopline, int noerror)
 {
   int c;
   int desc;
+  int noprint = 0;
   FILE *stream;
   int nlines = stopline - line;
   struct cleanup *cleanup;
@@ -1304,11 +1320,12 @@ print_source_lines_base (struct symtab *s, int line, int stopline, int noerror)
     }
   else
     {
-      desc = -1;
+      desc = last_source_error;
       noerror = 1;
+      noprint = 1;
     }
 
-  if (desc < 0)
+  if (desc < 0 || noprint)
     {
       last_source_error = desc;
 
@@ -1860,7 +1877,6 @@ unset_substitute_path_command (char *args, int from_tty)
 static void
 set_substitute_path_command (char *args, int from_tty)
 {
-  char *from_path, *to_path;
   char **argv;
   struct substitute_path_rule *rule;
   
@@ -1899,6 +1915,7 @@ void
 _initialize_source (void)
 {
   struct cmd_list_element *c;
+
   current_source_symtab = 0;
   init_source_path ();
 
@@ -1960,6 +1977,7 @@ The matching line number is also stored as the value of \"$_\"."));
   add_com ("reverse-search", class_files, reverse_search_command, _("\
 Search backward for regular expression (see regex(3)) from last line listed.\n\
 The matching line number is also stored as the value of \"$_\"."));
+  add_com_alias ("rev", "reverse-search", class_files, 1);
 
   if (xdb_commands)
     {

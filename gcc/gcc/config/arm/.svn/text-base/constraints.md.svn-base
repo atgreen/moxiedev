@@ -29,9 +29,9 @@
 ;; in Thumb-1 state: I, J, K, L, M, N, O
 
 ;; The following multi-letter normal constraints have been used:
-;; in ARM/Thumb-2 state: Da, Db, Dc, Dn, Dl, DL, Dv, Dy
-;; in Thumb-1 state: Pa, Pb
-;; in Thumb-2 state: Ps, Pt
+;; in ARM/Thumb-2 state: Da, Db, Dc, Dn, Dl, DL, Dv, Dy, Di
+;; in Thumb-1 state: Pa, Pb, Pc
+;; in Thumb-2 state: Ps, Pt, Pu, Pv, Pw, Px
 
 ;; The following memory constraints have been used:
 ;; in ARM/Thumb-2 state: Q, Ut, Uv, Uy, Un, Um, Us
@@ -122,7 +122,7 @@
  (and (match_code "const_int")
       (match_test "TARGET_32BIT ? ((ival >= 0 && ival <= 32)
 				 || ((ival & (ival - 1)) == 0))
-		   : ((ival >= 0 && ival <= 1020) && ((ival & 3) == 0))")))
+		   : ival >= 0 && ival <= 1020 && (ival & 3) == 0")))
 
 (define_constraint "N"
  "Thumb-1 state a constant in the range 0-31."
@@ -148,6 +148,12 @@
        (match_test "TARGET_THUMB1 && ival >= -262 && ival <= 262
 		    && (ival > 255 || ival < -255)")))
 
+(define_constraint "Pc"
+  "@internal In Thumb-1 state a constant that is in the range 1021 to 1275"
+  (and (match_code "const_int")
+       (match_test "TARGET_THUMB1
+  		    && ival > 1020 && ival <= 1275")))
+
 (define_constraint "Ps"
   "@internal In Thumb-2 state a constant in the range -255 to +255"
   (and (match_code "const_int")
@@ -157,6 +163,26 @@
   "@internal In Thumb-2 state a constant in the range -7 to +7"
   (and (match_code "const_int")
        (match_test "TARGET_THUMB2 && ival >= -7 && ival <= 7")))
+
+(define_constraint "Pu"
+  "@internal In Thumb-2 state a constant in the range +1 to +8"
+  (and (match_code "const_int")
+       (match_test "TARGET_THUMB2 && ival >= 1 && ival <= 8")))
+
+(define_constraint "Pv"
+  "@internal In Thumb-2 state a constant in the range -255 to 0"
+  (and (match_code "const_int")
+       (match_test "TARGET_THUMB2 && ival >= -255 && ival <= 0")))
+
+(define_constraint "Pw"
+  "@internal In Thumb-2 state a constant in the range -255 to -1"
+  (and (match_code "const_int")
+       (match_test "TARGET_THUMB2 && ival >= -255 && ival <= -1")))
+
+(define_constraint "Px"
+  "@internal In Thumb-2 state a constant in the range -7 to -1"
+  (and (match_code "const_int")
+       (match_test "TARGET_THUMB2 && ival >= -7 && ival <= -1")))
 
 (define_constraint "G"
  "In ARM/Thumb-2 state a valid FPA immediate constant."
@@ -190,6 +216,13 @@
  (and (match_code "const_double,const_int,const_vector")
       (match_test "TARGET_32BIT && arm_const_double_inline_cost (op) == 4
 		   && !(optimize_size || arm_ld_sched)")))
+
+(define_constraint "Di"
+ "@internal
+  In ARM/Thumb-2 state a const_int or const_double where both the high
+  and low SImode words can be generated as immediates in 32-bit instructions."
+ (and (match_code "const_double,const_int")
+      (match_test "TARGET_32BIT && arm_const_double_by_immediates (op)")))
 
 (define_constraint "Dn"
  "@internal

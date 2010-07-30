@@ -1,5 +1,5 @@
 /*
- *  $Id: _types.h,v 1.3 2009/12/17 16:10:41 jjohnstn Exp $
+ *  $Id: _types.h,v 1.4 2010/07/30 07:40:26 green Exp $
  */
 
 #ifndef _MACHINE__TYPES_H
@@ -20,7 +20,7 @@ typedef signed int _ssize_t;
 typedef long signed int _ssize_t;
 #endif
 #define __ssize_t_defined 1
-#elif defined(__AVR__) || defined(__lm32__) || defined(__m32c__) || defined(__mips__) || defined(__PPC__) || defined(__sparc__) || defined(__sh__)
+#elif defined(__AVR__) || defined(__lm32__) || defined(__m32c__) || defined(__mips__) || defined(__moxie__) || defined(__PPC__) || defined(__sparc__) || defined(__sh__)
 typedef signed int _ssize_t;
 #define __ssize_t_defined 1
 #else

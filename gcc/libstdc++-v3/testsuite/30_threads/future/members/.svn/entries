@@ -1,14 +1,14 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/30_threads/future/members
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2010-01-21T00:01:47.017302Z
-156097
+2010-05-19T18:48:48.403174Z
+159593
 redi
 
 
@@ -168,10 +168,10 @@ file
 
 
 
-2010-02-03T11:41:58.862445Z
-df7dbfbf7d944c4392182a11e3a67105
-2010-01-21T00:01:47.017302Z
-156097
+2010-07-08T15:19:30.502343Z
+ff2f11d19a4357d3e3a0eb886053d6c5
+2010-05-19T18:48:48.403174Z
+159593
 redi
 
 
@@ -194,7 +194,7 @@ redi
 
 
 
-1590
+1598
 
 wait_for.cc
 file

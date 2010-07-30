@@ -61,17 +61,6 @@ if { ![runto known_types] } then {
    return 
 }
 
-set target_bigendian_p 1
-send_gdb "show endian\n"
-gdb_expect {
-    -re "little endian.*$gdb_prompt $" { set target_bigendian_p 0 }
-    -re "big endian.*$gdb_prompt $" { }
-    -re "$gdb_prompt $" {
-	 fail "getting target endian"
-    }
-    default	{ fail "(timeout) getting target endian" }
-}
-
 # Detect the size of the target's basic types.
 
 set sizeof_char [get_sizeof "char" 1]
@@ -96,20 +85,10 @@ proc pat2 { n pats } {
 
 proc gdb_test_xxx { test pat name } {
     if { $pat == "" } {
-	setup_kfail *-*-* gdb/1672
+	setup_kfail gdb/1672 *-*-*
 	gdb_test $test "xxx" $name
     } else {
 	gdb_test $test $pat $name
-    }
-}
-
-proc gdb_test_bi { test be le } {
-    global target_bigendian_p
-
-    if { $target_bigendian_p } {
-	gdb_test_xxx $test $be $test
-    } else {
-	gdb_test_xxx $test $le $test
     }
 }
 
@@ -175,7 +154,7 @@ gdb_test "p/d val.dec" "-6101065172474983726" "decimal print p/d"
 #
 gdb_test "p/d val.oct" "-6399925985474168457"
 gdb_test "p/u val.oct" "12046818088235383159"
-gdb_test "p/o val.oct" ""
+gdb_test "p/o val.oct" ".*"
 gdb_test "p/t val.oct" "1010011100101110111001010011100101110111000001010011100101110111"
 gdb_test_ptr "p/a val.oct" "" "" "0x77053977" "0xa72ee53977053977"
 gdb_test "p/c val.oct" "'w'"
@@ -251,7 +230,7 @@ gdb_test_long_long "p/c *(long long *)ll" "" "" "" "-17 '.*'"
 
 # Implict Word size (except for a, c, and f)
 
-gdb_test "x/w w" "" "set examine size to w"
+gdb_test "x/w w" ".*" "set examine size to w"
 gdb_test "x/x w" "0x01234567"
 gdb_test "x/d w" "19088743"
 gdb_test "x/u w" "19088743"
@@ -267,7 +246,7 @@ if { $sizeof_double == 8 || $sizeof_long_double == 8 } {
 
 # Implict Giant size (except for a, c, and f)
 
-gdb_test "x/g g" "" "set examine size to g"
+gdb_test "x/g g" ".*" "set examine size to g"
 gdb_test "x/2x g" "0x0123456789abcdef.*0xa72ee53977053977"
 gdb_test "x/2d g" "81985529216486895.*-6399925985474168457"
 gdb_test "x/2u g" "81985529216486895.*12046818088235383159"

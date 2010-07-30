@@ -1,3 +1,1031 @@
+2010-07-29  Sriraman Tallam  <tmsriram@google.com>
+
+	* arm.cc (Target_arm<big_endian>::gc_process_relocs): Add template
+	paramter to the call to gold::gc_process_relocs.
+	* i386.cc (Target_i386<big_endian>::gc_process_relocs): Add template
+	paramter to the call to gold::gc_process_relocs.
+	* x86_64.cc (Target_x86_64<big_endian>::gc_process_relocs): Add template
+	parameter to the call to gold::gc_process_relocs.
+	* powerpc.cc (Target_powerpc<big_endian>::gc_process_relocs): Add
+	template parameter to the call to gold::gc_process_relocs.
+	* sparc.cc (Target_sparc<big_endian>::gc_process_relocs): Add template
+	paramter to the call to gold::gc_process_relocs.
+	* gc.h (get_embedded_addend_size): New function.
+	(gc_process_relocs): Save the size of the reloc for use by ICF.
+	* icf.cc (get_section_contents): Get the addend from the text section
+	for SHT_REL relocation sections.
+	* icf.h (Icf::Reloc_addend_size_info): New typedef.
+	(Icf::Reloc_info): Add new member reloc_addend_size_info.
+	* int_encoding.h (read_from_pointer): New overloaded function.
+	* testsuite/Makefile.am (icf_sht_rel_addend_test): New test.
+	* testsuite/icf_sht_rel_addend_test.sh: New file.
+	* testsuite/icf_sht_rel_addend_test_1.cc: New file.
+	* testsuite/icf_sht_rel_addend_test_2.cc: New file.
+
+2010-07-28  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac (AM_INIT_AUTOMAKE): Use parallel-tests option.
+	* Makefile.in: Regenerate.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-07-27  Jeffrey Yasskin  <jyasskin@google.com>
+
+	* testsuite/debug_msg.sh: Test mixed weak/strong symbol behavior.
+	* gold/testsuite/debug_msg.cc: Likewise.
+	* gold/testsuite/odr_violation1.cc
+	* gold/testsuite/odr_violation2.cc
+
+2010-07-21  Cary Coutant  <ccoutant@google.com>
+
+	* merge.h (Output_merge_string::Merged_string): Remove object, shndx,
+	string, and length fields.
+	(Output_merge_string::Merged_strings_list): New type.
+	(Output_merge_string::Merged_strings_lists): New typedef.
+	(Output_merge_string): Replace merged_strings_ with
+	merged_strings_lists_.
+	* merge.cc (Output_merge_string::do_add_input_section): Allocate new
+	Merged_strings_list per input object and section.  Don't store pointer
+	to the string.  Don't store length with each merged string entry.
+	(Output_merge_string::finalize_merged_data): Loop over list of merged
+	strings lists.  Recompute length of each merged string.
+
+2010-07-15  Cary Coutant  <ccoutant@google.com>
+
+	* plugin.cc (Plugin_finish::run): Don't call cleanup handlers from
+	here.
+
+2010-07-14  Ian Lance Taylor  <iant@google.com>
+
+	* descriptors.cc (Descriptors::open): Report correct name in error
+	message.
+
+2010-07-13  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_input_section::Arm_input_section): For a
+	SHT_ARM_EXIDX section, always keeps the input sections.
+	(Arm_input_section::set_exidx_section_link): New method.
+	(Arm_exidx_input_section::Arm_exidx_input_section): Initialize
+	has_errors_ to false.
+	(Arm_exidx_input_section::has_errors,
+	Arm_exidx_input_section::set_has_errors): New methods.
+	(Arm_exidx_input_section::has_errors_): New data member.
+	(Arm_relobj::get_exidx_shndx_list): New method.
+	(Arm_output_section::append_text_sections_to_list): Do not skip
+	section without SHF_EXECINSTR.
+	(Arm_output_section::fix_exidx_coverage): Skip input sections with
+	errors.
+ 	(Arm_relobj::make_exidx_input_section): Add new parameter for text
+	section header.  Make error messages more verbose.  Check for
+	a non-executable section linked to an EXIDX section.
+	(Arm_relobj::do_read_symbols): Remove error checking, which has been
+	moved to Arm_relobj::make_exidx_input_section.  Add an assertion to
+	check that there is no deferred EXIDX section if we exit early.
+	Instead of not making an EXIDX section in case of an error, make one
+	and set the has_errors flag of it.
+	(Target_arm::do_finalize_sections): Fix up links of EXIDX sections
+	in a relocatable link.
+	(Target_arm::do_relax): Look for the EXIDX output section instead of
+	assuming that it is called .ARM.exidx.
+ 	(Target_arm::fix_exidx_coverage): Add a new parameter for input
+	section list.  Do not check for SHF_EXECINSTR section flags but
+	skip any input section with errors.
+	* output.cc (Output_section::Output_section): Initialize
+	always_keeps_input_sections_ to false.
+	(Output_section::add_input_section): Check for
+	always_keeps_input_sections_.
+	*  output.h (Output_section::always_keeps_input_sections,
+	Output_section::set_always_keeps_input_sections): New methods.
+	(Output_section::always_keeps_input_sections): New data member.
+
+2010-07-13  Rafael Espindola  <espindola@google.com>
+
+	* fileread.cc (try_extra_search_path, find_file): Move to Input_file.
+	* fileread.h (Input_file): Add try_extra_search_path and find_file.
+
+2010-07-13  Philip Herron  <herron.philip@googlemail.com>
+	    Ian Lance Taylor  <iant@google.com>
+
+	* output.h (Output_section_lookup_maps::add_merge_section):
+	Correct check of whether value was inserted.
+	(Output_section_lookup_maps::add_merge_input_section): Likewise.
+	(Output_section_lookup_maps::add_relaxed_input_section):
+	Likewise.
+	* arm.cc (Target_arm::got_section): Remove used local os.
+	* i386.cc (Target_i386::got_section): Likewise.
+	* x86_64.cc (Target_x86_64::got_section): Likewise.
+	* sparc.cc (Target_sparc::got_section): Likewise.
+	(Target_sparc::relocate): Remove unused local have_got_offset.
+	* powerpc.cc (Target_powerpc::relocate): Likewise.
+
+2010-07-13  Ian Lance Taylor  <iant@google.com>
+
+	* compressed_output.cc (zlib_decompress): Fix signature in
+	!HAVE_ZLIB_H case.
+
+	* archive.cc (Archive::include_member): Unlock an external member
+	of a thin archive.  Don't bother to delete an object we know is
+	NULL.
+
+2010-07-12  Cary Coutant  <ccoutant@google.com>
+
+	* compressed_output.cc (zlib_decompress): New function.
+	(get_uncompressed_size): New function.
+	(decompress_input_section): New function.
+	* compressed_output.h (get_uncompressed_size): New function.
+	(decompress_input_section): New function.
+	* dwarf_reader.cc (Sized_dwarf_line_info::Sized_dwarf_line_info)
+	Handle compressed debug sections.
+	* layout.cc (is_compressed_debug_section): New function.
+	(Layout::output_section_name): Map compressed section names to
+	canonical names.
+	* layout.h (is_compressed_debug_section): New function.
+	(is_debug_info_section): Recognize compressed debug sections.
+	* merge.cc: Include compressed_output.h.
+	(Output_merge_data::do_add_input_section): Handle compressed
+	debug sections.
+	(Output_merge_string::do_add_input_section): Handle compressed
+	debug sections.
+	* object.cc: Include compressed_output.h.
+	(Sized_relobj::Sized_relobj): Initialize new data members.
+	(build_compressed_section_map): New function.
+	(Sized_relobj::do_read_symbols): Handle compressed debug sections.
+	* object.h (Object::section_is_compressed): New method.
+	(Object::do_section_is_compressed): New method.
+	(Sized_relobj::Compressed_section_map): New type.
+	(Sized_relobj::do_section_is_compressed): New method.
+	(Sized_relobj::compressed_sections_): New data member.
+	* output.cc (Output_section::add_input_section): Handle compressed
+	debug sections.
+	* reloc.cc: Include compressed_output.h.
+	(Sized_relobj::write_sections): Handle compressed debug sections.
+
+2010-07-08  Cary Coutant  <ccoutant@google.com>
+
+	* resolve.cc (Symbol_table::resolve): Remember whether undef was
+	weak when resolving to a dynamic def.
+	(Symbol_table::should_override): Add adjust_dyndef flag; set it
+	for weak undef/dynamic def cases. Adjust callers.
+	* symtab.cc (Symbol::init_fields): Initialize undef_binding_set_ and
+	undef_binding_weak_.
+	(Symbol_table::sized_write_globals): Adjust symbol binding.
+	(Symbol_table::sized_write_symbol): Add binding parameter.
+	* symtab.h (Symbol::set_undef_binding): New method.
+	(Symbol::is_undef_binding_weak): New method.
+	(Symbol::undef_binding_set_, Symbol::undef_binding_weak_): New members.
+	(Symbol_table::should_override): Add new parameter.
+	(Symbol_table::sized_write_symbol): Add new parameter.
+
+	* testsuite/weak_undef_file1.cc: Add new test case.
+	* testsuite/weak_undef_file2.cc: Fix header comment.
+	* testsuite/weak_undef_test.cc: Add new test case.
+
+2010-06-29  Doug Kwan  <dougkwan@google.com>
+
+	* arm-reloc-property.cc (Arm_reloc_property::Arm_reloc_property):
+	Initialize USE_SYMBOL_.
+	* arm-reloc-property.h (Arm_reloc_property::uses_symbol): New method
+	definition.
+	(Arm_reloc_property::uses_symbol_): New data member declaration.
+	* arm.cc (Target_arm::Relocate::relocate): Exit early if relocation
+	uses symbol value and symbol is undefined but not weakly undefined.
+
+2010-06-28  Rafael Espindola  <espindola@google.com>
+
+	* plugin.cc (Plugin::load): Use dlerror.
+
+2010-06-26  Jeffrey Yaskin  <jyasskin@google.com>
+
+	* symtab.cc (detect_odr_violations): When reporting an ODR
+	violation, report an object where the symbol is defined.
+
+2010-06-25  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::can_check_for_functions_pointers): Return true.
+	(Target_arm::section_may_have_icf_unsafe_pointers): New method
+	definition.
+	(Target_arm::Scan::local_reloc_may_be_function_pointer,
+	Target_arm::Scan::global_reloc_may_be_function_pointer): Implement
+	target hook to detect function points.
+	(Target_arm::Scan::possible_function_pointer_reloc): New method.
+	* icf.h (Icf::check_section_for_function_pointers): Change type of
+	parameter SECTION_NAME to const reference to std::string.  Use
+	target hook to determine if section may have unsafe pointers.
+	* target.h (Target::section_may_have_icf_unsafe_pointers): New
+	method definition.
+
+2010-06-21  Rafael Espindola  <espindola@google.com>
+
+	* fileread.cc (Input_file::find_fie): New
+	(Input_file::open): Use Input_file::find_fie.
+	* fileread.h (Input_file::find_fie): New
+	* plugin.cc (set_extra_library_path): New.
+	(Plugin::load): Add set_extra_library_path to the transfer vector.
+	(Plugin_manager::set_extra_library_path): New.
+	(Plugin_manager::add_input_file): Use the extra search path if set.
+	(set_extra_library_path(): New.
+	* plugin.h (Plugin_manager): Add set_extra_library_path and
+	extra_search_path_.
+
+2010-06-19  Cary Coutant  <ccoutant@google.com>
+
+	* layout.cc (gdb_sections): Add .debug_types.
+	(lines_only_debug_sections): Likewise.
+
+2010-06-18  Rafael Espindola  <espindola@google.com>
+
+	* plugin.cc (add_input_file,add_input_library)
+	(Plugin_manager::add_input_file): Make filename arguments const.
+	* plugin.h (Plugin_manager::add_input_file): Make filename arguments
+	const.
+
+2010-06-16  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::do_finalize_sections): Do not emit an
+	.ARM.attributes section if we have not merged any input
+	attributes sections.
+
+2010-06-15  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* arm.cc: Allow combining objects with no EABI version
+	information.
+
+2010-06-15  Rafael Espindola  <espindola@google.com>
+
+	* plugin.cc (Plugin_hook::run): Set in_real_elf for the start symbol.
+
+2010-06-15  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* fileread.cc: Only #include <sys/uio.h> if HAVE_READV.
+	(struct iovec): Correct !HAVE_READV definition.
+
+2010-06-10  Cary Coutant  <ccoutant@google.com>
+
+	* object.cc (Sized_relobj::do_layout): Defer layout for reloc sections.
+	(Sized_relobj::do_layout_deferred_sections): Do layout for deferred
+	reloc sections.
+	* object.h (Sized_relobj::deferred_layout_relocs_): New data member.
+
+	PR 11683
+	* symtab.h (Symbol::is_placeholder): New member function.
+	* target-reloc.h (relocate_section): Check for placeholder symbols.
+
+	* testsuite/Makefile.am (plugin_test_8): New test.
+	(plugin_test_9): New test.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-06-09  Nick Clifton  <nickc@redhat.com>
+
+	* yyscript.y (input_list_element): Allow strings prefixed with
+	the '-' character.  Treat these as libraries.
+	* script.cc (script_add_library): New function.  Adds a library
+	specified by "-l<name>" found in an input script.
+	* script-c.h: Add prototype for script_add_library.
+
+2010-06-07  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::do_relax): Reserve more space for stubs.
+	Restrict stub-group size to be within long conditional branch
+	range when working around cortex-A8 erratum.
+
+2010-06-07  Damien Diederen  <dd@crosstwine.com>
+
+	* gold-threads.cc (Lock_impl_threads::Lock_impl_threads): Correct
+	#ifdef typo.
+
+2010-06-03  Sriraman Tallam  <tmsriram@google.com>
+
+	PR gold/11658
+	* output.cc
+	(Output_section::Input_section_sort_entry::compare_section_ordering):
+	Change to return non-zero correctly.
+	(Output_section::Input_section_sort_section_order_index_compare
+	::operator()): Change to fix ambiguity in comparisons.
+
+2010-06-01  Sriraman Tallam  <tmsriram@google.com>
+
+	* gold.h (is_wildcard_string): New function.
+	* layout.cc (Layout::layout): Pass this pointer to add_input_section.
+	(Layout::layout_eh_frame): Ditto.
+	(Layout::find_section_order_index): New method.
+	(Layout::read_layout_from_file): New method.
+	* layout.h (Layout::find_section_order_index): New method.
+	(Layout::read_layout_from_file): New method.
+	(Layout::input_section_position_): New private member.
+	(Layout::input_section_glob_): New private member.
+	* main.cc (main): Call read_layout_from_file here.
+	* options.h (--section-ordering-file): New option.
+	* output.cc (Output_section::input_section_order_specified_): New
+	member.
+	(Output_section::Output_section): Initialize new member.
+	(Output_section::add_input_section): Add new parameter.
+	Keep input sections when --section-ordering-file is used.
+	(Output_section::set_final_data_size): Sort input sections when
+	section ordering file is specified.
+	(Output_section::Input_section_sort_entry): Add new parameter.
+	Check sorting type.
+	(Output_section::Input_section_sort_entry::compare_section_ordering):
+	New method.
+	(Output_section::Input_section_sort_compare::operator()): Change to
+	consider section_order_index.
+	(Output_section::Input_section_sort_init_fini_compare::operator()):
+	Change to consider section_order_index.
+	(Output_section::Input_section_sort_section_order_index_compare
+	::operator()): New method.
+	(Output_section::sort_attached_input_sections): Change to sort
+	according to section order when specified.
+	(Output_section::add_input_section<32, true>): Add new parameter.
+	(Output_section::add_input_section<64, true>): Add new parameter.
+	(Output_section::add_input_section<32, false>): Add new parameter.
+	(Output_section::add_input_section<64, false>): Add new parameter.
+	* output.h (Output_section::add_input_section): Add new parameter.
+	(Output_section::input_section_order_specified): New
+	method.
+	(Output_section::set_input_section_order_specified): New method.
+	(Input_section::Input_section): Initialize section_order_index_.
+	(Input_section::section_order_index): New method.
+	(Input_section::set_section_order_index): New method.
+	(Input_section::section_order_index_): New member.
+	(Input_section::Input_section_sort_section_order_index_compare): New
+	struct.
+	(Output_section::input_section_order_specified_): New member.
+	* script-sections.cc (is_wildcard_string): Delete and move modified
+	method to gold.h.
+	(Output_section_element_input::Output_section_element_input): Modify
+	call to is_wildcard_string.
+	(Output_section_element_input::Input_section_pattern
+	::Input_section_pattern): Ditto.
+	(Output_section_element_input::Output_section_element_input): Ditto.
+	* testsuite/Makefile.am (final_layout): New test case.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/final_layout.cc: New file.
+	* testsuite/final_layout.sh: New file.
+
+2010-06-01  Rafael Espindola  <espindola@google.com>
+
+	* plugin.cc (Plugin::load): Pass the output name to the plugin.
+
+2010-06-01  Rafael Espindola  <espindola@google.com>
+
+	* plugin.cc (Sized_pluginobj::::do_add_symbols): Correctly set the
+	visibility of symbols.
+
+2010-05-27  Doug Kwan  <dougkwan@google.com>
+
+	* object.cc (Sized_relobj::do_finalize_local_symbols): Use offset
+	from start of output section instead of address for a local symbol
+	in a merged or relaxed section when doing a relocatable link.
+
+2010-05-26  Rafael Espindola  <espindola@google.com>
+
+       PR 11604
+	* gold/object.cc(Sized_relobj::do_layout_deferred_sections): Avoid
+	adding sections the garbage collector removed.
+	* gold/testsuite/Makefile.am: Add test.
+	* gold/testsuite/Makefile.in: Regenerate.
+	* gold/testsuite/plugin_test_7.sh: New.
+	* gold/testsuite/plugin_test_7_1.c: New.
+	* gold/testsuite/plugin_test_7_2.c: New.
+
+2010-05-26  Rafael Espindola  <espindola@google.com>
+
+	* script-sections.cc (Output_section_definition::set_section_addresses):
+	Check for --section-start.
+
+2010-05-26  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_scan_relocatable_relocs): New class.
+	(Target_arm::relocate_special_relocatable): New method.
+	(Arm_relocate_functions::arm_branch_common): Handle relocatable link.
+	(Arm_relocate_functions::thumb_branch_common): Same.
+	(Target_arm::scan_relocatable_relocs): Use Arm_scan_relocatable_relocs
+	instead of Default_scan_relocatable_relocs.
+	* target-reloc.h (relocate_for_relocatable): Let target handle
+	relocation strategy Relocatable_relocs::RELOC_SPECIAL.
+	* target.h (Sized_target::relocate_special_relocatable): New method.
+
+2010-05-25  Viktor Kutuzov  <vkutuzov@accesssoftek.com>
+
+	* timer.cc: Only #include <sys/times.h> if HAVE_TIMES is defined.
+
+2010-05-23  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_input_section::do_output_offset): Use convert_types
+	instead of a cast.
+	(Target_arm::apply_cortex_a8_workaround): Rewrite a conditional branch
+	with a direct branch, not a conditional branch, to a stub.
+	* merge.cc (Output_merge_base::record_input_section): New method
+	defintion.
+	(Output_merge_data::do_add_input_section): Record input section if
+	keeps-input-sections flag is set.
+	(Output_merge_string::do_add_input_section): Ditto.
+	* merge.h (Output_merge_base::Output_merge_base): Initialize new data
+	members KEEPS_INPUT_SECTIONS_, FIRST_RELOBJ_, FIRST_SHNDX_ and
+	INPUT_SECTIONS_.
+	(Output_merge_base::keeps_input_sections,
+	Output_merge_base::set_keeps_input_sections,
+	Output_merge_base::first_relobj, Output_merge_base::first_shndx): New
+	method definitions.
+	(Output_merge_base::Input_sections): New type declaration.
+	(Output_merge_base::input_sections_begin,
+	Output_merge_base::input_sections_end,
+	Output_merge_base::do_set_keeps_input_sections): New method definitions.
+	(Output_merge_base::bool keeps_input_sections_,
+	Output_merge_base::first_relobj_, Output_merge_base::first_shndx_,
+	Output_merge_base::input_sections_): New data members.
+	(Output_merge_data::do_set_keeps_input_sections): New method
+	defintion.
+	(Output_merge_string::do_set_keeps_input_sections): Ditto.
+	* output.cc (Output_section::Input_section::relobj): Move method
+	defintion from class declaration to here and handle merge sections.
+	(Output_section::Input_section::shndx): Ditto.
+	(Output_section::Output_section): Remove initializations of removed
+	data members and initialize new data member LOOKUP_MAPS_.
+	(Output_section::add_input_section): Set keeps-input-sections flag
+	for a newly created merge output section as appropriate.  Adjust code
+	to use Output_section_lookup_maps class.
+	(Output_section::add_relaxed_input_section): Adjst code for lookup
+	maps code refactoring.
+ 	(Output_section::add_merge_input_section): Add a new parameter
+	KEEPS_INPUT_SECTION.  Adjust code to use Output_section_lookup_maps
+	class.  If adding input section to a newly created merge output
+	section fails, remove the new merge section.
+	(Output_section::convert_input_sections_in_list_to_relaxed_input_sections):
+	Adjust code for use of the Output_section_lookup_maps class.
+ 	(Output_section::find_merge_section): Ditto.
+	(Output_section::build_lookup_maps): New method defintion.
+ 	(Output_section::find_relaxed_input_section): Adjust code to use
+	Output_section_lookup_maps class.
+	(Output_section::get_input_sections): Export merge sections.  Adjust
+	code to use Output_section_lookup_maps class.
+	(Output_section:::add_script_input_section): Adjust code to use
+	Output_section_lookup_maps class.  Update lookup maps for merge
+	sections also.
+	(Output_section::discard_states): Use Output_section_lookup_maps.
+	(Output_section::restore_states): Same.
+	* output.h (Merge_section_properties): Move class defintion out of
+	Output_section.
+	(Output_section_lookup_maps): New class.
+	(Output_section::Input_section::is_merge_section): New method
+	defintion.
+	(Output_section::Input_section::relobj): Move defintion out of class
+	defintion.  Declare method only.
+	(Output_section::Input_section::shndx): Ditto.
+	(Output_section::Input_section::output_merge_base): New method defintion.
+     	(Output_section::Input_section::u2_.pomb): New union field.
+	(Output_section::Merge_section_by_properties_map,
+	Output_section::Output_section_data_by_input_section_map,
+	Output_section::Ouptut_relaxed_input_section_by_input_section_map):
+	Remove types.
+   	(Output_section::add_merge_input_section): Add new parameter
+	KEEPS_INPUT_SECTIONS.
+	(Output_section::build_lookup_maps): New method declaration.
+	(Output_section::merge_section_map_,
+	Output_section::merge_section_by_properties_map_,
+	Output_section::relaxed_input_section_map_,
+	Output_section::is_relaxed_input_section_map_valid_): Remove data
+	members.
+	(Output_section::lookup_maps_): New data member.
+
+2010-05-21  Doug Kwan  <dougkwan@google.com>
+
+	PR gold/11619
+	* arm.cc (Arm_input_section::do_output_offset): Add a cast to
+	avoid a compilation error.
+
+2010-05-19  Rafael Espindola  <espindola@google.com>
+
+	* script-sections.cc (Output_section_definition::allocate_to_segment):
+	Update the phdrs_list even when the output section is NULL.
+	* testsuite/Makefile.am: Add test.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/script_test_9.cc: New.
+	* testsuite/script_test_9.sh: New.
+	* testsuite/script_test_9.t: New.
+
+2010-05-19  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_input_section::original_size): New method.
+	(Arm_input_section::do_addralign): Add a cast.
+	(Arm_input_section::do_output_offset): Remove static cast.
+	(Arm_input_section::original_addralign,
+	 Arm_input_section::original_size_): Change type to uint32_t.
+	(Arm_input_section::init): Add safe casts for section alignment
+	and size.
+	(Arm_input_section::set_final_data_size): Do not set address and
+	offset of stub table.
+	(Arm_output_section::fix_exidx_coverage): Change use of of
+	Output_section::Simple_input_section to that of
+	Output_section::Input_section.
+	(Target_arm::do_relax): Set addresses and file offsets of Stub_tables
+	except for the first pass.
+	* output.cc (Output_section::get_input_sections): Change type of
+	input_sections to std::list<Input_section>.
+	(Output_section::add_script_input_section): Rename from
+	Output_section::add_simple_input_section.  Change type of SIS
+	parameter from Simple_input_section to Input_section.
+	* output.h (Output_section::Simple_input_section): Remove class.
+	(Output_section::Input_section): Change class visibility to public.
+	(Output_section::Input_section::addralign): Use stored alignments
+	for special input sections if set.
+	(Output_section::Input_section::set_addralign): New method.
+	(Output_section::get_input_sections): Change parameter type from
+	list of Simple_input_section to list of Input_section.
+	(Output_section::add_script_input_section): Rename from
+	Output_section::add_simple_input_section. Change first parameter's
+	type from Simple_input_section to Input_section and remove the
+	second and third parameters.
+	* script-sections.cc (Input_section::Input_section_list): Change
+	type to list of Output_section::Input_section/
+	(Input_section_info::Input_section_info): Change parameter type of
+	INPUT_SECTION to Output_section::Input_section.
+	(Input_section_info::input_section): Change return type.
+	(Input_section_info::input_section_): Change type to
+	Output_section::Input_section.
+	(Output_section_element_input::set_section_addresses): Adjust code
+	to use Output_section::Input_section instead of
+	Output_section::Simple_input_section.  Adjust code for renaming
+	of Output_section::add_simple_input_section.
+	(Orphan_output_section::set_section_addresses): Ditto.
+
+2010-05-18  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* gold.h (Unordered_multimap, Unordered_map): Fix defines for
+	when neither HAVE_TR1_UNORDERED_MAP nor HAVE_EXT_HASH_MAP are set.
+
+2010-05-18  Rafael Espindola  <espindola@google.com>
+
+	* options.cc (General_options::finalize): Handle -nostdlib.
+	* options.h (nostdlib): New option.
+	* script.cc (script_add_search_dir): Handle -nostdlib.
+
+2010-05-12  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::do_finalize_sections): Create an empty
+	attributes section only if there no attributes section after merging.
+	(Target_arm::merge_object_attributes): Move value of
+	Tag_MPextension_use_legacy to that of Tag_MPextension_use.
+	Handle Tag_DIV_use and Tag_MPextension_use_legacy.
+	* testsuite/Makefile.am (check_SCRIPTS): Add arm_attr_merge.sh
+	(check_DATA): Add arm_attr_merge_6.stdout, arm_attr_merge_6r_stdout
+	and arm_attr_merge_7.stdout.
+	(arm_attr_merge_6.stdout, arm_attr_merge_6 arm_attr_merge_6a.o
+	arm_attr_merge_6b.o, arm_attr_merge_6r.stdout, arm_attr_merge_6r,
+	arm_attr_merge_7.stdout, arm_attr_merge_7, arm_attr_merge_7a.o,
+	arm_attr_merge_7b.o): New rules.
+	(MOSTLYCLEANFILES): Add arm_attr_merge_6, arm_attr_merge_6r and
+	arm_attr_merge_7
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/arm_attr_merge.sh: New file.
+	* testsuite/arm_attr_merge_[67][ab].s: Same.
+
+2010-05-05  Nick Clifton  <nickc@redhat.com>
+
+	* po/es.po: Updated Spanish translation.
+
+2010-04-27  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* Makefile.am (install-exec-local): Properly install gold as
+	default cross linker.
+	* Makefile.in: Regenerated.
+
+2010-04-27  H.J. Lu  <hongjiu.lu@intel.com>
+	    Nick Clifton  <nickc@redhat.com>
+
+	* configure.ac (install_as_default): Define and set to false
+	unless --enable-gold or --enable-gold=both/gold has been
+	specified.
+	* configure: Regenerate.
+
+	* Makefile.am (install-exec-local): Install the executable as
+	'ld.gold'.  If install_as_default is true then also install it as
+	'ld'.
+	* Makefile.in: Regenerated.
+
+2010-04-24  Ian Lance Taylor  <iant@google.com>
+
+	* layout.cc (Layout::layout_reloc): In relocatable link don't
+	combine reloc sections for grouped sections.
+
+2010-04-23  Sriraman Tallam  <tmsriram@google.com>
+
+	* gc.h (gc_process_relocs): Pass information on relocs pointing to
+	sections that are not ordinary to icf.
+	* icf.cc (get_section_contents): Handle relocation pointing to section
+	with no object or shndx information.
+	* testsuite/Makefile.am: Remove icf_virtual_function_folding_test.sh
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/icf_virtual_function_folding_test.cc: Remove printf.
+	* testsuite/icf_virtual_function_folding_test.sh: Delete file.
+
+2010-04-22  Ian Lance Taylor  <iant@google.com>
+
+	* expression.cc (Expression::Expression_eval_info): Add
+	result_alignment_pointer field.
+	(Expression::eval_with_dot): Add result_alignment_pointer
+	parameter.  Change all callers.
+	(Expression::eval_maybe_dot): Likewise.
+	(class Binary_expression): Add alignment_pointer parameter to
+	left_value and right_value.  Change all callers.
+	(BINARY_EXPRESSION): Set result alignment.
+	(class Trinary_expression): Add alignment_pointer parameter to
+	arg2_value and arg3_value.  Change all callers.
+	(Trinary_cond::value): Set result alignment.
+	(Max_expression::value, Min_expression::value): Likewise.
+	(Align_expression::value): Likewise.
+	* script-sections.cc (class Sections_element): Add dot_alignment
+	parameter to set_section_addresses virtual function.  Update
+	instantiations.
+	(class Output_section_element): Likewise.
+	(Script_sections::create_segments): Add dot_alignment parameter.
+	Change all callers.
+	(Script_sections::create_segments_from_phdrs_clause): Likewise.
+	(Script_sections::set_phdrs_clause_addresses): Likewise.
+	* script-sections.h: Update declarations.
+	* script.h: Update declarations.
+	* output.h (Output_segment::set_minimum_p_align): Don't decrease
+	min_p_align.
+	* testsuite/script_test_3.t: Set large alignment.
+	* testsuite/script_test_3.sh: Make sure that at least one LOAD
+	segment has expected alignment.
+
+2010-04-22  Nick Clifton  <nickc@redhat.com>
+
+	* po/gold.pot: Updated by the Translation project.
+	* po/vi.po: Updated Vietnamese translation.
+
+2010-04-22  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/Makefile.am (check_PROGRAMS): Add
+	icf_virtual_function_folding_test.
+	* testsuite/Makefile.in: Regenerated.
+
+2010-04-15  Andrew Haley  <aph@redhat.com>
+
+	* options.h (merge_exidx_entries): New option.
+	* arm.cc (class Arm_exidx_fixup): Add new arg, merge_exidx_entries.
+	(class Arm_exidx_fixup::merge_exidx_entries_): New member.
+	(Output_section::fix_exidx_coverage): Add new arg, merge_exidx_entries.
+	(Target_arm::merge_exidx_entries): New function.
+	(process_exidx_entry): Don't merge if merge_exidx_entries_ is false.
+	(Arm_output_section::fix_exidx_coverage): Pass merge_exidx_entries
+	to Arm_exidx_fixup constructor.
+	Add new arg, merge_exidx_entries.
+	(Target_arm::fix_exidx_coverage): pass merge_exidx_entries to
+	Arm_output_section::fix_exidx_coverage.
+
+2010-04-18  Sriraman Tallam  <tmsriram@google.com>
+
+	* icf.cc (get_section_contents): Check for preemptible functions.
+	Ignore addend when appropriate.
+	* symtab.cc (should_add_dynsym_entry): Add new parameter.  Check for
+	section folded.
+	(add_from_relobj): Check for section folded.
+	(set_dynsym_indexes): Fix call to should_add_dynsym_entry.
+	* symtab.h (should_add_dynsym_entry): Add new parameter.
+	* target-reloc.h (scan_relocs): Check for section folded.
+	* x86_64.cc (Target_x86_64::Scan::possible_function_pointer_reloc):
+	Check reloc types for function pointers in shared objects.
+	* testsuite/Makefile.am (icf_virtual_function_folding_test): New test
+	case.
+	(icf_preemptible_functions_test): New test case.
+	(icf_string_merge_test): New test case.
+	* testsuite.Makefile.in: Regenerate.
+	* testsuite/icf_safe_so_test.sh: Change to not fold foo_glob and
+	bar_glob.  Refactor code.
+	* testsuite/icf_preemptible_functions_test.cc: New file.
+	* testsuite/icf_preemptible_functions_test.sh: New file.
+	* testsuite/icf_string_merge_test.cc: New file.
+	* testsuite/icf_string_merge_test.sh: New file.
+	* testsuite/icf_virtual_function_folding_test.cc: New file.
+	* testsuite/icf_virtual_function_folding_test.sh: New file.
+
+2010-04-14  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_output_section::fix_exidx_coverage): Mark object
+	for local symbol recounting if we remove a section due to ICF.
+	* gold.cc (queue_middle_gc_tasks): Create a dummy blocker if
+	there are no regular objects in input.
+
+2010-04-13  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_input_section::set_final_data_size): Compute
+	accurate final data size instead of using current data size.
+
+2010-04-09  Doug Kwan  <dougkwan@google.com>
+
+	* layout.cc (Layout::choose_output_section): Handle script section
+	types.
+	(Layout::make_output_section_for_script): Add section type parameter.
+	Handle script section types.
+	* layout.h (Layout::make_output_section_for_script): Add section
+	type parameter.
+	* output.cc (Output_section::Output_section): Initialize data member
+	is_noload_.
+	(Output_section::do_reset_address_and_file_offset): Do not set address
+	to 0 if section is a NOLOAD section.
+	* output.h (Output_section::is_noload): New method.
+	(Output_section::set_is_noload): Ditto.
+	(Output_section::is_noload_): New data member.
+	* script-c.h (Script_section_type): New enum type.
+	(struct Parser_output_section_header): Add new file section_type.
+	* script-sections.cc (Sections_element::output_section_name): Add
+	parameter for returning script section type.
+	(Output_section_definition::output_section_name): Ditto.
+	(Output_section_definition::section_type)P; New method.
+	(Output_section_definiton::script_section_type_name): Ditto.
+	(Output_section_definition::script_section_type_): New data member.
+	(Output_section_definition::Output_section_definition): Initialize
+	data member Output_section_definition::script_section_type_.
+	(Output_section_definition::create_sections): Pass script section type
+	to Layout::make_output_section_for_script.
+	(Output_section_definition::output_section_name): Return script
+	section type to caller.
+	(Output_section_definition::set_section_address): Do not advance
+	dot value and load address if section type is NOLOAD.  Set address
+	of NOLOAD sections regardless of section flags.
+	(Output_section_definition::print): Print section type if it is
+	not SCRIPT_SECTION_TYPE_NONE.
+	(Output_section_definition::section_type): New method.
+	(Output_section_definition::script_section_type_name): Ditto.
+	(Script_sections::output_section_name): Add new parameter
+	PSECTION_TYPE for returning script section type.  Pass it to
+	section elements.  Handle discard sections.
+	(Sort_output_sections::operator()): Handle NOLOAD sections.
+	* script-sections.h (Script_sections::Section_type): New enum type.
+   	(Script_sections::output_section_name): Add a new parameter for
+	returning script section type.
+	* script.cc (script_keyword_parsecodes): Add keywords COPY, DSECT,
+	INFO and NOLOAD.
+	* yyscript.y (union): Add new field SECTION_TYPE.
+	(COPY, DSECT, INFO, NOLOAD): New tokens.
+	(opt_address_and_section_type): Change type to output_section_header.
+	(section_type): New non-terminal
+	(section_header): Handle section type.
+	(opt_address_and_section_type): Return section type value.
+
+2010-04-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* testsuite/plugin_common_test_1.c (foo): Add prototype.
+	* testsuite/plugin_common_test_2.c (foo): Likewise.
+
+2010-04-08  Doug Kwan  <dougkwan@google.com>
+
+	* merge.cc (Output_merge_data::set_final_data_size): Handle empty
+	Output_merge_data.
+	* output.cc (Output_section::add_merge_input_section): Simplify
+	code and return status of Output_merge_base::add_input_section.
+	Update merge section map only if Output_merge_base::add_input_section
+	returns true.
+
+2010-04-07  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relobj::scan_section_for_cortex_a8_erratum): Warn
+	if section is marked as containing instructions but has no mapping
+	symbols.
+	(Arm_relobj::do_count_local_symbols): Call adjust_sym_shndx to get
+	correct section index.
+	(Arm_relobj::find_linked_text_section): Ditto.
+
+2010-04-07  Cary Coutant  <ccoutant@google.com>
+
+	* archive.cc (include_member): Destroy Read_symbols_data object before
+	releasing file.
+	* object.cc (Read_symbols_data::~Read_symbols_data) New destructor.
+	* object.h (Read_symbols_data::Read_symbols_data) New constructor.
+	(Read_symbols_data::~Read_symbols_data) New destructor.
+	(Section_relocs::Section_relocs) New constructor.
+	(Section_relocs::~Section_relocs) New destructor.
+	(Read_relocs_data::Read_relocs_data) New constructor.
+	(Read_relocs_data::~Read_relocs_data) New destructor.
+	* testsuite/binary_unittest.cc (Sized_binary_test): Set sd member
+	pointers to NULL after deleting.
+
+2010-04-07  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc: Replace "endianity" with "endianness" in comments.
+	(Arm_exidx_cantunwind): Ditto.
+	(Arm_relobj::Arm_relobj): Initialize merge_flags_and_attribures.
+	(Arm_relobj::merge_flags_and_attributes): New method.
+	(Arm_relobj::merge_flags_and_attributes_): New data member.
+	(Arm_exidx_cantunwind::do_fixed_endian_write): Fix formatting.
+	(Arm_relobj::scan_sections_for_stubs): Ditto.
+	(Arm_relobj::do_read_symbols): Check to see if we really want to
+	merge processor-specific flags and attributes.  Exit early if
+	an object is empty except for section names and the undefined symbol.
+	(Target_arm::do_finalize_sections): Move check for ELF format to
+	Arm_relobj::do_read_symbols.  Merge processor specific flags and
+	attributes from a regular object only when we have determined that
+	it is aapropriate.  Do not create an .ARM.attributes section in
+	output if there is no regular input object.
+	(Target_arm::merge_processor_specific_flags): Check
+	--warn-mismatch before printing any error.
+	(Target_arm::merge_object_attributes): Ditto.
+	* gold.cc (queue_middle_tasks): Handle the case in which there is
+	no regular object in input.
+	* options.cc (General_options::parse_EB): New method.
+	(General_options::parse_EL): Same.
+	(General_options::General_options): Initialize endianness_.
+	* options.h (-EB, -EL, -no-pipeline-knowledge, -p, --warn-mismatch):
+	New options.
+	(General_options::Endianness): New enum.
+	(General_options::endianness): New method.
+	(General_options::endianness_): New data member.
+	* parameters.cc (Parameters::set_options): Check target endianness.
+	(Parameters::set_target_once): Ditto.
+	(Parameters::check_target_endianness): New method.
+	(parameters_force_valid_target): If either -EL or -EB is specified,
+	use it to define endianness of default target.
+	* parameters.h (Parameters::check_target_endianness): New method
+	declaration.
+	* target.h (class Target): Change "endianity" to "endianness"
+	in comments.
+
+2010-04-07  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure.ac (AM_INIT_AUTOMAKE): Add option no-dist.
+	* configure: Regenerate.
+	* Makefile.in: Regenerate.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-04-06  Cary Coutant  <ccoutant@google.com>
+
+	gcc PR lto/42757
+	* plugin.cc (Pluginobj::get_symbol_resolution_info): Check for
+	prevailing definitions of common symbols.
+	* testsuite/plugin_test_6.sh: New test case.
+	* testsuite/plugin_common_test_1.c: New test case.
+	* testsuite/plugin_common_test_2.c: New test case.
+	* testsuite/Makefile.am (plugin_test_6): New test case.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-04-06  Nick Clifton  <nickc@redhat.com>
+
+	* po/vi.po: New Vietnamese translation.
+
+2010-03-30  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Target_arm::using_thumb_only): Handle v6-M
+
+2010-03-25  Doug Kwan  <dougkwan@google.com>
+
+	* gold/arm.cc (Arm_exidx_fixup::update_offset_map): Rearrange code
+	to avoid a conversion warning on a 32-bit host.
+
+2010-03-24  Ian Lance Taylor  <iant@google.com>
+
+	* testsuite/script_test_3.t: Add a TLS segment.
+	* testsuite/Makefile.am (check_PROGRAMS): Add
+	tls_phdrs_script_test.
+	(tls_phdrs_script_test_SOURCES): Define.
+	(tls_phdrs_script_test_DEPENDENCIES): Define.
+	(tls_phdrs_script_test_LDFLAGS): Define.
+	(tls_phdrs_script_test_LDADD): Define.
+	* testsuite/Makefile.in: Rebuild.
+
+2010-03-23  Cary Coutant  <ccoutant@google.com>
+
+	* fileread.cc (find_or_make_view): Fix comment.
+
+2010-03-23  Ian Lance Taylor  <iant@google.com>
+
+	* script-sections.cc (class Orphan_section_placement): Define
+	PLACE_TLS and PLACE_TLS_BSS.
+	(Orphan_section_placement::Orphan_section_placement): Initialize
+	new places.
+	(Orphan_section_placement::find_place): Handle SHF_TLS sections.
+	* testsuite/Makefile.am (check_PROGRAMS): Add tls_script_test.
+	(tls_script_test_SOURCES): Define.
+	(tls_script_test_DEPENDENCIES): Define.
+	(tls_script_test_LDFLAGS): Define.
+	(tls_script_test_LDADD): Define.
+	* testsuite/Makefile.in: Rebuild.
+
+2010-03-22  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Arm_relocate_functions::abs8,
+	Arm_relocate_functions::abs16): Use correct check for overflow
+	specified in the ARM ELF specs.
+	(Arm_relocate_functions): thumb_branch_common.  Handle bit 1 of branch
+	target of a BLX instruction specially.
+	(Reloc_stub::stub_type_for_reloc): Ditto.
+	(Relocate::relocate): Use symbolic names instead of numeric relocation
+	codes to report error.
+	(Target_arm::do_relox): Reduce default stub-group size for Cortex-A8
+	workaround.
+	* testsuite/Makefile.am (check_DATA): add thumb_blx_in_range.stdout,
+	thumb_blx_out_of_range.stdout, thumb2_blx_in_range.stdout and
+	thumb2_blx_out_of_range.stdout
+	(thumb_bl_out_of_range, thumb_bl_out_of_range.o,
+	thumb2_bl_out_of_range, thumb2_bl_out_of_range.o): Fix dependenices.
+	(thumb_blx_in_range.stdout, thumb_blx_in_range, thumb_blx_in_range.o,
+	thumb_blx_out_of_range.stdout, thumb_blx_out_of_range,
+	thumb_blx_out_of_range.o, thumb2_blx_in_range.stdout,
+	thumb2_blx_in_range, thumb2_blx_in_range.o,
+	thumb2_blx_out_of_range.stdout, thumb2_blx_out_of_range,
+	thumb2_blx_out_of_range.o): New rules.
+ 	(MOSTLYCLEANFILES): Add thumb_blx_in_range, thumb_blx_out_of_range,
+	thumb2_blx_in_range and	thumb2_blx_out_of_range.
+	* testsuite/Makefile.in: Regenerate.
+	* arm_branch_in_range.sh: Add tests for THUMB BLX.
+	* testsuite/thumb_blx_in_range.s: New file.
+	* testsuite/thumb_blx_out_of_range.s: New file.
+
+2010-03-22  Rafael Espindola  <espindola@google.com>
+
+	* archive.cc (Should_include): Move to archive.h.
+	(should_include_member): Make it a member of Archive.
+	(Lib_group): New.
+	(Add_lib_group_symbols): New.
+	* archive.h: Include options.h.
+	(Archive_member): Moved from Archive.
+	(Should_include): Moved from archive.cc.
+	(Lib_group): New.
+	(Add_lib_group_symbols): New.
+	* dynobj.cc (do_should_include_member): New.
+	* dynobj.h (do_should_include_member): New.
+	* gold.cc (queue_initial_tasks): Update call to queue.
+	* main.cc (main): Print lib group stats.
+	* object.cc (do_should_include_member): New.
+	* object.h: Include archive.h.
+	(Object::should_include_member): New.
+	(Object::do_should_include_member): New.
+	(Sized_relobj::do_should_include_member): New.
+	* options.cc (General_options::parse_start_lib): New.
+	(General_options::parse_end_lib): New.
+	(Input_arguments::add_file): Handle lib groups.
+	(Input_arguments::start_group): Check we are not in a lib.
+	(Input_arguments::start_lib): New.
+	(Input_arguments::end_lib): New.
+	* options.h (General_options): Add start_lib and end_lib.
+	(Input_argument::lib_): New.
+	(Input_argument::lib): New.
+	(Input_argument::is_lib): New.
+	(Input_file_lib): New.
+	(Input_arguments::in_lib_): New.
+	(Input_arguments::in_lib): New.
+	(Input_arguments::start_lib): New.
+	(Input_arguments::end_lib_): New.
+	* plugin.cc (Pluginobj::get_symbol_resolution_info): Mark symbols
+	in unused members as preempted.
+	(Sized_pluginobj::do_should_include_member): New.
+	* plugin.h (Sized_pluginobj::do_should_include_member): New.
+	* readsyms.cc (Read_symbols::locks): If we are just reading a member,
+	return the blocker.
+	(Read_symbols::do_whole_lib_group): New.
+	(Read_symbols::do_lib_group): New.
+	(Read_symbols::do_read_symbols): Handle lib groups.
+	(Read_symbols::get_name): Handle lib groups.
+	* readsyms.h (Read_symbols): Add an archive member pointer.
+	(Read_symbols::do_whole_lib_group): New.
+	(Read_symbols::do_lib_group): New.
+	(Read_symbols::member_): New.
+	* script.cc (read_input_script): Update call to queue_soon.
+
+2010-03-19  Doug Kwan  <dougkwan@google.com>
+
+	* arm.cc (Stub_table::Stub_table): Initialize new data members
+	Stub_table::reloc_stubs_size_ and Stub_table::reloc_stubs_addralign_.
+	(Stub_table::add_reloc_stub): Assign stub offset and update
+	Stub_table::reloc_stubs_size_ and Stub_table::reloc_stubs_addralign_.
+	(Stub_table::reloc_stubs_size_, Stub_table::reloc_stubs_addralign_):
+	New data members.
+ 	(Stub_table::update_data_size_and_addralign): Use
+	Stub_table::reloc_stubs_size_ and Stub_table::reloc_stubs_addralign_
+	instead of going over all reloc stubs.
+ 	(Stub_table::finalize_stubs): Do not assign reloc stub offsets.
+	* stringpool.cc (Stringpool_template::Stringpool_template): Initialize
+	Stringpool_template::offset_ to size of Stringpool_char.
+ 	(Stringpool_template::new_key_offset): Remove code to initialize
+	Stringpool_template::offset_.
+	* stringpool.h (Stringpool_template::set_no_zero_null): Set
+	Stringpool_template::offset_ to zero.
+
+2010-03-15  Doug Kwan  <dougkwan@google.com>
+
+	* stringpool.cc (Stringpool_template::Stringpool_template): Initialize
+	offset_.
+	(Stringpool_template::new_key_offset): New method.
+	(Stringpool_template::add_string): Assign offsets when adding new
+	strings.
+	(Stringpool_template::set_string_offsets): Do not set string offsets
+	when not optimizing.
+	* stringpool.h (Chunked_vector::Chunked_vector): Initialize data
+	member size_.
+   	(Chunked_vector::clear): Clear size_.
+   	(Chunked_vector::reserve): Call reserve method of all Element_vectors.
+   	(Chunked_vector::size): Return size_.
+   	(Chunked_vector::push_back): Use size_ to find insert position.
+	(Chunked_vector::size_): New data member.
+	(Stringpool_template::set_no_zero_null): Assert string set is empty.
+	(Stringpool_template::new_key_offset): New method declaration.
+	(Stringpool_template::offset_): New data member.
+
+2010-03-15   Rafael Espindola  <espindola@google.com>
+
+	* readsyms.cc (Read_symbols::do_read_symbols): Update calls to
+	Add_symbols' constructor.
+	* readsyms.h (Add_symbols): Remove the input_group member.
+
 2010-03-10  Ian Lance Taylor  <iant@google.com>
 
 	* reloc.cc (Sized_relobj::split_stack_adjust_reltype): Call the
@@ -208,7 +1236,7 @@
 	(Target_arm::Scan::global): Ditto.
 	(Target_arm::Relocate::relocate_tls): Handle static linking.  Fix
 	all incorrectly implemented relocations.
-	(Target_arm::fix_exidx_coverage): Pass layout to 
+	(Target_arm::fix_exidx_coverage): Pass layout to
 	Arm_output_section::fix_exidx_coverage.
 	* layout.cc (Layout::section_name_mapping): Remove trailing dots
 	from ".ARM.exidx." and ".ARM.extab.".
@@ -242,7 +1270,7 @@
      	(Arm_relocate_functions::thumb_branch_common): Ditto.
 	* testsuite/Makefile.am (check_SCRIPTS): Add arm_branch_in_range.sh.
 	(check_DATA): Add arm_bl_in_range.stdout, arm_bl_out_of_range.stdout
-	thumb_bl_in_range.stdout, thumb_bl_out_of_range.stdout, 
+	thumb_bl_in_range.stdout, thumb_bl_out_of_range.stdout,
 	thumb2_bl_in_range.stdout and thumb2_bl_out_of_range.stdout.
 	(arm_bl_in_range.stdout, arm_bl_in_range, arm_bl_in_range.o,
 	arm_bl_out_of_range.stdout, arm_bl_out_of_range,
@@ -693,7 +1721,7 @@
 	(Target_arm::Relocate::relocate): Adjust code to call
 	Arm_relocation_functions::arm_branch_common and
 	Arm_relocation_functions::thumb_branch_common instead of their removed
-	wrappers.  Merge switch-cases together to reduce source code size.  
+	wrappers.  Merge switch-cases together to reduce source code size.
 
 2010-01-29  Doug Kwan  <dougkwan@google.com>
 
@@ -938,7 +1966,7 @@
 	* options.h (DEFINE_bool): Set the user-set flag.
 	(General_options): Add --[no-]-fix-cortex options.
 	* output.cc (Output_section::convert_input_sections_to_relaxed_sections)
-	: Update fast look-up map after conversion. 
+	: Update fast look-up map after conversion.
 
 2010-01-14  Sriraman Tallam  <tmsriram@google.com>
 
@@ -964,7 +1992,7 @@
 	relocation and Cortex-A8 stub scanning.
 	(Target_arm::do_relax): Force stubs to be after stubbed sections
 	if fixing the Cortex-A8 erratum.  Remove all Cortex-A8 stubs at
-	the beginning of a new relaxation pass.  Update a comment. 
+	the beginning of a new relaxation pass.  Update a comment.
 	(Target_arm::scan_span_for_cortex_a8_erratum): New method definition.
 
 2010-01-12  Ian Lance Taylor  <iant@google.com>
@@ -1875,7 +2903,7 @@
 	Target_arm::set_secondary_compatible_arch,
 	Target_arm::tag_cpu_arch_combine, Target_arm::aeabi_enum_name,
 	Target_arm::tag_cpu_name_value, Target_arm::merge_object_attributes,
-	Target_arm::do_attribute_arg_type, Target_arm::do_attributes_order): 
+	Target_arm::do_attribute_arg_type, Target_arm::do_attributes_order):
 	New method definitions.
 
 2009-12-09  Ian Lance Taylor  <iant@google.com>
@@ -2065,7 +3093,7 @@
 	* Makefile.in: Regenerated.
 
 2009-11-25  Doug Kwan  <dougkwan@google.com>
-	
+
 	Revert:
 
 	2009-11-25  Doug Kwan  <dougkwan@google.com>
@@ -2183,7 +3211,7 @@
 	* object.cc (make_elf_object): Ditto.
 	* x86_64.cc (Target_x86_64::do_calls_non_split): Add a cast to avoid
 	a format warning.
- 
+
 009-11-09  H.J. Lu  <hongjiu.lu@intel.com>
 
 	PR gold/10930
@@ -2314,7 +3342,7 @@
 	(Target_arm::new_arm_input_section,
 	Target_arm::find_arm_input_section, Target_arm::new_stub_table,
 	Target_arm::reloc_uses_thumb_bit): New method declarations.
-	(Target_arm::Stub_table_list, Target_arm::Arm_input_section_map): 
+	(Target_arm::Stub_table_list, Target_arm::Arm_input_section_map):
 	New type definitions.
 	(Target_arm::stub_tables_, Target_arm::stub_factory_): New data
 	member declarations.
@@ -2438,7 +3466,7 @@
 2009-10-28  Doug Kwan  <dougkwan@google.com>
 
 	* arm.cc (Arm_relobj): New class definition.
-	(Arm_relobj::scan_sections_for_stubs, 
+	(Arm_relobj::scan_sections_for_stubs,
 	Arm_relobj::do_count_local_symbols, Arm_relobj::do_relocate_sections):
 	New method definitions.
 
@@ -2488,7 +3516,7 @@
 	from private to protected to allow access by child class.
 	(Sized_relobj::do_relocate_sections): New method declaration.
 	(Sized_relobj::relocate_sections): Virtualize.
-	* reloc.cc (Sized_relobj::do_relocate_sections): Rename from 
+	* reloc.cc (Sized_relobj::do_relocate_sections): Rename from
 	Sized_relobj::relocate_sections.  Instantiate template explicitly
 	for different target sizes and endianity.
 
@@ -2717,7 +3745,7 @@
 	* testsuite/Makefile.am: Add commands to build icf_safe_test. Modify
 	icf_test and icf_keep_unique_test to use the --icf enum flag.
 	* testsuite/icf_safe_test.sh: New file.
-	* testsuite/icf_safe_test.cc: New file.	
+	* testsuite/icf_safe_test.cc: New file.
 
 2009-10-12  Sriraman Tallam  <tmsriram@google.com>
 
@@ -3263,7 +4291,7 @@
 	(Output_section_headers::Output_section_headers): Move size
 	computation to Output_section_headers::do_size.
 	(Output_segment_headers::do_size): New method definition.
-	(Output_file_header::Output_file_header): Move size computation to 
+	(Output_file_header::Output_file_header): Move size computation to
 	Output_file_header::do_size and call it.
 	(Output_file_header::do_size): New method definition.
 	(Output_data_group::Output_data_group): Adjust call to
@@ -3364,7 +4392,7 @@
 	pair with Output_section::Simple_input_section and Convert struct to a
 	class.
 	(Input_section_sorter::operator()): Adjust access to
-	Input_section_info data member to use accessors. 
+	Input_section_info data member to use accessors.
 	(Output_section_element_input::set_section_addresses): Use layout
 	parameter.  Adjust code to use Output_section::Simple_input_section
 	and Input_secction_info classes.  Register filler for relaxation
@@ -3560,7 +4588,7 @@
 	* testsuite/gc_tls_test.sh: New file.
 
 2009-08-05  Sriraman Tallam  <tmsriram@google.com>
-	
+
 	* icf.cc: New file.
 	* icf.h: New file.
 	* Makefile.am (CCFILES): Add icf.cc.
@@ -3663,9 +4691,9 @@
 	Renamed from timestamp_nsec.
 	(Incremental_inputs_entry_write::timestamp_sec): Fix argument to
 	Elf_Xword.
-	(Incremental_inputs_entry_write::timestamp_usec): Renamed from 
+	(Incremental_inputs_entry_write::timestamp_usec): Renamed from
 	timestamp_nsec.
-	(Incremental_inputs::report_archive): Save mtime; style fix. 
+	(Incremental_inputs::report_archive): Save mtime; style fix.
 	(Incremental_inputs::report_obejct): Save mtime; style fix.
 	(Incremental_inputs::report_script): Save mtime; style fix.
 	(Incremental_inputs::finalize_inputs): Style fix.
@@ -3893,7 +4921,7 @@
 2009-06-05  Doug Kwan  <dougkwan@google.com>
 
 	* Makefile.am (CCFILES): Add target.cc.
-	* Makefile.in: Regenerate. 
+	* Makefile.in: Regenerate.
 	* i386.cc (class Target_i386): Define new virtual method to
 	override do_is_local_label_name in parent.
 	* object.cc (Sized_relobj::do_count_local_symbols): Discard
@@ -4046,7 +5074,7 @@
 
 2009-05-22  Sriraman Tallam  <tmsriram@google.com>
 
-	* testsuite/Makefile.am: Add -ffunction-sections to compile 
+	* testsuite/Makefile.am: Add -ffunction-sections to compile
 	gc_comdat_test files.  Add -Wl,--gc-sections to build
 	gc_comdat_test.
 	* testsuite/Makefile.in: Regenerate.
@@ -4337,7 +5365,7 @@
 
 	* layout.cc (Layout::output_section_name): Preserve names
 	of '.note.' sections.
-	
+
 2009-03-19  Ian Lance Taylor  <iant@google.com>
 
 	* descriptors.cc (Descriptors::open): Check that the options are
@@ -4387,11 +5415,11 @@
 	* configure, Makefile.in, config.in: Rebuild.
 
 2009-03-17  Paul Pluzhnikov  <ppluzhnikov@google.com>
-	
+
 	* layout.h (Layout::create_note): Add section_name parameter.
 	* layout.cc (Layout::create_note): Likewise.
 	(Layout::create_build_id, Layout::create_gold_note): Fix callers.
-	
+
 2009-03-17  Ian Lance Taylor  <iant@google.com>
 
 	* descriptors.cc: Include "options.h".
@@ -4767,8 +5795,8 @@
 	* main.cc (main): Create object of class "Garbage_collection".
 	* object.cc (Relobj::copy_symbols_data): New function.
 	(Relobj::is_section_name_included): New function.
-	(Sized_relobj::do_layout): Allow this function to be called twice 
-	during garbage collection and defer layout of section during the 
+	(Sized_relobj::do_layout): Allow this function to be called twice
+	during garbage collection and defer layout of section during the
 	first call.
 	* object.h (Relobj::get_symbols_data): New function.
 	(Relobj::is_section_name_included): New function.
@@ -4815,7 +5843,7 @@
 	(Symbol_table::gc_mark_symbol_for_shlib): New function.
 	(Symbol_table::gc_mark_dyn_syms): New function.
 	(Symbol_table::gc_): New data member.
-	* target.h (Sized_target::gc_process_relocs): New pure virtual 
+	* target.h (Sized_target::gc_process_relocs): New pure virtual
 	function.
 	* x86_64.cc (Target_x86_64::gc_process_relocs): New function.
 	* testsuite/testfile.cc (Target_test::gc_process_relocs): New function.

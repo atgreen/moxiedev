@@ -135,6 +135,7 @@ library_list_end_library (struct gdb_xml_parser *parser,
 {
   VEC(lm_info_p) **list = user_data;
   struct lm_info *lm_info = VEC_last (lm_info_p, *list);
+
   if (lm_info->segment_bases == NULL
       && lm_info->section_bases == NULL)
     gdb_xml_error (parser,
@@ -364,6 +365,7 @@ Could not relocate shared library \"%s\": wrong number of ALLOC sections"),
 	      int bases_index = 0;
 	      int found_range = 0;
 	      CORE_ADDR *section_bases;
+
 	      section_bases = VEC_address (CORE_ADDR,
 					   so->lm_info->section_bases);
 
@@ -378,6 +380,7 @@ Could not relocate shared library \"%s\": wrong number of ALLOC sections"),
 		  if (bfd_section_size (so->abfd, sect) > 0)
 		    {
 		      CORE_ADDR low, high;
+
 		      low = section_bases[i];
 		      high = low + bfd_section_size (so->abfd, sect) - 1;
 
@@ -399,6 +402,7 @@ Could not relocate shared library \"%s\": wrong number of ALLOC sections"),
       else if (so->lm_info->segment_bases)
 	{
 	  struct symfile_segment_data *data;
+
 	  data = get_symfile_segment_data (so->abfd);
 	  if (data == NULL)
 	    warning (_("\
@@ -493,4 +497,9 @@ _initialize_solib_target (void)
   solib_target_so_ops.in_dynsym_resolve_code
     = solib_target_in_dynsym_resolve_code;
   solib_target_so_ops.bfd_open = solib_bfd_open;
+
+  /* Set current_target_so_ops to solib_target_so_ops if not already
+     set.  */
+  if (current_target_so_ops == 0)
+    current_target_so_ops = &solib_target_so_ops;
 }

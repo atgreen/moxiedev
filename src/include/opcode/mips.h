@@ -5,21 +5,22 @@
    Contributed by Ralph Campbell and OSF
    Commented and modified by Ian Lance Taylor, Cygnus Support
 
-This file is part of GDB, GAS, and the GNU binutils.
+   This file is part of GDB, GAS, and the GNU binutils.
 
-GDB, GAS, and the GNU binutils are free software; you can redistribute
-them and/or modify them under the terms of the GNU General Public
-License as published by the Free Software Foundation; either version
-1, or (at your option) any later version.
+   GDB, GAS, and the GNU binutils are free software; you can redistribute
+   them and/or modify them under the terms of the GNU General Public
+   License as published by the Free Software Foundation; either version 3,
+   or (at your option) any later version.
 
-GDB, GAS, and the GNU binutils are distributed in the hope that they
-will be useful, but WITHOUT ANY WARRANTY; without even the implied
-warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
-the GNU General Public License for more details.
+   GDB, GAS, and the GNU binutils are distributed in the hope that they
+   will be useful, but WITHOUT ANY WARRANTY; without even the implied
+   warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
+   the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with this file; see the file COPYING.  If not, write to the Free
-Software Foundation, 51 Franklin Street - Fifth Floor, Boston, MA 02110-1301, USA.  */
+   You should have received a copy of the GNU General Public License
+   along with this file; see the file COPYING3.  If not, write to the Free
+   Software Foundation, 51 Franklin Street - Fifth Floor, Boston,
+   MA 02110-1301, USA.  */
 
 #ifndef _MIPS_H_
 #define _MIPS_H_
@@ -554,8 +555,9 @@ static const unsigned int mips_isa_table[] =
 /* DSP ASE */ 
 #define INSN_DSP                  0x00001000
 #define INSN_DSP64                0x00002000
-/* MIPS 16 ASE */
-#define INSN_MIPS16               0x00004000
+
+/* 0x00004000 is unused.  */
+
 /* MIPS-3D ASE */
 #define INSN_MIPS3D               0x00008000
 
@@ -1087,8 +1089,10 @@ extern int bfd_mips_num_opcodes;
 #define MIPS16_INSN_READ_PC		    0x00002000
 /* Reads the general purpose register in MIPS16OP_*_REGR32.  */
 #define MIPS16_INSN_READ_GPR_X		    0x00004000
-/* Is a branch insn. */
-#define MIPS16_INSN_BRANCH                  0x00010000
+/* Is an unconditional branch insn. */
+#define MIPS16_INSN_UNCOND_BRANCH	    0x00008000
+/* Is a conditional branch insn. */
+#define MIPS16_INSN_COND_BRANCH		    0x00010000
 
 /* The following flags have the same value for the mips16 opcode
    table:

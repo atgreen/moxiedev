@@ -121,7 +121,7 @@ struct hash<T*>
 
 #define Unordered_set std::set
 #define Unordered_map std::map
-#define Unordered_map std::multimap
+#define Unordered_multimap std::multimap
 
 #define reserve_unordered_map(map, n)
 
@@ -399,6 +399,15 @@ string_hash(const Char_type* s)
     }
 
   return h;
+}
+
+// Return whether STRING contains a wildcard character.  This is used
+// to speed up matching.
+
+inline bool
+is_wildcard_string(const char* s)
+{
+  return strpbrk(s, "?*[") != NULL;
 }
 
 } // End namespace gold.

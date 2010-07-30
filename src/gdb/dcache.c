@@ -417,7 +417,6 @@ DCACHE *
 dcache_init (void)
 {
   DCACHE *dcache;
-  int i;
 
   dcache = (DCACHE *) xmalloc (sizeof (*dcache));
 
@@ -474,6 +473,7 @@ dcache_xfer_memory (struct target_ops *ops, DCACHE *dcache,
   int i;
   int res;
   int (*xfunc) (DCACHE *dcache, CORE_ADDR addr, gdb_byte *ptr);
+
   xfunc = should_write ? dcache_poke_byte : dcache_peek_byte;
 
   /* If this is a different inferior from what we've recorded,
@@ -533,6 +533,7 @@ void
 dcache_update (DCACHE *dcache, CORE_ADDR memaddr, gdb_byte *myaddr, int len)
 {
   int i;
+
   for (i = 0; i < len; i++)
     dcache_poke_byte (dcache, memaddr + i, myaddr + i);
 }
@@ -585,11 +586,12 @@ static void
 dcache_info (char *exp, int tty)
 {
   splay_tree_node n;
-  int i, refcount, lineno;
+  int i, refcount;
 
   if (exp)
     {
       char *linestart;
+
       i = strtol (exp, &linestart, 10);
       if (linestart == exp || i < 0)
 	{

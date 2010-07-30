@@ -1380,7 +1380,7 @@ static reloc_howto_type ppc_elf_howto_raw[] = {
 	 0,			/* rightshift */
 	 1,			/* size (0 = byte, 1 = short, 2 = long) */
 	 16,			/* bitsize */
-	 TRUE,			/* pc_relative */
+	 FALSE,			/* pc_relative */
 	 0,			/* bitpos */
 	 complain_overflow_signed, /* complain_on_overflow */
 	 bfd_elf_generic_reloc,	/* special_function */
@@ -1994,9 +1994,6 @@ ppc_elf_fake_sections (bfd *abfd ATTRIBUTE_UNUSED,
 		       Elf_Internal_Shdr *shdr,
 		       asection *asect)
 {
-  if ((asect->flags & (SEC_GROUP | SEC_EXCLUDE)) == SEC_EXCLUDE)
-    shdr->sh_flags |= SHF_EXCLUDE;
-
   if ((asect->flags & SEC_SORT_ENTRIES) != 0)
     shdr->sh_type = SHT_ORDERED;
 
@@ -2077,12 +2074,13 @@ typedef struct apuinfo_list
 apuinfo_list;
 
 static apuinfo_list *head;
-
+static bfd_boolean apuinfo_set;
 
 static void
 apuinfo_list_init (void)
 {
   head = NULL;
+  apuinfo_set = FALSE;
 }
 
 static void
@@ -2162,7 +2160,6 @@ ppc_elf_begin_write_processing (bfd *abfd, struct bfd_link_info *link_info)
   char *buffer = NULL;
   bfd_size_type largest_input_size = 0;
   unsigned i;
-  unsigned num_entries;
   unsigned long length;
   const char *error_message = NULL;
 
@@ -2185,6 +2182,7 @@ ppc_elf_begin_write_processing (bfd *abfd, struct bfd_link_info *link_info)
       if (length < 20)
 	goto fail;
 
+      apuinfo_set = TRUE;
       if (largest_input_size < asec->size)
 	{
 	  if (buffer)
@@ -2194,7 +2192,7 @@ ppc_elf_begin_write_processing (bfd *abfd, struct bfd_link_info *link_info)
 	  if (!buffer)
 	    return;
 	}
-      
+
       if (bfd_seek (ibfd, asec->filepos, SEEK_SET) != 0
 	  || (bfd_bread (buffer, length, ibfd) != length))
 	{
@@ -2228,13 +2226,14 @@ ppc_elf_begin_write_processing (bfd *abfd, struct bfd_link_info *link_info)
 
   error_message = NULL;
 
-  /* Compute the size of the output section.  */
-  num_entries = apuinfo_list_length ();
-
-  if (num_entries)
+  if (apuinfo_set)
     {
+      /* Compute the size of the output section.  */
+      unsigned num_entries = apuinfo_list_length ();
+
       /* Set the output section size, if it exists.  */
       asec = bfd_get_section_by_name (abfd, APUINFO_SECTION_NAME);
+
       if (asec && ! bfd_set_section_size (abfd, asec, 20 + num_entries * 4))
 	{
 	  ibfd = abfd;
@@ -2259,8 +2258,7 @@ ppc_elf_write_section (bfd *abfd ATTRIBUTE_UNUSED,
 		       asection *asec,
 		       bfd_byte *contents ATTRIBUTE_UNUSED)
 {
-  return (apuinfo_list_length ()
-	  && strcmp (asec->name, APUINFO_SECTION_NAME) == 0);
+  return apuinfo_set && strcmp (asec->name, APUINFO_SECTION_NAME) == 0;
 }
 
 /* Finally we can generate the output section.  */
@@ -2278,7 +2276,7 @@ ppc_elf_final_write_processing (bfd *abfd, bfd_boolean linker ATTRIBUTE_UNUSED)
   if (asec == NULL)
     return;
 
-  if (apuinfo_list_length () == 0)
+  if (!apuinfo_set)
     return;
 
   length = asec->size;
@@ -2710,7 +2708,7 @@ struct ppc_elf_link_hash_table
 
   /* The bfd that forced an old-style PLT.  */
   bfd *old_bfd;
- 
+
   /* TLS local dynamic got entry handling.  */
   union {
     bfd_signed_vma refcount;
@@ -4046,15 +4044,15 @@ ppc_elf_merge_obj_attributes (bfd *ibfd, bfd *obfd)
 	  (_("Warning: %B uses hard float, %B uses soft float"), obfd, ibfd);
       else if (out_attr->i == 1 && in_attr->i == 3)
 	_bfd_error_handler
-	  (_("Warning: %B uses double-precision hard float, %B uses single-precision hard float"), 
+	  (_("Warning: %B uses double-precision hard float, %B uses single-precision hard float"),
 	  obfd, ibfd);
       else if (out_attr->i == 3 && in_attr->i == 1)
 	_bfd_error_handler
-	  (_("Warning: %B uses double-precision hard float, %B uses single-precision hard float"), 
+	  (_("Warning: %B uses double-precision hard float, %B uses single-precision hard float"),
 	  ibfd, obfd);
       else if (out_attr->i == 3 && in_attr->i == 2)
 	_bfd_error_handler
-	  (_("Warning: %B uses soft float, %B uses single-precision hard float"), 
+	  (_("Warning: %B uses soft float, %B uses single-precision hard float"),
 	  ibfd, obfd);
       else if (out_attr->i == 2 && (in_attr->i == 1 || in_attr->i == 3))
 	_bfd_error_handler
@@ -4790,7 +4788,6 @@ ppc_elf_tls_optimize (bfd *obfd ATTRIBUTE_UNUSED,
 		    }
 		  else
 		    {
-		      Elf_Internal_Sym *sym;
 		      bfd_signed_vma *lgot_refs;
 		      struct plt_entry **local_plt;
 		      char *lgot_masks;
@@ -4809,7 +4806,6 @@ ppc_elf_tls_optimize (bfd *obfd ATTRIBUTE_UNUSED,
 			      return FALSE;
 			    }
 			}
-		      sym = locsyms + r_symndx;
 		      lgot_refs = elf_local_got_refcounts (ibfd);
 		      if (lgot_refs == NULL)
 			abort ();
@@ -5231,7 +5227,7 @@ allocate_dynrelocs (struct elf_link_hash_entry *h, void *inf)
 
 			/* If this symbol is not defined in a regular
 			   file, and we are not generating a shared
-			   library, then set the symbol to this location 
+			   library, then set the symbol to this location
 			   in the .plt.  This is to avoid text
 			   relocations, and is required to make
 			   function pointers compare as equal between
@@ -5971,6 +5967,7 @@ ppc_elf_relax_section (bfd *abfd,
   struct ppc_elf_link_hash_table *htab;
   bfd_size_type trampoff;
   asection *got2;
+  bfd_boolean maybe_pasted;
 
   *again = FALSE;
 
@@ -5987,10 +5984,13 @@ ppc_elf_relax_section (bfd *abfd,
      anyway.  */
   if (link_info->relocatable && link_info->shared)
      return TRUE;
-  
+
   trampoff = (isec->size + 3) & (bfd_vma) -4;
+  maybe_pasted = (strcmp (isec->output_section->name, ".init") == 0
+		  || strcmp (isec->output_section->name, ".fini") == 0);
   /* Space for a branch around any trampolines.  */
-  trampoff += 4;
+  if (maybe_pasted)
+    trampoff += 4;
 
   symtab_hdr = &elf_symtab_hdr (abfd);
 
@@ -6315,7 +6315,6 @@ ppc_elf_relax_section (bfd *abfd,
     {
       const int *stub;
       bfd_byte *dest;
-      bfd_vma val;
       int i, size;
 
       do
@@ -6331,12 +6330,15 @@ ppc_elf_relax_section (bfd *abfd,
 	goto error_return;
 
       isec->size = (isec->size + 3) & (bfd_vma) -4;
-      /* Branch around the trampolines.  */
-      val = B + trampoff - isec->size;
       dest = contents + isec->size;
+      /* Branch around the trampolines.  */
+      if (maybe_pasted)
+	{
+	  bfd_vma val = B + trampoff - isec->size;
+	  bfd_put_32 (abfd, val, dest);
+	  dest += 4;
+	}
       isec->size = trampoff;
-      bfd_put_32 (abfd, val, dest);
-      dest += 4;
 
       if (link_info->shared)
 	{
@@ -6392,7 +6394,7 @@ ppc_elf_relax_section (bfd *abfd,
       Elf_Internal_Rela *new_relocs = bfd_malloc ((changes + isec->reloc_count)
 						  * sizeof (*new_relocs));
       unsigned ix;
-      
+
       if (!new_relocs)
 	goto error_return;
       memcpy (new_relocs, internal_relocs,
@@ -6434,7 +6436,7 @@ ppc_elf_relax_section (bfd *abfd,
 	    irel++;
 	  }
     }
-  
+
   return TRUE;
 
  error_return:
@@ -7604,9 +7606,9 @@ ppc_elf_relocate_section (bfd *output_bfd,
 		}
 
 	      skip = 0;
-	      outrel.r_offset =
-		_bfd_elf_section_offset (output_bfd, info, input_section,
-					 rel->r_offset);
+	      outrel.r_offset = _bfd_elf_section_offset (output_bfd, info,
+							 input_section,
+							 rel->r_offset);
 	      if (outrel.r_offset == (bfd_vma) -1
 		  || outrel.r_offset == (bfd_vma) -2)
 		skip = (int) outrel.r_offset;
@@ -8201,7 +8203,7 @@ ppc_elf_finish_dynamic_symbol (bfd *output_bfd,
 	      {
 		bfd_vma got_offset;
 		const bfd_vma *plt_entry;
-		
+
 		/* The first three entries in .got.plt are reserved.  */
 		got_offset = (reloc_index + 3) * 4;
 
@@ -8242,7 +8244,7 @@ ppc_elf_finish_dynamic_symbol (bfd *output_bfd,
 		   low-order 16 bits of the load instruction.  */
 		/* NOTE: It appears that this is now an index rather than a
 		   prescaled offset.  */
-		bfd_put_32 (output_bfd, 
+		bfd_put_32 (output_bfd,
 			    plt_entry[4] | reloc_index,
 			    htab->plt->contents + ent->plt.offset + 16);
 		/* This instruction is a PC-relative branch whose target is
@@ -8251,8 +8253,8 @@ ppc_elf_finish_dynamic_symbol (bfd *output_bfd,
 		   The address is encoded in bits 6-29, inclusive.  The value
 		   stored is right-shifted by two bits, permitting a 26-bit
 		   offset.  */
-		bfd_put_32 (output_bfd, 
-			    (plt_entry[5] 
+		bfd_put_32 (output_bfd,
+			    (plt_entry[5]
 			     | (-(ent->plt.offset + 20) & 0x03fffffc)),
 			    htab->plt->contents + ent->plt.offset + 20);
 		bfd_put_32 (output_bfd, plt_entry[6],
@@ -8401,8 +8403,8 @@ ppc_elf_finish_dynamic_symbol (bfd *output_bfd,
 		   relocation.  */
 		sym->st_shndx = (_bfd_elf_section_from_bfd_section
 				 (output_bfd, htab->glink->output_section));
-		sym->st_value = (ent->glink_offset +
-				 htab->glink->output_offset
+		sym->st_value = (ent->glink_offset
+				 + htab->glink->output_offset
 				 + htab->glink->output_section->vma);
 	      }
 	    doneone = TRUE;
@@ -8531,7 +8533,7 @@ ppc_elf_finish_dynamic_sections (bfd *output_bfd,
   dynobj = elf_hash_table (info)->dynobj;
   sdyn = bfd_get_section_by_name (dynobj, ".dynamic");
   if (htab->is_vxworks)
-    splt = bfd_get_section_by_name (dynobj, ".plt");  
+    splt = bfd_get_section_by_name (dynobj, ".plt");
   else
     splt = NULL;
 
@@ -8640,9 +8642,9 @@ ppc_elf_finish_dynamic_sections (bfd *output_bfd,
   if (splt && splt->size > 0)
     {
       /* Use the right PLT. */
-      static const bfd_vma *plt_entry = NULL;
-      plt_entry = info->shared ? 
-	ppc_elf_vxworks_pic_plt0_entry : ppc_elf_vxworks_plt0_entry;
+      const bfd_vma *plt_entry = (info->shared
+				  ? ppc_elf_vxworks_pic_plt0_entry
+				  : ppc_elf_vxworks_plt0_entry);
 
       if (!info->shared)
 	{
@@ -8680,7 +8682,7 @@ ppc_elf_finish_dynamic_sections (bfd *output_bfd,
 	  rela.r_addend = 0;
 	  bfd_elf32_swap_reloca_out (output_bfd, &rela, loc);
 	  loc += sizeof (Elf32_External_Rela);
-	  
+
 	  /* Output the @l relocation for the second instruction.  */
 	  rela.r_offset = (htab->plt->output_section->vma
 			   + htab->plt->output_offset

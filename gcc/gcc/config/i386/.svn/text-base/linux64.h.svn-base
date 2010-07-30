@@ -1,5 +1,5 @@
 /* Definitions for AMD x86-64 running Linux-based GNU systems with ELF format.
-   Copyright (C) 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2001, 2002, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Jan Hubicka <jh@suse.cz>, based on linux.h.
 
@@ -105,13 +105,15 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
 #define LIBGCC2_TF_CEXT q
 #define TF_SIZE 113
 
-#undef NEED_INDICATE_EXEC_STACK
-#define NEED_INDICATE_EXEC_STACK 1
+#define TARGET_ASM_FILE_END file_end_indicate_exec_stack
 
 #define MD_UNWIND_SUPPORT "config/i386/linux-unwind.h"
 
 /* The stack pointer needs to be moved while checking the stack.  */
 #define STACK_CHECK_MOVING_SP 1
+
+/* Static stack checking is supported by means of probes.  */
+#define STACK_CHECK_STATIC_BUILTIN 1
 
 /* This macro may be overridden in i386/k*bsd-gnu.h.  */
 #define REG_NAME(reg) reg

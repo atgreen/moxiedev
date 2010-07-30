@@ -101,6 +101,7 @@ libunwind_descr_init (struct gdbarch *gdbarch)
 {
   struct libunwind_descr *descr = GDBARCH_OBSTACK_ZALLOC (gdbarch,
 							  struct libunwind_descr);
+
   return descr;
 }
 
@@ -201,6 +202,7 @@ void
 libunwind_frame_dealloc_cache (struct frame_info *self, void *this_cache)
 {
   struct libunwind_frame_cache *cache = this_cache;
+
   if (cache->as)
     unw_destroy_addr_space_p (cache->as);
 }
@@ -346,7 +348,6 @@ libunwind_frame_prev_register (struct frame_info *this_frame,
               return frame_unwind_got_constant (this_frame, regnum, 0);
             val = frame_unwind_got_constant (this_frame, regnum, intval);
           }
-        set_value_optimized_out (val, 1);
         break;
       }
     }

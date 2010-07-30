@@ -1,5 +1,6 @@
 /* Global, SSA-based optimizations using mathematical identities.
-   Copyright (C) 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010
+   Free Software Foundation, Inc.
 
 This file is part of GCC.
 
@@ -91,15 +92,16 @@ along with GCC; see the file COPYING3.  If not see
 #include "flags.h"
 #include "tree.h"
 #include "tree-flow.h"
-#include "real.h"
 #include "timevar.h"
 #include "tree-pass.h"
 #include "alloc-pool.h"
 #include "basic-block.h"
 #include "target.h"
-#include "diagnostic.h"
-#include "rtl.h"
-#include "expr.h"
+#include "gimple-pretty-print.h"
+
+/* FIXME: RTL headers have to be included here for optabs.  */
+#include "rtl.h"		/* Because optabs.h wants enum rtx_code.  */
+#include "expr.h"		/* Because optabs.h wants sepops.  */
 #include "optabs.h"
 
 /* This structure represents one basic block that either computes a
@@ -472,7 +474,7 @@ execute_cse_reciprocals (void)
     gcc_assert (!bb->aux);
 #endif
 
-  for (arg = DECL_ARGUMENTS (cfun->decl); arg; arg = TREE_CHAIN (arg))
+  for (arg = DECL_ARGUMENTS (cfun->decl); arg; arg = DECL_CHAIN (arg))
     if (gimple_default_def (cfun, arg)
 	&& FLOAT_TYPE_P (TREE_TYPE (arg))
 	&& is_gimple_reg (arg))
@@ -1111,11 +1113,9 @@ execute_optimize_bswap (void)
     return 0;
 
   bswap32_p = (built_in_decls[BUILT_IN_BSWAP32]
-	       && optab_handler (bswap_optab, SImode)->insn_code !=
-	       CODE_FOR_nothing);
+	       && optab_handler (bswap_optab, SImode) != CODE_FOR_nothing);
   bswap64_p = (built_in_decls[BUILT_IN_BSWAP64]
-	       && (optab_handler (bswap_optab, DImode)->insn_code !=
-		   CODE_FOR_nothing
+	       && (optab_handler (bswap_optab, DImode) != CODE_FOR_nothing
 		   || (bswap32_p && word_mode == SImode)));
 
   if (!bswap32_p && !bswap64_p)
@@ -1248,6 +1248,288 @@ struct gimple_opt_pass pass_optimize_bswap =
   "bswap",				/* name */
   gate_optimize_bswap,                  /* gate */
   execute_optimize_bswap,		/* execute */
+  NULL,					/* sub */
+  NULL,					/* next */
+  0,					/* static_pass_number */
+  TV_NONE,				/* tv_id */
+  PROP_ssa,				/* properties_required */
+  0,					/* properties_provided */
+  0,					/* properties_destroyed */
+  0,					/* todo_flags_start */
+  0                                     /* todo_flags_finish */
+ }
+};
+
+/* Return true if RHS is a suitable operand for a widening multiplication.
+   There are two cases:
+
+     - RHS makes some value twice as wide.  Store that value in *NEW_RHS_OUT
+       if so, and store its type in *TYPE_OUT.
+
+     - RHS is an integer constant.  Store that value in *NEW_RHS_OUT if so,
+       but leave *TYPE_OUT untouched.  */
+
+static bool
+is_widening_mult_rhs_p (tree rhs, tree *type_out, tree *new_rhs_out)
+{
+  gimple stmt;
+  tree type, type1, rhs1;
+  enum tree_code rhs_code;
+
+  if (TREE_CODE (rhs) == SSA_NAME)
+    {
+      type = TREE_TYPE (rhs);
+      stmt = SSA_NAME_DEF_STMT (rhs);
+      if (!is_gimple_assign (stmt))
+	return false;
+
+      rhs_code = gimple_assign_rhs_code (stmt);
+      if (TREE_CODE (type) == INTEGER_TYPE
+	  ? !CONVERT_EXPR_CODE_P (rhs_code)
+	  : rhs_code != FIXED_CONVERT_EXPR)
+	return false;
+
+      rhs1 = gimple_assign_rhs1 (stmt);
+      type1 = TREE_TYPE (rhs1);
+      if (TREE_CODE (type1) != TREE_CODE (type)
+	  || TYPE_PRECISION (type1) * 2 != TYPE_PRECISION (type))
+	return false;
+
+      *new_rhs_out = rhs1;
+      *type_out = type1;
+      return true;
+    }
+
+  if (TREE_CODE (rhs) == INTEGER_CST)
+    {
+      *new_rhs_out = rhs;
+      *type_out = NULL;
+      return true;
+    }
+
+  return false;
+}
+
+/* Return true if STMT performs a widening multiplication.  If so,
+   store the unwidened types of the operands in *TYPE1_OUT and *TYPE2_OUT
+   respectively.  Also fill *RHS1_OUT and *RHS2_OUT such that converting
+   those operands to types *TYPE1_OUT and *TYPE2_OUT would give the
+   operands of the multiplication.  */
+
+static bool
+is_widening_mult_p (gimple stmt,
+		    tree *type1_out, tree *rhs1_out,
+		    tree *type2_out, tree *rhs2_out)
+{
+  tree type;
+
+  type = TREE_TYPE (gimple_assign_lhs (stmt));
+  if (TREE_CODE (type) != INTEGER_TYPE
+      && TREE_CODE (type) != FIXED_POINT_TYPE)
+    return false;
+
+  if (!is_widening_mult_rhs_p (gimple_assign_rhs1 (stmt), type1_out, rhs1_out))
+    return false;
+
+  if (!is_widening_mult_rhs_p (gimple_assign_rhs2 (stmt), type2_out, rhs2_out))
+    return false;
+
+  if (*type1_out == NULL)
+    {
+      if (*type2_out == NULL || !int_fits_type_p (*rhs1_out, *type2_out))
+	return false;
+      *type1_out = *type2_out;
+    }
+
+  if (*type2_out == NULL)
+    {
+      if (!int_fits_type_p (*rhs2_out, *type1_out))
+	return false;
+      *type2_out = *type1_out;
+    }
+
+  return true;
+}
+
+/* Process a single gimple statement STMT, which has a MULT_EXPR as
+   its rhs, and try to convert it into a WIDEN_MULT_EXPR.  The return
+   value is true iff we converted the statement.  */
+
+static bool
+convert_mult_to_widen (gimple stmt)
+{
+  tree lhs, rhs1, rhs2, type, type1, type2;
+  enum insn_code handler;
+
+  lhs = gimple_assign_lhs (stmt);
+  type = TREE_TYPE (lhs);
+  if (TREE_CODE (type) != INTEGER_TYPE)
+    return false;
+
+  if (!is_widening_mult_p (stmt, &type1, &rhs1, &type2, &rhs2))
+    return false;
+
+  if (TYPE_UNSIGNED (type1) && TYPE_UNSIGNED (type2))
+    handler = optab_handler (umul_widen_optab, TYPE_MODE (type));
+  else if (!TYPE_UNSIGNED (type1) && !TYPE_UNSIGNED (type2))
+    handler = optab_handler (smul_widen_optab, TYPE_MODE (type));
+  else
+    handler = optab_handler (usmul_widen_optab, TYPE_MODE (type));
+
+  if (handler == CODE_FOR_nothing)
+    return false;
+
+  gimple_assign_set_rhs1 (stmt, fold_convert (type1, rhs1));
+  gimple_assign_set_rhs2 (stmt, fold_convert (type2, rhs2));
+  gimple_assign_set_rhs_code (stmt, WIDEN_MULT_EXPR);
+  update_stmt (stmt);
+  return true;
+}
+
+/* Process a single gimple statement STMT, which is found at the
+   iterator GSI and has a either a PLUS_EXPR or a MINUS_EXPR as its
+   rhs (given by CODE), and try to convert it into a
+   WIDEN_MULT_PLUS_EXPR or a WIDEN_MULT_MINUS_EXPR.  The return value
+   is true iff we converted the statement.  */
+
+static bool
+convert_plusminus_to_widen (gimple_stmt_iterator *gsi, gimple stmt,
+			    enum tree_code code)
+{
+  gimple rhs1_stmt = NULL, rhs2_stmt = NULL;
+  tree type, type1, type2;
+  tree lhs, rhs1, rhs2, mult_rhs1, mult_rhs2, add_rhs;
+  enum tree_code rhs1_code = ERROR_MARK, rhs2_code = ERROR_MARK;
+  optab this_optab;
+  enum tree_code wmult_code;
+
+  lhs = gimple_assign_lhs (stmt);
+  type = TREE_TYPE (lhs);
+  if (TREE_CODE (type) != INTEGER_TYPE
+      && TREE_CODE (type) != FIXED_POINT_TYPE)
+    return false;
+
+  if (code == MINUS_EXPR)
+    wmult_code = WIDEN_MULT_MINUS_EXPR;
+  else
+    wmult_code = WIDEN_MULT_PLUS_EXPR;
+
+  /* Verify that the machine can perform a widening multiply
+     accumulate in this mode/signedness combination, otherwise
+     this transformation is likely to pessimize code.  */
+  this_optab = optab_for_tree_code (wmult_code, type, optab_default);
+  if (optab_handler (this_optab, TYPE_MODE (type)) == CODE_FOR_nothing)
+    return false;
+
+  rhs1 = gimple_assign_rhs1 (stmt);
+  rhs2 = gimple_assign_rhs2 (stmt);
+
+  if (TREE_CODE (rhs1) == SSA_NAME)
+    {
+      rhs1_stmt = SSA_NAME_DEF_STMT (rhs1);
+      if (is_gimple_assign (rhs1_stmt))
+	rhs1_code = gimple_assign_rhs_code (rhs1_stmt);
+    }
+  else
+    return false;
+
+  if (TREE_CODE (rhs2) == SSA_NAME)
+    {
+      rhs2_stmt = SSA_NAME_DEF_STMT (rhs2);
+      if (is_gimple_assign (rhs2_stmt))
+	rhs2_code = gimple_assign_rhs_code (rhs2_stmt);
+    }
+  else
+    return false;
+
+  if (code == PLUS_EXPR && rhs1_code == MULT_EXPR)
+    {
+      if (!is_widening_mult_p (rhs1_stmt, &type1, &mult_rhs1,
+			       &type2, &mult_rhs2))
+	return false;
+      mult_rhs1 = fold_convert (type1, mult_rhs1);
+      mult_rhs2 = fold_convert (type2, mult_rhs2);
+      add_rhs = rhs2;
+    }
+  else if (rhs2_code == MULT_EXPR)
+    {
+      if (!is_widening_mult_p (rhs1_stmt, &type1, &mult_rhs1,
+			       &type2, &mult_rhs2))
+	return false;
+      mult_rhs1 = fold_convert (type1, mult_rhs1);
+      mult_rhs2 = fold_convert (type2, mult_rhs2);
+      add_rhs = rhs1;
+    }
+  else if (code == PLUS_EXPR && rhs1_code == WIDEN_MULT_EXPR)
+    {
+      mult_rhs1 = gimple_assign_rhs1 (rhs1_stmt);
+      mult_rhs2 = gimple_assign_rhs2 (rhs1_stmt);
+      add_rhs = rhs2;
+    }
+  else if (rhs2_code == WIDEN_MULT_EXPR)
+    {
+      mult_rhs1 = gimple_assign_rhs1 (rhs2_stmt);
+      mult_rhs2 = gimple_assign_rhs2 (rhs2_stmt);
+      add_rhs = rhs1;
+    }
+  else
+    return false;
+
+  /* ??? May need some type verification here?  */
+
+  gimple_assign_set_rhs_with_ops_1 (gsi, wmult_code, mult_rhs1, mult_rhs2,
+				    add_rhs);
+  update_stmt (gsi_stmt (*gsi));
+  return true;
+}
+
+/* Find integer multiplications where the operands are extended from
+   smaller types, and replace the MULT_EXPR with a WIDEN_MULT_EXPR
+   where appropriate.  */
+
+static unsigned int
+execute_optimize_widening_mul (void)
+{
+  bool changed = false;
+  basic_block bb;
+
+  FOR_EACH_BB (bb)
+    {
+      gimple_stmt_iterator gsi;
+
+      for (gsi = gsi_after_labels (bb); !gsi_end_p (gsi); gsi_next (&gsi))
+        {
+	  gimple stmt = gsi_stmt (gsi);
+	  enum tree_code code;
+
+	  if (!is_gimple_assign (stmt))
+	    continue;
+
+	  code = gimple_assign_rhs_code (stmt);
+	  if (code == MULT_EXPR)
+	    changed |= convert_mult_to_widen (stmt);
+	  else if (code == PLUS_EXPR || code == MINUS_EXPR)
+	    changed |= convert_plusminus_to_widen (&gsi, stmt, code);
+	}
+    }
+
+  return (changed ? TODO_dump_func | TODO_update_ssa | TODO_verify_ssa
+	  | TODO_verify_stmts : 0);
+}
+
+static bool
+gate_optimize_widening_mul (void)
+{
+  return flag_expensive_optimizations && optimize;
+}
+
+struct gimple_opt_pass pass_optimize_widening_mul =
+{
+ {
+  GIMPLE_PASS,
+  "widening_mul",			/* name */
+  gate_optimize_widening_mul,		/* gate */
+  execute_optimize_widening_mul,	/* execute */
   NULL,					/* sub */
   NULL,					/* next */
   0,					/* static_pass_number */

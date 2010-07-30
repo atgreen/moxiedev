@@ -22,8 +22,6 @@ if $tracelevel then {
 	strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile "structs"
 set srcfile ${testfile}.c
@@ -34,5 +32,34 @@ gdb_start
 gdb_test "source ${srcdir}/${subdir}/source-error.gdb" \
     "source-error.gdb:21: Error in sourced command file:\[\r\n\]*Cannot access memory at address 0x0.*" \
     "script contains error"
-    
+
+gdb_test "source -v ${srcdir}/${subdir}/source-test.gdb" \
+    "echo test source options.*" \
+    "source -v"
+
+# There was a bug where -v got stuck in the "on" position.
+# Verify "source script", without the -v, is not verbose.
+set test "source after -v"
+gdb_test_multiple "source ${srcdir}/${subdir}/source-test.gdb" $test {
+    -re "echo test source options.*$gdb_prompt $" {
+	fail "$test"
+    }
+    -re "test source options.*$gdb_prompt $" {
+	pass "$test"
+    }
+}
+
+gdb_test "dir ${srcdir}/${subdir}" "Source directories searched: .*"
+gdb_test "source -s ./source-test.gdb" \
+    "test source options" \
+    "source -s"
+
+# Test -v and -s in either order.
+gdb_test "source -s -v ./source-test.gdb" \
+    "echo test source options.*" \
+    "source -s -v"
+gdb_test "source -v -s ./source-test.gdb" \
+    "echo test source options.*" \
+    "source -v -s"
+
 gdb_exit

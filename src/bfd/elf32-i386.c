@@ -789,8 +789,6 @@ elf_i386_get_local_sym_hash (struct elf_i386_link_hash_table *htab,
       ret->elf.indx = sec->id;
       ret->elf.dynstr_index = ELF32_R_SYM (rel->r_info);
       ret->elf.dynindx = -1;
-      ret->elf.plt.offset = (bfd_vma) -1;
-      ret->elf.got.offset = (bfd_vma) -1;
       *slot = ret;
     }
   return &ret->elf;
@@ -1162,6 +1160,12 @@ elf_i386_tls_transition (struct bfd_link_info *info, bfd *abfd,
   unsigned int to_type = from_type;
   bfd_boolean check = TRUE;
 
+  /* Skip TLS transition for functions.  */
+  if (h != NULL
+      && (h->type == STT_FUNC
+	  || h->type == STT_GNU_IFUNC))
+    return TRUE;
+
   switch (from_type)
     {
     case R_386_TLS_GD:
@@ -1330,8 +1334,7 @@ elf_i386_check_relocs (bfd *abfd,
 	  /* Check relocation against local STT_GNU_IFUNC symbol.  */
 	  if (ELF32_ST_TYPE (isym->st_info) == STT_GNU_IFUNC)
 	    {
-	      h = elf_i386_get_local_sym_hash (htab, abfd, rel,
-						   TRUE);
+	      h = elf_i386_get_local_sym_hash (htab, abfd, rel, TRUE);
 	      if (h == NULL)
 		return FALSE;
 
@@ -1820,6 +1823,23 @@ elf_i386_gc_sweep_hook (bfd *abfd,
 		break;
 	      }
 	}
+      else
+	{
+	  /* A local symbol.  */
+	  Elf_Internal_Sym *isym;
+
+	  isym = bfd_sym_from_r_symndx (&htab->sym_cache,
+					abfd, r_symndx);
+
+	  /* Check relocation against local STT_GNU_IFUNC symbol.  */
+	  if (isym != NULL
+	      && ELF32_ST_TYPE (isym->st_info) == STT_GNU_IFUNC)
+	    {
+	      h = elf_i386_get_local_sym_hash (htab, abfd, rel, FALSE);
+	      if (h == NULL)
+		abort ();
+	    }
+	}
 
       r_type = ELF32_R_TYPE (rel->r_info);
       if (! elf_i386_tls_transition (info, abfd, sec, NULL,
@@ -1846,6 +1866,11 @@ elf_i386_gc_sweep_hook (bfd *abfd,
 	    {
 	      if (h->got.refcount > 0)
 		h->got.refcount -= 1;
+	      if (h->type == STT_GNU_IFUNC)
+		{
+		  if (h->plt.refcount > 0)
+		    h->plt.refcount -= 1;
+		}
 	    }
 	  else if (local_got_refcounts != NULL)
 	    {
@@ -1863,6 +1888,16 @@ elf_i386_gc_sweep_hook (bfd *abfd,
 	case R_386_PLT32:
 	  if (h != NULL)
 	    {
+	      if (h->plt.refcount > 0)
+		h->plt.refcount -= 1;
+	    }
+	  break;
+
+	case R_386_GOTOFF:
+	  if (h != NULL && h->type == STT_GNU_IFUNC)
+	    {
+	      if (h->got.refcount > 0)
+		h->got.refcount -= 1;
 	      if (h->plt.refcount > 0)
 		h->plt.refcount -= 1;
 	    }
@@ -2520,6 +2555,23 @@ elf_i386_size_dynamic_sections (bfd *output_bfd ATTRIBUTE_UNUSED,
   if (htab->elf.srelplt)
     htab->sgotplt_jump_table_size = htab->next_tls_desc_index * 4;
 
+  if (htab->elf.sgotplt)
+    {
+      /* Don't allocate .got.plt section if there are no GOT nor PLT
+         entries.  */
+      if ((htab->elf.sgotplt->size
+	   == get_elf_backend_data (output_bfd)->got_header_size)
+	  && (htab->elf.splt == NULL
+	      || htab->elf.splt->size == 0)
+	  && (htab->elf.sgot == NULL
+	      || htab->elf.sgot->size == 0)
+	  && (htab->elf.iplt == NULL
+	      || htab->elf.iplt->size == 0)
+	  && (htab->elf.igotplt == NULL
+	      || htab->elf.igotplt->size == 0))
+	htab->elf.sgotplt->size = 0;
+    }
+
   /* We now have determined the sizes of the various dynamic sections.
      Allocate memory for them.  */
   relocs = FALSE;
@@ -2934,8 +2986,8 @@ elf_i386_relocate_section (bfd *output_bfd,
 		   && ELF32_ST_TYPE (sym->st_info) == STT_GNU_IFUNC)
 	    {
 	      /* Relocate against local STT_GNU_IFUNC symbol.  */
-	      h = elf_i386_get_local_sym_hash (htab, input_bfd,
-						   rel, FALSE);
+	      h = elf_i386_get_local_sym_hash (htab, input_bfd, rel,
+					       FALSE);
 	      if (h == NULL)
 		abort ();
 
@@ -2946,7 +2998,7 @@ elf_i386_relocate_section (bfd *output_bfd,
 	}
       else
 	{
-	  bfd_boolean warned;
+	  bfd_boolean warned ATTRIBUTE_UNUSED;
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
@@ -2955,15 +3007,8 @@ elf_i386_relocate_section (bfd *output_bfd,
 	}
 
       if (sec != NULL && elf_discarded_section (sec))
-	{
-	  /* For relocs against symbols from removed linkonce sections,
-	     or sections discarded by a linker script, we just want the
-	     section contents zeroed.  Avoid any special processing.  */
-	  _bfd_clear_contents (howto, input_bfd, contents + rel->r_offset);
-	  rel->r_info = 0;
-	  rel->r_addend = 0;
-	  continue;
-	}
+	RELOC_AGAINST_DISCARDED_SECTION (info, input_bfd, input_section,
+					 rel, relend, howto, contents);
 
       if (info->relocatable)
 	continue;

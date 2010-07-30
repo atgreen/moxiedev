@@ -1,5 +1,5 @@
 /* Disassemble ADI Blackfin Instructions.
-   Copyright 2005, 2006, 2007, 2008, 2009 Free Software Foundation, Inc.
+   Copyright 2005, 2006, 2007, 2008, 2009, 2010 Free Software Foundation, Inc.
 
    This file is part of libopcodes.
 
@@ -390,7 +390,7 @@ static enum machine_registers decode_regs_hi[] =
 {
   REG_RH0, REG_RH1, REG_RH2, REG_RH3, REG_RH4, REG_RH5, REG_RH6, REG_RH7,
   REG_PH0, REG_PH1, REG_PH2, REG_PH3, REG_PH4, REG_PH5, REG_SHP, REG_FHP,
-  REG_IH0, REG_IH1, REG_IH2, REG_IH3, REG_MH0, REG_MH1, REG_LH2, REG_MH3,
+  REG_IH0, REG_IH1, REG_IH2, REG_IH3, REG_MH0, REG_MH1, REG_MH2, REG_MH3,
   REG_BH0, REG_BH1, REG_BH2, REG_BH3, REG_LH0, REG_LH1, REG_LH2, REG_LH3,
 };
 
@@ -4629,7 +4629,11 @@ _print_insn_bfin (bfd_vma pc, disassemble_info *outf)
   int rv = 0;
 
   status = (*outf->read_memory_func) (pc & ~0x1, buf, 2, outf);
+  /* FIXME */
+  (void) status;
   status = (*outf->read_memory_func) ((pc + 2) & ~0x1, buf + 2, 2, outf);
+  /* FIXME */
+  (void) status;
 
   iw0 = bfd_getl16 (buf);
   iw1 = bfd_getl16 (buf + 2);
@@ -4729,6 +4733,8 @@ print_insn_bfin (bfd_vma pc, disassemble_info *outf)
   int count = 0;
 
   status = (*outf->read_memory_func) (pc & ~0x01, buf, 2, outf);
+  /* FIXME */
+  (void) status;
   iw0 = bfd_getl16 (buf);
 
   count += _print_insn_bfin (pc, outf);

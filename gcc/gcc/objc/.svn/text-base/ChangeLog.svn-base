@@ -1,3 +1,177 @@
+2010-07-15  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* objc-act.c: Carefully replace TREE_CHAIN with DECL_CHAIN.
+
+2010-07-10  Iain Sandoe  <iains@gcc.gnu.org>
+
+	PR objc/44140
+	* objc-act.c: build_objc_string_decl() remove declaration.
+	(finish_var_decl): Remove forcing of var output and marking
+	as "Used". 
+	(init_def_list): Use integer_zero_node. 
+	(init_objc_symtab): Use integer_zero_node, make the short
+	integer type specific on relevant nodes.
+	(generate_objc_symtab_decl): Remove call to 
+	forward_declare_categories().  Use null_pointer_node where
+	appropriate.  
+	(build_module_descriptor): Comment and mark this item as 
+	DECL_PRESERVE_P. 
+	(generate_static_references): Use gcc_unreachable instead of
+	abort (). 
+	(diagnose_missing_method): New.
+	(build_next_selector_translation_table): New.
+	(build_gnu_selector_translation_table): New.
+	(add_objc_string): Merge code from build_objc_string_decl...
+	... and delete build_objc_string_decl().
+	(generate_dispatch_table): Make integer types explicit.
+	(generate_category): Pass implent and arrange for the data
+	to be extracted within the routine.  Do not start new vars, 
+	but finish the ones collcted during parsing.
+	(generate_shared_structures): Likewise.
+	(finish_objc):  Reorder code so that we finish variables before
+	referencing them.  Save the global data before calling meta-data
+	creation routines, and pass the current reference to the two 
+	main routines.  Only call generate_objc_image_info () for the 
+	NeXT runtime.
+	(generate_classref_translation_entry): Comment on and make this
+	item DECL_PRESERVE_P.
+	(handle_class_ref): Use varpool interfaces, comment on and make
+	this item DECL_PRESERVE_P.
+	(handle_impent): Likewise.
+	(generate_objc_image_info): Only generate when the content is 
+	non-zero.  Make integer types explict.
+
+2010-07-03  Nathan Froyd  <froydnj@codesourcery.com>
+
+	PR objc/24867
+	* objc-act.c (build_sized_array_type): New function.
+	(add_objc_string): Use it.
+	(generate_protocol_list): Likewise.
+	(generate_objc_image_info): Likewise.
+	(add_field_decl): New function.
+	(objc_build_struct): Use a VEC rather than building a TREE_LIST.
+	(generate_struct_by_value_array): Use add_field_decl.
+	(build_objc_symtab_template): Likewise.
+	(build_module_descriptor): Likewise.
+	(build_objc_exception_stuff): Likewise.
+	(build_protocol_template): Likewise.
+	(build_method_prototype_list_template): Likewise.
+	(build_method_prototype_template): Likewise.
+	(build_category_template): Likewise.
+	(build_selector_template): Likewise.
+	(build_class_template): Likewise.
+	(build_super_template): Likewise.
+	(build_ivar_template): Likewise.
+	(build_ivar_list_template): Likewise.
+	(build_method_list_template): Likewise.
+	(build_method_template): Likewise.
+
+2010-06-28  Steven Bosscher  <steven@gcc.gnu.org>
+
+	* objc-act.c: Do not include except.h.
+
+2010-06-08  Laurynas Biveinis  <laurynas.biveinis@gmail.com>
+
+	* objc-act.h (ALLOC_OBJC_TYPE_LANG_SPECIFIC): Use typed GC
+	allocation.
+
+	* objc-act.c (objc_volatilize_decl): Likewise.
+	(objc_build_string_object): Likewise.
+	(hash_init): Likewise.
+	(hash_enter): Likewise.
+	(hash_add_attr): Likewise.
+	(add_class): Likewise.
+	(start_class): Likewise.
+
+2010-06-05  Steven Bosscher  <steven@gcc.gnu.org>
+
+	* objc-act.c: Update include path for moved files.
+	* objc-lang.c: Likewise.
+	* config-lang.in: Update paths in gtfiles for files in c-family/.
+
+2010-06-01  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* objc-act.c (build_next_objc_exception_stuff): Give setjmp a
+	varargs type instead of a zero-argument type.
+
+2010-05-30  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* objc-act.c (synth_module_prologue): Use build_function_type_list
+	instead of build_function_type.
+	(build_module_initializer_routine): Likewise.
+	(build_next_objc_exception_stuff): Likewise.
+	(build_objc_exception_stuff): Likewise.
+
+2010-05-27  Joseph Myers  <joseph@codesourcery.com>
+
+	* objc-act.c: Include diagnostic-core.h instead of diagnostic.h.
+	* Make-lang.in (objc/objc-act.o): Update dependencies.
+
+2010-05-25  Steven Bosscher  <steven@gcc.gnu.org>
+
+	* objc-act.h: Do not include gimple.h.
+	* objc-act.c: Do not include rtl.h, expr.h, libfuncs.h, and tm_p.h.
+	Include gimple.h.  Explain why except.h has to be included.
+	* objc-lang.c: Do not include diagnostics.h.
+	* Make-lang.in: Update dependencies.
+
+2010-05-25  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* objc-act.c (objc_build_constructor): Adjust OBJCPLUS impedance
+	mismatch code for VECs.
+
+2010-05-25  Nathan Froyd  <froydnj@codesourcery.com>
+
+	* objc-act.c (objc_build_constructor): Take a VEC instead of a tree.
+	Use build_constructor instead of build_constructor_from_list.
+	(objc_build_string_object): Build a VEC argument for
+	objc_build_constructor.
+	(init_def_list): Likewise.
+	(init_objc_symtab): Likewise.
+	(init_module_descriptor): Likewise.
+	(generate_static_references): Likewise.
+	(build_selector_translation_table): Likewise.
+	(build_descriptor_table_initializer): Likewise.
+	(generate_descriptor_table): Likewise.
+	(build_protocol_initializer): Likewise.
+	(build_ivar_list_initializer): Likewise.
+	(generate_ivars_list): Likewise.
+	(build_dispatch_table_initializer): Likewise.
+	(generate_dispatch_table): Likewise.
+	(generate_protocol_list): Likewise.
+	(build_category_initializer): Likewise.
+	(build_shared_structure_initializer): Likewise.
+	(generate_objc_image_info): Likewise.
+
+2010-04-30  Iain Sandoe  <iains@gcc.gnu.org>
+
+	PR objc++/32052
+	* objc-act.c (encode_aggregate_within): Encode structure tags
+	with template args for ObjC++.
+
+2010-04-30  Steven Bosscher  <steven@gcc.gnu.org>
+
+	* objc-act.c: Do not include varray.h.
+
+2010-04-07  Jakub Jelinek  <jakub@redhat.com>
+
+	PR c/18624
+	* objc-act.c (finish_var_decl, objc_begin_catch_clause,
+	really_start_method, get_super_receiver, handle_class_ref): Set
+	DECL_READ_P in addition to TREE_USED.
+
+2010-04-07  Iain Sandoe <iains@gcc.gnu.org>
+
+	PR objc/35996
+	* objc-act.c (objc_init): Warn that -fobjc-gc is ignored for
+	-fgnu-runtime and set flag_objc_gc to zero.
+
+2010-04-07  Iain Sandoe <iains@gcc.gnu.org>
+
+	PR objc++/23716
+	* objc-act.c (build_module_initializer_routine): Make the argument
+	to objc_start_function NULL_TREE when compiling ObjC++.
+
 2010-02-18  Iain Sandoe <iain.sandoe@sandoe-acoustics.co.uk>
 	    Mike Stump  <mikestump@comcast.net>
 

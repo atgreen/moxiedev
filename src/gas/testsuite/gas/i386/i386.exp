@@ -37,6 +37,7 @@ if [expr ([istarget "i*86-*-*"] ||  [istarget "x86_64-*-*"]) && [gas_32_check]] 
     run_dump_test "intel16"
     run_list_test "intelbad" ""
     run_dump_test "intelok"
+    run_dump_test "intel-got32"
     run_dump_test "prefix"
     run_dump_test "amd"
     run_dump_test "katmai"
@@ -168,6 +169,12 @@ if [expr ([istarget "i*86-*-*"] ||  [istarget "x86_64-*-*"]) && [gas_32_check]] 
     run_dump_test "fma4"
     run_dump_test "lwp"
     run_dump_test "xop"
+    run_dump_test "f16c"
+    run_dump_test "f16c-intel"
+    run_dump_test "fsgs"
+    run_dump_test "fsgs-intel"
+    run_dump_test "rdrnd"
+    run_dump_test "rdrnd-intel"
 
     # These tests require support for 8 and 16 bit relocs,
     # so we only run them for ELF and COFF targets.
@@ -205,6 +212,12 @@ if [expr ([istarget "i*86-*-*"] ||  [istarget "x86_64-*-*"]) && [gas_32_check]] 
 	run_dump_test "ifunc"
 	run_list_test "l1om-inval" "-march=l1om --32"
 	run_dump_test "localpic"
+	run_dump_test "debug1"
+
+	if [expr [istarget "*-*-linux*"]] then {
+	    setup_xfail "*-*-linux*"
+	    run_dump_test "dw2-compress-2"
+	}
     }
 
     # This is a PE specific test.
@@ -223,9 +236,14 @@ if [expr [istarget "i*86-*-*"] || [istarget "x86_64-*-*"]] then {
     run_dump_test "string-ok"
     run_list_test "string-bad" ""
     run_list_test "space1" "-al"
-    run_list_test_stdin "list-1" "-al"
-    run_list_test_stdin "list-2" "-al"
-    run_list_test_stdin "list-3" "-al"
+    if [is_elf_format] then {
+	run_list_test_stdin "list-1" "-al"
+	run_list_test_stdin "list-2" "-al"
+	run_list_test_stdin "list-3" "-al"
+    }
+    if [expr [istarget "*-*-linux*"]] then {
+	run_dump_test "dw2-compress-1"
+    }
 }
 
 if [expr ([istarget "i*86-*-*"] || [istarget "x86_64-*-*"]) && [gas_64_check]] then {
@@ -311,6 +329,7 @@ if [expr ([istarget "i*86-*-*"] || [istarget "x86_64-*-*"]) && [gas_64_check]] t
     if { ![istarget "*-*-mingw*"] } then {
       run_dump_test "x86-64-opcode-inval"
       run_dump_test "x86-64-opcode-inval-intel"
+      run_dump_test "intel-got64"
     }
     run_dump_test "rexw"
     run_dump_test "x86-64-fxsave"
@@ -353,6 +372,12 @@ if [expr ([istarget "i*86-*-*"] || [istarget "x86_64-*-*"]) && [gas_64_check]] t
     run_dump_test "x86-64-fma4"
     run_dump_test "x86-64-lwp"
     run_dump_test "x86-64-xop"
+    run_dump_test "x86-64-f16c"
+    run_dump_test "x86-64-f16c-intel"
+    run_dump_test "x86-64-fsgs"
+    run_dump_test "x86-64-fsgs-intel"
+    run_dump_test "x86-64-rdrnd"
+    run_dump_test "x86-64-rdrnd-intel"
 
     if { ![istarget "*-*-aix*"]
       && ![istarget "*-*-beos*"]
@@ -380,6 +405,12 @@ if [expr ([istarget "i*86-*-*"] || [istarget "x86_64-*-*"]) && [gas_64_check]] t
 	run_dump_test "x86-64-ifunc"
 	run_dump_test "l1om"
 	run_dump_test "x86-64-localpic"
+	run_dump_test "debug1"
+
+	if [istarget "*-*-linux*"] then {
+	    setup_xfail "*-*-linux*"
+	    run_dump_test "x86-64-dw2-compress-2"
+	}
     }
 
     set ASFLAGS "$old_ASFLAGS"

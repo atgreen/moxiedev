@@ -1,5 +1,5 @@
 /* Tcl/Tk command definitions for Insight - Breakpoints.
-   Copyright (C) 2001, 2002, 2008, 2009 Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2008, 2009, 2010 Free Software Foundation, Inc.
 
    This file is part of GDB.
 
@@ -32,6 +32,11 @@
 #include "observer.h"
 #include "arch-utils.h"
 #include "exceptions.h"
+
+/* Globals to support action and breakpoint commands.  */
+static Tcl_Obj **gdbtk_obj_array;
+static int gdbtk_obj_array_cnt;
+static int gdbtk_obj_array_ptr;
 
 /* From breakpoint.c */
 extern struct breakpoint *breakpoint_chain;
@@ -155,6 +160,17 @@ Gdbtk_Breakpoint_Init (Tcl_Interp *interp)
   memset (breakpoint_list, 0, breakpoint_list_size * sizeof (struct breakpoint *));
 
   return TCL_OK;
+}
+
+/* A line buffer for breakpoint commands and tracepoint actions
+   input validation.  */
+static char *
+gdbtk_read_next_line (void)
+{
+  if (gdbtk_obj_array_ptr == gdbtk_obj_array_cnt)
+    return NULL;
+
+  return  Tcl_GetStringFromObj (gdbtk_obj_array[gdbtk_obj_array_ptr++], NULL);
 }
 
 /*
@@ -346,7 +362,7 @@ gdb_get_breakpoint_info (ClientData clientData, Tcl_Interp *interp, int objc,
 			    Tcl_NewIntObj (b->ignore_count));
 
   Tcl_ListObjAppendElement (NULL, result_ptr->obj_ptr,
-			    get_breakpoint_commands (b->commands));
+			    get_breakpoint_commands ((breakpoint_commands (b)) ? breakpoint_commands (b) : NULL));
 
   Tcl_ListObjAppendElement (NULL, result_ptr->obj_ptr,
 			    Tcl_NewStringObj (b->cond_string, -1));
@@ -530,9 +546,15 @@ gdb_set_bp (ClientData clientData, Tcl_Interp *interp,
 
   TRY_CATCH (e, RETURN_MASK_ALL)
     {
-      set_breakpoint (get_current_arch (), address, condition,
-		      0 /* hardwareflag */, temp, thread, ignore_count,
-		      pending, enabled);
+      create_breakpoint (get_current_arch (), address, condition, thread,
+			 0	/* condition and thread are valid */,
+			 temp,
+			 bp_breakpoint /* type wanted */,
+			 ignore_count,
+			 (pending ? AUTO_BOOLEAN_TRUE : AUTO_BOOLEAN_FALSE),
+			 NULL	/* breakpoint ops */,
+			 0	/* from_tty */,
+			 enabled);
     }
 
   if (e.reason < 0)
@@ -642,13 +664,9 @@ static int
 gdb_actions_command (ClientData clientData, Tcl_Interp *interp,
 		     int objc, Tcl_Obj *CONST objv[])
 {
+  char *number;
   struct breakpoint *tp;
-  Tcl_Obj **actions;
-  int nactions, i, len;
-  char *number, *args, *action;
-  long step_count;
-  struct action_line *next = NULL, *temp;
-  enum actionline_type linetype;
+  struct command_line *commands;
 
   if (objc != 3)
     {
@@ -656,8 +674,8 @@ gdb_actions_command (ClientData clientData, Tcl_Interp *interp,
       return TCL_ERROR;
     }
 
-  args = number = Tcl_GetStringFromObj (objv[1], NULL);
-  tp = get_tracepoint_by_number (&args, 0, 0);
+  number = Tcl_GetStringFromObj (objv[1], NULL);
+  tp = get_tracepoint_by_number (&number, 0, 0);
   if (tp == NULL)
     {
       Tcl_AppendStringsToObj (result_ptr->obj_ptr, "Tracepoint \"",
@@ -665,42 +683,14 @@ gdb_actions_command (ClientData clientData, Tcl_Interp *interp,
       return TCL_ERROR;
     }
 
-  /* Free any existing actions */
-  if (tp->actions != NULL)
-    free_actions (tp);
+  /* Validate and set new tracepoint actions.  */
+  Tcl_ListObjGetElements (interp, objv[2], &gdbtk_obj_array_cnt,
+			  &gdbtk_obj_array);
+  gdbtk_obj_array_ptr = 1;
+  commands = read_command_lines_1 (gdbtk_read_next_line, 1,
+				   check_tracepoint_command, tp);  
 
-  step_count = 0;
-
-  Tcl_ListObjGetElements (interp, objv[2], &nactions, &actions);
-
-  /* Add the actions to the tracepoint */
-  for (i = 0; i < nactions; i++)
-    {
-      temp = xmalloc (sizeof (struct action_line));
-      temp->next = NULL;
-      action = Tcl_GetStringFromObj (actions[i], &len);
-      temp->action = savestring (action, len);
-
-      linetype = validate_actionline (&(temp->action), tp);
-
-      if (linetype == BADLINE)
-	{
-	  free (temp);
-	  continue;
-	}
-
-      if (next == NULL)
-	{
-	  tp->actions = temp;
-	  next = temp;
-	}
-      else
-	{
-	  next->next = temp;
-	  next = temp;
-	}
-    }
-
+  breakpoint_set_commands (tp, commands);
   return TCL_OK;
 }
 
@@ -726,7 +716,7 @@ gdb_get_tracepoint_info (ClientData clientData, Tcl_Interp *interp,
   struct symtab_and_line sal;
   int tpnum;
   struct breakpoint *tp;
-  struct action_line *al;
+  struct command_line *cl;
   Tcl_Obj *action_list;
   char *filename, *funcname;
 
@@ -779,12 +769,15 @@ gdb_get_tracepoint_info (ClientData clientData, Tcl_Interp *interp,
 
   /* Append a list of actions */
   action_list = Tcl_NewObj ();
-  for (al = tp->actions; al != NULL; al = al->next)
+  if (tp->commands != NULL)
     {
-      Tcl_ListObjAppendElement (interp, action_list,
-				Tcl_NewStringObj (al->action, -1));
+      for (cl = breakpoint_commands (tp); cl != NULL; cl = cl->next)
+	{
+	  Tcl_ListObjAppendElement (interp, action_list,
+				    Tcl_NewStringObj (cl->line, -1));
+	}
+      Tcl_ListObjAppendElement (interp, result_ptr->obj_ptr, action_list);
     }
-  Tcl_ListObjAppendElement (interp, result_ptr->obj_ptr, action_list);
 
   return TCL_OK;
 }

@@ -85,6 +85,7 @@ typedef unsigned char gdb_byte;
    least the size of a (void *).  */
 typedef long long CORE_ADDR;
 
+typedef long long LONGEST;
 typedef unsigned long long ULONGEST;
 
 /* The ptid struct is a collection of the various "ids" necessary
@@ -162,8 +163,53 @@ struct inferior_list_entry
   struct inferior_list_entry *next;
 };
 
-/* Opaque type for user-visible threads.  */
 struct thread_info;
+struct process_info;
+struct regcache;
+
+#include "regcache.h"
+#include "gdb/signals.h"
+#include "gdb_signals.h"
+#include "target.h"
+#include "mem-break.h"
+
+struct thread_info
+{
+  struct inferior_list_entry entry;
+  void *target_data;
+  void *regcache_data;
+
+  /* The last resume GDB requested on this thread.  */
+  enum resume_kind last_resume_kind;
+
+  /* The last wait status reported for this thread.  */
+  struct target_waitstatus last_status;
+
+  /* Given `while-stepping', a thread may be collecting data for more
+     than one tracepoint simultaneously.  E.g.:
+
+    ff0001  INSN1 <-- TP1, while-stepping 10 collect $regs
+    ff0002  INSN2
+    ff0003  INSN3 <-- TP2, collect $regs
+    ff0004  INSN4 <-- TP3, while-stepping 10 collect $regs
+    ff0005  INSN5
+
+   Notice that when instruction INSN5 is reached, the while-stepping
+   actions of both TP1 and TP3 are still being collected, and that TP2
+   had been collected meanwhile.  The whole range of ff0001-ff0005
+   should be single-stepped, due to at least TP1's while-stepping
+   action covering the whole range.
+
+   On the other hand, the same tracepoint with a while-stepping action
+   may be hit by more than one thread simultaneously, hence we can't
+   keep the current step count in the tracepoint itself.
+
+   This is the head of the list of the states of `while-stepping'
+   tracepoint actions this thread is now collecting; NULL if empty.
+   Each item in the list holds the current step of the while-stepping
+   action.  */
+  struct wstep_state *while_stepping;
+};
 
 struct dll_info
 {
@@ -174,23 +220,33 @@ struct dll_info
 
 struct sym_cache;
 struct breakpoint;
+struct raw_breakpoint;
+struct fast_tracepoint_jump;
 struct process_info_private;
 
 struct process_info
 {
   struct inferior_list_entry head;
 
+  /* Nonzero if this child process was attached rather than
+     spawned.  */
   int attached;
+
+  /* True if GDB asked us to detach from this process, but we remained
+     attached anyway.  */
+  int gdb_detached;
 
   /* The symbol cache.  */
   struct sym_cache *symbol_cache;
 
-  /* If this flag has been set, assume symbol cache misses are
-     failures.  */
-  int all_symbols_looked_up;
-
   /* The list of memory breakpoints.  */
   struct breakpoint *breakpoints;
+
+  /* The list of raw memory breakpoints.  */
+  struct raw_breakpoint *raw_breakpoints;
+
+  /* The list of installed fast tracepoints.  */
+  struct fast_tracepoint_jump *fast_tracepoint_jumps;
 
   /* Private target data.  */
   struct process_info_private *private;
@@ -202,12 +258,6 @@ struct process_info
 
 struct process_info *current_process (void);
 struct process_info *get_thread_process (struct thread_info *);
-
-#include "regcache.h"
-#include "gdb/signals.h"
-#include "gdb_signals.h"
-#include "target.h"
-#include "mem-break.h"
 
 /* Target-specific functions */
 
@@ -286,17 +336,21 @@ extern int non_stop;
 
 /* Functions from event-loop.c.  */
 typedef void *gdb_client_data;
-typedef void (handler_func) (int, gdb_client_data);
+typedef int (handler_func) (int, gdb_client_data);
+typedef int (callback_handler_func) (gdb_client_data);
 
 extern void delete_file_handler (int fd);
 extern void add_file_handler (int fd, handler_func *proc,
 			      gdb_client_data client_data);
+extern int append_callback_event (callback_handler_func *proc,
+				   gdb_client_data client_data);
+extern void delete_callback_event (int id);
 
 extern void start_event_loop (void);
 
 /* Functions from server.c.  */
-extern void handle_serial_event (int err, gdb_client_data client_data);
-extern void handle_target_event (int err, gdb_client_data client_data);
+extern int handle_serial_event (int err, gdb_client_data client_data);
+extern int handle_target_event (int err, gdb_client_data client_data);
 
 extern void push_event (ptid_t ptid, struct target_waitstatus *status);
 
@@ -309,9 +363,10 @@ extern void hostio_last_error_from_errno (char *own_buf);
 /* From remote-utils.c */
 
 extern int remote_debug;
-extern int all_symbols_looked_up;
 extern int noack_mode;
 extern int transport_is_reliable;
+
+int gdb_connected (void);
 
 ptid_t read_ptid (char *buf, char **obuf);
 char *write_ptid (char *buf, ptid_t ptid);
@@ -328,8 +383,8 @@ void initialize_async_io (void);
 void enable_async_io (void);
 void disable_async_io (void);
 void check_remote_input_interrupt_request (void);
-void convert_ascii_to_int (char *from, unsigned char *to, int n);
-void convert_int_to_ascii (unsigned char *from, char *to, int n);
+void convert_ascii_to_int (const char *from, unsigned char *to, int n);
+void convert_int_to_ascii (const unsigned char *from, char *to, int n);
 void new_thread_notify (int id);
 void dead_thread_notify (int id);
 void prepare_resume_reply (char *buf, ptid_t ptid,
@@ -340,9 +395,9 @@ void decode_address (CORE_ADDR *addrp, const char *start, int len);
 void decode_m_packet (char *from, CORE_ADDR * mem_addr_ptr,
 		      unsigned int *len_ptr);
 void decode_M_packet (char *from, CORE_ADDR * mem_addr_ptr,
-		      unsigned int *len_ptr, unsigned char *to);
+		      unsigned int *len_ptr, unsigned char **to_p);
 int decode_X_packet (char *from, int packet_len, CORE_ADDR * mem_addr_ptr,
-		     unsigned int *len_ptr, unsigned char *to);
+		     unsigned int *len_ptr, unsigned char **to_p);
 int decode_xfer_write (char *buf, int packet_len, char **annex,
 		       CORE_ADDR *offset, unsigned int *len,
 		       unsigned char *data);
@@ -356,9 +411,12 @@ int hexify (char *hex, const char *bin, int count);
 int remote_escape_output (const gdb_byte *buffer, int len,
 			  gdb_byte *out_buf, int *out_len,
 			  int out_maxlen);
+char *unpack_varlen_hex (char *buff,  ULONGEST *result);
 
 void clear_symbol_cache (struct sym_cache **symcache_p);
-int look_up_one_symbol (const char *name, CORE_ADDR *addrp);
+int look_up_one_symbol (const char *name, CORE_ADDR *addrp, int may_ask_gdb);
+
+int relocate_instruction (CORE_ADDR *to, CORE_ADDR oldloc);
 
 void monitor_output (const char *msg);
 
@@ -391,7 +449,7 @@ char* buffer_finish (struct buffer *buffer);
 /* Simple printf to BUFFER function.  Current implemented formatters:
    %s - grow an xml escaped text in OBSTACK.  */
 void buffer_xml_printf (struct buffer *buffer, const char *format, ...)
-  ATTR_FORMAT (printf, 2, 3);;
+  ATTR_FORMAT (printf, 2, 3);
 
 #define buffer_grow_str(BUFFER,STRING)         \
   buffer_grow (BUFFER, STRING, strlen (STRING))
@@ -401,14 +459,48 @@ void buffer_xml_printf (struct buffer *buffer, const char *format, ...)
 /* Functions from utils.c */
 
 void *xmalloc (size_t) ATTR_MALLOC;
+void *xrealloc (void *, size_t);
 void *xcalloc (size_t, size_t) ATTR_MALLOC;
 char *xstrdup (const char *) ATTR_MALLOC;
 void freeargv (char **argv);
 void perror_with_name (const char *string);
 void error (const char *string,...) ATTR_NORETURN ATTR_FORMAT (printf, 1, 2);
 void fatal (const char *string,...) ATTR_NORETURN ATTR_FORMAT (printf, 1, 2);
+void internal_error (const char *file, int line, const char *, ...)
+     ATTR_NORETURN ATTR_FORMAT (printf, 3, 4);
 void warning (const char *string,...) ATTR_FORMAT (printf, 1, 2);
 char *paddress (CORE_ADDR addr);
+char *pulongest (ULONGEST u);
+char *plongest (LONGEST l);
+char *phex_nz (ULONGEST l, int sizeof_l);
+
+#define gdb_assert(expr)                                                      \
+  ((void) ((expr) ? 0 :                                                       \
+	   (gdb_assert_fail (#expr, __FILE__, __LINE__, ASSERT_FUNCTION), 0)))
+
+/* Version 2.4 and later of GCC define a magical variable `__PRETTY_FUNCTION__'
+   which contains the name of the function currently being defined.
+   This is broken in G++ before version 2.6.
+   C9x has a similar variable called __func__, but prefer the GCC one since
+   it demangles C++ function names.  */
+#if (GCC_VERSION >= 2004)
+#define ASSERT_FUNCTION		__PRETTY_FUNCTION__
+#else
+#if defined __STDC_VERSION__ && __STDC_VERSION__ >= 199901L
+#define ASSERT_FUNCTION		__func__
+#endif
+#endif
+
+/* This prints an "Assertion failed" message, and exits.  */
+#if defined (ASSERT_FUNCTION)
+#define gdb_assert_fail(assertion, file, line, function)		\
+  internal_error (file, line, "%s: Assertion `%s' failed.",		\
+		  function, assertion)
+#else
+#define gdb_assert_fail(assertion, file, line, function)		\
+  internal_error (file, line, "Assertion `%s' failed.",			\
+		  assertion)
+#endif
 
 /* Maximum number of bytes to read/write at once.  The value here
    is chosen to fill up a packet (the headers account for the 32).  */
@@ -418,6 +510,125 @@ char *paddress (CORE_ADDR addr);
    value to accomodate multiple register formats.  This value must be at least
    as large as the largest register set supported by gdbserver.  */
 #define PBUFSIZ 16384
+
+/* Functions from tracepoint.c */
+
+int in_process_agent_loaded (void);
+
+void initialize_tracepoint (void);
+
+extern int tracing;
+extern int disconnected_tracing;
+
+void tracepoint_look_up_symbols (void);
+
+void stop_tracing (void);
+
+int handle_tracepoint_general_set (char *own_buf);
+int handle_tracepoint_query (char *own_buf);
+
+int tracepoint_finished_step (struct thread_info *tinfo, CORE_ADDR stop_pc);
+int tracepoint_was_hit (struct thread_info *tinfo, CORE_ADDR stop_pc);
+
+void release_while_stepping_state_list (struct thread_info *tinfo);
+
+extern int current_traceframe;
+
+int in_readonly_region (CORE_ADDR addr, ULONGEST length);
+int traceframe_read_mem (int tfnum, CORE_ADDR addr,
+			 unsigned char *buf, ULONGEST length,
+			 ULONGEST *nbytes);
+int fetch_traceframe_registers (int tfnum,
+				struct regcache *regcache,
+				int regnum);
+
+int traceframe_read_sdata (int tfnum, ULONGEST offset,
+			   unsigned char *buf, ULONGEST length,
+			   ULONGEST *nbytes);
+
+/* If a thread is determined to be collecting a fast tracepoint, this
+   structure holds the collect status.  */
+
+struct fast_tpoint_collect_status
+{
+  /* The tracepoint that is presently being collected.  */
+  int tpoint_num;
+  CORE_ADDR tpoint_addr;
+
+  /* The address range in the jump pad of where the original
+     instruction the tracepoint jump was inserted was relocated
+     to.  */
+  CORE_ADDR adjusted_insn_addr;
+  CORE_ADDR adjusted_insn_addr_end;
+};
+
+int fast_tracepoint_collecting (CORE_ADDR thread_area,
+				CORE_ADDR stop_pc,
+				struct fast_tpoint_collect_status *status);
+void force_unlock_trace_buffer (void);
+
+int handle_tracepoint_bkpts (struct thread_info *tinfo, CORE_ADDR stop_pc);
+
+#ifdef IN_PROCESS_AGENT
+void initialize_low_tracepoint (void);
+void supply_fast_tracepoint_registers (struct regcache *regcache,
+				       const unsigned char *regs);
+void supply_static_tracepoint_registers (struct regcache *regcache,
+					 const unsigned char *regs,
+					 CORE_ADDR pc);
+#else
+void stop_tracing (void);
+#endif
+
+/* Bytecode compilation function vector.  */
+
+struct emit_ops
+{
+  void (*emit_prologue) (void);
+  void (*emit_epilogue) (void);
+  void (*emit_add) (void);
+  void (*emit_sub) (void);
+  void (*emit_mul) (void);
+  void (*emit_lsh) (void);
+  void (*emit_rsh_signed) (void);
+  void (*emit_rsh_unsigned) (void);
+  void (*emit_ext) (int arg);
+  void (*emit_log_not) (void);
+  void (*emit_bit_and) (void);
+  void (*emit_bit_or) (void);
+  void (*emit_bit_xor) (void);
+  void (*emit_bit_not) (void);
+  void (*emit_equal) (void);
+  void (*emit_less_signed) (void);
+  void (*emit_less_unsigned) (void);
+  void (*emit_ref) (int size);
+  void (*emit_if_goto) (int *offset_p, int *size_p);
+  void (*emit_goto) (int *offset_p, int *size_p);
+  void (*write_goto_address) (CORE_ADDR from, CORE_ADDR to, int size);
+  void (*emit_const) (LONGEST num);
+  void (*emit_call) (CORE_ADDR fn);
+  void (*emit_reg) (int reg);
+  void (*emit_pop) (void);
+  void (*emit_stack_flush) (void);
+  void (*emit_zero_ext) (int arg);
+  void (*emit_swap) (void);
+  void (*emit_stack_adjust) (int n);
+
+  /* Emit code for a generic function that takes one fixed integer
+     argument and returns a 64-bit int (for instance, tsv getter).  */
+  void (*emit_int_call_1) (CORE_ADDR fn, int arg1);
+
+  /* Emit code for a generic function that takes one fixed integer
+     argument and a 64-bit int from the top of the stack, and returns
+     nothing (for instance, tsv setter).  */
+  void (*emit_void_call_2) (CORE_ADDR fn, int arg1);
+};
+
+/* Returns the address of the get_raw_reg function in the IPA.  */
+CORE_ADDR get_raw_reg_func_addr (void);
+
+CORE_ADDR current_insn_ptr;
+int emit_error;
 
 /* Version information, from version.c.  */
 extern const char version[];

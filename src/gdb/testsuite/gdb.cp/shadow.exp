@@ -20,14 +20,16 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile shadow
 set srcfile ${testfile}.cc
 set binfile ${objdir}/${subdir}/${testfile}
 if  { [gdb_compile "${srcdir}/${subdir}/${srcfile}" "${binfile}" executable {debug c++}] != "" } {
     untested "Couldn't compile test program"
+    return -1
+}
+
+if [get_compiler_info ${binfile}] {
     return -1
 }
 
@@ -85,5 +87,9 @@ gdb_test "print x" "= 55" "Print local x not namespace x"
 gdb_breakpoint [gdb_get_line_number "marker5"]
 gdb_continue_to_breakpoint "marker5"
 
-setup_kfail "gdb/7936" "*-*-*"
+if { [test_compiler_info {gcc-[0-3]-*}] ||
+     [test_compiler_info {gcc-4-[0-3]-*}]} {
+    setup_xfail *-*-*
+}
+
 gdb_test "print x" "= 11" "Print imported namespace x"

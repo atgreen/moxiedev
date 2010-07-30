@@ -29,6 +29,7 @@
 #include "gdb_string.h"
 #include "linux-fork.h"
 #include "linux-nat.h"
+#include "gdbthread.h"
 
 #include <sys/ptrace.h>
 #include "gdb_wait.h"
@@ -47,6 +48,7 @@ struct fork_info
 {
   struct fork_info *next;
   ptid_t ptid;
+  ptid_t parent_ptid;
   int num;			/* Convenient handle (GDB fork id) */
   struct regcache *savedregs;	/* Convenient for info fork, saves
 				   having to actually switch contexts.  */
@@ -410,12 +412,78 @@ linux_fork_detach (char *args, int from_tty)
     delete_fork (inferior_ptid);
 }
 
+static void
+inferior_call_waitpid_cleanup (void *fp)
+{
+  struct fork_info *oldfp = fp;
+
+  if (oldfp)
+    {
+      /* Switch back to inferior_ptid. */
+      remove_breakpoints ();
+      fork_load_infrun_state (oldfp);
+      insert_breakpoints ();
+    }
+}
+
+static int
+inferior_call_waitpid (ptid_t pptid, int pid)
+{
+  struct objfile *waitpid_objf;
+  struct value *waitpid_fn = NULL;
+  struct value *argv[4], *retv;
+  struct gdbarch *gdbarch = get_current_arch ();
+  struct fork_info *oldfp = NULL, *newfp = NULL;
+  struct cleanup *old_cleanup;
+  int ret = -1;
+
+  if (!ptid_equal (pptid, inferior_ptid))
+    {
+      /* Switch to pptid.  */
+      oldfp = find_fork_ptid (inferior_ptid);
+      gdb_assert (oldfp != NULL);
+      newfp = find_fork_ptid (pptid);
+      gdb_assert (oldfp != NULL);
+      fork_save_infrun_state (oldfp, 1);
+      remove_breakpoints ();
+      fork_load_infrun_state (newfp);
+      insert_breakpoints ();
+    }
+
+  old_cleanup = make_cleanup (inferior_call_waitpid_cleanup, oldfp);
+
+  /* Get the waitpid_fn.  */
+  if (lookup_minimal_symbol ("waitpid", NULL, NULL) != NULL)
+    waitpid_fn = find_function_in_inferior ("waitpid", &waitpid_objf);
+  if (!waitpid_fn && lookup_minimal_symbol ("_waitpid", NULL, NULL) != NULL)
+    waitpid_fn = find_function_in_inferior ("_waitpid", &waitpid_objf);
+  if (!waitpid_fn)
+    goto out;
+
+  /* Get the argv.  */
+  argv[0] = value_from_longest (builtin_type (gdbarch)->builtin_int, pid);
+  argv[1] = value_from_pointer (builtin_type (gdbarch)->builtin_data_ptr, 0);
+  argv[2] = value_from_longest (builtin_type (gdbarch)->builtin_int, 0);
+  argv[3] = 0;
+
+  retv = call_function_by_hand (waitpid_fn, 3, argv);
+  if (value_as_long (retv) < 0)
+    goto out;
+
+  ret = 0;
+
+out:
+  do_cleanups (old_cleanup);
+  return ret;
+}
+
 /* Fork list <-> user interface.  */
 
 static void
 delete_checkpoint_command (char *args, int from_tty)
 {
-  ptid_t ptid;
+  ptid_t ptid, pptid;
+  struct fork_info *fi;
 
   if (!args || !*args)
     error (_("Requires argument (checkpoint id to delete)"));
@@ -431,10 +499,25 @@ Please switch to another checkpoint before deleting the current one"));
   if (ptrace (PTRACE_KILL, PIDGET (ptid), 0, 0))
     error (_("Unable to kill pid %s"), target_pid_to_str (ptid));
 
+  fi = find_fork_ptid (ptid);
+  gdb_assert (fi);
+  pptid = fi->parent_ptid;
+
   if (from_tty)
     printf_filtered (_("Killed %s\n"), target_pid_to_str (ptid));
 
   delete_fork (ptid);
+
+  /* If fi->parent_ptid is not a part of lwp but it's a part of checkpoint
+     list, waitpid the ptid.
+     If fi->parent_ptid is a part of lwp and it is stoped, waitpid the
+     ptid.  */
+  if ((!find_thread_ptid (pptid) && find_fork_ptid (pptid))
+      || (find_thread_ptid (pptid) && is_stopped (pptid)))
+    {
+      if (inferior_call_waitpid (pptid, PIDGET (ptid)))
+        warning (_("Unable to wait pid %s"), target_pid_to_str (ptid));
+    }
 }
 
 static void
@@ -468,11 +551,8 @@ static void
 info_checkpoints_command (char *arg, int from_tty)
 {
   struct gdbarch *gdbarch = get_current_arch ();
-  struct frame_info *cur_frame;
   struct symtab_and_line sal;
-  struct symtab *cur_symtab;
   struct fork_info *fp;
-  int cur_line;
   ULONGEST pc;
   int requested = -1;
   struct fork_info *printed = NULL;
@@ -554,7 +634,6 @@ checkpoint_command (char *args, int from_tty)
   struct fork_info *fp;
   pid_t retpid;
   struct cleanup *old_chain;
-  long i;
 
   /* Make the inferior fork, record its (and gdb's) state.  */
 
@@ -600,6 +679,7 @@ checkpoint_command (char *args, int from_tty)
   if (!fp)
     error (_("Failed to find new fork"));
   fork_save_infrun_state (fp, 1);
+  fp->parent_ptid = last_target_ptid;
 }
 
 static void
@@ -607,8 +687,6 @@ linux_fork_context (struct fork_info *newfp, int from_tty)
 {
   /* Now we attempt to switch processes.  */
   struct fork_info *oldfp;
-  ptid_t ptid;
-  int id, i;
 
   gdb_assert (newfp != NULL);
 

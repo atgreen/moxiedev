@@ -709,15 +709,15 @@ _initialize_gdbtk ()
 	  break;
 	default:
 	  AllocConsole ();
-	  cygwin32_attach_handle_to_fd ("/dev/conin", 0,
-					GetStdHandle (STD_INPUT_HANDLE),
-					1, GENERIC_READ);
-	  cygwin32_attach_handle_to_fd ("/dev/conout", 1,
-					GetStdHandle (STD_OUTPUT_HANDLE),
-					0, GENERIC_WRITE);
-	  cygwin32_attach_handle_to_fd ("/dev/conout", 2,
-					GetStdHandle (STD_ERROR_HANDLE),
-					0, GENERIC_WRITE);
+	  cygwin_attach_handle_to_fd ("/dev/conin", 0,
+				      GetStdHandle (STD_INPUT_HANDLE),
+				      1, GENERIC_READ);
+	  cygwin_attach_handle_to_fd ("/dev/conout", 1,
+				      GetStdHandle (STD_OUTPUT_HANDLE),
+				      0, GENERIC_WRITE);
+	  cygwin_attach_handle_to_fd ("/dev/conout", 2,
+				      GetStdHandle (STD_ERROR_HANDLE),
+				      0, GENERIC_WRITE);
 	  break;
 	}
     }

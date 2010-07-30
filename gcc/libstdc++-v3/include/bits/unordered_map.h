@@ -82,6 +82,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 		__eql, std::_Select1st<std::pair<const _Key, _Tp> >(), __a)
 	{ }
 
+      __unordered_map(const __unordered_map& __x) = default;
+
       __unordered_map(__unordered_map&& __x)
       : _Base(std::forward<_Base>(__x)) { }
     };
@@ -137,6 +139,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 		__eql, std::_Select1st<std::pair<const _Key, _Tp> >(), __a)
         { }
 
+      __unordered_multimap(const __unordered_multimap& __x) = default;
+
       __unordered_multimap(__unordered_multimap&& __x)
       : _Base(std::forward<_Base>(__x)) { }
     };
@@ -159,6 +163,41 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	 _Alloc, __cache_hash_code>& __y)
     { __x.swap(__y); }
 
+  template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc,
+	   bool __cache_hash_code>
+    inline bool
+    operator==(const __unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __x,
+	       const __unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __y)
+    { return __x._M_equal(__y); }
+
+  template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc,
+	   bool __cache_hash_code>
+    inline bool
+    operator!=(const __unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __x,
+	       const __unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __y)
+    { return !(__x == __y); }
+
+  template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc,
+	   bool __cache_hash_code>
+    inline bool
+    operator==(const __unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __x,
+	       const __unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __y)
+    { return __x._M_equal(__y); }
+
+  template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc,
+	   bool __cache_hash_code>
+    inline bool
+    operator!=(const __unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __x,
+	       const __unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __y)
+    { return !(__x == __y); }
 
   /**
    *  @brief A standard container composed of unique keys (containing
@@ -211,6 +250,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	: _Base(__f, __l, __n, __hf, __eql, __a)
         { }
 
+      unordered_map(const unordered_map& __x) = default;
+
       unordered_map(unordered_map&& __x)
       : _Base(std::forward<_Base>(__x)) { }
 
@@ -221,6 +262,9 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 		    const allocator_type& __a = allocator_type())
 	: _Base(__l.begin(), __l.end(), __n, __hf, __eql, __a)
       { }
+
+      unordered_map&
+      operator=(const unordered_map& __x) = default;
 
       unordered_map&
       operator=(unordered_map&& __x)
@@ -293,6 +337,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	: _Base(__f, __l, __n, __hf, __eql, __a)
         { }
 
+      unordered_multimap(const unordered_multimap& __x) = default;
+
       unordered_multimap(unordered_multimap&& __x)
       : _Base(std::forward<_Base>(__x)) { }
 
@@ -303,6 +349,9 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 			 const allocator_type& __a = allocator_type())
 	: _Base(__l.begin(), __l.end(), __n, __hf, __eql, __a)
       { }
+
+      unordered_multimap&
+      operator=(const unordered_multimap& __x) = default;
 
       unordered_multimap&
       operator=(unordered_multimap&& __x)
@@ -334,6 +383,30 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
     swap(unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
 	 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
     { __x.swap(__y); }
+
+  template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+    inline bool
+    operator==(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
+	       const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
+    { return __x._M_equal(__y); }
+
+  template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+    inline bool
+    operator!=(const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
+	       const unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
+    { return !(__x == __y); }
+
+  template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+    inline bool
+    operator==(const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
+	       const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
+    { return __x._M_equal(__y); }
+
+  template<class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
+    inline bool
+    operator!=(const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __x,
+	       const unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>& __y)
+    { return !(__x == __y); }
 
 _GLIBCXX_END_NESTED_NAMESPACE
 

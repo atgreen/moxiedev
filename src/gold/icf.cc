@@ -145,6 +145,8 @@
 #include "symtab.h"
 #include "libiberty.h"
 #include "demangle.h"
+#include "elfcpp.h"
+#include "int_encoding.h"
 
 namespace gold
 {
@@ -263,15 +265,22 @@ get_section_contents(bool first_iteration,
     {
       Icf::Sections_reachable_info v =
         (it_reloc_info_list->second).section_info;
+      // Stores the information of the symbol pointed to by the reloc.
       Icf::Symbol_info s = (it_reloc_info_list->second).symbol_info;
+      // Stores the addend and the symbol value.
       Icf::Addend_info a = (it_reloc_info_list->second).addend_info;
+      // Stores the offset of the reloc.
       Icf::Offset_info o = (it_reloc_info_list->second).offset_info;
+      Icf::Reloc_addend_size_info reloc_addend_size_info =
+        (it_reloc_info_list->second).reloc_addend_size_info;
       Icf::Sections_reachable_info::iterator it_v = v.begin();
       Icf::Symbol_info::iterator it_s = s.begin();
       Icf::Addend_info::iterator it_a = a.begin();
       Icf::Offset_info::iterator it_o = o.begin();
+      Icf::Reloc_addend_size_info::iterator it_addend_size =
+        reloc_addend_size_info.begin();
 
-      for (; it_v != v.end(); ++it_v, ++it_s, ++it_a, ++it_o)
+      for (; it_v != v.end(); ++it_v, ++it_s, ++it_a, ++it_o, ++it_addend_size)
         {
           // ADDEND_STR stores the symbol value and addend and offset,
           // each atmost 16 hex digits long.  it_a points to a pair
@@ -285,6 +294,24 @@ get_section_contents(bool first_iteration,
                    static_cast<long long>((*it_a).first),
 		   static_cast<long long>((*it_a).second),
 		   static_cast<unsigned long long>(*it_o));
+
+	  // If the symbol pointed to by the reloc is not in an ordinary
+	  // section or if the symbol type is not FROM_OBJECT, then the
+	  // object is NULL.
+	  if (it_v->first == NULL)
+            {
+	      if (first_iteration)
+                {
+		  // If the symbol name is available, use it.
+                  if ((*it_s) != NULL)
+                      buffer.append((*it_s)->name());
+                  // Append the addend.
+                  buffer.append(addend_str);
+                  buffer.append("@");
+		}
+	      continue;
+	    }
+
           Section_id reloc_secn(it_v->first, it_v->second);
 
           // If this reloc turns back and points to the same section,
@@ -304,7 +331,12 @@ get_section_contents(bool first_iteration,
             symtab->icf()->section_to_int_map();
           Icf::Uniq_secn_id_map::iterator section_id_map_it =
             section_id_map.find(reloc_secn);
-          if (section_id_map_it != section_id_map.end())
+          bool is_sym_preemptible = (*it_s != NULL
+				     && !(*it_s)->is_from_dynobj()
+				     && !(*it_s)->is_undefined()
+				     && (*it_s)->is_preemptible());
+          if (!is_sym_preemptible
+              && section_id_map_it != section_id_map.end())
             {
               // This is a reloc to a section that might be folded.
               if (num_tracked_relocs)
@@ -338,7 +370,54 @@ get_section_contents(bool first_iteration,
                 {
                   uint64_t entsize =
                     (it_v->first)->section_entsize(it_v->second);
-                  long long offset = it_a->first + it_a->second;
+		  long long offset = it_a->first;
+
+                  unsigned long long addend = it_a->second;
+                  // Ignoring the addend when it is a negative value.  See the 
+                  // comments in Merged_symbol_value::Value in object.h.
+                  if (addend < 0xffffff00)
+                    offset = offset + addend;
+
+		  // For SHT_REL relocation sections, the addend is stored in the
+		  // text section at the relocation offset.
+		  uint64_t reloc_addend_value = 0;
+                  const unsigned char* reloc_addend_ptr =
+		    contents + static_cast<unsigned long long>(*it_o);
+		  switch(*it_addend_size)
+		    {
+		      case 0:
+		        {
+                          break;
+                        }
+                      case 1:
+                        {
+                          reloc_addend_value =
+                            read_from_pointer<8>(reloc_addend_ptr);
+			  break;
+                        }
+                      case 2:
+                        {
+                          reloc_addend_value =
+                            read_from_pointer<16>(reloc_addend_ptr);
+			  break;
+                        }
+                      case 4:
+                        {
+                          reloc_addend_value =
+                            read_from_pointer<32>(reloc_addend_ptr);
+			  break;
+                        }
+                      case 8:
+                        {
+                          reloc_addend_value =
+                            read_from_pointer<64>(reloc_addend_ptr);
+			  break;
+                        }
+		      default:
+		        gold_unreachable();
+		    }
+		  offset = offset + reloc_addend_value;
+
                   section_size_type secn_len;
                   const unsigned char* str_contents =
                   (it_v->first)->section_contents(it_v->second,
@@ -394,8 +473,7 @@ get_section_contents(bool first_iteration,
               else if ((*it_s) != NULL)
                 {
                   // If symbol name is available use that.
-                  const char *sym_name = (*it_s)->name();
-                  buffer.append(sym_name);
+                  buffer.append((*it_s)->name());
                   // Append the addend.
                   buffer.append(addend_str);
                   buffer.append("@");

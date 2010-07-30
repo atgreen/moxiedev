@@ -56,7 +56,7 @@ static void c_type_print_modifier (struct type *, struct ui_file *,
 /* LEVEL is the depth to indent lines by.  */
 
 void
-c_print_type (struct type *type, char *varstring, struct ui_file *stream,
+c_print_type (struct type *type, const char *varstring, struct ui_file *stream,
 	      int show, int level)
 {
   enum type_code code;
@@ -107,7 +107,8 @@ c_print_typedef (struct type *type, struct symbol *new_symbol,
   type_print (type, "", stream, 0);
   if (TYPE_NAME ((SYMBOL_TYPE (new_symbol))) == 0
       || strcmp (TYPE_NAME ((SYMBOL_TYPE (new_symbol))),
-		 SYMBOL_LINKAGE_NAME (new_symbol)) != 0)
+		 SYMBOL_LINKAGE_NAME (new_symbol)) != 0
+      || TYPE_CODE (SYMBOL_TYPE (new_symbol)) == TYPE_CODE_TYPEDEF)
     fprintf_filtered (stream, " %s", SYMBOL_PRINT_NAME (new_symbol));
   fprintf_filtered (stream, ";\n");
 }
@@ -233,6 +234,7 @@ c_type_print_varspec_prefix (struct type *type, struct ui_file *stream,
 			     int show, int passed_a_ptr, int need_post_space)
 {
   char *name;
+
   if (type == 0)
     return;
 
@@ -416,8 +418,8 @@ c_type_print_args (struct type *type, struct ui_file *stream,
 	}
     }
   else if (!printed_any
-      && (TYPE_PROTOTYPED (type)
-	  || current_language->la_language == language_cplus))
+	   && ((TYPE_PROTOTYPED (type) && language != language_java)
+	       || language == language_cplus))
     fprintf_filtered (stream, "void");
 
   fprintf_filtered (stream, ")");
@@ -616,7 +618,7 @@ c_type_print_varspec_suffix (struct type *type, struct ui_file *stream,
       if (passed_a_ptr)
 	fprintf_filtered (stream, ")");
       if (!demangled_args)
-	c_type_print_args (type, stream, 1, language_c);
+	c_type_print_args (type, stream, 1, current_language->la_language);
       c_type_print_varspec_suffix (TYPE_TARGET_TYPE (type), stream, show,
 				   passed_a_ptr, 0);
       break;
@@ -766,7 +768,8 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 	  cp_type_print_derivation_info (stream, type);
 
 	  fprintf_filtered (stream, "{\n");
-	  if ((TYPE_NFIELDS (type) == 0) && (TYPE_NFN_FIELDS (type) == 0))
+	  if (TYPE_NFIELDS (type) == 0 && TYPE_NFN_FIELDS (type) == 0
+	      && TYPE_TYPEDEF_FIELD_COUNT (type) == 0)
 	    {
 	      if (TYPE_STUB (type))
 		fprintfi_filtered (level + 4, stream, _("<incomplete type>\n"));
@@ -919,6 +922,7 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 	      struct fn_field *f = TYPE_FN_FIELDLIST1 (type, i);
 	      int len2 = TYPE_FN_FIELDLIST_LENGTH (type, i);
 	      int j;
+
 	      for (j = 0; j < len2; j++)
 		if (!TYPE_FN_FIELD_ARTIFICIAL (f, j))
 		  real_len++;
@@ -934,13 +938,14 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 	      char *method_name = TYPE_FN_FIELDLIST_NAME (type, i);
 	      char *name = type_name_no_tag (type);
 	      int is_constructor = name && strcmp (method_name, name) == 0;
+
 	      for (j = 0; j < len2; j++)
 		{
 		  char *physname = TYPE_FN_FIELD_PHYSNAME (f, j);
 		  int is_full_physname_constructor =
-		   is_constructor_name (physname) 
-		   || is_destructor_name (physname)
-		   || method_name[0] == '~';
+		    is_constructor_name (physname) 
+		    || is_destructor_name (physname)
+		    || method_name[0] == '~';
 
 		  /* Do not print out artificial methods.  */
 		  if (TYPE_FN_FIELD_ARTIFICIAL (f, j))
@@ -1013,6 +1018,7 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 			{
 			  int staticp = TYPE_FN_FIELD_STATIC_P (f, j);
 			  struct type *mtype = TYPE_FN_FIELD_TYPE (f, j);
+
 			  cp_type_print_method_args (mtype,
 						     "",
 						     method_name,
@@ -1034,6 +1040,7 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 		      if (p != NULL)
 			{
 			  int length = p - demangled_no_class;
+
 			  demangled_no_static = (char *) xmalloc (length + 1);
 			  strncpy (demangled_no_static, demangled_no_class, length);
 			  *(demangled_no_static + length) = '\0';
@@ -1048,6 +1055,29 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
 		  if (TYPE_FN_FIELD_STUB (f, j))
 		    xfree (mangled_name);
 
+		  fprintf_filtered (stream, ";\n");
+		}
+	    }
+
+	  /* Print typedefs defined in this class.  */
+
+	  if (TYPE_TYPEDEF_FIELD_COUNT (type) != 0)
+	    {
+	      if (TYPE_NFIELDS (type) != 0 || TYPE_NFN_FIELDS (type) != 0)
+		fprintf_filtered (stream, "\n");
+
+	      for (i = 0; i < TYPE_TYPEDEF_FIELD_COUNT (type); i++)
+		{
+		  struct type *target = TYPE_TYPEDEF_FIELD_TYPE (type, i);
+
+		  /* Dereference the typedef declaration itself.  */
+		  gdb_assert (TYPE_CODE (target) == TYPE_CODE_TYPEDEF);
+		  target = TYPE_TARGET_TYPE (target);
+
+		  print_spaces_filtered (level + 4, stream);
+		  fprintf_filtered (stream, "typedef ");
+		  c_print_type (target, TYPE_TYPEDEF_FIELD_NAME (type, i),
+				stream, show - 1, level + 4);
 		  fprintf_filtered (stream, ";\n");
 		}
 	    }
@@ -1116,7 +1146,7 @@ c_type_print_base (struct type *type, struct ui_file *stream, int show,
       break;
 
     case TYPE_CODE_ERROR:
-      fprintf_filtered (stream, _("<unknown type>"));
+      fprintf_filtered (stream, "%s", TYPE_ERROR_NAME (type));
       break;
 
     case TYPE_CODE_RANGE:

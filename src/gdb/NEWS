@@ -1,7 +1,130 @@
 		What has changed in GDB?
 	     (Organized release by release)
 
-*** Changes since GDB 7.1
+*** Changes since GDB 7.2
+
+*** Changes in GDB 7.2
+
+* C++ Improvements:
+
+  ** Argument Dependent Lookup (ADL)
+
+  In C++ ADL lookup directs function search to the namespaces of its
+  arguments even if the namespace has not been imported.
+  For example:
+    namespace A
+      { 
+        class B { }; 
+        void foo (B) { }
+      }
+    ...
+    A::B b
+    foo(b)
+  Here the compiler will search for `foo' in the namespace of 'b'
+  and find A::foo.  GDB now supports this.  This construct is commonly
+  used in the Standard Template Library for operators.
+
+  ** Improved User Defined Operator Support
+
+  In addition to member operators, GDB now supports lookup of operators
+  defined in a namespace and imported with a `using' directive, operators
+  defined in the global scope, operators imported implicitly from an
+  anonymous namespace, and the ADL operators mentioned in the previous
+  entry.
+  GDB now also supports proper overload resolution for all the previously
+  mentioned flavors of operators.
+
+  ** static const class members
+
+  Printing of static const class members that are initialized in the
+  class definition has been fixed.
+
+* Windows Thread Information Block access.
+
+  On Windows targets, GDB now supports displaying the Windows Thread
+  Information Block (TIB) structure.  This structure is visible either
+  by using the new command `info w32 thread-information-block' or, by
+  dereferencing the new convenience variable named `$_tlb', a
+  thread-specific pointer to the TIB.  This feature is also supported
+  when remote debugging using GDBserver.
+
+* Static tracepoints
+
+  Static tracepoints are calls in the user program into a tracing
+  library.  One such library is a port of the LTTng kernel tracer to
+  userspace --- UST (LTTng Userspace Tracer, http://lttng.org/ust).
+  When debugging with GDBserver, GDB now supports combining the GDB
+  tracepoint machinery with such libraries.  For example: the user can
+  use GDB to probe a static tracepoint marker (a call from the user
+  program into the tracing library) with the new "strace" command (see
+  "New commands" below).  This creates a "static tracepoint" in the
+  breakpoint list, that can be manipulated with the same feature set
+  as fast and regular tracepoints.  E.g., collect registers, local and
+  global variables, collect trace state variables, and define
+  tracepoint conditions.  In addition, the user can collect extra
+  static tracepoint marker specific data, by collecting the new
+  $_sdata internal variable.  When analyzing the trace buffer, you can
+  inspect $_sdata like any other variable available to GDB.  For more
+  information, see the "Tracepoints" chapter in GDB user manual.  New
+  remote packets have been defined to support static tracepoints, see
+  the "New remote packets" section below.
+
+* New remote packets
+
+qGetTIBAddr
+
+  Return the address of the Windows Thread Information Block of a given thread.
+
+qRelocInsn
+
+  In response to several of the tracepoint packets, the target may now
+  also respond with a number of intermediate `qRelocInsn' request
+  packets before the final result packet, to have GDB handle
+  relocating an instruction to execute at a different address.  This
+  is particularly useful for stubs that support fast tracepoints.  GDB
+  reports support for this feature in the qSupported packet.
+
+qTfSTM, qTsSTM
+
+  List static tracepoint markers in the target program.
+
+qTSTMat
+
+  List static tracepoint markers at a given address in the target
+  program.
+
+qXfer:statictrace:read
+
+  Read the static trace data collected (by a `collect $_sdata'
+  tracepoint action).  The remote stub reports support for this packet
+  to gdb's qSupported query.
+
+* The source command now accepts a -s option to force searching for the
+  script in the source search path even if the script name specifies
+  a directory.
+
+* New features in the GDB remote stub, GDBserver
+
+  - GDBserver now support tracepoints (including fast tracepoints, and
+    static tracepoints).  The feature is currently supported by the
+    i386-linux and amd64-linux builds.  See the "Tracepoints support
+    in gdbserver" section in the manual for more information.
+
+    GDBserver JIT compiles the tracepoint's conditional agent
+    expression bytecode into native code whenever possible for low
+    overhead dynamic tracepoints conditionals.  For such tracepoints,
+    an expression that examines program state is evaluated when the
+    tracepoint is reached, in order to determine whether to capture
+    trace data.  If the condition is simple and false, processing the
+    tracepoint finishes very quickly and no data is gathered.
+
+    GDBserver interfaces with the UST (LTTng Userspace Tracer) library
+    for static tracepoints support.
+
+  - GDBserver now supports x86_64 Windows 64-bit debugging.
+
+* GDB now sends xmlRegisters= in qSupported packet to indicate that
+  it understands register description.
 
 * The --batch flag now disables pagination and queries.
 
@@ -13,16 +136,92 @@
   16-bit word register AX that are actually portions of the 32-bit
   register EAX or 64-bit register RAX.
 
+* The `commands' command now accepts a range of breakpoints to modify.
+  A plain `commands' following a command that creates multiple
+  breakpoints affects all the breakpoints set by that command.  This
+  applies to breakpoints set by `rbreak', and also applies when a
+  single `break' command creates multiple breakpoints (e.g.,
+  breakpoints on overloaded c++ functions).
+
+* The `rbreak' command now accepts a filename specification as part of
+  its argument, limiting the functions selected by the regex to those
+  in the specified file.
+
+* Support for remote debugging Windows and SymbianOS shared libraries
+  from Unix hosts has been improved.  Non Windows GDB builds now can
+  understand target reported file names that follow MS-DOS based file
+  system semantics, such as file names that include drive letters and
+  use the backslash character as directory separator.  This makes it
+  possible to transparently use the "set sysroot" and "set
+  solib-search-path" on Unix hosts to point as host copies of the
+  target's shared libraries.  See the new command "set
+  target-file-system-kind" described below, and the "Commands to
+  specify files" section in the user manual for more information.
+
+* New commands
+
+eval template, expressions...
+  Convert the values of one or more expressions under the control
+  of the string template to a command line, and call it.
+
+set target-file-system-kind unix|dos-based|auto
+show target-file-system-kind
+  Set or show the assumed file system kind for target reported file
+  names.
+
+save breakpoints <filename>
+  Save all current breakpoint definitions to a file suitable for use
+  in a later debugging session.  To read the saved breakpoint
+  definitions, use the `source' command.
+
+`save tracepoints' is a new alias for `save-tracepoints'.  The latter
+is now deprecated.
+
+info static-tracepoint-markers
+  Display information about static tracepoint markers in the target.
+
+strace FN | FILE:LINE | *ADDR | -m MARKER_ID
+  Define a static tracepoint by probing a marker at the given
+  function, line, address, or marker ID.
+
 * Python scripting
 
-** The GDB Python API now has access to symbols, symbol tables, and
-   frame's code blocks.
+** GDB now provides a new directory location, called the python directory,
+   where Python scripts written for GDB can be installed.  The location
+   of that directory is <data-directory>/python, where <data-directory>
+   is the GDB data directory.  For more details, see section `Scripting
+   GDB using Python' in the manual.
 
-** New methods gdb.target_charset and gdb.target_wide_charset.
+** The GDB Python API now has access to breakpoints, symbols, symbol
+   tables, program spaces, inferiors, threads and frame's code blocks.
+   Additionally, GDB Parameters can now be created from the API, and
+   manipulated via set/show in the CLI.
+
+** New functions gdb.target_charset, gdb.target_wide_charset,
+   gdb.progspaces, gdb.current_progspace, and gdb.string_to_argv.
+
+** New exception gdb.GdbError.
+
+** Pretty-printers are now also looked up in the current program space.
+
+** Pretty-printers can now be individually enabled and disabled.
+
+** GDB now looks for names of Python scripts to auto-load in a
+   special section named `.debug_gdb_scripts', in addition to looking
+   for a OBJFILE-gdb.py script when OBJFILE is read by the debugger.
+
+* Tracepoint actions were unified with breakpoint commands. In particular,
+there are no longer differences in "info break" output for breakpoints and
+tracepoints and the "commands" command can be used for both tracepoints and
+regular breakpoints.
 
 * New targets
 
 ARM Symbian			arm*-*-symbianelf*
+
+* D language support.
+  GDB now supports debugging programs written in the D programming
+  language.
 
 *** Changes in GDB 7.1
 
@@ -114,7 +313,14 @@ Renesas RX			rx
   tracing run at the moment that it was saved.  To create a trace
   file, use "tsave <filename>", and to use it, do "target tfile
   <name>".
-  
+
+  ** Circular trace buffer
+
+  You can ask the target agent to handle the trace buffer as a
+  circular buffer, discarding the oldest trace frames to make room for
+  newer ones, by setting circular-trace-buffer to on.  This feature may
+  not be available for all target agents.
+
 * Changed commands
 
 disassemble
@@ -215,6 +421,13 @@ show disconnected-tracing
    loses its connection to GDB.  If 0, the target is to stop tracing
    upon disconnection.
 
+set circular-trace-buffer
+show circular-trace-buffer
+   If set to on, the target is instructed to use a circular trace buffer
+   and discard the oldest trace frames instead of stopping the trace due
+   to a full trace buffer.  If set to off, the trace stops when the buffer
+   fills up.  Some targets may not support this.
+
 set script-extension off|soft|strict
 show script-extension
    If set to "off", the debugger does not perform any script language
@@ -257,6 +470,9 @@ qTV
 
 QTDisconnected
    Set desired tracing behavior upon disconnection.
+
+QTBuffer:circular
+   Set the trace buffer to be linear or circular.
 
 qTfP, qTsP
    Get data about the tracepoints currently in use.

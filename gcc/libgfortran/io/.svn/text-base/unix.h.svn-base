@@ -1,4 +1,4 @@
-/* Copyright (C) 2009
+/* Copyright (C) 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Janne Blomqvist
 
@@ -40,6 +40,29 @@ struct stream
   int (*flush) (struct stream *);
   int (*close) (struct stream *);
 };
+
+
+typedef struct
+{
+  stream st;
+
+  gfc_offset buffer_offset;	/* File offset of the start of the buffer */
+  gfc_offset physical_offset;	/* Current physical file offset */
+  gfc_offset logical_offset;	/* Current logical file offset */
+  gfc_offset file_length;	/* Length of the file, -1 if not seekable. */
+
+  char *buffer;                 /* Pointer to the buffer.  */
+  int fd;                       /* The POSIX file descriptor.  */
+
+  int active;			/* Length of valid bytes in the buffer */
+
+  int prot;
+  int ndirty;			/* Dirty bytes starting at buffer_offset */
+
+  int special_file;		/* =1 if the fd refers to a special file */
+}
+unix_stream;
+
 
 /* Inline functions for doing file I/O given a stream.  */
 static inline ssize_t
@@ -94,11 +117,20 @@ internal_proto(open_external);
 extern stream *open_internal (char *, int, gfc_offset);
 internal_proto(open_internal);
 
+extern stream *open_internal4 (char *, int, gfc_offset);
+internal_proto(open_internal4);
+
 extern char * mem_alloc_w (stream *, int *);
 internal_proto(mem_alloc_w);
 
 extern char * mem_alloc_r (stream *, int *);
-internal_proto(mem_alloc_w);
+internal_proto(mem_alloc_r);
+
+extern gfc_char4_t * mem_alloc_w4 (stream *, int *);
+internal_proto(mem_alloc_w4);
+
+extern char * mem_alloc_r4 (stream *, int *);
+internal_proto(mem_alloc_r4);
 
 extern stream *input_stream (void);
 internal_proto(input_stream);
@@ -120,6 +152,9 @@ internal_proto(delete_file);
 
 extern int file_exists (const char *file, gfc_charlen_type file_len);
 internal_proto(file_exists);
+
+extern GFC_IO_INT file_size (const char *file, gfc_charlen_type file_len);
+internal_proto(file_size);
 
 extern const char *inquire_sequential (const char *, int);
 internal_proto(inquire_sequential);

@@ -682,6 +682,8 @@ PLUGINS_FALSE
 PLUGINS_TRUE
 THREADS_FALSE
 THREADS_TRUE
+installed_linker
+install_as_default
 am__untar
 am__tar
 AMTAR
@@ -759,6 +761,7 @@ ac_subst_files=''
 ac_user_opts='
 enable_option_checking
 with_sysroot
+enable_gold
 enable_threads
 enable_plugins
 enable_targets
@@ -1403,6 +1406,7 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-gold[=ARG]     build gold [ARG={both}[/{gold,ld}]]
   --enable-threads        multi-threaded linking
   --enable-plugins        linker plugins
   --enable-targets        alternative target configurations
@@ -3225,6 +3229,33 @@ _ACEOF
 cat >>confdefs.h <<_ACEOF
 #define TARGET_SYSTEM_ROOT_RELOCATABLE $sysroot_relocatable
 _ACEOF
+
+
+# Check whether --enable-gold was given.
+if test "${enable_gold+set}" = set; then :
+  enableval=$enable_gold; case "${enableval}" in
+ yes)
+   install_as_default=gold
+   installed_linker=ld
+   ;;
+ both/gold)
+   install_as_default=yes
+   installed_linker=ld.gold
+   ;;
+ both|both/ld)
+   install_as_default=no
+   installed_linker=ld.gold
+   ;;
+ *)
+   as_fn_error "invalid --enable-gold argument" "$LINENO" 5
+   ;;
+ esac
+else
+  install_as_default=gold
+ installed_linker=ld
+fi
+
+
 
 
 # Check whether --enable-threads was given.
@@ -6305,7 +6336,19 @@ fi
 
 
 
-GCC_WARN_CFLAGS="-W -Wall -Wstrict-prototypes -Wmissing-prototypes -Wshadow"
+GCC_WARN_CFLAGS="-W -Wall -Wstrict-prototypes -Wmissing-prototypes"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+__GNUC__
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "^[0-3]$" >/dev/null 2>&1; then :
+
+else
+  GCC_WARN_CFLAGS="$GCC_WARN_CFLAGS -Wshadow"
+fi
+rm -f conftest*
+
 
 # Check whether --enable-werror was given.
 if test "${enable_werror+set}" = set; then :
@@ -6317,7 +6360,7 @@ if test "${enable_werror+set}" = set; then :
 fi
 
 
-# Enable -Wno-format by default when using gcc on mingw
+# Disable -Wformat by default when using gcc on mingw
 case "${host}" in
   *-*-mingw32*)
     if test "${GCC}" = yes -a -z "${ERROR_ON_WARNING}" ; then

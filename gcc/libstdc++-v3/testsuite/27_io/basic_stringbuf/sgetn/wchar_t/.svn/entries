@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_stringbuf/sgetn/wchar_t
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -32,11 +32,11 @@ file
 
 
 
-2009-04-24T17:50:31.000000Z
-6509797bb0907d410d5f0a1a41916ab7
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-07-08T15:19:26.568343Z
+f7670379833114a4a6fc6216c06e7b28
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -58,5 +58,5 @@ jakub
 
 
 
-3489
+3393
 

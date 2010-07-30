@@ -499,6 +499,20 @@ General_options::parse_end_group(const char*, const char*,
   cmdline->inputs().end_group();
 }
 
+void
+General_options::parse_start_lib(const char*, const char*,
+                                 Command_line* cmdline)
+{
+  cmdline->inputs().start_lib(cmdline->position_dependent_options());
+}
+
+void
+General_options::parse_end_lib(const char*, const char*,
+                               Command_line* cmdline)
+{
+  cmdline->inputs().end_lib();
+}
+
 // The function add_excluded_libs() in ld/ldlang.c of GNU ld breaks up a list
 // of names seperated by commas or colons and puts them in a linked list.
 // We implement the same parsing of names here but store names in an unordered
@@ -598,6 +612,18 @@ General_options::parse_fix_v4bx_interworking(const char*, const char*,
 					     Command_line*)
 {
   this->fix_v4bx_ = FIX_V4BX_INTERWORKING;
+}
+
+void
+General_options::parse_EB(const char*, const char*, Command_line*)
+{
+  this->endianness_ = ENDIANNESS_BIG;
+}
+
+void
+General_options::parse_EL(const char*, const char*, Command_line*)
+{
+  this->endianness_ = ENDIANNESS_LITTLE;
 }
 
 } // End namespace gold.
@@ -831,7 +857,8 @@ General_options::General_options()
     excluded_libs_(),
     symbols_to_retain_(),
     section_starts_(),
-    fix_v4bx_(FIX_V4BX_NONE)
+    fix_v4bx_(FIX_V4BX_NONE),
+    endianness_(ENDIANNESS_NOT_SET)
 {
   // Turn off option registration once construction is complete.
   gold::options::ready_to_register = false;
@@ -1047,7 +1074,7 @@ General_options::finalize()
 	}
       while (next_pos != std::string::npos);
     }
-  else
+  else if (!this->nostdlib())
     {
       // Even if they don't specify it, we add -L /lib and -L /usr/lib.
       // FIXME: We should only do this when configured in native mode.
@@ -1161,14 +1188,20 @@ Search_directory::add_sysroot(const char* sysroot,
 void
 Input_arguments::add_file(const Input_file_argument& file)
 {
-  if (!this->in_group_)
-    this->input_argument_list_.push_back(Input_argument(file));
-  else
+  if (this->in_group_)
     {
       gold_assert(!this->input_argument_list_.empty());
       gold_assert(this->input_argument_list_.back().is_group());
       this->input_argument_list_.back().group()->add_file(file);
     }
+  else if (this->in_lib_)
+    {
+      gold_assert(!this->input_argument_list_.empty());
+      gold_assert(this->input_argument_list_.back().is_lib());
+      this->input_argument_list_.back().lib()->add_file(file);
+    }
+  else
+    this->input_argument_list_.push_back(Input_argument(file));
 }
 
 // Start a group.
@@ -1178,6 +1211,8 @@ Input_arguments::start_group()
 {
   if (this->in_group_)
     gold_fatal(_("May not nest groups"));
+  if (this->in_lib_)
+    gold_fatal(_("may not nest groups in libraries"));
   Input_file_group* group = new Input_file_group();
   this->input_argument_list_.push_back(Input_argument(group));
   this->in_group_ = true;
@@ -1191,6 +1226,30 @@ Input_arguments::end_group()
   if (!this->in_group_)
     gold_fatal(_("Group end without group start"));
   this->in_group_ = false;
+}
+
+// Start a lib.
+
+void
+Input_arguments::start_lib(const Position_dependent_options& options)
+{
+  if (this->in_lib_)
+    gold_fatal(_("may not nest libraries"));
+  if (this->in_group_)
+    gold_fatal(_("may not nest libraries in groups"));
+  Input_file_lib* lib = new Input_file_lib(options);
+  this->input_argument_list_.push_back(Input_argument(lib));
+  this->in_lib_ = true;
+}
+
+// End a lib.
+
+void
+Input_arguments::end_lib()
+{
+  if (!this->in_lib_)
+    gold_fatal(_("lib end without lib start"));
+  this->in_lib_ = false;
 }
 
 // Command_line options.

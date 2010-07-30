@@ -1512,7 +1512,7 @@ cris_elf_relocate_section (bfd *output_bfd ATTRIBUTE_UNUSED,
 	      if (sreloc == NULL)
 		{
 		  sreloc = _bfd_elf_get_dynamic_reloc_section
-		    (input_bfd, input_section, /*rela?*/ TRUE);
+		    (dynobj, input_section, /*rela?*/ TRUE);
 		  /* The section should have been created in cris_elf_check_relocs,
 		     but that function will not be called for objects which fail in
 		     cris_elf_merge_private_bfd_data.  */
@@ -2157,7 +2157,6 @@ elf_cris_finish_dynamic_symbol (bfd *output_bfd,
     {
       asection *splt;
       asection *sgotplt;
-      asection *sgot;
       asection *srela;
       bfd_vma got_base;
 
@@ -2197,7 +2196,6 @@ elf_cris_finish_dynamic_symbol (bfd *output_bfd,
       BFD_ASSERT (h->dynindx != -1);
 
       splt = bfd_get_section_by_name (dynobj, ".plt");
-      sgot = bfd_get_section_by_name (dynobj, ".got");
       sgotplt = bfd_get_section_by_name (dynobj, ".got.plt");
       srela = bfd_get_section_by_name (dynobj, ".rela.plt");
       BFD_ASSERT (splt != NULL && sgotplt != NULL
@@ -3106,12 +3104,37 @@ elf_cris_copy_indirect_symbol (struct bfd_link_info *info,
       return;
     }
 
-  BFD_ASSERT (edir->pcrel_relocs_copied == NULL);
   BFD_ASSERT (edir->gotplt_offset == 0 || eind->gotplt_offset == 0);
 
 #define XMOVOPZ(F, OP, Z) edir->F OP eind->F; eind->F = Z
 #define XMOVE(F) XMOVOPZ (F, +=, 0)
-  XMOVOPZ (pcrel_relocs_copied, =, NULL);
+  if (eind->pcrel_relocs_copied != NULL)
+    {
+      if (edir->pcrel_relocs_copied != NULL)
+	{
+	  struct elf_cris_pcrel_relocs_copied **pp;
+	  struct elf_cris_pcrel_relocs_copied *p;
+
+	  /* Add reloc counts against the indirect sym to the direct sym
+	     list.  Merge any entries against the same section.  */
+	  for (pp = &eind->pcrel_relocs_copied; *pp != NULL;)
+	    {
+	      struct elf_cris_pcrel_relocs_copied *q;
+	      p = *pp;
+	      for (q = edir->pcrel_relocs_copied; q != NULL; q = q->next)
+		if (q->section == p->section)
+		  {
+		    q->count += p->count;
+		    *pp = p->next;
+		    break;
+		  }
+	      if (q == NULL)
+		pp = &p->next;
+	    }
+	  *pp = edir->pcrel_relocs_copied;
+	}
+      XMOVOPZ (pcrel_relocs_copied, =, NULL);
+    }
   XMOVE (gotplt_refcount);
   XMOVE (gotplt_offset);
   XMOVE (reg_got_refcount);
@@ -3682,7 +3705,7 @@ cris_elf_check_relocs (bfd *abfd,
 	    eh = elf_cris_hash_entry (h);
 
 	    for (p = eh->pcrel_relocs_copied; p != NULL; p = p->next)
-	      if (p->section == sreloc)
+	      if (p->section == sec)
 		break;
 
 	    if (p == NULL)
@@ -3693,7 +3716,7 @@ cris_elf_check_relocs (bfd *abfd,
 		  return FALSE;
 		p->next = eh->pcrel_relocs_copied;
 		eh->pcrel_relocs_copied = p;
-		p->section = sreloc;
+		p->section = sec;
 		p->count = 0;
 		p->r_type = r_type;
 	      }
@@ -3951,8 +3974,14 @@ elf_cris_discard_excess_dso_dynamics (h, inf)
 	  || info->symbolic))
     {
       for (s = h->pcrel_relocs_copied; s != NULL; s = s->next)
-	s->section->size -= s->count * sizeof (Elf32_External_Rela);
-
+	{
+	  asection *sreloc
+	    = _bfd_elf_get_dynamic_reloc_section (elf_hash_table (info)
+						  ->dynobj,
+						  s->section,
+						  /*rela?*/ TRUE);
+	  sreloc->size -= s->count * sizeof (Elf32_External_Rela);
+	}
       return TRUE;
     }
 
@@ -3963,21 +3992,20 @@ elf_cris_discard_excess_dso_dynamics (h, inf)
      late).  */
 
   for (s = h->pcrel_relocs_copied; s != NULL; s = s->next)
-    {
-      BFD_ASSERT ((s->section->flags & SEC_READONLY) != 0);
+    if ((s->section->flags & SEC_READONLY) != 0)
+      {
+	/* FIXME: How do we make this optionally a warning only?  */
+	(*_bfd_error_handler)
+	  (_("%B, section `%A', to symbol `%s':\n"
+	     "  relocation %s should not be used"
+	     " in a shared object; recompile with -fPIC"),
+	   s->section->owner,
+	   s->section,
+	   h->root.root.root.string,
+	   cris_elf_howto_table[s->r_type].name);
 
-      /* FIXME: How do we make this optionally a warning only?  */
-      (*_bfd_error_handler)
-	(_("%B, section `%A', to symbol `%s':\n"
-	   "  relocation %s should not be used"
-	   " in a shared object; recompile with -fPIC"),
-	 s->section->owner,
-	 s->section,
-	 h->root.root.root.string,
-	 cris_elf_howto_table[s->r_type].name);
-
-      info->flags |= DF_TEXTREL;
-    }
+	info->flags |= DF_TEXTREL;
+      }
 
   return TRUE;
 }

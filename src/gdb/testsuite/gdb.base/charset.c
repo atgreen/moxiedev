@@ -65,6 +65,9 @@ typedef unsigned int char32_t;
 char16_t uvar;
 char32_t Uvar;
 
+char16_t *String16;
+char32_t *String32;
+
 /* A typedef to a typedef should also work.  */
 typedef wchar_t my_wchar_t;
 my_wchar_t myvar;
@@ -117,6 +120,11 @@ int main ()
   set_debug_traps();
   breakpoint();
 #endif
+
+  /* charset.exp wants to allocate memory for constants.  So make sure malloc
+     gets linked into the program.  */
+  malloc (1);
+
   /* Initialize ascii_string.  */
   init_string (ascii_string,
                120,

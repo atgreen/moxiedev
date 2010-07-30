@@ -17,8 +17,6 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile start
 set srcfile ${testfile}.c
@@ -46,8 +44,7 @@ gdb_test "show lang" \
 
 # Now, switch the language to a specific language, instead of leaving it
 # on auto.
-gdb_test "set lang ada" \
-         "" \
+gdb_test_no_output "set lang ada" \
          "forcing the language to ada"
 
 # Verify that the language is now "ada".
@@ -56,8 +53,7 @@ gdb_test "show lang" \
          "show lang after switching language to ada"
 
 # Then, switch back to auto...
-gdb_test "set lang auto" \
-         "" \
+gdb_test_no_output "set lang auto" \
          "switching the language back to auto"
 
 # ... And verify that the language mode is back to auto *and* that

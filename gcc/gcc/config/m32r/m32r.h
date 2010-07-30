@@ -823,14 +823,6 @@ extern enum reg_class m32r_regno_reg_class[FIRST_PSEUDO_REGISTER];
    increase the stack frame size by this amount.  */
 #define ACCUMULATE_OUTGOING_ARGS 1
 
-/* Value is the number of bytes of arguments automatically
-   popped when returning from a subroutine call.
-   FUNDECL is the declaration node of the function (as a tree),
-   FUNTYPE is the data type of the function (as a tree),
-   or for a library call it is an identifier node for the subroutine name.
-   SIZE is the number of bytes of arguments passed on the stack.  */
-#define RETURN_POPS_ARGS(DECL, FUNTYPE, SIZE) 0
-
 /* Define a data type for recording info about an argument list
    during the scan of that argument list.  This data type should
    hold all necessary information about the function itself
@@ -1273,24 +1265,6 @@ L2:     .word STATIC
   { "r15", STACK_POINTER_REGNUM },	\
   SUBTARGET_ADDITIONAL_REGISTER_NAMES	\
 }
-
-/* A C expression which evaluates to true if CODE is a valid
-   punctuation character for use in the `PRINT_OPERAND' macro.  */
-extern char m32r_punct_chars[256];
-#define PRINT_OPERAND_PUNCT_VALID_P(CHAR) \
-  m32r_punct_chars[(unsigned char) (CHAR)]
-
-/* Print operand X (an rtx) in assembler syntax to file FILE.
-   CODE is a letter or dot (`z' in `%z0') or 0 if no letter was specified.
-   For `%' followed by punctuation, CODE is the punctuation and X is null.  */
-#define PRINT_OPERAND(FILE, X, CODE) \
-  m32r_print_operand (FILE, X, CODE)
-
-/* A C compound statement to output to stdio stream STREAM the
-   assembler syntax for an instruction operand that is a memory
-   reference whose address is ADDR.  ADDR is an RTL expression.  */
-#define PRINT_OPERAND_ADDRESS(FILE, ADDR) \
-  m32r_print_operand_address (FILE, ADDR)
 
 /* If defined, C string expressions to be used for the `%R', `%L',
    `%U', and `%I' options of `asm_fprintf' (see `final.c').  These

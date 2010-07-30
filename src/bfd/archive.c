@@ -303,6 +303,15 @@ eq_file_ptr (const PTR p1, const PTR p2)
   return arc1->ptr == arc2->ptr;
 }
 
+/* The calloc function doesn't always take size_t (e.g. on VMS)
+   so wrap it to avoid a compile time warning.   */
+
+static void *
+_bfd_calloc_wrapper (size_t a, size_t b)
+{
+  return calloc (a, b);
+}
+
 /* Kind of stupid to call cons for each one, but we don't do too many.  */
 
 bfd_boolean
@@ -315,7 +324,7 @@ _bfd_add_bfd_to_archive_cache (bfd *arch_bfd, file_ptr filepos, bfd *new_elt)
   if (hash_table == NULL)
     {
       hash_table = htab_create_alloc (16, hash_file_ptr, eq_file_ptr,
-				      NULL, calloc, free);
+				      NULL, _bfd_calloc_wrapper, free);
       if (hash_table == NULL)
 	return FALSE;
       bfd_ardata (arch_bfd)->cache = hash_table;
@@ -536,8 +545,8 @@ _bfd_generic_read_ar_hdr_mag (bfd *abfd, const char *mag)
 /* Append the relative pathname for a member of the thin archive
    to the pathname of the directory containing the archive.  */
 
-static char *
-append_relative_path (bfd *arch, char *elt_name)
+char *
+_bfd_append_relative_path (bfd *arch, char *elt_name)
 {
   const char *arch_name = arch->filename;
   const char *base_name = lbasename (arch_name);
@@ -591,7 +600,7 @@ _bfd_get_elt_at_filepos (bfd *archive, file_ptr filepos)
       /* This is a proxy entry for an external file.  */
       if (! IS_ABSOLUTE_PATH (filename))
         {
-          filename = append_relative_path (archive, filename);
+          filename = _bfd_append_relative_path (archive, filename);
           if (filename == NULL)
             return NULL;
         }
@@ -1640,7 +1649,7 @@ _bfd_archive_bsd44_construct_extended_name_table (bfd *abfd,
 
           len = (len + 3) & ~3;
           arch_eltdata (current)->extra_size = len;
-          _bfd_ar_spacepad (hdr->ar_name, maxname, "#1/%u", len);
+          _bfd_ar_spacepad (hdr->ar_name, maxname, "#1/%lu", len);
 	}
     }
 
@@ -2196,6 +2205,7 @@ _bfd_compute_and_write_armap (bfd *arch, unsigned int elength)
 		  if ((flags & BSF_GLOBAL
 		       || flags & BSF_WEAK
 		       || flags & BSF_INDIRECT
+		       || flags & BSF_GNU_UNIQUE
 		       || bfd_is_com_section (sec))
 		      && ! bfd_is_und_section (sec))
 		    {

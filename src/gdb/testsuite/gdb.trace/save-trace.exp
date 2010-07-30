@@ -21,8 +21,6 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 gdb_exit
 gdb_start
@@ -73,6 +71,9 @@ foreach x { 1 2 3 4 5 6 } {
 	     "Setting tracepoint $trcpt.* to $x" \
 	     "10.x: set passcount for tracepoint $trcpt"
 
+    gdb_test_no_output "condition $trcpt $x - 1 == $x / 2" \
+	     "10.x: set condition for tracepoint $trcpt"
+
     gdb_trace_setactions "10.x: set actions for tracepoint $x" \
 	    "" \
 	    "collect q$x" "^$" \
@@ -81,6 +82,8 @@ foreach x { 1 2 3 4 5 6 } {
 	    "end" "^$"
 }
 
+gdb_test_no_output "set default-collect gdb_char_test, gdb_long_test - 100" \
+    "10: set default-collect"
 
 proc gdb_verify_tracepoints { testname } {
     global gdb_prompt;
@@ -89,9 +92,8 @@ proc gdb_verify_tracepoints { testname } {
     set nl "\[\r\n\]+"
     set ourstate 1;
     set result "pass";
-    send_gdb "info tracepoints\n";
-    gdb_expect 10 {
-	-re "\[0-9\]+\[\t \]+tracepoint\[\t \]+keep y\[\t \]+0x\[0-9a-fA-F\]+ in gdb_recursion_test\[^\r\n\]+" {
+    gdb_test_multiple "info tracepoints" "$testname" {
+	-re "\[0-9\]+\[\t \]+tracepoint\[\t \]+keep y\[\t \]+0x\[0-9a-fA-F\]+ in gdb_recursion_test\[^\r\n\]+\r\n\[ \t]+trace only if \[0-9\] - 1 == \[0-9\] / 2" {
 #	    if { $expect_out(1,string) != $ourstate } {
 #		set result "fail";
 #	    }
@@ -110,7 +112,10 @@ proc gdb_verify_tracepoints { testname } {
 	}
     }
     $result $testname;
-    return $result;
+
+    gdb_test "show default-collect" \
+	"The list of expressions to collect by default is \"gdb_char_test, gdb_long_test - 100\"..*" \
+	"10: show default-collect"
 }
 
 gdb_verify_tracepoints "10.x: verify trace setup";
@@ -119,12 +124,13 @@ gdb_verify_tracepoints "10.x: verify trace setup";
 
 remote_file host delete savetrace.tr
 gdb_test "save-tracepoints savetrace.tr" \
-	"Tracepoints saved to file 'savetrace.tr'." \
+	"Saved to file 'savetrace.tr'." \
 	"10.1: save tracepoint definitions"
 
 # 10.2 Read back tracepoint definitions
 
 gdb_delete_tracepoints
+gdb_test_no_output "set default-collect" "10.2: clear default-collect"
 gdb_test "info tracepoints" "No tracepoints." "10.2: delete tracepoints"
 gdb_test "source savetrace.tr" \
 	"Tracepoint \[0-9\]+ at .*" \
@@ -137,10 +143,11 @@ remote_file host delete savetrace.tr
 set escapedfilename [string_to_regexp $objdir/savetrace.tr]
 remote_file host delete $objdir/savetrace.tr
 gdb_test "save-tracepoints $objdir/savetrace.tr" \
-	"Tracepoints saved to file '${escapedfilename}'." \
+	"Saved to file '${escapedfilename}'." \
 	"10.3: save tracepoint definitions, full path"
 
 gdb_delete_tracepoints
+gdb_test_no_output "set default-collect" "10.3: clear default-collect"
 gdb_test "info tracepoints" "No tracepoints." "10.3: delete tracepoints"
 gdb_test "source $objdir/savetrace.tr" \
 	"Tracepoint \[0-9\]+ at .*" \

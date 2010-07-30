@@ -1063,7 +1063,7 @@ static void append_insn
 static void mips_no_prev_insn (void);
 static void macro_build (expressionS *, const char *, const char *, ...);
 static void mips16_macro_build
-  (expressionS *, const char *, const char *, va_list);
+  (expressionS *, const char *, const char *, va_list *);
 static void load_register (int, expressionS *, int);
 static void macro_start (void);
 static void macro_end (void);
@@ -1817,11 +1817,10 @@ reg_lookup (char **s, unsigned int types, unsigned int *regnop)
 }
 
 /* Return TRUE if opcode MO is valid on the currently selected ISA and
-   architecture.  If EXPANSIONP is TRUE then this check is done while
-   expanding a macro.  Use is_opcode_valid_16 for MIPS16 opcodes.  */
+   architecture.  Use is_opcode_valid_16 for MIPS16 opcodes.  */
 
 static bfd_boolean
-is_opcode_valid (const struct mips_opcode *mo, bfd_boolean expansionp)
+is_opcode_valid (const struct mips_opcode *mo)
 {
   int isa = mips_opts.isa;
   int fp_s, fp_d;
@@ -1840,11 +1839,6 @@ is_opcode_valid (const struct mips_opcode *mo, bfd_boolean expansionp)
     isa |= INSN_MIPS3D;
   if (mips_opts.ase_smartmips)
     isa |= INSN_SMARTMIPS;
-
-  /* For user code we don't check for mips_opts.mips16 since we want
-     to allow jalx if -mips16 was specified on the command line.  */
-  if (expansionp ? mips_opts.mips16 : file_ase_mips16)
-    isa |= INSN_MIPS16;
 
   /* Don't accept instructions based on the ISA if the CPU does not implement
      all the coprocessor insns. */
@@ -2736,7 +2730,9 @@ nops_for_insn_or_target (const struct mips_cl_insn *hist,
       if (tmp_nops > nops)
 	nops = tmp_nops;
     }
-  else if (mips_opts.mips16 && (insn->insn_mo->pinfo & MIPS16_INSN_BRANCH))
+  else if (mips_opts.mips16
+	   && (insn->insn_mo->pinfo & (MIPS16_INSN_UNCOND_BRANCH
+				       | MIPS16_INSN_COND_BRANCH)))
     {
       tmp_nops = nops_for_sequence (1, hist, insn);
       if (tmp_nops > nops)
@@ -3620,7 +3616,7 @@ macro_build (expressionS *ep, const char *name, const char *fmt, ...)
 
   if (mips_opts.mips16)
     {
-      mips16_macro_build (ep, name, fmt, args);
+      mips16_macro_build (ep, name, fmt, &args);
       va_end (args);
       return;
     }
@@ -3638,7 +3634,7 @@ macro_build (expressionS *ep, const char *name, const char *fmt, ...)
 	 macros will never generate MDMX, MIPS-3D, or MT instructions.  */
       if (strcmp (fmt, mo->args) == 0
 	  && mo->pinfo != INSN_MACRO
-	  && is_opcode_valid (mo, TRUE))
+	  && is_opcode_valid (mo))
 	break;
 
       ++mo;
@@ -3846,7 +3842,7 @@ macro_build (expressionS *ep, const char *name, const char *fmt, ...)
 
 static void
 mips16_macro_build (expressionS *ep, const char *name, const char *fmt,
-		    va_list args)
+		    va_list *args)
 {
   struct mips_opcode *mo;
   struct mips_cl_insn insn;
@@ -3882,20 +3878,20 @@ mips16_macro_build (expressionS *ep, const char *name, const char *fmt,
 
 	case 'y':
 	case 'w':
-	  MIPS16_INSERT_OPERAND (RY, insn, va_arg (args, int));
+	  MIPS16_INSERT_OPERAND (RY, insn, va_arg (*args, int));
 	  continue;
 
 	case 'x':
 	case 'v':
-	  MIPS16_INSERT_OPERAND (RX, insn, va_arg (args, int));
+	  MIPS16_INSERT_OPERAND (RX, insn, va_arg (*args, int));
 	  continue;
 
 	case 'z':
-	  MIPS16_INSERT_OPERAND (RZ, insn, va_arg (args, int));
+	  MIPS16_INSERT_OPERAND (RZ, insn, va_arg (*args, int));
 	  continue;
 
 	case 'Z':
-	  MIPS16_INSERT_OPERAND (MOVE32Z, insn, va_arg (args, int));
+	  MIPS16_INSERT_OPERAND (MOVE32Z, insn, va_arg (*args, int));
 	  continue;
 
 	case '0':
@@ -3905,14 +3901,14 @@ mips16_macro_build (expressionS *ep, const char *name, const char *fmt,
 	  continue;
 
 	case 'X':
-	  MIPS16_INSERT_OPERAND (REGR32, insn, va_arg (args, int));
+	  MIPS16_INSERT_OPERAND (REGR32, insn, va_arg (*args, int));
 	  continue;
 
 	case 'Y':
 	  {
 	    int regno;
 
-	    regno = va_arg (args, int);
+	    regno = va_arg (*args, int);
 	    regno = ((regno & 7) << 2) | ((regno & 0x18) >> 3);
 	    MIPS16_INSERT_OPERAND (REG32R, insn, regno);
 	  }
@@ -3951,7 +3947,7 @@ mips16_macro_build (expressionS *ep, const char *name, const char *fmt,
 	  continue;
 
 	case '6':
-	  MIPS16_INSERT_OPERAND (IMM6, insn, va_arg (args, int));
+	  MIPS16_INSERT_OPERAND (IMM6, insn, va_arg (*args, int));
 	  continue;
 	}
 
@@ -6223,6 +6219,8 @@ macro (struct mips_cl_insn *ip)
 		      /* Quiet this warning.  */
 		      mips_cprestore_valid = 1;
 		    }
+		  if (mips_opts.noreorder)
+		    macro_build (NULL, "nop", "");
 		  expr1.X_add_number = mips_cprestore_offset;
   		  macro_build_ldst_constoffset (&expr1, ADDRESS_LOAD_INSN,
 						mips_gp_register,
@@ -8776,7 +8774,7 @@ mips_ip (char *str, struct mips_cl_insn *ip)
 
       gas_assert (strcmp (insn->name, str) == 0);
 
-      ok = is_opcode_valid (insn, FALSE);
+      ok = is_opcode_valid (insn);
       if (! ok)
 	{
 	  if (insn + 1 < &mips_opcodes[NUMOPCODES]
@@ -9955,9 +9953,7 @@ do_msbd:
 		    /* Set the argument to the current address in the
 		       section.  */
 		    offset_expr.X_op = O_symbol;
-		    offset_expr.X_add_symbol =
-		      symbol_new ("L0\001", now_seg,
-				  (valueT) frag_now_fix (), frag_now);
+		    offset_expr.X_add_symbol = symbol_temp_new_now ();
 		    offset_expr.X_add_number = 0;
 
 		    /* Put the floating point number into the section.  */
@@ -12238,7 +12234,7 @@ mips_frob_file (void)
 	    hi_pos = pos;
 
 	  if ((*pos)->fx_r_type == looking_for_rtype
-	      && (*pos)->fx_addsy == l->fixp->fx_addsy
+	      && symbol_same_p ((*pos)->fx_addsy, l->fixp->fx_addsy)
 	      && (*pos)->fx_offset >= l->fixp->fx_offset
 	      && (lo_pos == NULL
 		  || (*pos)->fx_offset < (*lo_pos)->fx_offset
@@ -12701,6 +12697,8 @@ s_change_section (int ignore ATTRIBUTE_UNUSED)
     section_alignment = get_absolute_expression ();
   else
     section_alignment = 0;
+  /* FIXME: really ignore?  */
+  (void) section_alignment;
 
   section_name = xstrdup (section_name);
 
@@ -15083,11 +15081,8 @@ s_mips_end (int x ATTRIBUTE_UNUSED)
     {
       segT saved_seg = now_seg;
       subsegT saved_subseg = now_subseg;
-      valueT dot;
       expressionS exp;
       char *fragp;
-
-      dot = frag_now_fix ();
 
 #ifdef md_flush_pending_output
       md_flush_pending_output ();
@@ -15671,20 +15666,16 @@ MIPS options:\n\
 #endif
 }
 
+#ifdef TE_IRIX
 enum dwarf2_format
 mips_dwarf2_format (asection *sec ATTRIBUTE_UNUSED)
 {
   if (HAVE_64BIT_SYMBOLS)
-    {
-#ifdef TE_IRIX
-      return dwarf2_format_64bit_irix;
-#else
-      return dwarf2_format_64bit;
-#endif
-    }
+    return dwarf2_format_64bit_irix;
   else
     return dwarf2_format_32bit;
 }
+#endif
 
 int
 mips_dwarf2_addr_size (void)

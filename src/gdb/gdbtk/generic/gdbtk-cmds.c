@@ -74,6 +74,20 @@
 
 #ifdef __CYGWIN__
 #include <sys/cygwin.h>		/* for cygwin_conv_to_full_win32_path */
+#include <cygwin/version.h>
+# if CYGWIN_VERSION_DLL_MAKE_COMBINED(CYGWIN_VERSION_API_MAJOR,CYGWIN_VERSION_API_MINOR) >= 181
+#   define __USEWIDE
+# else
+#   define CCP_POSIX_TO_WIN_A 0 
+#   define CCP_POSIX_TO_WIN_W 1
+#   define CCP_WIN_A_TO_POSIX 2 
+#   define CCP_WIN_W_TO_POSIX 3
+#   define cygwin_conv_path(op, from, to, size)  \
+         (op == CCP_WIN_A_TO_POSIX) ? \
+         cygwin_conv_to_full_posix_path (from, to) : \
+         cygwin_conv_to_win32_path (from, to)
+#   define CW_SET_DOS_FILE_WARNING -1	/* no-op this for older Cygwin */
+# endif
 #endif
 
 #ifdef HAVE_CTYPE_H
@@ -640,7 +654,7 @@ gdb_eval (ClientData clientData, Tcl_Interp *interp,
   make_cleanup_ui_file_delete (stb);
   val_print (value_type (val), value_contents (val),
 	     value_embedded_offset (val), value_address (val),
-	     stb, 0, &opts, current_language);
+	     stb, 0, val, &opts, current_language);
   result = ui_file_xstrdup (stb, &dummy);
   Tcl_SetObjResult (interp, Tcl_NewStringObj (result, -1));
   xfree (result);
@@ -2874,8 +2888,8 @@ gdb_path_conv (ClientData clientData, Tcl_Interp *interp,
   {
     char pathname[256], *ptr;
 
-    cygwin_conv_to_full_win32_path (Tcl_GetStringFromObj (objv[1], NULL),
-				      pathname);
+    cygwin_conv_path (CCP_POSIX_TO_WIN_A, Tcl_GetStringFromObj (objv[1], NULL),
+		      pathname, 256);
     for (ptr = pathname; *ptr; ptr++)
       {
 	if (*ptr == '\\')

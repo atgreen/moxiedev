@@ -112,7 +112,9 @@
 #include "toplev.h"
 #include "params.h"
 #include "diagnostic.h"
+#include "tree-pretty-print.h"
 #include "pointer-set.h"
+#include "recog.h"
 
 /* var-tracking.c assumes that tree code with the same value as VALUE rtx code
    has no chance to appear in REG_EXPR/MEM_EXPRs and isn't a decl.
@@ -405,9 +407,8 @@ static void stack_adjust_offset_pre_post (rtx, HOST_WIDE_INT *,
 					  HOST_WIDE_INT *);
 static void insn_stack_adjust_offset_pre_post (rtx, HOST_WIDE_INT *,
 					       HOST_WIDE_INT *);
-static void bb_stack_adjust_offset (basic_block);
 static bool vt_stack_adjustments (void);
-static rtx adjust_stack_reference (rtx, HOST_WIDE_INT);
+static rtx compute_cfa_pointer (HOST_WIDE_INT);
 static hashval_t variable_htab_hash (const void *);
 static int variable_htab_eq (const void *, const void *);
 static void variable_htab_free (void *);
@@ -421,7 +422,6 @@ static void attrs_list_union (attrs *, attrs);
 
 static void **unshare_variable (dataflow_set *set, void **slot, variable var,
 				enum var_init_status);
-static int vars_copy_1 (void **, void *);
 static void vars_copy (htab_t, htab_t);
 static tree var_debug_decl (tree);
 static void var_reg_set (dataflow_set *, rtx, enum var_init_status, rtx);
@@ -438,7 +438,6 @@ static void dataflow_set_init (dataflow_set *);
 static void dataflow_set_clear (dataflow_set *);
 static void dataflow_set_copy (dataflow_set *, dataflow_set *);
 static int variable_union_info_cmp_pos (const void *, const void *);
-static int variable_union (void **, void *);
 static void dataflow_set_union (dataflow_set *, dataflow_set *);
 static location_chain find_loc_in_1pdv (rtx, variable, htab_t);
 static bool canon_value_cmp (rtx, rtx);
@@ -446,7 +445,6 @@ static int loc_cmp (rtx, rtx);
 static bool variable_part_different_p (variable_part *, variable_part *);
 static bool onepart_variable_different_p (variable, variable);
 static bool variable_different_p (variable, variable);
-static int dataflow_set_different_1 (void **, void *);
 static bool dataflow_set_different (dataflow_set *, dataflow_set *);
 static void dataflow_set_destroy (dataflow_set *);
 
@@ -490,7 +488,7 @@ static void vt_emit_notes (void);
 
 static bool vt_get_decl_and_offset (rtx, tree *, HOST_WIDE_INT *);
 static void vt_add_function_parameters (void);
-static void vt_initialize (void);
+static bool vt_initialize (void);
 static void vt_finalize (void);
 
 /* Given a SET, calculate the amount of stack adjustment it contains
@@ -617,29 +615,6 @@ insn_stack_adjust_offset_pre_post (rtx insn, HOST_WIDE_INT *pre,
     }
 }
 
-/* Compute stack adjustment in basic block BB.  */
-
-static void
-bb_stack_adjust_offset (basic_block bb)
-{
-  HOST_WIDE_INT offset;
-  unsigned int i;
-  micro_operation *mo;
-
-  offset = VTI (bb)->in.stack_adjust;
-  for (i = 0; VEC_iterate (micro_operation, VTI (bb)->mos, i, mo); i++)
-    {
-      if (mo->type == MO_ADJUST)
-	offset += mo->u.adjust;
-      else if (mo->type != MO_CALL)
-	{
-	  if (MEM_P (mo->u.loc))
-	    mo->u.loc = adjust_stack_reference (mo->u.loc, -offset);
-	}
-    }
-  VTI (bb)->out.stack_adjust = offset;
-}
-
 /* Compute stack adjustments for all blocks by traversing DFS tree.
    Return true when the adjustments on all incoming edges are consistent.
    Heavily borrowed from pre_and_rev_post_order_compute.  */
@@ -652,6 +627,7 @@ vt_stack_adjustments (void)
 
   /* Initialize entry block.  */
   VTI (ENTRY_BLOCK_PTR)->visited = true;
+  VTI (ENTRY_BLOCK_PTR)->in.stack_adjust = INCOMING_FRAME_SP_OFFSET;
   VTI (ENTRY_BLOCK_PTR)->out.stack_adjust = INCOMING_FRAME_SP_OFFSET;
 
   /* Allocate stack for back-tracking up CFG.  */
@@ -675,9 +651,22 @@ vt_stack_adjustments (void)
       /* Check if the edge destination has been visited yet.  */
       if (!VTI (dest)->visited)
 	{
+	  rtx insn;
+	  HOST_WIDE_INT pre, post, offset;
 	  VTI (dest)->visited = true;
-	  VTI (dest)->in.stack_adjust = VTI (src)->out.stack_adjust;
-	  bb_stack_adjust_offset (dest);
+	  VTI (dest)->in.stack_adjust = offset = VTI (src)->out.stack_adjust;
+
+	  if (dest != EXIT_BLOCK_PTR)
+	    for (insn = BB_HEAD (dest);
+		 insn != NEXT_INSN (BB_END (dest));
+		 insn = NEXT_INSN (insn))
+	      if (INSN_P (insn))
+		{
+		  insn_stack_adjust_offset_pre_post (insn, &pre, &post);
+		  offset += pre + post;
+		}
+
+	  VTI (dest)->out.stack_adjust = offset;
 
 	  if (EDGE_COUNT (dest->succs) > 0)
 	    /* Since the DEST node has been visited for the first
@@ -706,13 +695,12 @@ vt_stack_adjustments (void)
   return true;
 }
 
-/* Adjust stack reference MEM by ADJUSTMENT bytes and make it relative
-   to the argument pointer.  Return the new rtx.  */
+/* Compute a CFA-based value for the stack pointer.  */
 
 static rtx
-adjust_stack_reference (rtx mem, HOST_WIDE_INT adjustment)
+compute_cfa_pointer (HOST_WIDE_INT adjustment)
 {
-  rtx addr, cfa, tmp;
+  rtx cfa;
 
 #ifdef FRAME_POINTER_CFA_OFFSET
   adjustment -= FRAME_POINTER_CFA_OFFSET (current_function_decl);
@@ -722,12 +710,351 @@ adjust_stack_reference (rtx mem, HOST_WIDE_INT adjustment)
   cfa = plus_constant (arg_pointer_rtx, adjustment);
 #endif
 
-  addr = replace_rtx (copy_rtx (XEXP (mem, 0)), stack_pointer_rtx, cfa);
-  tmp = simplify_rtx (addr);
-  if (tmp)
-    addr = tmp;
+  return cfa;
+}
 
-  return replace_equiv_address_nv (mem, addr);
+/* Adjustment for hard_frame_pointer_rtx to cfa base reg,
+   or -1 if the replacement shouldn't be done.  */
+static HOST_WIDE_INT hard_frame_pointer_adjustment = -1;
+
+/* Data for adjust_mems callback.  */
+
+struct adjust_mem_data
+{
+  bool store;
+  enum machine_mode mem_mode;
+  HOST_WIDE_INT stack_adjust;
+  rtx side_effects;
+};
+
+/* Helper for adjust_mems.  Return 1 if *loc is unsuitable for
+   transformation of wider mode arithmetics to narrower mode,
+   -1 if it is suitable and subexpressions shouldn't be
+   traversed and 0 if it is suitable and subexpressions should
+   be traversed.  Called through for_each_rtx.  */
+
+static int
+use_narrower_mode_test (rtx *loc, void *data)
+{
+  rtx subreg = (rtx) data;
+
+  if (CONSTANT_P (*loc))
+    return -1;
+  switch (GET_CODE (*loc))
+    {
+    case REG:
+      if (cselib_lookup (*loc, GET_MODE (SUBREG_REG (subreg)), 0))
+	return 1;
+      return -1;
+    case PLUS:
+    case MINUS:
+    case MULT:
+      return 0;
+    case ASHIFT:
+      if (for_each_rtx (&XEXP (*loc, 0), use_narrower_mode_test, data))
+	return 1;
+      else
+	return -1;
+    default:
+      return 1;
+    }
+}
+
+/* Transform X into narrower mode MODE from wider mode WMODE.  */
+
+static rtx
+use_narrower_mode (rtx x, enum machine_mode mode, enum machine_mode wmode)
+{
+  rtx op0, op1;
+  if (CONSTANT_P (x))
+    return lowpart_subreg (mode, x, wmode);
+  switch (GET_CODE (x))
+    {
+    case REG:
+      return lowpart_subreg (mode, x, wmode);
+    case PLUS:
+    case MINUS:
+    case MULT:
+      op0 = use_narrower_mode (XEXP (x, 0), mode, wmode);
+      op1 = use_narrower_mode (XEXP (x, 1), mode, wmode);
+      return simplify_gen_binary (GET_CODE (x), mode, op0, op1);
+    case ASHIFT:
+      op0 = use_narrower_mode (XEXP (x, 0), mode, wmode);
+      return simplify_gen_binary (ASHIFT, mode, op0, XEXP (x, 1));
+    default:
+      gcc_unreachable ();
+    }
+}
+
+/* Helper function for adjusting used MEMs.  */
+
+static rtx
+adjust_mems (rtx loc, const_rtx old_rtx, void *data)
+{
+  struct adjust_mem_data *amd = (struct adjust_mem_data *) data;
+  rtx mem, addr = loc, tem;
+  enum machine_mode mem_mode_save;
+  bool store_save;
+  switch (GET_CODE (loc))
+    {
+    case REG:
+      /* Don't do any sp or fp replacements outside of MEM addresses
+         on the LHS.  */
+      if (amd->mem_mode == VOIDmode && amd->store)
+	return loc;
+      if (loc == stack_pointer_rtx
+	  && !frame_pointer_needed)
+	return compute_cfa_pointer (amd->stack_adjust);
+      else if (loc == hard_frame_pointer_rtx
+	       && frame_pointer_needed
+	       && hard_frame_pointer_adjustment != -1)
+	return compute_cfa_pointer (hard_frame_pointer_adjustment);
+      return loc;
+    case MEM:
+      mem = loc;
+      if (!amd->store)
+	{
+	  mem = targetm.delegitimize_address (mem);
+	  if (mem != loc && !MEM_P (mem))
+	    return simplify_replace_fn_rtx (mem, old_rtx, adjust_mems, data);
+	}
+
+      addr = XEXP (mem, 0);
+      mem_mode_save = amd->mem_mode;
+      amd->mem_mode = GET_MODE (mem);
+      store_save = amd->store;
+      amd->store = false;
+      addr = simplify_replace_fn_rtx (addr, old_rtx, adjust_mems, data);
+      amd->store = store_save;
+      amd->mem_mode = mem_mode_save;
+      if (mem == loc)
+	addr = targetm.delegitimize_address (addr);
+      if (addr != XEXP (mem, 0))
+	mem = replace_equiv_address_nv (mem, addr);
+      if (!amd->store)
+	mem = avoid_constant_pool_reference (mem);
+      return mem;
+    case PRE_INC:
+    case PRE_DEC:
+      addr = gen_rtx_PLUS (GET_MODE (loc), XEXP (loc, 0),
+			   GEN_INT (GET_CODE (loc) == PRE_INC
+				    ? GET_MODE_SIZE (amd->mem_mode)
+				    : -GET_MODE_SIZE (amd->mem_mode)));
+    case POST_INC:
+    case POST_DEC:
+      if (addr == loc)
+	addr = XEXP (loc, 0);
+      gcc_assert (amd->mem_mode != VOIDmode && amd->mem_mode != BLKmode);
+      addr = simplify_replace_fn_rtx (addr, old_rtx, adjust_mems, data);
+      tem = gen_rtx_PLUS (GET_MODE (loc), XEXP (loc, 0),
+			   GEN_INT ((GET_CODE (loc) == PRE_INC
+				     || GET_CODE (loc) == POST_INC)
+				    ? GET_MODE_SIZE (amd->mem_mode)
+				    : -GET_MODE_SIZE (amd->mem_mode)));
+      amd->side_effects = alloc_EXPR_LIST (0,
+					   gen_rtx_SET (VOIDmode,
+							XEXP (loc, 0),
+							tem),
+					   amd->side_effects);
+      return addr;
+    case PRE_MODIFY:
+      addr = XEXP (loc, 1);
+    case POST_MODIFY:
+      if (addr == loc)
+	addr = XEXP (loc, 0);
+      gcc_assert (amd->mem_mode != VOIDmode);
+      addr = simplify_replace_fn_rtx (addr, old_rtx, adjust_mems, data);
+      amd->side_effects = alloc_EXPR_LIST (0,
+					   gen_rtx_SET (VOIDmode,
+							XEXP (loc, 0),
+							XEXP (loc, 1)),
+					   amd->side_effects);
+      return addr;
+    case SUBREG:
+      /* First try without delegitimization of whole MEMs and
+	 avoid_constant_pool_reference, which is more likely to succeed.  */
+      store_save = amd->store;
+      amd->store = true;
+      addr = simplify_replace_fn_rtx (SUBREG_REG (loc), old_rtx, adjust_mems,
+				      data);
+      amd->store = store_save;
+      mem = simplify_replace_fn_rtx (addr, old_rtx, adjust_mems, data);
+      if (mem == SUBREG_REG (loc))
+	{
+	  tem = loc;
+	  goto finish_subreg;
+	}
+      tem = simplify_gen_subreg (GET_MODE (loc), mem,
+				 GET_MODE (SUBREG_REG (loc)),
+				 SUBREG_BYTE (loc));
+      if (tem)
+	goto finish_subreg;
+      tem = simplify_gen_subreg (GET_MODE (loc), addr,
+				 GET_MODE (SUBREG_REG (loc)),
+				 SUBREG_BYTE (loc));
+      if (tem == NULL_RTX)
+	tem = gen_rtx_raw_SUBREG (GET_MODE (loc), addr, SUBREG_BYTE (loc));
+    finish_subreg:
+      if (MAY_HAVE_DEBUG_INSNS
+	  && GET_CODE (tem) == SUBREG
+	  && (GET_CODE (SUBREG_REG (tem)) == PLUS
+	      || GET_CODE (SUBREG_REG (tem)) == MINUS
+	      || GET_CODE (SUBREG_REG (tem)) == MULT
+	      || GET_CODE (SUBREG_REG (tem)) == ASHIFT)
+	  && GET_MODE_CLASS (GET_MODE (tem)) == MODE_INT
+	  && GET_MODE_CLASS (GET_MODE (SUBREG_REG (tem))) == MODE_INT
+	  && GET_MODE_SIZE (GET_MODE (tem))
+	     < GET_MODE_SIZE (GET_MODE (SUBREG_REG (tem)))
+	  && subreg_lowpart_p (tem)
+	  && !for_each_rtx (&SUBREG_REG (tem), use_narrower_mode_test, tem))
+	return use_narrower_mode (SUBREG_REG (tem), GET_MODE (tem),
+				  GET_MODE (SUBREG_REG (tem)));
+      return tem;
+    case ASM_OPERANDS:
+      /* Don't do any replacements in second and following
+	 ASM_OPERANDS of inline-asm with multiple sets.
+	 ASM_OPERANDS_INPUT_VEC, ASM_OPERANDS_INPUT_CONSTRAINT_VEC
+	 and ASM_OPERANDS_LABEL_VEC need to be equal between
+	 all the ASM_OPERANDs in the insn and adjust_insn will
+	 fix this up.  */
+      if (ASM_OPERANDS_OUTPUT_IDX (loc) != 0)
+	return loc;
+      break;
+    default:
+      break;
+    }
+  return NULL_RTX;
+}
+
+/* Helper function for replacement of uses.  */
+
+static void
+adjust_mem_uses (rtx *x, void *data)
+{
+  rtx new_x = simplify_replace_fn_rtx (*x, NULL_RTX, adjust_mems, data);
+  if (new_x != *x)
+    validate_change (NULL_RTX, x, new_x, true);
+}
+
+/* Helper function for replacement of stores.  */
+
+static void
+adjust_mem_stores (rtx loc, const_rtx expr, void *data)
+{
+  if (MEM_P (loc))
+    {
+      rtx new_dest = simplify_replace_fn_rtx (SET_DEST (expr), NULL_RTX,
+					      adjust_mems, data);
+      if (new_dest != SET_DEST (expr))
+	{
+	  rtx xexpr = CONST_CAST_RTX (expr);
+	  validate_change (NULL_RTX, &SET_DEST (xexpr), new_dest, true);
+	}
+    }
+}
+
+/* Simplify INSN.  Remove all {PRE,POST}_{INC,DEC,MODIFY} rtxes,
+   replace them with their value in the insn and add the side-effects
+   as other sets to the insn.  */
+
+static void
+adjust_insn (basic_block bb, rtx insn)
+{
+  struct adjust_mem_data amd;
+  rtx set;
+  amd.mem_mode = VOIDmode;
+  amd.stack_adjust = -VTI (bb)->out.stack_adjust;
+  amd.side_effects = NULL_RTX;
+
+  amd.store = true;
+  note_stores (PATTERN (insn), adjust_mem_stores, &amd);
+
+  amd.store = false;
+  if (GET_CODE (PATTERN (insn)) == PARALLEL
+      && asm_noperands (PATTERN (insn)) > 0
+      && GET_CODE (XVECEXP (PATTERN (insn), 0, 0)) == SET)
+    {
+      rtx body, set0;
+      int i;
+
+      /* inline-asm with multiple sets is tiny bit more complicated,
+	 because the 3 vectors in ASM_OPERANDS need to be shared between
+	 all ASM_OPERANDS in the instruction.  adjust_mems will
+	 not touch ASM_OPERANDS other than the first one, asm_noperands
+	 test above needs to be called before that (otherwise it would fail)
+	 and afterwards this code fixes it up.  */
+      note_uses (&PATTERN (insn), adjust_mem_uses, &amd);
+      body = PATTERN (insn);
+      set0 = XVECEXP (body, 0, 0);
+      gcc_checking_assert (GET_CODE (set0) == SET
+			   && GET_CODE (SET_SRC (set0)) == ASM_OPERANDS
+			   && ASM_OPERANDS_OUTPUT_IDX (SET_SRC (set0)) == 0);
+      for (i = 1; i < XVECLEN (body, 0); i++)
+	if (GET_CODE (XVECEXP (body, 0, i)) != SET)
+	  break;
+	else
+	  {
+	    set = XVECEXP (body, 0, i);
+	    gcc_checking_assert (GET_CODE (SET_SRC (set)) == ASM_OPERANDS
+				 && ASM_OPERANDS_OUTPUT_IDX (SET_SRC (set))
+				    == i);
+	    if (ASM_OPERANDS_INPUT_VEC (SET_SRC (set))
+		!= ASM_OPERANDS_INPUT_VEC (SET_SRC (set0))
+		|| ASM_OPERANDS_INPUT_CONSTRAINT_VEC (SET_SRC (set))
+		   != ASM_OPERANDS_INPUT_CONSTRAINT_VEC (SET_SRC (set0))
+		|| ASM_OPERANDS_LABEL_VEC (SET_SRC (set))
+		   != ASM_OPERANDS_LABEL_VEC (SET_SRC (set0)))
+	      {
+		rtx newsrc = shallow_copy_rtx (SET_SRC (set));
+		ASM_OPERANDS_INPUT_VEC (newsrc)
+		  = ASM_OPERANDS_INPUT_VEC (SET_SRC (set0));
+		ASM_OPERANDS_INPUT_CONSTRAINT_VEC (newsrc)
+		  = ASM_OPERANDS_INPUT_CONSTRAINT_VEC (SET_SRC (set0));
+		ASM_OPERANDS_LABEL_VEC (newsrc)
+		  = ASM_OPERANDS_LABEL_VEC (SET_SRC (set0));
+		validate_change (NULL_RTX, &SET_SRC (set), newsrc, true);
+	      }
+	  }
+    }
+  else
+    note_uses (&PATTERN (insn), adjust_mem_uses, &amd);
+
+  /* For read-only MEMs containing some constant, prefer those
+     constants.  */
+  set = single_set (insn);
+  if (set && MEM_P (SET_SRC (set)) && MEM_READONLY_P (SET_SRC (set)))
+    {
+      rtx note = find_reg_equal_equiv_note (insn);
+
+      if (note && CONSTANT_P (XEXP (note, 0)))
+	validate_change (NULL_RTX, &SET_SRC (set), XEXP (note, 0), true);
+    }
+
+  if (amd.side_effects)
+    {
+      rtx *pat, new_pat, s;
+      int i, oldn, newn;
+
+      pat = &PATTERN (insn);
+      if (GET_CODE (*pat) == COND_EXEC)
+	pat = &COND_EXEC_CODE (*pat);
+      if (GET_CODE (*pat) == PARALLEL)
+	oldn = XVECLEN (*pat, 0);
+      else
+	oldn = 1;
+      for (s = amd.side_effects, newn = 0; s; newn++)
+	s = XEXP (s, 1);
+      new_pat = gen_rtx_PARALLEL (VOIDmode, rtvec_alloc (oldn + newn));
+      if (GET_CODE (*pat) == PARALLEL)
+	for (i = 0; i < oldn; i++)
+	  XVECEXP (new_pat, 0, i) = XVECEXP (*pat, 0, i);
+      else
+	XVECEXP (new_pat, 0, 0) = *pat;
+      for (s = amd.side_effects, i = oldn; i < oldn + newn; i++, s = XEXP (s, 1))
+	XVECEXP (new_pat, 0, i) = XEXP (s, 0);
+      free_EXPR_LIST_list (&amd.side_effects);
+      validate_change (NULL_RTX, pat, new_pat, true);
+    }
 }
 
 /* Return true if a decl_or_value DV is a DECL or NULL.  */
@@ -829,7 +1156,7 @@ dv_from_value (rtx value)
 
 extern void debug_dv (decl_or_value dv);
 
-void
+DEBUG_FUNCTION void
 debug_dv (decl_or_value dv)
 {
   if (dv_is_value_p (dv))
@@ -898,7 +1225,7 @@ variable_htab_free (void *elem)
   variable var = (variable) elem;
   location_chain node, next;
 
-  gcc_assert (var->refcount > 0);
+  gcc_checking_assert (var->refcount > 0);
 
   var->refcount--;
   if (var->refcount > 0)
@@ -1101,7 +1428,7 @@ shared_hash_copy (shared_hash vars)
 static void
 shared_hash_destroy (shared_hash vars)
 {
-  gcc_assert (vars->refcount > 0);
+  gcc_checking_assert (vars->refcount > 0);
   if (--vars->refcount == 0)
     {
       htab_delete (vars->htab);
@@ -1266,34 +1593,23 @@ unshare_variable (dataflow_set *set, void **slot, variable var,
   return slot;
 }
 
-/* Add a variable from *SLOT to hash table DATA and increase its reference
-   count.  */
-
-static int
-vars_copy_1 (void **slot, void *data)
-{
-  htab_t dst = (htab_t) data;
-  variable src;
-  void **dstp;
-
-  src = (variable) *slot;
-  src->refcount++;
-
-  dstp = htab_find_slot_with_hash (dst, src->dv,
-				   dv_htab_hash (src->dv),
-				   INSERT);
-  *dstp = src;
-
-  /* Continue traversing the hash table.  */
-  return 1;
-}
-
 /* Copy all variables from hash table SRC to hash table DST.  */
 
 static void
 vars_copy (htab_t dst, htab_t src)
 {
-  htab_traverse_noresize (src, vars_copy_1, dst);
+  htab_iterator hi;
+  variable var;
+
+  FOR_EACH_HTAB_ELEMENT (src, var, variable, hi)
+    {
+      void **dstp;
+      var->refcount++;
+      dstp = htab_find_slot_with_hash (dst, var->dv,
+				       dv_htab_hash (var->dv),
+				       INSERT);
+      *dstp = var;
+    }
 }
 
 /* Map a decl to its main debug decl.  */
@@ -1302,9 +1618,12 @@ static inline tree
 var_debug_decl (tree decl)
 {
   if (decl && DECL_P (decl)
-      && DECL_DEBUG_EXPR_IS_FROM (decl) && DECL_DEBUG_EXPR (decl)
-      && DECL_P (DECL_DEBUG_EXPR (decl)))
-    decl = DECL_DEBUG_EXPR (decl);
+      && DECL_DEBUG_EXPR_IS_FROM (decl))
+    {
+      tree debugdecl = DECL_DEBUG_EXPR (decl);
+      if (debugdecl && DECL_P (debugdecl))
+	decl = debugdecl;
+    }
 
   return decl;
 }
@@ -1795,14 +2114,12 @@ variable_union_info_cmp_pos (const void *n1, const void *n2)
    we keep the newest locations in the beginning.  */
 
 static int
-variable_union (void **slot, void *data)
+variable_union (variable src, dataflow_set *set)
 {
-  variable src, dst;
+  variable dst;
   void **dstp;
-  dataflow_set *set = (dataflow_set *) data;
   int i, j, k;
 
-  src = (variable) *slot;
   dstp = shared_hash_find_slot (set->vars, src->dv);
   if (!dstp || !*dstp)
     {
@@ -1828,8 +2145,8 @@ variable_union (void **slot, void *data)
     {
       location_chain *nodep, dnode, snode;
 
-      gcc_assert (src->n_var_parts == 1);
-      gcc_assert (dst->n_var_parts == 1);
+      gcc_assert (src->n_var_parts == 1
+		  && dst->n_var_parts == 1);
 
       snode = src->var_part[0].loc_chain;
       gcc_assert (snode);
@@ -2178,7 +2495,13 @@ dataflow_set_union (dataflow_set *dst, dataflow_set *src)
       dst->vars = shared_hash_copy (src->vars);
     }
   else
-    htab_traverse (shared_hash_htab (src->vars), variable_union, dst);
+    {
+      htab_iterator hi;
+      variable var;
+
+      FOR_EACH_HTAB_ELEMENT (shared_hash_htab (src->vars), var, variable, hi)
+	variable_union (var, dst);
+    }
 }
 
 /* Whether the value is currently being expanded.  */
@@ -2214,45 +2537,79 @@ dv_changed_p (decl_or_value dv)
 
 /* Return a location list node whose loc is rtx_equal to LOC, in the
    location list of a one-part variable or value VAR, or in that of
-   any values recursively mentioned in the location lists.  */
+   any values recursively mentioned in the location lists.  VARS must
+   be in star-canonical form.  */
 
 static location_chain
 find_loc_in_1pdv (rtx loc, variable var, htab_t vars)
 {
   location_chain node;
+  enum rtx_code loc_code;
 
   if (!var)
     return NULL;
 
+#ifdef ENABLE_CHECKING
   gcc_assert (dv_onepart_p (var->dv));
+#endif
 
   if (!var->n_var_parts)
     return NULL;
 
+#ifdef ENABLE_CHECKING
   gcc_assert (var->var_part[0].offset == 0);
+  gcc_assert (loc != dv_as_opaque (var->dv));
+#endif
 
+  loc_code = GET_CODE (loc);
   for (node = var->var_part[0].loc_chain; node; node = node->next)
-    if (rtx_equal_p (loc, node->loc))
-      return node;
-    else if (GET_CODE (node->loc) == VALUE
-	     && !VALUE_RECURSED_INTO (node->loc))
-      {
-	decl_or_value dv = dv_from_value (node->loc);
-	variable var = (variable)
-		       htab_find_with_hash (vars, dv, dv_htab_hash (dv));
+    {
+      decl_or_value dv;
+      variable rvar;
 
-	if (var)
-	  {
-	    location_chain where;
-	    VALUE_RECURSED_INTO (node->loc) = true;
-	    if ((where = find_loc_in_1pdv (loc, var, vars)))
-	      {
-		VALUE_RECURSED_INTO (node->loc) = false;
-		return where;
-	      }
-	    VALUE_RECURSED_INTO (node->loc) = false;
-	  }
-      }
+      if (GET_CODE (node->loc) != loc_code)
+	{
+	  if (GET_CODE (node->loc) != VALUE)
+	    continue;
+	}
+      else if (loc == node->loc)
+	return node;
+      else if (loc_code != VALUE)
+	{
+	  if (rtx_equal_p (loc, node->loc))
+	    return node;
+	  continue;
+	}
+
+      /* Since we're in star-canonical form, we don't need to visit
+	 non-canonical nodes: one-part variables and non-canonical
+	 values would only point back to the canonical node.  */
+      if (dv_is_value_p (var->dv)
+	  && !canon_value_cmp (node->loc, dv_as_value (var->dv)))
+	{
+	  /* Skip all subsequent VALUEs.  */
+	  while (node->next && GET_CODE (node->next->loc) == VALUE)
+	    {
+	      node = node->next;
+#ifdef ENABLE_CHECKING
+	      gcc_assert (!canon_value_cmp (node->loc,
+					    dv_as_value (var->dv)));
+#endif
+	      if (loc == node->loc)
+		return node;
+	    }
+	  continue;
+	}
+
+#ifdef ENABLE_CHECKING
+      gcc_assert (node == var->var_part[0].loc_chain);
+      gcc_assert (!node->next);
+#endif
+
+      dv = dv_from_value (node->loc);
+      rvar = (variable) htab_find_with_hash (vars, dv, dv_htab_hash (dv));
+      return find_loc_in_1pdv (loc, rvar, vars);
+    }
 
   return NULL;
 }
@@ -2310,6 +2667,33 @@ intersect_loc_chains (rtx val, location_chain *dest, struct dfset_merge *dsm,
   dataflow_set *s1set = dsm->cur;
   dataflow_set *s2set = dsm->src;
   location_chain found;
+
+  if (s2var)
+    {
+      location_chain s2node;
+
+#ifdef ENABLE_CHECKING
+      gcc_assert (dv_onepart_p (s2var->dv));
+#endif
+
+      if (s2var->n_var_parts)
+	{
+#ifdef ENABLE_CHECKING
+	  gcc_assert (s2var->var_part[0].offset == 0);
+#endif
+	  s2node = s2var->var_part[0].loc_chain;
+
+	  for (; s1node && s2node;
+	       s1node = s1node->next, s2node = s2node->next)
+	    if (s1node->loc != s2node->loc)
+	      break;
+	    else if (s1node->loc == val)
+	      continue;
+	    else
+	      insert_into_intersection (dest, s1node->loc,
+					MIN (s1node->init, s2node->init));
+	}
+    }
 
   for (; s1node; s1node = s1node->next)
     {
@@ -2597,15 +2981,23 @@ add_value_chains (decl_or_value dv, rtx loc)
 }
 
 /* If CSELIB_VAL_PTR of value DV refer to VALUEs, add backlinks from those
-   VALUEs to DV.  */
+   VALUEs to DV.  Add the same time get rid of ASM_OPERANDS from locs list,
+   that is something we never can express in .debug_info and can prevent
+   reverse ops from being used.  */
 
 static void
 add_cselib_value_chains (decl_or_value dv)
 {
-  struct elt_loc_list *l;
+  struct elt_loc_list **l;
 
-  for (l = CSELIB_VAL_PTR (dv_as_value (dv))->locs; l; l = l->next)
-    for_each_rtx (&l->loc, add_value_chain, dv_as_opaque (dv));
+  for (l = &CSELIB_VAL_PTR (dv_as_value (dv))->locs; *l;)
+    if (GET_CODE ((*l)->loc) == ASM_OPERANDS)
+      *l = (*l)->next;
+    else
+      {
+	for_each_rtx (&(*l)->loc, add_value_chain, dv_as_opaque (dv));
+	l = &(*l)->next;
+      }
 }
 
 /* If decl or value DVP refers to VALUE from *LOC, remove backlinks
@@ -2732,7 +3124,7 @@ canonicalize_values_mark (void **slot, void *data)
   if (!dv_is_value_p (dv))
     return 1;
 
-  gcc_assert (var->n_var_parts == 1);
+  gcc_checking_assert (var->n_var_parts == 1);
 
   val = dv_as_value (dv);
 
@@ -2775,7 +3167,7 @@ canonicalize_values_star (void **slot, void *data)
   if (!dv_onepart_p (dv))
     return 1;
 
-  gcc_assert (var->n_var_parts == 1);
+  gcc_checking_assert (var->n_var_parts == 1);
 
   if (dv_is_value_p (dv))
     {
@@ -2965,11 +3357,72 @@ canonicalize_values_star (void **slot, void *data)
 
   /* Variable may have been unshared.  */
   var = (variable)*slot;
-  gcc_assert (var->n_var_parts && var->var_part[0].loc_chain->loc == cval
-	      && var->var_part[0].loc_chain->next == NULL);
+  gcc_checking_assert (var->n_var_parts && var->var_part[0].loc_chain->loc == cval
+		       && var->var_part[0].loc_chain->next == NULL);
 
   if (VALUE_RECURSED_INTO (cval))
     goto restart_with_cval;
+
+  return 1;
+}
+
+/* Bind one-part variables to the canonical value in an equivalence
+   set.  Not doing this causes dataflow convergence failure in rare
+   circumstances, see PR42873.  Unfortunately we can't do this
+   efficiently as part of canonicalize_values_star, since we may not
+   have determined or even seen the canonical value of a set when we
+   get to a variable that references another member of the set.  */
+
+static int
+canonicalize_vars_star (void **slot, void *data)
+{
+  dataflow_set *set = (dataflow_set *)data;
+  variable var = (variable) *slot;
+  decl_or_value dv = var->dv;
+  location_chain node;
+  rtx cval;
+  decl_or_value cdv;
+  void **cslot;
+  variable cvar;
+  location_chain cnode;
+
+  if (!dv_onepart_p (dv) || dv_is_value_p (dv))
+    return 1;
+
+  gcc_assert (var->n_var_parts == 1);
+
+  node = var->var_part[0].loc_chain;
+
+  if (GET_CODE (node->loc) != VALUE)
+    return 1;
+
+  gcc_assert (!node->next);
+  cval = node->loc;
+
+  /* Push values to the canonical one.  */
+  cdv = dv_from_value (cval);
+  cslot = shared_hash_find_slot_noinsert (set->vars, cdv);
+  if (!cslot)
+    return 1;
+  cvar = (variable)*cslot;
+  gcc_assert (cvar->n_var_parts == 1);
+
+  cnode = cvar->var_part[0].loc_chain;
+
+  /* CVAL is canonical if its value list contains non-VALUEs or VALUEs
+     that are not “more canonical” than it.  */
+  if (GET_CODE (cnode->loc) != VALUE
+      || !canon_value_cmp (cnode->loc, cval))
+    return 1;
+
+  /* CVAL was found to be non-canonical.  Change the variable to point
+     to the canonical VALUE.  */
+  gcc_assert (!cnode->next);
+  cval = cnode->loc;
+
+  slot = set_slot_part (set, cval, slot, dv, 0,
+			node->init, node->set_src);
+  slot = clobber_slot_part (set, cval, slot, 0, node->set_src);
 
   return 1;
 }
@@ -2980,12 +3433,10 @@ canonicalize_values_star (void **slot, void *data)
    intersection.  */
 
 static int
-variable_merge_over_cur (void **s1slot, void *data)
+variable_merge_over_cur (variable s1var, struct dfset_merge *dsm)
 {
-  struct dfset_merge *dsm = (struct dfset_merge *)data;
   dataflow_set *dst = dsm->dst;
   void **dstslot;
-  variable s1var = (variable) *s1slot;
   variable s2var, dvar = NULL;
   decl_or_value dv = s1var->dv;
   bool onepart = dv_onepart_p (dv);
@@ -2996,14 +3447,14 @@ variable_merge_over_cur (void **s1slot, void *data)
   /* If the incoming onepart variable has an empty location list, then
      the intersection will be just as empty.  For other variables,
      it's always union.  */
-  gcc_assert (s1var->n_var_parts);
-  gcc_assert (s1var->var_part[0].loc_chain);
+  gcc_checking_assert (s1var->n_var_parts
+		       && s1var->var_part[0].loc_chain);
 
   if (!onepart)
-    return variable_union (s1slot, dst);
+    return variable_union (s1var, dst);
 
-  gcc_assert (s1var->n_var_parts == 1);
-  gcc_assert (s1var->var_part[0].offset == 0);
+  gcc_checking_assert (s1var->n_var_parts == 1
+		       && s1var->var_part[0].offset == 0);
 
   dvhash = dv_htab_hash (dv);
   if (dv_is_value_p (dv))
@@ -3019,17 +3470,17 @@ variable_merge_over_cur (void **s1slot, void *data)
     }
 
   dsm->src_onepart_cnt--;
-  gcc_assert (s2var->var_part[0].loc_chain);
-  gcc_assert (s2var->n_var_parts == 1);
-  gcc_assert (s2var->var_part[0].offset == 0);
+  gcc_assert (s2var->var_part[0].loc_chain
+	      && s2var->n_var_parts == 1
+	      && s2var->var_part[0].offset == 0);
 
   dstslot = shared_hash_find_slot_noinsert_1 (dst->vars, dv, dvhash);
   if (dstslot)
     {
       dvar = (variable)*dstslot;
-      gcc_assert (dvar->refcount == 1);
-      gcc_assert (dvar->n_var_parts == 1);
-      gcc_assert (dvar->var_part[0].offset == 0);
+      gcc_assert (dvar->refcount == 1
+		  && dvar->n_var_parts == 1
+		  && dvar->var_part[0].offset == 0);
       nodep = &dvar->var_part[0].loc_chain;
     }
   else
@@ -3243,11 +3694,9 @@ variable_merge_over_cur (void **s1slot, void *data)
    variable_merge_over_cur().  */
 
 static int
-variable_merge_over_src (void **s2slot, void *data)
+variable_merge_over_src (variable s2var, struct dfset_merge *dsm)
 {
-  struct dfset_merge *dsm = (struct dfset_merge *)data;
   dataflow_set *dst = dsm->dst;
-  variable s2var = (variable) *s2slot;
   decl_or_value dv = s2var->dv;
   bool onepart = dv_onepart_p (dv);
 
@@ -3274,6 +3723,8 @@ dataflow_set_merge (dataflow_set *dst, dataflow_set *src2)
   struct dfset_merge dsm;
   int i;
   size_t src1_elems, src2_elems;
+  htab_iterator hi;
+  variable var;
 
   src1_elems = htab_elements (shared_hash_htab (src1->vars));
   src2_elems = htab_elements (shared_hash_htab (src2->vars));
@@ -3294,10 +3745,10 @@ dataflow_set_merge (dataflow_set *dst, dataflow_set *src2)
   dsm.cur = src1;
   dsm.src_onepart_cnt = 0;
 
-  htab_traverse (shared_hash_htab (dsm.src->vars), variable_merge_over_src,
-		 &dsm);
-  htab_traverse (shared_hash_htab (dsm.cur->vars), variable_merge_over_cur,
-		 &dsm);
+  FOR_EACH_HTAB_ELEMENT (shared_hash_htab (dsm.src->vars), var, variable, hi)
+    variable_merge_over_src (var, &dsm);
+  FOR_EACH_HTAB_ELEMENT (shared_hash_htab (dsm.cur->vars), var, variable, hi)
+    variable_merge_over_cur (var, &dsm);
 
   if (dsm.src_onepart_cnt)
     dst_can_be_shared = false;
@@ -3316,6 +3767,11 @@ dataflow_set_equiv_regs (dataflow_set *set)
   for (i = 0; i < FIRST_PSEUDO_REGISTER; i++)
     {
       rtx canon[NUM_MACHINE_MODES];
+
+      /* If the list is empty or one entry, no need to canonicalize
+	 anything.  */
+      if (set->regs[i] == NULL || set->regs[i]->next == NULL)
+	continue;
 
       memset (canon, 0, sizeof (canon));
 
@@ -3510,8 +3966,8 @@ variable_post_merge_new_vals (void **slot, void *info)
 		       att; att = att->next)
 		    if (GET_MODE (att->loc) == GET_MODE (node->loc))
 		      {
-			gcc_assert (att->offset == 0);
-			gcc_assert (dv_is_value_p (att->dv));
+			gcc_assert (att->offset == 0
+				    && dv_is_value_p (att->dv));
 			val_reset (set, att->dv);
 			break;
 		      }
@@ -3577,18 +4033,24 @@ variable_post_merge_perm_vals (void **pslot, void *info)
   decl_or_value dv;
   attrs att;
 
-  gcc_assert (dv_is_value_p (pvar->dv));
-  gcc_assert (pvar->n_var_parts == 1);
+  gcc_assert (dv_is_value_p (pvar->dv)
+	      && pvar->n_var_parts == 1);
   pnode = pvar->var_part[0].loc_chain;
-  gcc_assert (pnode);
-  gcc_assert (!pnode->next);
-  gcc_assert (REG_P (pnode->loc));
+  gcc_assert (pnode
+	      && !pnode->next
+	      && REG_P (pnode->loc));
 
   dv = pvar->dv;
 
   var = shared_hash_find (set->vars, dv);
   if (var)
     {
+      /* Although variable_post_merge_new_vals may have made decls
+	 non-star-canonical, values that pre-existed in canonical form
+	 remain canonical, and newly-created values reference a single
+	 REG, so they are canonical as well.  Since VAR has the
+	 location list for a VALUE, using find_loc_in_1pdv for it is
+	 fine, since VALUEs don't map back to DECLs.  */
       if (find_loc_in_1pdv (pnode->loc, var, shared_hash_htab (set->vars)))
 	return 1;
       val_reset (set, dv);
@@ -3613,7 +4075,7 @@ variable_post_merge_perm_vals (void **pslot, void *info)
     {
       attrs_list_insert (&set->regs[REGNO (pnode->loc)],
 			 dv, 0, pnode->loc);
-      variable_union (pslot, set);
+      variable_union (pvar, set);
     }
 
   return 1;
@@ -3636,6 +4098,7 @@ dataflow_post_merge_adjust (dataflow_set *set, dataflow_set **permp)
     htab_traverse (shared_hash_htab ((*permp)->vars),
 		   variable_post_merge_perm_vals, &dfpm);
   htab_traverse (shared_hash_htab (set->vars), canonicalize_values_star, set);
+  htab_traverse (shared_hash_htab (set->vars), canonicalize_vars_star, set);
 }
 
 /* Return a node whose loc is a MEM that refers to EXPR in the
@@ -3653,9 +4116,8 @@ find_mem_expr_in_1pdv (tree expr, rtx val, htab_t vars)
   if (!val)
     return NULL;
 
-  gcc_assert (GET_CODE (val) == VALUE);
-
-  gcc_assert (!VALUE_RECURSED_INTO (val));
+  gcc_assert (GET_CODE (val) == VALUE
+	      && !VALUE_RECURSED_INTO (val));
 
   dv = dv_from_value (val);
   var = (variable) htab_find_with_hash (vars, dv, dv_htab_hash (dv));
@@ -3906,7 +4368,7 @@ dataflow_set_clear_at_call (dataflow_set *set)
   int r;
 
   for (r = 0; r < FIRST_PSEUDO_REGISTER; r++)
-    if (TEST_HARD_REG_BIT (call_used_reg_set, r))
+    if (TEST_HARD_REG_BIT (regs_invalidated_by_call, r))
       var_regno_delete (set, r);
 
   if (MAY_HAVE_DEBUG_INSNS)
@@ -3920,10 +4382,6 @@ dataflow_set_clear_at_call (dataflow_set *set)
       set->traversed_vars = NULL;
     }
 }
-
-/* Flag whether two dataflow sets being compared contain different data.  */
-static bool
-dataflow_set_different_value;
 
 static bool
 variable_part_different_p (variable_part *vp1, variable_part *vp2)
@@ -3959,14 +4417,13 @@ onepart_variable_different_p (variable var1, variable var2)
   if (var1 == var2)
     return false;
 
-  gcc_assert (var1->n_var_parts == 1);
-  gcc_assert (var2->n_var_parts == 1);
+  gcc_assert (var1->n_var_parts == 1
+	      && var2->n_var_parts == 1);
 
   lc1 = var1->var_part[0].loc_chain;
   lc2 = var2->var_part[0].loc_chain;
 
-  gcc_assert (lc1);
-  gcc_assert (lc2);
+  gcc_assert (lc1 && lc2);
 
   while (lc1 && lc2)
     {
@@ -3999,8 +4456,8 @@ variable_different_p (variable var1, variable var2)
       /* One-part values have locations in a canonical order.  */
       if (i == 0 && var1->var_part[i].offset == 0 && dv_onepart_p (var1->dv))
 	{
-	  gcc_assert (var1->n_var_parts == 1);
-	  gcc_assert (dv_as_opaque (var1->dv) == dv_as_opaque (var2->dv));
+	  gcc_assert (var1->n_var_parts == 1
+		      && dv_as_opaque (var1->dv) == dv_as_opaque (var2->dv));
 	  return onepart_variable_different_p (var1, var2);
 	}
       if (variable_part_different_p (&var1->var_part[i], &var2->var_part[i]))
@@ -4011,56 +4468,14 @@ variable_different_p (variable var1, variable var2)
   return false;
 }
 
-/* Compare variable *SLOT with the same variable in hash table DATA
-   and set DATAFLOW_SET_DIFFERENT_VALUE if they are different.  */
-
-static int
-dataflow_set_different_1 (void **slot, void *data)
-{
-  htab_t htab = (htab_t) data;
-  variable var1, var2;
-
-  var1 = (variable) *slot;
-  var2 = (variable) htab_find_with_hash (htab, var1->dv,
-					 dv_htab_hash (var1->dv));
-  if (!var2)
-    {
-      dataflow_set_different_value = true;
-
-      if (dump_file && (dump_flags & TDF_DETAILS))
-	{
-	  fprintf (dump_file, "dataflow difference found: removal of:\n");
-	  dump_var (var1);
-	}
-
-      /* Stop traversing the hash table.  */
-      return 0;
-    }
-
-  if (variable_different_p (var1, var2))
-    {
-      dataflow_set_different_value = true;
-
-      if (dump_file && (dump_flags & TDF_DETAILS))
-	{
-	  fprintf (dump_file, "dataflow difference found: old and new follow:\n");
-	  dump_var (var1);
-	  dump_var (var2);
-	}
-
-      /* Stop traversing the hash table.  */
-      return 0;
-    }
-
-  /* Continue traversing the hash table.  */
-  return 1;
-}
-
 /* Return true if dataflow sets OLD_SET and NEW_SET differ.  */
 
 static bool
 dataflow_set_different (dataflow_set *old_set, dataflow_set *new_set)
 {
+  htab_iterator hi;
+  variable var1;
+
   if (old_set->vars == new_set->vars)
     return false;
 
@@ -4068,14 +4483,38 @@ dataflow_set_different (dataflow_set *old_set, dataflow_set *new_set)
       != htab_elements (shared_hash_htab (new_set->vars)))
     return true;
 
-  dataflow_set_different_value = false;
+  FOR_EACH_HTAB_ELEMENT (shared_hash_htab (old_set->vars), var1, variable, hi)
+    {
+      htab_t htab = shared_hash_htab (new_set->vars);
+      variable var2 = (variable) htab_find_with_hash (htab, var1->dv,
+						      dv_htab_hash (var1->dv));
+      if (!var2)
+	{
+	  if (dump_file && (dump_flags & TDF_DETAILS))
+	    {
+	      fprintf (dump_file, "dataflow difference found: removal of:\n");
+	      dump_var (var1);
+	    }
+	  return true;
+	}
 
-  htab_traverse (shared_hash_htab (old_set->vars), dataflow_set_different_1,
-		 shared_hash_htab (new_set->vars));
+      if (variable_different_p (var1, var2))
+	{
+	  if (dump_file && (dump_flags & TDF_DETAILS))
+	    {
+	      fprintf (dump_file, "dataflow difference found: "
+		       "old and new follow:\n");
+	      dump_var (var1);
+	      dump_var (var2);
+	    }
+	  return true;
+	}
+    }
+
   /* No need to traverse the second hashtab, if both have the same number
      of elements and the second one had all entries found in the first one,
      then it can't have any extra entries.  */
-  return dataflow_set_different_value;
+  return false;
 }
 
 /* Free the contents of dataflow set SET.  */
@@ -4156,13 +4595,32 @@ track_expr_p (tree expr, bool need_rtl)
      don't need to track this expression if the ultimate declaration is
      ignored.  */
   realdecl = expr;
-  if (DECL_DEBUG_EXPR_IS_FROM (realdecl) && DECL_DEBUG_EXPR (realdecl))
+  if (DECL_DEBUG_EXPR_IS_FROM (realdecl))
     {
       realdecl = DECL_DEBUG_EXPR (realdecl);
-      /* ??? We don't yet know how to emit DW_OP_piece for variable
-	 that has been SRA'ed.  */
-      if (!DECL_P (realdecl))
-	return 0;
+      if (realdecl == NULL_TREE)
+	realdecl = expr;
+      else if (!DECL_P (realdecl))
+	{
+	  if (handled_component_p (realdecl))
+	    {
+	      HOST_WIDE_INT bitsize, bitpos, maxsize;
+	      tree innerdecl
+		= get_ref_base_and_extent (realdecl, &bitpos, &bitsize,
+					   &maxsize);
+	      if (!DECL_P (innerdecl)
+		  || DECL_IGNORED_P (innerdecl)
+		  || TREE_STATIC (innerdecl)
+		  || bitsize <= 0
+		  || bitpos + bitsize > 256
+		  || bitsize != maxsize)
+		return 0;
+	      else
+		realdecl = expr;
+	    }
+	  else
+	    return 0;
+	}
     }
 
   /* Do not track EXPR if REALDECL it should be ignored for debugging
@@ -4326,6 +4784,10 @@ var_lowpart (enum machine_mode mode, rtx loc)
   return gen_rtx_REG_offset (loc, mode, regno, offset);
 }
 
+/* arg_pointer_rtx resp. frame_pointer_rtx if stack_pointer_rtx or
+   hard_frame_pointer_rtx is being mapped to it.  */
+static rtx cfa_base_rtx;
+
 /* Carry information about uses and stores while walking rtx.  */
 
 struct count_use_info
@@ -4371,6 +4833,17 @@ find_use_val (rtx x, enum machine_mode mode, struct count_use_info *cui)
   return NULL;
 }
 
+/* Helper function to get mode of MEM's address.  */
+
+static inline enum machine_mode
+get_address_mode (rtx mem)
+{
+  enum machine_mode mode = GET_MODE (XEXP (mem, 0));
+  if (mode != VOIDmode)
+    return mode;
+  return targetm.addr_space.address_mode (MEM_ADDR_SPACE (mem));
+}
+
 /* Replace all registers and addresses in an expression with VALUE
    expressions that map back to them, unless the expression is a
    register.  If no mapping is or can be performed, returns NULL.  */
@@ -4382,9 +4855,8 @@ replace_expr_with_values (rtx loc)
     return NULL;
   else if (MEM_P (loc))
     {
-      enum machine_mode address_mode
-	= targetm.addr_space.address_mode (MEM_ADDR_SPACE (loc));
-      cselib_val *addr = cselib_lookup (XEXP (loc, 0), address_mode, 0);
+      cselib_val *addr = cselib_lookup (XEXP (loc, 0),
+					get_address_mode (loc), 0);
       if (addr)
 	return replace_equiv_address_nv (loc, addr->val_rtx);
       else
@@ -4409,12 +4881,15 @@ use_type (rtx loc, struct count_use_info *cui, enum machine_mode *modep)
 	  if (track_expr_p (PAT_VAR_LOCATION_DECL (loc), false))
 	    {
 	      rtx ploc = PAT_VAR_LOCATION_LOC (loc);
-	      cselib_val *val = cselib_lookup (ploc, GET_MODE (loc), 1);
+	      if (! VAR_LOC_UNKNOWN_P (ploc))
+		{
+		  cselib_val *val = cselib_lookup (ploc, GET_MODE (loc), 1);
 
-	      /* ??? flag_float_store and volatile mems are never
-		 given values, but we could in theory use them for
-		 locations.  */
-	      gcc_assert (val || 1);
+		  /* ??? flag_float_store and volatile mems are never
+		     given values, but we could in theory use them for
+		     locations.  */
+		  gcc_assert (val || 1);
+		}
 	      return MO_VAL_LOC;
 	    }
 	  else
@@ -4429,7 +4904,8 @@ use_type (rtx loc, struct count_use_info *cui, enum machine_mode *modep)
 	    {
 	      if (REG_P (loc)
 		  || (find_use_val (loc, GET_MODE (loc), cui)
-		      && cselib_lookup (XEXP (loc, 0), GET_MODE (loc), 0)))
+		      && cselib_lookup (XEXP (loc, 0),
+					get_address_mode (loc), 0)))
 		return MO_VAL_SET;
 	    }
 	  else
@@ -4446,6 +4922,8 @@ use_type (rtx loc, struct count_use_info *cui, enum machine_mode *modep)
     {
       gcc_assert (REGNO (loc) < FIRST_PSEUDO_REGISTER);
 
+      if (loc == cfa_base_rtx)
+	return MO_CLOBBER;
       expr = REG_EXPR (loc);
 
       if (!expr)
@@ -4490,30 +4968,6 @@ log_op_type (rtx x, basic_block bb, rtx insn,
   fputc ('\n', out);
 }
 
-/* Adjust sets if needed.  Currently this optimizes read-only MEM loads
-   if REG_EQUAL/REG_EQUIV note is present.  */
-
-static void
-adjust_sets (rtx insn, struct cselib_set *sets, int n_sets)
-{
-  if (n_sets == 1 && MEM_P (sets[0].src) && MEM_READONLY_P (sets[0].src))
-    {
-      /* For read-only MEMs containing some constant, prefer those
-	 constants.  */
-      rtx note = find_reg_equal_equiv_note (insn), src;
-
-      if (note && CONSTANT_P (XEXP (note, 0)))
-	{
-	  sets[0].src = src = XEXP (note, 0);
-	  if (GET_CODE (PATTERN (insn)) == COND_EXEC)
-	    src = gen_rtx_IF_THEN_ELSE (GET_MODE (sets[0].dest),
-					COND_EXEC_TEST (PATTERN (insn)),
-					src, sets[0].dest);
-	  sets[0].src_elt = cselib_lookup (src, GET_MODE (sets[0].dest), 1);
-	}
-    }
-}
-
 /* Tell whether the CONCAT used to holds a VALUE and its location
    needs value resolution, i.e., an attempt of mapping the location
    back to other incoming values.  */
@@ -4548,6 +5002,33 @@ preserve_value (cselib_val *val)
   VEC_safe_push (rtx, heap, preserved_values, val->val_rtx);
 }
 
+/* Helper function for MO_VAL_LOC handling.  Return non-zero if
+   any rtxes not suitable for CONST use not replaced by VALUEs
+   are discovered.  */
+
+static int
+non_suitable_const (rtx *x, void *data ATTRIBUTE_UNUSED)
+{
+  if (*x == NULL_RTX)
+    return 0;
+
+  switch (GET_CODE (*x))
+    {
+    case REG:
+    case DEBUG_EXPR:
+    case PC:
+    case SCRATCH:
+    case CC0:
+    case ASM_INPUT:
+    case ASM_OPERANDS:
+      return 1;
+    case MEM:
+      return !MEM_READONLY_P (*x);
+    default:
+      return 0;
+    }
+}
+
 /* Add uses (register and memory references) LOC which will be tracked
    to VTI (bb)->mos.  INSN is instruction which the LOC is part of.  */
 
@@ -4577,11 +5058,14 @@ add_uses (rtx *ploc, void *data)
 	  gcc_assert (cui->sets);
 
 	  if (MEM_P (vloc)
-	      && !REG_P (XEXP (vloc, 0)) && !MEM_P (XEXP (vloc, 0)))
+	      && !REG_P (XEXP (vloc, 0))
+	      && !MEM_P (XEXP (vloc, 0))
+	      && (GET_CODE (XEXP (vloc, 0)) != PLUS
+		  || XEXP (XEXP (vloc, 0), 0) != cfa_base_rtx
+		  || !CONST_INT_P (XEXP (XEXP (vloc, 0), 1))))
 	    {
 	      rtx mloc = vloc;
-	      enum machine_mode address_mode
-		= targetm.addr_space.address_mode (MEM_ADDR_SPACE (mloc));
+	      enum machine_mode address_mode = get_address_mode (mloc);
 	      cselib_val *val
 		= cselib_lookup (XEXP (mloc, 0), address_mode, 0);
 
@@ -4601,8 +5085,12 @@ add_uses (rtx *ploc, void *data)
 		}
 	    }
 
-	  if (!VAR_LOC_UNKNOWN_P (vloc)
-	      && (val = find_use_val (vloc, GET_MODE (oloc), cui)))
+	  if (CONSTANT_P (vloc)
+	      && (GET_CODE (vloc) != CONST
+		  || for_each_rtx (&vloc, non_suitable_const, NULL)))
+	    /* For constants don't look up any value.  */;
+	  else if (!VAR_LOC_UNKNOWN_P (vloc)
+		   && (val = find_use_val (vloc, GET_MODE (oloc), cui)))
 	    {
 	      enum machine_mode mode2;
 	      enum micro_operation_type type2;
@@ -4646,11 +5134,14 @@ add_uses (rtx *ploc, void *data)
 	  gcc_assert (cui->sets);
 
 	  if (MEM_P (oloc)
-	      && !REG_P (XEXP (oloc, 0)) && !MEM_P (XEXP (oloc, 0)))
+	      && !REG_P (XEXP (oloc, 0))
+	      && !MEM_P (XEXP (oloc, 0))
+	      && (GET_CODE (XEXP (oloc, 0)) != PLUS
+		  || XEXP (XEXP (oloc, 0), 0) != cfa_base_rtx
+		  || !CONST_INT_P (XEXP (XEXP (oloc, 0), 1))))
 	    {
 	      rtx mloc = oloc;
-	      enum machine_mode address_mode
-		= targetm.addr_space.address_mode (MEM_ADDR_SPACE (mloc));
+	      enum machine_mode address_mode = get_address_mode (mloc);
 	      cselib_val *val
 		= cselib_lookup (XEXP (mloc, 0), address_mode, 0);
 
@@ -4753,14 +5244,19 @@ reverse_op (rtx val, const_rtx expr)
     case XOR:
     case NOT:
     case NEG:
+      if (!REG_P (XEXP (src, 0)))
+	return NULL_RTX;
+      break;
     case SIGN_EXTEND:
     case ZERO_EXTEND:
+      if (!REG_P (XEXP (src, 0)) && !MEM_P (XEXP (src, 0)))
+	return NULL_RTX;
       break;
     default:
       return NULL_RTX;
     }
 
-  if (!REG_P (XEXP (src, 0)) || !SCALAR_INT_MODE_P (GET_MODE (src)))
+  if (!SCALAR_INT_MODE_P (GET_MODE (src)) || XEXP (src, 0) == cfa_base_rtx)
     return NULL_RTX;
 
   v = cselib_lookup (XEXP (src, 0), GET_MODE (XEXP (src, 0)), 0);
@@ -4814,21 +5310,6 @@ reverse_op (rtx val, const_rtx expr)
   return gen_rtx_CONCAT (GET_MODE (v->val_rtx), v->val_rtx, ret);
 }
 
-/* Return SRC, or, if it is a read-only MEM for which adjust_sets
-   replated it with a constant from REG_EQUIV/REG_EQUAL note,
-   that constant.  */
-
-static inline rtx
-get_adjusted_src (struct count_use_info *cui, rtx src)
-{
-  if (cui->n_sets == 1
-      && MEM_P (src)
-      && MEM_READONLY_P (src)
-      && CONSTANT_P (cui->sets[0].src))
-    return cui->sets[0].src;
-  return src;
-}
-
 /* Add stores (register and memory references) LOC which will be tracked
    to VTI (bb)->mos.  EXPR is the RTL expression containing the store.
    CUIP->insn is instruction which the LOC is part of.  */
@@ -4854,6 +5335,7 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
 
   if (REG_P (loc))
     {
+      gcc_assert (loc != cfa_base_rtx);
       if ((GET_CODE (expr) == CLOBBER && type != MO_VAL_SET)
 	  || !(track_p = use_type (loc, NULL, &mode2) == MO_USE)
 	  || GET_CODE (expr) == CLOBBER)
@@ -4864,10 +5346,7 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
       else
 	{
 	  if (GET_CODE (expr) == SET && SET_DEST (expr) == loc)
-	    {
-	      src = get_adjusted_src (cui, SET_SRC (expr));
-	      src = var_lowpart (mode2, src);
-	    }
+	    src = var_lowpart (mode2, SET_SRC (expr));
 	  loc = var_lowpart (mode2, loc);
 
 	  if (src == NULL)
@@ -4877,10 +5356,7 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
 	    }
 	  else
 	    {
-	      rtx xexpr = CONST_CAST_RTX (expr);
-
-	      if (SET_SRC (expr) != src)
-		xexpr = gen_rtx_SET (VOIDmode, loc, src);
+	      rtx xexpr = gen_rtx_SET (VOIDmode, loc, src);
 	      if (same_variable_part_p (src, REG_EXPR (loc), REG_OFFSET (loc)))
 		mo.type = MO_COPY;
 	      else
@@ -4895,12 +5371,16 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
 	       || cui->sets))
     {
       if (MEM_P (loc) && type == MO_VAL_SET
-	  && !REG_P (XEXP (loc, 0)) && !MEM_P (XEXP (loc, 0)))
+	  && !REG_P (XEXP (loc, 0))
+	  && !MEM_P (XEXP (loc, 0))
+	  && (GET_CODE (XEXP (loc, 0)) != PLUS
+	      || XEXP (XEXP (loc, 0), 0) != cfa_base_rtx
+	      || !CONST_INT_P (XEXP (XEXP (loc, 0), 1))))
 	{
 	  rtx mloc = loc;
-	  enum machine_mode address_mode
-	    = targetm.addr_space.address_mode (MEM_ADDR_SPACE (mloc));
-	  cselib_val *val = cselib_lookup (XEXP (mloc, 0), address_mode, 0);
+	  enum machine_mode address_mode = get_address_mode (mloc);
+	  cselib_val *val = cselib_lookup (XEXP (mloc, 0),
+					   address_mode, 0);
 
 	  if (val && !cselib_preserved_value_p (val))
 	    {
@@ -4924,10 +5404,7 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
       else
 	{
 	  if (GET_CODE (expr) == SET && SET_DEST (expr) == loc)
-	    {
-	      src = get_adjusted_src (cui, SET_SRC (expr));
-	      src = var_lowpart (mode2, src);
-	    }
+	    src = var_lowpart (mode2, SET_SRC (expr));
 	  loc = var_lowpart (mode2, loc);
 
 	  if (src == NULL)
@@ -4937,10 +5414,7 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
 	    }
 	  else
 	    {
-	      rtx xexpr = CONST_CAST_RTX (expr);
-
-	      if (SET_SRC (expr) != src)
-		xexpr = gen_rtx_SET (VOIDmode, loc, src);
+	      rtx xexpr = gen_rtx_SET (VOIDmode, loc, src);
 	      if (same_variable_part_p (SET_SRC (xexpr),
 					MEM_EXPR (loc),
 					INT_MEM_OFFSET (loc)))
@@ -4997,13 +5471,12 @@ add_stores (rtx loc, const_rtx expr, void *cuip)
     }
   else if (resolve && GET_CODE (mo.u.loc) == SET)
     {
-      src = get_adjusted_src (cui, SET_SRC (expr));
-      nloc = replace_expr_with_values (src);
+      nloc = replace_expr_with_values (SET_SRC (expr));
 
       /* Avoid the mode mismatch between oexpr and expr.  */
       if (!nloc && mode != mode2)
 	{
-	  nloc = src;
+	  nloc = SET_SRC (expr);
 	  gcc_assert (oloc == SET_DEST (expr));
 	}
 
@@ -5101,8 +5574,6 @@ add_with_sets (rtx insn, struct cselib_set *sets, int n_sets)
   micro_operation *mos;
 
   cselib_hook_called = true;
-
-  adjust_sets (insn, sets, n_sets);
 
   cui.insn = insn;
   cui.bb = bb;
@@ -5337,6 +5808,11 @@ compute_bb_dataflow (basic_block bb)
 				     VAR_INIT_STATUS_INITIALIZED, NULL_RTX,
 				     INSERT);
 		}
+	      else if (!VAR_LOC_UNKNOWN_P (PAT_VAR_LOCATION_LOC (vloc)))
+		set_variable_part (out, PAT_VAR_LOCATION_LOC (vloc),
+				   dv_from_decl (var), 0,
+				   VAR_INIT_STATUS_INITIALIZED, NULL_RTX,
+				   INSERT);
 	    }
 	    break;
 
@@ -5576,6 +6052,7 @@ vt_find_locations (void)
   int htabmax = PARAM_VALUE (PARAM_MAX_VARTRACK_SIZE);
   bool success = true;
 
+  timevar_push (TV_VAR_TRACKING_DATAFLOW);
   /* Compute reverse completion order of depth first search of the CFG
      so that the data-flow runs faster.  */
   rc_order = XNEWVEC (int, n_basic_blocks - NUM_FIXED_BLOCKS);
@@ -5611,6 +6088,7 @@ vt_find_locations (void)
 	{
 	  bb = (basic_block) fibheap_extract_min (worklist);
 	  RESET_BIT (in_worklist, bb->index);
+	  gcc_assert (!TEST_BIT (visited, bb->index));
 	  if (!TEST_BIT (visited, bb->index))
 	    {
 	      bool changed;
@@ -5763,6 +6241,7 @@ vt_find_locations (void)
   sbitmap_free (in_worklist);
   sbitmap_free (in_pending);
 
+  timevar_pop (TV_VAR_TRACKING_DATAFLOW);
   return success;
 }
 
@@ -6583,14 +7062,13 @@ vt_expand_loc_callback (rtx x, bitmap regs, int max_depth, void *data)
 		result = pc_rtx;
 		break;
 	      }
-	    else
-	      {
-		result = cselib_expand_value_rtx_cb (loc->loc, regs, max_depth,
-						     vt_expand_loc_callback,
-						     data);
-		if (result)
-		  break;
-	      }
+	  }
+	else
+	  {
+	    result = cselib_expand_value_rtx_cb (loc->loc, regs, max_depth,
+						 vt_expand_loc_callback, data);
+	    if (result)
+	      break;
 	  }
       if (dummy && (result || var->var_part[0].cur_loc))
 	var->cur_loc_changed = true;
@@ -6625,7 +7103,7 @@ vt_expand_loc (rtx loc, htab_t vars)
   data.vars = vars;
   data.dummy = false;
   data.cur_loc_changed = false;
-  loc = cselib_expand_value_rtx_cb (loc, scratch_regs, 5,
+  loc = cselib_expand_value_rtx_cb (loc, scratch_regs, 8,
 				    vt_expand_loc_callback, &data);
 
   if (loc && MEM_P (loc))
@@ -6646,7 +7124,7 @@ vt_expand_loc_dummy (rtx loc, htab_t vars, bool *pcur_loc_changed)
   data.vars = vars;
   data.dummy = true;
   data.cur_loc_changed = false;
-  ret = cselib_dummy_expand_value_rtx_cb (loc, scratch_regs, 5,
+  ret = cselib_dummy_expand_value_rtx_cb (loc, scratch_regs, 8,
 					  vt_expand_loc_callback, &data);
   *pcur_loc_changed = data.cur_loc_changed;
   return ret;
@@ -6690,7 +7168,7 @@ emit_note_insn_var_location (void **varp, void *data)
   complete = true;
   last_limit = 0;
   n_var_parts = 0;
-  if (!MAY_HAVE_DEBUG_STMTS)
+  if (!MAY_HAVE_DEBUG_INSNS)
     {
       for (i = 0; i < var->n_var_parts; i++)
 	if (var->var_part[i].cur_loc == NULL && var->var_part[i].loc_chain)
@@ -6731,6 +7209,8 @@ emit_note_insn_var_location (void **varp, void *data)
 	}
       loc[n_var_parts] = loc2;
       mode = GET_MODE (var->var_part[i].cur_loc);
+      if (mode == VOIDmode && dv_onepart_p (var->dv))
+	mode = DECL_MODE (decl);
       for (lc = var->var_part[i].loc_chain; lc; lc = lc->next)
 	if (var->var_part[i].cur_loc == lc->loc)
 	  {
@@ -6820,8 +7300,12 @@ emit_note_insn_var_location (void **varp, void *data)
 				    (int) initialized);
   else if (n_var_parts == 1)
     {
-      rtx expr_list
-	= gen_rtx_EXPR_LIST (VOIDmode, loc[0], GEN_INT (offsets[0]));
+      rtx expr_list;
+
+      if (offsets[0] || GET_CODE (loc[0]) == PARALLEL)
+	expr_list = gen_rtx_EXPR_LIST (VOIDmode, loc[0], GEN_INT (offsets[0]));
+      else
+	expr_list = loc[0];
 
       note_vl = gen_rtx_VAR_LOCATION (VOIDmode, decl, expr_list,
 				      (int) initialized);
@@ -7088,8 +7572,8 @@ emit_notes_for_differences_1 (void **slot, void *data)
 	{
 	  location_chain lc1, lc2;
 
-	  gcc_assert (old_var->n_var_parts == 1);
-	  gcc_assert (new_var->n_var_parts == 1);
+	  gcc_assert (old_var->n_var_parts == 1
+		      && new_var->n_var_parts == 1);
 	  lc1 = old_var->var_part[0].loc_chain;
 	  lc2 = new_var->var_part[0].loc_chain;
 	  while (lc1
@@ -7252,6 +7736,11 @@ emit_notes_in_bb (basic_block bb, dataflow_set *set)
 				     VAR_INIT_STATUS_INITIALIZED, NULL_RTX,
 				     INSERT);
 		}
+	      else if (!VAR_LOC_UNKNOWN_P (PAT_VAR_LOCATION_LOC (vloc)))
+		set_variable_part (set, PAT_VAR_LOCATION_LOC (vloc),
+				   dv_from_decl (var), 0,
+				   VAR_INIT_STATUS_INITIALIZED, NULL_RTX,
+				   INSERT);
 
 	      emit_notes_for_changes (insn, EMIT_NOTE_AFTER_INSN, set->vars);
 	    }
@@ -7573,7 +8062,7 @@ vt_add_function_parameters (void)
   tree parm;
 
   for (parm = DECL_ARGUMENTS (current_function_decl);
-       parm; parm = TREE_CHAIN (parm))
+       parm; parm = DECL_CHAIN (parm))
     {
       rtx decl_rtl = DECL_RTL_IF_SET (parm);
       rtx incoming = DECL_INCOMING_RTL (parm);
@@ -7688,123 +8177,74 @@ vt_add_function_parameters (void)
 
 }
 
+/* Return true if INSN in the prologue initializes hard_frame_pointer_rtx.  */
+
+static bool
+fp_setter (rtx insn)
+{
+  rtx pat = PATTERN (insn);
+  if (RTX_FRAME_RELATED_P (insn))
+    {
+      rtx expr = find_reg_note (insn, REG_FRAME_RELATED_EXPR, NULL_RTX);
+      if (expr)
+	pat = XEXP (expr, 0);
+    }
+  if (GET_CODE (pat) == SET)
+    return SET_DEST (pat) == hard_frame_pointer_rtx;
+  else if (GET_CODE (pat) == PARALLEL)
+    {
+      int i;
+      for (i = XVECLEN (pat, 0) - 1; i >= 0; i--)
+	if (GET_CODE (XVECEXP (pat, 0, i)) == SET
+	    && SET_DEST (XVECEXP (pat, 0, i)) == hard_frame_pointer_rtx)
+	  return true;
+    }
+  return false;
+}
+
+/* Initialize cfa_base_rtx, create a preserved VALUE for it and
+   ensure it isn't flushed during cselib_reset_table.
+   Can be called only if frame_pointer_rtx resp. arg_pointer_rtx
+   has been eliminated.  */
+
+static void
+vt_init_cfa_base (void)
+{
+  cselib_val *val;
+
+#ifdef FRAME_POINTER_CFA_OFFSET
+  cfa_base_rtx = frame_pointer_rtx;
+#else
+  cfa_base_rtx = arg_pointer_rtx;
+#endif
+  if (cfa_base_rtx == hard_frame_pointer_rtx
+      || !fixed_regs[REGNO (cfa_base_rtx)])
+    {
+      cfa_base_rtx = NULL_RTX;
+      return;
+    }
+  if (!MAY_HAVE_DEBUG_INSNS)
+    return;
+
+  val = cselib_lookup_from_insn (cfa_base_rtx, GET_MODE (cfa_base_rtx), 1,
+				 get_insns ());
+  preserve_value (val);
+  cselib_preserve_cfa_base_value (val, REGNO (cfa_base_rtx));
+  var_reg_decl_set (&VTI (ENTRY_BLOCK_PTR)->out, cfa_base_rtx,
+		    VAR_INIT_STATUS_INITIALIZED, dv_from_value (val->val_rtx),
+		    0, NULL_RTX, INSERT);
+}
+
 /* Allocate and initialize the data structures for variable tracking
    and parse the RTL to get the micro operations.  */
 
-static void
+static bool
 vt_initialize (void)
 {
-  basic_block bb;
+  basic_block bb, prologue_bb = NULL;
+  HOST_WIDE_INT fp_cfa_offset = -1;
 
   alloc_aux_for_blocks (sizeof (struct variable_tracking_info_def));
-
-  if (MAY_HAVE_DEBUG_INSNS)
-    {
-      cselib_init (true);
-      scratch_regs = BITMAP_ALLOC (NULL);
-      valvar_pool = create_alloc_pool ("small variable_def pool",
-				       sizeof (struct variable_def), 256);
-      preserved_values = VEC_alloc (rtx, heap, 256);
-    }
-  else
-    {
-      scratch_regs = NULL;
-      valvar_pool = NULL;
-    }
-
-  FOR_EACH_BB (bb)
-    {
-      rtx insn;
-      HOST_WIDE_INT pre, post = 0;
-      basic_block first_bb, last_bb;
-
-      if (MAY_HAVE_DEBUG_INSNS)
-	{
-	  cselib_record_sets_hook = add_with_sets;
-	  if (dump_file && (dump_flags & TDF_DETAILS))
-	    fprintf (dump_file, "first value: %i\n",
-		     cselib_get_next_uid ());
-	}
-
-      first_bb = bb;
-      for (;;)
-	{
-	  edge e;
-	  if (bb->next_bb == EXIT_BLOCK_PTR
-	      || ! single_pred_p (bb->next_bb))
-	    break;
-	  e = find_edge (bb, bb->next_bb);
-	  if (! e || (e->flags & EDGE_FALLTHRU) == 0)
-	    break;
-	  bb = bb->next_bb;
-	}
-      last_bb = bb;
-
-      /* Add the micro-operations to the vector.  */
-      FOR_BB_BETWEEN (bb, first_bb, last_bb->next_bb, next_bb)
-	{
-	  for (insn = BB_HEAD (bb); insn != NEXT_INSN (BB_END (bb));
-	       insn = NEXT_INSN (insn))
-	    {
-	      if (INSN_P (insn))
-		{
-		  if (!frame_pointer_needed)
-		    {
-		      insn_stack_adjust_offset_pre_post (insn, &pre, &post);
-		      if (pre)
-			{
-			  micro_operation mo;
-			  mo.type = MO_ADJUST;
-			  mo.u.adjust = pre;
-			  mo.insn = insn;
-			  VEC_safe_push (micro_operation, heap, VTI (bb)->mos,
-					 &mo);
-
-			  if (dump_file && (dump_flags & TDF_DETAILS))
-			    log_op_type (PATTERN (insn), bb, insn,
-					 MO_ADJUST, dump_file);
-			}
-		    }
-
-		  cselib_hook_called = false;
-		  if (MAY_HAVE_DEBUG_INSNS)
-		    {
-		      cselib_process_insn (insn);
-		      if (dump_file && (dump_flags & TDF_DETAILS))
-			{
-			  print_rtl_single (dump_file, insn);
-			  dump_cselib_table (dump_file);
-			}
-		    }
-		  if (!cselib_hook_called)
-		    add_with_sets (insn, 0, 0);
-
-		  if (!frame_pointer_needed && post)
-		    {
-		      micro_operation mo;
-		      mo.type = MO_ADJUST;
-		      mo.u.adjust = post;
-		      mo.insn = insn;
-		      VEC_safe_push (micro_operation, heap, VTI (bb)->mos,
-				     &mo);
-
-		      if (dump_file && (dump_flags & TDF_DETAILS))
-			log_op_type (PATTERN (insn), bb, insn,
-				     MO_ADJUST, dump_file);
-		    }
-		}
-	    }
-	}
-
-      bb = last_bb;
-
-      if (MAY_HAVE_DEBUG_INSNS)
-	{
-	  cselib_preserve_only_values ();
-	  cselib_reset_table (cselib_get_next_uid ());
-	  cselib_record_sets_hook = NULL;
-	}
-    }
 
   attrs_pool = create_alloc_pool ("attrs_def pool",
 				  sizeof (struct attrs_def), 1024);
@@ -7843,8 +8283,182 @@ vt_initialize (void)
       VTI (bb)->permp = NULL;
     }
 
+  if (MAY_HAVE_DEBUG_INSNS)
+    {
+      cselib_init (CSELIB_RECORD_MEMORY | CSELIB_PRESERVE_CONSTANTS);
+      scratch_regs = BITMAP_ALLOC (NULL);
+      valvar_pool = create_alloc_pool ("small variable_def pool",
+				       sizeof (struct variable_def), 256);
+      preserved_values = VEC_alloc (rtx, heap, 256);
+    }
+  else
+    {
+      scratch_regs = NULL;
+      valvar_pool = NULL;
+    }
+
+  if (!frame_pointer_needed)
+    {
+      rtx reg, elim;
+
+      if (!vt_stack_adjustments ())
+	return false;
+
+#ifdef FRAME_POINTER_CFA_OFFSET
+      reg = frame_pointer_rtx;
+#else
+      reg = arg_pointer_rtx;
+#endif
+      elim = eliminate_regs (reg, VOIDmode, NULL_RTX);
+      if (elim != reg)
+	{
+	  if (GET_CODE (elim) == PLUS)
+	    elim = XEXP (elim, 0);
+	  if (elim == stack_pointer_rtx)
+	    vt_init_cfa_base ();
+	}
+    }
+  else if (!crtl->stack_realign_tried)
+    {
+      rtx reg, elim;
+
+#ifdef FRAME_POINTER_CFA_OFFSET
+      reg = frame_pointer_rtx;
+      fp_cfa_offset = FRAME_POINTER_CFA_OFFSET (current_function_decl);
+#else
+      reg = arg_pointer_rtx;
+      fp_cfa_offset = ARG_POINTER_CFA_OFFSET (current_function_decl);
+#endif
+      elim = eliminate_regs (reg, VOIDmode, NULL_RTX);
+      if (elim != reg)
+	{
+	  if (GET_CODE (elim) == PLUS)
+	    {
+	      fp_cfa_offset -= INTVAL (XEXP (elim, 1));
+	      elim = XEXP (elim, 0);
+	    }
+	  if (elim != hard_frame_pointer_rtx)
+	    fp_cfa_offset = -1;
+	  else
+	    prologue_bb = single_succ (ENTRY_BLOCK_PTR);
+	}
+    }
+
+  hard_frame_pointer_adjustment = -1;
+
+  FOR_EACH_BB (bb)
+    {
+      rtx insn;
+      HOST_WIDE_INT pre, post = 0;
+      basic_block first_bb, last_bb;
+
+      if (MAY_HAVE_DEBUG_INSNS)
+	{
+	  cselib_record_sets_hook = add_with_sets;
+	  if (dump_file && (dump_flags & TDF_DETAILS))
+	    fprintf (dump_file, "first value: %i\n",
+		     cselib_get_next_uid ());
+	}
+
+      first_bb = bb;
+      for (;;)
+	{
+	  edge e;
+	  if (bb->next_bb == EXIT_BLOCK_PTR
+	      || ! single_pred_p (bb->next_bb))
+	    break;
+	  e = find_edge (bb, bb->next_bb);
+	  if (! e || (e->flags & EDGE_FALLTHRU) == 0)
+	    break;
+	  bb = bb->next_bb;
+	}
+      last_bb = bb;
+
+      /* Add the micro-operations to the vector.  */
+      FOR_BB_BETWEEN (bb, first_bb, last_bb->next_bb, next_bb)
+	{
+	  HOST_WIDE_INT offset = VTI (bb)->out.stack_adjust;
+	  VTI (bb)->out.stack_adjust = VTI (bb)->in.stack_adjust;
+	  for (insn = BB_HEAD (bb); insn != NEXT_INSN (BB_END (bb));
+	       insn = NEXT_INSN (insn))
+	    {
+	      if (INSN_P (insn))
+		{
+		  if (!frame_pointer_needed)
+		    {
+		      insn_stack_adjust_offset_pre_post (insn, &pre, &post);
+		      if (pre)
+			{
+			  micro_operation mo;
+			  mo.type = MO_ADJUST;
+			  mo.u.adjust = pre;
+			  mo.insn = insn;
+			  if (dump_file && (dump_flags & TDF_DETAILS))
+			    log_op_type (PATTERN (insn), bb, insn,
+					 MO_ADJUST, dump_file);
+			  VEC_safe_push (micro_operation, heap, VTI (bb)->mos,
+					 &mo);
+			  VTI (bb)->out.stack_adjust += pre;
+			}
+		    }
+
+		  cselib_hook_called = false;
+		  adjust_insn (bb, insn);
+		  if (MAY_HAVE_DEBUG_INSNS)
+		    {
+		      cselib_process_insn (insn);
+		      if (dump_file && (dump_flags & TDF_DETAILS))
+			{
+			  print_rtl_single (dump_file, insn);
+			  dump_cselib_table (dump_file);
+			}
+		    }
+		  if (!cselib_hook_called)
+		    add_with_sets (insn, 0, 0);
+		  cancel_changes (0);
+
+		  if (!frame_pointer_needed && post)
+		    {
+		      micro_operation mo;
+		      mo.type = MO_ADJUST;
+		      mo.u.adjust = post;
+		      mo.insn = insn;
+		      if (dump_file && (dump_flags & TDF_DETAILS))
+			log_op_type (PATTERN (insn), bb, insn,
+				     MO_ADJUST, dump_file);
+		      VEC_safe_push (micro_operation, heap, VTI (bb)->mos,
+				     &mo);
+		      VTI (bb)->out.stack_adjust += post;
+		    }
+
+		  if (bb == prologue_bb
+		      && hard_frame_pointer_adjustment == -1
+		      && RTX_FRAME_RELATED_P (insn)
+		      && fp_setter (insn))
+		    {
+		      vt_init_cfa_base ();
+		      hard_frame_pointer_adjustment = fp_cfa_offset;
+		    }
+		}
+	    }
+	  gcc_assert (offset == VTI (bb)->out.stack_adjust);
+	}
+
+      bb = last_bb;
+
+      if (MAY_HAVE_DEBUG_INSNS)
+	{
+	  cselib_preserve_only_values ();
+	  cselib_reset_table (cselib_get_next_uid ());
+	  cselib_record_sets_hook = NULL;
+	}
+    }
+
+  hard_frame_pointer_adjustment = -1;
   VTI (ENTRY_BLOCK_PTR)->flooded = true;
   vt_add_function_parameters ();
+  cfa_base_rtx = NULL_RTX;
+  return true;
 }
 
 /* Get rid of all debug insns from the insn stream.  */
@@ -7946,15 +8560,11 @@ variable_tracking_main_1 (void)
     }
 
   mark_dfs_back_edges ();
-  vt_initialize ();
-  if (!frame_pointer_needed)
+  if (!vt_initialize ())
     {
-      if (!vt_stack_adjustments ())
-	{
-	  vt_finalize ();
-	  vt_debug_insns_local (true);
-	  return 0;
-	}
+      vt_finalize ();
+      vt_debug_insns_local (true);
+      return 0;
     }
 
   success = vt_find_locations ();
@@ -7968,10 +8578,8 @@ variable_tracking_main_1 (void)
       /* This is later restored by our caller.  */
       flag_var_tracking_assignments = 0;
 
-      vt_initialize ();
-
-      if (!frame_pointer_needed && !vt_stack_adjustments ())
-	gcc_unreachable ();
+      success = vt_initialize ();
+      gcc_assert (success);
 
       success = vt_find_locations ();
     }
@@ -7989,7 +8597,9 @@ variable_tracking_main_1 (void)
       dump_flow_info (dump_file, dump_flags);
     }
 
+  timevar_push (TV_VAR_TRACKING_EMIT);
   vt_emit_notes ();
+  timevar_pop (TV_VAR_TRACKING_EMIT);
 
   vt_finalize ();
   vt_debug_insns_local (false);

@@ -26,6 +26,11 @@ if { [prepare_for_testing ${testfile}.exp ${testfile} ${srcfile}] } {
     return -1
 }
 
+# Disable hardware watchpoints if necessary.
+if [target_info exists gdb,no_hardware_watchpoints] {
+    gdb_test_no_output "set can-use-hw-watchpoints 0" ""
+}
+
 if ![runto_main] then {
     fail "Can't run to main"
     return
@@ -40,6 +45,11 @@ gdb_test "continue" \
     "watchpoint with global expression, local condition evaluates in correct frame"
 
 clean_restart ${testfile}
+
+# Disable hardware watchpoints if necessary.
+if [target_info exists gdb,no_hardware_watchpoints] {
+    gdb_test_no_output "set can-use-hw-watchpoints 0" ""
+}
 
 if ![runto_main] then {
     fail "Can't run to main"
@@ -56,6 +66,11 @@ gdb_test "continue" \
 
 clean_restart ${testfile}
 
+# Disable hardware watchpoints if necessary.
+if [target_info exists gdb,no_hardware_watchpoints] {
+    gdb_test_no_output "set can-use-hw-watchpoints 0" ""
+}
+
 if ![runto_main] then {
     fail "Can't run to main"
     return
@@ -69,8 +84,7 @@ gdb_test "continue" \
     "Old value = 0.*New value = 1.*" \
     "watchpoint on global2 variable triggers"
 
-gdb_test "condition 2 *foo > 10" \
-    "" \
+gdb_test_no_output "condition 2 *foo > 10" \
     "condition of watchpoint 2 changes"
 
 gdb_test "continue" \

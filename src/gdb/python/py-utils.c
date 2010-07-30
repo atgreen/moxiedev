@@ -19,6 +19,7 @@
 
 #include "defs.h"
 #include "charset.h"
+#include "value.h"
 #include "python-internal.h"
 
 
@@ -29,6 +30,7 @@ static void
 py_decref (void *p)
 {
   PyObject *py = p;
+
   /* Note that we need the extra braces in this 'if' to avoid a
      warning from gcc.  */
   if (py)
@@ -220,4 +222,102 @@ int
 gdbpy_is_string (PyObject *obj)
 {
   return PyString_Check (obj) || PyUnicode_Check (obj);
+}
+
+/* Return the string representation of OBJ, i.e., str (obj).
+   Space for the result is malloc'd, the caller must free.
+   If the result is NULL a python error occurred, the caller must clear it.  */
+
+char *
+gdbpy_obj_to_string (PyObject *obj)
+{
+  PyObject *str_obj = PyObject_Str (obj);
+
+  if (str_obj != NULL)
+    {
+      char *msg = xstrdup (PyString_AsString (str_obj));
+
+      Py_DECREF (str_obj);
+      return msg;
+    }
+
+  return NULL;
+}
+
+/* Return the string representation of the exception represented by
+   TYPE, VALUE which is assumed to have been obtained with PyErr_Fetch,
+   i.e., the error indicator is currently clear.
+   Space for the result is malloc'd, the caller must free.
+   If the result is NULL a python error occurred, the caller must clear it.  */
+
+char *
+gdbpy_exception_to_string (PyObject *ptype, PyObject *pvalue)
+{
+  PyObject *str_obj = PyObject_Str (pvalue);
+  char *str;
+
+  /* There are a few cases to consider.
+     For example:
+     pvalue is a string when PyErr_SetString is used.
+     pvalue is not a string when raise "foo" is used, instead it is None
+     and ptype is "foo".
+     So the algorithm we use is to print `str (pvalue)' if it's not
+     None, otherwise we print `str (ptype)'.
+     Using str (aka PyObject_Str) will fetch the error message from
+     gdb.GdbError ("message").  */
+
+  if (pvalue && pvalue != Py_None)
+    str = gdbpy_obj_to_string (pvalue);
+  else
+    str = gdbpy_obj_to_string (ptype);
+
+  return str;
+}
+
+/* Converts OBJ to a CORE_ADDR value.
+
+   Returns 1 on success or 0 on failure, with a Python exception set.  This
+   function can also throw GDB exceptions.
+*/
+
+int
+get_addr_from_python (PyObject *obj, CORE_ADDR *addr)
+{
+  if (gdbpy_is_value_object (obj))
+    *addr = value_as_address (value_object_to_value (obj));
+  else if (PyLong_Check (obj))
+    {
+      /* Assume CORE_ADDR corresponds to unsigned long.  */
+      *addr = PyLong_AsUnsignedLong (obj);
+      if (PyErr_Occurred () != NULL)
+	return 0;
+    }
+  else if (PyInt_Check (obj))
+    {
+      long val;
+
+      /* Assume CORE_ADDR corresponds to unsigned long.  */
+      val = PyInt_AsLong (obj);
+
+      if (val >= 0)
+	*addr = val;
+      else
+      {
+	/* If no error ocurred, VAL is indeed negative.  */
+	if (PyErr_Occurred () != NULL)
+	  return 0;
+
+	PyErr_SetString (PyExc_ValueError,
+			 _("Supplied address is negative."));
+	return 0;
+      }
+    }
+  else
+    {
+      PyErr_SetString (PyExc_TypeError,
+		       _("Invalid type for address."));
+      return 0;
+    }
+
+  return 1;
 }

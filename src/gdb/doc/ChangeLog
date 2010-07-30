@@ -1,3 +1,348 @@
+2010-07-01  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (Create and Delete Tracepoints): Add more index
+	entries for fast tracepoints and static tracepoints.
+
+2010-07-01  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (General Query Packets) <qfThreadInfo,
+	qsThreadInfo>: Spell out `l' as ell.
+
+2010-07-01  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (Convenience Variables): Document $_sdata.
+	(Commands to Set Tracepoints): Describe static tracepoints.  Add
+	`Listing Static Tracepoint Markers' menu entry.  Document
+	"strace".
+	(Tracepoint Action Lists): Document collecting $_sdata.
+	(Listing Static Tracepoint Markers): New subsection.
+	(Tracepoints support in gdbserver): Mention static tracepoints.
+	(remote packets, enabling and disabling): Mention
+	read-sdata-object.
+	(General Query Packets) <qSupported>: Document qXfer:sdata:read
+	and StaticTracepoint.
+	Mention qTfSTM, qTsSTM and qTSTMat as tracepoint packets.
+	Document qXfer:sdata:read.
+	(Tracepoint packets): Document qTfSTM, qTsSTM and qTSTMat.
+
+2010-06-29  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.texinfo (Threads In Python): Fix unmatched @end table.
+
+2010-06-28  Phil Muldoon  <pmuldoon@redhat.com>
+	    Tom Tromey  <tromey@redhat.com>
+	    Thiago Jung Bauermann  <bauerman@br.ibm.com>
+
+	* gdb.texinfo (Inferiors In Python): New node.
+	* gdb.texinfo (Threads In Python): New node.
+
+2010-06-28  Joel Brobecker  <brobecker@adacore.com>
+
+	* gdb.texinfo (Python): Document what the python directory is
+	and what its location is.
+	(Basic Python): Document the gdb.PYTHONDIR constant.
+
+2010-06-25  Tom Tromey  <tromey@redhat.com>
+
+	PR python/10808:
+	* gdb.texinfo (Basic Python): Document new gdb.execute argument.
+
+2010-06-24  Hui Zhu  <teawater@gmail.com>
+
+	* gdb.texinfo: (Commands for Controlled Output): Add
+	documentation for command "eval".
+
+2010-06-21  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo: Add explicit @node and @appendix for GFDL.
+	* annotate.texinfo: Ditto.
+	* gdbint.texinfo: Ditto.
+	* stabs.texinfo: Ditto.
+
+2010-06-22  Hui Zhu  <teawater@gmail.com>
+
+	* gdb.texinfo: (Process Record and Replay): Add documentation
+	for command "set record memory-query".
+
+2010-06-21  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo: Relicense under GFDL version 1.3.
+	* annotate.texinfo: Relicense under GFDL version 1.3.
+	* gdbint.texinfo: Relicense under GFDL version 1.3.
+	* stabs.texinfo: Relicense under GFDL version 1.3.
+	* fdl.texi: Update to version 1.3.
+
+2010-06-18  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo (Operating System Auxiliary Information): Describe
+	"info os" when no arguments given.
+
+	* gdb.texinfo (Debugging Programs with Multiple Threads): Describe
+	$_thread.
+
+2010-06-18  Hui Zhu  <teawater@gmail.com>
+
+	* gdb.texinfo: (Process Record and Replay): Add documentation
+	for commands "record save" and "record restore".
+
+2010-06-16  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.texinfo: Include information about the correct use
+	of addresses in the `watch' command.
+
+2010-06-11  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo (Observer Mode): New section.
+	(General Query Packets): Document QAllow.
+	 
+2010-06-04  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Python API): New node `Disabling Pretty-Printers'.
+
+2010-06-03  Doug Evans  <dje@google.com>
+
+	* gdbint.texinfo (Coding): Add subsection on command names.
+
+2010-06-02  Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Maintenance Commands): Document maint set dwarf2
+	always-disassemble.
+
+2010-06-01  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (Set Tracepoints): Mention tracepoints support in
+	gdbserver, and add cross reference.
+	(Tracepoints support in gdbserver): New subsection.
+
+2010-05-26  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (General Query Packets) <qSupported>: Describe the
+	`qRelocInsn' feature.
+	(Relocate instruction reply packet): New subsection
+	of `Tracepoint Packets'.
+	(Tracepoint Packets): Mention that packets QTDP and QTStart
+	support the qRelocInsn request, and add cross reference to new
+	subsection.
+
+2010-05-25  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Exception Handling): Document gdb.GdbError.
+	(Commands In Python): Document gdb.string_to_argv.
+
+2010-05-02  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdbint.texinfo (Host Definition): Remove items NORETURN and
+	ATTR_NORETURN.
+
+2010-04-29  Phil Muldoon  <pmuldoon@redhat.com>
+	    Tom Tromey  <tromey@redhat.com>
+	    Thiago Jung Bauermann  <bauerman@br.ibm.com>
+
+	* gdb.texinfo (Parameters In Python): New Node.
+
+2010-04-29  Mihail Zenkov  <mihail.zenkov@gmail.com>
+
+	* gdb.texinfo: (Summary) Add mention about D language support.
+	(Filenames): Add D suffixes.
+	(D): New node.
+
+2010-04-26  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* gdbint.texinfo (CANNOT_STEP_HW_WATCHPOINTS): Remove explanation
+	of macro deleted from GDB code.
+
+2010-04-24  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (Commands to specify files): Describe what how GDB
+	looks up DOS-based filesystem paths on the system root.  Document
+	the new `set/show target-file-system-kind' commands.
+
+2010-04-23  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Python): Move Auto-loading section here ...
+	(Python API): from here.
+	(Auto-loading): Add docs for .debug_gdb_scripts auto-loaded scripts.
+	(Maintenance Commands): Add docs for "maint print section-scripts".
+
+2010-04-20  Chris Moller  <cmoller@redhat.com>
+
+	* gdb.texinfo (Setting Breakpoints): Added description of
+	filename-qualified rbreak.
+	* refcard.tex (Breakpoints and Watchpoints): Added brief
+	description of filename-qualified rbreak.
+
+2010-04-22  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* gdb.texinfo (Data): New @menu reference to Pretty Printing.
+	(Python API): Change the reference to Pretty Printing API.
+	(Pretty Printing): Move the user part under the Data node.  Reformat
+	the sample output to 72 columns.  Create a new reference to Pretty
+	Printing API.  Rename the API part ...
+	(Pretty Printing API): To a new node name.
+	(Selecting Pretty-Printers, Progspaces In Python, Objfiles In Python)
+	(GDB/MI Variable Objects): Change references to Pretty Printing API.
+
+2010-04-21  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo (Tracepoint Actions): Mention synonymy of actions
+ 	and commands.
+	(Listing Tracepoints): Update to reflect current behavior.
+	
+2010-04-22  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* gdb.texinfo (Examining memory): Update for change in string
+	display with explicit size.
+
+2010-04-19  Pedro Alves  <pedro@codesourcery.com>
+
+	PR breakpoints/8554.
+
+	* gdb.texinfo (Save Breakpoints): New node.
+	(save-tracepoints): Rename to ...
+	(save tracepoints): ... this.  Mention that `save-tracepoints' is
+	a deprecated alias to `save tracepoints'.
+
+2010-04-16  Pierre Muller  <muller@ics.u-strasbg.fr>
+
+	* gdb.texinfo ($_tlb): Document new automatic convinience variable.
+	(info w32 thread-information-block): Document new command.
+	(qGetTIBAddress): Document new gdbserver query.
+	(maint set/show show-all-tib): Document new command.
+
+2010-04-15  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Python API): Add progspaces section.
+	(Selecting Pretty-Printers): Progspace pretty-printers are
+	searched too.
+	(Progspaces In Python): New section.
+
+	* gdb.texinfo (Command Files): Add docs for new "source -s" option.
+
+2010-04-14  Phil Muldoon  <pmuldoon@redhat.com>
+
+	* gdb.texinfo (Pretty Printing): Document behaviour when to_string
+	returns None.
+
+2010-04-09  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo (gdb/mi Tracepoint Commands) <-trace-status>:
+	Describe the `frames-created' field, tweak grammar.
+
+2010-04-09  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (gdb/mi Tracepoint Commands) <-trace-status>:
+	Describe the `circular' and `disconnected' fields.
+
+2010-04-09  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gdb.texinfo (maint print registers): Mention unavailable and
+	invisible registers.
+
+2010-04-09  Phil Muldoon  <pmuldoon@redhat.com>
+	    Thiago Jung Bauermann  <bauerman@br.ibm.com>
+	    Tom Tromey  <tromey@redhat.com>
+
+	* gdb.texinfo (Breakpoints In Python): New Node.
+
+2010-04-08  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo (Tracepoint Packets): Describe disconn and circular
+	trace status fields.
+
+2010-04-08  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gdb.texinfo (i386 Features): Make org.gnu.gdb.i386.avx
+	optional.  Make org.gnu.gdb.i386.avx requires
+	org.gnu.gdb.i386.avx.
+
+2010-04-08  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (Command Files): Document that gdb skips $cdir in
+	search path, and document that gdb only scans the search path if
+	the script's path doesn't specify a directory.
+
+2010-04-05  Doug Evans  <dje@google.com>
+
+	* gdb.texinfo (maint show python auto-load): Fix typo.
+
+2010-04-04  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo (Setting Breakpoints): "info watch" no longer a synonym.
+	(Setting Watchpoints): Update description of "info watch".
+	(Disabling Breakpoints): Only "info break" lists all.
+
+	* gdb.texinfo (Tracepoint Restrictions): Document PC inference.
+	(tdump): Explain how tdump works.
+
+2010-04-01  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (Break Commands): Clarify `commands' changes, and
+	add cross reference.
+
+2010-03-31  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (TUI Commands): Mention that in some cases, these
+	commands error out.
+
+2010-03-30  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gdb.texinfo (i386 Features): Add org.gnu.gdb.i386.avx.
+
+2010-03-30  H.J. Lu  <hongjiu.lu@intel.com>
+
+	* gdb.texinfo (General Query Packets): Add xmlRegisters.
+
+2010-03-29  Stan Shebs  <stan@codesourcery.com>
+	    Nathan Sidwell  <nathan@codesourcery.com>
+
+	* gdb.texinfo (GDB/MI Tracepoint Commands): Add notes about the
+	GDBN equivalent.
+	(Set Tracepoints): Remove mention that conditional tracepoints
+	don't exist.
+	(Tracepoint Actions): Clarify when while-stepping collection
+	happens, note that while-stepping does not automatically collect
+	$pc.
+
+2010-03-29  Stan Shebs  <stan@codesourcery.com>
+	
+	* gdb.texinfo (Tracepoint Packets): Describe QTDPsrc.
+	(General Query Packets): Describe TracepointSource.
+
+2010-03-27  Matt Rice  <ratmice@gmail.com>
+
+	* gdb.texinfo (ARM): Document arguments to "target sim".
+	(Set Catchpoints): Use @dots{} instead of @r{...}.
+
+2010-03-26  Pedro Alves  <pedro@codesourcery.com>
+
+	* gdb.texinfo (Tracepoint Packets): Remove mention that
+	terror:string may be plain text, and drop mention of X prefix.
+
+2010-03-26  Vladimir Prus  <vladimir@codesourcery.com>
+
+	* gdb.texinfo (GDB/MI Tracepoint Commands): Add comma after @xref.
+
+2010-03-24  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo (Tracepoint Packets): Document trace error status.
+
+2010-03-24  Tom Tromey  <tromey@redhat.com>
+
+	PR breakpoints/9352:
+	* gdb.texinfo (Break Commands): Update.
+
+2010-03-24  Vladimir Prus  <vladimir@codesourcery.com>
+
+	* gdb.texinfo (GDB/MI Tracepoint Commands): Document MI tracepoint
+	commands.
+
+2010-03-16  Stan Shebs  <stan@codesourcery.com>
+
+	* gdb.texinfo (Starting and Stopping Trace Experiments): Describe
+	circular-trace-buffer.
+	(Tracepoint Packets): Describe QTBuffer, and details of the
+	qTStatus reply.
+
 2010-03-12  Stan Shebs  <stan@codesourcery.com>
 	    Nathan Sidwell  <nathan@codesourcery.com>
 
@@ -37,7 +382,7 @@
 	description to read_var text.
 
 2010-02-26  Phil Muldoon  <pmuldoon@redhat.com>
-            Tom Tromey  <tromey@redhat.com>
+	    Tom Tromey  <tromey@redhat.com>
 
 	* gdb.texinfo (Types In Python): Describe block argument in
 	template_argument and gdb.lookup_type.
@@ -311,7 +656,7 @@
 2009-10-27  Tom Tromey <tromey@redhat.com>
 	    Eli Zaretskii <eliz@gnu.org>
 
-        PR python/10781
+	PR python/10781
 
 	* gdb.texinfo (Values From Inferior): Document cast method.
 
@@ -470,8 +815,8 @@
 
 2009-08-05  Jeremy Bennett  <jeremy.bennett@embecosm.com>
 
-        * gdb.texinfo (Separate Debug Files, Remote Protocol): Clarified
-        CRC definitions.
+	* gdb.texinfo (Separate Debug Files, Remote Protocol): Clarified
+	CRC definitions.
 
 2009-08-03  Vladimir Prus  <vladimir@codesourcery.com>
 
@@ -663,7 +1008,7 @@
 	Add index entries.
 
 2009-04-30  Hui Zhu  <teawater@gmail.com>
-            Michael Snyder  <msnyder@vmware.com>
+	    Michael Snyder  <msnyder@vmware.com>
 
 	* gdb.texinfo: (Process Record and Replay): Add documentation for
 	process record and replay.
@@ -727,7 +1072,7 @@
 	* gdb.texinfo (Source Path): Document --with-relocated-sources.
 
 2009-04-18  Carlos O'Donell  <carlos@codesourcery.com>
-            Joseph Myers  <joseph@codesourcery.com>
+	    Joseph Myers  <joseph@codesourcery.com>
 
 	* Makefile.in (MAKEHTML): Set to makeinfo --html.
 	(MAKEHTMLFLAGS): Set to empty.
@@ -990,7 +1335,7 @@
 	* gdb.texinfo (Define, Hooks): Document prefix command support.
 
 2009-01-14  Joseph Myers  <joseph@codesourcery.com>
-            Carlos O'Donell  <carlos@codesourcery.com>
+	    Carlos O'Donell  <carlos@codesourcery.com>
 
 	Fixes for makeinfo --html.
 
@@ -1055,24 +1400,24 @@
 
 	MI non-stop and multiprocess docs.
 
-        * gdb.texinfo (GDB/MI): New section 'GDB/MI General Design'
-        (GDB/MI Output Records): New section 'GDB/MI Frame Information'
-        Adjust documentation for *stopped, document =thread-created,
-        =thread-exited, =thread-group-created and =thread-group-exited.
-        (GDB/MI Thread Commands): Document the 'state' field in
-        -thread-info output.
-        (GDB/MI Program Execution): Mention --all and --thread-group
-        options.
-        (GDB/MI Variable Objects): Describe floating and fixed variable
-        objects.
-        (GDB/MI Miscellaneous Commands): Document -list-thread-groups.
+	* gdb.texinfo (GDB/MI): New section 'GDB/MI General Design'
+	(GDB/MI Output Records): New section 'GDB/MI Frame Information'
+	Adjust documentation for *stopped, document =thread-created,
+	=thread-exited, =thread-group-created and =thread-group-exited.
+	(GDB/MI Thread Commands): Document the 'state' field in
+	-thread-info output.
+	(GDB/MI Program Execution): Mention --all and --thread-group
+	options.
+	(GDB/MI Variable Objects): Describe floating and fixed variable
+	objects.
+	(GDB/MI Miscellaneous Commands): Document -list-thread-groups.
 
 2008-12-02  Vladimir Prus  <vladimir@codesourcery.com>
 
-        * gdb.texinfo (Operating System Information): New appendix.
-        (Operating System Auxiliary Information): Document 'info os processes'
-        (Remote Configuration): Document 'osdata'
-        (General Query Packets): Document qXfer:osdata:read.
+	* gdb.texinfo (Operating System Information): New appendix.
+	(Operating System Auxiliary Information): Document 'info os processes'
+	(Remote Configuration): Document 'osdata'
+	(General Query Packets): Document qXfer:osdata:read.
 
 2008-11-27  Tristan Gingold  <gingold@adacore.com>
 
@@ -1101,11 +1446,11 @@
 2008-11-17  Vladimir Prus  <vladimir@codesourcery.com>
 
 	* gdb.texinfo (GDB/MI Async Records): Document
-        =thread-selected.
+	=thread-selected.
 	
 2008-11-17  Vladimir Prus  <vladimir@codesourcery.com>
 
-        * observer.texi (new_inferior, inferior_exit): New observers.
+	* observer.texi (new_inferior, inferior_exit): New observers.
 
 2008-10-27  Pedro Alves  <pedro@codesourcery.com>
 
@@ -1227,12 +1572,12 @@
 
 2008-08-20  Vladimir Prus  <vladimir@codesourcery.com>
 
-        * gdb.textinfo (GDB/MI Miscellaneous Commands): Use @table
-        for possible features of -list-features.
+	* gdb.textinfo (GDB/MI Miscellaneous Commands): Use @table
+	for possible features of -list-features.
 
 2008-08-19  Vladimir Prus  <vladimir@codesourcery.com>
 
-        * gdb.texinfo (Background execution): Adjust example
+	* gdb.texinfo (Background execution): Adjust example
 	(GDB/MI Miscellaneous Commands): Document -list-target-features.
 
 2008-08-19  Vladimir Prus  <vladimir@codesourcery.com>

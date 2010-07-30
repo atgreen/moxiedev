@@ -955,7 +955,7 @@ Symbol_assignment::sized_finalize(Symbol_table* symtab, const Layout* layout,
   uint64_t final_val = this->val_->eval_maybe_dot(symtab, layout, true,
 						  is_dot_available,
 						  dot_value, dot_section,
-						  &section);
+						  &section, NULL);
   Sized_symbol<size>* ssym = symtab->get_sized_symbol<size>(this->sym_);
   ssym->set_value(final_val);
   if (section != NULL)
@@ -974,7 +974,7 @@ Symbol_assignment::set_if_absolute(Symbol_table* symtab, const Layout* layout,
   Output_section* val_section;
   uint64_t val = this->val_->eval_maybe_dot(symtab, layout, false,
 					    is_dot_available, dot_value,
-					    NULL, &val_section);
+					    NULL, &val_section, NULL);
   if (val_section != NULL)
     return;
 
@@ -1438,7 +1438,7 @@ read_input_script(Workqueue* workqueue, Symbol_table* symtab, Layout* layout,
 	}
       workqueue->queue_soon(new Read_symbols(input_objects, symtab,
 					     layout, dirsearch, 0, mapfile, &*p,
-					     input_group, this_blocker, nb));
+					     input_group, NULL, this_blocker, nb));
       this_blocker = nb;
     }
 
@@ -1646,11 +1646,13 @@ script_keyword_parsecodes[] =
   { "BYTE", BYTE },
   { "CONSTANT", CONSTANT },
   { "CONSTRUCTORS", CONSTRUCTORS },
+  { "COPY", COPY },
   { "CREATE_OBJECT_SYMBOLS", CREATE_OBJECT_SYMBOLS },
   { "DATA_SEGMENT_ALIGN", DATA_SEGMENT_ALIGN },
   { "DATA_SEGMENT_END", DATA_SEGMENT_END },
   { "DATA_SEGMENT_RELRO_END", DATA_SEGMENT_RELRO_END },
   { "DEFINED", DEFINED },
+  { "DSECT", DSECT },
   { "ENTRY", ENTRY },
   { "EXCLUDE_FILE", EXCLUDE_FILE },
   { "EXTERN", EXTERN },
@@ -1660,6 +1662,7 @@ script_keyword_parsecodes[] =
   { "GROUP", GROUP },
   { "HLL", HLL },
   { "INCLUDE", INCLUDE },
+  { "INFO", INFO },
   { "INHIBIT_COMMON_ALLOCATION", INHIBIT_COMMON_ALLOCATION },
   { "INPUT", INPUT },
   { "KEEP", KEEP },
@@ -1673,6 +1676,7 @@ script_keyword_parsecodes[] =
   { "NEXT", NEXT },
   { "NOCROSSREFS", NOCROSSREFS },
   { "NOFLOAT", NOFLOAT },
+  { "NOLOAD", NOLOAD },
   { "ONLY_IF_RO", ONLY_IF_RO },
   { "ONLY_IF_RW", ONLY_IF_RW },
   { "OPTION", OPTION },
@@ -2589,6 +2593,24 @@ script_add_file(void* closurev, const char* name, size_t length)
   closure->inputs()->add_file(file);
 }
 
+// Called by the bison parser to add a library to the link.
+
+extern "C" void
+script_add_library(void* closurev, const char* name, size_t length)
+{
+  Parser_closure* closure = static_cast<Parser_closure*>(closurev);
+  std::string name_string(name, length);
+
+  if (name_string[0] != 'l')
+    gold_error(_("library name must be prefixed with -l"));
+    
+  Input_file_argument file(name_string.c_str() + 1,
+			   Input_file_argument::INPUT_FILE_TYPE_LIBRARY,
+			   "", false,
+			   closure->position_dependent_options());
+  closure->inputs()->add_file(file);
+}
+
 // Called by the bison parser to start a group.  If we are already in
 // a group, that means that this script was invoked within a
 // --start-group --end-group sequence on the command line, or that
@@ -2763,7 +2785,7 @@ script_add_search_dir(void* closurev, const char* option, size_t length)
     gold_warning(_("%s:%d:%d: ignoring SEARCH_DIR; SEARCH_DIR is only valid"
 		   " for scripts specified via -T/--script"),
 		 closure->filename(), closure->lineno(), closure->charpos());
-  else
+  else if (!closure->command_line()->options().nostdlib())
     {
       std::string s = "-L" + std::string(option, length);
       script_parse_option(closurev, s.c_str(), s.size());

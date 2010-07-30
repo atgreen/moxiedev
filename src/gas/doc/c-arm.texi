@@ -452,7 +452,8 @@ The following relocations are supported:
 @code{TLSGD},
 @code{TLSLDM},
 @code{TLSLDO},
-@code{GOTTPOFF}
+@code{GOTTPOFF},
+@code{GOT_PREL}
 and
 @code{TPOFF}.
 
@@ -537,7 +538,7 @@ for the @option{-mcpu} commandline option.
 
 @cindex @code{.dn} and @code{.qn} directives, ARM
 @item @var{name} .dn @var{register name} [@var{.type}] [[@var{index}]]
-@item @var{name} .qn @var{register name} [@var{.type}] [[@var{index}]]
+@itemx @var{name} .qn @var{register name} [@var{.type}] [[@var{index}]]
 
 The @code{dn} and @code{qn} directives are used to create typed
 and/or indexed register aliases for use in Advanced SIMD Extension
@@ -574,19 +575,19 @@ Set the EABI object attribute @var{tag} to @var{value}.
 The @var{tag} is either an attribute number, or one of the following:
 @code{Tag_CPU_raw_name}, @code{Tag_CPU_name}, @code{Tag_CPU_arch},
 @code{Tag_CPU_arch_profile}, @code{Tag_ARM_ISA_use},
-@code{Tag_THUMB_ISA_use}, @code{Tag_VFP_arch}, @code{Tag_WMMX_arch},
+@code{Tag_THUMB_ISA_use}, @code{Tag_FP_arch}, @code{Tag_WMMX_arch},
 @code{Tag_Advanced_SIMD_arch}, @code{Tag_PCS_config},
 @code{Tag_ABI_PCS_R9_use}, @code{Tag_ABI_PCS_RW_data},
 @code{Tag_ABI_PCS_RO_data}, @code{Tag_ABI_PCS_GOT_use},
 @code{Tag_ABI_PCS_wchar_t}, @code{Tag_ABI_FP_rounding},
 @code{Tag_ABI_FP_denormal}, @code{Tag_ABI_FP_exceptions},
 @code{Tag_ABI_FP_user_exceptions}, @code{Tag_ABI_FP_number_model},
-@code{Tag_ABI_align8_needed}, @code{Tag_ABI_align8_preserved},
+@code{Tag_ABI_align_needed}, @code{Tag_ABI_align_preserved},
 @code{Tag_ABI_enum_size}, @code{Tag_ABI_HardFP_use},
 @code{Tag_ABI_VFP_args}, @code{Tag_ABI_WMMX_args},
 @code{Tag_ABI_optimization_goals}, @code{Tag_ABI_FP_optimization_goals},
 @code{Tag_compatibility}, @code{Tag_CPU_unaligned_access},
-@code{Tag_VFP_HP_extension}, @code{Tag_ABI_FP_16bit_format},
+@code{Tag_FP_HP_extension}, @code{Tag_ABI_FP_16bit_format},
 @code{Tag_MPextension_use}, @code{Tag_DIV_use},
 @code{Tag_nodefaults}, @code{Tag_also_compatible_with},
 @code{Tag_conformance}, @code{Tag_T2EE_use},
@@ -594,6 +595,10 @@ The @var{tag} is either an attribute number, or one of the following:
 
 The @var{value} is either a @code{number}, @code{"string"}, or
 @code{number, "string"} depending on the tag.
+
+Note - the following legacy values are also accepted by @var{tag}:
+@code{Tag_VFP_arch}, @code{Tag_ABI_align8_needed}, 
+@code{Tag_ABI_align8_preserved}, @code{Tag_VFP_HP_extension},
 
 @cindex @code{.even} directive, ARM
 @item .even
@@ -650,8 +655,8 @@ directive.
 
 @cindex @code{.inst} directive, ARM
 @item .inst @var{opcode} [ , @dots{} ]
-@item .inst.n @var{opcode} [ , @dots{} ]
-@item .inst.w @var{opcode} [ , @dots{} ]
+@itemx .inst.n @var{opcode} [ , @dots{} ]
+@itemx .inst.w @var{opcode} [ , @dots{} ]
 Generates the instruction corresponding to the numerical value @var{opcode}.
 @code{.inst.n} and @code{.inst.w} allow the Thumb instruction size to be
 specified explicitly, overriding the normal encoding rules.
@@ -769,7 +774,7 @@ or
 Make all unwinder annotations relative to a frame pointer.  Without this
 the unwinder will use offsets from the stack pointer.
 
-The syntax of this directive is the same as the @code{sub} or @code{mov}
+The syntax of this directive is the same as the @code{add} or @code{mov}
 instruction used to set the frame pointer.  @var{spreg} must be either
 @code{sp} or mentioned in a previous @code{.movsp} directive.
 
@@ -778,7 +783,7 @@ instruction used to set the frame pointer.  @var{spreg} must be either
 mov ip, sp
 @dots{}
 .setfp fp, ip, #4
-sub fp, ip, #4
+add fp, ip, #4
 @end smallexample
 
 @cindex @code{.secrel32} directive, ARM

@@ -29,8 +29,11 @@ if [target_info exists gdb,noinferiorio] {
     continue
 }
 
-set prms_id 0
-set bug_id 0
+if [target_info exists gdb,nosignals] {
+    verbose "Skipping call-signal-resume.exp because of nosignals."
+    continue
+}
+
 
 set testfile "call-signals"
 set srcfile ${testfile}.c
@@ -50,24 +53,14 @@ if [target_info exists gdb,cannot_call_functions] {
 }
 
 proc get_dummy_frame_number { } {
-  global gdb_prompt
+    global gdb_prompt
 
-  send_gdb "bt\n"
-  gdb_expect {
-    -re "#(\[0-9\]*) *<function called from gdb>.*$gdb_prompt $"
-      {
-	return $expect_out(1,string)
-      }
-    -re "$gdb_prompt $"
-      {
-	return ""
-      }
-    timeout
-      {
-	return ""
-      }
-  }
-  return ""
+    gdb_test_multiple "bt" "backtrace" {
+	-re "#(\[0-9\]*) *<function called from gdb>.*$gdb_prompt $" {
+	    return $expect_out(1,string)
+	}
+    }
+    return ""
 }
 
 # Start with a fresh gdb.
@@ -108,9 +101,9 @@ if { "$frame_number" == "" } {
 }
 
 # Pop the dummy frame.
-gdb_test "frame $frame_number" ""
-gdb_test "set confirm off" ""
-gdb_test "return" ""
+gdb_test "frame $frame_number" ".*"
+gdb_test_no_output "set confirm off"
+gdb_test_no_output "return"
 
 # Resume execution, the program should continue without any signal.
 
@@ -141,9 +134,9 @@ if { "$frame_number" == "" } {
 }
 
 # Pop the dummy frame.
-gdb_test "frame $frame_number" ""
-gdb_test "set confirm off" ""
-gdb_test "return" ""
+gdb_test "frame $frame_number" ".*"
+gdb_test_no_output "set confirm off"
+gdb_test_no_output "return"
 
 # Continue again, this time we should get to the signal handler.
 

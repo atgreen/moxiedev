@@ -59,6 +59,10 @@ class Output_reduced_debug_info_section;
 class Eh_frame;
 class Target;
 
+// Return TRUE if SECNAME is the name of a compressed debug section.
+extern bool
+is_compressed_debug_section(const char* secname);
+
 // This task function handles mapping the input sections to output
 // sections and laying them out in memory.
 
@@ -308,6 +312,12 @@ class Layout
 	 const char* name, const elfcpp::Shdr<size, big_endian>& shdr,
 	 unsigned int reloc_shndx, unsigned int reloc_type, off_t* offset);
 
+  unsigned int
+  find_section_order_index(const std::string&);
+
+  void
+  read_layout_from_file();
+
   // Layout an input reloc section when doing a relocatable link.  The
   // section is RELOC_SHNDX in OBJECT, with data in SHDR.
   // DATA_SECTION is the reloc section to which it refers.  RR is the
@@ -445,6 +455,7 @@ class Layout
   {
     // Debugging sections can only be recognized by name.
     return (strncmp(name, ".debug", sizeof(".debug") - 1) == 0
+            || strncmp(name, ".zdebug", sizeof(".zdebug") - 1) == 0
             || strncmp(name, ".gnu.linkonce.wi.",
                        sizeof(".gnu.linkonce.wi.") - 1) == 0
             || strncmp(name, ".line", sizeof(".line") - 1) == 0
@@ -600,7 +611,8 @@ class Layout
 
   // Make a section for a linker script to hold data.
   Output_section*
-  make_output_section_for_script(const char* name);
+  make_output_section_for_script(const char* name,
+				 Script_sections::Section_type section_type);
 
   // Make a segment.  This is used by the linker script code.
   Output_segment*
@@ -1036,6 +1048,10 @@ class Layout
   Segment_states* segment_states_;
   // A relaxation debug checker.  We only create one when in debugging mode.
   Relaxation_debug_check* relaxation_debug_check_;
+  // Hash a pattern to its position in the section ordering file.
+  Unordered_map<std::string, unsigned int> input_section_position_;
+  // Vector of glob only patterns in the section_ordering file.
+  std::vector<std::string> input_section_glob_;
 };
 
 // This task handles writing out data in output sections which is not

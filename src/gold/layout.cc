@@ -26,8 +26,10 @@
 #include <cstring>
 #include <algorithm>
 #include <iostream>
+#include <fstream>
 #include <utility>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <unistd.h>
 #include "libiberty.h"
 #include "md5.h"
@@ -241,6 +243,7 @@ static const char* gdb_sections[] =
   // ".debug_aranges",   // not used by gdb as of 6.7.1
   ".debug_frame",
   ".debug_info",
+  ".debug_types",
   ".debug_line",
   ".debug_loc",
   ".debug_macinfo",
@@ -254,6 +257,7 @@ static const char* lines_only_debug_sections[] =
   // ".debug_aranges",   // not used by gdb as of 6.7.1
   // ".debug_frame",
   ".debug_info",
+  // ".debug_types",
   ".debug_line",
   // ".debug_loc",
   // ".debug_macinfo",
@@ -502,11 +506,25 @@ Layout::choose_output_section(const Relobj* relobj, const char* name,
       Script_sections* ss = this->script_options_->script_sections();
       const char* file_name = relobj == NULL ? NULL : relobj->name().c_str();
       Output_section** output_section_slot;
-      name = ss->output_section_name(file_name, name, &output_section_slot);
+      Script_sections::Section_type script_section_type;
+      name = ss->output_section_name(file_name, name, &output_section_slot,
+				     &script_section_type);
       if (name == NULL)
 	{
 	  // The SECTIONS clause says to discard this input section.
 	  return NULL;
+	}
+
+      // We can only handle script section types ST_NONE and ST_NOLOAD.
+      switch (script_section_type)
+	{
+	case Script_sections::ST_NONE:
+	  break;
+	case Script_sections::ST_NOLOAD:
+	  flags &= elfcpp::SHF_ALLOC;
+	  break;
+	default:
+	  gold_unreachable();
 	}
 
       // If this is an orphan section--one not mentioned in the linker
@@ -533,6 +551,25 @@ Layout::choose_output_section(const Relobj* relobj, const char* name,
 				      is_dynamic_linker_section, is_relro,
 				      is_last_relro, is_first_non_relro);
 	  os->set_found_in_sections_clause();
+
+	  // Special handling for NOLOAD sections.
+	  if (script_section_type == Script_sections::ST_NOLOAD)
+	    {
+	      os->set_is_noload();
+
+	      // The constructor of Output_section sets addresses of non-ALLOC
+	      // sections to 0 by default.  We don't want that for NOLOAD
+	      // sections even if they have no SHF_ALLOC flag.
+	      if ((os->flags() & elfcpp::SHF_ALLOC) == 0
+		  && os->is_address_valid())
+		{
+		  gold_assert(os->address() == 0
+			      && !os->is_offset_valid()
+			      && !os->is_data_size_valid());
+		  os->reset_address_and_file_offset();
+		}
+	    }
+
 	  *output_section_slot = os;
 	  return os;
 	}
@@ -635,7 +672,7 @@ Layout::layout(Sized_relobj<size, big_endian>* object, unsigned int shndx,
 
   // FIXME: Handle SHF_LINK_ORDER somewhere.
 
-  *off = os->add_input_section(object, shndx, name, shdr, reloc_shndx,
+  *off = os->add_input_section(this, object, shndx, name, shdr, reloc_shndx,
 			       this->script_options_->saw_sections_clause());
   this->have_added_input_section_ = true;
 
@@ -666,11 +703,20 @@ Layout::layout_reloc(Sized_relobj<size, big_endian>* object,
     gold_unreachable();
   name += data_section->name();
 
-  Output_section* os = this->choose_output_section(object, name.c_str(),
-						   sh_type,
-						   shdr.get_sh_flags(),
-						   false, false, false,
-						   false, false, false);
+  // In a relocatable link relocs for a grouped section must not be
+  // combined with other reloc sections.
+  Output_section* os;
+  if (!parameters->options().relocatable()
+      || (data_section->flags() & elfcpp::SHF_GROUP) == 0)
+    os = this->choose_output_section(object, name.c_str(), sh_type,
+				     shdr.get_sh_flags(), false, false,
+				     false, false, false, false);
+  else
+    {
+      const char* n = this->namepool_.add(name.c_str(), true, NULL);
+      os = this->make_output_section(n, sh_type, shdr.get_sh_flags(),
+				     false, false, false, false, false);
+    }
 
   os->set_should_link_to_symtab();
   os->set_info_section(data_section);
@@ -844,7 +890,7 @@ Layout::layout_eh_frame(Sized_relobj<size, big_endian>* object,
       // We couldn't handle this .eh_frame section for some reason.
       // Add it as a normal section.
       bool saw_sections_clause = this->script_options_->saw_sections_clause();
-      *off = os->add_input_section(object, shndx, name, shdr, reloc_shndx,
+      *off = os->add_input_section(this, object, shndx, name, shdr, reloc_shndx,
 				   saw_sections_clause);
       this->have_added_input_section_ = true;
     }
@@ -898,7 +944,16 @@ Layout::section_flags_to_segment(elfcpp::Elf_Xword flags)
 static bool
 is_compressible_debug_section(const char* secname)
 {
-  return (strncmp(secname, ".debug", sizeof(".debug") - 1) == 0);
+  return (is_prefix_of(".debug", secname));
+}
+
+// We may see compressed debug sections in input files.  Return TRUE
+// if this is the name of a compressed debug section.
+
+bool
+is_compressed_debug_section(const char* secname)
+{
+  return (is_prefix_of(".zdebug", secname));
 }
 
 // Make a new Output_section, and attach it to segments as
@@ -1157,13 +1212,20 @@ Layout::attach_allocated_section_to_segment(Output_section* os)
 // Make an output section for a script.
 
 Output_section*
-Layout::make_output_section_for_script(const char* name)
+Layout::make_output_section_for_script(
+    const char* name,
+    Script_sections::Section_type section_type)
 {
   name = this->namepool_.add(name, false, NULL);
+  elfcpp::Elf_Xword sh_flags = elfcpp::SHF_ALLOC;
+  if (section_type == Script_sections::ST_NOLOAD)
+    sh_flags = 0;
   Output_section* os = this->make_output_section(name, elfcpp::SHT_PROGBITS,
-						 elfcpp::SHF_ALLOC, false,
+						 sh_flags, false,
 						 false, false, false, false);
   os->set_found_in_sections_clause();
+  if (section_type == Script_sections::ST_NOLOAD)
+    os->set_is_noload();
   return os;
 }
 
@@ -1591,6 +1653,72 @@ Layout::relaxation_loop_body(
 
   *pload_seg = load_seg;
   return off;
+}
+
+// Search the list of patterns and find the postion of the given section
+// name in the output section.  If the section name matches a glob
+// pattern and a non-glob name, then the non-glob position takes
+// precedence.  Return 0 if no match is found.
+
+unsigned int
+Layout::find_section_order_index(const std::string& section_name)
+{
+  Unordered_map<std::string, unsigned int>::iterator map_it;
+  map_it = this->input_section_position_.find(section_name);
+  if (map_it != this->input_section_position_.end())
+    return map_it->second;
+
+  // Absolute match failed.  Linear search the glob patterns.
+  std::vector<std::string>::iterator it;
+  for (it = this->input_section_glob_.begin();
+       it != this->input_section_glob_.end();
+       ++it)
+    {
+       if (fnmatch((*it).c_str(), section_name.c_str(), FNM_NOESCAPE) == 0)
+         {
+           map_it = this->input_section_position_.find(*it);
+           gold_assert(map_it != this->input_section_position_.end());
+           return map_it->second;
+         }
+    }
+  return 0;
+}
+
+// Read the sequence of input sections from the file specified with
+// --section-ordering-file.
+
+void
+Layout::read_layout_from_file()
+{
+  const char* filename = parameters->options().section_ordering_file();
+  std::ifstream in;
+  std::string line;
+
+  in.open(filename);
+  if (!in)
+    gold_fatal(_("unable to open --section-ordering-file file %s: %s"),
+               filename, strerror(errno));
+
+  std::getline(in, line);   // this chops off the trailing \n, if any
+  unsigned int position = 1;
+
+  while (in)
+    {
+      if (!line.empty() && line[line.length() - 1] == '\r')   // Windows
+        line.resize(line.length() - 1);
+      // Ignore comments, beginning with '#'
+      if (line[0] == '#')
+        {
+          std::getline(in, line);
+          continue;
+        }
+      this->input_section_position_[line] = position;
+      // Store all glob patterns in a vector.
+      if (is_wildcard_string(line.c_str()))
+        this->input_section_glob_.push_back(line);
+      position++;
+      std::getline(in, line);
+    }
 }
 
 // Finalize the layout.  When this is called, we have created all the
@@ -3651,6 +3779,20 @@ Layout::output_section_name(const char* name, size_t* plen)
 	  *plen = psnm->tolen;
 	  return psnm->to;
 	}
+    }
+
+  // Compressed debug sections should be mapped to the corresponding
+  // uncompressed section.
+  if (is_compressed_debug_section(name))
+    {
+      size_t len = strlen(name);
+      char *uncompressed_name = new char[len];
+      uncompressed_name[0] = '.';
+      gold_assert(name[0] == '.' && name[1] == 'z');
+      strncpy(&uncompressed_name[1], &name[2], len - 2);
+      uncompressed_name[len - 1] = '\0';
+      *plen = len - 1;
+      return uncompressed_name;
     }
 
   return name;

@@ -1761,7 +1761,20 @@ lang_insert_orphan (asection *s,
     add_child = &os->children;
   lang_add_section (add_child, s, os);
 
-  lang_leave_output_section_statement (0, "*default*", NULL, NULL);
+  if (after && (s->flags & (SEC_LOAD | SEC_ALLOC)) != 0)
+    {
+      const char *region = (after->region
+			    ? after->region->name_list.name
+			    : DEFAULT_MEMORY_REGION);
+      const char *lma_region = (after->lma_region
+				? after->lma_region->name_list.name
+				: NULL);
+      lang_leave_output_section_statement (NULL, region, after->phdrs,
+					   lma_region);
+    }
+  else
+    lang_leave_output_section_statement (NULL, DEFAULT_MEMORY_REGION, NULL,
+					 NULL);
 
   if (ps != NULL && *ps == '\0')
     {
@@ -2312,14 +2325,12 @@ wild_sort (lang_wild_statement_type *wild,
 	   lang_input_statement_type *file,
 	   asection *section)
 {
-  const char *section_name;
   lang_statement_union_type *l;
 
   if (!wild->filenames_sorted
       && (sec == NULL || sec->spec.sorted == none))
     return NULL;
 
-  section_name = bfd_get_section_name (file->the_bfd, section);
   for (l = wild->children.head; l != NULL; l = l->header.next)
     {
       lang_input_section_type *ls;
@@ -4550,13 +4561,13 @@ sort_sections_by_lma (const void *arg1, const void *arg2)
 static void
 lang_check_section_addresses (void)
 {
-  asection *s, *os;
+  asection *s, *p;
   asection **sections, **spp;
   unsigned int count;
   bfd_vma s_start;
   bfd_vma s_end;
-  bfd_vma os_start;
-  bfd_vma os_end;
+  bfd_vma p_start;
+  bfd_vma p_end;
   bfd_size_type amt;
   lang_memory_region_type *m;
 
@@ -4589,24 +4600,29 @@ lang_check_section_addresses (void)
 
   spp = sections;
   s = *spp++;
-  s_start = bfd_section_lma (link_info.output_bfd, s);
+  s_start = s->lma;
   s_end = s_start + TO_ADDR (s->size) - 1;
   for (count--; count; count--)
     {
       /* We must check the sections' LMA addresses not their VMA
 	 addresses because overlay sections can have overlapping VMAs
 	 but they must have distinct LMAs.  */
-      os = s;
-      os_start = s_start;
-      os_end = s_end;
+      p = s;
+      p_start = s_start;
+      p_end = s_end;
       s = *spp++;
-      s_start = bfd_section_lma (link_info.output_bfd, s);
+      s_start = s->lma;
       s_end = s_start + TO_ADDR (s->size) - 1;
 
-      /* Look for an overlap.  */
-      if (s_end >= os_start && s_start <= os_end)
+      /* Look for an overlap.  We have sorted sections by lma, so we
+	 know that s_start >= p_start.  Besides the obvious case of
+	 overlap when the current section starts before the previous
+	 one ends, we also must have overlap if the previous section
+	 wraps around the address space.  */
+      if (s_start <= p_end
+	  || p_end < p_start)
 	einfo (_("%X%P: section %s loaded at [%V,%V] overlaps section %s loaded at [%V,%V]\n"),
-	       s->name, s_start, s_end, os->name, os_start, os_end);
+	       s->name, s_start, s_end, p->name, p_start, p_end);
     }
 
   free (sections);
@@ -4667,16 +4683,17 @@ os_region_check (lang_output_section_statement_type *os,
 
 static bfd_vma
 lang_size_sections_1
-  (lang_statement_union_type *s,
+  (lang_statement_union_type **prev,
    lang_output_section_statement_type *output_section_statement,
-   lang_statement_union_type **prev,
    fill_type *fill,
    bfd_vma dot,
    bfd_boolean *relax,
    bfd_boolean check_regions)
 {
+  lang_statement_union_type *s;
+
   /* Size up the sections from their constituent parts.  */
-  for (; s != NULL; s = s->header.next)
+  for (s = *prev; s != NULL; s = s->header.next)
     {
       switch (s->header.type)
 	{
@@ -4824,7 +4841,7 @@ lang_size_sections_1
 		os->bfd_section->output_offset = 0;
 	      }
 
-	    lang_size_sections_1 (os->children.head, os, &os->children.head,
+	    lang_size_sections_1 (&os->children.head, os,
 				  os->fill, newdot, relax, check_regions);
 
 	    os->processed_vma = TRUE;
@@ -4980,9 +4997,8 @@ lang_size_sections_1
 	  break;
 
 	case lang_constructors_statement_enum:
-	  dot = lang_size_sections_1 (constructor_list.head,
+	  dot = lang_size_sections_1 (&constructor_list.head,
 				      output_section_statement,
-				      &s->wild_statement.children.head,
 				      fill, dot, relax, check_regions);
 	  break;
 
@@ -5039,9 +5055,8 @@ lang_size_sections_1
 	  break;
 
 	case lang_wild_statement_enum:
-	  dot = lang_size_sections_1 (s->wild_statement.children.head,
+	  dot = lang_size_sections_1 (&s->wild_statement.children.head,
 				      output_section_statement,
-				      &s->wild_statement.children.head,
 				      fill, dot, relax, check_regions);
 	  break;
 
@@ -5058,7 +5073,7 @@ lang_size_sections_1
 	  {
 	    asection *i;
 
-	    i = (*prev)->input_section.section;
+	    i = s->input_section.section;
 	    if (relax)
 	      {
 		bfd_boolean again;
@@ -5171,9 +5186,8 @@ lang_size_sections_1
 	  break;
 
 	case lang_group_statement_enum:
-	  dot = lang_size_sections_1 (s->group_statement.children.head,
+	  dot = lang_size_sections_1 (&s->group_statement.children.head,
 				      output_section_statement,
-				      &s->group_statement.children.head,
 				      fill, dot, relax, check_regions);
 	  break;
 
@@ -5239,8 +5253,8 @@ void
 one_lang_size_sections_pass (bfd_boolean *relax, bfd_boolean check_regions)
 {
   lang_statement_iteration++;
-  lang_size_sections_1 (statement_list.head, abs_output_section,
-			&statement_list.head, 0, 0, relax, check_regions);
+  lang_size_sections_1 (&statement_list.head, abs_output_section,
+			0, 0, relax, check_regions);
 }
 
 void

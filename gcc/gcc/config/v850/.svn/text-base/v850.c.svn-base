@@ -27,7 +27,6 @@
 #include "rtl.h"
 #include "regs.h"
 #include "hard-reg-set.h"
-#include "real.h"
 #include "insn-config.h"
 #include "conditions.h"
 #include "output.h"
@@ -36,6 +35,7 @@
 #include "recog.h"
 #include "expr.h"
 #include "function.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "ggc.h"
 #include "integrate.h"
@@ -65,6 +65,7 @@ static void v850_asm_init_sections   (void);
 static section *v850_select_section (tree, int, unsigned HOST_WIDE_INT);
 static void v850_encode_data_area    (tree, rtx);
 static void v850_encode_section_info (tree, rtx, int);
+static int v850_issue_rate (void);
 static bool v850_return_in_memory    (const_tree, const_tree);
 static rtx v850_function_value (const_tree, const_tree, bool);
 static void v850_setup_incoming_varargs (CUMULATIVE_ARGS *, enum machine_mode,
@@ -73,9 +74,13 @@ static bool v850_pass_by_reference (CUMULATIVE_ARGS *, enum machine_mode,
 				    const_tree, bool);
 static int v850_arg_partial_bytes (CUMULATIVE_ARGS *, enum machine_mode,
 				   tree, bool);
+static bool v850_strict_argument_naming (CUMULATIVE_ARGS *);
 static bool v850_can_eliminate       (const int, const int);
 static void v850_asm_trampoline_template (FILE *);
 static void v850_trampoline_init (rtx, tree, rtx);
+static void v850_print_operand (FILE *, rtx, int);
+static void v850_print_operand_address (FILE *, rtx);
+static bool v850_print_operand_punct_valid_p (unsigned char code);
 
 /* Information about the various small memory areas.  */
 struct small_memory_info small_memory[ (int)SMALL_MEMORY_max ] =
@@ -97,6 +102,8 @@ data_area_stack_element * data_area_stack = NULL;
 /* True if we don't need to check any more if the current
    function is an interrupt handler.  */
 static int v850_interrupt_cache_p = FALSE;
+
+rtx v850_compare_op0, v850_compare_op1;
 
 /* Whether current function is an interrupt handler.  */
 static int v850_interrupt_p = FALSE;
@@ -124,6 +131,13 @@ static const struct attribute_spec v850_attribute_table[] =
 /* Initialize the GCC target structure.  */
 #undef TARGET_ASM_ALIGNED_HI_OP
 #define TARGET_ASM_ALIGNED_HI_OP "\t.hword\t"
+
+#undef TARGET_PRINT_OPERAND
+#define TARGET_PRINT_OPERAND v850_print_operand
+#undef TARGET_PRINT_OPERAND_ADDRESS
+#define TARGET_PRINT_OPERAND_ADDRESS v850_print_operand_address
+#undef TARGET_PRINT_OPERAND_PUNCT_VALID_P
+#define TARGET_PRINT_OPERAND_PUNCT_VALID_P v850_print_operand_punct_valid_p
 
 #undef TARGET_ATTRIBUTE_TABLE
 #define TARGET_ATTRIBUTE_TABLE v850_attribute_table
@@ -159,6 +173,9 @@ static const struct attribute_spec v850_attribute_table[] =
 #undef TARGET_MACHINE_DEPENDENT_REORG
 #define TARGET_MACHINE_DEPENDENT_REORG v850_reorg
 
+#undef TARGET_SCHED_ISSUE_RATE
+#define TARGET_SCHED_ISSUE_RATE v850_issue_rate
+
 #undef TARGET_PROMOTE_PROTOTYPES
 #define TARGET_PROMOTE_PROTOTYPES hook_bool_const_tree_true
 
@@ -187,6 +204,9 @@ static const struct attribute_spec v850_attribute_table[] =
 #define TARGET_ASM_TRAMPOLINE_TEMPLATE v850_asm_trampoline_template
 #undef TARGET_TRAMPOLINE_INIT
 #define TARGET_TRAMPOLINE_INIT v850_trampoline_init
+
+#undef TARGET_STRICT_ARGUMENT_NAMING
+#define TARGET_STRICT_ARGUMENT_NAMING v850_strict_argument_naming
 
 struct gcc_target targetm = TARGET_INITIALIZER;
 
@@ -248,7 +268,10 @@ v850_handle_option (size_t code, const char *arg, int value ATTRIBUTE_UNUSED)
       return true;
     }
 }
-
+
+/* Handle the TARGET_PASS_BY_REFERENCE target hook.
+   Specify whether to pass the argument by reference.  */
+
 static bool
 v850_pass_by_reference (CUMULATIVE_ARGS *cum ATTRIBUTE_UNUSED,
 			enum machine_mode mode, const_tree type,
@@ -264,6 +287,14 @@ v850_pass_by_reference (CUMULATIVE_ARGS *cum ATTRIBUTE_UNUSED,
   return size > 8;
 }
 
+/* Implementing the Varargs Macros.  */
+
+static bool
+v850_strict_argument_naming (CUMULATIVE_ARGS * ca ATTRIBUTE_UNUSED)
+{
+  return !TARGET_GHS ? true : false;
+}
+
 /* Return an RTX to represent where an argument with mode MODE
    and type TYPE will be passed to a function.  If the result
    is NULL_RTX, the argument will be pushed.  */
@@ -277,13 +308,15 @@ function_arg (CUMULATIVE_ARGS * cum,
   rtx result = NULL_RTX;
   int size, align;
 
-  if (TARGET_GHS && !named)
+  if (!named)
     return NULL_RTX;
 
   if (mode == BLKmode)
     size = int_size_in_bytes (type);
   else
     size = GET_MODE_SIZE (mode);
+
+  size = (size + UNITS_PER_WORD -1) & ~(UNITS_PER_WORD -1);
 
   if (size < 1)
     {
@@ -292,7 +325,7 @@ function_arg (CUMULATIVE_ARGS * cum,
       return NULL_RTX;
     }
 
-  if (type)
+  if (size <= UNITS_PER_WORD && type)
     align = TYPE_ALIGN (type) / BITS_PER_UNIT;
   else
     align = size;
@@ -327,10 +360,8 @@ function_arg (CUMULATIVE_ARGS * cum,
   return result;
 }
 
-
 /* Return the number of bytes which must be put into registers
    for values which are part in registers and part in memory.  */
-
 static int
 v850_arg_partial_bytes (CUMULATIVE_ARGS * cum, enum machine_mode mode,
                         tree type, bool named)
@@ -368,7 +399,6 @@ v850_arg_partial_bytes (CUMULATIVE_ARGS * cum, enum machine_mode mode,
   return 4 * UNITS_PER_WORD - cum->nbytes;
 }
 
-
 /* Return the high and low words of a CONST_DOUBLE */
 
 static void
@@ -515,8 +545,8 @@ v850_rtx_costs (rtx x,
 /* Print operand X using operand code CODE to assembly language output file
    FILE.  */
 
-void
-print_operand (FILE * file, rtx x, int code)
+static void
+v850_print_operand (FILE * file, rtx x, int code)
 {
   HOST_WIDE_INT high, low;
 
@@ -660,7 +690,7 @@ print_operand (FILE * file, rtx x, int code)
 	  break;
 	case MEM:
 	  x = XEXP (adjust_address (x, SImode, 4), 0);
-	  print_operand_address (file, x);
+	  v850_print_operand_address (file, x);
 	  if (GET_CODE (x) == CONST_INT)
 	    fprintf (file, "[r0]");
 	  break;
@@ -703,6 +733,11 @@ print_operand (FILE * file, rtx x, int code)
     case 'z':			/* reg or zero */
       if (GET_CODE (x) == REG)
 	fputs (reg_names[REGNO (x)], file);
+      else if ((GET_MODE(x) == SImode
+		|| GET_MODE(x) == DFmode
+		|| GET_MODE(x) == SFmode)
+		&& x == CONST0_RTX(GET_MODE(x)))
+      fputs (reg_names[0], file);
       else
 	{
 	  gcc_assert (x == const0_rtx);
@@ -731,7 +766,7 @@ print_operand (FILE * file, rtx x, int code)
 	case CONST:
 	case LABEL_REF:
 	case CODE_LABEL:
-	  print_operand_address (file, x);
+	  v850_print_operand_address (file, x);
 	  break;
 	default:
 	  gcc_unreachable ();
@@ -744,14 +779,14 @@ print_operand (FILE * file, rtx x, int code)
 
 /* Output assembly language output for the address ADDR to FILE.  */
 
-void
-print_operand_address (FILE * file, rtx addr)
+static void
+v850_print_operand_address (FILE * file, rtx addr)
 {
   switch (GET_CODE (addr))
     {
     case REG:
       fprintf (file, "0[");
-      print_operand (file, addr, 0);
+      v850_print_operand (file, addr, 0);
       fprintf (file, "]");
       break;
     case LO_SUM:
@@ -759,9 +794,9 @@ print_operand_address (FILE * file, rtx addr)
 	{
 	  /* reg,foo */
 	  fprintf (file, "lo(");
-	  print_operand (file, XEXP (addr, 1), 0);
+	  v850_print_operand (file, XEXP (addr, 1), 0);
 	  fprintf (file, ")[");
-	  print_operand (file, XEXP (addr, 0), 0);
+	  v850_print_operand (file, XEXP (addr, 0), 0);
 	  fprintf (file, "]");
 	}
       break;
@@ -770,16 +805,16 @@ print_operand_address (FILE * file, rtx addr)
 	  || GET_CODE (XEXP (addr, 0)) == SUBREG)
 	{
 	  /* reg,foo */
-	  print_operand (file, XEXP (addr, 1), 0);
+	  v850_print_operand (file, XEXP (addr, 1), 0);
 	  fprintf (file, "[");
-	  print_operand (file, XEXP (addr, 0), 0);
+	  v850_print_operand (file, XEXP (addr, 0), 0);
 	  fprintf (file, "]");
 	}
       else
 	{
-	  print_operand (file, XEXP (addr, 0), 0);
+	  v850_print_operand (file, XEXP (addr, 0), 0);
 	  fprintf (file, "+");
-	  print_operand (file, XEXP (addr, 1), 0);
+	  v850_print_operand (file, XEXP (addr, 1), 0);
 	}
       break;
     case SYMBOL_REF:
@@ -848,6 +883,12 @@ print_operand_address (FILE * file, rtx addr)
     }
 }
 
+static bool
+v850_print_operand_punct_valid_p (unsigned char code)
+{
+  return code == '.';
+}
+
 /* When assemble_integer is used to emit the offsets for a switch
    table it can encounter (TRUNCATE:HI (MINUS:SI (LABEL_REF:SI) (LABEL_REF:SI))).
    output_addr_const will normally barf at this, but it is OK to omit
@@ -901,13 +942,13 @@ output_move_single (rtx * operands)
 	    return "mov %1,%0";
 
 	  else if (CONST_OK_FOR_K (value))	/* Signed 16-bit immediate.  */
-	    return "movea lo(%1),%.,%0";
+	    return "movea %1,%.,%0";
 
 	  else if (CONST_OK_FOR_L (value))	/* Upper 16 bits were set.  */
-	    return "movhi hi(%1),%.,%0";
+	    return "movhi hi0(%1),%.,%0";
 
 	  /* A random constant.  */
-	  else if (TARGET_V850E)
+	  else if (TARGET_V850E || TARGET_V850E2_ALL)
 	      return "mov %1,%0";
 	  else
 	    return "movhi hi(%1),%.,%0\n\tmovea lo(%1),%0,%0";
@@ -923,13 +964,13 @@ output_move_single (rtx * operands)
 	    return "mov %F1,%0";
 
 	  else if (CONST_OK_FOR_K (high))	/* Signed 16-bit immediate.  */
-	    return "movea lo(%F1),%.,%0";
+	    return "movea %F1,%.,%0";
 
 	  else if (CONST_OK_FOR_L (high))	/* Upper 16 bits were set.  */
-	    return "movhi hi(%F1),%.,%0";
+	    return "movhi hi0(%F1),%.,%0";
 
 	  /* A random constant.  */
-	  else if (TARGET_V850E)
+	else if (TARGET_V850E || TARGET_V850E2_ALL)
 	      return "mov %F1,%0";
 
 	  else
@@ -946,7 +987,7 @@ output_move_single (rtx * operands)
 	       || GET_CODE (src) == SYMBOL_REF
 	       || GET_CODE (src) == CONST)
 	{
-	  if (TARGET_V850E)
+	  if (TARGET_V850E || TARGET_V850E2_ALL) 
 	    return "mov hilo(%1),%0";
 	  else
 	    return "movhi hi(%1),%.,%0\n\tmovea lo(%1),%0,%0";
@@ -980,7 +1021,169 @@ output_move_single (rtx * operands)
   return "";
 }
 
-
+/* Generate comparison code.  */
+int
+v850_float_z_comparison_operator (rtx op, enum machine_mode mode)
+{
+  enum rtx_code code = GET_CODE (op);
+
+  if (GET_RTX_CLASS (code) != RTX_COMPARE
+      && GET_RTX_CLASS (code) != RTX_COMM_COMPARE)
+    return 0;
+
+  if (mode != GET_MODE (op) && mode != VOIDmode)
+    return 0;
+
+  if ((GET_CODE (XEXP (op, 0)) != REG
+       || REGNO (XEXP (op, 0)) != CC_REGNUM)
+      || XEXP (op, 1) != const0_rtx)
+    return 0;
+
+  if (GET_MODE (XEXP (op, 0)) == CC_FPU_LTmode)
+    return code == LT;
+  if (GET_MODE (XEXP (op, 0)) == CC_FPU_LEmode)
+    return code == LE;
+  if (GET_MODE (XEXP (op, 0)) == CC_FPU_EQmode)
+    return code == EQ;
+
+  return 0;
+}
+
+int
+v850_float_nz_comparison_operator (rtx op, enum machine_mode mode)
+{
+  enum rtx_code code = GET_CODE (op);
+
+  if (GET_RTX_CLASS (code) != RTX_COMPARE
+      && GET_RTX_CLASS (code) != RTX_COMM_COMPARE)
+    return 0;
+
+  if (mode != GET_MODE (op) && mode != VOIDmode)
+    return 0;
+
+  if ((GET_CODE (XEXP (op, 0)) != REG
+       || REGNO (XEXP (op, 0)) != CC_REGNUM)
+      || XEXP (op, 1) != const0_rtx)
+    return 0;
+
+  if (GET_MODE (XEXP (op, 0)) == CC_FPU_GTmode)
+    return code == GT;
+  if (GET_MODE (XEXP (op, 0)) == CC_FPU_GEmode)
+    return code == GE;
+  if (GET_MODE (XEXP (op, 0)) == CC_FPU_NEmode)
+    return code == NE;
+
+  return 0;
+}
+
+enum machine_mode
+v850_select_cc_mode (enum rtx_code cond, rtx op0, rtx op1)
+{
+  if (GET_MODE_CLASS (GET_MODE (op0)) == MODE_FLOAT)
+    {
+      switch (cond)
+	{
+	case LE:
+	  return CC_FPU_LEmode;
+	case GE:
+	  return CC_FPU_GEmode;
+	case LT:
+	  return CC_FPU_LTmode;
+	case GT:
+	  return CC_FPU_GTmode;
+	case EQ:
+	  return CC_FPU_EQmode;
+	case NE:
+	  return CC_FPU_NEmode;
+	default:
+	  abort ();
+	}
+    }
+  return CCmode;
+}
+
+enum machine_mode
+v850_gen_float_compare (enum rtx_code cond, enum machine_mode mode ATTRIBUTE_UNUSED, rtx op0, rtx op1)
+{
+  if (GET_MODE(op0) == DFmode)
+    {
+      switch (cond)
+	{
+	case LE:
+	  emit_insn (gen_cmpdf_le_insn (op0, op1));
+	  break;
+	case GE:
+	  emit_insn (gen_cmpdf_ge_insn (op0, op1));
+	  break;
+	case LT:
+	  emit_insn (gen_cmpdf_lt_insn (op0, op1));
+	  break;
+	case GT:
+	  emit_insn (gen_cmpdf_gt_insn (op0, op1));
+	  break;
+	case EQ:
+	  emit_insn (gen_cmpdf_eq_insn (op0, op1));
+	  break;
+	case NE:
+	  emit_insn (gen_cmpdf_ne_insn (op0, op1));
+	  break;
+	default:
+	  abort ();
+	}
+    }
+  else if (GET_MODE(v850_compare_op0) == SFmode)
+    {
+      switch (cond)
+	{
+	case LE:
+	  emit_insn (gen_cmpsf_le_insn(op0, op1));
+	  break;
+	case GE:
+	  emit_insn (gen_cmpsf_ge_insn(op0, op1));
+	  break;
+	case LT:
+	  emit_insn (gen_cmpsf_lt_insn(op0, op1));
+	  break;
+	case GT:
+	  emit_insn (gen_cmpsf_gt_insn(op0, op1));
+	  break;
+	case EQ:
+	  emit_insn (gen_cmpsf_eq_insn(op0, op1));
+	  break;
+	case NE:
+	  emit_insn (gen_cmpsf_ne_insn(op0, op1));
+	  break;
+	default:
+	  abort ();
+	}
+    }
+  else
+    {
+      abort ();
+    }
+
+  return v850_select_cc_mode (cond, op0, op1);
+}
+
+rtx
+v850_gen_compare (enum rtx_code cond, enum machine_mode mode, rtx op0, rtx op1)
+{
+  if (GET_MODE_CLASS(GET_MODE (op0)) != MODE_FLOAT)
+    {
+      emit_insn (gen_cmpsi_insn (op0, op1));
+      return gen_rtx_fmt_ee (cond, mode, gen_rtx_REG(CCmode, CC_REGNUM), const0_rtx);
+    }
+  else
+    {
+      rtx cc_reg;
+      mode = v850_gen_float_compare (cond, mode, op0, op1);
+      cc_reg = gen_rtx_REG (mode, CC_REGNUM);
+      emit_insn (gen_rtx_SET(mode, cc_reg, gen_rtx_REG (mode, FCC_REGNUM)));  
+
+      return gen_rtx_fmt_ee (cond, mode, cc_reg, const0_rtx);
+    }
+}
+
 /* Return maximum offset supported for a short EP memory reference of mode
    MODE and signedness UNSIGNEDP.  */
 
@@ -994,9 +1197,8 @@ ep_memory_offset (enum machine_mode mode, int unsignedp ATTRIBUTE_UNUSED)
     case QImode:
       if (TARGET_SMALL_SLD)
 	max_offset = (1 << 4);
-      else if (TARGET_V850E 
-	       && (   (  unsignedp && ! TARGET_US_BIT_SET)
-		   || (! unsignedp &&   TARGET_US_BIT_SET)))
+      else if ((TARGET_V850E || TARGET_V850E2_ALL)
+		&& unsignedp)
 	max_offset = (1 << 4);
       else
 	max_offset = (1 << 7);
@@ -1005,9 +1207,8 @@ ep_memory_offset (enum machine_mode mode, int unsignedp ATTRIBUTE_UNUSED)
     case HImode:
       if (TARGET_SMALL_SLD)
 	max_offset = (1 << 5);
-      else if (TARGET_V850E
-	       && (   (  unsignedp && ! TARGET_US_BIT_SET)
-		   || (! unsignedp &&   TARGET_US_BIT_SET)))
+      else if ((TARGET_V850E || TARGET_V850E2_ALL)
+		&& unsignedp)
 	max_offset = (1 << 5);
       else
 	max_offset = (1 << 8);
@@ -1404,18 +1605,15 @@ v850_reorg (void)
     }
 }
 
-
 /* # of registers saved by the interrupt handler.  */
-#define INTERRUPT_FIXED_NUM 4
+#define INTERRUPT_FIXED_NUM 5
 
 /* # of bytes for registers saved by the interrupt handler.  */
 #define INTERRUPT_FIXED_SAVE_SIZE (4 * INTERRUPT_FIXED_NUM)
 
-/* # of registers saved in register parameter area.  */
-#define INTERRUPT_REGPARM_NUM 4
 /* # of words saved for other registers.  */
 #define INTERRUPT_ALL_SAVE_NUM \
-  (30 - INTERRUPT_FIXED_NUM + INTERRUPT_REGPARM_NUM)
+  (30 - INTERRUPT_FIXED_NUM)
 
 #define INTERRUPT_ALL_SAVE_SIZE (4 * INTERRUPT_ALL_SAVE_NUM)
 
@@ -1461,6 +1659,7 @@ compute_register_save_size (long * p_reg_saved)
 	  case 1:		/* temp used to hold ep */
 	  case 4:		/* gp */
 	  case 10:		/* temp used to call interrupt save/restore */
+	  case 11:		/* temp used to call interrupt save/restore (long call) */
 	  case EP_REGNUM:	/* ep */
 	    size += 4;
 	    break;
@@ -1534,19 +1733,50 @@ compute_frame_size (int size, long * p_reg_saved)
 	  + crtl->outgoing_args_size);
 }
 
-
+static int
+use_prolog_function (int num_save, int frame_size)
+{
+  int alloc_stack = (4 * num_save);
+  int unalloc_stack = frame_size - alloc_stack;
+  int save_func_len, restore_func_len;
+  int save_normal_len, restore_normal_len;
+
+  if (! TARGET_DISABLE_CALLT)
+      save_func_len = restore_func_len = 2;
+  else
+      save_func_len = restore_func_len = TARGET_LONG_CALLS ? (4+4+4+2+2) : 4;
+
+  if (unalloc_stack)
+    {
+      save_func_len += CONST_OK_FOR_J (-unalloc_stack) ? 2 : 4;
+      restore_func_len += CONST_OK_FOR_J (-unalloc_stack) ? 2 : 4;
+    }
+
+  /* See if we would have used ep to save the stack.  */
+  if (TARGET_EP && num_save > 3 && (unsigned)frame_size < 255)
+    save_normal_len = restore_normal_len = (3 * 2) + (2 * num_save);
+  else
+    save_normal_len = restore_normal_len = 4 * num_save;
+
+  save_normal_len += CONST_OK_FOR_J (-frame_size) ? 2 : 4;
+  restore_normal_len += (CONST_OK_FOR_J (frame_size) ? 2 : 4) + 2;
+
+  /* Don't bother checking if we don't actually save any space.
+     This happens for instance if one register is saved and additional
+     stack space is allocated.  */
+  return ((save_func_len + restore_func_len) < (save_normal_len + restore_normal_len));
+}
+
 void
 expand_prologue (void)
 {
   unsigned int i;
-  int offset;
   unsigned int size = get_frame_size ();
   unsigned int actual_fsize;
   unsigned int init_stack_alloc = 0;
   rtx save_regs[32];
   rtx save_all;
   unsigned int num_save;
-  unsigned int default_stack;
   int code;
   int interrupt_handler = v850_interrupt_function_p (current_function_decl);
   long reg_saved = 0;
@@ -1556,7 +1786,7 @@ expand_prologue (void)
   /* Save/setup global registers for interrupt functions right now.  */
   if (interrupt_handler)
     {
-      if (TARGET_V850E && ! TARGET_DISABLE_CALLT)
+      if (! TARGET_DISABLE_CALLT)
 	emit_insn (gen_callt_save_interrupt ());
       else
 	emit_insn (gen_save_interrupt ());
@@ -1567,93 +1797,48 @@ expand_prologue (void)
 	actual_fsize -= INTERRUPT_ALL_SAVE_SIZE;
     }
 
-  /* Save arg registers to the stack if necessary.  */
-  else if (crtl->args.info.anonymous_args)
-    {
-      if (TARGET_PROLOG_FUNCTION && TARGET_V850E && !TARGET_DISABLE_CALLT)
-	emit_insn (gen_save_r6_r9_v850e ());
-      else if (TARGET_PROLOG_FUNCTION && ! TARGET_LONG_CALLS)
-	emit_insn (gen_save_r6_r9 ());
-      else
-	{
-	  offset = 0;
-	  for (i = 6; i < 10; i++)
-	    {
-	      emit_move_insn (gen_rtx_MEM (SImode,
-					   plus_constant (stack_pointer_rtx,
-							  offset)),
-			      gen_rtx_REG (SImode, i));
-	      offset += 4;
-	    }
-	}
-    }
-
   /* Identify all of the saved registers.  */
   num_save = 0;
-  default_stack = 0;
-  for (i = 1; i < 31; i++)
+  for (i = 1; i < 32; i++)
     {
       if (((1L << i) & reg_saved) != 0)
 	save_regs[num_save++] = gen_rtx_REG (Pmode, i);
     }
 
-  /* If the return pointer is saved, the helper functions also allocate
-     16 bytes of stack for arguments to be saved in.  */
-  if (((1L << LINK_POINTER_REGNUM) & reg_saved) != 0)
-    {
-      save_regs[num_save++] = gen_rtx_REG (Pmode, LINK_POINTER_REGNUM);
-      default_stack = 16;
-    }
-
   /* See if we have an insn that allocates stack space and saves the particular
      registers we want to.  */
   save_all = NULL_RTX;
-  if (TARGET_PROLOG_FUNCTION && num_save > 0 && actual_fsize >= default_stack)
+  if (TARGET_PROLOG_FUNCTION && num_save > 0)
     {
-      int alloc_stack = (4 * num_save) + default_stack;
-      int unalloc_stack = actual_fsize - alloc_stack;
-      int save_func_len = 4;
-      int save_normal_len;
-
-      if (unalloc_stack)
-	save_func_len += CONST_OK_FOR_J (unalloc_stack) ? 2 : 4;
-
-      /* see if we would have used ep to save the stack */
-      if (TARGET_EP && num_save > 3 && (unsigned)actual_fsize < 255)
-	save_normal_len = (3 * 2) + (2 * num_save);
-      else
-	save_normal_len = 4 * num_save;
-
-      save_normal_len += CONST_OK_FOR_J (actual_fsize) ? 2 : 4;
-
-      /* Don't bother checking if we don't actually save any space.
-	 This happens for instance if one register is saved and additional
-	 stack space is allocated.  */
-      if (save_func_len < save_normal_len)
+      if (use_prolog_function (num_save, actual_fsize))
 	{
+	  int alloc_stack = 4 * num_save;
+	  int offset = 0;
+
 	  save_all = gen_rtx_PARALLEL
 	    (VOIDmode,
 	     rtvec_alloc (num_save + 1
-			  + (TARGET_V850 ? (TARGET_LONG_CALLS ? 2 : 1) : 0)));
+			  + (TARGET_DISABLE_CALLT ? (TARGET_LONG_CALLS ? 2 : 1) : 0)));
 
 	  XVECEXP (save_all, 0, 0)
 	    = gen_rtx_SET (VOIDmode,
 			   stack_pointer_rtx,
-			   plus_constant (stack_pointer_rtx, -alloc_stack));
-
-	  offset = - default_stack;
+			   gen_rtx_PLUS (Pmode,
+					 stack_pointer_rtx,
+					 GEN_INT(-alloc_stack)));
 	  for (i = 0; i < num_save; i++)
 	    {
+	      offset -= 4;
 	      XVECEXP (save_all, 0, i+1)
 		= gen_rtx_SET (VOIDmode,
 			       gen_rtx_MEM (Pmode,
-					    plus_constant (stack_pointer_rtx,
-							   offset)),
+					    gen_rtx_PLUS (Pmode,
+							  stack_pointer_rtx,
+							  GEN_INT(offset))),
 			       save_regs[i]);
-	      offset -= 4;
 	    }
 
-	  if (TARGET_V850)
+	  if (TARGET_DISABLE_CALLT)
 	    {
 	      XVECEXP (save_all, 0, num_save + 1)
 		= gen_rtx_CLOBBER (VOIDmode, gen_rtx_REG (Pmode, 10));
@@ -1670,12 +1855,6 @@ expand_prologue (void)
 	      INSN_CODE (insn) = code;
 	      actual_fsize -= alloc_stack;
 	      
-	      if (TARGET_DEBUG)
-		fprintf (stderr, "\
-Saved %d bytes via prologue function (%d vs. %d) for function %s\n",
-			 save_normal_len - save_func_len,
-			 save_normal_len, save_func_len,
-			 IDENTIFIER_POINTER (DECL_NAME (current_function_decl)));
 	    }
 	  else
 	    save_all = NULL_RTX;
@@ -1689,13 +1868,14 @@ Saved %d bytes via prologue function (%d vs. %d) for function %s\n",
       /* Special case interrupt functions that save all registers for a call.  */
       if (interrupt_handler && ((1L << LINK_POINTER_REGNUM) & reg_saved) != 0)
 	{
-	  if (TARGET_V850E && ! TARGET_DISABLE_CALLT)
+	  if (! TARGET_DISABLE_CALLT)
 	    emit_insn (gen_callt_save_all_interrupt ());
 	  else
 	    emit_insn (gen_save_all_interrupt ());
 	}
       else
 	{
+	  int offset;
 	  /* If the stack is too big, allocate it in chunks so we can do the
 	     register saves.  We use the register save size so we use the ep
 	     register.  */
@@ -1739,7 +1919,7 @@ Saved %d bytes via prologue function (%d vs. %d) for function %s\n",
   if (actual_fsize > init_stack_alloc)
     {
       int diff = actual_fsize - init_stack_alloc;
-      if (CONST_OK_FOR_K (diff))
+      if (CONST_OK_FOR_K (-diff))
 	emit_insn (gen_addsi3 (stack_pointer_rtx,
 			       stack_pointer_rtx,
 			       GEN_INT (-diff)));
@@ -1761,15 +1941,12 @@ void
 expand_epilogue (void)
 {
   unsigned int i;
-  int offset;
   unsigned int size = get_frame_size ();
   long reg_saved = 0;
   int actual_fsize = compute_frame_size (size, &reg_saved);
-  unsigned int init_stack_free = 0;
   rtx restore_regs[32];
   rtx restore_all;
   unsigned int num_restore;
-  unsigned int default_stack;
   int code;
   int interrupt_handler = v850_interrupt_function_p (current_function_decl);
 
@@ -1787,49 +1964,28 @@ expand_epilogue (void)
 
   /* Identify all of the saved registers.  */
   num_restore = 0;
-  default_stack = 0;
-  for (i = 1; i < 31; i++)
+  for (i = 1; i < 32; i++)
     {
       if (((1L << i) & reg_saved) != 0)
 	restore_regs[num_restore++] = gen_rtx_REG (Pmode, i);
     }
 
-  /* If the return pointer is saved, the helper functions also allocate
-     16 bytes of stack for arguments to be saved in.  */
-  if (((1L << LINK_POINTER_REGNUM) & reg_saved) != 0)
-    {
-      restore_regs[num_restore++] = gen_rtx_REG (Pmode, LINK_POINTER_REGNUM);
-      default_stack = 16;
-    }
-
   /* See if we have an insn that restores the particular registers we
      want to.  */
   restore_all = NULL_RTX;
-  
+
   if (TARGET_PROLOG_FUNCTION
       && num_restore > 0
-      && actual_fsize >= (signed) default_stack
       && !interrupt_handler)
     {
-      int alloc_stack = (4 * num_restore) + default_stack;
-      int unalloc_stack = actual_fsize - alloc_stack;
-      int restore_func_len = 4;
+      int alloc_stack = (4 * num_restore);
+      int restore_func_len;
       int restore_normal_len;
 
-      if (unalloc_stack)
-	restore_func_len += CONST_OK_FOR_J (unalloc_stack) ? 2 : 4;
-
-      /* See if we would have used ep to restore the registers.  */
-      if (TARGET_EP && num_restore > 3 && (unsigned)actual_fsize < 255)
-	restore_normal_len = (3 * 2) + (2 * num_restore);
-      else
-	restore_normal_len = 4 * num_restore;
-
-      restore_normal_len += (CONST_OK_FOR_J (actual_fsize) ? 2 : 4) + 2;
-
       /* Don't bother checking if we don't actually save any space.  */
-      if (restore_func_len < restore_normal_len)
+      if (use_prolog_function (num_restore, actual_fsize))
 	{
+	  int offset;
 	  restore_all = gen_rtx_PARALLEL (VOIDmode,
 					  rtvec_alloc (num_restore + 2));
 	  XVECEXP (restore_all, 0, 0) = gen_rtx_RETURN (VOIDmode);
@@ -1846,8 +2002,9 @@ expand_epilogue (void)
 		= gen_rtx_SET (VOIDmode,
 			       restore_regs[i],
 			       gen_rtx_MEM (Pmode,
-					    plus_constant (stack_pointer_rtx,
-							   offset)));
+                                            gen_rtx_PLUS (Pmode,
+                                                          stack_pointer_rtx,
+                                                          GEN_INT(offset))));
 	      offset -= 4;
 	    }
 
@@ -1877,12 +2034,6 @@ expand_epilogue (void)
 	      insn = emit_jump_insn (restore_all);
 	      INSN_CODE (insn) = code;
 
-	      if (TARGET_DEBUG)
-		fprintf (stderr, "\
-Saved %d bytes via epilogue function (%d vs. %d) in function %s\n",
-			 restore_normal_len - restore_func_len,
-			 restore_normal_len, restore_func_len,
-			 IDENTIFIER_POINTER (DECL_NAME (current_function_decl)));
 	    }
 	  else
 	    restore_all = NULL_RTX;
@@ -1893,8 +2044,12 @@ Saved %d bytes via epilogue function (%d vs. %d) in function %s\n",
      old fashioned way (one by one).  */
   if (!restore_all)
     {
+      unsigned int init_stack_free;
+
       /* If the stack is large, we need to cut it down in 2 pieces.  */
-      if (actual_fsize && !CONST_OK_FOR_K (-actual_fsize))
+      if (interrupt_handler)
+       init_stack_free = 0;
+      else if (actual_fsize && !CONST_OK_FOR_K (-actual_fsize))
 	init_stack_free = 4 * num_restore;
       else
 	init_stack_free = (signed) actual_fsize;
@@ -1904,7 +2059,7 @@ Saved %d bytes via epilogue function (%d vs. %d) in function %s\n",
 	{
 	  int diff;
 
-	  diff = actual_fsize - ((interrupt_handler) ? 0 : init_stack_free);
+	  diff = actual_fsize - init_stack_free;
 
 	  if (CONST_OK_FOR_K (diff))
 	    emit_insn (gen_addsi3 (stack_pointer_rtx,
@@ -1924,7 +2079,7 @@ Saved %d bytes via epilogue function (%d vs. %d) in function %s\n",
 	 for a call.  */
       if (interrupt_handler && ((1L << LINK_POINTER_REGNUM) & reg_saved) != 0)
 	{
-	  if (TARGET_V850E && ! TARGET_DISABLE_CALLT)
+	  if (! TARGET_DISABLE_CALLT)
 	    emit_insn (gen_callt_restore_all_interrupt ());
 	  else
 	    emit_insn (gen_restore_all_interrupt ());
@@ -1932,7 +2087,7 @@ Saved %d bytes via epilogue function (%d vs. %d) in function %s\n",
       else
 	{
 	  /* Restore registers from the beginning of the stack frame.  */
-	  offset = init_stack_free - 4;
+	  int offset = init_stack_free - 4;
 
 	  /* Restore the return pointer first.  */
 	  if (num_restore > 0
@@ -1966,7 +2121,7 @@ Saved %d bytes via epilogue function (%d vs. %d) in function %s\n",
       /* And return or use reti for interrupt handlers.  */
       if (interrupt_handler)
         {
-          if (TARGET_V850E && ! TARGET_DISABLE_CALLT)
+          if (! TARGET_DISABLE_CALLT)
             emit_insn (gen_callt_return_interrupt ());
           else
             emit_jump_insn (gen_return_interrupt ());
@@ -1981,9 +2136,7 @@ Saved %d bytes via epilogue function (%d vs. %d) in function %s\n",
   v850_interrupt_p = FALSE;
 }
 
-
 /* Update the condition code from the insn.  */
-
 void
 notice_update_cc (rtx body, rtx insn)
 {
@@ -2010,7 +2163,7 @@ notice_update_cc (rtx body, rtx insn)
 
     case CC_SET_ZNV:
       /* Insn sets the Z,N,V flags of CC to recog_data.operand[0].
-	 C is in an unusable state.  */
+  	 C is in an unusable state.  */
       CC_STATUS_INIT;
       cc_status.flags |= CC_NO_CARRY;
       cc_status.value1 = recog_data.operand[0];
@@ -2028,7 +2181,7 @@ notice_update_cc (rtx body, rtx insn)
       break;
     }
 }
-
+
 /* Retrieve the data area that has been chosen for the given decl.  */
 
 v850_data_area
@@ -2242,6 +2395,7 @@ v850_encode_section_info (tree decl, rtx rtl, int first)
    pops registers off the stack and possibly releases some extra stack space
    as well.  The code has already verified that the RTL matches these
    requirements.  */
+
 char *
 construct_restore_jr (rtx op)
 {
@@ -2271,7 +2425,7 @@ construct_restore_jr (rtx op)
   stack_bytes -= (count - 2) * 4;
 
   /* Make sure that the amount we are popping either 0 or 16 bytes.  */
-  if (stack_bytes != 0 && stack_bytes != 16)
+  if (stack_bytes != 0)
     {
       error ("bad amount of stack space removal: %d", stack_bytes);
       return NULL;
@@ -2303,8 +2457,6 @@ construct_restore_jr (rtx op)
   /* Discover the last register to pop.  */
   if (mask & (1 << LINK_POINTER_REGNUM))
     {
-      gcc_assert (stack_bytes == 16);
-      
       last = LINK_POINTER_REGNUM;
     }
   else
@@ -2360,7 +2512,7 @@ construct_save_jarl (rtx op)
   int i;
   static char buff [100]; /* XXX */
   
-  if (count <= 2)
+  if (count <= (TARGET_LONG_CALLS ? 3 : 2)) 
     {
       error ("bogus JARL construction: %d\n", count);
       return NULL;
@@ -2380,7 +2532,7 @@ construct_save_jarl (rtx op)
   stack_bytes += (count - (TARGET_LONG_CALLS ? 3 : 2)) * 4;
 
   /* Make sure that the amount we are popping either 0 or 16 bytes.  */
-  if (stack_bytes != 0 && stack_bytes != -16)
+  if (stack_bytes != 0)
     {
       error ("bad amount of stack space removal: %d", stack_bytes);
       return NULL;
@@ -2412,8 +2564,6 @@ construct_save_jarl (rtx op)
   /* Discover the last register to push.  */
   if (mask & (1 << LINK_POINTER_REGNUM))
     {
-      gcc_assert (stack_bytes == -16);
-      
       last = LINK_POINTER_REGNUM;
     }
   else
@@ -2703,7 +2853,7 @@ construct_dispose_instruction (rtx op)
     }
 
   if (! TARGET_DISABLE_CALLT
-      && (use_callt || stack_bytes == 0 || stack_bytes == 16))
+      && (use_callt || stack_bytes == 0))
     {
       if (use_callt)
 	{
@@ -2719,8 +2869,8 @@ construct_dispose_instruction (rtx op)
 	  if (i == 31)
 	    sprintf (buff, "callt ctoff(__callt_return_r31c)");
 	  else
-	    sprintf (buff, "callt ctoff(__callt_return_r%d_r%d%s)",
-		     i, (mask & (1 << 31)) ? 31 : 29, stack_bytes ? "c" : "");
+	    sprintf (buff, "callt ctoff(__callt_return_r%d_r%s)",
+		     i, (mask & (1 << 31)) ? "31c" : "29");
 	}
     }
   else
@@ -2773,16 +2923,16 @@ construct_dispose_instruction (rtx op)
 char *
 construct_prepare_instruction (rtx op)
 {
-  int                count = XVECLEN (op, 0);
+  int                count;
   int                stack_bytes;
   unsigned long int  mask;
   int		     i;
   static char        buff[ 100 ]; /* XXX */
   int		     use_callt = 0;
   
-  if (count <= 1)
+  if (XVECLEN (op, 0) <= 1)
     {
-      error ("bogus PREPEARE construction: %d", count);
+      error ("bogus PREPEARE construction: %d", XVECLEN (op, 0));
       return NULL;
     }
 
@@ -2794,8 +2944,6 @@ construct_prepare_instruction (rtx op)
     
   stack_bytes = INTVAL (XEXP (SET_SRC (XVECEXP (op, 0, 0)), 1));
 
-  /* Each push will put 4 bytes from the stack.  */
-  stack_bytes += (count - 1) * 4;
 
   /* Make sure that the amount we are popping
      will fit into the DISPOSE instruction.  */
@@ -2806,10 +2954,14 @@ construct_prepare_instruction (rtx op)
     }
 
   /* Now compute the bit mask of registers to push.  */
+  count = 0;
   mask = 0;
-  for (i = 1; i < count; i++)
+  for (i = 1; i < XVECLEN (op, 0); i++)
     {
       rtx vector_element = XVECEXP (op, 0, i);
+      
+      if (GET_CODE (vector_element) == CLOBBER)
+	continue;
       
       gcc_assert (GET_CODE (vector_element) == SET);
       gcc_assert (GET_CODE (SET_SRC (vector_element)) == REG);
@@ -2820,10 +2972,13 @@ construct_prepare_instruction (rtx op)
 	use_callt = 1;
       else
 	mask |= 1 << REGNO (SET_SRC (vector_element));
+      count++;
     }
 
+  stack_bytes += count * 4;
+
   if ((! TARGET_DISABLE_CALLT)
-      && (use_callt || stack_bytes == 0 || stack_bytes == -16))
+      && (use_callt || stack_bytes == 0))
     {
       if (use_callt)
 	{
@@ -2838,8 +2993,8 @@ construct_prepare_instruction (rtx op)
       if (i == 31)
 	sprintf (buff, "callt ctoff(__callt_save_r31c)");
       else
-	sprintf (buff, "callt ctoff(__callt_save_r%d_r%d%s)",
-		 i, (mask & (1 << 31)) ? 31 : 29, stack_bytes ? "c" : "");
+	sprintf (buff, "callt ctoff(__callt_save_r%d_r%s)",
+		 i, (mask & (1 << 31)) ? "31c" : "29");
     }
   else
     {
@@ -2884,7 +3039,7 @@ construct_prepare_instruction (rtx op)
   
   return buff;
 }
-
+
 /* Return an RTX indicating where the return address to the
    calling function can be found.  */
 
@@ -3029,5 +3184,10 @@ v850_trampoline_init (rtx m_tramp, tree fndecl, rtx chain_value)
   mem = adjust_address (m_tramp, SImode, 20);
   emit_move_insn (mem, fnaddr);
 }
-
+
+static int
+v850_issue_rate (void)
+{
+  return (TARGET_V850E2_ALL? 2 : 1);
+}
 #include "gt-v850.h"

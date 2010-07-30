@@ -19,8 +19,6 @@ if $tracelevel then {
 	strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile "circ"
 set srcfile ${testfile}.c
@@ -119,10 +117,10 @@ proc gdb_trace_circular_tests { } {
 
     if [trace_buffer_normal] then { return 1; }
 
-    gdb_test "break begin" "" ""
-    gdb_test "break end"   "" ""
-    gdb_test "tstop"       "" ""
-    gdb_test "tfind none"  "" ""
+    gdb_test "break begin" ".*" ""
+    gdb_test "break end"   ".*" ""
+    gdb_test "tstop"       ".*" ""
+    gdb_test "tfind none"  ".*" ""
 
     if [setup_tracepoints] then { return 1; }
 
@@ -197,6 +195,17 @@ gdb_load $binfile
 if [target_info exists gdb_stub] {
     gdb_step_for_stub;
 }
+
+gdb_test_no_output "set circular-trace-buffer on" \
+    "set circular-trace-buffer on"
+
+gdb_test "show circular-trace-buffer" "Target's use of circular trace buffer is on." "show circular-trace-buffer (on)"
+
+gdb_test_no_output "set circular-trace-buffer off" \
+    "set circular-trace-buffer off"
+
+gdb_test "show circular-trace-buffer" "Target's use of circular trace buffer is off." "show circular-trace-buffer (off)"
+
 # Body of test encased in a proc so we can return prematurely.
 if { ![gdb_trace_circular_tests] } then {
     # Set trace buffer attributes back to normal
@@ -204,4 +213,4 @@ if { ![gdb_trace_circular_tests] } then {
 }
 
 # Finished!
-gdb_test "tfind none" "" ""
+gdb_test "tfind none" ".*" ""

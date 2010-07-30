@@ -46,6 +46,7 @@
 #include "solib.h"
 #include "filenames.h"
 #include "progspace.h"
+#include "objfiles.h"
 
 
 #ifndef O_LARGEFILE
@@ -221,9 +222,7 @@ core_close (int quitting)
       core_has_fake_pid = 0;
 
       name = bfd_get_filename (core_bfd);
-      if (!bfd_close (core_bfd))
-	warning (_("cannot close \"%s\": %s"),
-		 name, bfd_errmsg (bfd_get_error ()));
+      gdb_bfd_close_or_warn (core_bfd);
       xfree (name);
       core_bfd = NULL;
     }
@@ -419,6 +418,7 @@ core_open (char *filename, int from_tty)
 	 usually happen, but we're dealing with input here, which can
 	 always be broken in different ways.  */
       struct thread_info *thread = first_thread_of_process (-1);
+
       if (thread == NULL)
 	{
 	  inferior_appeared (current_inferior (), CORELOW_PID);
@@ -691,7 +691,6 @@ core_xfer_partial (struct target_ops *ops, enum target_object object,
 
 	  struct bfd_section *section;
 	  bfd_size_type size;
-	  char *contents;
 
 	  section = bfd_get_section_by_name (core_bfd, ".auxv");
 	  if (section == NULL)
@@ -723,7 +722,6 @@ core_xfer_partial (struct target_ops *ops, enum target_object object,
 
 	  struct bfd_section *section;
 	  bfd_size_type size;
-	  char *contents;
 
 	  section = bfd_get_section_by_name (core_bfd, ".wcookie");
 	  if (section == NULL)
@@ -767,9 +765,8 @@ core_xfer_partial (struct target_ops *ops, enum target_object object,
 
 	  struct bfd_section *section;
 	  bfd_size_type size;
-	  char *contents;
-
 	  char sectionstr[100];
+
 	  xsnprintf (sectionstr, sizeof sectionstr, "SPU/%s", annex);
 
 	  section = bfd_get_section_by_name (core_bfd, sectionstr);
@@ -796,6 +793,7 @@ core_xfer_partial (struct target_ops *ops, enum target_object object,
 	{
 	  /* NULL annex requests list of all present spuids.  */
 	  struct spuid_list list;
+
 	  list.buf = readbuf;
 	  list.offset = offset;
 	  list.len = len;
@@ -860,6 +858,7 @@ core_pid_to_str (struct target_ops *ops, ptid_t ptid)
       && gdbarch_core_pid_to_str_p (core_gdbarch))
     {
       char *ret = gdbarch_core_pid_to_str (core_gdbarch, ptid);
+
       if (ret != NULL)
 	return ret;
     }

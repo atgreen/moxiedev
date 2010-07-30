@@ -52,7 +52,7 @@ static void demangled_name_complaint (const char *name);
 
 /* Functions/variables related to overload resolution.  */
 
-static int sym_return_val_size;
+static int sym_return_val_size = -1;
 static int sym_return_val_index;
 static struct symbol **sym_return_val;
 
@@ -158,7 +158,6 @@ mangled_name_to_comp (const char *mangled_name, int options,
 {
   struct demangle_component *ret;
   char *demangled_name;
-  int len;
 
   /* If it looks like a v3 mangled name, then try to go directly
      to trees.  */
@@ -342,7 +341,6 @@ method_name_from_physname (const char *physname)
   void *storage = NULL;
   char *demangled_name = NULL, *ret;
   struct demangle_component *ret_comp;
-  int done;
 
   ret_comp = mangled_name_to_comp (physname, DMGL_ANSI, &storage,
 				   &demangled_name);
@@ -373,7 +371,6 @@ cp_func_name (const char *full_name)
 {
   char *ret;
   struct demangle_component *ret_comp;
-  int done;
 
   ret_comp = cp_demangled_name_to_comp (full_name, NULL);
   if (!ret_comp)
@@ -696,6 +693,7 @@ make_symbol_overload_list (const char *func_name,
 			   const char *namespace)
 {
   struct cleanup *old_cleanups;
+  const char *name;
 
   sym_return_val_size = 100;
   sym_return_val_index = 0;
@@ -707,9 +705,146 @@ make_symbol_overload_list (const char *func_name,
 
   make_symbol_overload_list_using (func_name, namespace);
 
+  if (namespace[0] == '\0')
+    name = func_name;
+  else
+    {
+      char *concatenated_name
+	= alloca (strlen (namespace) + 2 + strlen (func_name) + 1);
+      strcpy (concatenated_name, namespace);
+      strcat (concatenated_name, "::");
+      strcat (concatenated_name, func_name);
+      name = concatenated_name;
+    }
+
+  make_symbol_overload_list_qualified (name);
+
   discard_cleanups (old_cleanups);
 
   return sym_return_val;
+}
+
+/* Add all symbols with a name matching NAME in BLOCK to the overload
+   list.  */
+
+static void
+make_symbol_overload_list_block (const char *name,
+                                 const struct block *block)
+{
+  struct dict_iterator iter;
+  struct symbol *sym;
+
+  const struct dictionary *dict = BLOCK_DICT (block);
+
+  for (sym = dict_iter_name_first (dict, name, &iter);
+       sym != NULL;
+       sym = dict_iter_name_next (name, &iter))
+    overload_list_add_symbol (sym, name);
+}
+
+/* Adds the function FUNC_NAME from NAMESPACE to the overload set.  */
+
+static void
+make_symbol_overload_list_namespace (const char *func_name,
+                                     const char *namespace)
+{
+  const char *name;
+  const struct block *block = NULL;
+
+  if (namespace[0] == '\0')
+    name = func_name;
+  else
+    {
+      char *concatenated_name
+	= alloca (strlen (namespace) + 2 + strlen (func_name) + 1);
+
+      strcpy (concatenated_name, namespace);
+      strcat (concatenated_name, "::");
+      strcat (concatenated_name, func_name);
+      name = concatenated_name;
+    }
+
+  /* Look in the static block.  */
+  block = block_static_block (get_selected_block (0));
+  make_symbol_overload_list_block (name, block);
+
+  /* Look in the global block.  */
+  block = block_global_block (block);
+  make_symbol_overload_list_block (name, block);
+
+}
+
+/* Search the namespace of the given type and namespace of and public base
+ types.  */
+
+static void
+make_symbol_overload_list_adl_namespace (struct type *type,
+                                         const char *func_name)
+{
+  char *namespace;
+  char *type_name;
+  int i, prefix_len;
+
+  while (TYPE_CODE (type) == TYPE_CODE_PTR || TYPE_CODE (type) == TYPE_CODE_REF
+         || TYPE_CODE (type) == TYPE_CODE_ARRAY
+         || TYPE_CODE (type) == TYPE_CODE_TYPEDEF)
+    {
+      if (TYPE_CODE (type) == TYPE_CODE_TYPEDEF)
+	type = check_typedef(type);
+      else
+	type = TYPE_TARGET_TYPE (type);
+    }
+
+  type_name = TYPE_NAME (type);
+
+  if (type_name == NULL)
+    return;
+
+  prefix_len = cp_entire_prefix_len (type_name);
+
+  if (prefix_len != 0)
+    {
+      namespace = alloca (prefix_len + 1);
+      strncpy (namespace, type_name, prefix_len);
+      namespace[prefix_len] = '\0';
+
+      make_symbol_overload_list_namespace (func_name, namespace);
+    }
+
+  /* Check public base type */
+  if (TYPE_CODE (type) == TYPE_CODE_CLASS)
+    for (i = 0; i < TYPE_N_BASECLASSES (type); i++)
+      {
+	if (BASETYPE_VIA_PUBLIC (type, i))
+	  make_symbol_overload_list_adl_namespace (TYPE_BASECLASS (type, i),
+						   func_name);
+      }
+}
+
+/* Adds the the overload list overload candidates for FUNC_NAME found through
+   argument dependent lookup.  */
+
+struct symbol **
+make_symbol_overload_list_adl (struct type **arg_types, int nargs,
+                               const char *func_name)
+{
+  int i;
+
+  gdb_assert (sym_return_val_size != -1);
+
+  for (i = 1; i <= nargs; i++)
+    make_symbol_overload_list_adl_namespace (arg_types[i - 1], func_name);
+
+  return sym_return_val;
+}
+
+/* Used for cleanups to reset the "searched" flag in case of an error.  */
+
+static void
+reset_directive_searched (void *data)
+{
+  struct using_direct *direct = data;
+  direct->searched = 0;
 }
 
 /* This applies the using directives to add namespaces to search in,
@@ -721,38 +856,45 @@ static void
 make_symbol_overload_list_using (const char *func_name,
 				 const char *namespace)
 {
-  const struct using_direct *current;
+  struct using_direct *current;
+  const struct block *block;
 
   /* First, go through the using directives.  If any of them apply,
      look in the appropriate namespaces for new functions to match
      on.  */
 
-  for (current = block_using (get_selected_block (0));
-       current != NULL;
-       current = current->next)
-    {
-      if (strcmp (namespace, current->import_dest) == 0)
-	{
-	  make_symbol_overload_list_using (func_name,
-					   current->import_src);
-	}
-    }
+  for (block = get_selected_block (0);
+       block != NULL;
+       block = BLOCK_SUPERBLOCK (block))
+    for (current = block_using (block);
+	current != NULL;
+	current = current->next)
+      {
+	/* Prevent recursive calls.  */
+	if (current->searched)
+	  continue;
+
+        /* If this is a namespace alias or imported declaration ignore it.  */
+        if (current->alias != NULL || current->declaration != NULL)
+          continue;
+
+        if (strcmp (namespace, current->import_dest) == 0)
+	  {
+	    /* Mark this import as searched so that the recursive call does
+	       not search it again.  */
+	    struct cleanup *old_chain;
+	    current->searched = 1;
+	    old_chain = make_cleanup (reset_directive_searched, current);
+
+	    make_symbol_overload_list_using (func_name, current->import_src);
+
+	    current->searched = 0;
+	    discard_cleanups (old_chain);
+	  }
+      }
 
   /* Now, add names for this namespace.  */
-  
-  if (namespace[0] == '\0')
-    {
-      make_symbol_overload_list_qualified (func_name);
-    }
-  else
-    {
-      char *concatenated_name
-	= alloca (strlen (namespace) + 2 + strlen (func_name) + 1);
-      strcpy (concatenated_name, namespace);
-      strcat (concatenated_name, "::");
-      strcat (concatenated_name, func_name);
-      make_symbol_overload_list_qualified (concatenated_name);
-    }
+  make_symbol_overload_list_namespace (func_name, namespace);
 }
 
 /* This does the bulk of the work of finding overloaded symbols.
@@ -782,16 +924,7 @@ make_symbol_overload_list_qualified (const char *func_name)
      complete on local vars.  */
 
   for (b = get_selected_block (0); b != NULL; b = BLOCK_SUPERBLOCK (b))
-    {
-      dict = BLOCK_DICT (b);
-
-      for (sym = dict_iter_name_first (dict, func_name, &iter);
-	   sym;
-	   sym = dict_iter_name_next (func_name, &iter))
-	{
-	  overload_list_add_symbol (sym, func_name);
-	}
-    }
+    make_symbol_overload_list_block (func_name, b);
 
   surrounding_static_block = block_static_block (get_selected_block (0));
 
@@ -802,14 +935,7 @@ make_symbol_overload_list_qualified (const char *func_name)
   {
     QUIT;
     b = BLOCKVECTOR_BLOCK (BLOCKVECTOR (s), GLOBAL_BLOCK);
-    dict = BLOCK_DICT (b);
-
-    for (sym = dict_iter_name_first (dict, func_name, &iter);
-	 sym;
-	 sym = dict_iter_name_next (func_name, &iter))
-    {
-      overload_list_add_symbol (sym, func_name);
-    }
+    make_symbol_overload_list_block (func_name, b);
   }
 
   ALL_PRIMARY_SYMTABS (objfile, s)
@@ -819,14 +945,7 @@ make_symbol_overload_list_qualified (const char *func_name)
     /* Don't do this block twice.  */
     if (b == surrounding_static_block)
       continue;
-    dict = BLOCK_DICT (b);
-
-    for (sym = dict_iter_name_first (dict, func_name, &iter);
-	 sym;
-	 sym = dict_iter_name_next (func_name, &iter))
-    {
-      overload_list_add_symbol (sym, func_name);
-    }
+    make_symbol_overload_list_block (func_name, b);
   }
 }
 
@@ -925,25 +1044,26 @@ cp_validate_operator (const char *input)
   struct expression *expr;
   struct value *val;
   struct gdb_exception except;
-  struct cleanup *old_chain;
 
   p = input;
 
   if (strncmp (p, "operator", 8) == 0)
     {
       int valid = 0;
-      p += 8;
 
+      p += 8;
       SKIP_SPACE (p);
       for (i = 0; i < sizeof (operator_tokens) / sizeof (operator_tokens[0]);
 	   ++i)
 	{
 	  int length = strlen (operator_tokens[i]);
+
 	  /* By using strncmp here, we MUST have operator_tokens ordered!
 	     See additional notes where operator_tokens is defined above.  */
 	  if (strncmp (p, operator_tokens[i], length) == 0)
 	    {
 	      const char *op = p;
+
 	      valid = 1;
 	      p += length;
 

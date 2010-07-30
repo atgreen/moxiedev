@@ -472,13 +472,13 @@ const struct mips_arch_choice mips_arch_choices[] =
      MIPS32 Architecture_ (MIPS Document Number MD00082, Revision 0.95),
      page 1.  */
   { "mips32",	1, bfd_mach_mipsisa32, CPU_MIPS32,
-    ISA_MIPS32 | INSN_MIPS16 | INSN_SMARTMIPS,
+    ISA_MIPS32 | INSN_SMARTMIPS,
     mips_cp0_names_mips3264,
     mips_cp0sel_names_mips3264, ARRAY_SIZE (mips_cp0sel_names_mips3264),
     mips_hwr_names_numeric },
 
   { "mips32r2",	1, bfd_mach_mipsisa32r2, CPU_MIPS32R2,
-    (ISA_MIPS32R2 | INSN_MIPS16 | INSN_SMARTMIPS | INSN_DSP | INSN_DSPR2
+    (ISA_MIPS32R2 | INSN_SMARTMIPS | INSN_DSP | INSN_DSPR2
      | INSN_MIPS3D | INSN_MT),
     mips_cp0_names_mips3264r2,
     mips_cp0sel_names_mips3264r2, ARRAY_SIZE (mips_cp0sel_names_mips3264r2),
@@ -486,13 +486,13 @@ const struct mips_arch_choice mips_arch_choices[] =
 
   /* For stock MIPS64, disassemble all applicable MIPS-specified ASEs.  */
   { "mips64",	1, bfd_mach_mipsisa64, CPU_MIPS64,
-    ISA_MIPS64 | INSN_MIPS16 | INSN_MIPS3D | INSN_MDMX,
+    ISA_MIPS64 | INSN_MIPS3D | INSN_MDMX,
     mips_cp0_names_mips3264,
     mips_cp0sel_names_mips3264, ARRAY_SIZE (mips_cp0sel_names_mips3264),
     mips_hwr_names_numeric },
 
   { "mips64r2",	1, bfd_mach_mipsisa64r2, CPU_MIPS64R2,
-    (ISA_MIPS64R2 | INSN_MIPS16 | INSN_MIPS3D | INSN_DSP | INSN_DSPR2
+    (ISA_MIPS64R2 | INSN_MIPS3D | INSN_DSP | INSN_DSPR2
      | INSN_DSP64 | INSN_MT | INSN_MDMX),
     mips_cp0_names_mips3264r2,
     mips_cp0sel_names_mips3264r2, ARRAY_SIZE (mips_cp0sel_names_mips3264r2),
@@ -524,7 +524,7 @@ const struct mips_arch_choice mips_arch_choices[] =
 
   /* This entry, mips16, is here only for ISA/processor selection; do
      not print its name.  */
-  { "",		1, bfd_mach_mips16, CPU_MIPS16, ISA_MIPS3 | INSN_MIPS16,
+  { "",		1, bfd_mach_mips16, CPU_MIPS16, ISA_MIPS3,
     mips_cp0_names_numeric, NULL, 0, mips_hwr_names_numeric },
 };
 
@@ -1404,7 +1404,8 @@ print_insn_mips (bfd_vma memaddr,
 	      /* Figure out instruction type and branch delay information.  */
 	      if ((op->pinfo & INSN_UNCOND_BRANCH_DELAY) != 0)
 	        {
-		  if ((info->insn_type & INSN_WRITE_GPR_31) != 0)
+		  if ((op->pinfo & (INSN_WRITE_GPR_31
+				    | INSN_WRITE_GPR_D)) != 0)
 		    info->insn_type = dis_jsr;
 		  else
 		    info->insn_type = dis_branch;
@@ -1413,7 +1414,7 @@ print_insn_mips (bfd_vma memaddr,
 	      else if ((op->pinfo & (INSN_COND_BRANCH_DELAY
 				     | INSN_COND_BRANCH_LIKELY)) != 0)
 		{
-		  if ((info->insn_type & INSN_WRITE_GPR_31) != 0)
+		  if ((op->pinfo & INSN_WRITE_GPR_31) != 0)
 		    info->insn_type = dis_condjsr;
 		  else
 		    info->insn_type = dis_condbranch;
@@ -1660,7 +1661,6 @@ print_mips16_insn_arg (char type,
 	    signedp = 1;
 	    pcrel = 1;
 	    branch = 1;
-	    info->insn_type = dis_condbranch;
 	    break;
 	  case 'q':
 	    nbits = 11;
@@ -1668,7 +1668,6 @@ print_mips16_insn_arg (char type,
 	    signedp = 1;
 	    pcrel = 1;
 	    branch = 1;
-	    info->insn_type = dis_branch;
 	    break;
 	  case 'A':
 	    nbits = 8;
@@ -1789,8 +1788,6 @@ print_mips16_insn_arg (char type,
       }
       info->target = ((memaddr + 4) & ~(bfd_vma) 0x0fffffff) | l;
       (*info->print_address_func) (info->target, info);
-      info->insn_type = dis_jsr;
-      info->branch_delay_insns = 1;
       break;
 
     case 'l':
@@ -2082,12 +2079,19 @@ print_insn_mips16 (bfd_vma memaddr, struct disassemble_info *info)
 				     info);
 	    }
 
+	  /* Figure out branch instruction type and delay slot information.  */
 	  if ((op->pinfo & INSN_UNCOND_BRANCH_DELAY) != 0)
+	    info->branch_delay_insns = 1;
+	  if ((op->pinfo & (INSN_UNCOND_BRANCH_DELAY
+			    | MIPS16_INSN_UNCOND_BRANCH)) != 0)
 	    {
-	      info->branch_delay_insns = 1;
-	      if (info->insn_type != dis_jsr)
+	      if ((op->pinfo & INSN_WRITE_GPR_31) != 0)
+		info->insn_type = dis_jsr;
+	      else
 		info->insn_type = dis_branch;
 	    }
+	  else if ((op->pinfo & MIPS16_INSN_COND_BRANCH) != 0)
+	    info->insn_type = dis_condbranch;
 
 	  return length;
 	}

@@ -533,6 +533,7 @@ gdbarch_from_bfd (bfd *abfd)
 {
   struct gdbarch_info info;
   gdbarch_info_init (&info);
+
   info.abfd = abfd;
   return gdbarch_find_by_info (info);
 }
@@ -580,9 +581,9 @@ void
 initialize_current_architecture (void)
 {
   const char **arches = gdbarch_printable_names ();
+  struct gdbarch_info info;
 
   /* determine a default architecture and byte order. */
-  struct gdbarch_info info;
   gdbarch_info_init (&info);
   
   /* Find a default architecture. */
@@ -652,7 +653,6 @@ initialize_current_architecture (void)
   /* Create the ``set architecture'' command appending ``auto'' to the
      list of architectures. */
   {
-    struct cmd_list_element *c;
     /* Append ``auto''. */
     int nr;
     for (nr = 0; arches[nr] != NULL; nr++);
@@ -790,7 +790,6 @@ extern initialize_file_ftype _initialize_gdbarch_utils; /* -Wmissing-prototypes 
 void
 _initialize_gdbarch_utils (void)
 {
-  struct cmd_list_element *c;
   add_setshow_enum_cmd ("endian", class_support,
 			endian_enum, &set_endian_string, _("\
 Set endianness of target."), _("\

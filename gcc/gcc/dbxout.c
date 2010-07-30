@@ -1,6 +1,6 @@
 /* Output dbx-format symbol table information from GNU compiler.
    Copyright (C) 1987, 1988, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -81,6 +81,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "reload.h"
 #include "output.h"
 #include "dbxout.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "tm_p.h"
 #include "ggc.h"
@@ -288,9 +289,12 @@ static const char *base_input_file;
 #endif
 
 /* A C expression for the integer offset value of an argument (N_PSYM)
-   having address X (an RTX).  The nominal offset is OFFSET.  */
+   having address X (an RTX).  The nominal offset is OFFSET.
+   Note that we use OFFSET + 0 here to avoid the self-assign warning
+   when the macro is called in a context like
+   number = DEBUGGER_ARG_OFFSET(number, X)  */
 #ifndef DEBUGGER_ARG_OFFSET
-#define DEBUGGER_ARG_OFFSET(OFFSET, X) (OFFSET)
+#define DEBUGGER_ARG_OFFSET(OFFSET, X) (OFFSET + 0)
 #endif
 
 /* This obstack holds the stab string currently being constructed.  We
@@ -357,6 +361,7 @@ const struct gcc_debug_hooks dbx_debug_hooks =
   dbxout_source_line,		         /* source_line */
   dbxout_begin_prologue,	         /* begin_prologue */
   debug_nothing_int_charstar,	         /* end_prologue */
+  debug_nothing_int_charstar,	         /* begin_epilogue */
   debug_nothing_int_charstar,	         /* end_epilogue */
 #ifdef DBX_FUNCTION_FIRST
   dbxout_begin_function,
@@ -399,6 +404,7 @@ const struct gcc_debug_hooks xcoff_debug_hooks =
   xcoffout_source_line,
   xcoffout_begin_prologue,	         /* begin_prologue */
   debug_nothing_int_charstar,	         /* end_prologue */
+  debug_nothing_int_charstar,	         /* begin_epilogue */
   xcoffout_end_epilogue,
   debug_nothing_tree,		         /* begin_function */
   xcoffout_end_function,
@@ -1004,7 +1010,7 @@ dbxout_init (const char *input_file_name)
   const char *mapped_name;
 
   typevec_len = 100;
-  typevec = GGC_CNEWVEC (struct typeinfo, typevec_len);
+  typevec = ggc_alloc_cleared_vec_typeinfo (typevec_len);
 
   /* stabstr_ob contains one string, which will be just fine with
      1-byte alignment.  */
@@ -1096,7 +1102,7 @@ dbxout_init (const char *input_file_name)
 static void
 dbxout_typedefs (tree syms)
 {
-  for (; syms != NULL_TREE; syms = TREE_CHAIN (syms))
+  for (; syms != NULL_TREE; syms = DECL_CHAIN (syms))
     {
       if (TREE_CODE (syms) == TYPE_DECL)
 	{
@@ -1420,7 +1426,7 @@ dbxout_type_fields (tree type)
 
   /* Output the name, type, position (in bits), size (in bits) of each
      field that we can support.  */
-  for (tem = TYPE_FIELDS (type); tem; tem = TREE_CHAIN (tem))
+  for (tem = TYPE_FIELDS (type); tem; tem = DECL_CHAIN (tem))
     {
       /* If one of the nodes is an error_mark or its type is then
 	 return early.  */
@@ -1563,7 +1569,7 @@ dbxout_type_methods (tree type)
 	 These differ in the types of the arguments.  */
       for (last = NULL_TREE;
 	   fndecl && (last == NULL_TREE || DECL_NAME (fndecl) == DECL_NAME (last));
-	   fndecl = TREE_CHAIN (fndecl))
+	   fndecl = DECL_CHAIN (fndecl))
 	/* Output the name of the field (after overloading), as
 	   well as the name of the field before overloading, along
 	   with its parameter list */
@@ -3304,7 +3310,7 @@ dbxout_syms (tree syms)
       comm_prev = comm_new;
 
       result += dbxout_symbol (syms, 1);
-      syms = TREE_CHAIN (syms);
+      syms = DECL_CHAIN (syms);
     }
 
   if (comm_prev != NULL)
@@ -3331,7 +3337,7 @@ dbxout_parms (tree parms)
   ++debug_nesting;
   emit_pending_bincls_if_required ();
 
-  for (; parms; parms = TREE_CHAIN (parms))
+  for (; parms; parms = DECL_CHAIN (parms))
     if (DECL_NAME (parms)
 	&& TREE_TYPE (parms) != error_mark_node
 	&& DECL_RTL_SET_P (parms)
@@ -3533,7 +3539,7 @@ dbxout_reg_parms (tree parms)
 {
   ++debug_nesting;
 
-  for (; parms; parms = TREE_CHAIN (parms))
+  for (; parms; parms = DECL_CHAIN (parms))
     if (DECL_NAME (parms) && PARM_PASSED_IN_MEMORY (parms))
       {
 	/* Report parms that live in registers during the function

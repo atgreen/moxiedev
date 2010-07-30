@@ -51,7 +51,7 @@ typedef struct {
     do {						\
       frame = frame_object_to_frame_info (frame_obj);	\
       if (frame == NULL)				\
-	error ("Frame is invalid.");			\
+	error (_("Frame is invalid."));			\
     } while (0)
 
 static PyTypeObject frame_object_type;
@@ -227,7 +227,7 @@ frapy_block (PyObject *self, PyObject *args)
   if (!sal.symtab || !sal.symtab->objfile)
     {
       PyErr_SetString (PyExc_RuntimeError,
-		       "Cannot locate object file for block.");
+		       _("Cannot locate object file for block."));
       return NULL;
     }
 
@@ -265,7 +265,7 @@ frapy_function (PyObject *self, PyObject *args)
 /* Convert a frame_info struct to a Python Frame object.
    Sets a Python exception and returns NULL on error.  */
 
-static frame_object *
+PyObject *
 frame_info_to_frame_object (struct frame_info *frame)
 {
   frame_object *frame_obj;
@@ -273,7 +273,8 @@ frame_info_to_frame_object (struct frame_info *frame)
   frame_obj = PyObject_New (frame_object, &frame_object_type);
   if (frame_obj == NULL)
     {
-      PyErr_SetString (PyExc_MemoryError, "Could not allocate frame object.");
+      PyErr_SetString (PyExc_MemoryError, 
+		       _("Could not allocate frame object."));
       return NULL;
     }
 
@@ -295,7 +296,7 @@ frame_info_to_frame_object (struct frame_info *frame)
 
   frame_obj->gdbarch = get_frame_arch (frame);
 
-  return frame_obj;
+  return (PyObject *) frame_obj;
 }
 
 /* Implementation of gdb.Frame.older (self) -> gdb.Frame.
@@ -364,7 +365,6 @@ frapy_find_sal (PyObject *self, PyObject *args)
 {
   struct frame_info *frame;
   struct symtab_and_line sal;
-  struct objfile *objfile = NULL;
   volatile struct gdb_exception except;
   PyObject *sal_obj = NULL;   /* Initialize to appease gcc warning.  */
 
@@ -436,7 +436,7 @@ frapy_read_var (PyObject *self, PyObject *args)
       if (!var)
 	{
 	  PyErr_Format (PyExc_ValueError,
-			_("variable '%s' not found"), var_name);
+			_("Variable '%s' not found."), var_name);
 	  do_cleanups (cleanup);
 
 	  return NULL;
@@ -447,7 +447,7 @@ frapy_read_var (PyObject *self, PyObject *args)
   else
     {
       PyErr_SetString (PyExc_TypeError,
-		       _("argument must be a symbol or string"));
+		       _("Argument must be a symbol or string."));
       return NULL;
     }
 
@@ -497,7 +497,7 @@ PyObject *
 gdbpy_selected_frame (PyObject *self, PyObject *args)
 {
   struct frame_info *frame;
-  frame_object *frame_obj = NULL;   /* Initialize to appease gcc warning.  */
+  PyObject *frame_obj = NULL;   /* Initialize to appease gcc warning.  */
   volatile struct gdb_exception except;
 
   TRY_CATCH (except, RETURN_MASK_ALL)
@@ -507,7 +507,7 @@ gdbpy_selected_frame (PyObject *self, PyObject *args)
     }
   GDB_PY_HANDLE_EXCEPTION (except);
 
-  return (PyObject *) frame_obj;
+  return frame_obj;
 }
 
 /* Implementation of gdb.stop_reason_string (Integer) -> String.
@@ -524,7 +524,8 @@ gdbpy_frame_stop_reason_string (PyObject *self, PyObject *args)
 
   if (reason < 0 || reason > UNWIND_NO_SAVED_PC)
     {
-      PyErr_SetString (PyExc_ValueError, "Invalid frame stop reason.");
+      PyErr_SetString (PyExc_ValueError, 
+		       _("Invalid frame stop reason."));
       return NULL;
     }
 

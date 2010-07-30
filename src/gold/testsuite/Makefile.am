@@ -193,6 +193,57 @@ icf_safe_so_test_1.stdout: icf_safe_so_test
 icf_safe_so_test_2.stdout: icf_safe_so_test
 	$(TEST_READELF) -h icf_safe_so_test > icf_safe_so_test_2.stdout
 
+check_SCRIPTS += final_layout.sh
+check_DATA += final_layout.stdout
+MOSTLYCLEANFILES += final_layout
+final_layout.o: final_layout.cc
+	$(CXXCOMPILE) -O0 -c -ffunction-sections  -fdata-sections -g -o $@ $<
+final_layout_sequence.txt:
+	(echo "*_Z3barv*" && echo ".text._Z3bazv" && echo "*_Z3foov*" && echo "*global_varb*" && echo "*global_vara*" && echo "*global_varc*") > final_layout_sequence.txt
+final_layout: final_layout.o final_layout_sequence.txt gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--section-ordering-file,final_layout_sequence.txt final_layout.o
+final_layout.stdout: final_layout
+	$(TEST_NM) final_layout > final_layout.stdout
+
+check_PROGRAMS += icf_virtual_function_folding_test
+MOSTLYCLEANFILES += icf_virtual_function_folding_test
+icf_virtual_function_folding_test.o: icf_virtual_function_folding_test.cc
+	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIE -g -o $@ $<
+icf_virtual_function_folding_test: icf_virtual_function_folding_test.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_virtual_function_folding_test.o -pie
+
+check_SCRIPTS += icf_preemptible_functions_test.sh
+check_DATA += icf_preemptible_functions_test.stdout
+MOSTLYCLEANFILES += icf_preemptible_functions_test
+icf_preemptible_functions_test.o: icf_preemptible_functions_test.cc
+	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
+icf_preemptible_functions_test: icf_preemptible_functions_test.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_preemptible_functions_test.o -fPIC -shared
+icf_preemptible_functions_test.stdout: icf_preemptible_functions_test
+	$(TEST_NM) icf_preemptible_functions_test > icf_preemptible_functions_test.stdout
+
+check_SCRIPTS += icf_string_merge_test.sh
+check_DATA += icf_string_merge_test.stdout
+MOSTLYCLEANFILES += icf_string_merge_test
+icf_string_merge_test.o: icf_string_merge_test.cc
+	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
+icf_string_merge_test: icf_string_merge_test.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_string_merge_test.o
+icf_string_merge_test.stdout: icf_string_merge_test
+	$(TEST_NM) icf_string_merge_test > icf_string_merge_test.stdout
+
+check_SCRIPTS += icf_sht_rel_addend_test.sh
+check_DATA += icf_sht_rel_addend_test.stdout
+MOSTLYCLEANFILES += icf_sht_rel_addend_test
+icf_sht_rel_addend_test_1.o: icf_sht_rel_addend_test_1.cc
+	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
+icf_sht_rel_addend_test_2.o: icf_sht_rel_addend_test_2.cc
+	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
+icf_sht_rel_addend_test: icf_sht_rel_addend_test_1.o icf_sht_rel_addend_test_2.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_sht_rel_addend_test_1.o icf_sht_rel_addend_test_2.o
+icf_sht_rel_addend_test.stdout: icf_sht_rel_addend_test
+	$(TEST_NM) icf_sht_rel_addend_test > icf_sht_rel_addend_test.stdout
+
 check_PROGRAMS += basic_test
 check_PROGRAMS += basic_static_test
 check_PROGRAMS += basic_pic_test
@@ -1086,6 +1137,12 @@ script_test_3: basic_test.o gcctestdir/ld script_test_3.t
 script_test_3.stdout: script_test_3
 	$(TEST_READELF) -SlW script_test_3 > script_test_3.stdout
 
+check_PROGRAMS += tls_phdrs_script_test
+tls_phdrs_script_test_SOURCES = $(tls_test_SOURCES)
+tls_phdrs_script_test_DEPENDENCIES = $(tls_test_DEPENDENCIES) $(srcdir)/script_test_3.t
+tls_phdrs_script_test_LDFLAGS = $(tls_test_LDFLAGS) -T $(srcdir)/script_test_3.t
+tls_phdrs_script_test_LDADD = $(tls_test_LDADD)
+
 check_SCRIPTS += script_test_4.sh
 check_DATA += script_test_4.stdout
 MOSTLYCLEANFILES += script_test_4
@@ -1093,6 +1150,12 @@ script_test_4: basic_test.o gcctestdir/ld $(srcdir)/script_test_4.t
 	$(CXXLINK) -Bgcctestdir/ basic_test.o -T $(srcdir)/script_test_4.t
 script_test_4.stdout: script_test_4
 	$(TEST_READELF) -SlW script_test_4 > script_test_4.stdout
+
+check_PROGRAMS += tls_script_test
+tls_script_test_SOURCES = $(tls_test_SOURCES)
+tls_script_test_DEPENDENCIES = $(tls_test_DEPENDENCIES) $(srcdir)/script_test_4.t
+tls_script_test_LDFLAGS = $(tls_test_LDFLAGS) -T $(srcdir)/script_test_4.t
+tls_script_test_LDADD = $(tls_test_LDADD)
 
 check_SCRIPTS += script_test_5.sh
 check_DATA += script_test_5.stdout
@@ -1127,6 +1190,17 @@ script_test_8: basic_test.o gcctestdir/ld $(srcdir)/script_test_7.t
 	-Wl,-Ttext=0x20001000 -Wl,-Tdata=0x20200000 -Wl,-Tbss=0x20400000
 script_test_8.stdout: script_test_8
 	$(TEST_READELF) -SlW script_test_8 > script_test_8.stdout
+
+
+check_SCRIPTS += script_test_9.sh
+check_DATA += script_test_9.stdout
+script_test_9.o: script_test_9.cc
+	$(CXXCOMPILE) -O0 -c -o $@ $<
+script_test_9: gcctestdir/ld $(srcdir)/script_test_9.t script_test_9.o
+	$(CXXLINK) -Bgcctestdir/ script_test_9.o -T $(srcdir)/script_test_9.t
+script_test_9.stdout: script_test_9
+	$(TEST_READELF) -lW script_test_9 > script_test_9.stdout
+
 
 # Test --dynamic-list, --dynamic-list-data, --dynamic-list-cpp-new,
 # and --dynamic-list-cpp-typeinfo
@@ -1225,6 +1299,61 @@ check_PROGRAMS += plugin_test_5
 plugin_test_5: two_file_test_main.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2.syms unused.syms gcctestdir/ld plugin_test.so
 	$(CXXLINK) -Bgcctestdir/ -Wl,--no-demangle,--plugin,"./plugin_test.so",--plugin-opt,"_Z4f13iv",--gc-sections two_file_test_main.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2.syms unused.syms
 
+check_PROGRAMS += plugin_test_6
+check_SCRIPTS += plugin_test_6.sh
+check_DATA += plugin_test_6.err
+MOSTLYCLEANFILES += plugin_test_6.err
+plugin_test_6: plugin_common_test_1.syms plugin_common_test_2.syms gcctestdir/ld plugin_test.so
+	$(CXXLINK) -Bgcctestdir/ -Wl,--no-demangle,--plugin,"./plugin_test.so" plugin_common_test_1.syms plugin_common_test_2.syms 2>plugin_test_6.err
+plugin_test_6.err: plugin_test_6
+	@touch plugin_test_6.err
+
+check_PROGRAMS += plugin_test_7
+check_SCRIPTS += plugin_test_7.sh
+check_DATA += plugin_test_7.err plugin_test_7.syms
+MOSTLYCLEANFILES += plugin_test_7.err
+plugin_test_7: plugin_test_7_1.o plugin_test_7_1.syms plugin_test_7_2.o gcctestdir/ld plugin_test.so
+	$(LINK) -Bgcctestdir/ -Wl,--no-demangle,--plugin,"./plugin_test.so",--gc-sections,--print-gc-sections plugin_test_7_1.syms plugin_test_7_2.o 2>plugin_test_7.err
+plugin_test_7.syms: plugin_test_7
+	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+plugin_test_7_1.o: plugin_test_7_1.c
+	$(COMPILE) -DLTO -O0 -c -ffunction-sections -fdata-sections -o $@ $<
+plugin_test_7_1_orig.o: plugin_test_7_1.c
+	$(COMPILE) -O0 -c -ffunction-sections -fdata-sections -o $@ $<
+plugin_test_7_1.syms: plugin_test_7_1_orig.o
+	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+plugin_test_7_2.o: plugin_test_7_2.c
+	$(COMPILE) -O0 -c -ffunction-sections -fdata-sections -o $@ $<
+plugin_test_7.err: plugin_test_7
+
+# Test plugins with -r.
+check_PROGRAMS += plugin_test_8
+plugin_test_8.o: two_file_test_main.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2.o ../ld-new plugin_test.so
+	../ld-new -r -o $@ --no-demangle --plugin "./plugin_test.so" two_file_test_main.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2.o
+plugin_test_8: plugin_test_8.o gcctestdir/ld
+	$(CXXLINK) -Bgcctestdir/ -Wl,--no-demangle plugin_test_8.o
+
+# Test that symbols known in the IR file but not in the replacement file
+# produce an unresolved symbol error.
+check_DATA += plugin_test_9.err
+MOSTLYCLEANFILES += plugin_test_9.err
+plugin_test_9.err: two_file_test_main.o two_file_test_1c.syms two_file_test_2.syms gcctestdir/ld plugin_test.so
+	@echo $(CXXLINK) -Bgcctestdir/ -o plugin_test_9 -Wl,--no-demangle,--plugin,"./plugin_test.so" two_file_test_main.o two_file_test_1c.syms two_file_test_2.syms "2>$@"
+	@if $(CXXLINK) -Bgcctestdir/ -o plugin_test_9 -Wl,--no-demangle,--plugin,"./plugin_test.so" two_file_test_main.o two_file_test_1c.syms two_file_test_2.syms 2>$@; then \
+	  echo 1>&2 "Link of plugin_test_9 should have failed"; \
+	  rm -f $@; \
+	  exit 1; \
+	fi
+# Make a .syms file that claims to define the symbol _Z4t16av.
+two_file_test_1c.syms: two_file_test_1.syms two_file_test_1c.o
+	cp two_file_test_1.syms $@.tmp
+	grep "_Z4t16av" two_file_test_1b.syms >> $@.tmp
+	mv -f $@.tmp $@
+# Make a copy of two_file_test_1.o, which does not define the symbol _Z4t16av.
+MOSTLYCLEANFILES += two_file_test_1c.o
+two_file_test_1c.o: two_file_test_1.o
+	cp two_file_test_1.o $@
+
 plugin_test.so: plugin_test.o
 	$(LINK) -Bgcctestdir/ -shared plugin_test.o
 plugin_test.o: plugin_test.c
@@ -1237,6 +1366,10 @@ two_file_test_1.syms: two_file_test_1.o
 two_file_test_1b.syms: two_file_test_1b.o
 	$(TEST_READELF) -sW $< >$@ 2>/dev/null
 two_file_test_2.syms: two_file_test_2.o
+	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+plugin_common_test_1.syms: plugin_common_test_1.o
+	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+plugin_common_test_2.syms: plugin_common_test_2.o
 	$(TEST_READELF) -sW $< >$@ 2>/dev/null
 
 empty.syms:
@@ -1488,7 +1621,9 @@ MOSTLYCLEANFILES += arm_abs_global
 check_SCRIPTS += arm_branch_in_range.sh
 check_DATA += arm_bl_in_range.stdout arm_bl_out_of_range.stdout \
 	thumb_bl_in_range.stdout thumb_bl_out_of_range.stdout \
-	thumb2_bl_in_range.stdout thumb2_bl_out_of_range.stdout
+	thumb2_bl_in_range.stdout thumb2_bl_out_of_range.stdout \
+	thumb_blx_in_range.stdout thumb_blx_out_of_range.stdout \
+	thumb2_blx_in_range.stdout thumb2_blx_out_of_range.stdout
 
 arm_bl_in_range.stdout: arm_bl_in_range
 	$(TEST_OBJDUMP) -D $< > $@
@@ -1520,10 +1655,10 @@ thumb_bl_in_range.o: thumb_bl_in_range.s
 thumb_bl_out_of_range.stdout: thumb_bl_out_of_range
 	$(TEST_OBJDUMP) -D $< > $@
 
-thumb_bl_out_of_range: thumb_bl_in_range.o ../ld-new
+thumb_bl_out_of_range: thumb_bl_out_of_range.o ../ld-new
 	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
 
-thumb_bl_out_of_range.o: thumb_bl_in_range.s
+thumb_bl_out_of_range.o: thumb_bl_out_of_range.s
 	$(TEST_AS) -o $@ -march=armv5te $<
 
 thumb2_bl_in_range.stdout: thumb2_bl_in_range
@@ -1538,14 +1673,52 @@ thumb2_bl_in_range.o: thumb_bl_in_range.s
 thumb2_bl_out_of_range.stdout: thumb2_bl_out_of_range
 	$(TEST_OBJDUMP) -D $< > $@
 
-thumb2_bl_out_of_range: thumb2_bl_in_range.o ../ld-new
+thumb2_bl_out_of_range: thumb2_bl_out_of_range.o ../ld-new
 	../ld-new -T $(srcdir)/thumb2_branch_range.t -o $@ $<
 
-thumb2_bl_out_of_range.o: thumb_bl_in_range.s
+thumb2_bl_out_of_range.o: thumb_bl_out_of_range.s
+	$(TEST_AS) -o $@ -march=armv7-a $<
+
+thumb_blx_in_range.stdout: thumb_blx_in_range
+	$(TEST_OBJDUMP) -D $< > $@
+
+thumb_blx_in_range: thumb_blx_in_range.o ../ld-new
+	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+
+thumb_blx_in_range.o: thumb_blx_in_range.s
+	$(TEST_AS) -o $@ -march=armv5te $<
+
+thumb_blx_out_of_range.stdout: thumb_blx_out_of_range
+	$(TEST_OBJDUMP) -D $< > $@
+
+thumb_blx_out_of_range: thumb_blx_out_of_range.o ../ld-new
+	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+
+thumb_blx_out_of_range.o: thumb_blx_out_of_range.s
+	$(TEST_AS) -o $@ -march=armv5te $<
+
+thumb2_blx_in_range.stdout: thumb2_blx_in_range
+	$(TEST_OBJDUMP) -D $< > $@
+
+thumb2_blx_in_range: thumb2_blx_in_range.o ../ld-new
+	../ld-new -T $(srcdir)/thumb2_branch_range.t -o $@ $<
+
+thumb2_blx_in_range.o: thumb_blx_in_range.s
+	$(TEST_AS) -o $@ -march=armv7-a $<
+
+thumb2_blx_out_of_range.stdout: thumb2_blx_out_of_range
+	$(TEST_OBJDUMP) -D $< > $@
+
+thumb2_blx_out_of_range: thumb2_blx_out_of_range.o ../ld-new
+	../ld-new -T $(srcdir)/thumb2_branch_range.t -o $@ $<
+
+thumb2_blx_out_of_range.o: thumb_blx_out_of_range.s
 	$(TEST_AS) -o $@ -march=armv7-a $<
 
 MOSTLYCLEANFILES += arm_bl_in_range arm_bl_out_of_range thumb_bl_in_range \
-	thumb_bl_out_of_range thumb2_bl_in_range thumb2_bl_out_of_range
+	thumb_bl_out_of_range thumb2_bl_in_range thumb2_bl_out_of_range \
+	thumb_blx_in_range thumb_blx_out_of_range thumb2_blx_in_range \
+	thumb2_blx_out_of_range
 
 check_SCRIPTS += arm_fix_v4bx.sh
 check_DATA += arm_fix_v4bx.stdout arm_fix_v4bx_interworking.stdout \
@@ -1573,5 +1746,41 @@ arm_no_fix_v4bx: arm_fix_v4bx.o ../ld-new
 	../ld-new -o $@ $<
 
 MOSTLYCLEANFILES += arm_fix_v4bx arm_fix_v4bx_interworking arm_no_fix_v4bx
+
+check_SCRIPTS += arm_attr_merge.sh
+check_DATA += arm_attr_merge_6.stdout arm_attr_merge_6r.stdout \
+	arm_attr_merge_7.stdout
+
+arm_attr_merge_6.stdout: arm_attr_merge_6
+	$(TEST_READELF) -A $< > $@
+
+arm_attr_merge_6: arm_attr_merge_6a.o arm_attr_merge_6b.o
+	../ld-new -o $@ arm_attr_merge_6a.o arm_attr_merge_6b.o
+
+arm_attr_merge_6a.o: arm_attr_merge_6a.s
+	$(TEST_AS) -o $@ $<
+
+arm_attr_merge_6b.o: arm_attr_merge_6b.s
+	$(TEST_AS) -o $@ $<
+
+arm_attr_merge_6r.stdout: arm_attr_merge_6r
+	$(TEST_READELF) -A $< > $@
+
+arm_attr_merge_6r: arm_attr_merge_6b.o arm_attr_merge_6a.o
+	../ld-new -o $@ arm_attr_merge_6b.o arm_attr_merge_6a.o
+
+arm_attr_merge_7.stdout: arm_attr_merge_7
+	$(TEST_READELF) -A $< > $@
+
+arm_attr_merge_7: arm_attr_merge_7a.o arm_attr_merge_7b.o
+	../ld-new -o $@ arm_attr_merge_7a.o arm_attr_merge_7b.o
+
+arm_attr_merge_7a.o: arm_attr_merge_7a.s
+	$(TEST_AS) -o $@ $<
+
+arm_attr_merge_7b.o: arm_attr_merge_7b.s
+	$(TEST_AS) -o $@ $<
+
+MOSTLYCLEANFILES += arm_attr_merge_6 arm_attr_merge_6r arm_attr_merge_7
 
 endif DEFAULT_TARGET_ARM

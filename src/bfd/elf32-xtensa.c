@@ -2672,6 +2672,9 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 
       if (info->relocatable)
 	{
+	  bfd_vma dest_addr;
+	  asection * sym_sec = get_elf_r_symndx_section (input_bfd, r_symndx);
+
 	  /* This is a relocatable link.
 	     1) If the reloc is against a section symbol, adjust
 	     according to the output section.
@@ -2687,6 +2690,9 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 						contents))
 		return FALSE;
 	    }
+
+	  dest_addr = sym_sec->output_section->vma + sym_sec->output_offset
+	    + get_elf_r_symndx_offset (input_bfd, r_symndx) + rel->r_addend;
 
 	  if (r_type == R_XTENSA_ASM_SIMPLIFY)
 	    {
@@ -2724,24 +2730,40 @@ elf_xtensa_relocate_section (bfd *output_bfd,
 	     to work around problems with DWARF in relocatable links
 	     with some previous version of BFD.  Now we can't easily get
 	     rid of the hack without breaking backward compatibility.... */
-	  if (rel->r_addend)
+	  r = bfd_reloc_ok;
+	  howto = &elf_howto_table[r_type];
+	  if (howto->partial_inplace && rel->r_addend)
 	    {
-	      howto = &elf_howto_table[r_type];
-	      if (howto->partial_inplace)
+	      r = elf_xtensa_do_reloc (howto, input_bfd, input_section,
+				       rel->r_addend, contents,
+				       rel->r_offset, FALSE,
+				       &error_message);
+	      rel->r_addend = 0;
+	    }
+	  else
+	    {
+	      /* Put the correct bits in the target instruction, even
+		 though the relocation will still be present in the output
+		 file.  This makes disassembly clearer, as well as
+		 allowing loadable kernel modules to work without needing
+		 relocations on anything other than calls and l32r's.  */
+
+	      /* If it is not in the same section, there is nothing we can do.  */
+	      if (r_type >= R_XTENSA_SLOT0_OP && r_type <= R_XTENSA_SLOT14_OP &&
+		  sym_sec->output_section == input_section->output_section)
 		{
 		  r = elf_xtensa_do_reloc (howto, input_bfd, input_section,
-					   rel->r_addend, contents,
+					   dest_addr, contents,
 					   rel->r_offset, FALSE,
 					   &error_message);
-		  if (r != bfd_reloc_ok)
-		    {
-		      if (!((*info->callbacks->reloc_dangerous)
-			    (info, error_message, input_bfd, input_section,
-			     rel->r_offset)))
-			return FALSE;
-		    }
-		  rel->r_addend = 0;
 		}
+	    }
+	  if (r != bfd_reloc_ok)
+	    {
+	      if (!((*info->callbacks->reloc_dangerous)
+		    (info, error_message, input_bfd, input_section,
+		     rel->r_offset)))
+		return FALSE;
 	    }
 
 	  /* Done with work for relocatable link; continue with next reloc.  */
@@ -7807,7 +7829,6 @@ xlate_offset_with_removed_text (const xlate_map_t *map,
 				text_action_list *action_list,
 				bfd_vma offset)
 {
-  xlate_map_entry_t tmp;
   void *r;
   xlate_map_entry_t *e;
 
@@ -7816,10 +7837,6 @@ xlate_offset_with_removed_text (const xlate_map_t *map,
 
   if (map->entry_count == 0)
     return offset;
-
-  tmp.orig_address = offset;
-  tmp.new_address = offset;
-  tmp.size = 1;
 
   r = bsearch (&offset, map->entry, map->entry_count,
 	       sizeof (xlate_map_entry_t), &xlate_compare);
@@ -8848,6 +8865,9 @@ relax_section (bfd *abfd, asection *sec, struct bfd_link_info *link_info)
 
   internal_relocs = retrieve_internal_relocs (abfd, sec, 
 					      link_info->keep_memory);
+  if (!internal_relocs && !relax_info->action_list.head)
+    return TRUE;
+
   contents = retrieve_contents (abfd, sec, link_info->keep_memory);
   if (contents == NULL && sec_size != 0)
     {
@@ -9635,12 +9655,10 @@ move_literal (bfd *abfd,
     {
       int r_type;
       unsigned i;
-      asection *target_sec;
       reloc_bfd_fix *fix;
       unsigned insert_at;
 
       r_type = ELF32_R_TYPE (r_rel->rela.r_info);
-      target_sec = r_reloc_get_section (r_rel);
 
       /* This is the difficult case.  We have to create a fix up.  */
       this_rela.r_offset = offset;

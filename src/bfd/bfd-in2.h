@@ -301,7 +301,7 @@ typedef struct bfd_section *sec_ptr;
   (((sec)->rawsize ? (sec)->rawsize : (sec)->size) \
    / bfd_octets_per_byte (bfd))
 
-/* Return TRUE if section has been discarded.  */
+/* Return TRUE if input section SEC has been discarded.  */
 #define elf_discarded_section(sec)				\
   (!bfd_is_abs_section (sec)					\
    && bfd_is_abs_section ((sec)->output_section)		\
@@ -913,7 +913,7 @@ extern bfd_boolean elf32_arm_build_stubs
 
 /* ARM unwind section editing support.  */
 extern bfd_boolean elf32_arm_fix_exidx_coverage
-  (struct bfd_section **, unsigned int, struct bfd_link_info *);
+(struct bfd_section **, unsigned int, struct bfd_link_info *, bfd_boolean);
 
 /* PowerPC @tls opcode transform/validate.  */
 extern unsigned int _bfd_elf_ppc_at_tls_transform
@@ -1971,11 +1971,14 @@ enum bfd_architecture
 #define bfd_mach_tic3x         30
 #define bfd_mach_tic4x         40
   bfd_arch_tic54x,    /* Texas Instruments TMS320C54X */
+  bfd_arch_tic6x,     /* Texas Instruments TMS320C6X */
   bfd_arch_tic80,     /* TI TMS320c80 (MVP) */
   bfd_arch_v850,      /* NEC V850 */
 #define bfd_mach_v850          1
 #define bfd_mach_v850e         'E'
 #define bfd_mach_v850e1        '1'
+#define bfd_mach_v850e2        0x4532   /* ('E'<<8|'2') */
+#define bfd_mach_v850e2v3      0x45325633 /* ('E'<<24|'2'<<16|'V'<<8|'3') */
   bfd_arch_arc,       /* ARC Cores */
 #define bfd_mach_arc_5         5
 #define bfd_mach_arc_6         6
@@ -2082,9 +2085,6 @@ enum bfd_architecture
 #define bfd_mach_xc16xs         3
   bfd_arch_xtensa,    /* Tensilica's Xtensa cores.  */
 #define bfd_mach_xtensa        1
-   bfd_arch_maxq,     /* Dallas MAXQ 10/20 */
-#define bfd_mach_maxq10    10
-#define bfd_mach_maxq20    20
   bfd_arch_z80,
 #define bfd_mach_z80strict      1 /* No undocumented opcodes.  */
 #define bfd_mach_z80            3 /* With ixl, ixh, iyl, and iyh.  */
@@ -2243,10 +2243,7 @@ struct reloc_howto_struct
       when doing overflow checking.  */
   unsigned int bitsize;
 
-  /*  Notes that the relocation is relative to the location in the
-      data section of the addend.  The relocation function will
-      subtract from the relocation value the address of the location
-      being relocated.  */
+  /*  The relocation is relative to the field being relocated.  */
   bfd_boolean pc_relative;
 
   /*  The bit position of the reloc value in the destination.
@@ -3114,6 +3111,7 @@ pc-relative or some form of GOT-indirect relocation.  */
   BFD_RELOC_ARM_RELATIVE,
   BFD_RELOC_ARM_GOTOFF,
   BFD_RELOC_ARM_GOTPC,
+  BFD_RELOC_ARM_GOT_PREL,
 
 /* ARM thread-local storage relocations.  */
   BFD_RELOC_ARM_TLS_GD32,
@@ -3277,6 +3275,13 @@ pc-relative or some form of GOT-indirect relocation.  */
   BFD_RELOC_SH_TLS_DTPMOD32,
   BFD_RELOC_SH_TLS_DTPOFF32,
   BFD_RELOC_SH_TLS_TPOFF32,
+  BFD_RELOC_SH_GOT20,
+  BFD_RELOC_SH_GOTOFF20,
+  BFD_RELOC_SH_GOTFUNCDESC,
+  BFD_RELOC_SH_GOTFUNCDESC20,
+  BFD_RELOC_SH_GOTOFFFUNCDESC,
+  BFD_RELOC_SH_GOTOFFFUNCDESC20,
+  BFD_RELOC_SH_FUNCDESC,
 
 /* ARC Cores relocs.
 ARC 22 bit pc-relative branch.  The lowest two bits must be zero and are
@@ -3602,6 +3607,72 @@ bits placed non-contiguously in the instruction.  */
 instructions.  */
   BFD_RELOC_V850_LO16_SPLIT_OFFSET,
 
+/* This is a 16-bit reloc.  */
+  BFD_RELOC_V850_16_PCREL,
+
+/* This is a 17-bit reloc.  */
+  BFD_RELOC_V850_17_PCREL,
+
+/* This is a 23-bit reloc.  */
+  BFD_RELOC_V850_23,
+
+/* This is a 32-bit reloc.  */
+  BFD_RELOC_V850_32_PCREL,
+
+/* This is a 32-bit reloc.  */
+  BFD_RELOC_V850_32_ABS,
+
+/* This is a 16-bit reloc.  */
+  BFD_RELOC_V850_16_SPLIT_OFFSET,
+
+/* This is a 16-bit reloc.  */
+  BFD_RELOC_V850_16_S1,
+
+/* Low 16 bits. 16 bit shifted by 1.  */
+  BFD_RELOC_V850_LO16_S1,
+
+/* This is a 16 bit offset from the call table base pointer.  */
+  BFD_RELOC_V850_CALLT_15_16_OFFSET,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_32_GOTPCREL,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_16_GOT,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_32_GOT,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_22_PLT_PCREL,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_32_PLT_PCREL,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_COPY,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_GLOB_DAT,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_JMP_SLOT,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_RELATIVE,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_16_GOTOFF,
+
+/* DSO relocations.  */
+  BFD_RELOC_V850_32_GOTOFF,
+
+/* start code.  */
+  BFD_RELOC_V850_CODE,
+
+/* start data in text.  */
+  BFD_RELOC_V850_DATA,
+
 /* This is a 32bit pcrel reloc for the mn10300, offset by two bytes in the
 instruction.  */
   BFD_RELOC_MN10300_32_PCREL,
@@ -3637,6 +3708,34 @@ the opcode.  */
 significant 7 bits of a 23-bit extended address are placed into
 the opcode.  */
   BFD_RELOC_TIC54X_MS7_OF_23,
+
+/* TMS320C6000 relocations.  */
+  BFD_RELOC_C6000_PCR_S21,
+  BFD_RELOC_C6000_PCR_S12,
+  BFD_RELOC_C6000_PCR_S10,
+  BFD_RELOC_C6000_PCR_S7,
+  BFD_RELOC_C6000_ABS_S16,
+  BFD_RELOC_C6000_ABS_L16,
+  BFD_RELOC_C6000_ABS_H16,
+  BFD_RELOC_C6000_SBR_U15_B,
+  BFD_RELOC_C6000_SBR_U15_H,
+  BFD_RELOC_C6000_SBR_U15_W,
+  BFD_RELOC_C6000_SBR_S16,
+  BFD_RELOC_C6000_SBR_L16_B,
+  BFD_RELOC_C6000_SBR_L16_H,
+  BFD_RELOC_C6000_SBR_L16_W,
+  BFD_RELOC_C6000_SBR_H16_B,
+  BFD_RELOC_C6000_SBR_H16_H,
+  BFD_RELOC_C6000_SBR_H16_W,
+  BFD_RELOC_C6000_SBR_GOT_U15_W,
+  BFD_RELOC_C6000_SBR_GOT_L16_W,
+  BFD_RELOC_C6000_SBR_GOT_H16_W,
+  BFD_RELOC_C6000_DSBT_INDEX,
+  BFD_RELOC_C6000_PREL31,
+  BFD_RELOC_C6000_COPY,
+  BFD_RELOC_C6000_ALIGN,
+  BFD_RELOC_C6000_FPHEAD,
+  BFD_RELOC_C6000_NOCMP,
 
 /* This is a 48 bit reloc for the FR30 that stores 32 bits.  */
   BFD_RELOC_FR30_48,
@@ -5092,6 +5191,10 @@ struct bfd
 
   /* Set if this is a thin archive.  */
   unsigned int is_thin_archive : 1;
+
+  /* Set if only required symbols should be added in the link hash table for
+     this object.  Used by VMS linkers.  */
+  unsigned int selective_search : 1;
 };
 
 typedef enum bfd_error

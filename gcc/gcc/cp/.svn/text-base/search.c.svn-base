@@ -30,9 +30,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "tree.h"
 #include "cp-tree.h"
 #include "intl.h"
-#include "obstack.h"
 #include "flags.h"
-#include "rtl.h"
 #include "output.h"
 #include "toplev.h"
 #include "target.h"
@@ -172,7 +170,7 @@ accessible_base_p (tree t, tree base, bool consider_local_p)
      public typedef created in the scope of every class.  */
   decl = TYPE_FIELDS (base);
   while (!DECL_SELF_REFERENCE_P (decl))
-    decl = TREE_CHAIN (decl);
+    decl = DECL_CHAIN (decl);
   while (ANON_AGGR_TYPE_P (t))
     t = TYPE_CONTEXT (t);
   return accessible_p (t, decl, consider_local_p);
@@ -218,8 +216,7 @@ lookup_base (tree t, tree base, base_access access, base_kind *kind_ptr)
 
   /* If BASE is incomplete, it can't be a base of T--and instantiating it
      might cause an error.  */
-  if (t_binfo && CLASS_TYPE_P (base)
-      && (COMPLETE_TYPE_P (base) || TYPE_BEING_DEFINED (base)))
+  if (t_binfo && CLASS_TYPE_P (base) && COMPLETE_OR_OPEN_TYPE_P (base))
     {
       struct lookup_base_data_s data;
 
@@ -450,7 +447,7 @@ lookup_field_1 (tree type, tree name, bool want_type)
 #ifdef GATHER_STATISTICS
   n_calls_lookup_field_1++;
 #endif /* GATHER_STATISTICS */
-  for (field = TYPE_FIELDS (type); field; field = TREE_CHAIN (field))
+  for (field = TYPE_FIELDS (type); field; field = DECL_CHAIN (field))
     {
 #ifdef GATHER_STATISTICS
       n_fields_searched++;
@@ -973,6 +970,7 @@ shared_member_p (tree t)
     return 1;
   if (is_overloaded_fn (t))
     {
+      t = get_fns (t);
       for (; t; t = OVL_NEXT (t))
 	{
 	  tree fn = OVL_CURRENT (t);
@@ -1337,7 +1335,7 @@ lookup_conversion_operator (tree class_type, tree type)
 }
 
 /* TYPE is a class type. Return the index of the fields within
-   the method vector with name NAME, or -1 is no such field exists.  */
+   the method vector with name NAME, or -1 if no such field exists.  */
 
 int
 lookup_fnfields_1 (tree type, tree name)
@@ -1363,9 +1361,13 @@ lookup_fnfields_1 (tree type, tree name)
 	  if (CLASSTYPE_LAZY_MOVE_CTOR (type))
 	    lazily_declare_fn (sfk_move_constructor, type);
 	}
-      else if (name == ansi_assopname(NOP_EXPR)
-	       && CLASSTYPE_LAZY_ASSIGNMENT_OP (type))
-	lazily_declare_fn (sfk_assignment_operator, type);
+      else if (name == ansi_assopname (NOP_EXPR))
+	{
+	  if (CLASSTYPE_LAZY_COPY_ASSIGN (type))
+	    lazily_declare_fn (sfk_copy_assignment, type);
+	  if (CLASSTYPE_LAZY_MOVE_ASSIGN (type))
+	    lazily_declare_fn (sfk_move_assignment, type);
+	}
       else if ((name == dtor_identifier
 		|| name == base_dtor_identifier
 		|| name == complete_dtor_identifier
@@ -1441,6 +1443,18 @@ lookup_fnfields_1 (tree type, tree name)
       }
 
   return -1;
+}
+
+/* TYPE is a class type. Return the field within the method vector with
+   name NAME, or NULL_TREE if no such field exists.  */
+
+tree
+lookup_fnfields_slot (tree type, tree name)
+{
+  int ix = lookup_fnfields_1 (type, name);
+  if (ix < 0)
+    return NULL_TREE;
+  return VEC_index (tree, CLASSTYPE_METHOD_VEC (type), ix);
 }
 
 /* Like lookup_fnfields_1, except that the name is extracted from
@@ -1868,7 +1882,7 @@ check_final_overrider (tree overrider, tree basefn)
     }
 
   /* Check throw specifier is at least as strict.  */
-  if (!comp_except_specs (base_throw, over_throw, 0))
+  if (!comp_except_specs (base_throw, over_throw, ce_derived))
     {
       error ("looser throw specifier for %q+#F", overrider);
       error ("  overriding %q+#F", basefn);
@@ -1891,6 +1905,7 @@ check_final_overrider (tree overrider, tree basefn)
 	{
 	  error ("deleted function %q+D", overrider);
 	  error ("overriding non-deleted function %q+D", basefn);
+	  maybe_explain_implicit_delete (overrider);
 	}
       else
 	{

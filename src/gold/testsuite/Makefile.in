@@ -62,6 +62,10 @@ check_PROGRAMS = object_unittest$(EXEEXT) binary_unittest$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_keep_unique_test.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_safe_test.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_safe_so_test.sh \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	final_layout.sh \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_preemptible_functions_test.sh \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_string_merge_test.sh \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_sht_rel_addend_test.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_shared.sh weak_plt.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	debug_msg.sh undef_symbol.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	ver_test_1.sh ver_test_2.sh \
@@ -73,7 +77,8 @@ check_PROGRAMS = object_unittest$(EXEEXT) binary_unittest$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_5.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_6.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_7.sh \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_8.sh dynamic_list.sh
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_8.sh \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_9.sh dynamic_list.sh
 
 # Create the data files that debug_msg.sh analyzes.
 
@@ -91,6 +96,10 @@ check_PROGRAMS = object_unittest$(EXEEXT) binary_unittest$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_safe_test_2.stdout \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_safe_so_test_1.stdout \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_safe_so_test_2.stdout \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	final_layout.stdout \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_preemptible_functions_test.stdout \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_string_merge_test.stdout \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_sht_rel_addend_test.stdout \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_shared.dbg \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	weak_plt_shared.so debug_msg.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	debug_msg_so.err \
@@ -106,16 +115,23 @@ check_PROGRAMS = object_unittest$(EXEEXT) binary_unittest$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_6.stdout \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_7.stdout \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_8.stdout \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_9.stdout \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	dynamic_list.stdout
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_3 = incremental_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	gc_comdat_test gc_tls_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	gc_orphan_section_test icf_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_keep_unique_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_safe_test icf_safe_so_test \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	final_layout \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_virtual_function_folding_test \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_preemptible_functions_test \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_string_merge_test \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	icf_sht_rel_addend_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_shared.dbg \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	alt/weak_undef_lib.so
-@GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_4 = basic_test \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@	basic_static_test basic_pic_test \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_4 = icf_virtual_function_folding_test \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	basic_test basic_static_test \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	basic_pic_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	basic_static_pic_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	basic_pie_test constructor_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	constructor_static_test \
@@ -223,6 +239,8 @@ check_PROGRAMS = object_unittest$(EXEEXT) binary_unittest$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	relro_script_test script_test_1 \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_2 justsyms \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	binary_test script_test_3 \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	tls_phdrs_script_test \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	tls_script_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	thin_archive_test_1 \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	thin_archive_test_2
 @GCC_FALSE@script_test_1_DEPENDENCIES =
@@ -235,28 +253,47 @@ check_PROGRAMS = object_unittest$(EXEEXT) binary_unittest$(EXEEXT) \
 @NATIVE_LINKER_FALSE@binary_test_DEPENDENCIES =
 @GCC_FALSE@thin_archive_test_2_DEPENDENCIES =
 @NATIVE_LINKER_FALSE@thin_archive_test_2_DEPENDENCIES =
+
+# Test plugins with -r.
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@am__append_22 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_1 \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_2 \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_3 \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_4 \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_5
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_5 \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6 \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7 \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_8
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@am__append_23 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_1.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_2.sh \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_3.sh \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_4.sh
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_4.sh \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6.sh \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7.sh
+
+# Test that symbols known in the IR file but not in the replacement file
+# produce an unresolved symbol error.
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@am__append_24 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_1.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_2.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_3.err \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_4.err
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_4.err \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6.err \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7.err \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7.syms \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_9.err
+# Make a copy of two_file_test_1.o, which does not define the symbol _Z4t16av.
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@am__append_25 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_1.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_2.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_3.err \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_4.a \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_4.err \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6.err \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7.err \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_9.err \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	two_file_test_1c.o \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	unused.c
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am__append_26 = exclude_libs_test \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	local_labels_test \
@@ -330,7 +367,7 @@ check_PROGRAMS = object_unittest$(EXEEXT) binary_unittest$(EXEEXT) \
 
 @DEFAULT_TARGET_ARM_TRUE@am__append_38 = arm_abs_global.sh \
 @DEFAULT_TARGET_ARM_TRUE@	arm_branch_in_range.sh \
-@DEFAULT_TARGET_ARM_TRUE@	arm_fix_v4bx.sh
+@DEFAULT_TARGET_ARM_TRUE@	arm_fix_v4bx.sh arm_attr_merge.sh
 @DEFAULT_TARGET_ARM_TRUE@am__append_39 = arm_abs_global.stdout \
 @DEFAULT_TARGET_ARM_TRUE@	arm_bl_in_range.stdout \
 @DEFAULT_TARGET_ARM_TRUE@	arm_bl_out_of_range.stdout \
@@ -338,19 +375,31 @@ check_PROGRAMS = object_unittest$(EXEEXT) binary_unittest$(EXEEXT) \
 @DEFAULT_TARGET_ARM_TRUE@	thumb_bl_out_of_range.stdout \
 @DEFAULT_TARGET_ARM_TRUE@	thumb2_bl_in_range.stdout \
 @DEFAULT_TARGET_ARM_TRUE@	thumb2_bl_out_of_range.stdout \
+@DEFAULT_TARGET_ARM_TRUE@	thumb_blx_in_range.stdout \
+@DEFAULT_TARGET_ARM_TRUE@	thumb_blx_out_of_range.stdout \
+@DEFAULT_TARGET_ARM_TRUE@	thumb2_blx_in_range.stdout \
+@DEFAULT_TARGET_ARM_TRUE@	thumb2_blx_out_of_range.stdout \
 @DEFAULT_TARGET_ARM_TRUE@	arm_fix_v4bx.stdout \
 @DEFAULT_TARGET_ARM_TRUE@	arm_fix_v4bx_interworking.stdout \
-@DEFAULT_TARGET_ARM_TRUE@	arm_no_fix_v4bx.stdout
+@DEFAULT_TARGET_ARM_TRUE@	arm_no_fix_v4bx.stdout \
+@DEFAULT_TARGET_ARM_TRUE@	arm_attr_merge_6.stdout \
+@DEFAULT_TARGET_ARM_TRUE@	arm_attr_merge_6r.stdout \
+@DEFAULT_TARGET_ARM_TRUE@	arm_attr_merge_7.stdout
 @DEFAULT_TARGET_ARM_TRUE@am__append_40 = arm_abs_global \
 @DEFAULT_TARGET_ARM_TRUE@	arm_bl_in_range arm_bl_out_of_range \
 @DEFAULT_TARGET_ARM_TRUE@	thumb_bl_in_range \
 @DEFAULT_TARGET_ARM_TRUE@	thumb_bl_out_of_range \
 @DEFAULT_TARGET_ARM_TRUE@	thumb2_bl_in_range \
-@DEFAULT_TARGET_ARM_TRUE@	thumb2_bl_out_of_range arm_fix_v4bx \
+@DEFAULT_TARGET_ARM_TRUE@	thumb2_bl_out_of_range \
+@DEFAULT_TARGET_ARM_TRUE@	thumb_blx_in_range \
+@DEFAULT_TARGET_ARM_TRUE@	thumb_blx_out_of_range \
+@DEFAULT_TARGET_ARM_TRUE@	thumb2_blx_in_range \
+@DEFAULT_TARGET_ARM_TRUE@	thumb2_blx_out_of_range arm_fix_v4bx \
 @DEFAULT_TARGET_ARM_TRUE@	arm_fix_v4bx_interworking \
-@DEFAULT_TARGET_ARM_TRUE@	arm_no_fix_v4bx
+@DEFAULT_TARGET_ARM_TRUE@	arm_no_fix_v4bx arm_attr_merge_6 \
+@DEFAULT_TARGET_ARM_TRUE@	arm_attr_merge_6r arm_attr_merge_7
 subdir = testsuite
-DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
+DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/../config/depstand.m4 \
 	$(top_srcdir)/../config/gettext-sister.m4 \
@@ -373,7 +422,8 @@ libgoldtest_a_LIBADD =
 am_libgoldtest_a_OBJECTS = test.$(OBJEXT) testmain.$(OBJEXT) \
 	testfile.$(OBJEXT)
 libgoldtest_a_OBJECTS = $(am_libgoldtest_a_OBJECTS)
-@GCC_TRUE@@NATIVE_LINKER_TRUE@am__EXEEXT_1 = basic_test$(EXEEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@am__EXEEXT_1 = icf_virtual_function_folding_test$(EXEEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	basic_test$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	basic_static_test$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	basic_pic_test$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	basic_static_pic_test$(EXEEXT) \
@@ -452,13 +502,18 @@ libgoldtest_a_OBJECTS = $(am_libgoldtest_a_OBJECTS)
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	justsyms$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	binary_test$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_3$(EXEEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	tls_phdrs_script_test$(EXEEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	tls_script_test$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	thin_archive_test_1$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	thin_archive_test_2$(EXEEXT)
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@am__EXEEXT_16 = plugin_test_1$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_2$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_3$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_4$(EXEEXT) \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_5$(EXEEXT)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_5$(EXEEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_6$(EXEEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_7$(EXEEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	plugin_test_8$(EXEEXT)
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am__EXEEXT_17 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exclude_libs_test$(EXEEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	local_labels_test$(EXEEXT) \
@@ -498,7 +553,6 @@ basic_test_LDADD = $(LDADD)
 basic_test_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__binary_test_SOURCES_DIST = binary_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_binary_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	binary_test.$(OBJEXT)
 binary_test_OBJECTS = $(am_binary_test_OBJECTS)
@@ -510,19 +564,16 @@ binary_unittest_LDADD = $(LDADD)
 binary_unittest_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__common_test_1_SOURCES_DIST = common_test_1.c
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_common_test_1_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	common_test_1.$(OBJEXT)
 common_test_1_OBJECTS = $(am_common_test_1_OBJECTS)
 common_test_1_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(common_test_1_LDFLAGS) $(LDFLAGS) -o $@
-am__common_test_2_SOURCES_DIST = common_test_1.c
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_common_test_2_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	common_test_1.$(OBJEXT)
 common_test_2_OBJECTS = $(am_common_test_2_OBJECTS)
 common_test_2_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(common_test_2_LDFLAGS) $(LDFLAGS) -o $@
-am__constructor_static_test_SOURCES_DIST = constructor_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am__objects_1 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	constructor_test.$(OBJEXT)
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_constructor_static_test_OBJECTS =  \
@@ -531,19 +582,16 @@ constructor_static_test_OBJECTS =  \
 	$(am_constructor_static_test_OBJECTS)
 constructor_static_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(constructor_static_test_LDFLAGS) $(LDFLAGS) -o $@
-am__constructor_test_SOURCES_DIST = constructor_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_constructor_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	constructor_test.$(OBJEXT)
 constructor_test_OBJECTS = $(am_constructor_test_OBJECTS)
 constructor_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(constructor_test_LDFLAGS) $(LDFLAGS) -o $@
-am__copy_test_SOURCES_DIST = copy_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_copy_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	copy_test.$(OBJEXT)
 copy_test_OBJECTS = $(am_copy_test_OBJECTS)
 copy_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(copy_test_LDFLAGS) $(LDFLAGS) -o $@
-am__discard_locals_test_SOURCES_DIST = discard_locals_test.c
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_discard_locals_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	discard_locals_test.$(OBJEXT)
 discard_locals_test_OBJECTS = $(am_discard_locals_test_OBJECTS)
@@ -553,15 +601,12 @@ discard_locals_test_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 discard_locals_test_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(discard_locals_test_LDFLAGS) $(LDFLAGS) -o $@
-am__exception_same_shared_test_SOURCES_DIST = exception_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_exception_same_shared_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_main.$(OBJEXT)
 exception_same_shared_test_OBJECTS =  \
 	$(am_exception_same_shared_test_OBJECTS)
 exception_same_shared_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(exception_same_shared_test_LDFLAGS) $(LDFLAGS) -o $@
-am__exception_separate_shared_12_test_SOURCES_DIST =  \
-	exception_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_exception_separate_shared_12_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_main.$(OBJEXT)
 exception_separate_shared_12_test_OBJECTS =  \
@@ -569,8 +614,6 @@ exception_separate_shared_12_test_OBJECTS =  \
 exception_separate_shared_12_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(exception_separate_shared_12_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__exception_separate_shared_21_test_SOURCES_DIST =  \
-	exception_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_exception_separate_shared_21_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_main.$(OBJEXT)
 exception_separate_shared_21_test_OBJECTS =  \
@@ -578,8 +621,6 @@ exception_separate_shared_21_test_OBJECTS =  \
 exception_separate_shared_21_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(exception_separate_shared_21_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__exception_shared_1_test_SOURCES_DIST = exception_test_2.cc \
-	exception_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_exception_shared_1_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_2.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_main.$(OBJEXT)
@@ -587,8 +628,6 @@ exception_shared_1_test_OBJECTS =  \
 	$(am_exception_shared_1_test_OBJECTS)
 exception_shared_1_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(exception_shared_1_test_LDFLAGS) $(LDFLAGS) -o $@
-am__exception_shared_2_test_SOURCES_DIST = exception_test_1.cc \
-	exception_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_exception_shared_2_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_1.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_main.$(OBJEXT)
@@ -596,8 +635,6 @@ exception_shared_2_test_OBJECTS =  \
 	$(am_exception_shared_2_test_OBJECTS)
 exception_shared_2_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(exception_shared_2_test_LDFLAGS) $(LDFLAGS) -o $@
-am__exception_static_test_SOURCES_DIST = exception_test_main.cc \
-	exception_test_1.cc exception_test_2.cc exception_test.h
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am__objects_2 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_main.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_1.$(OBJEXT) \
@@ -607,8 +644,6 @@ am__exception_static_test_SOURCES_DIST = exception_test_main.cc \
 exception_static_test_OBJECTS = $(am_exception_static_test_OBJECTS)
 exception_static_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(exception_static_test_LDFLAGS) $(LDFLAGS) -o $@
-am__exception_test_SOURCES_DIST = exception_test_main.cc \
-	exception_test_1.cc exception_test_2.cc exception_test.h
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_exception_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_main.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exception_test_1.$(OBJEXT) \
@@ -616,7 +651,6 @@ am__exception_test_SOURCES_DIST = exception_test_main.cc \
 exception_test_OBJECTS = $(am_exception_test_OBJECTS)
 exception_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(exception_test_LDFLAGS) $(LDFLAGS) -o $@
-am__exclude_libs_test_SOURCES_DIST = exclude_libs_test.c
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_exclude_libs_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	exclude_libs_test.$(OBJEXT)
 exclude_libs_test_OBJECTS = $(am_exclude_libs_test_OBJECTS)
@@ -645,18 +679,23 @@ flagstest_o_specialfile_and_compress_debug_sections_DEPENDENCIES =  \
 	libgoldtest.a ../libgold.a ../../libiberty/libiberty.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-am__initpri1_SOURCES_DIST = initpri1.c
+icf_virtual_function_folding_test_SOURCES =  \
+	icf_virtual_function_folding_test.c
+icf_virtual_function_folding_test_OBJECTS =  \
+	icf_virtual_function_folding_test.$(OBJEXT)
+icf_virtual_function_folding_test_LDADD = $(LDADD)
+icf_virtual_function_folding_test_DEPENDENCIES = libgoldtest.a \
+	../libgold.a ../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 @CONSTRUCTOR_PRIORITY_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@am_initpri1_OBJECTS = initpri1.$(OBJEXT)
 initpri1_OBJECTS = $(am_initpri1_OBJECTS)
 initpri1_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(initpri1_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__justsyms_SOURCES_DIST = justsyms_1.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_justsyms_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	justsyms_1.$(OBJEXT)
 justsyms_OBJECTS = $(am_justsyms_OBJECTS)
 justsyms_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(justsyms_LDFLAGS) $(LDFLAGS) -o $@
-am__large_SOURCES_DIST = large.c
 @GCC_TRUE@@MCMODEL_MEDIUM_TRUE@@NATIVE_LINKER_TRUE@am_large_OBJECTS = large-large.$(OBJEXT)
 large_OBJECTS = $(am_large_OBJECTS)
 large_LINK = $(CCLD) $(large_CFLAGS) $(CFLAGS) $(large_LDFLAGS) \
@@ -673,7 +712,6 @@ many_sections_r_test_LDADD = $(LDADD)
 many_sections_r_test_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__many_sections_test_SOURCES_DIST = many_sections_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_many_sections_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	many_sections_test.$(OBJEXT)
 many_sections_test_OBJECTS = $(am_many_sections_test_OBJECTS)
@@ -721,8 +759,24 @@ plugin_test_5_LDADD = $(LDADD)
 plugin_test_5_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__protected_1_SOURCES_DIST = protected_main_1.cc protected_main_2.cc \
-	protected_main_3.cc
+plugin_test_6_SOURCES = plugin_test_6.c
+plugin_test_6_OBJECTS = plugin_test_6.$(OBJEXT)
+plugin_test_6_LDADD = $(LDADD)
+plugin_test_6_DEPENDENCIES = libgoldtest.a ../libgold.a \
+	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+plugin_test_7_SOURCES = plugin_test_7.c
+plugin_test_7_OBJECTS = plugin_test_7.$(OBJEXT)
+plugin_test_7_LDADD = $(LDADD)
+plugin_test_7_DEPENDENCIES = libgoldtest.a ../libgold.a \
+	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+plugin_test_8_SOURCES = plugin_test_8.c
+plugin_test_8_OBJECTS = plugin_test_8.$(OBJEXT)
+plugin_test_8_LDADD = $(LDADD)
+plugin_test_8_DEPENDENCIES = libgoldtest.a ../libgold.a \
+	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_protected_1_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	protected_main_1.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	protected_main_2.$(OBJEXT) \
@@ -730,33 +784,27 @@ am__protected_1_SOURCES_DIST = protected_main_1.cc protected_main_2.cc \
 protected_1_OBJECTS = $(am_protected_1_OBJECTS)
 protected_1_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(protected_1_LDFLAGS) $(LDFLAGS) -o $@
-am__protected_2_SOURCES_DIST = protected_main_1.cc protected_3.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_protected_2_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	protected_main_1.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	protected_3.$(OBJEXT)
 protected_2_OBJECTS = $(am_protected_2_OBJECTS)
 protected_2_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(protected_2_LDFLAGS) $(LDFLAGS) -o $@
-am__relro_script_test_SOURCES_DIST = relro_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_relro_script_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	relro_test_main.$(OBJEXT)
 relro_script_test_OBJECTS = $(am_relro_script_test_OBJECTS)
 relro_script_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(relro_script_test_LDFLAGS) $(LDFLAGS) -o $@
-am__relro_test_SOURCES_DIST = relro_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_relro_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	relro_test_main.$(OBJEXT)
 relro_test_OBJECTS = $(am_relro_test_OBJECTS)
 relro_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(relro_test_LDFLAGS) $(LDFLAGS) -o $@
-am__script_test_1_SOURCES_DIST = script_test_1.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_script_test_1_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_1.$(OBJEXT)
 script_test_1_OBJECTS = $(am_script_test_1_OBJECTS)
 script_test_1_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(script_test_1_LDFLAGS) $(LDFLAGS) -o $@
-am__script_test_2_SOURCES_DIST = script_test_2.cc script_test_2a.cc \
-	script_test_2b.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_script_test_2_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_2.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	script_test_2a.$(OBJEXT) \
@@ -770,25 +818,32 @@ script_test_3_LDADD = $(LDADD)
 script_test_3_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__searched_file_test_SOURCES_DIST = searched_file_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_searched_file_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	searched_file_test.$(OBJEXT)
 searched_file_test_OBJECTS = $(am_searched_file_test_OBJECTS)
 searched_file_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(searched_file_test_LDFLAGS) $(LDFLAGS) -o $@
-am__thin_archive_test_1_SOURCES_DIST = thin_archive_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_thin_archive_test_1_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	thin_archive_main.$(OBJEXT)
 thin_archive_test_1_OBJECTS = $(am_thin_archive_test_1_OBJECTS)
 thin_archive_test_1_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(thin_archive_test_1_LDFLAGS) $(LDFLAGS) -o $@
-am__thin_archive_test_2_SOURCES_DIST = thin_archive_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_thin_archive_test_2_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	thin_archive_main.$(OBJEXT)
 thin_archive_test_2_OBJECTS = $(am_thin_archive_test_2_OBJECTS)
 thin_archive_test_2_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(thin_archive_test_2_LDFLAGS) $(LDFLAGS) -o $@
-am__tls_pic_test_SOURCES_DIST = tls_test_main.cc
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am__objects_3 =  \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test.$(OBJEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_file2.$(OBJEXT) \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_main.$(OBJEXT)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@am_tls_phdrs_script_test_OBJECTS =  \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(am__objects_3)
+tls_phdrs_script_test_OBJECTS = $(am_tls_phdrs_script_test_OBJECTS)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am__DEPENDENCIES_2 =  \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_c.o
+tls_phdrs_script_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
+	$(tls_phdrs_script_test_LDFLAGS) $(LDFLAGS) -o $@
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am_tls_pic_test_OBJECTS = tls_test_main.$(OBJEXT)
 tls_pic_test_OBJECTS = $(am_tls_pic_test_OBJECTS)
 tls_pic_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
@@ -805,63 +860,51 @@ tls_pie_test_LDADD = $(LDADD)
 tls_pie_test_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__tls_shared_gd_to_ie_test_SOURCES_DIST = tls_test_main.cc
+@GCC_TRUE@@NATIVE_LINKER_TRUE@am_tls_script_test_OBJECTS =  \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(am__objects_3)
+tls_script_test_OBJECTS = $(am_tls_script_test_OBJECTS)
+tls_script_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
+	$(tls_script_test_LDFLAGS) $(LDFLAGS) -o $@
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am_tls_shared_gd_to_ie_test_OBJECTS = tls_test_main.$(OBJEXT)
 tls_shared_gd_to_ie_test_OBJECTS =  \
 	$(am_tls_shared_gd_to_ie_test_OBJECTS)
 tls_shared_gd_to_ie_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(tls_shared_gd_to_ie_test_LDFLAGS) $(LDFLAGS) -o $@
-am__tls_shared_gnu2_gd_to_ie_test_SOURCES_DIST = tls_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_GNU2_DIALECT_TRUE@@TLS_TRUE@am_tls_shared_gnu2_gd_to_ie_test_OBJECTS = tls_test_main.$(OBJEXT)
 tls_shared_gnu2_gd_to_ie_test_OBJECTS =  \
 	$(am_tls_shared_gnu2_gd_to_ie_test_OBJECTS)
 tls_shared_gnu2_gd_to_ie_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(tls_shared_gnu2_gd_to_ie_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__tls_shared_gnu2_test_SOURCES_DIST = tls_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_DESCRIPTORS_TRUE@@TLS_GNU2_DIALECT_TRUE@@TLS_TRUE@am_tls_shared_gnu2_test_OBJECTS = tls_test_main.$(OBJEXT)
 tls_shared_gnu2_test_OBJECTS = $(am_tls_shared_gnu2_test_OBJECTS)
 tls_shared_gnu2_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(tls_shared_gnu2_test_LDFLAGS) $(LDFLAGS) -o $@
-am__tls_shared_ie_test_SOURCES_DIST = tls_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am_tls_shared_ie_test_OBJECTS = tls_test_main.$(OBJEXT)
 tls_shared_ie_test_OBJECTS = $(am_tls_shared_ie_test_OBJECTS)
 tls_shared_ie_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(tls_shared_ie_test_LDFLAGS) $(LDFLAGS) -o $@
-am__tls_shared_nonpic_test_SOURCES_DIST = tls_test_main.cc
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am_tls_shared_nonpic_test_OBJECTS = tls_test_main.$(OBJEXT)
 tls_shared_nonpic_test_OBJECTS = $(am_tls_shared_nonpic_test_OBJECTS)
 tls_shared_nonpic_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(tls_shared_nonpic_test_LDFLAGS) $(LDFLAGS) -o $@
-am__tls_shared_test_SOURCES_DIST = tls_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am_tls_shared_test_OBJECTS = tls_test_main.$(OBJEXT)
 tls_shared_test_OBJECTS = $(am_tls_shared_test_OBJECTS)
 tls_shared_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(tls_shared_test_LDFLAGS) $(LDFLAGS) -o $@
-am__tls_static_pic_test_SOURCES_DIST = tls_test_main.cc
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am__objects_3 = tls_test_main.$(OBJEXT)
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@STATIC_TLS_TRUE@@TLS_TRUE@am_tls_static_pic_test_OBJECTS = $(am__objects_3)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am__objects_4 = tls_test_main.$(OBJEXT)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@STATIC_TLS_TRUE@@TLS_TRUE@am_tls_static_pic_test_OBJECTS = $(am__objects_4)
 tls_static_pic_test_OBJECTS = $(am_tls_static_pic_test_OBJECTS)
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am__DEPENDENCIES_2 =  \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am__DEPENDENCIES_3 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_pic.o \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_file2_pic.o \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_c_pic.o
 tls_static_pic_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(tls_static_pic_test_LDFLAGS) $(LDFLAGS) -o $@
-am__tls_static_test_SOURCES_DIST = tls_test.cc tls_test_file2.cc \
-	tls_test_main.cc tls_test.h
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am__objects_4 =  \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test.$(OBJEXT) \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_file2.$(OBJEXT) \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_main.$(OBJEXT)
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@STATIC_TLS_TRUE@@TLS_TRUE@am_tls_static_test_OBJECTS = $(am__objects_4)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@STATIC_TLS_TRUE@@TLS_TRUE@am_tls_static_test_OBJECTS = $(am__objects_3)
 tls_static_test_OBJECTS = $(am_tls_static_test_OBJECTS)
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am__DEPENDENCIES_3 =  \
-@GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_c.o
 tls_static_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(tls_static_test_LDFLAGS) $(LDFLAGS) -o $@
-am__tls_test_SOURCES_DIST = tls_test.cc tls_test_file2.cc \
-	tls_test_main.cc tls_test.h
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@am_tls_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@TLS_TRUE@	tls_test_file2.$(OBJEXT) \
@@ -869,20 +912,17 @@ am__tls_test_SOURCES_DIST = tls_test.cc tls_test_file2.cc \
 tls_test_OBJECTS = $(am_tls_test_OBJECTS)
 tls_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(tls_test_LDFLAGS) $(LDFLAGS) -o $@
-am__two_file_mixed_2_shared_test_SOURCES_DIST = two_file_test_main.cc
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_mixed_2_shared_test_OBJECTS = two_file_test_main.$(OBJEXT)
 two_file_mixed_2_shared_test_OBJECTS =  \
 	$(am_two_file_mixed_2_shared_test_OBJECTS)
 two_file_mixed_2_shared_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_mixed_2_shared_test_LDFLAGS) $(LDFLAGS) \
 	-o $@
-am__two_file_mixed_shared_test_SOURCES_DIST = two_file_test_main.cc
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_mixed_shared_test_OBJECTS = two_file_test_main.$(OBJEXT)
 two_file_mixed_shared_test_OBJECTS =  \
 	$(am_two_file_mixed_shared_test_OBJECTS)
 two_file_mixed_shared_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(two_file_mixed_shared_test_LDFLAGS) $(LDFLAGS) -o $@
-am__two_file_pic_test_SOURCES_DIST = two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_pic_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_pic_test_OBJECTS = $(am_two_file_pic_test_OBJECTS)
@@ -894,23 +934,18 @@ two_file_pie_test_LDADD = $(LDADD)
 two_file_pie_test_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__two_file_relocatable_test_SOURCES_DIST = two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_relocatable_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_relocatable_test_OBJECTS =  \
 	$(am_two_file_relocatable_test_OBJECTS)
 two_file_relocatable_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(two_file_relocatable_test_LDFLAGS) $(LDFLAGS) -o $@
-am__two_file_same_shared_nonpic_test_SOURCES_DIST =  \
-	two_file_test_main.cc
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_same_shared_nonpic_test_OBJECTS = two_file_test_main.$(OBJEXT)
 two_file_same_shared_nonpic_test_OBJECTS =  \
 	$(am_two_file_same_shared_nonpic_test_OBJECTS)
 two_file_same_shared_nonpic_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_same_shared_nonpic_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__two_file_same_shared_strip_test_SOURCES_DIST =  \
-	two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_same_shared_strip_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_same_shared_strip_test_OBJECTS =  \
@@ -918,23 +953,18 @@ two_file_same_shared_strip_test_OBJECTS =  \
 two_file_same_shared_strip_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_same_shared_strip_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__two_file_same_shared_test_SOURCES_DIST = two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_same_shared_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_same_shared_test_OBJECTS =  \
 	$(am_two_file_same_shared_test_OBJECTS)
 two_file_same_shared_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(two_file_same_shared_test_LDFLAGS) $(LDFLAGS) -o $@
-am__two_file_separate_shared_12_nonpic_test_SOURCES_DIST =  \
-	two_file_test_main.cc
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_separate_shared_12_nonpic_test_OBJECTS = two_file_test_main.$(OBJEXT)
 two_file_separate_shared_12_nonpic_test_OBJECTS =  \
 	$(am_two_file_separate_shared_12_nonpic_test_OBJECTS)
 two_file_separate_shared_12_nonpic_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_separate_shared_12_nonpic_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__two_file_separate_shared_12_test_SOURCES_DIST =  \
-	two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_separate_shared_12_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_separate_shared_12_test_OBJECTS =  \
@@ -942,16 +972,12 @@ two_file_separate_shared_12_test_OBJECTS =  \
 two_file_separate_shared_12_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_separate_shared_12_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__two_file_separate_shared_21_nonpic_test_SOURCES_DIST =  \
-	two_file_test_main.cc
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_separate_shared_21_nonpic_test_OBJECTS = two_file_test_main.$(OBJEXT)
 two_file_separate_shared_21_nonpic_test_OBJECTS =  \
 	$(am_two_file_separate_shared_21_nonpic_test_OBJECTS)
 two_file_separate_shared_21_nonpic_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_separate_shared_21_nonpic_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__two_file_separate_shared_21_test_SOURCES_DIST =  \
-	two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_separate_shared_21_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_separate_shared_21_test_OBJECTS =  \
@@ -959,8 +985,6 @@ two_file_separate_shared_21_test_OBJECTS =  \
 two_file_separate_shared_21_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_separate_shared_21_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__two_file_shared_1_nonpic_test_SOURCES_DIST = two_file_test_2.cc \
-	two_file_test_main.cc
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_shared_1_nonpic_test_OBJECTS = two_file_test_2.$(OBJEXT) \
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_shared_1_nonpic_test_OBJECTS =  \
@@ -968,7 +992,6 @@ two_file_shared_1_nonpic_test_OBJECTS =  \
 two_file_shared_1_nonpic_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_shared_1_nonpic_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__two_file_shared_1_pic_2_test_SOURCES_DIST = two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_shared_1_pic_2_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_shared_1_pic_2_test_OBJECTS =  \
@@ -976,16 +999,12 @@ two_file_shared_1_pic_2_test_OBJECTS =  \
 two_file_shared_1_pic_2_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_shared_1_pic_2_test_LDFLAGS) $(LDFLAGS) \
 	-o $@
-am__two_file_shared_1_test_SOURCES_DIST = two_file_test_2.cc \
-	two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_shared_1_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_2.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_shared_1_test_OBJECTS = $(am_two_file_shared_1_test_OBJECTS)
 two_file_shared_1_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(two_file_shared_1_test_LDFLAGS) $(LDFLAGS) -o $@
-am__two_file_shared_2_nonpic_test_SOURCES_DIST = two_file_test_1.cc \
-	two_file_test_1b.cc two_file_test_main.cc
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_shared_2_nonpic_test_OBJECTS = two_file_test_1.$(OBJEXT) \
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_1b.$(OBJEXT) \
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
@@ -994,7 +1013,6 @@ two_file_shared_2_nonpic_test_OBJECTS =  \
 two_file_shared_2_nonpic_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_shared_2_nonpic_test_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__two_file_shared_2_pic_1_test_SOURCES_DIST = two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_shared_2_pic_1_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 two_file_shared_2_pic_1_test_OBJECTS =  \
@@ -1002,8 +1020,6 @@ two_file_shared_2_pic_1_test_OBJECTS =  \
 two_file_shared_2_pic_1_test_LINK = $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(two_file_shared_2_pic_1_test_LDFLAGS) $(LDFLAGS) \
 	-o $@
-am__two_file_shared_2_test_SOURCES_DIST = two_file_test_1.cc \
-	two_file_test_1b.cc two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_shared_2_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_1.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_1b.$(OBJEXT) \
@@ -1011,9 +1027,6 @@ am__two_file_shared_2_test_SOURCES_DIST = two_file_test_1.cc \
 two_file_shared_2_test_OBJECTS = $(am_two_file_shared_2_test_OBJECTS)
 two_file_shared_2_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(two_file_shared_2_test_LDFLAGS) $(LDFLAGS) -o $@
-am__two_file_static_test_SOURCES_DIST = two_file_test_1.cc \
-	two_file_test_1b.cc two_file_test_2.cc two_file_test_main.cc \
-	two_file_test.h
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am__objects_5 =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_1.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_1b.$(OBJEXT) \
@@ -1030,9 +1043,6 @@ two_file_strip_test_LDADD = $(LDADD)
 two_file_strip_test_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__two_file_test_SOURCES_DIST = two_file_test_1.cc \
-	two_file_test_1b.cc two_file_test_2.cc two_file_test_main.cc \
-	two_file_test.h
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_two_file_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_1.$(OBJEXT) \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_1b.$(OBJEXT) \
@@ -1041,43 +1051,36 @@ am__two_file_test_SOURCES_DIST = two_file_test_1.cc \
 two_file_test_OBJECTS = $(am_two_file_test_OBJECTS)
 two_file_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(two_file_test_LDFLAGS) $(LDFLAGS) -o $@
-am__ver_test_SOURCES_DIST = ver_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_ver_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	ver_test_main.$(OBJEXT)
 ver_test_OBJECTS = $(am_ver_test_OBJECTS)
 ver_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(ver_test_LDFLAGS) $(LDFLAGS) -o $@
-am__ver_test_11_SOURCES_DIST = ver_test_main_2.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_ver_test_11_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	ver_test_main_2.$(OBJEXT)
 ver_test_11_OBJECTS = $(am_ver_test_11_OBJECTS)
 ver_test_11_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(ver_test_11_LDFLAGS) $(LDFLAGS) -o $@
-am__ver_test_2_SOURCES_DIST = ver_test_main_2.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_ver_test_2_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	ver_test_main_2.$(OBJEXT)
 ver_test_2_OBJECTS = $(am_ver_test_2_OBJECTS)
 ver_test_2_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(ver_test_2_LDFLAGS) $(LDFLAGS) -o $@
-am__ver_test_6_SOURCES_DIST = ver_test_6.c
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_ver_test_6_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	ver_test_6.$(OBJEXT)
 ver_test_6_OBJECTS = $(am_ver_test_6_OBJECTS)
 ver_test_6_LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(ver_test_6_LDFLAGS) \
 	$(LDFLAGS) -o $@
-am__ver_test_8_SOURCES_DIST = two_file_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_ver_test_8_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	two_file_test_main.$(OBJEXT)
 ver_test_8_OBJECTS = $(am_ver_test_8_OBJECTS)
 ver_test_8_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(ver_test_8_LDFLAGS) $(LDFLAGS) -o $@
-am__ver_test_9_SOURCES_DIST = ver_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_ver_test_9_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	ver_test_main.$(OBJEXT)
 ver_test_9_OBJECTS = $(am_ver_test_9_OBJECTS)
 ver_test_9_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(ver_test_9_LDFLAGS) $(LDFLAGS) -o $@
-am__weak_alias_test_SOURCES_DIST = weak_alias_test_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_weak_alias_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	weak_alias_test_main.$(OBJEXT)
 weak_alias_test_OBJECTS = $(am_weak_alias_test_OBJECTS)
@@ -1089,18 +1092,15 @@ weak_plt_LDADD = $(LDADD)
 weak_plt_DEPENDENCIES = libgoldtest.a ../libgold.a \
 	../../libiberty/libiberty.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__weak_test_SOURCES_DIST = weak_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_weak_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	weak_test.$(OBJEXT)
 weak_test_OBJECTS = $(am_weak_test_OBJECTS)
 weak_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(weak_test_LDFLAGS) $(LDFLAGS) -o $@
-am__weak_undef_nonpic_test_SOURCES_DIST = weak_undef_test.cc
 @FN_PTRS_IN_SO_WITHOUT_PIC_TRUE@@GCC_TRUE@@NATIVE_LINKER_TRUE@am_weak_undef_nonpic_test_OBJECTS = weak_undef_test.$(OBJEXT)
 weak_undef_nonpic_test_OBJECTS = $(am_weak_undef_nonpic_test_OBJECTS)
 weak_undef_nonpic_test_LINK = $(CXXLD) $(AM_CXXFLAGS) $(CXXFLAGS) \
 	$(weak_undef_nonpic_test_LDFLAGS) $(LDFLAGS) -o $@
-am__weak_undef_test_SOURCES_DIST = weak_undef_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@am_weak_undef_test_OBJECTS =  \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	weak_undef_test.$(OBJEXT)
 weak_undef_test_OBJECTS = $(am_weak_undef_test_OBJECTS)
@@ -1134,17 +1134,19 @@ SOURCES = $(libgoldtest_a_SOURCES) basic_pic_test.c basic_pie_test.c \
 	$(exclude_libs_test_SOURCES) \
 	flagstest_compress_debug_sections.c flagstest_o_specialfile.c \
 	flagstest_o_specialfile_and_compress_debug_sections.c \
-	$(initpri1_SOURCES) $(justsyms_SOURCES) $(large_SOURCES) \
-	local_labels_test.c many_sections_r_test.c \
-	$(many_sections_test_SOURCES) $(object_unittest_SOURCES) \
-	permission_test.c plugin_test_1.c plugin_test_2.c \
-	plugin_test_3.c plugin_test_4.c plugin_test_5.c \
-	$(protected_1_SOURCES) $(protected_2_SOURCES) \
+	icf_virtual_function_folding_test.c $(initpri1_SOURCES) \
+	$(justsyms_SOURCES) $(large_SOURCES) local_labels_test.c \
+	many_sections_r_test.c $(many_sections_test_SOURCES) \
+	$(object_unittest_SOURCES) permission_test.c plugin_test_1.c \
+	plugin_test_2.c plugin_test_3.c plugin_test_4.c \
+	plugin_test_5.c plugin_test_6.c plugin_test_7.c \
+	plugin_test_8.c $(protected_1_SOURCES) $(protected_2_SOURCES) \
 	$(relro_script_test_SOURCES) $(relro_test_SOURCES) \
 	$(script_test_1_SOURCES) $(script_test_2_SOURCES) \
 	script_test_3.c $(searched_file_test_SOURCES) \
 	$(thin_archive_test_1_SOURCES) $(thin_archive_test_2_SOURCES) \
-	$(tls_pic_test_SOURCES) tls_pie_pic_test.c tls_pie_test.c \
+	$(tls_phdrs_script_test_SOURCES) $(tls_pic_test_SOURCES) \
+	tls_pie_pic_test.c tls_pie_test.c $(tls_script_test_SOURCES) \
 	$(tls_shared_gd_to_ie_test_SOURCES) \
 	$(tls_shared_gnu2_gd_to_ie_test_SOURCES) \
 	$(tls_shared_gnu2_test_SOURCES) $(tls_shared_ie_test_SOURCES) \
@@ -1174,80 +1176,80 @@ SOURCES = $(libgoldtest_a_SOURCES) basic_pic_test.c basic_pie_test.c \
 	$(ver_test_9_SOURCES) $(weak_alias_test_SOURCES) weak_plt.c \
 	$(weak_test_SOURCES) $(weak_undef_nonpic_test_SOURCES) \
 	$(weak_undef_test_SOURCES)
-DIST_SOURCES = $(libgoldtest_a_SOURCES) basic_pic_test.c \
-	basic_pie_test.c basic_static_pic_test.c basic_static_test.c \
-	basic_test.c $(am__binary_test_SOURCES_DIST) \
-	$(binary_unittest_SOURCES) $(am__common_test_1_SOURCES_DIST) \
-	$(am__common_test_2_SOURCES_DIST) \
-	$(am__constructor_static_test_SOURCES_DIST) \
-	$(am__constructor_test_SOURCES_DIST) \
-	$(am__copy_test_SOURCES_DIST) \
-	$(am__discard_locals_test_SOURCES_DIST) \
-	$(am__exception_same_shared_test_SOURCES_DIST) \
-	$(am__exception_separate_shared_12_test_SOURCES_DIST) \
-	$(am__exception_separate_shared_21_test_SOURCES_DIST) \
-	$(am__exception_shared_1_test_SOURCES_DIST) \
-	$(am__exception_shared_2_test_SOURCES_DIST) \
-	$(am__exception_static_test_SOURCES_DIST) \
-	$(am__exception_test_SOURCES_DIST) \
-	$(am__exclude_libs_test_SOURCES_DIST) \
-	flagstest_compress_debug_sections.c flagstest_o_specialfile.c \
-	flagstest_o_specialfile_and_compress_debug_sections.c \
-	$(am__initpri1_SOURCES_DIST) $(am__justsyms_SOURCES_DIST) \
-	$(am__large_SOURCES_DIST) local_labels_test.c \
-	many_sections_r_test.c $(am__many_sections_test_SOURCES_DIST) \
-	$(object_unittest_SOURCES) permission_test.c plugin_test_1.c \
-	plugin_test_2.c plugin_test_3.c plugin_test_4.c \
-	plugin_test_5.c $(am__protected_1_SOURCES_DIST) \
-	$(am__protected_2_SOURCES_DIST) \
-	$(am__relro_script_test_SOURCES_DIST) \
-	$(am__relro_test_SOURCES_DIST) \
-	$(am__script_test_1_SOURCES_DIST) \
-	$(am__script_test_2_SOURCES_DIST) script_test_3.c \
-	$(am__searched_file_test_SOURCES_DIST) \
-	$(am__thin_archive_test_1_SOURCES_DIST) \
-	$(am__thin_archive_test_2_SOURCES_DIST) \
-	$(am__tls_pic_test_SOURCES_DIST) tls_pie_pic_test.c \
-	tls_pie_test.c $(am__tls_shared_gd_to_ie_test_SOURCES_DIST) \
-	$(am__tls_shared_gnu2_gd_to_ie_test_SOURCES_DIST) \
-	$(am__tls_shared_gnu2_test_SOURCES_DIST) \
-	$(am__tls_shared_ie_test_SOURCES_DIST) \
-	$(am__tls_shared_nonpic_test_SOURCES_DIST) \
-	$(am__tls_shared_test_SOURCES_DIST) \
-	$(am__tls_static_pic_test_SOURCES_DIST) \
-	$(am__tls_static_test_SOURCES_DIST) \
-	$(am__tls_test_SOURCES_DIST) \
-	$(am__two_file_mixed_2_shared_test_SOURCES_DIST) \
-	$(am__two_file_mixed_shared_test_SOURCES_DIST) \
-	$(am__two_file_pic_test_SOURCES_DIST) two_file_pie_test.c \
-	$(am__two_file_relocatable_test_SOURCES_DIST) \
-	$(am__two_file_same_shared_nonpic_test_SOURCES_DIST) \
-	$(am__two_file_same_shared_strip_test_SOURCES_DIST) \
-	$(am__two_file_same_shared_test_SOURCES_DIST) \
-	$(am__two_file_separate_shared_12_nonpic_test_SOURCES_DIST) \
-	$(am__two_file_separate_shared_12_test_SOURCES_DIST) \
-	$(am__two_file_separate_shared_21_nonpic_test_SOURCES_DIST) \
-	$(am__two_file_separate_shared_21_test_SOURCES_DIST) \
-	$(am__two_file_shared_1_nonpic_test_SOURCES_DIST) \
-	$(am__two_file_shared_1_pic_2_test_SOURCES_DIST) \
-	$(am__two_file_shared_1_test_SOURCES_DIST) \
-	$(am__two_file_shared_2_nonpic_test_SOURCES_DIST) \
-	$(am__two_file_shared_2_pic_1_test_SOURCES_DIST) \
-	$(am__two_file_shared_2_test_SOURCES_DIST) \
-	$(am__two_file_static_test_SOURCES_DIST) two_file_strip_test.c \
-	$(am__two_file_test_SOURCES_DIST) $(am__ver_test_SOURCES_DIST) \
-	$(am__ver_test_11_SOURCES_DIST) $(am__ver_test_2_SOURCES_DIST) \
-	$(am__ver_test_6_SOURCES_DIST) $(am__ver_test_8_SOURCES_DIST) \
-	$(am__ver_test_9_SOURCES_DIST) \
-	$(am__weak_alias_test_SOURCES_DIST) weak_plt.c \
-	$(am__weak_test_SOURCES_DIST) \
-	$(am__weak_undef_nonpic_test_SOURCES_DIST) \
-	$(am__weak_undef_test_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
 red=; grn=; lgn=; blu=; std=
-DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
+am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
+am__vpath_adj = case $$p in \
+    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
+    *) f=$$p;; \
+  esac;
+am__strip_dir = f=`echo $$p | sed -e 's|^.*/||'`;
+am__install_max = 40
+am__nobase_strip_setup = \
+  srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*|]/\\\\&/g'`
+am__nobase_strip = \
+  for p in $$list; do echo "$$p"; done | sed -e "s|$$srcdirstrip/||"
+am__nobase_list = $(am__nobase_strip_setup); \
+  for p in $$list; do echo "$$p $$p"; done | \
+  sed "s| $$srcdirstrip/| |;"' / .*\//!s/ .*/ ./; s,\( .*\)/[^/]*$$,\1,' | \
+  $(AWK) 'BEGIN { files["."] = "" } { files[$$2] = files[$$2] " " $$1; \
+    if (++n[$$2] == $(am__install_max)) \
+      { print $$2, files[$$2]; n[$$2] = 0; files[$$2] = "" } } \
+    END { for (dir in files) print dir, files[dir] }'
+am__base_list = \
+  sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
+  sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
+# Restructured Text title and section.
+am__rst_title = sed 's/.*/   &   /;h;s/./=/g;p;x;p;g;p;s/.*//'
+am__rst_section = sed 'p;s/./=/g;p;g'
+# Put stdin (possibly several lines separated by ".  ") in a box.
+am__text_box = $(AWK) '{				\
+  n = split($$0, lines, "\\.  "); max = 0;		\
+  for (i = 1; i <= n; ++i)				\
+    if (max < length(lines[i]))				\
+      max = length(lines[i]);				\
+  for (i = 0; i < max; ++i) line = line "=";		\
+  print line;						\
+  for (i = 1; i <= n; ++i) if (lines[i]) print lines[i];\
+  print line;						\
+}'
+# Solaris 10 'make', and several other traditional 'make' implementations,
+# pass "-e" to $(SHELL).  This contradicts POSIX.  Work around the problem
+# by disabling -e (using the XSI extension "set +e") if it's set.
+am__sh_e_setup = case $$- in *e*) set +e;; esac
+# To be inserted before the command running the test.  Creates the
+# directory for the log if needed.  Stores in $dir the directory
+# containing $f, in $tst the test, in $log the log, and passes
+# TESTS_ENVIRONMENT.  Save and restore TERM around use of
+# TESTS_ENVIRONMENT, in case that unsets it.
+am__check_pre = \
+$(am__sh_e_setup);					\
+$(am__vpath_adj_setup) $(am__vpath_adj)			\
+srcdir=$(srcdir); export srcdir;			\
+rm -f $@-t;						\
+trap 'st=$$?; rm -f '\''$(abs_builddir)/$@-t'\''; (exit $$st); exit $$st' \
+  1 2 13 15;						\
+am__odir=`echo "./$@" | sed 's|/[^/]*$$||'`;		\
+test "x$$am__odir" = x. || $(MKDIR_P) "$$am__odir" || exit $$?;	\
+if test -f "./$$f"; then dir=./;			\
+elif test -f "$$f"; then dir=;				\
+else dir="$(srcdir)/"; fi;				\
+tst=$$dir$$f; log='$@'; __SAVED_TERM=$$TERM;		\
+$(TESTS_ENVIRONMENT)
+RECHECK_LOGS = $(TEST_LOGS)
+AM_RECURSIVE_TARGETS = check check-html recheck recheck-html
+TEST_SUITE_LOG = test-suite.log
+TEST_SUITE_HTML = $(TEST_SUITE_LOG:.log=.html)
+TEST_EXTENSIONS = @EXEEXT@ .test
+LOG_COMPILE = $(LOG_COMPILER) $(AM_LOG_FLAGS) $(LOG_FLAGS)
+am__test_logs1 = $(TESTS:=.log)
+am__test_logs2 = $(am__test_logs1:@EXEEXT@.log=.log)
+TEST_LOGS = $(am__test_logs2:.test.log=.log)
+TEST_LOG_COMPILE = $(TEST_LOG_COMPILER) $(AM_TEST_LOG_FLAGS) \
+	$(TEST_LOG_FLAGS)
+TEST_LOGS_TMP = $(TEST_LOGS:.log=.log-t)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AUTOCONF = @AUTOCONF@
@@ -1353,7 +1355,9 @@ host_vendor = @host_vendor@
 htmldir = @htmldir@
 includedir = @includedir@
 infodir = @infodir@
+install_as_default = @install_as_default@
 install_sh = @install_sh@
+installed_linker = @installed_linker@
 libdir = @libdir@
 libexecdir = @libexecdir@
 localedir = @localedir@
@@ -1755,6 +1759,14 @@ binary_unittest_SOURCES = binary_unittest.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@binary_test_DEPENDENCIES = gcctestdir/ld binary.txt
 @GCC_TRUE@@NATIVE_LINKER_TRUE@binary_test_LDFLAGS = -Bgcctestdir/ -Wl,--format,binary,binary.txt,--format,elf
 @GCC_TRUE@@NATIVE_LINKER_TRUE@binary_test_LDADD = 
+@GCC_TRUE@@NATIVE_LINKER_TRUE@tls_phdrs_script_test_SOURCES = $(tls_test_SOURCES)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@tls_phdrs_script_test_DEPENDENCIES = $(tls_test_DEPENDENCIES) $(srcdir)/script_test_3.t
+@GCC_TRUE@@NATIVE_LINKER_TRUE@tls_phdrs_script_test_LDFLAGS = $(tls_test_LDFLAGS) -T $(srcdir)/script_test_3.t
+@GCC_TRUE@@NATIVE_LINKER_TRUE@tls_phdrs_script_test_LDADD = $(tls_test_LDADD)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@tls_script_test_SOURCES = $(tls_test_SOURCES)
+@GCC_TRUE@@NATIVE_LINKER_TRUE@tls_script_test_DEPENDENCIES = $(tls_test_DEPENDENCIES) $(srcdir)/script_test_4.t
+@GCC_TRUE@@NATIVE_LINKER_TRUE@tls_script_test_LDFLAGS = $(tls_test_LDFLAGS) -T $(srcdir)/script_test_4.t
+@GCC_TRUE@@NATIVE_LINKER_TRUE@tls_script_test_LDADD = $(tls_test_LDADD)
 @GCC_TRUE@@NATIVE_LINKER_TRUE@thin_archive_test_1_SOURCES = thin_archive_main.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@thin_archive_test_1_DEPENDENCIES = gcctestdir/ld libthin1.a alt/libthin2.a
 @GCC_TRUE@@NATIVE_LINKER_TRUE@thin_archive_test_1_LDFLAGS = -Bgcctestdir/ -Lalt
@@ -1791,7 +1803,7 @@ all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .cc .o .obj
+.SUFFIXES: .c .cc .html .log .o .obj .test .test$(EXEEXT)
 $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -1934,6 +1946,12 @@ exclude_libs_test$(EXEEXT): $(exclude_libs_test_OBJECTS) $(exclude_libs_test_DEP
 @NATIVE_LINKER_FALSE@flagstest_o_specialfile_and_compress_debug_sections$(EXEEXT): $(flagstest_o_specialfile_and_compress_debug_sections_OBJECTS) $(flagstest_o_specialfile_and_compress_debug_sections_DEPENDENCIES) 
 @NATIVE_LINKER_FALSE@	@rm -f flagstest_o_specialfile_and_compress_debug_sections$(EXEEXT)
 @NATIVE_LINKER_FALSE@	$(LINK) $(flagstest_o_specialfile_and_compress_debug_sections_OBJECTS) $(flagstest_o_specialfile_and_compress_debug_sections_LDADD) $(LIBS)
+@GCC_FALSE@icf_virtual_function_folding_test$(EXEEXT): $(icf_virtual_function_folding_test_OBJECTS) $(icf_virtual_function_folding_test_DEPENDENCIES) 
+@GCC_FALSE@	@rm -f icf_virtual_function_folding_test$(EXEEXT)
+@GCC_FALSE@	$(LINK) $(icf_virtual_function_folding_test_OBJECTS) $(icf_virtual_function_folding_test_LDADD) $(LIBS)
+@NATIVE_LINKER_FALSE@icf_virtual_function_folding_test$(EXEEXT): $(icf_virtual_function_folding_test_OBJECTS) $(icf_virtual_function_folding_test_DEPENDENCIES) 
+@NATIVE_LINKER_FALSE@	@rm -f icf_virtual_function_folding_test$(EXEEXT)
+@NATIVE_LINKER_FALSE@	$(LINK) $(icf_virtual_function_folding_test_OBJECTS) $(icf_virtual_function_folding_test_LDADD) $(LIBS)
 initpri1$(EXEEXT): $(initpri1_OBJECTS) $(initpri1_DEPENDENCIES) 
 	@rm -f initpri1$(EXEEXT)
 	$(initpri1_LINK) $(initpri1_OBJECTS) $(initpri1_LDADD) $(LIBS)
@@ -2012,6 +2030,33 @@ object_unittest$(EXEEXT): $(object_unittest_OBJECTS) $(object_unittest_DEPENDENC
 @PLUGINS_FALSE@plugin_test_5$(EXEEXT): $(plugin_test_5_OBJECTS) $(plugin_test_5_DEPENDENCIES) 
 @PLUGINS_FALSE@	@rm -f plugin_test_5$(EXEEXT)
 @PLUGINS_FALSE@	$(LINK) $(plugin_test_5_OBJECTS) $(plugin_test_5_LDADD) $(LIBS)
+@GCC_FALSE@plugin_test_6$(EXEEXT): $(plugin_test_6_OBJECTS) $(plugin_test_6_DEPENDENCIES) 
+@GCC_FALSE@	@rm -f plugin_test_6$(EXEEXT)
+@GCC_FALSE@	$(LINK) $(plugin_test_6_OBJECTS) $(plugin_test_6_LDADD) $(LIBS)
+@NATIVE_LINKER_FALSE@plugin_test_6$(EXEEXT): $(plugin_test_6_OBJECTS) $(plugin_test_6_DEPENDENCIES) 
+@NATIVE_LINKER_FALSE@	@rm -f plugin_test_6$(EXEEXT)
+@NATIVE_LINKER_FALSE@	$(LINK) $(plugin_test_6_OBJECTS) $(plugin_test_6_LDADD) $(LIBS)
+@PLUGINS_FALSE@plugin_test_6$(EXEEXT): $(plugin_test_6_OBJECTS) $(plugin_test_6_DEPENDENCIES) 
+@PLUGINS_FALSE@	@rm -f plugin_test_6$(EXEEXT)
+@PLUGINS_FALSE@	$(LINK) $(plugin_test_6_OBJECTS) $(plugin_test_6_LDADD) $(LIBS)
+@GCC_FALSE@plugin_test_7$(EXEEXT): $(plugin_test_7_OBJECTS) $(plugin_test_7_DEPENDENCIES) 
+@GCC_FALSE@	@rm -f plugin_test_7$(EXEEXT)
+@GCC_FALSE@	$(LINK) $(plugin_test_7_OBJECTS) $(plugin_test_7_LDADD) $(LIBS)
+@NATIVE_LINKER_FALSE@plugin_test_7$(EXEEXT): $(plugin_test_7_OBJECTS) $(plugin_test_7_DEPENDENCIES) 
+@NATIVE_LINKER_FALSE@	@rm -f plugin_test_7$(EXEEXT)
+@NATIVE_LINKER_FALSE@	$(LINK) $(plugin_test_7_OBJECTS) $(plugin_test_7_LDADD) $(LIBS)
+@PLUGINS_FALSE@plugin_test_7$(EXEEXT): $(plugin_test_7_OBJECTS) $(plugin_test_7_DEPENDENCIES) 
+@PLUGINS_FALSE@	@rm -f plugin_test_7$(EXEEXT)
+@PLUGINS_FALSE@	$(LINK) $(plugin_test_7_OBJECTS) $(plugin_test_7_LDADD) $(LIBS)
+@GCC_FALSE@plugin_test_8$(EXEEXT): $(plugin_test_8_OBJECTS) $(plugin_test_8_DEPENDENCIES) 
+@GCC_FALSE@	@rm -f plugin_test_8$(EXEEXT)
+@GCC_FALSE@	$(LINK) $(plugin_test_8_OBJECTS) $(plugin_test_8_LDADD) $(LIBS)
+@NATIVE_LINKER_FALSE@plugin_test_8$(EXEEXT): $(plugin_test_8_OBJECTS) $(plugin_test_8_DEPENDENCIES) 
+@NATIVE_LINKER_FALSE@	@rm -f plugin_test_8$(EXEEXT)
+@NATIVE_LINKER_FALSE@	$(LINK) $(plugin_test_8_OBJECTS) $(plugin_test_8_LDADD) $(LIBS)
+@PLUGINS_FALSE@plugin_test_8$(EXEEXT): $(plugin_test_8_OBJECTS) $(plugin_test_8_DEPENDENCIES) 
+@PLUGINS_FALSE@	@rm -f plugin_test_8$(EXEEXT)
+@PLUGINS_FALSE@	$(LINK) $(plugin_test_8_OBJECTS) $(plugin_test_8_LDADD) $(LIBS)
 protected_1$(EXEEXT): $(protected_1_OBJECTS) $(protected_1_DEPENDENCIES) 
 	@rm -f protected_1$(EXEEXT)
 	$(protected_1_LINK) $(protected_1_OBJECTS) $(protected_1_LDADD) $(LIBS)
@@ -2045,6 +2090,9 @@ thin_archive_test_1$(EXEEXT): $(thin_archive_test_1_OBJECTS) $(thin_archive_test
 thin_archive_test_2$(EXEEXT): $(thin_archive_test_2_OBJECTS) $(thin_archive_test_2_DEPENDENCIES) 
 	@rm -f thin_archive_test_2$(EXEEXT)
 	$(thin_archive_test_2_LINK) $(thin_archive_test_2_OBJECTS) $(thin_archive_test_2_LDADD) $(LIBS)
+tls_phdrs_script_test$(EXEEXT): $(tls_phdrs_script_test_OBJECTS) $(tls_phdrs_script_test_DEPENDENCIES) 
+	@rm -f tls_phdrs_script_test$(EXEEXT)
+	$(tls_phdrs_script_test_LINK) $(tls_phdrs_script_test_OBJECTS) $(tls_phdrs_script_test_LDADD) $(LIBS)
 tls_pic_test$(EXEEXT): $(tls_pic_test_OBJECTS) $(tls_pic_test_DEPENDENCIES) 
 	@rm -f tls_pic_test$(EXEEXT)
 	$(tls_pic_test_LINK) $(tls_pic_test_OBJECTS) $(tls_pic_test_LDADD) $(LIBS)
@@ -2066,6 +2114,9 @@ tls_pic_test$(EXEEXT): $(tls_pic_test_OBJECTS) $(tls_pic_test_DEPENDENCIES)
 @TLS_FALSE@tls_pie_test$(EXEEXT): $(tls_pie_test_OBJECTS) $(tls_pie_test_DEPENDENCIES) 
 @TLS_FALSE@	@rm -f tls_pie_test$(EXEEXT)
 @TLS_FALSE@	$(LINK) $(tls_pie_test_OBJECTS) $(tls_pie_test_LDADD) $(LIBS)
+tls_script_test$(EXEEXT): $(tls_script_test_OBJECTS) $(tls_script_test_DEPENDENCIES) 
+	@rm -f tls_script_test$(EXEEXT)
+	$(tls_script_test_LINK) $(tls_script_test_OBJECTS) $(tls_script_test_LDADD) $(LIBS)
 tls_shared_gd_to_ie_test$(EXEEXT): $(tls_shared_gd_to_ie_test_OBJECTS) $(tls_shared_gd_to_ie_test_DEPENDENCIES) 
 	@rm -f tls_shared_gd_to_ie_test$(EXEEXT)
 	$(tls_shared_gd_to_ie_test_LINK) $(tls_shared_gd_to_ie_test_OBJECTS) $(tls_shared_gd_to_ie_test_LDADD) $(LIBS)
@@ -2223,6 +2274,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flagstest_compress_debug_sections.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flagstest_o_specialfile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flagstest_o_specialfile_and_compress_debug_sections.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/icf_virtual_function_folding_test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/initpri1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/justsyms_1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/large-large.Po@am__quote@
@@ -2236,6 +2288,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_4.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_5.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_6.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_7.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/plugin_test_8.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/protected_3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/protected_main_1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/protected_main_2.Po@am__quote@
@@ -2364,128 +2419,451 @@ GTAGS:
 distclean-tags:
 	-rm -f TAGS ID GTAGS GRTAGS GSYMS GPATH tags
 
-check-TESTS: $(TESTS)
-	@failed=0; all=0; xfail=0; xpass=0; skip=0; \
-	srcdir=$(srcdir); export srcdir; \
-	list=' $(TESTS) '; \
-	$(am__tty_colors); \
-	if test -n "$$list"; then \
-	  for tst in $$list; do \
-	    if test -f ./$$tst; then dir=./; \
-	    elif test -f $$tst; then dir=; \
-	    else dir="$(srcdir)/"; fi; \
-	    if $(TESTS_ENVIRONMENT) $${dir}$$tst; then \
-	      all=`expr $$all + 1`; \
-	      case " $(XFAIL_TESTS) " in \
-	      *[\ \	]$$tst[\ \	]*) \
-		xpass=`expr $$xpass + 1`; \
-		failed=`expr $$failed + 1`; \
-		col=$$red; res=XPASS; \
-	      ;; \
-	      *) \
-		col=$$grn; res=PASS; \
-	      ;; \
-	      esac; \
-	    elif test $$? -ne 77; then \
-	      all=`expr $$all + 1`; \
-	      case " $(XFAIL_TESTS) " in \
-	      *[\ \	]$$tst[\ \	]*) \
-		xfail=`expr $$xfail + 1`; \
-		col=$$lgn; res=XFAIL; \
-	      ;; \
-	      *) \
-		failed=`expr $$failed + 1`; \
-		col=$$red; res=FAIL; \
-	      ;; \
-	      esac; \
-	    else \
-	      skip=`expr $$skip + 1`; \
-	      col=$$blu; res=SKIP; \
-	    fi; \
-	    echo "$${col}$$res$${std}: $$tst"; \
-	  done; \
-	  if test "$$all" -eq 1; then \
-	    tests="test"; \
-	    All=""; \
-	  else \
-	    tests="tests"; \
-	    All="All "; \
-	  fi; \
-	  if test "$$failed" -eq 0; then \
-	    if test "$$xfail" -eq 0; then \
-	      banner="$$All$$all $$tests passed"; \
-	    else \
-	      if test "$$xfail" -eq 1; then failures=failure; else failures=failures; fi; \
-	      banner="$$All$$all $$tests behaved as expected ($$xfail expected $$failures)"; \
-	    fi; \
-	  else \
-	    if test "$$xpass" -eq 0; then \
-	      banner="$$failed of $$all $$tests failed"; \
-	    else \
-	      if test "$$xpass" -eq 1; then passes=pass; else passes=passes; fi; \
-	      banner="$$failed of $$all $$tests did not behave as expected ($$xpass unexpected $$passes)"; \
-	    fi; \
-	  fi; \
-	  dashes="$$banner"; \
-	  skipped=""; \
-	  if test "$$skip" -ne 0; then \
-	    if test "$$skip" -eq 1; then \
-	      skipped="($$skip test was not run)"; \
-	    else \
-	      skipped="($$skip tests were not run)"; \
-	    fi; \
-	    test `echo "$$skipped" | wc -c` -le `echo "$$banner" | wc -c` || \
-	      dashes="$$skipped"; \
-	  fi; \
-	  report=""; \
-	  if test "$$failed" -ne 0 && test -n "$(PACKAGE_BUGREPORT)"; then \
-	    report="Please report to $(PACKAGE_BUGREPORT)"; \
-	    test `echo "$$report" | wc -c` -le `echo "$$banner" | wc -c` || \
-	      dashes="$$report"; \
-	  fi; \
-	  dashes=`echo "$$dashes" | sed s/./=/g`; \
-	  if test "$$failed" -eq 0; then \
-	    echo "$$grn$$dashes"; \
-	  else \
-	    echo "$$red$$dashes"; \
-	  fi; \
-	  echo "$$banner"; \
-	  test -z "$$skipped" || echo "$$skipped"; \
-	  test -z "$$report" || echo "$$report"; \
-	  echo "$$dashes$$std"; \
-	  test "$$failed" -eq 0; \
-	else :; fi
+# To be appended to the command running the test.  Handle the stdout
+# and stderr redirection, and catch the exit status.
+am__check_post =					\
+>$@-t 2>&1;						\
+estatus=$$?;						\
+if test -n '$(DISABLE_HARD_ERRORS)'			\
+   && test $$estatus -eq 99; then			\
+  estatus=1;						\
+fi;							\
+TERM=$$__SAVED_TERM; export TERM;			\
+$(am__tty_colors);					\
+xfailed=PASS;						\
+case " $(XFAIL_TESTS) " in				\
+  *[\ \	]$$f[\ \	]* | *[\ \	]$$dir$$f[\ \	]*) \
+    xfailed=XFAIL;;					\
+esac;							\
+case $$estatus:$$xfailed in				\
+    0:XFAIL) col=$$red; res=XPASS;;			\
+    0:*)     col=$$grn; res=PASS ;;			\
+    77:*)    col=$$blu; res=SKIP ;;			\
+    99:*)    col=$$red; res=FAIL ;;			\
+    *:XFAIL) col=$$lgn; res=XFAIL;;			\
+    *:*)     col=$$red; res=FAIL ;;			\
+esac;							\
+echo "$${col}$$res$${std}: $$f";			\
+echo "$$res: $$f (exit: $$estatus)" |			\
+  $(am__rst_section) >$@;				\
+cat $@-t >>$@;						\
+rm -f $@-t
 
-distdir: $(DISTFILES)
-	@srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
-	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's/[].[^$$\\*]/\\\\&/g'`; \
-	list='$(DISTFILES)'; \
-	  dist_files=`for file in $$list; do echo $$file; done | \
-	  sed -e "s|^$$srcdirstrip/||;t" \
-	      -e "s|^$$topsrcdirstrip/|$(top_builddir)/|;t"`; \
-	case $$dist_files in \
-	  */*) $(MKDIR_P) `echo "$$dist_files" | \
-			   sed '/\//!d;s|^|$(distdir)/|;s,/[^/]*$$,,' | \
-			   sort -u` ;; \
-	esac; \
-	for file in $$dist_files; do \
-	  if test -f $$file || test -d $$file; then d=.; else d=$(srcdir); fi; \
-	  if test -d $$d/$$file; then \
-	    dir=`echo "/$$file" | sed -e 's,/[^/]*$$,,'`; \
-	    if test -d "$(distdir)/$$file"; then \
-	      find "$(distdir)/$$file" -type d ! -perm -700 -exec chmod u+rwx {} \;; \
-	    fi; \
-	    if test -d $(srcdir)/$$file && test $$d != $(srcdir); then \
-	      cp -fpR $(srcdir)/$$file "$(distdir)$$dir" || exit 1; \
-	      find "$(distdir)/$$file" -type d ! -perm -700 -exec chmod u+rwx {} \;; \
-	    fi; \
-	    cp -fpR $$d/$$file "$(distdir)$$dir" || exit 1; \
-	  else \
-	    test -f "$(distdir)/$$file" \
-	    || cp -p $$d/$$file "$(distdir)/$$file" \
-	    || exit 1; \
-	  fi; \
-	done
+$(TEST_SUITE_LOG): $(TEST_LOGS)
+	@$(am__sh_e_setup);						\
+	list='$(TEST_LOGS)';						\
+	results=`for f in $$list; do					\
+		   read line < $$f && echo "$$line" || echo FAIL;	\
+		 done`;							\
+	all=`echo "$$results" | sed '/^$$/d' | wc -l | sed -e 's/^[	 ]*//'`; \
+	fail=`echo "$$results" | grep -c '^FAIL'`;			\
+	pass=`echo "$$results" | grep -c '^PASS'`;			\
+	skip=`echo "$$results" | grep -c '^SKIP'`;			\
+	xfail=`echo "$$results" | grep -c '^XFAIL'`;			\
+	xpass=`echo "$$results" | grep -c '^XPASS'`;			\
+	failures=`expr $$fail + $$xpass`;				\
+	all=`expr $$all - $$skip`;					\
+	if test "$$all" -eq 1; then tests=test; All=;			\
+	else tests=tests; All="All "; fi;				\
+	case fail=$$fail:xpass=$$xpass:xfail=$$xfail in			\
+	  fail=0:xpass=0:xfail=0)					\
+	    msg="$$All$$all $$tests passed.  ";				\
+	    exit=true;;							\
+	  fail=0:xpass=0:xfail=*)					\
+	    msg="$$All$$all $$tests behaved as expected";		\
+	    if test "$$xfail" -eq 1; then xfailures=failure;		\
+	    else xfailures=failures; fi;				\
+	    msg="$$msg ($$xfail expected $$xfailures).  ";		\
+	    exit=true;;							\
+	  fail=*:xpass=0:xfail=*)					\
+	    msg="$$fail of $$all $$tests failed.  ";			\
+	    exit=false;;						\
+	  fail=*:xpass=*:xfail=*)					\
+	    msg="$$failures of $$all $$tests did not behave as expected"; \
+	    if test "$$xpass" -eq 1; then xpasses=pass;			\
+	    else xpasses=passes; fi;					\
+	    msg="$$msg ($$xpass unexpected $$xpasses).  ";		\
+	    exit=false;;						\
+	  *)								\
+	    echo >&2 "incorrect case"; exit 4;;				\
+	esac;								\
+	if test "$$skip" -ne 0; then					\
+	  if test "$$skip" -eq 1; then					\
+	    msg="$$msg($$skip test was not run).  ";			\
+	  else								\
+	    msg="$$msg($$skip tests were not run).  ";			\
+	  fi;								\
+	fi;								\
+	{								\
+	  echo "$(PACKAGE_STRING): $(subdir)/$(TEST_SUITE_LOG)" |	\
+	    $(am__rst_title);						\
+	  echo "$$msg";							\
+	  echo;								\
+	  echo ".. contents:: :depth: 2";				\
+	  echo;								\
+	  for f in $$list; do						\
+	    read line < $$f;						\
+	    case $$line in						\
+	      PASS:*|XFAIL:*);;						\
+	      *) echo; cat $$f;;					\
+	    esac;							\
+	  done;								\
+	} >$(TEST_SUITE_LOG).tmp;					\
+	mv $(TEST_SUITE_LOG).tmp $(TEST_SUITE_LOG);			\
+	if test "$$failures" -ne 0; then				\
+	  msg="$${msg}See $(subdir)/$(TEST_SUITE_LOG).  ";		\
+	  if test -n "$(PACKAGE_BUGREPORT)"; then			\
+	    msg="$${msg}Please report to $(PACKAGE_BUGREPORT).  ";	\
+	  fi;								\
+	fi;								\
+	test x"$$VERBOSE" = x || $$exit || cat $(TEST_SUITE_LOG);	\
+	$(am__tty_colors);						\
+	if $$exit; then							\
+	  echo $(ECHO_N) "$$grn$(ECHO_C)";				\
+	 else								\
+	  echo $(ECHO_N) "$$red$(ECHO_C)";				\
+	fi;								\
+	echo "$$msg" | $(am__text_box);					\
+	echo $(ECHO_N) "$$std$(ECHO_C)";				\
+	$$exit
+
+# Run all the tests.
+check-TESTS:
+	@list='$(RECHECK_LOGS)'; test -z "$$list" || rm -f $$list
+	@test -z "$(TEST_SUITE_LOG)" || rm -f $(TEST_SUITE_LOG)
+	@set_logs=; if test "X$(TEST_LOGS)" = X.log; then		\
+	  set_logs=TEST_LOGS=;						\
+	fi;								\
+	$(MAKE) $(AM_MAKEFLAGS) $(TEST_SUITE_LOG) $$set_logs
+
+.log.html:
+	@list='$(RST2HTML) $$RST2HTML rst2html rst2html.py';		\
+	for r2h in $$list; do						\
+	  if ($$r2h --version) >/dev/null 2>&1; then			\
+	    R2H=$$r2h;							\
+	  fi;								\
+	done;								\
+	if test -z "$$R2H"; then					\
+	  echo >&2 "cannot find rst2html, cannot create $@";		\
+	  exit 2;							\
+	fi;								\
+	$$R2H $< >$@.tmp
+	@mv $@.tmp $@
+
+# Be sure to run check first, and then to convert the result.
+# Beware of concurrent executions.  Run "check" not "check-TESTS", as
+# check-SCRIPTS and other dependencies are rebuilt by the former only.
+# And expect check to fail.
+check-html:
+	@if $(MAKE) $(AM_MAKEFLAGS) check; then			\
+	  rv=0; else rv=$$?;					\
+	fi;							\
+	$(MAKE) $(AM_MAKEFLAGS) $(TEST_SUITE_HTML) || exit 4;	\
+	exit $$rv
+recheck recheck-html:
+	@target=`echo $@ | sed 's,^re,,'`;				\
+	list='$(TEST_LOGS)';						\
+	list=`for f in $$list; do					\
+	        test -f $$f || continue;				\
+	        if read line < $$f; then				\
+	          case $$line in FAIL*|XPASS*) echo $$f;; esac;		\
+	        else echo $$f; fi;					\
+	      done | tr '\012\015' '  '`;				\
+	$(MAKE) $(AM_MAKEFLAGS) $$target AM_MAKEFLAGS='$(AM_MAKEFLAGS) TEST_LOGS="'"$$list"'"'
+incremental_test.sh.log: incremental_test.sh
+	@p='incremental_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+gc_comdat_test.sh.log: gc_comdat_test.sh
+	@p='gc_comdat_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+gc_tls_test.sh.log: gc_tls_test.sh
+	@p='gc_tls_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+gc_orphan_section_test.sh.log: gc_orphan_section_test.sh
+	@p='gc_orphan_section_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+icf_test.sh.log: icf_test.sh
+	@p='icf_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+icf_keep_unique_test.sh.log: icf_keep_unique_test.sh
+	@p='icf_keep_unique_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+icf_safe_test.sh.log: icf_safe_test.sh
+	@p='icf_safe_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+icf_safe_so_test.sh.log: icf_safe_so_test.sh
+	@p='icf_safe_so_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+final_layout.sh.log: final_layout.sh
+	@p='final_layout.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+icf_preemptible_functions_test.sh.log: icf_preemptible_functions_test.sh
+	@p='icf_preemptible_functions_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+icf_string_merge_test.sh.log: icf_string_merge_test.sh
+	@p='icf_string_merge_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+icf_sht_rel_addend_test.sh.log: icf_sht_rel_addend_test.sh
+	@p='icf_sht_rel_addend_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_shared.sh.log: two_file_shared.sh
+	@p='two_file_shared.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+weak_plt.sh.log: weak_plt.sh
+	@p='weak_plt.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+debug_msg.sh.log: debug_msg.sh
+	@p='debug_msg.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+undef_symbol.sh.log: undef_symbol.sh
+	@p='undef_symbol.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_1.sh.log: ver_test_1.sh
+	@p='ver_test_1.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_2.sh.log: ver_test_2.sh
+	@p='ver_test_2.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_4.sh.log: ver_test_4.sh
+	@p='ver_test_4.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_5.sh.log: ver_test_5.sh
+	@p='ver_test_5.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_7.sh.log: ver_test_7.sh
+	@p='ver_test_7.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_10.sh.log: ver_test_10.sh
+	@p='ver_test_10.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_matching_test.sh.log: ver_matching_test.sh
+	@p='ver_matching_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_3.sh.log: script_test_3.sh
+	@p='script_test_3.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_4.sh.log: script_test_4.sh
+	@p='script_test_4.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_5.sh.log: script_test_5.sh
+	@p='script_test_5.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_6.sh.log: script_test_6.sh
+	@p='script_test_6.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_7.sh.log: script_test_7.sh
+	@p='script_test_7.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_8.sh.log: script_test_8.sh
+	@p='script_test_8.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_9.sh.log: script_test_9.sh
+	@p='script_test_9.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+dynamic_list.sh.log: dynamic_list.sh
+	@p='dynamic_list.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_1.sh.log: plugin_test_1.sh
+	@p='plugin_test_1.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_2.sh.log: plugin_test_2.sh
+	@p='plugin_test_2.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_3.sh.log: plugin_test_3.sh
+	@p='plugin_test_3.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_4.sh.log: plugin_test_4.sh
+	@p='plugin_test_4.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_6.sh.log: plugin_test_6.sh
+	@p='plugin_test_6.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_7.sh.log: plugin_test_7.sh
+	@p='plugin_test_7.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+exclude_libs_test.sh.log: exclude_libs_test.sh
+	@p='exclude_libs_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+discard_locals_test.sh.log: discard_locals_test.sh
+	@p='discard_locals_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+hidden_test.sh.log: hidden_test.sh
+	@p='hidden_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+retain_symbols_file_test.sh.log: retain_symbols_file_test.sh
+	@p='retain_symbols_file_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+no_version_test.sh.log: no_version_test.sh
+	@p='no_version_test.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+split_i386.sh.log: split_i386.sh
+	@p='split_i386.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+split_x86_64.sh.log: split_x86_64.sh
+	@p='split_x86_64.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+arm_abs_global.sh.log: arm_abs_global.sh
+	@p='arm_abs_global.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+arm_branch_in_range.sh.log: arm_branch_in_range.sh
+	@p='arm_branch_in_range.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+arm_fix_v4bx.sh.log: arm_fix_v4bx.sh
+	@p='arm_fix_v4bx.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+arm_attr_merge.sh.log: arm_attr_merge.sh
+	@p='arm_attr_merge.sh'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+object_unittest.log: object_unittest$(EXEEXT)
+	@p='object_unittest$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+binary_unittest.log: binary_unittest$(EXEEXT)
+	@p='binary_unittest$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+icf_virtual_function_folding_test.log: icf_virtual_function_folding_test$(EXEEXT)
+	@p='icf_virtual_function_folding_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+basic_test.log: basic_test$(EXEEXT)
+	@p='basic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+basic_static_test.log: basic_static_test$(EXEEXT)
+	@p='basic_static_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+basic_pic_test.log: basic_pic_test$(EXEEXT)
+	@p='basic_pic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+basic_static_pic_test.log: basic_static_pic_test$(EXEEXT)
+	@p='basic_static_pic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+basic_pie_test.log: basic_pie_test$(EXEEXT)
+	@p='basic_pie_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+constructor_test.log: constructor_test$(EXEEXT)
+	@p='constructor_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+constructor_static_test.log: constructor_static_test$(EXEEXT)
+	@p='constructor_static_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_test.log: two_file_test$(EXEEXT)
+	@p='two_file_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_static_test.log: two_file_static_test$(EXEEXT)
+	@p='two_file_static_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_pic_test.log: two_file_pic_test$(EXEEXT)
+	@p='two_file_pic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_shared_1_test.log: two_file_shared_1_test$(EXEEXT)
+	@p='two_file_shared_1_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_shared_2_test.log: two_file_shared_2_test$(EXEEXT)
+	@p='two_file_shared_2_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_shared_1_pic_2_test.log: two_file_shared_1_pic_2_test$(EXEEXT)
+	@p='two_file_shared_1_pic_2_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_shared_2_pic_1_test.log: two_file_shared_2_pic_1_test$(EXEEXT)
+	@p='two_file_shared_2_pic_1_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_same_shared_test.log: two_file_same_shared_test$(EXEEXT)
+	@p='two_file_same_shared_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_separate_shared_12_test.log: two_file_separate_shared_12_test$(EXEEXT)
+	@p='two_file_separate_shared_12_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_separate_shared_21_test.log: two_file_separate_shared_21_test$(EXEEXT)
+	@p='two_file_separate_shared_21_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_relocatable_test.log: two_file_relocatable_test$(EXEEXT)
+	@p='two_file_relocatable_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_pie_test.log: two_file_pie_test$(EXEEXT)
+	@p='two_file_pie_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_shared_1_nonpic_test.log: two_file_shared_1_nonpic_test$(EXEEXT)
+	@p='two_file_shared_1_nonpic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_shared_2_nonpic_test.log: two_file_shared_2_nonpic_test$(EXEEXT)
+	@p='two_file_shared_2_nonpic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_same_shared_nonpic_test.log: two_file_same_shared_nonpic_test$(EXEEXT)
+	@p='two_file_same_shared_nonpic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_separate_shared_12_nonpic_test.log: two_file_separate_shared_12_nonpic_test$(EXEEXT)
+	@p='two_file_separate_shared_12_nonpic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_separate_shared_21_nonpic_test.log: two_file_separate_shared_21_nonpic_test$(EXEEXT)
+	@p='two_file_separate_shared_21_nonpic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_mixed_shared_test.log: two_file_mixed_shared_test$(EXEEXT)
+	@p='two_file_mixed_shared_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_mixed_2_shared_test.log: two_file_mixed_2_shared_test$(EXEEXT)
+	@p='two_file_mixed_2_shared_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_strip_test.log: two_file_strip_test$(EXEEXT)
+	@p='two_file_strip_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+two_file_same_shared_strip_test.log: two_file_same_shared_strip_test$(EXEEXT)
+	@p='two_file_same_shared_strip_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+common_test_1.log: common_test_1$(EXEEXT)
+	@p='common_test_1$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+common_test_2.log: common_test_2$(EXEEXT)
+	@p='common_test_2$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+exception_test.log: exception_test$(EXEEXT)
+	@p='exception_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+exception_static_test.log: exception_static_test$(EXEEXT)
+	@p='exception_static_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+exception_shared_1_test.log: exception_shared_1_test$(EXEEXT)
+	@p='exception_shared_1_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+exception_shared_2_test.log: exception_shared_2_test$(EXEEXT)
+	@p='exception_shared_2_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+exception_same_shared_test.log: exception_same_shared_test$(EXEEXT)
+	@p='exception_same_shared_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+exception_separate_shared_12_test.log: exception_separate_shared_12_test$(EXEEXT)
+	@p='exception_separate_shared_12_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+exception_separate_shared_21_test.log: exception_separate_shared_21_test$(EXEEXT)
+	@p='exception_separate_shared_21_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+weak_test.log: weak_test$(EXEEXT)
+	@p='weak_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+weak_undef_test.log: weak_undef_test$(EXEEXT)
+	@p='weak_undef_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+weak_undef_nonpic_test.log: weak_undef_nonpic_test$(EXEEXT)
+	@p='weak_undef_nonpic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+weak_alias_test.log: weak_alias_test$(EXEEXT)
+	@p='weak_alias_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+weak_plt.log: weak_plt$(EXEEXT)
+	@p='weak_plt$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+copy_test.log: copy_test$(EXEEXT)
+	@p='copy_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_test.log: tls_test$(EXEEXT)
+	@p='tls_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_pic_test.log: tls_pic_test$(EXEEXT)
+	@p='tls_pic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_pie_test.log: tls_pie_test$(EXEEXT)
+	@p='tls_pie_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_pie_pic_test.log: tls_pie_pic_test$(EXEEXT)
+	@p='tls_pie_pic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_shared_test.log: tls_shared_test$(EXEEXT)
+	@p='tls_shared_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_shared_ie_test.log: tls_shared_ie_test$(EXEEXT)
+	@p='tls_shared_ie_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_shared_gd_to_ie_test.log: tls_shared_gd_to_ie_test$(EXEEXT)
+	@p='tls_shared_gd_to_ie_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_shared_gnu2_gd_to_ie_test.log: tls_shared_gnu2_gd_to_ie_test$(EXEEXT)
+	@p='tls_shared_gnu2_gd_to_ie_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_shared_gnu2_test.log: tls_shared_gnu2_test$(EXEEXT)
+	@p='tls_shared_gnu2_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_static_test.log: tls_static_test$(EXEEXT)
+	@p='tls_static_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_static_pic_test.log: tls_static_pic_test$(EXEEXT)
+	@p='tls_static_pic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_shared_nonpic_test.log: tls_shared_nonpic_test$(EXEEXT)
+	@p='tls_shared_nonpic_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+many_sections_test.log: many_sections_test$(EXEEXT)
+	@p='many_sections_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+many_sections_r_test.log: many_sections_r_test$(EXEEXT)
+	@p='many_sections_r_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+initpri1.log: initpri1$(EXEEXT)
+	@p='initpri1$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+flagstest_o_specialfile.log: flagstest_o_specialfile$(EXEEXT)
+	@p='flagstest_o_specialfile$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+flagstest_compress_debug_sections.log: flagstest_compress_debug_sections$(EXEEXT)
+	@p='flagstest_compress_debug_sections$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+flagstest_o_specialfile_and_compress_debug_sections.log: flagstest_o_specialfile_and_compress_debug_sections$(EXEEXT)
+	@p='flagstest_o_specialfile_and_compress_debug_sections$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test.log: ver_test$(EXEEXT)
+	@p='ver_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_2.log: ver_test_2$(EXEEXT)
+	@p='ver_test_2$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_6.log: ver_test_6$(EXEEXT)
+	@p='ver_test_6$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_8.log: ver_test_8$(EXEEXT)
+	@p='ver_test_8$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_9.log: ver_test_9$(EXEEXT)
+	@p='ver_test_9$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+ver_test_11.log: ver_test_11$(EXEEXT)
+	@p='ver_test_11$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+protected_1.log: protected_1$(EXEEXT)
+	@p='protected_1$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+protected_2.log: protected_2$(EXEEXT)
+	@p='protected_2$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+relro_test.log: relro_test$(EXEEXT)
+	@p='relro_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+relro_script_test.log: relro_script_test$(EXEEXT)
+	@p='relro_script_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_1.log: script_test_1$(EXEEXT)
+	@p='script_test_1$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_2.log: script_test_2$(EXEEXT)
+	@p='script_test_2$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+justsyms.log: justsyms$(EXEEXT)
+	@p='justsyms$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+binary_test.log: binary_test$(EXEEXT)
+	@p='binary_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+script_test_3.log: script_test_3$(EXEEXT)
+	@p='script_test_3$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_phdrs_script_test.log: tls_phdrs_script_test$(EXEEXT)
+	@p='tls_phdrs_script_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+tls_script_test.log: tls_script_test$(EXEEXT)
+	@p='tls_script_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+thin_archive_test_1.log: thin_archive_test_1$(EXEEXT)
+	@p='thin_archive_test_1$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+thin_archive_test_2.log: thin_archive_test_2$(EXEEXT)
+	@p='thin_archive_test_2$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_1.log: plugin_test_1$(EXEEXT)
+	@p='plugin_test_1$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_2.log: plugin_test_2$(EXEEXT)
+	@p='plugin_test_2$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_3.log: plugin_test_3$(EXEEXT)
+	@p='plugin_test_3$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_4.log: plugin_test_4$(EXEEXT)
+	@p='plugin_test_4$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_5.log: plugin_test_5$(EXEEXT)
+	@p='plugin_test_5$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_6.log: plugin_test_6$(EXEEXT)
+	@p='plugin_test_6$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_7.log: plugin_test_7$(EXEEXT)
+	@p='plugin_test_7$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+plugin_test_8.log: plugin_test_8$(EXEEXT)
+	@p='plugin_test_8$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+exclude_libs_test.log: exclude_libs_test$(EXEEXT)
+	@p='exclude_libs_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+local_labels_test.log: local_labels_test$(EXEEXT)
+	@p='local_labels_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+discard_locals_test.log: discard_locals_test$(EXEEXT)
+	@p='discard_locals_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+large.log: large$(EXEEXT)
+	@p='large$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+permission_test.log: permission_test$(EXEEXT)
+	@p='permission_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+searched_file_test.log: searched_file_test$(EXEEXT)
+	@p='searched_file_test$(EXEEXT)'; $(am__check_pre) $(LOG_COMPILE) "$$tst" $(am__check_post)
+.test.log:
+	@p='$<'; $(am__check_pre) $(TEST_LOG_COMPILE) "$$tst" $(am__check_post)
+@am__EXEEXT_TRUE@.test$(EXEEXT).log:
+@am__EXEEXT_TRUE@	@p='$<'; $(am__check_pre) $(TEST_LOG_COMPILE) "$$tst" $(am__check_post)
 check-am: all-am
 	$(MAKE) $(AM_MAKEFLAGS) $(check_LIBRARIES) $(check_PROGRAMS) \
 	  $(check_SCRIPTS) $(check_DATA)
@@ -2511,6 +2889,10 @@ install-strip:
 	    echo "INSTALL_PROGRAM_ENV=STRIPPROG='$(STRIP)'"` install
 mostlyclean-generic:
 	-test -z "$(MOSTLYCLEANFILES)" || rm -f $(MOSTLYCLEANFILES)
+	-test -z "$(TEST_LOGS)" || rm -f $(TEST_LOGS)
+	-test -z "$(TEST_LOGS_TMP)" || rm -f $(TEST_LOGS_TMP)
+	-test -z "$(TEST_SUITE_HTML)" || rm -f $(TEST_SUITE_HTML)
+	-test -z "$(TEST_SUITE_LOG)" || rm -f $(TEST_SUITE_LOG)
 
 clean-generic:
 
@@ -2592,12 +2974,13 @@ ps-am:
 
 uninstall-am:
 
-.MAKE: all check check-am install install-am install-strip
+.MAKE: all check check-am check-html install install-am install-strip \
+	recheck recheck-html
 
-.PHONY: CTAGS GTAGS all all-am check check-TESTS check-am clean \
-	clean-checkLIBRARIES clean-checkPROGRAMS clean-generic ctags \
-	distclean distclean-compile distclean-generic distclean-tags \
-	distdir dvi dvi-am html html-am info info-am install \
+.PHONY: CTAGS GTAGS all all-am check check-TESTS check-am check-html \
+	clean clean-checkLIBRARIES clean-checkPROGRAMS clean-generic \
+	ctags distclean distclean-compile distclean-generic \
+	distclean-tags dvi dvi-am html html-am info info-am install \
 	install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
 	install-html-am install-info install-info-am install-man \
@@ -2605,7 +2988,7 @@ uninstall-am:
 	install-strip installcheck installcheck-am installdirs \
 	maintainer-clean maintainer-clean-generic mostlyclean \
 	mostlyclean-compile mostlyclean-generic pdf pdf-am ps ps-am \
-	tags uninstall uninstall-am
+	recheck recheck-html tags uninstall uninstall-am
 
 
 # ---------------------------------------------------------------------
@@ -2688,6 +3071,38 @@ uninstall-am:
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_NM) icf_safe_so_test > icf_safe_so_test_1.stdout
 @GCC_TRUE@@NATIVE_LINKER_TRUE@icf_safe_so_test_2.stdout: icf_safe_so_test
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_READELF) -h icf_safe_so_test > icf_safe_so_test_2.stdout
+@GCC_TRUE@@NATIVE_LINKER_TRUE@final_layout.o: final_layout.cc
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXCOMPILE) -O0 -c -ffunction-sections  -fdata-sections -g -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@final_layout_sequence.txt:
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	(echo "*_Z3barv*" && echo ".text._Z3bazv" && echo "*_Z3foov*" && echo "*global_varb*" && echo "*global_vara*" && echo "*global_varc*") > final_layout_sequence.txt
+@GCC_TRUE@@NATIVE_LINKER_TRUE@final_layout: final_layout.o final_layout_sequence.txt gcctestdir/ld
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,--section-ordering-file,final_layout_sequence.txt final_layout.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@final_layout.stdout: final_layout
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_NM) final_layout > final_layout.stdout
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_virtual_function_folding_test.o: icf_virtual_function_folding_test.cc
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIE -g -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_virtual_function_folding_test: icf_virtual_function_folding_test.o gcctestdir/ld
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_virtual_function_folding_test.o -pie
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_preemptible_functions_test.o: icf_preemptible_functions_test.cc
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_preemptible_functions_test: icf_preemptible_functions_test.o gcctestdir/ld
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_preemptible_functions_test.o -fPIC -shared
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_preemptible_functions_test.stdout: icf_preemptible_functions_test
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_NM) icf_preemptible_functions_test > icf_preemptible_functions_test.stdout
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_string_merge_test.o: icf_string_merge_test.cc
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_string_merge_test: icf_string_merge_test.o gcctestdir/ld
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_string_merge_test.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_string_merge_test.stdout: icf_string_merge_test
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_NM) icf_string_merge_test > icf_string_merge_test.stdout
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_sht_rel_addend_test_1.o: icf_sht_rel_addend_test_1.cc
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_sht_rel_addend_test_2.o: icf_sht_rel_addend_test_2.cc
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXCOMPILE) -O0 -c -ffunction-sections -fPIC -g -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_sht_rel_addend_test: icf_sht_rel_addend_test_1.o icf_sht_rel_addend_test_2.o gcctestdir/ld
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,--icf=all icf_sht_rel_addend_test_1.o icf_sht_rel_addend_test_2.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@icf_sht_rel_addend_test.stdout: icf_sht_rel_addend_test
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_NM) icf_sht_rel_addend_test > icf_sht_rel_addend_test.stdout
 @GCC_TRUE@@NATIVE_LINKER_TRUE@basic_test.o: basic_test.cc
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXCOMPILE) -O0 -c -o $@ $<
 @GCC_TRUE@@NATIVE_LINKER_TRUE@basic_test: basic_test.o gcctestdir/ld
@@ -3054,6 +3469,12 @@ uninstall-am:
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	-Wl,-Ttext=0x20001000 -Wl,-Tdata=0x20200000 -Wl,-Tbss=0x20400000
 @GCC_TRUE@@NATIVE_LINKER_TRUE@script_test_8.stdout: script_test_8
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_READELF) -SlW script_test_8 > script_test_8.stdout
+@GCC_TRUE@@NATIVE_LINKER_TRUE@script_test_9.o: script_test_9.cc
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXCOMPILE) -O0 -c -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@script_test_9: gcctestdir/ld $(srcdir)/script_test_9.t script_test_9.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXLINK) -Bgcctestdir/ script_test_9.o -T $(srcdir)/script_test_9.t
+@GCC_TRUE@@NATIVE_LINKER_TRUE@script_test_9.stdout: script_test_9
+@GCC_TRUE@@NATIVE_LINKER_TRUE@	$(TEST_READELF) -lW script_test_9 > script_test_9.stdout
 @GCC_TRUE@@NATIVE_LINKER_TRUE@dynamic_list: basic_test.o gcctestdir/ld $(srcdir)/dynamic_list.t
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	$(CXXLINK) -Bgcctestdir/ basic_test.o \
 @GCC_TRUE@@NATIVE_LINKER_TRUE@	  -Wl,--dynamic-list $(srcdir)/dynamic_list.t \
@@ -3105,6 +3526,41 @@ uninstall-am:
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(TEST_AR) cr $@ $^
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_5: two_file_test_main.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2.syms unused.syms gcctestdir/ld plugin_test.so
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,--no-demangle,--plugin,"./plugin_test.so",--plugin-opt,"_Z4f13iv",--gc-sections two_file_test_main.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2.syms unused.syms
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_6: plugin_common_test_1.syms plugin_common_test_2.syms gcctestdir/ld plugin_test.so
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,--no-demangle,--plugin,"./plugin_test.so" plugin_common_test_1.syms plugin_common_test_2.syms 2>plugin_test_6.err
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_6.err: plugin_test_6
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	@touch plugin_test_6.err
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_7: plugin_test_7_1.o plugin_test_7_1.syms plugin_test_7_2.o gcctestdir/ld plugin_test.so
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(LINK) -Bgcctestdir/ -Wl,--no-demangle,--plugin,"./plugin_test.so",--gc-sections,--print-gc-sections plugin_test_7_1.syms plugin_test_7_2.o 2>plugin_test_7.err
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_7.syms: plugin_test_7
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_7_1.o: plugin_test_7_1.c
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(COMPILE) -DLTO -O0 -c -ffunction-sections -fdata-sections -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_7_1_orig.o: plugin_test_7_1.c
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(COMPILE) -O0 -c -ffunction-sections -fdata-sections -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_7_1.syms: plugin_test_7_1_orig.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_7_2.o: plugin_test_7_2.c
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(COMPILE) -O0 -c -ffunction-sections -fdata-sections -o $@ $<
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_7.err: plugin_test_7
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_8.o: two_file_test_main.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2.o ../ld-new plugin_test.so
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	../ld-new -r -o $@ --no-demangle --plugin "./plugin_test.so" two_file_test_main.o two_file_test_1.syms two_file_test_1b.syms two_file_test_2.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_8: plugin_test_8.o gcctestdir/ld
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(CXXLINK) -Bgcctestdir/ -Wl,--no-demangle plugin_test_8.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test_9.err: two_file_test_main.o two_file_test_1c.syms two_file_test_2.syms gcctestdir/ld plugin_test.so
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	@echo $(CXXLINK) -Bgcctestdir/ -o plugin_test_9 -Wl,--no-demangle,--plugin,"./plugin_test.so" two_file_test_main.o two_file_test_1c.syms two_file_test_2.syms "2>$@"
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	@if $(CXXLINK) -Bgcctestdir/ -o plugin_test_9 -Wl,--no-demangle,--plugin,"./plugin_test.so" two_file_test_main.o two_file_test_1c.syms two_file_test_2.syms 2>$@; then \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	  echo 1>&2 "Link of plugin_test_9 should have failed"; \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	  rm -f $@; \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	  exit 1; \
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	fi
+# Make a .syms file that claims to define the symbol _Z4t16av.
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@two_file_test_1c.syms: two_file_test_1.syms two_file_test_1c.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	cp two_file_test_1.syms $@.tmp
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	grep "_Z4t16av" two_file_test_1b.syms >> $@.tmp
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	mv -f $@.tmp $@
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@two_file_test_1c.o: two_file_test_1.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	cp two_file_test_1.o $@
 
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_test.so: plugin_test.o
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(LINK) -Bgcctestdir/ -shared plugin_test.o
@@ -3118,6 +3574,10 @@ uninstall-am:
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@two_file_test_1b.syms: two_file_test_1b.o
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(TEST_READELF) -sW $< >$@ 2>/dev/null
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@two_file_test_2.syms: two_file_test_2.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_common_test_1.syms: plugin_common_test_1.o
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(TEST_READELF) -sW $< >$@ 2>/dev/null
+@GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@plugin_common_test_2.syms: plugin_common_test_2.o
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@	$(TEST_READELF) -sW $< >$@ 2>/dev/null
 
 @GCC_TRUE@@NATIVE_LINKER_TRUE@@PLUGINS_TRUE@empty.syms:
@@ -3288,10 +3748,10 @@ uninstall-am:
 @DEFAULT_TARGET_ARM_TRUE@thumb_bl_out_of_range.stdout: thumb_bl_out_of_range
 @DEFAULT_TARGET_ARM_TRUE@	$(TEST_OBJDUMP) -D $< > $@
 
-@DEFAULT_TARGET_ARM_TRUE@thumb_bl_out_of_range: thumb_bl_in_range.o ../ld-new
+@DEFAULT_TARGET_ARM_TRUE@thumb_bl_out_of_range: thumb_bl_out_of_range.o ../ld-new
 @DEFAULT_TARGET_ARM_TRUE@	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
 
-@DEFAULT_TARGET_ARM_TRUE@thumb_bl_out_of_range.o: thumb_bl_in_range.s
+@DEFAULT_TARGET_ARM_TRUE@thumb_bl_out_of_range.o: thumb_bl_out_of_range.s
 @DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ -march=armv5te $<
 
 @DEFAULT_TARGET_ARM_TRUE@thumb2_bl_in_range.stdout: thumb2_bl_in_range
@@ -3306,10 +3766,46 @@ uninstall-am:
 @DEFAULT_TARGET_ARM_TRUE@thumb2_bl_out_of_range.stdout: thumb2_bl_out_of_range
 @DEFAULT_TARGET_ARM_TRUE@	$(TEST_OBJDUMP) -D $< > $@
 
-@DEFAULT_TARGET_ARM_TRUE@thumb2_bl_out_of_range: thumb2_bl_in_range.o ../ld-new
+@DEFAULT_TARGET_ARM_TRUE@thumb2_bl_out_of_range: thumb2_bl_out_of_range.o ../ld-new
 @DEFAULT_TARGET_ARM_TRUE@	../ld-new -T $(srcdir)/thumb2_branch_range.t -o $@ $<
 
-@DEFAULT_TARGET_ARM_TRUE@thumb2_bl_out_of_range.o: thumb_bl_in_range.s
+@DEFAULT_TARGET_ARM_TRUE@thumb2_bl_out_of_range.o: thumb_bl_out_of_range.s
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ -march=armv7-a $<
+
+@DEFAULT_TARGET_ARM_TRUE@thumb_blx_in_range.stdout: thumb_blx_in_range
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_OBJDUMP) -D $< > $@
+
+@DEFAULT_TARGET_ARM_TRUE@thumb_blx_in_range: thumb_blx_in_range.o ../ld-new
+@DEFAULT_TARGET_ARM_TRUE@	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+
+@DEFAULT_TARGET_ARM_TRUE@thumb_blx_in_range.o: thumb_blx_in_range.s
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ -march=armv5te $<
+
+@DEFAULT_TARGET_ARM_TRUE@thumb_blx_out_of_range.stdout: thumb_blx_out_of_range
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_OBJDUMP) -D $< > $@
+
+@DEFAULT_TARGET_ARM_TRUE@thumb_blx_out_of_range: thumb_blx_out_of_range.o ../ld-new
+@DEFAULT_TARGET_ARM_TRUE@	../ld-new -T $(srcdir)/thumb_branch_range.t -o $@ $<
+
+@DEFAULT_TARGET_ARM_TRUE@thumb_blx_out_of_range.o: thumb_blx_out_of_range.s
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ -march=armv5te $<
+
+@DEFAULT_TARGET_ARM_TRUE@thumb2_blx_in_range.stdout: thumb2_blx_in_range
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_OBJDUMP) -D $< > $@
+
+@DEFAULT_TARGET_ARM_TRUE@thumb2_blx_in_range: thumb2_blx_in_range.o ../ld-new
+@DEFAULT_TARGET_ARM_TRUE@	../ld-new -T $(srcdir)/thumb2_branch_range.t -o $@ $<
+
+@DEFAULT_TARGET_ARM_TRUE@thumb2_blx_in_range.o: thumb_blx_in_range.s
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ -march=armv7-a $<
+
+@DEFAULT_TARGET_ARM_TRUE@thumb2_blx_out_of_range.stdout: thumb2_blx_out_of_range
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_OBJDUMP) -D $< > $@
+
+@DEFAULT_TARGET_ARM_TRUE@thumb2_blx_out_of_range: thumb2_blx_out_of_range.o ../ld-new
+@DEFAULT_TARGET_ARM_TRUE@	../ld-new -T $(srcdir)/thumb2_branch_range.t -o $@ $<
+
+@DEFAULT_TARGET_ARM_TRUE@thumb2_blx_out_of_range.o: thumb_blx_out_of_range.s
 @DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ -march=armv7-a $<
 
 @DEFAULT_TARGET_ARM_TRUE@arm_fix_v4bx.stdout: arm_fix_v4bx
@@ -3332,6 +3828,36 @@ uninstall-am:
 
 @DEFAULT_TARGET_ARM_TRUE@arm_no_fix_v4bx: arm_fix_v4bx.o ../ld-new
 @DEFAULT_TARGET_ARM_TRUE@	../ld-new -o $@ $<
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_6.stdout: arm_attr_merge_6
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_READELF) -A $< > $@
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_6: arm_attr_merge_6a.o arm_attr_merge_6b.o
+@DEFAULT_TARGET_ARM_TRUE@	../ld-new -o $@ arm_attr_merge_6a.o arm_attr_merge_6b.o
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_6a.o: arm_attr_merge_6a.s
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ $<
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_6b.o: arm_attr_merge_6b.s
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ $<
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_6r.stdout: arm_attr_merge_6r
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_READELF) -A $< > $@
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_6r: arm_attr_merge_6b.o arm_attr_merge_6a.o
+@DEFAULT_TARGET_ARM_TRUE@	../ld-new -o $@ arm_attr_merge_6b.o arm_attr_merge_6a.o
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_7.stdout: arm_attr_merge_7
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_READELF) -A $< > $@
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_7: arm_attr_merge_7a.o arm_attr_merge_7b.o
+@DEFAULT_TARGET_ARM_TRUE@	../ld-new -o $@ arm_attr_merge_7a.o arm_attr_merge_7b.o
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_7a.o: arm_attr_merge_7a.s
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ $<
+
+@DEFAULT_TARGET_ARM_TRUE@arm_attr_merge_7b.o: arm_attr_merge_7b.s
+@DEFAULT_TARGET_ARM_TRUE@	$(TEST_AS) -o $@ $<
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

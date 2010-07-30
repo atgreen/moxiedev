@@ -88,6 +88,7 @@ cmdpy_dont_repeat (PyObject *self, PyObject *args)
 
 
 /* Called if the gdb cmd_list_element is destroyed.  */
+
 static void
 cmdpy_destroyer (struct cmd_list_element *self, void *context)
 {
@@ -111,6 +112,7 @@ cmdpy_destroyer (struct cmd_list_element *self, void *context)
 }
 
 /* Called by gdb to invoke the command.  */
+
 static void
 cmdpy_function (struct cmd_list_element *command, char *args, int from_tty)
 {
@@ -145,31 +147,51 @@ cmdpy_function (struct cmd_list_element *command, char *args, int from_tty)
 				       ttyobj, NULL);
   Py_DECREF (argobj);
   Py_DECREF (ttyobj);
+
   if (! result)
     {
       PyObject *ptype, *pvalue, *ptraceback;
-      char *s, *str;
+      char *msg;
 
       PyErr_Fetch (&ptype, &pvalue, &ptraceback);
 
-      if (pvalue && PyString_Check (pvalue))
-	{
-	  /* Make a temporary copy of the string data.  */
-	  char *s = PyString_AsString (pvalue);
-	  char *copy = alloca (strlen (s) + 1);
-	  strcpy (copy, s);
+      /* Try to fetch an error message contained within ptype, pvalue.
+	 When fetching the error message we need to make our own copy,
+	 we no longer own ptype, pvalue after the call to PyErr_Restore.  */
 
+      msg = gdbpy_exception_to_string (ptype, pvalue);
+      make_cleanup (xfree, msg);
+
+      if (msg == NULL)
+	{
+	  /* An error occurred computing the string representation of the
+	     error message.  This is rare, but we should inform the user.  */
+	  printf_filtered (_("An error occurred in a Python command\n"
+			     "and then another occurred computing the error message.\n"));
+	  gdbpy_print_stack ();
+	}
+
+      /* Don't print the stack for gdb.GdbError exceptions.
+	 It is generally used to flag user errors.
+
+	 We also don't want to print "Error occurred in Python command"
+	 for user errors.  However, a missing message for gdb.GdbError
+	 exceptions is arguably a bug, so we flag it as such.  */
+
+      if (! PyErr_GivenExceptionMatches (ptype, gdbpy_gdberror_exc)
+	  || msg == NULL || *msg == '\0')
+	{
 	  PyErr_Restore (ptype, pvalue, ptraceback);
 	  gdbpy_print_stack ();
-	  error (_("Error occurred in Python command: %s"), copy);
+	  if (msg != NULL && *msg != '\0')
+	    error (_("Error occurred in Python command: %s"), msg);
+	  else
+	    error (_("Error occurred in Python command."));
 	}
       else
-	{
-	  PyErr_Restore (ptype, pvalue, ptraceback);
-	  gdbpy_print_stack ();
-	  error (_("Error occurred in Python command."));
-	}
+	error ("%s", msg);
     }
+
   Py_DECREF (result);
   do_cleanups (cleanup);
 }
@@ -218,14 +240,15 @@ cmdpy_completer (struct cmd_list_element *command, char *text, char *word)
     {
       Py_ssize_t i, len = PySequence_Size (resultobj);
       Py_ssize_t out;
+
       if (len < 0)
 	goto done;
 
       result = (char **) xmalloc ((len + 1) * sizeof (char *));
       for (i = out = 0; i < len; ++i)
 	{
-	  int l;
 	  PyObject *elt = PySequence_GetItem (resultobj, i);
+
 	  if (elt == NULL || ! gdbpy_is_string (elt))
 	    {
 	      /* Skip problem elements.  */
@@ -242,6 +265,7 @@ cmdpy_completer (struct cmd_list_element *command, char *text, char *word)
       /* User code may also return one of the completion constants,
 	 thus requesting that sort of completion.  */
       long value = PyInt_AsLong (resultobj);
+
       if (value >= 0 && value < (long) N_COMPLETERS)
 	result = completers[value].completer (command, text, word);
     }
@@ -263,10 +287,14 @@ cmdpy_completer (struct cmd_list_element *command, char *text, char *word)
    *BASE_LIST is set to the final prefix command's list of
    *sub-commands.
    
+   START_LIST is the list in which the search starts.
+
    This function returns the xmalloc()d name of the new command.  On
    error sets the Python error and returns NULL.  */
-static char *
-parse_command_name (char *text, struct cmd_list_element ***base_list)
+char *
+gdbpy_parse_command_name (char *text,
+			  struct cmd_list_element ***base_list,
+			  struct cmd_list_element **start_list)
 {
   struct cmd_list_element *elt;
   int len = strlen (text);
@@ -279,7 +307,7 @@ parse_command_name (char *text, struct cmd_list_element ***base_list)
     ;
   if (i < 0)
     {
-      PyErr_SetString (PyExc_RuntimeError, _("no command name found"));
+      PyErr_SetString (PyExc_RuntimeError, _("No command name found."));
       return NULL;
     }
   lastchar = i;
@@ -299,7 +327,7 @@ parse_command_name (char *text, struct cmd_list_element ***base_list)
     ;
   if (i < 0)
     {
-      *base_list = &cmdlist;
+      *base_list = start_list;
       return result;
     }
 
@@ -308,10 +336,10 @@ parse_command_name (char *text, struct cmd_list_element ***base_list)
   prefix_text[i + 1] = '\0';
 
   text = prefix_text;
-  elt = lookup_cmd_1 (&text, cmdlist, NULL, 1);
+  elt = lookup_cmd_1 (&text, *start_list, NULL, 1);
   if (!elt || elt == (struct cmd_list_element *) -1)
     {
-      PyErr_Format (PyExc_RuntimeError, _("could not find command prefix %s"),
+      PyErr_Format (PyExc_RuntimeError, _("Could not find command prefix %s."),
 		    prefix_text);
       xfree (prefix_text);
       xfree (result);
@@ -325,7 +353,7 @@ parse_command_name (char *text, struct cmd_list_element ***base_list)
       return result;
     }
 
-  PyErr_Format (PyExc_RuntimeError, _("'%s' is not a prefix command"),
+  PyErr_Format (PyExc_RuntimeError, _("'%s' is not a prefix command."),
 		prefix_text);
   xfree (prefix_text);
   xfree (result);
@@ -374,7 +402,7 @@ cmdpy_init (PyObject *self, PyObject *args, PyObject *kw)
       /* Note: this is apparently not documented in Python.  We return
 	 0 for success, -1 for failure.  */
       PyErr_Format (PyExc_RuntimeError,
-		    _("command object already initialized"));
+		    _("Command object already initialized."));
       return -1;
     }
 
@@ -389,17 +417,17 @@ cmdpy_init (PyObject *self, PyObject *args, PyObject *kw)
       && cmdtype != class_trace && cmdtype != class_obscure
       && cmdtype != class_maintenance)
     {
-      PyErr_Format (PyExc_RuntimeError, _("invalid command class argument"));
+      PyErr_Format (PyExc_RuntimeError, _("Invalid command class argument."));
       return -1;
     }
 
   if (completetype < -1 || completetype >= (int) N_COMPLETERS)
     {
-      PyErr_Format (PyExc_RuntimeError, _("invalid completion type argument"));
+      PyErr_Format (PyExc_RuntimeError, _("Invalid completion type argument."));
       return -1;
     }
 
-  cmd_name = parse_command_name (name, &cmd_list);
+  cmd_name = gdbpy_parse_command_name (name, &cmd_list, &cmdlist);
   if (! cmd_name)
     return -1;
 
@@ -436,6 +464,7 @@ cmdpy_init (PyObject *self, PyObject *args, PyObject *kw)
   if (PyObject_HasAttr (self, gdbpy_doc_cst))
     {
       PyObject *ds_obj = PyObject_GetAttr (self, gdbpy_doc_cst);
+
       if (ds_obj && gdbpy_is_string (ds_obj))
 	docstring = python_string_to_host_string (ds_obj);
     }
@@ -583,3 +612,55 @@ static PyTypeObject cmdpy_object_type =
   0,				  /* tp_alloc */
   PyType_GenericNew		  /* tp_new */
 };
+
+
+
+/* Utility to build a buildargv-like result from ARGS.
+   This intentionally parses arguments the way libiberty/argv.c:buildargv
+   does.  It splits up arguments in a reasonable way, and we want a standard
+   way of parsing arguments.  Several gdb commands use buildargv to parse their
+   arguments.  Plus we want to be able to write compatible python
+   implementations of gdb commands.  */
+
+PyObject *
+gdbpy_string_to_argv (PyObject *self, PyObject *args)
+{
+  PyObject *py_argv;
+  char *input;
+
+  if (!PyArg_ParseTuple (args, "s", &input))
+    return NULL;
+
+  py_argv = PyList_New (0);
+
+  /* buildargv uses NULL to represent an empty argument list, but we can't use
+     that in Python.  Instead, if ARGS is "" then return an empty list.
+     This undoes the NULL -> "" conversion that cmdpy_function does.  */
+
+  if (*input != '\0')
+    {
+      char **c_argv = gdb_buildargv (input);
+      int i;
+
+      for (i = 0; c_argv[i] != NULL; ++i)
+	{
+	  PyObject *argp = PyString_FromString (c_argv[i]);
+
+	  if (argp == NULL
+	      || PyList_Append (py_argv, argp) < 0)
+	    {
+	      if (argp != NULL)
+		{
+		  Py_DECREF (argp);
+		}
+	      Py_DECREF (py_argv);
+	      freeargv (c_argv);
+	      return NULL;
+	    }
+	}
+
+      freeargv (c_argv);
+    }
+
+  return py_argv;
+}

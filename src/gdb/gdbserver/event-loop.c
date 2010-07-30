@@ -39,7 +39,7 @@
 #endif
 
 typedef struct gdb_event gdb_event;
-typedef void (event_handler_func) (int);
+typedef int (event_handler_func) (int);
 
 /* Tell create_file_handler what events we are interested in.  */
 
@@ -141,6 +141,36 @@ static struct
   }
 gdb_notifier;
 
+/* Callbacks are just routines that are executed before waiting for the
+   next event.  In GDB this is struct gdb_timer.  We don't need timers
+   so rather than copy all that complexity in gdbserver, we provide what
+   we need, but we do so in a way that if/when the day comes that we need
+   that complexity, it'll be easier to add - replace callbacks with timers
+   and use a delta of zero (which is all gdb currently uses timers for anyway).
+
+   PROC will be executed before gdbserver goes to sleep to wait for the
+   next event.  */
+
+struct callback_event
+  {
+    int id;
+    callback_handler_func *proc;
+    gdb_client_data *data;
+    struct callback_event *next;
+  };
+
+/* Table of registered callbacks.  */
+
+static struct
+  {
+    struct callback_event *first;
+    struct callback_event *last;
+
+    /* Id of the last callback created.  */
+    int num_callbacks;
+  }
+callback_list;
+
 /* Insert an event object into the gdb event queue.
 
    EVENT_PTR points to the event to be inserted into the queue.  The
@@ -211,11 +241,87 @@ process_event (void)
       free (event_ptr);
 
       /* Now call the procedure associated with the event.  */
-      (*proc) (fd);
+      if ((*proc) (fd))
+	return -1;
       return 1;
     }
 
   /* This is the case if there are no event on the event queue.  */
+  return 0;
+}
+
+/* Append PROC to the callback list.
+   The result is the "id" of the callback that can be passed back to
+   delete_callback_event.  */
+
+int
+append_callback_event (callback_handler_func *proc, gdb_client_data data)
+{
+  struct callback_event *event_ptr;
+
+  event_ptr = xmalloc (sizeof (*event_ptr));
+  event_ptr->id = callback_list.num_callbacks++;
+  event_ptr->proc = proc;
+  event_ptr->data = data;
+  event_ptr->next = NULL;
+  if (callback_list.first == NULL)
+    callback_list.first = event_ptr;
+  if (callback_list.last != NULL)
+    callback_list.last->next = event_ptr;
+  callback_list.last = event_ptr;
+  return event_ptr->id;
+}
+
+/* Delete callback ID.
+   It is not an error callback ID doesn't exist.  */
+
+void
+delete_callback_event (int id)
+{
+  struct callback_event **p;
+
+  for (p = &callback_list.first; *p != NULL; p = &(*p)->next)
+    {
+      struct callback_event *event_ptr = *p;
+
+      if (event_ptr->id == id)
+	{
+	  *p = event_ptr->next;
+	  if (event_ptr == callback_list.last)
+	    callback_list.last = NULL;
+	  free (event_ptr);
+	  break;
+	}
+    }
+}
+
+/* Run the next callback.
+   The result is 1 if a callback was called and event processing
+   should continue, -1 if the callback wants the event loop to exit,
+   and 0 if there are no more callbacks.  */
+
+static int
+process_callback (void)
+{
+  struct callback_event *event_ptr;
+
+  event_ptr = callback_list.first;
+  if (event_ptr != NULL)
+    {
+      callback_handler_func *proc = event_ptr->proc;
+      gdb_client_data *data = event_ptr->data;
+
+      /* Remove the event before calling PROC,
+	 more events may get added by PROC.  */
+      callback_list.first = event_ptr->next;
+      if (callback_list.first == NULL)
+	callback_list.last = NULL;
+      free  (event_ptr);
+      if ((*proc) (data))
+	return -1;
+      return 1;
+    }
+
   return 0;
 }
 
@@ -347,7 +453,7 @@ delete_file_handler (int fd)
    through event_ptr->proc.  EVENT_FILE_DESC is file descriptor of the
    event in the front of the event queue.  */
 
-static void
+static int
 handle_file_event (int event_file_desc)
 {
   file_handler *file_ptr;
@@ -378,10 +484,16 @@ handle_file_event (int event_file_desc)
 
 	  /* If there was a match, then call the handler.  */
 	  if (mask != 0)
-	    (*file_ptr->proc) (file_ptr->error, file_ptr->client_data);
+	    {
+	      if ((*file_ptr->proc) (file_ptr->error,
+				     file_ptr->client_data) < 0)
+		return -1;
+	    }
 	  break;
 	}
     }
+
+  return 0;
 }
 
 /* Create a file event, to be enqueued in the event queue for
@@ -491,7 +603,23 @@ start_event_loop (void)
   while (1)
     {
       /* Any events already waiting in the queue?  */
-      if (process_event ())
+      int res = process_event ();
+
+      /* Did the event handler want the event loop to stop?  */
+      if (res == -1)
+	return;
+
+      if (res)
+	continue;
+
+      /* Process any queued callbacks before we go to sleep.  */
+      res = process_callback ();
+
+      /* Did the callback want the event loop to stop?  */
+      if (res == -1)
+	return;
+
+      if (res)
 	continue;
 
       /* Wait for a new event.  If wait_for_event returns -1, we

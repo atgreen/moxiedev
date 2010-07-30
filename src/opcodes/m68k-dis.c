@@ -1111,7 +1111,7 @@ print_insn_arg (const char *d,
 		  return -1;
 	      }
 	      if (flt_p)	/* Print a float? */
-		(*info->fprintf_func) (info->stream, "#%g", flval);
+		(*info->fprintf_func) (info->stream, "#0e%g", flval);
 	      else
 		(*info->fprintf_func) (info->stream, "#%d", val);
 	      break;
@@ -1626,7 +1626,7 @@ print_insn_m68k (bfd_vma memaddr, disassemble_info *info)
 
   if (val == 0)
     /* Handle undefined instructions.  */
-    info->fprintf_func (info->stream, "0%o", (buffer[0] << 8) + buffer[1]);
+    info->fprintf_func (info->stream, ".short 0x%04x", (buffer[0] << 8) + buffer[1]);
 
   return val ? val : 2;
 }

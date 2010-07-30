@@ -43,6 +43,7 @@ class Icf
   typedef std::vector<Symbol*> Symbol_info;
   typedef std::vector<std::pair<long long, long long> > Addend_info;
   typedef std::vector<uint64_t> Offset_info;
+  typedef std::vector<unsigned int> Reloc_addend_size_info;
   typedef Unordered_map<Section_id,
                         unsigned int,
                         Section_id_hash> Uniq_secn_id_map;
@@ -57,6 +58,7 @@ class Icf
     // This stores the symbol value and the addend for a reloc.
     Addend_info addend_info;
     Offset_info offset_info;
+    Reloc_addend_size_info reloc_addend_size_info;
   } Reloc_info;
 
   typedef Unordered_map<Section_id, Reloc_info,
@@ -121,14 +123,13 @@ class Icf
   // corresponding to taken function pointers.  Ignores eh_frame
   // and vtable sections.
   inline bool
-  check_section_for_function_pointers(std::string section_name,
+  check_section_for_function_pointers(const std::string& section_name,
                                       Target* target)
   {
     return (parameters->options().icf_safe_folding()
 	    && target->can_check_for_function_pointers()
-            && !is_prefix_of(".rodata._ZTV", section_name.c_str())
-            && !is_prefix_of(".data.rel.ro._ZTV", section_name.c_str())
-            && !is_prefix_of(".eh_frame", section_name.c_str()));
+	    && target->section_may_have_icf_unsafe_pointers(
+	        section_name.c_str()));
   }
 
   // Returns a map of a section to info (Reloc_info) about its relocations.

@@ -343,11 +343,11 @@ get_register (int regnum, map_arg arg)
 		      gdbarch_register_name (get_current_arch (), regnum)) == 0))
 	{
 	  val_print (FIELD_TYPE (TYPE_FIELD (reg_vtype, 0)), buffer, 0, 0,
-		     stb, 0, &opts, current_language);
+		     stb, 0, NULL, &opts, current_language);
 	}
       else
 	val_print (reg_vtype, buffer, 0, 0,
-		   stb, 0, &opts, current_language);
+		   stb, 0, NULL, &opts, current_language);
     }
   
   res = ui_file_xstrdup (stb, &dummy);

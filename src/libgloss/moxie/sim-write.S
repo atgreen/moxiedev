@@ -14,7 +14,7 @@
  * they apply.
  */
 
-#include "syscall.h"
+#define	SYS_write	5
 
 /*
  * Input:

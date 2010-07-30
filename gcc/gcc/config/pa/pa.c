@@ -1,6 +1,6 @@
 /* Subroutines for insn-output.c for HPPA.
    Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Tim Moore (moore@cs.utah.edu), based on sparc.c
 
@@ -27,7 +27,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "rtl.h"
 #include "regs.h"
 #include "hard-reg-set.h"
-#include "real.h"
 #include "insn-config.h"
 #include "conditions.h"
 #include "insn-attr.h"
@@ -40,6 +39,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "reload.h"
 #include "integrate.h"
 #include "function.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "ggc.h"
 #include "recog.h"
@@ -156,9 +156,9 @@ static bool pa_pass_by_reference (CUMULATIVE_ARGS *, enum machine_mode,
 static int pa_arg_partial_bytes (CUMULATIVE_ARGS *, enum machine_mode,
 				 tree, bool);
 static struct machine_function * pa_init_machine_status (void);
-static enum reg_class pa_secondary_reload (bool, rtx, enum reg_class,
-					   enum machine_mode,
-					   secondary_reload_info *);
+static reg_class_t pa_secondary_reload (bool, rtx, reg_class_t,
+					enum machine_mode,
+					secondary_reload_info *);
 static void pa_extra_live_on_entry (bitmap);
 static enum machine_mode pa_promote_function_mode (const_tree,
 						   enum machine_mode, int *,
@@ -520,6 +520,17 @@ override_options (void)
   if (flag_pic == 1 || TARGET_64BIT)
     flag_pic = 2;
 
+  /* Disable -freorder-blocks-and-partition as we don't support hot and
+     cold partitioning.  */
+  if (flag_reorder_blocks_and_partition)
+    {
+      inform (input_location,
+              "-freorder-blocks-and-partition does not work "
+              "on this architecture");
+      flag_reorder_blocks_and_partition = 0;
+      flag_reorder_blocks = 1;
+    }
+
   /* We can't guarantee that .dword is available for 32-bit targets.  */
   if (UNITS_PER_WORD == 4)
     targetm.asm_out.aligned_op.di = NULL;
@@ -559,7 +570,7 @@ pa_init_builtins (void)
 static struct machine_function *
 pa_init_machine_status (void)
 {
-  return GGC_CNEW (machine_function);
+  return ggc_alloc_cleared_machine_function ();
 }
 
 /* If FROM is a probable pointer register, mark TO as a probable
@@ -1066,7 +1077,7 @@ hppa_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
     {
 
       /* First, try and figure out what to use as a base register.  */
-      rtx reg1, reg2, base, idx, orig_base;
+      rtx reg1, reg2, base, idx;
 
       reg1 = XEXP (XEXP (x, 0), 1);
       reg2 = XEXP (x, 1);
@@ -1088,7 +1099,6 @@ hppa_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
 	  && REG_POINTER (reg1))
 	{
 	  base = reg1;
-	  orig_base = XEXP (XEXP (x, 0), 1);
 	  idx = gen_rtx_PLUS (Pmode,
 			      gen_rtx_MULT (Pmode,
 					    XEXP (XEXP (XEXP (x, 0), 0), 0),
@@ -1099,7 +1109,6 @@ hppa_legitimize_address (rtx x, rtx oldx ATTRIBUTE_UNUSED,
 	       && REG_POINTER (reg2))
 	{
 	  base = reg2;
-	  orig_base = XEXP (x, 1);
 	  idx = XEXP (x, 0);
 	}
 
@@ -1699,10 +1708,6 @@ emit_move_sequence (rtx *operands, enum machine_mode mode, rtx scratch_reg)
 		  && !REG_POINTER (operand0)
 		  && !HARD_REGISTER_P (operand0))
 		copy_reg_pointer (operand0, operand1);
-	      else if (REG_POINTER (operand0)
-		       && !REG_POINTER (operand1)
-		       && !HARD_REGISTER_P (operand1))
-		copy_reg_pointer (operand1, operand0);
 	    }
 	  
 	  /* When MEMs are broken out, the REG_POINTER flag doesn't
@@ -1716,12 +1721,8 @@ emit_move_sequence (rtx *operands, enum machine_mode mode, rtx scratch_reg)
 
 	      /* Set the register pointer flag and register alignment
 		 if the declaration for this memory reference is a
-		 pointer type.  Fortran indirect argument references
-		 are ignored.  */
-	      if (decl
-		  && !(flag_argument_noalias > 1
-		       && TREE_CODE (decl) == INDIRECT_REF
-		       && TREE_CODE (TREE_OPERAND (decl, 0)) == PARM_DECL))
+		 pointer type.  */
+	      if (decl)
 		{
 		  tree type;
 
@@ -5382,13 +5383,11 @@ get_deferred_plabel (rtx symbol)
       tree id;
 
       if (deferred_plabels == 0)
-	deferred_plabels = (struct deferred_plabel *)
-	  ggc_alloc (sizeof (struct deferred_plabel));
+	deferred_plabels =  ggc_alloc_deferred_plabel ();
       else
-	deferred_plabels = (struct deferred_plabel *)
-	  ggc_realloc (deferred_plabels,
-		       ((n_deferred_plabels + 1)
-			* sizeof (struct deferred_plabel)));
+        deferred_plabels = GGC_RESIZEVEC (struct deferred_plabel,
+                                          deferred_plabels,
+                                          n_deferred_plabels + 1);
 
       i = n_deferred_plabels++;
       deferred_plabels[i].internal_label = gen_label_rtx ();
@@ -5690,11 +5689,12 @@ output_arg_descriptor (rtx call_insn)
   fputc ('\n', asm_out_file);
 }
 
-static enum reg_class
-pa_secondary_reload (bool in_p, rtx x, enum reg_class rclass,
+static reg_class_t
+pa_secondary_reload (bool in_p, rtx x, reg_class_t rclass_i,
 		     enum machine_mode mode, secondary_reload_info *sri)
 {
   int is_symbolic, regno;
+  enum reg_class rclass = (enum reg_class) rclass_i;
 
   /* Handle the easy stuff first.  */
   if (rclass == R1_REGS)
@@ -5768,7 +5768,9 @@ pa_secondary_reload (bool in_p, rtx x, enum reg_class rclass,
       /* Request a secondary reload with a general scratch register
 	 for everthing else.  ??? Could symbolic operands be handled
 	 directly when generating non-pic PA 2.0 code?  */
-      sri->icode = in_p ? reload_in_optab[mode] : reload_out_optab[mode];
+      sri->icode = (in_p
+		    ? direct_optab_handler (reload_in_optab, mode)
+		    : direct_optab_handler (reload_out_optab, mode));
       return NO_REGS;
     }
 
@@ -5776,7 +5778,9 @@ pa_secondary_reload (bool in_p, rtx x, enum reg_class rclass,
      and anything other than a general register.  */
   if (rclass == SHIFT_REGS && (regno <= 0 || regno >= 32))
     {
-      sri->icode = in_p ? reload_in_optab[mode] : reload_out_optab[mode];
+      sri->icode = (in_p
+		    ? direct_optab_handler (reload_in_optab, mode)
+		    : direct_optab_handler (reload_out_optab, mode));
       return NO_REGS;
     }
 
@@ -5786,7 +5790,9 @@ pa_secondary_reload (bool in_p, rtx x, enum reg_class rclass,
       && (REGNO_REG_CLASS (regno) == SHIFT_REGS
       && FP_REG_CLASS_P (rclass)))
     {
-      sri->icode = in_p ? reload_in_optab[mode] : reload_out_optab[mode];
+      sri->icode = (in_p
+		    ? direct_optab_handler (reload_in_optab, mode)
+		    : direct_optab_handler (reload_out_optab, mode));
       return NO_REGS;
     }
 
@@ -6041,11 +6047,10 @@ hppa_gimplify_va_arg_expr (tree valist, tree type, gimple_seq *pre_p,
       u = fold_build1 (NEGATE_EXPR, sizetype, u);
       t = build2 (POINTER_PLUS_EXPR, valist_type, valist, u);
 
-      /* Copied from va-pa.h, but we probably don't need to align to
-	 word size, since we generate and preserve that invariant.  */
-      u = size_int (size > 4 ? -8 : -4);
-      t = fold_convert (sizetype, t);
-      t = build2 (BIT_AND_EXPR, sizetype, t, u);
+      /* Align to 4 or 8 byte boundary depending on argument size.  */
+
+      u = build_int_cst (TREE_TYPE (t), (HOST_WIDE_INT)(size > 4 ? -8 : -4));
+      t = build2 (BIT_AND_EXPR, TREE_TYPE (t), t, u);
       t = fold_convert (valist_type, t);
 
       t = build2 (MODIFY_EXPR, valist_type, valist, t);

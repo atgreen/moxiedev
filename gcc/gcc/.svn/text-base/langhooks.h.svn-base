@@ -1,5 +1,5 @@
 /* The lang_hooks data structure.
-   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -195,6 +195,10 @@ struct lang_hooks_for_decls
      predetermined, OMP_CLAUSE_DEFAULT_UNSPECIFIED otherwise.  */
   enum omp_clause_default_kind (*omp_predetermined_sharing) (tree);
 
+  /* Return decl that should be reported for DEFAULT(NONE) failure
+     diagnostics.  Usually the DECL passed in.  */
+  tree (*omp_report_decl) (tree);
+
   /* Return true if DECL's DECL_VALUE_EXPR (if any) should be
      disregarded in OpenMP construct, because it is going to be
      remapped during OpenMP lowering.  SHARED is true if DECL
@@ -265,29 +269,35 @@ struct lang_hooks
      on unrecognized codes.  */
   size_t (*tree_size) (enum tree_code);
 
-  /* The first callback made to the front end, for simple
-     initialization needed before any calls to handle_option.  Return
-     the language mask to filter the switch array with.  */
-  unsigned int (*init_options) (unsigned int argc, const char **argv);
+  /* Return the language mask used for converting argv into a sequence
+     of options.  */
+  unsigned int (*option_lang_mask) (void);
+
+  /* After the initialize_diagnostics hook is called, do any simple
+     initialization needed before any calls to handle_option.  */
+  void (*init_options) (unsigned int decoded_options_count,
+			struct cl_decoded_option *decoded_options);
 
   /* Callback used to perform language-specific initialization for the
      global diagnostic context structure.  */
   void (*initialize_diagnostics) (struct diagnostic_context *);
+
+  /* Return true if a warning should be given about option OPTION,
+     which is for the wrong language, false if it should be quietly
+     ignored.  */
+  bool (*complain_wrong_lang_p) (const struct cl_option *option);
 
   /* Handle the switch CODE, which has real type enum opt_code from
      options.h.  If the switch takes an argument, it is passed in ARG
      which points to permanent storage.  The handler is responsible for
      checking whether ARG is NULL, which indicates that no argument
      was in fact supplied.  For -f and -W switches, VALUE is 1 or 0
-     for the positive and negative forms respectively.
+     for the positive and negative forms respectively.  HANDLERS should
+     be passed to any recursive handle_option calls.
 
-     Return 1 if the switch is valid, 0 if invalid, and -1 if it's
-     valid and should not be treated as language-independent too.  */
-  int (*handle_option) (size_t code, const char *arg, int value);
-
-  /* Return false to use the default complaint about a missing
-     argument, otherwise output a complaint and return true.  */
-  bool (*missing_argument) (const char *opt, size_t code);
+     Return true if the switch is valid, false if invalid.  */
+  bool (*handle_option) (size_t code, const char *arg, int value, int kind,
+			 const struct cl_option_handlers *handlers);
 
   /* Called when all command line options have been parsed to allow
      further processing and initialization
@@ -417,10 +427,6 @@ struct lang_hooks
      enum gimplify_status, though we can't see that type here.  */
   int (*gimplify_expr) (tree *, gimple_seq *, gimple_seq *);
 
-  /* Fold an OBJ_TYPE_REF expression to the address of a function.
-     KNOWN_TYPE carries the true type of the OBJ_TYPE_REF_OBJECT.  */
-  tree (*fold_obj_type_ref) (tree, tree);
-
   /* Do language specific processing in the builtin function DECL  */
   tree (*builtin_function) (tree decl);
 
@@ -446,9 +452,21 @@ struct lang_hooks
   /* Map a type to a runtime object to match type.  */
   tree (*eh_runtime_type) (tree);
 
+  /* If non-NULL, this is a function that returns a function decl to be
+     executed if an unhandled exception is propagated out of a cleanup
+     region.  For example, in C++, an exception thrown by a destructor
+     during stack unwinding is required to result in a call to
+     `std::terminate', so the C++ version of this function returns a
+     FUNCTION_DECL for `std::terminate'.  */
+  tree (*eh_protect_cleanup_actions) (void);
+
   /* True if this language uses __cxa_end_cleanup when the ARM EABI
      is enabled.  */
   bool eh_use_cxa_end_cleanup;
+
+  /* True if this language requires deep unsharing of tree nodes prior to
+     gimplification.  */
+  bool deep_unsharing;
 
   /* Whenever you add entries here, make sure you adjust langhooks-def.h
      and langhooks.c accordingly.  */

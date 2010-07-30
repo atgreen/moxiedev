@@ -75,6 +75,14 @@ if test $use_secureplt = true; then
     [Define if we should default to creating read-only plt entries])
 fi
 
+AC_ARG_ENABLE(leading-mingw64-underscores,
+  AS_HELP_STRING([--enable-leading-mingw64-underscores],
+                 [Enable leading underscores on 64 bit mingw targets]),
+  [],[])
+AS_IF([ test x"$enable_leading_mingw64_underscores" = xyes ],
+  [AC_DEFINE(USE_MINGW64_LEADING_UNDERSCORES, 1,
+    [Define if we should use leading underscore on 64 bit mingw targets])])
+
 DEBUGDIR=${libdir}/debug
 AC_ARG_WITH(separate-debug-dir,
   AS_HELP_STRING([--with-separate-debug-dir=DIR],
@@ -211,10 +219,11 @@ AM_ZLIB
 # If we are configured native, pick a core file support file.
 COREFILE=
 COREFLAG=
+CORE_HEADER=
 TRAD_HEADER=
 if test "${target}" = "${host}"; then
   case "${host}" in
-  alpha*-*-freebsd* | alpha*-*-kfreebsd*-gnu)
+  alpha*-*-freebsd* | alpha*-*-kfreebsd*-gnu | alpha*-*-*vms*)
 	COREFILE=''
 	;;
   alpha*-*-linux-*)
@@ -224,9 +233,11 @@ if test "${target}" = "${host}"; then
   alpha*-*-netbsd* | alpha*-*-openbsd*)
 	COREFILE=netbsd-core.lo
 	;;
-  alpha*-*-*)		COREFILE=osf-core.lo ;;
+  alpha*-*-*)
+        COREFILE=osf-core.lo
+	;;
   arm-*-freebsd* | arm-*-kfreebsd*-gnu)
-			COREFILE='' ;;
+	COREFILE='' ;;
   arm-*-netbsd* | arm-*-openbsd*)
 	COREFILE=netbsd-core.lo
 	;;
@@ -443,6 +454,9 @@ changequote([,])dnl
 	COREFILE=trad-core.lo
 	TRAD_HEADER='"hosts/vaxbsd.h"'
 	;;
+  x86_64-*-linux*)
+	CORE_HEADER='"hosts/x86-64linux.h"'
+	;;
   x86_64-*-netbsd* | x86_64-*-openbsd*)
 	COREFILE=netbsd-core.lo
 	;;
@@ -487,6 +501,10 @@ changequote([,])dnl
 fi
 AC_SUBST(COREFILE)
 AC_SUBST(COREFLAG)
+if test -n "$CORE_HEADER"; then
+  AC_DEFINE_UNQUOTED(CORE_HEADER, $CORE_HEADER,
+    [Name of host specific core header file to include in elf.c.])
+fi
 if test -n "$TRAD_HEADER"; then
   AC_DEFINE_UNQUOTED(TRAD_HEADER, $TRAD_HEADER,
     [Name of host specific header file to include in trad-core.c.])
@@ -754,7 +772,9 @@ do
     bfd_elf32_sh64lnbsd_vec)	tb="$tb elf32-sh64.lo elf32-sh64-com.lo elf-vxworks.lo elf32.lo $elf cofflink.lo" ;;
     bfd_elf32_sh64nbsd_vec)	tb="$tb elf32-sh64.lo elf32-sh64-com.lo elf-vxworks.lo elf32.lo $elf cofflink.lo" ;;
     bfd_elf32_sh_vec)		tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo" ;;
+    bfd_elf32_shbfd_vec)	tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo cofflink.lo" ;;
     bfd_elf32_shblin_vec)	tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo cofflink.lo" ;;
+    bfd_elf32_shfd_vec)		tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo cofflink.lo" ;;
     bfd_elf32_shl_vec)		tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo" ;;
     bfd_elf32_shl_symbian_vec)	tb="$tb elf32-sh-symbian.lo elf32-sh64-com.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo" ;;
     bfd_elf32_shlin_vec)	tb="$tb elf32-sh.lo elf-vxworks.lo elf32.lo $elf coff-sh.lo cofflink.lo" ;;
@@ -765,6 +785,8 @@ do
     bfd_elf32_sparc_vec)	tb="$tb elf32-sparc.lo elfxx-sparc.lo elf-vxworks.lo elf32.lo $elf" ;;
     bfd_elf32_sparc_vxworks_vec) tb="$tb elf32-sparc.lo elfxx-sparc.lo elf-vxworks.lo elf32.lo $elf" ;;
     bfd_elf32_spu_vec)		tb="$tb elf32-spu.lo elf32.lo $elf" ;;
+    bfd_elf32_tic6x_be_vec)	tb="$tb elf32-tic6x.lo elf32.lo $elf" ;;
+    bfd_elf32_tic6x_le_vec)	tb="$tb elf32-tic6x.lo elf32.lo $elf" ;;
     bfd_elf32_tradbigmips_vec)  tb="$tb elf32-mips.lo elfxx-mips.lo elf-vxworks.lo elf32.lo $elf ecofflink.lo" ;;
     bfd_elf32_tradlittlemips_vec) tb="$tb elf32-mips.lo elfxx-mips.lo elf-vxworks.lo elf32.lo $elf ecofflink.lo" ;;
     bfd_elf32_us_cris_vec)	tb="$tb elf32-cris.lo elf32.lo $elf" ;;
@@ -783,7 +805,7 @@ do
     bfd_elf64_ia64_big_vec)	tb="$tb elf64-ia64.lo elf64.lo $elf"; target_size=64 ;;
     bfd_elf64_ia64_hpux_big_vec) tb="$tb elf64-ia64.lo elf64.lo $elf"; target_size=64 ;;
     bfd_elf64_ia64_little_vec)	tb="$tb elf64-ia64.lo elf64.lo $elf"; target_size=64 ;;
-    bfd_elf64_ia64_vms_vec)	tb="$tb elf64-ia64.lo elf64.lo $elf"; target_size=64 ;;
+    bfd_elf64_ia64_vms_vec)	tb="$tb elf64-ia64.lo elf64.lo vms-lib.lo vms-misc.lo $elf"; target_size=64 ;;
     bfd_elf64_little_generic_vec) tb="$tb elf64-gen.lo elf64.lo $elf"; target_size=64 ;;
     bfd_elf64_littlemips_vec) 	tb="$tb elf64-mips.lo elf64.lo elfxx-mips.lo elf-vxworks.lo elf32.lo $elf ecofflink.lo"; target_size=64 ;;
     bfd_elf64_mmix_vec) 	tb="$tb elf64-mmix.lo elf64.lo $elf" target_size=64 ;;
@@ -854,7 +876,6 @@ do
     m88kbcs_vec)		tb="$tb coff-m88k.lo" ;;
     m88kmach3_vec)		tb="$tb m88kmach3.lo aout32.lo" ;;
     m88kopenbsd_vec)		tb="$tb m88kopenbsd.lo aout32.lo" ;;
-    maxqcoff_vec)               tb="$tb coff-maxq.lo" ;;
     mach_o_be_vec)              tb="$tb mach-o.lo" ;;
     mach_o_le_vec)              tb="$tb mach-o.lo" ;;
     mach_o_fat_vec)             tb="$tb mach-o.lo" ;;
@@ -917,8 +938,8 @@ do
     vax1knetbsd_vec)		tb="$tb vax1knetbsd.lo aout32.lo" ;;
     vaxbsd_vec)			tb="$tb vaxbsd.lo aout32.lo" ;;
     versados_vec)		tb="$tb versados.lo" ;;
-    vms_alpha_vec)		tb="$tb vms.lo vms-hdr.lo vms-gsd.lo vms-tir.lo vms-misc.lo"; target_size=64 ;;
-    vms_vax_vec)		tb="$tb vms.lo vms-hdr.lo vms-gsd.lo vms-tir.lo vms-misc.lo" ;;
+    vms_alpha_vec)		tb="$tb vms-alpha.lo vms-misc.lo vms-lib.lo"; target_size=64 ;;
+    vms_lib_txt_vec)		tb="$tb vms-lib.lo vms-misc.lo" ;;
     w65_vec)			tb="$tb coff-w65.lo reloc16.lo" ;;
     we32kcoff_vec)		tb="$tb coff-we32k.lo" ;;
     z80coff_vec)		tb="$tb coff-z80.lo reloc16.lo" ;;
@@ -974,7 +995,7 @@ if test x${all_targets} = xtrue ; then
   bfd_backends="${bfd_backends}"' $(ALL_BACKENDS)'
   bfd_machines="${bfd_machines}"' $(ALL_MACHINES)'
   selvecs=
-  havevecs=
+  havevecs=-DHAVE_all_vecs
   selarchs=
   test -n "$assocvecs" &&
     assocvecs=`echo $assocvecs | sed -e 's/^/\&/' -e 's/ \(.\)/,\&\1/g'`
@@ -1059,8 +1080,8 @@ test -n "${defvec}" && tdefaults="${tdefaults} -DDEFAULT_VECTOR=${defvec}"
 test -n "${selvecs}" && tdefaults="${tdefaults} -DSELECT_VECS='${selvecs}'"
 test -n "${assocvecs}" && tdefaults="${tdefaults} -DASSOCIATED_VECS='${assocvecs}'"
 test -n "${selarchs}" && tdefaults="${tdefaults} -DSELECT_ARCHITECTURES='${selarchs}'"
-test -n "${havevecs}" && tdefaults="${tdefaults} ${havevecs}"
 AC_SUBST(tdefaults)
+AC_SUBST(havevecs)
 
 dnl AC_CHECK_HEADERS(sys/mman.h)
 AC_FUNC_MMAP

@@ -28,8 +28,11 @@
 #include "symtab.h"
 #include "gdbtypes.h"
 #include "reggroups.h"
+#include "regset.h"
 #include "amd64-linux-tdep.h"
+#include "i386-linux-tdep.h"
 #include "linux-tdep.h"
+#include "i386-xstate.h"
 
 #include "gdb_string.h"
 
@@ -38,6 +41,7 @@
 #include "xml-syscall.h"
 
 #include "features/i386/amd64-linux.c"
+#include "features/i386/amd64-avx-linux.c"
 
 /* The syscall's XML filename for i386.  */
 #define XML_SYSCALL_FILENAME_AMD64 "syscalls/amd64-linux.xml"
@@ -45,11 +49,20 @@
 #include "record.h"
 #include "linux-record.h"
 
+/* Supported register note sections.  */
+static struct core_regset_section amd64_linux_regset_sections[] =
+{
+  { ".reg", 27 * 8, "general-purpose" },
+  { ".reg2", 512, "floating-point" },
+  { ".reg-xstate", I386_XSTATE_MAX_SIZE, "XSAVE extended state" },
+  { NULL, 0 }
+};
+
 /* Mapping between the general-purpose registers in `struct user'
    format and GDB's register cache layout.  */
 
 /* From <sys/reg.h>.  */
-static int amd64_linux_gregset_reg_offset[] =
+int amd64_linux_gregset_reg_offset[] =
 {
   10 * 8,			/* %rax */
   5 * 8,			/* %rbx */
@@ -74,7 +87,14 @@ static int amd64_linux_gregset_reg_offset[] =
   23 * 8,			/* %ds */
   24 * 8,			/* %es */
   25 * 8,			/* %fs */
-  26 * 8			/* %gs */
+  26 * 8,			/* %gs */
+  -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1,
+  -1, -1, -1, -1, -1, -1, -1, -1,
+  15 * 8			/* "orig_rax" */
 };
 
 
@@ -1249,13 +1269,15 @@ amd64_linux_core_read_description (struct gdbarch *gdbarch,
 				  struct target_ops *target,
 				  bfd *abfd)
 {
-  asection *section = bfd_get_section_by_name (abfd, ".reg2");
-
-  if (section == NULL)
-    return NULL;
-
   /* Linux/x86-64.  */
-  return tdesc_amd64_linux;
+  uint64_t xcr0 = i386_linux_core_read_xcr0 (gdbarch, target, abfd);
+  switch ((xcr0 & I386_XSTATE_AVX_MASK))
+    {
+    case I386_XSTATE_AVX_MASK:
+      return tdesc_amd64_avx_linux;
+    default:
+      return tdesc_amd64_linux;
+    }
 }
 
 static void
@@ -1297,6 +1319,8 @@ amd64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
   tdep->sc_reg_offset = amd64_linux_sc_reg_offset;
   tdep->sc_num_regs = ARRAY_SIZE (amd64_linux_sc_reg_offset);
 
+  tdep->xsave_xcr0_offset = I386_LINUX_XSAVE_XCR0_OFFSET;
+
   /* GNU/Linux uses SVR4-style shared libraries.  */
   set_solib_svr4_fetch_link_map_offsets
     (gdbarch, svr4_lp64_fetch_link_map_offsets);
@@ -1317,6 +1341,9 @@ amd64_linux_init_abi (struct gdbarch_info info, struct gdbarch *gdbarch)
 
   /* GNU/Linux uses SVR4-style shared libraries.  */
   set_gdbarch_skip_trampoline_code (gdbarch, find_solib_trampoline_target);
+
+  /* Install supported register note sections.  */
+  set_gdbarch_core_regset_sections (gdbarch, amd64_linux_regset_sections);
 
   set_gdbarch_core_read_description (gdbarch,
 				     amd64_linux_core_read_description);
@@ -1517,4 +1544,5 @@ _initialize_amd64_linux_tdep (void)
 
   /* Initialize the Linux target description  */
   initialize_tdesc_amd64_linux ();
+  initialize_tdesc_amd64_avx_linux ();
 }

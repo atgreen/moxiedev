@@ -39,16 +39,9 @@
 
 #include "interps.h"
 #include "main.h"
-
 #include "source.h"
-
-/* If nonzero, display time usage both at startup and for each command.  */
-
-int display_time;
-
-/* If nonzero, display space usage both at startup and for each command.  */
-
-int display_space;
+#include "cli/cli-cmds.h"
+#include "python/python.h"
 
 /* The selected interpreter.  This will be used as a set command
    variable, so it should always be malloc'ed - since
@@ -66,6 +59,10 @@ char *gdb_sysroot = 0;
 
 /* GDB datadir, used to store data files.  */
 char *gdb_datadir = 0;
+
+/* If gdb was configured with --with-python=/path,
+   the possibly relocated path to python's lib directory.  */
+char *python_libdir = 0;
 
 struct ui_file *gdb_stdout;
 struct ui_file *gdb_stderr;
@@ -142,6 +139,7 @@ relocate_directory (const char *progname, const char *initial, int flag)
   if (*dir)
     {
       char *canon_sysroot = lrealpath (dir);
+
       if (canon_sysroot)
 	{
 	  xfree (dir);
@@ -291,8 +289,9 @@ captured_main (void *data)
   char *local_gdbinit;
 
   int i;
+  int save_auto_load;
 
-  long time_at_startup = get_run_time ();
+  struct cleanup *pre_stat_chain = make_command_stats_cleanup (0);
 
 #if defined (HAVE_SETLOCALE) && defined (HAVE_LC_MESSAGES)
   setlocale (LC_MESSAGES, "");
@@ -347,6 +346,14 @@ captured_main (void *data)
 
   gdb_datadir = relocate_directory (argv[0], GDB_DATADIR,
 				    GDB_DATADIR_RELOCATABLE);
+
+#ifdef WITH_PYTHON_PATH
+  /* For later use in helping Python find itself.  */
+  python_libdir = relocate_directory (argv[0],
+				      concat (WITH_PYTHON_PATH,
+					      SLASH_STRING, "lib", NULL),
+				      PYTHON_PATH_RELOCATABLE);
+#endif
 
 #ifdef RELOC_SRCDIR
   add_substitute_path_rule (RELOC_SRCDIR,
@@ -470,8 +477,8 @@ captured_main (void *data)
 	    break;
 	  case OPT_STATISTICS:
 	    /* Enable the display of both time and space usage.  */
-	    display_time = 1;
-	    display_space = 1;
+	    set_display_time (1);
+	    set_display_space (1);
 	    break;
 	  case OPT_TUI:
 	    /* --tui is equivalent to -i=tui.  */
@@ -740,6 +747,7 @@ Excess command line arguments ignored. (%s%s)\n"),
   {
     /* Find it.  */
     struct interp *interp = interp_lookup (interpreter_p);
+
     if (interp == NULL)
       error (_("Interpreter `%s' unrecognized"), interpreter_p);
     /* Install it.  */
@@ -797,6 +805,11 @@ Excess command line arguments ignored. (%s%s)\n"),
   for (i = 0; i < ndir; i++)
     catch_command_errors (directory_switch, dirarg[i], 0, RETURN_MASK_ALL);
   xfree (dirarg);
+
+  /* Skip auto-loading section-specified scripts until we've sourced
+     local_gdbinit (which is often used to augment the source search path).  */
+  save_auto_load = gdbpy_global_auto_load;
+  gdbpy_global_auto_load = 0;
 
   if (execarg != NULL
       && symarg != NULL
@@ -857,6 +870,14 @@ Can't attach to process and specify a core file at the same time."));
   if (local_gdbinit && !inhibit_gdbinit)
     catch_command_errors (source_script, local_gdbinit, 0, RETURN_MASK_ALL);
 
+  /* Now that all .gdbinit's have been read and all -d options have been
+     processed, we can read any scripts mentioned in SYMARG.
+     We wait until now because it is common to add to the source search
+     path in local_gdbinit.  */
+  gdbpy_global_auto_load = save_auto_load;
+  if (symfile_objfile != NULL)
+    load_auto_scripts_for_objfile (symfile_objfile);
+
   for (i = 0; i < ncmd; i++)
     {
       if (cmdarg[i].type == CMDARG_FILE)
@@ -878,25 +899,7 @@ Can't attach to process and specify a core file at the same time."));
     }
 
   /* Show time and/or space usage.  */
-
-  if (display_time)
-    {
-      long init_time = get_run_time () - time_at_startup;
-
-      printf_unfiltered (_("Startup time: %ld.%06ld\n"),
-			 init_time / 1000000, init_time % 1000000);
-    }
-
-  if (display_space)
-    {
-#ifdef HAVE_SBRK
-      extern char **environ;
-      char *lim = (char *) sbrk (0);
-
-      printf_unfiltered (_("Startup size: data size %ld\n"),
-			 (long) (lim - (char *) &environ));
-#endif
-    }
+  do_cleanups (pre_stat_chain);
 
   /* NOTE: cagney/1999-11-07: There is probably no reason for not
      moving this loop and the code found in captured_command_loop()

@@ -108,8 +108,6 @@ enum exp_opcode
 
     /* Modula-2 standard (binary) procedures */
     BINOP_VAL,
-    BINOP_INCL,
-    BINOP_EXCL,
 
     /* Concatenate two operands, such as character strings or bitstrings.
        If the first operand is a integer expression, then it means concatenate
@@ -279,9 +277,6 @@ enum exp_opcode
     UNOP_ODD,
     UNOP_TRUNC,
 
-    /* (The deleted) Chill builtin functions.  */
-    UNOP_LOWER, UNOP_UPPER, UNOP_LENGTH, UNOP_CARD, UNOP_CHMAX, UNOP_CHMIN,
-
     OP_BOOL,			/* Modula-2 builtin BOOLEAN type */
     OP_M2_STRING,		/* Modula-2 string constants */
 
@@ -346,6 +341,10 @@ enum exp_opcode
        and a dec long constant value in the following exp_element.
        Then comes another OP_DECFLOAT.  */
     OP_DECFLOAT,
+
+    /* OP_ADL_FUNC specifies that the function is to be looked up in an
+       Argument Dependent manner (Koenig lookup).  */
+    OP_ADL_FUNC,
 
      /* First extension operator.  Individual language modules define
 	extra operators in *.inc include files below always starting with

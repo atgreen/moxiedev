@@ -82,6 +82,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 		std::_Identity<_Value>(), __a)
         { }
 
+      __unordered_set(const __unordered_set& __x) = default;
+
       __unordered_set(__unordered_set&& __x)
       : _Base(std::forward<_Base>(__x)) { }
     };
@@ -135,6 +137,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 		std::_Identity<_Value>(), __a)
         { }
 
+      __unordered_multiset(const __unordered_multiset& __x) = default;
+
       __unordered_multiset(__unordered_multiset&& __x)
       : _Base(std::forward<_Base>(__x)) { }
     };
@@ -155,6 +159,41 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	 _Alloc, __cache_hash_code>& __y)
     { __x.swap(__y); }
 
+  template<class _Value, class _Hash, class _Pred, class _Alloc,
+	   bool __cache_hash_code>
+    inline bool
+    operator==(const __unordered_set<_Value, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __x,
+	       const __unordered_set<_Value, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __y)
+    { return __x._M_equal(__y); }
+
+  template<class _Value, class _Hash, class _Pred, class _Alloc,
+	   bool __cache_hash_code>
+    inline bool
+    operator!=(const __unordered_set<_Value, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __x,
+	       const __unordered_set<_Value, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __y)
+    { return !(__x == __y); }
+
+  template<class _Value, class _Hash, class _Pred, class _Alloc,
+	   bool __cache_hash_code>
+    inline bool
+    operator==(const __unordered_multiset<_Value, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __x,
+	       const __unordered_multiset<_Value, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __y)
+    { return __x._M_equal(__y); }
+
+  template<class _Value, class _Hash, class _Pred, class _Alloc,
+	   bool __cache_hash_code>
+    inline bool
+    operator!=(const __unordered_multiset<_Value, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __x,
+	       const __unordered_multiset<_Value, _Hash, _Pred, _Alloc,
+	       __cache_hash_code>& __y)
+    { return !(__x == __y); }
 
   /**
    *  @brief A standard container composed of unique keys (containing
@@ -204,6 +243,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	: _Base(__f, __l, __n, __hf, __eql, __a)
         { }
 
+      unordered_set(const unordered_set& __x) = default;
+
       unordered_set(unordered_set&& __x)
       : _Base(std::forward<_Base>(__x)) { }
 
@@ -214,6 +255,9 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 		    const allocator_type& __a = allocator_type())
 	: _Base(__l.begin(), __l.end(), __n, __hf, __eql, __a)
       { }
+
+      unordered_set&
+      operator=(const unordered_set& __x) = default;
 
       unordered_set&
       operator=(unordered_set&& __x)
@@ -283,6 +327,8 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 	: _Base(__f, __l, __n, __hf, __eql, __a)
         { }
 
+      unordered_multiset(const unordered_multiset& __x) = default;
+
       unordered_multiset(unordered_multiset&& __x)
       : _Base(std::forward<_Base>(__x)) { }
 
@@ -293,6 +339,9 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
 			 const allocator_type& __a = allocator_type())
 	: _Base(__l.begin(), __l.end(), __n, __hf, __eql, __a)
       { }
+
+      unordered_multiset&
+      operator=(const unordered_multiset& __x) = default;
 
       unordered_multiset&
       operator=(unordered_multiset&& __x)
@@ -324,6 +373,30 @@ _GLIBCXX_BEGIN_NESTED_NAMESPACE(std, _GLIBCXX_STD_D)
     swap(unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
 	 unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __y)
     { __x.swap(__y); }
+
+  template<class _Value, class _Hash, class _Pred, class _Alloc>
+    inline bool
+    operator==(const unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
+	       const unordered_set<_Value, _Hash, _Pred, _Alloc>& __y)
+    { return __x._M_equal(__y); }
+
+  template<class _Value, class _Hash, class _Pred, class _Alloc>
+    inline bool
+    operator!=(const unordered_set<_Value, _Hash, _Pred, _Alloc>& __x,
+	       const unordered_set<_Value, _Hash, _Pred, _Alloc>& __y)
+    { return !(__x == __y); }
+
+  template<class _Value, class _Hash, class _Pred, class _Alloc>
+    inline bool
+    operator==(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
+	       const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __y)
+    { return __x._M_equal(__y); }
+
+  template<class _Value, class _Hash, class _Pred, class _Alloc>
+    inline bool
+    operator!=(const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __x,
+	       const unordered_multiset<_Value, _Hash, _Pred, _Alloc>& __y)
+    { return !(__x == __y); }
 
 _GLIBCXX_END_NESTED_NAMESPACE
 

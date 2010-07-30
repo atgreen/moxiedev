@@ -52,7 +52,7 @@ void f_type_print_base (struct type *, struct ui_file *, int, int);
 /* LEVEL is the depth to indent lines by.  */
 
 void
-f_print_type (struct type *type, char *varstring, struct ui_file *stream,
+f_print_type (struct type *type, const char *varstring, struct ui_file *stream,
 	      int show, int level)
 {
   enum type_code code;
@@ -153,7 +153,7 @@ f_type_print_varspec_suffix (struct type *type, struct ui_file *stream,
 			     int arrayprint_recurse_level)
 {
   int upper_bound, lower_bound;
-  int retcode;
+
   /* No static variables are permitted as an error call may occur during
      execution of this function.  */
 
@@ -258,9 +258,7 @@ void
 f_type_print_base (struct type *type, struct ui_file *stream, int show,
 		   int level)
 {
-  int retcode;
   int upper_bound;
-
   int index;
 
   QUIT;
@@ -314,7 +312,7 @@ f_type_print_base (struct type *type, struct ui_file *stream, int show,
       break;
 
     case TYPE_CODE_ERROR:
-      fprintfi_filtered (level, stream, "<unknown type>");
+      fprintfi_filtered (level, stream, "%s", TYPE_ERROR_NAME (type));
       break;
 
     case TYPE_CODE_RANGE:
@@ -370,6 +368,10 @@ f_type_print_base (struct type *type, struct ui_file *stream, int show,
 	} 
       fprintfi_filtered (level, stream, "End Type ");
       fputs_filtered (TYPE_TAG_NAME (type), stream);
+      break;
+
+    case TYPE_CODE_MODULE:
+      fprintfi_filtered (level, stream, "module %s", TYPE_TAG_NAME (type));
       break;
 
     default_case:

@@ -28,8 +28,6 @@ if $tracelevel then {
 	strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile interrupt
 set srcfile ${testfile}.c
@@ -55,7 +53,7 @@ if ![file exists $binfile] then {
     gdb_reinitialize_dir $srcdir/$subdir
     gdb_load $binfile
     # Hope this is unix :-)
-    gdb_test "shell stty intr '^C'" "" \
+    gdb_test "shell stty intr '^C'" ".*" \
 	"set interrupt character in interrupt.exp"
     if [runto_main] then {
 	send_gdb "continue\n"

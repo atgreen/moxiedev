@@ -588,6 +588,7 @@ set_osabi (char *args, int from_tty, struct cmd_list_element *c)
   else
     {
       int i;
+
       for (i = 1; i < GDB_OSABI_INVALID; i++)
 	if (strcmp (set_osabi_string, gdbarch_osabi_name (i)) == 0)
 	  {
@@ -630,8 +631,6 @@ extern initialize_file_ftype _initialize_gdb_osabi; /* -Wmissing-prototype */
 void
 _initialize_gdb_osabi (void)
 {
-  struct cmd_list_element *c;
-
   if (strcmp (gdb_osabi_names[GDB_OSABI_INVALID], "<invalid>") != 0)
     internal_error
       (__FILE__, __LINE__,

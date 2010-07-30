@@ -577,14 +577,14 @@ procfs_meminfo (char *args, int from_tty)
 		       printme.text.addr);
       printf_filtered ("\t\tflags=%08x\n", printme.text.flags);
       printf_filtered ("\t\tdebug=%08x\n", printme.text.debug_vaddr);
-      printf_filtered ("\t\toffset=%016llx\n", printme.text.offset);
+      printf_filtered ("\t\toffset=%s\n", phex (printme.text.offset, 8));
       if (printme.data.size)
 	{
 	  printf_filtered ("\tdata=%08x bytes @ 0x%08x\n", printme.data.size,
 			   printme.data.addr);
 	  printf_filtered ("\t\tflags=%08x\n", printme.data.flags);
 	  printf_filtered ("\t\tdebug=%08x\n", printme.data.debug_vaddr);
-	  printf_filtered ("\t\toffset=%016llx\n", printme.data.offset);
+	  printf_filtered ("\t\toffset=%s\n", phex (printme.data.offset, 8));
 	}
       printf_filtered ("\tdev=0x%x\n", printme.dev);
       printf_filtered ("\tino=0x%x\n", (unsigned int) printme.ino);
@@ -1506,13 +1506,15 @@ procfs_can_use_hw_breakpoint (int type, int cnt, int othertype)
 }
 
 static int
-procfs_remove_hw_watchpoint (CORE_ADDR addr, int len, int type)
+procfs_remove_hw_watchpoint (CORE_ADDR addr, int len, int type,
+			     struct expression *cond)
 {
   return procfs_hw_watchpoint (addr, -1, type);
 }
 
 static int
-procfs_insert_hw_watchpoint (CORE_ADDR addr, int len, int type)
+procfs_insert_hw_watchpoint (CORE_ADDR addr, int len, int type,
+			     struct expression *cond)
 {
   return procfs_hw_watchpoint (addr, len, type);
 }

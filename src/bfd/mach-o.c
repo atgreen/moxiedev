@@ -1,5 +1,6 @@
 /* Mach-O support for BFD.
-   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
+   2009, 2010
    Free Software Foundation, Inc.
 
    This file is part of BFD, the Binary File Descriptor library.
@@ -629,13 +630,11 @@ bfd_mach_o_write_thread (bfd *abfd, bfd_mach_o_load_command *command)
   unsigned int i;
   unsigned char buf[8];
   unsigned int offset;
-  unsigned int nflavours;
 
   BFD_ASSERT ((command->type == BFD_MACH_O_LC_THREAD)
 	      || (command->type == BFD_MACH_O_LC_UNIXTHREAD));
 
   offset = 8;
-  nflavours = 0;
   for (i = 0; i < cmd->nflavours; i++)
     {
       BFD_ASSERT ((cmd->flavours[i].size % 4) == 0);

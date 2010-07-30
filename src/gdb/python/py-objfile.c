@@ -45,6 +45,7 @@ static PyObject *
 objfpy_get_filename (PyObject *self, void *closure)
 {
   objfile_object *obj = (objfile_object *) self;
+
   if (obj->objfile && obj->objfile->name)
     return PyString_Decode (obj->objfile->name, strlen (obj->objfile->name),
 			    host_charset (), NULL);
@@ -55,6 +56,7 @@ static void
 objfpy_dealloc (PyObject *o)
 {
   objfile_object *self = (objfile_object *) o;
+
   Py_XDECREF (self->printers);
   self->ob_type->tp_free ((PyObject *) self);
 }
@@ -63,6 +65,7 @@ static PyObject *
 objfpy_new (PyTypeObject *type, PyObject *args, PyObject *keywords)
 {
   objfile_object *self = (objfile_object *) type->tp_alloc (type, 0);
+
   if (self)
     {
       self->objfile = NULL;
@@ -81,6 +84,7 @@ PyObject *
 objfpy_get_printers (PyObject *o, void *ignore)
 {
   objfile_object *self = (objfile_object *) o;
+
   Py_INCREF (self->printers);
   return self->printers;
 }
@@ -90,17 +94,18 @@ objfpy_set_printers (PyObject *o, PyObject *value, void *ignore)
 {
   PyObject *tmp;
   objfile_object *self = (objfile_object *) o;
+
   if (! value)
     {
       PyErr_SetString (PyExc_TypeError,
-		       "cannot delete the pretty_printers attribute");
+		       _("Cannot delete the pretty_printers attribute."));
       return -1;
     }
 
   if (! PyList_Check (value))
     {
       PyErr_SetString (PyExc_TypeError,
-		       "the pretty_printers attribute must be a list");
+		       _("The pretty_printers attribute must be a list."));
       return -1;
     }
 
@@ -144,8 +149,6 @@ objfile_to_objfile_object (struct objfile *objfile)
       object = PyObject_New (objfile_object, &objfile_object_type);
       if (object)
 	{
-	  PyObject *dict;
-
 	  object->objfile = objfile;
 
 	  object->printers = PyList_New (0);

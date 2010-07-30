@@ -95,7 +95,7 @@ AC_DEFUN([GLIBCXX_CONFIGURE], [
   ## (Right now, this only matters for enable_wchar_t, but nothing prevents
   ## other macros from doing the same.  This should be automated.)  -pme
 
-  # Check for uClibc since Linux platforms use different configuration
+  # Check for C library flavor since Linux platforms use different configuration
   # directories depending on the C library in use.
   AC_EGREP_CPP([_using_uclibc], [
   #include <stdio.h>
@@ -103,6 +103,13 @@ AC_DEFUN([GLIBCXX_CONFIGURE], [
     _using_uclibc
   #endif
   ], uclibc=yes, uclibc=no)
+
+  AC_EGREP_CPP([_using_bionic], [
+  #include <stdio.h>
+  #if __BIONIC__
+    _using_bionic
+  #endif
+  ], bionic=yes, bionic=no)
 
   # Find platform-specific directories containing configuration info.
   # Also possibly modify flags used elsewhere, as needed by the platform.
@@ -1075,8 +1082,9 @@ AC_DEFUN([GLIBCXX_ENABLE_LIBSTDCXX_TIME], [
   CXXFLAGS="$CXXFLAGS -fno-exceptions"
   ac_save_LIBS="$LIBS"
 
-  ac_has_clock_monotonic=no;
-  ac_has_clock_realtime=no;
+  ac_has_clock_monotonic=no
+  ac_has_clock_realtime=no
+  AC_MSG_RESULT($enable_libstdcxx_time)
 
   if test x"$enable_libstdcxx_time" != x"no"; then
 
@@ -1611,26 +1619,33 @@ AC_DEFUN([GLIBCXX_CHECK_RANDOM_TR1], [
 ])
 
 dnl
-dnl Check whether EOF, SEEK_CUR, and SEEK_END have the most common values:
-dnl in that case including <cstdio> in some C++ headers can be avoided.
+dnl Compute the EOF, SEEK_CUR, and SEEK_END integer constants.
 dnl
-AC_DEFUN([GLIBCXX_CHECK_STDIO_MACROS], [
+AC_DEFUN([GLIBCXX_COMPUTE_STDIO_INTEGER_CONSTANTS], [
 
-  AC_MSG_CHECKING([for EOF == -1, SEEK_CUR == 1, SEEK_END == 2])
-  AC_CACHE_VAL(glibcxx_cv_stdio_macros, [
-  AC_TRY_COMPILE([#include <stdio.h>],
-                 [#if ((EOF != -1) || (SEEK_CUR != 1) || (SEEK_END != 2))
-	            unusual values...
-	          #endif
-	         ], [glibcxx_cv_stdio_macros=yes],
-		    [glibcxx_cv_stdio_macros=no])
+  AC_CACHE_CHECK([for the value of EOF], glibcxx_cv_stdio_eof, [
+  AC_COMPUTE_INT([glibcxx_cv_stdio_eof], [[EOF]],
+                 [#include <stdio.h>],
+                 [AC_MSG_ERROR([computing EOF failed])])
   ])
-  AC_MSG_RESULT($glibcxx_cv_stdio_macros)
-  if test x"$glibcxx_cv_stdio_macros" = x"yes"; then
-    AC_DEFINE(_GLIBCXX_STDIO_MACROS, 1,
-              [Define if EOF == -1, SEEK_CUR == 1, SEEK_END == 2.])
-  fi
+  AC_DEFINE_UNQUOTED(_GLIBCXX_STDIO_EOF, $glibcxx_cv_stdio_eof,
+                     [Define to the value of the EOF integer constant.])
 
+  AC_CACHE_CHECK([for the value of SEEK_CUR], glibcxx_cv_stdio_seek_cur, [
+  AC_COMPUTE_INT([glibcxx_cv_stdio_seek_cur], [[SEEK_CUR]],
+                 [#include <stdio.h>],
+                 [AC_MSG_ERROR([computing SEEK_CUR failed])])
+  ])
+  AC_DEFINE_UNQUOTED(_GLIBCXX_STDIO_SEEK_CUR, $glibcxx_cv_stdio_seek_cur,
+                     [Define to the value of the SEEK_CUR integer constant.])
+
+  AC_CACHE_CHECK([for the value of SEEK_END], glibcxx_cv_stdio_seek_end, [
+  AC_COMPUTE_INT([glibcxx_cv_stdio_seek_end], [[SEEK_END]],
+                 [#include <stdio.h>],
+                 [AC_MSG_ERROR([computing SEEK_END failed])])
+  ])
+  AC_DEFINE_UNQUOTED(_GLIBCXX_STDIO_SEEK_END, $glibcxx_cv_stdio_seek_end,
+                     [Define to the value of the SEEK_END integer constant.])
 ])
 
 dnl
@@ -1739,40 +1754,10 @@ AC_DEFUN([GLIBCXX_ENABLE_CLOCALE], [
   if test $enable_clocale_flag = gnu; then
     AC_EGREP_CPP([_GLIBCXX_ok], [
     #include <features.h>
-    #if __GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 2)
+    #if (__GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 3)) && !defined(__UCLIBC__)
       _GLIBCXX_ok
     #endif
     ], enable_clocale_flag=gnu, enable_clocale_flag=generic)
-
-    if test $enable_clocale = auto; then
-      # Test for bugs early in glibc-2.2.x series
-      AC_TRY_RUN([
-      #define _GNU_SOURCE 1
-      #include <locale.h>
-      #include <string.h>
-      #if __GLIBC__ > 2 || (__GLIBC__ == 2 && __GLIBC_MINOR__ > 2)
-      extern __typeof(newlocale) __newlocale;
-      extern __typeof(duplocale) __duplocale;
-      extern __typeof(strcoll_l) __strcoll_l;
-      #endif
-      int main()
-      {
-	const char __one[] = "Äuglein Augmen";
-        const char __two[] = "Äuglein";
-       	int i;
-        int j;
-        __locale_t        loc;
-        __locale_t        loc_dup;
-        loc = __newlocale(1 << LC_ALL, "de_DE", 0);
-        loc_dup = __duplocale(loc);
-        i = __strcoll_l(__one, __two, loc);
-        j = __strcoll_l(__one, __two, loc_dup);
-        return 0;
-      }
-      ],
-      [enable_clocale_flag=gnu],[enable_clocale_flag=generic],
-      [enable_clocale_flag=generic])
-    fi
 
     # Set it to scream when it hurts.
     ac_save_CFLAGS="$CFLAGS"	
@@ -2834,11 +2819,14 @@ AC_DEFUN([GLIBCXX_ENABLE_SYMVERS], [
 
 GLIBCXX_ENABLE(symvers,$1,[=STYLE],
   [enables symbol versioning of the shared library],
-  [permit yes|no|gnu|gnu-versioned-namespace|darwin|darwin-export])
+  [permit yes|no|gnu|gnu-versioned-namespace|darwin|darwin-export|sun])
 
 # If we never went through the GLIBCXX_CHECK_LINKER_FEATURES macro, then we
 # don't know enough about $LD to do tricks...
 AC_REQUIRE([GLIBCXX_CHECK_LINKER_FEATURES])
+# Sun style symbol versions needs GNU c++filt for make_sunver.pl to work
+# with extern "C++" in version scripts.
+AC_REQUIRE([GCC_PROG_GNU_CXXFILT])
 
 # Turn a 'yes' into a suitable default.
 if test x$enable_symvers = xyes ; then
@@ -2856,6 +2844,20 @@ if test x$enable_symvers = xyes ; then
       case ${target_os} in
         darwin*)
 	  enable_symvers=darwin ;;
+	# Sun symbol versioning exists since Solaris 2.5.
+	solaris2.[[5-9]]* | solaris2.1[[0-9]]*)
+	  # make_sunver.pl needs GNU c++filt to support extern "C++" in
+	  # version scripts, so disable symbol versioning if none can be
+	  # found.
+	  if test -z "$ac_cv_path_CXXFILT"; then
+	    AC_MSG_WARN([=== You have requested Sun symbol versioning, but])
+	    AC_MSG_WARN([=== no GNU c++filt could  be found.])
+	    AC_MSG_WARN([=== Symbol versioning will be disabled.])
+	    enable_symvers=no
+	  else
+	    enable_symvers=sun
+	  fi
+	  ;;
         *)
           enable_symvers=no ;;
       esac
@@ -2868,8 +2870,26 @@ if test x$enable_symvers = xdarwin-export ; then
     enable_symvers=darwin
 fi
 
+# Check if 'sun' was requested on non-Solaris 2 platforms.
+if test x$enable_symvers = xsun ; then
+  case ${target_os} in
+    solaris2*)
+      # All fine.
+      ;;
+    *)
+      # Unlikely to work.
+      AC_MSG_WARN([=== You have requested Sun symbol versioning, but])
+      AC_MSG_WARN([=== you are not targetting Solaris 2.])
+      AC_MSG_WARN([=== Symbol versioning will be disabled.])
+      enable_symvers=no
+      ;;
+  esac
+fi
+
 # Check to see if 'gnu' can win.
-if test $enable_symvers = gnu || test $enable_symvers = gnu-versioned-namespace; then
+if test $enable_symvers = gnu || 
+  test $enable_symvers = gnu-versioned-namespace || 
+  test $enable_symvers = sun; then
   # Check to see if libgcc_s exists, indicating that shared libgcc is possible.
   AC_MSG_CHECKING([for shared libgcc])
   ac_save_CFLAGS="$CFLAGS"
@@ -2905,6 +2925,8 @@ changequote([,])dnl
       AC_MSG_WARN([=== you are not building a shared libgcc_s.])
       AC_MSG_WARN([=== Symbol versioning will be disabled.])
       enable_symvers=no
+  elif test $with_gnu_ld != yes && test $enable_symvers = sun; then
+    : All interesting versions of Sun ld support sun style symbol versioning.
   elif test $with_gnu_ld != yes ; then
     # just fail for now
     AC_MSG_WARN([=== You have requested GNU symbol versioning, but])
@@ -2944,6 +2966,11 @@ case $enable_symvers in
     AC_DEFINE(_GLIBCXX_SYMVER_DARWIN, 1, 
               [Define to use darwin versioning in the shared library.])
     ;;
+  sun)
+    SYMVER_FILE=config/abi/pre/gnu.ver
+    AC_DEFINE(_GLIBCXX_SYMVER_SUN, 1, 
+              [Define to use Sun versioning in the shared library.])
+    ;;
 esac
 
 if test x$enable_symvers != xno ; then
@@ -2967,7 +2994,23 @@ GLIBCXX_CONDITIONAL(ENABLE_SYMVERS, test $enable_symvers != no)
 GLIBCXX_CONDITIONAL(ENABLE_SYMVERS_GNU, test $enable_symvers = gnu)
 GLIBCXX_CONDITIONAL(ENABLE_SYMVERS_GNU_NAMESPACE, test $enable_symvers = gnu-versioned-namespace)
 GLIBCXX_CONDITIONAL(ENABLE_SYMVERS_DARWIN, test $enable_symvers = darwin)
+GLIBCXX_CONDITIONAL(ENABLE_SYMVERS_SUN, test $enable_symvers = sun)
 AC_MSG_NOTICE(versioning on shared library symbols is $enable_symvers)
+
+if test $enable_symvers != no ; then
+   case ${target_os} in
+     # The Solaris 2 runtime linker doesn't support the GNU extension of
+     # binding the same symbol to different versions
+     solaris2*)
+       symvers_renaming=no  ;;
+     # Other platforms with GNU symbol versioning (GNU/Linux, more?) do.
+     *)
+       AC_DEFINE(HAVE_SYMVER_SYMBOL_RENAMING_RUNTIME_SUPPORT, 1,
+         [Define to 1 if the target runtime linker supports binding the same symbol to different versions.])
+       symvers_renaming=yes  ;;
+    esac
+fi
+GLIBCXX_CONDITIONAL(ENABLE_SYMVERS_SOL2, test $symvers_renaming = no)
 
 # Now, set up compatibility support, if any.
 # In addition, need this to deal with std::size_t mangling in
@@ -3105,5 +3148,6 @@ AC_DEFUN([AC_LC_MESSAGES], [
 ])
 
 # Macros from the top-level gcc directory.
+m4_include([../config/gc++filt.m4])
 m4_include([../config/tls.m4])
 

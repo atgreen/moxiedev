@@ -1614,41 +1614,6 @@ typedef struct frv_stack {
    proper.  */
 #define ACCUMULATE_OUTGOING_ARGS 1
 
-/* A C expression that should indicate the number of bytes of its own arguments
-   that a function pops on returning, or 0 if the function pops no arguments
-   and the caller must therefore pop them all after the function returns.
-
-   FUNDECL is a C variable whose value is a tree node that describes the
-   function in question.  Normally it is a node of type `FUNCTION_DECL' that
-   describes the declaration of the function.  From this it is possible to
-   obtain the DECL_ATTRIBUTES of the function.
-
-   FUNTYPE is a C variable whose value is a tree node that describes the
-   function in question.  Normally it is a node of type `FUNCTION_TYPE' that
-   describes the data type of the function.  From this it is possible to obtain
-   the data types of the value and arguments (if known).
-
-   When a call to a library function is being considered, FUNTYPE will contain
-   an identifier node for the library function.  Thus, if you need to
-   distinguish among various library functions, you can do so by their names.
-   Note that "library function" in this context means a function used to
-   perform arithmetic, whose name is known specially in the compiler and was
-   not mentioned in the C code being compiled.
-
-   STACK-SIZE is the number of bytes of arguments passed on the stack.  If a
-   variable number of bytes is passed, it is zero, and argument popping will
-   always be the responsibility of the calling function.
-
-   On the VAX, all functions always pop their arguments, so the definition of
-   this macro is STACK-SIZE.  On the 68000, using the standard calling
-   convention, no functions pop their arguments, so the value of the macro is
-   always 0 in this case.  But an alternative calling convention is available
-   in which functions that take a fixed number of arguments pop them but other
-   functions (such as `printf') pop nothing (the caller pops all).  When this
-   convention is in use, FUNTYPE is examined to determine whether a function
-   takes a fixed number of arguments.  */
-#define RETURN_POPS_ARGS(FUNDECL, FUNTYPE, STACK_SIZE) 0
-
 
 /* The number of register assigned to holding function arguments.  */
 
@@ -2324,52 +2289,6 @@ do {									\
 
 #define FINAL_PRESCAN_INSN(INSN, OPVEC, NOPERANDS)\
   frv_final_prescan_insn (INSN, OPVEC, NOPERANDS)
-
-
-/* A C compound statement to output to stdio stream STREAM the assembler syntax
-   for an instruction operand X.  X is an RTL expression.
-
-   CODE is a value that can be used to specify one of several ways of printing
-   the operand.  It is used when identical operands must be printed differently
-   depending on the context.  CODE comes from the `%' specification that was
-   used to request printing of the operand.  If the specification was just
-   `%DIGIT' then CODE is 0; if the specification was `%LTR DIGIT' then CODE is
-   the ASCII code for LTR.
-
-   If X is a register, this macro should print the register's name.  The names
-   can be found in an array `reg_names' whose type is `char *[]'.  `reg_names'
-   is initialized from `REGISTER_NAMES'.
-
-   When the machine description has a specification `%PUNCT' (a `%' followed by
-   a punctuation character), this macro is called with a null pointer for X and
-   the punctuation character for CODE.  */
-#define PRINT_OPERAND(STREAM, X, CODE) frv_print_operand (STREAM, X, CODE)
-
-/* A C expression which evaluates to true if CODE is a valid punctuation
-   character for use in the `PRINT_OPERAND' macro.  If
-   `PRINT_OPERAND_PUNCT_VALID_P' is not defined, it means that no punctuation
-   characters (except for the standard one, `%') are used in this way.  */
-/* . == gr0
-   # == hint operand -- always zero for now
-   @ == small data base register (gr16)
-   ~ == pic register (gr17)
-   * == temporary integer CCR register (cr3)
-   & == temporary integer ICC register (icc3)  */
-#define PRINT_OPERAND_PUNCT_VALID_P(CODE)				\
-((CODE) == '.' || (CODE) == '#' || (CODE) == '@' || (CODE) == '~'	\
- || (CODE) == '*' || (CODE) == '&')
-
-/* A C compound statement to output to stdio stream STREAM the assembler syntax
-   for an instruction operand that is a memory reference whose address is X.  X
-   is an RTL expression.
-
-   On some machines, the syntax for a symbolic address depends on the section
-   that the address refers to.  On these machines, define the macro
-   `ENCODE_SECTION_INFO' to store the information into the `symbol_ref', and
-   then check for it here.
-
-   This declaration must be present.  */
-#define PRINT_OPERAND_ADDRESS(STREAM, X) frv_print_operand_address (STREAM, X)
 
 /* If defined, C string expressions to be used for the `%R', `%L', `%U', and
    `%I' options of `asm_fprintf' (see `final.c').  These are useful when a

@@ -135,6 +135,7 @@ typedef struct
 }
 arch_entry;
 
+static void update_code_flag (int, int);
 static void set_code_flag (int);
 static void set_16bit_gcc_code_flag (int);
 static void set_intel_syntax (int);
@@ -204,6 +205,20 @@ union i386_op
     const reg_entry *regs;
   };
 
+enum i386_error
+  {
+    operand_size_mismatch,
+    operand_type_mismatch,
+    register_type_mismatch,
+    number_of_operands_mismatch,
+    invalid_instruction_suffix,
+    bad_imm4,
+    old_gcc_only,
+    unsupported_with_intel_mnemonic,
+    unsupported_syntax,
+    unsupported
+  };
+
 struct _i386_insn
   {
     /* TM holds the template for the insn were currently assembling.  */
@@ -262,7 +277,7 @@ struct _i386_insn
     unsigned int swap_operand;
 
     /* Error message.  */
-    const char *err_msg;
+    enum i386_error error;
   };
 
 typedef struct _i386_insn i386_insn;
@@ -548,6 +563,8 @@ const relax_typeS md_relax_table[] =
 
 static const arch_entry cpu_arch[] =
 {
+  /* Do not replace the first two entries - i386_target_format()
+     relies on them being there in this order.  */
   { STRING_COMMA_LEN ("generic32"), PROCESSOR_GENERIC32,
     CPU_GENERIC32_FLAGS, 0 },
   { STRING_COMMA_LEN ("generic64"), PROCESSOR_GENERIC64,
@@ -646,12 +663,20 @@ static const arch_entry cpu_arch[] =
     CPU_SMX_FLAGS, 0 },
   { STRING_COMMA_LEN (".xsave"), PROCESSOR_UNKNOWN,
     CPU_XSAVE_FLAGS, 0 },
+  { STRING_COMMA_LEN (".xsaveopt"), PROCESSOR_UNKNOWN,
+    CPU_XSAVEOPT_FLAGS, 0 },
   { STRING_COMMA_LEN (".aes"), PROCESSOR_UNKNOWN,
     CPU_AES_FLAGS, 0 },
   { STRING_COMMA_LEN (".pclmul"), PROCESSOR_UNKNOWN,
     CPU_PCLMUL_FLAGS, 0 },
   { STRING_COMMA_LEN (".clmul"), PROCESSOR_UNKNOWN,
     CPU_PCLMUL_FLAGS, 1 },
+  { STRING_COMMA_LEN (".fsgsbase"), PROCESSOR_UNKNOWN,
+    CPU_FSGSBASE_FLAGS, 0 },
+  { STRING_COMMA_LEN (".rdrnd"), PROCESSOR_UNKNOWN,
+    CPU_RDRND_FLAGS, 0 },
+  { STRING_COMMA_LEN (".f16c"), PROCESSOR_UNKNOWN,
+    CPU_F16C_FLAGS, 0 },
   { STRING_COMMA_LEN (".fma"), PROCESSOR_UNKNOWN,
     CPU_FMA_FLAGS, 0 },
   { STRING_COMMA_LEN (".fma4"), PROCESSOR_UNKNOWN,
@@ -1565,7 +1590,7 @@ operand_size_match (const insn_template *t)
   else if (!t->opcode_modifier.d && !t->opcode_modifier.floatd)
     {
 mismatch:
-      i.err_msg = _("operand size mismatch");
+      i.error = operand_size_mismatch;
       return 0;
     }
 
@@ -1611,7 +1636,7 @@ operand_type_match (i386_operand_type overlap,
     return 1;
 
 mismatch:
-  i.err_msg = _("operand type mismatch");
+  i.error = operand_type_mismatch;
   return 0;
 }
 
@@ -1661,7 +1686,7 @@ operand_type_register_match (i386_operand_type m0,
       && !(t0.bitfield.reg64 & t1.bitfield.reg64))
     return 1;
 
-  i.err_msg = _("register type mismatch");
+  i.error = register_type_mismatch;
 
   return 0;
 }
@@ -1906,8 +1931,10 @@ add_prefix (unsigned int prefix)
 }
 
 static void
-set_code_flag (int value)
+update_code_flag (int value, int check)
 {
+  PRINTF_LIKE ((*as_error));
+
   flag_code = (enum flag_code) value;
   if (flag_code == CODE_64BIT)
     {
@@ -1921,13 +1948,29 @@ set_code_flag (int value)
     }
   if (value == CODE_64BIT && !cpu_arch_flags.bitfield.cpulm )
     {
-      as_bad (_("64bit mode not supported on this CPU."));
+      if (check)
+	as_error = as_fatal;
+      else
+	as_error = as_bad;
+      (*as_error) (_("64bit mode not supported on `%s'."),
+		   cpu_arch_name ? cpu_arch_name : default_arch);
     }
   if (value == CODE_32BIT && !cpu_arch_flags.bitfield.cpui386)
     {
-      as_bad (_("32bit mode not supported on this CPU."));
+      if (check)
+	as_error = as_fatal;
+      else
+	as_error = as_bad;
+      (*as_error) (_("32bit mode not supported on `%s'."),
+		   cpu_arch_name ? cpu_arch_name : default_arch);
     }
   stackop_size = '\0';
+}
+
+static void
+set_code_flag (int value)
+{
+  update_code_flag (value, 0);
 }
 
 static void
@@ -2327,7 +2370,7 @@ static void ps (symbolS *);
 static void
 pi (char *line, i386_insn *x)
 {
-  unsigned int i;
+  unsigned int j;
 
   fprintf (stdout, "%s: template ", line);
   pte (&x->tm);
@@ -2344,35 +2387,35 @@ pi (char *line, i386_insn *x)
 	   (x->rex & REX_R) != 0,
 	   (x->rex & REX_X) != 0,
 	   (x->rex & REX_B) != 0);
-  for (i = 0; i < x->operands; i++)
+  for (j = 0; j < x->operands; j++)
     {
-      fprintf (stdout, "    #%d:  ", i + 1);
-      pt (x->types[i]);
+      fprintf (stdout, "    #%d:  ", j + 1);
+      pt (x->types[j]);
       fprintf (stdout, "\n");
-      if (x->types[i].bitfield.reg8
-	  || x->types[i].bitfield.reg16
-	  || x->types[i].bitfield.reg32
-	  || x->types[i].bitfield.reg64
-	  || x->types[i].bitfield.regmmx
-	  || x->types[i].bitfield.regxmm
-	  || x->types[i].bitfield.regymm
-	  || x->types[i].bitfield.sreg2
-	  || x->types[i].bitfield.sreg3
-	  || x->types[i].bitfield.control
-	  || x->types[i].bitfield.debug
-	  || x->types[i].bitfield.test)
-	fprintf (stdout, "%s\n", x->op[i].regs->reg_name);
-      if (operand_type_check (x->types[i], imm))
-	pe (x->op[i].imms);
-      if (operand_type_check (x->types[i], disp))
-	pe (x->op[i].disps);
+      if (x->types[j].bitfield.reg8
+	  || x->types[j].bitfield.reg16
+	  || x->types[j].bitfield.reg32
+	  || x->types[j].bitfield.reg64
+	  || x->types[j].bitfield.regmmx
+	  || x->types[j].bitfield.regxmm
+	  || x->types[j].bitfield.regymm
+	  || x->types[j].bitfield.sreg2
+	  || x->types[j].bitfield.sreg3
+	  || x->types[j].bitfield.control
+	  || x->types[j].bitfield.debug
+	  || x->types[j].bitfield.test)
+	fprintf (stdout, "%s\n", x->op[j].regs->reg_name);
+      if (operand_type_check (x->types[j], imm))
+	pe (x->op[j].imms);
+      if (operand_type_check (x->types[j], disp))
+	pe (x->op[j].disps);
     }
 }
 
 static void
 pte (insn_template *t)
 {
-  unsigned int i;
+  unsigned int j;
   fprintf (stdout, " %d operands ", t->operands);
   fprintf (stdout, "opcode %x ", t->base_opcode);
   if (t->extension_opcode != None)
@@ -2382,10 +2425,10 @@ pte (insn_template *t)
   if (t->opcode_modifier.w)
     fprintf (stdout, "W");
   fprintf (stdout, "\n");
-  for (i = 0; i < t->operands; i++)
+  for (j = 0; j < t->operands; j++)
     {
-      fprintf (stdout, "    #%d type ", i + 1);
-      pt (t->operand_types[i]);
+      fprintf (stdout, "    #%d type ", j + 1);
+      pt (t->operand_types[j]);
       fprintf (stdout, "\n");
     }
 }
@@ -3758,7 +3801,7 @@ VEX_check_operands (const insn_template *t)
       if (i.op[0].imms->X_op != O_constant
 	  || !fits_in_imm4 (i.op[0].imms->X_add_number))
 	{
-	  i.err_msg = _("Imm4 isn't the first operand");
+	  i.error = bad_imm4;
 	  return 1;
 	}
 
@@ -3810,35 +3853,35 @@ match_template (void)
       addr_prefix_disp = -1;
 
       /* Must have right number of operands.  */
-      i.err_msg = _("number of operands mismatch");
+      i.error = number_of_operands_mismatch;
       if (i.operands != t->operands)
 	continue;
 
       /* Check processor support.  */
-      i.err_msg = _("unsupported");
+      i.error = unsupported;
       found_cpu_match = (cpu_flags_match (t)
 			 == CPU_FLAGS_PERFECT_MATCH);
       if (!found_cpu_match)
 	continue;
 
       /* Check old gcc support. */
-      i.err_msg = _("only supported with old gcc");
+      i.error = old_gcc_only;
       if (!old_gcc && t->opcode_modifier.oldgcc)
 	continue;
 
       /* Check AT&T mnemonic.   */
-      i.err_msg = _("unsupported with Intel mnemonic");
+      i.error = unsupported_with_intel_mnemonic;
       if (intel_mnemonic && t->opcode_modifier.attmnemonic)
 	continue;
 
       /* Check AT&T/Intel syntax.   */
-      i.err_msg = _("unsupported syntax");
+      i.error = unsupported_syntax;
       if ((intel_syntax && t->opcode_modifier.attsyntax)
 	  || (!intel_syntax && t->opcode_modifier.intelsyntax))
 	continue;
 
       /* Check the suffix, except for some instructions in intel mode.  */
-      i.err_msg = _("invalid instruction suffix");
+      i.error = invalid_instruction_suffix;
       if ((!intel_syntax || !t->opcode_modifier.ignoresize)
 	  && ((t->opcode_modifier.no_bsuf && suffix_check.no_bsuf)
 	      || (t->opcode_modifier.no_wsuf && suffix_check.no_wsuf)
@@ -4090,7 +4133,43 @@ check_reverse:
   if (t == current_templates->end)
     {
       /* We found no match.  */
-      as_bad (_("%s for `%s'"), i.err_msg,
+      const char *err_msg;
+      switch (i.error)
+	{
+	default:
+	  abort ();
+	case operand_size_mismatch:
+	  err_msg = _("operand size mismatch");
+	  break;
+	case operand_type_mismatch:
+	  err_msg = _("operand type mismatch");
+	  break;
+	case register_type_mismatch:
+	  err_msg = _("register type mismatch");
+	  break;
+	case number_of_operands_mismatch:
+	  err_msg = _("number of operands mismatch");
+	  break;
+	case invalid_instruction_suffix:
+	  err_msg = _("invalid instruction suffix");
+	  break;
+	case bad_imm4:
+	  err_msg = _("Imm4 isn't the first operand");
+	  break;
+	case old_gcc_only:
+	  err_msg = _("only supported with old gcc");
+	  break;
+	case unsupported_with_intel_mnemonic:
+	  err_msg = _("unsupported with Intel mnemonic");
+	  break;
+	case unsupported_syntax:
+	  err_msg = _("unsupported syntax");
+	  break;
+	case unsupported:
+	  err_msg = _("unsupported");
+	  break;
+	}
+      as_bad (_("%s for `%s'"), err_msg,
 	      current_templates->start->name);
       return NULL;
     }
@@ -6268,60 +6347,60 @@ lex_got (enum bfd_reloc_code_real *rel,
      and adjust the reloc according to the real size in reloc().  */
   static const struct {
     const char *str;
+    int len;
     const enum bfd_reloc_code_real rel[2];
     const i386_operand_type types64;
   } gotrel[] = {
-    { "PLTOFF",   { _dummy_first_bfd_reloc_code_real,
-		    BFD_RELOC_X86_64_PLTOFF64 },
+    { STRING_COMMA_LEN ("PLTOFF"),   { _dummy_first_bfd_reloc_code_real,
+				       BFD_RELOC_X86_64_PLTOFF64 },
       OPERAND_TYPE_IMM64 },
-    { "PLT",      { BFD_RELOC_386_PLT32,
-		    BFD_RELOC_X86_64_PLT32    },
+    { STRING_COMMA_LEN ("PLT"),      { BFD_RELOC_386_PLT32,
+				       BFD_RELOC_X86_64_PLT32    },
       OPERAND_TYPE_IMM32_32S_DISP32 },
-    { "GOTPLT",   { _dummy_first_bfd_reloc_code_real,
-		    BFD_RELOC_X86_64_GOTPLT64 },
+    { STRING_COMMA_LEN ("GOTPLT"),   { _dummy_first_bfd_reloc_code_real,
+				       BFD_RELOC_X86_64_GOTPLT64 },
       OPERAND_TYPE_IMM64_DISP64 },
-    { "GOTOFF",   { BFD_RELOC_386_GOTOFF,
-		    BFD_RELOC_X86_64_GOTOFF64 },
+    { STRING_COMMA_LEN ("GOTOFF"),   { BFD_RELOC_386_GOTOFF,
+				       BFD_RELOC_X86_64_GOTOFF64 },
       OPERAND_TYPE_IMM64_DISP64 },
-    { "GOTPCREL", { _dummy_first_bfd_reloc_code_real,
-		    BFD_RELOC_X86_64_GOTPCREL },
+    { STRING_COMMA_LEN ("GOTPCREL"), { _dummy_first_bfd_reloc_code_real,
+				       BFD_RELOC_X86_64_GOTPCREL },
       OPERAND_TYPE_IMM32_32S_DISP32 },
-    { "TLSGD",    { BFD_RELOC_386_TLS_GD,
-		    BFD_RELOC_X86_64_TLSGD    },
+    { STRING_COMMA_LEN ("TLSGD"),    { BFD_RELOC_386_TLS_GD,
+				       BFD_RELOC_X86_64_TLSGD    },
       OPERAND_TYPE_IMM32_32S_DISP32 },
-    { "TLSLDM",   { BFD_RELOC_386_TLS_LDM,
-		    _dummy_first_bfd_reloc_code_real },
+    { STRING_COMMA_LEN ("TLSLDM"),   { BFD_RELOC_386_TLS_LDM,
+				       _dummy_first_bfd_reloc_code_real },
       OPERAND_TYPE_NONE },
-    { "TLSLD",    { _dummy_first_bfd_reloc_code_real,
-		    BFD_RELOC_X86_64_TLSLD    },
+    { STRING_COMMA_LEN ("TLSLD"),    { _dummy_first_bfd_reloc_code_real,
+				       BFD_RELOC_X86_64_TLSLD    },
       OPERAND_TYPE_IMM32_32S_DISP32 },
-    { "GOTTPOFF", { BFD_RELOC_386_TLS_IE_32,
-		    BFD_RELOC_X86_64_GOTTPOFF },
+    { STRING_COMMA_LEN ("GOTTPOFF"), { BFD_RELOC_386_TLS_IE_32,
+				       BFD_RELOC_X86_64_GOTTPOFF },
       OPERAND_TYPE_IMM32_32S_DISP32 },
-    { "TPOFF",    { BFD_RELOC_386_TLS_LE_32,
-		    BFD_RELOC_X86_64_TPOFF32  },
+    { STRING_COMMA_LEN ("TPOFF"),    { BFD_RELOC_386_TLS_LE_32,
+				       BFD_RELOC_X86_64_TPOFF32  },
       OPERAND_TYPE_IMM32_32S_64_DISP32_64 },
-    { "NTPOFF",   { BFD_RELOC_386_TLS_LE,
-		    _dummy_first_bfd_reloc_code_real },
+    { STRING_COMMA_LEN ("NTPOFF"),   { BFD_RELOC_386_TLS_LE,
+				       _dummy_first_bfd_reloc_code_real },
       OPERAND_TYPE_NONE },
-    { "DTPOFF",   { BFD_RELOC_386_TLS_LDO_32,
-		    BFD_RELOC_X86_64_DTPOFF32 },
-
+    { STRING_COMMA_LEN ("DTPOFF"),   { BFD_RELOC_386_TLS_LDO_32,
+				       BFD_RELOC_X86_64_DTPOFF32 },
       OPERAND_TYPE_IMM32_32S_64_DISP32_64 },
-    { "GOTNTPOFF",{ BFD_RELOC_386_TLS_GOTIE,
-		    _dummy_first_bfd_reloc_code_real },
+    { STRING_COMMA_LEN ("GOTNTPOFF"),{ BFD_RELOC_386_TLS_GOTIE,
+				       _dummy_first_bfd_reloc_code_real },
       OPERAND_TYPE_NONE },
-    { "INDNTPOFF",{ BFD_RELOC_386_TLS_IE,
-		    _dummy_first_bfd_reloc_code_real },
+    { STRING_COMMA_LEN ("INDNTPOFF"),{ BFD_RELOC_386_TLS_IE,
+				       _dummy_first_bfd_reloc_code_real },
       OPERAND_TYPE_NONE },
-    { "GOT",      { BFD_RELOC_386_GOT32,
-		    BFD_RELOC_X86_64_GOT32    },
+    { STRING_COMMA_LEN ("GOT"),      { BFD_RELOC_386_GOT32,
+				       BFD_RELOC_X86_64_GOT32    },
       OPERAND_TYPE_IMM32_32S_64_DISP32 },
-    { "TLSDESC",  { BFD_RELOC_386_TLS_GOTDESC,
-		    BFD_RELOC_X86_64_GOTPC32_TLSDESC },
+    { STRING_COMMA_LEN ("TLSDESC"),  { BFD_RELOC_386_TLS_GOTDESC,
+				       BFD_RELOC_X86_64_GOTPC32_TLSDESC },
       OPERAND_TYPE_IMM32_32S_DISP32 },
-    { "TLSCALL",  { BFD_RELOC_386_TLS_DESC_CALL,
-		    BFD_RELOC_X86_64_TLSDESC_CALL },
+    { STRING_COMMA_LEN ("TLSCALL"),  { BFD_RELOC_386_TLS_DESC_CALL,
+				       BFD_RELOC_X86_64_TLSDESC_CALL },
       OPERAND_TYPE_IMM32_32S_DISP32 },
   };
   char *cp;
@@ -6336,9 +6415,7 @@ lex_got (enum bfd_reloc_code_real *rel,
 
   for (j = 0; j < ARRAY_SIZE (gotrel); j++)
     {
-      int len;
-
-      len = strlen (gotrel[j].str);
+      int len = gotrel[j].len;
       if (strncasecmp (cp + 1, gotrel[j].str, len) == 0)
 	{
 	  if (gotrel[j].rel[object_64bit] != 0)
@@ -6403,6 +6480,7 @@ x86_cons (expressionS *exp, int size)
 {
   intel_syntax = -intel_syntax;
 
+  exp->X_md = 0;
   if (size == 4 || (object_64bit && size == 8))
     {
       /* Handle @GOTOFF and the like in an expression.  */
@@ -6800,7 +6878,8 @@ i386_finalize_displacement (segT exp_seg ATTRIBUTE_UNUSED, expressionS *exp,
 	goto inv_disp;
 
       if (S_IS_LOCAL (exp->X_add_symbol)
-	  && S_GET_SEGMENT (exp->X_add_symbol) != undefined_section)
+	  && S_GET_SEGMENT (exp->X_add_symbol) != undefined_section
+	  && S_GET_SEGMENT (exp->X_add_symbol) != expr_section)
 	section_symbol (S_GET_SEGMENT (exp->X_add_symbol));
       exp->X_op = O_subtract;
       exp->X_op_symbol = GOT_symbol;
@@ -7999,7 +8078,7 @@ const char *md_shortopts = "qn";
 #define OPTION_MOLD_GCC (OPTION_MD_BASE + 9)
 #define OPTION_MSSE2AVX (OPTION_MD_BASE + 10)
 #define OPTION_MSSE_CHECK (OPTION_MD_BASE + 11)
-#define OPTION_MAVXSCALAR (OPTION_MSSE_CHECK + 11)
+#define OPTION_MAVXSCALAR (OPTION_MD_BASE + 12)
 
 struct option md_longopts[] =
 {
@@ -8117,6 +8196,9 @@ md_parse_option (int c, char *arg)
 	      if (strcmp (arch, cpu_arch [j].name) == 0)
 		{
 		  /* Processor.  */
+		  if (! cpu_arch[j].flags.bitfield.cpui386)
+		    continue;
+
 		  cpu_arch_name = cpu_arch[j].name;
 		  cpu_sub_arch_name = NULL;
 		  cpu_arch_flags = cpu_arch[j].flags;
@@ -8248,7 +8330,7 @@ md_parse_option (int c, char *arg)
 "                                                                                "
 
 static void
-show_arch (FILE *stream, int ext)
+show_arch (FILE *stream, int ext, int check)
 {
   static char message[] = MESSAGE_TEMPLATE;
   char *start = message + 27;
@@ -8283,6 +8365,11 @@ show_arch (FILE *stream, int ext)
       else if (ext)
 	{
 	  /* It is an processor.  Skip if we show only extension.  */
+	  continue;
+	}
+      else if (check && ! cpu_arch[j].flags.bitfield.cpui386)
+	{
+	  /* It is an impossible processor - skip.  */
 	  continue;
 	}
 
@@ -8349,13 +8436,13 @@ md_show_usage (FILE *stream)
   fprintf (stream, _("\
   -march=CPU[,+EXTENSION...]\n\
                           generate code for CPU and EXTENSION, CPU is one of:\n"));
-  show_arch (stream, 0);
+  show_arch (stream, 0, 1);
   fprintf (stream, _("\
                           EXTENSION is combination of:\n"));
-  show_arch (stream, 1);
+  show_arch (stream, 1, 0);
   fprintf (stream, _("\
   -mtune=CPU              optimize for CPU, CPU is one of:\n"));
-  show_arch (stream, 0);
+  show_arch (stream, 0, 0);
   fprintf (stream, _("\
   -msse2avx               encode SSE instructions with VEX prefix\n"));
   fprintf (stream, _("\
@@ -8386,54 +8473,17 @@ const char *
 i386_target_format (void)
 {
   if (!strcmp (default_arch, "x86_64"))
-    {
-      set_code_flag (CODE_64BIT);
-      if (cpu_flags_all_zero (&cpu_arch_isa_flags))
-	{
-	  cpu_arch_isa_flags.bitfield.cpui186 = 1;
-	  cpu_arch_isa_flags.bitfield.cpui286 = 1;
-	  cpu_arch_isa_flags.bitfield.cpui386 = 1;
-	  cpu_arch_isa_flags.bitfield.cpui486 = 1;
-	  cpu_arch_isa_flags.bitfield.cpui586 = 1;
-	  cpu_arch_isa_flags.bitfield.cpui686 = 1;
-	  cpu_arch_isa_flags.bitfield.cpuclflush = 1;
-	  cpu_arch_isa_flags.bitfield.cpummx= 1;
-	  cpu_arch_isa_flags.bitfield.cpusse = 1;
-	  cpu_arch_isa_flags.bitfield.cpusse2 = 1;
-	  cpu_arch_isa_flags.bitfield.cpulm = 1;
-	}
-      if (cpu_flags_all_zero (&cpu_arch_tune_flags))
-	{
-	  cpu_arch_tune_flags.bitfield.cpui186 = 1;
-	  cpu_arch_tune_flags.bitfield.cpui286 = 1;
-	  cpu_arch_tune_flags.bitfield.cpui386 = 1;
-	  cpu_arch_tune_flags.bitfield.cpui486 = 1;
-	  cpu_arch_tune_flags.bitfield.cpui586 = 1;
-	  cpu_arch_tune_flags.bitfield.cpui686 = 1;
-	  cpu_arch_tune_flags.bitfield.cpuclflush = 1;
-	  cpu_arch_tune_flags.bitfield.cpummx= 1;
-	  cpu_arch_tune_flags.bitfield.cpusse = 1;
-	  cpu_arch_tune_flags.bitfield.cpusse2 = 1;
-	}
-    }
+    update_code_flag (CODE_64BIT, 1);
   else if (!strcmp (default_arch, "i386"))
-    {
-      set_code_flag (CODE_32BIT);
-      if (cpu_flags_all_zero (&cpu_arch_isa_flags))
-	{
-	  cpu_arch_isa_flags.bitfield.cpui186 = 1;
-	  cpu_arch_isa_flags.bitfield.cpui286 = 1;
-	  cpu_arch_isa_flags.bitfield.cpui386 = 1;
-	}
-      if (cpu_flags_all_zero (&cpu_arch_tune_flags))
-	{
-	  cpu_arch_tune_flags.bitfield.cpui186 = 1;
-	  cpu_arch_tune_flags.bitfield.cpui286 = 1;
-	  cpu_arch_tune_flags.bitfield.cpui386 = 1;
-	}
-    }
+    update_code_flag (CODE_32BIT, 1);
   else
     as_fatal (_("Unknown architecture"));
+
+  if (cpu_flags_all_zero (&cpu_arch_isa_flags))
+    cpu_arch_isa_flags = cpu_arch[flag_code == CODE_64BIT].flags;
+  if (cpu_flags_all_zero (&cpu_arch_tune_flags))
+    cpu_arch_tune_flags = cpu_arch[flag_code == CODE_64BIT].flags;
+
   switch (OUTPUT_FLAVOR)
     {
 #if defined (OBJ_MAYBE_AOUT) || defined (OBJ_AOUT)

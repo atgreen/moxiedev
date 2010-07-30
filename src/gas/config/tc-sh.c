@@ -145,6 +145,11 @@ static unsigned int preset_target_arch;
    accommodate the insns seen so far.  */
 static unsigned int valid_arch;
 
+#ifdef OBJ_ELF
+/* Whether --fdpic was given.  */
+static int sh_fdpic;
+#endif
+
 const char EXP_CHARS[] = "eE";
 
 /* Chars that mean this number is a floating point constant.  */
@@ -612,7 +617,6 @@ sh_check_fixup (expressionS *main_exp, bfd_reloc_code_real_type *r_type_p)
 
   if (exp->X_op == O_PIC_reloc)
     {
-#ifdef HAVE_SH64
       switch (*r_type_p)
 	{
 	case BFD_RELOC_NONE:
@@ -620,6 +624,31 @@ sh_check_fixup (expressionS *main_exp, bfd_reloc_code_real_type *r_type_p)
 	  *r_type_p = exp->X_md;
 	  break;
 
+	case BFD_RELOC_SH_DISP20:
+	  switch (exp->X_md)
+	    {
+	    case BFD_RELOC_32_GOT_PCREL:
+	      *r_type_p = BFD_RELOC_SH_GOT20;
+	      break;
+
+	    case BFD_RELOC_32_GOTOFF:
+	      *r_type_p = BFD_RELOC_SH_GOTOFF20;
+	      break;
+
+	    case BFD_RELOC_SH_GOTFUNCDESC:
+	      *r_type_p = BFD_RELOC_SH_GOTFUNCDESC20;
+	      break;
+
+	    case BFD_RELOC_SH_GOTOFFFUNCDESC:
+	      *r_type_p = BFD_RELOC_SH_GOTOFFFUNCDESC20;
+	      break;
+
+	    default:
+	      abort ();
+	    }
+	  break;
+
+#ifdef HAVE_SH64
 	case BFD_RELOC_SH_IMM_LOW16:
 	  switch (exp->X_md)
 	    {
@@ -715,13 +744,11 @@ sh_check_fixup (expressionS *main_exp, bfd_reloc_code_real_type *r_type_p)
 	      abort ();
 	    }
 	  break;
+#endif
 
 	default:
 	  abort ();
 	}
-#else
-      *r_type_p = exp->X_md;
-#endif
       if (exp == main_exp)
 	exp->X_op = O_symbol;
       else
@@ -1358,12 +1385,6 @@ parse_exp (char *s, sh_operand_info *op)
   expression (&op->immediate);
   if (op->immediate.X_op == O_absent)
     as_bad (_("missing operand"));
-#ifdef OBJ_ELF
-  else if (op->immediate.X_op == O_PIC_reloc
-	   || sh_PIC_related_p (op->immediate.X_add_symbol)
-	   || sh_PIC_related_p (op->immediate.X_op_symbol))
-    as_bad (_("misplaced PIC operand"));
-#endif
   new_pointer = input_line_pointer;
   input_line_pointer = save;
   return new_pointer;
@@ -2327,6 +2348,10 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
   unsigned int size = 2;
   int low_byte = target_big_endian ? 1 : 0;
   int max_index = 4;
+  bfd_reloc_code_real_type r_type;
+#ifdef OBJ_ELF
+  int unhandled_pic = 0;
+#endif
 
   nbuf[0] = 0;
   nbuf[1] = 0;
@@ -2336,6 +2361,16 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
   nbuf[5] = 0;
   nbuf[6] = 0;
   nbuf[7] = 0;
+
+#ifdef OBJ_ELF
+  for (indx = 0; indx < 3; indx++)
+    if (opcode->arg[indx] == A_IMM
+	&& operand[indx].type == A_IMM
+	&& (operand[indx].immediate.X_op == O_PIC_reloc
+	    || sh_PIC_related_p (operand[indx].immediate.X_add_symbol)
+	    || sh_PIC_related_p (operand[indx].immediate.X_op_symbol)))
+      unhandled_pic = 1;
+#endif
 
   if (SH_MERGE_ARCH_SET (opcode->arch, arch_op32))
     {
@@ -2415,7 +2450,13 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
 	    case IMM0_20_4:
 	      break;
 	    case IMM0_20:
-	      insert4 (output, BFD_RELOC_SH_DISP20, 0, operand);
+	      r_type = BFD_RELOC_SH_DISP20;
+#ifdef OBJ_ELF
+	      if (sh_check_fixup (&operand->immediate, &r_type))
+		as_bad (_("Invalid PIC expression."));
+	      unhandled_pic = 0;
+#endif
+	      insert4 (output, r_type, 0, operand);
 	      break;
 	    case IMM0_20BY8:
 	      insert4 (output, BFD_RELOC_SH_DISP20BY8, 0, operand);
@@ -2474,6 +2515,10 @@ build_Mytes (sh_opcode_info *opcode, sh_operand_info *operand)
 	    }
 	}
     }
+#ifdef OBJ_ELF
+  if (unhandled_pic)
+    as_bad (_("misplaced PIC operand"));
+#endif
   if (!target_big_endian)
     {
       output[1] = (nbuf[0] << 4) | (nbuf[1]);
@@ -2510,7 +2555,7 @@ find_cooked_opcode (char **str_p)
   unsigned char *op_start;
   unsigned char *op_end;
   char name[20];
-  int nlen = 0;
+  unsigned int nlen = 0;
 
   /* Drop leading whitespace.  */
   while (*str == ' ')
@@ -2522,7 +2567,7 @@ find_cooked_opcode (char **str_p)
      assemble_ppi, so the opcode might be terminated by an '@'.  */
   for (op_start = op_end = (unsigned char *) str;
        *op_end
-       && nlen < 20
+       && nlen < sizeof (name) - 1
        && !is_end_of_line[*op_end] && *op_end != ' ' && *op_end != '@';
        op_end++)
     {
@@ -3098,6 +3143,9 @@ enum options
   OPTION_PT32,
 #endif
   OPTION_H_TICK_HEX,
+#ifdef OBJ_ELF
+  OPTION_FDPIC,
+#endif
   OPTION_DUMMY  /* Not used.  This is just here to make it easy to add and subtract options from this enum.  */
 };
 
@@ -3125,6 +3173,10 @@ struct option md_longopts[] =
   {"expand-pt32",            no_argument, NULL, OPTION_PT32},
 #endif /* HAVE_SH64 */
   { "h-tick-hex", no_argument,	      NULL, OPTION_H_TICK_HEX  },
+
+#ifdef OBJ_ELF
+  {"fdpic", no_argument, NULL, OPTION_FDPIC},
+#endif
 
   {NULL, no_argument, NULL, 0}
 };
@@ -3259,6 +3311,12 @@ md_parse_option (int c, char *arg ATTRIBUTE_UNUSED)
       enable_h_tick_hex = 1;
       break;
 
+#ifdef OBJ_ELF
+    case OPTION_FDPIC:
+      sh_fdpic = TRUE;
+      break;
+#endif /* OBJ_ELF */
+
     default:
       return 0;
     }
@@ -3311,6 +3369,10 @@ SH options:\n\
 --expand-pt32		with -abi=64, expand PT, PTA and PTB instructions\n\
 			to 32 bits only\n"));
 #endif /* HAVE_SH64 */
+#ifdef OBJ_ELF
+  fprintf (stream, _("\
+--fdpic			generate an FDPIC object file\n"));
+#endif /* OBJ_ELF */
 }
 
 /* This struct is used to pass arguments to sh_count_relocs through
@@ -3663,7 +3725,6 @@ void
 sh_cons_align (int nbytes)
 {
   int nalign;
-  char *p;
 
   if (sh_no_align_cons)
     {
@@ -3689,8 +3750,8 @@ sh_cons_align (int nbytes)
       return;
     }
 
-  p = frag_var (rs_align_test, 1, 1, (relax_substateT) 0,
-		(symbolS *) NULL, (offsetT) nalign, (char *) NULL);
+  frag_var (rs_align_test, 1, 1, (relax_substateT) 0,
+	    (symbolS *) NULL, (offsetT) nalign, (char *) NULL);
 
   record_alignment (now_seg, nalign);
 }
@@ -3804,7 +3865,13 @@ sh_fix_adjustable (fixS *fixP)
 {
   if (fixP->fx_r_type == BFD_RELOC_32_PLT_PCREL
       || fixP->fx_r_type == BFD_RELOC_32_GOT_PCREL
+      || fixP->fx_r_type == BFD_RELOC_SH_GOT20
       || fixP->fx_r_type == BFD_RELOC_SH_GOTPC
+      || fixP->fx_r_type == BFD_RELOC_SH_GOTFUNCDESC
+      || fixP->fx_r_type == BFD_RELOC_SH_GOTFUNCDESC20
+      || fixP->fx_r_type == BFD_RELOC_SH_GOTOFFFUNCDESC
+      || fixP->fx_r_type == BFD_RELOC_SH_GOTOFFFUNCDESC20
+      || fixP->fx_r_type == BFD_RELOC_SH_FUNCDESC
       || ((fixP->fx_r_type == BFD_RELOC_32) && dont_adjust_reloc_32)
       || fixP->fx_r_type == BFD_RELOC_RVA)
     return 0;
@@ -3843,6 +3910,22 @@ sh_elf_final_processing (void)
 
   elf_elfheader (stdoutput)->e_flags &= ~EF_SH_MACH_MASK;
   elf_elfheader (stdoutput)->e_flags |= val;
+
+  if (sh_fdpic)
+    elf_elfheader (stdoutput)->e_flags |= EF_SH_FDPIC;
+}
+#endif
+
+#ifdef TE_UCLINUX
+/* Return the target format for uClinux.  */
+
+const char *
+sh_uclinux_target_format (void)
+{
+  if (sh_fdpic)
+    return (!target_big_endian ? "elf32-sh-fdpic" : "elf32-shbig-fdpic");
+  else
+    return (!target_big_endian ? "elf32-shl" : "elf32-sh");
 }
 #endif
 
@@ -4151,7 +4234,13 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       S_SET_THREAD_LOCAL (fixP->fx_addsy);
       /* Fallthrough */
     case BFD_RELOC_32_GOT_PCREL:
+    case BFD_RELOC_SH_GOT20:
     case BFD_RELOC_SH_GOTPLT32:
+    case BFD_RELOC_SH_GOTFUNCDESC:
+    case BFD_RELOC_SH_GOTFUNCDESC20:
+    case BFD_RELOC_SH_GOTOFFFUNCDESC:
+    case BFD_RELOC_SH_GOTOFFFUNCDESC20:
+    case BFD_RELOC_SH_FUNCDESC:
       * valP = 0; /* Fully resolved at runtime.  No addend.  */
       apply_full_field_fix (fixP, buf, 0, 4);
       break;
@@ -4161,6 +4250,7 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
       S_SET_THREAD_LOCAL (fixP->fx_addsy);
       /* Fallthrough */
     case BFD_RELOC_32_GOTOFF:
+    case BFD_RELOC_SH_GOTOFF20:
       apply_full_field_fix (fixP, buf, val, 4);
       break;
 #endif
@@ -4468,6 +4558,14 @@ sh_parse_name (char const *name,
     reloc_type = BFD_RELOC_SH_TLS_LE_32;
   else if ((next_end = sh_end_of_match (next + 1, "DTPOFF")))
     reloc_type = BFD_RELOC_SH_TLS_LDO_32;
+  else if ((next_end = sh_end_of_match (next + 1, "PCREL")))
+    reloc_type = BFD_RELOC_32_PCREL;
+  else if ((next_end = sh_end_of_match (next + 1, "GOTFUNCDESC")))
+    reloc_type = BFD_RELOC_SH_GOTFUNCDESC;
+  else if ((next_end = sh_end_of_match (next + 1, "GOTOFFFUNCDESC")))
+    reloc_type = BFD_RELOC_SH_GOTOFFFUNCDESC;
+  else if ((next_end = sh_end_of_match (next + 1, "FUNCDESC")))
+    reloc_type = BFD_RELOC_SH_FUNCDESC;
   else
     goto no_suffix;
 

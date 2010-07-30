@@ -702,7 +702,6 @@ tdesc_gdb_type (struct gdbarch *gdbarch, struct tdesc_type *tdesc_type)
 
     case TDESC_TYPE_FLAGS:
       {
-	struct type *type, *field_type;
 	struct tdesc_type_flag *f;
 	int ix;
 
@@ -852,7 +851,6 @@ tdesc_register_size (const struct tdesc_feature *feature,
 static struct tdesc_arch_reg *
 tdesc_find_arch_register (struct gdbarch *gdbarch, int regno)
 {
-  struct tdesc_arch_reg *reg;
   struct tdesc_arch_data *data;
 
   data = gdbarch_data (gdbarch, tdesc_data);
@@ -866,6 +864,7 @@ static struct tdesc_reg *
 tdesc_find_register (struct gdbarch *gdbarch, int regno)
 {
   struct tdesc_arch_reg *reg = tdesc_find_arch_register (gdbarch, regno);
+
   return reg? reg->reg : NULL;
 }
 
@@ -885,6 +884,7 @@ tdesc_register_name (struct gdbarch *gdbarch, int regno)
   if (regno >= num_regs && regno < num_regs + num_pseudo_regs)
     {
       struct tdesc_arch_data *data = gdbarch_data (gdbarch, tdesc_data);
+
       gdb_assert (data->pseudo_register_name != NULL);
       return data->pseudo_register_name (gdbarch, regno);
     }
@@ -903,6 +903,7 @@ tdesc_register_type (struct gdbarch *gdbarch, int regno)
   if (reg == NULL && regno >= num_regs && regno < num_regs + num_pseudo_regs)
     {
       struct tdesc_arch_data *data = gdbarch_data (gdbarch, tdesc_data);
+
       gdb_assert (data->pseudo_register_type != NULL);
       return data->pseudo_register_type (gdbarch, regno);
     }
@@ -1040,6 +1041,7 @@ tdesc_register_reggroup_p (struct gdbarch *gdbarch, int regno,
   if (regno >= num_regs && regno < num_regs + num_pseudo_regs)
     {
       struct tdesc_arch_data *data = gdbarch_data (gdbarch, tdesc_data);
+
       if (data->pseudo_register_reggroup_p != NULL)
 	return data->pseudo_register_reggroup_p (gdbarch, regno, reggroup);
       /* Otherwise fall through to the default reggroup_p.  */
@@ -1091,7 +1093,7 @@ tdesc_use_registers (struct gdbarch *gdbarch,
 		     struct tdesc_arch_data *early_data)
 {
   int num_regs = gdbarch_num_regs (gdbarch);
-  int i, ixf, ixr;
+  int ixf, ixr;
   struct tdesc_feature *feature;
   struct tdesc_reg *reg;
   struct tdesc_arch_data *data;
@@ -1200,7 +1202,6 @@ tdesc_create_reg (struct tdesc_feature *feature, const char *name,
 static void
 tdesc_free_type (struct tdesc_type *type)
 {
-
   switch (type->kind)
     {
     case TDESC_TYPE_STRUCT:

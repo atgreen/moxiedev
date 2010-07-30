@@ -290,6 +290,9 @@ proc gdb_run_cmd {args} {
 	    exp_continue
 	}
 	-notransfer -re "Starting program: \[^\r\n\]*" {}
+	-notransfer -re "$gdb_prompt $" {
+	    # There is no more input expected.
+	}
     }
 }
 
@@ -415,6 +418,10 @@ proc runto { function args } {
 	}
 	-re "Breakpoint \[0-9\]*, \[0-9xa-f\]* in .*$gdb_prompt $" { 
 	    return 1
+	}
+	-re "The target does not support running in non-stop mode.\r\n$gdb_prompt $" {
+	    unsupported "Non-stop mode not supported"
+	    return 0
 	}
 	-re "$gdb_prompt $" { 
 	    fail "running to $function in runto"
@@ -571,6 +578,10 @@ proc gdb_test_multiple { command message user_code } {
 
     if { $message == "" } {
 	set message $command
+    }
+
+    if [string match "*\[\r\n\]" $command] {
+	error "Invalid trailing newline in \"$message\" test"
     }
 
     # TCL/EXPECT WART ALERT
@@ -747,7 +758,7 @@ proc gdb_test_multiple { command message user_code } {
 	    fail "$errmsg"
 	    set result -1
 	}
-	 -re "EXIT code \[0-9\r\n\]+Program exited normally.*$gdb_prompt $" {
+	 -re "Program exited normally.*$gdb_prompt $" {
 	    if ![string match "" $message] then {
 		set errmsg "$message (the program exited)"
 	    } else {
@@ -877,6 +888,34 @@ proc gdb_test { args } {
 	}
      }]
 }
+
+# gdb_test_no_output COMMAND MESSAGE
+# Send a command to GDB and verify that this command generated no output.
+#
+# See gdb_test_multiple for a description of the COMMAND and MESSAGE
+# parameters.  If MESSAGE is ommitted, then COMMAND will be used as
+# the message.  (If MESSAGE is the empty string, then sometimes we do not
+# call pass or fail at all; I don't understand this at all.)
+
+proc gdb_test_no_output { args } {
+    global gdb_prompt
+    set command [lindex $args 0]
+    if [llength $args]>1 then {
+	set message [lindex $args 1]
+    } else {
+	set message $command
+    }
+
+    set command_regex [string_to_regexp $command]
+    gdb_test_multiple $command $message {
+        -re "^$command_regex\r\n$gdb_prompt $" {
+	    if ![string match "" $message] then {
+		pass "$message"
+            }
+        }
+    }
+}
+
 
 # Test that a command gives an error.  For pass or fail, return
 # a 1 to indicate that more tests can proceed.  However a timeout
@@ -996,6 +1035,59 @@ proc gdb_test_exact { args } {
     }
 
     return [gdb_test $command $pattern $message]
+}
+
+# Wrapper around gdb_test_multiple that looks for a list of expected
+# output elements, but which can appear in any order.
+# CMD is the gdb command.
+# NAME is the name of the test.
+# ELM_FIND_REGEXP specifies how to partition the output into elements to
+# compare.
+# ELM_EXTRACT_REGEXP specifies the part of ELM_FIND_REGEXP to compare.
+# RESULT_MATCH_LIST is a list of exact matches for each expected element.
+# All elements of RESULT_MATCH_LIST must appear for the test to pass.
+#
+# A typical use of ELM_FIND_REGEXP/ELM_EXTRACT_REGEXP is to extract one line
+# of text per element and then strip trailing \r\n's.
+# Example:
+# gdb_test_list_exact "foo" "bar" \
+#     {[^\r\n]+[\r\n]+} \
+#     {[^\r\n]+} \
+#     { \
+#	{expected result 1} \
+#	{expected result 2} \
+#     }
+
+proc gdb_test_list_exact { cmd name elm_find_regexp elm_extract_regexp result_match_list } {
+    global gdb_prompt
+
+    set matches [lsort $result_match_list]
+    set seen {}
+    gdb_test_multiple $cmd $name {
+	"$cmd\[\r\n\]" { exp_continue }
+	-re $elm_find_regexp {
+	    set str $expect_out(0,string)
+	    verbose -log "seen: $str" 3
+	    regexp -- $elm_extract_regexp $str elm_seen
+	    verbose -log "extracted: $elm_seen" 3
+	    lappend seen $elm_seen
+	    exp_continue
+	}
+	-re "$gdb_prompt $" {
+	    set failed ""
+	    foreach got [lsort $seen] have $matches {
+		if {![string equal $got $have]} {
+		    set failed $have
+		    break
+		}
+	    }
+	    if {[string length $failed] != 0} {
+		fail "$name ($failed not found)"
+	    } else {
+		pass $name
+	    }
+	}
+    }
 }
 
 proc gdb_reinitialize_dir { subdir } {
@@ -1266,6 +1358,8 @@ proc gdb_compile_test {src output} {
     } elseif { [regexp {^[a-zA-Z_0-9]+: Can't find [^ ]+\.$} $output] } {
 	unsupported "compilation [file tail $src]"
     } elseif { [regexp {.*: command not found[\r|\n]*$} $output] } {
+	unsupported "compilation [file tail $src]"
+    } elseif { [regexp {.*: [^\r\n]*compiler not installed[^\r\n]*[\r|\n]*$} $output] } {
 	unsupported "compilation [file tail $src]"
     } else {
 	verbose -log "compilation failed: $output" 2
@@ -2478,6 +2572,20 @@ if ![info exists gdb_test_timeout] {
     set gdb_test_timeout $timeout
 }
 
+# A list of global variables that GDB testcases should not use.
+# We try to prevent their use by monitoring write accesses and raising
+# an error when that happens.
+set banned_variables { bug_id prms_id }
+
+# gdb_init is called by runtest at start, but also by several
+# tests directly; gdb_finish is only called from within runtest after
+# each test source execution.
+# Placing several traces by repetitive calls to gdb_init leads
+# to problems, as only one trace is removed in gdb_finish.
+# To overcome this possible problem, we add a variable that records
+# if the banned variables are traced.
+set banned_variables_traced 0
+
 proc gdb_init { args } {
     # Reset the timeout value to the default.  This way, any testcase
     # that changes the timeout value without resetting it cannot affect
@@ -2485,6 +2593,17 @@ proc gdb_init { args } {
     global gdb_test_timeout
     global timeout
     set timeout $gdb_test_timeout
+
+    # Block writes to all banned variables...
+    global banned_variables
+    global banned_variables_traced
+    if (!$banned_variables_traced) {
+    	foreach banned_var $banned_variables {
+            global "$banned_var"
+            trace add variable "$banned_var" write error
+	}
+	set banned_variables_traced 1
+    }
 
     return [eval default_gdb_init $args];
 }
@@ -2498,6 +2617,18 @@ proc gdb_finish { } {
     if { [llength $cleanfiles] > 0 } {
 	eval remote_file target delete $cleanfiles
 	set cleanfiles {}
+    }
+
+    # Unblock write access to the banned variables.  Dejagnu typically
+    # resets some of them between testcases.
+    global banned_variables
+    global banned_variables_traced
+    if ($banned_variables_traced) {
+    	foreach banned_var $banned_variables {
+            global "$banned_var"
+            trace remove variable "$banned_var" write error
+	}
+	set banned_variables_traced 0
     }
 }
 
@@ -2831,8 +2962,8 @@ proc gdb_skip_xml_test { } {
 # Note: the procedure gdb_gnu_strip_debug will produce an executable called
 # ${binfile}.dbglnk, which is just like the executable ($binfile) but without
 # the debuginfo. Instead $binfile has a .gnu_debuglink section which contains
-# the name of a debuginfo only file. This file will be stored in the 
-# gdb.base/.debug subdirectory.
+# the name of a debuginfo only file. This file will be stored in the same
+# subdirectory.
 
 # Functions for separate debug info testing
 
@@ -2841,26 +2972,8 @@ proc gdb_skip_xml_test { } {
 
 # at the end of the process we have:
 # foo.stripped --> foo w/o debug info
-# .debug/foo.debug --> foo's debug info
+# foo.debug --> foo's debug info
 # foo --> like foo, but with a new .gnu_debuglink section pointing to foo.debug.
-
-# Return the name of the file in which we should stor EXEC's separated
-# debug info. EXEC contains the full path.
-proc separate_debug_filename { exec } {
-
-    # In a .debug subdirectory off the same directory where the testcase
-    # executable is going to be. Something like:
-    # <your-path>/gdb/testsuite/gdb.base/.debug/blah.debug.
-    # This is the default location where gdb expects to findi
-    # the debug info file.
-
-    set exec_dir [file dirname $exec]
-    set exec_file [file tail $exec]
-    set debug_dir [file join $exec_dir ".debug"]
-    set debug_file [file join $debug_dir "${exec_file}.debug"]
-
-    return $debug_file
-}
 
 # Return the build-id hex string (usually 160 bits as 40 hex characters)
 # converted to the form: .build-id/ab/cdef1234...89.debug
@@ -2894,19 +3007,18 @@ proc build_id_debug_filename_get { exec } {
 # Create stripped files for DEST, replacing it.  If ARGS is passed, it is a
 # list of optional flags.  The only currently supported flag is no-main,
 # which removes the symbol entry for main from the separate debug file.
+#
+# Function returns zero on success.  Function will return non-zero failure code
+# on some targets not supporting separate debug info (such as i386-msdos).
 
 proc gdb_gnu_strip_debug { dest args } {
 
-    set debug_file [separate_debug_filename $dest]
+    # Use the first separate debug info file location searched by GDB so the
+    # run cannot be broken by some stale file searched with higher precedence.
+    set debug_file "${dest}.debug"
+
     set strip_to_file_program [transform strip]
     set objcopy_program [transform objcopy]
-
-    # Make sure the directory that will hold the separated debug
-    # info actually exists.
-    set debug_dir [file dirname $debug_file]
-    if {! [file isdirectory $debug_dir]} {
-	file mkdir $debug_dir
-    }
 
     set debug_link [file tail $debug_file]
     set stripped_file "${dest}.stripped"

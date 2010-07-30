@@ -45,7 +45,6 @@ static valueT generic_bignum_to_int64 (void);
 #endif
 static void integer_constant (int radix, expressionS * expressionP);
 static void mri_char_constant (expressionS *);
-static void current_location (expressionS *);
 static void clean_up_expression (expressionS * expressionP);
 static segT operand (expressionS *, enum expr_mode);
 static operatorT operatorf (int *);
@@ -695,7 +694,7 @@ mri_char_constant (expressionS *expressionP)
 /* Return an expression representing the current location.  This
    handles the magic symbol `.'.  */
 
-static void
+void
 current_location (expressionS *expressionp)
 {
   if (now_seg == absolute_section)
@@ -1740,6 +1739,7 @@ expr (int rankarg,		/* Larger # is higher rank.  */
 
       input_line_pointer += op_chars;	/* -> after operator.  */
 
+      right.X_md = 0;
       rightseg = expr (op_rank[(int) op_left], &right, mode);
       if (right.X_op == O_absent)
 	{

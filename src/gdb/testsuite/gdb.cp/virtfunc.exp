@@ -231,21 +231,17 @@ proc test_virtual_calls {} {
 }
 
 proc do_tests {} {
-    global prms_id
-    global bug_id
     global srcdir subdir binfile
     global gdb_prompt
 
-    set prms_id 0
-    set bug_id 0
 
     gdb_exit
     gdb_start
     gdb_reinitialize_dir $srcdir/$subdir
     gdb_load $binfile
 
-    gdb_test "set language c++" "" ""
-    gdb_test "set width 0" "" ""
+    gdb_test_no_output "set language c++" ""
+    gdb_test_no_output "set width 0" ""
 
     if ![runto_main] then {
 	perror "couldn't run to breakpoint"

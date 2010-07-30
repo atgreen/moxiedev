@@ -1,9 +1,9 @@
-/* Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009
+/* Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Andy Vaught
    F2003 I/O support contributed by Jerry DeLisle
 
-This file is part of the GNU Fortran 95 runtime library (libgfortran).
+This file is part of the GNU Fortran runtime library (libgfortran).
 
 Libgfortran is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -134,28 +134,6 @@ typedef struct stat gfstat_t;
 /* Unix and internal stream I/O module */
 
 static const int BUFFER_SIZE = 8192;
-
-typedef struct
-{
-  stream st;
-
-  gfc_offset buffer_offset;	/* File offset of the start of the buffer */
-  gfc_offset physical_offset;	/* Current physical file offset */
-  gfc_offset logical_offset;	/* Current logical file offset */
-  gfc_offset file_length;	/* Length of the file, -1 if not seekable. */
-
-  char *buffer;                 /* Pointer to the buffer.  */
-  int fd;                       /* The POSIX file descriptor.  */
-
-  int active;			/* Length of valid bytes in the buffer */
-
-  int prot;
-  int ndirty;			/* Dirty bytes starting at buffer_offset */
-
-  int special_file;		/* =1 if the fd refers to a special file */
-}
-unix_stream;
-
 
 /* fix_fd()-- Given a file descriptor, make sure it is not one of the
  * standard descriptors, returning a non-standard descriptor.  If the
@@ -308,7 +286,7 @@ raw_truncate (unix_stream * s, gfc_offset length)
       errno = EBADF;
       return -1;
     }
-  h = _get_osfhandle (s->fd);
+  h = (HANDLE) _get_osfhandle (s->fd);
   if (h == INVALID_HANDLE_VALUE)
     {
       errno = EBADF;
@@ -351,7 +329,7 @@ raw_close (unix_stream * s)
     retval = close (s->fd);
   else
     retval = 0;
-  free_mem (s);
+  free (s);
   return retval;
 }
 
@@ -404,6 +382,10 @@ buf_flush (unix_stream * s)
   s->ndirty -= writelen;
   if (s->ndirty != 0)
     return -1;
+
+#ifdef _WIN32
+  _commit (s->fd);
+#endif
 
   return 0;
 }
@@ -496,13 +478,17 @@ buf_write (unix_stream * s, const void * buf, ssize_t nbyte)
           s->ndirty += nbyte;
         }
       else
-        {
-          if (s->file_length != -1 && s->physical_offset != s->logical_offset
-              && lseek (s->fd, s->logical_offset, SEEK_SET) < 0)
-            return -1;
-          nbyte = raw_write (s, buf, nbyte);
-          s->physical_offset += nbyte;
-        }
+	{
+	  if (s->file_length != -1 && s->physical_offset != s->logical_offset)
+	    {
+	      if (lseek (s->fd, s->logical_offset, SEEK_SET) < 0)
+		return -1;
+	      s->physical_offset = s->logical_offset;
+	    }
+
+	  nbyte = raw_write (s, buf, nbyte);
+	  s->physical_offset += nbyte;
+	}
     }
   s->logical_offset += nbyte;
   /* Don't increment file_length if the file is non-seekable.  */
@@ -560,7 +546,7 @@ buf_close (unix_stream * s)
 {
   if (buf_flush (s) != 0)
     return -1;
-  free_mem (s->buffer);
+  free (s->buffer);
   return raw_close (s);
 }
 
@@ -590,7 +576,6 @@ buf_init (unix_stream * s)
 
 *********************************************************************/
 
-
 char *
 mem_alloc_r (stream * strm, int * len)
 {
@@ -608,6 +593,26 @@ mem_alloc_r (stream * strm, int * len)
   s->logical_offset = where + *len;
 
   return s->buffer + (where - s->buffer_offset);
+}
+
+
+char *
+mem_alloc_r4 (stream * strm, int * len)
+{
+  unix_stream * s = (unix_stream *) strm;
+  gfc_offset n;
+  gfc_offset where = s->logical_offset;
+
+  if (where < s->buffer_offset || where > s->buffer_offset + s->active)
+    return NULL;
+
+  n = s->buffer_offset + s->active - where;
+  if (*len > n)
+    *len = n;
+
+  s->logical_offset = where + *len;
+
+  return s->buffer + (where - s->buffer_offset) * 4;
 }
 
 
@@ -632,7 +637,28 @@ mem_alloc_w (stream * strm, int * len)
 }
 
 
-/* Stream read function for internal units.  */
+gfc_char4_t *
+mem_alloc_w4 (stream * strm, int * len)
+{
+  unix_stream * s = (unix_stream *) strm;
+  gfc_offset m;
+  gfc_offset where = s->logical_offset;
+  gfc_char4_t *result = (gfc_char4_t *) s->buffer;
+
+  m = where + *len;
+
+  if (where < s->buffer_offset)
+    return NULL;
+
+  if (m > s->file_length)
+    return NULL;
+
+  s->logical_offset = m;
+  return &result[where - s->buffer_offset];
+}
+
+
+/* Stream read function for character(kine=1) internal units.  */
 
 static ssize_t
 mem_read (stream * s, void * buf, ssize_t nbytes)
@@ -651,9 +677,26 @@ mem_read (stream * s, void * buf, ssize_t nbytes)
 }
 
 
-/* Stream write function for internal units. This is not actually used
-   at the moment, as all internal IO is formatted and the formatted IO
-   routines use mem_alloc_w_at.  */
+/* Stream read function for chracter(kind=4) internal units.  */
+
+static ssize_t
+mem_read4 (stream * s, void * buf, ssize_t nbytes)
+{
+  void *p;
+  int nb = nbytes;
+
+  p = mem_alloc_r (s, &nb);
+  if (p)
+    {
+      memcpy (buf, p, nb);
+      return (ssize_t) nb;
+    }
+  else
+    return 0;
+}
+
+
+/* Stream write function for character(kind=1) internal units.  */
 
 static ssize_t
 mem_write (stream * s, const void * buf, ssize_t nbytes)
@@ -666,6 +709,26 @@ mem_write (stream * s, const void * buf, ssize_t nbytes)
     {
       memcpy (p, buf, nb);
       return (ssize_t) nb;
+    }
+  else
+    return 0;
+}
+
+
+/* Stream write function for character(kind=4) internal units.  */
+
+static ssize_t
+mem_write4 (stream * s, const void * buf, ssize_t nwords)
+{
+  gfc_char4_t *p;
+  int nw = nwords;
+
+  p = mem_alloc_w4 (s, &nw);
+  if (p)
+    {
+      while (nw--)
+	*p++ = (gfc_char4_t) *((char *) buf);
+      return nwords;
     }
   else
     return 0;
@@ -735,7 +798,7 @@ static int
 mem_close (unix_stream * s)
 {
   if (s != NULL)
-    free_mem (s);
+    free (s);
 
   return 0;
 }
@@ -755,7 +818,8 @@ empty_internal_buffer(stream *strm)
   memset(s->buffer, ' ', s->file_length);
 }
 
-/* open_internal()-- Returns a stream structure from an internal file */
+/* open_internal()-- Returns a stream structure from a character(kind=1)
+   internal file */
 
 stream *
 open_internal (char *base, int length, gfc_offset offset)
@@ -777,6 +841,34 @@ open_internal (char *base, int length, gfc_offset offset)
   s->st.trunc = (void *) mem_truncate;
   s->st.read = (void *) mem_read;
   s->st.write = (void *) mem_write;
+  s->st.flush = (void *) mem_flush;
+
+  return (stream *) s;
+}
+
+/* open_internal4()-- Returns a stream structure from a character(kind=4)
+   internal file */
+
+stream *
+open_internal4 (char *base, int length, gfc_offset offset)
+{
+  unix_stream *s;
+
+  s = get_mem (sizeof (unix_stream));
+  memset (s, '\0', sizeof (unix_stream));
+
+  s->buffer = base;
+  s->buffer_offset = offset;
+
+  s->logical_offset = 0;
+  s->active = s->file_length = length;
+
+  s->st.close = (void *) mem_close;
+  s->st.seek = (void *) mem_seek;
+  s->st.tell = (void *) mem_tell;
+  s->st.trunc = (void *) mem_truncate;
+  s->st.read = (void *) mem_read4;
+  s->st.write = (void *) mem_write4;
   s->st.flush = (void *) mem_flush;
 
   return (stream *) s;
@@ -873,42 +965,67 @@ tempfile (st_parameter_open *opp)
 {
   const char *tempdir;
   char *template;
+  const char *slash = "/";
   int fd;
 
   tempdir = getenv ("GFORTRAN_TMPDIR");
+#ifdef __MINGW32__
+  if (tempdir == NULL)
+    {
+      char buffer[MAX_PATH + 1];
+      DWORD ret;
+      ret = GetTempPath (MAX_PATH, buffer);
+      /* If we are not able to get a temp-directory, we use
+	 current directory.  */
+      if (ret > MAX_PATH || !ret)
+        buffer[0] = 0;
+      else
+        buffer[ret] = 0;
+      tempdir = strdup (buffer);
+    }
+#else
   if (tempdir == NULL)
     tempdir = getenv ("TMP");
   if (tempdir == NULL)
     tempdir = getenv ("TEMP");
   if (tempdir == NULL)
     tempdir = DEFAULT_TEMPDIR;
+#endif
+  /* Check for special case that tempdir contains slash
+     or backslash at end.  */
+  if (*tempdir == 0 || tempdir[strlen (tempdir) - 1] == '/'
+#ifdef __MINGW32__
+      || tempdir[strlen (tempdir) - 1] == '\\'
+#endif
+     )
+    slash = "";
 
   template = get_mem (strlen (tempdir) + 20);
 
-  sprintf (template, "%s/gfortrantmpXXXXXX", tempdir);
-
 #ifdef HAVE_MKSTEMP
+  sprintf (template, "%s%sgfortrantmpXXXXXX", tempdir, slash);
 
   fd = mkstemp (template);
 
 #else /* HAVE_MKSTEMP */
-
-  if (mktemp (template))
-    do
+  fd = -1;
+  do
+    {
+      sprintf (template, "%s%sgfortrantmpXXXXXX", tempdir, slash);
+      if (!mktemp (template))
+	break;
 #if defined(HAVE_CRLF) && defined(O_BINARY)
       fd = open (template, O_RDWR | O_CREAT | O_EXCL | O_BINARY,
 		 S_IREAD | S_IWRITE);
 #else
       fd = open (template, O_RDWR | O_CREAT | O_EXCL, S_IREAD | S_IWRITE);
 #endif
-    while (!(fd == -1 && errno == EEXIST) && mktemp (template));
-  else
-    fd = -1;
-
+    }
+  while (fd == -1 && errno == EEXIST);
 #endif /* HAVE_MKSTEMP */
 
   if (fd < 0)
-    free_mem (template);
+    free (template);
   else
     {
       opp->file = template;
@@ -1366,7 +1483,7 @@ retry:
 	  __gthread_mutex_lock (&unit_lock);
 	  __gthread_mutex_unlock (&u->lock);
 	  if (predec_waiting_locked (u) == 0)
-	    free_mem (u);
+	    free (u);
 	  goto retry;
 	}
 
@@ -1431,7 +1548,7 @@ flush_all_units (void)
 	  __gthread_mutex_lock (&unit_lock);
 	  __gthread_mutex_unlock (&u->lock);
 	  if (predec_waiting_locked (u) == 0)
-	    free_mem (u);
+	    free (u);
 	}
     }
   while (1);
@@ -1475,6 +1592,22 @@ file_exists (const char *file, gfc_charlen_type file_len)
 }
 
 
+/* file_size()-- Returns the size of the file.  */
+
+GFC_IO_INT
+file_size (const char *file, gfc_charlen_type file_len)
+{
+  char path[PATH_MAX + 1];
+  gfstat_t statbuf;
+
+  if (unpack_filename (path, file, file_len))
+    return -1;
+
+  if (stat (path, &statbuf) < 0)
+    return -1;
+
+  return (GFC_IO_INT) statbuf.st_size;
+}
 
 static const char yes[] = "YES", no[] = "NO", unknown[] = "UNKNOWN";
 

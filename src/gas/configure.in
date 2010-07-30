@@ -612,7 +612,7 @@ AC_DEFINE_UNQUOTED(TARGET_OS,		"${target_os}",    [Target OS.])
 AC_PROG_YACC
 AM_PROG_LEX
 
-ALL_LINGUAS="fr tr es rw id"
+ALL_LINGUAS="fr tr es rw id ru"
 ZW_GNU_GETTEXT_SISTER_DIR
 AM_PO_SUBDIRS
 
@@ -620,7 +620,7 @@ AM_MAINTAINER_MODE
 AM_CONDITIONAL(GENINSRC_NEVER, false)
 AC_EXEEXT
 
-AC_CHECK_HEADERS(string.h stdlib.h memory.h strings.h unistd.h stdarg.h varargs.h errno.h sys/types.h limits.h time.h sys/stat.h)
+AC_CHECK_HEADERS(string.h stdlib.h memory.h strings.h unistd.h errno.h sys/types.h limits.h time.h sys/stat.h)
 
 # Put this here so that autoconf's "cross-compiling" message doesn't confuse
 # people who are not cross-compiling but are compiling cross-assemblers.
@@ -708,6 +708,9 @@ AC_CHECK_DECLS([mempcpy])
 AC_CHECK_DECLS([vsnprintf])
 
 BFD_BINARY_FOPEN
+
+# Link in zlib if we can.  This allows us to write compressed debug sections.
+AM_ZLIB
 
 # Support for VMS timestamps via cross compile
 

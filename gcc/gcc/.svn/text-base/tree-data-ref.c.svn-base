@@ -1,5 +1,5 @@
 /* Data references and dependences detectors.
-   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
    Contributed by Sebastian Pop <pop@cri.ensmp.fr>
 
@@ -81,11 +81,9 @@ along with GCC; see the file COPYING3.  If not see
 #include "ggc.h"
 #include "flags.h"
 #include "tree.h"
-
-/* These RTL headers are needed for basic-block.h.  */
-#include "rtl.h"
 #include "basic-block.h"
-#include "diagnostic.h"
+#include "tree-pretty-print.h"
+#include "gimple-pretty-print.h"
 #include "tree-flow.h"
 #include "tree-dump.h"
 #include "timevar.h"
@@ -160,7 +158,7 @@ dump_data_references (FILE *file, VEC (data_reference_p, heap) *datarefs)
 
 /* Dump into STDERR all the data references from DATAREFS.  */
 
-void
+DEBUG_FUNCTION void
 debug_data_references (VEC (data_reference_p, heap) *datarefs)
 {
   dump_data_references (stderr, datarefs);
@@ -168,7 +166,7 @@ debug_data_references (VEC (data_reference_p, heap) *datarefs)
 
 /* Dump to STDERR all the dependence relations from DDRS.  */
 
-void
+DEBUG_FUNCTION void
 debug_data_dependence_relations (VEC (ddr_p, heap) *ddrs)
 {
   dump_data_dependence_relations (stderr, ddrs);
@@ -189,7 +187,7 @@ dump_data_dependence_relations (FILE *file,
 
 /* Print to STDERR the data_reference DR.  */
 
-void
+DEBUG_FUNCTION void
 debug_data_reference (struct data_reference *dr)
 {
   dump_data_reference (stderr, dr);
@@ -203,19 +201,19 @@ dump_data_reference (FILE *outf,
 {
   unsigned int i;
 
-  fprintf (outf, "(Data Ref: \n  stmt: ");
+  fprintf (outf, "#(Data Ref: \n#  stmt: ");
   print_gimple_stmt (outf, DR_STMT (dr), 0, 0);
-  fprintf (outf, "  ref: ");
+  fprintf (outf, "#  ref: ");
   print_generic_stmt (outf, DR_REF (dr), 0);
-  fprintf (outf, "  base_object: ");
+  fprintf (outf, "#  base_object: ");
   print_generic_stmt (outf, DR_BASE_OBJECT (dr), 0);
 
   for (i = 0; i < DR_NUM_DIMENSIONS (dr); i++)
     {
-      fprintf (outf, "  Access function %d: ", i);
+      fprintf (outf, "#  Access function %d: ", i);
       print_generic_stmt (outf, DR_ACCESS_FN (dr, i), 0);
     }
-  fprintf (outf, ")\n");
+  fprintf (outf, "#)\n");
 }
 
 /* Dumps the affine function described by FN to the file OUTF.  */
@@ -363,7 +361,7 @@ print_dist_vectors  (FILE *outf, VEC (lambda_vector, heap) *dist_vects,
 
 /* Debug version.  */
 
-void
+DEBUG_FUNCTION void
 debug_data_dependence_relation (struct data_dependence_relation *ddr)
 {
   dump_data_dependence_relation (stderr, ddr);
@@ -748,7 +746,22 @@ dr_analyze_innermost (struct data_reference *dr)
       return false;
     }
 
-  base = build_fold_addr_expr (base);
+  if (TREE_CODE (base) == MEM_REF)
+    {
+      if (!integer_zerop (TREE_OPERAND (base, 1)))
+	{
+	  if (!poffset)
+	    {
+	      double_int moff = mem_ref_offset (base);
+	      poffset = double_int_to_tree (sizetype, moff);
+	    }
+	  else
+	    poffset = size_binop (PLUS_EXPR, poffset, TREE_OPERAND (base, 1));
+	}
+      base = TREE_OPERAND (base, 0);
+    }
+  else
+    base = build_fold_addr_expr (base);
   if (in_loop)
     {
       if (!simple_iv (loop, loop_containing_stmt (stmt), base, &base_iv,
@@ -846,19 +859,40 @@ dr_analyze_indices (struct data_reference *dr, struct loop *nest)
       aref = TREE_OPERAND (aref, 0);
     }
 
-  if (nest && INDIRECT_REF_P (aref))
+  if (nest
+      && (INDIRECT_REF_P (aref)
+	  || TREE_CODE (aref) == MEM_REF))
     {
       op = TREE_OPERAND (aref, 0);
       access_fn = analyze_scalar_evolution (loop, op);
       access_fn = instantiate_scev (before_loop, loop, access_fn);
       base = initial_condition (access_fn);
       split_constant_offset (base, &base, &off);
+      if (TREE_CODE (aref) == MEM_REF)
+	off = size_binop (PLUS_EXPR, off,
+			  fold_convert (ssizetype, TREE_OPERAND (aref, 1)));
       access_fn = chrec_replace_initial_condition (access_fn,
 			fold_convert (TREE_TYPE (base), off));
 
       TREE_OPERAND (aref, 0) = base;
       VEC_safe_push (tree, heap, access_fns, access_fn);
     }
+
+  if (TREE_CODE (aref) == MEM_REF)
+    TREE_OPERAND (aref, 1)
+      = build_int_cst (TREE_TYPE (TREE_OPERAND (aref, 1)), 0);
+
+  if (TREE_CODE (ref) == MEM_REF
+      && TREE_CODE (TREE_OPERAND (ref, 0)) == ADDR_EXPR
+      && integer_zerop (TREE_OPERAND (ref, 1)))
+    ref = TREE_OPERAND (TREE_OPERAND (ref, 0), 0);
+
+  /* For canonicalization purposes we'd like to strip all outermost
+     zero-offset component-refs.
+     ???  For now simply handle zero-index array-refs.  */
+  while (TREE_CODE (ref) == ARRAY_REF
+	 && integer_zerop (TREE_OPERAND (ref, 1)))
+    ref = TREE_OPERAND (ref, 0);
 
   DR_BASE_OBJECT (dr) = ref;
   DR_ACCESS_FNS (dr) = access_fns;
@@ -872,7 +906,8 @@ dr_analyze_alias (struct data_reference *dr)
   tree ref = DR_REF (dr);
   tree base = get_base_address (ref), addr;
 
-  if (INDIRECT_REF_P (base))
+  if (INDIRECT_REF_P (base)
+      || TREE_CODE (base) == MEM_REF)
     {
       addr = TREE_OPERAND (base, 0);
       if (TREE_CODE (addr) == SSA_NAME)
@@ -1190,7 +1225,8 @@ object_address_invariant_in_loop_p (const struct loop *loop, const_tree obj)
       obj = TREE_OPERAND (obj, 0);
     }
 
-  if (!INDIRECT_REF_P (obj))
+  if (!INDIRECT_REF_P (obj)
+      && TREE_CODE (obj) != MEM_REF)
     return true;
 
   return !chrec_contains_symbols_defined_in_loop (TREE_OPERAND (obj, 0),
@@ -1416,7 +1452,14 @@ initialize_data_dependence_relation (struct data_reference *a,
       return res;
     }
 
-  gcc_assert (DR_NUM_DIMENSIONS (a) == DR_NUM_DIMENSIONS (b));
+  /* If the number of dimensions of the access to not agree we can have
+     a pointer access to a component of the array element type and an
+     array access while the base-objects are still the same.  Punt.  */
+  if (DR_NUM_DIMENSIONS (a) != DR_NUM_DIMENSIONS (b))
+    {
+      DDR_ARE_DEPENDENT (res) = chrec_dont_know;
+      return res;
+    }
 
   DDR_AFFINE_P (res) = true;
   DDR_ARE_DEPENDENT (res) = NULL_TREE;
@@ -2176,6 +2219,7 @@ analyze_subscript_affine_affine (tree chrec_a,
   unsigned nb_vars_a, nb_vars_b, dim;
   HOST_WIDE_INT init_a, init_b, gamma, gcd_alpha_beta;
   lambda_matrix A, U, S;
+  struct obstack scratch_obstack;
 
   if (eq_evolutions_p (chrec_a, chrec_b))
     {
@@ -2203,10 +2247,12 @@ analyze_subscript_affine_affine (tree chrec_a,
   nb_vars_a = nb_vars_in_chrec (chrec_a);
   nb_vars_b = nb_vars_in_chrec (chrec_b);
 
+  gcc_obstack_init (&scratch_obstack);
+
   dim = nb_vars_a + nb_vars_b;
-  U = lambda_matrix_new (dim, dim);
-  A = lambda_matrix_new (dim, 1);
-  S = lambda_matrix_new (dim, 1);
+  U = lambda_matrix_new (dim, dim, &scratch_obstack);
+  A = lambda_matrix_new (dim, 1, &scratch_obstack);
+  S = lambda_matrix_new (dim, 1, &scratch_obstack);
 
   init_a = int_cst_value (initialize_matrix_A (A, chrec_a, 0, 1));
   init_b = int_cst_value (initialize_matrix_A (A, chrec_b, nb_vars_a, -1));
@@ -2420,6 +2466,7 @@ analyze_subscript_affine_affine (tree chrec_a,
     }
 
 end_analyze_subs_aa:
+  obstack_free (&scratch_obstack, NULL);
   if (dump_file && (dump_flags & TDF_DETAILS))
     {
       fprintf (dump_file, "  (overlaps_a = ");
@@ -4601,7 +4648,7 @@ dump_rdg_vertex (FILE *file, struct graph *rdg, int i)
 
 /* Call dump_rdg_vertex on stderr.  */
 
-void
+DEBUG_FUNCTION void
 debug_rdg_vertex (struct graph *rdg, int i)
 {
   dump_rdg_vertex (stderr, rdg, i);
@@ -4630,7 +4677,7 @@ void dump_rdg_component (FILE *file, struct graph *rdg, int c, bitmap dumped)
 
 /* Call dump_rdg_vertex on stderr.  */
 
-void
+DEBUG_FUNCTION void
 debug_rdg_component (struct graph *rdg, int c)
 {
   dump_rdg_component (stderr, rdg, c, NULL);
@@ -4656,7 +4703,7 @@ dump_rdg (FILE *file, struct graph *rdg)
 
 /* Call dump_rdg on stderr.  */
 
-void
+DEBUG_FUNCTION void
 debug_rdg (struct graph *rdg)
 {
   dump_rdg (stderr, rdg);

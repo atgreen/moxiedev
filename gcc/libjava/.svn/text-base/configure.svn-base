@@ -599,6 +599,7 @@ ac_includes_default="\
 #endif"
 
 enable_option_checking=no
+ac_c_werror_flag=
 ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
@@ -631,6 +632,10 @@ python_mod_dir
 here
 LD_FINISH_STATIC_SPEC
 LD_START_STATIC_SPEC
+ANONVERSCRIPT_SUN_FALSE
+ANONVERSCRIPT_SUN_TRUE
+ANONVERSCRIPT_GNU_FALSE
+ANONVERSCRIPT_GNU_TRUE
 ANONVERSCRIPT_FALSE
 ANONVERSCRIPT_TRUE
 SYSDEP_SOURCES
@@ -745,6 +750,7 @@ am__fastdepGCJ_FALSE
 am__fastdepGCJ_TRUE
 GCJDEPMODE
 GCJFLAGS
+ac_ct_GCJ
 GCJ
 CXXCPP
 CPP
@@ -778,6 +784,7 @@ BUILD_SUBLIBS_FALSE
 BUILD_SUBLIBS_TRUE
 LIBGCJ_LD_SYMBOLIC_FUNCTIONS
 LIBGCJ_LD_SYMBOLIC
+LIBGCJ_SUBLIB_CORE_EXTRA_DEPS
 LIBGCJ_SUBLIB_LTFLAGS
 LIBGCJ_JAVAFLAGS
 LIBGCJ_CXXFLAGS
@@ -788,6 +795,7 @@ MAINTAINER_MODE_TRUE
 UNZIP
 ZIP
 JAR
+DLLTOOL
 RANLIB
 AR
 LD
@@ -2311,8 +2319,10 @@ $as_echo "$ac_res" >&6; }
 ac_fn_c_check_decl ()
 {
   as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $2 is declared" >&5
-$as_echo_n "checking whether $2 is declared... " >&6; }
+  as_decl_name=`echo $2|sed 's/ *(.*//'`
+  as_decl_use=`echo $2|sed -e 's/(/((/' -e 's/)/) 0&/' -e 's/,/) 0& (/g'`
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether $as_decl_name is declared" >&5
+$as_echo_n "checking whether $as_decl_name is declared... " >&6; }
 if { as_var=$3; eval "test \"\${$as_var+set}\" = set"; }; then :
   $as_echo_n "(cached) " >&6
 else
@@ -2322,8 +2332,12 @@ $4
 int
 main ()
 {
-#ifndef $2
-  (void) $2;
+#ifndef $as_decl_name
+#ifdef __cplusplus
+  (void) $as_decl_use;
+#else
+  (void) $as_decl_name;
+#endif
 #endif
 
   ;
@@ -5567,6 +5581,98 @@ else
   RANLIB="$ac_cv_prog_RANLIB"
 fi
 
+if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}dlltool", so it can be a program name with args.
+set dummy ${ac_tool_prefix}dlltool; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_DLLTOOL+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$DLLTOOL"; then
+  ac_cv_prog_DLLTOOL="$DLLTOOL" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_DLLTOOL="${ac_tool_prefix}dlltool"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+DLLTOOL=$ac_cv_prog_DLLTOOL
+if test -n "$DLLTOOL"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $DLLTOOL" >&5
+$as_echo "$DLLTOOL" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_prog_DLLTOOL"; then
+  ac_ct_DLLTOOL=$DLLTOOL
+  # Extract the first word of "dlltool", so it can be a program name with args.
+set dummy dlltool; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_ac_ct_DLLTOOL+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_DLLTOOL"; then
+  ac_cv_prog_ac_ct_DLLTOOL="$ac_ct_DLLTOOL" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_ac_ct_DLLTOOL="dlltool"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_DLLTOOL=$ac_cv_prog_ac_ct_DLLTOOL
+if test -n "$ac_ct_DLLTOOL"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_DLLTOOL" >&5
+$as_echo "$ac_ct_DLLTOOL" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_ct_DLLTOOL" = x; then
+    DLLTOOL=":"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    DLLTOOL=$ac_ct_DLLTOOL
+  fi
+else
+  DLLTOOL="$ac_cv_prog_DLLTOOL"
+fi
+
 for ac_prog in gawk mawk nawk awk
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
@@ -5789,13 +5895,16 @@ fi
 #	libgcj_cxxflags  - host specific C++ compiler flags
 #	libgcj_javaflags - host specific Java compiler flags
 #	libgcj_sublib_ltflags - host specific Libtool flags
-#                          (only used when building sublibs)
+#	libgcj_sublib_core_extra_deps - host specific extra
+#			   dependencies for core sublib
+#	(these last two only used when building sublibs)
 # and a number of others; see the list at the start of the file.
 
 libgcj_cflags=
 libgcj_cxxflags=
 libgcj_javaflags=
 libgcj_sublib_ltflags=
+libgcj_sublib_core_extra_deps=
 
 . ${srcdir}/configure.host
 
@@ -5846,8 +5955,10 @@ LIBGCJ_CFLAGS="${libgcj_cflags}"
 LIBGCJ_CXXFLAGS="${libgcj_cxxflags}"
 LIBGCJ_JAVAFLAGS="${libgcj_javaflags}"
 LIBGCJ_SUBLIB_LTFLAGS="${libgcj_sublib_ltflags}"
+LIBGCJ_SUBLIB_CORE_EXTRA_DEPS="${libgcj_sublib_core_extra_deps}"
 LIBGCJ_LD_SYMBOLIC="${libgcj_ld_symbolic}"
 LIBGCJ_LD_SYMBOLIC_FUNCTIONS="${libgcj_ld_symbolic_functions}"
+
 
 
 
@@ -13238,7 +13349,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 13241 "configure"
+#line 13352 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -13344,7 +13455,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<_LT_EOF
-#line 13347 "configure"
+#line 13458 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -16610,10 +16721,11 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-for ac_prog in gcj
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+if test -n "$ac_tool_prefix"; then
+  for ac_prog in gcj
+  do
+    # Extract the first word of "$ac_tool_prefix$ac_prog", so it can be a program name with args.
+set dummy $ac_tool_prefix$ac_prog; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if test "${ac_cv_prog_GCJ+set}" = set; then :
@@ -16629,7 +16741,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_prog_GCJ="$ac_prog"
+    ac_cv_prog_GCJ="$ac_tool_prefix$ac_prog"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -16649,9 +16761,65 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$GCJ" && break
+    test -n "$GCJ" && break
+  done
+fi
+if test -z "$GCJ"; then
+  ac_ct_GCJ=$GCJ
+  for ac_prog in gcj
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_ac_ct_GCJ+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_GCJ"; then
+  ac_cv_prog_ac_ct_GCJ="$ac_ct_GCJ" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_ac_ct_GCJ="$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
-test -n "$GCJ" || GCJ="gcj"
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_GCJ=$ac_cv_prog_ac_ct_GCJ
+if test -n "$ac_ct_GCJ"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_GCJ" >&5
+$as_echo "$ac_ct_GCJ" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$ac_ct_GCJ" && break
+done
+
+  if test "x$ac_ct_GCJ" = x; then
+    GCJ="gcj"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    GCJ=$ac_ct_GCJ
+  fi
+fi
 
 test -z "$GCJ" && as_fn_error "no acceptable gcj found in \$PATH" "$LINENO" 5
 if test "x${GCJFLAGS-unset}" = xunset; then
@@ -16785,10 +16953,11 @@ fi
 
 
 
-for ac_prog in gcj
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+if test -n "$ac_tool_prefix"; then
+  for ac_prog in gcj
+  do
+    # Extract the first word of "$ac_tool_prefix$ac_prog", so it can be a program name with args.
+set dummy $ac_tool_prefix$ac_prog; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if test "${ac_cv_prog_GCJ+set}" = set; then :
@@ -16804,7 +16973,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_prog_GCJ="$ac_prog"
+    ac_cv_prog_GCJ="$ac_tool_prefix$ac_prog"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -16824,9 +16993,65 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$GCJ" && break
+    test -n "$GCJ" && break
+  done
+fi
+if test -z "$GCJ"; then
+  ac_ct_GCJ=$GCJ
+  for ac_prog in gcj
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_ac_ct_GCJ+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_GCJ"; then
+  ac_cv_prog_ac_ct_GCJ="$ac_ct_GCJ" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_ac_ct_GCJ="$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
-test -n "$GCJ" || GCJ="gcj"
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_GCJ=$ac_cv_prog_ac_ct_GCJ
+if test -n "$ac_ct_GCJ"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_GCJ" >&5
+$as_echo "$ac_ct_GCJ" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$ac_ct_GCJ" && break
+done
+
+  if test "x$ac_ct_GCJ" = x; then
+    GCJ="gcj"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    GCJ=$ac_ct_GCJ
+  fi
+fi
 
 test -z "$GCJ" && as_fn_error "no acceptable gcj found in \$PATH" "$LINENO" 5
 if test "x${GCJFLAGS-unset}" = xunset; then
@@ -19209,7 +19434,7 @@ if test "${enable_sjlj_exceptions+set}" = set; then :
   enableval=$enable_sjlj_exceptions; :
 else
   cat > conftest.$ac_ext << EOF
-#line 19212 "configure"
+#line 19437 "configure"
 struct S { ~S(); };
 void bar();
 void foo()
@@ -19540,7 +19765,7 @@ case "${host}" in
       fi
     ;;
     *-*-darwin[912]*)
-      SYSTEMSPEC="-allow_stack_execute"
+      SYSTEMSPEC="%{!Zdynamiclib:%{!Zbundle:-allow_stack_execute}}"
     ;;
     *)
       SYSTEMSPEC=
@@ -20306,6 +20531,48 @@ arm*linux*eabi)
     ;;
 esac
 
+# Check for --no-merge-exidx-entries, an ARM-specific linker option.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for --no-merge-exidx-entries" >&5
+$as_echo_n "checking for --no-merge-exidx-entries... " >&6; }
+if test "${libgcj_cv_exidx+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  saved_ldflags="$LDFLAGS"
+   LDFLAGS="${LDFLAGS} -Wl,--no-merge-exidx-entries"
+   # The IRIX 6 ld doesn't recognize --no-merge-exidx-entries, but only
+   # warns about unknown options, which breaks the testsuite.  So enable
+   # AC_LANG_WERROR, but there's currently (autoconf 2.64) no way to turn
+   # it off again.  As a workaround, save and restore werror flag like
+   # AC_PATH_XTRA.
+   ac_xsave_c_werror_flag=$ac_c_werror_flag
+
+ac_c_werror_flag=yes
+   if test x$gcc_no_link = xyes; then
+  as_fn_error "Link tests are not allowed after GCC_NO_EXECUTABLES." "$LINENO" 5
+fi
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+int main(void){ return 0;}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  eval "libgcj_cv_exidx=yes"
+else
+  eval "libgcj_cv_exidx=no"
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+   ac_c_werror_flag=$ac_xsave_c_werror_flag
+   LDFLAGS="${saved_ldflags}"
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libgcj_cv_exidx" >&5
+$as_echo "$libgcj_cv_exidx" >&6; }
+if test "${libgcj_cv_exidx}" = "yes"; then
+  SYSTEMSPEC="${SYSTEMSPEC} --no-merge-exidx-entries"
+  extra_ldflags="${extra_ldflags} -Wl,--no-merge-exidx-entries"
+fi
+
+
 
 
 
@@ -20444,6 +20711,19 @@ case "$THREADS" in
 	# boehm-gc needs some functions from librt, so link that too.
 	THREADLIBS='-lpthread -lrt'
 	THREADSPEC='-lpthread -lrt'
+	;;
+     *-*-solaris2.8)
+	# Always use alternate thread library on Solaris 8.  Need libthread
+	# for TLS support.
+	# Need -Wl,-R to get it through libtool ...
+	THREADLIBS='-L/usr/lib/lwp$(MULTISUBDIR) -Wl,-R -Wl,/usr/lib/lwp$(MULTISUBDIR) -lpthread -lthread'
+	# ... while ld only accepts -R.
+	THREADSPEC='-L/usr/lib/lwp%{m64:/64} -R/usr/lib/lwp%{m64:/64} -lpthread -lthread'
+        ;;
+     *-*-solaris2.9)
+	# As on Solaris 8, need libthread for TLS support.
+	THREADLIBS='-lpthread -lthread'
+	THREADSPEC='-lpthread -lthread'
 	;;
      *)
 	THREADLIBS=-lpthread
@@ -22904,10 +23184,11 @@ if test ! -f gnu/classpath/Configuration.java; then
 fi
 
 
-for ac_prog in gcj
-do
-  # Extract the first word of "$ac_prog", so it can be a program name with args.
-set dummy $ac_prog; ac_word=$2
+if test -n "$ac_tool_prefix"; then
+  for ac_prog in gcj
+  do
+    # Extract the first word of "$ac_tool_prefix$ac_prog", so it can be a program name with args.
+set dummy $ac_tool_prefix$ac_prog; ac_word=$2
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 $as_echo_n "checking for $ac_word... " >&6; }
 if test "${ac_cv_prog_GCJ+set}" = set; then :
@@ -22923,7 +23204,7 @@ do
   test -z "$as_dir" && as_dir=.
     for ac_exec_ext in '' $ac_executable_extensions; do
   if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
-    ac_cv_prog_GCJ="$ac_prog"
+    ac_cv_prog_GCJ="$ac_tool_prefix$ac_prog"
     $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
     break 2
   fi
@@ -22943,9 +23224,65 @@ $as_echo "no" >&6; }
 fi
 
 
-  test -n "$GCJ" && break
+    test -n "$GCJ" && break
+  done
+fi
+if test -z "$GCJ"; then
+  ac_ct_GCJ=$GCJ
+  for ac_prog in gcj
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if test "${ac_cv_prog_ac_ct_GCJ+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$ac_ct_GCJ"; then
+  ac_cv_prog_ac_ct_GCJ="$ac_ct_GCJ" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if { test -f "$as_dir/$ac_word$ac_exec_ext" && $as_test_x "$as_dir/$ac_word$ac_exec_ext"; }; then
+    ac_cv_prog_ac_ct_GCJ="$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
 done
-test -n "$GCJ" || GCJ="gcj"
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+ac_ct_GCJ=$ac_cv_prog_ac_ct_GCJ
+if test -n "$ac_ct_GCJ"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_ct_GCJ" >&5
+$as_echo "$ac_ct_GCJ" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$ac_ct_GCJ" && break
+done
+
+  if test "x$ac_ct_GCJ" = x; then
+    GCJ="gcj"
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    GCJ=$ac_ct_GCJ
+  fi
+fi
 
 test -z "$GCJ" && as_fn_error "no acceptable gcj found in \$PATH" "$LINENO" 5
 if test "x${GCJFLAGS-unset}" = xunset; then
@@ -23836,8 +24173,8 @@ case "${host}" in
  i?86-*-linux*)
     SIGNAL_HANDLER=include/i386-signal.h
     ;;
- sparc*-sun-solaris*)
-    SIGNAL_HANDLER=include/sparc-signal.h
+ *-*-solaris2*)
+    SIGNAL_HANDLER=include/solaris-signal.h
     ;;
 # ia64-*)
 #    SYSDEP_SOURCES=sysdep/ia64.c
@@ -24060,7 +24397,7 @@ rm -f core conftest.err conftest.$ac_objext \
 	CFLAGS="$chktls_save_CFLAGS"
 	if test "X$thread_CFLAGS" != Xfailed; then
 	  CFLAGS="$thread_CFLAGS $chktls_save_CFLAGS"
-	  if test "$cross_compiling" = yes; then :
+ 	  	  	  	  	  	  if test "$cross_compiling" = yes; then :
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error "cannot run test program while cross compiling
@@ -24070,7 +24407,7 @@ else
 /* end confdefs.h.  */
 #include <pthread.h>
 		__thread int a;
-		static int *a_in_other_thread;
+		static int *volatile a_in_other_thread;
 		static void *
 		thread_func (void *arg)
 		{
@@ -24082,11 +24419,11 @@ main ()
 {
 pthread_t thread;
 		void *thread_retval;
-		int *a_in_main_thread;
+		int *volatile a_in_main_thread;
+		a_in_main_thread = &a;
 		if (pthread_create (&thread, (pthread_attr_t *)0,
 				    thread_func, (void *)0))
 		  return 0;
-		a_in_main_thread = &a;
 		if (pthread_join (thread, &thread_retval))
 		  return 0;
 		return (a_in_other_thread == a_in_main_thread);
@@ -24168,7 +24505,8 @@ if test "${libjava_cv_anon_version_script+set}" = set; then :
 else
   save_CFLAGS="$CFLAGS"; save_LDFLAGS="$LDFLAGS"
    libjava_cv_anon_version_script=no
-   CFLAGS="$CFLAGS -fPIC"; LDFLAGS="$LDFLAGS -shared -Wl,--version-script,conftest.map"
+   CFLAGS="$CFLAGS -fPIC";
+   LDFLAGS="$LDFLAGS -shared -Wl,--version-script,conftest.map"
    echo '{ global: globalsymb*; local: *; };' > conftest.map
    if test x$gcc_no_link = xyes; then
   as_fn_error "Link tests are not allowed after GCC_NO_EXECUTABLES." "$LINENO" 5
@@ -24185,16 +24523,45 @@ main ()
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  libjava_cv_anon_version_script=yes
+  libjava_cv_anon_version_script=gnu
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
+   if test x$libjava_cv_anon_version_script = xno; then
+     case "$target_os" in
+       solaris2*)
+         LDFLAGS="$save_LDFLAGS"
+         LDFLAGS="$LDFLAGS -shared -Wl,-M,conftest.map"
+         # Sun ld doesn't understand wildcards here.
+         echo '{ global: globalsymbol; local: *; };' > conftest.map
+         if test x$gcc_no_link = xyes; then
+  as_fn_error "Link tests are not allowed after GCC_NO_EXECUTABLES." "$LINENO" 5
+fi
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+void globalsymbol (void) {} void localsymbol (void) {}
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  libjava_cv_anon_version_script=sun
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+         ;;
+     esac
+   fi
    CFLAGS="$save_CFLAGS"; LDFLAGS="$save_LDFLAGS"
 
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $libjava_cv_anon_version_script" >&5
 $as_echo "$libjava_cv_anon_version_script" >&6; }
- if test "$libjava_cv_anon_version_script" = yes; then
+ if test "$libjava_cv_anon_version_script" != no; then
   ANONVERSCRIPT_TRUE=
   ANONVERSCRIPT_FALSE='#'
 else
@@ -24202,12 +24569,28 @@ else
   ANONVERSCRIPT_FALSE=
 fi
 
+ if test "$libjava_cv_anon_version_script" = gnu; then
+  ANONVERSCRIPT_GNU_TRUE=
+  ANONVERSCRIPT_GNU_FALSE='#'
+else
+  ANONVERSCRIPT_GNU_TRUE='#'
+  ANONVERSCRIPT_GNU_FALSE=
+fi
+
+ if test "$libjava_cv_anon_version_script" = sun; then
+  ANONVERSCRIPT_SUN_TRUE=
+  ANONVERSCRIPT_SUN_FALSE='#'
+else
+  ANONVERSCRIPT_SUN_TRUE='#'
+  ANONVERSCRIPT_SUN_FALSE=
+fi
+
 
 # Check if linker supports static linking on a per library basis
 LD_START_STATIC_SPEC=
 LD_FINISH_STATIC_SPEC=
-if $LD --help 2>&1 | grep -q -e -call_shared ; then
-  if $LD --help 2>&1 | grep -q -e -non_shared ; then
+if $LD --help 2>&1 | grep -- -call_shared >/dev/null 2>&1; then
+  if $LD --help 2>&1 | grep -- -non_shared >/dev/null 2>&1; then
     LD_START_STATIC_SPEC='%{static-libgcj:-non_shared}'
     LD_FINISH_STATIC_SPEC='%{static-libgcj:-call_shared}'
   fi
@@ -24739,6 +25122,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${ANONVERSCRIPT_TRUE}" && test -z "${ANONVERSCRIPT_FALSE}"; then
   as_fn_error "conditional \"ANONVERSCRIPT\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ANONVERSCRIPT_GNU_TRUE}" && test -z "${ANONVERSCRIPT_GNU_FALSE}"; then
+  as_fn_error "conditional \"ANONVERSCRIPT_GNU\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${ANONVERSCRIPT_SUN_TRUE}" && test -z "${ANONVERSCRIPT_SUN_FALSE}"; then
+  as_fn_error "conditional \"ANONVERSCRIPT_SUN\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${INSTALL_AOT_RPM_TRUE}" && test -z "${INSTALL_AOT_RPM_FALSE}"; then

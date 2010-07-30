@@ -56,8 +56,6 @@ global usestubs
 #
 # test running programs
 #
-set prms_id 0
-set bug_id 0
 
 set testfile "break"
 set srcfile ${testfile}.c
@@ -354,7 +352,7 @@ gdb_expect  {
         -re "^help info watchpoints $"\
             { send_gdb "\n"
               gdb_expect {
-                      -re "Synonym for .*\r\n.*$gdb_prompt $"\
+                      -re "Status of watchpoints, .*\r\n.*$gdb_prompt $"\
                           { pass "complete help info wat" }
                       -re ".*$gdb_prompt $" { fail "complete help info wat"}
                       timeout   {fail "(timeout) complete help info wat"}
@@ -796,7 +794,7 @@ gdb_expect  {
                       -re "marker1.*$gdb_prompt info func marker$"\
                       { send_gdb "\n"
                         gdb_expect {
-                                -re "All functions matching regular expression \"marker\":.*File.*break1.c:\r\nint marker1\\((void|)\\);\r\nint marker2\\(int\\).*marker3\\(char.*char.*\\).*marker4\\(long int\\);.*$gdb_prompt $"\
+                                -re "All functions matching regular expression \"marker\":.*File.*break1.c:\r\nint marker1\\((void|)\\);\r\nint marker2\\(int\\).*marker3\\(char.*char.*\\).*marker4\\(long( int)?\\);.*$gdb_prompt $"\
                                                   { pass "complete 'info func marke'"}
                                 -re ".*$gdb_prompt $" { fail "complete 'info func marke'"}
                                 timeout           {fail "(timeout) complete 'info func marke'"}
@@ -846,6 +844,12 @@ gdb_expect  {
         timeout         { fail "(timeout) Completing non-existing component #2" }
         eof             { fail "(eof) Completing non-existing component #2" }
         }
+
+# If there is a non-deprecated completion, it should be returned.
+gdb_test "complete sav" "save" "test non-deprecated completion"
+# If there is only a deprecated completion, then it should be returned.
+gdb_test "complete save-t" "save-tracepoints" "test deprecated completion"
+
 
 # Restore globals modified in this test...
 set timeout $oldtimeout1

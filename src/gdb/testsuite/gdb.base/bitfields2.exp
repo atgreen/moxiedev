@@ -27,8 +27,6 @@ if $tracelevel then {
 	strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile "bitfields2"
 set srcfile ${testfile}.c
@@ -59,7 +57,7 @@ proc continue_test { function tag } {
 #
 proc start_test { function } {
     delete_breakpoints
-    if [gdb_test "break tester" "" "break tester prior to $function"] {
+    if [gdb_test "break tester" ".*" "break tester prior to $function"] {
 	gdb_suppress_tests
     }
     continue_test "tester" "prior to $function"
@@ -290,7 +288,7 @@ gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load ${binfile}
 
-send_gdb "set print sevenbit-strings\n" ; gdb_expect -re "$gdb_prompt $"
+gdb_test_no_output "set print sevenbit-strings"
 runto_main
 
 bitfield_uniqueness

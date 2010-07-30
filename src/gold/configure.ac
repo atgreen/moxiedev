@@ -7,7 +7,7 @@ AC_CONFIG_SRCDIR(gold.cc)
 
 AC_CANONICAL_TARGET
 
-AM_INIT_AUTOMAKE
+AM_INIT_AUTOMAKE([no-dist parallel-tests])
 
 AM_CONFIG_HEADER(config.h:config.in)
 
@@ -37,6 +37,33 @@ AC_DEFINE_UNQUOTED(TARGET_SYSTEM_ROOT, "$sysroot",
   [System root for target files])
 AC_DEFINE_UNQUOTED(TARGET_SYSTEM_ROOT_RELOCATABLE, $sysroot_relocatable,
   [Whether the system root can be relocated])
+
+dnl "install_as_default" is true if the linker to be installed as the
+dnl default linker, ld.
+dnl "installed_linker" is the installed gold linker name.
+AC_ARG_ENABLE(gold,
+[[  --enable-gold[=ARG]     build gold [ARG={both}[/{gold,ld}]]]],
+[case "${enableval}" in 
+ yes)
+   install_as_default=gold
+   installed_linker=ld
+   ;;
+ both/gold)
+   install_as_default=yes
+   installed_linker=ld.gold
+   ;;
+ both|both/ld)
+   install_as_default=no
+   installed_linker=ld.gold
+   ;;
+ *)
+   AC_MSG_ERROR([invalid --enable-gold argument])
+   ;;
+ esac],
+[install_as_default=gold
+ installed_linker=ld])
+AC_SUBST(install_as_default)
+AC_SUBST(installed_linker)
 
 dnl For now threads are a configure time option.
 AC_ARG_ENABLE([threads],

@@ -321,7 +321,7 @@ tui_display_registers_from (int start_element_no)
       && display_info->regs_content_count > 0)
     {
       int i = start_element_no;
-      int j, value_chars_wide, item_win_width, cur_y;
+      int j, item_win_width, cur_y;
 
       int max_len = 0;
       for (i = 0; i < display_info->regs_content_count; i++)
@@ -504,7 +504,7 @@ tui_check_register_values (struct frame_info *frame)
 	tui_show_registers (display_info->current_group);
       else
 	{
-	  int i, j;
+	  int i;
 
 	  for (i = 0; (i < display_info->regs_content_count); i++)
 	    {
@@ -541,7 +541,12 @@ tui_display_register (struct tui_data_element *data,
       int i;
 
       if (data->highlight)
-	wstandout (win_info->handle);
+	/* We ignore the return value, casting it to void in order to avoid
+	   a compiler warning.  The warning itself was introduced by a patch
+	   to ncurses 5.7 dated 2009-08-29, changing this macro to expand
+	   to code that causes the compiler to generate an unused-value
+	   warning.  */
+	(void) wstandout (win_info->handle);
       
       wmove (win_info->handle, 0, 0);
       for (i = 1; i < win_info->width; i++)
@@ -551,7 +556,12 @@ tui_display_register (struct tui_data_element *data,
         waddstr (win_info->handle, data->content);
 
       if (data->highlight)
-	wstandend (win_info->handle);
+	/* We ignore the return value, casting it to void in order to avoid
+	   a compiler warning.  The warning itself was introduced by a patch
+	   to ncurses 5.7 dated 2009-08-29, changing this macro to expand
+	   to code that causes the compiler to generate an unused-value
+	   warning.  */
+	(void) wstandend (win_info->handle);
       tui_refresh_win (win_info);
     }
 }
@@ -674,7 +684,6 @@ tui_register_format (struct frame_info *frame,
   const char *name;
   struct cleanup *cleanups;
   char *p, *s;
-  int pos;
   struct type *type = register_type (gdbarch, regnum);
 
   name = gdbarch_register_name (gdbarch, regnum);
@@ -734,8 +743,8 @@ tui_get_register (struct frame_info *frame,
   if (target_has_registers)
     {
       gdb_byte buf[MAX_REGISTER_SIZE];
-      get_frame_register (frame, regnum, buf);
 
+      get_frame_register (frame, regnum, buf);
       if (changedp)
 	{
 	  struct gdbarch *gdbarch = get_frame_arch (frame);

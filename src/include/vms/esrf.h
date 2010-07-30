@@ -31,4 +31,6 @@ struct vms_esrf
   unsigned char name[31];
 };
 
+#define ESRF__B_NAMLNG   8
+
 #endif /* _VMS_ESRF_H */

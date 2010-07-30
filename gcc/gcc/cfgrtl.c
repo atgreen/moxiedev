@@ -42,7 +42,6 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "tree.h"
-#include "rtl.h"
 #include "hard-reg-set.h"
 #include "basic-block.h"
 #include "regs.h"
@@ -50,7 +49,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "output.h"
 #include "function.h"
 #include "except.h"
-#include "toplev.h"
+#include "rtl-error.h"
 #include "tm_p.h"
 #include "obstack.h"
 #include "insn-attr.h"
@@ -994,6 +993,9 @@ patch_jump_insn (rtx insn, rtx old_label, basic_block new_bb)
 	      && !find_reg_note (insn, REG_LABEL_TARGET, new_label))
 	    add_reg_note (insn, REG_LABEL_TARGET, new_label);
 	}
+      while ((note = find_reg_note (insn, REG_LABEL_OPERAND, old_label))
+	     != NULL_RTX)
+	XEXP (note, 0) = new_label;
     }
   else
     {
@@ -1407,7 +1409,22 @@ rtl_split_edge (edge edge_in)
       gcc_assert (redirected);
     }
   else
-    redirect_edge_succ (edge_in, bb);
+    {
+      if (edge_in->src != ENTRY_BLOCK_PTR)
+	{
+	  /* For asm goto even splitting of fallthru edge might
+	     need insn patching, as other labels might point to the
+	     old label.  */
+	  rtx last = BB_END (edge_in->src);
+	  if (last
+	      && JUMP_P (last)
+	      && edge_in->dest != EXIT_BLOCK_PTR
+	      && extract_asm_operands (PATTERN (last)) != NULL_RTX
+	      && patch_jump_insn (last, before, bb))
+	    df_set_bb_dirty (edge_in->src);
+	}
+      redirect_edge_succ (edge_in, bb);
+    }
 
   return bb;
 }
@@ -3062,7 +3079,7 @@ void
 init_rtl_bb_info (basic_block bb)
 {
   gcc_assert (!bb->il.rtl);
-  bb->il.rtl = GGC_CNEW (struct rtl_bb_info);
+  bb->il.rtl = ggc_alloc_cleared_rtl_bb_info ();
 }
 
 
@@ -3123,10 +3140,10 @@ insert_insn_end_bb_new (rtx pat, basic_block bb)
            && (!single_succ_p (bb)
                || single_succ_edge (bb)->flags & EDGE_ABNORMAL))
     {
-      /* Keeping in mind SMALL_REGISTER_CLASSES and parameters in registers,
-         we search backward and place the instructions before the first
-         parameter is loaded.  Do this for everyone for consistency and a
-         presumption that we'll get better code elsewhere as well.  */
+      /* Keeping in mind targets with small register classes and parameters
+         in registers, we search backward and place the instructions before
+	 the first parameter is loaded.  Do this for everyone for consistency
+	 and a presumption that we'll get better code elsewhere as well.  */
 
       /* Since different machines initialize their parameter registers
          in different orders, assume nothing.  Collect the set of all

@@ -83,7 +83,8 @@ scan_relocs(
 	  shndx = object->adjust_sym_shndx(r_sym, shndx, &is_ordinary);
 	  if (is_ordinary
 	      && shndx != elfcpp::SHN_UNDEF
-	      && !object->is_section_included(shndx))
+	      && !object->is_section_included(shndx)
+              && !symtab->is_section_folded(object, shndx))
 	    {
 	      // RELOC is a relocation against a local symbol in a
 	      // section we are discarding.  We can ignore this
@@ -102,7 +103,6 @@ scan_relocs(
 
 	      continue;
 	    }
-
 	  scan.local(symtab, layout, target, object, data_shndx,
 		     output_section, reloc, r_type, lsym);
 	}
@@ -341,7 +341,7 @@ relocate_section(
 	}
 
       if (sym != NULL
-	  && sym->is_undefined()
+	  && (sym->is_undefined() || sym->is_placeholder())
 	  && sym->binding() != elfcpp::STB_WEAK
 	  && !is_defined_in_discarded_section
           && !target->is_defined_by_abi(sym)
@@ -515,7 +515,7 @@ relocate_for_relocatable(
     const Relocatable_relocs* rr,
     unsigned char* view,
     typename elfcpp::Elf_types<size>::Elf_Addr view_address,
-    section_size_type,
+    section_size_type view_size,
     unsigned char* reloc_view,
     section_size_type reloc_view_size)
 {
@@ -537,6 +537,19 @@ relocate_for_relocatable(
       if (strategy == Relocatable_relocs::RELOC_DISCARD)
 	continue;
 
+      if (strategy == Relocatable_relocs::RELOC_SPECIAL)
+	{
+	  // Target wants to handle this relocation.
+	  Sized_target<size, big_endian>* target =
+	    parameters->sized_target<size, big_endian>();
+	  target->relocate_special_relocatable(relinfo, sh_type, prelocs,
+					       i, output_section,
+					       offset_in_output_section,
+					       view, view_address,
+					       view_size, pwrite);
+	  pwrite += reloc_size;
+	  continue;
+	}
       Reltype reloc(prelocs);
       Reltype_write reloc_write(pwrite);
 

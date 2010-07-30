@@ -24,8 +24,6 @@ if ![istarget "h8300*-*-*"] {
     return
 }
 
-set prms_id 0
-set bug_id 0
 
 set testfile "t12_bit"
 set srcfile ${srcdir}/${subdir}/${testfile}.s
@@ -50,7 +48,7 @@ gdb_start
 gdb_reinitialize_dir $srcdir/$subdir
 gdb_load $binfile
 
-gdb_test "x /i _start" "bset\t#0x7,r1h" \
+gdb_test "x /i start" "bset\t#0x7,r1h" \
 	"bset #0x7,r1h"
 gdb_test "x" "bset\t#0x7,@er1" \
 	"bset #0x7,@er1"

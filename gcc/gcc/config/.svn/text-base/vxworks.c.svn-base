@@ -23,6 +23,7 @@ along with GCC; see the file COPYING3.  If not see
 #include "system.h"
 #include "coretypes.h"
 #include "target.h"
+#include "diagnostic-core.h"
 #include "toplev.h"
 #include "output.h"
 #include "tm.h"
@@ -69,21 +70,21 @@ vxworks_emutls_var_fields (tree type, tree *name)
   
   *name = get_identifier ("__tls_var");
   
-  field = build_decl (FIELD_DECL, get_identifier ("size"),
-		      unsigned_type_node);
+  field = build_decl (BUILTINS_LOCATION, FIELD_DECL,
+		      get_identifier ("size"), unsigned_type_node);
   DECL_CONTEXT (field) = type;
   next_field = field;
 
-  field = build_decl (FIELD_DECL, get_identifier ("module_id"),
-		      unsigned_type_node);
+  field = build_decl (BUILTINS_LOCATION, FIELD_DECL,
+		      get_identifier ("module_id"), unsigned_type_node);
   DECL_CONTEXT (field) = type;
-  TREE_CHAIN (field) = next_field;
+  DECL_CHAIN (field) = next_field;
   next_field = field;
 
-  field = build_decl (FIELD_DECL, get_identifier ("offset"),
-		      unsigned_type_node);
+  field = build_decl (BUILTINS_LOCATION, FIELD_DECL,
+		      get_identifier ("offset"), unsigned_type_node);
   DECL_CONTEXT (field) = type;
-  TREE_CHAIN (field) = next_field;
+  DECL_CHAIN (field) = next_field;
 
   return field;
 }
@@ -107,12 +108,12 @@ vxworks_emutls_var_init (tree var, tree decl, tree tmpl_addr)
   elt->value = fold_convert (TREE_TYPE (field), tmpl_addr);
   
   elt = VEC_quick_push (constructor_elt, v, NULL);
-  field = TREE_CHAIN (field);
+  field = DECL_CHAIN (field);
   elt->index = field;
   elt->value = build_int_cst (TREE_TYPE (field), 0);
   
   elt = VEC_quick_push (constructor_elt, v, NULL);
-  field = TREE_CHAIN (field);
+  field = DECL_CHAIN (field);
   elt->index = field;
   elt->value = fold_convert (TREE_TYPE (field), DECL_SIZE_UNIT (decl));
   

@@ -1,15 +1,15 @@
 10
 
 dir
-157419
+162706
 svn://gcc.gnu.org/svn/gcc/trunk/libstdc++-v3/testsuite/27_io/basic_filebuf/seekoff
 svn://gcc.gnu.org/svn/gcc
 
 
 
-2009-09-17T23:54:25.734027Z
-151825
-jsm28
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -137,11 +137,11 @@ file
 
 
 
-2009-04-24T17:50:26.000000Z
-edac5c035d46be10005a1036377b51a9
-2009-04-09T15:00:19.611803Z
-145841
-jakub
+2010-07-08T15:19:28.124091Z
+7efe6576c5fe9dc7b1497ef1dd2755a2
+2010-06-08T00:45:02.718875Z
+160416
+paolo
 
 
 
@@ -163,7 +163,7 @@ jakub
 
 
 
-2090
+2068
 
 10132-2.cc
 file

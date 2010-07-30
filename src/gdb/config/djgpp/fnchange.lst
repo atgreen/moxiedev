@@ -136,7 +136,6 @@
 @V@/gdb/config/i386/nm-linux64.h @V@/gdb/config/i386/nm-lx64.h
 @V@/gdb/config/i386/nm-i386sco4.h @V@/gdb/config/i386/nm-sco4.h
 @V@/gdb/config/i386/nm-i386sco5.h @V@/gdb/config/i386/nm-sco5.h
-@V@/gdb/config/i386/nm-i386sol2.h @V@/gdb/config/i386/nm-sol2.h
 @V@/gdb/config/i386/nm-i386v4.h @V@/gdb/config/i386/nm-v4.h
 @V@/gdb/config/i386/nm-i386v42mp.h @V@/gdb/config/i386/nm-v42mp.h
 @V@/gdb/config/i386/tm-i386sol2.h @V@/gdb/config/i386/tm-sol2.h
@@ -228,6 +227,18 @@
 @V@/gdb/features/rs6000/powerpc-vsx64l.xml @V@/gdb/features/rs6000/ppc-v64l.xml
 @V@/gdb/features/rs6000/powerpc-cell32l.xml @V@/gdb/features/rs6000/ppc-c32l.xml
 @V@/gdb/features/rs6000/powerpc-cell64l.xml @V@/gdb/features/rs6000/ppc-c64l.xml
+@V@/gdb/features/i386/amd64-avx-linux.c @V@/gdb/features/i386/a64-al.c
+@V@/gdb/features/i386/amd64-avx.c @V@/gdb/features/i386/a64-a.c
+@V@/gdb/features/i386/amd64-avx-linux.xml @V@/gdb/features/i386/a64-al.xml
+@V@/gdb/features/i386/amd64-avx.xml @V@/gdb/features/i386/a64-a.xml
+@V@/gdb/features/i386/i386-avx-linux.c @V@/features/i386/i32-al.c
+@V@/gdb/features/i386/i386-avx.c @V@/gdb/features/i386/i32-a.c
+@V@/gdb/features/i386/i386-avx-linux.xml @V@/gdb/features/i386/i32-al.xml
+@V@/gdb/features/i386/i386-avx.xml @V@/gdb/features/i386/i32-a.xml
+@V@/gdb/features/i386/i386-mmx-linux.c @V@/features/i386/i32-ml.c
+@V@/gdb/features/i386/i386-mmx.c @V@/gdb/features/i386/i32-m.c
+@V@/gdb/features/i386/i386-mmx-linux.xml @V@/gdb/features/i386/i32-ml.xml
+@V@/gdb/features/i386/i386-mmx.xml @V@/gdb/features/i386/i32-m.xml
 @V@/gdb/f-exp.tab.c @V@/gdb/f-exp_tab.c
 @V@/gdb/gdbserver/linux-cris-low.c @V@/gdb/gdbserver/lx-cris.c
 @V@/gdb/gdbserver/linux-crisv32-low.c @V@/gdb/gdbserver/lx-cris32.c
@@ -371,6 +382,7 @@
 @V@/gdb/testsuite/gdb.arch/powerpc-prologue.exp @V@/gdb/testsuite/gdb.arch/ppc-prologue.exp
 @V@/gdb/testsuite/gdb.base/bitfields2.c @V@/gdb/testsuite/gdb.base/bitfiel2.c
 @V@/gdb/testsuite/gdb.base/bitfields2.exp @V@/gdb/testsuite/gdb.base/bitfiel2.exp
+@V@/gdb/testsuite/gdb.base/break-entry.exp @V@/gdb/testsuite/gdb.base/brkentry.exp
 @V@/gdb/testsuite/gdb.base/coremaker2.c @V@/gdb/testsuite/gdb.base/core2maker.c
 @V@/gdb/testsuite/gdb.base/hashline1.exp @V@/gdb/testsuite/gdb.base/hash1line.exp
 @V@/gdb/testsuite/gdb.base/hashline2.exp @V@/gdb/testsuite/gdb.base/hash2line.exp
@@ -384,6 +396,7 @@
 @V@/gdb/testsuite/gdb.base/siginfo-obj.c @V@/gdb/testsuite/gdb.base/si-obj.c
 @V@/gdb/testsuite/gdb.base/siginfo-addr.exp @V@/gdb/testsuite/gdb.base/si-addr.exp
 @V@/gdb/testsuite/gdb.base/siginfo-obj.exp @V@/gdb/testsuite/gdb.base/si-obj.exp
+@V@/gdb/testsuite/gdb.base/solib-corrupted.exp @V@/gdb/testsuite/gdb.base/so-crptd.exp
 @V@/gdb/testsuite/gdb.base/solib-disc.c @V@/gdb/testsuite/gdb.base/so-disc.c
 @V@/gdb/testsuite/gdb.base/solib-display-lib.c @V@/gdb/testsuite/gdb.base/so-displib.c
 @V@/gdb/testsuite/gdb.base/solib-display-main.c @V@/gdb/testsuite/gdb.base/so-dispmain.c
@@ -394,8 +407,8 @@
 @V@/gdb/testsuite/gdb.base/solib-symbol-main.c @V@/gdb/testsuite/gdb.base/so-symmain.c
 @V@/gdb/testsuite/gdb.base/solib-overlap-lib.c @V@/gdb/testsuite/gdb.base/so-ovrlib.c
 @V@/gdb/testsuite/gdb.base/solib-overlap-main.c @V@/gdb/testsuite/gdb.base/so-ovrmain.c
-@V@/gdb/testsuite/gdb.base/gdb.base/symbol-without-target_section.exp @V@/gdb/testsuite/gdb.base/symnosec.exp
-@V@/gdb/testsuite/gdb.base/gdb.base/symbol-without-target_section.c @V@/gdb/testsuite/gdb.base/symnosec.c
+@V@/gdb/testsuite/gdb.base/symbol-without-target_section.exp @V@/gdb/testsuite/gdb.base/symnosec.exp
+@V@/gdb/testsuite/gdb.base/symbol-without-target_section.c @V@/gdb/testsuite/gdb.base/symnosec.c
 @V@/gdb/testsuite/gdb.base/type-opaque-lib.c @V@/gdb/testsuite/gdb.base/ty-opqlib.c
 @V@/gdb/testsuite/gdb.base/type-opaque-main.c @V@/gdb/testsuite/gdb.base/ty-opqmain.c
 @V@/gdb/testsuite/gdb.base/watchpoint-hw.c @V@/gdb/testsuite/gdb.base/wp-hw.c

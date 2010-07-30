@@ -1,5 +1,5 @@
 /* Lower complex number operations to scalar operations.
-   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009
+   Copyright (C) 2004, 2005, 2006, 2007, 2008, 2009, 2010
    Free Software Foundation, Inc.
 
 This file is part of GCC.
@@ -23,15 +23,12 @@ along with GCC; see the file COPYING3.  If not see
 #include "coretypes.h"
 #include "tm.h"
 #include "tree.h"
-#include "rtl.h"
-#include "real.h"
 #include "flags.h"
 #include "tree-flow.h"
 #include "gimple.h"
 #include "tree-iterator.h"
 #include "tree-pass.h"
 #include "tree-ssa-propagate.h"
-#include "diagnostic.h"
 
 
 /* For each complex ssa name, a lattice value.  We're interested in finding
@@ -177,7 +174,7 @@ init_parameter_lattice_values (void)
 {
   tree parm, ssa_name;
 
-  for (parm = DECL_ARGUMENTS (cfun->decl); parm ; parm = TREE_CHAIN (parm))
+  for (parm = DECL_ARGUMENTS (cfun->decl); parm ; parm = DECL_CHAIN (parm))
     if (is_complex_reg (parm)
 	&& var_ann (parm) != NULL
 	&& (ssa_name = gimple_default_def (cfun, parm)) != NULL_TREE)
@@ -599,10 +596,10 @@ extract_component (gimple_stmt_iterator *gsi, tree t, bool imagpart_p,
     case VAR_DECL:
     case RESULT_DECL:
     case PARM_DECL:
-    case INDIRECT_REF:
     case COMPONENT_REF:
     case ARRAY_REF:
     case VIEW_CONVERT_EXPR:
+    case MEM_REF:
       {
 	tree inner_type = TREE_TYPE (TREE_TYPE (t));
 
@@ -683,7 +680,7 @@ update_parameter_components (void)
   edge entry_edge = single_succ_edge (ENTRY_BLOCK_PTR);
   tree parm;
 
-  for (parm = DECL_ARGUMENTS (cfun->decl); parm ; parm = TREE_CHAIN (parm))
+  for (parm = DECL_ARGUMENTS (cfun->decl); parm ; parm = DECL_CHAIN (parm))
     {
       tree type = TREE_TYPE (parm);
       tree ssa_name, r, i;

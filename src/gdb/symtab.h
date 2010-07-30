@@ -148,7 +148,7 @@ struct general_symbol_info
 
   short section;
 
-  /* The section associated with this symbol. */
+  /* The section associated with this symbol.  It can be NULL.  */
 
   struct obj_section *obj_section;
 };
@@ -516,8 +516,9 @@ struct symbol_computed_ops
   int (*read_needs_frame) (struct symbol * symbol);
 
   /* Write to STREAM a natural-language description of the location of
-     SYMBOL.  */
-  int (*describe_location) (struct symbol * symbol, struct ui_file * stream);
+     SYMBOL, in the context of ADDR.  */
+  void (*describe_location) (struct symbol * symbol, CORE_ADDR addr,
+			     struct ui_file * stream);
 
   /* Tracepoint support.  Append bytecodes to the tracepoint agent
      expression AX that push the address of the object SYMBOL.  Set
@@ -885,6 +886,12 @@ extern struct symbol *lookup_symbol_aux_block (const char *name,
 					       const struct block *block,
 					       const domain_enum domain);
 
+/* Lookup a symbol only in the file static scope of all the objfiles.  */
+
+struct symbol *lookup_static_symbol_aux (const char *name,
+					 const domain_enum domain);
+
+
 /* lookup a symbol by name, within a specified block */
 
 extern struct symbol *lookup_block_symbol (const struct block *, const char *,
@@ -1115,6 +1122,8 @@ extern void forget_cached_source_info (void);
 
 extern void select_source_symtab (struct symtab *);
 
+extern char **default_make_symbol_completion_list_break_on
+  (char *text, char *word, const char *break_on);
 extern char **default_make_symbol_completion_list (char *, char *);
 extern char **make_symbol_completion_list (char *, char *);
 extern char **make_symbol_completion_list_fn (struct cmd_list_element *,
@@ -1132,11 +1141,10 @@ extern char *find_main_filename (void);
 
 extern struct symtab *find_line_symtab (struct symtab *, int, int *, int *);
 
-extern CORE_ADDR find_function_start_pc (struct gdbarch *,
-					 CORE_ADDR, struct obj_section *);
-
 extern struct symtab_and_line find_function_start_sal (struct symbol *sym,
 						       int);
+
+extern void skip_prologue_sal (struct symtab_and_line *);
 
 /* symfile.c */
 
@@ -1198,10 +1206,15 @@ struct symbol *lookup_global_symbol_from_objfile (const struct objfile *objfile,
 						  const char *name,
 						  const domain_enum domain);
 
-extern struct symtabs_and_lines
-expand_line_sal (struct symtab_and_line sal);
+extern struct symtabs_and_lines expand_line_sal (struct symtab_and_line sal);
+
+/* Return 1 if the supplied producer string matches the ARM RealView
+   compiler (armcc).  */
+int producer_is_realview (const char *producer);
 
 void fixup_section (struct general_symbol_info *ginfo,
 		    CORE_ADDR addr, struct objfile *objfile);
+
+struct objfile *lookup_objfile_from_block (const struct block *block);
 
 #endif /* !defined(SYMTAB_H) */

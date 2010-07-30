@@ -1,3 +1,173 @@
+2010-07-23  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.ac (*-*-solaris2.8): Use alternate thread library.
+	Add libthread.
+	(*-*-solaris2.9): Use libthread.
+	* configure: Regenerate.
+
+2010-07-15  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* include/sparc-signal.h: Renamed to ...
+	* include/solaris-signal.h: ... this.
+	* configure.ac: Use it on any *-*-solaris2* target.
+	* configure: Regenerate.
+	* configure.host (i?86-*-solaris2*): Set can_unwind_signal=yes.
+	* Makefile.am (prims.lo): Add -fno-omit-frame-pointer to AM_CXXFLAGS.
+	* Makefile.in: Regenerate.
+
+2010-07-05  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.ac (ANONVERSCRIPT): Handle sun style.
+	Define ANONVERSCRIPT_GNU, ANONVERSCRIPT_SUN automake conditionals.
+	* configure: Regenerate.
+
+	* Makefile.am [ANONVERSCRIPT]: Protect GNU section with
+	ANONVERSCRIPT_GNU.
+	Introduce per-library $(lib)_la_version_arg, $(lib)_la_version_dep
+	variables.
+	[ANONVERSCRIPT_GNU] (version_arg): Default ld arg for version map.
+	(version_dep): Likewise for dependency.
+	Use them to set the per-library variables.
+	[!ANONVERSCRIPT]: Provide them vor the unversioned case.
+	[ANONVERSCRIPT_SUN]: Handle Sun symbol versioning.
+	(libgcj_la_DEPENDENCIES): Unconditionally use
+	$(libgcj_la_version_dep).
+	(libgcj_la_LINK): Add $(libgcj_la_version_arg).
+	(libgcj_noncore_la_DEPENDENCIES): Unconditionally use
+	$(libgcj_la_version_dep).
+	(libgcj_tools_la_LIBADD): Move -lm ...
+	(libgcj_tools_la_LDFLAGS): ... here.
+	(libgcj_tools_la_DEPENDENCIES): Add
+	$(libgcj_tools_la_version_dep).
+	(libgcj_tools_la_LINK): Add $(libgcj_tools_la_version_arg).
+	(lib_gnu_awt_xlib_la_DEPENDENCIES): Add
+	$(lib_gnu_awt_xlib_la_version_dep).
+	(lib_gnu_awt_xlib_la_LINK): Add
+	$(lib_gnu_awt_xlib_la_version_arg).
+	(libgcj_bc_la_DEPENDENCIES): Add $(libgcj_bc_la_version_dep).
+	(libgcj_bc_la_LINK): $(libgcj_bc_la_version_arg).
+	[ANONVERSCRIPT && ANONVERSCRIPT_SUN] (%.ver-sun): New pattern rule.
+	* Makefile.in: Regenerate.
+
+	* libgcj.ver: Reformat.
+
+2010-06-10  Peter O'Gorman  <peter@pogma.com>
+
+	* configure.ac: Set SYSTEMSPEC so that -allow_stack_execute is not
+	passed to the linker for -dynamiclib or -bundle on darwin.
+	* configure: Regenerate. 
+
+2010-06-09  Iain Sandoe  <iains@gcc.gnu.org>
+
+	PR bootstrap/43170
+	* configure: Regenerate.
+
+2010-06-03  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* configure: Regenerate.
+
+2010-06-03  Matthias Klose  <doko@ubuntu.com>
+
+	* libtool-version: Bump soversion.
+
+2010-05-29  Mike Stump  <mikestump@comcast.net>
+
+	* configure.ac: Add multilib support for gmp.  Proper -I and -L
+	flags for gmp are added.
+
+2010-05-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	* configure.ac: Redirect grep stdout, stderr to /dev/null instead
+	of grep -q.
+	Use -- instead of grep -e.
+	* configure: Regenerate.
+
+2010-05-25  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
+
+	PR libgcj/44216
+	* configure.ac (libgcj_cv_exidx): Enable AC_LANG_WERROR.
+	Save and restore werror flag.
+	* configure: Regenerate.
+
+2010-05-04  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	PR other/43620
+	* configure.ac (AM_INIT_AUTOMAKE): Add no-dist.
+	* Makefile.in: Regenerate.
+	* gcj/Makefile.in: Regenerate.
+	* include/Makefile.in: Regenerate.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-05-03  Jack Howarth <howarth@bromo.med.uc.edu>
+
+	PR 43839
+	* testsuite/Makefile.am: Override automake for site.exp creation
+	and add entry to set libiconv.
+	* testsuite/Makefile.in: Regenerate.
+	* testsuite/libjava.jni/jni.exp (gcj_jni_get_cxxflags_invocation):
+	Add new global variable libiconv to handle alternative libiconv
+	locations.
+
+2010-04-19  Andrew Haley  <aph@redhat.com>
+
+	PR libgcj/40860
+	* configure.ac: Handle --no-merge-exidx-entries.
+
+2010-04-07  Jakub Jelinek  <jakub@redhat.com>
+
+	* exception.cc (_Jv_Throw): Avoid set but not used warning.
+	* include/java-assert.h (JvAssertMessage, JvAssert): Use argument in
+	sizeof to avoid set but not used warnings.
+
+2010-04-07  Jason Merrill  <jason@redhat.com>
+
+	* gnu/gcj/runtime/natSharedLibLoader.cc (findCore): Move
+	declaration of _Jv_create_core out of the function.
+
+2010-04-02  Ralf Wildenhues  <Ralf.Wildenhues@gmx.de>
+
+	* Makefile.in: Regenerate.
+	* aclocal.m4: Regenerate.
+	* configure: Regenerate.
+	* gcj/Makefile.in: Regenerate.
+	* include/Makefile.in: Regenerate.
+	* testsuite/Makefile.in: Regenerate.
+
+2010-03-21  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	PR target/42811
+	* configure.ac (DLLTOOL): Call AC_CHECK_TOOL.
+	(libgcj_sublib_core_extra_deps): New host-dependent configure var.
+	(LIBGCJ_SUBLIB_CORE_EXTRA_DEPS): AC_SUBST it.
+	* configure.host (libgcj_sublib_core_extra_deps): Define
+	appropriately on Cygwin and MinGW.
+	(libgcj_sublib_core_extra_deps): Add libgcj-noncore-dummy import
+	stub library on Cygwin and MinGW.
+	* Makefile.am (LIBJAVA_CORE_EXTRA): Import AC_SUBST'd
+	LIBGCJ_SUBLIB_CORE_EXTRA_DEPS if building sublibs, else define empty.
+	(libgcj_la_DEPENDENCIES): Use it.
+	(DLL_VERSION): New makefile macro.
+	(libgcj-noncore-dummy.dll.a): New build rule for dummy import stub
+	library.
+	(libgcj_noncore_la_LIBADD): Trim superfluous convenience libs.
+	(AM_MAKEFLAGS): Add DLLTOOL recursive propagation.
+	* libgcj-noncore-dummy.def: New file.
+	* Makefile.in: Regenerate.
+	* include/Makefile.in: Likewise.
+	* testsuite/Makefile.in: Likewise.
+	* configure: Likewise.
+	* gcj/Makefile.in: Likewise.
+
+2010-03-21  Dave Korn  <dave.korn.cygwin@gmail.com>
+
+	PR target/42811 (prerequisite)
+	* jvmti.cc (_Jv_GetJVMTIEnv): Avoid use of uninitialised memory.
+
+2010-03-13  Matthias Klose  <doko@ubuntu.com>
+
+	PR libgcj/42676
+	* Regenerate .h files for anonymous inner classes.
+
 2010-03-01  Rainer Orth  <ro@CeBiTec.Uni-Bielefeld.DE>
 
 	* configure.host (mips-sgi-irix6*): Don't set libgcj_interpreter.

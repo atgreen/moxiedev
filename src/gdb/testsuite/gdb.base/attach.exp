@@ -18,8 +18,6 @@ if $tracelevel then {
     strace $tracelevel
 }
 
-set prms_id 0
-set bug_id 0
 
 # On HP-UX 11.0, this test is causing a process running the program
 # "attach" to be left around spinning.  Until we figure out why, I am
@@ -248,34 +246,15 @@ proc do_attach_tests {} {
     # Verify that we can modify the variable "should_exit" in the
     # program.
 
-    gdb_test "set should_exit=1" "" "after attach2, set should_exit"
+    gdb_test_no_output "set should_exit=1" "after attach2, set should_exit"
 
     # Verify that the modification really happened.
 
-    send_gdb "tbreak 19\n"
-    gdb_expect {
-	-re "Temporary breakpoint .*at.*$srcfile, line 19.*$gdb_prompt $" {
-	    pass "after attach2, set tbreak postloop"
-	}
-	-re "$gdb_prompt $" {
-	    fail "after attach2, set tbreak postloop"
-	}
-	timeout {
-	    fail "(timeout) after attach2, set tbreak postloop"
-	}
-    }
-    send_gdb "continue\n"
-    gdb_expect {
-	-re "main.*at.*$srcfile:19.*$gdb_prompt $" {
-	    pass "after attach2, reach tbreak postloop"
-	}
-	-re "$gdb_prompt $" {
-	    fail "after attach2, reach tbreak postloop"
-	}
-	timeout {
-	    fail "(timeout) after attach2, reach tbreak postloop"
-	}
-    }
+    gdb_test "tbreak 19" "Temporary breakpoint .*at.*$srcfile, line 19.*" \
+	"after attach2, set tbreak postloop"
+
+    gdb_test "continue" "main.*at.*$srcfile:19.*" \
+	"after attach2, reach tbreak postloop"
 
     # Allow the test process to exit, to cleanup after ourselves.
 
@@ -330,11 +309,11 @@ proc do_attach_tests {} {
 	"attach when process' a.out not in cwd"
 
     set test "after attach3, exit"
-    gdb_test_multiple "kill" "$test" {
-	-re "Kill the program being debugged.*y or n. $" {
-	    gdb_test "y" "" "$test"
-	}
-    }
+    gdb_test "kill" \
+	"" \
+	"$test" \
+	"Kill the program being debugged.*y or n. $" \
+	"y"
     
     # Another "don't leave a process around"
     remote_exec build "kill -9 ${testpid}"
@@ -357,7 +336,7 @@ proc do_call_attach_tests {} {
 
     # Attach
    
-    gdb_test "file $binfile2" "" "force switch to gdb64, if necessary"
+    gdb_test "file $binfile2" ".*" "force switch to gdb64, if necessary"
     set test "attach call"
     gdb_test_multiple "attach $testpid" "$test" {
 	-re "warning: reading register.*I.*O error.*$gdb_prompt $" {

@@ -1,5 +1,9 @@
 2010-07-30  Anthony Green  <green@moxielogic.com>
 
+	* scripts/precheck/git-submodule-recursive-update: New file.
+	* scripts/precheck/check-submodules: Use
+	git-submodule-recursive-update.
+
 	* scripts/moxie-rtems-gcc-wrapper: New file.
 	* build.xml: Build moxie-rtems toolchain.
 

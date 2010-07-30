@@ -22,11 +22,10 @@ COUNT=`git config -l | grep submodule | wc -l`
 
 # There should not be 0.
 if test "$COUNT" -eq "0"; then
-  echo "./scripts/check-submodules is downloading the missing submodules"
-  git submodule init
-  git submodule update
+  echo "./scripts/precheck/check-submodules is downloading the missing submodules"
+  ./scripts/precheck/git-submodule-recursive-update
 else
-  echo "./scripts/check-submodules says we have all git submodules"
+  echo "./scripts/precheck/check-submodules says we have all git submodules"
 fi
 
 

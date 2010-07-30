@@ -1115,10 +1115,6 @@ dump_relocations (FILE * file,
 	  rtype = elf_mn10200_reloc_type (type);
 	  break;
 
-	case EM_MOXIE:
-	  rtype = elf_moxie_reloc_type (type);
-	  break;
-
 	case EM_FR30:
 	case EM_CYGNUS_FR30:
 	  rtype = elf_fr30_reloc_type (type);
@@ -2022,7 +2018,6 @@ get_machine_name (unsigned e_machine)
     case EM_CR16_OLD:		return "National Semiconductor's CR16";
     case EM_MICROBLAZE:		return "Xilinx MicroBlaze";
     case EM_MICROBLAZE_OLD:	return "Xilinx MicroBlaze";
-    case EM_MOXIE:              return "moxielogic.org's moxie core";
     case EM_RX:			return "Renesas RX";
     case EM_METAG:		return "Imagination Technologies META processor architecture";
     case EM_MCST_ELBRUS:	return "MCST Elbrus general purpose hardware architecture";

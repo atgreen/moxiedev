@@ -7,3 +7,6 @@
 [submodule "qemu"]
 	path = qemu
 	url = git://github.com/atgreen/qemu-moxie
+[submodule "rtems"]
+	path = rtems
+	url = git://github.com/atgreen/rtems-moxie

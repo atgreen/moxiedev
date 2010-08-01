@@ -1,3 +1,7 @@
+2010-07-31  Anthony Green  <green@moxielogic.com>
+
+	* Makefile (install): Add install rule.
+
 2009-10-15  Anthony Green  <green@moxielogic.com>
 
 	* insn_hist.c (track_insn_usage): New file.

@@ -4,3 +4,6 @@ moxielyzer: moxielyzer.c scan.c insns.c check_cmp.c offset_regs.c insn_hist.c
 
 clean:
 	rm moxielyzer
+
+install:
+	install -m 755 moxielyzer ../root/usr/bin

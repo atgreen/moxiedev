@@ -594,6 +594,30 @@
       <arg value="vmlinux"/>
     </exec>
 
+    <echo message="===================================================================="/>
+    <echo message="====== Building rtems =============================================="/>
+    <echo message="===================================================================="/>
+    <mkdir dir="build/rtems"/>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd rtems; ./bootstrap)"/>
+    </exec>
+    <exec executable="sh">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="-c"/>
+      <arg value="(cd build/rtems; ../../rtems/configure --target=moxie-rtems --prefix=`(cd ../../root/usr/moxie-rtems; pwd)`)"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="--directory=build/rtems"/>
+      <arg value="RTEMS_BSP=moxiesim"/>
+    </exec>
+    <exec executable="make">
+      <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
+      <arg value="install"/>
+    </exec>
+
   </target>
 
   <!-- =================================================================== -->

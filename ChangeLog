@@ -1,3 +1,11 @@
+2010-09-04  Anthony Green  <green@moxielogic.com>
+
+	* moxie/rtl/verilog/Makefile, moxie/rtl/verilog/cpu_decode.v,
+	moxie/rtl/verilog/cpu_fetch.v, moxie/rtl/verilog/cpu_ififo.v,
+	moxie/rtl/verilog/muskoka.v, moxie/rtl/verilog/testm.v: New files.
+
+	* build.xml: Build rtems.
+
 2010-07-30  Anthony Green  <green@moxielogic.com>
 
 	* scripts/precheck/git-submodule-recursive-update: New file.

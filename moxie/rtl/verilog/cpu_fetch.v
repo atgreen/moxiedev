@@ -78,12 +78,10 @@ module cpu_fetch (/*AUTOARG*/
   always @(posedge clk_i) begin
     if (! rst_i) begin
       if (! full) begin
-	$display ("PC = 0x%x", PC);
 	wren <= 1;
 	wrdata <= { MEM[PC], MEM[PC+1], MEM[PC+2], MEM[PC+3] };
 	PC <= PC+4;
       end else begin
-	$display ("PC = 0x%x  NOWRITE full = ", PC, full);
 	wren <= 0;
       end
       rden <= 1;

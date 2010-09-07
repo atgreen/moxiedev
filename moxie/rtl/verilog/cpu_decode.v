@@ -19,14 +19,14 @@
 
 module cpu_decode (/*AUTOARG*/
   // Inputs
-  rst_i, clk_i, opcode_i, operand_i, valid_i
+  rst_i, clk_i, opcode_i, operand_i, valid_i,
   );
 
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
   
   // --- Instructions ---------------------------------------------
-  input [15:0] opcode_i;			// From ififo of cpu_ififo.v
+  input [15:0] opcode_i;		// From ififo of cpu_ififo.v
   input [31:0] operand_i;		// From ififo of cpu_ififo.v
   input valid_i;			// From ififo of cpu_ififo.v
   
@@ -71,22 +71,20 @@ module cpu_decode (/*AUTOARG*/
   always @(posedge clk_i) begin
     if (valid_i == 1)
       begin
-	$display ("**** 3 START *******************************************************");
-	$display ("s3: valid insn: 0x%x", opcode_i);
 	casex (opcode_i)
 	  16'b00000000????????:
 	    begin
-	      $display ("\tnop (0x%x)", operand_i);
+	      $display ("\tnop (0x%x)", opcode_i);
 	    end
 	  16'b00000001????????:
 	    begin
-	      $display ("\tldi.l\t$%0s,\t0x%x", 
+	      $display ("\tldi.l\t$%0s,\t0x%x",
 			get_regname(opcode_i[7:4]),
 			operand_i);
 	    end
 	  16'b00000010????????:
 	    begin
-	      $display ("\tmov\t$%0s,\t%0s",
+	      $display ("\tmov\t$%0s,\t$%0s",
 			get_regname(opcode_i[7:4]),
 			get_regname(opcode_i[3:0]));
 	    end
@@ -99,15 +97,15 @@ module cpu_decode (/*AUTOARG*/
 	      $display ("\tret");
 	    end
 	  16'b00000101????????:
-	    $display ("\tadd.l\t$%0s,\t%0s",
+	    $display ("\tadd.l\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00000110????????:
-	    $display ("\tpush\t$%0s,\t%0s",
+	    $display ("\tpush\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00000111????????:
-	    $display ("\tpop\t$%0s,\t%0s",
+	    $display ("\tpop\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00001000????????:
@@ -133,7 +131,7 @@ module cpu_decode (/*AUTOARG*/
 	      $display ("\tsto.l\t0x%x", operand_i);
 	    end
 	  16'b00001110????????:
-	    $display ("\tcmp\t$%0s,\t%0s",
+	    $display ("\tcmp\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00001111????????:
@@ -198,45 +196,45 @@ module cpu_decode (/*AUTOARG*/
 	  16'b00100101????????:
 	    $display ("\tjmp");
 	  16'b00100110????????:
-	    $display ("\tand\t$%0s,\t%0s",
+	    $display ("\tand\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00100111????????:
 	    begin
-	      $display ("\tlshr\t$%0s,\t%0s",
+	      $display ("\tlshr\t$%0s,\t$%0s",
 			get_regname(opcode_i[7:4]),
 			get_regname(opcode_i[3:0]));
 	    end
 	  16'b00101000????????:
 	    begin
-	      $display ("\tashl\t$%0s,\t%0s",
+	      $display ("\tashl\t$%0s,\t$%0s",
 			get_regname(opcode_i[7:4]),
 			get_regname(opcode_i[3:0]));
 	    end
 	  16'b00101001????????:
-	    $display ("\tsub.l\t$%0s,\t%0s",
+	    $display ("\tsub.l\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00101010????????:
 	    $display ("\tneg");
 	  16'b00101011????????:
-	    $display ("\tor\t$%0s,\t%0s",
+	    $display ("\tor\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00101100????????:
 	    $display ("\tnot");
 	  16'b00101101????????:
 	    begin
-	      $display ("\tashr\t$%0s,\t%0s",
+	      $display ("\tashr\t$%0s,\t$%0s",
 			get_regname(opcode_i[7:4]),
 			get_regname(opcode_i[3:0]));
 	    end
 	  16'b00101110????????:
-	    $display ("\txor\t$%0s,\t%0s",
+	    $display ("\txor\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00101111????????:
-	    $display ("\tmul.l\t$%0s,\t%0s",
+	    $display ("\tmul.l\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00110000????????:
@@ -244,19 +242,19 @@ module cpu_decode (/*AUTOARG*/
 	      $display ("\tswi\t0x%x", operand_i);
 	    end
 	  16'b00110001????????:
-	    $display ("\tdiv.l\t$%0s,\t%0s",
+	    $display ("\tdiv.l\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00110010????????:
-	    $display ("\tudiv.l\t$%0s,\t%0s",
+	    $display ("\tudiv.l\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00110011????????:
-	    $display ("\tmod.l\t$%0s,\t%0s",
+	    $display ("\tmod.l\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00110100????????:
-	    $display ("\tumod.l\t$%0s,\t%0s",
+	    $display ("\tumod.l\t$%0s,\t$%0s",
 		      get_regname(opcode_i[7:4]),
 		      get_regname(opcode_i[3:0]));
 	  16'b00110101????????:
@@ -334,7 +332,6 @@ module cpu_decode (/*AUTOARG*/
 	  16'b111111??????????:
 	    $display ("\tbad");
 	endcase // casex (opcode_i)
-	$display ("**** 3 END *********************************************************");
       end
   end // always @ (posedge clk_i)
 endmodule // cpu_s3

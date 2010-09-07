@@ -1,3 +1,9 @@
+2010-09-07  Anthony Green  <green@moxielogic.com>
+
+	* moxie/rtl/verilog/cpu_ififo.v: Bug fixes.
+	* moxie/rtl/verilog/cpu_fetch.v: Bug fixes.
+	* moxie/rtl/verilog/cpu_decode.v: Bug fixes.
+
 2010-09-04  Anthony Green  <green@moxielogic.com>
 
 	* moxie/rtl/verilog/Makefile, moxie/rtl/verilog/cpu_decode.v,

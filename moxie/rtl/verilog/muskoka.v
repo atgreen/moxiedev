@@ -39,15 +39,14 @@ module muskoka (/*AUTOARG*/
 		// Inputs
 		.rst_i			(rst_i),
 		.clk_i			(clk_i));
-
-
+  
   cpu_decode s2 (// Inputs
 		 .rst_i			(rst_i),
 		 .clk_i			(clk_i),
 		 .opcode_i		(opcode[15:0]),
 		 .operand_i		(operand[31:0]),
 		 .valid_i		(valid));
-     
+       
    always @ (posedge clk_i) begin
       
       if (rst_i == 1) begin

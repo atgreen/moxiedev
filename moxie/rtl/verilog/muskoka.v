@@ -26,35 +26,111 @@ module muskoka (/*AUTOARG*/
   input  rst_i, clk_i;
   
   reg 	 rst;
-
-  /*AUTOWIRE*/
-  wire 	 [15:0] opcode;
-  wire   [31:0] operand;
-  wire   [0:0] valid;
   
-  cpu_fetch s1 (// Outputs
-		.opcode		(opcode[15:0]),
-		.valid		(valid),
-		.operand		(operand[31:0]),
-		// Inputs
-		.rst_i			(rst_i),
-		.clk_i			(clk_i));
+  // --- Wires to connect the 5 pipeline stages -------------------
+  //
+  //  Prefix codes for the control signals
+  //        fd - Fetch to Decode
+  //        dx - Decode to Execute
+  //        rx - Register File to Execute
+  //        xr - Execute to Register File
   
-  cpu_decode s2 (// Inputs
-		 .rst_i			(rst_i),
-		 .clk_i			(clk_i),
-		 .opcode_i		(opcode[15:0]),
-		 .operand_i		(operand[31:0]),
-		 .valid_i		(valid));
-       
-   always @ (posedge clk_i) begin
-      
-      if (rst_i == 1) begin
-	 
-	 $display("** RESET **");
+  wire [15:0] fd_opcode;
+  wire [31:0] fd_operand;
+  wire [0:0]  fd_valid;
+  wire [31:0] dx_operand;
+  wire [0:0]  dx_register_write_enable;
+  wire [0:0]  dx_op_ldi;
+  wire [0:0]  dx_op_dec;
+  wire [0:0]  dx_op_nop;
+  wire [0:0]  xr_register_write_enable;
+  wire [3:0]  dx_register_write_index;
+  wire [3:0]  xr_register_write_index;
+  wire [31:0] xr_result;
+  wire [3:0]  dx_regA;
+  wire [3:0]  dx_regB;
+  wire [3:0]  dx_regC;
+ 
+  wire [31:0] rx_reg_value1;
+  wire [31:0] rx_reg_value2;
+  wire [0:0]  dr_read_enable;
+  wire [3:0]  dr_reg_index1;
+  wire [3:0]  dr_reg_index2;
 
-      end
-	
-   end
-	 
+  wire [0:0] hazard_war;
+
+  initial
+    begin
+      $dumpvars(1,stage_fetch); 
+      $dumpvars(1,stage_decode); 
+      $dumpvars(1,stage_execute); 
+      $dumpvars(1,regs); 
+    end
+
+  cpu_registerfile regs (// Outputs
+			 .value1_o (rx_reg_value1), 
+			 .value2_o (rx_reg_value2),
+			 // Inputs
+			 .rst_i			(rst_i),
+			 .clk_i			(clk_i),
+			 .write_enable_i (xr_register_write_enable), 
+			 .read_enable_i (dr_read_enable),
+			 .reg_write_index_i (xr_register_write_index),
+			 .reg_read_index1_i (dr_reg_index1), 
+			 .reg_read_index2_i (dr_reg_index2), 
+			 .value_i (xr_result));
+  
+  cpu_fetch stage_fetch (// Outputs
+			 .opcode		(fd_opcode[15:0]),
+			 .valid		(fd_valid),
+			 .operand		(fd_operand[31:0]),
+			 // Inputs
+			 .rst_i			(rst_i),
+			 .clk_i			(clk_i),
+			 .stall_i               (hazard_war));
+  
+  cpu_decode stage_decode (// Inputs
+			   .rst_i			(rst_i),
+			   .clk_i			(clk_i),
+			   .opcode_i		(fd_opcode[15:0]),
+			   .operand_i		(fd_operand[31:0]),
+			   .valid_i		(fd_valid),
+			   .stall_i             (hazard_war),
+			   // Outputs
+			   .register_read_enable_o (dr_read_enable),
+			   .register_write_enable_o (dx_register_write_enable),
+			   .register_write_index_o (dx_register_write_index),
+			   .operand_o (dx_operand),
+			   .regA_o (dr_reg_index1),
+			   .regB_o (dr_reg_index2),
+			   .op_ldi_o (dx_op_ldi),
+			   .op_dec_o (dx_op_dec),
+			   .op_nop_o (dx_op_nop));
+  
+  cpu_execute stage_execute (// Inputs
+			     .rst_i			(rst_i),
+			     .clk_i			(clk_i),
+			     .op_ldi_i           (dx_op_ldi),
+			     .op_dec_i           (dx_op_dec),
+			     .op_nop_i           (dx_op_nop),
+			     .operand_i		(dx_operand[31:0]),
+			     .regA_i (rx_reg_value1),
+			     .regB_i (rx_reg_value2),
+			     .register_write_index_i (dx_register_write_index),
+			     // Outputs
+			     .register_write_enable_o (xr_register_write_enable),
+			     .register_write_index_o (xr_register_write_index),
+			     .result_o (xr_result));
+  
+
+  assign hazard_war = dr_read_enable & (dr_reg_index1 == xr_register_write_index);
+    
+  always @ (posedge clk_i) begin
+    if (hazard_war)
+      $display("HAZARD! register 0x%x", dr_reg_index1);
+    
+//    $display("OPCODE  == 0x%x", fd_opcode);
+//    $display("OPERAND == 0x%x", fd_operand);
+  end
+
 endmodule // muskoka

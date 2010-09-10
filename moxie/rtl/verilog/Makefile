@@ -1,5 +1,6 @@
 
-MSOURCES = muskoka.v testm.v cpu_ififo.v cpu_fetch.v cpu_decode.v
+MSOURCES = muskoka.v testm.v cpu_ififo.v cpu_fetch.v cpu_decode.v \
+cpu_execute.v cpu_registerfile.v
 
 all: a.out 
 

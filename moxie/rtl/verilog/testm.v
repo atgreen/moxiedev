@@ -25,7 +25,7 @@ module testm;
       $dumpvars(1,soc); 
       # 10 rst_o = 1;
       # 20 rst_o = 0;
-      # 4000 $stop;
+      # 400 $stop;
    end
 
    reg clk_o = 0;

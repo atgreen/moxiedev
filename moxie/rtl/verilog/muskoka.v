@@ -40,9 +40,7 @@ module muskoka (/*AUTOARG*/
   wire [0:0]  fd_valid;
   wire [31:0] dx_operand;
   wire [0:0]  dx_register_write_enable;
-  wire [0:0]  dx_op_ldi;
-  wire [0:0]  dx_op_dec;
-  wire [0:0]  dx_op_nop;
+  wire [5:0]  dx_op;
   wire [0:0]  xr_register_write_enable;
   wire [3:0]  dx_register_write_index;
   wire [3:0]  xr_register_write_index;
@@ -64,7 +62,7 @@ module muskoka (/*AUTOARG*/
       $dumpvars(1,stage_fetch); 
       $dumpvars(1,stage_decode); 
       $dumpvars(1,stage_execute); 
-      $dumpvars(1,regs); 
+      $dumpvars(1,regs);
     end
 
   cpu_registerfile regs (// Outputs
@@ -103,16 +101,13 @@ module muskoka (/*AUTOARG*/
 			   .operand_o (dx_operand),
 			   .regA_o (dr_reg_index1),
 			   .regB_o (dr_reg_index2),
-			   .op_ldi_o (dx_op_ldi),
-			   .op_dec_o (dx_op_dec),
-			   .op_nop_o (dx_op_nop));
-  
+			   .op_o (dx_op));
+    
   cpu_execute stage_execute (// Inputs
 			     .rst_i			(rst_i),
 			     .clk_i			(clk_i),
-			     .op_ldi_i           (dx_op_ldi),
-			     .op_dec_i           (dx_op_dec),
-			     .op_nop_i           (dx_op_nop),
+			     .stall_i        (hazard_war),
+			     .op_i           (dx_op),
 			     .operand_i		(dx_operand[31:0]),
 			     .regA_i (rx_reg_value1),
 			     .regB_i (rx_reg_value2),
@@ -123,14 +118,16 @@ module muskoka (/*AUTOARG*/
 			     .result_o (xr_result));
   
 
-  assign hazard_war = dr_read_enable & (dr_reg_index1 == xr_register_write_index);
+  assign hazard_war = dr_read_enable & xr_register_write_enable & ((dr_reg_index1 == xr_register_write_index) | (dr_reg_index2 == xr_register_write_index));
     
   always @ (posedge clk_i) begin
-    if (hazard_war)
-      $display("HAZARD! register 0x%x", dr_reg_index1);
-    
-//    $display("OPCODE  == 0x%x", fd_opcode);
-//    $display("OPERAND == 0x%x", fd_operand);
+    if (!rst_i & hazard_war)
+      begin
+	if (dr_reg_index1 == xr_register_write_index)
+	  $display("HAZARD! register1 0x%x", dr_reg_index1);
+	else if (dr_reg_index2 == xr_register_write_index)
+	  $display("HAZARD! register2 0x%x", dr_reg_index2);
+      end
   end
 
 endmodule // muskoka

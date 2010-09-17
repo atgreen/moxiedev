@@ -42,6 +42,7 @@ module cpu_registerfile (/*AUTOARG*/
 
   reg [31:0] register_fp;
   reg [31:0] register_sp;
+  reg [31:0] register_r0;
   reg [31:0] register_r1;
   reg [31:0] register_r2;
   reg [31:0] register_r3;
@@ -60,6 +61,7 @@ module cpu_registerfile (/*AUTOARG*/
     $display ("REGRESET");
     register_fp <= 32'b00000000000000000000000000000000;
     register_sp <= 32'b00000000000000000000000000000000;
+    register_r0 <= 32'b00000000000000000000000000000000;
     register_r1 <= 32'b00000000000000000000000000000000;
     register_r2 <= 32'b00000000000000000000000000000000;
     register_r3 <= 32'b00000000000000000000000000000000;
@@ -75,7 +77,8 @@ module cpu_registerfile (/*AUTOARG*/
     register_r13 <= 32'b00000000000000000000000000000000;
   end
 
-  always @ (posedge write_enable_i) begin
+  always @ (posedge clk_i) begin
+    if (write_enable_i)
     if (!rst_i) begin
       $display("WRITING 0x%x to register 0x%x", value_i, reg_write_index_i);
       case (reg_write_index_i)
@@ -84,12 +87,14 @@ module cpu_registerfile (/*AUTOARG*/
 	4'b0001:
 	  register_sp <= value_i;
 	4'b0010:
-	  register_r1 <= value_i;
+	  register_r0 <= value_i;
 	4'b0011:
-	  register_r2 <= value_i;
+	  register_r1 <= value_i;
 	4'b0100:
-	  register_r3 <= value_i;
+	  register_r2 <= value_i;
 	4'b0101:
+	  register_r3 <= value_i;
+	4'b0110:
 	  register_r4 <= value_i;
 	4'b0111:
 	  register_r5 <= value_i;
@@ -122,12 +127,14 @@ module cpu_registerfile (/*AUTOARG*/
 	  4'b0001:
 	    value1_o <= register_sp;
 	  4'b0010:
-	    value1_o <= register_r1;
+	    value1_o <= register_r0;
 	  4'b0011:
-	    value1_o <= register_r2;
+	    value1_o <= register_r1;
 	  4'b0100:
-	    value1_o <= register_r3;
+	    value1_o <= register_r2;
 	  4'b0101:
+	    value1_o <= register_r3;
+	  4'b0110:
 	    value1_o <= register_r4;
 	  4'b0111:
 	    value1_o <= register_r5;
@@ -148,7 +155,42 @@ module cpu_registerfile (/*AUTOARG*/
 	  4'b1111:
 	    value1_o <= register_r13;
 	endcase
-	$display("READING 0x%x from register 0x%x", value1_o, reg_read_index1_i);
+	case (reg_read_index2_i)
+	  4'b0000:
+	    value2_o <= register_fp;
+	  4'b0001:
+	    value2_o <= register_sp;
+	  4'b0010:
+	    value2_o <= register_r0;
+	  4'b0011:
+	    value2_o <= register_r1;
+	  4'b0100:
+	    value2_o <= register_r2;
+	  4'b0101:
+	    value2_o <= register_r3;
+	  4'b0110:
+	    value2_o <= register_r4;
+	  4'b0111:
+	    value2_o <= register_r5;
+	  4'b1000:
+	    value2_o <= register_r6;
+	  4'b1001:
+	    value2_o <= register_r7;
+	  4'b1010:
+	    value2_o <= register_r8;
+	  4'b1011:
+	    value2_o <= register_r9;
+	  4'b1100:
+	    value2_o <= register_r10;
+	  4'b1101:
+	    value2_o <= register_r11;
+	  4'b1110:
+	    value2_o <= register_r12;
+	  4'b1111:
+	    value2_o <= register_r13;
+	endcase
+	#1 $display("READING 0x%x from register 0x%x", value1_o, reg_read_index1_i);
+	#1 $display("READING 0x%x from register 0x%x", value2_o, reg_read_index2_i);
       end
   end
 

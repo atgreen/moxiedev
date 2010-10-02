@@ -18,6 +18,8 @@
 // 02110-1301, USA.
 
 module muskoka (/*AUTOARG*/
+  // Outputs
+  hazout,
   // Inputs
   rst_i, clk_i
   );
@@ -26,7 +28,10 @@ module muskoka (/*AUTOARG*/
   input  rst_i, clk_i;
   
   reg 	 rst;
-  
+
+  // --- Hazard output  -testing only - ---------------------------
+  output hazout;
+    
   // --- Wires to connect the 5 pipeline stages -------------------
   //
   //  Prefix codes for the control signals
@@ -51,12 +56,17 @@ module muskoka (/*AUTOARG*/
  
   wire [31:0] rx_reg_value1;
   wire [31:0] rx_reg_value2;
-  wire [0:0]  dr_read_enable;
+  wire [0:0]  dr_A_read_enable;
+  wire [0:0]  dr_B_read_enable;
   wire [3:0]  dr_reg_index1;
   wire [3:0]  dr_reg_index2;
 
   wire [0:0] hazard_war;
+  wire [0:0] hazout;
 
+  assign hazout = hazard_war;
+
+  // synthesis translate_off 
   initial
     begin
       $dumpvars(1,stage_fetch); 
@@ -64,6 +74,7 @@ module muskoka (/*AUTOARG*/
       $dumpvars(1,stage_execute); 
       $dumpvars(1,regs);
     end
+  // synthesis translate_on 
 
   cpu_registerfile regs (// Outputs
 			 .value1_o (rx_reg_value1), 
@@ -72,7 +83,7 @@ module muskoka (/*AUTOARG*/
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
 			 .write_enable_i (xr_register_write_enable), 
-			 .read_enable_i (dr_read_enable),
+			 .read_enable_i (dr_A_read_enable | dr_B_read_enable),
 			 .reg_write_index_i (xr_register_write_index),
 			 .reg_read_index1_i (dr_reg_index1), 
 			 .reg_read_index2_i (dr_reg_index2), 
@@ -95,7 +106,8 @@ module muskoka (/*AUTOARG*/
 			   .valid_i		(fd_valid),
 			   .stall_i             (hazard_war),
 			   // Outputs
-			   .register_read_enable_o (dr_read_enable),
+			   .register_A_read_enable_o (dr_A_read_enable),
+			   .register_B_read_enable_o (dr_B_read_enable),
 			   .register_write_enable_o (dx_register_write_enable),
 			   .register_write_index_o (dx_register_write_index),
 			   .operand_o (dx_operand),
@@ -118,14 +130,14 @@ module muskoka (/*AUTOARG*/
 			     .result_o (xr_result));
   
 
-  assign hazard_war = dr_read_enable & xr_register_write_enable & ((dr_reg_index1 == xr_register_write_index) | (dr_reg_index2 == xr_register_write_index));
+  assign hazard_war = (dr_A_read_enable & (xr_register_write_enable & (dr_reg_index1 == xr_register_write_index))) |  (dr_B_read_enable & (xr_register_write_enable & (dr_reg_index2 == xr_register_write_index)));
     
   always @ (posedge clk_i) begin
     if (!rst_i & hazard_war)
       begin
-	if (dr_reg_index1 == xr_register_write_index)
+	if (dr_A_read_enable & (dr_reg_index1 == xr_register_write_index))
 	  $display("HAZARD! register1 0x%x", dr_reg_index1);
-	else if (dr_reg_index2 == xr_register_write_index)
+	else if (dr_B_read_enable & (dr_reg_index2 == xr_register_write_index))
 	  $display("HAZARD! register2 0x%x", dr_reg_index2);
       end
   end

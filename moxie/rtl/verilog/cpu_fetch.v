@@ -39,10 +39,11 @@ module cpu_fetch (/*AUTOARG*/
   output [31:0] operand;
  
   // --- Test memory.  Let's just read from an internal array.  */
-  reg [7:0] 	MEM [0:128000];
+  //  reg [7:0] 	MEM [0:128000];
+  reg [7:0] 	MEM [0:8096];
   reg [31:0] 	PC; /* For testing only.  */
 
-  wire 		valid;
+  wire [0:0] 	valid, empty, full;
   reg 		wren, rden;
   reg  [31:0] 	wrdata;
   wire [15:0] opcode;
@@ -63,35 +64,33 @@ module cpu_fetch (/*AUTOARG*/
 		   .read_en_i		(rden),
 		   .data_i	(wrdata[31:0]));
   
+  // synthesis translate_off 
   initial
-     begin
-       $readmemh("hello.vh", MEM);
-       $dumpvars(1,ififo); 
-     end
-
-  // --- Reset Logic ----------------------------------------------
-  always @(posedge clk_i) begin
-    // Initialize all the registers
-    if (rst_i == 1) begin
-      PC <= #1 `BOOT_ADDRESS;
+    begin
+      $readmemh("hello.vh", MEM);
+      $dumpvars(1,ififo); 
     end
-  end
+  // synthesis translate_on
 
   // --- Test fetch -----------------------------------------------
   always @(posedge clk_i) begin
-    if (! rst_i && ! stall_i) begin
-      if (! full) begin
-	wren <= 1;
-	wrdata <= { MEM[PC], MEM[PC+1], MEM[PC+2], MEM[PC+3] };
-	PC <= PC+4;
-      end else begin
-	wren <= 0;
-      end
-      rden <= 1;
-    end else begin
-      wren <= 0;
-      rden <= 0;
-    end      
+    if (rst_i) begin
+       PC <= #1 `BOOT_ADDRESS;
+    end else begin 
+       if (! stall_i) begin
+	  if (! full) begin
+	     wren <= 1;
+	     wrdata <= { MEM[PC], MEM[PC+1], MEM[PC+2], MEM[PC+3] };
+	     PC <= PC+4;
+	  end else begin
+	     wren <= 0;
+	  end
+	  rden <= 1;
+       end else begin
+	  wren <= 0;
+	  rden <= 0;
+       end      
+    end // else: !if(rst_i)
   end
 
 endmodule // cpu_fetch

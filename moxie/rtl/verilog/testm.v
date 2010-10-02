@@ -28,10 +28,12 @@ module testm;
       # 400 $stop;
    end
 
+  wire hazout;
+  
    reg clk_o = 0;
 
    always #5 clk_o = !clk_o;
 
-   muskoka soc (rst_o, clk_o);
+   muskoka soc (rst_o, clk_o, hazout);
 
 endmodule

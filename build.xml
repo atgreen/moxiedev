@@ -439,14 +439,12 @@
       <arg value="all-binutils"/>
       <arg value="all-gas"/>
       <arg value="all-ld"/>
-      <arg value="all-sim"/>
     </exec>
     <exec executable="make">
       <arg value="--directory=build/src-rtems"/>
       <arg value="install-binutils"/>
       <arg value="install-gas"/>
       <arg value="install-ld"/>
-      <arg value="install-sim"/>
     </exec>
 
     <echo message="===================================================================="/>
@@ -464,14 +462,12 @@
       <arg value="all-binutils"/>
       <arg value="all-gas"/>
       <arg value="all-ld"/>
-      <arg value="all-sim"/>
     </exec>
     <exec executable="make">
       <arg value="--directory=build/src-uclinux"/>
       <arg value="install-binutils"/>
       <arg value="install-gas"/>
       <arg value="install-ld"/>
-      <arg value="install-sim"/>
     </exec>
 
     <echo message="===================================================================="/>

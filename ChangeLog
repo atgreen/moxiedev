@@ -2,6 +2,7 @@
 
 	* build.xml: Disable RTEMS test program builds, enable
 	moxie-rtems-g++ and fix RTEMS installation.
+	Don't build moxie-rtems-run or moxie-uclinux-run.
 
 2010-09-08  Anthony Green  <green@moxielogic.com>
 

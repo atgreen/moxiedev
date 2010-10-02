@@ -1,3 +1,13 @@
+2010-10-02  Anthony Green  <green@moxielogic.com>
+
+	* build.xml: Disable RTEMS test program builds, enable
+	moxie-rtems-g++ and fix RTEMS installation.
+
+2010-09-08  Anthony Green  <green@moxielogic.com>
+
+	* moxie/rtl/verilog/cpu_print.v: Copy from cpu_decode.v so we can
+	write a real decoder.
+
 2010-09-07  Anthony Green  <green@moxielogic.com>
 
 	* moxie/rtl/verilog/cpu_ififo.v: Bug fixes.

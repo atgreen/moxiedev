@@ -518,7 +518,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/gcc-rtems; ../../gcc/configure  --target=moxie-rtems --enable-threads=rtems --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c --disable-libssp --with-gnu-as --with-gnu-ld --with-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
+      <arg value="(cd build/gcc-rtems; ../../gcc/configure  --target=moxie-rtems --enable-threads=rtems --prefix=`(cd ../../root/usr; pwd)` --enable-languages=c,c++ --disable-libssp --with-gnu-as --with-gnu-ld --with-newlib --with-libelf=`(cd ../../root/usr; pwd)` --enable-lto )"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -606,7 +606,7 @@
     <exec executable="sh">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="-c"/>
-      <arg value="(cd build/rtems; ../../rtems/configure --target=moxie-rtems --prefix=`(cd ../../root/usr/moxie-rtems; pwd)`)"/>
+      <arg value="(cd build/rtems; ../../rtems/configure --target=moxie-rtems --disable-tests --prefix=`(cd ../../root/usr/moxie-rtems; pwd)`)"/>
     </exec>
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
@@ -616,6 +616,7 @@
     <exec executable="make">
       <env key="PATH" path="${basedir}/root/usr/bin:${env.PATH}"/>
       <arg value="install"/>
+      <arg value="RTEMS_BSP=moxiesim"/>
     </exec>
 
   </target>

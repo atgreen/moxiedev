@@ -22,14 +22,18 @@
 
 module cpu_fetch (/*AUTOARG*/
   // Outputs
-  opcode, valid, operand,
+  imem_address_o, opcode, valid, operand,
   // Inputs
-  rst_i, clk_i, stall_i
+  rst_i, clk_i, imem_data_i, stall_i
   );
   
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
   
+  // --- Instruction memory ---------------------------------------
+  output [31:0] imem_address_o;
+  input  [31:0] imem_data_i;
+
   // --- Pipeline interlock ---------------------------------------
   input stall_i;
   
@@ -40,7 +44,7 @@ module cpu_fetch (/*AUTOARG*/
  
   // --- Test memory.  Let's just read from an internal array.  */
   //  reg [7:0] 	MEM [0:128000];
-  reg [7:0] 	MEM [0:8096];
+  reg [7:0] 	MEM [0:16675];
   reg [31:0] 	PC; /* For testing only.  */
 
   wire [0:0] 	valid, empty, full;
@@ -48,6 +52,8 @@ module cpu_fetch (/*AUTOARG*/
   reg  [31:0] 	wrdata;
   wire [15:0] opcode;
   wire [31:0] operand;
+
+  assign imem_address_o = PC;
   
   // The instruction FIFO
   cpu_ififo ififo (
@@ -80,7 +86,8 @@ module cpu_fetch (/*AUTOARG*/
        if (! stall_i) begin
 	  if (! full) begin
 	     wren <= 1;
-	     wrdata <= { MEM[PC], MEM[PC+1], MEM[PC+2], MEM[PC+3] };
+//	     wrdata <= { MEM[PC], MEM[PC+1], MEM[PC+2], MEM[PC+3] };
+	     wrdata <= imem_data_i;
 	     PC <= PC+4;
 	  end else begin
 	     wren <= 0;

@@ -1,6 +1,6 @@
 
 MSOURCES = cpu_ififo.v cpu_fetch.v cpu_decode.v \
-cpu_execute.v cpu_registerfile.v
+cpu_execute.v cpu_registerfile.v muskoka.v
 
 PROJECT = muskoka
 

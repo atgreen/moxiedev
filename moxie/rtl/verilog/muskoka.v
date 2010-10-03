@@ -19,9 +19,9 @@
 
 module muskoka (/*AUTOARG*/
   // Outputs
-  hazout,
+  imem_address_o,
   // Inputs
-  rst_i, clk_i
+  rst_i, clk_i, imem_data_i
   );
    
   // --- Clock and Reset ------------------------------------------
@@ -29,8 +29,9 @@ module muskoka (/*AUTOARG*/
   
   reg 	 rst;
 
-  // --- Hazard output  -testing only - ---------------------------
-  output hazout;
+  // --- Instruction memory ---------------------------------------
+  output [31:0] imem_address_o;
+  input  [31:0] imem_data_i;
     
   // --- Wires to connect the 5 pipeline stages -------------------
   //
@@ -39,7 +40,7 @@ module muskoka (/*AUTOARG*/
   //        dx - Decode to Execute
   //        rx - Register File to Execute
   //        xr - Execute to Register File
-  
+
   wire [15:0] fd_opcode;
   wire [31:0] fd_operand;
   wire [0:0]  fd_valid;
@@ -62,9 +63,6 @@ module muskoka (/*AUTOARG*/
   wire [3:0]  dr_reg_index2;
 
   wire [0:0] hazard_war;
-  wire [0:0] hazout;
-
-  assign hazout = hazard_war;
 
   // synthesis translate_off 
   initial
@@ -93,11 +91,13 @@ module muskoka (/*AUTOARG*/
 			 .opcode		(fd_opcode[15:0]),
 			 .valid		(fd_valid),
 			 .operand		(fd_operand[31:0]),
+			 .imem_address_o        (imem_address_o[31:0]),
 			 // Inputs
 			 .rst_i			(rst_i),
 			 .clk_i			(clk_i),
-			 .stall_i               (hazard_war));
-  
+			 .stall_i               (hazard_war),
+			 .imem_data_i           (imem_data_i));
+    
   cpu_decode stage_decode (// Inputs
 			   .rst_i			(rst_i),
 			   .clk_i			(clk_i),

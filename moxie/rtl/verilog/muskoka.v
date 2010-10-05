@@ -18,128 +18,42 @@
 // 02110-1301, USA.
 
 module muskoka (/*AUTOARG*/
-  // Outputs
-  imem_address_o,
   // Inputs
-  rst_i, clk_i, imem_data_i
+  rst_i, clk_i
   );
    
   // --- Clock and Reset ------------------------------------------
   input  rst_i, clk_i;
-  
   reg 	 rst;
 
-  // --- Instruction memory ---------------------------------------
-  output [31:0] imem_address_o;
-  input  [31:0] imem_data_i;
-    
-  // --- Wires to connect the 5 pipeline stages -------------------
-  //
-  //  Prefix codes for the control signals
-  //        fd - Fetch to Decode
-  //        dx - Decode to Execute
-  //        rx - Register File to Execute
-  //        xr - Execute to Register File
-
-  wire [15:0] fd_opcode;
-  wire [31:0] fd_operand;
-  wire [0:0]  fd_valid;
-  wire [31:0] dx_operand;
-  wire [0:0]  dx_register_write_enable;
-  wire [5:0]  dx_op;
-  wire [0:0]  xr_register_write_enable;
-  wire [3:0]  dx_register_write_index;
-  wire [3:0]  xr_register_write_index;
-  wire [31:0] xr_result;
-  wire [3:0]  dx_regA;
-  wire [3:0]  dx_regB;
-  wire [3:0]  dx_regC;
- 
-  wire [31:0] rx_reg_value1;
-  wire [31:0] rx_reg_value2;
-  wire [0:0]  dr_A_read_enable;
-  wire [0:0]  dr_B_read_enable;
-  wire [3:0]  dr_reg_index1;
-  wire [3:0]  dr_reg_index2;
-
-  wire [0:0] hazard_war;
-
-  // synthesis translate_off 
-  initial
-    begin
-      $dumpvars(1,stage_fetch); 
-      $dumpvars(1,stage_decode); 
-      $dumpvars(1,stage_execute); 
-      $dumpvars(1,regs);
-    end
-  // synthesis translate_on 
-
-  cpu_registerfile regs (// Outputs
-			 .value1_o (rx_reg_value1), 
-			 .value2_o (rx_reg_value2),
-			 // Inputs
-			 .rst_i			(rst_i),
-			 .clk_i			(clk_i),
-			 .write_enable_i (xr_register_write_enable), 
-			 .read_enable_i (dr_A_read_enable | dr_B_read_enable),
-			 .reg_write_index_i (xr_register_write_index),
-			 .reg_read_index1_i (dr_reg_index1), 
-			 .reg_read_index2_i (dr_reg_index2), 
-			 .value_i (xr_result));
+  wire [31:0] moxie_dat_i;
+  wire [31:0] moxie_dat_o;
+  wire [31:1] moxie_adr_i;
+  wire [1:0]  moxie_sel_i;
+  wire 	      moxie_we_i;
+  wire 	      moxie_cyc_i;
+  wire        moxie_stb_i;
+  wire 	      moxie_ack_o;
+   
+  wb_intercon intercon (.wbm_dat_i (moxie_dat_i),
+			.wbm_dat_o, (moxie_dat_o),
+			.wbm_adr_i, (moxie_adr_i),
+			.wbm_sel_i, (moxie_sel_i),
+			.wbm_we_i, (moxie_we_i),
+			.wbm_cyc_i, (moxie_cyc_i),
+			.wbm_stb_i, (moxie_stb_i),
+			.wbm_ack_o, (moxie_ack_o));
   
-  cpu_fetch stage_fetch (// Outputs
-			 .opcode		(fd_opcode[15:0]),
-			 .valid		(fd_valid),
-			 .operand		(fd_operand[31:0]),
-			 .imem_address_o        (imem_address_o[31:0]),
-			 // Inputs
-			 .rst_i			(rst_i),
-			 .clk_i			(clk_i),
-			 .stall_i               (hazard_war),
-			 .imem_data_i           (imem_data_i));
-    
-  cpu_decode stage_decode (// Inputs
-			   .rst_i			(rst_i),
-			   .clk_i			(clk_i),
-			   .opcode_i		(fd_opcode[15:0]),
-			   .operand_i		(fd_operand[31:0]),
-			   .valid_i		(fd_valid),
-			   .stall_i             (hazard_war),
-			   // Outputs
-			   .register_A_read_enable_o (dr_A_read_enable),
-			   .register_B_read_enable_o (dr_B_read_enable),
-			   .register_write_enable_o (dx_register_write_enable),
-			   .register_write_index_o (dx_register_write_index),
-			   .operand_o (dx_operand),
-			   .regA_o (dr_reg_index1),
-			   .regB_o (dr_reg_index2),
-			   .op_o (dx_op));
-    
-  cpu_execute stage_execute (// Inputs
-			     .rst_i			(rst_i),
-			     .clk_i			(clk_i),
-			     .stall_i        (hazard_war),
-			     .op_i           (dx_op),
-			     .operand_i		(dx_operand[31:0]),
-			     .regA_i (rx_reg_value1),
-			     .regB_i (rx_reg_value2),
-			     .register_write_index_i (dx_register_write_index),
-			     // Outputs
-			     .register_write_enable_o (xr_register_write_enable),
-			     .register_write_index_o (xr_register_write_index),
-			     .result_o (xr_result));
+  moxie core (.rst_i (rst_i),
+	      .clk_i (clk_i),
+	      .wb_dat_i (moxie_dat_i),
+	      .wb_dat_o, (moxie_dat_o),
+	      .wb_adr_i, (moxie_adr_i),
+	      .wb_sel_i, (moxie_sel_i),
+	      .wb_we_i, (moxie_we_i),
+	      .wb_cyc_i, (moxie_cyc_i),
+	      .wb_stb_i, (moxie_stb_i),
+	      .wb_ack_o, (moxie_ack_o));
+)
   
-
-  assign hazard_war = (dr_A_read_enable & (xr_register_write_enable & (dr_reg_index1 == xr_register_write_index))) |  (dr_B_read_enable & (xr_register_write_enable & (dr_reg_index2 == xr_register_write_index)));
-    
-  always @ (posedge clk_i) begin
-    if (!rst_i & hazard_war)
-      begin
-	if (dr_A_read_enable & (dr_reg_index1 == xr_register_write_index))
-	  $display("HAZARD! register1 0x%x", dr_reg_index1);
-	else if (dr_B_read_enable & (dr_reg_index2 == xr_register_write_index))
-	  $display("HAZARD! register2 0x%x", dr_reg_index2);
-      end
-  end
-
 endmodule // muskoka

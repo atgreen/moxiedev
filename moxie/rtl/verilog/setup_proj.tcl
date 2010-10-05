@@ -6,6 +6,12 @@ set_global_assignment -name DEVICE EP2C35F672C6
 
 # ---- Assign pins -------------------------------------
 
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED"
+set_global_assignment -name STRATIX_DEVICE_IO_STANDARD LVCMOS
+set_global_assignment -name RESERVE_ASDO_AFTER_CONFIGURATION "AS INPUT TRI-STATED"
+set_global_assignment -name IGNORE_CLOCK_SETTINGS ON
+
+set_global_assignment -name CYCLONE_OPTIMIZATION_TECHNIQUE SPEED
 # The DE2 board has PIN_N2 as a 50MHz clock and PIN_D13 as a 27MHz
 # clock.
 set_location_assignment -to clk_i PIN_N2
@@ -60,5 +66,7 @@ set_global_assignment -name VERILOG_FILE cpu_ififo.v
 set_global_assignment -name VERILOG_FILE cpu_decode.v
 set_global_assignment -name VERILOG_FILE cpu_execute.v
 set_global_assignment -name VERILOG_FILE cpu_registerfile.v
+set_global_assignment -name VERILOG_FILE altera_sdram/sdram.v
+set_global_assignment -name VERILOG_FILE altera_sdram/sdram_controller.v
 
 project_close

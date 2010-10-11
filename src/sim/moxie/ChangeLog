@@ -1,3 +1,9 @@
+2010-10-11  Anthony Green  <green@moxielogic.com>
+	    Albery Cahalan <acahalan@gmail.com>
+
+	* Makefile.in (SIM_CFLAGS): Build with -D_GNU_SOURCE.
+	* interp.c: Many style adjustments.
+
 2010-07-12  Anthony Green  <green@moxielogic.com>
 
 	* interp.c (sim_write): buffer is const.

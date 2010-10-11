@@ -34,9 +34,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 typedef int word;
 typedef unsigned int uword;
 
-host_callback *       callback;
+static host_callback *       callback;
 
-FILE *tracefile;
+static FILE *tracefile;
 
 /* Extract the signed 10-bit offset from a 16-bit branch
    instruction.  */
@@ -48,10 +48,8 @@ FILE *tracefile;
    + (sim_core_read_aligned_1 (scpu, cia, read_map, addr+2) << 8) \
    + (sim_core_read_aligned_1 (scpu, cia, read_map, addr+3)))
 
-unsigned long
-moxie_extract_unsigned_integer (addr, len)
-     unsigned char * addr;
-     int len;
+// FIXME: "unsigned long" varies by architecture
+static unsigned long moxie_extract_unsigned_integer (unsigned char * addr, int len)
 {
   unsigned long retval;
   unsigned char * p;
@@ -72,11 +70,7 @@ moxie_extract_unsigned_integer (addr, len)
   return retval;
 }
 
-void
-moxie_store_unsigned_integer (addr, len, val)
-     unsigned char * addr;
-     int len;
-     unsigned long val;
+static void moxie_store_unsigned_integer (unsigned char * addr, int len, unsigned long val)
 {
   unsigned char * p;
   unsigned char * startaddr = (unsigned char *)addr;
@@ -134,16 +128,13 @@ static char *myname;
 static SIM_OPEN_KIND sim_kind;
 static int issue_messages = 0;
 
-void
-sim_size (int s)
+void sim_size (int s)
 {
 }
 
-static void
-set_initial_gprs ()
+static void set_initial_gprs (void)
 {
   int i;
-  long space;
   
   /* Set up machine just out of reset.  */
   cpu.asregs.regs[PC_REGNO] = 0;
@@ -155,16 +146,14 @@ set_initial_gprs ()
     cpu.asregs.sregs[i] = 0;
 }
 
-static void
-interrupt ()
+static void interrupt (int signum)
 {
   cpu.asregs.exception = SIGINT;
 }
 
 /* Write a 1 byte value to memory.  */
 
-static void INLINE 
-wbat (sim_cpu *scpu, word pc, word x, word v)
+static INLINE void wbat (sim_cpu *scpu, word pc, word x, word v)
 {
   address_word cia = CIA_GET (scpu);
   
@@ -173,8 +162,7 @@ wbat (sim_cpu *scpu, word pc, word x, word v)
 
 /* Write a 2 byte value to memory.  */
 
-static void INLINE 
-wsat (sim_cpu *scpu, word pc, word x, word v)
+static INLINE void wsat (sim_cpu *scpu, word pc, word x, word v)
 {
   address_word cia = CIA_GET (scpu);
   
@@ -183,8 +171,7 @@ wsat (sim_cpu *scpu, word pc, word x, word v)
 
 /* Write a 4 byte value to memory.  */
 
-static void INLINE 
-wlat (sim_cpu *scpu, word pc, word x, word v)
+static INLINE void wlat (sim_cpu *scpu, word pc, word x, word v)
 {
   address_word cia = CIA_GET (scpu);
 	
@@ -193,8 +180,7 @@ wlat (sim_cpu *scpu, word pc, word x, word v)
 
 /* Read 2 bytes from memory.  */
 
-static int INLINE 
-rsat (sim_cpu *scpu, word pc, word x)
+static INLINE int rsat (sim_cpu *scpu, word pc, word x)
 {
   address_word cia = CIA_GET (scpu);
   
@@ -203,8 +189,7 @@ rsat (sim_cpu *scpu, word pc, word x)
 
 /* Read 1 byte from memory.  */
 
-static int INLINE 
-rbat (sim_cpu *scpu, word pc, word x)
+static INLINE int rbat (sim_cpu *scpu, word pc, word x)
 {
   address_word cia = CIA_GET (scpu);
   
@@ -213,8 +198,7 @@ rbat (sim_cpu *scpu, word pc, word x)
 
 /* Read 4 bytes from memory.  */
 
-static int INLINE 
-rlat (sim_cpu *scpu, word pc, word x)
+static INLINE int rlat (sim_cpu *scpu, word pc, word x)
 {
   address_word cia = CIA_GET (scpu);
   
@@ -223,8 +207,7 @@ rlat (sim_cpu *scpu, word pc, word x)
 
 #define CHECK_FLAG(T,H) if (tflags & T) { hflags |= H; tflags ^= T; }
 
-unsigned int 
-convert_target_flags (unsigned int tflags)
+static unsigned int convert_target_flags (unsigned int tflags)
 {
   unsigned int hflags = 0x0;
 
@@ -248,15 +231,12 @@ convert_target_flags (unsigned int tflags)
 
 static int tracing = 0;
 
-void
-sim_resume (sd, step, siggnal)
-     SIM_DESC sd;
-     int step, siggnal;
+void sim_resume (SIM_DESC sd, int step, int siggnal)
 {
   word pc, opc;
   unsigned long long insts;
   unsigned short inst;
-  void (* sigsave)();
+  sighandler_t sigsave;
   sim_cpu *scpu = STATE_CPU (sd, 0); /* FIXME */
   address_word cia = CIA_GET (scpu);
 
@@ -1024,12 +1004,7 @@ sim_resume (sd, step, siggnal)
   signal (SIGINT, sigsave);
 }
 
-int
-sim_write (sd, addr, buffer, size)
-     SIM_DESC sd;
-     SIM_ADDR addr;
-     const unsigned char * buffer;
-     int size;
+int sim_write (SIM_DESC sd, SIM_ADDR addr, const unsigned char * buffer, int size)
 {
   sim_cpu *scpu = STATE_CPU (sd, 0); /* FIXME */
 
@@ -1038,12 +1013,7 @@ sim_write (sd, addr, buffer, size)
   return size;
 }
 
-int
-sim_read (sd, addr, buffer, size)
-     SIM_DESC sd;
-     SIM_ADDR addr;
-     unsigned char * buffer;
-     int size;
+int sim_read (SIM_DESC sd, SIM_ADDR addr, unsigned char * buffer, int size)
 {
   sim_cpu *scpu = STATE_CPU (sd, 0); /* FIXME */
 
@@ -1053,12 +1023,7 @@ sim_read (sd, addr, buffer, size)
 }
 
 
-int
-sim_store_register (sd, rn, memory, length)
-     SIM_DESC sd;
-     int rn;
-     unsigned char * memory;
-     int length;
+int sim_store_register (SIM_DESC sd, int rn, unsigned char * memory, int length)
 {
   if (rn < NUM_MOXIE_REGS && rn >= 0)
     {
@@ -1077,12 +1042,7 @@ sim_store_register (sd, rn, memory, length)
     return 0;
 }
 
-int
-sim_fetch_register (sd, rn, memory, length)
-     SIM_DESC sd;
-     int rn;
-     unsigned char * memory;
-     int length;
+int sim_fetch_register (SIM_DESC sd, int rn, unsigned char * memory, int length)
 {
   if (rn < NUM_MOXIE_REGS && rn >= 0)
     {
@@ -1101,9 +1061,7 @@ sim_fetch_register (sd, rn, memory, length)
 }
 
 
-int
-sim_trace (sd)
-     SIM_DESC sd;
+int sim_trace (SIM_DESC sd)
 {
   if (tracefile == 0)
     tracefile = fopen("trace.csv", "wb");
@@ -1117,11 +1075,7 @@ sim_trace (sd)
   return 1;
 }
 
-void
-sim_stop_reason (sd, reason, sigrc)
-     SIM_DESC sd;
-     enum sim_stop * reason;
-     int * sigrc;
+void sim_stop_reason (SIM_DESC sd, enum sim_stop * reason, int * sigrc)
 {
   if (cpu.asregs.exception == SIGQUIT)
     {
@@ -1136,34 +1090,32 @@ sim_stop_reason (sd, reason, sigrc)
 }
 
 
-int
-sim_stop (sd)
-     SIM_DESC sd;
+int sim_stop (SIM_DESC sd)
 {
   cpu.asregs.exception = SIGINT;
   return 1;
 }
 
 
-void
-sim_info (sd, verbose)
-     SIM_DESC sd;
-     int verbose;
+void sim_info (SIM_DESC sd, int verbose)
 {
   callback->printf_filtered (callback, "\n\n# instructions executed  %llu\n",
 			     cpu.asregs.insts);
 }
 
 
-SIM_DESC
-sim_open (kind, cb, abfd, argv)
-     SIM_OPEN_KIND kind;
-     host_callback * cb;
-     struct bfd * abfd;
-     char ** argv;
+void sim_do_command (SIM_DESC sd, char * cmd)
+{
+  if (sim_args_command (sd, cmd) != SIM_RC_OK)
+    sim_io_printf (sd, 
+		   "Error: \"%s\" is not a valid moxie simulator command.\n",
+		   cmd);
+}
+
+SIM_DESC sim_open (SIM_OPEN_KIND kind, host_callback *cb, struct bfd *abfd, char **argv)
 {
   SIM_DESC sd = sim_state_alloc (kind, cb);
-  printf ("0x%x 0x%x\n", sd, STATE_MAGIC(sd));
+  printf ("%p 0x%x\n", sd, STATE_MAGIC(sd));
   SIM_ASSERT (STATE_MAGIC (sd) == SIM_MAGIC_NUMBER);
 
   if (sim_pre_argv_init (sd, argv[0]) != SIM_RC_OK)
@@ -1199,10 +1151,7 @@ sim_open (kind, cb, abfd, argv)
   return sd;
 }
 
-void
-sim_close (sd, quitting)
-     SIM_DESC sd;
-     int quitting;
+void sim_close (SIM_DESC sd, int quitting)
 {
   /* nothing to do */
 }
@@ -1210,8 +1159,7 @@ sim_close (sd, quitting)
 
 /* Load the device tree blob.  */
 
-static void
-load_dtb (SIM_DESC sd, const char *filename)
+static void load_dtb (SIM_DESC sd, const char *filename)
 {
   int size = 0;
   FILE *f = fopen (filename, "rb");
@@ -1226,7 +1174,7 @@ load_dtb (SIM_DESC sd, const char *filename)
   size = ftell(f);
   fseek (f, 0, SEEK_SET);
   buf = alloca (size);
-  if (size != fread (buf, 1, size, f))
+  if (size != (int)fread (buf, 1, size, f))
     {
       printf ("ERROR: error reading ``%s''.\n", filename);
       return;
@@ -1236,12 +1184,7 @@ load_dtb (SIM_DESC sd, const char *filename)
   fclose (f);
 }
 
-SIM_RC
-sim_load (sd, prog, abfd, from_tty)
-     SIM_DESC sd;
-     char * prog;
-     bfd * abfd;
-     int from_tty;
+SIM_RC sim_load (SIM_DESC sd, char * prog, bfd * abfd, int from_tty)
 {
 
   /* Do the right thing for ELF executables; this turns out to be
@@ -1290,12 +1233,8 @@ sim_load (sd, prog, abfd, from_tty)
   return SIM_RC_OK;
 }
 
-SIM_RC
-sim_create_inferior (sd, prog_bfd, argv, env)
-     SIM_DESC sd;
-     struct bfd * prog_bfd;
-     char ** argv;
-     char ** env;
+SIM_RC sim_create_inferior (SIM_DESC sd, struct bfd * prog_bfd, 
+			    char ** argv, char ** env)
 {
   char ** avp;
   int l, argc, i, tp;
@@ -1347,28 +1286,13 @@ sim_create_inferior (sd, prog_bfd, argv, env)
   return SIM_RC_OK;
 }
 
-void
-sim_kill (sd)
-     SIM_DESC sd;
+void sim_kill (SIM_DESC sd)
 {
   if (tracefile)
     fclose(tracefile);
 }
 
-void
-sim_do_command (sd, cmd)
-     SIM_DESC sd;
-     char * cmd;
-{
-  if (sim_args_command (sd, cmd) != SIM_RC_OK)
-    sim_io_printf (sd, 
-		   "Error: \"%s\" is not a valid moxie simulator command.\n",
-		   cmd);
-}
-
-void
-sim_set_callbacks (ptr)
-     host_callback * ptr;
+void sim_set_callbacks (host_callback * ptr)
 {
   callback = ptr; 
 }
